@@ -1,0 +1,34 @@
+[17:42:31.733] [INFO] ═══════════════════════════════════════════════════════
+[17:42:31.749] [SUCCESS] RawrXD Developer Console Initialized
+[17:42:31.751] [INFO] PowerShell Version: 5.1.26100.6725
+[17:42:31.751] [INFO] Browser Type: WebView2
+[17:42:31.753] [INFO] WebView2 Enabled: True
+[17:42:31.753] [INFO] ═══════════════════════════════════════════════════════
+[17:52:54.017] [SUCCESS] User settings loaded successfully
+[17:52:54.251] [SUCCESS] ✅ Created new chat tab: Main Chat
+[17:52:54.256] [INFO] 🔧 Initializing multithreaded agent system...
+[17:52:54.354] [SUCCESS] ✅ Multithreaded agent system initialized with 4 workers
+[17:52:54.437] [SUCCESS] ✅ Chat history loaded for Main Chat
+[17:52:54.468] [SUCCESS] RawrXD Form Loaded Successfully
+[17:52:54.468] [INFO] Agent Mode: ON
+[17:52:54.468] [INFO] Current Directory: C:\Users\HiH8e\OneDrive\Desktop\Powershield
+[17:52:54.472] [INFO] Applying Stealth-Cheetah theme...
+[17:52:54.474] [SUCCESS] 🐆 Stealth-Cheetah theme activated - Maximum stealth mode
+[17:52:54.475] [ERROR] ❌ Error applying theme: The variable '$leftPanel' cannot be retrieved because it has not been set.
+[17:52:54.477] [INFO] 🐆 Applied default Stealth-Cheetah theme
+[17:52:54.477] [INFO] 🚀 Starting performance optimization...
+[17:52:54.535] [SUCCESS] 🧹 Memory optimization completed
+[17:52:54.543] [SUCCESS] ⚡ Process priority set to High
+[17:52:54.547] [SUCCESS] 🌐 Network settings optimized
+[17:52:54.550] [WARNING] ⚠️ UI optimization partial: Method invocation failed because [System.Windows.Forms.Form] does not contain a method named 'SetStyle'.
+[17:52:54.552] [SUCCESS] ✅ Performance optimization completed
+[17:52:54.552] [INFO] Auto-starting Ollama server...
+[17:52:54.555] [INFO] Attempting to start Ollama server...
+[17:52:54.563] [SUCCESS] Ollama server already running (PID: 24924)
+[17:53:04.499] [INFO] 🔄 Changed model for Main Chat to mistral
+[17:53:35.047] [INFO] Agent command received: test
+[17:53:35.059] [DEBUG] Sending request to Ollama API (Model: bigdaddyg-fast:latest)
+[17:53:35.065] [DEBUG] Validating model availability...
+[17:53:35.121] [DEBUG] Attempt 1/3 - POST http://localhost:11434/api/generate
+[17:53:39.756] [SUCCESS] Ollama response received (105 chars)
+[17:53:39.769] [ERROR] Ollama API Error (final): The property 'encrypted' cannot be found on this object. Verify that the property exists.
