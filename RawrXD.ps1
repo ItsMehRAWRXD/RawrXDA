@@ -71,7 +71,8 @@ param(
         'test-visibility', 'check-editor-visibility',
         'test-all-features', 'get-settings', 'set-setting',
         'video-search', 'video-download', 'video-play', 'video-help',
-        'browser-navigate', 'browser-screenshot', 'browser-click'
+        'browser-navigate', 'browser-screenshot', 'browser-click',
+        'poshllm-train', 'poshllm-generate', 'poshllm-list', 'poshllm-save', 'poshllm-load'
     )]
     [string]$Command,
     
@@ -116,6 +117,7 @@ $script:EmergencyLogPath = Join-Path $PSScriptRoot "logs"
 $script:StartupLogFile = Join-Path $script:EmergencyLogPath "startup_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $script:ProjectRoot = $PSScriptRoot
 $script:LogConfig = $null
+$global:RawrXDPoshLLMTraining = $false
 
 # Create log directory if it doesn't exist
 if (-not (Test-Path $script:EmergencyLogPath)) {
@@ -307,10 +309,7 @@ function Invoke-ExplorerNodeOpen {
                                 $script:editor.Text = $content
                             }
 
-                            $module = Import-Module $moduleFile.FullName -PassThru -Force -DisableNameChecking -WarningAction SilentlyContinue -ErrorAction Stop                            $apiKeyVar = Get-Variable -Name "OllamaAPIKey" -Scope Script -ErrorAction SilentlyContinue
-                            if (-not $apiKeyVar -or $null -eq $apiKeyVar.Value) {
-                                $script:OllamaAPIKey = Get-SecureAPIKey
-                            }                            # CRITICAL: Apply text color to all loaded content
+                            # CRITICAL: Apply text color to all loaded content
                             try {
                                 Set-EditorTextColor -Color ([System.Drawing.Color]::FromArgb(220, 220, 220))
                                 Write-DevConsole "Applied text color to loaded file" "DEBUG"
@@ -407,12 +406,10 @@ function Invoke-ExplorerNodeOpen {
                     Write-StartupLog "Editor is not properly initialized. Please restart RawrXD." "ERROR"
                     [System.Windows.Forms.MessageBox]::Show("Editor is not properly initialized. Please restart RawrXD.", "Editor Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                 }
-
             }
             catch {
                 Write-DevConsole "❌ Error reading file: $_" "ERROR"
                 Write-DevConsole "Error reading file: $($_.Exception.Message)" "ERROR"
-            }
         }
     }
     catch {
@@ -3597,6 +3594,11 @@ function Show-ConsoleHelp {
    /chat <message>          - Start AI chat conversation
    /models                  - List available AI models
    /status                  - Show AI service status
+   /poshllm-train <name> <corpus> - Train a PoshLLM model
+   /poshllm-generate <name> <prompt> - Generate text with PoshLLM
+   /poshllm-list            - List trained PoshLLM models
+   /poshllm-save <name> <path> - Save PoshLLM model to file
+   /poshllm-load <name> <path> - Load PoshLLM model from file
 
 📝 EDITOR COMMANDS:
    /edit <file>             - Open file in CLI text editor
@@ -7343,14 +7345,18 @@ $explorer.add_NodeMouseDoubleClick({
                                     $script:editor.SelectionColor = $visibleColor
                                 }
                                 
-                                # Ensure editor is visible
+                                # FIX: Ensure editor is visible, enabled, and editable
                                 $script:editor.Visible = $true
                                 $script:editor.Enabled = $true
+                                $script:editor.ReadOnly = $false  # CRITICAL: Ensure editor is editable
                                 
                                 # Reset selection and scroll to top
                                 $script:editor.SelectionStart = 0
                                 $script:editor.SelectionLength = 0
                                 $script:editor.ScrollToCaret()
+                                
+                                # FIX: Force focus to editor to ensure it's interactive
+                                $script:editor.Focus()
                                 
                                 # Force refresh and focus
                                 $script:editor.Refresh()
@@ -7567,31 +7573,46 @@ $explorerContextMenu.Items.Add($openFolderItem) | Out-Null
 # Properties
 $propertiesItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $propertiesItem.Text = "ℹ️ Properties"
-$propertiesItem.Add_Click({
-        $selectedNode = $explorer.SelectedNode
-        if ($selectedNode -and $selectedNode.Tag -and $selectedNode.Tag -ne "DUMMY") {
-            try {
-                if (Test-Path $selectedNode.Tag) {
-                    $item = Get-Item $selectedNode.Tag
-                    $isFile = -not (Test-Path $selectedNode.Tag -PathType Container)
-                
-                    $props = @"
-Path: $($item.FullName)
-Name: $($item.Name)
-Type: $(if ($isFile) { "File" } else { "Folder" })
-Created: $($item.CreationTime)
-Modified: $($item.LastWriteTime)
-$(if ($isFile) { "Size: $($item.Length) bytes" } else { "" })
-Attributes: $($item.Attributes)
-"@
-                    Write-DevConsole "Properties - $($item.Name): $props" "INFO"
-                }
-            }
-            catch {
-                Write-DevConsole "Failed to get properties: $_" "ERROR"
-                Write-ErrorLog -Message "Failed to get properties: $($_.Exception.Message)" -Severity "HIGH"
-            }
+$trainModelItem.Add_Click({
+    if ($global:RawrXDPoshLLMTraining) {
+        [System.Windows.Forms.MessageBox]::Show("A training run is already in progress.", "PoshLLM", "OK", "Information")
+        return
+    }
+    $global:RawrXDPoshLLMTraining = $true
+    try {
+        if (-not (Get-Module -Name "PoshLLM")) {
+            $modulePath = Join-Path $PSScriptRoot "extensions\PoshLLM.psm1"
+            Import-Module $modulePath -Force
         }
+        
+        $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+        $openFileDialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*"
+        $openFileDialog.Title = "Select corpus file for training"
+        if ($openFileDialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
+        $corpusFile = $openFileDialog.FileName
+        
+        $modelName = [Microsoft.VisualBasic.Interaction]::InputBox("Enter model name:", "PoshLLM Train", "my-model")
+        if (-not $modelName) { return }
+        
+        $corpus = Get-Content $corpusFile | Where-Object { $_ -ne '' }
+        Write-Host "Training PoshLLM model '$modelName' with $($corpus.Count) lines..." -ForegroundColor Cyan
+        $progressAction = {
+            param($Epoch, $Total, $Loss)
+            $percent = [math]::Min(100, [math]::Floor(100 * $Epoch / $Total))
+            $host.UI.WriteProgress("PoshLLM Training", "Epoch $Epoch/$Total", $percent)
+        }
+        Initialize-PoshLLM -Name $modelName -Corpus $corpus -VocabSize 300 -EmbedDim 64 -MaxSeqLen 128 -Layers 4 -Heads 4 -Epochs 10 -ProgressAction $progressAction
+        $host.UI.WriteProgress("PoshLLM Training", "Completed", 100)
+        [System.Windows.Forms.MessageBox]::Show("Model '$modelName' trained successfully!", "PoshLLM", "OK", "Information")
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show("Error training model: $($_.Exception.Message)", "Error", "OK", "Error")
+    }
+    finally {
+        $global:RawrXDPoshLLMTraining = $false
+        $host.UI.WriteProgress("PoshLLM Training", "Idle", 0)
+    }
+})
     })
 $explorerContextMenu.Items.Add($propertiesItem) | Out-Null
 
@@ -7693,6 +7714,9 @@ $toggleAgentBtn.Add_Click({
     })
 
 # Text Editor (Middle Pane)
+# CRITICAL: Only create editor if Windows Forms is available
+if ($script:WindowsFormsAvailable) {
+    try {
 $script:editor = New-Object System.Windows.Forms.RichTextBox
 $script:editor.Dock = [System.Windows.Forms.DockStyle]::Fill
 $script:editor.Font = New-Object System.Drawing.Font("Consolas", 10)
@@ -7702,7 +7726,78 @@ $script:editor.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)  # Li
 $script:editor.BorderStyle = [System.Windows.Forms.BorderStyle]::None
 $script:editor.Visible = $true
 $script:editor.DetectUrls = $false  # Prevent RTF auto-formatting
-Write-EmergencyLog "✅ Editor colors set: Back=30,30,30 Fore=220,220,220 Visible=$($script:editor.Visible)" "SUCCESS"
+        
+        # Safe logging - don't let logging failures break editor creation
+        try {
+            Write-EmergencyLog "✅ Editor created successfully: Back=30,30,30 Fore=220,220,220 Visible=$($script:editor.Visible)" "SUCCESS"
+    }
+    catch {
+            # Logging failed, but editor was created - use fallback
+            Write-Host "✅ Editor created successfully" -ForegroundColor Green -ErrorAction SilentlyContinue
+}
+
+# CRITICAL: Prevent RTF format errors by ensuring Text property is initialized first
+try {
+    $script:editor.Text = ""  # Initialize with empty plain text, NOT RTF
+}
+catch {
+            try {
+    Write-EmergencyLog "Error initializing editor text: $_" "WARNING"
+            }
+            catch {
+                Write-Host "Warning: Error initializing editor text" -ForegroundColor Yellow -ErrorAction SilentlyContinue
+            }
+}
+
+# CRITICAL FIX: Force SelectionColor after handle is created, not before
+# Setting color properties before handle creation can cause RTF format exceptions
+$script:editor.Add_HandleCreated({
+        try {
+            if ($script:editor -and -not $script:editor.IsDisposed) {
+                # Set default color for new text
+                Set-EditorTextColor -Color ([System.Drawing.Color]::FromArgb(220, 220, 220))
+                        try {
+                Write-EmergencyLog "✅ Editor text color applied via HandleCreated" "SUCCESS"
+                        }
+                        catch {
+                            # Logging failed, continue anyway
+                        }
+            }
+        }
+        catch {
+                    try {
+            Write-EmergencyLog "Error setting editor colors in HandleCreated: $_" "WARNING"
+                    }
+                    catch {
+                        # Logging failed, continue anyway
+                    }
+        }
+    })
+
+# Enable built-in undo for RichTextBox
+$script:editor.EnableAutoDragDrop = $true
+    }
+    catch {
+        # Safe error logging
+        try {
+            Write-EmergencyLog "❌ CRITICAL: Failed to create editor: $($_.Exception.Message)" "ERROR"
+            Write-EmergencyLog "Stack trace: $($_.ScriptStackTrace)" "ERROR"
+        }
+        catch {
+            Write-Host "❌ CRITICAL: Failed to create editor: $($_.Exception.Message)" -ForegroundColor Red -ErrorAction SilentlyContinue
+        }
+        $script:editor = $null
+    }
+}
+else {
+    try {
+        Write-EmergencyLog "⚠️ Windows Forms not available - editor will not be created" "WARNING"
+    }
+    catch {
+        Write-Host "⚠️ Windows Forms not available - editor will not be created" -ForegroundColor Yellow -ErrorAction SilentlyContinue
+    }
+    $script:editor = $null
+}
 
 # CRITICAL: Helper function to apply text color to ALL text in RichTextBox
 function Set-EditorTextColor {
@@ -7729,36 +7824,12 @@ function Set-EditorTextColor {
     }
 }
 
-# CRITICAL: Prevent RTF format errors by ensuring Text property is initialized first
-try {
-    $script:editor.Text = ""  # Initialize with empty plain text, NOT RTF
-}
-catch {
-    Write-EmergencyLog "Error initializing editor text: $_" "WARNING"
-}
-
-# CRITICAL FIX: Force SelectionColor after handle is created, not before
-# Setting color properties before handle creation can cause RTF format exceptions
-$script:editor.Add_HandleCreated({
-        try {
-            if ($script:editor -and -not $script:editor.IsDisposed) {
-                # Set default color for new text
-                Set-EditorTextColor -Color ([System.Drawing.Color]::FromArgb(220, 220, 220))
-                Write-EmergencyLog "✅ Editor text color applied via HandleCreated" "SUCCESS"
-            }
-        }
-        catch {
-            Write-EmergencyLog "Error setting editor colors in HandleCreated: $_" "WARNING"
-        }
-    })
-
-# Enable built-in undo for RichTextBox
-$script:editor.EnableAutoDragDrop = $true
-
 # Syntax highlighting debounce timer
 $script:syntaxHighlightTimer = $null
 
 # Track text changes for undo/redo stack and syntax highlighting
+# Only add event handler if editor was successfully created
+if ($script:editor) {
 $script:editor.Add_TextChanged({
         # CRITICAL: Ensure text color is always visible when typing
         if ($script:editor.IsHandleCreated -and -not $script:editor.IsDisposed) {
@@ -7881,13 +7952,19 @@ $script:editor.Add_KeyPress({
         }
         catch {
             # Silently handle RTF color setting errors during keypress
+                try {
             Write-EmergencyLog "Error setting editor color on keypress: $_" "DEBUG"
+                }
+                catch {
+                    # Logging failed, continue anyway
+                }
         }
     })
 
 # Create editor context menu for copilot-like features
 $editorContextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 $script:editor.ContextMenuStrip = $editorContextMenu
+}
 
 # Copilot menu items
 $explainCodeItem = New-Object System.Windows.Forms.ToolStripMenuItem "🤖 Explain Code"
@@ -15092,6 +15169,594 @@ function Load-MarketplaceCatalog {
     }
 }
 
+# ============================================
+# GitHub Copilot Status Functions
+# ============================================
+
+function Get-EditorCliPath {
+    <#
+    .SYNOPSIS
+        Resolve the CLI path and invocation hint for supported editors.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('VSCode', 'Cursor')]
+        [string]$Editor
+    )
+
+    $commandCandidates = switch ($Editor) {
+        'VSCode' { @('code', 'code-insiders', 'code.cmd', 'code-insiders.cmd') }
+        'Cursor' { @('cursor', 'cursor-insiders', 'cursor.cmd') }
+    }
+
+    foreach ($candidate in $commandCandidates) {
+        try {
+            $command = Get-Command $candidate -ErrorAction SilentlyContinue
+            if ($command) {
+                return [pscustomobject]@{
+                    Path       = $command.Source
+                    Invocation = $command.Name
+                }
+            }
+        }
+        catch {
+            # Ignore lookup errors and continue
+        }
+    }
+
+    $paths = @()
+
+    try {
+        $isWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+        $isLinux   = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Linux)
+        $isMacOS   = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::OSX)
+    }
+    catch {
+        $isWindows = $env:OS -eq 'Windows_NT'
+        $isLinux   = -not $isWindows
+        $isMacOS   = $false
+    }
+
+    if ($isWindows) {
+        if ($Editor -eq 'VSCode') {
+            if ($env:LOCALAPPDATA) {
+                $paths += (Join-Path $env:LOCALAPPDATA 'Programs\Microsoft VS Code\bin\code.cmd')
+                $paths += (Join-Path $env:LOCALAPPDATA 'Programs\Microsoft VS Code\Code.exe')
+            }
+            if ($env:ProgramFiles) {
+                $paths += (Join-Path $env:ProgramFiles 'Microsoft VS Code\bin\code.cmd')
+            }
+            $programFilesX86 = ${env:ProgramFiles(x86)}
+            if ($programFilesX86) {
+                $paths += (Join-Path $programFilesX86 'Microsoft VS Code\bin\code.cmd')
+            }
+        }
+        else {
+            if ($env:LOCALAPPDATA) {
+                $paths += (Join-Path $env:LOCALAPPDATA 'Programs\Cursor\cursor.exe')
+                $paths += (Join-Path $env:LOCALAPPDATA 'Programs\Cursor\Application\cursor.exe')
+            }
+        }
+    }
+    elseif ($isMacOS) {
+        if ($Editor -eq 'VSCode') {
+            $paths += '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code'
+            $paths += '/usr/local/bin/code'
+        }
+        else {
+            $paths += '/Applications/Cursor.app/Contents/MacOS/Cursor'
+            $paths += '/Applications/Cursor.app/Contents/Resources/app/bin/cursor'
+        }
+    }
+    elseif ($isLinux) {
+        if ($Editor -eq 'VSCode') {
+            $paths += '/usr/bin/code'
+            $paths += '/snap/bin/code'
+            if ($env:HOME) {
+                $paths += (Join-Path $env:HOME '.vscode-server/bin/code')
+            }
+        }
+        else {
+            $paths += '/usr/bin/cursor'
+            $paths += '/snap/bin/cursor'
+            if ($env:HOME) {
+                $paths += (Join-Path $env:HOME '.local/bin/cursor')
+            }
+        }
+    }
+
+    foreach ($candidatePath in $paths) {
+        try {
+            if ($candidatePath -and (Test-Path -LiteralPath $candidatePath)) {
+                $invocation = if ($candidatePath -match '\s') { "`"$candidatePath`"" } else { $candidatePath }
+                return [pscustomobject]@{
+                    Path       = $candidatePath
+                    Invocation = $invocation
+                }
+            }
+        }
+        catch {
+            # Ignore filesystem errors and keep scanning
+        }
+    }
+
+    return $null
+}
+
+function Get-EditorCopilotStatus {
+    <#
+    .SYNOPSIS
+        Inspect local editor installations and determine GitHub Copilot coverage.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('VSCode', 'Cursor')]
+        [string]$Editor
+    )
+
+    $displayName = if ($Editor -eq 'VSCode') { 'VS Code' } else { 'Cursor' }
+    $defaultInvocation = if ($Editor -eq 'VSCode') { 'code' } else { 'cursor' }
+
+    $result = [ordered]@{
+        Editor               = $displayName
+        Installed            = $false
+        CliPath              = $null
+        InvocationHint       = $defaultInvocation
+        Version              = 'Not detected'
+        CopilotInstalled     = $false
+        CopilotVersion       = 'Not installed'
+        CopilotChatInstalled = $false
+        CopilotChatVersion   = 'Not installed'
+        Notes                = @()
+    }
+
+    $cliInfo = Get-EditorCliPath -Editor $Editor
+    if (-not $cliInfo) {
+        $result.Notes += "$displayName CLI not found. Install $displayName and add it to PATH."
+        return [pscustomobject]$result
+    }
+
+    $result.CliPath = $cliInfo.Path
+    $result.InvocationHint = $cliInfo.Invocation
+    $result.Installed = $true
+
+    try {
+        $versionOutput = & $cliInfo.Path '--version' 2>$null
+        if ($versionOutput) {
+            $firstLine = ($versionOutput | Select-Object -First 1).Trim()
+            if ($firstLine) {
+                $result.Version = $firstLine
+            }
+        }
+    }
+    catch {
+        $result.Notes += "Unable to read version information: $($_.Exception.Message)"
+    }
+
+    try {
+        $extensionOutput = & $cliInfo.Path '--list-extensions' '--show-versions' 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "Extension query exited with code $LASTEXITCODE"
+        }
+
+        foreach ($line in $extensionOutput) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed) { continue }
+
+            if ($trimmed -match '^(?i)github\.copilot(?:@(?<ver>.+))?$') {
+                $result.CopilotInstalled = $true
+                if ($matches.ver) {
+                    $result.CopilotVersion = $matches.ver
+                }
+                else {
+                    $result.CopilotVersion = 'Installed'
+                }
+            }
+            elseif ($trimmed -match '^(?i)github\.copilot-chat(?:@(?<ver>.+))?$') {
+                $result.CopilotChatInstalled = $true
+                if ($matches.ver) {
+                    $result.CopilotChatVersion = $matches.ver
+                }
+                else {
+                    $result.CopilotChatVersion = 'Installed'
+                }
+            }
+        }
+    }
+    catch {
+        $result.Notes += "Unable to enumerate extensions: $($_.Exception.Message)"
+    }
+
+    return [pscustomobject]$result
+}
+
+function Get-GitHubCopilotServiceStatus {
+    <#
+    .SYNOPSIS
+        Fetch GitHub status API details for Copilot services.
+    #>
+    param()
+
+    $statusInfo = @{
+        Status     = 'unknown'
+        Components = @()
+        Retrieved  = Get-Date
+        Message    = $null
+    }
+
+    try {
+        $response = Invoke-RestMethod -Uri 'https://www.githubstatus.com/api/v2/components.json' -Method Get -TimeoutSec 10 -ErrorAction Stop
+        if ($response.components) {
+            $copilotComponents = $response.components | Where-Object { $_.name -match 'Copilot' }
+            if ($copilotComponents) {
+                $severityRank = @{
+                    'operational'          = 0
+                    'under_maintenance'    = 1
+                    'degraded_performance' = 2
+                    'partial_outage'       = 3
+                    'major_outage'         = 4
+                }
+                $worstComponent = $copilotComponents | Sort-Object -Property {
+                    if ($severityRank.ContainsKey($_.status)) { $severityRank[$_.status] } else { 5 }
+                } -Descending | Select-Object -First 1
+
+                $statusInfo.Status = $worstComponent.status
+                $statusInfo.Components = $copilotComponents
+                return $statusInfo
+            }
+        }
+
+        $statusInfo.Message = 'GitHub status API did not return Copilot components.'
+    }
+    catch {
+        $statusInfo.Message = $_.Exception.Message
+    }
+
+    return $statusInfo
+}
+
+function Invoke-CliCopilotStatus {
+    <#
+    .SYNOPSIS
+        Display VS Code/Cursor GitHub Copilot status and optionally install extensions.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$Action
+    )
+
+    Write-Host "`n=== Cursor & VS Code GitHub Copilot Status ===" -ForegroundColor Cyan
+
+    $printSummary = {
+        param(
+            [Parameter(Mandatory = $true)]$Data,
+            [string]$Title = $null
+        )
+
+        if ($Title) {
+            Write-Host "`n$Title" -ForegroundColor Yellow
+        }
+
+        $table = $Data | Select-Object `
+            @{ Name = 'Editor'; Expression = { $_.Editor } },
+            @{ Name = 'Installed'; Expression = { if ($_.Installed) { '✅' } else { '❌' } } },
+            @{ Name = 'Version'; Expression = { $_.Version } },
+            @{ Name = 'Copilot'; Expression = { if ($_.CopilotInstalled) { "✅ $($_.CopilotVersion)" } else { '❌ Missing' } } },
+            @{ Name = 'Copilot Chat'; Expression = { if ($_.CopilotChatInstalled) { "✅ $($_.CopilotChatVersion)" } else { '❌ Missing' } } },
+            @{ Name = 'CLI'; Expression = { if ($_.CliPath) { $_.CliPath } else { 'Not detected' } } }
+
+        $table | Format-Table -AutoSize
+    }
+
+    $statuses = @('VSCode', 'Cursor') | ForEach-Object { Get-EditorCopilotStatus -Editor $_ }
+
+    & $printSummary $statuses 'Current local status'
+
+    foreach ($status in $statuses) {
+        if ($status.Notes -and $status.Notes.Count -gt 0) {
+            Write-Host "`nNotes for $($status.Editor):" -ForegroundColor DarkYellow
+            foreach ($note in $status.Notes) {
+                Write-Host "  - $note" -ForegroundColor Gray
+            }
+        }
+    }
+
+    $serviceStatus = Get-GitHubCopilotServiceStatus
+    if ($serviceStatus.Components -and $serviceStatus.Components.Count -gt 0) {
+        $iconMap = @{
+            'operational'          = '✅'
+            'under_maintenance'    = '🛠️'
+            'degraded_performance' = '⚠️'
+            'partial_outage'       = '⚠️'
+            'major_outage'         = '🛑'
+        }
+        $overallIcon = if ($iconMap.ContainsKey($serviceStatus.Status)) { $iconMap[$serviceStatus.Status] } else { 'ℹ️' }
+        Write-Host "`nCloud Status: $overallIcon $($serviceStatus.Status)" -ForegroundColor Cyan
+        foreach ($component in $serviceStatus.Components) {
+            $componentIcon = if ($iconMap.ContainsKey($component.status)) { $iconMap[$component.status] } else { '•' }
+            Write-Host "  $componentIcon $($component.name): $($component.status)" -ForegroundColor Gray
+        }
+    }
+    elseif ($serviceStatus.Message) {
+        Write-Host "`nCloud Status: Unable to reach GitHub status API ($($serviceStatus.Message))" -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "`nCloud Status: Unknown (no data returned)" -ForegroundColor Yellow
+    }
+
+    $actionNormalized = if ($Action) { $Action.Trim().ToLowerInvariant() } else { '' }
+    $shouldInstall = $actionNormalized -in @('install', 'ensure', 'setup', 'fix', 'auto', 'auto-install')
+
+    if ($shouldInstall) {
+        Write-Host "`nAttempting to install missing GitHub Copilot extensions (PowerShell only)..." -ForegroundColor Cyan
+        foreach ($status in $statuses) {
+            if (-not $status.Installed -or -not $status.CliPath) {
+                Write-Host "  Skipping $($status.Editor) (CLI not detected)" -ForegroundColor DarkGray
+                continue
+            }
+
+            $extensionsToEnsure = @(
+                @{ Id = 'GitHub.copilot'; Property = 'CopilotInstalled' },
+                @{ Id = 'GitHub.copilot-chat'; Property = 'CopilotChatInstalled' }
+            )
+
+            foreach ($extension in $extensionsToEnsure) {
+                $property = $status.PSObject.Properties[$extension.Property]
+                if ($property -and $property.Value) {
+                    continue
+                }
+
+                try {
+                    Write-Host "  Installing $($extension.Id) for $($status.Editor)..." -ForegroundColor Yellow
+                    $installOutput = & $status.CliPath '--install-extension' $extension.Id 2>&1
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "    ✓ Installed $($extension.Id)" -ForegroundColor Green
+                    }
+                    else {
+                        Write-Host "    ✗ CLI exited with code $LASTEXITCODE" -ForegroundColor Red
+                        if ($installOutput) {
+                            $formattedOutput = if ($installOutput -is [System.Array]) { $installOutput -join "`n" } else { $installOutput }
+                            Write-Host $formattedOutput -ForegroundColor DarkGray
+                        }
+                    }
+                }
+                catch {
+                    Write-Host "    ✗ Failed to install $($extension.Id): $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+        }
+
+        $statuses = @('VSCode', 'Cursor') | ForEach-Object { Get-EditorCopilotStatus -Editor $_ }
+        & $printSummary $statuses 'Updated status after install attempt'
+    }
+    else {
+        $missingCopilot = $statuses | Where-Object { $_.Installed -and -not $_.CopilotInstalled }
+        if ($missingCopilot) {
+            Write-Host "`nInstall GitHub Copilot locally:" -ForegroundColor Yellow
+            foreach ($status in $missingCopilot) {
+                Write-Host "  $($status.InvocationHint) --install-extension GitHub.copilot" -ForegroundColor White
+            }
+        }
+
+        $missingChat = $statuses | Where-Object { $_.Installed -and -not $_.CopilotChatInstalled }
+        if ($missingChat) {
+            Write-Host "`nInstall GitHub Copilot Chat:" -ForegroundColor Yellow
+            foreach ($status in $missingChat) {
+                Write-Host "  $($status.InvocationHint) --install-extension GitHub.copilot-chat" -ForegroundColor White
+            }
+        }
+    }
+
+    $missingEditors = $statuses | Where-Object { -not $_.Installed }
+    if ($missingEditors) {
+        Write-Host "`nEnable CLI access for these editors to allow automation:" -ForegroundColor Yellow
+        foreach ($editorStatus in $missingEditors) {
+            Write-Host "  - $($editorStatus.Editor): enable '$($editorStatus.InvocationHint)' command in PATH" -ForegroundColor Gray
+        }
+    }
+
+    return $true
+}
+
+# ============================================
+# Language Detection Function (Prevents Hallucinations)
+# ============================================
+
+function Format-ChatText {
+    <#
+    .SYNOPSIS
+        Sanitize and format text for chat display to prevent encoding issues and garbling.
+    
+    .DESCRIPTION
+        Ensures text is properly encoded in UTF-8 and strips problematic control characters
+        that can cause display issues in Windows Forms TextBox controls.
+    
+    .PARAMETER Text
+        Text to sanitize and format
+    
+    .EXAMPLE
+        Format-ChatText -Text "Hello`r`nWorld"
+        Returns properly encoded text safe for TextBox display
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$Text
+    )
+    
+    try {
+        # Remove problematic control characters (keep tab, newline, carriage return)
+        $cleanText = -join ($Text.ToCharArray() | Where-Object { 
+            [int]$_ -ge 9 -and [int]$_ -le 0xD7FF -or 
+            [int]$_ -ge 0xE000 -or
+            [int]$_ -eq 0x000A -or  # Newline
+            [int]$_ -eq 0x000D      # Carriage return
+        })
+        
+        # Normalize line endings to CRLF for Windows Forms
+        $cleanText = $cleanText -replace "`r?`n", "`r`n"
+        
+        # Ensure UTF-8 encoding
+        $utf8 = [System.Text.Encoding]::UTF8
+        $bytes = $utf8.GetBytes($cleanText)
+        $cleanText = $utf8.GetString($bytes)
+        
+        return $cleanText
+    }
+    catch {
+        # Fallback: return original text if sanitization fails
+        Write-DevConsole "Warning: Text sanitization failed: $_" "WARNING"
+        return $Text
+    }
+}
+
+function Get-FileLanguage {
+    <#
+    .SYNOPSIS
+        Detect programming language from file path and content to prevent agent hallucinations.
+    
+    .DESCRIPTION
+        Determines the programming language of a file to ensure agent responses match the file type.
+        Prevents issues like generating Java code for PowerShell files.
+    
+    .PARAMETER Path
+        Path to the file to analyze
+    
+    .EXAMPLE
+        Get-FileLanguage -Path "script.ps1"
+        Returns: "powershell"
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+    
+    # Check file extension first (most reliable)
+    $ext = [System.IO.Path]::GetExtension($Path).ToLower()
+    
+    $extensionMap = @{
+        '.ps1' = 'powershell'
+        '.psm1' = 'powershell'
+        '.psd1' = 'powershell'
+        '.java' = 'java'
+        '.js' = 'javascript'
+        '.ts' = 'typescript'
+        '.py' = 'python'
+        '.c' = 'c'
+        '.cpp' = 'cpp'
+        '.cs' = 'csharp'
+        '.go' = 'go'
+        '.rs' = 'rust'
+        '.rb' = 'ruby'
+        '.php' = 'php'
+        '.html' = 'html'
+        '.css' = 'css'
+        '.json' = 'json'
+        '.xml' = 'xml'
+        '.md' = 'markdown'
+        '.sql' = 'sql'
+        '.sh' = 'bash'
+        '.bat' = 'batch'
+        '.cmd' = 'batch'
+        '.yml' = 'yaml'
+        '.yaml' = 'yaml'
+    }
+    
+    if ($extensionMap.ContainsKey($ext)) {
+        return $extensionMap[$ext]
+    }
+    
+    # Fallback: content-based detection
+    if (Test-Path $Path) {
+        try {
+            $head = (Get-Content -Path $Path -TotalCount 20 -ErrorAction Stop) -join "`n"
+            
+            # PowerShell indicators
+            if ($head -match '^\s*function\s+\w+' -or 
+                $head -match 'param\s*\(' -or 
+                $head -match '\[CmdletBinding\(\)\]' -or
+                $head -match 'Write-Host|Get-Content|Invoke-') {
+                return 'powershell'
+            }
+            
+            # Java indicators
+            if ($head -match '^\s*public\s+class\s+\w+' -or 
+                $head -match '^\s*package\s+\w+' -or
+                $head -match 'import\s+java\.') {
+                return 'java'
+            }
+            
+            # Python indicators
+            if ($head -match '^\s*import\s+\w+|^\s*def\s+\w+|^\s*class\s+\w+:' -or
+                $head -match '__main__|if __name__') {
+                return 'python'
+            }
+        }
+        catch {
+            # If we can't read the file, return unknown
+            return 'unknown'
+        }
+    }
+    
+    return 'unknown'
+}
+
+function Test-FileLanguageMatch {
+    <#
+    .SYNOPSIS
+        Validates that agent response language matches the file being edited.
+    
+    .DESCRIPTION
+        Prevents hallucinations by ensuring code suggestions match the file's language.
+    
+    .PARAMETER FilePath
+        Path to the file being edited
+    
+    .PARAMETER ProposedCode
+        Code snippet proposed by the agent
+    
+    .EXAMPLE
+        Test-FileLanguageMatch -FilePath "script.ps1" -ProposedCode "function Test { ... }"
+        Returns: $true if code looks like PowerShell
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$FilePath,
+        
+        [Parameter(Mandatory)]
+        [string]$ProposedCode
+    )
+    
+    $fileLanguage = Get-FileLanguage -Path $FilePath
+    
+    if ($fileLanguage -eq 'unknown') {
+        return $true  # Can't validate, allow it
+    }
+    
+    # Check if proposed code matches file language
+    $codeIndicators = @{
+        'powershell' = @('function\s+\w+', 'param\s*\(', 'Write-Host', 'Get-', 'Set-', 'Invoke-', '\$', '`n')
+        'java' = @('public\s+class', 'private\s+\w+', 'import\s+java\.', 'System\.out\.print', 'String\s+\w+')
+        'python' = @('def\s+\w+', 'import\s+\w+', 'class\s+\w+:', 'print\s*\(', '__main__')
+        'javascript' = @('function\s+\w+', 'const\s+\w+', 'let\s+\w+', 'console\.log', '=>')
+    }
+    
+    if (-not $codeIndicators.ContainsKey($fileLanguage)) {
+        return $true  # Unknown language, allow it
+    }
+    
+    $indicators = $codeIndicators[$fileLanguage]
+    $matchCount = 0
+    
+    foreach ($pattern in $indicators) {
+        if ($ProposedCode -match $pattern) {
+            $matchCount++
+        }
+    }
+    
+    # If at least one indicator matches, consider it valid
+    return $matchCount -gt 0
+}
+
 function Register-Extension {
     param(
         [string]$Id,
@@ -15204,9 +15869,12 @@ function Load-ModuleExtensions {
             if ($extensionVar) {
                 $extData = $extensionVar.Value
                 
-                # Register the extension
+                # Register the extension - safely extract Language and Capabilities with defaults
+                $langValue = if ($extData.ContainsKey('Language')) { [int]$extData.Language } else { 0 }
+                $capValue = if ($extData.ContainsKey('Capabilities')) { [int]$extData.Capabilities } else { 0 }
+                
                 $extension = Register-Extension -Id $extData.Id -Name $extData.Name -Description $extData.Description `
-                    -Author $extData.Author -Capabilities $extData.Capabilities -Version $extData.Version
+                    -Author $extData.Author -Language $langValue -Capabilities $capValue -Version $extData.Version
                 
                 # Store module reference for cleanup
                 $extension.ModulePath = $moduleFile.FullName
@@ -17656,7 +18324,30 @@ function New-ChatTab {
     $modelCombo.Height = 18
     $modelCombo.Font = New-Object System.Drawing.Font("Segoe UI", 8)
     $modelCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-    $modelCombo.Items.AddRange(@("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder"))
+    
+    # FIX: Dynamically load models from Ollama API instead of hardcoded list
+    try {
+        $availableModels = Get-AvailableModels
+        if ($availableModels -and $availableModels.Count -gt 0) {
+            foreach ($m in $availableModels) {
+                $modelCombo.Items.Add($m) | Out-Null
+            }
+            Write-DevConsole "✅ Loaded $($availableModels.Count) models into chat dropdown" "DEBUG"
+        }
+        else {
+            # Fallback to common models if scan fails
+            $fallbackModels = @("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder", "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M")
+            $modelCombo.Items.AddRange($fallbackModels)
+            Write-DevConsole "⚠️ Using fallback model list (scan returned no models)" "WARNING"
+        }
+    }
+    catch {
+        # Fallback on error
+        $fallbackModels = @("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder", "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M")
+        $modelCombo.Items.AddRange($fallbackModels)
+        Write-DevConsole "⚠️ Error loading models, using fallback: $_" "WARNING"
+    }
+    
     $modelCombo.SelectedItem = if ($Model) { $Model } else { $global:settings.OllamaModel }
     $modelCombo.Margin = New-Object System.Windows.Forms.Padding(0)
     $modelPanel.Controls.Add($modelCombo)
@@ -17826,7 +18517,7 @@ function Send-ChatMessage {
         $message -match "^/dl\s+") {
         
         # Show user message in chat
-        $userText = "You: $message`n"
+        $userText = Format-ChatText -Text "You: $message`n"
         $chatSession.ChatBox.AppendText($userText)
         $chatSession.ChatBox.ScrollToCaret()
         
@@ -17927,8 +18618,8 @@ function Send-ChatMessage {
             Write-DevConsole "❌ Agentic command error: $($_.Exception.Message)" "ERROR"
         }
         
-        # Add AI response to chat
-        $aiText = "AI: $responseMessage`n`n"
+        # Add AI response to chat (with encoding fix)
+        $aiText = Format-ChatText -Text "AI: $responseMessage`n`n"
         $chatSession.ChatBox.AppendText($aiText)
         $chatSession.ChatBox.ScrollToCaret()
         
@@ -17955,7 +18646,7 @@ function Send-ChatMessage {
     # AGENTIC HELP COMMAND
     # ============================================
     if ($message -match "^/(video-help|agentic-help|yt-help|media-help)$" -or $message -match "how do I (search|download|play) (videos?|youtube)") {
-        $userText = "You: $message`n"
+        $userText = Format-ChatText -Text "You: $message`n"
         $chatSession.ChatBox.AppendText($userText)
         $chatSession.ChatBox.ScrollToCaret()
         
@@ -18010,7 +18701,7 @@ function Send-ChatMessage {
         $themeRequest = $matches[1] -or $matches[2]
         $themeRequest = $themeRequest.Trim()
         
-        $userText = "You: $message`n"
+        $userText = Format-ChatText -Text "You: $message`n"
         $chatSession.ChatBox.AppendText($userText)
         $chatSession.ChatBox.ScrollToCaret()
         
@@ -18088,7 +18779,7 @@ function Send-ChatMessage {
         $searchPattern = if ($matches[1] -eq "grep" -or $matches[1] -eq "search-text" -or $matches[1] -eq "search") { $matches[2] } else { $matches[1] }
         $searchPattern = $searchPattern.Trim()
         
-        $userText = "You: $message`n"
+        $userText = Format-ChatText -Text "You: $message`n"
         $chatSession.ChatBox.AppendText($userText)
         $chatSession.ChatBox.ScrollToCaret()
         
@@ -18159,7 +18850,7 @@ function Send-ChatMessage {
         $searchQuery = if ($matches[1] -eq "search" -or $matches[1] -eq "find" -or $matches[1] -eq "codebase-search") { $matches[2] } else { $matches[1] }
         $searchQuery = $searchQuery.Trim()
         
-        $userText = "You: $message`n"
+        $userText = Format-ChatText -Text "You: $message`n"
         $chatSession.ChatBox.AppendText($userText)
         $chatSession.ChatBox.ScrollToCaret()
         
@@ -18225,7 +18916,7 @@ function Send-ChatMessage {
         else { "" }
         $listPath = $listPath.Trim()
         
-        $userText = "You: $message`n"
+        $userText = Format-ChatText -Text "You: $message`n"
         $chatSession.ChatBox.AppendText($userText)
         $chatSession.ChatBox.ScrollToCaret()
         
@@ -18277,7 +18968,7 @@ function Send-ChatMessage {
     
     # Check for /summarize or summarize chat context
     if ($message -match "^/(summarize|summary|context)" -or $message -match "summarize (chat|conversation|context)") {
-        $userText = "You: $message`n"
+        $userText = Format-ChatText -Text "You: $message`n"
         $chatSession.ChatBox.AppendText($userText)
         $chatSession.ChatBox.ScrollToCaret()
         
@@ -18331,7 +19022,7 @@ function Send-ChatMessage {
     }
     
     # Add user message to chat
-    $userText = "You: $message`n"
+    $userText = Format-ChatText -Text "You: $message`n"
     $chatSession.ChatBox.AppendText($userText)
     $chatSession.ChatBox.ScrollToCaret()
     
@@ -18346,8 +19037,8 @@ function Send-ChatMessage {
     $chatSession.InputBox.Text = ""
     $chatSession.LastActivity = Get-Date
     
-    # Show processing indicator
-    $processingText = "AI (processing...): "
+    # Show processing indicator (with encoding fix)
+    $processingText = Format-ChatText -Text "AI (processing...): "
     $chatSession.ChatBox.AppendText($processingText)
     $chatSession.ChatBox.ScrollToCaret()
     
@@ -18503,12 +19194,17 @@ You can help users search code, find files, and navigate the codebase.
                             -not $trackerRef.ChatSession.ChatBox.IsDisposed) {
                             
                             # Safely get current text
+                            # FIX: Use AppendText instead of Text assignment to prevent scroll reset
                             $currentText = if ($trackerRef.ChatSession.ChatBox.Text) { 
                                 $trackerRef.ChatSession.ChatBox.Text 
                             }
                             else { "" }
                             
-                            $trackerRef.ChatSession.ChatBox.Text = $currentText -replace "$([regex]::Escape($trackerRef.ProcessingText))$", "AI: $aiResponse`n`n"
+                            # Remove processing text and append response (with encoding fix)
+                            $newText = $currentText -replace "$([regex]::Escape($trackerRef.ProcessingText))$", ""
+                            $trackerRef.ChatSession.ChatBox.Text = $newText
+                            $formattedResponse = Format-ChatText -Text "AI: $aiResponse`n`n"
+                            $trackerRef.ChatSession.ChatBox.AppendText($formattedResponse)
                             
                             # Keep view anchored at bottom for new messages
                             $trackerRef.ChatSession.ChatBox.SelectionStart = $trackerRef.ChatSession.ChatBox.TextLength
@@ -18535,12 +19231,18 @@ You can help users search code, find files, and navigate the codebase.
                             $trackerRef.ChatSession.ChatBox -and 
                             -not $trackerRef.ChatSession.ChatBox.IsDisposed) {
                             
+                            # FIX: Use AppendText instead of Text assignment to prevent scroll reset
                             $currentText = if ($trackerRef.ChatSession.ChatBox.Text) { 
                                 $trackerRef.ChatSession.ChatBox.Text 
                             }
                             else { "" }
                             
-                            $trackerRef.ChatSession.ChatBox.Text = $currentText -replace "$([regex]::Escape($trackerRef.ProcessingText))$", "AI: Error generating response`n`n"
+                            # Remove processing text and append error message (with encoding fix)
+                            $newText = $currentText -replace "$([regex]::Escape($trackerRef.ProcessingText))$", ""
+                            $trackerRef.ChatSession.ChatBox.Text = $newText
+                            $formattedError = Format-ChatText -Text "AI: Error generating response`n`n"
+                            $trackerRef.ChatSession.ChatBox.AppendText($formattedError)
+                            $trackerRef.ChatSession.ChatBox.ScrollToCaret()
                             
                             # Keep view anchored at bottom even for errors
                             $trackerRef.ChatSession.ChatBox.SelectionStart = $trackerRef.ChatSession.ChatBox.TextLength
@@ -18667,7 +19369,30 @@ function Show-ChatSettings {
     $defaultModelCombo.Location = New-Object System.Drawing.Point(20, 165)
     $defaultModelCombo.Size = New-Object System.Drawing.Size(200, 20)
     $defaultModelCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-    $defaultModelCombo.Items.AddRange(@("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder"))
+    
+    # FIX: Dynamically load models from Ollama API instead of hardcoded list
+    try {
+        $availableModels = Get-AvailableModels
+        if ($availableModels -and $availableModels.Count -gt 0) {
+            foreach ($m in $availableModels) {
+                $defaultModelCombo.Items.Add($m) | Out-Null
+            }
+            Write-DevConsole "✅ Loaded $($availableModels.Count) models into chat settings dropdown" "DEBUG"
+        }
+        else {
+            # Fallback to common models if scan fails
+            $fallbackModels = @("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder", "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M")
+            $defaultModelCombo.Items.AddRange($fallbackModels)
+            Write-DevConsole "⚠️ Using fallback model list in chat settings (scan returned no models)" "WARNING"
+        }
+    }
+    catch {
+        # Fallback on error
+        $fallbackModels = @("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder", "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M")
+        $defaultModelCombo.Items.AddRange($fallbackModels)
+        Write-DevConsole "⚠️ Error loading models in chat settings, using fallback: $_" "WARNING"
+    }
+    
     $defaultModelCombo.SelectedItem = $global:settings.OllamaModel
     $chatSettingsForm.Controls.Add($defaultModelCombo)
     
@@ -23707,11 +24432,15 @@ function Start-ChatJobMonitor {
                                     $processingText = "AI (processing...): "
                             
                                     if ($result.Success) {
-                                        # CRITICAL NULL CHECK: Find and replace the processing indicator
+                                        # FIX: Use AppendText instead of Text assignment to prevent scroll reset
                                         if ($chatSession.ChatBox -and 
                                             -not $chatSession.ChatBox.IsDisposed -and
                                             $chatSession.ChatBox.Text -ne $null) {
-                                            $chatSession.ChatBox.Text = $chatSession.ChatBox.Text -replace [regex]::Escape($processingText), "AI: $($result.Response)`n`n"
+                                            $currentText = $chatSession.ChatBox.Text
+                                            $newText = $currentText -replace [regex]::Escape($processingText), ""
+                                            $chatSession.ChatBox.Text = $newText
+                                            $formattedResponse = Format-ChatText -Text "AI: $($result.Response)`n`n"
+                                            $chatSession.ChatBox.AppendText($formattedResponse)
                                             $chatSession.ChatBox.ScrollToCaret()
                                         }
                                 
@@ -23727,11 +24456,15 @@ function Start-ChatJobMonitor {
                                         Write-DevConsole "✅ Parallel chat response received for tab $($result.TabId)" "SUCCESS"
                                     }
                                     else {
-                                        # CRITICAL NULL CHECK: Verify ChatBox.Text exists before accessing
+                                        # FIX: Use AppendText instead of Text assignment to prevent scroll reset
                                         if ($chatSession.ChatBox -and 
                                             -not $chatSession.ChatBox.IsDisposed -and
                                             $chatSession.ChatBox.Text -ne $null) {
-                                            $chatSession.ChatBox.Text = $chatSession.ChatBox.Text -replace [regex]::Escape($processingText), "AI: Error - $($result.Error)`n`n"
+                                            $currentText = $chatSession.ChatBox.Text
+                                            $newText = $currentText -replace [regex]::Escape($processingText), ""
+                                            $chatSession.ChatBox.Text = $newText
+                                            $formattedError = Format-ChatText -Text "AI: Error - $($result.Error)`n`n"
+                                            $chatSession.ChatBox.AppendText($formattedError)
                                             $chatSession.ChatBox.ScrollToCaret()
                                         }
                                         Write-DevConsole "❌ Parallel chat error for tab $($result.TabId): $($result.Error)" "ERROR"
@@ -29068,6 +29801,7 @@ function Show-CliHelp {
         @{Name = "vscode-search"; Description = "🌐 Search VSCode Marketplace (Live API)"; Options = "-Prompt <search_term>" }
         @{Name = "vscode-install"; Description = "🌐 Install VSCode extension (Live API)"; Options = "-Prompt <extension_id>" }
         @{Name = "vscode-categories"; Description = "🌐 Browse VSCode extension categories"; Options = "" }
+        @{Name = "copilot-status"; Description = "⚙️ Check VS Code/Cursor + GitHub Copilot status"; Options = "[-Prompt install]" }
         @{Name = "diagnose"; Description = "Run comprehensive diagnostic checks"; Options = "" }
         @{Name = "test-editor-settings"; Description = "Test editor settings (colors, fonts, syntax) - no GUI needed"; Options = "" }
         @{Name = "test-file-operations"; Description = "Test file operations (open, save, read) - no GUI needed"; Options = "" }
@@ -29108,6 +29842,8 @@ function Show-CliHelp {
     Write-Host "  .\RawrXD.ps1 -CliMode -Command vscode-popular" -ForegroundColor Cyan
     Write-Host "  .\RawrXD.ps1 -CliMode -Command vscode-search -Prompt 'copilot'" -ForegroundColor Cyan
     Write-Host "  .\RawrXD.ps1 -CliMode -Command vscode-install -Prompt 'GitHub.copilot'" -ForegroundColor Cyan
+    Write-Host "  .\RawrXD.ps1 -CliMode -Command copilot-status" -ForegroundColor Gray
+    Write-Host "  .\RawrXD.ps1 -CliMode -Command copilot-status -Prompt install" -ForegroundColor Gray
     Write-Host ""
     Write-Host "🎬 Video Engine Examples:" -ForegroundColor Magenta
     Write-Host "  .\RawrXD.ps1 -CliMode -Command video-search -Prompt 'python tutorial'" -ForegroundColor Gray
@@ -29170,6 +29906,7 @@ if ($CliMode) {
         "testing"     = Join-Path $handlerPath "testing-handlers.ps1"
         "settings"    = Join-Path $handlerPath "settings-handlers.ps1"
         "agent"       = Join-Path $handlerPath "agent-handlers.ps1"
+        "poshllm"     = Join-Path $handlerPath "poshllm-handlers.ps1"
     }
     
     $exitCode = 0
@@ -29213,6 +29950,28 @@ if ($CliMode) {
         "help" {
             . $handlers["agent"]
             $exitCode = Invoke-HelpHandler
+        }
+        
+        # PoshLLM handlers
+        "poshllm-train" {
+            . $handlers["poshllm"]
+            $exitCode = Invoke-PoshLLMTrainHandler -Name $AgentName -CorpusFile $FilePath
+        }
+        "poshllm-generate" {
+            . $handlers["poshllm"]
+            $exitCode = Invoke-PoshLLMGenerateHandler -Name $AgentName -Prompt $Prompt
+        }
+        "poshllm-list" {
+            . $handlers["poshllm"]
+            $exitCode = Invoke-PoshLLMListHandler
+        }
+        "poshllm-save" {
+            . $handlers["poshllm"]
+            $exitCode = Invoke-PoshLLMSaveHandler -Name $AgentName -Path $FilePath
+        }
+        "poshllm-load" {
+            . $handlers["poshllm"]
+            $exitCode = Invoke-PoshLLMLoadHandler -Name $AgentName -Path $FilePath
         }
         
         # Marketplace handlers
@@ -29364,6 +30123,11 @@ if ($CliMode) {
                     Write-Host "Error installing extension: $($_.Exception.Message)" -ForegroundColor Red
                     $exitCode = 1
                 }
+            }
+        }
+        "copilot-status" {
+            if (-not (Invoke-CliCopilotStatus -Action $Prompt)) {
+                $exitCode = 1
             }
         }
         "vscode-categories" {
