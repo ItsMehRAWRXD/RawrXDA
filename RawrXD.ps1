@@ -9,1066 +9,54 @@
     - Integrated terminal
     - Git version control
     - Agent task automation
-
-.PARAMETER CliMode
-    Run in command-line interface mode without GUI
-
-.PARAMETER Command
-    Command to execute in CLI mode. Available commands:
-    - test-ollama: Test Ollama connection and models
-    - list-models: List available Ollama models
-    - chat: Interactive chat session
-    - analyze-file: Analyze a file with AI
-    - git-status: Show git status
-    - create-agent: Create a new agent task
-    - list-agents: List all agent tasks
-    - marketplace-sync: Sync marketplace catalog
-    - diagnose: Run diagnostic checks
-    - help: Show available commands
-
-.PARAMETER FilePath
-    File path for file-related commands
-
-.PARAMETER Model
-    Ollama model to use (default: llama2)
-
-.PARAMETER Prompt
-    Prompt text for AI commands
-
-.PARAMETER AgentName
-    Name for agent-related commands
-
-.EXAMPLE
-    .\RawrXD.ps1
-    Launch the GUI editor
-
-.EXAMPLE
-    .\RawrXD.ps1 -CliMode -Command test-ollama
-    Test Ollama connection from command line
-
-.EXAMPLE
-    .\RawrXD.ps1 -CliMode -Command chat -Model llama2
-    Start interactive chat session
-
-.EXAMPLE
-    .\RawrXD.ps1 -CliMode -Command analyze-file -FilePath "test.ps1"
-    Analyze a PowerShell file with AI
 #>
+Write-EmergencyLog "Working Directory: $(Get-Location)" "INFO"
+Write-EmergencyLog "Log File: $script:StartupLogFile" "INFO"
+Write-EmergencyLog "═══════════════════════════════════════════════════════" "INFO"
 
-[CmdletBinding()]
-param(
-    [Parameter(Mandatory = $false)]
-    [switch]$CliMode,
+# Strict mode for better error detection
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Continue"  # Changed from Stop to Continue for better startup resilience
+
+# Global error handler with emergency logging
+trap {
+    Write-EmergencyLog "CRITICAL STARTUP ERROR: $_" "ERROR"
+    Write-EmergencyLog "Error Category: $($_.CategoryInfo.Category)" "ERROR" 
+    Write-EmergencyLog "Error Type: $($_.Exception.GetType().Name)" "ERROR"
+    Write-EmergencyLog "Stack Trace: $($_.ScriptStackTrace)" "ERROR"
+    Write-EmergencyLog "Script Line Number: $($_.InvocationInfo.ScriptLineNumber)" "ERROR"
+    Write-EmergencyLog "Position Message: $($_.InvocationInfo.PositionMessage)" "ERROR"
     
-    [Parameter(Mandatory = $false)]
-    [ValidateSet(
-        'test-ollama', 'list-models', 'chat', 'analyze-file', 
-        'git-status', 'create-agent', 'list-agents', 
-        'marketplace-sync', 'marketplace-search', 'marketplace-install', 'list-extensions',
-        'vscode-popular', 'vscode-search', 'vscode-install', 'vscode-categories',
-        'diagnose', 'help',
-        'test-editor-settings', 'test-file-operations', 'test-settings-persistence',
-        'test-visibility', 'check-editor-visibility',
-        'test-all-features', 'get-settings', 'set-setting',
-        'video-search', 'video-download', 'video-play', 'video-help',
-        'browser-navigate', 'browser-screenshot', 'browser-click',
-        'poshllm-train', 'poshllm-generate', 'poshllm-list', 'poshllm-save', 'poshllm-load'
-    )]
-    [string]$Command,
-    
-    [Parameter(Mandatory = $false)]
-    [string]$FilePath,
-    
-    [Parameter(Mandatory = $false)]
-    [string]$Model = "llama2",
-    
-    [Parameter(Mandatory = $false)]
-    [string]$Prompt,
-    
-    [Parameter(Mandatory = $false)]
-    [string]$AgentName,
-    
-    [Parameter(Mandatory = $false)]
-    [string]$SettingName,
-    
-    [Parameter(Mandatory = $false)]
-    [string]$SettingValue,
-    
-    [Parameter(Mandatory = $false)]
-    [string]$URL,
-    
-    [Parameter(Mandatory = $false)]
-    [string]$Selector,
-    
-    [Parameter(Mandatory = $false)]
-    [string]$OutputPath
-)
-
-# Suppress PowerShell's automatic module loading warnings about snap-ins
-# These are harmless warnings in Windows PowerShell 5.1 when modules are already loaded
-# We'll restore warnings after initialization completes
-$global:OriginalWarningPreference = $WarningPreference
-
-# ============================================
-# CRITICAL: Initialize script-level variables BEFORE any code uses them
-# ============================================
-$script:SkipGUIInit = $false
-$script:EmergencyLogPath = Join-Path $PSScriptRoot "logs"
-$script:StartupLogFile = Join-Path $script:EmergencyLogPath "startup_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-$script:ProjectRoot = $PSScriptRoot
-$script:LogConfig = $null
-$global:RawrXDPoshLLMTraining = $false
-
-# Create log directory if it doesn't exist
-if (-not (Test-Path $script:EmergencyLogPath)) {
-    New-Item -ItemType Directory -Path $script:EmergencyLogPath -Force | Out-Null
-}
-
-# Fallback to hardcoded default if PSScriptRoot is unavailable
-if (-not $PSScriptRoot) {
-    Write-Host "[DEBUG] PSScriptRoot is null. Using hardcoded default path." -ForegroundColor Yellow
-    $PSScriptRoot = "C:\Users\HiH8e\OneDrive\Desktop\Powershield"
-}
-
-# Log additional context for debugging
-Write-Host "[DEBUG] PSScriptRoot: $PSScriptRoot" -ForegroundColor Yellow
-Write-Host "[DEBUG] EmergencyLogPath: $script:EmergencyLogPath" -ForegroundColor Yellow
-Write-Host "[DEBUG] LogFile: $logFile" -ForegroundColor Yellow
-
-# Create a simple Write-EmergencyLog function that will be replaced later
-function Write-EmergencyLog {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Message,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$Level = "INFO",
-        
-        [Parameter(Mandatory = $false)]
-        [switch]$NoConsole
-    )
-    
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logEntry = "[$timestamp] [$Level] $Message"
-    
-    if (-not $NoConsole) {
-        $color = switch ($Level) {
-            "ERROR" { "Red" }
-            "WARNING" { "Yellow" }
-            "SUCCESS" { "Green" }
-            "INFO" { "Cyan" }
-            default { "White" }
-        }
-        Write-Host $logEntry -ForegroundColor $color
-    }
-    
-    # Try to log to file
-    try {
-        $logFile = Join-Path $script:EmergencyLogPath "RawrXD.log"
-        Add-Content -Path $logFile -Value $logEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-    }
-    catch {
-        # Silently fail - we can't recursively error
-    }
-}
-
-# Shared helper for opening file nodes from the explorer TreeView
-function Invoke-ExplorerNodeOpen {
-    param(
-        [System.Windows.Forms.TreeNode]$Node
-    )
-
-    if (-not $Node) {
-        return
-    }
-
-    try {
-        if ($Node.Tag -and $Node.Tag -ne "DUMMY") {
-            $filePath = $Node.Tag
-
-            Write-DevConsole "🔍 Double-click detected on: $filePath" "INFO"
-
-            # Basic validation first
-            if (-not (Test-Path $filePath)) {
-        # Enforce visibility after theming (handles cases where previous RTF formatting hides text)
-        if ($script:editor) { Force-EditorVisibility -Editor $script:editor }
-                Write-DevConsole "❌ File not found: $filePath" "ERROR"
-                Write-DevConsole "File not found: $filePath" "ERROR"
-                return
-            }
-
-            if ($Editor) { Force-EditorVisibility -Editor $Editor }
-                Write-DevConsole "ℹ️ Directory double-clicked, ignoring..." "INFO"
-                return
-            }
-
-            # Check if it's a file we can handle
-            $fileInfo = Get-Item $filePath
-            Write-DevConsole "✅ File found: $($fileInfo.Length) bytes" "SUCCESS"
-
-            # Basic size check (increased to 50MB for practicality)
-            if ($fileInfo.Length -gt 50MB) {
-                $sizeMB = [math]::Round($fileInfo.Length / 1MB, 1)
-                $result = [System.Windows.Forms.MessageBox]::Show(
-                    "File is large ($sizeMB MB). This may slow down the editor. Continue?",
-                    "Large File Warning",
-                    [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                    [System.Windows.Forms.MessageBoxIcon]::Question
-                )
-                if ($result -ne [System.Windows.Forms.DialogResult]::Yes) {
-                    Write-DevConsole "⚠️ User cancelled opening large file" "INFO"
-                    return
-                }
-            }
-
-            # Basic extension check for obviously dangerous files
-            $extension = [System.IO.Path]::GetExtension($filePath).ToLower()
-            $binaryExts = @('.exe', '.dll', '.bin', '.obj', '.lib', '.com', '.scr', '.msi', '.cab')
-            if ($extension -in $binaryExts) {
-                $result = [System.Windows.Forms.MessageBox]::Show(
-                    "This appears to be a binary file ($extension). It may not display correctly as text. Open anyway?",
-                    "Binary File Warning",
-                    [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                    [System.Windows.Forms.MessageBoxIcon]::Question
-                )
-                if ($result -ne [System.Windows.Forms.DialogResult]::Yes) {
-                    Write-DevConsole "⚠️ User cancelled opening binary file" "INFO"
-                    return
-                }
-            }
-
-            try {
-                # Read the file content with proper encoding
-                Write-DevConsole "📖 Reading file content..." "INFO"
-                try {
-                    $content = [System.IO.File]::ReadAllText($filePath, [System.Text.Encoding]::UTF8)
-                }
-                catch {
-                    # Fallback to default encoding
-                    $content = [System.IO.File]::ReadAllText($filePath)
-                }
-                Write-DevConsole "✅ File content read successfully: $($content.Length) characters" "SUCCESS"
-
-                # Handle encrypted files (.secure extension)
-                if ($extension -eq '.secure') {
-                    try {
-                        if (Get-Command "Unprotect-SensitiveString" -ErrorAction SilentlyContinue) {
-                            $content = Unprotect-SensitiveString -EncryptedData $content
-                            Write-DevConsole "🔓 Encrypted file decrypted successfully" "SUCCESS"
-                        }
-                        else {
-                            Write-DevConsole "⚠️ Encrypted file detected but no decryption function available" "WARNING"
-                        }
-                    }
-                    catch {
-                        Write-DevConsole "❌ Failed to decrypt file: $_" "ERROR"
-                        $result = [System.Windows.Forms.MessageBox]::Show(
-                            "File appears to be encrypted but decryption failed. Show raw content?",
-                            "Decryption Failed",
-                            [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                            [System.Windows.Forms.MessageBoxIcon]::Question
-                        )
-                        if ($result -ne [System.Windows.Forms.DialogResult]::Yes) {
-                            Write-DevConsole "⚠️ User cancelled opening encrypted file" "INFO"
-                            return
-                        }
-                    }
-                }
-
-                # Assign to editor (this is where the magic happens)
-                if ($script:editor -and $script:editor.IsHandleCreated) {
-                    # Double-click handler is already on UI thread, but use BeginInvoke for safety
-                    $action = [System.Action] {
-                        try {
-                            # Verify editor is still valid
-                            if (-not $script:editor -or $script:editor.IsDisposed) {
-                                Write-DevConsole "❌ Editor is disposed or invalid" "ERROR"
-                                return
-                            }
-
-                            # Clear editor first to ensure clean state
-                            $script:editor.Clear()
-
-                            # Set content - use AppendText for large files to avoid blocking
-                            if ($content.Length -gt 100000) {
-                                # For very large files, use AppendText in chunks
-                                $chunkSize = 50000
-                                $script:editor.Text = ""
-                                for ($i = 0; $i -lt $content.Length; $i += $chunkSize) {
-                                    $chunk = if ($i + $chunkSize -lt $content.Length) {
-                                        $content.Substring($i, $chunkSize)
-                                    }
-                                    else {
-                                        $content.Substring($i)
-                                    }
-                                    $script:editor.AppendText($chunk)
-                                    [System.Windows.Forms.Application]::DoEvents()
-                                }
-                            }
-                            else {
-                                $script:editor.Text = $content
-                            }
-
-                            # CRITICAL: Apply text color to all loaded content
-                            try {
-                                Set-EditorTextColor -Color ([System.Drawing.Color]::FromArgb(220, 220, 220))
-                                Write-DevConsole "Applied text color to loaded file" "DEBUG"
-                            }
-                            catch {
-                                Write-DevConsole "Warning: Could not apply text color to loaded file: $_" "WARNING"
-                            }
-
-                            # Update status label with file info if available (safe check)
-                            $statusLabel = Get-Variable -Name "statusLabel" -Scope Script -ValueOnly -ErrorAction SilentlyContinue
-                            if ($statusLabel) {
-                                $statusLabel.Text = "Opened: $([System.IO.Path]::GetFileName($filePath)) - $([math]::Round($fileInfo.Length / 1KB, 1)) KB"
-                            }
-
-                            # Set syntax highlighting based on extension
-                            if ($script:editor.Tag) {
-                                $script:editor.Tag.FilePath = $filePath
-                            }
-                            else {
-                                $script:editor.Tag = [PSCustomObject]@{ FilePath = $filePath }
-                            }
-
-                            # Delay syntax highlighting to avoid freezing on large files
-                            if ($content.Length -gt 100000) {
-                                $highlightTimer = New-Object System.Windows.Forms.Timer
-                                $highlightTimer.Interval = 750
-                                $highlightTimer.Add_Tick({
-                                        param($sender, $args)
-                                        try {
-                                            $sender.Stop()
-                                            $sender.Dispose()
-                                        }
-                                        catch {
-                                            Write-EmergencyLog "Failed to stop highlight timer: $_" "WARNING"
-                                        }
-                                        try {
-                                            if ($script:editor -and -not $script:editor.IsDisposed -and $script:editor.IsHandleCreated) {
-                                                Apply-SyntaxHighlighting -Editor $script:editor -FilePath $filePath
-                                            }
-                                        }
-                                        catch {
-                                            Write-EmergencyLog "Failed to apply syntax highlighting: $_" "WARNING"
-                                        }
-                                    })
-                                $highlightTimer.Start()
-                            }
-                            else {
-                                # For smaller files, apply immediately
-                                if ($script:editor -and -not $script:editor.IsDisposed -and $script:editor.IsHandleCreated) {
-                                    try {
-                                        Apply-SyntaxHighlighting -Editor $script:editor -FilePath $filePath
-                                    }
-                                    catch {
-                                        Write-DevConsole "⚠️ Syntax highlighting failed: $($_.Exception.Message)" "WARNING"
-                                    }
-                                }
-                            }
-
-                            Write-DevConsole "Setting editor content (safe handler)..." "DEBUG"
-                            Set-EditorContent -Content $content -Editor $script:editor
-                            Write-DevConsole "✅ Editor content set successfully" "DEBUG"
-                        }
-                        catch {
-                            Write-DevConsole "❌ Error setting editor content: $($_.Exception.Message)" "ERROR"
-                            Write-StartupLog "Error setting editor content: $($_.Exception.Message)" "ERROR"
-                            Write-StartupLog "Stack trace: $($_.ScriptStackTrace)" "ERROR"
-                        }
-                    }
-
-                    # Execute on UI thread
-                    if ($form.InvokeRequired) {
-                        $form.BeginInvoke($action) | Out-Null
-                    }
-                    else {
-                        $action.Invoke()
-                    }
-
-                    Write-DevConsole "🎉 File opened successfully in editor! ($($content.Length) characters)" "SUCCESS"
-
-                    # Update last activity if session exists
-                    if ($script:CurrentSession) {
-                        $script:CurrentSession.LastActivity = Get-Date
-                    }
-
-                    # Optional: Add to recent files
-                    if ($script:RecentFiles -and $script:RecentFiles.Count -lt 10) {
-                        if ($filePath -notin $script:RecentFiles) {
-                            $script:RecentFiles.Add($filePath)
-                        }
-                    }
-                }
-                else {
-                    Write-DevConsole "❌ Editor not initialized! Editor object is null." "ERROR"
-                    Write-StartupLog "Editor is not properly initialized. Please restart RawrXD." "ERROR"
-                    [System.Windows.Forms.MessageBox]::Show("Editor is not properly initialized. Please restart RawrXD.", "Editor Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-                }
-            }
-            catch {
-                Write-DevConsole "❌ Error reading file: $_" "ERROR"
-                Write-DevConsole "Error reading file: $($_.Exception.Message)" "ERROR"
-        }
-    }
-    catch {
-        Write-DevConsole "❌ Error in double-click handler: $_" "ERROR"
-        Write-DevConsole "Unexpected error: $($_.Exception.Message)" "ERROR"
-    }
-}
-
-# Wrapper functions for test compatibility
-function Update-FileExplorer {
-    <#
-    .SYNOPSIS
-        Refreshes the file explorer TreeView
-    .DESCRIPTION
-        Updates the file explorer view to reflect current file system state
-    .PARAMETER Path
-        Optional path to focus on after refresh
-    #>
-    param(
-        [string]$Path
-    )
-    
-    try {
-        Write-DevConsole "🔄 Refreshing file explorer..." "INFO"
-        
-        if ($script:explorer) {
-            # If path provided, try to refresh that node
-            if ($Path -and (Test-Path $Path)) {
-                # Find and refresh the node for this path
-                # For now, just clear and reload root nodes
-                $script:explorer.Nodes.Clear()
-                
-                # Reload recent files or default paths
-                if ($script:RecentFiles -and $script:RecentFiles.Count -gt 0) {
-                    foreach ($file in $script:RecentFiles) {
-                        if (Test-Path $file) {
-                            $fileName = [System.IO.Path]::GetFileName($file)
-                            $node = $script:explorer.Nodes.Add($fileName)
-                            $node.Tag = $file
-                        }
-                    }
-                }
-            }
-            else {
-                # Full refresh
-                $script:explorer.Nodes.Clear()
-                if ($script:RecentFiles) {
-                    foreach ($file in $script:RecentFiles) {
-                        if (Test-Path $file) {
-                            $fileName = [System.IO.Path]::GetFileName($file)
-                            $node = $script:explorer.Nodes.Add($fileName)
-                            $node.Tag = $file
-                        }
-                    }
-                }
-            }
-            
-            Write-DevConsole "✅ File explorer refreshed" "SUCCESS"
-        }
-    }
-    catch {
-        Write-DevConsole "❌ Error refreshing file explorer: $_" "ERROR"
-    }
-}
-
-function Open-FileInEditor {
-    <#
-    .SYNOPSIS
-        Opens a file in the editor
-    .DESCRIPTION
-        Loads the specified file into the main editor control
-    .PARAMETER FilePath
-        Path to the file to open
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$FilePath
-    )
-    
-    try {
-        if (-not (Test-Path $FilePath)) {
-            Write-DevConsole "❌ File not found: $FilePath" "ERROR"
-            return $false
-        }
-        
-        Write-DevConsole "📂 Opening file: $FilePath" "INFO"
-        
-        # Use the existing file opening logic
-        $content = [System.IO.File]::ReadAllText($FilePath, [System.Text.Encoding]::UTF8)
-        
-        if ($script:editor -and $script:editor.IsHandleCreated) {
-            $script:editor.Text = $content
-            
-            # Set file path in tag
-            if ($script:editor.Tag) {
-                $script:editor.Tag.FilePath = $FilePath
-            }
-            else {
-                $script:editor.Tag = [PSCustomObject]@{ FilePath = $FilePath }
-            }
-            
-            # Apply syntax highlighting
-            if (Get-Command "Apply-SyntaxHighlighting" -ErrorAction SilentlyContinue) {
-                Apply-SyntaxHighlighting -Editor $script:editor -FilePath $FilePath
-            }
-            
-            Write-DevConsole "✅ File opened successfully" "SUCCESS"
-            return $true
-        }
-        else {
-            Write-DevConsole "❌ Editor not available" "ERROR"
-            return $false
-        }
-    }
-    catch {
-        Write-DevConsole "❌ Error opening file: $_" "ERROR"
-        return $false
-    }
-}
-
-function Save-CurrentFile {
-    <#
-    .SYNOPSIS
-        Saves the current editor content to file
-    .DESCRIPTION
-        Saves the content of the main editor to the current file or prompts for a new file
-    .PARAMETER FilePath
-        Optional file path to save to (if not provided, uses current file or prompts)
-    #>
-    param(
-        [string]$FilePath
-    )
-    
-    try {
-        # Get current file path from editor tag if not provided
-        if (-not $FilePath) {
-            if ($script:editor.Tag -and $script:editor.Tag.FilePath) {
-                $FilePath = $script:editor.Tag.FilePath
-            }
-            else {
-                # Prompt for file path
-                $saveDialog = New-Object System.Windows.Forms.SaveFileDialog
-                $saveDialog.Filter = "All Files (*.*)|*.*|Text Files (*.txt)|*.txt|PowerShell (*.ps1)|*.ps1"
-                $saveDialog.Title = "Save File"
-                
-                if ($saveDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                    $FilePath = $saveDialog.FileName
-                }
-                else {
-                    Write-DevConsole "⚠️ Save cancelled" "INFO"
-                    return $false
-                }
-            }
-        }
-        
-        Write-DevConsole "💾 Saving file: $FilePath" "INFO"
-        
-        if ($script:editor) {
-            $content = $script:editor.Text
-            [System.IO.File]::WriteAllText($FilePath, $content, [System.Text.Encoding]::UTF8)
-            
-            # Update editor tag
-            if ($script:editor.Tag) {
-                $script:editor.Tag.FilePath = $FilePath
-            }
-            else {
-                $script:editor.Tag = [PSCustomObject]@{ FilePath = $FilePath }
-            }
-            
-            Write-DevConsole "✅ File saved successfully" "SUCCESS"
-            return $true
-        }
-        else {
-            Write-DevConsole "❌ Editor not available" "ERROR"
-            return $false
-        }
-    }
-    catch {
-        Write-DevConsole "❌ Error saving file: $_" "ERROR"
-        return $false
-    }
-}
-
-function Open-File {
-    <#
-    .SYNOPSIS
-        Opens a file using file dialog or specified path
-    .DESCRIPTION
-        Wrapper function for opening files, provides file dialog if no path specified
-    .PARAMETER FilePath
-        Optional file path to open
-    #>
-    param(
-        [string]$FilePath
-    )
-    
-    try {
-        # If no path provided, show file dialog
-        if (-not $FilePath) {
-            $openDialog = New-Object System.Windows.Forms.OpenFileDialog
-            $openDialog.Filter = "All Files (*.*)|*.*|Text Files (*.txt)|*.txt|PowerShell (*.ps1)|*.ps1|Markdown (*.md)|*.md"
-            $openDialog.Title = "Open File"
-            
-            if ($openDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $FilePath = $openDialog.FileName
-            }
-            else {
-                Write-DevConsole "⚠️ Open file cancelled" "INFO"
-                return $false
-            }
-        }
-        
-        # Use existing Open-FileInEditor function
-        return (Open-FileInEditor -FilePath $FilePath)
-    }
-    catch {
-        Write-DevConsole "❌ Error in Open-File: $_" "ERROR"
-        return $false
-    }
-}
-
-# NOTE: Double-click event handler for explorer moved to after GUI initialization (around line 7008+)
-# ============================================
-# AGENTIC VIDEO ENGINE & BROWSER CONTROL MODULES
-# ============================================
-# Load browser automation, download manager, and agentic command processor
-try {
-    $browserAutomationPath = Join-Path $script:ProjectRoot "BrowserAutomation.ps1"
-    $downloadManagerPath = Join-Path $script:ProjectRoot "DownloadManager.ps1"
-    $agentCommandProcessorPath = Join-Path $script:ProjectRoot "AgentCommandProcessor.ps1"
-    
-    if (Test-Path $browserAutomationPath) {
-        . $browserAutomationPath
-        Write-EmergencyLog "✅ Loaded BrowserAutomation.ps1 - YouTube search, JS injection, browser control" "SUCCESS"
-    }
-    else {
-        Write-EmergencyLog "⚠️ BrowserAutomation.ps1 not found - browser automation features unavailable" "WARNING"
-    }
-    
-    if (Test-Path $downloadManagerPath) {
-        . $downloadManagerPath
-        Write-EmergencyLog "✅ Loaded DownloadManager.ps1 - Multi-threaded downloads, resume support" "SUCCESS"
-    }
-    else {
-        Write-EmergencyLog "⚠️ DownloadManager.ps1 not found - download features unavailable" "WARNING"
-    }
-    
-    if (Test-Path $agentCommandProcessorPath) {
-        . $agentCommandProcessorPath
-        Write-EmergencyLog "✅ Loaded AgentCommandProcessor.ps1 - Agentic video engine commands" "SUCCESS"
-    }
-    else {
-        Write-EmergencyLog "⚠️ AgentCommandProcessor.ps1 not found - agentic commands unavailable" "WARNING"
-    }
-
-    # Load WebView2 shim (fallback). Search multiple candidate locations to support multi-root workspace.
-    $webView2ShimPrimary = Join-Path $script:ProjectRoot 'WebView2Shim.ps1'
-    $webView2ShimCandidates = @(
-        $webView2ShimPrimary,
-        (Join-Path $script:ProjectRoot '..\professional-nasm-ide\Powershield\WebView2Shim.ps1'),
-        'D:\professional-nasm-ide\Powershield\WebView2Shim.ps1'
-    ) | Get-Unique
-    $webView2ShimLoaded = $false
-    foreach ($shimPath in $webView2ShimCandidates) {
-        try {
-            if (Test-Path $shimPath) {
-                . $shimPath
-                Write-EmergencyLog "✅ Loaded WebView2Shim.ps1 from: $shimPath" "SUCCESS"
-                $webView2ShimLoaded = $true
-                break
-            }
-        }
-        catch {
-            Write-EmergencyLog "⚠️ Failed loading WebView2Shim at $shimPath : $($_.Exception.Message)" "WARNING"
-        }
-    }
-    if (-not $webView2ShimLoaded) {
-        Write-EmergencyLog "⚠️ WebView2Shim.ps1 not found in any known location - fallback unavailable" "WARNING"
-    }
-}
-catch {
-    Write-EmergencyLog "❌ Error loading agentic modules: $($_.Exception.Message)" "ERROR"
-}
-
-# ============================================
-# CRITICAL: Set Windows Forms compatibility settings FIRST
-# Must be called before ANY form objects are created
-# (Skip in CLI mode)
-# ============================================
-if (-not $script:SkipGUIInit) {
-    try {
-        # Ensure assembly is loaded before calling static members to avoid type resolution warnings.
-        if (-not ([Type]::GetType('System.Windows.Forms.Application', $false))) {
-            Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
-        }
-        [System.Windows.Forms.Application]::EnableVisualStyles()
-        [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
-        Write-EmergencyLog "✅ Windows Forms compatibility settings applied (before any form creation)" "SUCCESS"
-    }
-    catch {
-        Write-EmergencyLog "⚠️ Could not set compatibility settings: $($_.Exception.Message)" "WARNING"
-    }
-}
-
-# ============================================
-# ERROR HANDLERS AND STRICT MODE
-# (Skip complex handlers in CLI mode - use simple error handling instead)
-# ============================================
-
-if (-not $script:SkipGUIInit) {
-    # Syntax Error Handler - catches parse errors before they cause popups
-    $script:SyntaxErrorHandler = {
-        param($ErrorRecord)
-        
-        $errorMsg = $ErrorRecord.Exception.Message
-        $lineNumber = if ($ErrorRecord.InvocationInfo) { $ErrorRecord.InvocationInfo.ScriptLineNumber } else { 0 }
-        
-        # Log syntax errors to file instead of showing popup
-        Write-ErrorToFile -ErrorMessage $errorMsg `
-            -ErrorCategory "SYNTAX" `
-            -LineNumber $lineNumber `
-            -StackTrace $ErrorRecord.ScriptStackTrace `
-            -PositionMessage $ErrorRecord.InvocationInfo.PositionMessage
-        
-        Write-EmergencyLog "SYNTAX ERROR at line $lineNumber : $errorMsg" "ERROR"
-        Write-EmergencyLog "Check ERRORS.log for full details" "INFO"
-        
-        # Don't show popup - just log and continue
-        return $true
-    }
-
-    # Strict mode for better error detection
-    Set-StrictMode -Version Latest
-    $ErrorActionPreference = "Continue"  # Changed from Stop to Continue for better startup resilience
-
-    # Set up error view to prevent popups
-    $ErrorView = "NormalView"  # Prevents detailed error popups
-
-    # Register PowerShell error event handler - catches ALL errors and logs to file (NO POPUPS)
-    $errorAction = {
-        param($ErrorRecord)
-        $errorMsg = $ErrorRecord.Exception.Message
-        $errorCategory = $ErrorRecord.CategoryInfo.Category
-        $lineNumber = if ($ErrorRecord.InvocationInfo) { $ErrorRecord.InvocationInfo.ScriptLineNumber } else { 0 }
-        $stackTrace = $ErrorRecord.ScriptStackTrace
-        
-        # Log to file immediately - NO POPUPS
-        if (Get-Command Write-ErrorToFile -ErrorAction SilentlyContinue) {
-            Write-ErrorToFile -ErrorMessage $errorMsg `
-                -ErrorCategory $errorCategory `
-                -LineNumber $lineNumber `
-                -StackTrace $stackTrace `
-                -PositionMessage ""
-        }
-        
-        # Also write directly to ERRORS.log as backup
-        try {
-            # Guard against null path - use fallback if emergency path not set
-            $logBasePath = if ($script:EmergencyLogPath) { $script:EmergencyLogPath } else { $env:TEMP }
-            if (-not $logBasePath) { $logBasePath = [System.IO.Path]::GetTempPath() }
-            
-            $errorLogFile = Join-Path $logBasePath "ERRORS.log"
-            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
-            $errorEntry = "[$timestamp] [ERROR] [$errorCategory] Line $lineNumber : $errorMsg`nStack: $stackTrace`n───────────────────────────────────────────────────────────`n"
-            Add-Content -Path $errorLogFile -Value $errorEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-        }
-        catch {
-            Write-Host "[ERROR] Global error handler failed to write log: $_" -ForegroundColor Red
-        }
-    }
-
-    # Subscribe to error events - catches ALL PowerShell errors
-    $null = Register-EngineEvent PowerShell.Exiting -Action $errorAction -ErrorAction SilentlyContinue
-}
-
-# Enhanced error logging function - logs to file instead of showing popups
-function Write-ErrorToFile {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$ErrorMessage,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$ErrorCategory = "GENERAL",
-        
-        [Parameter(Mandatory = $false)]
-        [int]$LineNumber = 0,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$StackTrace = "",
-        
-        [Parameter(Mandatory = $false)]
-        [string]$PositionMessage = ""
-    )
-    
-    try {
-        $errorLogFile = Join-Path $script:EmergencyLogPath "ERRORS.log"
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
-        
-        $errorEntry = @"
-═══════════════════════════════════════════════════════════
-[$timestamp] ERROR
-Category: $ErrorCategory
-Line: $LineNumber
-Error: $ErrorMessage
-Position: $PositionMessage
+    # Also save critical errors to a separate emergency file
+    $emergencyFile = Join-Path $script:EmergencyLogPath "CRITICAL_ERRORS.log"
+    $criticalEntry = @"
+[$(Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff")] CRITICAL ERROR
+Error: $_
+Category: $($_.CategoryInfo.Category)
+Type: $($_.Exception.GetType().Name)
+Line: $($_.InvocationInfo.ScriptLineNumber)
+Position: $($_.InvocationInfo.PositionMessage)
 Stack Trace:
-$StackTrace
-───────────────────────────────────────────────────────────
+$($_.ScriptStackTrace)
+═════════════════════════════════════════════════════════
 
 "@
-        
-        # Write to error log file
-        Add-Content -Path $errorLogFile -Value $errorEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-        
-        # Also write to critical errors if it's a syntax/parse error
-        if ($ErrorCategory -match "Parse|Syntax|Compile") {
-            $criticalFile = Join-Path $logBasePath "CRITICAL_ERRORS.log"
-            Add-Content -Path $criticalFile -Value $errorEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-        }
-        
-        # Write to startup log as well
-        if ($script:StartupLogFile) {
-            Add-Content -Path $script:StartupLogFile -Value "[$timestamp] [ERROR] $ErrorMessage" -Encoding UTF8 -ErrorAction SilentlyContinue
-        }
+    try {
+        Add-Content -Path $emergencyFile -Value $criticalEntry -Encoding UTF8
     }
-    catch {
-        # Last resort - try to write to temp file
-        try {
-            $tempDir = if ($env:TEMP) { $env:TEMP } else { [System.IO.Path]::GetTempPath() }
-            $tempLog = Join-Path $tempDir "RawrXD_Error_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-            Add-Content -Path $tempLog -Value "[$timestamp] ERROR: $ErrorMessage" -Encoding UTF8 -ErrorAction SilentlyContinue
-        }
-        catch {
-            Write-Host "[CRITICAL] Emergency log failed - cannot write to any location: $_" -ForegroundColor Red
-        }
-    }
-}
-
-# Global error handler with emergency logging - NO POPUPS
-# (Skip in CLI mode)
-if (-not $script:SkipGUIInit) {
-    trap {
-        $errorMsg = $_.Exception.Message
-        $errorCategory = $_.CategoryInfo.Category
-        $errorType = $_.Exception.GetType().Name
-        $lineNumber = $_.InvocationInfo.ScriptLineNumber
-        $position = $_.InvocationInfo.PositionMessage
-        $stackTrace = $_.ScriptStackTrace
-        
-        # Log to file instead of showing popup
-        Write-ErrorToFile -ErrorMessage $errorMsg `
-            -ErrorCategory $errorCategory `
-            -LineNumber $lineNumber `
-            -StackTrace $stackTrace `
-            -PositionMessage $position
-        
-        # Also log to emergency log (console output only, no popup)
-        Write-EmergencyLog "CRITICAL ERROR: $errorMsg" "ERROR"
-        Write-EmergencyLog "Category: $errorCategory | Type: $errorType | Line: $lineNumber" "ERROR"
-        
-        # Check if it's a parse/syntax error
-        if ($errorType -match "ParseException|SyntaxException" -or $errorMsg -match "missing.*catch|missing.*finally|syntax error") {
-            Write-EmergencyLog "SYNTAX/PARSE ERROR DETECTED - Check ERRORS.log for details" "CRITICAL"
-            
-            # Try to provide helpful information
-            if ($errorMsg -match "try.*missing.*catch") {
-                Write-EmergencyLog "Try block missing catch or finally block at line $lineNumber" "ERROR"
-            }
-        }
-        
-        # Continue execution instead of showing popup
-        continue
-    }
+    catch { }
+    
+    continue
 }
 
 # ============================================
-# CENTRALIZED LOG CONFIGURATION SYSTEM
+# ENHANCED STARTUP LOGGER SYSTEM  
 # ============================================
 
-<#
-.SYNOPSIS
-    Centralized logging configuration for RawrXD application
-.DESCRIPTION
-    Defines log formats, storage locations, retention policies, and analysis settings
-    for all logging subsystems in the application.
-#>
-
-# Log Configuration - Centralized settings for all logging subsystems
-$script:LogConfig = @{
-    # Base paths and storage locations
-    BasePath         = $script:EmergencyLogPath
-    FallbackPath     = Join-Path $script:ProjectRoot "logs_tmp"
-    ArchivePath      = Join-Path $script:EmergencyLogPath "Archive"
-    
-    # Log file naming patterns
-    FileNamePatterns = @{
-        Startup     = "startup_{0:yyyy-MM-dd}.log"
-        Error       = "ERRORS.log"
-        Critical    = "CRITICAL_ERRORS.log"
-        Security    = "SECURITY_{0:yyyy-MM-dd}.log"
-        Performance = "PERFORMANCE_{0:yyyy-MM-dd}.log"
-        Agent       = "AGENT_{0:yyyy-MM-dd}.log"
-        Network     = "NETWORK_{0:yyyy-MM-dd}.log"
-        Audit       = "AUDIT_{0:yyyy-MM-dd}.log"
-    }
-    
-    # Log entry formats
-    Formats          = @{
-        Standard = "[{0:yyyy-MM-dd HH:mm:ss.fff}] [{1}] {2}"
-        Detailed = "[{0:yyyy-MM-dd HH:mm:ss.fff}] [{1}] [{2}] [{3}] {4}"
-        JSON     = @{
-            Enabled     = $false
-            PrettyPrint = $true
-        }
-    }
-    
-    # Log levels and their priorities
-    Levels           = @{
-        DEBUG    = 0
-        INFO     = 1
-        SUCCESS  = 2
-        WARNING  = 3
-        ERROR    = 4
-        CRITICAL = 5
-    }
-    
-    # Retention policies (in days)
-    Retention        = @{
-        Startup     = 30
-        Error       = 90
-        Critical    = 365
-        Security    = 365
-        Performance = 7
-        Agent       = 14
-        Network     = 14
-        Audit       = 730  # 2 years for audit logs
-    }
-    
-    # Rotation settings
-    Rotation         = @{
-        Enabled         = $true
-        MaxFileSizeMB   = 10
-        MaxFilesPerType = 10
-        CompressOldLogs = $true
-    }
-    
-    # Analysis settings
-    Analysis         = @{
-        EnableMetrics          = $true
-        EnablePatternDetection = $true
-        EnableAnomalyDetection = $false
-        MetricsIntervalMinutes = 5
-    }
-    
-    # Performance settings
-    Performance      = @{
-        AsyncLogging         = $true
-        BufferSize           = 1000
-        FlushIntervalSeconds = 5
-        MaxQueueSize         = 10000
-    }
-}
-
-# Initialize log configuration and create directory structure
-function Initialize-LogConfiguration {
-    <#
-    .SYNOPSIS
-        Initializes the centralized logging configuration system
-    .DESCRIPTION
-        Creates log directory structure, validates paths, and sets up log rotation
-    .OUTPUTS
-        [bool] True if initialization succeeded, false otherwise
-    #>
-    
-    try {
-        Write-EmergencyLog "Initializing centralized log configuration..." "INFO"
-        
-        # Create base log directory
-        if (-not (Test-Path $script:LogConfig.BasePath)) {
-            New-Item -ItemType Directory -Path $script:LogConfig.BasePath -Force | Out-Null
-            Write-EmergencyLog "Created log directory: $($script:LogConfig.BasePath)" "SUCCESS"
-        }
-        
-        # Create archive directory
-        if (-not (Test-Path $script:LogConfig.ArchivePath)) {
-            New-Item -ItemType Directory -Path $script:LogConfig.ArchivePath -Force | Out-Null
-        }
-        
-        # Validate write permissions
-        $testFile = Join-Path $script:LogConfig.BasePath "test_write.tmp"
-        try {
-            "test" | Out-File -FilePath $testFile -ErrorAction Stop
-            Remove-Item $testFile -ErrorAction SilentlyContinue
-        }
-        catch {
-            Write-EmergencyLog "Cannot write to log directory, using fallback: $($script:LogConfig.FallbackPath)" "WARNING"
-            $script:LogConfig.BasePath = $script:LogConfig.FallbackPath
-            if (-not (Test-Path $script:LogConfig.BasePath)) {
-                New-Item -ItemType Directory -Path $script:LogConfig.BasePath -Force | Out-Null
-            }
-        }
-        
-        # Update emergency log path to use centralized config
-        $script:EmergencyLogPath = $script:LogConfig.BasePath
-        $script:StartupLogFile = Join-Path $script:LogConfig.BasePath ($script:LogConfig.FileNamePatterns.Startup -f (Get-Date))
-        
-        Write-EmergencyLog "Log configuration initialized successfully" "SUCCESS"
-        if (Get-Command Ensure-LoadMetrics -ErrorAction SilentlyContinue) { Ensure-LoadMetrics } else { Write-EmergencyLog "Ensure-LoadMetrics not available (will defer)" "DEBUG" }
-        Write-EmergencyLog "Base log path: $($script:LogConfig.BasePath)" "INFO"
-        return $true
-    }
-    catch {
-        Write-EmergencyLog "Failed to initialize log configuration: $($_.Exception.Message)" "ERROR"
-        return $false
-    }
-}
-
-# Get log file path for a specific log type
-function Get-LogFilePath {
-    <#
-    .SYNOPSIS
-        Gets the file path for a specific log type
-    .PARAMETER LogType
-        Type of log (Startup, Error, Critical, Security, Performance, Agent, Network, Audit)
-    .PARAMETER Date
-        Optional date for date-based log files (defaults to current date)
-    .OUTPUTS
-        [string] Full path to the log file
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [ValidateSet("Startup", "Error", "Critical", "Security", "Performance", "Agent", "Network", "Audit")]
-        [string]$LogType,
-        
-        [Parameter(Mandatory = $false)]
-        [DateTime]$Date = (Get-Date)
-    )
-    
-    try {
-        if ($script:LogConfig.FileNamePatterns.ContainsKey($LogType)) {
-            $fileName = $script:LogConfig.FileNamePatterns[$LogType] -f $Date
-            return Join-Path $script:LogConfig.BasePath $fileName
-        }
-        else {
-            Write-EmergencyLog "Unknown log type: $LogType" "WARNING"
-            return Join-Path $script:LogConfig.BasePath "UNKNOWN.log"
-        }
-    }
-    catch {
-        Write-EmergencyLog "Error getting log file path: $($_.Exception.Message)" "ERROR"
-        return Join-Path $script:LogConfig.FallbackPath "FALLBACK.log"
-    }
-}
+# Startup logger function - enhanced with emergency fallback
 function Write-StartupLog {
     param(
-        [Parameter(Mandatory = $true)]
         [string]$Message,
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("INFO", "WARNING", "ERROR", "CRITICAL", "SUCCESS", "DEBUG")]
         [string]$Level = "INFO"
     )
     
@@ -1097,7 +85,6 @@ function Write-StartupLog {
         # Also output to console for immediate feedback
         $color = switch ($Level) {
             "ERROR" { "Red" }
-            "CRITICAL" { "Red" }
             "WARNING" { "Yellow" }
             "SUCCESS" { "Green" }
             "DEBUG" { "Gray" }
@@ -1108,11 +95,9 @@ function Write-StartupLog {
     }
     catch {
         # Last resort - console output only
-        Write-Host "[$Level] $Message" -ForegroundColor $(if ($Level -eq "ERROR" -or $Level -eq "CRITICAL") { "Red" } else { "Yellow" })
+        Write-Host "[$Level] $Message" -ForegroundColor $(if ($Level -eq "ERROR") { "Red" }else { "Yellow" })
     }
-
 }
-
 
 # ============================================
 # ADVANCED ERROR HANDLING & NOTIFICATION SYSTEM
@@ -1156,7 +141,7 @@ function Register-ErrorHandler {
         [string]$ErrorMessage,
         
         [Parameter(Mandatory = $false)]
-        [ValidateSet("CRITICAL", "SECURITY", "NETWORK", "FILESYSTEM", "UI", "OLLAMA", "AUTH", "PERFORMANCE", "TELEMETRY")]
+        [ValidateSet("CRITICAL", "SECURITY", "NETWORK", "FILESYSTEM", "UI", "OLLAMA", "AUTH", "PERFORMANCE")]
         [string]$ErrorCategory = "UI",
         
         [Parameter(Mandatory = $false)]
@@ -1196,7 +181,7 @@ function Register-ErrorHandler {
         Category       = $ErrorCategory
         Severity       = $Severity
         SourceFunction = $SourceFunction
-        SessionId      = if ($script:CurrentSession -and $script:CurrentSession.SessionId) { $script:CurrentSession.SessionId } else { "Unknown" }
+        SessionId      = $script:CurrentSession.SessionId
         ProcessId      = $PID
         UserContext    = [Environment]::UserName
         MachineName    = [Environment]::MachineName
@@ -1223,8 +208,8 @@ function Register-ErrorHandler {
         Write-SecurityLog "Application error" "ERROR" "$ErrorCategory - $ErrorMessage"
     }
     
-    # Log to Windows Event Log (requires admin)
-    if ($script:ErrorNotificationConfig.LogToEventLog -and $script:IsAdmin) {
+    # Log to Windows Event Log
+    if ($script:ErrorNotificationConfig.LogToEventLog) {
         try {
             if (-not ([System.Diagnostics.EventLog]::SourceExists("RawrXD"))) {
                 [System.Diagnostics.EventLog]::CreateEventSource("RawrXD", "Application")
@@ -1255,9 +240,7 @@ function Register-ErrorHandler {
         try {
             [System.Media.SystemSounds]::Exclamation.Play()
         }
-        catch {
-            Write-StartupLog "Failed to play sound notification: $_" "DEBUG"
-        }
+        catch { }
     }
     
     # Email notification for critical errors
@@ -1274,83 +257,34 @@ function Show-ErrorNotification {
     
     try {
         # ALWAYS use logging instead of popups - non-intrusive error handling
-        # NEVER show popups - log to file immediately
         $message = "$($ErrorRecord.Message) | Category: $($ErrorRecord.Category) | Time: $($ErrorRecord.Timestamp)"
         if ($ErrorRecord.SourceFunction) {
             $message += " | Source: $($ErrorRecord.SourceFunction)"
         }
         
-        # ALWAYS write to ERRORS.log file FIRST - NO EXCEPTIONS
-        $errorLogFile = Join-Path $script:EmergencyLogPath "ERRORS.log"
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
-        $severity = if ($ErrorRecord.Severity) { $ErrorRecord.Severity } else { "MEDIUM" }
-        $category = if ($ErrorRecord.Category) { $ErrorRecord.Category } else { "GENERAL" }
-        
-        $errorEntry = @"
-═══════════════════════════════════════════════════════════
-[$timestamp] [$severity] [$category]
-Message: $($ErrorRecord.Message)
-Source: $($ErrorRecord.SourceFunction)
-Category: $category
-Time: $($ErrorRecord.Timestamp)
-───────────────────────────────────────────────────────────
-
-"@
-        
-        # Write to ERRORS.log file - CRITICAL - NO POPUPS
-        Add-Content -Path $errorLogFile -Value $errorEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-        
-        # Also write to CRITICAL_ERRORS.log if severity is CRITICAL
-        if ($severity -eq "CRITICAL") {
-            $criticalFile = Join-Path $script:EmergencyLogPath "CRITICAL_ERRORS.log"
-            Add-Content -Path $criticalFile -Value $errorEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-        }
-        
         # Log to appropriate channel based on severity
-        switch ($severity) {
+        switch ($ErrorRecord.Severity) {
             "CRITICAL" { 
-                Write-ErrorLog -Message $message -Severity "CRITICAL" -ErrorCategory $category -SourceFunction $($ErrorRecord.SourceFunction) -ShowToUser $false
-                if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
-                    Write-DevConsole "CRITICAL ERROR: $message" "ERROR"
-                }
+                Write-ErrorLog -Message $message -Severity "CRITICAL"
+                Write-DevConsole "CRITICAL ERROR: $message" "ERROR"
             }
             "HIGH" { 
-                Write-ErrorLog -Message $message -Severity "HIGH" -ErrorCategory $category -SourceFunction $($ErrorRecord.SourceFunction) -ShowToUser $false
-                if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
-                    Write-DevConsole "HIGH ERROR: $message" "ERROR"
-                }
+                Write-ErrorLog -Message $message -Severity "HIGH"
+                Write-DevConsole "HIGH ERROR: $message" "ERROR"
             }
             "MEDIUM" { 
-                Write-ErrorLog -Message $message -Severity "MEDIUM" -ErrorCategory $category -SourceFunction $($ErrorRecord.SourceFunction) -ShowToUser $false
-                if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
-                    Write-DevConsole "MEDIUM ERROR: $message" "WARNING"
-                }
+                Write-DevConsole "MEDIUM ERROR: $message" "WARNING"
             }
             "LOW" { 
-                Write-ErrorLog -Message $message -Severity "LOW" -ErrorCategory $category -SourceFunction $($ErrorRecord.SourceFunction) -ShowToUser $false
-                if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
-                    Write-DevConsole "LOW ERROR: $message" "INFO"
-                }
+                Write-DevConsole "LOW ERROR: $message" "INFO"
             }
             default { 
-                Write-ErrorLog -Message $message -Severity "MEDIUM" -ErrorCategory $category -SourceFunction $($ErrorRecord.SourceFunction) -ShowToUser $false
-                if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
-                    Write-DevConsole "ERROR: $message" "WARNING"
-                }
+                Write-DevConsole "ERROR: $message" "WARNING"
             }
         }
     }
     catch {
-        # Fallback - write directly to file
-        try {
-            $errorLogFile = Join-Path $script:EmergencyLogPath "ERRORS.log"
-            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
-            $fallbackEntry = "[$timestamp] [CRITICAL] [LOGGING_FAILURE] Failed to log error notification: $($_.Exception.Message)`n───────────────────────────────────────────────────────────`n"
-            Add-Content -Path $errorLogFile -Value $fallbackEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-        }
-        catch {
-            Write-Host "[ERROR] Fallback error logger failed: $_" -ForegroundColor Red
-        }
+        Write-StartupLog "Failed to log error notification: $_" "WARNING"
     }
 }
 
@@ -1784,14 +718,16 @@ function Initialize-WindowsForms {
             }
         }
         
-        # Compatibility settings already applied at script start (before any form creation)
-        Write-EmergencyLog "✅ Windows Forms initialization" "SUCCESS"
-        
         # Test Windows Forms availability
         try {
             $testForm = New-Object System.Windows.Forms.Form -ErrorAction Stop
             $testForm.Dispose()
             Write-EmergencyLog "✅ Windows Forms is functional" "SUCCESS"
+            
+            # Set application compatibility settings
+            [System.Windows.Forms.Application]::EnableVisualStyles()
+            [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
+            Write-EmergencyLog "✅ Application compatibility settings applied" "SUCCESS"
             
             return $true
         }
@@ -1833,7 +769,7 @@ SOLUTIONS:
 4. Check if you're running in a restricted environment (like some CI/CD systems)
 
 PowerShell Version: $($PSVersionTable.PSVersion)
-Platform: $(if ($PSVersionTable.PSObject.Properties["Platform"]) { $PSVersionTable.Platform } else { "Win32NT" })
+Platform: $($PSVersionTable.Platform)
 "@
     
     Write-Host $errorMessage -ForegroundColor Red
@@ -1900,14 +836,7 @@ function Show-ConsoleHelp {
    /models                  - List available AI models
    /status                  - Show AI service status
 
-� EXTENSION MARKETPLACE:
-   /marketplace             - Browse extension marketplace
-   /search <term>           - Search for extensions
-   /install <extension-id>  - Install an extension
-   /list-extensions         - List installed extensions
-   /extension-info <id>     - Show extension details
-
-�📁 FILE COMMANDS:
+📁 FILE COMMANDS:
    /open <file>             - Open file for editing
    /save <file> <content>   - Save content to file  
    /list [path]             - List files and directories
@@ -1915,6 +844,7 @@ function Show-ConsoleHelp {
    /cd <path>               - Change directory
 
 🔍 SEARCH & ANALYSIS:
+   /search <term> [path]    - Search for text in files
    /analyze <file>          - Analyze file for insights
    /errors                  - Show error log dashboard
 
@@ -1925,8 +855,6 @@ function Show-ConsoleHelp {
    /exit                    - Exit RawrXD
 
 ═══════════════════════════════════════════════════════════════════
-💡 TIP: VSCode Marketplace commands fetch real data from Microsoft's API
-    /vscode-popular, /vscode-search, /vscode-install, /vscode-categories
 Type a command to get started, or /help for more information.
 "@ -ForegroundColor Gray
 }
@@ -1947,7 +875,7 @@ function Start-ConsoleInteractiveMode {
             Write-Host "RawrXD> " -NoNewline -ForegroundColor Cyan
             
             # Get user input
-            $userInput = Read-SecureInput -Prompt "Console" -AsSecureString:$false
+            $userInput = Read-Host
             
             if (-not [string]::IsNullOrWhiteSpace($userInput)) {
                 $script:ConsoleHistory += $userInput
@@ -1982,7 +910,7 @@ function Process-ConsoleCommand {
         "/status" {
             Write-Host "📊 RAWRXD STATUS:" -ForegroundColor Cyan
             Write-Host "   PowerShell: $($PSVersionTable.PSVersion)" -ForegroundColor Gray
-            Write-Host "   Platform: $(if ($PSVersionTable.PSObject.Properties["Platform"]) { $PSVersionTable.Platform } else { "Win32NT" })" -ForegroundColor Gray
+            Write-Host "   Platform: $($PSVersionTable.Platform)" -ForegroundColor Gray
             Write-Host "   Windows Forms: $(if ($script:WindowsFormsAvailable) { '✅ Available' } else { '❌ Not Available' })" -ForegroundColor Gray
             Write-Host "   Ollama: $(if ($script:ConsoleOllamaAvailable) { '✅ Available' } else { '❌ Not Available' })" -ForegroundColor Gray
             Write-Host "   Session ID: $($script:CurrentSession.SessionId)" -ForegroundColor Gray
@@ -2034,178 +962,6 @@ function Process-ConsoleCommand {
             }
         }
         
-        "/edit" {
-            if ([string]::IsNullOrEmpty($arguments)) {
-                Write-Host "🔍 Usage: /edit <filename> - Open file in CLI text editor" -ForegroundColor Yellow
-            }
-            else {
-                Start-CLITextEditor $arguments
-            }
-        }
-        
-        "/tree" {
-            if ([string]::IsNullOrEmpty($arguments)) {
-                Show-CLIFileTree (Get-Location).Path
-            }
-            else {
-                Show-CLIFileTree $arguments
-            }
-        }
-        
-        "/tabs" {
-            Show-CLITabs
-        }
-        
-        "/split" {
-            if ([string]::IsNullOrEmpty($arguments)) {
-                Write-Host "🔍 Usage: /split <file1> <file2> - View two files side by side" -ForegroundColor Yellow
-            }
-            else {
-                $files = $arguments -split '\s+', 2
-                if ($files.Length -eq 2) {
-                    Start-CLISplitView $files[0] $files[1]
-                }
-                else {
-                    Write-Host "❌ Split view requires two files" -ForegroundColor Red
-                }
-            }
-        }
-        
-        "/syntax" {
-            if ([string]::IsNullOrEmpty($arguments)) {
-                Write-Host "🔍 Usage: /syntax <filename> - Preview file with syntax highlighting" -ForegroundColor Yellow
-            }
-            else {
-                Show-SyntaxHighlightedFile $arguments
-            }
-        }
-        
-        "/open" {
-            if ([string]::IsNullOrEmpty($arguments)) {
-                Write-Host "🔍 Usage: /open <file> - Open file for viewing" -ForegroundColor Yellow
-            }
-            else {
-                try {
-                    $content = Get-Content $arguments -ErrorAction Stop
-                    Write-Host "📄 File: $arguments" -ForegroundColor Cyan
-                    Write-Host "─────────────────────────────────────────" -ForegroundColor Gray
-                    $content | ForEach-Object { Write-Host $_ -ForegroundColor White }
-                    Write-Host "─────────────────────────────────────────" -ForegroundColor Gray
-                }
-                catch {
-                    Write-Host "❌ Cannot open file: $($_.Exception.Message)" -ForegroundColor Red
-                }
-            }
-        }
-        
-        "/save" {
-            if ([string]::IsNullOrEmpty($arguments)) {
-                Write-Host "🔍 Usage: /save <file> <content> - Save content to file" -ForegroundColor Yellow
-            }
-            else {
-                $parts = $arguments -split '\s+', 2
-                if ($parts.Length -eq 2) {
-                    try {
-                        $parts[1] | Set-Content $parts[0] -ErrorAction Stop
-                        Write-Host "💾 File saved: $($parts[0])" -ForegroundColor Green
-                    }
-                    catch {
-                        Write-Host "❌ Cannot save file: $($_.Exception.Message)" -ForegroundColor Red
-                    }
-                }
-                else {
-                    Write-Host "❌ Save requires filename and content" -ForegroundColor Red
-                }
-            }
-        }
-        
-        "/cd" {
-            if ([string]::IsNullOrEmpty($arguments)) {
-                Write-Host "🔍 Usage: /cd <path> - Change directory" -ForegroundColor Yellow
-            }
-            else {
-                try {
-                    Set-Location $arguments
-                    Write-Host "📁 Changed to: $(Get-Location)" -ForegroundColor Green
-                }
-                catch {
-                    Write-Host "❌ Cannot change to directory: $($_.Exception.Message)" -ForegroundColor Red
-                }
-            }
-        }
-        
-        "/analyze" {
-            if ([string]::IsNullOrEmpty($arguments)) {
-                Write-Host "🔍 Usage: /analyze <file> - Analyze file for insights" -ForegroundColor Yellow
-            }
-            else {
-                try {
-                    $fileInfo = Get-Item $arguments -ErrorAction Stop
-                    Write-Host "🔍 File Analysis: $arguments" -ForegroundColor Cyan
-                    Write-Host "   Size: $($fileInfo.Length) bytes" -ForegroundColor Gray
-                    Write-Host "   Extension: $($fileInfo.Extension)" -ForegroundColor Gray
-                    Write-Host "   Modified: $($fileInfo.LastWriteTime)" -ForegroundColor Gray
-                    
-                    if ($fileInfo.Extension -match '\.(ps1|py|js|json|xml|md|txt)$') {
-                        $content = Get-Content $arguments
-                        Write-Host "   Lines: $($content.Length)" -ForegroundColor Gray
-                        $words = ($content | Out-String) -split '\s+' | Where-Object { $_ }
-                        Write-Host "   Words: $($words.Length)" -ForegroundColor Gray
-                        
-                        if ($script:ConsoleOllamaAvailable -and $fileInfo.Extension -eq '.ps1') {
-                            Write-Host "   🤖 AI Analysis available - use '/ask analyze this PowerShell file: $arguments'" -ForegroundColor Yellow
-                        }
-                    }
-                }
-                catch {
-                    Write-Host "❌ Cannot analyze file: $($_.Exception.Message)" -ForegroundColor Red
-                }
-            }
-        }
-        
-        "/chat" {
-            if ([string]::IsNullOrEmpty($arguments)) {
-                Write-Host "🔍 Usage: /chat <message> - Start AI conversation" -ForegroundColor Yellow
-            }
-            else {
-                if (-not $script:ConsoleOllamaAvailable) {
-                    Write-Host "❌ Ollama service not available. Please start Ollama first." -ForegroundColor Red
-                    return
-                }
-                
-                Write-Host "💬 Starting AI chat session..." -ForegroundColor Cyan
-                try {
-                    $response = Send-OllamaRequest $arguments $OllamaModel
-                    Write-Host "🤖 AI: $response" -ForegroundColor Green
-                    
-                    # Start interactive chat
-                    $chatting = $true
-                    while ($chatting) {
-                        Write-Host ""
-                        Write-Host "You: " -ForegroundColor Yellow -NoNewline
-                        $userMessage = Read-Host
-                        
-                        if ([string]::IsNullOrWhiteSpace($userMessage) -or $userMessage.ToLower() -in @('/exit', '/quit', '/back')) {
-                            $chatting = $false
-                            Write-Host "👋 Chat session ended" -ForegroundColor Cyan
-                        }
-                        else {
-                            try {
-                                $aiResponse = Send-OllamaRequest $userMessage $OllamaModel
-                                Write-Host "🤖 AI: $aiResponse" -ForegroundColor Green
-                            }
-                            catch {
-                                Write-Host "❌ AI Error: $($_.Exception.Message)" -ForegroundColor Red
-                            }
-                        }
-                    }
-                }
-                catch {
-                    Write-Host "❌ Error starting chat: $($_.Exception.Message)" -ForegroundColor Red
-                }
-            }
-        }
-        
         "/pwd" {
             Write-Host "📂 Current Directory: $(Get-Location)" -ForegroundColor Gray
         }
@@ -2214,7 +970,7 @@ function Process-ConsoleCommand {
             $path = if ([string]::IsNullOrWhiteSpace($arguments)) { Get-Location } else { $arguments }
             try {
                 Write-Host "📁 Contents of: $path" -ForegroundColor Cyan
-                Get-ChildItem -Path $path | ForEach-Object {
+                Get-ChildItem $path | ForEach-Object {
                     $icon = if ($_.PSIsContainer) { "📁" } else { "📄" }
                     $size = if (-not $_.PSIsContainer) { " ($($_.Length) bytes)" } else { "" }
                     Write-Host "   $icon $($_.Name)$size" -ForegroundColor Gray
@@ -2260,342 +1016,6 @@ function Process-ConsoleCommand {
             Write-Host "   Debug Mode: $($global:settings.DebugMode)" -ForegroundColor Gray
         }
         
-        "/marketplace" {
-            Write-Host "🛒 Extension Marketplace" -ForegroundColor Cyan
-            Write-Host "Loading extensions..." -ForegroundColor Gray
-            try {
-                $catalog = Load-MarketplaceCatalog -Force
-                Write-Host "Found $($catalog.Count) extensions`n" -ForegroundColor Green
-                
-                # Show top 20 extensions by downloads
-                $topExtensions = $catalog | Sort-Object -Property Downloads -Descending | Select-Object -First 20
-                foreach ($ext in $topExtensions) {
-                    $downloads = if ($ext.Downloads) { "{0:N0}" -f $ext.Downloads } else { "N/A" }
-                    Write-Host "📦 $($ext.Name) " -NoNewline -ForegroundColor White
-                    Write-Host "v$($ext.Version) " -NoNewline -ForegroundColor Gray
-                    Write-Host "by $($ext.Author)" -ForegroundColor DarkGray
-                    Write-Host "   $($ext.Description)" -ForegroundColor Gray
-                    Write-Host "   Downloads: $downloads | Category: $($ext.Category) | ID: $($ext.Id)" -ForegroundColor DarkGray
-                    Write-Host ""
-                }
-                Write-Host "Use '/search <term>' to find specific extensions" -ForegroundColor Yellow
-            }
-            catch {
-                Write-Host "❌ Error loading marketplace: $($_.Exception.Message)" -ForegroundColor Red
-            }
-        }
-        
-        "/search" {
-            if ([string]::IsNullOrWhiteSpace($arguments)) {
-                Write-Host "❌ Please provide a search term. Usage: /search <term>" -ForegroundColor Red
-                return
-            }
-            
-            Write-Host "🔍 Searching for: $arguments" -ForegroundColor Cyan
-            try {
-                $results = Search-Marketplace -Query $arguments -IncludeRemote
-                if ($results.Count -eq 0) {
-                    Write-Host "No extensions found matching '$arguments'" -ForegroundColor Yellow
-                }
-                else {
-                    Write-Host "Found $($results.Count) extension(s):`n" -ForegroundColor Green
-                    foreach ($ext in $results) {
-                        $downloads = if ($ext.Downloads) { "{0:N0}" -f $ext.Downloads } else { "N/A" }
-                        $installed = if ($ext.Installed) { "✅ INSTALLED" } else { "" }
-                        Write-Host "📦 $($ext.Name) " -NoNewline -ForegroundColor White
-                        Write-Host "v$($ext.Version) " -NoNewline -ForegroundColor Gray
-                        Write-Host "$installed" -ForegroundColor Green
-                        Write-Host "   $($ext.Description)" -ForegroundColor Gray
-                        Write-Host "   Author: $($ext.Author) | Downloads: $downloads | ID: $($ext.Id)" -ForegroundColor DarkGray
-                        if ($ext.Tags) {
-                            Write-Host "   Tags: $($ext.Tags -join ', ')" -ForegroundColor DarkGray
-                        }
-                        Write-Host ""
-                    }
-                }
-            }
-            catch {
-                Write-Host "❌ Error searching marketplace: $($_.Exception.Message)" -ForegroundColor Red
-            }
-        }
-        
-        "/install" {
-            if ([string]::IsNullOrWhiteSpace($arguments)) {
-                Write-Host "❌ Please provide an extension ID. Usage: /install <extension-id>" -ForegroundColor Red
-                return
-            }
-            
-            Write-Host "📥 Installing extension: $arguments" -ForegroundColor Cyan
-            try {
-                $results = Search-Marketplace -Query $arguments -IncludeRemote
-                $extension = $results | Where-Object { $_.Id -eq $arguments } | Select-Object -First 1
-                
-                if (-not $extension) {
-                    $extension = $results | Select-Object -First 1
-                }
-                
-                if ($extension) {
-                    Write-Host "Installing: $($extension.Name) v$($extension.Version)" -ForegroundColor Yellow
-                    # Simulate installation
-                    Start-Sleep -Milliseconds 500
-                    Write-Host "✅ Extension '$($extension.Name)' installed successfully!" -ForegroundColor Green
-                    Write-Host "   Note: In CLI mode, extensions are listed but not functionally active." -ForegroundColor DarkGray
-                }
-                else {
-                    Write-Host "❌ Extension not found: $arguments" -ForegroundColor Red
-                }
-            }
-            catch {
-                Write-Host "❌ Error installing extension: $($_.Exception.Message)" -ForegroundColor Red
-            }
-        }
-        
-        "/list-extensions" {
-            Write-Host "📦 Installed Extensions:" -ForegroundColor Cyan
-            try {
-                if ($script:extensionRegistry.Count -eq 0) {
-                    Write-Host "   No extensions installed" -ForegroundColor Gray
-                }
-                else {
-                    foreach ($ext in $script:extensionRegistry) {
-                        $status = if ($ext.Enabled) { "✅ ENABLED" } else { "⏸️ DISABLED" }
-                        Write-Host "📦 $($ext.Name) " -NoNewline -ForegroundColor White
-                        Write-Host "v$($ext.Version) " -NoNewline -ForegroundColor Gray
-                        Write-Host "$status" -ForegroundColor $(if ($ext.Enabled) { "Green" } else { "Yellow" })
-                        Write-Host "   $($ext.Description)" -ForegroundColor Gray
-                        Write-Host "   ID: $($ext.Id)" -ForegroundColor DarkGray
-                        Write-Host ""
-                    }
-                }
-            }
-            catch {
-                Write-Host "❌ Error listing extensions: $($_.Exception.Message)" -ForegroundColor Red
-            }
-        }
-        
-        "/extension-info" {
-            if ([string]::IsNullOrWhiteSpace($arguments)) {
-                Write-Host "❌ Please provide an extension ID. Usage: /extension-info <extension-id>" -ForegroundColor Red
-                return
-            }
-            
-            try {
-                $results = Search-Marketplace -Query $arguments -IncludeRemote -IncludeInstalled
-                $extension = $results | Where-Object { $_.Id -eq $arguments } | Select-Object -First 1
-                
-                if (-not $extension) {
-                    $extension = $results | Select-Object -First 1
-                }
-                
-                if ($extension) {
-                    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-                    Write-Host "📦 $($extension.Name) v$($extension.Version)" -ForegroundColor White
-                    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-                    Write-Host ""
-                    Write-Host "Description:" -ForegroundColor Yellow
-                    Write-Host "   $($extension.Description)" -ForegroundColor Gray
-                    Write-Host ""
-                    Write-Host "Details:" -ForegroundColor Yellow
-                    Write-Host "   ID: $($extension.Id)" -ForegroundColor Gray
-                    Write-Host "   Author: $($extension.Author)" -ForegroundColor Gray
-                    Write-Host "   Version: $($extension.Version)" -ForegroundColor Gray
-                    Write-Host "   Category: $($extension.Category)" -ForegroundColor Gray
-                    if ($extension.Downloads) {
-                        Write-Host "   Downloads: $("{0:N0}" -f $extension.Downloads)" -ForegroundColor Gray
-                    }
-                    if ($extension.Rating) {
-                        Write-Host "   Rating: $($extension.Rating)/5.0" -ForegroundColor Gray
-                    }
-                    if ($extension.Tags) {
-                        Write-Host "   Tags: $($extension.Tags -join ', ')" -ForegroundColor Gray
-                    }
-                    # Safe Source property access (supports PSCustomObject and hashtable forms)
-                    $hasProp = { param($obj,$prop) (($obj -is [hashtable] -and $obj.ContainsKey($prop)) -or ($obj.PSObject.Properties[$prop])) }
-                    if (&$hasProp $extension 'Source' -and $extension.Source) {
-                        Write-Host "   Source: $($extension.Source)" -ForegroundColor Gray
-                    }
-                    Write-Host ""
-                }
-                else {
-                    Write-Host "❌ Extension not found: $arguments" -ForegroundColor Red
-                }
-            }
-            catch {
-                Write-Host "❌ Error getting extension info: $($_.Exception.Message)" -ForegroundColor Red
-            }
-        }
-        
-        "/vscode-popular" {
-            Write-Host "🔥 Fetching Popular VSCode Extensions..." -ForegroundColor Cyan
-            Write-Host "   (Querying official VSCode Marketplace API)" -ForegroundColor Gray
-            Write-Host ""
-            
-            try {
-                $extensions = Get-VSCodeMarketplaceExtensions -PageSize 20
-                
-                if ($extensions.Count -eq 0) {
-                    Write-Host "❌ No extensions found. Check your internet connection." -ForegroundColor Red
-                    return
-                }
-                
-                Write-Host "Found $($extensions.Count) popular extensions from VSCode Marketplace:`n" -ForegroundColor Green
-                
-                $index = 1
-                foreach ($ext in $extensions) {
-                    $downloads = if ($ext.Downloads) { "{0:N0}" -f $ext.Downloads } else { "N/A" }
-                    $ratingStars = if ($ext.Rating -gt 0) { "⭐ $($ext.Rating)/5.0" } else { "" }
-                    
-                    Write-Host "[$index] 📦 $($ext.Name) " -NoNewline -ForegroundColor White
-                    Write-Host "v$($ext.Version) " -NoNewline -ForegroundColor Gray
-                    Write-Host "$ratingStars" -ForegroundColor Yellow
-                    Write-Host "     $($ext.Description)" -ForegroundColor Gray
-                    Write-Host "     By: $($ext.Author) | Downloads: $downloads | Category: $($ext.Category)" -ForegroundColor DarkGray
-                    Write-Host "     ID: $($ext.Id)" -ForegroundColor DarkGray
-                    Write-Host ""
-                    $index++
-                }
-                
-                Write-Host "Use '/vscode-search <term>' to find specific extensions" -ForegroundColor Yellow
-                Write-Host "Use '/vscode-install <extension-id>' to install an extension" -ForegroundColor Yellow
-            }
-            catch {
-                Write-Host "❌ Error fetching VSCode extensions: $($_.Exception.Message)" -ForegroundColor Red
-                Write-Host "   Make sure you have internet connectivity" -ForegroundColor Gray
-            }
-        }
-        
-        "/vscode-search" {
-            if ([string]::IsNullOrWhiteSpace($arguments)) {
-                Write-Host "❌ Please provide a search term. Usage: /vscode-search <term>" -ForegroundColor Red
-                return
-            }
-            
-            Write-Host "🔍 Searching VSCode Marketplace for: $arguments" -ForegroundColor Cyan
-            Write-Host "   (Querying official VSCode Marketplace API)" -ForegroundColor Gray
-            Write-Host ""
-            
-            try {
-                $extensions = Get-VSCodeMarketplaceExtensions -Query $arguments -PageSize 15
-                
-                if ($extensions.Count -eq 0) {
-                    Write-Host "No extensions found matching '$arguments'" -ForegroundColor Yellow
-                    Write-Host "Try a different search term or check /vscode-popular for trending extensions" -ForegroundColor Gray
-                    return
-                }
-                
-                Write-Host "Found $($extensions.Count) extension(s):`n" -ForegroundColor Green
-                
-                foreach ($ext in $extensions) {
-                    $downloads = if ($ext.Downloads) { "{0:N0}" -f $ext.Downloads } else { "N/A" }
-                    $ratingStars = if ($ext.Rating -gt 0) { "⭐ $($ext.Rating)/5.0" } else { "" }
-                    
-                    Write-Host "📦 $($ext.Name) " -NoNewline -ForegroundColor White
-                    Write-Host "v$($ext.Version) " -NoNewline -ForegroundColor Gray
-                    Write-Host "$ratingStars" -ForegroundColor Yellow
-                    Write-Host "   $($ext.Description)" -ForegroundColor Gray
-                    Write-Host "   By: $($ext.Author) | Downloads: $downloads | ID: $($ext.Id)" -ForegroundColor DarkGray
-                    if ($ext.Tags -and $ext.Tags.Count -gt 0) {
-                        $tagStr = ($ext.Tags | Select-Object -First 5) -join ', '
-                        Write-Host "   Tags: $tagStr" -ForegroundColor DarkGray
-                    }
-                    Write-Host ""
-                }
-                
-                Write-Host "Use '/vscode-install <extension-id>' to install an extension" -ForegroundColor Yellow
-            }
-            catch {
-                Write-Host "❌ Error searching VSCode Marketplace: $($_.Exception.Message)" -ForegroundColor Red
-                Write-Host "   Make sure you have internet connectivity" -ForegroundColor Gray
-            }
-        }
-        
-        "/vscode-install" {
-            if ([string]::IsNullOrWhiteSpace($arguments)) {
-                Write-Host "❌ Please provide an extension ID. Usage: /vscode-install <extension-id>" -ForegroundColor Red
-                Write-Host "   Example: /vscode-install GitHub.copilot" -ForegroundColor Gray
-                return
-            }
-            
-            Write-Host "📥 Fetching extension from VSCode Marketplace: $arguments" -ForegroundColor Cyan
-            
-            try {
-                # Search for the specific extension
-                $query = $arguments -replace '.*\.', ''  # Get extension name without publisher
-                $extensions = Get-VSCodeMarketplaceExtensions -Query $query -PageSize 10
-                $extension = $extensions | Where-Object { $_.Id -eq $arguments } | Select-Object -First 1
-                
-                if (-not $extension) {
-                    # Try finding by name match
-                    $extension = $extensions | Where-Object { $_.Id -like "*$arguments*" } | Select-Object -First 1
-                }
-                
-                if ($extension) {
-                    Write-Host ""
-                    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-                    Write-Host "📦 Installing: $($extension.Name)" -ForegroundColor White
-                    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-                    Write-Host "   Version: $($extension.Version)" -ForegroundColor Gray
-                    Write-Host "   Author: $($extension.Author)" -ForegroundColor Gray
-                    Write-Host "   Downloads: $("{0:N0}" -f $extension.Downloads)" -ForegroundColor Gray
-                    if ($extension.Rating -gt 0) {
-                        Write-Host "   Rating: ⭐ $($extension.Rating)/5.0" -ForegroundColor Gray
-                    }
-                    Write-Host "   Source: VSCode Marketplace (Live API)" -ForegroundColor Gray
-                    Write-Host ""
-                    
-                    # Simulate installation with progress
-                    Write-Host "⏳ Downloading extension..." -ForegroundColor Yellow
-                    Start-Sleep -Milliseconds 500
-                    Write-Host "⏳ Installing dependencies..." -ForegroundColor Yellow
-                    Start-Sleep -Milliseconds 500
-                    Write-Host "⏳ Configuring extension..." -ForegroundColor Yellow
-                    Start-Sleep -Milliseconds 500
-                    
-                    Write-Host ""
-                    Write-Host "✅ Extension '$($extension.Name)' installed successfully!" -ForegroundColor Green
-                    Write-Host "   ID: $($extension.Id)" -ForegroundColor Gray
-                    Write-Host "   Note: In CLI mode, extensions are catalogued but not functionally active." -ForegroundColor DarkGray
-                    Write-Host "   Launch GUI mode for full extension functionality." -ForegroundColor DarkGray
-                }
-                else {
-                    Write-Host "❌ Extension not found: $arguments" -ForegroundColor Red
-                    Write-Host "   Try searching first with: /vscode-search <keyword>" -ForegroundColor Gray
-                }
-            }
-            catch {
-                Write-Host "❌ Error installing extension: $($_.Exception.Message)" -ForegroundColor Red
-                Write-Host "   Make sure you have internet connectivity" -ForegroundColor Gray
-            }
-        }
-        
-        "/vscode-categories" {
-            Write-Host "📂 VSCode Extension Categories" -ForegroundColor Cyan
-            Write-Host ""
-            
-            $categories = @(
-                @{ Icon = "🎨"; Name = "Themes"; Desc = "Color themes and icon themes" }
-                @{ Icon = "📝"; Name = "Programming Languages"; Desc = "Language support and syntax highlighting" }
-                @{ Icon = "🐛"; Name = "Debuggers"; Desc = "Debugging tools and extensions" }
-                @{ Icon = "✨"; Name = "Linters"; Desc = "Code quality and linting tools" }
-                @{ Icon = "🎯"; Name = "Formatters"; Desc = "Code formatting utilities" }
-                @{ Icon = "🧪"; Name = "Testing"; Desc = "Test frameworks and runners" }
-                @{ Icon = "📊"; Name = "Data Science"; Desc = "Jupyter, data analysis tools" }
-                @{ Icon = "🤖"; Name = "AI"; Desc = "GitHub Copilot, Amazon Q, etc." }
-                @{ Icon = "☁️"; Name = "Azure"; Desc = "Azure and cloud development" }
-                @{ Icon = "🔌"; Name = "Extension Packs"; Desc = "Bundled extension collections" }
-                @{ Icon = "🌐"; Name = "SCM Providers"; Desc = "Source control management" }
-                @{ Icon = "📚"; Name = "Snippets"; Desc = "Code snippets and templates" }
-            )
-            
-            foreach ($cat in $categories) {
-                Write-Host "$($cat.Icon) $($cat.Name)" -ForegroundColor White
-                Write-Host "   $($cat.Desc)" -ForegroundColor Gray
-                Write-Host ""
-            }
-            
-            Write-Host "Search by category: /vscode-search <category-name>" -ForegroundColor Yellow
-        }
-        
         default {
             if ($Command.StartsWith("/")) {
                 Write-Host "❌ Unknown command: $cmd" -ForegroundColor Red
@@ -2621,1021 +1041,6 @@ function Process-ConsoleCommand {
     }
     
     Write-Host ""  # Add spacing between commands
-}
-
-# ============================================
-# CLI VISUAL EDITOR FUNCTIONS
-# ============================================
-
-# Global CLI editor state
-$script:CLIEditorState = @{
-    CurrentFiles    = @()
-    ActiveTabIndex  = 0
-    SplitView       = $false
-    SplitFiles      = @()
-    FileContents    = @{}
-    CursorPositions = @{}
-    UnsavedChanges  = @{}
-}
-
-function Start-CLITextEditor {
-    param([string]$FilePath)
-    
-    try {
-        $resolvedPath = Resolve-Path $FilePath -ErrorAction Stop
-        $content = Get-Content $resolvedPath -ErrorAction Stop
-        
-        # Add to tabs if not already open
-        if ($script:CLIEditorState.CurrentFiles -notcontains $resolvedPath) {
-            $script:CLIEditorState.CurrentFiles += $resolvedPath
-            $script:CLIEditorState.FileContents[$resolvedPath] = $content
-            $script:CLIEditorState.CursorPositions[$resolvedPath] = @{Line = 0; Column = 0 }
-            $script:CLIEditorState.UnsavedChanges[$resolvedPath] = $false
-        }
-        
-        # Set as active tab
-        $script:CLIEditorState.ActiveTabIndex = $script:CLIEditorState.CurrentFiles.IndexOf($resolvedPath)
-        
-        Show-CLIEditor $resolvedPath
-    }
-    catch {
-        Write-Host "❌ Cannot open file: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Show-CLIEditor {
-    param([string]$FilePath)
-    
-    Clear-Host
-    
-    # Show tab bar
-    Show-CLITabBar
-    
-    Write-Host ""
-    Write-Host "╔══════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                            📝 CLI TEXT EDITOR                                ║" -ForegroundColor Cyan
-    Write-Host "╠══════════════════════════════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host "║ File: $(($FilePath -replace '^.*\\', '') -replace '^.*/', '')" -ForegroundColor White -NoNewline
-    if ($script:CLIEditorState.UnsavedChanges[$FilePath]) {
-        Write-Host " (Modified)" -ForegroundColor Yellow -NoNewline
-    }
-    Write-Host (" " * (75 - ($FilePath -replace '^.*[\\\/]', '').Length)) + "║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-    Write-Host ""
-    
-    # Show file content with line numbers
-    $content = $script:CLIEditorState.FileContents[$FilePath]
-    $cursor = $script:CLIEditorState.CursorPositions[$FilePath]
-    
-    for ($i = 0; $i -lt $content.Length; $i++) {
-        $lineNumber = ($i + 1).ToString().PadLeft(4)
-        $line = $content[$i]
-        
-        if ($i -eq $cursor.Line) {
-            Write-Host "$lineNumber │ " -ForegroundColor Yellow -NoNewline
-            Write-Host $line -ForegroundColor White -BackgroundColor DarkBlue
-        }
-        else {
-            Write-Host "$lineNumber │ " -ForegroundColor Gray -NoNewline
-            Write-Host $line -ForegroundColor White
-        }
-    }
-    
-    Write-Host ""
-    Write-Host "🎯 Commands: /save | /close | /find <text> | /goto <line> | /insert <line> <text> | /delete <line> | /replace <line> <text>" -ForegroundColor Green
-    Write-Host "📋 Navigation: /up | /down | /tabs | /split | /syntax | /tree" -ForegroundColor Cyan
-    Write-Host ""
-    
-    # Start editor command loop
-    Start-CLIEditorLoop $FilePath
-}
-
-function Start-CLIEditorLoop {
-    param([string]$FilePath)
-    
-    $editorRunning = $true
-    while ($editorRunning) {
-        Write-Host "editor> " -ForegroundColor Yellow -NoNewline
-        $command = Read-Host
-        
-        if ([string]::IsNullOrWhiteSpace($command)) { continue }
-        
-        $parts = $command -split '\s+', 3
-        $cmd = $parts[0].ToLower()
-        
-        switch ($cmd) {
-            "/save" {
-                Save-CLIEditorFile $FilePath
-            }
-            "/close" {
-                $editorRunning = $false
-                Remove-CLIEditorTab $FilePath
-            }
-            "/exit" {
-                $editorRunning = $false
-            }
-            "/find" {
-                if ($parts.Length -gt 1) {
-                    Find-CLIEditorText $FilePath $parts[1]
-                }
-            }
-            "/goto" {
-                if ($parts.Length -gt 1 -and $parts[1] -match '^\d+$') {
-                    Set-CLIEditorCursor $FilePath ([int]$parts[1] - 1) 0
-                    Show-CLIEditor $FilePath
-                    return
-                }
-            }
-            "/insert" {
-                if ($parts.Length -gt 2) {
-                    Insert-CLIEditorLine $FilePath ([int]$parts[1] - 1) $parts[2]
-                    Show-CLIEditor $FilePath
-                    return
-                }
-            }
-            "/delete" {
-                if ($parts.Length -gt 1 -and $parts[1] -match '^\d+$') {
-                    Delete-CLIEditorLine $FilePath ([int]$parts[1] - 1)
-                    Show-CLIEditor $FilePath
-                    return
-                }
-            }
-            "/replace" {
-                if ($parts.Length -gt 2) {
-                    Replace-CLIEditorLine $FilePath ([int]$parts[1] - 1) $parts[2]
-                    Show-CLIEditor $FilePath
-                    return
-                }
-            }
-            "/up" {
-                Move-CLIEditorCursor $FilePath -1 0
-                Show-CLIEditor $FilePath
-                return
-            }
-            "/down" {
-                Move-CLIEditorCursor $FilePath 1 0
-                Show-CLIEditor $FilePath
-                return
-            }
-            "/tabs" {
-                Show-CLITabs
-                return
-            }
-            "/split" {
-                if ($parts.Length -gt 1) {
-                    Start-CLISplitView $FilePath $parts[1]
-                    return
-                }
-                else {
-                    Write-Host "Usage: /split <other-file>" -ForegroundColor Yellow
-                }
-            }
-            "/syntax" {
-                Show-SyntaxHighlightedFile $FilePath
-                Read-Host "Press Enter to continue..."
-                Show-CLIEditor $FilePath
-                return
-            }
-            "/tree" {
-                Show-CLIFileTree (Split-Path $FilePath -Parent)
-                Read-Host "Press Enter to continue..."
-                Show-CLIEditor $FilePath
-                return
-            }
-            "/help" {
-                Show-CLIEditorHelp
-            }
-            default {
-                Write-Host "❓ Unknown command: $cmd (Type /help for commands)" -ForegroundColor Red
-            }
-        }
-    }
-}
-
-function Show-CLITabBar {
-    if ($script:CLIEditorState.CurrentFiles.Count -eq 0) { return }
-    
-    Write-Host "📁 Tabs: " -ForegroundColor Cyan -NoNewline
-    
-    for ($i = 0; $i -lt $script:CLIEditorState.CurrentFiles.Count; $i++) {
-        $fileName = ($script:CLIEditorState.CurrentFiles[$i] -replace '^.*[\\\/]', '')
-        
-        if ($i -eq $script:CLIEditorState.ActiveTabIndex) {
-            Write-Host "[$fileName]" -ForegroundColor Yellow -NoNewline
-        }
-        else {
-            Write-Host " $fileName " -ForegroundColor White -NoNewline
-        }
-        
-        if ($script:CLIEditorState.UnsavedChanges[$script:CLIEditorState.CurrentFiles[$i]]) {
-            Write-Host "*" -ForegroundColor Red -NoNewline
-        }
-        
-        if ($i -lt $script:CLIEditorState.CurrentFiles.Count - 1) {
-            Write-Host " | " -ForegroundColor Gray -NoNewline
-        }
-    }
-    Write-Host ""
-}
-
-function Show-CLITabs {
-    Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                                📂 OPEN TABS                                  ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-    Write-Host ""
-    
-    if ($script:CLIEditorState.CurrentFiles.Count -eq 0) {
-        Write-Host "   No files currently open" -ForegroundColor Yellow
-    }
-    else {
-        for ($i = 0; $i -lt $script:CLIEditorState.CurrentFiles.Count; $i++) {
-            $file = $script:CLIEditorState.CurrentFiles[$i]
-            $fileName = $file -replace '^.*[\\\/]', ''
-            $status = if ($script:CLIEditorState.UnsavedChanges[$file]) { " (Modified)" } else { "" }
-            $active = if ($i -eq $script:CLIEditorState.ActiveTabIndex) { "►" } else { " " }
-            
-            Write-Host "$active $($i + 1). $fileName$status" -ForegroundColor $(if ($i -eq $script:CLIEditorState.ActiveTabIndex) { "Yellow" } else { "White" })
-            Write-Host "      Path: $file" -ForegroundColor Gray
-        }
-    }
-    
-    Write-Host ""
-    Write-Host "Commands: /switch <number> | /close <number> | /closeall | /back" -ForegroundColor Green
-    
-    $tabCommand = Read-Host "tab> "
-    $parts = $tabCommand -split '\s+', 2
-    
-    switch ($parts[0].ToLower()) {
-        "/switch" {
-            if ($parts.Length -gt 1 -and $parts[1] -match '^\d+$') {
-                $index = [int]$parts[1] - 1
-                if ($index -ge 0 -and $index -lt $script:CLIEditorState.CurrentFiles.Count) {
-                    $script:CLIEditorState.ActiveTabIndex = $index
-                    Show-CLIEditor $script:CLIEditorState.CurrentFiles[$index]
-                }
-            }
-        }
-        "/close" {
-            if ($parts.Length -gt 1 -and $parts[1] -match '^\d+$') {
-                $index = [int]$parts[1] - 1
-                if ($index -ge 0 -and $index -lt $script:CLIEditorState.CurrentFiles.Count) {
-                    Remove-CLIEditorTab $script:CLIEditorState.CurrentFiles[$index]
-                    Show-CLITabs
-                }
-            }
-        }
-        "/closeall" {
-            $script:CLIEditorState.CurrentFiles = @()
-            $script:CLIEditorState.FileContents = @{}
-            $script:CLIEditorState.CursorPositions = @{}
-            $script:CLIEditorState.UnsavedChanges = @{}
-            $script:CLIEditorState.ActiveTabIndex = 0
-        }
-        "/back" {
-            return
-        }
-        default {
-            if (-not [string]::IsNullOrWhiteSpace($tabCommand)) {
-                Write-Host "❓ Unknown command: $($parts[0])" -ForegroundColor Red
-                Read-Host "Press Enter to continue..."
-                Show-CLITabs
-            }
-        }
-    }
-}
-
-function Show-CLIFileTree {
-    param([string]$RootPath = (Get-Location).Path)
-    
-    Clear-Host
-    Write-Host "╔══════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                            🌳 FILE TREE EXPLORER                             ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "📁 Current Path: $RootPath" -ForegroundColor White
-    Write-Host ""
-    
-    try {
-        # Show directories first
-        $directories = Get-ChildItem $RootPath -Directory | Sort-Object Name
-        foreach ($dir in $directories) {
-            Write-Host "📁 $($dir.Name)/" -ForegroundColor Yellow
-        }
-        
-        # Show files
-        $files = Get-ChildItem $RootPath -File | Sort-Object Name
-        foreach ($file in $files) {
-            $icon = Get-FileIcon $file.Extension
-            $size = Get-FileSizeString $file.Length
-            Write-Host "$icon $($file.Name) ($size)" -ForegroundColor White
-        }
-        
-        if ($directories.Count -eq 0 -and $files.Count -eq 0) {
-            Write-Host "   (Empty directory)" -ForegroundColor Gray
-        }
-    }
-    catch {
-        Write-Host "❌ Cannot access directory: $($_.Exception.Message)" -ForegroundColor Red
-    }
-    
-    Write-Host ""
-    Write-Host "Commands: /cd <dir> | /up | /edit <file> | /view <file> | /back" -ForegroundColor Green
-    
-    $treeCommand = Read-Host "tree> "
-    $parts = $treeCommand -split '\s+', 2
-    
-    switch ($parts[0].ToLower()) {
-        "/cd" {
-            if ($parts.Length -gt 1) {
-                $newPath = Join-Path $RootPath $parts[1]
-                if (Test-Path $newPath -PathType Container) {
-                    Show-CLIFileTree $newPath
-                }
-                else {
-                    Write-Host "❌ Directory not found: $($parts[1])" -ForegroundColor Red
-                    Read-Host "Press Enter to continue..."
-                    Show-CLIFileTree $RootPath
-                }
-            }
-        }
-        "/up" {
-            $parent = Split-Path $RootPath -Parent
-            if ($parent) {
-                Show-CLIFileTree $parent
-            }
-        }
-        "/edit" {
-            if ($parts.Length -gt 1) {
-                $filePath = Join-Path $RootPath $parts[1]
-                if (Test-Path $filePath -PathType Leaf) {
-                    Start-CLITextEditor $filePath
-                }
-                else {
-                    Write-Host "❌ File not found: $($parts[1])" -ForegroundColor Red
-                    Read-Host "Press Enter to continue..."
-                    Show-CLIFileTree $RootPath
-                }
-            }
-        }
-        "/view" {
-            if ($parts.Length -gt 1) {
-                $filePath = Join-Path $RootPath $parts[1]
-                if (Test-Path $filePath -PathType Leaf) {
-                    Show-SyntaxHighlightedFile $filePath
-                    Read-Host "Press Enter to continue..."
-                    Show-CLIFileTree $RootPath
-                }
-            }
-        }
-        "/back" {
-            return
-        }
-        default {
-            if (-not [string]::IsNullOrWhiteSpace($treeCommand)) {
-                Write-Host "❓ Unknown command: $($parts[0])" -ForegroundColor Red
-                Read-Host "Press Enter to continue..."
-                Show-CLIFileTree $RootPath
-            }
-        }
-    }
-}
-
-function Start-CLISplitView {
-    param([string]$File1, [string]$File2)
-    
-    try {
-        $content1 = Get-Content $File1 -ErrorAction Stop
-        $content2 = Get-Content $File2 -ErrorAction Stop
-        
-        Clear-Host
-        Write-Host "╔════════════════════════════════╦════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║         📄 SPLIT VIEW           ║         📄 SPLIT VIEW           ║" -ForegroundColor Cyan
-        Write-Host "╠════════════════════════════════╬════════════════════════════════╣" -ForegroundColor Cyan
-        Write-Host "║ $(($File1 -replace '^.*[\\\/]', '').PadRight(30).Substring(0,30)) ║ $(($File2 -replace '^.*[\\\/]', '').PadRight(30).Substring(0,30)) ║" -ForegroundColor White
-        Write-Host "╚════════════════════════════════╩════════════════════════════════╝" -ForegroundColor Cyan
-        Write-Host ""
-        
-        $maxLines = [Math]::Max($content1.Length, $content2.Length)
-        
-        for ($i = 0; $i -lt $maxLines; $i++) {
-            $line1 = if ($i -lt $content1.Length) { $content1[$i].PadRight(35).Substring(0, 35) } else { " " * 35 }
-            $line2 = if ($i -lt $content2.Length) { $content2[$i].PadRight(35).Substring(0, 35) } else { " " * 35 }
-            
-            $lineNum = ($i + 1).ToString().PadLeft(3)
-            Write-Host "$lineNum │ $line1 │ $line2" -ForegroundColor White
-        }
-        
-        Write-Host ""
-        Write-Host "Commands: /edit1 | /edit2 | /syntax1 | /syntax2 | /back" -ForegroundColor Green
-        
-        $splitCommand = Read-Host "split> "
-        
-        switch ($splitCommand.ToLower()) {
-            "/edit1" { Start-CLITextEditor $File1 }
-            "/edit2" { Start-CLITextEditor $File2 }
-            "/syntax1" { 
-                Show-SyntaxHighlightedFile $File1
-                Read-Host "Press Enter to continue..."
-                Start-CLISplitView $File1 $File2
-            }
-            "/syntax2" { 
-                Show-SyntaxHighlightedFile $File2
-                Read-Host "Press Enter to continue..."
-                Start-CLISplitView $File1 $File2
-            }
-            "/back" { return }
-            default { 
-                if (-not [string]::IsNullOrWhiteSpace($splitCommand)) {
-                    Write-Host "❓ Unknown command: $splitCommand" -ForegroundColor Red
-                    Read-Host "Press Enter to continue..."
-                    Start-CLISplitView $File1 $File2
-                }
-            }
-        }
-    }
-    catch {
-        Write-Host "❌ Cannot open split view: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Show-SyntaxHighlightedFile {
-    param([string]$FilePath)
-    
-    try {
-        $content = Get-Content $FilePath -ErrorAction Stop
-        $extension = [System.IO.Path]::GetExtension($FilePath).ToLower()
-        
-        Clear-Host
-        Write-Host "╔══════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                          🎨 SYNTAX HIGHLIGHTED VIEW                          ║" -ForegroundColor Cyan
-        Write-Host "╠══════════════════════════════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-        Write-Host "║ File: $(($FilePath -replace '^.*[\\\/]', '').PadRight(69).Substring(0,69)) ║" -ForegroundColor White
-        Write-Host "╚══════════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-        Write-Host ""
-        
-        for ($i = 0; $i -lt $content.Length; $i++) {
-            $lineNumber = ($i + 1).ToString().PadLeft(4)
-            $line = $content[$i]
-            
-            Write-Host "$lineNumber │ " -ForegroundColor Gray -NoNewline
-            Write-SyntaxHighlightedLine $line $extension
-        }
-    }
-    catch {
-        Write-Host "❌ Cannot display file: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Write-SyntaxHighlightedLine {
-    param([string]$Line, [string]$Extension)
-    
-    switch ($Extension) {
-        ".ps1" { Write-PowerShellSyntax $Line }
-        ".json" { Write-JsonSyntax $Line }
-        ".xml" { Write-XmlSyntax $Line }
-        ".md" { Write-MarkdownSyntax $Line }
-        ".py" { Write-PythonSyntax $Line }
-        ".js" { Write-JavaScriptSyntax $Line }
-        default { Write-Host $Line -ForegroundColor White }
-    }
-}
-
-function Write-PowerShellSyntax {
-    param([string]$Line)
-    
-    if ($Line -match '^\s*#') {
-        Write-Host $Line -ForegroundColor Green
-    }
-    elseif ($Line -match '\$\w+') {
-        $parts = $Line -split '(\$\w+)'
-        foreach ($part in $parts) {
-            if ($part -match '^\$\w+$') {
-                Write-Host $part -ForegroundColor Yellow -NoNewline
-            }
-            else {
-                Write-Host $part -ForegroundColor White -NoNewline
-            }
-        }
-        Write-Host ""
-    }
-    elseif ($Line -match '(function|if|else|foreach|while|switch|param)') {
-        $keywords = @('function', 'if', 'else', 'foreach', 'while', 'switch', 'param', 'return', 'break', 'continue')
-        $highlighted = $Line
-        foreach ($keyword in $keywords) {
-            $highlighted = $highlighted -replace "\b$keyword\b", "`e[35m$keyword`e[0m"
-        }
-        Write-Host $highlighted -ForegroundColor White
-    }
-    else {
-        Write-Host $Line -ForegroundColor White
-    }
-}
-
-function Write-JsonSyntax {
-    param([string]$Line)
-    
-    if ($Line -match '"[^"]*":') {
-        Write-Host $Line -ForegroundColor Cyan
-    }
-    elseif ($Line -match ':\s*(true|false|null)') {
-        Write-Host $Line -ForegroundColor Yellow
-    }
-    elseif ($Line -match ':\s*\d+') {
-        Write-Host $Line -ForegroundColor Magenta
-    }
-    else {
-        Write-Host $Line -ForegroundColor White
-    }
-}
-
-function Write-XmlSyntax {
-    param([string]$Line)
-    
-    if ($Line -match '<[^>]*>') {
-        Write-Host $Line -ForegroundColor Cyan
-    }
-    else {
-        Write-Host $Line -ForegroundColor White
-    }
-}
-
-function Write-MarkdownSyntax {
-    param([string]$Line)
-    
-    if ($Line -match '^#+\s+') {
-        Write-Host $Line -ForegroundColor Yellow
-    }
-    elseif ($Line -match '^\*\s+' -or $Line -match '^\d+\.\s+') {
-        Write-Host $Line -ForegroundColor Cyan
-    }
-    elseif ($Line -match '`[^`]*`') {
-        Write-Host $Line -ForegroundColor Green
-    }
-    else {
-        Write-Host $Line -ForegroundColor White
-    }
-}
-
-function Write-PythonSyntax {
-    param([string]$Line)
-    
-    if ($Line -match '^\s*#') {
-        Write-Host $Line -ForegroundColor Green
-    }
-    elseif ($Line -match '(def|class|if|else|elif|for|while|import|from|return|break|continue)') {
-        Write-Host $Line -ForegroundColor Yellow
-    }
-    else {
-        Write-Host $Line -ForegroundColor White
-    }
-}
-
-function Write-JavaScriptSyntax {
-    param([string]$Line)
-    
-    if ($Line -match '^\s*//' -or $Line -match '/\*.*\*/') {
-        Write-Host $Line -ForegroundColor Green
-    }
-    elseif ($Line -match '(function|var|let|const|if|else|for|while|return|break|continue)') {
-        Write-Host $Line -ForegroundColor Yellow
-    }
-    else {
-        Write-Host $Line -ForegroundColor White
-    }
-}
-
-# Helper functions for CLI editor operations
-function Save-CLIEditorFile {
-    param([string]$FilePath)
-    
-    try {
-        $script:CLIEditorState.FileContents[$FilePath] | Set-Content $FilePath -ErrorAction Stop
-        $script:CLIEditorState.UnsavedChanges[$FilePath] = $false
-        Write-Host "💾 File saved successfully" -ForegroundColor Green
-    }
-    catch {
-        Write-Host "❌ Cannot save file: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Remove-CLIEditorTab {
-    param([string]$FilePath)
-    
-    $index = $script:CLIEditorState.CurrentFiles.IndexOf($FilePath)
-    if ($index -ge 0) {
-        $script:CLIEditorState.CurrentFiles = $script:CLIEditorState.CurrentFiles | Where-Object { $_ -ne $FilePath }
-        $script:CLIEditorState.FileContents.Remove($FilePath)
-        $script:CLIEditorState.CursorPositions.Remove($FilePath)
-        $script:CLIEditorState.UnsavedChanges.Remove($FilePath)
-        
-        # Adjust active tab index
-        if ($script:CLIEditorState.ActiveTabIndex -ge $script:CLIEditorState.CurrentFiles.Count) {
-            $script:CLIEditorState.ActiveTabIndex = $script:CLIEditorState.CurrentFiles.Count - 1
-        }
-        if ($script:CLIEditorState.ActiveTabIndex -lt 0) {
-            $script:CLIEditorState.ActiveTabIndex = 0
-        }
-    }
-}
-
-function Set-CLIEditorCursor {
-    param([string]$FilePath, [int]$Line, [int]$Column)
-    
-    $maxLine = $script:CLIEditorState.FileContents[$FilePath].Length - 1
-    $Line = [Math]::Max(0, [Math]::Min($Line, $maxLine))
-    
-    $script:CLIEditorState.CursorPositions[$FilePath] = @{Line = $Line; Column = $Column }
-}
-
-function Move-CLIEditorCursor {
-    param([string]$FilePath, [int]$LineDelta, [int]$ColumnDelta)
-    
-    $cursor = $script:CLIEditorState.CursorPositions[$FilePath]
-    $newLine = $cursor.Line + $LineDelta
-    $newColumn = $cursor.Column + $ColumnDelta
-    
-    Set-CLIEditorCursor $FilePath $newLine $newColumn
-}
-
-function Insert-CLIEditorLine {
-    param([string]$FilePath, [int]$LineNumber, [string]$Text)
-    
-    $content = [System.Collections.ArrayList]$script:CLIEditorState.FileContents[$FilePath]
-    $content.Insert($LineNumber, $Text)
-    $script:CLIEditorState.FileContents[$FilePath] = $content.ToArray()
-    $script:CLIEditorState.UnsavedChanges[$FilePath] = $true
-}
-
-function Delete-CLIEditorLine {
-    param([string]$FilePath, [int]$LineNumber)
-    
-    if ($LineNumber -ge 0 -and $LineNumber -lt $script:CLIEditorState.FileContents[$FilePath].Length) {
-        $content = [System.Collections.ArrayList]$script:CLIEditorState.FileContents[$FilePath]
-        $content.RemoveAt($LineNumber)
-        $script:CLIEditorState.FileContents[$FilePath] = $content.ToArray()
-        $script:CLIEditorState.UnsavedChanges[$FilePath] = $true
-    }
-}
-
-function Replace-CLIEditorLine {
-    param([string]$FilePath, [int]$LineNumber, [string]$NewText)
-    
-    if ($LineNumber -ge 0 -and $LineNumber -lt $script:CLIEditorState.FileContents[$FilePath].Length) {
-        $script:CLIEditorState.FileContents[$FilePath][$LineNumber] = $NewText
-        $script:CLIEditorState.UnsavedChanges[$FilePath] = $true
-    }
-}
-
-function Find-CLIEditorText {
-    param([string]$FilePath, [string]$SearchText)
-    
-    $content = $script:CLIEditorState.FileContents[$FilePath]
-    $matches = @()
-    
-    for ($i = 0; $i -lt $content.Length; $i++) {
-        if ($content[$i] -match $SearchText) {
-            $matches += @{Line = $i + 1; Content = $content[$i] }
-        }
-    }
-    
-    if ($matches.Count -gt 0) {
-        Write-Host "🔍 Found $($matches.Count) match(es):" -ForegroundColor Green
-        foreach ($match in $matches) {
-            Write-Host "   Line $($match.Line): $($match.Content)" -ForegroundColor White
-        }
-    }
-    else {
-        Write-Host "🔍 No matches found for '$SearchText'" -ForegroundColor Yellow
-    }
-}
-
-function Get-FileIcon {
-    param([string]$Extension)
-    
-    switch ($Extension.ToLower()) {
-        ".ps1" { "⚡" }
-        ".py" { "🐍" }
-        ".js" { "📜" }
-        ".json" { "📋" }
-        ".xml" { "📄" }
-        ".md" { "📝" }
-        ".txt" { "📃" }
-        ".log" { "📊" }
-        default { "📄" }
-    }
-}
-
-function Get-FileSizeString {
-    param([long]$Bytes)
-    
-    if ($Bytes -lt 1KB) { "$Bytes B" }
-    elseif ($Bytes -lt 1MB) { "{0:N1} KB" -f ($Bytes / 1KB) }
-    elseif ($Bytes -lt 1GB) { "{0:N1} MB" -f ($Bytes / 1MB) }
-    else { "{0:N1} GB" -f ($Bytes / 1GB) }
-}
-
-function Show-CLIEditorHelp {
-    Write-Host ""
-    Write-Host "╔══════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║                           📚 CLI EDITOR HELP                                 ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "📝 EDITING COMMANDS:" -ForegroundColor Yellow
-    Write-Host "   /save                  - Save current file" -ForegroundColor White
-    Write-Host "   /close                 - Close current file" -ForegroundColor White
-    Write-Host "   /insert <line> <text>  - Insert text at line number" -ForegroundColor White
-    Write-Host "   /delete <line>         - Delete line number" -ForegroundColor White
-    Write-Host "   /replace <line> <text> - Replace line with new text" -ForegroundColor White
-    Write-Host ""
-    Write-Host "🔍 NAVIGATION COMMANDS:" -ForegroundColor Yellow
-    Write-Host "   /goto <line>           - Go to line number" -ForegroundColor White
-    Write-Host "   /find <text>           - Find text in file" -ForegroundColor White
-    Write-Host "   /up                    - Move cursor up" -ForegroundColor White
-    Write-Host "   /down                  - Move cursor down" -ForegroundColor White
-    Write-Host ""
-    Write-Host "🗂️ VIEW COMMANDS:" -ForegroundColor Yellow
-    Write-Host "   /tabs                  - Show all open tabs" -ForegroundColor White
-    Write-Host "   /split <file>          - Split view with another file" -ForegroundColor White
-    Write-Host "   /syntax                - Show syntax highlighted view" -ForegroundColor White
-    Write-Host "   /tree                  - Show file tree explorer" -ForegroundColor White
-    Write-Host ""
-    Read-Host "Press Enter to continue..."
-}
-
-# Additional CLI helper functions
-function Show-CLIMarketplace {
-    Write-Host "🛒 Extension Marketplace" -ForegroundColor Cyan
-    Write-Host "Loading extensions..." -ForegroundColor Gray
-    try {
-        $catalog = @(
-            @{Name = "PowerShell Language Support"; Author = "Microsoft"; Version = "1.0.0"; Downloads = 50000; Category = "Language"; Id = "ms-vscode.powershell" }
-            @{Name = "Python Support"; Author = "Microsoft"; Version = "2023.1.0"; Downloads = 75000; Category = "Language"; Id = "ms-python.python" }
-            @{Name = "Git Integration"; Author = "Microsoft"; Version = "1.0.0"; Downloads = 60000; Category = "SCM"; Id = "vscode.git" }
-            @{Name = "JSON Tools"; Author = "Microsoft"; Version = "1.0.0"; Downloads = 40000; Category = "Formatter"; Id = "vscode.json" }
-            @{Name = "Markdown Support"; Author = "Microsoft"; Version = "1.0.0"; Downloads = 45000; Category = "Language"; Id = "vscode.markdown" }
-        )
-        
-        Write-Host "Found $($catalog.Count) extensions`n" -ForegroundColor Green
-        
-        foreach ($ext in $catalog) {
-            $downloads = "{0:N0}" -f $ext.Downloads
-            Write-Host "📦 $($ext.Name) " -NoNewline -ForegroundColor White
-            Write-Host "v$($ext.Version) " -NoNewline -ForegroundColor Gray
-            Write-Host "by $($ext.Author)" -ForegroundColor DarkGray
-            Write-Host "   Downloads: $downloads | Category: $($ext.Category) | ID: $($ext.Id)" -ForegroundColor DarkGray
-            Write-Host ""
-        }
-        Write-Host "Use '/search <term>' to find specific extensions" -ForegroundColor Yellow
-    }
-    catch {
-        Write-Host "❌ Error loading marketplace: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Search-CLIExtensions {
-    param([string]$Query)
-    
-    Write-Host "🔍 Searching for: $Query" -ForegroundColor Cyan
-    $mockResults = @(
-        @{Name = "PowerShell IntelliSense"; Author = "Community"; Version = "1.2.0"; Downloads = 15000; Category = "Language"; Id = "powershell.intellisense"; Installed = $false }
-        @{Name = "Advanced Git Tools"; Author = "GitTools"; Version = "2.1.0"; Downloads = 25000; Category = "SCM"; Id = "git.advanced"; Installed = $false }
-    )
-    
-    $results = $mockResults | Where-Object { $_.Name -like "*$Query*" -or $_.Category -like "*$Query*" }
-    
-    if ($results.Count -eq 0) {
-        Write-Host "No extensions found matching '$Query'" -ForegroundColor Yellow
-    }
-    else {
-        Write-Host "Found $($results.Count) extension(s):`n" -ForegroundColor Green
-        foreach ($ext in $results) {
-            $downloads = "{0:N0}" -f $ext.Downloads
-            $installed = if ($ext.Installed) { "✅ INSTALLED" } else { "" }
-            Write-Host "📦 $($ext.Name) " -NoNewline -ForegroundColor White
-            Write-Host "v$($ext.Version) " -NoNewline -ForegroundColor Gray
-            Write-Host "$installed" -ForegroundColor Green
-            Write-Host "   Author: $($ext.Author) | Downloads: $downloads | ID: $($ext.Id)" -ForegroundColor DarkGray
-            Write-Host ""
-        }
-    }
-}
-
-function Install-CLIExtension {
-    param([string]$ExtensionId)
-    
-    Write-Host "📥 Installing extension: $ExtensionId" -ForegroundColor Cyan
-    Write-Host "✅ Extension installed successfully!" -ForegroundColor Green
-    Write-Host "   Note: In CLI mode, extensions are listed but not functionally active." -ForegroundColor DarkGray
-}
-
-function Show-CLIExtensionsList {
-    Write-Host "📦 Installed Extensions:" -ForegroundColor Cyan
-    Write-Host "   No extensions installed in CLI mode" -ForegroundColor Gray
-    Write-Host "   Use /install <extension-id> to install extensions" -ForegroundColor Yellow
-}
-
-function Show-CLIExtensionInfo {
-    param([string]$ExtensionId)
-    
-    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "📦 Extension Information" -ForegroundColor White
-    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "   ID: $ExtensionId" -ForegroundColor Gray
-    Write-Host "   Status: Not installed" -ForegroundColor Gray
-}
-
-function Open-CLIFile {
-    param([string]$FilePath)
-    
-    try {
-        $content = Get-Content $FilePath -ErrorAction Stop
-        Write-Host "📄 File: $FilePath" -ForegroundColor Cyan
-        Write-Host "─────────────────────────────────────────" -ForegroundColor Gray
-        $content | ForEach-Object { Write-Host $_ -ForegroundColor White }
-        Write-Host "─────────────────────────────────────────" -ForegroundColor Gray
-    }
-    catch {
-        Write-Host "❌ Cannot open file: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Save-CLIFile {
-    param([string]$FilePath, [string]$Content)
-    
-    try {
-        $Content | Set-Content $FilePath -ErrorAction Stop
-        Write-Host "💾 File saved: $FilePath" -ForegroundColor Green
-    }
-    catch {
-        Write-Host "❌ Cannot save file: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Show-CLIDirectoryListing {
-    param([string]$Path)
-    
-    try {
-        Write-Host "📁 Contents of: $Path" -ForegroundColor Cyan
-        Get-ChildItem -Path $Path | ForEach-Object {
-            $icon = if ($_.PSIsContainer) { "📁" } else { Get-FileIcon $_.Extension }
-            $size = if (-not $_.PSIsContainer) { " (" + (Get-FileSizeString $_.Length) + ")" } else { "" }
-            Write-Host "   $icon $($_.Name)$size" -ForegroundColor Gray
-        }
-    }
-    catch {
-        Write-Host "❌ Error listing directory: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Analyze-CLIFile {
-    param([string]$FilePath)
-    
-    try {
-        $fileInfo = Get-Item $FilePath -ErrorAction Stop
-        Write-Host "🔍 File Analysis: $FilePath" -ForegroundColor Cyan
-        Write-Host "   Size: $($fileInfo.Length) bytes" -ForegroundColor Gray
-        Write-Host "   Extension: $($fileInfo.Extension)" -ForegroundColor Gray
-        Write-Host "   Modified: $($fileInfo.LastWriteTime)" -ForegroundColor Gray
-        
-        if ($fileInfo.Extension -match '\.(ps1|py|js|json|xml|md|txt)$') {
-            $content = Get-Content $FilePath
-            Write-Host "   Lines: $($content.Length)" -ForegroundColor Gray
-            $words = ($content | Out-String) -split '\s+' | Where-Object { $_ }
-            Write-Host "   Words: $($words.Length)" -ForegroundColor Gray
-        }
-    }
-    catch {
-        Write-Host "❌ Cannot analyze file: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Show-CLIErrorDashboard {
-    Write-Host "🔍 Error Dashboard" -ForegroundColor Cyan
-    Write-Host "   Recent errors: 0" -ForegroundColor Gray
-    Write-Host "   System status: OK" -ForegroundColor Green
-}
-
-function Show-CLILogs {
-    try {
-        if (Test-Path $script:StartupLogFile) {
-            Write-Host "📋 Recent log entries:" -ForegroundColor Cyan
-            Get-Content $script:StartupLogFile -Tail 20 | ForEach-Object {
-                Write-Host "   $_" -ForegroundColor Gray
-            }
-        }
-        else {
-            Write-Host "❌ Log file not found: $script:StartupLogFile" -ForegroundColor Red
-        }
-    }
-    catch {
-        Write-Host "❌ Error reading logs: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-function Show-CLISettings {
-    Write-Host "⚙️ Current Settings:" -ForegroundColor Cyan
-    Write-Host "   Ollama Model: $OllamaModel" -ForegroundColor Gray
-    Write-Host "   Emergency Log: $script:EmergencyLogPath" -ForegroundColor Gray
-    Write-Host "   Session Timeout: $($script:SecurityConfig.SessionTimeout) seconds" -ForegroundColor Gray
-    Write-Host "   Debug Mode: $($script:DebugMode)" -ForegroundColor Gray
-}
-
-function Start-CLIAIChat {
-    param([string]$InitialMessage)
-    
-    if (-not $script:ConsoleOllamaAvailable) {
-        Write-Host "❌ Ollama service not available. Please start Ollama first." -ForegroundColor Red
-        return
-    }
-    
-    Write-Host "💬 Starting AI chat session..." -ForegroundColor Cyan
-    try {
-        $response = Send-OllamaRequest $InitialMessage $OllamaModel
-        Write-Host "🤖 AI: $response" -ForegroundColor Green
-        
-        # Start interactive chat
-        $chatting = $true
-        while ($chatting) {
-            Write-Host ""
-            Write-Host "You: " -ForegroundColor Yellow -NoNewline
-            $userMessage = Read-Host
-            
-            if ([string]::IsNullOrWhiteSpace($userMessage) -or $userMessage.ToLower() -in @('/exit', '/quit', '/back')) {
-                $chatting = $false
-                Write-Host "👋 Chat session ended" -ForegroundColor Cyan
-            }
-            else {
-                try {
-                    $aiResponse = Send-OllamaRequest $userMessage $OllamaModel
-                    Write-Host "🤖 AI: $aiResponse" -ForegroundColor Green
-                }
-                catch {
-                    Write-Host "❌ AI Error: $($_.Exception.Message)" -ForegroundColor Red
-                }
-            }
-        }
-    }
-    catch {
-        Write-Host "❌ Error starting chat: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-# Update the console help to include new commands
-function Show-ConsoleHelp {
-    param()
-    
-    Write-Host @"
-📋 AVAILABLE COMMANDS:
-═══════════════════════════════════════════════════════════════════
-
-🤖 AI COMMANDS:
-   /ask <question>          - Ask AI a question (requires Ollama)
-   /chat <message>          - Start AI chat conversation
-   /models                  - List available AI models
-   /status                  - Show AI service status
-   /poshllm-train <name> <corpus> - Train a PoshLLM model
-   /poshllm-generate <name> <prompt> - Generate text with PoshLLM
-   /poshllm-list            - List trained PoshLLM models
-   /poshllm-save <name> <path> - Save PoshLLM model to file
-   /poshllm-load <name> <path> - Load PoshLLM model from file
-
-📝 EDITOR COMMANDS:
-   /edit <file>             - Open file in CLI text editor
-   /tree [path]             - Browse files with CLI file tree
-   /tabs                    - View and manage open tabs
-   /split <file1> <file2>   - View two files side by side
-   /syntax <file>           - Preview file with syntax highlighting
-
-📁 FILE COMMANDS:
-   /open <file>             - Open file for viewing
-   /save <file> <content>   - Save content to file  
-   /list [path]             - List files and directories
-   /pwd                     - Show current directory
-   /cd <path>               - Change directory
-
-🔍 SEARCH & ANALYSIS:
-   /analyze <file>          - Analyze file for insights
-   /errors                  - Show error log dashboard
-
-🛍️ EXTENSION MARKETPLACE:
-   /marketplace             - Browse extension marketplace
-   /search <term>           - Search for extensions
-   /install <extension-id>  - Install an extension
-   /list-extensions         - List installed extensions
-   /extension-info <id>     - Show extension details
-
-⚙️ SYSTEM COMMANDS:
-   /settings                - Show current settings
-   /logs                    - View system logs
-   /help                    - Show this help message
-   /exit                    - Exit RawrXD
-
-═══════════════════════════════════════════════════════════════════
-💡 TIP: The CLI editor supports tabs, split view, syntax highlighting!
-    Try /edit myfile.ps1 then use /syntax to see highlighted code.
-Type a command to get started, or /help for more information.
-"@ -ForegroundColor Gray
 }
 
 # ============================================
@@ -3736,20 +1141,11 @@ $script:SecurityConfig = @{
     SecureConnections      = $true
     StealthMode            = $false
     AuthenticationRequired = $false
-    RequireAuthentication  = $false
     SessionTimeout         = 3600  # 1 hour
     MaxLoginAttempts       = 3
     LogSecurityEvents      = $true
     AntiForensics          = $false
     ProcessHiding          = $false
-    MaxFileSize            = 10MB
-    AllowedExtensions      = @('.txt', '.md', '.ps1', '.json', '.xml', '.yaml', '.yml', '.log')
-    DangerousExtensions    = @('.exe', '.bat', '.cmd', '.com', '.scr', '.pif', '.vbs', '.js', '.jar', '.msi')
-    TwoFactorAuth          = $false
-    EnableAuditTrail       = $true
-    LogToEventLog          = $true
-    MaxErrorsPerMinute     = 10
-    SecurityCheckInterval  = 60000  # 1 minute in milliseconds
 }
 
 # Session management
@@ -3884,9 +1280,7 @@ function Enable-StealthMode {
                 $process = Get-Process -Id $PID
                 $process.ProcessName = "svchost"  # This doesn't actually work but shows intent
             }
-            catch {
-                Write-StartupLog "Failed to modify process name (expected to fail): $_" "DEBUG"
-            }
+            catch { }
         }
         
         # Enable anti-forensics measures
@@ -3903,386 +1297,16 @@ function Enable-StealthMode {
 }
 
 function Test-SessionSecurity {
-    <#
-    .SYNOPSIS
-        Tests if the current session is still valid and secure.
-    .DESCRIPTION
-        Performs comprehensive security validation including:
-        - Session timeout validation
-        - Authentication status verification
-        - Session integrity checks
-        - Security configuration validation
-        - Anomaly detection (unusual activity patterns)
-    .OUTPUTS
-        [bool] True if session is secure, false otherwise.
-    .EXAMPLE
-        if (-not (Test-SessionSecurity)) {
-            Show-AuthenticationDialog
-        }
-    #>
-    try {
-        # Validate session object exists
-        if (-not $script:CurrentSession) {
-            Write-SecurityLog "Session security check failed: CurrentSession object is null" "ERROR"
-            Register-ErrorHandler -ErrorMessage "CurrentSession is null" -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Test-SessionSecurity"
-            return $false
-        }
-        
-        # Validate security config exists
-        if (-not $script:SecurityConfig) {
-            Write-SecurityLog "Session security check failed: SecurityConfig object is null" "ERROR"
-            Register-ErrorHandler -ErrorMessage "SecurityConfig is null" -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Test-SessionSecurity"
-            return $false
-        }
-        
-        $currentTime = Get-Date
-        $sessionDuration = ($currentTime - $script:CurrentSession.StartTime).TotalSeconds
+    $currentTime = Get-Date
+    $sessionDuration = ($currentTime - $script:CurrentSession.StartTime).TotalSeconds
     
-        # Validate session ID format (should be GUID)
-        if ($script:CurrentSession.SessionId -and -not ($script:CurrentSession.SessionId -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) {
-            Write-SecurityLog "Invalid session ID format detected: $($script:CurrentSession.SessionId)" "ERROR"
-            Register-ErrorHandler -ErrorMessage "Invalid session ID format" -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Test-SessionSecurity"
-            return $false
-        }
-        
-        # Check session timeout with detailed logging
-        if ($script:SecurityConfig.AuthenticationRequired) {
-            if ($sessionDuration -gt $script:SecurityConfig.SessionTimeout) {
-                Write-SecurityLog "Session timeout exceeded. Duration: $([math]::Round($sessionDuration, 2)) seconds, Limit: $($script:SecurityConfig.SessionTimeout) seconds" "WARNING"
-                Register-ErrorHandler -ErrorMessage "Session timeout exceeded" -ErrorCategory "SECURITY" -Severity "MEDIUM" -SourceFunction "Test-SessionSecurity"
-                return $false
-            }
-            
-            # Log remaining session time for debugging
-            $remainingTime = $script:SecurityConfig.SessionTimeout - $sessionDuration
-            if ($remainingTime -lt 300) {
-                # Less than 5 minutes remaining
-                Write-SecurityLog "Session expiring soon. Remaining time: $([math]::Round($remainingTime, 2)) seconds" "INFO"
-            }
-        }
-        
-        # Validate authentication status if required
-        if ($script:SecurityConfig.AuthenticationRequired -and -not $script:CurrentSession.IsAuthenticated) {
-            Write-SecurityLog "Session not authenticated but authentication is required" "ERROR"
-            Register-ErrorHandler -ErrorMessage "Unauthenticated session" -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Test-SessionSecurity"
-            return $false
-        }
-        
-        # Check for suspicious activity (too many login attempts)
-        if ($script:CurrentSession.LoginAttempts -ge $script:SecurityConfig.MaxLoginAttempts) {
-            Write-SecurityLog "Maximum login attempts exceeded: $($script:CurrentSession.LoginAttempts)" "ERROR"
-            Register-ErrorHandler -ErrorMessage "Maximum login attempts exceeded" -ErrorCategory "SECURITY" -Severity "CRITICAL" -SourceFunction "Test-SessionSecurity"
-            return $false
-        }
-        
-        # Validate session start time is not in the future
-        if ($script:CurrentSession.StartTime -gt $currentTime) {
-            Write-SecurityLog "Invalid session start time (future date): $($script:CurrentSession.StartTime)" "ERROR"
-            Register-ErrorHandler -ErrorMessage "Invalid session start time" -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Test-SessionSecurity"
-            return $false
-        }
-        
-        # Update last activity time
-        $script:CurrentSession.LastActivity = $currentTime
-    
-        return $true
-    }
-    catch {
-        $errorMsg = "Error in session security check: $($_.Exception.Message). Error type: $($_.Exception.GetType().FullName). Stack trace: $($_.ScriptStackTrace)"
-        Write-SecurityLog $errorMsg "ERROR"
-        Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Test-SessionSecurity"
+    # Check session timeout
+    if ($script:SecurityConfig.AuthenticationRequired -and $sessionDuration -gt $script:SecurityConfig.SessionTimeout) {
+        Write-SecurityLog "Session timeout exceeded" "WARNING" "Duration: $sessionDuration seconds"
         return $false
     }
-}
-
-function Test-AuthenticationCredentials {
-    <#
-    .SYNOPSIS
-        Validates authentication credentials with security checks
-    .DESCRIPTION
-        Performs comprehensive credential validation including:
-        - Input sanitization
-        - Credential format validation
-        - Brute force protection with rate limiting
-        - Account lockout checks (5 attempts = 5 minute lockout)
-        - Exponential backoff after repeated failures
-    .PARAMETER Username
-        Username to validate
-    .PARAMETER Password
-        Password to validate
-    .OUTPUTS
-        [hashtable] Result object with Success, Message, and LockoutTime properties
-    .EXAMPLE
-        $result = Test-AuthenticationCredentials -Username "admin" -Password "password123"
-        if ($result.Success) { Write-Host "Authentication successful" }
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Username,
-        
-        [Parameter(Mandatory = $true)]
-        [string]$Password
-    )
     
-    # Initialize login attempt tracking if not exists
-    if (-not (Get-Variable -Name 'LoginAttempts' -Scope Script -ErrorAction SilentlyContinue)) {
-        $script:LoginAttempts = @{
-            FailedCount     = 0
-            LastFailureTime = $null
-            LockedUntil     = $null
-            AttemptHistory  = @()  # Track all attempts for security audit
-        }
-    }
-    
-    try {
-        # Input validation
-        if ([string]::IsNullOrWhiteSpace($Username)) {
-            return @{
-                Success     = $false
-                Message     = "Username cannot be empty"
-                LockoutTime = $null
-            }
-        }
-        
-        if ([string]::IsNullOrWhiteSpace($Password)) {
-            return @{
-                Success     = $false
-                Message     = "Password cannot be empty"
-                LockoutTime = $null
-            }
-        }
-        
-        # Sanitize inputs to prevent injection
-        $sanitizedUsername = $Username.Trim()
-        $sanitizedPassword = $Password
-        
-        # Check for SQL injection patterns (basic check)
-        $dangerousPatterns = @("';", "--", "/*", "*/", "xp_", "sp_", "<script", "javascript:")
-        foreach ($pattern in $dangerousPatterns) {
-            if ($sanitizedUsername -match [regex]::Escape($pattern) -or $sanitizedPassword -match [regex]::Escape($pattern)) {
-                Write-SecurityLog "Potential injection attempt detected in credentials" "ERROR"
-                Register-ErrorHandler -ErrorMessage "Injection pattern detected in credentials" -ErrorCategory "SECURITY" -Severity "CRITICAL" -SourceFunction "Test-AuthenticationCredentials"
-                
-                # Log injection attempt
-                $script:LoginAttempts.AttemptHistory += @{
-                    Timestamp = Get-Date
-                    Username  = $sanitizedUsername
-                    Status    = "INJECTION_ATTEMPT"
-                    Details   = "Injection pattern detected"
-                }
-                
-                return @{
-                    Success     = $false
-                    Message     = "Invalid credentials"
-                    LockoutTime = $null
-                }
-            }
-        }
-        
-        # ============================================
-        # RATE LIMITING: Brute Force Protection
-        # ============================================
-        
-        # Check if account is locked
-        if ($script:LoginAttempts.LockedUntil -and (Get-Date) -lt $script:LoginAttempts.LockedUntil) {
-            $remainingSeconds = [math]::Round(($script:LoginAttempts.LockedUntil - (Get-Date)).TotalSeconds)
-            
-            Write-SecurityLog "Login attempt blocked: Account locked for $remainingSeconds more seconds" "WARNING"
-            Write-DevConsole "❌ Account locked due to too many failed attempts" "ERROR"
-            Write-DevConsole "⏱️ Remaining lockout time: $remainingSeconds seconds" "WARNING"
-            
-            # Log blocked attempt
-            $script:LoginAttempts.AttemptHistory += @{
-                Timestamp = Get-Date
-                Username  = $sanitizedUsername
-                Status    = "BLOCKED_LOCKOUT"
-                Details   = "Account locked, attempts blocked"
-            }
-            
-            return @{
-                Success     = $false
-                Message     = "Account locked due to too many failed attempts. Try again in $remainingSeconds seconds."
-                LockoutTime = $script:LoginAttempts.LockedUntil
-            }
-        }
-        
-        # Check if lockout period has expired
-        if ($script:LoginAttempts.LockedUntil -and (Get-Date) -ge $script:LoginAttempts.LockedUntil) {
-            Write-SecurityLog "Account lockout period expired, resetting login attempts" "INFO"
-            $script:LoginAttempts.FailedCount = 0
-            $script:LoginAttempts.LockedUntil = $null
-            $script:LoginAttempts.LastFailureTime = $null
-        }
-        
-        # Validate credentials (in real scenario, use secure credential storage)
-        $validCredentials = @{
-            "admin" = "RawrXD2024!"
-            "user"  = "secure123"
-            "guest" = "guest"
-        }
-        
-        if ($validCredentials.ContainsKey($sanitizedUsername) -and $validCredentials[$sanitizedUsername] -eq $sanitizedPassword) {
-            # ============================================
-            # SUCCESSFUL AUTHENTICATION
-            # ============================================
-            
-            # Reset failed attempts on success
-            $script:LoginAttempts.FailedCount = 0
-            $script:LoginAttempts.LockedUntil = $null
-            $script:LoginAttempts.LastFailureTime = $null
-            
-            # Update session
-            $script:CurrentSession.LoginAttempts = 0
-            $script:CurrentSession.IsAuthenticated = $true
-            $script:CurrentSession.UserId = $sanitizedUsername
-            $script:CurrentSession.LastActivity = Get-Date
-            
-            Write-SecurityLog "✅ User '$sanitizedUsername' authenticated successfully" "SUCCESS"
-            Write-DevConsole "✅ Authentication successful for user: $sanitizedUsername" "SUCCESS"
-            
-            # Log successful attempt
-            $script:LoginAttempts.AttemptHistory += @{
-                Timestamp = Get-Date
-                Username  = $sanitizedUsername
-                Status    = "SUCCESS"
-                Details   = "Authentication successful"
-            }
-            
-            return @{
-                Success     = $true
-                Message     = "Authentication successful"
-                LockoutTime = $null
-            }
-        }
-        else {
-            # ============================================
-            # FAILED AUTHENTICATION - Implement Rate Limiting
-            # ============================================
-            
-            $script:LoginAttempts.FailedCount++
-            $script:LoginAttempts.LastFailureTime = Get-Date
-            
-            Write-SecurityLog "Authentication failed for user '$sanitizedUsername'. Attempts: $($script:LoginAttempts.FailedCount)/5" "WARNING"
-            Write-DevConsole "❌ Authentication failed for user: $sanitizedUsername" "ERROR"
-            Write-DevConsole "📊 Failed attempts: $($script:LoginAttempts.FailedCount)/5" "WARNING"
-            
-            # Log failed attempt
-            $script:LoginAttempts.AttemptHistory += @{
-                Timestamp = Get-Date
-                Username  = $sanitizedUsername
-                Status    = "FAILED"
-                Details   = "Invalid credentials"
-            }
-            
-            Register-ErrorHandler -ErrorMessage "Authentication failed for user: $sanitizedUsername (attempt $($script:LoginAttempts.FailedCount))" `
-                -ErrorCategory "SECURITY" -Severity "MEDIUM" -SourceFunction "Test-AuthenticationCredentials" -AdditionalData @{
-                Username         = $sanitizedUsername
-                FailedAttempts   = $script:LoginAttempts.FailedCount
-                MaxAttempts      = 5
-                LockoutThreshold = 5
-            }
-            
-            # ============================================
-            # LOCKOUT THRESHOLD: 5 failed attempts
-            # ============================================
-            
-            if ($script:LoginAttempts.FailedCount -ge 5) {
-                # Lock account for 5 minutes (300 seconds)
-                $lockoutDuration = 300
-                $script:LoginAttempts.LockedUntil = (Get-Date).AddSeconds($lockoutDuration)
-                
-                Write-SecurityLog "🔒 ACCOUNT LOCKED: Too many failed attempts ($($script:LoginAttempts.FailedCount)). Lockout duration: $lockoutDuration seconds" "CRITICAL"
-                Write-DevConsole "🔒 ACCOUNT LOCKED for 5 minutes due to too many failed attempts" "ERROR"
-                
-                # Log lockout event
-                $script:LoginAttempts.AttemptHistory += @{
-                    Timestamp = Get-Date
-                    Username  = $sanitizedUsername
-                    Status    = "ACCOUNT_LOCKED"
-                    Details   = "5 failed attempts - account locked for 5 minutes"
-                }
-                
-                return @{
-                    Success     = $false
-                    Message     = "Account locked due to too many failed attempts. Try again in 5 minutes."
-                    LockoutTime = $script:LoginAttempts.LockedUntil
-                }
-            }
-            
-            # Provide remaining attempts count
-            $remainingAttempts = 5 - $script:LoginAttempts.FailedCount
-            $message = "Invalid credentials. Remaining attempts: $remainingAttempts"
-            
-            if ($remainingAttempts -le 2) {
-                Write-DevConsole "⚠️  WARNING: Account will lock after $remainingAttempts more failed attempts" "WARNING"
-            }
-            
-            return @{
-                Success     = $false
-                Message     = $message
-                LockoutTime = $null
-            }
-        }
-    }
-    catch {
-        $errorMsg = "Error validating credentials: $($_.Exception.Message)"
-        Write-SecurityLog $errorMsg "ERROR"
-        Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Test-AuthenticationCredentials"
-        return @{
-            Success     = $false
-            Message     = "Authentication error occurred"
-            LockoutTime = $null
-        }
-    }
-}
-
-function Test-SessionIntegrity {
-    <#
-    .SYNOPSIS
-        Validates session integrity and detects tampering
-    .DESCRIPTION
-        Performs integrity checks on session data to detect:
-        - Session hijacking attempts
-        - Data tampering
-        - Unauthorized modifications
-    .OUTPUTS
-        [bool] True if session integrity is valid, false otherwise
-    #>
-    try {
-        if (-not $script:CurrentSession) {
-            return $false
-        }
-        
-        # Check for required session properties
-        $requiredProperties = @("SessionId", "StartTime", "LastActivity", "UserId", "IsAuthenticated")
-        foreach ($prop in $requiredProperties) {
-            if (-not $script:CurrentSession.ContainsKey($prop)) {
-                Write-SecurityLog "Session integrity check failed: Missing property '$prop'" "ERROR"
-                return $false
-            }
-        }
-        
-        # Validate session ID hasn't changed unexpectedly
-        if ($script:CurrentSession.SessionId -ne $script:CurrentSession.SessionId) {
-            Write-SecurityLog "Session ID mismatch detected - possible hijacking attempt" "ERROR"
-            Register-ErrorHandler -ErrorMessage "Session ID mismatch" -ErrorCategory "SECURITY" -Severity "CRITICAL" -SourceFunction "Test-SessionIntegrity"
-            return $false
-        }
-        
-        # Check for suspicious time gaps (possible session manipulation)
-        $timeSinceLastActivity = ((Get-Date) - $script:CurrentSession.LastActivity).TotalSeconds
-        if ($timeSinceLastActivity -gt 86400) {
-            # More than 24 hours
-            Write-SecurityLog "Suspicious time gap detected: $timeSinceLastActivity seconds since last activity" "WARNING"
-        }
-        
-        return $true
-    }
-    catch {
-        Write-SecurityLog "Error in session integrity check: $($_.Exception.Message)" "ERROR"
-        Register-ErrorHandler -ErrorMessage "Session integrity check failed" -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Test-SessionIntegrity"
-        return $false
-    }
+    return $true
 }
 
 # ============================================
@@ -4328,43 +1352,13 @@ function Write-ErrorLog {
     )
     
     try {
-        # ALWAYS write to ERRORS.log file FIRST - no exceptions
-        $errorLogFile = Join-Path $script:EmergencyLogPath "ERRORS.log"
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
-        
-        $errorEntry = @"
-═══════════════════════════════════════════════════════════
-[$timestamp] [$Severity] [$ErrorCategory]
-Message: $ErrorMessage
-Source: $SourceFunction
-"@
-        
-        if ($IsAIRelated) {
-            $errorEntry += "`nAI Context: $AgentContext`nAI Model: $AIModel"
-        }
-        
-        if ($AdditionalData.Count -gt 0) {
-            $errorEntry += "`nAdditional Data: $($AdditionalData | ConvertTo-Json -Compress)"
-        }
-        
-        $errorEntry += "`n───────────────────────────────────────────────────────────`n"
-        
-        # Write to ERRORS.log file - CRITICAL - NO POPUPS
-        Add-Content -Path $errorLogFile -Value $errorEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-        
-        # Also write to CRITICAL_ERRORS.log if severity is CRITICAL
-        if ($Severity -eq "CRITICAL") {
-            $criticalFile = Join-Path $script:EmergencyLogPath "CRITICAL_ERRORS.log"
-            Add-Content -Path $criticalFile -Value $errorEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-        }
-        
         # Enhanced error data with AI context
         $enhancedData = $AdditionalData.Clone()
         if ($IsAIRelated) {
             $enhancedData["IsAIRelated"] = $true
             $enhancedData["AgentContext"] = $AgentContext
             $enhancedData["AIModel"] = $AIModel
-            $enhancedData["Timestamp"] = $timestamp
+            $enhancedData["Timestamp"] = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
             if ($AIMetrics.Count -gt 0) {
                 $enhancedData["AIMetrics"] = $AIMetrics
             }
@@ -4379,25 +1373,14 @@ Source: $SourceFunction
         }
         Write-StartupLog $logMessage "ERROR"
         
-        # Also use Write-ErrorToFile for comprehensive logging
-        if (Get-Command Write-ErrorToFile -ErrorAction SilentlyContinue) {
-            Write-ErrorToFile -ErrorMessage $ErrorMessage `
-                -ErrorCategory $ErrorCategory `
-                -LineNumber 0 `
-                -StackTrace "" `
-                -PositionMessage "Source: $SourceFunction"
-        }
-        
         # Agentic AI specific logging
         if ($IsAIRelated) {
-            if (Get-Command Write-AgenticErrorLog -ErrorAction SilentlyContinue) {
-                Write-AgenticErrorLog -ErrorMessage $ErrorMessage -ErrorCategory $ErrorCategory -Severity $Severity -AgentContext $AgentContext -AIModel $AIModel -AIMetrics $AIMetrics
-            }
+            Write-AgenticErrorLog -ErrorMessage $ErrorMessage -ErrorCategory $ErrorCategory -Severity $Severity -AgentContext $AgentContext -AIModel $AIModel -AIMetrics $AIMetrics
         }
         
         # Also call the comprehensive error reporting if available
         if (Get-Command Write-ErrorReport -ErrorAction SilentlyContinue) {
-            Write-ErrorReport -ErrorMessage $ErrorMessage -ErrorCategory $ErrorCategory -Severity $Severity -SourceFunction $SourceFunction -AdditionalData $enhancedData -ShowToUser $false
+            Write-ErrorReport -ErrorMessage $ErrorMessage -ErrorCategory $ErrorCategory -Severity $Severity -SourceFunction $SourceFunction -AdditionalData $enhancedData -ShowToUser $ShowToUser
         }
         
         # Log to security system with AI context
@@ -4405,11 +1388,9 @@ Source: $SourceFunction
         if ($IsAIRelated) {
             $securityContext += ", AI_Context: $AgentContext, Model: $AIModel"
         }
-        if (Get-Command Write-SecurityLog -ErrorAction SilentlyContinue) {
-            Write-SecurityLog "Error logged: $ErrorMessage" "ERROR" $securityContext
-        }
+        Write-SecurityLog "Error logged: $ErrorMessage" "ERROR" $securityContext
         
-        # Real-time AI error notification to chat if available and AI-related (NO POPUP)
+        # Real-time AI error notification to chat if available and AI-related
         if ($IsAIRelated -and $script:chatBox -and $ShowToUser) {
             $aiErrorNotification = "🤖 AI Agent Error [$Severity]: $ErrorMessage"
             if ($AgentContext) {
@@ -4422,25 +1403,9 @@ Source: $SourceFunction
         }
     }
     catch {
-        # Fallback error logging - write to file directly
-        try {
-            $errorLogFile = Join-Path $script:EmergencyLogPath "ERRORS.log"
-            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
-            $fallbackEntry = "[$timestamp] [CRITICAL] [LOGGING_FAILURE] Failed to log error: $ErrorMessage`nOriginal Error: $($_.Exception.Message)`n───────────────────────────────────────────────────────────`n"
-            Add-Content -Path $errorLogFile -Value $fallbackEntry -Encoding UTF8 -ErrorAction SilentlyContinue
-        }
-        catch {
-            # Last resort - try temp file
-            try {
-                $tempDir = Join-Path $script:EmergencyLogPath "temp"
-                if (-not (Test-Path $tempDir)) { New-Item -ItemType Directory -Path $tempDir -Force | Out-Null }
-                $tempLog = Join-Path $tempDir "RawrXD_Error_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-                Add-Content -Path $tempLog -Value "[$timestamp] ERROR: $ErrorMessage" -Encoding UTF8 -ErrorAction SilentlyContinue
-            }
-            catch {
-                Write-Host "[CRITICAL] All emergency logging methods failed: $_" -ForegroundColor Red
-            }
-        }
+        # Fallback error logging
+        Write-StartupLog "ERROR: Failed to log error - $($_.Exception.Message)" "ERROR"
+        Write-Host "ERROR: Failed to log error - $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -4684,9 +1649,7 @@ function Load-Settings {
     try {
         # Determine config file path
         if ([string]::IsNullOrEmpty($ConfigPath)) {
-            $configDir = Join-Path $script:ProjectRoot "config"
-            if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir -Force | Out-Null }
-            $ConfigPath = Join-Path $configDir "RawrXD_Settings.json"
+            $ConfigPath = Join-Path $env:TEMP "RawrXD_Settings.json"
         }
         
         Write-StartupLog "Loading settings from: $ConfigPath" "INFO"
@@ -4704,7 +1667,7 @@ function Load-Settings {
                 ChatHistory      = $true
                 SaveSession      = $true
                 SecurityLevel    = "Medium"
-                OllamaServer     = "http://localhost:11434"  # HTTPS enforced for security
+                OllamaServer     = "http://localhost:11434"
                 DefaultModel     = "llama2"
                 AutoSave         = $true
                 AutoSaveInterval = 300  # 5 minutes
@@ -4875,7 +1838,7 @@ function Update-Insights {
             EventData = $EventData
             Category  = $EventCategory
             Metadata  = $Metadata
-            SessionId = if ($script:CurrentSession -and $script:CurrentSession.SessionId) { $script:CurrentSession.SessionId } else { "Unknown" }
+            SessionId = $script:CurrentSession.SessionId
         }
         
         # Store insight
@@ -4910,7 +1873,7 @@ function Update-Insights {
         
     }
     catch {
-        Register-ErrorHandler -ErrorMessage "Failed to update insights: $($_.Exception.Message)" -ErrorCategory "PERFORMANCE" -Severity "MEDIUM" -SourceFunction "Update-Insights"
+        Register-ErrorHandler -ErrorMessage "Failed to update insights: $($_.Exception.Message)" -ErrorCategory "TELEMETRY" -Severity "MEDIUM" -SourceFunction "Update-Insights"
     }
 }
 
@@ -5061,7 +2024,7 @@ function Update-PerformanceMetrics {
                 }
             }
             catch {
-                Write-StartupLog "Failed to collect disk I/O metrics: $_" "WARNING"
+                # Silent fail for disk I/O metrics
             }
             
             # Trim old metrics (keep last 100 entries)
@@ -5077,7 +2040,7 @@ function Update-PerformanceMetrics {
         }
     }
     catch {
-        Write-StartupLog "Performance metrics collection failed: $_" "WARNING"
+        # Silent fail for performance metrics
     }
 }
 
@@ -5244,16 +2207,8 @@ function Show-DesktopNotification {
             $timer = New-Object Windows.Forms.Timer
             $timer.Interval = 4000
             $timer.Add_Tick({ 
-                    try {
-                        $notificationForm.Close() 
-                        $timer.Dispose()
-                    }
-                    catch [System.Management.Automation.PipelineStoppedException] {
-                        # Pipeline stopped - silently ignore during shutdown
-                    }
-                    catch {
-                        Write-StartupLog "Notification timer cleanup failed: $_" "WARNING"
-                    }
+                    $notificationForm.Close() 
+                    $timer.Dispose() 
                 })
             $timer.Start()
             
@@ -5315,94 +2270,31 @@ function Export-InsightsReport {
         return $reportPath
     }
     catch {
-        Register-ErrorHandler -ErrorMessage "Failed to export insights report: $($_.Exception.Message)" -ErrorCategory "PERFORMANCE" -Severity "MEDIUM" -SourceFunction "Export-InsightsReport"
+        Register-ErrorHandler -ErrorMessage "Failed to export insights report: $($_.Exception.Message)" -ErrorCategory "TELEMETRY" -Severity "MEDIUM" -SourceFunction "Export-InsightsReport"
         return $null
     }
 }
 
 function Invoke-SecureCleanup {
-    <#
-    .SYNOPSIS
-        Performs secure cleanup of sensitive data and system resources.
-    .DESCRIPTION
-        Securely removes sensitive variables, clears clipboard, and forces garbage collection
-        to prevent data leakage. This function should be called before application shutdown.
-    .PARAMETER Confirm
-        If false, skips confirmation prompts. Default is true.
-    .EXAMPLE
-        Invoke-SecureCleanup -Confirm:$false
-    #>
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
-    param(
-        [switch]$Force
-    )
-    
-    if (-not $Force -and -not $PSCmdlet.ShouldProcess("Perform secure cleanup", "This will clear sensitive data and system resources", "Continue?")) {
-        Write-SecurityLog "Secure cleanup cancelled by user" "INFO"
-        return
-    }
-    
     Write-SecurityLog "Performing secure cleanup" "INFO"
     
-    try {
-        # Clear sensitive variables with detailed error handling
-        $sensitiveVars = @("OllamaAPIKey", "token", "password", "apiKey", "secret")
-        foreach ($varName in $sensitiveVars) {
-            try {
-                if (Get-Variable -Name $varName -ErrorAction SilentlyContinue -Scope Global) {
-                    Remove-Variable -Name $varName -Scope Global -Force -ErrorAction SilentlyContinue
-                    Write-SecurityLog "Cleared sensitive variable: $varName" "INFO"
-                }
-                if (Get-Variable -Name $varName -ErrorAction SilentlyContinue -Scope Script) {
-                    Remove-Variable -Name $varName -Scope Script -Force -ErrorAction SilentlyContinue
-                    Write-SecurityLog "Cleared sensitive variable: $varName (script scope)" "INFO"
-                }
-            }
-            catch {
-                Write-SecurityLog "Failed to clear variable '$varName': $($_.Exception.Message)" "WARNING"
-            }
-        }
+    # Clear sensitive variables
+    if (Get-Variable -Name "OllamaAPIKey" -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name "OllamaAPIKey" -Scope Global -Force -ErrorAction SilentlyContinue
+    }
     
-        # Clear clipboard if it contains sensitive data
-        try {
-            [System.Windows.Forms.Clipboard]::Clear()
-            Write-SecurityLog "Clipboard cleared successfully" "INFO"
-        }
-        catch {
-            Write-SecurityLog "Failed to clear clipboard: $($_.Exception.Message). Error details: $($_.Exception.GetType().FullName)" "WARNING"
-        }
-        
-        # Clear editor content if it contains sensitive data
-        if ($script:editor -and $script:editor.Text) {
-            try {
-                $script:editor.Clear()
-                Write-SecurityLog "Editor content cleared" "INFO"
-            }
-            catch {
-                Write-SecurityLog "Failed to clear editor: $($_.Exception.Message)" "WARNING"
-            }
-        }
-        
-        # Force garbage collection with detailed logging
-        try {
-            $beforeGC = [System.GC]::GetTotalMemory($false)
-            [System.GC]::Collect()
-            [System.GC]::WaitForPendingFinalizers()
-            [System.GC]::Collect()
-            $afterGC = [System.GC]::GetTotalMemory($false)
-            $freed = $beforeGC - $afterGC
-            Write-SecurityLog "Garbage collection completed. Memory freed: $([math]::Round($freed / 1MB, 2)) MB" "INFO"
-        }
-        catch {
-            Write-SecurityLog "Garbage collection error: $($_.Exception.Message)" "WARNING"
-        }
-        
-        Write-SecurityLog "Secure cleanup completed successfully" "SUCCESS"
+    # Clear clipboard if it contains sensitive data
+    try {
+        [System.Windows.Forms.Clipboard]::Clear()
     }
-    catch {
-        Write-SecurityLog "Critical error during secure cleanup: $($_.Exception.Message). Stack trace: $($_.ScriptStackTrace)" "ERROR"
-        throw
-    }
+    catch { }
+    
+    # Force garbage collection
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+    [System.GC]::Collect()
+    
+    Write-SecurityLog "Secure cleanup completed" "SUCCESS"
 }
 
 function Show-AuthenticationDialog {
@@ -5514,65 +2406,44 @@ function Show-AuthenticationDialog {
     $script:authResult = $false
     
     $loginBtn.Add_Click({
-            try {
-                $username = $usernameBox.Text.Trim()
-                $password = $passwordBox.Text
+            $username = $usernameBox.Text.Trim()
+            $password = $passwordBox.Text
         
-                # Use enhanced credential validation
-                $authResult = Test-AuthenticationCredentials -Username $username -Password $password
-            
-                if ($authResult.Success) {
-                    # Authentication successful
-                    $script:CurrentSession.UserId = $username
-                    $script:SecurityConfig.StealthMode = $stealthCheck.Checked
-                    $script:UseHTTPS = $httpsCheck.Checked
-                    $script:SecurityConfig.EncryptSensitiveData = $encryptCheck.Checked
-            
-                    if ($script:UseHTTPS) {
-                        $script:OllamaAPIEndpoint = $OllamaSecureEndpoint
-                    }
-            
-                    Write-SecurityLog "User '$username' authenticated successfully" "SUCCESS" "Options: Stealth=$($stealthCheck.Checked), HTTPS=$($httpsCheck.Checked), Encrypt=$($encryptCheck.Checked)"
-            
-                    $script:authResult = $true
-                    $authForm.DialogResult = "OK"
-                    $authForm.Close()
-                }
-                else {
-                    # Authentication failed
-                    if ($authResult.LockoutTime) {
-                        $remainingSeconds = [math]::Round(($authResult.LockoutTime - (Get-Date)).TotalSeconds)
-                        Write-DevConsole "Account locked. Please try again in $remainingSeconds seconds." "ERROR"
-                        [System.Windows.Forms.MessageBox]::Show(
-                            "Account locked due to too many failed attempts.`nPlease try again in $remainingSeconds seconds.",
-                            "Account Locked",
-                            [System.Windows.Forms.MessageBoxButtons]::OK,
-                            [System.Windows.Forms.MessageBoxIcon]::Warning
-                        )
-                        $authForm.DialogResult = "Cancel"
-                        $authForm.Close()
-                        return
-                    }
-            
-                    if ($script:CurrentSession.LoginAttempts -ge $script:SecurityConfig.MaxLoginAttempts) {
-                        Write-StartupLog "Maximum login attempts exceeded. Application will exit." "CRITICAL"
-                        Write-DevConsole "SECURITY: Maximum login attempts exceeded" "ERROR"
-                        Register-ErrorHandler -ErrorMessage "Maximum login attempts exceeded for user: $username" -ErrorCategory "SECURITY" -Severity "CRITICAL" -SourceFunction "Show-AuthenticationDialog"
-                        $authForm.DialogResult = "Cancel"
-                        $authForm.Close()
-                        return
-                    }
-            
-                    Write-DevConsole $authResult.Message "WARNING"
-                    $passwordBox.Clear()
-                    $passwordBox.Focus()
-                }
+            # Simple authentication (in real scenario, use proper credential storage)
+            $validCredentials = @{
+                "admin" = "RawrXD2024!"
+                "user"  = "secure123"
+                "guest" = "guest"
             }
-            catch {
-                $errorMsg = "Error during authentication: $($_.Exception.Message)"
-                Write-SecurityLog $errorMsg "ERROR"
-                Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Show-AuthenticationDialog"
-                Write-DevConsole $errorMsg "ERROR"
+        
+            if ($username -and $validCredentials.ContainsKey($username) -and $validCredentials[$username] -eq $password) {
+                $script:CurrentSession.UserId = $username
+                $script:SecurityConfig.StealthMode = $stealthCheck.Checked
+                $script:UseHTTPS = $httpsCheck.Checked
+                $script:SecurityConfig.EncryptSensitiveData = $encryptCheck.Checked
+            
+                if ($script:UseHTTPS) {
+                    $script:OllamaAPIEndpoint = $OllamaSecureEndpoint
+                }
+            
+                Write-SecurityLog "User '$username' authenticated successfully" "SUCCESS" "Options: Stealth=$($stealthCheck.Checked), HTTPS=$($httpsCheck.Checked), Encrypt=$($encryptCheck.Checked)"
+            
+                $script:authResult = $true
+                $authForm.DialogResult = "OK"
+                $authForm.Close()
+            }
+            else {
+                $script:CurrentSession.LoginAttempts++
+                Write-SecurityLog "Authentication failed for user '$username'" "ERROR" "Attempts: $($script:CurrentSession.LoginAttempts)"
+            
+                if ($script:CurrentSession.LoginAttempts -ge $script:SecurityConfig.MaxLoginAttempts) {
+                    Write-StartupLog "Maximum login attempts exceeded. Application will exit." "CRITICAL"; Write-DevConsole "SECURITY: Maximum login attempts exceeded" "ERROR"
+                    $authForm.DialogResult = "Cancel"
+                    $authForm.Close()
+                    return
+                }
+            
+                Write-DevConsole "Invalid credentials. Please try again." "WARNING"
                 $passwordBox.Clear()
                 $passwordBox.Focus()
             }
@@ -5605,206 +2476,118 @@ function Show-AuthenticationDialog {
 }
 
 function Show-SecuritySettings {
-    try {
-        # Ensure SecurityConfig is initialized
-        if (-not $script:SecurityConfig) {
-            Write-DevConsole "SecurityConfig not initialized, initializing..." "WARNING"
-            Initialize-SecurityConfig
+    $settingsForm = New-Object System.Windows.Forms.Form
+    $settingsForm.Text = "Security Settings"
+    $settingsForm.Size = New-Object System.Drawing.Size(500, 600)
+    $settingsForm.StartPosition = "CenterScreen"
+    $settingsForm.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+    $settingsForm.ForeColor = [System.Drawing.Color]::White
+    $settingsForm.FormBorderStyle = "FixedDialog"
+    $settingsForm.MaximizeBox = $false
+    $settingsForm.MinimizeBox = $false
+    
+    # Settings controls
+    $y = 20
+    
+    foreach ($setting in $script:SecurityConfig.Keys) {
+        $label = New-Object System.Windows.Forms.Label
+        $label.Text = $setting + ":"
+        $label.Size = New-Object System.Drawing.Size(200, 20)
+        $label.Location = New-Object System.Drawing.Point(20, $y)
+        $settingsForm.Controls.Add($label)
+        
+        if ($script:SecurityConfig[$setting] -is [bool]) {
+            $checkbox = New-Object System.Windows.Forms.CheckBox
+            $checkbox.Checked = $script:SecurityConfig[$setting]
+            $checkbox.Size = New-Object System.Drawing.Size(20, 20)
+            $checkbox.Location = New-Object System.Drawing.Point(230, $y)
+            $checkbox.Tag = $setting
+            $settingsForm.Controls.Add($checkbox)
         }
-        
-        $settingsForm = New-Object System.Windows.Forms.Form
-        $settingsForm.Text = "Security Settings"
-        $settingsForm.Size = New-Object System.Drawing.Size(500, 600)
-        $settingsForm.StartPosition = "CenterScreen"
-        $settingsForm.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-        $settingsForm.ForeColor = [System.Drawing.Color]::White
-        $settingsForm.FormBorderStyle = "FixedDialog"
-        $settingsForm.MaximizeBox = $false
-        $settingsForm.MinimizeBox = $false
-    
-        # Settings controls
-        $y = 20
-    
-        foreach ($setting in $script:SecurityConfig.Keys) {
-            try {
-                # Ensure $y is always a valid integer
-                if (-not ($y -is [int])) {
-                    $y = 20
-                }
-                
-                $label = New-Object System.Windows.Forms.Label
-                $label.Text = $setting + ":"
-                $label.Size = New-Object System.Drawing.Size(200, 20)
-                $label.Location = New-Object System.Drawing.Point(20, [int]$y)
-                $settingsForm.Controls.Add($label)
-        
-                if ($script:SecurityConfig[$setting] -is [bool]) {
-                    $checkbox = New-Object System.Windows.Forms.CheckBox
-                    $checkbox.Checked = $script:SecurityConfig[$setting]
-                    $checkbox.Size = New-Object System.Drawing.Size(20, 20)
-                    $checkbox.Location = New-Object System.Drawing.Point(230, [int]$y)
-                    $checkbox.Tag = $setting
-                    $settingsForm.Controls.Add($checkbox)
-                }
-                elseif ($script:SecurityConfig[$setting] -is [int]) {
-                    $numericUpDown = New-Object System.Windows.Forms.NumericUpDown
-                    $numericUpDown.Size = New-Object System.Drawing.Size(100, 20)
-                    $numericUpDown.Location = New-Object System.Drawing.Point(230, [int]$y)
+        elseif ($script:SecurityConfig[$setting] -is [int]) {
+            $numericUpDown = New-Object System.Windows.Forms.NumericUpDown
+            $numericUpDown.Value = $script:SecurityConfig[$setting]
+            $numericUpDown.Size = New-Object System.Drawing.Size(100, 20)
+            $numericUpDown.Location = New-Object System.Drawing.Point(230, $y)
             
-                    # Set appropriate min/max values based on the specific setting FIRST
-                    # (Must be set before Value to avoid ArgumentOutOfRangeException)
-                    switch ($setting) {
-                        "SessionTimeout" {
-                            $numericUpDown.Minimum = 60      # 1 minute minimum
-                            $numericUpDown.Maximum = 86400   # 24 hours maximum
-                        }
-                        "MaxLoginAttempts" {
-                            $numericUpDown.Minimum = 1       # At least 1 attempt
-                            $numericUpDown.Maximum = 100     # Maximum 100 attempts
-                        }
-                        "MaxErrorsPerMinute" {
-                            $numericUpDown.Minimum = 1       # At least 1 error per minute
-                            $numericUpDown.Maximum = 1000    # Maximum 1000 errors per minute
-                        }
-                        "MaxFileSize" {
-                            $numericUpDown.Minimum = 1       # 1 byte minimum
-                            $numericUpDown.Maximum = 1073741824  # 1GB maximum (in bytes)
-                        }
-                        default {
-                            # Generic safe range for unknown integer settings
-                            $numericUpDown.Minimum = 0
-                            $numericUpDown.Maximum = 999999
-                        }
-                    }
-            
-                    # Now set the Value after Minimum/Maximum are configured
-                    # Clamp the value to ensure it's within the valid range
-                    $configValue = $script:SecurityConfig[$setting]
-                    if ($configValue -lt $numericUpDown.Minimum) {
-                        $numericUpDown.Value = $numericUpDown.Minimum
-                    }
-                    elseif ($configValue -gt $numericUpDown.Maximum) {
-                        $numericUpDown.Value = $numericUpDown.Maximum
-                    }
-                    else {
-                        $numericUpDown.Value = $configValue
-                    }
-            
-                    $numericUpDown.Tag = $setting
-                    $settingsForm.Controls.Add($numericUpDown)
+            # Set appropriate min/max values based on the specific setting
+            switch ($setting) {
+                "SessionTimeout" {
+                    $numericUpDown.Minimum = 60      # 1 minute minimum
+                    $numericUpDown.Maximum = 86400   # 24 hours maximum
                 }
-                elseif ($script:SecurityConfig[$setting] -is [array]) {
-                    # Handle array values (like AllowedExtensions, DangerousExtensions)
-                    $arrayValue = $script:SecurityConfig[$setting]
-                    $arrayText = if ($arrayValue.Count -gt 0) { ($arrayValue -join ", ") } else { "(empty)" }
-                
-                    $textBox = New-Object System.Windows.Forms.TextBox
-                    $textBox.Text = $arrayText
-                    $textBox.Size = New-Object System.Drawing.Size(250, 20)
-                    $textBox.Location = New-Object System.Drawing.Point(230, [int]$y)
-                    $textBox.ReadOnly = $true
-                    $textBox.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
-                    $textBox.ForeColor = [System.Drawing.Color]::LightGray
-                    $textBox.Tag = $setting
-                    $settingsForm.Controls.Add($textBox)
+                "MaxLoginAttempts" {
+                    $numericUpDown.Minimum = 1       # At least 1 attempt
+                    $numericUpDown.Maximum = 100     # Maximum 100 attempts
                 }
-                else {
-                    # Handle other types (strings, etc.) as read-only text
-                    $textBox = New-Object System.Windows.Forms.TextBox
-                    $textBox.Text = $script:SecurityConfig[$setting].ToString()
-                    $textBox.Size = New-Object System.Drawing.Size(250, 20)
-                    $textBox.Location = New-Object System.Drawing.Point(230, [int]$y)
-                    $textBox.ReadOnly = $true
-                    $textBox.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
-                    $textBox.ForeColor = [System.Drawing.Color]::LightGray
-                    $textBox.Tag = $setting
-                    $settingsForm.Controls.Add($textBox)
+                "MaxErrorsPerMinute" {
+                    $numericUpDown.Minimum = 1       # At least 1 error per minute
+                    $numericUpDown.Maximum = 1000    # Maximum 1000 errors per minute
+                }
+                "MaxFileSize" {
+                    $numericUpDown.Minimum = 1       # 1 byte minimum
+                    $numericUpDown.Maximum = 1073741824  # 1GB maximum (in bytes)
+                }
+                default {
+                    # Generic safe range for unknown integer settings
+                    $numericUpDown.Minimum = 0
+                    $numericUpDown.Maximum = 999999
                 }
             }
-            catch {
-                Write-DevConsole "Error adding setting '$setting' to security dialog: $_" "ERROR"
-                Write-ErrorLog -Message "Error in Show-SecuritySettings for setting '$setting': $($_.Exception.Message)" -Severity "MEDIUM"
-            }
-            finally {
-                # Always increment $y, even if there was an error
-                if ($y -is [int]) {
-                    $y += 35
-                }
-                else {
-                    $y = 20  # Reset if corrupted
-                }
-            }
+            
+            $numericUpDown.Tag = $setting
+            $settingsForm.Controls.Add($numericUpDown)
         }
-    
-        # Save button
-        $saveBtn = New-Object System.Windows.Forms.Button
-        $saveBtn.Text = "Save Settings"
-        $saveBtn.Size = New-Object System.Drawing.Size(100, 30)
-        # Ensure $y is valid before creating buttons
-        if (-not ($y -is [int])) {
-            $y = 20
-        }
-        $saveBtn.Location = New-Object System.Drawing.Point(20, [int]($y + 20))
-        $saveBtn.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
-        $saveBtn.ForeColor = [System.Drawing.Color]::White
-        $saveBtn.FlatStyle = "Flat"
-        $settingsForm.Controls.Add($saveBtn)
-    
-        # Cancel button
-        $cancelBtn = New-Object System.Windows.Forms.Button
-        $cancelBtn.Text = "Cancel"
-        $cancelBtn.Size = New-Object System.Drawing.Size(80, 30)
-        $cancelBtn.Location = New-Object System.Drawing.Point(130, [int]($y + 20))
-        $cancelBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-        $cancelBtn.ForeColor = [System.Drawing.Color]::White
-        $cancelBtn.FlatStyle = "Flat"
-        $cancelBtn.Add_Click({ $settingsForm.Close() })
-        $settingsForm.Controls.Add($cancelBtn)
-    
-        $saveBtn.Add_Click({
-                foreach ($control in $settingsForm.Controls) {
-                    if ($control.Tag -and $script:SecurityConfig.ContainsKey($control.Tag)) {
-                        if ($control -is [System.Windows.Forms.CheckBox]) {
-                            $script:SecurityConfig[$control.Tag] = $control.Checked
-                        }
-                        elseif ($control -is [System.Windows.Forms.NumericUpDown]) {
-                            $script:SecurityConfig[$control.Tag] = $control.Value
-                        }
-                    }
-                }
         
-                # Save to file
-                $configDir = Join-Path $script:ProjectRoot "config"
-                if (-not (Test-Path $configDir)) {
-                    New-Item -ItemType Directory -Path $configDir -Force | Out-Null
-                }
-                $configPath = Join-Path $configDir "security.json"
-                # Only save non-array settings (arrays are read-only in this dialog)
-                $settingsToSave = @{}
-                foreach ($key in $script:SecurityConfig.Keys) {
-                    if ($script:SecurityConfig[$key] -isnot [array]) {
-                        $settingsToSave[$key] = $script:SecurityConfig[$key]
-                    }
-                    else {
-                        $settingsToSave[$key] = $script:SecurityConfig[$key]  # Keep arrays as-is
-                    }
-                }
-                $settingsToSave | ConvertTo-Json -Depth 10 | Set-Content $configPath
-        
-                Write-SecurityLog "Security settings updated" "SUCCESS"
-                $settingsForm.Close()
-            })
-    
-        # Adjust form height based on number of controls
-        $settingsForm.Height = [Math]::Min(800, $y + 100)
-    
-        $settingsForm.ShowDialog()
+        $y += 35
     }
-    catch {
-        Write-DevConsole "❌ Error showing security settings: $_" "ERROR"
-        Write-ErrorLog -Message "Failed to show security settings dialog: $($_.Exception.Message)" -Severity "HIGH"
-        [System.Windows.Forms.MessageBox]::Show("Error loading security settings: $($_.Exception.Message)", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-    }
+    
+    # Save button
+    $saveBtn = New-Object System.Windows.Forms.Button
+    $saveBtn.Text = "Save Settings"
+    $saveBtn.Size = New-Object System.Drawing.Size(100, 30)
+    $saveBtn.Location = New-Object System.Drawing.Point(20, $y + 20)
+    $saveBtn.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+    $saveBtn.ForeColor = [System.Drawing.Color]::White
+    $saveBtn.FlatStyle = "Flat"
+    $settingsForm.Controls.Add($saveBtn)
+    
+    # Cancel button
+    $cancelBtn = New-Object System.Windows.Forms.Button
+    $cancelBtn.Text = "Cancel"
+    $cancelBtn.Size = New-Object System.Drawing.Size(80, 30)
+    $cancelBtn.Location = New-Object System.Drawing.Point(130, $y + 20)
+    $cancelBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
+    $cancelBtn.ForeColor = [System.Drawing.Color]::White
+    $cancelBtn.FlatStyle = "Flat"
+    $cancelBtn.Add_Click({ $settingsForm.Close() })
+    $settingsForm.Controls.Add($cancelBtn)
+    
+    $saveBtn.Add_Click({
+            foreach ($control in $settingsForm.Controls) {
+                if ($control.Tag -and $script:SecurityConfig.ContainsKey($control.Tag)) {
+                    if ($control -is [System.Windows.Forms.CheckBox]) {
+                        $script:SecurityConfig[$control.Tag] = $control.Checked
+                    }
+                    elseif ($control -is [System.Windows.Forms.NumericUpDown]) {
+                        $script:SecurityConfig[$control.Tag] = $control.Value
+                    }
+                }
+            }
+        
+            # Save to file
+            $configDir = Join-Path $env:APPDATA "RawrXD"
+            if (-not (Test-Path $configDir)) {
+                New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+            }
+            $configPath = Join-Path $configDir "security.json"
+            $script:SecurityConfig | ConvertTo-Json | Set-Content $configPath
+        
+            Write-SecurityLog "Security settings updated" "SUCCESS"
+            $settingsForm.Close()
+        })
+    
+    $settingsForm.ShowDialog()
 }
 
 # ============================================
@@ -5816,125 +2599,9 @@ function Show-SecuritySettings {
 $wvDir = "$env:TEMP\WVLibs"
 $script:useWebView2 = $false
 $script:browserType = "Unknown"
-$script:dotnetMajorVersion = [System.Environment]::Version.Major
 
-# Check .NET runtime version for WebView2 compatibility
-# WebView2 requires .NET 8 for PowerShell 7+ (works best with .NET 8, has issues with .NET 9+)
-function Test-DotNetVersionForWebView2 {
-    try {
-        # For PowerShell 7+, check the actual .NET runtime version
-        if ($PSVersionTable.PSVersion.Major -ge 7) {
-            $runtimeInfo = [System.Runtime.InteropServices.RuntimeInformation]::FrameworkDescription
-            Write-StartupLog ".NET Runtime: $runtimeInfo" "INFO"
-            
-            # Check if it's .NET 8 (best for WebView2)
-            if ($runtimeInfo -match '\.NET 8\.') {
-                Write-StartupLog "✓ .NET 8 detected - optimal for WebView2" "SUCCESS"
-                return $true
-            }
-            # Check if it's .NET 9+ (has compatibility issues)
-            elseif ($runtimeInfo -match '\.NET 9\.') {
-                Write-StartupLog "⚠ .NET 9 detected - WebView2 may have compatibility issues" "WARNING"
-                return $false
-            }
-            # Check if it's .NET 6 or 7 (should work but .NET 8 is recommended)
-            elseif ($runtimeInfo -match '\.NET [67]\.') {
-                Write-StartupLog "⚠ .NET 6/7 detected - .NET 8 recommended for best WebView2 compatibility" "WARNING"
-                return $true  # Will work but not optimal
-            }
-            else {
-                Write-StartupLog "⚠ Unknown .NET version: $runtimeInfo" "WARNING"
-                return $true  # Try anyway
-            }
-        }
-        else {
-            # Windows PowerShell 5.1 uses .NET Framework 4.8, which works with WebView2
-            Write-StartupLog "Windows PowerShell 5.1 detected - .NET Framework 4.8 (WebView2 compatible)" "INFO"
-            return $true
-        }
-    }
-    catch {
-        Write-StartupLog "Could not determine .NET version: $($_.Exception.Message)" "WARNING"
-        return $true  # Try anyway
-    }
-}
-
-function Ensure-WebView2ContextMenuShim {
-    $needsContextMenu = -not [System.Type]::GetType("System.Windows.Forms.ContextMenu")
-    $needsMenuItem = -not [System.Type]::GetType("System.Windows.Forms.MenuItem")
-    if (-not ($needsContextMenu -or $needsMenuItem)) {
-        return
-    }
-
-    # For .NET 9+, use System.Drawing.Primitives for Point type
-    # Also avoid using Point directly in the shim to prevent type forwarding issues
-    $typeBuilder = @"
-using System;
-using System.ComponentModel;
-namespace System.Windows.Forms
-{
-"@
-
-    if ($needsContextMenu) {
-        $typeBuilder += @"
-    public class ContextMenu : Component
-    {
-        public ContextMenu() { }
-        public ContextMenu(params object[] items) { }
-        public void Show(Control control, int x, int y) { }
-        public void Show(Control control, System.Drawing.Point position) { }
-    }
-"@
-    }
-
-    if ($needsMenuItem) {
-        $typeBuilder += @"
-    public class MenuItem : Component
-    {
-        public string Text { get; set; }
-        public MenuItem() { }
-        public MenuItem(string text) { Text = text; }
-        public void PerformClick() { }
-    }
-"@
-    }
-
-    $typeBuilder += @"
-}
-"@
-
-    try {
-        # Try with System.Drawing.Primitives for .NET 9+ compatibility
-        $assemblies = @('System.Windows.Forms.dll', 'System.Drawing.dll', 'System.ComponentModel.Primitives.dll')
-        
-        # Check if System.Drawing.Primitives exists (for .NET 9+)
-        try {
-            $null = [System.Reflection.Assembly]::Load("System.Drawing.Primitives, Version=0.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")
-            $assemblies += 'System.Drawing.Primitives.dll'
-        }
-        catch {
-            # System.Drawing.Primitives not available, continue without it
-        }
-        
-        Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $typeBuilder -ErrorAction Stop
-        Write-StartupLog "WebView2 shim applied for System.Windows.Forms.ContextMenu/MenuItem compatibility." "INFO"
-    }
-    catch {
-        Write-StartupLog "Failed to inject WebView2 compatibility shim: $($_.Exception.Message)" "WARNING"
-        Write-StartupLog "Note: WebView2 may not work properly with .NET 9. Consider installing .NET 8 Desktop Runtime." "WARNING"
-    }
-}
-
-# Check if WebView2 Runtime is available
-# Note: WebView2 can work in PowerShell Core with proper handling
 Write-StartupLog "Checking WebView2 Runtime..." "INFO"
 
-# Verify .NET version compatibility for WebView2
-$script:dotNetCompatibleForWebView2 = Test-DotNetVersionForWebView2
-if (-not $script:dotNetCompatibleForWebView2 -and $PSVersionTable.PSVersion.Major -ge 7) {
-    Write-StartupLog "⚠ .NET 8 Desktop Runtime recommended for WebView2 in PowerShell 7+" "WARNING"
-    Write-StartupLog "  Install with: winget install Microsoft.DotNet.DesktopRuntime.8" "INFO"
-}
 # Check if WebView2 Runtime is already installed system-wide
 $webView2Installed = Test-Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
 
@@ -5991,410 +2658,13 @@ else {
     $script:useWebView2 = $false
 }
 
-# ============================================
-# PRODUCTION SECURITY HARDENING MODULE
-# ============================================
-# Implements enterprise-grade security controls:
-# - TLS 1.3 enforcement for all API communications
-# - Secure API key storage and management
-# - Zero-trust architecture principles
-# - Enhanced error handling with structured logging
-# - Input validation and sanitization
-# - File permission restrictions
-# ============================================
-
-# Initialize security variables early to prevent "variable not set" errors
-if (-not (Get-Variable -Name "OllamaAPIKey" -Scope Script -ErrorAction SilentlyContinue)) {
-    $script:OllamaAPIKey = $null
-}
-
-# Secure configuration storage path
-$script:SecureConfigPath = Join-Path (Join-Path $PSScriptRoot "config") "secure.json"
-$script:SecureConfigDir = Split-Path $script:SecureConfigPath -Parent
-
-# Ensure secure config directory exists with restricted permissions
-if (-not (Test-Path $script:SecureConfigDir)) {
-    New-Item -ItemType Directory -Path $script:SecureConfigDir -Force | Out-Null
-    # Restrict directory permissions (Windows only)
-    if ($IsWindows -or $env:OS -match "Windows") {
-        try {
-            $acl = Get-Acl -Path $script:SecureConfigDir
-            $acl.SetAccessRuleProtection($true, $false)
-            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-            $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                $currentUser, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
-            )
-            $acl.SetAccessRule($accessRule)
-            Set-Acl -Path $script:SecureConfigDir -AclObject $acl -ErrorAction SilentlyContinue
-        }
-        catch {
-            Write-DevConsole "Could not set secure config directory permissions: $_" "WARNING"
-        }
-    }
-}
-
-# Secure API key storage and retrieval
-function Get-SecureAPIKey {
-    <#
-    .SYNOPSIS
-        Retrieves the Ollama API key from settings or secure storage
-    .DESCRIPTION
-        Reads the API key from global settings first, then from encrypted secure storage if needed.
-        Falls back to default value if available. Validates 8+ digit minimum length.
-    #>
-    # Check global settings first (user-configured or default)
-    if ($global:settings -and $global:settings.OllamaAPIKey) {
-        $apiKey = $global:settings.OllamaAPIKey
-        if ($apiKey -and $apiKey.Length -ge 8) {
-            return $apiKey
-        }
-    }
-    
-    # Initialize variable if not set
-    if (-not (Get-Variable -Name "OllamaAPIKey" -Scope Script -ErrorAction SilentlyContinue)) {
-        $script:OllamaAPIKey = $null
-    }
-    
-    if ($null -ne $script:OllamaAPIKey -and $script:OllamaAPIKey -ne "") {
-        return $script:OllamaAPIKey
-    }
-    
-    # Try to load from secure config
-    if (Test-Path $script:SecureConfigPath) {
-        try {
-            $secureConfig = Get-Content -Path $script:SecureConfigPath -Raw | ConvertFrom-Json
-            if ($secureConfig.APIKey) {
-                # Decrypt if encrypted (basic implementation - enhance with proper encryption)
-                $script:OllamaAPIKey = $secureConfig.APIKey
-                return $script:OllamaAPIKey
-            }
-        }
-        catch {
-            Write-DevConsole "Could not read secure config: $_" "WARNING"
-        }
-    }
-    
-    return $null
-}
-
-function Set-SecureAPIKey {
-    <#
-    .SYNOPSIS
-        Stores the Ollama API key securely in settings and config file
-    .PARAMETER APIKey
-        The API key to store (must be 8+ characters/digits)
-    .DESCRIPTION
-        Validates that APIKey meets minimum length (8+ digits) and stores both to global:settings and secure config file
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$APIKey
-    )
-    
-    # Validate minimum 8+ digit length
-    if ($APIKey.Length -lt 8) {
-        Write-DevConsole "API key must be at least 8 characters long (received: $($APIKey.Length))" "ERROR"
-        return $false
-    }
-    
-    try {
-        # Update global settings first
-        if ($global:settings) {
-            $global:settings.OllamaAPIKey = $APIKey
-        }
-        
-        $secureConfig = @{
-            APIKey      = $APIKey
-            LastUpdated = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
-            Version     = "1.0"
-        }
-        
-        # Ensure directory exists
-        if (-not (Test-Path $script:SecureConfigDir)) {
-            New-Item -ItemType Directory -Path $script:SecureConfigDir -Force | Out-Null
-        }
-        
-        $secureConfig | ConvertTo-Json | Set-Content -Path $script:SecureConfigPath -Encoding UTF8 -Force
-        $script:OllamaAPIKey = $APIKey
-        
-        # Restrict file permissions
-        if ($IsWindows -or $env:OS -match "Windows") {
-            try {
-                $acl = Get-Acl -Path $script:SecureConfigPath
-                $acl.SetAccessRuleProtection($true, $false)
-                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                    $currentUser, "FullControl", "Allow"
-                )
-                $acl.SetAccessRule($accessRule)
-                Set-Acl -Path $script:SecureConfigPath -AclObject $acl -ErrorAction SilentlyContinue
-            }
-            catch {
-                Write-DevConsole "Could not set secure config file permissions: $_" "WARNING"
-            }
-        }
-        
-        Write-DevConsole "API key updated successfully (length: $($APIKey.Length) chars)" "SUCCESS"
-        return $true
-    }
-    catch {
-        Write-DevConsole "Failed to store API key: $_" "ERROR"
-        return $false
-    }
-}
-
-# Secure input handling for sensitive data
-function Read-SecureInput {
-    <#
-    .SYNOPSIS
-        Reads sensitive input securely using SecureString
-    .PARAMETER Prompt
-        The prompt text to display
-    .PARAMETER AsSecureString
-        If true, returns SecureString. If false, returns plain string (less secure but compatible)
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Prompt,
-        
-        [Parameter(Mandatory = $false)]
-        [switch]$AsSecureString
-    )
-    
-    if ($AsSecureString) {
-        $secureInput = Read-Host -Prompt $Prompt -AsSecureString
-        return $secureInput
-    }
-    else {
-        # For compatibility, return plain string but log securely
-        $input = Read-Host -Prompt $Prompt
-        Write-SecurityLog "Sensitive input received" "INFO" "Length: $($input.Length), Type: $($Prompt)"
-        return $input
-    }
-}
-
-# Enhanced input validation
-function Test-InputValidation {
-    <#
-    .SYNOPSIS
-        Validates and sanitizes input according to type
-    .PARAMETER Input
-        The input to validate
-    .PARAMETER Type
-        The type of input (ModelName, Prompt, FilePath, etc.)
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Input,
-        
-        [Parameter(Mandatory = $true)]
-        [ValidateSet("ModelName", "Prompt", "FilePath", "URL", "APIKey")]
-        [string]$Type
-    )
-    
-    if ([string]::IsNullOrWhiteSpace($Input)) {
-        return $false
-    }
-    
-    switch ($Type) {
-        "ModelName" {
-            # Model names should be alphanumeric with :, -, _, and .
-            if ($Input -notmatch '^[a-zA-Z0-9:\-_.]+$') {
-                Write-SecurityLog "Invalid model name format" "WARNING" "Input: $Input"
-                return $false
-            }
-            # Prevent path traversal
-            if ($Input -match '\.\.|/|\\') {
-                Write-SecurityLog "Model name contains path traversal attempt" "ERROR" "Input: $Input"
-                return $false
-            }
-        }
-        "FilePath" {
-            # Validate file path
-            if ($Input -match '\.\./|\.\.\\|^/|^\\') {
-                Write-SecurityLog "Suspicious file path detected" "WARNING" "Input: $Input"
-                return $false
-            }
-        }
-        "URL" {
-            # Validate URL format
-            if ($Input -notmatch '^https?://[a-zA-Z0-9\-\.]+(:\d+)?(/.*)?$') {
-                Write-SecurityLog "Invalid URL format" "WARNING" "Input: $Input"
-                return $false
-            }
-        }
-        "APIKey" {
-            # API keys should not be empty and should have reasonable length
-            if ($Input.Length -lt 8 -or $Input.Length -gt 512) {
-                Write-SecurityLog "API key length validation failed" "WARNING" "Length: $($Input.Length)"
-                return $false
-            }
-        }
-    }
-    
-    return $true
-}
-
-# Response caching for performance
-$script:ResponseCache = @{}
-$script:CacheExpiry = @{}
-
-function Get-CachedResponse {
-    <#
-    .SYNOPSIS
-        Retrieves a cached API response if available and not expired
-    .PARAMETER Key
-        Cache key (typically endpoint + parameters hash)
-    .PARAMETER MaxAgeSeconds
-        Maximum age of cached response in seconds (default: 300 = 5 minutes)
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Key,
-        
-        [Parameter(Mandatory = $false)]
-        [int]$MaxAgeSeconds = 300
-    )
-    
-    if ($script:ResponseCache.ContainsKey($Key)) {
-        $cachedTime = $script:CacheExpiry[$Key]
-        $age = (Get-Date) - $cachedTime
-        
-        if ($age.TotalSeconds -lt $MaxAgeSeconds) {
-            Write-DevConsole "Cache hit for key: $Key" "DEBUG"
-            return $script:ResponseCache[$Key]
-        }
-        else {
-            # Expired, remove from cache
-            $script:ResponseCache.Remove($Key)
-            $script:CacheExpiry.Remove($Key)
-        }
-    }
-    
-    return $null
-}
-
-function Set-CachedResponse {
-    <#
-    .SYNOPSIS
-        Stores a response in the cache
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Key,
-        
-        [Parameter(Mandatory = $true)]
-        [object]$Value
-    )
-    
-    $script:ResponseCache[$Key] = $Value
-    $script:CacheExpiry[$Key] = Get-Date
-}
-
-# File pagination for large files
-function Read-FileChunked {
-    <#
-    .SYNOPSIS
-        Reads a large file in chunks to avoid memory issues
-    .PARAMETER FilePath
-        Path to the file
-    .PARAMETER ChunkSizeMB
-        Size of each chunk in MB (default: 1MB)
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$FilePath,
-        
-        [Parameter(Mandatory = $false)]
-        [int]$ChunkSizeMB = 1
-    )
-    
-    $chunkSize = $ChunkSizeMB * 1MB
-    $fileInfo = Get-Item -Path $FilePath
-    $totalSize = $fileInfo.Length
-    $chunks = [math]::Ceiling($totalSize / $chunkSize)
-    
-    for ($i = 0; $i -lt $chunks; $i++) {
-        $offset = $i * $chunkSize
-        $length = [math]::Min($chunkSize, $totalSize - $offset)
-        
-        $buffer = New-Object byte[] $length
-        $stream = [System.IO.File]::OpenRead($FilePath)
-        $stream.Position = $offset
-        $bytesRead = $stream.Read($buffer, 0, $length)
-        $stream.Close()
-        
-        $chunk = [System.Text.Encoding]::UTF8.GetString($buffer, 0, $bytesRead)
-        Write-Output $chunk
-    }
-}
-
-# Enhanced structured error logging
-function Write-StructuredErrorLog {
-    <#
-    .SYNOPSIS
-        Writes structured error logs for compliance and troubleshooting
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$ErrorMessage,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$ErrorCategory = "GENERAL",
-        
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("LOW", "MEDIUM", "HIGH", "CRITICAL")]
-        [string]$Severity = "MEDIUM",
-        
-        [Parameter(Mandatory = $false)]
-        [string]$SourceFunction = "",
-        
-        [Parameter(Mandatory = $false)]
-        [hashtable]$AdditionalData = @{}
-    )
-    
-    $errorEntry = @{
-        Timestamp      = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
-        ErrorType      = $ErrorCategory
-        Severity       = $Severity
-        Code           = $_.Exception.HResult
-        Message        = $ErrorMessage
-        SourceFunction = $SourceFunction
-        StackTrace     = if ($_.Exception) { $_.Exception.StackTrace } else { "" }
-        AdditionalData = $AdditionalData
-    }
-    
-    # Log to secure location
-    $logPath = Join-Path $PSScriptRoot "logs" "security-errors.log"
-    $logDir = Split-Path $logPath -Parent
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-    }
-    
-    try {
-        $errorEntry | ConvertTo-Json -Depth 10 | Add-Content -Path $logPath -Encoding UTF8 -ErrorAction SilentlyContinue
-    }
-    catch {
-        # Fallback to emergency log
-        Write-EmergencyLog "Failed to write structured error log: $_" "ERROR"
-    }
-    
-    # Also call existing error logging
-    if (Get-Command Write-ErrorLog -ErrorAction SilentlyContinue) {
-        Write-ErrorLog -ErrorMessage $ErrorMessage -ErrorCategory $ErrorCategory -Severity $Severity -SourceFunction $SourceFunction
-    }
-}
-
-# Configuration (Production Hardened - HTTPS/TLS 1.3 by default)
-$OllamaAPIEndpoint = "http://localhost:11434/api/generate"  # HTTPS Endpoint (TLS 1.3 enforced)
-$OllamaSecureEndpoint = "http://localhost:11434/api/generate"  # HTTPS Endpoint (primary)
+# Configuration (Adjust these as needed)
+$OllamaAPIEndpoint = "http://localhost:11434/api/generate"  # Default API Endpoint
+$OllamaSecureEndpoint = "https://localhost:11434/api/generate"  # HTTPS Endpoint (if configured)
 $OllamaModel = "bigdaddyg-fast:latest" # Default Ollama Model
-# API key will be loaded later after functions are defined
-$script:OllamaAPIKey = $null
-$script:UseHTTPS = $true     # Enable HTTPS for Ollama connections (PRODUCTION DEFAULT)
+$script:OllamaAPIKey = $null  # API key for authentication (if required)
+$script:UseHTTPS = $false     # Enable HTTPS for Ollama connections
 $script:DebugMode = $false    # Enable debug logging
-$script:TLSVersion = "Tls13"  # Enforce TLS 1.3 (highest security)
-$script:ValidateCertificates = $false  # Set to $true in production to enforce certificate validation (default: $false for self-signed certs)
 
 # ============================================
 # MULTI-SERVER OLLAMA SUPPORT SYSTEM
@@ -6404,8 +2674,8 @@ $script:ValidateCertificates = $false  # Set to $true in production to enforce c
 $script:OllamaServers = @{
     "Local"       = @{
         Name                = "Local Server"
-        BaseURL             = "http://localhost:11434"  # HTTPS enforced (HTTP disabled)
-        SecureURL           = "http://localhost:11434"
+        BaseURL             = "http://localhost:11434"
+        SecureURL           = "https://localhost:11434"
         Username            = ""
         Password            = ""
         APIKey              = ""
@@ -6552,8 +2822,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
         # Store connection in pool
         $script:OllamaConnectionPool[$ServerName] = $connection
         
-        $connectionTimeMs = [math]::Round($connectionTime, 2)
-        Write-StartupLog "✅ Connected to Ollama server '$ServerName' (${connectionTimeMs}ms)" "SUCCESS"
+        Write-StartupLog "✅ Connected to Ollama server '$ServerName' ($([math]::Round($connectionTime, 2))ms)" "SUCCESS"
         Register-ErrorHandler -ErrorMessage "Successfully connected to server '$ServerName'" -ErrorCategory "OLLAMA" -Severity "LOW" -SourceFunction "Connect-OllamaServer" -ShowToUser $false
         
         return $true
@@ -6687,90 +2956,25 @@ function Test-OllamaServerConnection {
 function Get-OllamaServerModels {
     param([string]$ServerName)
     
-    $allModels = @()
-    
     try {
         if (-not $ServerName) { $ServerName = $script:CurrentOllamaServer }
         
         $server = $script:OllamaServers[$ServerName]
         if (-not $server) { return @() }
         
-        # Get models from Ollama API
         $modelsUrl = "$($server.BaseURL)/api/tags"
         $response = Invoke-RestMethod -Uri $modelsUrl -Method GET -TimeoutSec $server.Timeout
         
-        $apiModels = @($response.models | ForEach-Object { $_.name })
-        $allModels += $apiModels
+        $models = @($response.models | ForEach-Object { $_.name })
+        $server.Models = $models
         
-        Write-StartupLog "✅ Retrieved $($apiModels.Count) models from server '$ServerName' API" "INFO"
+        Write-StartupLog "✅ Retrieved $($models.Count) models from server '$ServerName'" "INFO"
+        return $models
     }
     catch {
         Register-ErrorHandler -ErrorMessage "Failed to get models from server '$ServerName': $($_.Exception.Message)" -ErrorCategory "OLLAMA" -Severity "MEDIUM" -SourceFunction "Get-OllamaServerModels"
+        return @()
     }
-    
-    # Also scan custom model directory D:\OllamaModels
-    $customModelPath = "D:\OllamaModels"
-    if (Test-Path -LiteralPath $customModelPath) {
-        try {
-            Write-StartupLog "🔍 Scanning custom model directory: $customModelPath" "INFO"
-            
-            # Scan for model directories
-            $modelDirs = Get-ChildItem -LiteralPath $customModelPath -Directory -ErrorAction SilentlyContinue
-            
-            foreach ($modelDir in $modelDirs) {
-                # Check for model files
-                $modelFiles = Get-ChildItem -LiteralPath $modelDir.FullName -File -ErrorAction SilentlyContinue | 
-                Where-Object { $_.Extension -in @('.gguf', '.bin', '.safetensors') -or $_.Name -eq 'blobs' }
-                
-                if ($modelFiles.Count -gt 0) {
-                    $modelName = $modelDir.Name
-                    if ($modelName -notmatch ':') {
-                        $modelName = "$modelName:latest"
-                    }
-                    
-                    if ($modelName -notin $allModels) {
-                        $allModels += $modelName
-                        Write-StartupLog "✅ Found custom model: $modelName" "INFO"
-                    }
-                }
-            }
-            
-            # Check for direct .gguf files
-            $directModels = Get-ChildItem -LiteralPath $customModelPath -File -Filter "*.gguf" -ErrorAction SilentlyContinue
-            foreach ($modelFile in $directModels) {
-                $modelName = [System.IO.Path]::GetFileNameWithoutExtension($modelFile.Name)
-                if ($modelName -notmatch ':') {
-                    $modelName = "$modelName:latest"
-                }
-                if ($modelName -notin $allModels) {
-                    $allModels += $modelName
-                    Write-StartupLog "✅ Found custom model file: $modelName" "INFO"
-                }
-            }
-        }
-        catch {
-            Write-StartupLog "⚠️ Error scanning custom model directory: $_" "WARNING"
-        }
-    }
-    
-    # Set OLLAMA_MODELS environment variable
-    if (Test-Path -LiteralPath $customModelPath) {
-        try {
-            $env:OLLAMA_MODELS = $customModelPath
-            Write-StartupLog "✅ Set OLLAMA_MODELS to: $customModelPath" "INFO"
-        }
-        catch {
-            Write-StartupLog "⚠️ Could not set OLLAMA_MODELS: $_" "WARNING"
-        }
-    }
-    
-    # Store in server object
-    if ($server) {
-        $server.Models = $allModels | Sort-Object -Unique
-    }
-    
-    Write-StartupLog "✅ Total models available: $($allModels.Count)" "INFO"
-    return $allModels | Sort-Object -Unique
 }
 
 function Start-OllamaHealthMonitoring {
@@ -6782,31 +2986,19 @@ function Start-OllamaHealthMonitoring {
     $script:OllamaHealthMonitor = New-Object System.Windows.Forms.Timer
     $script:OllamaHealthMonitor.Interval = 30000  # Check every 30 seconds
     $script:OllamaHealthMonitor.add_Tick({
-            try {
-                if (-not $script:OllamaServers) {
-                    return
-                }
+            foreach ($serverName in $script:OllamaServers.Keys) {
+                $server = $script:OllamaServers[$serverName]
+                if ($server.IsActive) {
+                    $previousStatus = $server.Status
+                    $isOnline = Test-OllamaServerConnection -ServerName $serverName
                 
-                foreach ($serverName in $script:OllamaServers.Keys) {
-                    $server = $script:OllamaServers[$serverName]
-                    if ($server -and $server.IsActive) {
-                        $previousStatus = $server.Status
-                        $isOnline = Test-OllamaServerConnection -ServerName $serverName
-                    
-                        if ($isOnline -and $previousStatus -ne "Online") {
-                            Register-ErrorHandler -ErrorMessage "Server '$serverName' is back online" -ErrorCategory "OLLAMA" -Severity "LOW" -SourceFunction "Health Monitor" -ShowToUser $false
-                        }
-                        elseif (-not $isOnline -and $previousStatus -eq "Online") {
-                            Register-ErrorHandler -ErrorMessage "Server '$serverName' went offline" -ErrorCategory "OLLAMA" -Severity "MEDIUM" -SourceFunction "Health Monitor"
-                        }
+                    if ($isOnline -and $previousStatus -ne "Online") {
+                        Register-ErrorHandler -ErrorMessage "Server '$serverName' is back online" -ErrorCategory "OLLAMA" -Severity "LOW" -SourceFunction "Health Monitor" -ShowToUser $false
+                    }
+                    elseif (-not $isOnline -and $previousStatus -eq "Online") {
+                        Register-ErrorHandler -ErrorMessage "Server '$serverName' went offline" -ErrorCategory "OLLAMA" -Severity "MEDIUM" -SourceFunction "Health Monitor"
                     }
                 }
-            }
-            catch [System.Management.Automation.PipelineStoppedException] {
-                # Pipeline stopped - silently ignore during shutdown
-            }
-            catch {
-                Write-StartupLog "Error in Ollama health monitor timer: $_" "WARNING"
             }
         })
     $script:OllamaHealthMonitor.Start()
@@ -6944,7 +3136,7 @@ Write-SecurityLog "Application starting" "INFO" "Version: 2.0, Security: Enabled
 $script:CurrentSession.LastActivity = Get-Date
 
 # Initialize security configuration from environment or config file
-$configPath = Join-Path (Join-Path $script:ProjectRoot "config") "security.json"
+$configPath = Join-Path $env:APPDATA "RawrXD\security.json"
 if (Test-Path $configPath) {
     try {
         $savedConfig = Get-Content $configPath | ConvertFrom-Json
@@ -6960,67 +3152,8 @@ if (Test-Path $configPath) {
     }
 }
 
-# ============================================
-# CRITICAL VARIABLE INITIALIZATION
-# ============================================
-# Initialize all global variables to prevent undefined variable errors
-# These variables are used throughout the application and must be defined early
-
-# Main application form - MUST be initialized before any GUI operations
-$form = $null
-$script:form = $null
-
-# Authentication and security variables
-$script:loginResult = $null
-$script:token = $null
-# CurrentSession is already initialized at line 1592, don't overwrite it
-if (-not $script:CurrentSession) {
-    $script:CurrentSession = @{
-        UserId          = $null
-        SessionId       = [System.Guid]::NewGuid().ToString()
-        StartTime       = Get-Date
-        LastActivity    = Get-Date
-        IsAuthenticated = $false
-        LoginAttempts   = 0
-        SecurityLevel   = "Standard"
-        EncryptionKey   = [StealthCrypto]::GenerateKey()
-    }
-}
-
-# Initialize SecurityConfig early with default values to prevent null reference errors
-if (-not $script:SecurityConfig) {
-    $script:SecurityConfig = @{
-        EncryptSensitiveData   = $true
-        StealthMode            = $false
-        ProcessHiding          = $false
-        AntiForensics          = $false
-        MaxFileSize            = 10MB
-        AllowedExtensions      = @('.txt', '.md', '.ps1', '.json', '.xml', '.yaml', '.yml', '.log')
-        DangerousExtensions    = @('.exe', '.bat', '.cmd', '.com', '.scr', '.pif', '.vbs', '.js', '.jar', '.msi')
-        SessionTimeout         = 3600  # 1 hour
-        MaxErrorsPerMinute     = 10
-        LogToEventLog          = $true
-        EnableAuditTrail       = $true
-        AuthenticationRequired = $false
-        RequireAuthentication  = $false
-        TwoFactorAuth          = $false
-        LogSecurityEvents      = $true
-        SecurityCheckInterval  = 60000  # 1 minute in milliseconds
-    }
-}
-
-# Console and logging variables
-$global:devConsole = $null
-$script:devConsole = $null
-
-# Recent files list for file browser
-$script:RecentFiles = New-Object System.Collections.ArrayList
-
 # GUI Setup
 $form = New-Object System.Windows.Forms.Form
-$script:form = $form
-$mainForm = $form  # Alias for test compatibility
-$script:mainForm = $form
 $form.Text = "RawrXD - Secure AI Editor"
 $form.Size = New-Object System.Drawing.Size(1200, 700)
 $form.StartPosition = "CenterScreen"
@@ -7061,18 +3194,12 @@ $mainSplitter = New-Object System.Windows.Forms.SplitContainer
 $mainSplitter.Dock = [System.Windows.Forms.DockStyle]::Fill
 $mainSplitter.Orientation = [System.Windows.Forms.Orientation]::Vertical
 $mainSplitter.SplitterDistance = 800
-# Add collapsible functionality
-$mainSplitter.Panel1Collapsed = $false
-$mainSplitter.Panel2Collapsed = $false
 
 # Left side splitter (Explorer and Editor)
 $leftSplitter = New-Object System.Windows.Forms.SplitContainer
 $leftSplitter.Dock = [System.Windows.Forms.DockStyle]::Fill
 $leftSplitter.Orientation = [System.Windows.Forms.Orientation]::Vertical
 $leftSplitter.SplitterDistance = 200
-# Add collapsible functionality
-$leftSplitter.Panel1Collapsed = $false
-$leftSplitter.Panel2Collapsed = $false
 $mainSplitter.Panel1.Controls.Add($leftSplitter) | Out-Null
 
 # File Explorer Container (Left Pane)
@@ -7210,15 +3337,8 @@ $explorer.add_NodeMouseDoubleClick({
             
                 # Basic size check (increased to 50MB for practicality)
                 if ($fileInfo.Length -gt 50MB) {
-                    $sizeMB = [math]::Round($fileInfo.Length / 1MB, 1)
-                    $result = [System.Windows.Forms.MessageBox]::Show(
-                        "File is large ($sizeMB MB). This may slow down the editor. Continue?",
-                        "Large File Warning",
-                        [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                        [System.Windows.Forms.MessageBoxIcon]::Question
-                    )
-                    if ($result -ne [System.Windows.Forms.DialogResult]::Yes) {
-                        Write-DevConsole "⚠️ User cancelled opening large file" "INFO"
+                    $result = (Read-Host "File is large ($([math]::Round($fileInfo.Length/1MB, 1))MB). This may slow down the editor. Continue? (y/N)") -eq "y"
+                    if ($result -ne "Yes") {
                         return
                     }
                 }
@@ -7227,28 +3347,16 @@ $explorer.add_NodeMouseDoubleClick({
                 $extension = [System.IO.Path]::GetExtension($filePath).ToLower()
                 $binaryExts = @('.exe', '.dll', '.bin', '.obj', '.lib', '.com', '.scr', '.msi', '.cab')
                 if ($extension -in $binaryExts) {
-                    $result = [System.Windows.Forms.MessageBox]::Show(
-                        "This appears to be a binary file ($extension). It may not display correctly as text. Open anyway?",
-                        "Binary File Warning",
-                        [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                        [System.Windows.Forms.MessageBoxIcon]::Question
-                    )
-                    if ($result -ne [System.Windows.Forms.DialogResult]::Yes) {
-                        Write-DevConsole "⚠️ User cancelled opening binary file" "INFO"
+                    $result = (Read-Host "This appears to be a binary file ($extension). It may not display correctly as text. Open anyway? (y/N)") -eq "y"
+                    if ($result -ne "Yes") {
                         return
                     }
                 }
             
                 try {
-                    # Read the file content with proper encoding
+                    # Read the file content
                     Write-DevConsole "📖 Reading file content..." "INFO"
-                    try {
-                        $content = [System.IO.File]::ReadAllText($filePath, [System.Text.Encoding]::UTF8)
-                    }
-                    catch {
-                        # Fallback to default encoding
-                        $content = [System.IO.File]::ReadAllText($filePath)
-                    }
+                    $content = [System.IO.File]::ReadAllText($filePath)
                     Write-DevConsole "✅ File content read successfully: $($content.Length) characters" "SUCCESS"
                 
                     # Handle encrypted files (.secure extension)
@@ -7264,194 +3372,19 @@ $explorer.add_NodeMouseDoubleClick({
                         }
                         catch {
                             Write-DevConsole "❌ Failed to decrypt file: $_" "ERROR"
-                            $result = [System.Windows.Forms.MessageBox]::Show(
-                                "File appears to be encrypted but decryption failed. Show raw content?",
-                                "Decryption Failed",
-                                [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                                [System.Windows.Forms.MessageBoxIcon]::Question
-                            )
-                            if ($result -ne [System.Windows.Forms.DialogResult]::Yes) {
-                                Write-DevConsole "⚠️ User cancelled opening encrypted file" "INFO"
+                            $result = (Read-Host "File appears to be encrypted but decryption failed. Show raw content? (y/N)") -eq "y"
+                            if ($result -ne "Yes") {
                                 return
                             }
                         }
                     }
                 
                     # Assign to editor (this is where the magic happens)
-                    if ($script:editor -and $script:editor.IsHandleCreated) {
-                        # Double-click handler is already on UI thread, but use BeginInvoke for safety
-                        $action = [System.Action] {
-                            try {
-                                # Verify editor is still valid
-                                if (-not $script:editor -or $script:editor.IsDisposed) {
-                                    Write-DevConsole "❌ Editor is disposed or invalid" "ERROR"
-                                    return
-                                }
-                                
-                                # Clear editor first to ensure clean state
-                                $script:editor.Clear()
-                                
-                                # Set content - use AppendText for large files to avoid blocking
-                                if ($content.Length -gt 100000) {
-                                    # For very large files, use AppendText in chunks
-                                    $chunkSize = 50000
-                                    $script:editor.Text = ""
-                                    for ($i = 0; $i -lt $content.Length; $i += $chunkSize) {
-                                        $chunk = if ($i + $chunkSize -lt $content.Length) {
-                                            $content.Substring($i, $chunkSize)
-                                        }
-                                        else {
-                                            $content.Substring($i)
-                                        }
-                                        $script:editor.AppendText($chunk)
-                                        [System.Windows.Forms.Application]::DoEvents()
-                                    }
-                                    
-                                    # CRITICAL: Force text color to light gray (very visible) after appending all chunks
-                                    if ($script:editor.IsHandleCreated) {
-                                        $visibleColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-                                        $script:editor.SelectionStart = 0
-                                        $script:editor.SelectionLength = $script:editor.Text.Length
-                                        $script:editor.SelectionColor = $visibleColor
-                                        $script:editor.SelectionStart = 0
-                                        $script:editor.SelectionLength = 0
-                                    }
-                                }
-                                else {
-                                    # For smaller files, set directly
-                                    $script:editor.Text = $content
-                            
-                                    # CRITICAL: Force text color to light gray (very visible) after setting content
-                                    # RichTextBox may use RTF that overrides ForeColor, so we must set SelectionColor
-                                    if ($script:editor.IsHandleCreated) {
-                                        $visibleColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-                                        $script:editor.SelectionStart = 0
-                                        $script:editor.SelectionLength = $script:editor.Text.Length
-                                        $script:editor.SelectionColor = $visibleColor
-                                        $script:editor.SelectionStart = 0
-                                        $script:editor.SelectionLength = 0
-                                    }
-                                }
-                                
-                                # Update global state
-                                $global:currentFile = $filePath
-                                $form.Text = "RawrXD - AI Editor - $([System.IO.Path]::GetFileName($filePath))"
-                                
-                                # Ensure editor is visible with proper colors
-                                $visibleColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-                                $script:editor.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-                                $script:editor.ForeColor = $visibleColor
-                                if ($script:editor.IsHandleCreated) {
-                                    $script:editor.SelectionColor = $visibleColor
-                                }
-                                
-                                # FIX: Ensure editor is visible, enabled, and editable
-                                $script:editor.Visible = $true
-                                $script:editor.Enabled = $true
-                                $script:editor.ReadOnly = $false  # CRITICAL: Ensure editor is editable
-                                
-                                # Reset selection and scroll to top
-                                $script:editor.SelectionStart = 0
-                                $script:editor.SelectionLength = 0
-                                $script:editor.ScrollToCaret()
-                                
-                                # FIX: Force focus to editor to ensure it's interactive
-                                $script:editor.Focus()
-                                
-                                # Force refresh and focus
-                                $script:editor.Refresh()
-                                $script:editor.Focus()
-                            
-                                # Update undo stack
-                                if ($script:undoStack) {
-                                    $script:lastEditorText = $content
-                                }
-                                
-                                # Apply syntax highlighting after file is loaded (with delay for large files)
-                                if ($global:settings -and $global:settings.CodeHighlighting) {
-                                    if (Get-Command Apply-SyntaxHighlighting -ErrorAction SilentlyContinue) {
-                                        # Capture variables for timer closure to avoid null reference
-                                        $editorRef = $script:editor
-                                        $filePathRef = $filePath
-                                        
-                                        # Use a timer to delay highlighting for large files
-                                        if ($content.Length -gt 50000) {
-                                            $highlightTimer = New-Object System.Windows.Forms.Timer
-                                            $timerRef = $highlightTimer  # Capture timer reference
-                                            $highlightTimer.Interval = 500
-                                            $highlightTimer.Add_Tick({
-                                                    try {
-                                                        # Stop and dispose timer first
-                                                        if (Test-Path variable:timerRef) {
-                                                            $t = $timerRef
-                                                            if ($t) {
-                                                                $t.Stop()
-                                                                $t.Dispose()
-                                                            }
-                                                        }
-                                                        
-                                                        # Verify editor is still valid before highlighting
-                                                        if ($editorRef -and -not $editorRef.IsDisposed -and $editorRef.IsHandleCreated) {
-                                                            if ($filePathRef -and (Test-Path $filePathRef -ErrorAction SilentlyContinue)) {
-                                                                Apply-SyntaxHighlighting -Editor $editorRef -FilePath $filePathRef
-                                                            }
-                                                        }
-                                                    }
-                                                    catch [System.Management.Automation.PipelineStoppedException] {
-                                                        # Pipeline stopped - silently ignore during shutdown
-                                                    }
-                                                    catch {
-                                                        # Silently handle errors to prevent unhandled exceptions
-                                                        try {
-                                                            if (Test-Path variable:timerRef) {
-                                                                $t = $timerRef
-                                                                if ($t -and $t.Enabled) {
-                                                                    $t.Stop()
-                                                                    $t.Dispose()
-                                                                }
-                                                            }
-                                                        }
-                                                        catch {
-                                                            Write-EmergencyLog "Failed to dispose syntax highlight timer: $_" "WARNING"
-                                                        }
-                                                    }
-                                                })
-                                            $highlightTimer.Start()
-                                        }
-                                        else {
-                                            # For smaller files, apply immediately
-                                            if ($script:editor -and -not $script:editor.IsDisposed -and $script:editor.IsHandleCreated) {
-                                                try {
-                                                    Apply-SyntaxHighlighting -Editor $script:editor -FilePath $filePath
-                                                }
-                                                catch {
-                                                    Write-DevConsole "⚠️ Syntax highlighting failed: $($_.Exception.Message)" "WARNING"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                Write-DevConsole "Setting editor content (safe handler)..." "DEBUG"
-                                Set-EditorContent -Content $content -Editor $script:editor
-                                Write-DevConsole "✅ Editor content set successfully" "DEBUG"
-                            }
-                            catch {
-                                Write-DevConsole "❌ Error setting editor content: $($_.Exception.Message)" "ERROR"
-                                Write-StartupLog "Error setting editor content: $($_.Exception.Message)" "ERROR"
-                                Write-StartupLog "Stack trace: $($_.ScriptStackTrace)" "ERROR"
-                            }
-                        }
-                        
-                        # Execute on UI thread
-                        if ($form.InvokeRequired) {
-                            $form.BeginInvoke($action) | Out-Null
-                        }
-                        else {
-                            $action.Invoke()
-                        }
-                        
-                        Write-DevConsole "🎉 File opened successfully in editor! ($($content.Length) characters)" "SUCCESS"
+                    if ($script:editor) {
+                        $script:editor.Text = $content
+                        $global:currentFile = $filePath
+                        $form.Text = "RawrXD - AI Editor - $([System.IO.Path]::GetFileName($filePath))"
+                        Write-DevConsole "🎉 File opened successfully in editor!" "SUCCESS"
                     
                         # Update last activity if session exists
                         if ($script:CurrentSession) {
@@ -7466,9 +3399,8 @@ $explorer.add_NodeMouseDoubleClick({
                         }
                     }
                     else {
-                        Write-DevConsole "❌ Editor not initialized! Editor object is null." "ERROR"
-                        Write-StartupLog "Editor is not properly initialized. Please restart RawrXD." "ERROR"
-                        [System.Windows.Forms.MessageBox]::Show("Editor is not properly initialized. Please restart RawrXD.", "Editor Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                        Write-DevConsole "❌ Editor not initialized!" "ERROR"
+                        Write-StartupLog "Editor is not properly initialized. Please restart RawrXD." "ERROR"; Write-DevConsole "CRITICAL: Editor initialization failed" "ERROR"
                     }
                 
                 }
@@ -7493,13 +3425,10 @@ $openInRawrItem.Add_Click({
         $selectedNode = $explorer.SelectedNode
         if ($selectedNode -and $selectedNode.Tag -and $selectedNode.Tag -ne "DUMMY") {
             if ((Test-Path $selectedNode.Tag) -and -not (Test-Path $selectedNode.Tag -PathType Container)) {
-                # Trigger the same logic as a double-click without calling protected methods
-                try {
-                    Invoke-ExplorerNodeOpen -Node $selectedNode
-                }
-                catch {
-                    Write-DevConsole "Error opening file: $_" "ERROR"
-                }
+                # Trigger the same logic as double-click
+                $explorer_NodeMouseDoubleClick = $explorer.GetType().GetEvent("NodeMouseDoubleClick")
+                $dummyArgs = New-Object System.Windows.Forms.TreeNodeMouseClickEventArgs($selectedNode, [System.Windows.Forms.MouseButtons]::Left, 2, 0, 0)
+                $explorer.OnNodeMouseDoubleClick($dummyArgs)
             }
         }
     })
@@ -7573,46 +3502,31 @@ $explorerContextMenu.Items.Add($openFolderItem) | Out-Null
 # Properties
 $propertiesItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $propertiesItem.Text = "ℹ️ Properties"
-$trainModelItem.Add_Click({
-    if ($global:RawrXDPoshLLMTraining) {
-        [System.Windows.Forms.MessageBox]::Show("A training run is already in progress.", "PoshLLM", "OK", "Information")
-        return
-    }
-    $global:RawrXDPoshLLMTraining = $true
-    try {
-        if (-not (Get-Module -Name "PoshLLM")) {
-            $modulePath = Join-Path $PSScriptRoot "extensions\PoshLLM.psm1"
-            Import-Module $modulePath -Force
+$propertiesItem.Add_Click({
+        $selectedNode = $explorer.SelectedNode
+        if ($selectedNode -and $selectedNode.Tag -and $selectedNode.Tag -ne "DUMMY") {
+            try {
+                if (Test-Path $selectedNode.Tag) {
+                    $item = Get-Item $selectedNode.Tag
+                    $isFile = -not (Test-Path $selectedNode.Tag -PathType Container)
+                
+                    $props = @"
+Path: $($item.FullName)
+Name: $($item.Name)
+Type: $(if ($isFile) { "File" } else { "Folder" })
+Created: $($item.CreationTime)
+Modified: $($item.LastWriteTime)
+$(if ($isFile) { "Size: $($item.Length) bytes" } else { "" })
+Attributes: $($item.Attributes)
+"@
+                    Write-DevConsole "Properties - $($item.Name): $props" "INFO"
+                }
+            }
+            catch {
+                Write-DevConsole "Failed to get properties: $_" "ERROR"
+                Write-ErrorLog -Message "Failed to get properties: $($_.Exception.Message)" -Severity "HIGH"
+            }
         }
-        
-        $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-        $openFileDialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*"
-        $openFileDialog.Title = "Select corpus file for training"
-        if ($openFileDialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
-        $corpusFile = $openFileDialog.FileName
-        
-        $modelName = [Microsoft.VisualBasic.Interaction]::InputBox("Enter model name:", "PoshLLM Train", "my-model")
-        if (-not $modelName) { return }
-        
-        $corpus = Get-Content $corpusFile | Where-Object { $_ -ne '' }
-        Write-Host "Training PoshLLM model '$modelName' with $($corpus.Count) lines..." -ForegroundColor Cyan
-        $progressAction = {
-            param($Epoch, $Total, $Loss)
-            $percent = [math]::Min(100, [math]::Floor(100 * $Epoch / $Total))
-            $host.UI.WriteProgress("PoshLLM Training", "Epoch $Epoch/$Total", $percent)
-        }
-        Initialize-PoshLLM -Name $modelName -Corpus $corpus -VocabSize 300 -EmbedDim 64 -MaxSeqLen 128 -Layers 4 -Heads 4 -Epochs 10 -ProgressAction $progressAction
-        $host.UI.WriteProgress("PoshLLM Training", "Completed", 100)
-        [System.Windows.Forms.MessageBox]::Show("Model '$modelName' trained successfully!", "PoshLLM", "OK", "Information")
-    }
-    catch {
-        [System.Windows.Forms.MessageBox]::Show("Error training model: $($_.Exception.Message)", "Error", "OK", "Error")
-    }
-    finally {
-        $global:RawrXDPoshLLMTraining = $false
-        $host.UI.WriteProgress("PoshLLM Training", "Idle", 0)
-    }
-})
     })
 $explorerContextMenu.Items.Add($propertiesItem) | Out-Null
 
@@ -7654,210 +3568,16 @@ $explorerPathLabel.ForeColor = [System.Drawing.Color]::White
 $explorerPathLabel.Padding = New-Object System.Windows.Forms.Padding(5, 8, 5, 0)
 $explorerToolbar.Controls.Add($explorerPathLabel) | Out-Null
 
-# Add splitter toggle buttons for collapsible panes
-# Toggle main splitter (hide/show right chat pane)
-$toggleChatBtn = New-Object System.Windows.Forms.Button
-$toggleChatBtn.Text = "💬"
-$toggleChatBtn.Dock = [System.Windows.Forms.DockStyle]::Right
-$toggleChatBtn.Width = 30
-$toggleChatBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$toggleChatBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-$toggleChatBtn.ForeColor = [System.Drawing.Color]::White
-$toggleChatBtn.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-$chatToolTip = New-Object System.Windows.Forms.ToolTip
-$chatToolTip.SetToolTip($toggleChatBtn, "Toggle Chat Pane (Ctrl+Shift+C)")
-$explorerToolbar.Controls.Add($toggleChatBtn) | Out-Null
-
-# Toggle left splitter (hide/show file explorer)
-$toggleExplorerBtn = New-Object System.Windows.Forms.Button
-$toggleExplorerBtn.Text = "📁"
-$toggleExplorerBtn.Dock = [System.Windows.Forms.DockStyle]::Right
-$toggleExplorerBtn.Width = 30
-$toggleExplorerBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$toggleExplorerBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-$toggleExplorerBtn.ForeColor = [System.Drawing.Color]::White
-$toggleExplorerBtn.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-$explorerToolTip = New-Object System.Windows.Forms.ToolTip
-$explorerToolTip.SetToolTip($toggleExplorerBtn, "Toggle File Explorer (Ctrl+Shift+E)")
-$explorerToolbar.Controls.Add($toggleExplorerBtn) | Out-Null
-
-# Toggle agent changes splitter (hide/show agent changes)
-$toggleAgentBtn = New-Object System.Windows.Forms.Button
-$toggleAgentBtn.Text = "🤖"
-$toggleAgentBtn.Dock = [System.Windows.Forms.DockStyle]::Right
-$toggleAgentBtn.Width = 30
-$toggleAgentBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$toggleAgentBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-$toggleAgentBtn.ForeColor = [System.Drawing.Color]::White
-$toggleAgentBtn.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-$agentToolTip = New-Object System.Windows.Forms.ToolTip
-$agentToolTip.SetToolTip($toggleAgentBtn, "Toggle Agent Panel (Ctrl+Shift+A)")
-$explorerToolbar.Controls.Add($toggleAgentBtn) | Out-Null
-
-# Toggle button click event handlers for collapsible panes
-$toggleChatBtn.Add_Click({
-        # Toggle main splitter panel 2 (chat pane)
-        $mainSplitter.Panel2Collapsed = -not $mainSplitter.Panel2Collapsed
-        Write-DevConsole "Chat pane $(if ($mainSplitter.Panel2Collapsed) { 'collapsed' } else { 'expanded' })" "INFO"
-    })
-
-$toggleExplorerBtn.Add_Click({
-        # Toggle left splitter panel 1 (file explorer)
-        $leftSplitter.Panel1Collapsed = -not $leftSplitter.Panel1Collapsed
-        Write-DevConsole "File explorer $(if ($leftSplitter.Panel1Collapsed) { 'collapsed' } else { 'expanded' })" "INFO"
-    })
-
-$toggleAgentBtn.Add_Click({
-        # Toggle agent changes splitter panel 2 (agent changes)
-        $agentChangesSplitter.Panel2Collapsed = -not $agentChangesSplitter.Panel2Collapsed
-        Write-DevConsole "Agent panel $(if ($agentChangesSplitter.Panel2Collapsed) { 'collapsed' } else { 'expanded' })" "INFO"
-    })
-
 # Text Editor (Middle Pane)
-# CRITICAL: Only create editor if Windows Forms is available
-if ($script:WindowsFormsAvailable) {
-    try {
 $script:editor = New-Object System.Windows.Forms.RichTextBox
 $script:editor.Dock = [System.Windows.Forms.DockStyle]::Fill
 $script:editor.Font = New-Object System.Drawing.Font("Consolas", 10)
-# Set colors to ensure text is visible - CRITICAL for text visibility
-$script:editor.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-$script:editor.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)  # Light gray (very visible)
-$script:editor.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-$script:editor.Visible = $true
-$script:editor.DetectUrls = $false  # Prevent RTF auto-formatting
-        
-        # Safe logging - don't let logging failures break editor creation
-        try {
-            Write-EmergencyLog "✅ Editor created successfully: Back=30,30,30 Fore=220,220,220 Visible=$($script:editor.Visible)" "SUCCESS"
-    }
-    catch {
-            # Logging failed, but editor was created - use fallback
-            Write-Host "✅ Editor created successfully" -ForegroundColor Green -ErrorAction SilentlyContinue
-}
-
-# CRITICAL: Prevent RTF format errors by ensuring Text property is initialized first
-try {
-    $script:editor.Text = ""  # Initialize with empty plain text, NOT RTF
-}
-catch {
-            try {
-    Write-EmergencyLog "Error initializing editor text: $_" "WARNING"
-            }
-            catch {
-                Write-Host "Warning: Error initializing editor text" -ForegroundColor Yellow -ErrorAction SilentlyContinue
-            }
-}
-
-# CRITICAL FIX: Force SelectionColor after handle is created, not before
-# Setting color properties before handle creation can cause RTF format exceptions
-$script:editor.Add_HandleCreated({
-        try {
-            if ($script:editor -and -not $script:editor.IsDisposed) {
-                # Set default color for new text
-                Set-EditorTextColor -Color ([System.Drawing.Color]::FromArgb(220, 220, 220))
-                        try {
-                Write-EmergencyLog "✅ Editor text color applied via HandleCreated" "SUCCESS"
-                        }
-                        catch {
-                            # Logging failed, continue anyway
-                        }
-            }
-        }
-        catch {
-                    try {
-            Write-EmergencyLog "Error setting editor colors in HandleCreated: $_" "WARNING"
-                    }
-                    catch {
-                        # Logging failed, continue anyway
-                    }
-        }
-    })
 
 # Enable built-in undo for RichTextBox
 $script:editor.EnableAutoDragDrop = $true
-    }
-    catch {
-        # Safe error logging
-        try {
-            Write-EmergencyLog "❌ CRITICAL: Failed to create editor: $($_.Exception.Message)" "ERROR"
-            Write-EmergencyLog "Stack trace: $($_.ScriptStackTrace)" "ERROR"
-        }
-        catch {
-            Write-Host "❌ CRITICAL: Failed to create editor: $($_.Exception.Message)" -ForegroundColor Red -ErrorAction SilentlyContinue
-        }
-        $script:editor = $null
-    }
-}
-else {
-    try {
-        Write-EmergencyLog "⚠️ Windows Forms not available - editor will not be created" "WARNING"
-    }
-    catch {
-        Write-Host "⚠️ Windows Forms not available - editor will not be created" -ForegroundColor Yellow -ErrorAction SilentlyContinue
-    }
-    $script:editor = $null
-}
 
-# CRITICAL: Helper function to apply text color to ALL text in RichTextBox
-function Set-EditorTextColor {
-    param([System.Drawing.Color]$Color = [System.Drawing.Color]::FromArgb(220, 220, 220))
-    
-    if (-not $script:editor -or $script:editor.IsDisposed) { return }
-    
-    try {
-        # Save current selection
-        $start = $script:editor.SelectionStart
-        $length = $script:editor.SelectionLength
-        
-        # Select all and apply color
-        $script:editor.SelectionStart = 0
-        $script:editor.SelectionLength = $script:editor.TextLength
-        $script:editor.SelectionColor = $Color
-        
-        # Restore selection
-        $script:editor.SelectionStart = $start
-        $script:editor.SelectionLength = $length
-    }
-    catch {
-        Write-EmergencyLog "Error setting editor text color: $_" "WARNING"
-    }
-}
-
-# Syntax highlighting debounce timer
-$script:syntaxHighlightTimer = $null
-
-# Track text changes for undo/redo stack and syntax highlighting
-# Only add event handler if editor was successfully created
-if ($script:editor) {
+# Track text changes for undo/redo stack
 $script:editor.Add_TextChanged({
-        # CRITICAL: Ensure text color is always visible when typing
-        if ($script:editor.IsHandleCreated -and -not $script:editor.IsDisposed) {
-            try {
-                # Save selection
-                $selStart = $script:editor.SelectionStart
-                $selLength = $script:editor.SelectionLength
-                
-                # Set color at current position for newly typed text
-                $script:editor.SelectionColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-                
-                # Ensure background and foreground colors remain correct
-                if ($script:editor.BackColor.ToArgb() -ne [System.Drawing.Color]::FromArgb(30, 30, 30).ToArgb()) {
-                    $script:editor.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-                }
-                if ($script:editor.ForeColor.ToArgb() -ne [System.Drawing.Color]::FromArgb(220, 220, 220).ToArgb()) {
-                    $script:editor.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-                }
-                
-                # Restore selection
-                $script:editor.SelectionStart = $selStart
-                $script:editor.SelectionLength = $selLength
-            }
-            catch {
-                # Silently handle errors to avoid recursion
-            }
-        }
-        
         if (-not $script:isUndoRedoOperation) {
             # Only save to undo stack if text actually changed
             if ($script:lastEditorText -ne $script:editor.Text) {
@@ -7876,281 +3596,16 @@ $script:editor.Add_TextChanged({
                         $script:undoStack.Push($tempStack.Pop())
                     }
                 }
-                
-                # Debounced syntax highlighting (wait 500ms after typing stops)
-                if ($global:settings -and $global:settings.CodeHighlighting) {
-                    if ($script:syntaxHighlightTimer) {
-                        try {
-                            $script:syntaxHighlightTimer.Stop()
-                            $script:syntaxHighlightTimer.Dispose()
-                        }
-                        catch { }
-                    }
-                    
-                    # Capture variables for timer closure to prevent null reference errors
-                    $editorRef = $script:editor
-                    $filePathRef = $global:currentFile
-                    $timerRefLocal = New-Object System.Windows.Forms.Timer
-                    $script:syntaxHighlightTimer = $timerRefLocal
-                    
-                    $timerRefLocal.Interval = 500
-                    $timerRefLocal.Add_Tick({
-                            try {
-                                # Use script scope to get timer reference safely
-                                $localTimer = $script:syntaxHighlightTimer
-                                
-                                # Stop and dispose timer first
-                                if ($localTimer -and $localTimer.Enabled) {
-                                    $localTimer.Stop()
-                                    $localTimer.Dispose()
-                                }
-                                
-                                # Clear the script-level reference
-                                $script:syntaxHighlightTimer = $null
-                            
-                                # Apply syntax highlighting only if editor and file are still valid
-                                    if ($editorRef -and -not $editorRef.IsDisposed -and $editorRef.IsHandleCreated) {
-                                        if ($filePathRef -and (Test-Path $filePathRef -ErrorAction SilentlyContinue)) {
-                                            Apply-SyntaxHighlighting -Editor $editorRef -FilePath $filePathRef
-                                            Force-EditorVisibility -Editor $editorRef
-                                        }
-                                    }
-                            }
-                            catch [System.Management.Automation.PipelineStoppedException] {
-                                # Pipeline stopped - silently ignore during shutdown
-                            }
-                            catch {
-                                # Silently handle errors in timer callback to prevent crashes
-                                try {
-                                    $safeTimer = $script:syntaxHighlightTimer
-                                    if ($safeTimer -and $safeTimer.Enabled) {
-                                        $safeTimer.Stop()
-                                        $safeTimer.Dispose()
-                                        $script:syntaxHighlightTimer = $null
-                                    }
-                                }
-                                catch {
-                                    Write-EmergencyLog "Failed to dispose syntax timer in error handler: $_" "WARNING"
-                                }
-                            }
-                        })
-                    $timerRefLocal.Start()
-                }
             }
         }
     })
-
-# CRITICAL FIX: Add KeyPress handler to ensure text is IMMEDIATELY visible as you type
-$script:editor.Add_KeyPress({
-        param($sender, $e)
-        try {
-            if ($script:editor.IsHandleCreated -and -not $script:editor.IsDisposed) {
-                # Ensure the text color is visible BEFORE the character is inserted
-                $visibleColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-                $script:editor.SelectionColor = $visibleColor
-            }
-        }
-        catch {
-            # Silently handle RTF color setting errors during keypress
-                try {
-            Write-EmergencyLog "Error setting editor color on keypress: $_" "DEBUG"
-                }
-                catch {
-                    # Logging failed, continue anyway
-                }
-        }
-    })
-
-# Create editor context menu for copilot-like features
-$editorContextMenu = New-Object System.Windows.Forms.ContextMenuStrip
-$script:editor.ContextMenuStrip = $editorContextMenu
-}
-
-# Copilot menu items
-$explainCodeItem = New-Object System.Windows.Forms.ToolStripMenuItem "🤖 Explain Code"
-$explainCodeItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        if ($selectedText) {
-            Invoke-EditorCopilotAction -Action "explain" -Text $selectedText
-        }
-        else {
-            Invoke-EditorCopilotAction -Action "explain" -Text $script:editor.Text
-        }
-    })
-$editorContextMenu.Items.Add($explainCodeItem) | Out-Null
-
-$improveCodeItem = New-Object System.Windows.Forms.ToolStripMenuItem "✨ Improve Code"
-$improveCodeItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        if ($selectedText) {
-            Invoke-EditorCopilotAction -Action "improve" -Text $selectedText
-        }
-        else {
-            Invoke-EditorCopilotAction -Action "improve" -Text $script:editor.Text
-        }
-    })
-$editorContextMenu.Items.Add($improveCodeItem) | Out-Null
-
-$refactorCodeItem = New-Object System.Windows.Forms.ToolStripMenuItem "🔧 Refactor Code"
-$refactorCodeItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        if ($selectedText) {
-            Invoke-EditorCopilotAction -Action "refactor" -Text $selectedText
-        }
-        else {
-            Invoke-EditorCopilotAction -Action "refactor" -Text $script:editor.Text
-        }
-    })
-$editorContextMenu.Items.Add($refactorCodeItem) | Out-Null
-
-$generateCodeItem = New-Object System.Windows.Forms.ToolStripMenuItem "💻 Generate Code"
-$generateCodeItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        Invoke-EditorCopilotAction -Action "generate" -Text $selectedText
-    })
-$editorContextMenu.Items.Add($generateCodeItem) | Out-Null
-
-$editorContextMenu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
-
-$fixBugsItem = New-Object System.Windows.Forms.ToolStripMenuItem "🐛 Fix Bugs"
-$fixBugsItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        if ($selectedText) {
-            Invoke-EditorCopilotAction -Action "fix" -Text $selectedText
-        }
-        else {
-            Invoke-EditorCopilotAction -Action "fix" -Text $script:editor.Text
-        }
-    })
-$editorContextMenu.Items.Add($fixBugsItem) | Out-Null
-
-$addCommentsItem = New-Object System.Windows.Forms.ToolStripMenuItem "💬 Add Comments"
-$addCommentsItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        if ($selectedText) {
-            Invoke-EditorCopilotAction -Action "comment" -Text $selectedText
-        }
-        else {
-            Invoke-EditorCopilotAction -Action "comment" -Text $script:editor.Text
-        }
-    })
-$editorContextMenu.Items.Add($addCommentsItem) | Out-Null
-
-$optimizeCodeItem = New-Object System.Windows.Forms.ToolStripMenuItem "⚡ Optimize Code"
-$optimizeCodeItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        if ($selectedText) {
-            Invoke-EditorCopilotAction -Action "optimize" -Text $selectedText
-        }
-        else {
-            Invoke-EditorCopilotAction -Action "optimize" -Text $script:editor.Text
-        }
-    })
-$editorContextMenu.Items.Add($optimizeCodeItem) | Out-Null
-
-$editorContextMenu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
-
-$translateCodeItem = New-Object System.Windows.Forms.ToolStripMenuItem "🌐 Translate Code"
-$translateCodeItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        if ($selectedText) {
-            Invoke-EditorCopilotAction -Action "translate" -Text $selectedText
-        }
-        else {
-            Invoke-EditorCopilotAction -Action "translate" -Text $script:editor.Text
-        }
-    })
-$editorContextMenu.Items.Add($translateCodeItem) | Out-Null
-
-$documentCodeItem = New-Object System.Windows.Forms.ToolStripMenuItem "📝 Generate Documentation"
-$documentCodeItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        if ($selectedText) {
-            Invoke-EditorCopilotAction -Action "document" -Text $selectedText
-        }
-        else {
-            Invoke-EditorCopilotAction -Action "document" -Text $script:editor.Text
-        }
-    })
-$editorContextMenu.Items.Add($documentCodeItem) | Out-Null
-
-$editorContextMenu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
-
-# Fix submenu with system scanner and auto-tune options
-$fixMenu = New-Object System.Windows.Forms.ToolStripMenuItem "🔧 Fix"
-
-$scanSystemItem = New-Object System.Windows.Forms.ToolStripMenuItem "🖥️ Scan && Adjust Settings"
-$scanSystemItem.ToolTipText = "Scan your computer specs and auto-adjust settings/models"
-$scanSystemItem.Add_Click({
-        Show-SystemScannerPanel
-    })
-$fixMenu.DropDownItems.Add($scanSystemItem) | Out-Null
-
-$autoTuneItem = New-Object System.Windows.Forms.ToolStripMenuItem "⚡ Quick Auto-Tune"
-$autoTuneItem.ToolTipText = "Quickly scan and apply optimal settings"
-$autoTuneItem.Add_Click({
-        Write-DevConsole "🔧 Running quick auto-tune..." "INFO"
-        $result = Invoke-SystemScan -Apply
-        [System.Windows.Forms.MessageBox]::Show(
-            "Auto-tune complete!`n`nSystem Tier: $($result.Specs.Performance.Tier)`nScore: $($result.Specs.Performance.Score)`nRecommended Model: $($result.OptimalSettings.RecommendedModelSize)",
-            "Auto-Tune Complete",
-            "OK",
-            "Information"
-        )
-    })
-$fixMenu.DropDownItems.Add($autoTuneItem) | Out-Null
-
-$fixMenu.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
-
-$fixCodeItem = New-Object System.Windows.Forms.ToolStripMenuItem "🐛 Fix Selected Code"
-$fixCodeItem.Add_Click({
-        $selectedText = $script:editor.SelectedText
-        if ($selectedText) {
-            Invoke-EditorCopilotAction -Action "fix" -Text $selectedText
-        }
-        else {
-            Invoke-EditorCopilotAction -Action "fix" -Text $script:editor.Text
-        }
-    })
-$fixMenu.DropDownItems.Add($fixCodeItem) | Out-Null
-
-$fixSyntaxItem = New-Object System.Windows.Forms.ToolStripMenuItem "📋 Fix Syntax Errors"
-$fixSyntaxItem.Add_Click({
-        $code = if ($script:editor.SelectedText) { $script:editor.SelectedText } else { $script:editor.Text }
-        Invoke-EditorCopilotAction -Action "fix-syntax" -Text $code
-    })
-$fixMenu.DropDownItems.Add($fixSyntaxItem) | Out-Null
-
-$fixFormattingItem = New-Object System.Windows.Forms.ToolStripMenuItem "🎨 Fix Formatting"
-$fixFormattingItem.Add_Click({
-        $code = if ($script:editor.SelectedText) { $script:editor.SelectedText } else { $script:editor.Text }
-        Invoke-EditorCopilotAction -Action "format" -Text $code
-    })
-$fixMenu.DropDownItems.Add($fixFormattingItem) | Out-Null
-
-$editorContextMenu.Items.Add($fixMenu) | Out-Null
 
 $leftSplitter.Panel2.Controls.Add($script:editor) | Out-Null
-
-# CRITICAL: Ensure editor text is visible with high contrast colors
-if (Get-Command Ensure-TextVisibility -ErrorAction SilentlyContinue) {
-    try {
-        Ensure-TextVisibility -Control $script:editor -ForceHighContrast | Out-Null
-        Write-EmergencyLog "✅ Editor text visibility ensured" "SUCCESS"
-    }
-    catch {
-        Write-EmergencyLog "⚠️ Could not ensure editor visibility: $_" "WARNING"
-    }
-}
 
 # Right side - Tab Control for Chat and Browser
 $rightTabControl = New-Object System.Windows.Forms.TabControl
 $rightTabControl.Dock = [System.Windows.Forms.DockStyle]::Fill
 $mainSplitter.Panel2.Controls.Add($rightTabControl) | Out-Null
-
-# Aliases for test compatibility
-$chatTabs = $rightTabControl  # Alias for chat tab control
-$script:chatTabs = $rightTabControl
 
 # Chat Tab
 $chatTab = New-Object System.Windows.Forms.TabPage
@@ -8261,131 +3716,13 @@ $agentTasksToolbar.Dock = [System.Windows.Forms.DockStyle]::Top
 $agentTasksToolbar.Height = 40
 $agentTasksContainer.Controls.Add($agentTasksToolbar) | Out-Null
 
-# Agent Mode Selector: Agent/Plan/Ask
-$agentModeLabel = New-Object System.Windows.Forms.Label
-$agentModeLabel.Text = "Mode:"
-$agentModeLabel.Dock = [System.Windows.Forms.DockStyle]::Left
-$agentModeLabel.Width = 50
-$agentModeLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-$agentModeLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
-$agentModeLabel.Padding = New-Object System.Windows.Forms.Padding(5, 0, 0, 0)
-$agentTasksToolbar.Controls.Add($agentModeLabel) | Out-Null
-
-# Agent Mode ComboBox Selector
-$script:agentModeSelector = New-Object System.Windows.Forms.ComboBox
-$script:agentModeSelector.Dock = [System.Windows.Forms.DockStyle]::Left
-$script:agentModeSelector.Width = 120
-$script:agentModeSelector.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-$script:agentModeSelector.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
-$script:agentModeSelector.Items.AddRange(@("Agent", "Plan", "Ask", "Thinking"))
-$script:agentModeSelector.SelectedIndex = 0  # Default to "Agent"
-$script:agentModeSelector.Width = 140  # Wider to fit "Thinking"
-$script:agentModeSelector.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 45)
-$script:agentModeSelector.ForeColor = [System.Drawing.Color]::White
-$agentTasksToolbar.Controls.Add($script:agentModeSelector) | Out-Null
-
-# Initialize agent interaction mode
-$global:AgentInteractionMode = "Agent"  # Options: "Agent", "Plan", "Ask", "Thinking"
-
-# Context usage tracking
-$global:ContextUsage = @{
-    TotalContext = 0
-    UsedContext  = 0
-    Percentage   = 0.0
-    Files        = @()
-    Folders      = @()
-    Docs         = @()
-    BrowserPages = @()
-}
-
-# Agent Mode Selector Change Handler
-$script:agentModeSelector.Add_SelectedIndexChanged({
-        $selectedMode = $script:agentModeSelector.SelectedItem.ToString()
-        $global:AgentInteractionMode = $selectedMode
-        
-        # Update status based on mode
-        switch ($selectedMode) {
-            "Agent" {
-                $agentStatusLabel.Text = "Agent Mode: Autonomous - Agents execute automatically"
-                $agentStatusLabel.ForeColor = 'Green'
-                Write-DevConsole "Agent Mode: Autonomous execution enabled" "INFO"
-            }
-            "Plan" {
-                $agentStatusLabel.Text = "Plan Mode: Shows plans before execution"
-                $agentStatusLabel.ForeColor = 'Yellow'
-                Write-DevConsole "Agent Mode: Planning mode - will show plans before execution" "INFO"
-            }
-            "Ask" {
-                $agentStatusLabel.Text = "Ask Mode: Asks for confirmation before actions"
-                $agentStatusLabel.ForeColor = 'Orange'
-                Write-DevConsole "Agent Mode: Ask mode - will request confirmation before actions" "INFO"
-            }
-            "Thinking" {
-                $agentStatusLabel.Text = "Thinking Mode: Deep research with browser & computer use"
-                $agentStatusLabel.ForeColor = 'Cyan'
-                Write-DevConsole "Agent Mode: Thinking mode - deep research and browser-enabled computer use" "INFO"
-            }
-        }
-        
-        # Notify active chat
-        if (Get-Command Get-ActiveChatTab -ErrorAction SilentlyContinue) {
-            $activeChat = Get-ActiveChatTab
-            if ($activeChat) {
-                $modeDescription = switch ($selectedMode) {
-                    "Agent" { "Autonomous - Agents execute actions automatically" }
-                    "Plan" { "Planning - Shows execution plans before running" }
-                    "Ask" { "Interactive - Asks for confirmation before each action" }
-                    "Thinking" { "Deep Research - Uses browser for research, @ mentions for files/folders/docs, and computer use capabilities" }
-                }
-                $activeChat.ChatBox.AppendText("System > Agent Mode changed to: $selectedMode - $modeDescription`r`n`r`n")
-                $activeChat.ChatBox.ScrollToCaret()
-            }
-        }
-        
-        # Update settings
-        if ($global:settings) {
-            $global:settings.AgentInteractionMode = $selectedMode
-        }
-    })
-
-# Context usage label (shows percentage of context used)
-$contextUsageLabel = New-Object System.Windows.Forms.Label
-$contextUsageLabel.Text = "Context: 0%"
-$contextUsageLabel.Dock = [System.Windows.Forms.DockStyle]::Right
-$contextUsageLabel.Width = 100
-$contextUsageLabel.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-$contextUsageLabel.ForeColor = 'LightGray'
-$contextUsageLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
-$contextUsageLabel.Padding = New-Object System.Windows.Forms.Padding(0, 0, 10, 0)
-$agentTasksToolbar.Controls.Add($contextUsageLabel) | Out-Null
-
-# Agent status label (shows current mode status)
+# Agent status label
 $agentStatusLabel = New-Object System.Windows.Forms.Label
-$agentStatusLabel.Text = "Agent Mode: Autonomous - Agents execute automatically"
+$agentStatusLabel.Text = "Agent Status: Active - Agentic editing enabled"
 $agentStatusLabel.Dock = [System.Windows.Forms.DockStyle]::Fill
 $agentStatusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $agentStatusLabel.ForeColor = 'Green'
-$agentStatusLabel.Padding = New-Object System.Windows.Forms.Padding(10, 0, 0, 0)
 $agentTasksToolbar.Controls.Add($agentStatusLabel) | Out-Null
-
-# Function to update context usage display
-function Update-ContextUsageDisplay {
-    if ($global:ContextUsage.TotalContext -gt 0) {
-        $percentage = [math]::Round(($global:ContextUsage.UsedContext / $global:ContextUsage.TotalContext) * 100, 1)
-        $global:ContextUsage.Percentage = $percentage
-        
-        $color = if ($percentage -lt 50) { 'LightGreen' } 
-        elseif ($percentage -lt 80) { 'Yellow' } 
-        else { 'OrangeRed' }
-        
-        $contextUsageLabel.Text = "Context: $percentage%"
-        $contextUsageLabel.ForeColor = $color
-    }
-    else {
-        $contextUsageLabel.Text = "Context: 0%"
-        $contextUsageLabel.ForeColor = 'LightGray'
-    }
-}
 
 # Ollama status label and controls
 $ollamaToolbar = New-Object System.Windows.Forms.Panel
@@ -8568,7 +3905,6 @@ $script:ollamaTimer = $null
 # Settings & Configuration
 $global:settings = @{
     OllamaModel      = $OllamaModel
-    OllamaAPIKey     = "Bibbles19"  # Default 8+ digit API key (changeable in settings)
     MaxTabs          = 25
     EditorFontSize   = 10
     EditorFontFamily = "Consolas"
@@ -8586,18 +3922,9 @@ $global:settings = @{
     MaxChatTabs      = 5
     ChatTabAutoClose = $false
     ChatTabPosition  = "Right" # Right, Bottom, Popup
-    AgentMode        = $true
-    AgentModeLevel   = "Auto"  # Options: "Off", "Auto", "Max"
 }
 
-# Initialize editor settings if function is available
-if (Get-Command Set-EditorSettings -ErrorAction SilentlyContinue) {
-    Set-EditorSettings
-}
-else {
-    # Function not yet defined - will be called later when function is available
-    Write-EmergencyLog "Set-EditorSettings not yet available, will initialize later" "DEBUG"
-}
+Set-EditorSettings
 
 # Settings file path
 $script:settingsPath = Join-Path $env:APPDATA "RawrXD\settings.json"
@@ -9052,20 +4379,7 @@ $script:threadSafeContext = @{
     WorkerCount        = 4
     MaxConcurrentTasks = 8
     SyncRoot           = New-Object System.Object
-    LoadMetrics        = @{
-        ActiveTasks         = 0
-        QueuedTasks         = 0
-        CompletedTasks      = 0
-        FailedTasks         = 0
-        AverageTaskDuration = 0
-        PeakMemoryUsage     = 0
-        PeakCPUUsage        = 0
-        LastUpdate          = Get-Date
-    }
 }
-
-# Defensive re-initialization helper (used if LoadMetrics missing later)
-# (Duplicate Ensure-LoadMetrics definition removed; early version at top of file handles re-initialization.)
 
 # Runspace session state for sharing variables
 $script:sessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
@@ -9076,7 +4390,6 @@ $script:sessionState.ImportPSModule(@('Microsoft.PowerShell.Utility', 'Microsoft
 # Thread-safe logging queue
 $script:logQueue = [System.Collections.Queue]::Synchronized((New-Object System.Collections.Queue))
 $script:logProcessingTimer = $null
-$script:loadMonitoringTimer = $null
 
 # Agent worker states
 $script:agentWorkers = @{
@@ -9101,26 +4414,15 @@ if (-not (Test-Path $script:extensionsDir)) {
 
 $script:extensionRegistry = @()
 $script:marketplaceCache = @()
-$script:marketplaceLocalDir = Join-Path $PSScriptRoot "marketplace"
-if (-not (Test-Path $script:marketplaceLocalDir)) {
-    New-Item -ItemType Directory -Path $script:marketplaceLocalDir -Force | Out-Null
-}
-
 $script:marketplaceSources = @(
-    # Remote sources disabled - GitHub repo doesn't exist (404 errors)
-    # @{ Name = 'RawrXD Official (Remote)'; Url = 'https://raw.githubusercontent.com/HiH8e/RawrXD-marketplace/main/extensions.json'; MarketplaceId = 'rawrxd-official' }
-    # @{ Name = 'Community Marketplace (Remote)'; Url = 'https://raw.githubusercontent.com/HiH8e/RawrXD-marketplace/main/community.json'; MarketplaceId = 'community-marketplace' }
-    
-    # Local marketplace sources (working)
-    @{ Name = 'RawrXD Official (Local)'; Url = 'file://' + (Join-Path $script:marketplaceLocalDir 'rawrxd_official.json'); MarketplaceId = 'rawrxd-official' }
-    @{ Name = 'Community Marketplace (Local)'; Url = 'file://' + (Join-Path $script:marketplaceLocalDir 'community.json'); MarketplaceId = 'community-marketplace' }
-    @{ Name = 'Local Official Extras'; Url = 'file://' + (Join-Path $script:marketplaceLocalDir 'local-official.json'); MarketplaceId = 'rawrxd-official' }
-    @{ Name = 'Local Community Extras'; Url = 'file://' + (Join-Path $script:marketplaceLocalDir 'local-community.json'); MarketplaceId = 'community-marketplace' }
+    @{ Name = "RawrXD Official"; Url = "https://raw.githubusercontent.com/HiH8e/RawrXD-marketplace/main/extensions.json" }
+    @{ Name = "Community Marketplace"; Url = "https://raw.githubusercontent.com/HiH8e/RawrXD-marketplace/main/community.json" }
 )
 $script:marketplaceLastRefresh = $null
 
 # Agent Tools System
 $script:agentTools = @{}
+
 # Extension Capabilities
 $script:CAP_SYNTAX_HIGHLIGHT = 1
 $script:CAP_CODE_COMPLETION = 2
@@ -9131,21 +4433,6 @@ $script:CAP_REFACTORING = 32
 $script:CAP_BUILD_SYSTEM = 64
 $script:CAP_GIT_INTEGRATION = 128
 $script:CAP_MODEL_DAMPENING = 256
-$script:CAP_AI_ASSIST = 512
-$script:CAP_TEXT_EDITOR = 1024
-$script:CAP_FILE_OPERATIONS = 2048
-$script:CAP_EDITOR_THEMES = 4096
-
-# Editor Types
-$script:EDITOR_TYPE_RICHTEXT = "RichText"
-$script:EDITOR_TYPE_BASIC = "Basic" 
-$script:EDITOR_TYPE_ADVANCED = "Advanced"
-$script:EDITOR_TYPE_MINIMAL = "Minimal"
-
-# Current editor configuration
-$script:activeEditorType = $script:EDITOR_TYPE_RICHTEXT
-$script:editorExtensions = @()
-$script:activeEditor = $null = 256
 $script:CAP_AI_ASSIST = 512
 
 # ============================================
@@ -9785,252 +5072,69 @@ $browserRefreshBtn.Width = 40
 $browserButtons.Controls.Add($browserRefreshBtn) | Out-Null
 
 # WebBrowser control (WebView2 or fallback)
-# WebView2 initialization will proceed if available
-
 if ($script:useWebView2) {
     try {
         Write-StartupLog "Initializing WebView2 browser..." "INFO"
-        
-        # Check .NET version compatibility before initializing
-        if (-not $script:dotNetCompatibleForWebView2) {
-            Write-StartupLog "⚠ .NET version may not be optimal for WebView2 - attempting with compatibility shim" "WARNING"
-        }
-        
-        if ($script:dotnetMajorVersion -ge 9) {
-            Ensure-WebView2ContextMenuShim
-        }
         $script:webBrowser = New-Object Microsoft.Web.WebView2.WinForms.WebView2
-        
-        # Add to container first
+        $script:webBrowser.Dock = [System.Windows.Forms.DockStyle]::Fill
         $browserContainer.Controls.Add($script:webBrowser) | Out-Null
-        
-        # Set Dock property with .NET 9+ compatibility handling
-        # Use reflection to avoid triggering ContextMenu type loading
-        try {
-            # Try standard assignment first
-            $script:webBrowser.Dock = [System.Windows.Forms.DockStyle]::Fill
-            Write-StartupLog "WebView2 Dock property set successfully" "INFO"
-        }
-        catch {
-            # If standard assignment fails, try reflection workaround
-            Write-StartupLog "Standard Dock assignment failed (likely .NET 9+ ContextMenu issue), using reflection workaround" "DEBUG"
-            try {
-                $dockProperty = $script:webBrowser.GetType().GetProperty("Dock")
-                if ($dockProperty) {
-                    $dockStyle = [System.Windows.Forms.DockStyle]::Fill
-                    $dockProperty.SetValue($script:webBrowser, $dockStyle, $null)
-                    Write-StartupLog "WebView2 Dock property set via reflection" "INFO"
-                }
-                else {
-                    throw "Could not find Dock property"
-                }
-            }
-            catch {
-                # If reflection also fails, try setting Size and Location manually
-                Write-StartupLog "Reflection workaround failed, using manual layout" "WARNING"
-                try {
-                    $script:webBrowser.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
-                    $script:webBrowser.Location = New-Object System.Drawing.Point(0, 0)
-                    $script:webBrowser.Size = $browserContainer.Size
-                    
-                    # Add resize handler to maintain size
-                    $browserContainer.Add_Resize({
-                            if ($script:webBrowser -and $browserContainer) {
-                                $script:webBrowser.Size = $browserContainer.Size
-                            }
-                        })
-                    Write-StartupLog "WebView2 layout set via Anchor/Size (workaround for .NET 9)" "INFO"
-                }
-                catch {
-                    Write-StartupLog ".NET 9+ ContextMenu compatibility issue - all workarounds failed" "WARNING"
-                    Write-StartupLog "Falling back to legacy WebBrowser control" "INFO"
-            
-                    # Remove the WebView2 control from container
-                    $browserContainer.Controls.Remove($script:webBrowser) | Out-Null
-                    $script:webBrowser = $null
-            
-                    # Force fallback to legacy browser
-                    throw "WebView2 incompatible with .NET 9+ (ContextMenu type conflict - all workarounds failed)"
-                }
-            }
-        }
         
         # Initialize WebView2 with proper error handling
         try {
             # Use NavigationCompleted event instead of CoreWebView2InitializationCompleted 
             # which may not be available on all WebView2 versions
             
-            # Skip EnsureCoreWebView2Async to avoid System.Windows.Forms version mismatch
-            # WebView2 will initialize lazily when Source is set or when user navigates
-            # This avoids the ContextMenu version conflict (9.0.0.0 vs 4.0.0.0)
-            Write-StartupLog "Using lazy initialization for WebView2 (skipping EnsureCoreWebView2Async)" "INFO"
+            # First ensure CoreWebView2 is initialized
+            $null = $webBrowser.EnsureCoreWebView2Async()
             
             # Set up events after initialization
-            # Use a delayed initialization approach to avoid version conflicts
-            $initScript = {
-                param($wb)
-                try {
-                    Start-Sleep -Milliseconds 100  # Small delay to let control settle
-                    if ($wb.CoreWebView2) {
-                        Write-StartupLog "WebView2 initialization successful" "SUCCESS"
+            $webBrowser.add_NavigationCompleted({
+                    param($navSender, $navEventArgs)
+                    try {
+                        if ($navSender.CoreWebView2) {
+                            Write-StartupLog "WebView2 initialization successful" "SUCCESS"
+                            
+                            # Add host object for agentic control
+                            $script:webBrowser.CoreWebView2.AddHostObjectToScript("rawrAgent", @{
+                                    getPageTitle  = {
+                                        return $script:webBrowser.CoreWebView2.DocumentTitle
+                                    }
+                                    getPageUrl    = {
+                                        return $script:webBrowser.CoreWebView2.Source.ToString()
+                                    }
+                                    executeScript = {
+                                        param($script)
+                                        return $script:webBrowser.CoreWebView2.ExecuteScriptAsync($script).Result
+                                    }
+                                })
                         
-                        # Configure settings for media/video playback
-                        try {
-                            $settings = $wb.CoreWebView2.Settings
-                            $settings.IsScriptEnabled = $true
-                            $settings.IsWebMessageEnabled = $true
-                            $settings.AreDefaultScriptDialogsEnabled = $true
-                            $settings.AreHostObjectsAllowed = $true
-                            $settings.IsZoomControlEnabled = $true
-                            $settings.AreBrowserAcceleratorKeysEnabled = $true
-                            Write-StartupLog "WebView2 settings configured for media playback" "SUCCESS"
-                        }
-                        catch {
-                            Write-StartupLog "Could not configure WebView2 settings: $($_.Exception.Message)" "WARNING"
+                            # Set up navigation events
+                            $script:webBrowser.CoreWebView2.Add_NavigationStarting({
+                                    param($startSender, $navArgs)
+                                    Write-StartupLog "Navigating to: $($navArgs.Uri)" "INFO"
+                                })
+                        
+                            $script:webBrowser.CoreWebView2.Add_NavigationCompleted({
+                                    param($completeSender, $navArgs)
+                                    if ($navArgs.IsSuccess) {
+                                        Write-StartupLog "Navigation completed successfully" "SUCCESS"
+                                        if ($browserUrlBox) {
+                                            $browserUrlBox.Text = $script:webBrowser.CoreWebView2.Source.ToString()
+                                        }
+                                    }
+                                    else {
+                                        Write-StartupLog "Navigation failed" "ERROR"
+                                    }
+                                })
                         }
                     }
-                    else {
-                        # Try to access CoreWebView2 property which may trigger initialization
-                        try {
-                            $null = $wb.CoreWebView2
-                            Write-StartupLog "WebView2 CoreWebView2 accessed successfully" "SUCCESS"
-                            
-                            # Configure settings after initialization
-                            try {
-                                $settings = $wb.CoreWebView2.Settings
-                                $settings.IsScriptEnabled = $true
-                                $settings.IsWebMessageEnabled = $true
-                                $settings.AreDefaultScriptDialogsEnabled = $true
-                                $settings.AreHostObjectsAllowed = $true
-                                $settings.IsZoomControlEnabled = $true
-                                $settings.AreBrowserAcceleratorKeysEnabled = $true
-                                Write-StartupLog "WebView2 settings configured for media playback" "SUCCESS"
-                            }
-                            catch {
-                                Write-StartupLog "Could not configure WebView2 settings: $($_.Exception.Message)" "WARNING"
-                            }
-                        }
-                        catch {
-                            Write-StartupLog "WebView2 CoreWebView2 not yet available: $($_.Exception.Message)" "DEBUG"
-                        }
+                    catch {
+                        Write-StartupLog "WebView2 event setup failed: $($_.Exception.Message)" "DEBUG"
                     }
-                }
-                catch {
-                    Write-StartupLog "WebView2 delayed initialization check failed: $($_.Exception.Message)" "DEBUG"
-                }
-            }
-            
-            # Set up events - WebView2 will initialize automatically when needed
-            try {
-                $script:webBrowser.add_NavigationCompleted({
-                        param($navSender, $navEventArgs)
-                        try {
-                            if ($navSender.CoreWebView2) {
-                                Write-StartupLog "WebView2 initialization successful" "SUCCESS"
-                                
-                                # Configure WebView2 settings for media/video playback
-                                try {
-                                    $settings = $script:webBrowser.CoreWebView2.Settings
-                                    $settings.IsScriptEnabled = $true
-                                    $settings.IsWebMessageEnabled = $true
-                                    $settings.AreDefaultScriptDialogsEnabled = $true
-                                    $settings.AreHostObjectsAllowed = $true
-                                    $settings.IsZoomControlEnabled = $true
-                                    $settings.AreBrowserAcceleratorKeysEnabled = $true
-                                    
-                                    # Enable media autoplay for video playback
-                                    # Note: Autoplay policy may still restrict some content
-                                    $settings.IsStatusBarEnabled = $false
-                                    
-                                    Write-StartupLog "WebView2 settings configured for media playback" "SUCCESS"
-                                }
-                                catch {
-                                    Write-StartupLog "Could not configure WebView2 settings: $($_.Exception.Message)" "WARNING"
-                                }
-                            
-                                # Add host object for agentic control
-                                $script:webBrowser.CoreWebView2.AddHostObjectToScript("rawrAgent", @{
-                                        getPageTitle  = {
-                                            return $script:webBrowser.CoreWebView2.DocumentTitle
-                                        }
-                                        getPageUrl    = {
-                                            return $script:webBrowser.CoreWebView2.Source.ToString()
-                                        }
-                                        executeScript = {
-                                            param($script)
-                                            return $script:webBrowser.CoreWebView2.ExecuteScriptAsync($script).Result
-                                        }
-                                    })
-                        
-                                # Set up navigation events
-                                $script:webBrowser.CoreWebView2.Add_NavigationStarting({
-                                        param($startSender, $navArgs)
-                                        Write-StartupLog "Navigating to: $($navArgs.Uri)" "INFO"
-                                    })
-                        
-                                $script:webBrowser.CoreWebView2.Add_NavigationCompleted({
-                                        param($completeSender, $navArgs)
-                                        if ($navArgs.IsSuccess) {
-                                            Write-StartupLog "Navigation completed successfully" "SUCCESS"
-                                            if ($browserUrlBox) {
-                                                $browserUrlBox.Text = $script:webBrowser.CoreWebView2.Source.ToString()
-                                            }
-                                            
-                                            # Inject script to enable video playback after page load
-                                            try {
-                                                $enableVideoScript = @"
-(function() {
-    // Enable autoplay for video elements
-    document.addEventListener('DOMContentLoaded', function() {
-        var videos = document.querySelectorAll('video');
-        videos.forEach(function(video) {
-            video.setAttribute('playsinline', '');
-            video.setAttribute('webkit-playsinline', '');
-            if (video.hasAttribute('autoplay')) {
-                video.play().catch(function(e) {
-                    console.log('Autoplay prevented:', e);
-                });
-            }
-        });
-    });
-    
-    // Also try for iframes (YouTube embeds)
-    var iframes = document.querySelectorAll('iframe');
-    iframes.forEach(function(iframe) {
-        iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-    });
-})();
-"@
-                                                $script:webBrowser.CoreWebView2.ExecuteScriptAsync($enableVideoScript) | Out-Null
-                                                Write-StartupLog "Video playback enhancement script injected" "INFO"
-                                            }
-                                            catch {
-                                                Write-StartupLog "Could not inject video enhancement script: $($_.Exception.Message)" "DEBUG"
-                                            }
-                                        }
-                                        else {
-                                            Write-StartupLog "Navigation failed" "ERROR"
-                                        }
-                                    })
-                            }
-                        }
-                        catch {
-                            Write-StartupLog "WebView2 event setup failed: $($_.Exception.Message)" "DEBUG"
-                        }
-                    })
-            }
-            catch {
-                Write-StartupLog "Could not attach NavigationCompleted event: $($_.Exception.Message)" "WARNING"
-            }
-            
-            # Set a blank page to trigger lazy initialization
-            $script:webBrowser.Source = New-Object System.Uri("about:blank")
-            Write-StartupLog "WebView2 lazy initialization triggered via Source property" "INFO"
+                })
         }
         catch {
             Write-StartupLog "WebView2 initialization failed: $($_.Exception.Message)" "ERROR"
-            Write-StartupLog "Falling back to WebBrowser control." "WARNING"
-            # WebView2 initialization failed, will use fallback
             $script:useWebView2 = $false
         }
         
@@ -10038,76 +5142,29 @@ if ($script:useWebView2) {
     }
     catch {
         Write-StartupLog "WebView2 initialization failed: $_" "ERROR"
-        Write-StartupLog "Error details: $($_.Exception.GetType().FullName) - $($_.Exception.Message)" "ERROR"
-        if ($_.Exception.InnerException) {
-            Write-StartupLog "Inner exception: $($_.Exception.InnerException.Message)" "ERROR"
-        }
         $script:useWebView2 = $false
         $script:browserType = "WebBrowser"
     }
 }
 
 if (-not $script:useWebView2) {
-    # Custom Browser Wrapper - Enhanced WebBrowser with better compatibility
-    if (-not $script:useWebView2) {
-        Write-StartupLog "Creating custom browser wrapper (WebView2 not available, using fallback)" "INFO"
-    }
-    else {
-        Write-StartupLog "Creating custom browser wrapper" "INFO"
-    }
-    
-    # Create a custom browser panel that wraps WebBrowser with enhanced features
-    $script:customBrowserPanel = New-Object System.Windows.Forms.Panel
-    $script:customBrowserPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $script:customBrowserPanel.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
-    
-    # Create the actual WebBrowser control
+    # Fallback to old WebBrowser control
+    Write-StartupLog "Using fallback WebBrowser control" "WARNING"
     $script:webBrowser = New-Object System.Windows.Forms.WebBrowser
     $script:webBrowser.Dock = [System.Windows.Forms.DockStyle]::Fill
     $script:webBrowser.ScriptErrorsSuppressed = $true
     $script:webBrowser.IsWebBrowserContextMenuEnabled = $true
     $script:webBrowser.AllowNavigation = $true
-    $script:webBrowser.WebBrowserShortcutsEnabled = $true
     
-    # Add navigation events for legacy browser (using correct event name)
+    # Add navigation events for legacy browser
     $script:webBrowser.Add_Navigated({
             param($legacySender, $navEventArgs)
-            try {
-                if ($browserUrlBox) {
-                    $browserUrlBox.Text = $navEventArgs.Url.ToString()
-                }
-                Write-StartupLog "Custom browser navigated to: $($navEventArgs.Url)" "INFO"
-            }
-            catch {
-                Write-StartupLog "Error in browser navigation event: $_" "WARNING"
-            }
+            $browserUrlBox.Text = $navEventArgs.Url.ToString()
+            Write-StartupLog "Legacy browser navigated to: $($navEventArgs.Url)" "INFO"
         })
     
-    # Add DocumentCompleted event for better page load detection
-    $script:webBrowser.Add_DocumentCompleted({
-            param($docSender, $docEventArgs)
-            try {
-                if ($browserUrlBox) {
-                    $browserUrlBox.Text = $docEventArgs.Url.ToString()
-                }
-                Write-StartupLog "Custom browser page loaded: $($docEventArgs.Url)" "DEBUG"
-            }
-            catch {
-                Write-StartupLog "Error in document completed event: $_" "WARNING"
-            }
-        })
-    
-    # Add the browser to the panel, then panel to container
-    $script:customBrowserPanel.Controls.Add($script:webBrowser) | Out-Null
-    $browserContainer.Controls.Add($script:customBrowserPanel) | Out-Null
-    $script:browserType = "CustomBrowser"
-    Write-StartupLog "✅ Custom browser wrapper created successfully" "SUCCESS"
-}
-
-# CLI / Headless fallback: if we couldn't create a real browser control, enable shim
-if (-not $script:webBrowser -and (Get-Variable -Name 'webView2Shim' -Scope Script -ErrorAction SilentlyContinue)) {
-    Write-StartupLog "No browser control available; enabling WebView2 shim for headless/CLI operations" "INFO"
-    Enable-WebView2ShimForRawrXD | Out-Null
+    $browserContainer.Controls.Add($script:webBrowser) | Out-Null
+    $script:browserType = "WebBrowser"
 }
 
 # ============================================
@@ -10153,198 +5210,15 @@ $exportLogBtn.Font = New-Object System.Drawing.Font("Segoe UI", 8)
 $exportLogBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $devToolbar.Controls.Add($exportLogBtn) | Out-Null
 
-# Copy to Clipboard button
-$copyLogBtn = New-Object System.Windows.Forms.Button
-$copyLogBtn.Text = "Copy All"
-$copyLogBtn.Dock = [System.Windows.Forms.DockStyle]::Left
-$copyLogBtn.Width = 80
-$copyLogBtn.Height = 22
-$copyLogBtn.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
-$copyLogBtn.ForeColor = [System.Drawing.Color]::White
-$copyLogBtn.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-$copyLogBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$devToolbar.Controls.Add($copyLogBtn) | Out-Null
-
-# Copy Selected button
-$copySelectedBtn = New-Object System.Windows.Forms.Button
-$copySelectedBtn.Text = "Copy Selected"
-$copySelectedBtn.Dock = [System.Windows.Forms.DockStyle]::Left
-$copySelectedBtn.Width = 100
-$copySelectedBtn.Height = 22
-$copySelectedBtn.BackColor = [System.Drawing.Color]::FromArgb(0, 150, 136)
-$copySelectedBtn.ForeColor = [System.Drawing.Color]::White
-$copySelectedBtn.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-$copySelectedBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$devToolbar.Controls.Add($copySelectedBtn) | Out-Null
-
-# Format toggle button
-$formatToggleBtn = New-Object System.Windows.Forms.Button
-$formatToggleBtn.Text = "Raw Format"
-$formatToggleBtn.Dock = [System.Windows.Forms.DockStyle]::Left
-$formatToggleBtn.Width = 90
-$formatToggleBtn.Height = 22
-$formatToggleBtn.BackColor = [System.Drawing.Color]::FromArgb(156, 39, 176)
-$formatToggleBtn.ForeColor = [System.Drawing.Color]::White
-$formatToggleBtn.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-$formatToggleBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$devToolbar.Controls.Add($formatToggleBtn) | Out-Null
-
 # Console output
 $global:devConsole = New-Object System.Windows.Forms.RichTextBox
 $global:devConsole.Dock = [System.Windows.Forms.DockStyle]::Fill
-$global:devConsole.ReadOnly = $false  # Allow selection and copying
+$global:devConsole.ReadOnly = $true
 $global:devConsole.Font = New-Object System.Drawing.Font("Consolas", 9)
 $global:devConsole.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
 $global:devConsole.ForeColor = [System.Drawing.Color]::LightGray
 $global:devConsole.WordWrap = $false
-$global:devConsole.HideSelection = $false  # Keep selection visible when not focused
-$global:devConsole.EnableAutoDragDrop = $false  # Prevent accidental edits
-$global:devConsole.DetectUrls = $true  # Make URLs clickable
-$global:devConsole.ShowSelectionMargin = $true  # Show selection margin
-$global:devConsole.AcceptsTab = $true  # Allow tab selection
 $devToolsContainer.Controls.Add($global:devConsole) | Out-Null
-
-# Add context menu for copy operations
-$devConsoleContextMenu = New-Object System.Windows.Forms.ContextMenuStrip
-$copyAllMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$copyAllMenuItem.Text = "Copy All Text"
-$copySelectedMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$copySelectedMenuItem.Text = "Copy Selected Text"
-$selectAllMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$selectAllMenuItem.Text = "Select All"
-$exportMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$exportMenuItem.Text = "Export to File..."
-
-$devConsoleContextMenu.Items.Add($copySelectedMenuItem) | Out-Null
-$devConsoleContextMenu.Items.Add($copyAllMenuItem) | Out-Null
-$devConsoleContextMenu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
-$devConsoleContextMenu.Items.Add($selectAllMenuItem) | Out-Null
-$devConsoleContextMenu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
-$devConsoleContextMenu.Items.Add($exportMenuItem) | Out-Null
-$global:devConsole.ContextMenuStrip = $devConsoleContextMenu
-
-# Initialize formatting state
-$script:rawFormatMode = $false
-
-# Agent Changes Tab
-$agentChangesTab = New-Object System.Windows.Forms.TabPage
-$agentChangesTab.Text = "Agent Changes"
-$rightTabControl.TabPages.Add($agentChangesTab) | Out-Null
-
-# Agent Changes container
-$agentChangesContainer = New-Object System.Windows.Forms.Panel
-$agentChangesContainer.Dock = [System.Windows.Forms.DockStyle]::Fill
-$agentChangesTab.Controls.Add($agentChangesContainer) | Out-Null
-
-# Agent Changes toolbar
-$agentChangesToolbar = New-Object System.Windows.Forms.Panel
-$agentChangesToolbar.Dock = [System.Windows.Forms.DockStyle]::Top
-$agentChangesToolbar.Height = 30
-$agentChangesToolbar.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
-$agentChangesContainer.Controls.Add($agentChangesToolbar) | Out-Null
-
-# Refresh button
-$refreshChangesBtn = New-Object System.Windows.Forms.Button
-$refreshChangesBtn.Text = "Refresh"
-$refreshChangesBtn.Dock = [System.Windows.Forms.DockStyle]::Left
-$refreshChangesBtn.Width = 80
-$refreshChangesBtn.Height = 25
-$refreshChangesBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-$refreshChangesBtn.ForeColor = [System.Drawing.Color]::White
-$refreshChangesBtn.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-$refreshChangesBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$refreshChangesBtn.Add_Click({
-        Update-AgentChangesDisplay
-    })
-$agentChangesToolbar.Controls.Add($refreshChangesBtn) | Out-Null
-
-# Clear changes button
-$clearChangesBtn = New-Object System.Windows.Forms.Button
-$clearChangesBtn.Text = "Clear History"
-$clearChangesBtn.Dock = [System.Windows.Forms.DockStyle]::Left
-$clearChangesBtn.Width = 100
-$clearChangesBtn.Height = 25
-$clearChangesBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-$clearChangesBtn.ForeColor = [System.Drawing.Color]::White
-$clearChangesBtn.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-$clearChangesBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-$clearChangesBtn.Add_Click({
-        $result = [System.Windows.Forms.MessageBox]::Show(
-            "Are you sure you want to clear the agent changes history?",
-            "Clear History",
-            [System.Windows.Forms.MessageBoxButtons]::YesNo,
-            [System.Windows.Forms.MessageBoxIcon]::Question
-        )
-        if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
-            $global:agentContext.Edits = @()
-            Update-AgentChangesDisplay
-            Write-DevConsole "Agent changes history cleared" "INFO"
-        }
-    })
-$agentChangesToolbar.Controls.Add($clearChangesBtn) | Out-Null
-
-# Agent Changes ListView
-$script:agentChangesList = New-Object System.Windows.Forms.ListView
-$script:agentChangesList.Dock = [System.Windows.Forms.DockStyle]::Fill
-$script:agentChangesList.View = [System.Windows.Forms.View]::Details
-$script:agentChangesList.FullRowSelect = $true
-$script:agentChangesList.GridLines = $true
-$script:agentChangesList.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-$script:agentChangesList.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-$script:agentChangesList.ForeColor = [System.Drawing.Color]::White
-$script:agentChangesList.Columns.Add("File Name", 300) | Out-Null
-$script:agentChangesList.Columns.Add("Change Description", 500) | Out-Null
-$script:agentChangesList.Columns.Add("Timestamp", 150) | Out-Null
-$script:agentChangesList.Columns.Add("Type", 100) | Out-Null
-$agentChangesContainer.Controls.Add($script:agentChangesList) | Out-Null
-
-# Agent Changes Details panel (split view)
-$agentChangesSplitter = New-Object System.Windows.Forms.SplitContainer
-$agentChangesSplitter.Dock = [System.Windows.Forms.DockStyle]::Fill
-$agentChangesSplitter.Orientation = [System.Windows.Forms.Orientation]::Vertical
-$agentChangesSplitter.SplitterDistance = 400
-# Add collapsible functionality
-$agentChangesSplitter.Panel1Collapsed = $false
-$agentChangesSplitter.Panel2Collapsed = $false
-$agentChangesSplitter.Panel1.Controls.Add($script:agentChangesList) | Out-Null
-
-# Details RichTextBox
-$agentChangesDetails = New-Object System.Windows.Forms.RichTextBox
-$agentChangesDetails.Dock = [System.Windows.Forms.DockStyle]::Fill
-$agentChangesDetails.ReadOnly = $true
-$agentChangesDetails.Font = New-Object System.Drawing.Font("Consolas", 9)
-$agentChangesDetails.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
-$agentChangesDetails.ForeColor = [System.Drawing.Color]::LightGray
-$agentChangesDetails.Text = "Select a change from the list above to view details`r`n"
-$agentChangesSplitter.Panel2.Controls.Add($agentChangesDetails) | Out-Null
-$agentChangesContainer.Controls.Add($agentChangesSplitter) | Out-Null
-
-# Event handler for selection change
-$script:agentChangesList.Add_SelectedIndexChanged({
-        if ($script:agentChangesList.SelectedItems -and $script:agentChangesList.SelectedItems.Count -gt 0) {
-            $edit = $script:agentChangesList.SelectedItems[0].Tag
-            if ($edit) {
-                $details = @"
-File: $($edit.File)
-Timestamp: $($edit.Timestamp)
-Type: $($edit.Type)
-
-Change Description:
-$($edit.Description)
-
-"@
-                if ($edit.Diffs -and $edit.Diffs.Count -gt 0) {
-                    $details += "Changes:`r`n"
-                    foreach ($diff in $edit.Diffs) {
-                        $details += "`r`n--- Line $($diff.Range.start.line + 1) ---`r`n"
-                        $details += "Old: $($diff.OldText)`r`n"
-                        $details += "New: $($diff.NewText)`r`n"
-                    }
-                }
-                Set-SafeRichTextContent -RichTextBox $agentChangesDetails -Content $details
-            }
-        }
-    })
 
 # Dev Console logging function
 function Write-DevConsole {
@@ -10367,16 +5241,6 @@ function Write-DevConsole {
     }
     
     $timestamp = Get-Date -Format "HH:mm:ss.fff"
-    
-    # If raw format mode, use plain text formatting
-    if ($script:rawFormatMode) {
-        $logEntry = "[$timestamp] [$Level] $Message`r`n"
-        $global:devConsole.AppendText($logEntry)
-        $global:devConsole.ScrollToCaret()
-        return
-    }
-    
-    # Rich formatting mode (default)
     $color = switch ($Level) {
         "ERROR" { [System.Drawing.Color]::Red }
         "WARNING" { [System.Drawing.Color]::Yellow }
@@ -10400,453 +5264,10 @@ function Write-DevConsole {
     $global:devConsole.ScrollToCaret()
 }
 
-<#
-.SYNOPSIS
-    Detects if text is visible in a control by analyzing color contrast and control properties.
-
-.DESCRIPTION
-    Comprehensive text visibility detection that checks:
-    - Control visibility state (.Visible property)
-    - Control enabled state
-    - Foreground/background color contrast
-    - Parent container visibility
-    - Z-order positioning
-    - Opacity/transparency
-    - Text content existence
-
-.PARAMETER Control
-    The Windows Forms control to check (TextBox, RichTextBox, Label, etc.)
-
-.PARAMETER CheckContrast
-    If $true, performs color contrast analysis (WCAG 2.0 standards)
-
-.PARAMETER MinimumContrast
-    Minimum contrast ratio (default: 3.0 for WCAG AA Large Text)
-
-.EXAMPLE
-    Test-TextVisibility -Control $script:editor
-    Returns visibility analysis for the editor control
-
-.EXAMPLE
-    Test-TextVisibility -Control $chatBox -CheckContrast -MinimumContrast 4.5
-    Returns detailed contrast analysis with WCAG AA standard
-#>
-function Test-TextVisibility {
-    param(
-        [Parameter(Mandatory = $true)]
-        [System.Windows.Forms.Control]$Control,
-        
-        [switch]$CheckContrast,
-        
-        [double]$MinimumContrast = 3.0,
-        
-        [switch]$Detailed
-    )
-    
-    try {
-        # Initialize result object
-        $result = [PSCustomObject]@{
-            IsVisible       = $false
-            Reason          = @()
-            ControlState    = @{}
-            ColorAnalysis   = $null
-            Recommendations = @()
-        }
-        
-        # 1. Check if control exists
-        if (-not $Control) {
-            $result.Reason += "Control is null"
-            return $result
-        }
-        
-        # 2. Check if disposed
-        if ($Control.IsDisposed) {
-            $result.Reason += "Control is disposed"
-            return $result
-        }
-        
-        # 3. Check Visible property
-        $result.ControlState.Visible = $Control.Visible
-        if (-not $Control.Visible) {
-            $result.Reason += "Control.Visible = false"
-        }
-        
-        # 4. Check if control has text
-        $hasText = $false
-        if ($Control -is [System.Windows.Forms.TextBoxBase]) {
-            $hasText = -not [string]::IsNullOrEmpty($Control.Text)
-            $result.ControlState.TextLength = $Control.Text.Length
-        }
-        elseif ($Control -is [System.Windows.Forms.Label]) {
-            $hasText = -not [string]::IsNullOrEmpty($Control.Text)
-            $result.ControlState.TextLength = $Control.Text.Length
-        }
-        else {
-            $hasText = $true  # Assume other controls may have content
-        }
-        
-        $result.ControlState.HasText = $hasText
-        if (-not $hasText) {
-            $result.Reason += "Control has no text content"
-        }
-        
-        # 5. Check enabled state
-        $result.ControlState.Enabled = $Control.Enabled
-        if (-not $Control.Enabled) {
-            $result.Reason += "Control is disabled (may affect visibility)"
-        }
-        
-        # 6. Check parent visibility chain
-        $parent = $Control.Parent
-        $parentLevel = 0
-        $allParentsVisible = $true
-        while ($parent -and $parentLevel -lt 10) {
-            if (-not $parent.Visible) {
-                $result.Reason += "Parent control at level $parentLevel is not visible"
-                $allParentsVisible = $false
-                break
-            }
-            $parent = $parent.Parent
-            $parentLevel++
-        }
-        $result.ControlState.ParentChainVisible = $allParentsVisible
-        
-        # 7. Check bounds and size
-        $result.ControlState.Width = $Control.Width
-        $result.ControlState.Height = $Control.Height
-        $result.ControlState.Location = "$($Control.Location.X), $($Control.Location.Y)"
-        
-        if ($Control.Width -le 0 -or $Control.Height -le 0) {
-            $result.Reason += "Control has zero width or height"
-        }
-        
-        # 8. Color contrast analysis
-        if ($CheckContrast) {
-            $foreColor = $Control.ForeColor
-            $backColor = $Control.BackColor
-            
-            # Calculate relative luminance (WCAG 2.0 formula)
-            function Get-RelativeLuminance {
-                param([System.Drawing.Color]$Color)
-                
-                $r = $Color.R / 255.0
-                $g = $Color.G / 255.0
-                $b = $Color.B / 255.0
-                
-                # Apply gamma correction
-                $r = if ($r -le 0.03928) { $r / 12.92 } else { [Math]::Pow(($r + 0.055) / 1.055, 2.4) }
-                $g = if ($g -le 0.03928) { $g / 12.92 } else { [Math]::Pow(($g + 0.055) / 1.055, 2.4) }
-                $b = if ($b -le 0.03928) { $b / 12.92 } else { [Math]::Pow(($b + 0.055) / 1.055, 2.4) }
-                
-                return (0.2126 * $r + 0.7152 * $g + 0.0722 * $b)
-            }
-            
-            $foreLuminance = Get-RelativeLuminance -Color $foreColor
-            $backLuminance = Get-RelativeLuminance -Color $backColor
-            
-            # Calculate contrast ratio
-            $lighter = [Math]::Max($foreLuminance, $backLuminance)
-            $darker = [Math]::Min($foreLuminance, $backLuminance)
-            $contrastRatio = ($lighter + 0.05) / ($darker + 0.05)
-            
-            $result.ColorAnalysis = [PSCustomObject]@{
-                ForeColor            = "RGB($($foreColor.R), $($foreColor.G), $($foreColor.B))"
-                BackColor            = "RGB($($backColor.R), $($backColor.G), $($backColor.B))"
-                ForeLuminance        = [Math]::Round($foreLuminance, 3)
-                BackLuminance        = [Math]::Round($backLuminance, 3)
-                ContrastRatio        = [Math]::Round($contrastRatio, 2)
-                MeetsWCAG_AA_Normal  = $contrastRatio -ge 4.5
-                MeetsWCAG_AA_Large   = $contrastRatio -ge 3.0
-                MeetsWCAG_AAA_Normal = $contrastRatio -ge 7.0
-                MeetsWCAG_AAA_Large  = $contrastRatio -ge 4.5
-            }
-            
-            # Check if colors are too similar
-            if ($contrastRatio -lt $MinimumContrast) {
-                $result.Reason += "Insufficient color contrast: $([Math]::Round($contrastRatio, 2)):1 (minimum: $MinimumContrast`:1)"
-                $result.Recommendations += "Increase contrast between foreground and background colors"
-            }
-            
-            # Check for invisible combinations (same/similar colors)
-            if ($contrastRatio -lt 1.5) {
-                $result.Reason += "Text is nearly invisible - colors are too similar"
-                $result.Recommendations += "CRITICAL: Change ForeColor or BackColor immediately"
-            }
-        }
-        
-        # 9. Check opacity (if supported)
-        if ($Control.GetType().GetProperty("Opacity")) {
-            $opacity = $Control.Opacity
-            $result.ControlState.Opacity = $opacity
-            if ($opacity -lt 0.1) {
-                $result.Reason += "Control opacity is too low: $opacity"
-            }
-        }
-        
-        # 10. Determine overall visibility
-        $result.IsVisible = (
-            $Control.Visible -and
-            $allParentsVisible -and
-            $Control.Width -gt 0 -and
-            $Control.Height -gt 0 -and
-            (-not $CheckContrast -or $result.ColorAnalysis.ContrastRatio -ge $MinimumContrast)
-        )
-        
-        # Add success message if visible
-        if ($result.IsVisible) {
-            $result.Reason = @("Text is visible")
-        }
-        
-        return $result
-        
-    }
-    catch {
-        Write-DevConsole "Error in Test-TextVisibility: $_" "ERROR"
-        return [PSCustomObject]@{
-            IsVisible       = $false
-            Reason          = @("Error during visibility check: $_")
-            ControlState    = @{}
-            ColorAnalysis   = $null
-            Recommendations = @()
-        }
-    }
-}
-
-<#
-.SYNOPSIS
-    Ensures text visibility by fixing common visibility issues.
-
-.DESCRIPTION
-    Automatically fixes text visibility problems:
-    - Sets Visible = true
-    - Ensures proper color contrast
-    - Makes parent controls visible
-    - Validates control state
-
-.PARAMETER Control
-    The control to make visible
-
-.PARAMETER ForceHighContrast
-    If $true, applies high-contrast colors automatically
-
-.EXAMPLE
-    Ensure-TextVisibility -Control $script:editor -ForceHighContrast
-#>
-function Ensure-TextVisibility {
-    param(
-        [Parameter(Mandatory = $true)]
-        [System.Windows.Forms.Control]$Control,
-        
-        [switch]$ForceHighContrast
-    )
-    
-    try {
-        if (-not $Control -or $Control.IsDisposed) {
-            Write-DevConsole "Cannot ensure visibility - control is null or disposed" "ERROR"
-            return $false
-        }
-        
-        # 1. Make control visible
-        if (-not $Control.Visible) {
-            $Control.Visible = $true
-            Write-DevConsole "Set control Visible = true" "INFO"
-        }
-        
-        # 2. Make parent chain visible
-        $parent = $Control.Parent
-        $level = 0
-        while ($parent -and $level -lt 10) {
-            if (-not $parent.Visible) {
-                $parent.Visible = $true
-                Write-DevConsole "Set parent (level $level) Visible = true" "INFO"
-            }
-            $parent = $parent.Parent
-            $level++
-        }
-        
-        # 3. Fix color contrast if requested
-        if ($ForceHighContrast) {
-            # Check current contrast
-            $visCheck = Test-TextVisibility -Control $Control -CheckContrast
-            
-            if ($visCheck.ColorAnalysis.ContrastRatio -lt 3.0) {
-                # Apply high-contrast colors
-                $Control.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)  # Dark background
-                $Control.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)  # Light gray text
-                Write-DevConsole "Applied high-contrast colors (220,220,220 on 30,30,30)" "SUCCESS"
-            }
-        }
-        
-        # 4. Ensure control has valid size
-        if ($Control.Width -le 0) {
-            $Control.Width = 100
-            Write-DevConsole "Set control width to 100 (was 0)" "INFO"
-        }
-        if ($Control.Height -le 0) {
-            $Control.Height = 20
-            Write-DevConsole "Set control height to 20 (was 0)" "INFO"
-        }
-        
-        # 5. Verify final state
-        $finalCheck = Test-TextVisibility -Control $Control -CheckContrast
-        
-        if ($finalCheck.IsVisible) {
-            Write-DevConsole "Text visibility ensured successfully ✓" "SUCCESS"
-            return $true
-        }
-        else {
-            Write-DevConsole "Text visibility issues remain: $($finalCheck.Reason -join ', ')" "WARNING"
-            return $false
-        }
-        
-    }
-    catch {
-        Write-DevConsole "Error in Ensure-TextVisibility: $_" "ERROR"
-        return $false
-    }
-}
-
-function Copy-LogToClipboard {
-    param(
-        [string]$TextToCopy,
-        [string]$SuccessMessage = "Log copied to clipboard!"
-    )
-    
-    try {
-        if ([string]::IsNullOrEmpty($TextToCopy)) {
-            Write-DevConsole "No text to copy" "WARNING"
-            return
-        }
-        
-        # Clean up the text for better copy/paste experience
-        $cleanText = $TextToCopy -replace "`r`n", "`n" -replace "`r", "`n"
-        
-        # Use Windows Forms Clipboard (more reliable)
-        [System.Windows.Forms.Clipboard]::SetText($cleanText)
-        
-        Write-DevConsole $SuccessMessage "SUCCESS"
-        
-        # Show brief visual feedback
-        $originalBackColor = $global:devConsole.BackColor
-        $global:devConsole.BackColor = [System.Drawing.Color]::FromArgb(0, 50, 0)
-        Start-Sleep -Milliseconds 200
-        $global:devConsole.BackColor = $originalBackColor
-    }
-    catch {
-        Write-DevConsole "Failed to copy to clipboard: $($_.Exception.Message)" "ERROR"
-        
-        # Fallback: try to use Out-Clipboard cmdlet if available
-        try {
-            $TextToCopy | Set-Clipboard
-            Write-DevConsole "Copied using Set-Clipboard (fallback)" "SUCCESS"
-        }
-        catch {
-            Write-DevConsole "All clipboard methods failed. Text length: $($TextToCopy.Length)" "ERROR"
-        }
-    }
-}
-
 # Clear console button handler
 $clearConsoleBtn.Add_Click({
         $global:devConsole.Clear()
         Write-DevConsole "Console cleared" "INFO"
-    })
-
-# Copy All button handler
-$copyLogBtn.Add_Click({
-        if ($global:devConsole.Text.Length -eq 0) {
-            Write-DevConsole "No log content to copy" "WARNING"
-            return
-        }
-        Copy-LogToClipboard -TextToCopy $global:devConsole.Text -SuccessMessage "📋 All log content copied to clipboard! ($($global:devConsole.Text.Length) characters)"
-    })
-
-# Copy Selected button handler
-$copySelectedBtn.Add_Click({
-        if ([string]::IsNullOrEmpty($global:devConsole.SelectedText)) {
-            Write-DevConsole "No text selected. Select some text first, then click Copy Selected." "WARNING"
-            return
-        }
-        Copy-LogToClipboard -TextToCopy $global:devConsole.SelectedText -SuccessMessage "📋 Selected text copied to clipboard! ($($global:devConsole.SelectedText.Length) characters)"
-    })
-
-# Format toggle button handler
-$formatToggleBtn.Add_Click({
-        $script:rawFormatMode = -not $script:rawFormatMode
-        if ($script:rawFormatMode) {
-            $formatToggleBtn.Text = "Rich Format"
-            $formatToggleBtn.BackColor = [System.Drawing.Color]::FromArgb(76, 175, 80)
-            Write-DevConsole "🔧 Switched to RAW format mode - text will be easier to copy/paste" "INFO"
-        }
-        else {
-            $formatToggleBtn.Text = "Raw Format"
-            $formatToggleBtn.BackColor = [System.Drawing.Color]::FromArgb(156, 39, 176)
-            Write-DevConsole "🎨 Switched to RICH format mode - colorized output" "INFO"
-        }
-    })
-
-# Context menu event handlers
-$copyAllMenuItem.Add_Click({
-        if ($global:devConsole.Text.Length -eq 0) {
-            Write-DevConsole "No log content to copy" "WARNING"
-            return
-        }
-        Copy-LogToClipboard -TextToCopy $global:devConsole.Text -SuccessMessage "📋 All log content copied!"
-    })
-
-$copySelectedMenuItem.Add_Click({
-        if ([string]::IsNullOrEmpty($global:devConsole.SelectedText)) {
-            Write-DevConsole "No text selected" "WARNING"
-            return
-        }
-        Copy-LogToClipboard -TextToCopy $global:devConsole.SelectedText -SuccessMessage "📋 Selected text copied!"
-    })
-
-$selectAllMenuItem.Add_Click({
-        $global:devConsole.SelectAll()
-        Write-DevConsole "All text selected - use Copy Selected or Ctrl+C to copy" "INFO"
-    })
-
-$exportMenuItem.Add_Click({
-        # Trigger the export button click
-        $exportLogBtn.PerformClick()
-    })
-
-# Add keyboard shortcuts for common operations
-$global:devConsole.Add_KeyDown({
-        param($sender, $e)
-        
-        # Ctrl+A = Select All
-        if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
-            $global:devConsole.SelectAll()
-            $e.Handled = $true
-        }
-        # Ctrl+C = Copy Selected (enhanced feedback)
-        elseif ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::C) {
-            if (-not [string]::IsNullOrEmpty($global:devConsole.SelectedText)) {
-                Copy-LogToClipboard -TextToCopy $global:devConsole.SelectedText -SuccessMessage "📋 Copied!"
-            }
-            $e.Handled = $true
-        }
-        # Ctrl+Shift+C = Copy All
-        elseif ($e.Control -and $e.Shift -and $e.KeyCode -eq [System.Windows.Forms.Keys]::C) {
-            Copy-LogToClipboard -TextToCopy $global:devConsole.Text -SuccessMessage "📋 All copied!"
-            $e.Handled = $true
-        }
-        # F5 = Toggle format mode
-        elseif ($e.KeyCode -eq [System.Windows.Forms.Keys]::F5) {
-            $formatToggleBtn.PerformClick()
-            $e.Handled = $true
-        }
-    })
-
-# Prevent accidental editing while still allowing selection
-$global:devConsole.Add_KeyPress({
-        param($sender, $e)
-        # Block all character input except Ctrl combinations
-        if (-not [char]::IsControl($e.KeyChar)) {
-            $e.Handled = $true
-        }
     })
 
 # Export log button handler
@@ -10856,11 +5277,6 @@ $exportLogBtn.Add_Click({
             $saveDialog.Filter = "Log Files (*.log)|*.log|Text Files (*.txt)|*.txt"
             $saveDialog.Title = "Export Developer Console Log"
             $saveDialog.FileName = "RawrXD_DevLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-            # Set initial directory to the project logs folder
-            $saveDialog.InitialDirectory = $script:LogConfig.BasePath
-            if (-not (Test-Path $saveDialog.InitialDirectory)) {
-                $saveDialog.InitialDirectory = $script:ProjectRoot
-            }
             
             if ($saveDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                 [System.IO.File]::WriteAllText($saveDialog.FileName, $global:devConsole.Text)
@@ -10875,11 +5291,7 @@ $exportLogBtn.Add_Click({
 
 # Initialize dev console with startup info
 Write-DevConsole "═══════════════════════════════════════════════════════" "INFO"
-Write-DevConsole "🎯 RawrXD Developer Console Initialized" "SUCCESS"
-Write-DevConsole "📋 COPY FEATURES: Click 'Copy All' or 'Copy Selected' buttons" "INFO"
-Write-DevConsole "⌨️  SHORTCUTS: Ctrl+A=Select All, Ctrl+C=Copy, Ctrl+Shift+C=Copy All, F5=Toggle Format" "INFO"
-Write-DevConsole "🖱️  RIGHT-CLICK: Context menu with copy options" "INFO"
-Write-DevConsole "🔧 FORMAT TOGGLE: Switch between Rich (colored) and Raw (copy-friendly) modes" "INFO"
+Write-DevConsole "RawrXD Developer Console Initialized" "SUCCESS"
 Write-DevConsole "PowerShell Version: $($PSVersionTable.PSVersion)" "INFO"
 Write-DevConsole "Browser Type: $script:browserType" "INFO"
 Write-DevConsole "WebView2 Enabled: $script:useWebView2" "INFO"
@@ -10892,19 +5304,6 @@ Write-DevConsole "════════════════════�
 function Start-OllamaServer {
     [CmdletBinding()]
     param()
-    
-    # Set OLLAMA_MODELS environment variable to custom directory if it exists
-    $customModelPath = "D:\OllamaModels"
-    if (Test-Path -LiteralPath $customModelPath) {
-        try {
-            $env:OLLAMA_MODELS = $customModelPath
-            Write-StartupLog "✅ Set OLLAMA_MODELS environment variable to: $customModelPath" "INFO"
-            Write-DevConsole "✅ Configured Ollama to use custom model directory: $customModelPath" "INFO"
-        }
-        catch {
-            Write-StartupLog "⚠️ Could not set OLLAMA_MODELS environment variable: $_" "WARNING"
-        }
-    }
     
     try {
         Write-StartupLog "Starting Ollama server..." "INFO"
@@ -10929,7 +5328,7 @@ function Start-OllamaServer {
             return $true
         }
         
-        # Start Ollama server with custom model path
+        # Start Ollama server
         $processInfo = New-Object System.Diagnostics.ProcessStartInfo
         $processInfo.FileName = "ollama"
         $processInfo.Arguments = "serve"
@@ -10937,17 +5336,6 @@ function Start-OllamaServer {
         $processInfo.CreateNoWindow = $true
         $processInfo.RedirectStandardOutput = $true
         $processInfo.RedirectStandardError = $true
-        
-        # Set OLLAMA_MODELS environment variable for the process
-        if (Test-Path -LiteralPath $customModelPath) {
-            if (-not $processInfo.EnvironmentVariables.ContainsKey("OLLAMA_MODELS")) {
-                $processInfo.EnvironmentVariables.Add("OLLAMA_MODELS", $customModelPath)
-            }
-            else {
-                $processInfo.EnvironmentVariables["OLLAMA_MODELS"] = $customModelPath
-            }
-            Write-StartupLog "✅ Configured Ollama process to use custom model directory: $customModelPath" "INFO"
-        }
         
         $global:ollamaProcess = [System.Diagnostics.Process]::Start($processInfo)
         
@@ -11028,7 +5416,7 @@ function Test-OllamaConnection {
     )
     
     try {
-        $testUrl = "http://localhost:11434/api/tags"  # HTTPS enforced
+        $testUrl = "http://localhost:11434/api/tags"
         $request = [System.Net.WebRequest]::Create($testUrl)
         $request.Method = "GET"
         $request.Timeout = $TimeoutSeconds * 1000
@@ -11061,39 +5449,29 @@ function Update-OllamaStatusDisplay {
     param()
     
     if ($script:ollamaStatusLabel) {
-        try {
-            $status = Get-OllamaStatus
-            if (-not $status) {
-                $script:ollamaStatusLabel.Text = "⚠️ Ollama: Unknown"
-                $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::Orange
-                return
-            }
+        $status = Get-OllamaStatus
         
-            switch ($status.Status) {
-                "Running" { 
-                    $script:ollamaStatusLabel.Text = "🟢 Ollama: Running"
-                    $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::Green
-                }
-                "Starting" { 
-                    $script:ollamaStatusLabel.Text = "🟡 Ollama: Starting..."
-                    $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::Orange
-                }
-                "Stopped" { 
-                    $script:ollamaStatusLabel.Text = "🔴 Ollama: Stopped"
-                    $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::Red
-                }
-                "Not Found" { 
-                    $script:ollamaStatusLabel.Text = "❌ Ollama: Not Installed"
-                    $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::DarkRed
-                }
-                default { 
-                    $script:ollamaStatusLabel.Text = "⚠️ Ollama: $($status.Status)"
-                    $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::Orange
-                }
+        switch ($status.Status) {
+            "Running" { 
+                $script:ollamaStatusLabel.Text = "🟢 Ollama: Running"
+                $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::Green
             }
-        }
-        catch {
-            # Silently handle errors in status update
+            "Starting" { 
+                $script:ollamaStatusLabel.Text = "🟡 Ollama: Starting..."
+                $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::Orange
+            }
+            "Stopped" { 
+                $script:ollamaStatusLabel.Text = "🔴 Ollama: Stopped"
+                $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::Red
+            }
+            "Not Found" { 
+                $script:ollamaStatusLabel.Text = "❌ Ollama: Not Installed"
+                $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::DarkRed
+            }
+            default { 
+                $script:ollamaStatusLabel.Text = "⚠️ Ollama: $($status.Status)"
+                $script:ollamaStatusLabel.ForeColor = [System.Drawing.Color]::Orange
+            }
         }
     }
 }
@@ -11130,7 +5508,7 @@ $undoItem.Add_Click({
         if ($script:editor -and $script:undoStack.Count -gt 0) {
             $script:isUndoRedoOperation = $true
             $script:redoStack.Push($script:editor.Text)
-            Set-EditorContent -Content $script:undoStack.Pop() -Editor $script:editor
+            $script:editor.Text = $script:undoStack.Pop()
             $script:isUndoRedoOperation = $false
             Update-UndoRedoMenuState
         }
@@ -11143,7 +5521,7 @@ $redoItem.Add_Click({
         if ($script:editor -and $script:redoStack.Count -gt 0) {
             $script:isUndoRedoOperation = $true
             $script:undoStack.Push($script:editor.Text)
-            Set-EditorContent -Content $script:redoStack.Pop() -Editor $script:editor
+            $script:editor.Text = $script:redoStack.Pop()
             $script:isUndoRedoOperation = $false
             Update-UndoRedoMenuState
         }
@@ -11279,9 +5657,7 @@ $menu.Items.Add($extensionsMenu) | Out-Null
 
 $marketplaceItem = New-Object System.Windows.Forms.ToolStripMenuItem "Marketplace..."
 $installedItem = New-Object System.Windows.Forms.ToolStripMenuItem "Installed Extensions"
-$extensionManagerItem = New-Object System.Windows.Forms.ToolStripMenuItem "🛠️ Extension Manager"
-$extensionManagerItem.add_Click({ Show-ExtensionManager })
-$extensionsMenu.DropDownItems.AddRange(@($marketplaceItem, $installedItem, $extensionManagerItem))
+$extensionsMenu.DropDownItems.AddRange(@($marketplaceItem, $installedItem))
 
 # Security Menu
 $securityMenu = New-Object System.Windows.Forms.ToolStripMenuItem "Security"
@@ -11336,14 +5712,6 @@ $encryptionTestItem.Add_Click({
 # Tools Menu
 $toolsMenu = New-Object System.Windows.Forms.ToolStripMenuItem "Tools"
 $menu.Items.Add($toolsMenu) | Out-Null
-
-# Feature Development Todos
-$todosItem = New-Object System.Windows.Forms.ToolStripMenuItem "Feature Development Todos"
-$todosItem.Add_Click({
-        Show-FeatureTodosDialog
-    })
-$toolsMenu.DropDownItems.Add($todosItem) | Out-Null
-$toolsMenu.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
 
 # Ollama Server submenu
 $ollamaServerItem = New-Object System.Windows.Forms.ToolStripMenuItem "Ollama Server"
@@ -11406,102 +5774,42 @@ $perfRealTimeItem.Add_Click({
         Show-RealTimeMonitor
     })
 
-# Agent Mode Configuration
-# Modes: "Off", "Auto", "Max"
-# Off: Agents disabled - no automatic agent actions
-# Auto: Agents work automatically when needed - balanced autonomy
-# Max: Maximum agent autonomy and activity - full autonomous operation
+# Agent Mode Toggle - Start with Agent Mode ON for agentic editing
 $global:AgentMode = $true
-$global:AgentModeLevel = "Auto"  # Default to Auto mode
-
-# Function to update agent mode display
-function Update-AgentModeDisplay {
-    param([string]$Mode)
-    
-    $global:AgentModeLevel = $Mode
-    
-    switch ($Mode) {
-        "Off" {
-            $global:AgentMode = $false
-            $toggle.Text = "Agent Mode: OFF"
-            $toggle.ForeColor = 'Red'
-            $agentStatusLabel.Text = "Agent Status: OFF - Agents disabled"
-            $agentStatusLabel.ForeColor = 'Red'
-        }
-        "Auto" {
-            $global:AgentMode = $true
-            $toggle.Text = "Agent Mode: AUTO"
-            $toggle.ForeColor = 'Yellow'
-            $agentStatusLabel.Text = "Agent Status: AUTO - Balanced autonomy"
-            $agentStatusLabel.ForeColor = 'Yellow'
-        }
-        "Max" {
-            $global:AgentMode = $true
-            $toggle.Text = "Agent Mode: MAX"
-            $toggle.ForeColor = 'Green'
-            $agentStatusLabel.Text = "Agent Status: MAX - Maximum autonomy"
-            $agentStatusLabel.ForeColor = 'Green'
-        }
-    }
-    
-    # Update settings
-    if ($global:settings) {
-        $global:settings.AgentMode = $global:AgentMode
-        $global:settings.AgentModeLevel = $Mode
-    }
-    
-    # Notify active chat
-    if (Get-Command Get-ActiveChatTab -ErrorAction SilentlyContinue) {
-        $activeChat = Get-ActiveChatTab
-        if ($activeChat) {
-            $modeDescription = switch ($Mode) {
-                "Off" { "OFF - Agents disabled, basic chat only" }
-                "Auto" { "AUTO - Agents work automatically when needed" }
-                "Max" { "MAX - Maximum agent autonomy and activity" }
-            }
-            $activeChat.ChatBox.AppendText("System > Agent Mode: $Mode - $modeDescription`r`n`r`n")
-            $activeChat.ChatBox.ScrollToCaret()
-        }
-    }
-    
-    Write-DevConsole "Agent Mode changed to: $Mode" "INFO"
-}
-
-# Agent Mode Toggle Menu Item - Cycles through Off -> Auto -> Max -> Off
 $toggle = New-Object System.Windows.Forms.ToolStripMenuItem
-$toggle.Text = "Agent Mode: AUTO"
-$toggle.ForeColor = 'Yellow'
+$toggle.Text = "Agent Mode: ON"
+$toggle.ForeColor = 'Green'
 $menu.Items.Add($toggle) | Out-Null
 
 $toggle.Add_Click({
-        # Cycle through modes: Off -> Auto -> Max -> Off
-        switch ($global:AgentModeLevel) {
-            "Off" {
-                Update-AgentModeDisplay -Mode "Auto"
+        $global:AgentMode = -not $global:AgentMode
+        if ($global:AgentMode) {
+            $toggle.Text = "Agent Mode: ON"
+            $toggle.ForeColor = 'Green'
+            $agentStatusLabel.Text = "Agent Status: Active - Agentic editing enabled"
+            $agentStatusLabel.ForeColor = 'Green'
+            
+            $activeChat = Get-ActiveChatTab
+            if ($activeChat) {
+                $activeChat.ChatBox.AppendText("System > Agent Mode ENABLED - All agentic features active`r`n`r`n")
+                $activeChat.ChatBox.ScrollToCaret()
             }
-            "Auto" {
-                Update-AgentModeDisplay -Mode "Max"
-            }
-            "Max" {
-                Update-AgentModeDisplay -Mode "Off"
-            }
-            default {
-                Update-AgentModeDisplay -Mode "Auto"
+        }
+        else {
+            $toggle.Text = "Agent Mode: OFF"
+            $toggle.ForeColor = 'Red'
+            $agentStatusLabel.Text = "Agent Status: Inactive"
+            $agentStatusLabel.ForeColor = 'Red'
+            
+            $activeChat = Get-ActiveChatTab
+            if ($activeChat) {
+                $activeChat.ChatBox.AppendText("System > Agent Mode DISABLED - Basic chat only`r`n`r`n")
+                $activeChat.ChatBox.ScrollToCaret()
             }
         }
     })
 
-# Initialize agent mode display
-Update-AgentModeDisplay -Mode $global:AgentModeLevel
-
 # Chat History Functions
-function Get-ActiveChatTab {
-    if ($script:activeChatTabId -and $script:chatTabs -and $script:chatTabs.ContainsKey($script:activeChatTabId)) {
-        return $script:chatTabs[$script:activeChatTabId]
-    }
-    return $null
-}
-
 function Save-ChatHistory {
     try {
         $activeChat = Get-ActiveChatTab
@@ -11652,21 +5960,7 @@ $openItem.Add_Click({
                     }
                 }
                 
-                # Read file with proper encoding detection
-                try {
-                    $content = [System.IO.File]::ReadAllText($fileName, [System.Text.Encoding]::UTF8)
-                }
-                catch {
-                    # Fallback to default encoding if UTF8 fails
-                    try {
-                        $content = [System.IO.File]::ReadAllText($fileName)
-                    }
-                    catch {
-                        Write-DevConsole "❌ Error reading file: $_" "ERROR"
-                        Write-SecurityLog "File read failed" "ERROR" "File: $fileName, Error: $($_.Exception.Message)"
-                        return
-                    }
-                }
+                $content = [System.IO.File]::ReadAllText($fileName)
                 
                 # Validate file content for security
                 if (-not (Test-InputSafety -Input $content -Type "FileContent")) {
@@ -11690,26 +5984,11 @@ $openItem.Add_Click({
                     }
                 }
                 
-                # Ensure editor is initialized before setting text
-                if (-not $script:editor) {
-                    Write-DevConsole "❌ Editor not initialized! Cannot open file." "ERROR"
-                    Write-SecurityLog "File open failed: Editor not initialized" "ERROR" "File: $fileName"
-                    [System.Windows.Forms.MessageBox]::Show("Editor is not initialized. Please restart the application.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-                    return
-                }
-                
-                try {
-                    $script:editor.Text = $content
-                    $global:currentFile = $fileName
-                    $form.Text = "RawrXD - Secure AI Editor - $([System.IO.Path]::GetFileName($fileName))"
-                    Write-DevConsole "✅ File opened successfully: $fileName" "SUCCESS"
-                    Write-SecurityLog "File opened successfully" "SUCCESS" "File: $fileName, Size: $($content.Length) chars"
-                }
-                catch {
-                    Write-DevConsole "❌ Error setting file content in editor: $_" "ERROR"
-                    Write-SecurityLog "File content set failed" "ERROR" "File: $fileName, Error: $($_.Exception.Message)"
-                    [System.Windows.Forms.MessageBox]::Show("Error loading file into editor: $($_.Exception.Message)", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-                }
+                $script:editor.Text = $content
+                $global:currentFile = $fileName
+                $form.Text = "RawrXD - Secure AI Editor - $([System.IO.Path]::GetFileName($fileName))"
+                Write-DevConsole "✅ File opened successfully: $fileName" "SUCCESS"
+                Write-SecurityLog "File opened successfully" "SUCCESS" "File: $fileName, Size: $($content.Length) chars"
                 
                 # Update last activity
                 $script:CurrentSession.LastActivity = Get-Date
@@ -11926,22 +6205,6 @@ $form.Add_KeyDown({
             Show-CommandPalette
             $_.Handled = $true
         }
-        # Pane toggle keyboard shortcuts
-        elseif ($_.Control -and $_.Shift -and $_.KeyCode -eq "C") {
-            # Ctrl+Shift+C - Toggle chat pane
-            $toggleChatBtn.PerformClick()
-            $_.Handled = $true
-        }
-        elseif ($_.Control -and $_.Shift -and $_.KeyCode -eq "E") {
-            # Ctrl+Shift+E - Toggle file explorer
-            $toggleExplorerBtn.PerformClick()
-            $_.Handled = $true
-        }
-        elseif ($_.Control -and $_.Shift -and $_.KeyCode -eq "A") {
-            # Ctrl+Shift+A - Toggle agent panel
-            $toggleAgentBtn.PerformClick()
-            $_.Handled = $true
-        }
     })
 
 # Settings menu event handlers
@@ -11958,7 +6221,7 @@ $chatSettingsItem.Add_Click({
     })
 
 $themeSettingsItem.Add_Click({
-        Show-ThemeAppearanceDialog
+        Write-DevConsole "ℹ️ Theme settings feature coming soon!" "INFO"
     })
 
 # Exit - Save chat before closing
@@ -12037,101 +6300,36 @@ function Send-OllamaRequest {
         $null = Protect-SensitiveString -Data $Prompt
     }
     
-    # PRODUCTION SECURITY: Always use HTTPS (TLS 1.3 enforced)
-    # HTTP is disabled for security - all connections must use HTTPS
-    $endpoint = $OllamaSecureEndpoint  # Always HTTPS
-    $tagsEndpoint = "http://localhost:11434/api/tags"  # Always HTTPS
+    # Determine endpoint based on security settings
+    $endpoint = if ($script:UseHTTPS) { 
+        $OllamaSecureEndpoint 
+    }
+    else { 
+        $OllamaAPIEndpoint 
+    }
     
-    # Validate endpoint security
-    if ($endpoint -notmatch '^https://') {
-        Write-StructuredErrorLog -ErrorMessage "Security violation: HTTP endpoint detected in production mode" `
-            -ErrorCategory "SECURITY" -Severity "CRITICAL" -SourceFunction "Send-OllamaRequest" `
-            -AdditionalData @{Endpoint = $endpoint }
-        return "Error: HTTP connections are disabled for security. Please configure HTTPS."
+    $tagsEndpoint = if ($script:UseHTTPS) { 
+        "https://localhost:11434/api/tags" 
+    }
+    else { 
+        "http://localhost:11434/api/tags" 
     }
     
     # Validate model exists first
     try {
         Write-DevConsole "Validating model availability..." "DEBUG"
         
-        # PRODUCTION SECURITY: API key authentication is REQUIRED
-        $headers = @{
-            "Content-Type" = "application/json"
+        # Prepare headers for secure connections
+        $headers = @{}
+        if ($script:OllamaAPIKey) {
+            $headers["Authorization"] = "Bearer $script:OllamaAPIKey"
+            Write-SecurityLog "Using API key authentication" "DEBUG"
         }
         
-        # Get API key from secure storage (runspace-safe)
-        $apiKey = $null
-
-        # 1) Prefer calling local function if available in this scope
-        try {
-            if (Get-Command -Name Get-SecureAPIKey -CommandType Function -ErrorAction SilentlyContinue) {
-                $apiKey = Get-SecureAPIKey
-            }
-        }
-        catch {
-            # Function not available in this runspace - fall through to other methods
-        }
-
-        # 2) Try global settings (may be available depending on host/runspace)
-        if (-not $apiKey) {
-            try {
-                if ($global:settings -and $global:settings.OllamaAPIKey) {
-                    $apiKey = $global:settings.OllamaAPIKey
-                }
-            }
-            catch {
-                # Ignore - not available in this runspace
-            }
-        }
-
-        # 3) Fall back to environment variables (safe for background jobs/runspaces)
-        if (-not $apiKey) {
-            foreach ($envVar in @('RAWRXD_API_KEY', 'OLLAMA_API_KEY', 'RAWRAI_API_KEY')) {
-                $val = [System.Environment]::GetEnvironmentVariable($envVar)
-                if ($val -and $val.Trim() -ne '') {
-                    $apiKey = $val
-                    break
-                }
-            }
-        }
-
-        # 4) If still not found, return a clear error (do not throw unhandled function-not-found)
-        if (-not $apiKey) {
-            Write-StructuredErrorLog -ErrorMessage "API key authentication required but not configured (no runspace-accessible key)" `
-                -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Send-OllamaRequest"
-            return "Error: API key authentication required. Please configure your Ollama API key using Set-SecureAPIKey or set RAWRXD_API_KEY environment variable."
-        }
-
-        # Validate API key format
-        if (-not (Test-InputValidation -Input $apiKey -Type "APIKey")) {
-            Write-StructuredErrorLog -ErrorMessage "Invalid API key format detected" `
-                -ErrorCategory "SECURITY" -Severity "HIGH" -SourceFunction "Send-OllamaRequest"
-            return "Error: Invalid API key format. Please reconfigure your API key."
-        }
-
-        # Add API key to headers (Ollama supports both Bearer and X-Ollama-API-Key)
-        $headers["Authorization"] = "Bearer $apiKey"
-        $headers["X-Ollama-API-Key"] = $apiKey
-        Write-SecurityLog "API key authentication configured" "INFO" "KeyLength: $($apiKey.Length)"
-        
-        # Configure SSL/TLS settings for HTTPS (TLS 1.3 enforced)
+        # Configure SSL/TLS settings for HTTPS
         if ($script:UseHTTPS) {
-            # Enforce TLS 1.3 (highest security) - fallback to TLS 1.2 if 1.3 not available
-            try {
-                # Try TLS 1.3 first (requires .NET 4.8+ or PowerShell 7+)
-                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls13 -bor [System.Net.SecurityProtocolType]::Tls12
-                Write-SecurityLog "HTTPS connection configured with TLS 1.3/1.2" "INFO"
-            }
-            catch {
-                # Fallback to TLS 1.2 if TLS 1.3 not supported
-                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-                Write-SecurityLog "HTTPS connection configured with TLS 1.2 (TLS 1.3 not available)" "WARNING"
-            }
-            
-            # For production: Validate certificates strictly
-            # For development: Allow self-signed certificates (configurable)
-            if (-not $script:ValidateCertificates) {
-                add-type @"
+            # Allow self-signed certificates for local Ollama instance
+            add-type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
@@ -12140,31 +6338,16 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
     }
 }
 "@
-                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-                Write-SecurityLog "Self-signed certificates allowed (development mode)" "WARNING"
-            }
+            [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+            Write-SecurityLog "HTTPS connection configured with TLS 1.2" "INFO"
         }
         
-        # PRODUCTION SECURITY: Always use headers with API key authentication
-        $apiKey = Get-SecureAPIKey
-        if (-not $apiKey) {
-            throw "API key authentication required"
-        }
-        
-        $authHeaders = @{
-            "Authorization"    = "Bearer $apiKey"
-            "X-Ollama-API-Key" = $apiKey
-        }
-        
-        # Check cache for model list (cache for 60 seconds)
-        $cacheKey = "ollama_models_list"
-        $cachedModels = Get-CachedResponse -Key $cacheKey -MaxAgeSeconds 60
-        if ($cachedModels) {
-            $modelsResponse = $cachedModels
+        $modelsResponse = if (@($headers).Count -gt 0) {
+            Invoke-RestMethod -Uri $tagsEndpoint -Method GET -Headers $headers -TimeoutSec 10
         }
         else {
-            $modelsResponse = Invoke-RestMethod -Uri $tagsEndpoint -Method GET -Headers $authHeaders -TimeoutSec 10 -ErrorAction Stop
-            Set-CachedResponse -Key $cacheKey -Value $modelsResponse
+            Invoke-RestMethod -Uri $tagsEndpoint -Method GET -TimeoutSec 10
         }
         
         $availableModels = @($modelsResponse.models | ForEach-Object { $_.name })
@@ -12212,13 +6395,8 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
         }
     }
     catch {
-        $errorMsg = "Could not validate models (server may be down): $($_.Exception.Message)"
-        Write-DevConsole $errorMsg "WARNING"
+        Write-DevConsole "Could not validate models (server may be down): $_" "WARNING"
         Write-SecurityLog "Model validation failed" "WARNING" $_.Exception.Message
-        Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "OLLAMA" -Severity "MEDIUM" -SourceFunction "Send-OllamaRequest" -AdditionalData @{
-            Model    = $Model
-            Endpoint = $tagsEndpoint
-        }
         # Continue with original model - might work if server is just slow
     }
     
@@ -12228,10 +6406,9 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
         stream = $false
     }
     
-    # PRODUCTION SECURITY: Always include API key in request body for compatibility
-    $apiKey = Get-SecureAPIKey
-    if ($apiKey) {
-        $body.api_key = $apiKey
+    # Add additional security parameters if available
+    if ($script:OllamaAPIKey) {
+        $body.api_key = $script:OllamaAPIKey
     }
     
     # Retry logic with exponential backoff
@@ -12245,67 +6422,11 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             Write-DevConsole "Attempt $($retryCount + 1)/$maxRetries - POST $endpoint" "DEBUG"
             Write-SecurityLog "API request attempt" "DEBUG" "Retry: $retryCount, HTTPS: $script:UseHTTPS"
             
-            # PRODUCTION SECURITY: Always use headers with API key authentication
-            # Check cache first for performance optimization
-            $cacheKey = "ollama_$($Model)_$($Prompt.GetHashCode())"
-            $cachedResponse = Get-CachedResponse -Key $cacheKey -MaxAgeSeconds 300
-            if ($cachedResponse) {
-                Write-DevConsole "Using cached response" "DEBUG"
-                return $cachedResponse
-            }
-            
-            # Make API call with authentication - Use async job to prevent UI freezes
-            Write-DevConsole "Initiating async Ollama request (non-blocking)..." "INFO"
-            
-            $job = Start-Job -ScriptBlock {
-                param($uri, $body, $headers, $timeout)
-                try {
-                    $jsonBody = $body | ConvertTo-Json -Depth 10
-                    Invoke-RestMethod -Uri $uri -Method POST -Body $jsonBody -ContentType "application/json" -Headers $headers -TimeoutSec $timeout -ErrorAction Stop
-                }
-                catch {
-                    @{ error = $_.Exception.Message; errorType = "JobError" }
-                }
-            } -ArgumentList $endpoint, $body, $headers, 30
-            
-            # Wait for job with progress indicator
-            $spinner = @('⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏')
-            $spinIdx = 0
-            $jobTimeout = 180  # 3 minute total timeout
-            $startTime = Get-Date
-            
-            while ($job.State -eq 'Running' -and (((Get-Date) - $startTime).TotalSeconds -lt $jobTimeout)) {
-                $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds)
-                $spinChar = $spinner[$spinIdx % $spinner.Length]
-                Write-DevConsole "`r$spinChar Generating response ($elapsed seconds)..." -NoNewline "INFO"
-                Start-Sleep -Milliseconds 250
-                $spinIdx++
-            }
-            
-            Write-DevConsole "`r✓ Generation complete!                  " "SUCCESS"
-            
-            # Retrieve job result
-            if ($job.State -eq 'Completed') {
-                $response = Receive-Job -Job $job
-                Remove-Job $job
-                
-                if ($response.error) {
-                    throw $response.error
-                }
-            }
-            elseif ($job.State -eq 'Failed') {
-                $jobError = Receive-Job -Job $job -ErrorVariable jobErr -ErrorAction SilentlyContinue
-                Remove-Job $job
-                throw "Async job failed: $jobErr"
+            $response = if (@($headers).Count -gt 0) {
+                Invoke-RestMethod -Uri $endpoint -Method POST -Body $jsonBody -ContentType "application/json" -Headers $headers -TimeoutSec 30
             }
             else {
-                Remove-Job $job -Force
-                throw "Request timeout after $jobTimeout seconds"
-            }
-            
-            # Cache successful response
-            if ($response.response) {
-                Set-CachedResponse -Key $cacheKey -Value $response.response
+                Invoke-RestMethod -Uri $endpoint -Method POST -Body $jsonBody -ContentType "application/json" -TimeoutSec 30
             }
             
             # Parse response
@@ -12359,31 +6480,21 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
         catch {
             $retryCount++
             $errorMsg = $_.Exception.Message
-            $errorCode = if ($_.Exception) { $_.Exception.HResult } else { 0 }
             
-            # Enhanced structured error logging with compliance metadata
+            # Enhanced AI error logging with metrics
             $aiMetrics = @{
                 RetryCount   = $retryCount
                 MaxRetries   = $maxRetries
                 Model        = $Model
                 Endpoint     = $endpoint
                 UseHTTPS     = $script:UseHTTPS
-                HasAPIKey    = ($null -ne (Get-SecureAPIKey))
+                HasAPIKey    = ($null -ne $script:OllamaAPIKey)
                 PromptLength = $Prompt.Length
-                ErrorType    = if ($errorMsg -match "Unable to connect") { "CONNECTION" } elseif ($errorMsg -match "timeout") { "TIMEOUT" } elseif ($errorMsg -match "refused") { "REFUSED" } elseif ($errorMsg -match "401|Unauthorized") { "AUTHENTICATION" } elseif ($errorMsg -match "403|Forbidden") { "AUTHORIZATION" } else { "OTHER" }
-                ErrorCode    = $errorCode
+                ErrorType    = if ($errorMsg -match "Unable to connect") { "CONNECTION" } elseif ($errorMsg -match "timeout") { "TIMEOUT" } elseif ($errorMsg -match "refused") { "REFUSED" } else { "OTHER" }
                 ResponseTime = $null
-                Timestamp    = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
             }
             
-            # Structured error logging for compliance (NIST, GDPR)
-            Write-StructuredErrorLog -ErrorMessage "Ollama API request failed: $errorMsg" `
-                -ErrorCategory "AI" `
-                -Severity $(if ($retryCount -eq $maxRetries) { "HIGH" } else { "MEDIUM" }) `
-                -SourceFunction "Send-OllamaRequest" `
-                -AdditionalData $aiMetrics
-            
-            # Legacy error logging for compatibility
+            # Log AI-specific error with context
             Write-ErrorLog -ErrorMessage "Ollama API request failed: $errorMsg" `
                 -ErrorCategory "AI" `
                 -Severity $(if ($retryCount -eq $maxRetries) { "HIGH" } else { "MEDIUM" }) `
@@ -12393,28 +6504,19 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 -AIModel $Model `
                 -AIMetrics $aiMetrics
             
-            # Retry logic with exponential backoff
-            if ($errorMsg -match "Unable to connect|refused|timeout|not found|429|503") {
-                Write-DevConsole "Network error (attempt $retryCount/$maxRetries): $errorMsg" "ERROR"
+            if ($errorMsg -match "Unable to connect|refused|timeout|not found") {
+                Write-DevConsole "Network error (attempt $retryCount): $errorMsg" "ERROR"
                 Write-SecurityLog "Network connection error" "ERROR" "Attempt: $retryCount, Error: $errorMsg"
                 
                 if ($retryCount -lt $maxRetries) {
-                    # Exponential backoff: 500ms, 1s, 2s, 4s...
-                    $backoffMs = [math]::Pow(2, $retryCount) * 500
-                    Write-DevConsole "Retrying in $($backoffMs)ms (exponential backoff)..." "INFO"
+                    $backoffMs = [math]::Pow(2, $retryCount) * 500  # 500ms, 1s, 2s
+                    Write-DevConsole "Retrying in $($backoffMs)ms..." "INFO"
                     Start-Sleep -Milliseconds $backoffMs
                     continue
                 }
             }
-            elseif ($errorMsg -match "401|Unauthorized") {
-                # Authentication error - don't retry
-                Write-StructuredErrorLog -ErrorMessage "API key authentication failed" `
-                    -ErrorCategory "SECURITY" -Severity "CRITICAL" -SourceFunction "Send-OllamaRequest" `
-                    -AdditionalData $aiMetrics
-                return "Error: Authentication failed. Please verify your API key."
-            }
             
-            Write-DevConsole "Ollama API Error (final after $retryCount retries): $errorMsg" "ERROR"
+            Write-DevConsole "Ollama API Error (final): $errorMsg" "ERROR"
             Write-SecurityLog "Final Ollama API failure" "ERROR" $errorMsg
             
             # Provide helpful diagnostic info
@@ -12441,19 +6543,6 @@ Error details: $errorMsg
             
             return $diagnosticMsg
         }
-    }
-    
-    # Final catch block for any unexpected errors not caught above
-    catch {
-        $errorMsg = "Unexpected error in Send-OllamaRequest: $($_.Exception.Message)"
-        Write-DevConsole $errorMsg "ERROR"
-        Write-SecurityLog "Unexpected error in Ollama request" "ERROR" $_.Exception.Message
-        Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "OLLAMA" -Severity "CRITICAL" -SourceFunction "Send-OllamaRequest" -AdditionalData @{
-            Model        = $Model
-            PromptLength = if ($Prompt) { $Prompt.Length } else { 0 }
-            StackTrace   = $_.ScriptStackTrace
-        }
-        return "Error: An unexpected error occurred while processing the request. Please check the logs for details."
     }
     
     return "Error: Failed to connect to Ollama after $maxRetries attempts"
@@ -12483,89 +6572,6 @@ function Send-Chat {
         Write-SecurityLog "Chat blocked: Session security check failed" "ERROR"
         $chatBox.AppendText("SECURITY > Session expired or security validation failed. Please restart the application.`r`n`r`n")
         return
-    }
-    
-    # ============================================
-    # @ MENTION PARSING - Files, Folders, Docs
-    # ============================================
-    $mentionedFiles = @()
-    $mentionedFolders = @()
-    $mentionedDocs = @()
-    $contextSize = 0
-    
-    # Parse @ mentions for files
-    $fileMentions = [regex]::Matches($msg, '@file["'']?([^"'']+)["'']?|@([A-Za-z]:\\[^\s]+\.\w+)|@([^\s]+\.\w+)')
-    foreach ($match in $fileMentions) {
-        $filePath = if ($match.Groups[1].Success) { $match.Groups[1].Value } 
-        elseif ($match.Groups[2].Success) { $match.Groups[2].Value }
-        else { $match.Groups[3].Value }
-        
-        # Resolve relative paths
-        if (-not [System.IO.Path]::IsPathRooted($filePath)) {
-            $filePath = Join-Path $global:currentWorkingDir $filePath
-        }
-        
-        if (Test-Path $filePath -PathType Leaf) {
-            $mentionedFiles += $filePath
-            try {
-                $fileInfo = Get-Item $filePath
-                $contextSize += $fileInfo.Length
-                $global:ContextUsage.Files += $filePath
-            }
-            catch { }
-        }
-    }
-    
-    # Parse @ mentions for folders
-    $folderMentions = [regex]::Matches($msg, '@folder["'']?([^"'']+)["'']?|@dir["'']?([^"'']+)["'']?')
-    foreach ($match in $folderMentions) {
-        $folderPath = if ($match.Groups[1].Success) { $match.Groups[1].Value } else { $match.Groups[2].Value }
-        
-        if (-not [System.IO.Path]::IsPathRooted($folderPath)) {
-            $folderPath = Join-Path $global:currentWorkingDir $folderPath
-        }
-        
-        if (Test-Path $folderPath -PathType Container) {
-            $mentionedFolders += $folderPath
-            try {
-                $folderFiles = Get-ChildItem -Path $folderPath -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 100
-                $contextSize += ($folderFiles | Measure-Object -Property Length -Sum).Sum
-                $global:ContextUsage.Folders += $folderPath
-            }
-            catch { }
-        }
-    }
-    
-    # Parse @ mentions for docs (web pages, documents)
-    $docMentions = [regex]::Matches($msg, '@doc["'']?([^"'']+)["'']?|@url["'']?([^"'']+)["'']?|@browser["'']?([^"'']+)["'']?')
-    foreach ($match in $docMentions) {
-        $docPath = if ($match.Groups[1].Success) { $match.Groups[1].Value }
-        elseif ($match.Groups[2].Success) { $match.Groups[2].Value }
-        else { $match.Groups[3].Value }
-        
-        $mentionedDocs += $docPath
-        $global:ContextUsage.Docs += $docPath
-        
-        # If it's a URL, add to browser pages
-        if ($docPath -match '^https?://') {
-            $global:ContextUsage.BrowserPages += $docPath
-        }
-    }
-    
-    # Update context usage
-    $global:ContextUsage.UsedContext += $contextSize
-    if ($global:ContextUsage.TotalContext -eq 0) {
-        $global:ContextUsage.TotalContext = 1000000  # Default 1MB context window
-    }
-    Update-ContextUsageDisplay
-    
-    # Log mentions if any found
-    if ($mentionedFiles.Count -gt 0 -or $mentionedFolders.Count -gt 0 -or $mentionedDocs.Count -gt 0) {
-        $mentionSummary = @()
-        if ($mentionedFiles.Count -gt 0) { $mentionSummary += "$($mentionedFiles.Count) file(s)" }
-        if ($mentionedFolders.Count -gt 0) { $mentionSummary += "$($mentionedFolders.Count) folder(s)" }
-        if ($mentionedDocs.Count -gt 0) { $mentionSummary += "$($mentionedDocs.Count) doc(s)" }
-        Write-DevConsole "📎 @ Mentions detected: $($mentionSummary -join ', ')" "INFO"
     }
     
     # Handle pending delete confirmation (chat-based, no popups)
@@ -12626,58 +6632,8 @@ function Send-Chat {
         $null = Protect-SensitiveString -Data $msg
     }
     
-    # Build enhanced message with @ mention context
-    $enhancedMsg = $msg
-    $contextData = ""
-    
-    # Add file contents from @ mentions
-    foreach ($filePath in $mentionedFiles) {
-        try {
-            $fileContent = Get-Content -Path $filePath -Raw -ErrorAction Stop
-            $fileName = [System.IO.Path]::GetFileName($filePath)
-            $contextData += "`n`n[File: @file $fileName]`n$fileContent`n[/File]"
-            Write-DevConsole "📄 Added file to context: $fileName ($($fileContent.Length) chars)" "INFO"
-        }
-        catch {
-            Write-DevConsole "⚠️ Could not read file for context: $filePath" "WARNING"
-        }
-    }
-    
-    # Add folder contents from @ mentions
-    foreach ($folderPath in $mentionedFolders) {
-        try {
-            $folderName = [System.IO.Path]::GetFileName($folderPath)
-            $folderFiles = Get-ChildItem -Path $folderPath -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 20
-            $contextData += "`n`n[Folder: @folder $folderName]`n"
-            foreach ($file in $folderFiles) {
-                try {
-                    $fileContent = Get-Content -Path $file.FullName -Raw -ErrorAction SilentlyContinue
-                    if ($fileContent) {
-                        $contextData += "`nFile: $($file.Name)`n$fileContent`n"
-                    }
-                }
-                catch { }
-            }
-            $contextData += "`n[/Folder]"
-            Write-DevConsole "📁 Added folder to context: $folderName" "INFO"
-        }
-        catch {
-            Write-DevConsole "⚠️ Could not read folder for context: $folderPath" "WARNING"
-        }
-    }
-    
     # Append user message to chat (display original, store encrypted)
     $chatBox.AppendText("You > $msg`r`n")
-    
-    # Show @ mentions in chat if any
-    if ($mentionedFiles.Count -gt 0 -or $mentionedFolders.Count -gt 0 -or $mentionedDocs.Count -gt 0) {
-        $mentionInfo = "📎 Context added: "
-        $parts = @()
-        if ($mentionedFiles.Count -gt 0) { $parts += "$($mentionedFiles.Count) file(s)" }
-        if ($mentionedFolders.Count -gt 0) { $parts += "$($mentionedFolders.Count) folder(s)" }
-        if ($mentionedDocs.Count -gt 0) { $parts += "$($mentionedDocs.Count) doc(s)" }
-        $chatBox.AppendText("System > $mentionInfo$($parts -join ', ')`r`n")
-    }
     
     # Auto-save chat history after each message
     Save-ChatHistory
@@ -12898,7 +6854,7 @@ function Send-Chat {
             $lines = @($chatBox.Lines)
             if ($lines.Count -ge 1) {
                 $lastAI = $lines[-1]
-                Set-EditorContent -Content $lastAI -Editor $script:editor
+                $script:editor.Text = $lastAI
                 $chatBox.AppendText("Agent > Applied AI output to editor.`r`n`r`n")
             }
             return
@@ -13028,13 +6984,6 @@ function Send-Chat {
 
         if ($msg -match "^/ls\s*(.*)$" -or $msg -match "^/list\s*(.*)$" -or $msg -match "^/dir\s*(.*)$") {
             $path = if ($Matches[1]) { $Matches[1] } else { $global:currentWorkingDir }
-            
-            # Validate path is not empty
-            if ([string]::IsNullOrWhiteSpace($path)) {
-                $chatBox.AppendText("Agent > Error: Path is empty`r`n`r`n")
-                return
-            }
-            
             try {
                 $items = Get-ChildItem -Path $path -ErrorAction Stop
                 $output = "Contents of $path :`r`n"
@@ -13076,23 +7025,6 @@ function Send-Chat {
             try {
                 [System.IO.File]::WriteAllText($filePath, $content)
                 $chatBox.AppendText("Agent > Wrote to file: $filePath`r`n`r`n")
-                
-                # Track this change in agent context
-                $global:agentContext.Edits += @{
-                    Id              = [guid]::NewGuid().ToString()
-                    File            = $filePath
-                    OriginalContent = ""
-                    NewContent      = $content
-                    Diffs           = @()
-                    Timestamp       = Get-Date
-                    Type            = "Write"
-                    Description     = "File written/created by agent"
-                }
-                
-                # Update Agent Changes display
-                if (Get-Command Update-AgentChangesDisplay -ErrorAction SilentlyContinue) {
-                    Update-AgentChangesDisplay
-                }
             }
             catch {
                 $chatBox.AppendText("Agent > Error writing file: $_`r`n`r`n")
@@ -13318,12 +7250,6 @@ function Send-Chat {
                         $script:editor.Text = $content
                         $global:currentFile = $filePath
                         $form.Text = "AI Text Editor - $filePath"
-                        
-                        # Apply syntax highlighting after file is loaded
-                        if ($global:settings.CodeHighlighting) {
-                            Apply-SyntaxHighlighting -Editor $script:editor -FilePath $filePath
-                        }
-                        
                         $chatBox.AppendText("Agent > Opened file: $filePath ($($fileInfo.Length) bytes)`r`n`r`n")
                     }
                 }
@@ -13373,23 +7299,6 @@ function Send-Chat {
                 $form.Text = "AI Text Editor - $fullPath"
                 Update-Explorer
                 $chatBox.AppendText("Agent > Created new file: $fullPath`r`n`r`n")
-                
-                # Track this change in agent context
-                $global:agentContext.Edits += @{
-                    Id              = [guid]::NewGuid().ToString()
-                    File            = $fullPath
-                    OriginalContent = ""
-                    NewContent      = ""
-                    Diffs           = @()
-                    Timestamp       = Get-Date
-                    Type            = "Create"
-                    Description     = "New file created by agent"
-                }
-                
-                # Update Agent Changes display
-                if (Get-Command Update-AgentChangesDisplay -ErrorAction SilentlyContinue) {
-                    Update-AgentChangesDisplay
-                }
             }
             catch {
                 $chatBox.AppendText("Agent > Error creating file: $_`r`n`r`n")
@@ -13577,7 +7486,7 @@ function Send-Chat {
                 try {
                     $refactored = Invoke-CodeRefactor $code $instructions
                     $chatBox.AppendText("Agent > Refactored code:`r`n$refactored`r`n`r`n")
-                    Set-EditorContent -Content $refactored -Editor $script:editor
+                    $script:editor.Text = $refactored
                 }
                 catch {
                     $chatBox.AppendText("Agent > Error refactoring code: $_`r`n`r`n")
@@ -13634,18 +7543,7 @@ TEXT END:
     # If the request mentions files/directories/auditing, gather REAL data first
     $contextData = ""
     
-    # In Max mode, always enable agentic features; in Auto mode, only when needed
-    $shouldUseAgentMode = if ($global:AgentModeLevel -eq "Max") { 
-        $true 
-    }
-    elseif ($global:AgentModeLevel -eq "Auto" -and $requiresAgentMode) { 
-        $true 
-    }
-    else { 
-        $false 
-    }
-    
-    if ($shouldUseAgentMode) {
+    if ($global:AgentMode -and $requiresAgentMode) {
         $chatBox.AppendText("Agent > *Gathering real filesystem context...*`r`n")
         
         # Extract path references from the message
@@ -13738,130 +7636,23 @@ $($gatheredContext -join "`n")
         }
     }
     
-    # ============================================
-    # THINKING MODE - Deep Research with Browser
-    # ============================================
-    if ($global:AgentInteractionMode -eq "Thinking") {
-        $chatBox.AppendText("🤔 Thinking Mode: Conducting deep research...`r`n")
-        
-        # Extract research queries from message
-        $researchQueries = @()
-        if ($msg -match 'research\s+(.+)|search\s+for\s+(.+)|find\s+information\s+about\s+(.+)') {
-            $query = if ($Matches[1]) { $Matches[1] } else { $Matches[2] }
-            $researchQueries += $query.Trim()
-        }
-        else {
-            # Use the whole message as a research query
-            $researchQueries += $msg
-        }
-        
-        # Use browser for research
-        foreach ($query in $researchQueries) {
-            try {
-                # Search using browser - URL encode the query
-                try {
-                    Add-Type -AssemblyName System.Web -ErrorAction SilentlyContinue
-                }
-                catch { }
-                $encodedQuery = if (Get-Command -Name "System.Web.HttpUtility" -ErrorAction SilentlyContinue) {
-                    [System.Web.HttpUtility]::UrlEncode($query)
-                }
-                else {
-                    [System.Uri]::EscapeDataString($query)
-                }
-                $searchUrl = "https://www.google.com/search?q=" + $encodedQuery
-                Open-Browser $searchUrl
-                $chatBox.AppendText("🔍 Researching: $query`r`n")
-                $chatBox.AppendText("🌐 Opened browser for research: $searchUrl`r`n")
-                
-                # Wait a bit for page to load, then extract content
-                Start-Sleep -Seconds 3
-                
-                # Extract page content for context
-                try {
-                    if ($script:browserType -eq "WebView2" -and $script:webBrowser.CoreWebView2) {
-                        # Use JavaScript to extract page content
-                        $pageContent = $script:webBrowser.CoreWebView2.ExecuteScriptAsync("document.body.innerText").Result
-                        if ($pageContent) {
-                            $contextData += "`n`n[Browser Research: $query]`n$pageContent`n[/Browser Research]"
-                            $global:ContextUsage.BrowserPages += $searchUrl
-                            Write-DevConsole "📊 Extracted research content: $($pageContent.Length) chars" "INFO"
-                        }
-                    }
-                    else {
-                        # Legacy browser
-                        $pageContent = $script:webBrowser.Document.Body.InnerText
-                        if ($pageContent) {
-                            $contextData += "`n`n[Browser Research: $query]`n$pageContent`n[/Browser Research]"
-                            $global:ContextUsage.BrowserPages += $searchUrl
-                            Write-DevConsole "📊 Extracted research content: $($pageContent.Length) chars" "INFO"
-                        }
-                    }
-                }
-                catch {
-                    Write-DevConsole "⚠️ Could not extract browser content: $_" "WARNING"
-                }
-            }
-            catch {
-                $chatBox.AppendText("⚠️ Error during research: $_`r`n")
-                Write-DevConsole "Research error: $_" "WARNING"
-            }
-        }
-        
-        # Browser-based computer use capabilities
-        if ($msg -match 'use\s+computer|browser\s+action|navigate\s+to|click\s+on|fill\s+form') {
-            $chatBox.AppendText("💻 Browser computer use enabled - Can interact with web pages`r`n")
-            $contextData += "`n`n[Computer Use: Browser interaction enabled. You can navigate, click, fill forms, and extract data from web pages.]`n"
-        }
-    }
-    
-    # Combine @ mention context with existing context
-    if ($contextData) {
-        $enhancedContextData = $contextData
-        if ($gatheredContext.Count -gt 0) {
-            $enhancedContextData += "`n`n" + ($gatheredContext -join "`n")
-        }
-    }
-    else {
-        $enhancedContextData = if ($gatheredContext.Count -gt 0) {
-            $gatheredContext -join "`n"
-        }
-        else {
-            ""
-        }
-    }
-    
-    # Build enhanced prompt with all context
-    $enhancedPrompt = if ($enhancedContextData) {
+    # Build enhanced prompt with context
+    $enhancedPrompt = if ($contextData) {
         @"
-$enhancedContextData
+$contextData
 
-USER REQUEST: $msg
+USER REQUEST: $prompt
 
-Based on the context above (files, folders, docs, browser research), respond to the user's request. Use ONLY the actual data provided - do not invent statistics or file names.
+Based on the REAL filesystem data above, respond to the user's request. Use ONLY the actual data provided - do not invent statistics or file names.
 "@
     }
     else {
-        $msg
+        $prompt
     }
-    
-    # Update context usage
-    $promptSize = $enhancedPrompt.Length
-    $global:ContextUsage.UsedContext += $promptSize
-    if ($global:ContextUsage.TotalContext -eq 0) {
-        $global:ContextUsage.TotalContext = 1000000  # Default 1MB context window
-    }
-    Update-ContextUsageDisplay
 
     try {
         $response = Send-OllamaRequest $enhancedPrompt $model
         $chatBox.AppendText("AI > $response`r`n`r`n")
-        
-        # Update context usage after response
-        $responseSize = $response.Length
-        $global:ContextUsage.UsedContext += $responseSize
-        Update-ContextUsageDisplay
-        
         # Save chat history after AI response
         Save-ChatHistory
     }
@@ -13875,12 +7666,9 @@ Based on the context above (files, folders, docs, browser research), respond to 
 function Open-Browser {
     <#
     .SYNOPSIS
-        Opens a URL in the embedded browser (FULLY FIXED)
+        Opens a URL in the embedded browser
     .PARAMETER Url
         The URL to navigate to
-    .DESCRIPTION
-        Comprehensive browser navigation with proper error handling,
-        WebView2/IE fallback support, and URL validation
     #>
     [CmdletBinding()]
     param(
@@ -13888,210 +7676,67 @@ function Open-Browser {
         [ValidateNotNullOrEmpty()]
         [string]$url
     )
-    
-    if ([string]::IsNullOrWhiteSpace($url)) {
-        Write-DevConsole "❌ Cannot navigate to empty URL" "WARNING"
-        return
-    }
-    
-    try {
-        # Clean and validate URL
-        $url = $url.Trim()
-        
-        # Add protocol if missing
-        if (-not $url.StartsWith("http://") -and -not $url.StartsWith("https://") -and -not $url.StartsWith("about:")) {
+    if ($url) {
+        if (-not $url.StartsWith("http://") -and -not $url.StartsWith("https://")) {
             $url = "https://" + $url
         }
-        
-        Write-DevConsole "🌐 Opening browser: $url" "INFO"
-        
-        # Update URL box safely
-        if ($browserUrlBox) {
-            try {
-                $browserUrlBox.Text = $url
-            }
-            catch {
-                Write-DevConsole "Could not update URL box: $_" "DEBUG"
-            }
-        }
-        
-        # Navigate based on browser type
+        $browserUrlBox.Text = $url
         if ($script:browserType -eq "WebView2") {
-            # WebView2 browser (modern Chromium engine)
-            if ($script:webBrowser) {
-                try {
-                    # Check if CoreWebView2 is initialized
-                    if ($script:webBrowser.CoreWebView2) {
-                        $script:webBrowser.CoreWebView2.Navigate($url)
-                        Write-DevConsole "✅ WebView2 navigation started" "SUCCESS"
-                    }
-                    else {
-                        # CoreWebView2 not initialized yet - use Source property for lazy init
-                        Write-DevConsole "WebView2 not fully initialized, using Source property" "INFO"
-                        $script:webBrowser.Source = New-Object System.Uri($url)
-                    }
-                }
-                catch {
-                    Write-DevConsole "WebView2 navigation error: $($_.Exception.Message)" "ERROR"
-                    Write-DevConsole "Attempting fallback navigation via Source property" "INFO"
-                    try {
-                        $script:webBrowser.Source = New-Object System.Uri($url)
-                    }
-                    catch {
-                        Write-DevConsole "WebView2 Source navigation failed: $_" "ERROR"
-                    }
-                }
-            }
-            else {
-                Write-DevConsole "❌ WebView2 control not available" "ERROR"
+            if ($webBrowser.CoreWebView2) {
+                $webBrowser.CoreWebView2.Navigate($url)
             }
         }
         else {
-            # Legacy WebBrowser control (IE engine)
-            if ($script:webBrowser) {
-                try {
-                    # Use UI thread-safe navigation
-                    if ($script:webBrowser.InvokeRequired) {
-                        $script:webBrowser.Invoke([System.Action] {
-                                $script:webBrowser.Navigate($url)
-                            }) | Out-Null
-                    }
-                    else {
-                        $script:webBrowser.Navigate($url)
-                    }
-                    Write-DevConsole "✅ Legacy browser navigation started: $url" "SUCCESS"
-                }
-                catch {
-                    Write-DevConsole "Legacy browser navigation error: $($_.Exception.Message)" "ERROR"
-                }
-            }
-            else {
-                Write-DevConsole "❌ Legacy browser control not available" "ERROR"
-            }
+            $webBrowser.Navigate($url)
         }
-    }
-    catch {
-        $errorMsg = "Critical browser error: $($_.Exception.Message)"
-        Write-DevConsole $errorMsg "ERROR"
-        Write-ErrorLog -ErrorMessage $errorMsg -ErrorCategory "BROWSER" -Severity "MEDIUM" -SourceFunction "Open-Browser"
     }
 }
 
-# Browser Event Handlers (FULLY FIXED)
+# Browser Event Handlers
 $browserGoBtn.Add_Click({
-        try {
-            $url = $browserUrlBox.Text.Trim()
-            if (-not [string]::IsNullOrWhiteSpace($url)) {
-                Open-Browser $url
-            }
-            else {
-                Write-DevConsole "⚠️ Please enter a URL" "WARNING"
-            }
-        }
-        catch {
-            Write-DevConsole "Go button error: $_" "ERROR"
-        }
+        Open-Browser $browserUrlBox.Text.Trim()
     })
 
 $browserUrlBox.Add_KeyDown({
-        try {
-            if ($_.KeyCode -eq "Enter") {
-                $url = $browserUrlBox.Text.Trim()
-                if (-not [string]::IsNullOrWhiteSpace($url)) {
-                    Open-Browser $url
-                }
-            }
-        }
-        catch {
-            Write-DevConsole "URL box KeyDown error: $_" "ERROR"
+        if ($_.KeyCode -eq "Enter") {
+            Open-Browser $browserUrlBox.Text.Trim()
         }
     })
 
 $browserBackBtn.Add_Click({
-        try {
-            if ($script:browserType -eq "WebView2") {
-                if ($script:webBrowser -and $script:webBrowser.CoreWebView2) {
-                    if ($script:webBrowser.CoreWebView2.CanGoBack) {
-                        $script:webBrowser.CoreWebView2.GoBack()
-                        Write-DevConsole "⬅️ WebView2 navigated back" "INFO"
-                    }
-                    else {
-                        Write-DevConsole "Cannot go back (no history)" "INFO"
-                    }
-                }
-                else {
-                    Write-DevConsole "WebView2 not initialized" "WARNING"
-                }
-            }
-            else {
-                # Legacy WebBrowser
-                if ($script:webBrowser -and $script:webBrowser.CanGoBack) {
-                    $script:webBrowser.GoBack()
-                    Write-DevConsole "⬅️ Browser navigated back" "INFO"
-                }
-                else {
-                    Write-DevConsole "Cannot go back (no history)" "INFO"
-                }
+        if ($script:browserType -eq "WebView2") {
+            if ($webBrowser.CoreWebView2 -and $webBrowser.CoreWebView2.CanGoBack) {
+                $webBrowser.CoreWebView2.GoBack()
             }
         }
-        catch {
-            Write-DevConsole "Back button error: $_" "ERROR"
+        else {
+            if ($webBrowser.CanGoBack) {
+                $webBrowser.GoBack()
+            }
         }
     })
 
 $browserForwardBtn.Add_Click({
-        try {
-            if ($script:browserType -eq "WebView2") {
-                if ($script:webBrowser -and $script:webBrowser.CoreWebView2) {
-                    if ($script:webBrowser.CoreWebView2.CanGoForward) {
-                        $script:webBrowser.CoreWebView2.GoForward()
-                        Write-DevConsole "➡️ WebView2 navigated forward" "INFO"
-                    }
-                    else {
-                        Write-DevConsole "Cannot go forward (no forward history)" "INFO"
-                    }
-                }
-                else {
-                    Write-DevConsole "WebView2 not initialized" "WARNING"
-                }
-            }
-            else {
-                # Legacy WebBrowser
-                if ($script:webBrowser -and $script:webBrowser.CanGoForward) {
-                    $script:webBrowser.GoForward()
-                    Write-DevConsole "➡️ Browser navigated forward" "INFO"
-                }
-                else {
-                    Write-DevConsole "Cannot go forward (no forward history)" "INFO"
-                }
+        if ($script:browserType -eq "WebView2") {
+            if ($webBrowser.CoreWebView2 -and $webBrowser.CoreWebView2.CanGoForward) {
+                $webBrowser.CoreWebView2.GoForward()
             }
         }
-        catch {
-            Write-DevConsole "Forward button error: $_" "ERROR"
+        else {
+            if ($webBrowser.CanGoForward) {
+                $webBrowser.GoForward()
+            }
         }
     })
 
 $browserRefreshBtn.Add_Click({
-        try {
-            if ($script:browserType -eq "WebView2") {
-                if ($script:webBrowser -and $script:webBrowser.CoreWebView2) {
-                    $script:webBrowser.CoreWebView2.Reload()
-                    Write-DevConsole "🔄 WebView2 page refreshed" "SUCCESS"
-                }
-                else {
-                    Write-DevConsole "WebView2 not initialized" "WARNING"
-                }
-            }
-            else {
-                # Legacy WebBrowser
-                if ($script:webBrowser) {
-                    $script:webBrowser.Refresh()
-                    Write-DevConsole "🔄 Browser page refreshed" "SUCCESS"
-                }
+        if ($script:browserType -eq "WebView2") {
+            if ($webBrowser.CoreWebView2) {
+                $webBrowser.CoreWebView2.Reload()
             }
         }
-        catch {
-            Write-DevConsole "Refresh button error: $_" "ERROR"
+        else {
+            $webBrowser.Refresh()
         }
     })
 
@@ -14117,15 +7762,13 @@ if ($script:browserType -eq "WebView2") {
     }
 }
 else {
-    # Legacy WebBrowser control - use Navigated event (not NavigationCompleted)
-    # NavigationCompleted is WebView2-only, WebBrowser uses Navigated
     try {
-        $script:webBrowser.Add_Navigated({
-                param($navSender, $navEventArgs)
+        # For WebView2, use NavigationCompleted event
+        $webBrowser.add_NavigationCompleted({
+                param($navCompleteSender, $navCompleteArgs)
                 if ($browserUrlBox) {
-                    $browserUrlBox.Text = $navEventArgs.Url.ToString()
+                    $browserUrlBox.Text = $navCompleteSender.Source.ToString()
                 }
-                Write-StartupLog "Legacy browser navigated to: $($navEventArgs.Url)" "DEBUG"
             })
     }
     catch {
@@ -14133,29 +7776,12 @@ else {
     }
 }
 
-# Navigate to default URL on load (asynchronously to avoid blocking UI)
-# Use a timer to delay navigation until after form is fully displayed
-$browserInitTimer = New-Object System.Windows.Forms.Timer
-$browserInitTimer.Interval = 500  # Wait 500ms after form is shown
-$browserInitTimer.Add_Tick({
-        $browserInitTimer.Stop()
-        $browserInitTimer.Dispose()
-        try {
-            # Navigate asynchronously to avoid blocking
-            if ($script:webBrowser) {
-                Open-Browser "https://www.youtube.com"
-            }
-        }
-        catch [System.Management.Automation.PipelineStoppedException] {
-            # Pipeline stopped - silently ignore during shutdown
-        }
-        catch {
-            Write-StartupLog "Could not navigate to default URL: $($_.Exception.Message)" "DEBUG"
-        }
-    })
+# Navigate to default URL on load
+Start-Job -ScriptBlock {
+    Start-Sleep -Seconds 1
+} | Out-Null
 $form.Add_Shown({
-        # Start timer to navigate after form is fully displayed
-        $browserInitTimer.Start()
+        Open-Browser "https://www.youtube.com"
     })
 
 # ============================================
@@ -14194,8 +7820,6 @@ function Invoke-GitCommand {
         The Git command to execute
     .PARAMETER Arguments
         Arguments to pass to the Git command
-    .PARAMETER WorkingDirectory
-        Optional working directory for the Git command
     #>
     [CmdletBinding()]
     param(
@@ -14203,22 +7827,10 @@ function Invoke-GitCommand {
         [string]$Command,
         
         [Parameter(Mandatory = $false)]
-        [string[]]$Arguments = @(),
-        
-        [Parameter(Mandatory = $false)]
-        [string]$WorkingDirectory = $null
+        [string[]]$Arguments
     )
     
-    $currentDir = if ($WorkingDirectory) { 
-        $WorkingDirectory 
-    }
-    elseif ($global:currentFile) { 
-        Split-Path $global:currentFile 
-    }
-    else { 
-        Get-Location 
-    }
-    
+    $currentDir = if ($global:currentFile) { Split-Path $global:currentFile } else { Get-Location }
     if (-not (Test-Path (Join-Path $currentDir ".git"))) {
         return "Not a Git repository"
     }
@@ -14325,11 +7937,12 @@ function Invoke-TerminalCommand {
     
     try {
         Write-TerminalOutput "PS $($global:currentWorkingDir)> $command`r`n" "Cyan"
-        
-        # Add to history
-        $global:terminalHistory += $command
-        $global:terminalHistoryIndex = @($global:terminalHistory).Count
-        
+    
+    # Add to history
+    $global:terminalHistory += $command
+    $global:terminalHistoryIndex = @($global:terminalHistory).Count
+    
+    try {
         # Change directory commands
         if ($command -match "^cd\s+(.+)$") {
             $path = $Matches[1]
@@ -14391,12 +8004,7 @@ function Update-Explorer {
                 
                 # Add immediate children with lazy loading (don't load subdirectories)
                 try {
-                    if ($driveNode.Tag -and -not [string]::IsNullOrWhiteSpace($driveNode.Tag)) {
-                        Add-TreeNodeChildren -parentNode $driveNode -path $driveNode.Tag -showFiles $true -maxItems 999999
-                    }
-                    else {
-                        Write-StartupLog "Skipping drive node expansion: Tag is empty" "WARNING"
-                    }
+                    Add-TreeNodeChildren -parentNode $driveNode -path $driveNode.Tag -showFiles $true -maxItems 500
                     Write-StartupLog "Successfully loaded drive $($drive.Name):" "SUCCESS"
                 }
                 catch {
@@ -14413,7 +8021,7 @@ function Update-Explorer {
         }
         
         # Expand the drive containing current working directory and navigate to it
-        if ($global:currentWorkingDir -and -not [string]::IsNullOrWhiteSpace($global:currentWorkingDir)) {
+        if ($global:currentWorkingDir) {
             $currentDrive = [System.IO.Path]::GetPathRoot($global:currentWorkingDir)
             $matchingNode = $explorer.Nodes | Where-Object { $_.Tag -eq $currentDrive }
             if ($matchingNode) {
@@ -14429,9 +8037,6 @@ function Update-Explorer {
                 }
             }
         }
-        else {
-            Write-DevConsole "Skipping path expansion: currentWorkingDir is empty or not set" "DEBUG"
-        }
         
         Write-StartupLog "File explorer update completed successfully" "SUCCESS"
     }
@@ -14445,7 +8050,7 @@ function Update-Explorer {
             $rootNode = New-Object System.Windows.Forms.TreeNode("�️ Desktop (Fallback)")
             $rootNode.Tag = $desktopPath
             $explorer.Nodes.Add($rootNode) | Out-Null
-            Add-TreeNodeChildren -parentNode $rootNode -path $desktopPath -showFiles $true -maxItems 999999
+            Add-TreeNodeChildren -parentNode $rootNode -path $desktopPath -showFiles $true -maxItems 100
             $rootNode.Expand()
             Write-StartupLog "Using desktop fallback: $desktopPath" "WARNING"
         }
@@ -14460,7 +8065,7 @@ function Add-TreeNodeChildren {
         [System.Windows.Forms.TreeNode]$parentNode,
         [string]$path,
         [bool]$showFiles = $true,
-        [int]$maxItems = 999999,  # Load all items (effectively unlimited)
+        [int]$maxItems = 500,
         [int]$maxDepth = 0
     )
     
@@ -14470,12 +8075,6 @@ function Add-TreeNodeChildren {
     }
     
     try {
-        # Ensure we're working with a valid path
-        if ([string]::IsNullOrWhiteSpace($path)) {
-            Write-DevConsole "Add-TreeNodeChildren: Path is null or empty" "WARNING"
-            return
-        }
-        
         # Only clear nodes if they are dummy nodes or if explicitly refreshing
         $hasDummyNodes = $parentNode.Nodes | Where-Object { $_.Tag -eq "DUMMY" }
         $nodeCount = $parentNode.Nodes.Count
@@ -14493,10 +8092,11 @@ function Add-TreeNodeChildren {
         $files = @()
         
         try {
-            # Use more robust directory enumeration - load ALL directories
+            # Use more robust directory enumeration
             $directories = @(Get-ChildItem -Path $path -Directory -Force -ErrorAction SilentlyContinue | 
                 Where-Object { -not ($_.Attributes -band [System.IO.FileAttributes]::System) -or $_.Name -notmatch '^(\$|System Volume Information|pagefile\.sys)' } |
-                Sort-Object Name)
+                Sort-Object Name | 
+                Select-Object -First $maxItems)
             
             Write-StartupLog "Found $($directories.Count) directories in: $path" "DEBUG"
         }
@@ -14506,17 +8106,15 @@ function Add-TreeNodeChildren {
         
         if ($showFiles) {
             try {
-                # Load ALL files (no limit) - user requested all files to be shown
                 $files = @(Get-ChildItem -Path $path -File -Force -ErrorAction SilentlyContinue | 
-                    Where-Object { $_.Length -lt 100MB } |  # Skip very large files for performance (but show all others)
-                    Sort-Object Name)
+                    Where-Object { $_.Length -lt 100MB } |  # Skip very large files for performance
+                    Sort-Object Name | 
+                    Select-Object -First $maxItems)
                 
                 Write-StartupLog "Found $($files.Count) files in: $path" "DEBUG"
-                Write-DevConsole "📁 Found $($files.Count) files in: $path" "DEBUG"
             }
             catch {
                 Write-StartupLog "Error reading files in $path : $_" "WARNING"
-                Write-DevConsole "❌ Error reading files in $path : $_" "WARNING"
             }
         }
         
@@ -14618,10 +8216,17 @@ function Add-TreeNodeChildren {
             }
         }
         
-        # No truncation - all items are loaded
+        # Add summary if items were truncated
+        $totalDirs = (Get-ChildItem -Path $path -Directory -Force -ErrorAction SilentlyContinue | Measure-Object).Count
+        $totalFiles = if ($showFiles) { (Get-ChildItem -Path $path -File -Force -ErrorAction SilentlyContinue | Measure-Object).Count } else { 0 }
+        
         $dirCount = @($directories).Count
         $fileCount = @($files).Count
-        # Removed truncation message - all files and directories are now loaded
+        if (($dirCount + $fileCount) -lt ($totalDirs + $totalFiles)) {
+            $truncatedNode = New-Object System.Windows.Forms.TreeNode("⋯ ... and $($totalDirs + $totalFiles - $dirCount - $fileCount) more items")
+            $truncatedNode.ForeColor = [System.Drawing.Color]::DarkGray
+            $parentNode.Nodes.Add($truncatedNode) | Out-Null
+        }
         
         Write-StartupLog "Loaded $dirCount folders and $fileCount files for: $path" "DEBUG"
         
@@ -14643,11 +8248,6 @@ function Expand-PathInTree {
         [string]$targetPath
     )
     
-    if ([string]::IsNullOrWhiteSpace($targetPath)) {
-        Write-DevConsole "Skipping tree expansion because target path is empty." "WARNING"
-        return
-    }
-
     try {
         $pathParts = $targetPath.Split([IO.Path]::DirectorySeparatorChar, [StringSplitOptions]::RemoveEmptyEntries)
         $currentPath = ""
@@ -14711,12 +8311,7 @@ function Expand-ExplorerNode {
                 $node.Nodes.Clear()
                 
                 # Populate with actual directories and files
-                if ($node.Tag -and -not [string]::IsNullOrWhiteSpace($node.Tag)) {
-                    Add-TreeNodeChildren -parentNode $node -path $node.Tag -showFiles $true -maxItems 999999
-                }
-                else {
-                    Write-StartupLog "Skipping node expansion: Tag is empty for node '$($node.Text)'" "WARNING"
-                }
+                Add-TreeNodeChildren -parentNode $node -path $node.Tag -showFiles $true -maxItems 500
                 
                 Write-DevConsole "Successfully populated node: $($node.Tag) with $($node.Nodes.Count) items" "DEBUG"
             }
@@ -14752,1009 +8347,125 @@ function Resolve-MarketplaceLanguageCode {
 
     $token = $LanguageInput.ToString().ToLower()
     switch ($token) {
-        'asm' { return $script:LANG_ASM }
-        'python' { return $script:LANG_PYTHON }
-        'c' { return $script:LANG_C }
-        'cpp' { return $script:LANG_CPP }
-        'c++' { return $script:LANG_CPP }
-        'rust' { return $script:LANG_RUST }
-        'go' { return $script:LANG_GO }
-        'js' { return $script:LANG_JAVASCRIPT }
-        'javascript' { return $script:LANG_JAVASCRIPT }
-        default { return $script:LANG_CUSTOM }
+        'asm'       { return $script:LANG_ASM }
+        'python'    { return $script:LANG_PYTHON }
+        'c'         { return $script:LANG_C }
+        'cpp'       { return $script:LANG_CPP }
+        'c++'       { return $script:LANG_CPP }
+        'rust'      { return $script:LANG_RUST }
+        'go'        { return $script:LANG_GO }
+        'js'        { return $script:LANG_JAVASCRIPT }
+        'javascript'{ return $script:LANG_JAVASCRIPT }
+        default     { return $script:LANG_CUSTOM }
     }
 }
 
 function Normalize-MarketplaceEntry {
     param($Entry)
 
-    # Helper to safely test for property existence across hashtable/PSCustomObject
-    $hasProp = { param($obj, $prop) (($obj -is [hashtable] -and $obj.ContainsKey($prop)) -or ($obj.PSObject.Properties[$prop])) }
-    $getProp = { param($obj, $prop, $default) if (&$hasProp $obj $prop) { $obj.$prop } else { $default } }
-
-    $name = if (&$hasProp $Entry 'Name' -and $Entry.Name) { $Entry.Name } elseif (&$hasProp $Entry 'Id') { $Entry.Id } else { $Entry.Id }
+    $name = $Entry.Name ?? $Entry.Id
     $id = $Entry.Id
     if (-not $id -and $name) {
         $id = ($name.ToLower() -replace '[^a-z0-9]+', '-') -replace '^-+|-+$', ''
     }
 
-    # Fix: Use proper conditional assignments instead of $() expressions
-    $languageInput = if (&$hasProp $Entry 'Language' -and $Entry.Language) { $Entry.Language } else { $script:LANG_CUSTOM }
-    $language = Resolve-MarketplaceLanguageCode -Input $languageInput
-    
-    $downloads = if ($Entry.Downloads) { [int64]$Entry.Downloads } else { [int64]0 }
-    $rating = if ($Entry.Rating) { [double]$Entry.Rating } else { [double]4.5 }
+    $language = Resolve-MarketplaceLanguageCode -Input ($Entry.Language ?? $script:LANG_CUSTOM)
+    $downloads = [int64]($Entry.Downloads ?? 0)
+    $rating = [double]($Entry.Rating ?? 4.5)
     if ($rating -gt 5) { $rating = 5 }
     if ($rating -lt 0) { $rating = 0 }
 
     $tags = @()
-    if (&$hasProp $Entry 'Tags' -and $Entry.Tags) { $tags = @($Entry.Tags) | Where-Object { $_ } }
+    if ($Entry.Tags) {
+        $tags = @($Entry.Tags) | Where-Object { $_ }
+    }
 
-    $sourceValue = $null
-    if (&$hasProp $Entry 'Source' -and $Entry.Source) {
-        $sourceValue = $Entry.Source
-    }
-    elseif (&$hasProp $Entry 'MarketplaceId') {
-        $sourceValue = $Entry.MarketplaceId
-    }
-    elseif (&$hasProp $Entry 'Name' -and $Entry.Name) {
-        $sourceValue = $Entry.Name
-    }
-    else {
-        $sourceValue = 'Marketplace'
-    }
     return [PSCustomObject]@{
-        Id            = $id
-        Name          = $name
-        Description   = if (&$hasProp $Entry 'Description' -and $Entry.Description) { $Entry.Description } else { 'No description provided.' }
-        Author        = if (&$hasProp $Entry 'Author' -and $Entry.Author) { $Entry.Author } else { 'RawrXD Community' }
-        Language      = $language
-        Capabilities  = if (&$hasProp $Entry 'Capabilities' -and $Entry.Capabilities) { [int]$Entry.Capabilities } else { [int]0 }
-        Version       = if (&$hasProp $Entry 'Version' -and $Entry.Version) { $Entry.Version } else { '1.0.0' }
-        Category      = if (&$hasProp $Entry 'Category' -and $Entry.Category) { $Entry.Category } else { 'Marketplace' }
-        Downloads     = $downloads
-        Rating        = [math]::Round($rating, 1)
-        Tags          = $tags
-        MarketplaceId = if (&$hasProp $Entry 'MarketplaceId') { $Entry.MarketplaceId } else { $id }
-        Source        = $sourceValue
-        Installed     = [bool](&$getProp $Entry 'Installed' $false)
-        Enabled       = [bool](&$getProp $Entry 'Enabled' $false)
-        EntryPoint    = if (&$hasProp $Entry 'EntryPoint') { $Entry.EntryPoint } else { $null }
-    }
-}
-
-# Safe editor content setter to prevent invalid RTF exceptions
-function Set-EditorContent {
-    param(
-        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Content,
-        [Parameter(Mandatory = $true)]$Editor
-    )
-    try {
-        if (-not $Editor -or $Editor.IsDisposed) { return }
-        
-        # Handle empty content explicitly
-        if ([string]::IsNullOrEmpty($Content)) {
-            $Editor.Text = ""
-            if ($Editor) { Force-EditorVisibility -Editor $Editor }
-            return
-        }
-        
-        # Only treat as RTF if it begins with standard RTF header ({\rtf - single backslash)
-        if ($Content.Length -gt 5 -and $Content.TrimStart().StartsWith('{\rtf')) {
-            $Editor.Rtf = $Content
-        }
-        else {
-            $Editor.Text = $Content
-        }
-        if ($Editor) { Force-EditorVisibility -Editor $Editor }
-    }
-    catch {
-        # Fallback to plain text if RTF fails
-        try { $Editor.Text = $Content } catch { }
-        Write-StartupLog "RTF assignment failed; fell back to Text: $($_.Exception.Message)" "WARNING"
-        if ($Editor) { Force-EditorVisibility -Editor $Editor }
-    }
-}
-
-# Safe RichTextBox content setter - prevents RTF parsing errors
-function Set-SafeRichTextContent {
-    param(
-        [Parameter(Mandatory = $true)]$RichTextBox,
-        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Content
-    )
-    try {
-        if (-not $RichTextBox -or $RichTextBox.IsDisposed) { return }
-        # Clear any existing content first to reset RTF state
-        $RichTextBox.Clear()
-        # Use Text property for safe assignment (won't parse as RTF)
-        $RichTextBox.Text = $Content
-    }
-    catch {
-        # Last resort: try AppendText
-        try {
-            $RichTextBox.Clear()
-            $RichTextBox.AppendText($Content)
-        }
-        catch {
-            Write-StartupLog "RichTextBox content assignment failed: $($_.Exception.Message)" "WARNING"
-        }
-    }
-}
-
-function Get-VSCodeMarketplaceExtensions {
-    <#
-    .SYNOPSIS
-        Fetches extensions from the official VSCode Marketplace API
-    .DESCRIPTION
-        Queries the VSCode Marketplace to get real extension data including
-        popular extensions like GitHub Copilot, Amazon Q, etc.
-    .PARAMETER Query
-        Search query to find specific extensions
-    .PARAMETER PageSize
-        Number of results to return (default: 50, max: 100)
-    .EXAMPLE
-        Get-VSCodeMarketplaceExtensions -Query "copilot"
-    #>
-    param(
-        [string]$Query = "",
-        [int]$PageSize = 50
-    )
-    
-    try {
-        Write-DevConsole "Fetching extensions from VSCode Marketplace API..." "INFO"
-        
-        # VSCode Marketplace API endpoint
-        $apiUrl = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery"
-        
-        # Build the request body for the VSCode Marketplace API
-        $requestBody = @{
-            filters = @(
-                @{
-                    criteria   = @(
-                        @{
-                            filterType = 8  # Extension name or display name
-                            value      = if ($Query) { $Query } else { "" }
-                        }
-                        @{
-                            filterType = 10  # Target platform
-                            value      = "Microsoft.VisualStudio.Code"
-                        }
-                    )
-                    pageNumber = 1
-                    pageSize   = $PageSize
-                    sortBy     = 4  # Sort by download count (most popular)
-                    sortOrder  = 2  # Descending
-                }
-            )
-            flags   = 0x192  # Flags for what data to include (statistics, versions, files, etc.)
-        } | ConvertTo-Json -Depth 10
-        
-        # Make the API request
-        $headers = @{
-            "Content-Type" = "application/json"
-            "Accept"       = "application/json;api-version=7.1-preview.1"
-            "User-Agent"   = "RawrXD-Editor/1.0"
-        }
-        
-        $response = Invoke-RestMethod -Uri $apiUrl -Method Post -Body $requestBody -Headers $headers -TimeoutSec 15
-        
-        $extensions = @()
-        
-        if ($response.results -and $response.results[0].extensions) {
-            foreach ($ext in $response.results[0].extensions) {
-                try {
-                    # Extract extension metadata
-                    $publisher = $ext.publisher.publisherName
-                    $extName = $ext.extensionName
-                    $displayName = $ext.displayName
-                    $shortDesc = $ext.shortDescription
-                    $version = if ($ext.versions -and $ext.versions[0]) { $ext.versions[0].version } else { "1.0.0" }
-                    
-                    # Get statistics (downloads, ratings)
-                    $downloads = 0
-                    $rating = 0
-                    if ($ext.statistics) {
-                        $downloadStat = $ext.statistics | Where-Object { $_.statisticName -eq "install" } | Select-Object -First 1
-                        if ($downloadStat) { $downloads = [int]$downloadStat.value }
-                        
-                        $ratingStat = $ext.statistics | Where-Object { $_.statisticName -eq "averagerating" } | Select-Object -First 1
-                        if ($ratingStat) { $rating = [math]::Round([double]$ratingStat.value, 1) }
-                    }
-                    
-                    # Get tags/categories
-                    $tags = @()
-                    if ($ext.tags) {
-                        $tags = $ext.tags
-                    }
-                    if ($ext.categories) {
-                        $tags += $ext.categories
-                    }
-                    
-                    $category = if ($ext.categories -and $ext.categories[0]) { $ext.categories[0] } else { "Other" }
-                    
-                    # Create normalized extension entry
-                    $extensions += @{
-                        Id           = "$publisher.$extName"
-                        Name         = $displayName
-                        Description  = $shortDesc
-                        Author       = $publisher
-                        Version      = $version
-                        Downloads    = $downloads
-                        Rating       = $rating
-                        Category     = $category
-                        Tags         = $tags
-                        Source       = "VSCode Marketplace (Live)"
-                        Language     = $script:LANG_CUSTOM
-                        Capabilities = $script:CAP_SYNTAX_HIGHLIGHT
-                        Installed    = $false
-                    }
-                }
-                catch {
-                    Write-DevConsole "Error parsing extension: $_" "WARNING"
-                }
-            }
-        }
-        
-        Write-DevConsole "✅ Fetched $($extensions.Count) extensions from VSCode Marketplace" "SUCCESS"
-        return $extensions
-    }
-    catch {
-        Write-DevConsole "⚠️ Failed to fetch from VSCode Marketplace API: $($_.Exception.Message)" "WARNING"
-        Write-StartupLog "VSCode Marketplace API error: $($_.Exception.Message)" "WARNING"
-        return @()
+        Id           = $id
+        Name         = $name
+        Description  = $Entry.Description ?? 'No description provided.'
+        Author       = $Entry.Author ?? 'RawrXD Community'
+        Language     = $language
+        Capabilities = [int]($Entry.Capabilities ?? 0)
+        Version      = $Entry.Version ?? '1.0.0'
+        Category     = $Entry.Category ?? 'Marketplace'
+        Downloads    = $downloads
+        Rating       = [math]::Round($rating, 1)
+        Tags         = $tags
+        MarketplaceId= $Entry.MarketplaceId ?? $id
+        Source       = $Entry.Source ?? 'Marketplace'
+        Installed    = [bool]($Entry.Installed ?? $false)
+        Enabled      = [bool]($Entry.Enabled ?? $false)
+        EntryPoint   = $Entry.EntryPoint
     }
 }
 
 function Get-MarketplaceSeedData {
     $seeds = @(
-        # Original extensions
-        @{ Id = 'python-toolkit'; Name = 'Python Productivity Pack'; Description = 'Linting, formatting, and debugging helpers for Python developers.'; Author = 'RawrXD'; Language = $script:LANG_PYTHON; Capabilities = ($script:CAP_SYNTAX_HIGHLIGHT -bor $script:CAP_CODE_COMPLETION -bor $script:CAP_LINTING -bor $script:CAP_DEBUGGING); Version = '3.1.0'; Category = 'Productivity'; Downloads = 341234; Rating = 4.9; Tags = @('python', 'lint', 'debug'); Source = 'RawrXD Official' }
-        @{ Id = 'js-debugger-plus'; Name = 'JavaScript Debugger+'; Description = 'Live JavaScript/Node debugging with console replay and breakpoints.'; Author = 'RawrXD'; Language = $script:LANG_JAVASCRIPT; Capabilities = ($script:CAP_DEBUGGING -bor $script:CAP_CODE_COMPLETION); Version = '2.5.3'; Category = 'Debugger'; Downloads = 217890; Rating = 4.7; Tags = @('javascript', 'debugger', 'node'); Source = 'RawrXD Official' }
-        @{ Id = 'rust-toolchain'; Name = 'Rust Toolchain Suite'; Description = 'Cargo workflows with linting, formatting, and documentation previews.'; Author = 'RawrXD'; Language = $script:LANG_RUST; Capabilities = ($script:CAP_BUILD_SYSTEM -bor $script:CAP_FORMATTING -bor $script:CAP_LINTING); Version = '1.2.4'; Category = 'Toolchain'; Downloads = 114502; Rating = 4.6; Tags = @('rust', 'cargo'); Source = 'RawrXD Official' }
-        @{ Id = 'gitops-visualizer'; Name = 'GitOps Visualizer'; Description = 'Visualize branches, commits, and automations with live dependency graphs.'; Author = 'RawrXD'; Language = $script:LANG_CUSTOM; Capabilities = $script:CAP_GIT_INTEGRATION; Version = '1.0.8'; Category = 'Git'; Downloads = 85301; Rating = 4.8; Tags = @('git', 'visual'); Source = 'Community Marketplace' }
-        @{ Id = 'ai-code-mentor'; Name = 'AI Code Mentor'; Description = 'Context-aware AI hints, refactors, and explanations powered by RawrXD models.'; Author = 'RawrXD'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_AI_ASSIST -bor $script:CAP_REFACTORING); Version = '0.9.7'; Category = 'AI'; Downloads = 68790; Rating = 4.9; Tags = @('ai', 'assistant', 'mentor'); Source = 'Community Marketplace' }
-        
-        # Popular VSCode AI Extensions
-        @{ Id = 'github-copilot'; Name = 'GitHub Copilot'; Description = 'AI-powered code completion from GitHub. Get code suggestions as you type.'; Author = 'GitHub'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_AI_ASSIST -bor $script:CAP_CODE_COMPLETION); Version = '1.145.0'; Category = 'AI'; Downloads = 5234890; Rating = 4.8; Tags = @('ai', 'copilot', 'github', 'completion', 'assistant'); Source = 'VSCode Marketplace' }
-        @{ Id = 'github-copilot-chat'; Name = 'GitHub Copilot Chat'; Description = 'Chat with GitHub Copilot to get help, explanations, and code suggestions.'; Author = 'GitHub'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_AI_ASSIST -bor $script:CAP_CODE_COMPLETION); Version = '0.11.0'; Category = 'AI'; Downloads = 2456123; Rating = 4.7; Tags = @('ai', 'copilot', 'chat', 'github'); Source = 'VSCode Marketplace' }
-        @{ Id = 'amazonq'; Name = 'Amazon Q'; Description = 'AI-powered coding assistant from AWS. Get code suggestions, security scanning, and more.'; Author = 'Amazon Web Services'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_AI_ASSIST -bor $script:CAP_CODE_COMPLETION -bor $script:CAP_LINTING); Version = '1.20.0'; Category = 'AI'; Downloads = 1234567; Rating = 4.6; Tags = @('ai', 'amazon', 'aws', 'q', 'assistant', 'security'); Source = 'VSCode Marketplace' }
-        @{ Id = 'codewhisperer'; Name = 'AWS CodeWhisperer'; Description = 'AI-powered code suggestions and security scanning from AWS (legacy - use Amazon Q).'; Author = 'Amazon Web Services'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_AI_ASSIST -bor $script:CAP_CODE_COMPLETION); Version = '0.15.0'; Category = 'AI'; Downloads = 987654; Rating = 4.5; Tags = @('ai', 'aws', 'codewhisperer', 'security'); Source = 'VSCode Marketplace' }
-        
-        # Other popular AI assistants
-        @{ Id = 'tabnine'; Name = 'Tabnine AI'; Description = 'AI code completion trained on millions of programs. Works offline and respects privacy.'; Author = 'Tabnine'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_AI_ASSIST -bor $script:CAP_CODE_COMPLETION); Version = '4.9.0'; Category = 'AI'; Downloads = 3456789; Rating = 4.7; Tags = @('ai', 'tabnine', 'completion', 'privacy'); Source = 'VSCode Marketplace' }
-        @{ Id = 'codeium'; Name = 'Codeium'; Description = 'Free AI-powered code completion and chat. Lightning fast with 70+ languages.'; Author = 'Codeium'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_AI_ASSIST -bor $script:CAP_CODE_COMPLETION); Version = '1.6.40'; Category = 'AI'; Downloads = 2345678; Rating = 4.8; Tags = @('ai', 'codeium', 'free', 'completion'); Source = 'VSCode Marketplace' }
-        @{ Id = 'cursor'; Name = 'Cursor AI'; Description = 'AI-first code editor integration with GPT-4 and custom models.'; Author = 'Cursor'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_AI_ASSIST -bor $script:CAP_CODE_COMPLETION -bor $script:CAP_REFACTORING); Version = '0.12.0'; Category = 'AI'; Downloads = 1567890; Rating = 4.6; Tags = @('ai', 'cursor', 'gpt4'); Source = 'VSCode Marketplace' }
-        
-        # Language-specific extensions
-        @{ Id = 'vscode-python'; Name = 'Python'; Description = 'Official Python extension with IntelliSense, debugging, linting, and Jupyter support.'; Author = 'Microsoft'; Language = $script:LANG_PYTHON; Capabilities = ($script:CAP_SYNTAX_HIGHLIGHT -bor $script:CAP_CODE_COMPLETION -bor $script:CAP_DEBUGGING -bor $script:CAP_LINTING); Version = '2023.20.0'; Category = 'Languages'; Downloads = 78901234; Rating = 4.9; Tags = @('python', 'jupyter', 'microsoft'); Source = 'VSCode Marketplace' }
-        @{ Id = 'vscode-csharp'; Name = 'C#'; Description = 'Official C# extension with IntelliSense, debugging, and .NET support.'; Author = 'Microsoft'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_SYNTAX_HIGHLIGHT -bor $script:CAP_CODE_COMPLETION -bor $script:CAP_DEBUGGING); Version = '2.10.0'; Category = 'Languages'; Downloads = 45678901; Rating = 4.8; Tags = @('csharp', 'dotnet', 'microsoft'); Source = 'VSCode Marketplace' }
-        @{ Id = 'vscode-typescript'; Name = 'TypeScript and JavaScript'; Description = 'Official TypeScript/JavaScript language features built into VS Code.'; Author = 'Microsoft'; Language = $script:LANG_JAVASCRIPT; Capabilities = ($script:CAP_SYNTAX_HIGHLIGHT -bor $script:CAP_CODE_COMPLETION -bor $script:CAP_DEBUGGING -bor $script:CAP_REFACTORING); Version = '5.3.0'; Category = 'Languages'; Downloads = 89012345; Rating = 4.9; Tags = @('typescript', 'javascript', 'js', 'ts'); Source = 'VSCode Marketplace' }
-        @{ Id = 'rust-analyzer'; Name = 'rust-analyzer'; Description = 'Rust language support with code completion, go-to-definition, and inline errors.'; Author = 'rust-lang'; Language = $script:LANG_RUST; Capabilities = ($script:CAP_SYNTAX_HIGHLIGHT -bor $script:CAP_CODE_COMPLETION -bor $script:CAP_LINTING -bor $script:CAP_REFACTORING); Version = '0.3.1740'; Category = 'Languages'; Downloads = 5678901; Rating = 4.8; Tags = @('rust', 'analyzer', 'lsp'); Source = 'VSCode Marketplace' }
-        
-        # Productivity tools
-        @{ Id = 'prettier'; Name = 'Prettier'; Description = 'Code formatter that enforces a consistent style. Supports many languages.'; Author = 'Prettier'; Language = $script:LANG_CUSTOM; Capabilities = $script:CAP_FORMATTING; Version = '10.1.0'; Category = 'Formatters'; Downloads = 34567890; Rating = 4.9; Tags = @('prettier', 'formatter', 'style'); Source = 'VSCode Marketplace' }
-        @{ Id = 'eslint'; Name = 'ESLint'; Description = 'JavaScript/TypeScript linter to find and fix problems in your code.'; Author = 'Microsoft'; Language = $script:LANG_JAVASCRIPT; Capabilities = $script:CAP_LINTING; Version = '2.4.4'; Category = 'Linters'; Downloads = 23456789; Rating = 4.8; Tags = @('eslint', 'linter', 'javascript'); Source = 'VSCode Marketplace' }
-        @{ Id = 'gitlens'; Name = 'GitLens'; Description = 'Supercharge Git with blame annotations, code authorship, and repository insights.'; Author = 'GitKraken'; Language = $script:LANG_CUSTOM; Capabilities = $script:CAP_GIT_INTEGRATION; Version = '14.6.0'; Category = 'Source Control'; Downloads = 15678901; Rating = 4.9; Tags = @('git', 'gitlens', 'blame', 'history'); Source = 'VSCode Marketplace' }
-        @{ Id = 'live-server'; Name = 'Live Server'; Description = 'Launch a local development server with live reload for static and dynamic pages.'; Author = 'Ritwick Dey'; Language = $script:LANG_CUSTOM; Capabilities = 0; Version = '5.7.9'; Category = 'Debuggers'; Downloads = 12345678; Rating = 4.7; Tags = @('html', 'server', 'live', 'reload'); Source = 'VSCode Marketplace' }
+        @{ Id = 'python-toolkit'; Name = 'Python Productivity Pack'; Description = 'Linting, formatting, and debugging helpers for Python developers.'; Author = 'RawrXD'; Language = $script:LANG_PYTHON; Capabilities = ($script:CAP_SYNTAX_HIGHLIGHT -bor $script:CAP_CODE_COMPLETION -bor $script:CAP_LINTING -bor $script:CAP_DEBUGGING); Version = '3.1.0'; Category = 'Productivity'; Downloads = 341234; Rating = 4.9; Tags = @('python','lint','debug'); Source = 'RawrXD Official' }
+        @{ Id = 'js-debugger-plus'; Name = 'JavaScript Debugger+'; Description = 'Live JavaScript/Node debugging with console replay and breakpoints.'; Author = 'RawrXD'; Language = $script:LANG_JAVASCRIPT; Capabilities = ($script:CAP_DEBUGGING -bor $script:CAP_CODE_COMPLETION); Version = '2.5.3'; Category = 'Debugger'; Downloads = 217890; Rating = 4.7; Tags = @('javascript','debugger','node'); Source = 'RawrXD Official' }
+        @{ Id = 'rust-toolchain'; Name = 'Rust Toolchain Suite'; Description = 'Cargo workflows with linting, formatting, and documentation previews.'; Author = 'RawrXD'; Language = $script:LANG_RUST; Capabilities = ($script:CAP_BUILD_SYSTEM -bor $script:CAP_FORMATTING -bor $script:CAP_LINTING); Version = '1.2.4'; Category = 'Toolchain'; Downloads = 114502; Rating = 4.6; Tags = @('rust','cargo'); Source = 'RawrXD Official' }
+        @{ Id = 'gitops-visualizer'; Name = 'GitOps Visualizer'; Description = 'Visualize branches, commits, and automations with live dependency graphs.'; Author = 'RawrXD'; Language = $script:LANG_CUSTOM; Capabilities = $script:CAP_GIT_INTEGRATION; Version = '1.0.8'; Category = 'Git'; Downloads = 85301; Rating = 4.8; Tags = @('git','visual'); Source = 'Community Marketplace' }
+        @{ Id = 'ai-code-mentor'; Name = 'AI Code Mentor'; Description = 'Context-aware AI hints, refactors, and explanations powered by RawrXD models.'; Author = 'RawrXD'; Language = $script:LANG_CUSTOM; Capabilities = ($script:CAP_AI_ASSIST -bor $script:CAP_REFACTORING); Version = '0.9.7'; Category = 'AI'; Downloads = 68790; Rating = 4.9; Tags = @('ai','assistant','mentor'); Source = 'Community Marketplace' }
     )
 
-    $normalized = $seeds | ForEach-Object { Normalize-MarketplaceEntry -Entry $_ }
-    return $normalized
-}
-
-function Get-MarketplacePayloadFromSource {
-    param(
-        [hashtable]$Source
-    )
-
-    if (-not $Source -or -not $Source.Url) {
-        return $null
-    }
-
-    try {
-        $uri = [System.Uri]::new($Source.Url)
-        if ($uri.Scheme -eq 'file') {
-            $localPath = $uri.LocalPath
-            if (-not (Test-Path $localPath)) {
-                Write-StartupLog "Local marketplace file missing: $localPath" "WARNING"
-                return $null
-            }
-
-            $raw = Get-Content -Raw -LiteralPath $localPath -ErrorAction Stop
-            return $raw | ConvertFrom-Json
-        }
-
-        return Invoke-RestMethod -Uri $uri.AbsoluteUri -TimeoutSec 15 -UseBasicParsing -Headers @{ 'User-Agent' = 'RawrXD-Marketplace/1.0' }
-    }
-    catch {
-        throw
-    }
+    return $seeds | ForEach-Object { Normalize-MarketplaceEntry -Entry $_ }
 }
 
 function Load-MarketplaceCatalog {
     param([switch]$Force)
 
-    try {
-        if (-not $Force -and $script:marketplaceCache.Count -gt 0) {
-            return $script:marketplaceCache
-        }
-
-        $catalog = Get-MarketplaceSeedData
-        Write-DevConsole "Loading marketplace from $($script:marketplaceSources.Count) source(s)..." "INFO"
-        
-        # Try to fetch live data from VSCode Marketplace API
-        try {
-            Write-DevConsole "Fetching live extensions from VSCode Marketplace..." "INFO"
-            $liveExtensions = Get-VSCodeMarketplaceExtensions -PageSize 100
-            if ($liveExtensions -and $liveExtensions.Count -gt 0) {
-                foreach ($ext in $liveExtensions) {
-                    $normalized = Normalize-MarketplaceEntry -Entry $ext
-                    $catalog += $normalized
-                }
-                Write-DevConsole "✅ Added $($liveExtensions.Count) live extensions from VSCode Marketplace" "SUCCESS"
-            }
-        }
-        catch {
-            Write-DevConsole "⚠️ Could not fetch live VSCode Marketplace data: $($_.Exception.Message)" "WARNING"
-        }
-        
-        foreach ($source in $script:marketplaceSources) {
-            try {
-                $payload = Get-MarketplacePayloadFromSource -Source $source
-                if ($payload -and $payload.PSObject) {
-                    $extensionsProperty = $payload.PSObject.Properties | Where-Object { $_.Name -ieq 'extensions' }
-                    if ($extensionsProperty -and $extensionsProperty.Value) {
-                        $payload = $extensionsProperty.Value
-                    }
-                    elseif ($payload.PSObject.Properties['Extensions']) {
-                        $payload = $payload.Extensions
-                    }
-                }
-
-                if ($payload) {
-                    $entries = @()
-                    if ($payload -is [System.Collections.IEnumerable]) {
-                        $entries = $payload
-                    }
-                    else {
-                        $entries = @($payload)
-                    }
-
-                    foreach ($entry in $entries) {
-                        try {
-                            $normalized = Normalize-MarketplaceEntry -Entry $entry
-                            $normalized.Source = $source.Name
-                            $catalog += $normalized
-                        }
-                        catch {
-                            Write-DevConsole "⚠️ Skipped invalid entry in $($source.Name): $($_.Exception.Message)" "WARNING"
-                            continue
-                        }
-                    }
-                }
-
-                Write-StartupLog "Loaded marketplace source '$($source.Name)'" "INFO"
-                Write-DevConsole "✅ Loaded extensions from $($source.Name)" "SUCCESS"
-            }
-            catch {
-                Write-StartupLog "Marketplace source '$($source.Name)' failed: $($_.Exception.Message)" "WARNING"
-                Write-DevConsole "⚠️ Failed to load $($source.Name): $($_.Exception.Message)" "WARNING"
-            }
-        }
-
-        if (-not $catalog.Count) {
-            Write-DevConsole "No extensions loaded from remote sources, using seed data" "WARNING"
-            $catalog = Get-MarketplaceSeedData
-        }
-
-        $unique = @{}
-        foreach ($entry in $catalog) {
-            if (-not $entry.Id) { continue }
-            $key = $entry.Id.ToLower()
-            if (-not $unique.ContainsKey($key)) {
-                $unique[$key] = $entry
-            }
-        }
-
-        $script:marketplaceCache = $unique.Values | Sort-Object -Property Downloads -Descending
-        $script:marketplaceLastRefresh = Get-Date
-        Write-DevConsole "✅ Marketplace catalog loaded: $($script:marketplaceCache.Count) unique extensions" "SUCCESS"
+    if (-not $Force -and $script:marketplaceCache.Count -gt 0) {
         return $script:marketplaceCache
     }
-    catch {
-        Write-DevConsole "❌ Error loading marketplace catalog: $_" "ERROR"
-        Write-ErrorLog -Message "Marketplace catalog load failed: $($_.Exception.Message)" -Severity "MEDIUM"
-        # Return seed data as fallback
-        return Get-MarketplaceSeedData
-    }
-}
 
-# ============================================
-# GitHub Copilot Status Functions
-# ============================================
-
-function Get-EditorCliPath {
-    <#
-    .SYNOPSIS
-        Resolve the CLI path and invocation hint for supported editors.
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('VSCode', 'Cursor')]
-        [string]$Editor
-    )
-
-    $commandCandidates = switch ($Editor) {
-        'VSCode' { @('code', 'code-insiders', 'code.cmd', 'code-insiders.cmd') }
-        'Cursor' { @('cursor', 'cursor-insiders', 'cursor.cmd') }
-    }
-
-    foreach ($candidate in $commandCandidates) {
+    $catalog = Get-MarketplaceSeedData
+    foreach ($source in $script:marketplaceSources) {
         try {
-            $command = Get-Command $candidate -ErrorAction SilentlyContinue
-            if ($command) {
-                return [pscustomobject]@{
-                    Path       = $command.Source
-                    Invocation = $command.Name
-                }
+            $payload = Invoke-RestMethod -Uri $source.Url -TimeoutSec 15 -UseBasicParsing -Headers @{ 'User-Agent' = 'RawrXD-Marketplace/1.0' }
+            if ($payload -and $payload.Extensions) {
+                $payload = $payload.Extensions
             }
-        }
-        catch {
-            # Ignore lookup errors and continue
-        }
-    }
 
-    $paths = @()
-
-    try {
-        $isWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
-        $isLinux   = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Linux)
-        $isMacOS   = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::OSX)
-    }
-    catch {
-        $isWindows = $env:OS -eq 'Windows_NT'
-        $isLinux   = -not $isWindows
-        $isMacOS   = $false
-    }
-
-    if ($isWindows) {
-        if ($Editor -eq 'VSCode') {
-            if ($env:LOCALAPPDATA) {
-                $paths += (Join-Path $env:LOCALAPPDATA 'Programs\Microsoft VS Code\bin\code.cmd')
-                $paths += (Join-Path $env:LOCALAPPDATA 'Programs\Microsoft VS Code\Code.exe')
-            }
-            if ($env:ProgramFiles) {
-                $paths += (Join-Path $env:ProgramFiles 'Microsoft VS Code\bin\code.cmd')
-            }
-            $programFilesX86 = ${env:ProgramFiles(x86)}
-            if ($programFilesX86) {
-                $paths += (Join-Path $programFilesX86 'Microsoft VS Code\bin\code.cmd')
-            }
-        }
-        else {
-            if ($env:LOCALAPPDATA) {
-                $paths += (Join-Path $env:LOCALAPPDATA 'Programs\Cursor\cursor.exe')
-                $paths += (Join-Path $env:LOCALAPPDATA 'Programs\Cursor\Application\cursor.exe')
-            }
-        }
-    }
-    elseif ($isMacOS) {
-        if ($Editor -eq 'VSCode') {
-            $paths += '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code'
-            $paths += '/usr/local/bin/code'
-        }
-        else {
-            $paths += '/Applications/Cursor.app/Contents/MacOS/Cursor'
-            $paths += '/Applications/Cursor.app/Contents/Resources/app/bin/cursor'
-        }
-    }
-    elseif ($isLinux) {
-        if ($Editor -eq 'VSCode') {
-            $paths += '/usr/bin/code'
-            $paths += '/snap/bin/code'
-            if ($env:HOME) {
-                $paths += (Join-Path $env:HOME '.vscode-server/bin/code')
-            }
-        }
-        else {
-            $paths += '/usr/bin/cursor'
-            $paths += '/snap/bin/cursor'
-            if ($env:HOME) {
-                $paths += (Join-Path $env:HOME '.local/bin/cursor')
-            }
-        }
-    }
-
-    foreach ($candidatePath in $paths) {
-        try {
-            if ($candidatePath -and (Test-Path -LiteralPath $candidatePath)) {
-                $invocation = if ($candidatePath -match '\s') { "`"$candidatePath`"" } else { $candidatePath }
-                return [pscustomobject]@{
-                    Path       = $candidatePath
-                    Invocation = $invocation
-                }
-            }
-        }
-        catch {
-            # Ignore filesystem errors and keep scanning
-        }
-    }
-
-    return $null
-}
-
-function Get-EditorCopilotStatus {
-    <#
-    .SYNOPSIS
-        Inspect local editor installations and determine GitHub Copilot coverage.
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('VSCode', 'Cursor')]
-        [string]$Editor
-    )
-
-    $displayName = if ($Editor -eq 'VSCode') { 'VS Code' } else { 'Cursor' }
-    $defaultInvocation = if ($Editor -eq 'VSCode') { 'code' } else { 'cursor' }
-
-    $result = [ordered]@{
-        Editor               = $displayName
-        Installed            = $false
-        CliPath              = $null
-        InvocationHint       = $defaultInvocation
-        Version              = 'Not detected'
-        CopilotInstalled     = $false
-        CopilotVersion       = 'Not installed'
-        CopilotChatInstalled = $false
-        CopilotChatVersion   = 'Not installed'
-        Notes                = @()
-    }
-
-    $cliInfo = Get-EditorCliPath -Editor $Editor
-    if (-not $cliInfo) {
-        $result.Notes += "$displayName CLI not found. Install $displayName and add it to PATH."
-        return [pscustomobject]$result
-    }
-
-    $result.CliPath = $cliInfo.Path
-    $result.InvocationHint = $cliInfo.Invocation
-    $result.Installed = $true
-
-    try {
-        $versionOutput = & $cliInfo.Path '--version' 2>$null
-        if ($versionOutput) {
-            $firstLine = ($versionOutput | Select-Object -First 1).Trim()
-            if ($firstLine) {
-                $result.Version = $firstLine
-            }
-        }
-    }
-    catch {
-        $result.Notes += "Unable to read version information: $($_.Exception.Message)"
-    }
-
-    try {
-        $extensionOutput = & $cliInfo.Path '--list-extensions' '--show-versions' 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            throw "Extension query exited with code $LASTEXITCODE"
-        }
-
-        foreach ($line in $extensionOutput) {
-            $trimmed = $line.Trim()
-            if (-not $trimmed) { continue }
-
-            if ($trimmed -match '^(?i)github\.copilot(?:@(?<ver>.+))?$') {
-                $result.CopilotInstalled = $true
-                if ($matches.ver) {
-                    $result.CopilotVersion = $matches.ver
+            if ($payload) {
+                $entries = @()
+                if ($payload -is [System.Collections.IEnumerable]) {
+                    $entries = $payload
                 }
                 else {
-                    $result.CopilotVersion = 'Installed'
-                }
-            }
-            elseif ($trimmed -match '^(?i)github\.copilot-chat(?:@(?<ver>.+))?$') {
-                $result.CopilotChatInstalled = $true
-                if ($matches.ver) {
-                    $result.CopilotChatVersion = $matches.ver
-                }
-                else {
-                    $result.CopilotChatVersion = 'Installed'
-                }
-            }
-        }
-    }
-    catch {
-        $result.Notes += "Unable to enumerate extensions: $($_.Exception.Message)"
-    }
-
-    return [pscustomobject]$result
-}
-
-function Get-GitHubCopilotServiceStatus {
-    <#
-    .SYNOPSIS
-        Fetch GitHub status API details for Copilot services.
-    #>
-    param()
-
-    $statusInfo = @{
-        Status     = 'unknown'
-        Components = @()
-        Retrieved  = Get-Date
-        Message    = $null
-    }
-
-    try {
-        $response = Invoke-RestMethod -Uri 'https://www.githubstatus.com/api/v2/components.json' -Method Get -TimeoutSec 10 -ErrorAction Stop
-        if ($response.components) {
-            $copilotComponents = $response.components | Where-Object { $_.name -match 'Copilot' }
-            if ($copilotComponents) {
-                $severityRank = @{
-                    'operational'          = 0
-                    'under_maintenance'    = 1
-                    'degraded_performance' = 2
-                    'partial_outage'       = 3
-                    'major_outage'         = 4
-                }
-                $worstComponent = $copilotComponents | Sort-Object -Property {
-                    if ($severityRank.ContainsKey($_.status)) { $severityRank[$_.status] } else { 5 }
-                } -Descending | Select-Object -First 1
-
-                $statusInfo.Status = $worstComponent.status
-                $statusInfo.Components = $copilotComponents
-                return $statusInfo
-            }
-        }
-
-        $statusInfo.Message = 'GitHub status API did not return Copilot components.'
-    }
-    catch {
-        $statusInfo.Message = $_.Exception.Message
-    }
-
-    return $statusInfo
-}
-
-function Invoke-CliCopilotStatus {
-    <#
-    .SYNOPSIS
-        Display VS Code/Cursor GitHub Copilot status and optionally install extensions.
-    #>
-    param(
-        [Parameter(Mandatory = $false)]
-        [string]$Action
-    )
-
-    Write-Host "`n=== Cursor & VS Code GitHub Copilot Status ===" -ForegroundColor Cyan
-
-    $printSummary = {
-        param(
-            [Parameter(Mandatory = $true)]$Data,
-            [string]$Title = $null
-        )
-
-        if ($Title) {
-            Write-Host "`n$Title" -ForegroundColor Yellow
-        }
-
-        $table = $Data | Select-Object `
-            @{ Name = 'Editor'; Expression = { $_.Editor } },
-            @{ Name = 'Installed'; Expression = { if ($_.Installed) { '✅' } else { '❌' } } },
-            @{ Name = 'Version'; Expression = { $_.Version } },
-            @{ Name = 'Copilot'; Expression = { if ($_.CopilotInstalled) { "✅ $($_.CopilotVersion)" } else { '❌ Missing' } } },
-            @{ Name = 'Copilot Chat'; Expression = { if ($_.CopilotChatInstalled) { "✅ $($_.CopilotChatVersion)" } else { '❌ Missing' } } },
-            @{ Name = 'CLI'; Expression = { if ($_.CliPath) { $_.CliPath } else { 'Not detected' } } }
-
-        $table | Format-Table -AutoSize
-    }
-
-    $statuses = @('VSCode', 'Cursor') | ForEach-Object { Get-EditorCopilotStatus -Editor $_ }
-
-    & $printSummary $statuses 'Current local status'
-
-    foreach ($status in $statuses) {
-        if ($status.Notes -and $status.Notes.Count -gt 0) {
-            Write-Host "`nNotes for $($status.Editor):" -ForegroundColor DarkYellow
-            foreach ($note in $status.Notes) {
-                Write-Host "  - $note" -ForegroundColor Gray
-            }
-        }
-    }
-
-    $serviceStatus = Get-GitHubCopilotServiceStatus
-    if ($serviceStatus.Components -and $serviceStatus.Components.Count -gt 0) {
-        $iconMap = @{
-            'operational'          = '✅'
-            'under_maintenance'    = '🛠️'
-            'degraded_performance' = '⚠️'
-            'partial_outage'       = '⚠️'
-            'major_outage'         = '🛑'
-        }
-        $overallIcon = if ($iconMap.ContainsKey($serviceStatus.Status)) { $iconMap[$serviceStatus.Status] } else { 'ℹ️' }
-        Write-Host "`nCloud Status: $overallIcon $($serviceStatus.Status)" -ForegroundColor Cyan
-        foreach ($component in $serviceStatus.Components) {
-            $componentIcon = if ($iconMap.ContainsKey($component.status)) { $iconMap[$component.status] } else { '•' }
-            Write-Host "  $componentIcon $($component.name): $($component.status)" -ForegroundColor Gray
-        }
-    }
-    elseif ($serviceStatus.Message) {
-        Write-Host "`nCloud Status: Unable to reach GitHub status API ($($serviceStatus.Message))" -ForegroundColor Yellow
-    }
-    else {
-        Write-Host "`nCloud Status: Unknown (no data returned)" -ForegroundColor Yellow
-    }
-
-    $actionNormalized = if ($Action) { $Action.Trim().ToLowerInvariant() } else { '' }
-    $shouldInstall = $actionNormalized -in @('install', 'ensure', 'setup', 'fix', 'auto', 'auto-install')
-
-    if ($shouldInstall) {
-        Write-Host "`nAttempting to install missing GitHub Copilot extensions (PowerShell only)..." -ForegroundColor Cyan
-        foreach ($status in $statuses) {
-            if (-not $status.Installed -or -not $status.CliPath) {
-                Write-Host "  Skipping $($status.Editor) (CLI not detected)" -ForegroundColor DarkGray
-                continue
-            }
-
-            $extensionsToEnsure = @(
-                @{ Id = 'GitHub.copilot'; Property = 'CopilotInstalled' },
-                @{ Id = 'GitHub.copilot-chat'; Property = 'CopilotChatInstalled' }
-            )
-
-            foreach ($extension in $extensionsToEnsure) {
-                $property = $status.PSObject.Properties[$extension.Property]
-                if ($property -and $property.Value) {
-                    continue
+                    $entries = @($payload)
                 }
 
-                try {
-                    Write-Host "  Installing $($extension.Id) for $($status.Editor)..." -ForegroundColor Yellow
-                    $installOutput = & $status.CliPath '--install-extension' $extension.Id 2>&1
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-Host "    ✓ Installed $($extension.Id)" -ForegroundColor Green
-                    }
-                    else {
-                        Write-Host "    ✗ CLI exited with code $LASTEXITCODE" -ForegroundColor Red
-                        if ($installOutput) {
-                            $formattedOutput = if ($installOutput -is [System.Array]) { $installOutput -join "`n" } else { $installOutput }
-                            Write-Host $formattedOutput -ForegroundColor DarkGray
-                        }
-                    }
-                }
-                catch {
-                    Write-Host "    ✗ Failed to install $($extension.Id): $($_.Exception.Message)" -ForegroundColor Red
+                foreach ($entry in $entries) {
+                    $normalized = Normalize-MarketplaceEntry -Entry $entry
+                    $normalized.Source = $source.Name
+                    $catalog += $normalized
                 }
             }
-        }
 
-        $statuses = @('VSCode', 'Cursor') | ForEach-Object { Get-EditorCopilotStatus -Editor $_ }
-        & $printSummary $statuses 'Updated status after install attempt'
-    }
-    else {
-        $missingCopilot = $statuses | Where-Object { $_.Installed -and -not $_.CopilotInstalled }
-        if ($missingCopilot) {
-            Write-Host "`nInstall GitHub Copilot locally:" -ForegroundColor Yellow
-            foreach ($status in $missingCopilot) {
-                Write-Host "  $($status.InvocationHint) --install-extension GitHub.copilot" -ForegroundColor White
-            }
-        }
-
-        $missingChat = $statuses | Where-Object { $_.Installed -and -not $_.CopilotChatInstalled }
-        if ($missingChat) {
-            Write-Host "`nInstall GitHub Copilot Chat:" -ForegroundColor Yellow
-            foreach ($status in $missingChat) {
-                Write-Host "  $($status.InvocationHint) --install-extension GitHub.copilot-chat" -ForegroundColor White
-            }
-        }
-    }
-
-    $missingEditors = $statuses | Where-Object { -not $_.Installed }
-    if ($missingEditors) {
-        Write-Host "`nEnable CLI access for these editors to allow automation:" -ForegroundColor Yellow
-        foreach ($editorStatus in $missingEditors) {
-            Write-Host "  - $($editorStatus.Editor): enable '$($editorStatus.InvocationHint)' command in PATH" -ForegroundColor Gray
-        }
-    }
-
-    return $true
-}
-
-# ============================================
-# Language Detection Function (Prevents Hallucinations)
-# ============================================
-
-function Format-ChatText {
-    <#
-    .SYNOPSIS
-        Sanitize and format text for chat display to prevent encoding issues and garbling.
-    
-    .DESCRIPTION
-        Ensures text is properly encoded in UTF-8 and strips problematic control characters
-        that can cause display issues in Windows Forms TextBox controls.
-    
-    .PARAMETER Text
-        Text to sanitize and format
-    
-    .EXAMPLE
-        Format-ChatText -Text "Hello`r`nWorld"
-        Returns properly encoded text safe for TextBox display
-    #>
-    param(
-        [Parameter(Mandatory)]
-        [string]$Text
-    )
-    
-    try {
-        # Remove problematic control characters (keep tab, newline, carriage return)
-        $cleanText = -join ($Text.ToCharArray() | Where-Object { 
-            [int]$_ -ge 9 -and [int]$_ -le 0xD7FF -or 
-            [int]$_ -ge 0xE000 -or
-            [int]$_ -eq 0x000A -or  # Newline
-            [int]$_ -eq 0x000D      # Carriage return
-        })
-        
-        # Normalize line endings to CRLF for Windows Forms
-        $cleanText = $cleanText -replace "`r?`n", "`r`n"
-        
-        # Ensure UTF-8 encoding
-        $utf8 = [System.Text.Encoding]::UTF8
-        $bytes = $utf8.GetBytes($cleanText)
-        $cleanText = $utf8.GetString($bytes)
-        
-        return $cleanText
-    }
-    catch {
-        # Fallback: return original text if sanitization fails
-        Write-DevConsole "Warning: Text sanitization failed: $_" "WARNING"
-        return $Text
-    }
-}
-
-function Get-FileLanguage {
-    <#
-    .SYNOPSIS
-        Detect programming language from file path and content to prevent agent hallucinations.
-    
-    .DESCRIPTION
-        Determines the programming language of a file to ensure agent responses match the file type.
-        Prevents issues like generating Java code for PowerShell files.
-    
-    .PARAMETER Path
-        Path to the file to analyze
-    
-    .EXAMPLE
-        Get-FileLanguage -Path "script.ps1"
-        Returns: "powershell"
-    #>
-    param(
-        [Parameter(Mandatory)]
-        [string]$Path
-    )
-    
-    # Check file extension first (most reliable)
-    $ext = [System.IO.Path]::GetExtension($Path).ToLower()
-    
-    $extensionMap = @{
-        '.ps1' = 'powershell'
-        '.psm1' = 'powershell'
-        '.psd1' = 'powershell'
-        '.java' = 'java'
-        '.js' = 'javascript'
-        '.ts' = 'typescript'
-        '.py' = 'python'
-        '.c' = 'c'
-        '.cpp' = 'cpp'
-        '.cs' = 'csharp'
-        '.go' = 'go'
-        '.rs' = 'rust'
-        '.rb' = 'ruby'
-        '.php' = 'php'
-        '.html' = 'html'
-        '.css' = 'css'
-        '.json' = 'json'
-        '.xml' = 'xml'
-        '.md' = 'markdown'
-        '.sql' = 'sql'
-        '.sh' = 'bash'
-        '.bat' = 'batch'
-        '.cmd' = 'batch'
-        '.yml' = 'yaml'
-        '.yaml' = 'yaml'
-    }
-    
-    if ($extensionMap.ContainsKey($ext)) {
-        return $extensionMap[$ext]
-    }
-    
-    # Fallback: content-based detection
-    if (Test-Path $Path) {
-        try {
-            $head = (Get-Content -Path $Path -TotalCount 20 -ErrorAction Stop) -join "`n"
-            
-            # PowerShell indicators
-            if ($head -match '^\s*function\s+\w+' -or 
-                $head -match 'param\s*\(' -or 
-                $head -match '\[CmdletBinding\(\)\]' -or
-                $head -match 'Write-Host|Get-Content|Invoke-') {
-                return 'powershell'
-            }
-            
-            # Java indicators
-            if ($head -match '^\s*public\s+class\s+\w+' -or 
-                $head -match '^\s*package\s+\w+' -or
-                $head -match 'import\s+java\.') {
-                return 'java'
-            }
-            
-            # Python indicators
-            if ($head -match '^\s*import\s+\w+|^\s*def\s+\w+|^\s*class\s+\w+:' -or
-                $head -match '__main__|if __name__') {
-                return 'python'
-            }
+            Write-StartupLog "Loaded marketplace source '$($source.Name)'" "INFO"
         }
         catch {
-            # If we can't read the file, return unknown
-            return 'unknown'
+            Write-StartupLog "Marketplace source '$($source.Name)' failed: $($_.Exception.Message)" "WARNING"
         }
     }
-    
-    return 'unknown'
-}
 
-function Test-FileLanguageMatch {
-    <#
-    .SYNOPSIS
-        Validates that agent response language matches the file being edited.
-    
-    .DESCRIPTION
-        Prevents hallucinations by ensuring code suggestions match the file's language.
-    
-    .PARAMETER FilePath
-        Path to the file being edited
-    
-    .PARAMETER ProposedCode
-        Code snippet proposed by the agent
-    
-    .EXAMPLE
-        Test-FileLanguageMatch -FilePath "script.ps1" -ProposedCode "function Test { ... }"
-        Returns: $true if code looks like PowerShell
-    #>
-    param(
-        [Parameter(Mandatory)]
-        [string]$FilePath,
-        
-        [Parameter(Mandatory)]
-        [string]$ProposedCode
-    )
-    
-    $fileLanguage = Get-FileLanguage -Path $FilePath
-    
-    if ($fileLanguage -eq 'unknown') {
-        return $true  # Can't validate, allow it
+    if (-not $catalog.Count) {
+        $catalog = Get-MarketplaceSeedData
     }
-    
-    # Check if proposed code matches file language
-    $codeIndicators = @{
-        'powershell' = @('function\s+\w+', 'param\s*\(', 'Write-Host', 'Get-', 'Set-', 'Invoke-', '\$', '`n')
-        'java' = @('public\s+class', 'private\s+\w+', 'import\s+java\.', 'System\.out\.print', 'String\s+\w+')
-        'python' = @('def\s+\w+', 'import\s+\w+', 'class\s+\w+:', 'print\s*\(', '__main__')
-        'javascript' = @('function\s+\w+', 'const\s+\w+', 'let\s+\w+', 'console\.log', '=>')
-    }
-    
-    if (-not $codeIndicators.ContainsKey($fileLanguage)) {
-        return $true  # Unknown language, allow it
-    }
-    
-    $indicators = $codeIndicators[$fileLanguage]
-    $matchCount = 0
-    
-    foreach ($pattern in $indicators) {
-        if ($ProposedCode -match $pattern) {
-            $matchCount++
+
+    $unique = @{}
+    foreach ($entry in $catalog) {
+        if (-not $entry.Id) { continue }
+        $key = $entry.Id.ToLower()
+        if (-not $unique.ContainsKey($key)) {
+            $unique[$key] = $entry
         }
     }
-    
-    # If at least one indicator matches, consider it valid
-    return $matchCount -gt 0
+
+    $script:marketplaceCache = $unique.Values | Sort-Object -Property Downloads -Descending
+    $script:marketplaceLastRefresh = Get-Date
+    return $script:marketplaceCache
 }
 
 function Register-Extension {
@@ -15816,9 +8527,6 @@ function Initialize-ExtensionSystem {
     
     # Load user-installed extensions
     Import-UserExtensions
-    
-    # Load PowerShell module extensions
-    Load-ModuleExtensions
 }
 
 function Import-UserExtensions {
@@ -15827,74 +8535,12 @@ function Import-UserExtensions {
         try {
             $userExtensions = Get-Content $extensionsFile | ConvertFrom-Json
             foreach ($ext in $userExtensions) {
-                # LINTER FIX: Safely handle optional Language property
-                $langParam = if (Get-Member -InputObject $ext -Name 'Language') { $ext.Language } else { 0 }
                 Register-Extension -Id $ext.Id -Name $ext.Name -Description $ext.Description `
-                    -Author $ext.Author -Language $langParam -Capabilities $ext.Capabilities -Version $ext.Version
+                    -Author $ext.Author -Language $ext.Language -Capabilities $ext.Capabilities -Version $ext.Version
             }
         }
         catch {
             Write-Host "Error loading user extensions: $_" -ForegroundColor Yellow
-        }
-    }
-    
-    # Load PowerShell module-based extensions
-    Load-ModuleExtensions
-}
-
-function Load-ModuleExtensions {
-    <#
-    .SYNOPSIS
-        Loads extension modules (.psm1 files) from the extensions directory
-    #>
-    
-    $extensionsPath = Join-Path $PSScriptRoot "extensions"
-    if (-not (Test-Path $extensionsPath)) {
-        New-Item -ItemType Directory -Path $extensionsPath -Force | Out-Null
-    }
-    
-    $moduleFiles = Get-ChildItem -Path $extensionsPath -Filter "*.psm1" -ErrorAction SilentlyContinue
-    
-    foreach ($moduleFile in $moduleFiles) {
-        try {
-            Write-DevConsole "🔌 Loading extension module: $($moduleFile.BaseName)" "INFO"
-            
-            # Import the module - suppress warnings about unapproved verbs and already-loaded modules
-            $module = Import-Module $moduleFile.FullName -PassThru -Force -DisableNameChecking -WarningAction SilentlyContinue -ErrorAction Stop
-            
-            # Check if module has extension metadata
-            $extensionVar = Get-Variable -Name "*Extension" -Scope Global -ErrorAction SilentlyContinue | 
-            Where-Object { $_.Value.Id -eq $moduleFile.BaseName.ToLower() -or $_.Value.Name -eq $moduleFile.BaseName }
-            
-            if ($extensionVar) {
-                $extData = $extensionVar.Value
-                
-                # Register the extension - safely extract Language and Capabilities with defaults
-                $langValue = if ($extData.ContainsKey('Language')) { [int]$extData.Language } else { 0 }
-                $capValue = if ($extData.ContainsKey('Capabilities')) { [int]$extData.Capabilities } else { 0 }
-                
-                $extension = Register-Extension -Id $extData.Id -Name $extData.Name -Description $extData.Description `
-                    -Author $extData.Author -Language $langValue -Capabilities $capValue -Version $extData.Version
-                
-                # Store module reference for cleanup
-                $extension.ModulePath = $moduleFile.FullName
-                $extension.ModuleName = $module.Name
-                
-                # Initialize extension if it has init function
-                $initFunction = "Initialize-$($moduleFile.BaseName)Extension"
-                if (Get-Command $initFunction -ErrorAction SilentlyContinue) {
-                    & $initFunction
-                }
-                
-                Write-DevConsole "✅ Extension loaded successfully: $($extData.Name)" "SUCCESS"
-            }
-            else {
-                # Module imported but has no extension metadata - it may still provide functions
-                Write-DevConsole "ℹ️ Module loaded without extension metadata: $($moduleFile.Name) (still usable as PowerShell module)" "INFO"
-            }
-        }
-        catch {
-            Write-DevConsole "❌ Failed to load extension $($moduleFile.Name): $($_.Exception.Message)" "ERROR"
         }
     }
 }
@@ -15926,7 +8572,7 @@ function Search-Marketplace {
             $entry.Source = $defaultSource
         }
 
-        $idKey = if ($entry.Id) { $entry.Id } elseif ($entry.MarketplaceId) { $entry.MarketplaceId } else { '' }
+        $idKey = ($entry.Id ?? $entry.MarketplaceId ?? '')
         if ($idKey) {
             $idKey = $idKey.ToString().ToLower()
             if ($seenIds.ContainsKey($idKey)) {
@@ -15936,31 +8582,15 @@ function Search-Marketplace {
 
         $match = [string]::IsNullOrEmpty($Query)
         if (-not $match) {
-            # Search in Name, Description, Author, Category
             foreach ($field in @($entry.Name, $entry.Description, $entry.Author, $entry.Category)) {
                 if ($field -and $field -like "*$Query*") {
                     $match = $true
                     break
                 }
             }
-            
-            # Also search in Tags array if present
-            if (-not $match -and $entry.Tags) {
-                foreach ($tag in $entry.Tags) {
-                    if ($tag -and $tag -like "*$Query*") {
-                        $match = $true
-                        break
-                    }
-                }
-            }
-            
-            # Also check ID for direct matches
-            if (-not $match -and $entry.Id -and $entry.Id -like "*$Query*") {
-                $match = $true
-            }
         }
 
-        if ($match -and ($LanguageFilter -eq -1 -or (-not (Get-Member -InputObject $entry -Name 'Language') -or $entry.Language -eq $LanguageFilter))) {
+        if ($match -and ($LanguageFilter -eq -1 -or $entry.Language -eq $LanguageFilter)) {
             $results += $entry
             if ($idKey) {
                 $seenIds[$idKey] = $true
@@ -15977,139 +8607,57 @@ function Search-Marketplace {
     if ($IncludeRemote) {
         $catalog = Load-MarketplaceCatalog
         foreach ($entry in $catalog) {
-            $source = if ($entry.Source) { $entry.Source } else { 'Marketplace' }
-            & $evaluateEntry $entry $source
+            & $evaluateEntry $entry ($entry.Source ?? 'Marketplace')
         }
     }
 
-    return $results | Sort-Object @{ Expression = { if ($_.Downloads) { $_.Downloads } else { 0 } }; Descending = $true }, @{ Expression = { $_.Name }; Descending = $false }
+    return $results | Sort-Object @{ Expression = { $_.Downloads ?? 0 }; Descending = $true }, @{ Expression = { $_.Name }; Descending = $false }
 }
 
 function Show-Marketplace {
-    try {
-        Write-DevConsole "Opening Extension Marketplace..." "INFO"
-        
-        $marketplaceForm = New-Object System.Windows.Forms.Form
-        $marketplaceForm.Text = "Extension Marketplace"
-        $marketplaceForm.Size = New-Object System.Drawing.Size(800, 600)
-        $marketplaceForm.StartPosition = "CenterScreen"
-        $marketplaceForm.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-        $marketplaceForm.ForeColor = [System.Drawing.Color]::White
+    $marketplaceForm = New-Object System.Windows.Forms.Form
+    $marketplaceForm.Text = "Extension Marketplace"
+    $marketplaceForm.Size = New-Object System.Drawing.Size(800, 600)
+    $marketplaceForm.StartPosition = "CenterScreen"
     
-        # Search box
-        $searchBox = New-Object System.Windows.Forms.TextBox
-        $searchBox.Dock = [System.Windows.Forms.DockStyle]::Top
-        $searchBox.Height = 30
-        $searchBox.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-        $searchBox.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 45)
-        $searchBox.ForeColor = [System.Drawing.Color]::White
-        # Conditional PlaceholderText assignment (not available in .NET Framework 4.8)
-        if ($searchBox.PSObject.Properties['PlaceholderText']) {
-            $searchBox.PlaceholderText = "Search extensions..."
-        }
-        else {
-            # Fallback: show hint via status label after load
-            Write-DevConsole "PlaceholderText not supported; using fallback hint" "DEBUG"
-        }
-        $marketplaceForm.Controls.Add($searchBox) | Out-Null
-        
-        # Status label
-        $statusLabel = New-Object System.Windows.Forms.Label
-        $statusLabel.Dock = [System.Windows.Forms.DockStyle]::Bottom
-        $statusLabel.Height = 25
-        $statusLabel.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
-        $statusLabel.ForeColor = [System.Drawing.Color]::LightGray
-        $statusLabel.Text = "Loading marketplace..."
-        $marketplaceForm.Controls.Add($statusLabel) | Out-Null
+    # Search box
+    $searchBox = New-Object System.Windows.Forms.TextBox
+    $searchBox.Dock = [System.Windows.Forms.DockStyle]::Top
+    $searchBox.Height = 30
+    $searchBox.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $marketplaceForm.Controls.Add($searchBox) | Out-Null
     
-        # Results list
-        $resultsList = New-Object System.Windows.Forms.ListView
-        $resultsList.Dock = [System.Windows.Forms.DockStyle]::Fill
-        $resultsList.View = [System.Windows.Forms.View]::Details
-        $resultsList.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-        $resultsList.FullRowSelect = $true
-        $resultsList.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
-        $resultsList.ForeColor = [System.Drawing.Color]::White
-        $resultsList.Columns.Add("Name", 200) | Out-Null
-        $resultsList.Columns.Add("Description", 400) | Out-Null
-        $resultsList.Columns.Add("Author", 100) | Out-Null
-        $resultsList.Columns.Add("Version", 80) | Out-Null
-        $marketplaceForm.Controls.Add($resultsList) | Out-Null
+    # Results list
+    $resultsList = New-Object System.Windows.Forms.ListView
+    $resultsList.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $resultsList.View = [System.Windows.Forms.View]::Details
+    $resultsList.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $resultsList.FullRowSelect = $true
+    $resultsList.Columns.Add("Name", 200) | Out-Null
+    $resultsList.Columns.Add("Description", 400) | Out-Null
+    $resultsList.Columns.Add("Author", 100) | Out-Null
+    $resultsList.Columns.Add("Version", 80) | Out-Null
+    $marketplaceForm.Controls.Add($resultsList) | Out-Null
     
-        # Refresh results function
-        $refreshResults = {
-            try {
-                $resultsList.Items.Clear()
-                $query = $searchBox.Text
-                $statusLabel.Text = "Searching..."
-                
-                try {
-                    $results = Search-Marketplace -Query $query -IncludeInstalled -IncludeRemote
-                    $statusLabel.Text = "Found $($results.Count) extension(s)"
-                    
-                    foreach ($ext in $results) {
-                        try {
-                            $item = New-Object System.Windows.Forms.ListViewItem($ext.Name)
-                            $item.SubItems.Add($ext.Description) | Out-Null
-                            $item.SubItems.Add($ext.Author) | Out-Null
-                            $item.SubItems.Add($ext.Version) | Out-Null
-                            $item.Tag = $ext
-                            $item.ForeColor = [System.Drawing.Color]::White
-                            $resultsList.Items.Add($item) | Out-Null
-                        }
-                        catch {
-                            Write-DevConsole "Error adding extension to list: $_" "WARNING"
-                        }
-                    }
-                }
-                catch {
-                    Write-DevConsole "Error searching marketplace: $_" "ERROR"
-                    $statusLabel.Text = "Error: $($_.Exception.Message)"
-                    [System.Windows.Forms.MessageBox]::Show("Error loading marketplace: $($_.Exception.Message)", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-                }
-            }
-            catch {
-                Write-DevConsole "Error in refreshResults: $_" "ERROR"
-                $statusLabel.Text = "Error refreshing results"
-            }
+    # Refresh results
+    $refreshResults = {
+        $resultsList.Items.Clear()
+        $query = $searchBox.Text
+        $results = Search-Marketplace -Query $query
+        foreach ($ext in $results) {
+            $item = New-Object System.Windows.Forms.ListViewItem($ext.Name)
+            $item.SubItems.Add($ext.Description) | Out-Null
+            $item.SubItems.Add($ext.Author) | Out-Null
+            $item.SubItems.Add($ext.Version) | Out-Null
+            $item.Tag = $ext
+            $resultsList.Items.Add($item) | Out-Null
         }
-        
-        # Load initial results
-        $searchBox.Add_TextChanged($refreshResults)
-        
-        # Try to load marketplace catalog in background
-        try {
-            Write-DevConsole "Loading marketplace catalog..." "INFO"
-            $catalog = Load-MarketplaceCatalog -Force
-            Write-DevConsole "Marketplace catalog loaded: $($catalog.Count) extensions" "SUCCESS"
-            $statusLabel.Text = "Ready - $($catalog.Count) extensions available"
-        }
-        catch {
-            Write-DevConsole "Error loading marketplace catalog: $_" "WARNING"
-            $statusLabel.Text = "Using cached data - $($_.Exception.Message)"
-        }
-        
-        # Refresh results now that catalog is loaded
-        & $refreshResults
-    
-        $marketplaceForm.ShowDialog() | Out-Null
     }
-    catch {
-        Write-DevConsole "❌ Error showing marketplace: $_" "ERROR"
-        Write-ErrorLog -Message "Failed to show marketplace: $($_.Exception.Message)" -Severity "HIGH"
-        [System.Windows.Forms.MessageBox]::Show("Error opening marketplace: $($_.Exception.Message)", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-    }
-}
-
-# Wrapper function for test compatibility
-function Show-ExtensionMarketplace {
-    <#
-    .SYNOPSIS
-        Opens the extension marketplace (wrapper for Show-Marketplace)
-    .DESCRIPTION
-        Provides a standardized function name for opening the extension marketplace
-    #>
-    Show-Marketplace
+    
+    $searchBox.Add_TextChanged($refreshResults)
+    $refreshResults.Invoke()
+    
+    $marketplaceForm.ShowDialog() | Out-Null
 }
 
 function Show-InstalledExtensions {
@@ -16129,202 +8677,6 @@ function Show-InstalledExtensions {
     }
     
     $installedForm.ShowDialog() | Out-Null
-}
-
-function Show-ExtensionManager {
-    <#
-    .SYNOPSIS
-        Shows the extension management interface
-    #>
-    
-    $form = New-Object System.Windows.Forms.Form
-    $form.Text = "🔌 Extension Manager"
-    $form.Size = New-Object System.Drawing.Size(800, 600)
-    $form.StartPosition = "CenterScreen"
-    $form.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-    
-    # Create tab control
-    $tabControl = New-Object System.Windows.Forms.TabControl
-    $tabControl.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $form.Controls.Add($tabControl)
-    
-    # Installed tab
-    $installedTab = New-Object System.Windows.Forms.TabPage
-    $installedTab.Text = "📦 Installed Extensions"
-    $tabControl.TabPages.Add($installedTab)
-    
-    # Extensions list
-    $extListView = New-Object System.Windows.Forms.ListView
-    $extListView.Location = New-Object System.Drawing.Point(10, 10)
-    $extListView.Size = New-Object System.Drawing.Size(750, 400)
-    $extListView.View = "Details"
-    $extListView.FullRowSelect = $true
-    $extListView.GridLines = $true
-    $extListView.Columns.Add("Name", 200)
-    $extListView.Columns.Add("Version", 80)
-    $extListView.Columns.Add("Author", 120)
-    $extListView.Columns.Add("Status", 80)
-    $extListView.Columns.Add("Description", 250)
-    $installedTab.Controls.Add($extListView)
-    
-    # Refresh extension list
-    foreach ($ext in $script:extensionRegistry) {
-        $item = New-Object System.Windows.Forms.ListViewItem
-        $item.Text = $ext.Name
-        $item.SubItems.Add($ext.Version)
-        $item.SubItems.Add($ext.Author)
-        $item.SubItems.Add($(if ($ext.Enabled) { "Enabled" } else { "Disabled" }))
-        $item.SubItems.Add($ext.Description)
-        $extListView.Items.Add($item)
-    }
-    
-    # Action buttons
-    $buttonPanel = New-Object System.Windows.Forms.Panel
-    $buttonPanel.Location = New-Object System.Drawing.Point(10, 420)
-    $buttonPanel.Size = New-Object System.Drawing.Size(750, 40)
-    $installedTab.Controls.Add($buttonPanel)
-    
-    $enableBtn = New-Object System.Windows.Forms.Button
-    $enableBtn.Text = "Enable"
-    $enableBtn.Location = New-Object System.Drawing.Point(0, 5)
-    $enableBtn.Size = New-Object System.Drawing.Size(80, 30)
-    $enableBtn.add_Click({
-            if ($extListView.SelectedItems.Count -gt 0) {
-                $extName = $extListView.SelectedItems[0].Text
-                Enable-Extension -Name $extName
-                [System.Windows.Forms.MessageBox]::Show("Extension '$extName' enabled.", "Success")
-            }
-        })
-    $buttonPanel.Controls.Add($enableBtn)
-    
-    $disableBtn = New-Object System.Windows.Forms.Button
-    $disableBtn.Text = "Disable"
-    $disableBtn.Location = New-Object System.Drawing.Point(90, 5)
-    $disableBtn.Size = New-Object System.Drawing.Size(80, 30)
-    $disableBtn.add_Click({
-            if ($extListView.SelectedItems.Count -gt 0) {
-                $extName = $extListView.SelectedItems[0].Text
-                Disable-Extension -Name $extName
-                [System.Windows.Forms.MessageBox]::Show("Extension '$extName' disabled.", "Success")
-            }
-        })
-    $buttonPanel.Controls.Add($disableBtn)
-    
-    $uninstallBtn = New-Object System.Windows.Forms.Button
-    $uninstallBtn.Text = "Uninstall"
-    $uninstallBtn.Location = New-Object System.Drawing.Point(180, 5)
-    $uninstallBtn.Size = New-Object System.Drawing.Size(80, 30)
-    $uninstallBtn.BackColor = [System.Drawing.Color]::LightCoral
-    $uninstallBtn.add_Click({
-            if ($extListView.SelectedItems.Count -gt 0) {
-                $extName = $extListView.SelectedItems[0].Text
-                $result = [System.Windows.Forms.MessageBox]::Show("Are you sure you want to uninstall '$extName'?", "Confirm", "YesNo", "Question")
-                if ($result -eq "Yes") {
-                    Uninstall-Extension -Name $extName
-                    $extListView.Items.Remove($extListView.SelectedItems[0])
-                    [System.Windows.Forms.MessageBox]::Show("Extension '$extName' uninstalled.", "Success")
-                }
-            }
-        })
-    $buttonPanel.Controls.Add($uninstallBtn)
-    
-    # Available tab
-    $availableTab = New-Object System.Windows.Forms.TabPage
-    $availableTab.Text = "🌐 Available Extensions"
-    $tabControl.TabPages.Add($availableTab)
-    
-    $infoLabel = New-Object System.Windows.Forms.Label
-    $infoLabel.Text = "Built-in extensions available:`n• Model Maker - Create custom AI models`n• Assembly Optimizer - NASM code optimization`n• Project Templates - Quick project setup"
-    $infoLabel.Location = New-Object System.Drawing.Point(20, 20)
-    $infoLabel.Size = New-Object System.Drawing.Size(700, 100)
-    $availableTab.Controls.Add($infoLabel)
-    
-    $installModelMakerBtn = New-Object System.Windows.Forms.Button
-    $installModelMakerBtn.Text = "Install Model Maker Extension"
-    $installModelMakerBtn.Location = New-Object System.Drawing.Point(20, 130)
-    $installModelMakerBtn.Size = New-Object System.Drawing.Size(200, 30)
-    $installModelMakerBtn.BackColor = [System.Drawing.Color]::LightGreen
-    $installModelMakerBtn.add_Click({
-            Install-ModelMakerExtension
-            [System.Windows.Forms.MessageBox]::Show("Model Maker Extension installed successfully!", "Success")
-            $form.Close()
-        })
-    $availableTab.Controls.Add($installModelMakerBtn)
-    
-    $form.ShowDialog()
-}
-
-function Install-ModelMakerExtension {
-    <#
-    .SYNOPSIS
-        Installs the Model Maker extension if not already present
-    #>
-    
-    $extensionsPath = Join-Path $PSScriptRoot "extensions"
-    $modelMakerPath = Join-Path $extensionsPath "ModelMaker.psm1"
-    
-    if (-not (Test-Path $modelMakerPath)) {
-        Write-DevConsole "❌ Model Maker extension file not found at: $modelMakerPath" "ERROR"
-        return $false
-    }
-    
-    try {
-        # Load the extension
-        Load-ModuleExtensions
-        Write-DevConsole "✅ Model Maker extension installed and loaded" "SUCCESS"
-        return $true
-    }
-    catch {
-        Write-DevConsole "❌ Failed to install Model Maker extension: $($_.Exception.Message)" "ERROR"
-        return $false
-    }
-}
-
-function Enable-Extension {
-    param([string]$Name)
-    
-    $extension = $script:extensionRegistry | Where-Object { $_.Name -eq $Name }
-    if ($extension) {
-        $extension.Enabled = $true
-        Write-DevConsole "✅ Extension enabled: $Name" "SUCCESS"
-    }
-}
-
-function Disable-Extension {
-    param([string]$Name)
-    
-    $extension = $script:extensionRegistry | Where-Object { $_.Name -eq $Name }
-    if ($extension) {
-        $extension.Enabled = $false
-        Write-DevConsole "⏸️ Extension disabled: $Name" "INFO"
-    }
-}
-
-function Uninstall-Extension {
-    param([string]$Name)
-    
-    $extension = $script:extensionRegistry | Where-Object { $_.Name -eq $Name }
-    if ($extension -and $extension.ModulePath) {
-        try {
-            # Remove module if loaded
-            if ($extension.ModuleName) {
-                Remove-Module $extension.ModuleName -Force -ErrorAction SilentlyContinue
-            }
-            
-            # Remove file
-            if (Test-Path $extension.ModulePath) {
-                Remove-Item $extension.ModulePath -Force
-            }
-            
-            # Remove from registry
-            $script:extensionRegistry = $script:extensionRegistry | Where-Object { $_.Name -ne $Name }
-            
-            Write-DevConsole "🗑️ Extension uninstalled: $Name" "SUCCESS"
-        }
-        catch {
-            Write-DevConsole "❌ Failed to uninstall extension $Name : $($_.Exception.Message)" "ERROR"
-        }
-    }
 }
 
 # ============================================
@@ -16368,81 +8720,8 @@ function Save-Settings {
 
 function Apply-EditorSettings {
     try {
-        if ($script:editor) {
-            $script:editor.Font = New-Object System.Drawing.Font($global:settings.EditorFontFamily, $global:settings.EditorFontSize)
-            
-            # Default visible colors (light text on dark background)
-            $defaultTextColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-            $defaultBgColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-            
-            # Apply background color if set in settings
-            if ($global:settings.EditorBackgroundColor) {
-                try {
-                    $colorParts = $global:settings.EditorBackgroundColor -split ','
-                    if ($colorParts.Count -eq 3) {
-                        $bgColor = [System.Drawing.Color]::FromArgb([int]$colorParts[0], [int]$colorParts[1], [int]$colorParts[2])
-                        $script:editor.BackColor = $bgColor
-                    }
-                    else {
-                        $script:editor.BackColor = $defaultBgColor
-                    }
-                }
-                catch {
-                    Write-DevConsole "Warning: Could not apply background color, using default" "WARNING"
-                    $script:editor.BackColor = $defaultBgColor
-                }
-            }
-            else {
-                $script:editor.BackColor = $defaultBgColor
-            }
-            
-            # Apply text color if set in settings
-            if ($global:settings.EditorTextColor) {
-                try {
-                    $colorParts = $global:settings.EditorTextColor -split ','
-                    if ($colorParts.Count -eq 3) {
-                        $textColor = [System.Drawing.Color]::FromArgb([int]$colorParts[0], [int]$colorParts[1], [int]$colorParts[2])
-                        
-                        # Ensure text color is different enough from background
-                        if ($textColor -eq $script:editor.BackColor) {
-                            Write-DevConsole "Warning: Text color matches background, using default" "WARNING"
-                            $textColor = $defaultTextColor
-                        }
-                        
-                        $script:editor.ForeColor = $textColor
-                        $script:editor.SelectionColor = $textColor
-                        
-                        # Apply color to existing text
-                        if ($script:editor.IsHandleCreated -and $script:editor.Text.Length -gt 0) {
-                            $savedStart = $script:editor.SelectionStart
-                            $savedLength = $script:editor.SelectionLength
-                            
-                            $script:editor.SelectionStart = 0
-                            $script:editor.SelectionLength = $script:editor.Text.Length
-                            $script:editor.SelectionColor = $textColor
-                            
-                            $script:editor.SelectionStart = $savedStart
-                            $script:editor.SelectionLength = $savedLength
-                        }
-                    }
-                    else {
-                        $script:editor.ForeColor = $defaultTextColor
-                        $script:editor.SelectionColor = $defaultTextColor
-                    }
-                }
-                catch {
-                    Write-DevConsole "Warning: Could not apply text color, using default" "WARNING"
-                    $script:editor.ForeColor = $defaultTextColor
-                    $script:editor.SelectionColor = $defaultTextColor
-                }
-            }
-            else {
-                $script:editor.ForeColor = $defaultTextColor
-                $script:editor.SelectionColor = $defaultTextColor
-            }
-            
-            Write-DevConsole "Applied editor settings (Text: $($script:editor.ForeColor), Background: $($script:editor.BackColor))" "DEBUG"
-        }
+        $script:editor.Font = New-Object System.Drawing.Font($global:settings.EditorFontFamily, $global:settings.EditorFontSize)
+        Write-DevConsole "Applied editor settings" "DEBUG"
     }
     catch {
         Write-DevConsole "Error applying editor settings: $_" "WARNING"
@@ -16459,25 +8738,15 @@ function Set-EditorSettings {
     }
 
     $defaults = @{
-        EditorFontFamily      = "Consolas"
-        EditorFontSize        = 10
-        EditorTextColor       = "220,220,220"  # Light gray (very visible on dark backgrounds)
-        EditorBackgroundColor = "30,30,30"      # Dark gray by default
-        TabSize               = 4
-        ShowLineNumbers       = $true
-        WrapText              = $false
-        AutoIndent            = $true
-        CodeHighlighting      = $true
-        AutoComplete          = $true
-        ShowWhitespace        = $false
-        # Syntax highlighting colors (default dark theme colors)
-        SyntaxKeywordColor    = "86,156,214"    # Blue
-        SyntaxStringColor     = "206,145,120"   # Orange
-        SyntaxCommentColor    = "106,153,85"    # Green
-        SyntaxFunctionColor   = "220,220,170"   # Yellow
-        SyntaxVariableColor   = "156,220,254"   # Light blue
-        SyntaxNumberColor     = "181,206,168"  # Light green
-        SyntaxOperatorColor   = "180,180,180"   # Gray
+        EditorFontFamily = "Consolas"
+        EditorFontSize   = 10
+        TabSize          = 4
+        ShowLineNumbers  = $true
+        WrapText         = $false
+        AutoIndent       = $true
+        CodeHighlighting = $true
+        AutoComplete     = $true
+        ShowWhitespace   = $false
     }
 
     foreach ($key in $defaults.Keys) {
@@ -16502,1163 +8771,15 @@ function Set-EditorSettings {
     }
 }
 
-# Initialize editor settings now that function is defined
-# (This ensures settings are initialized even if the earlier call failed)
-if (-not $global:settings -or $global:settings.Count -eq 0) {
-    Set-EditorSettings
-}
-
-function Scan-ForModels {
-    <#
-    .SYNOPSIS
-        Comprehensively scans for Ollama models in multiple locations
-    .DESCRIPTION
-        Scans for models in:
-        - Ollama API (default location)
-        - Custom model directory (D:\OllamaModels)
-        - Default Ollama model storage location
-        Returns detailed information about found models including their locations
-    .PARAMETER CustomPath
-        Custom path to scan for models (defaults to D:\OllamaModels)
-    .PARAMETER IncludeDetails
-        If true, returns detailed model information including file paths and sizes
-    .OUTPUTS
-        [array] Array of model names or detailed model objects
-    .EXAMPLE
-        $models = Scan-ForModels
-        Scan-ForModels -CustomPath "D:\OllamaModels" -IncludeDetails
-    #>
-    param(
-        [Parameter(Mandatory = $false)]
-        [string]$CustomPath = "D:\OllamaModels",
-        
-        [Parameter(Mandatory = $false)]
-        [switch]$IncludeDetails = $false
-    )
-    
-    $allModels = @()
-    $modelDetails = @{}
-    $scanResults = @{
-        ApiModels     = @()
-        CustomModels  = @()
-        DefaultModels = @()
-        TotalCount    = 0
-    }
-    
-    Write-DevConsole "🔍 Starting comprehensive model scan..." "INFO"
-    
-    # 1. Get models from Ollama API
-    try {
-        # Ollama typically runs on HTTP (not HTTPS) for localhost
-        # Try HTTP first, fallback to HTTPS if needed
-        $endpoint = "http://localhost:11434/api/tags"
-        $response = $null
-        
-        try {
-            $response = Invoke-RestMethod -Uri $endpoint -Method GET -TimeoutSec 5 -ErrorAction Stop
-        }
-        catch {
-            # If HTTP fails, try HTTPS (for cases where Ollama is configured with SSL)
-            Write-DevConsole "HTTP connection failed, trying HTTPS..." "DEBUG"
-            $endpoint = "http://localhost:11434/api/tags"
-            
-            # Configure SSL to allow self-signed certificates for localhost
-            if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-                Add-Type @"
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
-public class TrustAllCertsPolicy : ICertificatePolicy {
-    public bool CheckValidationResult(ServicePoint sp, X509Certificate cert, WebRequest req, int problem) {
-        return true;
-    }
-}
-"@
-            }
-            [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls13
-            
-            $response = Invoke-RestMethod -Uri $endpoint -Method GET -TimeoutSec 5 -ErrorAction Stop
-        }
-        $apiModels = @($response.models | ForEach-Object { $_.name })
-        $allModels += $apiModels
-        $scanResults.ApiModels = $apiModels
-        
-        foreach ($model in $response.models) {
-            if ($IncludeDetails) {
-                $modelDetails[$model.name] = @{
-                    Name     = $model.name
-                    Size     = if ($model.size) { $model.size } else { "Unknown" }
-                    Modified = if ($model.modified_at) { $model.modified_at } else { "Unknown" }
-                    Source   = "Ollama API"
-                    Path     = "Ollama Default Storage"
-                }
-            }
-        }
-        
-        Write-DevConsole "✅ Found $($apiModels.Count) models from Ollama API" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "⚠️ Could not fetch models from Ollama API: $_" "WARNING"
-        Register-ErrorHandler -ErrorMessage "Failed to fetch models from Ollama API: $($_.Exception.Message)" -ErrorCategory "OLLAMA" -Severity "LOW" -SourceFunction "Scan-ForModels"
-    }
-    
-    # 2. Scan custom model directory D:\OllamaModels
-    if (Test-Path -LiteralPath $CustomPath) {
-        try {
-            Write-DevConsole "🔍 Scanning custom model directory: $CustomPath" "INFO"
-            $customModelsFound = 0
-            
-            # Scan for model directories (Ollama stores models in subdirectories)
-            $modelDirs = Get-ChildItem -LiteralPath $CustomPath -Directory -ErrorAction SilentlyContinue
-            
-            foreach ($modelDir in $modelDirs) {
-                try {
-                    # Check for model files (typically .gguf files, blobs, or safetensors)
-                    $modelFiles = @(Get-ChildItem -LiteralPath $modelDir.FullName -Recurse -File -ErrorAction SilentlyContinue | 
-                        Where-Object { 
-                            $_.Extension -in @('.gguf', '.bin', '.safetensors', '.pt', '.pth') -or 
-                            $_.Name -eq 'blobs' -or
-                            $_.Name -match '^model' 
-                        })
-                    
-                    if ($modelFiles.Count -gt 0) {
-                        # Model name is typically the directory name
-                        $modelName = $modelDir.Name
-                        
-                        # Handle model:tag format
-                        if ($modelName -notmatch ':') {
-                            $modelName = "$modelName:latest"
-                        }
-                        
-                        if ($modelName -notin $allModels) {
-                            $allModels += $modelName
-                            $scanResults.CustomModels += $modelName
-                            $customModelsFound++
-                            
-                            if ($IncludeDetails) {
-                                $totalSize = ($modelFiles | Measure-Object -Property Length -Sum).Sum
-                                $modelDetails[$modelName] = @{
-                                    Name      = $modelName
-                                    Size      = $totalSize
-                                    FileCount = $modelFiles.Count
-                                    Source    = "Custom Directory"
-                                    Path      = $modelDir.FullName
-                                    Files     = $modelFiles | ForEach-Object { $_.FullName }
-                                }
-                            }
-                            
-                            Write-DevConsole "✅ Found custom model: $modelName (Path: $($modelDir.FullName))" "SUCCESS"
-                        }
-                    }
-                }
-                catch {
-                    Write-DevConsole "⚠️ Error scanning model directory $($modelDir.Name): $_" "WARNING"
-                }
-            }
-            
-            # Also check for direct .gguf files in the root
-            $directModels = Get-ChildItem -LiteralPath $CustomPath -File -Filter "*.gguf" -ErrorAction SilentlyContinue
-            foreach ($modelFile in $directModels) {
-                try {
-                    $modelName = [System.IO.Path]::GetFileNameWithoutExtension($modelFile.Name)
-                    if ($modelName -notmatch ':') {
-                        $modelName = "$modelName:latest"
-                    }
-                    if ($modelName -notin $allModels) {
-                        $allModels += $modelName
-                        $scanResults.CustomModels += $modelName
-                        $customModelsFound++
-                        
-                        if ($IncludeDetails) {
-                            $modelDetails[$modelName] = @{
-                                Name      = $modelName
-                                Size      = $modelFile.Length
-                                FileCount = 1
-                                Source    = "Custom Directory"
-                                Path      = $modelFile.DirectoryName
-                                Files     = @($modelFile.FullName)
-                            }
-                        }
-                        
-                        Write-DevConsole "✅ Found custom model file: $modelName" "SUCCESS"
-                    }
-                }
-                catch {
-                    Write-DevConsole "⚠️ Error processing model file $($modelFile.Name): $_" "WARNING"
-                }
-            }
-            
-            Write-DevConsole "✅ Scanned custom model directory: Found $customModelsFound additional models" "SUCCESS"
-        }
-        catch {
-            $errorMsg = "Error scanning custom model directory: $($_.Exception.Message)"
-            Write-DevConsole "⚠️ $errorMsg" "WARNING"
-            Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "FILESYSTEM" -Severity "MEDIUM" -SourceFunction "Scan-ForModels"
-        }
-    }
-    else {
-        # If the custom model directory does not exist, skip scanning and continue without error.
-        Write-DevConsole "ℹ️ Custom model directory not found: $CustomPath" "INFO"
-    }
-    
-    # 3. Scan default Ollama model storage location (if different from custom path)
-    $defaultOllamaPath = if ($env:OLLAMA_MODELS) { $env:OLLAMA_MODELS } else { "$env:USERPROFILE\.ollama\models" }
-    if ((Test-Path -LiteralPath $defaultOllamaPath) -and $defaultOllamaPath -ne $CustomPath) {
-        try {
-            Write-DevConsole "🔍 Scanning default Ollama storage: $defaultOllamaPath" "INFO"
-            $defaultDirs = Get-ChildItem -LiteralPath $defaultOllamaPath -Directory -ErrorAction SilentlyContinue
-            
-            foreach ($dir in $defaultDirs) {
-                $modelFiles = Get-ChildItem -Path $dir.FullName -Recurse -File -ErrorAction SilentlyContinue | 
-                Where-Object { $_.Extension -in @('.gguf', '.bin') -or $_.Name -eq 'blobs' }
-                
-                if ($modelFiles.Count -gt 0) {
-                    $modelName = $dir.Name
-                    if ($modelName -notmatch ':') {
-                        $modelName = "$modelName:latest"
-                    }
-                    
-                    if ($modelName -notin $allModels) {
-                        $allModels += $modelName
-                        $scanResults.DefaultModels += $modelName
-                        
-                        if ($IncludeDetails) {
-                            $modelDetails[$modelName] = @{
-                                Name      = $modelName
-                                Size      = ($modelFiles | Measure-Object -Property Length -Sum).Sum
-                                FileCount = $modelFiles.Count
-                                Source    = "Default Storage"
-                                Path      = $dir.FullName
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        catch {
-            Write-DevConsole "⚠️ Error scanning default Ollama storage at path '$defaultOllamaPath' in Scan-ForModels: $($_.Exception.Message)" "WARNING"
-        }
-    }
-    
-    # Set OLLAMA_MODELS environment variable if custom path exists
-    if (Test-Path -LiteralPath $CustomPath) {
-        try {
-            $env:OLLAMA_MODELS = $CustomPath
-            Write-DevConsole "✅ Set OLLAMA_MODELS environment variable to: $CustomPath" "INFO"
-        }
-        catch {
-            Write-DevConsole "⚠️ Could not set OLLAMA_MODELS environment variable: $_" "WARNING"
-        }
-    }
-    
-    $scanResults.TotalCount = $allModels.Count
-    
-    Write-DevConsole "📊 Model scan complete: $($scanResults.TotalCount) total models found" "SUCCESS"
-    Write-DevConsole "   - API Models: $($scanResults.ApiModels.Count)" "INFO"
-    Write-DevConsole "   - Custom Models: $($scanResults.CustomModels.Count)" "INFO"
-    Write-DevConsole "   - Default Storage Models: $($scanResults.DefaultModels.Count)" "INFO"
-    
-    if ($IncludeDetails) {
-        return @{
-            Models      = $allModels | Sort-Object -Unique
-            Details     = $modelDetails
-            ScanResults = $scanResults
-        }
-    }
-    else {
-        return $allModels | Sort-Object -Unique
-    }
-}
-
-# ============================================
-# System Specifications Scanner & Auto-Tuning
-# ============================================
-
-function Get-SystemSpecifications {
-    <#
-    .SYNOPSIS
-        Comprehensive hardware and system specifications detection
-    .DESCRIPTION
-        Scans CPU, RAM, GPU, Storage, Display, and OS information
-        Returns detailed specifications for auto-tuning settings
-    .OUTPUTS
-        [hashtable] Detailed system specifications
-    #>
-    
-    Write-DevConsole "🔍 Scanning system specifications..." "INFO"
-    
-    $specs = @{
-        CPU         = @{
-            Name              = "Unknown"
-            Cores             = 4
-            LogicalProcessors = 4
-            MaxSpeed          = 2400
-            Architecture      = "x64"
-            L2Cache           = 0
-            L3Cache           = 0
-        }
-        RAM         = @{
-            TotalGB     = 8
-            AvailableGB = 4
-            Speed       = 2400
-            FormFactor  = "Unknown"
-            Slots       = 0
-        }
-        GPU         = @{
-            Name           = "Unknown"
-            VRAM_MB        = 0
-            DriverVersion  = "Unknown"
-            DirectXVersion = "Unknown"
-            CUDASupport    = $false
-        }
-        Storage     = @{
-            SystemDrive = "C:"
-            TotalGB     = 256
-            FreeGB      = 50
-            Type        = "Unknown"
-            IOPS        = 0
-        }
-        Display     = @{
-            Width       = 1920
-            Height      = 1080
-            DPI         = 96
-            ScaleFactor = 1.0
-            Monitors    = 1
-        }
-        OS          = @{
-            Name      = "Windows"
-            Version   = "10"
-            Build     = "Unknown"
-            Is64Bit   = $true
-            PowerPlan = "Balanced"
-        }
-        Performance = @{
-            Score           = 500
-            Tier            = "Mid-Range"
-            CPUBenchmark    = 0
-            MemoryBandwidth = 0
-            DiskIOPS        = 0
-        }
-        ScanTime    = Get-Date
-    }
-    
-    # CPU Detection
-    try {
-        $cpu = Get-CimInstance -ClassName Win32_Processor -ErrorAction Stop | Select-Object -First 1
-        $specs.CPU.Name = $cpu.Name.Trim()
-        $specs.CPU.Cores = [int]$cpu.NumberOfCores
-        $specs.CPU.LogicalProcessors = [int]$cpu.NumberOfLogicalProcessors
-        $specs.CPU.MaxSpeed = [int]$cpu.MaxClockSpeed
-        $specs.CPU.Architecture = switch ($cpu.Architecture) {
-            0 { "x86" }
-            5 { "ARM" }
-            9 { "x64" }
-            12 { "ARM64" }
-            default { "x64" }
-        }
-        $specs.CPU.L2Cache = [int]($cpu.L2CacheSize / 1KB)
-        $specs.CPU.L3Cache = [int]($cpu.L3CacheSize / 1KB)
-        Write-DevConsole "✅ CPU: $($specs.CPU.Name) ($($specs.CPU.Cores) cores)" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "⚠️ CPU detection failed: $_" "WARNING"
-    }
-    
-    # RAM Detection
-    try {
-        $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
-        $specs.RAM.TotalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 1)
-        $specs.RAM.AvailableGB = [math]::Round($os.FreePhysicalMemory / 1MB, 1)
-        
-        $memory = Get-CimInstance -ClassName Win32_PhysicalMemory -ErrorAction SilentlyContinue
-        if ($memory) {
-            $specs.RAM.Slots = @($memory).Count
-            $specs.RAM.Speed = ($memory | Select-Object -First 1).Speed
-            $specs.RAM.FormFactor = switch (($memory | Select-Object -First 1).FormFactor) {
-                8 { "DIMM" }
-                12 { "SO-DIMM" }
-                default { "Unknown" }
-            }
-        }
-        Write-DevConsole "✅ RAM: $($specs.RAM.TotalGB) GB ($($specs.RAM.AvailableGB) GB available)" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "⚠️ RAM detection failed: $_" "WARNING"
-    }
-    
-    # GPU Detection
-    try {
-        $gpu = Get-CimInstance -ClassName Win32_VideoController -ErrorAction Stop | 
-        Where-Object { $_.AdapterRAM -gt 0 } | Select-Object -First 1
-        if ($gpu) {
-            $specs.GPU.Name = $gpu.Name
-            $specs.GPU.VRAM_MB = [math]::Round($gpu.AdapterRAM / 1MB, 0)
-            $specs.GPU.DriverVersion = $gpu.DriverVersion
-            $specs.GPU.CUDASupport = $gpu.Name -match "NVIDIA|GeForce|Quadro|Tesla"
-            
-            # Check DirectX version
-            $dxdiag = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\DirectX" -ErrorAction SilentlyContinue
-            if ($dxdiag) {
-                $specs.GPU.DirectXVersion = $dxdiag.Version
-            }
-        }
-        Write-DevConsole "✅ GPU: $($specs.GPU.Name) ($($specs.GPU.VRAM_MB) MB VRAM)" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "⚠️ GPU detection failed: $_" "WARNING"
-    }
-    
-    # Storage Detection
-    try {
-        $systemDrive = $env:SystemDrive
-        $drive = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$systemDrive'" -ErrorAction Stop
-        $specs.Storage.SystemDrive = $systemDrive
-        $specs.Storage.TotalGB = [math]::Round($drive.Size / 1GB, 1)
-        $specs.Storage.FreeGB = [math]::Round($drive.FreeSpace / 1GB, 1)
-        
-        # Detect SSD/HDD
-        $diskDrive = Get-CimInstance -ClassName Win32_DiskDrive -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($diskDrive) {
-            $specs.Storage.Type = if ($diskDrive.MediaType -match "SSD|Solid") { "SSD" }
-            elseif ($diskDrive.Model -match "SSD|NVMe|Solid") { "SSD" }
-            else { "HDD" }
-        }
-        Write-DevConsole "✅ Storage: $($specs.Storage.TotalGB) GB $($specs.Storage.Type) ($($specs.Storage.FreeGB) GB free)" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "⚠️ Storage detection failed: $_" "WARNING"
-    }
-    
-    # Display Detection
-    try {
-        Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
-        $screen = [System.Windows.Forms.Screen]::PrimaryScreen
-        $specs.Display.Width = $screen.Bounds.Width
-        $specs.Display.Height = $screen.Bounds.Height
-        $specs.Display.Monitors = [System.Windows.Forms.Screen]::AllScreens.Count
-        
-        # DPI Detection
-        $dpi = [System.Drawing.Graphics]::FromHwnd([IntPtr]::Zero).DpiX
-        $specs.Display.DPI = [int]$dpi
-        $specs.Display.ScaleFactor = [math]::Round($dpi / 96, 2)
-        
-        Write-DevConsole "✅ Display: $($specs.Display.Width)x$($specs.Display.Height) @ $($specs.Display.DPI) DPI" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "⚠️ Display detection failed: $_" "WARNING"
-    }
-    
-    # OS Detection
-    try {
-        $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
-        $specs.OS.Name = $osInfo.Caption
-        $specs.OS.Version = $osInfo.Version
-        $specs.OS.Build = $osInfo.BuildNumber
-        $specs.OS.Is64Bit = [Environment]::Is64BitOperatingSystem
-        
-        # Power Plan
-        $powerPlan = powercfg /getactivescheme 2>$null
-        if ($powerPlan -match "High performance") { $specs.OS.PowerPlan = "High Performance" }
-        elseif ($powerPlan -match "Power saver") { $specs.OS.PowerPlan = "Power Saver" }
-        else { $specs.OS.PowerPlan = "Balanced" }
-        
-        Write-DevConsole "✅ OS: $($specs.OS.Name) (Build $($specs.OS.Build))" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "⚠️ OS detection failed: $_" "WARNING"
-    }
-    
-    # Calculate Performance Score & Tier
-    $specs.Performance = Get-PerformanceScore -Specs $specs
-    
-    Write-DevConsole "📊 System scan complete - Tier: $($specs.Performance.Tier) (Score: $($specs.Performance.Score))" "SUCCESS"
-    
-    return $specs
-}
-
-function Get-PerformanceScore {
-    <#
-    .SYNOPSIS
-        Calculate performance score and tier from system specs
-    #>
-    param([hashtable]$Specs)
-    
-    $score = 0
-    
-    # CPU Score (max 350 points)
-    $cpuScore = [math]::Min(350, ($Specs.CPU.Cores * 20) + ($Specs.CPU.MaxSpeed / 20))
-    $score += $cpuScore
-    
-    # RAM Score (max 300 points)
-    $ramScore = [math]::Min(300, $Specs.RAM.TotalGB * 8)
-    $score += $ramScore
-    
-    # GPU Score (max 200 points)
-    $gpuScore = [math]::Min(200, $Specs.GPU.VRAM_MB / 50)
-    if ($Specs.GPU.CUDASupport) { $gpuScore += 50 }
-    $score += $gpuScore
-    
-    # Storage Score (max 150 points)
-    $storageScore = if ($Specs.Storage.Type -eq "SSD") { 100 } else { 30 }
-    $storageScore += [math]::Min(50, $Specs.Storage.FreeGB / 10)
-    $score += $storageScore
-    
-    # Determine tier
-    $tier = switch ($true) {
-        { $Specs.RAM.TotalGB -ge 32 -and $Specs.CPU.Cores -ge 12 } { "High-End" }
-        { $Specs.RAM.TotalGB -ge 16 -and $Specs.CPU.Cores -ge 6 } { "Mid-Range" }
-        { $Specs.RAM.TotalGB -ge 8 -and $Specs.CPU.Cores -ge 4 } { "Entry-Level" }
-        default { "Low-End" }
-    }
-    
-    return @{
-        Score           = [math]::Round($score, 0)
-        Tier            = $tier
-        CPUBenchmark    = $cpuScore
-        MemoryBandwidth = $ramScore
-        DiskIOPS        = $storageScore
-    }
-}
-
-function Get-OptimalSettings {
-    <#
-    .SYNOPSIS
-        Generate optimal settings based on system specifications
-    .DESCRIPTION
-        Analyzes system specs and returns recommended settings for:
-        - Thread pool size
-        - AI model recommendations
-        - Context length limits
-        - UI scaling
-        - Buffer sizes
-        - Feature enablement
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$Specs
-    )
-    
-    Write-DevConsole "⚙️ Calculating optimal settings..." "INFO"
-    
-    $optimal = @{
-        # Threading
-        ThreadPoolSize           = [math]::Max(2, [math]::Min($Specs.CPU.LogicalProcessors - 2, 16))
-        AsyncOperations          = $Specs.CPU.Cores -ge 4
-        
-        # AI Model Recommendations
-        RecommendedModelSize     = switch ($true) {
-            { $Specs.RAM.TotalGB -ge 64 } { "70B" }
-            { $Specs.RAM.TotalGB -ge 32 } { "34B" }
-            { $Specs.RAM.TotalGB -ge 16 } { "13B" }
-            { $Specs.RAM.TotalGB -ge 8 } { "7B" }
-            default { "3B" }
-        }
-        RecommendedModels        = @()
-        MaxContextLength         = switch ($true) {
-            { $Specs.RAM.TotalGB -ge 32 } { 32768 }
-            { $Specs.RAM.TotalGB -ge 16 } { 16384 }
-            { $Specs.RAM.TotalGB -ge 8 } { 8192 }
-            default { 4096 }
-        }
-        UseGPUAcceleration       = $Specs.GPU.CUDASupport -and $Specs.GPU.VRAM_MB -ge 4096
-        
-        # UI Settings
-        UIScale                  = $Specs.Display.ScaleFactor
-        FontSize                 = switch ($true) {
-            { $Specs.Display.DPI -ge 144 } { 12 }
-            { $Specs.Display.DPI -ge 120 } { 11 }
-            default { 10 }
-        }
-        EnableAnimations         = $Specs.Performance.Score -ge 400
-        
-        # Buffer & Memory
-        EditorBufferSize         = switch ($Specs.Performance.Tier) {
-            "High-End" { 10MB }
-            "Mid-Range" { 5MB }
-            "Entry-Level" { 2MB }
-            default { 1MB }
-        }
-        UndoHistorySize          = switch ($Specs.Performance.Tier) {
-            "High-End" { 500 }
-            "Mid-Range" { 200 }
-            "Entry-Level" { 100 }
-            default { 50 }
-        }
-        
-        # Features
-        EnableSyntaxHighlighting = $true
-        EnableAutoComplete       = $Specs.Performance.Score -ge 300
-        EnableLivePreview        = $Specs.Performance.Score -ge 500
-        EnableBackgroundTasks    = $Specs.CPU.Cores -ge 4
-        EnableParallelProcessing = $Specs.CPU.Cores -ge 6
-        
-        # Auto-save
-        AutoSaveInterval         = if ($Specs.Storage.Type -eq "SSD") { 30 } else { 60 }
-        
-        # Network
-        MaxConcurrentRequests    = [math]::Min($Specs.CPU.Cores, 8)
-        RequestTimeout           = 30
-    }
-    
-    # Build recommended models list based on RAM
-    $optimal.RecommendedModels = switch ($true) {
-        { $Specs.RAM.TotalGB -ge 64 } { @("llama3.1:70b", "mixtral:8x22b", "codellama:70b", "llama3.1:latest") }
-        { $Specs.RAM.TotalGB -ge 32 } { @("llama3.1:latest", "codellama:34b", "mixtral:8x7b", "deepseek-coder:33b") }
-        { $Specs.RAM.TotalGB -ge 16 } { @("llama3.1:latest", "codellama:13b", "mistral:latest", "deepseek-coder:6.7b") }
-        { $Specs.RAM.TotalGB -ge 8 } { @("llama3.2:latest", "codellama:7b", "mistral:7b", "phi3:latest") }
-        default { @("phi3:mini", "tinyllama:latest", "gemma:2b") }
-    }
-    
-    Write-DevConsole "✅ Optimal settings calculated for $($Specs.Performance.Tier) system" "SUCCESS"
-    
-    return $optimal
-}
-
-function Invoke-SystemScan {
-    <#
-    .SYNOPSIS
-        Performs full system scan and auto-tunes settings
-    .DESCRIPTION
-        Scans hardware, calculates optimal settings, and applies them
-    .PARAMETER Apply
-        If true, automatically applies the optimal settings
-    .PARAMETER ShowUI
-        If true, shows the System Scanner UI panel
-    #>
-    param(
-        [switch]$Apply = $false,
-        [switch]$ShowUI = $false
-    )
-    
-    Write-DevConsole "🚀 Starting full system scan and auto-tune..." "INFO"
-    
-    # Get system specifications
-    $script:SystemSpecs = Get-SystemSpecifications
-    
-    # Calculate optimal settings
-    $script:OptimalSettings = Get-OptimalSettings -Specs $script:SystemSpecs
-    
-    # Store in global settings
-    $global:settings.SystemSpecs = $script:SystemSpecs
-    $global:settings.OptimalSettings = $script:OptimalSettings
-    $global:settings.LastSystemScan = Get-Date
-    
-    if ($Apply) {
-        Apply-OptimalSettings -Settings $script:OptimalSettings
-    }
-    
-    if ($ShowUI) {
-        Show-SystemScannerPanel
-    }
-    
-    # Log insights
-    try {
-        Track-UserInsight -Category "SystemScan" -Action "Completed" -Value $script:SystemSpecs.Performance.Tier
-    }
-    catch { }
-    
-    Write-DevConsole "✅ System scan complete!" "SUCCESS"
-    
-    return @{
-        Specs           = $script:SystemSpecs
-        OptimalSettings = $script:OptimalSettings
-    }
-}
-
-function Apply-OptimalSettings {
-    <#
-    .SYNOPSIS
-        Applies the optimal settings to the application
-    #>
-    param([hashtable]$Settings)
-    
-    Write-DevConsole "⚙️ Applying optimal settings..." "INFO"
-    
-    try {
-        # Apply editor settings
-        $global:settings.EditorFontSize = $Settings.FontSize
-        $global:settings.AutoSaveInterval = $Settings.AutoSaveInterval
-        $global:settings.MaxUndoSteps = $Settings.UndoHistorySize
-        $global:settings.EnableAutoComplete = $Settings.EnableAutoComplete
-        $global:settings.EnableSyntaxHighlighting = $Settings.EnableSyntaxHighlighting
-        
-        # Apply AI settings
-        $global:settings.MaxContextLength = $Settings.MaxContextLength
-        $global:settings.UseGPUAcceleration = $Settings.UseGPUAcceleration
-        
-        # Apply performance settings
-        $global:settings.EnableAnimations = $Settings.EnableAnimations
-        $global:settings.EnableBackgroundTasks = $Settings.EnableBackgroundTasks
-        $global:settings.MaxConcurrentRequests = $Settings.MaxConcurrentRequests
-        
-        # Apply to editor if available
-        if ($script:editor) {
-            Apply-EditorSettings
-        }
-        
-        # Save settings
-        Save-Settings
-        
-        Write-DevConsole "✅ Optimal settings applied successfully" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "❌ Error applying settings: $_" "ERROR"
-    }
-}
-
-function Show-SystemScannerPanel {
-    <#
-    .SYNOPSIS
-        Shows the System Scanner UI panel with specs, recommendations, and controls
-    #>
-    
-    $scanForm = New-Object System.Windows.Forms.Form
-    $scanForm.Text = "🖥️ System Scanner & Auto-Tune"
-    $scanForm.Size = New-Object System.Drawing.Size(700, 650)
-    $scanForm.StartPosition = "CenterScreen"
-    $scanForm.FormBorderStyle = "FixedDialog"
-    $scanForm.MaximizeBox = $false
-    $scanForm.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-    $scanForm.ForeColor = [System.Drawing.Color]::White
-    
-    # Tab Control
-    $tabControl = New-Object System.Windows.Forms.TabControl
-    $tabControl.Location = New-Object System.Drawing.Point(10, 10)
-    $tabControl.Size = New-Object System.Drawing.Size(665, 500)
-    $tabControl.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 45)
-    $scanForm.Controls.Add($tabControl)
-    
-    # === Specifications Tab ===
-    $specsTab = New-Object System.Windows.Forms.TabPage
-    $specsTab.Text = "📊 Specifications"
-    $specsTab.BackColor = [System.Drawing.Color]::FromArgb(35, 35, 35)
-    $tabControl.TabPages.Add($specsTab)
-    
-    $specsText = New-Object System.Windows.Forms.RichTextBox
-    $specsText.Location = New-Object System.Drawing.Point(10, 10)
-    $specsText.Size = New-Object System.Drawing.Size(635, 450)
-    $specsText.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
-    $specsText.ForeColor = [System.Drawing.Color]::LightGreen
-    $specsText.Font = New-Object System.Drawing.Font("Consolas", 10)
-    $specsText.ReadOnly = $true
-    $specsText.BorderStyle = "None"
-    $specsTab.Controls.Add($specsText)
-    
-    # === Recommendations Tab ===
-    $recsTab = New-Object System.Windows.Forms.TabPage
-    $recsTab.Text = "💡 Recommendations"
-    $recsTab.BackColor = [System.Drawing.Color]::FromArgb(35, 35, 35)
-    $tabControl.TabPages.Add($recsTab)
-    
-    $recsText = New-Object System.Windows.Forms.RichTextBox
-    $recsText.Location = New-Object System.Drawing.Point(10, 10)
-    $recsText.Size = New-Object System.Drawing.Size(635, 450)
-    $recsText.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
-    $recsText.ForeColor = [System.Drawing.Color]::Cyan
-    $recsText.Font = New-Object System.Drawing.Font("Consolas", 10)
-    $recsText.ReadOnly = $true
-    $recsText.BorderStyle = "None"
-    $recsTab.Controls.Add($recsText)
-    
-    # === Model Selector Tab ===
-    $modelTab = New-Object System.Windows.Forms.TabPage
-    $modelTab.Text = "🤖 Model Selector"
-    $modelTab.BackColor = [System.Drawing.Color]::FromArgb(35, 35, 35)
-    $tabControl.TabPages.Add($modelTab)
-    
-    # Model selection panel
-    $modelLabel = New-Object System.Windows.Forms.Label
-    $modelLabel.Text = "Select AI Model:"
-    $modelLabel.Location = New-Object System.Drawing.Point(10, 15)
-    $modelLabel.Size = New-Object System.Drawing.Size(150, 25)
-    $modelLabel.ForeColor = [System.Drawing.Color]::White
-    $modelTab.Controls.Add($modelLabel)
-    
-    $modelCombo = New-Object System.Windows.Forms.ComboBox
-    $modelCombo.Location = New-Object System.Drawing.Point(170, 12)
-    $modelCombo.Size = New-Object System.Drawing.Size(350, 25)
-    $modelCombo.DropDownStyle = "DropDownList"
-    $modelCombo.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
-    $modelCombo.ForeColor = [System.Drawing.Color]::White
-    $modelTab.Controls.Add($modelCombo)
-    
-    $refreshModelsBtn = New-Object System.Windows.Forms.Button
-    $refreshModelsBtn.Text = "🔄"
-    $refreshModelsBtn.Location = New-Object System.Drawing.Point(530, 10)
-    $refreshModelsBtn.Size = New-Object System.Drawing.Size(40, 28)
-    $refreshModelsBtn.FlatStyle = "Flat"
-    $refreshModelsBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-    $refreshModelsBtn.ForeColor = [System.Drawing.Color]::White
-    $refreshModelsBtn.Add_Click({
-            $modelCombo.Items.Clear()
-            $models = Get-AvailableModels
-            foreach ($m in $models) { $modelCombo.Items.Add($m) | Out-Null }
-            if ($modelCombo.Items.Count -gt 0) { $modelCombo.SelectedIndex = 0 }
-        })
-    $modelTab.Controls.Add($refreshModelsBtn)
-    
-    # Recommended models list
-    $recModelsLabel = New-Object System.Windows.Forms.Label
-    $recModelsLabel.Text = "Recommended for your system:"
-    $recModelsLabel.Location = New-Object System.Drawing.Point(10, 55)
-    $recModelsLabel.Size = New-Object System.Drawing.Size(250, 25)
-    $recModelsLabel.ForeColor = [System.Drawing.Color]::LightGreen
-    $modelTab.Controls.Add($recModelsLabel)
-    
-    $recModelsList = New-Object System.Windows.Forms.ListBox
-    $recModelsList.Location = New-Object System.Drawing.Point(10, 85)
-    $recModelsList.Size = New-Object System.Drawing.Size(300, 120)
-    $recModelsList.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
-    $recModelsList.ForeColor = [System.Drawing.Color]::LightGreen
-    $modelTab.Controls.Add($recModelsList)
-    
-    # Context input
-    $contextLabel = New-Object System.Windows.Forms.Label
-    $contextLabel.Text = "Context / Instructions:"
-    $contextLabel.Location = New-Object System.Drawing.Point(10, 220)
-    $contextLabel.Size = New-Object System.Drawing.Size(200, 25)
-    $contextLabel.ForeColor = [System.Drawing.Color]::White
-    $modelTab.Controls.Add($contextLabel)
-    
-    $contextInput = New-Object System.Windows.Forms.TextBox
-    $contextInput.Location = New-Object System.Drawing.Point(10, 250)
-    $contextInput.Size = New-Object System.Drawing.Size(620, 100)
-    $contextInput.Multiline = $true
-    $contextInput.ScrollBars = "Vertical"
-    $contextInput.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
-    $contextInput.ForeColor = [System.Drawing.Color]::White
-    $contextInput.Text = "You are a helpful coding assistant. Be concise and accurate."
-    $modelTab.Controls.Add($contextInput)
-    
-    # Command input
-    $cmdLabel = New-Object System.Windows.Forms.Label
-    $cmdLabel.Text = "Command / Prompt:"
-    $cmdLabel.Location = New-Object System.Drawing.Point(10, 360)
-    $cmdLabel.Size = New-Object System.Drawing.Size(200, 25)
-    $cmdLabel.ForeColor = [System.Drawing.Color]::White
-    $modelTab.Controls.Add($cmdLabel)
-    
-    $cmdInput = New-Object System.Windows.Forms.TextBox
-    $cmdInput.Location = New-Object System.Drawing.Point(10, 390)
-    $cmdInput.Size = New-Object System.Drawing.Size(530, 25)
-    $cmdInput.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
-    $cmdInput.ForeColor = [System.Drawing.Color]::White
-    $modelTab.Controls.Add($cmdInput)
-    
-    $sendBtn = New-Object System.Windows.Forms.Button
-    $sendBtn.Text = "📤 Send"
-    $sendBtn.Location = New-Object System.Drawing.Point(550, 388)
-    $sendBtn.Size = New-Object System.Drawing.Size(80, 28)
-    $sendBtn.FlatStyle = "Flat"
-    $sendBtn.BackColor = [System.Drawing.Color]::FromArgb(0, 122, 204)
-    $sendBtn.ForeColor = [System.Drawing.Color]::White
-    $sendBtn.Add_Click({
-            $selectedModel = $modelCombo.SelectedItem
-            $context = $contextInput.Text
-            $command = $cmdInput.Text
-        
-            if (-not $selectedModel) {
-                [System.Windows.Forms.MessageBox]::Show("Please select a model first.", "No Model", "OK", "Warning")
-                return
-            }
-            if (-not $command) {
-                [System.Windows.Forms.MessageBox]::Show("Please enter a command/prompt.", "No Command", "OK", "Warning")
-                return
-            }
-        
-            # Set the model and send to chat
-            $global:settings.OllamaModel = $selectedModel
-            $script:currentModel = $selectedModel
-        
-            Write-DevConsole "📤 Sending to $selectedModel with context..." "INFO"
-        
-            # Build full prompt with context
-            $fullPrompt = if ($context) { "$context`n`nUser: $command" } else { $command }
-        
-            # Send via existing chat function
-            if (Get-Command Send-OllamaMessage -ErrorAction SilentlyContinue) {
-                Send-OllamaMessage -Prompt $fullPrompt -Model $selectedModel
-            }
-        
-            $cmdInput.Clear()
-        })
-    $modelTab.Controls.Add($sendBtn)
-    
-    # === Extensions Tab ===
-    $extTab = New-Object System.Windows.Forms.TabPage
-    $extTab.Text = "🧩 Extensions"
-    $extTab.BackColor = [System.Drawing.Color]::FromArgb(35, 35, 35)
-    $tabControl.TabPages.Add($extTab)
-    
-    $extList = New-Object System.Windows.Forms.ListView
-    $extList.Location = New-Object System.Drawing.Point(10, 10)
-    $extList.Size = New-Object System.Drawing.Size(635, 400)
-    $extList.View = "Details"
-    $extList.FullRowSelect = $true
-    $extList.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
-    $extList.ForeColor = [System.Drawing.Color]::White
-    $extList.Columns.Add("Extension", 200)
-    $extList.Columns.Add("Category", 100)
-    $extList.Columns.Add("Status", 80)
-    $extList.Columns.Add("Description", 250)
-    $extTab.Controls.Add($extList)
-    
-    $loadExtBtn = New-Object System.Windows.Forms.Button
-    $loadExtBtn.Text = "Load Extensions"
-    $loadExtBtn.Location = New-Object System.Drawing.Point(10, 420)
-    $loadExtBtn.Size = New-Object System.Drawing.Size(150, 30)
-    $loadExtBtn.FlatStyle = "Flat"
-    $loadExtBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-    $loadExtBtn.ForeColor = [System.Drawing.Color]::White
-    $loadExtBtn.Add_Click({
-            $extList.Items.Clear()
-            try {
-                $catalog = Load-MarketplaceCatalog
-                foreach ($ext in $catalog) {
-                    $item = New-Object System.Windows.Forms.ListViewItem($ext.Name)
-                    $item.SubItems.Add($ext.Category)
-                    $item.SubItems.Add($(if ($ext.Installed) { "Installed" } else { "Available" }))
-                    $item.SubItems.Add($ext.Description.Substring(0, [math]::Min(50, $ext.Description.Length)) + "...")
-                    $extList.Items.Add($item) | Out-Null
-                }
-            }
-            catch {
-                Write-DevConsole "Error loading extensions: $_" "ERROR"
-            }
-        })
-    $extTab.Controls.Add($loadExtBtn)
-    
-    # Bottom buttons
-    $scanBtn = New-Object System.Windows.Forms.Button
-    $scanBtn.Text = "🔍 Rescan System"
-    $scanBtn.Location = New-Object System.Drawing.Point(10, 520)
-    $scanBtn.Size = New-Object System.Drawing.Size(150, 35)
-    $scanBtn.FlatStyle = "Flat"
-    $scanBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-    $scanBtn.ForeColor = [System.Drawing.Color]::White
-    $scanForm.Controls.Add($scanBtn)
-    
-    $applyBtn = New-Object System.Windows.Forms.Button
-    $applyBtn.Text = "✅ Apply Optimal Settings"
-    $applyBtn.Location = New-Object System.Drawing.Point(170, 520)
-    $applyBtn.Size = New-Object System.Drawing.Size(180, 35)
-    $applyBtn.FlatStyle = "Flat"
-    $applyBtn.BackColor = [System.Drawing.Color]::FromArgb(0, 122, 204)
-    $applyBtn.ForeColor = [System.Drawing.Color]::White
-    $scanForm.Controls.Add($applyBtn)
-    
-    $exportBtn = New-Object System.Windows.Forms.Button
-    $exportBtn.Text = "💾 Export Report"
-    $exportBtn.Location = New-Object System.Drawing.Point(360, 520)
-    $exportBtn.Size = New-Object System.Drawing.Size(150, 35)
-    $exportBtn.FlatStyle = "Flat"
-    $exportBtn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-    $exportBtn.ForeColor = [System.Drawing.Color]::White
-    $scanForm.Controls.Add($exportBtn)
-    
-    $closeBtn = New-Object System.Windows.Forms.Button
-    $closeBtn.Text = "Close"
-    $closeBtn.Location = New-Object System.Drawing.Point(520, 520)
-    $closeBtn.Size = New-Object System.Drawing.Size(150, 35)
-    $closeBtn.FlatStyle = "Flat"
-    $closeBtn.BackColor = [System.Drawing.Color]::FromArgb(80, 80, 80)
-    $closeBtn.ForeColor = [System.Drawing.Color]::White
-    $closeBtn.Add_Click({ $scanForm.Close() })
-    $scanForm.Controls.Add($closeBtn)
-    
-    # Tier indicator
-    $tierLabel = New-Object System.Windows.Forms.Label
-    $tierLabel.Location = New-Object System.Drawing.Point(10, 565)
-    $tierLabel.Size = New-Object System.Drawing.Size(660, 30)
-    $tierLabel.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
-    $tierLabel.TextAlign = "MiddleCenter"
-    $scanForm.Controls.Add($tierLabel)
-    
-    # Function to update display
-    $updateDisplay = {
-        param($specs, $optimal)
-        
-        if (-not $specs) { return }
-        
-        # Update specs text
-        $specsText.Clear()
-        $specsText.AppendText("═══════════════════════════════════════════════════════════`n")
-        $specsText.AppendText("                    SYSTEM SPECIFICATIONS                    `n")
-        $specsText.AppendText("═══════════════════════════════════════════════════════════`n`n")
-        
-        $specsText.AppendText("🖥️ CPU`n")
-        $specsText.AppendText("   Name: $($specs.CPU.Name)`n")
-        $specsText.AppendText("   Cores: $($specs.CPU.Cores) ($($specs.CPU.LogicalProcessors) threads)`n")
-        $specsText.AppendText("   Speed: $($specs.CPU.MaxSpeed) MHz`n")
-        $specsText.AppendText("   Architecture: $($specs.CPU.Architecture)`n`n")
-        
-        $specsText.AppendText("💾 MEMORY`n")
-        $specsText.AppendText("   Total: $($specs.RAM.TotalGB) GB`n")
-        $specsText.AppendText("   Available: $($specs.RAM.AvailableGB) GB`n")
-        $specsText.AppendText("   Speed: $($specs.RAM.Speed) MHz`n")
-        $specsText.AppendText("   Slots Used: $($specs.RAM.Slots)`n`n")
-        
-        $specsText.AppendText("🎮 GPU`n")
-        $specsText.AppendText("   Name: $($specs.GPU.Name)`n")
-        $specsText.AppendText("   VRAM: $($specs.GPU.VRAM_MB) MB`n")
-        $specsText.AppendText("   CUDA Support: $($specs.GPU.CUDASupport)`n`n")
-        
-        $specsText.AppendText("💿 STORAGE`n")
-        $specsText.AppendText("   System Drive: $($specs.Storage.SystemDrive)`n")
-        $specsText.AppendText("   Total: $($specs.Storage.TotalGB) GB`n")
-        $specsText.AppendText("   Free: $($specs.Storage.FreeGB) GB`n")
-        $specsText.AppendText("   Type: $($specs.Storage.Type)`n`n")
-        
-        $specsText.AppendText("🖼️ DISPLAY`n")
-        $specsText.AppendText("   Resolution: $($specs.Display.Width)x$($specs.Display.Height)`n")
-        $specsText.AppendText("   DPI: $($specs.Display.DPI) ($($specs.Display.ScaleFactor * 100)%)`n")
-        $specsText.AppendText("   Monitors: $($specs.Display.Monitors)`n`n")
-        
-        $specsText.AppendText("📊 PERFORMANCE SCORE: $($specs.Performance.Score) / 1000`n")
-        $specsText.AppendText("   System Tier: $($specs.Performance.Tier)`n")
-        
-        # Update recommendations
-        if ($optimal) {
-            $recsText.Clear()
-            $recsText.AppendText("═══════════════════════════════════════════════════════════`n")
-            $recsText.AppendText("                 RECOMMENDED SETTINGS                       `n")
-            $recsText.AppendText("═══════════════════════════════════════════════════════════`n`n")
-            
-            $recsText.AppendText("🤖 AI SETTINGS`n")
-            $recsText.AppendText("   Recommended Model Size: $($optimal.RecommendedModelSize)`n")
-            $recsText.AppendText("   Max Context Length: $($optimal.MaxContextLength) tokens`n")
-            $recsText.AppendText("   GPU Acceleration: $($optimal.UseGPUAcceleration)`n`n")
-            
-            $recsText.AppendText("💻 PERFORMANCE`n")
-            $recsText.AppendText("   Thread Pool Size: $($optimal.ThreadPoolSize)`n")
-            $recsText.AppendText("   Async Operations: $($optimal.AsyncOperations)`n")
-            $recsText.AppendText("   Parallel Processing: $($optimal.EnableParallelProcessing)`n`n")
-            
-            $recsText.AppendText("📝 EDITOR`n")
-            $recsText.AppendText("   Font Size: $($optimal.FontSize)`n")
-            $recsText.AppendText("   Undo History: $($optimal.UndoHistorySize) steps`n")
-            $recsText.AppendText("   Auto-Save: Every $($optimal.AutoSaveInterval) seconds`n`n")
-            
-            $recsText.AppendText("✨ FEATURES`n")
-            $recsText.AppendText("   Syntax Highlighting: $($optimal.EnableSyntaxHighlighting)`n")
-            $recsText.AppendText("   Auto-Complete: $($optimal.EnableAutoComplete)`n")
-            $recsText.AppendText("   Live Preview: $($optimal.EnableLivePreview)`n")
-            $recsText.AppendText("   Animations: $($optimal.EnableAnimations)`n`n")
-            
-            $recsText.AppendText("🎯 RECOMMENDED MODELS:`n")
-            foreach ($model in $optimal.RecommendedModels) {
-                $recsText.AppendText("   • $model`n")
-            }
-            
-            # Update recommended models list
-            $recModelsList.Items.Clear()
-            foreach ($model in $optimal.RecommendedModels) {
-                $recModelsList.Items.Add($model) | Out-Null
-            }
-        }
-        
-        # Update tier label
-        $tierColor = switch ($specs.Performance.Tier) {
-            "High-End" { [System.Drawing.Color]::LightGreen }
-            "Mid-Range" { [System.Drawing.Color]::Cyan }
-            "Entry-Level" { [System.Drawing.Color]::Yellow }
-            default { [System.Drawing.Color]::Orange }
-        }
-        $tierLabel.ForeColor = $tierColor
-        $tierLabel.Text = "System Tier: $($specs.Performance.Tier) | Score: $($specs.Performance.Score) | Scanned: $($specs.ScanTime.ToString('HH:mm:ss'))"
-    }
-    
-    # Scan button handler
-    $scanBtn.Add_Click({
-            $scanBtn.Enabled = $false
-            $scanBtn.Text = "Scanning..."
-            $scanForm.Refresh()
-        
-            $result = Invoke-SystemScan
-            & $updateDisplay $result.Specs $result.OptimalSettings
-        
-            # Refresh model list
-            $modelCombo.Items.Clear()
-            $models = Get-AvailableModels
-            foreach ($m in $models) { $modelCombo.Items.Add($m) | Out-Null }
-            if ($modelCombo.Items.Count -gt 0) { $modelCombo.SelectedIndex = 0 }
-        
-            $scanBtn.Enabled = $true
-            $scanBtn.Text = "🔍 Rescan System"
-        })
-    
-    # Apply button handler
-    $applyBtn.Add_Click({
-            if ($script:OptimalSettings) {
-                Apply-OptimalSettings -Settings $script:OptimalSettings
-                [System.Windows.Forms.MessageBox]::Show(
-                    "Optimal settings have been applied based on your system specifications.`n`nSystem Tier: $($script:SystemSpecs.Performance.Tier)`nRecommended Model Size: $($script:OptimalSettings.RecommendedModelSize)",
-                    "Settings Applied",
-                    "OK",
-                    "Information"
-                )
-            }
-            else {
-                [System.Windows.Forms.MessageBox]::Show("Please scan system first.", "No Scan Data", "OK", "Warning")
-            }
-        })
-    
-    # Export button handler
-    $exportBtn.Add_Click({
-            if ($script:SystemSpecs) {
-                $saveDialog = New-Object System.Windows.Forms.SaveFileDialog
-                $saveDialog.Filter = "JSON Files (*.json)|*.json|Text Files (*.txt)|*.txt"
-                $saveDialog.FileName = "RawrXD-SystemReport-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-            
-                if ($saveDialog.ShowDialog() -eq "OK") {
-                    $report = @{
-                        GeneratedAt     = Get-Date
-                        Application     = "RawrXD IDE"
-                        SystemSpecs     = $script:SystemSpecs
-                        OptimalSettings = $script:OptimalSettings
-                    }
-                    $report | ConvertTo-Json -Depth 5 | Out-File $saveDialog.FileName -Encoding UTF8
-                    Write-DevConsole "Report exported to: $($saveDialog.FileName)" "SUCCESS"
-                    [System.Windows.Forms.MessageBox]::Show("Report exported successfully!", "Export Complete", "OK", "Information")
-                }
-            }
-        })
-    
-    # Initial population
-    if ($script:SystemSpecs -and $script:OptimalSettings) {
-        & $updateDisplay $script:SystemSpecs $script:OptimalSettings
-    }
-    else {
-        # Auto-scan on first open
-        $result = Invoke-SystemScan
-        & $updateDisplay $result.Specs $result.OptimalSettings
-    }
-    
-    # Populate model combo
-    $models = Get-AvailableModels
-    foreach ($m in $models) { $modelCombo.Items.Add($m) | Out-Null }
-    if ($global:settings.OllamaModel) {
-        $idx = $modelCombo.Items.IndexOf($global:settings.OllamaModel)
-        if ($idx -ge 0) { $modelCombo.SelectedIndex = $idx }
-        elseif ($modelCombo.Items.Count -gt 0) { $modelCombo.SelectedIndex = 0 }
-    }
-    elseif ($modelCombo.Items.Count -gt 0) { $modelCombo.SelectedIndex = 0 }
-    
-    $scanForm.ShowDialog() | Out-Null
-}
-
 function Get-AvailableModels {
-    <#
-    .SYNOPSIS
-        Gets all available Ollama models from API and custom directories
-    .DESCRIPTION
-        Retrieves models from Ollama API and scans custom model directory.
-        This is a convenience wrapper around Scan-ForModels.
-    .OUTPUTS
-        [array] Array of model names
-    #>
-    # Use the comprehensive scan function
-    return Scan-ForModels -CustomPath "D:\OllamaModels"
+    try {
+        $response = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -Method GET -TimeoutSec 5
+        return $response.models | ForEach-Object { $_.name } | Sort-Object
+    }
+    catch {
+        Write-DevConsole "Could not fetch models from Ollama: $_" "WARNING"
+        return @("bigdaddyg-fast:latest", "llama3:latest", "phi:latest")  # fallback models
+    }
 }
 
 function Show-ModelSettings {
@@ -17793,7 +8914,7 @@ function Show-ModelSettings {
 function Show-EditorSettings {
     $editorForm = New-Object System.Windows.Forms.Form
     $editorForm.Text = "Editor Settings"
-    $editorForm.Size = New-Object System.Drawing.Size(450, 600)
+    $editorForm.Size = New-Object System.Drawing.Size(450, 350)
     $editorForm.StartPosition = "CenterScreen"
     $editorForm.FormBorderStyle = "FixedDialog"
     $editorForm.MaximizeBox = $false
@@ -17842,358 +8963,38 @@ function Show-EditorSettings {
     $tabNumeric.Value = $global:settings.TabSize
     $editorForm.Controls.Add($tabNumeric)
     
-    # Text Color
-    $textColorLabel = New-Object System.Windows.Forms.Label
-    $textColorLabel.Text = "Text Color:"
-    $textColorLabel.Location = New-Object System.Drawing.Point(20, 110)
-    $textColorLabel.Size = New-Object System.Drawing.Size(100, 23)
-    $editorForm.Controls.Add($textColorLabel)
-    
-    # Get current text color from settings or editor
-    $currentTextColor = if ($global:settings.EditorTextColor) {
-        $colorParts = $global:settings.EditorTextColor -split ','
-        [System.Drawing.Color]::FromArgb([int]$colorParts[0], [int]$colorParts[1], [int]$colorParts[2])
-    }
-    elseif ($script:editor) {
-        $script:editor.ForeColor
-    }
-    else {
-        [System.Drawing.Color]::White
-    }
-    
-    # Get current background color from settings or editor
-    $currentBgColor = if ($global:settings.EditorBackgroundColor) {
-        $colorParts = $global:settings.EditorBackgroundColor -split ','
-        [System.Drawing.Color]::FromArgb([int]$colorParts[0], [int]$colorParts[1], [int]$colorParts[2])
-    }
-    elseif ($script:editor) {
-        $script:editor.BackColor
-    }
-    else {
-        [System.Drawing.Color]::FromArgb(30, 30, 30)
-    }
-    
-    $textColorButton = New-Object System.Windows.Forms.Button
-    $textColorButton.Text = "Select Color"
-    $textColorButton.Location = New-Object System.Drawing.Point(130, 107)
-    $textColorButton.Size = New-Object System.Drawing.Size(150, 30)
-    $textColorButton.BackColor = $currentTextColor
-    $textColorButton.ForeColor = if ($currentTextColor.GetBrightness() -lt 0.5) { [System.Drawing.Color]::White } else { [System.Drawing.Color]::Black }
-    $textColorButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $textColorButton.FlatAppearance.BorderSize = 1
-    $textColorButton.FlatAppearance.BorderColor = [System.Drawing.Color]::Gray
-    $editorForm.Controls.Add($textColorButton)
-    
-    $selectedTextColor = $currentTextColor
-    
-    # Background Color
-    $bgColorLabel = New-Object System.Windows.Forms.Label
-    $bgColorLabel.Text = "Background Color:"
-    $bgColorLabel.Location = New-Object System.Drawing.Point(20, 145)
-    $bgColorLabel.Size = New-Object System.Drawing.Size(100, 23)
-    $editorForm.Controls.Add($bgColorLabel)
-    
-    $bgColorButton = New-Object System.Windows.Forms.Button
-    $bgColorButton.Text = "Select Color"
-    $bgColorButton.Location = New-Object System.Drawing.Point(130, 142)
-    $bgColorButton.Size = New-Object System.Drawing.Size(150, 30)
-    $bgColorButton.BackColor = $currentBgColor
-    $bgColorButton.ForeColor = if ($currentBgColor.GetBrightness() -lt 0.5) { [System.Drawing.Color]::White } else { [System.Drawing.Color]::Black }
-    $bgColorButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $bgColorButton.FlatAppearance.BorderSize = 1
-    $bgColorButton.FlatAppearance.BorderColor = [System.Drawing.Color]::Gray
-    $editorForm.Controls.Add($bgColorButton)
-    
-    $selectedBgColor = $currentBgColor
-    
-    # Color preview label
-    $colorPreviewLabel = New-Object System.Windows.Forms.Label
-    $colorPreviewLabel.Text = "Preview: The quick brown fox jumps over the lazy dog"
-    $colorPreviewLabel.Location = New-Object System.Drawing.Point(20, 180)
-    $colorPreviewLabel.Size = New-Object System.Drawing.Size(400, 25)
-    $colorPreviewLabel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
-    $colorPreviewLabel.BackColor = $selectedBgColor
-    $colorPreviewLabel.ForeColor = $selectedTextColor
-    $editorForm.Controls.Add($colorPreviewLabel)
-    
-    # Update preview when colors change
-    $updateColorPreview = {
-        $colorPreviewLabel.ForeColor = $selectedTextColor
-        $colorPreviewLabel.BackColor = $selectedBgColor
-        $textColorButton.BackColor = $selectedTextColor
-        $textColorButton.ForeColor = if ($selectedTextColor.GetBrightness() -lt 0.5) { [System.Drawing.Color]::White } else { [System.Drawing.Color]::Black }
-        $bgColorButton.BackColor = $selectedBgColor
-        $bgColorButton.ForeColor = if ($selectedBgColor.GetBrightness() -lt 0.5) { [System.Drawing.Color]::White } else { [System.Drawing.Color]::Black }
-    }
-    
-    $textColorButton.Add_Click({
-            $colorDialog = New-Object System.Windows.Forms.ColorDialog
-            $colorDialog.Color = $selectedTextColor
-            $colorDialog.FullOpen = $true
-            if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $selectedTextColor = $colorDialog.Color
-                & $updateColorPreview
-            }
-        })
-    
-    $bgColorButton.Add_Click({
-            $colorDialog = New-Object System.Windows.Forms.ColorDialog
-            $colorDialog.Color = $selectedBgColor
-            $colorDialog.FullOpen = $true
-            if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $selectedBgColor = $colorDialog.Color
-                & $updateColorPreview
-            }
-        })
-    
     # Checkboxes
     $lineNumbersCheck = New-Object System.Windows.Forms.CheckBox
     $lineNumbersCheck.Text = "Show Line Numbers"
-    $lineNumbersCheck.Location = New-Object System.Drawing.Point(20, 225)
+    $lineNumbersCheck.Location = New-Object System.Drawing.Point(20, 110)
     $lineNumbersCheck.Size = New-Object System.Drawing.Size(150, 23)
     $lineNumbersCheck.Checked = $global:settings.ShowLineNumbers
     $editorForm.Controls.Add($lineNumbersCheck)
     
     $wrapCheck = New-Object System.Windows.Forms.CheckBox
     $wrapCheck.Text = "Word Wrap"
-    $wrapCheck.Location = New-Object System.Drawing.Point(200, 225)
+    $wrapCheck.Location = New-Object System.Drawing.Point(200, 110)
     $wrapCheck.Size = New-Object System.Drawing.Size(150, 23)
     $wrapCheck.Checked = $global:settings.WrapText
     $editorForm.Controls.Add($wrapCheck)
     
     $autoIndentCheck = New-Object System.Windows.Forms.CheckBox
     $autoIndentCheck.Text = "Auto Indent"
-    $autoIndentCheck.Location = New-Object System.Drawing.Point(20, 265)
+    $autoIndentCheck.Location = New-Object System.Drawing.Point(20, 150)
     $autoIndentCheck.Size = New-Object System.Drawing.Size(150, 23)
     $autoIndentCheck.Checked = $global:settings.AutoIndent
     $editorForm.Controls.Add($autoIndentCheck)
     
     $highlightCheck = New-Object System.Windows.Forms.CheckBox
     $highlightCheck.Text = "Syntax Highlighting"
-    $highlightCheck.Location = New-Object System.Drawing.Point(200, 265)
+    $highlightCheck.Location = New-Object System.Drawing.Point(200, 150)
     $highlightCheck.Size = New-Object System.Drawing.Size(150, 23)
     $highlightCheck.Checked = $global:settings.CodeHighlighting
-    $highlightCheck.Add_CheckedChanged({
-            $syntaxColorsGroup.Enabled = $highlightCheck.Checked
-        })
     $editorForm.Controls.Add($highlightCheck)
-    
-    # Syntax Highlighting Colors Group
-    $syntaxColorsGroup = New-Object System.Windows.Forms.GroupBox
-    $syntaxColorsGroup.Text = "Syntax Highlighting Colors"
-    $syntaxColorsGroup.Location = New-Object System.Drawing.Point(20, 305)
-    $syntaxColorsGroup.Size = New-Object System.Drawing.Size(400, 200)
-    $syntaxColorsGroup.Enabled = $highlightCheck.Checked
-    $editorForm.Controls.Add($syntaxColorsGroup)
-    
-    # Helper function to parse color from settings
-    $parseColor = {
-        param([string]$colorString, [System.Drawing.Color]$defaultColor)
-        if ($colorString) {
-            try {
-                $parts = $colorString -split ','
-                if ($parts.Count -eq 3) {
-                    return [System.Drawing.Color]::FromArgb([int]$parts[0], [int]$parts[1], [int]$parts[2])
-                }
-            }
-            catch { }
-        }
-        return $defaultColor
-    }
-    
-    # Keyword Color
-    $keywordColor = & $parseColor $global:settings.SyntaxKeywordColor ([System.Drawing.Color]::FromArgb(86, 156, 214))
-    $keywordLabel = New-Object System.Windows.Forms.Label
-    $keywordLabel.Text = "Keywords:"
-    $keywordLabel.Location = New-Object System.Drawing.Point(10, 25)
-    $keywordLabel.Size = New-Object System.Drawing.Size(80, 23)
-    $syntaxColorsGroup.Controls.Add($keywordLabel)
-    
-    $keywordColorBtn = New-Object System.Windows.Forms.Button
-    $keywordColorBtn.Text = "Color"
-    $keywordColorBtn.Location = New-Object System.Drawing.Point(95, 22)
-    $keywordColorBtn.Size = New-Object System.Drawing.Size(100, 25)
-    $keywordColorBtn.BackColor = $keywordColor
-    $keywordColorBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $syntaxColorsGroup.Controls.Add($keywordColorBtn)
-    $selectedKeywordColor = $keywordColor
-    
-    # String Color
-    $stringColor = & $parseColor $global:settings.SyntaxStringColor ([System.Drawing.Color]::FromArgb(206, 145, 120))
-    $stringLabel = New-Object System.Windows.Forms.Label
-    $stringLabel.Text = "Strings:"
-    $stringLabel.Location = New-Object System.Drawing.Point(210, 25)
-    $stringLabel.Size = New-Object System.Drawing.Size(80, 23)
-    $syntaxColorsGroup.Controls.Add($stringLabel)
-    
-    $stringColorBtn = New-Object System.Windows.Forms.Button
-    $stringColorBtn.Text = "Color"
-    $stringColorBtn.Location = New-Object System.Drawing.Point(295, 22)
-    $stringColorBtn.Size = New-Object System.Drawing.Size(100, 25)
-    $stringColorBtn.BackColor = $stringColor
-    $stringColorBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $syntaxColorsGroup.Controls.Add($stringColorBtn)
-    $selectedStringColor = $stringColor
-    
-    # Comment Color
-    $commentColor = & $parseColor $global:settings.SyntaxCommentColor ([System.Drawing.Color]::FromArgb(106, 153, 85))
-    $commentLabel = New-Object System.Windows.Forms.Label
-    $commentLabel.Text = "Comments:"
-    $commentLabel.Location = New-Object System.Drawing.Point(10, 60)
-    $commentLabel.Size = New-Object System.Drawing.Size(80, 23)
-    $syntaxColorsGroup.Controls.Add($commentLabel)
-    
-    $commentColorBtn = New-Object System.Windows.Forms.Button
-    $commentColorBtn.Text = "Color"
-    $commentColorBtn.Location = New-Object System.Drawing.Point(95, 57)
-    $commentColorBtn.Size = New-Object System.Drawing.Size(100, 25)
-    $commentColorBtn.BackColor = $commentColor
-    $commentColorBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $syntaxColorsGroup.Controls.Add($commentColorBtn)
-    $selectedCommentColor = $commentColor
-    
-    # Function Color
-    $functionColor = & $parseColor $global:settings.SyntaxFunctionColor ([System.Drawing.Color]::FromArgb(220, 220, 170))
-    $functionLabel = New-Object System.Windows.Forms.Label
-    $functionLabel.Text = "Functions:"
-    $functionLabel.Location = New-Object System.Drawing.Point(210, 60)
-    $functionLabel.Size = New-Object System.Drawing.Size(80, 23)
-    $syntaxColorsGroup.Controls.Add($functionLabel)
-    
-    $functionColorBtn = New-Object System.Windows.Forms.Button
-    $functionColorBtn.Text = "Color"
-    $functionColorBtn.Location = New-Object System.Drawing.Point(295, 57)
-    $functionColorBtn.Size = New-Object System.Drawing.Size(100, 25)
-    $functionColorBtn.BackColor = $functionColor
-    $functionColorBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $syntaxColorsGroup.Controls.Add($functionColorBtn)
-    $selectedFunctionColor = $functionColor
-    
-    # Variable Color
-    $variableColor = & $parseColor $global:settings.SyntaxVariableColor ([System.Drawing.Color]::FromArgb(156, 220, 254))
-    $variableLabel = New-Object System.Windows.Forms.Label
-    $variableLabel.Text = "Variables:"
-    $variableLabel.Location = New-Object System.Drawing.Point(10, 95)
-    $variableLabel.Size = New-Object System.Drawing.Size(80, 23)
-    $syntaxColorsGroup.Controls.Add($variableLabel)
-    
-    $variableColorBtn = New-Object System.Windows.Forms.Button
-    $variableColorBtn.Text = "Color"
-    $variableColorBtn.Location = New-Object System.Drawing.Point(95, 92)
-    $variableColorBtn.Size = New-Object System.Drawing.Size(100, 25)
-    $variableColorBtn.BackColor = $variableColor
-    $variableColorBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $syntaxColorsGroup.Controls.Add($variableColorBtn)
-    $selectedVariableColor = $variableColor
-    
-    # Number Color
-    $numberColor = & $parseColor $global:settings.SyntaxNumberColor ([System.Drawing.Color]::FromArgb(181, 206, 168))
-    $numberLabel = New-Object System.Windows.Forms.Label
-    $numberLabel.Text = "Numbers:"
-    $numberLabel.Location = New-Object System.Drawing.Point(210, 95)
-    $numberLabel.Size = New-Object System.Drawing.Size(80, 23)
-    $syntaxColorsGroup.Controls.Add($numberLabel)
-    
-    $numberColorBtn = New-Object System.Windows.Forms.Button
-    $numberColorBtn.Text = "Color"
-    $numberColorBtn.Location = New-Object System.Drawing.Point(295, 92)
-    $numberColorBtn.Size = New-Object System.Drawing.Size(100, 25)
-    $numberColorBtn.BackColor = $numberColor
-    $numberColorBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $syntaxColorsGroup.Controls.Add($numberColorBtn)
-    $selectedNumberColor = $numberColor
-    
-    # Operator Color
-    $operatorColor = & $parseColor $global:settings.SyntaxOperatorColor ([System.Drawing.Color]::FromArgb(180, 180, 180))
-    $operatorLabel = New-Object System.Windows.Forms.Label
-    $operatorLabel.Text = "Operators:"
-    $operatorLabel.Location = New-Object System.Drawing.Point(10, 130)
-    $operatorLabel.Size = New-Object System.Drawing.Size(80, 23)
-    $syntaxColorsGroup.Controls.Add($operatorLabel)
-    
-    $operatorColorBtn = New-Object System.Windows.Forms.Button
-    $operatorColorBtn.Text = "Color"
-    $operatorColorBtn.Location = New-Object System.Drawing.Point(95, 127)
-    $operatorColorBtn.Size = New-Object System.Drawing.Size(100, 25)
-    $operatorColorBtn.BackColor = $operatorColor
-    $operatorColorBtn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $syntaxColorsGroup.Controls.Add($operatorColorBtn)
-    $selectedOperatorColor = $operatorColor
-    
-    # Color picker handlers
-    $keywordColorBtn.Add_Click({
-            $colorDialog = New-Object System.Windows.Forms.ColorDialog
-            $colorDialog.Color = $selectedKeywordColor
-            $colorDialog.FullOpen = $true
-            if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $selectedKeywordColor = $colorDialog.Color
-                $keywordColorBtn.BackColor = $selectedKeywordColor
-            }
-        })
-    
-    $stringColorBtn.Add_Click({
-            $colorDialog = New-Object System.Windows.Forms.ColorDialog
-            $colorDialog.Color = $selectedStringColor
-            $colorDialog.FullOpen = $true
-            if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $selectedStringColor = $colorDialog.Color
-                $stringColorBtn.BackColor = $selectedStringColor
-            }
-        })
-    
-    $commentColorBtn.Add_Click({
-            $colorDialog = New-Object System.Windows.Forms.ColorDialog
-            $colorDialog.Color = $selectedCommentColor
-            $colorDialog.FullOpen = $true
-            if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $selectedCommentColor = $colorDialog.Color
-                $commentColorBtn.BackColor = $selectedCommentColor
-            }
-        })
-    
-    $functionColorBtn.Add_Click({
-            $colorDialog = New-Object System.Windows.Forms.ColorDialog
-            $colorDialog.Color = $selectedFunctionColor
-            $colorDialog.FullOpen = $true
-            if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $selectedFunctionColor = $colorDialog.Color
-                $functionColorBtn.BackColor = $selectedFunctionColor
-            }
-        })
-    
-    $variableColorBtn.Add_Click({
-            $colorDialog = New-Object System.Windows.Forms.ColorDialog
-            $colorDialog.Color = $selectedVariableColor
-            $colorDialog.FullOpen = $true
-            if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $selectedVariableColor = $colorDialog.Color
-                $variableColorBtn.BackColor = $selectedVariableColor
-            }
-        })
-    
-    $numberColorBtn.Add_Click({
-            $colorDialog = New-Object System.Windows.Forms.ColorDialog
-            $colorDialog.Color = $selectedNumberColor
-            $colorDialog.FullOpen = $true
-            if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $selectedNumberColor = $colorDialog.Color
-                $numberColorBtn.BackColor = $selectedNumberColor
-            }
-        })
-    
-    $operatorColorBtn.Add_Click({
-            $colorDialog = New-Object System.Windows.Forms.ColorDialog
-            $colorDialog.Color = $selectedOperatorColor
-            $colorDialog.FullOpen = $true
-            if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $selectedOperatorColor = $colorDialog.Color
-                $operatorColorBtn.BackColor = $selectedOperatorColor
-            }
-        })
     
     # Buttons
     $buttonPanel = New-Object System.Windows.Forms.Panel
-    $buttonPanel.Location = New-Object System.Drawing.Point(0, 520)
+    $buttonPanel.Location = New-Object System.Drawing.Point(0, 270)
     $buttonPanel.Size = New-Object System.Drawing.Size(450, 50)
     $buttonPanel.Dock = [System.Windows.Forms.DockStyle]::Bottom
     $editorForm.Controls.Add($buttonPanel)
@@ -18221,21 +9022,6 @@ function Show-EditorSettings {
         $global:settings.WrapText = $wrapCheck.Checked
         $global:settings.AutoIndent = $autoIndentCheck.Checked
         $global:settings.CodeHighlighting = $highlightCheck.Checked
-        
-        # Save text color as RGB string
-        $global:settings.EditorTextColor = "$($selectedTextColor.R),$($selectedTextColor.G),$($selectedTextColor.B)"
-        
-        # Save background color as RGB string
-        $global:settings.EditorBackgroundColor = "$($selectedBgColor.R),$($selectedBgColor.G),$($selectedBgColor.B)"
-        
-        # Save syntax highlighting colors
-        $global:settings.SyntaxKeywordColor = "$($selectedKeywordColor.R),$($selectedKeywordColor.G),$($selectedKeywordColor.B)"
-        $global:settings.SyntaxStringColor = "$($selectedStringColor.R),$($selectedStringColor.G),$($selectedStringColor.B)"
-        $global:settings.SyntaxCommentColor = "$($selectedCommentColor.R),$($selectedCommentColor.G),$($selectedCommentColor.B)"
-        $global:settings.SyntaxFunctionColor = "$($selectedFunctionColor.R),$($selectedFunctionColor.G),$($selectedFunctionColor.B)"
-        $global:settings.SyntaxVariableColor = "$($selectedVariableColor.R),$($selectedVariableColor.G),$($selectedVariableColor.B)"
-        $global:settings.SyntaxNumberColor = "$($selectedNumberColor.R),$($selectedNumberColor.G),$($selectedNumberColor.B)"
-        $global:settings.SyntaxOperatorColor = "$($selectedOperatorColor.R),$($selectedOperatorColor.G),$($selectedOperatorColor.B)"
         
         Apply-EditorSettings
         Save-Settings
@@ -18277,22 +9063,15 @@ function New-ChatTab {
     $chatSplitter.SplitterDistance = 350
     $chatSplitter.Panel2MinSize = 80
     $chatSplitter.IsSplitterFixed = $false
-    # Add collapsible functionality
-    $chatSplitter.Panel1Collapsed = $false
-    $chatSplitter.Panel2Collapsed = $false
     $newChatTabPage.Controls.Add($chatSplitter)
     
-    # Chat display area - Use TextBox instead of RichTextBox to avoid RTF errors
-    $chatBox = New-Object System.Windows.Forms.TextBox
+    # Chat display area
+    $chatBox = New-Object System.Windows.Forms.RichTextBox
     $chatBox.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $chatBox.Multiline = $true
     $chatBox.ReadOnly = $true
-    $chatBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
     $chatBox.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-    # CRITICAL FIX: Use light gray text for visibility (same as editor)
     $chatBox.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-    $chatBox.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)  # Light gray for visibility
-    $chatBox.WordWrap = $true
+    $chatBox.ForeColor = [System.Drawing.Color]::White
     $chatSplitter.Panel1.Controls.Add($chatBox)
     
     # Input area container
@@ -18324,48 +9103,24 @@ function New-ChatTab {
     $modelCombo.Height = 18
     $modelCombo.Font = New-Object System.Drawing.Font("Segoe UI", 8)
     $modelCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-    
-    # FIX: Dynamically load models from Ollama API instead of hardcoded list
-    try {
-        $availableModels = Get-AvailableModels
-        if ($availableModels -and $availableModels.Count -gt 0) {
-            foreach ($m in $availableModels) {
-                $modelCombo.Items.Add($m) | Out-Null
-            }
-            Write-DevConsole "✅ Loaded $($availableModels.Count) models into chat dropdown" "DEBUG"
-        }
-        else {
-            # Fallback to common models if scan fails
-            $fallbackModels = @("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder", "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M")
-            $modelCombo.Items.AddRange($fallbackModels)
-            Write-DevConsole "⚠️ Using fallback model list (scan returned no models)" "WARNING"
-        }
-    }
-    catch {
-        # Fallback on error
-        $fallbackModels = @("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder", "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M")
-        $modelCombo.Items.AddRange($fallbackModels)
-        Write-DevConsole "⚠️ Error loading models, using fallback: $_" "WARNING"
-    }
-    
+    $modelCombo.Items.AddRange(@("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder"))
     $modelCombo.SelectedItem = if ($Model) { $Model } else { $global:settings.OllamaModel }
     $modelCombo.Margin = New-Object System.Windows.Forms.Padding(0)
     $modelPanel.Controls.Add($modelCombo)
     
-    # Input box - Fill the remaining space after model panel
+    # Input box - Use explicit positioning instead of Fill to ensure visibility
     $inputBox = New-Object System.Windows.Forms.TextBox
-    $inputBox.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $inputBox.Anchor = [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right -bor [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom
+    $inputBox.Location = New-Object System.Drawing.Point(2, 22)
+    $inputBox.Size = New-Object System.Drawing.Size(($inputContainer.Width - 6), ($inputContainer.Height - 26))
     $inputBox.Multiline = $true
-    $inputBox.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $inputBox.Font = New-Object System.Drawing.Font("Segoe UI", 9)
     $inputBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
     $inputBox.WordWrap = $true
-    # CRITICAL FIX: Use light gray text for visibility (consistent with editor and chat display)
     $inputBox.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
-    $inputBox.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)  # Light gray for visibility
+    $inputBox.ForeColor = [System.Drawing.Color]::White
     $inputBox.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
     $inputBox.TabIndex = 0
-    $inputBox.ReadOnly = $false
-    $inputBox.Enabled = $true
     $inputContainer.Controls.Add($inputBox)
     
     # Chat session data
@@ -18438,12 +9193,21 @@ function New-ChatTab {
             $enterSender.ScrollToCaret()
         })
     
+    # Add resize handler for input container to update input box size
+    $inputContainer.add_Resize({
+            param($resizeSender, $e)
+            try {
+                # Update input box size when container resizes
+                $inputBox.Size = New-Object System.Drawing.Size(($resizeSender.Width - 6), ($resizeSender.Height - 26))
+            }
+            catch {
+                # Ignore resize errors
+            }
+        })
+    
     # Select the new tab
     $chatTabControl.SelectedTab = $newChatTabPage
     $script:activeChatTabId = $tabId
-    
-    # Ensure input box can receive focus
-    $inputBox.Focus()
     
     Update-ChatStatus
     Write-DevConsole "✅ Created new chat tab: $finalTabName" "SUCCESS"
@@ -18503,205 +9267,12 @@ function Send-ChatMessage {
     
     if ([string]::IsNullOrWhiteSpace($message)) { return }
     
-    # ============================================
-    # AGENTIC VIDEO ENGINE COMMANDS
-    # ============================================
-    # Handle /search, /download, /play, /stream, /playlist, /navigate, /click, /screenshot
-    # Also handles natural language like "search youtube for...", "download this video", etc.
-    if ($message -match "^/(search|download|play|stream|playlist|navigate|click|screenshot|video|youtube)\b" -or
-        $message -match "^(search|find|look for|download|get|save|play|watch|stream|open)\s+(youtube|video|the video)" -or
-        $message -match "download\s+(video|#?\d+|https?://)" -or
-        $message -match "play\s+(video|#?\d+|https?://)" -or
-        $message -match "search\s+youtube\s+for" -or
-        $message -match "^/yt\s+" -or
-        $message -match "^/dl\s+") {
-        
-        # Show user message in chat
-        $userText = Format-ChatText -Text "You: $message`n"
-        $chatSession.ChatBox.AppendText($userText)
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        Write-DevConsole "🎬 Processing agentic video command: $message" "INFO"
-        
-        try {
-            # Check if agentic command processor is available
-            if (Get-Command Process-AgentCommand -ErrorAction SilentlyContinue) {
-                # Normalize shortcuts
-                $normalizedCommand = $message
-                if ($message -match "^/yt\s+(.+)") { $normalizedCommand = "/search youtube $($matches[1])" }
-                if ($message -match "^/dl\s+(.+)") { $normalizedCommand = "/download $($matches[1])" }
-                
-                # Process the agentic command
-                $result = Process-AgentCommand -Command $normalizedCommand -OnProgress {
-                    param($ProgressMessage)
-                    # Update chat with progress
-                    $chatSession.ChatBox.AppendText("⏳ $ProgressMessage`n")
-                    $chatSession.ChatBox.ScrollToCaret()
-                    [System.Windows.Forms.Application]::DoEvents()
-                }
-                
-                # Format response based on result
-                $responseMessage = ""
-                
-                if ($result.Status -eq "success") {
-                    switch -Regex ($normalizedCommand) {
-                        "^/(search|find)" {
-                            $responseMessage = "🔍 **Search Results:**`n`n"
-                            if ($result.Display) {
-                                $responseMessage += $result.Display
-                            }
-                            elseif ($result.Results) {
-                                $counter = 1
-                                foreach ($item in $result.Results) {
-                                    $responseMessage += "$counter. **$($item.Title)**`n"
-                                    $responseMessage += "   Channel: $($item.Channel) | Duration: $($item.Duration) | Views: $($item.Views)`n`n"
-                                    $counter++
-                                }
-                            }
-                            $responseMessage += "`n💡 Use `/play 1` to watch or `/download 1` to save"
-                        }
-                        "^/(download|dl)" {
-                            $responseMessage = "✅ **Download Complete!**`n`n"
-                            $responseMessage += "📁 File: $($result.FilePath)`n"
-                            if ($result.Speed) { $responseMessage += "⚡ Speed: $($result.Speed)`n" }
-                            if ($result.Duration) { $responseMessage += "⏱️ Duration: $($result.Duration)`n" }
-                        }
-                        "^/(play|stream|watch)" {
-                            $responseMessage = "▶️ **Now Playing:**`n`n"
-                            $responseMessage += "🎬 $($result.URL)`n"
-                            if ($result.Quality) { $responseMessage += "📺 Quality: $($result.Quality)`n" }
-                        }
-                        "^/playlist" {
-                            $responseMessage = "📋 **Playlist:**`n`n"
-                            if ($result.PlaylistPath) {
-                                $responseMessage += "📁 Saved to: $($result.PlaylistPath)`n"
-                            }
-                            if ($result.VideoCount) {
-                                $responseMessage += "🎬 Videos: $($result.VideoCount)`n"
-                            }
-                            if ($result.Message) {
-                                $responseMessage += $result.Message
-                            }
-                        }
-                        "^/(navigate|click|screenshot)" {
-                            $responseMessage = "🌐 **Browser Action:**`n`n"
-                            if ($result.Message) { $responseMessage += $result.Message }
-                            if ($result.Path) { $responseMessage += "📁 Saved: $($result.Path)`n" }
-                        }
-                        default {
-                            $responseMessage = "✅ Command completed successfully"
-                            if ($result.Message) { $responseMessage += "`n$($result.Message)" }
-                        }
-                    }
-                }
-                elseif ($result.Status -eq "error") {
-                    $responseMessage = "❌ **Error:**`n$($result.Message)"
-                }
-                else {
-                    $responseMessage = "⚠️ Unknown response: $($result | ConvertTo-Json -Compress)"
-                }
-                
-                Write-DevConsole "✅ Agentic command completed: $($result.Status)" "SUCCESS"
-            }
-            else {
-                $responseMessage = "❌ **Agentic Video Engine Not Loaded**`n`n"
-                $responseMessage += "The video engine modules are not available. Please ensure these files exist:`n"
-                $responseMessage += "• BrowserAutomation.ps1`n"
-                $responseMessage += "• DownloadManager.ps1`n"
-                $responseMessage += "• AgentCommandProcessor.ps1`n`n"
-                $responseMessage += "Restart RawrXD to load them."
-                Write-DevConsole "❌ AgentCommandProcessor not loaded" "ERROR"
-            }
-        }
-        catch {
-            $responseMessage = "❌ **Error processing command:**`n$($_.Exception.Message)"
-            Write-DevConsole "❌ Agentic command error: $($_.Exception.Message)" "ERROR"
-        }
-        
-        # Add AI response to chat (with encoding fix)
-        $aiText = Format-ChatText -Text "AI: $responseMessage`n`n"
-        $chatSession.ChatBox.AppendText($aiText)
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        # Store messages in session
-        $chatSession.Messages += @{
-            Role      = "user"
-            Content   = $message
-            Timestamp = Get-Date
-        }
-        $chatSession.Messages += @{
-            Role      = "assistant"
-            Content   = $responseMessage
-            Timestamp = Get-Date
-        }
-        
-        # Clear input and update activity
-        $chatSession.InputBox.Text = ""
-        $chatSession.LastActivity = Get-Date
-        
-        return
-    }
-    
-    # ============================================
-    # AGENTIC HELP COMMAND
-    # ============================================
-    if ($message -match "^/(video-help|agentic-help|yt-help|media-help)$" -or $message -match "how do I (search|download|play) (videos?|youtube)") {
-        $userText = Format-ChatText -Text "You: $message`n"
-        $chatSession.ChatBox.AppendText($userText)
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        $helpText = @"
-🎬 **Agentic Video Engine Commands**
-
-**Search:**
-  /search youtube "query"    - Search YouTube
-  /yt "query"               - Shortcut for YouTube search
-  
-**Download:**
-  /download 1               - Download search result #1
-  /download URL             - Download from URL
-  /dl 1                     - Shortcut for download
-  
-**Playback:**
-  /play 1                   - Play search result #1
-  /play URL                 - Play video from URL
-  /stream URL 720p          - Stream with quality
-  
-**Playlists:**
-  /playlist create "topic"  - Create playlist from search
-  /playlist add 1           - Add video to playlist
-  /playlist list            - Show all playlists
-  
-**Browser Control:**
-  /navigate URL             - Open URL in browser
-  /click "#selector"        - Click element
-  /screenshot               - Capture browser
-  
-**Natural Language:**
-  "search youtube for cats"
-  "download video 1"
-  "play the first video"
-  "watch tutorial on python"
-  
-💡 Tip: Results are numbered, use /play 1 or /download 1 to select!
-"@
-        
-        $chatSession.ChatBox.AppendText("AI: $helpText`n`n")
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        $chatSession.Messages += @{ Role = "user"; Content = $message; Timestamp = Get-Date }
-        $chatSession.Messages += @{ Role = "assistant"; Content = $helpText; Timestamp = Get-Date }
-        $chatSession.InputBox.Text = ""
-        $chatSession.LastActivity = Get-Date
-        return
-    }
-    
     # Check for theme switching commands
     if ($message -match "^/(theme|set-theme)\s+(.+)" -or $message -match "switch theme to (.+)" -or $message -match "use (.+) theme" -or $message -match "^/(theme|current-theme)$" -or $message -match "what theme" -or $message -match "current theme") {
         $themeRequest = $matches[1] -or $matches[2]
         $themeRequest = $themeRequest.Trim()
         
-        $userText = Format-ChatText -Text "You: $message`n"
+        $userText = "You: $message`n"
         $chatSession.ChatBox.AppendText($userText)
         $chatSession.ChatBox.ScrollToCaret()
         
@@ -18774,255 +9345,8 @@ function Send-ChatMessage {
         return
     }
     
-    # Check for /grep or GREP command - search for text patterns in files
-    if ($message -match "^/(grep|search-text)\s+(.+)" -or $message -match "^(grep|search)\s+(.+)" -or $message -match "search for (.+) in") {
-        $searchPattern = if ($matches[1] -eq "grep" -or $matches[1] -eq "search-text" -or $matches[1] -eq "search") { $matches[2] } else { $matches[1] }
-        $searchPattern = $searchPattern.Trim()
-        
-        $userText = Format-ChatText -Text "You: $message`n"
-        $chatSession.ChatBox.AppendText($userText)
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        $responseMessage = "🔍 Searching for pattern: '$searchPattern'`n`n"
-        $chatSession.ChatBox.AppendText("AI: $responseMessage")
-        
-        try {
-            $currentDir = if ($global:currentFile) { Split-Path $global:currentFile } else { $global:currentWorkingDir }
-            if (-not $currentDir) { $currentDir = Get-Location }
-            
-            $results = @()
-            $fileCount = 0
-            $matchCount = 0
-            
-            # Search in current directory and subdirectories
-            Get-ChildItem -Path $currentDir -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
-                try {
-                    $content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
-                    if ($content -match $searchPattern) {
-                        $fileCount++
-                        $lines = $content -split "`n"
-                        $lineMatches = @()
-                        for ($i = 0; $i -lt $lines.Count; $i++) {
-                            if ($lines[$i] -match $searchPattern) {
-                                $lineMatches += "  Line $($i + 1): $($lines[$i].Trim())"
-                                $matchCount++
-                            }
-                        }
-                        if ($lineMatches.Count -gt 0) {
-                            $results += "📄 $($_.Name) ($($_.FullName))"
-                            $results += $lineMatches[0..([Math]::Min(5, $lineMatches.Count - 1))]
-                            if ($lineMatches.Count -gt 5) {
-                                $results += "  ... and $($lineMatches.Count - 5) more matches"
-                            }
-                        }
-                    }
-                }
-                catch { }
-            }
-            
-            if ($results.Count -eq 0) {
-                $responseMessage += "❌ No matches found for pattern '$searchPattern' in $currentDir"
-            }
-            else {
-                $responseMessage += "✅ Found $matchCount match(es) in $fileCount file(s):`n`n"
-                $responseMessage += ($results -join "`n")
-                if ($results.Count -gt 20) {
-                    $responseMessage += "`n... (showing first 20 results)"
-                }
-            }
-        }
-        catch {
-            $responseMessage += "❌ Error searching: $($_.Exception.Message)"
-        }
-        
-        $chatSession.ChatBox.AppendText("$responseMessage`n`n")
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        $chatSession.Messages += @{ Role = "user"; Content = $message; Timestamp = Get-Date }
-        $chatSession.Messages += @{ Role = "assistant"; Content = $responseMessage; Timestamp = Get-Date }
-        $chatSession.InputBox.Text = ""
-        $chatSession.LastActivity = Get-Date
-        return
-    }
-    
-    # Check for /search or SEARCH command - semantic/codebase search
-    if ($message -match "^/(search|find|codebase-search)\s+(.+)" -or $message -match "^(search|find)\s+(.+)" -or $message -match "search codebase for (.+)") {
-        $searchQuery = if ($matches[1] -eq "search" -or $matches[1] -eq "find" -or $matches[1] -eq "codebase-search") { $matches[2] } else { $matches[1] }
-        $searchQuery = $searchQuery.Trim()
-        
-        $userText = Format-ChatText -Text "You: $message`n"
-        $chatSession.ChatBox.AppendText($userText)
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        $responseMessage = "🔎 Semantic search for: '$searchQuery'`n`n"
-        $chatSession.ChatBox.AppendText("AI: $responseMessage")
-        
-        try {
-            $currentDir = if ($global:currentFile) { Split-Path $global:currentFile } else { $global:currentWorkingDir }
-            if (-not $currentDir) { $currentDir = Get-Location }
-            
-            # Use codebase_search equivalent - search for files containing the query
-            $results = @()
-            $fileCount = 0
-            
-            Get-ChildItem -Path $currentDir -Recurse -File -ErrorAction SilentlyContinue | 
-            Where-Object { $_.Extension -match '\.(ps1|psm1|txt|md|json|xml|yaml|yml|js|ts|py|java|cpp|h|cs)$' } | 
-            ForEach-Object {
-                try {
-                    $content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
-                    # Simple keyword matching for semantic search
-                    $keywords = $searchQuery -split '\s+'
-                    $matchScore = 0
-                    foreach ($keyword in $keywords) {
-                        if ($content -match [regex]::Escape($keyword)) {
-                            $matchScore++
-                        }
-                    }
-                    if ($matchScore -gt 0) {
-                        $fileCount++
-                        $results += "📄 $($_.Name) (Score: $matchScore/$($keywords.Count)) - $($_.FullName)"
-                        if ($results.Count -ge 10) { return }
-                    }
-                }
-                catch { }
-            }
-            
-            if ($results.Count -eq 0) {
-                $responseMessage += "❌ No relevant files found for '$searchQuery'"
-            }
-            else {
-                $responseMessage += "✅ Found $fileCount relevant file(s):`n`n"
-                $responseMessage += ($results -join "`n")
-            }
-        }
-        catch {
-            $responseMessage += "❌ Error searching: $($_.Exception.Message)"
-        }
-        
-        $chatSession.ChatBox.AppendText("$responseMessage`n`n")
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        $chatSession.Messages += @{ Role = "user"; Content = $message; Timestamp = Get-Date }
-        $chatSession.Messages += @{ Role = "assistant"; Content = $responseMessage; Timestamp = Get-Date }
-        $chatSession.InputBox.Text = ""
-        $chatSession.LastActivity = Get-Date
-        return
-    }
-    
-    # Check for /list or LIST command - list files/directories
-    if ($message -match "^/(list|ls|dir)\s*(.*)" -or $message -match "^(list|show)\s+(files|directories|dir)\s*(.*)" -or $message -match "list (.+)") {
-        $listPath = if ($matches[1] -and $matches[1] -ne "list" -and $matches[1] -ne "ls" -and $matches[1] -ne "dir") { $matches[1] } 
-        elseif ($matches[2]) { $matches[2] } 
-        else { "" }
-        $listPath = $listPath.Trim()
-        
-        $userText = Format-ChatText -Text "You: $message`n"
-        $chatSession.ChatBox.AppendText($userText)
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        try {
-            if ([string]::IsNullOrWhiteSpace($listPath)) {
-                $listPath = if ($global:currentFile) { Split-Path $global:currentFile } else { $global:currentWorkingDir }
-                if (-not $listPath) { $listPath = Get-Location }
-            }
-            
-            if (-not (Test-Path $listPath)) {
-                $responseMessage = "❌ Path not found: $listPath"
-            }
-            else {
-                $items = Get-ChildItem -Path $listPath -ErrorAction SilentlyContinue | Sort-Object Name
-                $dirs = $items | Where-Object { $_.PSIsContainer }
-                $files = $items | Where-Object { -not $_.PSIsContainer }
-                
-                $responseMessage = "📁 Directory: $listPath`n`n"
-                $responseMessage += "📂 Directories ($($dirs.Count)):`n"
-                foreach ($dir in $dirs) {
-                    $responseMessage += "  📁 $($dir.Name)`n"
-                }
-                $responseMessage += "`n📄 Files ($($files.Count)):`n"
-                foreach ($file in $files) {
-                    $size = if ($file.Length -lt 1KB) { "$($file.Length) B" }
-                    elseif ($file.Length -lt 1MB) { "$([math]::Round($file.Length/1KB, 2)) KB" }
-                    else { "$([math]::Round($file.Length/1MB, 2)) MB" }
-                    $responseMessage += "  📄 $($file.Name) ($size)`n"
-                }
-                
-                if ($items.Count -gt 50) {
-                    $responseMessage += "`n... (showing first 50 items)"
-                }
-            }
-        }
-        catch {
-            $responseMessage = "❌ Error listing directory: $($_.Exception.Message)"
-        }
-        
-        $chatSession.ChatBox.AppendText("AI: $responseMessage`n`n")
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        $chatSession.Messages += @{ Role = "user"; Content = $message; Timestamp = Get-Date }
-        $chatSession.Messages += @{ Role = "assistant"; Content = $responseMessage; Timestamp = Get-Date }
-        $chatSession.InputBox.Text = ""
-        $chatSession.LastActivity = Get-Date
-        return
-    }
-    
-    # Check for /summarize or summarize chat context
-    if ($message -match "^/(summarize|summary|context)" -or $message -match "summarize (chat|conversation|context)") {
-        $userText = Format-ChatText -Text "You: $message`n"
-        $chatSession.ChatBox.AppendText($userText)
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        $responseMessage = "📋 Chat Context Summary`n`n"
-        
-        try {
-            $messageCount = $chatSession.Messages.Count
-            $userMessages = $chatSession.Messages | Where-Object { $_.Role -eq "user" }
-            $aiMessages = $chatSession.Messages | Where-Object { $_.Role -eq "assistant" }
-            
-            $responseMessage += "📊 Statistics:`n"
-            $responseMessage += "  • Total messages: $messageCount`n"
-            $responseMessage += "  • User messages: $($userMessages.Count)`n"
-            $responseMessage += "  • AI responses: $($aiMessages.Count)`n"
-            $responseMessage += "  • Session duration: $((Get-Date) - $chatSession.Messages[0].Timestamp)`n"
-            $responseMessage += "`n💬 Recent Topics:`n"
-            
-            # Extract key topics from recent messages
-            $recentMessages = $chatSession.Messages[-10..-1] | Where-Object { $_ }
-            $topics = @()
-            foreach ($msg in $recentMessages) {
-                if ($msg.Role -eq "user" -and $msg.Content.Length -gt 10) {
-                    $words = $msg.Content -split '\s+' | Where-Object { $_.Length -gt 4 }
-                    $topics += $words[0..2] -join " "
-                }
-            }
-            $uniqueTopics = $topics | Select-Object -Unique | Select-Object -First 5
-            foreach ($topic in $uniqueTopics) {
-                $responseMessage += "  • $topic`n"
-            }
-            
-            $responseMessage += "`n📝 Key Points:`n"
-            # Summarize first few user messages
-            foreach ($msg in $userMessages[0..([Math]::Min(3, $userMessages.Count - 1))]) {
-                $preview = if ($msg.Content.Length -gt 60) { $msg.Content.Substring(0, 60) + "..." } else { $msg.Content }
-                $responseMessage += "  • $preview`n"
-            }
-        }
-        catch {
-            $responseMessage += "❌ Error generating summary: $($_.Exception.Message)"
-        }
-        
-        $chatSession.ChatBox.AppendText("AI: $responseMessage`n`n")
-        $chatSession.ChatBox.ScrollToCaret()
-        
-        $chatSession.Messages += @{ Role = "user"; Content = $message; Timestamp = Get-Date }
-        $chatSession.Messages += @{ Role = "assistant"; Content = $responseMessage; Timestamp = Get-Date }
-        $chatSession.InputBox.Text = ""
-        $chatSession.LastActivity = Get-Date
-        return
-    }
-    
     # Add user message to chat
-    $userText = Format-ChatText -Text "You: $message`n"
+    $userText = "You: $message`n"
     $chatSession.ChatBox.AppendText($userText)
     $chatSession.ChatBox.ScrollToCaret()
     
@@ -19037,8 +9361,8 @@ function Send-ChatMessage {
     $chatSession.InputBox.Text = ""
     $chatSession.LastActivity = Get-Date
     
-    # Show processing indicator (with encoding fix)
-    $processingText = Format-ChatText -Text "AI (processing...): "
+    # Show processing indicator
+    $processingText = "AI (processing...): "
     $chatSession.ChatBox.AppendText($processingText)
     $chatSession.ChatBox.ScrollToCaret()
     
@@ -19072,19 +9396,8 @@ function Send-ChatMessage {
             param($message, $model, $chatHistory)
         
             try {
-                # Build context from chat history with available commands
-                $systemContext = @"
-You are an AI assistant in RawrXD IDE. You have access to these commands:
-- /grep <pattern> or grep <pattern> - Search for text patterns in files
-- /search <query> or search <query> - Semantic codebase search
-- /list [path] or list [path] - List files and directories
-- /summarize - Summarize chat context and conversation
-- /theme <name> - Change UI theme
-
-You can help users search code, find files, and navigate the codebase.
-"@
-                
-                $context = "System: $systemContext`n`n"
+                # Build context from chat history
+                $context = ""
                 foreach ($msg in $chatHistory) {
                     $context += "$($msg.Role): $($msg.Content)`n"
                 }
@@ -19095,48 +9408,7 @@ You can help users search code, find files, and navigate the codebase.
                     stream = $false
                 } | ConvertTo-Json -Depth 3
             
-                # PRODUCTION SECURITY: HTTPS enforced, API key required
-                # Runspace-safe API key retrieval (function -> global settings -> env vars)
-                $apiKey = $null
-                
-                # Try function first
-                try {
-                    if (Get-Command -Name Get-SecureAPIKey -CommandType Function -ErrorAction SilentlyContinue) {
-                        $apiKey = Get-SecureAPIKey
-                    }
-                }
-                catch { }
-                
-                # Try global settings next
-                if (-not $apiKey) {
-                    try {
-                        if ($global:settings -and $global:settings.OllamaAPIKey) {
-                            $apiKey = $global:settings.OllamaAPIKey
-                        }
-                    }
-                    catch { }
-                }
-                
-                # Fall back to environment variables (safe for background jobs/runspaces)
-                if (-not $apiKey) {
-                    foreach ($envVar in @('RAWRXD_API_KEY', 'OLLAMA_API_KEY', 'RAWRAI_API_KEY')) {
-                        $val = [System.Environment]::GetEnvironmentVariable($envVar)
-                        if ($val -and $val.Trim() -ne '') {
-                            $apiKey = $val
-                            break
-                            ds                        
-                        }
-                    }
-                }
-                
-                $headers = @{
-                    "Content-Type" = "application/json"
-                }
-                if ($apiKey) {
-                    $headers["Authorization"] = "Bearer $apiKey"
-                    $headers["X-Ollama-API-Key"] = $apiKey
-                }
-                $response = Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method POST -Body $body -ContentType "application/json" -Headers $headers
+                $response = Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method POST -Body $body -ContentType "application/json"
                 return $response.response
             }
             catch {
@@ -19167,112 +9439,33 @@ You can help users search code, find files, and navigate the codebase.
     # Update UI when complete (timer-based polling)
     $completionTracker.Timer = New-Object System.Windows.Forms.Timer
     $completionTracker.Timer.Interval = 100
-    $timerRef = $completionTracker.Timer
-    $trackerRef = $completionTracker
     $completionTracker.Timer.add_Tick({
-            try {
-                # CRITICAL NULL CHECK: Ensure all references are valid
-                if (-not $trackerRef -or -not $timerRef) {
-                    return
-                }
+            if ($completionTracker.Job.IsCompleted) {
+                try {
+                    $aiResponse = $completionTracker.PowerShell.EndInvoke($completionTracker.Job)
                 
-                if (-not $trackerRef.Job -or -not $trackerRef.PowerShell -or -not $trackerRef.ChatSession) {
-                    if ($timerRef) {
-                        $timerRef.Stop()
-                        $timerRef.Dispose()
-                    }
-                    return
-                }
+                    # Update chat display
+                    $completionTracker.ChatSession.ChatBox.Text = $completionTracker.ChatSession.ChatBox.Text -replace "$([regex]::Escape($completionTracker.ProcessingText))$", "AI: $aiResponse`n`n"
+                    $completionTracker.ChatSession.ChatBox.ScrollToCaret()
                 
-                if ($trackerRef.Job.IsCompleted) {
-                    try {
-                        $aiResponse = $trackerRef.PowerShell.EndInvoke($trackerRef.Job)
-                    
-                        # CRITICAL NULL CHECK: Verify ChatBox exists and is valid
-                        if ($trackerRef.ChatSession -and 
-                            $trackerRef.ChatSession.ChatBox -and 
-                            -not $trackerRef.ChatSession.ChatBox.IsDisposed) {
-                            
-                            # Safely get current text
-                            # FIX: Use AppendText instead of Text assignment to prevent scroll reset
-                            $currentText = if ($trackerRef.ChatSession.ChatBox.Text) { 
-                                $trackerRef.ChatSession.ChatBox.Text 
-                            }
-                            else { "" }
-                            
-                            # Remove processing text and append response (with encoding fix)
-                            $newText = $currentText -replace "$([regex]::Escape($trackerRef.ProcessingText))$", ""
-                            $trackerRef.ChatSession.ChatBox.Text = $newText
-                            $formattedResponse = Format-ChatText -Text "AI: $aiResponse`n`n"
-                            $trackerRef.ChatSession.ChatBox.AppendText($formattedResponse)
-                            
-                            # Keep view anchored at bottom for new messages
-                            $trackerRef.ChatSession.ChatBox.SelectionStart = $trackerRef.ChatSession.ChatBox.TextLength
-                            $trackerRef.ChatSession.ChatBox.ScrollToCaret()
-                        }
-                    
-                        # Store AI response
-                        if ($trackerRef.ChatSession -and $trackerRef.ChatSession.Messages) {
-                            $trackerRef.ChatSession.Messages += @{
-                                Role      = "assistant"
-                                Content   = $aiResponse
-                                Timestamp = Get-Date
-                            }
-                        }
-                    
-                        Write-DevConsole "✅ AI response received for chat $($trackerRef.TabId)" "SUCCESS"
+                    # Store AI response
+                    $completionTracker.ChatSession.Messages += @{
+                        Role      = "assistant"
+                        Content   = $aiResponse
+                        Timestamp = Get-Date
                     }
-                    catch [System.Management.Automation.PipelineStoppedException] {
-                        # Pipeline stopped - silently ignore during shutdown
-                    }
-                    catch {
-                        # CRITICAL NULL CHECK: Verify ChatBox before error message
-                        if ($trackerRef.ChatSession -and 
-                            $trackerRef.ChatSession.ChatBox -and 
-                            -not $trackerRef.ChatSession.ChatBox.IsDisposed) {
-                            
-                            # FIX: Use AppendText instead of Text assignment to prevent scroll reset
-                            $currentText = if ($trackerRef.ChatSession.ChatBox.Text) { 
-                                $trackerRef.ChatSession.ChatBox.Text 
-                            }
-                            else { "" }
-                            
-                            # Remove processing text and append error message (with encoding fix)
-                            $newText = $currentText -replace "$([regex]::Escape($trackerRef.ProcessingText))$", ""
-                            $trackerRef.ChatSession.ChatBox.Text = $newText
-                            $formattedError = Format-ChatText -Text "AI: Error generating response`n`n"
-                            $trackerRef.ChatSession.ChatBox.AppendText($formattedError)
-                            $trackerRef.ChatSession.ChatBox.ScrollToCaret()
-                            
-                            # Keep view anchored at bottom even for errors
-                            $trackerRef.ChatSession.ChatBox.SelectionStart = $trackerRef.ChatSession.ChatBox.TextLength
-                            $trackerRef.ChatSession.ChatBox.ScrollToCaret()
-                        }
-                    
-                        Write-DevConsole "❌ Error in chat $($trackerRef.TabId) : $($_.Exception.Message)" "ERROR"
-                    }
-                    finally {
-                        if ($timerRef) {
-                            $timerRef.Stop()
-                            $timerRef.Dispose()
-                        }
-                        if ($trackerRef.PowerShell) {
-                            $trackerRef.PowerShell.Dispose()
-                        }
-                        if ($trackerRef.Runspace) {
-                            $trackerRef.Runspace.Close()
-                        }
-                    }
+                
+                    Write-DevConsole "✅ AI response received for chat $($completionTracker.TabId)" "SUCCESS"
                 }
-            }
-            catch {
-                Write-DevConsole "❌ Fatal error in completion tracker timer: $_" "ERROR"
-                if ($timerRef) {
-                    try {
-                        $timerRef.Stop()
-                        $timerRef.Dispose()
-                    }
-                    catch {}
+                catch {
+                    $completionTracker.ChatSession.ChatBox.Text = $completionTracker.ChatSession.ChatBox.Text -replace "$([regex]::Escape($completionTracker.ProcessingText))$", "AI: Error generating response`n`n"
+                    Write-DevConsole "❌ Error in chat $($completionTracker.TabId) : $($_.Exception.Message)" "ERROR"
+                }
+                finally {
+                    $completionTracker.Timer.Stop()
+                    $completionTracker.Timer.Dispose()
+                    $completionTracker.PowerShell.Dispose()
+                    $completionTracker.Runspace.Close()
                 }
             }
         }.GetNewClosure())
@@ -19369,30 +9562,7 @@ function Show-ChatSettings {
     $defaultModelCombo.Location = New-Object System.Drawing.Point(20, 165)
     $defaultModelCombo.Size = New-Object System.Drawing.Size(200, 20)
     $defaultModelCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-    
-    # FIX: Dynamically load models from Ollama API instead of hardcoded list
-    try {
-        $availableModels = Get-AvailableModels
-        if ($availableModels -and $availableModels.Count -gt 0) {
-            foreach ($m in $availableModels) {
-                $defaultModelCombo.Items.Add($m) | Out-Null
-            }
-            Write-DevConsole "✅ Loaded $($availableModels.Count) models into chat settings dropdown" "DEBUG"
-        }
-        else {
-            # Fallback to common models if scan fails
-            $fallbackModels = @("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder", "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M")
-            $defaultModelCombo.Items.AddRange($fallbackModels)
-            Write-DevConsole "⚠️ Using fallback model list in chat settings (scan returned no models)" "WARNING"
-        }
-    }
-    catch {
-        # Fallback on error
-        $fallbackModels = @("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder", "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M")
-        $defaultModelCombo.Items.AddRange($fallbackModels)
-        Write-DevConsole "⚠️ Error loading models in chat settings, using fallback: $_" "WARNING"
-    }
-    
+    $defaultModelCombo.Items.AddRange(@("bigdaddyg-fast:latest", "llama3.2", "llama3.2:1b", "llama3.1", "codellama", "mistral", "qwen2.5-coder"))
     $defaultModelCombo.SelectedItem = $global:settings.OllamaModel
     $chatSettingsForm.Controls.Add($defaultModelCombo)
     
@@ -19639,21 +9809,14 @@ function Update-ThreadingStatusLabel {
     #>
     
     if ($threadingStatusLabel) {
-        try {
-            $status = Get-ThreadingStatus
-            if ($status -and $status.IsInitialized) {
-                $activeJobs = if ($status.ActiveJobs) { $status.ActiveJobs } else { 0 }
-                $maxTasks = if ($status.MaxConcurrentTasks) { $status.MaxConcurrentTasks } else { 0 }
-                $threadingStatusLabel.Text = "MT: $activeJobs/$maxTasks active"
-                $threadingStatusLabel.ForeColor = [System.Drawing.Color]::Green
-            }
-            else {
-                $threadingStatusLabel.Text = "MT: Disabled"
-                $threadingStatusLabel.ForeColor = [System.Drawing.Color]::Red
-            }
+        $status = Get-ThreadingStatus
+        if ($status.IsInitialized) {
+            $threadingStatusLabel.Text = "MT: $($status.ActiveJobs)/$($status.MaxConcurrentTasks) active"
+            $threadingStatusLabel.ForeColor = [System.Drawing.Color]::Green
         }
-        catch {
-            # Silently handle errors in status update
+        else {
+            $threadingStatusLabel.Text = "MT: Disabled"
+            $threadingStatusLabel.ForeColor = [System.Drawing.Color]::Red
         }
     }
 }
@@ -19768,31 +9931,48 @@ function Invoke-CommandPaletteSelection {
 # ============================================
 function Register-AgentTool {
     param(
-        [Parameter(Mandatory = $true)][string]$Name,
-        [Parameter(Mandatory = $true)][string]$Description,
-        [hashtable]$Parameters = @{},
-        [Parameter(Mandatory = $true)][scriptblock]$Handler,
-        [string]$Category = "General",
-        [string]$Version = "1.0"
+        [string]$Name,
+        [string]$Description,
+        [hashtable]$Parameters,
+        [scriptblock]$Handler
     )
-
+    
     if (-not $script:agentTools) {
         $script:agentTools = @{}
     }
-
+    
     $script:agentTools[$Name] = @{
         Name        = $Name
         Description = $Description
         Parameters  = $Parameters
         Handler     = $Handler
-        Category    = $Category
-        Version     = $Version
-        Registered  = (Get-Date).ToString('o')
     }
 }
 
-# Removed duplicate Invoke-AgentTool function - using the more complete version defined later in the file
-# This function was a simpler version that has been replaced by the enhanced version at line 11004
+function Invoke-AgentTool {
+    param(
+        [string]$ToolName,
+        [hashtable]$Arguments
+    )
+    
+    if ($script:agentTools -and $script:agentTools[$ToolName]) {
+        $tool = $script:agentTools[$ToolName]
+        try {
+            $result = & $tool.Handler @Arguments
+            $global:agentContext.Commands += @{
+                Tool      = $ToolName
+                Arguments = $Arguments
+                Result    = $result
+                Timestamp = Get-Date
+            }
+            return $result
+        }
+        catch {
+            return @{Error = $_.Exception.Message }
+        }
+    }
+    return @{Error = "Tool not found: $ToolName" }
+}
 
 function Get-AgentToolsSchema {
     <#
@@ -20131,2238 +10311,6 @@ Register-AgentTool -Name "git_commit" -Description "Commit changes to Git reposi
     }
 }
 
-Register-AgentTool -Name "git_init" -Description "Initialize a new Git repository" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    repository_path = @{
-        type        = "string"
-        description = "Path where to initialize the repository (defaults to current directory)"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$repository_path = $null)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        # Check if already a git repo
-        if (Test-Path (Join-Path $repoPath ".git")) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Directory is already a Git repository" }
-        }
-        
-        $result = git init 2>&1 | Out-String
-        Set-Location $originalLocation
-        
-        return @{
-            success = $true
-            path    = $repoPath
-            output  = $result
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_add" -Description "Stage files for commit in Git repository" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    files           = @{
-        type        = "string"
-        description = "Files to add (use '.' for all files, or specific file paths)"
-        required    = $true
-    }
-    repository_path = @{
-        type        = "string"
-        description = "Path to Git repository"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$files, [string]$repository_path = $null)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Not a Git repository" }
-        }
-        
-        $result = git add $files 2>&1 | Out-String
-        Set-Location $originalLocation
-        
-        return @{
-            success = $true
-            files   = $files
-            output  = $result
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_push" -Description "Push changes to remote Git repository (GitHub, etc.). Automatically handles stuck pushes." `
-    -Category "Git" -Version "1.1" `
-    -Parameters @{
-    remote          = @{
-        type        = "string"
-        description = "Remote name (default: origin)"
-        required    = $false
-    }
-    branch          = @{
-        type        = "string"
-        description = "Branch to push (default: current branch)"
-        required    = $false
-    }
-    repository_path = @{
-        type        = "string"
-        description = "Path to Git repository"
-        required    = $false
-    }
-    force           = @{
-        type        = "boolean"
-        description = "Force push (use with caution, useful when push gets stuck)"
-        required    = $false
-    }
-    timeout_seconds = @{
-        type        = "integer"
-        description = "Timeout in seconds (default: 60, use 0 for no timeout)"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$remote = "origin", [string]$branch = $null, [string]$repository_path = $null, [bool]$force = $false, [int]$timeout_seconds = 60)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Not a Git repository" }
-        }
-        
-        # Get current branch if not specified
-        if (-not $branch) {
-            $branch = git branch --show-current 2>&1
-            if ($LASTEXITCODE -ne 0) {
-                Set-Location $originalLocation
-                return @{success = $false; error = "Could not determine current branch" }
-            }
-        }
-        
-        # Build push command
-        $pushArgs = @($remote, $branch)
-        if ($force) {
-            $pushArgs = @($remote, $branch, "--force")
-        }
-        
-        # Execute with timeout if specified
-        $result = ""
-        if ($timeout_seconds -gt 0) {
-            $job = Start-Job -ScriptBlock {
-                param($args)
-                Set-Location $using:repoPath
-                & git push $args 2>&1 | Out-String
-            } -ArgumentList $pushArgs
-            
-            $completed = Wait-Job -Job $job -Timeout $timeout_seconds
-            if ($completed) {
-                $result = Receive-Job -Job $job
-                Remove-Job -Job $job
-            }
-            else {
-                Stop-Job -Job $job
-                Remove-Job -Job $job
-                Set-Location $originalLocation
-                return @{
-                    success    = $false
-                    error      = "Push operation timed out after $timeout_seconds seconds. Try force push or check network connection."
-                    suggestion = "Use git_push with force=true or check if remote is accessible"
-                }
-            }
-        }
-        else {
-            $result = git push $pushArgs 2>&1 | Out-String
-        }
-        
-        Set-Location $originalLocation
-        
-        # Check for common stuck push scenarios
-        if ($result -match "fatal:|error:|timeout|connection refused|connection reset") {
-            return @{
-                success    = $false
-                error      = "Push failed: $result"
-                suggestion = "Try: git_abort, git_reset, or git_push with force=true"
-                output     = $result
-            }
-        }
-        
-        return @{
-            success = $true
-            remote  = $remote
-            branch  = $branch
-            output  = $result
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_create_remote" -Description "Add a remote repository (e.g., GitHub) to Git repository" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    name            = @{
-        type        = "string"
-        description = "Remote name (default: origin)"
-        required    = $false
-    }
-    url             = @{
-        type        = "string"
-        description = "Remote URL (e.g., https://github.com/user/repo.git)"
-        required    = $true
-    }
-    repository_path = @{
-        type        = "string"
-        description = "Path to Git repository"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$name = "origin", [string]$url, [string]$repository_path = $null)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Not a Git repository" }
-        }
-        
-        # Check if remote already exists
-        $existing = git remote get-url $name 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            # Update existing remote
-            $result = git remote set-url $name $url 2>&1 | Out-String
-        }
-        else {
-            # Add new remote
-            $result = git remote add $name $url 2>&1 | Out-String
-        }
-        
-        Set-Location $originalLocation
-        
-        return @{
-            success = $true
-            name    = $name
-            url     = $url
-            output  = $result
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_create_branch" -Description "Create a new Git branch" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    branch_name     = @{
-        type        = "string"
-        description = "Name of the branch to create"
-        required    = $true
-    }
-    checkout        = @{
-        type        = "boolean"
-        description = "Switch to the new branch after creating it"
-        required    = $false
-    }
-    repository_path = @{
-        type        = "string"
-        description = "Path to Git repository"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$branch_name, [bool]$checkout = $true, [string]$repository_path = $null)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Not a Git repository" }
-        }
-        
-        # Check if branch already exists
-        $existing = git branch --list $branch_name 2>&1
-        if ($existing) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Branch '$branch_name' already exists" }
-        }
-        
-        if ($checkout) {
-            $result = git checkout -b $branch_name 2>&1 | Out-String
-        }
-        else {
-            $result = git branch $branch_name 2>&1 | Out-String
-        }
-        
-        Set-Location $originalLocation
-        
-        return @{
-            success = $true
-            branch  = $branch_name
-            output  = $result
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_clone" -Description "Clone a Git repository from remote (GitHub, etc.)" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    url         = @{
-        type        = "string"
-        description = "Repository URL to clone (e.g., https://github.com/user/repo.git)"
-        required    = $true
-    }
-    destination = @{
-        type        = "string"
-        description = "Directory where to clone the repository"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$url, [string]$destination = $null)
-    try {
-        $originalLocation = Get-Location
-        
-        # Determine destination
-        if ($destination) {
-            $clonePath = $destination
-        }
-        else {
-            # Extract repo name from URL
-            $repoName = [System.IO.Path]::GetFileNameWithoutExtension($url -replace '\.git$', '')
-            $clonePath = Join-Path $global:currentWorkingDir $repoName
-        }
-        
-        # Check if destination already exists
-        if (Test-Path $clonePath) {
-            return @{success = $false; error = "Destination directory already exists: $clonePath" }
-        }
-        
-        # Clone the repository
-        $result = git clone $url $clonePath 2>&1 | Out-String
-        
-        return @{
-            success     = $true
-            url         = $url
-            destination = $clonePath
-            output      = $result
-        }
-    }
-    catch {
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_pull" -Description "Pull latest changes from remote Git repository" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    remote          = @{
-        type        = "string"
-        description = "Remote name (default: origin)"
-        required    = $false
-    }
-    branch          = @{
-        type        = "string"
-        description = "Branch to pull (default: current branch)"
-        required    = $false
-    }
-    repository_path = @{
-        type        = "string"
-        description = "Path to Git repository"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$remote = "origin", [string]$branch = $null, [string]$repository_path = $null)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Not a Git repository" }
-        }
-        
-        # Build pull command
-        $pullArgs = @($remote)
-        if ($branch) {
-            $pullArgs += $branch
-        }
-        
-        $result = git pull $pullArgs 2>&1 | Out-String
-        Set-Location $originalLocation
-        
-        return @{
-            success = $true
-            remote  = $remote
-            branch  = $branch
-            output  = $result
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_reset" -Description "Reset Git repository to recover from stuck operations (merge, rebase, etc.)" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    reset_type      = @{
-        type        = "string"
-        description = "Reset type: 'hard' (discard all changes), 'soft' (keep changes staged), 'mixed' (keep changes unstaged)"
-        required    = $true
-    }
-    commit          = @{
-        type        = "string"
-        description = "Commit to reset to (default: HEAD)"
-        required    = $false
-    }
-    repository_path = @{
-        type        = "string"
-        description = "Path to Git repository"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$reset_type, [string]$commit = "HEAD", [string]$repository_path = $null)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Not a Git repository" }
-        }
-        
-        # Validate reset type
-        $validTypes = @("hard", "soft", "mixed")
-        if ($reset_type -notin $validTypes) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Invalid reset type. Use: hard, soft, or mixed" }
-        }
-        
-        $result = git reset --$reset_type $commit 2>&1 | Out-String
-        Set-Location $originalLocation
-        
-        return @{
-            success    = $true
-            reset_type = $reset_type
-            commit     = $commit
-            output     = $result
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_clean" -Description "Clean up untracked files and directories (useful when files get stuck)" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    clean_type      = @{
-        type        = "string"
-        description = "Clean type: 'dry-run' (show what would be deleted), 'files' (remove untracked files), 'directories' (remove untracked dirs), 'all' (remove both)"
-        required    = $true
-    }
-    force           = @{
-        type        = "boolean"
-        description = "Force clean (required for git clean -f)"
-        required    = $false
-    }
-    repository_path = @{
-        type        = "string"
-        description = "Path to Git repository"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$clean_type, [bool]$force = $false, [string]$repository_path = $null)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Not a Git repository" }
-        }
-        
-        # Build clean command
-        $cleanArgs = @()
-        if ($clean_type -eq "dry-run") {
-            $cleanArgs += "-n"
-        }
-        elseif ($clean_type -eq "files") {
-            $cleanArgs += "-f"
-        }
-        elseif ($clean_type -eq "directories") {
-            $cleanArgs += "-fd"
-        }
-        elseif ($clean_type -eq "all") {
-            $cleanArgs += "-fd"
-        }
-        
-        if ($force -and $clean_type -ne "dry-run") {
-            $cleanArgs += "-f"
-        }
-        
-        $result = git clean $cleanArgs 2>&1 | Out-String
-        Set-Location $originalLocation
-        
-        return @{
-            success    = $true
-            clean_type = $clean_type
-            output     = $result
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_abort" -Description "Abort stuck Git operations (merge, rebase, cherry-pick, etc.)" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    operation       = @{
-        type        = "string"
-        description = "Operation to abort: 'merge', 'rebase', 'cherry-pick', 'revert', or 'all'"
-        required    = $true
-    }
-    repository_path = @{
-        type        = "string"
-        description = "Path to Git repository"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$operation, [string]$repository_path = $null)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Not a Git repository" }
-        }
-        
-        $result = ""
-        $aborted = @()
-        
-        # Abort specific operation or all
-        if ($operation -eq "all" -or $operation -eq "merge") {
-            if (Test-Path (Join-Path $repoPath ".git\MERGE_HEAD")) {
-                $mergeResult = git merge --abort 2>&1 | Out-String
-                $result += "Merge aborted: $mergeResult`n"
-                $aborted += "merge"
-            }
-        }
-        
-        if ($operation -eq "all" -or $operation -eq "rebase") {
-            if (Test-Path (Join-Path $repoPath ".git\rebase-apply") -or Test-Path (Join-Path $repoPath ".git\rebase-merge")) {
-                $rebaseResult = git rebase --abort 2>&1 | Out-String
-                $result += "Rebase aborted: $rebaseResult`n"
-                $aborted += "rebase"
-            }
-        }
-        
-        if ($operation -eq "all" -or $operation -eq "cherry-pick") {
-            if (Test-Path (Join-Path $repoPath ".git\CHERRY_PICK_HEAD")) {
-                $cherryResult = git cherry-pick --abort 2>&1 | Out-String
-                $result += "Cherry-pick aborted: $cherryResult`n"
-                $aborted += "cherry-pick"
-            }
-        }
-        
-        if ($operation -eq "all" -or $operation -eq "revert") {
-            if (Test-Path (Join-Path $repoPath ".git\REVERT_HEAD")) {
-                $revertResult = git revert --abort 2>&1 | Out-String
-                $result += "Revert aborted: $revertResult`n"
-                $aborted += "revert"
-            }
-        }
-        
-        Set-Location $originalLocation
-        
-        if ($aborted.Count -eq 0) {
-            return @{success = $true; message = "No stuck operations found to abort"; output = $result }
-        }
-        
-        return @{
-            success = $true
-            aborted = $aborted
-            output  = $result
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "git_flush_cache" -Description "Flush Git cache and clear index (useful when files get stuck in cache)" `
-    -Category "Git" -Version "1.0" `
-    -Parameters @{
-    repository_path = @{
-        type        = "string"
-        description = "Path to Git repository"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$repository_path = $null)
-    try {
-        $repoPath = if ($repository_path) { $repository_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $repoPath
-        
-        if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "Not a Git repository" }
-        }
-        
-        # Flush cache
-        $cacheResult = git rm -r --cached . 2>&1 | Out-String
-        
-        # Reset index
-        $resetResult = git reset HEAD 2>&1 | Out-String
-        
-        Set-Location $originalLocation
-        
-        return @{
-            success = $true
-            output  = "Cache flushed. Index reset.`n$cacheResult`n$resetResult"
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "process_kill" -Description "Kill stuck or hanging processes" `
-    -Category "System" -Version "1.0" `
-    -Parameters @{
-    process_name = @{
-        type        = "string"
-        description = "Process name to kill (e.g., 'git', 'node', 'python')"
-        required    = $false
-    }
-    process_id   = @{
-        type        = "integer"
-        description = "Process ID (PID) to kill"
-        required    = $false
-    }
-    force        = @{
-        type        = "boolean"
-        description = "Force kill process"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$process_name = $null, [int]$process_id = 0, [bool]$force = $false)
-    try {
-        $killed = @()
-        
-        if ($process_id -gt 0) {
-            $process = Get-Process -Id $process_id -ErrorAction SilentlyContinue
-            if ($process) {
-                if ($force) {
-                    Stop-Process -Id $process_id -Force
-                }
-                else {
-                    Stop-Process -Id $process_id
-                }
-                $killed += "PID: $process_id ($($process.ProcessName))"
-            }
-            else {
-                return @{success = $false; error = "Process with PID $process_id not found" }
-            }
-        }
-        elseif ($process_name) {
-            $processes = Get-Process -Name $process_name -ErrorAction SilentlyContinue
-            if ($processes) {
-                foreach ($proc in $processes) {
-                    if ($force) {
-                        Stop-Process -Id $proc.Id -Force
-                    }
-                    else {
-                        Stop-Process -Id $proc.Id
-                    }
-                    $killed += "PID: $($proc.Id) ($($proc.ProcessName))"
-                }
-            }
-            else {
-                return @{success = $false; error = "No processes found with name: $process_name" }
-            }
-        }
-        else {
-            return @{success = $false; error = "Must specify either process_name or process_id" }
-        }
-        
-        return @{
-            success = $true
-            killed  = $killed
-            message = "Killed $($killed.Count) process(es)"
-        }
-    }
-    catch {
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "file_unlock" -Description "Unlock files that are stuck or locked by processes" `
-    -Category "FileSystem" -Version "1.0" `
-    -Parameters @{
-    file_path = @{
-        type        = "string"
-        description = "Path to the locked file"
-        required    = $true
-    }
-    force     = @{
-        type        = "boolean"
-        description = "Force unlock (kill processes using the file)"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$file_path, [bool]$force = $false)
-    try {
-        if (-not (Test-Path $file_path)) {
-            return @{success = $false; error = "File not found: $file_path" }
-        }
-        
-        $fileInfo = Get-Item $file_path
-        $lockedBy = @()
-        
-        # Find processes using the file
-        $processes = Get-Process | Where-Object {
-            try {
-                $_.Path -eq $fileInfo.FullName -or 
-                ($_.Modules | Where-Object { $_.FileName -eq $fileInfo.FullName })
-            }
-            catch { $false }
-        }
-        
-        # Also check using handle.exe if available, or use alternative method
-        try {
-            # Try to open file exclusively to check if locked
-            $fileStream = [System.IO.File]::Open($fileInfo.FullName, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
-            $fileStream.Close()
-            return @{success = $true; message = "File is not locked"; locked_by = @() }
-        }
-        catch {
-            # File is locked, try to find and kill processes
-            if ($force) {
-                # Get all processes and check file handles (simplified approach)
-                $allProcesses = Get-Process
-                foreach ($proc in $allProcesses) {
-                    try {
-                        $procModules = $proc.Modules
-                        foreach ($module in $procModules) {
-                            if ($module.FileName -eq $fileInfo.FullName) {
-                                Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-                                $lockedBy += "$($proc.ProcessName) (PID: $($proc.Id))"
-                            }
-                        }
-                    }
-                    catch { }
-                }
-                
-                if ($lockedBy.Count -gt 0) {
-                    return @{
-                        success   = $true
-                        message   = "File unlocked by killing processes"
-                        locked_by = $lockedBy
-                    }
-                }
-            }
-            
-            return @{
-                success   = $false
-                error     = "File is locked. Use force=true to kill processes using it."
-                locked_by = $lockedBy
-            }
-        }
-    }
-    catch {
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-# ============================================
-# PROJECT CREATION & MANAGEMENT TOOLS
-# ============================================
-
-# ============================================
-# LANGUAGE DETECTION & COMPILER DISCOVERY
-# ============================================
-
-function Get-DetectedLanguages {
-    <#
-    .SYNOPSIS
-        Detects all installed programming languages and their compilers/interpreters
-    #>
-    $languages = @{}
-    
-    # Define language detection patterns
-    $languagePatterns = @{
-        "powershell" = @{ command = "pwsh"; version = "--version"; alt = @("powershell") }
-        "python"     = @{ command = "python"; version = "--version"; alt = @("python3", "py") }
-        "node"       = @{ command = "node"; version = "--version"; alt = @() }
-        "javascript" = @{ command = "node"; version = "--version"; alt = @() }
-        "typescript" = @{ command = "tsc"; version = "--version"; alt = @() }
-        "java"       = @{ command = "java"; version = "-version"; alt = @() }
-        "javac"      = @{ command = "javac"; version = "-version"; alt = @() }
-        "csharp"     = @{ command = "dotnet"; version = "--version"; alt = @() }
-        "c"          = @{ command = "gcc"; version = "--version"; alt = @("clang", "cl") }
-        "cpp"        = @{ command = "g++"; version = "--version"; alt = @("clang++", "cl") }
-        "rust"       = @{ command = "rustc"; version = "--version"; alt = @() }
-        "cargo"      = @{ command = "cargo"; version = "--version"; alt = @() }
-        "go"         = @{ command = "go"; version = "version"; alt = @() }
-        "php"        = @{ command = "php"; version = "--version"; alt = @() }
-        "ruby"       = @{ command = "ruby"; version = "--version"; alt = @() }
-        "perl"       = @{ command = "perl"; version = "--version"; alt = @() }
-        "lua"        = @{ command = "lua"; version = "-v"; alt = @() }
-        "swift"      = @{ command = "swift"; version = "--version"; alt = @() }
-        "kotlin"     = @{ command = "kotlinc"; version = "-version"; alt = @() }
-        "scala"      = @{ command = "scala"; version = "-version"; alt = @() }
-        "haskell"    = @{ command = "ghc"; version = "--version"; alt = @() }
-        "ocaml"      = @{ command = "ocaml"; version = "-version"; alt = @() }
-        "fsharp"     = @{ command = "fsharpc"; version = "--version"; alt = @("fsc") }
-        "dart"       = @{ command = "dart"; version = "--version"; alt = @() }
-        "nim"        = @{ command = "nim"; version = "--version"; alt = @() }
-        "crystal"    = @{ command = "crystal"; version = "--version"; alt = @() }
-        "zig"        = @{ command = "zig"; version = "version"; alt = @() }
-        "v"          = @{ command = "v"; version = "version"; alt = @() }
-        "d"          = @{ command = "dmd"; version = "--version"; alt = @("ldc2", "gdc") }
-        "pascal"     = @{ command = "fpc"; version = "-v"; alt = @() }
-        "fortran"    = @{ command = "gfortran"; version = "--version"; alt = @() }
-        "ada"        = @{ command = "gnat"; version = "--version"; alt = @() }
-        "cobol"      = @{ command = "cobc"; version = "--version"; alt = @() }
-        "erlang"     = @{ command = "erlang"; version = "-version"; alt = @() }
-        "elixir"     = @{ command = "elixir"; version = "--version"; alt = @() }
-        "clojure"    = @{ command = "clojure"; version = "--version"; alt = @() }
-        "racket"     = @{ command = "racket"; version = "--version"; alt = @() }
-        "scheme"     = @{ command = "scheme"; version = "--version"; alt = @() }
-        "lisp"       = @{ command = "sbcl"; version = "--version"; alt = @("clisp") }
-        "prolog"     = @{ command = "swipl"; version = "--version"; alt = @() }
-        "bash"       = @{ command = "bash"; version = "--version"; alt = @() }
-        "sh"         = @{ command = "sh"; version = "--version"; alt = @() }
-        "zsh"        = @{ command = "zsh"; version = "--version"; alt = @() }
-        "asm"        = @{ command = "nasm"; version = "-v"; alt = @("ml", "ml64", "masm") }
-        "nasm"       = @{ command = "nasm"; version = "-v"; alt = @() }
-        "masm"       = @{ command = "ml"; version = "/?"; alt = @("ml64") }
-    }
-    
-    foreach ($lang in $languagePatterns.Keys) {
-        $pattern = $languagePatterns[$lang]
-        $detected = $false
-        $version = $null
-        $compiler = $null
-        
-        # Try primary command
-        try {
-            $cmd = Get-Command $pattern.command -ErrorAction SilentlyContinue
-            if ($cmd) {
-                $versionOutput = & $pattern.command $pattern.version 2>&1 | Out-String
-                if ($LASTEXITCODE -eq 0 -or $versionOutput) {
-                    $detected = $true
-                    $version = $versionOutput.Trim()
-                    $compiler = $pattern.command
-                }
-            }
-        }
-        catch { }
-        
-        # Try alternative commands
-        if (-not $detected -and $pattern.alt) {
-            foreach ($alt in $pattern.alt) {
-                try {
-                    $cmd = Get-Command $alt -ErrorAction SilentlyContinue
-                    if ($cmd) {
-                        $versionOutput = & $alt $pattern.version 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0 -or $versionOutput) {
-                            $detected = $true
-                            $version = $versionOutput.Trim()
-                            $compiler = $alt
-                            break
-                        }
-                    }
-                }
-                catch { }
-            }
-        }
-        
-        # Special handling for MASM - check Visual Studio paths
-        if (-not $detected -and $lang -eq "masm") {
-            $vsPaths = @(
-                "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC",
-                "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC",
-                "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC",
-                "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC",
-                "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC",
-                "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC",
-                "${env:ProgramFiles}\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC",
-                "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC"
-            )
-            
-            foreach ($vsPath in $vsPaths) {
-                if (Test-Path $vsPath) {
-                    $msvcDirs = Get-ChildItem -Path $vsPath -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending
-                    foreach ($msvcDir in $msvcDirs) {
-                        $ml64Path = Join-Path $msvcDir "bin\Hostx64\x64\ml64.exe"
-                        $mlPath = Join-Path $msvcDir "bin\Hostx64\x86\ml.exe"
-                        
-                        if (Test-Path $ml64Path) {
-                            $detected = $true
-                            $compiler = "ml64"
-                            $version = "Visual Studio MASM (64-bit) - $($msvcDir.Name)"
-                            break
-                        }
-                        elseif (Test-Path $mlPath) {
-                            $detected = $true
-                            $compiler = "ml"
-                            $version = "Visual Studio MASM (32-bit) - $($msvcDir.Name)"
-                            break
-                        }
-                    }
-                    if ($detected) { break }
-                }
-            }
-        }
-        
-        if ($detected) {
-            $languages[$lang] = @{
-                name      = $lang
-                compiler  = $compiler
-                version   = $version
-                available = $true
-            }
-        }
-    }
-    
-    return $languages
-}
-
-function Get-LanguageProjectTemplate {
-    <#
-    .SYNOPSIS
-        Returns project template structure for a given language
-    #>
-    param([string]$Language)
-    
-    # Build templates dynamically using switch to avoid PowerShell parsing issues
-    $langLower = $Language.ToLower()
-    
-    switch ($langLower) {
-        "python" {
-            $files = @{}
-            $files["main.py"] = @"
-#!/usr/bin/env python3
-"""Main entry point for the application."""
-
-def main():
-    print("Hello, World!")
-
-if __name__ == "__main__":
-    main()
-"@
-            $files["requirements.txt"] = ""
-            $files["README.md"] = @"
-# Python Project
-
-## Getting Started
-
-\`\`\`bash
-pip install -r requirements.txt
-python main.py
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("main.py", "requirements.txt", "README.md")
-            }
-        }
-        
-        "javascript" {
-            $files = @{}
-            $files["index.js"] = @"
-// Main entry point
-console.log('Hello, World!');
-"@
-            $files["package.json"] = @"
-{
-  "name": "project-name",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  }
-}
-"@
-            $files["README.md"] = @"
-# JavaScript Project
-
-## Getting Started
-
-\`\`\`bash
-npm install
-npm start
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("index.js", "package.json", "README.md")
-            }
-        }
-        
-        "typescript" {
-            $files = @{}
-            $files["src/index.ts"] = @"
-// Main entry point
-console.log('Hello, World!');
-"@
-            $files["package.json"] = @"
-{
-  "name": "project-name",
-  "version": "1.0.0",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "ts-node": "^10.9.0"
-  }
-}
-"@
-            $files["tsconfig.json"] = @"
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true
-  }
-}
-"@
-            $files["README.md"] = @"
-# TypeScript Project
-
-## Getting Started
-
-\`\`\`bash
-npm install
-npm run build
-npm start
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("src/index.ts", "package.json", "tsconfig.json", "README.md")
-            }
-        }
-        
-        "rust" {
-            $files = @{}
-            $files["src/main.rs"] = @"
-fn main() {
-    println!("Hello, World!");
-}
-"@
-            $files["Cargo.toml"] = @"
-[package]
-name = "project-name"
-version = "1.0.0"
-edition = "2021"
-
-[dependencies]
-"@
-            $files["README.md"] = @"
-# Rust Project
-
-## Getting Started
-
-\`\`\`bash
-cargo run
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("src/main.rs", "Cargo.toml", "README.md")
-            }
-        }
-        
-        "go" {
-            $files = @{}
-            $files["main.go"] = @"
-package main
-
-import "fmt"
-
-func main() {
-    fmt.Println("Hello, World!")
-}
-"@
-            $files["go.mod"] = @"
-module project-name
-
-go 1.21
-"@
-            $files["README.md"] = @"
-# Go Project
-
-## Getting Started
-
-\`\`\`bash
-go run main.go
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("main.go", "go.mod", "README.md")
-            }
-        }
-        
-        "java" {
-            $files = @{}
-            $files["src/main/java/Main.java"] = @"
-public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-    }
-}
-"@
-            $files["README.md"] = @"
-# Java Project
-
-## Getting Started
-
-\`\`\`bash
-javac src/main/java/Main.java
-java -cp src/main/java Main
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("src/main/java/Main.java", "README.md")
-            }
-        }
-        
-        { $_ -eq "csharp" -or $_ -eq "c#" } {
-            $files = @{}
-            $files["Program.cs"] = @"
-using System;
-
-class Program
-{
-    static void Main(string[] args)
-    {
-        Console.WriteLine("Hello, World!");
-    }
-}
-"@
-            $files["project.csproj"] = @"
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-  </PropertyGroup>
-</Project>
-"@
-            $files["README.md"] = @"
-# C# Project
-
-## Getting Started
-
-\`\`\`bash
-dotnet run
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("Program.cs", "project.csproj", "README.md")
-            }
-        }
-        
-        "c" {
-            $files = @{}
-            $files["main.c"] = @"
-#include <stdio.h>
-
-int main() {
-    printf("Hello, World!\n");
-    return 0;
-}
-"@
-            $files["Makefile"] = @"
-CC=gcc
-CFLAGS=-Wall -std=c11
-TARGET=main
-SOURCES=main.c
-
-all: $(TARGET)
-
-$(TARGET): $(SOURCES)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES)
-
-clean:
-	rm -f $(TARGET)
-
-.PHONY: all clean
-"@
-            $files["README.md"] = @"
-# C Project
-
-## Getting Started
-
-\`\`\`bash
-make
-./main
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("main.c", "Makefile", "README.md")
-            }
-        }
-        
-        { $_ -eq "cpp" -or $_ -eq "c++" } {
-            $files = @{}
-            $files["main.cpp"] = @"
-#include <iostream>
-
-int main() {
-    std::cout << "Hello, World!" << std::endl;
-    return 0;
-}
-"@
-            $files["Makefile"] = @"
-CXX=g++
-CXXFLAGS=-Wall -std=c++17
-TARGET=main
-SOURCES=main.cpp
-
-all: $(TARGET)
-
-$(TARGET): $(SOURCES)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCES)
-
-clean:
-	rm -f $(TARGET)
-
-.PHONY: all clean
-"@
-            $files["README.md"] = @"
-# C++ Project
-
-## Getting Started
-
-\`\`\`bash
-make
-./main
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("main.cpp", "Makefile", "README.md")
-            }
-        }
-        
-        "nasm" {
-            $files = @{}
-            $files["main.asm"] = @"
-; NASM Hello World (Linux x86-64)
-
-section .data
-    msg db 'Hello, World!', 0xA
-    len equ `$ - msg
-
-section .text
-    global _start
-
-_start:
-    ; Write message
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, msg
-    mov rdx, len
-    syscall
-
-    ; Exit
-    mov rax, 60
-    mov rdi, 0
-    syscall
-"@
-            $files["build.sh"] = @"
-#!/bin/bash
-# Build script for Linux x86-64
-nasm -f elf64 main.asm -o main.o
-ld main.o -o main
-./main
-"@
-            $files["build.bat"] = @"
-@echo off
-REM Build script for Windows x86-64
-nasm -f win64 main.asm -o main.obj
-gcc main.obj -o main.exe
-main.exe
-"@
-            $files["README.md"] = @"
-# NASM Assembly Project
-
-## Getting Started
-
-### Linux
-\`\`\`bash
-nasm -f elf64 main.asm -o main.o
-ld main.o -o main
-./main
-\`\`\`
-
-### Windows
-\`\`\`bash
-nasm -f win64 main.asm -o main.obj
-gcc main.obj -o main.exe
-main.exe
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("main.asm", "build.sh", "build.bat", "README.md")
-            }
-        }
-        
-        "masm" {
-            $files = @{}
-            $files["main.asm"] = @"
-; MASM Hello World (Windows x86-64)
-; Requires Visual Studio MASM (ml64.exe)
-
-.code
-main proc
-    sub rsp, 28h
-    mov rcx, -11
-    call GetStdHandle
-    mov rcx, rax
-    lea rdx, msg
-    mov r8, lengthof msg
-    mov r9, 0
-    push 0
-    call WriteFile
-    mov ecx, 0
-    call ExitProcess
-main endp
-
-.data
-    msg db 'Hello, World!', 0Dh, 0Ah
-
-end
-"@
-            $files["build.bat"] = @"
-@echo off
-REM Build script for MASM (Visual Studio)
-ml64 /c main.asm
-link /subsystem:console main.obj kernel32.lib /entry:main
-main.exe
-"@
-            $files["README.md"] = @"
-# MASM Assembly Project
-
-## Getting Started
-
-\`\`\`bash
-ml64 /c main.asm
-link /subsystem:console main.obj kernel32.lib /entry:main
-main.exe
-\`\`\`
-"@
-            return @{
-                files     = $files
-                structure = @("main.asm", "build.bat", "README.md")
-            }
-        }
-        
-        { $_ -eq "asm" -or $_ -eq "assembly" } {
-            $files = @{}
-            $files["main.asm"] = @"
-; Assembly Hello World (NASM syntax)
-
-section .data
-    msg db 'Hello, World!', 0xA
-    len equ `$ - msg
-
-section .text
-    global _start
-
-_start:
-    mov eax, 4
-    mov ebx, 1
-    mov ecx, msg
-    mov edx, len
-    int 0x80
-
-    mov eax, 1
-    mov ebx, 0
-    int 0x80
-"@
-            $files["build.bat"] = @"
-@echo off
-nasm -f win32 main.asm -o main.obj
-gcc main.obj -o main.exe
-main.exe
-"@
-            $files["build.sh"] = @"
-#!/bin/bash
-nasm -f elf32 main.asm -o main.o
-ld -m elf_i386 main.o -o main
-./main
-"@
-            $files["build_masm.bat"] = @"
-@echo off
-ml /c /coff main.asm
-link /subsystem:console main.obj kernel32.lib
-main.exe
-"@
-            $files["README.md"] = @"
-# Assembly Project
-
-## Getting Started
-
-See build scripts for your platform.
-"@
-            return @{
-                files     = $files
-                structure = @("main.asm", "build.bat", "build.sh", "build_masm.bat", "README.md")
-            }
-        }
-    }
-    
-    # Return null if template not found
-    return $null
-}
-
-Register-AgentTool -Name "detect_languages" -Description "Detect all installed programming languages and their compilers/interpreters" `
-    -Category "System" -Version "1.0" `
-    -Parameters @{} `
-    -Handler {
-    param()
-    try {
-        $languages = Get-DetectedLanguages
-        return @{
-            success   = $true
-            languages = $languages
-            count     = $languages.Count
-            detected  = $languages.Keys
-        }
-    }
-    catch {
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "create_project" -Description "Create a new project for any programming language (auto-detects language and uses appropriate template)" `
-    -Category "Project" -Version "1.0" `
-    -Parameters @{
-    project_name = @{
-        type        = "string"
-        description = "Name of the project"
-        required    = $true
-    }
-    language     = @{
-        type        = "string"
-        description = "Programming language (python, javascript, rust, go, java, csharp, c, cpp, etc.) or 'auto-detect'"
-        required    = $false
-    }
-    directory    = @{
-        type        = "string"
-        description = "Directory where to create the project (default: current directory)"
-        required    = $false
-    }
-    use_cli      = @{
-        type        = "boolean"
-        description = "Use official CLI tool if available (e.g., create-react-app, cargo new, dotnet new)"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$project_name, [string]$language = "auto-detect", [string]$directory = $null, [bool]$use_cli = $true)
-    try {
-        $targetDir = if ($directory) { $directory } else { $global:currentWorkingDir }
-        $projectPath = Join-Path $targetDir $project_name
-        $originalLocation = Get-Location
-        
-        # Check if directory already exists
-        if (Test-Path $projectPath) {
-            return @{success = $false; error = "Directory already exists: $projectPath" }
-        }
-        
-        # Auto-detect language if not specified
-        if ($language -eq "auto-detect" -or -not $language) {
-            # Try to infer from project name or use default
-            $language = "python"  # Default fallback
-        }
-        
-        $langLower = $language.ToLower()
-        $detectedLanguages = Get-DetectedLanguages
-        
-        # Check if language is available
-        if (-not $detectedLanguages.ContainsKey($langLower)) {
-            # Check for aliases
-            $aliases = @{
-                "js"       = "javascript"
-                "ts"       = "typescript"
-                "c++"      = "cpp"
-                "c#"       = "csharp"
-                "cs"       = "csharp"
-                "ps1"      = "powershell"
-                "pwsh"     = "powershell"
-                "assembly" = "asm"
-                ".asm"     = "asm"
-            }
-            
-            if ($aliases.ContainsKey($langLower)) {
-                $langLower = $aliases[$langLower]
-            }
-            else {
-                return @{
-                    success             = $false
-                    error               = "Language '$language' not detected. Available languages: $($detectedLanguages.Keys -join ', ')"
-                    available_languages = $detectedLanguages.Keys
-                }
-            }
-        }
-        
-        $langInfo = $detectedLanguages[$langLower]
-        Set-Location $targetDir
-        
-        # Try CLI tools first if requested
-        if ($use_cli) {
-            $cliCreated = $false
-            
-            switch ($langLower) {
-                "rust" {
-                    if (Get-Command cargo -ErrorAction SilentlyContinue) {
-                        $result = cargo new $project_name 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-                "csharp" {
-                    if (Get-Command dotnet -ErrorAction SilentlyContinue) {
-                        $result = dotnet new console -n $project_name -o $project_name 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-                "fsharp" {
-                    if (Get-Command dotnet -ErrorAction SilentlyContinue) {
-                        $result = dotnet new console -lang F# -n $project_name -o $project_name 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-                "go" {
-                    if (Get-Command go -ErrorAction SilentlyContinue) {
-                        New-Item -ItemType Directory -Path $project_name -Force | Out-Null
-                        Set-Location $project_name
-                        $result = go mod init $project_name 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                        Set-Location ..
-                    }
-                }
-                "javascript" {
-                    if (Get-Command npm -ErrorAction SilentlyContinue) {
-                        New-Item -ItemType Directory -Path $project_name -Force | Out-Null
-                        Set-Location $project_name
-                        $result = npm init -y 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                        Set-Location ..
-                    }
-                }
-                "typescript" {
-                    if (Get-Command npm -ErrorAction SilentlyContinue) {
-                        New-Item -ItemType Directory -Path $project_name -Force | Out-Null
-                        Set-Location $project_name
-                        $result = npm init -y 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                            npm install --save-dev typescript @types/node ts-node 2>&1 | Out-Null
-                        }
-                        Set-Location ..
-                    }
-                }
-                "dart" {
-                    if (Get-Command dart -ErrorAction SilentlyContinue) {
-                        $result = dart create $project_name 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-                "python" {
-                    if (Get-Command python -ErrorAction SilentlyContinue) {
-                        New-Item -ItemType Directory -Path $project_name -Force | Out-Null
-                        Set-Location $project_name
-                        $result = python -m venv venv 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                        Set-Location ..
-                    }
-                }
-                "java" {
-                    if (Get-Command mvn -ErrorAction SilentlyContinue) {
-                        $result = mvn archetype:generate -DgroupId=com.example -DartifactId=$project_name -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                    elseif (Get-Command gradle -ErrorAction SilentlyContinue) {
-                        $result = gradle init --type java-application --project-name $project_name --dsl groovy --package com.example --test-framework junit 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-                "kotlin" {
-                    if (Get-Command gradle -ErrorAction SilentlyContinue) {
-                        $result = gradle init --type kotlin-application --project-name $project_name --dsl groovy --package com.example 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-                "swift" {
-                    if (Get-Command swift -ErrorAction SilentlyContinue) {
-                        $result = swift package init --type executable --name $project_name 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-                "elixir" {
-                    if (Get-Command mix -ErrorAction SilentlyContinue) {
-                        $result = mix new $project_name 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-                "nim" {
-                    if (Get-Command nimble -ErrorAction SilentlyContinue) {
-                        $result = nimble init $project_name 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-                "zig" {
-                    if (Get-Command zig -ErrorAction SilentlyContinue) {
-                        New-Item -ItemType Directory -Path $project_name -Force | Out-Null
-                        Set-Location $project_name
-                        $result = zig init-exe 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                        Set-Location ..
-                    }
-                }
-                "d" {
-                    if (Get-Command dub -ErrorAction SilentlyContinue) {
-                        $result = dub init $project_name 2>&1 | Out-String
-                        if ($LASTEXITCODE -eq 0) {
-                            $cliCreated = $true
-                        }
-                    }
-                }
-            }
-            
-            if ($cliCreated) {
-                Set-Location $originalLocation
-                return @{
-                    success      = $true
-                    project_name = $project_name
-                    path         = $projectPath
-                    language     = $langLower
-                    method       = "cli"
-                    output       = $result
-                }
-            }
-        }
-        
-        # Fallback to template-based creation
-        New-Item -ItemType Directory -Path $projectPath -Force | Out-Null
-        Set-Location $projectPath
-        
-        $template = Get-LanguageProjectTemplate -Language $langLower
-        
-        if ($template) {
-            $filesCreated = @()
-            
-            foreach ($file in $template.files.Keys) {
-                try {
-                    $filePath = $file
-                    $fileDir = Split-Path $filePath -Parent
-                    
-                    if ($fileDir -and -not (Test-Path $fileDir)) {
-                        New-Item -ItemType Directory -Path $fileDir -Force | Out-Null
-                    }
-                    
-                    $content = $template.files[$file]
-                    
-                    # Replace project-name placeholder with actual project name
-                    if ($content -is [string]) {
-                        $content = $content -replace "project-name", $project_name
-                        $content = $content -replace "project_name", ($project_name -replace '-', '_')
-                    }
-                    
-                    if ($content -is [hashtable] -or $content -is [PSCustomObject]) {
-                        # JSON file - replace placeholders recursively
-                        $jsonContent = $content | ConvertTo-Json -Depth 10
-                        $jsonContent = $jsonContent -replace "project-name", $project_name
-                        $jsonContent = $jsonContent -replace "project_name", ($project_name -replace '-', '_')
-                        $jsonContent | Set-Content -Path $filePath -Force
-                    }
-                    else {
-                        # Text file
-                        Set-Content -Path $filePath -Value $content -Force
-                    }
-                    
-                    $filesCreated += $file
-                }
-                catch {
-                    Write-StartupLog "Failed to create file $file : $_" "WARNING"
-                }
-            }
-            
-            Set-Location $originalLocation
-            
-            return @{
-                success          = $true
-                project_name     = $project_name
-                path             = $projectPath
-                language         = $langLower
-                method           = "template"
-                files_created    = $filesCreated
-                compiler         = $langInfo.compiler
-                compiler_version = $langInfo.version
-            }
-        }
-        else {
-            # Generic project structure for unknown languages
-            $mainFile = switch ($langLower) {
-                "python" { "main.py" }
-                "javascript" { "index.js" }
-                "typescript" { "index.ts" }
-                "java" { "Main.java" }
-                "c" { "main.c" }
-                "cpp" { "main.cpp" }
-                "rust" { "src/main.rs" }
-                "go" { "main.go" }
-                default { "main.$langLower" }
-            }
-            
-            $mainContent = switch ($langLower) {
-                "python" { "#!/usr/bin/env python3`n`nprint('Hello, World!')" }
-                "javascript" { "console.log('Hello, World!');" }
-                "typescript" { "console.log('Hello, World!');" }
-                "java" { "public class Main {`n    public static void main(String[] args) {`n        System.out.println('Hello, World!');`n    }`n}" }
-                "c" { "#include <stdio.h>`n`nint main() {`n    printf('Hello, World!\n');`n    return 0;`n}" }
-                "cpp" { "#include <iostream>`n`nint main() {`n    std::cout << 'Hello, World!' << std::endl;`n    return 0;`n}" }
-                default { "# $project_name`n# Created by agent`n`n# TODO: Add your code here" }
-            }
-            
-            Set-Content -Path $mainFile -Value $mainContent -Force
-            $readmeContent = @"
-# $project_name
-
-Project created by agent.
-
-## Language: $langLower
-## Compiler: $($langInfo.compiler)
-## Version: $($langInfo.version)
-
-## Getting Started
-
-Add your code to $mainFile
-"@
-            Set-Content -Path "README.md" -Value $readmeContent -Force
-            
-            Set-Location $originalLocation
-            
-            return @{
-                success          = $true
-                project_name     = $project_name
-                path             = $projectPath
-                language         = $langLower
-                method           = "generic"
-                files_created    = @($mainFile, "README.md")
-                compiler         = $langInfo.compiler
-                compiler_version = $langInfo.version
-            }
-        }
-    }
-    catch {
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "detect_languages" -Description "Detect all installed programming languages and their compilers/interpreters" `
-    -Category "System" -Version "1.0" `
-    -Parameters @{} `
-    -Handler {
-    param()
-    try {
-        $languages = Get-DetectedLanguages
-        return @{
-            success   = $true
-            languages = $languages
-            count     = $languages.Count
-            detected  = $languages.Keys
-        }
-    }
-    catch {
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "detect_and_install_dependencies" -Description "Detect missing dependencies and install them automatically" `
-    -Category "Project" -Version "1.0" `
-    -Parameters @{
-    project_path    = @{
-        type        = "string"
-        description = "Path to project directory (default: current directory)"
-        required    = $false
-    }
-    package_manager = @{
-        type        = "string"
-        description = "Package manager to use: 'npm', 'yarn', or 'pnpm' (auto-detected if not specified)"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$project_path = $null, [string]$package_manager = $null)
-    try {
-        $projPath = if ($project_path) { $project_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $projPath
-        
-        # Check for package.json
-        if (-not (Test-Path "package.json")) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "package.json not found in $projPath" }
-        }
-        
-        # Detect package manager
-        if (-not $package_manager) {
-            if (Test-Path "yarn.lock") {
-                $package_manager = "yarn"
-            }
-            elseif (Test-Path "pnpm-lock.yaml") {
-                $package_manager = "pnpm"
-            }
-            else {
-                $package_manager = "npm"
-            }
-        }
-        
-        # Check if node_modules exists
-        $needsInstall = -not (Test-Path "node_modules")
-        
-        if ($needsInstall) {
-            # Install dependencies
-            $result = ""
-            switch ($package_manager) {
-                "yarn" {
-                    if (-not (Get-Command yarn -ErrorAction SilentlyContinue)) {
-                        Set-Location $originalLocation
-                        return @{success = $false; error = "yarn is not installed" }
-                    }
-                    $result = yarn install 2>&1 | Out-String
-                }
-                "pnpm" {
-                    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-                        Set-Location $originalLocation
-                        return @{success = $false; error = "pnpm is not installed" }
-                    }
-                    $result = pnpm install 2>&1 | Out-String
-                }
-                default {
-                    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-                        Set-Location $originalLocation
-                        return @{success = $false; error = "npm is not installed" }
-                    }
-                    $result = npm install 2>&1 | Out-String
-                }
-            }
-            
-            Set-Location $originalLocation
-            return @{
-                success         = $true
-                installed       = $true
-                package_manager = $package_manager
-                output          = $result
-            }
-        }
-        else {
-            Set-Location $originalLocation
-            return @{
-                success   = $true
-                installed = $false
-                message   = "Dependencies already installed"
-            }
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "validate_project_structure" -Description "Validate that a project has the correct structure and required files" `
-    -Category "Project" -Version "1.0" `
-    -Parameters @{
-    project_path = @{
-        type        = "string"
-        description = "Path to project directory (default: current directory)"
-        required    = $false
-    }
-    project_type = @{
-        type        = "string"
-        description = "Project type: 'react', 'node', 'python', or 'auto-detect'"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$project_path = $null, [string]$project_type = "auto-detect")
-    try {
-        $projPath = if ($project_path) { $project_path } else { $global:currentWorkingDir }
-        
-        if (-not (Test-Path $projPath)) {
-            return @{success = $false; error = "Project path does not exist: $projPath" }
-        }
-        
-        $validation = @{
-            valid          = $true
-            errors         = @()
-            warnings       = @()
-            detected_type  = $null
-            required_files = @()
-            found_files    = @()
-        }
-        
-        # Auto-detect project type
-        if ($project_type -eq "auto-detect") {
-            if (Test-Path (Join-Path $projPath "package.json")) {
-                $packageJson = Get-Content (Join-Path $projPath "package.json") | ConvertFrom-Json
-                if ($packageJson.dependencies.react -or $packageJson.dependencies.'react-dom') {
-                    $project_type = "react"
-                }
-                else {
-                    $project_type = "node"
-                }
-            }
-            elseif (Test-Path (Join-Path $projPath "requirements.txt") -or Test-Path (Join-Path $projPath "setup.py")) {
-                $project_type = "python"
-            }
-        }
-        
-        $validation.detected_type = $project_type
-        
-        # Validate based on project type
-        switch ($project_type) {
-            "react" {
-                $requiredFiles = @("package.json", "src/index.js", "public/index.html")
-                foreach ($file in $requiredFiles) {
-                    $filePath = Join-Path $projPath $file
-                    if (Test-Path $filePath) {
-                        $validation.found_files += $file
-                    }
-                    else {
-                        $validation.errors += "Missing required file: $file"
-                        $validation.valid = $false
-                    }
-                }
-                $validation.required_files = $requiredFiles
-            }
-            "node" {
-                if (Test-Path (Join-Path $projPath "package.json")) {
-                    $validation.found_files += "package.json"
-                }
-                else {
-                    $validation.errors += "Missing package.json"
-                    $validation.valid = $false
-                }
-            }
-            "python" {
-                if (Test-Path (Join-Path $projPath "requirements.txt") -or Test-Path (Join-Path $projPath "setup.py")) {
-                    $validation.found_files += "requirements.txt or setup.py"
-                }
-                else {
-                    $validation.warnings += "No requirements.txt or setup.py found"
-                }
-            }
-        }
-        
-        return @{
-            success    = $validation.valid
-            validation = $validation
-        }
-    }
-    catch {
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "start_development_server" -Description "Start development server for a project (React, Node, etc.)" `
-    -Category "Project" -Version "1.0" `
-    -Parameters @{
-    project_path = @{
-        type        = "string"
-        description = "Path to project directory (default: current directory)"
-        required    = $false
-    }
-    command      = @{
-        type        = "string"
-        description = "Command to run (default: auto-detect based on project type)"
-        required    = $false
-    }
-    port         = @{
-        type        = "integer"
-        description = "Port to run server on (default: auto)"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$project_path = $null, [string]$command = $null, [int]$port = 0)
-    try {
-        $projPath = if ($project_path) { $project_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $projPath
-        
-        # Check for package.json
-        if (-not (Test-Path "package.json")) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "package.json not found" }
-        }
-        
-        # Auto-detect command if not specified
-        if (-not $command) {
-            $packageJson = Get-Content "package.json" | ConvertFrom-Json
-            if ($packageJson.scripts.start) {
-                $command = "npm start"
-            }
-            elseif ($packageJson.scripts.dev) {
-                $command = "npm run dev"
-            }
-            else {
-                Set-Location $originalLocation
-                return @{success = $false; error = "No start or dev script found in package.json" }
-            }
-        }
-        
-        # Build command with port if specified
-        if ($port -gt 0) {
-            $env:PORT = $port
-        }
-        
-        # Start server in background job
-        $job = Start-Job -ScriptBlock {
-            param($cmd, $path, $port)
-            Set-Location $path
-            if ($port -gt 0) {
-                $env:PORT = $port
-            }
-            Invoke-Expression $cmd
-        } -ArgumentList $command, $projPath, $port
-        
-        Set-Location $originalLocation
-        
-        return @{
-            success = $true
-            command = $command
-            job_id  = $job.Id
-            port    = if ($port -gt 0) { $port } else { "auto" }
-            message = "Development server started in background job $($job.Id)"
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "build_project" -Description "Build a project for production" `
-    -Category "Project" -Version "1.0" `
-    -Parameters @{
-    project_path  = @{
-        type        = "string"
-        description = "Path to project directory (default: current directory)"
-        required    = $false
-    }
-    build_command = @{
-        type        = "string"
-        description = "Build command to use (default: auto-detect)"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$project_path = $null, [string]$build_command = $null)
-    try {
-        $projPath = if ($project_path) { $project_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $projPath
-        
-        # Check for package.json
-        if (-not (Test-Path "package.json")) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "package.json not found" }
-        }
-        
-        # Auto-detect build command
-        if (-not $build_command) {
-            $packageJson = Get-Content "package.json" | ConvertFrom-Json
-            if ($packageJson.scripts.build) {
-                $build_command = "npm run build"
-            }
-            else {
-                Set-Location $originalLocation
-                return @{success = $false; error = "No build script found in package.json" }
-            }
-        }
-        
-        # Execute build
-        $result = Invoke-Expression $build_command 2>&1 | Out-String
-        $buildSuccess = $LASTEXITCODE -eq 0
-        
-        Set-Location $originalLocation
-        
-        return @{
-            success    = $buildSuccess
-            command    = $build_command
-            output     = $result
-            build_path = if ($buildSuccess -and (Test-Path (Join-Path $projPath "build"))) { 
-                Join-Path $projPath "build" 
-            }
-            else { 
-                $null 
-            }
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
-Register-AgentTool -Name "run_tests" -Description "Run test suite for a project" `
-    -Category "Project" -Version "1.0" `
-    -Parameters @{
-    project_path = @{
-        type        = "string"
-        description = "Path to project directory (default: current directory)"
-        required    = $false
-    }
-    test_command = @{
-        type        = "string"
-        description = "Test command to use (default: auto-detect)"
-        required    = $false
-    }
-} `
-    -Handler {
-    param([string]$project_path = $null, [string]$test_command = $null)
-    try {
-        $projPath = if ($project_path) { $project_path } else { $global:currentWorkingDir }
-        $originalLocation = Get-Location
-        Set-Location $projPath
-        
-        # Check for package.json
-        if (-not (Test-Path "package.json")) {
-            Set-Location $originalLocation
-            return @{success = $false; error = "package.json not found" }
-        }
-        
-        # Auto-detect test command
-        if (-not $test_command) {
-            $packageJson = Get-Content "package.json" | ConvertFrom-Json
-            if ($packageJson.scripts.test) {
-                $test_command = "npm test"
-            }
-            else {
-                Set-Location $originalLocation
-                return @{success = $false; error = "No test script found in package.json" }
-            }
-        }
-        
-        # Execute tests
-        $result = Invoke-Expression $test_command 2>&1 | Out-String
-        $testSuccess = $LASTEXITCODE -eq 0
-        
-        Set-Location $originalLocation
-        
-        return @{
-            success = $testSuccess
-            command = $test_command
-            output  = $result
-            passed  = $testSuccess
-        }
-    }
-    catch {
-        Set-Location $originalLocation
-        return @{success = $false; error = $_.Exception.Message }
-    }
-}
-
 # ============================================
 # BROWSER & WEB TOOLS
 # ============================================
@@ -22642,9 +10590,7 @@ Register-AgentTool -Name "check_package_installed" -Description "Check if a pack
                         $version = ($result | Where-Object { $_ -like "Version:*" }) -replace "Version: ", ""
                     }
                 }
-                catch {
-                    Write-StartupLog "Failed to check pip package: $_" "DEBUG"
-                }
+                catch { }
             }
             "javascript" {
                 $command = "npm list $package_name"
@@ -22652,9 +10598,7 @@ Register-AgentTool -Name "check_package_installed" -Description "Check if a pack
                     $result = npm list $package_name --depth=0 2>$null
                     $installed = $LASTEXITCODE -eq 0
                 }
-                catch {
-                    Write-StartupLog "Failed to check npm package: $_" "DEBUG"
-                }
+                catch { }
             }
             "dotnet" {
                 $command = "dotnet list package"
@@ -22662,9 +10606,7 @@ Register-AgentTool -Name "check_package_installed" -Description "Check if a pack
                     $result = dotnet list package | Select-String $package_name
                     $installed = @($result).Count -gt 0
                 }
-                catch {
-                    Write-StartupLog "Failed to check npm package installation: $_" "DEBUG"
-                }
+                catch { }
             }
             "powershell" {
                 $command = "Get-Module -ListAvailable $package_name"
@@ -22675,9 +10617,7 @@ Register-AgentTool -Name "check_package_installed" -Description "Check if a pack
                         $version = $module[0].Version.ToString()
                     }
                 }
-                catch {
-                    Write-StartupLog "Failed to check PowerShell module installation: $_" "DEBUG"
-                }
+                catch { }
             }
         }
         
@@ -22830,9 +10770,7 @@ Register-AgentTool -Name "analyze_code_errors" -Description "Analyze code for sy
                                 $suggestions += "Install with: pip install $import"
                             }
                         }
-                        catch {
-                            Write-StartupLog "Failed to check Python import: $_" "DEBUG"
-                        }
+                        catch { }
                     }
                 }
             }
@@ -22961,7 +10899,6 @@ function Get-$project_name {
     Write-Host "Hello from $project_name!"
 }
 
-# Note: Export-ModuleMember only works in .psm1 module files
 Export-ModuleMember -Function Get-$project_name
 "@
                 
@@ -22995,7 +10932,6 @@ function Invoke-AgentTool {
         Execute a registered agent tool by name
     .DESCRIPTION
         Validates parameters and executes the specified tool's handler
-        Supports both -Parameters and -Arguments parameter names for backward compatibility
     #>
     [CmdletBinding()]
     param(
@@ -23003,49 +10939,26 @@ function Invoke-AgentTool {
         [string]$ToolName,
         
         [Parameter(Mandatory = $false)]
-        [hashtable]$Parameters = @{},
-        
-        # Alias for backward compatibility with older code that uses -Arguments
-        [Parameter(Mandatory = $false)]
-        [Alias("Arguments")]
-        [hashtable]$Arguments = @{}
+        [hashtable]$Parameters = @{}
     )
     
-    # Support both Parameters and Arguments - Arguments takes precedence if both provided
-    if ($Arguments.Count -gt 0) {
-        $Parameters = $Arguments
-    }
-    
-    if (-not $script:agentTools -or -not $script:agentTools.ContainsKey($ToolName)) {
+    if (-not $script:agentTools.ContainsKey($ToolName)) {
         return @{success = $false; error = "Tool not found: $ToolName" }
     }
     
     $tool = $script:agentTools[$ToolName]
     
     # Validate required parameters
-    if ($tool.Parameters) {
-        foreach ($paramName in $tool.Parameters.Keys) {
-            $paramDef = $tool.Parameters[$paramName]
-            if ($paramDef.required -and -not $Parameters.ContainsKey($paramName)) {
-                return @{success = $false; error = "Missing required parameter: $paramName" }
-            }
+    foreach ($paramName in $tool.Parameters.Keys) {
+        $paramDef = $tool.Parameters[$paramName]
+        if ($paramDef.required -and -not $Parameters.ContainsKey($paramName)) {
+            return @{success = $false; error = "Missing required parameter: $paramName" }
         }
     }
     
     # Execute tool handler
     try {
         $result = & $tool.Handler @Parameters
-        
-        # Track command in agent context if available (for backward compatibility)
-        if ($global:agentContext) {
-            $global:agentContext.Commands += @{
-                Tool      = $ToolName
-                Arguments = $Parameters
-                Result    = $result
-                Timestamp = Get-Date
-            }
-        }
-        
         return $result
     }
     catch {
@@ -23084,6 +10997,7 @@ function Get-AgentToolsList {
 
 # Register environment info agent tool
 Register-AgentTool `
+    -Id "environment-info" `
     -Name "Environment Information" `
     -Description "Provides detailed system environment information" `
     -Category "System" `
@@ -23095,198 +11009,72 @@ Register-AgentTool `
 # Edit Application Engine (Diff/Preview System)
 # ============================================
 function Set-StructuredEdit {
-    <#
-    .SYNOPSIS
-        Applies structured edits to a file with diff tracking and preview
-    .DESCRIPTION
-        Processes a series of edits (replacements) to a file, tracking all changes
-        as diffs. Creates a pending edit that requires approval before applying.
-        Includes validation and error handling.
-    .PARAMETER File
-        Path to the file to edit
-    .PARAMETER Edits
-        Array of edit objects with type, range, and newText properties
-    .OUTPUTS
-        [hashtable] Result object with EditId, Diffs, and Preview
-    .EXAMPLE
-        $edits = @(@{
-            type = "replace"
-            range = @{
-                start = @{line = 0; character = 0}
-                end = @{line = 0; character = 5}
-            }
-            newText = "Hello"
-        })
-        $result = Set-StructuredEdit -File "test.txt" -Edits $edits
-    #>
     param(
-        [Parameter(Mandatory = $true)]
         [string]$File,
-        
-        [Parameter(Mandatory = $true)]
         [array]$Edits
     )
     
-    try {
-        # Validate file path
-        if ([string]::IsNullOrWhiteSpace($File)) {
-            throw "File path cannot be empty"
-        }
-        
-        # Resolve file path
-        $resolvedFile = Resolve-Path $File -ErrorAction SilentlyContinue
-        if (-not $resolvedFile) {
-            $resolvedFile = $File
-        }
-        else {
-            $resolvedFile = $resolvedFile.Path
-        }
-        
-        if (-not (Test-Path $resolvedFile)) {
-            $errorMsg = "File not found: $resolvedFile"
-            Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "FILESYSTEM" -Severity "MEDIUM" -SourceFunction "Set-StructuredEdit"
-            return @{Error = $errorMsg }
-        }
-        
-        # Validate edits array
-        if ($Edits.Count -eq 0) {
-            Write-AgentLog -Level "Warning" -Message "No edits provided for file: $resolvedFile" -Data @{File = $resolvedFile }
-            return @{Error = "No edits provided" }
-        }
-        
-        # Read original content with error handling
-        try {
-            $originalContent = [System.IO.File]::ReadAllText($resolvedFile)
-        }
-        catch {
-            $errorMsg = "Failed to read file: $($_.Exception.Message)"
-            Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "FILESYSTEM" -Severity "HIGH" -SourceFunction "Set-StructuredEdit" -AdditionalData @{File = $resolvedFile }
-            return @{Error = $errorMsg }
-        }
-        
-        $newContent = $originalContent
-        $diffs = @()
+    if (-not (Test-Path $File)) {
+        return @{Error = "File not found: $File" }
+    }
     
-        # Process each edit
-        foreach ($edit in $Edits) {
-            try {
-                if ($edit.type -eq "replace") {
-                    # Validate edit structure
-                    if (-not $edit.range) {
-                        throw "Edit range is required"
-                    }
-                    if (-not $edit.range.start -or -not $edit.range.end) {
-                        throw "Edit range must have start and end properties"
-                    }
-                    
-                    $start = $edit.range.start
-                    $end = $edit.range.end
-                    $newText = if ($edit.newText) { $edit.newText } else { "" }
-                    
-                    # Validate range values
-                    if ($start.line -lt 0 -or $end.line -lt 0) {
-                        throw "Line numbers cannot be negative"
-                    }
-                    if ($start.character -lt 0 -or $end.character -lt 0) {
-                        throw "Character positions cannot be negative"
-                    }
+    $originalContent = [System.IO.File]::ReadAllText($File)
+    $newContent = $originalContent
+    $diffs = @()
+    
+    foreach ($edit in $Edits) {
+        if ($edit.type -eq "replace") {
+            $start = $edit.range.start
+            $end = $edit.range.end
+            $newText = $edit.newText
             
-                    # Calculate line/column positions
-                    $lines = $originalContent -split "`r?`n"
-                    $startPos = 0
-                    $endPos = 0
-                    $lineCount = @($lines).Count
-                    
-                    # Validate line numbers
-                    if ($start.line -ge $lineCount) {
-                        throw "Start line $($start.line) exceeds file line count $lineCount"
-                    }
-                    if ($end.line -ge $lineCount) {
-                        throw "End line $($end.line) exceeds file line count $lineCount"
-                    }
-                    
-                    for ($i = 0; $i -lt $lineCount; $i++) {
-                        if ($i -lt $start.line) {
-                            $startPos += $lines[$i].Length + 1
-                        }
-                        elseif ($i -eq $start.line) {
-                            if ($start.character -gt $lines[$i].Length) {
-                                throw "Start character position exceeds line length"
-                            }
-                            $startPos += $start.character
-                        }
-                        if ($i -lt $end.line) {
-                            $endPos += $lines[$i].Length + 1
-                        }
-                        elseif ($i -eq $end.line) {
-                            if ($end.character -gt $lines[$i].Length) {
-                                throw "End character position exceeds line length"
-                            }
-                            $endPos += $end.character
-                        }
-                    }
-            
-                    # Validate positions
-                    if ($startPos -gt $endPos) {
-                        throw "Start position ($startPos) is greater than end position ($endPos)"
-                    }
-                    if ($startPos -ge $originalContent.Length) {
-                        throw "Start position exceeds file length"
-                    }
-                    
-                    # Extract old text and create diff
-                    $length = [math]::Min($endPos - $startPos, $originalContent.Length - $startPos)
-                    $oldText = $originalContent.Substring($startPos, $length)
-                    
-                    $diffs += @{
-                        File    = $resolvedFile
-                        OldText = $oldText
-                        NewText = $newText
-                        Range   = $edit.range
-                    }
-            
-                    # Apply edit
-                    $newContent = $newContent.Substring(0, $startPos) + $newText + $newContent.Substring($startPos + $length)
+            # Calculate line/column positions
+            $lines = $originalContent -split "`r?`n"
+            $startPos = 0
+            $endPos = 0
+            $lineCount = @($lines).Count
+            for ($i = 0; $i -lt $lineCount; $i++) {
+                if ($i -lt $start.line) {
+                    $startPos += $lines[$i].Length + 1
                 }
-                else {
-                    Write-AgentLog -Level "Warning" -Message "Unknown edit type: $($edit.type)" -Data @{EditType = $edit.type; File = $resolvedFile }
+                elseif ($i -eq $start.line) {
+                    $startPos += $start.character
+                }
+                if ($i -lt $end.line) {
+                    $endPos += $lines[$i].Length + 1
+                }
+                elseif ($i -eq $end.line) {
+                    $endPos += $end.character
                 }
             }
-            catch {
-                $errorMsg = "Error processing edit: $($_.Exception.Message)"
-                Write-AgentLog -Level "Error" -Message $errorMsg -Data @{File = $resolvedFile; Edit = $edit }
-                Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "UI" -Severity "MEDIUM" -SourceFunction "Set-StructuredEdit" -AdditionalData @{File = $resolvedFile; Edit = $edit }
-                # Continue with next edit instead of failing completely
+            
+            $oldText = $originalContent.Substring($startPos, $endPos - $startPos)
+            $diffs += @{
+                File    = $File
+                OldText = $oldText
+                NewText = $newText
+                Range   = $edit.range
             }
-        }
-    
-        # Store pending edit for approval
-        $editId = [guid]::NewGuid().ToString()
-        if (-not $global:agentContext.PendingEdits) {
-            $global:agentContext.PendingEdits = @()
-        }
-        
-        $global:agentContext.PendingEdits += @{
-            Id              = $editId
-            File            = $resolvedFile
-            OriginalContent = $originalContent
-            NewContent      = $newContent
-            Diffs           = $diffs
-            Timestamp       = Get-Date
-        }
-        
-        Write-AgentLog -Level "Info" -Message "Created pending edit: $editId for file: $resolvedFile" -Data @{EditId = $editId; File = $resolvedFile; DiffCount = $diffs.Count }
-    
-        return @{
-            EditId  = $editId
-            Diffs   = $diffs
-            Preview = Show-EditPreview -EditId $editId
+            
+            $newContent = $newContent.Substring(0, $startPos) + $newText + $newContent.Substring($endPos)
         }
     }
-    catch {
-        $errorMsg = "Error in Set-StructuredEdit: $($_.Exception.Message)"
-        Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "UI" -Severity "HIGH" -SourceFunction "Set-StructuredEdit" -AdditionalData @{File = $File }
-        return @{Error = $errorMsg }
+    
+    # Store pending edit for approval
+    $editId = [guid]::NewGuid().ToString()
+    $global:agentContext.PendingEdits += @{
+        Id              = $editId
+        File            = $File
+        OriginalContent = $originalContent
+        NewContent      = $newContent
+        Diffs           = $diffs
+        Timestamp       = Get-Date
+    }
+    
+    return @{
+        EditId  = $editId
+        Diffs   = $diffs
+        Preview = Show-EditPreview -EditId $editId
     }
 }
 
@@ -23311,7 +11099,7 @@ function Show-EditPreview {
     # Original
     $originalBox = New-Object System.Windows.Forms.RichTextBox
     $originalBox.Dock = [System.Windows.Forms.DockStyle]::Fill
-    Set-SafeRichTextContent -RichTextBox $originalBox -Content $edit.OriginalContent
+    $originalBox.Text = $edit.OriginalContent
     $originalBox.ReadOnly = $false
     $originalBox.Font = New-Object System.Drawing.Font("Consolas", 9)
     $splitter.Panel1.Controls.Add($originalBox) | Out-Null
@@ -23319,7 +11107,7 @@ function Show-EditPreview {
     # New
     $newBox = New-Object System.Windows.Forms.RichTextBox
     $newBox.Dock = [System.Windows.Forms.DockStyle]::Fill
-    Set-SafeRichTextContent -RichTextBox $newBox -Content $edit.NewContent
+    $newBox.Text = $edit.NewContent
     $newBox.ReadOnly = $false
     $newBox.Font = New-Object System.Drawing.Font("Consolas", 9)
     $splitter.Panel2.Controls.Add($newBox) | Out-Null
@@ -23360,43 +11148,12 @@ function Set-ApprovedEdit {
     if ($edit) {
         try {
             [System.IO.File]::WriteAllText($edit.File, $edit.NewContent)
-            
-            # Add change description to edit
-            $changeDescription = "File modified"
-            if ($edit.Diffs -and $edit.Diffs.Count -gt 0) {
-                $diffCount = $edit.Diffs.Count
-                $changeDescription = "$diffCount change(s) applied"
-                if ($diffCount -eq 1) {
-                    $diff = $edit.Diffs[0]
-                    $oldLen = if ($diff.OldText) { $diff.OldText.Length } else { 0 }
-                    $newLen = if ($diff.NewText) { $diff.NewText.Length } else { 0 }
-                    if ($oldLen -gt 0 -and $newLen -eq 0) {
-                        $changeDescription = "Removed $oldLen character(s)"
-                    }
-                    elseif ($oldLen -eq 0 -and $newLen -gt 0) {
-                        $changeDescription = "Added $newLen character(s)"
-                    }
-                    elseif ($oldLen -gt 0 -and $newLen -gt 0) {
-                        $changeDescription = "Replaced $oldLen character(s) with $newLen character(s)"
-                    }
-                }
-            }
-            
-            # Add metadata to edit
-            $edit | Add-Member -NotePropertyName "Type" -NotePropertyValue "Edit" -Force
-            $edit | Add-Member -NotePropertyName "Description" -NotePropertyValue $changeDescription -Force
-            
             $global:agentContext.Edits += $edit
             $global:agentContext.PendingEdits = $global:agentContext.PendingEdits | Where-Object { $_.Id -ne $EditId }
             
             # Update editor if file is open
             if ($global:currentFile -eq $edit.File) {
-                Set-EditorContent -Content $edit.NewContent -Editor $script:editor
-            }
-            
-            # Update Agent Changes display
-            if (Get-Command Update-AgentChangesDisplay -ErrorAction SilentlyContinue) {
-                Update-AgentChangesDisplay
+                $script:editor.Text = $edit.NewContent
             }
             
             return @{success = $true }
@@ -23404,75 +11161,6 @@ function Set-ApprovedEdit {
         catch {
             return @{Error = $_.Exception.Message }
         }
-    }
-}
-
-# ============================================
-# Agent Changes Display Management
-# ============================================
-function Update-AgentChangesDisplay {
-    <#
-    .SYNOPSIS
-        Updates the Agent Changes tab with all approved edits and changes
-    #>
-    
-    if (-not $script:agentChangesList) {
-        return
-    }
-    
-    try {
-        $script:agentChangesList.Items.Clear()
-        
-        # Process all approved edits
-        foreach ($edit in $global:agentContext.Edits) {
-            $fileName = [System.IO.Path]::GetFileName($edit.File)
-            $changeDesc = if ($edit.Description) { $edit.Description } else { "File modified" }
-            $timestamp = if ($edit.Timestamp) { $edit.Timestamp.ToString("HH:mm:ss") } else { "Unknown" }
-            $changeType = if ($edit.Type) { $edit.Type } else { "Edit" }
-            
-            $item = New-Object System.Windows.Forms.ListViewItem($fileName)
-            $item.SubItems.Add($changeDesc) | Out-Null
-            $item.SubItems.Add($timestamp) | Out-Null
-            $item.SubItems.Add($changeType) | Out-Null
-            $item.Tag = $edit
-            $item.ForeColor = [System.Drawing.Color]::LightGreen
-            $script:agentChangesList.Items.Add($item) | Out-Null
-        }
-        
-        # Also track file operations from Commands
-        foreach ($cmd in $global:agentContext.Commands) {
-            if ($cmd.Tool -and $cmd.Result) {
-                $fileName = "N/A"
-                $changeDesc = "Command executed"
-                $timestamp = if ($cmd.Timestamp) { $cmd.Timestamp.ToString("HH:mm:ss") } else { "Unknown" }
-                
-                # Try to extract file information from command
-                if ($cmd.Arguments -and $cmd.Arguments.ContainsKey("File")) {
-                    $fileName = [System.IO.Path]::GetFileName($cmd.Arguments["File"])
-                    $changeDesc = "Tool: $($cmd.Tool)"
-                }
-                elseif ($cmd.Tool -match "file|edit|write|create") {
-                    $changeDesc = "Tool: $($cmd.Tool)"
-                }
-                
-                $item = New-Object System.Windows.Forms.ListViewItem($fileName)
-                $item.SubItems.Add($changeDesc) | Out-Null
-                $item.SubItems.Add($timestamp) | Out-Null
-                $item.SubItems.Add("Command") | Out-Null
-                $item.Tag = $cmd
-                $item.ForeColor = [System.Drawing.Color]::LightBlue
-                $script:agentChangesList.Items.Add($item) | Out-Null
-            }
-        }
-        
-        # Sort by timestamp (newest first)
-        $script:agentChangesList.Sorting = [System.Windows.Forms.SortOrder]::Descending
-        $script:agentChangesList.Sort()
-        
-        Write-DevConsole "Agent Changes display updated: $($script:agentChangesList.Items.Count) change(s)" "DEBUG"
-    }
-    catch {
-        Write-DevConsole "Error updating Agent Changes display: $_" "ERROR"
     }
 }
 
@@ -23540,36 +11228,28 @@ function Get-EnvironmentInfo {
         $pythonVersion = python --version 2>&1
         $env.Python = $pythonVersion
     }
-    catch {
-        Write-StartupLog "Python not detected or not in PATH: $_" "DEBUG"
-    }
+    catch {}
     
     # Detect Node
     try {
         $nodeVersion = node --version 2>&1
         $env.Node = $nodeVersion
     }
-    catch {
-        Write-StartupLog "Node.js not detected or not in PATH: $_" "DEBUG"
-    }
+    catch {}
     
     # Detect Java
     try {
         $javaVersion = java -version 2>&1 | Select-Object -First 1
         $env.Java = $javaVersion
     }
-    catch {
-        Write-StartupLog "Java not detected or not in PATH: $_" "DEBUG"
-    }
+    catch {}
     
     # Detect .NET
     try {
         $dotnetVersion = dotnet --version 2>&1
         $env.DotNet = $dotnetVersion
     }
-    catch {
-        Write-StartupLog ".NET not detected or not in PATH: $_" "DEBUG"
-    }
+    catch {}
     
     $global:agentContext.Environment = $env
     return $env
@@ -23637,106 +11317,52 @@ function New-AgentTask {
 }
 
 function Start-AgentTask {
-    <#
-    .SYNOPSIS
-        Starts execution of an agent task either synchronously or asynchronously
-    .DESCRIPTION
-        Executes an agent task with its defined steps. Can run synchronously or 
-        delegate to async execution if multithreading is available. Includes:
-        - Step-by-step execution with progress tracking
-        - Error handling and recovery
-        - Status updates
-        - Result collection
-    .PARAMETER TaskId
-        Unique identifier of the task to execute
-    .PARAMETER UseAsync
-        If true and multithreading is available, executes task asynchronously
-    .OUTPUTS
-        [void] Updates task status and progress in-place
-    .EXAMPLE
-        Start-AgentTask -TaskId "abc-123-def" -UseAsync
-    #>
     param(
-        [Parameter(Mandatory = $true)]
         [string]$TaskId,
-        
-        [Parameter(Mandatory = $false)]
         [switch]$UseAsync = $false
     )
     
-    try {
-        # If async is requested and multithreading is available, delegate to async version
-        if ($UseAsync -and $script:threadSafeContext.RunspacePool) {
-            Start-AgentTaskAsync -TaskId $TaskId -Priority "Normal"
-            return
-        }
+    # If async is requested and multithreading is available, delegate to async version
+    if ($UseAsync -and $script:threadSafeContext.RunspacePool) {
+        Start-AgentTaskAsync -TaskId $TaskId -Priority "Normal"
+        return
+    }
     
-        $task = $global:agentContext.Tasks | Where-Object { $_.Id -eq $TaskId } | Select-Object -First 1
-        if (-not $task) {
-            Write-AgentLog -Level "Error" -Message "Task not found: $TaskId" -Data @{TaskId = $TaskId }
-            Register-ErrorHandler -ErrorMessage "Task not found: $TaskId" -ErrorCategory "UI" -Severity "MEDIUM" -SourceFunction "Start-AgentTask"
-            return
-        }
-        
+    $task = $global:agentContext.Tasks | Where-Object { $_.Id -eq $TaskId } | Select-Object -First 1
+    if ($task) {
         $task.Status = "Running"
-        if ($agentStatusLabel) {
-            $agentStatusLabel.Text = "Agent Status: Running - $($task.Name)"
-        }
+        $agentStatusLabel.Text = "Agent Status: Running - $($task.Name)"
         Update-AgentTasksList
         
         # Execute task steps synchronously
         foreach ($step in $task.Steps) {
-            try {
-                $task.CurrentStep++
-                $task.Progress = [math]::Round(($task.CurrentStep / $task.Steps.Count) * 100)
-                Update-AgentTasksList
+            $task.CurrentStep++
+            $task.Progress = [math]::Round(($task.CurrentStep / $task.Steps.Count) * 100)
+            Update-AgentTasksList
             
-                Write-AgentLog -Level "Info" -Message "Executing step: $($step.Description)" -Data @{TaskId = $TaskId; Step = $task.CurrentStep }
-                
-                $result = $null
-                switch ($step.Type) {
-                    "tool" {
-                        if (-not $step.Tool) {
-                            throw "Tool name is required for tool step"
-                        }
-                        $result = Invoke-AgentTool -ToolName $step.Tool -Arguments $step.Arguments
-                        $step.Result = $result
-                        $step.Completed = $true
-                    }
-                    "command" {
-                        if (-not $step.Command) {
-                            throw "Command is required for command step"
-                        }
-                        $result = Invoke-TerminalCommand -Command $step.Command
-                        $step.Result = $result
-                        $step.Completed = $true
-                    }
-                    "edit" {
-                        if (-not $step.File) {
-                            throw "File path is required for edit step"
-                        }
-                        if (-not $step.Edits) {
-                            throw "Edits array is required for edit step"
-                        }
-                        $result = Set-StructuredEdit -File $step.File -Edits $step.Edits
-                        $step.Result = $result
-                        $step.Completed = $true
-                    }
-                    default {
-                        throw "Unknown step type: $($step.Type)"
-                    }
+            Write-AgentLog -Level "Info" -Message "Executing step: $($step.Description)" -Data @{TaskId = $TaskId }
+            
+            try {
+                if ($step.Type -eq "tool") {
+                    $result = Invoke-AgentTool -ToolName $step.Tool -Arguments $step.Arguments
+                    $step.Result = $result
+                    $step.Completed = $true
+                }
+                elseif ($step.Type -eq "command") {
+                    $result = Invoke-TerminalCommand -Command $step.Command
+                    $step.Result = $result
+                    $step.Completed = $true
+                }
+                elseif ($step.Type -eq "edit") {
+                    $result = Set-StructuredEdit -File $step.File -Edits $step.Edits
+                    $step.Result = $result
+                    $step.Completed = $true
                 }
             }
             catch {
                 $step.Error = $_.Exception.Message
                 $task.Status = "Error"
-                $task.EndTime = Get-Date
-                Write-AgentLog -Level "Error" -Message "Task step failed: $($_.Exception.Message)" -Data @{TaskId = $TaskId; Step = $step.Description; Error = $_.Exception.Message }
-                Register-ErrorHandler -ErrorMessage "Task step failed: $($_.Exception.Message)" -ErrorCategory "UI" -Severity "MEDIUM" -SourceFunction "Start-AgentTask" -AdditionalData @{
-                    TaskId   = $TaskId
-                    Step     = $step.Description
-                    StepType = $step.Type
-                }
+                Write-AgentLog -Level "Error" -Message "Task step failed: $($_.Exception.Message)" -Data @{TaskId = $TaskId; Step = $step.Description }
                 break
             }
         }
@@ -23745,18 +11371,11 @@ function Start-AgentTask {
             $task.Status = "Completed"
             $task.EndTime = Get-Date
             $task.Progress = 100
-            Write-AgentLog -Level "Info" -Message "Task completed successfully: $($task.Name)" -Data @{TaskId = $TaskId; Status = $task.Status; Duration = (New-TimeSpan -Start $task.StartTime -End $task.EndTime).TotalSeconds }
         }
         
-        if ($agentStatusLabel) {
-            $agentStatusLabel.Text = "Agent Status: $($task.Status) - $($task.Name)"
-        }
+        $agentStatusLabel.Text = "Agent Status: $($task.Status) - $($task.Name)"
         Update-AgentTasksList
-    }
-    catch {
-        $errorMsg = "Error starting agent task: $($_.Exception.Message)"
-        Write-AgentLog -Level "Error" -Message $errorMsg -Data @{TaskId = $TaskId; Error = $_.Exception.Message }
-        Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "UI" -Severity "HIGH" -SourceFunction "Start-AgentTask" -AdditionalData @{TaskId = $TaskId }
+        Write-AgentLog -Level "Info" -Message "Task completed: $($task.Name)" -Data @{TaskId = $TaskId; Status = $task.Status }
     }
 }
 
@@ -23844,67 +11463,18 @@ function Invoke-AgenticWorkflow {
 function Initialize-MultithreadedAgents {
     <#
     .SYNOPSIS
-        Initializes the multithreaded agent system with runspace pools and load management
+        Initializes the multithreaded agent system with runspace pools
     .DESCRIPTION
-        Creates runspace pools for parallel agent task execution with proper thread safety,
-        resource limits, and load balancing capabilities. Includes:
-        - Dynamic worker pool sizing based on system resources
-        - Memory and CPU monitoring
-        - Task queue management
-        - Graceful degradation under high load
-    .OUTPUTS
-        [bool] True if initialization succeeded, false otherwise
-    .EXAMPLE
-        if (Initialize-MultithreadedAgents) {
-            Write-Host "Multithreading system ready"
-        }
+        Creates runspace pools for parallel agent task execution with proper thread safety
     #>
     
     Write-DevConsole "🔧 Initializing multithreaded agent system..." "INFO"
     
     try {
-        # Calculate optimal worker count based on system resources
-        $cpuCount = [System.Environment]::ProcessorCount
-        $availableMemoryGB = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB
-        
-        # Dynamic worker count calculation (max 1 worker per CPU core, but cap at reasonable limit)
-        $optimalWorkers = [math]::Min($cpuCount, 8)  # Cap at 8 workers max
-        
-        # Adjust based on available memory (need at least 1GB per worker)
-        if ($availableMemoryGB -lt $optimalWorkers) {
-            $optimalWorkers = [math]::Max(1, [math]::Floor($availableMemoryGB))
-            Write-DevConsole "⚠️ Limited memory detected, reducing worker count to $optimalWorkers" "WARNING"
-        }
-        
-        # Update worker count if not already set or if system resources suggest different value
-        if (-not $script:threadSafeContext.WorkerCount -or $script:threadSafeContext.WorkerCount -gt $optimalWorkers) {
-            $script:threadSafeContext.WorkerCount = $optimalWorkers
-            Write-DevConsole "Worker count set to $optimalWorkers (CPU cores: $cpuCount, Memory: $([math]::Round($availableMemoryGB, 2)) GB)" "INFO"
-        }
-        
-        # Set maximum concurrent tasks (prevent resource exhaustion)
-        if (-not $script:threadSafeContext.MaxConcurrentTasks) {
-            $script:threadSafeContext.MaxConcurrentTasks = [math]::Min($script:threadSafeContext.WorkerCount * 2, 16)
-        }
-        
-        # Initialize load monitoring
-        if (-not $script:threadSafeContext.LoadMetrics) {
-            $script:threadSafeContext.LoadMetrics = @{
-                ActiveTasks         = 0
-                QueuedTasks         = 0
-                CompletedTasks      = 0
-                FailedTasks         = 0
-                AverageTaskDuration = 0
-                PeakMemoryUsage     = 0
-                PeakCPUUsage        = 0
-                LastUpdate          = Get-Date
-            }
-        }
-        
         # Create runspace pool for parallel execution
         $script:threadSafeContext.RunspacePool = [runspacefactory]::CreateRunspacePool(
-            1,  # Minimum workers
-            $script:threadSafeContext.WorkerCount,  # Maximum workers
+            1, 
+            $script:threadSafeContext.WorkerCount,
             $script:sessionState,
             $Host
         )
@@ -23916,159 +11486,20 @@ function Initialize-MultithreadedAgents {
         
         $script:threadSafeContext.RunspacePool.Open()
         
-        # Initialize task queue if not exists
-        if (-not $script:threadSafeContext.TaskQueue) {
-            $script:threadSafeContext.TaskQueue = New-Object System.Collections.Queue
-        }
-        
-        # Initialize active jobs tracking if not exists
-        if (-not $script:threadSafeContext.ActiveJobs) {
-            $script:threadSafeContext.ActiveJobs = New-Object System.Collections.ArrayList
-        }
-        
         # Initialize log processing timer
         $script:logProcessingTimer = New-Object System.Windows.Forms.Timer
         $script:logProcessingTimer.Interval = 100  # Process logs every 100ms
         $script:logProcessingTimer.add_Tick({
-                try {
-                    Process-ThreadSafeLogs
-                }
-                catch [System.Management.Automation.PipelineStoppedException] {
-                    # Pipeline stopped - silently ignore during shutdown
-                }
-                catch {
-                    Write-DevConsole "Error in log processing timer: $_" "WARNING"
-                    Register-ErrorHandler -ErrorMessage "Log processing timer error: $_" -ErrorCategory "PERFORMANCE" -Severity "LOW" -SourceFunction "Initialize-MultithreadedAgents"
-                }
+                Process-ThreadSafeLogs
             })
         $script:logProcessingTimer.Start()
         
-        # Initialize load monitoring timer (update metrics every 5 seconds)
-        if (-not $script:loadMonitoringTimer) {
-            $script:loadMonitoringTimer = New-Object System.Windows.Forms.Timer
-            $script:loadMonitoringTimer.Interval = 5000  # 5 seconds
-            $script:loadMonitoringTimer.add_Tick({
-                    try {
-                        Update-LoadMetrics
-                    }
-                    catch [System.Management.Automation.PipelineStoppedException] {
-                        # Pipeline stopped - silently ignore during shutdown
-                    }
-                    catch {
-                        Write-DevConsole "Error updating load metrics: $_" "WARNING"
-                    }
-                })
-            $script:loadMonitoringTimer.Start()
-        }
-        
-        Write-DevConsole "✅ Multithreaded agent system initialized with $($script:threadSafeContext.WorkerCount) workers (Max concurrent: $($script:threadSafeContext.MaxConcurrentTasks))" "SUCCESS"
+        Write-DevConsole "✅ Multithreaded agent system initialized with $($script:threadSafeContext.WorkerCount) workers" "SUCCESS"
         return $true
     }
     catch {
-        $errorMsg = "Failed to initialize multithreaded agents: $($_.Exception.Message)"
-        Write-DevConsole "❌ $errorMsg" "ERROR"
-        Register-ErrorHandler -ErrorMessage $errorMsg -ErrorCategory "PERFORMANCE" -Severity "HIGH" -SourceFunction "Initialize-MultithreadedAgents"
+        Write-DevConsole "❌ Failed to initialize multithreaded agents: $_" "ERROR"
         return $false
-    }
-}
-
-function Update-LoadMetrics {
-    <#
-    .SYNOPSIS
-        Updates system load metrics for multithreading system
-    .DESCRIPTION
-        Monitors and updates metrics including:
-        - Active task count
-        - Queue depth
-        - Memory usage
-        - CPU usage
-        - Task completion rates
-    #>
-    try {
-        if (-not $script:threadSafeContext.LoadMetrics) {
-            return
-        }
-        
-        $metrics = $script:threadSafeContext.LoadMetrics
-        
-        # Update task counts
-        $metrics.ActiveTasks = if ($script:threadSafeContext.ActiveJobs) { $script:threadSafeContext.ActiveJobs.Count } else { 0 }
-        $metrics.QueuedTasks = if ($script:threadSafeContext.TaskQueue) { $script:threadSafeContext.TaskQueue.Count } else { 0 }
-        
-        # Update memory usage
-        $process = Get-Process -Id $PID -ErrorAction SilentlyContinue
-        if ($process) {
-            $currentMemoryMB = $process.WorkingSet64 / 1MB
-            if ($currentMemoryMB -gt $metrics.PeakMemoryUsage) {
-                $metrics.PeakMemoryUsage = $currentMemoryMB
-            }
-        }
-        
-        # Update CPU usage (placeholder: accurate measurement requires Windows performance counters or WMI queries)
-        # For precise CPU usage, use [System.Diagnostics.PerformanceCounter] or Get-CimInstance Win32_PerfFormattedData_PerfProc_Process
-        $metrics.LastUpdate = Get-Date
-        
-        # Check for high load conditions
-        if ($metrics.ActiveTasks -ge $script:threadSafeContext.MaxConcurrentTasks) {
-            Write-DevConsole "⚠️ High load detected: $($metrics.ActiveTasks) active tasks, $($metrics.QueuedTasks) queued" "WARNING"
-        }
-    }
-    catch {
-        Write-DevConsole "Error updating load metrics: $_" "WARNING"
-    }
-}
-
-function Get-SystemLoadStatus {
-    <#
-    .SYNOPSIS
-        Gets current system load status for the multithreading system
-    .DESCRIPTION
-        Returns current load metrics and system status
-    .OUTPUTS
-        [hashtable] Load status with metrics and recommendations
-    #>
-    try {
-        if (-not $script:threadSafeContext.LoadMetrics) {
-            return @{
-                Status  = "Unknown"
-                Message = "Load metrics not initialized"
-            }
-        }
-        
-        $metrics = $script:threadSafeContext.LoadMetrics
-        $loadPercentage = if ($script:threadSafeContext.MaxConcurrentTasks -gt 0) {
-            ($metrics.ActiveTasks / $script:threadSafeContext.MaxConcurrentTasks) * 100
-        }
-        else { 0 }
-        
-        $status = "Normal"
-        if ($loadPercentage -ge 90) {
-            $status = "Critical"
-        }
-        elseif ($loadPercentage -ge 75) {
-            $status = "High"
-        }
-        elseif ($loadPercentage -ge 50) {
-            $status = "Moderate"
-        }
-        
-        return @{
-            Status         = $status
-            LoadPercentage = [math]::Round($loadPercentage, 2)
-            ActiveTasks    = $metrics.ActiveTasks
-            QueuedTasks    = $metrics.QueuedTasks
-            MaxConcurrent  = $script:threadSafeContext.MaxConcurrentTasks
-            Workers        = $script:threadSafeContext.WorkerCount
-            PeakMemoryMB   = [math]::Round($metrics.PeakMemoryUsage, 2)
-            Metrics        = $metrics
-        }
-    }
-    catch {
-        Register-ErrorHandler -ErrorMessage "Error getting load status: $_" -ErrorCategory "PERFORMANCE" -Severity "LOW" -SourceFunction "Get-SystemLoadStatus"
-        return @{
-            Status  = "Error"
-            Message = $_.Exception.Message
-        }
     }
 }
 
@@ -24286,19 +11717,8 @@ function Start-ParallelChatProcessing {
                 param($TabId, $Message, $Model, $ChatHistory)
             
                 try {
-                    # Build context from chat history with available commands
-                    $systemContext = @"
-You are an AI assistant in RawrXD IDE. You have access to these commands:
-- /grep <pattern> or grep <pattern> - Search for text patterns in files
-- /search <query> or search <query> - Semantic codebase search
-- /list [path] or list [path] - List files and directories
-- /summarize - Summarize chat context and conversation
-- /theme <name> - Change UI theme
-
-You can help users search code, find files, and navigate the codebase.
-"@
-                    
-                    $context = "System: $systemContext`n`n"
+                    # Build context from chat history
+                    $context = ""
                     foreach ($msg in $ChatHistory) {
                         $context += "$($msg.Role): $($msg.Content)`n"
                     }
@@ -24309,46 +11729,7 @@ You can help users search code, find files, and navigate the codebase.
                         stream = $false
                     } | ConvertTo-Json -Depth 3
                 
-                    # PRODUCTION SECURITY: Runspace-safe API key retrieval
-                    $apiKey = $null
-                    
-                    # Try function first (may not be available in runspace)
-                    try {
-                        if (Get-Command -Name Get-SecureAPIKey -CommandType Function -ErrorAction SilentlyContinue) {
-                            $apiKey = Get-SecureAPIKey
-                        }
-                    }
-                    catch { }
-                    
-                    # Try global settings next
-                    if (-not $apiKey) {
-                        try {
-                            if ($global:settings -and $global:settings.OllamaAPIKey) {
-                                $apiKey = $global:settings.OllamaAPIKey
-                            }
-                        }
-                        catch { }
-                    }
-                    
-                    # Fall back to environment variables (always accessible in runspaces)
-                    if (-not $apiKey) {
-                        foreach ($envVar in @('RAWRXD_API_KEY', 'OLLAMA_API_KEY', 'RAWRAI_API_KEY')) {
-                            $val = [System.Environment]::GetEnvironmentVariable($envVar)
-                            if ($val -and $val.Trim() -ne '') {
-                                $apiKey = $val
-                                break
-                            }
-                        }
-                    }
-                    
-                    $headers = @{
-                        "Content-Type" = "application/json"
-                    }
-                    if ($apiKey) {
-                        $headers["Authorization"] = "Bearer $apiKey"
-                        $headers["X-Ollama-API-Key"] = $apiKey
-                    }
-                    $response = Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method POST -Body $body -ContentType "application/json" -Headers $headers
+                    $response = Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method POST -Body $body -ContentType "application/json"
                 
                     return @{
                         TabId          = $TabId
@@ -24398,113 +11779,64 @@ function Start-ChatJobMonitor {
         $script:chatJobMonitorTimer.Interval = 250
         
         $script:chatJobMonitorTimer.add_Tick({
-                try {
-                    if (-not $script:chatJobs) {
-                        return
-                    }
-                    
-                    $completedJobs = @()
-                
-                    foreach ($chatJob in $script:chatJobs) {
-                        if (-not $chatJob -or -not $chatJob.Job -or -not $chatJob.PowerShell) {
-                            continue
-                        }
-                        
-                        if ($chatJob.Job.IsCompleted) {
-                            try {
-                                $result = $chatJob.PowerShell.EndInvoke($chatJob.Job)
-                            
-                                if (-not $result -or -not $result.TabId) {
-                                    continue
-                                }
-                            
-                                # Update UI on main thread
-                                [System.Windows.Forms.Control]::CheckForIllegalCrossThreadCalls = $false
-                            
-                                if ($script:chatTabs -and $script:chatTabs.ContainsKey($result.TabId)) {
-                                    $chatSession = $script:chatTabs[$result.TabId]
-                                    
-                                    if (-not $chatSession) {
-                                        continue
-                                    }
-                            
-                                    # Define processing text indicator once
-                                    $processingText = "AI (processing...): "
-                            
-                                    if ($result.Success) {
-                                        # FIX: Use AppendText instead of Text assignment to prevent scroll reset
-                                        if ($chatSession.ChatBox -and 
-                                            -not $chatSession.ChatBox.IsDisposed -and
-                                            $chatSession.ChatBox.Text -ne $null) {
-                                            $currentText = $chatSession.ChatBox.Text
-                                            $newText = $currentText -replace [regex]::Escape($processingText), ""
-                                            $chatSession.ChatBox.Text = $newText
-                                            $formattedResponse = Format-ChatText -Text "AI: $($result.Response)`n`n"
-                                            $chatSession.ChatBox.AppendText($formattedResponse)
-                                            $chatSession.ChatBox.ScrollToCaret()
-                                        }
-                                
-                                        # Store AI response
-                                        if ($chatSession.Messages) {
-                                            $chatSession.Messages += @{
-                                                Role      = "assistant"
-                                                Content   = $result.Response
-                                                Timestamp = Get-Date
-                                            }
-                                        }
-                                
-                                        Write-DevConsole "✅ Parallel chat response received for tab $($result.TabId)" "SUCCESS"
-                                    }
-                                    else {
-                                        # FIX: Use AppendText instead of Text assignment to prevent scroll reset
-                                        if ($chatSession.ChatBox -and 
-                                            -not $chatSession.ChatBox.IsDisposed -and
-                                            $chatSession.ChatBox.Text -ne $null) {
-                                            $currentText = $chatSession.ChatBox.Text
-                                            $newText = $currentText -replace [regex]::Escape($processingText), ""
-                                            $chatSession.ChatBox.Text = $newText
-                                            $formattedError = Format-ChatText -Text "AI: Error - $($result.Error)`n`n"
-                                            $chatSession.ChatBox.AppendText($formattedError)
-                                            $chatSession.ChatBox.ScrollToCaret()
-                                        }
-                                        Write-DevConsole "❌ Parallel chat error for tab $($result.TabId): $($result.Error)" "ERROR"
-                                    }
-                                }
-                        
-                                $completedJobs += $chatJob
-                            }
-                            catch {
-                                Write-DevConsole "❌ Error processing chat job completion: $_" "ERROR"
-                                $completedJobs += $chatJob
-                            }
-                            finally {
-                                $chatJob.PowerShell.Dispose()
-                            }
-                        }
-                    }
+                $completedJobs = @()
             
-                    # Remove completed jobs
-                    foreach ($completed in $completedJobs) {
-                        if ($script:chatJobs) {
-                            $script:chatJobs = @($script:chatJobs | Where-Object { $_.TabId -ne $completed.TabId })
+                foreach ($chatJob in $script:chatJobs) {
+                    if ($chatJob.Job.IsCompleted) {
+                        try {
+                            $result = $chatJob.PowerShell.EndInvoke($chatJob.Job)
+                        
+                            # Update UI on main thread
+                            [System.Windows.Forms.Control]::CheckForIllegalCrossThreadCalls = $false
+                        
+                            if ($script:chatTabs.ContainsKey($result.TabId)) {
+                                $chatSession = $script:chatTabs[$result.TabId]
+                            
+                                if ($result.Success) {
+                                    # Find and replace the processing indicator
+                                    $processingText = "AI (processing...): "
+                                    $chatSession.ChatBox.Text = $chatSession.ChatBox.Text -replace [regex]::Escape($processingText), "AI: $($result.Response)`n`n"
+                                
+                                    # Store AI response
+                                    $chatSession.Messages += @{
+                                        Role      = "assistant"
+                                        Content   = $result.Response
+                                        Timestamp = Get-Date
+                                    }
+                                
+                                    Write-DevConsole "✅ Parallel chat response received for tab $($result.TabId)" "SUCCESS"
+                                }
+                                else {
+                                    $chatSession.ChatBox.Text = $chatSession.ChatBox.Text -replace [regex]::Escape($processingText), "AI: Error - $($result.Error)`n`n"
+                                    Write-DevConsole "❌ Parallel chat error for tab $($result.TabId): $($result.Error)" "ERROR"
+                                }
+                            
+                                $chatSession.ChatBox.ScrollToCaret()
+                            }
+                        
+                            $completedJobs += $chatJob
+                        }
+                        catch {
+                            Write-DevConsole "❌ Error processing chat job completion: $_" "ERROR"
+                            $completedJobs += $chatJob
+                        }
+                        finally {
+                            $chatJob.PowerShell.Dispose()
                         }
                     }
-                
-                    # Stop timer if all jobs completed
-                    if (-not $script:chatJobs -or @($script:chatJobs).Count -eq 0) {
-                        if ($script:chatJobMonitorTimer) {
-                            $script:chatJobMonitorTimer.Stop()
-                            $script:chatJobMonitorTimer.Dispose()
-                            $script:chatJobMonitorTimer = $null
-                        }
-                        Write-DevConsole "✅ All parallel chat jobs completed" "SUCCESS"
-                    }
                 }
-                catch [System.Management.Automation.PipelineStoppedException] {
-                    # Pipeline stopped - silently ignore during shutdown
+            
+                # Remove completed jobs
+                foreach ($completed in $completedJobs) {
+                    $script:chatJobs = @($script:chatJobs | Where-Object { $_.TabId -ne $completed.TabId })
                 }
-                catch {
-                    Write-DevConsole "❌ Error in chat job monitor timer: $_" "ERROR"
+            
+                # Stop timer if all jobs completed
+                if (@($script:chatJobs).Count -eq 0) {
+                    $script:chatJobMonitorTimer.Stop()
+                    $script:chatJobMonitorTimer.Dispose()
+                    $script:chatJobMonitorTimer = $null
+                    Write-DevConsole "✅ All parallel chat jobs completed" "SUCCESS"
                 }
             })
         
@@ -24518,7 +11850,6 @@ function Process-ThreadSafeLogs {
         Processes logs from background threads and displays them in the UI
     #>
     
-    if (-not $script:logQueue) { return }
     if ($script:logQueue.Count -eq 0) { return }
     
     $processedCount = 0
@@ -24554,18 +11885,10 @@ function Monitor-AgentJobs {
         Monitors async agent jobs and updates UI when they complete
     #>
     
-    if (-not $script:threadSafeContext -or -not $script:threadSafeContext.ActiveJobs) {
-        return
-    }
-    
     $completedJobs = @()
     
     foreach ($jobId in $script:threadSafeContext.ActiveJobs.Keys) {
         $jobInfo = $script:threadSafeContext.ActiveJobs[$jobId]
-        
-        if (-not $jobInfo -or -not $jobInfo.Job) {
-            continue
-        }
         
         if ($jobInfo.Job.IsCompleted) {
             try {
@@ -24701,39 +12024,14 @@ function Get-ThreadingStatus {
         Gets current status of the multithreading system
     #>
     
-    try {
-        if (-not $script:threadSafeContext) {
-            return @{
-                IsInitialized      = $false
-                ActiveJobs         = 0
-                QueuedTasks        = 0
-                CompletedTasks     = 0
-                WorkerStates       = $script:agentWorkers
-                MaxConcurrentTasks = 0
-                WorkerCount        = 0
-            }
-        }
-    
-        return @{
-            IsInitialized      = ($null -ne $script:threadSafeContext.RunspacePool)
-            ActiveJobs         = if ($script:threadSafeContext.ActiveJobs) { $script:threadSafeContext.ActiveJobs.Count } else { 0 }
-            QueuedTasks        = if ($script:threadSafeContext.TaskQueue) { $script:threadSafeContext.TaskQueue.Count } else { 0 }
-            CompletedTasks     = if ($script:threadSafeContext.CompletedTasks) { $script:threadSafeContext.CompletedTasks.Count } else { 0 }
-            WorkerStates       = $script:agentWorkers
-            MaxConcurrentTasks = if ($script:threadSafeContext.MaxConcurrentTasks) { $script:threadSafeContext.MaxConcurrentTasks } else { 0 }
-            WorkerCount        = if ($script:threadSafeContext.WorkerCount) { $script:threadSafeContext.WorkerCount } else { 0 }
-        }
-    }
-    catch {
-        return @{
-            IsInitialized      = $false
-            ActiveJobs         = 0
-            QueuedTasks        = 0
-            CompletedTasks     = 0
-            WorkerStates       = @{}
-            MaxConcurrentTasks = 0
-            WorkerCount        = 0
-        }
+    return @{
+        IsInitialized      = ($null -ne $script:threadSafeContext.RunspacePool)
+        ActiveJobs         = $script:threadSafeContext.ActiveJobs.Count
+        QueuedTasks        = $script:threadSafeContext.TaskQueue.Count
+        CompletedTasks     = $script:threadSafeContext.CompletedTasks.Count
+        WorkerStates       = $script:agentWorkers
+        MaxConcurrentTasks = $script:threadSafeContext.MaxConcurrentTasks
+        WorkerCount        = $script:threadSafeContext.WorkerCount
     }
 }
 
@@ -25079,8 +12377,6 @@ $form.Add_Load({
         }
         catch {
             Write-DevConsole "Marketplace warm-up failed: $_" "WARNING"
-            Write-StartupLog "Marketplace warm-up error details: $($_.Exception.Message) | Position: $($_.InvocationInfo.PositionMessage)" "ERROR"
-            Write-ErrorLog -Message "Marketplace catalog warm-up failed: $($_.Exception.Message)" -Severity "LOW"
         }
     })
 
@@ -25551,15 +12847,7 @@ function Show-PerformanceMonitor {
     $perfTimer = New-Object System.Windows.Forms.Timer
     $perfTimer.Interval = 3000  # 3 seconds
     $perfTimer.Add_Tick({
-            try {
-                Update-PerformanceDisplay $perfTextBox
-            }
-            catch [System.Management.Automation.PipelineStoppedException] {
-                # Pipeline stopped - silently ignore during shutdown
-            }
-            catch {
-                Write-DevConsole "Error in performance timer: $_" "WARNING"
-            }
+            Update-PerformanceDisplay $perfTextBox
         })
     $perfTimer.Start()
     
@@ -25611,9 +12899,9 @@ OLLAMA STATUS:
   Active Servers: $(@($script:OllamaServers).Count)
   
 REAL-TIME MONITORING:
-  Status Updates: $(if ($script:RealTimeMonitoring -and $script:RealTimeMonitoring.StatusTimer.Enabled) { "✅ Active" } else { "❌ Inactive" })
-  Performance Tracking: $(if ($script:RealTimeMonitoring -and $script:RealTimeMonitoring.PerformanceTimer.Enabled) { "✅ Active" } else { "❌ Inactive" })
-  Network Monitoring: $(if ($script:RealTimeMonitoring -and $script:RealTimeMonitoring.NetworkTimer.Enabled) { "✅ Active" } else { "❌ Inactive" })
+  Status Updates: $(if ($script:RealTimeMonitoring.StatusTimer.Enabled) { "✅ Active" } else { "❌ Inactive" })
+  Performance Tracking: $(if ($script:RealTimeMonitoring.PerformanceTimer.Enabled) { "✅ Active" } else { "❌ Inactive" })
+  Network Monitoring: $(if ($script:RealTimeMonitoring.NetworkTimer.Enabled) { "✅ Active" } else { "❌ Inactive" })
 
 ERROR HANDLING:
   Total Errors Handled: $($script:ErrorStats.TotalErrors)
@@ -25686,9 +12974,6 @@ function Start-PerformanceProfiler {
                 $sampleCount++
             
                 Write-DevConsole "📊 Profiler sample $sampleCount/$maxSamples collected" "INFO"
-            }
-            catch [System.Management.Automation.PipelineStoppedException] {
-                # Pipeline stopped - silently ignore during shutdown
             }
             catch {
                 Write-DevConsole "⚠️ Profiler sample error: $_" "WARNING"
@@ -25773,65 +13058,6 @@ DETAILED SAMPLES:
 # CUSTOMIZATION FUNCTIONS
 # ===============================
 
-function Ensure-HighContrastColor {
-    param(
-        [System.Drawing.Color]$BackgroundColor,
-        [System.Drawing.Color]$CandidateColor
-    )
-
-    $backLum = ((0.299 * $BackgroundColor.R) + (0.587 * $BackgroundColor.G) + (0.114 * $BackgroundColor.B)) / 255.0
-    $candidateLum = ((0.299 * $CandidateColor.R) + (0.587 * $CandidateColor.G) + (0.114 * $CandidateColor.B)) / 255.0
-    $max = [math]::Max($backLum, $candidateLum)
-    $min = [math]::Min($backLum, $candidateLum)
-    $contrastRatio = ($max + 0.05) / ($min + 0.05)
-
-    if ($contrastRatio -lt 4.5) {
-        if ($backLum -gt 0.5) {
-            return [System.Drawing.Color]::FromArgb(20, 20, 20)
-        }
-        return [System.Drawing.Color]::FromArgb(240, 240, 240)
-    }
-
-    return $CandidateColor
-}
-
-# Force-EditorVisibility
-# Ensures all existing and future text in the RichTextBox remains visible.
-# Applies a safe high-contrast color to ForeColor and (for reasonably sized buffers) to all existing text.
-# Skips full recolor for very large documents (>600KB) for performance reasons.
-function Force-EditorVisibility {
-    param([System.Windows.Forms.RichTextBox]$Editor)
-    try {
-        if (-not $Editor -or $Editor.IsDisposed) { return }
-        $bg = $Editor.BackColor
-        $fgCandidate = if ($Editor.ForeColor) { $Editor.ForeColor } else { [System.Drawing.Color]::FromArgb(220,220,220) }
-        $safe = Ensure-HighContrastColor -BackgroundColor $bg -CandidateColor $fgCandidate
-
-        $Editor.SuspendLayout()
-        $Editor.ForeColor = $safe
-        $length = $Editor.Text.Length
-        if ($length -le 600000) {
-            $prevStart = $Editor.SelectionStart
-            $prevLen   = $Editor.SelectionLength
-            $Editor.SelectionStart = 0
-            $Editor.SelectionLength = $length
-            $Editor.SelectionColor = $safe
-            # Restore caret/selection
-            $Editor.SelectionStart = $prevStart
-            $Editor.SelectionLength = $prevLen
-            $Editor.SelectionColor = $safe
-        }
-        else {
-            # Large buffer: at least ensure insertion color is readable
-            $Editor.SelectionColor = $safe
-        }
-        $Editor.ResumeLayout()
-    }
-    catch {
-        Write-DevConsole "Force-EditorVisibility partial: $_" "WARNING"
-    }
-}
-
 function Apply-Theme {
     param(
         [string]$ThemeName
@@ -25908,19 +13134,16 @@ function Apply-Theme {
             Write-DevConsole "Chat theming partial: $_" "WARNING"
         }
         
-        # Apply to text editor - use fgColor (light gray/white) instead of textColor (amber accent)
+        # Apply to text editor
         try {
             if ($script:editor) {
-                $safeEditorColor = Ensure-HighContrastColor -BackgroundColor $bgColor -CandidateColor $fgColor
                 $script:editor.BackColor = $bgColor
-                $script:editor.ForeColor = $safeEditorColor  # Use safe foreground color for readability
-                $script:editor.SelectionColor = $safeEditorColor  # Ensure selection color matches
+                $script:editor.ForeColor = $textColor
             }
         }
         catch {
             Write-DevConsole "Editor theming partial: $_" "WARNING"
         }
-        if ($script:editor) { Force-EditorVisibility -Editor $script:editor }
         
         # Save theme preference
         $script:CurrentTheme = $ThemeName
@@ -26040,514 +13263,6 @@ function Update-ScaleMenuChecks {
     
     foreach ($item in $AllItems) {
         $item.Checked = ($item -eq $SelectedItem)
-    }
-}
-
-function Invoke-EditorCopilotAction {
-    param(
-        [string]$Action,
-        [string]$Text
-    )
-    
-    try {
-        # Check if chat session exists and has required properties
-        if (-not $script:CurrentSession) {
-            Write-DevConsole "⚠️ No active chat session for copilot action" "WARNING"
-            return
-        }
-        
-        # Safely check for ChatBox and InputBox properties
-        $chatBox = if ($script:CurrentSession.PSObject.Properties['ChatBox']) { $script:CurrentSession.ChatBox } else { $null }
-        $inputBox = if ($script:CurrentSession.PSObject.Properties['InputBox']) { $script:CurrentSession.InputBox } else { $null }
-        
-        if (-not $chatBox -or -not $inputBox) {
-            # Only warn if not in CLI mode (expected behavior in CLI)
-            if (-not $CliMode) {
-                Write-DevConsole "⚠️ Chat session missing required UI components (ChatBox/InputBox)" "WARNING"
-            }
-            else {
-                Write-DevConsole "ℹ️ Editor copilot actions require GUI mode" "DEBUG"
-            }
-            return
-        }
-        
-        # Build prompt based on action
-        $prompt = switch ($Action) {
-            "explain" { "Explain this code in detail: `n`n$Text" }
-            "improve" { "Improve and optimize this code: `n`n$Text" }
-            "refactor" { "Refactor this code for better maintainability: `n`n$Text" }
-            "generate" { if ($Text) { "Generate code based on this description: $Text" } else { "Generate code based on the current file context" } }
-            "fix" { "Find and fix bugs in this code: `n`n$Text" }
-            "comment" { "Add comprehensive comments to this code: `n`n$Text" }
-            "optimize" { "Optimize this code for performance: `n`n$Text" }
-            "translate" { "Translate this code to a different language (specify target language): `n`n$Text" }
-            "document" { "Generate documentation for this code: `n`n$Text" }
-            default { "Process this code: `n`n$Text" }
-        }
-        
-        # Add to chat input and send
-        $inputBox.Text = $prompt
-        $inputBox.Focus()
-        
-        # Auto-send if there's a send button handler
-        Write-DevConsole "🤖 Copilot action '$Action' prepared in chat" "INFO"
-        
-        # Switch to chat tab
-        if ($rightTabControl) {
-            $chatTab = $rightTabControl.TabPages | Where-Object { $_.Text -like "*Chat*" } | Select-Object -First 1
-            if ($chatTab) {
-                $rightTabControl.SelectedTab = $chatTab
-            }
-        }
-    }
-    catch {
-        Write-DevConsole "❌ Error in copilot action: $_" "ERROR"
-    }
-}
-
-function Apply-SyntaxHighlighting {
-    param(
-        [System.Windows.Forms.RichTextBox]$Editor,
-        [string]$FilePath = $null
-    )
-    
-    try {
-        if (-not $global:settings.CodeHighlighting) {
-            return
-        }
-        
-        if (-not $Editor -or -not $Editor.Text) {
-            return
-        }
-        
-        # Detect language from file extension
-        $language = "plain"
-        if ($FilePath) {
-            $ext = [System.IO.Path]::GetExtension($FilePath).ToLower()
-            switch ($ext) {
-                ".ps1" { $language = "powershell" }
-                ".py" { $language = "python" }
-                ".js" { $language = "javascript" }
-                ".ts" { $language = "typescript" }
-                ".html" { $language = "html" }
-                ".css" { $language = "css" }
-                ".json" { $language = "json" }
-                ".xml" { $language = "xml" }
-                ".md" { $language = "markdown" }
-                ".c" { $language = "c" }
-                ".cpp" { $language = "cpp" }
-                ".cs" { $language = "csharp" }
-                ".java" { $language = "java" }
-                ".go" { $language = "go" }
-                ".rs" { $language = "rust" }
-                ".sql" { $language = "sql" }
-                ".sh" { $language = "bash" }
-                ".bat" { $language = "batch" }
-                ".yml" { $language = "yaml" }
-                ".yaml" { $language = "yaml" }
-            }
-        }
-        
-        # Save current selection
-        $selStart = $Editor.SelectionStart
-        $selLength = $Editor.SelectionLength
-        
-        # CRITICAL FIX: Get text color from editor - ensure it's always visible
-        # Use ForeColor as fallback, but prefer a guaranteed visible color
-        $textColor = $Editor.ForeColor
-        if (-not $textColor -or $textColor.ToArgb() -eq [System.Drawing.Color]::FromArgb(30, 30, 30).ToArgb()) {
-            # If color is dark/black background color, use light gray instead
-            $textColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-        }
-        
-        # Define color scheme - use custom colors from settings if available
-        $parseSyntaxColor = {
-            param([string]$colorString, [System.Drawing.Color]$defaultColor)
-            if ($colorString) {
-                try {
-                    $parts = $colorString -split ','
-                    if ($parts.Count -eq 3) {
-                        return [System.Drawing.Color]::FromArgb([int]$parts[0], [int]$parts[1], [int]$parts[2])
-                    }
-                }
-                catch { }
-            }
-            return $defaultColor
-        }
-        
-        $colors = @{
-            Keyword  = & $parseSyntaxColor $global:settings.SyntaxKeywordColor ([System.Drawing.Color]::FromArgb(86, 156, 214))    # Blue
-            String   = & $parseSyntaxColor $global:settings.SyntaxStringColor ([System.Drawing.Color]::FromArgb(206, 145, 120))    # Orange
-            Comment  = & $parseSyntaxColor $global:settings.SyntaxCommentColor ([System.Drawing.Color]::FromArgb(106, 153, 85))    # Green
-            Number   = & $parseSyntaxColor $global:settings.SyntaxNumberColor ([System.Drawing.Color]::FromArgb(181, 206, 168))    # Light green
-            Function = & $parseSyntaxColor $global:settings.SyntaxFunctionColor ([System.Drawing.Color]::FromArgb(220, 220, 170))  # Yellow
-            Variable = & $parseSyntaxColor $global:settings.SyntaxVariableColor ([System.Drawing.Color]::FromArgb(156, 220, 254))  # Light blue
-            Operator = & $parseSyntaxColor $global:settings.SyntaxOperatorColor ([System.Drawing.Color]::FromArgb(180, 180, 180))  # Gray
-        }
-        
-        # CRITICAL FIX: DON'T SelectAll() as it causes background to flash grey/black
-        # Instead, just ensure forecolor is set and highlight only visible tokens
-        $Editor.ForeColor = $textColor
-        
-        $text = $Editor.Text
-        $lines = $text -split "`n"
-        
-        # PowerShell highlighting
-        if ($language -eq "powershell") {
-            $keywords = @("function", "if", "else", "elseif", "foreach", "while", "do", "until", "switch", "case", "default", "try", "catch", "finally", "param", "begin", "process", "end", "return", "break", "continue", "throw", "where", "select", "filter", "workflow", "class", "enum", "using", "namespace", "module", "import", "export", "true", "false", "null", "and", "or", "not", "xor", "eq", "ne", "lt", "le", "gt", "ge", "like", "notlike", "match", "notmatch", "contains", "notcontains", "in", "notin", "replace", "split", "join", "format", "out", "write", "read", "get", "set", "new", "remove", "add", "clear")
-            
-            foreach ($line in $lines) {
-                $lineStart = $text.IndexOf($line)
-                if ($lineStart -lt 0) { continue }
-                
-                # Comments
-                if ($line -match '^\s*#') {
-                    $Editor.Select($lineStart, $line.Length)
-                    $Editor.SelectionColor = $colors.Comment
-                    continue
-                }
-                
-                # Strings (single and double quoted)
-                $stringPattern = "(['""])(?:(?=(\\?))\2.)*?\1"
-                $matches = [regex]::Matches($line, $stringPattern)
-                foreach ($match in $matches) {
-                    $Editor.Select($lineStart + $match.Index, $match.Length)
-                    $Editor.SelectionColor = $colors.String
-                }
-                
-                # Keywords
-                foreach ($keyword in $keywords) {
-                    $pattern = "\b$keyword\b"
-                    $matches = [regex]::Matches($line, $pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-                    foreach ($match in $matches) {
-                        $Editor.Select($lineStart + $match.Index, $match.Length)
-                        $Editor.SelectionColor = $colors.Keyword
-                    }
-                }
-                
-                # Functions (word followed by opening parenthesis or space-dash)
-                $funcPattern = "\b([A-Za-z_][A-Za-z0-9_-]*)\s*[-\(]"
-                $matches = [regex]::Matches($line, $funcPattern)
-                foreach ($match in $matches) {
-                    $Editor.Select($lineStart + $match.Groups[1].Index, $match.Groups[1].Length)
-                    $Editor.SelectionColor = $colors.Function
-                }
-                
-                # Variables ($var, ${var})
-                $varPattern = '\$\{?[A-Za-z_][A-Za-z0-9_]*\}?'
-                $matches = [regex]::Matches($line, $varPattern)
-                foreach ($match in $matches) {
-                    $Editor.Select($lineStart + $match.Index, $match.Length)
-                    $Editor.SelectionColor = $colors.Variable
-                }
-                
-                # Numbers
-                $numPattern = '\b\d+\.?\d*\b'
-                $matches = [regex]::Matches($line, $numPattern)
-                foreach ($match in $matches) {
-                    $Editor.Select($lineStart + $match.Index, $match.Length)
-                    $Editor.SelectionColor = $colors.Number
-                }
-            }
-        }
-        
-        # Python highlighting
-        elseif ($language -eq "python") {
-            $keywords = @("def", "class", "if", "elif", "else", "for", "while", "try", "except", "finally", "with", "as", "import", "from", "return", "yield", "break", "continue", "pass", "raise", "assert", "lambda", "and", "or", "not", "in", "is", "None", "True", "False", "async", "await")
-            
-            foreach ($line in $lines) {
-                $lineStart = $text.IndexOf($line)
-                if ($lineStart -lt 0) { continue }
-                
-                # Comments
-                if ($line -match '#') {
-                    $commentStart = $line.IndexOf('#')
-                    $Editor.Select($lineStart + $commentStart, $line.Length - $commentStart)
-                    $Editor.SelectionColor = $colors.Comment
-                }
-                
-                # Strings
-                $stringPattern = "(['""])(?:(?=(\\?))\2.)*?\1|(['""]{3})(?:(?=(\\?))\4.)*?\3"
-                $matches = [regex]::Matches($line, $stringPattern)
-                foreach ($match in $matches) {
-                    $Editor.Select($lineStart + $match.Index, $match.Length)
-                    $Editor.SelectionColor = $colors.String
-                }
-                
-                # Keywords
-                foreach ($keyword in $keywords) {
-                    $pattern = "\b$keyword\b"
-                    $matches = [regex]::Matches($line, $pattern)
-                    foreach ($match in $matches) {
-                        $Editor.Select($lineStart + $match.Index, $match.Length)
-                        $Editor.SelectionColor = $colors.Keyword
-                    }
-                }
-                
-                # Functions
-                $funcPattern = "\bdef\s+([A-Za-z_][A-Za-z0-9_]*)"
-                $matches = [regex]::Matches($line, $funcPattern)
-                foreach ($match in $matches) {
-                    $Editor.Select($lineStart + $match.Groups[1].Index, $match.Groups[1].Length)
-                    $Editor.SelectionColor = $colors.Function
-                }
-                
-                # Numbers
-                $numPattern = '\b\d+\.?\d*\b'
-                $matches = [regex]::Matches($line, $numPattern)
-                foreach ($match in $matches) {
-                    $Editor.Select($lineStart + $match.Index, $match.Length)
-                    $Editor.SelectionColor = $colors.Number
-                }
-            }
-        }
-        
-        # JavaScript/TypeScript highlighting
-        elseif ($language -eq "javascript" -or $language -eq "typescript") {
-            $keywords = @("function", "var", "let", "const", "if", "else", "for", "while", "do", "switch", "case", "default", "try", "catch", "finally", "return", "break", "continue", "throw", "new", "this", "class", "extends", "super", "async", "await", "import", "export", "from", "as", "default", "true", "false", "null", "undefined", "typeof", "instanceof", "in", "of", "void", "delete")
-            
-            foreach ($line in $lines) {
-                $lineStart = $text.IndexOf($line)
-                if ($lineStart -lt 0) { continue }
-                
-                # Comments
-                if ($line -match '//') {
-                    $commentStart = $line.IndexOf('//')
-                    $Editor.Select($lineStart + $commentStart, $line.Length - $commentStart)
-                    $Editor.SelectionColor = $colors.Comment
-                }
-                if ($line -match '/\*') {
-                    # Multi-line comments handled separately
-                }
-                
-                # Strings
-                $stringPattern = "(['""`])(?:(?=(\\?))\2.)*?\1"
-                $matches = [regex]::Matches($line, $stringPattern)
-                foreach ($match in $matches) {
-                    $Editor.Select($lineStart + $match.Index, $match.Length)
-                    $Editor.SelectionColor = $colors.String
-                }
-                
-                # Keywords
-                foreach ($keyword in $keywords) {
-                    $pattern = "\b$keyword\b"
-                    $matches = [regex]::Matches($line, $pattern)
-                    foreach ($match in $matches) {
-                        $Editor.Select($lineStart + $match.Index, $match.Length)
-                        $Editor.SelectionColor = $colors.Keyword
-                    }
-                }
-                
-                # Functions
-                $funcPattern = "\bfunction\s+([A-Za-z_][A-Za-z0-9_]*)|\b([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:function|\(|=>)"
-                $matches = [regex]::Matches($line, $funcPattern)
-                foreach ($match in $matches) {
-                    if ($match.Groups[1].Success) {
-                        $Editor.Select($lineStart + $match.Groups[1].Index, $match.Groups[1].Length)
-                        $Editor.SelectionColor = $colors.Function
-                    }
-                    elseif ($match.Groups[2].Success) {
-                        $Editor.Select($lineStart + $match.Groups[2].Index, $match.Groups[2].Length)
-                        $Editor.SelectionColor = $colors.Function
-                    }
-                }
-                
-                # Numbers
-                $numPattern = '\b\d+\.?\d*\b'
-                $matches = [regex]::Matches($line, $numPattern)
-                foreach ($match in $matches) {
-                    $Editor.Select($lineStart + $match.Index, $match.Length)
-                    $Editor.SelectionColor = $colors.Number
-                }
-            }
-        }
-        
-        # Restore selection
-        $Editor.SelectionStart = $selStart
-        $Editor.SelectionLength = $selLength
-        $Editor.SelectionColor = $textColor
-        
-        Write-DevConsole "✅ Syntax highlighting applied ($language)" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "⚠️ Syntax highlighting error: $_" "WARNING"
-    }
-}
-
-function Show-ThemeAppearanceDialog {
-    try {
-        $themeDialog = New-Object System.Windows.Forms.Form
-        $themeDialog.Text = "Theme & Appearance"
-        $themeDialog.Size = New-Object System.Drawing.Size(500, 450)
-        $themeDialog.StartPosition = "CenterScreen"
-        $themeDialog.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
-        $themeDialog.MaximizeBox = $false
-        $themeDialog.MinimizeBox = $false
-        
-        # Theme Selection
-        $themeLabel = New-Object System.Windows.Forms.Label
-        $themeLabel.Text = "Select Theme:"
-        $themeLabel.Location = New-Object System.Drawing.Point(20, 20)
-        $themeLabel.Size = New-Object System.Drawing.Size(150, 20)
-        $themeDialog.Controls.Add($themeLabel)
-        
-        $themeCombo = New-Object System.Windows.Forms.ComboBox
-        $themeCombo.Location = New-Object System.Drawing.Point(20, 45)
-        $themeCombo.Size = New-Object System.Drawing.Size(200, 25)
-        $themeCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-        $themeCombo.Items.AddRange(@("Stealth-Cheetah", "Dark", "Light"))
-        $themeCombo.SelectedItem = if ($script:CurrentTheme) { $script:CurrentTheme } else { "Stealth-Cheetah" }
-        $themeDialog.Controls.Add($themeCombo)
-        
-        # Font Size
-        $fontLabel = New-Object System.Windows.Forms.Label
-        $fontLabel.Text = "Font Size:"
-        $fontLabel.Location = New-Object System.Drawing.Point(20, 90)
-        $fontLabel.Size = New-Object System.Drawing.Size(150, 20)
-        $themeDialog.Controls.Add($fontLabel)
-        
-        $fontCombo = New-Object System.Windows.Forms.ComboBox
-        $fontCombo.Location = New-Object System.Drawing.Point(20, 115)
-        $fontCombo.Size = New-Object System.Drawing.Size(200, 25)
-        $fontCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-        $fontCombo.Items.AddRange(@("8", "9", "10", "11", "12", "14", "16", "18", "20", "24"))
-        $fontCombo.SelectedItem = if ($script:CurrentFontSize) { $script:CurrentFontSize.ToString() } else { "10" }
-        $themeDialog.Controls.Add($fontCombo)
-        
-        # UI Scale
-        $scaleLabel = New-Object System.Windows.Forms.Label
-        $scaleLabel.Text = "UI Scale:"
-        $scaleLabel.Location = New-Object System.Drawing.Point(20, 160)
-        $scaleLabel.Size = New-Object System.Drawing.Size(150, 20)
-        $themeDialog.Controls.Add($scaleLabel)
-        
-        $scaleCombo = New-Object System.Windows.Forms.ComboBox
-        $scaleCombo.Location = New-Object System.Drawing.Point(20, 185)
-        $scaleCombo.Size = New-Object System.Drawing.Size(200, 25)
-        $scaleCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-        $scaleCombo.Items.AddRange(@("75%", "100%", "125%", "150%", "175%", "200%"))
-        $currentScale = if ($script:CurrentUIScale) { "$([int]($script:CurrentUIScale * 100))%" } else { "100%" }
-        $scaleCombo.SelectedItem = $currentScale
-        $themeDialog.Controls.Add($scaleCombo)
-        
-        # Editor Text Color Preview
-        $editorColorLabel = New-Object System.Windows.Forms.Label
-        $editorColorLabel.Text = "Editor Text Color:"
-        $editorColorLabel.Location = New-Object System.Drawing.Point(20, 230)
-        $editorColorLabel.Size = New-Object System.Drawing.Size(150, 20)
-        $themeDialog.Controls.Add($editorColorLabel)
-        
-        $editorColorButton = New-Object System.Windows.Forms.Button
-        $editorColorButton.Text = "Select Color"
-        $editorColorButton.Location = New-Object System.Drawing.Point(20, 255)
-        $editorColorButton.Size = New-Object System.Drawing.Size(150, 30)
-        if ($script:editor) {
-            $editorColorButton.BackColor = $script:editor.ForeColor
-        }
-        else {
-            $editorColorButton.BackColor = [System.Drawing.Color]::White
-        }
-        $themeDialog.Controls.Add($editorColorButton)
-        
-        $selectedEditorColor = if ($script:editor) { $script:editor.ForeColor } else { [System.Drawing.Color]::White }
-        
-        # Preview Label
-        $previewLabel = New-Object System.Windows.Forms.Label
-        $previewLabel.Text = "Preview: The quick brown fox jumps over the lazy dog"
-        $previewLabel.Location = New-Object System.Drawing.Point(20, 310)
-        $previewLabel.Size = New-Object System.Drawing.Size(450, 30)
-        $previewLabel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
-        if ($script:editor) {
-            $previewLabel.BackColor = $script:editor.BackColor
-            $previewLabel.ForeColor = $script:editor.ForeColor
-        }
-        $themeDialog.Controls.Add($previewLabel)
-        
-        # Update preview when colors change
-        $updatePreview = {
-            if ($script:editor) {
-                $previewLabel.BackColor = $script:editor.BackColor
-                $previewLabel.ForeColor = Ensure-HighContrastColor -BackgroundColor $previewLabel.BackColor -CandidateColor $selectedEditorColor
-            }
-        }
-        
-        $editorColorButton.Add_Click({
-                $colorDialog = New-Object System.Windows.Forms.ColorDialog
-                $colorDialog.Color = $selectedEditorColor
-                if ($colorDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                    $selectedEditorColor = $colorDialog.Color
-                    $editorColorButton.BackColor = $selectedEditorColor
-                    & $updatePreview
-                }
-            })
-        
-        # Custom Theme Builder Button
-        $customThemeButton = New-Object System.Windows.Forms.Button
-        $customThemeButton.Text = "Custom Theme Builder..."
-        $customThemeButton.Location = New-Object System.Drawing.Point(250, 255)
-        $customThemeButton.Size = New-Object System.Drawing.Size(150, 30)
-        $customThemeButton.Add_Click({
-                $themeDialog.Hide()
-                Show-CustomThemeBuilder
-                $themeDialog.Show()
-            })
-        $themeDialog.Controls.Add($customThemeButton)
-        
-        # Apply Button
-        $applyButton = New-Object System.Windows.Forms.Button
-        $applyButton.Text = "Apply"
-        $applyButton.Location = New-Object System.Drawing.Point(320, 360)
-        $applyButton.Size = New-Object System.Drawing.Size(80, 35)
-        $applyButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-        $themeDialog.Controls.Add($applyButton)
-        
-        # Cancel Button
-        $cancelButton = New-Object System.Windows.Forms.Button
-        $cancelButton.Text = "Cancel"
-        $cancelButton.Location = New-Object System.Drawing.Point(230, 360)
-        $cancelButton.Size = New-Object System.Drawing.Size(80, 35)
-        $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-        $themeDialog.Controls.Add($cancelButton)
-        
-        # Accept Button (Enter key)
-        $themeDialog.AcceptButton = $applyButton
-        $themeDialog.CancelButton = $cancelButton
-        
-        if ($themeDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            # Apply selected theme
-            if ($themeCombo.SelectedItem) {
-                Apply-Theme -ThemeName $themeCombo.SelectedItem
-            }
-            
-            # Apply font size
-            if ($fontCombo.SelectedItem) {
-                $fontSize = [int]$fontCombo.SelectedItem
-                Apply-FontSize -Size $fontSize
-            }
-            
-            # Apply UI scale
-            if ($scaleCombo.SelectedItem) {
-                $scalePercent = [int]($scaleCombo.SelectedItem -replace '%', '')
-                $scale = $scalePercent / 100.0
-                Apply-UIScaling -Scale $scale
-            }
-            
-            # Apply editor text color
-            if ($script:editor) {
-                $safeThemeColor = Ensure-HighContrastColor -BackgroundColor $script:editor.BackColor -CandidateColor $selectedEditorColor
-                $script:editor.ForeColor = $safeThemeColor
-                $script:editor.SelectionColor = $safeThemeColor
-                Write-DevConsole "✅ Editor text color updated" "SUCCESS"
-            }
-            
-            Write-DevConsole "✅ Theme appearance settings applied" "SUCCESS"
-        }
-        
-        $themeDialog.Dispose()
-    }
-    catch {
-        Write-DevConsole "❌ Error showing theme appearance dialog: $_" "ERROR"
-        Write-ErrorLog -Message "Theme appearance dialog failed: $($_.Exception.Message)" -Severity "MEDIUM"
     }
 }
 
@@ -26705,9 +13420,8 @@ function Apply-CustomTheme {
         # Apply to text editor
         try {
             if ($script:editor) {
-                $safeCustomColor = Ensure-HighContrastColor -BackgroundColor $BackColor -CandidateColor $TextColor
                 $script:editor.BackColor = $BackColor
-                $script:editor.ForeColor = $safeCustomColor
+                $script:editor.ForeColor = $TextColor
             }
         }
         catch {
@@ -27085,34 +13799,6 @@ $script:ErrorStats = @{
 $form.Controls.Add($mainSplitter) | Out-Null
 $form.Controls.Add($menu) | Out-Null
 
-# Create missing GUI variable aliases for test compatibility
-# These are referenced by validation tests but may not exist as standalone controls
-# Use Get-Variable to safely check if variables exist before accessing them
-$statusBar = if (Get-Variable -Name "statusLabel" -Scope Script -ErrorAction SilentlyContinue) { 
-    $script:statusLabel 
-}
-else { 
-    New-Object System.Windows.Forms.Label 
-}
-$script:statusBar = $statusBar
-
-$menuStrip = if ($menu) { $menu } else { New-Object System.Windows.Forms.MenuStrip }
-$script:menuStrip = $menuStrip
-
-$agentPanel = if (Get-Variable -Name "agentChangesList" -Scope Script -ErrorAction SilentlyContinue) { 
-    $script:agentChangesList 
-}
-else { 
-    New-Object System.Windows.Forms.ListBox 
-}
-$script:agentPanel = $agentPanel
-
-# Create webBrowser alias if it doesn't exist
-if (-not (Get-Variable -Name "webBrowser" -Scope Script -ErrorAction SilentlyContinue)) {
-    $script:webBrowser = $null  # Will be initialized during browser tab creation
-}
-$webBrowser = $script:webBrowser
-
 # Global error handler
 $form.Add_Shown({
         Write-DevConsole "RawrXD Form Loaded Successfully" "SUCCESS"
@@ -27124,16 +13810,6 @@ $form.Add_Shown({
         
         # Initialize performance optimization
         Start-PerformanceOptimization
-        
-        # Initialize Agent Changes display
-        if (Get-Command Update-AgentChangesDisplay -ErrorAction SilentlyContinue) {
-            Update-AgentChangesDisplay
-        }
-        
-        # Initialize Git status display
-        if (Get-Command Update-GitStatus -ErrorAction SilentlyContinue) {
-            Update-GitStatus
-        }
         
         # Start Ollama server automatically
         if (-not $global:ollamaStartupAttempted) {
@@ -27147,39 +13823,17 @@ $form.Add_Shown({
             $script:ollamaTimer = New-Object System.Windows.Forms.Timer
             $script:ollamaTimer.Interval = 2000  # Check every 2 seconds
             $script:ollamaTimer.Add_Tick({
-                    try {
-                        Update-OllamaStatusDisplay
-                    }
-                    catch [System.Management.Automation.PipelineStoppedException] {
-                        # Pipeline stopped - silently ignore during shutdown
-                    }
-                    catch {
-                        Write-DevConsole "Error in Ollama timer: $_" "WARNING"
-                    }
+                    Update-OllamaStatusDisplay
                 })
             $script:ollamaTimer.Start()
         }
         
         # Update initial status
         Update-OllamaStatusDisplay
-    })
-    
-# Capture all unhandled exceptions - log to file instead of popup
+    })# Capture all unhandled exceptions
 $null = Register-ObjectEvent -InputObject ([System.AppDomain]::CurrentDomain) -EventName UnhandledException -Action {
     $errorMsg = $Event.SourceEventArgs.ExceptionObject.ToString()
-    $exception = $Event.SourceEventArgs.ExceptionObject
-        
-    # Log to file instead of showing popup
-    if (Get-Command Write-ErrorToFile -ErrorAction SilentlyContinue) {
-        Write-ErrorToFile -ErrorMessage $errorMsg `
-            -ErrorCategory "UNHANDLED_EXCEPTION" `
-            -LineNumber 0 `
-            -StackTrace $exception.StackTrace `
-            -PositionMessage ""
-    }
-        
     Write-DevConsole "UNHANDLED EXCEPTION: $errorMsg" "ERROR"
-    Write-EmergencyLog "UNHANDLED EXCEPTION: $errorMsg" "CRITICAL"
 }
 
 # Error handling for form display
@@ -27261,29 +13915,14 @@ try {
         $script:agentMonitorTimer = New-Object System.Windows.Forms.Timer
         $script:agentMonitorTimer.Interval = 500  # Check every 500ms
         $script:agentMonitorTimer.add_Tick({
-                try {
-                    # CRITICAL NULL CHECK: Verify functions exist before calling
-                    if (Get-Command Monitor-AgentJobs -ErrorAction SilentlyContinue) {
-                        Monitor-AgentJobs
-                    }
-                    if (Get-Command Update-ThreadingStatusLabel -ErrorAction SilentlyContinue) {
-                        Update-ThreadingStatusLabel
-                    }
-                }
-                catch [System.Management.Automation.PipelineStoppedException] {
-                    # Pipeline stopped - silently ignore during shutdown
-                }
-                catch {
-                    Write-DevConsole "Error in agent monitor timer: $_" "WARNING"
-                }
+                Monitor-AgentJobs
+                Update-ThreadingStatusLabel
             })
         $script:agentMonitorTimer.Start()
         Write-StartupLog "✅ Agent monitoring system started" "INFO"
         
         # Set initial threading status
-        if (Get-Command Update-ThreadingStatusLabel -ErrorAction SilentlyContinue) {
-            Update-ThreadingStatusLabel
-        }
+        Update-ThreadingStatusLabel
     }
     else {
         Write-StartupLog "⚠ Multithreaded agents disabled, using single-threaded fallback" "WARNING"
@@ -27293,109 +13932,37 @@ try {
     # SECURITY INITIALIZATION
     # ============================================
     
-    # Safely access SecurityConfig properties with null checks
-    $encryptStatus = if ($script:SecurityConfig -and $script:SecurityConfig.ContainsKey('EncryptSensitiveData')) { 
-        $script:SecurityConfig.EncryptSensitiveData 
-    }
-    else { 
-        $false 
-    }
-    $stealthStatus = if ($script:SecurityConfig -and $script:SecurityConfig.ContainsKey('StealthMode')) { 
-        $script:SecurityConfig.StealthMode 
-    }
-    else { 
-        $false 
-    }
-    $httpsStatus = if ($script:UseHTTPS) { "Enabled" } else { "Disabled" }
-    
-    Write-SecurityLog "Application initialization completed" "SUCCESS" "Features: Encryption=$encryptStatus, HTTPS=$httpsStatus, Stealth=$stealthStatus"
+    Write-SecurityLog "Application initialization completed" "SUCCESS" "Features: Encryption=$($script:SecurityConfig.EncryptSensitiveData), HTTPS=$script:UseHTTPS, Stealth=$($script:SecurityConfig.StealthMode)"
     
     # Apply stealth mode if enabled
-    if ($script:SecurityConfig -and $script:SecurityConfig.ContainsKey('StealthMode') -and $script:SecurityConfig.StealthMode) {
+    if ($script:SecurityConfig.StealthMode) {
         Enable-StealthMode -Enable $true
         Write-StartupLog "✅ Stealth mode activated" "INFO"
     }
     
     # Set up periodic security checks
-    if ($script:SecurityConfig -and $script:SecurityConfig.ContainsKey('LogSecurityEvents') -and $script:SecurityConfig.LogSecurityEvents) {
-        # Security check timer configuration
-        # Interval: 60000ms (1 minute) - Configurable via SecurityConfig if needed
-        # This frequency balances security with performance
-        $securityCheckInterval = if ($script:SecurityConfig -and $script:SecurityConfig.ContainsKey('SecurityCheckInterval') -and $script:SecurityConfig.SecurityCheckInterval) { 
-            $script:SecurityConfig.SecurityCheckInterval 
-        }
-        else { 
-            60000  # Default: 1 minute
-        }
-        
+    if ($script:SecurityConfig.LogSecurityEvents) {
         $script:securityTimer = New-Object System.Windows.Forms.Timer
-        $script:securityTimer.Interval = $securityCheckInterval
-        Write-StartupLog "Security timer initialized with interval: $securityCheckInterval ms ($([math]::Round($securityCheckInterval / 1000, 2)) seconds)" "INFO"
+        $script:securityTimer.Interval = 60000  # Check every minute
         $script:securityTimer.add_Tick({
-                try {
-                    # Validate required objects exist before security check
-                    if (-not $script:CurrentSession) {
-                        Write-SecurityLog "Security timer error: CurrentSession is null" "ERROR"
-                        return
-                    }
-                    
-                    if (-not $script:SecurityConfig) {
-                        Write-SecurityLog "Security timer error: SecurityConfig is null" "ERROR"
-                        return
-                    }
-                    
-                    # Perform security check
-                    if (-not (Test-SessionSecurity)) {
-                        $sessionDuration = ((Get-Date) - $script:CurrentSession.StartTime).TotalSeconds
-                        Write-SecurityLog "Session security check failed during runtime. Session duration: $([math]::Round($sessionDuration, 2)) seconds" "ERROR"
-                        
-                        if ($script:SecurityConfig.AuthenticationRequired) {
-                            Write-DevConsole "Session security check failed - attempting re-authentication" "WARNING"
-                            
-                            # Show authentication dialog
+                if (-not (Test-SessionSecurity)) {
+                    Write-SecurityLog "Session security check failed during runtime" "ERROR"
+                    if ($script:SecurityConfig.AuthenticationRequired) {
+                        $result = "Yes"; Write-DevConsole "Session security check failed - auto-attempting re-authentication" "WARNING"
+                        if ($result -eq "Yes") {
                             $authResult = Show-AuthenticationDialog
-                            
                             if (-not $authResult) {
-                                Write-SecurityLog "Re-authentication failed. Closing application for security. Error details: User cancelled or authentication failed" "ERROR"
-                                
-                                # Safely close form if it exists
-                                if ($form -and $form.IsHandleCreated) {
-                                    try {
-                                        $form.Invoke([System.Action] { $form.Close() })
-                                    }
-                                    catch {
-                                        Write-SecurityLog "Error closing form during security failure: $($_.Exception.Message)" "ERROR"
-                                    }
-                                }
-                                elseif ($script:form -and $script:form.IsHandleCreated) {
-                                    try {
-                                        $script:form.Invoke([System.Action] { $script:form.Close() })
-                                    }
-                                    catch {
-                                        Write-SecurityLog "Error closing script form during security failure: $($_.Exception.Message)" "ERROR"
-                                    }
-                                }
+                                Write-SecurityLog "Re-authentication failed, closing application" "ERROR"
+                                $form.Close()
                             }
                             else {
-                                Write-SecurityLog "Re-authentication successful. Session renewed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" "SUCCESS"
-                                # Reset session start time
-                                if ($script:CurrentSession) {
-                                    $script:CurrentSession.StartTime = Get-Date
-                                }
+                                Write-SecurityLog "Re-authentication successful" "SUCCESS"
                             }
                         }
+                        else {
+                            $form.Close()
+                        }
                     }
-                }
-                catch [System.Management.Automation.PipelineStoppedException] {
-                    # Pipeline stopped - silently ignore during shutdown
-                }
-                catch {
-                    $errorDetails = "Error in security timer: $($_.Exception.Message). Error type: $($_.Exception.GetType().FullName)"
-                    if ($_.ScriptStackTrace) {
-                        $errorDetails += " Stack trace: $($_.ScriptStackTrace)"
-                    }
-                    Write-SecurityLog $errorDetails "ERROR"
-                    Write-DevConsole $errorDetails "ERROR"
                 }
             })
         $script:securityTimer.Start()
@@ -27411,71 +13978,17 @@ try {
     if ($script:WindowsFormsAvailable) {
         Write-StartupLog "Launching RawrXD GUI..." "INFO"
         try {
-            # Ensure form is ready before showing
-            $form.WindowState = [System.Windows.Forms.FormWindowState]::Normal
-            $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-            
-            # CRITICAL FIX: Ensure editor is properly initialized with visible colors before showing form
-            if ($script:editor) {
-                try {
-                    $visibleColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-                    $darkBg = [System.Drawing.Color]::FromArgb(30, 30, 30)
-                    
-                    $script:editor.BackColor = $darkBg
-                    $script:editor.ForeColor = $visibleColor
-                    $script:editor.SelectionColor = $visibleColor
-                    $script:editor.Visible = $true
-                    $script:editor.Enabled = $true
-                    
-                    Write-StartupLog "✅ Editor color initialization complete - text will be visible" "SUCCESS"
-                }
-                catch {
-                    Write-StartupLog "⚠️ Could not pre-initialize editor colors: $_" "WARNING"
-                }
-            }
-            
-            # Use ShowDialog for modal form (more reliable than Application.Run for this use case)
-            # ShowDialog will block until form is closed, which is what we want
-            Write-StartupLog "Displaying main form..." "INFO"
             $form.ShowDialog() | Out-Null
-            Write-StartupLog "Form closed by user" "INFO"
         }
         catch {
-            $errorMsg = $_.Exception.Message
-            $stackTrace = $_.ScriptStackTrace
-            $lineNumber = $_.InvocationInfo.ScriptLineNumber
-            
-            # Log to file immediately - NO POPUPS
-            Write-ErrorToFile -ErrorMessage "Error launching GUI: $errorMsg" `
-                -ErrorCategory "UI" `
-                -LineNumber $lineNumber `
-                -StackTrace $stackTrace `
-                -PositionMessage ""
-            
-            Write-EmergencyLog "❌ Error launching GUI: $errorMsg" "ERROR"
-            Write-EmergencyLog "Stack trace: $stackTrace" "ERROR"
-            
-            # Try Application.Run as fallback
-            try {
-                Write-EmergencyLog "Attempting Application.Run as fallback..." "WARNING"
-                [System.Windows.Forms.Application]::EnableVisualStyles()
-                $form.Visible = $true
-                [System.Windows.Forms.Application]::Run($form)
-            }
-            catch {
-                Write-EmergencyLog "Application.Run also failed: $($_.Exception.Message)" "ERROR"
-                Write-EmergencyLog "Falling back to console mode..." "WARNING"
-                if (Get-Command Start-ConsoleMode -ErrorAction SilentlyContinue) {
-                    Start-ConsoleMode
-                }
-            }
+            Write-EmergencyLog "❌ Error launching GUI: $($_.Exception.Message)" "ERROR"
+            Write-EmergencyLog "Falling back to console mode..." "WARNING"
+            Start-ConsoleMode
         }
     }
     else {
         Write-EmergencyLog "GUI not available - starting in console mode" "WARNING"
-        if (Get-Command Start-ConsoleMode -ErrorAction SilentlyContinue) {
-            Start-ConsoleMode
-        }
+        Start-ConsoleMode
     }
     
     # ============================================
@@ -27497,36 +14010,10 @@ try {
 }
 catch {
     $errorMsg = $_.Exception.Message
-    $lineNumber = $_.InvocationInfo.ScriptLineNumber
-    $stackTrace = $_.ScriptStackTrace
-    $position = $_.InvocationInfo.PositionMessage
-    
-    # Log to file instead of showing popup
-    if (Get-Command Write-ErrorToFile -ErrorAction SilentlyContinue) {
-        Write-ErrorToFile -ErrorMessage $errorMsg `
-            -ErrorCategory "STARTUP_ERROR" `
-            -LineNumber $lineNumber `
-            -StackTrace $stackTrace `
-            -PositionMessage $position
-    }
-    
-    # Also log to startup log
     Write-StartupLog "CRITICAL ERROR during application startup: $errorMsg" "ERROR"
-    Write-StartupLog "Stack trace: $stackTrace" "ERROR"
-    Write-StartupLog "Line: $lineNumber | Position: $position" "ERROR"
-    
-    # Log to dev console if available (no popup)
-    if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
-        Write-DevConsole "FATAL ERROR: $errorMsg" "ERROR"
-        Write-DevConsole "❌ Critical startup failure - Check ERRORS.log: $script:EmergencyLogPath\ERRORS.log" "ERROR"
-    }
-    else {
-        Write-EmergencyLog "FATAL ERROR: $errorMsg" "CRITICAL"
-        Write-EmergencyLog "Check ERRORS.log: $script:EmergencyLogPath\ERRORS.log" "INFO"
-    }
-    
-    # Don't show popup - just log and exit gracefully
-    Start-Sleep -Seconds 1
+    Write-StartupLog "Stack trace: $($_.ScriptStackTrace)" "ERROR"
+    Write-DevConsole "FATAL ERROR: $errorMsg" "ERROR"
+    Write-DevConsole "❌ Critical startup failure - Check startup log: $script:StartupLogFile" "ERROR"
     exit 1
 }
 
@@ -27534,3100 +14021,6 @@ catch {
 Write-StartupLog "RawrXD application session ended" "INFO"
 Write-StartupLog "═══════════════════════════════════════════════" "INFO"
 
-# ============================================
-# AGENT TOOLS COMMAND INTERFACE
-# ============================================
-function Invoke-AgentTool {
-    <#
-    .SYNOPSIS
-        Execute a registered agent tool by name
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$ToolName,
-        
-        [Parameter(Mandatory = $false)]
-        [hashtable]$Parameters = @{},
-        
-        # Alias for backward compatibility with older code that uses -Arguments
-        [Parameter(Mandatory = $false)]
-        [Alias("Arguments")]
-        [hashtable]$Arguments = @{}
-    )
-    
-    # Support both Parameters and Arguments - Arguments takes precedence if both provided
-    if ($Arguments.Count -gt 0) {
-        $Parameters = $Arguments
-    }
-    
-    if (-not $script:agentTools -or -not $script:agentTools.ContainsKey($ToolName)) {
-        Write-DevConsole "⚠️ Agent tool not found: $ToolName" "WARNING"
-        return
-    }
-    
-    $tool = $script:agentTools[$ToolName]
-    
-    # Validate required parameters
-    if ($tool.Parameters) {
-        foreach ($paramName in $tool.Parameters.Keys) {
-            $paramDef = $tool.Parameters[$paramName]
-            if ($paramDef.required -and -not $Parameters.ContainsKey($paramName)) {
-                Write-DevConsole "⚠️ Missing required parameter: $paramName" "WARNING"
-                return
-            }
-        }
-    }
-    
-    # Execute tool handler
-    try {
-        $result = & $tool.Handler @Parameters
-        
-        # Track command in agent context if available (for backward compatibility)
-        if ($global:agentContext) {
-            $global:agentContext.Commands += @{
-                Tool      = $ToolName
-                Arguments = $Parameters
-                Result    = $result
-                Timestamp = Get-Date
-            }
-        }
-        
-        return $result
-    }
-    catch {
-        Write-DevConsole "⚠️ Error executing agent tool command: $_" "ERROR"
-        # Don't show popup - just log and exit gracefully
-        Start-Sleep -Seconds 1
-        exit 1
-    }
-}
-
-function Get-AgentToolsList {
-    <#
-    .SYNOPSIS
-        Get a formatted list of all available agent tools
-    #>
-    param()
-    
-    $categories = @{}
-    
-    foreach ($tool in $script:agentTools.Values) {
-        $category = $tool.Category
-        if (-not $categories.ContainsKey($category)) {
-            $categories[$category] = @()
-        }
-        
-        $categories[$category] += @{
-            name        = $tool.Name
-            description = $tool.Description
-            version     = $tool.Version
-            parameters  = $tool.Parameters.Keys -join ", "
-        }
-    }
-    
-    return $categories
-}
-
-# ============================================
-# AGENT CHANGES DISPLAY MANAGEMENT
-# ============================================
-function Update-AgentChangesDisplay {
-    <#
-    .SYNOPSIS
-        Updates the Agent Changes tab with all approved edits and changes
-    #>
-    
-    if (-not $script:agentChangesList) {
-        return
-    }
-    
-    try {
-        $script:agentChangesList.Items.Clear()
-        
-        # Process all approved edits
-        foreach ($edit in $global:agentContext.Edits) {
-            $fileName = [System.IO.Path]::GetFileName($edit.File)
-            $changeDesc = if ($edit.Description) { $edit.Description } else { "File modified" }
-            $timestamp = if ($edit.Timestamp) { $edit.Timestamp.ToString("yyyy-MM-dd HH:mm:ss") } else { "Unknown" }
-            
-            # Add edit to display
-            $item = New-Object System.Windows.Forms.ListViewItem($fileName)
-            $item.SubItems.Add($changeDesc) | Out-Null
-            $script:agentChangesList.Items.Add($item) | Out-Null
-        }
-        
-        # Sort by timestamp (newest first)
-        $script:agentChangesList.Sorting = [System.Windows.Forms.SortOrder]::Descending
-        $script:agentChangesList.Sort()
-        
-        Write-DevConsole "Agent Changes display updated" "INFO"
-    }
-    catch {
-        Write-DevConsole "Error updating Agent Changes display" "WARNING"
-    }
-}
-
-# ============================================
-# PERFORMANCE OPTIMIZATION FUNCTIONS
-# ============================================
-function Start-PerformanceOptimization {
-    <#
-    .SYNOPSIS
-        Starts performance optimization, including memory and process optimization
-    #>
-    
-    try {
-        Write-DevConsole "🚀 Starting performance optimization..." "INFO"
-        
-        # Memory optimization
-        Optimize-Memory
-        
-        # Process priority optimization
-        Optimize-ProcessPriority
-        
-        # Network optimization
-        Optimize-NetworkSettings
-        
-        # UI optimization
-        Optimize-UIPerformance
-        
-        Write-DevConsole "✅ Performance optimization completed" "SUCCESS"
-    }
-    catch {
-        Write-DevConsole "⚠️ Error during performance optimization: $_" "ERROR"
-        # Don't show popup - just log and exit gracefully
-        Start-Sleep -Seconds 1
-        exit 1
-    }
-}
-
-function Optimize-Memory {
-    <#
-    .SYNOPSIS
-        Optimizes memory usage by garbage collecting and managing processes
-    #>
-    
-    try {
-        [System.GC]::Collect()
-        
-        # Process optimization
-        Optimize-ProcessPriority
-        
-        Write-DevConsole "🧹 Memory optimized" "INFO"
-    }
-    catch {
-        Write-DevConsole "⚠️ Error during memory optimization: $_" "ERROR"
-        # Don't show popup - just log and exit gracefully
-        Start-Sleep -Seconds 1
-        exit 1
-    }
-}
-
-function Optimize-ProcessPriority {
-    <#
-    .SYNOPSIS
-        Optimizes process priority to improve performance
-    #>
-    
-    try {
-        $process = Get-Process -Id $PID
-        if ($process.PriorityClass -ne [System.Diagnostics.ProcessPriorityClass]::High) {
-            Write-DevConsole "🚀 Process prioritized" "INFO"
-            
-            $result = [Diagnostics.ProcessPriorityClass]::High
-            [Diagnostics.Process]::SetPriority($process.Handle, $result)
-            
-            Write-DevConsole "✅ Process optimized" "INFO"
-        }
-    }
-    catch {
-        Write-DevConsole "⚠️ Error during process prioritization: $_" "ERROR"
-        # Don't show popup - just log and exit gracefully
-        Start-Sleep -Seconds 1
-        exit 1
-    }
-}
-
-function Optimize-NetworkSettings {
-    <#
-    .SYNOPSIS
-        Optimizes network settings to improve performance
-    #>
-    
-    try {
-        $systemNetServicePoint = [System.Net.ServicePoint]
-        
-        Write-DevConsole "🌐 Network optimized" "INFO"
-        
-        if ($systemNetServicePoint.DefaultConnectionLimit -ne 20) {
-            Write-DevConsole "🚀 Connection limit increased to 20" "INFO"
-            
-            $result = $systemNetServicePoint.DefaultConnectionLimit
-            [System.Net.ServicePoint]::DefaultConnectionLimit = $result
-        }
-        
-        if ($systemNetServicePoint.Expect100Continue -ne $false) {
-            Write-DevConsole "🚀 Expect 100 Continue enabled" "INFO"
-            
-            $result = $systemNetServicePoint.Expect100Continue
-            [System.Net.ServicePoint]::Expect100Continue = $result
-        }
-        
-        if ($systemNetServicePoint.EnableNagleAlgorithm -ne $false) {
-            Write-DevConsole "🚀 Nagle algorithm enabled" "INFO"
-            
-            $result = $systemNetServicePoint.EnableNagleAlgorithm
-            [System.Net.ServicePoint]::EnableNagleAlgorithm = $result
-        }
-        
-        if ($systemNetServicePoint.MaxConnections -ne 20) {
-            Write-DevConsole "🚀 Max connections increased to 20" "INFO"
-            
-            $result = $systemNetServicePoint.MaxConnections
-            [System.Net.ServicePoint]::MaxConnections = $result
-        }
-    }
-    catch {
-        Write-DevConsole "⚠️ Error during network optimization: $_" "ERROR"
-        # Don't show popup - just log and exit gracefully
-        Start-Sleep -Seconds 1
-        exit 1
-    }
-}
-
-function Optimize-UIPerformance {
-    <#
-    .SYNOPSIS
-        Optimizes UI performance by enabling double buffering
-    #>
-    
-    try {
-        Enable-ControlDoubleBuffering -Control $form
-        Write-DevConsole "🎨 UI optimized" "INFO"
-    }
-    catch {
-        Write-DevConsole "⚠️ Error during UI optimization: $_" "ERROR"
-        # Don't show popup - just log and exit gracefully
-        Start-Sleep -Seconds 1
-        exit 1
-    }
-}
-
-# ============================================
-# CLI COMMAND HANDLERS
-# ============================================
-
-# Get all .ps1 files in the cli-handlers directory
-$files = Get-ChildItem -Path 'C:\Users\HiH8e\OneDrive\Desktop\Powershield\cli-handlers' -Filter *.ps1
-
-foreach ($file in $files) {
-    if ($file.Name -eq 'ollama-handlers.ps1') {
-        continue
-    }
-
-    # Read the content of the file
-    $content = Get-Content -Path $file.FullName -Raw
-
-    # Check if Export-ModuleMember is present in the content
-    if ($content -match 'Export-ModuleMember') {
-        # Replace Export-ModuleMember (entire line) with a note
-        $newContent = $content -replace '(?m)^.*Export-ModuleMember.*$', '# Note: Export-ModuleMember removed - this file is dot-sourced, not imported as a module'
-
-        # Write the new content back to the file
-        Set-Content -Path $file.FullName -Value $newContent
-
-        # Print a success message
-        Write-Host "Fixed: $($file.Name)" -ForegroundColor Green
-    }
-}
-
-function Invoke-CliTestOllama {
-    <#
-    .SYNOPSIS
-        Test Ollama connection and available models
-    .DESCRIPTION
-        Tests connection to Ollama server with enhanced error handling and security validation
-    #>
-    
-    Write-Host "`n=== Testing Ollama Connection ===" -ForegroundColor Cyan
-    
-    try {
-        # Validate Ollama endpoint URL to prevent SSRF attacks
-        $ollamaUri = "http://localhost:11434/api/tags"  # HTTPS enforced
-        if ($ollamaUri -notmatch '^http://localhost:11434/') {
-            Write-Error "Invalid Ollama endpoint - security validation failed"
-            return $false
-        }
-        
-        # Test connection with timeout and proper error handling
-        $response = Invoke-RestMethod -Uri $ollamaUri -Method Get -TimeoutSec 5 -ErrorAction Stop
-        
-        Write-Host "✓ Ollama server is running" -ForegroundColor Green
-        Write-Host "`nAvailable models:" -ForegroundColor Yellow
-        
-        if ($response.models -and $response.models.Count -gt 0) {
-            foreach ($model in $response.models) {
-                # Sanitize model name output to prevent injection
-                $modelName = if ($model.name) { $model.name } else { "Unknown" }
-                $modelSize = if ($model.size) { [Math]::Round($model.size / 1GB, 2) } else { 0 }
-                Write-Host "  • $modelName - Size: $modelSize GB" -ForegroundColor White
-            }
-        }
-        else {
-            Write-Host "  No models found" -ForegroundColor Red
-        }
-        
-        return $true
-    }
-    catch [System.Net.WebException] {
-        Write-Host "✗ Ollama server is not reachable" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "`n  Please ensure Ollama is running: ollama serve" -ForegroundColor Yellow
-        Write-Error "Ollama connection test failed: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-    catch {
-        Write-Host "✗ Unexpected error during Ollama connection test" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "Ollama test failed: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-}
-
-function Invoke-CliListModels {
-    <#
-    .SYNOPSIS
-        List all available Ollama models with details
-    .DESCRIPTION
-        Lists all available Ollama models with enhanced security and error handling
-    #>
-    
-    Write-Host "`n=== Available Ollama Models ===" -ForegroundColor Cyan
-    
-    try {
-        # Use HTTP for local Ollama server (HTTPS not supported by default)
-        $ollamaUri = "http://localhost:11434/api/tags"
-        
-        $response = Invoke-RestMethod -Uri $ollamaUri -Method Get -TimeoutSec 5 -ErrorAction Stop
-        
-        if ($response.models -and $response.models.Count -gt 0) {
-            $models = $response.models | Sort-Object name
-            
-            Write-Host "`nFound $($models.Count) model(s):" -ForegroundColor Green
-            Write-Host ""
-            
-            foreach ($model in $models) {
-                # Sanitize and validate model data before display
-                $modelName = if ($model.name) { $model.name } else { "Unknown" }
-                $sizeGB = if ($model.size -and $model.size -gt 0) { 
-                    [Math]::Round($model.size / 1GB, 2) 
-                }
-                else { 
-                    0 
-                }
-                
-                $modified = if ($model.modified_at) { 
-                    try {
-                        (Get-Date $model.modified_at -Format "yyyy-MM-dd HH:mm:ss") 
-                    }
-                    catch {
-                        "Invalid Date"
-                    }
-                }
-                else { 
-                    "Unknown" 
-                }
-                
-                Write-Host "Model: " -NoNewline -ForegroundColor Yellow
-                Write-Host $modelName -ForegroundColor White
-                Write-Host "  Size: $sizeGB GB" -ForegroundColor Gray
-                Write-Host "  Modified: $modified" -ForegroundColor Gray
-                Write-Host ""
-            }
-        }
-        else {
-            Write-Host "No models installed" -ForegroundColor Red
-            Write-Host "Install a model: ollama pull llama2" -ForegroundColor Yellow
-        }
-        
-        return $true
-    }
-    catch [System.Net.WebException] {
-        Write-Host "✗ Failed to list models - connection error" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "Failed to list Ollama models: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-    catch {
-        Write-Host "✗ Failed to list models" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "Failed to list Ollama models: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-}
-
-function Invoke-CliChat {
-    <#
-    .SYNOPSIS
-        Start an interactive chat session with Ollama
-    .DESCRIPTION
-        Interactive chat with enhanced security, input validation, and error handling
-    #>
-    param(
-        [Parameter(Mandatory = $false)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Model = "llama2"
-    )
-    
-    # Validate model name to prevent injection
-    if ($Model -match '[<>"|&;`]') {
-        Write-Error "Invalid model name - contains illegal characters"
-        return $false
-    }
-    
-    # Limit model name length
-    if ($Model.Length -gt 100) {
-        Write-Error "Model name too long (max 100 characters)"
-        return $false
-    }
-    
-    Write-Host "`n=== Interactive Chat Session ===" -ForegroundColor Cyan
-    Write-Host "Model: $Model" -ForegroundColor Yellow
-    Write-Host "Type 'exit' or 'quit' to end the session`n" -ForegroundColor Gray
-    
-    # Test connection first
-    if (-not (Invoke-CliTestOllama)) {
-        Write-Error "Ollama service is not running. Please start it first."
-        return $false
-    }
-    
-    $conversationHistory = @()
-    $ollamaUri = "http://localhost:11434/api/generate"  # HTTPS enforced
-    
-    # Validate Ollama endpoint URL (HTTPS required)
-    if ($ollamaUri -notmatch '^http://localhost:11434/') {
-        Write-Error "Invalid Ollama endpoint - security validation failed"
-        return $false
-    }
-    
-    while ($true) {
-        Write-Host "You: " -NoNewline -ForegroundColor Green
-        $userInput = Read-SecureInput -Prompt "You" -AsSecureString:$false
-        
-        if ($userInput -match "^(exit|quit)$") {
-            Write-Host "`nEnding chat session. Goodbye!" -ForegroundColor Cyan
-            break
-        }
-        
-        if ([string]::IsNullOrWhiteSpace($userInput)) {
-            continue
-        }
-        
-        # Validate input length to prevent DoS
-        if ($userInput.Length -gt 10000) {
-            Write-Host "Error: Input too long (max 10000 characters)" -ForegroundColor Red
-            Write-Host ""
-            continue
-        }
-        
-        # Handle built-in commands before sending to AI
-        $handled = $false
-        
-        # GREP command - search for text patterns
-        if ($userInput -match "^/(grep|search-text)\s+(.+)" -or $userInput -match "^(grep|search)\s+(.+)" -or $userInput -match "search for (.+) in") {
-            $searchPattern = if ($matches[1] -eq "grep" -or $matches[1] -eq "search-text" -or $matches[1] -eq "search") { $matches[2] } else { $matches[1] }
-            $searchPattern = $searchPattern.Trim()
-            
-            Write-Host "🔍 Searching for pattern: '$searchPattern'`n" -ForegroundColor Yellow
-            
-            try {
-                $currentDir = Get-Location
-                $results = @()
-                $fileCount = 0
-                $matchCount = 0
-                
-                Get-ChildItem -Path $currentDir -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
-                    try {
-                        $content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
-                        if ($content -match $searchPattern) {
-                            $fileCount++
-                            $lines = $content -split "`n"
-                            $lineMatches = @()
-                            for ($i = 0; $i -lt $lines.Count; $i++) {
-                                if ($lines[$i] -match $searchPattern) {
-                                    $lineMatches += "  Line $($i + 1): $($lines[$i].Trim())"
-                                    $matchCount++
-                                }
-                            }
-                            if ($lineMatches.Count -gt 0) {
-                                $results += "📄 $($_.Name) ($($_.FullName))"
-                                $results += $lineMatches[0..([Math]::Min(5, $lineMatches.Count - 1))]
-                                if ($lineMatches.Count -gt 5) {
-                                    $results += "  ... and $($lineMatches.Count - 5) more matches"
-                                }
-                            }
-                        }
-                    }
-                    catch { }
-                }
-                
-                if ($results.Count -eq 0) {
-                    Write-Host "❌ No matches found for pattern '$searchPattern' in $currentDir" -ForegroundColor Red
-                }
-                else {
-                    Write-Host "✅ Found $matchCount match(es) in $fileCount file(s):`n" -ForegroundColor Green
-                    $displayResults = if ($results.Count -gt 20) { $results[0..19] } else { $results }
-                    Write-Host ($displayResults -join "`n") -ForegroundColor White
-                    if ($results.Count -gt 20) {
-                        Write-Host "... (showing first 20 results)" -ForegroundColor Gray
-                    }
-                }
-            }
-            catch {
-                Write-Host "❌ Error searching: $($_.Exception.Message)" -ForegroundColor Red
-            }
-            
-            Write-Host ""
-            $handled = $true
-        }
-        
-        # SEARCH command - semantic codebase search
-        if (-not $handled -and ($userInput -match "^/(search|find|codebase-search)\s+(.+)" -or $userInput -match "^(search|find)\s+(.+)" -or $userInput -match "search codebase for (.+)")) {
-            $searchQuery = if ($matches[1] -eq "search" -or $matches[1] -eq "find" -or $matches[1] -eq "codebase-search") { $matches[2] } else { $matches[1] }
-            $searchQuery = $searchQuery.Trim()
-            
-            Write-Host "🔎 Semantic search for: '$searchQuery'`n" -ForegroundColor Yellow
-            
-            try {
-                $currentDir = Get-Location
-                $results = @()
-                $fileCount = 0
-                
-                Get-ChildItem -Path $currentDir -Recurse -File -ErrorAction SilentlyContinue | 
-                Where-Object { $_.Extension -match '\.(ps1|psm1|txt|md|json|xml|yaml|yml|js|ts|py|java|cpp|h|cs)$' } | 
-                ForEach-Object {
-                    try {
-                        $content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
-                        $keywords = $searchQuery -split '\s+'
-                        $matchScore = 0
-                        foreach ($keyword in $keywords) {
-                            if ($content -match [regex]::Escape($keyword)) {
-                                $matchScore++
-                            }
-                        }
-                        if ($matchScore -gt 0) {
-                            $fileCount++
-                            $results += "📄 $($_.Name) (Score: $matchScore/$($keywords.Count)) - $($_.FullName)"
-                            if ($results.Count -ge 10) { return }
-                        }
-                    }
-                    catch { }
-                }
-                
-                if ($results.Count -eq 0) {
-                    Write-Host "❌ No relevant files found for '$searchQuery'" -ForegroundColor Red
-                }
-                else {
-                    Write-Host "✅ Found $fileCount relevant file(s):`n" -ForegroundColor Green
-                    Write-Host ($results -join "`n") -ForegroundColor White
-                }
-            }
-            catch {
-                Write-Host "❌ Error searching: $($_.Exception.Message)" -ForegroundColor Red
-            }
-            
-            Write-Host ""
-            $handled = $true
-        }
-        
-        # LIST command - list files/directories
-        if (-not $handled -and ($userInput -match "^/(list|ls|dir)\s*(.*)" -or $userInput -match "^(list|show)\s+(files|directories|dir)\s*(.*)" -or $userInput -match "list (.+)")) {
-            $listPath = if ($matches[1] -and $matches[1] -ne "list" -and $matches[1] -ne "ls" -and $matches[1] -ne "dir") { $matches[1] } 
-            elseif ($matches[2]) { $matches[2] } 
-            else { "" }
-            $listPath = $listPath.Trim()
-            
-            try {
-                if ([string]::IsNullOrWhiteSpace($listPath)) {
-                    $listPath = Get-Location
-                }
-                
-                if (-not (Test-Path $listPath)) {
-                    Write-Host "❌ Path not found: $listPath" -ForegroundColor Red
-                }
-                else {
-                    $items = Get-ChildItem -Path $listPath -ErrorAction SilentlyContinue | Sort-Object Name
-                    $dirs = $items | Where-Object { $_.PSIsContainer }
-                    $files = $items | Where-Object { -not $_.PSIsContainer }
-                    
-                    Write-Host "📁 Directory: $listPath`n" -ForegroundColor Cyan
-                    Write-Host "📂 Directories ($($dirs.Count)):" -ForegroundColor Yellow
-                    foreach ($dir in $dirs) {
-                        Write-Host "  📁 $($dir.Name)" -ForegroundColor White
-                    }
-                    Write-Host "`n📄 Files ($($files.Count)):" -ForegroundColor Yellow
-                    foreach ($file in $files) {
-                        $size = if ($file.Length -lt 1KB) { "$($file.Length) B" }
-                        elseif ($file.Length -lt 1MB) { "$([math]::Round($file.Length/1KB, 2)) KB" }
-                        else { "$([math]::Round($file.Length/1MB, 2)) MB" }
-                        Write-Host "  📄 $($file.Name) ($size)" -ForegroundColor White
-                    }
-                    
-                    if ($items.Count -gt 50) {
-                        Write-Host "`n... (showing first 50 items)" -ForegroundColor Gray
-                    }
-                }
-            }
-            catch {
-                Write-Host "❌ Error listing directory: $($_.Exception.Message)" -ForegroundColor Red
-            }
-            
-            Write-Host ""
-            $handled = $true
-        }
-        
-        # SUMMARIZE command - summarize chat context
-        if (-not $handled -and ($userInput -match "^/(summarize|summary|context)" -or $userInput -match "summarize (chat|conversation|context)")) {
-            Write-Host "📋 Chat Context Summary`n" -ForegroundColor Cyan
-            
-            try {
-                $messageCount = $conversationHistory.Count
-                $userMessages = $conversationHistory | Where-Object { $_.Role -eq "user" }
-                $aiMessages = $conversationHistory | Where-Object { $_.Role -eq "assistant" }
-                
-                Write-Host "📊 Statistics:" -ForegroundColor Yellow
-                Write-Host "  • Total messages: $messageCount" -ForegroundColor White
-                Write-Host "  • User messages: $($userMessages.Count)" -ForegroundColor White
-                Write-Host "  • AI responses: $($aiMessages.Count)" -ForegroundColor White
-                if ($conversationHistory.Count -gt 0) {
-                    $duration = (Get-Date) - $conversationHistory[0].Timestamp
-                    Write-Host "  • Session duration: $($duration.ToString('hh\:mm\:ss'))" -ForegroundColor White
-                }
-                
-                Write-Host "`n💬 Recent Topics:" -ForegroundColor Yellow
-                $recentMessages = $conversationHistory[-10..-1] | Where-Object { $_ }
-                $topics = @()
-                foreach ($msg in $recentMessages) {
-                    if ($msg.Role -eq "user" -and $msg.Content.Length -gt 10) {
-                        $words = $msg.Content -split '\s+' | Where-Object { $_.Length -gt 4 }
-                        if ($words.Count -gt 0) {
-                            $topics += $words[0..2] -join " "
-                        }
-                    }
-                }
-                $uniqueTopics = $topics | Select-Object -Unique | Select-Object -First 5
-                foreach ($topic in $uniqueTopics) {
-                    Write-Host "  • $topic" -ForegroundColor White
-                }
-                
-                Write-Host "`n📝 Key Points:" -ForegroundColor Yellow
-                foreach ($msg in $userMessages[0..([Math]::Min(3, $userMessages.Count - 1))]) {
-                    $preview = if ($msg.Content.Length -gt 60) { $msg.Content.Substring(0, 60) + "..." } else { $msg.Content }
-                    Write-Host "  • $preview" -ForegroundColor White
-                }
-            }
-            catch {
-                Write-Host "❌ Error generating summary: $($_.Exception.Message)" -ForegroundColor Red
-            }
-            
-            Write-Host ""
-            $handled = $true
-        }
-        
-        # If command was handled, skip AI call
-        if ($handled) {
-            continue
-        }
-        
-        # Send to AI with context
-        try {
-            Write-Host "AI: " -NoNewline -ForegroundColor Cyan
-            
-            # Build context with available commands
-            $systemContext = @"
-You are an AI assistant in RawrXD IDE. You have access to these commands:
-- /grep <pattern> or grep <pattern> - Search for text patterns in files
-- /search <query> or search <query> - Semantic codebase search
-- /list [path] or list [path] - List files and directories
-- /summarize - Summarize chat context and conversation
-
-You can help users search code, find files, and navigate the codebase.
-"@
-            
-            # Build conversation context
-            $context = "System: $systemContext`n`n"
-            foreach ($msg in $conversationHistory) {
-                $context += "$($msg.Role): $($msg.Content)`n"
-            }
-            
-            # Sanitize model name in request body
-            $sanitizedModel = $Model.Trim()
-            $sanitizedInput = $context + "user: $($userInput.Trim())`n"
-            
-            $body = @{
-                model  = $sanitizedModel
-                prompt = $sanitizedInput
-                stream = $false
-            } | ConvertTo-Json -Compress
-            
-            $response = Invoke-RestMethod -Uri $ollamaUri -Method Post -Body $body -ContentType "application/json" -TimeoutSec 120 -ErrorAction Stop
-            
-            if ($response.response) {
-                Write-Host $response.response -ForegroundColor White
-                # Store in conversation history
-                $conversationHistory += @{ Role = "user"; Content = $userInput; Timestamp = Get-Date }
-                $conversationHistory += @{ Role = "assistant"; Content = $response.response; Timestamp = Get-Date }
-            }
-            else {
-                Write-Host "No response received from model" -ForegroundColor Red
-            }
-            
-            Write-Host ""
-        }
-        catch [System.Net.WebException] {
-            Write-Host "Error: Connection failed - $($_.Exception.Message)" -ForegroundColor Red
-            Write-Host ""
-        }
-        catch {
-            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-            Write-Host ""
-        }
-    }
-    
-    return $true
-}
-
-function Invoke-CliAnalyzeFile {
-    <#
-    .SYNOPSIS
-        Analyze a file with AI
-    .DESCRIPTION
-        Analyzes a file with enhanced security, path validation, and error handling
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$FilePath,
-        
-        [Parameter(Mandatory = $false)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Model = "llama2"
-    )
-    
-    Write-Host "`n=== File Analysis ===" -ForegroundColor Cyan
-    
-    # Validate and sanitize file path to prevent path traversal attacks
-    try {
-        $resolvedPath = Resolve-Path -Path $FilePath -ErrorAction Stop
-        $fullPath = $resolvedPath.Path
-        
-        # Additional security: ensure path is within reasonable bounds
-        if ($fullPath.Length -gt 260) {
-            Write-Error "File path too long (max 260 characters)"
-            return $false
-        }
-    }
-    catch {
-        Write-Host "✗ Invalid file path: $FilePath" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "File path validation failed: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-    
-    if (-not (Test-Path $fullPath)) {
-        Write-Host "✗ File not found: $fullPath" -ForegroundColor Red
-        Write-Error "File not found: $fullPath" -ErrorAction Continue
-        return $false
-    }
-    
-    # Validate it's actually a file, not a directory
-    $fileItem = Get-Item -Path $fullPath -ErrorAction Stop
-    if ($fileItem.PSIsContainer) {
-        Write-Host "✗ Path is a directory, not a file: $fullPath" -ForegroundColor Red
-        Write-Error "Path is a directory: $fullPath" -ErrorAction Continue
-        return $false
-    }
-    
-    # Validate file size (prevent loading huge files)
-    $maxFileSize = 10MB
-    if ($fileItem.Length -gt $maxFileSize) {
-        Write-Host "✗ File too large: $([Math]::Round($fileItem.Length / 1MB, 2)) MB (max 10 MB)" -ForegroundColor Red
-        Write-Error "File too large for analysis: $([Math]::Round($fileItem.Length / 1MB, 2)) MB" -ErrorAction Continue
-        return $false
-    }
-    
-    # Validate model name
-    if ($Model -match '[<>"|&;`]') {
-        Write-Error "Invalid model name - contains illegal characters"
-        return $false
-    }
-    
-    try {
-        $content = Get-Content -Path $fullPath -Raw -ErrorAction Stop
-        $fileInfo = Get-Item $fullPath
-        
-        Write-Host "File: $($fileInfo.Name)" -ForegroundColor Yellow
-        Write-Host "Size: $([Math]::Round($fileInfo.Length / 1KB, 2)) KB" -ForegroundColor Gray
-        Write-Host "Lines: $(($content -split "`n").Count)" -ForegroundColor Gray
-        Write-Host "`nAnalyzing with $Model...`n" -ForegroundColor Cyan
-        
-        # Limit prompt size to prevent issues
-        $maxPromptLength = 50000
-        if ($content.Length -gt $maxPromptLength) {
-            Write-Host "⚠ File content truncated for analysis (showing first $maxPromptLength characters)" -ForegroundColor Yellow
-            $content = $content.Substring(0, $maxPromptLength) + "`n`n[Content truncated...]"
-        }
-        
-        $prompt = "Analyze this code file and provide insights about its purpose, structure, and any potential improvements:`n`n$content"
-        
-        # Validate Ollama endpoint URL
-        $ollamaUri = "http://localhost:11434/api/generate"
-        if ($ollamaUri -notmatch '^http://localhost:11434/') {
-            Write-Error "Invalid Ollama endpoint - security validation failed"
-            return $false
-        }
-        
-        $body = @{
-            model  = $Model.Trim()
-            prompt = $prompt
-            stream = $false
-        } | ConvertTo-Json -Compress
-        
-        $response = Invoke-RestMethod -Uri $ollamaUri -Method Post -Body $body -ContentType "application/json" -TimeoutSec 180 -ErrorAction Stop
-        
-        if ($response.response) {
-            Write-Host "Analysis:" -ForegroundColor Green
-            Write-Host $response.response -ForegroundColor White
-        }
-        else {
-            Write-Host "✗ No analysis received from model" -ForegroundColor Red
-        }
-        
-        return $true
-    }
-    catch [System.IO.IOException] {
-        Write-Host "✗ Failed to read file" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "File analysis failed - IO error: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-    catch [System.Net.WebException] {
-        Write-Host "✗ Failed to analyze file - connection error" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "File analysis failed - network error: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-    catch {
-        Write-Host "✗ Failed to analyze file" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "File analysis failed: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-}
-
-function Invoke-CliGitStatus {
-    <#
-    .SYNOPSIS
-        Show git status in a formatted way
-    .DESCRIPTION
-        Shows git status with enhanced security and error handling
-    #>
-    
-    Write-Host "`n=== Git Status ===" -ForegroundColor Cyan
-    
-    try {
-        # Check if git is available
-        $gitCheck = Get-Command git -ErrorAction SilentlyContinue
-        if (-not $gitCheck) {
-            Write-Host "✗ Git is not installed or not in PATH" -ForegroundColor Red
-            Write-Error "Git command not found" -ErrorAction Continue
-            return $false
-        }
-        
-        # Check if in a git repository (using secure method)
-        $gitRootOutput = & git rev-parse --show-toplevel 2>&1
-        if ($LASTEXITCODE -ne 0 -or -not $gitRootOutput) {
-            Write-Host "✗ Not in a git repository" -ForegroundColor Red
-            Write-Error "Not in a git repository" -ErrorAction Continue
-            return $false
-        }
-        
-        # Sanitize git root path
-        $gitRoot = ($gitRootOutput | Select-Object -First 1).ToString().Trim()
-        if ([string]::IsNullOrWhiteSpace($gitRoot)) {
-            Write-Host "✗ Unable to determine git repository root" -ForegroundColor Red
-            return $false
-        }
-        
-        Write-Host "Repository: $gitRoot`n" -ForegroundColor Yellow
-        
-        # Get current branch (secure method)
-        $branchOutput = & git rev-parse --abbrev-ref HEAD 2>&1
-        if ($LASTEXITCODE -eq 0 -and $branchOutput) {
-            $branch = ($branchOutput | Select-Object -First 1).ToString().Trim()
-            Write-Host "Branch: $branch" -ForegroundColor Green
-        }
-        else {
-            Write-Host "Branch: Unable to determine" -ForegroundColor Yellow
-        }
-        
-        # Get status using secure method
-        $statusOutput = & git status --porcelain 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "✗ Error running git status" -ForegroundColor Red
-            Write-Error "Git status command failed" -ErrorAction Continue
-            return $false
-        }
-        
-        $status = $statusOutput | Where-Object { $_ -and $_.ToString().Trim().Length -gt 0 }
-        
-        if ($status) {
-            Write-Host "`nModified files:" -ForegroundColor Yellow
-            foreach ($line in $status) {
-                $lineStr = $line.ToString().Trim()
-                if ($lineStr.Length -lt 3) {
-                    continue
-                }
-                
-                $statusCode = $lineStr.Substring(0, 2).Trim()
-                $file = if ($lineStr.Length -gt 3) { $lineStr.Substring(3).Trim() } else { "" }
-                
-                # Sanitize file path for display
-                if ([string]::IsNullOrWhiteSpace($file)) {
-                    continue
-                }
-                
-                $color = switch ($statusCode) {
-                    "M" { "Yellow" }
-                    "A" { "Green" }
-                    "D" { "Red" }
-                    "R" { "Cyan" }
-                    "??" { "Gray" }
-                    default { "White" }
-                }
-                
-                $symbol = switch ($statusCode) {
-                    "M" { "✎" }
-                    "A" { "+" }
-                    "D" { "✗" }
-                    "R" { "→" }
-                    "??" { "?" }
-                    default { "•" }
-                }
-                
-                Write-Host "  $symbol $file" -ForegroundColor $color
-            }
-        }
-        else {
-            Write-Host "`n✓ Working directory clean" -ForegroundColor Green
-        }
-        
-        return $true
-    }
-    catch {
-        Write-Host "✗ Error checking git status" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "Git status check failed: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-}
-
-function Invoke-CliCreateAgent {
-    <#
-    .SYNOPSIS
-        Create a new agent task
-    .DESCRIPTION
-        Creates a new agent task with enhanced security, input validation, and error handling
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$AgentName,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$Prompt
-    )
-    
-    Write-Host "`n=== Create Agent Task ===" -ForegroundColor Cyan
-    
-    # Validate and sanitize agent name
-    $sanitizedAgentName = $AgentName.Trim()
-    
-    # Security: Validate agent name doesn't contain path traversal or illegal characters
-    if ($sanitizedAgentName -match '[<>:"|?*\x00-\x1f]') {
-        Write-Host "✗ Invalid agent name - contains illegal characters" -ForegroundColor Red
-        Write-Error "Agent name contains illegal characters" -ErrorAction Continue
-        return $false
-    }
-    
-    # Limit agent name length
-    if ($sanitizedAgentName.Length -gt 100) {
-        Write-Host "✗ Agent name too long (max 100 characters)" -ForegroundColor Red
-        Write-Error "Agent name too long" -ErrorAction Continue
-        return $false
-    }
-    
-    if (-not $Prompt) {
-        Write-Host "Agent Name: $sanitizedAgentName" -ForegroundColor Yellow
-        Write-Host "`nEnter task description (max 5000 characters, press Enter twice to finish):" -ForegroundColor Gray
-        
-        $lines = @()
-        $totalLength = 0
-        $maxLength = 5000
-        
-        while ($true) {
-            $line = Read-Host
-            if ([string]::IsNullOrWhiteSpace($line) -and $lines.Count -gt 0) {
-                break
-            }
-            if (-not [string]::IsNullOrWhiteSpace($line)) {
-                $totalLength += $line.Length
-                if ($totalLength -gt $maxLength) {
-                    Write-Host "⚠ Task description exceeds maximum length. Truncating..." -ForegroundColor Yellow
-                    break
-                }
-                $lines += $line
-            }
-        }
-        
-        $Prompt = $lines -join "`n"
-    }
-    
-    # Validate prompt
-    $sanitizedPrompt = $Prompt.Trim()
-    if ([string]::IsNullOrWhiteSpace($sanitizedPrompt)) {
-        Write-Host "✗ No task description provided" -ForegroundColor Red
-        Write-Error "No task description provided" -ErrorAction Continue
-        return $false
-    }
-    
-    # Limit prompt length
-    if ($sanitizedPrompt.Length -gt 5000) {
-        Write-Host "⚠ Task description too long, truncating to 5000 characters" -ForegroundColor Yellow
-        $sanitizedPrompt = $sanitizedPrompt.Substring(0, 5000)
-    }
-    
-    try {
-        # Create agent task file with secure path handling and restricted permissions (NIST compliance)
-        $agentsPath = Join-Path $PSScriptRoot "agents"
-        if (-not (Test-Path $agentsPath)) {
-            try {
-                New-Item -ItemType Directory -Path $agentsPath -Force | Out-Null
-                
-                # PRODUCTION SECURITY: Set restricted permissions for agents directory
-                if ($IsWindows -or $env:OS -match "Windows") {
-                    try {
-                        $acl = Get-Acl -Path $agentsPath
-                        $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance
-                        
-                        # Get current user
-                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                        
-                        # Grant full control to current user only (RBAC)
-                        $userRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                            $currentUser, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
-                        )
-                        $acl.SetAccessRule($userRule)
-                        
-                        Set-Acl -Path $agentsPath -AclObject $acl -ErrorAction SilentlyContinue
-                        Write-SecurityLog "Agents directory created with restricted permissions" "INFO" "Path: $agentsPath"
-                    }
-                    catch {
-                        Write-DevConsole "Could not set agents directory permissions: $_" "WARNING"
-                    }
-                }
-            }
-            catch {
-                Write-Host "✗ Failed to create agents directory" -ForegroundColor Red
-                Write-Error "Failed to create agents directory: $($_.Exception.Message)" -ErrorAction Continue
-                return $false
-            }
-        }
-        
-        # Validate agents path is within project root (security check)
-        $resolvedAgentsPath = Resolve-Path -Path $agentsPath -ErrorAction Stop
-        $resolvedScriptRoot = Resolve-Path -Path $PSScriptRoot -ErrorAction Stop
-        if (-not $resolvedAgentsPath.Path.StartsWith($resolvedScriptRoot.Path)) {
-            Write-Host "✗ Security validation failed - agents path outside project root" -ForegroundColor Red
-            Write-Error "Security validation failed" -ErrorAction Continue
-            return $false
-        }
-        
-        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-        # Sanitize filename
-        $safeFileName = $sanitizedAgentName -replace '[<>:"|?*\x00-\x1f]', '_'
-        $agentFile = Join-Path $resolvedAgentsPath.Path "${safeFileName}_${timestamp}.json"
-        
-        # Validate file path length
-        if ($agentFile.Length -gt 260) {
-            Write-Host "✗ Generated file path too long" -ForegroundColor Red
-            Write-Error "File path too long" -ErrorAction Continue
-            return $false
-        }
-        
-        $agentData = @{
-            Name     = $sanitizedAgentName
-            Created  = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-            Prompt   = $sanitizedPrompt
-            Status   = "Pending"
-            Priority = "Normal"
-        }
-        
-        $jsonContent = $agentData | ConvertTo-Json -Depth 10
-        Set-Content -Path $agentFile -Value $jsonContent -Encoding UTF8 -ErrorAction Stop
-        
-        Write-Host "`n✓ Agent task created successfully" -ForegroundColor Green
-        Write-Host "  File: $agentFile" -ForegroundColor Gray
-        Write-Host "`nAgent Details:" -ForegroundColor Yellow
-        Write-Host "  Name: $sanitizedAgentName" -ForegroundColor White
-        $displayPrompt = if ($sanitizedPrompt.Length -gt 200) { 
-            $sanitizedPrompt.Substring(0, 200) + "..." 
-        }
-        else { 
-            $sanitizedPrompt 
-        }
-        Write-Host "  Task: $displayPrompt" -ForegroundColor White
-        
-        return $true
-    }
-    catch [System.IO.IOException] {
-        Write-Host "✗ Failed to create agent task - IO error" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "Agent creation failed - IO error: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-    catch {
-        Write-Host "✗ Failed to create agent task" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "Agent creation failed: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-}
-
-function Invoke-CliListAgents {
-    <#
-    .SYNOPSIS
-        List all agent tasks
-    .DESCRIPTION
-        Lists all agent tasks with enhanced security and error handling
-    #>
-    
-    Write-Host "`n=== Agent Tasks ===" -ForegroundColor Cyan
-    
-    try {
-        $agentsPath = Join-Path $PSScriptRoot "agents"
-        
-        if (-not (Test-Path $agentsPath)) {
-            Write-Host "No agent tasks found (agents directory does not exist)" -ForegroundColor Yellow
-            return $true
-        }
-        
-        # Validate agents path is within project root (security check)
-        try {
-            $resolvedAgentsPath = Resolve-Path -Path $agentsPath -ErrorAction Stop
-            $resolvedScriptRoot = Resolve-Path -Path $PSScriptRoot -ErrorAction Stop
-            if (-not $resolvedAgentsPath.Path.StartsWith($resolvedScriptRoot.Path)) {
-                Write-Host "✗ Security validation failed - agents path outside project root" -ForegroundColor Red
-                Write-Error "Security validation failed" -ErrorAction Continue
-                return $false
-            }
-        }
-        catch {
-            Write-Host "✗ Failed to validate agents path" -ForegroundColor Red
-            Write-Error "Path validation failed: $($_.Exception.Message)" -ErrorAction Continue
-            return $false
-        }
-        
-        $agentFiles = Get-ChildItem -Path $resolvedAgentsPath.Path -Filter "*.json" -File -ErrorAction Stop
-        
-        if ($agentFiles.Count -eq 0) {
-            Write-Host "No agent tasks found" -ForegroundColor Yellow
-            return $true
-        }
-        
-        Write-Host "`nFound $($agentFiles.Count) agent task(s):`n" -ForegroundColor Green
-        
-        foreach ($file in $agentFiles) {
-            try {
-                # Validate file size before reading
-                if ($file.Length -gt 1MB) {
-                    Write-Host "  ⚠ Skipping $($file.Name) - file too large" -ForegroundColor Yellow
-                    continue
-                }
-                
-                $jsonContent = Get-Content -Path $file.FullName -Raw -ErrorAction Stop
-                $agent = $jsonContent | ConvertFrom-Json -ErrorAction Stop
-                
-                # Validate and sanitize agent data
-                $agentName = if ($agent.Name) { $agent.Name } else { "Unknown" }
-                $agentCreated = if ($agent.Created) { $agent.Created } else { "Unknown" }
-                $agentStatus = if ($agent.Status) { $agent.Status } else { "Unknown" }
-                $agentPrompt = if ($agent.Prompt) { $agent.Prompt } else { "No description" }
-                
-                Write-Host "Agent: " -NoNewline -ForegroundColor Yellow
-                Write-Host $agentName -ForegroundColor White
-                Write-Host "  Created: $agentCreated" -ForegroundColor Gray
-                Write-Host "  Status: $agentStatus" -ForegroundColor $(
-                    switch ($agentStatus) {
-                        "Completed" { "Green" }
-                        "In Progress" { "Cyan" }
-                        "Pending" { "Yellow" }
-                        default { "White" }
-                    }
-                )
-                
-                # Safely truncate prompt for display
-                $displayPrompt = if ($agentPrompt.Length -gt 100) { 
-                    $agentPrompt.Substring(0, 100) + "..." 
-                }
-                else { 
-                    $agentPrompt 
-                }
-                Write-Host "  Task: $displayPrompt" -ForegroundColor Gray
-                Write-Host ""
-            }
-            catch [System.Management.Automation.ParseException] {
-                Write-Host "  ✗ Error parsing JSON in $($file.Name)" -ForegroundColor Red
-            }
-            catch [System.IO.IOException] {
-                Write-Host "  ✗ Error reading $($file.Name) - IO error" -ForegroundColor Red
-            }
-            catch {
-                Write-Host "  ✗ Error reading $($file.Name): $($_.Exception.Message)" -ForegroundColor Red
-            }
-        }
-        
-        return $true
-    }
-    catch [System.IO.DirectoryNotFoundException] {
-        Write-Host "✗ Agents directory not found" -ForegroundColor Red
-        Write-Error "Agents directory not found" -ErrorAction Continue
-        return $false
-    }
-    catch {
-        Write-Host "✗ Failed to list agents" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Error "Failed to list agents: $($_.Exception.Message)" -ErrorAction Continue
-        return $false
-    }
-}
-
-function Invoke-CliMarketplaceSync {
-    <#
-    .SYNOPSIS
-        Sync marketplace catalog
-    #>
-    
-    Write-Host "`n=== Marketplace Sync ===" -ForegroundColor Cyan
-    
-    try {
-        $marketplaceUrl = "https://raw.githubusercontent.com/ItsMehRAWRXD/OhDang/master/marketplace/catalog.json"
-        
-        Write-Host "Fetching catalog from: $marketplaceUrl" -ForegroundColor Gray
-        
-        $catalog = Invoke-RestMethod -Uri $marketplaceUrl -Method Get -TimeoutSec 30 -ErrorAction Stop
-        
-        if ($catalog) {
-            $marketplacePath = Join-Path $PSScriptRoot "marketplace"
-            if (-not (Test-Path $marketplacePath)) {
-                New-Item -ItemType Directory -Path $marketplacePath -Force | Out-Null
-            }
-            
-            $catalogFile = Join-Path $marketplacePath "catalog.json"
-            $catalog | ConvertTo-Json -Depth 10 | Set-Content -Path $catalogFile -Encoding UTF8
-            
-            Write-Host "`n✓ Marketplace catalog synced successfully" -ForegroundColor Green
-            
-            if ($catalog.extensions) {
-                Write-Host "`nAvailable extensions: $($catalog.extensions.Count)" -ForegroundColor Yellow
-                
-                foreach ($ext in $catalog.extensions | Select-Object -First 5) {
-                    Write-Host "  • $($ext.name) - $($ext.description)" -ForegroundColor White
-                }
-                
-                if ($catalog.extensions.Count -gt 5) {
-                    Write-Host "  ... and $($catalog.extensions.Count - 5) more" -ForegroundColor Gray
-                }
-            }
-        }
-        else {
-            Write-Host "✗ Empty catalog received" -ForegroundColor Red
-        }
-        
-        return $true
-    }
-    catch {
-        Write-Host "✗ Failed to sync marketplace" -ForegroundColor Red
-        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-        return $false
-    }
-}
-
-function Invoke-CliTestEditorSettings {
-    <#
-    .SYNOPSIS
-        Test editor settings functionality (colors, fonts, syntax highlighting)
-    .DESCRIPTION
-        Tests all editor settings without launching GUI - like API testing
-    #>
-    
-    Write-Host "`n=== Editor Settings Test ===" -ForegroundColor Cyan
-    
-    $results = @{
-        Passed   = 0
-        Failed   = 0
-        Warnings = 0
-        Tests    = @()
-    }
-    
-    try {
-        # Initialize settings if needed
-        if (-not $global:settings) {
-            Set-EditorSettings
-        }
-        
-        # Test 1: Load settings from file
-        Write-Host "`n[1/8] Testing settings file load..." -ForegroundColor Yellow
-        try {
-            $settingsPath = Join-Path $env:APPDATA "RawrXD\settings.json"
-            if (Test-Path $settingsPath) {
-                $loaded = Get-Content $settingsPath | ConvertFrom-Json
-                Write-Host "  ✓ Settings file exists and is readable" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "Settings file load"; Status = "PASS" }
-            }
-            else {
-                Write-Host "  ⚠ Settings file does not exist (will be created on first save)" -ForegroundColor Yellow
-                $results.Warnings++
-                $results.Tests += @{Name = "Settings file load"; Status = "WARN" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Failed to load settings: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Settings file load"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 2: Default settings initialization
-        Write-Host "`n[2/8] Testing default settings..." -ForegroundColor Yellow
-        try {
-            $defaults = @{
-                EditorFontFamily      = "Consolas"
-                EditorFontSize        = 10
-                EditorTextColor       = "255,255,255"
-                EditorBackgroundColor = "30,30,30"
-                TabSize               = 4
-                ShowLineNumbers       = $true
-                CodeHighlighting      = $true
-            }
-            
-            $allPresent = $true
-            foreach ($key in $defaults.Keys) {
-                if (-not $global:settings.ContainsKey($key)) {
-                    Write-Host "  ✗ Missing default: $key" -ForegroundColor Red
-                    $allPresent = $false
-                }
-            }
-            
-            if ($allPresent) {
-                Write-Host "  ✓ All default settings present" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "Default settings"; Status = "PASS" }
-            }
-            else {
-                $results.Failed++
-                $results.Tests += @{Name = "Default settings"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error checking defaults: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Default settings"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 3: Color format validation
-        Write-Host "`n[3/8] Testing color format validation..." -ForegroundColor Yellow
-        try {
-            $testColors = @(
-                @{Name = "TextColor"; Value = "255,255,255"; Valid = $true }
-                @{Name = "BackgroundColor"; Value = "30,30,30"; Valid = $true }
-                @{Name = "InvalidColor1"; Value = "255,255"; Valid = $false }
-                @{Name = "InvalidColor2"; Value = "not-a-color"; Valid = $false }
-            )
-            
-            $colorTestsPassed = 0
-            foreach ($test in $testColors) {
-                $parts = $test.Value -split ','
-                $isValid = ($parts.Count -eq 3) -and ($parts | ForEach-Object { [int]::TryParse($_, [ref]$null) } | Where-Object { $_ } | Measure-Object).Count -eq 3
-                
-                if ($isValid -eq $test.Valid) {
-                    $colorTestsPassed++
-                }
-                else {
-                    Write-Host "  ✗ Color validation failed for: $($test.Name)" -ForegroundColor Red
-                }
-            }
-            
-            if ($colorTestsPassed -eq $testColors.Count) {
-                Write-Host "  ✓ Color format validation works correctly" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "Color validation"; Status = "PASS" }
-            }
-            else {
-                $results.Failed++
-                $results.Tests += @{Name = "Color validation"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error testing colors: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Color validation"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 4: Syntax highlighting colors
-        Write-Host "`n[4/8] Testing syntax highlighting colors..." -ForegroundColor Yellow
-        try {
-            $syntaxColors = @(
-                "SyntaxKeywordColor", "SyntaxStringColor", "SyntaxCommentColor",
-                "SyntaxFunctionColor", "SyntaxVariableColor", "SyntaxNumberColor", "SyntaxOperatorColor"
-            )
-            
-            $allSyntaxColorsPresent = $true
-            foreach ($colorKey in $syntaxColors) {
-                if (-not $global:settings.ContainsKey($colorKey)) {
-                    Write-Host "  ✗ Missing syntax color: $colorKey" -ForegroundColor Red
-                    $allSyntaxColorsPresent = $false
-                }
-                else {
-                    $colorValue = $global:settings[$colorKey]
-                    $parts = $colorValue -split ','
-                    if ($parts.Count -ne 3) {
-                        Write-Host "  ✗ Invalid format for: $colorKey" -ForegroundColor Red
-                        $allSyntaxColorsPresent = $false
-                    }
-                }
-            }
-            
-            if ($allSyntaxColorsPresent) {
-                Write-Host "  ✓ All syntax highlighting colors configured" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "Syntax highlighting colors"; Status = "PASS" }
-            }
-            else {
-                $results.Failed++
-                $results.Tests += @{Name = "Syntax highlighting colors"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error testing syntax colors: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Syntax highlighting colors"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 5: Settings save functionality
-        Write-Host "`n[5/8] Testing settings save..." -ForegroundColor Yellow
-        try {
-            $testSettingsPath = Join-Path $env:TEMP "RawrXD_Test_Settings.json"
-            $originalPath = $script:settingsPath
-            $script:settingsPath = $testSettingsPath
-            
-            Save-Settings
-            
-            if (Test-Path $testSettingsPath) {
-                $saved = Get-Content $testSettingsPath | ConvertFrom-Json
-                if ($saved) {
-                    Write-Host "  ✓ Settings save works correctly" -ForegroundColor Green
-                    $results.Passed++
-                    $results.Tests += @{Name = "Settings save"; Status = "PASS" }
-                    Remove-Item $testSettingsPath -ErrorAction SilentlyContinue
-                }
-                else {
-                    Write-Host "  ✗ Saved file is empty or invalid" -ForegroundColor Red
-                    $results.Failed++
-                    $results.Tests += @{Name = "Settings save"; Status = "FAIL" }
-                }
-            }
-            else {
-                Write-Host "  ✗ Settings file was not created" -ForegroundColor Red
-                $results.Failed++
-                $results.Tests += @{Name = "Settings save"; Status = "FAIL" }
-            }
-            
-            $script:settingsPath = $originalPath
-        }
-        catch {
-            Write-Host "  ✗ Error saving settings: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Settings save"; Status = "FAIL"; Error = $_.Exception.Message }
-            $script:settingsPath = $originalPath
-        }
-        
-        # Test 6: Settings load functionality
-        Write-Host "`n[6/8] Testing settings load..." -ForegroundColor Yellow
-        try {
-            $testSettingsPath = Join-Path $env:TEMP "RawrXD_Test_Settings.json"
-            $testSettings = @{
-                EditorFontFamily      = "Courier New"
-                EditorFontSize        = 12
-                EditorTextColor       = "200,200,200"
-                EditorBackgroundColor = "40,40,40"
-            }
-            $testSettings | ConvertTo-Json | Set-Content $testSettingsPath -Encoding UTF8
-            
-            $originalPath = $script:settingsPath
-            $script:settingsPath = $testSettingsPath
-            
-            Get-Settings
-            
-            $loaded = $true
-            foreach ($key in $testSettings.Keys) {
-                if ($global:settings[$key] -ne $testSettings[$key]) {
-                    Write-Host "  ✗ Setting $key not loaded correctly" -ForegroundColor Red
-                    $loaded = $false
-                }
-            }
-            
-            if ($loaded) {
-                Write-Host "  ✓ Settings load works correctly" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "Settings load"; Status = "PASS" }
-            }
-            else {
-                $results.Failed++
-                $results.Tests += @{Name = "Settings load"; Status = "FAIL" }
-            }
-            
-            Remove-Item $testSettingsPath -ErrorAction SilentlyContinue
-            $script:settingsPath = $originalPath
-        }
-        catch {
-            Write-Host "  ✗ Error loading settings: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Settings load"; Status = "FAIL"; Error = $_.Exception.Message }
-            $script:settingsPath = $originalPath
-        }
-        
-        # Test 7: Color parsing
-        Write-Host "`n[7/8] Testing color parsing..." -ForegroundColor Yellow
-        try {
-            $testCases = @(
-                @{Input = "255,255,255"; Expected = [System.Drawing.Color]::White }
-                @{Input = "0,0,0"; Expected = [System.Drawing.Color]::Black }
-                @{Input = "255,0,0"; Expected = [System.Drawing.Color]::Red }
-            )
-            
-            $parseTestsPassed = 0
-            foreach ($test in $testCases) {
-                $parts = $test.Input -split ','
-                try {
-                    $parsed = [System.Drawing.Color]::FromArgb([int]$parts[0], [int]$parts[1], [int]$parts[2])
-                    if ($parsed.R -eq $test.Expected.R -and $parsed.G -eq $test.Expected.G -and $parsed.B -eq $test.Expected.B) {
-                        $parseTestsPassed++
-                    }
-                }
-                catch {
-                    Write-Host "  ✗ Failed to parse: $($test.Input)" -ForegroundColor Red
-                }
-            }
-            
-            if ($parseTestsPassed -eq $testCases.Count) {
-                Write-Host "  ✓ Color parsing works correctly" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "Color parsing"; Status = "PASS" }
-            }
-            else {
-                $results.Failed++
-                $results.Tests += @{Name = "Color parsing"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error testing color parsing: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Color parsing"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 8: Settings persistence
-        Write-Host "`n[8/8] Testing settings persistence..." -ForegroundColor Yellow
-        try {
-            $originalSettings = $global:settings.Clone()
-            
-            # Modify a setting
-            $global:settings.EditorFontSize = 14
-            Save-Settings
-            
-            # Reload
-            $global:settings = @{}
-            Set-EditorSettings
-            Get-Settings
-            
-            if ($global:settings.EditorFontSize -eq 14) {
-                Write-Host "  ✓ Settings persistence works correctly" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "Settings persistence"; Status = "PASS" }
-            }
-            else {
-                Write-Host "  ✗ Settings did not persist correctly" -ForegroundColor Red
-                $results.Failed++
-                $results.Tests += @{Name = "Settings persistence"; Status = "FAIL" }
-            }
-            
-            # Restore original
-            $global:settings = $originalSettings
-            Save-Settings
-        }
-        catch {
-            Write-Host "  ✗ Error testing persistence: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Settings persistence"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Summary
-        Write-Host "`n=== Test Summary ===" -ForegroundColor Cyan
-        Write-Host "Passed: " -NoNewline -ForegroundColor Green
-        Write-Host $results.Passed
-        Write-Host "Warnings: " -NoNewline -ForegroundColor Yellow
-        Write-Host $results.Warnings
-        Write-Host "Failed: " -NoNewline -ForegroundColor Red
-        Write-Host $results.Failed
-        
-        if ($results.Failed -eq 0) {
-            Write-Host "`n✓ All editor settings tests passed" -ForegroundColor Green
-            return $true
-        }
-        else {
-            Write-Host "`n⚠ Some tests failed - see details above" -ForegroundColor Yellow
-            return $false
-        }
-    }
-    catch {
-        Write-Host "`n✗ Fatal error in editor settings test: $_" -ForegroundColor Red
-        return $false
-    }
-}
-
-function Invoke-CliTestFileOperations {
-    <#
-    .SYNOPSIS
-        Test file operations (open, save, read) without GUI
-    #>
-    
-    Write-Host "`n=== File Operations Test ===" -ForegroundColor Cyan
-    
-    $results = @{
-        Passed = 0
-        Failed = 0
-        Tests  = @()
-    }
-    
-    try {
-        $testDir = Join-Path $env:TEMP "RawrXD_FileOps_Test"
-        if (Test-Path $testDir) {
-            Remove-Item $testDir -Recurse -Force -ErrorAction SilentlyContinue
-        }
-        New-Item -ItemType Directory -Path $testDir -Force | Out-Null
-        
-        # Test 1: Create test file
-        Write-Host "`n[1/6] Testing file creation..." -ForegroundColor Yellow
-        try {
-            $testFile = Join-Path $testDir "test.txt"
-            $testContent = "This is a test file`nLine 2`nLine 3"
-            Set-Content -Path $testFile -Value $testContent -Encoding UTF8
-            
-            if (Test-Path $testFile) {
-                Write-Host "  ✓ File created successfully" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "File creation"; Status = "PASS" }
-            }
-            else {
-                Write-Host "  ✗ File was not created" -ForegroundColor Red
-                $results.Failed++
-                $results.Tests += @{Name = "File creation"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error creating file: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "File creation"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 2: Read file
-        Write-Host "`n[2/6] Testing file read..." -ForegroundColor Yellow
-        try {
-            $readContent = Get-Content -Path $testFile -Raw -Encoding UTF8
-            if ($readContent -eq $testContent) {
-                Write-Host "  ✓ File read correctly" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "File read"; Status = "PASS" }
-            }
-            else {
-                Write-Host "  ✗ File content mismatch" -ForegroundColor Red
-                $results.Failed++
-                $results.Tests += @{Name = "File read"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error reading file: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "File read"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 3: Large file handling
-        Write-Host "`n[3/6] Testing large file handling..." -ForegroundColor Yellow
-        try {
-            $largeFile = Join-Path $testDir "large.txt"
-            $largeContent = "Line " * 10000
-            Set-Content -Path $largeFile -Value $largeContent -Encoding UTF8
-            
-            $fileSize = (Get-Item $largeFile).Length
-            if ($fileSize -gt 50000) {
-                Write-Host "  ✓ Large file created ($([math]::Round($fileSize/1KB, 2)) KB)" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "Large file handling"; Status = "PASS" }
-            }
-            else {
-                Write-Host "  ✗ Large file size incorrect" -ForegroundColor Red
-                $results.Failed++
-                $results.Tests += @{Name = "Large file handling"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error with large file: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Large file handling"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 4: Binary file detection
-        Write-Host "`n[4/6] Testing binary file detection..." -ForegroundColor Yellow
-        try {
-            $binaryFile = Join-Path $testDir "test.bin"
-            [byte[]]$bytes = 0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD
-            [System.IO.File]::WriteAllBytes($binaryFile, $bytes)
-            
-            $isBinary = $false
-            try {
-                $content = Get-Content -Path $binaryFile -Raw -Encoding UTF8 -ErrorAction Stop
-                # Check for null bytes or control characters
-                if ($content -match "`0" -or $content -match "[^\x20-\x7E\n\r\t]") {
-                    $isBinary = $true
-                }
-            }
-            catch {
-                $isBinary = $true
-            }
-            
-            if ($isBinary) {
-                Write-Host "  ✓ Binary file detected correctly" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "Binary file detection"; Status = "PASS" }
-            }
-            else {
-                Write-Host "  ✗ Binary file not detected" -ForegroundColor Red
-                $results.Failed++
-                $results.Tests += @{Name = "Binary file detection"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error testing binary detection: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "Binary file detection"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 5: File encoding detection
-        Write-Host "`n[5/6] Testing file encoding..." -ForegroundColor Yellow
-        try {
-            $utf8File = Join-Path $testDir "utf8.txt"
-            $utf8Content = "Test with UTF-8: émojis 🎉"
-            [System.IO.File]::WriteAllText($utf8File, $utf8Content, [System.Text.Encoding]::UTF8)
-            
-            $readBack = [System.IO.File]::ReadAllText($utf8File, [System.Text.Encoding]::UTF8)
-            if ($readBack -eq $utf8Content) {
-                Write-Host "  ✓ UTF-8 encoding works correctly" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "File encoding"; Status = "PASS" }
-            }
-            else {
-                Write-Host "  ✗ UTF-8 encoding failed" -ForegroundColor Red
-                $results.Failed++
-                $results.Tests += @{Name = "File encoding"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error testing encoding: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "File encoding"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Test 6: File permissions
-        Write-Host "`n[6/6] Testing file permissions..." -ForegroundColor Yellow
-        try {
-            $permFile = Join-Path $testDir "perms.txt"
-            Set-Content -Path $permFile -Value "test" -Encoding UTF8
-            
-            $canRead = Test-Path $permFile
-            $canWrite = $true
-            try {
-                Add-Content -Path $permFile -Value "more" -ErrorAction Stop
-            }
-            catch {
-                $canWrite = $false
-            }
-            
-            if ($canRead -and $canWrite) {
-                Write-Host "  ✓ File permissions are correct" -ForegroundColor Green
-                $results.Passed++
-                $results.Tests += @{Name = "File permissions"; Status = "PASS" }
-            }
-            else {
-                Write-Host "  ✗ File permission issues" -ForegroundColor Red
-                $results.Failed++
-                $results.Tests += @{Name = "File permissions"; Status = "FAIL" }
-            }
-        }
-        catch {
-            Write-Host "  ✗ Error testing permissions: $_" -ForegroundColor Red
-            $results.Failed++
-            $results.Tests += @{Name = "File permissions"; Status = "FAIL"; Error = $_.Exception.Message }
-        }
-        
-        # Cleanup
-        Remove-Item $testDir -Recurse -Force -ErrorAction SilentlyContinue
-        
-        # Summary
-        Write-Host "`n=== Test Summary ===" -ForegroundColor Cyan
-        Write-Host "Passed: " -NoNewline -ForegroundColor Green
-        Write-Host $results.Passed
-        Write-Host "Failed: " -NoNewline -ForegroundColor Red
-        Write-Host $results.Failed
-        
-        if ($results.Failed -eq 0) {
-            Write-Host "`n✓ All file operation tests passed" -ForegroundColor Green
-            return $true
-        }
-        else {
-            Write-Host "`n⚠ Some tests failed - see details above" -ForegroundColor Yellow
-            return $false
-        }
-    }
-    catch {
-        Write-Host "`n✗ Fatal error in file operations test: $_" -ForegroundColor Red
-        return $false
-    }
-}
-
-function Invoke-CliGetSettings {
-    <#
-    .SYNOPSIS
-        Get current settings (like GET /api/settings)
-    .PARAMETER SettingName
-        Specific setting name to retrieve (optional)
-    #>
-    param(
-        [Parameter(Mandatory = $false)]
-        [string]$SettingName
-    )
-    
-    Write-Host "`n=== Settings ===" -ForegroundColor Cyan
-    
-    try {
-        if (-not $global:settings) {
-            Set-EditorSettings
-        }
-        
-        if ($SettingName) {
-            if ($global:settings.ContainsKey($SettingName)) {
-                Write-Host "`n$SettingName = " -NoNewline -ForegroundColor Yellow
-                Write-Host $global:settings[$SettingName] -ForegroundColor White
-                return $true
-            }
-            else {
-                Write-Host "✗ Setting '$SettingName' not found" -ForegroundColor Red
-                Write-Host "`nAvailable settings:" -ForegroundColor Yellow
-                $global:settings.Keys | Sort-Object | ForEach-Object {
-                    Write-Host "  • $_" -ForegroundColor Gray
-                }
-                return $false
-            }
-        }
-        else {
-            Write-Host "`nCurrent Settings:" -ForegroundColor Yellow
-            $global:settings.GetEnumerator() | Sort-Object Name | ForEach-Object {
-                Write-Host "  " -NoNewline
-                Write-Host $_.Name.PadRight(30) -NoNewline -ForegroundColor Cyan
-                Write-Host " = " -NoNewline
-                Write-Host $_.Value -ForegroundColor White
-            }
-            return $true
-        }
-    }
-    catch {
-        Write-Host "✗ Error retrieving settings: $_" -ForegroundColor Red
-        return $false
-    }
-}
-
-function Invoke-CliSetSetting {
-    <#
-    .SYNOPSIS
-        Set a specific setting (like POST /api/settings)
-    .PARAMETER SettingName
-        Setting name to set
-    .PARAMETER SettingValue
-        Value to set
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$SettingName,
-        
-        [Parameter(Mandatory = $true)]
-        [string]$SettingValue
-    )
-    
-    Write-Host "`n=== Set Setting ===" -ForegroundColor Cyan
-    
-    try {
-        if (-not $global:settings) {
-            Set-EditorSettings
-        }
-        
-        # Validate and convert value
-        $convertedValue = $SettingValue
-        
-        # Try to convert to appropriate type
-        if ($SettingValue -match '^true$|^false$') {
-            $convertedValue = [bool]::Parse($SettingValue)
-        }
-        elseif ($SettingValue -match '^\d+$') {
-            $convertedValue = [int]::Parse($SettingValue)
-        }
-        elseif ($SettingValue -match '^\d+\.\d+$') {
-            $convertedValue = [double]::Parse($SettingValue)
-        }
-        
-        $global:settings[$SettingName] = $convertedValue
-        Save-Settings
-        
-        Write-Host "✓ Setting updated: $SettingName = $convertedValue" -ForegroundColor Green
-        return $true
-    }
-    catch {
-        Write-Host "✗ Error setting '$SettingName': $_" -ForegroundColor Red
-        return $false
-    }
-}
-
-function Invoke-CliTestAllFeatures {
-    <#
-    .SYNOPSIS
-        Run comprehensive test suite for all CLI-testable features
-    #>
-    
-    Write-Host "`n=== Comprehensive Feature Test Suite ===" -ForegroundColor Cyan
-    Write-Host "Testing all features without GUI..." -ForegroundColor Yellow
-    Write-Host ""
-    
-    $testResults = @{
-        Total    = 0
-        Passed   = 0
-        Failed   = 0
-        Warnings = 0
-    }
-    
-    # Test 1: Editor Settings
-    Write-Host "`n[1/4] Testing Editor Settings..." -ForegroundColor Cyan
-    if (Invoke-CliTestEditorSettings) {
-        $testResults.Passed++
-    }
-    else {
-        $testResults.Failed++
-    }
-    $testResults.Total++
-    
-    # Test 2: File Operations
-    Write-Host "`n[2/4] Testing File Operations..." -ForegroundColor Cyan
-    if (Invoke-CliTestFileOperations) {
-        $testResults.Passed++
-    }
-    else {
-        $testResults.Failed++
-    }
-    $testResults.Total++
-    
-    # Test 3: Ollama Connection
-    Write-Host "`n[3/4] Testing Ollama Connection..." -ForegroundColor Cyan
-    if (Invoke-CliTestOllama) {
-        $testResults.Passed++
-    }
-    else {
-        $testResults.Warnings++  # Ollama might not be running
-    }
-    $testResults.Total++
-    
-    # Test 4: Settings Persistence
-    Write-Host "`n[4/4] Testing Settings Persistence..." -ForegroundColor Cyan
-    try {
-        $originalFontSize = $global:settings.EditorFontSize
-        Invoke-CliSetSetting -SettingName "EditorFontSize" -SettingValue "12"
-        $loaded = Invoke-CliGetSettings -SettingName "EditorFontSize"
-        if ($global:settings.EditorFontSize -eq 12) {
-            Write-Host "✓ Settings persistence works" -ForegroundColor Green
-            $testResults.Passed++
-        }
-        else {
-            Write-Host "✗ Settings persistence failed" -ForegroundColor Red
-            $testResults.Failed++
-        }
-        Invoke-CliSetSetting -SettingName "EditorFontSize" -SettingValue $originalFontSize
-    }
-    catch {
-        Write-Host "✗ Settings persistence test error: $_" -ForegroundColor Red
-        $testResults.Failed++
-    }
-    $testResults.Total++
-    
-    # Final Summary
-    Write-Host "`n" + "="*50 -ForegroundColor Cyan
-    Write-Host "=== Final Test Summary ===" -ForegroundColor Cyan
-    Write-Host "Total Tests: " -NoNewline -ForegroundColor White
-    Write-Host $testResults.Total
-    Write-Host "Passed: " -NoNewline -ForegroundColor Green
-    Write-Host $testResults.Passed
-    Write-Host "Failed: " -NoNewline -ForegroundColor Red
-    Write-Host $testResults.Failed
-    Write-Host "Warnings: " -NoNewline -ForegroundColor Yellow
-    Write-Host $testResults.Warnings
-    
-    if ($testResults.Failed -eq 0) {
-        Write-Host "`n✓ All tests passed!" -ForegroundColor Green
-        return $true
-    }
-    else {
-        Write-Host "`n⚠ Some tests failed" -ForegroundColor Yellow
-        return $false
-    }
-}
-
-function Invoke-CliDiagnose {
-    <#
-    .SYNOPSIS
-        Run diagnostic checks on RawrXD environment
-    #>
-    
-    Write-Host "`n=== RawrXD Diagnostics ===" -ForegroundColor Cyan
-    
-    $results = @{
-        Passed   = 0
-        Failed   = 0
-        Warnings = 0
-    }
-    
-    # Check PowerShell version
-    Write-Host "`n[1/8] PowerShell Version" -ForegroundColor Yellow
-    if ($PSVersionTable.PSVersion.Major -ge 5) {
-        Write-Host "  ✓ PowerShell $($PSVersionTable.PSVersion) (OK)" -ForegroundColor Green
-        $results.Passed++
-    }
-    else {
-        Write-Host "  ✗ PowerShell $($PSVersionTable.PSVersion) (Requires 5.0+)" -ForegroundColor Red
-        $results.Failed++
-    }
-    
-    # Check .NET Framework
-    Write-Host "`n[2/8] .NET Framework" -ForegroundColor Yellow
-    try {
-        $netVersion = [System.Runtime.InteropServices.RuntimeInformation]::FrameworkDescription
-        Write-Host "  ✓ $netVersion" -ForegroundColor Green
-        $results.Passed++
-    }
-    catch {
-        Write-Host "  ⚠ Unable to determine .NET version" -ForegroundColor Yellow
-        $results.Warnings++
-    }
-    
-    # Check Ollama
-    Write-Host "`n[3/8] Ollama Server" -ForegroundColor Yellow
-    try {
-        # PRODUCTION SECURITY: HTTPS enforced, API key required
-        $apiKey = Get-SecureAPIKey
-        $headers = @{}
-        if ($apiKey) {
-            $headers["Authorization"] = "Bearer $apiKey"
-            $headers["X-Ollama-API-Key"] = $apiKey
-        }
-        $response = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -Method Get -Headers $headers -TimeoutSec 5 -ErrorAction Stop
-        Write-Host "  ✓ Ollama is running" -ForegroundColor Green
-        Write-Host "    Models: $($response.models.Count)" -ForegroundColor Gray
-        $results.Passed++
-    }
-    catch {
-        Write-Host "  ✗ Ollama is not reachable" -ForegroundColor Red
-        $results.Failed++
-    }
-    
-    # Check Git
-    Write-Host "`n[4/8] Git" -ForegroundColor Yellow
-    $gitCheck = Get-Command git -ErrorAction SilentlyContinue
-    if ($gitCheck) {
-        $gitVersion = git --version
-        Write-Host "  ✓ $gitVersion" -ForegroundColor Green
-        $results.Passed++
-    }
-    else {
-        Write-Host "  ⚠ Git not found in PATH" -ForegroundColor Yellow
-        $results.Warnings++
-    }
-    
-    # Check Project Structure
-    Write-Host "`n[5/8] Project Structure" -ForegroundColor Yellow
-    $requiredDirs = @("logs", "marketplace", "agents")
-    $missingDirs = @()
-    
-    foreach ($dir in $requiredDirs) {
-        $path = Join-Path $PSScriptRoot $dir
-        if (-not (Test-Path $path)) {
-            $missingDirs += $dir
-        }
-    }
-    
-    if ($missingDirs.Count -eq 0) {
-        Write-Host "  ✓ All required directories exist" -ForegroundColor Green
-        $results.Passed++
-    }
-    else {
-        Write-Host "  ⚠ Missing directories: $($missingDirs -join ', ')" -ForegroundColor Yellow
-        Write-Host "    (Will be created automatically)" -ForegroundColor Gray
-        $results.Warnings++
-    }
-    
-    # Check Logs
-    Write-Host "`n[6/8] Logs" -ForegroundColor Yellow
-    $logsPath = Join-Path $PSScriptRoot "logs"
-    if (Test-Path $logsPath) {
-        $logFiles = Get-ChildItem -Path $logsPath -Filter "*.log" -File
-        Write-Host "  ✓ Log directory exists" -ForegroundColor Green
-        Write-Host "    Log files: $($logFiles.Count)" -ForegroundColor Gray
-        $results.Passed++
-    }
-    else {
-        Write-Host "  ⚠ Log directory not found" -ForegroundColor Yellow
-        $results.Warnings++
-    }
-    
-    # Check Network
-    Write-Host "`n[7/8] Network Connectivity" -ForegroundColor Yellow
-    try {
-        $testConnection = Test-NetConnection -ComputerName "github.com" -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue
-        if ($testConnection) {
-            Write-Host "  ✓ Internet connectivity OK" -ForegroundColor Green
-            $results.Passed++
-        }
-        else {
-            Write-Host "  ⚠ Limited internet connectivity" -ForegroundColor Yellow
-            $results.Warnings++
-        }
-    }
-    catch {
-        Write-Host "  ⚠ Unable to test connectivity" -ForegroundColor Yellow
-        $results.Warnings++
-    }
-    
-    # Check Disk Space
-    Write-Host "`n[8/8] Disk Space" -ForegroundColor Yellow
-    try {
-        $drive = (Get-Item $PSScriptRoot).PSDrive
-        $freeSpaceGB = [Math]::Round($drive.Free / 1GB, 2)
-        
-        if ($freeSpaceGB -gt 10) {
-            Write-Host "  ✓ Free space: $freeSpaceGB GB" -ForegroundColor Green
-            $results.Passed++
-        }
-        elseif ($freeSpaceGB -gt 5) {
-            Write-Host "  ⚠ Free space: $freeSpaceGB GB (Low)" -ForegroundColor Yellow
-            $results.Warnings++
-        }
-        else {
-            Write-Host "  ✗ Free space: $freeSpaceGB GB (Critical)" -ForegroundColor Red
-            $results.Failed++
-        }
-    }
-    catch {
-        Write-Host "  ⚠ Unable to check disk space" -ForegroundColor Yellow
-        $results.Warnings++
-    }
-    
-    # Summary
-    Write-Host "`n=== Diagnostic Summary ===" -ForegroundColor Cyan
-    Write-Host "Passed: " -NoNewline -ForegroundColor Green
-    Write-Host $results.Passed
-    Write-Host "Warnings: " -NoNewline -ForegroundColor Yellow
-    Write-Host $results.Warnings
-    Write-Host "Failed: " -NoNewline -ForegroundColor Red
-    Write-Host $results.Failed
-    
-    if ($results.Failed -eq 0) {
-        Write-Host "`n✓ All critical checks passed" -ForegroundColor Green
-        return $true
-    }
-    else {
-        Write-Host "`n⚠ Some checks failed - see details above" -ForegroundColor Yellow
-        return $false
-    }
-}
-
-function Show-CliHelp {
-    <#
-    .SYNOPSIS
-        Display help for CLI commands
-    #>
-    
-    Write-Host "`n=== RawrXD CLI Help ===" -ForegroundColor Cyan
-    Write-Host "`nUsage: .\RawrXD.ps1 -CliMode -Command <command> [options]`n" -ForegroundColor Yellow
-    
-    Write-Host "Available Commands:" -ForegroundColor Green
-    Write-Host ""
-    
-    $commands = @(
-        @{Name = "test-ollama"; Description = "Test Ollama connection and list available models"; Options = "" }
-        @{Name = "list-models"; Description = "List all available Ollama models with details"; Options = "" }
-        @{Name = "chat"; Description = "Start an interactive chat session"; Options = "-Model <model_name>" }
-        @{Name = "analyze-file"; Description = "Analyze a file with AI"; Options = "-FilePath <path> -Model <model_name>" }
-        @{Name = "git-status"; Description = "Show formatted git status"; Options = "" }
-        @{Name = "create-agent"; Description = "Create a new agent task"; Options = "-AgentName <name> -Prompt <task>" }
-        @{Name = "list-agents"; Description = "List all agent tasks"; Options = "" }
-        @{Name = "marketplace-sync"; Description = "Sync marketplace catalog and browse extensions"; Options = "" }
-        @{Name = "marketplace-search"; Description = "Search for extensions in marketplace"; Options = "-Prompt <search_term>" }
-        @{Name = "marketplace-install"; Description = "Install an extension from marketplace"; Options = "-Prompt <extension_id>" }
-        @{Name = "list-extensions"; Description = "List installed extensions"; Options = "" }
-        @{Name = "vscode-popular"; Description = "🌐 Get top 15 popular VSCode extensions (Live API)"; Options = "" }
-        @{Name = "vscode-search"; Description = "🌐 Search VSCode Marketplace (Live API)"; Options = "-Prompt <search_term>" }
-        @{Name = "vscode-install"; Description = "🌐 Install VSCode extension (Live API)"; Options = "-Prompt <extension_id>" }
-        @{Name = "vscode-categories"; Description = "🌐 Browse VSCode extension categories"; Options = "" }
-        @{Name = "copilot-status"; Description = "⚙️ Check VS Code/Cursor + GitHub Copilot status"; Options = "[-Prompt install]" }
-        @{Name = "diagnose"; Description = "Run comprehensive diagnostic checks"; Options = "" }
-        @{Name = "test-editor-settings"; Description = "Test editor settings (colors, fonts, syntax) - no GUI needed"; Options = "" }
-        @{Name = "test-file-operations"; Description = "Test file operations (open, save, read) - no GUI needed"; Options = "" }
-        @{Name = "test-settings-persistence"; Description = "Test settings save/load persistence - no GUI needed"; Options = "" }
-        @{Name = "test-visibility"; Description = "🔍 Test text visibility detection with multiple scenarios"; Options = "" }
-        @{Name = "check-editor-visibility"; Description = "🔍 Get instructions for checking editor visibility in GUI mode"; Options = "" }
-        @{Name = "test-all-features"; Description = "Run comprehensive test suite for all CLI-testable features"; Options = "" }
-        @{Name = "get-settings"; Description = "Get current settings (like GET /api/settings)"; Options = "-SettingName <name> (optional)" }
-        @{Name = "set-setting"; Description = "Set a specific setting (like POST /api/settings)"; Options = "-SettingName <name> -SettingValue <value>" }
-        @{Name = "test-gui"; Description = "Test all GUI features and log results"; Options = "" }
-        @{Name = "test-gui-interactive"; Description = "Interactive GUI tester (requires GUI to be running)"; Options = "" }
-        @{Name = "test-dropdowns"; Description = "Test all dropdown menus and combo boxes"; Options = "" }
-        @{Name = "video-search"; Description = "🎬 Search YouTube for videos"; Options = "-Prompt <search_query>" }
-        @{Name = "video-download"; Description = "📥 Download video from URL"; Options = "-URL <url> [-OutputPath <path>]" }
-        @{Name = "video-play"; Description = "▶️ Play video in browser"; Options = "-URL <url>" }
-        @{Name = "video-help"; Description = "🎬 Show video engine help and examples"; Options = "" }
-        @{Name = "browser-navigate"; Description = "🌐 Open URL in browser"; Options = "-URL <url>" }
-        @{Name = "browser-screenshot"; Description = "📸 Take browser screenshot"; Options = "[-OutputPath <path>]" }
-        @{Name = "browser-click"; Description = "🖱️ Click browser element"; Options = "-Selector <css_selector>" }
-        @{Name = "help"; Description = "Show this help message"; Options = "" }
-    )
-    
-    foreach ($cmd in $commands) {
-        Write-Host "  " -NoNewline
-        Write-Host $cmd.Name.PadRight(22) -NoNewline -ForegroundColor Yellow
-        Write-Host $cmd.Description -ForegroundColor White
-        
-        if ($cmd.Options -and $cmd.Options -ne "") {
-            Write-Host " ".PadRight(24) -NoNewline
-            Write-Host $cmd.Options -ForegroundColor Gray
-        }
-    }
-    
-    Write-Host "`nExamples:" -ForegroundColor Green
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command test-ollama" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command chat -Model llama2" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command analyze-file -FilePath script.ps1" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command vscode-popular" -ForegroundColor Cyan
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command vscode-search -Prompt 'copilot'" -ForegroundColor Cyan
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command vscode-install -Prompt 'GitHub.copilot'" -ForegroundColor Cyan
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command copilot-status" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command copilot-status -Prompt install" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "🎬 Video Engine Examples:" -ForegroundColor Magenta
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command video-search -Prompt 'python tutorial'" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command video-download -URL 'https://...' -OutputPath '~/Videos'" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command video-play -URL 'https://youtube.com/watch?v=...'" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command video-help" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command diagnose" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command test-all-features" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command get-settings" -ForegroundColor Gray
-    Write-Host "  .\RawrXD.ps1 -CliMode -Command set-setting -SettingName EditorFontSize -SettingValue 12" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "🌐 VSCode Marketplace commands connect to the official Microsoft API" -ForegroundColor Cyan
-    Write-Host "🎬 Video Engine commands support YouTube search, download, and playback" -ForegroundColor Magenta
-    Write-Host ""
-}
-# ============================================
-# POST-INITIALIZATION: Load API Key After Functions Are Defined
-# ============================================
-try {
-    # Use Get-Variable to safely check if OllamaAPIKey exists and is null
-    $apiKeyVar = Get-Variable -Name "OllamaAPIKey" -Scope Script -ErrorAction SilentlyContinue
-    if (-not $apiKeyVar -or $null -eq $apiKeyVar.Value) {
-        $script:OllamaAPIKey = Get-SecureAPIKey
-        
-        # CRITICAL: Set environment variable so runspaces/background jobs can access it
-        if ($script:OllamaAPIKey) {
-            [System.Environment]::SetEnvironmentVariable('RAWRXD_API_KEY', $script:OllamaAPIKey, 'Process')
-            Write-DevConsole "✅ API key loaded and set as environment variable for runspace access" "SUCCESS"
-        }
-    }
-}
-catch {
-    Write-EmergencyLog "Warning: Could not load API key: $_" "WARNING"
-    $script:OllamaAPIKey = $null
-}
-
-# ============================================
-# CLI MODE ENTRY POINT
-# ============================================
-
-# Note: WarningPreference remains SilentlyContinue to suppress harmless PowerShell module warnings
-
-if ($CliMode) {
-    Write-EmergencyLog "Starting RawrXD in CLI mode" "INFO"
-    
-    if (-not $Command) {
-        Show-CliHelp
-        exit 0
-    }
-    
-    # Load CLI handler modules
-    $handlerPath = Join-Path $PSScriptRoot "cli-handlers"
-    $handlers = @{
-        "ollama"      = Join-Path $handlerPath "ollama-handlers.ps1"
-        "marketplace" = Join-Path $handlerPath "marketplace-handlers.ps1"
-        "vscode"      = Join-Path $handlerPath "vscode-handlers.ps1"
-        "video"       = Join-Path $handlerPath "video-handlers.ps1"
-        "browser"     = Join-Path $handlerPath "browser-handlers.ps1"
-        "testing"     = Join-Path $handlerPath "testing-handlers.ps1"
-        "settings"    = Join-Path $handlerPath "settings-handlers.ps1"
-        "agent"       = Join-Path $handlerPath "agent-handlers.ps1"
-        "poshllm"     = Join-Path $handlerPath "poshllm-handlers.ps1"
-    }
-    
-    $exitCode = 0
-    
-    switch ($Command) {
-        # Ollama handlers
-        "test-ollama" {
-            . $handlers["ollama"]
-            $exitCode = Invoke-OllamaTestHandler
-        }
-        "list-models" {
-            . $handlers["ollama"]
-            $exitCode = Invoke-OllamaListModelsHandler
-        }
-        "chat" {
-            . $handlers["ollama"]
-            $exitCode = Invoke-OllamaChatHandler -Model $Model
-        }
-        "analyze-file" {
-            . $handlers["ollama"]
-            $exitCode = Invoke-OllamaAnalyzeFileHandler -FilePath $FilePath -Model $Model
-        }
-        
-        # Agent & diagnostic handlers
-        "git-status" {
-            . $handlers["agent"]
-            $exitCode = Invoke-GitStatusHandler
-        }
-        "create-agent" {
-            . $handlers["agent"]
-            $exitCode = Invoke-CreateAgentHandler -AgentName $AgentName -Prompt $Prompt
-        }
-        "list-agents" {
-            . $handlers["agent"]
-            $exitCode = Invoke-ListAgentsHandler
-        }
-        "diagnose" {
-            . $handlers["agent"]
-            $exitCode = Invoke-DiagnoseHandler
-        }
-        "help" {
-            . $handlers["agent"]
-            $exitCode = Invoke-HelpHandler
-        }
-        
-        # PoshLLM handlers
-        "poshllm-train" {
-            . $handlers["poshllm"]
-            $exitCode = Invoke-PoshLLMTrainHandler -Name $AgentName -CorpusFile $FilePath
-        }
-        "poshllm-generate" {
-            . $handlers["poshllm"]
-            $exitCode = Invoke-PoshLLMGenerateHandler -Name $AgentName -Prompt $Prompt
-        }
-        "poshllm-list" {
-            . $handlers["poshllm"]
-            $exitCode = Invoke-PoshLLMListHandler
-        }
-        "poshllm-save" {
-            . $handlers["poshllm"]
-            $exitCode = Invoke-PoshLLMSaveHandler -Name $AgentName -Path $FilePath
-        }
-        "poshllm-load" {
-            . $handlers["poshllm"]
-            $exitCode = Invoke-PoshLLMLoadHandler -Name $AgentName -Path $FilePath
-        }
-        
-        # Marketplace handlers
-        "marketplace-sync" {
-            . $handlers["marketplace"]
-            $exitCode = Invoke-MarketplaceSyncHandler
-        }
-        "marketplace-search" {
-            . $handlers["marketplace"]
-            $exitCode = Invoke-MarketplaceSearchHandler -Query $Prompt
-        }
-        "marketplace-install" {
-            . $handlers["marketplace"]
-            $exitCode = Invoke-MarketplaceInstallHandler -ExtensionId $Prompt
-        }
-        "list-extensions" {
-            . $handlers["marketplace"]
-            $exitCode = Invoke-ListExtensionsHandler
-        }
-        "vscode-popular" {
-            try {
-                Write-Host "`n=== Top VSCode Extensions (Live API) ===" -ForegroundColor Cyan
-                Write-Host "Fetching from official VSCode Marketplace..." -ForegroundColor Gray
-                Write-Host ""
-                
-                $extensions = Get-VSCodeMarketplaceExtensions -PageSize 15
-                
-                if ($extensions.Count -eq 0) {
-                    Write-Host "⚠️ No extensions returned. Check internet connection." -ForegroundColor Yellow
-                    $exitCode = 1
-                }
-                else {
-                    Write-Host "Found $($extensions.Count) popular extensions:`n" -ForegroundColor Green
-                    
-                    $index = 1
-                    foreach ($ext in $extensions) {
-                        $downloads = if ($ext.Downloads) { "{0:N0}" -f $ext.Downloads } else { "N/A" }
-                        $ratingStars = if ($ext.Rating -gt 0) { "⭐ $($ext.Rating)/5.0" } else { "" }
-                        
-                        Write-Host "[$index] 📦 $($ext.Name) v$($ext.Version) $ratingStars" -ForegroundColor White
-                        Write-Host "     $($ext.Description)" -ForegroundColor Gray
-                        Write-Host "     By: $($ext.Author) | Downloads: $downloads | Category: $($ext.Category)" -ForegroundColor DarkGray
-                        Write-Host "     ID: $($ext.Id)" -ForegroundColor DarkGray
-                        Write-Host ""
-                        $index++
-                    }
-                }
-            }
-            catch {
-                Write-Host "Error fetching VSCode extensions: $($_.Exception.Message)" -ForegroundColor Red
-                $exitCode = 1
-            }
-        }
-        "vscode-search" {
-            if (-not $Prompt) {
-                Write-Host "Error: -Prompt parameter required for search query" -ForegroundColor Red
-                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command vscode-search -Prompt 'copilot'" -ForegroundColor Yellow
-                $exitCode = 1
-            }
-            else {
-                try {
-                    Write-Host "`n=== VSCode Marketplace Search: '$Prompt' (Live API) ===" -ForegroundColor Cyan
-                    Write-Host "Querying official VSCode Marketplace..." -ForegroundColor Gray
-                    Write-Host ""
-                    
-                    $extensions = Get-VSCodeMarketplaceExtensions -Query $Prompt -PageSize 10
-                    
-                    if ($extensions.Count -eq 0) {
-                        Write-Host "No extensions found matching '$Prompt'" -ForegroundColor Yellow
-                        Write-Host "Try a different search term or use 'vscode-popular' for trending extensions" -ForegroundColor Gray
-                    }
-                    else {
-                        Write-Host "Found $($extensions.Count) extension(s):`n" -ForegroundColor Green
-                        
-                        foreach ($ext in $extensions) {
-                            $downloads = if ($ext.Downloads) { "{0:N0}" -f $ext.Downloads } else { "N/A" }
-                            $ratingStars = if ($ext.Rating -gt 0) { "⭐ $($ext.Rating)/5.0" } else { "" }
-                            
-                            Write-Host "📦 $($ext.Name) v$($ext.Version) $ratingStars" -ForegroundColor White
-                            Write-Host "   $($ext.Description)" -ForegroundColor Gray
-                            Write-Host "   By: $($ext.Author) | Downloads: $downloads | ID: $($ext.Id)" -ForegroundColor DarkGray
-                            if ($ext.Tags -and $ext.Tags.Count -gt 0) {
-                                $tagStr = ($ext.Tags | Select-Object -First 5) -join ', '
-                                Write-Host "   Tags: $tagStr" -ForegroundColor DarkGray
-                            }
-                            Write-Host ""
-                        }
-                    }
-                }
-                catch {
-                    Write-Host "Error searching VSCode Marketplace: $($_.Exception.Message)" -ForegroundColor Red
-                    $exitCode = 1
-                }
-            }
-        }
-        "vscode-install" {
-            if (-not $Prompt) {
-                Write-Host "Error: -Prompt parameter required for extension ID" -ForegroundColor Red
-                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command vscode-install -Prompt 'GitHub.copilot'" -ForegroundColor Yellow
-                $exitCode = 1
-            }
-            else {
-                try {
-                    Write-Host "`n=== Installing VSCode Extension (Live API) ===" -ForegroundColor Cyan
-                    Write-Host "Searching for: $Prompt" -ForegroundColor Gray
-                    Write-Host ""
-                    
-                    $query = $Prompt -replace '.*\.', ''
-                    $extensions = Get-VSCodeMarketplaceExtensions -Query $query -PageSize 10
-                    $extension = $extensions | Where-Object { $_.Id -eq $Prompt } | Select-Object -First 1
-                    
-                    if (-not $extension) {
-                        $extension = $extensions | Where-Object { $_.Id -like "*$Prompt*" } | Select-Object -First 1
-                    }
-                    
-                    if ($extension) {
-                        Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-                        Write-Host "📦 Installing: $($extension.Name)" -ForegroundColor White
-                        Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-                        Write-Host "   Version: $($extension.Version)" -ForegroundColor Gray
-                        Write-Host "   Author: $($extension.Author)" -ForegroundColor Gray
-                        Write-Host "   Downloads: $("{0:N0}" -f $extension.Downloads)" -ForegroundColor Gray
-                        if ($extension.Rating -gt 0) {
-                            Write-Host "   Rating: ⭐ $($extension.Rating)/5.0" -ForegroundColor Gray
-                        }
-                        Write-Host "   Source: VSCode Marketplace (Live API)" -ForegroundColor Gray
-                        Write-Host ""
-                        
-                        Write-Host "⏳ Downloading extension..." -ForegroundColor Yellow
-                        Start-Sleep -Milliseconds 500
-                        Write-Host "⏳ Installing dependencies..." -ForegroundColor Yellow
-                        Start-Sleep -Milliseconds 500
-                        Write-Host "⏳ Configuring extension..." -ForegroundColor Yellow
-                        Start-Sleep -Milliseconds 500
-                        
-                        Write-Host ""
-                        Write-Host "✅ Extension '$($extension.Name)' installed successfully!" -ForegroundColor Green
-                        Write-Host "   ID: $($extension.Id)" -ForegroundColor Gray
-                        Write-Host "   Note: In CLI mode, extensions are catalogued but not functionally active." -ForegroundColor DarkGray
-                        Write-Host "   Launch GUI mode for full extension functionality." -ForegroundColor DarkGray
-                    }
-                    else {
-                        Write-Host "❌ Extension not found: $Prompt" -ForegroundColor Red
-                        Write-Host "   Try searching first with: .\RawrXD.ps1 -CliMode -Command vscode-search -Prompt '<keyword>'" -ForegroundColor Gray
-                        $exitCode = 1
-                    }
-                }
-                catch {
-                    Write-Host "Error installing extension: $($_.Exception.Message)" -ForegroundColor Red
-                    $exitCode = 1
-                }
-            }
-        }
-        "copilot-status" {
-            if (-not (Invoke-CliCopilotStatus -Action $Prompt)) {
-                $exitCode = 1
-            }
-        }
-        "vscode-categories" {
-            try {
-                Write-Host "`n=== VSCode Extension Categories ===" -ForegroundColor Cyan
-                Write-Host ""
-                
-                $categories = @(
-                    @{ Icon = "🎨"; Name = "Themes"; Desc = "Color themes and icon themes" }
-                    @{ Icon = "📝"; Name = "Programming Languages"; Desc = "Language support and syntax highlighting" }
-                    @{ Icon = "🐛"; Name = "Debuggers"; Desc = "Debugging tools and extensions" }
-                    @{ Icon = "✨"; Name = "Linters"; Desc = "Code quality and linting tools" }
-                    @{ Icon = "🎯"; Name = "Formatters"; Desc = "Code formatting utilities" }
-                    @{ Icon = "🧪"; Name = "Testing"; Desc = "Test frameworks and runners" }
-                    @{ Icon = "📊"; Name = "Data Science"; Desc = "Jupyter, data analysis tools" }
-                    @{ Icon = "🤖"; Name = "AI"; Desc = "GitHub Copilot, Amazon Q, etc." }
-                    @{ Icon = "☁️"; Name = "Azure"; Desc = "Azure and cloud development" }
-                    @{ Icon = "🔌"; Name = "Extension Packs"; Desc = "Bundled extension collections" }
-                    @{ Icon = "🌐"; Name = "SCM Providers"; Desc = "Source control management" }
-                    @{ Icon = "📚"; Name = "Snippets"; Desc = "Code snippets and templates" }
-                )
-                
-                foreach ($cat in $categories) {
-                    Write-Host "$($cat.Icon) $($cat.Name)" -ForegroundColor White
-                    Write-Host "   $($cat.Desc)" -ForegroundColor Gray
-                    Write-Host ""
-                }
-                
-                Write-Host "Search by category: .\RawrXD.ps1 -CliMode -Command vscode-search -Prompt '<category-name>'" -ForegroundColor Yellow
-            }
-            catch {
-                Write-Host "Error displaying categories: $($_.Exception.Message)" -ForegroundColor Red
-                $exitCode = 1
-            }
-        }
-        "diagnose" {
-            if (-not (Invoke-CliDiagnose)) { $exitCode = 1 }
-        }
-        "test-editor-settings" {
-            if (-not (Invoke-CliTestEditorSettings)) { $exitCode = 1 }
-        }
-        "test-file-operations" {
-            if (-not (Invoke-CliTestFileOperations)) { $exitCode = 1 }
-        }
-        "test-settings-persistence" {
-            Write-Host "`n=== Settings Persistence Test ===" -ForegroundColor Cyan
-            try {
-                $originalFontSize = $global:settings.EditorFontSize
-                Invoke-CliSetSetting -SettingName "EditorFontSize" -SettingValue "14"
-                Start-Sleep -Milliseconds 100
-                Invoke-CliGetSettings -SettingName "EditorFontSize"
-                if ($global:settings.EditorFontSize -eq 14) {
-                    Write-Host "✓ Settings persistence works" -ForegroundColor Green
-                    Invoke-CliSetSetting -SettingName "EditorFontSize" -SettingValue $originalFontSize
-                }
-                else {
-                    Write-Host "✗ Settings did not persist" -ForegroundColor Red
-                    $exitCode = 1
-                }
-            }
-            catch {
-                Write-Host "✗ Error: $_" -ForegroundColor Red
-                $exitCode = 1
-            }
-        }
-        "test-visibility" {
-            Write-Host "`n=== Text Visibility Detection Test ===" -ForegroundColor Cyan
-            Write-Host "Testing visibility detection with sample controls...`n" -ForegroundColor Gray
-            
-            try {
-                # Create test controls
-                Add-Type -AssemblyName System.Windows.Forms
-                Add-Type -AssemblyName System.Drawing
-                
-                # Test 1: Visible control with good contrast
-                Write-Host "Test 1: Visible RichTextBox with high contrast" -ForegroundColor White
-                $testBox1 = New-Object System.Windows.Forms.RichTextBox
-                $testBox1.Text = "Sample visible text"
-                $testBox1.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
-                $testBox1.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
-                $testBox1.Visible = $true
-                $testBox1.Width = 300
-                $testBox1.Height = 100
-                
-                $result1 = Test-TextVisibility -Control $testBox1 -CheckContrast -Detailed
-                Write-Host "  Status: $(if ($result1.IsVisible) { '✓ VISIBLE' } else { '✗ NOT VISIBLE' })" -ForegroundColor $(if ($result1.IsVisible) { 'Green' } else { 'Red' })
-                if ($result1.ColorAnalysis) {
-                    Write-Host "  Contrast Ratio: $($result1.ColorAnalysis.ContrastRatio):1" -ForegroundColor Cyan
-                    Write-Host "  WCAG AA Large: $(if ($result1.ColorAnalysis.MeetsWCAG_AA_Large) { '✓' } else { '✗' })" -ForegroundColor $(if ($result1.ColorAnalysis.MeetsWCAG_AA_Large) { 'Green' } else { 'Yellow' })
-                }
-                Write-Host ""
-                
-                # Test 2: Invisible control (hidden)
-                Write-Host "Test 2: Hidden control (Visible = false)" -ForegroundColor White
-                $testBox2 = New-Object System.Windows.Forms.RichTextBox
-                $testBox2.Text = "Hidden text"
-                $testBox2.Visible = $false
-                
-                $result2 = Test-TextVisibility -Control $testBox2
-                Write-Host "  Status: $(if ($result2.IsVisible) { '✓ VISIBLE' } else { '✗ NOT VISIBLE' })" -ForegroundColor $(if ($result2.IsVisible) { 'Green' } else { 'Yellow' })
-                Write-Host "  Reasons: $($result2.Reason -join ', ')" -ForegroundColor Gray
-                Write-Host ""
-                
-                # Test 3: Poor contrast
-                Write-Host "Test 3: Poor contrast (black on black)" -ForegroundColor White
-                $testBox3 = New-Object System.Windows.Forms.RichTextBox
-                $testBox3.Text = "Low contrast text"
-                $testBox3.BackColor = [System.Drawing.Color]::Black
-                $testBox3.ForeColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
-                $testBox3.Visible = $true
-                $testBox3.Width = 300
-                $testBox3.Height = 100
-                
-                $result3 = Test-TextVisibility -Control $testBox3 -CheckContrast -MinimumContrast 3.0
-                Write-Host "  Status: $(if ($result3.IsVisible) { '✓ VISIBLE' } else { '✗ NOT VISIBLE' })" -ForegroundColor $(if ($result3.IsVisible) { 'Green' } else { 'Red' })
-                if ($result3.ColorAnalysis) {
-                    Write-Host "  Contrast Ratio: $($result3.ColorAnalysis.ContrastRatio):1 (needs 3.0:1)" -ForegroundColor Red
-                    Write-Host "  Recommendations:" -ForegroundColor Yellow
-                    foreach ($rec in $result3.Recommendations) {
-                        Write-Host "    - $rec" -ForegroundColor Yellow
-                    }
-                }
-                Write-Host ""
-                
-                # Test 4: Fix visibility automatically
-                Write-Host "Test 4: Auto-fix visibility with Ensure-TextVisibility" -ForegroundColor White
-                $testBox4 = New-Object System.Windows.Forms.RichTextBox
-                $testBox4.Text = "Text to be fixed"
-                $testBox4.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
-                $testBox4.ForeColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
-                $testBox4.Visible = $false
-                $testBox4.Width = 0
-                
-                Write-Host "  Before fix:" -ForegroundColor Gray
-                $beforeFix = Test-TextVisibility -Control $testBox4 -CheckContrast
-                Write-Host "    Visible: $($testBox4.Visible), Width: $($testBox4.Width), Contrast: $($beforeFix.ColorAnalysis.ContrastRatio):1" -ForegroundColor DarkGray
-                
-                $fixed = Ensure-TextVisibility -Control $testBox4 -ForceHighContrast
-                
-                Write-Host "  After fix:" -ForegroundColor Gray
-                $afterFix = Test-TextVisibility -Control $testBox4 -CheckContrast
-                Write-Host "    Visible: $($testBox4.Visible), Width: $($testBox4.Width), Contrast: $($afterFix.ColorAnalysis.ContrastRatio):1" -ForegroundColor Green
-                Write-Host "  Auto-fix: $(if ($fixed) { '✓ SUCCESS' } else { '✗ FAILED' })" -ForegroundColor $(if ($fixed) { 'Green' } else { 'Red' })
-                Write-Host ""
-                
-                # Cleanup
-                $testBox1.Dispose()
-                $testBox2.Dispose()
-                $testBox3.Dispose()
-                $testBox4.Dispose()
-                
-                Write-Host "✅ Text visibility detection test completed" -ForegroundColor Green
-                Write-Host "   4/4 test cases executed successfully" -ForegroundColor Gray
-                
-            }
-            catch {
-                Write-Host "✗ Error during visibility test: $_" -ForegroundColor Red
-                Write-Host $_.ScriptStackTrace -ForegroundColor DarkGray
-                $exitCode = 1
-            }
-        }
-        "check-editor-visibility" {
-            Write-Host "`n=== Editor Visibility Check ===" -ForegroundColor Cyan
-            Write-Host "Note: This command requires GUI mode to check actual editor control" -ForegroundColor Yellow
-            Write-Host ""
-            Write-Host "To check editor visibility:" -ForegroundColor White
-            Write-Host "  1. Launch RawrXD in GUI mode" -ForegroundColor Gray
-            Write-Host "  2. Open Dev Console (F12)" -ForegroundColor Gray
-            Write-Host "  3. Run: Test-TextVisibility -Control `$script:editor -CheckContrast -Detailed" -ForegroundColor Cyan
-            Write-Host ""
-            Write-Host "Example expected output:" -ForegroundColor White
-            Write-Host "  IsVisible: True" -ForegroundColor Green
-            Write-Host "  ContrastRatio: 11.54:1" -ForegroundColor Green
-            Write-Host "  MeetsWCAG_AA: True" -ForegroundColor Green
-        }
-        "test-all-features" {
-            if (-not (Invoke-CliTestAllFeatures)) { $exitCode = 1 }
-        }
-        "get-settings" {
-            if ($SettingName) {
-                if (-not (Invoke-CliGetSettings -SettingName $SettingName)) { $exitCode = 1 }
-            }
-            else {
-                if (-not (Invoke-CliGetSettings)) { $exitCode = 1 }
-            }
-        }
-        "set-setting" {
-            if (-not $SettingName -or -not $SettingValue) {
-                Write-Host "Error: -SettingName and -SettingValue are required for set-setting command" -ForegroundColor Red
-                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command set-setting -SettingName <name> -SettingValue <value>" -ForegroundColor Yellow
-                $exitCode = 1
-            }
-            else {
-                if (-not (Invoke-CliSetSetting -SettingName $SettingName -SettingValue $SettingValue)) { $exitCode = 1 }
-            }
-        }
-        "test-gui" {
-            Write-Host "`n=== GUI Feature Tester ===" -ForegroundColor Cyan
-            Write-Host "Running comprehensive GUI tests..." -ForegroundColor Yellow
-            Write-Host ""
-            if (Test-Path "Test-All-GUI-Features.ps1") {
-                & ".\Test-All-GUI-Features.ps1" -RunTests
-            }
-            else {
-                Write-Host "Error: Test-All-GUI-Features.ps1 not found" -ForegroundColor Red
-                Write-Host "Please ensure the test script is in the same directory" -ForegroundColor Yellow
-                $exitCode = 1
-            }
-        }
-        "test-gui-interactive" {
-            Write-Host "`n=== Interactive GUI Tester ===" -ForegroundColor Cyan
-            Write-Host "This will test GUI features while the IDE is running" -ForegroundColor Yellow
-            Write-Host ""
-            if (Test-Path "Test-GUI-Interactive.ps1") {
-                & ".\Test-GUI-Interactive.ps1" -AutoTest
-            }
-            else {
-                Write-Host "Error: Test-GUI-Interactive.ps1 not found" -ForegroundColor Red
-                Write-Host "Please ensure the test script is in the same directory" -ForegroundColor Yellow
-                $exitCode = 1
-            }
-        }
-        "test-dropdowns" {
-            Write-Host "`n=== Dropdown Feature Tester ===" -ForegroundColor Cyan
-            Write-Host "Testing all dropdown menus and combo boxes..." -ForegroundColor Yellow
-            Write-Host ""
-            if (Test-Path "Test-Dropdown-Features.ps1") {
-                & ".\Test-Dropdown-Features.ps1" -RunAll
-            }
-            else {
-                Write-Host "Error: Test-Dropdown-Features.ps1 not found" -ForegroundColor Red
-                Write-Host "Please ensure the test script is in the same directory" -ForegroundColor Yellow
-                $exitCode = 1
-            }
-        }
-        # ============================================
-        # AGENTIC VIDEO ENGINE CLI COMMANDS
-        # ============================================
-        "video-search" {
-            Write-Host "`n=== 🎬 Agentic Video Search ===" -ForegroundColor Cyan
-            if (-not $Prompt) {
-                Write-Host "Error: -Prompt parameter required for search query" -ForegroundColor Red
-                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command video-search -Prompt 'python tutorial'" -ForegroundColor Yellow
-                Write-Host ""
-                Write-Host "Examples:" -ForegroundColor Gray
-                Write-Host "  .\RawrXD.ps1 -CliMode -Command video-search -Prompt 'machine learning'" -ForegroundColor Gray
-                Write-Host "  curl equivalent:" -ForegroundColor Gray
-                Write-Host "  curl -X POST http://localhost:11434/api/generate -d '{\"model\":\"llama2\",\"prompt\":\"search youtube for python\"}'" -ForegroundColor DarkGray
-                $exitCode = 1
-            }
-            else {
-                try {
-                    Write-Host "Searching YouTube for: '$Prompt'" -ForegroundColor Yellow
-                    Write-Host ""
-                    
-                    # Check if agentic modules are loaded
-                    if (Get-Command Search-YouTubeFromBrowser -ErrorAction SilentlyContinue) {
-                        $results = Search-YouTubeFromBrowser -Query $Prompt -MaxResults 10
-                        
-                        if ($results.Count -eq 0) {
-                            Write-Host "❌ No results found for '$Prompt'" -ForegroundColor Red
-                        }
-                        else {
-                            Write-Host "✅ Found $($results.Count) video(s):`n" -ForegroundColor Green
-                            
-                            $counter = 1
-                            foreach ($video in $results) {
-                                Write-Host "  $counter. 🎬 $($video.Title)" -ForegroundColor White
-                                Write-Host "     Channel: $($video.Channel) | Duration: $($video.Duration)" -ForegroundColor Gray
-                                Write-Host "     Views: $($video.Views) | URL: $($video.URL)" -ForegroundColor DarkGray
-                                Write-Host ""
-                                $counter++
-                            }
-                            
-                            Write-Host "💡 Use video-play or video-download with -URL parameter" -ForegroundColor Yellow
-                            
-                            # Output JSON for curl/API integration
-                            Write-Host "`n--- JSON Output (for curl/API) ---" -ForegroundColor Cyan
-                            $jsonOutput = @{
-                                status  = "success"
-                                query   = $Prompt
-                                count   = $results.Count
-                                results = $results
-                            } | ConvertTo-Json -Depth 5
-                            Write-Host $jsonOutput -ForegroundColor Gray
-                        }
-                    }
-                    else {
-                        Write-Host "❌ Video engine not loaded. Ensure BrowserAutomation.ps1 exists." -ForegroundColor Red
-                        $exitCode = 1
-                    }
-                }
-                catch {
-                    Write-Host "❌ Error searching: $($_.Exception.Message)" -ForegroundColor Red
-                    $exitCode = 1
-                }
-            }
-        }
-        "video-download" {
-            Write-Host "`n=== 📥 Agentic Video Download ===" -ForegroundColor Cyan
-            if (-not $URL) {
-                Write-Host "Error: -URL parameter required for download" -ForegroundColor Red
-                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command video-download -URL 'https://...' [-OutputPath 'C:\Videos']" -ForegroundColor Yellow
-                Write-Host ""
-                Write-Host "Examples:" -ForegroundColor Gray
-                Write-Host "  .\RawrXD.ps1 -CliMode -Command video-download -URL 'https://youtube.com/watch?v=...' -OutputPath '~/Videos'" -ForegroundColor Gray
-                $exitCode = 1
-            }
-            else {
-                try {
-                    $destination = if ($OutputPath) { $OutputPath } else { "$env:USERPROFILE\Videos" }
-                    Write-Host "Downloading: $URL" -ForegroundColor Yellow
-                    Write-Host "Destination: $destination" -ForegroundColor Gray
-                    Write-Host ""
-                    
-                    if (Get-Command Invoke-MultiThreadedDownload -ErrorAction SilentlyContinue) {
-                        # Extract filename from URL
-                        $filename = if ($URL -match 'v=([a-zA-Z0-9_-]+)') {
-                            "video_$($matches[1]).mp4"
-                        }
-                        else {
-                            "download_$(Get-Date -Format 'yyyyMMdd_HHmmss').mp4"
-                        }
-                        
-                        $outputFile = Join-Path $destination $filename
-                        
-                        Write-Host "⏳ Starting multi-threaded download (4 threads)..." -ForegroundColor Yellow
-                        
-                        $result = Invoke-MultiThreadedDownload -URL $URL -OutputPath $outputFile -ThreadCount 4 -MaxRetries 3
-                        
-                        if ($result.Success) {
-                            Write-Host ""
-                            Write-Host "✅ Download Complete!" -ForegroundColor Green
-                            Write-Host "   File: $($result.FilePath)" -ForegroundColor White
-                            Write-Host "   Size: $(Format-Bytes $result.FileSize)" -ForegroundColor Gray
-                            Write-Host "   Speed: $($result.Speed)" -ForegroundColor Gray
-                            Write-Host "   Duration: $($result.Duration)" -ForegroundColor Gray
-                            
-                            # JSON output for curl
-                            Write-Host "`n--- JSON Output ---" -ForegroundColor Cyan
-                            $result | ConvertTo-Json | Write-Host -ForegroundColor Gray
-                        }
-                        else {
-                            Write-Host "❌ Download failed: $($result.Error)" -ForegroundColor Red
-                            $exitCode = 1
-                        }
-                    }
-                    else {
-                        Write-Host "❌ Download manager not loaded. Ensure DownloadManager.ps1 exists." -ForegroundColor Red
-                        $exitCode = 1
-                    }
-                }
-                catch {
-                    Write-Host "❌ Error downloading: $($_.Exception.Message)" -ForegroundColor Red
-                    $exitCode = 1
-                }
-            }
-        }
-        "video-play" {
-            Write-Host "`n=== ▶️ Agentic Video Play ===" -ForegroundColor Cyan
-            if (-not $URL) {
-                Write-Host "Error: -URL parameter required for playback" -ForegroundColor Red
-                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command video-play -URL 'https://...'" -ForegroundColor Yellow
-                $exitCode = 1
-            }
-            else {
-                try {
-                    Write-Host "Opening video: $URL" -ForegroundColor Yellow
-                    
-                    # Open in default browser (CLI mode can't use embedded WebView2)
-                    Start-Process $URL
-                    
-                    Write-Host "✅ Video opened in default browser" -ForegroundColor Green
-                    Write-Host ""
-                    Write-Host "--- JSON Output ---" -ForegroundColor Cyan
-                    @{
-                        status = "success"
-                        action = "play"
-                        url    = $URL
-                        method = "default_browser"
-                    } | ConvertTo-Json | Write-Host -ForegroundColor Gray
-                }
-                catch {
-                    Write-Host "❌ Error playing: $($_.Exception.Message)" -ForegroundColor Red
-                    $exitCode = 1
-                }
-            }
-        }
-        "video-help" {
-            Write-Host "`n=== 🎬 Agentic Video Engine Help ===" -ForegroundColor Cyan
-            Write-Host ""
-            Write-Host "COMMANDS:" -ForegroundColor Yellow
-            Write-Host "  video-search    Search YouTube for videos" -ForegroundColor White
-            Write-Host "  video-download  Download video from URL" -ForegroundColor White
-            Write-Host "  video-play      Play video in browser" -ForegroundColor White
-            Write-Host "  browser-navigate Open URL in browser" -ForegroundColor White
-            Write-Host "  browser-click   Click element by selector" -ForegroundColor White
-            Write-Host "  browser-screenshot Capture browser screenshot" -ForegroundColor White
-            Write-Host ""
-            Write-Host "PARAMETERS:" -ForegroundColor Yellow
-            Write-Host "  -Prompt     Search query (for video-search)" -ForegroundColor Gray
-            Write-Host "  -URL        Video/page URL (for download/play/navigate)" -ForegroundColor Gray
-            Write-Host "  -OutputPath Destination folder (for downloads)" -ForegroundColor Gray
-            Write-Host "  -Selector   CSS selector (for browser-click)" -ForegroundColor Gray
-            Write-Host ""
-            Write-Host "EXAMPLES:" -ForegroundColor Yellow
-            Write-Host "  # Search for videos" -ForegroundColor Gray
-            Write-Host "  .\RawrXD.ps1 -CliMode -Command video-search -Prompt 'powershell tutorial'" -ForegroundColor DarkGray
-            Write-Host ""
-            Write-Host "  # Download a video" -ForegroundColor Gray
-            Write-Host "  .\RawrXD.ps1 -CliMode -Command video-download -URL 'https://...' -OutputPath '~/Videos'" -ForegroundColor DarkGray
-            Write-Host ""
-            Write-Host "  # Play a video" -ForegroundColor Gray
-            Write-Host "  .\RawrXD.ps1 -CliMode -Command video-play -URL 'https://youtube.com/watch?v=...'" -ForegroundColor DarkGray
-            Write-Host ""
-            Write-Host "CURL INTEGRATION:" -ForegroundColor Yellow
-            Write-Host "  All commands output JSON for easy scripting/curl integration." -ForegroundColor Gray
-            Write-Host "  Pipe output through 'ConvertFrom-Json' for structured data." -ForegroundColor Gray
-            Write-Host ""
-            Write-Host "GUI COMMANDS (in chat):" -ForegroundColor Yellow
-            Write-Host "  /search youtube <query>  - Search YouTube" -ForegroundColor Gray
-            Write-Host "  /download <url|number>   - Download video" -ForegroundColor Gray  
-            Write-Host "  /play <url|number>       - Play video" -ForegroundColor Gray
-            Write-Host "  /playlist create <topic> - Create playlist" -ForegroundColor Gray
-            Write-Host "  /video-help              - Show this help" -ForegroundColor Gray
-        }
-        "browser-navigate" {
-            Write-Host "`n=== 🌐 Browser Navigate ===" -ForegroundColor Cyan
-            if (-not $URL) {
-                Write-Host "Error: -URL parameter required" -ForegroundColor Red
-                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command browser-navigate -URL 'https://...'" -ForegroundColor Yellow
-                $exitCode = 1
-            }
-            else {
-                try {
-                    Write-Host "Opening: $URL" -ForegroundColor Yellow
-                    Start-Process $URL
-                    Write-Host "✅ URL opened in default browser" -ForegroundColor Green
-                    @{ status = "success"; action = "navigate"; url = $URL } | ConvertTo-Json | Write-Host -ForegroundColor Gray
-                }
-                catch {
-                    Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
-                    $exitCode = 1
-                }
-            }
-        }
-        "browser-screenshot" {
-            Write-Host "`n=== 📸 Browser Screenshot ===" -ForegroundColor Cyan
-            Write-Host "Note: Screenshots require GUI mode with WebView2" -ForegroundColor Yellow
-            Write-Host ""
-            if (Get-Command Get-BrowserScreenshot -ErrorAction SilentlyContinue) {
-                $outputFile = if ($OutputPath) { $OutputPath } else { "$env:TEMP\browser_screenshot_$(Get-Date -Format 'yyyyMMdd_HHmmss').png" }
-                try {
-                    $result = Get-BrowserScreenshot -OutputPath $outputFile
-                    if ($result) {
-                        Write-Host "✅ Screenshot saved: $outputFile" -ForegroundColor Green
-                        @{ status = "success"; path = $outputFile } | ConvertTo-Json | Write-Host -ForegroundColor Gray
-                    }
-                    else {
-                        Write-Host "❌ Screenshot failed (WebView2 not available in CLI mode)" -ForegroundColor Red
-                        $exitCode = 1
-                    }
-                }
-                catch {
-                    Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
-                    $exitCode = 1
-                }
-            }
-            else {
-                Write-Host "❌ BrowserAutomation module not loaded" -ForegroundColor Red
-                $exitCode = 1
-            }
-        }
-        "browser-click" {
-            Write-Host "`n=== 🖱️ Browser Click ===" -ForegroundColor Cyan
-            Write-Host "Note: Click requires GUI mode with WebView2" -ForegroundColor Yellow
-            if (-not $Selector) {
-                Write-Host "Error: -Selector parameter required (CSS selector)" -ForegroundColor Red
-                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command browser-click -Selector '#button-id'" -ForegroundColor Yellow
-                $exitCode = 1
-            }
-            else {
-                Write-Host "Selector: $Selector" -ForegroundColor Gray
-                Write-Host "⚠️ Browser click only works in GUI mode with active WebView2" -ForegroundColor Yellow
-                @{ status = "info"; message = "Click requires GUI mode"; selector = $Selector } | ConvertTo-Json | Write-Host -ForegroundColor Gray
-            }
-        }
-        "help" {
-            Show-CliHelp
-        }
-        default {
-            Write-Host "Error: Unknown command '$Command'" -ForegroundColor Red
-            Write-Host "Run with -Command help to see available commands" -ForegroundColor Yellow
-            $exitCode = 1
-        }
-    }
-    
-    Write-Host ""
-    exit $exitCode
-}
 
 
 
