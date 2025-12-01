@@ -17,7 +17,7 @@ jobs:
         uses: microsoft/setup-msbuild@v1.3
 
       - name: Build Win32 IDE
-        run: .\scripts\build.ps1 -Config Release -A x64
+        run: .\build.ps1 -Config Release -A x64
 
       - name: Set up Python
         uses: actions/setup-python@v5
