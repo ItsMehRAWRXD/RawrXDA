@@ -35,7 +35,7 @@ jobs:
         working-directory: RawrXD-ModelLoader/services
         shell: pwsh
         run: |
-          Start-Process python hexmag\hexmag_engine.py -ArgumentList "--port 8001" -NoNewWindow
+          Start-Process python ..\hexmag_engine.py -ArgumentList "--port 8001" -NoNewWindow
           do {
             Start-Sleep -Seconds 1
             $r = try { (Invoke-WebRequest http://localhost:8001/health -TimeoutSec 5 -ErrorAction Stop).StatusCode } catch { 0 }
