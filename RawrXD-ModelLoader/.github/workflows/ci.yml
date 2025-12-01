@@ -29,14 +29,16 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Start HexMag Test Swarm (background on port 8001)
+        working-directory: services/hexmag
         shell: pwsh
         run: |
-          cd services/hexmag
+          $scriptDir = $PWD.Path
           $job = Start-Job -ScriptBlock { 
-            cd $using:PWD
+            param($dir)
+            Set-Location $dir
             python hexmag_engine.py --port 8001 
-          }
-          Write-Host "Started HexMag job: $($job.Id)"
+          } -ArgumentList $scriptDir
+          Write-Host "Started HexMag job: $($job.Id) in $scriptDir"
           
           $timeout = 60
           $port = 8001
