@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-test:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: RawrXD-ModelLoader
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -25,12 +28,12 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        working-directory: services
+        working-directory: RawrXD-ModelLoader/services
         run: pip install -r requirements.txt
 
       - name: Start HexMag Test Swarm (background on port 8001)
-        working-directory: services
-        shell: pwpress
+        working-directory: RawrXD-ModelLoader/services
+        shell: pwsh
         run: |
           Start-Process python hexmag\hexmag_engine.py -ArgumentList "--port 8001" -NoNewWindow
           do {
@@ -39,7 +42,7 @@ jobs:
           } while ($r -ne 200)
 
       - name: Smoke-test /ask and /agent endpoints
-        working-directory: services
+        working-directory: RawrXD-ModelLoader/services
         shell: pwsh
         run: python test_smoke.py
 
