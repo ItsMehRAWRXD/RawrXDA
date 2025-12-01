@@ -32,10 +32,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Start HexMag Test Swarm (background on port 8001)
-        working-directory: RawrXD-ModelLoader/services
+        working-directory: RawrXD-ModelLoader
         shell: pwsh
         run: |
-          Start-Process python -ArgumentList @('..\hexmag_engine.py', '--port', '8001') -NoNewWindow
+          Start-Process python -ArgumentList @('hexmag_engine.py', '--port', '8001') -NoNewWindow
           do {
             Start-Sleep -Seconds 1
             $r = try { (Invoke-WebRequest http://localhost:8001/health -TimeoutSec 5 -ErrorAction Stop).StatusCode } catch { 0 }
