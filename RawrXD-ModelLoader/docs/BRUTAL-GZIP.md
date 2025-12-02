@@ -9,3 +9,11 @@
 - **Latency**: 8.10 ms
 - **Speedup vs Qt**: 116.62x
 - **Status**: Verified
+
+## Integration
+- **GGUFRunner::compressBrutal()**: Static helper for drop-in replacement
+- **Performance**: 116x speedup (ARM64) and 232x speedup (x64) vs Qt default compression
+
+## Integration
+- **GGUFRunner::compressBrutal()**: Static helper for drop-in replacement
+- **Performance**: 116x speedup (ARM64) and 232x speedup (x64) vs Qt default compression
