@@ -7,7 +7,7 @@
 #endif
 
 extern "C" void q4_0_unpack_64x64(const uint8_t* q4, float* fp32, float scale);
-extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, int K);
+extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, int K, bool accumulate = false);
 
 static void gemm_q4_0_scalar(int M, int N, int K, const float* A, const uint8_t* Bq4, float scale, float* C) {
     for (int i = 0; i < M; ++i) {
@@ -87,7 +87,7 @@ extern "C" void ggml_gemm_q4_0_avx2(int M, int N, int K, const float* A, const u
                 for (int kk2 = 0; kk2 < Kb; ++kk2) {
                     std::memcpy(&Bblk[kk2 * Nb], &Btile[kk2 * TN], sizeof(float) * Nb);
                 }
-                matmul_kernel_avx2(Ablk.data(), Bblk.data(), Cblk.data(), Mb, Kb, Nb);
+                matmul_kernel_avx2(Ablk.data(), Bblk.data(), Cblk.data(), Mb, Kb, Nb, false);
                 for (int ii = 0; ii < Mb; ++ii) {
                     float* Cd = C + (i0 + ii) * N + j0;
                     const float* Cs = &Cblk[ii * Nb];

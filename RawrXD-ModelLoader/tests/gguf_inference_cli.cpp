@@ -69,7 +69,7 @@ void dequant_q4_0_scalar(const BlockQ4_0* blocks, float* dst, size_t n) {
 #if HAS_AVX2
 // AVX2 Q4_0 batch unpacking (from Phase 2)
 extern "C" void q4_0_unpack_64x64(const BlockQ4_0* src, float* dst);
-extern "C" void matmul_kernel_avx2(const float* A, const float* B, float* C, int M, int N, int K);
+extern "C" void matmul_kernel_avx2(const float* A, const float* B, float* C, int M, int N, int K, bool accumulate = false);
 
 // Simple runtime AVX2 check
 bool has_avx2_runtime() {
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
                     matmul_kernel_avx2(&hidden[kb],
                                        &weight_scratch[kb * hidden_dim + jb],
                                        &output[jb],
-                                       1, BLOCK, BLOCK);
+                                       1, BLOCK, BLOCK, false);
                 }
             }
         } else

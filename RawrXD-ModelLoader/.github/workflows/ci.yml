@@ -22,12 +22,15 @@ jobs:
           choco install nasm -y
           $env:PATH += ";C:\Program Files\NASM"
 
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: '6.5.2'
-          host: 'windows'
-          arch: 'win64_msvc2019_64'
+      - name: Install Qt via aqtinstall
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.5.2 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.5.2\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
 
       - name: Build Win32 IDE
         run: .\scripts\build.ps1 -Config Release -A x64
