@@ -1,4 +1,5 @@
 #include "GGUFRunner.h"
+#include "brutal_gzip.h"
 
 #include <QByteArray>
 #include <QCoreApplication>
@@ -29,7 +30,7 @@
 #endif
 
 // Keep linkage visible to the ASM translation unit.
-extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, int K);
+extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, int K, bool accumulate = false);
 extern "C" void ggml_gemm_q4_0(int M, int N, int K, const float* A, const uint8_t* Bq4, float scale, float* C);
 
 namespace {
@@ -720,8 +721,8 @@ void GGUFRunner::matmul(const float* A, const float* B, float* C, int N, int M, 
     // Runtime dispatch: use AVX2 if available, otherwise fall back to scalar
     if (context_.hasAVX2) {
         // Use the optimized AVX2 micro-kernel when available
-        // Signature: matmul_kernel_avx2(A[NxM], B[MxK], C[NxK], N, M, K)
-        matmul_kernel_avx2(const_cast<float*>(A), const_cast<float*>(B), C, N, M, K);
+        // Signature: matmul_kernel_avx2(A[NxM], B[MxK], C[NxK], N, M, K, accumulate)
+        matmul_kernel_avx2(const_cast<float*>(A), const_cast<float*>(B), C, N, M, K, false);
         return;
     }
 #endif
@@ -1029,3 +1030,30 @@ bool GGUFRunner::readTensorFloat32(QFile& file, qint64 offset, qint64 count, std
     }
     return true;
 }
+
+QByteArray GGUFRunner::compressBrutal(const void* data, size_t len)
+{
+    size_t out_len = 0;
+    void* out_ptr = nullptr;
+
+#if defined(HAS_BRUTAL_GZIP_MASM)
+    out_ptr = deflate_brutal_masm(data, len, &out_len);
+#elif defined(HAS_BRUTAL_GZIP_NEON)
+    out_ptr = deflate_brutal_neon(data, len, &out_len);
+#else
+    // Fallback or no-op if architecture not supported
+    // For now, return empty or implement a slow C++ fallback if needed
+    return QByteArray();
+#endif
+
+    if (!out_ptr) return QByteArray();
+
+    // Take ownership of the malloc-ed buffer into QByteArray
+    // QByteArray makes a copy by default, so we copy and free.
+    // To avoid copy, we would need to wrap it, but QByteArray doesn't easily take malloc ownership without custom deleter.
+    // Given the speed, a memcpy here is negligible compared to qCompress.
+    QByteArray result(reinterpret_cast<const char*>(out_ptr), static_cast<int>(out_len));
+    free(out_ptr);
+    return result;
+}
+
