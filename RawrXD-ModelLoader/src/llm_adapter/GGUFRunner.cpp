@@ -1036,6 +1036,7 @@ QByteArray GGUFRunner::compressBrutal(const void* data, size_t len)
     size_t out_len = 0;
     void* out_ptr = nullptr;
 
+    // Selects the brutal_gzip kernel that matched the current architecture (MASM for x64, NEON for ARM64).
 #if defined(HAS_BRUTAL_GZIP_MASM)
     out_ptr = deflate_brutal_masm(data, len, &out_len);
 #elif defined(HAS_BRUTAL_GZIP_NEON)
