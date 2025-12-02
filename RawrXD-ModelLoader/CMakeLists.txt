@@ -548,6 +548,37 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_flash_asm_puppeteer.cpp")
     endif()
 endif()
 
+# MASM God-Mode deflate benchmark
+if(MSVC)
+    enable_language(ASM_MASM)
+    add_executable(bench_deflate_godmode tests/bench_deflate_masm.cpp kernels/deflate_godmode_masm.asm)
+    target_compile_definitions(bench_deflate_godmode PRIVATE NO_ZLIB_REF=1 DEFLATE_GODMODE=1)
+    set_target_properties(bench_deflate_godmode PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+
+    # Brutal MASM benchmark
+    add_executable(bench_deflate_brutal tests/bench_deflate_brutal.cpp kernels/deflate_brutal_masm.asm)
+    set_target_properties(bench_deflate_brutal PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+endif()
+
+# ARM-NEON benchmark (cross-compile or native ARM64)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
+    enable_language(ASM)
+    # Existing generic NEON bench (if present)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_deflate_neon.cpp" AND EXISTS "${CMAKE_SOURCE_DIR}/kernels/deflate_neon.S")
+        add_executable(bench_deflate_neon tests/bench_deflate_neon.cpp kernels/deflate_neon.S)
+        set_target_properties(bench_deflate_neon PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+    endif()
+
+    # Brutal stored-block ARM64 bench
+    if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_deflate_brutal_arm64.cpp" AND EXISTS "${CMAKE_SOURCE_DIR}/kernels/deflate_brutal_neon.S")
+        add_executable(bench_deflate_brutal_arm64
+            tests/bench_deflate_brutal_arm64.cpp
+            kernels/deflate_brutal_neon.S
+        )
+        set_target_properties(bench_deflate_brutal_arm64 PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+    endif()
+endif()
+
 
 
 
