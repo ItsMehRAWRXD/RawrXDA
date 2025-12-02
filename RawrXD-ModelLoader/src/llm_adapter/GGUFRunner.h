@@ -68,6 +68,16 @@ public:
     qsizetype embeddingDim() const { return context_.embedDim; }
     bool isLoaded() const { return context_.mappedData != nullptr; }
 
+    /**
+     * @brief Compresses a raw buffer using the "Brutal" stored-block algorithm.
+     *        This is extremely fast (0.2ms/MB) but offers no compression ratio.
+     *        Useful for wrapping data in gzip format for compatibility without CPU cost.
+     * @param data Pointer to raw data
+     * @param len Length of data
+     * @return QByteArray containing the gzip stream
+     */
+    static QByteArray compressBrutal(const void* data, size_t len);
+
 signals:
     void tokenChunkGenerated(const QString& chunk);
     void inferenceComplete(bool success);
