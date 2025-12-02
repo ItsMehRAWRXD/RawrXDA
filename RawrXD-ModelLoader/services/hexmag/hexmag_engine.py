@@ -143,16 +143,25 @@ def health() -> Dict[str, Any]:
     return {"status": "ok", "queue": len(getattr(swarm.engine, "q", []))}
 
 
-async def run() -> None:
+import argparse
+
+async def run(port: int = 8000) -> None:
     async def background() -> None:
         while True:
             await swarm.engine.step()
 
+    config = uvicorn.Config(app, host="0.0.0.0", port=port)
+    server = uvicorn.Server(config)
+    
     await asyncio.gather(
         background(),
-        uvicorn.Server(uvicorn.Config(app, host="0.0.0.0", port=8000)).serve(),
+        server.serve(),
     )
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
+    args = parser.parse_args()
+    
+    asyncio.run(run(port=args.port))

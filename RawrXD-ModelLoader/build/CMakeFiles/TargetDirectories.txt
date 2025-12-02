@@ -1,0 +1,11 @@
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/RawrXD-Chromatic.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/bench_q8_0_end2end.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/bench_flash_attn.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/bench_flash_all_quant.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/bench_flash_asm_puppeteer.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/bench_deflate_godmode.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/bench_deflate_brutal.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/bench_deflate_50mb.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/brutal_gzip.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/ALL_BUILD.dir
+D:/temp/RawrXD-q8-wire/RawrXD-ModelLoader/build/CMakeFiles/ZERO_CHECK.dir

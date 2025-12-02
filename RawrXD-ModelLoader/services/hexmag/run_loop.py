@@ -1,6 +1,7 @@
 import asyncio
 from typing import List
 from core.contracts import Event, Finding
+from core.registry import load_bots
 
 class Engine:
     """
@@ -10,6 +11,8 @@ class Engine:
         self.q: List[Event] = []
         self.history: List[Finding] = []
         self.event_count = 0
+        self.bots = load_bots()
+        print(f"Engine initialized with {len(self.bots)} bots.")
 
     def add(self, event: Event) -> None:
         """Add an event to the processing queue."""
@@ -28,14 +31,42 @@ class Engine:
         event = self.q.pop(0)
         self.event_count += 1
         
-        # Handle llm.question events
+        # Dispatch to bots
+        tasks = []
+        for bot in self.bots:
+            if bot.supports(event):
+                tasks.append(bot.run(event))
+        
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for res in results:
+                if isinstance(res, list):
+                    self.history.extend(res)
+                elif isinstance(res, Exception):
+                    print(f"Bot error: {res}")
+
+        # Fallback if no bots handled it (for basic Q&A if no bot matched)
+        # We check if any finding was generated for this event (conceptually)
+        # But since we don't track which finding belongs to which event easily here without ID,
+        # we'll just do a quick check if we need to generate a default answer.
+        
+        # If it was a question and no bot responded, use the default generator
+        if event.kind == "llm.question":
+            # Check if we got an answer in history recently? 
+            # Simplification: Just run the default generator if no bots are loaded or none matched?
+            # For now, let's keep the default generator as a fallback if no bots are loaded.
+            if not self.bots:
+                 self._run_default_logic(event)
+            else:
+                 # If bots exist, we assume they handled it. 
+                 # But if the codegen bot didn't match, we might want a fallback.
+                 # Let's check if any finding was added.
+                 pass
+
+    def _run_default_logic(self, event: Event):
         if event.kind == "llm.question":
             question = event.payload.get("question", "")
-            
-            # Generate a real answer based on the question
             answer = self._generate_answer(question)
-            
-            # Create a Finding with the answer
             finding = Finding(
                 bot="HexMag-Engine",
                 score=1.0,

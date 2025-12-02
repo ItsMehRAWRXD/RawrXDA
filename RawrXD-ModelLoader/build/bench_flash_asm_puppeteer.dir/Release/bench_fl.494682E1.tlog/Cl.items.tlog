@@ -1,0 +1,3 @@
+D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\tests\bench_flash_asm_puppeteer.cpp;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_flash_asm_puppeteer.dir\Release\bench_flash_asm_puppeteer.obj
+D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\kernels\flash_attn_avx2.cc;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_flash_asm_puppeteer.dir\Release\flash_attn_avx2.obj
+D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\kernels\matmul_kernel_avx2.cc;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_flash_asm_puppeteer.dir\Release\matmul_kernel_avx2.obj

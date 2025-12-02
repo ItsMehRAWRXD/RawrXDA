@@ -84,13 +84,24 @@ deflate_neon:
     mov     x12, x11                /* copy count */
     
 .copy_loop_neon:
+    cmp     x12, #64
+    blo     .copy_loop_32
+    
+    /* Unrolled 64-byte copy */
+    ldp     q0, q1, [x19], #32
+    ldp     q2, q3, [x19], #32
+    stp     q0, q1, [x9], #32
+    stp     q2, q3, [x9], #32
+    sub     x12, x12, #64
+    b       .copy_loop_neon
+
+.copy_loop_32:
     cmp     x12, #32
     blo     .copy_tail
     
     ldp     q0, q1, [x19], #32
     stp     q0, q1, [x9], #32
     sub     x12, x12, #32
-    b       .copy_loop_neon
 
 .copy_tail:
     /* Handle remaining bytes byte-by-byte (simple fallback) */

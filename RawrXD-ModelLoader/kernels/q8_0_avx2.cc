@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstring>
 
-extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, int K);
+extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, int K, bool accumulate = false);
 
 // Q8_0 unpack: 64x64 int8 tile -> FP32 with scale
 extern "C" void ggml_q8_0_unpack_64x64(const int8_t* q8, float* fp32, float scale) {
@@ -80,7 +80,7 @@ extern "C" void ggml_gemm_q8_0_avx2(int M, int N, int K,
                     std::memcpy(&Bblk[kk * Nb], &Btile[kk * TN], sizeof(float) * Nb);
                 }
                 
-                matmul_kernel_avx2(Ablk.data(), Bblk.data(), Cblk.data(), Mb, Kb, Nb);
+                matmul_kernel_avx2(Ablk.data(), Bblk.data(), Cblk.data(), Mb, Kb, Nb, false);
                 
                 for (int ii = 0; ii < Mb; ++ii) {
                     float* Cd = C + (i0 + ii) * N + j0;
