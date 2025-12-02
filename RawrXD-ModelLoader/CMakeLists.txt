@@ -500,3 +500,54 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_q8_0_end2end.cpp")
     )
 endif()
 
+# Flash-Attention AVX2 bench
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_flash_attn.cpp")
+    add_executable(bench_flash_attn
+        tests/bench_flash_attn.cpp
+        kernels/flash_attn_avx2.cc
+        kernels/matmul_kernel_avx2.cc
+    )
+    target_include_directories(bench_flash_attn PRIVATE ${CMAKE_SOURCE_DIR})
+    target_compile_options(bench_flash_attn PRIVATE /arch:AVX2 /O2)
+    target_compile_definitions(bench_flash_attn PRIVATE __AVX2__=1)
+    set_target_properties(bench_flash_attn PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    )
+endif()
+# Flash-Attention All-Quant bench
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_flash_all_quant.cpp")
+    add_executable(bench_flash_all_quant
+        tests/bench_flash_all_quant.cpp
+        kernels/flash_attn_avx2.cc
+        kernels/matmul_kernel_avx2.cc
+    )
+    target_include_directories(bench_flash_all_quant PRIVATE ${CMAKE_SOURCE_DIR})
+    target_compile_options(bench_flash_all_quant PRIVATE /arch:AVX2 /O2)
+    target_compile_definitions(bench_flash_all_quant PRIVATE __AVX2__=1)
+    set_target_properties(bench_flash_all_quant PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    )
+endif()
+
+# Flash-Attention ASM Puppeteer (Phase 4 Final Form)
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_flash_asm_puppeteer.cpp")
+    if(MSVC)
+        enable_language(ASM_MASM)
+        add_executable(bench_flash_asm_puppeteer
+            tests/bench_flash_asm_puppeteer.cpp
+            kernels/flash_attn_avx2.cc
+            kernels/matmul_kernel_avx2.cc
+            kernels/flash_attn_asm_avx2.asm
+        )
+        target_include_directories(bench_flash_asm_puppeteer PRIVATE ${CMAKE_SOURCE_DIR})
+        target_compile_options(bench_flash_asm_puppeteer PRIVATE /arch:AVX2 /O2)
+        target_compile_definitions(bench_flash_asm_puppeteer PRIVATE __AVX2__=1)
+        set_target_properties(bench_flash_asm_puppeteer PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        )
+    endif()
+endif()
+
+
+
+
