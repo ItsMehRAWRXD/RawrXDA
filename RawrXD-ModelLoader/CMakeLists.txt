@@ -610,9 +610,10 @@ endif()
 
 
 
-# Brutal Gzip Library
+# Brutal Gzip Library auto-selects MASM on x64 and NEON on ARM64
 add_library(brutal_gzip STATIC)
 target_include_directories(brutal_gzip PUBLIC include)
+# Architecture-specific kernels get added below (MASM on x64, NEON on ARM64).
 
 if(MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64")
     enable_language(ASM_MASM)
