@@ -32,6 +32,21 @@ if(DEFINED ENV{Qt6_DIR})
     message(STATUS "Set CMAKE_PREFIX_PATH to ${CMAKE_PREFIX_PATH}")
 endif()
 
+# Explicitly specify Qt6 paths
+set(Qt6_DIR "C:/Qt/6.7.3/msvc2022_64/lib/cmake/Qt6")
+list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.7.3/msvc2022_64")
+
+find_package(Qt6 REQUIRED COMPONENTS Core)
+
+if(Qt6_FOUND)
+    message(STATUS "Qt6 found: ${Qt6_VERSION}")
+    add_definitions(-DHAVE_QT_CORE)
+    include_directories(${Qt6_INCLUDE_DIRS})
+    link_libraries(Qt6::Core)
+else()
+    message(WARNING "Qt6 not found. Qt-based benchmarks will be skipped.")
+endif()
+
 # Qt-based IDE shell (separate executable, no Vulkan)
 if(MSVC)
     find_package(Qt6 COMPONENTS Widgets Network QUIET)
@@ -61,6 +76,9 @@ if(MSVC)
             src/orchestrator/AgentOrchestrator.cpp
             src/llm_adapter/matmul_avx2.cpp
         )
+        
+        # Link brutal gzip library
+        target_link_libraries(RawrXD-QtShell PRIVATE brutal_gzip)
         
         # Add Assembly kernel for high-performance MatMul (MSVC-specific syntax)
         if(MSVC)
@@ -581,7 +599,28 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
     endif()
 endif()
 
+# Add benchmark for 50MB payload
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_deflate_50mb.cpp")
+    add_executable(bench_deflate_50mb tests/bench_deflate_50mb.cpp kernels/deflate_brutal_masm.asm)
+    set_target_properties(bench_deflate_50mb PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+endif()
 
 
 
+
+
+
+# Brutal Gzip Library
+add_library(brutal_gzip STATIC)
+target_include_directories(brutal_gzip PUBLIC include)
+
+if(MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64")
+    enable_language(ASM_MASM)
+    target_sources(brutal_gzip PRIVATE kernels/deflate_brutal_masm.asm)
+    target_compile_definitions(brutal_gzip PUBLIC HAS_BRUTAL_GZIP_MASM=1)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
+    enable_language(ASM)
+    target_sources(brutal_gzip PRIVATE kernels/deflate_neon.S)
+    target_compile_definitions(brutal_gzip PUBLIC HAS_BRUTAL_GZIP_NEON=1)
+endif()
 
