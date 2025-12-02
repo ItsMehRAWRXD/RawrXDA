@@ -129,6 +129,7 @@ private:
         std::vector<float> output_norm_w;            // output norm weight
         std::vector<float> output_w;                 // output projection weight
         std::vector<uint8_t> raw_q4_output;          // raw Q4_0 bytes for output.weight (optional)
+        std::vector<int8_t> raw_q8_output;           // raw Q8_0 bytes for output.weight (optional)
         std::vector<float> ln_f_g;                   // final layernorm gamma [embedDim]
         std::vector<float> ln_f_b;                   // final layernorm beta [embedDim]
 

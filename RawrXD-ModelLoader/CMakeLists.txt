@@ -485,3 +485,18 @@ target_compile_options(RawrXD-TestRunner PRIVATE -O2)
 target_compile_definitions(RawrXD-TestRunner PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
 endif()
 
+# Q8_0 AVX2 end-to-end bench
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_q8_0_end2end.cpp")
+    add_executable(bench_q8_0_end2end
+        tests/bench_q8_0_end2end.cpp
+        kernels/q8_0_avx2.cc
+        kernels/matmul_kernel_avx2.cc
+    )
+    target_include_directories(bench_q8_0_end2end PRIVATE ${CMAKE_SOURCE_DIR})
+    target_compile_options(bench_q8_0_end2end PRIVATE /arch:AVX2 /O2)
+    target_compile_definitions(bench_q8_0_end2end PRIVATE __AVX2__=1)
+    set_target_properties(bench_q8_0_end2end PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    )
+endif()
+
