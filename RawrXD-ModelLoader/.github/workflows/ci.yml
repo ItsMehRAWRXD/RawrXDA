@@ -4,6 +4,7 @@ on:
   push:
     branches: [ main, dev ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -16,8 +17,13 @@ jobs:
       - name: Add MSBuild
         uses: microsoft/setup-msbuild@v1.3
 
+      - name: Install NASM
+        run: |
+          choco install nasm -y
+          $env:PATH += ";C:\Program Files\NASM"
+
       - name: Build Win32 IDE
-        run: .\build.ps1 -Config Release -A x64
+        run: .\scripts\build.ps1 -Config Release -A x64
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,31 +35,14 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Start HexMag Test Swarm (background on port 8001)
+        working-directory: services/hexmag
         shell: pwsh
         run: |
-          $scriptDir = Join-Path $env:GITHUB_WORKSPACE "RawrXD-ModelLoader\services\hexmag"
-          $job = Start-Job -ScriptBlock {
-            param($dir)
-            Set-Location $dir
-            python hexmag_engine.py --port 8001
-          } -ArgumentList $scriptDir
-          Write-Host "Started HexMag job: $($job.Id) in $scriptDir"
-
-          $timeout = 60
-          $port = 8001
-          Write-Host "Waiting for HexMag service to start on port $port..."
-          $retries = 0
+          Start-Process python -ArgumentList "hexmag_engine.py --port 8001" -NoNewWindow
           do {
             Start-Sleep -Seconds 1
-            $retries++
-            $r = try { (Invoke-WebRequest "http://localhost:$port/health" -TimeoutSec 5 -ErrorAction Stop).StatusCode } catch { 0 }
-            if ($retries -gt $timeout) { 
-              Write-Host "Job output:"
-              Receive-Job $job
-              throw "HexMag service failed to start after $timeout seconds." 
-            }
+            $r = try { (Invoke-WebRequest http://localhost:8001/health -TimeoutSec 5 -ErrorAction Stop).StatusCode } catch { 0 }
           } while ($r -ne 200)
-          Write-Host "HexMag service is ready."
 
       - name: Smoke-test /ask and /agent endpoints
         working-directory: services
