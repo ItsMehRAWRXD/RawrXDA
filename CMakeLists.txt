@@ -1048,9 +1048,10 @@ target_compile_definitions(RawrXD-Chromatic PRIVATE _CRT_SECURE_NO_WARNINGS NOMI
 if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     message(STATUS "Building RawrXD-AgenticIDE with Qt ${Qt6_VERSION}")
     
-    # Check for required source files
+    # Check for required source files - v5.0 Clean Implementation
     set(AGENTICIDE_SOURCES
-        src/agentic_ide_main_simple.cpp
+        src/qtapp/main_v5.cpp
+        src/qtapp/MainWindow_v5.cpp
     )
     
     # Check if additional source files exist
@@ -1206,18 +1207,19 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     
     # Phase 3: Production Enhancements
     # Security, checkpoint, and CI/CD management components
-    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/security_manager.cpp")
-        list(APPEND AGENTICIDE_SOURCES src/qtapp/security_manager.cpp)
-    endif()
-    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/checkpoint_manager.cpp")
-        list(APPEND AGENTICIDE_SOURCES src/qtapp/checkpoint_manager.cpp)
-    endif()
-    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ci_cd_settings.cpp")
-        list(APPEND AGENTICIDE_SOURCES src/qtapp/ci_cd_settings.cpp)
-    endif()
-    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/tokenizer_selector.cpp")
-        list(APPEND AGENTICIDE_SOURCES src/qtapp/tokenizer_selector.cpp)
-    endif()
+    # TEMPORARILY DISABLED - not needed for v5.0 clean build
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/security_manager.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/security_manager.cpp)
+    # endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/checkpoint_manager.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/checkpoint_manager.cpp)
+    # endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ci_cd_settings.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/ci_cd_settings.cpp)
+    # endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/tokenizer_selector.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/tokenizer_selector.cpp)
+    # endif()
     
     # Add headers for MOC processing
     list(APPEND AGENTICIDE_SOURCES
@@ -1260,10 +1262,14 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     
     add_executable(RawrXD-AgenticIDE WIN32 ${AGENTICIDE_SOURCES})
     
-    # Enable Qt MOC for QObject-derived classes (Telemetry, etc.)
-    set_target_properties(RawrXD-AgenticIDE PROPERTIES AUTOMOC ON)
-
-    target_include_directories(RawrXD-AgenticIDE PRIVATE 
+    # Enable Qt MOC for QObject-derived classes - must be set BEFORE any other properties
+    set_target_properties(RawrXD-AgenticIDE PROPERTIES 
+        AUTOMOC ON
+        AUTOMOC_MOC_OPTIONS "-I${CMAKE_SOURCE_DIR}/include"
+    )
+    
+    # Explicitly set MOC include paths
+    target_include_directories(RawrXD-AgenticIDE BEFORE PRIVATE 
         ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/src/qtapp
