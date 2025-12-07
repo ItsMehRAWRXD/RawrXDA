@@ -6,15 +6,22 @@
 #include <QDir>
 #include <QSettings>
 
+// Lightweight constructor - no QSettings creation
 Settings::Settings() : settings_(nullptr) {
-    // Initialize Qt settings for GUI preferences
-    settings_ = new QSettings("RawrXD", "AgenticIDE");
+    // Deferred to initialize() - safe to call before QApplication
 }
 
 Settings::~Settings() {
     if (settings_) {
         delete settings_;
         settings_ = nullptr;
+    }
+}
+
+// Two-phase init: Create QSettings after QApplication is running
+void Settings::initialize() {
+    if (!settings_) {
+        settings_ = new QSettings("RawrXD", "AgenticIDE");
     }
 }
 

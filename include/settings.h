@@ -38,6 +38,9 @@ public:
     Settings();
     ~Settings();
     
+    // Two-phase initialization: call after QApplication exists
+    void initialize();
+    
     // Qt-based settings (for GUI)
     void setValue(const QString& key, const QVariant& value);
     QVariant getValue(const QString& key, const QVariant& default_value = QVariant());

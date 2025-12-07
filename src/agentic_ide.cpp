@@ -1,5 +1,6 @@
 #include "agentic_ide.h"
 #include "telemetry.h"
+#include "settings.h"
 #include <QTimer>
 #include <QShowEvent>
 
@@ -25,6 +26,10 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
             // Safe to do now that QApplication is fully running
             static Telemetry telemetry;
             telemetry.initializeHardware();
+            
+            // Initialize settings (QSettings registry/file access)
+            static Settings settings;
+            settings.initialize();
         });
     }
 }
