@@ -51,6 +51,15 @@ public:
         IntegratedGradients,        // Input attribution
         SaliencyMap                 // Input importance map
     };
+    
+    explicit InterpretabilityPanel(QWidget* parent = nullptr);
+    ~InterpretabilityPanel();
+    
+    /**
+     * Two-phase initialization - call after QApplication is ready
+     * Creates all Qt widgets and sets up connections
+     */
+    void initialize();
 
     struct AttentionData {
         int headIndex;

@@ -27,6 +27,12 @@ InterpretabilityPanel::InterpretabilityPanel(QWidget* parent)
       m_statsLabel(nullptr),
       m_problemsLabel(nullptr)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+    qDebug() << "[InterpretabilityPanel] Constructed (lazy-init)";
+}
+
+void InterpretabilityPanel::initialize() {
+    if (m_tabWidget) return;  // Already initialized
     qDebug() << "[InterpretabilityPanel] Initializing interpretability panel";
     setupUI();
     setupConnections();
