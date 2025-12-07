@@ -28,10 +28,14 @@ HardwareBackendSelector::HardwareBackendSelector(QWidget* parent)
     , m_int8Enabled(false)
     , m_memoryPoolMB(1024)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
     setWindowTitle("Hardware Backend Configuration");
     setMinimumSize(700, 600);
     setModal(true);
+}
 
+void HardwareBackendSelector::initialize() {
+    if (m_backendCombo) return;  // Already initialized
     setupUI();
     setupConnections();
     detectAvailableBackends();

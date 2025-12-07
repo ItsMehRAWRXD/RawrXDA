@@ -67,6 +67,12 @@ public:
      */
     explicit HardwareBackendSelector(QWidget* parent = nullptr);
     ~HardwareBackendSelector() override = default;
+    
+    /**
+     * Two-phase initialization - call after QApplication is ready
+     * Creates all Qt widgets, sets up connections, and detects backends
+     */
+    void initialize();
 
     /**
      * @brief Get currently selected backend
