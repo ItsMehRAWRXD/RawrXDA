@@ -21,8 +21,13 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     : QDialog(parent)
     , m_settings(new SettingsManager(this))
 {
+    // Lightweight constructor - defer Qt widget creation
     setWindowTitle("RawrXD IDE Settings");
     setMinimumSize(800, 600);
+}
+
+void SettingsDialog::initialize() {
+    if (m_autoSaveCheck) return;  // Already initialized
     
     setupUI();
     loadSettings();
