@@ -36,6 +36,8 @@ public:
      */
     explicit TrainingDialog(ModelTrainer* trainer, QWidget* parent = nullptr);
     ~TrainingDialog() override = default;
+    
+    void initialize();
 
     /**
      * @brief Get the configured training parameters

@@ -21,10 +21,15 @@ TrainingDialog::TrainingDialog(ModelTrainer* trainer, QWidget* parent)
     : QDialog(parent)
     , m_trainer(trainer)
 {
+    // Lightweight constructor - defer Qt widget creation
     setWindowTitle("Configure Model Training");
     setMinimumSize(700, 600);
     setModal(true);
+}
 
+void TrainingDialog::initialize() {
+    if (m_datasetPathEdit) return;  // Already initialized
+    
     setupUI();
     setupConnections();
     loadDefaultSettings();
