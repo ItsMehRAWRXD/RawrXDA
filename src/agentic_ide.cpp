@@ -1,6 +1,7 @@
 #include "agentic_ide.h"
 #include "telemetry.h"
 #include "settings.h"
+#include "multi_tab_editor.h"
 #include <QTimer>
 #include <QShowEvent>
 
@@ -30,6 +31,13 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
             // Initialize settings (QSettings registry/file access)
             static Settings settings;
             settings.initialize();
+            
+            // Initialize multi-tab editor (Qt widgets creation)
+            if (!m_multiTabEditor) {
+                m_multiTabEditor = new MultiTabEditor(this);
+                m_multiTabEditor->initialize();
+                setCentralWidget(m_multiTabEditor);
+            }
         });
     }
 }

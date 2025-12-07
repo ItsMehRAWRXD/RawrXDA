@@ -10,7 +10,15 @@
 #include <QMessageBox>
 #include <QDebug>
 
-MultiTabEditor::MultiTabEditor(QWidget* parent) : QWidget(parent) {
+// Lightweight constructor - no widget creation
+MultiTabEditor::MultiTabEditor(QWidget* parent) : QWidget(parent), tab_widget_(nullptr) {
+    // Deferred to initialize() - safe to call before QApplication
+}
+
+// Two-phase init: Create Qt widgets after QApplication is running
+void MultiTabEditor::initialize() {
+    if (tab_widget_) return;  // Already initialized
+    
     QVBoxLayout* layout = new QVBoxLayout(this);
     tab_widget_ = new QTabWidget(this);
     tab_widget_->setTabsClosable(true); // Enable tab closing

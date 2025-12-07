@@ -10,6 +10,9 @@ class MultiTabEditor : public QWidget {
 public:
     explicit MultiTabEditor(QWidget* parent = nullptr);
     
+    // Two-phase initialization: call after QApplication exists
+    void initialize();
+    
 public slots:
     void openFile(const QString& filepath);
     void newFile();
