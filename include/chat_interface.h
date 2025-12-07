@@ -10,6 +10,10 @@ class QCheckBox;
 class QLabel;
 class AgenticEngine;
 
+namespace RawrXD {
+    class PlanOrchestrator;
+}
+
 class ChatInterface : public QWidget {
     Q_OBJECT
 public:
@@ -19,6 +23,7 @@ public:
     void initialize();
     
     void setAgenticEngine(AgenticEngine* engine) { m_agenticEngine = engine; }
+    void setPlanOrchestrator(RawrXD::PlanOrchestrator* orchestrator) { m_planOrchestrator = orchestrator; }
     
     void addMessage(const QString& sender, const QString& message);
     QString selectedModel() const;
@@ -59,4 +64,5 @@ private:
     bool m_busy = false;  // Prevent re-entrancy during inference
     QString m_lastPrompt;  // Store last user message
     AgenticEngine* m_agenticEngine = nullptr;
+    RawrXD::PlanOrchestrator* m_planOrchestrator = nullptr;
 };

@@ -1150,6 +1150,18 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/planning_agent.cpp")
         list(APPEND AGENTICIDE_SOURCES src/planning_agent.cpp)
     endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/plan_orchestrator.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/plan_orchestrator.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/lsp_client.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/lsp_client.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/agentic_text_edit.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/agentic_text_edit.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/ghost_text_renderer.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/ghost_text_renderer.cpp)
+    endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/telemetry.cpp")
         list(APPEND AGENTICIDE_SOURCES src/telemetry.cpp)
     endif()
@@ -1219,6 +1231,10 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
         include/terminal_pool.h
         include/file_browser.h
         include/planning_agent.h
+        include/plan_orchestrator.h
+        include/lsp_client.h
+        include/agentic_text_edit.h
+        include/ghost_text_renderer.h
         # include/inference_engine_stub.hpp  # Using qtapp/inference_engine.hpp instead
         include/scalar_server.h
         include/telemetry.h

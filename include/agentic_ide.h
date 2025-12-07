@@ -7,6 +7,11 @@ class ChatInterface;
 class TerminalPool;
 class AgenticEngine;
 
+namespace RawrXD {
+    class LSPClient;
+    class PlanOrchestrator;
+}
+
 class AgenticIDE : public QMainWindow {
 public:
     explicit AgenticIDE(QWidget *parent = nullptr);
@@ -25,4 +30,8 @@ private:
     
     // Agent engine
     AgenticEngine *m_agenticEngine = nullptr;
+    
+    // Multi-file orchestration
+    RawrXD::PlanOrchestrator *m_planOrchestrator = nullptr;
+    RawrXD::LSPClient *m_lspClient = nullptr;
 };

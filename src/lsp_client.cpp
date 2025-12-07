@@ -8,9 +8,11 @@
 #include "lsp_client.h"
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QJsonValue>
 #include <QFileInfo>
 #include <QDebug>
 #include <QUrl>
+#include <QCoreApplication>
 
 namespace RawrXD {
 
@@ -477,9 +479,17 @@ void LSPClient::handleCompletionResponse(const QJsonObject& result, int requestI
     // Result can be CompletionList or CompletionItem[]
     QJsonArray itemsArray;
     if (result.contains("items")) {
-        itemsArray = result["items"].toArray();
-    } else if (result.isArray()) {
-        itemsArray = result.toArray();
+        QJsonValue itemsValue = result.value("items");
+        if (itemsValue.isArray()) {
+            itemsArray = itemsValue.toArray();
+        }
+    } else {
+        // Result itself might be an array (not wrapped in CompletionList)
+        // In this case, convert the entire object to a document and check
+        QJsonDocument doc(result);
+        if (doc.isArray()) {
+            itemsArray = doc.array();
+        }
     }
     
     for (const QJsonValue& val : itemsArray) {
@@ -549,10 +559,14 @@ void LSPClient::handleDefinitionResponse(const QJsonObject& result, int requestI
     QJsonObject location;
     if (result.contains("uri")) {
         location = result;
-    } else if (result.isArray()) {
-        QJsonArray arr = result.toArray();
-        if (!arr.isEmpty()) {
-            location = arr.first().toObject();
+    } else {
+        // Result might be an array of locations
+        QJsonDocument doc(result);
+        if (doc.isArray()) {
+            QJsonArray arr = doc.array();
+            if (!arr.isEmpty()) {
+                location = arr.first().toObject();
+            }
         }
     }
     

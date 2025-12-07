@@ -4,8 +4,11 @@
 #include <QString>
 
 class QTabWidget;
-class LSPClient;
-class AgenticTextEdit;
+
+namespace RawrXD {
+    class LSPClient;
+    class AgenticTextEdit;
+}
 
 class MultiTabEditor : public QWidget {
     Q_OBJECT
@@ -29,12 +32,12 @@ public slots:
     QString getCurrentFilePath() const;
     
     // LSP integration
-    void setLSPClient(LSPClient* client);
-    LSPClient* lspClient() const { return m_lspClient; }
-    AgenticTextEdit* getCurrentEditor() const;
+    void setLSPClient(RawrXD::LSPClient* client);
+    RawrXD::LSPClient* lspClient() const { return m_lspClient; }
+    RawrXD::AgenticTextEdit* getCurrentEditor() const;
 
 private:
     QTabWidget* tab_widget_;
     QMap<QWidget*, QString> tab_file_paths_;  // Maps editor widget to file path
-    LSPClient* m_lspClient{};  // Shared LSP client for all tabs
+    RawrXD::LSPClient* m_lspClient{};  // Shared LSP client for all tabs
 };

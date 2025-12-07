@@ -10,6 +10,7 @@
 #include <QAbstractTextDocumentLayout>
 #include <QTextBlock>
 #include <QScrollBar>
+#include <QThread>
 
 namespace RawrXD {
 

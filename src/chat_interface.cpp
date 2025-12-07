@@ -1,6 +1,7 @@
 // Chat Interface - Chat UI component
 #include "chat_interface.h"
 #include "agentic_engine.h"
+#include "plan_orchestrator.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -337,8 +338,9 @@ void ChatInterface::sendMessage() {
 }
 
 bool ChatInterface::isAgentCommand(const QString& message) const {
-    // Commands start with @ or use known keywords
+    // Commands start with @ or / or use known keywords
     return message.startsWith("@") || 
+           message.startsWith("/") ||
            message.startsWith("grep ") ||
            message.startsWith("read ") ||
            message.startsWith("search ") ||
@@ -398,12 +400,54 @@ void ChatInterface::executeAgentCommand(const QString& command, const QString& a
         response = m_agenticEngine->referenceSymbol(symbol);
         addMessage("Agent", response);
     }
+    else if (command.startsWith("/refactor ")) {
+        // Multi-file AI refactoring command
+        if (!m_planOrchestrator) {
+            addMessage("System", "PlanOrchestrator not initialized");
+            statusLabel_->setText("Refactor error: Orchestrator not ready");
+            return;
+        }
+        
+        QString prompt = command.mid(10).trimmed();  // Remove "/refactor "
+        if (prompt.isEmpty()) {
+            addMessage("System", "Usage: /refactor <description>\nExample: /refactor change UserManager to use UUID instead of int ID");
+            return;
+        }
+        
+        addMessage("System", "Planning multi-file refactor: " + prompt);
+        statusLabel_->setText("Planning refactor...");
+        
+        // Execute multi-file refactor (synchronous for now)
+        // TODO: Use current workspace root from project manager
+        QString workspaceRoot = QDir::currentPath();
+        RawrXD::ExecutionResult result = m_planOrchestrator->planAndExecute(prompt, workspaceRoot, false);
+        
+        if (result.success) {
+            QString summary = QString("✓ Refactor complete: %1 files modified\n").arg(result.successCount);
+            for (const QString& file : result.successfulFiles) {
+                summary += "  • " + file + "\n";
+            }
+            addMessage("Agent", summary);
+            statusLabel_->setText(QString("Refactored %1 files").arg(result.successCount));
+        } else {
+            QString errorMsg = QString("✗ Refactor failed: %1\n").arg(result.errorMessage);
+            if (!result.failedFiles.isEmpty()) {
+                errorMsg += "Failed files:\n";
+                for (const QString& file : result.failedFiles) {
+                    errorMsg += "  • " + file + "\n";
+                }
+            }
+            addMessage("System", errorMsg);
+            statusLabel_->setText("Refactor failed");
+        }
+    }
     else {
         response = "Unknown agent command. Available commands:\n"
                    "  @grep <pattern> - Search for text pattern in files\n"
                    "  @read <filepath> - Read file contents\n"
                    "  @search <query> - Search for files matching query\n"
-                   "  @ref <symbol> - Find symbol references and definitions";
+                   "  @ref <symbol> - Find symbol references and definitions\n"
+                   "  /refactor <description> - Multi-file AI refactoring";
         addMessage("System", response);
     }
     
