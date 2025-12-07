@@ -22,6 +22,12 @@ public:
     explicit HotpatchPanel(QWidget* parent = nullptr);
     
     /**
+     * Two-phase initialization - call after QApplication is ready
+     * Creates all Qt widgets and sets up UI
+     */
+    void initialize();
+    
+    /**
      * Log a hotpatch event
      * \param eventType Event type ("quantReloaded", "moduleReloaded", "reloadFailed", etc.)
      * \param details Event details/error message

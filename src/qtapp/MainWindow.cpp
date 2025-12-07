@@ -3686,6 +3686,7 @@ void MainWindow::setupAgentSystem() {
 void MainWindow::setupHotpatchPanel() {
     // Create Hotpatch Panel widget
     m_hotpatchPanel = new HotpatchPanel(this);
+    m_hotpatchPanel->initialize();  // Two-phase init - create Qt widgets after QApplication
     
     // Create dock widget
     m_hotpatchPanelDock = new QDockWidget("Hotpatch Events", this);

@@ -8,6 +8,11 @@ HotpatchPanel::HotpatchPanel(QWidget* parent)
     : QWidget(parent)
     , m_sessionStart(QDateTime::currentDateTime())
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void HotpatchPanel::initialize() {
+    if (m_eventList) return;  // Already initialized
     setupUI();
 }
 
