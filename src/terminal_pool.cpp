@@ -11,7 +11,13 @@
 #include <QDir>
 
 TerminalPool::TerminalPool(uint32_t pool_size, QWidget* parent) 
-    : QWidget(parent), pool_size_(pool_size) {
+    : QWidget(parent), pool_size_(pool_size), tab_widget_(nullptr) {
+    // Lightweight constructor - defer Qt widget and process creation
+}
+
+void TerminalPool::initialize() {
+    if (tab_widget_) return;  // Already initialized
+    
     QVBoxLayout* layout = new QVBoxLayout(this);
     
     QHBoxLayout* control_layout = new QHBoxLayout();

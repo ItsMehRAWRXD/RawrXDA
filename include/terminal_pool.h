@@ -20,6 +20,7 @@ class TerminalPool : public QWidget {
     Q_OBJECT
 public:
     explicit TerminalPool(uint32_t pool_size, QWidget* parent = nullptr);
+    void initialize();
     
 public slots:
     void createNewTerminal();

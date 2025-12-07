@@ -4,8 +4,10 @@
 #include "multi_tab_editor.h"
 #include "chat_interface.h"
 #include "agentic_engine.h"
+#include "terminal_pool.h"
 #include <QTimer>
 #include <QShowEvent>
+#include <QDockWidget>
 
 // Lightweight constructor - no heavy initialization
 AgenticIDE::AgenticIDE(QWidget *parent) : QMainWindow(parent) {
@@ -56,6 +58,17 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 if (m_chatInterface) {
                     m_chatInterface->setAgenticEngine(m_agenticEngine);
                 }
+            }
+            
+            // Initialize terminal pool (Qt widgets + QProcess spawning)
+            if (!m_terminalPool) {
+                m_terminalPool = new TerminalPool(2, this);  // 2 terminals by default
+                m_terminalPool->initialize();
+                
+                // Add terminal as dock widget
+                m_terminalDock = new QDockWidget("Terminal Pool", this);
+                m_terminalDock->setWidget(m_terminalPool);
+                addDockWidget(Qt::BottomDockWidgetArea, m_terminalDock);
             }
         });
     }
