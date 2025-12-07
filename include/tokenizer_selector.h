@@ -80,6 +80,8 @@ public:
     // Constructor
     explicit TokenizerSelector(QWidget* parent = nullptr);
     ~TokenizerSelector() override;
+    
+    void initialize();
 
     /**
      * @brief Set current tokenizer configuration

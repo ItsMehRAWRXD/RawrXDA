@@ -35,7 +35,7 @@ TokenizerSelector::TokenizerSelector(QWidget* parent)
       m_previewEdit(nullptr),
       m_tokensEdit(nullptr)
 {
-    qDebug() << "[TokenizerSelector] Initializing tokenizer selector";
+    // Lightweight constructor - defer Qt widget creation
     
     // Initialize default config
     m_config.language = Language::English;
@@ -52,6 +52,12 @@ TokenizerSelector::TokenizerSelector(QWidget* parent)
     m_config.subwordRegularizationAlpha = 0.1f;
     
     initializeTokenizerMap();
+}
+
+void TokenizerSelector::initialize() {
+    if (m_languageCombo) return;  // Already initialized
+    
+    qDebug() << "[TokenizerSelector] Initializing tokenizer selector";
     setupUI();
     setupConnections();
 }
