@@ -19,6 +19,12 @@ class ModelMonitor : public QWidget {
     Q_OBJECT
 public:
     explicit ModelMonitor(InferenceEngine* engine, QWidget* parent = nullptr);
+    
+    /**
+     * Two-phase initialization - call after QApplication is ready
+     * Creates all Qt widgets and starts refresh timer
+     */
+    void initialize();
 
 private slots:
     void refresh();

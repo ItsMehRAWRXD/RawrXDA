@@ -9,6 +9,12 @@
 ModelMonitor::ModelMonitor(InferenceEngine* engine, QWidget* parent)
     : QWidget(parent), m_engine(engine)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void ModelMonitor::initialize() {
+    if (m_modelLabel) return;  // Already initialized
+    
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(10, 10, 10, 10);
     

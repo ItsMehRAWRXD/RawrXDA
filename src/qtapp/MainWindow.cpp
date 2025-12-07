@@ -553,7 +553,9 @@ void MainWindow::setupMenuBar()
     connect(monAct, &QAction::toggled, this, [this](bool on){
         if (on && !m_modelMonitorDock) {
             m_modelMonitorDock = new QDockWidget(tr("Model Monitor"), this);
-            m_modelMonitorDock->setWidget(new ModelMonitor(m_inferenceEngine, m_modelMonitorDock));
+            ModelMonitor* monitor = new ModelMonitor(m_inferenceEngine, m_modelMonitorDock);
+            monitor->initialize();  // Two-phase init - create Qt widgets after QApplication
+            m_modelMonitorDock->setWidget(monitor);
             addDockWidget(Qt::RightDockWidgetArea, m_modelMonitorDock);
         } else if (m_modelMonitorDock) {
             m_modelMonitorDock->setVisible(on);
