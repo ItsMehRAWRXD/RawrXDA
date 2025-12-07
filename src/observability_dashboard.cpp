@@ -19,19 +19,27 @@
 
 ObservabilityDashboard::ObservabilityDashboard(Profiler* profiler, QWidget* parent)
     : QWidget(parent)
-    , m_tabWidget(new QTabWidget(this))
+    , m_tabWidget(nullptr)
     , m_profiler(profiler)
 {
-    setWindowTitle("Observability Dashboard");
-    setMinimumSize(1000, 700);
-
-    setupUI();
-    setupConnections();
+    // Lightweight constructor - defer Qt Charts creation to initialize()
 }
 
 ObservabilityDashboard::~ObservabilityDashboard()
 {
     // Qt handles widget cleanup
+}
+
+// Two-phase init: Create Qt Charts widgets after QApplication is running
+void ObservabilityDashboard::initialize() {
+    if (m_tabWidget) return;  // Already initialized
+    
+    setWindowTitle("Observability Dashboard");
+    setMinimumSize(1000, 700);
+
+    m_tabWidget = new QTabWidget(this);
+    setupUI();
+    setupConnections();
 }
 
 void ObservabilityDashboard::setupUI()

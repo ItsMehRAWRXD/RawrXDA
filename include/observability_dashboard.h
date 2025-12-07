@@ -42,6 +42,9 @@ public:
     explicit ObservabilityDashboard(Profiler* profiler, QWidget* parent = nullptr);
     ~ObservabilityDashboard() override;
 
+    // Two-phase initialization: call after QApplication exists
+    void initialize();
+
 public slots:
     /**
      * @brief Called when new profiling metrics available
