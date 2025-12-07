@@ -15,6 +15,9 @@ class ChatInterface : public QWidget {
 public:
     explicit ChatInterface(QWidget* parent = nullptr);
     
+    // Two-phase initialization: call after QApplication exists
+    void initialize();
+    
     void setAgenticEngine(AgenticEngine* engine) { m_agenticEngine = engine; }
     
     void addMessage(const QString& sender, const QString& message);

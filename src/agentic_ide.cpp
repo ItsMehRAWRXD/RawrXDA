@@ -2,6 +2,7 @@
 #include "telemetry.h"
 #include "settings.h"
 #include "multi_tab_editor.h"
+#include "chat_interface.h"
 #include <QTimer>
 #include <QShowEvent>
 
@@ -37,6 +38,13 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 m_multiTabEditor = new MultiTabEditor(this);
                 m_multiTabEditor->initialize();
                 setCentralWidget(m_multiTabEditor);
+            }
+            
+            // Initialize chat interface (Qt widgets + model scanning)
+            if (!m_chatInterface) {
+                m_chatInterface = new ChatInterface(this);
+                m_chatInterface->initialize();
+                // Chat will be added as dock widget later
             }
         });
     }

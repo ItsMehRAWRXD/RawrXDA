@@ -14,7 +14,24 @@
 #include <QFileInfo>
 #include <QtConcurrent>
 
-ChatInterface::ChatInterface(QWidget* parent) : QWidget(parent), maxMode_(false) {
+// Lightweight constructor - no widget creation
+ChatInterface::ChatInterface(QWidget* parent) 
+    : QWidget(parent)
+    , maxMode_(false)
+    , message_history_(nullptr)
+    , message_input_(nullptr)
+    , modelSelector_(nullptr)
+    , modelSelector2_(nullptr)
+    , maxModeToggle_(nullptr)
+    , statusLabel_(nullptr)
+{
+    // Deferred to initialize() - safe to call before QApplication
+}
+
+// Two-phase init: Create Qt widgets after QApplication is running
+void ChatInterface::initialize() {
+    if (message_history_) return;  // Already initialized
+    
     QVBoxLayout* layout = new QVBoxLayout(this);
     
     // Header with title
