@@ -36,6 +36,8 @@ public:
      */
     explicit TrainingProgressDock(ModelTrainer* trainer, QWidget* parent = nullptr);
     ~TrainingProgressDock() override = default;
+    
+    void initialize();
 
 public slots:
     // Connected to ModelTrainer signals

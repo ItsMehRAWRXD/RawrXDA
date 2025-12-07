@@ -24,7 +24,14 @@ TrainingProgressDock::TrainingProgressDock(ModelTrainer* trainer, QWidget* paren
     , m_trainingStartTime(0)
     , m_lastBatchTime(0)
     , m_totalBatchesProcessed(0)
+    , m_statusLabel(nullptr)
 {
+    // Lightweight constructor - defer Qt widget creation
+}
+
+void TrainingProgressDock::initialize() {
+    if (m_statusLabel) return;  // Already initialized
+    
     setupUI();
     setupConnections();
     resetMetrics();
