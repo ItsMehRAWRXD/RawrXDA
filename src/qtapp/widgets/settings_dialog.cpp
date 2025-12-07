@@ -22,6 +22,12 @@ namespace RawrXD {
 GeneralSettingsWidget::GeneralSettingsWidget(QWidget* parent)
     : QWidget(parent)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void GeneralSettingsWidget::initialize() {
+    if (m_autoSaveCheckBox) return;  // Already initialized
+    
     auto* layout = new QVBoxLayout(this);
     
     // Auto-save group
@@ -93,6 +99,12 @@ void GeneralSettingsWidget::resetToDefaults() {
 AppearanceSettingsWidget::AppearanceSettingsWidget(QWidget* parent)
     : QWidget(parent)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void AppearanceSettingsWidget::initialize() {
+    if (m_themeComboBox) return;  // Already initialized
+    
     auto* layout = new QVBoxLayout(this);
     
     // Theme group
@@ -247,6 +259,12 @@ void AppearanceSettingsWidget::updatePreview() {
 EditorSettingsWidget::EditorSettingsWidget(QWidget* parent)
     : QWidget(parent)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void EditorSettingsWidget::initialize() {
+    if (m_tabSizeSpinBox) return;  // Already initialized
+    
     auto* layout = new QVBoxLayout(this);
     
     // Indentation group
@@ -386,6 +404,12 @@ void EditorSettingsWidget::resetToDefaults() {
 KeyboardSettingsWidget::KeyboardSettingsWidget(QWidget* parent)
     : QWidget(parent)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void KeyboardSettingsWidget::initialize() {
+    if (m_searchEdit) return;  // Already initialized
+    
     auto* layout = new QVBoxLayout(this);
     
     // Search bar
@@ -571,6 +595,12 @@ void KeyboardSettingsWidget::onExportClicked() {
 TerminalSettingsWidget::TerminalSettingsWidget(QWidget* parent)
     : QWidget(parent)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void TerminalSettingsWidget::initialize() {
+    if (m_shellEdit) return;  // Already initialized
+    
     auto* layout = new QVBoxLayout(this);
     
     // Shell group
@@ -652,6 +682,12 @@ void TerminalSettingsWidget::resetToDefaults() {
 AISettingsWidget::AISettingsWidget(QWidget* parent)
     : QWidget(parent)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void AISettingsWidget::initialize() {
+    if (m_enableSuggestionsCheckBox) return;  // Already initialized
+    
     auto* layout = new QVBoxLayout(this);
     
     // Suggestions group
@@ -717,6 +753,11 @@ void AISettingsWidget::resetToDefaults() {
 SettingsDialog::SettingsDialog(QWidget* parent)
     : QDialog(parent)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void SettingsDialog::initialize() {
+    if (m_tabWidget) return;  // Already initialized
     setupUI();
     loadAllSettings();
 }
@@ -842,3 +883,8 @@ void SettingsDialog::onResetClicked() {
 }
 
 } // namespace RawrXD
+
+
+
+
+

@@ -33,6 +33,8 @@ class GeneralSettingsWidget : public QWidget {
 public:
     explicit GeneralSettingsWidget(QWidget* parent = nullptr);
     
+    void initialize();  // Two-phase init
+    
     void loadSettings();
     void saveSettings();
     void resetToDefaults();
@@ -52,6 +54,8 @@ class AppearanceSettingsWidget : public QWidget {
     
 public:
     explicit AppearanceSettingsWidget(QWidget* parent = nullptr);
+    
+    void initialize();  // Two-phase init
     
     void loadSettings();
     void saveSettings();
@@ -87,6 +91,8 @@ class EditorSettingsWidget : public QWidget {
 public:
     explicit EditorSettingsWidget(QWidget* parent = nullptr);
     
+    void initialize();  // Two-phase init
+    
     void loadSettings();
     void saveSettings();
     void resetToDefaults();
@@ -113,6 +119,8 @@ class KeyboardSettingsWidget : public QWidget {
     
 public:
     explicit KeyboardSettingsWidget(QWidget* parent = nullptr);
+    
+    void initialize();  // Two-phase init
     
     void loadSettings();
     void saveSettings();
@@ -145,6 +153,8 @@ class TerminalSettingsWidget : public QWidget {
 public:
     explicit TerminalSettingsWidget(QWidget* parent = nullptr);
     
+    void initialize();  // Two-phase init
+    
     void loadSettings();
     void saveSettings();
     void resetToDefaults();
@@ -164,6 +174,8 @@ class AISettingsWidget : public QWidget {
     
 public:
     explicit AISettingsWidget(QWidget* parent = nullptr);
+    
+    void initialize();  // Two-phase init
     
     void loadSettings();
     void saveSettings();
@@ -191,6 +203,8 @@ class SettingsDialog : public QDialog {
     
 public:
     explicit SettingsDialog(QWidget* parent = nullptr);
+    
+    void initialize();  // Two-phase init
     
     /**
      * \brief Open dialog to specific tab
