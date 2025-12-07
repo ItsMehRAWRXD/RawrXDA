@@ -34,6 +34,12 @@ public:
 
     explicit AIChatPanel(QWidget* parent = nullptr);
     
+    /**
+     * Two-phase initialization - call after QApplication is ready
+     * Creates all Qt widgets and applies theme
+     */
+    void initialize();
+    
     void addUserMessage(const QString& message);
     void addAssistantMessage(const QString& message, bool streaming = false);
     void updateStreamingMessage(const QString& content);

@@ -10,6 +10,11 @@
 AIChatPanel::AIChatPanel(QWidget* parent)
     : QWidget(parent)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void AIChatPanel::initialize() {
+    if (m_messagesLayout) return;  // Already initialized
     setupUI();
     applyDarkTheme();
 }

@@ -3804,6 +3804,7 @@ void MainWindow::toggleMASMEditor(bool visible) {
 void MainWindow::setupAIChatPanel() {
     // Create AI Chat Panel widget
     m_aiChatPanel = new AIChatPanel(this);
+    m_aiChatPanel->initialize();  // Two-phase init - create Qt widgets after QApplication
     
     // Create dock widget to hold the chat panel
     m_aiChatPanelDock = new QDockWidget("AI Chat Panel", this);
