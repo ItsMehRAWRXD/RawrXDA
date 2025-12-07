@@ -8,7 +8,13 @@
 #include <QDir>
 #include <QDebug>
 
-FileBrowser::FileBrowser(QWidget* parent) : QWidget(parent) {
+FileBrowser::FileBrowser(QWidget* parent) : QWidget(parent), tree_widget_(nullptr) {
+    // Lightweight constructor - defer Qt widget creation and drive enumeration
+}
+
+void FileBrowser::initialize() {
+    if (tree_widget_) return;  // Already initialized
+    
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     

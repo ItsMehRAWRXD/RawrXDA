@@ -10,6 +10,7 @@ class FileBrowser : public QWidget {
     Q_OBJECT
 public:
     explicit FileBrowser(QWidget* parent = nullptr);
+    void initialize();
     
     void loadDirectory(const QString& dirpath);
     void loadDrives();
