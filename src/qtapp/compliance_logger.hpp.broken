@@ -1,0 +1,152 @@
+#pragma once
+
+#include <QObject>
+#include <QString>
+#include <QFile>
+#include <QTextStream>
+#include <QDateTime>
+#include <QMutex>
+
+/**
+ * @brief Compliance logger for SOC2, HIPAA, and enterprise audit requirements
+ * 
+ * Features:
+ * - Structured audit logging
+ * - SOC2 compliance (access logs, change tracking)
+ * - HIPAA compliance (PHI access logging)
+ * - Log rotation and retention
+ * - Tamper-evident logging (checksums)
+ * - Log export for compliance audits
+ */
+class ComplianceLogger : public QObject {
+    Q_OBJECT
+
+public:
+    enum class LogLevel {
+        INFO,
+        WARNING,
+        ERROR,
+        SECURITY,
+        AUDIT
+    };
+    Q_ENUM(LogLevel)
+
+    enum class EventType {
+        ModelAccess,        // Model loaded/accessed
+        DataAccess,         // Data file accessed
+        UserLogin,          // User authentication
+        ConfigChange,       // Configuration modified
+        SystemError,        // System error occurred
+        SecurityViolation   // Security policy violation
+    };
+    Q_ENUM(EventType)
+
+    struct LogEntry {
+        QDateTime timestamp;
+        LogLevel level;
+        EventType eventType;
+        QString userId;
+        QString action;
+        QString resourceId;
+        QString ipAddress;
+        QString details;
+        QString checksum;
+    };
+
+    static ComplianceLogger& instance();
+    ~ComplianceLogger();
+
+    /**
+     * @brief Start compliance logging
+     * @param logFilePath Path to log file
+     */
+    void start(const QString& logFilePath = QString());
+
+    /**
+     * @brief Stop logging
+     */
+    void stop();
+
+    /**
+     * @brief Log an event
+     */
+    void logEvent(LogLevel level, EventType eventType, 
+                  const QString& userId, const QString& action,
+                  const QString& resourceId = QString(),
+                  const QString& details = QString());
+
+    /**
+     * @brief Log model access (SOC2/HIPAA requirement)
+     */
+    void logModelAccess(const QString& userId, const QString& modelPath, 
+                        const QString& action);
+
+    /**
+     * @brief Log data access (HIPAA requirement for PHI)
+     */
+    void logDataAccess(const QString& userId, const QString& dataPath,
+                       const QString& action);
+
+    /**
+     * @brief Log configuration change (SOC2 requirement)
+     */
+    void logConfigChange(const QString& userId, const QString& setting,
+                         const QString& oldValue, const QString& newValue);
+
+    /**
+     * @brief Log security violation
+     */
+    void logSecurityViolation(const QString& userId, const QString& violation);
+
+    /**
+     * @brief Log user login attempt
+     */
+    void logUserLogin(const QString& userId, bool success, const QString& ipAddress);
+
+    /**
+     * @brief Log system error
+     */
+    void logSystemError(const QString& component, const QString& errorMessage);
+
+    /**
+     * @brief Export logs for audit
+     * @param startDate Start date for export
+     * @param endDate End date for export
+     * @return JSON formatted audit log
+     */
+    QString exportAuditLog(const QDateTime& startDate, const QDateTime& endDate) const;
+
+    /**
+     * @brief Rotate log files (daily/weekly/monthly)
+     */
+    void rotateLogs();
+
+    /**
+     * @brief Set log retention period
+     * @param days Number of days to keep logs (default: 365 for SOC2)
+     */
+    void setRetentionPeriod(int days);
+
+signals:
+    void eventLogged(const LogEntry& entry);
+    void securityAlert(const QString& message);
+    void complianceViolation(const QString& violation);
+
+private:
+    ComplianceLogger();  // Singleton
+    ComplianceLogger(const ComplianceLogger&) = delete;
+    ComplianceLogger& operator=(const ComplianceLogger&) = delete;
+
+    void writeLogEntry(const LogEntry& entry);
+    QString calculateEntryChecksum(const LogEntry& entry) const;
+    QString formatLogEntry(const LogEntry& entry) const;
+    QString eventTypeToString(EventType type) const;
+    QString logLevelToString(LogLevel level) const;
+
+    mutable QMutex m_mutex;
+    QFile* m_logFile = nullptr;
+    QTextStream* m_logStream = nullptr;
+    QString m_logFilePath;
+    int m_retentionDays = 365;  // SOC2 requirement: 1 year
+    bool m_running = false;
+};

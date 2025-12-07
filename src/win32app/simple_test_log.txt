@@ -1,0 +1,3 @@
+Test started
+About to load library
+Success

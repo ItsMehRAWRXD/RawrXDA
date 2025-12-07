@@ -1,0 +1,8 @@
+# Test NASM deflate implementation
+add_executable(bench_deflate_nasm
+    tests/bench_deflate_masm.cpp
+    kernels/deflate_nasm.asm
+)
+set_source_files_properties(kernels/deflate_nasm.asm PROPERTIES LANGUAGE ASM_NASM)
+target_compile_definitions(bench_deflate_nasm PRIVATE NO_ZLIB_REF=1 DEFLATE_NASM=1)
+set_target_properties(bench_deflate_nasm PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
