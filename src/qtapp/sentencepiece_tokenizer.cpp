@@ -28,11 +28,19 @@ struct SentencePieceTokenizer::Lattice {
 };
 
 SentencePieceTokenizer::SentencePieceTokenizer() {
+    m_trie = nullptr;
+}
+
+void SentencePieceTokenizer::initialize() {
+    if (m_trie) return;  // Already initialized
     m_trie = new TrieNode();
 }
 
 SentencePieceTokenizer::~SentencePieceTokenizer() {
-    delete m_trie;
+    if (m_trie) {
+        delete m_trie;
+        m_trie = nullptr;
+    }
 }
 
 bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
@@ -141,6 +149,7 @@ bool SentencePieceTokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArra
 }
 
 void SentencePieceTokenizer::buildTrie() {
+    initialize();  // Ensure trie is allocated
     for (const SentencePiece& piece : m_pieces) {
         insertTrie(piece.piece, piece.id);
     }

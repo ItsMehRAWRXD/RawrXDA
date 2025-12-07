@@ -16,6 +16,8 @@ public:
     SentencePieceTokenizer();
     ~SentencePieceTokenizer();
     
+    void initialize();
+    
     /**
      * @brief Load SentencePiece model from file
      * @param modelPath Path to .model file (protobuf format)
