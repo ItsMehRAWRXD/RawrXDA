@@ -12,6 +12,7 @@ class TodoDock : public QWidget {
     Q_OBJECT
 public:
     explicit TodoDock(TodoManager* todoManager, QWidget* parent = nullptr);
+    void initialize();
     
 public slots:
     void refreshTodos();

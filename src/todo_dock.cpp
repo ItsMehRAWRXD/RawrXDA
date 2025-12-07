@@ -10,7 +10,13 @@
 #include <QUrl>
 
 TodoDock::TodoDock(TodoManager* todoManager, QWidget* parent) 
-    : QWidget(parent), todoManager_(todoManager) {
+    : QWidget(parent), todoManager_(todoManager), treeWidget_(nullptr) {
+    // Lightweight constructor - defer Qt widget creation
+}
+
+void TodoDock::initialize() {
+    if (treeWidget_) return;  // Already initialized
+    
     setupUI();
     loadTodos();
     
