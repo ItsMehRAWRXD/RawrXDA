@@ -1,5 +1,7 @@
 // Multi-Tab Editor
 #include "multi_tab_editor.h"
+#include "agentic_text_edit.h"
+#include "lsp_client.h"
 #include <QVBoxLayout>
 #include <QTabWidget>
 #include <QTextEdit>
@@ -9,6 +11,8 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QDebug>
+
+using namespace RawrXD;
 
 // Lightweight constructor - no widget creation
 MultiTabEditor::MultiTabEditor(QWidget* parent) : QWidget(parent), tab_widget_(nullptr) {
@@ -42,10 +46,18 @@ void MultiTabEditor::openFile(const QString& filepath) {
         return;
     }
     
-    QTextEdit* editor = new QTextEdit(this);
+    AgenticTextEdit* editor = new AgenticTextEdit(this);
+    editor->initialize();
+    
     QTextStream stream(&file);
-    editor->setText(stream.readAll());
+    editor->setPlainText(stream.readAll());
     file.close();
+    
+    // Configure LSP
+    editor->setDocumentUri(filepath);
+    if (m_lspClient) {
+        editor->setLSPClient(m_lspClient);
+    }
     
     QString filename = filepath.section('/', -1);
     tab_widget_->addTab(editor, filename);
@@ -58,17 +70,25 @@ void MultiTabEditor::openFile(const QString& filepath) {
 }
 
 void MultiTabEditor::newFile() {
-    QTextEdit* editor = new QTextEdit(this);
+    AgenticTextEdit* editor = new AgenticTextEdit(this);
+    editor->initialize();
     editor->setPlainText("// New file\n// Start coding here...");
     
     static int newFileCount = 1;
     QString tabName = "Untitled-" + QString::number(newFileCount++);
+    QString tempUri = QString("untitled://%1.cpp").arg(newFileCount - 1);
+    
+    editor->setDocumentUri(tempUri);
+    if (m_lspClient) {
+        editor->setLSPClient(m_lspClient);
+    }
+    
     tab_widget_->addTab(editor, tabName);
     tab_widget_->setCurrentWidget(editor);
 }
 
 void MultiTabEditor::saveCurrentFile() {
-    QTextEdit* currentEditor = qobject_cast<QTextEdit*>(tab_widget_->currentWidget());
+    AgenticTextEdit* currentEditor = qobject_cast<AgenticTextEdit*>(tab_widget_->currentWidget());
     if (!currentEditor) {
         QMessageBox::warning(this, "Error", "No file to save");
         return;
@@ -95,21 +115,21 @@ void MultiTabEditor::saveCurrentFile() {
 }
 
 void MultiTabEditor::undo() {
-    QTextEdit* currentEditor = qobject_cast<QTextEdit*>(tab_widget_->currentWidget());
+    AgenticTextEdit* currentEditor = qobject_cast<AgenticTextEdit*>(tab_widget_->currentWidget());
     if (currentEditor) {
         currentEditor->undo();
     }
 }
 
 void MultiTabEditor::redo() {
-    QTextEdit* currentEditor = qobject_cast<QTextEdit*>(tab_widget_->currentWidget());
+    AgenticTextEdit* currentEditor = qobject_cast<AgenticTextEdit*>(tab_widget_->currentWidget());
     if (currentEditor) {
         currentEditor->redo();
     }
 }
 
 void MultiTabEditor::find() {
-    QTextEdit* currentEditor = qobject_cast<QTextEdit*>(tab_widget_->currentWidget());
+    AgenticTextEdit* currentEditor = qobject_cast<AgenticTextEdit*>(tab_widget_->currentWidget());
     if (currentEditor) {
         QString searchText = QInputDialog::getText(this, "Find", "Enter text to find:");
         if (!searchText.isEmpty()) {
@@ -130,7 +150,7 @@ void MultiTabEditor::find() {
 }
 
 void MultiTabEditor::replace() {
-    QTextEdit* currentEditor = qobject_cast<QTextEdit*>(tab_widget_->currentWidget());
+    AgenticTextEdit* currentEditor = qobject_cast<AgenticTextEdit*>(tab_widget_->currentWidget());
     if (currentEditor) {
         QString searchText = QInputDialog::getText(this, "Replace", "Enter text to find:");
         if (!searchText.isEmpty()) {
@@ -146,7 +166,7 @@ void MultiTabEditor::replace() {
 }
 
 QString MultiTabEditor::getCurrentText() const {
-    QTextEdit* currentEditor = qobject_cast<QTextEdit*>(tab_widget_->currentWidget());
+    AgenticTextEdit* currentEditor = qobject_cast<AgenticTextEdit*>(tab_widget_->currentWidget());
     if (currentEditor) {
         return currentEditor->toPlainText();
     }
@@ -154,7 +174,7 @@ QString MultiTabEditor::getCurrentText() const {
 }
 
 QString MultiTabEditor::getSelectedText() const {
-    QTextEdit* currentEditor = qobject_cast<QTextEdit*>(tab_widget_->currentWidget());
+    AgenticTextEdit* currentEditor = qobject_cast<AgenticTextEdit*>(tab_widget_->currentWidget());
     if (currentEditor) {
         QTextCursor cursor = currentEditor->textCursor();
         return cursor.selectedText();
@@ -163,10 +183,26 @@ QString MultiTabEditor::getSelectedText() const {
 }
 
 QString MultiTabEditor::getCurrentFilePath() const {
-    QTextEdit* currentEditor = qobject_cast<QTextEdit*>(tab_widget_->currentWidget());
+    AgenticTextEdit* currentEditor = qobject_cast<AgenticTextEdit*>(tab_widget_->currentWidget());
     if (currentEditor) {
         // Return the stored full file path, or empty string if not saved yet
         return tab_file_paths_.value(currentEditor, QString());
     }
     return QString();
+}
+
+void MultiTabEditor::setLSPClient(LSPClient* client) {
+    m_lspClient = client;
+    
+    // Wire LSP to all existing editors
+    for (int i = 0; i < tab_widget_->count(); ++i) {
+        AgenticTextEdit* editor = qobject_cast<AgenticTextEdit*>(tab_widget_->widget(i));
+        if (editor) {
+            editor->setLSPClient(client);
+        }
+    }
+}
+
+AgenticTextEdit* MultiTabEditor::getCurrentEditor() const {
+    return qobject_cast<AgenticTextEdit*>(tab_widget_->currentWidget());
 }
