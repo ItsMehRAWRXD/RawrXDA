@@ -22,11 +22,15 @@ ModelRegistry::ModelRegistry(QWidget* parent)
     : QWidget(parent)
     , m_selectedModelId(-1)
 {
+    // Lightweight constructor - defers database/Qt widget creation to initialize()
     // Initialize database path
     QString dataLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(dataLocation);
     m_dbPath = dataLocation + "/model_registry.db";
+}
 
+void ModelRegistry::initialize() {
+    if (m_db.isOpen()) return;  // Already initialized
     setupDatabase();
     setupUI();
     setupConnections();

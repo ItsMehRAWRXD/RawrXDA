@@ -52,6 +52,12 @@ class ModelRegistry : public QWidget
 public:
     explicit ModelRegistry(QWidget* parent = nullptr);
     ~ModelRegistry() override;
+    
+    /**
+     * Two-phase initialization - call after QApplication is ready
+     * Sets up database, creates Qt widgets, and loads models
+     */
+    void initialize();
 
     /**
      * @brief Register a newly trained model
