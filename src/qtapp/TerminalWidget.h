@@ -16,6 +16,12 @@ class TerminalWidget : public QWidget
 public:
     explicit TerminalWidget(QWidget* parent = nullptr);
     ~TerminalWidget() override;
+    
+    /**
+     * Two-phase initialization - call after QApplication is ready
+     * Creates all Qt widgets and sets up connections
+     */
+    void initialize();
 
     void startShell(TerminalManager::ShellType type);
     void stopShell();

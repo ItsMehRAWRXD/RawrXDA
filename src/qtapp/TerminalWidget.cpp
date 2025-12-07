@@ -13,11 +13,21 @@
 TerminalWidget::TerminalWidget(QWidget* parent)
     : QWidget(parent)
     , m_manager(new TerminalManager(this))
-    , m_output(new QPlainTextEdit(this))
-    , m_input(new QLineEdit(this))
-    , m_shellSelect(new QComboBox(this))
-    , m_startStopBtn(new QPushButton("Start", this))
+    , m_output(nullptr)
+    , m_input(nullptr)
+    , m_shellSelect(nullptr)
+    , m_startStopBtn(nullptr)
 {
+    // Lightweight constructor - defers Qt widget creation to initialize()
+}
+
+void TerminalWidget::initialize() {
+    if (m_output) return;  // Already initialized
+    
+    m_output = new QPlainTextEdit(this);
+    m_input = new QLineEdit(this);
+    m_shellSelect = new QComboBox(this);
+    m_startStopBtn = new QPushButton("Start", this);
     m_output->setReadOnly(true);
     m_output->setFont(QFont("Consolas", 10));
 
