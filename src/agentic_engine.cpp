@@ -29,14 +29,8 @@ AgenticEngine::AgenticEngine(QObject* parent)
       m_totalInteractions(0),
       m_positiveResponses(0)
 {
-    // Initialize user preferences with defaults
-    m_userPreferences["language"] = "C++";
-    m_userPreferences["style"] = "modern";
-    m_userPreferences["verbosity"] = "detailed";
-    
-    // Create inference engine instance
-    m_inferenceEngine = new InferenceEngine(this);
-    qInfo() << "[AgenticEngine] Inference engine created";
+    // Lightweight constructor - defer heavy initialization
+    // InferenceEngine creation moved to initialize()
 }
 
 AgenticEngine::~AgenticEngine()
@@ -47,6 +41,7 @@ AgenticEngine::~AgenticEngine()
     
     // Release inference engine resources
     if (m_inferenceEngine) {
+        delete m_inferenceEngine;
         m_inferenceEngine = nullptr;
     }
     
@@ -54,6 +49,17 @@ AgenticEngine::~AgenticEngine()
 }
 
 void AgenticEngine::initialize() {
+    if (m_inferenceEngine) return;  // Already initialized
+    
+    // Initialize user preferences with defaults
+    m_userPreferences["language"] = "C++";
+    m_userPreferences["style"] = "modern";
+    m_userPreferences["verbosity"] = "detailed";
+    
+    // Create inference engine instance (deferred from constructor)
+    m_inferenceEngine = new InferenceEngine(this);
+    qInfo() << "[AgenticEngine] Inference engine created";
+    
     qDebug() << "Agentic Engine initialized - waiting for model selection";
     
     // Initialize security and checkpoint managers

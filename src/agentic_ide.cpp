@@ -3,6 +3,7 @@
 #include "settings.h"
 #include "multi_tab_editor.h"
 #include "chat_interface.h"
+#include "agentic_engine.h"
 #include <QTimer>
 #include <QShowEvent>
 
@@ -45,6 +46,16 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 m_chatInterface = new ChatInterface(this);
                 m_chatInterface->initialize();
                 // Chat will be added as dock widget later
+            }
+            
+            // Initialize agentic engine (InferenceEngine + AI core)
+            if (!m_agenticEngine) {
+                m_agenticEngine = new AgenticEngine(this);
+                m_agenticEngine->initialize();
+                // Connect chat to engine
+                if (m_chatInterface) {
+                    m_chatInterface->setAgenticEngine(m_agenticEngine);
+                }
             }
         });
     }
