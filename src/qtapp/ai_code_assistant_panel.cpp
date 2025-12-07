@@ -33,6 +33,12 @@ AICodeAssistantPanel::AICodeAssistantPanel(QWidget *parent)
       suggestion_history_(nullptr),
       streaming_in_progress_(false)
 {
+    // Lightweight constructor - defer Qt widget creation
+}
+
+void AICodeAssistantPanel::initialize() {
+    if (status_indicator_) return;  // Already initialized
+    
     qDebug() << "[AICodeAssistantPanel] Initializing AI Code Assistant Panel";
     setupUI();
 }

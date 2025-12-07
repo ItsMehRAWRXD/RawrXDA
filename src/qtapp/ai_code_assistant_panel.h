@@ -29,7 +29,8 @@ class AICodeAssistantPanel : public QDockWidget {
 public:
     explicit AICodeAssistantPanel(QWidget *parent = nullptr);
     ~AICodeAssistantPanel();
-
+    
+    void initialize();
     void setAssistant(AICodeAssistant *assistant);
 
 private slots:
