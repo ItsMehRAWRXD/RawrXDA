@@ -54,11 +54,24 @@ void AgenticEngine::initialize() {
     m_userPreferences["style"] = "modern";
     m_userPreferences["verbosity"] = "detailed";
     
+    // Initialize generation config with defaults
+    m_genConfig.temperature = 0.8f;
+    m_genConfig.topP = 0.9f;
+    m_genConfig.maxTokens = 512;
+    
     // Create inference engine instance (deferred from constructor)
     m_inferenceEngine = new InferenceEngine(this);
     qInfo() << "[AgenticEngine] Inference engine created";
     
     qDebug() << "Agentic Engine initialized - waiting for model selection";
+}
+
+void AgenticEngine::setGenerationConfig(const GenerationConfig& config) {
+    m_genConfig = config;
+    qInfo() << "[AgenticEngine] Generation config updated:"
+            << "temperature=" << config.temperature
+            << "topP=" << config.topP
+            << "maxTokens=" << config.maxTokens;
 }
 
 void AgenticEngine::setModel(const QString& modelPath) {
@@ -221,16 +234,25 @@ bool AgenticEngine::loadModelAsync(const std::string& modelPath) {
     }
 }
 
-void AgenticEngine::processMessage(const QString& message) {
+void AgenticEngine::processMessage(const QString& message, const QString& editorContext) {
     qDebug() << "[AgenticEngine] Processing message:" << message;
+    if (!editorContext.isEmpty()) {
+        qDebug() << "[AgenticEngine] With editor context:" << editorContext.length() << "chars";
+    }
     qDebug() << "[AgenticEngine] m_modelLoaded:" << m_modelLoaded;
     qDebug() << "[AgenticEngine] m_inferenceEngine:" << (m_inferenceEngine ? "exists" : "null");
     qDebug() << "[AgenticEngine] isModelLoaded:" << (m_inferenceEngine ? m_inferenceEngine->isModelLoaded() : false);
     
+    // Enhance message with editor context if provided
+    QString enhancedMessage = message;
+    if (!editorContext.isEmpty()) {
+        enhancedMessage = message + "\n\n[Context from editor]\n```\n" + editorContext + "\n```";
+    }
+    
     if (m_modelLoaded && m_inferenceEngine && m_inferenceEngine->isModelLoaded()) {
         // Use real inference engine - response will be emitted via signal
         qInfo() << "[AgenticEngine] ✓ Using loaded model for response generation";
-        generateTokenizedResponse(message);
+        generateTokenizedResponse(enhancedMessage);
         // Response will be emitted asynchronously via responseReady signal
     } else {
         // Fallback to keyword-based responses if no model loaded
@@ -238,7 +260,7 @@ void AgenticEngine::processMessage(const QString& message) {
         qWarning() << "[AgenticEngine]   Reason: m_modelLoaded=" << m_modelLoaded 
                    << ", engine=" << (m_inferenceEngine ? "OK" : "NULL")
                    << ", engine.isModelLoaded=" << (m_inferenceEngine ? m_inferenceEngine->isModelLoaded() : false);
-        QString response = generateResponse(message);
+        QString response = generateResponse(enhancedMessage);
         emit responseReady(response);
     }
 }

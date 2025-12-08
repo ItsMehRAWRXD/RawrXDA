@@ -1629,18 +1629,20 @@ set_target_properties(test_agent_coordinator PROPERTIES
 )
 
 # Agent Coordinator integration tests (real GGUF model loading + inference)
-add_executable(test_agent_coordinator_integration 
+add_executable(test_agent_coordinator_integration
     tests/test_agent_coordinator_integration.cpp
     src/model_loader/model_loader.cpp
     src/inference_engine_stub.cpp
     src/qtapp/gguf_server.cpp
     src/gguf_loader.cpp
+    src/qtapp/inflate_deflate_cpp.cpp
 )
-target_link_libraries(test_agent_coordinator_integration PRIVATE 
-    Qt6::Core 
+target_link_libraries(test_agent_coordinator_integration PRIVATE
+    Qt6::Core
     Qt6::Test
     Qt6::Network
     RawrXDOrchestration
+    brutal_gzip
 )
 target_include_directories(test_agent_coordinator_integration PRIVATE 
     ${CMAKE_SOURCE_DIR}

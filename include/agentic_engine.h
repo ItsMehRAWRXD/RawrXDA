@@ -28,7 +28,6 @@ public:
     virtual ~AgenticEngine();
     
     void initialize();
-    void processMessage(const QString& message);
     
     // AI Core Component 1: Code Analysis
     QString analyzeCode(const QString& code);
@@ -80,9 +79,19 @@ public:
     QString generateResponse(const QString& message);
     void setInferenceEngine(class InferenceEngine* engine) { m_inferenceEngine = engine; }
     
+    // Generation configuration
+    struct GenerationConfig {
+        float temperature = 0.8f;
+        float topP = 0.9f;
+        int maxTokens = 512;
+    };
+    void setGenerationConfig(const GenerationConfig& config);
+    GenerationConfig generationConfig() const { return m_genConfig; }
+    
 public slots:
     void setModel(const QString& modelPath);
     void setModelName(const QString& modelName);
+    void processMessage(const QString& message, const QString& editorContext = QString());
     
 signals:
     void responseReady(const QString& response);
@@ -124,4 +133,5 @@ private:
     bool m_modelLoaded = false;
     std::string m_currentModelPath;
     class InferenceEngine* m_inferenceEngine = nullptr;
+    GenerationConfig m_genConfig;
 };

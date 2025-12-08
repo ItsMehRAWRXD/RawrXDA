@@ -1,4 +1,5 @@
 #include "transformer_inference.hpp"
+#include "inference_engine.hpp"
 #include <ggml.h>
 #include <ggml-backend.h>
 #include <ggml-cpu.h>
@@ -139,11 +140,11 @@ bool TransformerInference::loadWeights(const QHash<QString, QByteArray>& tensorC
         }
         
         // Layer norm
-        const CachedTensorData& ln1Data = tensorCache.value(prefix + "attn_norm.weight");
-        layer.ln1_weight = createTensorFromCache(ln1Data.data, ln1Data.ggml_type_id, {m_nEmbd});
+        const QByteArray& ln1Data = tensorCache.value(prefix + "attn_norm.weight");
+        layer.ln1_weight = createTensorFromCache(ln1Data, GGML_TYPE_F32, {m_nEmbd});
         if (!layer.ln1_weight) {
-            const CachedTensorData& altData = tensorCache.value(altPrefix + "input_layernorm.weight");
-            layer.ln1_weight = createTensorFromCache(altData.data, altData.ggml_type_id, {m_nEmbd});
+            const QByteArray& altData = tensorCache.value(altPrefix + "input_layernorm.weight");
+            layer.ln1_weight = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
         
         // MLP
@@ -176,11 +177,11 @@ bool TransformerInference::loadWeights(const QHash<QString, QByteArray>& tensorC
             layer.mlp_fc2_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
         
-        const CachedTensorData& ln2Data = tensorCache.value(prefix + "ffn_norm.weight");
-        layer.ln2_weight = createTensorFromCache(ln2Data.data, ln2Data.ggml_type_id, {m_nEmbd});
+        const QByteArray& ln2Data = tensorCache.value(prefix + "ffn_norm.weight");
+        layer.ln2_weight = createTensorFromCache(ln2Data, GGML_TYPE_F32, {m_nEmbd});
         if (!layer.ln2_weight) {
-            const CachedTensorData& altData = tensorCache.value(altPrefix + "post_attention_layernorm.weight");
-            layer.ln2_weight = createTensorFromCache(altData.data, altData.ggml_type_id, {m_nEmbd});
+            const QByteArray& altData = tensorCache.value(altPrefix + "post_attention_layernorm.weight");
+            layer.ln2_weight = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
     }
     

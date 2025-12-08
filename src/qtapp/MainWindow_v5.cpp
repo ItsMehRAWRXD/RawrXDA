@@ -6,6 +6,8 @@
 #include "terminal_pool.h"
 #include "file_browser.h"
 #include "agentic_engine.h"
+#include "inference_engine.hpp"
+#include "gguf_loader.hpp"
 #include "plan_orchestrator.h"
 #include "lsp_client.h"
 #include "todo_dock.h"
@@ -46,6 +48,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_terminalPool(nullptr)
     , m_fileBrowser(nullptr)
     , m_agenticEngine(nullptr)
+    , m_inferenceEngine(nullptr)
     , m_planOrchestrator(nullptr)
     , m_lspClient(nullptr)
     , m_todoManager(nullptr)
@@ -187,15 +190,15 @@ void MainWindow::initializePhase3()
         
         updateSplashProgress("✓ Chat interface ready", 65);
         
-        // Connect chat messages to agentic engine
+        // Connect chat messages to agentic engine with editor context
         connect(m_chatInterface, &ChatInterface::messageSent,
-                m_agenticEngine, &AgenticEngine::processMessage);
+                this, &MainWindow::onChatMessageSent);
         connect(m_agenticEngine, &AgenticEngine::responseReady,
                 m_chatInterface, &ChatInterface::messageReceived);
         
         // Connect model selection to load GGUF files
         connect(m_chatInterface, &ChatInterface::modelSelected,
-                m_agenticEngine, &AgenticEngine::setModelName);
+                this, &MainWindow::onModelSelected);
         
         // Connect model ready signal to enable/disable chat input
         connect(m_agenticEngine, &AgenticEngine::modelReady,
@@ -596,11 +599,100 @@ void MainWindow::loadModel()
     }
 }
 
+void MainWindow::onModelSelected(const QString &ggufPath)
+{
+    // Create inference engine if it doesn't exist
+    if (!m_inferenceEngine) {
+        m_inferenceEngine = new ::InferenceEngine(ggufPath, this);
+    }
+    
+    // Load the model using the InferenceEngine's built-in loader
+    if (m_inferenceEngine->loadModel(ggufPath)) {
+        // Link to agentic engine
+        if (m_agenticEngine) {
+            m_agenticEngine->setInferenceEngine(m_inferenceEngine);
+        }
+        
+        // Update status bar with comprehensive info
+        QString modelName = QFileInfo(ggufPath).baseName();
+        QString backend = "CPU";  // Default, could be read from settings
+        QSettings settings("RawrXD", "AgenticIDE");
+        QString savedBackend = settings.value("AI/backend", "Auto").toString();
+        if (savedBackend.contains("Vulkan")) backend = "Vulkan";
+        else if (savedBackend.contains("CUDA")) backend = "CUDA";
+        
+        QString lspStatus = (m_lspClient && m_lspClient->isRunning()) ? "✔" : "✘";
+        
+        statusBar()->showMessage(
+            QString("Model: %1 | GPU: %2 | LSP: %3")
+            .arg(modelName).arg(backend).arg(lspStatus));
+        
+        // Enable chat after model loads
+        if (m_chatInterface) {
+            m_chatInterface->setCanSendMessage(true);
+        }
+        
+        qInfo() << "[MainWindow] ✅ Model loaded successfully:" << modelName;
+    } else {
+        QMessageBox::critical(this, "Load Failed", 
+            QString("Failed to load GGUF model: %1").arg(ggufPath));
+        statusBar()->showMessage(QString("❌ Model load failed: %1").arg(QFileInfo(ggufPath).fileName()));
+    }
+}
+
+void MainWindow::applyInferenceSettings()
+{
+    QSettings settings("RawrXD", "AgenticIDE");
+    
+    // Read settings or use defaults
+    float temperature = settings.value("AI/temperature", 0.8f).toFloat();
+    float topP = settings.value("AI/topP", 0.9f).toFloat();
+    int maxTokens = settings.value("AI/maxTokens", 512).toInt();
+    
+    qDebug() << "[MainWindow::applyInferenceSettings] Applying:"
+             << "temp=" << temperature << "topP=" << topP << "maxTokens=" << maxTokens;
+    
+    // Forward to AgenticEngine
+    if (m_agenticEngine) {
+        AgenticEngine::GenerationConfig cfg;
+        cfg.temperature = temperature;
+        cfg.topP = topP;
+        cfg.maxTokens = maxTokens;
+        
+        m_agenticEngine->setGenerationConfig(cfg);
+        
+        statusBar()->showMessage(
+            QString("⚙️ Inference settings updated: Temp=%.1f, TopP=%.2f, Tokens=%1")
+            .arg(temperature).arg(topP).arg(maxTokens), 3000);
+    }
+}
+
+void MainWindow::onChatMessageSent(const QString& message)
+{
+    // This slot is called when ChatInterface emits messageSent
+    // We enhance the message with editor context before sending to AgenticEngine
+    
+    QString editorContext;
+    if (m_multiTabEditor) {
+        editorContext = m_multiTabEditor->getSelectedText();
+    }
+    
+    // Forward to AgenticEngine with context
+    if (m_agenticEngine) {
+        m_agenticEngine->processMessage(message, editorContext);
+        qDebug() << "[MainWindow::onChatMessageSent] Sent message with"
+                 << editorContext.length() << "chars of editor context";
+    } else {
+        qWarning() << "[MainWindow::onChatMessageSent] AgenticEngine not initialized";
+    }
+}
+
 void MainWindow::showInferenceSettings()
 {
     QDialog *dialog = new QDialog(this);
     dialog->setWindowTitle("Inference Settings");
     dialog->setModal(true);
+    dialog->setMinimumWidth(400);
     
     QVBoxLayout *layout = new QVBoxLayout(dialog);
     
@@ -610,7 +702,8 @@ void MainWindow::showInferenceSettings()
     QDoubleSpinBox *tempSpin = new QDoubleSpinBox();
     tempSpin->setRange(0.0, 2.0);
     tempSpin->setSingleStep(0.1);
-    tempSpin->setValue(0.8);
+    QSettings settings("RawrXD", "AgenticIDE");
+    tempSpin->setValue(settings.value("AI/temperature", 0.8).toDouble());
     tempLayout->addWidget(tempSpin);
     layout->addLayout(tempLayout);
     
@@ -620,7 +713,7 @@ void MainWindow::showInferenceSettings()
     QDoubleSpinBox *topPSpin = new QDoubleSpinBox();
     topPSpin->setRange(0.0, 1.0);
     topPSpin->setSingleStep(0.05);
-    topPSpin->setValue(0.9);
+    topPSpin->setValue(settings.value("AI/topP", 0.9).toDouble());
     topPLayout->addWidget(topPSpin);
     layout->addLayout(topPLayout);
     
@@ -629,7 +722,7 @@ void MainWindow::showInferenceSettings()
     tokensLayout->addWidget(new QLabel("Max Tokens:"));
     QSpinBox *tokensSpin = new QSpinBox();
     tokensSpin->setRange(1, 4096);
-    tokensSpin->setValue(512);
+    tokensSpin->setValue(settings.value("AI/maxTokens", 512).toInt());
     tokensLayout->addWidget(tokensSpin);
     layout->addLayout(tokensLayout);
     
@@ -637,22 +730,30 @@ void MainWindow::showInferenceSettings()
     QHBoxLayout *backendLayout = new QHBoxLayout();
     backendLayout->addWidget(new QLabel("Backend:"));
     QComboBox *backendCombo = new QComboBox();
-    backendCombo->addItems({\"Auto\", \"CPU\", \"GPU (Vulkan)\", \"GPU (CUDA)\"});
+    backendCombo->addItems({"Auto", "CPU", "GPU (Vulkan)", "GPU (CUDA)"});
+    QString savedBackend = settings.value("AI/backend", "Auto").toString();
+    int backendIdx = backendCombo->findText(savedBackend);
+    if (backendIdx >= 0) backendCombo->setCurrentIndex(backendIdx);
     backendLayout->addWidget(backendCombo);
     layout->addLayout(backendLayout);
     
     // Buttons
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    connect(buttons, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::accepted, [=]() {
+        // Save settings
+        QSettings s("RawrXD", "AgenticIDE");
+        s.setValue("AI/temperature", tempSpin->value());
+        s.setValue("AI/topP", topPSpin->value());
+        s.setValue("AI/maxTokens", tokensSpin->value());
+        s.setValue("AI/backend", backendCombo->currentText());
+        
+        applyInferenceSettings();
+        dialog->accept();
+    });
     connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
     layout->addWidget(buttons);
     
-    if (dialog->exec() == QDialog::Accepted) {
-        // TODO: Apply settings to AgenticEngine
-        statusBar()->showMessage(QString("Inference settings updated: Temp=%.1f, TopP=%.2f, Tokens=%1")
-            .arg(tempSpin->value()).arg(topPSpin->value()).arg(tokensSpin->value()), 3000);
-    }
-    
+    dialog->exec();
     delete dialog;
 }
 
@@ -754,7 +855,7 @@ void MainWindow::showPreferences()
     QHBoxLayout *shellLayout = new QHBoxLayout();
     shellLayout->addWidget(new QLabel("Shell:"));
     QComboBox *shellCombo = new QComboBox();
-    shellCombo->addItems({\"PowerShell\", \"Cmd\", \"Bash\", \"Custom\"});
+    shellCombo->addItems({"PowerShell", "Cmd", "Bash", "Custom"});
     shellLayout->addWidget(shellCombo);
     termLayout->addLayout(shellLayout);
     

@@ -6,11 +6,14 @@
 
 // Forward declarations
 class QDockWidget;
+class QLabel;
+class QProgressBar;
 class MultiTabEditor;
 class ChatInterface;
 class TerminalPool;
 class FileBrowser;
 class AgenticEngine;
+class InferenceEngine;
 class TodoManager;
 class TodoDock;
 
@@ -51,6 +54,9 @@ private slots:
     void generateCode();
     void refactorCode();
     void loadModel();
+    void onModelSelected(const QString &ggufPath);
+    void onChatMessageSent(const QString &message);
+    void applyInferenceSettings();
     void showInferenceSettings();
     void showAbout();
     void showAIHelp();
@@ -95,6 +101,7 @@ private:
     TerminalPool *m_terminalPool;
     FileBrowser *m_fileBrowser;
     AgenticEngine *m_agenticEngine;
+    InferenceEngine *m_inferenceEngine;
     RawrXD::PlanOrchestrator *m_planOrchestrator;
     RawrXD::LSPClient *m_lspClient;
     TodoManager *m_todoManager;

@@ -98,7 +98,13 @@ bool InferenceEngine::loadModel(const QString& path)
         
         if (!m_tensorCache.isEmpty()) {
             try {
-                bool transformerLoaded = m_transformer.loadWeights(m_tensorCache, nLayers, nEmbd, nHead, nVocab);
+                // Convert CachedTensorData -> QByteArray for legacy loadWeights signature
+                QHash<QString, QByteArray> byteArrayCache;
+                for (auto it = m_tensorCache.constBegin(); it != m_tensorCache.constEnd(); ++it) {
+                    byteArrayCache.insert(it.key(), it.value().data);
+                }
+                
+                bool transformerLoaded = m_transformer.loadWeights(byteArrayCache, nLayers, nEmbd, nHead, nVocab);
                 if (!transformerLoaded) {
                     qWarning() << "[InferenceEngine] Transformer weight loading failed, inference will be limited";
                 } else {

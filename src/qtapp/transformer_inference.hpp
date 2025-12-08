@@ -10,8 +10,8 @@ struct ggml_context;
 struct ggml_tensor;
 struct ggml_cgraph;
 
-// Forward declaration of CachedTensorData from inference_engine.hpp
-struct CachedTensorData;
+// Forward declaration to avoid circular dependency
+class InferenceEngine;
 
 /**
  * @brief Lightweight transformer inference using ggml backend
@@ -29,7 +29,7 @@ public:
     ~TransformerInference();
     
     /**
-     * @brief Load model weights from quantized tensor cache
+     * @brief Load model weights from QByteArray hash (legacy overload)
      * @param tensorCache Map of tensor names to quantized data
      * @param nLayers Number of transformer layers
      * @param nEmbd Embedding dimension
@@ -39,6 +39,13 @@ public:
      */
     bool loadWeights(const QHash<QString, QByteArray>& tensorCache,
                      int nLayers, int nEmbd, int nHead, int nVocab);
+    
+    /*
+     * Template overload - commented out until GGUF cache path is ready
+    template <typename WeightDict>
+    bool loadWeights(const WeightDict& cached,
+                     int nLayers, int nHeads, int nEmb, int nSeq);
+    */
     
     /**
      * @brief Generate tokens autoregressively

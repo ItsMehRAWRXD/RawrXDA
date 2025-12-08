@@ -318,6 +318,15 @@ void ChatInterface::sendMessage() {
     if (!message.isEmpty()) {
         m_busy = true;
         m_lastPrompt = message;
+        
+        // Enhance prompt with editor context if available
+        QString enhancedMessage = message;
+        
+        // Try to get selected code from the editor
+        // This requires a reference to the MultiTabEditor, which we may not have directly
+        // For now, we'll emit the message as-is and the MainWindow or AgenticEngine
+        // can augment it with context if needed
+        
         addMessage("User", message);
         statusLabel_->setText("Processing...");
         
@@ -327,7 +336,8 @@ void ChatInterface::sendMessage() {
             m_busy = false;
         } else {
             // Emit signal to process message (will be handled asynchronously)
-            emit messageSent(message);
+            // The enhanced message with context will be prepared by the receiving engine
+            emit messageSent(enhancedMessage);
         }
         
         message_input_->clear();
@@ -445,13 +455,58 @@ void ChatInterface::executeAgentCommand(const QString& command, const QString& a
             statusLabel_->setText("Refactor failed");
         }
     }
+    else if (command.startsWith("/plan ")) {
+        // Create implementation plan
+        if (!m_planOrchestrator) {
+            addMessage("System", "PlanOrchestrator not initialized");
+            statusLabel_->setText("Plan error: Orchestrator not ready");
+            return;
+        }
+        
+        QString task = command.mid(6).trimmed();  // Remove "/plan "
+        if (task.isEmpty()) {
+            addMessage("System", "Usage: /plan <task description>\nExample: /plan implement unit tests for UserManager.cpp");
+            return;
+        }
+        
+        addMessage("System", "📋 Creating implementation plan: " + task);
+        statusLabel_->setText("Creating plan...");
+        
+        // Create plan using PlanOrchestrator
+        QString workspaceRoot = QDir::currentPath();
+        RawrXD::PlanningResult plan = m_planOrchestrator->generatePlan(task, workspaceRoot);
+        
+        if (plan.tasks.isEmpty()) {
+            addMessage("System", "⚠ Could not generate plan for this task");
+            statusLabel_->setText("Plan generation failed");
+        } else {
+            QString planSummary = QString("✓ Plan created: %1 tasks\n\n").arg(plan.tasks.size());
+            for (int i = 0; i < plan.tasks.size(); ++i) {
+                planSummary += QString("%1. %2\n").arg(i + 1).arg(plan.tasks[i].description);
+            }
+            planSummary += "\nUse /execute to run the plan";
+            addMessage("Agent", planSummary);
+            statusLabel_->setText(QString("Plan ready: %1 tasks").arg(plan.tasks.size()));
+        }
+    }
+    else if (command.startsWith("/help") || command == "/?") {
+        QString helpText = "<h3>Available Commands</h3>"
+                          "<b>File Operations:</b><br>"
+                          "  @grep &lt;pattern&gt; - Search for text in files<br>"
+                          "  @read &lt;file&gt; - Read file contents<br>"
+                          "  @search &lt;query&gt; - Find files<br>"
+                          "  @ref &lt;symbol&gt; - Find symbol references<br><br>"
+                          "<b>AI Operations:</b><br>"
+                          "  /refactor &lt;description&gt; - Multi-file refactoring<br>"
+                          "  /plan &lt;task&gt; - Create implementation plan<br>"
+                          "  /help - Show this help<br><br>"
+                          "<b>Tips:</b><br>"
+                          "  • Select code in editor before chatting for context<br>"
+                          "  • Use AI → Inference Settings to tune model behavior<br>";
+        addMessage("System", helpText);
+    }
     else {
-        response = "Unknown agent command. Available commands:\n"
-                   "  @grep <pattern> - Search for text pattern in files\n"
-                   "  @read <filepath> - Read file contents\n"
-                   "  @search <query> - Search for files matching query\n"
-                   "  @ref <symbol> - Find symbol references and definitions\n"
-                   "  /refactor <description> - Multi-file AI refactoring";
+        response = "Unknown command. Type /help for available commands.";
         addMessage("System", response);
     }
     
