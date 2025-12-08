@@ -50,8 +50,29 @@ private slots:
     void analyzeCode();
     void generateCode();
     void refactorCode();
+    void loadModel();
+    void showInferenceSettings();
     void showAbout();
     void showAIHelp();
+    
+    // LSP operations
+    void startLSPServer();
+    void stopLSPServer();
+    void restartLSPServer();
+    void showLSPStatus();
+    
+    // Settings
+    void showPreferences();
+    
+    // TODO operations
+    void addTodo();
+    void scanCodeForTodos();
+    
+    // Terminal operations
+    void newTerminal();
+    void closeTerminal();
+    void nextTerminal();
+    void previousTerminal();
 
 private:
     // Initialization phases (deferred to event loop)
@@ -59,6 +80,7 @@ private:
     void initializePhase2();
     void initializePhase3();
     void initializePhase4();
+    void updateSplashProgress(const QString& message, int percent);
     
     // Setup methods
     void setupMenuBar();
@@ -83,6 +105,11 @@ private:
     QDockWidget *m_terminalDock;
     QDockWidget *m_fileDock;
     QDockWidget *m_todoDockWidget;
+    
+    // Splash screen for initialization
+    QWidget *m_splashWidget;
+    QLabel *m_splashLabel;
+    QProgressBar *m_splashProgress;
 };
 
 } // namespace RawrXD
