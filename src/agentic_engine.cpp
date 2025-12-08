@@ -1,8 +1,6 @@
 // Agentic Engine - Production-Ready AI Core
 #include "agentic_engine.h"
 #include "../src/qtapp/inference_engine.hpp"
-#include "security_manager.h"
-#include "checkpoint_manager.h"
 #include <QTimer>
 #include <QtConcurrent>
 #include <QFutureWatcher>
@@ -61,10 +59,6 @@ void AgenticEngine::initialize() {
     qInfo() << "[AgenticEngine] Inference engine created";
     
     qDebug() << "Agentic Engine initialized - waiting for model selection";
-    
-    // Initialize security and checkpoint managers
-    SecurityManager::getInstance()->initialize();
-    CheckpointManager::instance();
 }
 
 void AgenticEngine::setModel(const QString& modelPath) {
@@ -77,12 +71,72 @@ void AgenticEngine::setModel(const QString& modelPath) {
     // Load model in background thread
     QThread* thread = new QThread;
     connect(thread, &QThread::started, this, [this, modelPath, thread]() {
+        qDebug() << "[AgenticEngine] Background thread started for model loading";
         bool success = loadModelAsync(modelPath.toStdString());
+        qDebug() << "[AgenticEngine] Background thread finished. Success:" << success;
         emit modelLoadingFinished(success, modelPath);
+        // CRITICAL: Emit modelReady on main thread after background work completes
+        QMetaObject::invokeMethod(this, [this, success]() {
+            qDebug() << "[AgenticEngine] Main thread: Emitting modelReady(" << success << ")";
+            emit modelReady(success);
+        }, Qt::QueuedConnection);
         thread->quit();
     });
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
     thread->start();
+}
+
+void AgenticEngine::setModelName(const QString& modelName) {
+    qDebug() << "[AgenticEngine] ═══ Model Selection Start ═══";
+    qDebug() << "[AgenticEngine] Model selection received:" << modelName;
+    
+    // Resolve Ollama model name to actual GGUF file path
+    QString ggufPath = resolveGgufPath(modelName);
+    
+    if (!ggufPath.isEmpty()) {
+        qInfo() << "[AgenticEngine] Resolved" << modelName << "to" << ggufPath;
+        qDebug() << "[AgenticEngine] Calling setModel() to load GGUF...";
+        setModel(ggufPath);
+    } else {
+        qWarning() << "[AgenticEngine] Could not resolve GGUF path for model:" << modelName;
+        qWarning() << "[AgenticEngine] No matching .gguf file found in D:/OllamaModels";
+        m_modelLoaded = false;
+        // Emit signal with special value to indicate path resolution failure
+        emit modelLoadingFinished(false, "NO_GGUF_FILE:" + modelName);
+        emit modelReady(false);
+    }
+}
+
+QString AgenticEngine::resolveGgufPath(const QString& modelName) {
+    // Search for GGUF file in Ollama models directory
+    QStringList searchPaths = {
+        "D:/OllamaModels",
+        "C:/Users/" + qEnvironmentVariable("USERNAME") + "/.ollama/models",
+        QDir::homePath() + "/.ollama/models"
+    };
+    
+    // Extract base model name (e.g., "llama3.2" from "llama3.2:3b")
+    QString baseName = modelName.split(':').first();
+    QString searchPattern = "*" + baseName + "*.gguf";
+    
+    for (const QString& searchPath : searchPaths) {
+        QDir dir(searchPath);
+        if (!dir.exists()) continue;
+        
+        QStringList filters;
+        filters << searchPattern;
+        QFileInfoList files = dir.entryInfoList(filters, QDir::Files);
+        
+        if (!files.isEmpty()) {
+            // Return first matching GGUF file
+            QString path = files.first().absoluteFilePath();
+            qDebug() << "[AgenticEngine] Found GGUF:" << path;
+            return path;
+        }
+    }
+    
+    qWarning() << "[AgenticEngine] No GGUF file found for" << modelName;
+    return QString();
 }
 
 bool AgenticEngine::loadModelAsync(const std::string& modelPath) {
@@ -134,11 +188,14 @@ bool AgenticEngine::loadModelAsync(const std::string& modelPath) {
         // Delegate to inference engine for actual model loading
         // This is wrapped in additional try/catch to handle ggml crashes
         if (m_inferenceEngine) {
+            qDebug() << "[AgenticEngine] Calling InferenceEngine::loadModel for:" << QString::fromStdString(modelPath);
             bool success = m_inferenceEngine->loadModel(QString::fromStdString(modelPath));
             m_modelLoaded = success;
             m_currentModelPath = modelPath;
-            qInfo() << "Model loading" << (success ? "succeeded" : "failed") << ":" << QString::fromStdString(modelPath);
+            qInfo() << "[AgenticEngine] Model loading" << (success ? "succeeded" : "failed") << ":" << QString::fromStdString(modelPath);
+            qDebug() << "[AgenticEngine] Emitting modelReady(" << success << ")";
             emit modelLoadingFinished(success, QString::fromStdString(modelPath));
+            emit modelReady(success);
             return success;
         }
         
@@ -146,36 +203,44 @@ bool AgenticEngine::loadModelAsync(const std::string& modelPath) {
         m_modelLoaded = true;
         m_currentModelPath = modelPath;
         emit modelLoadingFinished(true, QString::fromStdString(modelPath));
+        emit modelReady(true);
         return true;
         
     } catch (const std::exception& e) {
-        qCritical() << "Model load crashed:" << e.what();
+        qCritical() << "[AgenticEngine] Model load crashed:" << e.what();
         m_modelLoaded = false;
         emit modelLoadingFinished(false, QString::fromStdString(modelPath));
+        emit modelReady(false);
         return false;
     } catch (...) {
-        qCritical() << "Model load – unknown exception";
+        qCritical() << "[AgenticEngine] Model load – unknown exception";
         m_modelLoaded = false;
         emit modelLoadingFinished(false, QString::fromStdString(modelPath));
+        emit modelReady(false);
         return false;
     }
 }
 
 void AgenticEngine::processMessage(const QString& message) {
-    qDebug() << "Processing message:" << message;
+    qDebug() << "[AgenticEngine] Processing message:" << message;
+    qDebug() << "[AgenticEngine] m_modelLoaded:" << m_modelLoaded;
+    qDebug() << "[AgenticEngine] m_inferenceEngine:" << (m_inferenceEngine ? "exists" : "null");
+    qDebug() << "[AgenticEngine] isModelLoaded:" << (m_inferenceEngine ? m_inferenceEngine->isModelLoaded() : false);
     
-    // Run message processing in a worker thread to keep GUI responsive
-    (void)QtConcurrent::run([this, message]() {
-        QString response;
-        if (m_modelLoaded) {
-            // Use real tokenization from loaded model
-            response = generateTokenizedResponse(message);
-        } else {
-            // Fallback to keyword-based responses if no model loaded
-            response = generateResponse(message);
-        }
+    if (m_modelLoaded && m_inferenceEngine && m_inferenceEngine->isModelLoaded()) {
+        // Use real inference engine - response will be emitted via signal
+        qInfo() << "[AgenticEngine] ✓ Using loaded model for response generation";
+        generateTokenizedResponse(message);
+        // Response will be emitted asynchronously via responseReady signal
+    } else {
+        // Fallback to keyword-based responses if no model loaded
+        qWarning() << "[AgenticEngine] ✗ No model loaded, using fallback response";
+        qWarning() << "[AgenticEngine]   Reason: m_modelLoaded=" << m_modelLoaded 
+                   << ", engine=" << (m_inferenceEngine ? "OK" : "NULL")
+                   << ", engine.isModelLoaded=" << (m_inferenceEngine ? m_inferenceEngine->isModelLoaded() : false);
+        QString response = generateResponse(message);
         emit responseReady(response);
-    });
+    }
 }
 
 QString AgenticEngine::analyzeCode(const QString& code) {

@@ -127,6 +127,20 @@ void MainWindow::initializePhase3()
         m_chatDock->setWidget(m_chatInterface);
         addDockWidget(Qt::RightDockWidgetArea, m_chatDock);
         
+        // Connect chat messages to agentic engine
+        connect(m_chatInterface, &ChatInterface::messageSent,
+                m_agenticEngine, &AgenticEngine::processMessage);
+        connect(m_agenticEngine, &AgenticEngine::responseReady,
+                m_chatInterface, &ChatInterface::messageReceived);
+        
+        // Connect model selection to load GGUF files
+        connect(m_chatInterface, &ChatInterface::modelSelected,
+                m_agenticEngine, &AgenticEngine::setModelName);
+        
+        // Connect model ready signal to enable/disable chat input
+        connect(m_agenticEngine, &AgenticEngine::modelReady,
+                m_chatInterface, &ChatInterface::setCanSendMessage);
+        
         // Wire progress signals
         connect(m_planOrchestrator, &RawrXD::PlanOrchestrator::planningStarted,
                 m_chatInterface, [this](const QString& prompt) {
@@ -155,6 +169,10 @@ void MainWindow::initializePhase3()
         m_fileDock = new QDockWidget("Files", this);
         m_fileDock->setWidget(m_fileBrowser);
         addDockWidget(Qt::LeftDockWidgetArea, m_fileDock);
+        
+        // Connect file browser to editor
+        connect(m_fileBrowser, &FileBrowser::fileSelected,
+                m_multiTabEditor, &MultiTabEditor::openFile);
         
         // Create terminal pool dock
         m_terminalPool = new TerminalPool(3, this);
@@ -361,14 +379,15 @@ void MainWindow::startChat()
 void MainWindow::analyzeCode()
 {
     if (m_chatInterface) {
-        m_chatInterface->sendMessage("@analyze current file");
+        m_chatInterface->sendMessageProgrammatically("@analyze current file");
     }
 }
 
 void MainWindow::generateCode()
 {
     if (m_chatInterface) {
-        m_chatInterface->sendMessage("@generate ");
+        m_chatInterface->sendMessageProgrammatically("@generate ");
+        m_chatInterface->focusInput();
     }
 }
 

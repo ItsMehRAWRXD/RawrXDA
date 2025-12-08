@@ -216,8 +216,7 @@ if(MSVC)
             src/qtapp/TerminalWidget.h
             src/qtapp/TerminalManager.cpp
             src/qtapp/TerminalManager.h
-            src/qtapp/gguf_loader.hpp
-            src/qtapp/gguf_loader.cpp
+            src/gguf_loader.cpp
             src/qtapp/inference_engine.hpp
             src/qtapp/inference_engine.cpp
             src/qtapp/transformer_inference.hpp
@@ -277,8 +276,9 @@ if(MSVC)
             # src/qtapp/security_manager.h
             # src/qtapp/distributed_trainer.cpp    # Temporarily disabled due to compilation issues
             # src/qtapp/distributed_trainer.h      # Temporarily disabled due to compilation issues
-            # src/qtapp/interpretability_panel.cpp  # Temporarily disabled due to compilation issues
-            # src/qtapp/interpretability_panel.h    # Temporarily disabled due to compilation issues
+            # ENHANCED Interpretability Panel - Production Ready (1,500+ LOC)
+            src/qtapp/interpretability_panel_enhanced.hpp
+            src/qtapp/interpretability_panel_enhanced.cpp
             include/checkpoint_manager.h
             src/qtapp/checkpoint_manager.cpp
             include/tokenizer_selector.h
@@ -388,6 +388,13 @@ target_link_libraries(RawrXD-QtShell PRIVATE
             brutal_gzip
             self_test_gate
             quant_utils
+        )
+        
+        # Add include directories for QtShell to access both qtapp and main source headers
+        target_include_directories(RawrXD-QtShell PRIVATE 
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/src/qtapp
+            ${CMAKE_SOURCE_DIR}/include
         )
         
         # Conditionally link OpenSSL if found
@@ -1105,6 +1112,9 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ci_cd_settings.cpp")
         list(APPEND AGENTICIDE_SOURCES src/qtapp/ci_cd_settings.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/checkpoint_manager.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/checkpoint_manager.cpp)
     endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/inflate_deflate_cpp.cpp")
         list(APPEND AGENTICIDE_SOURCES src/qtapp/inflate_deflate_cpp.cpp)

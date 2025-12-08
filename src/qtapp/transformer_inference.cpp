@@ -51,22 +51,24 @@ bool TransformerInference::loadWeights(const QHash<QString, QByteArray>& tensorC
         return false;
     }
     
-    // Load token embedding: [vocab_size, n_embd]
-    int64_t embdShape[] = {m_nVocab, m_nEmbd};
-    m_tokenEmbed = createTensorFromCache("token_embd.weight", tensorCache, embdShape, 2);
-    if (!m_tokenEmbed) {
-        // Try alternative name
-        m_tokenEmbed = createTensorFromCache("model.embed_tokens.weight", tensorCache, embdShape, 2);
-    }
-    
-    // Load output projection: [n_embd, vocab_size]
-    int64_t outShape[] = {m_nEmbd, m_nVocab};
-    m_outputWeight = createTensorFromCache("output.weight", tensorCache, outShape, 2);
-    if (!m_outputWeight) {
-        m_outputWeight = createTensorFromCache("lm_head.weight", tensorCache, outShape, 2);
-    }
-    
-    // Load per-layer weights
+        // Load token embedding: [vocab_size, n_embd]
+        const QByteArray& embdData = tensorCache.value("token_embd.weight");
+        m_tokenEmbed = createTensorFromCache(embdData, GGML_TYPE_F32, {m_nVocab, m_nEmbd});
+        if (!m_tokenEmbed) {
+            // Try alternative name
+            const QByteArray& altData = tensorCache.value("model.embed_tokens.weight");
+            m_tokenEmbed = createTensorFromCache(altData, GGML_TYPE_F32, {m_nVocab, m_nEmbd});
+        }
+        
+        // Load output projection: [n_embd, vocab_size]
+        const QByteArray& outData = tensorCache.value("output.weight");
+        m_outputWeight = createTensorFromCache(outData, GGML_TYPE_F32, {m_nEmbd, m_nVocab});
+        if (!m_outputWeight) {
+            const QByteArray& altData = tensorCache.value("lm_head.weight");
+            m_outputWeight = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nVocab});
+        }
+        
+        // Load per-layer weights
     m_layers.resize(m_nLayers);
     for (int i = 0; i < m_nLayers; ++i) {
         QString prefix = QString("blk.%1.").arg(i);
@@ -79,31 +81,107 @@ bool TransformerInference::loadWeights(const QHash<QString, QByteArray>& tensorC
         int64_t lnShape[] = {m_nEmbd};
         
         // Attention weights
-        layer.attn_q = createTensorFromCache(prefix + "attn_q.weight", tensorCache, qkvShape, 2);
-        if (!layer.attn_q) layer.attn_q = createTensorFromCache(altPrefix + "self_attn.q_proj.weight", tensorCache, qkvShape, 2);
+        const QByteArray& qData = tensorCache.value(prefix + "attn_q.weight");
+        layer.attn_q = createTensorFromCache(qData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
+        if (!layer.attn_q) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.q_proj.weight");
+            layer.attn_q = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
+        }
         
-        layer.attn_k = createTensorFromCache(prefix + "attn_k.weight", tensorCache, qkvShape, 2);
-        if (!layer.attn_k) layer.attn_k = createTensorFromCache(altPrefix + "self_attn.k_proj.weight", tensorCache, qkvShape, 2);
+        const QByteArray& kData = tensorCache.value(prefix + "attn_k.weight");
+        layer.attn_k = createTensorFromCache(kData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
+        if (!layer.attn_k) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.k_proj.weight");
+            layer.attn_k = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
+        }
         
-        layer.attn_v = createTensorFromCache(prefix + "attn_v.weight", tensorCache, qkvShape, 2);
-        if (!layer.attn_v) layer.attn_v = createTensorFromCache(altPrefix + "self_attn.v_proj.weight", tensorCache, qkvShape, 2);
+        const QByteArray& vData = tensorCache.value(prefix + "attn_v.weight");
+        layer.attn_v = createTensorFromCache(vData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
+        if (!layer.attn_v) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.v_proj.weight");
+            layer.attn_v = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
+        }
         
-        layer.attn_proj = createTensorFromCache(prefix + "attn_output.weight", tensorCache, qkvShape, 2);
-        if (!layer.attn_proj) layer.attn_proj = createTensorFromCache(altPrefix + "self_attn.o_proj.weight", tensorCache, qkvShape, 2);
+        const QByteArray& projData = tensorCache.value(prefix + "attn_output.weight");
+        layer.attn_proj = createTensorFromCache(projData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
+        if (!layer.attn_proj) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.o_proj.weight");
+            layer.attn_proj = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
+        }
+        
+        // FIX 4: Attention Biases
+        const QByteArray& qBiasData = tensorCache.value(prefix + "attn_q.bias");
+        layer.attn_q_bias = createTensorFromCache(qBiasData, GGML_TYPE_F32, {m_nEmbd});
+        if (!layer.attn_q_bias) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.q_proj.bias");
+            layer.attn_q_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
+        }
+        
+        const QByteArray& kBiasData = tensorCache.value(prefix + "attn_k.bias");
+        layer.attn_k_bias = createTensorFromCache(kBiasData, GGML_TYPE_F32, {m_nEmbd});
+        if (!layer.attn_k_bias) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.k_proj.bias");
+            layer.attn_k_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
+        }
+        
+        const QByteArray& vBiasData = tensorCache.value(prefix + "attn_v.bias");
+        layer.attn_v_bias = createTensorFromCache(vBiasData, GGML_TYPE_F32, {m_nEmbd});
+        if (!layer.attn_v_bias) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.v_proj.bias");
+            layer.attn_v_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
+        }
+        
+        const QByteArray& projBiasData = tensorCache.value(prefix + "attn_output.bias");
+        layer.attn_output_bias = createTensorFromCache(projBiasData, GGML_TYPE_F32, {m_nEmbd});
+        if (!layer.attn_output_bias) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.o_proj.bias");
+            layer.attn_output_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
+        }
         
         // Layer norm
-        layer.ln1_weight = createTensorFromCache(prefix + "attn_norm.weight", tensorCache, lnShape, 1);
-        if (!layer.ln1_weight) layer.ln1_weight = createTensorFromCache(altPrefix + "input_layernorm.weight", tensorCache, lnShape, 1);
+        const CachedTensorData& ln1Data = tensorCache.value(prefix + "attn_norm.weight");
+        layer.ln1_weight = createTensorFromCache(ln1Data.data, ln1Data.ggml_type_id, {m_nEmbd});
+        if (!layer.ln1_weight) {
+            const CachedTensorData& altData = tensorCache.value(altPrefix + "input_layernorm.weight");
+            layer.ln1_weight = createTensorFromCache(altData.data, altData.ggml_type_id, {m_nEmbd});
+        }
         
         // MLP
-        layer.mlp_fc1 = createTensorFromCache(prefix + "ffn_up.weight", tensorCache, mlpShape, 2);
-        if (!layer.mlp_fc1) layer.mlp_fc1 = createTensorFromCache(altPrefix + "mlp.up_proj.weight", tensorCache, mlpShape, 2);
+        const QByteArray& mlp1Data = tensorCache.value(prefix + "ffn_up.weight");
+        layer.mlp_fc1 = createTensorFromCache(mlp1Data, GGML_TYPE_F32, {m_nEmbd, m_nEmbd * 4});
+        if (!layer.mlp_fc1) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "mlp.up_proj.weight");
+            layer.mlp_fc1 = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd * 4});
+        }
         
-        layer.mlp_fc2 = createTensorFromCache(prefix + "ffn_down.weight", tensorCache, mlp2Shape, 2);
-        if (!layer.mlp_fc2) layer.mlp_fc2 = createTensorFromCache(altPrefix + "mlp.down_proj.weight", tensorCache, mlp2Shape, 2);
+        const QByteArray& mlp2Data = tensorCache.value(prefix + "ffn_down.weight");
+        layer.mlp_fc2 = createTensorFromCache(mlp2Data, GGML_TYPE_F32, {m_nEmbd * 4, m_nEmbd});
+        if (!layer.mlp_fc2) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "mlp.down_proj.weight");
+            layer.mlp_fc2 = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd * 4, m_nEmbd});
+        }
         
-        layer.ln2_weight = createTensorFromCache(prefix + "ffn_norm.weight", tensorCache, lnShape, 1);
-        if (!layer.ln2_weight) layer.ln2_weight = createTensorFromCache(altPrefix + "post_attention_layernorm.weight", tensorCache, lnShape, 1);
+        // FIX 4: MLP Biases
+        const QByteArray& mlp1BiasData = tensorCache.value(prefix + "ffn_up.bias");
+        layer.mlp_fc1_bias = createTensorFromCache(mlp1BiasData, GGML_TYPE_F32, {m_nEmbd * 4});
+        if (!layer.mlp_fc1_bias) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "mlp.up_proj.bias");
+            layer.mlp_fc1_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd * 4});
+        }
+        
+        const QByteArray& mlp2BiasData = tensorCache.value(prefix + "ffn_down.bias");
+        layer.mlp_fc2_bias = createTensorFromCache(mlp2BiasData, GGML_TYPE_F32, {m_nEmbd});
+        if (!layer.mlp_fc2_bias) {
+            const QByteArray& altData = tensorCache.value(altPrefix + "mlp.down_proj.bias");
+            layer.mlp_fc2_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
+        }
+        
+        const CachedTensorData& ln2Data = tensorCache.value(prefix + "ffn_norm.weight");
+        layer.ln2_weight = createTensorFromCache(ln2Data.data, ln2Data.ggml_type_id, {m_nEmbd});
+        if (!layer.ln2_weight) {
+            const CachedTensorData& altData = tensorCache.value(altPrefix + "post_attention_layernorm.weight");
+            layer.ln2_weight = createTensorFromCache(altData.data, altData.ggml_type_id, {m_nEmbd});
+        }
     }
     
     // Initialize KV cache
@@ -171,15 +249,52 @@ ggml_tensor* TransformerInference::createTensorFromCache(
         return nullptr;
     }
     
-    // Copy quantized data - for now assume F32 or will need dequant
+    // Copy quantized data - now with proper type handling
     size_t expectedSize = ggml_nbytes(tensor);
-    if (data.size() < (int)expectedSize) {
-        qWarning() << "Tensor data too small:" << name << data.size() << "vs" << expectedSize;
-        // Copy what we have
-        std::memcpy(tensor->data, data.constData(), std::min<size_t>(data.size(), expectedSize));
-    } else {
-        std::memcpy(tensor->data, data.constData(), expectedSize);
+    if (expectedSize != (size_t)data.size()) {
+        qCritical() << QString("Size mismatch for tensor %1: Expected %2, Got %3")
+                        .arg(name).arg(expectedSize).arg(data.size());
+        return nullptr;
     }
+    
+    std::memcpy(tensor->data, data.constData(), expectedSize);
+    
+    return tensor;
+}
+
+// New implementation that uses the correct GGML type
+struct ggml_tensor* TransformerInference::createTensorFromCache(
+    const QByteArray& data,
+    int typeId,
+    const std::vector<qint64>& dimensions)
+{
+    // Use the retrieved typeId to cast to the correct ggml_type enum
+    enum ggml_type type = (enum ggml_type)typeId;
+
+    struct ggml_tensor* tensor = nullptr;
+    
+    if (dimensions.size() == 1) {
+        tensor = ggml_new_tensor_1d(m_ctx, type, dimensions[0]);
+    } else if (dimensions.size() == 2) {
+        // Dimensions in ggml are stored in reverse order
+        tensor = ggml_new_tensor_2d(m_ctx, type, dimensions[1], dimensions[0]);
+    } else if (dimensions.size() == 3) {
+        tensor = ggml_new_tensor_3d(m_ctx, type, dimensions[2], dimensions[1], dimensions[0]);
+    } else {
+        qWarning() << "Unsupported tensor dimension count:" << dimensions.size();
+        return nullptr;
+    }
+
+    // Critical safety check - ensure data size matches tensor size
+    size_t expected_size = ggml_nbytes(tensor);
+    if (expected_size != (size_t)data.size()) {
+        qCritical() << QString("Size mismatch for tensor: Expected %1 (Type %2), Got %3")
+                        .arg(expected_size).arg(typeId).arg(data.size());
+        return nullptr;
+    }
+
+    // The memcpy is now safe because the tensor type matches the data format
+    std::memcpy(tensor->data, data.constData(), expected_size);
     
     return tensor;
 }

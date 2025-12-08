@@ -27,6 +27,16 @@ InferenceEngine::InferenceEngine(QObject* parent)
 {
 }
 
+InferenceEngine::~InferenceEngine()
+{
+    // Clean up GGUFLoader resources
+    if (m_loader) {
+        delete m_loader;
+        m_loader = nullptr;
+    }
+    m_tensorCache.clear();
+}
+
 bool InferenceEngine::loadModel(const QString& path)
 {
     try {
@@ -46,7 +56,7 @@ bool InferenceEngine::loadModel(const QString& path)
         qInfo() << "[InferenceEngine] Attempting to load model from:" << path;
         
         // Create loader with error checking
-        m_loader = new GGUFLoader(path);
+        m_loader = new GGUFLoaderQt(path);
         
         if (!m_loader->isOpen()) {
             qWarning() << "[InferenceEngine] GGUFLoader failed to open file:" << path;
@@ -107,9 +117,14 @@ bool InferenceEngine::loadModel(const QString& path)
         
         qInfo() << "[InferenceEngine] Model loaded successfully:" << modelName;
         emit modelLoadedChanged(true, modelName);
-        return true;
         
-    } catch (const std::exception& e) {
+        // FIX 6: Immediately check the queue after model load.
+        processNextRequest(); 
+        
+        // FIX 3.2: Emit the signal to notify listeners
+        emit transformerReady();
+        
+        return true;    } catch (const std::exception& e) {
         qCritical() << "[InferenceEngine] CRITICAL: Exception during model loading:" << e.what();
         if (m_loader) {
             delete m_loader;
@@ -200,52 +215,17 @@ void InferenceEngine::request(const QString& prompt, qint64 reqId)
         return;
     }
     
-    m_inferenceTimer.start();
-    
-    // Use transformer if ready, otherwise fallback to placeholder
-    if (m_transformer.isReady()) {
-        // Tokenize the prompt
-        std::vector<int32_t> inputTokens = tokenize(prompt);
-        
-        qInfo() << "Running transformer inference with" << inputTokens.size() << "input tokens";
-        
-        // === CORE FIX: Delegate to the dedicated generate method (max 50 new tokens) ===
-        // The generate method handles the autoregressive loop, logging, and performance metrics.
-        std::vector<int32_t> allTokens = generate(inputTokens, 50);
+    // FIX 6: Enqueue the request instead of processing immediately
+    InferenceRequest request;
+    request.prompt = prompt;
+    request.requestId = reqId;
+    m_requestQueue.enqueue(request);
 
-        // Calculate generated tokens (excluding input tokens)
-        int inputSize = inputTokens.size();
-        int totalTokens = allTokens.size();
-        int generatedTokens = std::max(0, totalTokens - inputSize);
-        
-        // Detokenize the generated part (detokenize handles which to skip)
-        QString response = detokenize(allTokens); 
-        
-        // Performance metrics
-        qint64 elapsed = m_inferenceTimer.elapsed();
-        if (generatedTokens > 0 && elapsed > 0) {
-            m_tokensPerSecond = (generatedTokens * 1000.0) / elapsed;
-        }
-        
-        qInfo() << "Inference completed:" << totalTokens << "tokens in" << elapsed 
-                << "ms (" << QString::number(m_tokensPerSecond, 'f', 1) << "tok/s)";
-        
-        emit resultReady(reqId, response);
-    } else {
-        // Fallback: model not fully initialized
-        QString response = QString("⚠ Model loaded but transformer not ready\n\n"
-                                   "Model: %1\n"
-                                   "Quantization: %2\n"
-                                   "Cached tensors: %3\n\n"
-                                   "Input: \"%4\"\n\n"
-                                   "[Transformer weights still loading...]")
-                                 .arg(extractModelName(m_modelPath))
-                                 .arg(m_quantMode)
-                                 .arg(m_tensorCache.size())
-                                 .arg(prompt);
-        
-        qInfo() << "Transformer not ready, using fallback response";
-        emit resultReady(reqId, response);
+    qInfo() << QString("Request %1 enqueued. Queue size: %2").arg(reqId).arg(m_requestQueue.size());
+
+    // Attempt to start processing if the engine is not busy
+    if (!m_isProcessingInference) {
+        processNextRequest();
     }
 }
 
@@ -317,10 +297,17 @@ void InferenceEngine::rebuildTensorCache()
                     continue;
                 }
                 
-                // Apply quantization safely
+                // Apply quantization safely and capture the resulting type
                 try {
-                    QByteArray quantized = apply_quant(raw, qmode);
-                    m_tensorCache.insert(name, quantized);
+                    // Use the new function that returns both data and type
+                    auto [quantized, resulting_type_id] = apply_quant_with_type(raw, qmode);
+
+                    if (!quantized.isEmpty()) {
+                        CachedTensorData tensorData;
+                        tensorData.data = quantized;
+                        tensorData.ggml_type_id = resulting_type_id;
+                        m_tensorCache.insert(name, tensorData);
+                    }
                 } catch (const std::exception& e) {
                     qWarning() << "[InferenceEngine] Failed to quantize tensor" << name << ":" << e.what();
                 }
@@ -332,6 +319,9 @@ void InferenceEngine::rebuildTensorCache()
         qInfo() << "[InferenceEngine] Tensor cache built with" << m_tensorCache.size() << "tensors";
         
         // Reload transformer weights if cache was rebuilt
+        // FIX: Removed dangerous premature weight loading with hardcoded dimensions.
+        // Weights should only be loaded in loadModel() after correct dimensions are read.
+        /*
         if (!m_tensorCache.isEmpty() && m_loader) {
             try {
                 m_transformer.loadWeights(m_tensorCache, 12, 768, 12, 50257);
@@ -339,6 +329,7 @@ void InferenceEngine::rebuildTensorCache()
                 qWarning() << "[InferenceEngine] Failed to load weights to transformer:" << e.what();
             }
         }
+        */
     } catch (const std::exception& e) {
         qCritical() << "[InferenceEngine] Critical exception in rebuildTensorCache:" << e.what();
     } catch (...) {
@@ -720,6 +711,77 @@ float InferenceEngine::getRandomFloat(float min, float max)
     // Generate uniform random float in [min, max)
     std::uniform_real_distribution<float> distribution(min, max);
     return distribution(m_randomEngine);
+}
+
+// ============================================================================
+// FIX 6: REQUEST QUEUE IMPLEMENTATION
+// ============================================================================
+
+void InferenceEngine::processNextRequest()
+{
+    QMutexLocker lock(&m_mutex);
+    
+    if (m_isProcessingInference) {
+        // Already processing a request, wait for the current one to finish.
+        return;
+    }
+
+    if (m_requestQueue.isEmpty()) {
+        // Nothing to do. Engine is idle.
+        return;
+    }
+
+    // Dequeue the next request
+    InferenceRequest currentRequest = m_requestQueue.dequeue();
+    m_isProcessingInference = true; 
+    
+    // Check model readiness before running the heavy task
+    if (!m_transformer.isReady()) {
+        // Model is loading or initialization failed. Re-enqueue and signal the wait.
+        m_requestQueue.prepend(currentRequest); // Put it back at the front
+
+        QString response = QString("⚠ Model not ready. Request %1 re-queued. Please wait for model loading to complete.").arg(currentRequest.requestId);
+        
+        // Emit a temporary message so the user knows the request wasn't lost.
+        emit resultReady(currentRequest.requestId, response); 
+        m_isProcessingInference = false; // We didn't actually start inference, so we aren't busy.
+        return;
+    }
+
+    qInfo() << QString("Starting inference for request %1. %2 remaining in queue.")
+                   .arg(currentRequest.requestId)
+                   .arg(m_requestQueue.size());
+
+    // --- EXECUTE INFERENCE ---
+    m_inferenceTimer.start();
+    
+    // 1. Tokenize the prompt
+    std::vector<int32_t> tokens = tokenize(currentRequest.prompt);
+    
+    // 2. Run the transformer (synchronous, blocking call)
+    std::vector<int32_t> outputTokens = m_transformer.generate(tokens, 50); 
+
+    // 3. Detokenize the result
+    QString response = detokenize(outputTokens);
+
+    // 4. Performance metrics
+    qint64 elapsed = m_inferenceTimer.elapsed();
+    int generatedTokens = std::max(0, (int)outputTokens.size() - (int)tokens.size());
+    if (generatedTokens > 0 && elapsed > 0) {
+        m_tokensPerSecond = (generatedTokens * 1000.0) / elapsed;
+    }
+    
+    qInfo() << "Inference completed:" << outputTokens.size() << "tokens in" << elapsed 
+            << "ms (" << QString::number(m_tokensPerSecond, 'f', 1) << "tok/s)";
+
+    // 5. Signal completion
+    emit resultReady(currentRequest.requestId, response);
+
+    // 6. Cleanup and check for the next request
+    m_isProcessingInference = false;
+    
+    // Recursive call to immediately process the next item if the queue isn't empty
+    processNextRequest(); 
 }
 
 

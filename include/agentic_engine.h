@@ -82,10 +82,12 @@ public:
     
 public slots:
     void setModel(const QString& modelPath);
+    void setModelName(const QString& modelName);
     
 signals:
     void responseReady(const QString& response);
     void modelLoadingFinished(bool success, const QString& modelPath);
+    void modelReady(bool success);
     void feedbackCollected(const QString& responseId);
     void learningCompleted();
     void securityWarning(const QString& warning);
@@ -94,6 +96,7 @@ private:
     QString generateTokenizedResponse(const QString& message);
     QString generateFallbackResponse(const QString& message);
     bool loadModelAsync(const std::string& modelPath);
+    QString resolveGgufPath(const QString& modelName);
     
     // Internal AI processing
     QString processWithContext(const QString& input, const QJsonObject& context);

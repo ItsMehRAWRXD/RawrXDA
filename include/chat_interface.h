@@ -28,6 +28,7 @@ public:
     void addMessage(const QString& sender, const QString& message);
     QString selectedModel() const;
     bool isMaxMode() const;
+    void sendMessageProgrammatically(const QString& message);
     
     // Agent tool commands
     // Updated to accept optional arguments string for future extensions
@@ -42,6 +43,7 @@ public slots:
     void onModelChanged(int index);
     void onModel2Changed(int index);
     void onMaxModeToggled(bool enabled);
+    void setCanSendMessage(bool enabled);
     
 signals:
     void messageSent(const QString& message);

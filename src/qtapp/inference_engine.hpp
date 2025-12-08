@@ -5,6 +5,7 @@
 #include <QMutex>
 #include <QHash>
 #include <QElapsedTimer>
+#include <QQueue>
 #include <vector>
 #include <cstdint>
 #include <random>
@@ -29,6 +30,11 @@ public:
     explicit InferenceEngine(const QString& ggufPath = QString(), QObject* parent = nullptr);
     // Overload used by server components expecting QObject* only
     explicit InferenceEngine(QObject* parent);
+    
+    /**
+     * @brief Destructor - cleans up GGUFLoader resources
+     */
+    ~InferenceEngine();
     
     /**
      * @brief Load a GGUF model file
@@ -177,14 +183,31 @@ signals:
      * @param errorMessage Error description
      */
     void inferenceError(const QString& requestId, const QString& errorMessage);
+    
+    /**
+     * @brief Emitted when the transformer is fully ready for inference
+     */
+    void transformerReady();
 
 private:
-    GGUFLoader* m_loader;
+    GGUFLoaderQt* m_loader;
     TransformerInference m_transformer;
     BPETokenizer m_bpeTokenizer;
     SentencePieceTokenizer m_spTokenizer;
     VocabularyLoader m_vocab;
 
+    // Define structure to store quantized tensor data and its type
+    struct CachedTensorData {
+        QByteArray data;
+        int ggml_type_id;  // Stores the enum ggml_type as an integer
+    };
+    
+    // Define structure for inference requests
+    struct InferenceRequest {
+        QString prompt;
+        qint64 requestId;
+    };
+    
     mutable QMutex m_mutex;
     QString m_modelPath;
     qint64 m_memoryUsageMB{0};
@@ -192,9 +215,13 @@ private:
     double m_temperature{0.8};
     double m_topP{0.95};
     QString m_quantMode{"Q4_0"};  // Default quantization
-    QHash<QString, QByteArray> m_tensorCache;  // Cached quantized tensors
+    QHash<QString, CachedTensorData> m_tensorCache;  // Cached quantized tensors with type info
     QHash<QString, QString> m_perLayerQuant;  // Tensor-specific quants
     QElapsedTimer m_inferenceTimer;
+    
+    // FIX 6: Add request queue and processing state
+    QQueue<InferenceRequest> m_requestQueue;
+    bool m_isProcessingInference{false};
     
     enum TokenizerMode {
         TOKENIZER_FALLBACK,  // Simple word-based fallback
@@ -206,6 +233,9 @@ private:
     QString extractModelName(const QString& path) const;
     void rebuildTensorCache();
     void initializeTokenizer();
+    
+    // FIX 6: Request queue processing
+    void processNextRequest();
     
     // Elegant two-phase inference with KV-cache
 

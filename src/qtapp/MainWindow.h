@@ -92,6 +92,7 @@ class AIChatPanel;
 class MASMEditorWidget;
 class HotpatchPanel;
 class LayerQuantWidget;
+class InterpretabilityPanelEnhanced;
 
 /* ============================================================ */
 /**
@@ -309,6 +310,7 @@ private slots: /* ----------  new IDE-wide slots  ---------- */
     void toggleLanguageClientHost(bool visible);
     void toggleMASMEditor(bool visible);
     void toggleHotpatchPanel(bool visible);
+    void toggleInterpretabilityPanel(bool visible);
 
 private: /* ---------------  UI creators  --------------- */
     QWidget* createGoalBar();
@@ -337,6 +339,7 @@ private: /* ---------------  UI creators  --------------- */
     void setupAIChatPanel();
     void setupMASMEditor();
     void setupHotpatchPanel();
+    void setupInterpretabilityPanel();
     void restoreSession();
     void saveSession();
     
@@ -491,6 +494,10 @@ private: /* ---------------  new IDE members  --------------- */
     /* Hotpatch Panel */
     class HotpatchPanel* m_hotpatchPanel{};
     QDockWidget* m_hotpatchPanelDock{};
+    
+    /* Interpretability Panel - Model Analysis & Diagnostics */
+    class InterpretabilityPanelEnhanced* m_interpretabilityPanel{};
+    QDockWidget* m_interpretabilityPanelDock{};
 
     /* VS Code-like Layout Components */
     class ActivityBar* m_activityBar{};

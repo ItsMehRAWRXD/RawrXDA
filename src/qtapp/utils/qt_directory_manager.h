@@ -25,28 +25,28 @@ public:
     
     // IDirectoryManager interface implementation
     FileOperationResult createDirectory(const QString& path,
-                                       bool createParents = true) override;
+                                       bool createParents = true);
     
     FileOperationResult deleteDirectory(const QString& path,
-                                       bool recursive = false) override;
+                                       bool recursive = false);
     
     FileOperationResult copyDirectory(const QString& sourcePath,
-                                     const QString& destPath) override;
+                                     const QString& destPath);
     
-    bool exists(const QString& path) const override;
+    bool exists(const QString& path) const;
     
-    bool isDirectory(const QString& path) const override;
+    bool isDirectory(const QString& path) const;
     
     QStringList listFiles(const QString& path,
-                         bool recursive = false) const override;
+                         bool recursive = false) const;
     
     QStringList listDirectories(const QString& path,
-                               bool recursive = false) const override;
+                               bool recursive = false) const;
     
-    QString absolutePath(const QString& path) const override;
+    QString absolutePath(const QString& path) const;
     
     QString relativePath(const QString& basePath,
-                        const QString& targetPath) const override;
+                        const QString& targetPath) const;
 
 private:
     bool removeDirectoryRecursive(const QString& path) const;

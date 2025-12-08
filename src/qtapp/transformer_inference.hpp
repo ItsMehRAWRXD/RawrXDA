@@ -10,6 +10,9 @@ struct ggml_context;
 struct ggml_tensor;
 struct ggml_cgraph;
 
+// Forward declaration of CachedTensorData from inference_engine.hpp
+struct CachedTensorData;
+
 /**
  * @brief Lightweight transformer inference using ggml backend
  * 
@@ -86,6 +89,14 @@ private:
         ggml_tensor* mlp_fc2{nullptr};
         ggml_tensor* ln2_weight{nullptr};
         ggml_tensor* ln2_bias{nullptr};
+        
+        // FIX 4: Add Bias Terms
+        ggml_tensor* attn_q_bias{nullptr};
+        ggml_tensor* attn_k_bias{nullptr};
+        ggml_tensor* attn_v_bias{nullptr};
+        ggml_tensor* attn_output_bias{nullptr};
+        ggml_tensor* mlp_fc1_bias{nullptr};
+        ggml_tensor* mlp_fc2_bias{nullptr};
     };
     std::vector<LayerWeights> m_layers;
     
@@ -99,6 +110,12 @@ private:
     ggml_tensor* createTensorFromCache(const QString& name, 
                                        const QHash<QString, QByteArray>& cache,
                                        const int64_t* shape, int nDims);
+    
+    // New overload that accepts type ID
+    ggml_tensor* createTensorFromCache(const QByteArray& data,
+                                       int typeId,
+                                       const std::vector<qint64>& dimensions);
+    
     ggml_tensor* buildGraph(ggml_context* ctx, const std::vector<int32_t>& tokens);
     int sampleToken(const std::vector<float>& logits, float temperature);
     void initKVCache();

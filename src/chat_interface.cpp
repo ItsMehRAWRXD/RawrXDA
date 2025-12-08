@@ -14,6 +14,9 @@
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QtConcurrent>
+#include <QProcess>
+#include <QRegularExpression>
+#include <QProcess>
 
 // Lightweight constructor - no widget creation
 ChatInterface::ChatInterface(QWidget* parent) 
@@ -125,68 +128,72 @@ void ChatInterface::initialize() {
     statusLabel_->setStyleSheet("color: #888888; font-size: 11px;");
     layout->addWidget(statusLabel_);
     
-    // Connect messageReceived signal to add response message
+    // Connect messageReceived signal to add response message and reset busy state
     connect(this, &ChatInterface::messageReceived,
-            this, [this](const QString& reply){ addMessage("Bot", reply); });
+            this, [this](const QString& reply){ 
+                addMessage("Bot", reply); 
+                m_busy = false;
+                statusLabel_->setText("Ready");
+            });
+    
+    // Load available Ollama models on startup
+    loadAvailableModels();
+    loadAvailableModelsForSecond();
+    
+    // Initial state: Input enabled, prompt user to select model
+    if (statusLabel_) {
+        statusLabel_->setText("Select a model with matching .gguf file in D:/OllamaModels");
+    }
 }
 
 void ChatInterface::loadAvailableModels() {
-    // === RECURSIVE GGUF SCANNER ===
-    // Scans Ollama's nested directory structure (e.g., .ollama/models/blobs/sha256-xxx)
-    QStringList searchPaths = {
-        QDir::homePath() + "/.ollama/models",
-        "D:/OllamaModels",
-        QDir::homePath() + "/models",
-        "C:/models",
-        "./models"
-    };
+    // === DYNAMIC OLLAMA MODEL DETECTION ===
+    // Queries 'ollama list' command directly for real-time model availability
+    qDebug() << "[ChatInterface] Querying Ollama for available models...";
+    
+    QProcess ollamaProcess;
+    ollamaProcess.start("ollama", QStringList() << "list");
+    
+    if (!ollamaProcess.waitForStarted(3000)) {
+        qWarning() << "[ChatInterface] Failed to start ollama command";
+        statusLabel_->setText("Error: Cannot connect to Ollama. Is it installed?");
+        return;
+    }
+    
+    if (!ollamaProcess.waitForFinished(5000)) {
+        qWarning() << "[ChatInterface] Ollama command timed out";
+        statusLabel_->setText("Error: Ollama command timed out");
+        ollamaProcess.kill();
+        return;
+    }
+    
+    QString output = QString::fromUtf8(ollamaProcess.readAllStandardOutput());
+    QStringList lines = output.split('\n', Qt::SkipEmptyParts);
     
     int modelsFound = 0;
-    for (const QString& rootPath : searchPaths) {
-        QDir dir(rootPath);
-        if (!dir.exists()) {
-            qDebug() << "[ChatInterface] path does not exist:" << rootPath;
-            continue;
-        }
+    for (int i = 1; i < lines.size(); ++i) {  // Skip header line
+        QString line = lines[i].trimmed();
+        if (line.isEmpty()) continue;
         
-        qDebug() << "[ChatInterface] scanning" << rootPath;
+        // Parse: "NAME                   ID              SIZE      MODIFIED"
+        QStringList parts = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+        if (parts.isEmpty()) continue;
         
-        try {
-            // Recursive iterator finds .gguf files in all subdirectories
-            // NOTE: Disabled recursive Subdirectories flag to avoid potential access violations.
-            // If deeper scanning is required, a safe recursive implementation can be added later.
-            QDirIterator it(rootPath, QStringList() << "*.gguf", QDir::Files, QDirIterator::NoIteratorFlags);
-            while (it.hasNext()) {
-                QString filePath = it.next();
-                QFileInfo fileInfo(filePath);
-                
-                qDebug() << "  found" << filePath;
-                
-                // Display relative path to help identify the model
-                QString relativePath = dir.relativeFilePath(filePath);
-                QString displayName = fileInfo.fileName();
-                
-                // If file is deep in subdirectories, show part of path
-                if (relativePath.contains('/')) {
-                    displayName = relativePath;
-                }
-                
-                modelSelector_->addItem(displayName, filePath);
-                modelsFound++;
-            }
-        } catch (const std::exception& e) {
-            qWarning() << "[ChatInterface] exception scanning" << rootPath << ":" << e.what();
-        } catch (...) {
-            qWarning() << "[ChatInterface] skipping unreadable path" << rootPath;
-        }
+        QString modelName = parts[0];  // e.g., "llama3.2:3b" or "dolphin3:latest"
+        
+        // Store model name as both display and data
+        modelSelector_->addItem(modelName, modelName);
+        modelsFound++;
+        
+        qDebug() << "  [ChatInterface] Found model:" << modelName;
     }
     
     if (modelsFound == 0) {
-        statusLabel_->setText("No GGUF models found. Run 'ollama pull <model>' or add files to D:/OllamaModels");
-        qDebug() << "[ChatInterface] No models found in any scanned path";
+        statusLabel_->setText("No Ollama models found. Run 'ollama pull <model>'");
+        qDebug() << "[ChatInterface] No models detected from ollama list";
     } else {
-        statusLabel_->setText(QString("Found %1 GGUF model(s)").arg(modelsFound));
-        qDebug() << "[ChatInterface] Total models found:" << modelsFound;
+        statusLabel_->setText(QString("Found %1 Ollama model(s)").arg(modelsFound));
+        qDebug() << "[ChatInterface] Total Ollama models found:" << modelsFound;
     }
 }
 
@@ -238,45 +245,35 @@ void ChatInterface::onMaxModeToggled(bool enabled) {
 }
 
 void ChatInterface::loadAvailableModelsForSecond() {
-    // === RECURSIVE GGUF SCANNER (for Model 2) ===
-    // Scans Ollama's nested directory structure
-    QStringList searchPaths = {
-        QDir::homePath() + "/.ollama/models",
-        "D:/OllamaModels",
-        QDir::homePath() + "/models",
-        "C:/models",
-        "./models"
-    };
+    // === DYNAMIC OLLAMA MODEL DETECTION (Model 2) ===
+    qDebug() << "[ChatInterface] Querying Ollama for Model 2 options...";
     
-    for (const QString& rootPath : searchPaths) {
-        QDir dir(rootPath);
-        if (!dir.exists()) {
-            continue;
-        }
+    QProcess ollamaProcess;
+    ollamaProcess.start("ollama", QStringList() << "list");
+    
+    if (!ollamaProcess.waitForStarted(3000)) {
+        qWarning() << "[ChatInterface] Failed to start ollama command for Model 2";
+        return;
+    }
+    
+    if (!ollamaProcess.waitForFinished(5000)) {
+        qWarning() << "[ChatInterface] Ollama command timed out for Model 2";
+        ollamaProcess.kill();
+        return;
+    }
+    
+    QString output = QString::fromUtf8(ollamaProcess.readAllStandardOutput());
+    QStringList lines = output.split('\n', Qt::SkipEmptyParts);
+    
+    for (int i = 1; i < lines.size(); ++i) {  // Skip header line
+        QString line = lines[i].trimmed();
+        if (line.isEmpty()) continue;
         
-        try {
-            // Recursive iterator finds .gguf files in all subdirectories
-            QDirIterator it(rootPath, QStringList() << "*.gguf", QDir::Files, QDirIterator::Subdirectories);
-            while (it.hasNext()) {
-                QString filePath = it.next();
-                QFileInfo fileInfo(filePath);
-                
-                // Display relative path to help identify the model
-                QString relativePath = dir.relativeFilePath(filePath);
-                QString displayName = fileInfo.fileName();
-                
-                // If file is deep in subdirectories, show part of path
-                if (relativePath.contains('/')) {
-                    displayName = relativePath;
-                }
-                
-                modelSelector2_->addItem(displayName, filePath);
-            }
-        } catch (const std::exception& e) {
-            qWarning() << "[ChatInterface] exception scanning Model 2 path" << rootPath << ":" << e.what();
-        } catch (...) {
-            qWarning() << "[ChatInterface] skipping unreadable Model 2 path" << rootPath;
-        }
+        QStringList parts = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+        if (parts.isEmpty()) continue;
+        
+        QString modelName = parts[0];
+        modelSelector2_->addItem(modelName, modelName);
     }
 }
 
@@ -334,6 +331,13 @@ void ChatInterface::sendMessage() {
         }
         
         message_input_->clear();
+    }
+}
+
+void ChatInterface::sendMessageProgrammatically(const QString& message) {
+    if (message_input_) {
+        message_input_->setText(message);
+        sendMessage();
     }
 }
 
@@ -452,5 +456,24 @@ void ChatInterface::executeAgentCommand(const QString& command, const QString& a
     }
     
     statusLabel_->setText("Agent command executed");
+}
+
+void ChatInterface::setCanSendMessage(bool enabled) {
+    qDebug() << "[ChatInterface] ═══ setCanSendMessage(" << enabled << ") called ═══";
+    if (message_input_) {
+        // Always enable input so user can try selecting another model
+        message_input_->setEnabled(true);
+        qDebug() << "[ChatInterface] Message input ENABLED";
+    }
+    if (statusLabel_) {
+        QString statusText;
+        if (enabled) {
+            statusText = "✓ Ready - Model loaded";
+        } else {
+            statusText = "⚠ No GGUF file found - Select a model with matching .gguf in D:/OllamaModels";
+        }
+        statusLabel_->setText(statusText);
+        qDebug() << "[ChatInterface] Status set to:" << statusText;
+    }
 }
 

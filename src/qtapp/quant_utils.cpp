@@ -123,6 +123,33 @@ QByteArray apply_quant(const QByteArray& raw, const QString& mode) {
     return raw;
 }
 
+QPair<QByteArray, int> apply_quant_with_type(const QByteArray& raw, const QString& mode)
+{
+    QByteArray quantized;
+    int ggml_type_id = 0;  // Default to F32 (0)
+    
+    if (mode == "Q4_0") {
+        quantized = quantize_q4_0(raw);
+        ggml_type_id = 2;  // GGML_TYPE_Q4_0
+    } else if (mode == "Q8_0") {
+        quantized = quantize_q8k(raw);
+        ggml_type_id = 7;  // GGML_TYPE_Q8_0
+    } else if (mode == "F16") {
+        quantized = to_f16(raw);
+        ggml_type_id = 1;  // GGML_TYPE_F16
+    } else if (mode == "F32") {
+        quantized = raw;  // No quantization for F32
+        ggml_type_id = 0;  // GGML_TYPE_F32
+    } else {
+        // Default to F32 for unknown modes
+        quantized = raw;
+        ggml_type_id = 0;
+        // qWarning() << "Unknown quantization mode:" << mode << ", defaulting to F32";
+    }
+    
+    return qMakePair(quantized, ggml_type_id);
+}
+
 QVector<float> unpack_generic_bits(const QByteArray& packed, int bits) {
     QVector<float> result;
     if (packed.size() < 4) return result;

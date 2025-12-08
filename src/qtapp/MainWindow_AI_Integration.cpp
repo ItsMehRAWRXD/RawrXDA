@@ -7,6 +7,7 @@
  * - Hot-swap quantization (Q4_0 through F32)
  * - Per-layer mixed precision
  * - Collaborative swarm editing
+ * - Interpretability Panel - Model analysis and diagnostics
  * 
  * Add these methods to MainWindow class:
  * - Include this code in MainWindow.cpp or compile as separate translation unit
@@ -701,6 +702,14 @@ void MainWindow::setupCommandPalette()
     m_commandPalette->registerCommand(cmd);
     
     cmd = {
+        "view.interpretability", "Toggle Model Interpretability Panel", "View",
+        "Show/hide model analysis and diagnostics panel",
+        QKeySequence("Ctrl+Shift+I"),
+        [this]() { toggleInterpretabilityPanel(!m_interpretabilityPanelDock || !m_interpretabilityPanelDock->isVisible()); }
+    };
+    m_commandPalette->registerCommand(cmd);
+    
+    cmd = {
         "view.terminal", "Toggle Terminal", "View",
         "Show/hide integrated terminal",
         QKeySequence("Ctrl+`"),
@@ -752,3 +761,4 @@ void MainWindow::setupCommandPalette()
     qDebug() << "Command palette initialized with" << "commands";
 }
 
+// Interpretability Panel setup is in MainWindow.cpp to avoid separate compilation issues

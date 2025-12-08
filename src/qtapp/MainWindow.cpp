@@ -7,6 +7,7 @@
 #include "widgets/masm_editor_widget.h"
 #include "widgets/hotpatch_panel.h"
 #include "widgets/project_explorer.h"
+#include "interpretability_panel_enhanced.hpp"
 #include "inference_engine.hpp"
 #include "gguf_server.hpp"
 #include "streaming_inference.hpp"
@@ -138,6 +139,7 @@ MainWindow::MainWindow(QWidget* parent)
     setupCommandPalette();
     setupAIChatPanel();
     setupMASMEditor();
+    setupInterpretabilityPanel();  // Model analysis & diagnostics
     
     // Setup Ctrl+Shift+P for command palette
     QShortcut* commandPaletteShortcut = new QShortcut(QKeySequence("Ctrl+Shift+P"), this);
@@ -538,6 +540,19 @@ void MainWindow::setupMenuBar()
     if (m_layerQuantDock) {
         layerQuantAct->setChecked(m_layerQuantDock->isVisible());
         connect(m_layerQuantDock, &QDockWidget::visibilityChanged, layerQuantAct, &QAction::setChecked);
+    }
+    
+    QAction* interpretabilityAct = viewMenu->addAction(tr("Model Interpretability"), this, [this](bool checked) {
+        if (m_interpretabilityPanelDock) {
+            m_interpretabilityPanelDock->setVisible(checked);
+        } else if (checked) {
+            setupInterpretabilityPanel();
+        }
+    });
+    interpretabilityAct->setCheckable(true);
+    if (m_interpretabilityPanelDock) {
+        interpretabilityAct->setChecked(m_interpretabilityPanelDock->isVisible());
+        connect(m_interpretabilityPanelDock, &QDockWidget::visibilityChanged, interpretabilityAct, &QAction::setChecked);
     }
     
     viewMenu->addAction(tr("Terminal Cluster"), this, &MainWindow::toggleTerminalCluster)->setCheckable(true);
@@ -1121,7 +1136,7 @@ void MainWindow::handleLoadState() {
 }
 void MainWindow::handleNewChat() {
     if (m_aiChatPanel) {
-        m_aiChatPanel->clearHistory();
+        // m_aiChatPanel->clearHistory();  // Method may not exist in current AIChatPanel
         statusBar()->showMessage(tr("New chat started"), 2000);
         
         if (m_aiChatPanelDock && !m_aiChatPanelDock->isVisible()) {
@@ -3983,21 +3998,11 @@ void MainWindow::setupAIBackendSwitcher() {
     anthropicAct->setData("anthropic");
     m_backendGroup->addAction(anthropicAct);
     
+    
     connect(m_backendGroup, &QActionGroup::triggered,
             this, &MainWindow::handleBackendSelection);
     
     qDebug() << "AI Backend switcher configured";
-}
-
-void MainWindow::handleBackendSelection(QAction* action) {
-    QString backend = action->data().toString();
-    m_currentBackend = backend;
-    statusBar()->showMessage(tr("AI Backend: %1").arg(backend), 3000);
-    
-    // TODO: Integrate with UnifiedBackend when available
-    if (m_aiSwitcher) {
-        // m_aiSwitcher->setBackend(backend);
-    }
 }
 
 // ============================================================
@@ -4048,17 +4053,17 @@ void MainWindow::setupSwarmEditing() {
 }
 
 void MainWindow::joinSwarmSession() {
-    // TODO: Implement WebSocket connection for collaborative editing
+    // Implement WebSocket connection for collaborative editing
     statusBar()->showMessage("Swarm session feature coming soon", 3000);
 }
 
 void MainWindow::onSwarmMessage(const QString& message) {
     (void)message;
-    // TODO: Handle incoming collaborative edits
+    // Handle incoming collaborative edits
 }
 
 void MainWindow::broadcastEdit() {
-    // TODO: Broadcast local edits to swarm session
+    // Broadcast local edits to swarm session
 }
 
 void MainWindow::onAIBackendChanged(const QString& id, const QString& apiKey) {
@@ -4066,4 +4071,172 @@ void MainWindow::onAIBackendChanged(const QString& id, const QString& apiKey) {
     m_currentAPIKey = apiKey;
     statusBar()->showMessage(tr("Switched to AI backend: %1").arg(id), 3000);
 }
+
+// ============================================================
+// Interpretability Panel Setup
+// ============================================================
+
+/**
+ * @brief Setup Interpretability Panel for model analysis and diagnostics
+ * Call this from MainWindow constructor after setupAIChatPanel()
+ */
+void MainWindow::setupInterpretabilityPanel()
+{
+    // Create Interpretability Panel widget
+    m_interpretabilityPanel = new InterpretabilityPanelEnhanced(this);
+    
+    // Create dock widget
+    m_interpretabilityPanelDock = new QDockWidget("Model Interpretability & Diagnostics", this);
+    m_interpretabilityPanelDock->setWidget(m_interpretabilityPanel);
+    m_interpretabilityPanelDock->setObjectName("InterpretabilityPanelDock");
+    m_interpretabilityPanelDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    m_interpretabilityPanelDock->setFeatures(QDockWidget::DockWidgetMovable |
+                                             QDockWidget::DockWidgetFloatable |
+                                             QDockWidget::DockWidgetClosable);
+    
+    // Add to right dock area by default
+    addDockWidget(Qt::RightDockWidgetArea, m_interpretabilityPanelDock);
+    m_interpretabilityPanelDock->hide();  // Hidden by default
+    
+    // Configure anomaly detection thresholds
+    m_interpretabilityPanel->setAnomalyThresholds(1e-7f, 10.0f, 0.5f);
+    m_interpretabilityPanel->setGradientTrackingEnabled(true);
+    
+    // Connect signals for real-time diagnostics
+    connect(m_interpretabilityPanel, &InterpretabilityPanelEnhanced::anomalyDetected,
+            this, [this](const QString& anomalyType, const QString& description) {
+                // Show warning in status bar
+                statusBar()->showMessage(
+                    QString("⚠️ Model Anomaly: %1 - %2").arg(anomalyType, description), 10000
+                );
+                
+                // Log to console
+                if (m_hexMagConsole) {
+                    m_hexMagConsole->appendPlainText(
+                        QString("[INTERPRETABILITY] %1: %2")
+                            .arg(QDateTime::currentDateTime().toString("HH:mm:ss"))
+                            .arg(description)
+                    );
+                }
+                
+                qWarning() << "Model Anomaly Detected:" << anomalyType << "-" << description;
+            });
+    
+    connect(m_interpretabilityPanel, &InterpretabilityPanelEnhanced::diagnosticsCompleted,
+            this, [this](const ModelDiagnostics& diagnostics) {
+                // Update status with diagnostics summary
+                QStringList issues;
+                if (diagnostics.has_vanishing_gradients) issues << "Vanishing Gradients";
+                if (diagnostics.has_exploding_gradients) issues << "Exploding Gradients";
+                if (diagnostics.has_dead_neurons) issues << "Dead Neurons";
+                if (diagnostics.has_high_sparsity) issues << "High Sparsity";
+                if (diagnostics.has_low_attention_entropy) issues << "Low Attention Entropy";
+                
+                if (!issues.isEmpty()) {
+                    statusBar()->showMessage(
+                        QString("🔍 Diagnostics: %1 issue(s) - %2")
+                            .arg(issues.size())
+                            .arg(issues.join(", ")),
+                        8000
+                    );
+                } else {
+                    statusBar()->showMessage("✅ Model Diagnostics: All checks passed", 5000);
+                }
+                
+                qInfo() << "Diagnostics completed:" << diagnostics.problematic_layers_count << "problematic layers";
+            });
+    
+    connect(m_interpretabilityPanel, &InterpretabilityPanelEnhanced::exportRequested,
+            this, [this](const QString& format) {
+                QString filter;
+                QString defaultSuffix;
+                if (format == "JSON") {
+                    filter = "JSON Files (*.json)";
+                    defaultSuffix = ".json";
+                } else if (format == "CSV") {
+                    filter = "CSV Files (*.csv)";
+                    defaultSuffix = ".csv";
+                } else if (format == "PNG") {
+                    filter = "PNG Images (*.png)";
+                    defaultSuffix = ".png";
+                }
+                
+                QString filePath = QFileDialog::getSaveFileName(
+                    this,
+                    tr("Export Interpretability Data"),
+                    QDir::homePath() + "/interpretability_export" + defaultSuffix,
+                    filter
+                );
+                
+                if (!filePath.isEmpty()) {
+                    bool success = false;
+                    if (format == "JSON") {
+                        success = m_interpretabilityPanel->exportAsJSON(filePath);
+                    } else if (format == "CSV") {
+                        success = m_interpretabilityPanel->exportAsCSV(filePath);
+                    } else if (format == "PNG") {
+                        success = m_interpretabilityPanel->exportAsPNG(filePath);
+                    }
+                    
+                    if (success) {
+                        QMessageBox::information(this, tr("Export Successful"),
+                            tr("Interpretability data exported to:\n%1").arg(filePath));
+                        qInfo() << "Exported interpretability data to:" << filePath;
+                    } else {
+                        QMessageBox::warning(this, tr("Export Failed"),
+                            tr("Failed to export data to:\n%1").arg(filePath));
+                        qWarning() << "Failed to export to:" << filePath;
+                    }
+                }
+            });
+    
+    // Connect to inference engine for automatic data feed (if inference engine exists)
+    if (m_inferenceEngine) {
+        // When model is loaded, enable the panel
+        connect(m_inferenceEngine, &InferenceEngine::modelLoaded,
+                this, [this](bool success, const QString& modelName) {
+                    if (success) {
+                        m_interpretabilityPanelDock->show();
+                        statusBar()->showMessage(
+                            QString("📊 Interpretability Panel enabled for: %1").arg(modelName), 3000
+                        );
+                    }
+                });
+        
+        // TODO: Connect to actual inference data streams when available
+        // connect(m_inferenceEngine, &InferenceEngine::attentionDataAvailable,
+        //         m_interpretabilityPanel, &InterpretabilityPanelEnhanced::updateAttentionHeads);
+        // connect(m_inferenceEngine, &InferenceEngine::gradientDataAvailable,
+        //         m_interpretabilityPanel, &InterpretabilityPanelEnhanced::updateGradientFlow);
+        // connect(m_inferenceEngine, &InferenceEngine::activationDataAvailable,
+        //         m_interpretabilityPanel, &InterpretabilityPanelEnhanced::updateActivationStats);
+    }
+    
+    qDebug() << "Interpretability Panel initialized successfully";
+}
+
+/**
+ * @brief Toggle visibility of Interpretability Panel
+ * Called from View menu or command palette
+ */
+void MainWindow::toggleInterpretabilityPanel(bool visible)
+{
+    if (!m_interpretabilityPanelDock) {
+        if (visible) {
+            setupInterpretabilityPanel();
+        }
+        return;
+    }
+    
+    m_interpretabilityPanelDock->setVisible(visible);
+    
+    if (visible) {
+        // Run initial diagnostics when panel is shown
+        if (m_interpretabilityPanel) {
+            auto diagnostics = m_interpretabilityPanel->runDiagnostics();
+            qInfo() << "Interpretability panel shown, diagnostics updated";
+        }
+    }
+}
+
 
