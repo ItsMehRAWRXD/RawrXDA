@@ -10,6 +10,8 @@
 #include <QPushButton>
 #include <QComboBox>
 #include <QCheckBox>
+#include <QProgressBar>
+#include <QTimer>
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
@@ -97,6 +99,24 @@ void ChatInterface::initialize() {
     modelLayout->addWidget(refreshBtn);
     
     layout->addLayout(modelLayout);
+    
+    // ==== PHASE 2: STREAMING TOKEN PROGRESS BAR ====
+    m_tokenProgress = new QProgressBar(this);
+    m_tokenProgress->setRange(0, 0);       // Busy indicator (indeterminate)
+    m_tokenProgress->setTextVisible(false);
+    m_tokenProgress->setFixedHeight(4);    // Slim bar
+    m_tokenProgress->setStyleSheet(
+        "QProgressBar { background: transparent; border: none; }"
+        "QProgressBar::chunk { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
+        "stop:0 #4ec9b0, stop:0.5 #569cd6, stop:1 #4ec9b0); }"
+    );
+    m_tokenProgress->hide();
+    layout->insertWidget(1, m_tokenProgress);  // Insert right after title
+    
+    m_hideTimer = new QTimer(this);
+    m_hideTimer->setSingleShot(true);
+    connect(m_hideTimer, &QTimer::timeout, this, &ChatInterface::hideProgress);
+    // ===============================================
     
     // Message history
     message_history_ = new QTextEdit(this);
@@ -512,6 +532,26 @@ void ChatInterface::executeAgentCommand(const QString& command, const QString& a
     
     statusLabel_->setText("Agent command executed");
 }
+
+// ==== PHASE 2: STREAMING TOKEN PROGRESS IMPLEMENTATION ====
+void ChatInterface::onTokenGenerated(int delta)
+{
+    Q_UNUSED(delta);
+    if (m_tokenProgress->isHidden()) {
+        m_tokenProgress->show();
+        m_hideTimer->stop();
+        qDebug() << "[ChatInterface] Token progress bar shown - generation started";
+    }
+    // Restart hide timer - will hide 1s after last token
+    m_hideTimer->start(1000);
+}
+
+void ChatInterface::hideProgress()
+{
+    m_tokenProgress->hide();
+    qDebug() << "[ChatInterface] Token progress bar hidden - generation complete";
+}
+// ========================================================
 
 void ChatInterface::setCanSendMessage(bool enabled) {
     qDebug() << "[ChatInterface] ═══ setCanSendMessage(" << enabled << ") called ═══";

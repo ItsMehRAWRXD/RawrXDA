@@ -1215,6 +1215,23 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
         list(APPEND AGENTICIDE_SOURCES src/hardware_backend_selector.cpp)
     endif()
     
+    # Phase 2 Polish: UI Enhancement Components (Investor Demo Features)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/ui/diff_dock.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/ui/diff_dock.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/ui/gpu_backend_selector.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/ui/gpu_backend_selector.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/ui/auto_model_downloader.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/ui/auto_model_downloader.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/ui/model_download_dialog_new.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/ui/model_download_dialog_new.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/ui/telemetry_optin_dialog.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/ui/telemetry_optin_dialog.cpp)
+    endif()
+    
     # Phase 3: Production Enhancements
     # Security, checkpoint, and CI/CD management components
     # TEMPORARILY DISABLED - not needed for v5.0 clean build

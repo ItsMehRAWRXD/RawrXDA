@@ -12,6 +12,14 @@
 #include "lsp_client.h"
 #include "todo_dock.h"
 #include "todo_manager.h"
+#include "agentic_text_edit.h"
+
+// Phase 2 Polish Features
+#include "../ui/diff_dock.h"
+#include "../ui/gpu_backend_selector.h"
+#include "../ui/auto_model_downloader.h"
+#include "../ui/model_download_dialog_new.h"
+#include "../ui/telemetry_optin_dialog.h"
 
 #include <QApplication>
 #include <QMenuBar>
@@ -298,6 +306,10 @@ void MainWindow::initializePhase4()
                 setCentralWidget(m_multiTabEditor);
                 m_multiTabEditor->show();
             }
+            
+            // Initialize Phase 2 Polish Features
+            initializePhase2Polish();
+            
             statusBar()->showMessage("Ready - Type /refactor <prompt> in chat to start", 5000);
         });
         
@@ -954,6 +966,175 @@ void MainWindow::previousTerminal()
     if (m_terminalPool) {
         statusBar()->showMessage("Use Ctrl+Shift+Tab to switch terminals", 2000);
     }
+}
+
+// ============================================================================
+// PHASE 2 POLISH FEATURES IMPLEMENTATION
+// ============================================================================
+
+void MainWindow::initializePhase2Polish()
+{
+    qDebug() << "[MainWindow] 🎨 Initializing Phase 2 Polish Features...";
+    
+    // ===== 1. DIFF PREVIEW DOCK =====
+    try {
+        m_diffPreviewDock = new DiffDock(this);
+        addDockWidget(Qt::RightDockWidgetArea, m_diffPreviewDock);
+        m_diffPreviewDock->hide();  // Hidden until refactor is suggested
+        
+        // Connect accept button - apply changes to editor
+        connect(m_diffPreviewDock, &DiffDock::accepted, this,
+                [this](const QString &text) {
+            if (m_multiTabEditor && m_multiTabEditor->getCurrentEditor()) {
+                auto cursor = m_multiTabEditor->getCurrentEditor()->textCursor();
+                cursor.beginEditBlock();
+                cursor.select(QTextCursor::BlockUnderCursor);
+                cursor.insertText(text);
+                cursor.endEditBlock();
+                m_diffPreviewDock->hide();
+                statusBar()->showMessage("✓ Refactor applied", 3000);
+                qDebug() << "[MainWindow] Refactor accepted and applied";
+            }
+        });
+        
+        // Connect reject button
+        connect(m_diffPreviewDock, &DiffDock::rejected, this,
+                [this]() {
+            m_diffPreviewDock->hide();
+            statusBar()->showMessage("✗ Refactor rejected", 2000);
+            qDebug() << "[MainWindow] Refactor rejected";
+        });
+        
+        qDebug() << "  ✓ Diff Preview Dock initialized";
+        
+    } catch (const std::exception& e) {
+        qWarning() << "[MainWindow] Failed to init diff preview:" << e.what();
+    }
+    
+    // ===== 2. STREAMING TOKEN PROGRESS (Already in ChatInterface) =====
+    // Connect AgenticEngine token signal to ChatInterface progress bar
+    if (m_agenticEngine && m_chatInterface) {
+        connect(m_agenticEngine, &AgenticEngine::tokenGenerated,
+                m_chatInterface, &ChatInterface::onTokenGenerated);
+        qDebug() << "  ✓ Token progress connected to AgenticEngine";
+    }
+    
+    // ===== 3. GPU BACKEND SELECTOR =====
+    try {
+        QToolBar* aiToolbar = nullptr;
+        
+        // Find existing AI toolbar or create new one
+        for (QToolBar* toolbar : findChildren<QToolBar*>()) {
+            if (toolbar->windowTitle() == "AI") {
+                aiToolbar = toolbar;
+                break;
+            }
+        }
+        
+        if (!aiToolbar) {
+            aiToolbar = addToolBar("AI Settings");
+        }
+        
+        m_backendSelector = new RawrXD::GPUBackendSelector(this);
+        aiToolbar->addSeparator();
+        aiToolbar->addWidget(new QLabel(" Backend: ", this));
+        aiToolbar->addWidget(m_backendSelector);
+        
+        // Connect backend changes to inference engine
+        connect(m_backendSelector, &RawrXD::GPUBackendSelector::backendChanged,
+                this, [this](RawrXD::ComputeBackend backend) {
+            QString backendName;
+            switch (backend) {
+                case RawrXD::ComputeBackend::CUDA: backendName = "CUDA"; break;
+                case RawrXD::ComputeBackend::Vulkan: backendName = "Vulkan"; break;
+                case RawrXD::ComputeBackend::CPU: backendName = "CPU"; break;
+                case RawrXD::ComputeBackend::DirectML: backendName = "DirectML"; break;
+                default: backendName = "Auto"; break;
+            }
+            
+            qDebug() << "[MainWindow] Backend switched to:" << backendName;
+            statusBar()->showMessage("✓ Backend: " + backendName, 3000);
+        });
+        
+        qDebug() << "  ✓ GPU Backend Selector initialized";
+        
+    } catch (const std::exception& e) {
+        qWarning() << "[MainWindow] Failed to init backend selector:" << e.what();
+    }
+    
+    // ===== 4. AUTO MODEL DOWNLOAD =====
+    try {
+        QTimer::singleShot(1500, this, [this]() {
+            RawrXD::AutoModelDownloader downloader;
+            
+            if (!downloader.hasLocalModels()) {
+                qDebug() << "[MainWindow] No models detected - offering download";
+                showModelDownloadDialog();
+            }
+        });
+        
+        qDebug() << "  ✓ Auto Model Download scheduled";
+        
+    } catch (const std::exception& e) {
+        qWarning() << "[MainWindow] Failed to init model downloader:" << e.what();
+    }    // ===== 5. TELEMETRY OPT-IN =====
+    try {
+        QTimer::singleShot(2500, this, [this]() {
+            if (!RawrXD::hasTelemetryPreference()) {
+                qDebug() << "[MainWindow] No telemetry preference - showing opt-in dialog";
+                
+                RawrXD::TelemetryOptInDialog* dialog = new RawrXD::TelemetryOptInDialog(this);
+                
+                connect(dialog, &RawrXD::TelemetryOptInDialog::telemetryDecisionMade,
+                        this, [this](bool enabled) {
+                    qDebug() << "[MainWindow] Telemetry decision:" << (enabled ? "ENABLED" : "DISABLED");
+                    statusBar()->showMessage(enabled ? 
+                        "✓ Thank you for helping improve RawrXD IDE!" : 
+                        "Telemetry disabled", 
+                        5000);
+                });
+                
+                dialog->exec();
+                dialog->deleteLater();
+            }
+        });
+        
+        qDebug() << "  ✓ Telemetry Opt-In scheduled";
+        
+    } catch (const std::exception& e) {
+        qWarning() << "[MainWindow] Failed to init telemetry:" << e.what();
+    }
+    
+    qDebug() << "[MainWindow] ✅ Phase 2 Polish Features initialized";
+}
+
+void MainWindow::onRefactorSuggested(const QString &original, const QString &suggested)
+{
+    if (m_diffPreviewDock) {
+        m_diffPreviewDock->setDiff(original, suggested);
+        qDebug() << "[MainWindow] Refactor suggestion shown in diff dock";
+    }
+}
+
+void MainWindow::showModelDownloadDialog()
+{
+    RawrXD::ModelDownloadDialog* dialog = new RawrXD::ModelDownloadDialog(this);
+    
+    if (dialog->exec() == QDialog::Accepted) {
+        statusBar()->showMessage("✓ Model downloaded! Refreshing model list...", 5000);
+        qDebug() << "[MainWindow] Model downloaded successfully";
+        
+        if (m_chatInterface) {
+            m_chatInterface->refreshModels();
+        }
+    } else {
+        statusBar()->showMessage(
+            "ℹ No models installed. Use AI → Download Model to get started", 
+            10000);
+        qDebug() << "[MainWindow] User skipped model download";
+    }
+    
+    dialog->deleteLater();
 }
 
 } // namespace RawrXD

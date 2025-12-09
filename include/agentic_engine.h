@@ -101,6 +101,10 @@ signals:
     void learningCompleted();
     void securityWarning(const QString& warning);
     
+    // Phase 2: Streaming and refactoring signals
+    void tokenGenerated(int delta);  // Emitted for each token during generation
+    void refactorSuggested(const QString& original, const QString& suggested);  // Emitted when refactor is ready
+    
 private:
     QString generateTokenizedResponse(const QString& message);
     QString generateFallbackResponse(const QString& message);

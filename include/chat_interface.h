@@ -8,6 +8,8 @@ class QLineEdit;
 class QComboBox;
 class QCheckBox;
 class QLabel;
+class QProgressBar;
+class QTimer;
 class AgenticEngine;
 
 namespace RawrXD {
@@ -45,6 +47,10 @@ public slots:
     void onMaxModeToggled(bool enabled);
     void setCanSendMessage(bool enabled);
     
+    // Phase 2: Streaming token progress
+    void onTokenGenerated(int delta);
+    void hideProgress();
+    
 signals:
     void messageSent(const QString& message);
     void modelSelected(const QString& modelPath);
@@ -67,4 +73,8 @@ private:
     QString m_lastPrompt;  // Store last user message
     AgenticEngine* m_agenticEngine = nullptr;
     RawrXD::PlanOrchestrator* m_planOrchestrator = nullptr;
+    
+    // Phase 2: Streaming token progress bar
+    QProgressBar* m_tokenProgress{nullptr};
+    QTimer* m_hideTimer{nullptr};
 };

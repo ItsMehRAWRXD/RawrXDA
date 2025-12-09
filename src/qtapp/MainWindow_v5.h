@@ -17,6 +17,17 @@ class InferenceEngine;
 class TodoManager;
 class TodoDock;
 
+// Phase 2 forward declarations
+namespace RawrXD {
+    class DiffPreviewWidget;
+    class GPUBackendSelector;
+    class AutoModelDownloader;
+    class ModelDownloadDialog;
+    class TelemetryOptInDialog;
+}
+
+class DiffDock;  // Day 2 simplified diff viewer
+
 namespace RawrXD {
     class PlanOrchestrator;
     class LSPClient;
@@ -61,6 +72,10 @@ private slots:
     void showAbout();
     void showAIHelp();
     
+    // Phase 2: Diff preview and refactoring
+    void onRefactorSuggested(const QString &original, const QString &suggested);
+    void showModelDownloadDialog();
+    
     // LSP operations
     void startLSPServer();
     void stopLSPServer();
@@ -86,6 +101,7 @@ private:
     void initializePhase2();
     void initializePhase3();
     void initializePhase4();
+    void initializePhase2Polish();  // NEW: Phase 2 polish features
     void updateSplashProgress(const QString& message, int percent);
     
     // Setup methods
@@ -112,6 +128,10 @@ private:
     QDockWidget *m_terminalDock;
     QDockWidget *m_fileDock;
     QDockWidget *m_todoDockWidget;
+    
+    // Phase 2: Polish feature widgets
+    DiffDock *m_diffPreviewDock{nullptr};  // Day 2: Simplified diff viewer
+    RawrXD::GPUBackendSelector *m_backendSelector{nullptr};
     
     // Splash screen for initialization
     QWidget *m_splashWidget;
