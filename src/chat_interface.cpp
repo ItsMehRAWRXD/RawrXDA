@@ -14,6 +14,7 @@
 #include <QTimer>
 #include <QDir>
 #include <QDirIterator>
+#include <QFile>
 #include <QFileInfo>
 #include <QtConcurrent>
 #include <QProcess>
@@ -660,24 +661,71 @@ QString ChatInterface::resolveGgufPath(const QString& modelName)
     }
     
     // Second attempt: Search recursively in Ollama blobs (for Ollama-managed models)
-    QString ollamaBlobs = QDir::homePath() + "/.ollama/models/blobs";
-    QDir blobDir(ollamaBlobs);
-    if (blobDir.exists()) {
-        qDebug() << "  [ChatInterface::resolveGgufPath] Searching Ollama blobs...";
+    // Ollama stores models in ~/.ollama/blobs/blobs/ as sha256-* files without .gguf extension
+    QStringList blobsPaths = {
+        QDir::homePath() + "/.ollama/blobs/blobs",  // Windows/Linux actual location
+        QDir::homePath() + "/.ollama/models/blobs",  // Alternative location
+    };
+    
+    for (const QString& ollamaBlobs : blobsPaths) {
+        QDir blobDir(ollamaBlobs);
+        if (!blobDir.exists()) {
+            qDebug() << "  [ChatInterface::resolveGgufPath] Skipped (not found):" << ollamaBlobs;
+            continue;
+        }
         
-        // Search for any .gguf file in blobs
-        QFileInfoList blobFiles = blobDir.entryInfoList(QStringList() << "*.gguf", 
+        qDebug() << "  [ChatInterface::resolveGgufPath] Searching Ollama blobs:" << ollamaBlobs;
+        
+        // Ollama blobs are named sha256-<hash> without extension
+        // Look for large files (>100MB) which are likely model weights
+        QFileInfoList blobFiles = blobDir.entryInfoList(QStringList() << "sha256-*", 
                                                         QDir::Files | QDir::Hidden, 
                                                         QDir::Name);
         
-        // Also check subdirectories
-        QDirIterator it(ollamaBlobs, QStringList() << "*.gguf", 
-                        QDir::Files | QDir::Hidden, 
-                        QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            QString filePath = it.next();
-            qDebug() << "  [ChatInterface::resolveGgufPath] ✓ Found in Ollama blobs:" << filePath;
-            return filePath;
+        // Sort by size descending and pick the largest file (likely the model)
+        QList<QPair<qint64, QString>> sizedFiles;
+        for (const QFileInfo& file : blobFiles) {
+            qint64 sizeMB = file.size() / (1024 * 1024);
+            if (sizeMB > 100) {  // Only consider files > 100MB
+                sizedFiles.append(qMakePair(file.size(), file.absoluteFilePath()));
+                qDebug() << "    Found blob:" << file.fileName() << "Size:" << sizeMB << "MB";
+            }
+        }
+        
+        if (!sizedFiles.isEmpty()) {
+            // Sort by size and return largest (most recent/primary model)
+            std::sort(sizedFiles.begin(), sizedFiles.end(), 
+                     [](const QPair<qint64, QString>& a, const QPair<qint64, QString>& b) {
+                         return a.first > b.first;  // Descending
+                     });
+            
+            QString path = sizedFiles.first().second;
+            qint64 sizeMB = sizedFiles.first().first / (1024 * 1024);
+            
+            // Verify file is readable
+            QFile testFile(path);
+            if (!testFile.exists()) {
+                qWarning() << "  [ChatInterface::resolveGgufPath] File doesn't exist:" << path;
+                continue;  // Try next blobs directory
+            }
+            
+            if (!testFile.open(QIODevice::ReadOnly)) {
+                qWarning() << "  [ChatInterface::resolveGgufPath] Cannot open file:" << path;
+                continue;  // Try next blobs directory
+            }
+            
+            // Verify it's a valid GGUF file by checking magic bytes
+            QByteArray magic = testFile.read(4);
+            testFile.close();
+            
+            if (magic.size() == 4 && magic[0] == 'G' && magic[1] == 'G' && 
+                magic[2] == 'U' && magic[3] == 'F') {
+                qDebug() << "  [ChatInterface::resolveGgufPath] ✓ Valid GGUF found in Ollama blobs:" << path << "(" << sizeMB << "MB)";
+                return path;
+            } else {
+                qWarning() << "  [ChatInterface::resolveGgufPath] File is not a valid GGUF (bad magic bytes):" << path;
+                continue;  // Try next file
+            }
         }
     }
     
