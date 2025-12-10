@@ -620,9 +620,12 @@ void MainWindow::onModelSelected(const QString &ggufPath)
     
     // Load the model using the InferenceEngine's built-in loader
     if (m_inferenceEngine->loadModel(ggufPath)) {
-        // Link to agentic engine
+        // Link to agentic engine AND sync the modelLoaded flag
         if (m_agenticEngine) {
             m_agenticEngine->setInferenceEngine(m_inferenceEngine);
+            // CRITICAL: Sync AgenticEngine's m_modelLoaded flag so processMessage() uses real inference
+            m_agenticEngine->markModelAsLoaded(ggufPath);
+            qDebug() << "[MainWindow::onModelSelected] ✅ AgenticEngine flagged as model-loaded";
         }
         
         // Update status bar with comprehensive info

@@ -79,6 +79,13 @@ public:
     QString generateResponse(const QString& message);
     void setInferenceEngine(class InferenceEngine* engine) { m_inferenceEngine = engine; }
     
+    // CRITICAL: Mark model as loaded after external load (for MainWindow->AgenticEngine sync)
+    void markModelAsLoaded(const QString& modelPath) { 
+        m_modelLoaded = true; 
+        m_currentModelPath = modelPath.toStdString(); 
+        qDebug() << "[AgenticEngine::markModelAsLoaded] Model flagged:" << modelPath;
+    }
+    
     // Generation configuration
     struct GenerationConfig {
         float temperature = 0.8f;
