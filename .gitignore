@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Build artifacts
 build/
 *.obj
@@ -37,3 +38,44 @@ moc_*.cpp.d
 # OS
 .DS_Store
 Thumbs.db
+=======
+build/
+build-*/
+out/
+tmp/
+models/
+models-mnt
+
+compile_commands.json
+CMakeSettings.json
+.vs/
+.vscode/
+.idea/
+.clangd
+
+.venv/
+ggml_env/
+.exrc
+.cache
+.DS_Store
+.stablelm
+.gpt-2
+
+src/arm_neon.h
+tests/arm_neon.h
+
+zig-out/
+zig-cache/
+
+*.o
+*.d
+*.dot
+
+*.sw?
+
+__pycache__/
+
+# Model files
+ggml-model-f16.bin
+*.bat
+>>>>>>> upstream/master

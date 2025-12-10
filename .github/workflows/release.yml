@@ -1,8 +1,13 @@
+<<<<<<< HEAD
 name: Release & Deployment
+=======
+name: Release
+>>>>>>> upstream/master
 
 on:
   push:
     tags:
+<<<<<<< HEAD
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
@@ -425,3 +430,27 @@ jobs:
           echo ""
           echo "Artifacts available at:"
           echo "https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+=======
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create Release
+      id: create_release
+      uses: ggml-org/action-create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+>>>>>>> upstream/master
