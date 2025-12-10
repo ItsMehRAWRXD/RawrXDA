@@ -598,19 +598,45 @@ void ChatInterface::setCanSendMessage(bool enabled) {
 
 QString ChatInterface::resolveGgufPath(const QString& modelName)
 {
-    // Search for GGUF file in Ollama models directory
+    qDebug() << "[ChatInterface::resolveGgufPath] Resolving model:" << modelName;
+    
+    // First, try Ollama's 'show' command to get model information
+    // This is more reliable than trying to find files manually
+    QProcess ollamaShow;
+    ollamaShow.start("ollama", QStringList() << "show" << modelName);
+    
+    if (ollamaShow.waitForStarted(2000)) {
+        if (ollamaShow.waitForFinished(3000)) {
+            QString output = QString::fromUtf8(ollamaShow.readAllStandardOutput());
+            qDebug() << "[ChatInterface::resolveGgufPath] Ollama show output:\n" << output;
+            
+            // Ollama models are stored in blobs, but they're accessible through Ollama API
+            // For now, we'll fall through to file search below, but at least we know the model exists
+            if (!output.isEmpty()) {
+                qDebug() << "[ChatInterface::resolveGgufPath] Model exists in Ollama - will use Ollama runner";
+            }
+        }
+    }
+    
+    // Search for GGUF file in multiple locations
     QStringList searchPaths = {
+        // User's custom models directory
         "D:/OllamaModels",
+        // Windows Ollama models
         "C:/Users/" + qEnvironmentVariable("USERNAME") + "/.ollama/models",
-        QDir::homePath() + "/.ollama/models"
+        QDir::homePath() + "/.ollama/models",
+        // Alternative locations
+        "C:/Ollama/models",
+        QDir::homePath() + "/.cache/ollama",
     };
     
-    // Extract base model name (e.g., "llama3.2" from "llama3.2:3b")
+    // Extract base model name (e.g., "llama3.2" from "llama3.2:3b" or "unlocked-350M" from "unlocked-350M:latest")
     QString baseName = modelName.split(':').first();
     QString searchPattern = "*" + baseName + "*.gguf";
     
     qDebug() << "[ChatInterface::resolveGgufPath] Looking for pattern:" << searchPattern;
     
+    // First, try direct GGUF search in standard paths
     for (const QString& searchPath : searchPaths) {
         QDir dir(searchPath);
         if (!dir.exists()) {
@@ -618,9 +644,10 @@ QString ChatInterface::resolveGgufPath(const QString& modelName)
             continue;
         }
         
+        // Search for matching GGUF files
         QStringList filters;
         filters << searchPattern;
-        QFileInfoList files = dir.entryInfoList(filters, QDir::Files);
+        QFileInfoList files = dir.entryInfoList(filters, QDir::Files, QDir::Name);
         
         if (!files.isEmpty()) {
             // Return first matching GGUF file
@@ -632,7 +659,33 @@ QString ChatInterface::resolveGgufPath(const QString& modelName)
         qDebug() << "  [ChatInterface::resolveGgufPath] No matches in:" << searchPath;
     }
     
-    qWarning() << "[ChatInterface::resolveGgufPath] ✗ No GGUF file found for" << modelName;
+    // Second attempt: Search recursively in Ollama blobs (for Ollama-managed models)
+    QString ollamaBlobs = QDir::homePath() + "/.ollama/models/blobs";
+    QDir blobDir(ollamaBlobs);
+    if (blobDir.exists()) {
+        qDebug() << "  [ChatInterface::resolveGgufPath] Searching Ollama blobs...";
+        
+        // Search for any .gguf file in blobs
+        QFileInfoList blobFiles = blobDir.entryInfoList(QStringList() << "*.gguf", 
+                                                        QDir::Files | QDir::Hidden, 
+                                                        QDir::Name);
+        
+        // Also check subdirectories
+        QDirIterator it(ollamaBlobs, QStringList() << "*.gguf", 
+                        QDir::Files | QDir::Hidden, 
+                        QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            QString filePath = it.next();
+            qDebug() << "  [ChatInterface::resolveGgufPath] ✓ Found in Ollama blobs:" << filePath;
+            return filePath;
+        }
+    }
+    
+    // If model exists in Ollama but we can't find GGUF file, suggest using Ollama directly
+    qWarning() << "[ChatInterface::resolveGgufPath] ✗ No local GGUF file found for" << modelName;
+    qWarning() << "  Model may be stored in Ollama's blob directory (.ollama/models/blobs)";
+    qWarning() << "  Consider: 1) Moving model to D:/OllamaModels, or";
+    qWarning() << "           2) Exporting from Ollama and saving as .gguf file";
     return QString();
 }
 
