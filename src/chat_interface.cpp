@@ -245,10 +245,22 @@ void ChatInterface::refreshModels() {
 
 void ChatInterface::onModelChanged(int index) {
     if (index > 0) {
-        QString modelPath = modelSelector_->currentData().toString();
-        QString modelName = modelSelector_->currentText();
-        statusLabel_->setText("Selected: " + modelName);
-        emit modelSelected(modelPath);
+        QString modelName = modelSelector_->currentData().toString();
+        QString displayName = modelSelector_->currentText();
+        statusLabel_->setText("Selected: " + displayName + " - Resolving GGUF file...");
+        
+        // Resolve Ollama model name to actual GGUF file path
+        QString ggufPath = resolveGgufPath(modelName);
+        
+        if (!ggufPath.isEmpty()) {
+            qDebug() << "[ChatInterface::onModelChanged] Resolved" << modelName << "to" << ggufPath;
+            statusLabel_->setText("Loading: " + displayName);
+            emit modelSelected(ggufPath);  // Emit actual file path, not model name
+        } else {
+            qWarning() << "[ChatInterface::onModelChanged] Failed to resolve GGUF for" << modelName;
+            statusLabel_->setText("❌ No GGUF file found for " + modelName + " in D:/OllamaModels");
+            // Don't emit - user needs to fix path
+        }
     } else {
         statusLabel_->setText("No model selected");
     }
@@ -299,10 +311,22 @@ void ChatInterface::loadAvailableModelsForSecond() {
 
 void ChatInterface::onModel2Changed(int index) {
     if (index > 0) {
-        QString modelPath = modelSelector2_->currentData().toString();
-        QString modelName = modelSelector2_->currentText();
-        statusLabel_->setText("Model 2 selected: " + modelName);
-        emit model2Selected(modelPath);
+        QString modelName = modelSelector2_->currentData().toString();
+        QString displayName = modelSelector2_->currentText();
+        statusLabel_->setText("Model 2 Selected: " + displayName + " - Resolving GGUF file...");
+        
+        // Resolve Ollama model name to actual GGUF file path
+        QString ggufPath = resolveGgufPath(modelName);
+        
+        if (!ggufPath.isEmpty()) {
+            qDebug() << "[ChatInterface::onModel2Changed] Resolved" << modelName << "to" << ggufPath;
+            statusLabel_->setText("Loading Model 2: " + displayName);
+            emit model2Selected(ggufPath);  // Emit actual file path, not model name
+        } else {
+            qWarning() << "[ChatInterface::onModel2Changed] Failed to resolve GGUF for" << modelName;
+            statusLabel_->setText("❌ No GGUF file found for " + modelName + " in D:/OllamaModels");
+            // Don't emit - user needs to fix path
+        }
     } else {
         statusLabel_->setText("No secondary model selected");
     }
@@ -570,5 +594,45 @@ void ChatInterface::setCanSendMessage(bool enabled) {
         statusLabel_->setText(statusText);
         qDebug() << "[ChatInterface] Status set to:" << statusText;
     }
+}
+
+QString ChatInterface::resolveGgufPath(const QString& modelName)
+{
+    // Search for GGUF file in Ollama models directory
+    QStringList searchPaths = {
+        "D:/OllamaModels",
+        "C:/Users/" + qEnvironmentVariable("USERNAME") + "/.ollama/models",
+        QDir::homePath() + "/.ollama/models"
+    };
+    
+    // Extract base model name (e.g., "llama3.2" from "llama3.2:3b")
+    QString baseName = modelName.split(':').first();
+    QString searchPattern = "*" + baseName + "*.gguf";
+    
+    qDebug() << "[ChatInterface::resolveGgufPath] Looking for pattern:" << searchPattern;
+    
+    for (const QString& searchPath : searchPaths) {
+        QDir dir(searchPath);
+        if (!dir.exists()) {
+            qDebug() << "  [ChatInterface::resolveGgufPath] Skipped (not found):" << searchPath;
+            continue;
+        }
+        
+        QStringList filters;
+        filters << searchPattern;
+        QFileInfoList files = dir.entryInfoList(filters, QDir::Files);
+        
+        if (!files.isEmpty()) {
+            // Return first matching GGUF file
+            QString path = files.first().absoluteFilePath();
+            qDebug() << "  [ChatInterface::resolveGgufPath] ✓ Found:" << path;
+            return path;
+        }
+        
+        qDebug() << "  [ChatInterface::resolveGgufPath] No matches in:" << searchPath;
+    }
+    
+    qWarning() << "[ChatInterface::resolveGgufPath] ✗ No GGUF file found for" << modelName;
+    return QString();
 }
 

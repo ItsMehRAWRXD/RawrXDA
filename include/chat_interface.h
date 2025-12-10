@@ -61,6 +61,7 @@ signals:
 private:
     void loadAvailableModels();
     void loadAvailableModelsForSecond();
+    QString resolveGgufPath(const QString& modelName);  // Resolve Ollama model name to GGUF file
     
     QTextEdit* message_history_;
     QLineEdit* message_input_;
