@@ -465,12 +465,6 @@ bool ModelConversionDialog::verifyConvertedModelExists()
     return exists;
 }
 
-void ModelConversionDialog::onTerminalOutput(const QString& output)
-{
-    // Legacy overload for string output - deprecated in favor of QByteArray version
-    m_detailsText->append(output);
-}
-
 void ModelConversionDialog::logConversionHistory(bool success, qint64 durationMs)
 {
     // Get application data directory for log file

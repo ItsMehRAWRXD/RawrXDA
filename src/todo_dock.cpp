@@ -8,6 +8,9 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QMessageBox>
 
 TodoDock::TodoDock(TodoManager* todoManager, QWidget* parent) 
     : QWidget(parent), todoManager_(todoManager), treeWidget_(nullptr) {
@@ -106,4 +109,36 @@ void TodoDock::onItemDoubleClicked(QTreeWidgetItem* item, int column) {
         // Emit signal to open file in editor
         emit openFileRequested(filePath, todoId);
     }
+}
+
+void TodoDock::onAddTodo() {
+    bool ok;
+    QString description = QInputDialog::getText(this, "Add TODO", 
+        "TODO Description:", QLineEdit::Normal, "", &ok);
+    
+    if (ok && !description.isEmpty()) {
+        todoManager_->addTodo(description, QString(), 0);
+    }
+}
+
+void TodoDock::onCompleteTodo() {
+    QTreeWidgetItem* item = treeWidget_->currentItem();
+    if (item) {
+        QString todoId = item->data(0, Qt::UserRole).toString();
+        todoManager_->completeTodo(todoId);
+    }
+}
+
+void TodoDock::onRemoveTodo() {
+    QTreeWidgetItem* item = treeWidget_->currentItem();
+    if (item) {
+        QString todoId = item->data(0, Qt::UserRole).toString();
+        todoManager_->removeTodo(todoId);
+    }
+}
+
+void TodoDock::onScanCode() {
+    QMessageBox::information(this, "Scan for TODOs",
+        "This feature will scan all project files for TODO comments.\n\n"
+        "Implementation in progress...");
 }

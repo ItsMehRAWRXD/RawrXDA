@@ -22,6 +22,30 @@
 #include "../ui/model_download_dialog_new.h"
 #include "../ui/telemetry_optin_dialog.h"
 
+// ALL Q_OBJECT Headers - MUST be included to force AUTOMOC processing
+// MOC doesn't discover these through other .cpp file includes
+#include "agentic_ide.h"
+#include "agentic_executor.h"
+#include "agentic_copilot_bridge.h"
+#include "chat_workspace.h"
+#include "planning_agent.h"
+#include "ghost_text_renderer.h"
+#include "scalar_server.h"
+#include "telemetry.h"
+#include "transformer_block_scalar.h"
+#include "training_dialog.h"
+#include "training_progress_dock.h"
+#include "model_registry.h"
+#include "model_trainer.h"
+#include "profiler.h"
+#include "observability_dashboard.h"
+#include "hardware_backend_selector.h"
+#include "security_manager.h"
+#include "settings_dialog.h"
+#include "ci_cd_settings.h"
+#include "tokenizer_selector.h"
+#include "checkpoint_manager.h"
+
 #include <QApplication>
 #include <QMenuBar>
 #include <QToolBar>

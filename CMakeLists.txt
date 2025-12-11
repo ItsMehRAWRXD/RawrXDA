@@ -1117,6 +1117,18 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/settings_manager.cpp")
         list(APPEND AGENTICIDE_SOURCES src/qtapp/settings_manager.cpp)
     endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/gui/ModelConversionDialog.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/gui/ModelConversionDialog.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/TerminalManager.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/TerminalManager.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/utils/InferenceSettingsManager.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/utils/InferenceSettingsManager.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/ui/InferenceSettingsDialog.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/ui/InferenceSettingsDialog.cpp)
+    endif()
     # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/distributed_trainer.cpp")  # Temporarily disabled
     #     list(APPEND AGENTICIDE_SOURCES src/qtapp/distributed_trainer.cpp)
     # endif()
@@ -1251,64 +1263,30 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     # Phase 3: Production Enhancements
     # Security, checkpoint, and CI/CD management components
     # TEMPORARILY DISABLED - not needed for v5.0 clean build
-    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/security_manager.cpp")
-    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/security_manager.cpp)
-    # endif()
-    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/checkpoint_manager.cpp")
-    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/checkpoint_manager.cpp)
-    # endif()
-    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ci_cd_settings.cpp")
-    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/ci_cd_settings.cpp)
-    # endif()
-    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/tokenizer_selector.cpp")
-    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/tokenizer_selector.cpp)
-    # endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/security_manager.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/security_manager.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/checkpoint_manager.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/checkpoint_manager.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ci_cd_settings.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/ci_cd_settings.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/tokenizer_selector.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/tokenizer_selector.cpp)
+    endif()
     
-    # Add headers for MOC processing
-    list(APPEND AGENTICIDE_SOURCES
-        include/agentic_ide.h
-        include/agentic_engine.h
-        include/agentic_executor.h
-        include/agentic_copilot_bridge.h
-        include/chat_interface.h
-        include/chat_workspace.h
-        include/multi_tab_editor.h
-        include/terminal_pool.h
-        include/file_browser.h
-        include/planning_agent.h
-        include/plan_orchestrator.h
-        include/lsp_client.h
-        include/agentic_text_edit.h
-        include/ghost_text_renderer.h
-        # include/inference_engine_stub.hpp  # Using qtapp/inference_engine.hpp instead
-        include/scalar_server.h
-        include/telemetry.h
-        include/transformer_block_scalar.h
-        include/todo_manager.h
-        include/todo_dock.h
-        include/training_dialog.h
-        include/training_progress_dock.h
-        include/model_registry.h
-        include/model_trainer.h
-        include/profiler.h
-        include/observability_dashboard.h
-        include/hardware_backend_selector.h
-        include/security_manager.h
-        include/settings_dialog.h
-        # include/distributed_trainer.h  # Using qtapp version
-        # include/interpretability_panel.h  # Using qtapp version
-        include/ci_cd_settings.h
-        include/tokenizer_selector.h
-        include/checkpoint_manager.h
-        src/qtapp/settings_manager.h
-    )
+    # Add moc_includes.cpp to force AUTOMOC to process all Q_OBJECT headers
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/moc_includes.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/moc_includes.cpp)
+    endif()
     
     add_executable(RawrXD-AgenticIDE WIN32 ${AGENTICIDE_SOURCES})
     
     # Enable Qt MOC for QObject-derived classes - must be set BEFORE any other properties
     set_target_properties(RawrXD-AgenticIDE PROPERTIES 
         AUTOMOC ON
-        AUTOMOC_MOC_OPTIONS "-I${CMAKE_SOURCE_DIR}/include"
+        AUTOMOC_MOC_OPTIONS "-I${CMAKE_SOURCE_DIR}/include;-I${CMAKE_CURRENT_SOURCE_DIR}/src/qtapp;-I${CMAKE_CURRENT_SOURCE_DIR}/src/ui;-I${CMAKE_CURRENT_SOURCE_DIR}/src/utils;-I${CMAKE_CURRENT_SOURCE_DIR}/src/gui"
     )
     
     # Explicitly set MOC include paths

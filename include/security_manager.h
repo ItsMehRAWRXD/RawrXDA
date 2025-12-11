@@ -8,6 +8,7 @@
 #include <QDateTime>
 #include <vector>
 #include <memory>
+#include <map>
 
 /**
  * @class SecurityManager
@@ -271,14 +272,16 @@ signals:
 private:
     // Private constructor for singleton
     explicit SecurityManager(QObject* parent = nullptr);
-    static std::unique_ptr<SecurityManager> s_instance;
-
+    
     // ===== Encryption Implementation =====
     QByteArray deriveKeyPBKDF2(const QString& password, const QByteArray& salt, int iterations);
     QByteArray encryptAES256GCM(const QByteArray& plaintext, const QByteArray& key);
     QByteArray decryptAES256GCM(const QByteArray& ciphertext, const QByteArray& key);
     QByteArray encryptAES256CBC(const QByteArray& plaintext, const QByteArray& key);
     QByteArray decryptAES256CBC(const QByteArray& ciphertext, const QByteArray& key);
+
+    // Static singleton instance
+    static std::unique_ptr<SecurityManager> s_instance;
 
     // ===== Internal State =====
     QByteArray m_masterKey;                           // Primary encryption key
