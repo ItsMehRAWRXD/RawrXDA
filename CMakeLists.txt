@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 cmake_minimum_required(VERSION 3.20)
 project(RawrXD-ModelLoader VERSION 1.0.13)
 add_definitions(-DNOMINMAX)
@@ -6,13 +5,29 @@ add_definitions(-DNOMINMAX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ============================================================
+# 64-BIT ARCHITECTURE ENFORCEMENT
+# ============================================================
+# RawrXD Agentic IDE is x64-ONLY. All dependencies (Qt, GGML, Vulkan)
+# are compiled as 64-bit. No 32-bit (x86) support or fallback.
+# See: 64BIT_DEPENDENCY_AUDIT.md and DLL_DISTRIBUTION_PACKAGE.md
+
 # Force x64 architecture to prevent any 32-bit DLL issues
 if(MSVC)
     set(CMAKE_GENERATOR_PLATFORM x64)
     set(CMAKE_SIZEOF_VOID_P 8)
+    # Validate 64-bit configuration
+    if(NOT CMAKE_GENERATOR_PLATFORM STREQUAL "x64")
+        message(FATAL_ERROR "CRITICAL: CMAKE_GENERATOR_PLATFORM must be x64, got ${CMAKE_GENERATOR_PLATFORM}")
+    endif()
+    if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+        message(FATAL_ERROR "CRITICAL: CMAKE_SIZEOF_VOID_P must be 8 (x64), got ${CMAKE_SIZEOF_VOID_P}")
+    endif()
+    message(STATUS "✓ 64-bit configuration validated: pointer size = ${CMAKE_SIZEOF_VOID_P}, platform = ${CMAKE_GENERATOR_PLATFORM}")
 endif()
 
 # Pin MSVC runtime for deterministic builds - ALWAYS use /MD (dynamic CRT)
+# This ensures all DLLs link against the same MSVC runtime DLL
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     # Force /MD for all targets to prevent CRT mismatch
@@ -1749,90 +1764,6 @@ target_sources(brutal_gzip PRIVATE src/qtapp/inflate_deflate_cpp.cpp)
 # add_library(memory_hotpatch STATIC src/qtapp/model_memory_hotpatch.cpp)
 # Compiled into main target for now
 
-
-
-
-
-
-
-=======
-cmake_minimum_required(VERSION 3.14) # for add_link_options and implicit target directories.
-project("ggml" C CXX ASM)
-
-### GGML Version
-set(GGML_VERSION_MAJOR 0)
-set(GGML_VERSION_MINOR 9)
-set(GGML_VERSION_PATCH 4)
-set(GGML_VERSION_BASE "${GGML_VERSION_MAJOR}.${GGML_VERSION_MINOR}.${GGML_VERSION_PATCH}")
-
-find_program(GIT_EXE NAMES git git.exe NO_CMAKE_FIND_ROOT_PATH)
-if(GIT_EXE)
-    # Get current git commit hash
-    execute_process(COMMAND ${GIT_EXE} rev-parse --short HEAD
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        OUTPUT_VARIABLE GGML_BUILD_COMMIT
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-
-    # Check if the working directory is dirty (i.e., has uncommitted changes)
-    execute_process(COMMAND ${GIT_EXE} diff-index --quiet HEAD -- .
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        RESULT_VARIABLE GGML_GIT_DIRTY
-        ERROR_QUIET
-    )
-endif()
-
-set(GGML_VERSION "${GGML_VERSION_BASE}")
-
-if(NOT GGML_BUILD_COMMIT)
-    set(GGML_BUILD_COMMIT "unknown")
-endif()
-
-# Build the commit string with optional dirty flag
-if(DEFINED GGML_GIT_DIRTY AND GGML_GIT_DIRTY EQUAL 1)
-    set(GGML_BUILD_COMMIT "${GGML_BUILD_COMMIT}-dirty")
-endif()
-
-include(CheckIncludeFileCXX)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-if (NOT XCODE AND NOT MSVC AND NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
-
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(GGML_STANDALONE ON)
-
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
-    # configure project version
-    # TODO
-else()
-    set(GGML_STANDALONE OFF)
-endif()
-
-if (EMSCRIPTEN)
-    set(BUILD_SHARED_LIBS_DEFAULT OFF)
-
-    option(GGML_WASM_SINGLE_FILE "ggml: embed WASM inside the generated ggml.js" ON)
-else()
-    if (MINGW)
-        set(BUILD_SHARED_LIBS_DEFAULT OFF)
-    else()
-        set(BUILD_SHARED_LIBS_DEFAULT ON)
-    endif()
-endif()
-
-# remove the lib prefix on win32 mingw
-if (WIN32)
-    set(CMAKE_STATIC_LIBRARY_PREFIX "")
-    set(CMAKE_SHARED_LIBRARY_PREFIX "")
-    set(CMAKE_SHARED_MODULE_PREFIX  "")
-endif()
-
 option(BUILD_SHARED_LIBS           "ggml: build shared libraries" ${BUILD_SHARED_LIBS_DEFAULT})
 option(GGML_BACKEND_DL             "ggml: build backends as dynamic libraries (requires BUILD_SHARED_LIBS)" OFF)
 set(GGML_BACKEND_DIR "" CACHE PATH "ggml: directory to load dynamic backends from (requires GGML_BACKEND_DL")
@@ -2224,4 +2155,3 @@ if (MSVC)
         disable_msvc_warnings(test-pool)
     endif ()
 endif()
->>>>>>> upstream/master
