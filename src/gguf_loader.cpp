@@ -18,6 +18,9 @@ namespace brutal {
     extern QByteArray compress(const void* data, std::size_t size);
 }
 
+// Forward declaration for unsupported type name lookup (defined later in file)
+static std::string GetUnsupportedTypeNameByValue(uint32_t type_val);
+
 GGUFLoader::GGUFLoader() 
     : is_open_(false) {
     std::memset(&header_, 0, sizeof(GGUFHeader));
