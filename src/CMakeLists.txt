@@ -188,6 +188,9 @@ if (WIN32)
 endif()
 
 # ggml
+# Only define GGML targets if they don't already exist from the submodule
+if(NOT TARGET ggml-base)
+    message(STATUS "Defining GGML targets inline (submodule not found)")
 
 if (GGML_BACKEND_DL AND NOT BUILD_SHARED_LIBS)
     message(FATAL_ERROR "GGML_BACKEND_DL requires BUILD_SHARED_LIBS")
@@ -452,3 +455,7 @@ if (BUILD_SHARED_LIBS)
         target_compile_definitions(${target} PUBLIC  GGML_SHARED)
     endforeach()
 endif()
+
+else()
+    message(STATUS "Using GGML targets from submodule")
+endif() # NOT TARGET ggml-base
