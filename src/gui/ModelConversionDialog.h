@@ -66,6 +66,11 @@ private slots:
     void onCancel();
     
     /**
+     * @brief User clicked "Cancel Conversion" button during active conversion
+     */
+    void onCancelConversion();
+    
+    /**
      * @brief User clicked "Yes, Convert" button
      */
     void onConvertClicked();
@@ -99,10 +104,12 @@ private:
     void setupUI();
     void startConversion();
     void updateProgress(const QString& message);
+    void updateProgressPercentage(int current, int total);
     void showInfoPanel();
     void hideInfoPanel();
     void parseProgressFromOutput(const QString& output);
     bool verifyConvertedModelExists();
+    void logConversionHistory(bool success, qint64 durationMs);
     
     // UI elements
     QLabel* m_titleLabel;
@@ -112,6 +119,7 @@ private:
     QLabel* m_statusLabel;
     QPushButton* m_convertButton;
     QPushButton* m_cancelButton;
+    QPushButton* m_cancelConversionButton;
     QPushButton* m_moreInfoButton;
     QWidget* m_infoPanel;
     
@@ -127,4 +135,9 @@ private:
     std::unique_ptr<TerminalManager> m_terminalManager;
     QTimer* m_verifyTimer;
     int m_conversionStage = 0;  // Track which stage: 0=setup, 1=clone, 2=build, 3=convert
+    
+    // Progress tracking
+    qint64 m_conversionStartTime = 0;  // Timestamp when conversion started
+    int m_chunksProcessed = 0;  // Current chunk count from quantization output
+    int m_totalChunks = 0;      // Total chunks to process
 };
