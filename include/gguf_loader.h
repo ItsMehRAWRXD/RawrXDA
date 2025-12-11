@@ -134,6 +134,16 @@ public:
     std::string GetTypeString(GGMLType type) const override;
     uint64_t GetFileSize() const override;
     
+    // Quantization type validation (for IDE conversion workflow)
+    bool HasUnsupportedQuantizationTypes() const;
+    struct UnsupportedTypeInfo {
+        uint32_t type_value;
+        std::string type_name;
+        std::vector<std::string> tensor_names;  // Tensors using this type
+    };
+    std::vector<UnsupportedTypeInfo> GetUnsupportedQuantizationTypes() const;
+    std::string GetRecommendedConversionType() const;
+    
     // Streaming interface stubs (non-streaming loader - minimal implementations)
     bool BuildTensorIndex() override { return true; }  // Already built during ParseHeader
     bool LoadZone(const std::string& zone_name, uint64_t max_memory_mb = 512) override { return true; }
@@ -156,6 +166,9 @@ private:
     std::unordered_map<std::string, VulkanTensor> vulkan_tensors_;
     bool use_dummy_mode_{false};  // Skip tensor loading for huge files
     uint64_t file_size_{0};
+    
+    // Unsupported type tracking (for IDE conversion workflow)
+    std::vector<UnsupportedTypeInfo> unsupported_types_;
     
     // Memory-mapped file support (Windows)
     void* mmap_base_{nullptr};

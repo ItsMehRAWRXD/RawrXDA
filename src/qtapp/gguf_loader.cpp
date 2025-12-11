@@ -152,3 +152,40 @@ QStringList GGUFLoaderQt::tensorNames() const
 {
     return m_cachedTensorNames;
 }
+
+bool GGUFLoaderQt::hasUnsupportedQuantizationTypes() const
+{
+    if (!m_loader) {
+        return false;
+    }
+    return m_loader->HasUnsupportedQuantizationTypes();
+}
+
+QStringList GGUFLoaderQt::getUnsupportedQuantizationInfo() const
+{
+    QStringList result;
+    
+    if (!m_loader) {
+        return result;
+    }
+    
+    auto unsupported = m_loader->GetUnsupportedQuantizationTypes();
+    
+    for (const auto& info : unsupported) {
+        QString line = QString::fromStdString(info.type_name) +
+                      " (type " + QString::number(info.type_value) + "): " +
+                      QString::number(info.tensor_names.size()) + " tensors";
+        result.append(line);
+    }
+    
+    return result;
+}
+
+QString GGUFLoaderQt::getRecommendedConversionType() const
+{
+    if (!m_loader) {
+        return "Q5_K";
+    }
+    return QString::fromStdString(m_loader->GetRecommendedConversionType());
+}
+

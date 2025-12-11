@@ -49,6 +49,31 @@ public:
      */
     QStringList tensorNames() const;
 
+    /**
+     * @brief Check if model uses unsupported quantization types
+     * 
+     * This is used by the IDE's conversion workflow to detect when a model
+     * needs quantization conversion (e.g., IQ4_NL → Q5_K)
+     */
+    bool hasUnsupportedQuantizationTypes() const;
+
+    /**
+     * @brief Get information about unsupported quantization types
+     * 
+     * Returns a list of type values that are not supported by the current GGML.
+     * Used to prompt user for conversion in the IDE.
+     * 
+     * @return QStringList with format: "IQ4_NL (type 39): 145 tensors", etc.
+     */
+    QStringList getUnsupportedQuantizationInfo() const;
+
+    /**
+     * @brief Get the recommended conversion type
+     * 
+     * Returns the quantization type to convert to (e.g., "Q5_K")
+     */
+    QString getRecommendedConversionType() const;
+
 private:
     std::unique_ptr<GGUFLoader> m_loader;
     mutable QHash<QString, QVariant> m_metadataCache;

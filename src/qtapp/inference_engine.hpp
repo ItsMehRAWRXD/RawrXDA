@@ -178,6 +178,22 @@ signals:
     void inferenceComplete(const QString& requestId, const QString& result);
     
     /**
+     * @brief Emitted when model uses unsupported quantization types
+     * 
+     * This signal is emitted during loadModel() if the GGUF uses quantization types
+     * that are not supported by the current GGML library (e.g., IQ4_NL type 39).
+     * 
+     * The IDE can connect to this signal to show a conversion prompt dialog.
+     * 
+     * @param unsupportedTypes List of type descriptions (e.g., "IQ4_NL (type 39): 145 tensors")
+     * @param recommendedConversion Type to convert to (e.g., "Q5_K")
+     * @param modelPath Path to the model that needs conversion
+     */
+    void unsupportedQuantizationTypeDetected(const QStringList& unsupportedTypes, 
+                                             const QString& recommendedConversion,
+                                             const QString& modelPath);
+    
+    /**
      * @brief Emitted when inference error occurs (alias for error)
      * @param requestId Request ID  
      * @param errorMessage Error description

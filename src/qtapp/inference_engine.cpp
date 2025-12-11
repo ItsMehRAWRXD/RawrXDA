@@ -69,6 +69,25 @@ bool InferenceEngine::loadModel(const QString& path)
         m_modelPath = path;
         QString modelName = extractModelName(path);
         
+        // ========== CHECK FOR UNSUPPORTED QUANTIZATION TYPES ==========
+        // This is the key detection point for the IDE conversion workflow
+        if (m_loader->hasUnsupportedQuantizationTypes()) {
+            QStringList unsupportedInfo = m_loader->getUnsupportedQuantizationInfo();
+            QString recommendedType = m_loader->getRecommendedConversionType();
+            
+            qWarning() << "[InferenceEngine] Model uses unsupported quantization types:";
+            for (const auto& info : unsupportedInfo) {
+                qWarning() << "  -" << info;
+            }
+            qWarning() << "[InferenceEngine] Recommended conversion: IQ4_NL or other unsupported → " << recommendedType;
+            
+            // Emit signal for IDE to show conversion dialog
+            emit unsupportedQuantizationTypeDetected(unsupportedInfo, recommendedType, path);
+            
+            // Continue with model loading attempt anyway (it may fail later on tensor size calculation)
+            // The IDE will show the conversion dialog while we continue
+        }
+        
         // Initialize tokenizer from model
         try {
             initializeTokenizer();

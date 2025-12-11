@@ -36,6 +36,7 @@ bool GGUFLoader::Open(const std::string& filepath) {
     }
     
     is_open_ = true;
+    unsupported_types_.clear();  // Clear any previous unsupported types
     
     // ParseHeader now throws exceptions on error (consistent error handling)
     try {
@@ -51,14 +52,17 @@ bool GGUFLoader::Open(const std::string& filepath) {
     return true;
 }
 
+
 bool GGUFLoader::Close() {
     if (file_.is_open()) {
         file_.close();
     }
     is_open_ = false;
     tensors_.clear();
+    unsupported_types_.clear();  // Clear unsupported types tracking
     return true;
 }
+
 
 bool GGUFLoader::ParseHeader() {
     if (!file_.is_open()) {
@@ -240,6 +244,37 @@ bool GGUFLoader::ParseMetadata() {
         if (!ReadValue(type_val)) {
             throw std::runtime_error("Failed to read type for tensor: " + tensor.name);
         }
+        
+        // ========== UNSUPPORTED TYPE DETECTION ==========
+        // Check if tensor type is outside the supported GGML enum range (0-24)
+        // Types 39, 40, 41, etc. are newer quantization types (IQ4_NL, IQ4_XS, IQ3_S)
+        // that require newer GGML versions. This triggers IDE conversion workflow.
+        if (type_val > 24) {
+            // Log the unsupported type for the user
+            std::string type_name = GetUnsupportedTypeNameByValue(type_val);
+            std::cerr << "WARNING: Tensor '" << tensor.name 
+                     << "' uses unsupported type " << type_val 
+                     << " (" << type_name << "). "
+                     << "Model will need quantization conversion to proceed." << std::endl;
+            
+            // Track this unsupported type for later IDE prompting
+            bool type_exists = false;
+            for (auto& existing : unsupported_types_) {
+                if (existing.type_value == type_val) {
+                    existing.tensor_names.push_back(tensor.name);
+                    type_exists = true;
+                    break;
+                }
+            }
+            if (!type_exists) {
+                unsupported_types_.push_back({
+                    type_val,
+                    type_name,
+                    {tensor.name}
+                });
+            }
+        }
+        
         tensor.type = static_cast<GGMLType>(type_val);
         
         if (!ReadValue(tensor.offset)) {
@@ -544,6 +579,36 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
     } catch (const std::exception& e) {
         std::cerr << "Compression error: " << e.what() << std::endl;
         return false;
+    }
+}
+
+// ============================================================================
+// Quantization Type Validation (IDE Conversion Workflow)
+// ============================================================================
+
+bool GGUFLoader::HasUnsupportedQuantizationTypes() const {
+    return !unsupported_types_.empty();
+}
+
+std::vector<GGUFLoader::UnsupportedTypeInfo> GGUFLoader::GetUnsupportedQuantizationTypes() const {
+    return unsupported_types_;
+}
+
+std::string GGUFLoader::GetRecommendedConversionType() const {
+    // If we found unsupported types, recommend conversion to Q5_K (type 13)
+    // which provides excellent quality/size tradeoff and is widely supported
+    return "Q5_K";
+}
+
+// Helper function to map unsupported type values to human-readable names
+static std::string GetUnsupportedTypeNameByValue(uint32_t type_val) {
+    switch (type_val) {
+        case 39:  return "IQ4_NL";
+        case 40:  return "IQ4_XS";
+        case 41:  return "IQ3_S";
+        case 42:  return "IQ2_S";
+        case 43:  return "IQ2_M";
+        default:  return "IQ" + std::to_string(type_val);  // Generic fallback
     }
 }
 

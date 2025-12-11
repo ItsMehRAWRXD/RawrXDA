@@ -13,6 +13,7 @@
 #include "todo_dock.h"
 #include "todo_manager.h"
 #include "agentic_text_edit.h"
+#include "../gui/ModelConversionDialog.h"
 
 // Phase 2 Polish Features
 #include "../ui/diff_dock.h"
@@ -616,6 +617,30 @@ void MainWindow::onModelSelected(const QString &ggufPath)
     // Create inference engine if it doesn't exist
     if (!m_inferenceEngine) {
         m_inferenceEngine = new ::InferenceEngine(ggufPath, this);
+        
+        // Connect signal for unsupported quantization type detection
+        connect(m_inferenceEngine, &::InferenceEngine::unsupportedQuantizationTypeDetected,
+                this, [this](const QStringList& unsupportedTypes, const QString& recommendedType, const QString& modelPath) {
+            // Show conversion dialog when unsupported types are detected
+            ModelConversionDialog* conversionDialog = new ModelConversionDialog(
+                unsupportedTypes, recommendedType, modelPath, this);
+            
+            if (conversionDialog->exec() == QDialog::Accepted) {
+                auto result = conversionDialog->conversionResult();
+                if (result == ModelConversionDialog::ConversionSucceeded) {
+                    QString convertedPath = conversionDialog->convertedModelPath();
+                    qInfo() << "[MainWindow] Conversion succeeded, reloading model from:" << convertedPath;
+                    
+                    // Reload model from converted path
+                    if (m_inferenceEngine) {
+                        m_inferenceEngine->unloadModel();
+                        m_inferenceEngine->loadModel(convertedPath);
+                    }
+                }
+            }
+            
+            conversionDialog->deleteLater();
+        });
     }
     
     // Load the model using the InferenceEngine's built-in loader
