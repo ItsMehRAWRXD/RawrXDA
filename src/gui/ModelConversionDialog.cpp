@@ -1,4 +1,5 @@
 #include "ModelConversionDialog.h"
+#include "TerminalManager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -11,6 +12,8 @@
 #include <QUrl>
 #include <QCloseEvent>
 #include <QTimer>
+#include <QFileInfo>
+#include <QRegularExpression>
 
 ModelConversionDialog::ModelConversionDialog(const QStringList& unsupportedTypes,
                                            const QString& recommendedType,
@@ -20,7 +23,10 @@ ModelConversionDialog::ModelConversionDialog(const QStringList& unsupportedTypes
       m_unsupportedTypes(unsupportedTypes),
       m_recommendedType(recommendedType),
       m_modelPath(modelPath),
-      m_result(Cancelled)
+      m_result(Cancelled),
+      m_terminalManager(std::make_unique<TerminalManager>(this)),
+      m_verifyTimer(new QTimer(this)),
+      m_conversionStage(0)
 {
     setWindowTitle("Model Quantization Conversion Required");
     setModal(true);
@@ -29,8 +35,27 @@ ModelConversionDialog::ModelConversionDialog(const QStringList& unsupportedTypes
     
     setupUI();
     
+    // Connect terminal signals for real-time output monitoring
+    connect(m_terminalManager.get(), &TerminalManager::outputReady, this, &ModelConversionDialog::onTerminalOutput);
+    connect(m_terminalManager.get(), &TerminalManager::errorReady, this, &ModelConversionDialog::onTerminalError);
+    connect(m_terminalManager.get(), QOverload<int, QProcess::ExitStatus>::of(&TerminalManager::finished),
+            this, [this](int exitCode, QProcess::ExitStatus) {
+                onTerminalFinished(exitCode);
+            });
+    
+    // Set up verify timer for polling converted model existence
+    connect(m_verifyTimer, &QTimer::timeout, this, &ModelConversionDialog::onVerifyAndReload);
+    
     // Initially hide the info panel
     hideInfoPanel();
+}
+
+ModelConversionDialog::~ModelConversionDialog()
+{
+    m_verifyTimer->stop();
+    if (m_terminalManager && m_terminalManager->isRunning()) {
+        m_terminalManager->stop();
+    }
 }
 
 void ModelConversionDialog::setupUI()
@@ -180,7 +205,8 @@ void ModelConversionDialog::onConvertClicked()
 
 void ModelConversionDialog::startConversion()
 {
-    updateProgress("Starting quantization conversion...");
+    m_conversionStage = 0;
+    updateProgress("Initializing quantization conversion...");
     
     // Extract output directory from model path
     QString outputDir = m_modelPath.left(m_modelPath.lastIndexOf('/'));
@@ -191,60 +217,138 @@ void ModelConversionDialog::startConversion()
     // Build PowerShell command to invoke the conversion script
     // The script D:\setup-quantized-model.ps1 handles all the heavy lifting
     QString command = QString(
-        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& 'D:\\setup-quantized-model.ps1' "
-        "-BlobPath '%1' -OutputDir '%2' -TargetQuantization '%3'\""
+        "& 'D:\\setup-quantized-model.ps1' -BlobPath '%1' -OutputDir '%2' -TargetQuantization '%3'"
     ).arg(m_modelPath, outputDir, m_recommendedType);
     
-    // TODO: Invoke terminal_pool to run this command
-    // For now, show success message for testing
-    updateProgress("Setup script ready to execute (terminal integration pending)");
+    // Start terminal with PowerShell
+    if (!m_terminalManager->start(TerminalManager::PowerShell)) {
+        updateProgress("✗ Failed to start PowerShell terminal");
+        m_statusLabel->setStyleSheet("color: #d9534f; font-weight: bold;");
+        m_convertButton->setEnabled(true);
+        m_cancelButton->setEnabled(true);
+        m_moreInfoButton->setEnabled(true);
+        return;
+    }
     
-    // Simulate successful conversion for now
-    QTimer::singleShot(2000, this, [this]() {
-        onConversionComplete(true);
+    // Wait for shell to initialize, then send command
+    QTimer::singleShot(500, this, [this, command]() {
+        if (m_terminalManager->isRunning()) {
+            m_terminalManager->writeInput(command.toUtf8());
+            updateProgress("Conversion script started...");
+        }
     });
 }
 
 void ModelConversionDialog::updateProgress(const QString& message)
 {
     m_statusLabel->setText(message);
+    m_detailsText->append(message);
     m_statusLabel->repaint();
 }
 
-void ModelConversionDialog::onTerminalOutput(const QString& output)
+void ModelConversionDialog::onTerminalOutput(const QByteArray& output)
 {
-    // Append output to details text
-    m_detailsText->append(output);
+    QString text = QString::fromUtf8(output);
+    m_detailsText->append(text);
+    
+    // Parse progress from output
+    parseProgressFromOutput(text);
 }
 
-void ModelConversionDialog::onConversionComplete(bool success)
+void ModelConversionDialog::onTerminalError(const QByteArray& output)
 {
-    m_conversionInProgress = false;
-    m_progressBar->setVisible(false);
-    
-    if (success) {
-        m_result = ConversionSucceeded;
-        m_statusLabel->setText("✓ Conversion succeeded! Model will be reloaded.");
-        m_statusLabel->setStyleSheet("color: #5cb85c; font-weight: bold;");
+    QString text = QString::fromUtf8(output);
+    m_detailsText->append(QString("<span style='color: red;'>%1</span>").arg(text));
+}
+
+void ModelConversionDialog::parseProgressFromOutput(const QString& output)
+{
+    // Look for key stage transitions in the script output
+    if (output.contains("Cloning", Qt::CaseInsensitive)) {
+        m_conversionStage = 1;
+        updateProgress("Cloning llama.cpp repository...");
+    } else if (output.contains("Building", Qt::CaseInsensitive) || output.contains("cmake", Qt::CaseInsensitive)) {
+        m_conversionStage = 2;
+        updateProgress("Building quantization tool...");
+    } else if (output.contains("Converting", Qt::CaseInsensitive) || output.contains("quantize", Qt::CaseInsensitive)) {
+        m_conversionStage = 3;
+        updateProgress("Converting model to " + m_recommendedType + "...");
+    } else if (output.contains("Successfully", Qt::CaseInsensitive) || output.contains("Complete", Qt::CaseInsensitive)) {
+        updateProgress("✓ Conversion completed! Verifying model...");
+        m_progressBar->setValue(90);
+    } else if (output.contains("Error", Qt::CaseInsensitive) || output.contains("Failed", Qt::CaseInsensitive)) {
+        updateProgress("✗ Conversion error detected");
+    } else if (output.contains("100%", Qt::CaseInsensitive) || output.contains("done", Qt::CaseInsensitive)) {
+        m_progressBar->setValue(95);
+    }
+}
+
+void ModelConversionDialog::onTerminalFinished(int exitCode)
+{
+    if (exitCode == 0) {
+        // Conversion likely succeeded, start verification timer
+        updateProgress("Verifying converted model exists...");
+        m_progressBar->setValue(85);
         
-        // Construct converted model path (model.gguf → model_Q5K.gguf)
-        QString basePath = m_modelPath;
-        if (basePath.endsWith(".gguf", Qt::CaseInsensitive)) {
-            basePath = basePath.left(basePath.length() - 5);
-        }
-        m_convertedPath = basePath + "_" + m_recommendedType + ".gguf";
-        
-        // Close dialog after 2 seconds
-        QTimer::singleShot(2000, this, &QDialog::accept);
+        // Check if model exists every 500ms for up to 10 seconds
+        m_verifyTimer->start(500);
+        QTimer::singleShot(10000, m_verifyTimer, &QTimer::stop);
     } else {
-        m_result = ConversionFailed;
-        m_statusLabel->setText("✗ Conversion failed. Check terminal output for details.");
+        // Conversion failed
+        updateProgress(QString("✗ Conversion process exited with code %1").arg(exitCode));
         m_statusLabel->setStyleSheet("color: #d9534f; font-weight: bold;");
         
         m_convertButton->setEnabled(true);
         m_cancelButton->setEnabled(true);
         m_moreInfoButton->setEnabled(true);
+        m_progressBar->setVisible(false);
+        m_conversionInProgress = false;
     }
+}
+
+void ModelConversionDialog::onVerifyAndReload()
+{
+    if (verifyConvertedModelExists()) {
+        m_verifyTimer->stop();
+        
+        m_conversionInProgress = false;
+        m_result = ConversionSucceeded;
+        m_statusLabel->setText("✓ Model converted successfully! Reloading...");
+        m_statusLabel->setStyleSheet("color: #5cb85c; font-weight: bold;");
+        m_progressBar->setValue(100);
+        m_progressBar->setVisible(false);
+        
+        // Close dialog after 2 seconds to allow model to reload
+        QTimer::singleShot(2000, this, &QDialog::accept);
+    }
+}
+
+bool ModelConversionDialog::verifyConvertedModelExists()
+{
+    // Construct expected converted model path
+    QString basePath = m_modelPath;
+    if (basePath.endsWith(".gguf", Qt::CaseInsensitive)) {
+        basePath = basePath.left(basePath.length() - 5);
+    }
+    m_convertedPath = basePath + "_" + m_recommendedType + ".gguf";
+    
+    QFileInfo fileInfo(m_convertedPath);
+    bool exists = fileInfo.exists() && fileInfo.isFile() && fileInfo.size() > 0;
+    
+    if (exists) {
+        updateProgress(QString("✓ Found converted model: %1 (%2 MB)").arg(
+            m_convertedPath,
+            QString::number(fileInfo.size() / 1024.0 / 1024.0, 'f', 1)
+        ));
+    }
+    
+    return exists;
+}
+
+void ModelConversionDialog::onTerminalOutput(const QString& output)
+{
+    // Legacy overload for string output - deprecated in favor of QByteArray version
+    m_detailsText->append(output);
 }
 
 void ModelConversionDialog::closeEvent(QCloseEvent* event)

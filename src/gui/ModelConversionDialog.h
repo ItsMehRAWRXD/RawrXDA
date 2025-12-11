@@ -7,6 +7,10 @@
 #include <QPushButton>
 #include <QTextEdit>
 #include <QProgressBar>
+#include <memory>
+
+class TerminalManager;
+class QTimer;
 
 /**
  * @brief Dialog for prompting model quantization conversion
@@ -40,6 +44,8 @@ public:
                                   const QString& modelPath,
                                   QWidget* parent = nullptr);
     
+    ~ModelConversionDialog() override;
+    
     /**
      * @brief Get the result of the conversion attempt
      */
@@ -70,14 +76,24 @@ private slots:
     void onMoreInfoClicked();
     
     /**
-     * @brief Terminal output from quantization process
+     * @brief Terminal output from quantization process (stdout)
      */
-    void onTerminalOutput(const QString& output);
+    void onTerminalOutput(const QByteArray& output);
     
     /**
-     * @brief Quantization process completed
+     * @brief Terminal error output from quantization process (stderr)
      */
-    void onConversionComplete(bool success);
+    void onTerminalError(const QByteArray& output);
+    
+    /**
+     * @brief Quantization process finished
+     */
+    void onTerminalFinished(int exitCode);
+    
+    /**
+     * @brief Verify converted model exists and reload it
+     */
+    void onVerifyAndReload();
 
 private:
     void setupUI();
@@ -85,6 +101,8 @@ private:
     void updateProgress(const QString& message);
     void showInfoPanel();
     void hideInfoPanel();
+    void parseProgressFromOutput(const QString& output);
+    bool verifyConvertedModelExists();
     
     // UI elements
     QLabel* m_titleLabel;
@@ -105,6 +123,8 @@ private:
     QString m_convertedPath;
     bool m_conversionInProgress = false;
     
-    // Terminal ID for process monitoring
-    QString m_terminalId;
+    // Terminal management
+    std::unique_ptr<TerminalManager> m_terminalManager;
+    QTimer* m_verifyTimer;
+    int m_conversionStage = 0;  // Track which stage: 0=setup, 1=clone, 2=build, 3=convert
 };
