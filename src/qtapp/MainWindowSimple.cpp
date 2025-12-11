@@ -3,6 +3,7 @@
 #include "../../include/syntax_engine.h"
 #include "../../include/ui/split_layout.h"
 #include "../../include/ui/chat_panel.h"
+#include "gguf_loader.hpp"
 
 #include <sstream>
 #include <iomanip>
@@ -209,6 +210,16 @@ void MainWindow::createMenuBar()
     AppendMenuA(termMenu, MF_STRING, IDM_TERM_CLEAR, "Clear Terminal");
     AppendMenuA(termMenu, MF_STRING, IDM_TERM_KILL, "Kill Terminal");
     AppendMenuA(m_menuBar, MF_POPUP, (UINT_PTR)termMenu, "&Terminal");
+    
+    // ========== MODEL MENU ==========
+    HMENU modelMenu = CreatePopupMenu();
+    AppendMenuA(modelMenu, MF_STRING, IDM_MODEL_LOAD, "Load GGUF Model...\tCtrl+M");
+    AppendMenuA(modelMenu, MF_STRING | (m_modelLoaded ? 0 : MF_GRAYED), IDM_MODEL_UNLOAD, "Unload Model");
+    AppendMenuA(modelMenu, MF_STRING | (m_modelLoaded ? 0 : MF_GRAYED), IDM_MODEL_INFO, "Model Information");
+    AppendMenuA(modelMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuA(modelMenu, MF_STRING | (m_modelLoaded ? 0 : MF_GRAYED), IDM_MODEL_RELOAD, "Reload Model");
+    AppendMenuA(modelMenu, MF_STRING, IDM_MODEL_SETTINGS, "Model Settings...");
+    AppendMenuA(m_menuBar, MF_POPUP, (UINT_PTR)modelMenu, "&Model");
     
     // ========== HELP MENU ==========
     HMENU helpMenu = CreatePopupMenu();
@@ -525,6 +536,23 @@ void MainWindow::handleMenuCommand(WORD cmdId)
         break;
     case IDM_TERM_GITBASH:
         sendToTerminal("\"C:\\Program Files\\Git\\bin\\bash.exe\"\n");
+        break;
+
+    // ========== MODEL COMMANDS ==========
+    case IDM_MODEL_LOAD:
+        loadGGUFModel();
+        break;
+    case IDM_MODEL_UNLOAD:
+        unloadGGUFModel();
+        break;
+    case IDM_MODEL_INFO:
+        showModelInfo();
+        break;
+    case IDM_MODEL_RELOAD:
+        reloadCurrentModel();
+        break;
+    case IDM_MODEL_SETTINGS:
+        MessageBoxA(m_hwnd, "Model Settings:\n\nConfigure inference parameters, GPU settings, and model paths.", "Model Settings", MB_OK | MB_ICONINFORMATION);
         break;
 
     // ========== HELP COMMANDS ==========
@@ -2001,6 +2029,218 @@ void MainWindow::saveTab(size_t index) {
 }
 
 void MainWindow::saveAllDirtyTabs() { for(size_t i=0;i<m_tabs.size();++i) if(m_tabs[i].dirty) saveTab(i); refreshTabBar(); }
+
+// ============================================================================
+// Model Loading Implementation
+// ============================================================================
+
+void MainWindow::loadGGUFModel() {
+#ifdef _WIN32
+    try {
+        // Open file dialog for GGUF model selection
+        char filename[MAX_PATH] = {};
+        OPENFILENAMEA ofn = {};
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = m_hwnd;
+        ofn.lpstrFilter = "GGUF Models\0*.gguf\0All Files\0*.*\0";
+        ofn.lpstrFile = filename;
+        ofn.nMaxFile = MAX_PATH;
+        ofn.lpstrTitle = "Select GGUF Model File";
+        ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+        
+        if (!GetOpenFileNameA(&ofn)) {
+            // User cancelled
+            return;
+        }
+        
+        // Verify file exists
+        if (!fs::exists(filename)) {
+            MessageBoxA(m_hwnd, "Selected file does not exist!", "Model Load Error", MB_OK | MB_ICONERROR);
+            return;
+        }
+        
+        // Show loading message
+        sendToTerminal("[Model Loader] Loading GGUF model: " + std::string(filename) + "\n");
+        
+        // Create and initialize GGUF loader
+        m_ggufLoader = std::make_unique<GGUFLoaderQt>(QString::fromStdString(filename));
+        
+        if (!m_ggufLoader || !m_ggufLoader->isOpen()) {
+            m_ggufLoader.reset();
+            m_modelLoaded = false;
+            std::string errorMsg = "Failed to load GGUF model.\n\nFile: " + std::string(filename) + 
+                                  "\n\nPossible causes:\n- Invalid GGUF format\n- Corrupted file\n- Incompatible version\n\nCheck the terminal output for details.";
+            MessageBoxA(m_hwnd, errorMsg.c_str(), "Model Load Failed", MB_OK | MB_ICONERROR);
+            sendToTerminal("[Model Loader] ERROR: Failed to open GGUF file\n");
+            return;
+        }
+        
+        // Model loaded successfully
+        m_currentModelPath = filename;
+        m_modelLoaded = true;
+        
+        // Get model info
+        int nLayer = m_ggufLoader->getParam("n_layer", 0).toInt();
+        int nEmbd = m_ggufLoader->getParam("n_embd", 0).toInt();
+        int nVocab = m_ggufLoader->getParam("n_vocab", 0).toInt();
+        int nCtx = m_ggufLoader->getParam("n_ctx", 0).toInt();
+        int tensorCount = m_ggufLoader->tensorNames().size();
+        
+        // Display success message
+        std::stringstream infoMsg;
+        infoMsg << "✓ Model loaded successfully!\n\n"
+                << "File: " << fs::path(filename).filename().string() << "\n"
+                << "Path: " << filename << "\n\n"
+                << "Model Architecture:\n"
+                << "  Layers: " << nLayer << "\n"
+                << "  Embedding Dim: " << nEmbd << "\n"
+                << "  Vocabulary Size: " << nVocab << "\n"
+                << "  Context Length: " << nCtx << "\n"
+                << "  Tensor Count: " << tensorCount << "\n";
+        
+        MessageBoxA(m_hwnd, infoMsg.str().c_str(), "Model Loaded", MB_OK | MB_ICONINFORMATION);
+        
+        // Log to terminal
+        sendToTerminal("[Model Loader] ✓ Model loaded successfully\n");
+        sendToTerminal("[Model Loader] Layers: " + std::to_string(nLayer) + "\n");
+        sendToTerminal("[Model Loader] Tensors: " + std::to_string(tensorCount) + "\n");
+        
+        // Update menu to reflect loaded state
+        DrawMenuBar(m_hwnd);
+        
+    } catch (const std::exception& e) {
+        m_ggufLoader.reset();
+        m_modelLoaded = false;
+        std::string errorMsg = "Exception while loading GGUF model:\n\n" + std::string(e.what());
+        MessageBoxA(m_hwnd, errorMsg.c_str(), "Model Load Exception", MB_OK | MB_ICONERROR);
+        sendToTerminal("[Model Loader] EXCEPTION: " + std::string(e.what()) + "\n");
+    } catch (...) {
+        m_ggufLoader.reset();
+        m_modelLoaded = false;
+        MessageBoxA(m_hwnd, "Unknown exception while loading GGUF model.", "Model Load Error", MB_OK | MB_ICONERROR);
+        sendToTerminal("[Model Loader] ERROR: Unknown exception\n");
+    }
+#endif
+}
+
+void MainWindow::unloadGGUFModel() {
+    if (!m_modelLoaded || !m_ggufLoader) {
+        MessageBoxA(m_hwnd, "No model is currently loaded.", "Unload Model", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    
+    std::string modelName = fs::path(m_currentModelPath).filename().string();
+    
+    // Confirm unload
+    std::string confirmMsg = "Unload model: " + modelName + "?";
+    if (MessageBoxA(m_hwnd, confirmMsg.c_str(), "Confirm Unload", MB_OKCANCEL | MB_ICONQUESTION) != IDOK) {
+        return;
+    }
+    
+    // Unload model
+    m_ggufLoader.reset();
+    m_modelLoaded = false;
+    m_currentModelPath.clear();
+    
+    MessageBoxA(m_hwnd, "Model unloaded successfully.", "Model Unloaded", MB_OK | MB_ICONINFORMATION);
+    sendToTerminal("[Model Loader] Model unloaded\n");
+    
+    // Update menu
+    DrawMenuBar(m_hwnd);
+}
+
+void MainWindow::showModelInfo() {
+    if (!m_modelLoaded || !m_ggufLoader) {
+        MessageBoxA(m_hwnd, "No model is currently loaded.", "Model Information", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    try {
+        // Get model metadata
+        int nLayer = m_ggufLoader->getParam("n_layer", 0).toInt();
+        int nEmbd = m_ggufLoader->getParam("n_embd", 0).toInt();
+        int nVocab = m_ggufLoader->getParam("n_vocab", 0).toInt();
+        int nCtx = m_ggufLoader->getParam("n_ctx", 0).toInt();
+        int tensorCount = m_ggufLoader->tensorNames().size();
+        
+        // Get file info
+        uintmax_t fileSize = fs::file_size(m_currentModelPath);
+        double fileSizeGB = fileSize / (1024.0 * 1024.0 * 1024.0);
+        
+        std::stringstream info;
+        info << std::fixed << std::setprecision(2);
+        info << "Model Information\n"
+             << "================\n\n"
+             << "File: " << fs::path(m_currentModelPath).filename().string() << "\n"
+             << "Path: " << m_currentModelPath << "\n"
+             << "Size: " << fileSizeGB << " GB (" << fileSize << " bytes)\n\n"
+             << "Architecture:\n"
+             << "  Layers: " << nLayer << "\n"
+             << "  Embedding Dimension: " << nEmbd << "\n"
+             << "  Vocabulary Size: " << nVocab << "\n"
+             << "  Context Length: " << nCtx << "\n"
+             << "  Total Tensors: " << tensorCount << "\n\n"
+             << "Additional Metadata:\n";
+        
+        // Add any extra metadata keys
+        auto metaKeys = {"general.architecture", "general.name", "general.quantization_version"};
+        for (const auto& key : metaKeys) {
+            QVariant value = m_ggufLoader->getParam(QString::fromStdString(key), QVariant());
+            if (value.isValid() && !value.toString().isEmpty()) {
+                info << "  " << key << ": " << value.toString().toStdString() << "\n";
+            }
+        }
+        
+        MessageBoxA(m_hwnd, info.str().c_str(), "Model Information", MB_OK | MB_ICONINFORMATION);
+        
+    } catch (const std::exception& e) {
+        std::string errorMsg = "Error retrieving model information:\n\n" + std::string(e.what());
+        MessageBoxA(m_hwnd, errorMsg.c_str(), "Error", MB_OK | MB_ICONERROR);
+    }
+}
+
+void MainWindow::reloadCurrentModel() {
+    if (!m_modelLoaded || m_currentModelPath.empty()) {
+        MessageBoxA(m_hwnd, "No model is currently loaded.", "Reload Model", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    std::string modelPath = m_currentModelPath;
+    unloadGGUFModel();
+    
+    sendToTerminal("[Model Loader] Reloading model...\n");
+    
+    // Small delay to ensure cleanup
+    Sleep(100);
+    
+    // Recreate loader
+    try {
+        m_ggufLoader = std::make_unique<GGUFLoaderQt>(QString::fromStdString(modelPath));
+        
+        if (m_ggufLoader && m_ggufLoader->isOpen()) {
+            m_currentModelPath = modelPath;
+            m_modelLoaded = true;
+            MessageBoxA(m_hwnd, "Model reloaded successfully.", "Reload Complete", MB_OK | MB_ICONINFORMATION);
+            sendToTerminal("[Model Loader] ✓ Model reloaded successfully\n");
+            DrawMenuBar(m_hwnd);
+        } else {
+            m_ggufLoader.reset();
+            m_modelLoaded = false;
+            MessageBoxA(m_hwnd, "Failed to reload model.", "Reload Failed", MB_OK | MB_ICONERROR);
+            sendToTerminal("[Model Loader] ERROR: Failed to reload model\n");
+        }
+    } catch (const std::exception& e) {
+        m_ggufLoader.reset();
+        m_modelLoaded = false;
+        std::string errorMsg = "Exception while reloading model:\n\n" + std::string(e.what());
+        MessageBoxA(m_hwnd, errorMsg.c_str(), "Reload Exception", MB_OK | MB_ICONERROR);
+        sendToTerminal("[Model Loader] EXCEPTION: " + std::string(e.what()) + "\n");
+    }
+}
+
+bool MainWindow::isModelLoaded() const {
+    return m_modelLoaded && m_ggufLoader && m_ggufLoader->isOpen();
+}
 
 void MainWindow::createCommandPalette() {
 #ifdef _WIN32

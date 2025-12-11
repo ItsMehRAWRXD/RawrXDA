@@ -102,6 +102,13 @@
 #define IDM_HELP_REPORT_ISSUE   707
 #define IDM_HELP_TIPS_TRICKS    708
 
+// Model Menu (800-899)
+#define IDM_MODEL_LOAD          801
+#define IDM_MODEL_UNLOAD        802
+#define IDM_MODEL_INFO          803
+#define IDM_MODEL_RELOAD        804
+#define IDM_MODEL_SETTINGS      805
+
 #endif
 
 #include "../../include/gui.h"
@@ -198,6 +205,13 @@ private:
     
     // AI Metrics & Telemetry
     void simulateAIRequest(const std::string& model, bool success = true);
+    
+    // Model Loading
+    void loadGGUFModel();
+    void unloadGGUFModel();
+    void showModelInfo();
+    void reloadCurrentModel();
+    bool isModelLoaded() const;
     void exportMetrics(const std::string& format);
     void clearMetrics();
     void showMetricsReport();
@@ -349,6 +363,11 @@ private:
 #ifdef _WIN32
     static constexpr UINT WM_CHAT_COMPLETE = WM_APP + 101;
 #endif
+    
+    // Model Loading state
+    std::unique_ptr<class GGUFLoaderQt> m_ggufLoader;
+    std::string m_currentModelPath;
+    bool m_modelLoaded = false;
 
     struct ThemeProfile {
         std::string name;
