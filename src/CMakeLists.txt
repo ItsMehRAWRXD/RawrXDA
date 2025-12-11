@@ -219,6 +219,16 @@ set_target_properties(ggml-base PROPERTIES
     SOVERSION ${GGML_VERSION_MAJOR}
 )
 
+# Suppress known upstream warnings in GGML
+# These are non-critical issues in the upstream library, not our code
+if (MSVC)
+    # C4530: Exception handling in /EHsc mode (Vulkan SDK headers)
+    # C4003: Insufficient macro arguments (Windows SDK quirk)
+    # C4319: Zero-extending type conversions (Vulkan specification)
+    # C4005: Macro redefinition (Windows SDK compatibility)
+    target_compile_options(ggml-base PRIVATE /wd4530 /wd4003 /wd4319 /wd4005)
+endif()
+
 target_include_directories(ggml-base PRIVATE .)
 if (GGML_BACKEND_DL)
     target_compile_definitions(ggml-base PUBLIC GGML_BACKEND_DL)
@@ -425,6 +435,11 @@ ggml_add_backend(WebGPU)
 ggml_add_backend(zDNN)
 ggml_add_backend(OpenCL)
 ggml_add_backend(Hexagon)
+
+# Suppress known Vulkan backend upstream warnings on MSVC
+if (MSVC AND TARGET ggml-vulkan)
+    target_compile_options(ggml-vulkan PRIVATE /wd4530 /wd4003 /wd4319 /wd4005)
+endif()
 
 foreach (target ggml-base ggml)
     target_include_directories(${target} PUBLIC    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include> $<INSTALL_INTERFACE:include>)
