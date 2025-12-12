@@ -1205,6 +1205,7 @@ private:
     void createChatPanel();
     void HandleCopilotSend();
     void HandleCopilotClear();
+    void HandleCopilotStreamUpdate(const char* token, size_t length = 0);
     void populateModelSelector();
     void onModelSelectionChanged();
     void onMaxTokensChanged(int newValue);

@@ -923,7 +923,7 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
     case WM_USER + 100:
         // Handle Copilot streaming token updates
-        // TODO: Implement HandleCopilotStreamUpdate()
+        HandleCopilotStreamUpdate(reinterpret_cast<const char*>(wParam), static_cast<size_t>(lParam));
         return 0;
 
     case WM_COMMAND:
@@ -3641,18 +3641,8 @@ INT_PTR CALLBACK Win32IDE::FindDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam
     switch (uMsg) {
     case WM_USER + 100:
         // Handle Copilot streaming token updates
-        if (pThis && pThis->m_hwndCopilotChatOutput) {
-            // Get the streaming token from wParam (if passed as pointer)
-            const char* token = (const char*)wParam;
-            if (token && strlen(token) > 0) {
-                // Append the token to the Copilot chat output
-                std::string currentText = pThis->getWindowText(pThis->m_hwndCopilotChatOutput);
-                currentText += token;
-                pThis->setWindowText(pThis->m_hwndCopilotChatOutput, currentText);
-                
-                // Auto-scroll to bottom
-                SendMessage(pThis->m_hwndCopilotChatOutput, WM_VSCROLL, SB_BOTTOM, 0);
-            }
+        if (pThis) {
+            pThis->HandleCopilotStreamUpdate(reinterpret_cast<const char*>(wParam), static_cast<size_t>(lParam));
         }
         return 0;
 
@@ -5666,6 +5656,24 @@ void Win32IDE::HandleCopilotClear() {
     m_chatHistory.clear();
     
     LOG_INFO("Chat panel cleared");
+}
+
+void Win32IDE::HandleCopilotStreamUpdate(const char* token, size_t length) {
+    if (!m_hwndCopilotChatOutput || !token) return;
+
+    std::string chunk;
+    if (length > 0) {
+        chunk.assign(token, token + length);
+    } else {
+        chunk = token;
+    }
+
+    if (chunk.empty()) return;
+
+    int currentLen = GetWindowTextLengthA(m_hwndCopilotChatOutput);
+    SendMessageA(m_hwndCopilotChatOutput, EM_SETSEL, currentLen, currentLen);
+    SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)chunk.c_str());
+    SendMessage(m_hwndCopilotChatOutput, WM_VSCROLL, SB_BOTTOM, 0);
 }
 
 void Win32IDE::onModelSelectionChanged() {

@@ -3,6 +3,7 @@
 
 #include "Win32IDE.h"
 #include "Win32IDE_AgenticBridge.h"
+#include "ModelConnection.h"
 #include "IDELogger.h"
 #include <sstream>
 
@@ -157,25 +158,109 @@ void Win32IDE::onAgentConfigureModel() {
         return;
     }
     
-    // Show model configuration dialog
-    std::stringstream config;
-    config << "Current Agent Configuration:\n\n";
-    config << "Model: " << m_agenticBridge->GetCurrentModel() << "\n\n";
-    config << "Available models:\n";
-    config << "- bigdaddyg-personalized-agentic:latest (Default)\n";
-    config << "- codestral:latest (Code-focused)\n";
-    config << "- llama3.3:latest (General purpose)\n\n";
-    config << "Enter new model name (or Cancel to keep current):";
-    
-    char newModel[256] = {0};
-    strcpy_s(newModel, m_agenticBridge->GetCurrentModel().c_str());
-    
-    // For now, show simple message box (can be enhanced with proper dialog later)
-    int result = MessageBoxA(m_hwndMain, config.str().c_str(), "Agent Model Configuration", MB_OKCANCEL | MB_ICONINFORMATION);
-    
-    if (result == IDOK) {
-        // TODO: Add actual dialog for model selection
-        appendToOutput("Model configuration dialog - TODO: implement selection UI\n", "Output", OutputSeverity::Info);
+    // Retrieve available models from the local model service (fallback to defaults)
+    std::vector<std::string> availableModels;
+    try {
+        ModelConnection connection;
+        availableModels = connection.getAvailableModels();
+    } catch (...) {
+        availableModels.clear();
+    }
+
+    if (availableModels.empty()) {
+        availableModels = {
+            "bigdaddyg-personalized-agentic:latest",
+            "codestral:latest",
+            "llama3.3:latest"
+        };
+    }
+
+    // Ensure current model is present and pre-selected
+    const std::string currentModel = m_agenticBridge->GetCurrentModel();
+    if (std::find(availableModels.begin(), availableModels.end(), currentModel) == availableModels.end()) {
+        availableModels.insert(availableModels.begin(), currentModel);
+    }
+
+    // Create a lightweight modal selection dialog (no resource template required)
+    RECT parentRect{};
+    GetWindowRect(m_hwndMain, &parentRect);
+
+    const int dlgWidth = 420;
+    const int dlgHeight = 200;
+    const int dlgX = parentRect.left + ((parentRect.right - parentRect.left) - dlgWidth) / 2;
+    const int dlgY = parentRect.top + ((parentRect.bottom - parentRect.top) - dlgHeight) / 2;
+
+    EnableWindow(m_hwndMain, FALSE);
+
+    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Select Agent Model",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        dlgX, dlgY, dlgWidth, dlgHeight, m_hwndMain, nullptr, m_hInstance, nullptr);
+
+    if (!hwndDlg) {
+        EnableWindow(m_hwndMain, TRUE);
+        MessageBoxA(m_hwndMain, "Failed to create model selection dialog", "Agent", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    CreateWindowExA(0, "STATIC", "Choose an available model:", WS_CHILD | WS_VISIBLE,
+        10, 10, dlgWidth - 20, 20, hwndDlg, nullptr, m_hInstance, nullptr);
+
+    HWND hwndCombo = CreateWindowExA(WS_EX_CLIENTEDGE, "COMBOBOX", "",
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
+        10, 35, dlgWidth - 40, 140, hwndDlg, (HMENU)1001, m_hInstance, nullptr);
+
+    int selectedIndex = 0;
+    for (size_t i = 0; i < availableModels.size(); ++i) {
+        const auto& model = availableModels[i];
+        SendMessageA(hwndCombo, CB_ADDSTRING, 0, (LPARAM)model.c_str());
+        if (model == currentModel) {
+            selectedIndex = static_cast<int>(i);
+        }
+    }
+    SendMessageA(hwndCombo, CB_SETCURSEL, selectedIndex, 0);
+
+    HWND hwndOk = CreateWindowExA(0, "BUTTON", "Use Model", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+        dlgWidth - 200, dlgHeight - 50, 90, 30, hwndDlg, (HMENU)IDOK, m_hInstance, nullptr);
+    HWND hwndCancel = CreateWindowExA(0, "BUTTON", "Cancel", WS_CHILD | WS_VISIBLE,
+        dlgWidth - 100, dlgHeight - 50, 80, 30, hwndDlg, (HMENU)IDCANCEL, m_hInstance, nullptr);
+
+    bool accepted = false;
+    std::string selectedModel = currentModel;
+
+    MSG msg{};
+    while (IsWindow(hwndDlg) && GetMessage(&msg, nullptr, 0, 0)) {
+        if (msg.message == WM_COMMAND) {
+            const WORD cmdId = LOWORD(msg.wParam);
+            const WORD cmdCode = HIWORD(msg.wParam);
+            HWND sender = (HWND)msg.hwnd;
+
+            if (cmdId == IDOK && cmdCode == BN_CLICKED) {
+                int sel = (int)SendMessageA(hwndCombo, CB_GETCURSEL, 0, 0);
+                if (sel != CB_ERR) {
+                    char buffer[256] = {0};
+                    SendMessageA(hwndCombo, CB_GETLBTEXT, sel, (LPARAM)buffer);
+                    selectedModel = buffer;
+                    accepted = true;
+                }
+                DestroyWindow(hwndDlg);
+                break;
+            } else if (cmdId == IDCANCEL && cmdCode == BN_CLICKED) {
+                DestroyWindow(hwndDlg);
+                break;
+            }
+        }
+
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    EnableWindow(m_hwndMain, TRUE);
+    SetForegroundWindow(m_hwndMain);
+
+    if (accepted && !selectedModel.empty()) {
+        m_agenticBridge->SetModel(selectedModel);
+        appendToOutput("✅ Agent model set to: " + selectedModel + "\n", "Output", OutputSeverity::Info);
+        MessageBoxA(m_hwndMain, ("Model updated to: " + selectedModel).c_str(), "Agent Model", MB_OK | MB_ICONINFORMATION);
     }
 }
 

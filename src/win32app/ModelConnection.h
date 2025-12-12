@@ -155,7 +155,124 @@ public:
     std::vector<std::string> getAvailableModels()
     {
         std::vector<std::string> models;
-        // TODO: Implement model list retrieval
+
+        HINTERNET hSession = WinHttpOpen(L"RawrXD-Chat/1.0",
+            WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME,
+            WINHTTP_NO_PROXY_BYPASS, 0);
+
+        if (!hSession) {
+            return models;
+        }
+
+        // Parse the configured endpoint
+        URL_COMPONENTS urlComp;
+        ZeroMemory(&urlComp, sizeof(urlComp));
+        urlComp.dwStructSize = sizeof(urlComp);
+
+        std::wstring endpoint_wide(m_endpoint.begin(), m_endpoint.end());
+        wchar_t host[256] = L"";
+        wchar_t path[256] = L"";
+
+        urlComp.lpszHostName = host;
+        urlComp.dwHostNameLength = sizeof(host) / sizeof(host[0]);
+        urlComp.lpszUrlPath = path;
+        urlComp.dwUrlPathLength = sizeof(path) / sizeof(path[0]);
+
+        if (!WinHttpCrackUrl(endpoint_wide.c_str(), 0, 0, &urlComp)) {
+            WinHttpCloseHandle(hSession);
+            return models;
+        }
+
+        // Build request path (respect existing base path if provided)
+        std::wstring basePath(path, path + urlComp.dwUrlPathLength);
+        if (basePath.empty() || basePath == L"/") {
+            basePath = L"";
+        }
+        if (!basePath.empty() && basePath.back() == L'/') {
+            basePath.pop_back();
+        }
+        std::wstring tagsPath = basePath + L"/api/tags";
+
+        HINTERNET hConnect = WinHttpConnect(hSession, urlComp.lpszHostName,
+            urlComp.nPort, 0);
+
+        if (!hConnect) {
+            WinHttpCloseHandle(hSession);
+            return models;
+        }
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET",
+            tagsPath.c_str(), NULL, WINHTTP_NO_REFERER,
+            WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+
+        if (!hRequest) {
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return models;
+        }
+
+        BOOL bResults = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS,
+            0, WINHTTP_NO_REQUEST_BODY, 0, 0, 0);
+
+        if (bResults) {
+            bResults = WinHttpReceiveResponse(hRequest, NULL);
+        }
+
+        std::string responseBody;
+
+        if (bResults) {
+            DWORD dwSize = 0;
+            do {
+                if (!WinHttpQueryDataAvailable(hRequest, &dwSize) || dwSize == 0) {
+                    break;
+                }
+
+                std::vector<char> buffer(dwSize + 1, 0);
+                DWORD dwRead = 0;
+                if (!WinHttpReadData(hRequest, buffer.data(), dwSize, &dwRead)) {
+                    break;
+                }
+
+                responseBody.append(buffer.data(), dwRead);
+
+            } while (dwSize > 0);
+        }
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
+        if (responseBody.empty()) {
+            return models;
+        }
+
+        try {
+            auto jsonObj = json::parse(responseBody);
+
+            if (jsonObj.contains("models") && jsonObj["models"].is_array()) {
+                for (const auto& modelEntry : jsonObj["models"]) {
+                    if (modelEntry.is_object()) {
+                        if (modelEntry.contains("name") && modelEntry["name"].is_string()) {
+                            models.push_back(modelEntry["name"].get<std::string>());
+                        } else if (modelEntry.contains("model") && modelEntry["model"].is_string()) {
+                            models.push_back(modelEntry["model"].get<std::string>());
+                        }
+                    } else if (modelEntry.is_string()) {
+                        models.push_back(modelEntry.get<std::string>());
+                    }
+                }
+            } else if (jsonObj.is_array()) {
+                for (const auto& modelEntry : jsonObj) {
+                    if (modelEntry.is_string()) {
+                        models.push_back(modelEntry.get<std::string>());
+                    }
+                }
+            }
+
+        } catch (const json::exception&) {
+            // Ignore parse errors and return empty list
+        }
+
         return models;
     }
 
