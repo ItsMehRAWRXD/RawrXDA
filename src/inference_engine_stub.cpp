@@ -4,6 +4,9 @@
 #include <QString>
 #include <random>
 #include <algorithm>
+#include <chrono>
+#include <cstring>
+#include <array>
 #include <QDebug>
 #include "inference_engine_stub.moc"  // Force moc output into translation unit for vtable
 
@@ -104,6 +107,7 @@ bool InferenceEngine::InitializeVulkan()
 
 bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
 {
+    const auto load_start = std::chrono::steady_clock::now();
     try {
         // If no model path provided, use demo mode with fake embeddings
         if (model_path.empty()) {
@@ -123,6 +127,8 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
         }
         
         m_loader = std::make_unique<GGUFLoader>();
+
+        // Open + parse metadata/tensors
         if (!m_loader->Open(model_path)) {
             qWarning() << "Failed to open GGUF file:" << QString::fromStdString(model_path) << "- using demo mode";
             // Fall back to demo mode
@@ -140,27 +146,97 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
             return true;
         }
 
-        // Extract model metadata
-        m_vocabSize = 32000;  // Typical LLaMA vocab
-        m_embeddingDim = 4096; // Typical hidden size
-        m_layerCount = 32;     // Typical layer count
-        m_headCount = 32;      // Typical attention heads
-        m_headDim = m_embeddingDim / m_headCount; // 128 per head
-
-        // Allocate embedding table
-        m_embeddingTable.resize(m_vocabSize * m_embeddingDim);
-        
-        // Initialize embeddings with random values (production loads from GGUF)
-        std::uniform_real_distribution<float> dist(-0.02f, 0.02f);
-        for (auto& val : m_embeddingTable) {
-            val = dist(m_rng);
+        // Parse metadata and tensor index
+        try {
+            m_loader->ParseMetadata();
+        } catch (const std::exception& e) {
+            qCritical() << "GGUF metadata parse failed:" << e.what();
+            return false;
         }
 
-        qInfo() << "GGUF model loaded successfully"
+        const auto meta = m_loader->GetMetadata();
+        if (meta.vocab_size > 0) m_vocabSize = meta.vocab_size; else m_vocabSize = 32000;
+        if (meta.embedding_dim > 0) m_embeddingDim = meta.embedding_dim; else m_embeddingDim = 4096;
+        if (meta.layer_count > 0) m_layerCount = meta.layer_count; else m_layerCount = 32;
+        if (meta.architecture_type == 1 && m_layerCount == 0) m_layerCount = 32; // llama default
+        if (m_headCount == 0) m_headCount = 32;
+        m_headDim = m_embeddingDim / std::max<uint32_t>(1, m_headCount);
+
+        // Allocate embedding table and try loading real weights
+        m_embeddingTable.resize(static_cast<size_t>(m_vocabSize) * m_embeddingDim);
+
+        const auto maybe_load_tensor = [this](const std::string& name, std::vector<uint8_t>& out) -> bool {
+            try {
+                return m_loader->LoadTensorZone(name, out);
+            } catch (const std::exception& e) {
+                qWarning() << "Tensor load failed for" << QString::fromStdString(name) << ":" << e.what();
+                return false;
+            }
+        };
+
+        // Candidate names for embeddings/output projection across common conversions
+        const std::vector<std::string> embedding_names = {
+            "token_embd.weight", "tok_embeddings.weight", "token_embedding.weight", "embeddings.weight"};
+        const std::vector<std::string> output_names = {
+            "output.weight", "lm_head.weight", "output_projection.weight"};
+
+        std::uniform_real_distribution<float> dist(-0.02f, 0.02f);
+
+        // Load embeddings
+        bool loaded_embeddings = false;
+        std::vector<uint8_t> raw;
+        for (const auto& name : embedding_names) {
+            if (maybe_load_tensor(name, raw)) {
+                if (raw.size() == m_embeddingTable.size() * sizeof(float)) {
+                    std::memcpy(m_embeddingTable.data(), raw.data(), raw.size());
+                    loaded_embeddings = true;
+                    break;
+                } else {
+                    qWarning() << "Embedding tensor size mismatch for" << QString::fromStdString(name)
+                               << "expected" << (m_embeddingTable.size() * sizeof(float))
+                               << "got" << raw.size();
+                }
+            }
+        }
+
+        if (!loaded_embeddings) {
+            for (auto& val : m_embeddingTable) {
+                val = dist(m_rng);
+            }
+        }
+
+        // Output projection weights
+        m_outputWeights.resize(static_cast<size_t>(m_embeddingDim) * m_vocabSize);
+        bool loaded_output = false;
+        raw.clear();
+        for (const auto& name : output_names) {
+            if (maybe_load_tensor(name, raw)) {
+                if (raw.size() == m_outputWeights.size() * sizeof(float)) {
+                    std::memcpy(m_outputWeights.data(), raw.data(), raw.size());
+                    loaded_output = true;
+                    break;
+                } else {
+                    qWarning() << "Output tensor size mismatch for" << QString::fromStdString(name)
+                               << "expected" << (m_outputWeights.size() * sizeof(float))
+                               << "got" << raw.size();
+                }
+            }
+        }
+        if (!loaded_output) {
+            for (auto& w : m_outputWeights) w = dist(m_rng);
+        }
+
+        const auto load_end = std::chrono::steady_clock::now();
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(load_end - load_start).count();
+
+        qInfo() << "GGUF model loaded"
                 << "| Vocab:" << m_vocabSize
                 << "| Embedding:" << m_embeddingDim
                 << "| Layers:" << m_layerCount
-                << "| Heads:" << m_headCount;
+                << "| Heads:" << m_headCount
+                << "| Load(ms):" << ms
+                << "| Embeddings:" << (loaded_embeddings ? "gguf" : "random")
+                << "| Output:" << (loaded_output ? "gguf" : "random");
         return true;
     } catch (const std::exception& e) {
         qCritical() << "Exception loading GGUF:" << e.what();
@@ -371,47 +447,116 @@ bool InferenceEngine::LoadTransformerWeights()
         return false;
     }
 
-    // In production, this would extract tensors from GGUF file
-    // For now, initialize with random weights for testing
     std::uniform_real_distribution<float> dist(-0.02f, 0.02f);
-    std::vector<float> weights(m_embeddingDim * m_embeddingDim);
+
+    const auto load_tensor_f32 = [this](const std::string& name, size_t expected_elems, std::vector<float>& out) -> bool {
+        std::vector<uint8_t> raw;
+        try {
+            if (!m_loader->LoadTensorZone(name, raw)) {
+                return false;
+            }
+        } catch (const std::exception& e) {
+            qWarning() << "Tensor load exception for" << QString::fromStdString(name) << ":" << e.what();
+            return false;
+        }
+
+        if (raw.size() != expected_elems * sizeof(float)) {
+            qWarning() << "Tensor size mismatch for" << QString::fromStdString(name)
+                       << "expected" << (expected_elems * sizeof(float))
+                       << "got" << raw.size();
+            return false;
+        }
+
+        out.resize(expected_elems);
+        std::memcpy(out.data(), raw.data(), raw.size());
+        return true;
+    };
+
+    const auto fill_random = [&](std::vector<float>& buf) {
+        for (auto& v : buf) v = dist(m_rng);
+    };
+
+    std::vector<float> mat_hidden_hidden(m_embeddingDim * m_embeddingDim);
+    std::vector<float> mat_ffn(m_embeddingDim * m_embeddingDim * 4);
     std::vector<float> norm_weights(m_embeddingDim);
     std::vector<float> norm_biases(m_embeddingDim);
 
+    const std::array<std::string, 4> q_names = {
+        "attn_q.weight", "attn_q_proj.weight", "attention.wq.weight", "q_proj.weight"};
+    const std::array<std::string, 4> k_names = {
+        "attn_k.weight", "attn_k_proj.weight", "attention.wk.weight", "k_proj.weight"};
+    const std::array<std::string, 4> v_names = {
+        "attn_v.weight", "attn_v_proj.weight", "attention.wv.weight", "v_proj.weight"};
+    const std::array<std::string, 4> o_names = {
+        "attn_output.weight", "attn_o.weight", "attention.wo.weight", "o_proj.weight"};
+    const std::array<std::string, 3> ffn_up_names = {
+        "ffn_up.weight", "ffn_gate.weight", "feed_forward.w1.weight"};
+    const std::array<std::string, 2> ffn_down_names = {
+        "ffn_down.weight", "feed_forward.w2.weight"};
+    const std::array<std::string, 2> attn_norm_w_names = {
+        "attn_norm.weight", "attention_norm.weight"};
+    const std::array<std::string, 2> attn_norm_b_names = {
+        "attn_norm.bias", "attention_norm.bias"};
+    const std::array<std::string, 2> ffn_norm_w_names = {
+        "ffn_norm.weight", "ffn_norm.weight"};
+    const std::array<std::string, 2> ffn_norm_b_names = {
+        "ffn_norm.bias", "ffn_norm.bias"};
+
+    auto load_first_match = [&](const std::string& prefix, const auto& candidates, size_t expected, std::vector<float>& out) {
+        for (const auto& base : candidates) {
+            std::string name = prefix + base;
+            if (load_tensor_f32(name, expected, out)) {
+                return true;
+            }
+        }
+        fill_random(out);
+        return false;
+    };
+
     for (uint32_t layer = 0; layer < m_layerCount; ++layer) {
-        // Initialize attention weights (Q, K, V, O)
-        for (auto& w : weights) w = dist(m_rng);
-        m_transformer->loadWeights(weights.data(), layer, TransformerBlockScalar::WeightType::Q_WEIGHTS);
-        
-        for (auto& w : weights) w = dist(m_rng);
-        m_transformer->loadWeights(weights.data(), layer, TransformerBlockScalar::WeightType::K_WEIGHTS);
-        
-        for (auto& w : weights) w = dist(m_rng);
-        m_transformer->loadWeights(weights.data(), layer, TransformerBlockScalar::WeightType::V_WEIGHTS);
-        
-        for (auto& w : weights) w = dist(m_rng);
-        m_transformer->loadWeights(weights.data(), layer, TransformerBlockScalar::WeightType::O_WEIGHTS);
+        const std::string prefix = "blk." + std::to_string(layer) + ".";
 
-        // Initialize FFN weights (up projection and down projection)
-        std::vector<float> ffn_weights(m_embeddingDim * m_embeddingDim * 4);
-        for (auto& w : ffn_weights) w = dist(m_rng);
-        m_transformer->loadWeights(ffn_weights.data(), layer, TransformerBlockScalar::WeightType::FFN_UP_WEIGHTS);
-        
-        for (auto& w : ffn_weights) w = dist(m_rng);
-        m_transformer->loadWeights(ffn_weights.data(), layer, TransformerBlockScalar::WeightType::FFN_DOWN_WEIGHTS);
+        // Attention weights
+        load_first_match(prefix, q_names, mat_hidden_hidden.size(), mat_hidden_hidden);
+        m_transformer->loadWeights(mat_hidden_hidden.data(), layer, TransformerBlockScalar::WeightType::Q_WEIGHTS);
 
-        // Initialize layer norm parameters
-        for (auto& w : norm_weights) w = 1.0f;
-        for (auto& b : norm_biases) b = 0.0f;
-        m_transformer->loadNormParams(norm_weights.data(), norm_biases.data(), layer, 
+        load_first_match(prefix, k_names, mat_hidden_hidden.size(), mat_hidden_hidden);
+        m_transformer->loadWeights(mat_hidden_hidden.data(), layer, TransformerBlockScalar::WeightType::K_WEIGHTS);
+
+        load_first_match(prefix, v_names, mat_hidden_hidden.size(), mat_hidden_hidden);
+        m_transformer->loadWeights(mat_hidden_hidden.data(), layer, TransformerBlockScalar::WeightType::V_WEIGHTS);
+
+        load_first_match(prefix, o_names, mat_hidden_hidden.size(), mat_hidden_hidden);
+        m_transformer->loadWeights(mat_hidden_hidden.data(), layer, TransformerBlockScalar::WeightType::O_WEIGHTS);
+
+        // FFN weights
+        load_first_match(prefix, ffn_up_names, mat_ffn.size(), mat_ffn);
+        m_transformer->loadWeights(mat_ffn.data(), layer, TransformerBlockScalar::WeightType::FFN_UP_WEIGHTS);
+
+        load_first_match(prefix, ffn_down_names, mat_ffn.size(), mat_ffn);
+        m_transformer->loadWeights(mat_ffn.data(), layer, TransformerBlockScalar::WeightType::FFN_DOWN_WEIGHTS);
+
+        // Norm params
+        load_first_match(prefix, attn_norm_w_names, norm_weights.size(), norm_weights);
+        load_first_match(prefix, attn_norm_b_names, norm_biases.size(), norm_biases);
+        m_transformer->loadNormParams(norm_weights.data(), norm_biases.data(), layer,
                                       TransformerBlockScalar::NormType::ATTENTION_NORM);
-        m_transformer->loadNormParams(norm_weights.data(), norm_biases.data(), layer, 
+
+        load_first_match(prefix, ffn_norm_w_names, norm_weights.size(), norm_weights);
+        load_first_match(prefix, ffn_norm_b_names, norm_biases.size(), norm_biases);
+        m_transformer->loadNormParams(norm_weights.data(), norm_biases.data(), layer,
                                       TransformerBlockScalar::NormType::FFN_NORM);
     }
 
-    // Initialize output projection weights
-    m_outputWeights.resize(m_embeddingDim * m_vocabSize);
-    for (auto& w : m_outputWeights) w = dist(m_rng);
+    if (m_outputWeights.empty()) {
+        m_outputWeights.resize(static_cast<size_t>(m_embeddingDim) * m_vocabSize);
+    }
+
+    // output weights already attempted in LoadModelFromGGUF; if zeroed, random fill to avoid degenerate logits
+    bool needs_output_fill = std::all_of(m_outputWeights.begin(), m_outputWeights.end(), [](float v){ return v == 0.0f; });
+    if (needs_output_fill) {
+        fill_random(m_outputWeights);
+    }
 
     qInfo() << "Transformer weights loaded for" << m_layerCount << "layers";
     return true;

@@ -6,6 +6,7 @@
 
 class GGUFServer;
 class InferenceEngine;
+class EnhancedModelLoader;
 
 /**
  * @class ModelLoader
@@ -43,6 +44,7 @@ signals:
 private:
     std::unique_ptr<InferenceEngine> m_engine;
     std::unique_ptr<GGUFServer> m_server;
+    std::unique_ptr<EnhancedModelLoader> m_enhancedLoader;
     QString m_modelPath;
     quint16 m_port = 11434;
 };

@@ -1,12 +1,21 @@
 #include "model_loader.hpp"
+#include "enhanced_model_loader.h"
+#include "../format_router.h"
 #include "../qtapp/gguf_server.hpp"
 #include "../../include/inference_engine_stub.hpp"
+#include <QDebug>
+#include <chrono>
 
 ModelLoader::ModelLoader(QObject* parent)
     : QObject(parent)
     , m_engine(nullptr)
     , m_server(nullptr)
+    , m_enhancedLoader(std::make_unique<EnhancedModelLoader>(this))
 {
+    // Forward signals from enhanced loader
+    connect(m_enhancedLoader.get(), &EnhancedModelLoader::modelLoaded, this, &ModelLoader::modelLoaded);
+    connect(m_enhancedLoader.get(), QOverload<const QString&>::of(&EnhancedModelLoader::error),
+            this, QOverload<const QString&>::of(&ModelLoader::error));
 }
 
 ModelLoader::~ModelLoader()
@@ -18,26 +27,28 @@ ModelLoader::~ModelLoader()
 
 bool ModelLoader::loadModel(const QString& modelPath)
 {
+    const auto start = std::chrono::steady_clock::now();
+    
     if (modelPath.isEmpty()) {
         emit error(QStringLiteral("Model path is empty"));
         return false;
     }
     
+    qInfo() << "[ModelLoader] Loading model:" << modelPath;
     m_modelPath = modelPath;
     
-    // Create inference engine if not already created
-    if (!m_engine) {
-        m_engine = std::make_unique<InferenceEngine>();
+    // Use enhanced loader for multi-format support (GGUF/HF/Ollama/MASM)
+    bool success = m_enhancedLoader->loadModel(modelPath);
+    
+    if (success) {
+        const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - start).count();
+        qInfo() << "[ModelLoader] Model loaded successfully in" << duration << "ms";
+    } else {
+        qWarning() << "[ModelLoader] Model load failed:" << m_enhancedLoader->getLastError();
     }
     
-    // Load model into engine
-    if (!m_engine->Initialize(modelPath.toStdString())) {
-        emit error(QStringLiteral("Failed to load model: %1").arg(modelPath));
-        return false;
-    }
-    
-    emit modelLoaded(modelPath);
-    return true;
+    return success;
 }
 
 bool ModelLoader::initializeInference()
