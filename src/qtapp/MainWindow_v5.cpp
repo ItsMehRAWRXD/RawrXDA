@@ -71,6 +71,10 @@
 #include <QFileInfo>
 #include <QProgressBar>
 #include <QDir>
+#include <QDirIterator>
+#include <QRegularExpression>
+#include <QTextStream>
+#include <QFile>
 
 namespace RawrXD {
 
@@ -980,12 +984,72 @@ void MainWindow::addTodo()
 
 void MainWindow::scanCodeForTodos()
 {
-    if (!m_todoManager || !m_fileBrowser) return;
+    if (!m_todoManager) return;
     
-    // TODO: Implement recursive scan of project files for // TODO: comments
-    QMessageBox::information(this, "Scan for TODOs",
-        "This will scan all project files for TODO comments.\n\n"
-        "Feature coming soon!");
+    // Get current project directory (use current working directory)
+    QString projectDir = QDir::currentPath();
+    
+    // Allow user to select directory
+    QString selectedDir = QFileDialog::getExistingDirectory(
+        this,
+        "Select Project Directory to Scan",
+        projectDir,
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
+    );
+    
+    if (selectedDir.isEmpty()) return;
+    projectDir = selectedDir;
+    
+    // Confirm scan
+    auto reply = QMessageBox::question(this, "Scan for TODOs",
+        QString("Scan all source files in:\n%1\n\nfor TODO/FIXME/XXX comments?").arg(projectDir),
+        QMessageBox::Yes | QMessageBox::Cancel);
+    
+    if (reply != QMessageBox::Yes) return;
+    
+    // Scan recursively
+    int foundCount = 0;
+    QStringList filters;
+    filters << "*.cpp" << "*.h" << "*.hpp" << "*.c" << "*.cc" << "*.cxx"
+            << "*.py" << "*.js" << "*.ts" << "*.java" << "*.cs" << "*.rs"
+            << "*.go" << "*.rb" << "*.php" << "*.swift" << "*.kt" << "*.scala"
+            << "*.md" << "*.txt" << "*.cmake" << "CMakeLists.txt";
+    
+    QDirIterator it(projectDir, filters, QDir::Files | QDir::NoSymLinks,
+                    QDirIterator::Subdirectories);
+    
+    QRegularExpression todoRegex(
+        R"((//|#|;|<!--|/\*)\s*(TODO|FIXME|XXX|HACK|NOTE|BUG)(:|\s+)(.*))",
+        QRegularExpression::CaseInsensitiveOption
+    );
+    
+    while (it.hasNext()) {
+        QString filePath = it.next();
+        if (filePath.contains("/build/") || filePath.contains("\\\\build\\\\") ||
+            filePath.contains("/build_") || filePath.contains("\\\\build_\\") ||
+            filePath.contains("/.git/") || filePath.contains("\\\\.git\\\\")) continue;
+        QFile file(filePath);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) continue;
+        QTextStream in(&file);
+        int lineNum = 0;
+        while (!in.atEnd()) {
+            lineNum++;
+            QString line = in.readLine();
+            QRegularExpressionMatch match = todoRegex.match(line);
+            if (match.hasMatch()) {
+                QString todoType = match.captured(2).toUpper();
+                QString todoText = match.captured(4).trimmed();
+                if (todoText.isEmpty()) todoText = QString("[%1]").arg(todoType);
+                else todoText = QString("[%1] %2").arg(todoType, todoText);
+                m_todoManager->addTodo(todoText, filePath, lineNum);
+                foundCount++;
+            }
+        }
+        file.close();
+    }
+    statusBar()->showMessage(QString("Scan complete: %1 TODO items found").arg(foundCount), 5000);
+    QMessageBox::information(this, "Scan Complete",
+        QString("Found %1 TODO/FIXME/XXX comments.\n\nItems added to TODO panel.").arg(foundCount));
 }
 
 void MainWindow::newTerminal()
