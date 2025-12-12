@@ -175,6 +175,27 @@ NavigationResult AgenticNavigator::navigateToPanel(PanelTab tab) {
     return result;
 }
 
+NavigationResult AgenticNavigator::navigateAndExecute(const std::string& target, int commandId) {
+    // First navigate to the target
+    auto navResult = navigateDirectAPI(target);
+    if (!navResult.success) {
+        return navResult;
+    }
+    
+    // Then execute the command if provided
+    if (commandId > 0) {
+        return executeCommand(commandId);
+    }
+    
+    return navResult;
+}
+    auto end = std::chrono::high_resolution_clock::now();
+    result.executionTimeMs = std::chrono::duration<double, std::milli>(end - start).count();
+    
+    learnFromResult(result);
+    return result;
+}
+
 std::vector<UIElement> AgenticNavigator::detectUIElements(const std::string& filter) {
     return detectElementsDirectAPI();
 }

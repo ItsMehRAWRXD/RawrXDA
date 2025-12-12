@@ -50,6 +50,23 @@ struct FallbackConfig {
     bool enableCrossValidation = true; // Enable result verification
 };
 
+// Sidebar view types
+enum class SidebarView {
+    FileExplorer = 0,
+    Search = 1,
+    SourceControl = 2,
+    RunDebug = 3,
+    Extensions = 4
+};
+
+// Panel tab types
+enum class PanelTab {
+    Terminal = 0,
+    Output = 1,
+    DebugConsole = 2,
+    Problems = 3
+};
+
 // Agentic Navigation Interface
 class AgenticNavigator {
 public:
@@ -63,6 +80,7 @@ public:
     NavigationResult navigateToCopilotChat();
     NavigationResult navigateToSidebar(SidebarView view);
     NavigationResult navigateToPanel(PanelTab tab);
+    NavigationResult navigateAndExecute(const std::string& target, int commandId = 0);
     
     // UI element detection
     std::vector<UIElement> detectUIElements(const std::string& filter = "");

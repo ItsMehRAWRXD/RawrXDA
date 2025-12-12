@@ -12,11 +12,11 @@ using namespace std::chrono;
 
 // Inline stubs for flash-attention symbols - full implementation not linked in this benchmark
 extern "C" {
-bool flash_attention(const float* Q, const float* K, const float* V, float* O, int seqLen, int headDim, int, int) {
+bool flash_attention(const float* Q, const float* K, const float* V, float* O, const int seqLen, const int headDim) {
     fprintf(stderr, "flash_attention: stub – full implementation not linked\n");
     return false;
 }
-bool attention_baseline(const float* Q, const float* K, const float* V, float* O, int seqLen, int headDim, int) {
+bool attention_baseline(const float* Q, const float* K, const float* V, float* O, const int seqLen, const int headDim) {
     fprintf(stderr, "attention_baseline: stub – full implementation not linked\n");
     return false;
 }

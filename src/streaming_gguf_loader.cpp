@@ -674,17 +674,6 @@ bool StreamingGGUFLoader::LoadZone(const std::string& zoneName) {
     }
     
     // Mark zone as loaded
-    loaded_zones_.insert(zoneName);
-    Diagnostics::info("Loaded zone: " + zoneName, "StreamingGGUFLoader");
     return true;
-}
-
-void StreamingGGUFLoader::UnloadZone(const std::string& zoneName) {
-    loaded_zones_.erase(zoneName);
-    Diagnostics::info("Unloaded zone: " + zoneName, "StreamingGGUFLoader");
-}
-
-bool StreamingGGUFLoader::IsZoneLoaded(const std::string& zoneName) const {
-    return loaded_zones_.count(zoneName) > 0;
 }
 
