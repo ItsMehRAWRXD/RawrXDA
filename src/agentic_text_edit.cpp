@@ -185,14 +185,53 @@ void AgenticTextEdit::onGhostTextDismissed() {
 }
 
 void AgenticTextEdit::triggerCompletion() {
-    if (!m_lspClient || !m_lspClient->isRunning()) return;
+    // Priority: AI completions > LSP completions
+    // AI completions provide better context-aware suggestions
     
-    QTextCursor cursor = textCursor();
-    int line = cursor.blockNumber();
-    int character = cursor.columnNumber();
+    if (m_aiCompletionsEnabled && m_aiProvider) {
+        QTextCursor cursor = textCursor();
+        QString currentLine = getCurrentLineText();
+        int cursorColumn = cursor.columnNumber();
+        
+        // Get some context lines (5 before current line)
+        QTextBlock block = cursor.block();
+        QStringList contextLines;
+        QTextBlock contextBlock = block.previous();
+        for (int i = 0; i < 5 && contextBlock.isValid(); ++i) {
+            contextLines.prepend(contextBlock.text());
+            contextBlock = contextBlock.previous();
+        }
+        
+        qDebug() << "[AgenticTextEdit] Requesting AI completions at column" << cursorColumn;
+        
+        // Extract prefix/suffix
+        QString prefix = currentLine.left(cursorColumn);
+        QString suffix = currentLine.mid(cursorColumn);
+        
+        // Determine file type from language ID
+        QString fileType = m_languageId;
+        
+        // Request completions
+        m_aiProvider->requestCompletions(
+            prefix,
+            suffix,
+            m_documentUri,
+            fileType,
+            contextLines
+        );
+        
+        return;  // Skip LSP if AI is enabled
+    }
     
-    qDebug() << "[AgenticTextEdit] Requesting completions at" << line << ":" << character;
-    m_lspClient->requestCompletions(m_documentUri, line, character);
+    // Fallback to LSP completions
+    if (m_lspClient && m_lspClient->isRunning()) {
+        QTextCursor cursor = textCursor();
+        int line = cursor.blockNumber();
+        int character = cursor.columnNumber();
+        
+        qDebug() << "[AgenticTextEdit] Requesting LSP completions at" << line << ":" << character;
+        m_lspClient->requestCompletions(m_documentUri, line, character);
+    }
 }
 
 void AgenticTextEdit::syncDocumentToLSP() {
@@ -236,6 +275,62 @@ bool AgenticTextEdit::shouldTriggerCompletion(const QString& lineText) const {
     }
     
     return false;
+}
+
+void AgenticTextEdit::setAICompletionProvider(AICompletionProvider* provider) {
+    if (m_aiProvider) {
+        // Disconnect old provider
+        disconnect(m_aiProvider, nullptr, this, nullptr);
+    }
+    
+    m_aiProvider = provider;
+    
+    if (m_aiProvider) {
+        // Connect to AI provider signals
+        connect(m_aiProvider, &AICompletionProvider::completionsReady,
+                this, &AgenticTextEdit::onAICompletionsReceived);
+        connect(m_aiProvider, &AICompletionProvider::error,
+                this, &AgenticTextEdit::onAICompletionError);
+        connect(m_aiProvider, &AICompletionProvider::latencyReported,
+                this, [](double ms) {
+                    qDebug() << "[AgenticTextEdit] AI completion latency:" << ms << "ms";
+                });
+        
+        qDebug() << "[AgenticTextEdit] AI completion provider connected";
+    }
+}
+
+void AgenticTextEdit::setAICompletionsEnabled(bool enabled) {
+    m_aiCompletionsEnabled = enabled;
+    qDebug() << "[AgenticTextEdit] AI completions" << (enabled ? "enabled" : "disabled");
+}
+
+void AgenticTextEdit::onAICompletionsReceived(const QVector<AICompletion>& completions) {
+    if (completions.isEmpty()) {
+        qDebug() << "[AgenticTextEdit] No AI completions received";
+        return;
+    }
+    
+    // Use the best completion (first one, already sorted by confidence)
+    const AICompletion& best = completions.first();
+    
+    qDebug() << "[AgenticTextEdit] Showing AI completion (confidence:" 
+             << (best.confidence * 100) << "%)" 
+             << "Text:" << best.text.left(50);
+    
+    // Show as ghost text
+    m_ghostRenderer->showGhostText(best.text, "ai-completion");
+}
+
+void AgenticTextEdit::onAICompletionError(const QString& error) {
+    qWarning() << "[AgenticTextEdit] AI completion error:" << error;
+    
+    // Fallback to LSP if AI fails
+    if (m_lspClient && m_lspClient->isRunning()) {
+        qDebug() << "[AgenticTextEdit] Falling back to LSP completions";
+        QTextCursor cursor = textCursor();
+        m_lspClient->requestCompletions(m_documentUri, cursor.blockNumber(), cursor.columnNumber());
+    }
 }
 
 } // namespace RawrXD
