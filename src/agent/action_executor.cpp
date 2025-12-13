@@ -347,8 +347,8 @@ bool ActionExecutor::handleSearchFiles(Action& action)
  */
 bool ActionExecutor::handleRunBuild(Action& action)
 {
-    QString target = action.params.value("target", "all").toString();
-    QString config = action.params.value("config", "Release").toString();
+    QString target = action.params.value("target").toString("all");
+    QString config = action.params.value("config").toString("Release");
 
     QStringList args = {"--build", "build", "--config", config};
     if (target != "all") {
@@ -366,7 +366,7 @@ bool ActionExecutor::handleRunBuild(Action& action)
  */
 bool ActionExecutor::handleExecuteTests(Action& action)
 {
-    QString testTarget = action.params.value("target", "all_tests").toString();
+    QString testTarget = action.params.value("target").toString("all_tests");
 
     QStringList args;
     if (testTarget != "all_tests") {
@@ -548,8 +548,8 @@ QJsonObject ActionExecutor::executeCommand(const QString& command,
     }
 
     result["exitCode"] = m_process->exitCode();
-    result["stdout"] = m_process->readAllStandardOutput();
-    result["stderr"] = m_process->readAllStandardError();
+    result["stdout"] = QString::fromUtf8(m_process->readAllStandardOutput());
+    result["stderr"] = QString::fromUtf8(m_process->readAllStandardError());
 
     return result;
 }
@@ -592,3 +592,18 @@ ActionType ActionExecutor::stringToActionType(const QString& typeStr) const
 
     return ActionType::Unknown;
 }
+
+// Private slot implementations - called by Qt signal/slot mechanism
+void ActionExecutor::onActionTaskFinished()
+{
+    qDebug() << "[ActionExecutor] Action task finished";
+    // Process completion of current action task
+}
+
+void ActionExecutor::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    qDebug() << "[ActionExecutor] Process finished with exit code:" << exitCode
+             << "status:" << static_cast<int>(exitStatus);
+    // Process completion of external process execution
+}
+

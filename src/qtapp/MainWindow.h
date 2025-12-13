@@ -76,10 +76,10 @@ QT_END_NAMESPACE
 
 namespace RawrXD {
 class ProjectExplorerWidget;
-class SettingsDialog;
 }
 
 /* ---------------  Our own forward decls  --------------- */
+class SettingsDialog;
 class StreamerClient;
 class AgentOrchestrator;
 class AISuggestionOverlay;
@@ -182,6 +182,10 @@ private slots: /* ----------  original slots  ---------- */
     void refactorCode();
     void generateTests();
     void generateDocs();
+    // Adapter slots for ActionExecutor signals
+    void onActionStarted(int index, const QString& description);
+    void onActionCompleted(int index, bool success, const QJsonObject& result);
+    void onPlanCompleted(bool success, const QJsonObject& result);
 
 private slots: /* ----------  new IDE-wide slots  ---------- */
     void onProjectOpened(const QString& path);
@@ -388,7 +392,7 @@ private: /* ---------------  new IDE members  --------------- */
     QPointer<ProgressManager> progressManager_{};
     QPointer<NotificationCenter> notificationCenter_{};
     QPointer<ShortcutsConfigurator> shortcutsConfig_{};
-    QPointer<RawrXD::SettingsDialog> settingsWidget_{};
+    QPointer<SettingsDialog> settingsWidget_{};
     QPointer<UpdateCheckerWidget> updateChecker_{};
     QPointer<TelemetryWidget> telemetry_{};
     QPointer<PluginManagerWidget> pluginManager_{};
@@ -527,4 +531,8 @@ private: /* ---------------  new IDE members  --------------- */
     void onAgentPlanGenerated(const QString& planSummary);
     void onAgentExecutionCompleted(bool success);
 };
+
+
+
+
 

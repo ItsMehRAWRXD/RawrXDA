@@ -9,6 +9,7 @@
 #define RAWRXD_QT_DIRECTORY_MANAGER_H
 
 #include "../interfaces/idirectory_manager.h"
+#include <QObject>
 
 namespace RawrXD {
 
@@ -18,35 +19,37 @@ namespace RawrXD {
  * Uses QDir and QFileInfo for cross-platform directory management.
  * Handles recursive operations with proper error reporting.
  */
-class QtDirectoryManager : public IDirectoryManager {
+class QtDirectoryManager : public QObject, public IDirectoryManager {
+    Q_OBJECT
 public:
-    QtDirectoryManager();
+    explicit QtDirectoryManager(QObject* parent = nullptr);
     ~QtDirectoryManager() override = default;
     
     // IDirectoryManager interface implementation
-    FileOperationResult createDirectory(const QString& path,
-                                       bool createParents = true);
+    FileOperationResult createDirectory(const QString& path) override;
     
     FileOperationResult deleteDirectory(const QString& path,
-                                       bool recursive = false);
+                                       bool moveToTrash = true) override;
     
     FileOperationResult copyDirectory(const QString& sourcePath,
-                                     const QString& destPath);
+                                     const QString& destPath) override;
     
-    bool exists(const QString& path) const;
+    bool exists(const QString& path) const override;
     
-    bool isDirectory(const QString& path) const;
+    bool isDirectory(const QString& path) const override;
     
+    QString toAbsolutePath(const QString& relativePath,
+                          const QString& basePath = QString()) const override;
+    
+    QString toRelativePath(const QString& absolutePath,
+                          const QString& basePath) const override;
+    
+    // Additional non-interface helpers
     QStringList listFiles(const QString& path,
                          bool recursive = false) const;
     
     QStringList listDirectories(const QString& path,
                                bool recursive = false) const;
-    
-    QString absolutePath(const QString& path) const;
-    
-    QString relativePath(const QString& basePath,
-                        const QString& targetPath) const;
 
 private:
     bool removeDirectoryRecursive(const QString& path) const;

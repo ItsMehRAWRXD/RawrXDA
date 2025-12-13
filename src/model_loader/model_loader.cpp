@@ -1,6 +1,6 @@
 #include "model_loader.hpp"
 #include "enhanced_model_loader.h"
-#include "../format_router.h"
+#include "format_router.h"
 #include "../qtapp/gguf_server.hpp"
 #include "../../include/inference_engine_stub.hpp"
 #include <QDebug>

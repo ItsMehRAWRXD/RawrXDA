@@ -3,6 +3,9 @@
 #define __d3d10effect_h__
 
 #include <d3d11.h>
+#include <d3d11shader.h>
+#include <Unknwn.h>
+#include <objbase.h>
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -13,9 +16,7 @@
 // ------------------------------------------------------------------------------
 
 // Define GUID for ID3D10Effect interface (required for __uuidof)
-interface __declspec(uuid("9537ab04-3250-412e-8213-fcd2f8677933")) ID3D10Effect;
-
-struct ID3D10Effect;
+struct __declspec(uuid("43ace486-8f01-4d59-a7a4-3414f5e9d62b")) ID3D10Effect;
 struct ID3D10EffectTechnique;
 struct ID3D10EffectPass;
 struct ID3D10EffectVariable;
@@ -48,9 +49,6 @@ struct D3D10_EFFECT_VARIABLE_DESC {
 
 struct D3D10_TECHNIQUE_DESC {
     LPCSTR Name;
-    UINT Passes;
-    UINT Annotations;
-};
     UINT Passes;
     UINT Annotations;
 };
@@ -181,7 +179,7 @@ public:
     D3D10EffectVariable*  GetVariableByName (const char* n) {
         auto it = varMap.find(n);  return it == varMap.end()  ? nullptr : it->second;
     }
-    D3D10EffectConstantBuffer* GetConstantBufferByName(const char*) { return nullptr; } // stub
+    ID3D10EffectConstantBuffer* GetConstantBufferByName(const char*) { return nullptr; } // stub
     BOOL IsValid() { return !techniques.empty(); }
 };
 

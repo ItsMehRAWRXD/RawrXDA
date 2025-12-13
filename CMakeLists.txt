@@ -74,6 +74,24 @@ list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.7.3/msvc2022_64")
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Sql Concurrent Test Charts)
 
+find_package(CURL QUIET)
+if(CURL_FOUND)
+    message(STATUS "CURL found: ${CURL_VERSION_STRING}")
+    set(HAVE_CURL 1)
+else()
+    message(WARNING "CURL not found - HTTP client will use fallback. Set CURL_DIR or install libcurl for full functionality.")
+    set(HAVE_CURL 0)
+endif()
+
+find_package(ZSTD QUIET)
+if(ZSTD_FOUND)
+    message(STATUS "ZSTD found: ${ZSTD_VERSION_STRING}")
+    set(HAVE_ZSTD 1)
+else()
+    message(WARNING "ZSTD not found - compression will use passthrough. Set ZSTD_ROOT or install zstd for full functionality.")
+    set(HAVE_ZSTD 0)
+endif()
+
 if(Qt6_FOUND)
     message(STATUS "Qt6 found: ${Qt6_VERSION}")
     add_definitions(-DHAVE_QT_CORE -DQT_NO_OPENGL)
@@ -223,7 +241,7 @@ if(MSVC)
             src/qtapp/main_qt.cpp
             src/qtapp/MainWindow.cpp
             src/qtapp/MainWindow.h
-            src/qtapp/MainWindow_AI_Integration.cpp
+            # MainWindow_AI_Integration.cpp removed - duplicate definitions merged into MainWindow.cpp
             src/qtapp/ActivityBar.cpp
             src/qtapp/ActivityBar.h
             src/qtapp/ActivityBarButton.cpp
@@ -232,7 +250,10 @@ if(MSVC)
             src/qtapp/TerminalWidget.h
             src/qtapp/TerminalManager.cpp
             src/qtapp/TerminalManager.h
-            src/gguf_loader.cpp
+            src/gguf_loader.cpp        # Native C++ loader wrapped by gguf_loader_qt
+            include/gguf_loader.h      # Ensure header is in sources for proper dependency tracking
+            src/qtapp/gguf_loader.hpp  # Qt wrapper header
+            src/qtapp/gguf_loader.cpp  # Qt wrapper implementation
             src/qtapp/inference_engine.hpp
             src/qtapp/inference_engine.cpp
             src/qtapp/transformer_inference.hpp
@@ -250,8 +271,8 @@ if(MSVC)
             src/qtapp/ai_switcher.cpp
             src/qtapp/unified_backend.hpp
             src/qtapp/unified_backend.cpp
-            src/qtapp/layer_quant_widget.hpp
-            src/qtapp/layer_quant_widget.cpp
+            src/qtapp/widgets/layer_quant_widget.hpp
+            src/qtapp/widgets/layer_quant_widget.cpp
             src/qtapp/streaming_inference.hpp
             src/qtapp/streaming_inference.cpp
             src/qtapp/model_monitor.hpp
@@ -301,6 +322,13 @@ if(MSVC)
             src/qtapp/tokenizer_selector.cpp
             include/ci_cd_settings.h
             src/qtapp/ci_cd_settings.cpp
+            # Project detection and metadata management
+            src/qtapp/utils/project_detector.cpp
+            # File and directory operations
+            src/qtapp/utils/qt_file_writer.cpp
+            src/qtapp/utils/qt_directory_manager.cpp
+            src/qtapp/settings_dialog.h
+            src/qtapp/settings_dialog.cpp
             src/qtapp/settings_manager.h
             src/qtapp/settings_manager.cpp
             src/qtapp/advanced_checkpoint_manager.cpp
@@ -335,6 +363,7 @@ if(MSVC)
             src/agent/auto_bootstrap.cpp
             src/qtapp/widgets/masm_editor_widget.cpp
             src/qtapp/widgets/hotpatch_panel.cpp
+            src/qtapp/widgets/layer_quant_widget.cpp
             # src/agent/zero_touch.cpp
             # kernels/quant_ladder_avx2.cpp  # Conflicts with ggml quantization functions
             # src/agent/planner.cpp
@@ -354,12 +383,24 @@ if(MSVC)
             src/agent/code_signer.cpp
             src/agent/telemetry_collector.hpp
             src/agent/telemetry_collector.cpp
+            # Agent execution and planning modules
+            src/agent/action_executor.hpp
+            src/agent/action_executor.cpp
+            src/agent/meta_planner.hpp
+            src/agent/meta_planner.cpp
+            # Project UI components
+            src/qtapp/widgets/project_explorer.cpp
+            src/qtapp/widgets/project_explorer.h
             # Code quality improvement modules
             src/utils/ErrorReporter.hpp
             src/utils/ErrorReporter.cpp
             src/model_loader/GGUFConstants.hpp
             src/utils/Diagnostics.hpp
             src/utils/Diagnostics.cpp
+            # Full Utility Tool Registry with Production Readiness
+            # TODO: Fix Windows RPC macro conflicts with nlohmann::json in tool_registry.cpp
+            # include/tool_registry.hpp
+            # src/tool_registry.cpp
         )
         
         add_library(self_test_gate STATIC
@@ -453,7 +494,18 @@ target_link_libraries(RawrXD-QtShell PRIVATE
         set_target_properties(RawrXD-QtShell PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
             WIN32_EXECUTABLE TRUE
+            AUTOMOC ON
+            AUTOMOC_MOC_OPTIONS "-I${CMAKE_SOURCE_DIR}/include;-I${CMAKE_CURRENT_SOURCE_DIR}/src/qtapp"
         )
+
+        # Explicitly wrap canonical headers so AUTOMOC generates moc sources for Q_OBJECT classes in include/
+        qt_wrap_cpp(QTSHELL_EXPLICIT_MOC_SOURCES
+            ${CMAKE_SOURCE_DIR}/include/checkpoint_manager.h
+            ${CMAKE_SOURCE_DIR}/include/ci_cd_settings.h
+            ${CMAKE_SOURCE_DIR}/include/tokenizer_selector.h
+            TARGET RawrXD-QtShell
+        )
+        target_sources(RawrXD-QtShell PRIVATE ${QTSHELL_EXPLICIT_MOC_SOURCES})
 
         if(MSVC)
             target_compile_options(RawrXD-QtShell PRIVATE /EHsc $<$<CONFIG:Release>:/O2>)
@@ -564,6 +616,7 @@ target_link_libraries(RawrXD-QtShell PRIVATE
             src/qtapp/gpu_inference_benchmark.cpp
             src/qtapp/inference_engine.cpp
             src/qtapp/gguf_loader.cpp
+            src/gguf_loader.cpp
             src/qtapp/transformer_inference.cpp
             src/qtapp/bpe_tokenizer.cpp
             src/qtapp/sentencepiece_tokenizer.cpp
@@ -575,6 +628,7 @@ target_link_libraries(RawrXD-QtShell PRIVATE
         
         target_link_libraries(gpu_inference_benchmark PRIVATE
             Qt6::Core
+            brutal_gzip
             ${GPU_BACKEND_LIBS}
         )
         
@@ -625,6 +679,7 @@ target_link_libraries(RawrXD-QtShell PRIVATE
             src/qtapp/gguf_hotpatch_tester.cpp
             src/qtapp/inference_engine.cpp
             src/qtapp/gguf_loader.cpp
+            src/gguf_loader.cpp
             src/qtapp/transformer_inference.cpp
             src/qtapp/bpe_tokenizer.cpp
             src/qtapp/sentencepiece_tokenizer.cpp
@@ -636,6 +691,7 @@ target_link_libraries(RawrXD-QtShell PRIVATE
         
         target_link_libraries(gguf_hotpatch_tester PRIVATE
             Qt6::Core
+            brutal_gzip
             ${GPU_BACKEND_LIBS}
         )
         
@@ -732,6 +788,8 @@ if(MSVC) # Re-enabled to test
         src/win32app/Win32IDE_Autonomy.cpp
         src/gguf_loader.cpp
         src/streaming_gguf_loader.cpp
+        src/utils/ErrorReporter.cpp
+        src/utils/Diagnostics.cpp
         $<$<BOOL:${ENABLE_VULKAN}>:src/win32app/VulkanRenderer.cpp>
         $<$<BOOL:${ENABLE_COPILOT}>:src/win32app/Win32IDE_CopilotIntegration.cpp>
         $<$<BOOL:${ENABLE_COPILOT}>:src/win32app/CopilotStreaming.cpp>
@@ -755,11 +813,15 @@ if(MSVC) # Re-enabled to test
         RawrXDOrchestration
         RawrXDGit
         RawrXDTerminal
+        brutal_gzip
     )
     
     # Add include dir first to pick up our d3d10effect.h and ggml.h stubs before system SDK
     target_include_directories(RawrXD-Win32IDE BEFORE PRIVATE 
         ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/utils
+        ${CMAKE_SOURCE_DIR}/src/model_loader
     )
     
     # Compiler options - MSVC only now
@@ -1281,6 +1343,27 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
         list(APPEND AGENTICIDE_SOURCES src/qtapp/moc_includes.cpp)
     endif()
     
+    # Phase 1 & 2: Response Parsing, Model Testing, and Library Integration
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/response_parser.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/response_parser.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/model_tester.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/model_tester.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/library_integration.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/library_integration.cpp)
+    endif()
+    
+    # Phase 3: Real AI Implementation with Multi-Backend LLM Support
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/ai_implementation.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/ai_implementation.cpp)
+    endif()
+    
+    # Phase 3: Production Streaming Support
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/streaming_engine.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/streaming_engine.cpp)
+    endif()
+    
     add_executable(RawrXD-AgenticIDE WIN32 ${AGENTICIDE_SOURCES})
     
     # Enable Qt MOC for QObject-derived classes - must be set BEFORE any other properties
@@ -1288,7 +1371,10 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
         AUTOMOC ON
         AUTOMOC_MOC_OPTIONS "-I${CMAKE_SOURCE_DIR}/include;-I${CMAKE_CURRENT_SOURCE_DIR}/src/qtapp;-I${CMAKE_CURRENT_SOURCE_DIR}/src/ui;-I${CMAKE_CURRENT_SOURCE_DIR}/src/utils;-I${CMAKE_CURRENT_SOURCE_DIR}/src/gui"
     )
-    
+
+    # MOC wrapping for checkpoint_manager, ci_cd_settings, tokenizer_selector is handled
+    # by RawrXD-QtShell target via qt_wrap_cpp to avoid duplicate generation
+
     # Explicitly set MOC include paths
     target_include_directories(RawrXD-AgenticIDE BEFORE PRIVATE 
         ${CMAKE_SOURCE_DIR}
@@ -1317,6 +1403,20 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
         quant_utils
         ggml_interface
     )
+
+    if(CURL_FOUND)
+        target_link_libraries(RawrXD-AgenticIDE PRIVATE CURL::libcurl)
+        target_compile_definitions(RawrXD-AgenticIDE PRIVATE HAVE_CURL=1)
+    else()
+        target_compile_definitions(RawrXD-AgenticIDE PRIVATE HAVE_CURL=0)
+    endif()
+
+    if(ZSTD_FOUND)
+        target_link_libraries(RawrXD-AgenticIDE PRIVATE zstd::libzstd_shared)
+        target_compile_definitions(RawrXD-AgenticIDE PRIVATE HAVE_ZSTD=1)
+    else()
+        target_compile_definitions(RawrXD-AgenticIDE PRIVATE HAVE_ZSTD=0)
+    endif()
     
     # Add Vulkan linkage if available
     if(Vulkan_FOUND)

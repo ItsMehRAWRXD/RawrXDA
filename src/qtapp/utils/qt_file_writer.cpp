@@ -15,7 +15,10 @@
 
 namespace RawrXD {
 
-QtFileWriter::QtFileWriter() : m_autoBackup(true) {}
+QtFileWriter::QtFileWriter(QObject* parent) 
+    : QObject(parent)
+    , m_autoBackup(true) 
+{}
 
 FileOperationResult QtFileWriter::writeFile(const QString& path,
                                            const QString& content,

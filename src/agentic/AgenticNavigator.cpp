@@ -189,12 +189,6 @@ NavigationResult AgenticNavigator::navigateAndExecute(const std::string& target,
     
     return navResult;
 }
-    auto end = std::chrono::high_resolution_clock::now();
-    result.executionTimeMs = std::chrono::duration<double, std::milli>(end - start).count();
-    
-    learnFromResult(result);
-    return result;
-}
 
 std::vector<UIElement> AgenticNavigator::detectUIElements(const std::string& filter) {
     return detectElementsDirectAPI();

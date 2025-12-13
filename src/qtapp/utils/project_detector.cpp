@@ -383,8 +383,33 @@ bool ProjectDetector::hasFilePattern(const QString& dirPath, const QString& patt
 }
 
 bool ProjectDetector::checkProjectType(const QString& rootPath, ProjectType type) {
-    // This is handled by detectProjectType
-    return detectProjectType(rootPath) == type;
+    // Static method implementation - checks if directory contains markers for given type
+    switch (type) {
+        case ProjectType::CMake:
+            return hasMarkerFile(rootPath, "CMakeLists.txt");
+        case ProjectType::VisualStudio:
+            return hasFilePattern(rootPath, "*.sln");
+        case ProjectType::DotNet:
+            return hasFilePattern(rootPath, "*.csproj") || hasFilePattern(rootPath, "*.vbproj");
+        case ProjectType::QMake:
+            return hasFilePattern(rootPath, "*.pro");
+        case ProjectType::Rust:
+            return hasMarkerFile(rootPath, "Cargo.toml");
+        case ProjectType::Go:
+            return hasMarkerFile(rootPath, "go.mod");
+        case ProjectType::NodeJS:
+            return hasMarkerFile(rootPath, "package.json");
+        case ProjectType::Python:
+            return hasMarkerFile(rootPath, "setup.py") || 
+                   hasMarkerFile(rootPath, "pyproject.toml") ||
+                   hasMarkerFile(rootPath, "requirements.txt");
+        case ProjectType::MASM:
+            return hasFilePattern(rootPath, "*.asm");
+        case ProjectType::Git:
+            return hasMarkerFile(rootPath, ".git");
+        default:
+            return false;
+    }
 }
 
 } // namespace RawrXD

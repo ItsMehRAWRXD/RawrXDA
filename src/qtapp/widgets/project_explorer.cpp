@@ -571,7 +571,7 @@ void ProjectExplorerWidget::actionCopyRelativePath() {
     QString path = selectedFilePath();
     if (path.isEmpty() || m_projectPath.isEmpty()) return;
     
-    QString relativePath = FileManager::toRelativePath(path, m_projectPath);
+    QString relativePath = m_dirManager ? m_dirManager->toRelativePath(path, m_projectPath) : path;
     QApplication::clipboard()->setText(relativePath);
     qDebug() << "Copied relative path to clipboard:" << relativePath;
 }
@@ -620,7 +620,7 @@ bool ProjectExplorerWidget::isFileIgnored(const QString& filePath) const {
         return false;
     }
     
-    QString relativePath = FileManager::toRelativePath(filePath, m_projectPath);
+    QString relativePath = m_dirManager ? m_dirManager->toRelativePath(filePath, m_projectPath) : filePath;
     
     for (const QString& pattern : m_gitignorePatterns) {
         // Simple pattern matching (could be improved with full gitignore spec)
@@ -691,7 +691,8 @@ void GitignoreFilter::addPattern(const QString& pattern) {
 }
 
 bool GitignoreFilter::shouldIgnore(const QString& filePath, const QString& basePath) const {
-    QString checkPath = basePath.isEmpty() ? filePath : FileManager::toRelativePath(filePath, basePath);
+    // Use QDir for relative path calculation since FileManager is not available in GitignoreFilter
+    QString checkPath = basePath.isEmpty() ? filePath : QDir(basePath).relativeFilePath(filePath);
     
     for (const QString& pattern : m_patterns) {
         if (matchPattern(checkPath, pattern)) {

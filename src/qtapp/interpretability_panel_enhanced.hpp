@@ -289,12 +289,26 @@ public:
     QJsonObject exportAsJSON() const;
     
     /**
+     * Export data as JSON file
+     * @param file_path Path to save JSON file
+     * @return Success status
+     */
+    bool exportAsJSON(const QString& file_path);
+    
+    /**
      * Export data as CSV format
      * @param file_path Path to save CSV
      * @param viz_type Which visualization type to export
      * @return Success status
      */
     bool exportAsCSV(const QString& file_path, VisualizationType viz_type) const;
+    
+    /**
+     * Export data as CSV file
+     * @param file_path Path to save CSV
+     * @return Success status
+     */
+    bool exportAsCSV(const QString& file_path);
     
     /**
      * Export visualization as image (PNG)
@@ -344,6 +358,7 @@ signals:
     void diagnosticsCompleted(const QJsonObject& diagnostics);
     void anomalyDetected(const QString& anomaly_description);
     void exportCompleted(bool success, const QString& file_path);
+    void exportRequested(const QString& format);
 
 private slots:
     void onRefreshDisplay();
@@ -439,5 +454,3 @@ private:
     class QLabel* m_problems_label = nullptr;
     class QLabel* m_diagnostics_label = nullptr;
 };
-
-#endif // INTERPRETABILITY_PANEL_ENHANCED_HPP

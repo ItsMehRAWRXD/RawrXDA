@@ -20,6 +20,11 @@
 #include "../agent/meta_planner.hpp"
 #include "../agent/action_executor.hpp"
 #include "../agent/model_invoker.hpp"
+#include "widgets/layer_quant_widget.hpp"
+#include "settings_dialog.h"
+#include "settings_manager.h"
+
+// Forward declaration resolved by include above
 
 // ----------------  brutal-gzip glue  ----------------
 #include "deflate_brutal_qt.hpp"     // compress / decompress
@@ -386,12 +391,14 @@ void MainWindow::createVSCodeLayout()
     panelLayout->addWidget(m_panelStack, 1);
     
     // ============= Connect Activity Bar to Sidebar Views =============
-    connect(m_activityBar.data(), &ActivityBar::viewChanged, this, [this](ActivityBar::ViewType view) {
-        m_sidebarStack->setCurrentIndex(static_cast<int>(view));
-        // Update sidebar header label
-        const char* titles[] = {"Explorer", "Search", "Source Control", "Run and Debug", "Extensions"};
-        // Update the header label (would need to store it as member)
-    });
+    if (m_activityBar) {
+        connect(m_activityBar, &ActivityBar::viewChanged, this, [this](ActivityBar::ViewType view) {
+            m_sidebarStack->setCurrentIndex(static_cast<int>(view));
+            // Update sidebar header label
+            const char* titles[] = {"Explorer", "Search", "Source Control", "Run and Debug", "Extensions"};
+            // Update the header label (would need to store it as member)
+        });
+    }
     
     // ============= Create Vertical Splitter (Editor + Panel) =============
     QSplitter* verticalSplitter = new QSplitter(Qt::Vertical, mainContainer);
@@ -794,11 +801,11 @@ void MainWindow::handleGoalSubmit() {
     if (!m_actionExecutor) {
         m_actionExecutor = new ActionExecutor(this);
         connect(m_actionExecutor, &ActionExecutor::actionStarted,
-                this, &MainWindow::handleTaskStatusUpdate);
+                this, &MainWindow::onActionStarted);
         connect(m_actionExecutor, &ActionExecutor::actionCompleted,
-                this, &MainWindow::handleTaskCompleted);
+                this, &MainWindow::onActionCompleted);
         connect(m_actionExecutor, &ActionExecutor::planCompleted,
-                this, &MainWindow::handleWorkflowFinished);
+                this, &MainWindow::onPlanCompleted);
     }
     
     ExecutionContext ctx;
@@ -922,6 +929,22 @@ void MainWindow::handleArchitectFinished() {
     architectBuffer_.clear();
     statusBar()->showMessage(tr("Architect planning complete"), 3000);
 }
+void MainWindow::onActionStarted(int index, const QString& description) {
+    handleTaskStatusUpdate(QString::number(index), description, QStringLiteral("Agent"));
+}
+
+void MainWindow::onActionCompleted(int index, bool success, const QJsonObject& result) {
+    QString summary = QJsonDocument(result).toJson(QJsonDocument::Compact);
+    QString status = success ? QStringLiteral("Completed") : QStringLiteral("Failed");
+    handleTaskStatusUpdate(QString::number(index), status, QStringLiteral("Agent"));
+    handleTaskCompleted(QStringLiteral("Agent"), summary);
+}
+
+void MainWindow::onPlanCompleted(bool success, const QJsonObject& result) {
+    Q_UNUSED(result);
+    handleWorkflowFinished(success);
+}
+
 void MainWindow::handleTaskStatusUpdate(const QString& taskId, const QString& status, const QString& agentType) {
     QString msg = tr("[%1] %2: %3").arg(agentType, taskId, status);
     
@@ -2309,7 +2332,8 @@ IMPLEMENT_TOGGLE(toggleDiffViewer, diffViewer_, DiffViewerWidget)
 IMPLEMENT_TOGGLE(toggleColorPicker, colorPicker_, ColorPickerWidget)
 IMPLEMENT_TOGGLE(toggleIconFont, iconFont_, IconFontWidget)
 IMPLEMENT_TOGGLE(togglePluginManager, pluginManager_, PluginManagerWidget)
-IMPLEMENT_TOGGLE(toggleSettings, settingsWidget_, SettingsWidget)
+// Note: settingsWidget_ is RawrXD::SettingsDialog, not SettingsWidget - it's a dialog not a widget for toggling
+// IMPLEMENT_TOGGLE(toggleSettings, settingsWidget_, SettingsDialog)
 IMPLEMENT_TOGGLE(toggleNotificationCenter, notificationCenter_, NotificationCenter)
 IMPLEMENT_TOGGLE(toggleShortcutsConfigurator, shortcutsConfig_, ShortcutsConfigurator)
 IMPLEMENT_TOGGLE(toggleTelemetry, telemetry_, TelemetryWidget)
@@ -4104,10 +4128,10 @@ void MainWindow::setupInterpretabilityPanel()
     
     // Connect signals for real-time diagnostics
     connect(m_interpretabilityPanel, &InterpretabilityPanelEnhanced::anomalyDetected,
-            this, [this](const QString& anomalyType, const QString& description) {
+            this, [this](const QString& description) {
                 // Show warning in status bar
                 statusBar()->showMessage(
-                    QString("⚠️ Model Anomaly: %1 - %2").arg(anomalyType, description), 10000
+                    QString("⚠️ Model Anomaly: %1").arg(description), 10000
                 );
                 
                 // Log to console
@@ -4119,18 +4143,18 @@ void MainWindow::setupInterpretabilityPanel()
                     );
                 }
                 
-                qWarning() << "Model Anomaly Detected:" << anomalyType << "-" << description;
+                qWarning() << "Model Anomaly Detected:" << description;
             });
     
     connect(m_interpretabilityPanel, &InterpretabilityPanelEnhanced::diagnosticsCompleted,
-            this, [this](const ModelDiagnostics& diagnostics) {
-                // Update status with diagnostics summary
+            this, [this](const QJsonObject& diagnostics_json) {
+                // Update status with diagnostics summary from JSON
                 QStringList issues;
-                if (diagnostics.has_vanishing_gradients) issues << "Vanishing Gradients";
-                if (diagnostics.has_exploding_gradients) issues << "Exploding Gradients";
-                if (diagnostics.has_dead_neurons) issues << "Dead Neurons";
-                if (diagnostics.has_high_sparsity) issues << "High Sparsity";
-                if (diagnostics.has_low_attention_entropy) issues << "Low Attention Entropy";
+                if (diagnostics_json["has_vanishing_gradients"].toBool()) issues << "Vanishing Gradients";
+                if (diagnostics_json["has_exploding_gradients"].toBool()) issues << "Exploding Gradients";
+                if (diagnostics_json["has_dead_neurons"].toBool()) issues << "Dead Neurons";
+                if (diagnostics_json["average_sparsity"].toDouble() > 0.5) issues << "High Sparsity";
+                if (diagnostics_json["attention_entropy_mean"].toDouble() < 1.0) issues << "Low Attention Entropy";
                 
                 if (!issues.isEmpty()) {
                     statusBar()->showMessage(
@@ -4143,7 +4167,7 @@ void MainWindow::setupInterpretabilityPanel()
                     statusBar()->showMessage("✅ Model Diagnostics: All checks passed", 5000);
                 }
                 
-                qInfo() << "Diagnostics completed:" << diagnostics.problematic_layers_count << "problematic layers";
+                qInfo() << "Diagnostics completed with issues:" << issues.count() << "total";
             });
     
     connect(m_interpretabilityPanel, &InterpretabilityPanelEnhanced::exportRequested,
@@ -4193,12 +4217,12 @@ void MainWindow::setupInterpretabilityPanel()
     // Connect to inference engine for automatic data feed (if inference engine exists)
     if (m_inferenceEngine) {
         // When model is loaded, enable the panel
-        connect(m_inferenceEngine, &InferenceEngine::modelLoaded,
-                this, [this](bool success, const QString& modelName) {
+        connect(m_inferenceEngine, &InferenceEngine::modelLoadedChanged,
+                this, [this](bool success) {
                     if (success) {
                         m_interpretabilityPanelDock->show();
                         statusBar()->showMessage(
-                            QString("📊 Interpretability Panel enabled for: %1").arg(modelName), 3000
+                            QString("📊 Interpretability Panel enabled"), 3000
                         );
                     }
                 });
@@ -4236,6 +4260,33 @@ void MainWindow::toggleInterpretabilityPanel(bool visible)
             auto diagnostics = m_interpretabilityPanel->runDiagnostics();
             qInfo() << "Interpretability panel shown, diagnostics updated";
         }
+    }
+}
+
+void MainWindow::toggleSettings(bool visible)
+{
+    if (!settingsWidget_) {
+        settingsWidget_ = new SettingsDialog(this);
+    }
+    
+    if (visible && !settingsWidget_.isNull()) {
+        settingsWidget_.data()->show();
+        settingsWidget_.data()->raise();
+        settingsWidget_.data()->activateWindow();
+    } else if (!settingsWidget_.isNull()) {
+        settingsWidget_.data()->hide();
+    }
+}
+
+void MainWindow::setupCommandPalette()
+{
+    // Stub implementation - command palette initialization
+    // In production, this would create CommandPalette widget and wire signals
+    qDebug() << "[MainWindow] Command palette setup requested - stub implementation";
+    
+    if (!m_commandPalette) {
+        // Future: instantiate CommandPalette widget here
+        qInfo() << "[MainWindow] Command palette widget not yet initialized";
     }
 }
 

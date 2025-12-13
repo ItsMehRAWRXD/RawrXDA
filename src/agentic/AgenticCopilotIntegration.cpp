@@ -94,7 +94,8 @@ NavigationResult AgenticCopilotIntegration::executeAutonomousTask(const std::str
                taskDescription.find("execute") != std::string::npos) {
         result = executeTerminalCommand(taskDescription);
     } else {
-        result = m_navigator->navigateAndExecute("Unknown", taskDescription);
+        // Use integration-level navigation handler for string actions
+        result = navigateAndExecute("Unknown", taskDescription);
     }
     
     auto end = std::chrono::high_resolution_clock::now();

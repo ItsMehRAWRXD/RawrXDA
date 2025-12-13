@@ -106,7 +106,7 @@ public:
         }
 
         BOOL bResults = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS,
-            0, WINHTTP_NO_REQUEST_BODY, 0, 0, 0);
+            0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
 
         if (bResults) {
             bResults = WinHttpReceiveResponse(hRequest, NULL);
@@ -212,7 +212,7 @@ public:
         }
 
         BOOL bResults = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS,
-            0, WINHTTP_NO_REQUEST_BODY, 0, 0, 0);
+            0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
 
         if (bResults) {
             bResults = WinHttpReceiveResponse(hRequest, NULL);
@@ -249,27 +249,45 @@ public:
         try {
             auto jsonObj = json::parse(responseBody);
 
-            if (jsonObj.contains("models") && jsonObj["models"].is_array()) {
-                for (const auto& modelEntry : jsonObj["models"]) {
-                    if (modelEntry.is_object()) {
-                        if (modelEntry.contains("name") && modelEntry["name"].is_string()) {
-                            models.push_back(modelEntry["name"].get<std::string>());
-                        } else if (modelEntry.contains("model") && modelEntry["model"].is_string()) {
-                            models.push_back(modelEntry["model"].get<std::string>());
+            if (jsonObj.contains("models")) {
+                const auto& modelsNode = jsonObj["models"];
+                if (modelsNode.is_array()) {
+                    for (size_t i = 0; i < modelsNode.size(); ++i) {
+                        const auto& modelEntry = modelsNode[i];
+                        if (modelEntry.is_object()) {
+                            if (modelEntry.contains("name") && modelEntry["name"].is_string()) {
+                                models.push_back(modelEntry["name"].get<std::string>());
+                            } else if (modelEntry.contains("model") && modelEntry["model"].is_string()) {
+                                models.push_back(modelEntry["model"].get<std::string>());
+                            }
+                        } else if (modelEntry.is_string()) {
+                            models.push_back(modelEntry.get<std::string>());
                         }
-                    } else if (modelEntry.is_string()) {
-                        models.push_back(modelEntry.get<std::string>());
+                    }
+                } else if (modelsNode.is_object()) {
+                    for (auto it = modelsNode.begin(); it != modelsNode.end(); ++it) {
+                        const auto& value = it->second;
+                        if (value.is_object()) {
+                            if (value.contains("name") && value["name"].is_string()) {
+                                models.push_back(value["name"].get<std::string>());
+                            } else if (value.contains("model") && value["model"].is_string()) {
+                                models.push_back(value["model"].get<std::string>());
+                            }
+                        } else if (value.is_string()) {
+                            models.push_back(value.get<std::string>());
+                        }
                     }
                 }
             } else if (jsonObj.is_array()) {
-                for (const auto& modelEntry : jsonObj) {
+                for (size_t i = 0; i < jsonObj.size(); ++i) {
+                    const auto& modelEntry = jsonObj[i];
                     if (modelEntry.is_string()) {
                         models.push_back(modelEntry.get<std::string>());
                     }
                 }
             }
 
-        } catch (const json::exception&) {
+        } catch (const std::exception&) {
             // Ignore parse errors and return empty list
         }
 
@@ -446,7 +464,7 @@ private:
                                 fullResponseText += responseChunk;
                             }
                         }
-                    } catch (const json::exception& e) {
+                    } catch (const std::exception& e) {
                         // Handle potential parsing errors if a line is incomplete or invalid
                         std::cerr << "JSON parse error: " << e.what() << std::endl;
                     }
@@ -498,11 +516,10 @@ private:
     std::string buildPayload(const std::string& model, const std::string& prompt)
     {
         // Use nlohmann/json for robust JSON building with proper escaping
-        json payload = {
-            {"model", model},
-            {"prompt", prompt},
-            {"stream", true}  // Enable streaming for real-time responses
-        };
+        json payload;
+        payload["model"] = model;
+        payload["prompt"] = prompt;
+        payload["stream"] = true;  // Enable streaming for real-time responses
         return payload.dump();
     }
 

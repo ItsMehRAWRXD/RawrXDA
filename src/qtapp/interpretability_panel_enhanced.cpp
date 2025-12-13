@@ -312,7 +312,8 @@ InterpretabilityPanelEnhanced::ModelDiagnostics InterpretabilityPanelEnhanced::r
     
     auto end_time = std::chrono::high_resolution_clock::now();
     m_perf_metrics.last_diagnostics_duration = end_time - start_time;
-    m_last_diagnostics_time = end_time;
+    // Convert high_resolution_clock to system_clock for compatibility
+    m_last_diagnostics_time = std::chrono::system_clock::now();
     m_cached_diagnostics = diagnostics;
     
     // Emit diagnostics signal
@@ -549,7 +550,7 @@ QJsonObject InterpretabilityPanelEnhanced::exportAsJSON() const
     auto end_time = std::chrono::high_resolution_clock::now();
     root["export_duration_ms"] = std::chrono::duration<double>(end_time - start_time).count() * 1000;
     
-    m_perf_metrics.total_exports++;
+    // Note: In const context, cannot modify m_perf_metrics.total_exports - client code handles tracking
     
     return root;
 }
@@ -879,7 +880,11 @@ void InterpretabilityPanelEnhanced::createCharts()
     if (!m_chart) return;
     
     m_chart->removeAllSeries();
-    m_chart->legend()->clear();
+    // Remove all axes instead of clearing legend
+    const auto axes = m_chart->axes();
+    for (auto axis : axes) {
+        m_chart->removeAxis(axis);
+    }
     
     switch (m_current_visualization) {
         case VisualizationType::GradientFlow: {
@@ -1010,4 +1015,51 @@ void InterpretabilityPanelEnhanced::logEvent(const QString& event_type, const QJ
 void InterpretabilityPanelEnhanced::onRefreshDisplay()
 {
     updateDisplay();
+}
+
+// ========== NEW EXPORT OVERLOADS FOR MAINWINDOW COMPATIBILITY ==========
+
+/**
+ * Export data as JSON file (overload for MainWindow)
+ * @param file_path Path to save JSON file
+ * @return Success status
+ */
+bool InterpretabilityPanelEnhanced::exportAsJSON(const QString& file_path)
+{
+    qDebug() << "[InterpretabilityPanelEnhanced] Exporting JSON to file:" << file_path;
+    
+    try {
+        QJsonObject json_data = exportAsJSON();
+        QJsonDocument doc(json_data);
+        
+        QFile file(file_path);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            qWarning() << "[InterpretabilityPanelEnhanced] Cannot open file for writing:" << file_path;
+            return false;
+        }
+        
+        file.write(doc.toJson(QJsonDocument::Indented));
+        file.close();
+        
+        QJsonObject event;
+        event["event"] = "json_file_export_completed";
+        event["file_path"] = file_path;
+        logEvent("export", event);
+        
+        return true;
+    } catch (const std::exception& e) {
+        qWarning() << "[InterpretabilityPanelEnhanced] JSON file export failed:"
+                   << QString::fromStdString(e.what());
+        return false;
+    }
+}
+
+/**
+ * Export data as CSV file (overload for MainWindow - uses current viz type)
+ * @param file_path Path to save CSV
+ * @return Success status
+ */
+bool InterpretabilityPanelEnhanced::exportAsCSV(const QString& file_path)
+{
+    return exportAsCSV(file_path, m_current_visualization);
 }

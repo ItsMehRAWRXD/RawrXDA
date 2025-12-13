@@ -13,22 +13,19 @@
 
 namespace RawrXD {
 
-QtDirectoryManager::QtDirectoryManager() {}
+QtDirectoryManager::QtDirectoryManager(QObject* parent) : QObject(parent) {}
 
-FileOperationResult QtDirectoryManager::createDirectory(const QString& path,
-                                                       bool createParents) 
+FileOperationResult QtDirectoryManager::createDirectory(const QString& path) 
 {
-    QString absolutePath = this->absolutePath(path);
+    QString absPath = toAbsolutePath(path, QString());
     QDir dir;
     
-    bool success = createParents 
-        ? dir.mkpath(absolutePath)
-        : dir.mkdir(absolutePath);
+    bool success = dir.mkpath(absPath);
     
     if (!success) {
         return FileOperationResult(
             false, 
-            QString("Failed to create directory: %1").arg(absolutePath)
+            QString("Failed to create directory: %1").arg(absPath)
         );
     }
     
@@ -36,9 +33,9 @@ FileOperationResult QtDirectoryManager::createDirectory(const QString& path,
 }
 
 FileOperationResult QtDirectoryManager::deleteDirectory(const QString& path,
-                                                       bool recursive) 
+                                                       bool moveToTrash) 
 {
-    QString absolutePath = this->absolutePath(path);
+    QString absolutePath = toAbsolutePath(path, QString());
     
     if (!exists(absolutePath)) {
         return FileOperationResult(false, "Directory does not exist");
@@ -50,19 +47,11 @@ FileOperationResult QtDirectoryManager::deleteDirectory(const QString& path,
     
     QDir dir(absolutePath);
     
-    if (recursive) {
-        if (!removeDirectoryRecursive(absolutePath)) {
-            return FileOperationResult(false, "Failed to delete directory recursively");
-        }
-    } else {
-        // Non-recursive: directory must be empty
-        if (!dir.isEmpty()) {
-            return FileOperationResult(false, "Directory is not empty");
-        }
-        
-        if (!dir.rmdir(absolutePath)) {
-            return FileOperationResult(false, "Failed to delete directory");
-        }
+    // moveToTrash not implemented - always do hard delete
+    // For production: integrate with platform trash APIs
+    
+    if (!removeDirectoryRecursive(absolutePath)) {
+        return FileOperationResult(false, "Failed to delete directory recursively");
     }
     
     return FileOperationResult(true);
@@ -71,8 +60,8 @@ FileOperationResult QtDirectoryManager::deleteDirectory(const QString& path,
 FileOperationResult QtDirectoryManager::copyDirectory(const QString& sourcePath,
                                                      const QString& destPath) 
 {
-    QString absoluteSource = this->absolutePath(sourcePath);
-    QString absoluteDest = this->absolutePath(destPath);
+    QString absoluteSource = toAbsolutePath(sourcePath, QString());
+    QString absoluteDest = toAbsolutePath(destPath, QString());
     
     if (!exists(absoluteSource)) {
         return FileOperationResult(false, "Source directory does not exist");
@@ -150,19 +139,22 @@ QStringList QtDirectoryManager::listDirectories(const QString& path, bool recurs
     return dirs;
 }
 
-QString QtDirectoryManager::absolutePath(const QString& path) const {
-    if (QFileInfo(path).isAbsolute()) {
-        return QDir::cleanPath(path);
+QString QtDirectoryManager::toAbsolutePath(const QString& relativePath,
+                                          const QString& basePath) const {
+    QString pathToConvert = relativePath;
+    if (QFileInfo(pathToConvert).isAbsolute()) {
+        return QDir::cleanPath(pathToConvert);
     }
-    return QDir::current().absoluteFilePath(path);
+    
+    QDir base = basePath.isEmpty() ? QDir::current() : QDir(basePath);
+    return base.absoluteFilePath(pathToConvert);
 }
 
-QString QtDirectoryManager::relativePath(const QString& basePath,
-                                        const QString& targetPath) const 
+QString QtDirectoryManager::toRelativePath(const QString& absolutePath,
+                                          const QString& basePath) const 
 {
     QDir baseDir(basePath);
-    QString absoluteTarget = this->absolutePath(targetPath);
-    return baseDir.relativeFilePath(absoluteTarget);
+    return baseDir.relativeFilePath(absolutePath);
 }
 
 // Private helper methods

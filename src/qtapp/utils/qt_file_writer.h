@@ -9,6 +9,7 @@
 #define RAWRXD_QT_FILE_WRITER_H
 
 #include "../interfaces/ifile_writer.h"
+#include <QObject>
 
 namespace RawrXD {
 
@@ -19,9 +20,10 @@ namespace RawrXD {
  * This ensures data integrity even if the application crashes
  * during a save operation.
  */
-class QtFileWriter : public IFileWriter {
+class QtFileWriter : public QObject, public IFileWriter {
+Q_OBJECT
 public:
-    QtFileWriter();
+    explicit QtFileWriter(QObject* parent = nullptr);
     ~QtFileWriter() override = default;
     
     // IFileWriter interface implementation
@@ -61,3 +63,7 @@ private:
 } // namespace RawrXD
 
 #endif // RAWRXD_QT_FILE_WRITER_H
+
+
+
+
