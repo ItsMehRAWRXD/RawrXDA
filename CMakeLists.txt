@@ -2082,10 +2082,10 @@ add_subdirectory(src)
 # Benchmark executables
 #
 
-# AI Completion Benchmark (Non-Qt benchmark using core engine)
-if(EXISTS "${CMAKE_SOURCE_DIR}/tests/benchmark_completions.cpp")
+# AI Completion Benchmark - FULL PRODUCTION VERSION (with comprehensive tests)
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/benchmark_completions_full.cpp")
     add_executable(benchmark_completions
-        tests/benchmark_completions.cpp
+        tests/benchmark_completions_full.cpp
         src/real_time_completion_engine.cpp
         src/qtapp/inference_engine.cpp
         src/qtapp/gguf_loader.cpp
@@ -2119,6 +2119,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/benchmark_completions.cpp")
     set_target_properties(benchmark_completions PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release"
     )
+    
+    message(STATUS "✓ Building benchmark_completions (FULL PRODUCTION VERSION)")
 endif()
 
 #
