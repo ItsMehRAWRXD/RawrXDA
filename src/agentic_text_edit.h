@@ -11,6 +11,7 @@
 #include <QTimer>
 #include "lsp_client.h"
 #include "ghost_text_renderer.h"
+#include "qtapp/ai_completion_provider.h"
 
 namespace RawrXD {
 
@@ -48,6 +49,27 @@ public:
      * Get current LSP client
      */
     LSPClient* lspClient() const { return m_lspClient; }
+
+    /**
+     * Set AI completion provider for this editor
+     * Enables Cursor-style AI completions powered by local GGUF models
+     */
+    void setAICompletionProvider(AICompletionProvider* provider);
+
+    /**
+     * Get current AI completion provider
+     */
+    AICompletionProvider* aiCompletionProvider() const { return m_aiProvider; }
+
+    /**
+     * Enable/disable AI completions (separate from LSP)
+     */
+    void setAICompletionsEnabled(bool enabled);
+
+    /**
+     * Check if AI completions are enabled
+     */
+    bool aiCompletionsEnabled() const { return m_aiCompletionsEnabled; }
 
     /**
      * Get ghost text renderer
@@ -98,6 +120,8 @@ private slots:
     void onCursorPositionChanged();
     void onCompletionTimeout();
     void onCompletionsReceived(const QString& uri, int line, int character, const QVector<CompletionItem>& items);
+    void onAICompletionsReceived(const QVector<AICompletion>& completions);
+    void onAICompletionError(const QString& error);
     void onGhostTextAccepted(const QString& text);
     void onGhostTextDismissed();
 
@@ -108,6 +132,7 @@ private:
     bool shouldTriggerCompletion(const QString& lineText) const;
 
     LSPClient* m_lspClient{};
+    AICompletionProvider* m_aiProvider{};
     GhostTextRenderer* m_ghostRenderer{};
     
     QString m_documentUri;
@@ -117,6 +142,7 @@ private:
     QTimer* m_completionTimer{};
     int m_completionDelay = 300;  // 300ms debounce
     bool m_autoCompletionsEnabled = true;
+    bool m_aiCompletionsEnabled = true;  // AI completions enabled by default
     
     bool m_documentOpened = false;
 };
