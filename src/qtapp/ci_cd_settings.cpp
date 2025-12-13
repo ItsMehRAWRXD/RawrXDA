@@ -501,3 +501,4 @@ std::map<QString, QJsonObject> CICDSettings::getPipelineTemplates() const
     
     return templates;
 }
+

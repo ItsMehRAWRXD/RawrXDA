@@ -6,7 +6,7 @@
 // ============================================================================
 
 #include "model_trainer.h"
-#include "inference_engine.h"
+#include "qtapp/inference_engine.hpp"
 #include "gguf_loader.h"
 #include "vulkan_compute.h"
 #include <QFile>

@@ -478,3 +478,4 @@ void TokenizerSelector::initializeTokenizerMap()
         TokenizerType::Custom
     };
 }
+

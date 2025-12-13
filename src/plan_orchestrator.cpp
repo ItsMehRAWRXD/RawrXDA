@@ -7,7 +7,6 @@
 
 #include "plan_orchestrator.h"
 #include "lsp_client.h"
-#include "inference_engine.h"
 #include <QFile>
 #include <QTextStream>
 #include <QDir>

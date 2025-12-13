@@ -512,3 +512,4 @@ bool CheckpointManager::readCheckpointFromDisk(const QString& checkpointId,
     state.modelWeights = data;
     return true;
 }
+

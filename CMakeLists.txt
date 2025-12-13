@@ -1200,12 +1200,37 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/tokenizer_selector.cpp")
         list(APPEND AGENTICIDE_SOURCES src/qtapp/tokenizer_selector.cpp)
     endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/tokenizer_selector.h")
+        set_source_files_properties(src/qtapp/tokenizer_selector.h PROPERTIES SKIP_AUTOMOC ON)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/real_time_completion_engine.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/real_time_completion_engine.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/include/tokenizer_selector.h")
+        list(APPEND AGENTICIDE_SOURCES include/tokenizer_selector.h)
+        set_source_files_properties(include/tokenizer_selector.h PROPERTIES SKIP_AUTOMOC OFF)
+    endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ci_cd_settings.cpp")
         list(APPEND AGENTICIDE_SOURCES src/qtapp/ci_cd_settings.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ci_cd_settings.h")
+        set_source_files_properties(src/qtapp/ci_cd_settings.h PROPERTIES SKIP_AUTOMOC ON)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/include/ci_cd_settings.h")
+        list(APPEND AGENTICIDE_SOURCES include/ci_cd_settings.h)
+        set_source_files_properties(include/ci_cd_settings.h PROPERTIES SKIP_AUTOMOC OFF)
     endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/checkpoint_manager.cpp")
         list(APPEND AGENTICIDE_SOURCES src/qtapp/checkpoint_manager.cpp)
     endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/checkpoint_manager.h")
+        set_source_files_properties(src/qtapp/checkpoint_manager.h PROPERTIES SKIP_AUTOMOC ON)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/include/checkpoint_manager.h")
+        list(APPEND AGENTICIDE_SOURCES include/checkpoint_manager.h)
+        set_source_files_properties(include/checkpoint_manager.h PROPERTIES SKIP_AUTOMOC OFF)
+    endif()
+
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/inflate_deflate_cpp.cpp")
         list(APPEND AGENTICIDE_SOURCES src/qtapp/inflate_deflate_cpp.cpp)
     endif()
@@ -2052,6 +2077,49 @@ include(GNUInstallDirs)
 #
 
 add_subdirectory(src)
+
+#
+# Benchmark executables
+#
+
+# AI Completion Benchmark (Non-Qt benchmark using core engine)
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/benchmark_completions.cpp")
+    add_executable(benchmark_completions
+        tests/benchmark_completions.cpp
+        src/real_time_completion_engine.cpp
+        src/qtapp/inference_engine.cpp
+        src/qtapp/gguf_loader.cpp
+        src/qtapp/quant_utils.cpp
+        src/qtapp/transformer_inference.cpp
+        src/qtapp/bpe_tokenizer.cpp
+        src/qtapp/sentencepiece_tokenizer.cpp
+        src/qtapp/vocabulary_loader.cpp
+        src/qtapp/inflate_deflate_cpp.cpp
+        src/gguf_loader.cpp
+    )
+    
+    target_link_libraries(benchmark_completions PRIVATE
+        ${ALL_LIBS}
+        brutal_gzip
+        ggml
+        ggml-cpu
+        ggml-vulkan
+    )
+    
+    target_include_directories(benchmark_completions PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
+        ${CMAKE_SOURCE_DIR}/3rdparty/ggml/src
+        ${Qt6_INCLUDE_DIRS}
+    )
+    
+    target_compile_options(benchmark_completions PRIVATE /EHsc /std:c++latest)
+    
+    set_target_properties(benchmark_completions PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release"
+    )
+endif()
 
 #
 # tests and examples

@@ -1,6 +1,7 @@
 #include "real_time_completion_engine.h"
 #include <algorithm>
 #include <chrono>
+#include <QString>
 
 RealTimeCompletionEngine::RealTimeCompletionEngine(
     std::shared_ptr<Logger> logger,
@@ -172,18 +173,16 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
             return {};
         }
 
-        if (!m_inferenceEngine->IsModelLoaded()) {
+        if (!m_inferenceEngine->isModelLoaded()) {
             m_logger->warn("Model not loaded for completions");
             m_metrics->incrementCounter("model_not_loaded_errors");
             return {};
         }
-
-        m_logger->info("Using InferenceEngine with model loaded (vocab_size={})",
-                      m_inferenceEngine->GetVocabSize());
+        m_logger->info("Using InferenceEngine with model loaded (prompt size tracking)");
 
         // STEP 2: Tokenize Prompt with Context Window Enforcement
         // ========================================================
-        std::vector<uint32_t> inputTokens = m_inferenceEngine->TokenizeText(prompt);
+        std::vector<int32_t> inputTokens = m_inferenceEngine->tokenize(QString::fromStdString(prompt));
         m_logger->debug("Tokenized prompt into {} tokens", inputTokens.size());
 
         // Enforce context window limit (typical: 512-2048 tokens)
@@ -204,77 +203,25 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
 
         // STEP 3: Generate Tokens with Stopping Conditions
         // ================================================
+        m_logger->debug("Starting token generation using InferenceEngine::generate (max_tokens={})", maxTokens);
+
+        std::vector<int32_t> generatedTokens = m_inferenceEngine->generate(inputTokens, maxTokens);
+
         std::string generatedCompletion;
-        const int MIN_COMPLETION_LENGTH = 5;
-        const std::vector<std::string> STOP_SEQUENCES = {
-            "\n\n",      // Double newline = end of statement block
-            "EOF",       // Explicit end marker
-            "};",        // End of struct/class
-            "}\n",       // Function/block end
-            "return"     // Return statement (often end of function)
-        };
-
-        m_logger->debug("Starting token generation loop (max_tokens={})", maxTokens);
-
-        for (int i = 0; i < maxTokens; i++) {
-            // Safety check: total tokens within reasonable limit
-            if (inputTokens.size() >= TOTAL_LIMIT) {
-                m_logger->debug("Hit total token limit: {} tokens", inputTokens.size());
-                break;
-            }
-
-            // Generate next token using the model
-            // Temperature 0.3 for focused completions (low randomness)
-            // Top-p 0.9 for nucleus sampling (controlled diversity)
-            // 
-            // Note: InferenceEngine::GenerateToken() returns text directly
-            // For more control, we would sample from logits with temperature/top_p
-            std::string tokenText = m_inferenceEngine->GenerateToken(prompt + generatedCompletion, 1);
-            
-            if (tokenText.empty()) {
-                m_logger->debug("Model returned empty token at position {}", i);
-                break;
-            }
-
-            generatedCompletion += tokenText;
-
-            // Check for natural end-of-sequence indicators
-            // Common EOS tokens: "</s>", "[END]", "<|endoftext|>", etc.
-            if (tokenText.find("</s>") != std::string::npos ||
-                tokenText.find("[END]") != std::string::npos ||
-                tokenText.find("<|endoftext|>") != std::string::npos) {
-                m_logger->debug("Model reached EOS token at position {}", i);
-                break;
-            }
-
-            // Check for manually defined stop sequences
-            for (const auto& stopSeq : STOP_SEQUENCES) {
-                if (generatedCompletion.find(stopSeq) != std::string::npos) {
-                    m_logger->debug("Stopping at sequence: '{}' (generated: {})", 
-                                   stopSeq, i + 1);
-                    goto completion_done;
-                }
-            }
-
-            // Early exit if we have a valid, complete code statement
-            if (generatedCompletion.length() >= MIN_COMPLETION_LENGTH &&
-                (tokenText == ";" || tokenText == ")" || 
-                 tokenText == "}\n" || tokenText == "},")) {
-                m_logger->debug("Got likely complete statement at {} tokens, early exit", i + 1);
-                break;
-            }
-
-            // Safety: limit generation length to prevent runaway
-            if (generatedCompletion.length() > 256) {
-                m_logger->warn("Hit maximum completion length ({})", generatedCompletion.length());
-                break;
-            }
+        if (generatedTokens.size() > inputTokens.size()) {
+            std::vector<int32_t> completionSegment(
+                generatedTokens.begin() + static_cast<long long>(inputTokens.size()),
+                generatedTokens.end());
+            generatedCompletion = m_inferenceEngine->detokenize(completionSegment).toStdString();
+        } else {
+            m_logger->debug("No additional tokens generated beyond prompt");
         }
 
-        completion_done:
         m_logger->info("Generated completion: {} chars, {} tokens",
-                      generatedCompletion.length(), 
-                      generatedCompletion.empty() ? 0 : (int)generatedCompletion.length() / 4);
+                      generatedCompletion.length(),
+                      generatedTokens.size() > inputTokens.size()
+                          ? static_cast<int>(generatedTokens.size() - inputTokens.size())
+                          : 0);
 
         // STEP 4: Parse Completions from Generated Text
         // =============================================

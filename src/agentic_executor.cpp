@@ -1,7 +1,7 @@
 // AgenticExecutor - Real agentic task execution (not simulated)
 #include "agentic_executor.h"
 #include "agentic_engine.h"
-#include "inference_engine.h"
+#include "qtapp/inference_engine.hpp"
 #include "model_trainer.h"
 #include <QFile>
 #include <QTextStream>
@@ -43,7 +43,7 @@ void AgenticExecutor::initialize(AgenticEngine* engine, InferenceEngine* inferen
             this, &AgenticExecutor::logMessage);
     
     if (m_inferenceEngine) {
-        m_modelTrainer->initialize(m_inferenceEngine, m_inferenceEngine->GetCurrentModelPath());
+        m_modelTrainer->initialize(m_inferenceEngine, m_inferenceEngine->modelPath());
     }
     
     qInfo() << "[AgenticExecutor] Connected to AgenticEngine, InferenceEngine, and ModelTrainer";
@@ -736,7 +736,7 @@ QJsonObject AgenticExecutor::trainModel(const QString& datasetPath, const QStrin
         return result;
     }
     
-    if (!m_inferenceEngine || !m_inferenceEngine->IsModelLoaded()) {
+    if (!m_inferenceEngine || !m_inferenceEngine->isModelLoaded()) {
         result["success"] = false;
         result["error"] = "No model loaded for training";
         return result;

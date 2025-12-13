@@ -38,13 +38,13 @@ private:
 
     // Caching
     std::unordered_map<std::string, std::vector<CodeCompletion>> m_completionCache;
-    std::mutex m_cacheMutex;
+    mutable std::mutex m_cacheMutex;
 
     // Performance tracking
     std::atomic<int64_t> m_totalRequests{0};
     std::atomic<int64_t> m_cacheHits{0};
     std::vector<double> m_latencyHistory;
-    std::mutex m_latencyMutex;
+    mutable std::mutex m_latencyMutex;
 
     // Configuration
     int m_maxCompletions = 5;

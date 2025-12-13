@@ -45,9 +45,9 @@ private:
 
 public:
     CompletionBenchmark() {
-        logger_ = std::make_shared<Logger>();
+        logger_ = std::make_shared<Logger>("benchmark");
         metrics_ = std::make_shared<Metrics>();
-        logger_->setLevel(LogLevel::INFO);
+        logger_->setMinLevel(LogLevel::INFO);
         engine_ = nullptr;
     }
 
@@ -59,8 +59,8 @@ public:
 
         std::cout << "[INIT] Loading GGUF model: " << modelPath << "\n";
         
-        engine_ = new InferenceEngine(nullptr);
-        bool loaded = engine_->Initialize(modelPath);
+        engine_ = new InferenceEngine(QString::fromStdString(modelPath));
+        bool loaded = engine_->loadModel(QString::fromStdString(modelPath));
         
         if (!loaded) {
             std::cerr << "✗ Failed to load model\n";
@@ -68,8 +68,8 @@ public:
         }
 
         std::cout << "✓ Model loaded successfully\n";
-        std::cout << "  • Vocab size: " << engine_->GetVocabSize() << "\n";
-        std::cout << "  • Embedding dim: " << engine_->GetEmbeddingDim() << "\n\n";
+        std::cout << "  • Model path: " << engine_->modelPath().toStdString() << "\n";
+        std::cout << "  • Model loaded: " << (engine_->isModelLoaded() ? "yes" : "no") << "\n\n";
 
         completionEngine_ = std::make_unique<RealTimeCompletionEngine>(logger_, metrics_);
         completionEngine_->setInferenceEngine(engine_);

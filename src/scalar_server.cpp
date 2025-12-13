@@ -1,7 +1,7 @@
 // Scalar Server - Lightweight inference server for scalar operations
 
 #include "scalar_server.h"
-#include "inference_engine.h"
+#include "qtapp/inference_engine.hpp"
 #include "transformer_block_scalar.h"
 #include <QTcpServer>
 #include <QTcpSocket>
