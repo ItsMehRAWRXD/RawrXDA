@@ -790,6 +790,9 @@ if(MSVC) # Re-enabled to test
         src/streaming_gguf_loader.cpp
         src/utils/ErrorReporter.cpp
         src/utils/Diagnostics.cpp
+        # Benchmark menu integration
+        src/benchmark_menu_widget.cpp
+        src/benchmark_runner.cpp
         $<$<BOOL:${ENABLE_VULKAN}>:src/win32app/VulkanRenderer.cpp>
         $<$<BOOL:${ENABLE_COPILOT}>:src/win32app/Win32IDE_CopilotIntegration.cpp>
         $<$<BOOL:${ENABLE_COPILOT}>:src/win32app/CopilotStreaming.cpp>
@@ -2096,6 +2099,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/benchmark_completions_full.cpp")
         src/qtapp/vocabulary_loader.cpp
         src/qtapp/inflate_deflate_cpp.cpp
         src/gguf_loader.cpp
+        # Memory-mapped streaming GGUF loader for 3-70GB models
+        src/ai/memory_mapped_file.cpp
+        src/ai/streaming_gguf_loader_qt.cpp
     )
     
     target_link_libraries(benchmark_completions PRIVATE
@@ -2109,6 +2115,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/benchmark_completions_full.cpp")
     target_include_directories(benchmark_completions PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/ai
         ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
         ${CMAKE_SOURCE_DIR}/3rdparty/ggml/src
         ${Qt6_INCLUDE_DIRS}

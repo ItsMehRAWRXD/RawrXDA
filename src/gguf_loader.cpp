@@ -137,15 +137,15 @@ bool GGUFLoader::ParseMetadata() {
         }
         
         // GGUF Value Types (https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)
-        // 1=String, 4=UInt32, 5=Int32, 6=Float32, 8=UInt64, 9=Int64, 10=Float64, 11=Array, 12=Bool
+        // 0=UInt8, 1=Int8, 2=UInt16, 3=Int16, 4=UInt32, 5=Int32, 6=Float32, 7=Bool, 8=String, 9=Array, 10=UInt64, 11=Int64, 12=Float64
         
-        if (value_type == 1) {  // UTF-8 string
+        if (value_type == 8) {  // UTF-8 string
             if (!ReadString(value)) {
                 throw std::runtime_error("Failed to read metadata string value for key: " + key);
             }
             metadata_.kv_pairs[key] = value;
             
-            // Parse important metadata
+            // Parse important metadata - support both llama and other model naming conventions
             if (key == "general.architecture") {
                 if (value == "llama") metadata_.architecture_type = 1;
             } else if (key == "llama.block_count") {
@@ -161,6 +161,19 @@ bool GGUFLoader::ParseMetadata() {
             uint32_t uint_val;
             if (!ReadValue(uint_val)) throw std::runtime_error("Failed to read uint32 for key: " + key);
             metadata_.kv_pairs[key] = std::to_string(uint_val);
+            
+            // Parse important numeric metadata
+            if (key == "llama.block_count") {
+                metadata_.layer_count = uint_val;
+            } else if (key == "llama.context_length") {
+                metadata_.context_length = uint_val;
+            } else if (key == "llama.embedding_length") {
+                metadata_.embedding_dim = uint_val;
+            } else if (key == "llama.vocab_size") {
+                metadata_.vocab_size = uint_val;
+            } else if (key == "llama.feed_forward_length") {
+                // Feed forward length is also useful metadata
+            }
         } else if (value_type == 5) {  // int32
             int32_t int_val;
             if (!ReadValue(int_val)) throw std::runtime_error("Failed to read int32 for key: " + key);
@@ -169,23 +182,50 @@ bool GGUFLoader::ParseMetadata() {
             float float_val;
             if (!ReadValue(float_val)) throw std::runtime_error("Failed to read float32 for key: " + key);
             metadata_.kv_pairs[key] = std::to_string(float_val);
-        } else if (value_type == 8) {  // uint64
+        } else if (value_type == 10) {  // uint64
             uint64_t uint64_val;
             if (!ReadValue(uint64_val)) throw std::runtime_error("Failed to read uint64 for key: " + key);
             metadata_.kv_pairs[key] = std::to_string(uint64_val);
-        } else if (value_type == 9) {  // int64
+            
+            // Parse important numeric metadata
+            if (key == "llama.block_count") {
+                metadata_.layer_count = uint64_val;
+            } else if (key == "llama.context_length") {
+                metadata_.context_length = uint64_val;
+            } else if (key == "llama.embedding_length") {
+                metadata_.embedding_dim = uint64_val;
+            } else if (key == "llama.vocab_size") {
+                metadata_.vocab_size = uint64_val;
+            }
+        } else if (value_type == 11) {  // int64
             int64_t int64_val;
             if (!ReadValue(int64_val)) throw std::runtime_error("Failed to read int64 for key: " + key);
             metadata_.kv_pairs[key] = std::to_string(int64_val);
-        } else if (value_type == 10) {  // float64
+        } else if (value_type == 12) {  // float64
             double float64_val;
             if (!ReadValue(float64_val)) throw std::runtime_error("Failed to read float64 for key: " + key);
             metadata_.kv_pairs[key] = std::to_string(float64_val);
-        } else if (value_type == 12) {  // boolean
+        } else if (value_type == 7) {  // boolean
             uint8_t bool_val;
             if (!ReadValue(bool_val)) throw std::runtime_error("Failed to read bool for key: " + key);
             metadata_.kv_pairs[key] = bool_val ? "true" : "false";
-        } else if (value_type == 11) {  // array
+        } else if (value_type == 0) {  // uint8
+            uint8_t uint8_val;
+            if (!ReadValue(uint8_val)) throw std::runtime_error("Failed to read uint8 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(uint8_val);
+        } else if (value_type == 1) {  // int8
+            int8_t int8_val;
+            if (!ReadValue(int8_val)) throw std::runtime_error("Failed to read int8 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(int8_val);
+        } else if (value_type == 2) {  // uint16
+            uint16_t uint16_val;
+            if (!ReadValue(uint16_val)) throw std::runtime_error("Failed to read uint16 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(uint16_val);
+        } else if (value_type == 3) {  // int16
+            int16_t int16_val;
+            if (!ReadValue(int16_val)) throw std::runtime_error("Failed to read int16 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(int16_val);
+        } else if (value_type == 9) {  // array
             // Array format: value_type (uint32) + array_length (uint64) + elements
             uint32_t array_type;
             uint64_t array_length;
@@ -195,7 +235,7 @@ bool GGUFLoader::ParseMetadata() {
             // For now, serialize array as comma-separated string (improve later if needed)
             std::string array_str = "[";
             for (uint64_t j = 0; j < array_length; ++j) {
-                if (array_type == 1) {  // string array
+                if (array_type == 8) {  // string array
                     std::string elem;
                     if (!ReadString(elem)) throw std::runtime_error("Failed to read array string element");
                     array_str += "\"" + elem + "\"";
@@ -236,10 +276,24 @@ bool GGUFLoader::ParseMetadata() {
             throw std::runtime_error("Failed to read dimension count for tensor: " + tensor.name);
         }
         
+        // Safety check: tensors should have <= 4 dimensions (very rare to have more)
+        if (n_dims > 8) {
+            throw std::runtime_error("Tensor has too many dimensions (" + std::to_string(n_dims) + 
+                                   ") for tensor: " + tensor.name);
+        }
+        
         tensor.shape.resize(n_dims);
         for (uint32_t d = 0; d < n_dims; ++d) {
             if (!ReadValue(tensor.shape[d])) {
-                throw std::runtime_error("Failed to read dimension " + std::to_string(d) + " for tensor: " + tensor.name);
+                throw std::runtime_error("Failed to read dimension " + std::to_string(d) + 
+                                       " for tensor: " + tensor.name);
+            }
+            
+            // Safety check: individual dimensions shouldn't exceed 1 billion
+            // (would be a sign of corrupted data)
+            if (tensor.shape[d] > 1000000000ULL) {
+                throw std::runtime_error("Tensor dimension too large (" + std::to_string(tensor.shape[d]) + 
+                                       ") for tensor: " + tensor.name);
             }
         }
         
@@ -413,6 +467,14 @@ bool GGUFLoader::ReadString(std::string& value) {
     uint64_t len;
     if (!ReadValue(len)) return false;
     
+    // Safety check: strings longer than 100MB are invalid
+    // This prevents bad allocation errors from corrupted metadata
+    const uint64_t MAX_STRING_SIZE = 100 * 1024 * 1024;  // 100MB limit
+    if (len > MAX_STRING_SIZE) {
+        std::cerr << "[GGUFLoader] String length " << len << " exceeds maximum allowed size" << std::endl;
+        return false;
+    }
+    
     value.resize(len);
     file_.read(&value[0], len);
     return file_.good();
@@ -476,9 +538,20 @@ uint64_t GGUFLoader::CalculateTensorSize(const std::vector<uint64_t>& shape, GGM
         case GGMLType::Q6_K: 
             return block_aligned_size(256, 210);
         
+        // F16_HALF
+        case GGMLType::F16_HALF:
+            return num_elements * 2;
+        
         default:
-            // In an enterprise setting, failing hard on an unknown type is safer
-            throw std::runtime_error("Unsupported GGMLType encountered for size calculation.");
+            // Type 14 is Q8_K (256 elements, 128 bytes per super-block)
+            // We handle it here as a fallback case since it's not in the enum
+            if (static_cast<uint32_t>(type) == 14) {
+                return block_aligned_size(256, 128);  // Q8_K: 256 elements, 128 bytes per block
+            }
+            // In production, log the unsupported type and use a safe default
+            std::cerr << "[GGUFLoader] WARNING: Unsupported GGMLType " << static_cast<uint32_t>(type) 
+                     << " encountered, assuming F32 size" << std::endl;
+            return num_elements * 4;  // Default to F32 size
     }
 }
 

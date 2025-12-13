@@ -42,6 +42,7 @@
 #include <filesystem>
 #include <cmath>
 #include <stdexcept>
+#include <cstdlib>
 
 #include "real_time_completion_engine.h"
 #include "inference_engine.h"
@@ -823,43 +824,90 @@ private:
 // ============================================================================
 
 int main(int argc, char* argv[]) {
-    // Parse command-line arguments
-    std::string modelPath = "models/ministral-3b-instruct-v0.3-Q4_K_M.gguf";
-    bool verbose = true;
-    bool gpuEnabled = true;
-    
-    for (int i = 1; i < argc; i++) {
-        std::string arg = argv[i];
-        if (arg == "-m" && i + 1 < argc) {
-            modelPath = argv[++i];
-        } else if (arg == "-q" || arg == "--quiet") {
-            verbose = false;
-        } else if (arg == "--cpu-only") {
-            gpuEnabled = false;
-        } else if (arg == "-h" || arg == "--help") {
-            std::cout << "RawrXD Completion Benchmark v2.0\n\n";
-            std::cout << "Usage: benchmark_completions [options]\n\n";
-            std::cout << "Options:\n";
-            std::cout << "  -m <path>        Path to GGUF model file\n";
-            std::cout << "  -q, --quiet      Suppress verbose output\n";
-            std::cout << "  --cpu-only       Disable GPU acceleration\n";
-            std::cout << "  -h, --help       Show this help message\n\n";
-            return 0;
+    try {
+        // Early diagnostic file write
+        {
+            std::ofstream diag("benchmark_start.diag", std::ios::out | std::ios::trunc);
+            diag << "start";
         }
-    }
+        // Echo argv for diagnostics
+        std::cout << "Args (" << argc << "):";
+        for (int i = 0; i < argc; ++i) {
+            std::cout << " [" << i << ":" << argv[i] << "]";
+        }
+        std::cout << "\n";
 
-    CompletionBenchmark benchmark(verbose, gpuEnabled);
-    
-    if (!benchmark.Initialize(modelPath)) {
-        std::cerr << "\n✗ Benchmark initialization failed!\n";
-        std::cerr << "  Model path: " << modelPath << "\n";
-        std::cerr << "  Please ensure the GGUF model file exists.\n\n";
-        return 1;
+        // Parse command-line arguments
+        std::string modelPath = "models/ministral-3b-instruct-v0.3-Q4_K_M.gguf";
+        bool verbose = true;
+        bool gpuEnabled = true;
+        
+        for (int i = 1; i < argc; i++) {
+            std::string arg = argv[i];
+            if (arg == "-m" && i + 1 < argc) {
+                modelPath = argv[++i];
+            } else if (arg == "-q" || arg == "--quiet") {
+                verbose = false;
+            } else if (arg == "--cpu-only") {
+                gpuEnabled = false;
+            } else if (arg == "-h" || arg == "--help") {
+                std::cout << "RawrXD Completion Benchmark v2.0\n\n";
+                std::cout << "Usage: benchmark_completions [options]\n\n";
+                std::cout << "Options:\n";
+                std::cout << "  -m <path>        Path to GGUF model file\n";
+                std::cout << "  -q, --quiet      Suppress verbose output\n";
+                std::cout << "  --cpu-only       Disable GPU acceleration\n";
+                std::cout << "  -h, --help       Show this help message\n\n";
+                return 0;
+            }
+        }
+
+        std::cout << "Model path: " << modelPath << "\n";
+        std::cout << "Verbose: " << (verbose ? "true" : "false")
+                  << ", GPU: " << (gpuEnabled ? "enabled" : "cpu-only") << "\n";
+
+        CompletionBenchmark benchmark(verbose, gpuEnabled);
+        
+        if (!benchmark.Initialize(modelPath)) {
+            std::cerr << "\n✗ Benchmark initialization failed!\n";
+            std::cerr << "  Model path: " << modelPath << "\n";
+            std::cerr << "  Please ensure the GGUF model file exists and is readable.\n\n";
+            {
+                std::ofstream diag("benchmark_init_fail.diag", std::ios::out | std::ios::trunc);
+                diag << "init_failed";
+            }
+            return EXIT_FAILURE;
+        }
+        
+        // Pre-run diagnostic
+        {
+            std::ofstream diag("benchmark_initialized.diag", std::ios::out | std::ios::trunc);
+            diag << "initialized";
+        }
+
+        benchmark.RunAllBenchmarks();
+
+        {
+            std::ofstream diag("benchmark_completed.diag", std::ios::out | std::ios::trunc);
+            diag << "completed";
+        }
+        
+        return EXIT_SUCCESS;
+    } catch (const std::exception& e) {
+        std::cerr << "\n✗ Unhandled exception: " << e.what() << "\n";
+        {
+            std::ofstream diag("benchmark_unhandled.diag", std::ios::out | std::ios::trunc);
+            diag << e.what();
+        }
+        return EXIT_FAILURE;
+    } catch (...) {
+        std::cerr << "\n✗ Unknown fatal error occurred.\n";
+        {
+            std::ofstream diag("benchmark_unknown.diag", std::ios::out | std::ios::trunc);
+            diag << "unknown";
+        }
+        return EXIT_FAILURE;
     }
-    
-    benchmark.RunAllBenchmarks();
-    
-    return 0;
 }
 
 
