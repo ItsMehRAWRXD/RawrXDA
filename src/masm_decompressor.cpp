@@ -1,16 +1,13 @@
 /**
  * @file masm_decompressor.cpp
- * @brief Real implementation of MASM/compressed format decompression
+ * @brief Production-ready MASM/compressed format decompression
  * 
  * This module handles decompression of GGUF models stored in compressed formats:
  * - Zstandard (zstd) - High compression ratio, fast decompression
  * - Gzip (gz) - Standard compression format
  * - LZ4 - Ultra-fast decompression
  * 
- * Production implementation requires linking against:
- * - zstd: https://github.com/facebook/zstd
- * - zlib: https://github.com/madler/zlib  
- * - lz4: https://github.com/lz4/lz4
+ * Production implementation with proper library integration
  */
 
 #include <fstream>
@@ -19,6 +16,12 @@
 #include <stdexcept>
 #include <iostream>
 #include <memory>
+
+// Production compression libraries
+#include <zstd.h>     // Zstandard compression
+#include <zlib.h>     // zlib for gzip
+#include <lz4.h>      // LZ4 compression
+#include <lz4frame.h> // LZ4 frame format
 
 class MASMDecompressor {
 public:
@@ -168,116 +171,169 @@ private:
     }
 
     /**
-     * Decompress Zstandard format
-     * 
-     * Requires: zstd library (https://github.com/facebook/zstd)
-     * Link: -lzstd or zstd::libzstd
-     * 
-     * In production, use ZSTD C API:
-     *   #include <zstd.h>
-     *   size_t result = ZSTD_decompress(dst, dstSize, src, srcSize);
-     *   if (ZSTD_isError(result)) { handle error }
+     * Production-ready Zstandard decompression using ZSTD C API
      */
     static bool decompressZstd(const std::vector<char>& compressed,
                               std::vector<char>& decompressed) {
         try {
             // Parse Zstd frame header to get content size
             if (compressed.size() < 18) {
+                std::cerr << "ZSTD: Input too small" << std::endl;
                 return false;
             }
 
-            // Extract content size from frame header
-            uint64_t contentSize = parseZstdContentSize(compressed);
-            if (contentSize == 0) {
-                // Fallback: estimate 4x compression ratio
-                contentSize = compressed.size() * 4;
+            // Get uncompressed size from frame header
+            unsigned long long const contentSize = ZSTD_getFrameContentSize(
+                compressed.data(), compressed.size());
+            
+            if (contentSize == ZSTD_CONTENTSIZE_ERROR) {
+                std::cerr << "ZSTD: Not a valid Zstandard frame" << std::endl;
+                return false;
             }
-
-            decompressed.resize(contentSize);
-
-            // TODO: Replace with real ZSTD_decompress call
-            // Example:
-            // #include <zstd.h>
-            // size_t result = ZSTD_decompress(
-            //     decompressed.data(), decompressed.size(),
-            //     compressed.data(), compressed.size()
-            // );
-            // if (ZSTD_isError(result)) {
-            //     std::cerr << "ZSTD error: " << ZSTD_getErrorName(result) << std::endl;
-            //     return false;
-            // }
-            // decompressed.resize(result);
-
-            // Placeholder: assume decompression works and resize
-            // In real implementation, this would call ZSTD_decompress above
-            if (contentSize <= 0xFFFFFFFF) {  // Reasonable size check
-                return true;
+            
+            if (contentSize == ZSTD_CONTENTSIZE_UNKNOWN) {
+                // Content size not stored in frame - use streaming decompression
+                // Estimate initial buffer size
+                size_t estimatedSize = compressed.size() * 4;
+                decompressed.resize(estimatedSize);
+                
+                ZSTD_DStream* const dstream = ZSTD_createDStream();
+                if (!dstream) {
+                    std::cerr << "ZSTD: Failed to create decompression stream" << std::endl;
+                    return false;
+                }
+                
+                size_t const initResult = ZSTD_initDStream(dstream);
+                if (ZSTD_isError(initResult)) {
+                    std::cerr << "ZSTD init error: " << ZSTD_getErrorName(initResult) << std::endl;
+                    ZSTD_freeDStream(dstream);
+                    return false;
+                }
+                
+                ZSTD_inBuffer input = { compressed.data(), compressed.size(), 0 };
+                size_t outputPos = 0;
+                
+                while (input.pos < input.size) {
+                    // Ensure enough output space
+                    if (outputPos + ZSTD_DStreamOutSize() > decompressed.size()) {
+                        decompressed.resize(decompressed.size() * 2);
+                    }
+                    
+                    ZSTD_outBuffer output = { decompressed.data() + outputPos, 
+                                             decompressed.size() - outputPos, 0 };
+                    size_t const result = ZSTD_decompressStream(dstream, &output, &input);
+                    
+                    if (ZSTD_isError(result)) {
+                        std::cerr << "ZSTD streaming error: " << ZSTD_getErrorName(result) << std::endl;
+                        ZSTD_freeDStream(dstream);
+                        return false;
+                    }
+                    
+                    outputPos += output.pos;
+                }
+                
+                decompressed.resize(outputPos);
+                ZSTD_freeDStream(dstream);
+                
+            } else {
+                // Content size is known - simple decompression
+                decompressed.resize(contentSize);
+                
+                size_t const result = ZSTD_decompress(
+                    decompressed.data(), decompressed.size(),
+                    compressed.data(), compressed.size()
+                );
+                
+                if (ZSTD_isError(result)) {
+                    std::cerr << "ZSTD error: " << ZSTD_getErrorName(result) << std::endl;
+                    return false;
+                }
+                
+                decompressed.resize(result);
             }
-
-            return false;
+            
+            std::cout << "ZSTD: Decompressed " << compressed.size() 
+                     << " -> " << decompressed.size() << " bytes" << std::endl;
+            return true;
 
         } catch (const std::exception& e) {
-            std::cerr << "Zstd decompression error: " << e.what() << std::endl;
+            std::cerr << "Zstd decompression exception: " << e.what() << std::endl;
             return false;
         }
     }
 
     /**
-     * Decompress Gzip format
-     * 
-     * Requires: zlib (https://github.com/madler/zlib)
-     * Link: -lz or ZLIB::ZLIB
-     * 
-     * In production, use zlib API:
-     *   #include <zlib.h>
-     *   z_stream stream;
-     *   inflateInit2(&stream, 16 + MAX_WBITS);  // 16 for gzip
-     *   inflate(&stream, Z_FINISH);
-     *   inflateEnd(&stream);
+     * Production-ready Gzip decompression using zlib API
      */
     static bool decompressGzip(const std::vector<char>& compressed,
                               std::vector<char>& decompressed) {
         try {
             if (compressed.size() < 10) {
-                return false;  // Gzip minimum header size
+                std::cerr << "GZIP: Input too small" << std::endl;
+                return false;
             }
 
-            // Verify gzip magic
-            if (compressed[0] != 0x1F || compressed[1] != 0x8B) {
+            // Verify gzip magic bytes
+            if (static_cast<unsigned char>(compressed[0]) != 0x1F || 
+                static_cast<unsigned char>(compressed[1]) != 0x8B) {
+                std::cerr << "GZIP: Invalid magic bytes" << std::endl;
                 return false;
             }
 
             // Extract compression method (byte 2)
-            uint8_t method = compressed[2];
+            uint8_t method = static_cast<unsigned char>(compressed[2]);
             if (method != 8) {
-                return false;  // Only deflate (8) is widely used
+                std::cerr << "GZIP: Unsupported compression method: " << (int)method << std::endl;
+                return false;
             }
 
-            // Estimate decompressed size (gzip doesn't store original size in header)
-            // Conservative estimate: 4x compression ratio
-            size_t estimatedSize = compressed.size() * 4;
-            decompressed.resize(estimatedSize);
+            // Initialize zlib stream
+            z_stream stream = {};
+            stream.avail_in = compressed.size();
+            stream.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(compressed.data()));
+            
+            // inflateInit2 with 16 + MAX_WBITS for gzip format
+            int ret = inflateInit2(&stream, 16 + MAX_WBITS);
+            if (ret != Z_OK) {
+                std::cerr << "GZIP: inflateInit2 failed: " << ret << std::endl;
+                return false;
+            }
 
-            // TODO: Replace with real zlib inflate call
-            // Example:
-            // #include <zlib.h>
-            // z_stream stream = {};
-            // if (inflateInit2(&stream, 16 + MAX_WBITS) != Z_OK) {
-            //     return false;
-            // }
-            // stream.avail_in = compressed.size();
-            // stream.next_in = (Bytef*)compressed.data();
-            // stream.avail_out = decompressed.size();
-            // stream.next_out = (Bytef*)decompressed.data();
-            // int ret = inflate(&stream, Z_FINISH);
-            // inflateEnd(&stream);
-            // if (ret == Z_STREAM_END) {
-            //     decompressed.resize(stream.total_out);
-            //     return true;
-            // }
-            // return false;
-
-            return true;  // Placeholder
+            // Estimate initial size and decompress in chunks
+            const size_t CHUNK_SIZE = 128 * 1024;  // 128KB chunks
+            std::vector<char> tempBuffer;
+            tempBuffer.reserve(compressed.size() * 4);  // Initial estimate
+            
+            do {
+                // Prepare output buffer
+                char outBuffer[CHUNK_SIZE];
+                stream.avail_out = CHUNK_SIZE;
+                stream.next_out = reinterpret_cast<Bytef*>(outBuffer);
+                
+                // Decompress chunk
+                ret = inflate(&stream, Z_NO_FLUSH);
+                
+                if (ret != Z_OK && ret != Z_STREAM_END) {
+                    inflateEnd(&stream);
+                    std::cerr << "GZIP: inflate failed: " << ret << std::endl;
+                    return false;
+                }
+                
+                // Append decompressed data
+                size_t produced = CHUNK_SIZE - stream.avail_out;
+                tempBuffer.insert(tempBuffer.end(), outBuffer, outBuffer + produced);
+                
+            } while (ret != Z_STREAM_END);
+            
+            // Clean up
+            inflateEnd(&stream);
+            
+            // Copy to output
+            decompressed = std::move(tempBuffer);
+            
+            std::cout << "GZIP: Decompressed " << compressed.size() 
+                     << " -> " << decompressed.size() << " bytes" << std::endl;
+            return true;
 
         } catch (const std::exception& e) {
             std::cerr << "Gzip decompression error: " << e.what() << std::endl;
@@ -286,66 +342,89 @@ private:
     }
 
     /**
-     * Decompress LZ4 format
-     * 
-     * Requires: lz4 (https://github.com/lz4/lz4)
-     * Link: -llz4 or lz4::lz4
-     * 
-     * In production, use LZ4 API:
-     *   #include <lz4.h>
-     *   int decompressedSize = LZ4_decompress_safe(
-     *       src, dst, srcSize, dstCapacity
-     *   );
+     * Production-ready LZ4 decompression using LZ4 Frame API
      */
     static bool decompressLz4(const std::vector<char>& compressed,
                              std::vector<char>& decompressed) {
         try {
             if (compressed.size() < 15) {
-                return false;  // LZ4 frame minimum size
-            }
-
-            // Verify LZ4 frame magic: 0x04 0x22 0x4D 0x18
-            if (compressed[0] != 0x04 || compressed[1] != 0x22 ||
-                compressed[2] != 0x4D || compressed[3] != 0x18) {
+                std::cerr << "LZ4: Input too small" << std::endl;
                 return false;
             }
 
-            // Parse content size from frame descriptor
-            uint8_t frameDescByte = compressed[4];
-            bool hasContentSize = (frameDescByte & 0x04) != 0;
+            // Verify LZ4 frame magic: 0x04 0x22 0x4D 0x18
+            if (static_cast<unsigned char>(compressed[0]) != 0x04 || 
+                static_cast<unsigned char>(compressed[1]) != 0x22 ||
+                static_cast<unsigned char>(compressed[2]) != 0x4D || 
+                static_cast<unsigned char>(compressed[3]) != 0x18) {
+                std::cerr << "LZ4: Invalid magic bytes" << std::endl;
+                return false;
+            }
 
-            uint64_t contentSize = 0;
-            if (hasContentSize && compressed.size() >= 12) {
-                // Extract 8-byte content size
-                for (int i = 0; i < 8; i++) {
-                    contentSize |= ((uint64_t)compressed[i + 5]) << (i * 8);
+            // Create LZ4 decompression context
+            LZ4F_dctx* dctx = nullptr;
+            LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&dctx, LZ4F_VERSION);
+            if (LZ4F_isError(err)) {
+                std::cerr << "LZ4: Failed to create context: " << LZ4F_getErrorName(err) << std::endl;
+                return false;
+            }
+
+            // Get frame info to determine output size
+            LZ4F_frameInfo_t frameInfo;
+            size_t srcSize = compressed.size();
+            size_t consumedSize = srcSize;
+            err = LZ4F_getFrameInfo(dctx, &frameInfo, compressed.data(), &consumedSize);
+            if (LZ4F_isError(err)) {
+                std::cerr << "LZ4: Failed to get frame info: " << LZ4F_getErrorName(err) << std::endl;
+                LZ4F_freeDecompressionContext(dctx);
+                return false;
+            }
+
+            // Allocate output buffer
+            size_t estimatedSize = (frameInfo.contentSize > 0) ? 
+                                    frameInfo.contentSize : compressed.size() * 2;
+            std::vector<char> tempBuffer;
+            tempBuffer.reserve(estimatedSize);
+
+            // Decompress in chunks
+            const size_t CHUNK_SIZE = 64 * 1024;  // 64KB chunks
+            size_t srcPos = consumedSize;
+            
+            while (srcPos < compressed.size()) {
+                char outBuffer[CHUNK_SIZE];
+                size_t dstSize = CHUNK_SIZE;
+                size_t srcRemaining = compressed.size() - srcPos;
+                
+                size_t result = LZ4F_decompress(dctx, outBuffer, &dstSize,
+                                               compressed.data() + srcPos, &srcRemaining,
+                                               nullptr);
+                
+                if (LZ4F_isError(result)) {
+                    std::cerr << "LZ4: Decompression error: " << LZ4F_getErrorName(result) << std::endl;
+                    LZ4F_freeDecompressionContext(dctx);
+                    return false;
                 }
+                
+                // Append decompressed data
+                tempBuffer.insert(tempBuffer.end(), outBuffer, outBuffer + dstSize);
+                srcPos += srcRemaining;
+                
+                // If result == 0, frame is complete
+                if (result == 0) break;
             }
 
-            if (contentSize == 0) {
-                // Estimate 2x compression ratio for LZ4
-                contentSize = compressed.size() * 2;
-            }
-
-            decompressed.resize(contentSize);
-
-            // TODO: Replace with real LZ4_decompress_safe call
-            // Example:
-            // #include <lz4.h>
-            // int decompressedSize = LZ4_decompress_safe(
-            //     compressed.data(), decompressed.data(),
-            //     compressed.size(), decompressed.size()
-            // );
-            // if (decompressedSize < 0) {
-            //     return false;
-            // }
-            // decompressed.resize(decompressedSize);
-            // return true;
-
-            return true;  // Placeholder
+            // Clean up
+            LZ4F_freeDecompressionContext(dctx);
+            
+            // Copy to output
+            decompressed = std::move(tempBuffer);
+            
+            std::cout << "LZ4: Decompressed " << compressed.size() 
+                     << " -> " << decompressed.size() << " bytes" << std::endl;
+            return true;
 
         } catch (const std::exception& e) {
-            std::cerr << "LZ4 decompression error: " << e.what() << std::endl;
+            std::cerr << "LZ4 decompression exception: " << e.what() << std::endl;
             return false;
         }
     }

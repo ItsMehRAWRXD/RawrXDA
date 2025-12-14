@@ -128,14 +128,25 @@ QByteArray GGUFLoaderQt::inflateWeight(const QString& tensorName)
             return QByteArray();
         }
 
-        // Convert std::vector<uint8_t> to QByteArray
+        // Convert std::vector<uint8_t> to QByteArray safely
+        // Check for buffer overflow - limit to 2GB max tensor size
+        if (data.size() > static_cast<size_t>(std::numeric_limits<int>::max())) {
+            qCritical() << "[GGUFLoaderQt] Tensor too large (>2GB):" << tensorName << "Size:" << data.size();
+            return QByteArray();
+        }
+        
+        if (data.empty()) {
+            qDebug() << "[GGUFLoaderQt] Empty tensor data:" << tensorName;
+            return QByteArray();
+        }
+        
         return QByteArray(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
 
     } catch (const std::exception& e) {
-        qWarning() << "[GGUFLoaderQt] Exception loading tensor" << tensorName << ":" << e.what();
+        qCritical() << "[GGUFLoaderQt] EXCEPTION loading tensor" << tensorName << ":" << e.what();
         return QByteArray();
     } catch (...) {
-        qWarning() << "[GGUFLoaderQt] Unknown exception loading tensor:" << tensorName;
+        qCritical() << "[GGUFLoaderQt] UNKNOWN EXCEPTION loading tensor:" << tensorName;
         return QByteArray();
     }
 }

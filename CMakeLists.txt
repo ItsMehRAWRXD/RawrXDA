@@ -97,6 +97,51 @@ if(Qt6_FOUND)
     add_definitions(-DHAVE_QT_CORE -DQT_NO_OPENGL)
     include_directories(${Qt6_INCLUDE_DIRS})
     link_libraries(Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Concurrent Qt6::Test Qt6::Charts)
+    
+    # ============================================================
+    # AUTOMATIC DLL DEPLOYMENT - Deploy ALL dependencies automatically
+    # ============================================================
+    find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${Qt6_DIR}/../../../bin")
+    
+    function(deploy_runtime_dependencies target_name)
+        if(WIN32 AND WINDEPLOYQT_EXECUTABLE)
+            # Use windeployqt to automatically deploy Qt DLLs, plugins, and MSVC runtime
+            add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND "${WINDEPLOYQT_EXECUTABLE}" 
+                    --release 
+                    --compiler-runtime 
+                    --no-translations 
+                    --no-system-d3d-compiler
+                    --no-opengl-sw
+                    "$<TARGET_FILE:${target_name}>"
+                WORKING_DIRECTORY "$<TARGET_FILE_DIR:${target_name}>"
+                COMMENT "Deploying Qt dependencies for ${target_name}..."
+            )
+            
+            # Additionally copy Qt6Sql.dll explicitly (sometimes missed by windeployqt)
+            add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "$<TARGET_FILE:Qt6::Sql>"
+                    "$<TARGET_FILE_DIR:${target_name}>/"
+                COMMENT "Ensuring Qt6Sql.dll is deployed for ${target_name}"
+            )
+            
+            # Copy MSVC OpenMP runtime (vcomp140.dll) if not already deployed
+            if(EXISTS "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.44.35207/x64/Microsoft.VC144.OpenMP/vcomp140.dll")
+                add_custom_command(TARGET ${target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.44.35207/x64/Microsoft.VC144.OpenMP/vcomp140.dll"
+                        "$<TARGET_FILE_DIR:${target_name}>/"
+                    COMMENT "Deploying vcomp140.dll for ${target_name}"
+                )
+            endif()
+            
+            message(STATUS "✓ Automatic DLL deployment enabled for ${target_name}")
+        else()
+            message(WARNING "windeployqt not found - manual DLL deployment required for ${target_name}")
+        endif()
+    endfunction()
+    
 else()
     message(WARNING "Qt6 not found. Qt-based benchmarks will be skipped.")
 endif()
@@ -251,6 +296,7 @@ if(MSVC)
             src/qtapp/TerminalManager.cpp
             src/qtapp/TerminalManager.h
             src/gguf_loader.cpp        # Native C++ loader wrapped by gguf_loader_qt
+            src/gguf_vocab_resolver.cpp  # Universal vocab size detection for all GGUF models
             include/gguf_loader.h      # Ensure header is in sources for proper dependency tracking
             src/qtapp/gguf_loader.hpp  # Qt wrapper header
             src/qtapp/gguf_loader.cpp  # Qt wrapper implementation
@@ -513,17 +559,8 @@ target_link_libraries(RawrXD-QtShell PRIVATE
             target_compile_options(RawrXD-QtShell PRIVATE -fexceptions $<$<CONFIG:Release>:-O2>)
         endif()
         
-        # Add windeployqt post-build step to ensure all Qt DLLs and VC runtime are deployed
-        find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${Qt6_DIR}/../../../bin")
-        if(WINDEPLOYQT_EXECUTABLE)
-            add_custom_command(TARGET RawrXD-QtShell POST_BUILD
-                COMMAND "${WINDEPLOYQT_EXECUTABLE}" --release --compiler-runtime --no-translations "$<TARGET_FILE:RawrXD-QtShell>"
-                WORKING_DIRECTORY "$<TARGET_FILE_DIR:RawrXD-QtShell>"
-                COMMENT "Running windeployqt to deploy Qt dependencies and VC runtime..."
-            )
-        else()
-            message(WARNING "windeployqt not found - manual deployment required")
-        endif()
+        # Automatic DLL deployment for RawrXD-QtShell
+        deploy_runtime_dependencies(RawrXD-QtShell)
         
         # ---------- Production Feature Test: Real component testing ----------
         add_executable(production_feature_test
@@ -617,6 +654,7 @@ target_link_libraries(RawrXD-QtShell PRIVATE
             src/qtapp/inference_engine.cpp
             src/qtapp/gguf_loader.cpp
             src/gguf_loader.cpp
+            src/gguf_vocab_resolver.cpp  # Universal vocab size detection
             src/qtapp/transformer_inference.cpp
             src/qtapp/bpe_tokenizer.cpp
             src/qtapp/sentencepiece_tokenizer.cpp
@@ -680,6 +718,7 @@ target_link_libraries(RawrXD-QtShell PRIVATE
             src/qtapp/inference_engine.cpp
             src/qtapp/gguf_loader.cpp
             src/gguf_loader.cpp
+            src/gguf_vocab_resolver.cpp  # Universal vocab size detection
             src/qtapp/transformer_inference.cpp
             src/qtapp/bpe_tokenizer.cpp
             src/qtapp/sentencepiece_tokenizer.cpp
@@ -799,6 +838,31 @@ if(MSVC) # Re-enabled to test
         # Agentic navigation integration
         src/agentic/AgenticNavigator.cpp
         src/agentic/AgenticCopilotIntegration.cpp
+        # Qt-based IDE Main Window
+        src/ide_main_window.h
+        src/ide_main_window.cpp
+        src/autonomous_widgets.h
+        src/autonomous_widgets.cpp
+        # Model Router Components
+        # Universal Model Router Integration (Cloud AI + Local GGUF)
+        src/universal_model_router.cpp
+        src/cloud_api_client.cpp
+        src/model_interface.cpp
+        # Model Router Qt Adapter for IDE Integration
+        src/model_router_adapter.h
+        src/model_router_adapter.cpp
+        # Model Router GUI Widget
+        src/model_router_widget.h
+        src/model_router_widget.cpp
+        # Cloud Settings Dialog
+        src/cloud_settings_dialog.h
+        src/cloud_settings_dialog.cpp
+        # Metrics Dashboard
+        src/metrics_dashboard.h
+        src/metrics_dashboard.cpp
+        # Model Router Console
+        src/model_router_console.h
+        src/model_router_console.cpp
     )
     
     target_link_libraries(RawrXD-Win32IDE PRIVATE
@@ -817,6 +881,10 @@ if(MSVC) # Re-enabled to test
         RawrXDGit
         RawrXDTerminal
         brutal_gzip
+        Qt6::Core
+        Qt6::Network
+        Qt6::Widgets
+        Qt6::Charts
     )
     
     # Add include dir first to pick up our d3d10effect.h and ggml.h stubs before system SDK
@@ -1267,6 +1335,9 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/gguf_loader.cpp")
         list(APPEND AGENTICIDE_SOURCES src/gguf_loader.cpp)
     endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/gguf_vocab_resolver.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/gguf_vocab_resolver.cpp)
+    endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/vulkan_compute.cpp")
         list(APPEND AGENTICIDE_SOURCES src/vulkan_compute.cpp)
     endif()
@@ -1293,6 +1364,9 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ai_completion_provider.cpp")
         list(APPEND AGENTICIDE_SOURCES src/qtapp/ai_completion_provider.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/model_loader_thread.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/model_loader_thread.cpp)
     endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/telemetry.cpp")
         list(APPEND AGENTICIDE_SOURCES src/telemetry.cpp)
@@ -1467,26 +1541,8 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     endif()
     target_compile_definitions(RawrXD-AgenticIDE PRIVATE _CRT_SECURE_NO_WARNINGS)
     
-    # Copy Qt DLLs to output directory
-    add_custom_command(TARGET RawrXD-AgenticIDE POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_FILE:Qt6::Core>"
-            "$<TARGET_FILE:Qt6::Gui>"
-            "$<TARGET_FILE:Qt6::Widgets>"
-            "$<TARGET_FILE:Qt6::Network>"
-            "$<TARGET_FILE_DIR:RawrXD-AgenticIDE>"
-        COMMENT "Copying Qt DLLs to output directory"
-    )
-    
-    # Copy Qt platform plugins
-    add_custom_command(TARGET RawrXD-AgenticIDE POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory
-            "$<TARGET_FILE_DIR:RawrXD-AgenticIDE>/platforms"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${Qt6_DIR}/../../../plugins/platforms/qwindows$<$<CONFIG:Debug>:d>.dll"
-            "$<TARGET_FILE_DIR:RawrXD-AgenticIDE>/platforms/"
-        COMMENT "Copying Qt platform plugins"
-    )
+    # Automatic DLL deployment for RawrXD-AgenticIDE
+    deploy_runtime_dependencies(RawrXD-AgenticIDE)
     
     # Include smoke tests
     if(EXISTS "${CMAKE_SOURCE_DIR}/smoke_tests.cmake")
@@ -1818,6 +1874,7 @@ endif()
 add_executable(test_gguf_loader
     tests/test_gguf_loader.cpp
     src/gguf_loader.cpp
+    src/gguf_vocab_resolver.cpp
 )
 target_link_libraries(test_gguf_loader PRIVATE 
     Qt6::Core
@@ -1836,6 +1893,7 @@ set_target_properties(test_gguf_loader PROPERTIES
 add_executable(test_gguf_loader_simple
     tests/test_gguf_loader_simple.cpp
     src/gguf_loader.cpp
+    src/gguf_vocab_resolver.cpp
 )
 target_link_libraries(test_gguf_loader_simple PRIVATE 
     Qt6::Core
@@ -2099,6 +2157,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/benchmark_completions_full.cpp")
         src/qtapp/vocabulary_loader.cpp
         src/qtapp/inflate_deflate_cpp.cpp
         src/gguf_loader.cpp
+        src/gguf_vocab_resolver.cpp  # Universal vocab size detection for all GGUF models
         # Memory-mapped streaming GGUF loader for 3-70GB models
         src/ai/memory_mapped_file.cpp
         src/ai/streaming_gguf_loader_qt.cpp
@@ -2126,6 +2185,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/benchmark_completions_full.cpp")
     set_target_properties(benchmark_completions PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release"
     )
+    
+    # Automatic DLL deployment for benchmark_completions
+    deploy_runtime_dependencies(benchmark_completions)
     
     message(STATUS "✓ Building benchmark_completions (FULL PRODUCTION VERSION)")
 endif()

@@ -47,6 +47,14 @@ public:
     Q_INVOKABLE bool loadModel(const QString& path);
     
     /**
+     * @brief Set a progress callback for model loading
+     * @param callback Function to call with progress updates
+     */
+    void setLoadProgressCallback(std::function<void(const QString&)> callback) {
+        m_loadProgressCallback = callback;
+    }
+    
+    /**
      * @brief Check if a model is currently loaded
      */
     bool isModelLoaded() const;
@@ -238,6 +246,9 @@ private:
     // FIX 6: Add request queue and processing state
     QQueue<InferenceRequest> m_requestQueue;
     bool m_isProcessingInference{false};
+    
+    // Progress callback for model loading (used by background threads)
+    std::function<void(const QString&)> m_loadProgressCallback;
     
     enum TokenizerMode {
         TOKENIZER_FALLBACK,  // Simple word-based fallback

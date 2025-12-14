@@ -1,6 +1,7 @@
 // RawrXD Agentic IDE - v5.0 Clean Implementation
 // Integrates v4.3 features with proper lazy initialization and async operations
 #include "MainWindow_v5.h"
+#include "model_loader_thread.hpp"
 #include "chat_interface.h"
 #include "multi_tab_editor.h"
 #include "terminal_pool.h"
@@ -97,6 +98,10 @@ MainWindow::MainWindow(QWidget *parent)
     , m_splashWidget(nullptr)
     , m_splashLabel(nullptr)
     , m_splashProgress(nullptr)
+    , m_modelLoaderThread(nullptr)
+    , m_loadingProgressDialog(nullptr)
+    , m_loadProgressTimer(nullptr)
+    , m_pendingModelPath()
 {
     qDebug() << "[MainWindow] Lightweight constructor - deferring all initialization";
     
@@ -630,21 +635,34 @@ void MainWindow::loadModel()
         "GGUF Models (*.gguf);;All Files (*)");
     
     if (!modelPath.isEmpty()) {
-        // Directly set the model in the agentic engine
-        if (m_agenticEngine) {
-            m_agenticEngine->setModelName(modelPath);
-            statusBar()->showMessage(QString("Loading model: %1").arg(QFileInfo(modelPath).fileName()), 3000);
-        } else {
-            statusBar()->showMessage("Agentic Engine not initialized", 3000);
-        }
+        // Actually load the model through onModelSelected which does the real work
+        statusBar()->showMessage(QString("Loading model: %1...").arg(QFileInfo(modelPath).fileName()), 5000);
+        
+        // Use QTimer to prevent blocking the UI during model loading
+        QTimer::singleShot(100, this, [this, modelPath]() {
+            onModelSelected(modelPath);
+        });
     }
 }
 
 void MainWindow::onModelSelected(const QString &ggufPath)
 {
+    // Validate model path
+    if (ggufPath.isEmpty() || !QFile::exists(ggufPath)) {
+        QMessageBox::critical(this, "Invalid Model", 
+            QString("Model file not found: %1").arg(ggufPath));
+        statusBar()->showMessage("❌ Model file not found", 3000);
+        return;
+    }
+    
+    qDebug() << "[MainWindow::onModelSelected] Loading model:" << ggufPath;
+    statusBar()->showMessage("🔄 Loading model...", 0);
+    QApplication::processEvents(); // Update UI
+    
     // Create inference engine if it doesn't exist
     if (!m_inferenceEngine) {
-        m_inferenceEngine = new ::InferenceEngine(ggufPath, this);
+        qDebug() << "[MainWindow] Creating new InferenceEngine";
+        m_inferenceEngine = new ::InferenceEngine(QString(), this);  // Empty path - no immediate load
         
         // Connect signal for unsupported quantization type detection
         connect(m_inferenceEngine, &::InferenceEngine::unsupportedQuantizationTypeDetected,
@@ -671,41 +689,149 @@ void MainWindow::onModelSelected(const QString &ggufPath)
         });
     }
     
-    // Load the model using the InferenceEngine's built-in loader
-    if (m_inferenceEngine->loadModel(ggufPath)) {
-        // Link to agentic engine AND sync the modelLoaded flag
-        if (m_agenticEngine) {
-            m_agenticEngine->setInferenceEngine(m_inferenceEngine);
-            // CRITICAL: Sync AgenticEngine's m_modelLoaded flag so processMessage() uses real inference
-            m_agenticEngine->markModelAsLoaded(ggufPath);
-            qDebug() << "[MainWindow::onModelSelected] ✅ AgenticEngine flagged as model-loaded";
+    // Store path
+    m_pendingModelPath = ggufPath;
+    
+    // Create progress dialog
+    if (!m_loadingProgressDialog) {
+        m_loadingProgressDialog = new QProgressDialog(this);
+        m_loadingProgressDialog->setWindowTitle("Loading Model");
+        m_loadingProgressDialog->setWindowModality(Qt::WindowModal);
+        m_loadingProgressDialog->setMinimumDuration(0);
+        m_loadingProgressDialog->setAutoClose(false);
+        m_loadingProgressDialog->setAutoReset(false);
+        connect(m_loadingProgressDialog, &QProgressDialog::canceled, this, &MainWindow::onModelLoadCanceled);
+    }
+    
+    QString modelName = QFileInfo(ggufPath).fileName();
+    m_loadingProgressDialog->setLabelText(QString("Loading %1...\nInitializing...").arg(modelName));
+    m_loadingProgressDialog->setRange(0, 0);  // Indeterminate
+    m_loadingProgressDialog->setValue(0);
+    m_loadingProgressDialog->show();
+    
+    qInfo() << "[MainWindow] Starting std::thread model load for:" << ggufPath;
+    
+    // Clean up existing thread if any
+    if (m_modelLoaderThread) {
+        m_modelLoaderThread->cancel();
+        m_modelLoaderThread->wait(2000);
+        delete m_modelLoaderThread;
+        m_modelLoaderThread = nullptr;
+    }
+    
+    // Create new loader thread (pure C++ std::thread)
+    m_modelLoaderThread = new ModelLoaderThread(m_inferenceEngine, ggufPath.toStdString());
+    
+    // Set progress callback (called from background thread)
+    m_modelLoaderThread->setProgressCallback([this](const std::string& msg) {
+        // Post to main thread via QTimer
+        QMetaObject::invokeMethod(this, [this, msg]() {
+            if (m_loadingProgressDialog && m_loadingProgressDialog->isVisible()) {
+                QString qmsg = QString::fromStdString(msg);
+                m_loadingProgressDialog->setLabelText(qmsg);
+            }
+        }, Qt::QueuedConnection);
+    });
+    
+    // Set completion callback (called from background thread)
+    m_modelLoaderThread->setCompleteCallback([this](bool success, const std::string& errorMsg) {
+        // Post to main thread
+        QMetaObject::invokeMethod(this, [this, success, errorMsg]() {
+            onModelLoadFinished(success, errorMsg);
+        }, Qt::QueuedConnection);
+    });
+    
+    // Start the thread
+    m_modelLoaderThread->start();
+    
+    // Setup timer to check if thread is still alive
+    if (!m_loadProgressTimer) {
+        m_loadProgressTimer = new QTimer(this);
+        connect(m_loadProgressTimer, &QTimer::timeout, this, &MainWindow::checkLoadProgress);
+    }
+    m_loadProgressTimer->start(500);  // Check every 500ms
+}
+
+void MainWindow::checkLoadProgress()
+{
+    // This runs on main thread, checking if background thread is still alive
+    if (m_modelLoaderThread && !m_modelLoaderThread->isRunning()) {
+        // Thread finished, stop timer
+        if (m_loadProgressTimer) {
+            m_loadProgressTimer->stop();
         }
-        
-        // Update status bar with comprehensive info
-        QString modelName = QFileInfo(ggufPath).baseName();
-        QString backend = "CPU";  // Default, could be read from settings
-        QSettings settings("RawrXD", "AgenticIDE");
-        QString savedBackend = settings.value("AI/backend", "Auto").toString();
-        if (savedBackend.contains("Vulkan")) backend = "Vulkan";
-        else if (savedBackend.contains("CUDA")) backend = "CUDA";
-        
-        QString lspStatus = (m_lspClient && m_lspClient->isRunning()) ? "✔" : "✘";
-        
-        statusBar()->showMessage(
-            QString("Model: %1 | GPU: %2 | LSP: %3")
-            .arg(modelName).arg(backend).arg(lspStatus));
-        
-        // Enable chat after model loads
-        if (m_chatInterface) {
-            m_chatInterface->setCanSendMessage(true);
-        }
-        
-        qInfo() << "[MainWindow] ✅ Model loaded successfully:" << modelName;
+    }
+}
+
+void MainWindow::onModelLoadFinished(bool loadSuccess, const std::string& errorMsg)
+{
+    QString ggufPath = m_pendingModelPath;
+    
+    // Stop progress timer
+    if (m_loadProgressTimer) {
+        m_loadProgressTimer->stop();
+    }
+    
+    // Hide progress dialog
+    if (m_loadingProgressDialog) {
+        m_loadingProgressDialog->hide();
+    }
+    
+    qInfo() << "[MainWindow::onModelLoadFinished] Result:" << (loadSuccess ? "SUCCESS" : "FAILED");
+    
+    if (loadSuccess) {
+            // Link to agentic engine AND sync the modelLoaded flag
+            if (m_agenticEngine) {
+                m_agenticEngine->setInferenceEngine(m_inferenceEngine);
+                // CRITICAL: Sync AgenticEngine's m_modelLoaded flag so processMessage() uses real inference
+                m_agenticEngine->markModelAsLoaded(ggufPath);
+                qDebug() << "[MainWindow::onModelSelected] ✅ AgenticEngine flagged as model-loaded";
+            }
+            
+            // Update status bar with comprehensive info
+            QString modelName = QFileInfo(ggufPath).baseName();
+            QString backend = "CPU";  // Default, could be read from settings
+            QSettings settings("RawrXD", "AgenticIDE");
+            QString savedBackend = settings.value("AI/backend", "Auto").toString();
+            if (savedBackend.contains("Vulkan")) backend = "Vulkan";
+            else if (savedBackend.contains("CUDA")) backend = "CUDA";
+            
+            QString lspStatus = (m_lspClient && m_lspClient->isRunning()) ? "✔" : "✘";
+            
+            statusBar()->showMessage(
+                QString("Model: %1 | GPU: %2 | LSP: %3")
+                .arg(modelName).arg(backend).arg(lspStatus));
+            
+            // Enable chat after model loads
+            if (m_chatInterface) {
+                m_chatInterface->setCanSendMessage(true);
+            }
+            
+            qInfo() << "[MainWindow] ✅ Model loaded successfully:" << modelName;
     } else {
         QMessageBox::critical(this, "Load Failed", 
-            QString("Failed to load GGUF model: %1").arg(ggufPath));
-        statusBar()->showMessage(QString("❌ Model load failed: %1").arg(QFileInfo(ggufPath).fileName()));
+            QString("Failed to load GGUF model: %1\n\nCheck the console for detailed error messages.").arg(ggufPath));
+        statusBar()->showMessage(QString("❌ Model load failed: %1").arg(QFileInfo(ggufPath).fileName()), 5000);
     }
+    
+    m_pendingModelPath.clear();
+}
+
+void MainWindow::onModelLoadCanceled()
+{
+    qWarning() << "[MainWindow] Model loading canceled by user";
+    
+    if (m_modelLoaderThread) {
+        m_modelLoaderThread->cancel();
+        // Don't wait here - let it finish asynchronously
+    }
+    
+    if (m_loadProgressTimer) {
+        m_loadProgressTimer->stop();
+    }
+    
+    statusBar()->showMessage("❌ Model load canceled", 3000);
+    m_pendingModelPath.clear();
 }
 
 void MainWindow::applyInferenceSettings()

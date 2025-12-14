@@ -7,6 +7,14 @@
 #include <QDebug>
 #include <QStandardPaths>
 
+// Production-ready compression using zlib
+#ifdef _WIN32
+#include <zlib.h>
+#pragma comment(lib, "zlib.lib")
+#else
+#include <zlib.h>
+#endif
+
 BackupManager& BackupManager::instance() {
     static BackupManager instance;
     return instance;
@@ -251,53 +259,138 @@ QString BackupManager::calculateChecksum(const QString& filePath) {
 }
 
 bool BackupManager::compressBackup(const QString& srcPath, const QString& dstPath) {
-    // Simplified compression - in production use brutal_gzip or tar
+    // Production-ready compression using zlib with gzip format
     QFile src(srcPath);
-    QFile dst(dstPath);
     
     if (!src.open(QIODevice::ReadOnly)) {
         qWarning() << "[BackupManager] Failed to open source:" << srcPath;
         return false;
     }
     
-    if (!dst.open(QIODevice::WriteOnly)) {
-        qWarning() << "[BackupManager] Failed to create backup file:" << dstPath;
+    // Open gzip file for writing
+    gzFile gzf = gzopen(dstPath.toUtf8().constData(), "wb9"); // wb9 = write binary, max compression
+    if (!gzf) {
+        qWarning() << "[BackupManager] Failed to create compressed file:" << dstPath;
+        src.close();
         return false;
     }
     
-    // Copy data (TODO: actual compression with brutal_gzip)
-    dst.write(src.readAll());
+    // Compress data in chunks
+    const int CHUNK_SIZE = 128 * 1024; // 128KB chunks
+    QByteArray buffer;
+    qint64 totalRead = 0;
+    qint64 totalWritten = 0;
     
+    while (!src.atEnd()) {
+        buffer = src.read(CHUNK_SIZE);
+        if (buffer.isEmpty()) break;
+        
+        totalRead += buffer.size();
+        int written = gzwrite(gzf, buffer.constData(), buffer.size());
+        
+        if (written <= 0) {
+            qWarning() << "[BackupManager] Compression write error at offset:" << totalRead;
+            gzclose(gzf);
+            src.close();
+            QFile::remove(dstPath); // Clean up partial file
+            return false;
+        }
+        
+        totalWritten += written;
+    }
+    
+    // Close both files
+    int closeResult = gzclose(gzf);
     src.close();
-    dst.close();
+    
+    if (closeResult != Z_OK) {
+        qWarning() << "[BackupManager] Error closing compressed file, code:" << closeResult;
+        return false;
+    }
+    
+    QFileInfo srcInfo(srcPath);
+    QFileInfo dstInfo(dstPath);
+    double compressionRatio = (double)dstInfo.size() / (double)srcInfo.size() * 100.0;
+    
+    qDebug() << "[BackupManager] Compressed" << srcPath 
+             << "from" << srcInfo.size() << "to" << dstInfo.size() 
+             << "bytes (" << QString::number(compressionRatio, 'f', 1) << "%)";
     
     return true;
 }
 
 bool BackupManager::decompressBackup(const QString& srcPath, const QString& dstPath) {
-    // Simplified decompression - in production use brutal_gzip or tar
-    QFile src(srcPath);
-    QFile dst(dstPath);
-    
-    if (!src.open(QIODevice::ReadOnly)) {
-        qWarning() << "[BackupManager] Failed to open backup:" << srcPath;
-        return false;
-    }
+    // Production-ready decompression using zlib with gzip format
     
     // Ensure destination directory exists
     QFileInfo fi(dstPath);
     QDir().mkpath(fi.absolutePath());
     
-    if (!dst.open(QIODevice::WriteOnly)) {
-        qWarning() << "[BackupManager] Failed to create restore file:" << dstPath;
+    // Open gzip file for reading
+    gzFile gzf = gzopen(srcPath.toUtf8().constData(), "rb");
+    if (!gzf) {
+        qWarning() << "[BackupManager] Failed to open compressed file:" << srcPath;
         return false;
     }
     
-    // Copy data (TODO: actual decompression with brutal_gzip)
-    dst.write(src.readAll());
+    // Open destination file for writing
+    QFile dst(dstPath);
+    if (!dst.open(QIODevice::WriteOnly)) {
+        qWarning() << "[BackupManager] Failed to create restore file:" << dstPath;
+        gzclose(gzf);
+        return false;
+    }
     
-    src.close();
+    // Decompress data in chunks
+    const int CHUNK_SIZE = 128 * 1024; // 128KB chunks
+    char buffer[CHUNK_SIZE];
+    qint64 totalDecompressed = 0;
+    
+    while (true) {
+        int bytesRead = gzread(gzf, buffer, CHUNK_SIZE);
+        
+        if (bytesRead < 0) {
+            int errnum;
+            const char* errMsg = gzerror(gzf, &errnum);
+            qWarning() << "[BackupManager] Decompression read error:" << errMsg << "code:" << errnum;
+            gzclose(gzf);
+            dst.close();
+            QFile::remove(dstPath); // Clean up partial file
+            return false;
+        }
+        
+        if (bytesRead == 0) {
+            // End of file
+            break;
+        }
+        
+        qint64 written = dst.write(buffer, bytesRead);
+        if (written != bytesRead) {
+            qWarning() << "[BackupManager] Failed to write decompressed data";
+            gzclose(gzf);
+            dst.close();
+            QFile::remove(dstPath);
+            return false;
+        }
+        
+        totalDecompressed += bytesRead;
+    }
+    
+    // Close both files
+    int closeResult = gzclose(gzf);
     dst.close();
+    
+    if (closeResult != Z_OK) {
+        qWarning() << "[BackupManager] Error closing compressed file during decompression, code:" << closeResult;
+        return false;
+    }
+    
+    QFileInfo srcInfo(srcPath);
+    QFileInfo dstInfo(dstPath);
+    
+    qDebug() << "[BackupManager] Decompressed" << srcPath 
+             << "from" << srcInfo.size() << "to" << dstInfo.size() << "bytes";
+    
     
     return true;
 }

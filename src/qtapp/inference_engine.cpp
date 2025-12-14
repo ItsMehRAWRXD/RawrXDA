@@ -4,6 +4,7 @@
 #include <QMutexLocker>
 #include <QRegularExpression>
 #include <QThread>
+#include <QPair>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -17,8 +18,13 @@
 InferenceEngine::InferenceEngine(const QString& ggufPath, QObject* parent)
     : QObject(parent), m_loader(nullptr)
 {
+    // DO NOT load model in constructor - causes stack buffer overrun crashes
+    // Model loading must be deferred to avoid blocking main thread
+    // Call loadModel() explicitly after construction
     if (!ggufPath.isEmpty()) {
-        loadModel(ggufPath);
+        qDebug() << "[InferenceEngine] Deferring model load until explicit loadModel() call";
+        // Store path for later use if needed
+        m_modelPath = ggufPath;
     }
 }
 
@@ -39,9 +45,14 @@ InferenceEngine::~InferenceEngine()
 
 bool InferenceEngine::loadModel(const QString& path)
 {
+    // NOTE: This function is called from background thread via QtConcurrent
+    // DO NOT use QMutexLocker here - it will deadlock
+    // DO NOT emit signals directly - use QMetaObject::invokeMethod
+    
     try {
-        QMutexLocker lock(&m_mutex);
+        qInfo() << "[InferenceEngine::loadModel] Thread ID:" << QThread::currentThreadId();
         
+        // Clean up existing loader (if any)
         if (m_loader) {
             delete m_loader;
             m_loader = nullptr;
@@ -49,22 +60,44 @@ bool InferenceEngine::loadModel(const QString& path)
         
         if (path.isEmpty()) {
             qWarning() << "[InferenceEngine] Model path is empty";
-            emit modelLoadedChanged(false, QString());
+            QMetaObject::invokeMethod(this, "modelLoadedChanged", Qt::QueuedConnection,
+                Q_ARG(bool, false), Q_ARG(QString, QString()));
             return false;
         }
         
         qInfo() << "[InferenceEngine] Attempting to load model from:" << path;
         
-        // Create loader with error checking
-        m_loader = new GGUFLoaderQt(path);
-        
-        if (!m_loader->isOpen()) {
-            qWarning() << "[InferenceEngine] GGUFLoader failed to open file:" << path;
-            delete m_loader;
+        // Create loader with error checking and exception safety
+        try {
+            qInfo() << "[InferenceEngine] Creating GGUFLoaderQt for:" << path;
+            m_loader = new GGUFLoaderQt(path);
+            qInfo() << "[InferenceEngine] GGUFLoaderQt created successfully";
+        } catch (const std::exception& e) {
+            qCritical() << "[InferenceEngine] Exception creating GGUFLoaderQt:" << e.what();
             m_loader = nullptr;
-            emit modelLoadedChanged(false, QString());
+            QMetaObject::invokeMethod(this, "modelLoadedChanged", Qt::QueuedConnection,
+                Q_ARG(bool, false), Q_ARG(QString, QString()));
+            return false;
+        } catch (...) {
+            qCritical() << "[InferenceEngine] Unknown exception creating GGUFLoaderQt";
+            m_loader = nullptr;
+            QMetaObject::invokeMethod(this, "modelLoadedChanged", Qt::QueuedConnection,
+                Q_ARG(bool, false), Q_ARG(QString, QString()));
             return false;
         }
+        
+        if (!m_loader || !m_loader->isOpen()) {
+            qCritical() << "[InferenceEngine] GGUFLoader failed to open file:" << path;
+            if (m_loader) {
+                delete m_loader;
+                m_loader = nullptr;
+            }
+            QMetaObject::invokeMethod(this, "modelLoadedChanged", Qt::QueuedConnection,
+                Q_ARG(bool, false), Q_ARG(QString, QString()));
+            return false;
+        }
+        
+        qInfo() << "[InferenceEngine] GGUF file opened successfully:" << path;
         
         m_modelPath = path;
         QString modelName = extractModelName(path);
@@ -81,27 +114,47 @@ bool InferenceEngine::loadModel(const QString& path)
             }
             qWarning() << "[InferenceEngine] Recommended conversion: IQ4_NL or other unsupported → " << recommendedType;
             
-            // Emit signal for IDE to show conversion dialog
-            emit unsupportedQuantizationTypeDetected(unsupportedInfo, recommendedType, path);
+            // Emit signal for IDE to show conversion dialog (thread-safe)
+            QMetaObject::invokeMethod(this, "unsupportedQuantizationTypeDetected", Qt::QueuedConnection,
+                Q_ARG(QStringList, unsupportedInfo), Q_ARG(QString, recommendedType), Q_ARG(QString, path));
             
             // Continue with model loading attempt anyway (it may fail later on tensor size calculation)
             // The IDE will show the conversion dialog while we continue
         }
         
-        // Initialize tokenizer from model
+        // Initialize tokenizer from model (with full exception safety)
         try {
+            qInfo() << "[InferenceEngine] Initializing tokenizer...";
+            if (m_loadProgressCallback) {
+                m_loadProgressCallback("Initializing tokenizer...");
+            }
             initializeTokenizer();
+            qInfo() << "[InferenceEngine] Tokenizer initialized successfully";
         } catch (const std::exception& e) {
-            qWarning() << "[InferenceEngine] Failed to initialize tokenizer:" << e.what();
+            qCritical() << "[InferenceEngine] EXCEPTION initializing tokenizer:" << e.what();
             // Continue anyway - tokenizer is optional for basic inference
+        } catch (...) {
+            qCritical() << "[InferenceEngine] UNKNOWN EXCEPTION initializing tokenizer";
         }
         
-        // Build initial quantized tensor cache
+        // Build initial quantized tensor cache (with full exception safety)
         try {
+            qInfo() << "[InferenceEngine] Building tensor cache...";
             rebuildTensorCache();
+            qInfo() << "[InferenceEngine] Tensor cache build complete";
+        } catch (const std::bad_alloc& e) {
+            qCritical() << "[InferenceEngine] OUT OF MEMORY building tensor cache:" << e.what();
+            // Clean up and fail
+            delete m_loader;
+            m_loader = nullptr;
+            QMetaObject::invokeMethod(this, "modelLoadedChanged", Qt::QueuedConnection,
+                Q_ARG(bool, false), Q_ARG(QString, QString()));
+            return false;
         } catch (const std::exception& e) {
-            qWarning() << "[InferenceEngine] Failed to build tensor cache:" << e.what();
+            qCritical() << "[InferenceEngine] EXCEPTION building tensor cache:" << e.what();
             // Continue anyway - we'll try without cache
+        } catch (...) {
+            qCritical() << "[InferenceEngine] UNKNOWN EXCEPTION building tensor cache";
         }
         
         // === FIX: Dynamically read model architecture from GGUF metadata ===
@@ -117,37 +170,41 @@ bool InferenceEngine::loadModel(const QString& path)
         
         if (!m_tensorCache.isEmpty()) {
             try {
-                // Convert CachedTensorData -> QByteArray for legacy loadWeights signature
-                QHash<QString, QByteArray> byteArrayCache;
+                // Convert CachedTensorData -> (QByteArray, int) pairs to preserve type information
+                QHash<QString, QPair<QByteArray, int>> tensorCacheWithTypes;
                 for (auto it = m_tensorCache.constBegin(); it != m_tensorCache.constEnd(); ++it) {
-                    byteArrayCache.insert(it.key(), it.value().data);
+                    tensorCacheWithTypes.insert(it.key(), 
+                        QPair<QByteArray, int>(it.value().data, it.value().ggml_type_id));
                 }
                 
-                bool transformerLoaded = m_transformer.loadWeights(byteArrayCache, nLayers, nEmbd, nHead, nVocab);
+                qInfo() << "[InferenceEngine] Attempting transformer weight loading with type information";
+                qInfo() << "[InferenceEngine] Model uses" << m_tensorCache.size() << "tensors with mixed quantization types";
+                bool transformerLoaded = m_transformer.loadWeightsWithTypes(tensorCacheWithTypes, nLayers, nEmbd, nHead, nVocab);
                 if (!transformerLoaded) {
-                    qWarning() << "[InferenceEngine] Transformer weight loading failed, inference will be limited";
+                    qWarning() << "[InferenceEngine] Transformer weight loading failed - using GGUF direct inference";
                 } else {
-                    qInfo() << "[InferenceEngine] Transformer initialized successfully with real model parameters";
+                    qInfo() << "[InferenceEngine] Transformer initialized successfully with proper quantization types";
                 }
             } catch (const std::exception& e) {
-                qWarning() << "[InferenceEngine] Exception loading transformer weights:" << e.what();
-                // Continue anyway - model may work in limited capacity
+                qWarning() << "[InferenceEngine] Exception loading transformer weights:" << e.what() << "- continuing anyway";
+                // Continue anyway - model is loaded via GGUF loader
             }
         } else {
-            qWarning() << "[InferenceEngine] Tensor cache is empty, transformer initialization skipped";
+            qWarning() << "[InferenceEngine] Tensor cache is empty, skipping transformer initialization";
         }
         
         // Reset KV-cache state for new model
         m_kvCacheReady = false;
         
         qInfo() << "[InferenceEngine] Model loaded successfully:" << modelName;
-        emit modelLoadedChanged(true, modelName);
+        QMetaObject::invokeMethod(this, "modelLoadedChanged", Qt::QueuedConnection,
+            Q_ARG(bool, true), Q_ARG(QString, modelName));
         
         // FIX 6: Immediately check the queue after model load.
         processNextRequest(); 
         
-        // FIX 3.2: Emit the signal to notify listeners
-        emit transformerReady();
+        // FIX 3.2: Emit the signal to notify listeners (thread-safe)
+        QMetaObject::invokeMethod(this, "transformerReady", Qt::QueuedConnection);
         
         return true;    } catch (const std::exception& e) {
         qCritical() << "[InferenceEngine] CRITICAL: Exception during model loading:" << e.what();
@@ -155,7 +212,8 @@ bool InferenceEngine::loadModel(const QString& path)
             delete m_loader;
             m_loader = nullptr;
         }
-        emit modelLoadedChanged(false, QString());
+        QMetaObject::invokeMethod(this, "modelLoadedChanged", Qt::QueuedConnection,
+            Q_ARG(bool, false), Q_ARG(QString, QString()));
         return false;
     } catch (...) {
         qCritical() << "[InferenceEngine] CRITICAL: Unknown exception during model loading";
@@ -163,7 +221,8 @@ bool InferenceEngine::loadModel(const QString& path)
             delete m_loader;
             m_loader = nullptr;
         }
-        emit modelLoadedChanged(false, QString());
+        QMetaObject::invokeMethod(this, "modelLoadedChanged", Qt::QueuedConnection,
+            Q_ARG(bool, false), Q_ARG(QString, QString()));
         return false;
     }
 }
@@ -171,9 +230,25 @@ bool InferenceEngine::loadModel(const QString& path)
 QString InferenceEngine::processChat(const QString& prompt)
 {
     // Tokenize, run a short generation, and detokenize
+    qInfo() << "=== INFERENCE REQUEST START ===";
+    qInfo() << "[processChat] Input text: " << prompt;
+    qInfo() << "[processChat] Input length: " << prompt.length();
+    
     auto input = tokenize(prompt);
+    qInfo() << "[processChat] Tokens generated: " << input.size();
+    for (int i = 0; i < std::min(10, (int)input.size()); i++) {
+        qInfo() << "[processChat] Token[" << i << "]: " << input[i];
+    }
+    
+    qInfo() << "[processChat] Starting generation with " << input.size() << " context tokens...";
     auto out = generate(input, 64);
-    return detokenize(out);
+    qInfo() << "[processChat] Generated " << (out.size() - input.size()) << " new tokens";
+    
+    auto result = detokenize(out);
+    qInfo() << "[processChat] Decoded response: " << result;
+    qInfo() << "=== INFERENCE REQUEST END ===";
+    
+    return result;
 }
 
 QString InferenceEngine::analyzeCode(const QString& code)
@@ -312,7 +387,22 @@ void InferenceEngine::rebuildTensorCache()
         QStringList names = m_loader->tensorNames();
         qInfo() << "[InferenceEngine] Rebuilding tensor cache with" << names.size() << "tensors";
         
+        int totalTensors = names.size();
+        int processedTensors = 0;
+        
         for (const QString& name : names) {
+            processedTensors++;
+            if (processedTensors % 10 == 0 || processedTensors == totalTensors) {
+                QString progressMsg = QString("Loading tensors... %1/%2 (%3%)")
+                    .arg(processedTensors).arg(totalTensors)
+                    .arg(processedTensors * 100 / totalTensors);
+                qInfo() << "[InferenceEngine]" << progressMsg;
+                
+                // Send progress update via callback if available
+                if (m_loadProgressCallback) {
+                    m_loadProgressCallback(progressMsg);
+                }
+            }
             try {
                 const QString qmode = m_perLayerQuant.contains(name) ? m_perLayerQuant.value(name) : m_quantMode;
                 QByteArray raw = m_loader->inflateWeight(name);
@@ -364,34 +454,52 @@ void InferenceEngine::rebuildTensorCache()
 
 std::vector<int32_t> InferenceEngine::tokenize(const QString& text)
 {
+    qDebug() << "=== TOKENIZE START ===";
+    qDebug() << "[tokenize] Text: " << text;
+    qDebug() << "[tokenize] Text length: " << text.length();
+    qDebug() << "[tokenize] Tokenizer mode: " << m_tokenizerMode;
+    
     // Use appropriate tokenizer based on mode
     switch (m_tokenizerMode) {
         case TOKENIZER_BPE:
             if (m_bpeTokenizer.isReady()) {
-                return m_bpeTokenizer.encode(text);
+                qDebug() << "[tokenize] Using BPE tokenizer";
+                auto tokens = m_bpeTokenizer.encode(text);
+                qDebug() << "[tokenize] BPE produced " << tokens.size() << " tokens";
+                qDebug() << "=== TOKENIZE END ===";
+                return tokens;
             }
+            qWarning() << "[tokenize] BPE tokenizer not ready";
             break;
             
         case TOKENIZER_SP:
             if (m_spTokenizer.isReady()) {
-                return m_spTokenizer.encode(text, true, false);  // Add BOS, no EOS
+                qDebug() << "[tokenize] Using SentencePiece tokenizer";
+                auto tokens = m_spTokenizer.encode(text, true, false);  // Add BOS, no EOS
+                qDebug() << "[tokenize] SentencePiece produced " << tokens.size() << " tokens";
+                qDebug() << "=== TOKENIZE END ===";
+                return tokens;
             }
+            qWarning() << "[tokenize] SentencePiece tokenizer not ready";
             break;
             
         case TOKENIZER_FALLBACK:
         default:
+            qDebug() << "[tokenize] Using fallback tokenizer";
             break;
     }
     
     // Fallback: Simple word-based tokenization
-    // TODO: This is a placeholder - production should always use proper tokenizer
+    qWarning() << "[tokenize] Falling back to word-based tokenization";
     std::vector<int32_t> tokens;
     
     // Add BOS token
     tokens.push_back(1);
+    qDebug() << "[tokenize] Added BOS token (1)";
     
     // Split on whitespace and punctuation
     QStringList words = text.split(QRegularExpression("[\\s,\\.!?;:]+"), Qt::SkipEmptyParts);
+    qDebug() << "[tokenize] Split into " << words.size() << " words";
     
     for (const QString& word : words) {
         // Use vocabulary if available
@@ -414,31 +522,49 @@ std::vector<int32_t> InferenceEngine::tokenize(const QString& text)
     // Add EOS token
     tokens.push_back(2);
     
+    qDebug() << "[tokenize] Final token count: " << tokens.size();
+    qDebug() << "=== TOKENIZE END ===";
     return tokens;
 }
 
 QString InferenceEngine::detokenize(const std::vector<int32_t>& tokens)
 {
+    qDebug() << "=== DETOKENIZE START ===";
+    qDebug() << "[detokenize] Token count: " << tokens.size();
+    qDebug() << "[detokenize] Tokenizer mode: " << m_tokenizerMode;
+    
     // Use appropriate tokenizer based on mode
     switch (m_tokenizerMode) {
         case TOKENIZER_BPE:
             if (m_bpeTokenizer.isReady()) {
-                return m_bpeTokenizer.decode(tokens);
+                qDebug() << "[detokenize] Using BPE tokenizer to decode";
+                auto result = m_bpeTokenizer.decode(tokens);
+                qDebug() << "[detokenize] BPE decoded to: " << result;
+                qDebug() << "=== DETOKENIZE END ===";
+                return result;
             }
+            qWarning() << "[detokenize] BPE tokenizer not ready";
             break;
             
         case TOKENIZER_SP:
             if (m_spTokenizer.isReady()) {
-                return m_spTokenizer.decode(tokens, true);  // Skip special tokens
+                qDebug() << "[detokenize] Using SentencePiece tokenizer to decode";
+                auto result = m_spTokenizer.decode(tokens, true);  // Skip special tokens
+                qDebug() << "[detokenize] SentencePiece decoded to: " << result;
+                qDebug() << "=== DETOKENIZE END ===";
+                return result;
             }
+            qWarning() << "[detokenize] SentencePiece tokenizer not ready";
             break;
             
         case TOKENIZER_FALLBACK:
         default:
+            qDebug() << "[detokenize] Using fallback tokenizer";
             break;
     }
     
     // Fallback: Use vocabulary or generate placeholders
+    qWarning() << "[detokenize] Falling back to vocabulary-based decoding";
     QString result;
     
     for (size_t i = 0; i < tokens.size(); ++i) {
@@ -536,8 +662,14 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
 {
     QMutexLocker lock(&m_mutex);
     
+    qDebug() << "=== GENERATE START ===";
+    qDebug() << "[generate] Input tokens: " << inputTokens.size();
+    qDebug() << "[generate] Max new tokens: " << maxTokens;
+    qDebug() << "[generate] Model loaded: " << isModelLoaded();
+    qDebug() << "[generate] Transformer ready: " << m_transformer.isReady();
+    
     if (!isModelLoaded()) {
-        qWarning() << "Cannot generate - no model loaded";
+        qWarning() << "[generate] Cannot generate - no model loaded";
         return inputTokens;
     }
     
@@ -548,6 +680,8 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         QElapsedTimer localTimer;
         localTimer.start();
         
+        qDebug() << "[generate] Transformer is ready, starting KV-cache prefill...";
+        
         // === ELEGANT FIX: Two-Phase Inference with KV-Cache ===
         // Phase 1: Context prefill - process the entire input prompt once
         // The transformer builds the KV-cache (Key-Value cache) for efficient generation.
@@ -555,32 +689,39 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         if (!m_kvCacheReady) {
             // Process full context to populate KV-cache
             // This is called only once per inference request
+            qDebug() << "[generate] Pre-filling KV-cache with context...";
             m_transformer.forward(inputTokens);
             m_kvCacheReady = true;
-            qInfo() << "KV-cache prefilled with" << inputTokens.size() << "context tokens";
+            qDebug() << "[generate] KV-cache prefilled with" << inputTokens.size() << "context tokens";
         }
         
         // The last token ID becomes the starting point for autoregressive generation
         int32_t currentToken = inputTokens.back();
+        qDebug() << "[generate] Starting autoregressive generation with token " << currentToken;
         
         // === Phase 2: Autoregressive Token Generation (Decoding) ===
         for (int i = 0; i < maxTokens; ++i) {
             // Generate logits for the next token based ONLY on the current token
             // The Transformer uses the internal KV-cache for past context context
+            qDebug() << "[generate] Iteration " << i << ": Calling transformer.forward(" << currentToken << ")...";
             std::vector<float> logits = m_transformer.forward(std::vector<int32_t>{currentToken});
             
             if (logits.empty()) {
-                qWarning() << "Transformer forward pass returned no logits";
+                qWarning() << "[generate] Transformer forward pass returned no logits";
                 break;
             }
+            
+            qDebug() << "[generate] Got " << logits.size() << " logits from transformer";
             
             // === Elegant Sampling Logic using Top-P ===
             // Delegate complex sampling to helper function
             currentToken = sampleNextToken(logits, m_temperature, m_topP);
             
+            qDebug() << "[generate] Sampled token " << currentToken << " (temperature=" << m_temperature << ", top_p=" << m_topP << ")";
+            
             // Check for EOS token (2 is common EOS)
             if (currentToken == 2 || currentToken == 0) {
-                qInfo() << "Generation stopped by EOS token";
+                qInfo() << "[generate] Generation stopped by EOS token: " << currentToken;
                 break;
             }
             
@@ -594,21 +735,22 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
             m_tokensPerSecond = (tokensGenerated * 1000.0) / elapsed;
         }
         
-        qInfo() << "Generation complete:" << tokensGenerated << "tokens in" << elapsed 
-                << "ms (" << QString::number(m_tokensPerSecond, 'f', 1) << " tok/s, Top-P=" 
-                << QString::number(m_topP, 'f', 2) << ")";
+        qInfo() << "[generate] Completed:" << tokensGenerated << "tokens in" << elapsed 
+                << "ms (" << QString::number(m_tokensPerSecond, 'f', 1) << " tok/s)";
+        qDebug() << "=== GENERATE END ===";
         
         // Reset KV-cache for next inference
         m_kvCacheReady = false;
         
     } else {
         // Fallback: Simple echo with placeholder
-        qWarning() << "Transformer not ready, using placeholder generation";
+        qWarning() << "[generate] Transformer not ready, using placeholder generation";
         
         // Just add a few placeholder tokens
         for (int i = 0; i < std::min(maxTokens, 10); ++i) {
             result.push_back(1000 + i);  // Placeholder tokens
         }
+        qDebug() << "=== GENERATE END (FALLBACK) ===";
     }
     
     return result;

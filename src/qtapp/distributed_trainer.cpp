@@ -8,6 +8,17 @@
 #include <algorithm>
 #include <numeric>
 #include <cmath>
+#include <chrono>
+
+// Production-ready distributed training backends
+#ifdef USE_NCCL
+#include <nccl.h>
+#include <cuda_runtime.h>
+#endif
+
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
 
 DistributedTrainer::DistributedTrainer(QObject* parent)
     : QObject(parent),
@@ -141,14 +152,74 @@ bool DistributedTrainer::allReduceGradients(float* gradientData, int size)
     
     qDebug() << "[DistributedTrainer] All-reduce on" << size << "elements";
     
-    // Simulate averaging (in production, use NCCL/MPI allreduce)
-    for (int i = 0; i < size; ++i) {
-        gradientData[i] /= m_config.pgConfig.worldSize;
+    auto startTime = std::chrono::high_resolution_clock::now();
+    bool success = false;
+    
+#ifdef USE_NCCL
+    // Production-ready NCCL all-reduce
+    if (m_config.backend == Backend::NCCL && m_ncclComm != nullptr) {
+        ncclResult_t result = ncclAllReduce(
+            gradientData,           // sendbuff
+            gradientData,           // recvbuff (in-place)
+            size,                   // count
+            ncclFloat,             // datatype
+            ncclSum,               // reduction operation
+            m_ncclComm,            // communicator
+            m_cudaStream           // CUDA stream
+        );
+        
+        if (result == ncclSuccess) {
+            // Synchronize CUDA stream
+            cudaStreamSynchronize(m_cudaStream);
+            
+            // Average gradients
+            for (int i = 0; i < size; ++i) {
+                gradientData[i] /= m_config.pgConfig.worldSize;
+            }
+            success = true;
+        } else {
+            qCritical() << "[DistributedTrainer] NCCL allReduce failed:" << ncclGetErrorString(result);
+        }
+    }
+#elif defined(USE_MPI)
+    // Production-ready MPI all-reduce
+    if (m_config.backend == Backend::MPI) {
+        std::vector<float> recvBuffer(size);
+        int mpiResult = MPI_Allreduce(
+            gradientData,           // sendbuf
+            recvBuffer.data(),      // recvbuf
+            size,                   // count
+            MPI_FLOAT,             // datatype
+            MPI_SUM,               // operation
+            MPI_COMM_WORLD         // communicator
+        );
+        
+        if (mpiResult == MPI_SUCCESS) {
+            // Copy result and average
+            for (int i = 0; i < size; ++i) {
+                gradientData[i] = recvBuffer[i] / m_config.pgConfig.worldSize;
+            }
+            success = true;
+        } else {
+            qCritical() << "[DistributedTrainer] MPI_Allreduce failed with code:" << mpiResult;
+        }
+    }
+#else
+    // Fallback: single-GPU or CPU mode - no communication needed
+    success = true;
+    qWarning() << "[DistributedTrainer] No distributed backend compiled, running in local mode";
+#endif
+    
+    auto endTime = std::chrono::high_resolution_clock::now();
+    float latencyMs = std::chrono::duration<float, std::milli>(endTime - startTime).count();
+    
+    recordCommunicationLatency(latencyMs);
+    
+    if (success) {
+        emit allReduceCompleted(size);
     }
     
-    recordCommunicationLatency(1.5f); // Simulated latency
-    emit allReduceCompleted(size);
-    return true;
+    return success;
 }
 
 bool DistributedTrainer::allGather(const void* sendBuffer, void* recvBuffer, int size)
@@ -160,11 +231,59 @@ bool DistributedTrainer::allGather(const void* sendBuffer, void* recvBuffer, int
     
     qDebug() << "[DistributedTrainer] All-gather" << size << "bytes";
     
-    // Simulate copying (in production, use NCCL/MPI allgather)
-    std::memcpy(recvBuffer, sendBuffer, size);
+    auto startTime = std::chrono::high_resolution_clock::now();
+    bool success = false;
     
-    recordCommunicationLatency(2.0f);
-    return true;
+#ifdef USE_NCCL
+    // Production-ready NCCL all-gather
+    if (m_config.backend == Backend::NCCL && m_ncclComm != nullptr) {
+        ncclResult_t result = ncclAllGather(
+            sendBuffer,            // sendbuff
+            recvBuffer,            // recvbuff
+            size,                  // sendcount (per rank)
+            ncclChar,             // datatype (bytes)
+            m_ncclComm,           // communicator
+            m_cudaStream          // CUDA stream
+        );
+        
+        if (result == ncclSuccess) {
+            cudaStreamSynchronize(m_cudaStream);
+            success = true;
+        } else {
+            qCritical() << "[DistributedTrainer] NCCL allGather failed:" << ncclGetErrorString(result);
+        }
+    }
+#elif defined(USE_MPI)
+    // Production-ready MPI all-gather
+    if (m_config.backend == Backend::MPI) {
+        int mpiResult = MPI_Allgather(
+            sendBuffer,            // sendbuf
+            size,                  // sendcount
+            MPI_BYTE,             // sendtype
+            recvBuffer,            // recvbuf
+            size,                  // recvcount (per rank)
+            MPI_BYTE,             // recvtype
+            MPI_COMM_WORLD        // communicator
+        );
+        
+        if (mpiResult == MPI_SUCCESS) {
+            success = true;
+        } else {
+            qCritical() << "[DistributedTrainer] MPI_Allgather failed with code:" << mpiResult;
+        }
+    }
+#else
+    // Fallback: local copy only
+    std::memcpy(recvBuffer, sendBuffer, size);
+    success = true;
+    qWarning() << "[DistributedTrainer] No distributed backend, using local copy";
+#endif
+    
+    auto endTime = std::chrono::high_resolution_clock::now();
+    float latencyMs = std::chrono::duration<float, std::milli>(endTime - startTime).count();
+    
+    recordCommunicationLatency(latencyMs);
+    return success;
 }
 
 bool DistributedTrainer::broadcast(void* data, int size)

@@ -7,6 +7,12 @@
 #include <cmath>
 #include <limits>
 
+// Production-ready SentencePiece with proper library
+#ifdef USE_SENTENCEPIECE
+#include <sentencepiece_processor.h>
+#include <sentencepiece_trainer.h>
+#endif
+
 // Simple lattice structure for Viterbi algorithm
 struct SentencePieceTokenizer::Lattice {
     struct Node {
@@ -44,13 +50,58 @@ SentencePieceTokenizer::~SentencePieceTokenizer() {
 }
 
 bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
-    QFile file(modelPath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open SentencePiece model:" << modelPath;
+#ifdef USE_SENTENCEPIECE
+    // Production-ready implementation using SentencePiece library
+    m_spProcessor = std::make_unique<sentencepiece::SentencePieceProcessor>();
+    
+    const auto status = m_spProcessor->Load(modelPath.toStdString());
+    if (!status.ok()) {
+        qWarning() << "Failed to load SentencePiece model:" << modelPath 
+                   << "Error:" << QString::fromStdString(status.ToString());
+        m_spProcessor.reset();
         return false;
     }
     
-    // Simplified protobuf parser (production would use proper protobuf library)
+    // Load vocabulary into our internal structures for compatibility
+    const int vocabSize = m_spProcessor->GetPieceSize();
+    m_pieces.reserve(vocabSize);
+    m_tokenIdToString.clear();
+    m_stringToTokenId.clear();
+    
+    for (int i = 0; i < vocabSize; ++i) {
+        const std::string piece = m_spProcessor->IdToPiece(i);
+        const float score = m_spProcessor->GetScore(i);
+        const bool isControl = m_spProcessor->IsControl(i);
+        const bool isUnused = m_spProcessor->IsUnused(i);
+        const bool isByte = m_spProcessor->IsByte(i);
+        
+        TokenPiece tp;
+        tp.piece = QString::fromStdString(piece);
+        tp.score = score;
+        tp.type = isControl ? TokenType::Control :
+                  isUnused ? TokenType::Unused :
+                  isByte ? TokenType::Byte :
+                  TokenType::Normal;
+        
+        m_pieces.append(tp);
+        m_tokenIdToString[i] = tp.piece;
+        m_stringToTokenId[tp.piece] = i;
+    }
+    
+    qDebug() << "Loaded SentencePiece model with" << vocabSize << "tokens";
+    buildTrie();
+    return true;
+    
+#else
+    // Fallback: simplified protobuf parser (not production-ready)
+    QFile file(modelPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to open SentencePiece model:" << modelPath;
+        qWarning() << "Note: Compile with USE_SENTENCEPIECE for production-ready tokenization";
+        return false;
+    }
+    
+    // Simplified parser - reads basic model structure
     QDataStream stream(&file);
     stream.setByteOrder(QDataStream::LittleEndian);
     
@@ -71,11 +122,10 @@ bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
         float score;
         stream >> score;
         
-        SentencePiece piece;
+        TokenPiece piece;
         piece.piece = QString::fromUtf8(pieceBytes);
         piece.score = score;
-        piece.id = i;
-        piece.type = SentencePiece::NORMAL;
+        piece.type = TokenType::Normal;
         
         // Detect special tokens
         if (piece.piece == "<s>") m_bosId = i;
@@ -84,13 +134,16 @@ bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
         else if (piece.piece == "<pad>") m_padId = i;
         
         m_pieces.append(piece);
-        m_pieceToId[piece.piece] = i;
+        m_tokenIdToString[i] = piece.piece;
+        m_stringToTokenId[piece.piece] = i;
     }
     
     buildTrie();
     
-    qInfo() << "SentencePiece loaded:" << m_pieces.size() << "pieces";
+    qInfo() << "SentencePiece loaded (fallback mode):" << m_pieces.size() << "pieces";
+    qWarning() << "WARNING: Using simplified tokenizer. Compile with USE_SENTENCEPIECE for production.";
     return true;
+#endif
 }
 
 bool SentencePieceTokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArray>& metadata) {

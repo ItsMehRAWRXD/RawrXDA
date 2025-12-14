@@ -2,6 +2,7 @@
 #include <QString>
 #include <QByteArray>
 #include <QHash>
+#include <QPair>
 #include <vector>
 #include <cstdint>
 
@@ -40,12 +41,22 @@ public:
     bool loadWeights(const QHash<QString, QByteArray>& tensorCache,
                      int nLayers, int nEmbd, int nHead, int nVocab);
     
-    /*
-     * Template overload - commented out until GGUF cache path is ready
-    template <typename WeightDict>
-    bool loadWeights(const WeightDict& cached,
-                     int nLayers, int nHeads, int nEmb, int nSeq);
-    */
+    /**
+     * @brief Load model weights with explicit quantization type information
+     * @param tensorCacheWithTypes Map of tensor names to (data, type_id) pairs
+     *        Each pair contains the quantized data and its GGML type ID
+     * @param nLayers Number of transformer layers
+     * @param nEmbd Embedding dimension
+     * @param nHead Number of attention heads
+     * @param nVocab Vocabulary size
+     * @return true if loaded successfully
+     * 
+     * This overload is preferred for models with mixed quantization types,
+     * as it preserves the actual quantization type of each tensor instead of
+     * assuming all tensors are F32.
+     */
+    bool loadWeightsWithTypes(const QHash<QString, QPair<QByteArray, int>>& tensorCacheWithTypes,
+                              int nLayers, int nEmbd, int nHead, int nVocab);
     
     /**
      * @brief Generate tokens autoregressively

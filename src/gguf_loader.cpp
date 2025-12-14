@@ -1,4 +1,5 @@
 #include "gguf_loader.h"
+#include "gguf_vocab_resolver.h"
 #include <algorithm>
 #include <cstring>
 #include <stdexcept>
@@ -345,6 +346,27 @@ bool GGUFLoader::ParseMetadata() {
     // Build O(1) lookup index for tensor access (Bottleneck #14 fix)
     for (auto& tensor : tensors_) {
         tensor_index_[tensor.name] = &tensor;
+    }
+    
+    // Fix vocab size using universal resolver
+    GGUFVocabResolver vocabResolver;
+    VocabSizeDetection vocabDetection = vocabResolver.detectVocabSize(metadata_.kv_pairs, filepath_);
+    
+    std::cout << "[GGUFLoader] Vocab detection: method=" << vocabDetection.detectionMethod
+              << ", size=" << vocabDetection.detectedSize
+              << ", confident=" << (vocabDetection.isConfident ? "yes" : "no") << std::endl;
+    
+    // Override metadata vocab size if detection was successful
+    if (vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
+        if (metadata_.vocab_size != vocabDetection.detectedSize) {
+            std::cout << "[GGUFLoader] Correcting vocab size: " << metadata_.vocab_size 
+                      << " -> " << vocabDetection.detectedSize << std::endl;
+            metadata_.vocab_size = vocabDetection.detectedSize;
+        }
+    } else if (!vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
+        // Use detection even if not confident, as it's better than potentially wrong metadata
+        std::cout << "[GGUFLoader] Using low-confidence vocab size: " << vocabDetection.detectedSize << std::endl;
+        metadata_.vocab_size = vocabDetection.detectedSize;
     }
     
     std::cout << "Metadata parsed successfully. Layers: " << metadata_.layer_count

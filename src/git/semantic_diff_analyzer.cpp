@@ -10,6 +10,166 @@
 #include <QNetworkReply>
 #include <QEventLoop>
 #include <QDateTime>
+#include <algorithm>
+#include <vector>
+
+// Production-ready Myers diff algorithm implementation
+namespace DiffAlgorithm {
+
+struct DiffEdit {
+    enum Type { KEEP, INSERT, DELETE };
+    Type type;
+    int oldIndex;
+    int newIndex;
+    QString line;
+};
+
+// Myers diff algorithm for computing minimal edit script
+std::vector<DiffEdit> computeMyersDiff(const QStringList& oldLines, const QStringList& newLines) {
+    const int N = oldLines.size();
+    const int M = newLines.size();
+    const int MAX = N + M;
+    
+    std::vector<int> V(2 * MAX + 1, 0);
+    std::vector<std::vector<int>> traces;
+    
+    // Forward search
+    for (int D = 0; D <= MAX; ++D) {
+        traces.push_back(V);
+        
+        for (int k = -D; k <= D; k += 2) {
+            int x;
+            if (k == -D || (k != D && V[MAX + k - 1] < V[MAX + k + 1])) {
+                x = V[MAX + k + 1];
+            } else {
+                x = V[MAX + k - 1] + 1;
+            }
+            
+            int y = x - k;
+            
+            // Follow diagonal
+            while (x < N && y < M && oldLines[x] == newLines[y]) {
+                ++x;
+                ++y;
+            }
+            
+            V[MAX + k] = x;
+            
+            if (x >= N && y >= M) {
+                // Found solution
+                std::vector<DiffEdit> edits;
+                
+                // Backtrack to build edit script
+                int currentX = N;
+                int currentY = M;
+                
+                for (int d = D; d > 0; --d) {
+                    const auto& prevV = traces[d - 1];
+                    int currentK = currentX - currentY;
+                    
+                    int prevK;
+                    if (currentK == -d || (currentK != d && prevV[MAX + currentK - 1] < prevV[MAX + currentK + 1])) {
+                        prevK = currentK + 1;
+                    } else {
+                        prevK = currentK - 1;
+                    }
+                    
+                    int prevX = prevV[MAX + prevK];
+                    int prevY = prevX - prevK;
+                    
+                    // Add diagonal moves (equals)
+                    while (currentX > prevX && currentY > prevY) {
+                        --currentX;
+                        --currentY;
+                        edits.push_back({DiffEdit::KEEP, currentX, currentY, oldLines[currentX]});
+                    }
+                    
+                    // Add edit
+                    if (currentX > prevX) {
+                        --currentX;
+                        edits.push_back({DiffEdit::DELETE, currentX, -1, oldLines[currentX]});
+                    } else if (currentY > prevY) {
+                        --currentY;
+                        edits.push_back({DiffEdit::INSERT, -1, currentY, newLines[currentY]});
+                    }
+                }
+                
+                std::reverse(edits.begin(), edits.end());
+                return edits;
+            }
+        }
+    }
+    
+    return {};
+}
+
+QString generateUnifiedDiff(const QString& filePath, const QStringList& oldLines, 
+                           const QStringList& newLines, int contextLines = 3) {
+    auto edits = computeMyersDiff(oldLines, newLines);
+    
+    QString result = QString("--- a/%1\n+++ b/%1\n").arg(filePath);
+    
+    // Group edits into hunks
+    std::vector<std::pair<int, int>> hunks; // (start, end) indices in edits
+    int hunkStart = 0;
+    int lastEditIndex = -contextLines - 1;
+    
+    for (size_t i = 0; i < edits.size(); ++i) {
+        if (edits[i].type != DiffEdit::KEEP) {
+            if (i - lastEditIndex > 2 * contextLines) {
+                if (lastEditIndex >= 0) {
+                    hunks.push_back({hunkStart, lastEditIndex + contextLines});
+                }
+                hunkStart = std::max(0, static_cast<int>(i) - contextLines);
+            }
+            lastEditIndex = i;
+        }
+    }
+    
+    if (lastEditIndex >= 0) {
+        hunks.push_back({hunkStart, std::min(static_cast<int>(edits.size()) - 1, 
+                                              lastEditIndex + contextLines)});
+    }
+    
+    // Generate hunk output
+    for (const auto& hunk : hunks) {
+        int oldStart = -1, newStart = -1;
+        int oldCount = 0, newCount = 0;
+        
+        for (int i = hunk.first; i <= hunk.second; ++i) {
+            if (edits[i].type == DiffEdit::DELETE || edits[i].type == DiffEdit::KEEP) {
+                if (oldStart < 0) oldStart = edits[i].oldIndex;
+                ++oldCount;
+            }
+            if (edits[i].type == DiffEdit::INSERT || edits[i].type == DiffEdit::KEEP) {
+                if (newStart < 0) newStart = edits[i].newIndex;
+                ++newCount;
+            }
+        }
+        
+        result += QString("@@ -%1,%2 +%3,%4 @@\n")
+                    .arg(oldStart + 1).arg(oldCount)
+                    .arg(newStart + 1).arg(newCount);
+        
+        for (int i = hunk.first; i <= hunk.second; ++i) {
+            switch (edits[i].type) {
+                case DiffEdit::KEEP:
+                    result += " " + edits[i].line + "\n";
+                    break;
+                case DiffEdit::DELETE:
+                    result += "-" + edits[i].line + "\n";
+                    break;
+                case DiffEdit::INSERT:
+                    result += "+" + edits[i].line + "\n";
+                    break;
+            }
+        }
+    }
+    
+    return result;
+}
+
+} // namespace DiffAlgorithm
 
 SemanticDiffAnalyzer::SemanticDiffAnalyzer(QObject* parent)
     : QObject(parent)
@@ -176,27 +336,11 @@ SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::compareFiles(const QStr
             config = m_config;
         }
         
-        // Generate unified diff
-        // In production, use libgit2 or similar for proper diff generation
-        QString diffContent = QString("--- a/%1\n+++ b/%1\n").arg(filePath);
-        
-        // Simple diff simulation (in production, use proper diff algorithm)
+        // Generate unified diff using production-ready Myers diff algorithm
         QStringList oldLines = oldContent.split('\n');
         QStringList newLines = newContent.split('\n');
         
-        for (int i = 0; i < qMax(oldLines.size(), newLines.size()); i++) {
-            if (i < oldLines.size() && i < newLines.size()) {
-                if (oldLines[i] != newLines[i]) {
-                    diffContent += QString("@@ -%1 +%1 @@\n").arg(i + 1);
-                    diffContent += QString("-%1\n").arg(oldLines[i]);
-                    diffContent += QString("+%1\n").arg(newLines[i]);
-                }
-            } else if (i >= oldLines.size()) {
-                diffContent += QString("+%1\n").arg(newLines[i]);
-            } else {
-                diffContent += QString("-%1\n").arg(oldLines[i]);
-            }
-        }
+        QString diffContent = DiffAlgorithm::generateUnifiedDiff(filePath, oldLines, newLines, 3);
         
         logStructured("DEBUG", "Generated diff for file comparison", QJsonObject{
             {"filePath", filePath},

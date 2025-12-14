@@ -49,6 +49,15 @@ int main(int argc, char* argv[]) {
         std::cout << "  Embedding dimension: " << metadata.embedding_dim << std::endl;
         std::cout << "  Vocabulary size: " << metadata.vocab_size << std::endl;
         
+        // Vocab size validation
+        if (metadata.vocab_size < 1000 || metadata.vocab_size > 1000000) {
+            std::cout << "  ⚠ WARNING: Vocab size " << metadata.vocab_size 
+                      << " is outside typical range (1K-1M)" << std::endl;
+            std::cout << "  ⚠ This might indicate incorrect metadata or special model" << std::endl;
+        } else {
+            std::cout << "  ✓ Vocab size is within reasonable bounds" << std::endl;
+        }
+        
         // Test 3: Check tensor info
         std::cout << "\nTest 3: Checking tensor information..." << std::endl;
         std::vector<TensorInfo> tensors = loader.GetTensorInfo();

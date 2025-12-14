@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include <QString>
+#include <QFutureWatcher>
+#include <QProgressDialog>
 
 // Forward declarations
 class QDockWidget;
@@ -16,6 +18,7 @@ class AgenticEngine;
 class InferenceEngine;
 class TodoManager;
 class TodoDock;
+class ModelLoaderThread;
 
 // Phase 2 forward declarations
 namespace RawrXD {
@@ -96,6 +99,16 @@ private slots:
     void previousTerminal();
 
 private:
+    // Async model loading with std::thread (no Qt threading)
+    ModelLoaderThread* m_modelLoaderThread;
+    QProgressDialog* m_loadingProgressDialog;
+    QTimer* m_loadProgressTimer;
+    QString m_pendingModelPath;
+    
+    void onModelLoadFinished(bool success, const std::string& errorMsg);
+    void onModelLoadCanceled();
+    void checkLoadProgress();
+    
     // Initialization phases (deferred to event loop)
     void initialize();
     void initializePhase2();

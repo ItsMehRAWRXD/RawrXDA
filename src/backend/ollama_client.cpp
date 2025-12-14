@@ -2,6 +2,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
+#include <nlohmann/json.hpp>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -10,6 +11,8 @@
 #else
 #include <curl/curl.h>
 #endif
+
+using json = nlohmann::json;
 
 namespace RawrXD {
 namespace Backend {
@@ -36,14 +39,15 @@ bool OllamaClient::testConnection() {
 
 std::string OllamaClient::getVersion() {
     std::string response = makeGetRequest("/api/version");
-    // Parse JSON: {"version": "0.1.0"}
-    size_t pos = response.find("\"version\"");
-    if (pos != std::string::npos) {
-        size_t start = response.find("\"", pos + 10) + 1;
-        size_t end = response.find("\"", start);
-        return response.substr(start, end - start);
+    
+    // Production-ready JSON parsing
+    try {
+        json j = json::parse(response);
+        return j.value("version", std::string());
+    } catch (const json::exception& e) {
+        std::cerr << "JSON parsing error in getVersion: " << e.what() << std::endl;
+        return "";
     }
-    return "";
 }
 
 bool OllamaClient::isRunning() {
@@ -159,79 +163,77 @@ std::string OllamaClient::createChatRequestJson(const OllamaChatRequest& req) {
     return oss.str();
 }
 
-OllamaResponse OllamaClient::parseResponse(const std::string& json) {
+OllamaResponse OllamaClient::parseResponse(const std::string& json_str) {
     OllamaResponse resp;
     
-    // Simple JSON parser (production should use proper library)
-    auto getValue = [&](const std::string& key) -> std::string {
-        size_t pos = json.find("\"" + key + "\"");
-        if (pos == std::string::npos) return "";
+    // Production-ready JSON parsing with nlohmann/json
+    try {
+        json j = json::parse(json_str);
         
-        size_t colon = json.find(":", pos);
-        size_t start = json.find("\"", colon) + 1;
-        if (start == std::string::npos) return "";
+        // Extract response fields with safe access
+        resp.model = j.value("model", std::string());
+        resp.response = j.value("response", std::string());
+        resp.done = j.value("done", false);
         
-        size_t end = json.find("\"", start);
-        return json.substr(start, end - start);
-    };
-    
-    auto getNumber = [&](const std::string& key) -> uint64_t {
-        size_t pos = json.find("\"" + key + "\"");
-        if (pos == std::string::npos) return 0;
+        // Extract performance metrics
+        resp.total_duration = j.value("total_duration", uint64_t(0));
+        resp.prompt_eval_count = j.value("prompt_eval_count", uint64_t(0));
+        resp.eval_count = j.value("eval_count", uint64_t(0));
         
-        size_t colon = json.find(":", pos);
-        size_t start = colon + 1;
-        size_t end = json.find_first_of(",}", start);
-        
-        std::string num_str = json.substr(start, end - start);
-        try {
-            return std::stoull(num_str);
-        } catch (...) {
-            return 0;
+        // Extract optional fields
+        if (j.contains("load_duration")) {
+            resp.load_duration = j["load_duration"].get<uint64_t>();
         }
-    };
-    
-    resp.model = getValue("model");
-    resp.response = getValue("response");
-    resp.done = json.find("\"done\":true") != std::string::npos;
-    
-    resp.total_duration = getNumber("total_duration");
-    resp.prompt_eval_count = getNumber("prompt_eval_count");
-    resp.eval_count = getNumber("eval_count");
+        if (j.contains("prompt_eval_duration")) {
+            resp.prompt_eval_duration = j["prompt_eval_duration"].get<uint64_t>();
+        }
+        if (j.contains("eval_duration")) {
+            resp.eval_duration = j["eval_duration"].get<uint64_t>();
+        }
+        
+    } catch (const json::exception& e) {
+        // Log parsing error and return partial response
+        std::cerr << "JSON parsing error in parseResponse: " << e.what() << std::endl;
+        // resp already initialized with defaults
+    }
     
     return resp;
 }
 
-std::vector<OllamaModel> OllamaClient::parseModels(const std::string& json) {
+std::vector<OllamaModel> OllamaClient::parseModels(const std::string& json_str) {
     std::vector<OllamaModel> models;
     
-    // Simple parser for models array
-    size_t pos = json.find("\"models\"");
-    if (pos != std::string::npos) {
-        size_t array_start = json.find("[", pos);
-        size_t array_end = json.find("]", array_start);
+    // Production-ready JSON parsing with nlohmann/json
+    try {
+        json j = json::parse(json_str);
         
-        std::string models_str = json.substr(array_start + 1, array_end - array_start - 1);
-        
-        // Parse each model object
-        size_t obj_pos = 0;
-        while ((obj_pos = models_str.find("{", obj_pos)) != std::string::npos) {
-            size_t obj_end = models_str.find("}", obj_pos);
-            std::string obj_str = models_str.substr(obj_pos, obj_end - obj_pos + 1);
-            
-            OllamaModel model;
-            
-            // Extract name
-            size_t name_pos = obj_str.find("\"name\"");
-            if (name_pos != std::string::npos) {
-                size_t start = obj_str.find("\"", name_pos + 6) + 1;
-                size_t end = obj_str.find("\"", start);
-                model.name = obj_str.substr(start, end - start);
+        // Extract models array
+        if (j.contains("models") && j["models"].is_array()) {
+            for (const auto& model_json : j["models"]) {
+                OllamaModel model;
+                
+                // Extract model fields with safe access
+                model.name = model_json.value("name", std::string());
+                model.modified_at = model_json.value("modified_at", std::string());
+                model.size = model_json.value("size", uint64_t(0));
+                model.digest = model_json.value("digest", std::string());
+                
+                // Extract details if present
+                if (model_json.contains("details")) {
+                    const auto& details = model_json["details"];
+                    model.format = details.value("format", std::string());
+                    model.family = details.value("family", std::string());
+                    model.parameter_size = details.value("parameter_size", std::string());
+                    model.quantization_level = details.value("quantization_level", std::string());
+                }
+                
+                models.push_back(model);
             }
-            
-            models.push_back(model);
-            obj_pos = obj_end + 1;
         }
+        
+    } catch (const json::exception& e) {
+        // Log parsing error and return empty list
+        std::cerr << "JSON parsing error in parseModels: " << e.what() << std::endl;
     }
     
     return models;

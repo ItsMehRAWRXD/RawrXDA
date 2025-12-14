@@ -1,192 +1,287 @@
-#pragma once
-#include <QObject>
-#include <QNetworkAccessManager>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QTimer>
-#include <QQueue>
-#include <memory>
+// hybrid_cloud_manager.h - Multi-Cloud AI Model Execution Manager
+#ifndef HYBRID_CLOUD_MANAGER_H
+#define HYBRID_CLOUD_MANAGER_H
 
+#include <QObject>
+#include <QString>
+#include <QVector>
+#include <QHash>
+#include <QJsonObject>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QDateTime>
+#include <QTimer>
+
+// Cloud provider information
+struct CloudProvider {
+    QString providerId;        // aws, azure, gcp, huggingface, ollama
+    QString name;
+    QString endpoint;
+    QString apiKey;            // Optional for Ollama
+    QString region;
+    bool isEnabled;
+    bool isHealthy;
+    QDateTime lastHealthCheck;
+    double costPerRequest;     // USD (0.0 for local Ollama)
+    double averageLatency;     // milliseconds
+    QJsonObject capabilities;
+};
+
+// Cloud model information
 struct CloudModel {
     QString modelId;
+    QString providerId;
     QString name;
-    QString provider; // "aws", "azure", "gcp", "huggingface"
-    QString type; // "completion", "chat", "embedding"
-    qint64 size;
+    QString endpoint;
+    QStringList supportedTasks;
     double costPerToken;
-    double latency;
+    int maxTokens;
+    double averageLatency;
     bool isAvailable;
-    QString endpoint;
-    QString apiKey;
-    QJsonObject capabilities;
-    QJsonObject restrictions;
+    QJsonObject metadata;
 };
 
-struct CloudCredentials {
-    QString provider;
-    QString accessKey;
-    QString secretKey;
-    QString region;
-    QString endpoint;
-    bool isValid;
-    QDateTime expiryTime;
-};
-
-struct HybridExecution {
-    QString executionId;
-    QString localModelId;
-    QString cloudModelId;
-    QString executionType; // "completion", "chat", "analysis"
-    QJsonObject request;
-    QJsonObject response;
-    qint64 localLatency;
-    qint64 cloudLatency;
-    double localCost;
-    double cloudCost;
-    bool wasSuccessful;
+// Execution request
+struct ExecutionRequest {
+    QString requestId;
+    QString taskType;
+    QString prompt;
+    QString language;
+    int maxTokens;
+    double temperature;
+    QJsonObject parameters;
     QDateTime timestamp;
-    qint64 totalTimeMs;
+};
+
+// Execution result
+struct ExecutionResult {
+    QString requestId;
+    QString executionLocation; // "local" or provider ID
+    QString modelUsed;
+    QString response;
+    int tokensUsed;
+    double latencyMs;
+    double cost;
+    bool success;
+    QString errorMessage;
+    QDateTime completedAt;
+    QJsonObject metadata;
+};
+
+// Hybrid execution decision
+struct HybridExecution {
+    QString requestId;
+    bool useCloud;
+    QString selectedProvider;
+    QString selectedModel;
+    QString reasoning;
+    double estimatedCost;
+    double estimatedLatency;
+    double confidenceScore;
+};
+
+// Cost tracking
+struct CostMetrics {
+    double totalCostUSD;
+    double todayCostUSD;
+    double monthCostUSD;
+    int totalRequests;
+    int cloudRequests;
+    int localRequests;
+    QHash<QString, double> costByProvider;
+    QHash<QString, int> requestsByProvider;
+};
+
+// Performance metrics
+struct PerformanceMetrics {
+    double averageLatency;
+    double p95Latency;
+    double p99Latency;
+    int successRate;           // Percentage
+    int failoverCount;
+    QHash<QString, double> latencyByProvider;
+};
+
+// Failover configuration
+struct FailoverConfig {
+    bool enabled;
+    int maxRetries;
+    int timeoutMs;
+    QVector<QString> fallbackProviders;
+    bool autoSwitchOnFailure;
 };
 
 class HybridCloudManager : public QObject {
     Q_OBJECT
-    
-private:
-    QNetworkAccessManager* networkManager;
-    QTimer* healthCheckTimer;
-    QTimer* costOptimizationTimer;
-    QTimer* syncTimer;
-    
-    QVector<CloudModel> availableCloudModels;
-    QVector<CloudModel> connectedCloudModels;
-    QHash<QString, CloudCredentials> cloudCredentials;
-    QQueue<HybridExecution> executionHistory;
-    
-    // Configuration
-    bool enableHybridOperation = true;
-    bool enableCloudFailover = true;
-    bool enableCostOptimization = true;
-    bool enableAutoScaling = true;
-    bool enableEnterpriseFeatures = true;
-    
-    QString defaultCloudProvider = "huggingface";
-    double maxCloudCostPerRequest = 0.01; // $0.01 per request
-    qint64 maxCloudLatency = 2000; // 2 seconds
-    int maxConcurrentCloudRequests = 10;
-    double cloudUsageThreshold = 0.8; // 80% usage before switching
-    
-    // Enterprise features
-    QString enterpriseAccountId;
-    QString teamId;
-    QString department;
-    QString complianceLevel; // "standard", "enterprise", "government"
 
 public:
-    HybridCloudManager(QObject* parent = nullptr);
+    explicit HybridCloudManager(QObject* parent = nullptr);
     ~HybridCloudManager();
+
+    // Provider management
+    void addProvider(const CloudProvider& provider);
+    void removeProvider(const QString& providerId);
+    void updateProvider(const CloudProvider& provider);
+    QVector<CloudProvider> getProviders() const;
+    CloudProvider getProvider(const QString& providerId) const;
     
-    // Hybrid operation management
-    HybridExecution executeHybrid(const QJsonObject& request, const QString& executionType);
+    // Provider health
+    void checkProviderHealth(const QString& providerId);
+    void checkAllProvidersHealth();
+    bool isProviderHealthy(const QString& providerId) const;
+    
+    // Model management
+    void registerCloudModel(const CloudModel& model);
+    QVector<CloudModel> getAvailableCloudModels() const;
+    QVector<CloudModel> getModelsForProvider(const QString& providerId) const;
+    CloudModel selectBestCloudModel(const ExecutionRequest& request);
+    
+    // Hybrid execution
+    HybridExecution planExecution(const ExecutionRequest& request,
+                                 const QString& executionType = "auto");
+    ExecutionResult execute(const ExecutionRequest& request);
+    ExecutionResult executeLocal(const ExecutionRequest& request);
+    ExecutionResult executeCloud(const ExecutionRequest& request, 
+                                 const QString& providerId,
+                                 const QString& modelId);
+    
+    // Intelligent routing
+    bool shouldUseCloud(const ExecutionRequest& request);
+    QString selectOptimalProvider(const ExecutionRequest& request);
+    double calculateExecutionCost(const QString& providerId, 
+                                  const QString& modelId,
+                                  int estimatedTokens);
+    
+    // Failover and retry
+    void enableFailover(bool enable);
+    void setFailoverConfig(const FailoverConfig& config);
+    ExecutionResult executeWithFailover(const ExecutionRequest& request);
+    bool retryWithFallback(const ExecutionRequest& request, 
+                          ExecutionResult& result);
+    
+    // Cost management
+    CostMetrics getCostMetrics() const;
+    double getTodayCost() const;
+    double getMonthCost() const;
+    void setCostLimit(double dailyLimitUSD, double monthlyLimitUSD);
+    bool isWithinCostLimits() const;
+    void resetCostMetrics();
+    
+    // Performance monitoring
+    PerformanceMetrics getPerformanceMetrics() const;
+    double getAverageLatency(const QString& providerId = "") const;
+    int getSuccessRate() const;
+    
+    // Cloud-specific operations
+    ExecutionResult executeAWS(const ExecutionRequest& request);
+    ExecutionResult executeAzure(const ExecutionRequest& request);
+    ExecutionResult executeGCP(const ExecutionRequest& request);
+    ExecutionResult executeHuggingFace(const ExecutionRequest& request);
+    
+    // Configuration
+    void setPreferLocal(bool prefer);
+    void setCloudFallbackEnabled(bool enabled);
+    void setCostThresholdPerRequest(double thresholdUSD);
+    void setLatencyThreshold(int thresholdMs);
+    void setAutoScaling(bool enabled);
+    
+    // Cloud switching
     bool switchToCloud(const QString& reason);
     bool switchToLocal(const QString& reason);
-    bool isHybridEnabled() const { return enableHybridOperation; }
+    bool isUsingCloud() const;
     
-    // Cloud model management
-    bool connectToCloudProvider(const QString& provider, const CloudCredentials& credentials);
-    bool disconnectFromCloudProvider(const QString& provider);
-    bool refreshCloudModels();
-    QVector<CloudModel> getAvailableCloudModels();
-    QVector<CloudModel> getConnectedCloudModels();
+    // API key management
+    void setAPIKey(const QString& providerId, const QString& apiKey);
+    void setAWSCredentials(const QString& accessKey, const QString& secretKey,
+                          const QString& region);
+    void setAzureCredentials(const QString& subscriptionId, const QString& apiKey);
+    void setGCPCredentials(const QString& projectId, const QString& apiKey);
+    void setHuggingFaceKey(const QString& apiKey);
     
-    // Intelligent model selection
-    CloudModel selectOptimalCloudModel(const QString& taskType, const QJsonObject& requirements);
-    CloudModel selectCostEffectiveModel(const QString& taskType, double budget);
-    CloudModel selectFastestModel(const QString& taskType, qint64 maxLatency);
-    CloudModel selectEnterpriseModel(const QString& taskType, const QString& compliance);
-    
-    // Cost and performance optimization
-    double calculateHybridCost(const HybridExecution& execution);
-    qint64 estimateHybridLatency(const QJsonObject& request);
-    bool optimizeForCost(const QString& taskType, double budget);
-    bool optimizeForPerformance(const QString& taskType, qint64 maxLatency);
-    bool optimizeForCompliance(const QString& taskType, const QString& compliance);
-    
-    // Failover and recovery
-    bool enableCloudFailoverMode(bool enable);
-    bool handleCloudFailure(const QString& provider, const QString& error);
-    bool recoverFromCloudFailure(const QString& provider);
-    bool validateCloudHealth(const QString& provider);
-    
-    // Enterprise integration
-    bool setupEnterpriseAccount(const QString& accountId, const QString& teamId);
-    bool configureTeamCollaboration(const QString& teamId);
-    bool enableComplianceMode(const QString& complianceLevel);
-    bool integrateWithEnterpriseSSO(const QString& ssoProvider);
-    bool setupAuditLogging(const QString& auditEndpoint);
-    
-    // Synchronization and backup
-    bool syncSettingsAcrossDevices(const QString& userId);
-    bool backupModelsToCloud(const QString& backupLocation);
-    bool restoreModelsFromCloud(const QString& backupLocation);
-    bool synchronizeTeamModels(const QString& teamId);
-    
-    // Real-time monitoring
-    QJsonObject getHybridMetrics() const;
-    QJsonObject getCloudHealthStatus() const;
-    QJsonObject getCostAnalytics() const;
-    QJsonObject getPerformanceAnalytics() const;
-    
-    // Machine learning integration
-    bool learnFromExecutionHistory(const QVector<HybridExecution>& history);
-    bool predictOptimalConfiguration(const QString& usagePattern);
-    bool adaptToUserBehavior(const QJsonObject& userBehavior);
-    bool optimizeForTeamUsage(const QString& teamId);
+    // Request queuing
+    void queueRequest(const ExecutionRequest& request);
+    QVector<ExecutionRequest> getPendingRequests() const;
+    void processPendingRequests();
 
 signals:
-    void cloudConnectionEstablished(const QString& provider);
-    void cloudConnectionLost(const QString& provider, const QString& reason);
-    void hybridExecutionCompleted(const HybridExecution& execution);
-    void cloudCostUpdated(double totalCost);
-    void cloudHealthStatusChanged(bool isHealthy);
-    void modelRecommendationReady(const CloudModel& model);
-    void enterpriseFeatureEnabled(const QString& feature);
-    void hybridMetricsUpdated(const QJsonObject& metrics);
-    void modelsUpdated();
+    void executionStarted(const QString& requestId);
+    void executionComplete(const ExecutionResult& result);
+    void providerHealthChanged(const QString& providerId, bool isHealthy);
+    void costLimitReached(const QString& limitType);
+    void failoverTriggered(const QString& fromProvider, const QString& toProvider);
+    void cloudSwitched(bool usingCloud);
+    void errorOccurred(const QString& error);
+
+private slots:
+    void onNetworkReplyFinished(QNetworkReply* reply);
+    void onHealthCheckTimerTimeout();
 
 private:
-    void setupNetworkManager();
-    void setupTimers();
-    void loadDefaultCloudProviders();
-    void setupEnterpriseIntegration();
+    // Execution helpers
+    ExecutionResult sendCloudRequest(const QString& providerId,
+                                    const QString& modelId,
+                                    const ExecutionRequest& request);
+    QJsonObject createRequestPayload(const ExecutionRequest& request,
+                                    const QString& providerId);
+    ExecutionResult parseCloudResponse(const QByteArray& data,
+                                      const QString& providerId);
     
-    // Core cloud functions
-    bool authenticateWithCloudProvider(const QString& provider, const CloudCredentials& credentials);
-    bool fetchCloudModels(const QString& provider);
-    bool validateCloudModel(const CloudModel& model);
-    bool executeCloudRequest(const QJsonObject& request, const CloudModel& model);
+    // Routing algorithms
+    double calculateProviderScore(const CloudProvider& provider,
+                                 const ExecutionRequest& request);
+    double calculateCostEfficiency(const CloudProvider& provider,
+                                   int estimatedTokens);
+    double calculateLatencyScore(const CloudProvider& provider);
+    double calculateReliabilityScore(const CloudProvider& provider);
     
-    // Intelligent decision functions
-    bool shouldUseCloud(const QJsonObject& request);
-    CloudModel selectBestCloudModel(const QString& taskType, const QJsonObject& requirements);
-    double calculateExecutionCost(const QJsonObject& request, const CloudModel& model);
-    qint64 estimateExecutionLatency(const QJsonObject& request, const CloudModel& model);
-    double calculateModelSuitability(const CloudModel& model, const QJsonObject& requirements);
+    // Health monitoring
+    bool validateCloudHealth(const QString& providerId);
+    void recordProviderLatency(const QString& providerId, double latencyMs);
+    void recordProviderFailure(const QString& providerId);
     
-    // Enterprise utility functions
-    bool checkEnterpriseCompliance(const QJsonObject& request);
-    bool validateEnterpriseSecurity(const QJsonObject& request);
-    bool auditEnterpriseUsage(const QJsonObject& request);
-    bool reportEnterpriseMetrics(const QJsonObject& metrics);
+    // Cost tracking
+    void recordCost(const QString& providerId, double cost);
+    void updateCostMetrics(const ExecutionResult& result);
     
-    // Helper functions
-    void performHealthCheck();
-    void optimizeCosts();
-    void syncSettings();
-    void onNetworkReply(QNetworkReply* reply);
-    QString generateExecutionId() const;
-    qint64 getCurrentSystemLoad() const;
-    CloudModel getCheapestAvailableModel(const QString& taskType) const;
-    double estimateExecutionCost(const QJsonObject& request, const CloudModel& model) const;
-    qint64 estimateHybridLatency(const QJsonObject& request) const;
-    QJsonObject buildCloudRequest(const QJsonObject& request, const CloudModel& model);
+    // Performance tracking
+    void recordLatency(double latencyMs);
+    void recordSuccess(bool success);
+    void updatePerformanceMetrics(const ExecutionResult& result);
+    
+    // Failover logic
+    QString getNextFallbackProvider(const QString& currentProvider);
+    bool shouldRetry(int attemptNumber, const QString& errorType);
+    
+    // Data members
+    QHash<QString, CloudProvider> providers;
+    QVector<CloudModel> cloudModels;
+    QHash<QString, ExecutionResult> executionHistory;
+    QVector<ExecutionRequest> requestQueue;
+    
+    CostMetrics costMetrics;
+    PerformanceMetrics performanceMetrics;
+    FailoverConfig failoverConfig;
+    
+    QNetworkAccessManager* networkManager;
+    QHash<QString, QNetworkReply*> activeRequests;
+    
+    QTimer* healthCheckTimer;
+    
+    bool preferLocal;
+    bool cloudFallbackEnabled;
+    double costThresholdPerRequest;
+    int latencyThreshold;
+    bool autoScalingEnabled;
+    bool currentlyUsingCloud;
+    
+    double dailyCostLimit;
+    double monthlyCostLimit;
+    
+    // Configuration
+    static constexpr int HEALTH_CHECK_INTERVAL_MS = 30000; // 30 seconds
+    static constexpr double DEFAULT_COST_THRESHOLD = 0.01;  // $0.01 per request
+    static constexpr int DEFAULT_LATENCY_THRESHOLD = 2000;  // 2 seconds
+    static constexpr int MAX_RETRY_ATTEMPTS = 3;
 };
+
+#endif // HYBRID_CLOUD_MANAGER_H

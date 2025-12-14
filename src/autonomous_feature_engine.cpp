@@ -1,606 +1,769 @@
+// autonomous_feature_engine.cpp - Real-time Autonomous Code Analysis & Suggestions
 #include "autonomous_feature_engine.h"
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <QJsonDocument>
+#include "hybrid_cloud_manager.h"
+#include "intelligent_codebase_engine.h"
+#include <QFile>
+#include <QTextStream>
+#include <QCryptographicHash>
+#include <QRegularExpression>
 #include <iostream>
+#include <algorithm>
 
-// ==================== Autonomous Feature Engine ====================
-
-AutonomousFeatureEngine::AutonomousFeatureEngine(IntelligentCodebaseEngine* engine, QObject* parent)
-    : QObject(parent), codebaseEngine(engine) {
+AutonomousFeatureEngine::AutonomousFeatureEngine(QObject* parent)
+    : QObject(parent),
+      hybridCloudManager(nullptr),
+      codebaseEngine(nullptr),
+      realTimeAnalysisEnabled(false),
+      analysisIntervalMs(DEFAULT_ANALYSIS_INTERVAL_MS),
+      confidenceThreshold(DEFAULT_CONFIDENCE_THRESHOLD),
+      automaticSuggestionsEnabled(true),
+      maxConcurrentAnalyses(4) {
     
-    enableAutoTestGeneration = true;
-    enableAutoFixSuggestions = true;
-    enableFeatureDiscovery = true;
-    minimumTestCoverage = 0.8;
+    analysisTimer = new QTimer(this);
+    analysisTimer->setInterval(analysisIntervalMs);
+    connect(analysisTimer, &QTimer::timeout, this, &AutonomousFeatureEngine::onAnalysisTimerTimeout);
+    
+    userProfile.userId = "default";
+    userProfile.averageAcceptanceRate = 0.75;
+    
+    std::cout << "[AutonomousFeatureEngine] Initialized" << std::endl;
 }
 
 AutonomousFeatureEngine::~AutonomousFeatureEngine() {
-    generatedTests.clear();
-    suggestedFixes.clear();
-    discoveredFeatures.clear();
+    stopBackgroundAnalysis();
 }
 
-QVector<QJsonObject> AutonomousFeatureEngine::generateTestsForFunction(const QString& functionName, const QString& filePath) {
-    std::cout << "[AutonomousFeatureEngine] Generating tests for function: " << functionName.toStdString() << std::endl;
-    
-    QVector<QJsonObject> tests;
-    
-    SymbolInfo symbol = codebaseEngine->getSymbolInfo(functionName);
-    
-    if (symbol.type == "function") {
-        // Generate unit test
-        tests.append(generateUnitTest(symbol));
-        
-        // Generate integration test
-        tests.append(generateIntegrationTest(symbol));
-        
-        // Generate edge case tests
-        tests.append(generateEdgeCaseTest(symbol));
-    }
-    
-    generatedTests.append(tests);
-    emit testsGenerated(tests);
-    
-    return tests;
+void AutonomousFeatureEngine::setHybridCloudManager(HybridCloudManager* manager) {
+    hybridCloudManager = manager;
 }
 
-QVector<QJsonObject> AutonomousFeatureEngine::generateTestsForClass(const QString& className, const QString& filePath) {
-    std::cout << "[AutonomousFeatureEngine] Generating tests for class: " << className.toStdString() << std::endl;
-    
-    QVector<QJsonObject> tests;
-    
-    SymbolInfo symbol = codebaseEngine->getSymbolInfo(className);
-    
-    if (symbol.type == "class") {
-        QJsonObject classTest;
-        classTest["test_name"] = QString("Test_%1").arg(className);
-        classTest["test_type"] = "class_test";
-        classTest["target_class"] = className;
-        classTest["file_path"] = filePath;
-        
-        classTest["test_code"] = QString(
-            "TEST(%1, BasicFunctionality) {\n"
-            "    %1 obj;\n"
-            "    // Test basic functionality\n"
-            "    ASSERT_TRUE(obj.isValid());\n"
-            "}\n"
-        ).arg(className);
-        
-        tests.append(classTest);
-    }
-    
-    generatedTests.append(tests);
-    emit testsGenerated(tests);
-    
-    return tests;
+void AutonomousFeatureEngine::setCodebaseEngine(IntelligentCodebaseEngine* engine) {
+    codebaseEngine = engine;
 }
 
-QVector<QJsonObject> AutonomousFeatureEngine::generateTestsForFile(const QString& filePath) {
-    std::cout << "[AutonomousFeatureEngine] Generating tests for file: " << filePath.toStdString() << std::endl;
+void AutonomousFeatureEngine::analyzeCode(const QString& code, const QString& filePath, const QString& language) {
+    std::cout << "[AutonomousFeatureEngine] Analyzing code in " << filePath.toStdString() << std::endl;
     
-    QVector<QJsonObject> tests;
+    // Generate suggestions based on code analysis
+    QVector<AutonomousSuggestion> suggestions = getSuggestionsForCode(code, language);
     
-    QVector<SymbolInfo> symbols = codebaseEngine->getSymbolsInFile(filePath);
-    
-    for (const SymbolInfo& symbol : symbols) {
-        if (symbol.type == "function") {
-            tests.append(generateUnitTest(symbol));
-        } else if (symbol.type == "class") {
-            QJsonObject classTest;
-            classTest["test_name"] = QString("Test_%1").arg(symbol.name);
-            classTest["test_type"] = "class_test";
-            classTest["target_class"] = symbol.name;
-            tests.append(classTest);
+    for (const AutonomousSuggestion& suggestion : suggestions) {
+        if (suggestion.confidence >= confidenceThreshold) {
+            activeSuggestions.append(suggestion);
+            emit suggestionGenerated(suggestion);
         }
     }
     
-    generatedTests.append(tests);
-    emit testsGenerated(tests);
-    
-    return tests;
-}
-
-QVector<QJsonObject> AutonomousFeatureEngine::generateTestsForProject(const QString& projectPath) {
-    std::cout << "[AutonomousFeatureEngine] Generating tests for entire project" << std::endl;
-    
-    QVector<QJsonObject> tests;
-    
-    // Would analyze entire project and generate comprehensive test suite
-    QJsonObject projectTest;
-    projectTest["test_name"] = "ProjectIntegrationTest";
-    projectTest["test_type"] = "integration_test";
-    projectTest["project_path"] = projectPath;
-    
-    tests.append(projectTest);
-    
-    generatedTests.append(tests);
-    emit testsGenerated(tests);
-    
-    return tests;
-}
-
-QJsonObject AutonomousFeatureEngine::suggestFixForBug(const BugReport& bug) {
-    std::cout << "[AutonomousFeatureEngine] Suggesting fix for bug: " << bug.bugType.toStdString() << std::endl;
-    
-    QJsonObject fix;
-    fix["bug_type"] = bug.bugType;
-    fix["severity"] = bug.severity;
-    fix["file_path"] = bug.filePath;
-    fix["line_number"] = bug.lineNumber;
-    
-    QString fixCode = generateFixCode(bug);
-    fix["fix_code"] = fixCode;
-    fix["confidence"] = bug.confidence;
-    fix["estimated_effort"] = analyzeFixComplexity(bug);
-    
-    suggestedFixes.append(fix);
-    emit fixSuggested(fix);
-    
-    return fix;
-}
-
-QVector<QJsonObject> AutonomousFeatureEngine::suggestFixesForAllBugs() {
-    std::cout << "[AutonomousFeatureEngine] Suggesting fixes for all detected bugs" << std::endl;
-    
-    QVector<QJsonObject> fixes;
-    
-    QVector<BugReport> bugs = codebaseEngine->detectBugs();
-    
-    for (const BugReport& bug : bugs) {
-        fixes.append(suggestFixForBug(bug));
+    // Detect security vulnerabilities
+    QVector<SecurityIssue> securityIssues = detectSecurityVulnerabilities(code, language);
+    for (const SecurityIssue& issue : securityIssues) {
+        detectedSecurityIssues.append(issue);
+        emit securityIssueDetected(issue);
     }
     
-    return fixes;
-}
-
-bool AutonomousFeatureEngine::applyAutomaticFix(const QJsonObject& fix) {
-    std::cout << "[AutonomousFeatureEngine] Applying automatic fix for: " << fix["bug_type"].toString().toStdString() << std::endl;
-    
-    // In production, would automatically apply the fix to the source code
-    return true;
-}
-
-QVector<QJsonObject> AutonomousFeatureEngine::discoverMissingFeatures() {
-    std::cout << "[AutonomousFeatureEngine] Discovering missing features" << std::endl;
-    
-    QVector<QJsonObject> features;
-    
-    // Analyze for common missing features
-    QJsonObject loggingFeature;
-    loggingFeature["feature_name"] = "Logging System";
-    loggingFeature["description"] = "Add comprehensive logging for debugging and monitoring";
-    loggingFeature["priority"] = "high";
-    loggingFeature["estimated_effort"] = "medium";
-    
-    features.append(loggingFeature);
-    
-    QJsonObject errorHandlingFeature;
-    errorHandlingFeature["feature_name"] = "Enhanced Error Handling";
-    errorHandlingFeature["description"] = "Implement enterprise-grade error handling and recovery";
-    errorHandlingFeature["priority"] = "high";
-    errorHandlingFeature["estimated_effort"] = "medium";
-    
-    features.append(errorHandlingFeature);
-    
-    discoveredFeatures.append(features);
-    
-    for (const QJsonObject& feature : features) {
-        emit featureDiscovered(feature);
-    }
-    
-    return features;
-}
-
-QVector<QJsonObject> AutonomousFeatureEngine::discoverAPIImprovements() {
-    std::cout << "[AutonomousFeatureEngine] Discovering API improvements" << std::endl;
-    
-    QVector<QJsonObject> improvements;
-    
-    QJsonObject apiImprovement;
-    apiImprovement["improvement_type"] = "API Consistency";
-    apiImprovement["description"] = "Standardize API naming conventions across all modules";
-    apiImprovement["priority"] = "medium";
-    
-    improvements.append(apiImprovement);
-    
-    return improvements;
-}
-
-QVector<QJsonObject> AutonomousFeatureEngine::discoverPerformanceOpportunities() {
-    std::cout << "[AutonomousFeatureEngine] Discovering performance opportunities" << std::endl;
-    
-    QVector<Optimization> optimizations = codebaseEngine->suggestOptimizations();
-    
-    QVector<QJsonObject> opportunities;
-    
-    for (const Optimization& opt : optimizations) {
-        if (opt.optimizationType == "performance") {
-            QJsonObject opportunity;
-            opportunity["type"] = opt.optimizationType;
-            opportunity["description"] = opt.description;
-            opportunity["potential_improvement"] = opt.potentialImprovement;
-            opportunity["confidence"] = opt.confidence;
-            
-            opportunities.append(opportunity);
+    // Find optimization opportunities
+    QVector<PerformanceOptimization> optimizations = suggestOptimizations(code, language);
+    for (const PerformanceOptimization& opt : optimizations) {
+        if (opt.confidence >= confidenceThreshold) {
+            optimizationSuggestions.append(opt);
+            emit optimizationFound(opt);
         }
     }
     
-    return opportunities;
+    // Record pattern for learning
+    analyzeCodePattern(code, language);
 }
 
-double AutonomousFeatureEngine::calculateTestCoverage(const QString& projectPath) {
-    std::cout << "[AutonomousFeatureEngine] Calculating test coverage" << std::endl;
-    
-    // Simplified test coverage calculation
-    double coverage = 0.75; // 75% default
-    
-    emit testCoverageUpdated(coverage);
-    
-    return coverage;
+void AutonomousFeatureEngine::analyzeCodeChange(const QString& oldCode, const QString& newCode, 
+                                               const QString& filePath, const QString& language) {
+    // Analyze what changed and provide real-time feedback
+    analyzeCode(newCode, filePath, language);
 }
 
-QJsonObject AutonomousFeatureEngine::generateCoverageReport() {
-    QJsonObject report;
+QVector<AutonomousSuggestion> AutonomousFeatureEngine::getSuggestionsForCode(
+    const QString& code, const QString& language) {
     
-    report["total_tests"] = generatedTests.size();
-    report["total_fixes"] = suggestedFixes.size();
-    report["total_features"] = discoveredFeatures.size();
-    report["test_coverage"] = 0.75;
+    QVector<AutonomousSuggestion> suggestions;
     
-    return report;
-}
-
-QJsonObject AutonomousFeatureEngine::generateUnitTest(const SymbolInfo& symbol) {
-    QJsonObject test;
-    
-    test["test_name"] = QString("Test_%1").arg(symbol.name);
-    test["test_type"] = "unit_test";
-    test["target_function"] = symbol.name;
-    test["file_path"] = symbol.filePath;
-    
-    QString testCode = QString(
-        "TEST(UnitTest, %1) {\n"
-        "    // Test basic functionality\n"
-        "    auto result = %1(");
-    
-    for (int i = 0; i < symbol.parameters.size(); ++i) {
-        if (i > 0) testCode += ", ";
-        testCode += "test_param" + QString::number(i);
+    // Detect functions that need tests
+    QRegularExpression funcRegex;
+    if (language == "cpp" || language == "c++") {
+        funcRegex.setPattern(R"(\w+\s+(\w+)\s*\([^)]*\)\s*\{)");
+    } else if (language == "python") {
+        funcRegex.setPattern(R"(def\s+(\w+)\s*\([^)]*\)\s*:)");
+    } else if (language == "javascript" || language == "typescript") {
+        funcRegex.setPattern(R"(function\s+(\w+)\s*\([^)]*\)\s*\{)");
     }
     
-    testCode += QString(
-        ");\n"
-        "    ASSERT_NE(result, nullptr);\n"
-        "}\n"
-    );
+    QRegularExpressionMatchIterator it = funcRegex.globalMatch(code);
+    while (it.hasNext()) {
+        QRegularExpressionMatch match = it.next();
+        int lineNum = code.left(match.capturedStart()).count('\n') + 1;
+        
+        // Extract function code
+        int braceCount = 1;
+        int pos = match.capturedEnd();
+        QString functionCode = match.captured(0);
+        
+        while (pos < code.length() && braceCount > 0) {
+            QChar c = code[pos];
+            functionCode += c;
+            if (c == '{') braceCount++;
+            if (c == '}') braceCount--;
+            pos++;
+        }
+        
+        // Skip trivial functions
+        int functionLines = functionCode.count('\n');
+        if (functionLines > 5 && functionLines < 100) {
+            AutonomousSuggestion testSuggestion = generateTestSuggestion(functionCode, language);
+            if (testSuggestion.confidence >= confidenceThreshold) {
+                suggestions.append(testSuggestion);
+            }
+        }
+    }
     
-    test["test_code"] = testCode.arg(symbol.name);
-    
-    return test;
+    return suggestions;
 }
 
-QJsonObject AutonomousFeatureEngine::generateIntegrationTest(const SymbolInfo& symbol) {
-    QJsonObject test;
+AutonomousSuggestion AutonomousFeatureEngine::generateTestSuggestion(
+    const QString& functionCode, const QString& language) {
     
-    test["test_name"] = QString("IntegrationTest_%1").arg(symbol.name);
-    test["test_type"] = "integration_test";
-    test["target_function"] = symbol.name;
-    test["file_path"] = symbol.filePath;
+    AutonomousSuggestion suggestion;
+    suggestion.suggestionId = QCryptographicHash::hash(
+        functionCode.toUtf8(), QCryptographicHash::Md5).toHex();
+    suggestion.type = "test_generation";
+    suggestion.originalCode = functionCode;
+    suggestion.timestamp = QDateTime::currentDateTime();
+    suggestion.wasAccepted = false;
     
-    test["test_code"] = QString(
-        "TEST(IntegrationTest, %1) {\n"
-        "    // Test integration with other components\n"
-        "    // TODO: Add integration test logic\n"
-        "}\n"
-    ).arg(symbol.name);
-    
-    return test;
-}
-
-QJsonObject AutonomousFeatureEngine::generateEdgeCaseTest(const SymbolInfo& symbol) {
-    QJsonObject test;
-    
-    test["test_name"] = QString("EdgeCaseTest_%1").arg(symbol.name);
-    test["test_type"] = "edge_case_test";
-    test["target_function"] = symbol.name;
-    test["file_path"] = symbol.filePath;
-    
-    test["test_code"] = QString(
-        "TEST(EdgeCase, %1) {\n"
-        "    // Test edge cases and boundary conditions\n"
-        "    // Test with null inputs\n"
-        "    // Test with extreme values\n"
-        "}\n"
-    ).arg(symbol.name);
-    
-    return test;
-}
-
-QJsonObject AutonomousFeatureEngine::analyzeFixComplexity(const BugReport& bug) {
-    QJsonObject complexity;
-    
-    if (bug.severity == "critical") {
-        complexity["effort"] = "high";
-        complexity["estimated_hours"] = 8;
-    } else if (bug.severity == "high") {
-        complexity["effort"] = "medium";
-        complexity["estimated_hours"] = 4;
+    // Extract function name
+    QRegularExpression nameRegex;
+    if (language == "cpp" || language == "c++") {
+        nameRegex.setPattern(R"(\w+\s+(\w+)\s*\()");
+    } else if (language == "python") {
+        nameRegex.setPattern(R"(def\s+(\w+)\s*\()");
     } else {
-        complexity["effort"] = "low";
-        complexity["estimated_hours"] = 2;
+        nameRegex.setPattern(R"(function\s+(\w+)\s*\()");
     }
     
-    return complexity;
-}
-
-QString AutonomousFeatureEngine::generateFixCode(const BugReport& bug) {
-    QString fixCode;
+    QRegularExpressionMatch match = nameRegex.match(functionCode);
+    QString funcName = match.captured(1);
     
-    if (bug.bugType == "null_pointer") {
-        fixCode = QString(
-            "// Add null check\n"
-            "if (ptr == nullptr) {\n"
-            "    std::cerr << \"Error: Null pointer detected\" << std::endl;\n"
-            "    return false;\n"
-            "}\n"
-        );
-    } else if (bug.bugType == "memory_leak") {
-        fixCode = QString(
-            "// Use smart pointers to prevent memory leaks\n"
-            "std::unique_ptr<Type> ptr = std::make_unique<Type>();\n"
-        );
-    } else if (bug.bugType == "infinite_loop") {
-        fixCode = QString(
-            "// Add break condition\n"
-            "int iterations = 0;\n"
-            "while (condition && iterations < MAX_ITERATIONS) {\n"
-            "    // Loop body\n"
-            "    iterations++;\n"
-            "}\n"
-        );
-    } else if (bug.bugType == "race_condition") {
-        fixCode = QString(
-            "// Add mutex for thread safety\n"
-            "std::lock_guard<std::mutex> lock(mutex_);\n"
-            "// Access shared state here\n"
-        );
+    // Generate test code based on language
+    QString testCode;
+    if (language == "cpp" || language == "c++") {
+        testCode = QString(
+            "TEST(FunctionTest, Test_%1) {\n"
+            "    // Arrange\n"
+            "    // TODO: Setup test data\n"
+            "    \n"
+            "    // Act\n"
+            "    // TODO: Call %1\n"
+            "    \n"
+            "    // Assert\n"
+            "    // EXPECT_EQ(expected, actual);\n"
+            "}\n").arg(funcName);
+        suggestion.explanation = "Generated Google Test unit test template";
+    } else if (language == "python") {
+        testCode = QString(
+            "def test_%1():\n"
+            "    # Arrange\n"
+            "    # TODO: Setup test data\n"
+            "    \n"
+            "    # Act\n"
+            "    result = %1()\n"
+            "    \n"
+            "    # Assert\n"
+            "    assert result is not None\n").arg(funcName);
+        suggestion.explanation = "Generated pytest unit test template";
+    } else if (language == "javascript" || language == "typescript") {
+        testCode = QString(
+            "describe('%1', () => {\n"
+            "    it('should work correctly', () => {\n"
+            "        // Arrange\n"
+            "        // TODO: Setup test data\n"
+            "        \n"
+            "        // Act\n"
+            "        const result = %1();\n"
+            "        \n"
+            "        // Assert\n"
+            "        expect(result).toBeDefined();\n"
+            "    });\n"
+            "});\n").arg(funcName);
+        suggestion.explanation = "Generated Jest unit test template";
     }
     
-    return fixCode;
-}
-
-bool AutonomousFeatureEngine::isFeatureMissing(const QString& featureName) {
-    // Check if feature is already implemented
-    return false;
-}
-
-QVector<QString> AutonomousFeatureEngine::analyzeAPIGaps() {
-    QVector<QString> gaps;
+    suggestion.suggestedCode = testCode;
+    suggestion.confidence = 0.80;
+    suggestion.benefits << "Improve code quality" << "Catch bugs early" << "Enable refactoring";
     
-    gaps.append("Authentication API");
-    gaps.append("Rate Limiting");
-    gaps.append("Caching Layer");
-    
-    return gaps;
+    return suggestion;
 }
 
-// ==================== Hybrid Cloud Manager ====================
-
-HybridCloudManager::HybridCloudManager(QObject* parent)
-    : QObject(parent), networkManager(nullptr) {
+GeneratedTest AutonomousFeatureEngine::generateTestsForFunction(
+    const QString& functionCode, const QString& language) {
     
-    setupNetworkManager();
+    GeneratedTest test;
+    test.testId = QCryptographicHash::hash(
+        functionCode.toUtf8(), QCryptographicHash::Md5).toHex();
+    test.language = language;
+    test.coverage = 0.85;
     
-    cloudEnabled = false;
-    localEnabled = true;
-    currentMode = "local";
+    if (language == "cpp" || language == "c++") {
+        test.framework = "GoogleTest";
+    } else if (language == "python") {
+        test.framework = "pytest";
+    } else if (language == "javascript" || language == "typescript") {
+        test.framework = "Jest";
+    }
+    
+    // Generate test code using the suggestion system
+    AutonomousSuggestion suggestion = generateTestSuggestion(functionCode, language);
+    test.testCode = suggestion.suggestedCode;
+    test.testName = "test_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+    test.reasoning = "Automatically generated comprehensive test suite";
+    
+    test.testCases << "Test with valid input" 
+                   << "Test with edge cases" 
+                   << "Test with invalid input";
+    
+    emit testGenerated(test);
+    return test;
 }
 
-HybridCloudManager::~HybridCloudManager() {
-}
-
-void HybridCloudManager::setupNetworkManager() {
-    networkManager = new QNetworkAccessManager(this);
-}
-
-bool HybridCloudManager::switchToCloudModel(const QString& reason) {
-    std::cout << "[HybridCloudManager] Switching to cloud model. Reason: " << reason.toStdString() << std::endl;
+QVector<GeneratedTest> AutonomousFeatureEngine::generateTestSuite(const QString& filePath) {
+    QVector<GeneratedTest> tests;
     
-    if (!cloudEnabled) {
-        if (!authenticateWithCloud()) {
-            std::cerr << "[HybridCloudManager] Failed to authenticate with cloud" << std::endl;
-            return false;
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return tests;
+    }
+    
+    QString code = QTextStream(&file).readAll();
+    file.close();
+    
+    // Detect language from file extension
+    QString language = "cpp";
+    if (filePath.endsWith(".py")) language = "python";
+    else if (filePath.endsWith(".js") || filePath.endsWith(".ts")) language = "javascript";
+    
+    // Find all functions and generate tests
+    QVector<AutonomousSuggestion> suggestions = getSuggestionsForCode(code, language);
+    
+    for (const AutonomousSuggestion& suggestion : suggestions) {
+        if (suggestion.type == "test_generation") {
+            GeneratedTest test = generateTestsForFunction(suggestion.originalCode, language);
+            tests.append(test);
         }
-        cloudEnabled = true;
     }
     
-    currentMode = "cloud";
-    emit modeChanged(currentMode);
-    
-    return true;
+    return tests;
 }
 
-bool HybridCloudManager::switchToLocalModel(const QString& reason) {
-    std::cout << "[HybridCloudManager] Switching to local model. Reason: " << reason.toStdString() << std::endl;
+QVector<SecurityIssue> AutonomousFeatureEngine::detectSecurityVulnerabilities(
+    const QString& code, const QString& language) {
     
-    currentMode = "local";
-    emit modeChanged(currentMode);
+    QVector<SecurityIssue> issues;
     
-    return true;
-}
-
-bool HybridCloudManager::enableHybridMode() {
-    std::cout << "[HybridCloudManager] Enabling hybrid mode" << std::endl;
-    
-    cloudEnabled = true;
-    localEnabled = true;
-    currentMode = "hybrid";
-    
-    emit modeChanged(currentMode);
-    
-    return true;
-}
-
-QString HybridCloudManager::getCurrentMode() const {
-    return currentMode;
-}
-
-QJsonArray HybridCloudManager::getCloudModels() {
-    std::cout << "[HybridCloudManager] Fetching cloud models" << std::endl;
-    
-    QJsonObject response = fetchFromCloud("/models");
-    
-    return response["models"].toArray();
-}
-
-bool HybridCloudManager::downloadCloudModel(const QString& modelId) {
-    std::cout << "[HybridCloudManager] Downloading cloud model: " << modelId.toStdString() << std::endl;
-    
-    QJsonObject request;
-    request["model_id"] = modelId;
-    request["action"] = "download";
-    
-    bool success = postToCloud("/models/download", request);
-    
-    if (success) {
-        emit cloudModelAvailable(modelId);
+    // SQL Injection detection
+    if (detectSQLInjection(code)) {
+        SecurityIssue issue;
+        issue.issueId = "sql_injection_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.severity = "critical";
+        issue.type = "sql_injection";
+        issue.vulnerableCode = code;
+        issue.description = "Potential SQL injection vulnerability detected";
+        issue.suggestedFix = "Use parameterized queries or prepared statements";
+        issue.cveReference = "CWE-89";
+        issue.riskScore = 9.5;
+        issues.append(issue);
     }
     
-    return success;
-}
-
-bool HybridCloudManager::uploadLocalModel(const QString& modelId) {
-    std::cout << "[HybridCloudManager] Uploading local model: " << modelId.toStdString() << std::endl;
-    
-    QJsonObject request;
-    request["model_id"] = modelId;
-    request["action"] = "upload";
-    
-    return postToCloud("/models/upload", request);
-}
-
-bool HybridCloudManager::syncSettingsToCloud() {
-    std::cout << "[HybridCloudManager] Syncing settings to cloud" << std::endl;
-    
-    bool success = postToCloud("/settings/sync", syncedSettings);
-    
-    if (success) {
-        emit settingsSynced();
+    // XSS detection
+    if (detectXSS(code)) {
+        SecurityIssue issue;
+        issue.issueId = "xss_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.severity = "high";
+        issue.type = "xss";
+        issue.description = "Cross-site scripting vulnerability detected";
+        issue.suggestedFix = "Sanitize and escape user input before rendering";
+        issue.cveReference = "CWE-79";
+        issue.riskScore = 8.0;
+        issues.append(issue);
     }
     
-    return success;
+    // Buffer overflow detection
+    if (detectBufferOverflow(code)) {
+        SecurityIssue issue;
+        issue.issueId = "buffer_overflow_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.severity = "critical";
+        issue.type = "buffer_overflow";
+        issue.description = "Potential buffer overflow vulnerability";
+        issue.suggestedFix = "Use bounds checking or safe string functions";
+        issue.cveReference = "CWE-120";
+        issue.riskScore = 9.0;
+        issues.append(issue);
+    }
+    
+    // Command injection detection
+    if (detectCommandInjection(code)) {
+        SecurityIssue issue;
+        issue.issueId = "cmd_injection_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.severity = "critical";
+        issue.type = "command_injection";
+        issue.description = "Command injection vulnerability detected";
+        issue.suggestedFix = "Validate and sanitize all user input, avoid shell execution";
+        issue.cveReference = "CWE-78";
+        issue.riskScore = 9.5;
+        issues.append(issue);
+    }
+    
+    // Path traversal detection
+    if (detectPathTraversal(code)) {
+        SecurityIssue issue;
+        issue.issueId = "path_traversal_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.severity = "high";
+        issue.type = "path_traversal";
+        issue.description = "Path traversal vulnerability detected";
+        issue.suggestedFix = "Validate file paths and restrict to allowed directories";
+        issue.cveReference = "CWE-22";
+        issue.riskScore = 7.5;
+        issues.append(issue);
+    }
+    
+    return issues;
 }
 
-bool HybridCloudManager::syncSettingsFromCloud() {
-    std::cout << "[HybridCloudManager] Syncing settings from cloud" << std::endl;
+bool AutonomousFeatureEngine::detectSQLInjection(const QString& code) {
+    // Detect string concatenation with SQL queries
+    QRegularExpression sqlPattern(R"((SELECT|INSERT|UPDATE|DELETE)\s+.*\+\s*\w+)");
+    return sqlPattern.match(code).hasMatch();
+}
+
+bool AutonomousFeatureEngine::detectXSS(const QString& code) {
+    // Detect unescaped HTML rendering
+    QRegularExpression xssPattern(R"(innerHTML\s*=|\.html\(|document\.write\()");
+    return xssPattern.match(code).hasMatch();
+}
+
+bool AutonomousFeatureEngine::detectBufferOverflow(const QString& code) {
+    // Detect unsafe C functions
+    QRegularExpression bufferPattern(R"(strcpy|strcat|gets|sprintf)");
+    return bufferPattern.match(code).hasMatch();
+}
+
+bool AutonomousFeatureEngine::detectCommandInjection(const QString& code) {
+    // Detect system command execution with user input
+    QRegularExpression cmdPattern(R"(system\(|exec\(|popen\(|eval\()");
+    return cmdPattern.match(code).hasMatch() && code.contains("input");
+}
+
+bool AutonomousFeatureEngine::detectPathTraversal(const QString& code) {
+    // Detect file operations with user-controlled paths
+    return (code.contains("../") || code.contains("..\\")) && 
+           (code.contains("fopen") || code.contains("open(") || code.contains("readFile"));
+}
+
+bool AutonomousFeatureEngine::detectInsecureCrypto(const QString& code) {
+    // Detect weak cryptographic algorithms
+    QRegularExpression cryptoPattern(R"(MD5|SHA1|DES|RC4)");
+    return cryptoPattern.match(code).hasMatch();
+}
+
+QVector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizations(
+    const QString& code, const QString& language) {
     
-    QJsonObject settings = fetchFromCloud("/settings");
+    QVector<PerformanceOptimization> optimizations;
     
-    if (!settings.isEmpty()) {
-        syncedSettings = settings;
-        emit settingsSynced();
+    // Detect parallelization opportunities
+    if (canParallelize(code)) {
+        PerformanceOptimization opt;
+        opt.optimizationId = "parallel_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        opt.type = "parallelization";
+        opt.currentImplementation = code;
+        opt.reasoning = "Loop can be parallelized for better performance";
+        opt.expectedSpeedup = 3.5;
+        opt.confidence = 0.85;
+        
+        if (language == "cpp" || language == "c++") {
+            opt.optimizedImplementation = "// Use std::execution::par with std::for_each\n" + code;
+        } else if (language == "python") {
+            opt.optimizedImplementation = "// Use multiprocessing.Pool or concurrent.futures\n" + code;
+        }
+        
+        optimizations.append(opt);
+    }
+    
+    // Detect caching opportunities
+    if (canCache(code)) {
+        PerformanceOptimization opt;
+        opt.optimizationId = "cache_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        opt.type = "caching";
+        opt.reasoning = "Function results can be cached to avoid recomputation";
+        opt.expectedSpeedup = 10.0;
+        opt.confidence = 0.90;
+        optimizations.append(opt);
+    }
+    
+    // Detect inefficient algorithms
+    QString algorithmName;
+    if (hasInefficient Algorithm(code, algorithmName)) {
+        PerformanceOptimization opt;
+        opt.optimizationId = "algorithm_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        opt.type = "algorithm";
+        opt.reasoning = QString("Inefficient algorithm detected: %1").arg(algorithmName);
+        opt.expectedSpeedup = 5.0;
+        opt.confidence = 0.80;
+        optimizations.append(opt);
+    }
+    
+    // Detect memory waste
+    if (hasMemoryWaste(code)) {
+        PerformanceOptimization opt;
+        opt.optimizationId = "memory_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        opt.type = "memory";
+        opt.reasoning = "Unnecessary memory allocations detected";
+        opt.expectedMemorySaving = 1024 * 1024 * 10; // 10MB
+        opt.confidence = 0.75;
+        optimizations.append(opt);
+    }
+    
+    return optimizations;
+}
+
+bool AutonomousFeatureEngine::canParallelize(const QString& code) {
+    // Detect simple for loops without dependencies
+    QRegularExpression loopPattern(R"(for\s*\([^)]+\)\s*\{)");
+    bool hasLoop = loopPattern.match(code).hasMatch();
+    bool hasNoDependencies = !code.contains("result +=") && !code.contains("accumulator");
+    return hasLoop && hasNoDependencies;
+}
+
+bool AutonomousFeatureEngine::canCache(const QString& code) {
+    // Detect pure functions (no side effects)
+    bool isPureFunction = !code.contains("static") && 
+                         !code.contains("global") && 
+                         !code.contains("cout") &&
+                         !code.contains("print");
+    return isPureFunction && code.count("return") == 1;
+}
+
+bool AutonomousFeatureEngine::hasInefficient Algorithm(const QString& code, QString& algorithmName) {
+    // Detect nested loops (O(n²))
+    if (code.count("for") >= 2) {
+        algorithmName = "Nested loops (O(n²))";
+        return true;
+    }
+    
+    // Detect linear search where hash map could be used
+    if (code.contains("find") && code.contains("vector")) {
+        algorithmName = "Linear search in vector";
         return true;
     }
     
     return false;
 }
 
-QJsonObject HybridCloudManager::getCurrentSettings() {
-    return syncedSettings;
+bool AutonomousFeatureEngine::hasMemoryWaste(const QString& code) {
+    // Detect unnecessary copies
+    return code.contains("vector<") && !code.contains("const &") && !code.contains("&&");
 }
 
-bool HybridCloudManager::joinTeam(const QString& teamId) {
-    std::cout << "[HybridCloudManager] Joining team: " << teamId.toStdString() << std::endl;
+CodeQualityMetrics AutonomousFeatureEngine::assessCodeQuality(
+    const QString& code, const QString& language) {
     
-    QJsonObject request;
-    request["team_id"] = teamId;
-    request["action"] = "join";
+    CodeQualityMetrics metrics;
     
-    bool success = postToCloud("/team/join", request);
+    metrics.maintainability = calculateMaintainability(code);
+    metrics.reliability = calculateReliability(code);
+    metrics.security = calculateSecurity(code);
+    metrics.efficiency = calculateEfficiency(code);
     
-    if (success) {
-        emit teamJoined(teamId);
+    metrics.overallScore = (metrics.maintainability + metrics.reliability + 
+                           metrics.security + metrics.efficiency) / 4.0;
+    
+    metrics.details["lines_of_code"] = code.count('\n');
+    metrics.details["complexity"] = calculateComplexity(code);
+    metrics.details["duplication"] = calculateDuplication(code);
+    metrics.details["code_smells"] = countCodeSmells(code);
+    
+    emit codeQualityAssessed(metrics);
+    return metrics;
+}
+
+double AutonomousFeatureEngine::calculateMaintainability(const QString& code) {
+    int linesOfCode = code.count('\n');
+    int complexity = calculateComplexity(code);
+    int comments = code.count("//") + code.count("/*");
+    
+    double score = 100.0;
+    score -= (linesOfCode > 200) ? 20 : 0;
+    score -= (complexity > 10) ? 30 : 0;
+    score += (comments > linesOfCode / 10) ? 10 : 0;
+    
+    return std::max(0.0, std::min(100.0, score));
+}
+
+double AutonomousFeatureEngine::calculateReliability(const QString& code) {
+    int errorHandling = code.count("try") + code.count("catch") + code.count("throw");
+    int nullChecks = code.count("nullptr") + code.count("null") + code.count("None");
+    
+    double score = 50.0;
+    score += errorHandling * 10;
+    score += nullChecks * 5;
+    
+    return std::max(0.0, std::min(100.0, score));
+}
+
+double AutonomousFeatureEngine::calculateSecurity(const QString& code) {
+    QVector<SecurityIssue> issues = detectSecurityVulnerabilities(code, "cpp");
+    
+    double score = 100.0;
+    for (const SecurityIssue& issue : issues) {
+        if (issue.severity == "critical") score -= 30;
+        else if (issue.severity == "high") score -= 20;
+        else if (issue.severity == "medium") score -= 10;
+        else score -= 5;
     }
     
-    return success;
+    return std::max(0.0, score);
 }
 
-bool HybridCloudManager::leaveTeam() {
-    std::cout << "[HybridCloudManager] Leaving team" << std::endl;
+double AutonomousFeatureEngine::calculateEfficiency(const QString& code) {
+    QString algorithmName;
+    bool hasInefficient = hasInefficient Algorithm(code, algorithmName);
+    bool hasWaste = hasMemoryWaste(code);
     
-    QJsonObject request;
-    request["action"] = "leave";
+    double score = 100.0;
+    if (hasInefficient) score -= 40;
+    if (hasWaste) score -= 20;
     
-    return postToCloud("/team/leave", request);
+    return std::max(0.0, score);
 }
 
-QJsonArray HybridCloudManager::getTeamModels() {
-    std::cout << "[HybridCloudManager] Fetching team models" << std::endl;
-    
-    QJsonObject response = fetchFromCloud("/team/models");
-    
-    return response["models"].toArray();
+int AutonomousFeatureEngine::calculateComplexity(const QString& code) {
+    int complexity = 1;
+    complexity += code.count("if ");
+    complexity += code.count("else if");
+    complexity += code.count("for ");
+    complexity += code.count("while ");
+    complexity += code.count("case ");
+    complexity += code.count("&&");
+    complexity += code.count("||");
+    return complexity;
 }
 
-bool HybridCloudManager::shareModelWithTeam(const QString& modelId) {
-    std::cout << "[HybridCloudManager] Sharing model with team: " << modelId.toStdString() << std::endl;
-    
-    QJsonObject request;
-    request["model_id"] = modelId;
-    request["action"] = "share";
-    
-    return postToCloud("/team/share", request);
+int AutonomousFeatureEngine::calculateDuplication(const QString& code) {
+    // Simplified duplication detection
+    return 0;
 }
 
-QJsonObject HybridCloudManager::getCommunityInsights() {
-    std::cout << "[HybridCloudManager] Fetching community insights" << std::endl;
+int AutonomousFeatureEngine::countCodeSmells(const QString& code) {
+    int smells = 0;
     
-    QJsonObject insights = fetchFromCloud("/community/insights");
+    if (code.count('\n') > 200) smells++; // Long method
+    if (code.count("if") > 10) smells++; // Too many conditionals
+    if (calculateComplexity(code) > 15) smells++; // High complexity
     
-    emit insightsUpdated(insights);
-    
-    return insights;
+    return smells;
 }
 
-QJsonArray HybridCloudManager::getTrendingModels() {
-    std::cout << "[HybridCloudManager] Fetching trending models" << std::endl;
+void AutonomousFeatureEngine::analyzeCodePattern(const QString& code, const QString& language) {
+    // Record pattern for machine learning
+    userProfile.languagePreferences[language]++;
     
-    QJsonObject response = fetchFromCloud("/community/trending");
-    
-    return response["models"].toArray();
+    // Detect common patterns
+    if (code.contains("singleton") || code.contains("getInstance")) {
+        userProfile.patternUsage["singleton"]++;
+    }
+    if (code.contains("factory") || code.contains("create")) {
+        userProfile.patternUsage["factory"]++;
+    }
 }
 
-QJsonArray HybridCloudManager::getRecommendedModels() {
-    std::cout << "[HybridCloudManager] Fetching recommended models" << std::endl;
-    
-    QJsonObject response = fetchFromCloud("/community/recommended");
-    
-    return response["models"].toArray();
+void AutonomousFeatureEngine::recordUserInteraction(const QString& suggestionId, bool accepted) {
+    for (AutonomousSuggestion& suggestion : activeSuggestions) {
+        if (suggestion.suggestionId == suggestionId) {
+            suggestion.wasAccepted = accepted;
+            
+            if (accepted) {
+                acceptedSuggestionsByType[suggestion.type]++;
+            } else {
+                rejectedSuggestionsByType[suggestion.type]++;
+            }
+            
+            updateAcceptanceRates();
+            break;
+        }
+    }
 }
 
-bool HybridCloudManager::authenticateWithCloud() {
-    std::cout << "[HybridCloudManager] Authenticating with cloud" << std::endl;
+void AutonomousFeatureEngine::updateAcceptanceRates() {
+    int totalAccepted = 0;
+    int totalRejected = 0;
     
-    // Simplified authentication
-    return true;
+    for (auto it = acceptedSuggestionsByType.begin(); it != acceptedSuggestionsByType.end(); ++it) {
+        totalAccepted += it.value();
+    }
+    for (auto it = rejectedSuggestionsByType.begin(); it != rejectedSuggestionsByType.end(); ++it) {
+        totalRejected += it.value();
+    }
+    
+    int total = totalAccepted + totalRejected;
+    if (total > 0) {
+        userProfile.averageAcceptanceRate = static_cast<double>(totalAccepted) / total;
+    }
 }
 
-QJsonObject HybridCloudManager::fetchFromCloud(const QString& endpoint) {
-    std::cout << "[HybridCloudManager] Fetching from cloud: " << endpoint.toStdString() << std::endl;
+double AutonomousFeatureEngine::calculateSuggestionConfidence(const AutonomousSuggestion& suggestion) {
+    double baseConfidence = suggestion.confidence;
+    double userAcceptanceRate = userProfile.averageAcceptanceRate;
     
-    // Simplified cloud fetch
-    QJsonObject response;
-    response["status"] = "success";
-    response["data"] = QJsonObject();
+    // Adjust based on user's historical acceptance
+    double adjustedConfidence = (baseConfidence * 0.7) + (userAcceptanceRate * 0.3);
     
-    return response;
+    return std::max(0.0, std::min(1.0, adjustedConfidence));
 }
 
-bool HybridCloudManager::postToCloud(const QString& endpoint, const QJsonObject& data) {
-    std::cout << "[HybridCloudManager] Posting to cloud: " << endpoint.toStdString() << std::endl;
+UserCodingProfile AutonomousFeatureEngine::getUserProfile() const {
+    return userProfile;
+}
+
+QVector<AutonomousSuggestion> AutonomousFeatureEngine::getActiveSuggestions() const {
+    return activeSuggestions;
+}
+
+void AutonomousFeatureEngine::acceptSuggestion(const QString& suggestionId) {
+    recordUserInteraction(suggestionId, true);
     
-    // Simplified cloud post
-    return true;
+    // Remove from active suggestions
+    for (int i = 0; i < activeSuggestions.size(); ++i) {
+        if (activeSuggestions[i].suggestionId == suggestionId) {
+            activeSuggestions.removeAt(i);
+            break;
+        }
+    }
+}
+
+void AutonomousFeatureEngine::rejectSuggestion(const QString& suggestionId) {
+    recordUserInteraction(suggestionId, false);
+    
+    for (int i = 0; i < activeSuggestions.size(); ++i) {
+        if (activeSuggestions[i].suggestionId == suggestionId) {
+            activeSuggestions.removeAt(i);
+            break;
+        }
+    }
+}
+
+void AutonomousFeatureEngine::dismissSuggestion(const QString& suggestionId) {
+    for (int i = 0; i < activeSuggestions.size(); ++i) {
+        if (activeSuggestions[i].suggestionId == suggestionId) {
+            activeSuggestions.removeAt(i);
+            break;
+        }
+    }
+}
+
+void AutonomousFeatureEngine::enableRealTimeAnalysis(bool enable) {
+    realTimeAnalysisEnabled = enable;
+    if (enable) {
+        analysisTimer->start();
+    } else {
+        analysisTimer->stop();
+    }
+}
+
+void AutonomousFeatureEngine::setAnalysisInterval(int milliseconds) {
+    analysisIntervalMs = milliseconds;
+    analysisTimer->setInterval(milliseconds);
+}
+
+void AutonomousFeatureEngine::startBackgroundAnalysis(const QString& projectPath) {
+    currentProjectPath = projectPath;
+    enableRealTimeAnalysis(true);
+    std::cout << "[AutonomousFeatureEngine] Started background analysis for: " 
+              << projectPath.toStdString() << std::endl;
+}
+
+void AutonomousFeatureEngine::stopBackgroundAnalysis() {
+    enableRealTimeAnalysis(false);
+    std::cout << "[AutonomousFeatureEngine] Stopped background analysis" << std::endl;
+}
+
+void AutonomousFeatureEngine::onAnalysisTimerTimeout() {
+    if (!currentProjectPath.isEmpty() && codebaseEngine) {
+        // Periodic codebase analysis
+        std::cout << "[AutonomousFeatureEngine] Running periodic analysis..." << std::endl;
+    }
+}
+
+void AutonomousFeatureEngine::setConfidenceThreshold(double threshold) {
+    confidenceThreshold = threshold;
+}
+
+void AutonomousFeatureEngine::enableAutomaticSuggestions(bool enable) {
+    automaticSuggestionsEnabled = enable;
+}
+
+void AutonomousFeatureEngine::setMaxConcurrentAnalyses(int max) {
+    maxConcurrentAnalyses = max;
+}
+
+double AutonomousFeatureEngine::getConfidenceThreshold() const {
+    return confidenceThreshold;
+}
+
+QString AutonomousFeatureEngine::generateDocumentation(const QString& symbolCode, const QString& symbolType) {
+    QString doc = "/**\n";
+    doc += " * @brief Automatically generated documentation\n";
+    doc += " *\n";
+    
+    if (symbolType == "function") {
+        doc += " * @param TODO: Add parameter descriptions\n";
+        doc += " * @return TODO: Add return value description\n";
+    }
+    
+    doc += " */\n";
+    return doc;
+}
+
+QVector<DocumentationGap> AutonomousFeatureEngine::findDocumentationGaps(const QString& filePath) {
+    QVector<DocumentationGap> gaps;
+    
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return gaps;
+    }
+    
+    QString content = QTextStream(&file).readAll();
+    file.close();
+    
+    // Find public functions without documentation
+    QRegularExpression publicFuncRegex(R"(public:\s*\n\s*\w+\s+(\w+)\s*\([^)]*\))");
+    QRegularExpressionMatchIterator it = publicFuncRegex.globalMatch(content);
+    
+    while (it.hasNext()) {
+        QRegularExpressionMatch match = it.next();
+        int lineNum = content.left(match.capturedStart()).count('\n') + 1;
+        
+        // Check if there's documentation before this function
+        int searchStart = std::max(0, match.capturedStart() - 200);
+        QString precedingText = content.mid(searchStart, match.capturedStart() - searchStart);
+        
+        if (!precedingText.contains("/**") && !precedingText.contains("///")) {
+            DocumentationGap gap;
+            gap.gapId = "doc_gap_" + QString::number(lineNum);
+            gap.filePath = filePath;
+            gap.lineNumber = lineNum;
+            gap.symbolName = match.captured(1);
+            gap.symbolType = "function";
+            gap.isCritical = true; // Public API
+            gap.suggestedDocumentation = generateDocumentation(match.captured(0), "function");
+            gaps.append(gap);
+        }
+    }
+    
+    return gaps;
 }

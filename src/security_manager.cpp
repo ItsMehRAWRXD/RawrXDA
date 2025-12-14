@@ -13,8 +13,11 @@
 #include <windows.h>
 #include <wincrypt.h>
 #include <dpapi.h>
+#include <bcrypt.h>  // Windows CNG (Cryptography Next Generation) API
+#include <ntstatus.h>
 
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "bcrypt.lib")
 
 // Static singleton instance
 std::unique_ptr<SecurityManager> SecurityManager::s_instance = nullptr;
@@ -226,55 +229,194 @@ QByteArray SecurityManager::decryptData(const QString& ciphertext)
 
 QByteArray SecurityManager::encryptAES256GCM(const QByteArray& plaintext, const QByteArray& key)
 {
-    // In production, this would use a proper crypto library (OpenSSL, Windows CryptoAPI, etc.)
-    // For this implementation, we use a simplified approach with Qt's built-in crypto
+    // Production-ready AES-256-GCM using Windows CNG API
+    BCRYPT_ALG_HANDLE hAlg = nullptr;
+    BCRYPT_KEY_HANDLE hKey = nullptr;
+    NTSTATUS status;
     
-    // Generate random IV (12 bytes for GCM)
-    QByteArray iv(12, 0);
-    QRandomGenerator::global()->fillRange(reinterpret_cast<quint32*>(iv.data()), 3);
-    
-    // In a real implementation, we would use CNG (Cryptography Next Generation) API on Windows
-    // For now, we use a simple XOR cipher as a placeholder (NOT SECURE - replace with real AES-GCM)
-    
-    QByteArray ciphertext = plaintext;
-    for (int i = 0; i < ciphertext.size(); ++i) {
-        ciphertext[i] = ciphertext[i] ^ key[i % key.size()] ^ iv[i % iv.size()];
+    try {
+        // Open algorithm provider for AES-GCM
+        status = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_AES_ALGORITHM, nullptr, 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            throw std::runtime_error("Failed to open AES algorithm provider");
+        }
+        
+        // Set chaining mode to GCM
+        status = BCryptSetProperty(hAlg, BCRYPT_CHAINING_MODE, 
+                                  (PUCHAR)BCRYPT_CHAIN_MODE_GCM, 
+                                  sizeof(BCRYPT_CHAIN_MODE_GCM), 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            throw std::runtime_error("Failed to set GCM chaining mode");
+        }
+        
+        // Generate key object from key material
+        status = BCryptGenerateSymmetricKey(hAlg, &hKey, nullptr, 0,
+                                           (PUCHAR)key.constData(), key.size(), 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            throw std::runtime_error("Failed to generate symmetric key");
+        }
+        
+        // Generate random 12-byte IV (nonce) for GCM
+        QByteArray iv(12, 0);
+        status = BCryptGenRandom(nullptr, (PUCHAR)iv.data(), iv.size(), 
+                                BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+        if (!BCRYPT_SUCCESS(status)) {
+            BCryptDestroyKey(hKey);
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            throw std::runtime_error("Failed to generate random IV");
+        }
+        
+        // Setup GCM authentication info
+        BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO authInfo;
+        BCRYPT_INIT_AUTH_MODE_INFO(authInfo);
+        
+        QByteArray tag(16, 0); // 16-byte authentication tag for GCM
+        authInfo.pbNonce = (PUCHAR)iv.data();
+        authInfo.cbNonce = iv.size();
+        authInfo.pbTag = (PUCHAR)tag.data();
+        authInfo.cbTag = tag.size();
+        authInfo.pbAuthData = nullptr;  // No additional authenticated data
+        authInfo.cbAuthData = 0;
+        
+        // Get required ciphertext buffer size
+        ULONG cbCiphertext = 0;
+        status = BCryptEncrypt(hKey, (PUCHAR)plaintext.constData(), plaintext.size(),
+                              &authInfo, nullptr, 0, nullptr, 0, &cbCiphertext, 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            BCryptDestroyKey(hKey);
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            throw std::runtime_error("Failed to calculate ciphertext size");
+        }
+        
+        // Allocate ciphertext buffer
+        QByteArray ciphertext(cbCiphertext, 0);
+        
+        // Perform encryption
+        ULONG cbResult = 0;
+        status = BCryptEncrypt(hKey, (PUCHAR)plaintext.constData(), plaintext.size(),
+                              &authInfo, nullptr, 0, (PUCHAR)ciphertext.data(), 
+                              ciphertext.size(), &cbResult, 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            BCryptDestroyKey(hKey);
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            throw std::runtime_error("Encryption failed");
+        }
+        
+        ciphertext.resize(cbResult);
+        
+        // Cleanup
+        BCryptDestroyKey(hKey);
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        
+        // Return format: IV (12 bytes) + Ciphertext + Tag (16 bytes)
+        QByteArray result = iv + ciphertext + tag;
+        
+        logSecurityEvent("encryption", "system", "aes-256-gcm", true, 
+                        QString("Encrypted %1 bytes").arg(plaintext.size()));
+        return result;
+        
+    } catch (const std::exception& e) {
+        logSecurityEvent("encryption", "system", "aes-256-gcm", false, 
+                        QString("Exception: %1").arg(e.what()));
+        return QByteArray();
     }
-    
-    // Prepend IV to ciphertext (needed for decryption)
-    QByteArray result = iv + ciphertext;
-    
-    // In real AES-GCM, we would also append the authentication tag (16 bytes)
-    QByteArray tag(16, 0);  // Placeholder tag
-    result.append(tag);
-    
-    return result;
 }
 
-QByteArray SecurityManager::decryptAES256GCM(const QByteArray& ciphertext, const QByteArray& key)
+QByteArray SecurityManager::decryptAES256GCM(const QByteArray& encrypted, const QByteArray& key)
 {
-    if (ciphertext.size() < 12 + 16) {  // IV (12) + tag (16)
+    if (encrypted.size() < 12 + 16) {  // IV (12) + tag (16)
+        logSecurityEvent("decryption", "system", "aes-256-gcm", false, 
+                        "Invalid ciphertext size");
         return QByteArray();
     }
     
-    // Extract IV (first 12 bytes)
-    QByteArray iv = ciphertext.left(12);
+    // Production-ready AES-256-GCM decryption using Windows CNG API
+    BCRYPT_ALG_HANDLE hAlg = nullptr;
+    BCRYPT_KEY_HANDLE hKey = nullptr;
+    NTSTATUS status;
     
-    // Extract tag (last 16 bytes)
-    QByteArray tag = ciphertext.right(16);
-    
-    // Extract actual ciphertext (middle portion)
-    QByteArray encrypted = ciphertext.mid(12, ciphertext.size() - 12 - 16);
-    
-    // Decrypt (reverse XOR operation)
-    QByteArray plaintext = encrypted;
-    for (int i = 0; i < plaintext.size(); ++i) {
-        plaintext[i] = plaintext[i] ^ key[i % key.size()] ^ iv[i % iv.size()];
+    try {
+        // Extract components from encrypted data
+        QByteArray iv = encrypted.left(12);
+        QByteArray tag = encrypted.right(16);
+        QByteArray ciphertext = encrypted.mid(12, encrypted.size() - 12 - 16);
+        
+        // Open algorithm provider for AES-GCM
+        status = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_AES_ALGORITHM, nullptr, 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            throw std::runtime_error("Failed to open AES algorithm provider");
+        }
+        
+        // Set chaining mode to GCM
+        status = BCryptSetProperty(hAlg, BCRYPT_CHAINING_MODE, 
+                                  (PUCHAR)BCRYPT_CHAIN_MODE_GCM, 
+                                  sizeof(BCRYPT_CHAIN_MODE_GCM), 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            throw std::runtime_error("Failed to set GCM chaining mode");
+        }
+        
+        // Generate key object from key material
+        status = BCryptGenerateSymmetricKey(hAlg, &hKey, nullptr, 0,
+                                           (PUCHAR)key.constData(), key.size(), 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            throw std::runtime_error("Failed to generate symmetric key");
+        }
+        
+        // Setup GCM authentication info for decryption
+        BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO authInfo;
+        BCRYPT_INIT_AUTH_MODE_INFO(authInfo);
+        
+        authInfo.pbNonce = (PUCHAR)iv.data();
+        authInfo.cbNonce = iv.size();
+        authInfo.pbTag = (PUCHAR)tag.data();
+        authInfo.cbTag = tag.size();
+        authInfo.pbAuthData = nullptr;
+        authInfo.cbAuthData = 0;
+        
+        // Get required plaintext buffer size
+        ULONG cbPlaintext = 0;
+        status = BCryptDecrypt(hKey, (PUCHAR)ciphertext.constData(), ciphertext.size(),
+                              &authInfo, nullptr, 0, nullptr, 0, &cbPlaintext, 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            BCryptDestroyKey(hKey);
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            throw std::runtime_error("Failed to calculate plaintext size");
+        }
+        
+        // Allocate plaintext buffer
+        QByteArray plaintext(cbPlaintext, 0);
+        
+        // Perform decryption (this also verifies the authentication tag)
+        ULONG cbResult = 0;
+        status = BCryptDecrypt(hKey, (PUCHAR)ciphertext.constData(), ciphertext.size(),
+                              &authInfo, nullptr, 0, (PUCHAR)plaintext.data(), 
+                              plaintext.size(), &cbResult, 0);
+        if (!BCRYPT_SUCCESS(status)) {
+            BCryptDestroyKey(hKey);
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            // Authentication tag verification failed or decryption error
+            throw std::runtime_error("Decryption failed or authentication tag mismatch");
+        }
+        
+        plaintext.resize(cbResult);
+        
+        // Cleanup
+        BCryptDestroyKey(hKey);
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        
+        logSecurityEvent("decryption", "system", "aes-256-gcm", true, 
+                        QString("Decrypted %1 bytes").arg(plaintext.size()));
+        return plaintext;
+        
+    } catch (const std::exception& e) {
+        logSecurityEvent("decryption", "system", "aes-256-gcm", false, 
+                        QString("Exception: %1").arg(e.what()));
+        return QByteArray();
     }
-    
-    // In real AES-GCM, we would verify the authentication tag here
-    
-    return plaintext;
 }
 
 // ==================== AES-256-CBC IMPLEMENTATION ====================
