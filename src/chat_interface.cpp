@@ -2,6 +2,7 @@
 #include "chat_interface.h"
 #include "agentic_engine.h"
 #include "plan_orchestrator.h"
+#include "qtapp/EnterpriseTelemetry.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -357,10 +358,17 @@ void ChatInterface::focusInput() {
 }
 
 void ChatInterface::sendMessage() {
-    if (m_busy) return;  // Ignore while generating
+    auto &telemetry = RawrXD::EnterpriseTelemetry::instance();
+    auto timer = telemetry.startTimer(QStringLiteral("chat.sendMessage"));
+
+    if (m_busy) {
+        telemetry.recordEvent(QStringLiteral("chat"), QStringLiteral("sendMessage.skipped"), QStringLiteral("busy"));
+        return;  // Ignore while generating
+    }
     
     QString message = message_input_->text().trimmed();
     if (!message.isEmpty()) {
+        telemetry.recordEvent(QStringLiteral("chat"), QStringLiteral("sendMessage.begin"), QStringLiteral("len=%1").arg(message.size()));
         m_busy = true;
         m_lastPrompt = message;
         
@@ -379,13 +387,17 @@ void ChatInterface::sendMessage() {
         if (isAgentCommand(message)) {
             executeAgentCommand(message);
             m_busy = false;
+            telemetry.recordTiming(QStringLiteral("chat"), QStringLiteral("sendMessage.command"), timer.elapsedMs(), QStringLiteral("cmd=%1").arg(message.split(' ').first()));
         } else {
             // Emit signal to process message (will be handled asynchronously)
             // The enhanced message with context will be prepared by the receiving engine
             emit messageSent(enhancedMessage);
+            telemetry.recordTiming(QStringLiteral("chat"), QStringLiteral("sendMessage.dispatched"), timer.elapsedMs(), QStringLiteral("len=%1").arg(enhancedMessage.size()));
         }
         
         message_input_->clear();
+    } else {
+        telemetry.recordEvent(QStringLiteral("chat"), QStringLiteral("sendMessage.ignored"), QStringLiteral("empty"));
     }
 }
 

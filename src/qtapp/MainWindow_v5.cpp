@@ -15,6 +15,7 @@
 #include "todo_manager.h"
 #include "agentic_text_edit.h"
 #include "../gui/ModelConversionDialog.h"
+#include "TelemetryWindow.h"
 
 // Phase 2 Polish Features
 #include "../ui/diff_dock.h"
@@ -69,6 +70,7 @@
 #include <QCheckBox>
 #include <QTabWidget>
 #include <QDialogButtonBox>
+#include <QDialog>
 #include <QFileInfo>
 #include <QProgressBar>
 #include <QDir>
@@ -394,6 +396,10 @@ void MainWindow::setupMenuBar()
     viewMenu->addAction("Toggle &Chat", this, &MainWindow::toggleChat);
     viewMenu->addAction("Toggle &Terminals", this, &MainWindow::toggleTerminals);
     viewMenu->addAction("Toggle &TODOs", this, &MainWindow::toggleTodos);
+    m_telemetryAction = viewMenu->addAction("Telemetry &Monitor", this, &MainWindow::toggleTelemetryWindow);
+    if (m_telemetryAction) {
+        m_telemetryAction->setCheckable(true);
+    }
     viewMenu->addSeparator();
     
     // TODO Panel submenu
@@ -559,6 +565,32 @@ void MainWindow::toggleTodos()
 {
     if (m_todoDockWidget) {
         m_todoDockWidget->setVisible(!m_todoDockWidget->isVisible());
+    }
+}
+
+void MainWindow::toggleTelemetryWindow()
+{
+    if (!m_telemetryWindow) {
+        m_telemetryWindow = new RawrXD::TelemetryWindow(this);
+        m_telemetryWindow->setLogDirectory(QDir::currentPath());
+        connect(m_telemetryWindow, &QDialog::finished, this, [this](int) {
+            if (m_telemetryAction) {
+                m_telemetryAction->setChecked(false);
+            }
+        });
+    }
+
+    const bool shouldShow = !m_telemetryWindow->isVisible();
+    if (shouldShow) {
+        m_telemetryWindow->show();
+        m_telemetryWindow->raise();
+        m_telemetryWindow->activateWindow();
+    } else {
+        m_telemetryWindow->hide();
+    }
+
+    if (m_telemetryAction) {
+        m_telemetryAction->setChecked(shouldShow);
     }
 }
 

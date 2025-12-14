@@ -1448,6 +1448,11 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
         list(APPEND AGENTICIDE_SOURCES src/qtapp/moc_includes.cpp)
     endif()
     
+    # Enterprise Telemetry Window - must be included for MOC processing
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/TelemetryWindow.h")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/TelemetryWindow.h)
+    endif()
+    
     # Phase 1 & 2: Response Parsing, Model Testing, and Library Integration
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/response_parser.cpp")
         list(APPEND AGENTICIDE_SOURCES src/response_parser.cpp)

@@ -1,6 +1,7 @@
 #include "inference_engine.hpp"
 #include <QDebug>
 #include <QFileInfo>
+#include "EnterpriseTelemetry.h"
 #include <QMutexLocker>
 #include <QRegularExpression>
 #include <QThread>
@@ -230,6 +231,10 @@ bool InferenceEngine::loadModel(const QString& path)
 QString InferenceEngine::processChat(const QString& prompt)
 {
     // Tokenize, run a short generation, and detokenize
+    auto &telemetry = RawrXD::EnterpriseTelemetry::instance();
+    auto timer = telemetry.startTimer(QStringLiteral("inference.processChat"));
+    telemetry.recordEvent(QStringLiteral("inference"), QStringLiteral("processChat.begin"), QStringLiteral("len=%1").arg(prompt.length()));
+
     qInfo() << "=== INFERENCE REQUEST START ===";
     qInfo() << "[processChat] Input text: " << prompt;
     qInfo() << "[processChat] Input length: " << prompt.length();
@@ -247,6 +252,8 @@ QString InferenceEngine::processChat(const QString& prompt)
     auto result = detokenize(out);
     qInfo() << "[processChat] Decoded response: " << result;
     qInfo() << "=== INFERENCE REQUEST END ===";
+
+    telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("processChat.complete"), timer.elapsedMs(), QStringLiteral("tokens_in=%1 tokens_out=%2").arg(input.size()).arg(out.size()));
     
     return result;
 }
@@ -661,6 +668,10 @@ void InferenceEngine::initializeTokenizer()
 std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& inputTokens, int maxTokens)
 {
     QMutexLocker lock(&m_mutex);
+
+    auto &telemetry = RawrXD::EnterpriseTelemetry::instance();
+    auto timer = telemetry.startTimer(QStringLiteral("inference.generate"));
+    telemetry.recordEvent(QStringLiteral("inference"), QStringLiteral("generate.begin"), QStringLiteral("tokens_in=%1 max=%2").arg(inputTokens.size()).arg(maxTokens));
     
     qDebug() << "=== GENERATE START ===";
     qDebug() << "[generate] Input tokens: " << inputTokens.size();
@@ -670,6 +681,7 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
     
     if (!isModelLoaded()) {
         qWarning() << "[generate] Cannot generate - no model loaded";
+            telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.no_model"), timer.elapsedMs(), QStringLiteral("tokens_in=%1").arg(inputTokens.size()));
         return inputTokens;
     }
     
@@ -738,6 +750,8 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         qInfo() << "[generate] Completed:" << tokensGenerated << "tokens in" << elapsed 
                 << "ms (" << QString::number(m_tokensPerSecond, 'f', 1) << " tok/s)";
         qDebug() << "=== GENERATE END ===";
+
+        telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.complete"), timer.elapsedMs(), QStringLiteral("tokens_out=%1 tok_s=%2").arg(result.size()).arg(m_tokensPerSecond, 0, 'f', 1));
         
         // Reset KV-cache for next inference
         m_kvCacheReady = false;
@@ -751,6 +765,7 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
             result.push_back(1000 + i);  // Placeholder tokens
         }
         qDebug() << "=== GENERATE END (FALLBACK) ===";
+        telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.fallback"), timer.elapsedMs(), QStringLiteral("tokens_out=%1").arg(result.size()));
     }
     
     return result;

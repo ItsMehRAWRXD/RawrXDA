@@ -122,10 +122,11 @@ bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
         float score;
         stream >> score;
         
-        TokenPiece piece;
+        SentencePiece piece;
         piece.piece = QString::fromUtf8(pieceBytes);
         piece.score = score;
-        piece.type = TokenType::Normal;
+        piece.id = i;
+        piece.type = SentencePiece::NORMAL;
         
         // Detect special tokens
         if (piece.piece == "<s>") m_bosId = i;
@@ -134,8 +135,7 @@ bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
         else if (piece.piece == "<pad>") m_padId = i;
         
         m_pieces.append(piece);
-        m_tokenIdToString[i] = piece.piece;
-        m_stringToTokenId[piece.piece] = i;
+        m_pieceToId[piece.piece] = i;
     }
     
     buildTrie();

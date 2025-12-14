@@ -6,6 +6,8 @@
 #include <QFutureWatcher>
 #include <QProgressDialog>
 
+class QAction;
+
 // Forward declarations
 class QDockWidget;
 class QLabel;
@@ -27,6 +29,7 @@ namespace RawrXD {
     class AutoModelDownloader;
     class ModelDownloadDialog;
     class TelemetryOptInDialog;
+    class TelemetryWindow;
 }
 
 class DiffDock;  // Day 2 simplified diff viewer
@@ -61,6 +64,7 @@ private slots:
     void toggleChat();
     void toggleTerminals();
     void toggleTodos();
+    void toggleTelemetryWindow();
     
     // AI operations
     void startChat();
@@ -135,6 +139,9 @@ private:
     RawrXD::LSPClient *m_lspClient;
     TodoManager *m_todoManager;
     TodoDock *m_todoDock;
+
+    RawrXD::TelemetryWindow *m_telemetryWindow{nullptr};
+    QAction *m_telemetryAction{nullptr};
     
     // Dock widgets
     QDockWidget *m_chatDock;
