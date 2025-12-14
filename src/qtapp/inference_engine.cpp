@@ -622,6 +622,11 @@ void InferenceEngine::initializeTokenizer()
         QHash<QString, QByteArray> tokenizerMetadata;
         try {
             tokenizerMetadata = m_loader->getTokenizerMetadata();
+        } catch (const std::bad_alloc&) {
+            qWarning() << "[InferenceEngine] Memory allocation failed loading tokenizer metadata (file may be too large)";
+            qWarning() << "[InferenceEngine] Falling back to simple word tokenizer";
+            m_tokenizerMode = TOKENIZER_FALLBACK;
+            return;
         } catch (const std::exception& e) {
             qWarning() << "[InferenceEngine] Failed to load tokenizer metadata:" << e.what();
             // Continue without metadata
@@ -637,6 +642,9 @@ void InferenceEngine::initializeTokenizer()
                     m_tokenizerMode = TOKENIZER_BPE;
                     qInfo() << "[InferenceEngine] Using BPE tokenizer (GPT-2 compatible)";
                 }
+            } catch (const std::bad_alloc&) {
+                qWarning() << "[InferenceEngine] Memory allocation failed in BPE tokenizer, using fallback";
+                m_tokenizerMode = TOKENIZER_FALLBACK;
             } catch (const std::exception& e) {
                 qWarning() << "[InferenceEngine] Failed to initialize BPE tokenizer:" << e.what();
             }
@@ -647,6 +655,9 @@ void InferenceEngine::initializeTokenizer()
                     m_tokenizerMode = TOKENIZER_SP;
                     qInfo() << "[InferenceEngine] Using SentencePiece tokenizer (LLaMA/Mistral compatible)";
                 }
+            } catch (const std::bad_alloc&) {
+                qWarning() << "[InferenceEngine] Memory allocation failed in SentencePiece tokenizer, using fallback";
+                m_tokenizerMode = TOKENIZER_FALLBACK;
             } catch (const std::exception& e) {
                 qWarning() << "[InferenceEngine] Failed to initialize SentencePiece tokenizer:" << e.what();
             }
