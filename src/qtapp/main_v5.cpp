@@ -37,13 +37,19 @@ void fileMessageHandler(QtMsgType type, const QMessageLogContext &context, const
     
     QString logLine = QString("[%1] [%2] %3").arg(timestamp, levelStr, msg);
     
-    // Write to console
+    // Write to console with immediate flush
     fprintf(stderr, "%s\n", logLine.toLocal8Bit().constData());
+    fflush(stderr);
     
     // Write to file with immediate flush
     if (g_logStream) {
         (*g_logStream) << logLine << "\n";
         g_logStream->flush();
+        
+        // Also flush the underlying file descriptor for extra safety
+        if (g_logFile && g_logFile->isOpen()) {
+            g_logFile->flush();
+        }
     }
     
     if (type == QtFatalMsg) {

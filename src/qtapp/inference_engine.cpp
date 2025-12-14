@@ -138,6 +138,31 @@ bool InferenceEngine::loadModel(const QString& path)
             qCritical() << "[InferenceEngine] UNKNOWN EXCEPTION initializing tokenizer";
         }
         
+        // Load vocabulary from GGUF file (CRITICAL for detokenization)
+        try {
+            qInfo() << "[InferenceEngine] Loading vocabulary from GGUF...";
+            if (m_loadProgressCallback) {
+                m_loadProgressCallback("Loading vocabulary...");
+            }
+            
+            if (m_loader && m_loader->isOpen()) {
+                // Load vocabulary directly from the GGUF file using VocabularyLoader
+                bool vocabLoaded = m_vocab.loadFromGGUF(path);
+                if (vocabLoaded) {
+                    qInfo() << "[InferenceEngine] Vocabulary loaded successfully from GGUF file";
+                } else {
+                    qWarning() << "[InferenceEngine] Failed to load vocabulary from GGUF, using fallback tokenization";
+                }
+            } else {
+                qWarning() << "[InferenceEngine] GGUF loader not available for vocabulary loading";
+            }
+        } catch (const std::exception& e) {
+            qWarning() << "[InferenceEngine] EXCEPTION loading vocabulary:" << e.what();
+            // Continue anyway - we'll use fallback detokenization
+        } catch (...) {
+            qWarning() << "[InferenceEngine] UNKNOWN EXCEPTION loading vocabulary";
+        }
+        
         // Build initial quantized tensor cache (with full exception safety)
         try {
             qInfo() << "[InferenceEngine] Building tensor cache...";
@@ -539,64 +564,91 @@ QString InferenceEngine::detokenize(const std::vector<int32_t>& tokens)
     qDebug() << "=== DETOKENIZE START ===";
     qDebug() << "[detokenize] Token count: " << tokens.size();
     qDebug() << "[detokenize] Tokenizer mode: " << m_tokenizerMode;
+    qDebug() << "[detokenize] Vocab loaded: " << m_vocab.isLoaded();
     
-    // Use appropriate tokenizer based on mode
+    QString result;
+    
+    // First try: Use actual tokenizers if available
     switch (m_tokenizerMode) {
         case TOKENIZER_BPE:
             if (m_bpeTokenizer.isReady()) {
                 qDebug() << "[detokenize] Using BPE tokenizer to decode";
-                auto result = m_bpeTokenizer.decode(tokens);
-                qDebug() << "[detokenize] BPE decoded to: " << result;
+                auto bpeResult = m_bpeTokenizer.decode(tokens);
+                qDebug() << "[detokenize] BPE decoded to: " << bpeResult;
                 qDebug() << "=== DETOKENIZE END ===";
-                return result;
+                return bpeResult;
             }
-            qWarning() << "[detokenize] BPE tokenizer not ready";
+            qWarning() << "[detokenize] BPE tokenizer not ready, trying fallback";
             break;
             
         case TOKENIZER_SP:
             if (m_spTokenizer.isReady()) {
                 qDebug() << "[detokenize] Using SentencePiece tokenizer to decode";
-                auto result = m_spTokenizer.decode(tokens, true);  // Skip special tokens
-                qDebug() << "[detokenize] SentencePiece decoded to: " << result;
+                auto spResult = m_spTokenizer.decode(tokens, true);
+                qDebug() << "[detokenize] SentencePiece decoded to: " << spResult;
                 qDebug() << "=== DETOKENIZE END ===";
-                return result;
+                return spResult;
             }
-            qWarning() << "[detokenize] SentencePiece tokenizer not ready";
+            qWarning() << "[detokenize] SentencePiece tokenizer not ready, trying fallback";
             break;
             
         case TOKENIZER_FALLBACK:
         default:
-            qDebug() << "[detokenize] Using fallback tokenizer";
+            qDebug() << "[detokenize] Using fallback/vocabulary-based decoder";
             break;
     }
     
-    // Fallback: Use vocabulary or generate placeholders
-    qWarning() << "[detokenize] Falling back to vocabulary-based decoding";
-    QString result;
-    
-    for (size_t i = 0; i < tokens.size(); ++i) {
-        int32_t token = tokens[i];
+    // Fallback: Decode using vocabulary
+    if (m_vocab.isLoaded()) {
+        qDebug() << "[detokenize] Vocabulary is loaded, using it to decode tokens";
         
-        // Skip special tokens
-        if (token == 1 || token == 2) continue;  // BOS/EOS
-        
-        // Use vocabulary if available
-        if (m_vocab.isLoaded()) {
-            VocabularyLoader::Token vocabToken = m_vocab.getToken(token);
-            if (vocabToken.id >= 0) {
-                result += vocabToken.text + " ";
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            int32_t tokenId = tokens[i];
+            
+            // Skip special tokens (BOS=1, EOS=2, PAD=0)
+            if (tokenId == 0 || tokenId == 1 || tokenId == 2) {
+                qDebug() << "[detokenize] Token" << tokenId << "-> skipped (special)";
                 continue;
             }
+            
+            // Look up in vocabulary
+            VocabularyLoader::Token vocabToken = m_vocab.getToken(tokenId);
+            if (vocabToken.id >= 0 && !vocabToken.text.isEmpty()) {
+                result += vocabToken.text;
+                if (!vocabToken.text.endsWith(" ") && i + 1 < tokens.size()) {
+                    result += " ";
+                }
+                qDebug() << "[detokenize] Token" << tokenId << "-> vocab:" << vocabToken.text;
+            } else {
+                // Unknown token - just show as space
+                result += " ";
+                qDebug() << "[detokenize] Token" << tokenId << "-> unknown";
+            }
         }
+    } else {
+        // No vocabulary loaded - complete fallback
+        qWarning() << "[detokenize] No vocabulary loaded, using character fallback";
         
-        // Pure fallback: placeholder
-        if (token >= 256 && token < 50256) {
-            result += QString("tok_%1 ").arg(token);
-        } else if (token < 256) {
-            result += QChar(token);
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            int32_t token = tokens[i];
+            
+            // Skip special tokens
+            if (token == 0 || token == 1 || token == 2) continue;
+            
+            // Try ASCII range first
+            if (token >= 32 && token < 127) {
+                result += QChar(token);
+            } else if (token < 256) {
+                result += QChar(token);
+            } else {
+                // Unknown - show as space
+                result += " ";
+            }
         }
     }
     
+    qDebug() << "[detokenize] Final result: " << result;
+    qDebug() << "=== DETOKENIZE END ===";
     return result.trimmed();
 }
 
@@ -678,8 +730,6 @@ void InferenceEngine::initializeTokenizer()
 
 std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& inputTokens, int maxTokens)
 {
-    QMutexLocker lock(&m_mutex);
-
     auto &telemetry = RawrXD::EnterpriseTelemetry::instance();
     auto timer = telemetry.startTimer(QStringLiteral("inference.generate"));
     telemetry.recordEvent(QStringLiteral("inference"), QStringLiteral("generate.begin"), QStringLiteral("tokens_in=%1 max=%2").arg(inputTokens.size()).arg(maxTokens));
@@ -687,14 +737,19 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
     qDebug() << "=== GENERATE START ===";
     qDebug() << "[generate] Input tokens: " << inputTokens.size();
     qDebug() << "[generate] Max new tokens: " << maxTokens;
-    qDebug() << "[generate] Model loaded: " << isModelLoaded();
-    qDebug() << "[generate] Transformer ready: " << m_transformer.isReady();
     
-    if (!isModelLoaded()) {
-        qWarning() << "[generate] Cannot generate - no model loaded";
+    // Check model loaded (with brief lock for safety)
+    {
+        QMutexLocker lock(&m_mutex);
+        if (!m_loader || !m_loader->isOpen()) {
+            qWarning() << "[generate] Cannot generate - no model loaded";
             telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.no_model"), timer.elapsedMs(), QStringLiteral("tokens_in=%1").arg(inputTokens.size()));
-        return inputTokens;
+            return inputTokens;
+        }
     }
+    
+    qDebug() << "[generate] Model loaded: true";
+    qDebug() << "[generate] Transformer ready: " << m_transformer.isReady();
     
     std::vector<int32_t> result = inputTokens;
     
