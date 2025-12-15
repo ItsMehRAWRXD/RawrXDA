@@ -59,6 +59,8 @@ struct GGUFMetadata {
     uint32_t embedding_dim;
     uint32_t vocab_size;
     std::vector<std::string> tokens;
+    std::vector<float> token_scores;
+    std::vector<uint32_t> token_types;
 };
 
 class IGGUFLoader {

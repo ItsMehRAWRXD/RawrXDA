@@ -485,7 +485,7 @@ bool ToolRegistry::saveConfiguration(const std::string& configPath) const {
         json config;
         config["globalTimeout"] = m_globalTimeout;
         
-        json toolsConfig = json::object{};
+        json toolsConfig = json::parse("{}");
         {
             std::lock_guard<std::mutex> lock(m_toolRegistryMutex);
             for (auto it = m_toolConfigs.begin(); it != m_toolConfigs.end(); ++it) {
@@ -606,7 +606,7 @@ json ToolRegistry::getToolStatistics(const std::string& toolName) const {
     
     auto it = m_statistics.find(toolName);
     if (it == m_statistics.end()) {
-        return json::object{};
+        return json::parse("{}");
     }
     
     const auto& stats = it->second;
@@ -634,7 +634,7 @@ json ToolRegistry::getToolStatistics(const std::string& toolName) const {
 json ToolRegistry::getAllStatistics() const {
     std::lock_guard<std::mutex> lock(m_statsMutex);
     
-    json result = json::object{};
+    json result = json::parse("{}");
     for (auto it = m_statistics.begin(); it != m_statistics.end(); ++it) {
         const std::string& toolName = it->first;
         const auto& stats = it->second;
@@ -703,7 +703,7 @@ json ToolRegistry::getMetricsSnapshot() const {
         uint64_t successCount = 0;
         int64_t totalLatency = 0;
         
-        json tools = json::object{};
+        json tools = json::parse("{}");
         
         for (auto it = m_statistics.begin(); it != m_statistics.end(); ++it) {
             const auto& toolName = it->first;
@@ -863,7 +863,7 @@ void ToolRegistry::clearCache(const std::string& toolName) {
 json ToolRegistry::getCacheStatistics() const {
     std::lock_guard<std::mutex> lock(m_cacheMutex);
     
-    json stats = json::object{};
+    json stats = json::parse("{}");
     uint64_t totalEntries = 0;
     
     for (auto it = m_cache.begin(); it != m_cache.end(); ++it) {
@@ -908,7 +908,7 @@ json ToolRegistry::getHealthStatus() const {
 }
 
 json ToolRegistry::runSelfTest() {
-    json results = json::object{};
+    json results = json::parse("{}");
     
     if (m_logger) {
         m_logger->info("ToolRegistry", "Running self-test on all tools");
@@ -934,7 +934,7 @@ json ToolRegistry::runToolSelfTest(const std::string& toolName) {
     result["tool_name"] = toolName;
     
     try {
-        json emptyParams = json::object{};
+        json emptyParams = json::parse("{}");
         auto execResult = executeTool(toolName, emptyParams);
         
         result["success"] = execResult.success;

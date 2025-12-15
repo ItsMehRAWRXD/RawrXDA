@@ -21,7 +21,7 @@ UniversalModelRouter::~UniversalModelRouter() = default;
 void UniversalModelRouter::registerModel(const QString& model_name, const ModelConfig& config)
 {
     if (!config.isValid()) {
-        emit error(QString("Invalid configuration for model: %1").arg(model_name));
+        emit routerError(QString("Invalid configuration for model: %1").arg(model_name));
         return;
     }
     
@@ -69,7 +69,7 @@ bool UniversalModelRouter::loadConfigFromFile(const QString& config_file_path)
 {
     QFile file(config_file_path);
     if (!file.open(QIODevice::ReadOnly)) {
-        emit error(QString("Cannot open config file: %1").arg(config_file_path));
+        emit routerError(QString("Cannot open config file: %1").arg(config_file_path));
         return false;
     }
     
@@ -77,7 +77,7 @@ bool UniversalModelRouter::loadConfigFromFile(const QString& config_file_path)
     file.close();
     
     if (!doc.isObject()) {
-        emit error("Config file is not valid JSON");
+        emit routerError("Config file is not valid JSON");
         return false;
     }
     
@@ -89,7 +89,7 @@ bool UniversalModelRouter::loadConfigFromJson(const QJsonObject& config_json)
     model_registry.clear();
     
     if (!config_json.contains("models")) {
-        emit error("Config missing 'models' section");
+        emit routerError("Config missing 'models' section");
         return false;
     }
     
@@ -101,9 +101,9 @@ bool UniversalModelRouter::loadConfigFromJson(const QJsonObject& config_json)
         ModelConfig config;
         config.full_config = model_json;
         config.model_id = model_json["model_id"].toString();
-        config.description = model_json.value("description", "").toString();
+        config.description = model_json.value("description").toString("");
         config.api_key = model_json["api_key"].toString();
-        config.endpoint = model_json.value("endpoint", "").toString();
+        config.endpoint = model_json.value("endpoint").toString("");
         
         // Parse backend
         QString backend_str = model_json["backend"].toString().toUpper();
@@ -124,7 +124,7 @@ bool UniversalModelRouter::loadConfigFromJson(const QJsonObject& config_json)
         } else if (backend_str == "AWS_BEDROCK") {
             config.backend = ModelBackend::AWS_BEDROCK;
         } else {
-            emit error(QString("Unknown backend: %1").arg(backend_str));
+            emit routerError(QString("Unknown backend: %1").arg(backend_str));
             continue;
         }
         
@@ -152,7 +152,7 @@ bool UniversalModelRouter::loadConfigFromJson(const QJsonObject& config_json)
     return true;
 }
 
-bool UniversalModelRouter::saveConfigToFile(const QString& config_file_path) const
+bool UniversalModelRouter::saveConfigToFile(const QString& config_file_path)
 {
     QJsonObject root;
     QJsonObject models_obj;
@@ -241,5 +241,5 @@ void UniversalModelRouter::onCloudClientInitialized()
 
 void UniversalModelRouter::onEngineError(const QString& error)
 {
-    emit error(error);
+    emit routerError(error);
 }

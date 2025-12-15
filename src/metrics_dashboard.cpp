@@ -250,9 +250,9 @@ void MetricsDashboard::updateSummaryLabels()
     m_active_model_label->setText(active_model.isEmpty() ? "None" : active_model);
 
     QJsonObject stats = m_adapter->getStatistics();
-    int total_requests = stats.value("total_requests", 0).toInt();
-    double avg_latency = stats.value("avg_latency_ms", 0).toDouble();
-    int success_rate = stats.value("success_rate", 0).toInt();
+    int total_requests = stats.value("total_requests").toInt();
+    double avg_latency = stats.value("avg_latency_ms").toDouble();
+    int success_rate = stats.value("success_rate").toInt();
 
     m_total_requests_label->setText(QString::number(total_requests));
     m_avg_latency_label->setText(QString("%1 ms").arg((int)avg_latency));
@@ -288,12 +288,12 @@ void MetricsDashboard::updateLatencyChart()
     QStringList categories;
     
     QJsonObject stats = m_adapter->getStatistics();
-    QJsonArray models = stats.value("models", QJsonArray()).toArray();
+    QJsonArray models = stats.value("models").toArray();
     
     for (const auto& model_val : models) {
         QJsonObject model_obj = model_val.toObject();
         QString name = model_obj.value("name").toString();
-        double latency = model_obj.value("avg_latency_ms", 0).toDouble();
+        double latency = model_obj.value("avg_latency_ms").toDouble();
         
         *bar_set << latency;
         categories << name;
@@ -307,7 +307,7 @@ void MetricsDashboard::updateSuccessRateChart()
     if (!m_adapter) return;
 
     QJsonObject stats = m_adapter->getStatistics();
-    int success_rate = stats.value("success_rate", 0).toInt();
+    int success_rate = stats.value("success_rate").toInt();
     
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     m_timestamp_history.append(now);
@@ -332,12 +332,12 @@ void MetricsDashboard::updateRequestCountTable()
     m_request_count_table->setRowCount(0);
     
     QJsonObject stats = m_adapter->getStatistics();
-    QJsonArray models = stats.value("models", QJsonArray()).toArray();
+    QJsonArray models = stats.value("models").toArray();
     
     for (const auto& model_val : models) {
         QJsonObject model_obj = model_val.toObject();
         QString name = model_obj.value("name").toString();
-        int count = model_obj.value("request_count", 0).toInt();
+        int count = model_obj.value("request_count").toInt();
         
         int row = m_request_count_table->rowCount();
         m_request_count_table->insertRow(row);

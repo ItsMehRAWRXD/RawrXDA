@@ -129,34 +129,32 @@ int main(int argc, char* argv[]) {
     printSystemInfo();
     
     // Configuration
-    std::string models_dir = "D:\\OllamaModels";
-    int tokens_per_model = 128;
-    
-    // Parse command line
-    if (argc > 1) {
-        models_dir = argv[1];
-    }
-    if (argc > 2) {
-        tokens_per_model = std::atoi(argv[2]);
-    }
+    std::string arg1 = argc > 1 ? argv[1] : std::string("D:\\OllamaModels");
+    int tokens_per_model = argc > 2 ? std::atoi(argv[2]) : 128;
     
     std::cout << "\n╔════════════════════════════════════════════════════════╗\n";
     std::cout << "║     REAL GPU BENCHMARK - ACTUAL MODEL LOADING          ║\n";
     std::cout << "╚════════════════════════════════════════════════════════╝\n\n";
     
-    std::cout << "Models Directory: " << models_dir << "\n";
+    std::cout << "Input: " << arg1 << "\n";
     std::cout << "Tokens Per Test:  " << tokens_per_model << "\n\n";
     
-    // Discover GGUF models
+    // Build list of models: if arg1 is a .gguf file, benchmark that file directly
     std::vector<std::string> model_paths;
     try {
-        for (const auto& entry : fs::directory_iterator(models_dir)) {
-            if (entry.is_regular_file() && entry.path().extension() == ".gguf") {
-                model_paths.push_back(entry.path().string());
+        fs::path p(arg1);
+        if (fs::is_regular_file(p) && p.extension() == ".gguf") {
+            model_paths.push_back(p.string());
+        } else {
+            // Treat as directory
+            for (const auto& entry : fs::directory_iterator(p)) {
+                if (entry.is_regular_file() && entry.path().extension() == ".gguf") {
+                    model_paths.push_back(entry.path().string());
+                }
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error scanning directory: " << e.what() << "\n";
+        std::cerr << "Error scanning input: " << e.what() << "\n";
         return 1;
     }
     

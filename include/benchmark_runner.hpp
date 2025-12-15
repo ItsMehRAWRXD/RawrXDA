@@ -104,4 +104,4 @@ private:
     std::unique_ptr<RealTimeCompletionEngine> completionEngine_;
 };
 
-#endif // BENCHMARK_RUNNER_HPP
+// End of benchmark_runner.hpp

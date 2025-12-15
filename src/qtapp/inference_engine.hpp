@@ -6,6 +6,7 @@
 #include <QHash>
 #include <QElapsedTimer>
 #include <QQueue>
+#include <atomic>
 #include <vector>
 #include <cstdint>
 #include <random>
@@ -89,6 +90,12 @@ public:
      */
     QString quantMode() const;
 
+    void setThreadingEnabled(bool on) { m_threadingEnabled.store(on); }
+    bool threadingEnabled() const { return m_threadingEnabled.load(); }
+
+    void setLoadTensors(bool load) { m_loadTensors.store(load); }
+    bool shouldLoadTensors() const { return m_loadTensors.load(); }
+
     /**
      * @brief Generate tokens synchronously (for server API)
      * @param inputTokens Input token sequence
@@ -96,6 +103,18 @@ public:
      * @return Generated token sequence
      */
     std::vector<int32_t> generate(const std::vector<int32_t>& inputTokens, int maxTokens = 100);
+    
+    // Streaming generation for chat
+    void generateStreaming(const std::vector<int32_t>& inputTokens,
+                           int maxTokens,
+                           std::function<void(const std::string&)> tokenCallback,
+                           std::function<void()> completeCallback);
+    
+    // Convenience method for string input
+    void generateStreaming(const QString& prompt,
+                           int maxTokens,
+                           std::function<void(const std::string&)> tokenCallback,
+                           std::function<void()> completeCallback);
     
     /**
      * @brief Tokenize text (public for server API)
@@ -111,6 +130,38 @@ public:
     QString processChat(const QString& prompt);
     QString analyzeCode(const QString& code);
 
+    // Streaming generation APIs
+    using TokenCallback = std::function<void(const QString&)>;
+    using CompleteCallback = std::function<void()>;
+
+    /**
+     * @brief Stream tokens for a tokenized prompt
+     * @param inputTokens Input token sequence
+     * @param maxTokens Max tokens to generate
+     * @param onToken Callback per detokenized token fragment
+     * @param onComplete Callback on stream completion
+     */
+    void generateStreaming(const std::vector<int32_t>& inputTokens,
+                           int maxTokens,
+                           TokenCallback onToken,
+                           CompleteCallback onComplete);
+
+    /**
+     * @brief Stream tokens for a text prompt (convenience)
+     */
+    void generateStreaming(const QString& prompt,
+                           int maxTokens,
+                           TokenCallback onToken,
+                           CompleteCallback onComplete);
+
+    /**
+     * @brief Stream tokens for a request (emits signals)
+     * @param reqId Request ID for signal emission
+     * @param prompt Input prompt
+     * @param maxTokens Maximum tokens to generate
+     */
+    void generateStreaming(qint64 reqId, const QString& prompt, int maxTokens = 128);
+
 public slots:
     /**
      * @brief Process an inference request
@@ -118,6 +169,14 @@ public slots:
      * @param reqId Request ID for correlation
      */
     void request(const QString& prompt, qint64 reqId);
+    
+    /**
+     * @brief Process a streaming inference request
+     * @param prompt User input text
+     * @param reqId Request ID for correlation
+     * @param streaming Whether to use streaming mode
+     */
+    void request(const QString& prompt, qint64 reqId, bool streaming);
     
     /**
      * @brief Unload the current model
@@ -136,6 +195,13 @@ public slots:
      * @param quant Quantization type for this layer
      */
     void setLayerQuant(const QString& tensorName, const QString& quant);
+
+private:
+    // Background worker for streaming
+    void streamingGenerateWorker(std::vector<int32_t> inputTokens,
+                                 int maxTokens,
+                                 TokenCallback onToken,
+                                 CompleteCallback onComplete);
 
 signals:
     /**
@@ -230,18 +296,21 @@ private:
     struct InferenceRequest {
         QString prompt;
         qint64 requestId;
+        bool streaming{false};
     };
     
     mutable QMutex m_mutex;
     QString m_modelPath;
     qint64 m_memoryUsageMB{0};
     double m_tokensPerSecond{0.0};
-    double m_temperature{0.8};
-    double m_topP{0.95};
+    double m_temperature{0.0};   // Enterprise deterministic default
+    double m_topP{1.0};          // Enterprise deterministic default (full nucleus)
     QString m_quantMode{"Q4_0"};  // Default quantization
     QHash<QString, CachedTensorData> m_tensorCache;  // Cached quantized tensors with type info
     QHash<QString, QString> m_perLayerQuant;  // Tensor-specific quants
     QElapsedTimer m_inferenceTimer;
+    std::atomic<bool> m_threadingEnabled{true};  // default threaded
+    std::atomic<bool> m_loadTensors{true};       // default load tensors (can be disabled for headless mode)
     
     // FIX 6: Add request queue and processing state
     QQueue<InferenceRequest> m_requestQueue;
@@ -260,6 +329,10 @@ private:
     QString extractModelName(const QString& path) const;
     void rebuildTensorCache();
     void initializeTokenizer();
+    bool initializeTokenizerWithTimeout(int timeoutMs = 5000);
+    bool loadFallbackTokenizer();
+    std::vector<int32_t> tokenizeInternal(const QString& text, bool includeSystemPrompt = true, bool includeSpecialTokens = true);
+    void buildSystemPromptTokens();
     
     // FIX 6: Request queue processing
     void processNextRequest();
@@ -275,4 +348,14 @@ private:
     // Sampling configuration
     bool m_kvCacheReady{false};  // Track if KV-cache is prefilled
     std::mt19937 m_randomEngine;  // Thread-safe random number generator
+    std::vector<int32_t> m_systemPromptTokens;  // Cached tokens for system prompt injection
+
+    // Thread-safe streaming generation worker
+    void streamingGenerateWorker(const std::vector<int32_t> inputTokens,
+                                 int maxTokens,
+                                 std::function<void(const std::string&)> tokenCallback,
+                                 std::function<void()> completeCallback);
+    
+    // Thread-safe streaming generation worker that emits signals
+    void streamingGenerateWorkerSignals(qint64 reqId, const QString& prompt, int maxTokens);
 };

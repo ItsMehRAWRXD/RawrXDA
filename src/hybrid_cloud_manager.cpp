@@ -432,7 +432,8 @@ ExecutionResult HybridCloudManager::executeOnHuggingFace(const ExecutionRequest&
     parameters["return_full_text"] = false;
     requestBody["parameters"] = parameters;
     
-    QNetworkRequest netRequest(QUrl(apiUrl));
+    QUrl requestUrl(apiUrl);
+    QNetworkRequest netRequest(requestUrl);
     netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     netRequest.setRawHeader("Authorization", ("Bearer " + hf.apiKey).toUtf8());
     
@@ -713,4 +714,19 @@ void HybridCloudManager::setMaxRetries(int retries) {
 
 double HybridCloudManager::getTotalCost() const {
     return totalCostUSD;
+}
+
+void HybridCloudManager::onNetworkReplyFinished(QNetworkReply* reply) {
+    // Handle async network replies if needed
+    if (reply) {
+        QString requestId = reply->property("requestId").toString();
+        if (!requestId.isEmpty()) {
+            activeRequests.remove(requestId);
+        }
+        reply->deleteLater();
+    }
+}
+
+void HybridCloudManager::onHealthCheckTimerTimeout() {
+    checkAllProvidersHealth();
 }

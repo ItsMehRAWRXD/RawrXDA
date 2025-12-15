@@ -13,8 +13,8 @@
 #include <QVector>
 #include <QMap>
 #include <memory>
-
-QT_CHARTS_USE_NAMESPACE
+#include <QHeaderView>
+#include "model_router_adapter.h"
 
 class ModelRouterAdapter;
 

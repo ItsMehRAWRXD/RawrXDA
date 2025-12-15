@@ -436,13 +436,6 @@ void CloudApiClient::onNetworkReplyFinished(QNetworkReply* reply)
     reply->deleteLater();
 }
 
-void CloudApiClient::onNetworkError(QNetworkAccessManager::NetworkAccessibility accessibility)
-{
-    if (accessibility == QNetworkAccessManager::NotAccessible) {
-        emit generationFailed("Network not accessible");
-    }
-}
-
 QVector<ApiCallLog> CloudApiClient::getCallHistory() const
 {
     return call_history;

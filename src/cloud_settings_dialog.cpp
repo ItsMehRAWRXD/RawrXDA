@@ -15,6 +15,9 @@
 #include <QJsonObject>
 #include <QDebug>
 #include <QProcess>
+#include <QHeaderView>
+#include <QTimer>
+#include <QCloseEvent>
 #include <cstdlib>
 
 CloudSettingsDialog::CloudSettingsDialog(ModelRouterAdapter *adapter, QWidget *parent)

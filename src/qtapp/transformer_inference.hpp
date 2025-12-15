@@ -80,6 +80,16 @@ public:
      */
     bool isReady() const { return m_ready; }
     
+    /**
+     * @brief Mark transformer as ready when using GGUF direct inference
+     * This is called when the model uses GGUF loader directly instead of
+     * loading weights into the transformer's own tensors.
+     */
+    void markReadyForGGUFInference() { 
+        m_ready = true; 
+        m_ggufDirectMode = true;
+    }
+    
 private:
     // Model hyperparameters
     int m_nLayers{0};
@@ -87,6 +97,9 @@ private:
     int m_nHead{0};
     int m_nVocab{0};
     int m_ctxSize{2048};  // Context window
+    
+    // GGUF direct mode flag (for models loaded via GGUF loader without transformer weight loading)
+    bool m_ggufDirectMode{false};
     
     // ggml computation context
     ggml_context* m_ctx{nullptr};

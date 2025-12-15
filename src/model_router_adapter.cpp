@@ -1,4 +1,5 @@
 #include "model_router_adapter.h"
+#include "universal_model_router.h"
 #include <QThread>
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -6,6 +7,7 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QElapsedTimer>
+#include <QtGlobal>
 #include <cmath>
 
 /**
@@ -27,7 +29,7 @@ public:
         timer.start();
         
         try {
-            ModelInterface::GenerationResult result = 
+            GenerationResult result = 
                 m_router->generate(m_prompt, m_model.isEmpty() ? "default" : m_model);
             
             m_result = result;
@@ -41,7 +43,7 @@ public:
         }
     }
 
-    ModelInterface::GenerationResult m_result;
+    GenerationResult m_result;
     QString m_error;
     bool m_success = false;
     qint64 m_latency = 0;
@@ -155,7 +157,8 @@ bool ModelRouterAdapter::loadApiKeys()
     };
     
     for (const auto& key : expected_keys) {
-        if (!qEnvironmentVariable(key).isEmpty()) {
+        QByteArray keyBytes = key.toUtf8();
+        if (!qEnvironmentVariableIsEmpty(keyBytes.constData())) {
             qDebug() << "[ModelRouterAdapter::loadApiKeys] Found:" << key;
             found_any = true;
         }
@@ -313,7 +316,7 @@ QString ModelRouterAdapter::generate(const QString& prompt, const QString& model
         }
         
         if (result.success) {
-            int tokens = result.metadata.value("tokens_used", 0).toInt();
+            int tokens = result.metadata.value("tokens_used").toInt();
             
             qDebug() << "[ModelRouterAdapter::generate] Success"
                      << "model:" << result.model_name
@@ -400,7 +403,7 @@ void ModelRouterAdapter::generateStream(const QString& prompt, const QString& mo
             // Emit as single chunk (would be per-chunk in real streaming)
             emit generationChunk(result.content);
             
-            int tokens = result.metadata.value("tokens_used", 0).toInt();
+            int tokens = result.metadata.value("tokens_used").toInt();
             emit generationComplete(result.content, tokens, timer.elapsed());
             
             qDebug() << "[ModelRouterAdapter::generateStream] Completed"
@@ -464,12 +467,12 @@ QMap<QString, double> ModelRouterAdapter::getCostBreakdown() const
     
     try {
         auto stats = m_router->getUsageStatistics();
-        QJsonArray models = stats.value("models", QJsonArray()).toArray();
+        QJsonArray models = stats.value("models").toArray();
         
         for (const auto& model_val : models) {
             QJsonObject model_obj = model_val.toObject();
             QString name = model_obj.value("name").toString();
-            double cost = model_obj.value("total_cost", 0).toDouble();
+            double cost = model_obj.value("total_cost").toDouble();
             breakdown[name] = cost;
         }
     } catch (const std::exception& e) {
@@ -510,15 +513,15 @@ bool ModelRouterAdapter::exportStatisticsToCsv(const QString& file_path) const
         stream << "Model,Total_Cost,Avg_Latency_ms,Success_Rate,Request_Count\n";
         
         // Write data
-        QJsonArray models = stats.value("models", QJsonArray()).toArray();
+        QJsonArray models = stats.value("models").toArray();
         for (const auto& model_val : models) {
             QJsonObject model_obj = model_val.toObject();
             
             QString name = model_obj.value("name").toString();
-            double cost = model_obj.value("total_cost", 0).toDouble();
-            double latency = model_obj.value("avg_latency_ms", 0).toDouble();
-            int success_rate = model_obj.value("success_rate", 0).toInt();
-            int count = model_obj.value("request_count", 0).toInt();
+            double cost = model_obj.value("total_cost").toDouble();
+            double latency = model_obj.value("avg_latency_ms").toDouble();
+            int success_rate = model_obj.value("success_rate").toInt();
+            int count = model_obj.value("request_count").toInt();
             
             stream << QString("%1,%2,%3,%4,%5\n").arg(name).arg(cost).arg(latency).arg(success_rate).arg(count);
         }
@@ -539,8 +542,7 @@ bool ModelRouterAdapter::registerModel(const QString& name, const QJsonObject& c
     if (!m_router) return false;
     
     try {
-        ModelInterface::ModelConfig model_config;
-        model_config.name = name;
+        ModelConfig model_config;
         model_config.model_id = config.value("model_id").toString();
         model_config.api_key = config.value("api_key").toString();
         model_config.endpoint = config.value("endpoint").toString();
@@ -633,7 +635,8 @@ void ModelRouterAdapter::onGenerationThreadFinished()
     if (!m_generation_thread) return;
     
     if (m_generation_thread->m_success) {
-        int tokens = m_generation_thread->m_result.metadata.value("tokens_used", 0).toInt();
+        int tokens = m_generation_thread->m_result.metadata.contains("tokens_used") 
+                    ? m_generation_thread->m_result.metadata.value("tokens_used").toInt() : 0;
         
         qDebug() << "[ModelRouterAdapter::onGenerationThreadFinished] Success"
                  << "latency:" << m_generation_thread->m_latency << "ms";

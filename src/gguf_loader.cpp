@@ -233,17 +233,23 @@ bool GGUFLoader::ParseMetadata() {
             if (!ReadValue(array_type)) throw std::runtime_error("Failed to read array type for key: " + key);
             if (!ReadValue(array_length)) throw std::runtime_error("Failed to read array length for key: " + key);
             
-            // For now, serialize array as comma-separated string (improve later if needed)
+            // Serialize for kv_pairs but also capture structured tokenizer data
             std::string array_str = "[";
+            std::vector<std::string> string_elems;
+            std::vector<float> float_elems;
+            std::vector<uint32_t> uint32_elems;
+
             for (uint64_t j = 0; j < array_length; ++j) {
                 if (array_type == 8) {  // string array
                     std::string elem;
                     if (!ReadString(elem)) throw std::runtime_error("Failed to read array string element");
                     array_str += "\"" + elem + "\"";
+                    string_elems.push_back(std::move(elem));
                 } else if (array_type == 4) {  // uint32 array
                     uint32_t elem;
                     if (!ReadValue(elem)) throw std::runtime_error("Failed to read array uint32 element");
                     array_str += std::to_string(elem);
+                    uint32_elems.push_back(elem);
                 } else if (array_type == 5) {  // int32 array
                     int32_t elem;
                     if (!ReadValue(elem)) throw std::runtime_error("Failed to read array int32 element");
@@ -252,6 +258,7 @@ bool GGUFLoader::ParseMetadata() {
                     float elem;
                     if (!ReadValue(elem)) throw std::runtime_error("Failed to read array float32 element");
                     array_str += std::to_string(elem);
+                    float_elems.push_back(elem);
                 } else {
                     throw std::runtime_error("Unsupported array element type: " + std::to_string(array_type));
                 }
@@ -259,6 +266,17 @@ bool GGUFLoader::ParseMetadata() {
             }
             array_str += "]";
             metadata_.kv_pairs[key] = array_str;
+
+            // Persist structured tokenizer fields for downstream loaders
+            if (key == "tokenizer.ggml.tokens" && !string_elems.empty()) {
+                metadata_.tokens = string_elems;
+            }
+            if (key == "tokenizer.ggml.scores" && !float_elems.empty()) {
+                metadata_.token_scores = float_elems;
+            }
+            if (key == "tokenizer.ggml.token_type" && !uint32_elems.empty()) {
+                metadata_.token_types = uint32_elems;
+            }
         } else {
             throw std::runtime_error("Unsupported metadata value type " + std::to_string(value_type) + " for key: " + key);
         }

@@ -408,7 +408,7 @@ QVector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizations(
     
     // Detect inefficient algorithms
     QString algorithmName;
-    if (hasInefficient Algorithm(code, algorithmName)) {
+    if (hasInefficientAlgorithm(code, algorithmName)) {
         PerformanceOptimization opt;
         opt.optimizationId = "algorithm_" + QString::number(QDateTime::currentMSecsSinceEpoch());
         opt.type = "algorithm";
@@ -449,7 +449,7 @@ bool AutonomousFeatureEngine::canCache(const QString& code) {
     return isPureFunction && code.count("return") == 1;
 }
 
-bool AutonomousFeatureEngine::hasInefficient Algorithm(const QString& code, QString& algorithmName) {
+bool AutonomousFeatureEngine::hasInefficientAlgorithm(const QString& code, QString& algorithmName) {
     // Detect nested loops (O(n²))
     if (code.count("for") >= 2) {
         algorithmName = "Nested loops (O(n²))";
@@ -532,7 +532,7 @@ double AutonomousFeatureEngine::calculateSecurity(const QString& code) {
 
 double AutonomousFeatureEngine::calculateEfficiency(const QString& code) {
     QString algorithmName;
-    bool hasInefficient = hasInefficient Algorithm(code, algorithmName);
+    bool hasInefficient = hasInefficientAlgorithm(code, algorithmName);
     bool hasWaste = hasMemoryWaste(code);
     
     double score = 100.0;
@@ -749,7 +749,7 @@ QVector<DocumentationGap> AutonomousFeatureEngine::findDocumentationGaps(const Q
         int lineNum = content.left(match.capturedStart()).count('\n') + 1;
         
         // Check if there's documentation before this function
-        int searchStart = std::max(0, match.capturedStart() - 200);
+        qsizetype searchStart = std::max(static_cast<qsizetype>(0), match.capturedStart() - 200);
         QString precedingText = content.mid(searchStart, match.capturedStart() - searchStart);
         
         if (!precedingText.contains("/**") && !precedingText.contains("///")) {

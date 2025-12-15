@@ -11,6 +11,7 @@ class QLabel;
 class QProgressBar;
 class QTimer;
 class AgenticEngine;
+class ZeroDayAgenticEngine;
 
 namespace RawrXD {
     class PlanOrchestrator;
@@ -26,6 +27,7 @@ public:
     
     void setAgenticEngine(AgenticEngine* engine) { m_agenticEngine = engine; }
     void setPlanOrchestrator(RawrXD::PlanOrchestrator* orchestrator) { m_planOrchestrator = orchestrator; }
+    void setZeroDayAgent(ZeroDayAgenticEngine* agent) { m_zeroDayAgent = agent; }
     
     void addMessage(const QString& sender, const QString& message);
     QString selectedModel() const;
@@ -74,6 +76,7 @@ private:
     QString m_lastPrompt;  // Store last user message
     AgenticEngine* m_agenticEngine = nullptr;
     RawrXD::PlanOrchestrator* m_planOrchestrator = nullptr;
+    ZeroDayAgenticEngine* m_zeroDayAgent = nullptr;
     
     // Phase 2: Streaming token progress bar
     QProgressBar* m_tokenProgress{nullptr};

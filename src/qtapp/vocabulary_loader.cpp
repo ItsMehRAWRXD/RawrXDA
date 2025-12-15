@@ -1,4 +1,5 @@
 #include "vocabulary_loader.hpp"
+#include "gguf_loader.hpp"
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -7,19 +8,196 @@
 #include <QDir>
 #include <QDebug>
 #include <QDataStream>
+#include <QVariant>
+#include <QList>
+#include <iostream>
+#include <chrono>
 
 VocabularyLoader::VocabularyLoader() {
 }
 
 bool VocabularyLoader::loadFromGGUF(const QString& ggufPath) {
-    QFile file(ggufPath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open GGUF file:" << ggufPath;
-        return false;
+    // Reset state before attempting load
+    m_tokens.clear();
+    m_textToId.clear();
+    m_idToIndex.clear();
+    m_special = {};
+    m_vocabSize = 0;
+    m_type = UNKNOWN;
+
+    // --- Zero-day fast path: use GGUF metadata keys (tokenizer.ggml.token_N or tokenizer.ggml.tokens) ---
+    auto loadFromMetadataKeys = [this](const QString& path) -> bool {
+        GGUFLoaderQt loader(path);
+        if (!loader.isOpen()) {
+            qWarning() << "[Vocab] GGUFLoaderQt failed to open" << path;
+            return false;
+        }
+
+        // Pull tokenizer metadata blob upfront to avoid repeated IO
+        QHash<QString, QByteArray> tokenizerMetadata;
+        try {
+            tokenizerMetadata = loader.getTokenizerMetadata();
+            qInfo() << "[Vocab] tokenizer metadata entries:" << tokenizerMetadata.size();
+        } catch (const std::exception& e) {
+            qWarning() << "[Vocab] Failed to read tokenizer metadata via GGUFLoaderQt:" << e.what();
+        }
+
+        // Detect vocab size if advertised; otherwise grow until a key is missing
+        int advertisedSize = loader.getParam("tokenizer.ggml.vocab_size", -1).toInt();
+        if (advertisedSize <= 0) {
+            advertisedSize = loader.getParam("tokenizer.ggml.vocab.size", -1).toInt();
+        }
+
+        // Parse tokens from metadata map first (tokenizer.ggml.tokens)
+        auto tryTokenArray = [&](const QByteArray& blob) -> bool {
+            if (blob.isEmpty()) return false;
+            QList<QByteArray> tokenList = blob.split('\0');
+            for (int i = 0; i < tokenList.size(); ++i) {
+                if (tokenList[i].isEmpty()) continue;
+                Token token;
+                token.id = i;
+                token.text = QString::fromUtf8(tokenList[i]);
+                token.score = 0.0f;
+                token.isSpecial = false;
+                m_tokens.append(token);
+                m_textToId[token.text] = token.id;
+                m_idToIndex[token.id] = m_tokens.size() - 1;
+            }
+            return !m_tokens.isEmpty();
+        };
+
+        // Parse per-index token entries (tokenizer.ggml.token_N)
+        auto tryTokenEntries = [&](const QHash<QString, QByteArray>& meta) -> bool {
+            int loadedCount = 0;
+            const int kMaxScan = (advertisedSize > 0) ? advertisedSize : 200000; // hard safety cap
+            for (int i = 0; i < kMaxScan; ++i) {
+                const QString tokenKey = QStringLiteral("tokenizer.ggml.token_%1").arg(i);
+                if (!meta.contains(tokenKey)) {
+                    if (advertisedSize > 0 && i < advertisedSize) {
+                        // hole inside advertised range: stop but consider success if >0 loaded
+                        break;
+                    }
+                    if (i == 0) {
+                        return false; // nothing found at all
+                    }
+                    break;
+                }
+
+                const QByteArray rawToken = meta.value(tokenKey);
+                Token token;
+                token.id = i;
+                token.text = QString::fromUtf8(rawToken);
+                token.score = loader.getParam(QStringLiteral("tokenizer.ggml.score_%1").arg(i), 0.0).toFloat();
+                token.isSpecial = false;
+
+                m_tokens.append(token);
+                m_textToId[token.text] = token.id;
+                m_idToIndex[token.id] = m_tokens.size() - 1;
+                ++loadedCount;
+
+                if (advertisedSize > 0 && loadedCount >= advertisedSize) {
+                    break;
+                }
+            }
+            return loadedCount > 0;
+        };
+
+        bool loaded = false;
+        if (!tokenizerMetadata.isEmpty()) {
+            // Prefer array form if present
+            loaded = tryTokenArray(tokenizerMetadata.value(QStringLiteral("tokenizer.ggml.tokens")));
+
+            // If no array, try per-token entries from metadata hash
+            if (!loaded) {
+                loaded = tryTokenEntries(tokenizerMetadata);
+            }
+        }
+
+        // Fallback: query params directly if metadata map is empty or missing entries
+        if (!loaded) {
+            int loadedCount = 0;
+            const int kMaxScan = (advertisedSize > 0) ? advertisedSize : 200000; // hard safety cap
+            for (int i = 0; i < kMaxScan; ++i) {
+                const QString tokenKey = QStringLiteral("tokenizer.ggml.token_%1").arg(i);
+                QVariant tokenVar = loader.getParam(tokenKey, QVariant());
+                if (!tokenVar.isValid()) {
+                    if (advertisedSize > 0 && i < advertisedSize) {
+                        break;
+                    }
+                    if (i == 0) {
+                        return false; // nothing found
+                    }
+                    break;
+                }
+
+                QByteArray rawToken = tokenVar.canConvert<QByteArray>() ? tokenVar.toByteArray() : tokenVar.toString().toUtf8();
+
+                Token token;
+                token.id = i;
+                token.text = QString::fromUtf8(rawToken);
+                token.score = loader.getParam(QStringLiteral("tokenizer.ggml.score_%1").arg(i), 0.0).toFloat();
+                token.isSpecial = false;
+
+                m_tokens.append(token);
+                m_textToId[token.text] = token.id;
+                m_idToIndex[token.id] = m_tokens.size() - 1;
+                ++loadedCount;
+
+                if (advertisedSize > 0 && loadedCount >= advertisedSize) {
+                    break;
+                }
+            }
+            loaded = loadedCount > 0;
+        }
+
+        // Attach scores if provided as array
+        if (loaded) {
+            QByteArray scoreBlob;
+            if (tokenizerMetadata.contains(QStringLiteral("tokenizer.ggml.scores"))) {
+                scoreBlob = tokenizerMetadata.value(QStringLiteral("tokenizer.ggml.scores"));
+            }
+
+            if (!scoreBlob.isEmpty()) {
+                QDataStream scoreStream(scoreBlob);
+                scoreStream.setByteOrder(QDataStream::LittleEndian);
+                for (int i = 0; i < m_tokens.size() && scoreStream.status() == QDataStream::Ok; ++i) {
+                    float score = 0.0f;
+                    scoreStream >> score;
+                    m_tokens[i].score = score;
+                }
+            }
+        }
+
+        if (!loaded) {
+            qWarning() << "[Vocab] No tokenizer.ggml token entries found in GGUF metadata";
+            return false;
+        }
+
+        m_vocabSize = m_tokens.size();
+        qInfo() << "[Vocab] Loaded" << m_tokens.size() << "tokens via GGUF metadata";
+        return true;
+    };
+
+    // Prefer metadata-driven loader; fall back to raw GGUF parsing if needed
+    bool success = false;
+    try {
+        success = loadFromMetadataKeys(ggufPath);
+    } catch (const std::exception& e) {
+        qWarning() << "[Vocab] Exception while loading metadata keys:" << e.what();
+    } catch (...) {
+        qWarning() << "[Vocab] Unknown exception while loading metadata keys";
     }
-    
-    bool success = loadGGUFMetadata(file);
-    file.close();
+
+    if (!success) {
+        QFile file(ggufPath);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "Failed to open GGUF file:" << ggufPath;
+            return false;
+        }
+        
+        success = loadGGUFMetadata(file);
+        file.close();
+    }
     
     if (success) {
         m_type = detectType();

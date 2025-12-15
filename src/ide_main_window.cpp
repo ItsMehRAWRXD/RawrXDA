@@ -668,13 +668,14 @@ void IDEMainWindow::onOptimizeCode() {
 
 void IDEMainWindow::onSwitchModel() {
     // Get available models
-    QVector<AIModel> models = modelManager->getAvailableModels();
-    
+    QJsonArray models = modelManager->getAvailableModels();
+
     QStringList modelNames;
-    for (const AIModel& model : models) {
-        modelNames << model.name;
+    for (const QJsonValue& value : models) {
+        QJsonObject model = value.toObject();
+        modelNames << model.value("name").toString(model.value("id").toString());
     }
-    
+
     // Would show dialog to select model
     showMessage("Model selection dialog - to be implemented");
 }
@@ -757,15 +758,19 @@ void IDEMainWindow::onErrorRecorded(const ErrorRecord& error) {
     metricsWidget->addItem(QString("[%1] %2: %3").arg(severity).arg(error.component).arg(error.message));
 }
 
-void IDEMainWindow::onErrorRecovered(const ErrorRecord& error) {
-    metricsWidget->addItem(QString("[RECOVERED] %1: %2").arg(error.component).arg(error.message));
-    showMessage("System recovered from error: " + error.component);
+void IDEMainWindow::onErrorRecovered(const QString& errorId, bool success) {
+    if (success) {
+        metricsWidget->addItem(QString("[RECOVERED] Error %1 recovered successfully").arg(errorId));
+        showMessage("System recovered from error: " + errorId);
+    } else {
+        metricsWidget->addItem(QString("[RECOVERY FAILED] Error %1 could not be recovered").arg(errorId));
+    }
 }
 
 void IDEMainWindow::onSystemHealthUpdated(const SystemHealth& health) {
     healthLabel->setText(QString("Health: %1%").arg(health.healthScore, 0, 'f', 1));
     
-    if (health.isHealthy) {
+    if (health.healthScore >= 80.0) {
         healthLabel->setStyleSheet("color: green; font-weight: bold;");
     } else {
         healthLabel->setStyleSheet("color: red; font-weight: bold;");

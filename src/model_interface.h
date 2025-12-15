@@ -14,7 +14,7 @@
 class UniversalModelRouter;
 class QuantizationAwareInferenceEngine;
 class CloudApiClient;
-struct ModelConfig;
+struct ModelConfig;  // Defined in universal_model_router.h
 
 // Generation options
 struct GenerationOptions {

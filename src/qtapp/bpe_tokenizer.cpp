@@ -4,6 +4,19 @@
 #include <QRegularExpression>
 #include <QDebug>
 #include <algorithm>
+#include <string_view>
+#include <QLoggingCategory>
+
+namespace {
+struct TraceScope {
+    const char* name;
+    QElapsedTimer timer;
+    explicit TraceScope(const char* n) : name(n) { timer.start(); }
+    ~TraceScope() {
+        qInfo() << "[TRACE]" << name << "us=" << timer.nsecsElapsed() / 1000;
+    }
+};
+}
 
 BPETokenizer::BPETokenizer() {
     // Initialize byte-level encoding (GPT-2 style)
@@ -33,6 +46,8 @@ BPETokenizer::BPETokenizer() {
 }
 
 bool BPETokenizer::loadFromFiles(const QString& vocabPath, const QString& mergesPath) {
+    reverseVocab_.clear();
+    m_ready = false;
     // Load vocabulary file (format: "token\tid" per line)
     QFile vocabFile(vocabPath);
     if (!vocabFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -53,6 +68,7 @@ bool BPETokenizer::loadFromFiles(const QString& vocabPath, const QString& merges
             int32_t id = parts[1].toInt();
             m_vocab[token] = id;
             m_reverseVocab[id] = token;
+            reverseVocab_[token.toStdString()] = static_cast<uint32_t>(id);
         }
     }
     vocabFile.close();
@@ -80,13 +96,20 @@ bool BPETokenizer::loadFromFiles(const QString& vocabPath, const QString& merges
     }
     mergesFile.close();
     
-    qInfo() << "BPE tokenizer loaded:" << m_vocab.size() << "tokens," << m_merges.size() << "merges";
-    return true;
+    m_ready = !m_vocab.isEmpty();
+    qInfo() << "BPE tokenizer loaded:" << m_vocab.size() << "tokens," << m_merges.size() << "merges" << "ready=" << m_ready;
+    return m_ready;
 }
 
 bool BPETokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArray>& metadata) {
     // Extract vocabulary from GGUF metadata
     // Common keys: "tokenizer.ggml.tokens", "tokenizer.ggml.merges"
+
+    m_ready = false;
+    m_vocab.clear();
+    m_reverseVocab.clear();
+    m_bytePieces.clear();
+    reverseVocab_.clear();
     
     if (metadata.contains("tokenizer.ggml.tokens")) {
         QByteArray tokensData = metadata["tokenizer.ggml.tokens"];
@@ -105,6 +128,7 @@ bool BPETokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArray>& metada
             QString token = QString::fromUtf8(tokenBytes);
             m_vocab[token] = i;
             m_reverseVocab[i] = token;
+            reverseVocab_[token.toStdString()] = static_cast<uint32_t>(i);
         }
     }
     
@@ -125,8 +149,9 @@ bool BPETokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArray>& metada
         }
     }
     
-    qInfo() << "BPE loaded from GGUF:" << m_vocab.size() << "tokens";
-    return !m_vocab.isEmpty();
+    m_ready = !m_vocab.isEmpty();
+    qInfo() << "BPE loaded from GGUF:" << m_vocab.size() << "tokens" << "merges=" << m_merges.size() << "ready=" << m_ready;
+    return m_ready;
 }
 
 QVector<QString> BPETokenizer::byteEncode(const QString& text) {
@@ -188,6 +213,46 @@ QVector<QString> BPETokenizer::applyBPE(const QVector<QString>& tokens) {
     return result;
 }
 
+bool BPETokenizer::greedyLongestMatch(const std::string& text, std::vector<uint32_t>& ids, MetricsTimer& mt) const {
+    TraceScope scope("bpe.greedyLongest");
+
+    if (!isReverseVocabReady()) {
+        qWarning() << "[bpe.greedyLongest] reverseVocab_ empty – model not loaded";
+        return false;
+    }
+
+    ids.clear();
+    ids.reserve(text.size());
+
+    std::string_view remaining(text);
+    const auto unkIt = reverseVocab_.find("<unk>");
+    const uint32_t unkId = (unkIt != reverseVocab_.end()) ? unkIt->second : static_cast<uint32_t>(m_unkToken);
+
+    while (!remaining.empty()) {
+        bool found = false;
+        const size_t maxLen = std::min<size_t>(remaining.size(), static_cast<size_t>(32));
+
+        for (size_t len = maxLen; len > 0; --len) {
+            std::string piece(remaining.substr(0, len));
+            auto it = reverseVocab_.find(piece);
+            if (it != reverseVocab_.end()) {
+                ids.push_back(it->second);
+                remaining.remove_prefix(len);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            ids.push_back(unkId);
+            remaining.remove_prefix(1);
+        }
+    }
+
+    qInfo() << "[bpe.greedyLongest] tokens=" << ids.size() << "us=" << mt.elapsedUs();
+    return true;
+}
+
 QVector<BPETokenizer::TextSplit> BPETokenizer::splitText(const QString& text) {
     QVector<TextSplit> splits;
     
@@ -213,28 +278,43 @@ std::vector<int32_t> BPETokenizer::encode(const QString& text) {
         qWarning() << "BPE tokenizer not initialized";
         return {};
     }
-    
+
     std::vector<int32_t> result;
-    QVector<TextSplit> splits = splitText(text);
-    
-    for (const TextSplit& split : splits) {
-        // Byte-level encode the text chunk
-        QVector<QString> byteTokens = byteEncode(split.text);
-        
-        // Apply BPE merges
-        QVector<QString> bpeTokens = applyBPE(byteTokens);
-        
-        // Convert to token IDs
-        for (const QString& token : bpeTokens) {
-            if (m_vocab.contains(token)) {
-                result.push_back(m_vocab[token]);
-            } else {
-                result.push_back(m_unkToken);  // Unknown token
+
+    if (!m_merges.isEmpty()) {
+        QVector<TextSplit> splits = splitText(text);
+        for (const TextSplit& split : splits) {
+            QVector<QString> byteTokens = byteEncode(split.text);
+            QVector<QString> bpeTokens = applyBPE(byteTokens);
+
+            for (const QString& token : bpeTokens) {
+                if (m_vocab.contains(token)) {
+                    result.push_back(m_vocab[token]);
+                } else {
+                    result.push_back(m_unkToken);  // Unknown token
+                }
             }
         }
     }
-    
-    return result;
+
+    if (!result.empty()) {
+        return result;
+    }
+
+    // Enterprise fallback: greedy longest-match over reverseVocab_
+    MetricsTimer mt;
+    std::vector<uint32_t> ids;
+    const std::string utf8 = text.toUtf8().toStdString();
+    if (greedyLongestMatch(utf8, ids, mt)) {
+        result.reserve(ids.size());
+        for (uint32_t id : ids) {
+            result.push_back(static_cast<int32_t>(id));
+        }
+        return result;
+    }
+
+    // Ultimate fallback – return single unk
+    return { m_unkToken };
 }
 
 QString BPETokenizer::decode(const std::vector<int32_t>& tokens) {
@@ -264,4 +344,18 @@ QString BPETokenizer::decode(const std::vector<int32_t>& tokens) {
     }
     
     return QString::fromUtf8(utf8);
+}
+
+// ============================================================================
+// ENTERPRISE FALLBACK: Qt-friendly wrapper for greedy longest-match
+// ============================================================================
+bool BPETokenizer::greedyLongestMatch(const QString& text, std::vector<int32_t>& ids) const
+{
+    MetricsTimer mt;
+    std::vector<uint32_t> tmp;
+    const bool ok = greedyLongestMatch(text.toUtf8().toStdString(), tmp, mt);
+    if (ok) {
+        ids.assign(tmp.begin(), tmp.end());
+    }
+    return ok;
 }

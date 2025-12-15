@@ -14,6 +14,9 @@
 #include <stdexcept>
 
 class QuantizationAwareInferenceEngine;
+struct QuantizationEngineNoopDeleter {
+    void operator()(QuantizationAwareInferenceEngine*) const noexcept {}
+};
 class CloudApiClient;
 
 // Model backend enumeration
@@ -77,7 +80,7 @@ public:
     // Model configuration loading
     bool loadConfigFromFile(const QString& config_file_path);
     bool loadConfigFromJson(const QJsonObject& config_json);
-    bool saveConfigToFile(const QString& config_file_path) const;
+    bool saveConfigToFile(const QString& config_file_path);
     
     // Backend initialization
     void initializeLocalEngine(const QString& engine_config_path);
@@ -97,7 +100,7 @@ signals:
     void modelUnregistered(const QString& model_name);
     void configLoaded(int model_count);
     void configSaved();
-    void error(const QString& error_message);
+    void routerError(const QString& error_message);
 
 private slots:
     void onLocalEngineInitialized();
@@ -106,7 +109,7 @@ private slots:
 
 private:
     QMap<QString, ModelConfig> model_registry;
-    std::unique_ptr<QuantizationAwareInferenceEngine> local_engine;
+    std::unique_ptr<QuantizationAwareInferenceEngine, QuantizationEngineNoopDeleter> local_engine;
     std::unique_ptr<CloudApiClient> cloud_client;
     bool local_engine_ready;
     bool cloud_client_ready;

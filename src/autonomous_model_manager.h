@@ -102,6 +102,9 @@ signals:
     void recommendationReady(const ModelRecommendation& recommendation);
     void autoUpdateCompleted();
     void errorOccurred(const QString& error);
+    void downloadProgress(const QString& modelId, int percentage, qint64 speedBytesPerSec, qint64 etaSeconds);
+    void downloadCompleted(const QString& modelId, bool success);
+    void modelLoaded(const QString& modelId);
 
 private:
     void setupNetworkManager();

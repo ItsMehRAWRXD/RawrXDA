@@ -100,7 +100,6 @@ signals:
 
 private slots:
     void onNetworkReplyFinished(QNetworkReply* reply);
-    void onNetworkError(QNetworkAccessManager::NetworkAccessibility accessibility);
 
 private:
     // API request execution

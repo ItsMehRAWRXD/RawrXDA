@@ -3926,10 +3926,11 @@ void MainWindow::onAIChatMessageSubmitted(const QString& message) {
             
             m_aiChatPanel->addAssistantMessage("", true);  // Start streaming
             
-            // Call the 'request' slot which is the actual inference method
+            // Call the streaming 'request' slot
             QMetaObject::invokeMethod(m_inferenceEngine, "request", Qt::QueuedConnection,
                                       Q_ARG(QString, message),
-                                      Q_ARG(qint64, reqId));
+                                      Q_ARG(qint64, reqId),
+                                      Q_ARG(bool, true));
         } else {
             m_aiChatPanel->addAssistantMessage("No model loaded. Please load a GGUF model first.", false);
         }

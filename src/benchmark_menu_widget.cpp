@@ -6,6 +6,7 @@
  */
 
 #include "benchmark_menu_widget.hpp"
+#include "benchmark_runner.hpp"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -21,6 +22,8 @@
 #include <QFontMetrics>
 #include <QColor>
 #include <QTextCharFormat>
+#include <QMenuBar>
+#include <QMenu>
 #include <iostream>
 #include <algorithm>
 
@@ -232,13 +235,7 @@ QString BenchmarkLogOutput::levelToColor(LogLevel level) {
 // BENCHMARK RESULTS DISPLAY IMPLEMENTATION
 // ============================================================================
 
-struct TestResult {
-    QString testName;
-    bool passed;
-    double avgLatencyMs;
-    double p95LatencyMs;
-    double successRate;
-};
+// TestResult struct is now defined in benchmark_menu_widget.hpp
 
 BenchmarkResultsDisplay::BenchmarkResultsDisplay(QWidget* parent)
     : QWidget(parent), totalTests_(0) {
@@ -294,17 +291,18 @@ void BenchmarkResultsDisplay::addResult(const QString& testName, bool passed,
 }
 
 void BenchmarkResultsDisplay::showSummary(int passed, int total, double executionTimeSec) {
-    QString summary = QString("\n" + QString("═").repeated(60) + "\n"
-                              "BENCHMARK SUMMARY\n"
-                              "═").repeated(60) + "\n\n"
-        "Tests Passed:  %1/%2\n"
-        "Execution Time: %3 seconds\n\n")
+    QString divider = QString("=").repeated(60);
+    QString summary = QString("\n%1\nBENCHMARK SUMMARY\n%2\n\n"
+        "Tests Passed:  %3/%4\n"
+        "Execution Time: %5 seconds\n\n")
+        .arg(divider)
+        .arg(divider)
         .arg(passed)
         .arg(total)
         .arg(executionTimeSec, 0, 'f', 2);
 
     if (passed == total) {
-        summary += "🎉 ALL TESTS PASSED!\n";
+        summary += "ALL TESTS PASSED!\n";
     } else if (passed >= static_cast<int>(total * 0.75)) {
         summary += "✓ MOST TESTS PASSED - Minor issues\n";
     } else {
@@ -384,8 +382,8 @@ void BenchmarkMenu::createDialog() {
     selector_ = new BenchmarkSelector();
     leftLayout->addWidget(selector_);
     
-    auto runButton = new QPushButton("Run Benchmarks", this);
-    auto stopButton = new QPushButton("Stop", this);
+    auto runButton = new QPushButton("Run Benchmarks");
+    auto stopButton = new QPushButton("Stop");
     stopButton->setEnabled(false);
     
     auto buttonLayout = new QHBoxLayout();
@@ -402,11 +400,11 @@ void BenchmarkMenu::createDialog() {
     auto rightWidget = new QWidget();
     auto rightLayout = new QVBoxLayout(rightWidget);
 
-    rightLayout->addWidget(new QLabel("Benchmark Output:", this));
+    rightLayout->addWidget(new QLabel("Benchmark Output:"));
     logOutput_ = new BenchmarkLogOutput();
     rightLayout->addWidget(logOutput_);
 
-    rightLayout->addWidget(new QLabel("Results:", this));
+    rightLayout->addWidget(new QLabel("Results:"));
     resultsDisplay_ = new BenchmarkResultsDisplay();
     rightLayout->addWidget(resultsDisplay_);
 

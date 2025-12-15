@@ -5,6 +5,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QProcess>
+#include <QRandomGenerator>
 #include <iostream>
 #include <algorithm>
 
@@ -297,7 +298,7 @@ bool ErrorRecoverySystem::attemptRecovery(const QString& errorId) {
         activeErrors.remove(errorId);
         
         std::cout << "[ErrorRecoverySystem] Recovery successful for " << errorId.toStdString() << std::endl;
-        emit errorRecovered(error);
+        emit errorRecoveredRecord(error);
         
         return true;
     } else {
@@ -485,7 +486,7 @@ void ErrorRecoverySystem::resolveError(const QString& errorId) {
     activeErrors.remove(errorId);
     
     std::cout << "[ErrorRecoverySystem] Manually resolved error: " << errorId.toStdString() << std::endl;
-    emit errorRecovered(error);
+    emit errorRecoveredRecord(error);
 }
 
 ErrorRecord ErrorRecoverySystem::getError(const QString& errorId) const {
@@ -613,10 +614,10 @@ void ErrorRecoverySystem::clearRecoveredErrors() {
 }
 
 QString ErrorRecoverySystem::generateErrorId() {
-    return QString("error_%1_%2").arg(QDateTime::currentMSecsSinceEpoch()).arg(qrand() % 10000);
+    return QString("error_%1_%2").arg(QDateTime::currentMSecsSinceEpoch()).arg(QRandomGenerator::global()->bounded(10000));
 }
 
-QString ErrorRecoverySystem::errorSeverityToString(ErrorSeverity severity) {
+QString ErrorRecoverySystem::errorSeverityToString(ErrorSeverity severity) const {
     switch (severity) {
         case ErrorSeverity::Info: return "INFO";
         case ErrorSeverity::Warning: return "WARNING";
@@ -627,7 +628,7 @@ QString ErrorRecoverySystem::errorSeverityToString(ErrorSeverity severity) {
     }
 }
 
-QString ErrorRecoverySystem::errorCategoryToString(ErrorCategory category) {
+QString ErrorRecoverySystem::errorCategoryToString(ErrorCategory category) const {
     switch (category) {
         case ErrorCategory::System: return "System";
         case ErrorCategory::Network: return "Network";

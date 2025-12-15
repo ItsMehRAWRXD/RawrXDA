@@ -477,8 +477,8 @@ void ModelRouterWidget::onCostUpdated(double total_cost)
 
 void ModelRouterWidget::onStatisticsUpdated(const QJsonObject& stats)
 {
-    setLatencyDisplay(stats.value("avg_latency_ms", 0).toDouble());
-    setSuccessRateDisplay(stats.value("success_rate", 0).toInt());
+    setLatencyDisplay(stats.value("avg_latency_ms").toDouble());
+    setSuccessRateDisplay(stats.value("success_rate").toInt());
 }
 
 // === Button Click Handlers ===

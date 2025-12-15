@@ -754,6 +754,50 @@ target_link_libraries(RawrXD-QtShell PRIVATE
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
         )
         
+        # ---------- Test Chat Streaming: Console streaming chat test ----------
+        add_executable(test_chat_streaming
+            src/qtapp/test_chat_streaming.cpp
+            src/qtapp/inference_engine.cpp
+            src/qtapp/gguf_loader.cpp
+            src/gguf_loader.cpp
+            src/gguf_vocab_resolver.cpp  # Universal vocab size detection
+            src/qtapp/transformer_inference.cpp
+            src/qtapp/bpe_tokenizer.cpp
+            src/qtapp/sentencepiece_tokenizer.cpp
+            src/qtapp/vocabulary_loader.cpp
+            src/qtapp/gpu_backend.cpp
+            src/qtapp/metrics_collector.cpp
+            src/qtapp/quant_utils.cpp
+        )
+        
+        target_link_libraries(test_chat_streaming PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Widgets
+            brutal_gzip
+            ${GPU_BACKEND_LIBS}
+        )
+        
+        if(TARGET ggml)
+            target_link_libraries(test_chat_streaming PRIVATE ggml)
+        endif()
+        
+        if(Vulkan_FOUND)
+            target_link_libraries(test_chat_streaming PRIVATE Vulkan::Vulkan)
+            target_compile_definitions(test_chat_streaming PRIVATE HAVE_VULKAN=1)
+        endif()
+        
+        target_include_directories(test_chat_streaming PRIVATE 
+            include 
+            ${CMAKE_SOURCE_DIR}/src 
+            ${CMAKE_SOURCE_DIR}/src/qtapp
+            ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
+        )
+        
+        set_target_properties(test_chat_streaming PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        )
+        
         # ---------- RawrXD-Agent: Autonomous coding agent executable ----------
         add_executable(RawrXD-Agent
             src/agent/agent_main.cpp
@@ -826,10 +870,13 @@ if(MSVC) # Re-enabled to test
         src/win32app/Win32IDE_Autonomy.h
         src/win32app/Win32IDE_Autonomy.cpp
         src/gguf_loader.cpp
+        src/gguf_vocab_resolver.cpp
         src/streaming_gguf_loader.cpp
         src/utils/ErrorReporter.cpp
         src/utils/Diagnostics.cpp
-        # Benchmark menu integration
+        # Benchmark menu integration (headers required for Q_OBJECT moc)
+        include/benchmark_menu_widget.hpp
+        include/benchmark_runner.hpp
         src/benchmark_menu_widget.cpp
         src/benchmark_runner.cpp
         $<$<BOOL:${ENABLE_VULKAN}>:src/win32app/VulkanRenderer.cpp>
@@ -863,6 +910,22 @@ if(MSVC) # Re-enabled to test
         # Model Router Console
         src/model_router_console.h
         src/model_router_console.cpp
+        # Autonomous IDE Components (missing implementations for linker)
+        src/autonomous_model_manager.cpp
+        src/autonomous_feature_engine.cpp
+        src/intelligent_codebase_engine.cpp
+        src/hybrid_cloud_manager.cpp
+        src/error_recovery_system.cpp
+        src/performance_monitor.cpp
+        # Real-time completion and inference
+        src/real_time_completion_engine.cpp
+        src/qtapp/inference_engine.cpp
+        # Additional tokenizer/inference support
+        src/qtapp/bpe_tokenizer.cpp
+        src/qtapp/sentencepiece_tokenizer.cpp
+        src/qtapp/vocabulary_loader.cpp
+        src/qtapp/transformer_inference.cpp
+        src/qtapp/gguf_loader.cpp
     )
     
     target_link_libraries(RawrXD-Win32IDE PRIVATE
@@ -881,6 +944,7 @@ if(MSVC) # Re-enabled to test
         RawrXDGit
         RawrXDTerminal
         brutal_gzip
+        quant_utils
         Qt6::Core
         Qt6::Network
         Qt6::Widgets
@@ -893,7 +957,16 @@ if(MSVC) # Re-enabled to test
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/utils
         ${CMAKE_SOURCE_DIR}/src/model_loader
+        ${CMAKE_SOURCE_DIR}/src/qtapp
+        ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
+        ${CMAKE_SOURCE_DIR}/3rdparty/ggml/src
     )
+    
+    # Link ggml if available
+    if(TARGET ggml)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE ggml)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE HAVE_GGML=1)
+    endif()
     
     # Compiler options - MSVC only now
     target_compile_options(RawrXD-Win32IDE PRIVATE /EHsc /O2)
@@ -1231,6 +1304,10 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/agentic_engine.cpp")
         list(APPEND AGENTICIDE_SOURCES src/agentic_engine.cpp)
+        list(APPEND AGENTICIDE_SOURCES src/zero_day_agentic_engine.cpp)
+        if(EXISTS "${CMAKE_SOURCE_DIR}/include/zero_day_agentic_engine.hpp")
+            list(APPEND AGENTICIDE_SOURCES include/zero_day_agentic_engine.hpp)
+        endif()
     endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/chat_interface.cpp")
         list(APPEND AGENTICIDE_SOURCES src/chat_interface.cpp)
@@ -1361,6 +1438,18 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/ghost_text_renderer.cpp")
         list(APPEND AGENTICIDE_SOURCES src/ghost_text_renderer.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/universal_model_router.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/universal_model_router.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/cloud_api_client.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/cloud_api_client.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/cloud_api_client.h")
+        list(APPEND AGENTICIDE_SOURCES src/cloud_api_client.h)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/tool_registry.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/tool_registry.cpp)
     endif()
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ai_completion_provider.cpp")
         list(APPEND AGENTICIDE_SOURCES src/qtapp/ai_completion_provider.cpp)

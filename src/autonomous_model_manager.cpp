@@ -153,8 +153,10 @@ bool AutonomousModelManager::autoDownloadAndSetup(const QString& modelId) {
     }
     
     // Determine installation path
+    QString sanitizedId = modelId;
+    sanitizedId.replace('/', '_');
     QString installPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + 
-                         "/models/" + modelId.replace('/', '_');
+                         "/models/" + sanitizedId;
     
     QDir().mkpath(installPath);
     

@@ -6,6 +6,7 @@
 #include <richedit.h>
 #include <sstream>
 #include <iomanip>
+#include <QDebug>
 
 // Define GET_X_LPARAM and GET_Y_LPARAM if not available
 #ifndef GET_X_LPARAM

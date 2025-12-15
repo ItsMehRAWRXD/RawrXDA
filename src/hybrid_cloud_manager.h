@@ -1,4 +1,5 @@
 // hybrid_cloud_manager.h - Multi-Cloud AI Model Execution Manager
+// SYNCHRONIZED WITH hybrid_cloud_manager.cpp
 #ifndef HYBRID_CLOUD_MANAGER_H
 #define HYBRID_CLOUD_MANAGER_H
 
@@ -11,6 +12,8 @@
 #include <QNetworkReply>
 #include <QDateTime>
 #include <QTimer>
+#include <QElapsedTimer>
+#include <QEventLoop>
 
 // Cloud provider information
 struct CloudProvider {
@@ -19,11 +22,11 @@ struct CloudProvider {
     QString endpoint;
     QString apiKey;            // Optional for Ollama
     QString region;
-    bool isEnabled;
-    bool isHealthy;
+    bool isEnabled = false;
+    bool isHealthy = false;
     QDateTime lastHealthCheck;
-    double costPerRequest;     // USD (0.0 for local Ollama)
-    double averageLatency;     // milliseconds
+    double costPerRequest = 0.0;     // USD (0.0 for local Ollama)
+    double averageLatency = 1000.0;  // milliseconds
     QJsonObject capabilities;
 };
 
@@ -34,10 +37,10 @@ struct CloudModel {
     QString name;
     QString endpoint;
     QStringList supportedTasks;
-    double costPerToken;
-    int maxTokens;
-    double averageLatency;
-    bool isAvailable;
+    double costPerToken = 0.0;
+    int maxTokens = 4096;
+    double averageLatency = 1000.0;
+    bool isAvailable = true;
     QJsonObject metadata;
 };
 
@@ -47,8 +50,8 @@ struct ExecutionRequest {
     QString taskType;
     QString prompt;
     QString language;
-    int maxTokens;
-    double temperature;
+    int maxTokens = 1024;
+    double temperature = 0.7;
     QJsonObject parameters;
     QDateTime timestamp;
 };
@@ -59,10 +62,10 @@ struct ExecutionResult {
     QString executionLocation; // "local" or provider ID
     QString modelUsed;
     QString response;
-    int tokensUsed;
-    double latencyMs;
-    double cost;
-    bool success;
+    int tokensUsed = 0;
+    double latencyMs = 0.0;
+    double cost = 0.0;
+    bool success = false;
     QString errorMessage;
     QDateTime completedAt;
     QJsonObject metadata;
@@ -71,44 +74,44 @@ struct ExecutionResult {
 // Hybrid execution decision
 struct HybridExecution {
     QString requestId;
-    bool useCloud;
+    bool useCloud = false;
     QString selectedProvider;
     QString selectedModel;
     QString reasoning;
-    double estimatedCost;
-    double estimatedLatency;
-    double confidenceScore;
+    double estimatedCost = 0.0;
+    double estimatedLatency = 0.0;
+    double confidenceScore = 0.0;
 };
 
 // Cost tracking
 struct CostMetrics {
-    double totalCostUSD;
-    double todayCostUSD;
-    double monthCostUSD;
-    int totalRequests;
-    int cloudRequests;
-    int localRequests;
+    double totalCostUSD = 0.0;
+    double todayCostUSD = 0.0;
+    double monthCostUSD = 0.0;
+    int totalRequests = 0;
+    int cloudRequests = 0;
+    int localRequests = 0;
     QHash<QString, double> costByProvider;
     QHash<QString, int> requestsByProvider;
 };
 
 // Performance metrics
 struct PerformanceMetrics {
-    double averageLatency;
-    double p95Latency;
-    double p99Latency;
-    int successRate;           // Percentage
-    int failoverCount;
+    double averageLatency = 0.0;
+    double p95Latency = 0.0;
+    double p99Latency = 0.0;
+    int successRate = 100;     // Percentage
+    int failoverCount = 0;
     QHash<QString, double> latencyByProvider;
 };
 
 // Failover configuration
 struct FailoverConfig {
-    bool enabled;
-    int maxRetries;
-    int timeoutMs;
+    bool enabled = true;
+    int maxRetries = 3;
+    int timeoutMs = 30000;
     QVector<QString> fallbackProviders;
-    bool autoSwitchOnFailure;
+    bool autoSwitchOnFailure = true;
 };
 
 class HybridCloudManager : public QObject {
@@ -119,11 +122,15 @@ public:
     ~HybridCloudManager();
 
     // Provider management
-    void addProvider(const CloudProvider& provider);
-    void removeProvider(const QString& providerId);
+    bool addProvider(const CloudProvider& provider);
+    bool removeProvider(const QString& providerId);
+    bool configureProvider(const QString& providerId, const QString& apiKey, 
+                          const QString& endpoint, const QString& region);
     void updateProvider(const CloudProvider& provider);
     QVector<CloudProvider> getProviders() const;
+    QVector<CloudProvider> getAllProviders() const;
     CloudProvider getProvider(const QString& providerId) const;
+    QVector<CloudProvider> getHealthyProviders() const;
     
     // Provider health
     void checkProviderHealth(const QString& providerId);
@@ -145,12 +152,25 @@ public:
                                  const QString& providerId,
                                  const QString& modelId);
     
+    // Cloud-specific execution (from cpp)
+    ExecutionResult executeOnCloud(const ExecutionRequest& request, 
+                                   const QString& providerId,
+                                   const QString& modelId);
+    ExecutionResult executeOnOllama(const ExecutionRequest& request);
+    ExecutionResult executeOnHuggingFace(const ExecutionRequest& request, const QString& modelId);
+    ExecutionResult executeOnAWS(const ExecutionRequest& request, const QString& modelId);
+    ExecutionResult executeOnAzure(const ExecutionRequest& request, const QString& modelId);
+    ExecutionResult executeOnGCP(const ExecutionRequest& request, const QString& modelId);
+    
     // Intelligent routing
-    bool shouldUseCloud(const ExecutionRequest& request);
+    bool shouldUseCloudExecution(const ExecutionRequest& request);
     QString selectOptimalProvider(const ExecutionRequest& request);
     double calculateExecutionCost(const QString& providerId, 
                                   const QString& modelId,
                                   int estimatedTokens);
+    
+    // Execution tracking
+    void recordExecution(const ExecutionResult& result);
     
     // Failover and retry
     void enableFailover(bool enable);
@@ -163,7 +183,9 @@ public:
     CostMetrics getCostMetrics() const;
     double getTodayCost() const;
     double getMonthCost() const;
+    double getTotalCost() const;
     void setCostLimit(double dailyLimitUSD, double monthlyLimitUSD);
+    void setCostThreshold(double thresholdUSD);
     bool isWithinCostLimits() const;
     void resetCostMetrics();
     
@@ -172,11 +194,9 @@ public:
     double getAverageLatency(const QString& providerId = "") const;
     int getSuccessRate() const;
     
-    // Cloud-specific operations
-    ExecutionResult executeAWS(const ExecutionRequest& request);
-    ExecutionResult executeAzure(const ExecutionRequest& request);
-    ExecutionResult executeGCP(const ExecutionRequest& request);
-    ExecutionResult executeHuggingFace(const ExecutionRequest& request);
+    // Execution history
+    QVector<ExecutionResult> getExecutionHistory(int limit = 0) const;
+    void clearExecutionHistory();
     
     // Configuration
     void setPreferLocal(bool prefer);
@@ -184,6 +204,9 @@ public:
     void setCostThresholdPerRequest(double thresholdUSD);
     void setLatencyThreshold(int thresholdMs);
     void setAutoScaling(bool enabled);
+    void enableLocalExecution(bool enable);
+    void setHealthCheckInterval(int milliseconds);
+    void setMaxRetries(int retries);
     
     // Cloud switching
     bool switchToCloud(const QString& reason);
@@ -211,12 +234,16 @@ signals:
     void failoverTriggered(const QString& fromProvider, const QString& toProvider);
     void cloudSwitched(bool usingCloud);
     void errorOccurred(const QString& error);
+    void healthCheckCompleted();
 
 private slots:
     void onNetworkReplyFinished(QNetworkReply* reply);
     void onHealthCheckTimerTimeout();
 
 private:
+    // Setup
+    void setupDefaultProviders();
+    
     // Execution helpers
     ExecutionResult sendCloudRequest(const QString& providerId,
                                     const QString& modelId,
@@ -252,10 +279,10 @@ private:
     QString getNextFallbackProvider(const QString& currentProvider);
     bool shouldRetry(int attemptNumber, const QString& errorType);
     
-    // Data members
+    // Data members - SYNCHRONIZED with cpp
     QHash<QString, CloudProvider> providers;
     QVector<CloudModel> cloudModels;
-    QHash<QString, ExecutionResult> executionHistory;
+    QVector<ExecutionResult> executionHistory;  // Changed to QVector from QHash
     QVector<ExecutionRequest> requestQueue;
     
     CostMetrics costMetrics;
@@ -266,18 +293,23 @@ private:
     QHash<QString, QNetworkReply*> activeRequests;
     
     QTimer* healthCheckTimer;
+    int healthCheckIntervalMs;
     
-    bool preferLocal;
-    bool cloudFallbackEnabled;
-    double costThresholdPerRequest;
-    int latencyThreshold;
-    bool autoScalingEnabled;
-    bool currentlyUsingCloud;
+    bool preferLocal = true;
+    bool cloudFallbackEnabled = true;
+    bool localExecutionEnabled = true;   // Added from cpp
+    double costThresholdPerRequest = 0.01;
+    double costThresholdUSD = 0.01;       // Added from cpp  
+    int latencyThreshold = 2000;
+    int maxRetries = 3;                   // Added from cpp
+    bool autoScalingEnabled = false;
+    bool currentlyUsingCloud = false;
+    double totalCostUSD = 0.0;            // Added from cpp
     
-    double dailyCostLimit;
-    double monthlyCostLimit;
+    double dailyCostLimit = 10.0;
+    double monthlyCostLimit = 100.0;
     
-    // Configuration
+    // Configuration constants
     static constexpr int HEALTH_CHECK_INTERVAL_MS = 30000; // 30 seconds
     static constexpr double DEFAULT_COST_THRESHOLD = 0.01;  // $0.01 per request
     static constexpr int DEFAULT_LATENCY_THRESHOLD = 2000;  // 2 seconds

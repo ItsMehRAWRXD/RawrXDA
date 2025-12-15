@@ -2,6 +2,7 @@
 #include "chat_interface.h"
 #include "agentic_engine.h"
 #include "plan_orchestrator.h"
+#include "zero_day_agentic_engine.hpp"
 #include "qtapp/EnterpriseTelemetry.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -546,6 +547,28 @@ void ChatInterface::executeAgentCommand(const QString& command, const QString& a
             statusLabel_->setText(QString("Plan ready: %1 tasks").arg(plan.tasks.size()));
         }
     }
+    else if (command.startsWith("/mission ")) {
+        // Zero-Day Agentic Engine autonomous mission
+        if (!m_zeroDayAgent) {
+            addMessage("System", "Zero-Day Agent not initialized");
+            statusLabel_->setText("Mission error: Agent not ready");
+            return;
+        }
+        
+        QString goal = command.mid(9).trimmed();  // Remove "/mission "
+        if (goal.isEmpty()) {
+            addMessage("System", "Usage: /mission <goal>\nExample: /mission List all files in the current directory");
+            return;
+        }
+        
+        addMessage("User", command);
+        addMessage("System", "🚀 Starting autonomous mission: " + goal);
+        statusLabel_->setText("Mission in progress...");
+        
+        // Launch Zero-Day agent (async execution via QtConcurrent)
+        m_zeroDayAgent->startMission(goal);
+        // Results will stream back via agentStream/agentComplete/agentError signals
+    }
     else if (command.startsWith("/help") || command == "/?") {
         QString helpText = "<h3>Available Commands</h3>"
                           "<b>File Operations:</b><br>"
@@ -554,6 +577,7 @@ void ChatInterface::executeAgentCommand(const QString& command, const QString& a
                           "  @search &lt;query&gt; - Find files<br>"
                           "  @ref &lt;symbol&gt; - Find symbol references<br><br>"
                           "<b>AI Operations:</b><br>"
+                          "  /mission &lt;goal&gt; - Autonomous Zero-Day agent mission<br>"
                           "  /refactor &lt;description&gt; - Multi-file refactoring<br>"
                           "  /plan &lt;task&gt; - Create implementation plan<br>"
                           "  /help - Show this help<br><br>"

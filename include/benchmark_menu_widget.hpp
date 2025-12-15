@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <QString>
 #include <QWidget>
 #include <QMainWindow>
 #include <QMenu>
@@ -28,6 +29,15 @@
 #include <string>
 
 class BenchmarkRunner;
+
+// Local TestResult struct for benchmark results display
+struct TestResult {
+    QString testName;
+    bool passed;
+    double avgLatencyMs;
+    double p95LatencyMs;
+    double successRate;
+};
 
 /**
  * @brief Widget for selecting which benchmarks to run
@@ -114,7 +124,7 @@ private:
     QProgressBar* progressBar_;
     QTextEdit* resultsDisplay_;
     int totalTests_;
-    std::vector<struct TestResult> results_;
+    std::vector<TestResult> results_;
 };
 
 /**
@@ -154,4 +164,4 @@ private:
     QThread* runnerThread_;
 };
 
-#endif // BENCHMARK_MENU_WIDGET_HPP
+// End of benchmark_menu_widget.hpp

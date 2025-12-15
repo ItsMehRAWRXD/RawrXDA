@@ -17,6 +17,8 @@
 #include <QComboBox>
 #include <QSplitter>
 #include <QTabWidget>
+#include <QJsonArray>
+#include <QJsonObject>
 #include "autonomous_model_manager.h"
 #include "intelligent_codebase_engine.h"
 #include "autonomous_feature_engine.h"
@@ -94,7 +96,7 @@ private slots:
 
     // Error recovery slots
     void onErrorRecorded(const ErrorRecord& error);
-    void onErrorRecovered(const ErrorRecord& error);
+    void onErrorRecovered(const QString& errorId, bool success);
     void onSystemHealthUpdated(const SystemHealth& health);
 
     // Performance monitoring slots

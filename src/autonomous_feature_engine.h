@@ -85,6 +85,7 @@ struct GeneratedTest {
     QString testName;
     QString testCode;
     QString framework;         // jest, pytest, gtest, etc.
+    QString language;          // cpp, python, javascript, etc.
     QStringList testCases;
     double coverage;           // Expected coverage
     QString reasoning;
@@ -220,7 +221,7 @@ private:
     // Performance analysis
     bool canParallelize(const QString& code);
     bool canCache(const QString& code);
-    bool hasInefficient Algorithm(const QString& code, QString& algorithmName);
+    bool hasInefficientAlgorithm(const QString& code, QString& algorithmName);
     bool hasMemoryWaste(const QString& code);
     
     // Test generation helpers

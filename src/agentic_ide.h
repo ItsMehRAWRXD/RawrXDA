@@ -6,6 +6,9 @@ class MultiTabEditor;
 class ChatInterface;
 class TerminalPool;
 class AgenticEngine;
+class ZeroDayAgenticEngine;
+class UniversalModelRouter;
+class ToolRegistry;
 
 namespace RawrXD {
     class LSPClient;
@@ -30,6 +33,9 @@ private:
     
     // Agent engine
     AgenticEngine *m_agenticEngine = nullptr;
+    ZeroDayAgenticEngine *m_zeroDayAgent = nullptr;
+    UniversalModelRouter *m_modelRouter = nullptr;
+    ToolRegistry *m_toolRegistry = nullptr;
     
     // Multi-file orchestration
     RawrXD::PlanOrchestrator *m_planOrchestrator = nullptr;

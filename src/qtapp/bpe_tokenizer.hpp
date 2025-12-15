@@ -5,6 +5,15 @@
 #include <QPair>
 #include <vector>
 #include <cstdint>
+#include <unordered_map>
+#include <string>
+#include <QElapsedTimer>
+
+struct MetricsTimer {
+    QElapsedTimer timer;
+    MetricsTimer() { timer.start(); }
+    qint64 elapsedUs() const { return timer.nsecsElapsed() / 1000; }
+};
 
 /**
  * @brief Byte Pair Encoding (BPE) tokenizer compatible with tiktoken/OpenAI
@@ -31,6 +40,8 @@ public:
      * @return true if loaded successfully
      */
     bool loadFromGGUFMetadata(const QHash<QString, QByteArray>& metadata);
+
+    bool isReverseVocabReady() const noexcept { return !reverseVocab_.empty(); }
     
     /**
      * @brief Encode text to token IDs using BPE
@@ -54,7 +65,7 @@ public:
     /**
      * @brief Check if tokenizer is ready
      */
-    bool isReady() const { return !m_vocab.isEmpty() && !m_merges.isEmpty(); }
+    bool isReady() const noexcept { return m_ready; }
     
     /**
      * @brief Get special token IDs
@@ -79,6 +90,9 @@ private:
     
     // Reverse vocabulary: token ID -> token string
     QHash<int32_t, QString> m_reverseVocab;
+
+    // Enterprise-grade greedy longest-match vocab (piece -> id)
+    std::unordered_map<std::string, uint32_t> reverseVocab_;
     
     // BPE merge rules: (token1, token2) -> priority
     QHash<QPair<QString, QString>, int> m_merges;
@@ -92,6 +106,17 @@ private:
     // Byte-level encoding map (256 bytes -> 256 unique unicode chars)
     QHash<uint8_t, QChar> m_byteEncoder;
     QHash<QChar, uint8_t> m_byteDecoder;
+
+    // Byte-level cache for direct id → piece lookup during decode
+    QVector<QString> m_bytePieces;
+
+    bool m_ready{false};
+
+    // ---------- enterprise fallback ----------
+    // Greedy longest-match tokenizer (SentencePiece-compatible)
+    // Returns true on success, fills ids vector with token IDs
+    bool greedyLongestMatch(const std::string& text, std::vector<uint32_t>& ids, MetricsTimer& mt) const;
+    bool greedyLongestMatch(const QString& text, std::vector<int32_t>& ids) const;
     
     // Precompiled regex pattern cache for text splitting
     struct TextSplit {

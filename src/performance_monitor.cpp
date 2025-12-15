@@ -300,7 +300,7 @@ double PerformanceMonitor::getPercentile(const QString& component, const QString
     
     // Calculate percentile index
     int index = static_cast<int>((percentile / 100.0) * values.size());
-    index = std::min(index, values.size() - 1);
+    index = std::min(index, static_cast<int>(values.size() - 1));
     
     return values[index];
 }

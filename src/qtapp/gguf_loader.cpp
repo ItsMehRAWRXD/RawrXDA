@@ -3,8 +3,10 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QByteArray>
 #include <memory>
 #include <stdexcept>
+#include <cstring>
 
 GGUFLoaderQt::GGUFLoaderQt(const QString& path)
     : m_loader(nullptr), m_initialized(false)
@@ -154,8 +156,55 @@ QByteArray GGUFLoaderQt::inflateWeight(const QString& tensorName)
 QHash<QString, QByteArray> GGUFLoaderQt::getTokenizerMetadata() const
 {
     QHash<QString, QByteArray> result;
-    // Tokenizer metadata extraction would go here
-    // For now, return empty - actual implementation depends on GGUF structure
+    if (!m_loader) {
+        return result;
+    }
+
+    try {
+        const auto metadata = m_loader->GetMetadata();
+
+        // Export kv_pairs as raw byte arrays
+        for (const auto& pair : metadata.kv_pairs) {
+            result.insert(QString::fromStdString(pair.first), QByteArray::fromStdString(pair.second));
+        }
+
+        // Include vocab size for convenience
+        if (metadata.vocab_size > 0) {
+            result.insert(QStringLiteral("tokenizer.ggml.vocab_size"), QByteArray::number(static_cast<qint64>(metadata.vocab_size)));
+        }
+
+        // Flatten tokens vector into a single \0-delimited blob (matches GGUF convention)
+        if (!metadata.tokens.empty()) {
+            QByteArray tokenBlob;
+            tokenBlob.reserve(static_cast<int>(metadata.tokens.size() * 8));
+            for (const auto& tok : metadata.tokens) {
+                tokenBlob.append(QByteArray::fromStdString(tok));
+                tokenBlob.append('\0');
+            }
+            result.insert(QStringLiteral("tokenizer.ggml.tokens"), tokenBlob);
+        }
+
+        // Serialize scores (float32 little-endian)
+        if (!metadata.token_scores.empty()) {
+            QByteArray scoreBlob;
+            scoreBlob.resize(static_cast<int>(metadata.token_scores.size() * sizeof(float)));
+            memcpy(scoreBlob.data(), metadata.token_scores.data(), scoreBlob.size());
+            result.insert(QStringLiteral("tokenizer.ggml.scores"), scoreBlob);
+        }
+
+        // Serialize token types (uint32 little-endian)
+        if (!metadata.token_types.empty()) {
+            QByteArray typeBlob;
+            typeBlob.resize(static_cast<int>(metadata.token_types.size() * sizeof(uint32_t)));
+            memcpy(typeBlob.data(), metadata.token_types.data(), typeBlob.size());
+            result.insert(QStringLiteral("tokenizer.ggml.token_type"), typeBlob);
+        }
+    } catch (const std::exception& e) {
+        qWarning() << "[GGUFLoaderQt] Exception building tokenizer metadata map:" << e.what();
+    } catch (...) {
+        qWarning() << "[GGUFLoaderQt] Unknown exception building tokenizer metadata map";
+    }
+
     return result;
 }
 

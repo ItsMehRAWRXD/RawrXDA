@@ -7,6 +7,11 @@
 #include "terminal_pool.h"
 #include "plan_orchestrator.h"
 #include "lsp_client.h"
+#include "zero_day_agentic_engine.hpp"
+#include "universal_model_router.h"
+#include "tool_registry.hpp"
+#include "logging/logger.h"
+#include "metrics/metrics.h"
 #include <QTimer>
 #include <QShowEvent>
 #include <QDockWidget>
@@ -44,20 +49,6 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 m_multiTabEditor = new MultiTabEditor(this);
                 m_multiTabEditor->initialize();
                 setCentralWidget(m_multiTabEditor);
-            }
-            
-            // Initialize chat interface (Qt widgets + model scanning)
-            if (!m_chatInterface) {
-                m_chatInterface = new ChatInterface(this);
-                m_chatInterface->initialize();
-                // Connect chat to engine and orchestrator
-                if (m_agenticEngine) {
-                    m_chatInterface->setAgenticEngine(m_agenticEngine);
-                }
-                if (m_planOrchestrator) {
-                    m_chatInterface->setPlanOrchestrator(m_planOrchestrator);
-                }
-                // Chat will be added as dock widget later
             }
             
             // Initialize agentic engine (InferenceEngine + AI core)
@@ -124,6 +115,67 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 // TODO: Set workspace root from current project
                 // m_planOrchestrator->setWorkspaceRoot(projectRoot);
             }
+
+            // Initialize tool registry and model router for Zero-Day engine
+            if (!m_toolRegistry) {
+                auto logger = std::make_shared<Logger>("tool_registry_ui");
+                auto metrics = std::make_shared<Metrics>();
+                m_toolRegistry = new ToolRegistry(logger, metrics);
+            }
+
+            if (!m_modelRouter) {
+                m_modelRouter = new UniversalModelRouter(this);
+                m_modelRouter->initializeLocalEngine(QString());
+                m_modelRouter->initializeCloudClient();
+            }
+
+            if (!m_zeroDayAgent && m_modelRouter && m_toolRegistry && m_planOrchestrator) {
+               m_zeroDayAgent = new ZeroDayAgenticEngine(m_modelRouter, m_toolRegistry, m_planOrchestrator, this);
+               if (m_chatInterface) {
+                   m_chatInterface->setZeroDayAgent(m_zeroDayAgent);
+                   connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentStream,
+                           m_chatInterface, [this](const QString& tok) {
+                               m_chatInterface->addMessage("System", tok);
+                           });
+                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentComplete,
+                            m_chatInterface, [this](const QString& summary) {
+                                m_chatInterface->addMessage("System", summary);
+                            });
+                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentError,
+                            m_chatInterface, [this](const QString& err) {
+                                m_chatInterface->addMessage("System", "⚠ " + err);
+                            });
+                }
+            }
+
+            // Initialize chat interface (Qt widgets + model scanning)
+            if (!m_chatInterface) {
+                m_chatInterface = new ChatInterface(this);
+                m_chatInterface->initialize();
+                // Connect chat to engine and orchestrator
+                if (m_agenticEngine) {
+                    m_chatInterface->setAgenticEngine(m_agenticEngine);
+                }
+                if (m_planOrchestrator) {
+                    m_chatInterface->setPlanOrchestrator(m_planOrchestrator);
+                }
+                if (m_zeroDayAgent) {
+                    m_chatInterface->setZeroDayAgent(m_zeroDayAgent);
+                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentStream,
+                            m_chatInterface, [this](const QString& tok) {
+                                m_chatInterface->addMessage("System", tok);
+                            });
+                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentComplete,
+                            m_chatInterface, [this](const QString& summary) {
+                                m_chatInterface->addMessage("System", summary);
+                            });
+                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentError,
+                            m_chatInterface, [this](const QString& err) {
+                                m_chatInterface->addMessage("System", "⚠ " + err);
+                            });
+                }
+                // Chat will be added as dock widget later
+            }
             
             // Initialize terminal pool (Qt widgets + QProcess spawning)
             if (!m_terminalPool) {
@@ -135,6 +187,10 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 m_terminalDock->setWidget(m_terminalPool);
                 addDockWidget(Qt::BottomDockWidgetArea, m_terminalDock);
             }
+
+            // Note: Zero-Day agent is now initialized and ready
+            // User can trigger missions manually via ChatInterface
+            // Auto-start is disabled to avoid blocking on model load
         });
     }
 }
