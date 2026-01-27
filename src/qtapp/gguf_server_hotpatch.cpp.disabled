@@ -1,0 +1,507 @@
+// gguf_server_hotpatch.cpp - Production-ready GGUF server protocol hotpatching
+// Enhanced with JSON robustness, context synchronization, and comprehensive error handling
+#include "gguf_server_hotpatch.hpp"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QDateTime>
+#include <QRegularExpression>
+#include <QDebug>
+#include <QFile>
+#include <algorithm>
+
+// MASM compression external
+extern "C" {
+#ifdef HAS_BRUTAL_GZIP_MASM
+    void* deflate_brutal_masm(const void* data, size_t size, size_t* out_size);
+#endif
+}
+
+GGUFServerHotpatch::GGUFServerHotpatch(QObject* parent)
+    : QObject(parent), m_rateLimitWindowMs(60000) // Default 60 seconds
+{
+    qInfo() << "[ServerHotpatch] GGUF server hotpatcher initialized";
+}
+
+GGUFServerHotpatch::~GGUFServerHotpatch()
+{
+}
+
+void GGUFServerHotpatch::setEnabled(bool enabled)
+{
+    QMutexLocker locker(&m_mutex);
+    m_enabled = enabled;
+    qInfo() << "[ServerHotpatch] Hotpatching" << (enabled ? "enabled" : "disabled");
+}
+
+bool GGUFServerHotpatch::isEnabled() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_enabled;
+}
+
+void GGUFServerHotpatch::addHotpatch(const ServerHotpatch& hotpatch)
+{
+    QMutexLocker locker(&m_mutex);
+    m_hotpatches[hotpatch.name] = hotpatch;
+    qInfo() << "[ServerHotpatch] Added hotpatch:" << hotpatch.name;
+}
+
+void GGUFServerHotpatch::removeHotpatch(const QString& name)
+{
+    QMutexLocker locker(&m_mutex);
+    m_hotpatches.remove(name);
+}
+
+void GGUFServerHotpatch::setHotpatchEnabled(const QString& name, bool enabled)
+{
+    QMutexLocker locker(&m_mutex);
+    if (m_hotpatches.contains(name)) {
+        m_hotpatches[name].enabled = enabled;
+    }
+}
+
+QByteArray GGUFServerHotpatch::applyRequestHotpatches(HotpatchContext& context)
+{
+    if (!m_enabled) {
+        return context.body;
+    }
+    
+    // Ensure the body is parsed once for all request-side hotpatches
+    context.parsedBody = parseRequestBody(context.body);
+
+    return applyHotpatchesAtPoint(HotpatchPoint::PreRequest, context, context.body);
+}
+
+QByteArray GGUFServerHotpatch::applyResponseHotpatches(HotpatchContext& context, 
+                                                     const QByteArray& responseData)
+{
+    if (!m_enabled) {
+        return responseData;
+    }
+    
+    return applyHotpatchesAtPoint(HotpatchPoint::PreResponse, context, responseData);
+}
+
+QByteArray GGUFServerHotpatch::applyStreamingHotpatches(HotpatchContext& context, 
+                                                      const QByteArray& chunk)
+{
+    if (!m_enabled) {
+        return chunk;
+    }
+    
+    context.isStreaming = true;
+    context.chunkIndex++;
+    
+    return applyHotpatchesAtPoint(HotpatchPoint::StreamingChunk, context, chunk);
+}
+
+QByteArray GGUFServerHotpatch::applyHotpatchesAtPoint(HotpatchPoint point,
+                                                      HotpatchContext& context,
+                                                      const QByteArray& data)
+{
+    QMutexLocker locker(&m_mutex);
+    
+    // Select applicable hotpatches
+    QList<ServerHotpatch> applicable = selectApplicableHotpatches(point, context);
+    
+    if (applicable.isEmpty()) {
+        return data;
+    }
+    
+    // Sort by priority
+    sortHotpatchesByPriority(applicable);
+    
+    QByteArray result = data;
+    
+    // Apply each hotpatch
+    for (ServerHotpatch& hotpatch : applicable) {
+        if (!hotpatch.enabled) {
+            continue;
+        }
+        
+        qint64 startTime = QDateTime::currentMSecsSinceEpoch();
+        
+        // Temporarily unlock for the potentially long-running transformation
+        locker.unlock();
+        QByteArray transformed = applyIndividualHotpatch(hotpatch, context, result);
+        locker.relock();
+        
+        if (transformed != result) {
+            result = transformed;
+            
+            // If we transformed a request body, re-parse it for subsequent hotpatches
+            if (point == HotpatchPoint::PreRequest) {
+                context.body = result;
+                context.parsedBody = parseRequestBody(result);
+            }
+            
+            qint64 latency = (QDateTime::currentMSecsSinceEpoch() - startTime) * 1000;
+            
+            // Update hotpatch stats
+            hotpatch.timesApplied++;
+            hotpatch.totalLatencyAdded += latency;
+            hotpatch.lastApplied = QDateTime::currentDateTime();
+            
+            // Update aggregate stats
+            m_stats.patchedRequests++;
+            m_stats.totalLatencyAdded += latency;
+            m_stats.hotpatchUsage[hotpatch.name]++;
+            
+            locker.unlock();
+            emit hotpatchApplied(hotpatch.name, point, latency);
+            locker.relock();
+        }
+    }
+    
+    m_stats.lastActivity = QDateTime::currentDateTime();
+    
+    return result;
+}
+
+QList<GGUFServerHotpatch::ServerHotpatch> GGUFServerHotpatch::selectApplicableHotpatches(
+    HotpatchPoint point,
+    const HotpatchContext& context)
+{
+    QList<ServerHotpatch> applicable;
+    
+    for (const ServerHotpatch& hotpatch : m_hotpatches.values()) {
+        if (!hotpatch.enabled || hotpatch.applicationPoint != point) {
+            continue;
+        }
+        
+        // Check endpoint pattern
+        if (!hotpatch.endpointPattern.isEmpty()) {
+            QRegularExpression regex(hotpatch.endpointPattern);
+            if (!regex.match(context.endpoint).hasMatch()) {
+                continue;
+            }
+        }
+        
+        // Check method pattern
+        if (!hotpatch.methodPattern.isEmpty()) {
+            if (context.method.toUpper() != hotpatch.methodPattern.toUpper()) {
+                continue;
+            }
+        }
+        
+        applicable.append(hotpatch);
+    }
+    
+    return applicable;
+}
+
+void GGUFServerHotpatch::sortHotpatchesByPriority(QList<ServerHotpatch>& hotpatches)
+{
+    std::sort(hotpatches.begin(), hotpatches.end(),
+              [](const ServerHotpatch& a, const ServerHotpatch& b) {
+                  return a.priority > b.priority;
+              });
+}
+
+QByteArray GGUFServerHotpatch::applyIndividualHotpatch(ServerHotpatch& hotpatch,
+                                                       HotpatchContext& context,
+                                                       const QByteArray& data)
+{
+    switch (hotpatch.transformType) {
+        case ServerHotpatch::InjectSystemPrompt:
+            if (!hotpatch.systemPromptInjection.isEmpty()) {
+                return injectSystemPrompt(data, hotpatch.systemPromptInjection);
+            }
+            break;
+            
+        case ServerHotpatch::AdjustTemperature:
+            if (hotpatch.parameterOverrides.contains("temperature")) {
+                double adjustment = hotpatch.parameterOverrides["temperature"].toDouble();
+                return adjustTemperature(data, adjustment);
+            }
+            break;
+            
+        case ServerHotpatch::EnforceMaxTokens:
+            if (hotpatch.parameterOverrides.contains("max_tokens")) {
+                int maxTokens = hotpatch.parameterOverrides["max_tokens"].toInt();
+                return enforceMaxTokens(data, maxTokens);
+            }
+            break;
+            
+        case ServerHotpatch::ModifyBody:
+            if (!hotpatch.bodyTransformation.isEmpty() && !hotpatch.bodyPattern.isEmpty()) {
+                QString dataStr = QString::fromUtf8(data);
+                QRegularExpression regex(hotpatch.bodyPattern);
+                dataStr.replace(regex, hotpatch.bodyTransformation);
+                return dataStr.toUtf8();
+            }
+            break;
+            
+        case ServerHotpatch::CompressResponse:
+            return compressResponse(data);
+            
+        case ServerHotpatch::Custom:
+            if (hotpatch.customTransform) {
+                return hotpatch.customTransform(data, context.parsedBody);
+            }
+            break;
+            
+        default:
+            qWarning() << "[ServerHotpatch] Unknown transform type for hotpatch:" << hotpatch.name;
+            break;
+    }
+    
+    return data;
+}
+
+QByteArray GGUFServerHotpatch::injectSystemPrompt(const QByteArray& requestBody, 
+                                                  const QString& systemPrompt)
+{
+    QJsonObject obj = parseRequestBody(requestBody);
+    if (obj.isEmpty()) {
+        return requestBody;
+    }
+    
+    if (obj.contains("messages")) {
+        QJsonArray messages = obj["messages"].toArray();
+        
+        bool hasSystem = false;
+        for (const QJsonValue& msg : messages) {
+            if (msg.isObject() && msg.toObject()["role"].toString() == "system") {
+                hasSystem = true;
+                break;
+            }
+        }
+        
+        if (!hasSystem) {
+            QJsonObject systemMsg;
+            systemMsg["role"] = "system";
+            systemMsg["content"] = systemPrompt;
+            messages.prepend(systemMsg);
+            obj["messages"] = messages;
+            qInfo() << "[ServerHotpatch] Injected system prompt (Chat format).";
+        }
+    }
+    else if (obj.contains("prompt")) {
+        QString prompt = obj["prompt"].toString();
+        obj["prompt"] = systemPrompt + "\n\n" + prompt.trimmed();
+        qInfo() << "[ServerHotpatch] Injected system prompt (Completion format).";
+    }
+    
+    return QJsonDocument(obj).toJson(QJsonDocument::Compact);
+}
+
+QByteArray GGUFServerHotpatch::adjustTemperature(const QByteArray& requestBody, 
+                                                 double temperatureAdjustment)
+{
+    QJsonObject obj = parseRequestBody(requestBody);
+    if (obj.isEmpty()) {
+        return requestBody;
+    }
+    
+    double currentTemp = obj.value("temperature").toDouble(1.0);
+    double newTemp = qBound(0.0, currentTemp + temperatureAdjustment, 2.0);
+    
+    obj["temperature"] = newTemp;
+    
+    qInfo() << "[ServerHotpatch] Adjusted temperature:" << currentTemp << "→" << newTemp;
+    
+    return QJsonDocument(obj).toJson(QJsonDocument::Compact);
+}
+
+QByteArray GGUFServerHotpatch::enforceMaxTokens(const QByteArray& requestBody, int maxTokens)
+{
+    QJsonObject obj = parseRequestBody(requestBody);
+    if (obj.isEmpty()) {
+        return requestBody;
+    }
+    
+    int currentMax = obj.value("max_tokens").toInt(1000000);
+    
+    if (currentMax > maxTokens) {
+        obj["max_tokens"] = maxTokens;
+        qInfo() << "[ServerHotpatch] Enforced max_tokens:" << currentMax << "→" << maxTokens;
+    }
+    
+    return QJsonDocument(obj).toJson(QJsonDocument::Compact);
+}
+
+QByteArray GGUFServerHotpatch::filterResponseContent(const QByteArray& response, 
+                                                     const QStringList& filters)
+{
+    QString responseStr = QString::fromUtf8(response);
+    
+    for (const QString& filter : filters) {
+        QRegularExpression regex(filter);
+        responseStr.replace(regex, "[FILTERED_BY_HOTPATCH]");
+    }
+    
+    return responseStr.toUtf8();
+}
+
+QByteArray GGUFServerHotpatch::compressResponse(const QByteArray& response)
+{
+#ifdef HAS_BRUTAL_GZIP_MASM
+    size_t compressedSize = 0;
+    void* compressed = deflate_brutal_masm(response.data(), response.size(), &compressedSize);
+    
+    if (compressed && compressedSize < response.size() * 0.7) {
+        QByteArray result(static_cast<char*>(compressed), compressedSize);
+        free(compressed);
+        
+        qInfo() << "[ServerHotpatch] MASM compressed response:" 
+                << response.size() << "→" << compressedSize << "bytes";
+        
+        return result;
+    }
+    
+    if (compressed) {
+        free(compressed);
+    }
+#endif
+    
+    return response;
+}
+
+bool GGUFServerHotpatch::isCached(const QString& cacheKey)
+{
+    QMutexLocker locker(&m_mutex);
+    
+    if (!m_cache.contains(cacheKey)) {
+        return false;
+    }
+    
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (m_cache[cacheKey].expiresAt < now) {
+        m_cache.remove(cacheKey);
+        qDebug() << "[ServerHotpatch] Cache entry expired and removed:" << cacheKey;
+        return false;
+    }
+    
+    return true;
+}
+
+QByteArray GGUFServerHotpatch::getCachedResponse(const QString& cacheKey)
+{
+    QMutexLocker locker(&m_mutex);
+    
+    if (isCached(cacheKey)) {
+        m_stats.cachedResponses++;
+        emit cacheHit(cacheKey);
+        return m_cache[cacheKey].response;
+    }
+    
+    locker.unlock();
+    emit cacheMiss(cacheKey);
+    locker.relock();
+    
+    return QByteArray();
+}
+
+void GGUFServerHotpatch::cacheResponse(const QString& cacheKey, 
+                                       const QByteArray& response, 
+                                       int ttl)
+{
+    if (ttl <= 0) {
+        qWarning() << "[ServerHotpatch] Cannot cache with non-positive TTL:" << ttl;
+        return;
+    }
+
+    QMutexLocker locker(&m_mutex);
+    
+    CacheEntry entry;
+    entry.response = response;
+    entry.expiresAt = QDateTime::currentMSecsSinceEpoch() + (static_cast<qint64>(ttl) * 1000);
+    
+    m_cache[cacheKey] = entry;
+    
+    qInfo() << "[ServerHotpatch] Cached response:" << cacheKey << "TTL:" << ttl << "s";
+}
+
+void GGUFServerHotpatch::clearCache()
+{
+    QMutexLocker locker(&m_mutex);
+    m_cache.clear();
+    qInfo() << "[ServerHotpatch] Cache cleared";
+}
+
+QString GGUFServerHotpatch::generateCacheKey(const HotpatchContext& context)
+{
+    QString key = QString("%1:%2:%3")
+        .arg(context.endpoint)
+        .arg(context.method.toUpper())
+        .arg(QString::number(qHash(context.body)));
+    
+    return key;
+}
+
+void GGUFServerHotpatch::setDefaultParameter(const QString& key, const QVariant& value)
+{
+    QMutexLocker locker(&m_mutex);
+    m_defaultParameters[key] = value;
+    qInfo() << "[ServerHotpatch] Set default parameter:" << key << "=" << value;
+}
+
+void GGUFServerHotpatch::removeDefaultParameter(const QString& key)
+{
+    QMutexLocker locker(&m_mutex);
+    m_defaultParameters.remove(key);
+}
+
+void GGUFServerHotpatch::setRateLimitWindow(int windowSeconds)
+{
+    QMutexLocker locker(&m_mutex);
+    m_rateLimitWindowMs = static_cast<qint64>(windowSeconds) * 1000;
+    qInfo() << "[ServerHotpatch] Rate limit window set to" << windowSeconds << "seconds.";
+}
+
+bool GGUFServerHotpatch::checkRateLimit(const QString& clientAddress, const QString& endpoint)
+{
+    QMutexLocker locker(&m_mutex);
+    
+    if (m_rateLimitWindowMs == 0) {
+        return true;
+    }
+
+    if (!m_rateLimitState.limits.contains(endpoint)) {
+        return true;
+    }
+    
+    int limit = m_rateLimitState.limits[endpoint];
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    qint64 windowStart = now - m_rateLimitWindowMs;
+    
+    QString key = clientAddress + ":" + endpoint;
+    
+    QList<qint64>& timestamps = m_rateLimitState.requestTimestamps[key];
+    timestamps.erase(std::remove_if(timestamps.begin(), timestamps.end(),
+                                   [windowStart](qint64 ts) { return ts < windowStart; }),
+                     timestamps.end());
+    
+    if (timestamps.size() >= limit) {
+        emit rateLimitExceeded(clientAddress, endpoint);
+        qWarning() << "[ServerHotpatch] Rate limit exceeded for" << clientAddress << "on" << endpoint;
+        m_stats.rateLimitBlocks++;
+        return false;
+    }
+    
+    timestamps.append(now);
+    return true;
+}
+
+GGUFServerHotpatch::ServerHotpatchStats GGUFServerHotpatch::getStatistics() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_stats;
+}
+
+QJsonObject GGUFServerHotpatch::parseRequestBody(const QByteArray& body)
+{
+    if (body.isEmpty()) {
+        return QJsonObject();
+    }
+    
+    QJsonDocument doc = QJsonDocument::fromJson(body);
+    if (!doc.isObject()) {
+        qWarning() << "[ServerHotpatch] Failed to parse request body as JSON";
+        return QJsonObject();
+    }
+    
+    return doc.object();
+}
