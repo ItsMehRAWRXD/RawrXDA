@@ -22,6 +22,13 @@ jobs:
       - name: Build Win32 IDE
         run: .\scripts\build.ps1 -Config Release -A x64
 
+      - name: Sovereign Dashboard Gate
+        shell: pwsh
+        run: |
+          Write-Host "Running Sovereign Dashboard Gate (8-point validation)..."
+          .\scripts\sovereign_dashboard_gate.ps1 -SkipKernel
+        continue-on-error: true  # Gate advisory on main until NVMe Oracle available in CI
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
