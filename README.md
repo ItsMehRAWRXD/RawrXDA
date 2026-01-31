@@ -41,7 +41,7 @@ Originally built on the Qt6 framework, RawrXD has evolved into a lean, "Direct-t
 
 ---
 
-## 🏗️ Architecture Architecture
+## 🏗️ Architecture
 
 ### Core Engine (Native C++)
 ```
