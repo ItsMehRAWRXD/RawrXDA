@@ -23,11 +23,14 @@
 - `ide_agent_bridge.cpp/hpp`: Controller logic using callbacks.
 - `agentic_copilot_bridge.cpp/hpp`: Bridge logic.
 
-## Remaining Candidates
-- `agentic_failure_detector.cpp/hpp`
-- `agentic_puppeteer.cpp/hpp`
-- `release_agent.cpp/hpp`
-- `self_test_gate.cpp/hpp`
-- `sign_binary.cpp/hpp`
-- `sentry_integration.cpp/hpp`
-- `planner.cpp/hpp` & `meta_planner.cpp/hpp` (likely pure, but verify)
+### Agentic Subsystems (Refactored Jan 30, 2026)
+- `agentic_failure_detector.cpp/hpp`: Logic-driven failure analysis.
+- `agentic_puppeteer.cpp/hpp`: Autonomous tool interaction.
+- `release_agent.cpp/hpp`: Automated delivery workflows.
+- `self_test_gate.cpp/hpp`: Quality gate enforcement.
+- `sign_binary.cpp/hpp`: Native Win32 code signing.
+- `sentry_integration.cpp/hpp`: WinHTTP error reporting.
+- `planner.cpp/hpp` & `meta_planner.cpp/hpp`: Core reasoning loop.
+
+## Status: 100% Core Files Refactored
+All identified files containing Qt dependencies have been successfully transitioned to pure C++20/23 and Win32 APIs. Build verification is the next step.
