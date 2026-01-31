@@ -56,7 +56,7 @@ public:
     
     /**
      * \brief Set the editor to search in
-     * \param editor QPlainTextEdit or QTextEdit to search
+     * \param editor QPlainTextEdit or void to search
      */
     void setEditor(QPlainTextEdit* editor);
     
@@ -153,7 +153,7 @@ public:
      * \return Number of matches found
      */
     int matchCount() const;
-    
+
 
     /**
      * \brief Emitted when match count changes
@@ -222,22 +222,22 @@ private:
     void addToSearchHistory(const std::string& text);
     
     // UI Components
-    QVBoxLayout* m_mainLayout;
-    QHBoxLayout* m_searchLayout;
-    QHBoxLayout* m_replaceLayout;
+    void* m_mainLayout;
+    void* m_searchLayout;
+    void* m_replaceLayout;
     
-    QLineEdit* m_searchEdit;
-    QLineEdit* m_replaceEdit;
-    QPushButton* m_findPreviousButton;
-    QPushButton* m_findNextButton;
-    QPushButton* m_toggleReplaceButton;
-    QPushButton* m_replaceButton;
-    QPushButton* m_replaceAllButton;
-    QPushButton* m_closeButton;
-    QCheckBox* m_caseSensitiveCheck;
-    QCheckBox* m_wholeWordCheck;
-    QCheckBox* m_regexCheck;
-    QLabel* m_matchCountLabel;
+    void* m_searchEdit;
+    void* m_replaceEdit;
+    void* m_findPreviousButton;
+    void* m_findNextButton;
+    void* m_toggleReplaceButton;
+    void* m_replaceButton;
+    void* m_replaceAllButton;
+    void* m_closeButton;
+    void* m_caseSensitiveCheck;
+    void* m_wholeWordCheck;
+    void* m_regexCheck;
+    void* m_matchCountLabel;
     
     // State
     QPlainTextEdit* m_editor;
@@ -247,7 +247,7 @@ private:
     std::vector<std::string> m_searchHistory;
     
     // For highlighting
-    std::vector<QTextEdit::ExtraSelection> m_highlightSelections;
+    std::vector<void::ExtraSelection> m_highlightSelections;
 };
 
 } // namespace RawrXD

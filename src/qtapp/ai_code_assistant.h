@@ -24,7 +24,7 @@ public:
         std::string type;           // Type: "completion", "refactoring", "explanation", "bugfix", "optimization"
         std::string context;        // Original code context
         float confidence;       // Confidence score 0.0-1.0
-        qint64 latency_ms;      // Response latency in milliseconds
+        int64_t latency_ms;      // Response latency in milliseconds
         std::chrono::system_clock::time_point timestamp;    // When the suggestion was generated
     };
 
@@ -81,20 +81,20 @@ public:
     void agentActionExecuted(const std::string &action, const std::string &result);
     
     // Metrics and logging
-    void latencyMeasured(qint64 milliseconds);
+    void latencyMeasured(int64_t milliseconds);
     void errorOccurred(const std::string &error);
 
 private:
     void onNetworkReply();
-    void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
-    void onProcessError(QProcess::ProcessError error);
+    void onProcessFinished(int exitCode, void*::ExitStatus exitStatus);
+    void onProcessError(void*::ProcessError error);
     void onProcessOutput();
 
 private:
     // Network helpers
     void performOllamaRequest(const std::string &systemPrompt, const std::string &userPrompt, 
                              const std::string &suggestType);
-    void setupNetworkRequest(QNetworkRequest &request);
+    void setupNetworkRequest(void* &request);
     
     // File system helpers
     std::vector<std::string> recursiveFileSearch(const std::string &directory, const std::string &pattern);
@@ -118,7 +118,7 @@ private:
 
     // Members
     void* *m_networkManager;
-    QProcess *m_process;
+    void* *m_process;
     std::string m_ollamaUrl;
     std::string m_model;
     float m_temperature;
@@ -130,4 +130,5 @@ private:
 };
 
 #endif // AI_CODE_ASSISTANT_H
+
 

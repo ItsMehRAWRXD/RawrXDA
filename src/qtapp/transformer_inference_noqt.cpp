@@ -31,9 +31,8 @@ void TransformerInference::freeContext() {
 
 bool TransformerInference::loadWeights(const std::map<std::string, std::pair<std::vector<uint8_t>, int>>& tensorCache,
                                        int nLayers, int nEmbd, int nHead, int nVocab) {
-    std::cerr << "Loading transformer weights: layers=" << nLayers 
-              << " embd=" << nEmbd << " heads=" << nHead << " vocab=" << nVocab << "\n";
-    
+
+
     m_nLayers = nLayers;
     m_nEmbd = nEmbd;
     m_nHead = nHead;
@@ -49,7 +48,7 @@ bool TransformerInference::loadWeights(const std::map<std::string, std::pair<std
     
     m_ctx = ggml_init(params);
     if (!m_ctx) {
-        std::cerr << "Failed to initialize ggml context\n";
+        
         return false;
     }
     
@@ -143,11 +142,11 @@ bool TransformerInference::loadWeights(const std::map<std::string, std::pair<std
         }
         
         m_ready = true;
-        std::cerr << "Successfully loaded transformer weights\n";
+        
         return true;
         
     } catch (const std::exception& e) {
-        std::cerr << "Error loading weights: " << e.what() << "\n";
+        
         freeContext();
         return false;
     }

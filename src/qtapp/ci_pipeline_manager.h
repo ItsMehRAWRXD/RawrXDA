@@ -47,7 +47,7 @@ private:
         std::string name;
         void* config;
         PipelineStatus status;
-        QProcess* process;
+        void** process;
         std::chrono::system_clock::time_point startTime;
         std::chrono::system_clock::time_point endTime;
     };

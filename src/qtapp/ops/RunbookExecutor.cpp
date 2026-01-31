@@ -7,7 +7,7 @@
 
 namespace {
 void LogInfo(const std::string& event, const std::string& detail) {
-    std::cout << "[INFO] ops.runbook " << event << " " << detail << "\n";
+    
 }
 }
 

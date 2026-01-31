@@ -96,22 +96,22 @@ private:
     int m_refresh_interval = 500;  // ms
 
     // Summary labels
-    QLabel *m_total_cost_label;
-    QLabel *m_total_requests_label;
-    QLabel *m_avg_latency_label;
-    QLabel *m_avg_success_rate_label;
-    QLabel *m_active_model_label;
+    void *m_total_cost_label;
+    void *m_total_requests_label;
+    void *m_avg_latency_label;
+    void *m_avg_success_rate_label;
+    void *m_active_model_label;
 
     // Charts
-    QChartView *m_cost_chart_view;
+// REMOVED_QT:     QChartView *m_cost_chart_view;
     QChart *m_cost_chart;
     QPieSeries *m_cost_pie_series;
 
-    QChartView *m_latency_chart_view;
+// REMOVED_QT:     QChartView *m_latency_chart_view;
     QChart *m_latency_chart;
     QBarSeries *m_latency_bar_series;
 
-    QChartView *m_success_rate_chart_view;
+// REMOVED_QT:     QChartView *m_success_rate_chart_view;
     QChart *m_success_rate_chart;
     QLineSeries *m_success_rate_line_series;
 
@@ -122,7 +122,7 @@ private:
 
     // Historical data for trend charts
     std::vector<double> m_success_rate_history;
-    std::vector<qint64> m_timestamp_history;
+    std::vector<int64_t> m_timestamp_history;
 
     // State
     std::map<std::string, double> m_cost_by_model;
@@ -131,4 +131,5 @@ private:
 };
 
 #endif // METRICS_DASHBOARD_H
+
 

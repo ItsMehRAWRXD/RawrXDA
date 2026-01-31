@@ -25,7 +25,7 @@ AskModeHandler::~AskModeHandler() = default;
 
 void AskModeHandler::askQuestion(const std::string& question, const std::string& context)
 {
-    if (question.isEmpty()) {
+    if (question.empty()) {
         qaError("Question cannot be empty");
         return;
     }
@@ -43,7 +43,7 @@ void AskModeHandler::askQuestion(const std::string& question, const std::string&
     researchStarted();
 
     // Research relevant files if context not provided
-    if (context.isEmpty()) {
+    if (context.empty()) {
         researchRelevantFiles(question);
     }
 
@@ -73,7 +73,7 @@ void AskModeHandler::askQuestion(const std::string& question, const std::string&
 
 void AskModeHandler::refineAnswer(const std::string& feedback)
 {
-    if (m_lastAnswer.text.isEmpty()) {
+    if (m_lastAnswer.text.empty()) {
         qaError("No previous answer to refine");
         return;
     }
@@ -106,7 +106,7 @@ void AskModeHandler::verifyAnswer(bool verified)
     }
 }
 
-void AskModeHandler::onStreamToken(qint64 reqId, const std::string& token)
+void AskModeHandler::onStreamToken(int64_t reqId, const std::string& token)
 {
     if (reqId != m_currentRequestId || !m_isAnswering) {
         return;
@@ -127,7 +127,7 @@ void AskModeHandler::onStreamToken(qint64 reqId, const std::string& token)
     }
 }
 
-void AskModeHandler::onError(qint64 reqId, const std::string& error)
+void AskModeHandler::onError(int64_t reqId, const std::string& error)
 {
     if (reqId != m_currentRequestId) {
         return;
@@ -140,7 +140,7 @@ void AskModeHandler::onError(qint64 reqId, const std::string& error)
 
 void AskModeHandler::parseAnswer()
 {
-    if (m_accumulatedText.isEmpty()) {
+    if (m_accumulatedText.empty()) {
         qaError("No answer content received");
         m_isAnswering = false;
         return;
@@ -165,7 +165,7 @@ void AskModeHandler::parseAnswer()
 
         for (const auto& line : lines) {
             std::string trimmed = line.trimmed();
-            if (!trimmed.isEmpty() && trimmed.startsWith('-')) {
+            if (!trimmed.empty() && trimmed.startsWith('-')) {
                 answer.citations.append(trimmed.mid(1).trimmed());
             }
         }
@@ -239,4 +239,6 @@ void AskModeHandler::researchRelevantFiles(const std::string& question)
     // In a real implementation, the planner would search for relevant files
     researchProgress(std::string("Searching for files matching: %1")));
 }
+
+
 

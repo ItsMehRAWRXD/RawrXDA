@@ -15,7 +15,7 @@
 
 class ActivityBarButton;
 
-class ActivityBar : public QFrame
+class ActivityBar : public void
 {
 
 public:
@@ -53,8 +53,8 @@ public:
     ActivityBarButton* button(ViewType view) const;
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(void*  event) override;
+    void resizeEvent(void*  event) override;
 
 
     /**

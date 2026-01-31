@@ -72,7 +72,7 @@ bool SelfTest::runAll() {
 }
 
 void SelfTest::log(const std::string& msg) {
-    std::cout << "[SelfTest] " << msg << std::endl;
+    
     m_output += msg + "\n";
 }
 

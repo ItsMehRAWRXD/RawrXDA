@@ -49,7 +49,7 @@ public:
     std::string convertedModelPath() const { return m_convertedPath; }
 
 protected:
-    void closeEvent(QCloseEvent* event) override;
+    void closeEvent(void*  event) override;
 
 private:
     /**
@@ -101,18 +101,18 @@ private:
     void hideInfoPanel();
     void parseProgressFromOutput(const std::string& output);
     bool verifyConvertedModelExists();
-    void logConversionHistory(bool success, qint64 durationMs);
+    void logConversionHistory(bool success, int64_t durationMs);
     
     // UI elements
-    QLabel* m_titleLabel;
-    QLabel* m_messageLabel;
-    QTextEdit* m_detailsText;
-    QProgressBar* m_progressBar;
-    QLabel* m_statusLabel;
-    QPushButton* m_convertButton;
-    QPushButton* m_cancelButton;
-    QPushButton* m_cancelConversionButton;
-    QPushButton* m_moreInfoButton;
+    void* m_titleLabel;
+    void* m_messageLabel;
+    void* m_detailsText;
+    void* m_progressBar;
+    void* m_statusLabel;
+    void* m_convertButton;
+    void* m_cancelButton;
+    void* m_cancelConversionButton;
+    void* m_moreInfoButton;
     void* m_infoPanel;
     
     // State
@@ -129,8 +129,9 @@ private:
     int m_conversionStage = 0;  // Track which stage: 0=setup, 1=clone, 2=build, 3=convert
     
     // Progress tracking
-    qint64 m_conversionStartTime = 0;  // Timestamp when conversion started
+    int64_t m_conversionStartTime = 0;  // Timestamp when conversion started
     int m_chunksProcessed = 0;  // Current chunk count from quantization output
     int m_totalChunks = 0;      // Total chunks to process
 };
+
 

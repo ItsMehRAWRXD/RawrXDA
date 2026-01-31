@@ -1,7 +1,7 @@
 #include "TerminalManager.h"
 
 TerminalManager::TerminalManager(void* parent)
-    : void(parent), m_process(new QProcess(this)), m_shellType(PowerShell)
+    : void(parent), m_process(new void*(this)), m_shellType(PowerShell)
 {
 // Qt connect removed
 // Qt connect removed
@@ -13,7 +13,7 @@ TerminalManager::~TerminalManager() = default;
 
 bool TerminalManager::start(ShellType shell)
 {
-    if (m_process->state() != QProcess::NotRunning) {
+    if (m_process->state() != void*::NotRunning) {
         return false; // already running
     }
 
@@ -36,7 +36,7 @@ bool TerminalManager::start(ShellType shell)
 
 void TerminalManager::stop()
 {
-    if (m_process->state() == QProcess::Running) {
+    if (m_process->state() == void*::Running) {
         m_process->terminate();
         if (!m_process->waitForFinished(2000)) {
             m_process->kill();
@@ -44,19 +44,19 @@ void TerminalManager::stop()
     }
 }
 
-qint64 TerminalManager::pid() const
+int64_t TerminalManager::pid() const
 {
     return m_process->processId();
 }
 
 bool TerminalManager::isRunning() const
 {
-    return m_process->state() == QProcess::Running;
+    return m_process->state() == void*::Running;
 }
 
 void TerminalManager::writeInput(const std::vector<uint8_t>& data)
 {
-    if (m_process->state() == QProcess::Running) {
+    if (m_process->state() == void*::Running) {
         m_process->write(data);
         m_process->write("\n");
         // Qt6 removed flush() - write() already flushes automatically
@@ -80,8 +80,9 @@ void TerminalManager::onProcessStarted()
     started();
 }
 
-void TerminalManager::onProcessFinished(int exitCode, QProcess::ExitStatus status)
+void TerminalManager::onProcessFinished(int exitCode, void*::ExitStatus status)
 {
     finished(exitCode, status);
 }
+
 

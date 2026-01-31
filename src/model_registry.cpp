@@ -66,31 +66,31 @@ void ModelRegistry::setupDatabase()
 
 void ModelRegistry::setupUI()
 {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     mainLayout->setContentsMargins(8, 8, 8, 8);
     mainLayout->setSpacing(8);
 
     // ===== Top Controls =====
-    QHBoxLayout* topLayout = new QHBoxLayout();
+    void* topLayout = new void();
 
-    m_searchEdit = new QLineEdit(this);
+    m_searchEdit = new void(this);
     m_searchEdit->setPlaceholderText("Search models...");
     topLayout->addWidget(m_searchEdit);
 
-    m_filterCombo = new QComboBox(this);
+    m_filterCombo = new void(this);
     m_filterCombo->addItem("All Models", "all");
     m_filterCombo->addItem("Active Only", "active");
     m_filterCombo->addItem("Recent (Last 7 days)", "recent");
     m_filterCombo->addItem("High Performance (Perplexity < 50)", "highperf");
     topLayout->addWidget(m_filterCombo);
 
-    m_refreshButton = new QPushButton("Refresh", this);
+    m_refreshButton = new void("Refresh", this);
     topLayout->addWidget(m_refreshButton);
 
     mainLayout->addLayout(topLayout);
 
     // ===== Table Widget =====
-    m_tableWidget = new QTableWidget(this);
+    m_tableWidget = nullptr;
     m_tableWidget->setColumnCount(10);
     m_tableWidget->setHorizontalHeaderLabels({
         "ID", "Name", "Created", "Base Model", "Dataset",
@@ -119,30 +119,30 @@ void ModelRegistry::setupUI()
     mainLayout->addWidget(m_tableWidget, 1); // Stretch factor
 
     // ===== Action Buttons =====
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     buttonLayout->addStretch();
 
-    m_activateButton = new QPushButton("Set Active", this);
+    m_activateButton = new void("Set Active", this);
     m_activateButton->setEnabled(false);
     buttonLayout->addWidget(m_activateButton);
 
-    m_compareButton = new QPushButton("Compare", this);
+    m_compareButton = new void("Compare", this);
     m_compareButton->setEnabled(false);
     buttonLayout->addWidget(m_compareButton);
 
-    m_exportButton = new QPushButton("Export Metadata", this);
+    m_exportButton = new void("Export Metadata", this);
     buttonLayout->addWidget(m_exportButton);
 
-    m_deleteButton = new QPushButton("Delete", this);
+    m_deleteButton = new void("Delete", this);
     m_deleteButton->setEnabled(false);
-    m_deleteButton->setStyleSheet("QPushButton { background-color: #f44336; color: white; }");
+    m_deleteButton->setStyleSheet("void { background-color: #f44336; color: white; }");
     buttonLayout->addWidget(m_deleteButton);
 
     mainLayout->addLayout(buttonLayout);
 
     // ===== Status Bar =====
-    m_statusLabel = new QLabel("Ready", this);
-    m_statusLabel->setStyleSheet("QLabel { color: gray; font-style: italic; }");
+    m_statusLabel = new void("Ready", this);
+    m_statusLabel->setStyleSheet("void { color: gray; font-style: italic; }");
     mainLayout->addWidget(m_statusLabel);
 }
 
@@ -203,41 +203,41 @@ void ModelRegistry::populateTable(const std::vector<ModelVersion>& models)
         m_tableWidget->insertRow(row);
 
         // ID
-        QTableWidgetItem* idItem = new QTableWidgetItem(std::string::number(model.id));
+        QTableWidgetItem* idItem = nullptr);
         idItem->setData(//UserRole, model.id);
         m_tableWidget->setItem(row, 0, idItem);
 
         // Name
-        m_tableWidget->setItem(row, 1, new QTableWidgetItem(model.name));
+        m_tableWidget->setItem(row, 1, nullptr);
 
         // Created
-        m_tableWidget->setItem(row, 2, new QTableWidgetItem(formatTimestamp(model.createdAt)));
+        m_tableWidget->setItem(row, 2, nullptr));
 
         // Base Model
         std::string baseModelShort = std::filesystem::path(model.baseModel).fileName();
-        m_tableWidget->setItem(row, 3, new QTableWidgetItem(baseModelShort));
+        m_tableWidget->setItem(row, 3, nullptr);
 
         // Dataset
         std::string datasetShort = std::filesystem::path(model.dataset).fileName();
-        m_tableWidget->setItem(row, 4, new QTableWidgetItem(datasetShort));
+        m_tableWidget->setItem(row, 4, nullptr);
 
         // Loss
-        m_tableWidget->setItem(row, 5, new QTableWidgetItem(std::string::number(model.finalLoss, 'f', 4)));
+        m_tableWidget->setItem(row, 5, nullptr));
 
         // Perplexity
-        m_tableWidget->setItem(row, 6, new QTableWidgetItem(std::string::number(model.perplexity, 'f', 2)));
+        m_tableWidget->setItem(row, 6, nullptr));
 
         // Epochs
-        m_tableWidget->setItem(row, 7, new QTableWidgetItem(std::string::number(model.epochs)));
+        m_tableWidget->setItem(row, 7, nullptr));
 
         // Size
-        m_tableWidget->setItem(row, 8, new QTableWidgetItem(formatFileSize(model.fileSize)));
+        m_tableWidget->setItem(row, 8, nullptr));
 
         // Active
-        QTableWidgetItem* activeItem = new QTableWidgetItem(model.isActive ? "✓" : "");
+        QTableWidgetItem* activeItem = nullptr;
         activeItem->setTextAlignment(//AlignCenter);
         if (model.isActive) {
-            activeItem->setBackground(QBrush(QColor(76, 175, 80, 50))); // Light green
+            activeItem->setBackground(QBrush(uint32_t(76, 175, 80, 50))); // Light green
         }
         m_tableWidget->setItem(row, 9, activeItem);
     }
@@ -402,7 +402,7 @@ void ModelRegistry::onExportClicked()
 
 void ModelRegistry::onSearchTextChanged(const std::string& text)
 {
-    if (text.isEmpty()) {
+    if (text.empty()) {
         populateTable(m_models);
         return;
     }
@@ -438,7 +438,7 @@ void ModelRegistry::onFilterChanged(int index)
         } else if (filter == "active") {
             include = model.isActive;
         } else if (filter == "recent") {
-            qint64 daysSinceCreation = model.createdAt.daysTo(std::chrono::system_clock::time_point::currentDateTime());
+            int64_t daysSinceCreation = model.createdAt.daysTo(std::chrono::system_clock::time_point::currentDateTime());
             include = (daysSinceCreation <= 7);
         } else if (filter == "highperf") {
             include = (model.perplexity < 50.0f && model.perplexity > 0.0f);
@@ -456,7 +456,7 @@ void ModelRegistry::onFilterChanged(int index)
 void ModelRegistry::onRowSelectionChanged()
 {
     std::vector<QTableWidgetItem*> selected = m_tableWidget->selectedItems();
-    if (selected.isEmpty()) {
+    if (selected.empty()) {
         m_selectedModelId = -1;
         m_activateButton->setEnabled(false);
         m_compareButton->setEnabled(false);
@@ -480,7 +480,7 @@ void ModelRegistry::onRowSelectionChanged()
     }
 }
 
-std::string ModelRegistry::formatFileSize(qint64 bytes) const
+std::string ModelRegistry::formatFileSize(int64_t bytes) const
 {
     if (bytes < 1024) {
         return std::string("%1 B");
@@ -500,4 +500,5 @@ std::string ModelRegistry::formatTimestamp(const std::chrono::system_clock::time
     }
     return dt.toString("yyyy-MM-dd hh:mm");
 }
+
 

@@ -466,7 +466,7 @@ ggml_backend_t ggml_backend_metal_init(void) {
 
     ggml_metal_t ctx = ggml_metal_init(ctx_dev);
     if (ctx == NULL) {
-        GGML_LOG_ERROR("%s: error: failed to allocate context\n", __func__);
+        GGML_
         return NULL;
     }
 
@@ -558,7 +558,7 @@ static ggml_backend_t ggml_backend_metal_device_init(ggml_backend_dev_t dev, con
 
     ggml_metal_t ctx = ggml_metal_init(ctx_dev);
     if (ctx == NULL) {
-        GGML_LOG_ERROR("%s: error: failed to allocate context\n", __func__);
+        GGML_
         return NULL;
     }
 

@@ -78,7 +78,7 @@ std::string AutoBootstrap::grabWish() {
     }
     
     // 3. Console Input (Fallback)
-    std::cout << "\n[RawrXD Agent] What should I build / fix / ship? > ";
+    
     std::string typed;
     std::getline(std::cin, typed);
     
@@ -104,7 +104,7 @@ void AutoBootstrap::startWithWishInternal(const std::string& wish) {
     json plan = planner.plan(wish);
 
     if (plan.empty()) {
-        std::cout << "[Agent] I don't know how to do that yet." << std::endl;
+        
         if (onExecutionCompleted) onExecutionCompleted(false);
         return;
     }
@@ -128,7 +128,7 @@ bool AutoBootstrap::safetyGate(const std::string& wish) {
         std::string lowerWord = word; // Assuming blacklist is already lower
         // .. actually safer to just do a find
         if (lowerWish.find(word) != std::string::npos) {
-            std::cout << "[Agent Safety] Blocked dangerous operation: " << word << std::endl;
+            
             return false;
         }
     }
@@ -184,8 +184,8 @@ void AutoBootstrap::executePlan(const std::string& wish, const json& plan) {
         std::string type = v.value("type", "");
         summary += "• " + type + "\n";
     }
-    
-    std::cout << "Execution plan for " << wish << ":\n" << summary << std::endl;
+
+
     if (onPlanGenerated) onPlanGenerated(summary);
     
     bool headless = false;
@@ -215,9 +215,8 @@ void AutoBootstrap::executePlan(const std::string& wish, const json& plan) {
         for (const auto& v : plan) {
             json t = v;
             std::string type = t.value("type", "");
-            
-            std::cout << "Executing task: " << type << std::endl;
-            
+
+
             if (type == "add_kernel") {
                 success = patch.addKernel(
                     t.value("target", ""), 
@@ -268,13 +267,13 @@ void AutoBootstrap::executePlan(const std::string& wish, const json& plan) {
             }
             
             if (!success) {
-                std::cerr << "Task failed: " << type << std::endl;
+                
                 if (onExecutionCompleted) onExecutionCompleted(false);
                 return;
             }
         }
-        
-        std::cout << "All tasks completed successfully" << std::endl;
+
+
         if (onExecutionCompleted) onExecutionCompleted(true);
     }).detach();
 }

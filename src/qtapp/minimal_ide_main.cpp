@@ -6,16 +6,16 @@
 int main(int argc, char* argv[])
 {
     try {
-        // Set up application attributes before QApplication creation
-        QApplication::setAttribute(//AA_EnableHighDpiScaling);
-        QApplication::setAttribute(//AA_UseHighDpiPixmaps);
+        // Set up application attributes before void creation
+        void::setAttribute(//AA_EnableHighDpiScaling);
+        void::setAttribute(//AA_UseHighDpiPixmaps);
         
-        QApplication app(argc, argv);
+        void app(argc, argv);
         app.setApplicationName("RawrXD-Minimal-IDE");
         app.setApplicationVersion("1.0.13");
         app.setOrganizationName("RawrXD");
-        
-        
+
+
         MainWindowMinimal window;
         
         window.show();

@@ -6,7 +6,7 @@
  */
 struct UnifiedRequest {
     std::string prompt;
-    qint64  reqId;
+    int64_t  reqId;
     std::string backend;   // "local" | "llama" | "openai" | "claude" | "gemini"
     std::string apiKey;
 };
@@ -42,23 +42,23 @@ public:
      * @param reqId Request identifier
      * @param token Single token or character from model
      */
-    void streamToken(qint64 reqId, const std::string& token);
+    void streamToken(int64_t reqId, const std::string& token);
     
     /**
      * @brief Emitted when streaming inference completes
      * @param reqId Request identifier
      */
-    void streamFinished(qint64 reqId);
+    void streamFinished(int64_t reqId);
     
     /**
      * @brief Emitted on inference error
      * @param reqId Request identifier
      * @param error Error message
      */
-    void error(qint64 reqId, const std::string& error);
+    void error(int64_t reqId, const std::string& error);
 
 private:
-    void onLocalDone(qint64 id, const std::string& answer);
+    void onLocalDone(int64_t id, const std::string& answer);
 
 private:
     void submitLlamaCpp(const UnifiedRequest& req);
@@ -69,4 +69,5 @@ private:
     void** m_nam{nullptr};
     void* m_localEngine{nullptr};
 };
+
 

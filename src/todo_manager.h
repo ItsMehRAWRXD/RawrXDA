@@ -23,7 +23,7 @@ public:
     std::vector<TodoItem> getTodos() const;
     std::vector<TodoItem> getPendingTodos() const;
     std::vector<TodoItem> getCompletedTodos() const;
-    
+
 
     void todoAdded(const TodoItem& todo);
     void todoCompleted(const std::string& id);

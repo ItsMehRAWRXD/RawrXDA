@@ -250,7 +250,7 @@ void MarketplaceUIView::setupSearchTab() {
     void* searchTab = new // Widget();
     void* layout = new void(searchTab);
     
-    m_searchResultsList = new QListWidget();
+    m_searchResultsList = nullptr;
     m_searchStatus = new void("Enter a search query to find extensions");
     m_searchStatus->setStyleSheet("void { color: gray; font-style: italic; }");
     
@@ -317,7 +317,7 @@ void MarketplaceUIView::setupInstalledTab() {
     void* installedTab = new // Widget();
     void* layout = new void(installedTab);
     
-    m_installedExtensionsList = new QListWidget();
+    m_installedExtensionsList = nullptr;
     m_uninstallSelectedButton = new void("Uninstall Selected");
     
     layout->addWidget(m_installedExtensionsList);
@@ -391,7 +391,7 @@ void MarketplaceUIView::updateExtensionList(const void*& extensions) {
         
         std::string itemText = std::string("%1\nby %2 (v%3)");
         
-        QListWidgetItem* item = new QListWidgetItem(itemText);
+        QListWidgetItem* item = nullptr;
         std::string extensionId = extension["extensionId"].toString();
         if (extensionId.empty()) {
             extensionId = extension["name"].toString();
@@ -442,7 +442,7 @@ void MarketplaceUIView::updateInstalledExtensionsList(const void*& extensions) {
         
         std::string itemText = std::string("%1 (v%2) by %3");
         
-        QListWidgetItem* item = new QListWidgetItem(itemText);
+        QListWidgetItem* item = nullptr;
         item->setData(UserRole, extension["id"].toString());
         
         m_installedExtensionsList->addItem(item);

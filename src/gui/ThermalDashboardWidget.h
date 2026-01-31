@@ -31,8 +31,8 @@ public:
     void thermalWarning(int driveIndex, int tempC);
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(void*  event) override;
+    void resizeEvent(void*  event) override;
 
 private:
     void onTimerTick();
@@ -41,7 +41,7 @@ private:
     void loadDll();
     void updateLayout();
     std::string tierName(unsigned int tier) const;
-    QColor tempColor(double tempC) const;
+    uint32_t tempColor(double tempC) const;
 
     // Timer for periodic refresh
     void** m_timer;

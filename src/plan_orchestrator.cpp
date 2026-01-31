@@ -50,14 +50,14 @@ PlanningResult PlanOrchestrator::generatePlan(const std::string& prompt,
     
     // Gather context files if not provided
     std::vector<std::string> filesToAnalyze = contextFiles;
-    if (filesToAnalyze.isEmpty()) {
+    if (filesToAnalyze.empty()) {
         filesToAnalyze = gatherContextFiles(workspaceRoot);
     }
     
     // Build planning prompt with context
     std::string planningPrompt = buildPlanningPrompt(prompt, filesToAnalyze);
-    
-    
+
+
     // TODO: Call inference engine to generate plan
     // For now, return a stub result
     result.success = true;
@@ -170,7 +170,7 @@ std::string PlanOrchestrator::buildPlanningPrompt(const std::string& userPrompt,
     prompt += "CONTEXT FILES:\n";
     for (const std::string& filePath : contextFiles) {
         std::string content = readFileContent(filePath);
-        if (!content.isEmpty()) {
+        if (!content.empty()) {
             prompt += "\n=== " + filePath + " ===\n";
             prompt += content.left(2000);  // Limit to 2000 chars per file
             if (content.length() > 2000) {
@@ -234,7 +234,7 @@ PlanningResult PlanOrchestrator::parsePlanningResponse(const std::string& respon
     }
     
     result.estimatedChanges = result.tasks.size();
-    result.success = !result.tasks.isEmpty();
+    result.success = !result.tasks.empty();
     
     return result;
 }
@@ -391,4 +391,5 @@ bool PlanOrchestrator::writeFileContent(const std::string& filePath, const std::
 }
 
 } // namespace RawrXD
+
 

@@ -148,7 +148,7 @@ private:
     // Threading control
     mutable std::mutex m_mutex;
     mutable std::shared_mutex m_statsLock;
-    QSemaphore m_pauseSemaphore{0};
+    std::counting_semaphore<1024> m_pauseSemaphore{0};
     QAtomicInt m_running{0};
     QAtomicInt m_paused{0};
     QAtomicInt m_stopRequested{0};

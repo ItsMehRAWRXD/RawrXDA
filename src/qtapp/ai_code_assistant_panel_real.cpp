@@ -3,7 +3,7 @@
 
 
 AICodeAssistantPanel::AICodeAssistantPanel(void *parent)
-    : QDockWidget("AI Code Assistant", parent),
+    : void("AI Code Assistant", parent),
       assistant_(nullptr),
       streaming_in_progress_(false)
 {
@@ -18,22 +18,22 @@ void AICodeAssistantPanel::setupUI() {
     void *central = new void(this);
     setWidget(central);
     
-    QVBoxLayout *main_layout = new QVBoxLayout(central);
+    void *main_layout = new void(central);
     main_layout->setContentsMargins(5, 5, 5, 5);
     main_layout->setSpacing(5);
     
     // ============================================================
     // Status Bar
     // ============================================================
-    QHBoxLayout *status_layout = new QHBoxLayout();
-    status_indicator_ = new QLabel("●");
+    void *status_layout = new void();
+    status_indicator_ = new void("●");
     status_indicator_->setStyleSheet("color: red; font-size: 14px;");
     status_indicator_->setToolTip("Ollama connection status");
     
-    model_label_ = new QLabel("Model: Disconnected");
+    model_label_ = new void("Model: Disconnected");
     model_label_->setStyleSheet("font-weight: bold;");
     
-    latency_label_ = new QLabel("Latency: -- ms");
+    latency_label_ = new void("Latency: -- ms");
     latency_label_->setStyleSheet("color: gray;");
     
     status_layout->addWidget(status_indicator_);
@@ -45,13 +45,13 @@ void AICodeAssistantPanel::setupUI() {
     // ============================================================
     // Configuration Panel
     // ============================================================
-    QGroupBox *config_group = new QGroupBox("Configuration", this);
-    QGridLayout *config_layout = new QGridLayout(config_group);
+    void *config_group = new void("Configuration", this);
+    void *config_layout = new void(config_group);
     config_layout->setSpacing(3);
     
     // Suggestion Type
-    config_layout->addWidget(new QLabel("Suggestion Type:"), 0, 0);
-    suggestion_type_selector_ = new QComboBox();
+    config_layout->addWidget(new void("Suggestion Type:"), 0, 0);
+    suggestion_type_selector_ = new void();
     suggestion_type_selector_->addItem("Code Completion", 0);
     suggestion_type_selector_->addItem("Refactoring", 1);
     suggestion_type_selector_->addItem("Explanation", 2);
@@ -60,14 +60,14 @@ void AICodeAssistantPanel::setupUI() {
     config_layout->addWidget(suggestion_type_selector_, 0, 1);
     
     // Temperature
-    config_layout->addWidget(new QLabel("Temperature:"), 1, 0);
-    QHBoxLayout *temp_layout = new QHBoxLayout();
-    temperature_slider_ = new QSlider(//Horizontal);
+    config_layout->addWidget(new void("Temperature:"), 1, 0);
+    void *temp_layout = new void();
+    temperature_slider_ = nullptr;
     temperature_slider_->setRange(0, 20);  // 0.0 to 2.0
     temperature_slider_->setValue(3);       // Default 0.3
-    temperature_slider_->setTickPosition(QSlider::TicksBelow);
+    temperature_slider_->setTickPosition(void::TicksBelow);
     temperature_slider_->setTickInterval(2);
-    temperature_value_label_ = new QLabel("0.30");
+    temperature_value_label_ = new void("0.30");
     temperature_value_label_->setFixedWidth(40);
 // Qt connect removed
     temp_layout->addWidget(temperature_slider_);
@@ -75,14 +75,14 @@ void AICodeAssistantPanel::setupUI() {
     config_layout->addLayout(temp_layout, 1, 1);
     
     // Max Tokens
-    config_layout->addWidget(new QLabel("Max Tokens:"), 2, 0);
-    QHBoxLayout *tokens_layout = new QHBoxLayout();
-    max_tokens_slider_ = new QSlider(//Horizontal);
+    config_layout->addWidget(new void("Max Tokens:"), 2, 0);
+    void *tokens_layout = new void();
+    max_tokens_slider_ = nullptr;
     max_tokens_slider_->setRange(32, 512);
     max_tokens_slider_->setValue(256);
-    max_tokens_slider_->setTickPosition(QSlider::TicksBelow);
+    max_tokens_slider_->setTickPosition(void::TicksBelow);
     max_tokens_slider_->setTickInterval(64);
-    max_tokens_value_label_ = new QLabel("256");
+    max_tokens_value_label_ = new void("256");
     max_tokens_value_label_->setFixedWidth(50);
 // Qt connect removed
     tokens_layout->addWidget(max_tokens_slider_);
@@ -94,7 +94,7 @@ void AICodeAssistantPanel::setupUI() {
     // ============================================================
     // Progress Indicator
     // ============================================================
-    progress_bar_ = new QProgressBar();
+    progress_bar_ = new void();
     progress_bar_->setMaximum(0);  // Marquee style
     progress_bar_->setVisible(false);
     main_layout->addWidget(progress_bar_);
@@ -104,28 +104,28 @@ void AICodeAssistantPanel::setupUI() {
     // ============================================================
     
     // Original Code
-    main_layout->addWidget(new QLabel("Original Code:"));
-    original_code_display_ = new QTextEdit();
+    main_layout->addWidget(new void("Original Code:"));
+    original_code_display_ = new void();
     original_code_display_->setReadOnly(true);
-    original_code_display_->setFont(QFont("Courier New", 9));
+    original_code_display_->setFont(std::string("Courier New", 9));
     original_code_display_->setMaximumHeight(100);
     original_code_display_->setPlaceholderText("Select code in editor to view...");
     main_layout->addWidget(original_code_display_);
     
     // Suggestion
-    main_layout->addWidget(new QLabel("AI Suggestion:"));
-    suggestion_display_ = new QTextEdit();
+    main_layout->addWidget(new void("AI Suggestion:"));
+    suggestion_display_ = new void();
     suggestion_display_->setReadOnly(true);
-    suggestion_display_->setFont(QFont("Courier New", 9));
+    suggestion_display_->setFont(std::string("Courier New", 9));
     suggestion_display_->setMaximumHeight(120);
     suggestion_display_->setPlaceholderText("AI suggestions will appear here...");
     main_layout->addWidget(suggestion_display_);
     
     // Explanation
-    main_layout->addWidget(new QLabel("Explanation:"));
-    explanation_display_ = new QTextEdit();
+    main_layout->addWidget(new void("Explanation:"));
+    explanation_display_ = new void();
     explanation_display_->setReadOnly(true);
-    explanation_display_->setFont(QFont("Segoe UI", 9));
+    explanation_display_->setFont(std::string("Segoe UI", 9));
     explanation_display_->setMaximumHeight(80);
     explanation_display_->setPlaceholderText("Explanation or reasoning...");
     main_layout->addWidget(explanation_display_);
@@ -133,24 +133,24 @@ void AICodeAssistantPanel::setupUI() {
     // ============================================================
     // Action Buttons
     // ============================================================
-    QHBoxLayout *button_layout = new QHBoxLayout();
+    void *button_layout = new void();
     
-    apply_button_ = new QPushButton("Apply Suggestion");
+    apply_button_ = new void("Apply Suggestion");
     apply_button_->setEnabled(false);
 // Qt connect removed
     button_layout->addWidget(apply_button_);
     
-    copy_button_ = new QPushButton("Copy");
+    copy_button_ = new void("Copy");
     copy_button_->setEnabled(false);
 // Qt connect removed
     button_layout->addWidget(copy_button_);
     
-    export_button_ = new QPushButton("Export");
+    export_button_ = new void("Export");
     export_button_->setEnabled(false);
 // Qt connect removed
     button_layout->addWidget(export_button_);
     
-    clear_button_ = new QPushButton("Clear");
+    clear_button_ = new void("Clear");
 // Qt connect removed
     button_layout->addWidget(clear_button_);
     
@@ -159,8 +159,8 @@ void AICodeAssistantPanel::setupUI() {
     // ============================================================
     // History
     // ============================================================
-    main_layout->addWidget(new QLabel("Suggestion History:"));
-    suggestion_history_ = new QListWidget();
+    main_layout->addWidget(new void("Suggestion History:"));
+    suggestion_history_ = nullptr;
     suggestion_history_->setMaximumHeight(80);
     main_layout->addWidget(suggestion_history_);
     
@@ -249,7 +249,7 @@ void AICodeAssistantPanel::onLatencyMeasured(int latency_ms) {
 }
 
 void AICodeAssistantPanel::onApplySuggestion() {
-    if (current_suggestion_.suggested_code.isEmpty()) return;
+    if (current_suggestion_.suggested_code.empty()) return;
     
     // Signal to editor to apply the suggestion
     // This would typically a signal that the main window connects to
@@ -265,15 +265,15 @@ void AICodeAssistantPanel::onClearPanel() {
 }
 
 void AICodeAssistantPanel::onCopyToClipboard() {
-    if (current_suggestion_.suggested_code.isEmpty()) return;
+    if (current_suggestion_.suggested_code.empty()) return;
     
-    QClipboard *clipboard = nullptr;
+    void* *clipboard = nullptr;
     clipboard->setText(current_suggestion_.suggested_code);
     
 }
 
 void AICodeAssistantPanel::onExportSuggestion() {
-    if (current_suggestion_.suggested_code.isEmpty()) return;
+    if (current_suggestion_.suggested_code.empty()) return;
     
     // TODO: Export to file
 }
@@ -312,4 +312,5 @@ std::string AICodeAssistantPanel::formatLatency(int ms) {
         return std::string("Latency: %.1f s");
     }
 }
+
 

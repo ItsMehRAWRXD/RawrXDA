@@ -9,7 +9,7 @@
 GGUFLoader//GGUFLoaderQt(const std::string& path)
     : m_loader(nullptr), m_initialized(false)
 {
-    if (!path.isEmpty()) {
+    if (!path.empty()) {
         initializeNativeLoader(path);
     }
 }
@@ -23,7 +23,7 @@ GGUFLoader//~GGUFLoaderQt()
 void GGUFLoader//initializeNativeLoader(const std::string& path)
 {
     try {
-        if (path.isEmpty()) {
+        if (path.empty()) {
             return;
         }
 
@@ -153,7 +153,7 @@ std::unordered_map<std::string, std::vector<uint8_t>> GGUFLoader//getTokenizerMe
 
         // Include vocab size for convenience
         if (metadata.vocab_size > 0) {
-            result.insert(QStringLiteral("tokenizer.ggml.vocab_size"), std::vector<uint8_t>::number(static_cast<qint64>(metadata.vocab_size)));
+            result.insert("tokenizer.ggml.vocab_size", std::vector<uint8_t>::number(static_cast<int64_t>(metadata.vocab_size)));
         }
 
         // Flatten tokens vector into a single \0-delimited blob (matches GGUF convention)
@@ -164,7 +164,7 @@ std::unordered_map<std::string, std::vector<uint8_t>> GGUFLoader//getTokenizerMe
                 tokenBlob.append(std::vector<uint8_t>::fromStdString(tok));
                 tokenBlob.append('\0');
             }
-            result.insert(QStringLiteral("tokenizer.ggml.tokens"), tokenBlob);
+            result.insert("tokenizer.ggml.tokens", tokenBlob);
         }
 
         // Serialize scores (float32 little-endian)
@@ -172,7 +172,7 @@ std::unordered_map<std::string, std::vector<uint8_t>> GGUFLoader//getTokenizerMe
             std::vector<uint8_t> scoreBlob;
             scoreBlob.resize(static_cast<int>(metadata.token_scores.size() * sizeof(float)));
             memcpy(scoreBlob.data(), metadata.token_scores.data(), scoreBlob.size());
-            result.insert(QStringLiteral("tokenizer.ggml.scores"), scoreBlob);
+            result.insert("tokenizer.ggml.scores", scoreBlob);
         }
 
         // Serialize token types (uint32 little-endian)
@@ -180,7 +180,7 @@ std::unordered_map<std::string, std::vector<uint8_t>> GGUFLoader//getTokenizerMe
             std::vector<uint8_t> typeBlob;
             typeBlob.resize(static_cast<int>(metadata.token_types.size() * sizeof(uint32_t)));
             memcpy(typeBlob.data(), metadata.token_types.data(), typeBlob.size());
-            result.insert(QStringLiteral("tokenizer.ggml.token_type"), typeBlob);
+            result.insert("tokenizer.ggml.token_type", typeBlob);
         }
     } catch (const std::exception& e) {
     } catch (...) {
@@ -229,4 +229,6 @@ std::string GGUFLoader//getRecommendedConversionType() const
     }
     return std::string::fromStdString(m_loader->GetRecommendedConversionType());
 }
+
+
 

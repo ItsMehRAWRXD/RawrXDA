@@ -136,8 +136,8 @@ bool DistributedTrainer::allReduceGradients(float* gradientData, int size)
     if (!m_initialized) {
         return false;
     }
-    
-    
+
+
     auto startTime = std::chrono::high_resolution_clock::now();
     bool success = false;
     
@@ -210,8 +210,8 @@ bool DistributedTrainer::allGather(const void* sendBuffer, void* recvBuffer, int
     if (!m_initialized) {
         return false;
     }
-    
-    
+
+
     auto startTime = std::chrono::high_resolution_clock::now();
     bool success = false;
     
@@ -514,8 +514,8 @@ bool DistributedTrainer::saveCheckpoint(int stepNumber, const void*& modelState)
     std::string checkpointPath = m_checkpointDir + std::string("/checkpoint_step_%1_rank_%2.json")
                                 
                                 ;
-    
-    
+
+
     std::fstream file(checkpointPath);
     if (!file.open(QIODevice::WriteOnly)) {
         return false;

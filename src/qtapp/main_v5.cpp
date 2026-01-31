@@ -33,7 +33,7 @@ void fileMessageHandler(QtMsgType type, const QMessageLogContext &context, const
     std::string logLine = std::string("[%1] [%2] %3");
     
     // Write to console with immediate flush
-    fprintf(stderr, "%s\n", logLine.toLocal8Bit().constData());
+
     fflush(stderr);
     
     // Write to file with immediate flush
@@ -59,20 +59,20 @@ int main(int argc, char *argv[])
         .toString("yyyyMMdd_HHmmss"));
     g_logFile = new std::fstream(logFileName);
     if (g_logFile->open(QIODevice::WriteOnly | QIODevice::Text)) {
-        g_logStream = new QTextStream(g_logFile);
+        g_logStream = nullptr;
         qInstallMessageHandler(fileMessageHandler);
     } else {
-        fprintf(stderr, "WARNING: Could not open log file %s\n", logFileName.toLocal8Bit().constData());
+
     }
-    
-    
-    QApplication app(argc, argv);
-    
-    
+
+
+    void app(argc, argv);
+
+
     RawrXD::MainWindow mainWindow;
     mainWindow.show();
-    
-    
+
+
     int result = app.exec();
     
     // Cleanup logging

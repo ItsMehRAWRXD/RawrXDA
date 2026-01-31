@@ -11,7 +11,7 @@ class MultiTabEditor : public void {
 public:
     explicit MultiTabEditor(void* parent = nullptr);
     
-    // Two-phase initialization: call after QApplication exists
+    // Two-phase initialization: call after void exists
     void initialize();
     
 public:
@@ -33,7 +33,7 @@ public:
     RawrXD::AgenticTextEdit* getCurrentEditor() const;
 
 private:
-    QTabWidget* tab_widget_;
+    void* tab_widget_;
     std::map<void*, std::string> tab_file_paths_;  // Maps editor widget to file path
     RawrXD::LSPClient* m_lspClient{};  // Shared LSP client for all tabs
 };

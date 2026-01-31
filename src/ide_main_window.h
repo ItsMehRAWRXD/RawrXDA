@@ -1,53 +1,40 @@
-// ide_main_window.h - Main IDE Window with Full Integration
+// ide_main_window.h - Main IDE Window (Pure C++ / Qt-Free)
 #ifndef IDE_MAIN_WINDOW_H
 #define IDE_MAIN_WINDOW_H
 
+#include <string>
+#include <memory>
+#include <vector>
 
-#include "autonomous_model_manager.h"
-#include "intelligent_codebase_engine.h"
-#include "autonomous_feature_engine.h"
-#include "hybrid_cloud_manager.h"
-#include "error_recovery_system.h"
-#include "performance_monitor.h"
-#include "model_router_adapter.h"
-#include "model_router_widget.h"
-#include "cloud_settings_dialog.h"
-#include "metrics_dashboard.h"
-#include "model_router_console.h"
+class AutonomousModelManager;
+class IntelligentCodebaseEngine;
+class AutonomousFeatureEngine;
+class HybridCloudManager;
+class ErrorRecoverySystem;
+class PerformanceMonitor;
+class ModelRouterAdapter;
 
-class AutonomousSuggestionWidget;
-class SecurityAlertWidget;
-class OptimizationPanelWidget;
-
-class IDEMainWindow : public void {
-
+class IDEMainWindow {
 public:
-    explicit IDEMainWindow(void *parent = nullptr);
+    explicit IDEMainWindow();
     ~IDEMainWindow();
 
+    void setupUI();
+
 private:
-    // File menu actions
-    void onNewFile();
-    void onOpenFile();
-    void onSaveFile();
-    void onSaveAs();
-    void onExit();
+    // Core systems
+    std::unique_ptr<AutonomousModelManager> modelManager;
+    std::unique_ptr<IntelligentCodebaseEngine> codebaseEngine;
+    std::unique_ptr<HybridCloudManager> cloudManager;
+    std::unique_ptr<AutonomousFeatureEngine> featureEngine;
+    std::unique_ptr<ErrorRecoverySystem> errorRecovery;
+    std::unique_ptr<PerformanceMonitor> performanceMonitor;
+    std::unique_ptr<ModelRouterAdapter> modelRouterAdapter;
 
-    // Edit menu actions
-    void onUndo();
-    void onRedo();
-    void onCut();
-    void onCopy();
-    void onPaste();
-    void onFind();
-
-    // View menu actions
-    void onToggleSuggestions();
-    void onToggleSecurity();
-    void onToggleOptimizations();
-    void onToggleFileExplorer();
-
-    // Tools menu actions
+    std::string currentLanguage;
+    bool isAnalyzing;
+};
+#endif
     void onAnalyzeCodebase();
     void onGenerateTests();
     void onSecurityScan();
@@ -88,7 +75,7 @@ private:
     void onSnapshotCaptured(const PerformanceSnapshot& snapshot);
 
     // Model management slots
-    void onModelDownloadProgress(const std::string& modelId, int percentage, qint64 speed, qint64 eta);
+    void onModelDownloadProgress(const std::string& modelId, int percentage, int64_t speed, int64_t eta);
     void onModelDownloadCompleted(const std::string& modelId, bool success);
     void onModelLoaded(const std::string& modelId);
 
@@ -132,50 +119,50 @@ private:
     // Model Router systems
     ModelRouterAdapter* modelRouterAdapter;
     ModelRouterWidget* modelRouterWidget;
-    QDockWidget* modelRouterDock;
+    void* modelRouterDock;
     CloudSettingsDialog* cloudSettingsDialog;
     MetricsDashboard* metricsDashboard;
-    QDockWidget* metricsDashboardDock;
+    void* metricsDashboardDock;
     ModelRouterConsole* modelRouterConsole;
-    QDockWidget* modelRouterConsoleDock;
+    void* modelRouterConsoleDock;
 
     // UI components
     QPlainTextEdit* codeEditor;
-    QTabWidget* editorTabs;
+    void* editorTabs;
     
     // Dock widgets
-    QDockWidget* suggestionsDock;
-    QDockWidget* securityDock;
-    QDockWidget* optimizationDock;
-    QDockWidget* fileExplorerDock;
-    QDockWidget* outputDock;
-    QDockWidget* metricsDock;
+    void* suggestionsDock;
+    void* securityDock;
+    void* optimizationDock;
+    void* fileExplorerDock;
+    void* outputDock;
+    void* metricsDock;
 
     // Custom widgets
     AutonomousSuggestionWidget* suggestionsWidget;
     SecurityAlertWidget* securityWidget;
     OptimizationPanelWidget* optimizationWidget;
     QTreeWidget* fileExplorerWidget;
-    QTextEdit* outputWidget;
+    void* outputWidget;
     QListWidget* metricsWidget;
 
     // Status bar widgets
-    QLabel* statusLabel;
-    QLabel* languageLabel;
-    QLabel* modelLabel;
-    QLabel* healthLabel;
-    QProgressBar* progressBar;
+    void* statusLabel;
+    void* languageLabel;
+    void* modelLabel;
+    void* healthLabel;
+    void* progressBar;
 
     // Menus
-    QMenu* fileMenu;
-    QMenu* editMenu;
-    QMenu* viewMenu;
-    QMenu* toolsMenu;
-    QMenu* helpMenu;
+    void* fileMenu;
+    void* editMenu;
+    void* viewMenu;
+    void* toolsMenu;
+    void* helpMenu;
 
     // Toolbars
-    QToolBar* mainToolbar;
-    QToolBar* aiToolbar;
+    void* mainToolbar;
+    void* aiToolbar;
 
     // State
     std::string currentFilePath;
@@ -186,4 +173,5 @@ private:
 };
 
 #endif // IDE_MAIN_WINDOW_H
+
 

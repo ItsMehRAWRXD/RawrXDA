@@ -383,7 +383,7 @@ std::string AgenticIterativeReasoning::callModelForReasoning(
 
     // Call inference engine for reasoning
     // This would use the actual model loaded in inference engine
-    std::string fullPrompt = context.isEmpty() ? prompt : context + "\n\n" + prompt;
+    std::string fullPrompt = context.empty() ? prompt : context + "\n\n" + prompt;
 
     // In production, this would call m_inferenceEngine->infer(fullPrompt)
     // For now, return a placeholder
@@ -483,4 +483,5 @@ void* AgenticIterativeReasoning::getMetrics() const
 
     return metrics;
 }
+
 

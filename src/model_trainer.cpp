@@ -255,7 +255,7 @@ std::vector<std::string> ModelTrainer::readPlainTextDataset(const std::string& f
     QTextStream in(&file);
     while (!in.atEnd() && !m_shouldStop) {
         std::string line = in.readLine().trimmed();
-        if (!line.isEmpty()) {
+        if (!line.empty()) {
             data.push_back(line.toStdString());
         }
     }
@@ -278,7 +278,7 @@ std::vector<void*> ModelTrainer::readJsonLinesDataset(const std::string& filePat
     int lineCount = 0;
     while (!in.atEnd() && !m_shouldStop) {
         std::string line = in.readLine().trimmed();
-        if (!line.isEmpty()) {
+        if (!line.empty()) {
             void* doc = void*::fromJson(line.toUtf8());
             if (doc.isObject()) {
                 data.push_back(doc.object());
@@ -305,7 +305,7 @@ std::vector<void*> ModelTrainer::readCsvDataset(const std::string& filePath)
     
     // Read header
     std::string headerLine = in.readLine();
-    if (headerLine.isEmpty()) {
+    if (headerLine.empty()) {
         file.close();
         return data;
     }
@@ -319,7 +319,7 @@ std::vector<void*> ModelTrainer::readCsvDataset(const std::string& filePath)
     int rowCount = 0;
     while (!in.atEnd() && !m_shouldStop) {
         std::string line = in.readLine().trimmed();
-        if (!line.isEmpty()) {
+        if (!line.empty()) {
             std::vector<std::string> values = line.split(',');
             void* row;
             
@@ -372,7 +372,7 @@ std::vector<std::vector<uint32_t>> ModelTrainer::tokenizeDataset()
                     }
                 }
 
-                if (!text.isEmpty()) {
+                if (!text.empty()) {
                     std::vector<uint32_t> tokens = tokenizeText(text.toStdString());
                     if (!tokens.empty()) {
                         tokenized.push_back(tokens);

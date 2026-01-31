@@ -39,10 +39,10 @@ bool VocabularyLoader::loadFromGGUF(const std::string& ggufPath) {
 
         // Parse tokens from metadata map first (tokenizer.ggml.tokens)
         auto tryTokenArray = [&](const std::vector<uint8_t>& blob) -> bool {
-            if (blob.isEmpty()) return false;
+            if (blob.empty()) return false;
             std::vector<std::vector<uint8_t>> tokenList = blob.split('\0');
             for (int i = 0; i < tokenList.size(); ++i) {
-                if (tokenList[i].isEmpty()) continue;
+                if (tokenList[i].empty()) continue;
                 Token token;
                 token.id = i;
                 token.text = std::string::fromUtf8(tokenList[i]);
@@ -52,7 +52,7 @@ bool VocabularyLoader::loadFromGGUF(const std::string& ggufPath) {
                 m_textToId[token.text] = token.id;
                 m_idToIndex[token.id] = m_tokens.size() - 1;
             }
-            return !m_tokens.isEmpty();
+            return !m_tokens.empty();
         };
 
         // Parse per-index token entries (tokenizer.ggml.token_N)
@@ -60,7 +60,7 @@ bool VocabularyLoader::loadFromGGUF(const std::string& ggufPath) {
             int loadedCount = 0;
             const int kMaxScan = (advertisedSize > 0) ? advertisedSize : 200000; // hard safety cap
             for (int i = 0; i < kMaxScan; ++i) {
-                const std::string tokenKey = QStringLiteral("tokenizer.ggml.token_%1");
+                const std::string tokenKey = "tokenizer.ggml.token_%1";
                 if (!meta.contains(tokenKey)) {
                     if (advertisedSize > 0 && i < advertisedSize) {
                         // hole inside advertised range: stop but consider success if >0 loaded
@@ -76,7 +76,7 @@ bool VocabularyLoader::loadFromGGUF(const std::string& ggufPath) {
                 Token token;
                 token.id = i;
                 token.text = std::string::fromUtf8(rawToken);
-                token.score = loader.getParam(QStringLiteral("tokenizer.ggml.score_%1"), 0.0).toFloat();
+                token.score = loader.getParam("tokenizer.ggml.score_%1", 0.0).toFloat();
                 token.isSpecial = false;
 
                 m_tokens.append(token);
@@ -92,9 +92,9 @@ bool VocabularyLoader::loadFromGGUF(const std::string& ggufPath) {
         };
 
         bool loaded = false;
-        if (!tokenizerMetadata.isEmpty()) {
+        if (!tokenizerMetadata.empty()) {
             // Prefer array form if present
-            loaded = tryTokenArray(tokenizerMetadata.value(QStringLiteral("tokenizer.ggml.tokens")));
+            loaded = tryTokenArray(tokenizerMetadata.value("tokenizer.ggml.tokens"));
 
             // If no array, try per-token entries from metadata hash
             if (!loaded) {
@@ -107,7 +107,7 @@ bool VocabularyLoader::loadFromGGUF(const std::string& ggufPath) {
             int loadedCount = 0;
             const int kMaxScan = (advertisedSize > 0) ? advertisedSize : 200000; // hard safety cap
             for (int i = 0; i < kMaxScan; ++i) {
-                const std::string tokenKey = QStringLiteral("tokenizer.ggml.token_%1");
+                const std::string tokenKey = "tokenizer.ggml.token_%1";
                 std::any tokenVar = loader.getParam(tokenKey, std::any());
                 if (!tokenVar.isValid()) {
                     if (advertisedSize > 0 && i < advertisedSize) {
@@ -124,7 +124,7 @@ bool VocabularyLoader::loadFromGGUF(const std::string& ggufPath) {
                 Token token;
                 token.id = i;
                 token.text = std::string::fromUtf8(rawToken);
-                token.score = loader.getParam(QStringLiteral("tokenizer.ggml.score_%1"), 0.0).toFloat();
+                token.score = loader.getParam("tokenizer.ggml.score_%1", 0.0).toFloat();
                 token.isSpecial = false;
 
                 m_tokens.append(token);
@@ -142,11 +142,11 @@ bool VocabularyLoader::loadFromGGUF(const std::string& ggufPath) {
         // Attach scores if provided as array
         if (loaded) {
             std::vector<uint8_t> scoreBlob;
-            if (tokenizerMetadata.contains(QStringLiteral("tokenizer.ggml.scores"))) {
-                scoreBlob = tokenizerMetadata.value(QStringLiteral("tokenizer.ggml.scores"));
+            if (tokenizerMetadata.contains("tokenizer.ggml.scores")) {
+                scoreBlob = tokenizerMetadata.value("tokenizer.ggml.scores");
             }
 
-            if (!scoreBlob.isEmpty()) {
+            if (!scoreBlob.empty()) {
                 QDataStream scoreStream(scoreBlob);
                 scoreStream.setByteOrder(QDataStream::LittleEndian);
                 for (int i = 0; i < m_tokens.size() && scoreStream.status() == QDataStream::Ok; ++i) {
@@ -202,44 +202,44 @@ bool VocabularyLoader::loadGGUFMetadata(std::fstream& file) {
         return false;
     }
     
-    quint32 version;
-    quint64 tensorCount, kvCount;
+    uint32_t version;
+    uint64_t tensorCount, kvCount;
     stream >> version >> tensorCount >> kvCount;
-    
-    
+
+
     // Read key-value metadata
     std::unordered_map<std::string, std::vector<uint8_t>> metadata;
     
-    for (quint64 i = 0; i < kvCount; ++i) {
+    for (uint64_t i = 0; i < kvCount; ++i) {
         // Read key
-        quint64 keyLen;
+        uint64_t keyLen;
         stream >> keyLen;
         std::vector<uint8_t> keyBytes(keyLen, //Uninitialized);
         stream.readRawData(keyBytes.data(), keyLen);
         std::string key = std::string::fromUtf8(keyBytes);
         
         // Read value type
-        quint32 valueType;
+        uint32_t valueType;
         stream >> valueType;
         
         std::vector<uint8_t> value;
         
         // Type 8 = string, 9 = array
         if (valueType == 8) {
-            quint64 strLen;
+            uint64_t strLen;
             stream >> strLen;
             value.resize(strLen);
             stream.readRawData(value.data(), strLen);
         } else if (valueType == 9) {
             // Array - read element type and count
-            quint32 elemType;
-            quint64 arrayLen;
+            uint32_t elemType;
+            uint64_t arrayLen;
             stream >> elemType >> arrayLen;
             
             // For string arrays (common for tokens)
             if (elemType == 8) {
-                for (quint64 j = 0; j < arrayLen; ++j) {
-                    quint64 strLen;
+                for (uint64_t j = 0; j < arrayLen; ++j) {
+                    uint64_t strLen;
                     stream >> strLen;
                     std::vector<uint8_t> str(strLen, //Uninitialized);
                     stream.readRawData(str.data(), strLen);
@@ -263,7 +263,7 @@ bool VocabularyLoader::loadGGUFMetadata(std::fstream& file) {
         m_tokens.reserve(tokenList.size());
         
         for (int i = 0; i < tokenList.size(); ++i) {
-            if (tokenList[i].isEmpty()) continue;
+            if (tokenList[i].empty()) continue;
             
             Token token;
             token.text = std::string::fromUtf8(tokenList[i]);
@@ -298,7 +298,7 @@ bool VocabularyLoader::loadGGUFMetadata(std::fstream& file) {
     }
     
     m_vocabSize = m_tokens.size();
-    return !m_tokens.isEmpty();
+    return !m_tokens.empty();
 }
 
 bool VocabularyLoader::loadFromJSON(const std::string& jsonPath) {
@@ -409,7 +409,7 @@ bool VocabularyLoader::loadFromText(const std::string& txtPath) {
     int32_t id = 0;
     while (!stream.atEnd()) {
         std::string line = stream.readLine().trimmed();
-        if (line.isEmpty()) continue;
+        if (line.empty()) continue;
         
         Token token;
         token.text = line;
@@ -431,7 +431,7 @@ bool VocabularyLoader::loadFromText(const std::string& txtPath) {
 }
 
 VocabularyLoader::TokenizerType VocabularyLoader::detectType() {
-    if (m_tokens.isEmpty()) return UNKNOWN;
+    if (m_tokens.empty()) return UNKNOWN;
     
     // Check for SentencePiece markers (▁ character)
     int spaceMarkers = 0;
@@ -570,4 +570,6 @@ bool VocabularyLoader::exportToFiles(const std::string& outputDir) {
     
     return true;
 }
+
+
 

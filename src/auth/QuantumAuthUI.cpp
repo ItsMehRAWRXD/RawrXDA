@@ -842,7 +842,7 @@ KeyVerificationPage::KeyVerificationPage(void* parent)
     auto* layout = new void(this);
     
     auto* infoGroup = new void(tr("Key Information"));
-    auto* infoLayout = new QFormLayout(infoGroup);
+    auto* infoLayout = nullptr;
     
     m_keyIdLabel = new void;
     m_keyIdLabel->setTextInteractionFlags(TextSelectableByMouse);
@@ -886,7 +886,7 @@ KeyVerificationPage::KeyVerificationPage(void* parent)
 
 void KeyVerificationPage::initializePage()
 {
-    auto* entropyPage = qobject_cast<EntropyCollectionPage*>(wizard()->page(KeyGenerationWizard::Page_Entropy));
+// REMOVED_QT:     auto* entropyPage = qobject_cast<EntropyCollectionPage*>(wizard()->page(KeyGenerationWizard::Page_Entropy));
     if (entropyPage) {
         auto result = entropyPage->getResult();
         
@@ -926,7 +926,7 @@ void KeyVerificationPage::onExportKey()
         tr("JSON Files (*.json)"));
     
     if (!path.empty()) {
-        auto* entropyPage = qobject_cast<EntropyCollectionPage*>(wizard()->page(KeyGenerationWizard::Page_Entropy));
+// REMOVED_QT:         auto* entropyPage = qobject_cast<EntropyCollectionPage*>(wizard()->page(KeyGenerationWizard::Page_Entropy));
         if (entropyPage) {
             auto result = entropyPage->getResult();
             
@@ -1093,7 +1093,7 @@ CompletionPage::CompletionPage(void* parent)
 
 void CompletionPage::initializePage()
 {
-    auto* entropyPage = qobject_cast<EntropyCollectionPage*>(wizard()->page(KeyGenerationWizard::Page_Entropy));
+// REMOVED_QT:     auto* entropyPage = qobject_cast<EntropyCollectionPage*>(wizard()->page(KeyGenerationWizard::Page_Entropy));
     
     std::string details;
     
@@ -1282,7 +1282,7 @@ void KeyManagerDialog::refreshKeyList()
 
             );
         
-        auto* item = new QListWidgetItem(text);
+        auto* item = nullptr;
         item->setData(UserRole, key.keyId);
         m_keyList->addItem(item);
     }

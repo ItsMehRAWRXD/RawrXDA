@@ -37,8 +37,8 @@ void startProductionHealthCheck(InferenceEngine* engine) {
         logEntry["event"] = "health_check_started";
         logEntry["port"] = port;
         logEntry["endpoints"] = void*{"/health", "/ready", "/metrics", "/metrics/prometheus", "/model", "/gpu"};
-        
-        
+
+
         // Log access information for operations team
         
     } else {
@@ -48,8 +48,8 @@ void startProductionHealthCheck(InferenceEngine* engine) {
         logEntry["component"] = "ProductionInit";
         logEntry["event"] = "health_check_failed";
         logEntry["port"] = port;
-        
-        
+
+
     }
     
     // Connect signals for real-time monitoring
@@ -183,8 +183,8 @@ void loadModelWithStreaming(const std::string& modelPath) {
     logEntry["model_size_gb"] = loader->getTotalSize() / (1024.0 * 1024.0 * 1024.0);
     logEntry["tensor_count"] = loader->getTensorCount();
     logEntry["max_loaded_zones"] = 8;
-    
-    
+
+
     // Connect signals for monitoring
     void {
             // Monitor zone loading performance
@@ -231,8 +231,8 @@ int main(int argc, char* argv[]) {
     startupLog["component"] = "ProductionInit";
     startupLog["event"] = "startup_complete";
     startupLog["version"] = "2.0-hardened";
-    
-    
+
+
     return app.exec();
 }
 

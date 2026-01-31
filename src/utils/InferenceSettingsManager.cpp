@@ -120,7 +120,7 @@ std::vector<std::string> InferenceSettingsManager::getRecentModels(int maxCount)
 
 void InferenceSettingsManager::addRecentModel(const std::string& modelPath)
 {
-    if (modelPath.isEmpty()) return;
+    if (modelPath.empty()) return;
     
     std::lock_guard<std::mutex> lock(m_mutex);
     
@@ -232,7 +232,7 @@ void InferenceSettingsManager::load()
 void InferenceSettingsManager::loadGenerationParams()
 {
     // Load from Qt SettingsManager
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     
     m_temperature = settings.value("inference/temperature", 0.7).toDouble();
     m_topP = settings.value("inference/topP", 0.9).toDouble();
@@ -248,7 +248,7 @@ void InferenceSettingsManager::loadGenerationParams()
 void InferenceSettingsManager::saveGenerationParams()
 {
     // Save to Qt SettingsManager
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     
     settings.setValue("inference/temperature", m_temperature);
     settings.setValue("inference/topP", m_topP);
@@ -264,14 +264,14 @@ void InferenceSettingsManager::saveGenerationParams()
 void InferenceSettingsManager::loadRecentModels()
 {
     // Load from Qt SettingsManager
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     m_recentModels = settings.value("inference/recentModels").toStringList();
 }
 
 void InferenceSettingsManager::saveRecentModels()
 {
     // Save to Qt SettingsManager
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     settings.setValue("inference/recentModels", m_recentModels);
 }
 
@@ -340,3 +340,4 @@ void InferenceSettingsManager::importFromJSON(const void*& json)
     
     settingsChanged();
 }
+

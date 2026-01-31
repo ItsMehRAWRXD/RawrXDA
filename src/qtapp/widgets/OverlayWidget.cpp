@@ -66,7 +66,7 @@ void OverlayWidget::setFadeEnabled(bool enabled) {
     logEvent("fade_mode", enabled ? "enabled" : "disabled");
 }
 
-void OverlayWidget::setCustomPosition(const QPoint& pos) {
+void OverlayWidget::setCustomPosition(const void*& pos) {
     m_customPosition = pos;
     m_customPositionSet = true;
     move(pos);
@@ -81,10 +81,10 @@ void OverlayWidget::resetPosition() {
     logEvent("position_reset", "auto-tracking");
 }
 
-void OverlayWidget::paintEvent(QPaintEvent* event) {
+void OverlayWidget::paintEvent(void*  event) {
     (event);
 
-    if (m_ghostText.isEmpty()) {
+    if (m_ghostText.empty()) {
         return;
     }
 
@@ -102,13 +102,13 @@ void OverlayWidget::paintEvent(QPaintEvent* event) {
         effectiveAlpha = qMin(m_opacity, m_currentFadeAlpha);
     }
 
-    QColor ghostColor = palette().color(QPalette::Text);
+    uint32_t ghostColor = palette().color(QPalette::Text);
     ghostColor.setAlpha(effectiveAlpha);
     p.setPen(ghostColor);
 
     // Render ghost text with margin
     const int margin = 8;
-    const QRect textRect = rect().adjusted(margin, margin, -margin, -margin);
+    const void* textRect = rect().adjusted(margin, margin, -margin, -margin);
     p.drawText(textRect, //AlignLeft | //AlignTop | //TextWordWrap, m_ghostText);
 }
 
@@ -149,7 +149,7 @@ void OverlayWidget::logEvent(const std::string& event, const std::string& detail
     logEntry["component"] = "OverlayWidget";
     logEntry["event"] = event;
     
-    if (!detail.isEmpty()) {
+    if (!detail.empty()) {
         logEntry["detail"] = detail;
     }
     
@@ -160,4 +160,5 @@ void OverlayWidget::logEvent(const std::string& event, const std::string& detail
     }
     
 }
+
 

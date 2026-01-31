@@ -459,7 +459,7 @@ bool AgenticErrorHandler::executeBacktrackStrategy(const ErrorContext& context)
     if (m_state) {
         // Restore from checkpoint
         void* snapshot = m_state->getLastSnapshot();
-        if (!snapshot.isEmpty()) {
+        if (!snapshot.empty()) {
             m_state->restoreFromSnapshot(snapshot);
             m_totalRecoveries++;
             return true;
@@ -520,4 +520,5 @@ ErrorSafeOperation::ErrorSafeOperation(
 ErrorSafeOperation::~ErrorSafeOperation()
 {
 }
+
 

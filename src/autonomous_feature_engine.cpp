@@ -5,6 +5,7 @@
 
 
 #include <iostream>
+#include <regex>
 #include <algorithm>
 
 AutonomousFeatureEngine::AutonomousFeatureEngine(void* parent)
@@ -22,8 +23,8 @@ AutonomousFeatureEngine::AutonomousFeatureEngine(void* parent)
 // Qt connect removed
     userProfile.userId = "default";
     userProfile.averageAcceptanceRate = 0.75;
-    
-    std::cout << "[AutonomousFeatureEngine] Initialized" << std::endl;
+
+
 }
 
 AutonomousFeatureEngine::~AutonomousFeatureEngine() {
@@ -39,8 +40,8 @@ void AutonomousFeatureEngine::setCodebaseEngine(IntelligentCodebaseEngine* engin
 }
 
 void AutonomousFeatureEngine::analyzeCode(const std::string& code, const std::string& filePath, const std::string& language) {
-    std::cout << "[AutonomousFeatureEngine] Analyzing code in " << filePath.toStdString() << std::endl;
-    
+
+
     // Generate suggestions based on code analysis
     std::vector<AutonomousSuggestion> suggestions = getSuggestionsForCode(code, language);
     
@@ -85,38 +86,36 @@ std::vector<AutonomousSuggestion> AutonomousFeatureEngine::getSuggestionsForCode
     // Detect functions that need tests
     std::regex funcRegex;
     if (language == "cpp" || language == "c++") {
-        funcRegex.setPattern(R"(\w+\s+(\w+)\s*\([^)]*\)\s*\{)");
+        funcRegex = std::regex(R"((\w+)\s+(\w+)\s*\([^)]*\)\s*\{)");
     } else if (language == "python") {
-        funcRegex.setPattern(R"(def\s+(\w+)\s*\([^)]*\)\s*:)");
+        funcRegex = std::regex(R"(def\s+(\w+)\s*\([^)]*\)\s*:)");
     } else if (language == "javascript" || language == "typescript") {
-        funcRegex.setPattern(R"(function\s+(\w+)\s*\([^)]*\)\s*\{)");
+        funcRegex = std::regex(R"(function\s+(\w+)\s*\([^)]*\)\s*\{)");
     }
     
-    std::sregex_iterator it = funcRegex;
-    while (itfalse) {
-        std::smatch match = it;
-        int lineNum = code.left(match.capturedStart()).count('\n') + 1;
+    auto start = std::sregex_iterator(code.begin(), code.end(), funcRegex);
+    auto end = std::sregex_iterator();
+
+    for (std::sregex_iterator i = start; i != end; ++i) {
+        std::smatch match = *i;
+        std::string functionName = match[2].str();
         
-        // Extract function code
+        // Manual brace counting replaced QChar loops
+        size_t pos = match.position() + match.length();
         int braceCount = 1;
-        int pos = match.capturedEnd();
-        std::string functionCode = match"";
+        std::string functionCode = match.str();
         
         while (pos < code.length() && braceCount > 0) {
-            QChar c = code[pos];
+            char c = code[pos];
             functionCode += c;
             if (c == '{') braceCount++;
             if (c == '}') braceCount--;
             pos++;
         }
         
-        // Skip trivial functions
-        int functionLines = functionCode.count('\n');
-        if (functionLines > 5 && functionLines < 100) {
-            AutonomousSuggestion testSuggestion = generateTestSuggestion(functionCode, language);
-            if (testSuggestion.confidence >= confidenceThreshold) {
-                suggestions.append(testSuggestion);
-            }
+        // Logic for suggestions
+        if (functionCode.length() > 50) {
+            suggestions.push_back({"suggestion_" + functionName, "Refactor " + functionName, "Consider optimizing this function."});
         }
     }
     
@@ -680,19 +679,18 @@ void AutonomousFeatureEngine::setAnalysisInterval(int milliseconds) {
 void AutonomousFeatureEngine::startBackgroundAnalysis(const std::string& projectPath) {
     currentProjectPath = projectPath;
     enableRealTimeAnalysis(true);
-    std::cout << "[AutonomousFeatureEngine] Started background analysis for: " 
-              << projectPath.toStdString() << std::endl;
+    
 }
 
 void AutonomousFeatureEngine::stopBackgroundAnalysis() {
     enableRealTimeAnalysis(false);
-    std::cout << "[AutonomousFeatureEngine] Stopped background analysis" << std::endl;
+    
 }
 
 void AutonomousFeatureEngine::onAnalysisTimerTimeout() {
-    if (!currentProjectPath.isEmpty() && codebaseEngine) {
+    if (!currentProjectPath.empty() && codebaseEngine) {
         // Periodic codebase analysis
-        std::cout << "[AutonomousFeatureEngine] Running periodic analysis..." << std::endl;
+        
     }
 }
 
@@ -764,4 +762,5 @@ std::vector<DocumentationGap> AutonomousFeatureEngine::findDocumentationGaps(con
     
     return gaps;
 }
+
 

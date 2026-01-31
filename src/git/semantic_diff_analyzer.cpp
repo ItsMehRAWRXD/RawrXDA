@@ -216,7 +216,7 @@ SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::analyzeDiff(const std::
         std::string diffHash = calculateDiffHash(diff);
         if (config.enableCaching) {
             DiffAnalysis cached = getCachedAnalysis(diffHash);
-            if (!cached.summary.isEmpty()) {
+            if (!cached.summary.empty()) {
                 std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
                 m_metrics.cacheHits++;
                 logStructured("INFO", "Cache hit for diff analysis", void*{{"diffHash", diffHash}});
@@ -526,7 +526,7 @@ void SemanticDiffAnalyzer::recordLatency(const std::string& operation, const std
 void* SemanticDiffAnalyzer::makeAiRequest(const std::string& endpoint, const void*& payload)
 {
     void* manager;
-    QNetworkRequest request(endpoint);
+    void* request(endpoint);
     
     Config config;
     {
@@ -534,8 +534,8 @@ void* SemanticDiffAnalyzer::makeAiRequest(const std::string& endpoint, const voi
         config = m_config;
     }
     
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    if (!config.apiKey.isEmpty()) {
+    request.setHeader(void*::ContentTypeHeader, "application/json");
+    if (!config.apiKey.empty()) {
         request.setRawHeader("Authorization", std::string("Bearer %1").toUtf8());
     }
     
@@ -589,7 +589,7 @@ void SemanticDiffAnalyzer::cacheAnalysis(const std::string& diffHash, const Diff
     }
     
     // Persist to disk if cache directory configured
-    if (!config.cacheDirectory.isEmpty()) {
+    if (!config.cacheDirectory.empty()) {
         std::filesystem::path cacheDir(config.cacheDirectory);
         if (!cacheDir.exists()) {
             cacheDir.mkpath(".");
@@ -627,7 +627,7 @@ void SemanticDiffAnalyzer::cacheAnalysis(const std::string& diffHash, const Diff
 
 bool SemanticDiffAnalyzer::validateDiff(const std::string& diff)
 {
-    if (diff.isEmpty()) {
+    if (diff.empty()) {
         return false;
     }
     
@@ -647,4 +647,5 @@ bool SemanticDiffAnalyzer::validateDiff(const std::string& diff)
     
     return true;
 }
+
 

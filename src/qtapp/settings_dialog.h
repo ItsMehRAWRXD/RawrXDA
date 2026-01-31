@@ -30,31 +30,31 @@ private:
     SettingsManager *m_settings = nullptr;
     
     // General Tab
-    QCheckBox *m_autoSaveCheck = nullptr;
-    QSpinBox *m_autoSaveInterval = nullptr;
-    QCheckBox *m_showLineNumbers = nullptr;
-    QCheckBox *m_wordWrap = nullptr;
-    QLineEdit *m_defaultModelPath = nullptr;
+    void *m_autoSaveCheck = nullptr;
+    void *m_autoSaveInterval = nullptr;
+    void *m_showLineNumbers = nullptr;
+    void *m_wordWrap = nullptr;
+    void *m_defaultModelPath = nullptr;
     
     // Security Tab
-    QCheckBox *m_encryptApiKeys = nullptr;
-    QCheckBox *m_enableAuditLog = nullptr;
-    QSpinBox *m_autoLockTimeout = nullptr;
+    void *m_encryptApiKeys = nullptr;
+    void *m_enableAuditLog = nullptr;
+    void *m_autoLockTimeout = nullptr;
     
     // Training Tab
-    QCheckBox *m_autoCheckpoint = nullptr;
-    QSpinBox *m_checkpointInterval = nullptr;
-    QLineEdit *m_checkpointPath = nullptr;
-    QComboBox *m_defaultTokenizer = nullptr;
+    void *m_autoCheckpoint = nullptr;
+    void *m_checkpointInterval = nullptr;
+    void *m_checkpointPath = nullptr;
+    void *m_defaultTokenizer = nullptr;
     
     // CI/CD Tab
-    QCheckBox *m_enableCICD = nullptr;
-    QCheckBox *m_autoDeploy = nullptr;
-    QLineEdit *m_notificationEmail = nullptr;
+    void *m_enableCICD = nullptr;
+    void *m_autoDeploy = nullptr;
+    void *m_notificationEmail = nullptr;
     
     // Model Tab
-    QCheckBox *m_enableGPU = nullptr;
-    QComboBox *m_gpuBackend = nullptr;
-    QSpinBox *m_maxTokens = nullptr;
+    void *m_enableGPU = nullptr;
+    void *m_gpuBackend = nullptr;
+    void *m_maxTokens = nullptr;
     QDoubleSpinBox *m_temperature = nullptr;
 };

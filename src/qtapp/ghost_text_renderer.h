@@ -18,7 +18,7 @@ struct GhostTextDecoration {
     int column;                 // Column position
     std::string text;               // Ghost text to display
     std::string type;               // "completion", "diff", "suggestion"
-    QColor color;              // Ghost text color
+    uint32_t color;              // Ghost text color
     bool multiline = false;    // Multi-line ghost text
     std::vector<std::string> lines;         // For multi-line ghost text
 };
@@ -100,7 +100,7 @@ public:
     /**
      * Check if ghost text is visible
      */
-    bool hasGhostText() const { return !m_currentGhostText.isEmpty(); }
+    bool hasGhostText() const { return !m_currentGhostText.empty(); }
 
 
     /**
@@ -119,16 +119,16 @@ public:
     void diffAccepted(const std::string& newText);
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
+    void paintEvent(void*  event) override;
     bool eventFilter(void* obj, QEvent* event) override;
 
 private:
     void renderGhostText(QPainter& painter);
     void renderDiffPreview(QPainter& painter);
     void updateOverlayGeometry();
-    QPoint getCursorPosition() const;
+    void* getCursorPosition() const;
     int getLineHeight() const;
-    QFont getEditorFont() const;
+    std::string getEditorFont() const;
     void fadeIn();
     void fadeOut();
 
@@ -142,10 +142,11 @@ private:
     void** m_fadeTimer{};
     bool m_fading = false;
     
-    QColor m_ghostColor{128, 128, 128, 180};  // Gray with transparency
-    QColor m_addColor{0, 255, 0, 100};        // Green for additions
-    QColor m_removeColor{255, 0, 0, 100};     // Red for deletions
+    uint32_t m_ghostColor{128, 128, 128, 180};  // Gray with transparency
+    uint32_t m_addColor{0, 255, 0, 100};        // Green for additions
+    uint32_t m_removeColor{255, 0, 0, 100};     // Red for deletions
 };
 
 } // namespace RawrXD
+
 

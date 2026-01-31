@@ -56,17 +56,17 @@ public:
         try {
             engine = std::make_unique<InferenceEngine>(model_path);
         } catch (const std::exception &e) {
-            std::cerr << "[FATAL] InferenceEngine create failed: " << e.what() << std::endl;
+            
             return false;
         }
         bool ok = engine->loadModel(model_path);
         auto t1 = now_ms();
         if (!ok) {
-            std::cerr << "[ERROR] loadModel failed" << std::endl;
+            
             return false;
         }
-        std::cout << "[Init] Model loaded in " << (t1 - t0) << " ms" << std::endl;
-        std::cout << "[Init] Memory MB: " << engine->memoryUsageMB() << std::endl;
+
+
         return true;
     }
 
@@ -80,7 +80,7 @@ public:
         r.tokenize_ms = t_tok1 - t_tok0;
         r.tokens_in = tokens.size();
         if (tokens.empty()) {
-            std::cerr << "[WARN] Tokenize produced 0 tokens for scenario: " << name << std::endl;
+            
         }
 
         // Generate (prefill + decode) using engine->generate
@@ -117,41 +117,34 @@ public:
 };
 
 static void print_result(const BenchResult &r) {
-    std::cout << "\n=== Scenario: " << r.name << " ===" << std::endl;
-    std::cout << "Tokens in: " << r.tokens_in << std::endl;
-    std::cout << "Tokenize: " << r.tokenize_ms << " ms" << std::endl;
-    std::cout << "Generate (E2E): " << r.decode_ms << " ms" << std::endl;
-    std::cout << "New tokens: " << r.decode_tokens << std::endl;
-    std::cout << "Throughput: " << r.tokens_per_sec << " tok/s" << std::endl;
-    std::cout << "Sample output (first 200 chars):\n";
+
+
     if (r.sample_output.empty()) {
-        std::cout << "(empty)" << std::endl;
+        
     } else {
-        std::cout << r.sample_output.substr(0, 200) << (r.sample_output.size() > 200 ? "..." : "") << std::endl;
+        
     }
 }
 
 int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
-    std::cout << "\n╔══════════════════════════════════════════════╗\n";
-    std::cout <<   "║ RawrXD Model Benchmark (Console)           ║\n";
-    std::cout <<   "╚══════════════════════════════════════════════╝\n";
+
 
     std::string model_path;
     if (argc > 1) {
         model_path = std::string::fromLocal8Bit(argv[1]);
-        std::cout << "[CLI] Model: " << model_path.toStdString() << std::endl;
+        
     } else if (const char* env = std::getenv("BENCH_MODEL")) {
         model_path = std::string::fromLocal8Bit(env);
-        std::cout << "[ENV] Model: " << model_path.toStdString() << std::endl;
+        
     } else {
         model_path = "gemma3";
-        std::cout << "[Default] Model: gemma3 (override with arg or BENCH_MODEL)" << std::endl;
+        
     }
 
     ModelBench bench;
     if (!bench.init(model_path)) {
-        std::cerr << "Benchmark init failed" << std::endl;
+        
         return 1;
     }
 
@@ -182,11 +175,7 @@ int main(int argc, char *argv[]) {
     print_result(r3);
     print_result(r4);
 
-    std::cout << "\n[Summary] Avg throughput (tok/s): "
-              << (r1.tokens_per_sec + r2.tokens_per_sec + r3.tokens_per_sec + r4.tokens_per_sec) / 4.0
-              << std::endl;
 
-    std::cout << "\nBenchmark complete" << std::endl;
     return 0;
 }
 

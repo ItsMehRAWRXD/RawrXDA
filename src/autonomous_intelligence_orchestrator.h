@@ -96,7 +96,7 @@ public:
     bool enableEnterpriseMode();
     bool setupTeamCollaboration(const std::string& teamId);
     void* getEnterpriseReport();
-    
+
 
     void autonomousModeStarted();
     void autonomousModeStopped();

@@ -16,8 +16,8 @@ void testGPUBackend() {
     
     GPUBackend& gpu = GPUBackend::instance();
     bool initSuccess = gpu.initialize();
-    
-    
+
+
     if (gpu.isAvailable()) {
         
         // Real memory allocation test (skip for Vulkan/no-reported VRAM to avoid hard failure)
@@ -43,7 +43,7 @@ void testMetricsCollector() {
     metrics.setEnabled(true);
     
     // Test 1: Fast request
-    qint64 reqId1 = 1001;
+    int64_t reqId1 = 1001;
     metrics.startRequest(reqId1, "fast-model.gguf", 100);
     std::thread::msleep(50);  // REAL 50ms delay
     for (int i = 0; i < 10; i++) {
@@ -53,7 +53,7 @@ void testMetricsCollector() {
     metrics.endRequest(reqId1, 10, true);
     
     // Test 2: Slow request
-    qint64 reqId2 = 1002;
+    int64_t reqId2 = 1002;
     metrics.startRequest(reqId2, "slow-model.gguf", 200);
     std::thread::msleep(100); // REAL 100ms delay
     for (int i = 0; i < 15; i++) {
@@ -63,7 +63,7 @@ void testMetricsCollector() {
     metrics.endRequest(reqId2, 15, true);
     
     // Test 3: Failed request
-    qint64 reqId3 = 1003;
+    int64_t reqId3 = 1003;
     metrics.startRequest(reqId3, "error-model.gguf", 50);
     std::thread::msleep(30);
     metrics.endRequest(reqId3, 0, false); // Failed with 0 tokens
@@ -122,16 +122,16 @@ void testBackupManager() {
     }
     
     // REAL verification test
-    if (!backupId1.isEmpty()) {
+    if (!backupId1.empty()) {
         bool verifyResult = backup.verifyBackup(backupId1);
     }
     
     // REAL restore test (RTO requirement: < 5 minutes)
     std::chrono::system_clock::time_point restoreStart = std::chrono::system_clock::time_point::currentDateTime();
     bool restoreSuccess = backup.restoreBackup(backupId1);
-    qint64 restoreTimeMs = restoreStart.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
-    
-    
+    int64_t restoreTimeMs = restoreStart.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
+
+
     // Cleanup test
     backup.cleanOldBackups(0); // Delete all (testing only)
     
@@ -142,8 +142,8 @@ void testSLAManager() {
     
     SLAManager& sla = SLAManager::instance();
     sla.start(99.99); // 99.99% = 43 min downtime/month
-    
-    
+
+
     // Simulate REAL health checks
     std::chrono::system_clock::time_point testStart = std::chrono::system_clock::time_point::currentDateTime();
     
@@ -183,7 +183,7 @@ void testSLAManager() {
     // Get REAL SLA compliance metrics
     auto slaMetrics = sla.getCurrentMetrics();
     
-    qint64 testDuration = testStart.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
+    int64_t testDuration = testStart.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
     
     sla.stop();
 }
@@ -191,9 +191,8 @@ void testSLAManager() {
 int main(int argc, char *argv[]) {
     // Lightweight Qt core app to satisfy void* requirements without GUI loop
     QCoreApplication app(argc, argv);
-    std::cout << "\n=== RawrXD Production Feature Tests ===\n" << std::endl;
-    
-    
+
+
     std::chrono::system_clock::time_point testSessionStart = std::chrono::system_clock::time_point::currentDateTime();
     
     try {
@@ -202,13 +201,15 @@ int main(int argc, char *argv[]) {
         testBackupManager();
         testSLAManager();
         
-        qint64 totalTime = testSessionStart.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
-        
-        
+        int64_t totalTime = testSessionStart.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
+
+
     } catch (const std::exception& e) {
         return 1;
     }
     
     return 0;
 }
+
+
 

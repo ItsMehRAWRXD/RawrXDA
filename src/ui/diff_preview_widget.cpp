@@ -12,23 +12,23 @@ DiffPreviewWidget::DiffPreviewWidget(void* parent)
 }
 
 void DiffPreviewWidget::setupUI() {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     mainLayout->setContentsMargins(10, 10, 10, 10);
     
     // Header section
     void* headerWidget = new void(this);
-    QVBoxLayout* headerLayout = new QVBoxLayout(headerWidget);
+    void* headerLayout = new void(headerWidget);
     headerLayout->setContentsMargins(0, 0, 0, 0);
     
-    QLabel* titleLabel = new QLabel("<h3>📋 Code Change Preview</h3>", this);
+    void* titleLabel = new void("<h3>📋 Code Change Preview</h3>", this);
     titleLabel->setStyleSheet("color: #4ec9b0; margin-bottom: 5px;");
     headerLayout->addWidget(titleLabel);
     
-    m_fileLabel = new QLabel("No file selected", this);
+    m_fileLabel = new void("No file selected", this);
     m_fileLabel->setStyleSheet("color: #569cd6; font-weight: bold;");
     headerLayout->addWidget(m_fileLabel);
     
-    m_descriptionLabel = new QLabel("", this);
+    m_descriptionLabel = new void("", this);
     m_descriptionLabel->setStyleSheet("color: #d4d4d4; font-style: italic;");
     m_descriptionLabel->setWordWrap(true);
     headerLayout->addWidget(m_descriptionLabel);
@@ -36,11 +36,11 @@ void DiffPreviewWidget::setupUI() {
     mainLayout->addWidget(headerWidget);
     
     // Diff display area
-    m_diffDisplay = new QTextEdit(this);
+    m_diffDisplay = new void(this);
     m_diffDisplay->setReadOnly(true);
-    m_diffDisplay->setFont(QFont("Consolas", 10));
+    m_diffDisplay->setFont(std::string("Consolas", 10));
     m_diffDisplay->setStyleSheet(
-        "QTextEdit {"
+        "void {"
         "  background-color: #1e1e1e;"
         "  color: #d4d4d4;"
         "  border: 1px solid #3c3c3c;"
@@ -50,12 +50,12 @@ void DiffPreviewWidget::setupUI() {
     mainLayout->addWidget(m_diffDisplay, 1);  // Give it stretch priority
     
     // Button row
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     buttonLayout->setSpacing(10);
     
-    m_rejectButton = new QPushButton("✗ Reject Change", this);
+    m_rejectButton = new void("✗ Reject Change", this);
     m_rejectButton->setStyleSheet(
-        "QPushButton {"
+        "void {"
         "  background-color: #c5323d;"
         "  color: white;"
         "  padding: 8px 16px;"
@@ -63,16 +63,16 @@ void DiffPreviewWidget::setupUI() {
         "  border-radius: 4px;"
         "  font-weight: bold;"
         "}"
-        "QPushButton:hover { background-color: #e53e49; }"
-        "QPushButton:disabled { background-color: #3c3c3c; color: #888888; }"
+        "void:hover { background-color: #e53e49; }"
+        "void:disabled { background-color: #3c3c3c; color: #888888; }"
     );
     m_rejectButton->setEnabled(false);
 // Qt connect removed
     buttonLayout->addWidget(m_rejectButton);
     
-    m_acceptButton = new QPushButton("✓ Accept Change", this);
+    m_acceptButton = new void("✓ Accept Change", this);
     m_acceptButton->setStyleSheet(
-        "QPushButton {"
+        "void {"
         "  background-color: #16825d;"
         "  color: white;"
         "  padding: 8px 16px;"
@@ -80,8 +80,8 @@ void DiffPreviewWidget::setupUI() {
         "  border-radius: 4px;"
         "  font-weight: bold;"
         "}"
-        "QPushButton:hover { background-color: #1a9c6f; }"
-        "QPushButton:disabled { background-color: #3c3c3c; color: #888888; }"
+        "void:hover { background-color: #1a9c6f; }"
+        "void:disabled { background-color: #3c3c3c; color: #888888; }"
     );
     m_acceptButton->setEnabled(false);
 // Qt connect removed
@@ -89,33 +89,33 @@ void DiffPreviewWidget::setupUI() {
     
     buttonLayout->addStretch();
     
-    m_rejectAllButton = new QPushButton("✗ Reject All", this);
+    m_rejectAllButton = new void("✗ Reject All", this);
     m_rejectAllButton->setStyleSheet(
-        "QPushButton {"
+        "void {"
         "  background-color: #c5323d;"
         "  color: white;"
         "  padding: 8px 16px;"
         "  border: none;"
         "  border-radius: 4px;"
         "}"
-        "QPushButton:hover { background-color: #e53e49; }"
-        "QPushButton:disabled { background-color: #3c3c3c; color: #888888; }"
+        "void:hover { background-color: #e53e49; }"
+        "void:disabled { background-color: #3c3c3c; color: #888888; }"
     );
     m_rejectAllButton->setEnabled(false);
 // Qt connect removed
     buttonLayout->addWidget(m_rejectAllButton);
     
-    m_acceptAllButton = new QPushButton("✓ Accept All", this);
+    m_acceptAllButton = new void("✓ Accept All", this);
     m_acceptAllButton->setStyleSheet(
-        "QPushButton {"
+        "void {"
         "  background-color: #16825d;"
         "  color: white;"
         "  padding: 8px 16px;"
         "  border: none;"
         "  border-radius: 4px;"
         "}"
-        "QPushButton:hover { background-color: #1a9c6f; }"
-        "QPushButton:disabled { background-color: #3c3c3c; color: #888888; }"
+        "void:hover { background-color: #1a9c6f; }"
+        "void:disabled { background-color: #3c3c3c; color: #888888; }"
     );
     m_acceptAllButton->setEnabled(false);
 // Qt connect removed
@@ -134,7 +134,7 @@ void DiffPreviewWidget::showDiff(const DiffChange& change) {
     
     // Update UI
     m_fileLabel->setText("📄 " + change.filePath);
-    m_descriptionLabel->setText(change.changeDescription.isEmpty() 
+    m_descriptionLabel->setText(change.changeDescription.empty() 
                                 ? "Review the proposed changes below" 
                                 : change.changeDescription);
     
@@ -234,8 +234,8 @@ void DiffPreviewWidget::setRejectCallback(std::function<void(const DiffChange&)>
 
 void DiffPreviewWidget::onAcceptClicked() {
     if (!m_hasPendingDiff) return;
-    
-    
+
+
     diffAccepted(m_currentDiff);
     
     if (m_acceptCallback) {
@@ -247,8 +247,8 @@ void DiffPreviewWidget::onAcceptClicked() {
 
 void DiffPreviewWidget::onRejectClicked() {
     if (!m_hasPendingDiff) return;
-    
-    
+
+
     diffRejected(m_currentDiff);
     
     if (m_rejectCallback) {
@@ -269,4 +269,5 @@ void DiffPreviewWidget::onRejectAllClicked() {
 }
 
 } // namespace RawrXD
+
 

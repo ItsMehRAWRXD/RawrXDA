@@ -123,7 +123,7 @@ private:
     std::map<std::string, std::vector<uint8_t>> m_hashCache; // path -> hash
     std::map<std::string, std::string> m_backupRegistry; // backupId -> original path
     std::map<std::string, int64_t> m_backupTimes; // backupId -> timestamp
-    QCache<std::string, LanguageProfile> m_profileCache;
+    std::map<std::string, LanguageProfile> m_profileCache;
     std::string m_backupDir;
     
     // Threading

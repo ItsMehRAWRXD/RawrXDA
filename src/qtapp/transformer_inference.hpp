@@ -143,11 +143,12 @@ private:
     // New overload that accepts type ID
     ggml_tensor* createTensorFromCache(const std::vector<uint8_t>& data,
                                        int typeId,
-                                       const std::vector<qint64>& dimensions);
+                                       const std::vector<int64_t>& dimensions);
     
     ggml_tensor* buildGraph(ggml_context* ctx, const std::vector<int32_t>& tokens);
     int sampleToken(const std::vector<float>& logits, float temperature);
     void initKVCache();
     void freeContext();
 };
+
 

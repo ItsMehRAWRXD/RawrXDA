@@ -61,11 +61,11 @@ public:
     }
     
     std::string pluginName() const override {
-        return QStringLiteral("RawrXD Thermal Dashboard");
+        return "RawrXD Thermal Dashboard";
     }
     
     std::string pluginVersion() const override {
-        return QStringLiteral("1.2.0-H");
+        return "1.2.0-H";
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -120,10 +120,10 @@ public:
     
     void setBurstMode(int mode) override {
         if (mode < 0 || mode > 2) return;
-        
-        
+
+
         // Call RawrXD-Hybrid.exe to set mode
-        QProcess process;
+        void* process;
         std::vector<std::string> args;
         
         switch (mode) {
@@ -185,7 +185,7 @@ private:
 private:
     void detectNVMeDrives() {
         // Use PowerShell to enumerate NVMe drives
-        QProcess process;
+        void* process;
         process.start("powershell", std::vector<std::string>() << "-NoProfile" << "-Command" <<
             "Get-WmiObject Win32_DiskDrive | Where-Object { $_.Model -like '*NVMe*' } | "
             "Select-Object -ExpandProperty DeviceID | Measure-Object | "
@@ -199,7 +199,7 @@ private:
     
     void pollNVMeTemperatures(ThermalSnapshot& snapshot) {
         // WMI query for NVMe SMART data
-        QProcess process;
+        void* process;
         process.start("powershell", std::vector<std::string>() << "-NoProfile" << "-Command" <<
             R"(
                 $drives = Get-WmiObject -Namespace 'root\wmi' -Class MSStorageDriver_ATAPISmartData -ErrorAction SilentlyContinue
@@ -235,7 +235,7 @@ private:
     
     void pollGPUTemperature(ThermalSnapshot& snapshot) {
         // AMD GPU via ADL or WMI
-        QProcess process;
+        void* process;
         process.start("powershell", std::vector<std::string>() << "-NoProfile" << "-Command" <<
             R"(
                 $gpu = Get-WmiObject -Namespace 'root\OpenHardwareMonitor' -Class Sensor -ErrorAction SilentlyContinue |
@@ -253,7 +253,7 @@ private:
     
     void pollCPUTemperature(ThermalSnapshot& snapshot) {
         // AMD Ryzen via WMI
-        QProcess process;
+        void* process;
         process.start("powershell", std::vector<std::string>() << "-NoProfile" << "-Command" <<
             R"(
                 $cpu = Get-WmiObject -Namespace 'root\OpenHardwareMonitor' -Class Sensor -ErrorAction SilentlyContinue |

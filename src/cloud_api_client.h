@@ -19,7 +19,7 @@ struct ApiCallLog {
     std::string request_body;
     std::string response_body;
     int status_code;
-    qint64 latency_ms;
+    int64_t latency_ms;
     bool success;
     std::string error_message;
 };
@@ -30,7 +30,7 @@ struct ApiResponse {
     std::string content;
     int status_code;
     std::string raw_body;
-    qint64 latency_ms;
+    int64_t latency_ms;
     std::string error_message;
     void* metadata;
 };
@@ -146,4 +146,5 @@ private:
 };
 
 #endif // CLOUD_API_CLIENT_H
+
 

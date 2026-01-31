@@ -11,7 +11,7 @@ bool runSelfTestGate() {
     Rollback rb;
     if (rb.detectRegression()) {
         rb.revertLastCommit();
-        rb.openIssue(QStringLiteral("Performance regression"), st.lastOutput());
+        rb.openIssue("Performance regression", st.lastOutput());
         return false;
     }
 

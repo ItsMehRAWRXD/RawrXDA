@@ -133,14 +133,11 @@ public:
         
         m_file.read(reinterpret_cast<char*>(&m_header), sizeof(m_header));
         if (m_header.magic != GGUF_MAGIC) {
-            std::cerr << "Invalid GGUF magic" << std::endl;
+            
             return false;
         }
-        
-        std::cout << "GGUF Version: " << m_header.version << std::endl;
-        std::cout << "Tensor Count: " << m_header.tensorCount << std::endl;
-        std::cout << "Metadata KV: " << m_header.metadataKVCount << std::endl;
-        
+
+
         return true;
     }
     
@@ -426,7 +423,7 @@ public:
         std::ofstream output(outputPath, std::ios::binary);
         
         if (!input || !output) {
-            std::cerr << "Failed to open files" << std::endl;
+            
             return false;
         }
         
@@ -467,8 +464,8 @@ public:
         while (input.read(buffer, sizeof(buffer)) || input.gcount() > 0) {
             output.write(buffer, input.gcount());
         }
-        
-        std::cout << "✓ BurstZone metadata injected: " << encoded.size() << " bytes (base64)" << std::endl;
+
+
         return true;
     }
 };
@@ -478,13 +475,8 @@ public:
 // ─────────────────────────────────────────────────────────────────────────────
 
 void PrintUsage(const char* prog) {
-    std::cout << "RAWRXD v1.2.0 BurstZone Patcher" << std::endl;
-    std::cout << "Usage: " << prog << " <input.gguf> [options]" << std::endl;
-    std::cout << "Options:" << std::endl;
-    std::cout << "  --output <path>    Output patched GGUF (default: input_burstzone.gguf)" << std::endl;
-    std::cout << "  --drives <N>       Number of drives in topology (default: 5)" << std::endl;
-    std::cout << "  --analyze          Analyze only, don't patch" << std::endl;
-    std::cout << "  --dump-zones       Print zone assignments" << std::endl;
+
+
 }
 
 int main(int argc, char** argv) {
@@ -521,34 +513,29 @@ int main(int argc, char** argv) {
     // Read GGUF
     GGUFReader reader;
     if (!reader.Open(inputPath)) {
-        std::cerr << "Failed to open GGUF: " << inputPath << std::endl;
+        
         return 1;
     }
     
     if (!reader.ScanMetadata()) {
-        std::cerr << "Failed to scan metadata" << std::endl;
+        
         return 1;
     }
     
     auto tensors = reader.GetTensorInfos();
-    std::cout << "Found " << tensors.size() << " tensors" << std::endl;
-    
+
+
     // Plan zones
     BurstZonePlanner planner(driveCount);
     auto zones = planner.PlanZones(tensors);
     
     if (dumpZones) {
-        std::cout << "\n--- Zone Assignments ---" << std::endl;
+        
         for (size_t i = 0; i < std::min(zones.size(), size_t(50)); i++) {
-            std::cout << "  [" << zones[i].tensorIndex << "] "
-                      << tensors[i].name
-                      << " -> Drive " << (int)zones[i].driveIndex
-                      << " (Priority " << (int)zones[i].priority << ")"
-                      << " [" << (zones[i].sizeBytes / 1024 / 1024) << " MB]"
-                      << std::endl;
+            
         }
         if (zones.size() > 50) {
-            std::cout << "  ... (" << (zones.size() - 50) << " more tensors)" << std::endl;
+            
         }
     }
     
@@ -561,34 +548,30 @@ int main(int argc, char** argv) {
             driveSize[zone.driveIndex] += zone.sizeBytes;
         }
     }
-    
-    std::cout << "\n--- Drive Distribution ---" << std::endl;
+
+
     for (int i = 0; i < driveCount; i++) {
         double pct = 100.0 * driveSize[i] / totalSize;
-        std::cout << "  Drive " << i << ": " 
-                  << (driveSize[i] / 1024 / 1024 / 1024) << " GB ("
-                  << pct << "%)" << std::endl;
+        
     }
-    std::cout << "  Total: " << (totalSize / 1024 / 1024 / 1024) << " GB" << std::endl;
-    
+
+
     if (analyzeOnly) {
-        std::cout << "\n[Analyze-only mode, not patching]" << std::endl;
+        
         return 0;
     }
     
     // Generate burstzone data
     auto burstZoneData = planner.GenerateBurstZoneData(zones);
-    std::cout << "\nBurstZone data size: " << burstZoneData.size() << " bytes" << std::endl;
-    
+
+
     // Inject into GGUF
     GGUFMetadataInjector injector;
     if (!injector.InjectBurstZone(inputPath, outputPath, burstZoneData)) {
-        std::cerr << "Failed to inject burstzone" << std::endl;
+        
         return 1;
     }
-    
-    std::cout << "\n✓ Patched GGUF written to: " << outputPath << std::endl;
-    std::cout << "✓ BurstZone ready for Tier-7 vectorized loading" << std::endl;
-    
+
+
     return 0;
 }

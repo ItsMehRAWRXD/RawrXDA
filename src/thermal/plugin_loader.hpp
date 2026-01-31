@@ -36,13 +36,13 @@ public:
         }
         
         std::string path = pluginPath;
-        if (path.isEmpty()) {
+        if (path.empty()) {
             // Default: plugins directory next to executable
             path = std::filesystem::path(QCoreApplication::applicationDirPath())
                        .filePath("plugins/thermal_dashboard.dll");
         }
-        
-        
+
+
         m_loader = std::make_unique<QPluginLoader>(path);
         
         if (!m_loader->load()) {
@@ -57,7 +57,7 @@ public:
             return false;
         }
         
-        m_plugin = qobject_cast<IThermalDashboardPlugin*>(instance);
+// REMOVED_QT:         m_plugin = qobject_cast<IThermalDashboardPlugin*>(instance);
         if (!m_plugin) {
             m_loader->unload();
             m_loader.reset();
@@ -82,8 +82,8 @@ public:
      */
     void unloadPlugin() {
         if (!m_plugin) return;
-        
-        
+
+
         m_plugin->shutdown();
         m_plugin = nullptr;
         
@@ -154,4 +154,5 @@ private:
 #define THERMAL_COMPACT(p)   rawrxd::thermal::ThermalPluginLoader::instance().createCompactWidget(p)
 
 } // namespace rawrxd::thermal
+
 

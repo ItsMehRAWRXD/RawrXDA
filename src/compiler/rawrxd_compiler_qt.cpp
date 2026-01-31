@@ -2604,7 +2604,7 @@ void DiagnosticsManager::updateTreeWidget()
     m_treeWidget->clear();
     
     for (const auto& diag : m_diagnostics) {
-        QTreeWidgetItem* item = new QTreeWidgetItem(m_treeWidget);
+        QTreeWidgetItem* item = nullptr;
         
         std::string icon;
         switch (diag.severity) {
@@ -2902,7 +2902,7 @@ void CompilerWidget::setupUI()
     layout->addWidget(m_progressBar);
     
     // Diagnostics tree
-    m_diagnosticsTree = new QTreeWidget(this);
+    m_diagnosticsTree = nullptr;
     m_diagnosticsTree->setHeaderLabels({"", "File", "Line", "Message"});
     m_diagnosticsTree->setColumnWidth(0, 30);
     m_diagnosticsTree->setColumnWidth(1, 150);

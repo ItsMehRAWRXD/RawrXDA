@@ -66,7 +66,7 @@ RoutingDecision LLMRouter::route(
     
     // Get available models
     auto availableModels = getAvailableModels();
-    if (availableModels.isEmpty()) {
+    if (availableModels.empty()) {
         decision.selectedModelId = "";
         decision.routingReason = "No models available";
         decision.confidenceScore = 0;
@@ -126,7 +126,7 @@ RoutingDecision LLMRouter::route(
         }
     }
     
-    if (!topModel2.isEmpty()) {
+    if (!topModel2.empty()) {
         decision.alternativeModels.append(topModel2);
     }
     
@@ -140,7 +140,7 @@ RoutingDecision LLMRouter::route(
         }
     }
     
-    if (!topModel3.isEmpty()) {
+    if (!topModel3.empty()) {
         decision.alternativeModels.append(topModel3);
     }
     
@@ -158,7 +158,7 @@ EnsembleResult LLMRouter::routeEnsemble(
     EnsembleResult result;
     auto availableModels = getAvailableModels();
     
-    if (availableModels.isEmpty()) {
+    if (availableModels.empty()) {
         result.consensus = "No models available";
         return result;
     }
@@ -187,7 +187,7 @@ EnsembleResult LLMRouter::routeEnsemble(
             }
         }
         
-        if (!topModel.isEmpty()) {
+        if (!topModel.empty()) {
             result.selectedModels.append(topModel);
         } else {
             break;  // No more models available
@@ -201,8 +201,8 @@ EnsembleResult LLMRouter::routeEnsemble(
     
     result.agreementLevel = 0.85f;  // Placeholder: would be calculated from actual responses
     result.finalConfidence = 0.90f;
-    
-    
+
+
     return result;
 }
 
@@ -311,7 +311,7 @@ void LLMRouter::handleModelFailure(const std::string& modelId, const std::string
     
     // Trigger failover
     RoutingDecision fallback = getFallbackModel(modelId);
-    if (!fallback.selectedModelId.isEmpty()) {
+    if (!fallback.selectedModelId.empty()) {
         failoverTriggered(modelId, fallback.selectedModelId);
     }
 }
@@ -321,7 +321,7 @@ RoutingDecision LLMRouter::getFallbackModel(const std::string& failedModelId)
     auto available = getAvailableModels();
     available.removeAll(failedModelId);
     
-    if (available.isEmpty()) {
+    if (available.empty()) {
         RoutingDecision decision;
         decision.selectedModelId = "";
         decision.routingReason = "No fallback models available";
@@ -394,7 +394,7 @@ int LLMRouter::calculateReliabilityScore(const std::string& modelId)
 
 std::string LLMRouter::selectFromCandidates(const std::vector<std::string>& candidates)
 {
-    if (candidates.isEmpty()) {
+    if (candidates.empty()) {
         return "";
     }
     
@@ -437,4 +437,5 @@ void LLMRouter::setCostOptimizationEnabled(bool enabled)
 {
     m_costOptimizationEnabled = enabled;
 }
+
 

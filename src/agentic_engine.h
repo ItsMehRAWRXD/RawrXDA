@@ -1,10 +1,13 @@
 #pragma once
 
-
 #include <vector>
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <functional>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 /**
  * @class AgenticEngine
@@ -18,53 +21,53 @@
  * 5. Learning - Feedback collection and model adaptation
  * 6. Security - Input validation and sandboxed execution
  */
-class AgenticEngine : public void {
+class AgenticEngine {
 
 public:
-    explicit AgenticEngine(void* parent = nullptr);
+    explicit AgenticEngine();
     virtual ~AgenticEngine();
     
     void initialize();
     
     // AI Core Component 1: Code Analysis
     std::string analyzeCode(const std::string& code);
-    void* analyzeCodeQuality(const std::string& code);
-    void* detectPatterns(const std::string& code);
-    void* calculateMetrics(const std::string& code);
+    json analyzeCodeQuality(const std::string& code);
+    json detectPatterns(const std::string& code);
+    json calculateMetrics(const std::string& code);
     std::string suggestImprovements(const std::string& code);
     
     // AI Core Component 2: Code Generation
     std::string generateCode(const std::string& prompt);
     std::string generateFunction(const std::string& signature, const std::string& description);
-    std::string generateClass(const std::string& className, const void*& spec);
+    std::string generateClass(const std::string& className, const json& spec);
     std::string generateTests(const std::string& code);
     std::string refactorCode(const std::string& code, const std::string& refactoringType);
     
     // AI Core Component 3: Task Planning
-    void* planTask(const std::string& goal);
-    void* decomposeTask(const std::string& task);
-    void* generateWorkflow(const std::string& project);
+    json planTask(const std::string& goal);
+    json decomposeTask(const std::string& task);
+    json generateWorkflow(const std::string& project);
     std::string estimateComplexity(const std::string& task);
     
-    // AI Core Component 4: NLP - Natural Language Processing
+    // AI Core Component 4: NLP
     std::string understandIntent(const std::string& userInput);
-    void* extractEntities(const std::string& text);
-    std::string generateNaturalResponse(const std::string& query, const void*& context);
+    json extractEntities(const std::string& text);
+    std::string generateNaturalResponse(const std::string& query, const json& context);
     std::string summarizeCode(const std::string& code);
     std::string explainError(const std::string& errorMessage);
     
     // AI Core Component 5: Learning and Improvement
     void collectFeedback(const std::string& responseId, bool positive, const std::string& comment);
     void trainFromFeedback();
-    void* getLearningStats() const;
-    void adaptToUserPreferences(const void*& preferences);
+    json getLearningStats() const;
+    void adaptToUserPreferences(const json& preferences);
     
     // AI Core Component 6: Security and Validation
     bool validateInput(const std::string& input);
     std::string sanitizeCode(const std::string& code);
     bool isCommandSafe(const std::string& command);
     
-    // Agent tool capabilities (file system operations)
+    // Agent tool capabilities
     std::string grepFiles(const std::string& pattern, const std::string& path = ".");
     std::string readFile(const std::string& filepath, int startLine = -1, int endLine = -1);
     std::string searchFiles(const std::string& query, const std::string& path = ".");
@@ -72,74 +75,47 @@ public:
     
     // Model management
     bool isModelLoaded() const { return m_modelLoaded; }
-    std::string currentModelPath() const { return std::string::fromStdString(m_currentModelPath); }
+    std::string currentModelPath() const { return m_currentModelPath; }
     std::string generateResponse(const std::string& message);
     void setInferenceEngine(class InferenceEngine* engine) { m_inferenceEngine = engine; }
     
-    // CRITICAL: Mark model as loaded after external load (for MainWindow->AgenticEngine sync)
     void markModelAsLoaded(const std::string& modelPath) { 
         m_modelLoaded = true; 
-        m_currentModelPath = modelPath.toStdString(); 
+        m_currentModelPath = modelPath; 
     }
     
-    // Generation configuration
     struct GenerationConfig {
         float temperature = 0.8f;
         float topP = 0.9f;
         int maxTokens = 512;
     };
-    void setGenerationConfig(const GenerationConfig& config);
+    void setGenerationConfig(const GenerationConfig& config) { m_genConfig = config; }
     GenerationConfig generationConfig() const { return m_genConfig; }
     
-public:
     void setModel(const std::string& modelPath);
     void setModelName(const std::string& modelName);
-    void processMessage(const std::string& message, const std::string& editorContext = std::string());
-    
+    void processMessage(const std::string& message, const std::string& editorContext = "");
 
-    void responseReady(const std::string& response);
-    void modelLoadingFinished(bool success, const std::string& modelPath);
-    void modelReady(bool success);
-    void feedbackCollected(const std::string& responseId);
-    void learningCompleted();
-    void securityWarning(const std::string& warning);
-    
-    // Phase 2: Streaming and refactoring signals
-    void tokenGenerated(int delta);  // Emitted for each token during generation
-    void refactorSuggested(const std::string& original, const std::string& suggested);  // Emitted when refactor is ready
-    
+    // Callbacks (replacing signals)
+    std::function<void(const std::string&)> onResponseReady;
+    std::function<void(bool)> onModelReady;
+    std::function<void(bool, const std::string&)> onModelLoadingFinished;
+
 private:
-    std::string generateTokenizedResponse(const std::string& message);
-    std::string generateFallbackResponse(const std::string& message);
-    bool loadModelAsync(const std::string& modelPath);
-    std::string resolveGgufPath(const std::string& modelName);
-    
-    // Internal AI processing
-    std::string processWithContext(const std::string& input, const void*& context);
-    void* buildCodeContext(const std::string& code);
-    std::string applyTemplate(const std::string& templateName, const void*& params);
-    
-    // Learning data structures
-    struct FeedbackEntry {
-        std::string responseId;
-        std::string input;
-        std::string output;
-        bool positive;
-        std::string comment;
-        qint64 timestamp;
-    };
-    std::vector<FeedbackEntry> m_feedbackHistory;
-    std::unordered_map<std::string, int> m_responseRatings;
-    
-    // User preferences and adaptation
-    void* m_userPreferences;
-    int m_totalInteractions = 0;
-    int m_positiveResponses = 0;
-    
-    // Model state
-    bool m_modelLoaded = false;
+    bool m_modelLoaded;
     std::string m_currentModelPath;
-    class InferenceEngine* m_inferenceEngine = nullptr;
+    class InferenceEngine* m_inferenceEngine;
     GenerationConfig m_genConfig;
+    std::unordered_map<std::string, std::string> m_userPreferences;
+    
+    // Internal helpers
+    bool loadModelAsync(const std::string& path);
+    std::string resolveGgufPath(const std::string& modelName);
+
+    // Feedback data
+    int m_totalInteractions;
+    int m_positiveResponses;
+    std::vector<std::string> m_feedbackHistory;
+    std::vector<int> m_responseRatings;
 };
 

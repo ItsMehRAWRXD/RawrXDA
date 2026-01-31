@@ -77,7 +77,7 @@ bool ProjectMetadata::fromJson(const void*& json) {
     
     customData = json["customData"].toObject();
     
-    return !rootPath.isEmpty();
+    return !rootPath.empty();
 }
 
 // ========== ProjectDetector ==========
@@ -90,7 +90,7 @@ ProjectMetadata ProjectDetector::detectProject(const std::string& path) {
     
     // Find project root
     std::string root = findProjectRoot(path);
-    if (root.isEmpty()) {
+    if (root.empty()) {
         root = std::filesystem::path(path).isDir() ? path : std::filesystem::path(path).absolutePath();
     }
     
@@ -106,11 +106,11 @@ ProjectMetadata ProjectDetector::detectProject(const std::string& path) {
     if (hasProjectMetadata(root)) {
         ProjectMetadata existing = loadProjectMetadata(root);
         // Keep user customizations
-        if (!existing.name.isEmpty()) meta.name = existing.name;
-        if (!existing.buildDirectory.isEmpty()) meta.buildDirectory = existing.buildDirectory;
+        if (!existing.name.empty()) meta.name = existing.name;
+        if (!existing.buildDirectory.empty()) meta.buildDirectory = existing.buildDirectory;
         meta.recentFiles = existing.recentFiles;
-        if (!existing.includePaths.isEmpty()) meta.includePaths = existing.includePaths;
-        if (!existing.sourcePaths.isEmpty()) meta.sourcePaths = existing.sourcePaths;
+        if (!existing.includePaths.empty()) meta.includePaths = existing.includePaths;
+        if (!existing.sourcePaths.empty()) meta.sourcePaths = existing.sourcePaths;
         meta.customData = existing.customData;
     }
     
@@ -267,7 +267,7 @@ std::vector<std::string> ProjectDetector::defaultSourceDirectories(ProjectType t
 }
 
 bool ProjectDetector::saveProjectMetadata(const ProjectMetadata& metadata) {
-    if (metadata.rootPath.isEmpty()) {
+    if (metadata.rootPath.empty()) {
         return false;
     }
     
@@ -369,7 +369,7 @@ bool ProjectDetector::hasMarkerFile(const std::string& dirPath, const std::strin
 bool ProjectDetector::hasFilePattern(const std::string& dirPath, const std::string& pattern) {
     std::filesystem::path dir(dirPath);
     std::vector<std::string> matches = dir.entryList({pattern}, std::filesystem::path::Files);
-    return !matches.isEmpty();
+    return !matches.empty();
 }
 
 bool ProjectDetector::checkProjectType(const std::string& rootPath, ProjectType type) {
@@ -403,4 +403,5 @@ bool ProjectDetector::checkProjectType(const std::string& rootPath, ProjectType 
 }
 
 } // namespace RawrXD
+
 

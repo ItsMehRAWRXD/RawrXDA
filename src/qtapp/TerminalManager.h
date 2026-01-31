@@ -15,7 +15,7 @@ public:
 
     bool start(ShellType shell);
     void stop();
-    qint64 pid() const;
+    int64_t pid() const;
     bool isRunning() const;
     void writeInput(const std::vector<uint8_t>& data);
 
@@ -23,16 +23,17 @@ public:
     void outputReady(const std::vector<uint8_t>& data);
     void errorReady(const std::vector<uint8_t>& data);
     void started();
-    void finished(int exitCode, QProcess::ExitStatus exitStatus);
+    void finished(int exitCode, void*::ExitStatus exitStatus);
 
 private:
     void onStdoutReady();
     void onStderrReady();
     void onProcessStarted();
-    void onProcessFinished(int exitCode, QProcess::ExitStatus status);
+    void onProcessFinished(int exitCode, void*::ExitStatus status);
 
 private:
-    QProcess* m_process;
+    void** m_process;
     ShellType m_shellType;
 };
+
 

@@ -23,11 +23,11 @@ CloudSettingsDialog::~CloudSettingsDialog()
 
 void CloudSettingsDialog::createUI()
 {
-    QVBoxLayout *main_layout = new QVBoxLayout(this);
+    void *main_layout = new void(this);
     main_layout->setContentsMargins(12, 12, 12, 12);
     main_layout->setSpacing(8);
 
-    m_tabs = new QTabWidget(this);
+    m_tabs = new void(this);
     
     createApiKeyTab();
     createConfigurationTab();
@@ -37,22 +37,22 @@ void CloudSettingsDialog::createUI()
     main_layout->addWidget(m_tabs);
 
     // Button layout at bottom
-    QHBoxLayout *button_layout = new QHBoxLayout();
+    void *button_layout = new void();
     button_layout->setSpacing(6);
 
-    m_test_all_button = new QPushButton("Test All Keys", this);
+    m_test_all_button = new void("Test All Keys", this);
     m_test_all_button->setToolTip("Test connectivity to all configured cloud providers");
 // Qt connect removed
-    m_load_env_button = new QPushButton("Load from Environment", this);
+    m_load_env_button = new void("Load from Environment", this);
     m_load_env_button->setToolTip("Load API keys from environment variables");
 // Qt connect removed
-    m_export_button = new QPushButton("Export Settings", this);
+    m_export_button = new void("Export Settings", this);
     m_export_button->setToolTip("Export configuration to JSON file");
 // Qt connect removed
-    m_import_button = new QPushButton("Import Settings", this);
+    m_import_button = new void("Import Settings", this);
     m_import_button->setToolTip("Import configuration from JSON file");
 // Qt connect removed
-    m_defaults_button = new QPushButton("Load Defaults", this);
+    m_defaults_button = new void("Load Defaults", this);
     m_defaults_button->setToolTip("Reset to default settings");
 // Qt connect removed
     button_layout->addWidget(m_test_all_button);
@@ -62,11 +62,11 @@ void CloudSettingsDialog::createUI()
     button_layout->addWidget(m_defaults_button);
     button_layout->addStretch();
 
-    m_save_button = new QPushButton("Save Settings", this);
-    m_save_button->setStyleSheet("QPushButton { background-color: #0066cc; color: white; font-weight: bold; }");
+    m_save_button = new void("Save Settings", this);
+    m_save_button->setStyleSheet("void { background-color: #0066cc; color: white; font-weight: bold; }");
     m_save_button->setMinimumWidth(120);
 // Qt connect removed
-    m_cancel_button = new QPushButton("Cancel", this);
+    m_cancel_button = new void("Cancel", this);
     m_cancel_button->setMinimumWidth(100);
 // Qt connect removed
     button_layout->addWidget(m_save_button);
@@ -79,10 +79,10 @@ void CloudSettingsDialog::createUI()
 void CloudSettingsDialog::createApiKeyTab()
 {
     void *tab = new void(this);
-    QVBoxLayout *layout = new QVBoxLayout(tab);
+    void *layout = new void(tab);
     layout->setSpacing(12);
 
-    QLabel *info = new QLabel(
+    void *info = new void(
         "Enter API keys for cloud AI providers. Keys are stored securely in environment variables.\n"
         "Leave empty to disable a provider. Click 'Test' to verify connectivity.",
         this
@@ -92,90 +92,90 @@ void CloudSettingsDialog::createApiKeyTab()
     layout->addWidget(info);
 
     // ===== OpenAI =====
-    QGroupBox *openai_group = new QGroupBox("OpenAI (GPT-4, GPT-3.5-turbo)", this);
-    QVBoxLayout *openai_layout = new QVBoxLayout(openai_group);
+    void *openai_group = new void("OpenAI (GPT-4, GPT-3.5-turbo)", this);
+    void *openai_layout = new void(openai_group);
 
-    QHBoxLayout *openai_key_layout = new QHBoxLayout();
-    openai_key_layout->addWidget(new QLabel("API Key:", this));
+    void *openai_key_layout = new void();
+    openai_key_layout->addWidget(new void("API Key:", this));
     
-    m_openai_key_input = new QLineEdit(this);
-    m_openai_key_input->setEchoMode(QLineEdit::Password);
+    m_openai_key_input = new void(this);
+    m_openai_key_input->setEchoMode(void::Password);
     m_openai_key_input->setPlaceholderText("sk-...");
     openai_key_layout->addWidget(m_openai_key_input);
 
-    m_openai_visible_checkbox = new QCheckBox("Show", this);
+    m_openai_visible_checkbox = nullptr;
 // Qt connect removed
     });
     openai_key_layout->addWidget(m_openai_visible_checkbox);
 
-    m_openai_test_button = new QPushButton("Test", this);
+    m_openai_test_button = new void("Test", this);
     m_openai_test_button->setMaximumWidth(70);
 // Qt connect removed
     openai_key_layout->addWidget(m_openai_test_button);
 
     openai_layout->addLayout(openai_key_layout);
 
-    m_openai_status_label = new QLabel("Status: Not tested", this);
+    m_openai_status_label = new void("Status: Not tested", this);
     m_openai_status_label->setStyleSheet("color: #666;");
     openai_layout->addWidget(m_openai_status_label);
 
     layout->addWidget(openai_group);
 
     // ===== Anthropic =====
-    QGroupBox *anthropic_group = new QGroupBox("Anthropic (Claude-3 Opus/Sonnet)", this);
-    QVBoxLayout *anthropic_layout = new QVBoxLayout(anthropic_group);
+    void *anthropic_group = new void("Anthropic (Claude-3 Opus/Sonnet)", this);
+    void *anthropic_layout = new void(anthropic_group);
 
-    QHBoxLayout *anthropic_key_layout = new QHBoxLayout();
-    anthropic_key_layout->addWidget(new QLabel("API Key:", this));
+    void *anthropic_key_layout = new void();
+    anthropic_key_layout->addWidget(new void("API Key:", this));
     
-    m_anthropic_key_input = new QLineEdit(this);
-    m_anthropic_key_input->setEchoMode(QLineEdit::Password);
+    m_anthropic_key_input = new void(this);
+    m_anthropic_key_input->setEchoMode(void::Password);
     m_anthropic_key_input->setPlaceholderText("sk-ant-...");
     anthropic_key_layout->addWidget(m_anthropic_key_input);
 
-    m_anthropic_visible_checkbox = new QCheckBox("Show", this);
+    m_anthropic_visible_checkbox = nullptr;
 // Qt connect removed
     });
     anthropic_key_layout->addWidget(m_anthropic_visible_checkbox);
 
-    m_anthropic_test_button = new QPushButton("Test", this);
+    m_anthropic_test_button = new void("Test", this);
     m_anthropic_test_button->setMaximumWidth(70);
 // Qt connect removed
     anthropic_key_layout->addWidget(m_anthropic_test_button);
 
     anthropic_layout->addLayout(anthropic_key_layout);
 
-    m_anthropic_status_label = new QLabel("Status: Not tested", this);
+    m_anthropic_status_label = new void("Status: Not tested", this);
     m_anthropic_status_label->setStyleSheet("color: #666;");
     anthropic_layout->addWidget(m_anthropic_status_label);
 
     layout->addWidget(anthropic_group);
 
     // ===== Google =====
-    QGroupBox *google_group = new QGroupBox("Google (Gemini Pro/1.5)", this);
-    QVBoxLayout *google_layout = new QVBoxLayout(google_group);
+    void *google_group = new void("Google (Gemini Pro/1.5)", this);
+    void *google_layout = new void(google_group);
 
-    QHBoxLayout *google_key_layout = new QHBoxLayout();
-    google_key_layout->addWidget(new QLabel("API Key:", this));
+    void *google_key_layout = new void();
+    google_key_layout->addWidget(new void("API Key:", this));
     
-    m_google_key_input = new QLineEdit(this);
-    m_google_key_input->setEchoMode(QLineEdit::Password);
+    m_google_key_input = new void(this);
+    m_google_key_input->setEchoMode(void::Password);
     m_google_key_input->setPlaceholderText("AIza...");
     google_key_layout->addWidget(m_google_key_input);
 
-    m_google_visible_checkbox = new QCheckBox("Show", this);
+    m_google_visible_checkbox = nullptr;
 // Qt connect removed
     });
     google_key_layout->addWidget(m_google_visible_checkbox);
 
-    m_google_test_button = new QPushButton("Test", this);
+    m_google_test_button = new void("Test", this);
     m_google_test_button->setMaximumWidth(70);
 // Qt connect removed
     google_key_layout->addWidget(m_google_test_button);
 
     google_layout->addLayout(google_key_layout);
 
-    m_google_status_label = new QLabel("Status: Not tested", this);
+    m_google_status_label = new void("Status: Not tested", this);
     m_google_status_label->setStyleSheet("color: #666;");
     google_layout->addWidget(m_google_status_label);
 
@@ -190,15 +190,15 @@ void CloudSettingsDialog::createApiKeyTab()
 void CloudSettingsDialog::createConfigurationTab()
 {
     void *tab = new void(this);
-    QVBoxLayout *layout = new QVBoxLayout(tab);
+    void *layout = new void(tab);
     layout->setSpacing(12);
 
     // Model preferences
-    QGroupBox *model_group = new QGroupBox("Model Preferences", this);
-    QGridLayout *model_grid = new QGridLayout(model_group);
+    void *model_group = new void("Model Preferences", this);
+    void *model_grid = new void(model_group);
 
-    model_grid->addWidget(new QLabel("Default Model:", this), 0, 0);
-    m_default_model_combo = new QComboBox(this);
+    model_grid->addWidget(new void("Default Model:", this), 0, 0);
+    m_default_model_combo = new void(this);
     m_default_model_combo->addItems({
         "quantumide-q4km (Local GGUF)",
         "gpt-4 (OpenAI)",
@@ -207,41 +207,41 @@ void CloudSettingsDialog::createConfigurationTab()
     });
     model_grid->addWidget(m_default_model_combo, 0, 1);
 
-    m_prefer_local_models_checkbox = new QCheckBox("Prefer local models when available", this);
+    m_prefer_local_models_checkbox = nullptr;
     m_prefer_local_models_checkbox->setChecked(true);
     model_grid->addWidget(m_prefer_local_models_checkbox, 1, 0, 1, 2);
 
-    m_enable_streaming_checkbox = new QCheckBox("Enable streaming responses", this);
+    m_enable_streaming_checkbox = nullptr;
     m_enable_streaming_checkbox->setChecked(true);
     model_grid->addWidget(m_enable_streaming_checkbox, 2, 0, 1, 2);
 
-    m_enable_fallback_checkbox = new QCheckBox("Auto-fallback to local model on cloud error", this);
+    m_enable_fallback_checkbox = nullptr;
     m_enable_fallback_checkbox->setChecked(true);
     model_grid->addWidget(m_enable_fallback_checkbox, 3, 0, 1, 2);
 
     layout->addWidget(model_group);
 
     // Request settings
-    QGroupBox *request_group = new QGroupBox("Request Settings", this);
-    QGridLayout *request_grid = new QGridLayout(request_group);
+    void *request_group = new void("Request Settings", this);
+    void *request_grid = new void(request_group);
 
-    request_grid->addWidget(new QLabel("Request Timeout (ms):", this), 0, 0);
-    m_timeout_spinbox = new QSpinBox(this);
+    request_grid->addWidget(new void("Request Timeout (ms):", this), 0, 0);
+    m_timeout_spinbox = nullptr;
     m_timeout_spinbox->setMinimum(1000);
     m_timeout_spinbox->setMaximum(120000);
     m_timeout_spinbox->setValue(30000);
     m_timeout_spinbox->setSuffix(" ms");
     request_grid->addWidget(m_timeout_spinbox, 0, 1);
 
-    request_grid->addWidget(new QLabel("Max Retries:", this), 1, 0);
-    m_max_retries_spinbox = new QSpinBox(this);
+    request_grid->addWidget(new void("Max Retries:", this), 1, 0);
+    m_max_retries_spinbox = nullptr;
     m_max_retries_spinbox->setMinimum(0);
     m_max_retries_spinbox->setMaximum(10);
     m_max_retries_spinbox->setValue(3);
     request_grid->addWidget(m_max_retries_spinbox, 1, 1);
 
-    request_grid->addWidget(new QLabel("Retry Delay (ms):", this), 2, 0);
-    m_retry_delay_spinbox = new QSpinBox(this);
+    request_grid->addWidget(new void("Retry Delay (ms):", this), 2, 0);
+    m_retry_delay_spinbox = nullptr;
     m_retry_delay_spinbox->setMinimum(100);
     m_retry_delay_spinbox->setMaximum(10000);
     m_retry_delay_spinbox->setValue(1000);
@@ -251,11 +251,11 @@ void CloudSettingsDialog::createConfigurationTab()
     layout->addWidget(request_group);
 
     // Cost management
-    QGroupBox *cost_group = new QGroupBox("Cost Management", this);
-    QGridLayout *cost_grid = new QGridLayout(cost_group);
+    void *cost_group = new void("Cost Management", this);
+    void *cost_grid = new void(cost_group);
 
-    cost_grid->addWidget(new QLabel("Cost Limit per Request:", this), 0, 0);
-    m_cost_limit_spinbox = new QDoubleSpinBox(this);
+    cost_grid->addWidget(new void("Cost Limit per Request:", this), 0, 0);
+    m_cost_limit_spinbox = nullptr;
     m_cost_limit_spinbox->setMinimum(0.01);
     m_cost_limit_spinbox->setMaximum(100.0);
     m_cost_limit_spinbox->setValue(5.0);
@@ -263,8 +263,8 @@ void CloudSettingsDialog::createConfigurationTab()
     m_cost_limit_spinbox->setDecimals(2);
     cost_grid->addWidget(m_cost_limit_spinbox, 0, 1);
 
-    cost_grid->addWidget(new QLabel("Cost Alert Threshold:", this), 1, 0);
-    m_cost_alert_threshold_spinbox = new QDoubleSpinBox(this);
+    cost_grid->addWidget(new void("Cost Alert Threshold:", this), 1, 0);
+    m_cost_alert_threshold_spinbox = nullptr;
     m_cost_alert_threshold_spinbox->setMinimum(1.0);
     m_cost_alert_threshold_spinbox->setMaximum(1000.0);
     m_cost_alert_threshold_spinbox->setValue(50.0);
@@ -281,28 +281,28 @@ void CloudSettingsDialog::createConfigurationTab()
 void CloudSettingsDialog::createProvidersTab()
 {
     void *tab = new void(this);
-    QVBoxLayout *layout = new QVBoxLayout(tab);
+    void *layout = new void(tab);
     layout->setSpacing(8);
 
-    QLabel *info = new QLabel("Cloud Provider Status and Health Checks", this);
+    void *info = new void("Cloud Provider Status and Health Checks", this);
     info->setStyleSheet("font-weight: bold; font-size: 11pt;");
     layout->addWidget(info);
 
     // Health check button
-    QHBoxLayout *health_button_layout = new QHBoxLayout();
-    m_check_health_button = new QPushButton("Check Provider Health", this);
+    void *health_button_layout = new void();
+    m_check_health_button = new void("Check Provider Health", this);
 // Qt connect removed
     health_button_layout->addWidget(m_check_health_button);
     health_button_layout->addStretch();
     
-    m_health_status_label = new QLabel("Status: Not checked", this);
+    m_health_status_label = new void("Status: Not checked", this);
     m_health_status_label->setStyleSheet("color: #666;");
     health_button_layout->addWidget(m_health_status_label);
     
     layout->addLayout(health_button_layout);
 
     // Provider table
-    m_providers_table = new QTableWidget(this);
+    m_providers_table = nullptr;
     m_providers_table->setColumnCount(5);
     m_providers_table->setHorizontalHeaderLabels({
         "Provider", "Status", "Latency", "Availability", "Last Checked"
@@ -313,31 +313,31 @@ void CloudSettingsDialog::createProvidersTab()
     
     // Add provider rows
     m_providers_table->insertRow(0);
-    m_providers_table->setItem(0, 0, new QTableWidgetItem("OpenAI"));
-    m_providers_table->setItem(0, 1, new QTableWidgetItem("Unknown"));
-    m_providers_table->setItem(0, 2, new QTableWidgetItem("—"));
-    m_providers_table->setItem(0, 3, new QTableWidgetItem("—"));
-    m_providers_table->setItem(0, 4, new QTableWidgetItem("—"));
+    m_providers_table->setItem(0, 0, nullptr);
+    m_providers_table->setItem(0, 1, nullptr);
+    m_providers_table->setItem(0, 2, nullptr);
+    m_providers_table->setItem(0, 3, nullptr);
+    m_providers_table->setItem(0, 4, nullptr);
 
     m_providers_table->insertRow(1);
-    m_providers_table->setItem(1, 0, new QTableWidgetItem("Anthropic"));
-    m_providers_table->setItem(1, 1, new QTableWidgetItem("Unknown"));
+    m_providers_table->setItem(1, 0, nullptr);
+    m_providers_table->setItem(1, 1, nullptr);
     
     m_providers_table->insertRow(2);
-    m_providers_table->setItem(2, 0, new QTableWidgetItem("Google"));
-    m_providers_table->setItem(2, 1, new QTableWidgetItem("Unknown"));
+    m_providers_table->setItem(2, 0, nullptr);
+    m_providers_table->setItem(2, 1, nullptr);
     
     m_providers_table->insertRow(3);
-    m_providers_table->setItem(3, 0, new QTableWidgetItem("Moonshot"));
-    m_providers_table->setItem(3, 1, new QTableWidgetItem("Unknown"));
+    m_providers_table->setItem(3, 0, nullptr);
+    m_providers_table->setItem(3, 1, nullptr);
     
     m_providers_table->insertRow(4);
-    m_providers_table->setItem(4, 0, new QTableWidgetItem("Azure OpenAI"));
-    m_providers_table->setItem(4, 1, new QTableWidgetItem("Unknown"));
+    m_providers_table->setItem(4, 0, nullptr);
+    m_providers_table->setItem(4, 1, nullptr);
     
     m_providers_table->insertRow(5);
-    m_providers_table->setItem(5, 0, new QTableWidgetItem("AWS Bedrock"));
-    m_providers_table->setItem(5, 1, new QTableWidgetItem("Unknown"));
+    m_providers_table->setItem(5, 0, nullptr);
+    m_providers_table->setItem(5, 1, nullptr);
 
     layout->addWidget(m_providers_table);
     
@@ -347,34 +347,34 @@ void CloudSettingsDialog::createProvidersTab()
 void CloudSettingsDialog::createAdvancedTab()
 {
     void *tab = new void(this);
-    QVBoxLayout *layout = new QVBoxLayout(tab);
+    void *layout = new void(tab);
     layout->setSpacing(12);
 
-    QGroupBox *advanced_group = new QGroupBox("Advanced Settings", this);
-    QGridLayout *grid = new QGridLayout(advanced_group);
+    void *advanced_group = new void("Advanced Settings", this);
+    void *grid = new void(advanced_group);
 
-    grid->addWidget(new QLabel("Custom Endpoint (optional):", this), 0, 0);
-    m_custom_endpoint_input = new QLineEdit(this);
+    grid->addWidget(new void("Custom Endpoint (optional):", this), 0, 0);
+    m_custom_endpoint_input = new void(this);
     m_custom_endpoint_input->setPlaceholderText("https://custom.api.endpoint/v1");
     grid->addWidget(m_custom_endpoint_input, 0, 1);
 
-    grid->addWidget(new QLabel("Connection Pool Size:", this), 1, 0);
-    m_connection_pool_size_spinbox = new QSpinBox(this);
+    grid->addWidget(new void("Connection Pool Size:", this), 1, 0);
+    m_connection_pool_size_spinbox = nullptr;
     m_connection_pool_size_spinbox->setMinimum(1);
     m_connection_pool_size_spinbox->setMaximum(50);
     m_connection_pool_size_spinbox->setValue(10);
     grid->addWidget(m_connection_pool_size_spinbox, 1, 1);
 
-    m_enable_caching_checkbox = new QCheckBox("Enable response caching", this);
+    m_enable_caching_checkbox = nullptr;
     m_enable_caching_checkbox->setChecked(true);
     grid->addWidget(m_enable_caching_checkbox, 2, 0, 1, 2);
 
-    m_enable_metrics_checkbox = new QCheckBox("Enable metrics collection", this);
+    m_enable_metrics_checkbox = nullptr;
     m_enable_metrics_checkbox->setChecked(true);
     grid->addWidget(m_enable_metrics_checkbox, 3, 0, 1, 2);
 
-    grid->addWidget(new QLabel("Metrics Retention (days):", this), 4, 0);
-    m_metrics_retention_spinbox = new QSpinBox(this);
+    grid->addWidget(new void("Metrics Retention (days):", this), 4, 0);
+    m_metrics_retention_spinbox = nullptr;
     m_metrics_retention_spinbox->setMinimum(1);
     m_metrics_retention_spinbox->setMaximum(365);
     m_metrics_retention_spinbox->setValue(30);
@@ -397,7 +397,7 @@ void CloudSettingsDialog::setupConnections()
 
 void CloudSettingsDialog::loadSettings()
 {
-    QSettings settings("RawrXD", "ModelRouter");
+    void* settings("RawrXD", "ModelRouter");
     
     // Load API keys from settings (not environment - more secure)
     m_openai_key_input->setText(settings.value("openai_api_key", "").toString());
@@ -423,7 +423,7 @@ void CloudSettingsDialog::applySettings()
 {
     if (!m_adapter) return;
     
-    QSettings settings("RawrXD", "ModelRouter");
+    void* settings("RawrXD", "ModelRouter");
     
     // Save API keys
     settings.setValue("openai_api_key", m_openai_key_input->text());
@@ -495,7 +495,7 @@ void CloudSettingsDialog::onToggleKeyVisibility(int provider_index)
 void CloudSettingsDialog::onTestOpenAIKey()
 {
     std::string key = m_openai_key_input->text();
-    if (key.isEmpty()) {
+    if (key.empty()) {
         m_openai_status_label->setText("Status: No key provided");
         return;
     }
@@ -517,7 +517,7 @@ void CloudSettingsDialog::onTestOpenAIKey()
 void CloudSettingsDialog::onTestAnthropicKey()
 {
     std::string key = m_anthropic_key_input->text();
-    if (key.isEmpty()) {
+    if (key.empty()) {
         m_anthropic_status_label->setText("Status: No key provided");
         return;
     }
@@ -537,7 +537,7 @@ void CloudSettingsDialog::onTestAnthropicKey()
 void CloudSettingsDialog::onTestGoogleKey()
 {
     std::string key = m_google_key_input->text();
-    if (key.isEmpty()) {
+    if (key.empty()) {
         m_google_status_label->setText("Status: No key provided");
         return;
     }
@@ -662,7 +662,7 @@ void CloudSettingsDialog::onExportConfiguration()
     std::string filename = QFileDialog::getSaveFileName(this, 
         "Export Configuration", "", "JSON Files (*.json)");
     
-    if (!filename.isEmpty()) {
+    if (!filename.empty()) {
         void* config;
         config["openai_api_key"] = maskApiKey(m_openai_key_input->text());
         config["anthropic_api_key"] = maskApiKey(m_anthropic_key_input->text());
@@ -686,7 +686,7 @@ void CloudSettingsDialog::onImportConfiguration()
     std::string filename = QFileDialog::getOpenFileName(this,
         "Import Configuration", "", "JSON Files (*.json)");
     
-    if (!filename.isEmpty()) {
+    if (!filename.empty()) {
         // Implementation for importing JSON configuration
         QMessageBox::information(this, "Import Complete",
             "Configuration imported from: " + filename);
@@ -721,7 +721,7 @@ int CloudSettingsDialog::exec()
     return void::exec();
 }
 
-void CloudSettingsDialog::closeEvent(QCloseEvent *event)
+void CloudSettingsDialog::closeEvent(void* event)
 {
     if (m_settings_changed) {
         int result = QMessageBox::question(this, "Unsaved Changes",
@@ -748,7 +748,7 @@ std::string CloudSettingsDialog::maskApiKey(const std::string& key) const
 bool CloudSettingsDialog::testApiKey(const std::string& provider, const std::string& key)
 {
     // Simplified test - real implementation would make HTTP call
-    return !key.isEmpty();
+    return !key.empty();
 }
 
 void CloudSettingsDialog::validateApiKeys()
@@ -776,4 +776,5 @@ void CloudSettingsDialog::loadApiKeyFromEnvironment(const std::string& provider)
 }
 
 // MOC removed
+
 

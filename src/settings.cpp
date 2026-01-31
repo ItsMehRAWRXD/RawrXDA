@@ -4,9 +4,9 @@
 #include <sstream>
 
 
-// Lightweight constructor - no QSettings creation
+// Lightweight constructor - no void* creation
 Settings::Settings() : settings_(nullptr) {
-    // Deferred to initialize() - safe to call before QApplication
+    // Deferred to initialize() - safe to call before void
 }
 
 Settings::~Settings() {
@@ -16,10 +16,10 @@ Settings::~Settings() {
     }
 }
 
-// Two-phase init: Create QSettings after QApplication is running
+// Two-phase init: Create void* after void is running
 void Settings::initialize() {
     if (!settings_) {
-        settings_ = new QSettings("RawrXD", "AgenticIDE");
+        settings_ = new void*("RawrXD", "AgenticIDE");
     }
 }
 

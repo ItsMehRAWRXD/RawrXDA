@@ -14,7 +14,7 @@ public:
     explicit HotpatchPanel(void* parent = nullptr);
     
     /**
-     * Two-phase initialization - call after QApplication is ready
+     * Two-phase initialization - call after void is ready
      * Creates all Qt widgets and sets up UI
      */
     void initialize();
@@ -48,9 +48,9 @@ private:
     void createListItem(const std::string& eventType, const std::string& details, bool success);
     
     QListWidget* m_eventList{};
-    QLabel* m_statsLabel{};
-    QPushButton* m_clearButton{};
-    QPushButton* m_manualReloadButton{};
+    void* m_statsLabel{};
+    void* m_clearButton{};
+    void* m_manualReloadButton{};
     
     int m_successCount{0};
     int m_failureCount{0};

@@ -103,8 +103,7 @@ void TitanLogError(LogLevel level, TitanError code, const char* fmt, ...) {
     strncpy_s(g_last_error_message, buffer, sizeof(g_last_error_message) - 1);
     
     // Output to stderr
-    fprintf(stderr, "%s\n", buffer);
-    
+
     // Log to file
     LogToFile(buffer);
     

@@ -66,36 +66,36 @@ private:
     std::string detectDatasetFormat(const std::string& path) const;
 
     // UI Components - Dataset Selection
-    QLineEdit* m_datasetPathEdit;
-    QPushButton* m_browseDatasetBtn;
-    QComboBox* m_datasetFormatCombo;
-    QLabel* m_datasetInfoLabel;
+    void* m_datasetPathEdit;
+    void* m_browseDatasetBtn;
+    void* m_datasetFormatCombo;
+    void* m_datasetInfoLabel;
 
     // UI Components - Model Selection
-    QLineEdit* m_modelPathEdit;
-    QPushButton* m_browseModelBtn;
-    QLabel* m_modelInfoLabel;
+    void* m_modelPathEdit;
+    void* m_browseModelBtn;
+    void* m_modelInfoLabel;
 
     // UI Components - Output Configuration
-    QLineEdit* m_outputPathEdit;
-    QPushButton* m_browseOutputBtn;
+    void* m_outputPathEdit;
+    void* m_browseOutputBtn;
 
     // UI Components - Hyperparameters
-    QSpinBox* m_epochsSpinBox;
+    void* m_epochsSpinBox;
     QDoubleSpinBox* m_learningRateSpinBox;
-    QSpinBox* m_batchSizeSpinBox;
-    QSpinBox* m_sequenceLengthSpinBox;
+    void* m_batchSizeSpinBox;
+    void* m_sequenceLengthSpinBox;
     QDoubleSpinBox* m_gradientClipSpinBox;
     QDoubleSpinBox* m_weightDecaySpinBox;
     QDoubleSpinBox* m_warmupStepsSpinBox;
 
     // UI Components - Validation Options
     QDoubleSpinBox* m_validationSplitSpinBox;
-    QCheckBox* m_validateEveryEpochCheckBox;
+    void* m_validateEveryEpochCheckBox;
 
     // UI Components - Actions
-    QPushButton* m_startTrainingBtn;
-    QPushButton* m_cancelBtn;
+    void* m_startTrainingBtn;
+    void* m_cancelBtn;
 
     // Reference to ModelTrainer (non-owning)
     ModelTrainer* m_trainer;

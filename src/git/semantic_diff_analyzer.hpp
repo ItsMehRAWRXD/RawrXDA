@@ -68,13 +68,13 @@ public:
 
     // Metrics
     struct Metrics {
-        qint64 diffsAnalyzed = 0;
-        qint64 semanticChangesDetected = 0;
-        qint64 breakingChangesDetected = 0;
-        qint64 impactAnalysesPerformed = 0;
-        qint64 cacheHits = 0;
-        qint64 cacheMisses = 0;
-        qint64 errorCount = 0;
+        int64_t diffsAnalyzed = 0;
+        int64_t semanticChangesDetected = 0;
+        int64_t breakingChangesDetected = 0;
+        int64_t impactAnalysesPerformed = 0;
+        int64_t cacheHits = 0;
+        int64_t cacheMisses = 0;
+        int64_t errorCount = 0;
         double avgAnalysisLatencyMs = 0.0;
         double avgImpactScore = 0.0;
     };
@@ -111,4 +111,5 @@ private:
     void cacheAnalysis(const std::string& diffHash, const DiffAnalysis& analysis);
     bool validateDiff(const std::string& diff);
 };
+
 

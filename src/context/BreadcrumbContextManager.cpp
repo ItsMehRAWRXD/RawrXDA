@@ -180,8 +180,8 @@ void BreadcrumbContextManager::registerSymbol(const std::string& filePath, const
         [&symbol](const SymbolContext& s) { return s.name == symbol.name; })) {
         m_fileSymbols[filePath].append(symbol);
     }
-    
-    
+
+
     // Add breadcrumb
     Breadcrumb crumb;
     crumb.id = key;

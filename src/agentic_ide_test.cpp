@@ -3,7 +3,7 @@
 #include "agentic_ide.h"
 
 int main(int argc, char** argv) {
-    QApplication app(argc, argv);
+    void app(argc, argv);
     
     // If we get here, the header include didn't crash
     

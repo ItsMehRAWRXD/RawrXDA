@@ -177,7 +177,7 @@ void ModelMemoryHotpatch::detach()
     std::lock_guard<std::mutex> lock(&m_mutex);
     if (!m_attached) return;
     
-    if (!m_fullBackup.isEmpty() && m_stats.appliedPatches > 0) {
+    if (!m_fullBackup.empty() && m_stats.appliedPatches > 0) {
         if (!restoreBackup().success) {
         }
     }
@@ -263,7 +263,7 @@ std::vector<uint8_t> ModelMemoryHotpatch::readMemory(size_t offset, size_t size)
 PatchResult ModelMemoryHotpatch::writeMemory(size_t offset, const std::vector<uint8_t>& data)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (data.isEmpty()) {
+    if (data.empty()) {
         return PatchResult::error(2005, "Cannot write empty data.");
     }
     
@@ -296,7 +296,7 @@ PatchResult ModelMemoryHotpatch::applyPatch(const std::string& name)
     size_t writeOffset = patch.offset;
     const std::vector<uint8_t>& patchData = patch.patchBytes;
     
-    if (patchData.isEmpty() || patch.size == 0) {
+    if (patchData.empty() || patch.size == 0) {
         if (patch.transformType == MemoryPatch::TransformType::None && patch.type != MemoryPatchType::GraphRedirection) {
              return PatchResult::error(3002, std::string("Patch '%1' has no data or size for byte modification."), timer.elapsed());
         }
@@ -347,7 +347,7 @@ PatchResult ModelMemoryHotpatch::revertPatch(const std::string& name)
     }
 
     MemoryPatch& patch = m_patches[name];
-    if (patch.originalBytes.isEmpty()) {
+    if (patch.originalBytes.empty()) {
         return PatchResult::error(4003, std::string("Patch '%1' cannot be reverted: original bytes missing."), timer.elapsed());
     }
 
@@ -402,7 +402,7 @@ PatchResult ModelMemoryHotpatch::restoreBackup()
     std::chrono::steady_clock timer;
     timer.start();
 
-    if (!m_attached || m_fullBackup.isEmpty()) {
+    if (!m_attached || m_fullBackup.empty()) {
         return PatchResult::error(6001, "Cannot restore backup: Not attached or no backup exists.", timer.elapsed());
     }
 
@@ -576,17 +576,17 @@ PatchResult ModelMemoryHotpatch::scaleTensorWeights(const std::string& tensorNam
     return PatchResult::error(5005, "Scale operation not fully implemented (requires GGUF/quantization logic).");
 }
 
-quint32 ModelMemoryHotpatch::calculateCRC32(size_t offset, size_t size) const
+uint32_t ModelMemoryHotpatch::calculateCRC32(size_t offset, size_t size) const
 {
     if (!m_attached || !m_modelPtr || offset + size > m_modelSize) {
         return 0;
     }
     
     // Simple CRC32 polynomial-based calculation
-    const quint32 CRC32_POLY = 0xEDB88320;
-    quint32 crc = 0xFFFFFFFF;
+    const uint32_t CRC32_POLY = 0xEDB88320;
+    uint32_t crc = 0xFFFFFFFF;
     
-    const quint8* data = static_cast<const quint8*>(m_modelPtr) + offset;
+    const uint8_t* data = static_cast<const uint8_t*>(m_modelPtr) + offset;
     
     for (size_t i = 0; i < size; ++i) {
         crc ^= data[i];
@@ -633,7 +633,7 @@ bool ModelMemoryHotpatch::verifyModelIntegrity()
     }
     
     // Calculate and verify integrity hash
-    quint32 calculatedHash = calculateCRC32(0, std::min(m_modelSize, (size_t)65536));
+    uint32_t calculatedHash = calculateCRC32(0, std::min(m_modelSize, (size_t)65536));
     if (m_integrityHash != 0 && m_integrityHash != calculatedHash) {
                    << "Expected:" << m_integrityHash << "Got:" << calculatedHash;
         return false;
@@ -726,7 +726,7 @@ PatchResult ModelMemoryHotpatch::directMemoryWriteBatch(const std::unordered_map
     return PatchResult::ok("Batch write completed (" + std::string::number(writes.size()) + " writes)", timer.elapsed());
 }
 
-PatchResult ModelMemoryHotpatch::directMemoryFill(size_t offset, size_t size, quint8 value)
+PatchResult ModelMemoryHotpatch::directMemoryFill(size_t offset, size_t size, uint8_t value)
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
@@ -787,11 +787,11 @@ bool ModelMemoryHotpatch::directMemoryCompare(size_t offset, const std::vector<u
     return std::memcmp(ptr, data.constData(), data.size()) == 0;
 }
 
-qint64 ModelMemoryHotpatch::directMemorySearch(size_t startOffset, const std::vector<uint8_t>& pattern) const
+int64_t ModelMemoryHotpatch::directMemorySearch(size_t startOffset, const std::vector<uint8_t>& pattern) const
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
-    if (!m_attached || !m_modelPtr || pattern.isEmpty()) {
+    if (!m_attached || !m_modelPtr || pattern.empty()) {
         return -1;
     }
     
@@ -881,4 +881,6 @@ PatchResult ModelMemoryHotpatch::unmapMemoryRegion(void* mappedPtr, size_t size)
     // Direct pointer regions don't need unmapping
     return PatchResult::ok("Unmapped successfully");
 }
+
+
 

@@ -24,7 +24,7 @@ bool EnhancedLoaderV1_1::InitializeIORing(const std::string& filepath) {
     if (!io_backend_) return false;
 
     if (!io_backend_->Initialize(filepath.c_str())) {
-        std::cerr << "❌ IORing: Failed to initialize backend for " << filepath << std::endl;
+        
         return false;
     }
 
@@ -36,7 +36,7 @@ bool EnhancedLoaderV1_1::InitializeIORing(const std::string& filepath) {
     // io_backend_->RegisterBuffers(ring_ptr, ring_size, count);
 
     use_ioring_ = true;
-    std::cout << "🚀 RAWRXD v1.1.0: Kernel-Bypass IORing initialized for " << filepath << std::endl;
+    
     return true;
 }
 

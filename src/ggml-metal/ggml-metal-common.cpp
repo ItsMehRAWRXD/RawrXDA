@@ -93,7 +93,7 @@ static bool ggml_mem_ranges_add_src(ggml_mem_ranges_t mrs, const ggml_tensor * t
     ggml_mem_range mr = ggml_mem_range_from_tensor_src(tensor);
 
     if (mrs->debug > 2) {
-        GGML_LOG_DEBUG("%s: add src range buf=%lld, [%lld, %lld)\n", __func__, mr.pb, mr.p0, mr.p1);
+        GGML_
     }
 
     return ggml_mem_ranges_add(mrs, mr);
@@ -105,7 +105,7 @@ static bool ggml_mem_ranges_add_dst(ggml_mem_ranges_t mrs, const ggml_tensor * t
     ggml_mem_range mr = ggml_mem_range_from_tensor_dst(tensor);
 
     if (mrs->debug > 2) {
-        GGML_LOG_DEBUG("%s: add dst range buf=%lld, [%lld, %lld)\n", __func__, mr.pb, mr.p0, mr.p1);
+        GGML_
     }
 
     return ggml_mem_ranges_add(mrs, mr);
@@ -137,12 +137,7 @@ static bool ggml_mem_ranges_check(ggml_mem_ranges_t mrs, ggml_mem_range mr) {
 
         if (mr.p0 < cmp.p1 && mr.p1 >= cmp.p0) {
             if (mrs->debug > 2) {
-                GGML_LOG_DEBUG("%s: the %s range buf=%lld, [%lld, %lld) overlaps with a previous %s range buf=%lld, [%lld, %lld)\n",
-                        __func__,
-                        mr.pt == MEM_RANGE_TYPE_SRC ? "src" : "dst",
-                        mr.pb, mr.p0, mr.p1,
-                        cmp.pt == MEM_RANGE_TYPE_SRC ? "src" : "dst",
-                        cmp.pb, cmp.p0, cmp.p1);
+                GGML_
             }
 
             return false;

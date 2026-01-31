@@ -22,57 +22,57 @@ ModelRouterWidget::~ModelRouterWidget()
 void ModelRouterWidget::createUI()
 {
     // Main layout
-    QVBoxLayout *main_layout = new QVBoxLayout(this);
+    void *main_layout = new void(this);
     main_layout->setContentsMargins(8, 8, 8, 8);
     main_layout->setSpacing(8);
 
     // ============ Top Toolbar ============
-    QHBoxLayout *toolbar = new QHBoxLayout();
+    void *toolbar = new void();
     toolbar->setSpacing(6);
 
     // Model label and dropdown
-    m_model_label = new QLabel("Model:", this);
-    QFont bold_font = m_model_label->font();
+    m_model_label = new void("Model:", this);
+    std::string bold_font = m_model_label->font();
     bold_font.setBold(true);
     m_model_label->setFont(bold_font);
     
-    m_model_combo = new QComboBox(this);
+    m_model_combo = new void(this);
     m_model_combo->setMinimumWidth(200);
     m_model_combo->setMaxVisibleItems(12);
     m_model_combo->setToolTip("Select AI model for generation");
 
     // Generate and Stop buttons
-    m_generate_button = new QPushButton("Generate", this);
+    m_generate_button = new void("Generate", this);
     m_generate_button->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
     m_generate_button->setToolTip("Generate text with selected model (Ctrl+G)");
     m_generate_button->setMaximumWidth(100);
     
-    m_stop_button = new QPushButton("Stop", this);
+    m_stop_button = new void("Stop", this);
     m_stop_button->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
     m_stop_button->setEnabled(false);
     m_stop_button->setToolTip("Stop generation (Esc)");
     m_stop_button->setMaximumWidth(80);
 
     // Settings button
-    m_settings_button = new QPushButton("Settings", this);
+    m_settings_button = new void("Settings", this);
     m_settings_button->setIcon(style()->standardIcon(QStyle::SP_DirIcon));
     m_settings_button->setToolTip("Open model router settings");
     m_settings_button->setMaximumWidth(90);
 
     // API Key button
-    m_api_key_button = new QPushButton("API Keys", this);
+    m_api_key_button = new void("API Keys", this);
     m_api_key_button->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
     m_api_key_button->setToolTip("Configure cloud provider API keys");
     m_api_key_button->setMaximumWidth(90);
 
     // Dashboard button
-    m_dashboard_button = new QPushButton("Dashboard", this);
+    m_dashboard_button = new void("Dashboard", this);
     m_dashboard_button->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
     m_dashboard_button->setToolTip("Show metrics and statistics dashboard");
     m_dashboard_button->setMaximumWidth(100);
 
     // Console button
-    m_console_button = new QPushButton("Console", this);
+    m_console_button = new void("Console", this);
     m_console_button->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
     m_console_button->setToolTip("Show detailed logs and diagnostics");
     m_console_button->setMaximumWidth(90);
@@ -92,24 +92,24 @@ void ModelRouterWidget::createUI()
     main_layout->addLayout(toolbar);
 
     // ============ Status and Progress ============
-    QHBoxLayout *status_layout = new QHBoxLayout();
+    void *status_layout = new void();
     status_layout->setSpacing(6);
 
-    m_status_label = new QLabel("Ready", this);
+    m_status_label = new void("Ready", this);
     m_status_label->setStyleSheet("color: #0066cc; font-weight: bold;");
     m_status_label->setMinimumHeight(20);
 
-    m_progress_bar = new QProgressBar(this);
+    m_progress_bar = new void(this);
     m_progress_bar->setMaximumHeight(16);
     m_progress_bar->setVisible(false);
     m_progress_bar->setRange(0, 100);
     m_progress_bar->setStyleSheet(
-        "QProgressBar {"
+        "void {"
         "  border: 1px solid #ccc;"
         "  border-radius: 4px;"
         "  background-color: #f0f0f0;"
         "}"
-        "QProgressBar::chunk {"
+        "void::chunk {"
         "  background-color: #0066cc;"
         "}"
     );
@@ -121,16 +121,16 @@ void ModelRouterWidget::createUI()
     main_layout->addLayout(status_layout);
 
     // ============ Metrics Display ============
-    QHBoxLayout *metrics_layout = new QHBoxLayout();
+    void *metrics_layout = new void();
     metrics_layout->setSpacing(12);
 
-    m_latency_label = new QLabel("Latency: — ms", this);
+    m_latency_label = new void("Latency: — ms", this);
     m_latency_label->setStyleSheet("color: #666; font-family: monospace;");
     
-    m_cost_label = new QLabel("Cost: $0.00", this);
+    m_cost_label = new void("Cost: $0.00", this);
     m_cost_label->setStyleSheet("color: #666; font-family: monospace;");
     
-    m_success_label = new QLabel("Success: —%", this);
+    m_success_label = new void("Success: —%", this);
     m_success_label->setStyleSheet("color: #666; font-family: monospace;");
 
     metrics_layout->addWidget(m_latency_label);
@@ -141,10 +141,10 @@ void ModelRouterWidget::createUI()
     main_layout->addLayout(metrics_layout);
 
     // ============ Error Display ============
-    m_error_label = new QLabel(this);
+    m_error_label = new void(this);
     m_error_label->setWordWrap(true);
     m_error_label->setStyleSheet(
-        "QLabel {"
+        "void {"
         "  background-color: #ffe6e6;"
         "  color: #cc0000;"
         "  padding: 8px;"
@@ -158,11 +158,11 @@ void ModelRouterWidget::createUI()
     main_layout->addWidget(m_error_label);
 
     // ============ Prompt Input ============
-    QLabel *prompt_label = new QLabel("Prompt:", this);
+    void *prompt_label = new void("Prompt:", this);
     prompt_label->setFont(bold_font);
     main_layout->addWidget(prompt_label);
 
-    m_prompt_input = new QPlainTextEdit(this);
+    m_prompt_input = nullptr;
     m_prompt_input->setPlaceholderText("Enter your prompt here...");
     m_prompt_input->setMaximumHeight(100);
     m_prompt_input->setStyleSheet(
@@ -176,12 +176,12 @@ void ModelRouterWidget::createUI()
     main_layout->addWidget(m_prompt_input);
 
     // ============ Output Display ============
-    QHBoxLayout *output_header_layout = new QHBoxLayout();
+    void *output_header_layout = new void();
     
-    QLabel *output_label = new QLabel("Output:", this);
+    void *output_label = new void("Output:", this);
     output_label->setFont(bold_font);
     
-    m_clear_output_button = new QPushButton("Clear", this);
+    m_clear_output_button = new void("Clear", this);
     m_clear_output_button->setMaximumWidth(60);
     
     output_header_layout->addWidget(output_label);
@@ -190,7 +190,7 @@ void ModelRouterWidget::createUI()
     
     main_layout->addLayout(output_header_layout);
 
-    m_output_display = new QPlainTextEdit(this);
+    m_output_display = nullptr;
     m_output_display->setReadOnly(true);
     m_output_display->setMaximumHeight(150);
     m_output_display->setStyleSheet(
@@ -303,10 +303,10 @@ void ModelRouterWidget::setStatusMessage(const std::string& message)
 void ModelRouterWidget::setErrorMessage(const std::string& error)
 {
     m_error_label->setText("⚠ " + error);
-    m_error_label->setVisible(!error.isEmpty());
-    if (!error.isEmpty()) {
+    m_error_label->setVisible(!error.empty());
+    if (!error.empty()) {
         m_error_label->setStyleSheet(
-            "QLabel {"
+            "void {"
             "  background-color: #ffe6e6;"
             "  color: #cc0000;"
             "  padding: 8px;"
@@ -449,13 +449,13 @@ void ModelRouterWidget::onStatisticsUpdated(const void*& stats)
 void ModelRouterWidget::onGenerateButtonClicked()
 {
     std::string prompt = getPromptInput();
-    if (prompt.isEmpty()) {
+    if (prompt.empty()) {
         setErrorMessage("Please enter a prompt");
         return;
     }
 
     std::string model = getSelectedModel();
-    if (model.isEmpty()) {
+    if (model.empty()) {
         setErrorMessage("Please select a model");
         return;
     }
@@ -544,4 +544,5 @@ void ModelRouterWidget::showTemporaryStatus(const std::string& message, int dura
 }
 
 // MOC removed
+
 

@@ -28,7 +28,7 @@ EnhancedModelLoader::~EnhancedModelLoader() {
 }
 
 bool EnhancedModelLoader::loadModel(const std::string& modelInput) {
-    if (modelInput.isEmpty()) {
+    if (modelInput.empty()) {
         m_lastError = "Model input is empty";
         error(m_lastError);
         return false;
@@ -352,7 +352,7 @@ void EnhancedModelLoader::logLoadStart(const std::string& input, ModelFormat for
             << "format:" << std::string::fromStdString(FormatRouter::formatToString(format));
 }
 
-void EnhancedModelLoader::logLoadSuccess(const std::string& input, ModelFormat format, qint64 durationMs) {
+void EnhancedModelLoader::logLoadSuccess(const std::string& input, ModelFormat format, int64_t durationMs) {
             << input
             << "format:" << std::string::fromStdString(FormatRouter::formatToString(format))
             << "duration:" << durationMs << "ms";
@@ -386,4 +386,6 @@ void EnhancedModelLoader::cleanupTempFiles() {
     }
     m_tempFiles.clear();
 }
+
+
 

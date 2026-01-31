@@ -556,8 +556,7 @@ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS> class tensor_
     }
 
     int repack(struct ggml_tensor * t, const void * data, size_t data_size) override {
-        GGML_LOG_DEBUG("%s: repack tensor %s with %s_%dx%d\n", __func__, t->name, ggml_type_name(t->type),
-                       (int) NB_COLS, (int) INTER_SIZE);
+        GGML_
         return ggml::cpu::riscv64_spacemit::repack<BLOC_TYPE, INTER_SIZE, NB_COLS>(t, data, data_size);
     }
 };

@@ -30,19 +30,19 @@ public:
     struct UptimeStats {
         std::chrono::system_clock::time_point periodStart;
         std::chrono::system_clock::time_point periodEnd;
-        qint64 totalUptimeMs;
-        qint64 totalDowntimeMs;
+        int64_t totalUptimeMs;
+        int64_t totalDowntimeMs;
         double uptimePercentage;
         int downtimeIncidents;
-        qint64 longestDowntimeMs;
+        int64_t longestDowntimeMs;
     };
 
     struct SLAMetrics {
         double currentUptime;        // Current uptime %
         double targetUptime;         // Target (99.99%)
-        qint64 allowedDowntimeMs;    // Monthly budget (43 min)
-        qint64 actualDowntimeMs;     // Actual downtime
-        qint64 remainingBudgetMs;    // Remaining budget
+        int64_t allowedDowntimeMs;    // Monthly budget (43 min)
+        int64_t actualDowntimeMs;     // Actual downtime
+        int64_t remainingBudgetMs;    // Remaining budget
         bool inCompliance;           // Is within SLA?
         int violationCount;          // # of violations this month
     };
@@ -69,7 +69,7 @@ public:
     /**
      * @brief Record a health check result
      */
-    void recordHealthCheck(bool success, qint64 responseTimeMs);
+    void recordHealthCheck(bool success, int64_t responseTimeMs);
 
     /**
      * @brief Get current SLA metrics
@@ -104,9 +104,9 @@ public:
     void statusChanged(HealthStatus status);
     void slaViolation(const std::string& details);
     void slaWarning(const std::string& message);
-    void healthCheckFailed(qint64 responseTimeMs);
+    void healthCheckFailed(int64_t responseTimeMs);
     void downtimeStarted();
-    void downtimeEnded(qint64 durationMs);
+    void downtimeEnded(int64_t durationMs);
 
 private:
     void performHealthCheck();
@@ -119,14 +119,14 @@ private:
 
     void recordDowntimeStart();
     void recordDowntimeEnd();
-    qint64 calculateAllowedDowntime() const;
+    int64_t calculateAllowedDowntime() const;
 
     HealthStatus m_currentStatus = Healthy;
     HealthStatus m_previousStatus = Healthy;
     
     std::chrono::system_clock::time_point m_periodStart;
     std::chrono::system_clock::time_point m_downtimeStart;
-    qint64 m_totalDowntimeMs = 0;
+    int64_t m_totalDowntimeMs = 0;
     int m_downtimeIncidents = 0;
     int m_violationCount = 0;
     
@@ -138,6 +138,7 @@ private:
     bool m_running = false;
     bool m_isDown = false;
     
-    std::vector<qint64> m_downtimePeriods;
+    std::vector<int64_t> m_downtimePeriods;
 };
+
 

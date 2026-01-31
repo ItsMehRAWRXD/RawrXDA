@@ -197,7 +197,7 @@ public:
         std::string absolutePath = fileInfo.absoluteFilePath();
         
         // If base path provided, verify it's under base path
-        if (!basePath.isEmpty()) {
+        if (!basePath.empty()) {
             std::filesystem::path baseDir(basePath);
             std::string baseAbsPath = baseDir.absolutePath();
             if (!absolutePath.startsWith(baseAbsPath)) {
@@ -227,4 +227,5 @@ public:
 private:
     PathResolver() = delete;  // Utility class, no instantiation
 };
+
 

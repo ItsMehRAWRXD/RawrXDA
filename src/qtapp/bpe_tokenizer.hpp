@@ -7,9 +7,9 @@
 #include <string>
 
 struct MetricsTimer {
-    QElapsedTimer timer;
+    std::chrono::steady_clock::time_point timer;
     MetricsTimer() { timer.start(); }
-    qint64 elapsedUs() const { return timer.nsecsElapsed() / 1000; }
+    int64_t elapsedUs() const { return timer.nsecsElapsed() / 1000; }
 };
 
 /**
@@ -122,4 +122,5 @@ private:
     };
     std::vector<TextSplit> splitText(const std::string& text);
 };
+
 

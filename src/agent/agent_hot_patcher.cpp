@@ -16,12 +16,12 @@ void AgentHotPatcher::initialize(const std::string& ggufLoaderPath, int flags) {
     m_ggufLoaderPath = ggufLoaderPath;
     
     if (!fs::exists(ggufLoaderPath)) {
-        std::cerr << "GGUF loader not found: " << ggufLoaderPath << std::endl;
+        
         return;
     }
     
     m_hotPatchingEnabled = true; // Default to true after init?
-    std::cout << "AgentHotPatcher initialized" << std::endl;
+    
 }
 
 json AgentHotPatcher::interceptModelOutput(const std::string& modelOutputStr, const json& context) {
@@ -83,8 +83,8 @@ json AgentHotPatcher::interceptModelOutput(const std::string& modelOutputStr, co
     result["modified"] = modified;
     result["final_output"] = output;
     return result; // The modifying logic depends on how the caller expects return.
-    // The original code returned a QJsonObject with 'original' and 'modified'. 
-    // Wait, the original code had: returns `void* result` which was a `QJsonObject`.
+    // The original code returned a void* with 'original' and 'modified'. 
+    // Wait, the original code had: returns `void* result` which was a `void*`.
 }
 
 HallucinationDetection AgentHotPatcher::detectHallucination(const std::string& content, const json& context) {

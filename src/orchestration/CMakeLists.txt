@@ -3,10 +3,7 @@ project(RawrXDOrchestration)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 COMPONENTS Core Network Sql Multimedia REQUIRED)
 
 add_library(RawrXDOrchestration STATIC
     llm_router.hpp
@@ -20,10 +17,6 @@ add_library(RawrXDOrchestration STATIC
 
 target_link_libraries(RawrXDOrchestration
     PUBLIC
-        Qt6::Core
-        Qt6::Network
-        Qt6::Sql
-        Qt6::Multimedia
 )
 
 target_include_directories(RawrXDOrchestration

@@ -1,8 +1,10 @@
 // AgenticMemorySystem Implementation (Core Functions)
 #include "agentic_memory_system.h"
 
-
 #include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 AgenticMemorySystem::AgenticMemorySystem(void* parent)
     : void(parent),
@@ -614,9 +616,11 @@ float AgenticMemorySystem::calculateRelevanceScore(
 
 std::string AgenticMemorySystem::hashContent(const std::string& content)
 {
-    QCryptographicHash hash(QCryptographicHash::Sha256);
-    hash.addData(content.toUtf8());
-    return std::string(hash.result().toHex());
+    // A simple hash implementation to replace QCryptographicHash
+    size_t h = std::hash<std::string>{}(content);
+    std::stringstream ss;
+    ss << std::hex << std::setw(16) << std::setfill('0') << h;
+    return ss.str();
 }
 
 void AgenticMemorySystem::extractPatterns()

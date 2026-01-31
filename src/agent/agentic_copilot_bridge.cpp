@@ -24,9 +24,8 @@ void AgenticCopilotBridge::initialize(AgenticEngine* engine, ChatInterface* chat
 std::string AgenticCopilotBridge::generateCodeCompletion(const std::string& context, const std::string& prefix) {
     auto start = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-    
-    std::cout << "[AgenticCopilot] Generating code completion for prefix: " << prefix.substr(0, 50) << "..." << std::endl;
-    
+
+
     try {
         if (!m_agenticEngine) {
             errorOccurred("Agentic engine not available for code completion");
@@ -51,9 +50,8 @@ std::string AgenticCopilotBridge::generateCodeCompletion(const std::string& cont
         
         auto end = std::chrono::steady_clock::now();
         long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        
-        std::cout << "[AgenticCopilot] Completion generated in " << elapsed << "ms" << std::endl;
-        
+
+
         completionReady(completion);
         return completion;
     } catch (const std::exception& e) {
@@ -65,9 +63,8 @@ std::string AgenticCopilotBridge::generateCodeCompletion(const std::string& cont
 std::string AgenticCopilotBridge::analyzeActiveFile() {
     auto start = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-    
-    std::cout << "[AgenticCopilot] Analyzing active file" << std::endl;
-    
+
+
     try {
         if (!m_multiTabEditor) {
             errorOccurred("Editor not available");
@@ -104,5 +101,5 @@ void AgenticCopilotBridge::analysisReady(const std::string& result) {
 }
 
 void AgenticCopilotBridge::errorOccurred(const std::string& error) {
-    std::cerr << "[AgenticCopilot] Error: " << error << std::endl;
+    
 }

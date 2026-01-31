@@ -103,7 +103,8 @@ class ThermalPluginLoader  {public:
      * @brief Enable/disable IPC command server
      */
     void setIpcEnabled(bool enabled);
-\npublic:\n    /**
+
+\npublic:\n    /**
      * @brief Emitted when plugin is loaded
      */
     void pluginLoaded();
@@ -127,7 +128,8 @@ class ThermalPluginLoader  {public:
      * @brief Emitted when auto-reload detects DLL change
      */
     void pluginFileChanged(const std::string& path);
-\nprivate:\n    void onFileChanged(const std::string& path);
+
+\nprivate:\n    void onFileChanged(const std::string& path);
     void onNewIpcConnection();
     void onIpcReadyRead();
     void onIpcDisconnected();
@@ -240,8 +242,8 @@ inline bool ThermalPluginLoader::loadPlugin(const std::string& pluginPath)
         pluginError(m_lastError);
         return false;
     }
-    
-    
+
+
     // Create loader and load
     m_loader = std::make_unique<QPluginLoader>(path);
     
@@ -254,7 +256,7 @@ inline bool ThermalPluginLoader::loadPlugin(const std::string& pluginPath)
     
     // Get plugin interface
     void* instance = m_loader->instance();
-    m_plugin = qobject_cast<rawrxd::thermal::IThermalDashboardPlugin*>(instance);
+// REMOVED_QT:     m_plugin = qobject_cast<rawrxd::thermal::IThermalDashboardPlugin*>(instance);
     
     if (!m_plugin) {
         m_lastError = "Plugin does not implement IThermalDashboardPlugin";
@@ -430,7 +432,7 @@ inline void ThermalPluginLoader::onNewIpcConnection()
 
 inline void ThermalPluginLoader::onIpcReadyRead()
 {
-    void** socket = qobject_cast<void**>(sender());
+// REMOVED_QT:     void** socket = qobject_cast<void**>(sender());
     if (!socket) return;
     
     std::vector<uint8_t> data = socket->readLine();
@@ -443,7 +445,7 @@ inline void ThermalPluginLoader::onIpcReadyRead()
 
 inline void ThermalPluginLoader::onIpcDisconnected()
 {
-    void** socket = qobject_cast<void**>(sender());
+// REMOVED_QT:     void** socket = qobject_cast<void**>(sender());
     if (socket) {
         m_ipcClients.removeAll(socket);
         socket->deleteLater();

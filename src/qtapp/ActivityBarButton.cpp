@@ -8,7 +8,7 @@ ActivityBarButton::ActivityBarButton(const std::string& tooltip, void* parent)
     , m_isPressed(false)
 {
     setToolTip(tooltip);
-    setIconSize(QSize(24, 24));
+    setIconSize(void*(24, 24));
     setFixedSize(BUTTON_SIZE, BUTTON_SIZE);
     setStyleSheet("QToolButton { background-color: transparent; border: none; }");
 }
@@ -33,7 +33,7 @@ void ActivityBarButton::setHovered(bool hovered)
     }
 }
 
-void ActivityBarButton::paintEvent(QPaintEvent* event)
+void ActivityBarButton::paintEvent(void*  event)
 {
     (event);
     
@@ -41,13 +41,13 @@ void ActivityBarButton::paintEvent(QPaintEvent* event)
     painter.setRenderHint(QPainter::Antialiasing);
     
     // Draw background
-    QColor bgColor;
+    uint32_t bgColor;
     if (m_isPressed || m_isActive) {
-        bgColor = QColor(0x2D, 0x2D, 0x2D);  // Slightly lighter
+        bgColor = uint32_t(0x2D, 0x2D, 0x2D);  // Slightly lighter
     } else if (m_isHovered) {
-        bgColor = QColor(0x2D, 0x2D, 0x2D);  // Hover color
+        bgColor = uint32_t(0x2D, 0x2D, 0x2D);  // Hover color
     } else {
-        bgColor = QColor(0x33, 0x33, 0x33);  // Standard background
+        bgColor = uint32_t(0x33, 0x33, 0x33);  // Standard background
     }
     
     painter.fillRect(rect(), bgColor);
@@ -55,15 +55,15 @@ void ActivityBarButton::paintEvent(QPaintEvent* event)
     // Draw left active indicator (blue line)
     if (m_isActive) {
         painter.fillRect(0, 0, ACTIVE_INDICATOR_WIDTH, height(), 
-                        QColor(ACTIVE_INDICATOR_COLOR));
+                        uint32_t(ACTIVE_INDICATOR_COLOR));
     }
     
     // Draw icon
     if (!icon().isNull()) {
-        QIcon::Mode mode = m_isActive ? QIcon::Active : 
-                          (m_isHovered ? QIcon::Selected : QIcon::Normal);
-        QIcon::State state = m_isPressed ? QIcon::On : QIcon::Off;
-        QPixmap pm = icon().pixmap(iconSize(), mode, state);
+        std::string::Mode mode = m_isActive ? std::string::Active : 
+                          (m_isHovered ? std::string::Selected : std::string::Normal);
+        std::string::State state = m_isPressed ? std::string::On : std::string::Off;
+        std::string pm = icon().pixmap(iconSize(), mode, state);
         
         // Center the icon
         int x = (width() - pm.width()) / 2;
@@ -72,7 +72,7 @@ void ActivityBarButton::paintEvent(QPaintEvent* event)
     }
 }
 
-void ActivityBarButton::enterEvent(QEnterEvent* event)
+void ActivityBarButton::enterEvent(void*  event)
 {
     (event);
     setHovered(true);
@@ -84,14 +84,14 @@ void ActivityBarButton::leaveEvent(QEvent* event)
     setHovered(false);
 }
 
-void ActivityBarButton::mousePressEvent(QMouseEvent* event)
+void ActivityBarButton::mousePressEvent(void*  event)
 {
     (event);
     m_isPressed = true;
     update();
 }
 
-void ActivityBarButton::mouseReleaseEvent(QMouseEvent* event)
+void ActivityBarButton::mouseReleaseEvent(void*  event)
 {
     (event);
     m_isPressed = false;

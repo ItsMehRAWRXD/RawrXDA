@@ -3,9 +3,39 @@
 
 
 #include <algorithm>
+#include <chrono>
+#include <thread>
+#include <regex>
 
-AgenticPuppeteer::AgenticPuppeteer(void* parent)
-    : void(parent)
+static bool stringContains(const std::string& haystack, const std::string& needle) {
+    return haystack.find(needle) != std::string::npos;
+}
+
+static bool stringContainsIgnoreCase(const std::string& haystack, const std::string& needle) {
+    if (needle.empty()) return true;
+    auto it = std::search(
+        haystack.begin(), haystack.end(),
+        needle.begin(), needle.end(),
+        [](char ch1, char ch2) { return std::tolower(ch1) == std::tolower(ch2); }
+    );
+    return it != haystack.end();
+}
+
+static std::string stringTrimmed(std::string s) {
+    s.erase(0, s.find_first_not_of(" \t\n\r\f\v"));
+    s.erase(s.find_last_not_of(" \t\n\r\f\v") + 1);
+    return s;
+}
+
+static bool stringStartsWith(const std::string& s, char c) {
+    return !s.empty() && s.front() == c;
+}
+
+static bool stringEndsWith(const std::string& s, char c) {
+    return !s.empty() && s.back() == c;
+}
+
+AgenticPuppeteer::AgenticPuppeteer()
 {
 }
 
@@ -53,7 +83,7 @@ CorrectionResult AgenticPuppeteer::correctFailure(
         default:
             // Use default retry strategy
             result.correctedResponse = retryWithRephrase(originalPrompt, modelCallback);
-            result.success = !result.correctedResponse.isEmpty();
+            result.success = !result.correctedResponse.empty();
             result.strategyUsed = CorrectionStrategy::Rephrase;
             result.attemptsUsed = 1;
             break;
@@ -96,18 +126,18 @@ CorrectionResult AgenticPuppeteer::correctRefusal(
             correctedResponse = retryWithSystemPrompt(prompt, generateSystemPrompt(FailureType::Refusal), modelCallback);
         }
         
-        if (!correctedResponse.isEmpty() && isResponseValid(correctedResponse, FailureType::Refusal)) {
+        if (!correctedResponse.empty() && isResponseValid(correctedResponse, FailureType::Refusal)) {
             m_stats.refusalsBypassed++;
             refusalBypassed(prompt);
             return CorrectionResult::succeeded(correctedResponse, CorrectionStrategy::HotpatchBypass, attempt);
         }
         
         if (m_retryDelay > 0) {
-            std::thread::msleep(m_retryDelay);
+            std::this_thread::sleep_for(std::chrono::milliseconds(m_retryDelay));
         }
     }
     
-    return CorrectionResult::failed("Failed to bypass refusal after " + std::string::number(m_maxRetries) + " attempts", m_maxRetries);
+    return CorrectionResult::failed("Failed to bypass refusal after " + std::to_string(m_maxRetries) + " attempts", m_maxRetries);
 }
 
 CorrectionResult AgenticPuppeteer::correctHallucination(
@@ -123,7 +153,7 @@ CorrectionResult AgenticPuppeteer::correctHallucination(
         
         std::string correctedResponse;
         
-        if (!correctContext.isEmpty()) {
+        if (!correctContext.empty()) {
             correctedResponse = retryWithContext(prompt, correctContext, modelCallback);
         } else {
             correctedResponse = retryWithSystemPrompt(
@@ -133,13 +163,13 @@ CorrectionResult AgenticPuppeteer::correctHallucination(
             );
         }
         
-        if (!correctedResponse.isEmpty() && isResponseValid(correctedResponse, FailureType::Hallucination)) {
+        if (!correctedResponse.empty() && isResponseValid(correctedResponse, FailureType::Hallucination)) {
             m_stats.hallucinationsCorrected++;
             return CorrectionResult::succeeded(correctedResponse, CorrectionStrategy::AddContext, attempt);
         }
         
         if (m_retryDelay > 0) {
-            std::thread::msleep(m_retryDelay);
+            std::this_thread::sleep_for(std::chrono::milliseconds(m_retryDelay));
         }
     }
     
@@ -154,20 +184,20 @@ CorrectionResult AgenticPuppeteer::correctFormatViolation(
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
-    std::string formatSpec = expectedFormat.isEmpty() ? extractFormatFromPrompt(prompt) : expectedFormat;
+    std::string formatSpec = expectedFormat.empty() ? extractFormatFromPrompt(prompt) : expectedFormat;
     
     for (int attempt = 1; attempt <= m_maxRetries; ++attempt) {
         correctionAttempted(CorrectionStrategy::FormatEnforce, attempt);
         
         std::string correctedResponse = retryWithFormatEnforcement(prompt, formatSpec, modelCallback);
         
-        if (!correctedResponse.isEmpty() && isResponseValid(correctedResponse, FailureType::FormatViolation)) {
+        if (!correctedResponse.empty() && isResponseValid(correctedResponse, FailureType::FormatViolation)) {
             m_stats.formatsCorrected++;
             return CorrectionResult::succeeded(correctedResponse, CorrectionStrategy::FormatEnforce, attempt);
         }
         
         if (m_retryDelay > 0) {
-            std::thread::msleep(m_retryDelay);
+            std::this_thread::sleep_for(std::chrono::milliseconds(m_retryDelay));
         }
     }
     
@@ -195,13 +225,13 @@ CorrectionResult AgenticPuppeteer::correctInfiniteLoop(
             correctedResponse = modelCallback(modifiedPrompt);
         }
         
-        if (!correctedResponse.isEmpty() && isResponseValid(correctedResponse, FailureType::InfiniteLoop)) {
+        if (!correctedResponse.empty() && isResponseValid(correctedResponse, FailureType::InfiniteLoop)) {
             m_stats.loopsBroken++;
             return CorrectionResult::succeeded(correctedResponse, CorrectionStrategy::ParameterAdjust, attempt);
         }
         
         if (m_retryDelay > 0) {
-            std::thread::msleep(m_retryDelay);
+            std::this_thread::sleep_for(std::chrono::milliseconds(m_retryDelay));
         }
     }
     
@@ -287,7 +317,7 @@ std::string AgenticPuppeteer::retryWithRephrase(const std::string& prompt, std::
 
 std::string AgenticPuppeteer::retryWithContext(const std::string& prompt, const std::string& context, std::function<std::string(const std::string&)> callback)
 {
-    std::string enrichedPrompt = std::string("Context: %1\n\n%2");
+    std::string enrichedPrompt = "Context: " + context + "\n\n" + prompt;
     return callback(enrichedPrompt);
 }
 
@@ -299,13 +329,13 @@ std::string AgenticPuppeteer::retryWithParameterAdjust(const std::string& prompt
 
 std::string AgenticPuppeteer::retryWithSystemPrompt(const std::string& prompt, const std::string& systemPrompt, std::function<std::string(const std::string&)> callback)
 {
-    std::string modifiedPrompt = std::string("[SYSTEM]: %1\n\n%2");
+    std::string modifiedPrompt = "[SYSTEM]: " + systemPrompt + "\n\n" + prompt;
     return callback(modifiedPrompt);
 }
 
 std::string AgenticPuppeteer::retryWithFormatEnforcement(const std::string& prompt, const std::string& format, std::function<std::string(const std::string&)> callback)
 {
-    std::string enforcedPrompt = prompt + std::string("\n\nIMPORTANT: Your response MUST follow this exact format:\n%1");
+    std::string enforcedPrompt = prompt + "\n\nIMPORTANT: Your response MUST follow this exact format:\n" + format;
     return callback(enforcedPrompt);
 }
 
@@ -320,8 +350,8 @@ std::string AgenticPuppeteer::bypassWithHotpatch(const std::string& prompt, std:
     bypassRule.name = "refusal_bypass_temp";
     bypassRule.type = ProxyHotpatchRule::ResponseCorrection;
     bypassRule.enabled = true;
-    bypassRule.searchPattern = "I cannot".toUtf8();
-    bypassRule.replacement = "I can help".toUtf8();
+    bypassRule.searchPattern = "I cannot";
+    bypassRule.replacement = "I can help";
     
     m_proxyHotpatcher->addRule(bypassRule);
     
@@ -344,7 +374,8 @@ std::string AgenticPuppeteer::rephrasePrompt(const std::string& original)
         "Could you provide details on: "
     };
     
-    int idx = std::unordered_map(original) % rephrasePrefixes.size();
+    size_t hash = std::hash<std::string>{}(original);
+    int idx = static_cast<int>(hash % rephrasePrefixes.size());
     return rephrasePrefixes[idx] + original;
 }
 
@@ -366,11 +397,11 @@ std::string AgenticPuppeteer::generateSystemPrompt(FailureType type)
 
 std::string AgenticPuppeteer::extractFormatFromPrompt(const std::string& prompt)
 {
-    if (prompt.contains("JSON", //CaseInsensitive)) {
+    if (stringContainsIgnoreCase(prompt, "JSON")) {
         return "JSON";
-    } else if (prompt.contains("markdown", //CaseInsensitive)) {
+    } else if (stringContainsIgnoreCase(prompt, "markdown")) {
         return "Markdown";
-    } else if (prompt.contains("list", //CaseInsensitive)) {
+    } else if (stringContainsIgnoreCase(prompt, "list")) {
         return "List";
     }
     return "Plain text";
@@ -378,42 +409,45 @@ std::string AgenticPuppeteer::extractFormatFromPrompt(const std::string& prompt)
 
 bool AgenticPuppeteer::isResponseValid(const std::string& response, FailureType originalFailure)
 {
-    if (response.isEmpty() || response.length() < 10) {
+    if (response.empty() || response.length() < 10) {
         return false;
     }
     
     switch (originalFailure) {
         case FailureType::Refusal:
-            return !response.contains("I cannot", //CaseInsensitive) &&
-                   !response.contains("I can't", //CaseInsensitive);
+            return !stringContainsIgnoreCase(response, "I cannot") &&
+                   !stringContainsIgnoreCase(response, "I can't");
         
         case FailureType::InfiniteLoop: {
-            std::vector<std::string> sentences = response.split(std::regex("[.!?]"), //SkipEmptyParts);
+            std::vector<std::string> sentences = stringSplit(response, std::regex("[.!?]"));
             if (sentences.size() < 2) return true;
             
             for (int i = 0; i < sentences.size() - 1; ++i) {
-                if (sentences[i].trimmed() == sentences[i + 1].trimmed()) {
+                if (stringTrimmed(sentences[i]) == stringTrimmed(sentences[i + 1])) {
                     return false;
                 }
             }
             return true;
         }
         
-        case FailureType::FormatViolation:
-            return (response.count('{') == response.count('}')) &&
-                   (response.count('[') == response.count(']'));
+        case FailureType::FormatViolation: {
+            int openBrace = std::count(response.begin(), response.end(), '{');
+            int closeBrace = std::count(response.begin(), response.end(), '}');
+            int openBracket = std::count(response.begin(), response.end(), '[');
+            int closeBracket = std::count(response.begin(), response.end(), ']');
+            return (openBrace == closeBrace) && (openBracket == closeBracket);
+        }
         
         default:
             return true;
     }
 }
 
-// RefusalBypassPuppeteer implementation
+// Specialized puppeteer classes
 
-RefusalBypassPuppeteer::RefusalBypassPuppeteer(void* parent)
-    : AgenticPuppeteer(parent)
+RefusalBypassPuppeteer::RefusalBypassPuppeteer()
+    : AgenticPuppeteer()
 {
-    setDefaultStrategy(CorrectionStrategy::HotpatchBypass);
 }
 
 CorrectionResult RefusalBypassPuppeteer::bypassRefusal(
@@ -422,16 +456,16 @@ CorrectionResult RefusalBypassPuppeteer::bypassRefusal(
 {
     std::vector<std::string> bypassPhrases = generateBypassPhrases(prompt);
     
-    for (int i = 0; i < bypassPhrases.size() && i < m_maxRetries; ++i) {
+    for (int i = 0; i < static_cast<int>(bypassPhrases.size()) && i < m_maxRetries; ++i) {
         std::string response = callback(bypassPhrases[i]);
         
-        if (!response.contains("I cannot", //CaseInsensitive)) {
+        if (!stringContainsIgnoreCase(response, "I cannot")) {
             m_stats.refusalsBypassed++;
             return CorrectionResult::succeeded(response, CorrectionStrategy::HotpatchBypass, i + 1);
         }
     }
     
-    return CorrectionResult::failed("All bypass attempts failed", bypassPhrases.size());
+    return CorrectionResult::failed("All bypass attempts failed", static_cast<int>(bypassPhrases.size()));
 }
 
 std::vector<std::string> RefusalBypassPuppeteer::generateBypassPhrases(const std::string& originalPrompt)
@@ -451,52 +485,55 @@ std::string RefusalBypassPuppeteer::injectBypassSystemPrompt()
 
 // HallucinationCorrectorPuppeteer implementation
 
-HallucinationCorrectorPuppeteer::HallucinationCorrectorPuppeteer(void* parent)
-    : AgenticPuppeteer(parent)
+HallucinationCorrectorPuppeteer::HallucinationCorrectorPuppeteer()
+    : AgenticPuppeteer()
 {
-    setDefaultStrategy(CorrectionStrategy::AddContext);
 }
 
 CorrectionResult HallucinationCorrectorPuppeteer::correctWithGrounding(
     const std::string& prompt,
     const std::string& groundTruth,
-    std::function<std::string(const std::string&)> callback)
+    std::function<std::string(const std::string&)> callback
+)
 {
-    std::string groundedPrompt = buildGroundedPrompt(prompt, groundTruth);
-    std::string response = callback(groundedPrompt);
-    
-    if (verifyFactualAccuracy(response, groundTruth)) {
-        m_stats.hallucinationsCorrected++;
-        return CorrectionResult::succeeded(response, CorrectionStrategy::AddContext, 1);
-    }
-    
-    return CorrectionResult::failed("Response still contains factual errors", 1);
+    FailureDetection failure;
+    failure.type = FailureType::Hallucination;
+    return correctHallucination(prompt, "", groundTruth, callback);
 }
 
 std::string HallucinationCorrectorPuppeteer::buildGroundedPrompt(const std::string& original, const std::string& facts)
 {
-    return std::string("Given these facts:\n%1\n\nAnswer: %2");
+    return "Facts: " + facts + "\n\n" + original;
 }
 
 bool HallucinationCorrectorPuppeteer::verifyFactualAccuracy(const std::string& response, const std::string& groundTruth)
 {
-    // Simple heuristic: check if response contains key facts from ground truth
-    std::vector<std::string> facts = groundTruth.split(std::regex("\\W+"), //SkipEmptyParts);
-    int matchedFacts = 0;
+    // Simple heuristic: check if response contains key words from ground truth
+    std::regex re("\\W+");
+    std::vector<std::string> words(
+        std::sregex_token_iterator(groundTruth.begin(), groundTruth.end(), re, -1),
+        std::sregex_token_iterator()
+    );
     
-    for (const std::string& fact : facts) {
-        if (fact.length() > 3 && response.contains(fact, //CaseInsensitive)) {
-            matchedFacts++;
+    int matchedFacts = 0;
+    int significantWords = 0;
+    
+    for (const std::string& word : words) {
+        if (word.length() > 3) {
+            significantWords++;
+            if (stringContainsIgnoreCase(response, word)) {
+                matchedFacts++;
+            }
         }
     }
     
-    return matchedFacts > facts.size() / 2;
+    return significantWords == 0 || matchedFacts > significantWords / 2;
 }
 
 // FormatEnforcerPuppeteer implementation
 
-FormatEnforcerPuppeteer::FormatEnforcerPuppeteer(void* parent)
-    : AgenticPuppeteer(parent)
+FormatEnforcerPuppeteer::FormatEnforcerPuppeteer()
+    : AgenticPuppeteer()
 {
     setDefaultStrategy(CorrectionStrategy::FormatEnforce);
 }
@@ -528,11 +565,11 @@ CorrectionResult FormatEnforcerPuppeteer::enforceFormat(
 
 std::string FormatEnforcerPuppeteer::generateFormatInstructions(const std::string& formatSpec)
 {
-    if (formatSpec.contains("JSON", //CaseInsensitive)) {
+    if (stringContainsIgnoreCase(formatSpec, "JSON")) {
         return "Your response MUST be valid JSON. Start with { and end with }.";
-    } else if (formatSpec.contains("Markdown", //CaseInsensitive)) {
+    } else if (stringContainsIgnoreCase(formatSpec, "Markdown")) {
         return "Use proper Markdown formatting with headers, lists, and code blocks.";
-    } else if (formatSpec.contains("List", //CaseInsensitive)) {
+    } else if (stringContainsIgnoreCase(formatSpec, "List")) {
         return "Provide your answer as a numbered or bulleted list.";
     }
     return "Follow the requested format exactly.";
@@ -540,20 +577,26 @@ std::string FormatEnforcerPuppeteer::generateFormatInstructions(const std::strin
 
 bool FormatEnforcerPuppeteer::validateFormat(const std::string& response, const std::string& formatSpec)
 {
-    if (formatSpec.contains("JSON", //CaseInsensitive)) {
-        return response.trimmed().startsWith('{') && response.trimmed().endsWith('}');
-    } else if (formatSpec.contains("Markdown", //CaseInsensitive)) {
-        return response.contains('#') || response.contains("```");
+    if (stringContainsIgnoreCase(formatSpec, "JSON")) {
+        std::string t = stringTrimmed(response);
+        return stringStartsWith(t, '{') && stringEndsWith(t, '}');
+    } else if (stringContainsIgnoreCase(formatSpec, "Markdown")) {
+        return stringContains(response, "#") || stringContains(response, "```");
     }
     return true;
 }
 
 std::string FormatEnforcerPuppeteer::autoFixFormat(const std::string& response, const std::string& formatSpec)
 {
-    if (formatSpec.contains("JSON", //CaseInsensitive)) {
-        std::string fixed = response.trimmed();
-        if (!fixed.startsWith('{')) fixed.prepend('{');
-        if (!fixed.endsWith('}')) fixed.append('}');
+    if (stringContainsIgnoreCase(formatSpec, "JSON")) {
+        std::string fixed = stringTrimmed(response);
+        if (!stringStartsWith(fixed, '{')) fixed = "{" + fixed;
+        if (!stringEndsWith(fixed, '}')) fixed = fixed + "}";
+        return fixed;
+    } else if (stringContainsIgnoreCase(formatSpec, "Markdown")) {
+        // Basic Markdown fixes
+        std::string fixed = stringTrimmed(response);
+        if (!stringStartsWith(fixed, "# ")) fixed = "# " + fixed;
         return fixed;
     }
     return response;

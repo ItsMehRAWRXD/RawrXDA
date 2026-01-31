@@ -84,34 +84,27 @@ public:
     
     ScanResults performScan() {
         ScanResults results{};
-        
-        std::cout << "\n";
-        std::cout << "═══════════════════════════════════════════════════════════════\n";
-        std::cout << "  DEEP SECTOR SCAN - LBA-Map Verification\n";
-        std::cout << "═══════════════════════════════════════════════════════════════\n";
-        std::cout << "\n";
-        
+
+
         // Step 1: Load and validate JITMAP header
-        std::cout << "[SCAN] Loading JITMAP: " << m_jitmapPath << "\n";
-        
+
+
         if (!loadJitMap(results)) {
             results.errors.push_back("Failed to load JITMAP file");
             return results;
         }
-        
-        std::cout << "[SCAN] ✓ Header validated: " << m_header.entryCount 
-                  << " tensor entries\n";
-        
+
+
         // Step 2: Verify LBA alignment
-        std::cout << "[SCAN] Verifying LBA alignment...\n";
+        
         verifyLbaAlignment(results);
         
         // Step 3: Check fragmentation
-        std::cout << "[SCAN] Analyzing fragmentation...\n";
+        
         analyzeFragmentation(results);
         
         // Step 4: Validate tensor UIDs
-        std::cout << "[SCAN] Validating tensor UID integrity...\n";
+        
         validateTensorUIDs(results);
         
         // Step 5: Generate summary
@@ -136,14 +129,14 @@ private:
                 file.open(path, std::ios::binary);
                 if (file.is_open()) {
                     m_jitmapPath = path;
-                    std::cout << "[SCAN] Using fallback: " << path << "\n";
+                    
                     break;
                 }
             }
             
             if (!file.is_open()) {
                 // Generate synthetic data for testing
-                std::cout << "[SCAN] JITMAP not found - generating synthetic data\n";
+                
                 generateSyntheticJitMap();
                 results.headerValid = true;
                 results.totalTensors = m_header.entryCount;
@@ -197,10 +190,8 @@ private:
                 );
             }
         }
-        
-        std::cout << "[SCAN] ✓ Total sectors: " << results.totalSectors << "\n";
-        std::cout << "[SCAN] ✓ Aligned: " << results.alignedSectors 
-                  << " (" << (results.alignedSectors * 100.0 / results.totalSectors) << "%)\n";
+
+
     }
     
     void analyzeFragmentation(ScanResults& results) {
@@ -241,10 +232,8 @@ private:
         
         results.fragmentationPercent = 
             (totalGapSize * 100.0) / std::max(results.totalSectors, uint64_t(1));
-        
-        std::cout << "[SCAN] Fragmentation: " << results.fragmentationPercent 
-                  << "% (" << totalGaps << " gaps)\n";
-        
+
+
         if (results.fragmentationPercent > 5.0) {
             results.warnings.push_back(
                 "High fragmentation detected: " + 
@@ -265,9 +254,8 @@ private:
             }
             seenUIDs.insert(entry.tensorUID);
         }
-        
-        std::cout << "[SCAN] ✓ Validated " << m_entries.size() 
-                  << " unique tensor UIDs\n";
+
+
     }
     
     void generateSyntheticJitMap() {
@@ -291,45 +279,31 @@ private:
     }
     
     void printSummary(const ScanResults& results) {
-        std::cout << "\n";
-        std::cout << "═══════════════════════════════════════════════════════════════\n";
-        std::cout << "  SCAN SUMMARY\n";
-        std::cout << "═══════════════════════════════════════════════════════════════\n";
-        std::cout << "\n";
-        
-        std::cout << "Total Tensors:      " << results.totalTensors << "\n";
-        std::cout << "Total Sectors:      " << results.totalSectors << "\n";
-        std::cout << "Aligned Sectors:    " << results.alignedSectors 
-                  << " (" << (results.alignedSectors * 100.0 / results.totalSectors) << "%)\n";
-        std::cout << "Fragmentation:      " << std::fixed << std::setprecision(2) 
-                  << results.fragmentationPercent << "%\n";
-        std::cout << "\n";
-        
+
+
         if (!results.warnings.empty()) {
-            std::cout << "⚠️  WARNINGS (" << results.warnings.size() << "):\n";
+            
             for (const auto& warning : results.warnings) {
-                std::cout << "   • " << warning << "\n";
+                
             }
-            std::cout << "\n";
+            
         }
         
         if (!results.errors.empty()) {
-            std::cout << "❌ ERRORS (" << results.errors.size() << "):\n";
+            
             for (const auto& error : results.errors) {
-                std::cout << "   • " << error << "\n";
+                
             }
-            std::cout << "\n";
+            
         }
         
         if (results.isValid()) {
-            std::cout << "STATUS: ✓ LBA-MAP VERIFIED - 100% ALIGNMENT ACHIEVED\n";
+            
         } else {
-            std::cout << "STATUS: ✗ LBA-MAP INTEGRITY CHECK FAILED - REALIGNMENT REQUIRED\n";
+            
         }
-        
-        std::cout << "\n";
-        std::cout << "═══════════════════════════════════════════════════════════════\n";
-        std::cout << "\n";
+
+
     }
 
 private:
@@ -358,9 +332,8 @@ int main(int argc, char* argv[]) {
     auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
         endTime - startTime
     ).count();
-    
-    std::cout << "Scan completed in " << durationMs << " ms\n\n";
-    
+
+
     // Write results to JSON
     std::string reportPath = "D:\\rawrxd\\logs\\deep_sector_scan_report.json";
     std::ofstream reportFile(reportPath);
@@ -377,8 +350,8 @@ int main(int argc, char* argv[]) {
         reportFile << "  \"errorCount\": " << results.errors.size() << "\n";
         reportFile << "}\n";
         reportFile.close();
-        
-        std::cout << "Report written to: " << reportPath << "\n\n";
+
+
     }
     
     return results.isValid() ? 0 : 1;

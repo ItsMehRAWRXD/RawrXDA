@@ -34,7 +34,7 @@ public:
     explicit ObservabilityDashboard(Profiler* profiler, void* parent = nullptr);
     ~ObservabilityDashboard() override;
 
-    // Two-phase initialization: call after QApplication exists
+    // Two-phase initialization: call after void exists
     void initialize();
 
 public:
@@ -87,10 +87,10 @@ private:
     void createMetricsPanel();
 
     // ===== UI Components =====
-    QTabWidget* m_tabWidget;
+    void* m_tabWidget;
     
     // Resource usage tab
-    QChartView* m_resourceChartView;
+// REMOVED_QT:     QChartView* m_resourceChartView;
     QChart* m_resourceChart;
     QLineSeries* m_cpuSeries;
     QLineSeries* m_memorySeries;
@@ -99,7 +99,7 @@ private:
     QValueAxis* m_resourceAxisY;
 
     // Throughput tab
-    QChartView* m_throughputChartView;
+// REMOVED_QT:     QChartView* m_throughputChartView;
     QChart* m_throughputChart;
     QLineSeries* m_samplesPerSecSeries;
     QLineSeries* m_tokensPerSecSeries;
@@ -107,7 +107,7 @@ private:
     QValueAxis* m_throughputAxisY;
 
     // Latency tab
-    QChartView* m_latencyChartView;
+// REMOVED_QT:     QChartView* m_latencyChartView;
     QChart* m_latencyChart;
     QLineSeries* m_batchLatencySeries;
     QLineSeries* m_p95LatencySeries;
@@ -117,12 +117,12 @@ private:
 
     // Metrics panel tab
     void* m_metricsPanel;
-    QLabel* m_currentCpuLabel;
-    QLabel* m_currentMemoryLabel;
-    QLabel* m_currentGpuLabel;
-    QLabel* m_currentThroughputLabel;
-    QLabel* m_peakMemoryLabel;
-    QLabel* m_warningsLabel;
+    void* m_currentCpuLabel;
+    void* m_currentMemoryLabel;
+    void* m_currentGpuLabel;
+    void* m_currentThroughputLabel;
+    void* m_peakMemoryLabel;
+    void* m_warningsLabel;
 
     // ===== State =====
     Profiler* m_profiler;

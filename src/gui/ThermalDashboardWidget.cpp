@@ -36,12 +36,12 @@ struct ThermalSnapshot {
 #pragma pack(pop)
 
 // Colors
-static const QColor COLOR_COOL(0, 180, 255);      // Blue - < 40°C
-static const QColor COLOR_WARM(255, 180, 0);      // Orange - 40-55°C
-static const QColor COLOR_HOT(255, 60, 60);       // Red - > 55°C
-static const QColor COLOR_BG(30, 30, 35);         // Dark background
-static const QColor COLOR_TEXT(220, 220, 220);    // Light text
-static const QColor COLOR_ACCENT(100, 200, 255);  // Accent blue
+static const uint32_t COLOR_COOL(0, 180, 255);      // Blue - < 40°C
+static const uint32_t COLOR_WARM(255, 180, 0);      // Orange - 40-55°C
+static const uint32_t COLOR_HOT(255, 60, 60);       // Red - > 55°C
+static const uint32_t COLOR_BG(30, 30, 35);         // Dark background
+static const uint32_t COLOR_TEXT(220, 220, 220);    // Light text
+static const uint32_t COLOR_ACCENT(100, 200, 255);  // Accent blue
 
 ThermalDashboardWidget::ThermalDashboardWidget(void* parent)
     : void(parent)
@@ -193,7 +193,7 @@ void ThermalDashboardWidget::onTimerTick()
     refresh();
 }
 
-void ThermalDashboardWidget::paintEvent(QPaintEvent*)
+void ThermalDashboardWidget::paintEvent(void* )
 {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
@@ -208,7 +208,7 @@ void ThermalDashboardWidget::paintEvent(QPaintEvent*)
     p.fillRect(rect(), COLOR_BG);
 
     // Header section
-    QFont headerFont = font();
+    std::string headerFont = font();
     headerFont.setPointSize(10);
     headerFont.setBold(true);
     p.setFont(headerFont);
@@ -228,7 +228,7 @@ void ThermalDashboardWidget::paintEvent(QPaintEvent*)
     p.drawText(margin, margin + 49, gpuStr);
 
     // Connection status indicator
-    QColor statusColor = m_dllLoaded ? QColor(0, 200, 100) : QColor(200, 100, 0);
+    uint32_t statusColor = m_dllLoaded ? uint32_t(0, 200, 100) : uint32_t(200, 100, 0);
     p.setBrush(statusColor);
     p.setPen(//NoPen);
     p.drawEllipse(w - margin - 12, margin + 5, 10, 10);
@@ -239,7 +239,7 @@ void ThermalDashboardWidget::paintEvent(QPaintEvent*)
     const int totalBarWidth = (w - margin * 2 - barSpacing * (barCount - 1)) / barCount;
     const int barY = headerHeight + margin;
 
-    QFont barFont = font();
+    std::string barFont = font();
     barFont.setPointSize(9);
     p.setFont(barFont);
 
@@ -253,37 +253,37 @@ void ThermalDashboardWidget::paintEvent(QPaintEvent*)
         int barHeight = static_cast<int>(normalizedTemp * barArea * 0.7);
 
         // Bar background
-        QRect barBg(x, barY, totalBarWidth, barArea - 20);
-        p.fillRect(barBg, QColor(50, 50, 55));
+        void* barBg(x, barY, totalBarWidth, barArea - 20);
+        p.fillRect(barBg, uint32_t(50, 50, 55));
 
         // Temperature bar
-        QColor barColor = tempColor(temp);
-        QRect barRect(x + 2, barY + barArea - 20 - barHeight - 2,
+        uint32_t barColor = tempColor(temp);
+        void* barRect(x + 2, barY + barArea - 20 - barHeight - 2,
                       totalBarWidth - 4, barHeight);
         p.fillRect(barRect, barColor);
 
         // Gradient overlay for depth
         QLinearGradient grad(barRect.topLeft(), barRect.topRight());
-        grad.setColorAt(0, QColor(255, 255, 255, 40));
-        grad.setColorAt(0.5, QColor(255, 255, 255, 0));
-        grad.setColorAt(1, QColor(0, 0, 0, 40));
+        grad.setColorAt(0, uint32_t(255, 255, 255, 40));
+        grad.setColorAt(0.5, uint32_t(255, 255, 255, 0));
+        grad.setColorAt(1, uint32_t(0, 0, 0, 40));
         p.fillRect(barRect, grad);
 
         // Temperature label
         p.setPen(COLOR_TEXT);
         std::string tempStr = std::string("%1°");
-        QRect labelRect(x, barY + barArea - 18, totalBarWidth, 16);
+        void* labelRect(x, barY + barArea - 18, totalBarWidth, 16);
         p.drawText(labelRect, //AlignCenter, tempStr);
 
         // Drive label
         p.setPen(COLOR_ACCENT);
         std::string driveStr = std::string("D%1");
-        QRect driveRect(x, barY - 2, totalBarWidth, 14);
+        void* driveRect(x, barY - 2, totalBarWidth, 14);
         p.drawText(driveRect, //AlignCenter, driveStr);
     }
 }
 
-void ThermalDashboardWidget::resizeEvent(QResizeEvent* event)
+void ThermalDashboardWidget::resizeEvent(void*  event)
 {
     void::resizeEvent(event);
     updateLayout();
@@ -305,7 +305,7 @@ std::string ThermalDashboardWidget::tierName(unsigned int tier) const
     }
 }
 
-QColor ThermalDashboardWidget::tempColor(double tempC) const
+uint32_t ThermalDashboardWidget::tempColor(double tempC) const
 {
     if (tempC < 40.0) return COLOR_COOL;
     if (tempC < 55.0) return COLOR_WARM;

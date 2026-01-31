@@ -33,7 +33,7 @@ void GenerateDiagnosticReport(const DiagnosticReport& report, const std::string&
 {
     std::ofstream file(outputPath);
     if (!file.is_open()) {
-        std::cerr << "Failed to write diagnostic report to: " << outputPath << std::endl;
+        
         return;
     }
     
@@ -74,7 +74,7 @@ void GenerateDiagnosticReport(const DiagnosticReport& report, const std::string&
     file << report.detailedTrace << "\n";
     
     file.close();
-    std::cout << "Diagnostic report written to: " << outputPath << std::endl;
+    
 }
 
 // ============================================================================
@@ -151,7 +151,7 @@ IDEProcessInfo LaunchIDE(const std::wstring& idePath, const std::wstring& testFi
     
     if (!CreateProcessW(nullptr, const_cast<wchar_t*>(cmdLine.c_str()), nullptr, nullptr, FALSE,
                         CREATE_NEW_CONSOLE, nullptr, nullptr, &si, &pi)) {
-        std::cerr << "Failed to launch IDE. Error: " << GetLastError() << std::endl;
+        
         return info;
     }
     
@@ -160,16 +160,14 @@ IDEProcessInfo LaunchIDE(const std::wstring& idePath, const std::wstring& testFi
     info.running = true;
     
     CloseHandle(pi.hThread);
-    
-    std::cout << "IDE launched. PID: " << info.processId << std::endl;
-    std::cout << "Waiting for IDE window..." << std::endl;
-    
+
+
     // Wait for window to appear
     info.hwnd = FindIDEWindow(info.processId);
     if (!info.hwnd) {
-        std::cerr << "Warning: Could not find IDE window" << std::endl;
+        
     } else {
-        std::cout << "IDE window found: 0x" << std::hex << reinterpret_cast<uintptr_t>(info.hwnd) << std::dec << std::endl;
+        
     }
     
     return info;
@@ -210,8 +208,8 @@ struct BeaconMonitor {
                 if (line.find("ERROR_DETECTED") != std::string::npos) {
                     errorDetected = true;
                 }
-                
-                std::cout << "[BEACON] " << line << std::endl;
+
+
             }
         }
         
@@ -229,14 +227,12 @@ struct BeaconMonitor {
 // ============================================================================
 int RunDiagnostic(const std::wstring& idePath, const std::wstring& testFile)
 {
-    std::cout << "\n========================================\n";
-    std::cout << "RawrXD IDE Autonomous Diagnostic Session\n";
-    std::cout << "========================================\n\n";
-    
+
+
     // Launch IDE
     IDEProcessInfo ideInfo = LaunchIDE(idePath, testFile);
     if (!ideInfo.running) {
-        std::cerr << "Failed to launch IDE" << std::endl;
+        
         return 1;
     }
     
@@ -245,13 +241,13 @@ int RunDiagnostic(const std::wstring& idePath, const std::wstring& testFile)
     std::string beaconLogPath = "C:\\RawrXD_Beacons.log";
     
     // Wait for IDE to initialize
-    std::cout << "\nMonitoring IDE initialization..." << std::endl;
+    
     Sleep(2000);
     
     // Trigger digestion via keyboard shortcut
     if (ideInfo.hwnd) {
-        std::cout << "\nTriggering digestion (Ctrl+Shift+D)..." << std::endl;
-        
+
+
         // Send Ctrl+Shift+D to IDE window
         SetForegroundWindow(ideInfo.hwnd);
         Sleep(100);
@@ -265,7 +261,7 @@ int RunDiagnostic(const std::wstring& idePath, const std::wstring& testFile)
     }
     
     // Monitor beacons
-    std::cout << "\nMonitoring beacons..." << std::endl;
+    
     auto startTime = std::chrono::steady_clock::now();
     auto timeout = std::chrono::milliseconds(DEFAULT_TIMEOUT_MS);
     
@@ -273,7 +269,7 @@ int RunDiagnostic(const std::wstring& idePath, const std::wstring& testFile)
         // Check if IDE process is still running
         DWORD exitCode = 0;
         if (GetExitCodeProcess(ideInfo.hProcess, &exitCode) && exitCode != STILL_ACTIVE) {
-            std::cout << "\nIDE process terminated. Exit code: " << exitCode << std::endl;
+            
             break;
         }
         
@@ -282,13 +278,13 @@ int RunDiagnostic(const std::wstring& idePath, const std::wstring& testFile)
         
         // Check for completion
         if (monitor.digestionCompleted) {
-            std::cout << "\nDigestion completed successfully!" << std::endl;
+            
             break;
         }
         
         // Check for errors
         if (monitor.errorDetected) {
-            std::cout << "\nError detected in digestion pipeline" << std::endl;
+            
             break;
         }
         
@@ -296,20 +292,20 @@ int RunDiagnostic(const std::wstring& idePath, const std::wstring& testFile)
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime);
         if (elapsed > timeout) {
-            std::cout << "\nDiagnostic timeout reached" << std::endl;
+            
             break;
         }
         
         // Check for stall
         if (monitor.IsStalled(15000)) {
-            std::cout << "\nWarning: No beacons received for 15 seconds" << std::endl;
+            
         }
         
         Sleep(BEACON_CHECK_INTERVAL_MS);
     }
     
     // Cleanup
-    std::cout << "\nShutting down IDE..." << std::endl;
+    
     if (ideInfo.hwnd) {
         PostMessageW(ideInfo.hwnd, WM_CLOSE, 0, 0);
     }
@@ -318,8 +314,8 @@ int RunDiagnostic(const std::wstring& idePath, const std::wstring& testFile)
     CloseHandle(ideInfo.hProcess);
     
     // Generate report
-    std::cout << "\nGenerating diagnostic report..." << std::endl;
-    
+
+
     std::string reportPath = "C:\\RawrXD_Diagnostic_Report.txt";
     std::ofstream report(reportPath);
     if (report.is_open()) {
@@ -342,7 +338,7 @@ int RunDiagnostic(const std::wstring& idePath, const std::wstring& testFile)
         }
         
         report.close();
-        std::cout << "Report written to: " << reportPath << std::endl;
+        
     }
     
     // Determine exit code
@@ -350,8 +346,8 @@ int RunDiagnostic(const std::wstring& idePath, const std::wstring& testFile)
     if (!monitor.digestionCompleted || monitor.errorDetected) {
         exitCode = 1;
     }
-    
-    std::cout << "\nDiagnostic complete. Exit code: " << exitCode << std::endl;
+
+
     return exitCode;
 }
 

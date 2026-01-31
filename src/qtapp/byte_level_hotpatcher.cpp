@@ -100,7 +100,7 @@ bool ByteLevelHotpatcher::revertPatch(const std::string& name)
     if (!m_patches.contains(name)) return false;
     
     BytePatch& patch = m_patches[name];
-    if (patch.originalBytes.isEmpty()) return false;
+    if (patch.originalBytes.empty()) return false;
     
     std::memcpy(m_modelData.data() + patch.offset, patch.originalBytes.constData(), patch.length);
     m_stats.patchesReverted++;
@@ -251,8 +251,8 @@ void* BytePatch::toJson() const
     obj["name"] = name;
     obj["description"] = description;
     obj["enabled"] = enabled;
-    obj["offset"] = (qint64)offset;
-    obj["length"] = (qint64)length;
+    obj["offset"] = (int64_t)offset;
+    obj["length"] = (int64_t)length;
     return obj;
 }
 
@@ -273,7 +273,7 @@ BytePatch BytePatch::fromJson(const void*& json, PatchResult& result)
 void* ByteLevelHotpatcher::getDirectPointer(size_t offset) const
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset >= (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset >= (size_t)m_modelData.size()) {
         return nullptr;
     }
     return (void*)(m_modelData.data() + offset);
@@ -282,7 +282,7 @@ void* ByteLevelHotpatcher::getDirectPointer(size_t offset) const
 std::vector<uint8_t> ByteLevelHotpatcher::directRead(size_t offset, size_t size) const
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset + size > (size_t)m_modelData.size()) {
         return std::vector<uint8_t>();
     }
     return m_modelData.mid(offset, size);
@@ -291,7 +291,7 @@ std::vector<uint8_t> ByteLevelHotpatcher::directRead(size_t offset, size_t size)
 PatchResult ByteLevelHotpatcher::directWrite(size_t offset, const std::vector<uint8_t>& data)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset + data.size() > (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset + data.size() > (size_t)m_modelData.size()) {
         return PatchResult::error(7001, "Write out of bounds");
     }
     
@@ -321,10 +321,10 @@ PatchResult ByteLevelHotpatcher::directWriteBatch(const std::unordered_map<size_
     return PatchResult::ok("Batch write completed", totalBytes);
 }
 
-PatchResult ByteLevelHotpatcher::directFill(size_t offset, size_t size, quint8 value)
+PatchResult ByteLevelHotpatcher::directFill(size_t offset, size_t size, uint8_t value)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7003, "Fill out of bounds");
     }
     
@@ -336,7 +336,7 @@ PatchResult ByteLevelHotpatcher::directFill(size_t offset, size_t size, quint8 v
 PatchResult ByteLevelHotpatcher::directCopy(size_t srcOffset, size_t dstOffset, size_t size)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || srcOffset + size > (size_t)m_modelData.size() || 
+    if (m_modelData.empty() || srcOffset + size > (size_t)m_modelData.size() || 
         dstOffset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7004, "Copy out of bounds");
     }
@@ -349,7 +349,7 @@ PatchResult ByteLevelHotpatcher::directCopy(size_t srcOffset, size_t dstOffset, 
 bool ByteLevelHotpatcher::directCompare(size_t offset, const std::vector<uint8_t>& data) const
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset + data.size() > (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset + data.size() > (size_t)m_modelData.size()) {
         return false;
     }
     
@@ -359,12 +359,12 @@ bool ByteLevelHotpatcher::directCompare(size_t offset, const std::vector<uint8_t
 std::vector<uint8_t> ByteLevelHotpatcher::directXOR(size_t offset, size_t size, const std::vector<uint8_t>& key)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size() || key.isEmpty()) {
+    if (m_modelData.empty() || offset + size > (size_t)m_modelData.size() || key.empty()) {
         return std::vector<uint8_t>();
     }
     
     std::vector<uint8_t> result(size, 0);
-    const quint8* keyData = (quint8*)key.constData();
+    const uint8_t* keyData = (uint8_t*)key.constData();
     size_t keyLen = key.size();
     
     for (size_t i = 0; i < size; ++i) {
@@ -377,12 +377,12 @@ std::vector<uint8_t> ByteLevelHotpatcher::directXOR(size_t offset, size_t size, 
 PatchResult ByteLevelHotpatcher::directBitOperation(size_t offset, size_t size, ByteOperation op, uint8_t operand)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7005, "Bit operation out of bounds");
     }
     
     for (size_t i = 0; i < size; ++i) {
-        quint8* byte = (quint8*)(m_modelData.data() + offset + i);
+        uint8_t* byte = (uint8_t*)(m_modelData.data() + offset + i);
         switch (op) {
         case ByteOperation::BitSet:
             *byte |= operand;
@@ -411,14 +411,14 @@ PatchResult ByteLevelHotpatcher::directBitOperation(size_t offset, size_t size, 
 PatchResult ByteLevelHotpatcher::directRotate(size_t offset, size_t size, int bitShift, bool leftShift)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7006, "Rotate out of bounds");
     }
     
     bitShift = bitShift % 8;
     
     for (size_t i = 0; i < size; ++i) {
-        quint8* byte = (quint8*)(m_modelData.data() + offset + i);
+        uint8_t* byte = (uint8_t*)(m_modelData.data() + offset + i);
         if (leftShift) {
             *byte = (*byte << bitShift) | (*byte >> (8 - bitShift));
         } else {
@@ -433,7 +433,7 @@ PatchResult ByteLevelHotpatcher::directRotate(size_t offset, size_t size, int bi
 PatchResult ByteLevelHotpatcher::directReverse(size_t offset, size_t size)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7007, "Reverse out of bounds");
     }
     
@@ -445,10 +445,10 @@ PatchResult ByteLevelHotpatcher::directReverse(size_t offset, size_t size)
     return PatchResult::ok("Reverse completed", size);
 }
 
-qint64 ByteLevelHotpatcher::directSearch(size_t startOffset, const std::vector<uint8_t>& pattern) const
+int64_t ByteLevelHotpatcher::directSearch(size_t startOffset, const std::vector<uint8_t>& pattern) const
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || pattern.isEmpty() || startOffset >= (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || pattern.empty() || startOffset >= (size_t)m_modelData.size()) {
         return -1;
     }
     
@@ -465,7 +465,7 @@ qint64 ByteLevelHotpatcher::directSearch(size_t startOffset, const std::vector<u
 PatchResult ByteLevelHotpatcher::atomicByteSwap(size_t offset1, size_t offset2, size_t size)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
-    if (m_modelData.isEmpty() || offset1 + size > (size_t)m_modelData.size() || 
+    if (m_modelData.empty() || offset1 + size > (size_t)m_modelData.size() || 
         offset2 + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7008, "Swap out of bounds");
     }
@@ -477,4 +477,6 @@ PatchResult ByteLevelHotpatcher::atomicByteSwap(size_t offset1, size_t offset2, 
     m_stats.bytesPatched += 2 * size;
     return PatchResult::ok("Swap completed", 2 * size);
 }
+
+
 

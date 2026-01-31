@@ -122,7 +122,7 @@ public:
  *       "llama-2-7b.gguf",
  *       "./models",
  *       [](uint64_t downloaded, uint64_t total) {
- *           std::cout << "Downloaded: " << downloaded << "/" << total << std::endl;
+ *           
  *       }
  *   );
  */
@@ -151,7 +151,7 @@ public:
      * Example:
      *   auto results = client.searchModels("llama", 10);
      *   for (const auto& model : results) {
-     *       std::cout << model.repo_id << " (" << model.downloads << " downloads)" << std::endl;
+     *       
      *   }
      */
     std::vector<ModelMetadata> searchModels(const std::string& query, 
@@ -167,12 +167,11 @@ public:
             url += "&limit=" + std::to_string(limit);
             url += "&sort=downloads&direction=-1";  // Sort by popularity
 
-            std::cout << "🔍 Searching HuggingFace Hub for: " << query << std::endl;
 
             // Make HTTP request
             std::string response = fetchJSON(url, token);
             if (response.empty()) {
-                std::cerr << "❌ No response from HuggingFace API" << std::endl;
+                
                 return results;
             }
 
@@ -182,7 +181,7 @@ public:
             size_t arrayEnd = response.rfind(']');
             
             if (arrayStart == std::string::npos || arrayEnd == std::string::npos) {
-                std::cerr << "❌ Invalid API response format" << std::endl;
+                
                 return results;
             }
 
@@ -206,11 +205,11 @@ public:
                 }
             }
 
-            std::cout << "✅ Found " << results.size() << " models" << std::endl;
+
             return results;
 
         } catch (const std::exception& e) {
-            std::cerr << "❌ Search error: " << e.what() << std::endl;
+            
             return results;
         }
     }
@@ -225,7 +224,7 @@ public:
      * Example:
      *   auto model = client.getModelInfo("meta-llama/Llama-2-7b-hf");
      *   for (const auto& file : model.files) {
-     *       std::cout << file << std::endl;
+     *       
      *   }
      */
     ModelMetadata getModelInfo(const std::string& repo_id, const std::string& token = "") {
@@ -234,12 +233,11 @@ public:
 
         try {
             std::string url = "https://huggingface.co/api/models/" + repo_id;
-            
-            std::cout << "📋 Fetching model info: " << repo_id << std::endl;
+
 
             std::string response = fetchJSON(url, token);
             if (response.empty()) {
-                std::cerr << "❌ Failed to fetch model info" << std::endl;
+                
                 return meta;
             }
 
@@ -275,13 +273,11 @@ public:
                 }
             }
 
-            std::cout << "✅ Model has " << meta.files.size() << " files, total: " 
-                     << formatBytes(meta.total_size) << std::endl;
 
             return meta;
 
         } catch (const std::exception& e) {
-            std::cerr << "❌ Error fetching model info: " << e.what() << std::endl;
+            
             return meta;
         }
     }
@@ -303,7 +299,7 @@ public:
      *       "./models",
      *       [](uint64_t cur, uint64_t total) {
      *           int pct = (cur * 100) / total;
-     *           std::cout << "\r" << pct << "%" << std::flush;
+     *           
      *       }
      *   );
      */
@@ -318,15 +314,12 @@ public:
 
             std::string outputPath = outputDir + "/" + filename;
 
-            std::cout << "⬇️  Downloading: " << filename << std::endl;
-            std::cout << "   From: " << repo_id << std::endl;
-            std::cout << "   To: " << outputPath << std::endl;
 
             // Download with resume support
             return downloadFile(url, outputPath, progressCallback, token);
 
         } catch (const std::exception& e) {
-            std::cerr << "❌ Download error: " << e.what() << std::endl;
+            
             return false;
         }
     }
@@ -391,7 +384,7 @@ private:
             // return response;
 
             // Placeholder: mock response for testing
-            std::cout << "   [Mock] Fetching from: " << url << std::endl;
+            
             return R"({"id": "mock/model", "downloads": 1000})";
 
         } catch (...) {
@@ -439,7 +432,7 @@ private:
             // curl_easy_cleanup(curl);
             // return res == CURLE_OK;
 
-            std::cout << "   ✅ Downloaded successfully (mock)" << std::endl;
+
             return true;
 
         } catch (...) {

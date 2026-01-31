@@ -18,17 +18,16 @@ extern "C" void GhostDispatchToken(int token_id);
 extern "C" void GhostPrefetchStart();
 
 int main() {
-    std::cout << "=== Ghost Paging Host Kernel Test ===" << std::endl;
-    
+
+
     // Initialize
     GhostPrefetchStart();
-    std::cout << "Kernel Initialized." << std::endl;
+
 
     // Simulate Streaming Generation
     const int TEST_TOKENS = 100; // 0.7 t/s would take a while, let's burst
-    
-    std::cout << "Streaming " << TEST_TOKENS << " tokens..." << std::endl;
-    
+
+
     DWORD start = GetTickCount();
     
     for (int i = 0; i < TEST_TOKENS; i++) {
@@ -37,9 +36,7 @@ int main() {
     }
     
     DWORD end = GetTickCount();
-    
-    std::cout << "Done. Duration: " << (end - start) << "ms" << std::endl;
-    std::cout << "Throughput: " << (float)TEST_TOKENS / ((end - start)/1000.0f) << " t/s (Simulated)" << std::endl;
-    
+
+
     return 0;
 }

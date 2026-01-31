@@ -104,12 +104,8 @@ bool GGUFLoader::ParseHeader() {
     
     // Calculate metadata offset
     header_.metadata_offset = file_.tellg();
-    
-    std::cout << "GGUF Header: Magic=0x" << std::hex << header_.magic << std::dec 
-              << ", Version=" << header_.version
-              << ", Tensors=" << header_.tensor_count
-              << ", Metadata=" << header_.metadata_kv_count << std::endl;
-    
+
+
     return true;
 }
 
@@ -327,11 +323,8 @@ bool GGUFLoader::ParseMetadata() {
         if (type_val > 24) {
             // Log the unsupported type for the user
             std::string type_name = GetUnsupportedTypeNameByValue(type_val);
-            std::cerr << "WARNING: Tensor '" << tensor.name 
-                     << "' uses unsupported type " << type_val 
-                     << " (" << type_name << "). "
-                     << "Model will need quantization conversion to proceed." << std::endl;
-            
+
+
             // Track this unsupported type for later IDE prompting
             bool type_exists = false;
             for (auto& existing : unsupported_types_) {
@@ -368,29 +361,21 @@ bool GGUFLoader::ParseMetadata() {
     // Fix vocab size using universal resolver
     GGUFVocabResolver vocabResolver;
     VocabSizeDetection vocabDetection = vocabResolver.detectVocabSize(metadata_.kv_pairs, filepath_);
-    
-    std::cout << "[GGUFLoader] Vocab detection: method=" << vocabDetection.detectionMethod
-              << ", size=" << vocabDetection.detectedSize
-              << ", confident=" << (vocabDetection.isConfident ? "yes" : "no") << std::endl;
-    
+
+
     // Override metadata vocab size if detection was successful
     if (vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
         if (metadata_.vocab_size != vocabDetection.detectedSize) {
-            std::cout << "[GGUFLoader] Correcting vocab size: " << metadata_.vocab_size 
-                      << " -> " << vocabDetection.detectedSize << std::endl;
+            
             metadata_.vocab_size = vocabDetection.detectedSize;
         }
     } else if (!vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
         // Use detection even if not confident, as it's better than potentially wrong metadata
-        std::cout << "[GGUFLoader] Using low-confidence vocab size: " << vocabDetection.detectedSize << std::endl;
+        
         metadata_.vocab_size = vocabDetection.detectedSize;
     }
-    
-    std::cout << "Metadata parsed successfully. Layers: " << metadata_.layer_count
-              << ", Context: " << metadata_.context_length
-              << ", Embedding: " << metadata_.embedding_dim
-              << ", Vocab: " << metadata_.vocab_size << std::endl;
-    
+
+
     return true;
 }
 
@@ -510,7 +495,7 @@ bool GGUFLoader::ReadString(std::string& value) {
     // This prevents bad allocation errors from corrupted metadata
     const uint64_t MAX_STRING_SIZE = 100 * 1024 * 1024;  // 100MB limit
     if (len > MAX_STRING_SIZE) {
-        std::cerr << "[GGUFLoader] String length " << len << " exceeds maximum allowed size" << std::endl;
+        
         return false;
     }
     
@@ -588,8 +573,7 @@ uint64_t GGUFLoader::CalculateTensorSize(const std::vector<uint64_t>& shape, GGM
                 return block_aligned_size(256, 128);  // Q8_K: 256 elements, 128 bytes per block
             }
             // In production, log the unsupported type and use a safe default
-            std::cerr << "[GGUFLoader] WARNING: Unsupported GGMLType " << static_cast<uint32_t>(type) 
-                     << " encountered, assuming F32 size" << std::endl;
+            
             return num_elements * 4;  // Default to F32 size
     }
 }
@@ -644,7 +628,7 @@ bool GGUFLoader::DecompressData(const std::vector<uint8_t>& compressed,
                 throw std::runtime_error("Unsupported compression type");
         }
     } catch (const std::exception& e) {
-        std::cerr << "Decompression error: " << e.what() << std::endl;
+        
         return false;
     }
 }
@@ -664,7 +648,7 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
                 std::vector<uint8_t> input(reinterpret_cast<const char*>(raw_data.data()), 
                                 static_cast<int>(raw_data.size()));
                 std::vector<uint8_t> output = brutal::compress(input);
-                if (output.isEmpty()) return false;
+                if (output.empty()) return false;
                 
                 compressed.resize(output.size());
                 std::memcpy(compressed.data(), output.constData(), output.size());
@@ -677,7 +661,7 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
                                 static_cast<int>(raw_data.size()));
                 bool ok = false;
                 std::vector<uint8_t> output = codec::deflate(input, &ok);
-                if (!ok || output.isEmpty()) return false;
+                if (!ok || output.empty()) return false;
                 
                 compressed.resize(output.size());
                 std::memcpy(compressed.data(), output.constData(), output.size());
@@ -692,7 +676,7 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
                 throw std::runtime_error("Unsupported compression type");
         }
     } catch (const std::exception& e) {
-        std::cerr << "Compression error: " << e.what() << std::endl;
+        
         return false;
     }
 }
@@ -726,4 +710,5 @@ static std::string GetUnsupportedTypeNameByValue(uint32_t type_val) {
         default:  return "IQ" + std::to_string(type_val);  // Generic fallback
     }
 }
+
 

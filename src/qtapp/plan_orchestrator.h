@@ -73,7 +73,7 @@ public:
 
     /**
      * Two-phase initialization
-     * Call after QApplication is ready
+     * Call after void is ready
      */
     void initialize();
 

@@ -24,10 +24,10 @@ private:
 
 private:
     QListWidget* suggestionList;
-    QTextEdit* detailsView;
-    QPushButton* acceptButton;
-    QPushButton* rejectButton;
-    QLabel* confidenceLabel;
+    void* detailsView;
+    void* acceptButton;
+    void* rejectButton;
+    void* confidenceLabel;
     
     std::map<std::string, AutonomousSuggestion> suggestions;
     std::string currentSuggestionId;
@@ -52,10 +52,10 @@ private:
 
 private:
     QListWidget* issueList;
-    QTextEdit* issueDetails;
-    QPushButton* fixButton;
-    QPushButton* ignoreButton;
-    QLabel* riskScoreLabel;
+    void* issueDetails;
+    void* fixButton;
+    void* ignoreButton;
+    void* riskScoreLabel;
     
     std::map<std::string, SecurityIssue> issues;
     std::string currentIssueId;
@@ -82,11 +82,11 @@ private:
 
 private:
     QListWidget* optimizationList;
-    QTextEdit* optimizationDetails;
-    QPushButton* applyButton;
-    QPushButton* dismissButton;
-    QLabel* speedupLabel;
-    QProgressBar* confidenceBar;
+    void* optimizationDetails;
+    void* applyButton;
+    void* dismissButton;
+    void* speedupLabel;
+    void* confidenceBar;
     
     std::map<std::string, PerformanceOptimization> optimizations;
     std::string currentOptimizationId;

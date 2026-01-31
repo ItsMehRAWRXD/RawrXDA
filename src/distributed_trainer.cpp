@@ -80,7 +80,7 @@ void DistributedTrainer::Shutdown()
 
 
     // Save final checkpoint if needed
-    if (!m_lastCheckpointPath.isEmpty()) {
+    if (!m_lastCheckpointPath.empty()) {
         Checkpoint(m_lastCheckpointPath);
     }
 
@@ -165,8 +165,8 @@ bool DistributedTrainer::initializeGloo()
     
     // Gloo supports both CPU and GPU, and is useful for multi-node training
     // It requires setting up a rendezvous point (typically TCP)
-    
-    
+
+
     return true;
 }
 
@@ -175,8 +175,8 @@ bool DistributedTrainer::initializeMPI()
     
     // MPI is used in HPC environments
     // Typically initialized via mpirun/mpiexec
-    
-    
+
+
     return true;
 }
 
@@ -248,16 +248,16 @@ bool DistributedTrainer::setupProcessGroup()
 {
     
     const auto& pgConfig = m_config.pgConfig;
-    
-    
+
+
     // In production, we would initialize the distributed process group here
     // This typically involves:
     // 1. Connect to master node
     // 2. Exchange rank information
     // 3. Set up communication channels
     // 4. Perform barrier synchronization
-    
-    
+
+
     return true;
 }
 
@@ -454,7 +454,7 @@ bool DistributedTrainer::TrainStep(const void*& batchData, float* lossOut)
     }
 
     // Periodic checkpointing
-    if (m_globalStep % 1000 == 0 && !m_checkpointDir.isEmpty()) {
+    if (m_globalStep % 1000 == 0 && !m_checkpointDir.empty()) {
         std::string checkpointPath = std::string("%1/checkpoint_%2");
         Checkpoint(checkpointPath);
     }
@@ -725,4 +725,5 @@ void DistributedTrainer::logError(const std::string& message, InferenceErrorCode
                       ;
     errorOccurred(message);
 }
+
 

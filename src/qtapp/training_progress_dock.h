@@ -16,7 +16,7 @@ class ModelTrainer;
  * - Training logs
  * - Time remaining estimates
  * 
- * Designed to be embedded in a QDockWidget for non-intrusive monitoring.
+ * Designed to be embedded in a void for non-intrusive monitoring.
  */
 class TrainingProgressDock : public void
 {
@@ -59,33 +59,33 @@ private:
     void setupConnections();
     void resetMetrics();
     void updateTimeEstimate();
-    std::string formatDuration(qint64 seconds) const;
+    std::string formatDuration(int64_t seconds) const;
 
     // UI Components - Status Section
-    QLabel* m_statusLabel;
-    QLabel* m_epochLabel;
-    QLabel* m_batchLabel;
-    QLabel* m_timeElapsedLabel;
-    QLabel* m_timeRemainingLabel;
+    void* m_statusLabel;
+    void* m_epochLabel;
+    void* m_batchLabel;
+    void* m_timeElapsedLabel;
+    void* m_timeRemainingLabel;
 
     // UI Components - Progress Bars
-    QProgressBar* m_epochProgressBar;
-    QProgressBar* m_batchProgressBar;
+    void* m_epochProgressBar;
+    void* m_batchProgressBar;
 
     // UI Components - Metrics Display
-    QLabel* m_currentLossLabel;
-    QLabel* m_avgLossLabel;
-    QLabel* m_perplexityLabel;
-    QLabel* m_throughputLabel;
+    void* m_currentLossLabel;
+    void* m_avgLossLabel;
+    void* m_perplexityLabel;
+    void* m_throughputLabel;
 
     // UI Components - Tabs
-    QTabWidget* m_tabWidget;
-    QTextEdit* m_trainingLogEdit;
-    QTextEdit* m_validationLogEdit;
+    void* m_tabWidget;
+    void* m_trainingLogEdit;
+    void* m_validationLogEdit;
 
     // UI Components - Controls
-    QPushButton* m_stopButton;
-    QPushButton* m_clearLogsButton;
+    void* m_stopButton;
+    void* m_clearLogsButton;
 
     // Training State
     ModelTrainer* m_trainer;
@@ -95,12 +95,13 @@ private:
     int m_totalBatches;
     float m_currentLoss;
     float m_bestLoss;
-    qint64 m_trainingStartTime;
-    qint64 m_lastBatchTime;
+    int64_t m_trainingStartTime;
+    int64_t m_lastBatchTime;
     int m_totalBatchesProcessed;
 
     // Metrics History
     std::vector<float> m_lossHistory;
     std::vector<float> m_perplexityHistory;
 };
+
 

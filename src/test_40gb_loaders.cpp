@@ -36,50 +36,44 @@ public:
     ModelLoaderBenchmark() = default;
     
     void TestGGUFLoader(const std::string& model_path) {
-        std::cout << "\n[TEST] GGUF Loader on " << model_path << std::endl;
-        
+
+
         auto start = std::chrono::high_resolution_clock::now();
         GGUFLoaderNamespace::GGUFLoader loader;
         
         if (!loader.Open(model_path)) {
-            std::cout << "  ❌ Failed to open model\n";
+            
             return;
         }
         
         auto end = std::chrono::high_resolution_clock::now();
         auto duration_ms = std::chrono::duration<double, std::milli>(end - start).count();
-        
-        std::cout << "  ✅ Load time: " << std::fixed << std::setprecision(2) << duration_ms << "ms\n";
-        std::cout << "  ✅ Tensor count: " << loader.GetTensorCount() << "\n";
-        
+
+
         loader.Close();
     }
     
     void TestStreamingGGUFLoader(const std::string& model_path) {
-        std::cout << "\n[TEST] Streaming GGUF Loader on " << model_path << std::endl;
-        
+
+
         auto start = std::chrono::high_resolution_clock::now();
         StreamingGGUFLoaderNamespace::StreamingGGUFLoader loader;
         
         if (!loader.Open(model_path)) {
-            std::cout << "  ❌ Failed to open model\n";
+            
             return;
         }
         
         auto end = std::chrono::high_resolution_clock::now();
         auto duration_ms = std::chrono::duration<double, std::milli>(end - start).count();
-        
-        std::cout << "  ✅ Stream time: " << std::fixed << std::setprecision(2) << duration_ms << "ms\n";
-        std::cout << "  ✅ Tensor count: " << loader.GetTensorCount() << "\n";
-        
+
+
         loader.Close();
     }
     
     void PrintHeader() {
-        std::cout << "\n" << std::string(60, '=') << "\n";
-        std::cout << "RawrXD 40GB Model Loader Benchmark\n";
-        std::cout << "Real TPS Testing - Non-Simulated\n";
-        std::cout << std::string(60, '=') << "\n";
+
+
     }
 };
 
@@ -97,10 +91,7 @@ int main(int argc, char* argv[]) {
         benchmark.TestGGUFLoader(model);
         benchmark.TestStreamingGGUFLoader(model);
     }
-    
-    std::cout << "\n" << std::string(60, '=') << "\n";
-    std::cout << "Benchmark Complete\n";
-    std::cout << std::string(60, '=') << "\n";
-    
+
+
     return 0;
 }

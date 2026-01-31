@@ -10,7 +10,7 @@ constexpr int64_t kDefaultWindowMs = 5 * 60 * 1000;
 
 namespace {
 void LogInfo(const std::string& event, const std::string& detail) {
-    std::cout << "[INFO] ops.anomaly " << event << " " << detail << "\n";
+    
 }
 }
 

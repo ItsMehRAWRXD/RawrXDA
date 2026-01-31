@@ -39,8 +39,8 @@ void BackupManager::start(int intervalMinutes) {
     
     m_running = true;
     m_backupTimer->start(intervalMinutes * 60 * 1000);
-    
-    
+
+
     // Create initial backup
     performAutomaticBackup();
 }
@@ -59,8 +59,8 @@ std::string BackupManager::createBackup(BackupType type) {
     backupId += "_" + typeName;
     
     backupStarted(backupId);
-    
-    
+
+
     // Create backup directory
     std::string backupPath = m_backupDirectory + "/" + backupId;
     std::filesystem::path().mkpath(backupPath);
@@ -123,8 +123,8 @@ bool BackupManager::restoreBackup(const std::string& backupId) {
     restoreStarted(backupId);
     
     const BackupInfo& info = m_backups[backupId];
-    
-    
+
+
     // Verify backup before restore
     if (!verifyBackup(backupId)) {
         restoreFailed("Backup verification failed");
@@ -197,7 +197,7 @@ void BackupManager::cleanOldBackups(int daysToKeep) {
         m_backups.remove(backupId);
     }
     
-    if (!toRemove.isEmpty()) {
+    if (!toRemove.empty()) {
     }
 }
 
@@ -215,7 +215,7 @@ void BackupManager::performAutomaticBackup() {
     // Use incremental backup for automatic backups
     std::string backupId = createBackup(Incremental);
     
-    if (!backupId.isEmpty()) {
+    if (!backupId.empty()) {
         // Clean old backups (keep 30 days)
         cleanOldBackups(30);
     }
@@ -253,12 +253,12 @@ bool BackupManager::compressBackup(const std::string& srcPath, const std::string
     // Compress data in chunks
     const int CHUNK_SIZE = 128 * 1024; // 128KB chunks
     std::vector<uint8_t> buffer;
-    qint64 totalRead = 0;
-    qint64 totalWritten = 0;
+    int64_t totalRead = 0;
+    int64_t totalWritten = 0;
     
     while (!src.atEnd()) {
         buffer = src.read(CHUNK_SIZE);
-        if (buffer.isEmpty()) break;
+        if (buffer.empty()) break;
         
         totalRead += buffer.size();
         int written = gzwrite(gzf, buffer.constData(), buffer.size());
@@ -314,7 +314,7 @@ bool BackupManager::decompressBackup(const std::string& srcPath, const std::stri
     // Decompress data in chunks
     const int CHUNK_SIZE = 128 * 1024; // 128KB chunks
     char buffer[CHUNK_SIZE];
-    qint64 totalDecompressed = 0;
+    int64_t totalDecompressed = 0;
     
     while (true) {
         int bytesRead = gzread(gzf, buffer, CHUNK_SIZE);
@@ -333,7 +333,7 @@ bool BackupManager::decompressBackup(const std::string& srcPath, const std::stri
             break;
         }
         
-        qint64 written = dst.write(buffer, bytesRead);
+        int64_t written = dst.write(buffer, bytesRead);
         if (written != bytesRead) {
             gzclose(gzf);
             dst.close();
@@ -360,4 +360,6 @@ bool BackupManager::decompressBackup(const std::string& srcPath, const std::stri
 
     return true;
 }
+
+
 

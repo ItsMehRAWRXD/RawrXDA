@@ -18,6 +18,11 @@
  */
 
 #include "multi_file_search.h"
+#include <iostream>
+#include <filesystem>
+#include <fstream>
+#include <regex>
+#include <algorithm>
 
 
 /**
@@ -34,17 +39,17 @@ MultiFileSearchWidget::MultiFileSearchWidget(void* parent)
     // Build UI Layout
     // ─────────────────────────────────────────────────────────────────────
 
-    auto mainLayout = new QVBoxLayout(this);
+    auto mainLayout = new void(this);
     mainLayout->setContentsMargins(8, 8, 8, 8);
     mainLayout->setSpacing(6);
 
     // Search input row
-    auto searchLayout = new QHBoxLayout();
-    QLabel* searchLabel = new QLabel("Search:", this);
-    m_searchInput = new QLineEdit(this);
+    auto searchLayout = new void();
+    void* searchLabel = new void("Search:", this);
+    m_searchInput = new void(this);
     m_searchInput->setPlaceholderText("Enter search query...");
     m_searchInput->setMinimumHeight(32);
-    m_searchButton = new QPushButton("Search", this);
+    m_searchButton = new void("Search", this);
     m_searchButton->setMinimumHeight(32);
     m_searchButton->setMaximumWidth(100);
 
@@ -54,9 +59,9 @@ MultiFileSearchWidget::MultiFileSearchWidget(void* parent)
     mainLayout->addLayout(searchLayout);
 
     // File filter row
-    auto filterLayout = new QHBoxLayout();
-    QLabel* filterLabel = new QLabel("File Filter:", this);
-    m_fileFilterInput = new QLineEdit(this);
+    auto filterLayout = new void();
+    void* filterLabel = new void("File Filter:", this);
+    m_fileFilterInput = new void(this);
     m_fileFilterInput->setPlaceholderText("*.cpp, *.h, *.hpp");
     m_fileFilterInput->setText("*");
     m_fileFilterInput->setMinimumHeight(28);
@@ -68,10 +73,10 @@ MultiFileSearchWidget::MultiFileSearchWidget(void* parent)
     mainLayout->addLayout(filterLayout);
 
     // Options row
-    auto optionsLayout = new QHBoxLayout();
-    m_caseSensitiveCheck = new QCheckBox("Case Sensitive", this);
-    m_regexCheck = new QCheckBox("Regex", this);
-    m_wholeWordCheck = new QCheckBox("Whole Word", this);
+    auto optionsLayout = new void();
+    m_caseSensitiveCheck = nullptr;
+    m_regexCheck = nullptr;
+    m_wholeWordCheck = nullptr;
 
     optionsLayout->addWidget(m_caseSensitiveCheck);
     optionsLayout->addWidget(m_regexCheck);
@@ -80,7 +85,7 @@ MultiFileSearchWidget::MultiFileSearchWidget(void* parent)
     mainLayout->addLayout(optionsLayout);
 
     // Results tree view
-    m_resultsTree = new QTreeWidget(this);
+    m_resultsTree = nullptr;
     m_resultsTree->setColumnCount(2);
     m_resultsTree->setHeaderLabels({"Location", "Context"});
     m_resultsTree->setColumnWidth(0, 200);
@@ -91,7 +96,7 @@ MultiFileSearchWidget::MultiFileSearchWidget(void* parent)
     mainLayout->addWidget(m_resultsTree, 1);
 
     // Status label
-    m_statusLabel = new QLabel("Ready", this);
+    m_statusLabel = new void("Ready", this);
     m_statusLabel->setStyleSheet("color: #666666; font-size: 11px;");
     mainLayout->addWidget(m_statusLabel);
 
@@ -160,7 +165,7 @@ std::string MultiFileSearchWidget::searchQuery() const
 void MultiFileSearchWidget::startSearch()
 {
     std::string query = m_searchInput->text().trimmed();
-    if (query.isEmpty() || m_projectRoot.isEmpty()) {
+    if (query.empty() || m_projectRoot.empty()) {
         updateStatus("Error: Search query and project root required");
         return;
     }
@@ -231,7 +236,7 @@ void MultiFileSearchWidget::onResultItemDoubleClicked(QTreeWidgetItem* item, int
 
     // Extract result data from item
     std::string file = item->data(0, //UserRole).toString();
-    if (file.isEmpty()) {
+    if (file.empty()) {
         return;
     }
 
@@ -279,133 +284,83 @@ void MultiFileSearchWidget::performSearch(const std::string& searchText,
                                          bool caseSensitive,
                                          const std::string& fileFilter)
 {
-    std::regex searchPattern;
-
-    // Compile search pattern (regex or literal)
-    if (useRegex) {
-        std::regex::PatternOptions options =
-            caseSensitive ? std::regex::NoPatternOption
-                          : std::regex::CaseInsensitiveOption;
-        searchPattern.setPattern(searchText);
-        searchPattern.setPatternOptions(options);
-
-        if (!searchPattern.isValid()) {
-            return;
-        }
+    if (m_searchCancelled.load(std::memory_order_acquire)) {
+        return;
     }
 
-    // Load gitignore patterns
-    auto gitignorePatterns = loadGitignorePatterns(rootPath);
-
-    // Parse file filter patterns
-    std::vector<std::string> filterList = fileFilter.split(',', //SkipEmptyParts);
-    for (auto& filter : filterList) {
-        filter = filter.trimmed();
+    // Split filters
+    std::vector<std::string> filterList;
+    std::stringstream ss(fileFilter);
+    std::string segment;
+    while (std::getline(ss, segment, ',')) {
+        segment.erase(0, segment.find_first_not_of(" \t"));
+        segment.erase(segment.find_last_not_of(" \t") + 1);
+        if (!segment.empty()) filterList.push_back(segment);
     }
 
-    // Recursive directory traversal
-    std::filesystem::path dir(rootPath);
-    QFileInfoList fileList = dir.entryInfoList(std::filesystem::path::Files | std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot,
-                                               std::filesystem::path::DirsFirst);
-
-    for (const std::filesystem::path& fileInfo : fileList) {
-        if (m_searchCancelled.load(std::memory_order_acquire)) {
-            return;
+    try {
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(rootPath)) {
+            if (m_searchCancelled.load(std::memory_order_acquire)) return;
+            
+            if (entry.is_regular_file()) {
+                std::string path = entry.path().string();
+                std::string filename = entry.path().filename().string();
+                
+                // Match filter
+                bool matchesFilter = filterList.empty();
+                for (const auto& filter : filterList) {
+                    // Simple wildcard check
+                    if (filename.find(filter) != std::string::npos) { // Very naive wildcard
+                        matchesFilter = true;
+                        break;
+                    }
+                }
+                
+                if (!matchesFilter) continue;
+                
+                // Search in file
+                searchInFile(path, searchText, useRegex, caseSensitive);
+            }
         }
+    } catch (...) {}
+}
 
-        if (fileInfo.isDir()) {
-            performSearch(searchText, fileInfo.absoluteFilePath(), useRegex, caseSensitive, fileFilter);
-        } else if (fileInfo.isFile()) {
-            // Check if file should be ignored
-            if (isIgnored(fileInfo.absoluteFilePath(), gitignorePatterns)) {
-                continue;
-            }
-
-            // Check file filter
-            bool matchesFilter = false;
-            for (const std::string& filter : filterList) {
-                std::regex filterPattern(std::regex::wildcardToRegularExpression(filter));
-                if (filterPattern.match(fileInfo.fileName()).hasMatch()) {
-                    matchesFilter = true;
-                    break;
+void MultiFileSearchWidget::searchInFile(const std::string& filePath, const std::string& searchText, 
+                                   bool useRegex, bool caseSensitive) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) return;
+    
+    std::string line;
+    int lineNum = 0;
+    while (std::getline(file, line)) {
+        lineNum++;
+        bool found = false;
+        if (useRegex) {
+            try {
+                std::regex_constants::syntax_option_type flags = std::regex::ECMAScript;
+                if (!caseSensitive) flags |= std::regex::icase;
+                std::regex re(searchText, flags);
+                if (std::regex_search(line, re)) found = true;
+            } catch (...) {}
+        } else {
+            auto it = std::search(
+                line.begin(), line.end(),
+                searchText.begin(), searchText.end(),
+                [caseSensitive](char a, char b) {
+                    return caseSensitive ? (a == b) : (::tolower(a) == ::tolower(b));
                 }
-            }
-
-            if (!matchesFilter) {
-                continue;
-            }
-
-            // Read and search file
-            std::string fileContent = FileManager::readFile(fileInfo.absoluteFilePath());
-            if (fileContent.isEmpty()) {
-                continue;
-            }
-
-            std::vector<std::string> lines = fileContent.split('\n');
-            for (int lineNum = 0; lineNum < lines.size(); ++lineNum) {
-                if (m_searchCancelled.load(std::memory_order_acquire)) {
-                    return;
-                }
-
-                const std::string& line = lines[lineNum];
-
-                // Search for matches in line
-                if (useRegex) {
-                    std::sregex_iterator it = searchPattern;
-                    while (itfalse) {
-                        std::smatch match = it;
-                        MultiFileSearchResult result(
-                            fileInfo.absoluteFilePath(),
-                            lineNum + 1,
-                            match.capturedStart(),
-                            line,
-                            match.captured()
-                        );
-
-                        {
-                            std::lock_guard<std::mutex> locker(&m_resultsMutex);
-                            m_pendingResults.push_back(result);
-                            m_totalResultCount++;
-                        }
-
-                        // Batch every 20 results for UI responsiveness
-                        if (m_totalResultCount % 20 == 0) {
-                            searchProgress(0, m_totalResultCount);
-                        }
-                    }
-                } else {
-                    // Literal string search
-                    //CaseSensitivity cs = caseSensitive ? //CaseSensitive : //CaseInsensitive;
-                    int startPos = 0;
-
-                    while (true) {
-                        int pos = line.indexOf(searchText, startPos, cs);
-                        if (pos == -1) {
-                            break;
-                        }
-
-                        MultiFileSearchResult result(
-                            fileInfo.absoluteFilePath(),
-                            lineNum + 1,
-                            pos,
-                            line,
-                            searchText
-                        );
-
-                        {
-                            std::lock_guard<std::mutex> locker(&m_resultsMutex);
-                            m_pendingResults.push_back(result);
-                            m_totalResultCount++;
-                        }
-
-                        // Batch every 20 results
-                        if (m_totalResultCount % 20 == 0) {
-                            searchProgress(0, m_totalResultCount);
-                        }
-
-                        startPos = pos + searchText.length();
-                    }
-                }
+            );
+            if (it != line.end()) found = true;
+        }
+        
+        if (found) {
+            // Report result via callback
+            if (onSearchResultReady) {
+                SearchResult res;
+                res.filePath = filePath;
+                res.lineNumber = lineNum;
+                res.lineText = line;
+                onSearchResultReady(res);
             }
         }
     }
@@ -430,7 +385,7 @@ std::vector<std::regex> MultiFileSearchWidget::loadGitignorePatterns(const std::
         std::string line = stream.readLine().trimmed();
 
         // Skip comments and empty lines
-        if (line.isEmpty() || line.startsWith('#')) {
+        if (line.empty() || line.startsWith('#')) {
             continue;
         }
 
@@ -478,7 +433,7 @@ void MultiFileSearchWidget::addResultToTree(const MultiFileSearchResult& result)
     }
 
     if (!fileItem) {
-        fileItem = new QTreeWidgetItem();
+        fileItem = nullptr;
         fileItem->setText(0, result.file);
         fileItem->setData(0, //UserRole, result.file);
         fileItem->setFirstColumnSpanned(true);
@@ -486,7 +441,7 @@ void MultiFileSearchWidget::addResultToTree(const MultiFileSearchResult& result)
     }
 
     // Add result as child item
-    QTreeWidgetItem* resultItem = new QTreeWidgetItem(fileItem);
+    QTreeWidgetItem* resultItem = nullptr;
     resultItem->setText(0, std::string("Line %1:%2"));
     resultItem->setText(1, result.lineText);
 
@@ -512,4 +467,5 @@ void MultiFileSearchWidget::updateStatus(const std::string& message)
 {
     m_statusLabel->setText(message);
 }
+
 

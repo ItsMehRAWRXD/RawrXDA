@@ -90,10 +90,11 @@ public:
      * \param path File path
      * \return File size, or -1 on error
      */
-    virtual qint64 fileSize(const std::string& path) const = 0;
+    virtual int64_t fileSize(const std::string& path) const = 0;
 };
 
 } // namespace RawrXD
 
 #endif // RAWRXD_IFILE_READER_H
+
 

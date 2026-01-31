@@ -33,46 +33,46 @@ InferenceSettingsDialog::~InferenceSettingsDialog()
 
 void InferenceSettingsDialog::setupUI()
 {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     
     // Preset selection
-    QGroupBox* presetGroup = new QGroupBox("Preset Configuration");
-    QVBoxLayout* presetLayout = new QVBoxLayout(presetGroup);
+    void* presetGroup = new void("Preset Configuration");
+    void* presetLayout = new void(presetGroup);
     
-    m_presetCombo = new QComboBox();
+    m_presetCombo = new void();
     m_presetCombo->addItem("Balanced", InferenceSettingsManager::Balanced);
     m_presetCombo->addItem("Performance", InferenceSettingsManager::Performance);
     m_presetCombo->addItem("Quality", InferenceSettingsManager::Quality);
     m_presetCombo->addItem("Custom", InferenceSettingsManager::Custom);
     
-    m_presetIndicator = new QLabel("Current: Balanced");
-    m_presetIndicator->setStyleSheet("QLabel { color: #4ec9b0; font-weight: bold; }");
+    m_presetIndicator = new void("Current: Balanced");
+    m_presetIndicator->setStyleSheet("void { color: #4ec9b0; font-weight: bold; }");
     
-    presetLayout->addWidget(new QLabel("Preset:"));
+    presetLayout->addWidget(new void("Preset:"));
     presetLayout->addWidget(m_presetCombo);
     presetLayout->addWidget(m_presetIndicator);
     
     // Generation parameters
-    QGroupBox* paramsGroup = new QGroupBox("Generation Parameters");
-    QFormLayout* paramsLayout = new QFormLayout(paramsGroup);
+    void* paramsGroup = new void("Generation Parameters");
+    QFormLayout* paramsLayout = nullptr;
     
-    m_temperatureSpin = new QDoubleSpinBox();
+    m_temperatureSpin = nullptr;
     m_temperatureSpin->setRange(0.0, 2.0);
     m_temperatureSpin->setSingleStep(0.1);
     m_temperatureSpin->setDecimals(1);
     
-    m_topPSpin = new QDoubleSpinBox();
+    m_topPSpin = nullptr;
     m_topPSpin->setRange(0.0, 1.0);
     m_topPSpin->setSingleStep(0.05);
     m_topPSpin->setDecimals(2);
     
-    m_topKSpin = new QSpinBox();
+    m_topKSpin = nullptr;
     m_topKSpin->setRange(1, 200);
     
-    m_maxTokensSpin = new QSpinBox();
+    m_maxTokensSpin = nullptr;
     m_maxTokensSpin->setRange(1, 8192);
     
-    m_repetitionPenaltySpin = new QDoubleSpinBox();
+    m_repetitionPenaltySpin = nullptr;
     m_repetitionPenaltySpin->setRange(1.0, 2.0);
     m_repetitionPenaltySpin->setSingleStep(0.05);
     m_repetitionPenaltySpin->setDecimals(2);
@@ -84,28 +84,28 @@ void InferenceSettingsDialog::setupUI()
     paramsLayout->addRow("Repetition Penalty:", m_repetitionPenaltySpin);
     
     // Ollama settings
-    QGroupBox* ollamaGroup = new QGroupBox("Ollama Integration");
-    QFormLayout* ollamaLayout = new QFormLayout(ollamaGroup);
+    void* ollamaGroup = new void("Ollama Integration");
+    QFormLayout* ollamaLayout = nullptr;
     
-    m_useOllamaCheck = new QCheckBox("Use Ollama for inference");
-    m_ollamaModelEdit = new QLineEdit();
+    m_useOllamaCheck = nullptr;
+    m_ollamaModelEdit = new void();
     
     ollamaLayout->addRow(m_useOllamaCheck);
     ollamaLayout->addRow("Model Tag:", m_ollamaModelEdit);
     
     // Recent models
-    QGroupBox* recentGroup = new QGroupBox("Recent Models");
-    QVBoxLayout* recentLayout = new QVBoxLayout(recentGroup);
+    void* recentGroup = new void("Recent Models");
+    void* recentLayout = new void(recentGroup);
     
-    m_recentModelsList = new QListWidget();
-    m_clearRecentButton = new QPushButton("Clear Recent Models");
+    m_recentModelsList = nullptr;
+    m_clearRecentButton = new void("Clear Recent Models");
     
-    recentLayout->addWidget(new QLabel("Recently loaded models:"));
+    recentLayout->addWidget(new void("Recently loaded models:"));
     recentLayout->addWidget(m_recentModelsList);
     recentLayout->addWidget(m_clearRecentButton);
     
     // Buttons
-    m_buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Apply | QDialogButtonBox::Cancel);
+    m_buttonBox = nullptr;
     
     mainLayout->addWidget(presetGroup);
     mainLayout->addWidget(paramsGroup);

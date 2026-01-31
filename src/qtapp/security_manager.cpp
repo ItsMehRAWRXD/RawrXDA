@@ -27,7 +27,7 @@ SecurityManager* SecurityManager::getInstance()
 bool SecurityManager::initialize(const std::string& masterPassword)
 {
     
-    if (masterPassword.isEmpty()) {
+    if (masterPassword.empty()) {
         m_masterKey = QCryptographicHash::hash("default", QCryptographicHash::Sha256);
     } else {
         m_masterKey = QCryptographicHash::hash(masterPassword.toUtf8(), QCryptographicHash::Sha256);
@@ -106,13 +106,13 @@ bool SecurityManager::rotateEncryptionKey()
     return true;
 }
 
-qint64 SecurityManager::getKeyExpirationTime() const
+int64_t SecurityManager::getKeyExpirationTime() const
 {
     return m_lastKeyRotation + m_keyRotationInterval;
 }
 
 bool SecurityManager::storeCredential(const std::string& username, const std::string& token,
-                                     const std::string& tokenType, qint64 expiresAt,
+                                     const std::string& tokenType, int64_t expiresAt,
                                      const std::string& refreshToken)
 {
     
@@ -122,7 +122,7 @@ bool SecurityManager::storeCredential(const std::string& username, const std::st
     cred.tokenType = tokenType;
     cred.issuedAt = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     cred.expiresAt = expiresAt > 0 ? expiresAt : (cred.issuedAt + 3600 * 1000); // 1 hour default
-    cred.isRefreshable = !refreshToken.isEmpty();
+    cred.isRefreshable = !refreshToken.empty();
     cred.refreshToken = refreshToken;
     
     m_credentials[username] = cred;
@@ -297,7 +297,7 @@ bool SecurityManager::exportAuditLog(const std::string& filePath) const
     
     for (const auto& entry : m_auditLog) {
         void* obj;
-        obj["timestamp"] = static_cast<qint64>(entry.timestamp);
+        obj["timestamp"] = static_cast<int64_t>(entry.timestamp);
         obj["eventType"] = entry.eventType;
         obj["actor"] = entry.actor;
         obj["resource"] = entry.resource;
@@ -322,7 +322,7 @@ bool SecurityManager::exportAuditLog(const std::string& filePath) const
 bool SecurityManager::loadConfiguration(const void*& config)
 {
     
-    m_keyRotationInterval = static_cast<qint64>(config["keyRotationInterval"].toDouble(86400));
+    m_keyRotationInterval = static_cast<int64_t>(config["keyRotationInterval"].toDouble(86400));
     m_debugMode = config["debugMode"].toBool(false);
     
     return true;
@@ -342,7 +342,7 @@ void* SecurityManager::getConfiguration() const
 
 bool SecurityManager::validateSetup() const
 {
-    return m_initialized && !m_masterKey.isEmpty();
+    return m_initialized && !m_masterKey.empty();
 }
 
 // Private encryption methods
@@ -499,7 +499,7 @@ std::vector<uint8_t> SecurityManager::decryptAES256CBC(const std::vector<uint8_t
     }
     
     // Remove PKCS7 padding
-    if (!plaintext.isEmpty()) {
+    if (!plaintext.empty()) {
         int paddingLen = static_cast<unsigned char>(plaintext[plaintext.size() - 1]);
         if (paddingLen > 0 && paddingLen <= 16) {
             plaintext = plaintext.left(plaintext.size() - paddingLen);
@@ -508,4 +508,6 @@ std::vector<uint8_t> SecurityManager::decryptAES256CBC(const std::vector<uint8_t
     
     return plaintext;
 }
+
+
 

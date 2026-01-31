@@ -13,31 +13,31 @@ ModelMonitor::ModelMonitor(InferenceEngine* engine, void* parent)
 void ModelMonitor::initialize() {
     if (m_modelLabel) return;  // Already initialized
     
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     mainLayout->setContentsMargins(10, 10, 10, 10);
     
     // Model info group
-    QGroupBox* modelGroup = new QGroupBox(tr("Model Information"), this);
-    QVBoxLayout* modelLayout = new QVBoxLayout(modelGroup);
-    m_modelLabel = new QLabel(tr("No model loaded"), modelGroup);
-    m_modelLabel->setStyleSheet("QLabel { color: #e0e0e0; }");
+    void* modelGroup = new void(tr("Model Information"), this);
+    void* modelLayout = new void(modelGroup);
+    m_modelLabel = new void(tr("No model loaded"), modelGroup);
+    m_modelLabel->setStyleSheet("void { color: #e0e0e0; }");
     modelLayout->addWidget(m_modelLabel);
     mainLayout->addWidget(modelGroup);
     
     // Performance metrics group
-    QGroupBox* perfGroup = new QGroupBox(tr("Performance Metrics"), this);
-    QVBoxLayout* perfLayout = new QVBoxLayout(perfGroup);
+    void* perfGroup = new void(tr("Performance Metrics"), this);
+    void* perfLayout = new void(perfGroup);
     
-    m_memLabel = new QLabel(tr("Memory: --"), perfGroup);
-    m_memLabel->setStyleSheet("QLabel { color: #e0e0e0; font-family: 'Consolas', monospace; }");
+    m_memLabel = new void(tr("Memory: --"), perfGroup);
+    m_memLabel->setStyleSheet("void { color: #e0e0e0; font-family: 'Consolas', monospace; }");
     perfLayout->addWidget(m_memLabel);
     
-    m_tokensLabel = new QLabel(tr("Tokens/sec: --"), perfGroup);
-    m_tokensLabel->setStyleSheet("QLabel { color: #0dff00; font-family: 'Consolas', monospace; font-weight: bold; }");
+    m_tokensLabel = new void(tr("Tokens/sec: --"), perfGroup);
+    m_tokensLabel->setStyleSheet("void { color: #0dff00; font-family: 'Consolas', monospace; font-weight: bold; }");
     perfLayout->addWidget(m_tokensLabel);
     
-    m_tempLabel = new QLabel(tr("Temperature: --"), perfGroup);
-    m_tempLabel->setStyleSheet("QLabel { color: #ff9900; font-family: 'Consolas', monospace; }");
+    m_tempLabel = new void(tr("Temperature: --"), perfGroup);
+    m_tempLabel->setStyleSheet("void { color: #ff9900; font-family: 'Consolas', monospace; }");
     perfLayout->addWidget(m_tempLabel);
     
     mainLayout->addWidget(perfGroup);
@@ -61,7 +61,7 @@ void ModelMonitor::refresh()
         m_modelLabel->setText(info.fileName());
         
         // Get real performance metrics from the engine
-        qint64 memMB = m_engine->memoryUsageMB();
+        int64_t memMB = m_engine->memoryUsageMB();
         double tps   = m_engine->tokensPerSecond();
         double temp  = m_engine->temperature();
         
@@ -75,4 +75,5 @@ void ModelMonitor::refresh()
         m_tempLabel->setText(tr("Temperature: --"));
     }
 }
+
 

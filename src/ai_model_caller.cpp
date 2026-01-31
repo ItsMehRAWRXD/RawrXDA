@@ -87,7 +87,7 @@ public:
      * int main() {
      *     std::vector<int> vec = {1, 2, 3};
      *     for (auto v : vec) {
-     *         std::cout << v << std::endl;  // <- cursor here
+     *           // <- cursor here
      * ```
      */
     struct Completion {
@@ -109,7 +109,6 @@ public:
             // Build completion-optimized prompt
             std::string prompt = buildCompletionPrompt(prefix, suffix, fileType, context);
 
-            std::cout << "🤖 Generating code completions..." << std::endl;
 
             // Call model
             GenerationParams params;
@@ -119,7 +118,7 @@ public:
 
             auto response = callModel(prompt, params);
             if (response.empty()) {
-                std::cerr << "❌ Model returned empty response" << std::endl;
+                
                 return results;
             }
 
@@ -146,12 +145,11 @@ public:
                 results.resize(numCompletions);
             }
 
-            std::cout << "✅ Generated " << results.size() << " completions" << std::endl;
 
             return results;
 
         } catch (const std::exception& e) {
-            std::cerr << "❌ Completion error: " << e.what() << std::endl;
+            
             return results;
         }
     }
@@ -198,7 +196,7 @@ public:
         result.original_code = code;
 
         try {
-            std::cout << "🔧 Generating " << refactorType << " refactoring..." << std::endl;
+
 
             // Build refactoring prompt
             std::string prompt = buildRefactoringPrompt(code, refactorType, context);
@@ -209,7 +207,7 @@ public:
 
             auto response = callModel(prompt, params);
             if (response.empty()) {
-                std::cerr << "❌ Model returned empty refactoring" << std::endl;
+                
                 return result;
             }
 
@@ -225,13 +223,11 @@ public:
             // Add benefits based on refactor type
             result.benefits = getRefactoringBenefits(refactorType);
 
-            std::cout << "✅ Generated refactoring (confidence: " 
-                     << (result.confidence * 100) << "%)" << std::endl;
 
             return result;
 
         } catch (const std::exception& e) {
-            std::cerr << "❌ Refactoring error: " << e.what() << std::endl;
+            
             return result;
         }
     }
@@ -280,7 +276,7 @@ public:
         std::vector<TestCase> results;
 
         try {
-            std::cout << "🧪 Generating test cases..." << std::endl;
+
 
             std::string prompt = buildTestPrompt(functionCode, language);
 
@@ -290,7 +286,7 @@ public:
 
             auto response = callModel(prompt, params);
             if (response.empty()) {
-                std::cerr << "❌ Model returned empty tests" << std::endl;
+                
                 return results;
             }
 
@@ -306,12 +302,11 @@ public:
                 results.push_back(testCase);
             }
 
-            std::cout << "✅ Generated " << results.size() << " test cases" << std::endl;
 
             return results;
 
         } catch (const std::exception& e) {
-            std::cerr << "❌ Test generation error: " << e.what() << std::endl;
+            
             return results;
         }
     }
@@ -349,7 +344,7 @@ public:
         std::vector<Diagnostic> results;
 
         try {
-            std::cout << "🔍 Analyzing code for issues..." << std::endl;
+
 
             std::string prompt = buildDiagnosticsPrompt(code, language);
 
@@ -366,12 +361,11 @@ public:
             auto diagnosticLines = response;
             // TODO: Parse structured diagnostics from model response
 
-            std::cout << "✅ Found " << results.size() << " diagnostics" << std::endl;
 
             return results;
 
         } catch (const std::exception& e) {
-            std::cerr << "❌ Diagnostic error: " << e.what() << std::endl;
+            
             return results;
         }
     }
@@ -412,11 +406,11 @@ private:
             // );
 
             // Placeholder: return mock response
-            std::string response = "std::cout << \"Hello, World!\" << std::endl;";
+            std::string response = "";
             return response;
 
         } catch (const std::exception& e) {
-            std::cerr << "❌ Model call error: " << e.what() << std::endl;
+            
             return "";
         }
     }

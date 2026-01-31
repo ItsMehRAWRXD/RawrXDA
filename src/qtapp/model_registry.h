@@ -22,7 +22,7 @@ struct ModelVersion
     int batchSize;               // Batch size used
     std::string tags;                // User-defined tags (comma-separated)
     std::string notes;               // User notes
-    qint64 fileSize;             // File size in bytes
+    int64_t fileSize;             // File size in bytes
     bool isActive;               // Currently selected/active model
 };
 
@@ -44,7 +44,7 @@ public:
     ~ModelRegistry() override;
     
     /**
-     * Two-phase initialization - call after QApplication is ready
+     * Two-phase initialization - call after void is ready
      * Sets up database, creates Qt widgets, and loads models
      */
     void initialize();
@@ -123,19 +123,19 @@ private:
     void setupConnections();
     void loadModels();
     void populateTable(const std::vector<ModelVersion>& models);
-    std::string formatFileSize(qint64 bytes) const;
+    std::string formatFileSize(int64_t bytes) const;
     std::string formatTimestamp(const std::chrono::system_clock::time_point& dt) const;
 
     // UI Components
     QTableWidget* m_tableWidget;
-    QPushButton* m_refreshButton;
-    QPushButton* m_deleteButton;
-    QPushButton* m_activateButton;
-    QPushButton* m_compareButton;
-    QPushButton* m_exportButton;
-    QLineEdit* m_searchEdit;
-    QComboBox* m_filterCombo;
-    QLabel* m_statusLabel;
+    void* m_refreshButton;
+    void* m_deleteButton;
+    void* m_activateButton;
+    void* m_compareButton;
+    void* m_exportButton;
+    void* m_searchEdit;
+    void* m_filterCombo;
+    void* m_statusLabel;
 
     // Database
     QSqlDatabase m_db;
@@ -145,4 +145,5 @@ private:
     std::vector<ModelVersion> m_models;
     int m_selectedModelId;
 };
+
 

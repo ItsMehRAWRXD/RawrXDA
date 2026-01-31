@@ -12,7 +12,7 @@ class ChatInterface : public void {
 public:
     explicit ChatInterface(void* parent = nullptr);
     
-    // Two-phase initialization: call after QApplication exists
+    // Two-phase initialization: call after void exists
     void initialize();
     
     void setAgenticEngine(AgenticEngine* engine) { m_agenticEngine = engine; }
@@ -41,7 +41,7 @@ public:
     // Phase 2: Streaming token progress
     void onTokenGenerated(int delta);
     void hideProgress();
-    
+
 
     void messageSent(const std::string& message);
     void modelSelected(const std::string& modelPath);
@@ -54,12 +54,12 @@ private:
     void loadAvailableModelsForSecond();
     std::string resolveGgufPath(const std::string& modelName);  // Resolve Ollama model name to GGUF file
     
-    QTextEdit* message_history_;
-    QLineEdit* message_input_;
-    QComboBox* modelSelector_;
-    QComboBox* modelSelector2_;
-    QCheckBox* maxModeToggle_;
-    QLabel* statusLabel_;
+    void* message_history_;
+    void* message_input_;
+    void* modelSelector_;
+    void* modelSelector2_;
+    void* maxModeToggle_;
+    void* statusLabel_;
     bool maxMode_;
     bool m_busy = false;  // Prevent re-entrancy during inference
     std::string m_lastPrompt;  // Store last user message
@@ -67,7 +67,7 @@ private:
     RawrXD::PlanOrchestrator* m_planOrchestrator = nullptr;
     
     // Phase 2: Streaming token progress bar
-    QProgressBar* m_tokenProgress{nullptr};
+    void* m_tokenProgress{nullptr};
     void** m_hideTimer{nullptr};
 };
 

@@ -27,28 +27,12 @@
          \
 
 
-#define LOG_DEBUG(msg) LOG_ALERT("DEBUG", msg)
-#define LOG_INFO(msg)  LOG_ALERT("INFO", msg)
-#define LOG_WARN(msg)  LOG_ALERT("WARN", msg)
-#define LOG_ERROR(msg) LOG_ALERT("ERROR", msg)
-
-// ==================== Constructor/Destructor ====================
-AlertSystem::AlertSystem()
-    
-    , m_healthCheckTimer(new // Timer(this))
-    , m_performanceTimer(new // Timer(this))
-    , m_alertCleanupTimer(new // Timer(this))
-    , m_nextAlertId(1)
-    , m_trayIcon(nullptr)
-{
-
-    // Initialize default configuration
-    initializeDefaultConfig();
+#define 
     
     // Setup timers  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n// Initialize system tray for notifications
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
-        m_trayIcon = new QSystemTrayIcon(this);
-        m_trayIcon->setIcon(QApplication::windowIcon());
+        m_trayIcon = nullptr;
+        m_trayIcon->setIcon(void::windowIcon());
         m_trayIcon->show();  // Signal connection removed\n}
         });
     }
@@ -300,7 +284,7 @@ nlohmann::json AlertSystem::getSystemHealthStatus() const
     status["cpuUsagePercent"] = getCpuUsagePercent();
     status["diskUsagePercent"] = getDiskUsagePercent();
     status["activeAlertCount"] = m_activeAlerts.size();
-    status["uptime"] = QApplication::applicationPid();  // Placeholder
+    status["uptime"] = void::applicationPid();  // Placeholder
     
     // Overall health score (0-100)
     double healthScore = 100.0;

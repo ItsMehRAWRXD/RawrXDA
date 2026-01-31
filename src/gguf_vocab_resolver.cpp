@@ -59,7 +59,7 @@ VocabSizeDetection GGUFVocabResolver::detectVocabSize(
     // Strategy 1: TinyLlama special case (fixes 7M bug)
     VocabSizeDetection tinyLlamaResult = detectForTinyLlama(metadata);
     if (tinyLlamaResult.isConfident) {
-        std::cout << "[VocabResolver] TinyLlama detected: " << tinyLlamaResult.detectedSize << std::endl;
+        
         return tinyLlamaResult;
     }
     
@@ -78,7 +78,7 @@ VocabSizeDetection GGUFVocabResolver::detectVocabSize(
     }
     
     // Strategy 4: Fallback to common sizes
-    std::cout << "[VocabResolver] WARNING: Could not confidently detect vocab size, using fallback" << std::endl;
+    
     return createDetection("fallback", 32000, false, {}, "unknown");
 }
 

@@ -65,7 +65,7 @@ void BenchmarkRunner::executeRun() {
     // Initialize inference engine
     try {
         engine_ = std::make_unique<InferenceEngine>(
-            modelPath_.isEmpty() ? nullptr : modelPath_.toLocal8Bit().constData()
+            modelPath_.empty() ? nullptr : modelPath_.toLocal8Bit().constData()
         );
 
         if (!engine_->loadModel(modelPath_)) {
@@ -614,11 +614,11 @@ bool BenchmarkRunner::testMemory(BenchmarkTestResult& result) {
     
     try {
         // Get initial memory usage
-        qint64 baseMemMB = engine_->memoryUsageMB();
+        int64_t baseMemMB = engine_->memoryUsageMB();
         log(std::string("    Base memory: %1 MB"), 1);
         
         // Perform inference operations to measure peak memory
-        std::vector<qint64> memorySnapshots;
+        std::vector<int64_t> memorySnapshots;
         memorySnapshots.push_back(baseMemMB);
         
         std::vector<std::string> testPrompts = {
@@ -632,7 +632,7 @@ bool BenchmarkRunner::testMemory(BenchmarkTestResult& result) {
             
             try {
                 auto completions = completionEngine_->getCompletions(prompt, "", "cpp", "");
-                qint64 currentMemMB = engine_->memoryUsageMB();
+                int64_t currentMemMB = engine_->memoryUsageMB();
                 memorySnapshots.push_back(currentMemMB);
                 
                 if (verbose_) {
@@ -644,10 +644,10 @@ bool BenchmarkRunner::testMemory(BenchmarkTestResult& result) {
         }
         
         // Calculate memory statistics
-        qint64 minMemMB = *std::min_element(memorySnapshots.begin(), memorySnapshots.end());
-        qint64 maxMemMB = *std::max_element(memorySnapshots.begin(), memorySnapshots.end());
-        qint64 avgMemMB = std::accumulate(memorySnapshots.begin(), memorySnapshots.end(), 0LL) / memorySnapshots.size();
-        qint64 peakDeltaMB = maxMemMB - minMemMB;
+        int64_t minMemMB = *std::min_element(memorySnapshots.begin(), memorySnapshots.end());
+        int64_t maxMemMB = *std::max_element(memorySnapshots.begin(), memorySnapshots.end());
+        int64_t avgMemMB = std::accumulate(memorySnapshots.begin(), memorySnapshots.end(), 0LL) / memorySnapshots.size();
+        int64_t peakDeltaMB = maxMemMB - minMemMB;
         
         result.testName = "Memory";
         result.avgLatencyMs = static_cast<double>(avgMemMB);
@@ -729,4 +729,5 @@ BenchmarkTestResult BenchmarkRunner::calculateStats(
 void BenchmarkRunner::log(const std::string& message, int level) {
     logMessage(message, level);
 }
+
 

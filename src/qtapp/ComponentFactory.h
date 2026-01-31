@@ -45,13 +45,13 @@ public:
     static ModelInvoker* createModelInvoker(void* parent = nullptr);
     
     // Helper functions to convert components to void for signal connections
-    static void* asQObject(InferenceEngine* engine);
-    static void* asQObject(AIChatPanel* panel);
-    static void* asQObject(CommandPalette* palette);
-    static void* asQObject(LayerQuantWidget* widget);
-    static void* asQObject(MetaPlanner* planner);
-    static void* asQObject(ActionExecutor* executor);
-    static void* asQObject(ExecutionContext* context);
+// REMOVED_QT:     static void* asQObject(InferenceEngine* engine);
+// REMOVED_QT:     static void* asQObject(AIChatPanel* panel);
+// REMOVED_QT:     static void* asQObject(CommandPalette* palette);
+// REMOVED_QT:     static void* asQObject(LayerQuantWidget* widget);
+// REMOVED_QT:     static void* asQObject(MetaPlanner* planner);
+// REMOVED_QT:     static void* asQObject(ActionExecutor* executor);
+// REMOVED_QT:     static void* asQObject(ExecutionContext* context);
     
     // Check if components are available
     static bool isInferenceEngineAvailable();

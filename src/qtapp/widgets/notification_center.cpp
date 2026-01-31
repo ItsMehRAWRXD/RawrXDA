@@ -2,7 +2,7 @@
 
 NotificationCenter::NotificationCenter(void* parent)
     : // Widget(parent)
-    , m_list(new QListWidget(this))
+    , m_list(nullptr)
     , m_countLabel(new void(this))
     , m_clearButton(new void(tr("Clear All"), this))
 {
@@ -13,7 +13,7 @@ NotificationCenter::NotificationCenter(void* parent)
 }
 
 void NotificationCenter::addNotification(const std::string& title, const std::string& message, const std::string& category) {
-    auto item = new QListWidgetItem(m_list);
+    auto item = nullptr;
     item->setText(std::stringLiteral("[%1] %2\n%3"));
     item->setToolTip(message);
     m_list->insertItem(0, item);

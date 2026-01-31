@@ -41,7 +41,7 @@ void logCoordinatorEvent(const std::string& event, const std::string& details = 
     std::string timestamp = std::chrono::system_clock::time_point::currentDateTimeUtc().toString(//ISODateWithMs);
     std::string message = std::string("[AgentCoordinator] %1 %2");
     
-    if (!details.isEmpty()) {
+    if (!details.empty()) {
         message += " | " + details;
     }
     
@@ -55,7 +55,7 @@ void logCoordinatorEvent(const std::string& event, const std::string& details = 
 AgentCoordinator::AgentCoordinator(void* parent)
     : void(parent)
 {
-    qRegisterMetaType<AgentCoordinator::AgentTask>("AgentCoordinator::AgentTask");
+// qRegisterMetaType removed
 }
 
 AgentCoordinator::~AgentCoordinator()
@@ -90,7 +90,7 @@ bool AgentCoordinator::registerAgent(const std::string& agentId,
                                      int maxConcurrency)
 {
     // Validate input parameters before proceeding
-    if (agentId.isEmpty()) {
+    if (agentId.empty()) {
         logCoordinatorEvent("registerAgent() failed", "Empty agent ID provided", true);
         return false;
     }
@@ -289,7 +289,7 @@ bool AgentCoordinator::cancelPlan(const std::string& planId, const std::string& 
 
     planCancelled(planId, reason);
     for (const auto& task : cancelledTasks) {
-        taskCompleted(planId, task, false, QStringLiteral("plan-cancelled"));
+        taskCompleted(planId, task, false, "plan-cancelled");
     }
     return true;
 }
@@ -413,7 +413,7 @@ bool AgentCoordinator::completeTask(const std::string& planId,
             // Task failed: mark as failed and cascade skip to dependents
             plan.state[taskId] = TaskState::Failed;
             
-            if (failureReason.isEmpty()) {
+            if (failureReason.empty()) {
                 failureReason = std::string("Task %1 failed");
             }
             
@@ -473,8 +473,8 @@ bool AgentCoordinator::completeTask(const std::string& planId,
         } else {
             // Plan failed due to task failure(s)
             std::string failReason = planFinalization.reason;
-            if (failReason.isEmpty()) {
-                failReason = failureReason.isEmpty() ? QStringLiteral("plan-failed") : failureReason;
+            if (failReason.empty()) {
+                failReason = failureReason.empty() ? "plan-failed" : failureReason;
             }
             planFailed(planId, failReason);
             logCoordinatorEvent("Plan finalized",
@@ -517,7 +517,7 @@ void* AgentCoordinator::getPlanStatus(const std::string& planId) const
     const auto planIt = m_plans.find(planId);
     if (planIt == m_plans.end()) {
         void* status;
-        status["error"] = QStringLiteral("plan-not-found");
+        status["error"] = "plan-not-found";
         return status;
     }
     
@@ -579,8 +579,8 @@ void* AgentCoordinator::getCoordinatorStats() const
 bool AgentCoordinator::validateTasks(const std::vector<AgentTask>& tasks, std::string& error) const
 {
     // Pre-condition: Task list must not be empty
-    if (tasks.isEmpty()) {
-        error = QStringLiteral("plan-empty");
+    if (tasks.empty()) {
+        error = "plan-empty";
         logCoordinatorEvent("validateTasks() failed", error, true);
         return false;
     }
@@ -592,15 +592,15 @@ bool AgentCoordinator::validateTasks(const std::vector<AgentTask>& tasks, std::s
     for (const auto& task : tasks) {
         
         // Validate task ID is not empty (required field)
-        if (task.id.isEmpty()) {
-            error = QStringLiteral("task-id-empty");
+        if (task.id.empty()) {
+            error = "task-id-empty";
             logCoordinatorEvent("validateTasks() failed", error, true);
             return false;
         }
         
         // Detect duplicate task IDs (must be unique within plan)
         if (taskIds.contains(task.id)) {
-            error = QStringLiteral("duplicate-task-id");
+            error = "duplicate-task-id";
             logCoordinatorEvent("validateTasks() failed", 
                               std::string("Task ID %1 %2"), true);
             return false;
@@ -609,7 +609,7 @@ bool AgentCoordinator::validateTasks(const std::vector<AgentTask>& tasks, std::s
 
         // Verify that the assigned agent exists (agent must be pre-registered)
         if (!m_agents.contains(task.agentId)) {
-            error = QStringLiteral("unknown-agent:%1");
+            error = "unknown-agent:%1";
             logCoordinatorEvent("validateTasks() failed",
                               std::string("Task %1 references %2"), true);
             return false;
@@ -618,7 +618,7 @@ bool AgentCoordinator::validateTasks(const std::vector<AgentTask>& tasks, std::s
         // Prevent self-dependencies (task cannot depend on itself)
         for (const auto& dep : task.dependencies) {
             if (dep == task.id) {
-                error = QStringLiteral("self-dependency:%1");
+                error = "self-dependency:%1";
                 logCoordinatorEvent("validateTasks() failed",
                                   std::string("Task %1 cannot depend on itself"), true);
                 return false;
@@ -630,7 +630,7 @@ bool AgentCoordinator::validateTasks(const std::vector<AgentTask>& tasks, std::s
 
     // Phase 2: Detect cycles using color-based DFS (O(V+E) complexity)
     if (detectCycle(tasks)) {
-        error = QStringLiteral("dependency-cycle");
+        error = "dependency-cycle";
         logCoordinatorEvent("validateTasks() failed", "Circular task dependency detected", true);
         return false;
     }
@@ -639,7 +639,7 @@ bool AgentCoordinator::validateTasks(const std::vector<AgentTask>& tasks, std::s
     for (const auto& task : tasks) {
         for (const auto& dep : task.dependencies) {
             if (!taskIds.contains(dep)) {
-                error = QStringLiteral("missing-dependency:%1->%2");
+                error = "missing-dependency:%1->%2";
                 logCoordinatorEvent("validateTasks() failed",
                                   std::string("Task %1 depends on undefined task %2"), true);
                 return false;
@@ -786,7 +786,7 @@ void AgentCoordinator::markDownstreamAsSkipped(PlanState& plan, const std::strin
     QQueue<std::string> queue;
     queue.enqueue(blockingTaskId);
 
-    while (!queue.isEmpty()) {
+    while (!queue.empty()) {
         const auto current = queue.dequeue();
         const auto dependents = plan.dependents.value(current);
         for (const auto& dep : dependents) {
@@ -898,4 +898,5 @@ void* AgentCoordinator::buildPlanStatus(const PlanState& plan) const
     status["context"] = plan.sharedContext;
     return status;
 }
+
 

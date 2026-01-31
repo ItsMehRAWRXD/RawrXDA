@@ -3,7 +3,7 @@
 #pragma once
 
 
-class DiffDock : public QDockWidget
+class DiffDock : public void
 {
 
 public:
@@ -16,9 +16,9 @@ public:
     void rejected();
 
 private:
-    QTextEdit *m_left;
-    QTextEdit *m_right;
-    QPushButton *m_acceptBtn;
-    QPushButton *m_rejectBtn;
+    void *m_left;
+    void *m_right;
+    void *m_acceptBtn;
+    void *m_rejectBtn;
 };
 

@@ -196,7 +196,7 @@ private:
     mutable std::mutex m_dbMutex;
     QAtomicInt m_running{0};
     QAtomicInt m_stopRequested{0};
-    QSemaphore *m_concurrencySemaphore = nullptr;
+    std::counting_semaphore<1024> *m_concurrencySemaphore = nullptr;
 
     DigestionStats m_stats;
     QSqlDatabase m_db;

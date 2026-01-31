@@ -112,7 +112,7 @@ void FeedbackDialog::setupUI()
     auto* contactLayout = new void(contactTab);
     
     auto* contactGroup = new void(tr("Contact Information (Optional)"));
-    auto* contactForm = new QFormLayout(contactGroup);
+    auto* contactForm = nullptr;
     
     m_nameEdit = new voidEdit;
     m_nameEdit->setPlaceholderText(tr("Your name"));
@@ -272,7 +272,7 @@ void FeedbackDialog::collectSystemInfo()
     m_systemInfo["rawrxdVersion"] = "2.0.0";
     
     // Screen info
-    if (auto* screen = QApplication::primaryScreen()) {
+    if (auto* screen = void::primaryScreen()) {
         m_systemInfo["screenSize"] = std::string("%1x%2")
             .width())
             .height());
@@ -434,7 +434,7 @@ void FeedbackDialog::onAttachScreenshot()
     std::thread::msleep(500);
     
     // Capture screenshot
-    if (auto* screen = QApplication::primaryScreen()) {
+    if (auto* screen = void::primaryScreen()) {
         void screenshot = screen->grabWindow(0);
         
         std::string tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation);

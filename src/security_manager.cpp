@@ -43,7 +43,7 @@ bool SecurityManager::initialize(const std::string& masterPassword)
 
     // Generate or load master key
     std::vector<uint8_t> salt;
-    if (masterPassword.isEmpty()) {
+    if (masterPassword.empty()) {
         // Generate random key (for testing/development)
         salt = std::vector<uint8_t>(32, 0);
         m_masterKey = deriveKeyPBKDF2("defaultMasterPassword", salt, 100000);
@@ -53,11 +53,11 @@ bool SecurityManager::initialize(const std::string& masterPassword)
         m_masterKey = deriveKeyPBKDF2(masterPassword, salt, 100000);
     }
 
-    if (m_masterKey.isEmpty() || m_masterKey.size() != 32) {
+    if (m_masterKey.empty() || m_masterKey.size() != 32) {
         return false;
     }
 
-    m_currentKeyId = std::string("key_%1"));
+    m_currentKeyId = std::string("key_master");
     m_lastKeyRotation = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
 
     // Load stored credentials (from secure storage)
@@ -76,16 +76,16 @@ bool SecurityManager::validateSetup() const
         return false;
     }
 
-    if (m_masterKey.isEmpty() || m_masterKey.size() != 32) {
+    if (m_masterKey.empty() || m_masterKey.size() != 32) {
         return false;
     }
 
-    if (m_currentKeyId.isEmpty()) {
+    if (m_currentKeyId.empty()) {
         return false;
     }
 
     // Check if key rotation is needed
-    qint64 now = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
+    int64_t now = static_cast<int64_t>(std::time(nullptr));
     if (now - m_lastKeyRotation > m_keyRotationInterval) {
         // Don't fail validation, but log warning
     }
@@ -101,7 +101,7 @@ std::string SecurityManager::encryptData(const std::vector<uint8_t>& plaintext, 
         return std::string();
     }
 
-    if (plaintext.isEmpty()) {
+    if (plaintext.empty()) {
         return std::string();
     }
 
@@ -122,7 +122,7 @@ std::string SecurityManager::encryptData(const std::vector<uint8_t>& plaintext, 
             return std::string();
         }
 
-        if (ciphertext.isEmpty()) {
+        if (ciphertext.empty()) {
             return std::string();
         }
 
@@ -141,30 +141,30 @@ std::vector<uint8_t> SecurityManager::decryptData(const std::string& ciphertext)
         return std::vector<uint8_t>();
     }
 
-    if (ciphertext.isEmpty()) {
+    if (ciphertext.empty()) {
         return std::vector<uint8_t>();
     }
 
     try {
         std::vector<uint8_t> encryptedData = std::vector<uint8_t>::fromBase64(ciphertext.toUtf8());
         
-        if (encryptedData.isEmpty()) {
+        if (encryptedData.empty()) {
             return std::vector<uint8_t>();
         }
 
         // Try AES-256-GCM first (default)
         std::vector<uint8_t> plaintext = decryptAES256GCM(encryptedData, m_masterKey);
         
-        if (plaintext.isEmpty()) {
+        if (plaintext.empty()) {
             // Try AES-256-CBC as fallback
             plaintext = decryptAES256CBC(encryptedData, m_masterKey);
         }
 
-        if (plaintext.isEmpty()) {
+        if (plaintext.empty()) {
             return std::vector<uint8_t>();
         }
 
-        
+
         return plaintext;
 
     } catch (const std::exception& e) {
@@ -368,7 +368,7 @@ std::vector<uint8_t> SecurityManager::encryptAES256CBC(const std::vector<uint8_t
     // Similar to GCM but using CBC mode
     // Generate random IV (16 bytes for CBC)
     std::vector<uint8_t> iv(16, 0);
-    QRandomGenerator::global()->fillRange(reinterpret_cast<quint32*>(iv.data()), 4);
+    QRandomGenerator::global()->fillRange(reinterpret_cast<uint32_t*>(iv.data()), 4);
     
     // Simple XOR cipher (replace with real AES-CBC)
     std::vector<uint8_t> ciphertext = plaintext;
@@ -460,8 +460,8 @@ std::vector<uint8_t> SecurityManager::deriveKeyPBKDF2(const std::string& passwor
             }
         }
     }
-    
-    
+
+
     return derivedKey;
 }
 
@@ -470,11 +470,11 @@ bool SecurityManager::generateNewKey(const std::string& keyId, EncryptionAlgorit
     
     // Generate random key material
     std::vector<uint8_t> newKey(32, 0);
-    QRandomGenerator::global()->fillRange(reinterpret_cast<quint32*>(newKey.data()), 8);
+    QRandomGenerator::global()->fillRange(reinterpret_cast<uint32_t*>(newKey.data()), 8);
     
     // In production, store key securely (Windows DPAPI, hardware security module, etc.)
-    
-    
+
+
     return true;
 }
 
@@ -487,7 +487,7 @@ bool SecurityManager::rotateEncryptionKey()
     // Generate new key
     std::vector<uint8_t> oldKey = m_masterKey;
     std::vector<uint8_t> newKey(32, 0);
-    QRandomGenerator::global()->fillRange(reinterpret_cast<quint32*>(newKey.data()), 8);
+    QRandomGenerator::global()->fillRange(reinterpret_cast<uint32_t*>(newKey.data()), 8);
     
     // Re-encrypt all stored credentials with new key
     std::map<std::string, CredentialInfo> reencryptedCredentials;
@@ -514,7 +514,7 @@ bool SecurityManager::rotateEncryptionKey()
     return true;
 }
 
-qint64 SecurityManager::getKeyExpirationTime() const
+int64_t SecurityManager::getKeyExpirationTime() const
 {
     return m_lastKeyRotation + m_keyRotationInterval;
 }
@@ -522,22 +522,22 @@ qint64 SecurityManager::getKeyExpirationTime() const
 // ==================== CREDENTIAL MANAGEMENT ====================
 
 bool SecurityManager::storeCredential(const std::string& username, const std::string& token,
-                                     const std::string& tokenType, qint64 expiresAt,
+                                     const std::string& tokenType, int64_t expiresAt,
                                      const std::string& refreshToken)
 {
     if (!m_initialized) {
         return false;
     }
 
-    
+
     // Encrypt the token
     std::string encryptedToken = encryptData(token.toUtf8());
-    if (encryptedToken.isEmpty()) {
+    if (encryptedToken.empty()) {
         return false;
     }
     
     std::string encryptedRefreshToken;
-    if (!refreshToken.isEmpty()) {
+    if (!refreshToken.empty()) {
         encryptedRefreshToken = encryptData(refreshToken.toUtf8());
     }
     
@@ -547,7 +547,7 @@ bool SecurityManager::storeCredential(const std::string& username, const std::st
     info.token = encryptedToken;
     info.issuedAt = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     info.expiresAt = expiresAt;
-    info.isRefreshable = !refreshToken.isEmpty();
+    info.isRefreshable = !refreshToken.empty();
     info.refreshToken = encryptedRefreshToken;
     
     m_credentials[username] = info;
@@ -583,8 +583,8 @@ bool SecurityManager::removeCredential(const std::string& username)
     }
     
     m_credentials.erase(it);
-    
-    
+
+
     return true;
 }
 
@@ -629,8 +629,8 @@ std::string SecurityManager::refreshToken(const std::string& username, const std
     info.token = encryptedNewToken;
     info.issuedAt = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     info.expiresAt = info.issuedAt + 3600;  // 1 hour from now
-    
-    
+
+
     return newToken;
 }
 
@@ -640,8 +640,8 @@ bool SecurityManager::setAccessControl(const std::string& username, const std::s
 {
     
     m_acl[username][resource] = level;
-    
-    
+
+
     return true;
 }
 
@@ -696,8 +696,8 @@ bool SecurityManager::pinCertificate(const std::string& domain, const std::strin
     std::string hashHex = hash.toHex();
     
     m_pinnedCertificates[domain] = hashHex;
-    
-    
+
+
     return true;
 }
 
@@ -791,8 +791,8 @@ bool SecurityManager::exportAuditLog(const std::string& filePath) const
     }
     
     file.close();
-    
-    
+
+
     return true;
 }
 

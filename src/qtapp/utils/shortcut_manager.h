@@ -45,7 +45,7 @@ public:
         QKeySequence currentKey; ///< Current key binding
         Context context;         ///< Where shortcut applies
         std::string description;     ///< What the shortcut does
-        QAction* action;         ///< Associated QAction (if any)
+        void* action;         ///< Associated void (if any)
         
         ShortcutInfo() : context(Global), action(nullptr) {}
     };
@@ -59,14 +59,14 @@ public:
      * \param defaultKey Default key sequence
      * \param context Where shortcut applies
      * \param description What the shortcut does
-     * \param action Associated QAction (optional)
+     * \param action Associated void (optional)
      */
     void registerShortcut(const std::string& id,
                          const std::string& displayName,
                          const QKeySequence& defaultKey,
                          Context context = Global,
                          const std::string& description = std::string(),
-                         QAction* action = nullptr);
+                         void* action = nullptr);
     
     /**
      * \brief Get current key sequence for a shortcut
@@ -128,7 +128,7 @@ public:
      * \brief Load custom shortcuts from file
      */
     bool loadKeybindings();
-    
+
 
     void shortcutChanged(const std::string& id, const QKeySequence& newKey);
     void shortcutsReset();

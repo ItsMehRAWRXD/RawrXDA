@@ -23,10 +23,10 @@ void SettingsDialog::initialize() {
 
 void SettingsDialog::setupUI()
 {
-    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    void *mainLayout = new void(this);
     
     // Create tab widget
-    QTabWidget *tabWidget = new QTabWidget(this);
+    void *tabWidget = new void(this);
     
     // General Settings Tab
     tabWidget->addTab(createGeneralTab(), "General");
@@ -46,10 +46,10 @@ void SettingsDialog::setupUI()
     mainLayout->addWidget(tabWidget);
     
     // Buttons
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-    QPushButton *saveButton = new QPushButton("Save", this);
-    QPushButton *cancelButton = new QPushButton("Cancel", this);
-    QPushButton *applyButton = new QPushButton("Apply", this);
+    void *buttonLayout = new void();
+    void *saveButton = new void("Save", this);
+    void *cancelButton = new void("Cancel", this);
+    void *applyButton = new void("Apply", this);
 // Qt connect removed
 // Qt connect removed
 // Qt connect removed
@@ -64,37 +64,37 @@ void SettingsDialog::setupUI()
 void* SettingsDialog::createGeneralTab()
 {
     void *tab = new void(this);
-    QVBoxLayout *layout = new QVBoxLayout(tab);
+    void *layout = new void(tab);
     
     // Editor Settings
-    QGroupBox *editorGroup = new QGroupBox("Editor Settings", tab);
-    QVBoxLayout *editorLayout = new QVBoxLayout(editorGroup);
+    void *editorGroup = new void("Editor Settings", tab);
+    void *editorLayout = new void(editorGroup);
     
-    m_autoSaveCheck = new QCheckBox("Enable Auto Save", editorGroup);
-    m_autoSaveInterval = new QSpinBox(editorGroup);
+    m_autoSaveCheck = nullptr;
+    m_autoSaveInterval = nullptr;
     m_autoSaveInterval->setRange(1, 60);
     m_autoSaveInterval->setSuffix(" minutes");
     
-    m_showLineNumbers = new QCheckBox("Show Line Numbers", editorGroup);
-    m_wordWrap = new QCheckBox("Enable Word Wrap", editorGroup);
+    m_showLineNumbers = nullptr;
+    m_wordWrap = nullptr;
     
     editorLayout->addWidget(m_autoSaveCheck);
-    editorLayout->addWidget(new QLabel("Auto Save Interval:", editorGroup));
+    editorLayout->addWidget(new void("Auto Save Interval:", editorGroup));
     editorLayout->addWidget(m_autoSaveInterval);
     editorLayout->addWidget(m_showLineNumbers);
     editorLayout->addWidget(m_wordWrap);
     
     // Model Paths
-    QGroupBox *modelGroup = new QGroupBox("Model Paths", tab);
-    QVBoxLayout *modelLayout = new QVBoxLayout(modelGroup);
+    void *modelGroup = new void("Model Paths", tab);
+    void *modelLayout = new void(modelGroup);
     
-    m_defaultModelPath = new QLineEdit(modelGroup);
-    QPushButton *browseModelBtn = new QPushButton("Browse...", modelGroup);
+    m_defaultModelPath = new void(modelGroup);
+    void *browseModelBtn = new void("Browse...", modelGroup);
 // Qt connect removed
-        if (!path.isEmpty()) m_defaultModelPath->setText(path);
+        if (!path.empty()) m_defaultModelPath->setText(path);
     });
     
-    modelLayout->addWidget(new QLabel("Default Model Directory:", modelGroup));
+    modelLayout->addWidget(new void("Default Model Directory:", modelGroup));
     modelLayout->addWidget(m_defaultModelPath);
     modelLayout->addWidget(browseModelBtn);
     
@@ -108,22 +108,22 @@ void* SettingsDialog::createGeneralTab()
 void* SettingsDialog::createSecurityTab()
 {
     void *tab = new void(this);
-    QVBoxLayout *layout = new QVBoxLayout(tab);
+    void *layout = new void(tab);
     
-    QGroupBox *securityGroup = new QGroupBox("Security Settings", tab);
-    QVBoxLayout *securityLayout = new QVBoxLayout(securityGroup);
+    void *securityGroup = new void("Security Settings", tab);
+    void *securityLayout = new void(securityGroup);
     
-    m_encryptApiKeys = new QCheckBox("Encrypt API Keys", securityGroup);
-    m_enableAuditLog = new QCheckBox("Enable Security Audit Log", securityGroup);
-    m_autoLockTimeout = new QSpinBox(securityGroup);
+    m_encryptApiKeys = nullptr;
+    m_enableAuditLog = nullptr;
+    m_autoLockTimeout = nullptr;
     m_autoLockTimeout->setRange(1, 120);
     m_autoLockTimeout->setSuffix(" minutes");
     
-    QPushButton *manageKeysBtn = new QPushButton("Manage Encryption Keys", securityGroup);
+    void *manageKeysBtn = new void("Manage Encryption Keys", securityGroup);
 // Qt connect removed
     securityLayout->addWidget(m_encryptApiKeys);
     securityLayout->addWidget(m_enableAuditLog);
-    securityLayout->addWidget(new QLabel("Auto Lock Timeout:", securityGroup));
+    securityLayout->addWidget(new void("Auto Lock Timeout:", securityGroup));
     securityLayout->addWidget(m_autoLockTimeout);
     securityLayout->addWidget(manageKeysBtn);
     
@@ -136,40 +136,40 @@ void* SettingsDialog::createSecurityTab()
 void* SettingsDialog::createTrainingTab()
 {
     void *tab = new void(this);
-    QVBoxLayout *layout = new QVBoxLayout(tab);
+    void *layout = new void(tab);
     
     // Checkpoint Settings
-    QGroupBox *checkpointGroup = new QGroupBox("Checkpoint Settings", tab);
-    QVBoxLayout *checkpointLayout = new QVBoxLayout(checkpointGroup);
+    void *checkpointGroup = new void("Checkpoint Settings", tab);
+    void *checkpointLayout = new void(checkpointGroup);
     
-    m_autoCheckpoint = new QCheckBox("Enable Auto Checkpointing", checkpointGroup);
-    m_checkpointInterval = new QSpinBox(checkpointGroup);
+    m_autoCheckpoint = nullptr;
+    m_checkpointInterval = nullptr;
     m_checkpointInterval->setRange(1, 1000);
     m_checkpointInterval->setSuffix(" epochs");
     
-    m_checkpointPath = new QLineEdit(checkpointGroup);
-    QPushButton *browseCheckpointBtn = new QPushButton("Browse...", checkpointGroup);
+    m_checkpointPath = new void(checkpointGroup);
+    void *browseCheckpointBtn = new void("Browse...", checkpointGroup);
 // Qt connect removed
-        if (!path.isEmpty()) m_checkpointPath->setText(path);
+        if (!path.empty()) m_checkpointPath->setText(path);
     });
     
     checkpointLayout->addWidget(m_autoCheckpoint);
-    checkpointLayout->addWidget(new QLabel("Checkpoint Interval:", checkpointGroup));
+    checkpointLayout->addWidget(new void("Checkpoint Interval:", checkpointGroup));
     checkpointLayout->addWidget(m_checkpointInterval);
-    checkpointLayout->addWidget(new QLabel("Checkpoint Directory:", checkpointGroup));
+    checkpointLayout->addWidget(new void("Checkpoint Directory:", checkpointGroup));
     checkpointLayout->addWidget(m_checkpointPath);
     checkpointLayout->addWidget(browseCheckpointBtn);
     
     // Tokenizer Settings
-    QGroupBox *tokenizerGroup = new QGroupBox("Tokenizer Settings", tab);
-    QVBoxLayout *tokenizerLayout = new QVBoxLayout(tokenizerGroup);
+    void *tokenizerGroup = new void("Tokenizer Settings", tab);
+    void *tokenizerLayout = new void(tokenizerGroup);
     
-    m_defaultTokenizer = new QComboBox(tokenizerGroup);
+    m_defaultTokenizer = new void(tokenizerGroup);
     m_defaultTokenizer->addItems({"WordPiece", "BPE", "SentencePiece", "CharacterBased"});
     
-    QPushButton *configureTokenizerBtn = new QPushButton("Configure Tokenizer", tokenizerGroup);
+    void *configureTokenizerBtn = new void("Configure Tokenizer", tokenizerGroup);
 // Qt connect removed
-    tokenizerLayout->addWidget(new QLabel("Default Tokenizer:", tokenizerGroup));
+    tokenizerLayout->addWidget(new void("Default Tokenizer:", tokenizerGroup));
     tokenizerLayout->addWidget(m_defaultTokenizer);
     tokenizerLayout->addWidget(configureTokenizerBtn);
     
@@ -183,21 +183,21 @@ void* SettingsDialog::createTrainingTab()
 void* SettingsDialog::createCICDTab()
 {
     void *tab = new void(this);
-    QVBoxLayout *layout = new QVBoxLayout(tab);
+    void *layout = new void(tab);
     
-    QGroupBox *ciGroup = new QGroupBox("CI/CD Pipeline Settings", tab);
-    QVBoxLayout *ciLayout = new QVBoxLayout(ciGroup);
+    void *ciGroup = new void("CI/CD Pipeline Settings", tab);
+    void *ciLayout = new void(ciGroup);
     
-    m_enableCICD = new QCheckBox("Enable CI/CD Pipeline", ciGroup);
-    m_autoDeploy = new QCheckBox("Auto Deploy After Training", ciGroup);
-    m_notificationEmail = new QLineEdit(ciGroup);
+    m_enableCICD = nullptr;
+    m_autoDeploy = nullptr;
+    m_notificationEmail = new void(ciGroup);
     m_notificationEmail->setPlaceholderText("email@example.com");
     
-    QPushButton *configurePipelineBtn = new QPushButton("Configure Pipeline", ciGroup);
+    void *configurePipelineBtn = new void("Configure Pipeline", ciGroup);
 // Qt connect removed
     ciLayout->addWidget(m_enableCICD);
     ciLayout->addWidget(m_autoDeploy);
-    ciLayout->addWidget(new QLabel("Notification Email:", ciGroup));
+    ciLayout->addWidget(new void("Notification Email:", ciGroup));
     ciLayout->addWidget(m_notificationEmail);
     ciLayout->addWidget(configurePipelineBtn);
     
@@ -210,35 +210,35 @@ void* SettingsDialog::createCICDTab()
 void* SettingsDialog::createModelTab()
 {
     void *tab = new void(this);
-    QVBoxLayout *layout = new QVBoxLayout(tab);
+    void *layout = new void(tab);
     
     // GPU Settings
-    QGroupBox *gpuGroup = new QGroupBox("GPU Settings", tab);
-    QVBoxLayout *gpuLayout = new QVBoxLayout(gpuGroup);
+    void *gpuGroup = new void("GPU Settings", tab);
+    void *gpuLayout = new void(gpuGroup);
     
-    m_enableGPU = new QCheckBox("Enable GPU Acceleration", gpuGroup);
-    m_gpuBackend = new QComboBox(gpuGroup);
+    m_enableGPU = nullptr;
+    m_gpuBackend = new void(gpuGroup);
     m_gpuBackend->addItems({"Vulkan", "CUDA", "OpenCL"});
     
     gpuLayout->addWidget(m_enableGPU);
-    gpuLayout->addWidget(new QLabel("GPU Backend:", gpuGroup));
+    gpuLayout->addWidget(new void("GPU Backend:", gpuGroup));
     gpuLayout->addWidget(m_gpuBackend);
     
     // Inference Settings
-    QGroupBox *inferenceGroup = new QGroupBox("Inference Settings", tab);
-    QVBoxLayout *inferenceLayout = new QVBoxLayout(inferenceGroup);
+    void *inferenceGroup = new void("Inference Settings", tab);
+    void *inferenceLayout = new void(inferenceGroup);
     
-    m_maxTokens = new QSpinBox(inferenceGroup);
+    m_maxTokens = nullptr;
     m_maxTokens->setRange(1, 8192);
     m_maxTokens->setSuffix(" tokens");
     
-    m_temperature = new QDoubleSpinBox(inferenceGroup);
+    m_temperature = nullptr;
     m_temperature->setRange(0.1, 2.0);
     m_temperature->setSingleStep(0.1);
     
-    inferenceLayout->addWidget(new QLabel("Max Tokens:", inferenceGroup));
+    inferenceLayout->addWidget(new void("Max Tokens:", inferenceGroup));
     inferenceLayout->addWidget(m_maxTokens);
-    inferenceLayout->addWidget(new QLabel("Temperature:", inferenceGroup));
+    inferenceLayout->addWidget(new void("Temperature:", inferenceGroup));
     inferenceLayout->addWidget(m_temperature);
     
     layout->addWidget(gpuGroup);
@@ -252,7 +252,7 @@ void SettingsDialog::loadSettings()
 {
     if (!m_settings) return;
     
-    // Load from QSettings or default values
+    // Load from void* or default values
     m_autoSaveCheck->setChecked(m_settings->getValue("editor/autoSave", true).toBool());
     m_autoSaveInterval->setValue(m_settings->getValue("editor/autoSaveInterval", 5).toInt());
     m_showLineNumbers->setChecked(m_settings->getValue("editor/showLineNumbers", true).toBool());
@@ -290,7 +290,7 @@ void SettingsDialog::applySettings()
 {
     if (!m_settings) return;
     
-    // Save to QSettings
+    // Save to void*
     m_settings->setValue("editor/autoSave", m_autoSaveCheck->isChecked());
     m_settings->setValue("editor/autoSaveInterval", m_autoSaveInterval->value());
     m_settings->setValue("editor/showLineNumbers", m_showLineNumbers->isChecked());
@@ -334,4 +334,5 @@ void SettingsDialog::configureCIPipeline()
 {
     QMessageBox::information(this, "CI/CD", "CI/CD pipeline configuration is available.\n\nFeatures:\n- Training job scheduling\n- Automated deployment\n- Webhook integration\n- Performance benchmarking");
 }
+
 

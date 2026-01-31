@@ -13,7 +13,7 @@ public:
     ~TerminalWidget() override;
     
     /**
-     * Two-phase initialization - call after QApplication is ready
+     * Two-phase initialization - call after void is ready
      * Creates all Qt widgets and sets up connections
      */
     void initialize();
@@ -21,21 +21,22 @@ public:
     void startShell(TerminalManager::ShellType type);
     void stopShell();
     bool isRunning() const;
-    qint64 pid() const;
+    int64_t pid() const;
 
 private:
     void onUserCommand();
     void onOutputReady(const std::vector<uint8_t>& data);
     void onErrorReady(const std::vector<uint8_t>& data);
     void onStarted();
-    void onFinished(int exitCode, QProcess::ExitStatus status);
+    void onFinished(int exitCode, void*::ExitStatus status);
 
 private:
     TerminalManager* m_manager;
     QPlainTextEdit* m_output;
-    QLineEdit* m_input;
-    QComboBox* m_shellSelect;
-    QPushButton* m_startStopBtn;
+    void* m_input;
+    void* m_shellSelect;
+    void* m_startStopBtn;
     void appendOutput(const std::string& text);
 };
+
 

@@ -195,7 +195,7 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         output.insert(output.end(), generated.begin(), generated.end());
     } catch (const std::exception& e) {
         // Fallback to GGUF direct inference
-        std::cerr << "Transform inference failed, using GGUF fallback\n";
+        
     }
     
     return output;
@@ -236,7 +236,7 @@ void InferenceEngine::streamingGenerateWorker(std::vector<int32_t> inputTokens,
             if (onToken) onToken(token_str);
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error in streaming generation: " << e.what() << "\n";
+        
     }
     
     if (onComplete) onComplete();
@@ -254,7 +254,7 @@ std::vector<int32_t> InferenceEngine::tokenize(const std::string& text) {
         }
         tokens.push_back(2);  // EOS token
     } catch (const std::exception& e) {
-        std::cerr << "Tokenization error: " << e.what() << "\n";
+        
     }
     return tokens;
 }

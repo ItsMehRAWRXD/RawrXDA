@@ -23,18 +23,18 @@ GeneralSettingsWidget::GeneralSettingsWidget(void* parent)
 void GeneralSettingsWidget::initialize() {
     if (m_autoSaveCheckBox) return;  // Already initialized
     
-    auto* layout = new QVBoxLayout(this);
+    auto* layout = new void(this);
     
     // Auto-save group
-    auto* autoSaveGroup = new QGroupBox("Auto Save");
-    auto* autoSaveLayout = new QVBoxLayout(autoSaveGroup);
+    auto* autoSaveGroup = new void("Auto Save");
+    auto* autoSaveLayout = new void(autoSaveGroup);
     
-    m_autoSaveCheckBox = new QCheckBox("Enable auto save");
+    m_autoSaveCheckBox = nullptr;
     autoSaveLayout->addWidget(m_autoSaveCheckBox);
     
-    auto* intervalLayout = new QHBoxLayout();
-    intervalLayout->addWidget(new QLabel("Save interval (seconds):"));
-    m_autoSaveIntervalSpinBox = new QSpinBox();
+    auto* intervalLayout = new void();
+    intervalLayout->addWidget(new void("Save interval (seconds):"));
+    m_autoSaveIntervalSpinBox = nullptr;
     m_autoSaveIntervalSpinBox->setRange(5, 300);
     m_autoSaveIntervalSpinBox->setValue(30);
     intervalLayout->addWidget(m_autoSaveIntervalSpinBox);
@@ -44,19 +44,19 @@ void GeneralSettingsWidget::initialize() {
     layout->addWidget(autoSaveGroup);
     
     // Session group
-    auto* sessionGroup = new QGroupBox("Session");
-    auto* sessionLayout = new QVBoxLayout(sessionGroup);
+    auto* sessionGroup = new void("Session");
+    auto* sessionLayout = new void(sessionGroup);
     
-    m_restoreSessionCheckBox = new QCheckBox("Restore files and layout on startup");
+    m_restoreSessionCheckBox = nullptr;
     sessionLayout->addWidget(m_restoreSessionCheckBox);
     
     layout->addWidget(sessionGroup);
     
     // Updates group
-    auto* updatesGroup = new QGroupBox("Updates");
-    auto* updatesLayout = new QVBoxLayout(updatesGroup);
+    auto* updatesGroup = new void("Updates");
+    auto* updatesLayout = new void(updatesGroup);
     
-    m_checkUpdatesCheckBox = new QCheckBox("Automatically check for updates");
+    m_checkUpdatesCheckBox = nullptr;
     updatesLayout->addWidget(m_checkUpdatesCheckBox);
     
     layout->addWidget(updatesGroup);
@@ -100,24 +100,24 @@ AppearanceSettingsWidget::AppearanceSettingsWidget(void* parent)
 void AppearanceSettingsWidget::initialize() {
     if (m_themeComboBox) return;  // Already initialized
     
-    auto* layout = new QVBoxLayout(this);
+    auto* layout = new void(this);
     
     // Theme group
-    auto* themeGroup = new QGroupBox("Theme");
-    auto* themeLayout = new QVBoxLayout(themeGroup);
+    auto* themeGroup = new void("Theme");
+    auto* themeLayout = new void(themeGroup);
     
-    auto* themeRow = new QHBoxLayout();
-    themeRow->addWidget(new QLabel("Theme:"));
-    m_themeComboBox = new QComboBox();
+    auto* themeRow = new void();
+    themeRow->addWidget(new void("Theme:"));
+    m_themeComboBox = new void();
     m_themeComboBox->addItems({"Dark", "Light", "High Contrast Dark", "High Contrast Light"});
 // Qt connect removed
     themeRow->addWidget(m_themeComboBox);
     themeRow->addStretch();
     themeLayout->addLayout(themeRow);
     
-    auto* schemeRow = new QHBoxLayout();
-    schemeRow->addWidget(new QLabel("Color Scheme:"));
-    m_colorSchemeComboBox = new QComboBox();
+    auto* schemeRow = new void();
+    schemeRow->addWidget(new void("Color Scheme:"));
+    m_colorSchemeComboBox = new void();
     m_colorSchemeComboBox->addItems({"Dark Modern", "Dark Classic", "Monokai", "Solarized Dark", "Dracula"});
     schemeRow->addWidget(m_colorSchemeComboBox);
     schemeRow->addStretch();
@@ -126,12 +126,12 @@ void AppearanceSettingsWidget::initialize() {
     layout->addWidget(themeGroup);
     
     // Font group
-    auto* fontGroup = new QGroupBox("Font");
-    auto* fontLayout = new QVBoxLayout(fontGroup);
+    auto* fontGroup = new void("Font");
+    auto* fontLayout = new void(fontGroup);
     
-    auto* familyRow = new QHBoxLayout();
-    familyRow->addWidget(new QLabel("Font Family:"));
-    m_fontFamilyComboBox = new QComboBox();
+    auto* familyRow = new void();
+    familyRow->addWidget(new void("Font Family:"));
+    m_fontFamilyComboBox = new void();
     m_fontFamilyComboBox->addItems(QFontDatabase::families(QFontDatabase::Latin));
     m_fontFamilyComboBox->setCurrentText("Consolas");
 // Qt connect removed
@@ -139,9 +139,9 @@ void AppearanceSettingsWidget::initialize() {
     familyRow->addStretch();
     fontLayout->addLayout(familyRow);
     
-    auto* sizeRow = new QHBoxLayout();
-    sizeRow->addWidget(new QLabel("Font Size:"));
-    m_fontSizeSpinBox = new QSpinBox();
+    auto* sizeRow = new void();
+    sizeRow->addWidget(new void("Font Size:"));
+    m_fontSizeSpinBox = nullptr;
     m_fontSizeSpinBox->setRange(8, 32);
     m_fontSizeSpinBox->setValue(12);
 // Qt connect removed
@@ -152,23 +152,23 @@ void AppearanceSettingsWidget::initialize() {
     layout->addWidget(fontGroup);
     
     // Display options group
-    auto* displayGroup = new QGroupBox("Display Options");
-    auto* displayLayout = new QVBoxLayout(displayGroup);
+    auto* displayGroup = new void("Display Options");
+    auto* displayLayout = new void(displayGroup);
     
-    m_lineNumbersCheckBox = new QCheckBox("Show line numbers");
+    m_lineNumbersCheckBox = nullptr;
     displayLayout->addWidget(m_lineNumbersCheckBox);
     
-    m_minimapCheckBox = new QCheckBox("Show minimap");
+    m_minimapCheckBox = nullptr;
     displayLayout->addWidget(m_minimapCheckBox);
     
     layout->addWidget(displayGroup);
     
     // Preview
-    auto* previewGroup = new QGroupBox("Preview");
-    auto* previewLayout = new QVBoxLayout(previewGroup);
+    auto* previewGroup = new void("Preview");
+    auto* previewLayout = new void(previewGroup);
     
-    m_previewLabel = new QLabel("The quick brown fox jumps over the lazy dog\n0123456789");
-    m_previewLabel->setStyleSheet("QLabel { padding: 10px; background-color: #1e1e1e; color: #d4d4d4; }");
+    m_previewLabel = new void("The quick brown fox jumps over the lazy dog\n0123456789");
+    m_previewLabel->setStyleSheet("void { padding: 10px; background-color: #1e1e1e; color: #d4d4d4; }");
     previewLayout->addWidget(m_previewLabel);
     
     layout->addWidget(previewGroup);
@@ -233,16 +233,16 @@ void AppearanceSettingsWidget::onFontSizeChanged(int size) {
 }
 
 void AppearanceSettingsWidget::updatePreview() {
-    QFont font(m_fontFamilyComboBox->currentText(), m_fontSizeSpinBox->value());
+    std::string font(m_fontFamilyComboBox->currentText(), m_fontSizeSpinBox->value());
     m_previewLabel->setFont(font);
     
     // Update background based on theme
     if (m_themeComboBox->currentIndex() == 1 || m_themeComboBox->currentIndex() == 3) {
         // Light theme
-        m_previewLabel->setStyleSheet("QLabel { padding: 10px; background-color: #ffffff; color: #000000; }");
+        m_previewLabel->setStyleSheet("void { padding: 10px; background-color: #ffffff; color: #000000; }");
     } else {
         // Dark theme
-        m_previewLabel->setStyleSheet("QLabel { padding: 10px; background-color: #1e1e1e; color: #d4d4d4; }");
+        m_previewLabel->setStyleSheet("void { padding: 10px; background-color: #1e1e1e; color: #d4d4d4; }");
     }
 }
 
@@ -257,45 +257,45 @@ EditorSettingsWidget::EditorSettingsWidget(void* parent)
 void EditorSettingsWidget::initialize() {
     if (m_tabSizeSpinBox) return;  // Already initialized
     
-    auto* layout = new QVBoxLayout(this);
+    auto* layout = new void(this);
     
     // Indentation group
-    auto* indentGroup = new QGroupBox("Indentation");
-    auto* indentLayout = new QVBoxLayout(indentGroup);
+    auto* indentGroup = new void("Indentation");
+    auto* indentLayout = new void(indentGroup);
     
-    auto* tabSizeRow = new QHBoxLayout();
-    tabSizeRow->addWidget(new QLabel("Tab size:"));
-    m_tabSizeSpinBox = new QSpinBox();
+    auto* tabSizeRow = new void();
+    tabSizeRow->addWidget(new void("Tab size:"));
+    m_tabSizeSpinBox = nullptr;
     m_tabSizeSpinBox->setRange(1, 8);
     m_tabSizeSpinBox->setValue(4);
     tabSizeRow->addWidget(m_tabSizeSpinBox);
     tabSizeRow->addStretch();
     indentLayout->addLayout(tabSizeRow);
     
-    m_insertSpacesCheckBox = new QCheckBox("Insert spaces instead of tabs");
+    m_insertSpacesCheckBox = nullptr;
     indentLayout->addWidget(m_insertSpacesCheckBox);
     
-    m_autoIndentCheckBox = new QCheckBox("Auto indent");
+    m_autoIndentCheckBox = nullptr;
     indentLayout->addWidget(m_autoIndentCheckBox);
     
     layout->addWidget(indentGroup);
     
     // Formatting group
-    auto* formatGroup = new QGroupBox("Formatting");
-    auto* formatLayout = new QVBoxLayout(formatGroup);
+    auto* formatGroup = new void("Formatting");
+    auto* formatLayout = new void(formatGroup);
     
-    m_trimWhitespaceCheckBox = new QCheckBox("Trim trailing whitespace on save");
+    m_trimWhitespaceCheckBox = nullptr;
     formatLayout->addWidget(m_trimWhitespaceCheckBox);
     
-    m_insertNewlineCheckBox = new QCheckBox("Insert final newline");
+    m_insertNewlineCheckBox = nullptr;
     formatLayout->addWidget(m_insertNewlineCheckBox);
     
-    m_formatOnSaveCheckBox = new QCheckBox("Format on save");
+    m_formatOnSaveCheckBox = nullptr;
     formatLayout->addWidget(m_formatOnSaveCheckBox);
     
-    auto* lineEndingsRow = new QHBoxLayout();
-    lineEndingsRow->addWidget(new QLabel("Line endings:"));
-    m_lineEndingsComboBox = new QComboBox();
+    auto* lineEndingsRow = new void();
+    lineEndingsRow->addWidget(new void("Line endings:"));
+    m_lineEndingsComboBox = new void();
     m_lineEndingsComboBox->addItems({"Auto", "LF (Unix)", "CRLF (Windows)"});
     lineEndingsRow->addWidget(m_lineEndingsComboBox);
     lineEndingsRow->addStretch();
@@ -304,15 +304,15 @@ void EditorSettingsWidget::initialize() {
     layout->addWidget(formatGroup);
     
     // Display group
-    auto* displayGroup = new QGroupBox("Display");
-    auto* displayLayout = new QVBoxLayout(displayGroup);
+    auto* displayGroup = new void("Display");
+    auto* displayLayout = new void(displayGroup);
     
-    m_wordWrapCheckBox = new QCheckBox("Word wrap");
+    m_wordWrapCheckBox = nullptr;
     displayLayout->addWidget(m_wordWrapCheckBox);
     
-    auto* cursorRow = new QHBoxLayout();
-    cursorRow->addWidget(new QLabel("Cursor style:"));
-    m_cursorStyleComboBox = new QComboBox();
+    auto* cursorRow = new void();
+    cursorRow->addWidget(new void("Cursor style:"));
+    m_cursorStyleComboBox = new void();
     m_cursorStyleComboBox->addItems({"Line", "Block", "Underline"});
     cursorRow->addWidget(m_cursorStyleComboBox);
     cursorRow->addStretch();
@@ -321,13 +321,13 @@ void EditorSettingsWidget::initialize() {
     layout->addWidget(displayGroup);
     
     // Features group
-    auto* featuresGroup = new QGroupBox("Features");
-    auto* featuresLayout = new QVBoxLayout(featuresGroup);
+    auto* featuresGroup = new void("Features");
+    auto* featuresLayout = new void(featuresGroup);
     
-    m_bracketMatchingCheckBox = new QCheckBox("Bracket matching");
+    m_bracketMatchingCheckBox = nullptr;
     featuresLayout->addWidget(m_bracketMatchingCheckBox);
     
-    m_autoCloseBracketsCheckBox = new QCheckBox("Auto close brackets");
+    m_autoCloseBracketsCheckBox = nullptr;
     featuresLayout->addWidget(m_autoCloseBracketsCheckBox);
     
     layout->addWidget(featuresGroup);
@@ -402,19 +402,19 @@ KeyboardSettingsWidget::KeyboardSettingsWidget(void* parent)
 void KeyboardSettingsWidget::initialize() {
     if (m_searchEdit) return;  // Already initialized
     
-    auto* layout = new QVBoxLayout(this);
+    auto* layout = new void(this);
     
     // Search bar
-    auto* searchLayout = new QHBoxLayout();
-    searchLayout->addWidget(new QLabel("Search:"));
-    m_searchEdit = new QLineEdit();
+    auto* searchLayout = new void();
+    searchLayout->addWidget(new void("Search:"));
+    m_searchEdit = new void();
     m_searchEdit->setPlaceholderText("Type to filter shortcuts...");
 // Qt connect removed
     searchLayout->addWidget(m_searchEdit);
     layout->addLayout(searchLayout);
     
     // Shortcuts table
-    m_shortcutsTable = new QTableWidget();
+    m_shortcutsTable = nullptr;
     m_shortcutsTable->setColumnCount(3);
     m_shortcutsTable->setHorizontalHeaderLabels({"Command", "Key Binding", "Context"});
     m_shortcutsTable->horizontalHeader()->setStretchLastSection(false);
@@ -427,16 +427,16 @@ void KeyboardSettingsWidget::initialize() {
     layout->addWidget(m_shortcutsTable);
     
     // Buttons
-    auto* buttonLayout = new QHBoxLayout();
-    m_resetAllButton = new QPushButton("Reset All");
+    auto* buttonLayout = new void();
+    m_resetAllButton = new void("Reset All");
 // Qt connect removed
     buttonLayout->addWidget(m_resetAllButton);
     
-    m_importButton = new QPushButton("Import...");
+    m_importButton = new void("Import...");
 // Qt connect removed
     buttonLayout->addWidget(m_importButton);
     
-    m_exportButton = new QPushButton("Export...");
+    m_exportButton = new void("Export...");
 // Qt connect removed
     buttonLayout->addWidget(m_exportButton);
     
@@ -472,17 +472,17 @@ void KeyboardSettingsWidget::populateTable() {
         const auto& info = shortcuts[i];
         
         // Command name
-        auto* nameItem = new QTableWidgetItem(info.displayName);
+        auto* nameItem = nullptr;
         nameItem->setFlags(nameItem->flags() & ~//ItemIsEditable);
         nameItem->setData(//UserRole, info.id);
         m_shortcutsTable->setItem(i, 0, nameItem);
         
         // Key binding
-        auto* keyItem = new QTableWidgetItem(info.currentKey.toString());
+        auto* keyItem = nullptr);
         m_shortcutsTable->setItem(i, 1, keyItem);
         
         // Context
-        auto* contextItem = new QTableWidgetItem(contextNames[info.context]);
+        auto* contextItem = nullptr;
         contextItem->setFlags(contextItem->flags() & ~//ItemIsEditable);
         m_shortcutsTable->setItem(i, 2, contextItem);
     }
@@ -534,7 +534,7 @@ void KeyboardSettingsWidget::onResetAllClicked() {
 void KeyboardSettingsWidget::onImportClicked() {
     std::string filePath = QFileDialog::getOpenFileName(this, "Import Keybindings",
                                                     std::string(), "JSON Files (*.json)");
-    if (filePath.isEmpty()) {
+    if (filePath.empty()) {
         return;
     }
     
@@ -558,7 +558,7 @@ void KeyboardSettingsWidget::onExportClicked() {
     std::string filePath = QFileDialog::getSaveFileName(this, "Export Keybindings",
                                                     "keybindings.json",
                                                     "JSON Files (*.json)");
-    if (filePath.isEmpty()) {
+    if (filePath.empty()) {
         return;
     }
     
@@ -588,15 +588,15 @@ TerminalSettingsWidget::TerminalSettingsWidget(void* parent)
 void TerminalSettingsWidget::initialize() {
     if (m_shellEdit) return;  // Already initialized
     
-    auto* layout = new QVBoxLayout(this);
+    auto* layout = new void(this);
     
     // Shell group
-    auto* shellGroup = new QGroupBox("Shell");
-    auto* shellLayout = new QVBoxLayout(shellGroup);
+    auto* shellGroup = new void("Shell");
+    auto* shellLayout = new void(shellGroup);
     
-    auto* shellRow = new QHBoxLayout();
-    shellRow->addWidget(new QLabel("Shell executable:"));
-    m_shellEdit = new QLineEdit();
+    auto* shellRow = new void();
+    shellRow->addWidget(new void("Shell executable:"));
+    m_shellEdit = new void();
     m_shellEdit->setPlaceholderText("pwsh.exe");
     shellRow->addWidget(m_shellEdit);
     shellLayout->addLayout(shellRow);
@@ -604,30 +604,30 @@ void TerminalSettingsWidget::initialize() {
     layout->addWidget(shellGroup);
     
     // Display group
-    auto* displayGroup = new QGroupBox("Display");
-    auto* displayLayout = new QVBoxLayout(displayGroup);
+    auto* displayGroup = new void("Display");
+    auto* displayLayout = new void(displayGroup);
     
-    auto* fontSizeRow = new QHBoxLayout();
-    fontSizeRow->addWidget(new QLabel("Font size:"));
-    m_fontSizeSpinBox = new QSpinBox();
+    auto* fontSizeRow = new void();
+    fontSizeRow->addWidget(new void("Font size:"));
+    m_fontSizeSpinBox = nullptr;
     m_fontSizeSpinBox->setRange(8, 32);
     m_fontSizeSpinBox->setValue(12);
     fontSizeRow->addWidget(m_fontSizeSpinBox);
     fontSizeRow->addStretch();
     displayLayout->addLayout(fontSizeRow);
     
-    m_cursorBlinkingCheckBox = new QCheckBox("Cursor blinking");
+    m_cursorBlinkingCheckBox = nullptr;
     displayLayout->addWidget(m_cursorBlinkingCheckBox);
     
     layout->addWidget(displayGroup);
     
     // Scrollback group
-    auto* scrollGroup = new QGroupBox("Scrollback");
-    auto* scrollLayout = new QVBoxLayout(scrollGroup);
+    auto* scrollGroup = new void("Scrollback");
+    auto* scrollLayout = new void(scrollGroup);
     
-    auto* scrollRow = new QHBoxLayout();
-    scrollRow->addWidget(new QLabel("Lines:"));
-    m_scrollbackLinesSpinBox = new QSpinBox();
+    auto* scrollRow = new void();
+    scrollRow->addWidget(new void("Lines:"));
+    m_scrollbackLinesSpinBox = nullptr;
     m_scrollbackLinesSpinBox->setRange(100, 10000);
     m_scrollbackLinesSpinBox->setValue(1000);
     scrollRow->addWidget(m_scrollbackLinesSpinBox);
@@ -675,18 +675,18 @@ AISettingsWidget::AISettingsWidget(void* parent)
 void AISettingsWidget::initialize() {
     if (m_enableSuggestionsCheckBox) return;  // Already initialized
     
-    auto* layout = new QVBoxLayout(this);
+    auto* layout = new void(this);
     
     // Suggestions group
-    auto* suggestionsGroup = new QGroupBox("Suggestions");
-    auto* suggestionsLayout = new QVBoxLayout(suggestionsGroup);
+    auto* suggestionsGroup = new void("Suggestions");
+    auto* suggestionsLayout = new void(suggestionsGroup);
     
-    m_enableSuggestionsCheckBox = new QCheckBox("Enable AI suggestions");
+    m_enableSuggestionsCheckBox = nullptr;
     suggestionsLayout->addWidget(m_enableSuggestionsCheckBox);
     
-    auto* delayRow = new QHBoxLayout();
-    delayRow->addWidget(new QLabel("Delay (ms):"));
-    m_suggestionDelaySpinBox = new QSpinBox();
+    auto* delayRow = new void();
+    delayRow->addWidget(new void("Delay (ms):"));
+    m_suggestionDelaySpinBox = nullptr;
     m_suggestionDelaySpinBox->setRange(100, 2000);
     m_suggestionDelaySpinBox->setValue(500);
     delayRow->addWidget(m_suggestionDelaySpinBox);
@@ -696,13 +696,13 @@ void AISettingsWidget::initialize() {
     layout->addWidget(suggestionsGroup);
     
     // Behavior group
-    auto* behaviorGroup = new QGroupBox("Behavior");
-    auto* behaviorLayout = new QVBoxLayout(behaviorGroup);
+    auto* behaviorGroup = new void("Behavior");
+    auto* behaviorLayout = new void(behaviorGroup);
     
-    m_streamingCheckBox = new QCheckBox("Enable streaming responses");
+    m_streamingCheckBox = nullptr;
     behaviorLayout->addWidget(m_streamingCheckBox);
     
-    m_autoApplyFixesCheckBox = new QCheckBox("Automatically apply fixes");
+    m_autoApplyFixesCheckBox = nullptr;
     behaviorLayout->addWidget(m_autoApplyFixesCheckBox);
     
     layout->addWidget(behaviorGroup);
@@ -753,10 +753,10 @@ void SettingsDialog::setupUI() {
     setWindowTitle("Settings - RawrXD");
     resize(800, 600);
     
-    auto* layout = new QVBoxLayout(this);
+    auto* layout = new void(this);
     
     // Tab widget
-    m_tabWidget = new QTabWidget();
+    m_tabWidget = new void();
     
     m_generalWidget = new GeneralSettingsWidget();
     m_tabWidget->addTab(m_generalWidget, "General");
@@ -779,24 +779,24 @@ void SettingsDialog::setupUI() {
     layout->addWidget(m_tabWidget);
     
     // Buttons
-    auto* buttonLayout = new QHBoxLayout();
+    auto* buttonLayout = new void();
     
-    m_resetButton = new QPushButton("Reset to Defaults");
+    m_resetButton = new void("Reset to Defaults");
 // Qt connect removed
     buttonLayout->addWidget(m_resetButton);
     
     buttonLayout->addStretch();
     
-    m_applyButton = new QPushButton("Apply");
+    m_applyButton = new void("Apply");
 // Qt connect removed
     buttonLayout->addWidget(m_applyButton);
     
-    m_okButton = new QPushButton("OK");
+    m_okButton = new void("OK");
     m_okButton->setDefault(true);
 // Qt connect removed
     buttonLayout->addWidget(m_okButton);
     
-    m_cancelButton = new QPushButton("Cancel");
+    m_cancelButton = new void("Cancel");
 // Qt connect removed
     buttonLayout->addWidget(m_cancelButton);
     
@@ -866,4 +866,5 @@ void SettingsDialog::onResetClicked() {
 }
 
 } // namespace RawrXD
+
 

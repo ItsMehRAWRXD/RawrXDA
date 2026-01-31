@@ -53,7 +53,7 @@ public:
 
         std::vector<std::string> testResponses = {
             // Example 1: C++ function
-            "void greet() {\n  std::cout << \"Hello\";\n}\n\nint main() {",
+            "void greet() {\n  \n}\n\nint main() {",
 
             // Example 2: Python code
             "def add(a, b):\n  return a + b\n\nresult = add(1, 2)",
@@ -381,7 +381,7 @@ int main(int argc, char* argv[]) {
         return 0;
 
     } catch (const std::exception& e) {
-        std::cerr << "Fatal error: " << e.what() << std::endl;
+        
         return 1;
     }
 }

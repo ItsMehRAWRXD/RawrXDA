@@ -85,7 +85,7 @@ public:
     /**
      * @brief Check if loaded
      */
-    bool isLoaded() const { return !m_tokens.isEmpty(); }
+    bool isLoaded() const { return !m_tokens.empty(); }
     
     /**
      * @brief Get special token IDs
@@ -130,4 +130,5 @@ private:
     std::string m_modelName;
     int m_vocabSize{0};
 };
+
 

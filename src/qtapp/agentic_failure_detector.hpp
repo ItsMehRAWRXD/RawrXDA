@@ -1,6 +1,10 @@
 // agentic_failure_detector.hpp - Detects AI model failures for auto-correction
 #pragma once
 
+#include <string>
+#include <vector>
+#include <mutex>
+#include <cstdint>
 
 // Types of failures the detector can identify
 enum class FailureType {
@@ -34,12 +38,12 @@ struct FailureDetection {
     }
 };
 
-class AgenticFailureDetector : public void
+class AgenticFailureDetector
 {
 
 public:
-    explicit AgenticFailureDetector(void* parent = nullptr);
-    ~AgenticFailureDetector() override;
+    explicit AgenticFailureDetector();
+    virtual ~AgenticFailureDetector();
 
     // Main detection method
     FailureDetection detectFailure(const std::string& response, const std::string& prompt = "");
@@ -78,15 +82,15 @@ public:
     
     // Statistics
     struct Stats {
-        qint64 totalDetections = 0;
-        qint64 refusalsDetected = 0;
-        qint64 hallucinationsDetected = 0;
-        qint64 formatViolations = 0;
-        qint64 loopsDetected = 0;
-        qint64 qualityIssues = 0;
-        qint64 toolMisuses = 0;
-        qint64 contextLosses = 0;
-        qint64 safetyViolations = 0;
+        int64_t totalDetections = 0;
+        int64_t refusalsDetected = 0;
+        int64_t hallucinationsDetected = 0;
+        int64_t formatViolations = 0;
+        int64_t loopsDetected = 0;
+        int64_t qualityIssues = 0;
+        int64_t toolMisuses = 0;
+        int64_t contextLosses = 0;
+        int64_t safetyViolations = 0;
         double avgConfidence = 0.0;
     };
     

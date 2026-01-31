@@ -95,7 +95,7 @@ public:
     void setModel(const std::string& modelPath);
     void setModelName(const std::string& modelName);
     void processMessage(const std::string& message, const std::string& editorContext = std::string());
-    
+
 
     void responseReady(const std::string& response);
     void modelLoadingFinished(bool success, const std::string& modelPath);
@@ -126,7 +126,7 @@ private:
         std::string output;
         bool positive;
         std::string comment;
-        qint64 timestamp;
+        int64_t timestamp;
     };
     std::vector<FeedbackEntry> m_feedbackHistory;
     std::unordered_map<std::string, int> m_responseRatings;
@@ -142,4 +142,5 @@ private:
     class InferenceEngine* m_inferenceEngine = nullptr;
     GenerationConfig m_genConfig;
 };
+
 

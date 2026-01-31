@@ -27,7 +27,7 @@ HealthCheckServer::~HealthCheckServer() {
     logEntry["level"] = "INFO";
     logEntry["component"] = "HealthCheckServer";
     logEntry["event"] = "destroyed";
-    logEntry["total_requests_served"] = (qint64)m_metrics.total_requests;
+    logEntry["total_requests_served"] = (int64_t)m_metrics.total_requests;
     
 }
 
@@ -37,7 +37,7 @@ bool HealthCheckServer::startServer(quint16 port) {
     
     m_server = std::make_unique<void*>(this);
     
-    if (!m_server->listen(QHostAddress::Any, port)) {
+    if (!m_server->listen(std::string::Any, port)) {
         void* logEntry;
         logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "ERROR";
@@ -45,13 +45,13 @@ bool HealthCheckServer::startServer(quint16 port) {
         logEntry["event"] = "server_start_failed";
         logEntry["port"] = port;
         logEntry["error"] = m_server->errorString();
-        
-        
+
+
         m_server.reset();
         return false;
     }
 // Qt connect removed
-    qint64 startup_time_ms = timer.elapsed();
+    int64_t startup_time_ms = timer.elapsed();
     
     // Production startup log
     void* logEntry;
@@ -71,8 +71,8 @@ bool HealthCheckServer::startServer(quint16 port) {
     endpoints.append(void*{{"method", "GET"}, {"path", "/gpu"}, {"description", "GPU status"}});
     
     logEntry["endpoints"] = endpoints;
-    
-    
+
+
     return true;
 }
 
@@ -86,7 +86,7 @@ void HealthCheckServer::stopServer() {
         logEntry["level"] = "INFO";
         logEntry["component"] = "HealthCheckServer";
         logEntry["event"] = "server_stopped";
-        logEntry["total_requests"] = (qint64)m_metrics.total_requests;
+        logEntry["total_requests"] = (int64_t)m_metrics.total_requests;
         logEntry["success_rate"] = m_metrics.total_requests > 0 ? 
             (100.0 * m_metrics.successful_requests / m_metrics.total_requests) : 0.0;
         
@@ -104,7 +104,7 @@ void HealthCheckServer::onReadyRead() {
     std::chrono::steady_clock requestTimer;
     requestTimer.start();
     
-    void** socket = qobject_cast<void**>(sender());
+// REMOVED_QT:     void** socket = qobject_cast<void**>(sender());
     if (!socket) return;
     
     std::string request = std::string::fromUtf8(socket->readAll());
@@ -164,7 +164,7 @@ void HealthCheckServer::onReadyRead() {
 }
 
 void HealthCheckServer::onDisconnected() {
-    void** socket = qobject_cast<void**>(sender());
+// REMOVED_QT:     void** socket = qobject_cast<void**>(sender());
     if (socket) {
         socket->deleteLater();
     }
@@ -200,10 +200,10 @@ std::string HealthCheckServer::createHealthJson() {
     
     void* queue;
     queue["pending_requests"] = health.pending_requests;
-    queue["total_processed"] = (qint64)health.total_requests_processed;
+    queue["total_processed"] = (int64_t)health.total_requests_processed;
     json["queue"] = queue;
     
-    if (!health.last_error.isEmpty()) {
+    if (!health.last_error.empty()) {
         json["last_error"] = health.last_error;
     }
     
@@ -255,9 +255,9 @@ std::string HealthCheckServer::createMetricsJson() {
     json["performance"] = performance;
     
     void* requests;
-    requests["total_processed"] = (qint64)m_metrics.total_requests;
-    requests["successful"] = (qint64)m_metrics.successful_requests;
-    requests["failed"] = (qint64)m_metrics.failed_requests;
+    requests["total_processed"] = (int64_t)m_metrics.total_requests;
+    requests["successful"] = (int64_t)m_metrics.successful_requests;
+    requests["failed"] = (int64_t)m_metrics.failed_requests;
     requests["error_rate"] = m_metrics.total_requests > 0 ? 
         (100.0 * m_metrics.failed_requests / m_metrics.total_requests) : 0.0;
     requests["pending"] = health.pending_requests;
@@ -388,7 +388,7 @@ std::string HealthCheckServer::buildHttpResponse(int statusCode, const std::stri
 
 std::string HealthCheckServer::extractPath(const std::string& request) {
     std::vector<std::string> lines = request.split("\r\n");
-    if (lines.isEmpty()) return "/";
+    if (lines.empty()) return "/";
     
     std::vector<std::string> parts = lines[0].split(" ");
     if (parts.size() < 2) return "/";
@@ -398,10 +398,10 @@ std::string HealthCheckServer::extractPath(const std::string& request) {
 
 std::string HealthCheckServer::extractMethod(const std::string& request) {
     std::vector<std::string> lines = request.split("\r\n");
-    if (lines.isEmpty()) return "GET";
+    if (lines.empty()) return "GET";
     
     std::vector<std::string> parts = lines[0].split(" ");
-    if (parts.isEmpty()) return "GET";
+    if (parts.empty()) return "GET";
     
     return parts[0];
 }
@@ -484,4 +484,6 @@ void HealthCheckServer::calculatePercentiles() {
         m_metrics.p99_response_time_ms = sorted[p99_idx];
     }
 }
+
+
 

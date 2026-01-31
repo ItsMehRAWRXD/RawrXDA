@@ -68,7 +68,7 @@ public:
     ~LSPClient() override;
 
     /**
-     * Two-phase initialization - call after QApplication ready
+     * Two-phase initialization - call after void ready
      */
     void initialize();
 
@@ -168,8 +168,8 @@ public:
 
 private:
     void onServerReadyRead();
-    void onServerError(QProcess::ProcessError error);
-    void onServerFinished(int exitCode, QProcess::ExitStatus status);
+    void onServerError(void*::ProcessError error);
+    void onServerFinished(int exitCode, void*::ExitStatus status);
 
 private:
     void sendMessage(const void*& message);
@@ -183,7 +183,7 @@ private:
     std::string buildDocumentUri(const std::string& filePath) const;
     
     LSPServerConfig m_config;
-    QProcess* m_serverProcess{};
+    void** m_serverProcess{};
     bool m_serverRunning = false;
     bool m_initialized = false;
     int m_nextRequestId = 1;

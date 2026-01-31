@@ -34,17 +34,17 @@
 #include "masm/elf_writer.h"
 #include "masm/mach_o_writer.h"
 
-QT_BEGIN_NAMESPACE
+// REMOVED_QT: // QT_BEGIN_NAMESPACE
 /* ---------------  Qt primitives  --------------- */
 
 
 /* ---------------  Qt advanced  --------------- */
 
 
-// class QtCharts::QChartView; // Forward declaration for charts if needed
+// REMOVED_QT: // class QtCharts::QChartView; // Forward declaration for charts if needed
 
 
-QT_END_NAMESPACE
+// REMOVED_QT: // QT_END_NAMESPACE
 
 namespace RawrXD {
 class ProjectExplorerWidget;
@@ -118,9 +118,9 @@ public:
 
 protected:
     bool eventFilter(void* watched, QEvent* event) override;
-    void closeEvent(QCloseEvent* event) override;
-    void dragEnterEvent(QDragEnterEvent* event) override;
-    void dropEvent(QDropEvent* event) override;
+    void closeEvent(void*  event) override;
+    void dragEnterEvent(void*  event) override;
+    void dropEvent(void*  event) override;
 
 private: /* ----------  original slots  ---------- */
     void handleGoalSubmit();
@@ -154,7 +154,7 @@ private: /* ----------  original slots  ---------- */
     void addRecentFile(const std::string& filePath);
     std::vector<std::string> getRecentFiles() const;
     void clearRecentFiles();
-    void populateRecentFilesMenu(QMenu* recentMenu);
+    void populateRecentFilesMenu(void* recentMenu);
     
     // Command History Tracking
     void addCommandToHistory(const std::string& command);
@@ -174,7 +174,7 @@ private: /* ----------  original slots  ---------- */
     void handleAddFile();
     void handleAddFolder();
     void handleAddSymbol();
-    void showContextMenu(const QPoint& pos);
+    void showContextMenu(const void*& pos);
     void loadContextItemIntoEditor(QListWidgetItem* item);
     void handleTabClose(int index);
     void handlePwshCommand();
@@ -184,7 +184,7 @@ private: /* ----------  original slots  ---------- */
     void clearDebugLog();
     void saveDebugLog();
     void filterLogLevel(const std::string& level);
-    void showEditorContextMenu(const QPoint& pos);
+    void showEditorContextMenu(const void*& pos);
     void explainCode();
     void fixCode();
     void refactorCode();
@@ -225,7 +225,7 @@ private: /* ----------  new IDE-wide slots  ---------- */
     void onSnippetInserted(const std::string& id);
     void onRegexTested(const std::string& pattern);
     void onDiffMerged();
-    void onColorPicked(const QColor& c);
+    void onColorPicked(const uint32_t& c);
     void onIconSelected(const std::string& name);
     void onPluginLoaded(const std::string& name);
     void onSettingsSaved();
@@ -270,8 +270,8 @@ private: /* ----------  new IDE-wide slots  ---------- */
     void loadGGUFModel(const std::string& ggufPath);
     void runInference();
     void unloadGGUFModel();
-    void showInferenceResult(qint64 reqId, const std::string& result);
-    void showInferenceError(qint64 reqId, const std::string& errorMsg);
+    void showInferenceResult(int64_t reqId, const std::string& result);
+    void showInferenceError(int64_t reqId, const std::string& errorMsg);
     void onModelLoadedChanged(bool loaded, const std::string& modelName);
     void onModelLoadFinished(bool success, const std::string& errorMsg);
     void batchCompressFolder();
@@ -283,7 +283,7 @@ private: /* ----------  new IDE-wide slots  ---------- */
     bool canRelease();
     void onHotReload();
     void changeAgentMode(const std::string& mode);
-    void handleBackendSelection(QAction* action);
+    void handleBackendSelection(void* action);
 
     // Toggle slots
     void toggleProjectExplorer(bool visible);
@@ -450,7 +450,7 @@ private: /* ---------------  UI creators  --------------- */
     void setupSystemTray();
     void setupShortcuts();
     void setupAIBackendSwitcher();
-    void setupQuantizationMenu(QMenu* aiMenu);
+    void setupQuantizationMenu(void* aiMenu);
     void setupLayerQuantWidget();
     void setupSwarmEditing();
     void setupCollaborationMenu();
@@ -472,13 +472,13 @@ private: /* ---------------  UI creators  --------------- */
 
 
 private: /* ---------------  original members  --------------- */
-    QLineEdit* goalInput_{};
-    QLabel* mockStatusBadge_{};
-    QComboBox* agentSelector_{};
+    void* goalInput_{};
+    void* mockStatusBadge_{};
+    void* agentSelector_{};
     QListWidget* chatHistory_{};
     QListWidget* contextList_{};
-    QTabWidget* editorTabs_{};
-    QTextEdit* codeView_{};
+    void* editorTabs_{};
+    void* codeView_{};
     AISuggestionOverlay* overlay_{};
     std::string suggestionBuffer_{};
     std::string architectBuffer_{};
@@ -487,30 +487,30 @@ private: /* ---------------  original members  --------------- */
     bool architectRunning_{false};
     std::unordered_map<std::string, QListWidgetItem*> proposalItemMap_{};
     std::unordered_map<std::string, TaskProposalWidget*> proposalWidgetMap_{};
-    QTextEdit* qshellOutput_{};
-    QLineEdit* qshellInput_{};
+    void* qshellOutput_{};
+    void* qshellInput_{};
     StreamerClient* streamer_{};
-    std::string streamerUrl_{QStringLiteral("http://localhost:11434")};
+    std::string streamerUrl_{"http://localhost:11434"};
     AgentOrchestrator* orchestrator_{};
-    QDockWidget* terminalDock_{};
-    QTabWidget* terminalTabs_{};
+    void* terminalDock_{};
+    void* terminalTabs_{};
     QPlainTextEdit* pwshOutput_{};
     QPlainTextEdit* cmdOutput_{};
-    QLineEdit* pwshInput_{};
-    QLineEdit* cmdInput_{};
-    QProcess* pwshProcess_{};
-    QProcess* cmdProcess_{};
+    void* pwshInput_{};
+    void* cmdInput_{};
+    void** pwshProcess_{};
+    void** cmdProcess_{};
 
     /* ============================================================
      * Missing members required by MainWindow.cpp
      * ============================================================ */
-    QTextEdit* editor_{};                      // Primary editor for code
+    void* editor_{};                      // Primary editor for code
     std::string currentFilePath_{};                 // Path of currently open file
     class MultiTabEditor* m_multiTabEditor{};  // Multi-tab editor manager
     std::string m_currentWorkspacePath{};           // Current workspace/project path
     QTreeWidget* m_explorerView{};              // Project explorer tree view
     class AIChatPanel* m_agentChatPane{};      // Agent chat panel (alias)
-    QDockWidget* m_compilerOutputDock{};        // Compiler output dock widget
+    void* m_compilerOutputDock{};        // Compiler output dock widget
     QPlainTextEdit* m_compilerOutput{};         // Compiler output text
     class RawrXD::TaskOrchestrator* m_taskOrchestrator{}; // Task orchestration system
 
@@ -597,12 +597,12 @@ private: /* ---------------  new IDE members  --------------- */
     class std::thread* m_engineThread{};
     class StreamingInference* m_streamer{};
     bool m_streamingMode{false};
-    qint64 m_currentStreamId{0};
-    QDockWidget* m_modelMonitorDock{};
-    QDockWidget* m_aiChatPanelDock{};
-    QDockWidget* m_orchestrationDock{};
-    QDockWidget* m_thermalDashboardDock{};  // NVMe Thermal Dashboard
-    QDockWidget* m_sovereignTelemetryDock{}; // Sovereign MMF telemetry
+    int64_t m_currentStreamId{0};
+    void* m_modelMonitorDock{};
+    void* m_aiChatPanelDock{};
+    void* m_orchestrationDock{};
+    void* m_thermalDashboardDock{};  // NVMe Thermal Dashboard
+    void* m_sovereignTelemetryDock{}; // Sovereign MMF telemetry
     class RawrXD::OrchestrationUI* m_orchestrationUI{}; // Orchestration UI panel
     
     /* Unified AI Backend (Cursor-style switcher) */
@@ -613,12 +613,12 @@ private: /* ---------------  new IDE members  --------------- */
     
     /* Quantization & Layer Management */
     class LayerQuantWidget* m_layerQuantWidget{};
-    QDockWidget* m_layerQuantDock{};
+    void* m_layerQuantDock{};
     std::string m_currentQuantMode{"Q4_0"};
     
     /* Collaborative Editing (requires Qt WebSockets) */
 #ifdef HAVE_QT_WEBSOCKETS
-    class QWebSocket* m_swarmSocket{};
+// REMOVED_QT:     class QWebSocket* m_swarmSocket{};
 #else
     void* m_swarmSocket{};  // Placeholder when WebSockets not available
 #endif
@@ -634,38 +634,38 @@ private: /* ---------------  new IDE members  --------------- */
 
     /* MASM Text Editor */
     class MASMEditorWidget* m_masmEditor{};
-    QDockWidget* m_masmEditorDock{};
+    void* m_masmEditorDock{};
 
     /* Hotpatch Panel */
     class HotpatchPanel* m_hotpatchPanel{};
-    QDockWidget* m_hotpatchPanelDock{};
+    void* m_hotpatchPanelDock{};
     
     /* Interpretability Panel - Model Analysis & Diagnostics */
     QPointer<InterpretabilityPanelEnhanced> m_interpretabilityPanel{};
-    QDockWidget* m_interpretabilityPanelDock{};
+    void* m_interpretabilityPanelDock{};
 
     // MASM Compiler Integration
     std::unique_ptr<MASMCompilerWidget> m_masmCompiler;
-    QDockWidget* m_masmDock;
+    void* m_masmDock;
 
     /* VS Code-like Layout Components */
     class ActivityBar* m_activityBar{};
     void* m_commandPalette{};  // Generic command palette widget (not the CommandPalette class)
     class AIChatPanel* m_aiChatPanel{};
-    QDockWidget* m_aiChatDock{};
-    QFrame* m_primarySidebar{};
-    QStackedWidget* m_sidebarStack{};
-    QFrame* m_bottomPanel{};
-    QStackedWidget* m_panelStack{};
-    QTabWidget* m_chatTabs{};
+    void* m_aiChatDock{};
+    void* m_primarySidebar{};
+    void* m_sidebarStack{};
+    void* m_bottomPanel{};
+    void* m_panelStack{};
+    void* m_chatTabs{};
     QPlainTextEdit* m_hexMagConsole{};
-    QComboBox* m_modelSelector{};      // Model selection dropdown
+    void* m_modelSelector{};      // Model selection dropdown
     std::unordered_map<std::string, std::string> m_modelTooltipCache{};
     std::string m_pendingModelPath{};
     QProgressDialog* m_loadingProgressDialog{};
     void** m_loadProgressTimer{};
     ModelLoaderThread* m_modelLoaderThread{};
-    QComboBox* m_agentModeSwitcher{};
+    void* m_agentModeSwitcher{};
     std::string m_agentMode{"Plan"};
     QActionGroup* m_agentModeGroup{};
     QActionGroup* m_backendGroup{};
@@ -689,11 +689,11 @@ private: /* ---------------  new IDE members  --------------- */
     int m_activeTabIndex = -1;          // Currently active tab index
     
     // Metrics for observability
-    qint64 m_lastSaveTime = 0;          // Timestamp of last save
-    qint64 m_lastRestoreTime = 0;       // Timestamp of last restore
-    qint64 m_persistenceSaveMs = 0;     // Duration of save operation in ms
-    qint64 m_persistenceRestoreMs = 0;  // Duration of restore operation in ms
-    qint64 m_persistenceDataSize = 0;   // Total data persisted in bytes
+    int64_t m_lastSaveTime = 0;          // Timestamp of last save
+    int64_t m_lastRestoreTime = 0;       // Timestamp of last restore
+    int64_t m_persistenceSaveMs = 0;     // Duration of save operation in ms
+    int64_t m_persistenceRestoreMs = 0;  // Duration of restore operation in ms
+    int64_t m_persistenceDataSize = 0;   // Total data persisted in bytes
     
     void createVSCodeLayout();
     void applyDarkTheme();
@@ -710,4 +710,5 @@ private: /* ---------------  new IDE members  --------------- */
     void scanProjectForTodos();
     void openFileInEditor(const std::string& path);
 };
+
 

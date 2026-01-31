@@ -19,7 +19,7 @@ CorrectionResult AgenticSelfCorrector::correctAgentOutput(const std::vector<uint
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
-    if (output.isEmpty()) {
+    if (output.empty()) {
         return CorrectionResult::failure("Empty output");
     }
     
@@ -246,7 +246,7 @@ bool AgenticSelfCorrector::detectFormatViolation(const std::vector<uint8_t>& out
     std::string text = std::string::fromUtf8(output);
     
     // Check for missing structure
-    if (text.isEmpty() || (text.length() < 5)) {
+    if (text.empty() || (text.length() < 5)) {
         return true;
     }
     
@@ -294,7 +294,7 @@ bool AgenticSelfCorrector::detectHallucination(const std::vector<uint8_t>& outpu
 
 double AgenticSelfCorrector::calculateConfidenceScore(const std::vector<uint8_t>& output) const
 {
-    if (output.isEmpty()) return 0.0;
+    if (output.empty()) return 0.0;
     
     double score = 0.5;  // Base score
     
@@ -317,4 +317,5 @@ double AgenticSelfCorrector::calculateConfidenceScore(const std::vector<uint8_t>
     
     return qBound(0.0, score, 1.0);
 }
+
 

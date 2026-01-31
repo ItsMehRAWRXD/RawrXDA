@@ -28,7 +28,7 @@
 
 // Define LOG_FUNCTION macro if not already defined
 #ifndef LOG_FUNCTION
-#define LOG_FUNCTION() LOG_DEBUG(std::string("ENTER ") + __FUNCTION__)
+#define LOG_FUNCTION() 
 #endif
 #include "Win32TerminalManager.h"
 #include "TransparentRenderer.h"

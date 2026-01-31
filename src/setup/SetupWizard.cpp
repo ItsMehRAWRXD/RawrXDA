@@ -152,7 +152,7 @@ void HardwarePage::setupUI()
     mainLayout->addLayout(gridLayout);
     
     // Hardware list for detailed view
-    m_hardwareList = new QListWidget(this);
+    m_hardwareList = nullptr;
     m_hardwareList->setMaximumHeight(100);
     mainLayout->addWidget(m_hardwareList);
     
@@ -765,7 +765,7 @@ void SummaryPage::initializePage()
 
 void SummaryPage::generateSummary()
 {
-    auto* wizard = qobject_cast<SetupWizard*>(this->wizard());
+// REMOVED_QT:     auto* wizard = qobject_cast<SetupWizard*>(this->wizard());
     if (!wizard) return;
     
     DetectedHardware hw = wizard->getHardware();
@@ -889,7 +889,7 @@ void CompletePage::onInstallComplete(bool success)
 
 void CompletePage::performInstallation()
 {
-    auto* wizard = qobject_cast<SetupWizard*>(this->wizard());
+// REMOVED_QT:     auto* wizard = qobject_cast<SetupWizard*>(this->wizard());
     if (!wizard) {
         onInstallComplete(false);
         return;

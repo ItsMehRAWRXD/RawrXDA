@@ -173,7 +173,7 @@ public:
         std::lock_guard<std::mutex> lock(state_mutex_);
         
         if (initialized_) {
-            fprintf(stderr, "WARNING: LSP client already initialized\n");
+
             return true;
         }
         
@@ -182,7 +182,7 @@ public:
         
         // Start LSP server process
         if (!start_server_process(server_path, args)) {
-            fprintf(stderr, "ERROR: Failed to start LSP server: %s\n", server_path.c_str());
+
             return false;
         }
         
@@ -194,8 +194,7 @@ public:
         
         // Start reader thread
         reader_thread_ = std::thread(&LSPClientUnified::reader_loop, this);
-        
-        fprintf(stderr, "INFO: LSP client initialized for %s\n", language.c_str());
+
         return true;
     }
     
@@ -354,8 +353,7 @@ public:
         }
         
         initialized_ = false;
-        
-        fprintf(stderr, "INFO: LSP client shutdown complete\n");
+
     }
 
 private:
@@ -563,7 +561,7 @@ private:
     bool ensure_initialized() {
         std::lock_guard<std::mutex> lock(state_mutex_);
         if (!initialized_) {
-            fprintf(stderr, "ERROR: LSP client not initialized\n");
+
             return false;
         }
         return true;

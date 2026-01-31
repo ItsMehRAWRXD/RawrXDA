@@ -4,7 +4,7 @@
 VoiceProcessor::VoiceProcessor(void* parent)
     : void(parent),
       m_audioSource(nullptr),
-      m_audioBuffer(new QBuffer(this)),
+      m_audioBuffer(nullptr),
       m_recordingTimer(new void*(this)),
       m_isRecording(false)
 {
@@ -87,7 +87,7 @@ bool VoiceProcessor::startRecording()
         }
         
         // Qt 6: QAudioInput renamed to QAudioSource
-        m_audioSource = new QAudioSource(m_audioDevice, m_audioFormat, this);
+        m_audioSource = nullptr;
 // Qt connect removed
         m_audioBuffer->close();
         m_audioBuffer->setData(std::vector<uint8_t>());
@@ -114,7 +114,7 @@ bool VoiceProcessor::startRecording()
         logStructured("INFO", "Recording started", void*{
             {"device", m_audioDevice.description()},
             {"maxDurationMs", config.maxRecordingDurationMs},
-            {"startLatencyMs", static_cast<qint64>(duration.count())}
+            {"startLatencyMs", static_cast<int64_t>(duration.count())}
         });
         
         recordingStarted();
@@ -256,7 +256,7 @@ void* VoiceProcessor::detectIntent(const std::string& transcription)
 {
     auto startTime = std::chrono::steady_clock::now();
     
-    if (transcription.isEmpty()) {
+    if (transcription.empty()) {
         logStructured("WARN", "Empty transcription for intent detection", void*{});
         return void*();
     }
@@ -310,7 +310,7 @@ std::string VoiceProcessor::generateSpeech(const std::string& text)
 {
     auto startTime = std::chrono::steady_clock::now();
     
-    if (text.isEmpty()) {
+    if (text.empty()) {
         logStructured("WARN", "Empty text for speech generation", void*{});
         return std::string();
     }
@@ -464,7 +464,7 @@ void VoiceProcessor::recordLatency(const std::string& operation, const std::chro
 void* VoiceProcessor::makeApiRequest(const std::string& endpoint, const void*& payload)
 {
     void* manager;
-    QNetworkRequest request(endpoint);
+    void* request(endpoint);
     
     Config config;
     {
@@ -472,8 +472,8 @@ void* VoiceProcessor::makeApiRequest(const std::string& endpoint, const void*& p
         config = m_config;
     }
     
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    if (!config.apiKey.isEmpty()) {
+    request.setHeader(void*::ContentTypeHeader, "application/json");
+    if (!config.apiKey.empty()) {
         request.setRawHeader("Authorization", std::string("Bearer %1").toUtf8());
     }
     
@@ -504,7 +504,7 @@ void* VoiceProcessor::makeApiRequest(const std::string& endpoint, const void*& p
 
 bool VoiceProcessor::validateAudioData(const std::vector<uint8_t>& audioData)
 {
-    if (audioData.isEmpty()) {
+    if (audioData.empty()) {
         return false;
     }
     
@@ -528,4 +528,6 @@ bool VoiceProcessor::validateAudioData(const std::vector<uint8_t>& audioData)
     
     return true;
 }
+
+
 

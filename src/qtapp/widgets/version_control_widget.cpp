@@ -87,7 +87,7 @@ void VersionControlWidget::createStatusView()
     void* unstagedGroup = new void("Unstaged Changes", this);
     void* unstagedLayout = new void(unstagedGroup);
     
-    m_unstagedFiles = new QTreeWidget(this);
+    m_unstagedFiles = nullptr;
     m_unstagedFiles->setHeaderLabels({"File", "Status"});
     m_unstagedFiles->setColumnWidth(0, 300);
     m_unstagedFiles->setContextMenuPolicy(CustomContextMenu);
@@ -111,7 +111,7 @@ void VersionControlWidget::createStatusView()
     void* stagedGroup = new void("Staged Changes", this);
     void* stagedLayout = new void(stagedGroup);
     
-    m_stagedFiles = new QTreeWidget(this);
+    m_stagedFiles = nullptr;
     m_stagedFiles->setHeaderLabels({"File", "Status"});
     m_stagedFiles->setColumnWidth(0, 300);
     m_stagedFiles->setContextMenuPolicy(CustomContextMenu);
@@ -160,7 +160,7 @@ void VersionControlWidget::createHistoryView()
     
     void* splitter = new void(Vertical, this);
     
-    m_commitHistory = new QTreeWidget(this);
+    m_commitHistory = nullptr;
     m_commitHistory->setHeaderLabels({"Hash", "Author", "Date", "Message"});
     m_commitHistory->setColumnWidth(0, 100);
     m_commitHistory->setColumnWidth(1, 150);
@@ -192,7 +192,7 @@ void VersionControlWidget::createBranchView()
     void* localGroup = new void("Local Branches", this);
     void* localLayout = new void(localGroup);
     
-    m_branchList = new QListWidget(this);
+    m_branchList = nullptr;
     m_branchList->setSelectionMode(QAbstractItemView::SingleSelection);
     localLayout->addWidget(m_branchList);
     
@@ -222,7 +222,7 @@ void VersionControlWidget::createBranchView()
     void* remoteGroup = new void("Remotes", this);
     void* remoteLayout = new void(remoteGroup);
     
-    m_remoteList = new QListWidget(this);
+    m_remoteList = nullptr;
     remoteLayout->addWidget(m_remoteList);
     
     void* remoteButtons = new void();
@@ -389,7 +389,7 @@ void VersionControlWidget::updateFileStatus()
 
 void VersionControlWidget::addFileToTree(QTreeWidget* tree, const std::string& file, const std::string& status)
 {
-    QTreeWidgetItem* item = new QTreeWidgetItem(tree);
+    QTreeWidgetItem* item = nullptr;
     item->setText(0, file);
     item->setText(1, status);
     item->setForeground(1, void(getStatusColor(status)));
@@ -582,7 +582,7 @@ void VersionControlWidget::updateCommitHistory()
     for (const std::string& entry : log) {
         std::stringList parts = entry.split('|');
         if (parts.size() >= 4) {
-            QTreeWidgetItem* item = new QTreeWidgetItem(m_commitHistory);
+            QTreeWidgetItem* item = nullptr;
             item->setText(0, parts[0].left(8)); // Short hash
             item->setText(1, parts[1]); // Author
             item->setText(2, parts[2]); // Date
@@ -863,7 +863,7 @@ void VersionControlWidget::onBranchSelectionChanged()
 
 void VersionControlWidget::onContextMenuRequested(const struct { int x; int y; }& pos)
 {
-    QTreeWidget* tree = qobject_cast<QTreeWidget*>(sender());
+// REMOVED_QT:     QTreeWidget* tree = qobject_cast<QTreeWidget*>(sender());
     if (!tree) return;
     
     QTreeWidgetItem* item = tree->itemAt(pos);

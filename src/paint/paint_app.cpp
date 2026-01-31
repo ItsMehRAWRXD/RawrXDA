@@ -310,7 +310,7 @@ void PaintApp::create_menu_bar() {
 
     auto zoom_in_action = view_menu->addAction(tr("Zoom &In"));  // Signal connection removed\nauto zoom_out_action = view_menu->addAction(tr("Zoom &Out"));  // Signal connection removed\nauto zoom_reset_action = view_menu->addAction(tr("&Reset Zoom"));  // Signal connection removed\n}
 
-QLayout* PaintApp::create_tool_panel() {
+void* PaintApp::create_tool_panel() {
     auto panel_layout = new void();
 
     // Tool selection
@@ -374,7 +374,7 @@ QLayout* PaintApp::create_tool_panel() {
     tool_panel_widget->setLayout(panel_layout);
     tool_panel_widget->setMaximumWidth(250);
     
-    auto main_layout = qobject_cast<void*>(centralWidget()->layout());
+// REMOVED_QT:     auto main_layout = qobject_cast<void*>(centralWidget()->layout());
     if (main_layout) {
         main_layout->addWidget(tool_panel_widget, 0);
     }

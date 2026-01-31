@@ -10,7 +10,7 @@
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        std::cerr << "Usage: burstc <model.gguf> <burst_profile.txt>\n";
+        
         return 1;
     }
 
@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 
     std::ofstream out(gguf_path, std::ios::binary | std::ios::app);
     if (!out) {
-        std::cerr << "Failed to open GGUF for patching\n";
+        
         return 1;
     }
 
@@ -39,6 +39,6 @@ int main(int argc, char** argv) {
         out.write(reinterpret_cast<const char*>(&val), 4);
     }
 
-    std::cout << "✓ Patched " << gguf_path << " with " << count << " burst IDs\n";
+
     return 0;
 }

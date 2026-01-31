@@ -1,15 +1,15 @@
 #include "ai_switcher.hpp"
 
-AISwitcher::AISwitcher(void* parent) : QMenu("AI Backend", parent)
+AISwitcher::AISwitcher(void* parent) : void("AI Backend", parent)
 {
-    m_backends = new QActionGroup(this);
+    m_backends = nullptr;
     m_backends->setExclusive(true);
 
     // Backend options
     std::vector<std::string> backends = {"Local GGUF", "llama.cpp HTTP", "OpenAI", "Claude", "Gemini"};
     
     for (const std::string& backend : backends) {
-        QAction* action = m_backends->addAction(backend);
+        void* action = m_backends->addAction(backend);
         action->setCheckable(true);
         
         // Extract ID from name (e.g., "Local GGUF" -> "local")
@@ -36,7 +36,7 @@ AISwitcher::AISwitcher(void* parent) : QMenu("AI Backend", parent)
 
 void AISwitcher::pickKey()
 {
-    QAction* action = qobject_cast<QAction*>(sender());
+// REMOVED_QT:     void* action = qobject_cast<void*>(sender());
     if (!action) {
         // Called from triggered signal - get checked action
         action = m_backends->checkedAction();
@@ -51,16 +51,17 @@ void AISwitcher::pickKey()
         this,
         backendName + " API Key",
         "Enter your API key:",
-        QLineEdit::Password,
+        void::Password,
         std::string(),
         &ok
     );
 
-    if (ok && !key.isEmpty()) {
+    if (ok && !key.empty()) {
         backendChanged(id, key);
-    } else if (ok && key.isEmpty()) {
+    } else if (ok && key.empty()) {
         // User clicked OK but didn't enter a key - revert to local
         m_backends->actions().first()->setChecked(true);
         backendChanged("local", std::string());
     }
 }
+

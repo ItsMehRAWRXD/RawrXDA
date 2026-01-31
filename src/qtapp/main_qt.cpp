@@ -7,9 +7,9 @@
 int main(int argc, char* argv[])
 {
     try {
-        QApplication app(argc, argv);
-        
-        
+        void app(argc, argv);
+
+
         // Disable auto-update during initial testing
         // AutoUpdate updater;
         // updater.checkAndInstall();

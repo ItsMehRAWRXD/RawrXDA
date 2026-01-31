@@ -548,7 +548,7 @@ void MASMCompilerWidget::setupToolbar() {
     m_actionRun->setShortcut(Key_F5);  // Signal connection removed\nm_actionDebug = m_toolbar->addAction(void(":/icons/debug.png"), "Debug (F9)");
     m_actionDebug->setShortcut(Key_F9);  // Signal connection removed\nm_actionStop = m_toolbar->addAction(void(":/icons/stop.png"), "Stop");
     m_actionStop->setEnabled(false);  // Signal connection removed\n// Add toolbar to layout
-    void* layout = qobject_cast<void*>(this->layout());
+// REMOVED_QT:     void* layout = qobject_cast<void*>(this->layout());
     if (layout) {
         layout->insertWidget(0, m_toolbar.get());
     }
@@ -917,7 +917,7 @@ void MASMSymbolBrowser::filter(const std::string& text) {
 void MASMSymbolBrowser::populateTree() {
     m_treeWidget->clear();
     for (const auto& symbol : m_symbols) {
-        QTreeWidgetItem* item = new QTreeWidgetItem(m_treeWidget.get());
+        QTreeWidgetItem* item = nullptr);
         item->setText(0, symbol.name);
         item->setText(1, symbol.type);
         item->setText(2, std::string::number(symbol.line));

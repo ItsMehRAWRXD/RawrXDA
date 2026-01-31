@@ -8,19 +8,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     std::ofstream log("D:\\temp\\test_ide.log");
     log << "TEST_IDE: WinMain entered\n"; log.flush();
     
-    // Step 1: QApplication included
-    log << "TEST_IDE: QApplication header included\n"; log.flush();
+    // Step 1: void included
+    log << "TEST_IDE: void header included\n"; log.flush();
     
     // Step 2: Convert command line
     const char* argv_data[] = { "test_ide", nullptr };
     char* argv[] = { const_cast<char*>(argv_data[0]), nullptr };
     int argc = 1;
     
-    log << "TEST_IDE: About to create QApplication\n"; log.flush();
+    log << "TEST_IDE: About to create void\n"; log.flush();
     
-    QApplication app(argc, argv);
+    void app(argc, argv);
     
-    log << "TEST_IDE: QApplication created\n"; log.flush();
+    log << "TEST_IDE: void created\n"; log.flush();
     
     log << "TEST_IDE: About to create AgenticIDE\n"; log.flush();
     

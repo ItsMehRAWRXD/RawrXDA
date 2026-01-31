@@ -8,6 +8,12 @@
 
 
 #include <mutex>
+#include <fstream>
+#include <filesystem>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 AgenticCopilotBridge::AgenticCopilotBridge(void* parent)
     : void(parent)
@@ -59,8 +65,8 @@ std::string AgenticCopilotBridge::generateCodeCompletion(const std::string& cont
         errorOccurred("Agentic engine not initialized");
         return "// Agentic engine not initialized";
     }
-    
-    
+
+
     // Build completion prompt
     std::string prompt = std::string(
         "Based on this code context:\n%1\n\n"
@@ -86,11 +92,11 @@ std::string AgenticCopilotBridge::analyzeActiveFile()
     }
     
     std::string code = m_multiTabEditor->getCurrentText();
-    if (code.isEmpty()) {
+    if (code.empty()) {
         return "No code to analyze";
     }
-    
-    
+
+
     // Run code analysis with agent
     std::string analysis = m_agenticEngine->analyzeCode(code);
     
@@ -148,11 +154,11 @@ std::string AgenticCopilotBridge::generateTestsForCode(const std::string& code)
 std::string AgenticCopilotBridge::askAgent(const std::string& question, const void*& context)
 {
     if (!m_agenticEngine) return "Engine not initialized";
-    
-    
+
+
     // Build full context
     void* fullContext = context;
-    if (fullContext.isEmpty()) {
+    if (fullContext.empty()) {
         fullContext = buildExecutionContext();
     }
     
@@ -187,7 +193,7 @@ std::string AgenticCopilotBridge::askAgent(const std::string& question, const vo
 
 std::string AgenticCopilotBridge::continuePreviousConversation(const std::string& followUp)
 {
-    if (m_conversationHistory.isEmpty()) {
+    if (m_conversationHistory.empty()) {
         return askAgent(followUp); // Start new conversation
     }
     
@@ -209,8 +215,8 @@ std::string AgenticCopilotBridge::continuePreviousConversation(const std::string
 std::string AgenticCopilotBridge::executeWithFailureRecovery(const std::string& prompt)
 {
     if (!m_agenticEngine) return "Engine not initialized";
-    
-    
+
+
     // First attempt
     std::string response = m_agenticEngine->generateResponse(prompt);
     
@@ -244,11 +250,11 @@ std::string AgenticCopilotBridge::hotpatchResponse(const std::string& originalRe
     }
     
     // Layer 4: Validate output
-    if (patched.isEmpty()) {
+    if (patched.empty()) {
         patched = "Unable to generate response. Please rephrase your request.";
     }
-    
-    
+
+
     return patched;
 }
 
@@ -285,8 +291,8 @@ void* AgenticCopilotBridge::transformCode(const std::string& code, const std::st
         result["success"] = false;
         return result;
     }
-    
-    
+
+
     std::string prompt = std::string(
         "Transform the following code by: %1\n\n"
         "Original code:\n%2\n\n"
@@ -335,8 +341,8 @@ void* AgenticCopilotBridge::executeAgentTask(const void*& task)
     
     std::string taskType = task.value("type").toString();
     std::string taskDescription = task.value("description").toString();
-    
-    
+
+
     if (taskType == "analyze_code") {
         result["output"] = analyzeActiveFile();
         result["success"] = true;
@@ -373,8 +379,8 @@ void* AgenticCopilotBridge::planMultiStepTask(const std::string& goal)
     void* plan;
     
     if (!m_agenticEngine) return plan;
-    
-    
+
+
     std::string prompt = 
         "Create a detailed step-by-step plan to accomplish: " + goal + "\n\n" +
         "For each step, include:\n1. Step description\n2. Resources needed\n3. Success criteria\n4. Estimated duration\n\n" +
@@ -556,37 +562,35 @@ void AgenticCopilotBridge::onEditorContentChanged()
 void AgenticCopilotBridge::submitFeedback(const std::string& feedback, bool isPositive)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
+
+    // Create feedback record
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %X");
+
+    nlohmann::json record;
+    record["timestamp"] = ss.str();
+    record["feedback"] = feedback;
+    record["is_positive"] = isPositive;
+    record["conversation_length"] = m_conversationHistory.size();
     
-    
-    // Create feedback record with timestamp and context
-    void* feedbackRecord;
-    feedbackRecord["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
-    feedbackRecord["feedback"] = feedback;
-    feedbackRecord["is_positive"] = isPositive;
-    feedbackRecord["conversation_length"] = m_conversationHistory.size();
-    
-    // Log feedback to file for analysis
-    std::string feedbackFilePath = std::string("feedback_%1.json")
-        .toString("yyyyMMdd"));
-    
-    std::fstream feedbackFile(feedbackFilePath);
-    if (feedbackFile.open(QIODevice::Append | QIODevice::Text)) {
-        QTextStream stream(&feedbackFile);
-        stream << void*(feedbackRecord).toJson(void*::Compact) << "\n";
+    // Log feedback to file
+    std::string filename = "feedback_" + ss.str().substr(0, 10) + ".json";
+    std::ofstream feedbackFile(filename, std::ios::app);
+    if (feedbackFile.is_open()) {
+        feedbackFile << record.dump() << "\n";
         feedbackFile.close();
-        
-    } else {
-        errorOccurred("Failed to save feedback");
     }
     
-    // Add to conversation history for context-aware improvements
-    void* historyEntry;
+    // Add to history
+    nlohmann::json historyEntry;
     historyEntry["role"] = "feedback";
     historyEntry["content"] = feedback;
     historyEntry["rating"] = isPositive ? "positive" : "negative";
-    m_conversationHistory.append(historyEntry);
+    m_conversationHistory.push_back(historyEntry);
     
-    feedbackSubmitted();
+    if (onFeedbackSubmitted) onFeedbackSubmitted();
 }
 
 // ========== PRODUCTION FEATURES: MODEL UPDATES ==========
@@ -599,8 +603,8 @@ void AgenticCopilotBridge::updateModel(const std::string& newModelPath)
         errorOccurred("Cannot update model: Engine not initialized");
         return;
     }
-    
-    
+
+
     try {
         // Validate model file exists
         std::fstream modelFile(newModelPath);
@@ -638,8 +642,8 @@ void* AgenticCopilotBridge::trainModel(const std::string& datasetPath, const std
         errorOccurred("Cannot train model: Executor not available");
         return result;
     }
-    
-    
+
+
     void* result = m_agenticExecutor->trainModel(datasetPath, modelPath, config);
     
     if (!result["success"].toBool()) {
@@ -719,4 +723,5 @@ void AgenticCopilotBridge::displayMessage(const std::string& message)
     m_chatInterface->addMessage("System", message);
     
 }
+
 

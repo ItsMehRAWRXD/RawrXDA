@@ -35,7 +35,7 @@ public:
     ModelRouterAdapter* getAdapter() const { return m_adapter; }
 
 protected:
-    void closeEvent(QCloseEvent *event) override;
+    void closeEvent(void* event) override;
 
 private:
     // API Key Management
@@ -104,79 +104,79 @@ private:
     ModelRouterAdapter *m_adapter;
     
     // Main tabs
-    QTabWidget *m_tabs;
+    void *m_tabs;
     
     // ===== API Keys Tab =====
     // OpenAI
-    QLineEdit *m_openai_key_input;
-    QPushButton *m_openai_test_button;
-    QLabel *m_openai_status_label;
-    QCheckBox *m_openai_visible_checkbox;
+    void *m_openai_key_input;
+    void *m_openai_test_button;
+    void *m_openai_status_label;
+    void *m_openai_visible_checkbox;
     
     // Anthropic
-    QLineEdit *m_anthropic_key_input;
-    QPushButton *m_anthropic_test_button;
-    QLabel *m_anthropic_status_label;
-    QCheckBox *m_anthropic_visible_checkbox;
+    void *m_anthropic_key_input;
+    void *m_anthropic_test_button;
+    void *m_anthropic_status_label;
+    void *m_anthropic_visible_checkbox;
     
     // Google
-    QLineEdit *m_google_key_input;
-    QPushButton *m_google_test_button;
-    QLabel *m_google_status_label;
-    QCheckBox *m_google_visible_checkbox;
+    void *m_google_key_input;
+    void *m_google_test_button;
+    void *m_google_status_label;
+    void *m_google_visible_checkbox;
     
     // Moonshot
-    QLineEdit *m_moonshot_key_input;
-    QPushButton *m_moonshot_test_button;
-    QLabel *m_moonshot_status_label;
-    QCheckBox *m_moonshot_visible_checkbox;
+    void *m_moonshot_key_input;
+    void *m_moonshot_test_button;
+    void *m_moonshot_status_label;
+    void *m_moonshot_visible_checkbox;
     
     // Azure OpenAI
-    QLineEdit *m_azure_key_input;
-    QPushButton *m_azure_test_button;
-    QLabel *m_azure_status_label;
-    QCheckBox *m_azure_visible_checkbox;
+    void *m_azure_key_input;
+    void *m_azure_test_button;
+    void *m_azure_status_label;
+    void *m_azure_visible_checkbox;
     
     // AWS
-    QLineEdit *m_aws_access_key_input;
-    QLineEdit *m_aws_secret_key_input;
-    QPushButton *m_aws_test_button;
-    QLabel *m_aws_status_label;
-    QCheckBox *m_aws_visible_checkbox;
+    void *m_aws_access_key_input;
+    void *m_aws_secret_key_input;
+    void *m_aws_test_button;
+    void *m_aws_status_label;
+    void *m_aws_visible_checkbox;
     
     // ===== Configuration Tab =====
-    QComboBox *m_default_model_combo;
-    QCheckBox *m_prefer_local_models_checkbox;
-    QCheckBox *m_enable_streaming_checkbox;
-    QCheckBox *m_enable_fallback_checkbox;
+    void *m_default_model_combo;
+    void *m_prefer_local_models_checkbox;
+    void *m_enable_streaming_checkbox;
+    void *m_enable_fallback_checkbox;
     
-    QSpinBox *m_timeout_spinbox;      // Request timeout (ms)
-    QSpinBox *m_max_retries_spinbox;
-    QSpinBox *m_retry_delay_spinbox;  // Retry delay (ms)
+    void *m_timeout_spinbox;      // Request timeout (ms)
+    void *m_max_retries_spinbox;
+    void *m_retry_delay_spinbox;  // Retry delay (ms)
     
     QDoubleSpinBox *m_cost_limit_spinbox;           // Max cost per request ($)
     QDoubleSpinBox *m_cost_alert_threshold_spinbox; // Alert threshold ($)
     
     // ===== Providers Tab =====
     QTableWidget *m_providers_table;  // Status of all providers
-    QPushButton *m_check_health_button;
-    QLabel *m_health_status_label;
+    void *m_check_health_button;
+    void *m_health_status_label;
     
     // ===== Advanced Tab =====
-    QLineEdit *m_custom_endpoint_input;
-    QSpinBox *m_connection_pool_size_spinbox;
-    QCheckBox *m_enable_caching_checkbox;
-    QCheckBox *m_enable_metrics_checkbox;
-    QSpinBox *m_metrics_retention_spinbox;  // Days
+    void *m_custom_endpoint_input;
+    void *m_connection_pool_size_spinbox;
+    void *m_enable_caching_checkbox;
+    void *m_enable_metrics_checkbox;
+    void *m_metrics_retention_spinbox;  // Days
     
     // Dialog buttons
-    QPushButton *m_save_button;
-    QPushButton *m_test_all_button;
-    QPushButton *m_load_env_button;
-    QPushButton *m_export_button;
-    QPushButton *m_import_button;
-    QPushButton *m_defaults_button;
-    QPushButton *m_cancel_button;
+    void *m_save_button;
+    void *m_test_all_button;
+    void *m_load_env_button;
+    void *m_export_button;
+    void *m_import_button;
+    void *m_defaults_button;
+    void *m_cancel_button;
     
     // State
     bool m_keys_visible[6] = {false};

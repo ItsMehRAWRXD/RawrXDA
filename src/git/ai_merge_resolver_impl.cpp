@@ -484,7 +484,7 @@ void AIMergeResolver::logAudit(const std::string& action, const void*& details)
         config = m_config;
     }
     
-    if (!config.enableAuditLog || config.auditLogPath.isEmpty()) {
+    if (!config.enableAuditLog || config.auditLogPath.empty()) {
         return;
     }
     
@@ -510,7 +510,7 @@ void AIMergeResolver::logAudit(const std::string& action, const void*& details)
 void* AIMergeResolver::makeAiRequest(const std::string& endpoint, const void*& payload)
 {
     void* manager;
-    QNetworkRequest request(endpoint);
+    void* request(endpoint);
     
     Config config;
     {
@@ -518,8 +518,8 @@ void* AIMergeResolver::makeAiRequest(const std::string& endpoint, const void*& p
         config = m_config;
     }
     
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    if (!config.apiKey.isEmpty()) {
+    request.setHeader(void*::ContentTypeHeader, "application/json");
+    if (!config.apiKey.empty()) {
         request.setRawHeader("Authorization", std::string("Bearer %1").toUtf8());
     }
     
@@ -550,7 +550,7 @@ void* AIMergeResolver::makeAiRequest(const std::string& endpoint, const void*& p
 
 bool AIMergeResolver::validateResolution(const Resolution& resolution, const ConflictBlock& conflict)
 {
-    if (resolution.resolvedContent.isEmpty()) {
+    if (resolution.resolvedContent.empty()) {
         logStructured("WARN", "Empty resolution content", void*{});
         return false;
     }
@@ -571,4 +571,5 @@ bool AIMergeResolver::validateResolution(const Resolution& resolution, const Con
     
     return true;
 }
+
 

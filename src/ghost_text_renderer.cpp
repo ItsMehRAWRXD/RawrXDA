@@ -51,7 +51,7 @@ void GhostTextRenderer::initialize() {
 }
 
 void GhostTextRenderer::showGhostText(const std::string& text, const std::string& type) {
-    if (text.isEmpty()) {
+    if (text.empty()) {
         clearGhostText();
         return;
     }
@@ -69,7 +69,7 @@ void GhostTextRenderer::showGhostText(const std::string& text, const std::string
     if (type == "completion") {
         m_ghostDecoration.color = m_ghostColor;
     } else if (type == "suggestion") {
-        m_ghostDecoration.color = QColor(100, 150, 255, 180);  // Light blue
+        m_ghostDecoration.color = uint32_t(100, 150, 255, 180);  // Light blue
     } else {
         m_ghostDecoration.color = m_ghostColor;
     }
@@ -82,7 +82,7 @@ void GhostTextRenderer::showGhostText(const std::string& text, const std::string
 }
 
 void GhostTextRenderer::showMultilineGhost(const std::vector<std::string>& lines) {
-    if (lines.isEmpty()) {
+    if (lines.empty()) {
         clearGhostText();
         return;
     }
@@ -126,9 +126,9 @@ void GhostTextRenderer::showDiffPreview(int startLine, int endLine, const std::s
     diff.newText = newText;
     
     // Determine diff type
-    if (oldText.isEmpty()) {
+    if (oldText.empty()) {
         diff.type = "add";
-    } else if (newText.isEmpty()) {
+    } else if (newText.empty()) {
         diff.type = "remove";
     } else {
         diff.type = "modify";
@@ -162,7 +162,7 @@ void GhostTextRenderer::acceptGhostText() {
     clearGhostText();
 }
 
-void GhostTextRenderer::paintEvent(QPaintEvent* event) {
+void GhostTextRenderer::paintEvent(void*  event) {
     (event);
     
     QPainter painter(this);
@@ -176,9 +176,9 @@ void GhostTextRenderer::renderGhostText(QPainter& painter) {
     if (!hasGhostText()) return;
     
     QTextCursor cursor = m_editor->textCursor();
-    QPoint cursorPos = getCursorPosition();
+    void* cursorPos = getCursorPosition();
     int lineHeight = getLineHeight();
-    QFont font = getEditorFont();
+    std::string font = getEditorFont();
     
     painter.setFont(font);
     painter.setPen(m_ghostDecoration.color);
@@ -197,28 +197,28 @@ void GhostTextRenderer::renderGhostText(QPainter& painter) {
 }
 
 void GhostTextRenderer::renderDiffPreview(QPainter& painter) {
-    if (m_diffDecorations.isEmpty()) return;
+    if (m_diffDecorations.empty()) return;
     
     int lineHeight = getLineHeight();
-    QFont font = getEditorFont();
+    std::string font = getEditorFont();
     painter.setFont(font);
     
     for (const DiffDecoration& diff : m_diffDecorations) {
         QTextCursor cursor(m_editor->document()->findBlockByNumber(diff.startLine));
-        QPoint pos = getCursorPosition();
+        void* pos = getCursorPosition();
         
         // Highlight background
-        QColor bgColor;
+        uint32_t bgColor;
         if (diff.type == "add") {
             bgColor = m_addColor;
         } else if (diff.type == "remove") {
             bgColor = m_removeColor;
         } else {
-            bgColor = QColor(255, 255, 0, 100);  // Yellow for modify
+            bgColor = uint32_t(255, 255, 0, 100);  // Yellow for modify
         }
         
         int numLines = diff.endLine - diff.startLine + 1;
-        QRect highlightRect(0, pos.y(), width(), numLines * lineHeight);
+        void* highlightRect(0, pos.y(), width(), numLines * lineHeight);
         painter.fillRect(highlightRect, bgColor);
         
         // Draw diff text
@@ -238,7 +238,7 @@ bool GhostTextRenderer::eventFilter(void* obj, QEvent* event) {
     if (obj != m_editor->viewport()) return false;
     
     if (event->type() == QEvent::KeyPress) {
-        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+        void*  keyEvent = static_cast<void* >(event);
         
         if (hasGhostText()) {
             // Tab to accept
@@ -274,13 +274,13 @@ void GhostTextRenderer::updateOverlayGeometry() {
     update();
 }
 
-QPoint GhostTextRenderer::getCursorPosition() const {
-    if (!m_editor) return QPoint(0, 0);
+void* GhostTextRenderer::getCursorPosition() const {
+    if (!m_editor) return void*(0, 0);
     
     QTextCursor cursor = m_editor->textCursor();
-    QRect cursorRect = m_editor->cursorRect(cursor);
+    void* cursorRect = m_editor->cursorRect(cursor);
     
-    return QPoint(cursorRect.x(), cursorRect.y() + cursorRect.height());
+    return void*(cursorRect.x(), cursorRect.y() + cursorRect.height());
 }
 
 int GhostTextRenderer::getLineHeight() const {
@@ -290,8 +290,8 @@ int GhostTextRenderer::getLineHeight() const {
     return fm.lineSpacing();
 }
 
-QFont GhostTextRenderer::getEditorFont() const {
-    if (!m_editor) return QFont("Consolas", 10);
+std::string GhostTextRenderer::getEditorFont() const {
+    if (!m_editor) return std::string("Consolas", 10);
     return m_editor->font();
 }
 
@@ -317,4 +317,5 @@ void GhostTextRenderer::fadeOut() {
 }
 
 } // namespace RawrXD
+
 

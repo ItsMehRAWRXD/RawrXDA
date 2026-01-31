@@ -56,8 +56,8 @@ bool GGUFServer::start(quint16 port) {
     
     // Start health monitoring
     m_healthTimer->start(HEALTH_CHECK_INTERVAL_MS);
-    
-    
+
+
     serverStarted(m_port);
     return true;
 }
@@ -125,7 +125,7 @@ quint16 GGUFServer::port() const {
 
 bool GGUFServer::isServerRunningOnPort(quint16 port) {
     void* testSocket;
-    testSocket.connectToHost(QHostAddress::LocalHost, port);
+    testSocket.connectToHost(std::string::LocalHost, port);
     
     if (testSocket.waitForConnected(500)) {
         // Send a simple HTTP GET request to check if it's our server
@@ -168,7 +168,7 @@ void GGUFServer::onNewConnection() {
 }
 
 void GGUFServer::onReadyRead() {
-    void** socket = qobject_cast<void**>(sender());
+// REMOVED_QT:     void** socket = qobject_cast<void**>(sender());
     if (!socket) return;
     
     // Append incoming data
@@ -221,7 +221,7 @@ void GGUFServer::onReadyRead() {
 }
 
 void GGUFServer::onDisconnected() {
-    void** socket = qobject_cast<void**>(sender());
+// REMOVED_QT:     void** socket = qobject_cast<void**>(sender());
     if (!socket) return;
     
     m_pendingRequests.remove(socket);
@@ -235,7 +235,7 @@ void GGUFServer::onHealthCheck() {
 }
 
 bool GGUFServer::tryBindPort(quint16 port) {
-    if (m_server->listen(QHostAddress::Any, port)) {
+    if (m_server->listen(std::string::Any, port)) {
         return true;
     }
     return false;
@@ -372,7 +372,7 @@ GGUFServer::HttpRequest GGUFServer::parseHttpRequest(const std::vector<uint8_t>&
     std::string data = std::string::fromUtf8(rawData);
     std::vector<std::string> lines = data.split("\r\n");
     
-    if (lines.isEmpty()) {
+    if (lines.empty()) {
         return request;
     }
     
@@ -399,7 +399,7 @@ GGUFServer::HttpRequest GGUFServer::parseHttpRequest(const std::vector<uint8_t>&
     // Parse headers
     int i = 1;
     for (; i < lines.size(); ++i) {
-        if (lines[i].isEmpty()) {
+        if (lines[i].empty()) {
             ++i;
             break;
         }
@@ -476,7 +476,7 @@ void GGUFServer::handleRequest(void** socket, const HttpRequest& request) {
     
     sendResponse(socket, response);
     
-    qint64 duration = timer.elapsed();
+    int64_t duration = timer.elapsed();
     bool success = (response.statusCode >= 200 && response.statusCode < 300);
     
     if (success) {
@@ -530,7 +530,7 @@ void GGUFServer::handleGenerateRequest(const HttpRequest& request, HttpResponse&
     std::string prompt = extractJsonField(request.body, "prompt");
     std::string model = extractJsonField(request.body, "model");
     
-    if (prompt.isEmpty()) {
+    if (prompt.empty()) {
         response.statusCode = 400;
         response.statusText = "Bad Request";
         response.body = "{\"error\":\"Missing prompt field\"}";
@@ -552,7 +552,7 @@ void GGUFServer::handleGenerateRequest(const HttpRequest& request, HttpResponse&
     
     // Ollama-compatible response
     void* responseObj;
-    responseObj["model"] = model.isEmpty() ? "gguf-model" : model;
+    responseObj["model"] = model.empty() ? "gguf-model" : model;
     responseObj["created_at"] = getCurrentTimestamp();
     responseObj["response"] = generated;
     responseObj["done"] = true;
@@ -566,7 +566,7 @@ void GGUFServer::handleChatCompletionsRequest(const HttpRequest& request, HttpRe
     std::string model = extractJsonField(request.body, "model");
     void* messages = extractJsonArray(request.body, "messages");
     
-    if (messages.isEmpty()) {
+    if (messages.empty()) {
         response.statusCode = 400;
         response.statusText = "Bad Request";
         response.body = "{\"error\":\"Missing messages field\"}";
@@ -702,11 +702,11 @@ void GGUFServer::handleHealthRequest(HttpResponse& response) {
     
     void* responseObj;
     responseObj["status"] = m_isRunning ? "ok" : "stopped";
-    responseObj["uptime_seconds"] = static_cast<qint64>(stats.uptimeSeconds);
-    responseObj["total_requests"] = static_cast<qint64>(stats.totalRequests);
-    responseObj["successful_requests"] = static_cast<qint64>(stats.successfulRequests);
-    responseObj["failed_requests"] = static_cast<qint64>(stats.failedRequests);
-    responseObj["tokens_generated"] = static_cast<qint64>(stats.totalTokensGenerated);
+    responseObj["uptime_seconds"] = static_cast<int64_t>(stats.uptimeSeconds);
+    responseObj["total_requests"] = static_cast<int64_t>(stats.totalRequests);
+    responseObj["successful_requests"] = static_cast<int64_t>(stats.successfulRequests);
+    responseObj["failed_requests"] = static_cast<int64_t>(stats.failedRequests);
+    responseObj["tokens_generated"] = static_cast<int64_t>(stats.totalTokensGenerated);
     responseObj["model_loaded"] = (m_engine && m_engine->isModelLoaded());
     
     if (m_engine && m_engine->isModelLoaded()) {
@@ -733,4 +733,6 @@ void GGUFServer::handleCorsPreflightRequest(HttpResponse& response) {
     response.statusText = "No Content";
     // CORS headers already added in handleRequest
 }
+
+
 

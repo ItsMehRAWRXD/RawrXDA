@@ -20,15 +20,15 @@ TokenizerSelector::~TokenizerSelector()
 
 void TokenizerSelector::setupUI()
 {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
 
     // ===== Language & Tokenizer Selection =====
-    QGroupBox* selectionGroup = new QGroupBox("Tokenizer Selection", this);
-    QVBoxLayout* selectionLayout = new QVBoxLayout(selectionGroup);
+    void* selectionGroup = new void("Tokenizer Selection", this);
+    void* selectionLayout = new void(selectionGroup);
 
-    QHBoxLayout* languageLayout = new QHBoxLayout();
-    languageLayout->addWidget(new QLabel("Language:"));
-    m_languageCombo = new QComboBox(this);
+    void* languageLayout = new void();
+    languageLayout->addWidget(new void("Language:"));
+    m_languageCombo = new void(this);
     m_languageCombo->addItem("English", static_cast<int>(Language::English));
     m_languageCombo->addItem("Chinese", static_cast<int>(Language::Chinese));
     m_languageCombo->addItem("Japanese", static_cast<int>(Language::Japanese));
@@ -37,95 +37,95 @@ void TokenizerSelector::setupUI()
     languageLayout->addWidget(m_languageCombo);
     selectionLayout->addLayout(languageLayout);
 
-    QHBoxLayout* typeLayout = new QHBoxLayout();
-    typeLayout->addWidget(new QLabel("Tokenizer Type:"));
-    m_tokenizerTypeCombo = new QComboBox(this);
+    void* typeLayout = new void();
+    typeLayout->addWidget(new void("Tokenizer Type:"));
+    m_tokenizerTypeCombo = new void(this);
     typeLayout->addWidget(m_tokenizerTypeCombo);
     selectionLayout->addLayout(typeLayout);
 
     mainLayout->addWidget(selectionGroup);
 
     // ===== Configuration Group =====
-    QGroupBox* configGroup = new QGroupBox("Configuration", this);
-    QVBoxLayout* configLayout = new QVBoxLayout(configGroup);
+    void* configGroup = new void("Configuration", this);
+    void* configLayout = new void(configGroup);
 
-    QHBoxLayout* vocabLayout = new QHBoxLayout();
-    vocabLayout->addWidget(new QLabel("Vocabulary Size:"));
-    m_vocabSizeSpinBox = new QSpinBox(this);
+    void* vocabLayout = new void();
+    vocabLayout->addWidget(new void("Vocabulary Size:"));
+    m_vocabSizeSpinBox = nullptr;
     m_vocabSizeSpinBox->setMinimum(1000);
     m_vocabSizeSpinBox->setMaximum(1000000);
     m_vocabSizeSpinBox->setValue(30522);  // BERT default
     vocabLayout->addWidget(m_vocabSizeSpinBox);
     configLayout->addLayout(vocabLayout);
 
-    QHBoxLayout* freqLayout = new QHBoxLayout();
-    freqLayout->addWidget(new QLabel("Min Frequency:"));
-    m_minFrequencySpinBox = new QSpinBox(this);
+    void* freqLayout = new void();
+    freqLayout->addWidget(new void("Min Frequency:"));
+    m_minFrequencySpinBox = nullptr;
     m_minFrequencySpinBox->setMinimum(1);
     m_minFrequencySpinBox->setMaximum(100);
     m_minFrequencySpinBox->setValue(2);
     freqLayout->addWidget(m_minFrequencySpinBox);
     configLayout->addLayout(freqLayout);
 
-    QHBoxLayout* charCoverageLayout = new QHBoxLayout();
-    charCoverageLayout->addWidget(new QLabel("Character Coverage (for multilingual):"));
-    m_characterCoverageLabel = new QLabel("0.9995");
+    void* charCoverageLayout = new void();
+    charCoverageLayout->addWidget(new void("Character Coverage (for multilingual):"));
+    m_characterCoverageLabel = new void("0.9995");
     charCoverageLayout->addWidget(m_characterCoverageLabel);
     configLayout->addLayout(charCoverageLayout);
 
-    m_lowercaseCheckBox = new QCheckBox("Lowercase Tokens", this);
+    m_lowercaseCheckBox = nullptr;
     m_lowercaseCheckBox->setChecked(true);
     configLayout->addWidget(m_lowercaseCheckBox);
 
-    m_addSpecialTokensCheckBox = new QCheckBox("Add Special Tokens", this);
+    m_addSpecialTokensCheckBox = nullptr;
     m_addSpecialTokensCheckBox->setChecked(true);
     configLayout->addWidget(m_addSpecialTokensCheckBox);
 
-    QLabel* specialTokensLabel = new QLabel("Special Tokens JSON:");
+    void* specialTokensLabel = new void("Special Tokens JSON:");
     configLayout->addWidget(specialTokensLabel);
-    m_specialTokensEdit = new QTextEdit(this);
+    m_specialTokensEdit = new void(this);
     m_specialTokensEdit->setMaximumHeight(100);
     m_specialTokensEdit->setText(R"({"cls": "[CLS]", "sep": "[SEP]", "pad": "[PAD]", "unk": "[UNK]"})");
     configLayout->addWidget(m_specialTokensEdit);
 
-    QHBoxLayout* maxTokenLayout = new QHBoxLayout();
-    maxTokenLayout->addWidget(new QLabel("Max Token Length:"));
-    m_maxTokenLengthSpinBox = new QSpinBox(this);
+    void* maxTokenLayout = new void();
+    maxTokenLayout->addWidget(new void("Max Token Length:"));
+    m_maxTokenLengthSpinBox = nullptr;
     m_maxTokenLengthSpinBox->setMinimum(1);
     m_maxTokenLengthSpinBox->setMaximum(512);
     m_maxTokenLengthSpinBox->setValue(200);
     maxTokenLayout->addWidget(m_maxTokenLengthSpinBox);
     configLayout->addLayout(maxTokenLayout);
 
-    m_subwordRegularizationCheckBox = new QCheckBox("Enable Subword Regularization", this);
+    m_subwordRegularizationCheckBox = nullptr;
     m_subwordRegularizationCheckBox->setChecked(false);
     configLayout->addWidget(m_subwordRegularizationCheckBox);
 
     mainLayout->addWidget(configGroup);
 
     // ===== Metrics Display =====
-    QGroupBox* metricsGroup = new QGroupBox("Tokenizer Metrics", this);
-    QVBoxLayout* metricsLayout = new QVBoxLayout(metricsGroup);
-    m_metricsLabel = new QLabel("Vocabulary Size: 30522 | Encoding: utf-8", this);
+    void* metricsGroup = new void("Tokenizer Metrics", this);
+    void* metricsLayout = new void(metricsGroup);
+    m_metricsLabel = new void("Vocabulary Size: 30522 | Encoding: utf-8", this);
     m_metricsLabel->setWordWrap(true);
     metricsLayout->addWidget(m_metricsLabel);
     mainLayout->addWidget(metricsGroup);
 
     // ===== Preview =====
-    QGroupBox* previewGroup = new QGroupBox("Tokenization Preview", this);
-    QVBoxLayout* previewLayout = new QVBoxLayout(previewGroup);
+    void* previewGroup = new void("Tokenization Preview", this);
+    void* previewLayout = new void(previewGroup);
 
-    previewLayout->addWidget(new QLabel("Text to Tokenize:"));
-    m_previewEdit = new QTextEdit(this);
+    previewLayout->addWidget(new void("Text to Tokenize:"));
+    m_previewEdit = new void(this);
     m_previewEdit->setMaximumHeight(60);
     m_previewEdit->setText("The quick brown fox jumps over the lazy dog.");
     previewLayout->addWidget(m_previewEdit);
 
-    QPushButton* previewButton = new QPushButton("Preview Tokenization", this);
+    void* previewButton = new void("Preview Tokenization", this);
     previewLayout->addWidget(previewButton);
 
-    previewLayout->addWidget(new QLabel("Tokens:"));
-    m_tokensEdit = new QTextEdit(this);
+    previewLayout->addWidget(new void("Tokens:"));
+    m_tokensEdit = new void(this);
     m_tokensEdit->setReadOnly(true);
     m_tokensEdit->setMaximumHeight(60);
     previewLayout->addWidget(m_tokensEdit);
@@ -133,14 +133,14 @@ void TokenizerSelector::setupUI()
     mainLayout->addWidget(previewGroup);
 
     // ===== Buttons =====
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     buttonLayout->addStretch();
 
-    QPushButton* okButton = new QPushButton("OK", this);
+    void* okButton = new void("OK", this);
 // Qt connect removed
     buttonLayout->addWidget(okButton);
 
-    QPushButton* cancelButton = new QPushButton("Cancel", this);
+    void* cancelButton = new void("Cancel", this);
 // Qt connect removed
     buttonLayout->addWidget(cancelButton);
 
@@ -329,7 +329,7 @@ std::vector<std::string> TokenizerSelector::previewTokenization(const std::strin
         std::string cleanWord = word;
         cleanWord.remove(std::regex(R"([.,!?;:\-\(\)])"));
 
-        if (!cleanWord.isEmpty()) {
+        if (!cleanWord.empty()) {
             tokens.push_back(cleanWord);
         }
     }
@@ -364,4 +364,5 @@ void TokenizerSelector::accept()
     tokenizerSelected(m_config);
     void::accept();
 }
+
 

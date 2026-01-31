@@ -92,7 +92,7 @@ std::string detectHeaderLanguage(const std::string& path) {
 }
 
 std::string languageFromExtension(const std::string& ext, const std::string& path) {
-    if (ext == QLatin1String("h")) {
+    if (ext == "h") {
         return detectHeaderLanguage(path);
     }
     auto it = kExtensionToLanguage.constFind(ext);

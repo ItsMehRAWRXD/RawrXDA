@@ -16,7 +16,7 @@ class AICodeAssistant;
  * - Monitoring suggestion latency
  * - Applying suggestions to editor
  */
-class AICodeAssistantPanel : public QDockWidget {
+class AICodeAssistantPanel : public void {
 
 public:
     explicit AICodeAssistantPanel(void *parent = nullptr);
@@ -52,27 +52,27 @@ private:
     AICodeAssistant *assistant_;
     
     // UI Components
-    QLabel *status_indicator_;
-    QLabel *model_label_;
+    void *status_indicator_;
+    void *model_label_;
     
-    QComboBox *suggestion_type_selector_;
-    QTextEdit *original_code_display_;
-    QTextEdit *suggestion_display_;
-    QTextEdit *explanation_display_;
+    void *suggestion_type_selector_;
+    void *original_code_display_;
+    void *suggestion_display_;
+    void *explanation_display_;
     
-    QSlider *temperature_slider_;
-    QLabel *temperature_value_label_;
+    void *temperature_slider_;
+    void *temperature_value_label_;
     
-    QSlider *max_tokens_slider_;
-    QLabel *max_tokens_value_label_;
+    void *max_tokens_slider_;
+    void *max_tokens_value_label_;
     
-    QProgressBar *progress_bar_;
-    QLabel *latency_label_;
+    void *progress_bar_;
+    void *latency_label_;
     
-    QPushButton *apply_button_;
-    QPushButton *clear_button_;
-    QPushButton *copy_button_;
-    QPushButton *export_button_;
+    void *apply_button_;
+    void *clear_button_;
+    void *copy_button_;
+    void *export_button_;
     
     QListWidget *suggestion_history_;
     

@@ -23,8 +23,8 @@ struct AgentValidation {
 
 // Byte-level pattern matching result
 struct PatternMatch {
-    qint64 position = -1;
-    qint64 length = 0;
+    int64_t position = -1;
+    int64_t length = 0;
     std::vector<uint8_t> matchedData;
     
     bool isValid() const { return position >= 0; }
@@ -89,7 +89,7 @@ public:
     
     // Zero-copy byte patching (production-ready)
     std::vector<uint8_t> bytePatchInPlace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement);
-    PatternMatch findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, qint64 startPos = 0) const;
+    PatternMatch findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, int64_t startPos = 0) const;
     std::vector<uint8_t> findAndReplace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement);
     
     // Boyer-Moore pattern matching (high-performance)
@@ -113,14 +113,14 @@ public:
     
     // Statistics
     struct Stats {
-        qint64 requestsProcessed = 0;
-        qint64 responsesProcessed = 0;
-        qint64 chunksProcessed = 0;
-        qint64 bytesPatched = 0;
-        qint64 patchesApplied = 0;
-        qint64 validationFailures = 0;
-        qint64 correctionsApplied = 0;
-        qint64 streamsTerminated = 0;
+        int64_t requestsProcessed = 0;
+        int64_t responsesProcessed = 0;
+        int64_t chunksProcessed = 0;
+        int64_t bytesPatched = 0;
+        int64_t patchesApplied = 0;
+        int64_t validationFailures = 0;
+        int64_t correctionsApplied = 0;
+        int64_t streamsTerminated = 0;
         double avgProcessingTimeMs = 0.0;
     };
     
@@ -145,8 +145,8 @@ public:
     PatchResult overwriteTokenBuffer(const std::vector<uint8_t>& tokenData);
     PatchResult modifyLogitsBatch(const std::unordered_map<size_t, float>& logitModifications);
     
-    qint64 searchInRequestBuffer(const std::vector<uint8_t>& pattern) const;
-    qint64 searchInResponseBuffer(const std::vector<uint8_t>& pattern) const;
+    int64_t searchInRequestBuffer(const std::vector<uint8_t>& pattern) const;
+    int64_t searchInResponseBuffer(const std::vector<uint8_t>& pattern) const;
     
     PatchResult swapBufferRegions(size_t region1Offset, size_t region2Offset, size_t size);
     PatchResult cloneBufferRegion(size_t sourceOffset, size_t destOffset, size_t size);
@@ -161,8 +161,8 @@ public:
 
 private:
     // Boyer-Moore preprocessing
-    std::unordered_map<quint8, qint64> buildBadCharTable(const std::vector<uint8_t>& pattern) const;
-    std::vector<qint64> buildGoodSuffixTable(const std::vector<uint8_t>& pattern) const;
+    std::unordered_map<uint8_t, int64_t> buildBadCharTable(const std::vector<uint8_t>& pattern) const;
+    std::vector<int64_t> buildGoodSuffixTable(const std::vector<uint8_t>& pattern) const;
     
     // Agent validation helpers
     bool checkForbiddenPatterns(const std::vector<uint8_t>& output, std::vector<std::string>& violations);
@@ -179,6 +179,7 @@ private:
     int m_streamTerminationPoint = -1;
     int m_currentChunkIndex = 0;
     
-    QElapsedTimer m_timer;
+    std::chrono::steady_clock::time_point m_timer;
 };
+
 

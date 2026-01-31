@@ -58,7 +58,7 @@ extern int g_ggml_sycl_prioritize_dmmv;
 #define GGML_SYCL_DEBUG(...)              \
     do {                                  \
         if (UNLIKELY(g_ggml_sycl_debug))  \
-            fprintf(stderr, __VA_ARGS__); \
+             \
     } while (0)
 
 #define CHECK_TRY_ERROR(expr)                                            \
@@ -67,9 +67,7 @@ extern int g_ggml_sycl_prioritize_dmmv;
       expr;                                                              \
       return dpct::success;                                              \
     } catch (std::exception const& e) {                                  \
-      std::cerr << e.what() << "\nException caught at file:" << __FILE__ \
-                << ", line:" << __LINE__ << ", func:" << __func__        \
-                << std::endl;                                            \
+                                                  \
       return dpct::default_error;                                        \
     }                                                                    \
   }()
@@ -121,8 +119,8 @@ static void crash() {
     const char* file,
     const int line,
     const char* msg) {
-  fprintf(stderr, "SYCL error: %s: %s\n", stmt, msg);
-  fprintf(stderr, "  in function %s at %s:%d\n", func, file, line);
+
+
   GGML_ABORT("SYCL error");
 }
 
@@ -182,8 +180,7 @@ inline dpct::err0 ggml_sycl_set_device(const int device) try {
 
   return CHECK_TRY_ERROR(dpct::select_device(device));
 } catch (sycl::exception const& exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
-            << ", line:" << __LINE__ << std::endl;
+  
   crash();
   std::exit(1);
 }

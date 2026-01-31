@@ -24,7 +24,7 @@ public:
         
         try {
             GenerationResult result = 
-                m_router->generate(m_prompt, m_model.isEmpty() ? "default" : m_model);
+                m_router->generate(m_prompt, m_model.empty() ? "default" : m_model);
             
             m_result = result;
             m_latency = timer.elapsed();
@@ -40,7 +40,7 @@ public:
     GenerationResult m_result;
     std::string m_error;
     bool m_success = false;
-    qint64 m_latency = 0;
+    int64_t m_latency = 0;
 
 private:
     ModelInterface* m_router;
@@ -91,7 +91,7 @@ bool ModelRouterAdapter::initialize(const std::string& config_file_path)
         
         // Get available models
         auto models = m_router->getAvailableModels();
-        if (models.isEmpty()) {
+        if (models.empty()) {
             m_last_error = "No models available after loading configuration";
             m_router.reset();
             return false;
@@ -235,7 +235,7 @@ std::string ModelRouterAdapter::selectFastestModel()
 
 void ModelRouterAdapter::setDefaultModel(const std::string& model_name)
 {
-    if (model_name.isEmpty()) return;
+    if (model_name.empty()) return;
     
     auto models = getAvailableModels();
     if (!models.contains(model_name)) {
@@ -254,13 +254,13 @@ std::string ModelRouterAdapter::generate(const std::string& prompt, const std::s
         return std::string();
     }
     
-    if (prompt.isEmpty()) {
+    if (prompt.empty()) {
         m_last_error = "Prompt cannot be empty";
         generationError(m_last_error);
         return std::string();
     }
     
-    std::string model = model_name.isEmpty() ? m_active_model : model_name;
+    std::string model = model_name.empty() ? m_active_model : model_name;
     
     try {
         generationStarted(model);
@@ -271,7 +271,7 @@ std::string ModelRouterAdapter::generate(const std::string& prompt, const std::s
         
         auto result = m_router->generate(prompt, model);
         
-        qint64 elapsed = timer.elapsed();
+        int64_t elapsed = timer.elapsed();
         
         if (!result.success) {
             m_last_error = result.error;
@@ -329,7 +329,7 @@ void ModelRouterAdapter::generateAsync(const std::string& prompt, const std::str
         return;
     }
     
-    std::string model = model_name.isEmpty() ? m_active_model : model_name;
+    std::string model = model_name.empty() ? m_active_model : model_name;
     
     // Create and start generation thread
     if (m_generation_thread) {
@@ -353,7 +353,7 @@ void ModelRouterAdapter::generateStream(const std::string& prompt, const std::st
         return;
     }
     
-    std::string model = model_name.isEmpty() ? m_active_model : model_name;
+    std::string model = model_name.empty() ? m_active_model : model_name;
     
     try {
         generationStarted(model);
@@ -388,7 +388,7 @@ double ModelRouterAdapter::getAverageLatency(const std::string& model_name) cons
     if (!m_router) return 0.0;
     
     try {
-        std::string model = model_name.isEmpty() ? m_active_model : model_name;
+        std::string model = model_name.empty() ? m_active_model : model_name;
         return m_router->getAverageLatency(model);
     } catch (const std::exception& e) {
                    << std::string::fromStdString(e.what());
@@ -401,7 +401,7 @@ int ModelRouterAdapter::getSuccessRate(const std::string& model_name) const
     if (!m_router) return 0;
     
     try {
-        std::string model = model_name.isEmpty() ? m_active_model : model_name;
+        std::string model = model_name.empty() ? m_active_model : model_name;
         return m_router->getSuccessRate(model);
     } catch (const std::exception& e) {
                    << std::string::fromStdString(e.what());

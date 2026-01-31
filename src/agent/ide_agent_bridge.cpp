@@ -47,7 +47,7 @@ void IDEAgentBridge::initialize(const std::string& endpoint,
                                const std::string& apiKey)
 {
     m_invoker->setLLMBackend(backend, endpoint, apiKey);
-    std::cout << "[IDEAgentBridge] Initialized with backend: " << backend << std::endl;
+    
 }
 
 void IDEAgentBridge::setProjectRoot(const std::string& root)
@@ -55,7 +55,7 @@ void IDEAgentBridge::setProjectRoot(const std::string& root)
     m_projectRoot = root;
     // Update executor context
     // m_executor->setContext(...) if available
-    std::cout << "[IDEAgentBridge] Project root set to: " << root << std::endl;
+    
 }
 
 void IDEAgentBridge::executeWish(const std::string& wish, bool requireApproval)
@@ -79,7 +79,7 @@ void IDEAgentBridge::executeWish(const std::string& wish, bool requireApproval)
     params.availableTools = {"search_files", "file_edit", "run_build",
                              "execute_tests", "commit_git", "invoke_command"};
 
-    std::cout << "[IDEAgentBridge] Executing wish: " << wish << std::endl;
+
     m_invoker->invokeAsync(params);
 }
 
@@ -111,9 +111,8 @@ void IDEAgentBridge::handlePlanGenerated(const LLMResponse& response)
 void IDEAgentBridge::approveExecution()
 {
     if (m_lastPlanJson.empty()) return;
-    
-    std::cout << "[IDEAgentBridge] Approving execution..." << std::endl;
-    
+
+
     // Convert string plan back to json or pass to executor
     json plan = json::parse(m_lastPlanJson);
     
@@ -137,7 +136,7 @@ void IDEAgentBridge::approveExecution()
 void IDEAgentBridge::rejectExecution()
 {
     m_isExecuting = false;
-    std::cout << "[IDEAgentBridge] Execution rejected." << std::endl;
+    
     m_lastPlanJson.clear();
 }
 
@@ -146,7 +145,7 @@ void IDEAgentBridge::cancelExecution()
     // m_invoker->cancel();
     // m_executor->cancel();
     m_isExecuting = false;
-    std::cout << "[IDEAgentBridge] Cancelled." << std::endl;
+    
 }
 
 void IDEAgentBridge::setDryRun(bool dryRun)

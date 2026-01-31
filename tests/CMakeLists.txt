@@ -8,7 +8,6 @@ cmake_minimum_required(VERSION 3.16)
 enable_testing()
 
 # Find required packages
-find_package(Qt5 COMPONENTS 
     Core 
     Gui 
     Sql 
@@ -39,10 +38,6 @@ target_link_libraries(voice_processor_test
     PRIVATE
         gtest
         gtest_main
-        Qt5::Core
-        Qt5::Multimedia
-        Qt5::Network
-        Qt5::Concurrent
 )
 
 target_include_directories(voice_processor_test
@@ -64,9 +59,6 @@ target_link_libraries(ai_merge_resolver_test
     PRIVATE
         gtest
         gtest_main
-        Qt5::Core
-        Qt5::Network
-        Qt5::Concurrent
 )
 
 target_include_directories(ai_merge_resolver_test
@@ -88,8 +80,6 @@ target_link_libraries(semantic_diff_analyzer_test
     PRIVATE
         gtest
         gtest_main
-        Qt5::Core
-        Qt5::Concurrent
 )
 
 target_include_directories(semantic_diff_analyzer_test
@@ -111,8 +101,6 @@ target_link_libraries(zero_retention_manager_test
     PRIVATE
         gtest
         gtest_main
-        Qt5::Core
-        Qt5::Concurrent
 )
 
 target_include_directories(zero_retention_manager_test
@@ -134,8 +122,6 @@ target_link_libraries(sandboxed_terminal_test
     PRIVATE
         gtest
         gtest_main
-        Qt5::Core
-        Qt5::Concurrent
 )
 
 target_include_directories(sandboxed_terminal_test
@@ -155,10 +141,6 @@ add_executable(model_registry_test
 
 target_link_libraries(model_registry_test
     PRIVATE
-        Qt5::Test
-        Qt5::Core
-        Qt5::Gui
-        Qt5::Sql
 )
 
 target_include_directories(model_registry_test

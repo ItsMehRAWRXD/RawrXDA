@@ -20,7 +20,7 @@ public:
     void executePlan();
     void addTask(const Task& task);
     std::vector<Task> getTasks() const;
-    
+
 
     void planCreated(const std::string& plan);
     void taskStatusChanged(const std::string& taskId, const std::string& status);

@@ -38,7 +38,7 @@ BenchmarkResult benchmarkModel(const std::string& model_path, int num_tokens = 2
         // Measure load time
         auto load_start = std::chrono::high_resolution_clock::now();
         if (!engine.loadModel(std::string::fromStdString(model_path))) {
-            std::cerr << "Failed to load model: " << model_path << std::endl;
+            
             return result;
         }
         auto load_end = std::chrono::high_resolution_clock::now();
@@ -64,7 +64,7 @@ BenchmarkResult benchmarkModel(const std::string& model_path, int num_tokens = 2
         result.success = true;
         
     } catch (const std::exception& e) {
-        std::cerr << "Exception benchmarking model: " << e.what() << std::endl;
+        
     }
     
     return result;
@@ -72,7 +72,7 @@ BenchmarkResult benchmarkModel(const std::string& model_path, int num_tokens = 2
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: multi_model_benchmark <model_path> [num_tokens]" << std::endl;
+        
         return 1;
     }
 
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     output["avg_latency_ms"] = result.avg_latency_ms;
 
     Json::StreamWriterBuilder writer;
-    std::cout << Json::writeString(writer, output);
+
 
     return result.success ? 0 : 1;
 }

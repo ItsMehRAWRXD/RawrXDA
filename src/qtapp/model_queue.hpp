@@ -25,7 +25,7 @@ public:
     };
 
     struct Request {
-        qint64 id;
+        int64_t id;
         std::string modelPath;
         std::string prompt;
         int maxTokens;
@@ -53,14 +53,14 @@ public:
      * @param priority Request priority
      * @return Request ID for tracking
      */
-    qint64 enqueue(const std::string& modelPath, const std::string& prompt, 
+    int64_t enqueue(const std::string& modelPath, const std::string& prompt, 
                    int maxTokens = 256, float temperature = 0.7f,
                    Priority priority = NORMAL);
 
     /**
      * @brief Cancel a pending request
      */
-    bool cancelRequest(qint64 requestId);
+    bool cancelRequest(int64_t requestId);
 
     /**
      * @brief Get queue status
@@ -83,17 +83,17 @@ public:
      */
     void setMaxConcurrentModels(int max);
 
-    void requestStarted(qint64 requestId);
-    void requestCompleted(qint64 requestId, const std::string& result);
-    void requestFailed(qint64 requestId, const std::string& error);
+    void requestStarted(int64_t requestId);
+    void requestCompleted(int64_t requestId, const std::string& result);
+    void requestFailed(int64_t requestId, const std::string& error);
     void queueEmpty();
     void modelLoaded(const std::string& modelPath);
     void modelUnloaded(const std::string& modelPath);
 
 private:
     void processQueue();
-    void onInferenceComplete(qint64 reqId, const std::string& result);
-    void onInferenceError(qint64 reqId, const std::string& error);
+    void onInferenceComplete(int64_t reqId, const std::string& result);
+    void onInferenceError(int64_t reqId, const std::string& error);
 
 private:
     struct ModelSlot {
@@ -108,15 +108,16 @@ private:
     InferenceEngine* getOrLoadModel(const std::string& modelPath);
 
     mutable std::mutex m_mutex;
-    QWaitCondition m_condition;
+    std::condition_variable m_condition;
     QQueue<Request> m_queue;
-    std::unordered_map<qint64, Request> m_activeRequests;
+    std::unordered_map<int64_t, Request> m_activeRequests;
     std::vector<ModelSlot> m_slots;
     
-    qint64 m_nextRequestId = 1;
+    int64_t m_nextRequestId = 1;
     int m_maxConcurrentModels = 2;
     bool m_running = false;
     
     std::thread* m_processingThread = nullptr;
 };
+
 

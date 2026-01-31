@@ -472,10 +472,6 @@ private:
     void printTestSummary() {
 
 
-        LOG_INFO("Passed:       " + std::to_string(m_testsPassed) + " (" + 
-                 std::to_string(m_testsRun > 0 ? (m_testsPassed * 100 / m_testsRun) : 0) + "%)");
-
-
         if (m_testsFailed > 0) {
             LOG_WARNING("Failed tests:");
             for (const auto& result : m_results) {

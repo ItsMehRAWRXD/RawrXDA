@@ -11,39 +11,39 @@
 AutonomousSuggestionWidget::AutonomousSuggestionWidget(void *parent)
     : void(parent) {
     
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     
     // Suggestion list
-    QLabel* titleLabel = new QLabel("AI Suggestions");
+    void* titleLabel = new void("AI Suggestions");
     titleLabel->setStyleSheet("font-weight: bold; font-size: 12pt;");
     mainLayout->addWidget(titleLabel);
     
-    suggestionList = new QListWidget(this);
+    suggestionList = nullptr;
     mainLayout->addWidget(suggestionList);
     
     // Details view
-    QGroupBox* detailsGroup = new QGroupBox("Details");
-    QVBoxLayout* detailsLayout = new QVBoxLayout(detailsGroup);
+    void* detailsGroup = new void("Details");
+    void* detailsLayout = new void(detailsGroup);
     
-    detailsView = new QTextEdit(this);
+    detailsView = new void(this);
     detailsView->setReadOnly(true);
     detailsView->setMaximumHeight(200);
     detailsLayout->addWidget(detailsView);
     
-    confidenceLabel = new QLabel("Confidence: N/A");
+    confidenceLabel = new void("Confidence: N/A");
     detailsLayout->addWidget(confidenceLabel);
     
     mainLayout->addWidget(detailsGroup);
     
     // Action buttons
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     
-    acceptButton = new QPushButton("✓ Accept");
+    acceptButton = new void("✓ Accept");
     acceptButton->setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;");
     acceptButton->setEnabled(false);
     buttonLayout->addWidget(acceptButton);
     
-    rejectButton = new QPushButton("✗ Reject");
+    rejectButton = new void("✗ Reject");
     rejectButton->setStyleSheet("background-color: #f44336; color: white; font-weight: bold;");
     rejectButton->setEnabled(false);
     buttonLayout->addWidget(rejectButton);
@@ -73,21 +73,21 @@ void AutonomousSuggestionWidget::addSuggestion(const AutonomousSuggestion& sugge
 
         ;
     
-    QListWidgetItem* item = new QListWidgetItem(itemText);
+    QListWidgetItem* item = nullptr;
     item->setData(//UserRole, suggestion.suggestionId);
     
     // Color code by confidence
     if (suggestion.confidence >= 0.9) {
-        item->setBackground(QColor(200, 255, 200)); // Light green
+        item->setBackground(uint32_t(200, 255, 200)); // Light green
     } else if (suggestion.confidence >= 0.7) {
-        item->setBackground(QColor(255, 255, 200)); // Light yellow
+        item->setBackground(uint32_t(255, 255, 200)); // Light yellow
     } else {
-        item->setBackground(QColor(255, 230, 230)); // Light red
+        item->setBackground(uint32_t(255, 230, 230)); // Light red
     }
     
     suggestionList->addItem(item);
-    
-    std::cout << "[SuggestionWidget] Added suggestion: " << suggestion.type.toStdString() << std::endl;
+
+
 }
 
 void AutonomousSuggestionWidget::clearSuggestions() {
@@ -128,7 +128,7 @@ void AutonomousSuggestionWidget::onSuggestionClicked(QListWidgetItem* item) {
 }
 
 void AutonomousSuggestionWidget::onAcceptClicked() {
-    if (currentSuggestionId.isEmpty()) {
+    if (currentSuggestionId.empty()) {
         return;
     }
     
@@ -151,7 +151,7 @@ void AutonomousSuggestionWidget::onAcceptClicked() {
 }
 
 void AutonomousSuggestionWidget::onRejectClicked() {
-    if (currentSuggestionId.isEmpty()) {
+    if (currentSuggestionId.empty()) {
         return;
     }
     
@@ -180,41 +180,41 @@ void AutonomousSuggestionWidget::onRejectClicked() {
 SecurityAlertWidget::SecurityAlertWidget(void *parent)
     : void(parent) {
     
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     
     // Title
-    QLabel* titleLabel = new QLabel("🔒 Security Alerts");
+    void* titleLabel = new void("🔒 Security Alerts");
     titleLabel->setStyleSheet("font-weight: bold; font-size: 12pt; color: #d32f2f;");
     mainLayout->addWidget(titleLabel);
     
     // Issue list
-    issueList = new QListWidget(this);
+    issueList = nullptr;
     mainLayout->addWidget(issueList);
     
     // Details view
-    QGroupBox* detailsGroup = new QGroupBox("Issue Details");
-    QVBoxLayout* detailsLayout = new QVBoxLayout(detailsGroup);
+    void* detailsGroup = new void("Issue Details");
+    void* detailsLayout = new void(detailsGroup);
     
-    issueDetails = new QTextEdit(this);
+    issueDetails = new void(this);
     issueDetails->setReadOnly(true);
     issueDetails->setMaximumHeight(200);
     detailsLayout->addWidget(issueDetails);
     
-    riskScoreLabel = new QLabel("Risk Score: N/A");
+    riskScoreLabel = new void("Risk Score: N/A");
     riskScoreLabel->setStyleSheet("font-weight: bold;");
     detailsLayout->addWidget(riskScoreLabel);
     
     mainLayout->addWidget(detailsGroup);
     
     // Action buttons
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     
-    fixButton = new QPushButton("🔧 Apply Fix");
+    fixButton = new void("🔧 Apply Fix");
     fixButton->setStyleSheet("background-color: #2196F3; color: white; font-weight: bold;");
     fixButton->setEnabled(false);
     buttonLayout->addWidget(fixButton);
     
-    ignoreButton = new QPushButton("⊘ Ignore");
+    ignoreButton = new void("⊘ Ignore");
     ignoreButton->setStyleSheet("background-color: #757575; color: white;");
     ignoreButton->setEnabled(false);
     buttonLayout->addWidget(ignoreButton);
@@ -242,14 +242,13 @@ void SecurityAlertWidget::addIssue(const SecurityIssue& issue) {
         )
         ;
     
-    QListWidgetItem* item = new QListWidgetItem(itemText);
+    QListWidgetItem* item = nullptr;
     item->setData(//UserRole, issue.issueId);
-    item->setBackground(QColor(getSeverityColor(issue.severity)));
+    item->setBackground(uint32_t(getSeverityColor(issue.severity)));
     
     issueList->addItem(item);
-    
-    std::cout << "[SecurityWidget] Added issue: " << issue.type.toStdString() 
-              << " (risk: " << issue.riskScore << ")" << std::endl;
+
+
 }
 
 void SecurityAlertWidget::clearIssues() {
@@ -295,7 +294,7 @@ void SecurityAlertWidget::onIssueClicked(QListWidgetItem* item) {
 }
 
 void SecurityAlertWidget::onFixClicked() {
-    if (currentIssueId.isEmpty()) {
+    if (currentIssueId.empty()) {
         return;
     }
     
@@ -318,7 +317,7 @@ void SecurityAlertWidget::onFixClicked() {
 }
 
 void SecurityAlertWidget::onIgnoreClicked() {
-    if (currentIssueId.isEmpty()) {
+    if (currentIssueId.empty()) {
         return;
     }
     
@@ -354,36 +353,36 @@ std::string SecurityAlertWidget::getSeverityColor(const std::string& severity) c
 OptimizationPanelWidget::OptimizationPanelWidget(void *parent)
     : void(parent) {
     
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     
     // Title
-    QLabel* titleLabel = new QLabel("⚡ Performance Optimizations");
+    void* titleLabel = new void("⚡ Performance Optimizations");
     titleLabel->setStyleSheet("font-weight: bold; font-size: 12pt; color: #1976d2;");
     mainLayout->addWidget(titleLabel);
     
     // Optimization list
-    optimizationList = new QListWidget(this);
+    optimizationList = nullptr;
     mainLayout->addWidget(optimizationList);
     
     // Details view
-    QGroupBox* detailsGroup = new QGroupBox("Optimization Details");
-    QVBoxLayout* detailsLayout = new QVBoxLayout(detailsGroup);
+    void* detailsGroup = new void("Optimization Details");
+    void* detailsLayout = new void(detailsGroup);
     
-    optimizationDetails = new QTextEdit(this);
+    optimizationDetails = new void(this);
     optimizationDetails->setReadOnly(true);
     optimizationDetails->setMaximumHeight(200);
     detailsLayout->addWidget(optimizationDetails);
     
-    QHBoxLayout* metricsLayout = new QHBoxLayout();
+    void* metricsLayout = new void();
     
-    speedupLabel = new QLabel("Expected Speedup: N/A");
+    speedupLabel = new void("Expected Speedup: N/A");
     speedupLabel->setStyleSheet("font-weight: bold; color: #1976d2;");
     metricsLayout->addWidget(speedupLabel);
     
-    QLabel* confLabel = new QLabel("Confidence:");
+    void* confLabel = new void("Confidence:");
     metricsLayout->addWidget(confLabel);
     
-    confidenceBar = new QProgressBar(this);
+    confidenceBar = new void(this);
     confidenceBar->setMaximum(100);
     confidenceBar->setTextVisible(true);
     metricsLayout->addWidget(confidenceBar);
@@ -393,14 +392,14 @@ OptimizationPanelWidget::OptimizationPanelWidget(void *parent)
     mainLayout->addWidget(detailsGroup);
     
     // Action buttons
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     
-    applyButton = new QPushButton("✓ Apply Optimization");
+    applyButton = new void("✓ Apply Optimization");
     applyButton->setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;");
     applyButton->setEnabled(false);
     buttonLayout->addWidget(applyButton);
     
-    dismissButton = new QPushButton("✗ Dismiss");
+    dismissButton = new void("✗ Dismiss");
     dismissButton->setStyleSheet("background-color: #9E9E9E; color: white;");
     dismissButton->setEnabled(false);
     buttonLayout->addWidget(dismissButton);
@@ -429,22 +428,21 @@ void OptimizationPanelWidget::addOptimization(const PerformanceOptimization& opt
         )
         ;
     
-    QListWidgetItem* item = new QListWidgetItem(itemText);
+    QListWidgetItem* item = nullptr;
     item->setData(//UserRole, optimization.optimizationId);
     
     // Color code by speedup
     if (optimization.expectedSpeedup >= 5.0) {
-        item->setBackground(QColor(200, 255, 200)); // Excellent
+        item->setBackground(uint32_t(200, 255, 200)); // Excellent
     } else if (optimization.expectedSpeedup >= 2.0) {
-        item->setBackground(QColor(220, 255, 220)); // Good
+        item->setBackground(uint32_t(220, 255, 220)); // Good
     } else {
-        item->setBackground(QColor(240, 255, 240)); // Moderate
+        item->setBackground(uint32_t(240, 255, 240)); // Moderate
     }
     
     optimizationList->addItem(item);
-    
-    std::cout << "[OptimizationWidget] Added optimization: " << optimization.type.toStdString() 
-              << " (" << optimization.expectedSpeedup << "x)" << std::endl;
+
+
 }
 
 void OptimizationPanelWidget::clearOptimizations() {
@@ -487,7 +485,7 @@ void OptimizationPanelWidget::onOptimizationClicked(QListWidgetItem* item) {
 }
 
 void OptimizationPanelWidget::onApplyClicked() {
-    if (currentOptimizationId.isEmpty()) {
+    if (currentOptimizationId.empty()) {
         return;
     }
     
@@ -510,7 +508,7 @@ void OptimizationPanelWidget::onApplyClicked() {
 }
 
 void OptimizationPanelWidget::onDismissClicked() {
-    if (currentOptimizationId.isEmpty()) {
+    if (currentOptimizationId.empty()) {
         return;
     }
     
@@ -531,4 +529,5 @@ void OptimizationPanelWidget::onDismissClicked() {
     dismissButton->setEnabled(false);
     currentOptimizationId.clear();
 }
+
 

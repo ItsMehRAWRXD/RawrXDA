@@ -59,7 +59,7 @@ public:
     ~HardwareBackendSelector() override = default;
     
     /**
-     * Two-phase initialization - call after QApplication is ready
+     * Two-phase initialization - call after void is ready
      * Creates all Qt widgets, sets up connections, and detects backends
      */
     void initialize();
@@ -143,33 +143,33 @@ private:
     bool detectMetal();
 
     // ===== UI Components =====
-    QComboBox* m_backendCombo;
-    QTextEdit* m_detailsText;
+    void* m_backendCombo;
+    void* m_detailsText;
     
     // Precision selection
-    QGroupBox* m_precisionGroup;
-    QRadioButton* m_fp32Radio;
-    QRadioButton* m_fp16Radio;
-    QRadioButton* m_int8Radio;
+    void* m_precisionGroup;
+    void* m_fp32Radio;
+    void* m_fp16Radio;
+    void* m_int8Radio;
     QButtonGroup* m_precisionGroup_impl;
     
     // Memory configuration
-    QGroupBox* m_memoryGroup;
-    QComboBox* m_memoryPoolCombo;
-    QLabel* m_vramLabel;
-    QLabel* m_vramUsageLabel;
+    void* m_memoryGroup;
+    void* m_memoryPoolCombo;
+    void* m_vramLabel;
+    void* m_vramUsageLabel;
     
     // Device selection
-    QComboBox* m_deviceCombo;
-    QLabel* m_deviceInfoLabel;
+    void* m_deviceCombo;
+    void* m_deviceInfoLabel;
     
     // Optimization options
-    QGroupBox* m_optimizationGroup;
-    QLabel* m_enableTensorCoresLabel;
-    QLabel* m_enableGraphsLabel;
-    QPushButton* m_detectBtn;
-    QPushButton* m_applyBtn;
-    QPushButton* m_resetBtn;
+    void* m_optimizationGroup;
+    void* m_enableTensorCoresLabel;
+    void* m_enableGraphsLabel;
+    void* m_detectBtn;
+    void* m_applyBtn;
+    void* m_resetBtn;
 
     // ===== Backend State =====
     std::vector<BackendInfo> m_backends;

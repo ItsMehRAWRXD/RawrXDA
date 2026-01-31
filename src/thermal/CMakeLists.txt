@@ -8,7 +8,6 @@ cmake_minimum_required(VERSION 3.16)
 # Dependencies
 # ═══════════════════════════════════════════════════════════════════════════════
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Charts)
 
 # MASM64 assembler (ml64.exe)
 if(WIN32)
@@ -125,9 +124,6 @@ set_target_properties(thermal_dashboard PROPERTIES
 )
 
 target_link_libraries(thermal_dashboard PRIVATE
-    Qt6::Core
-    Qt6::Widgets
-    Qt6::Charts
 )
 
 target_include_directories(thermal_dashboard PRIVATE

@@ -79,9 +79,9 @@ bool TelemetryCollector::initialize() {
     }
 
     if (m_enabled) {
-        std::cout << "[Telemetry] INITIALIZED | SessionID: " << m_sessionId << " | Opt-in: YES" << std::endl;
+        
     } else {
-        std::cout << "[Telemetry] DISABLED | User has not opted in" << std::endl;
+        
     }
     return m_enabled;
 }
@@ -89,7 +89,7 @@ bool TelemetryCollector::initialize() {
 void TelemetryCollector::enableTelemetry() {
     m_enabled = true;
     saveUserConsent(true);
-    std::cout << "[Telemetry] ENABLED" << std::endl;
+    
     trackFeatureUsage("telemetry.enabled", {});
     // Signal equivalent? m_callbacks... (omitted for now)
 }
@@ -98,7 +98,7 @@ void TelemetryCollector::disableTelemetry() {
     m_enabled = false;
     saveUserConsent(false);
     clearAllData();
-    std::cout << "[Telemetry] DISABLED" << std::endl;
+    
 }
 
 void TelemetryCollector::trackFeatureUsage(const std::string& featureName, const std::map<std::string, std::string>& metadata) {
@@ -132,7 +132,6 @@ void TelemetryCollector::trackFeatureUsage(const std::string& featureName, const
 
     m_events.push_back(event);
 
-    std::cout << "[Telemetry] FEATURE_TRACKED | Feature: " << sanitizedFeature << std::endl;
 
     if (m_events.size() >= 50) flushData();
 }
@@ -148,8 +147,8 @@ void TelemetryCollector::trackCrash(const std::string& crashReason) {
     event["session_id"] = m_sessionId;
     
     m_events.push_back(event);
-    std::cerr << "[Telemetry] CRASH_TRACKED | Reason: " << sanitizedReason << std::endl;
-    
+
+
     flushData();
 }
 
@@ -185,7 +184,7 @@ std::string TelemetryCollector::getAllTelemetryData() const {
 void TelemetryCollector::clearAllData() {
     m_events.clear();
     m_featureUsage.clear();
-    std::cout << "[Telemetry] DATA_CLEARED" << std::endl;
+    
 }
 
 void TelemetryCollector::flushData() {
@@ -204,8 +203,8 @@ void TelemetryCollector::flushData() {
     m_events.clear(); // Clear immediately
 
     std::string jsonStr = payload.dump();
-    
-    std::cout << "[Telemetry] FLUSH_START | Events: " << eventCount << std::endl;
+
+
     sendTelemetry(jsonStr);
 }
 

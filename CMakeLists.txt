@@ -380,7 +380,6 @@ if(MSVC)
         message(STATUS "Building Qt Shell with Qt version: ${Qt6_VERSION}")
         
         # Enable Qt MOC for QObject classes
-        set(CMAKE_AUTOMOC ON)
 
         # Create a simple Qt console app for now
         add_executable(RawrXD-QtShell 

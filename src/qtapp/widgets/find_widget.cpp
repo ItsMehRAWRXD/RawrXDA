@@ -24,11 +24,11 @@ FindWidget::FindWidget(void* parent)
     setupUI();
     
     // Keyboard shortcuts
-    QShortcut* escShortcut = new QShortcut(QKeySequence(//Key_Escape), this);
+    QShortcut* escShortcut = nullptr, this);
 // Qt connect removed
-    QShortcut* enterShortcut = new QShortcut(QKeySequence(//Key_Return), m_searchEdit);
+    QShortcut* enterShortcut = nullptr, m_searchEdit);
 // Qt connect removed
-    QShortcut* shiftEnterShortcut = new QShortcut(QKeySequence(//SHIFT | //Key_Return), m_searchEdit);
+    QShortcut* shiftEnterShortcut = nullptr, m_searchEdit);
 // Qt connect removed
 }
 
@@ -37,57 +37,57 @@ FindWidget::~FindWidget() {
 }
 
 void FindWidget::setupUI() {
-    m_mainLayout = new QVBoxLayout(this);
+    m_mainLayout = new void(this);
     m_mainLayout->setContentsMargins(4, 4, 4, 4);
     m_mainLayout->setSpacing(2);
     
     // Search row
-    m_searchLayout = new QHBoxLayout();
+    m_searchLayout = new void();
     
-    m_searchEdit = new QLineEdit(this);
+    m_searchEdit = new void(this);
     m_searchEdit->setPlaceholderText("Find");
     m_searchEdit->setClearButtonEnabled(true);
 // Qt connect removed
     m_searchLayout->addWidget(m_searchEdit);
     
-    m_findPreviousButton = new QPushButton("↑", this);
+    m_findPreviousButton = new void("↑", this);
     m_findPreviousButton->setToolTip("Previous match (Shift+Enter)");
     m_findPreviousButton->setMaximumWidth(30);
 // Qt connect removed
     m_searchLayout->addWidget(m_findPreviousButton);
     
-    m_findNextButton = new QPushButton("↓", this);
+    m_findNextButton = new void("↓", this);
     m_findNextButton->setToolTip("Next match (Enter)");
     m_findNextButton->setMaximumWidth(30);
 // Qt connect removed
     m_searchLayout->addWidget(m_findNextButton);
     
-    m_matchCountLabel = new QLabel("No matches", this);
+    m_matchCountLabel = new void("No matches", this);
     m_matchCountLabel->setMinimumWidth(80);
     m_searchLayout->addWidget(m_matchCountLabel);
     
-    m_caseSensitiveCheck = new QCheckBox("Aa", this);
+    m_caseSensitiveCheck = nullptr;
     m_caseSensitiveCheck->setToolTip("Match case");
 // Qt connect removed
     m_searchLayout->addWidget(m_caseSensitiveCheck);
     
-    m_wholeWordCheck = new QCheckBox("ab|", this);
+    m_wholeWordCheck = nullptr;
     m_wholeWordCheck->setToolTip("Match whole word");
 // Qt connect removed
     m_searchLayout->addWidget(m_wholeWordCheck);
     
-    m_regexCheck = new QCheckBox(".*", this);
+    m_regexCheck = nullptr;
     m_regexCheck->setToolTip("Use regular expression");
 // Qt connect removed
     m_searchLayout->addWidget(m_regexCheck);
     
-    m_toggleReplaceButton = new QPushButton("▼", this);
+    m_toggleReplaceButton = new void("▼", this);
     m_toggleReplaceButton->setToolTip("Toggle replace mode");
     m_toggleReplaceButton->setMaximumWidth(30);
 // Qt connect removed
     m_searchLayout->addWidget(m_toggleReplaceButton);
     
-    m_closeButton = new QPushButton("×", this);
+    m_closeButton = new void("×", this);
     m_closeButton->setToolTip("Close (Esc)");
     m_closeButton->setMaximumWidth(30);
 // Qt connect removed
@@ -96,20 +96,20 @@ void FindWidget::setupUI() {
     m_mainLayout->addLayout(m_searchLayout);
     
     // Replace row (hidden by default)
-    m_replaceLayout = new QHBoxLayout();
+    m_replaceLayout = new void();
     
-    m_replaceEdit = new QLineEdit(this);
+    m_replaceEdit = new void(this);
     m_replaceEdit->setPlaceholderText("Replace");
     m_replaceEdit->setClearButtonEnabled(true);
 // Qt connect removed
     m_replaceLayout->addWidget(m_replaceEdit);
     
-    m_replaceButton = new QPushButton("Replace", this);
+    m_replaceButton = new void("Replace", this);
     m_replaceButton->setToolTip("Replace current match");
 // Qt connect removed
     m_replaceLayout->addWidget(m_replaceButton);
     
-    m_replaceAllButton = new QPushButton("Replace All", this);
+    m_replaceAllButton = new void("Replace All", this);
     m_replaceAllButton->setToolTip("Replace all matches");
 // Qt connect removed
     m_replaceLayout->addWidget(m_replaceAllButton);
@@ -127,25 +127,25 @@ void FindWidget::setupUI() {
             background-color: #2d2d30;
             border-bottom: 1px solid #3e3e42;
         }
-        QLineEdit {
+        void {
             background-color: #3c3c3c;
             color: #cccccc;
             border: 1px solid #3e3e42;
             padding: 4px;
         }
-        QPushButton {
+        void {
             background-color: #0e639c;
             color: white;
             border: none;
             padding: 4px 8px;
         }
-        QPushButton:hover {
+        void:hover {
             background-color: #1177bb;
         }
-        QCheckBox {
+        void {
             color: #cccccc;
         }
-        QLabel {
+        void {
             color: #cccccc;
         }
     )");
@@ -176,7 +176,7 @@ void FindWidget::focusSearchBox() {
 void FindWidget::showAndFocusWithSelection() {
     if (m_editor && m_editor->textCursor().hasSelection()) {
         std::string selectedText = m_editor->textCursor().selectedText();
-        if (!selectedText.isEmpty() && !selectedText.contains('\n')) {
+        if (!selectedText.empty() && !selectedText.contains('\n')) {
             setSearchText(selectedText);
         }
     }
@@ -228,7 +228,7 @@ bool FindWidget::isUseRegex() const {
 std::vector<SearchResult> FindWidget::findAll() {
     m_matches.clear();
     
-    if (!m_editor || searchText().isEmpty()) {
+    if (!m_editor || searchText().empty()) {
         return m_matches;
     }
     
@@ -321,7 +321,7 @@ void FindWidget::replaceAll() {
     if (!m_editor) return;
     
     std::vector<SearchResult> matches = findAll();
-    if (matches.isEmpty()) {
+    if (matches.empty()) {
         return;
     }
     
@@ -393,7 +393,7 @@ void FindWidget::close() {
 void FindWidget::onSearchTextChanged() {
     clearHighlights();
     
-    if (searchText().isEmpty()) {
+    if (searchText().empty()) {
         m_matches.clear();
         m_currentMatchIndex = -1;
         m_matchCountLabel->setText("No matches");
@@ -407,7 +407,7 @@ void FindWidget::onSearchTextChanged() {
     updateMatchCount();
     
     // Auto-select first match
-    if (!m_matches.isEmpty()) {
+    if (!m_matches.empty()) {
         findNext();
     }
 }
@@ -433,7 +433,7 @@ void FindWidget::onEditorCursorPositionChanged() {
 }
 
 void FindWidget::updateMatchCount() {
-    if (m_matches.isEmpty()) {
+    if (m_matches.empty()) {
         m_matchCountLabel->setText("No matches");
         m_currentMatchIndex = -1;
         matchCountChanged(0, 0);
@@ -474,8 +474,8 @@ void FindWidget::highlightAllMatches() {
     m_highlightSelections.clear();
     
     for (const SearchResult& match : m_matches) {
-        QTextEdit::ExtraSelection selection;
-        selection.format.setBackground(QColor(100, 100, 100, 80));  // Semi-transparent gray
+        void::ExtraSelection selection;
+        selection.format.setBackground(uint32_t(100, 100, 100, 80));  // Semi-transparent gray
         
         QTextCursor cursor(m_editor->document());
         QTextBlock block = m_editor->document()->findBlockByNumber(match.line);
@@ -492,13 +492,13 @@ void FindWidget::highlightAllMatches() {
 
 void FindWidget::clearHighlights() {
     if (m_editor) {
-        m_editor->setExtraSelections(std::vector<QTextEdit::ExtraSelection>());
+        m_editor->setExtraSelections(std::vector<void::ExtraSelection>());
     }
     m_highlightSelections.clear();
 }
 
 QTextCursor FindWidget::findNextMatch(const QTextCursor& from, bool forward) {
-    if (!m_editor || m_matches.isEmpty()) {
+    if (!m_editor || m_matches.empty()) {
         return QTextCursor();
     }
     
@@ -521,7 +521,7 @@ QTextCursor FindWidget::findNextMatch(const QTextCursor& from, bool forward) {
         }
         
         // Wrap around to beginning
-        if (bestIndex == -1 && !m_matches.isEmpty()) {
+        if (bestIndex == -1 && !m_matches.empty()) {
             bestIndex = 0;
         }
     } else {
@@ -534,7 +534,7 @@ QTextCursor FindWidget::findNextMatch(const QTextCursor& from, bool forward) {
         }
         
         // Wrap around to end
-        if (bestIndex == -1 && !m_matches.isEmpty()) {
+        if (bestIndex == -1 && !m_matches.empty()) {
             bestIndex = m_matches.size() - 1;
         }
     }
@@ -577,7 +577,7 @@ std::string FindWidget::buildRegexPattern() const {
 }
 
 void FindWidget::addToSearchHistory(const std::string& text) {
-    if (text.isEmpty()) return;
+    if (text.empty()) return;
     
     m_searchHistory.removeAll(text);
     m_searchHistory.prepend(text);
@@ -589,4 +589,5 @@ void FindWidget::addToSearchHistory(const std::string& text) {
 }
 
 } // namespace RawrXD
+
 

@@ -29,7 +29,7 @@ BrutalGzipWrapper::~BrutalGzipWrapper() {
 bool BrutalGzipWrapper::Compress(const std::vector<uint8_t>& raw, 
                                   std::vector<uint8_t>& compressed) {
     if (!is_initialized_) {
-        std::cerr << "BrutalGzipWrapper not initialized" << std::endl;
+        
         return false;
     }
     
@@ -39,21 +39,18 @@ bool BrutalGzipWrapper::Compress(const std::vector<uint8_t>& raw,
         std::vector<uint8_t> input(reinterpret_cast<const char*>(raw.data()), static_cast<int>(raw.size()));
         std::vector<uint8_t> output = brutal::compress(input);
         
-        if (output.isEmpty() && !input.isEmpty()) {
-            std::cerr << "BrutalGzip compression failed - output is empty" << std::endl;
+        if (output.empty() && !input.empty()) {
+            
             return false;
         }
         
         // Copy compressed data to output vector
         compressed.assign(output.constData(), output.constData() + output.size());
-        
-        std::cout << "BrutalGzip compressed " << raw.size() 
-                  << " -> " << compressed.size() << " bytes ("
-                  << (100.0 * compressed.size() / raw.size()) << "%)" << std::endl;
-        
+
+
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "BrutalGzipWrapper compression error: " << e.what() << std::endl;
+        
         return false;
     }
 }
@@ -61,7 +58,7 @@ bool BrutalGzipWrapper::Compress(const std::vector<uint8_t>& raw,
 bool BrutalGzipWrapper::Decompress(const std::vector<uint8_t>& compressed, 
                                     std::vector<uint8_t>& raw) {
     if (!is_initialized_) {
-        std::cerr << "BrutalGzipWrapper not initialized" << std::endl;
+        
         return false;
     }
     
@@ -76,19 +73,17 @@ bool BrutalGzipWrapper::Decompress(const std::vector<uint8_t>& compressed,
         std::vector<uint8_t> output = codec::inflate(input, &ok);
         
         if (!ok) {
-            std::cerr << "BrutalGzip decompression failed" << std::endl;
+            
             return false;
         }
         
         // Copy decompressed data to output vector
         raw.assign(output.constData(), output.constData() + output.size());
-        
-        std::cout << "BrutalGzip decompressed " << compressed.size() 
-                  << " -> " << raw.size() << " bytes" << std::endl;
-        
+
+
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "BrutalGzipWrapper decompression error: " << e.what() << std::endl;
+        
         return false;
     }
 }
@@ -138,7 +133,7 @@ DeflateWrapper::~DeflateWrapper() {
 bool DeflateWrapper::Compress(const std::vector<uint8_t>& raw, 
                                std::vector<uint8_t>& compressed) {
     if (!is_initialized_) {
-        std::cerr << "DeflateWrapper not initialized" << std::endl;
+        
         return false;
     }
     
@@ -149,8 +144,8 @@ bool DeflateWrapper::Compress(const std::vector<uint8_t>& raw,
         bool ok = false;
         std::vector<uint8_t> output = codec::deflate(input, &ok);
         
-        if (!ok || output.isEmpty()) {
-            std::cerr << "Deflate compression failed" << std::endl;
+        if (!ok || output.empty()) {
+            
             return false;
         }
         
@@ -159,14 +154,11 @@ bool DeflateWrapper::Compress(const std::vector<uint8_t>& raw,
         
         total_compressed_input_ += raw.size();
         compression_calls_++;
-        
-        std::cout << "Deflate compressed " << raw.size() 
-                  << " -> " << compressed.size() << " bytes ("
-                  << (100.0 * compressed.size() / raw.size()) << "%)" << std::endl;
-        
+
+
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "DeflateWrapper compression error: " << e.what() << std::endl;
+        
         return false;
     }
 }
@@ -174,7 +166,7 @@ bool DeflateWrapper::Compress(const std::vector<uint8_t>& raw,
 bool DeflateWrapper::Decompress(const std::vector<uint8_t>& compressed, 
                                  std::vector<uint8_t>& raw) {
     if (!is_initialized_) {
-        std::cerr << "DeflateWrapper not initialized" << std::endl;
+        
         return false;
     }
     
@@ -186,7 +178,7 @@ bool DeflateWrapper::Decompress(const std::vector<uint8_t>& compressed,
         std::vector<uint8_t> output = codec::inflate(input, &ok);
         
         if (!ok) {
-            std::cerr << "Deflate decompression failed" << std::endl;
+            
             return false;
         }
         
@@ -195,13 +187,11 @@ bool DeflateWrapper::Decompress(const std::vector<uint8_t>& compressed,
         
         total_decompressed_bytes_ += raw.size();
         decompression_calls_++;
-        
-        std::cout << "Deflate decompressed " << compressed.size() 
-                  << " -> " << raw.size() << " bytes" << std::endl;
-        
+
+
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "DeflateWrapper decompression error: " << e.what() << std::endl;
+        
         return false;
     }
 }
@@ -233,23 +223,23 @@ std::shared_ptr<ICompressionProvider> CompressionFactory::Create(uint32_t prefer
         // Try BRUTAL_GZIP first
         auto gzip_provider = std::make_shared<BrutalGzipWrapper>();
         if (gzip_provider->IsSupported()) {
-            std::cout << "Using BrutalGzip compression provider (MASM kernels)" << std::endl;
+            
             return gzip_provider;
         }
         
         // Fallback to Deflate
-        std::cout << "BrutalGzip not available, falling back to Deflate" << std::endl;
+        
     }
     
     // Use Deflate
     auto deflate_provider = std::make_shared<DeflateWrapper>();
     if (deflate_provider->IsSupported()) {
-        std::cout << "Using Deflate compression provider (MASM kernels)" << std::endl;
+        
         return deflate_provider;
     }
     
     // All providers failed - return null
-    std::cerr << "No compression provider available!" << std::endl;
+    
     return nullptr;
 }
 
@@ -273,4 +263,5 @@ std::string CompressionStats::ToString() const {
         << "}";
     return oss.str();
 }
+
 

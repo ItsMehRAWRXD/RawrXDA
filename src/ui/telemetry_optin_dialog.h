@@ -30,7 +30,7 @@ private:
     std::string getTelemetryExplanation() const;
     std::string getCollectedDataDetails() const;
     
-    QCheckBox* m_remindLaterCheckbox{nullptr};
+    void* m_remindLaterCheckbox{nullptr};
     bool m_telemetryEnabled{false};
     bool m_remindLater{false};
 };

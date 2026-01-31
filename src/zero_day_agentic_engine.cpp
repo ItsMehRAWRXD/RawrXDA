@@ -51,7 +51,7 @@ ZeroDayAgenticEngine::~ZeroDayAgenticEngine() = default;
 
 void ZeroDayAgenticEngine::startMission(const std::string& userGoal) {
     if (d->running.load()) {
-        if (d->logger) d->logger->warn("Mission already running");
+        if (d->logger) 
         return;
     }
 
@@ -67,7 +67,7 @@ void ZeroDayAgenticEngine::startMission(const std::string& userGoal) {
         const std::string workspace = d->planner ? d->planner->workspaceRoot()
                                               : std::filesystem::path::currentPath();
 
-        if (d->logger) d->logger->info("Planning mission: {}", userGoal.toStdString());
+        if (d->logger) 
 
         RawrXD::ExecutionResult exec;
         if (d->planner) {
@@ -82,9 +82,9 @@ void ZeroDayAgenticEngine::startMission(const std::string& userGoal) {
         if (d->metrics) d->metrics->recordHistogram("agent.mission.ms", durationMs);
         if (d->logger) {
             if (ok) {
-                d->logger->info("Mission complete in {} ms", durationMs);
+                
             } else {
-                d->logger->error("Mission failed in {} ms: {}", durationMs, exec.errorMessage.toStdString());
+                
             }
         }
 
@@ -94,7 +94,7 @@ void ZeroDayAgenticEngine::startMission(const std::string& userGoal) {
             if (ok) {
                 agentComplete("Mission " + d->missionId + " finished.");
             } else {
-                agentError(exec.errorMessage.isEmpty() ? QStringLiteral("Mission failed") : exec.errorMessage);
+                agentError(exec.errorMessage.empty() ? "Mission failed" : exec.errorMessage);
             }
             d->running.store(false);
         }, //QueuedConnection);
@@ -105,4 +105,5 @@ void ZeroDayAgenticEngine::abortMission() {
     d->running.store(false);
     agentStream("\n🛑 Mission aborted.\n");
 }
+
 

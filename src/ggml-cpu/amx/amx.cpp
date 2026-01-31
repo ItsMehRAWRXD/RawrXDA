@@ -67,7 +67,7 @@ static void ggml_backend_amx_buffer_memset_tensor(ggml_backend_buffer_t buffer, 
 static void ggml_backend_amx_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor,
                                                const void * data, size_t offset, size_t size) {
     if (qtype_has_amx_kernels(tensor->type)) {
-        GGML_LOG_DEBUG("%s: amx repack tensor %s of type %s\n", __func__, tensor->name, ggml_type_name(tensor->type));
+        GGML_
         ggml_backend_amx_convert_weight(tensor, data, offset, size);
     } else {
         memcpy((char *) tensor->data + offset, data, size);
@@ -125,7 +125,7 @@ static const char * ggml_backend_amx_buffer_type_get_name(ggml_backend_buffer_ty
 static ggml_backend_buffer_t ggml_backend_amx_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
     void * data = ggml_aligned_malloc(size);
     if (data == NULL) {
-        fprintf(stderr, "%s: failed to allocate buffer of size %zu\n", __func__, size);
+
         return NULL;
     }
 
@@ -189,7 +189,7 @@ static size_t ggml_backend_amx_buffer_type_get_alloc_size(ggml_backend_buffer_ty
 static bool ggml_amx_init() {
 #if defined(__linux__)
     if (syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA)) {
-        fprintf(stderr, "AMX is not ready to be used!\n");
+
         return false;
     }
     return true;

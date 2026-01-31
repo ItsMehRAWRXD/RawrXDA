@@ -67,12 +67,12 @@ StreamingGGUFLoader//~StreamingGGUFLoaderQt() {
 
 void StreamingGGUFLoader//setError(const std::string& error) {
     lastError = error;
-    std::cerr << "[StreamingGGUFLoaderQt] " << error << std::endl;
+    
 }
 
 bool StreamingGGUFLoader//loadModel(const std::string& filePath) {
-    std::cout << "[StreamingGGUFLoaderQt] Loading model: " << filePath << std::endl;
-    
+
+
     // Memory map the file
     if (!mappedFile.Open(filePath)) {
         setError("Failed to memory map file: " + filePath);
@@ -102,10 +102,8 @@ bool StreamingGGUFLoader//loadModel(const std::string& filePath) {
     buildTensorIndex();
     
     isLoaded = true;
-    std::cout << "[StreamingGGUFLoaderQt] Model loaded successfully: " 
-              << tensors.size() << " tensors, " 
-              << metadata.size() << " metadata entries" << std::endl;
-    
+
+
     return true;
 }
 
@@ -157,12 +155,8 @@ bool StreamingGGUFLoader//parseHeader() {
         return false;
     }
     currentFileOffset += sizeof(uint64_t);
-    
-    std::cout << "[StreamingGGUFLoaderQt] GGUF Header - Magic: 0x" << std::hex << header.magic << std::dec
-              << ", Version: " << header.version
-              << ", Tensors: " << header.tensor_count
-              << ", Metadata: " << header.metadata_count << std::endl;
-    
+
+
     return true;
 }
 
@@ -200,8 +194,8 @@ bool StreamingGGUFLoader//readString(std::string& str, size_t offset, size_t& ne
 }
 
 bool StreamingGGUFLoader//parseMetadata() {
-    std::cout << "[StreamingGGUFLoaderQt] Parsing " << header.metadata_count << " metadata entries..." << std::endl;
-    
+
+
     for (uint64_t i = 0; i < header.metadata_count; ++i) {
         // Read metadata key
         std::string key;
@@ -405,19 +399,17 @@ bool StreamingGGUFLoader//parseMetadata() {
         
         // Log important metadata
         if (key == "general.name" || key == "general.architecture" || key == "general.description") {
-            std::cout << "[StreamingGGUFLoaderQt] Metadata: " << key << " = " 
-                      << (valueType == GGUFValueType::STRING ? metadataValue.AsString() : "(non-string)")
-                      << std::endl;
+            
         }
     }
-    
-    std::cout << "[StreamingGGUFLoaderQt] Parsed " << metadata.size() << " metadata entries successfully" << std::endl;
+
+
     return true;
 }
 
 bool StreamingGGUFLoader//parseTensorInfo() {
-    std::cout << "[StreamingGGUFLoaderQt] Parsing " << header.tensor_count << " tensor definitions..." << std::endl;
-    
+
+
     tensors.reserve(header.tensor_count);
     
     for (uint64_t i = 0; i < header.tensor_count; ++i) {
@@ -470,18 +462,16 @@ bool StreamingGGUFLoader//parseTensorInfo() {
         
         // Log first few tensors
         if (i < 5) {
-            std::cout << "[StreamingGGUFLoaderQt] Tensor " << i << ": " << tensor.name
-                      << " shape=[";
+            
             for (size_t j = 0; j < tensor.shape.size(); ++j) {
-                if (j > 0) std::cout << ",";
-                std::cout << tensor.shape[j];
+                if (j > 0) 
+                
             }
-            std::cout << "] type=" << static_cast<uint32_t>(tensor.type)
-                      << " size=" << tensor.size_bytes << " bytes" << std::endl;
+            
         }
     }
-    
-    std::cout << "[StreamingGGUFLoaderQt] Parsed " << tensors.size() << " tensor definitions successfully" << std::endl;
+
+
     return true;
 }
 

@@ -221,7 +221,7 @@ void AIDigestionEngine::startDigestion(const std::stringList& inputPaths) {
         return;
     }
 
-    
+
     m_isDigesting = true;
     m_shouldStop = false;
     m_isPaused = false;
@@ -388,7 +388,7 @@ void AIDigestionEngine::startTraining() {
     if (m_isTraining) {
         return;
     }
-    
+
 
     if (m_dataset.totalSamples == 0) {
         trainingFailed("No training data available. Please digest content first.");
@@ -538,8 +538,8 @@ void AIDigestionEngine::processFile(const std::string& filePath) {
             
             knowledgeExtracted(knowledge);
         }
-        
-        
+
+
     } catch (const std::exception& e) {
     }
 }

@@ -65,7 +65,7 @@ public:
     /**
      * @brief Get memory usage in MB
      */
-    qint64 memoryUsageMB() const;
+    int64_t memoryUsageMB() const;
     
     /**
      * @brief Get tokens per second performance metric
@@ -152,7 +152,7 @@ public:
      * @param prompt Input prompt
      * @param maxTokens Maximum tokens to generate
      */
-    void generateStreaming(qint64 reqId, const std::string& prompt, int maxTokens = 128);
+    void generateStreaming(int64_t reqId, const std::string& prompt, int maxTokens = 128);
 
 public:
     /**
@@ -160,7 +160,7 @@ public:
      * @param prompt User input text
      * @param reqId Request ID for correlation
      */
-    void request(const std::string& prompt, qint64 reqId);
+    void request(const std::string& prompt, int64_t reqId);
     
     /**
      * @brief Process a streaming inference request
@@ -168,7 +168,7 @@ public:
      * @param reqId Request ID for correlation
      * @param streaming Whether to use streaming mode
      */
-    void request(const std::string& prompt, qint64 reqId, bool streaming);
+    void request(const std::string& prompt, int64_t reqId, bool streaming);
     
     /**
      * @brief Unload the current model
@@ -200,14 +200,14 @@ private:
      * @param reqId Request ID
      * @param answer Generated response
      */
-    void resultReady(qint64 reqId, const std::string& answer);
+    void resultReady(int64_t reqId, const std::string& answer);
     
     /**
      * @brief Emitted when an error occurs
      * @param reqId Request ID
      * @param errorMsg Error description
      */
-    void error(qint64 reqId, const std::string& errorMsg);
+    void error(int64_t reqId, const std::string& errorMsg);
     
     /**
      * @brief Emitted when model loading status changes
@@ -221,13 +221,13 @@ private:
      * @param reqId Request ID
      * @param token Single token string
      */
-    void streamToken(qint64 reqId, const std::string& token);
+    void streamToken(int64_t reqId, const std::string& token);
     
     /**
      * @brief Emitted when streaming inference completes
      * @param reqId Request ID
      */
-    void streamFinished(qint64 reqId);
+    void streamFinished(int64_t reqId);
     
     /**
      * @brief Emitted when quantization mode changes
@@ -286,20 +286,20 @@ private:
     // Define structure for inference requests
     struct InferenceRequest {
         std::string prompt;
-        qint64 requestId;
+        int64_t requestId;
         bool streaming{false};
     };
     
     mutable std::mutex m_mutex;
     std::string m_modelPath;
-    qint64 m_memoryUsageMB{0};
+    int64_t m_memoryUsageMB{0};
     double m_tokensPerSecond{0.0};
     double m_temperature{0.0};   // Enterprise deterministic default
     double m_topP{1.0};          // Enterprise deterministic default (full nucleus)
     std::string m_quantMode{"Q4_0"};  // Default quantization
     std::unordered_map<std::string, CachedTensorData> m_tensorCache;  // Cached quantized tensors with type info
     std::unordered_map<std::string, std::string> m_perLayerQuant;  // Tensor-specific quants
-    QElapsedTimer m_inferenceTimer;
+    std::chrono::steady_clock::time_point m_inferenceTimer;
     std::atomic<bool> m_threadingEnabled{true};  // default threaded
     std::atomic<bool> m_loadTensors{true};       // default load tensors (can be disabled for headless mode)
     
@@ -348,6 +348,7 @@ private:
                                  std::function<void()> completeCallback);
     
     // Thread-safe streaming generation worker that emits signals
-    void streamingGenerateWorkerSignals(qint64 reqId, const std::string& prompt, int maxTokens);
+    void streamingGenerateWorkerSignals(int64_t reqId, const std::string& prompt, int maxTokens);
 };
+
 

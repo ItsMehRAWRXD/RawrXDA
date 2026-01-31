@@ -14,7 +14,7 @@ ModelTester::ModelTester(
     std::shared_ptr<Metrics> metrics,
     std::shared_ptr<ResponseParser> parser)
     : m_logger(logger), m_metrics(metrics), m_parser(parser) {
-    if (m_logger) m_logger->info("ModelTester initialized");
+    if (m_logger) m_
 }
 
 ModelTestResult ModelTester::testWithOllama(
@@ -22,7 +22,7 @@ ModelTestResult ModelTester::testWithOllama(
     const std::string& prompt,
     int maxTokens) {
 
-    if (m_logger) m_logger->info("Testing model: {} with prompt: {}...", modelName, prompt.substr(0, 50));
+    if (m_logger) m_
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -43,7 +43,7 @@ ModelTestResult ModelTester::testWithOllama(
                 << "  \"num_predict\": " << maxTokens << "\n"
                 << "}";
 
-        if (m_logger) m_logger->debug("Sending request to Ollama API");
+        if (m_logger) m_
 
         // Make HTTP request to Ollama
         std::string response = makeOllamaRequest("/api/generate", payload.str());
@@ -52,7 +52,7 @@ ModelTestResult ModelTester::testWithOllama(
         result.timeToFirstTokenUs = std::chrono::duration_cast<std::chrono::microseconds>(
             firstTokenTime - startTime).count();
 
-        if (m_logger) m_logger->debug("Received response: {} chars", response.length());
+        if (m_logger) m_
 
         // Parse response
         result.response = parseOllamaStreamingResponse(response);
@@ -93,13 +93,10 @@ ModelTestResult ModelTester::testWithOllama(
             m_metrics->recordHistogram("model_test_quality", result.responseQuality * 100);
         }
 
-        if (m_logger) m_logger->info("Test complete: {} tokens in {} us (avg {} us/token, quality: {:.2f}%)",
-                       result.tokenCount, result.totalLatencyUs, 
-                       static_cast<int>(result.avgTokenLatencyUs),
-                       result.responseQuality * 100);
+        if (m_logger) m_
 
     } catch (const std::exception& e) {
-        if (m_logger) m_logger->error("Test failed: {}", e.what());
+        if (m_logger) m_
         result.responseQuality = 0.0;
         result.parseSuccessful = false;
     }
@@ -112,13 +109,12 @@ std::vector<LatencyBenchmark> ModelTester::benchmarkModels(
     const std::vector<std::string>& testPrompts,
     int runsPerModel) {
 
-    if (m_logger) m_logger->info("Starting benchmark: {} models x {} prompts x {} runs",
-                   modelNames.size(), testPrompts.size(), runsPerModel);
+    if (m_logger) m_
 
     std::vector<LatencyBenchmark> results;
 
     for (const auto& model : modelNames) {
-        if (m_logger) m_logger->info("Benchmarking model: {}", model);
+        if (m_logger) m_
 
         std::vector<int64_t> allLatencies;
 
@@ -164,7 +160,7 @@ std::vector<LatencyBenchmark> ModelTester::benchmarkModels(
 }
 
 std::vector<ParsedCompletion> ModelTester::testResponseParsing(const std::string& modelOutput) {
-    if (m_logger) m_logger->debug("Testing response parsing on {} chars", modelOutput.length());
+    if (m_logger) m_
 
     auto completions = m_parser->parseResponse(modelOutput);
 
@@ -181,7 +177,7 @@ LatencyBenchmark ModelTester::measureLatencyDistribution(
     const std::string& modelName,
     int testCount) {
 
-    if (m_logger) m_logger->info("Measuring latency distribution for {} ({} requests)", modelName, testCount);
+    if (m_logger) m_
 
     std::vector<std::string> testPrompts = {
         "print('hello')",
@@ -219,7 +215,7 @@ bool ModelTester::validateModelResponse(
     const std::string& modelName,
     const std::string& prompt) {
 
-    if (m_logger) m_logger->debug("Validating model response for: {}", modelName);
+    if (m_logger) m_
 
     auto result = testWithOllama(modelName, prompt, 50);
 
@@ -227,7 +223,7 @@ bool ModelTester::validateModelResponse(
                    !result.response.empty() && 
                    result.responseQuality > 0.5;
 
-    if (m_logger) m_logger->info("Validation result: {}", isValid ? "PASS" : "FAIL");
+    if (m_logger) m_
 
     return isValid;
 }
@@ -303,7 +299,7 @@ std::string ModelTester::exportToJSON() const {
 }
 
 void ModelTester::resetResults() {
-    if (m_logger) m_logger->info("Resetting test results");
+    if (m_logger) m_
     m_testResults.clear();
     m_latencyHistory.clear();
 }
@@ -316,8 +312,7 @@ std::string ModelTester::makeOllamaRequest(
     // For now, return placeholder response
     // In production, would use curl_easy_perform()
 
-    if (m_logger) m_logger->debug("Making Ollama request to {} with {} chars payload", 
-                    endpoint, payload.length());
+    if (m_logger) m_
 
     // Placeholder: Simulate a response
     // Real implementation would make actual HTTP call to http://localhost:11434{endpoint}
@@ -337,7 +332,7 @@ std::string ModelTester::makeOllamaRequest(
 }
 )";
 
-    if (m_logger) m_logger->debug("Received response: {} chars", response.length());
+    if (m_logger) m_
     return response;
 }
 

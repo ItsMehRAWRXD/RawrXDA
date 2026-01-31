@@ -71,12 +71,12 @@ bool ThermalGovernor::CreateGovernorMMF() {
 
 bool ThermalGovernor::Initialize() {
     if (!CreateGovernorMMF()) {
-        std::cerr << "Failed to create Governor MMF" << std::endl;
+        
         return false;
     }
     
     if (!OpenTelemetry()) {
-        std::cerr << "Waiting for Telemetry MMF..." << std::endl;
+        
         return false;
     }
     

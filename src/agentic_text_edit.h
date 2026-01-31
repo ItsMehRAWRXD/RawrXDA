@@ -25,7 +25,7 @@ namespace RawrXD {
  * - Auto-trigger completions on typing pause (300ms debounce)
  * - Multi-language support (C++, Python, JavaScript, etc.)
  */
-class AgenticTextEdit : public QPlainTextEdit
+class AgenticTextEdit
 {
 
 public:
@@ -34,7 +34,7 @@ public:
 
     /**
      * Two-phase initialization
-     * Call after QApplication is ready
+     * Call after void is ready
      */
     void initialize();
 
@@ -111,7 +111,7 @@ public:
     void completionDismissed();
 
 protected:
-    void keyPressEvent(QKeyEvent* event) override;
+    void keyPressEvent(void*  event) override;
 
 private:
     void onTextChanged();

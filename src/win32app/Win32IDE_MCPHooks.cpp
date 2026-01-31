@@ -51,10 +51,8 @@ bool MCPHookManager::Initialize(HMODULE targetModule) {
     }
     
     m_moduleBase = reinterpret_cast<uintptr_t>(m_targetModule);
-    
-    LOG_INFO("MCPHookManager initialized with module base: 0x" + 
-             std::to_string(m_moduleBase));
-    
+
+
     m_initialized = true;
     return true;
 }
@@ -153,9 +151,8 @@ HookInstallResult MCPHookManager::InstallReadMessageHook() {
         EnterCriticalSection(&m_cs);
         m_hooks.push_back(state);
         LeaveCriticalSection(&m_cs);
-        
-        LOG_INFO("Installed readMessage hook at RVA 0x" + 
-                 std::to_string(MCPHookRVA::READ_MESSAGE));
+
+
     } else {
         result.errorCode = GetLastError();
 
@@ -187,9 +184,8 @@ HookInstallResult MCPHookManager::InstallWriteMessageHook() {
         EnterCriticalSection(&m_cs);
         m_hooks.push_back(state);
         LeaveCriticalSection(&m_cs);
-        
-        LOG_INFO("Installed writeMessage hook at RVA 0x" + 
-                 std::to_string(MCPHookRVA::WRITE_MESSAGE));
+
+
     } else {
         result.errorCode = GetLastError();
 
@@ -221,9 +217,8 @@ HookInstallResult MCPHookManager::InstallOnSocketDataHook() {
         EnterCriticalSection(&m_cs);
         m_hooks.push_back(state);
         LeaveCriticalSection(&m_cs);
-        
-        LOG_INFO("Installed onSocketData hook at RVA 0x" + 
-                 std::to_string(MCPHookRVA::ON_SOCKET_DATA));
+
+
     } else {
         result.errorCode = GetLastError();
 
@@ -255,9 +250,8 @@ HookInstallResult MCPHookManager::InstallWebSocketHook() {
         EnterCriticalSection(&m_cs);
         m_hooks.push_back(state);
         LeaveCriticalSection(&m_cs);
-        
-        LOG_INFO("Installed WebSocket hook at RVA 0x" + 
-                 std::to_string(MCPHookRVA::ESTABLISH_WS));
+
+
     } else {
         result.errorCode = GetLastError();
 
@@ -488,9 +482,8 @@ void MCPHookManager::OnWebSocketFrame(const uint8_t* frame, size_t length, uint8
     if (m_wsCallback) {
         m_wsCallback(frame, length, opcode);
     }
-    
-    LOG_DEBUG("MCP WebSocket frame intercepted: opcode=" + std::to_string(opcode) + 
-              ", " + std::to_string(payloadLen) + " bytes payload");
+
+
 }
 
 std::vector<MCPMessage> MCPHookManager::GetRecentMessages(size_t count) const {

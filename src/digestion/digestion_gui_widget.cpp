@@ -31,7 +31,7 @@ DigestionGuiWidget::DigestionGuiWidget(void* parent) : // Widget(parent) {
     layout->addWidget(m_progressBar);
     
     // Results table
-    m_resultsTable = new QTableWidget(this);
+    m_resultsTable = nullptr;
     m_resultsTable->setColumnCount(4);
     m_resultsTable->setHorizontalHeaderLabels({"File", "Language", "Stubs", "Status"});
     m_resultsTable->horizontalHeader()->setStretchLastSection(true);
@@ -89,10 +89,10 @@ void DigestionGuiWidget::onProgress(int done, int total, int stubs, int percent)
 void DigestionGuiWidget::onFileScanned(const std::string &path, const std::string &lang, int stubs) {
     int row = m_resultsTable->rowCount();
     m_resultsTable->insertRow(row);
-    m_resultsTable->setItem(row, 0, new QTableWidgetItem(path));
-    m_resultsTable->setItem(row, 1, new QTableWidgetItem(lang));
-    m_resultsTable->setItem(row, 2, new QTableWidgetItem(std::string::number(stubs)));
-    m_resultsTable->setItem(row, 3, new QTableWidgetItem(stubs > 0 ? "Found" : "Clean"));
+    m_resultsTable->setItem(row, 0, nullptr);
+    m_resultsTable->setItem(row, 1, nullptr);
+    m_resultsTable->setItem(row, 2, nullptr));
+    m_resultsTable->setItem(row, 3, nullptr);
     
     if (stubs > 0) {
         m_resultsTable->item(row, 2)->setBackground(yellow);

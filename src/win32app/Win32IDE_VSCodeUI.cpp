@@ -302,8 +302,8 @@ void Win32IDE::updateSecondarySidebarContent()
 void Win32IDE::sendCopilotMessage(const std::string& message)
 {
     if (message.empty()) return;
-    
-    
+
+
     // Add user message to history
     m_chatHistory.push_back({"user", message});
     

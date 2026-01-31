@@ -103,7 +103,7 @@ void SettingsManager::initializeDefaults() {
 
 std::any SettingsManager::value(const std::string& key, const std::any& defaultValue) const {
     std::vector<std::string> parts = key.split('/');
-    if (parts.isEmpty()) {
+    if (parts.empty()) {
         return defaultValue;
     }
     
@@ -129,7 +129,7 @@ std::any SettingsManager::value(const std::string& key, const std::any& defaultV
 
 void SettingsManager::setValue(const std::string& key, const std::any& value, bool saveImmediately) {
     std::vector<std::string> parts = key.split('/');
-    if (parts.isEmpty()) {
+    if (parts.empty()) {
         return;
     }
     
@@ -157,7 +157,7 @@ void SettingsManager::setValue(const std::string& key, const std::any& value, bo
 
 bool SettingsManager::contains(const std::string& key) const {
     std::vector<std::string> parts = key.split('/');
-    if (parts.isEmpty()) {
+    if (parts.empty()) {
         return false;
     }
     
@@ -178,7 +178,7 @@ bool SettingsManager::contains(const std::string& key) const {
 
 void SettingsManager::remove(const std::string& key) {
     std::vector<std::string> parts = key.split('/');
-    if (parts.isEmpty()) {
+    if (parts.empty()) {
         return;
     }
     
@@ -270,7 +270,7 @@ std::string SettingsManager::settingsFilePath() const {
 void SettingsManager::setWorkspacePath(const std::string& path) {
     if (m_workspacePath != path) {
         // Save current workspace settings
-        if (!m_workspacePath.isEmpty()) {
+        if (!m_workspacePath.empty()) {
             saveWorkspace();
         }
         
@@ -278,7 +278,7 @@ void SettingsManager::setWorkspacePath(const std::string& path) {
         m_workspaceSettings = void*();
         
         // Load new workspace settings
-        if (!m_workspacePath.isEmpty()) {
+        if (!m_workspacePath.empty()) {
             loadWorkspace();
         }
     }
@@ -290,9 +290,9 @@ std::string SettingsManager::workspacePath() const {
 
 std::any SettingsManager::workspaceValue(const std::string& key, const std::any& defaultValue) const {
     // Check workspace settings first
-    if (!m_workspaceSettings.isEmpty()) {
+    if (!m_workspaceSettings.empty()) {
         std::vector<std::string> parts = key.split('/');
-        if (!parts.isEmpty()) {
+        if (!parts.empty()) {
             void* obj = m_workspaceSettings;
             for (int i = 0; i < parts.size() - 1; ++i) {
                 if (!obj.contains(parts[i])) {
@@ -318,7 +318,7 @@ std::any SettingsManager::workspaceValue(const std::string& key, const std::any&
 
 void SettingsManager::setWorkspaceValue(const std::string& key, const std::any& value) {
     std::vector<std::string> parts = key.split('/');
-    if (parts.isEmpty()) {
+    if (parts.empty()) {
         return;
     }
     
@@ -341,7 +341,7 @@ void SettingsManager::setWorkspaceValue(const std::string& key, const std::any& 
 }
 
 bool SettingsManager::saveWorkspace() {
-    if (m_workspacePath.isEmpty()) {
+    if (m_workspacePath.empty()) {
         return false;
     }
     
@@ -365,7 +365,7 @@ bool SettingsManager::saveWorkspace() {
 }
 
 bool SettingsManager::loadWorkspace() {
-    if (m_workspacePath.isEmpty()) {
+    if (m_workspacePath.empty()) {
         return false;
     }
     
@@ -470,7 +470,7 @@ std::string SettingsManager::getSettingsDirectory() const {
 }
 
 std::string SettingsManager::getWorkspaceSettingsPath() const {
-    if (m_workspacePath.isEmpty()) {
+    if (m_workspacePath.empty()) {
         return std::string();
     }
     
@@ -478,4 +478,5 @@ std::string SettingsManager::getWorkspaceSettingsPath() const {
 }
 
 } // namespace RawrXD
+
 

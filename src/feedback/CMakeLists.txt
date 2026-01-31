@@ -3,7 +3,6 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 
 set(FEEDBACK_SOURCES
     FeedbackSystem.cpp
@@ -25,9 +24,6 @@ set_target_properties(rawrxd_feedback PROPERTIES
 )
 
 target_link_libraries(rawrxd_feedback PUBLIC
-    Qt6::Core
-    Qt6::Widgets
-    Qt6::Network
 )
 
 target_include_directories(rawrxd_feedback PUBLIC

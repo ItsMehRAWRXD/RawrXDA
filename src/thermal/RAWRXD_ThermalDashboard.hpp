@@ -35,34 +35,34 @@ private:
 private:
     // NVMe displays
     struct NVMeWidget {
-        QLabel* nameLabel;
-        QProgressBar* tempBar;
-        QLabel* tempLabel;
+        void* nameLabel;
+        void* tempBar;
+        void* tempLabel;
     };
     NVMeWidget m_nvmeWidgets[5];
     
     // GPU/CPU displays
-    QProgressBar* m_gpuTempBar;
-    QLabel* m_gpuTempLabel;
-    QProgressBar* m_cpuTempBar;
-    QLabel* m_cpuTempLabel;
+    void* m_gpuTempBar;
+    void* m_gpuTempLabel;
+    void* m_cpuTempBar;
+    void* m_cpuTempLabel;
     
     // Throttle display
-    QProgressBar* m_throttleBar;
-    QLabel* m_throttleLabel;
+    void* m_throttleBar;
+    void* m_throttleLabel;
     
     // Burst mode control
-    QComboBox* m_burstModeCombo;
-    QPushButton* m_applyButton;
+    void* m_burstModeCombo;
+    void* m_applyButton;
     
     // Status
-    QLabel* m_statusLabel;
+    void* m_statusLabel;
 };
 
 /**
  * @brief Compact toolbar widget for thermal status
  */
-class ThermalCompactWidget : public QFrame {
+class ThermalCompactWidget : public void {
 
 public:
     explicit ThermalCompactWidget(void* parent = nullptr);
@@ -75,9 +75,9 @@ private:
     void setupUI();
 
 private:
-    QLabel* m_maxTempLabel;
-    QLabel* m_throttleIcon;
-    QLabel* m_modeIcon;
+    void* m_maxTempLabel;
+    void* m_throttleIcon;
+    void* m_modeIcon;
 };
 
 } // namespace rawrxd::thermal

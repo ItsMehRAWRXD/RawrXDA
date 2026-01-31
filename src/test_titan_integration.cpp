@@ -14,19 +14,14 @@ const char* GetErrorDescription(int32_t code) {
 }
 
 int main() {
-    std::cout << "Testing Titan Streaming Orchestrator Integration...\n\n";
-    
+
+
     // Check available memory
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
-    
-    std::cout << "System Memory Status:\n";
-    std::cout << "  Total Physical: " << (memInfo.ullTotalPhys / (1024*1024)) << " MB\n";
-    std::cout << "  Available Physical: " << (memInfo.ullAvailPhys / (1024*1024)) << " MB\n";
-    std::cout << "  Memory Load: " << memInfo.dwMemoryLoad << "%\n\n";
-    
-    std::cout << "Calling Titan_Initialize...\n";
+
+
     std::cout.flush();
     
     // Initialize Titan
@@ -34,43 +29,29 @@ int main() {
     
     __try {
         int32_t result = Titan_Initialize(&titanHandle, 0);
-        
-        std::cout << "Titan_Initialize returned!\n";
-        std::cout << "Titan_Initialize result:\n";
-        std::cout << "  Return Code: 0x" << std::hex << std::setw(8) << std::setfill('0') 
-                  << static_cast<uint32_t>(result) << std::dec << "\n";
-        std::cout << "  Description: " << GetErrorDescription(result) << "\n";
-        
+
+
         if (result != 0) {
-            std::cerr << "\nERROR: Titan_Initialize failed\n";
-            std::cerr << "This is expected if system memory is low or constrained.\n";
-            std::cerr << "Titan requires ~68 MB for orchestrator + ring buffer.\n";
+
+
             return 1;
         }
-        
-        std::cout << "  Handle: " << titanHandle << "\n\n";
-        std::cout << "✓ Titan_Initialize succeeded\n\n";
-        
+
+
         // Shutdown Titan
         result = Titan_Shutdown(titanHandle);
-        
-        std::cout << "Titan_Shutdown result:\n";
-        std::cout << "  Return Code: 0x" << std::hex << std::setw(8) << std::setfill('0') 
-                  << static_cast<uint32_t>(result) << std::dec << "\n";
-        
+
+
         if (result != 0) {
-            std::cerr << "ERROR: Titan_Shutdown failed\n";
+            
             return 1;
         }
-        
-        std::cout << "✓ Titan_Shutdown succeeded\n\n";
-        std::cout << "══════════════════════════════════════════════════\n";
-        std::cout << "All tests passed! Titan library is properly integrated.\n";
-        std::cout << "══════════════════════════════════════════════════\n";
+
+
     }
     __except(EXCEPTION_EXECUTE_HANDLER) {
-        std::cerr << "\n\nEXCEPTION CAUGHT!\n";
-        std::cerr << "Exception Code: 0x" << std::hex << GetExceptionCode() << std::dec << "\n";
+
+
         return 1;
     }
     

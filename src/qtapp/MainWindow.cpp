@@ -66,15 +66,15 @@
 namespace {
 
 // Creates the Sovereign telemetry dock that consumes the MASM/MMF stats.
-QDockWidget* createSovereignTelemetryDock(void* host) {
-    auto* dock = new QDockWidget(void::tr("Sovereign Telemetry"), host);
-    dock->setObjectName(QStringLiteral("SovereignTelemetryDock"));
+void* createSovereignTelemetryDock(void* host) {
+    auto* dock = new void("Sovereign Telemetry", host);
+    dock->setObjectName("SovereignTelemetryDock");
     dock->setAllowedAreas(//LeftDockWidgetArea | //RightDockWidgetArea);
     dock->setMinimumWidth(260);
 
     auto* dashboard = new SovereignDashboardWidget(dock);
     // Attach to shared stats; if attach fails we still show the dock so users see status.
-    dashboard->attachSharedMemory(QStringLiteral("Global\\SOVEREIGN_STATS"));
+    dashboard->attachSharedMemory("Global\\SOVEREIGN_STATS");
     dock->setWidget(dashboard);
     return dock;
 }
@@ -93,8 +93,8 @@ static RawrXD::Integration::CircuitBreaker g_aiBreaker(5, std::chrono::seconds(3
 // ============================================================
 // Global Caches for Performance Optimization
 // ============================================================
-static QCache<std::string, std::any> g_settingsCache(100);  // Cache frequently accessed settings
-static QCache<std::string, std::filesystem::path> g_fileInfoCache(500); // Cache file info lookups
+static std::map<std::string, std::any> g_settingsCache(100);  // Cache frequently accessed settings
+static std::map<std::string, std::filesystem::path> g_fileInfoCache(500); // Cache file info lookups
 static std::mutex g_cacheMutex;                              // Thread-safe cache access
 static std::shared_mutex g_fileInfoLock;                    // RW lock for file info operations
 
@@ -106,7 +106,7 @@ inline std::any getCachedSetting(const std::string& key, const std::any& default
     if (auto* cached = g_settingsCache.object(key)) {
         return *cached;
     }
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     std::any value = settings.value(key, defaultValue);
     g_settingsCache.insert(key, new std::any(value));
     return value;
@@ -174,9 +174,9 @@ MainWindow::MainWindow(void* parent)
     // Initialize streaming inference
     m_streamer = new StreamingInference(m_hexMagConsole, this);
 // Qt connect removed
-            [this](qint64 /*reqId*/, const std::string& token) { m_streamer->pushToken(token); });
+            [this](int64_t /*reqId*/, const std::string& token) { m_streamer->pushToken(token); });
 // Qt connect removed
-            [this](qint64 /*reqId*/) { m_streamer->finishStream(); });
+            [this](int64_t /*reqId*/) { m_streamer->finishStream(); });
 
     // Setup AI/agent components
     setupAIBackendSwitcher();
@@ -189,13 +189,13 @@ MainWindow::MainWindow(void* parent)
     setupInterpretabilityPanel();
 
     // Shortcut for command palette
-    QShortcut* commandPaletteShortcut = new QShortcut(QKeySequence("Ctrl+Shift+P"), this);
+    QShortcut* commandPaletteShortcut = nullptr, this);
 // Qt connect removed
     });
 
     // Auto-load GGUF from env var if provided
     std::string ggufEnv = qEnvironmentVariable("RAWRXD_GGUF");
-    if (!ggufEnv.isEmpty()) {
+    if (!ggufEnv.empty()) {
         statusBar()->showMessage(tr("Auto-loading GGUF: %1"), 3000);
         QMetaObject::invokeMethod(m_inferenceEngine, "loadModel", //QueuedConnection,
                                   (std::string, ggufEnv));
@@ -227,78 +227,78 @@ void MainWindow::createVSCodeLayout()
     // AGENTIC PATCH: Ensure all pointers are initialized to nullptr before use (C++11+ best practice)
     // Declare missing local variables and member pointers before use
     void* mainContainer = new void(this);
-    QHBoxLayout* mainLayout = new QHBoxLayout(mainContainer);
+    void* mainLayout = new void(mainContainer);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
     // Ensure member pointers are initialized (redundant if done in constructor, but safe for agentic automation)
-    if (!m_primarySidebar) m_primarySidebar = new QFrame(mainContainer);
-    if (!m_sidebarStack) m_sidebarStack = new QStackedWidget(m_primarySidebar);
-    if (!editorTabs_) editorTabs_ = new QTabWidget(mainContainer);
-    if (!codeView_) codeView_ = new QTextEdit(mainContainer);
-    if (!m_bottomPanel) m_bottomPanel = new QFrame(mainContainer);
-    if (!m_panelStack) m_panelStack = new QStackedWidget(m_bottomPanel);
-    if (!m_hexMagConsole) m_hexMagConsole = new QPlainTextEdit(m_bottomPanel);
+    if (!m_primarySidebar) m_primarySidebar = new void(mainContainer);
+    if (!m_sidebarStack) m_sidebarStack = new void(m_primarySidebar);
+    if (!editorTabs_) editorTabs_ = new void(mainContainer);
+    if (!codeView_) codeView_ = new void(mainContainer);
+    if (!m_bottomPanel) m_bottomPanel = new void(mainContainer);
+    if (!m_panelStack) m_panelStack = new void(m_bottomPanel);
+    if (!m_hexMagConsole) m_hexMagConsole = nullptr;
 
     // AGENTIC PATCH: Declare missing local variable for centerSplitter
-    QSplitter* centerSplitter = new QSplitter(//Horizontal, mainContainer);
+    void* centerSplitter = new void(//Horizontal, mainContainer);
 
     m_primarySidebar->setFixedWidth(260);
-    m_primarySidebar->setStyleSheet("QFrame { background-color: #252526; border: none; }");
+    m_primarySidebar->setStyleSheet("void { background-color: #252526; border: none; }");
 
-    QVBoxLayout* sidebarLayout = new QVBoxLayout(m_primarySidebar);
+    void* sidebarLayout = new void(m_primarySidebar);
     sidebarLayout->setContentsMargins(0, 0, 0, 0);
     sidebarLayout->setSpacing(0);
 
     // Create sidebar header
-    QLabel* sidebarHeader = new QLabel("Explorer", m_primarySidebar);
-    sidebarHeader->setStyleSheet("QLabel { color: #e0e0e0; background-color: #2d2d30; padding: 8px; font-weight: bold; }");
+    void* sidebarHeader = new void("Explorer", m_primarySidebar);
+    sidebarHeader->setStyleSheet("void { color: #e0e0e0; background-color: #2d2d30; padding: 8px; font-weight: bold; }");
     sidebarLayout->addWidget(sidebarHeader);
 
     // Create stacked widget for sidebar views
-    m_sidebarStack->setStyleSheet("QStackedWidget { background-color: #252526; }");
+    m_sidebarStack->setStyleSheet("void { background-color: #252526; }");
 
     // Create Explorer view (placeholder - tree widget)
-    QTreeWidget* explorerView = new QTreeWidget(m_primarySidebar);
+    QTreeWidget* explorerView = nullptr;
     explorerView->setStyleSheet("QTreeWidget { background-color: #252526; color: #e0e0e0; }");
-    QTreeWidgetItem* rootItem = new QTreeWidgetItem();
+    QTreeWidgetItem* rootItem = nullptr;
     rootItem->setText(0, "Project Folder");
     explorerView->addTopLevelItem(rootItem);
     m_sidebarStack->addWidget(explorerView);
 
     // Create Search view (placeholder)
     void* searchView = new void(m_primarySidebar);
-    QVBoxLayout* searchLayout = new QVBoxLayout(searchView);
-    QLineEdit* searchInput = new QLineEdit(m_primarySidebar);
+    void* searchLayout = new void(searchView);
+    void* searchInput = new void(m_primarySidebar);
     searchInput->setPlaceholderText("Search files...");
-    searchInput->setStyleSheet("QLineEdit { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }");
+    searchInput->setStyleSheet("void { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }");
     searchLayout->addWidget(searchInput);
     m_sidebarStack->addWidget(searchView);
 
     // Create Source Control view (placeholder)
     void* scmView = new void(m_primarySidebar);
-    QVBoxLayout* scmLayout = new QVBoxLayout(scmView);
-    QLabel* scmLabel = new QLabel("Source Control\n\nNo folder open", m_primarySidebar);
-    scmLabel->setStyleSheet("QLabel { color: #e0e0e0; }");
+    void* scmLayout = new void(scmView);
+    void* scmLabel = new void("Source Control\n\nNo folder open", m_primarySidebar);
+    scmLabel->setStyleSheet("void { color: #e0e0e0; }");
     scmLabel->setAlignment(//AlignCenter);
     scmLayout->addWidget(scmLabel);
     m_sidebarStack->addWidget(scmView);
 
     // Create Debug view (placeholder)
     void* debugView = new void(m_primarySidebar);
-    QVBoxLayout* debugLayout = new QVBoxLayout(debugView);
-    QLabel* debugLabel = new QLabel("Run and Debug\n\nNo launch configuration", m_primarySidebar);
-    debugLabel->setStyleSheet("QLabel { color: #e0e0e0; }");
+    void* debugLayout = new void(debugView);
+    void* debugLabel = new void("Run and Debug\n\nNo launch configuration", m_primarySidebar);
+    debugLabel->setStyleSheet("void { color: #e0e0e0; }");
     debugLabel->setAlignment(//AlignCenter);
     debugLayout->addWidget(debugLabel);
     m_sidebarStack->addWidget(debugView);
 
     // Create Extensions view (placeholder)
     void* extView = new void(m_primarySidebar);
-    QVBoxLayout* extLayout = new QVBoxLayout(extView);
-    QLineEdit* extSearch = new QLineEdit(m_primarySidebar);
+    void* extLayout = new void(extView);
+    void* extSearch = new void(m_primarySidebar);
     extSearch->setPlaceholderText("Search extensions...");
-    extSearch->setStyleSheet("QLineEdit { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }");
+    extSearch->setStyleSheet("void { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }");
     extLayout->addWidget(extSearch);
     m_sidebarStack->addWidget(extView);
 
@@ -307,9 +307,9 @@ void MainWindow::createVSCodeLayout()
     centerSplitter->addWidget(m_primarySidebar);
 
     // --------- Central Editor Area (Tabbed) ---------
-    QFrame* editorFrame = new QFrame(mainContainer);
-    editorFrame->setStyleSheet("QFrame { background-color: #1e1e1e; border: none; }");
-    QVBoxLayout* editorLayout = new QVBoxLayout(editorFrame);
+    void* editorFrame = new void(mainContainer);
+    editorFrame->setStyleSheet("void { background-color: #1e1e1e; border: none; }");
+    void* editorLayout = new void(editorFrame);
     editorLayout->setContentsMargins(0, 0, 0, 0);
     editorLayout->setSpacing(0);
 
@@ -317,11 +317,11 @@ void MainWindow::createVSCodeLayout()
         "QTabBar { background-color: #252526; }"
         "QTabBar::tab { background-color: #1e1e1e; color: #e0e0e0; padding: 8px; margin: 0px; border: 1px solid #3e3e42; }"
         "QTabBar::tab:selected { background-color: #252526; border-bottom: 2px solid #007acc; }"
-        "QTabWidget::pane { border: none; }"
+        "void::pane { border: none; }"
     );
 
-    codeView_->setStyleSheet("QTextEdit { background-color: #1e1e1e; color: #e0e0e0; font-family: 'Consolas', monospace; font-size: 11pt; }");
-    codeView_->setLineWrapMode(QTextEdit::NoWrap);
+    codeView_->setStyleSheet("void { background-color: #1e1e1e; color: #e0e0e0; font-family: 'Consolas', monospace; font-size: 11pt; }");
+    codeView_->setLineWrapMode(void::NoWrap);
     editorTabs_->addTab(codeView_, "Untitled");
 
     editorLayout->addWidget(editorTabs_, 1);
@@ -334,30 +334,30 @@ void MainWindow::createVSCodeLayout()
 
     // ============= BOTTOM: Panel Dock (Terminal/Output/Problems/Debug) =============
     m_bottomPanel->setFixedHeight(200);  // Initial height
-    m_bottomPanel->setStyleSheet("QFrame { background-color: #252526; border-top: 1px solid #3e3e42; }");
+    m_bottomPanel->setStyleSheet("void { background-color: #252526; border-top: 1px solid #3e3e42; }");
 
-    QVBoxLayout* panelLayout = new QVBoxLayout(m_bottomPanel);
+    void* panelLayout = new void(m_bottomPanel);
     panelLayout->setContentsMargins(0, 0, 0, 0);
     panelLayout->setSpacing(0);
 
     // Panel tabs header
-    QFrame* panelHeader = new QFrame(m_bottomPanel);
+    void* panelHeader = new void(m_bottomPanel);
     panelHeader->setFixedHeight(35);
-    panelHeader->setStyleSheet("QFrame { background-color: #2d2d30; border: none; }");
-    QHBoxLayout* panelHeaderLayout = new QHBoxLayout(panelHeader);
+    panelHeader->setStyleSheet("void { background-color: #2d2d30; border: none; }");
+    void* panelHeaderLayout = new void(panelHeader);
     panelHeaderLayout->setContentsMargins(5, 0, 5, 0);
 
     // Panel tab buttons
-    QPushButton* terminalTabBtn = new QPushButton("Terminal", panelHeader);
-    QPushButton* outputTabBtn = new QPushButton("Output", panelHeader);
-    QPushButton* problemsTabBtn = new QPushButton("Problems", panelHeader);
-    QPushButton* debugTabBtn = new QPushButton("Debug Console", panelHeader);
+    void* terminalTabBtn = new void("Terminal", panelHeader);
+    void* outputTabBtn = new void("Output", panelHeader);
+    void* problemsTabBtn = new void("Problems", panelHeader);
+    void* debugTabBtn = new void("Debug Console", panelHeader);
 
-    for (QPushButton* btn : {terminalTabBtn, outputTabBtn, problemsTabBtn, debugTabBtn}) {
+    for (void* btn : {terminalTabBtn, outputTabBtn, problemsTabBtn, debugTabBtn}) {
         btn->setStyleSheet(
-            "QPushButton { background-color: transparent; color: #e0e0e0; border: none; padding: 8px; }"
-            "QPushButton:hover { background-color: #3e3e42; }"
-            "QPushButton:pressed { border-bottom: 2px solid #007acc; }"
+            "void { background-color: transparent; color: #e0e0e0; border: none; padding: 8px; }"
+            "void:hover { background-color: #3e3e42; }"
+            "void:pressed { border-bottom: 2px solid #007acc; }"
         );
         panelHeaderLayout->addWidget(btn);
     }
@@ -365,50 +365,50 @@ void MainWindow::createVSCodeLayout()
     panelHeaderLayout->addStretch();
 
     // Minimize/maximize buttons
-    QPushButton* panelMinBtn = new QPushButton("−", panelHeader);
+    void* panelMinBtn = new void("−", panelHeader);
     panelMinBtn->setFixedSize(30, 30);
-    panelMinBtn->setStyleSheet("QPushButton { background-color: transparent; color: #e0e0e0; }");
+    panelMinBtn->setStyleSheet("void { background-color: transparent; color: #e0e0e0; }");
     panelHeaderLayout->addWidget(panelMinBtn);
 
-    QPushButton* panelMaxBtn = new QPushButton("□", panelHeader);
+    void* panelMaxBtn = new void("□", panelHeader);
     panelMaxBtn->setFixedSize(30, 30);
-    panelMaxBtn->setStyleSheet("QPushButton { background-color: transparent; color: #e0e0e0; }");
+    panelMaxBtn->setStyleSheet("void { background-color: transparent; color: #e0e0e0; }");
     panelHeaderLayout->addWidget(panelMaxBtn);
 
-    QPushButton* panelCloseBtn = new QPushButton("✕", panelHeader);
+    void* panelCloseBtn = new void("✕", panelHeader);
     panelCloseBtn->setFixedSize(30, 30);
-    panelCloseBtn->setStyleSheet("QPushButton { background-color: transparent; color: #e0e0e0; }");
+    panelCloseBtn->setStyleSheet("void { background-color: transparent; color: #e0e0e0; }");
     panelHeaderLayout->addWidget(panelCloseBtn);
 
     panelLayout->addWidget(panelHeader);
 
     // Panel content (stacked widget for tabs)
-    m_panelStack->setStyleSheet("QStackedWidget { background-color: #1e1e1e; }");
+    m_panelStack->setStyleSheet("void { background-color: #1e1e1e; }");
 
     // Terminal tab
-    QPlainTextEdit* terminalView = new QPlainTextEdit(m_bottomPanel);
+    QPlainTextEdit* terminalView = nullptr;
     terminalView->setStyleSheet("QPlainTextEdit { background-color: #1e1e1e; color: #0dff00; font-family: 'Consolas', monospace; font-size: 10pt; }");
     terminalView->appendPlainText("PS E:\\> ");
     m_panelStack->addWidget(terminalView);
 
     // Output tab
-    QPlainTextEdit* outputView = new QPlainTextEdit(m_bottomPanel);
+    QPlainTextEdit* outputView = nullptr;
     outputView->setStyleSheet("QPlainTextEdit { background-color: #1e1e1e; color: #e0e0e0; font-family: 'Consolas', monospace; font-size: 10pt; }");
     outputView->appendPlainText("[INFO] Ready to process...");
     m_panelStack->addWidget(outputView);
 
     // Problems tab
     void* problemsView = new void(m_bottomPanel);
-    QVBoxLayout* problemsLayout = new QVBoxLayout(problemsView);
+    void* problemsLayout = new void(problemsView);
     problemsLayout->setContentsMargins(10, 10, 10, 10);
-    QLabel* problemsLabel = new QLabel("No problems detected", problemsView);
-    problemsLabel->setStyleSheet("QLabel { color: #e0e0e0; }");
+    void* problemsLabel = new void("No problems detected", problemsView);
+    problemsLabel->setStyleSheet("void { color: #e0e0e0; }");
     problemsLayout->addWidget(problemsLabel);
     problemsLayout->addStretch();
     m_panelStack->addWidget(problemsView);
 
     // Debug Console tab
-    QPlainTextEdit* debugConsole = new QPlainTextEdit(m_bottomPanel);
+    QPlainTextEdit* debugConsole = nullptr;
     debugConsole->setStyleSheet("QPlainTextEdit { background-color: #1e1e1e; color: #e0e0e0; font-family: 'Consolas', monospace; font-size: 10pt; }");
     debugConsole->appendPlainText("Debug console ready");
     m_panelStack->addWidget(debugConsole);
@@ -432,19 +432,19 @@ void MainWindow::createVSCodeLayout()
     }
 
     // ============= Create Vertical Splitter (Editor + Panel) =============
-    QSplitter* verticalSplitter = new QSplitter(//Vertical, mainContainer);
+    void* verticalSplitter = new void(//Vertical, mainContainer);
     verticalSplitter->setOpaqueResize(true);
     verticalSplitter->addWidget(mainLayout->takeAt(0)->widget());  // Adjust layout if needed
 
     // Better approach: Create a proper vertical splitter at the root
     void* centerWidget = new void(this);
-    QVBoxLayout* centerLayout = new QVBoxLayout(centerWidget);
+    void* centerLayout = new void(centerWidget);
     centerLayout->setContentsMargins(0, 0, 0, 0);
     centerLayout->setSpacing(0);
 
-    QSplitter* vertSplitter = new QSplitter(//Vertical, centerWidget);
+    void* vertSplitter = new void(//Vertical, centerWidget);
     vertSplitter->setOpaqueResize(true);
-    vertSplitter->setStyleSheet("QSplitter::handle { background-color: #2d2d2d; height: 4px; }");
+    vertSplitter->setStyleSheet("void::handle { background-color: #2d2d2d; height: 4px; }");
     // AGENTIC PATCH END: All missing variables declared, pointer initializations fixed, and automation comments added.
     
     // Create horizontal splitter for activity bar + sidebar + editor
@@ -466,9 +466,9 @@ void MainWindow::createVSCodeLayout()
     });
     
     // Connect terminal tab buttons
-    connect(terminalTabBtn, &QPushButton::clicked, this, [this]() { m_panelStack->setCurrentIndex(0); });
-    connect(outputTabBtn, &QPushButton::clicked, this, [this]() { m_panelStack->setCurrentIndex(1); });
-    connect(problemsTabBtn, &QPushButton::clicked, this, [this]() { m_panelStack->setCurrentIndex(2); });
+    // connect removed });
+    // connect removed });
+    // connect removed });
 // Qt connect removed
         else m_panelStack->setCurrentIndex(3); 
     });
@@ -481,22 +481,22 @@ void MainWindow::applyDarkTheme()
     QPalette darkPalette;
     
     // Window colors
-    darkPalette.setColor(QPalette::Window, QColor(0x1e, 0x1e, 0x1e));
-    darkPalette.setColor(QPalette::WindowText, QColor(0xe0, 0xe0, 0xe0));
+    darkPalette.setColor(QPalette::Window, uint32_t(0x1e, 0x1e, 0x1e));
+    darkPalette.setColor(QPalette::WindowText, uint32_t(0xe0, 0xe0, 0xe0));
     
     // Button colors
-    darkPalette.setColor(QPalette::Button, QColor(0x3c, 0x3c, 0x3c));
-    darkPalette.setColor(QPalette::ButtonText, QColor(0xe0, 0xe0, 0xe0));
+    darkPalette.setColor(QPalette::Button, uint32_t(0x3c, 0x3c, 0x3c));
+    darkPalette.setColor(QPalette::ButtonText, uint32_t(0xe0, 0xe0, 0xe0));
     
     // Base colors
-    darkPalette.setColor(QPalette::Base, QColor(0x25, 0x25, 0x26));
-    darkPalette.setColor(QPalette::AlternateBase, QColor(0x1e, 0x1e, 0x1e));
+    darkPalette.setColor(QPalette::Base, uint32_t(0x25, 0x25, 0x26));
+    darkPalette.setColor(QPalette::AlternateBase, uint32_t(0x1e, 0x1e, 0x1e));
     
     // Highlight colors
-    darkPalette.setColor(QPalette::Highlight, QColor(0x00, 0x7a, 0xcc));
-    darkPalette.setColor(QPalette::HighlightedText, QColor(0xff, 0xff, 0xff));
+    darkPalette.setColor(QPalette::Highlight, uint32_t(0x00, 0x7a, 0xcc));
+    darkPalette.setColor(QPalette::HighlightedText, uint32_t(0xff, 0xff, 0xff));
     
-    QApplication::setPalette(darkPalette);
+    void::setPalette(darkPalette);
 }
 
 MainWindow::~MainWindow()
@@ -535,7 +535,7 @@ void MainWindow::setAppState(std::shared_ptr<void> state)
     }
     
     // Persist state to settings
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     settings.setValue("AppState/lastUpdate", std::chrono::system_clock::time_point::currentDateTime());
     settings.sync();
 }
@@ -545,24 +545,24 @@ void MainWindow::setupMenuBar()
     // ============================================================
     // FILE MENU - Complete file operations
     // ============================================================
-    QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+    void* fileMenu = menuBar()->addMenu(tr("&File"));
     
     // New submenu
-    QMenu* newMenu = fileMenu->addMenu(tr("&New"));
+    void* newMenu = fileMenu->addMenu(tr("&New"));
     newMenu->addAction(tr("New &File"), this, &MainWindow::handleNewEditor, QKeySequence::New);
     newMenu->addAction(tr("New &Window"), this, &MainWindow::handleNewWindow, QKeySequence(//CTRL | //SHIFT | //Key_N));
     newMenu->addAction(tr("New &Chat"), this, &MainWindow::handleNewChat);
     
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Open File..."), this, &MainWindow::handleAddFile, QKeySequence::Open);
-    fileMenu->addAction(tr("Open &Folder..."), this, &MainWindow::handleAddFolder, QKeySequence(QStringLiteral("Ctrl+K Ctrl+O")));
+    fileMenu->addAction(tr("Open &Folder..."), this, &MainWindow::handleAddFolder, QKeySequence("Ctrl+K Ctrl+O"));
     
     // Recent Files submenu
-    QMenu* recentMenu = fileMenu->addMenu(tr("Open &Recent"));
+    void* recentMenu = fileMenu->addMenu(tr("Open &Recent"));
     recentMenu->addAction(tr("(No recent files)"));
     recentMenu->addSeparator();
     recentMenu->addAction(tr("Clear Recent Files"), this, [this]() {
-        QSettings settings("RawrXD", "IDE");
+        void* settings("RawrXD", "IDE");
         settings.remove("recentFiles");
         statusBar()->showMessage(tr("Recent files cleared"), 2000);
     });
@@ -570,16 +570,16 @@ void MainWindow::setupMenuBar()
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Save"), this, &MainWindow::handleSaveState, QKeySequence::Save);
     fileMenu->addAction(tr("Save &As..."), this, &MainWindow::handleSaveAs, QKeySequence::SaveAs);
-    fileMenu->addAction(tr("Save A&ll"), this, &MainWindow::handleSaveAll, QKeySequence(QStringLiteral("Ctrl+K S")));
+    fileMenu->addAction(tr("Save A&ll"), this, &MainWindow::handleSaveAll, QKeySequence("Ctrl+K S"));
     
     fileMenu->addSeparator();
-    QAction* autoSaveAct = fileMenu->addAction(tr("Auto Sa&ve"));
+    void* autoSaveAct = fileMenu->addAction(tr("Auto Sa&ve"));
     autoSaveAct->setCheckable(true);
-    autoSaveAct->setChecked(QSettings("RawrXD", "IDE").value("editor/autoSave", false).toBool());
+    autoSaveAct->setChecked(void*("RawrXD", "IDE").value("editor/autoSave", false).toBool());
 // Qt connect removed
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Close Editor"), this, &MainWindow::handleCloseEditor, QKeySequence::Close);
-    fileMenu->addAction(tr("Close &All Editors"), this, &MainWindow::handleCloseAllEditors, QKeySequence(QStringLiteral("Ctrl+K Ctrl+W")));
+    fileMenu->addAction(tr("Close &All Editors"), this, &MainWindow::handleCloseAllEditors, QKeySequence("Ctrl+K Ctrl+W"));
     fileMenu->addAction(tr("Close Fol&der"), this, &MainWindow::handleCloseFolder);
     
     fileMenu->addSeparator();
@@ -590,12 +590,12 @@ void MainWindow::setupMenuBar()
     fileMenu->addAction(tr("Pre&ferences..."), this, [this]() { toggleSettings(true); }, QKeySequence(//CTRL | //Key_Comma));
     
     fileMenu->addSeparator();
-    fileMenu->addAction(tr("E&xit"), qApp, &QApplication::quit, QKeySequence::Quit);
+    fileMenu->addAction(tr("E&xit"), qApp, &void::quit, QKeySequence::Quit);
 
     // ============================================================
     // EDIT MENU - Complete editing operations with proper slot connections
     // ============================================================
-    QMenu* editMenu = menuBar()->addMenu(tr("&Edit"));
+    void* editMenu = menuBar()->addMenu(tr("&Edit"));
     
     // Undo/Redo
     editMenu->addAction(tr("&Undo"), this, &MainWindow::handleUndo, QKeySequence::Undo);
@@ -641,27 +641,27 @@ void MainWindow::setupMenuBar()
     // ============================================================
     // VIEW MENU - All 48 toggle slots exposed via organized submenus
     // ============================================================
-    QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
+    void* viewMenu = menuBar()->addMenu(tr("&View"));
     
     // ----- Command Palette (Quick Access) -----
     viewMenu->addAction(tr("Command Palette..."), this, &MainWindow::toggleCommandPalette, QKeySequence(//CTRL | //SHIFT | //Key_P))->setCheckable(false);
     viewMenu->addSeparator();
     
     // ----- Explorer Section -----
-    QMenu* explorerMenu = viewMenu->addMenu(tr("&Explorer"));
-    QAction* projExplAct = explorerMenu->addAction(tr("Project Explorer"), this, &MainWindow::toggleProjectExplorer, QKeySequence(//CTRL | //SHIFT | //Key_E));
+    void* explorerMenu = viewMenu->addMenu(tr("&Explorer"));
+    void* projExplAct = explorerMenu->addAction(tr("Project Explorer"), this, &MainWindow::toggleProjectExplorer, QKeySequence(//CTRL | //SHIFT | //Key_E));
     projExplAct->setCheckable(true);
     explorerMenu->addAction(tr("Search Results"), this, &MainWindow::toggleSearchResult)->setCheckable(true);
     explorerMenu->addAction(tr("Bookmarks"), this, &MainWindow::toggleBookmark)->setCheckable(true);
     explorerMenu->addAction(tr("TODO List"), this, &MainWindow::toggleTodo)->setCheckable(true);
     
     // ----- Source Control Section -----
-    QMenu* scmMenu = viewMenu->addMenu(tr("&Source Control"));
+    void* scmMenu = viewMenu->addMenu(tr("&Source Control"));
     scmMenu->addAction(tr("Version Control"), this, &MainWindow::toggleVersionControl, QKeySequence(//CTRL | //SHIFT | //Key_G))->setCheckable(true);
     scmMenu->addAction(tr("Diff Viewer"), this, &MainWindow::toggleDiffViewer)->setCheckable(true);
     
     // ----- Build & Debug Section -----
-    QMenu* buildDebugMenu = viewMenu->addMenu(tr("&Build && Debug"));
+    void* buildDebugMenu = viewMenu->addMenu(tr("&Build && Debug"));
     buildDebugMenu->addAction(tr("Build System"), this, &MainWindow::toggleBuildSystem)->setCheckable(true);
     buildDebugMenu->addAction(tr("Run && Debug"), this, &MainWindow::toggleRunDebug, QKeySequence(//CTRL | //SHIFT | //Key_D))->setCheckable(true);
     buildDebugMenu->addAction(tr("Profiler"), this, &MainWindow::toggleProfiler)->setCheckable(true);
@@ -669,7 +669,7 @@ void MainWindow::setupMenuBar()
     buildDebugMenu->addSeparator();
     
     // --- Eon/ASM Compiler Integration ---
-    QMenu* compilerMenu = buildDebugMenu->addMenu(tr("&Eon/ASM Compiler"));
+    void* compilerMenu = buildDebugMenu->addMenu(tr("&Eon/ASM Compiler"));
     compilerMenu->addAction(tr("Compile Current File"), this, [this]() {
         toggleCompileCurrentFile();
     }, QKeySequence(//CTRL | //Key_F7));
@@ -688,8 +688,8 @@ void MainWindow::setupMenuBar()
     })->setCheckable(true);
     
     // ----- AI & Agent Section -----
-    QMenu* aiViewMenu = viewMenu->addMenu(tr("&AI && Agent"));
-    QAction* aiChatAct = aiViewMenu->addAction(tr("AI Chat Panel"), this, [this](bool checked) {
+    void* aiViewMenu = viewMenu->addMenu(tr("&AI && Agent"));
+    void* aiChatAct = aiViewMenu->addAction(tr("AI Chat Panel"), this, [this](bool checked) {
         if (m_aiChatPanelDock) m_aiChatPanelDock->setVisible(checked);
     }, QKeySequence(//CTRL | //SHIFT | //Key_A));
     aiChatAct->setCheckable(true);
@@ -700,7 +700,7 @@ void MainWindow::setupMenuBar()
     aiViewMenu->addAction(tr("AI Quick Fix"), this, &MainWindow::toggleAIQuickFix)->setCheckable(true);
     aiViewMenu->addAction(tr("AI Completion Cache"), this, &MainWindow::toggleAICompletionCache)->setCheckable(true);
     aiViewMenu->addSeparator();
-    QAction* orchestrationAct = aiViewMenu->addAction(tr("Task Orchestration"), this, [this](bool checked) {
+    void* orchestrationAct = aiViewMenu->addAction(tr("Task Orchestration"), this, [this](bool checked) {
         if (checked && !m_orchestrationDock) setupOrchestrationSystem();
         else if (m_orchestrationDock) m_orchestrationDock->setVisible(checked);
     });
@@ -711,8 +711,8 @@ void MainWindow::setupMenuBar()
     }
     
     // ----- Model Management Section -----
-    QMenu* modelViewMenu = viewMenu->addMenu(tr("&Model"));
-    QAction* monAct = modelViewMenu->addAction(tr("Model Monitor"));
+    void* modelViewMenu = viewMenu->addMenu(tr("&Model"));
+    void* monAct = modelViewMenu->addAction(tr("Model Monitor"));
     monAct->setCheckable(true);
     if (m_modelMonitorDock) {
         monAct->setChecked(m_modelMonitorDock->isVisible());
@@ -725,7 +725,7 @@ void MainWindow::setupMenuBar()
             addDockWidget(//RightDockWidgetArea, m_modelMonitorDock);
         } else if (m_modelMonitorDock) m_modelMonitorDock->setVisible(on);
     });
-    QAction* layerQuantAct = modelViewMenu->addAction(tr("Layer Quantization"), this, [this](bool checked) {
+    void* layerQuantAct = modelViewMenu->addAction(tr("Layer Quantization"), this, [this](bool checked) {
         if (m_layerQuantDock) m_layerQuantDock->setVisible(checked);
     });
     layerQuantAct->setCheckable(true);
@@ -733,7 +733,7 @@ void MainWindow::setupMenuBar()
         layerQuantAct->setChecked(m_layerQuantDock->isVisible());
 // Qt connect removed
     }
-    QAction* interpretabilityAct = modelViewMenu->addAction(tr("Model Interpretability"), this, [this](bool checked) {
+    void* interpretabilityAct = modelViewMenu->addAction(tr("Model Interpretability"), this, [this](bool checked) {
         if (m_interpretabilityPanelDock) m_interpretabilityPanelDock->setVisible(checked);
         else if (checked) setupInterpretabilityPanel();
     });
@@ -744,12 +744,12 @@ void MainWindow::setupMenuBar()
     }
     
     // ----- Terminal Section -----
-    QMenu* terminalMenu = viewMenu->addMenu(tr("&Terminal"));
+    void* terminalMenu = viewMenu->addMenu(tr("&Terminal"));
     terminalMenu->addAction(tr("Terminal Cluster"), this, &MainWindow::toggleTerminalCluster, QKeySequence(//CTRL | //Key_QuoteLeft))->setCheckable(true);
     terminalMenu->addAction(tr("Terminal Emulator"), this, &MainWindow::toggleTerminalEmulator)->setCheckable(true);
     
     // ----- Sovereign Telemetry Section -----
-    QAction* sovereignTelemetryAct = viewMenu->addAction(tr("Sovereign Telemetry"), this, [this](bool checked) {
+    void* sovereignTelemetryAct = viewMenu->addAction(tr("Sovereign Telemetry"), this, [this](bool checked) {
         if (!m_sovereignTelemetryDock && checked) {
             m_sovereignTelemetryDock = createSovereignTelemetryDock(this);
             if (m_sovereignTelemetryDock) {
@@ -767,9 +767,9 @@ void MainWindow::setupMenuBar()
     }
 
     // ----- Thermal Dashboard Section -----
-    QAction* thermalAct = viewMenu->addAction(tr("Thermal Dashboard"), this, [this](bool checked) {
+    void* thermalAct = viewMenu->addAction(tr("Thermal Dashboard"), this, [this](bool checked) {
         if (!m_thermalDashboardDock && checked) {
-            m_thermalDashboardDock = new QDockWidget(tr("NVMe Thermal"), this);
+            m_thermalDashboardDock = new void(tr("NVMe Thermal"), this);
             m_thermalDashboardDock->setWidget(new ThermalDashboardWidget(this));
             addDockWidget(//RightDockWidgetArea, m_thermalDashboardDock);
         } else if (m_thermalDashboardDock) {
@@ -780,8 +780,8 @@ void MainWindow::setupMenuBar()
     thermalAct->setChecked(false);
     
     // ----- Editor Features Section -----
-    QMenu* editorFeaturesMenu = viewMenu->addMenu(tr("&Editor Features"));
-    QAction* masmAct = editorFeaturesMenu->addAction(tr("MASM Editor"), this, [this](bool checked) {
+    void* editorFeaturesMenu = viewMenu->addMenu(tr("&Editor Features"));
+    void* masmAct = editorFeaturesMenu->addAction(tr("MASM Editor"), this, [this](bool checked) {
         if (m_masmEditorDock) m_masmEditorDock->setVisible(checked);
     });
     masmAct->setCheckable(true);
@@ -793,7 +793,7 @@ void MainWindow::setupMenuBar()
     editorFeaturesMenu->addAction(tr("Breadcrumb Bar"), this, &MainWindow::toggleBreadcrumbBar)->setCheckable(true);
     editorFeaturesMenu->addAction(tr("Language Server"), this, &MainWindow::toggleLanguageClientHost)->setCheckable(true);
     editorFeaturesMenu->addSeparator();
-    QAction* hotpatchAct = editorFeaturesMenu->addAction(tr("Hotpatch Panel"), this, [this](bool checked) {
+    void* hotpatchAct = editorFeaturesMenu->addAction(tr("Hotpatch Panel"), this, [this](bool checked) {
         if (m_hotpatchPanelDock) m_hotpatchPanelDock->setVisible(checked);
     });
     hotpatchAct->setCheckable(true);
@@ -803,14 +803,14 @@ void MainWindow::setupMenuBar()
     }
     
     // ----- DevOps & Cloud Section -----
-    QMenu* devopsMenu = viewMenu->addMenu(tr("&DevOps && Cloud"));
+    void* devopsMenu = viewMenu->addMenu(tr("&DevOps && Cloud"));
     devopsMenu->addAction(tr("Docker Tool"), this, &MainWindow::toggleDockerTool)->setCheckable(true);
     devopsMenu->addAction(tr("Cloud Explorer"), this, &MainWindow::toggleCloudExplorer)->setCheckable(true);
     devopsMenu->addAction(tr("Database Tool"), this, &MainWindow::toggleDatabaseTool)->setCheckable(true);
     devopsMenu->addAction(tr("Package Manager"), this, &MainWindow::togglePackageManager)->setCheckable(true);
     
     // ----- Documentation Section -----
-    QMenu* docsMenu = viewMenu->addMenu(tr("&Documentation"));
+    void* docsMenu = viewMenu->addMenu(tr("&Documentation"));
     docsMenu->addAction(tr("Documentation Browser"), this, &MainWindow::toggleDocumentation)->setCheckable(true);
     docsMenu->addAction(tr("UML View"), this, &MainWindow::toggleUMLView)->setCheckable(true);
     docsMenu->addAction(tr("Markdown Viewer"), this, &MainWindow::toggleMarkdownViewer)->setCheckable(true);
@@ -818,7 +818,7 @@ void MainWindow::setupMenuBar()
     docsMenu->addAction(tr("Spreadsheet"), this, &MainWindow::toggleSpreadsheet)->setCheckable(true);
     
     // ----- Design Tools Section -----
-    QMenu* designMenu = viewMenu->addMenu(tr("D&esign Tools"));
+    void* designMenu = viewMenu->addMenu(tr("D&esign Tools"));
     designMenu->addAction(tr("Image Tool"), this, &MainWindow::toggleImageTool)->setCheckable(true);
     designMenu->addAction(tr("Design to Code"), this, &MainWindow::toggleDesignToCode)->setCheckable(true);
     designMenu->addAction(tr("Color Picker"), this, &MainWindow::toggleColorPicker)->setCheckable(true);
@@ -826,7 +826,7 @@ void MainWindow::setupMenuBar()
     designMenu->addAction(tr("Translation"), this, &MainWindow::toggleTranslation)->setCheckable(true);
     
     // ----- Utilities Section -----
-    QMenu* utilsMenu = viewMenu->addMenu(tr("&Utilities"));
+    void* utilsMenu = viewMenu->addMenu(tr("&Utilities"));
     utilsMenu->addAction(tr("Snippet Manager"), this, &MainWindow::toggleSnippetManager)->setCheckable(true);
     utilsMenu->addAction(tr("Regex Tester"), this, &MainWindow::toggleRegexTester)->setCheckable(true);
     utilsMenu->addAction(tr("Macro Recorder"), this, &MainWindow::toggleMacroRecorder)->setCheckable(true);
@@ -834,7 +834,7 @@ void MainWindow::setupMenuBar()
     viewMenu->addSeparator();
     
     // ----- Appearance Section -----
-    QMenu* appearanceMenu = viewMenu->addMenu(tr("A&ppearance"));
+    void* appearanceMenu = viewMenu->addMenu(tr("A&ppearance"));
     appearanceMenu->addAction(tr("Toggle Full Screen"), this, &MainWindow::handleFullScreen, QKeySequence::FullScreen)->setCheckable(true);
     appearanceMenu->addAction(tr("Toggle Zen Mode"), this, &MainWindow::handleZenMode)->setCheckable(true);
     appearanceMenu->addSeparator();
@@ -844,7 +844,7 @@ void MainWindow::setupMenuBar()
     appearanceMenu->addAction(tr("Reset Layout"), this, &MainWindow::handleResetLayout);
     
     // ----- System Section -----
-    QMenu* systemMenu = viewMenu->addMenu(tr("S&ystem"));
+    void* systemMenu = viewMenu->addMenu(tr("S&ystem"));
     systemMenu->addAction(tr("Welcome Screen"), this, &MainWindow::toggleWelcomeScreen)->setCheckable(true);
     systemMenu->addAction(tr("Settings"), this, &MainWindow::toggleSettings)->setCheckable(true);
     systemMenu->addAction(tr("Shortcuts"), this, &MainWindow::toggleShortcutsConfigurator)->setCheckable(true);
@@ -859,7 +859,7 @@ void MainWindow::setupMenuBar()
     // ============================================================
     // TOOLS MENU - Developer utilities
     // ============================================================
-    QMenu* toolsMenu = menuBar()->addMenu(tr("&Tools"));
+    void* toolsMenu = menuBar()->addMenu(tr("&Tools"));
     toolsMenu->addAction(tr("Command Palette..."), this, &MainWindow::toggleCommandPalette, QKeySequence(//CTRL | //SHIFT | //Key_P));
     toolsMenu->addSeparator();
     toolsMenu->addAction(tr("Snippet Manager"), this, &MainWindow::toggleSnippetManager);
@@ -876,7 +876,7 @@ void MainWindow::setupMenuBar()
     // ============================================================
     // RUN MENU - Execution and debugging
     // ============================================================
-    QMenu* runMenu = menuBar()->addMenu(tr("&Run"));
+    void* runMenu = menuBar()->addMenu(tr("&Run"));
     runMenu->addAction(tr("&Start Debugging"), this, &MainWindow::handleStartDebug, QKeySequence(//Key_F5));
     runMenu->addAction(tr("Run &Without Debugging"), this, &MainWindow::handleRunNoDebug, QKeySequence(//CTRL | //Key_F5));
     runMenu->addAction(tr("S&top Debugging"), this, &MainWindow::handleStopDebug, QKeySequence(//SHIFT | //Key_F5));
@@ -894,7 +894,7 @@ void MainWindow::setupMenuBar()
     // ============================================================
     // TERMINAL MENU
     // ============================================================
-    QMenu* termMenu = menuBar()->addMenu(tr("Ter&minal"));
+    void* termMenu = menuBar()->addMenu(tr("Ter&minal"));
     termMenu->addAction(tr("&New Terminal"), this, &MainWindow::handleNewTerminal, QKeySequence(//CTRL | //SHIFT | //Key_QuoteLeft));
     termMenu->addAction(tr("&Split Terminal"), this, &MainWindow::handleSplitTerminal);
     termMenu->addAction(tr("&Kill Terminal"), this, &MainWindow::handleKillTerminal);
@@ -906,7 +906,7 @@ void MainWindow::setupMenuBar()
     // ============================================================
     // WINDOW MENU - Layout management
     // ============================================================
-    QMenu* windowMenu = menuBar()->addMenu(tr("&Window"));
+    void* windowMenu = menuBar()->addMenu(tr("&Window"));
     windowMenu->addAction(tr("&New Window"), this, &MainWindow::handleNewWindow);
     windowMenu->addSeparator();
     windowMenu->addAction(tr("Split Editor &Right"), this, &MainWindow::handleSplitRight);
@@ -920,7 +920,7 @@ void MainWindow::setupMenuBar()
     windowMenu->addAction(tr("&Save Layout As..."), this, &MainWindow::handleSaveLayout);
 
     // AI/GGUF menu with brutal_gzip integration
-    QMenu* aiMenu = menuBar()->addMenu(tr("&AI"));
+    void* aiMenu = menuBar()->addMenu(tr("&AI"));
     aiMenu->addAction(tr("Load GGUF Model..."), this,
                       static_cast<void (MainWindow::*)()>(&MainWindow::loadGGUFModel));
     aiMenu->addAction(tr("Run Inference..."), this, &MainWindow::runInference);
@@ -928,7 +928,7 @@ void MainWindow::setupMenuBar()
     aiMenu->addSeparator();
     
     // Streaming mode toggle
-    QAction* streamAct = aiMenu->addAction(tr("Streaming Mode"));
+    void* streamAct = aiMenu->addAction(tr("Streaming Mode"));
     streamAct->setCheckable(true);
 // Qt connect removed
         statusBar()->showMessage(on ? tr("Streaming inference ON")
@@ -937,12 +937,12 @@ void MainWindow::setupMenuBar()
     
     // Batch compress folder
     aiMenu->addSeparator();
-    QAction* batchAct = aiMenu->addAction(tr("Batch Compress Folder..."));
+    void* batchAct = aiMenu->addAction(tr("Batch Compress Folder..."));
 // Qt connect removed
     setupQuantizationMenu(aiMenu);
 
-    QMenu* agentMenu = menuBar()->addMenu(tr("&Agent"));
-    QActionGroup* agentModeGroup = new QActionGroup(this);
+    void* agentMenu = menuBar()->addMenu(tr("&Agent"));
+    QActionGroup* agentModeGroup = nullptr;
     m_agentModeGroup = agentModeGroup;
     agentModeGroup->setExclusive(true);
     struct AgentMode { const char* label; const char* id; } agentModes[] = {
@@ -951,7 +951,7 @@ void MainWindow::setupMenuBar()
         {"Ask Mode", "Ask"},
     };
     for (const auto& mode : agentModes) {
-        QAction* action = agentMenu->addAction(std::string::fromUtf8(mode.label));
+        void* action = agentMenu->addAction(std::string::fromUtf8(mode.label));
         action->setCheckable(true);
         action->setData(std::string::fromUtf8(mode.id));
         agentModeGroup->addAction(action);
@@ -962,12 +962,12 @@ void MainWindow::setupMenuBar()
 // Qt connect removed
     });
 
-    QMenu* modelMenu = menuBar()->addMenu(tr("&Model"));
+    void* modelMenu = menuBar()->addMenu(tr("&Model"));
     modelMenu->addAction(tr("Load Local GGUF..."), this,
                          static_cast<void (MainWindow::*)()>(&MainWindow::loadGGUFModel));
     modelMenu->addAction(tr("Unload Model"), this, &MainWindow::unloadGGUFModel);
     modelMenu->addSeparator();
-    m_backendGroup = new QActionGroup(this);
+    m_backendGroup = nullptr;
     m_backendGroup->setExclusive(true);
     struct BackendOption { const char* id; const char* label; } backendOptions[] = {
         {"local", "Local GGUF"},
@@ -976,7 +976,7 @@ void MainWindow::setupMenuBar()
     };
     for (const auto& backend : backendOptions) {
         std::string backendId = std::string::fromUtf8(backend.id);
-        QAction* backendAction = modelMenu->addAction(std::string::fromUtf8(backend.label));
+        void* backendAction = modelMenu->addAction(std::string::fromUtf8(backend.label));
         backendAction->setCheckable(true);
         backendAction->setData(backendId);
         m_backendGroup->addAction(backendAction);
@@ -992,14 +992,14 @@ void MainWindow::setupMenuBar()
     // ============================================================
     // HELP MENU - Comprehensive help and support
     // ============================================================
-    QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
+    void* helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(tr("&Welcome"), this, &MainWindow::toggleWelcomeScreen);
     helpMenu->addSeparator();
     helpMenu->addAction(tr("&Documentation"), this, &MainWindow::handleOpenDocs, QKeySequence(//Key_F1));
     helpMenu->addAction(tr("&Interactive Playground"), this, &MainWindow::handlePlayground);
     helpMenu->addAction(tr("Show All &Commands"), this, &MainWindow::toggleCommandPalette, QKeySequence(//CTRL | //SHIFT | //Key_P));
     helpMenu->addSeparator();
-    helpMenu->addAction(tr("&Keyboard Shortcuts"), this, &MainWindow::handleShowShortcuts, QKeySequence(QStringLiteral("Ctrl+K Ctrl+S")));
+    helpMenu->addAction(tr("&Keyboard Shortcuts"), this, &MainWindow::handleShowShortcuts, QKeySequence("Ctrl+K Ctrl+S"));
     helpMenu->addAction(tr("Keyboard Shortcuts &Reference..."), this, &MainWindow::toggleShortcutsConfigurator);
     helpMenu->addSeparator();
     helpMenu->addAction(tr("&Check for Updates..."), this, &MainWindow::handleCheckUpdates);
@@ -1016,7 +1016,7 @@ void MainWindow::setupMenuBar()
 
 void MainWindow::setupToolBars()
 {
-    QToolBar* toolbar = addToolBar(tr("Main"));
+    void* toolbar = addToolBar(tr("Main"));
     toolbar->addAction(tr("New"));
     toolbar->addAction(tr("Open"));
     toolbar->addAction(tr("Save"));
@@ -1025,10 +1025,10 @@ void MainWindow::setupToolBars()
     toolbar->addSeparator();
     
     // Model selector
-    QLabel* modelLabel = new QLabel(tr("Model: "), toolbar);
+    void* modelLabel = new void(tr("Model: "), toolbar);
     toolbar->addWidget(modelLabel);
     
-    m_modelSelector = new QComboBox(toolbar);
+    m_modelSelector = new void(toolbar);
     m_modelSelector->setToolTip(tr("Select GGUF model to load"));
     m_modelSelector->setMinimumWidth(300);
     m_modelSelector->addItem(tr("No model loaded"));
@@ -1047,15 +1047,15 @@ void MainWindow::setupToolBars()
                 std::filesystem::path d(dirPath);
                 if (!d.exists()) continue;
                 std::vector<std::string> matches = d.entryList(std::vector<std::string>() << std::string("*%1*.gguf"), std::filesystem::path::Files, std::filesystem::path::Name);
-                if (!matches.isEmpty()) { gguf = d.filePath(matches.first()); break; }
+                if (!matches.empty()) { gguf = d.filePath(matches.first()); break; }
             }
-            if (!gguf.isEmpty()) {
+            if (!gguf.empty()) {
                 // Auto-load the resolved GGUF directly
                 loadGGUFModel(gguf);
             } else {
                 statusBar()->showMessage(tr("No GGUF found for Ollama model %1"), 5000);
             }
-        } else if (!modelData.isEmpty() && modelData != "LOAD") {
+        } else if (!modelData.empty() && modelData != "LOAD") {
             // Direct model selection - if it appears to be a path to a GGUF file, load it
             if (std::fstream::exists(modelData) && modelData.endsWith(".gguf", //CaseInsensitive)) {
                 loadGGUFModel(modelData);
@@ -1074,11 +1074,11 @@ void MainWindow::setupToolBars()
     toolbar->addSeparator();
     
     // Agent mode switcher
-    m_agentModeSwitcher = new QComboBox(toolbar);
+    m_agentModeSwitcher = new void(toolbar);
     m_agentModeSwitcher->setToolTip(tr("Switch agentic mode"));
-    m_agentModeSwitcher->addItem(tr("Plan Mode"), QStringLiteral("Plan"));
-    m_agentModeSwitcher->addItem(tr("Agent Mode"), QStringLiteral("Agent"));
-    m_agentModeSwitcher->addItem(tr("Ask Mode"), QStringLiteral("Ask"));
+    m_agentModeSwitcher->addItem(tr("Plan Mode"), "Plan");
+    m_agentModeSwitcher->addItem(tr("Agent Mode"), "Agent");
+    m_agentModeSwitcher->addItem(tr("Ask Mode"), "Ask");
     toolbar->addWidget(m_agentModeSwitcher);
 // Qt connect removed
         std::any data = m_agentModeSwitcher->currentData();
@@ -1089,7 +1089,7 @@ void MainWindow::setupToolBars()
 
 void MainWindow::changeAgentMode(const std::string& mode)
 {
-    if (mode.isEmpty()) return;
+    if (mode.empty()) return;
     if (mode == m_agentMode) return;
     m_agentMode = mode;
     if (m_agentModeSwitcher) {
@@ -1101,7 +1101,7 @@ void MainWindow::changeAgentMode(const std::string& mode)
         m_agentModeSwitcher->blockSignals(blocked);
     }
     if (m_agentModeGroup) {
-        for (QAction* action : m_agentModeGroup->actions()) {
+        for (void* action : m_agentModeGroup->actions()) {
             if (action->data().toString() == mode) {
                 bool blocked = action->blockSignals(true);
                 action->setChecked(true);
@@ -1147,16 +1147,16 @@ void MainWindow::refreshModelSelector()
     }
 
     // Add Ollama models via `ollama list` (non-blocking but short timeout)
-    QProcess ollamaProcess;
+    void* ollamaProcess;
     ollamaProcess.start("ollama", std::vector<std::string>() << "list");
     if (ollamaProcess.waitForStarted(2000) && ollamaProcess.waitForFinished(4000)) {
         std::string output = std::string::fromUtf8(ollamaProcess.readAllStandardOutput());
         std::vector<std::string> lines = output.split('\n', //SkipEmptyParts);
         for (int i = 1; i < lines.size(); ++i) {
             std::string line = lines[i].trimmed();
-            if (line.isEmpty()) continue;
+            if (line.empty()) continue;
             std::vector<std::string> parts = line.split(std::regex("\\s+"), //SkipEmptyParts);
-            if (parts.isEmpty()) continue;
+            if (parts.empty()) continue;
             std::string modelName = parts[0];
             std::string key = std::string("ollama:%1");
             if (seen.contains(key)) continue;
@@ -1174,14 +1174,14 @@ void MainWindow::refreshModelSelector()
     } else {
     }
 
-    // Load cloud models from QSettings (claude, gpt, copilot, huggingface)
-    QSettings settings("RawrXD", "AgenticIDE");
+    // Load cloud models from void* (claude, gpt, copilot, huggingface)
+    void* settings("RawrXD", "AgenticIDE");
     settings.beginGroup("models/cloud");
 
     settings.beginGroup("claude");
     for (const auto& key : settings.allKeys()) {
         std::string modelId = settings.value(key, "").toString();
-        if (!modelId.isEmpty()) {
+        if (!modelId.empty()) {
             std::string data = std::string("cloud:claude:%1");
             if (!seen.contains(data)) {
                 std::string tooltip = std::string("<b>%1</b><br/>Provider: Claude<br/>Model: %2"));
@@ -1196,7 +1196,7 @@ void MainWindow::refreshModelSelector()
     settings.beginGroup("gpt");
     for (const auto& key : settings.allKeys()) {
         std::string modelId = settings.value(key, "").toString();
-        if (!modelId.isEmpty()) {
+        if (!modelId.empty()) {
             std::string data = std::string("cloud:openai:%1");
             if (!seen.contains(data)) {
                 std::string tooltip = std::string("<b>%1</b><br/>Provider: OpenAI<br/>Model: %2"));
@@ -1211,7 +1211,7 @@ void MainWindow::refreshModelSelector()
     settings.beginGroup("copilot");
     for (const auto& key : settings.allKeys()) {
         std::string modelId = settings.value(key, "").toString();
-        if (!modelId.isEmpty()) {
+        if (!modelId.empty()) {
             std::string data = std::string("cloud:copilot:%1");
             if (!seen.contains(data)) {
                 std::string tooltip = std::string("<b>%1</b><br/>Provider: GitHub Copilot");
@@ -1226,7 +1226,7 @@ void MainWindow::refreshModelSelector()
     settings.beginGroup("huggingface");
     for (const auto& key : settings.allKeys()) {
         std::string modelId = settings.value(key, "").toString();
-        if (!modelId.isEmpty()) {
+        if (!modelId.empty()) {
             std::string data = std::string("cloud:hf:%1");
             if (!seen.contains(data)) {
                 std::string tooltip = std::string("<b>%1</b><br/>Provider: HuggingFace");
@@ -1272,7 +1272,7 @@ std::string MainWindow::buildGgufTooltip(const std::string& filePath)
             std::string("Exception: %1")))));
     } catch (...) {
         RawrXD::Integration::logWarn("MainWindow", "gguf_tooltip_failed",
-            QStringLiteral("Unknown exception"));
+            "Unknown exception");
     }
 
     m_modelTooltipCache.insert(filePath, tooltip);
@@ -1281,7 +1281,7 @@ std::string MainWindow::buildGgufTooltip(const std::string& filePath)
 
 void MainWindow::loadGGUFModel(const std::string& ggufPath)
 {
-    if (ggufPath.isEmpty() || !std::fstream::exists(ggufPath)) {
+    if (ggufPath.empty() || !std::fstream::exists(ggufPath)) {
         QMessageBox::critical(this, tr("Invalid Model"), tr("Model file not found: %1"));
         statusBar()->showMessage(tr("❌ Model file not found"), 3000);
         return;
@@ -1290,7 +1290,7 @@ void MainWindow::loadGGUFModel(const std::string& ggufPath)
     m_pendingModelPath = ggufPath;
 
     if (!m_loadingProgressDialog) {
-        m_loadingProgressDialog = new QProgressDialog(this);
+        m_loadingProgressDialog = nullptr;
         m_loadingProgressDialog->setWindowTitle(tr("Loading Model"));
         m_loadingProgressDialog->setWindowModality(//WindowModal);
         m_loadingProgressDialog->setMinimumDuration(0);
@@ -1370,7 +1370,7 @@ void MainWindow::onModelLoadFinished(bool success, const std::string& errorMsg)
     // Enable input on existing chat panels and set selected model
     if (m_chatTabs) {
         for (int i = 0; i < m_chatTabs->count(); ++i) {
-            if (auto* panel = qobject_cast<AIChatPanel*>(m_chatTabs->widget(i))) {
+// REMOVED_QT:             if (auto* panel = qobject_cast<AIChatPanel*>(m_chatTabs->widget(i))) {
                 panel->setLocalModel(std::filesystem::path(ggufPath).baseName());
                 panel->setSelectedModel(std::filesystem::path(ggufPath).baseName());
                 panel->setInputEnabled(true);
@@ -1381,11 +1381,11 @@ void MainWindow::onModelLoadFinished(bool success, const std::string& errorMsg)
     statusBar()->showMessage(tr("✔ Model loaded: %1").fileName()), 4000);
 }
 
-void MainWindow::handleBackendSelection(QAction* action)
+void MainWindow::handleBackendSelection(void* action)
 {
     if (!action) return;
     std::string backendId = action->data().toString();
-    if (backendId.isEmpty() || backendId == m_currentBackend) return;
+    if (backendId.empty() || backendId == m_currentBackend) return;
     m_currentBackend = backendId;
     statusBar()->showMessage(tr("Backend switched to %1")), 2000);
     onAIBackendChanged(backendId, {});
@@ -1394,10 +1394,10 @@ void MainWindow::handleBackendSelection(QAction* action)
 void MainWindow::createCentralEditor()
 {
     void* central = new void(this);
-    QVBoxLayout* layout = new QVBoxLayout(central);
+    void* layout = new void(central);
     
-    editorTabs_ = new QTabWidget(central);
-    codeView_ = new QTextEdit();
+    editorTabs_ = new void(central);
+    codeView_ = new void();
     editorTabs_->addTab(codeView_, "Untitled");
     
     layout->addWidget(editorTabs_);
@@ -1413,8 +1413,8 @@ void MainWindow::setupStatusBar()
     // Create permanent status widgets
     
     // 1. Line/Column indicator
-    QLabel* lineColLabel = new QLabel(" Ln 1, Col 1 ", this);
-    lineColLabel->setStyleSheet("QLabel { padding: 2px 8px; }");
+    void* lineColLabel = new void(" Ln 1, Col 1 ", this);
+    lineColLabel->setStyleSheet("void { padding: 2px 8px; }");
     statusBar()->addPermanentWidget(lineColLabel);
     
     // Connect to editor cursor changes
@@ -1427,21 +1427,21 @@ void MainWindow::setupStatusBar()
     }
     
     // 2. Backend indicator
-    QLabel* backendLabel = new QLabel(" Backend: Local ", this);
-    backendLabel->setStyleSheet("QLabel { padding: 2px 8px; color: #00ff00; }");
+    void* backendLabel = new void(" Backend: Local ", this);
+    backendLabel->setStyleSheet("void { padding: 2px 8px; color: #00ff00; }");
     backendLabel->setToolTip(tr("Current AI backend"));
     statusBar()->addPermanentWidget(backendLabel);
     
     // 3. Model indicator
-    QLabel* modelLabel = new QLabel(" Model: None ", this);
-    modelLabel->setStyleSheet("QLabel { padding: 2px 8px; }");
+    void* modelLabel = new void(" Model: None ", this);
+    modelLabel->setStyleSheet("void { padding: 2px 8px; }");
     modelLabel->setToolTip(tr("Currently loaded model"));
     statusBar()->addPermanentWidget(modelLabel);
     
     // Update model label when model changes
     if (m_modelSelector) {
 // Qt connect removed
-            if (!modelName.isEmpty()) {
+            if (!modelName.empty()) {
                 // Truncate long model names
                 if (modelName.length() > 30) {
                     modelName = modelName.left(27) + "...";
@@ -1454,8 +1454,8 @@ void MainWindow::setupStatusBar()
     }
     
     // 4. Memory usage indicator (optional - updated via timer)
-    QLabel* memoryLabel = new QLabel(" RAM: -- MB ", this);
-    memoryLabel->setStyleSheet("QLabel { padding: 2px 8px; }");
+    void* memoryLabel = new void(" RAM: -- MB ", this);
+    memoryLabel->setStyleSheet("void { padding: 2px 8px; }");
     memoryLabel->setToolTip(tr("Memory usage"));
     statusBar()->addPermanentWidget(memoryLabel);
     
@@ -1476,8 +1476,8 @@ void MainWindow::setupStatusBar()
     memoryTimer->start(5000); // Update every 5 seconds
     
     // 5. Connection status indicator
-    QLabel* connectionLabel = new QLabel(" ✓ Connected ", this);
-    connectionLabel->setStyleSheet("QLabel { padding: 2px 8px; color: #00ff00; }");
+    void* connectionLabel = new void(" ✓ Connected ", this);
+    connectionLabel->setStyleSheet("void { padding: 2px 8px; color: #00ff00; }");
     connectionLabel->setToolTip(tr("Connection status"));
     statusBar()->addPermanentWidget(connectionLabel);
     
@@ -1581,14 +1581,14 @@ void MainWindow::initSubsystems()
         m_hexMagConsole->appendPlainText(std::string("Time: %1").toString()));
         m_hexMagConsole->appendPlainText(std::string("Success: %1/%2"));
         
-        if (!failedSubsystems.isEmpty()) {
+        if (!failedSubsystems.empty()) {
             m_hexMagConsole->appendPlainText(std::string("Failed: %1")));
         }
         
         m_hexMagConsole->appendPlainText(std::string("==============================\n"));
     }
-    
-    
+
+
     if (successCount == totalSubsystems) {
     } else {
     }
@@ -1602,7 +1602,7 @@ void MainWindow::handleGoalSubmit() {
     if (!goalInput_) return;
     
     std::string wish = goalInput_->text().trimmed();
-    if (wish.isEmpty()) {
+    if (wish.empty()) {
         statusBar()->showMessage(tr("Please enter a goal/wish"), 2000);
         return;
     }
@@ -1611,7 +1611,7 @@ void MainWindow::handleGoalSubmit() {
     MetaPlanner planner;
     void* plan = planner.plan(wish);
     
-    if (plan.isEmpty()) {
+    if (plan.empty()) {
         statusBar()->showMessage(tr("Failed to generate plan"), 3000);
         return;
     }
@@ -1699,12 +1699,12 @@ void MainWindow::handleQShellReturn() {
     try {
         if (!qshellInput_ || !qshellOutput_) return;
         std::string command = qshellInput_->text().trimmed();
-        if (command.isEmpty()) return;
+        if (command.empty()) return;
         qshellOutput_->append(">> " + command);
         qshellInput_->clear();
         MetaPlanner planner;
         void* plan = planner.plan(command);
-        if (!plan.isEmpty() && m_actionExecutor) {
+        if (!plan.empty() && m_actionExecutor) {
             ExecutionContext ctx;
             ctx.projectRoot = std::filesystem::path::currentPath();
             m_actionExecutor->setContext(ctx);
@@ -1764,14 +1764,14 @@ void MainWindow::handleArchitectFinished() {
     statusBar()->showMessage(tr("Architect planning complete"), 3000);
 }
 void MainWindow::onActionStarted(int index, const std::string& description) {
-    handleTaskStatusUpdate(std::string::number(index), description, QStringLiteral("Agent"));
+    handleTaskStatusUpdate(std::string::number(index), description, "Agent");
 }
 
 void MainWindow::onActionCompleted(int index, bool success, const void*& result) {
     std::string summary = void*(result).toJson(void*::Compact);
-    std::string status = success ? QStringLiteral("Completed") : QStringLiteral("Failed");
-    handleTaskStatusUpdate(std::string::number(index), status, QStringLiteral("Agent"));
-    handleTaskCompleted(QStringLiteral("Agent"), summary);
+    std::string status = success ? "Completed" : "Failed";
+    handleTaskStatusUpdate(std::string::number(index), status, "Agent");
+    handleTaskCompleted("Agent", summary);
 }
 
 void MainWindow::onPlanCompleted(bool success, const void*& result) {
@@ -1831,8 +1831,8 @@ void MainWindow::handleWorkflowFinished(bool success) {
     
     if (mockStatusBadge_) {
         mockStatusBadge_->setText(success ? tr("✓ Done") : tr("✗ Failed"));
-        mockStatusBadge_->setStyleSheet(success ? "QLabel { color: #00ff00; }"
-                                                : "QLabel { color: #ff0000; }");
+        mockStatusBadge_->setStyleSheet(success ? "void { color: #00ff00; }"
+                                                : "void { color: #ff0000; }");
     }
     
     QMessageBox msgBox(this);
@@ -1864,7 +1864,7 @@ void MainWindow::handleTaskStreaming(const std::string& taskId, const std::strin
     }
 }
 void MainWindow::handleSaveState() {
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     
     // Save window geometry and state
     settings.setValue("MainWindow/geometry", saveGeometry());
@@ -1914,7 +1914,7 @@ void MainWindow::handleSaveState() {
 }
 
 void MainWindow::handleLoadState() {
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     
     // Restore window geometry and state
     if (settings.contains("MainWindow/geometry")) {
@@ -1987,8 +1987,8 @@ void MainWindow::handleLoadState() {
             m_primarySidebar->setFixedWidth(width);
         }
     }
-    
-    
+
+
     // Phase C: Restore editor state and history
     restoreTabState();
     restoreEditorContent();
@@ -2002,7 +2002,7 @@ void MainWindow::handleLoadState() {
 void MainWindow::saveEditorState() {
     if (!editorTabs_) return;
     
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     RawrXD::Integration::ScopedTimer timer("MainWindow", "saveEditorState", "persistence");
     
     try {
@@ -2024,7 +2024,7 @@ void MainWindow::saveEditorState() {
             tabObj["title"] = editorTabs_->tabText(i);
             
             // Get editor state
-            if (auto textEdit = qobject_cast<QTextEdit*>(widget)) {
+// REMOVED_QT:             if (auto textEdit = qobject_cast<void*>(widget)) {
                 QTextCursor cursor = textEdit->textCursor();
                 tabObj["cursorLine"] = cursor.blockNumber();
                 tabObj["cursorColumn"] = cursor.positionInBlock();
@@ -2068,7 +2068,7 @@ void MainWindow::saveEditorState() {
 void MainWindow::restoreEditorState() {
     if (!editorTabs_) return;
     
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     RawrXD::Integration::ScopedTimer timer("MainWindow", "restoreEditorState", "persistence");
     
     try {
@@ -2094,7 +2094,7 @@ void MainWindow::restoreEditorState() {
                     
                     if (index >= 0 && index < editorTabs_->count()) {
                         void* widget = editorTabs_->widget(index);
-                        if (auto textEdit = qobject_cast<QTextEdit*>(widget)) {
+// REMOVED_QT:                         if (auto textEdit = qobject_cast<void*>(widget)) {
                             // Restore scroll position
                             int scrollPos = tabObj["scrollPosition"].toInt();
                             textEdit->verticalScrollBar()->setValue(scrollPos);
@@ -2132,7 +2132,7 @@ void MainWindow::restoreEditorState() {
 void MainWindow::saveTabState() {
     if (!editorTabs_) return;
     
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     
     try {
         // Save tab titles and count
@@ -2157,7 +2157,7 @@ void MainWindow::saveTabState() {
 void MainWindow::restoreTabState() {
     if (!editorTabs_) return;
     
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     
     try {
         // Restore tab visibility and active tab
@@ -2185,7 +2185,7 @@ void MainWindow::trackEditorCursorPosition() {
         if (currentTab < 0) return;
         
         void* widget = editorTabs_->widget(currentTab);
-        if (auto textEdit = qobject_cast<QTextEdit*>(widget)) {
+// REMOVED_QT:         if (auto textEdit = qobject_cast<void*>(widget)) {
             QTextCursor cursor = textEdit->textCursor();
             EditorState& state = m_editorStates[currentTab];
             state.cursorLine = cursor.blockNumber();
@@ -2206,7 +2206,7 @@ void MainWindow::trackEditorScrollPosition() {
         if (currentTab < 0) return;
         
         void* widget = editorTabs_->widget(currentTab);
-        if (auto textEdit = qobject_cast<QTextEdit*>(widget)) {
+// REMOVED_QT:         if (auto textEdit = qobject_cast<void*>(widget)) {
             EditorState& state = m_editorStates[currentTab];
             state.scrollPosition = textEdit->verticalScrollBar()->value();
         }
@@ -2245,9 +2245,9 @@ void MainWindow::restoreEditorMetadata() {
 // ============================================================
 
 void MainWindow::addRecentFile(const std::string& filePath) {
-    if (filePath.isEmpty()) return;
+    if (filePath.empty()) return;
     
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     
     // Load existing recent files
     std::vector<std::string> recentFiles = settings.value("Files/recentFiles", std::vector<std::string>()).toStringList();
@@ -2275,12 +2275,12 @@ void MainWindow::addRecentFile(const std::string& filePath) {
 }
 
 std::vector<std::string> MainWindow::getRecentFiles() const {
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     return settings.value("Files/recentFiles", std::vector<std::string>()).toStringList();
 }
 
 void MainWindow::clearRecentFiles() {
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     settings.remove("Files/recentFiles");
     m_recentFiles.clear();
     
@@ -2288,24 +2288,24 @@ void MainWindow::clearRecentFiles() {
         std::string("Cleared all recent files"));
 }
 
-void MainWindow::populateRecentFilesMenu(QMenu* recentMenu) {
+void MainWindow::populateRecentFilesMenu(void* recentMenu) {
     if (!recentMenu) return;
     
     try {
         recentMenu->clear();
         std::vector<std::string> recentFiles = getRecentFiles();
         
-        if (recentFiles.isEmpty()) {
+        if (recentFiles.empty()) {
             recentMenu->addAction("(No recent files)")->setEnabled(false);
         } else {
             for (const std::string& filePath : recentFiles) {
-                QAction* action = recentMenu->addAction(std::filesystem::path(filePath).fileName());
+                void* action = recentMenu->addAction(std::filesystem::path(filePath).fileName());
                 action->setData(filePath);
 // Qt connect removed
                     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                         QTextStream in(&file);
                         if (editorTabs_) {
-                            QTextEdit* editor = new QTextEdit(this);
+                            void* editor = new void(this);
                             editor->setPlainText(in.readAll());
                             int index = editorTabs_->addTab(editor, std::filesystem::path(filePath).fileName());
                             editorTabs_->setCurrentIndex(index);
@@ -2333,10 +2333,10 @@ void MainWindow::populateRecentFilesMenu(QMenu* recentMenu) {
 // ============================================================
 
 void MainWindow::addCommandToHistory(const std::string& command) {
-    if (command.isEmpty()) return;
+    if (command.empty()) return;
     
     try {
-        QSettings settings("RawrXD", "QtShell");
+        void* settings("RawrXD", "QtShell");
         
         // Load existing command history
         std::vector<std::string> history = settings.value("Commands/history", std::vector<std::string>()).toStringList();
@@ -2368,13 +2368,13 @@ void MainWindow::addCommandToHistory(const std::string& command) {
 }
 
 std::vector<std::string> MainWindow::getCommandHistory() const {
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     return settings.value("Commands/history", std::vector<std::string>()).toStringList();
 }
 
 void MainWindow::clearCommandHistory() {
     try {
-        QSettings settings("RawrXD", "QtShell");
+        void* settings("RawrXD", "QtShell");
         settings.remove("Commands/history");
         m_commandHistory.clear();
         
@@ -2400,7 +2400,7 @@ void MainWindow::handleNewChat() {
 
 void MainWindow::handleNewEditor() {
     if (editorTabs_) {
-        QTextEdit* newEditor = new QTextEdit(this);
+        void* newEditor = new void(this);
         newEditor->setStyleSheet(codeView_->styleSheet());
         int index = editorTabs_->addTab(newEditor, tr("Untitled %1")));
         editorTabs_->setCurrentIndex(index);
@@ -2421,7 +2421,7 @@ void MainWindow::handleAddFile() {
         std::string(),
         tr("All Files (*.*)"));
     
-    if (!filePath.isEmpty()) {
+    if (!filePath.empty()) {
         std::fstream file(filePath);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream in(&file);
@@ -2429,7 +2429,7 @@ void MainWindow::handleAddFile() {
             file.close();
             
             if (editorTabs_) {
-                QTextEdit* editor = new QTextEdit(this);
+                void* editor = new void(this);
                 editor->setStyleSheet(codeView_->styleSheet());
                 editor->setText(content);
                 int index = editorTabs_->addTab(editor, std::filesystem::path(filePath).fileName());
@@ -2448,7 +2448,7 @@ void MainWindow::handleAddFolder() {
         std::string(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     
-    if (!folderPath.isEmpty()) {
+    if (!folderPath.empty()) {
         if (projectExplorer_) {
             projectExplorer_->openProject(folderPath);
         }
@@ -2459,17 +2459,17 @@ void MainWindow::handleAddFolder() {
 void MainWindow::handleAddSymbol() {
     bool ok;
     std::string symbol = QInputDialog::getText(this, tr("Add Symbol"),
-                                          tr("Symbol name:"), QLineEdit::Normal,
+                                          tr("Symbol name:"), void::Normal,
                                           std::string(), &ok);
-    if (ok && !symbol.isEmpty()) {
+    if (ok && !symbol.empty()) {
         if (contextList_) {
             contextList_->addItem(symbol);
         }
         statusBar()->showMessage(tr("Symbol added: %1"), 2000);
     }
 }
-void MainWindow::showContextMenu(const QPoint& pos) {
-    QMenu contextMenu(tr("Context Menu"), this);
+void MainWindow::showContextMenu(const void*& pos) {
+    void contextMenu(tr("Context Menu"), this);
     
     contextMenu.addAction(tr("Explain with AI"), this, &MainWindow::explainCode);
     contextMenu.addAction(tr("Fix with AI"), this, &MainWindow::fixCode);
@@ -2509,8 +2509,8 @@ void MainWindow::handleTabClose(int index) {
     void* widget = editorTabs_->widget(index);
     
     // Ask for confirmation if content exists
-    QTextEdit* editor = qobject_cast<QTextEdit*>(widget);
-    if (editor && !editor->toPlainText().isEmpty()) {
+// REMOVED_QT:     void* editor = qobject_cast<void*>(widget);
+    if (editor && !editor->toPlainText().empty()) {
         QMessageBox::StandardButton reply = QMessageBox::question(
             this,
             tr("Close Tab"),
@@ -2540,7 +2540,7 @@ void MainWindow::handlePwshCommand()
     }
     
     std::string command = pwshInput_->text().trimmed();
-    if (command.isEmpty()) {
+    if (command.empty()) {
         statusBar()->showMessage(tr("Enter a PowerShell command first"), 2000);
         return;
     }
@@ -2576,7 +2576,7 @@ void MainWindow::handleCmdCommand()
     }
     
     std::string command = cmdInput_->text().trimmed();
-    if (command.isEmpty()) {
+    if (command.empty()) {
         statusBar()->showMessage(tr("Enter a CMD command first"), 2000);
         return;
     }
@@ -2607,11 +2607,11 @@ void MainWindow::readPwshOutput()
     std::vector<uint8_t> data = pwshProcess_->readAllStandardOutput();
     std::string output = std::string::fromUtf8(data);
     
-    if (output.isEmpty()) {
+    if (output.empty()) {
         return;
     }
-    
-    
+
+
     if (pwshOutput_) {
         pwshOutput_->appendPlainText(output);
     }
@@ -2622,7 +2622,7 @@ void MainWindow::readPwshOutput()
     
     // Check for errors
     std::vector<uint8_t> errorData = pwshProcess_->readAllStandardError();
-    if (!errorData.isEmpty()) {
+    if (!errorData.empty()) {
         std::string errorOutput = std::string::fromUtf8(errorData);
         
         if (pwshOutput_) {
@@ -2640,11 +2640,11 @@ void MainWindow::readCmdOutput()
     std::vector<uint8_t> data = cmdProcess_->readAllStandardOutput();
     std::string output = std::string::fromUtf8(data);
     
-    if (output.isEmpty()) {
+    if (output.empty()) {
         return;
     }
-    
-    
+
+
     if (cmdOutput_) {
         cmdOutput_->appendPlainText(output);
     }
@@ -2655,7 +2655,7 @@ void MainWindow::readCmdOutput()
     
     // Check for errors
     std::vector<uint8_t> errorData = cmdProcess_->readAllStandardError();
-    if (!errorData.isEmpty()) {
+    if (!errorData.empty()) {
         std::string errorOutput = std::string::fromUtf8(errorData);
         
         if (cmdOutput_) {
@@ -2703,7 +2703,7 @@ void MainWindow::saveDebugLog()
     
     std::string logContent = m_hexMagConsole->toPlainText();
     
-    if (logContent.isEmpty()) {
+    if (logContent.empty()) {
         QMessageBox::information(this, tr("Save Debug Log"), 
                                tr("Debug log is empty. Nothing to save."));
         return;
@@ -2720,7 +2720,7 @@ void MainWindow::saveDebugLog()
         tr("Log Files (*.log);;Text Files (*.txt);;All Files (*.*)")  
     );
     
-    if (filePath.isEmpty()) {
+    if (filePath.empty()) {
         statusBar()->showMessage(tr("Save cancelled"), 2000);
         return;
     }
@@ -2751,14 +2751,14 @@ void MainWindow::saveDebugLog()
     file.close();
     
     std::filesystem::path fileInfo(filePath);
-    qint64 fileSize = fileInfo.size();
+    int64_t fileSize = fileInfo.size();
     
     statusBar()->showMessage(
         tr("Debug log saved: %1 (%2 KB)")),
         5000
     );
-    
-    
+
+
     // Offer to open the file
     QMessageBox::StandardButton openReply = QMessageBox::question(
         this,
@@ -2800,7 +2800,7 @@ void MainWindow::filterLogLevel(const std::string& level)
     int filteredCount = 0;
     
     for (const std::string& line : lines) {
-        if (line.isEmpty()) {
+        if (line.empty()) {
             filteredLines.append(line);
             continue;
         }
@@ -2839,14 +2839,14 @@ void MainWindow::filterLogLevel(const std::string& level)
     
             << "lines, hidden" << filteredCount << "lines";
 }
-void MainWindow::showEditorContextMenu(const QPoint& pos) 
+void MainWindow::showEditorContextMenu(const void*& pos) 
 {
     
     if (!codeView_) {
         return;
     }
     
-    QMenu contextMenu(tr("Editor Context Menu"), this);
+    void contextMenu(tr("Editor Context Menu"), this);
     
     // Get selected text info
     QTextCursor cursor = codeView_->textCursor();
@@ -2854,28 +2854,28 @@ void MainWindow::showEditorContextMenu(const QPoint& pos)
     std::string selectedText = cursor.selectedText();
     
     // Basic editing operations
-    QAction* undoAction = contextMenu.addAction(QIcon(), tr("Undo"), codeView_, &QTextEdit::undo);
+    void* undoAction = contextMenu.addAction(std::string(), tr("Undo"), codeView_, &void::undo);
     undoAction->setShortcut(QKeySequence::Undo);
     undoAction->setEnabled(codeView_->document()->isUndoAvailable());
     
-    QAction* redoAction = contextMenu.addAction(QIcon(), tr("Redo"), codeView_, &QTextEdit::redo);
+    void* redoAction = contextMenu.addAction(std::string(), tr("Redo"), codeView_, &void::redo);
     redoAction->setShortcut(QKeySequence::Redo);
     redoAction->setEnabled(codeView_->document()->isRedoAvailable());
     
     contextMenu.addSeparator();
     
-    QAction* cutAction = contextMenu.addAction(QIcon(), tr("Cut"), codeView_, &QTextEdit::cut);
+    void* cutAction = contextMenu.addAction(std::string(), tr("Cut"), codeView_, &void::cut);
     cutAction->setShortcut(QKeySequence::Cut);
     cutAction->setEnabled(hasSelection);
     
-    QAction* copyAction = contextMenu.addAction(QIcon(), tr("Copy"), codeView_, &QTextEdit::copy);
+    void* copyAction = contextMenu.addAction(std::string(), tr("Copy"), codeView_, &void::copy);
     copyAction->setShortcut(QKeySequence::Copy);
     copyAction->setEnabled(hasSelection);
     
-    QAction* pasteAction = contextMenu.addAction(QIcon(), tr("Paste"), codeView_, &QTextEdit::paste);
+    void* pasteAction = contextMenu.addAction(std::string(), tr("Paste"), codeView_, &void::paste);
     pasteAction->setShortcut(QKeySequence::Paste);
     
-    QAction* deleteAction = contextMenu.addAction(QIcon(), tr("Delete"), [this, cursor]() mutable {
+    void* deleteAction = contextMenu.addAction(std::string(), tr("Delete"), [this, cursor]() mutable {
         cursor.removeSelectedText();
     });
     deleteAction->setShortcut(QKeySequence::Delete);
@@ -2883,14 +2883,14 @@ void MainWindow::showEditorContextMenu(const QPoint& pos)
     
     contextMenu.addSeparator();
     
-    QAction* selectAllAction = contextMenu.addAction(QIcon(), tr("Select All"), codeView_, &QTextEdit::selectAll);
+    void* selectAllAction = contextMenu.addAction(std::string(), tr("Select All"), codeView_, &void::selectAll);
     selectAllAction->setShortcut(QKeySequence::SelectAll);
     
     contextMenu.addSeparator();
     
     // AI-assisted operations (only if text is selected)
     if (hasSelection && m_aiChatPanel) {
-        QMenu* aiMenu = contextMenu.addMenu(tr("✨ AI Assist"));
+        void* aiMenu = contextMenu.addMenu(tr("✨ AI Assist"));
         
         aiMenu->addAction(tr("💡 Explain Code"), this, &MainWindow::explainCode);
         aiMenu->addAction(tr("🔧 Fix Bugs"), this, &MainWindow::fixCode);
@@ -2913,14 +2913,14 @@ void MainWindow::showEditorContextMenu(const QPoint& pos)
     }
     
     // Execute context menu at cursor position
-    QPoint globalPos = codeView_->mapToGlobal(pos);
+    void* globalPos = codeView_->mapToGlobal(pos);
     contextMenu.exec(globalPos);
     
 }
 void MainWindow::explainCode() 
 { 
     std::string sel = codeView_->textCursor().selectedText(); 
-    if (sel.isEmpty()) {
+    if (sel.empty()) {
         statusBar()->showMessage(tr("Select code first"), 2000);
         return;
     }
@@ -2943,7 +2943,7 @@ void MainWindow::explainCode()
 void MainWindow::fixCode() 
 { 
     std::string sel = codeView_->textCursor().selectedText(); 
-    if (sel.isEmpty()) {
+    if (sel.empty()) {
         statusBar()->showMessage(tr("Select code first"), 2000);
         return;
     }
@@ -2965,7 +2965,7 @@ void MainWindow::fixCode()
 void MainWindow::refactorCode() 
 { 
     std::string sel = codeView_->textCursor().selectedText(); 
-    if (sel.isEmpty()) {
+    if (sel.empty()) {
         statusBar()->showMessage(tr("Select code first"), 2000);
         return;
     }
@@ -2987,7 +2987,7 @@ void MainWindow::refactorCode()
 void MainWindow::generateTests() 
 { 
     std::string sel = codeView_->textCursor().selectedText(); 
-    if (sel.isEmpty()) {
+    if (sel.empty()) {
         statusBar()->showMessage(tr("Select code first"), 2000);
         return;
     }
@@ -3009,7 +3009,7 @@ void MainWindow::generateTests()
 void MainWindow::generateDocs() 
 { 
     std::string sel = codeView_->textCursor().selectedText();
-    if (sel.isEmpty()) {
+    if (sel.empty()) {
         sel = codeView_->toPlainText(); // Use entire file if nothing selected
     }
     
@@ -3038,7 +3038,7 @@ void MainWindow::onProjectOpened(const std::string& path) {
         return;
     }
     
-    if (path.isEmpty()) {
+    if (path.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "project_open", "Empty project path");
         return;
     }
@@ -3056,7 +3056,7 @@ void MainWindow::onProjectOpened(const std::string& path) {
     m_currentProjectPath = info.isDir() ? path : info.absolutePath();
     
     // Track project opens
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int openCount = settings.value("projects/openCount", 0).toInt() + 1;
     settings.setValue("projects/openCount", openCount);
     settings.setValue("projects/lastOpenedPath", m_currentProjectPath);
@@ -3096,7 +3096,7 @@ void MainWindow::onProjectOpened(const std::string& path) {
 }
 
 void MainWindow::openFileInEditor(const std::string& path) {
-    if (path.isEmpty() || !std::fstream::exists(path)) {
+    if (path.empty() || !std::fstream::exists(path)) {
         statusBar()->showMessage(tr("File not found: %1"), 4000);
         return;
     }
@@ -3113,7 +3113,7 @@ void MainWindow::openFileInEditor(const std::string& path) {
     file.close();
 
     if (editorTabs_) {
-        QTextEdit* editor = new QTextEdit(this);
+        void* editor = new void(this);
         editor->setPlainText(content);
         const std::string title = std::filesystem::path(path).fileName();
         editorTabs_->addTab(editor, title);
@@ -3141,7 +3141,7 @@ void MainWindow::onBuildStarted() {
     g_buildSystemBreaker.recordSuccess();
     
     // Track build sessions
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     settings.setValue("build/lastStartTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     settings.setValue("build/inProgress", true);
     int buildCount = settings.value("build/totalBuilds", 0).toInt() + 1;
@@ -3163,7 +3163,7 @@ void MainWindow::onBuildStarted() {
     
     // If we have a build output panel, clear it
     if (m_outputPanelWidget) {
-        if (auto output = qobject_cast<QPlainTextEdit*>(m_outputPanelWidget)) {
+// REMOVED_QT:         if (auto output = qobject_cast<QPlainTextEdit*>(m_outputPanelWidget)) {
             output->appendPlainText(std::string("[%1] Build started...\n")
                                    .toString("hh:mm:ss")));
         }
@@ -3185,10 +3185,10 @@ void MainWindow::onBuildFinished(bool success) {
     }
     
     // Calculate build duration
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     std::string startTimeStr = settings.value("build/lastStartTime").toString();
-    qint64 buildDuration = 0;
-    if (!startTimeStr.isEmpty()) {
+    int64_t buildDuration = 0;
+    if (!startTimeStr.empty()) {
         std::chrono::system_clock::time_point startTime = std::chrono::system_clock::time_point::fromString(startTimeStr, //ISODate);
         if (startTime.isValid()) {
             buildDuration = startTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
@@ -3260,7 +3260,7 @@ void MainWindow::onVcsStatusChanged() {
     g_vcsBreaker.recordSuccess();
     
     // Track VCS refresh
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int refreshCount = settings.value("vcs/refreshCount", 0).toInt() + 1;
     settings.setValue("vcs/refreshCount", refreshCount);
     settings.setValue("vcs/lastRefreshTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -3297,7 +3297,7 @@ void MainWindow::onDebuggerStateChanged(bool running) {
         MetricsCollector::instance().incrementCounter("debugger_sessions_started");
     } else {
         if (sessionStartTime.isValid()) {
-            qint64 sessionDuration = sessionStartTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
+            int64_t sessionDuration = sessionStartTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
             MetricsCollector::instance().recordLatency("debugger_session_duration_ms", sessionDuration);
             sessionStartTime = std::chrono::system_clock::time_point();
         }
@@ -3310,7 +3310,7 @@ void MainWindow::onDebuggerStateChanged(bool running) {
     }
     
     // Persist debugger state
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     settings.setValue("debugger/lastState", running ? "running" : "stopped");
     settings.setValue("debugger/lastStateChange", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
@@ -3346,7 +3346,7 @@ void MainWindow::onTestRunStarted() {
     }
     
     // Record test run start time for duration tracking
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     settings.setValue("testing/lastRunStartTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     settings.setValue("testing/runInProgress", true);
     
@@ -3367,7 +3367,7 @@ void MainWindow::onTestRunStarted() {
     
     // Clear previous test results in output panel
     if (m_outputPanelWidget) {
-        if (auto output = qobject_cast<QPlainTextEdit*>(m_outputPanelWidget)) {
+// REMOVED_QT:         if (auto output = qobject_cast<QPlainTextEdit*>(m_outputPanelWidget)) {
             output->clear();
             output->appendPlainText(std::string("[%1] Test run started...\n")
                                    .toString("hh:mm:ss")));
@@ -3394,12 +3394,12 @@ void MainWindow::onTestRunFinished() {
     }
     
     // Calculate test run duration
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     std::string startTimeStr = settings.value("testing/lastRunStartTime").toString();
-    if (!startTimeStr.isEmpty()) {
+    if (!startTimeStr.empty()) {
         std::chrono::system_clock::time_point startTime = std::chrono::system_clock::time_point::fromString(startTimeStr, //ISODate);
         if (startTime.isValid()) {
-            qint64 duration = startTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
+            int64_t duration = startTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
             MetricsCollector::instance().recordLatency("test_run_duration_ms", duration);
             settings.setValue("testing/lastRunDuration", duration);
         }
@@ -3428,7 +3428,7 @@ void MainWindow::onTestRunFinished() {
     
     // Append result to output panel
     if (m_outputPanelWidget) {
-        if (auto output = qobject_cast<QPlainTextEdit*>(m_outputPanelWidget)) {
+// REMOVED_QT:         if (auto output = qobject_cast<QPlainTextEdit*>(m_outputPanelWidget)) {
             output->appendPlainText(std::string("[%1] Test run completed.\n")
                                    .toString("hh:mm:ss")));
         }
@@ -3455,7 +3455,7 @@ void MainWindow::onDatabaseConnected() {
     }
     
     // Track database connections
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int connectionCount = settings.value("database/connections", 0).toInt() + 1;
     settings.setValue("database/connections", connectionCount);
     settings.setValue("database/lastConnectionTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -3563,13 +3563,13 @@ void MainWindow::onPackageInstalled(const std::string& pkg) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onPackageInstalled", "package");
     RawrXD::Integration::traceEvent("PackageManager", "package_installed");
     
-    if (pkg.isEmpty()) {
+    if (pkg.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "package_install", "Empty package name");
         return;
     }
     
     // Track package installations
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int installCount = settings.value("packages/installCount", 0).toInt() + 1;
     settings.setValue("packages/installCount", installCount);
     settings.setValue("packages/lastInstalled", pkg);
@@ -3603,13 +3603,13 @@ void MainWindow::onDocumentationQueried(const std::string& keyword) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onDocumentationQueried", "docs");
     RawrXD::Integration::traceEvent("Documentation", "queried");
     
-    if (keyword.isEmpty()) {
+    if (keyword.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "docs_query", "Empty documentation query");
         return;
     }
     
     // Track documentation queries
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int queryCount = settings.value("docs/queryCount", 0).toInt() + 1;
     settings.setValue("docs/queryCount", queryCount);
     settings.setValue("docs/lastQuery", keyword);
@@ -3625,7 +3625,7 @@ void MainWindow::onDocumentationQueried(const std::string& keyword) {
     }
     
     // Could integrate with AI chat to search documentation
-    if (m_aiChatPanel && !keyword.isEmpty()) {
+    if (m_aiChatPanel && !keyword.empty()) {
         std::string prompt = tr("Show documentation for: %1");
         m_aiChatPanel->addUserMessage(prompt);
     }
@@ -3639,13 +3639,13 @@ void MainWindow::onUMLGenerated(const std::string& plantUml) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onUMLGenerated", "uml");
     RawrXD::Integration::traceEvent("UML", "generated");
     
-    if (plantUml.isEmpty()) {
+    if (plantUml.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "uml_generate", "Empty UML content");
         return;
     }
     
     // Track UML generation
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int generationCount = settings.value("uml/generationCount", 0).toInt() + 1;
     settings.setValue("uml/generationCount", generationCount);
     settings.setValue("uml/lastGenerationLength", plantUml.length());
@@ -3675,7 +3675,7 @@ void MainWindow::onImageEdited(const std::string& path) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onImageEdited", "image");
     RawrXD::Integration::traceEvent("Image", "edited");
     
-    if (path.isEmpty()) {
+    if (path.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "image_edit", "Empty image path");
         return;
     }
@@ -3688,7 +3688,7 @@ void MainWindow::onImageEdited(const std::string& path) {
     }
     
     // Track image edits
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int editCount = settings.value("image/editCount", 0).toInt() + 1;
     settings.setValue("image/editCount", editCount);
     settings.setValue("image/lastEdited", path);
@@ -3716,13 +3716,13 @@ void MainWindow::onTranslationChanged(const std::string& lang) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onTranslationChanged", "translation");
     RawrXD::Integration::traceEvent("Translation", "changed");
     
-    if (lang.isEmpty()) {
+    if (lang.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "translation_change", "Empty language code");
         return;
     }
     
     // Track language changes
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int changeCount = settings.value("translation/changeCount", 0).toInt() + 1;
     settings.setValue("translation/changeCount", changeCount);
     settings.setValue("translation/lastLanguage", lang);
@@ -3736,7 +3736,7 @@ void MainWindow::onTranslationChanged(const std::string& lang) {
         m_hexMagConsole->appendPlainText(std::string("[TRANSLATION] Language: %1"));
     }
     
-    // Could trigger QApplication locale change here
+    // Could trigger void locale change here
     if (chatHistory_) {
         chatHistory_->addItem(tr("🌐 Language changed: %1"));
     }
@@ -3750,7 +3750,7 @@ void MainWindow::onDesignImported(const std::string& file) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onDesignImported", "design");
     RawrXD::Integration::traceEvent("Design", "imported");
     
-    if (file.isEmpty()) {
+    if (file.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "design_import", "Empty design file path");
         return;
     }
@@ -3763,7 +3763,7 @@ void MainWindow::onDesignImported(const std::string& file) {
     }
     
     // Track design imports
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int importCount = settings.value("design/importCount", 0).toInt() + 1;
     settings.setValue("design/importCount", importCount);
     settings.setValue("design/lastImported", file);
@@ -3790,13 +3790,13 @@ void MainWindow::onAIChatMessage(const std::string& msg) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onAIChatMessage", "ai_chat");
     RawrXD::Integration::traceEvent("AI_Chat", "message_received");
     
-    if (msg.isEmpty()) {
+    if (msg.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "ai_chat_message", "Empty AI chat message");
         return;
     }
     
     // Track AI chat messages
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int messageCount = settings.value("ai_chat/messageCount", 0).toInt() + 1;
     settings.setValue("ai_chat/messageCount", messageCount);
     settings.setValue("ai_chat/lastMessageLength", msg.length());
@@ -3830,7 +3830,7 @@ void MainWindow::onNotebookExecuted() {
     RawrXD::Integration::traceEvent("Notebook", "executed");
     
     // Track notebook executions
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int executionCount = settings.value("notebook/executionCount", 0).toInt() + 1;
     settings.setValue("notebook/executionCount", executionCount);
     settings.setValue("notebook/lastExecutionTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -3858,7 +3858,7 @@ void MainWindow::onMarkdownRendered() {
     RawrXD::Integration::traceEvent("Markdown", "rendered");
     
     // Track markdown renders
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int renderCount = settings.value("markdown/renderCount", 0).toInt() + 1;
     settings.setValue("markdown/renderCount", renderCount);
     settings.setValue("markdown/lastRenderTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -3881,7 +3881,7 @@ void MainWindow::onSheetCalculated() {
     RawrXD::Integration::traceEvent("Spreadsheet", "calculated");
     
     // Track spreadsheet calculations
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int calculationCount = settings.value("spreadsheet/calculationCount", 0).toInt() + 1;
     settings.setValue("spreadsheet/calculationCount", calculationCount);
     settings.setValue("spreadsheet/lastCalculationTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -3903,13 +3903,13 @@ void MainWindow::onTerminalCommand(const std::string& cmd) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onTerminalCommand", "terminal");
     RawrXD::Integration::traceEvent("Terminal", "command_executed");
     
-    if (cmd.isEmpty()) {
+    if (cmd.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "terminal_command", "Empty terminal command");
         return;
     }
     
     // Track terminal commands
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int commandCount = settings.value("terminal/commandCount", 0).toInt() + 1;
     settings.setValue("terminal/commandCount", commandCount);
     settings.setValue("terminal/lastCommand", cmd.left(100)); // Store first 100 chars
@@ -3924,7 +3924,7 @@ void MainWindow::onTerminalCommand(const std::string& cmd) {
         m_hexMagConsole->appendPlainText(std::string("[TERMINAL] $ %1"));
     }
     
-    // Could execute command via QProcess here
+    // Could execute command via void* here
     if (chatHistory_) {
         chatHistory_->addItem(tr("💻 Terminal: %1")));
     }
@@ -3937,13 +3937,13 @@ void MainWindow::onSnippetInserted(const std::string& id) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onSnippetInserted", "snippet");
     RawrXD::Integration::traceEvent("Snippet", "inserted");
     
-    if (id.isEmpty()) {
+    if (id.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "snippet_insert", "Empty snippet ID");
         return;
     }
     
     // Track snippet usage
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int snippetCount = settings.value("snippets/insertCount", 0).toInt() + 1;
     settings.setValue("snippets/insertCount", snippetCount);
     settings.setValue("snippets/lastInserted", id);
@@ -3966,13 +3966,13 @@ void MainWindow::onRegexTested(const std::string& pattern) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onRegexTested", "regex");
     RawrXD::Integration::traceEvent("Regex", "tested");
     
-    if (pattern.isEmpty()) {
+    if (pattern.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "regex_test", "Empty regex pattern");
         return;
     }
     
     // Track regex testing
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int testCount = settings.value("regex/testCount", 0).toInt() + 1;
     settings.setValue("regex/testCount", testCount);
     settings.setValue("regex/lastPattern", pattern);
@@ -3997,7 +3997,7 @@ void MainWindow::onDiffMerged() {
     RawrXD::Integration::traceEvent("Diff", "merged");
     
     // Track diff merges
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int mergeCount = settings.value("diff/mergeCount", 0).toInt() + 1;
     settings.setValue("diff/mergeCount", mergeCount);
     settings.setValue("diff/lastMergeTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -4020,7 +4020,7 @@ void MainWindow::onDiffMerged() {
         void*{{"merge_count", mergeCount}});
 }
 
-void MainWindow::onColorPicked(const QColor& c) {
+void MainWindow::onColorPicked(const uint32_t& c) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onColorPicked", "color");
     RawrXD::Integration::traceEvent("Color", "picked");
     
@@ -4030,7 +4030,7 @@ void MainWindow::onColorPicked(const QColor& c) {
     }
     
     // Track color picks
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int pickCount = settings.value("color/pickCount", 0).toInt() + 1;
     settings.setValue("color/pickCount", pickCount);
     settings.setValue("color/lastColor", c.name());
@@ -4059,13 +4059,13 @@ void MainWindow::onIconSelected(const std::string& name) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onIconSelected", "icon");
     RawrXD::Integration::traceEvent("Icon", "selected");
     
-    if (name.isEmpty()) {
+    if (name.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "icon_select", "Empty icon name");
         return;
     }
     
     // Track icon selections
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int selectionCount = settings.value("icon/selectionCount", 0).toInt() + 1;
     settings.setValue("icon/selectionCount", selectionCount);
     settings.setValue("icon/lastSelected", name);
@@ -4088,13 +4088,13 @@ void MainWindow::onPluginLoaded(const std::string& name) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onPluginLoaded", "plugin");
     RawrXD::Integration::traceEvent("Plugin", "loaded");
     
-    if (name.isEmpty()) {
+    if (name.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "plugin_load", "Empty plugin name");
         return;
     }
     
     // Track plugin loads
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int loadCount = settings.value("plugin/loadCount", 0).toInt() + 1;
     settings.setValue("plugin/loadCount", loadCount);
     settings.setValue("plugin/lastLoaded", name);
@@ -4123,7 +4123,7 @@ void MainWindow::onSettingsSaved() {
     RawrXD::Integration::traceEvent("Settings", "saved");
     
     // Track settings saves
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int saveCount = settings.value("settings/saveCount", 0).toInt() + 1;
     settings.setValue("settings/saveCount", saveCount);
     settings.setValue("settings/lastSaveTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -4152,13 +4152,13 @@ void MainWindow::onNotificationClicked(const std::string& id) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onNotificationClicked", "notification");
     RawrXD::Integration::traceEvent("Notification", "clicked");
     
-    if (id.isEmpty()) {
+    if (id.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "notification_click", "Empty notification ID");
         return;
     }
     
     // Track notification clicks
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int clickCount = settings.value("notification/clickCount", 0).toInt() + 1;
     settings.setValue("notification/clickCount", clickCount);
     settings.setValue("notification/lastClicked", id);
@@ -4181,13 +4181,13 @@ void MainWindow::onShortcutChanged(const std::string& id, const QKeySequence& ke
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onShortcutChanged", "shortcut");
     RawrXD::Integration::traceEvent("Shortcut", "changed");
     
-    if (id.isEmpty()) {
+    if (id.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "shortcut_change", "Empty shortcut ID");
         return;
     }
     
     // Track shortcut changes
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int changeCount = settings.value("shortcut/changeCount", 0).toInt() + 1;
     settings.setValue("shortcut/changeCount", changeCount);
     settings.setValue("shortcut/lastChanged", id);
@@ -4202,7 +4202,7 @@ void MainWindow::onShortcutChanged(const std::string& id, const QKeySequence& ke
     }
     
     // Save shortcuts to settings (use different settings object for QtShell)
-    QSettings qtShellSettings("RawrXD", "QtShell");
+    void* qtShellSettings("RawrXD", "QtShell");
     qtShellSettings.setValue(std::string("Shortcuts/%1"), key.toString());
     
     RawrXD::Integration::logInfo("MainWindow", "shortcut_changed",
@@ -4215,7 +4215,7 @@ void MainWindow::onTelemetryReady() {
     RawrXD::Integration::traceEvent("Telemetry", "ready");
     
     // Track telemetry initialization
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     settings.setValue("telemetry/initialized", true);
     settings.setValue("telemetry/initTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
@@ -4233,13 +4233,13 @@ void MainWindow::onUpdateAvailable(const std::string& version) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onUpdateAvailable", "update");
     RawrXD::Integration::traceEvent("Update", "available");
     
-    if (version.isEmpty()) {
+    if (version.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "update_available", "Empty version string");
         return;
     }
     
     // Track update notifications
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int notificationCount = settings.value("update/notificationCount", 0).toInt() + 1;
     settings.setValue("update/notificationCount", notificationCount);
     settings.setValue("update/lastVersion", version);
@@ -4278,13 +4278,13 @@ void MainWindow::onWelcomeProjectChosen(const std::string& path) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onWelcomeProjectChosen", "welcome");
     RawrXD::Integration::traceEvent("Welcome", "project_chosen");
     
-    if (path.isEmpty()) {
+    if (path.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "welcome_project", "Empty project path");
         return;
     }
     
     // Track welcome screen project selections
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int selectionCount = settings.value("welcome/projectSelections", 0).toInt() + 1;
     settings.setValue("welcome/projectSelections", selectionCount);
     settings.setValue("welcome/lastSelectedPath", path);
@@ -4304,13 +4304,13 @@ void MainWindow::onCommandPaletteTriggered(const std::string& cmd) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onCommandPaletteTriggered", "command_palette");
     RawrXD::Integration::traceEvent("CommandPalette", "triggered");
     
-    if (cmd.isEmpty()) {
+    if (cmd.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "command_palette", "Empty command");
         return;
     }
     
     // Track command palette usage
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int triggerCount = settings.value("command_palette/triggerCount", 0).toInt() + 1;
     settings.setValue("command_palette/triggerCount", triggerCount);
     settings.setValue("command_palette/lastCommand", cmd);
@@ -4339,13 +4339,13 @@ void MainWindow::onProgressCancelled(const std::string& taskId) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onProgressCancelled", "progress");
     RawrXD::Integration::traceEvent("Progress", "cancelled");
     
-    if (taskId.isEmpty()) {
+    if (taskId.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "progress_cancel", "Empty task ID");
         return;
     }
     
     // Track progress cancellations
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int cancelCount = settings.value("progress/cancelCount", 0).toInt() + 1;
     settings.setValue("progress/cancelCount", cancelCount);
     settings.setValue("progress/lastCancelled", taskId);
@@ -4468,7 +4468,7 @@ void MainWindow::onBookmarkToggled(const std::string& file, int line) {
     }
     
     // Save bookmark to settings
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     std::string bookmarkKey = std::string("Bookmarks/%1_%2");
     bool exists = settings.value(bookmarkKey, false).toBool();
     settings.setValue(bookmarkKey, !exists); // Toggle
@@ -4487,7 +4487,7 @@ void MainWindow::onTodoClicked(const std::string& file, int line) {
     }
     
     // Track TODO interaction
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int todoClicks = settings.value("todos/clickCount", 0).toInt() + 1;
     settings.setValue("todos/clickCount", todoClicks);
     settings.setValue("todos/lastClicked", std::string("%1:%2"));
@@ -4505,13 +4505,13 @@ void MainWindow::scanProjectForTodos()
     // Clear existing items
     todos_->clear();
     
-    std::string projectPath = QSettings("RawrXD", "IDE").value("project/currentPath", "").toString();
-    if (projectPath.isEmpty() && projectExplorer_) {
+    std::string projectPath = void*("RawrXD", "IDE").value("project/currentPath", "").toString();
+    if (projectPath.empty() && projectExplorer_) {
         // Try to get from project explorer
         projectPath = std::filesystem::path::currentPath();
     }
     
-    if (projectPath.isEmpty()) {
+    if (projectPath.empty()) {
         statusBar()->showMessage(tr("No project open for TODO scan"), 3000);
         return;
     }
@@ -4547,17 +4547,17 @@ void MainWindow::scanProjectForTodos()
                             
                             ;
                         
-                        QListWidgetItem* item = new QListWidgetItem(itemText);
+                        QListWidgetItem* item = nullptr;
                         item->setData(//UserRole, filePath);
                         item->setData(//UserRole + 1, lineNum);
                         
                         // Color code by type
                         if (pattern == "FIXME" || pattern == "BUG") {
-                            item->setForeground(QColor("#ff6b6b")); // Red
+                            item->setForeground(uint32_t("#ff6b6b")); // Red
                         } else if (pattern == "HACK" || pattern == "XXX") {
-                            item->setForeground(QColor("#ffd93d")); // Yellow
+                            item->setForeground(uint32_t("#ffd93d")); // Yellow
                         } else {
-                            item->setForeground(QColor("#6bcb77")); // Green
+                            item->setForeground(uint32_t("#6bcb77")); // Green
                         }
                         
                         todos_->addItem(item);
@@ -4572,7 +4572,7 @@ void MainWindow::scanProjectForTodos()
     statusBar()->showMessage(tr("Found %1 TODOs in project"), 5000);
     
     // Persist TODO count
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     settings.setValue("todos/totalCount", totalTodos);
     settings.setValue("todos/lastScan", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
 }
@@ -4733,7 +4733,7 @@ void MainWindow::onTimeEntryAdded(const std::string& task) {
     }
     
     // Save to settings for time tracking history
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     settings.setValue(std::string("TimeTracking/%1")), task);
 }
 
@@ -4790,7 +4790,7 @@ void MainWindow::onAccessibilityToggled(bool on) {
     }
     
     // Could adjust font sizes, contrast, screen reader support
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     settings.setValue("Accessibility/enabled", on);
     
     if (chatHistory_) {
@@ -4804,7 +4804,7 @@ void MainWindow::Func(bool visible) { \
     if (visible) { \
         if (!Member) { \
             Member = new Type(this); \
-            QDockWidget* dock = new QDockWidget(tr(#Type), this); \
+            void* dock = new void(tr(#Type), this); \
             dock->setWidget(Member); \
             addDockWidget(//RightDockWidgetArea, dock); \
         } \
@@ -4832,12 +4832,12 @@ void MainWindow::toggleProjectExplorer(bool visible) {
             if (std::fstream::exists("E:\\")) defaultPath = "E:\\";
             projectExplorer_->openProject(defaultPath);
         }
-        QDockWidget* dock = new QDockWidget(tr("Project Explorer"), this);
+        void* dock = new void(tr("Project Explorer"), this);
         dock->setWidget(projectExplorer_);
         addDockWidget(//LeftDockWidgetArea, dock);
         dock->show();
     } else if (projectExplorer_) {
-        if (QDockWidget* dock = qobject_cast<QDockWidget*>(projectExplorer_->parentWidget())) {
+// REMOVED_QT:         if (void* dock = qobject_cast<void*>(projectExplorer_->parentWidget())) {
             dock->hide();
         }
     }
@@ -4898,20 +4898,20 @@ bool MainWindow::eventFilter(void* watched, QEvent* event)
     return void::eventFilter(watched, event);
 }
 
-void MainWindow::closeEvent(QCloseEvent* event) 
+void MainWindow::closeEvent(void*  event) 
 {
     // Save session state before closing application
     handleSaveState();
     event->accept();
 }
 
-void MainWindow::dragEnterEvent(QDragEnterEvent* event) 
+void MainWindow::dragEnterEvent(void*  event) 
 {
     // Accept drag events for file drops
     event->acceptProposedAction();
 }
 
-void MainWindow::dropEvent(QDropEvent* event)
+void MainWindow::dropEvent(void*  event)
 {
     const QMimeData* mime = event->mimeData();
     if (!mime->hasUrls()) return;
@@ -4939,7 +4939,7 @@ void MainWindow::dropEvent(QDropEvent* event)
         f.close();
         
         std::vector<uint8_t> gz  = brutal::compress(raw);
-        if (gz.isEmpty()) {
+        if (gz.empty()) {
             QMessageBox::critical(this, tr("GGUF compress"), tr("Brutal deflate failed"));
             continue;
         }
@@ -4971,21 +4971,21 @@ void* MainWindow::createGoalBar() {
         goalBar->setObjectName("GoalBarWidget");
         goalBar->setStyleSheet("void#GoalBarWidget { background-color: #252526; border-bottom: 1px solid #3e3e42; }");
         
-        QHBoxLayout* layout = new QHBoxLayout(goalBar);
+        void* layout = new void(goalBar);
         layout->setContentsMargins(10, 5, 10, 5);
         layout->setSpacing(8);
         
         // Goal label
-        QLabel* label = new QLabel("Agent Goal:", goalBar);
-        label->setStyleSheet("QLabel { color: #e0e0e0; font-weight: bold; }");
+        void* label = new void("Agent Goal:", goalBar);
+        label->setStyleSheet("void { color: #e0e0e0; font-weight: bold; }");
         layout->addWidget(label);
         
         // Goal input field
-        goalInput_ = new QLineEdit(goalBar);
+        goalInput_ = new void(goalBar);
         goalInput_->setObjectName("GoalInput");
         goalInput_->setPlaceholderText("Enter your goal or wish for the AI agent...");
         goalInput_->setStyleSheet(
-            "QLineEdit#GoalInput { "
+            "void#GoalInput { "
             "background-color: #3c3c3c; "
             "color: #e0e0e0; "
             "border: 1px solid #555; "
@@ -4997,10 +4997,10 @@ void* MainWindow::createGoalBar() {
         layout->addWidget(goalInput_, 1);
         
         // Submit button
-        QPushButton* submitBtn = new QPushButton("Execute", goalBar);
+        void* submitBtn = new void("Execute", goalBar);
         submitBtn->setObjectName("SubmitButton");
         submitBtn->setStyleSheet(
-            "QPushButton#SubmitButton { "
+            "void#SubmitButton { "
             "background-color: #007acc; "
             "color: white; "
             "border: none; "
@@ -5008,8 +5008,8 @@ void* MainWindow::createGoalBar() {
             "padding: 6px 16px; "
             "font-weight: bold; "
             "} "
-            "QPushButton#SubmitButton:hover { background-color: #005a9e; } "
-            "QPushButton#SubmitButton:pressed { background-color: #004578; }"
+            "void#SubmitButton:hover { background-color: #005a9e; } "
+            "void#SubmitButton:pressed { background-color: #004578; }"
         );
         layout->addWidget(submitBtn);
         
@@ -5030,22 +5030,22 @@ void* MainWindow::createAgentPanel() {
         panel->setObjectName("AgentPanel");
         panel->setStyleSheet("void#AgentPanel { background-color: #252526; }");
         
-        QVBoxLayout* layout = new QVBoxLayout(panel);
+        void* layout = new void(panel);
         layout->setContentsMargins(10, 10, 10, 10);
         layout->setSpacing(12);
         
         // Agent mode selector
-        QLabel* modeLabel = new QLabel("Agent Mode:", panel);
-        modeLabel->setStyleSheet("QLabel { color: #e0e0e0; font-weight: bold; }");
+        void* modeLabel = new void("Agent Mode:", panel);
+        modeLabel->setStyleSheet("void { color: #e0e0e0; font-weight: bold; }");
         layout->addWidget(modeLabel);
         
-        agentSelector_ = new QComboBox(panel);
+        agentSelector_ = new void(panel);
         agentSelector_->setObjectName("AgentSelector");
         agentSelector_->addItems({"Plan", "Agent", "Ask"});
         agentSelector_->setStyleSheet(
-            "QComboBox { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }"
-            "QComboBox::drop-down { border: none; }"
-            "QComboBox QAbstractItemView { background-color: #252526; color: #e0e0e0; selection-background-color: #007acc; }"
+            "void { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }"
+            "void::drop-down { border: none; }"
+            "void QAbstractItemView { background-color: #252526; color: #e0e0e0; selection-background-color: #007acc; }"
         );
         layout->addWidget(agentSelector_);
 // Qt connect removed
@@ -5053,15 +5053,15 @@ void* MainWindow::createAgentPanel() {
         });
         
         // Status badge
-        QLabel* statusLabel = new QLabel("Status:", panel);
-        statusLabel->setStyleSheet("QLabel { color: #e0e0e0; font-weight: bold; margin-top: 10px; }");
+        void* statusLabel = new void("Status:", panel);
+        statusLabel->setStyleSheet("void { color: #e0e0e0; font-weight: bold; margin-top: 10px; }");
         layout->addWidget(statusLabel);
         
-        mockStatusBadge_ = new QLabel("Idle", panel);
+        mockStatusBadge_ = new void("Idle", panel);
         mockStatusBadge_->setObjectName("StatusBadge");
         mockStatusBadge_->setAlignment(//AlignCenter);
         mockStatusBadge_->setStyleSheet(
-            "QLabel#StatusBadge { "
+            "void#StatusBadge { "
             "background-color: #3c3c3c; "
             "color: #4ec9b0; "
             "border: 1px solid #4ec9b0; "
@@ -5073,19 +5073,19 @@ void* MainWindow::createAgentPanel() {
         layout->addWidget(mockStatusBadge_);
         
         // Progress indicator
-        QProgressBar* progressBar = new QProgressBar(panel);
+        void* progressBar = new void(panel);
         progressBar->setObjectName("AgentProgress");
         progressBar->setRange(0, 0);  // Indeterminate
         progressBar->setVisible(false);
         progressBar->setStyleSheet(
-            "QProgressBar { "
+            "void { "
             "background-color: #3c3c3c; "
             "border: 1px solid #555; "
             "border-radius: 3px; "
             "text-align: center; "
             "color: #e0e0e0; "
             "} "
-            "QProgressBar::chunk { background-color: #007acc; }"
+            "void::chunk { background-color: #007acc; }"
         );
         layout->addWidget(progressBar);
         
@@ -5105,14 +5105,14 @@ void* MainWindow::createProposalReview() {
         panel->setObjectName("ProposalReviewPanel");
         panel->setStyleSheet("void#ProposalReviewPanel { background-color: #1e1e1e; }");
         
-        QVBoxLayout* layout = new QVBoxLayout(panel);
+        void* layout = new void(panel);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
         
         // Header
-        QLabel* header = new QLabel("Agent Proposals", panel);
+        void* header = new void("Agent Proposals", panel);
         header->setStyleSheet(
-            "QLabel { "
+            "void { "
             "background-color: #2d2d30; "
             "color: #e0e0e0; "
             "padding: 8px; "
@@ -5123,7 +5123,7 @@ void* MainWindow::createProposalReview() {
         layout->addWidget(header);
         
         // Proposal list
-        chatHistory_ = new QListWidget(panel);
+        chatHistory_ = nullptr;
         chatHistory_->setObjectName("ProposalList");
         chatHistory_->setStyleSheet(
             "QListWidget#ProposalList { "
@@ -5146,21 +5146,21 @@ void* MainWindow::createProposalReview() {
         layout->addWidget(chatHistory_, 1);
         
         // Action buttons
-        QHBoxLayout* btnLayout = new QHBoxLayout();
+        void* btnLayout = new void();
         btnLayout->setContentsMargins(5, 5, 5, 5);
         btnLayout->setSpacing(5);
         
-        QPushButton* acceptBtn = new QPushButton("Accept All", panel);
+        void* acceptBtn = new void("Accept All", panel);
         acceptBtn->setStyleSheet(
-            "QPushButton { background-color: #0e7a0d; color: white; border: none; padding: 6px 12px; border-radius: 3px; } "
-            "QPushButton:hover { background-color: #0c5c0b; }"
+            "void { background-color: #0e7a0d; color: white; border: none; padding: 6px 12px; border-radius: 3px; } "
+            "void:hover { background-color: #0c5c0b; }"
         );
         btnLayout->addWidget(acceptBtn);
         
-        QPushButton* rejectBtn = new QPushButton("Reject", panel);
+        void* rejectBtn = new void("Reject", panel);
         rejectBtn->setStyleSheet(
-            "QPushButton { background-color: #a1260d; color: white; border: none; padding: 6px 12px; border-radius: 3px; } "
-            "QPushButton:hover { background-color: #7a1c0a; }"
+            "void { background-color: #a1260d; color: white; border: none; padding: 6px 12px; border-radius: 3px; } "
+            "void:hover { background-color: #7a1c0a; }"
         );
         btnLayout->addWidget(rejectBtn);
         
@@ -5181,17 +5181,17 @@ void* MainWindow::createEditorArea() {
         editorWidget->setObjectName("EditorArea");
         editorWidget->setStyleSheet("void#EditorArea { background-color: #1e1e1e; }");
         
-        QVBoxLayout* layout = new QVBoxLayout(editorWidget);
+        void* layout = new void(editorWidget);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
         
         // Tab widget for multiple editors
-        editorTabs_ = new QTabWidget(editorWidget);
+        editorTabs_ = new void(editorWidget);
         editorTabs_->setObjectName("EditorTabs");
         editorTabs_->setTabsClosable(true);
         editorTabs_->setMovable(true);
         editorTabs_->setStyleSheet(
-            "QTabWidget::pane { border: none; background-color: #1e1e1e; } "
+            "void::pane { border: none; background-color: #1e1e1e; } "
             "QTabBar { background-color: #2d2d30; } "
             "QTabBar::tab { "
             "background-color: #2d2d30; "
@@ -5211,10 +5211,10 @@ void* MainWindow::createEditorArea() {
         );
         
         // Create initial editor tab
-        codeView_ = new QTextEdit(editorWidget);
+        codeView_ = new void(editorWidget);
         codeView_->setObjectName("CodeEditor");
         codeView_->setStyleSheet(
-            "QTextEdit#CodeEditor { "
+            "void#CodeEditor { "
             "background-color: #1e1e1e; "
             "color: #d4d4d4; "
             "font-family: 'Consolas', 'Courier New', monospace; "
@@ -5223,7 +5223,7 @@ void* MainWindow::createEditorArea() {
             "selection-background-color: #264f78; "
             "}"
         );
-        codeView_->setLineWrapMode(QTextEdit::NoWrap);
+        codeView_->setLineWrapMode(void::NoWrap);
         codeView_->setAcceptDrops(true);
         
         editorTabs_->addTab(codeView_, "Untitled-1");
@@ -5246,16 +5246,16 @@ void* MainWindow::createQShellTab() {
         shellWidget->setObjectName("QShellTab");
         shellWidget->setStyleSheet("void#QShellTab { background-color: #1e1e1e; }");
         
-        QVBoxLayout* layout = new QVBoxLayout(shellWidget);
+        void* layout = new void(shellWidget);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
         
         // Output area
-        qshellOutput_ = new QTextEdit(shellWidget);
+        qshellOutput_ = new void(shellWidget);
         qshellOutput_->setObjectName("QShellOutput");
         qshellOutput_->setReadOnly(true);
         qshellOutput_->setStyleSheet(
-            "QTextEdit#QShellOutput { "
+            "void#QShellOutput { "
             "background-color: #1e1e1e; "
             "color: #0dff00; "
             "font-family: 'Consolas', 'Courier New', monospace; "
@@ -5264,7 +5264,7 @@ void* MainWindow::createQShellTab() {
             "padding: 10px; "
             "}"
         );
-        qshellOutput_->setLineWrapMode(QTextEdit::NoWrap);
+        qshellOutput_->setLineWrapMode(void::NoWrap);
         qshellOutput_->append("QShell v1.0 - AI-Powered Interactive Shell");
         qshellOutput_->append("Type 'help' for available commands or enter natural language instructions.\n");
         layout->addWidget(qshellOutput_, 1);
@@ -5272,19 +5272,19 @@ void* MainWindow::createQShellTab() {
         // Input area
         void* inputWidget = new void(shellWidget);
         inputWidget->setStyleSheet("void { background-color: #252526; border-top: 1px solid #3e3e42; }");
-        QHBoxLayout* inputLayout = new QHBoxLayout(inputWidget);
+        void* inputLayout = new void(inputWidget);
         inputLayout->setContentsMargins(10, 5, 10, 5);
         inputLayout->setSpacing(5);
         
-        QLabel* prompt = new QLabel(">>>", inputWidget);
-        prompt->setStyleSheet("QLabel { color: #0dff00; font-family: 'Consolas', monospace; font-weight: bold; }");
+        void* prompt = new void(">>>", inputWidget);
+        prompt->setStyleSheet("void { color: #0dff00; font-family: 'Consolas', monospace; font-weight: bold; }");
         inputLayout->addWidget(prompt);
         
-        qshellInput_ = new QLineEdit(inputWidget);
+        qshellInput_ = new void(inputWidget);
         qshellInput_->setObjectName("QShellInput");
         qshellInput_->setPlaceholderText("Enter command or agent instruction...");
         qshellInput_->setStyleSheet(
-            "QLineEdit#QShellInput { "
+            "void#QShellInput { "
             "background-color: #1e1e1e; "
             "color: #0dff00; "
             "font-family: 'Consolas', 'Courier New', monospace; "
@@ -5295,10 +5295,10 @@ void* MainWindow::createQShellTab() {
         );
         inputLayout->addWidget(qshellInput_, 1);
         
-        QPushButton* executeBtn = new QPushButton("Execute", inputWidget);
+        void* executeBtn = new void("Execute", inputWidget);
         executeBtn->setStyleSheet(
-            "QPushButton { background-color: #007acc; color: white; border: none; padding: 5px 15px; border-radius: 3px; } "
-            "QPushButton:hover { background-color: #005a9e; }"
+            "void { background-color: #007acc; color: white; border: none; padding: 5px 15px; border-radius: 3px; } "
+            "void:hover { background-color: #005a9e; }"
         );
         inputLayout->addWidget(executeBtn);
         
@@ -5384,7 +5384,7 @@ void* MainWindow::getMockArchitectJson() const {
 
 void MainWindow::populateFolderTree(QTreeWidgetItem* parent, const std::string& path) {
     
-    if (!parent || path.isEmpty()) {
+    if (!parent || path.empty()) {
         return;
     }
     
@@ -5407,14 +5407,14 @@ void MainWindow::populateFolderTree(QTreeWidgetItem* parent, const std::string& 
                 continue;
             }
             
-            QTreeWidgetItem* item = new QTreeWidgetItem(parent);
+            QTreeWidgetItem* item = nullptr;
             item->setText(0, entry.fileName());
             item->setData(0, //UserRole, entry.absoluteFilePath());
             
             if (entry.isDir()) {
                 // Folder icon and style
                 item->setIcon(0, style()->standardIcon(QStyle::SP_DirIcon));
-                item->setForeground(0, QColor("#4ec9b0"));  // Cyan for folders
+                item->setForeground(0, uint32_t("#4ec9b0"));  // Cyan for folders
                 
                 // Recursively populate subdirectory (limit depth to prevent performance issues)
                 static int depth = 0;
@@ -5424,14 +5424,14 @@ void MainWindow::populateFolderTree(QTreeWidgetItem* parent, const std::string& 
                     depth--;
                 } else {
                     // Add placeholder for deep directories
-                    QTreeWidgetItem* placeholder = new QTreeWidgetItem(item);
+                    QTreeWidgetItem* placeholder = nullptr;
                     placeholder->setText(0, "...");
-                    placeholder->setForeground(0, QColor("#808080"));
+                    placeholder->setForeground(0, uint32_t("#808080"));
                 }
             } else {
                 // File icon and style
                 item->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
-                item->setForeground(0, QColor("#e0e0e0"));
+                item->setForeground(0, uint32_t("#e0e0e0"));
                 
                 // Add file size info
                 std::string sizeStr = QLocale().formattedDataSize(entry.size());
@@ -5440,8 +5440,8 @@ void MainWindow::populateFolderTree(QTreeWidgetItem* parent, const std::string& 
             
             itemCount++;
         }
-        
-        
+
+
     } catch (const std::exception& e) {
     }
 }
@@ -5453,15 +5453,15 @@ void* MainWindow::createTerminalPanel() {
         terminalWidget->setObjectName("TerminalPanel");
         terminalWidget->setStyleSheet("void#TerminalPanel { background-color: #1e1e1e; }");
         
-        QVBoxLayout* layout = new QVBoxLayout(terminalWidget);
+        void* layout = new void(terminalWidget);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
         
         // Terminal tabs
-        terminalTabs_ = new QTabWidget(terminalWidget);
+        terminalTabs_ = new void(terminalWidget);
         terminalTabs_->setObjectName("TerminalTabs");
         terminalTabs_->setStyleSheet(
-            "QTabWidget::pane { border: none; background-color: #1e1e1e; } "
+            "void::pane { border: none; background-color: #1e1e1e; } "
             "QTabBar { background-color: #252526; } "
             "QTabBar::tab { background-color: #252526; color: #969696; padding: 6px 12px; } "
             "QTabBar::tab:selected { background-color: #1e1e1e; color: #ffffff; border-top: 1px solid #007acc; }"
@@ -5469,10 +5469,10 @@ void* MainWindow::createTerminalPanel() {
         
         // PowerShell tab
         void* pwshTab = new void(terminalWidget);
-        QVBoxLayout* pwshLayout = new QVBoxLayout(pwshTab);
+        void* pwshLayout = new void(pwshTab);
         pwshLayout->setContentsMargins(5, 5, 5, 5);
         
-        pwshOutput_ = new QPlainTextEdit(pwshTab);
+        pwshOutput_ = nullptr;
         pwshOutput_->setObjectName("PowerShellOutput");
         pwshOutput_->setReadOnly(true);
         pwshOutput_->setStyleSheet(
@@ -5486,16 +5486,16 @@ void* MainWindow::createTerminalPanel() {
         );
         pwshLayout->addWidget(pwshOutput_, 1);
         
-        QHBoxLayout* pwshInputLayout = new QHBoxLayout();
+        void* pwshInputLayout = new void();
         pwshInputLayout->setSpacing(5);
         
-        QLabel* pwshPrompt = new QLabel("PS>", pwshTab);
-        pwshPrompt->setStyleSheet("QLabel { color: #00ff00; font-family: 'Consolas', monospace; font-weight: bold; }");
+        void* pwshPrompt = new void("PS>", pwshTab);
+        pwshPrompt->setStyleSheet("void { color: #00ff00; font-family: 'Consolas', monospace; font-weight: bold; }");
         pwshInputLayout->addWidget(pwshPrompt);
         
-        pwshInput_ = new QLineEdit(pwshTab);
+        pwshInput_ = new void(pwshTab);
         pwshInput_->setStyleSheet(
-            "QLineEdit { background-color: #012456; color: #eeedf0; font-family: 'Consolas', monospace; border: none; }"
+            "void { background-color: #012456; color: #eeedf0; font-family: 'Consolas', monospace; border: none; }"
         );
         pwshInputLayout->addWidget(pwshInput_, 1);
         
@@ -5504,10 +5504,10 @@ void* MainWindow::createTerminalPanel() {
         
         // CMD tab
         void* cmdTab = new void(terminalWidget);
-        QVBoxLayout* cmdLayout = new QVBoxLayout(cmdTab);
+        void* cmdLayout = new void(cmdTab);
         cmdLayout->setContentsMargins(5, 5, 5, 5);
         
-        cmdOutput_ = new QPlainTextEdit(cmdTab);
+        cmdOutput_ = nullptr;
         cmdOutput_->setObjectName("CMDOutput");
         cmdOutput_->setReadOnly(true);
         cmdOutput_->setStyleSheet(
@@ -5521,16 +5521,16 @@ void* MainWindow::createTerminalPanel() {
         );
         cmdLayout->addWidget(cmdOutput_, 1);
         
-        QHBoxLayout* cmdInputLayout = new QHBoxLayout();
+        void* cmdInputLayout = new void();
         cmdInputLayout->setSpacing(5);
         
-        QLabel* cmdPrompt = new QLabel("C:\\>", cmdTab);
-        cmdPrompt->setStyleSheet("QLabel { color: #ffffff; font-family: 'Consolas', monospace; font-weight: bold; }");
+        void* cmdPrompt = new void("C:\\>", cmdTab);
+        cmdPrompt->setStyleSheet("void { color: #ffffff; font-family: 'Consolas', monospace; font-weight: bold; }");
         cmdInputLayout->addWidget(cmdPrompt);
         
-        cmdInput_ = new QLineEdit(cmdTab);
+        cmdInput_ = new void(cmdTab);
         cmdInput_->setStyleSheet(
-            "QLineEdit { background-color: #0c0c0c; color: #cccccc; font-family: 'Consolas', monospace; border: none; }"
+            "void { background-color: #0c0c0c; color: #cccccc; font-family: 'Consolas', monospace; border: none; }"
         );
         cmdInputLayout->addWidget(cmdInput_, 1);
         
@@ -5540,8 +5540,8 @@ void* MainWindow::createTerminalPanel() {
         layout->addWidget(terminalTabs_);
         
         // Initialize processes
-        pwshProcess_ = new QProcess(this);
-        cmdProcess_ = new QProcess(this);
+        pwshProcess_ = new void*(this);
+        cmdProcess_ = new void*(this);
 // Qt connect removed
 // Qt connect removed
 // Qt connect removed
@@ -5563,51 +5563,51 @@ void* MainWindow::createDebugPanel() {
         debugWidget->setObjectName("DebugPanel");
         debugWidget->setStyleSheet("void#DebugPanel { background-color: #1e1e1e; }");
         
-        QVBoxLayout* layout = new QVBoxLayout(debugWidget);
+        void* layout = new void(debugWidget);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
         
         // Toolbar
-        QFrame* toolbar = new QFrame(debugWidget);
-        toolbar->setStyleSheet("QFrame { background-color: #2d2d30; border-bottom: 1px solid #3e3e42; }");
+        void* toolbar = new void(debugWidget);
+        toolbar->setStyleSheet("void { background-color: #2d2d30; border-bottom: 1px solid #3e3e42; }");
         toolbar->setFixedHeight(35);
         
-        QHBoxLayout* toolbarLayout = new QHBoxLayout(toolbar);
+        void* toolbarLayout = new void(toolbar);
         toolbarLayout->setContentsMargins(5, 2, 5, 2);
         toolbarLayout->setSpacing(5);
         
-        QLabel* filterLabel = new QLabel("Filter:", toolbar);
-        filterLabel->setStyleSheet("QLabel { color: #e0e0e0; }");
+        void* filterLabel = new void("Filter:", toolbar);
+        filterLabel->setStyleSheet("void { color: #e0e0e0; }");
         toolbarLayout->addWidget(filterLabel);
         
-        QComboBox* logLevelFilter = new QComboBox(toolbar);
+        void* logLevelFilter = new void(toolbar);
         logLevelFilter->addItems({"All", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"});
         logLevelFilter->setStyleSheet(
-            "QComboBox { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 3px; } "
-            "QComboBox QAbstractItemView { background-color: #252526; color: #e0e0e0; }"
+            "void { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 3px; } "
+            "void QAbstractItemView { background-color: #252526; color: #e0e0e0; }"
         );
         toolbarLayout->addWidget(logLevelFilter);
         
         toolbarLayout->addStretch();
         
-        QPushButton* clearBtn = new QPushButton("Clear", toolbar);
+        void* clearBtn = new void("Clear", toolbar);
         clearBtn->setStyleSheet(
-            "QPushButton { background-color: #3c3c3c; color: #e0e0e0; border: none; padding: 4px 12px; } "
-            "QPushButton:hover { background-color: #505050; }"
+            "void { background-color: #3c3c3c; color: #e0e0e0; border: none; padding: 4px 12px; } "
+            "void:hover { background-color: #505050; }"
         );
         toolbarLayout->addWidget(clearBtn);
         
-        QPushButton* saveBtn = new QPushButton("Save Log", toolbar);
+        void* saveBtn = new void("Save Log", toolbar);
         saveBtn->setStyleSheet(
-            "QPushButton { background-color: #3c3c3c; color: #e0e0e0; border: none; padding: 4px 12px; } "
-            "QPushButton:hover { background-color: #505050; }"
+            "void { background-color: #3c3c3c; color: #e0e0e0; border: none; padding: 4px 12px; } "
+            "void:hover { background-color: #505050; }"
         );
         toolbarLayout->addWidget(saveBtn);
         
         layout->addWidget(toolbar);
         
         // Debug output
-        QPlainTextEdit* debugOutput = new QPlainTextEdit(debugWidget);
+        QPlainTextEdit* debugOutput = nullptr;
         debugOutput->setObjectName("DebugOutput");
         debugOutput->setReadOnly(true);
         debugOutput->setStyleSheet(
@@ -5648,11 +5648,11 @@ void MainWindow::setupDockWidgets() {
         // 1. Project Explorer Dock
         if (!projectExplorer_) {
             projectExplorer_ = new RawrXD::ProjectExplorerWidget(this);
-            QDockWidget* projDock = new QDockWidget("Project Explorer", this);
+            void* projDock = new void("Project Explorer", this);
             projDock->setObjectName("ProjectExplorerDock");
             projDock->setWidget(projectExplorer_);
             projDock->setAllowedAreas(//LeftDockWidgetArea | //RightDockWidgetArea);
-            projDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
+            projDock->setFeatures(void::DockWidgetMovable | void::DockWidgetFloatable | void::DockWidgetClosable);
             addDockWidget(//LeftDockWidgetArea, projDock);
             projDock->hide();  // Hidden by default
         }
@@ -5660,11 +5660,11 @@ void MainWindow::setupDockWidgets() {
         // 2. Build System Dock
         if (!buildWidget_) {
             buildWidget_ = new BuildSystemWidget(this);
-            QDockWidget* buildDock = new QDockWidget("Build System", this);
+            void* buildDock = new void("Build System", this);
             buildDock->setObjectName("BuildSystemDock");
             buildDock->setWidget(buildWidget_);
             buildDock->setAllowedAreas(//BottomDockWidgetArea | //RightDockWidgetArea);
-            buildDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
+            buildDock->setFeatures(void::DockWidgetMovable | void::DockWidgetFloatable | void::DockWidgetClosable);
             addDockWidget(//BottomDockWidgetArea, buildDock);
             buildDock->hide();
         }
@@ -5672,11 +5672,11 @@ void MainWindow::setupDockWidgets() {
         // 3. Version Control Dock
         if (!vcsWidget_) {
             vcsWidget_ = new VersionControlWidget(this);
-            QDockWidget* vcsDock = new QDockWidget("Version Control", this);
+            void* vcsDock = new void("Version Control", this);
             vcsDock->setObjectName("VersionControlDock");
             vcsDock->setWidget(vcsWidget_);
             vcsDock->setAllowedAreas(//LeftDockWidgetArea | //RightDockWidgetArea | //BottomDockWidgetArea);
-            vcsDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
+            vcsDock->setFeatures(void::DockWidgetMovable | void::DockWidgetFloatable | void::DockWidgetClosable);
             addDockWidget(//LeftDockWidgetArea, vcsDock);
             vcsDock->hide();
         }
@@ -5684,11 +5684,11 @@ void MainWindow::setupDockWidgets() {
         // 4. Debug/Run Dock
         if (!debugWidget_) {
             debugWidget_ = new RunDebugWidget(this);
-            QDockWidget* debugDock = new QDockWidget("Run & Debug", this);
+            void* debugDock = new void("Run & Debug", this);
             debugDock->setObjectName("RunDebugDock");
             debugDock->setWidget(debugWidget_);
             debugDock->setAllowedAreas(//AllDockWidgetAreas);
-            debugDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
+            debugDock->setFeatures(void::DockWidgetMovable | void::DockWidgetFloatable | void::DockWidgetClosable);
             addDockWidget(//BottomDockWidgetArea, debugDock);
             debugDock->hide();
         }
@@ -5696,11 +5696,11 @@ void MainWindow::setupDockWidgets() {
         // 5. Test Explorer Dock
         if (!testWidget_) {
             testWidget_ = new TestExplorerWidget(this);
-            QDockWidget* testDock = new QDockWidget("Test Explorer", this);
+            void* testDock = new void("Test Explorer", this);
             testDock->setObjectName("TestExplorerDock");
             testDock->setWidget(testWidget_);
             testDock->setAllowedAreas(//RightDockWidgetArea | //BottomDockWidgetArea);
-            testDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
+            testDock->setFeatures(void::DockWidgetMovable | void::DockWidgetFloatable | void::DockWidgetClosable);
             addDockWidget(//RightDockWidgetArea, testDock);
             testDock->hide();
         }
@@ -5708,11 +5708,11 @@ void MainWindow::setupDockWidgets() {
         // 6. Profiler Dock
         if (!profilerWidget_) {
             profilerWidget_ = new ProfilerWidget(this);
-            QDockWidget* profilerDock = new QDockWidget("Profiler", this);
+            void* profilerDock = new void("Profiler", this);
             profilerDock->setObjectName("ProfilerDock");
             profilerDock->setWidget(profilerWidget_);
             profilerDock->setAllowedAreas(//BottomDockWidgetArea | //RightDockWidgetArea);
-            profilerDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
+            profilerDock->setFeatures(void::DockWidgetMovable | void::DockWidgetFloatable | void::DockWidgetClosable);
             addDockWidget(//BottomDockWidgetArea, profilerDock);
             profilerDock->hide();
         }
@@ -5720,11 +5720,11 @@ void MainWindow::setupDockWidgets() {
         // 7. Database Tool Dock
         if (!database_) {
             database_ = new DatabaseToolWidget(this);
-            QDockWidget* dbDock = new QDockWidget("Database Tools", this);
+            void* dbDock = new void("Database Tools", this);
             dbDock->setObjectName("DatabaseToolDock");
             dbDock->setWidget(database_);
             dbDock->setAllowedAreas(//AllDockWidgetAreas);
-            dbDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
+            dbDock->setFeatures(void::DockWidgetMovable | void::DockWidgetFloatable | void::DockWidgetClosable);
             addDockWidget(//RightDockWidgetArea, dbDock);
             dbDock->hide();
         }
@@ -5732,34 +5732,34 @@ void MainWindow::setupDockWidgets() {
         // 8. Docker Tools Dock
         if (!docker_) {
             docker_ = new DockerToolWidget(this);
-            QDockWidget* dockerDock = new QDockWidget("Docker", this);
+            void* dockerDock = new void("Docker", this);
             dockerDock->setObjectName("DockerToolDock");
             dockerDock->setWidget(docker_);
             dockerDock->setAllowedAreas(//AllDockWidgetAreas);
-            dockerDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
+            dockerDock->setFeatures(void::DockWidgetMovable | void::DockWidgetFloatable | void::DockWidgetClosable);
             addDockWidget(//RightDockWidgetArea, dockerDock);
             dockerDock->hide();
         }
         
         // Apply consistent styling to all docks
-        std::vector<QDockWidget*> allDocks = findChildren<QDockWidget*>();
-        for (QDockWidget* dock : allDocks) {
+        std::vector<void*> allDocks = findChildren<void*>();
+        for (void* dock : allDocks) {
             dock->setStyleSheet(
-                "QDockWidget { "
+                "void { "
                 "background-color: #252526; "
                 "color: #e0e0e0; "
                 "titlebar-close-icon: url(:/icons/close.png); "
                 "titlebar-normal-icon: url(:/icons/float.png); "
                 "} "
-                "QDockWidget::title { "
+                "void::title { "
                 "background-color: #2d2d30; "
                 "padding: 6px; "
                 "border: 1px solid #3e3e42; "
                 "}"
             );
         }
-        
-        
+
+
     } catch (const std::exception& e) {
     }
 }
@@ -5772,10 +5772,10 @@ void MainWindow::setupSystemTray() {
         }
         
         // Create system tray icon
-        trayIcon_ = new QSystemTrayIcon(this);
+        trayIcon_ = nullptr;
         
         // Set icon (use application icon or default)
-        QIcon appIcon = windowIcon();
+        std::string appIcon = windowIcon();
         if (appIcon.isNull()) {
             // Fallback to a generic icon
             appIcon = style()->standardIcon(QStyle::SP_ComputerIcon);
@@ -5784,18 +5784,18 @@ void MainWindow::setupSystemTray() {
         trayIcon_->setToolTip("RawrXD IDE - AI-Powered Development Environment");
         
         // Create tray menu
-        QMenu* trayMenu = new QMenu(this);
+        void* trayMenu = new void(this);
         trayMenu->setStyleSheet(
-            "QMenu { "
+            "void { "
             "background-color: #252526; "
             "color: #e0e0e0; "
             "border: 1px solid #3e3e42; "
             "} "
-            "QMenu::item:selected { background-color: #007acc; }"
+            "void::item:selected { background-color: #007acc; }"
         );
         
         // Restore action
-        QAction* restoreAction = trayMenu->addAction("Restore Window");
+        void* restoreAction = trayMenu->addAction("Restore Window");
         restoreAction->setIcon(style()->standardIcon(QStyle::SP_TitleBarMaxButton));
 // Qt connect removed
             showNormal();
@@ -5806,15 +5806,15 @@ void MainWindow::setupSystemTray() {
         trayMenu->addSeparator();
         
         // Quick actions
-        QAction* newFileAction = trayMenu->addAction("New File");
+        void* newFileAction = trayMenu->addAction("New File");
         newFileAction->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
 // Qt connect removed
-        QAction* newChatAction = trayMenu->addAction("New AI Chat");
+        void* newChatAction = trayMenu->addAction("New AI Chat");
 // Qt connect removed
         trayMenu->addSeparator();
         
         // Settings action
-        QAction* settingsAction = trayMenu->addAction("Settings");
+        void* settingsAction = trayMenu->addAction("Settings");
         settingsAction->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
 // Qt connect removed
             toggleSettings(true);
@@ -5823,10 +5823,10 @@ void MainWindow::setupSystemTray() {
         trayMenu->addSeparator();
         
         // Quit action
-        QAction* quitAction = trayMenu->addAction("Quit RawrXD IDE");
+        void* quitAction = trayMenu->addAction("Quit RawrXD IDE");
         quitAction->setIcon(style()->standardIcon(QStyle::SP_TitleBarCloseButton));
 // Qt connect removed
-            QApplication::quit();
+            void::quit();
         });
         
         trayIcon_->setContextMenu(trayMenu);
@@ -5849,8 +5849,8 @@ void MainWindow::setupSystemTray() {
             QSystemTrayIcon::Information,
             3000
         );
-        
-        
+
+
     } catch (const std::exception& e) {
     }
 }
@@ -5860,7 +5860,7 @@ void MainWindow::restoreSession() {
     // Use existing handleLoadState() which already implements full state restoration
     handleLoadState();
     
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     
     // Restore open file tabs
     int tabCount = settings.value("Session/tabCount", 0).toInt();
@@ -5870,11 +5870,11 @@ void MainWindow::restoreSession() {
         std::string content = settings.value(tabKey + "/content").toString();
         std::string tabName = settings.value(tabKey + "/name").toString();
         
-        if (!content.isEmpty() && editorTabs_) {
-            QTextEdit* editor = new QTextEdit(this);
+        if (!content.empty() && editorTabs_) {
+            void* editor = new void(this);
             editor->setStyleSheet(codeView_->styleSheet());
             editor->setText(content);
-            editorTabs_->addTab(editor, tabName.isEmpty() ? tr("Untitled") : tabName);
+            editorTabs_->addTab(editor, tabName.empty() ? tr("Untitled") : tabName);
         }
     }
     
@@ -5885,7 +5885,7 @@ void MainWindow::saveSession() {
     // Use existing handleSaveState() which already implements full state saving
     handleSaveState();
     
-    QSettings settings("RawrXD", "QtShell");
+    void* settings("RawrXD", "QtShell");
     
     // Save open editor tabs
     if (editorTabs_) {
@@ -5893,7 +5893,7 @@ void MainWindow::saveSession() {
         
         for (int i = 0; i < editorTabs_->count(); ++i) {
             std::string tabKey = std::string("Session/tab%1");
-            QTextEdit* editor = qobject_cast<QTextEdit*>(editorTabs_->widget(i));
+// REMOVED_QT:             void* editor = qobject_cast<void*>(editorTabs_->widget(i));
             
             if (editor) {
                 settings.setValue(tabKey + "/content", editor->toPlainText());
@@ -5916,7 +5916,7 @@ void MainWindow::onRunScript()
         tr("Script Files (*.py *.js *.sh *.bat *.ps1 *.rb *.pl);;Python (*.py);;JavaScript (*.js);;Shell (*.sh);;Batch (*.bat);;PowerShell (*.ps1);;Ruby (*.rb);;Perl (*.pl);;All Files (*.*)")
     );
     
-    if (scriptPath.isEmpty()) {
+    if (scriptPath.empty()) {
         statusBar()->showMessage(tr("Script execution cancelled"), 2000);
         return;
     }
@@ -5972,17 +5972,17 @@ void MainWindow::onRunScript()
     }
     
     // Create process for script execution
-    QProcess* scriptProcess = new QProcess(this);
+    void** scriptProcess = new void*(this);
     scriptProcess->setWorkingDirectory(scriptInfo.absolutePath());
     
     // Connect output handlers
 // Qt connect removed
-        if (m_hexMagConsole && !output.isEmpty()) {
+        if (m_hexMagConsole && !output.empty()) {
             m_hexMagConsole->appendPlainText(output);
         }
     });
 // Qt connect removed
-        if (m_hexMagConsole && !error.isEmpty()) {
+        if (m_hexMagConsole && !error.empty()) {
             m_hexMagConsole->appendPlainText("[ERROR] " + error);
         }
     });
@@ -6000,8 +6000,8 @@ void MainWindow::onRunScript()
         if (chatHistory_) {
             chatHistory_->addItem(status + ": " + std::filesystem::path(scriptPath).fileName());
         }
-        
-        
+
+
         scriptProcess->deleteLater();
     });
     
@@ -6051,13 +6051,13 @@ void MainWindow::runInference()
         &ok
     );
     
-    if (!ok || prompt.isEmpty()) {
+    if (!ok || prompt.empty()) {
         return;
     }
     
     statusBar()->showMessage(tr("Running inference..."));
     
-    qint64 reqId = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
+    int64_t reqId = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     m_currentStreamId = reqId;
     
     if (m_hexMagConsole) {
@@ -6067,7 +6067,7 @@ void MainWindow::runInference()
     // Call inference engine
     QMetaObject::invokeMethod(m_inferenceEngine, "request", //QueuedConnection,
                               (std::string, prompt),
-                              (qint64, reqId));
+                              (int64_t, reqId));
 }
 
 void MainWindow::loadGGUFModel()
@@ -6079,7 +6079,7 @@ void MainWindow::loadGGUFModel()
         tr("GGUF Files (*.gguf);;All Files (*.*)")
     );
     
-    if (filePath.isEmpty()) {
+    if (filePath.empty()) {
         return;
     }
     
@@ -6097,7 +6097,7 @@ void MainWindow::unloadGGUFModel()
     statusBar()->showMessage(tr("Unloading model..."));
 }
 
-void MainWindow::showInferenceResult(qint64 reqId, const std::string& result)
+void MainWindow::showInferenceResult(int64_t reqId, const std::string& result)
 {
     // If streaming mode is active, skip full result (tokens already streamed)
     if (m_streamingMode && reqId == m_currentStreamId) {
@@ -6110,7 +6110,7 @@ void MainWindow::showInferenceResult(qint64 reqId, const std::string& result)
     statusBar()->showMessage(tr("Inference complete"), 3000);
 }
 
-void MainWindow::showInferenceError(qint64 reqId, const std::string& errorMsg)
+void MainWindow::showInferenceError(int64_t reqId, const std::string& errorMsg)
 {
     if (m_hexMagConsole) {
         m_hexMagConsole->appendPlainText(std::string("[%1] ERROR: %2"));
@@ -6135,9 +6135,9 @@ void MainWindow::onModelLoadedChanged(bool loaded, const std::string& modelName)
 
         // If developer wants auto per-layer set, use environment variable RAWRXD_AUTO_SET_LAYER
         std::string devCmd = qEnvironmentVariable("RAWRXD_AUTO_SET_LAYER");
-        if (!devCmd.isEmpty() && !names.isEmpty()) {
+        if (!devCmd.empty() && !names.empty()) {
             std::string target = names.first();
-            std::string quant = devCmd.isEmpty() ? "Q6_K" : devCmd; // default to Q6_K
+            std::string quant = devCmd.empty() ? "Q6_K" : devCmd; // default to Q6_K
             if (m_hexMagConsole) m_hexMagConsole->appendPlainText(std::string("Auto-set %1 -> %2"));
             QMetaObject::invokeMethod(m_inferenceEngine, "setLayerQuant", //QueuedConnection,
                                       (std::string, target), (std::string, quant));
@@ -6154,7 +6154,7 @@ void MainWindow::batchCompressFolder()
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
     
-    if (dir.isEmpty()) {
+    if (dir.empty()) {
         return;
     }
     
@@ -6175,7 +6175,7 @@ void MainWindow::batchCompressFolder()
         inFile.close();
         
         std::vector<uint8_t> gz = brutal::compress(raw);
-        if (gz.isEmpty()) {
+        if (gz.empty()) {
             ++total;
             continue;
         }
@@ -6200,7 +6200,7 @@ void MainWindow::batchCompressFolder()
 // ---------- Ctrl+Shift+A inside the editor ----------
 void MainWindow::onCtrlShiftA() {
     std::string wish = codeView_->textCursor().selectedText().trimmed();
-    if (wish.isEmpty()) return;
+    if (wish.empty()) return;
     AutoBootstrap::startWithWish(wish);
 }
 
@@ -6237,36 +6237,36 @@ void MainWindow::setupAgentSystem() {
     });
     
     // Add Tools menu for agent/hotpatch operations
-    QMenu* toolsMenu = menuBar()->findChild<QMenu*>("ToolsMenu");
+    void* toolsMenu = menuBar()->findChild<void*>("ToolsMenu");
     if (!toolsMenu) {
         toolsMenu = menuBar()->addMenu("Tools");
         toolsMenu->setObjectName("ToolsMenu");
     }
     
     // Add Hot Reload action with Ctrl+Shift+R shortcut
-    QAction* hotReloadAction = toolsMenu->addAction("Hot Reload Quantization");
+    void* hotReloadAction = toolsMenu->addAction("Hot Reload Quantization");
     hotReloadAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
 // Qt connect removed
     // Add separator
     toolsMenu->addSeparator();
     
     // Add Agent Mode actions
-    QMenu* agentModeMenu = toolsMenu->addMenu("Agent Mode");
+    void* agentModeMenu = toolsMenu->addMenu("Agent Mode");
     
-    m_agentModeGroup = new QActionGroup(this);
+    m_agentModeGroup = nullptr;
     
-    QAction* planModeAction = agentModeMenu->addAction("Plan");
+    void* planModeAction = agentModeMenu->addAction("Plan");
     planModeAction->setCheckable(true);
     planModeAction->setChecked(true);
     planModeAction->setData("Plan");
     m_agentModeGroup->addAction(planModeAction);
     
-    QAction* agentModeAction = agentModeMenu->addAction("Agent");
+    void* agentModeAction = agentModeMenu->addAction("Agent");
     agentModeAction->setCheckable(true);
     agentModeAction->setData("Agent");
     m_agentModeGroup->addAction(agentModeAction);
     
-    QAction* askModeAction = agentModeMenu->addAction("Ask");
+    void* askModeAction = agentModeMenu->addAction("Ask");
     askModeAction->setCheckable(true);
     askModeAction->setData("Ask");
     m_agentModeGroup->addAction(askModeAction);
@@ -6280,7 +6280,7 @@ void MainWindow::setupAgentSystem() {
     toolsMenu->addSeparator();
     
     // Add Self-Test Gate action
-    QAction* selfTestAction = toolsMenu->addAction("Run Self-Test Gate");
+    void* selfTestAction = toolsMenu->addAction("Run Self-Test Gate");
     selfTestAction->setShortcut(QKeySequence("Ctrl+Shift+T"));
 // Qt connect removed
         } else {
@@ -6299,16 +6299,16 @@ void MainWindow::setupAgentSystem() {
 void MainWindow::setupHotpatchPanel() {
     // Create Hotpatch Panel widget
     m_hotpatchPanel = new HotpatchPanel(this);
-    m_hotpatchPanel->initialize();  // Two-phase init - create Qt widgets after QApplication
+    m_hotpatchPanel->initialize();  // Two-phase init - create Qt widgets after void
     
     // Create dock widget
-    m_hotpatchPanelDock = new QDockWidget("Hotpatch Events", this);
+    m_hotpatchPanelDock = new void("Hotpatch Events", this);
     m_hotpatchPanelDock->setWidget(m_hotpatchPanel);
     m_hotpatchPanelDock->setObjectName("HotpatchPanelDock");
     m_hotpatchPanelDock->setAllowedAreas(//AllDockWidgetAreas);
-    m_hotpatchPanelDock->setFeatures(QDockWidget::DockWidgetMovable |
-                                      QDockWidget::DockWidgetFloatable |
-                                      QDockWidget::DockWidgetClosable);
+    m_hotpatchPanelDock->setFeatures(void::DockWidgetMovable |
+                                      void::DockWidgetFloatable |
+                                      void::DockWidgetClosable);
     
     // Add to bottom dock area by default
     addDockWidget(//BottomDockWidgetArea, m_hotpatchPanelDock);
@@ -6327,12 +6327,12 @@ void MainWindow::setupHotpatchPanel() {
     });
     
     // Add View menu toggle for Hotpatch Panel
-    QMenu* viewMenu = menuBar()->findChild<QMenu*>();
+    void* viewMenu = menuBar()->findChild<void*>();
     if (!viewMenu) {
         viewMenu = menuBar()->addMenu("View");
     }
     
-    QAction* toggleHotpatchAction = viewMenu->addAction("Hotpatch Events");
+    void* toggleHotpatchAction = viewMenu->addAction("Hotpatch Events");
     toggleHotpatchAction->setCheckable(true);
     toggleHotpatchAction->setChecked(true);
 // Qt connect removed
@@ -6358,13 +6358,13 @@ void MainWindow::setupMASMEditor() {
     m_masmEditor = new MASMEditorWidget(this);
     
     // Create dock widget
-    m_masmEditorDock = new QDockWidget("MASM Assembly Editor", this);
+    m_masmEditorDock = new void("MASM Assembly Editor", this);
     m_masmEditorDock->setWidget(m_masmEditor);
     m_masmEditorDock->setObjectName("MASMEditorDock");
     m_masmEditorDock->setAllowedAreas(//AllDockWidgetAreas);
-    m_masmEditorDock->setFeatures(QDockWidget::DockWidgetMovable |
-                                   QDockWidget::DockWidgetFloatable |
-                                   QDockWidget::DockWidgetClosable);
+    m_masmEditorDock->setFeatures(void::DockWidgetMovable |
+                                   void::DockWidgetFloatable |
+                                   void::DockWidgetClosable);
     
     // Add to right dock area by default
     addDockWidget(//RightDockWidgetArea, m_masmEditorDock);
@@ -6379,12 +6379,12 @@ void MainWindow::setupMASMEditor() {
     });
     
     // Add View menu toggle for MASM Editor
-    QMenu* viewMenu = menuBar()->findChild<QMenu*>();
+    void* viewMenu = menuBar()->findChild<void*>();
     if (!viewMenu) {
         viewMenu = menuBar()->addMenu("View");
     }
     
-    QAction* toggleMASMAction = viewMenu->addAction("MASM Assembly Editor");
+    void* toggleMASMAction = viewMenu->addAction("MASM Assembly Editor");
     toggleMASMAction->setCheckable(true);
     toggleMASMAction->setChecked(true);
 // Qt connect removed
@@ -6404,16 +6404,16 @@ void MainWindow::toggleMASMEditor(bool visible) {
 void MainWindow::setupAIChatPanel() {
     // Create AI Chat Panel widget
     m_aiChatPanel = new AIChatPanel(this);
-    m_aiChatPanel->initialize();  // Two-phase init - create Qt widgets after QApplication
+    m_aiChatPanel->initialize();  // Two-phase init - create Qt widgets after void
     
     // Create dock widget to hold the chat panel
-    m_aiChatPanelDock = new QDockWidget("AI Chat Panel", this);
+    m_aiChatPanelDock = new void("AI Chat Panel", this);
     m_aiChatPanelDock->setWidget(m_aiChatPanel);
     m_aiChatPanelDock->setObjectName("AIChatPanelDock");
     m_aiChatPanelDock->setAllowedAreas(//AllDockWidgetAreas);
-    m_aiChatPanelDock->setFeatures(QDockWidget::DockWidgetMovable |
-                                    QDockWidget::DockWidgetFloatable |
-                                    QDockWidget::DockWidgetClosable);
+    m_aiChatPanelDock->setFeatures(void::DockWidgetMovable |
+                                    void::DockWidgetFloatable |
+                                    void::DockWidgetClosable);
     
     // Add to right dock area by default
     addDockWidget(//RightDockWidgetArea, m_aiChatPanelDock);
@@ -6439,8 +6439,8 @@ void MainWindow::setupAIChatPanel() {
             });
     
     // Add View menu toggle for AI Chat Panel
-    QMenu* viewMenu = nullptr;
-    for (QAction* action : menuBar()->actions()) {
+    void* viewMenu = nullptr;
+    for (void* action : menuBar()->actions()) {
         if (action->text() == "View") {
             viewMenu = action->menu();
             break;
@@ -6451,7 +6451,7 @@ void MainWindow::setupAIChatPanel() {
         viewMenu = menuBar()->addMenu("View");
     }
     
-    QAction* toggleChatAction = viewMenu->addAction("AI Chat Panel");
+    void* toggleChatAction = viewMenu->addAction("AI Chat Panel");
     toggleChatAction->setCheckable(true);
     toggleChatAction->setChecked(true);
 // Qt connect removed
@@ -6473,7 +6473,7 @@ void MainWindow::onAIChatMessageSubmitted(const std::string& message) {
         
         // Send to inference engine
         if (m_inferenceEngine && m_inferenceEngine->isModelLoaded()) {
-            qint64 reqId = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
+            int64_t reqId = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
             m_currentStreamId = reqId;
             m_streamingMode = true;
             
@@ -6482,7 +6482,7 @@ void MainWindow::onAIChatMessageSubmitted(const std::string& message) {
             // Call the streaming 'request' slot
             QMetaObject::invokeMethod(m_inferenceEngine, "request", //QueuedConnection,
                                       (std::string, message),
-                                      (qint64, reqId),
+                                      (int64_t, reqId),
                                       (bool, true));
         } else {
             m_aiChatPanel->addAssistantMessage("No model loaded. Please load a GGUF model first.", false);
@@ -6524,13 +6524,13 @@ void MainWindow::setupLayerQuantWidget() {
     m_layerQuantWidget = new LayerQuantWidget(this);
     
     // Create dock widget
-    m_layerQuantDock = new QDockWidget("Layer Quantization", this);
+    m_layerQuantDock = new void("Layer Quantization", this);
     m_layerQuantDock->setWidget(m_layerQuantWidget);
     m_layerQuantDock->setObjectName("LayerQuantDock");
     m_layerQuantDock->setAllowedAreas(//AllDockWidgetAreas);
-    m_layerQuantDock->setFeatures(QDockWidget::DockWidgetMovable |
-                                   QDockWidget::DockWidgetFloatable |
-                                   QDockWidget::DockWidgetClosable);
+    m_layerQuantDock->setFeatures(void::DockWidgetMovable |
+                                   void::DockWidgetFloatable |
+                                   void::DockWidgetClosable);
     
     // Add to right dock area by default
     addDockWidget(//RightDockWidgetArea, m_layerQuantDock);
@@ -6546,27 +6546,27 @@ void MainWindow::setupLayerQuantWidget() {
 void MainWindow::setupAIBackendSwitcher() {
     // AI backend switcher is integrated in the toolbar/status bar
     // Add backend selection to Tools menu
-    QMenu* toolsMenu = menuBar()->findChild<QMenu*>("ToolsMenu");
+    void* toolsMenu = menuBar()->findChild<void*>("ToolsMenu");
     if (!toolsMenu) {
         toolsMenu = menuBar()->addMenu("Tools");
         toolsMenu->setObjectName("ToolsMenu");
     }
     
-    QMenu* backendMenu = toolsMenu->addMenu("AI Backend");
-    m_backendGroup = new QActionGroup(this);
+    void* backendMenu = toolsMenu->addMenu("AI Backend");
+    m_backendGroup = nullptr;
     
-    QAction* localAct = backendMenu->addAction("Local (GGUF)");
+    void* localAct = backendMenu->addAction("Local (GGUF)");
     localAct->setCheckable(true);
     localAct->setChecked(true);
     localAct->setData("local");
     m_backendGroup->addAction(localAct);
     
-    QAction* openaiAct = backendMenu->addAction("OpenAI");
+    void* openaiAct = backendMenu->addAction("OpenAI");
     openaiAct->setCheckable(true);
     openaiAct->setData("openai");
     m_backendGroup->addAction(openaiAct);
     
-    QAction* anthropicAct = backendMenu->addAction("Anthropic");
+    void* anthropicAct = backendMenu->addAction("Anthropic");
     anthropicAct->setCheckable(true);
     anthropicAct->setData("anthropic");
     m_backendGroup->addAction(anthropicAct);
@@ -6577,14 +6577,14 @@ void MainWindow::setupAIBackendSwitcher() {
 // Quantization Menu Setup
 // ============================================================
 
-void MainWindow::setupQuantizationMenu(QMenu* aiMenu) {
-    QMenu* quantMenu = aiMenu->addMenu("Quantization Mode");
+void MainWindow::setupQuantizationMenu(void* aiMenu) {
+    void* quantMenu = aiMenu->addMenu("Quantization Mode");
     
-    QActionGroup* quantGroup = new QActionGroup(this);
+    QActionGroup* quantGroup = nullptr;
     
     const char* modes[] = {"Q2_K", "Q3_K", "Q4_0", "Q4_1", "Q5_0", "Q5_1", "Q8_0", "F16", "F32"};
     for (const char* mode : modes) {
-        QAction* act = quantMenu->addAction(mode);
+        void* act = quantMenu->addAction(mode);
         act->setCheckable(true);
         act->setData(mode);
         quantGroup->addAction(act);
@@ -6615,7 +6615,7 @@ void MainWindow::setupSwarmEditing() {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "setupSwarmEditing", "swarm");
     
     if (!m_swarmSocket) {
-        m_swarmSocket = new QWebSocket(std::string(), QWebSocketProtocol::VersionLatest, this);
+// REMOVED_QT:         m_swarmSocket = nullptr, QWebSocketProtocol::VersionLatest, this);
         
         // Connection established
 // Qt connect removed
@@ -6654,7 +6654,7 @@ void MainWindow::joinSwarmSession() {
     }
     
     // Generate unique session ID if not set
-    if (m_swarmSessionId.isEmpty()) {
+    if (m_swarmSessionId.empty()) {
         m_swarmSessionId = QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
     }
     
@@ -6662,13 +6662,13 @@ void MainWindow::joinSwarmSession() {
     bool ok;
     std::string sessionId = QInputDialog::getText(this, tr("Join Swarm Session"),
         tr("Enter session ID (or leave empty to create new):"),
-        QLineEdit::Normal, m_swarmSessionId, &ok);
+        void::Normal, m_swarmSessionId, &ok);
     
     if (ok) {
-        m_swarmSessionId = sessionId.isEmpty() ? m_swarmSessionId : sessionId;
+        m_swarmSessionId = sessionId.empty() ? m_swarmSessionId : sessionId;
         
         // Connect to swarm server (configurable endpoint)
-        std::string serverUrl = QSettings().value("swarm/serverUrl", "wss://swarm.rawrxd.dev").toString();
+        std::string serverUrl = void*().value("swarm/serverUrl", "wss://swarm.rawrxd.dev").toString();
         std::string url(std::string("%1/session/%2"));
         
         statusBar()->showMessage(tr("Connecting to swarm session %1..."), 5000);
@@ -6694,10 +6694,10 @@ void MainWindow::onSwarmMessage(const std::string& message) {
         int col = msg["col"].toInt();
         std::string text = msg["text"].toString();
         std::string operation = msg["operation"].toString(); // insert, delete, replace
-        
-        
+
+
         // Apply to editor if same file is open
-        if (editor_ && !file.isEmpty()) {
+        if (editor_ && !file.empty()) {
             // Mark as remote edit to avoid broadcast loop
             editor_->setProperty("swarm_remote_edit", true);
             // Apply edit through editor interface
@@ -6746,7 +6746,7 @@ void MainWindow::broadcastEdit() {
         editText = cursor.selectedText();
         
         // Get current file path
-        if (!currentFilePath_.isEmpty()) {
+        if (!currentFilePath_.empty()) {
             currentFile = currentFilePath_;
         }
     }
@@ -6806,13 +6806,13 @@ void MainWindow::setupInterpretabilityPanel()
     m_interpretabilityPanel = new InterpretabilityPanelEnhanced(this);
     
     // Create dock widget
-    m_interpretabilityPanelDock = new QDockWidget("Model Interpretability & Diagnostics", this);
+    m_interpretabilityPanelDock = new void("Model Interpretability & Diagnostics", this);
     m_interpretabilityPanelDock->setWidget(m_interpretabilityPanel);
     m_interpretabilityPanelDock->setObjectName("InterpretabilityPanelDock");
     m_interpretabilityPanelDock->setAllowedAreas(//AllDockWidgetAreas);
-    m_interpretabilityPanelDock->setFeatures(QDockWidget::DockWidgetMovable |
-                                             QDockWidget::DockWidgetFloatable |
-                                             QDockWidget::DockWidgetClosable);
+    m_interpretabilityPanelDock->setFeatures(void::DockWidgetMovable |
+                                             void::DockWidgetFloatable |
+                                             void::DockWidgetClosable);
     
     // Add to right dock area by default
     addDockWidget(//RightDockWidgetArea, m_interpretabilityPanelDock);
@@ -6841,7 +6841,7 @@ void MainWindow::setupInterpretabilityPanel()
                 if (diagnostics_json["average_sparsity"].toDouble() > 0.5) issues << "High Sparsity";
                 if (diagnostics_json["attention_entropy_mean"].toDouble() < 1.0) issues << "Low Attention Entropy";
                 
-                if (!issues.isEmpty()) {
+                if (!issues.empty()) {
                     statusBar()->showMessage(
                         std::string("🔍 Diagnostics: %1 issue(s) - %2")
                             )
@@ -6873,7 +6873,7 @@ void MainWindow::setupInterpretabilityPanel()
                     filter
                 );
                 
-                if (!filePath.isEmpty()) {
+                if (!filePath.empty()) {
                     bool success = false;
                     if (format == "JSON") {
                         success = m_interpretabilityPanel->exportAsJSON(filePath);
@@ -7294,7 +7294,7 @@ void MainWindow::toggleCompileCurrentFile()
         currentFile = m_multiTabEditor->getTabFilePath(m_multiTabEditor->currentIndex());
     }
     
-    if (currentFile.isEmpty()) {
+    if (currentFile.empty()) {
         statusBar()->showMessage(tr("No file open to compile"), 3000);
         QMessageBox::warning(this, tr("Compile Error"), tr("Please open a file to compile."));
         return;
@@ -7344,10 +7344,10 @@ void MainWindow::toggleCompileCurrentFile()
     optionsDialog.setWindowTitle(tr("Universal Compiler - %1"));
     optionsDialog.setMinimumWidth(500);
     
-    QVBoxLayout* mainLayout = new QVBoxLayout(&optionsDialog);
+    void* mainLayout = new void(&optionsDialog);
     
     // Header with language info
-    QLabel* headerLabel = new QLabel(tr("🔧 Compiling <b>%1</b> file: <code>%2</code>")
+    void* headerLabel = new void(tr("🔧 Compiling <b>%1</b> file: <code>%2</code>")
         ));
     headerLabel->setWordWrap(true);
     mainLayout->addWidget(headerLabel);
@@ -7355,27 +7355,27 @@ void MainWindow::toggleCompileCurrentFile()
     mainLayout->addSpacing(10);
     
     // === COMPILER SELECTION ===
-    QGroupBox* compilerGroup = new QGroupBox(tr("Compiler Engine"));
-    QVBoxLayout* compilerLayout = new QVBoxLayout(compilerGroup);
+    void* compilerGroup = new void(tr("Compiler Engine"));
+    void* compilerLayout = new void(compilerGroup);
     
-    QRadioButton* rawrxdRadio = new QRadioButton(tr("🚀 RawrXD Native ASM Compiler (Recommended)"));
+    void* rawrxdRadio = nullptr"));
     rawrxdRadio->setToolTip(tr("Pure assembly implementation - maximum performance, full cross-platform support"));
     rawrxdRadio->setChecked(true);
     
-    QRadioButton* systemRadio = new QRadioButton(tr("🔧 System Compiler (%1)")
+    void* systemRadio = nullptr")
          ? tr("Not available") : compilerInfo->nativeCompiler));
     systemRadio->setToolTip(tr("Use system-installed compiler as fallback"));
-    systemRadio->setEnabled(!compilerInfo->nativeCompiler.isEmpty());
+    systemRadio->setEnabled(!compilerInfo->nativeCompiler.empty());
     
     compilerLayout->addWidget(rawrxdRadio);
     compilerLayout->addWidget(systemRadio);
     mainLayout->addWidget(compilerGroup);
     
     // === TARGET PLATFORM ===
-    QGroupBox* platformGroup = new QGroupBox(tr("Target Platform"));
-    QGridLayout* platformLayout = new QGridLayout(platformGroup);
+    void* platformGroup = new void(tr("Target Platform"));
+    void* platformLayout = new void(platformGroup);
     
-    QComboBox* platformCombo = new QComboBox();
+    void* platformCombo = new void();
     platformCombo->addItem(tr("🖥️ Native (Current OS)"), static_cast<int>(TargetPlatform::Native));
     platformCombo->addItem(tr("🪟 Windows"), static_cast<int>(TargetPlatform::Windows));
     platformCombo->addItem(tr("🐧 Linux"), static_cast<int>(TargetPlatform::Linux));
@@ -7392,15 +7392,15 @@ void MainWindow::toggleCompileCurrentFile()
     platformCombo->addItem(tr("⚡ Zephyr RTOS"), static_cast<int>(TargetPlatform::Zephyr));
     platformCombo->addItem(tr("🔌 Bare Metal"), static_cast<int>(TargetPlatform::EmbeddedBare));
     
-    platformLayout->addWidget(new QLabel(tr("Platform:")), 0, 0);
+    platformLayout->addWidget(new void(tr("Platform:")), 0, 0);
     platformLayout->addWidget(platformCombo, 0, 1);
     mainLayout->addWidget(platformGroup);
     
     // === TARGET ARCHITECTURE ===
-    QGroupBox* archGroup = new QGroupBox(tr("Target Architecture"));
-    QGridLayout* archLayout = new QGridLayout(archGroup);
+    void* archGroup = new void(tr("Target Architecture"));
+    void* archLayout = new void(archGroup);
     
-    QComboBox* archCombo = new QComboBox();
+    void* archCombo = new void();
     archCombo->addItem(tr("🎯 Native (Current CPU)"), static_cast<int>(TargetArch::Native));
     archCombo->addItem(tr("💻 x86_64 (AMD64)"), static_cast<int>(TargetArch::x86_64));
     archCombo->addItem(tr("💻 x86 (i686, 32-bit)"), static_cast<int>(TargetArch::x86));
@@ -7419,26 +7419,26 @@ void MainWindow::toggleCompileCurrentFile()
     archCombo->addItem(tr("🔌 Xtensa (ESP32)"), static_cast<int>(TargetArch::ESP32));
     archCombo->addItem(tr("🔌 ARM Cortex-M (STM32)"), static_cast<int>(TargetArch::STM32));
     
-    archLayout->addWidget(new QLabel(tr("Architecture:")), 0, 0);
+    archLayout->addWidget(new void(tr("Architecture:")), 0, 0);
     archLayout->addWidget(archCombo, 0, 1);
     mainLayout->addWidget(archGroup);
     
     // === BUILD OPTIONS ===
-    QGroupBox* buildGroup = new QGroupBox(tr("Build Options"));
-    QGridLayout* buildLayout = new QGridLayout(buildGroup);
+    void* buildGroup = new void(tr("Build Options"));
+    void* buildLayout = new void(buildGroup);
     
-    QCheckBox* debugCheck = new QCheckBox(tr("🐛 Include Debug Symbols"));
+    void* debugCheck = nullptr);
     debugCheck->setEnabled(compilerInfo->supportsDebug);
     debugCheck->setChecked(false);
     
-    QCheckBox* optimizeCheck = new QCheckBox(tr("🚀 Enable Optimizations"));
+    void* optimizeCheck = nullptr);
     optimizeCheck->setEnabled(compilerInfo->supportsOptimize);
     optimizeCheck->setChecked(true);
     
-    QCheckBox* staticCheck = new QCheckBox(tr("📦 Static Linking (Self-contained)"));
+    void* staticCheck = nullptr"));
     staticCheck->setChecked(true);
     
-    QCheckBox* stripCheck = new QCheckBox(tr("✂️ Strip Symbols (Smaller binary)"));
+    void* stripCheck = nullptr"));
     stripCheck->setChecked(true);
     
     buildLayout->addWidget(debugCheck, 0, 0);
@@ -7448,13 +7448,13 @@ void MainWindow::toggleCompileCurrentFile()
     mainLayout->addWidget(buildGroup);
     
     // === OUTPUT ===
-    QGroupBox* outputGroup = new QGroupBox(tr("Output"));
-    QHBoxLayout* outputLayout = new QHBoxLayout(outputGroup);
+    void* outputGroup = new void(tr("Output"));
+    void* outputLayout = new void(outputGroup);
     
-    QLineEdit* outputEdit = new QLineEdit(fi.baseName());
+    void* outputEdit = new void(fi.baseName());
     outputEdit->setPlaceholderText(tr("Output filename (without extension)"));
     
-    QLabel* extLabel = new QLabel(getOutputExtension(TargetPlatform::Native));
+    void* extLabel = new void(getOutputExtension(TargetPlatform::Native));
     
     // Update extension when platform changes
     void, [&](int idx) {
@@ -7462,14 +7462,13 @@ void MainWindow::toggleCompileCurrentFile()
         extLabel->setText(getOutputExtension(p));
     });
     
-    outputLayout->addWidget(new QLabel(tr("Output:")));
+    outputLayout->addWidget(new void(tr("Output:")));
     outputLayout->addWidget(outputEdit, 1);
     outputLayout->addWidget(extLabel);
     mainLayout->addWidget(outputGroup);
     
     // === DIALOG BUTTONS ===
-    QDialogButtonBox* buttonBox = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QDialogButtonBox* buttonBox = nullptr;
     buttonBox->button(QDialogButtonBox::Ok)->setText(tr("🔨 Compile"));
     buttonBox->button(QDialogButtonBox::Ok)->setDefault(true);
 // Qt connect removed
@@ -7489,7 +7488,7 @@ void MainWindow::toggleCompileCurrentFile()
     optimizeBuild = optimizeCheck->isChecked();
     bool staticLink = staticCheck->isChecked();
     bool stripSymbols = stripCheck->isChecked();
-    std::string outputName = outputEdit->text().isEmpty() ? fi.baseName() : outputEdit->text();
+    std::string outputName = outputEdit->text().empty() ? fi.baseName() : outputEdit->text();
     std::string outputExt = getOutputExtension(targetPlatform);
     std::string outputPath = fi.absolutePath() + "/" + outputName + outputExt;
     
@@ -7521,7 +7520,7 @@ void MainWindow::toggleCompileCurrentFile()
         if (stripSymbols && !debugBuild) compilerArgs << "--strip";
         
         // Add language-specific default args
-        if (!compilerInfo->defaultArgs.isEmpty()) {
+        if (!compilerInfo->defaultArgs.empty()) {
             compilerArgs << "--lang-args" << compilerInfo->defaultArgs;
         }
     } else {
@@ -7535,7 +7534,7 @@ void MainWindow::toggleCompileCurrentFile()
     }
     
     // Launch compiler process
-    QProcess* compiler = new QProcess(this);
+    void** compiler = new void*(this);
     compiler->setWorkingDirectory(fi.absolutePath());
     
     // Capture output
@@ -7547,7 +7546,7 @@ void MainWindow::toggleCompileCurrentFile()
             std::filesystem::path outFi(outputPath);
             std::string sizeStr;
             if (outFi.exists()) {
-                qint64 size = outFi.size();
+                int64_t size = outFi.size();
                 if (size < 1024) sizeStr = std::string("%1 bytes");
                 else if (size < 1024*1024) sizeStr = std::string("%1 KB");
                 else sizeStr = std::string("%1 MB"), 0, 'f', 2);
@@ -7573,12 +7572,12 @@ void MainWindow::toggleCompileCurrentFile()
             }
             
             // Log to output panel if available
-            if (!output.isEmpty()) {
+            if (!output.empty()) {
             }
         } else {
             statusBar()->showMessage(tr("❌ Compilation failed: %1")), 5000);
             
-            std::string errorMsg = errors.isEmpty() ? output : errors;
+            std::string errorMsg = errors.empty() ? output : errors;
             QMessageBox::critical(this, tr("Compilation Failed"),
                 tr("<b>%1 Compiler Error</b><br><br>"
                    "<b>File:</b> %2<br>"
@@ -7622,14 +7621,14 @@ void MainWindow::toggleBuildProject()
 {
     // Find all compilable files in current workspace
     std::string projectDir;
-    if (!m_currentWorkspacePath.isEmpty()) {
+    if (!m_currentWorkspacePath.empty()) {
         projectDir = m_currentWorkspacePath;
     } else if (m_multiTabEditor && m_multiTabEditor->currentIndex() >= 0) {
         std::filesystem::path fi(m_multiTabEditor->getTabFilePath(m_multiTabEditor->currentIndex()));
         projectDir = fi.absolutePath();
     }
     
-    if (projectDir.isEmpty()) {
+    if (projectDir.empty()) {
         statusBar()->showMessage(tr("No project directory"), 3000);
         QMessageBox::warning(this, tr("Build Error"), tr("Please open a project or file first."));
         return;
@@ -7648,7 +7647,7 @@ void MainWindow::toggleBuildProject()
         fileTypes[ext]++;
     }
     
-    if (sourceFiles.isEmpty()) {
+    if (sourceFiles.empty()) {
         statusBar()->showMessage(tr("No compilable files found"), 3000);
         QMessageBox::information(this, tr("Build Project"),
             tr("No compilable source files found in:\n%1\n\n"
@@ -7670,7 +7669,7 @@ void MainWindow::toggleBuildProject()
     }
     
     // Launch compiler for all files with parallelization
-    QProcess* compiler = new QProcess(this);
+    void** compiler = new void*(this);
     std::string compilerPath = QCoreApplication::applicationDirPath() + "/rawrxd.exe";
     
     // Check if compiler exists
@@ -7690,12 +7689,12 @@ void MainWindow::toggleBuildProject()
     
     // Monitor output
 // Qt connect removed
-        if (!output.isEmpty() && m_hexMagConsole) {
+        if (!output.empty() && m_hexMagConsole) {
             m_hexMagConsole->appendPlainText(output);
         }
     });
 // Qt connect removed
-        if (!error.isEmpty() && m_hexMagConsole) {
+        if (!error.empty() && m_hexMagConsole) {
             m_hexMagConsole->appendPlainText("[ERROR] " + error);
         }
     });
@@ -7713,8 +7712,8 @@ void MainWindow::toggleBuildProject()
                 m_hexMagConsole->appendPlainText(std::string("Compiled: %1 of %2 files")));
                 m_hexMagConsole->appendPlainText("===================================\n");
             }
-            
-            
+
+
             if (notificationCenter_) {
                 notificationCenter_->notify(tr("Build Complete"),
                     tr("Successfully built %1 of %2 files")),
@@ -7748,14 +7747,14 @@ void MainWindow::toggleBuildProject()
 void MainWindow::toggleCleanBuild()
 {
     std::string projectDir;
-    if (!m_currentWorkspacePath.isEmpty()) {
+    if (!m_currentWorkspacePath.empty()) {
         projectDir = m_currentWorkspacePath;
     } else if (m_multiTabEditor && m_multiTabEditor->currentIndex() >= 0) {
         std::filesystem::path fi(m_multiTabEditor->getTabFilePath(m_multiTabEditor->currentIndex()));
         projectDir = fi.absolutePath();
     }
     
-    if (projectDir.isEmpty()) {
+    if (projectDir.empty()) {
         statusBar()->showMessage(tr("No project directory"), 3000);
         return;
     }
@@ -7839,8 +7838,8 @@ void MainWindow::toggleCleanBuild()
         }
         m_hexMagConsole->appendPlainText("====================================\n");
     }
-    
-    
+
+
     if (notificationCenter_) {
         notificationCenter_->notify(tr("Clean Complete"),
             tr("Cleaned %1 build artifacts"),
@@ -7861,7 +7860,7 @@ void MainWindow::toggleCleanBuild()
 void MainWindow::toggleCompilerSettings()
 {
     // Load current settings
-    QSettings settings("RawrXD", "Compiler");
+    void* settings("RawrXD", "Compiler");
     std::string savedTarget = settings.value("target_arch", "x86-64").toString();
     std::string savedOpt = settings.value("opt_level", "O2").toString();
     bool savedDebug = settings.value("debug_info", false).toBool();
@@ -7876,41 +7875,41 @@ void MainWindow::toggleCompilerSettings()
     dialog->setMinimumSize(600, 650);
     dialog->setWindowModality(//WindowModal);
     
-    QVBoxLayout* layout = new QVBoxLayout(dialog);
+    void* layout = new void(dialog);
     
     // === Header ===
-    QLabel* headerLabel = new QLabel(tr("<b>RawrXD Compiler Configuration</b>"));
+    void* headerLabel = new void(tr("<b>RawrXD Compiler Configuration</b>"));
     layout->addWidget(headerLabel);
     layout->addSpacing(10);
     
     // === Target Architecture ===
-    QGroupBox* targetGroup = new QGroupBox(tr("Target Architecture"), dialog);
-    QVBoxLayout* targetLayout = new QVBoxLayout(targetGroup);
-    QComboBox* targetCombo = new QComboBox(targetGroup);
+    void* targetGroup = new void(tr("Target Architecture"), dialog);
+    void* targetLayout = new void(targetGroup);
+    void* targetCombo = new void(targetGroup);
     targetCombo->addItems({"x86-64 (Default, Native 64-bit)", "x86 (32-bit)", "ARM64 (Apple Silicon)", 
                            "ARM32 (ARMv7)", "RISC-V 64-bit", "WebAssembly"});
     int targetIndex = targetCombo->findText(savedTarget, //MatchStartsWith);
     if (targetIndex >= 0) targetCombo->setCurrentIndex(targetIndex);
-    targetLayout->addWidget(new QLabel(tr("Select target CPU architecture for compilation")));
+    targetLayout->addWidget(new void(tr("Select target CPU architecture for compilation")));
     targetLayout->addWidget(targetCombo);
     layout->addWidget(targetGroup);
     
     // === Output Format ===
-    QGroupBox* outputGroup = new QGroupBox(tr("Output Format"), dialog);
-    QVBoxLayout* outputLayout = new QVBoxLayout(outputGroup);
-    QComboBox* outputCombo = new QComboBox(outputGroup);
+    void* outputGroup = new void(tr("Output Format"), dialog);
+    void* outputLayout = new void(outputGroup);
+    void* outputCombo = new void(outputGroup);
     outputCombo->addItems({"Executable (.exe)", "Shared Library (.dll)", "Static Library (.lib)",
                            "Object File (.obj)", "Assembly (.s)", "IR (.ir)"});
     int outputIndex = outputCombo->findText(savedOutput);
     if (outputIndex >= 0) outputCombo->setCurrentIndex(outputIndex);
-    outputLayout->addWidget(new QLabel(tr("Choose output file format")));
+    outputLayout->addWidget(new void(tr("Choose output file format")));
     outputLayout->addWidget(outputCombo);
     layout->addWidget(outputGroup);
     
     // === Optimization Level ===
-    QGroupBox* optGroup = new QGroupBox(tr("Optimization Level"), dialog);
-    QVBoxLayout* optLayout = new QVBoxLayout(optGroup);
-    QComboBox* optCombo = new QComboBox(optGroup);
+    void* optGroup = new void(tr("Optimization Level"), dialog);
+    void* optLayout = new void(optGroup);
+    void* optCombo = new void(optGroup);
     optCombo->addItems({"O0 - No optimization (Fastest compile, slower code)", 
                         "O1 - Basic optimization", 
                         "O2 - Standard optimization (Default, balanced)", 
@@ -7919,38 +7918,38 @@ void MainWindow::toggleCompilerSettings()
     int optIndex = optCombo->findText(savedOpt, //MatchStartsWith);
     if (optIndex >= 0) optCombo->setCurrentIndex(optIndex);
     else optCombo->setCurrentIndex(2);
-    optLayout->addWidget(new QLabel(tr("Higher levels produce faster code but take longer to compile")));
+    optLayout->addWidget(new void(tr("Higher levels produce faster code but take longer to compile")));
     optLayout->addWidget(optCombo);
     layout->addWidget(optGroup);
     
     // === Parallelization ===
-    QGroupBox* parallelGroup = new QGroupBox(tr("Parallelization"), dialog);
-    QVBoxLayout* parallelLayout = new QVBoxLayout(parallelGroup);
-    QSpinBox* threadsSpinner = new QSpinBox(parallelGroup);
+    void* parallelGroup = new void(tr("Parallelization"), dialog);
+    void* parallelLayout = new void(parallelGroup);
+    void* threadsSpinner = nullptr;
     threadsSpinner->setMinimum(1);
     int maxThreads = std::thread::idealThreadCount();
     threadsSpinner->setMaximum(maxThreads);
     threadsSpinner->setValue(savedThreads);
-    parallelLayout->addWidget(new QLabel(tr("Number of parallel compilation threads (System: %1 cores):")
+    parallelLayout->addWidget(new void(tr("Number of parallel compilation threads (System: %1 cores):")
         ));
     parallelLayout->addWidget(threadsSpinner);
     layout->addWidget(parallelGroup);
     
     // === Build Options ===
-    QGroupBox* optionsGroup = new QGroupBox(tr("Build Options"), dialog);
-    QVBoxLayout* optionsLayout = new QVBoxLayout(optionsGroup);
+    void* optionsGroup = new void(tr("Build Options"), dialog);
+    void* optionsLayout = new void(optionsGroup);
     
-    QCheckBox* debugCheck = new QCheckBox(tr("🐛 Include Debug Symbols"), optionsGroup);
+    void* debugCheck = nullptr, optionsGroup);
     debugCheck->setChecked(savedDebug);
     debugCheck->setToolTip(tr("Include debugging information for debuggers"));
     optionsLayout->addWidget(debugCheck);
     
-    QCheckBox* warningsCheck = new QCheckBox(tr("⚠️  Treat Warnings as Errors"), optionsGroup);
+    void* warningsCheck = nullptr, optionsGroup);
     warningsCheck->setChecked(savedWarnings);
     warningsCheck->setToolTip(tr("Fail compilation if any warnings occur"));
     optionsLayout->addWidget(warningsCheck);
     
-    QCheckBox* verboseCheck = new QCheckBox(tr("📢 Verbose Output"), optionsGroup);
+    void* verboseCheck = nullptr, optionsGroup);
     verboseCheck->setChecked(savedVerbose);
     verboseCheck->setToolTip(tr("Print detailed compiler operations and diagnostics"));
     optionsLayout->addWidget(verboseCheck);
@@ -7958,22 +7957,21 @@ void MainWindow::toggleCompilerSettings()
     layout->addWidget(optionsGroup);
     
     // === Info Section ===
-    QLabel* infoLabel = new QLabel(
+    void* infoLabel = new void(
         tr("<b>RawrXD Compiler Information:</b><br>"
            "• Version: 1.0<br>"
            "• Supported Languages: EON, ASM, x86-64, ARM, WebAssembly<br>"
            "• Multi-target compilation for native and cross-platform builds<br>"
            "• Parallelized compilation with -j flag<br>"
            "• Support for optimization levels O0-O3 and Os"));
-    infoLabel->setStyleSheet("QLabel { background-color: #f0f0f0; padding: 10px; border-radius: 4px; }");
+    infoLabel->setStyleSheet("void { background-color: #f0f0f0; padding: 10px; border-radius: 4px; }");
     infoLabel->setWordWrap(true);
     layout->addWidget(infoLabel);
     
     layout->addStretch();
     
     // === Buttons ===
-    QDialogButtonBox* buttons = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::RestoreDefaults, dialog);
+    QDialogButtonBox* buttons = nullptr;
 // Qt connect removed
         settings.setValue("target_arch", targetCombo->currentText().split(" ").first());
         settings.setValue("output_format", outputCombo->currentText());
@@ -8011,26 +8009,26 @@ void MainWindow::toggleCompilerOutput()
 {
     // Create or show compiler output dock if not already created
     if (!m_compilerOutputDock) {
-        m_compilerOutputDock = new QDockWidget(tr("🔨 Compiler Output"), this);
+        m_compilerOutputDock = new void(tr("🔨 Compiler Output"), this);
         m_compilerOutputDock->setObjectName("CompilerOutputDock");
         m_compilerOutputDock->setAllowedAreas(//AllDockWidgetAreas);
-        m_compilerOutputDock->setFeatures(QDockWidget::DockWidgetMovable |
-                                          QDockWidget::DockWidgetFloatable |
-                                          QDockWidget::DockWidgetClosable);
+        m_compilerOutputDock->setFeatures(void::DockWidgetMovable |
+                                          void::DockWidgetFloatable |
+                                          void::DockWidgetClosable);
         
         // Create output widget container
         void* outputContainer = new void(m_compilerOutputDock);
-        QVBoxLayout* containerLayout = new QVBoxLayout(outputContainer);
+        void* containerLayout = new void(outputContainer);
         containerLayout->setContentsMargins(0, 0, 0, 0);
         containerLayout->setSpacing(0);
         
         // === Toolbar ===
-        QToolBar* toolbar = new QToolBar(tr("Compiler Output Tools"), outputContainer);
+        void* toolbar = new void(tr("Compiler Output Tools"), outputContainer);
         toolbar->setMovable(false);
         toolbar->setFloatable(false);
-        toolbar->setIconSize(QSize(16, 16));
+        toolbar->setIconSize(void*(16, 16));
         
-        QAction* clearAction = toolbar->addAction(tr("Clear"));
+        void* clearAction = toolbar->addAction(tr("Clear"));
         clearAction->setToolTip(tr("Clear output (Ctrl+L)"));
 // Qt connect removed
                 statusBar()->showMessage(tr("✅ Compiler output cleared"), 2000);
@@ -8039,14 +8037,14 @@ void MainWindow::toggleCompilerOutput()
         
         toolbar->addSeparator();
         
-        QAction* copyAction = toolbar->addAction(tr("Copy All"));
+        void* copyAction = toolbar->addAction(tr("Copy All"));
         copyAction->setToolTip(tr("Copy all output to clipboard"));
 // Qt connect removed
                 statusBar()->showMessage(tr("✅ Output copied to clipboard"), 2000);
             }
         });
         
-        QAction* selectAllAction = toolbar->addAction(tr("Select All"));
+        void* selectAllAction = toolbar->addAction(tr("Select All"));
         selectAllAction->setToolTip(tr("Select all output (Ctrl+A)"));
 // Qt connect removed
             }
@@ -8054,7 +8052,7 @@ void MainWindow::toggleCompilerOutput()
         
         toolbar->addSeparator();
         
-        QAction* saveAction = toolbar->addAction(tr("Save"));
+        void* saveAction = toolbar->addAction(tr("Save"));
         saveAction->setToolTip(tr("Save output to file"));
 // Qt connect removed
             std::string defaultPath = std::filesystem::path::homePath() + "/compiler_output_" + 
@@ -8064,7 +8062,7 @@ void MainWindow::toggleCompilerOutput()
                 tr("Save Compiler Output"), defaultPath,
                 tr("Text Files (*.txt);;Log Files (*.log);;All Files (*.*)"));
             
-            if (!fileName.isEmpty()) {
+            if (!fileName.empty()) {
                 std::fstream file(fileName);
                 if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
                     QTextStream stream(&file);
@@ -8086,16 +8084,16 @@ void MainWindow::toggleCompilerOutput()
         toolbar->addSeparator();
         
         // Wrap mode checkbox
-        QCheckBox* wrapCheck = new QCheckBox(tr("Word Wrap"));
+        void* wrapCheck = nullptr);
         wrapCheck->setChecked(false);
         toolbar->addWidget(wrapCheck);
         
         containerLayout->addWidget(toolbar);
         
         // === Output text editor ===
-        m_compilerOutput = new QPlainTextEdit(outputContainer);
+        m_compilerOutput = nullptr;
         m_compilerOutput->setReadOnly(true);
-        m_compilerOutput->setFont(QFont("Consolas", 10));
+        m_compilerOutput->setFont(std::string("Consolas", 10));
         m_compilerOutput->setMaximumBlockCount(5000);  // Keep last 5000 lines
         m_compilerOutput->setStyleSheet(
             "QPlainTextEdit {"
@@ -8116,8 +8114,8 @@ void MainWindow::toggleCompilerOutput()
         containerLayout->addWidget(m_compilerOutput);
         
         // === Status line ===
-        QLabel* statusLabel = new QLabel(tr("Ready"));
-        statusLabel->setStyleSheet("QLabel { background-color: #2d2d2d; color: #cccccc; padding: 4px; }");
+        void* statusLabel = new void(tr("Ready"));
+        statusLabel->setStyleSheet("void { background-color: #2d2d2d; color: #cccccc; padding: 4px; }");
         
         // Update status when text changes
 // Qt connect removed
@@ -8160,7 +8158,7 @@ void MainWindow::setupOrchestrationSystem()
     }
     
     if (!m_orchestrationDock) {
-        m_orchestrationDock = new QDockWidget(tr("Task Orchestration"), this);
+        m_orchestrationDock = new void(tr("Task Orchestration"), this);
         m_orchestrationDock->setWidget(m_orchestrationUI);
         addDockWidget(//RightDockWidgetArea, m_orchestrationDock);
         
@@ -8196,35 +8194,35 @@ void MainWindow::setupCommandPalette()
     m_commandPalette->setMinimumSize(500, 400);
     m_commandPalette->setStyleSheet(
         "void#CommandPalette { background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 8px; }"
-        "QLineEdit { background: #252526; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 4px; padding: 8px; font-size: 14px; }"
+        "void { background: #252526; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 4px; padding: 8px; font-size: 14px; }"
         "QListWidget { background: #1e1e1e; color: #cccccc; border: none; }"
         "QListWidget::item { padding: 8px; }"
         "QListWidget::item:selected { background: #094771; }"
         "QListWidget::item:hover { background: #2a2d2e; }"
     );
     
-    QVBoxLayout* layout = new QVBoxLayout(m_commandPalette);
+    void* layout = new void(m_commandPalette);
     layout->setContentsMargins(8, 8, 8, 8);
     layout->setSpacing(4);
     
     // Search input
-    QLineEdit* searchInput = new QLineEdit();
+    void* searchInput = new void();
     searchInput->setPlaceholderText(tr("Type a command..."));
     searchInput->setObjectName("CommandPaletteSearch");
     layout->addWidget(searchInput);
     
     // Command list
-    QListWidget* commandList = new QListWidget();
+    QListWidget* commandList = nullptr;
     commandList->setObjectName("CommandPaletteList");
     layout->addWidget(commandList);
     
     // Populate commands from menu actions
     std::vector<std::string> commands;
-    auto addMenuCommands = [&commands](QMenu* menu, const std::string& prefix = "") {
+    auto addMenuCommands = [&commands](void* menu, const std::string& prefix = "") {
         if (!menu) return;
-        for (QAction* action : menu->actions()) {
-            if (!action->text().isEmpty() && !action->isSeparator()) {
-                std::string cmd = prefix.isEmpty() ? action->text() : prefix + " > " + action->text();
+        for (void* action : menu->actions()) {
+            if (!action->text().empty() && !action->isSeparator()) {
+                std::string cmd = prefix.empty() ? action->text() : prefix + " > " + action->text();
                 cmd.remove('&'); // Remove mnemonics
                 commands << cmd;
             }
@@ -8248,7 +8246,7 @@ void MainWindow::setupCommandPalette()
     // Filter on search
 // Qt connect removed
         for (const std::string& cmd : commands) {
-            if (text.isEmpty() || cmd.contains(text, //CaseInsensitive)) {
+            if (text.empty() || cmd.contains(text, //CaseInsensitive)) {
                 commandList->addItem(cmd);
             }
         }
@@ -8316,7 +8314,7 @@ void MainWindow::executeCommand(const std::string& command)
         // Use codeView_ or editor tabs
         if (codeView_) {
             std::string selected = codeView_->textCursor().selectedText();
-            if (!selected.isEmpty() && m_aiChatPanel) {
+            if (!selected.empty() && m_aiChatPanel) {
                 // Send to AI chat
                 onAIChatMessageSubmitted(selected);
             }
@@ -8332,7 +8330,7 @@ void MainWindow::executeCommand(const std::string& command)
         std::vector<std::string> themes = {"Dark", "Light", "Monokai", "Solarized Dark", "Solarized Light"};
         bool ok;
         std::string theme = QInputDialog::getItem(this, tr("Select Theme"), tr("Theme:"), themes, 0, false, &ok);
-        if (ok && !theme.isEmpty()) {
+        if (ok && !theme.empty()) {
             applyDarkTheme();  // Use existing method (always dark for now)
         }
     } else {
@@ -8350,13 +8348,13 @@ void MainWindow::showCommandPalette()
     
     if (m_commandPalette) {
         // Position palette at top center of window
-        QPoint center = mapToGlobal(QPoint(width() / 2, 100));
+        void* center = mapToGlobal(void*(width() / 2, 100));
         m_commandPalette->move(center.x() - m_commandPalette->width() / 2, center.y());
         m_commandPalette->show();
         m_commandPalette->raise();
         
         // Focus search input
-        QLineEdit* search = m_commandPalette->findChild<QLineEdit*>("CommandPaletteSearch");
+        void* search = m_commandPalette->findChild<void*>("CommandPaletteSearch");
         if (search) {
             search->clear();
             search->setFocus();
@@ -8377,13 +8375,13 @@ void MainWindow::onAgentWishReceived(const std::string& wish) {
         return;
     }
     
-    if (wish.isEmpty()) {
+    if (wish.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "agent_wish", "Empty wish received");
         return;
     }
     
     // Track agent wish statistics
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int wishCount = settings.value("agent/wishesReceived", 0).toInt() + 1;
     settings.setValue("agent/wishesReceived", wishCount);
     settings.setValue("agent/lastWishTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -8417,13 +8415,13 @@ void MainWindow::onAgentPlanGenerated(const std::string& planSummary) {
         return;
     }
     
-    if (planSummary.isEmpty()) {
+    if (planSummary.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "agent_plan", "Empty plan summary");
         return;
     }
     
     // Track agent plan statistics
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int planCount = settings.value("agent/plansGenerated", 0).toInt() + 1;
     settings.setValue("agent/plansGenerated", planCount);
     settings.setValue("agent/lastPlanTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -8460,7 +8458,7 @@ void MainWindow::onAgentExecutionCompleted(bool success) {
     }
     
     // Track agent execution statistics
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int execCount = settings.value("agent/executionsCompleted", 0).toInt() + 1;
     settings.setValue("agent/executionsCompleted", execCount);
     settings.setValue("agent/lastExecutionTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
@@ -8512,7 +8510,7 @@ void MainWindow::handleSaveAs()
 {
     std::string fileName = QFileDialog::getSaveFileName(this, tr("Save As"), std::string(),
         tr("All Files (*);;C++ Files (*.cpp *.h *.hpp);;Python Files (*.py);;JavaScript Files (*.js)"));
-    if (!fileName.isEmpty()) {
+    if (!fileName.empty()) {
         // Get current editor content and save
         if (codeView_) {
             std::fstream file(fileName);
@@ -8541,7 +8539,7 @@ void MainWindow::handleSaveAll()
 
 void MainWindow::toggleAutoSave(bool enabled)
 {
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     settings.setValue("editor/autoSave", enabled);
     statusBar()->showMessage(enabled ? tr("Auto-save enabled") : tr("Auto-save disabled"), 2000);
 }
@@ -8587,7 +8585,7 @@ void MainWindow::handleExport()
 {
     std::string fileName = QFileDialog::getSaveFileName(this, tr("Export"), std::string(),
         tr("PDF Files (*.pdf);;HTML Files (*.html)"));
-    if (!fileName.isEmpty()) {
+    if (!fileName.empty()) {
         if (fileName.endsWith(".pdf")) {
             QPrinter printer(QPrinter::HighResolution);
             printer.setOutputFormat(QPrinter::PdfFormat);
@@ -8670,8 +8668,8 @@ void MainWindow::handleFind()
     // Show find dialog/panel
     bool ok;
     std::string searchText = QInputDialog::getText(this, tr("Find"), tr("Search for:"),
-        QLineEdit::Normal, std::string(), &ok);
-    if (ok && !searchText.isEmpty() && codeView_) {
+        void::Normal, std::string(), &ok);
+    if (ok && !searchText.empty() && codeView_) {
         codeView_->find(searchText);
     }
 }
@@ -8681,14 +8679,14 @@ void MainWindow::handleFindReplace()
     // Show find/replace dialog
     void dialog(this);
     dialog.setWindowTitle(tr("Find and Replace"));
-    QVBoxLayout* layout = new QVBoxLayout(&dialog);
+    void* layout = new void(&dialog);
     
-    QLineEdit* findEdit = new QLineEdit(&dialog);
+    void* findEdit = new void(&dialog);
     findEdit->setPlaceholderText(tr("Find..."));
-    QLineEdit* replaceEdit = new QLineEdit(&dialog);
+    void* replaceEdit = new void(&dialog);
     replaceEdit->setPlaceholderText(tr("Replace with..."));
     
-    QPushButton* replaceBtn = new QPushButton(tr("Replace All"), &dialog);
+    void* replaceBtn = new void(tr("Replace All"), &dialog);
     
     layout->addWidget(findEdit);
     layout->addWidget(replaceEdit);
@@ -8719,7 +8717,7 @@ void MainWindow::handleGoToLine()
         cursor.movePosition(QTextCursor::Start);
         cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, line - 1);
         codeView_->setTextCursor(cursor);
-        codeView_->ensureCursorVisible();  // QTextEdit equivalent of centerCursor
+        codeView_->ensureCursorVisible();  // void equivalent of centerCursor
     }
 }
 
@@ -8852,10 +8850,10 @@ void MainWindow::handleSplitTerminal()
 
 void MainWindow::handleKillTerminal()
 {
-    if (pwshProcess_ && pwshProcess_->state() == QProcess::Running) {
+    if (pwshProcess_ && pwshProcess_->state() == void*::Running) {
         pwshProcess_->terminate();
     }
-    if (cmdProcess_ && cmdProcess_->state() == QProcess::Running) {
+    if (cmdProcess_ && cmdProcess_->state() == void*::Running) {
         cmdProcess_->terminate();
     }
     statusBar()->showMessage(tr("Terminal killed"), 2000);
@@ -8877,7 +8875,7 @@ void MainWindow::handleRunSelection()
 {
     if (codeView_) {
         std::string selection = codeView_->textCursor().selectedText();
-        if (!selection.isEmpty() && pwshProcess_) {
+        if (!selection.empty() && pwshProcess_) {
             pwshProcess_->write(selection.toUtf8() + "\n");
             statusBar()->showMessage(tr("Running selection..."), 2000);
         }
@@ -8919,10 +8917,10 @@ void MainWindow::handleZenMode()
     
     if (zenMode) {
         // Hide all docks and toolbars
-        for (QDockWidget* dock : findChildren<QDockWidget*>()) {
+        for (void* dock : findChildren<void*>()) {
             dock->hide();
         }
-        for (QToolBar* toolbar : findChildren<QToolBar*>()) {
+        for (void* toolbar : findChildren<void*>()) {
             toolbar->hide();
         }
         menuBar()->hide();
@@ -8951,8 +8949,8 @@ void MainWindow::handleResetLayout()
 void MainWindow::handleSaveLayout()
 {
     std::string name = QInputDialog::getText(this, tr("Save Layout"), tr("Layout name:"));
-    if (!name.isEmpty()) {
-        QSettings settings("RawrXD", "IDE");
+    if (!name.empty()) {
+        void* settings("RawrXD", "IDE");
         settings.setValue(std::string("layouts/%1/geometry"), saveGeometry());
         settings.setValue(std::string("layouts/%1/state"), saveState());
         statusBar()->showMessage(tr("Layout '%1' saved"), 2000);
@@ -9046,12 +9044,12 @@ void MainWindow::onExplorerItemExpanded(QTreeWidgetItem* item) {
             pathParts.prepend(current->text(0));
             current = current->parent();
         }
-        if (!m_currentProjectPath.isEmpty()) {
+        if (!m_currentProjectPath.empty()) {
             itemPath = std::filesystem::path(m_currentProjectPath).filePath(pathParts.join(std::filesystem::path::separator()));
         }
     }
     
-    if (itemPath.isEmpty()) {
+    if (itemPath.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "explorer_expand", "Could not determine item path");
         return;
     }
@@ -9073,7 +9071,7 @@ void MainWindow::onExplorerItemExpanded(QTreeWidgetItem* item) {
                     std::filesystem::path::DirsFirst | std::filesystem::path::Name);
                 
                 for (const std::filesystem::path& entry : entries) {
-                    QTreeWidgetItem* child = new QTreeWidgetItem(item);
+                    QTreeWidgetItem* child = nullptr;
                     child->setText(0, entry.fileName());
                     child->setData(0, //UserRole, entry.absoluteFilePath());
                     
@@ -9081,7 +9079,7 @@ void MainWindow::onExplorerItemExpanded(QTreeWidgetItem* item) {
                     if (entry.isDir()) {
                         child->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
                         // Add dummy child to show expand indicator
-                        new QTreeWidgetItem(child);
+                        nullptr;
                     } else {
                         child->setChildIndicatorPolicy(QTreeWidgetItem::DontShowIndicator);
                     }
@@ -9118,12 +9116,12 @@ void MainWindow::onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column) 
             pathParts.prepend(current->text(0));
             current = current->parent();
         }
-        if (!m_currentProjectPath.isEmpty()) {
+        if (!m_currentProjectPath.empty()) {
             itemPath = std::filesystem::path(m_currentProjectPath).filePath(pathParts.join(std::filesystem::path::separator()));
         }
     }
     
-    if (itemPath.isEmpty()) {
+    if (itemPath.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "explorer_double_click", "Could not determine item path");
         return;
     }
@@ -9139,7 +9137,7 @@ void MainWindow::onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column) 
     }
     
     // Track navigation statistics
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int doubleClickCount = settings.value("explorer/doubleClicks", 0).toInt() + 1;
     settings.setValue("explorer/doubleClicks", doubleClickCount);
     settings.setValue("explorer/lastDoubleClick", itemPath);
@@ -9168,7 +9166,7 @@ void MainWindow::onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column) 
         }
         
         // Check file size (warn if > 100MB)
-        qint64 fileSize = info.size();
+        int64_t fileSize = info.size();
         if (fileSize > 100 * 1024 * 1024) {
             int ret = QMessageBox::question(this, tr("Large File"),
                                            tr("This file is %1 MB. Opening it may slow down the editor.\n\n"
@@ -9201,13 +9199,13 @@ void MainWindow::onAIChatCodeInsertRequested(const std::string& code) {
         return;
     }
     
-    if (code.isEmpty()) {
+    if (code.empty()) {
         RawrXD::Integration::logWarn("MainWindow", "ai_chat_code_insert", "Empty code to insert");
         return;
     }
     
     // Track code insertions
-    QSettings settings("RawrXD", "IDE");
+    void* settings("RawrXD", "IDE");
     int insertCount = settings.value("ai_chat/codeInserts", 0).toInt() + 1;
     settings.setValue("ai_chat/codeInserts", insertCount);
     settings.setValue("ai_chat/lastInsertLength", code.length());
@@ -9228,8 +9226,8 @@ void MainWindow::onAIChatCodeInsertRequested(const std::string& code) {
     }
     
     // Insert code at cursor position
-    QPlainTextEdit* plain = qobject_cast<QPlainTextEdit*>(editorObj);
-    QTextEdit* rich = qobject_cast<QTextEdit*>(editorObj);
+// REMOVED_QT:     QPlainTextEdit* plain = qobject_cast<QPlainTextEdit*>(editorObj);
+// REMOVED_QT:     void* rich = qobject_cast<void*>(editorObj);
     
     if (agenticEditor) {
         // Use agentic editor directly
@@ -9266,4 +9264,6 @@ void MainWindow::onAIChatCodeInsertRequested(const std::string& code) {
         std::string("Code inserted from AI (length: %1, total: %2)")),
         void*{{"code_length", code.length()}, {"total_inserts", insertCount}});
 }
+
+
 

@@ -17,7 +17,7 @@ AICodeAssistant::AICodeAssistant(void *parent)
 AICodeAssistant::~AICodeAssistant()
 {
     // Clean up any running processes
-    if (m_process && m_process->state() != QProcess::NotRunning) {
+    if (m_process && m_process->state() != void*::NotRunning) {
         m_process->kill();
         m_process->waitForFinished(5000);
     }
@@ -60,8 +60,8 @@ void AICodeAssistant::getCodeCompletion(const std::string &code)
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
-    networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* networkRequest(std::string(m_ollamaUrl + "/api/generate"));
+    networkRequest.setHeader(void*::ContentTypeHeader, "application/json");
     
     void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
@@ -81,8 +81,8 @@ void AICodeAssistant::getRefactoringSuggestions(const std::string &code)
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
-    networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* networkRequest(std::string(m_ollamaUrl + "/api/generate"));
+    networkRequest.setHeader(void*::ContentTypeHeader, "application/json");
     
     void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
@@ -102,8 +102,8 @@ void AICodeAssistant::getCodeExplanation(const std::string &code)
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
-    networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* networkRequest(std::string(m_ollamaUrl + "/api/generate"));
+    networkRequest.setHeader(void*::ContentTypeHeader, "application/json");
     
     void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
@@ -113,7 +113,7 @@ void AICodeAssistant::getCodeExplanation(const std::string &code)
 
 void AICodeAssistant::searchFiles(const std::string &pattern, const std::string &directory)
 {
-    std::string searchDir = directory.isEmpty() ? m_workspaceRoot : directory;
+    std::string searchDir = directory.empty() ? m_workspaceRoot : directory;
     std::filesystem::path dir(searchDir);
     
     std::vector<std::string> results;
@@ -130,11 +130,11 @@ void AICodeAssistant::searchFiles(const std::string &pattern, const std::string 
 
 void AICodeAssistant::grepFiles(const std::string &pattern, const std::string &directory, bool caseSensitive)
 {
-    std::string searchDir = directory.isEmpty() ? m_workspaceRoot : directory;
+    std::string searchDir = directory.empty() ? m_workspaceRoot : directory;
     
-    // Use QProcess to execute grep command
+    // Use void* to execute grep command
     if (!m_process) {
-        m_process = new QProcess(this);
+        m_process = new void*(this);
 // Qt connect removed
 // Qt connect removed
 // Qt connect removed
@@ -153,7 +153,7 @@ void AICodeAssistant::grepFiles(const std::string &pattern, const std::string &d
 void AICodeAssistant::executePowerShellCommand(const std::string &command)
 {
     if (!m_process) {
-        m_process = new QProcess(this);
+        m_process = new void*(this);
 // Qt connect removed
 // Qt connect removed
 // Qt connect removed
@@ -178,8 +178,8 @@ void AICodeAssistant::analyzeAndRecommend(const std::string &context)
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
-    networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* networkRequest(std::string(m_ollamaUrl + "/api/generate"));
+    networkRequest.setHeader(void*::ContentTypeHeader, "application/json");
     
     void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
@@ -199,8 +199,8 @@ void AICodeAssistant::autoFixIssue(const std::string &issueDescription, const st
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
-    networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* networkRequest(std::string(m_ollamaUrl + "/api/generate"));
+    networkRequest.setHeader(void*::ContentTypeHeader, "application/json");
     
     void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
@@ -210,7 +210,7 @@ void AICodeAssistant::autoFixIssue(const std::string &issueDescription, const st
 
 void AICodeAssistant::onNetworkReply()
 {
-    void* *reply = qobject_cast<void**>(sender());
+// REMOVED_QT:     void* *reply = qobject_cast<void**>(sender());
     if (!reply) {
         return;
     }
@@ -235,17 +235,17 @@ void AICodeAssistant::onNetworkReply()
     reply->deleteLater();
 }
 
-void AICodeAssistant::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
+void AICodeAssistant::onProcessFinished(int exitCode, void*::ExitStatus exitStatus)
 {
     (exitStatus)
     
     std::string output = m_process->readAllStandardOutput();
     std::string error = m_process->readAllStandardError();
     
-    if (!output.isEmpty()) {
+    if (!output.empty()) {
         commandOutputReceived(output);
     }
-    if (!error.isEmpty()) {
+    if (!error.empty()) {
         commandErrorReceived(error);
     }
     
@@ -253,23 +253,23 @@ void AICodeAssistant::onProcessFinished(int exitCode, QProcess::ExitStatus exitS
     commandProgress("Command execution completed");
 }
 
-void AICodeAssistant::onProcessError(QProcess::ProcessError error)
+void AICodeAssistant::onProcessError(void*::ProcessError error)
 {
     std::string errorMsg;
     switch (error) {
-        case QProcess::FailedToStart:
+        case void*::FailedToStart:
             errorMsg = "Process failed to start";
             break;
-        case QProcess::Crashed:
+        case void*::Crashed:
             errorMsg = "Process crashed";
             break;
-        case QProcess::Timedout:
+        case void*::Timedout:
             errorMsg = "Process timed out";
             break;
-        case QProcess::WriteError:
+        case void*::WriteError:
             errorMsg = "Write error";
             break;
-        case QProcess::ReadError:
+        case void*::ReadError:
             errorMsg = "Read error";
             break;
         default:
@@ -284,8 +284,9 @@ void AICodeAssistant::onProcessError(QProcess::ProcessError error)
 void AICodeAssistant::onProcessOutput()
 {
     std::string output = m_process->readAllStandardOutput();
-    if (!output.isEmpty()) {
+    if (!output.empty()) {
         commandOutputReceived(output);
     }
 }
+
 

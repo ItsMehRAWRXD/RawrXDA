@@ -11,11 +11,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     char* argv[] = { const_cast<char*>(argv_data[0]), nullptr };
     int argc = 1;
     
-    log << "TEST: Creating QApplication\n"; log.flush();
+    log << "TEST: Creating void\n"; log.flush();
     
-    QApplication app(argc, argv);
+    void app(argc, argv);
     
-    log << "TEST: QApplication created\n"; log.flush();
+    log << "TEST: void created\n"; log.flush();
     
     log << "TEST: Creating void\n"; log.flush();
     

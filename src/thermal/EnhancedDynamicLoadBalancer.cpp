@@ -341,7 +341,7 @@ std::string EnhancedDynamicLoadBalancer::selectOptimalDrive(OperationType opType
     }
     
     // If no drive found, try without exclusions
-    if (bestDrive.isEmpty() && m_config.allowDegradedOperation) {
+    if (bestDrive.empty() && m_config.allowDegradedOperation) {
         for (const auto& pair : m_drives) {
             if (pair.second.isOnline && pair.second.compositeScore > bestScore) {
                 bestScore = pair.second.compositeScore;
@@ -349,12 +349,12 @@ std::string EnhancedDynamicLoadBalancer::selectOptimalDrive(OperationType opType
             }
         }
         
-        if (!bestDrive.isEmpty()) {
+        if (!bestDrive.empty()) {
         }
     }
     
     // Update state and signal
-    if (!bestDrive.isEmpty() && bestDrive != m_lastSelectedDrive) {
+    if (!bestDrive.empty() && bestDrive != m_lastSelectedDrive) {
         std::string previousDrive = m_lastSelectedDrive;
         m_lastSelectedDrive = bestDrive;
         m_config.lastSelectedDrive = bestDrive;
@@ -362,7 +362,7 @@ std::string EnhancedDynamicLoadBalancer::selectOptimalDrive(OperationType opType
         lock.unlock();
         
         // Notify of balancing event
-        if (!previousDrive.isEmpty()) {
+        if (!previousDrive.empty()) {
             std::string reason = std::string("Score: %1% vs %2%")
                 )
                 );
@@ -738,7 +738,7 @@ void EnhancedDynamicLoadBalancer::queryWMIHealth(const std::string& drivePath)
 {
 #ifdef 
     // Use PowerShell to query disk health (async)
-    QProcess* process = new QProcess(this);
+    void** process = new void*(this);
 // Qt connect removed
                 // Parse JSON output
                 void* doc = void*::fromJson(output.toUtf8());
@@ -792,7 +792,7 @@ void EnhancedDynamicLoadBalancer::queryNVMeHealth(const std::string& drivePath)
 {
 #ifdef 
     // Query NVMe specific health via StorageReliabilityCounter
-    QProcess* process = new QProcess(this);
+    void** process = new void*(this);
 // Qt connect removed
                 void* doc = void*::fromJson(output.toUtf8());
                 if (!doc.isNull() && doc.isObject()) {
@@ -846,4 +846,5 @@ int64_t EnhancedDynamicLoadBalancer::getCurrentTimestampMs() const
 }
 
 } // namespace rawrxd::thermal
+
 

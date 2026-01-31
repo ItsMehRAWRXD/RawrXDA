@@ -11,7 +11,7 @@
  * 
  * Add these methods to MainWindow class:
  * - Include this code in MainWindow.cpp or compile as separate translation unit
- * - Link with: ai_switcher, unified_backend, layer_quant_widget, QWebSockets
+// REMOVED_QT:  * - Link with: ai_switcher, unified_backend, layer_quant_widget, QWebSockets
  */
 
 #include "MainWindow.h"
@@ -46,9 +46,9 @@ void MainWindow::setupAIBackendSwitcher()
 // Qt connect removed
         // Connect unified backend to streaming (adapt signatures)
 // Qt connect removed
-            this, [this](qint64, const std::string& token) { if (m_streamer) m_streamer->pushToken(token); });
+            this, [this](int64_t, const std::string& token) { if (m_streamer) m_streamer->pushToken(token); });
 // Qt connect removed
-            this, [this](qint64) { if (m_streamer) m_streamer->finishStream(); });
+            this, [this](int64_t) { if (m_streamer) m_streamer->finishStream(); });
 // Qt connect removed
             });
 }
@@ -57,15 +57,15 @@ void MainWindow::setupAIBackendSwitcher()
  * @brief Setup quantization mode menu
  * Call this from MainWindow::setupMenuBar() in AI menu
  */
-void MainWindow::setupQuantizationMenu(QMenu* aiMenu)
+void MainWindow::setupQuantizationMenu(void* aiMenu)
 {
-    QMenu* quantMenu = aiMenu->addMenu("Quant Mode");
-    QActionGroup* quantGroup = new QActionGroup(quantMenu);
+    void* quantMenu = aiMenu->addMenu("Quant Mode");
+    QActionGroup* quantGroup = nullptr;
     quantGroup->setExclusive(true);
     
     std::vector<std::string> modes = {"Q4_0", "Q4_1", "Q5_0", "Q5_1", "Q6_K", "Q8_K", "F16", "F32"};
     for (const std::string& mode : modes) {
-        QAction* action = quantGroup->addAction(mode);
+        void* action = quantGroup->addAction(mode);
         action->setCheckable(true);
         action->setChecked(mode == "Q4_0");  // Default
         action->setData(mode);
@@ -87,7 +87,7 @@ void MainWindow::setupQuantizationMenu(QMenu* aiMenu)
  */
 void MainWindow::setupLayerQuantWidget()
 {
-    m_layerQuantDock = new QDockWidget("Layer Quantization", this);
+    m_layerQuantDock = new void("Layer Quantization", this);
     m_layerQuantWidget = new LayerQuantWidget(m_layerQuantDock);
     m_layerQuantDock->setWidget(m_layerQuantWidget);
     addDockWidget(//RightDockWidgetArea, m_layerQuantDock);
@@ -102,7 +102,7 @@ void MainWindow::setupLayerQuantWidget()
     auto populate = [this]() {
         m_layerQuantWidget->clearTensors();
         std::vector<std::string> names = m_inferenceEngine ? m_inferenceEngine->tensorNames() : std::vector<std::string>();
-        if (!names.isEmpty()) {
+        if (!names.empty()) {
             for (const std::string& n : names) {
                 m_layerQuantWidget->addTensor(n, m_currentQuantMode);
             }
@@ -130,7 +130,7 @@ void MainWindow::setupLayerQuantWidget()
  */
 void MainWindow::setupSwarmEditing()
 {
-    m_swarmSocket = new QWebSocket(std::string(), QWebSocketProtocol::VersionLatest, this);
+// REMOVED_QT:     m_swarmSocket = nullptr, QWebSocketProtocol::VersionLatest, this);
 // Qt connect removed
 // Qt connect removed
     });
@@ -138,7 +138,7 @@ void MainWindow::setupSwarmEditing()
     });
     
     // TODO: Connect code editor textChanged signal to broadcastEdit()
-    // connect(codeView_, &QTextEdit::textChanged, this, &MainWindow::broadcastEdit);
+    // // connect removed
 }
 
 /**
@@ -147,11 +147,11 @@ void MainWindow::setupSwarmEditing()
  */
 void MainWindow::setupCollaborationMenu()
 {
-    QMenu* collabMenu = menuBar()->addMenu(tr("Collaborate"));
+    void* collabMenu = menuBar()->addMenu(tr("Collaborate"));
     
-    QAction* joinSwarmAction = collabMenu->addAction(tr("Join Swarm Session..."));
+    void* joinSwarmAction = collabMenu->addAction(tr("Join Swarm Session..."));
 // Qt connect removed
-    QAction* leaveSwarmAction = collabMenu->addAction(tr("Leave Swarm Session"));
+    void* leaveSwarmAction = collabMenu->addAction(tr("Leave Swarm Session"));
 // Qt connect removed
             m_swarmSessionId.clear();
         }
@@ -189,10 +189,10 @@ void MainWindow::onQuantModeChanged(const std::string& mode)
     statusBar()->showMessage("Quantization: " + mode, 3000);
     
     // Update status bar permanently
-    static QLabel* quantLabel = nullptr;
+    static void* quantLabel = nullptr;
     if (!quantLabel) {
-        quantLabel = new QLabel(this);
-        quantLabel->setStyleSheet("QLabel { padding: 2px 8px; background: #007acc; color: white; border-radius: 3px; }");
+        quantLabel = new void(this);
+        quantLabel->setStyleSheet("void { padding: 2px 8px; background: #007acc; color: white; border-radius: 3px; }");
         statusBar()->addPermanentWidget(quantLabel);
     }
     quantLabel->setText(std::string("⚡ %1"));
@@ -205,12 +205,12 @@ void MainWindow::joinSwarmSession()
         this,
         tr("Join Swarm Session"),
         tr("Enter shared document ID:"),
-        QLineEdit::Normal,
+        void::Normal,
         std::string(),
         &ok
     );
     
-    if (ok && !sessionId.isEmpty()) {
+    if (ok && !sessionId.empty()) {
         m_swarmSessionId = sessionId;
         
         // Connect to HexMag swarm WebSocket endpoint
@@ -271,10 +271,10 @@ void MainWindow::runInference()
     bool ok;
     std::string prompt = QInputDialog::getText(this, tr("AI Inference"), 
                                           tr("Enter your prompt:"),
-                                          QLineEdit::Normal, std::string(), &ok);
-    if (!ok || prompt.isEmpty()) return;
+                                          void::Normal, std::string(), &ok);
+    if (!ok || prompt.empty()) return;
     
-    qint64 reqId = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
+    int64_t reqId = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     m_currentStreamId = reqId;
     
     // Start streaming in console
@@ -302,7 +302,7 @@ void MainWindow::runInference()
  *    class AISwitcher;
  *    class UnifiedBackend;
  *    class LayerQuantWidget;
- *    class QWebSocket;
+// REMOVED_QT:  *    class QWebSocket;
  *    class AutoBootstrap;
  *    class HotReload;
  * 
@@ -372,7 +372,7 @@ void MainWindow::setupAgentSystem()
 void MainWindow::setupShortcuts()
 {
     // Ctrl+Shift+A: Trigger agent mode
-    QShortcut* agentShortcut = new QShortcut(QKeySequence("Ctrl+Shift+A"), this);
+    QShortcut* agentShortcut = nullptr, this);
 // Qt connect removed
 }
 
@@ -390,18 +390,18 @@ void MainWindow::triggerAgentMode()
     }
     
     // If no selection, prompt user
-    if (wish.isEmpty()) {
+    if (wish.empty()) {
         bool ok;
         wish = QInputDialog::getText(
             this,
             "RawrXD Agent",
             "What should I build / fix / ship?",
-            QLineEdit::Normal,
+            void::Normal,
             "",
             &ok
         );
         
-        if (!ok || wish.isEmpty()) {
+        if (!ok || wish.empty()) {
             return;
         }
     }
@@ -485,7 +485,7 @@ void MainWindow::setupCommandPalette()
         [this]() { 
             std::string fileName = QFileDialog::getOpenFileName(this, tr("Open File"),
                 std::string(), tr("All Files (*);;Text Files (*.txt);;C++ Files (*.cpp *.h);;Python Files (*.py)"));
-            if (!fileName.isEmpty()) {
+            if (!fileName.empty()) {
                 std::fstream file(fileName);
                 if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                     QTextStream in(&file);
@@ -512,7 +512,7 @@ void MainWindow::setupCommandPalette()
         [this]() {
             std::string fileName = QFileDialog::getSaveFileName(this, tr("Save File"),
                 std::string(), tr("All Files (*);;Text Files (*.txt);;C++ Files (*.cpp *.h);;Python Files (*.py)"));
-            if (!fileName.isEmpty()) {
+            if (!fileName.empty()) {
                 std::fstream file(fileName);
                 if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
                     QTextStream out(&file);
@@ -580,7 +580,7 @@ void MainWindow::setupCommandPalette()
         [this]() {
             std::string fileName = QFileDialog::getOpenFileName(this, tr("Load GGUF Model"),
                 std::string(), tr("GGUF Models (*.gguf);;All Files (*)"));
-            if (!fileName.isEmpty() && m_inferenceEngine) {
+            if (!fileName.empty() && m_inferenceEngine) {
                 bool success = m_inferenceEngine->loadModel(fileName);
                 if (success) {
                     statusBar()->showMessage("Model loaded: " + fileName, 5000);
@@ -681,7 +681,7 @@ void MainWindow::setupCommandPalette()
         [this]() {
             bool ok;
             std::string apiKey = QInputDialog::getText(this, tr("OpenAI API Key"),
-                tr("Enter your OpenAI API key:"), QLineEdit::Password,
+                tr("Enter your OpenAI API key:"), void::Password,
                 m_currentBackend == "openai" ? m_currentAPIKey : std::string(), &ok);
             if (ok) {
                 onAIBackendChanged("openai", apiKey);
@@ -697,7 +697,7 @@ void MainWindow::setupCommandPalette()
         [this]() {
             bool ok;
             std::string apiKey = QInputDialog::getText(this, tr("Claude API Key"),
-                tr("Enter your Anthropic Claude API key:"), QLineEdit::Password,
+                tr("Enter your Anthropic Claude API key:"), void::Password,
                 m_currentBackend == "claude" ? m_currentAPIKey : std::string(), &ok);
             if (ok) {
                 onAIBackendChanged("claude", apiKey);
@@ -709,4 +709,6 @@ void MainWindow::setupCommandPalette()
 }
 
 // Interpretability Panel setup is in MainWindow.cpp to avoid separate compilation issues
+
+
 

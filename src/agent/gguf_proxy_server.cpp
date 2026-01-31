@@ -46,8 +46,8 @@ bool GGUFProxyServer::startServer() {
 
     m_isListening = true;
     m_acceptThread = std::thread(&GGUFProxyServer::acceptLoop, this);
-    
-    std::cout << "[GGUFProxyServer] Listening on " << m_listenPort << std::endl;
+
+
     return true;
 }
 
@@ -104,8 +104,7 @@ SOCKET GGUFProxyServer::connectToBackend() {
         return INVALID_SOCKET;
     }
 
-    if (connect(s, result->ai_addr, (int)result->ai_addrlen) == SOCKET_ERROR) {
-        closesocket(s);
+    if (// connect removed
         s = INVALID_SOCKET;
     }
 

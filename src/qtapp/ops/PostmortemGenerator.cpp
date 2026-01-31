@@ -10,7 +10,7 @@ int64_t NowMs() {
 }
 
 void LogInfo(const std::string& event, const std::string& detail) {
-    std::cout << "[INFO] ops.postmortem " << event << " " << detail << "\n";
+    
 }
 }
 

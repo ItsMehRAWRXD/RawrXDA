@@ -25,12 +25,12 @@ struct PatchResult {
     bool success = false;
     std::string detail;
     int errorCode = 0;
-    qint64 elapsedMs = 0;
+    int64_t elapsedMs = 0;
     
-    static PatchResult ok(const std::string& msg = "OK", qint64 elapsed = 0) {
+    static PatchResult ok(const std::string& msg = "OK", int64_t elapsed = 0) {
         PatchResult r; r.success = true; r.detail = msg; r.elapsedMs = elapsed; return r;
     }
-    static PatchResult error(int code, const std::string& msg, qint64 elapsed = 0, int osError = 0) {
+    static PatchResult error(int code, const std::string& msg, int64_t elapsed = 0, int osError = 0) {
         PatchResult r; r.success = false; r.errorCode = code; r.detail = msg; r.elapsedMs = elapsed; 
         if (osError != 0 && r.errorCode == code) r.errorCode = osError;
         return r;
@@ -132,10 +132,10 @@ public:
     std::vector<uint8_t> directMemoryRead(size_t offset, size_t size) const;
     PatchResult directMemoryWrite(size_t offset, const std::vector<uint8_t>& data);
     PatchResult directMemoryWriteBatch(const std::unordered_map<size_t, std::vector<uint8_t>>& writes);
-    PatchResult directMemoryFill(size_t offset, size_t size, quint8 value);
+    PatchResult directMemoryFill(size_t offset, size_t size, uint8_t value);
     PatchResult directMemoryCopy(size_t srcOffset, size_t dstOffset, size_t size);
     bool directMemoryCompare(size_t offset, const std::vector<uint8_t>& data) const;
-    qint64 directMemorySearch(size_t startOffset, const std::vector<uint8_t>& pattern) const;
+    int64_t directMemorySearch(size_t startOffset, const std::vector<uint8_t>& pattern) const;
     PatchResult directMemorySwap(size_t offset1, size_t offset2, size_t size);
     PatchResult setMemoryProtection(size_t offset, size_t size, int protectionFlags);
     
@@ -144,12 +144,12 @@ public:
     PatchResult unmapMemoryRegion(void* mappedPtr, size_t size);
 
     struct MemoryPatchStats {
-        quint64 totalPatches = 0;
-        quint64 appliedPatches = 0;
-        quint64 revertedPatches = 0;
-        quint64 failedPatches = 0;
-        quint64 bytesModified = 0;
-        quint64 conflictsDetected = 0;
+        uint64_t totalPatches = 0;
+        uint64_t appliedPatches = 0;
+        uint64_t revertedPatches = 0;
+        uint64_t failedPatches = 0;
+        uint64_t bytesModified = 0;
+        uint64_t conflictsDetected = 0;
         size_t modelSize = 0;
         std::chrono::system_clock::time_point lastPatch;
     };
@@ -175,14 +175,14 @@ private:
     bool protectMemory(void* ptr, size_t size, int protectionFlags);
     size_t systemPageSize() const;
     uint64_t calculateChecksum64(size_t offset, size_t size) const;
-    quint32 calculateCRC32(size_t offset, size_t size) const;
+    uint32_t calculateCRC32(size_t offset, size_t size) const;
     bool parseTensorMetadata();
     bool rebuildTensorDependencyMap();
 
     void* m_modelPtr = nullptr;
     size_t m_modelSize = 0;
     bool m_attached = false;
-    quint32 m_integrityHash = 0;
+    uint32_t m_integrityHash = 0;
 
     std::unordered_map<std::string, MemoryPatch> m_patches;
     std::unordered_map<std::string, TensorInfo> m_tensorMap;
@@ -197,4 +197,5 @@ private:
         size_t maxBatchSize = 16 * 1024 * 1024;
     } m_batchConfig;
 };
+
 

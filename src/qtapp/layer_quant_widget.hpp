@@ -35,7 +35,7 @@ public:
     void quantChanged(const std::string& tensorName, const std::string& quant);
 
 private:
-    void onCustomContextMenu(const QPoint& pos);
+    void onCustomContextMenu(const void*& pos);
 
 private:
     std::unordered_map<std::string, QTreeWidgetItem*> m_tensorItems;

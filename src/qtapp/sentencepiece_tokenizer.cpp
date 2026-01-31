@@ -107,7 +107,7 @@ bool SentencePieceTokenizer::loadFromFile(const std::string& modelPath) {
     m_pieces.reserve(numPieces);
     
     for (int32_t i = 0; i < numPieces; ++i) {
-        quint32 pieceLen;
+        uint32_t pieceLen;
         stream >> pieceLen;
         
         std::vector<uint8_t> pieceBytes(pieceLen, //Uninitialized);
@@ -151,7 +151,7 @@ bool SentencePieceTokenizer::loadFromGGUFMetadata(const std::unordered_map<std::
         m_pieces.reserve(numTokens);
         
         for (int32_t i = 0; i < numTokens; ++i) {
-            quint32 len;
+            uint32_t len;
             stream >> len;
             
             std::vector<uint8_t> tokenBytes(len, //Uninitialized);
@@ -258,7 +258,7 @@ SentencePieceTokenizer::Lattice* SentencePieceTokenizer::buildLattice(const std:
     Lattice* lattice = new Lattice(text);
     
     for (int pos = 0; pos < text.length(); ++pos) {
-        if (lattice->nodes[pos].isEmpty()) continue;
+        if (lattice->nodes[pos].empty()) continue;
         
         // Find all pieces that can start at this position
         std::vector<int32_t> matches = findMatchingPieces(text, pos);
@@ -282,7 +282,7 @@ SentencePieceTokenizer::Lattice* SentencePieceTokenizer::buildLattice(const std:
         }
         
         // Byte fallback for unknown characters
-        if (m_byteFallback && lattice->nodes[pos + 1].isEmpty() && pos + 1 <= text.length()) {
+        if (m_byteFallback && lattice->nodes[pos + 1].empty() && pos + 1 <= text.length()) {
             uint8_t byte = text[pos].toLatin1();
             
             Lattice::Node byteNode;
@@ -302,7 +302,7 @@ std::vector<int32_t> SentencePieceTokenizer::viterbi(Lattice* lattice) {
     std::vector<int32_t> result;
     
     int endPos = lattice->text.length();
-    if (lattice->nodes[endPos].isEmpty()) {
+    if (lattice->nodes[endPos].empty()) {
         delete lattice;
         return result;
     }
@@ -336,7 +336,7 @@ std::vector<int32_t> SentencePieceTokenizer::viterbi(Lattice* lattice) {
         }
         
         pos = current->backPointer;
-        if (pos >= 0 && !lattice->nodes[pos].isEmpty()) {
+        if (pos >= 0 && !lattice->nodes[pos].empty()) {
             bestEnd = &lattice->nodes[pos].first();
         }
     }
@@ -404,4 +404,6 @@ std::string SentencePieceTokenizer::decode(const std::vector<int32_t>& tokens, b
     
     return result.trimmed();
 }
+
+
 

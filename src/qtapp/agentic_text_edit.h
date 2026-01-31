@@ -34,7 +34,7 @@ public:
 
     /**
      * Two-phase initialization
-     * Call after QApplication is ready
+     * Call after void is ready
      */
     void initialize();
 
@@ -111,7 +111,7 @@ public:
     void completionDismissed();
 
 protected:
-    void keyPressEvent(QKeyEvent* event) override;
+    void keyPressEvent(void*  event) override;
 
 private:
     void onTextChanged();

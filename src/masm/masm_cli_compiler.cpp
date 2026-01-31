@@ -310,9 +310,8 @@ public:
         auto startTime = std::chrono::high_resolution_clock::now();
         
         if (m_config.verbose) {
-            std::cout << "RawrXD Universal Compiler v1.0.0\n";
-            std::cout << "Target: " << m_config.targetArch << " (" << m_config.targetOS << ")\n";
-            std::cout << "Output: " << m_config.outputFile << "\n\n";
+
+
         }
 
         // --- System Compiler Orchestration ---
@@ -324,12 +323,12 @@ public:
             
             if (invokeSystemCompiler()) {
                 if (m_config.verbose) {
-                    std::cout << "✓ System compilation successful.\n";
+                    
                 }
                 return true;
             } else {
                 if (m_config.verbose) {
-                    std::cout << "⚠ System compiler failed or not found. Falling back to internal engine...\n";
+                    
                 }
                 // Fallthrough to internal compiled (which only supports ASM really, but we'll see)
             }
@@ -338,7 +337,7 @@ public:
         // Process each source file
         for (const auto& sourceFile : m_config.sourceFiles) {
             if (m_config.verbose) {
-                std::cout << "Processing: " << sourceFile << "\n";
+                
             }
             
             if (!processFile(sourceFile)) {
@@ -367,12 +366,8 @@ public:
         }
         
         // Print summary
-        std::cout << "\nBuild " << (m_stats.errorCount == 0 ? "succeeded!" : "failed!") << "\n";
-        std::cout << "\n  Files:     " << m_stats.filesProcessed << "/" << m_config.sourceFiles.size() << " compiled";
-        std::cout << "\n  Errors:    " << m_stats.errorCount;
-        std::cout << "\n  Warnings:  " << m_stats.warningCount;
-        std::cout << "\n  Time:      " << m_stats.duration.count() << "ms\n";
-        
+
+
         return (m_stats.errorCount == 0);
     }
 
@@ -384,7 +379,7 @@ private:
          // Select compiler based on language
          if (m_config.language == "cpp" || m_config.language == "c++") {
              // Try common C++ compilers
-             if (m_config.verbose) std::cout << "  [System] Detecting C++ compiler...\n";
+             if (m_config.verbose) 
              
              // Detect GCC/G++
              if (std::system("g++ --version >nul 2>nul") == 0) {
@@ -444,7 +439,7 @@ private:
          }
 
          if (m_config.verbose) {
-             std::cout << "  [Exec] " << ss.str() << "\n";
+             
          }
          
          int result = std::system(ss.str().c_str());
@@ -477,7 +472,7 @@ private:
         
         // Lexical analysis
         if (m_config.verbose) {
-            std::cout << "  [Lexer] Tokenizing source...\n";
+            
         }
         if (!lexicalAnalysis(source)) {
             return false;
@@ -485,7 +480,7 @@ private:
         
         // Syntax analysis
         if (m_config.verbose) {
-            std::cout << "  [Parser] Building AST...\n";
+            
         }
         if (!syntaxAnalysis()) {
             return false;
@@ -493,7 +488,7 @@ private:
         
         // Semantic analysis
         if (m_config.verbose) {
-            std::cout << "  [Semantic] Analyzing symbols...\n";
+            
         }
         if (!semanticAnalysis()) {
             return false;
@@ -501,7 +496,7 @@ private:
         
         // Code generation
         if (m_config.verbose) {
-            std::cout << "  [CodeGen] Generating machine code...\n";
+            
         }
         if (!codeGeneration()) {
             return false;
@@ -661,7 +656,7 @@ private:
         m_stats.tokenCount += m_tokens.size();
         
         if (m_config.verbose) {
-            std::cout << "    Tokens: " << m_tokens.size() << "\n";
+            
         }
         
         return true;
@@ -724,7 +719,7 @@ private:
         m_stats.astNodeCount = m_tokens.size();
         
         if (m_config.verbose) {
-            std::cout << "    AST nodes: " << m_stats.astNodeCount << "\n";
+            
         }
         
         return true;
@@ -748,7 +743,7 @@ private:
         m_stats.symbolCount = m_symbolTable.size();
         
         if (m_config.verbose) {
-            std::cout << "    Symbols: " << m_stats.symbolCount << "\n";
+            
         }
         
         return true;
@@ -788,7 +783,7 @@ private:
         m_stats.machineCodeSize = m_machineCode.size();
         
         if (m_config.verbose) {
-            std::cout << "    Machine code: " << m_stats.machineCodeSize << " bytes\n";
+            
         }
         
         return true;
@@ -796,7 +791,7 @@ private:
     
     bool linkObjects() {
         if (m_config.verbose) {
-            std::cout << "\n[Linker] Linking objects...\n";
+            
         }
         
         // Link all generated code
@@ -805,7 +800,7 @@ private:
     
     bool generateOutput() {
         if (m_config.verbose) {
-            std::cout << "\n[Writer] Generating " << m_config.outputFile << "...\n";
+            
         }
         
         // Generate PE/ELF file
@@ -822,7 +817,7 @@ private:
         outFile.close();
         
         if (m_config.verbose) {
-            std::cout << "  Output size: " << peFile.size() << " bytes\n";
+            
         }
         
         return true;
@@ -978,7 +973,7 @@ private:
         Message err(Message::MSG_ERROR, file, line, col, msg);
         m_messages.push_back(err);
         m_stats.errorCount++;
-        std::cerr << err.toString() << "\n";
+        
     }
     
     void addWarning(const std::string& file, int line, int col, const std::string& msg) {
@@ -987,7 +982,7 @@ private:
         Message warn(Message::MSG_WARNING, file, line, col, msg);
         m_messages.push_back(warn);
         m_stats.warningCount++;
-        std::cerr << warn.toString() << "\n";
+        
     }
 };
 
@@ -1092,36 +1087,11 @@ CompilerConfig parseCommandLine(int argc, char* argv[]) {
 }
 
 void printHelp() {
-    std::cout << 
-        "MASM CLI Compiler v1.0.0\n"
-        "Usage: masm_cli_compiler [options] <source files>\n\n"
-        "Options:\n"
-        "  -h, --help              Show this help message\n"
-        "  -v, --version           Show version information\n"
-        "  --verbose               Enable verbose output\n"
-        "  -o, --output <file>     Specify output file\n"
-        "  -O<level>               Optimization level (0-3)\n"
-        "  -g, --debug             Generate debug information\n"
-        "  -W, --warnings          Enable warnings\n"
-        "  -l, --listing           Generate listing file\n"
-        "  -m, --map               Generate map file\n"
-        "  -I<path>                Add include path\n"
-        "  -L<path>                Add library path\n"
-        "  -l<lib>                 Link with library\n"
-        "  -D<define>              Define preprocessor symbol\n"
-        "  --target <arch>         Target architecture (x86, x64, arm64)\n"
-        "  --format <fmt>          Output format (exe, dll, lib, obj)\n\n"
-        "Examples:\n"
-        "  masm_cli_compiler main.asm\n"
-        "  masm_cli_compiler -O2 -o app.exe main.asm utils.asm\n"
-        "  masm_cli_compiler --verbose -g main.asm\n";
+    
 }
 
 void printVersion() {
-    std::cout << 
-        "MASM CLI Compiler v1.0.0\n"
-        "Self-Compiling Zero-Dependency MASM Compiler\n"
-        "Copyright (C) 2026 RawrXD Project\n";
+    
 }
 
 // ============================================================================
@@ -1146,8 +1116,8 @@ int main(int argc, char* argv[]) {
     }
     
     if (config.sourceFiles.empty()) {
-        std::cerr << "Error: No input files specified\n";
-        std::cerr << "Use -h or --help for usage information\n";
+
+
         return 1;
     }
     

@@ -284,7 +284,7 @@ ggml_tensor* TransformerInference::createTensorFromCache(
 struct ggml_tensor* TransformerInference::createTensorFromCache(
     const std::vector<uint8_t>& data,
     int typeId,
-    const std::vector<qint64>& dimensions)
+    const std::vector<int64_t>& dimensions)
 {
     // Use the retrieved typeId to cast to the correct ggml_type enum
     enum ggml_type type = (enum ggml_type)typeId;
@@ -327,7 +327,6 @@ struct ggml_tensor* TransformerInference::createTensorFromCache(
     if (is_quantized) {
         // Calculate compression ratio for quantized types
         double compression_ratio = static_cast<double>(element_count * 4) / actual_size;
-        
 
 
             );
@@ -368,8 +367,8 @@ struct ggml_tensor* TransformerInference::createTensorFromCache(
     
     if (copy_size > 0 && tensor->data != nullptr) {
         std::memcpy(tensor->data, data.constData(), copy_size);
-        
-            
+
+
             ;
         
         if (copy_size < actual_size) {
@@ -598,4 +597,5 @@ int TransformerInference::sampleToken(const std::vector<float>& logits, float te
     
     return probs.size() - 1;
 }
+
 

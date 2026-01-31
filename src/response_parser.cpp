@@ -14,7 +14,7 @@ ResponseParser::ResponseParser(
 }
 
 std::vector<ParsedCompletion> ResponseParser::parseResponse(const std::string& response) {
-    if (m_logger) m_logger->debug("Parsing complete response ({} chars)", response.length());
+    if (m_logger) m_
 
     // Strategy: Try multiple parsing approaches in order
     // 1. First split by statement boundaries (most accurate for code)
@@ -23,17 +23,17 @@ std::vector<ParsedCompletion> ResponseParser::parseResponse(const std::string& r
 
     auto completions = splitByStatementBoundaries(response);
     if (completions.empty()) {
-        if (m_logger) m_logger->debug("No completions found via statement boundaries, trying line boundaries");
+        if (m_logger) m_
         completions = splitByLineBoundaries(response);
     }
     if (completions.empty()) {
-        if (m_logger) m_logger->debug("No completions found via line boundaries, trying token boundaries");
+        if (m_logger) m_
         completions = splitByTokenBoundaries(response);
     }
 
     // If still empty, create single completion from entire response
     if (completions.empty()) {
-        if (m_logger) m_logger->debug("No boundaries found, creating single completion from response");
+        if (m_logger) m_
         ParsedCompletion comp;
         comp.text = response;
         comp.tokenCount = estimateTokenCount(response);
@@ -50,8 +50,7 @@ std::vector<ParsedCompletion> ResponseParser::parseResponse(const std::string& r
 
     m_totalCharsParsed += response.length();
     if (m_metrics) m_metrics->recordHistogram("parsed_completions_per_response", completions.size());
-    if (m_logger) m_logger->info("Parsed {} completions from response ({} chars total)", 
-                   completions.size(), m_totalCharsParsed);
+    if (m_logger) m_
 
     return completions;
 }
@@ -82,8 +81,7 @@ std::vector<ParsedCompletion> ResponseParser::parseChunk(const std::string& chun
                 comp.isComplete = true;
                 result.push_back(comp);
 
-                if (m_logger) m_logger->debug("Extracted completion: {} chars, boundary: '{}'",
-                               completionText.length(), boundary);
+                if (m_logger) m_
             }
 
             lastBoundary = pos + boundary.length();
@@ -105,7 +103,7 @@ std::vector<ParsedCompletion> ResponseParser::parseChunk(const std::string& chun
 }
 
 std::vector<ParsedCompletion> ResponseParser::flush() {
-    if (m_logger) m_logger->debug("Flushing buffer ({} chars remaining)", m_buffer.length());
+    if (m_logger) m_
 
     std::vector<ParsedCompletion> result;
 
@@ -118,7 +116,7 @@ std::vector<ParsedCompletion> ResponseParser::flush() {
         comp.isComplete = false; // Incomplete due to buffer end
         result.push_back(comp);
 
-        if (m_logger) m_logger->info("Flushed {} chars from buffer", m_buffer.length());
+        if (m_logger) m_
         m_buffer.clear();
     }
 
@@ -126,7 +124,7 @@ std::vector<ParsedCompletion> ResponseParser::flush() {
 }
 
 std::vector<ParsedCompletion> ResponseParser::splitByStatementBoundaries(const std::string& text) {
-    if (m_logger) m_logger->debug("Splitting by statement boundaries");
+    if (m_logger) m_
 
     std::vector<ParsedCompletion> completions;
     size_t lastPos = 0;
@@ -156,7 +154,7 @@ std::vector<ParsedCompletion> ResponseParser::splitByStatementBoundaries(const s
                     comp.isComplete = true;
                     completions.push_back(comp);
 
-                    if (m_logger) m_logger->debug("Statement boundary '{}': {} chars", boundary, segment.length());
+                    if (m_logger) m_
                 }
 
                 lastPos = boundaryPos + boundary.length();
@@ -182,7 +180,7 @@ std::vector<ParsedCompletion> ResponseParser::splitByStatementBoundaries(const s
 }
 
 std::vector<ParsedCompletion> ResponseParser::splitByLineBoundaries(const std::string& text) {
-    if (m_logger) m_logger->debug("Splitting by line boundaries");
+    if (m_logger) m_
 
     std::vector<ParsedCompletion> completions;
     std::istringstream stream(text);
@@ -204,7 +202,7 @@ std::vector<ParsedCompletion> ResponseParser::splitByLineBoundaries(const std::s
 }
 
 std::vector<ParsedCompletion> ResponseParser::splitByTokenBoundaries(const std::string& text) {
-    if (m_logger) m_logger->debug("Splitting by token boundaries");
+    if (m_logger) m_
 
     std::vector<ParsedCompletion> completions;
     std::istringstream stream(text);
@@ -333,17 +331,17 @@ std::vector<std::pair<std::string, double>> ResponseParser::getStatistics() cons
 }
 
 void ResponseParser::reset() {
-    if (m_logger) m_logger->debug("Resetting parser state");
+    if (m_logger) m_
     m_buffer.clear();
     m_totalCharsParsed = 0;
 }
 
 void ResponseParser::setCustomDelimiters(const std::vector<std::string>& delimiters) {
-    if (m_logger) m_logger->info("Setting {} custom delimiters", delimiters.size());
+    if (m_logger) m_
     m_customDelimiters = delimiters;
 }
 
 void ResponseParser::setStatementBoundaries(const std::vector<std::string>& boundaries) {
-    if (m_logger) m_logger->info("Setting {} statement boundaries", boundaries.size());
+    if (m_logger) m_
     m_statementBoundaries = boundaries;
 }

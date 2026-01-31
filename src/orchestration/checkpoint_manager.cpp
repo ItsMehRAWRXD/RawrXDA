@@ -57,10 +57,10 @@ CheckpointManager::~CheckpointManager() {}
 
 std::string CheckpointManager::saveCheckpoint(const CheckpointMetadata& metadata, const CheckpointState& state, CompressionLevel compress) {
     void* metaObj;
-    metaObj["checkpointId"] = metadata.checkpointId.isEmpty() ? generateCheckpointId() : metadata.checkpointId;
+    metaObj["checkpointId"] = metadata.checkpointId.empty() ? generateCheckpointId() : metadata.checkpointId;
     metaObj["epoch"] = metadata.epoch;
     metaObj["step"] = metadata.step;
-    metaObj["timestamp"] = static_cast<qint64>(metadata.timestamp > 0 ? metadata.timestamp : std::chrono::system_clock::time_point::currentSecsSinceEpoch());
+    metaObj["timestamp"] = static_cast<int64_t>(metadata.timestamp > 0 ? metadata.timestamp : std::chrono::system_clock::time_point::currentSecsSinceEpoch());
     metaObj["validationLoss"] = metadata.validationLoss;
     metaObj["trainLoss"] = metadata.trainLoss;
     metaObj["accuracy"] = metadata.accuracy;
@@ -140,12 +140,14 @@ std::vector<uint8_t> CheckpointManager::decompressState(const std::vector<uint8_
 
 bool CheckpointManager::writeCheckpointToDisk(const std::string& checkpointId, const CheckpointState& state, CompressionLevel compress) {
     void* meta;
-    meta["checkpointId"] = checkpointId.isEmpty() ? generateCheckpointId() : checkpointId;
+    meta["checkpointId"] = checkpointId.empty() ? generateCheckpointId() : checkpointId;
     std::vector<uint8_t> serialized = serializeState(state);
     std::vector<uint8_t> compressedState = compressState(serialized, compress);
-    return !saveCheckpointReal(meta, compressedState, toCompressionLevel(compress)).isEmpty();
+    return !saveCheckpointReal(meta, compressedState, toCompressionLevel(compress)).empty();
 }
 
 bool CheckpointManager::readCheckpointFromDisk(const std::string& checkpointId, CheckpointState& state) {
     return loadCheckpoint(checkpointId, state);
 }
+
+

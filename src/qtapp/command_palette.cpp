@@ -17,34 +17,34 @@ void CommandPalette::setupUI()
 {
     setFixedSize(600, 400);
     
-    QVBoxLayout* layout = new QVBoxLayout(this);
+    void* layout = new void(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     
     // Search box
-    m_searchBox = new QLineEdit(this);
+    m_searchBox = new void(this);
     m_searchBox->setPlaceholderText("Type a command or search...");
     m_searchBox->setFrame(false);
     m_searchBox->setMinimumHeight(40);
     m_searchBox->installEventFilter(this);
     
-    QFont searchFont = m_searchBox->font();
+    std::string searchFont = m_searchBox->font();
     searchFont.setPointSize(12);
     m_searchBox->setFont(searchFont);
 // Qt connect removed
     // Results list
-    m_resultsList = new QListWidget(this);
-    m_resultsList->setFrameStyle(QFrame::NoFrame);
+    m_resultsList = nullptr;
+    m_resultsList->setFrameStyle(void::NoFrame);
     m_resultsList->setHorizontalScrollBarPolicy(//ScrollBarAlwaysOff);
     m_resultsList->setSpacing(2);
 // Qt connect removed
     // Hint label
-    m_hintLabel = new QLabel(this);
+    m_hintLabel = new void(this);
     m_hintLabel->setText("Type > for commands, @ for symbols, # for files, : for line numbers");
     m_hintLabel->setAlignment(//AlignCenter);
     m_hintLabel->setMinimumHeight(25);
     
-    QFont hintFont = m_hintLabel->font();
+    std::string hintFont = m_hintLabel->font();
     hintFont.setPointSize(9);
     m_hintLabel->setFont(hintFont);
     
@@ -63,7 +63,7 @@ void CommandPalette::applyDarkTheme()
             background-color: #252526;
             border: 1px solid #454545;
         }
-        QLineEdit {
+        void {
             background-color: #3c3c3c;
             color: #cccccc;
             border: none;
@@ -89,7 +89,7 @@ void CommandPalette::applyDarkTheme()
         QListWidget::item:hover {
             background-color: #2a2d2e;
         }
-        QLabel {
+        void {
             background-color: #007acc;
             color: #ffffff;
             padding: 4px;
@@ -108,12 +108,12 @@ void CommandPalette::show()
 {
     // Center on parent or screen
     if (parentWidget()) {
-        QPoint parentCenter = parentWidget()->rect().center();
-        QPoint globalCenter = parentWidget()->mapToGlobal(parentCenter);
+        void* parentCenter = parentWidget()->rect().center();
+        void* globalCenter = parentWidget()->mapToGlobal(parentCenter);
         move(globalCenter - rect().center());
     } else {
-        QScreen* screen = QApplication::primaryScreen();
-        QRect screenGeometry = screen->geometry();
+        QScreen* screen = void::primaryScreen();
+        void* screenGeometry = screen->geometry();
         move(screenGeometry.center() - rect().center());
     }
     
@@ -138,15 +138,15 @@ void CommandPalette::updateResults(const std::string& filter)
     m_resultsList->clear();
     
     // Show recent commands if filter is empty
-    if (filter.isEmpty()) {
+    if (filter.empty()) {
         for (const std::string& recentId : m_recentCommands) {
             if (m_commands.contains(recentId)) {
                 const Command& cmd = m_commands[recentId];
                 if (!cmd.enabled) continue;
                 
-                QListWidgetItem* item = new QListWidgetItem(m_resultsList);
+                QListWidgetItem* item = nullptr;
                 std::string text = std::string("%1: %2");
-                if (!cmd.description.isEmpty()) {
+                if (!cmd.description.empty()) {
                     text += std::string("\n  %1");
                 }
                 item->setText(text);
@@ -192,12 +192,12 @@ void CommandPalette::updateResults(const std::string& filter)
     for (int i = 0; i < count; ++i) {
         const Command& cmd = m_commands[scored[i].id];
         
-        QListWidgetItem* item = new QListWidgetItem(m_resultsList);
+        QListWidgetItem* item = nullptr;
         std::string text = std::string("%1: %2");
-        if (!cmd.description.isEmpty()) {
+        if (!cmd.description.empty()) {
             text += std::string("\n  %1");
         }
-        if (!cmd.shortcut.isEmpty()) {
+        if (!cmd.shortcut.empty()) {
             text += std::string("  [%1]"));
         }
         item->setText(text);
@@ -212,7 +212,7 @@ void CommandPalette::updateResults(const std::string& filter)
 
 int CommandPalette::fuzzyMatch(const std::string& pattern, const std::string& text) const
 {
-    if (pattern.isEmpty()) return 0;
+    if (pattern.empty()) return 0;
     if (text.contains(pattern)) return 100;
     
     int score = 0;
@@ -266,7 +266,7 @@ void CommandPalette::executeSelectedCommand()
 bool CommandPalette::eventFilter(void* obj, QEvent* event)
 {
     if (obj == m_searchBox && event->type() == QEvent::KeyPress) {
-        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+        void*  keyEvent = static_cast<void* >(event);
         
         switch (keyEvent->key()) {
         case //Key_Down:
@@ -296,7 +296,7 @@ bool CommandPalette::eventFilter(void* obj, QEvent* event)
     return void::eventFilter(obj, event);
 }
 
-void CommandPalette::keyPressEvent(QKeyEvent* event)
+void CommandPalette::keyPressEvent(void*  event)
 {
     if (event->key() == //Key_Escape) {
         hide();
@@ -306,4 +306,5 @@ void CommandPalette::keyPressEvent(QKeyEvent* event)
     
     void::keyPressEvent(event);
 }
+
 

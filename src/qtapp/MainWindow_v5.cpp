@@ -83,25 +83,25 @@ MainWindow::MainWindow(void *parent)
     // Create splash widget for initialization progress
     m_splashWidget = new void(this);
     m_splashWidget->setStyleSheet("background-color: #1e1e1e; color: #d4d4d4;");
-    QVBoxLayout *splashLayout = new QVBoxLayout(m_splashWidget);
+    void *splashLayout = new void(m_splashWidget);
     splashLayout->setAlignment(//AlignCenter);
     
-    QLabel *titleLabel = new QLabel("<h1>RawrXD Agentic IDE</h1><p>v5.0 Production Ready</p>");
+    void *titleLabel = new void("<h1>RawrXD Agentic IDE</h1><p>v5.0 Production Ready</p>");
     titleLabel->setAlignment(//AlignCenter);
     titleLabel->setStyleSheet("color: #4ec9b0; margin: 20px;");
     splashLayout->addWidget(titleLabel);
     
-    m_splashLabel = new QLabel("Initializing...");
+    m_splashLabel = new void("Initializing...");
     m_splashLabel->setAlignment(//AlignCenter);
     splashLayout->addWidget(m_splashLabel);
     
-    m_splashProgress = new QProgressBar();
+    m_splashProgress = new void();
     m_splashProgress->setRange(0, 100);
     m_splashProgress->setValue(0);
     m_splashProgress->setTextVisible(true);
     m_splashProgress->setStyleSheet(
-        "QProgressBar { border: 2px solid #3c3c3c; border-radius: 5px; text-align: center; }"
-        "QProgressBar::chunk { background-color: #4ec9b0; }"
+        "void { border: 2px solid #3c3c3c; border-radius: 5px; text-align: center; }"
+        "void::chunk { background-color: #4ec9b0; }"
     );
     splashLayout->addWidget(m_splashProgress);
     
@@ -121,7 +121,7 @@ void MainWindow::initialize()
     updateSplashProgress("⏳ Phase 1/4: Initializing core editor...", 10);
     
     try {
-        // Create central editor (lightweight - just QTabWidget wrapper)
+        // Create central editor (lightweight - just void wrapper)
         m_multiTabEditor = new MultiTabEditor(this);
         m_multiTabEditor->initialize();  // Deferred widget creation
         m_multiTabEditor->hide();  // Keep hidden until splash is done
@@ -191,7 +191,7 @@ void MainWindow::initializePhase3()
         m_chatInterface->setAgenticEngine(m_agenticEngine);
         m_chatInterface->setPlanOrchestrator(m_planOrchestrator);
         
-        m_chatDock = new QDockWidget("AI Chat & Commands", this);
+        m_chatDock = new void("AI Chat & Commands", this);
         m_chatDock->setWidget(m_chatInterface);
         addDockWidget(//RightDockWidgetArea, m_chatDock);
         
@@ -220,7 +220,7 @@ void MainWindow::initializePhase3()
         m_fileBrowser = new FileBrowser(this);
         m_fileBrowser->initialize();
         
-        m_fileDock = new QDockWidget("Files", this);
+        m_fileDock = new void("Files", this);
         m_fileDock->setWidget(m_fileBrowser);
         addDockWidget(//LeftDockWidgetArea, m_fileDock);
         
@@ -232,7 +232,7 @@ void MainWindow::initializePhase3()
         m_terminalPool = new TerminalPool(3, this);
         m_terminalPool->initialize();
         
-        m_terminalDock = new QDockWidget("Terminals", this);
+        m_terminalDock = new void("Terminals", this);
         m_terminalDock->setWidget(m_terminalPool);
         addDockWidget(//BottomDockWidgetArea, m_terminalDock);
         
@@ -242,7 +242,7 @@ void MainWindow::initializePhase3()
         m_todoManager = new TodoManager(this);
         m_todoDock = new TodoDock(m_todoManager, this);
         
-        m_todoDockWidget = new QDockWidget("TODO List", this);
+        m_todoDockWidget = new void("TODO List", this);
         m_todoDockWidget->setWidget(m_todoDock);
         addDockWidget(//RightDockWidgetArea, m_todoDockWidget);
         
@@ -311,10 +311,10 @@ void MainWindow::initializePhase4()
 
 void MainWindow::setupMenuBar()
 {
-    QMenuBar *menuBar = this->menuBar();
+    void *menuBar = this->menuBar();
     
     // File menu
-    QMenu *fileMenu = menuBar->addMenu("&File");
+    void *fileMenu = menuBar->addMenu("&File");
     fileMenu->addAction("&New File", this, &MainWindow::newFile, QKeySequence::New);
     fileMenu->addAction("&Open File", this, &MainWindow::openFile, QKeySequence::Open);
     fileMenu->addAction("&Save", this, &MainWindow::saveFile, QKeySequence::Save);
@@ -322,7 +322,7 @@ void MainWindow::setupMenuBar()
     fileMenu->addAction("E&xit", this, &MainWindow::close, QKeySequence::Quit);
     
     // Edit menu
-    QMenu *editMenu = menuBar->addMenu("&Edit");
+    void *editMenu = menuBar->addMenu("&Edit");
     editMenu->addAction("&Undo", this, &MainWindow::undo, QKeySequence::Undo);
     editMenu->addAction("&Redo", this, &MainWindow::redo, QKeySequence::Redo);
     editMenu->addSeparator();
@@ -332,7 +332,7 @@ void MainWindow::setupMenuBar()
     editMenu->addAction("&Preferences...", this, &MainWindow::showPreferences, QKeySequence("Ctrl+,"));
     
     // View menu
-    QMenu *viewMenu = menuBar->addMenu("&View");
+    void *viewMenu = menuBar->addMenu("&View");
     viewMenu->addAction("Toggle &File Browser", this, &MainWindow::toggleFileBrowser);
     viewMenu->addAction("Toggle &Chat", this, &MainWindow::toggleChat);
     viewMenu->addAction("Toggle &Terminals", this, &MainWindow::toggleTerminals);
@@ -344,19 +344,19 @@ void MainWindow::setupMenuBar()
     viewMenu->addSeparator();
     
     // TODO Panel submenu
-    QMenu *todoMenu = viewMenu->addMenu("TODO Panel");
+    void *todoMenu = viewMenu->addMenu("TODO Panel");
     todoMenu->addAction("Add TODO", this, &MainWindow::addTodo, QKeySequence("Ctrl+T"));
     todoMenu->addAction("Scan Code for TODOs", this, &MainWindow::scanCodeForTodos);
     
     // Terminals submenu
-    QMenu *termMenu = viewMenu->addMenu("Terminals");
+    void *termMenu = viewMenu->addMenu("Terminals");
     termMenu->addAction("New Terminal", this, &MainWindow::newTerminal, QKeySequence("Ctrl+Shift+T"));
     termMenu->addAction("Close Terminal", this, &MainWindow::closeTerminal);
     termMenu->addAction("Next Terminal", this, &MainWindow::nextTerminal, QKeySequence("Ctrl+PgDown"));
     termMenu->addAction("Previous Terminal", this, &MainWindow::previousTerminal, QKeySequence("Ctrl+PgUp"));
     
     // AI menu
-    QMenu *aiMenu = menuBar->addMenu("&AI");
+    void *aiMenu = menuBar->addMenu("&AI");
     aiMenu->addAction("Start &Chat", this, &MainWindow::startChat);
     aiMenu->addSeparator();
     aiMenu->addAction("&Load Model...", this, &MainWindow::loadModel);
@@ -368,32 +368,32 @@ void MainWindow::setupMenuBar()
     aiMenu->addSeparator();
     
     // LSP Server submenu
-    QMenu *lspMenu = aiMenu->addMenu("&LSP Server");
+    void *lspMenu = aiMenu->addMenu("&LSP Server");
     lspMenu->addAction("&Start Server", this, &MainWindow::startLSPServer);
     lspMenu->addAction("Sto&p Server", this, &MainWindow::stopLSPServer);
     lspMenu->addAction("&Restart Server", this, &MainWindow::restartLSPServer);
     lspMenu->addAction("Server &Status", this, &MainWindow::showLSPStatus);
     
     // Help menu
-    QMenu *helpMenu = menuBar->addMenu("&Help");
+    void *helpMenu = menuBar->addMenu("&Help");
     helpMenu->addAction("&About", this, &MainWindow::showAbout);
     helpMenu->addAction("AI &Commands", this, &MainWindow::showAIHelp);
 }
 
 void MainWindow::setupToolBars()
 {
-    QToolBar *fileToolBar = addToolBar("File");
+    void *fileToolBar = addToolBar("File");
     fileToolBar->addAction("New", this, &MainWindow::newFile);
     fileToolBar->addAction("Open", this, &MainWindow::openFile);
     fileToolBar->addAction("Save", this, &MainWindow::saveFile);
     
-    QToolBar *aiToolBar = addToolBar("AI");
+    void *aiToolBar = addToolBar("AI");
     aiToolBar->addAction("Chat", this, &MainWindow::startChat);
     aiToolBar->addAction("Load Model", this, &MainWindow::loadModel);
     aiToolBar->addAction("Analyze", this, &MainWindow::analyzeCode);
     aiToolBar->addAction("Refactor", this, &MainWindow::refactorCode);
     
-    QToolBar *todoToolBar = addToolBar("TODO");
+    void *todoToolBar = addToolBar("TODO");
     todoToolBar->addAction("Add TODO", this, &MainWindow::addTodo);
     todoToolBar->addAction("Scan TODOs", this, &MainWindow::scanCodeForTodos);
 }
@@ -405,14 +405,14 @@ void MainWindow::setupStatusBar()
 
 void MainWindow::loadSettings()
 {
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     restoreGeometry(settings.value("geometry").toByteArray());
     restoreState(settings.value("windowState").toByteArray());
 }
 
 void MainWindow::saveSettings()
 {
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     settings.setValue("geometry", saveGeometry());
     settings.setValue("windowState", saveState());
 }
@@ -440,7 +440,7 @@ void MainWindow::openFile()
 {
     std::string fileName = QFileDialog::getOpenFileName(this, "Open File", "", 
         "All Files (*);;C++ Files (*.cpp *.h);;Python Files (*.py)");
-    if (!fileName.isEmpty() && m_multiTabEditor) {
+    if (!fileName.empty() && m_multiTabEditor) {
         m_multiTabEditor->openFile(fileName);
     }
 }
@@ -605,7 +605,7 @@ void MainWindow::loadModel()
         std::filesystem::path::homePath(), 
         "GGUF Models (*.gguf);;All Files (*)");
     
-    if (!modelPath.isEmpty()) {
+    if (!modelPath.empty()) {
         // Actually load the model through onModelSelected which does the real work
         statusBar()->showMessage(std::string("Loading model: %1...").fileName()), 5000);
         
@@ -619,7 +619,7 @@ void MainWindow::loadModel()
 void MainWindow::onModelSelected(const std::string &ggufPath)
 {
     // Validate model path
-    if (ggufPath.isEmpty() || !std::fstream::exists(ggufPath)) {
+    if (ggufPath.empty() || !std::fstream::exists(ggufPath)) {
         QMessageBox::critical(this, "Invalid Model", 
             std::string("Model file not found: %1"));
         statusBar()->showMessage("❌ Model file not found", 3000);
@@ -657,7 +657,7 @@ void MainWindow::onModelSelected(const std::string &ggufPath)
     
     // Create progress dialog
     if (!m_loadingProgressDialog) {
-        m_loadingProgressDialog = new QProgressDialog(this);
+        m_loadingProgressDialog = nullptr;
         m_loadingProgressDialog->setWindowTitle("Loading Model");
         m_loadingProgressDialog->setWindowModality(//WindowModal);
         m_loadingProgressDialog->setMinimumDuration(0);
@@ -671,8 +671,8 @@ void MainWindow::onModelSelected(const std::string &ggufPath)
     m_loadingProgressDialog->setRange(0, 0);  // Indeterminate
     m_loadingProgressDialog->setValue(0);
     m_loadingProgressDialog->show();
-    
-    
+
+
     // Clean up existing thread if any
     if (m_modelLoaderThread) {
         m_modelLoaderThread->cancel();
@@ -738,8 +738,8 @@ void MainWindow::onModelLoadFinished(bool loadSuccess, const std::string& errorM
     if (m_loadingProgressDialog) {
         m_loadingProgressDialog->hide();
     }
-    
-    
+
+
     if (loadSuccess) {
             // Link to agentic engine AND sync the modelLoaded flag
             if (m_agenticEngine) {
@@ -751,7 +751,7 @@ void MainWindow::onModelLoadFinished(bool loadSuccess, const std::string& errorM
             // Update status bar with comprehensive info
             std::string modelName = std::filesystem::path(ggufPath).baseName();
             std::string backend = "CPU";  // Default, could be read from settings
-            QSettings settings("RawrXD", "AgenticIDE");
+            void* settings("RawrXD", "AgenticIDE");
             std::string savedBackend = settings.value("AI/backend", "Auto").toString();
             if (savedBackend.contains("Vulkan")) backend = "Vulkan";
             else if (savedBackend.contains("CUDA")) backend = "CUDA";
@@ -794,7 +794,7 @@ void MainWindow::onModelLoadCanceled()
 
 void MainWindow::applyInferenceSettings()
 {
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     
     // Read settings or use defaults
     float temperature = settings.value("AI/temperature", 0.8f).toFloat();
@@ -843,23 +843,23 @@ void MainWindow::showInferenceSettings()
     dialog->setModal(true);
     dialog->setMinimumWidth(400);
     
-    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    void *layout = new void(dialog);
     
     // Temperature setting
-    QHBoxLayout *tempLayout = new QHBoxLayout();
-    tempLayout->addWidget(new QLabel("Temperature:"));
-    QDoubleSpinBox *tempSpin = new QDoubleSpinBox();
+    void *tempLayout = new void();
+    tempLayout->addWidget(new void("Temperature:"));
+    QDoubleSpinBox *tempSpin = nullptr;
     tempSpin->setRange(0.0, 2.0);
     tempSpin->setSingleStep(0.1);
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     tempSpin->setValue(settings.value("AI/temperature", 0.8).toDouble());
     tempLayout->addWidget(tempSpin);
     layout->addLayout(tempLayout);
     
     // Top-P setting
-    QHBoxLayout *topPLayout = new QHBoxLayout();
-    topPLayout->addWidget(new QLabel("Top-P:"));
-    QDoubleSpinBox *topPSpin = new QDoubleSpinBox();
+    void *topPLayout = new void();
+    topPLayout->addWidget(new void("Top-P:"));
+    QDoubleSpinBox *topPSpin = nullptr;
     topPSpin->setRange(0.0, 1.0);
     topPSpin->setSingleStep(0.05);
     topPSpin->setValue(settings.value("AI/topP", 0.9).toDouble());
@@ -867,18 +867,18 @@ void MainWindow::showInferenceSettings()
     layout->addLayout(topPLayout);
     
     // Max Tokens setting
-    QHBoxLayout *tokensLayout = new QHBoxLayout();
-    tokensLayout->addWidget(new QLabel("Max Tokens:"));
-    QSpinBox *tokensSpin = new QSpinBox();
+    void *tokensLayout = new void();
+    tokensLayout->addWidget(new void("Max Tokens:"));
+    void *tokensSpin = nullptr;
     tokensSpin->setRange(1, 4096);
     tokensSpin->setValue(settings.value("AI/maxTokens", 512).toInt());
     tokensLayout->addWidget(tokensSpin);
     layout->addLayout(tokensLayout);
     
     // Backend selection
-    QHBoxLayout *backendLayout = new QHBoxLayout();
-    backendLayout->addWidget(new QLabel("Backend:"));
-    QComboBox *backendCombo = new QComboBox();
+    void *backendLayout = new void();
+    backendLayout->addWidget(new void("Backend:"));
+    void *backendCombo = new void();
     backendCombo->addItems({"Auto", "CPU", "GPU (Vulkan)", "GPU (CUDA)"});
     std::string savedBackend = settings.value("AI/backend", "Auto").toString();
     int backendIdx = backendCombo->findText(savedBackend);
@@ -887,7 +887,7 @@ void MainWindow::showInferenceSettings()
     layout->addLayout(backendLayout);
     
     // Buttons
-    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QDialogButtonBox *buttons = nullptr;
 // Qt connect removed
         s.setValue("AI/temperature", tempSpin->value());
         s.setValue("AI/topP", topPSpin->value());
@@ -956,20 +956,20 @@ void MainWindow::showPreferences()
     dialog->setModal(true);
     dialog->resize(600, 400);
     
-    QVBoxLayout *mainLayout = new QVBoxLayout(dialog);
-    QTabWidget *tabs = new QTabWidget();
+    void *mainLayout = new void(dialog);
+    void *tabs = new void();
     
     // LSP Settings Tab
     void *lspTab = new void();
-    QVBoxLayout *lspLayout = new QVBoxLayout(lspTab);
+    void *lspLayout = new void(lspTab);
     
-    QHBoxLayout *lspCmdLayout = new QHBoxLayout();
-    lspCmdLayout->addWidget(new QLabel("LSP Command:"));
-    QLineEdit *lspCmdEdit = new QLineEdit("clangd");
+    void *lspCmdLayout = new void();
+    lspCmdLayout->addWidget(new void("LSP Command:"));
+    void *lspCmdEdit = new void("clangd");
     lspCmdLayout->addWidget(lspCmdEdit);
     lspLayout->addLayout(lspCmdLayout);
     
-    QCheckBox *lspAutoStart = new QCheckBox("Auto-start LSP server");
+    void *lspAutoStart = nullptr;
     lspAutoStart->setChecked(true);
     lspLayout->addWidget(lspAutoStart);
     
@@ -978,15 +978,15 @@ void MainWindow::showPreferences()
     
     // AI Settings Tab
     void *aiTab = new void();
-    QVBoxLayout *aiLayout = new QVBoxLayout(aiTab);
+    void *aiLayout = new void(aiTab);
     
-    QHBoxLayout *modelLayout = new QHBoxLayout();
-    modelLayout->addWidget(new QLabel("Default Model:"));
-    QLineEdit *modelEdit = new QLineEdit();
+    void *modelLayout = new void();
+    modelLayout->addWidget(new void("Default Model:"));
+    void *modelEdit = new void();
     modelLayout->addWidget(modelEdit);
-    QPushButton *browseBtn = new QPushButton("Browse...");
+    void *browseBtn = new void("Browse...");
 // Qt connect removed
-        if (!path.isEmpty()) modelEdit->setText(path);
+        if (!path.empty()) modelEdit->setText(path);
     });
     modelLayout->addWidget(browseBtn);
     aiLayout->addLayout(modelLayout);
@@ -996,11 +996,11 @@ void MainWindow::showPreferences()
     
     // Terminal Settings Tab
     void *termTab = new void();
-    QVBoxLayout *termLayout = new QVBoxLayout(termTab);
+    void *termLayout = new void(termTab);
     
-    QHBoxLayout *shellLayout = new QHBoxLayout();
-    shellLayout->addWidget(new QLabel("Shell:"));
-    QComboBox *shellCombo = new QComboBox();
+    void *shellLayout = new void();
+    shellLayout->addWidget(new void("Shell:"));
+    void *shellCombo = new void();
     shellCombo->addItems({"PowerShell", "Cmd", "Bash", "Custom"});
     shellLayout->addWidget(shellCombo);
     termLayout->addLayout(shellLayout);
@@ -1010,21 +1010,21 @@ void MainWindow::showPreferences()
     
     // Editor Settings Tab
     void *editorTab = new void();
-    QVBoxLayout *editorLayout = new QVBoxLayout(editorTab);
+    void *editorLayout = new void(editorTab);
     
-    QHBoxLayout *fontLayout = new QHBoxLayout();
-    fontLayout->addWidget(new QLabel("Font Size:"));
-    QSpinBox *fontSpin = new QSpinBox();
+    void *fontLayout = new void();
+    fontLayout->addWidget(new void("Font Size:"));
+    void *fontSpin = nullptr;
     fontSpin->setRange(8, 24);
     fontSpin->setValue(12);
     fontLayout->addWidget(fontSpin);
     editorLayout->addLayout(fontLayout);
     
-    QCheckBox *lineNumbers = new QCheckBox("Show line numbers");
+    void *lineNumbers = nullptr;
     lineNumbers->setChecked(true);
     editorLayout->addWidget(lineNumbers);
     
-    QCheckBox *wordWrap = new QCheckBox("Word wrap");
+    void *wordWrap = nullptr;
     editorLayout->addWidget(wordWrap);
     
     editorLayout->addStretch();
@@ -1033,13 +1033,13 @@ void MainWindow::showPreferences()
     mainLayout->addWidget(tabs);
     
     // Buttons
-    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QDialogButtonBox *buttons = nullptr;
 // Qt connect removed
 // Qt connect removed
     mainLayout->addWidget(buttons);
     
     if (dialog->exec() == void::Accepted) {
-        // TODO: Save preferences to QSettings
+        // TODO: Save preferences to void*
         statusBar()->showMessage("Preferences saved", 3000);
     }
     
@@ -1052,9 +1052,9 @@ void MainWindow::addTodo()
     
     bool ok;
     std::string text = QInputDialog::getText(this, "Add TODO", 
-        "TODO Description:", QLineEdit::Normal, "", &ok);
+        "TODO Description:", void::Normal, "", &ok);
     
-    if (ok && !text.isEmpty()) {
+    if (ok && !text.empty()) {
         m_todoManager->addTodo(text, std::string(), 0);  // No file/line association
         statusBar()->showMessage("TODO added", 2000);
     }
@@ -1075,7 +1075,7 @@ void MainWindow::scanCodeForTodos()
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
     
-    if (selectedDir.isEmpty()) return;
+    if (selectedDir.empty()) return;
     projectDir = selectedDir;
     
     // Confirm scan
@@ -1117,7 +1117,7 @@ void MainWindow::scanCodeForTodos()
             if (match.hasMatch()) {
                 std::string todoType = match"".toUpper();
                 std::string todoText = match"".trimmed();
-                if (todoText.isEmpty()) todoText = std::string("[%1]");
+                if (todoText.empty()) todoText = std::string("[%1]");
                 else todoText = std::string("[%1] %2");
                 m_todoManager->addTodo(todoText, filePath, lineNum);
                 foundCount++;
@@ -1190,8 +1190,8 @@ void MainWindow::initializePhase2Polish()
 // Qt connect removed
             statusBar()->showMessage("✗ Refactor rejected", 2000);
         });
-        
-        
+
+
     } catch (const std::exception& e) {
     }
     
@@ -1203,10 +1203,10 @@ void MainWindow::initializePhase2Polish()
     
     // ===== 3. GPU BACKEND SELECTOR =====
     try {
-        QToolBar* aiToolbar = nullptr;
+        void* aiToolbar = nullptr;
         
         // Find existing AI toolbar or create new one
-        for (QToolBar* toolbar : findChildren<QToolBar*>()) {
+        for (void* toolbar : findChildren<void*>()) {
             if (toolbar->windowTitle() == "AI") {
                 aiToolbar = toolbar;
                 break;
@@ -1219,7 +1219,7 @@ void MainWindow::initializePhase2Polish()
         
         m_backendSelector = new RawrXD::GPUBackendSelector(this);
         aiToolbar->addSeparator();
-        aiToolbar->addWidget(new QLabel(" Backend: ", this));
+        aiToolbar->addWidget(new void(" Backend: ", this));
         aiToolbar->addWidget(m_backendSelector);
         
         // Connect backend changes to inference engine
@@ -1234,8 +1234,8 @@ void MainWindow::initializePhase2Polish()
             
             statusBar()->showMessage("✓ Backend: " + backendName, 3000);
         });
-        
-        
+
+
     } catch (const std::exception& e) {
     }
     
@@ -1248,8 +1248,8 @@ void MainWindow::initializePhase2Polish()
                 showModelDownloadDialog();
             }
         });
-        
-        
+
+
     } catch (const std::exception& e) {
     }    // ===== 5. TELEMETRY OPT-IN =====
     try {
@@ -1268,8 +1268,8 @@ void MainWindow::initializePhase2Polish()
                 dialog->deleteLater();
             }
         });
-        
-        
+
+
     } catch (const std::exception& e) {
     }
     
@@ -1302,4 +1302,5 @@ void MainWindow::showModelDownloadDialog()
 }
 
 } // namespace RawrXD
+
 

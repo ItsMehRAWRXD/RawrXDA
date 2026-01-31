@@ -25,7 +25,7 @@ bool ScalarServer::startServer(quint16 port)
         return true;
     }
     
-    if (!m_server->listen(QHostAddress::Any, port)) {
+    if (!m_server->listen(std::string::Any, port)) {
         return false;
     }
     

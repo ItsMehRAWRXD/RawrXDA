@@ -116,9 +116,4 @@ private:
 };
 
 // Convenience macros for logging
-#define LOG_TRACE(msg) IDELogger::getInstance().trace(__FUNCTION__, msg)
-#define LOG_DEBUG(msg) IDELogger::getInstance().debug(__FUNCTION__, msg)
-#define LOG_INFO(msg) IDELogger::getInstance().info(__FUNCTION__, msg)
-#define LOG_WARNING(msg) IDELogger::getInstance().warning(__FUNCTION__, msg)
-#define LOG_ERROR(msg) IDELogger::getInstance().error(__FUNCTION__, msg)
-#define LOG_CRITICAL(msg) IDELogger::getInstance().critical(__FUNCTION__, msg)
+#define 

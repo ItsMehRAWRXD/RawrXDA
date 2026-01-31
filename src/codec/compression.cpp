@@ -4,7 +4,7 @@
 namespace codec {
 
 std::vector<uint8_t> deflate(const std::vector<uint8_t>& data, bool* success) {
-    if (data.isEmpty()) {
+    if (data.empty()) {
         if (success) *success = true;
         return std::vector<uint8_t>();
     }
@@ -28,7 +28,7 @@ std::vector<uint8_t> deflate(const std::vector<uint8_t>& data, bool* success) {
 }
 
 std::vector<uint8_t> inflate(const std::vector<uint8_t>& data, bool* success) {
-    if (data.isEmpty()) {
+    if (data.empty()) {
         if (success) *success = true;
         return std::vector<uint8_t>();
     }
@@ -64,7 +64,7 @@ std::vector<uint8_t> inflate(const std::vector<uint8_t>& data, bool* success) {
 }
 
 std::vector<uint8_t> deflate_brutal_masm(const std::vector<uint8_t>& data, bool* success) {
-    if (data.isEmpty()) {
+    if (data.empty()) {
         if (success) *success = true;
         return std::vector<uint8_t>();
     }
@@ -87,3 +87,4 @@ std::vector<uint8_t> deflate_brutal_masm(const std::vector<uint8_t>& data, bool*
 }
 
 } // namespace codec
+

@@ -175,7 +175,7 @@ static bool ggml_metal_op_concurrency_add(ggml_metal_op_t ctx, const ggml_tensor
 static int ggml_metal_op_encode_impl(ggml_metal_op_t ctx, int idx) {
     struct ggml_tensor * node = ctx->node(idx);
 
-    //GGML_LOG_INFO("%s: encoding node %3d, op = %8s\n", __func__, idx, ggml_op_name(node->op));
+    //GGML_
 
     if (ggml_is_empty(node)) {
         return 1;
@@ -190,7 +190,7 @@ static int ggml_metal_op_encode_impl(ggml_metal_op_t ctx, int idx) {
             {
                 // noop -> next node
                 if (ctx->debug_graph > 0) {
-                    GGML_LOG_DEBUG("%s: node[%5d] - %-12s %s\n", __func__, idx, ggml_op_name(node->op), "(noop)");
+                    GGML_
                 }
             } return 1;
         default:
@@ -199,7 +199,7 @@ static int ggml_metal_op_encode_impl(ggml_metal_op_t ctx, int idx) {
     }
 
     if (!ggml_metal_device_supports_op(ctx->dev, node)) {
-        GGML_LOG_ERROR("%s: error: unsupported op '%s'\n", __func__, ggml_op_desc(node));
+        GGML_
         GGML_ABORT("unsupported op");
     }
 
@@ -221,7 +221,7 @@ static int ggml_metal_op_encode_impl(ggml_metal_op_t ctx, int idx) {
         }
 
         if (ctx->debug_graph > 0) {
-            GGML_LOG_DEBUG("%s: node[%5d] - %-12s %s\n", __func__, idx, ggml_op_name(node->op), is_concurrent ? "(concurrent)" : "");
+            GGML_
         }
         if (ctx->debug_graph > 1) {
             GGML_TENSOR_LOCALS( int64_t, ne0, node->src[0], ne);
@@ -236,24 +236,19 @@ static int ggml_metal_op_encode_impl(ggml_metal_op_t ctx, int idx) {
             GGML_TENSOR_LOCALS(uint64_t, nb,  node,         nb);
 
             if (node->src[0]) {
-                GGML_LOG_DEBUG("%s: src0 - %4s [%5lld, %5lld, %5lld, %5lld] [%5lld, %5lld, %5lld, %5lld], %d, %s\n", __func__, ggml_type_name(node->src[0]->type), ne00, ne01, ne02, ne03, nb00, nb01, nb02, nb03,
-                        ggml_is_contiguous(node->src[0]), node->src[0]->name);
+                GGML_
             }
             if (node->src[1]) {
-                GGML_LOG_DEBUG("%s: src1 - %4s [%5lld, %5lld, %5lld, %5lld] [%5lld, %5lld, %5lld, %5lld], %d, %s\n", __func__, ggml_type_name(node->src[1]->type), ne10, ne11, ne12, ne13, nb10, nb11, nb12, nb13,
-                        ggml_is_contiguous(node->src[1]), node->src[1]->name);
+                GGML_
             }
             if (node->src[2]) {
-                GGML_LOG_DEBUG("%s: src2 - %4s [%5lld, %5lld, %5lld, %5lld] [%5lld, %5lld, %5lld, %5lld], %d, %s\n", __func__, ggml_type_name(node->src[2]->type), ne20, ne21, ne22, ne23, nb20, nb21, nb22, nb23,
-                        ggml_is_contiguous(node->src[2]), node->src[2]->name);
+                GGML_
             }
             if (node->src[3]) {
-                GGML_LOG_DEBUG("%s: src3 - %4s [%5lld, %5lld, %5lld, %5lld] [%5lld, %5lld, %5lld, %5lld], %d, %s\n", __func__, ggml_type_name(node->src[3]->type), ne30, ne31, ne32, ne33, nb30, nb31, nb32, nb33,
-                        ggml_is_contiguous(node->src[3]), node->src[3]->name);
+                GGML_
             }
             if (node) {
-                GGML_LOG_DEBUG("%s: node  - %4s [%5lld, %5lld, %5lld, %5lld] [%5lld, %5lld, %5lld, %5lld], 1, %s\n", __func__, ggml_type_name(node->type), ne0, ne1, ne2, ne3, nb0, nb1, nb2, nb3,
-                        node->name);
+                GGML_
             }
         }
     }
@@ -438,14 +433,14 @@ static int ggml_metal_op_encode_impl(ggml_metal_op_t ctx, int idx) {
             } break;
        default:
             {
-                GGML_LOG_ERROR("%s: error: node %3d, op = %8s not implemented\n", __func__, idx, ggml_op_name(node->op));
+                GGML_
                 GGML_ABORT("fatal error");
             }
     }
 
     if (ctx->debug_graph > 0) {
         if (n_fuse > 1) {
-            GGML_LOG_DEBUG("%s:               fuse %d ops\n", __func__, n_fuse);
+            GGML_
         }
     }
 
@@ -1733,7 +1728,7 @@ int ggml_metal_op_mul_mat(ggml_metal_op_t ctx, int idx) {
         // for now the matrix-matrix multiplication kernel only works on A14+/M1+ SoCs
         // AMD GPU and older A-chips will reuse matrix-vector multiplication kernel
         props_dev->has_simdgroup_mm && ne00 >= 64 && ne11 > ne11_mm_min) {
-        //GGML_LOG_INFO("matrix: ne00 = %6d, ne01 = %6d, ne02 = %6d, ne11 = %6d, ne12 = %6d\n", ne00, ne01, ne02, ne11, ne12);
+        //GGML_
 
         // some Metal matrix data types require aligned pointers
         // ref: https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf (Table 2.5)
@@ -2751,7 +2746,7 @@ int ggml_metal_op_bin(ggml_metal_op_t ctx, int idx) {
         ++n_fuse;
 
         if (debug_fusion > 1 && n_fuse > 1) {
-            GGML_LOG_DEBUG("%s: fuse: ADD x %d\n", __func__, n_fuse);
+            GGML_
         }
     }
 
@@ -2998,10 +2993,10 @@ int ggml_metal_op_norm(ggml_metal_op_t ctx, int idx) {
 
         if (debug_fusion > 1 && n_fuse > 1) {
             if (n_fuse == 2) {
-                GGML_LOG_DEBUG("%s: fuse: %s + MUL\n", __func__, ggml_op_name(op->op));
+                GGML_
             }
             if (n_fuse == 3) {
-                GGML_LOG_DEBUG("%s: fuse: %s + MUL + ADD\n", __func__, ggml_op_name(op->op));
+                GGML_
             }
         }
     }

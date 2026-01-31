@@ -13,13 +13,14 @@ public:
     explicit StreamingInference(QPlainTextEdit* target, void* parent = nullptr);
 
 public:
-    void startStream(qint64 reqId, const std::string& prompt);
+    void startStream(int64_t reqId, const std::string& prompt);
     void pushToken(const std::string& token);        // called from worker
     void finishStream();
 
 private:
     QPlainTextEdit* m_out;
-    qint64          m_reqId{0};
+    int64_t          m_reqId{0};
     std::string         m_buffer;
 };
+
 

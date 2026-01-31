@@ -9,7 +9,7 @@ public:
     
     void loadDirectory(const std::string& dirpath);
     void loadDrives();
-    
+
 
     void fileSelected(const std::string& filepath);
     
@@ -29,9 +29,10 @@ private:
     void LogDirectoryAccess(const std::string& path, bool success);
     
     // Performance monitoring
-    void TrackLoadingMetrics(const std::string& path, int itemCount, qint64 loadTimeMs);
+    void TrackLoadingMetrics(const std::string& path, int itemCount, int64_t loadTimeMs);
     
 private:
     QTreeWidget* tree_widget_;
 };
+
 

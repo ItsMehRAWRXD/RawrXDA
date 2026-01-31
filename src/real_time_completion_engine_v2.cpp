@@ -172,7 +172,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         //
         // InferenceEngine& engine = AIIntegrationHub::getInstance().getInferenceEngine();
         // if (!engine.IsModelLoaded()) {
-        //     m_logger->error("Model not loaded");
+        //     m_
         //     return {};
         // }
         //
@@ -204,7 +204,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         //
         //     // Check for end-of-sequence
         //     if (nextToken == engine.GetVocabSize() - 1) {
-        //         m_logger->debug("Model reached EOS token");
+        //         m_
         //         break;
         //     }
         //
@@ -216,7 +216,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         //     // Check for stop sequences
         //     for (const auto& stopSeq : STOP_SEQUENCES) {
         //         if (generatedCompletion.find(stopSeq) != std::string::npos) {
-        //             m_logger->debug("Hit stop sequence: {}", stopSeq);
+        //             m_
         //             goto generation_done;
         //         }
         //     }
@@ -224,13 +224,13 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         //     // Early exit if we have a good completion
         //     if (generatedCompletion.length() >= MIN_LENGTH &&
         //         (token == ";" || token == ")" || token == "}\n")) {
-        //         m_logger->debug("Early exit: got complete statement");
+        //         m_
         //         break;
         //     }
         //
         //     // Safety: limit length to prevent runaway generation
         //     if (generatedCompletion.length() > 256) {
-        //         m_logger->debug("Hit maximum length");
+        //         m_
         //         break;
         //     }
         // }
@@ -251,7 +251,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         //              return a.confidence > b.confidence;
         //          });
         //
-        // m_logger->info("Generated {} completions", completions.size());
+        // m_
         // m_metrics->recordHistogram("completions_per_call", completions.size());
 
         // TEMPORARY: Until InferenceEngine is wired, return realistic mock data

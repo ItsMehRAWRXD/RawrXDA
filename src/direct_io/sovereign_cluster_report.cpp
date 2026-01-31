@@ -121,7 +121,7 @@ public:
         // Generate report
         std::ofstream out(outputPath);
         if (!out) {
-            std::cerr << "Failed to create report: " << outputPath << std::endl;
+            
             return;
         }
         
@@ -132,8 +132,8 @@ public:
         WritePerformanceMetrics(out);
         WriteSecurityStatus(out);
         WriteFooter(out);
-        
-        std::cout << "✓ Sovereign Cluster Report generated: " << outputPath << std::endl;
+
+
     }
     
 private:
@@ -325,17 +325,13 @@ int main(int argc, char** argv) {
         } else if (arg == "--cluster" && i + 1 < argc) {
             clusterId = argv[++i];
         } else if (arg == "--help") {
-            std::cout << "RAWRXD Sovereign Cluster Report Generator" << std::endl;
-            std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
-            std::cout << "  --output <path>   Output file (default: Sovereign_Cluster_Report.md)" << std::endl;
-            std::cout << "  --cluster <id>    Cluster identifier (default: RAWRXD_ALPHA_PRIME)" << std::endl;
+
+
             return 0;
         }
     }
-    
-    std::cout << "RAWRXD v1.2.0 Sovereign Cluster Report Generator" << std::endl;
-    std::cout << "─────────────────────────────────────────────────" << std::endl;
-    
+
+
     SovereignClusterReport report;
     report.Generate(outputPath, clusterId);
     

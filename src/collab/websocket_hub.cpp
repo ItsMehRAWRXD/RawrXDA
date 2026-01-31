@@ -1,7 +1,7 @@
 #include "websocket_hub.h"
 WebSocketHub::WebSocketHub()
     
-    , m_server(new QWebSocketServer(std::stringLiteral("Collab Server"), QWebSocketServer::NonSecureMode, this))
+// REMOVED_QT:     , m_server(nullptr, QWebSocketServer::NonSecureMode, this))
 {  // Signal connection removed\n}
 
 WebSocketHub::~WebSocketHub()
@@ -12,7 +12,7 @@ WebSocketHub::~WebSocketHub()
 
 bool WebSocketHub::startServer(uint16_t port)
 {
-    if (m_server->listen(QHostAddress::Any, port)) {
+    if (m_server->listen(std::string::Any, port)) {
         return true;
     } else {
         return false;
@@ -24,19 +24,19 @@ void WebSocketHub::broadcastMessage(const void* &message)
     void* doc(message);
     std::string messageStr = std::string::fromUtf8(doc.toJson(void*::Compact));
 
-    for (QWebSocket *client : m_clients) {
+// REMOVED_QT:     for (QWebSocket *client : m_clients) {
         client->sendTextMessage(messageStr);
     }
 }
 
 void WebSocketHub::onNewConnection()
 {
-    QWebSocket *socket = m_server->nextPendingConnection();  // Signal connection removed\n  // Signal connection removed\nm_clients << socket;
+// REMOVED_QT:     QWebSocket *socket = m_server->nextPendingConnection();  // Signal connection removed\n  // Signal connection removed\nm_clients << socket;
 }
 
 void WebSocketHub::onTextMessageReceived(const std::string &message)
 {
-    QWebSocket *client = qobject_cast<QWebSocket *>(sender());
+// REMOVED_QT:     QWebSocket *client = qobject_cast<QWebSocket *>(sender());
     if (!client) {
         return;
     }
@@ -56,7 +56,7 @@ void WebSocketHub::onTextMessageReceived(const std::string &message)
 
 void WebSocketHub::onSocketDisconnected()
 {
-    QWebSocket *client = qobject_cast<QWebSocket *>(sender());
+// REMOVED_QT:     QWebSocket *client = qobject_cast<QWebSocket *>(sender());
     if (!client) {
         return;
     }

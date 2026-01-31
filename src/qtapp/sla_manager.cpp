@@ -81,7 +81,7 @@ void SLAManager::reportStatus(HealthStatus status) {
     }
 }
 
-void SLAManager::recordHealthCheck(bool success, qint64 responseTimeMs) {
+void SLAManager::recordHealthCheck(bool success, int64_t responseTimeMs) {
     if (!success) {
         healthCheckFailed(responseTimeMs);
         
@@ -108,7 +108,7 @@ SLAManager::SLAMetrics SLAManager::getCurrentMetrics() const {
     metrics.targetUptime = m_targetUptime;
     metrics.currentUptime = currentUptime();
     
-    qint64 allowedMs = calculateAllowedDowntime();
+    int64_t allowedMs = calculateAllowedDowntime();
     metrics.allowedDowntimeMs = allowedMs;
     metrics.actualDowntimeMs = m_totalDowntimeMs;
     metrics.remainingBudgetMs = allowedMs - m_totalDowntimeMs;
@@ -125,7 +125,7 @@ SLAManager::UptimeStats SLAManager::getUptimeStats(const std::chrono::system_clo
     stats.periodStart = startDate;
     stats.periodEnd = endDate;
     
-    qint64 totalMs = startDate.msecsTo(endDate);
+    int64_t totalMs = startDate.msecsTo(endDate);
     stats.totalDowntimeMs = m_totalDowntimeMs;
     stats.totalUptimeMs = totalMs - m_totalDowntimeMs;
     stats.downtimeIncidents = m_downtimeIncidents;
@@ -138,7 +138,7 @@ SLAManager::UptimeStats SLAManager::getUptimeStats(const std::chrono::system_clo
     
     // Calculate longest downtime
     stats.longestDowntimeMs = 0;
-    for (qint64 downtime : m_downtimePeriods) {
+    for (int64_t downtime : m_downtimePeriods) {
         stats.longestDowntimeMs = qMax(stats.longestDowntimeMs, downtime);
     }
     
@@ -177,7 +177,7 @@ std::string SLAManager::generateMonthlyReport() const {
     
     // Downtime incidents
     void* incidentsArray;
-    for (qint64 downtime : m_downtimePeriods) {
+    for (int64_t downtime : m_downtimePeriods) {
         void* incident;
         incident["durationMinutes"] = (double)(downtime / 1000 / 60);
         incidentsArray.append(incident);
@@ -197,11 +197,11 @@ SLAManager::HealthStatus SLAManager::currentStatus() const {
 
 double SLAManager::currentUptime() const {
     std::chrono::system_clock::time_point now = std::chrono::system_clock::time_point::currentDateTime();
-    qint64 totalMs = m_periodStart.msecsTo(now);
+    int64_t totalMs = m_periodStart.msecsTo(now);
     
     if (totalMs <= 0) return 100.0;
     
-    qint64 uptimeMs = totalMs - m_totalDowntimeMs;
+    int64_t uptimeMs = totalMs - m_totalDowntimeMs;
     return (uptimeMs * 100.0) / totalMs;
 }
 
@@ -213,7 +213,7 @@ void SLAManager::performHealthCheck() {
     // - Network connectivity
     
     bool healthy = (m_currentStatus == Healthy || m_currentStatus == Degraded);
-    qint64 responseTime = healthy ? 50 : 200;  // Simulated response time
+    int64_t responseTime = healthy ? 50 : 200;  // Simulated response time
     
     recordHealthCheck(healthy, responseTime);
 }
@@ -253,7 +253,7 @@ void SLAManager::recordDowntimeEnd() {
     if (!m_isDown) return;
     
     std::chrono::system_clock::time_point now = std::chrono::system_clock::time_point::currentDateTime();
-    qint64 downtimeMs = m_downtimeStart.msecsTo(now);
+    int64_t downtimeMs = m_downtimeStart.msecsTo(now);
     
     m_totalDowntimeMs += downtimeMs;
     m_downtimePeriods.append(downtimeMs);
@@ -265,18 +265,19 @@ void SLAManager::recordDowntimeEnd() {
             << (m_totalDowntimeMs / 1000 / 60) << "minutes";
 }
 
-qint64 SLAManager::calculateAllowedDowntime() const {
+int64_t SLAManager::calculateAllowedDowntime() const {
     // Calculate allowed downtime based on target uptime
     // For 99.99% uptime: 43.2 minutes per month
     // For 99.9% uptime: 43.2 minutes per month
     // For 99% uptime: 7.2 hours per month
     
     // Assuming 30-day month = 30 * 24 * 60 * 60 * 1000 ms
-    qint64 monthMs = 30LL * 24 * 60 * 60 * 1000;
+    int64_t monthMs = 30LL * 24 * 60 * 60 * 1000;
     
     double allowedDowntimePercent = 100.0 - m_targetUptime;
-    qint64 allowedMs = (qint64)(monthMs * allowedDowntimePercent / 100.0);
+    int64_t allowedMs = (int64_t)(monthMs * allowedDowntimePercent / 100.0);
     
     return allowedMs;
 }
+
 

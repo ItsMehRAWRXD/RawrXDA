@@ -18,34 +18,34 @@ void HotpatchPanel::setupUI() {
         "HotpatchPanel { background-color: #1e1e1e; }"
         "QListWidget { background-color: #252526; color: #d4d4d4; border: none; }"
         "QListWidget::item { padding: 4px; margin: 2px; border-left: 3px solid #007acc; }"
-        "QLabel { color: #d4d4d4; }"
-        "QPushButton { background-color: #007acc; color: #ffffff; border: none; padding: 6px; border-radius: 3px; }"
-        "QPushButton:hover { background-color: #005a9e; }"
+        "void { color: #d4d4d4; }"
+        "void { background-color: #007acc; color: #ffffff; border: none; padding: 6px; border-radius: 3px; }"
+        "void:hover { background-color: #005a9e; }"
     );
     
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     mainLayout->setContentsMargins(8, 8, 8, 8);
     mainLayout->setSpacing(8);
     
     // Header with stats
-    QHBoxLayout* headerLayout = new QHBoxLayout();
+    void* headerLayout = new void();
     
-    m_statsLabel = new QLabel("Events: 0 | Success: 0 | Failed: 0", this);
-    QFont statsFont = m_statsLabel->font();
+    m_statsLabel = new void("Events: 0 | Success: 0 | Failed: 0", this);
+    std::string statsFont = m_statsLabel->font();
     statsFont.setPointSize(9);
     statsFont.setBold(true);
     m_statsLabel->setFont(statsFont);
     headerLayout->addWidget(m_statsLabel);
     headerLayout->addStretch();
     
-    m_manualReloadButton = new QPushButton("Manual Reload", this);
+    m_manualReloadButton = new void("Manual Reload", this);
     m_manualReloadButton->setMaximumWidth(120);
 // Qt connect removed
         manualReloadRequested("Q4_K"); // Default quant mode
     });
     headerLayout->addWidget(m_manualReloadButton);
     
-    m_clearButton = new QPushButton("Clear", this);
+    m_clearButton = new void("Clear", this);
     m_clearButton->setMaximumWidth(80);
 // Qt connect removed
     headerLayout->addWidget(m_clearButton);
@@ -53,8 +53,8 @@ void HotpatchPanel::setupUI() {
     mainLayout->addLayout(headerLayout);
     
     // Event list
-    m_eventList = new QListWidget(this);
-    m_eventList->setFont(QFont("Courier", 9));
+    m_eventList = nullptr;
+    m_eventList->setFont(std::string("Courier", 9));
     mainLayout->addWidget(m_eventList, 1);
     
     setLayout(mainLayout);
@@ -89,13 +89,13 @@ void HotpatchPanel::createListItem(const std::string& eventType, const std::stri
 
         ;
     
-    QListWidgetItem* item = new QListWidgetItem(itemText);
+    QListWidgetItem* item = nullptr;
     
     // Color the status indicator
     if (success) {
-        item->setForeground(QColor("#4ec9b0")); // Green text for success
+        item->setForeground(uint32_t("#4ec9b0")); // Green text for success
     } else {
-        item->setForeground(QColor("#f48771")); // Red text for failure
+        item->setForeground(uint32_t("#f48771")); // Red text for failure
     }
     
     item->setData(//UserRole, timestamp);

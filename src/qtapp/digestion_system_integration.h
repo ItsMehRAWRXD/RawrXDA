@@ -28,8 +28,8 @@ public:
         if (m_rootDir.empty()) {
             return;
         }
-        
-        
+
+
         // This would be called from app initialization
         pipelineStarted();
     }

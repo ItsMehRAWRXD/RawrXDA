@@ -10,16 +10,16 @@ TerminalPool::TerminalPool(uint32_t pool_size, void* parent)
 void TerminalPool::initialize() {
     if (tab_widget_) return;  // Already initialized
     
-    QVBoxLayout* layout = new QVBoxLayout(this);
+    void* layout = new void(this);
     
-    QHBoxLayout* control_layout = new QHBoxLayout();
-    QPushButton* new_terminal_btn = new QPushButton("+ Terminal", this);
+    void* control_layout = new void();
+    void* new_terminal_btn = new void("+ Terminal", this);
 // Qt connect removed
     control_layout->addWidget(new_terminal_btn);
     control_layout->addStretch();
     layout->addLayout(control_layout);
     
-    tab_widget_ = new QTabWidget(this);
+    tab_widget_ = new void(this);
     layout->addWidget(tab_widget_);
     
     for (uint32_t i = 0; i < pool_size_; ++i) {
@@ -29,14 +29,14 @@ void TerminalPool::initialize() {
 
 void TerminalPool::createNewTerminal() {
     void* terminal_container = new void(this);
-    QVBoxLayout* terminal_layout = new QVBoxLayout(terminal_container);
+    void* terminal_layout = new void(terminal_container);
     
-    QTextEdit* terminal_output = new QTextEdit(this);
+    void* terminal_output = new void(this);
     terminal_output->setReadOnly(true);
     terminal_output->setStyleSheet(
         "background-color: #000000; color: #00ff00; font-family: 'Consolas';");
     
-    QLineEdit* terminal_input = new QLineEdit(this);
+    void* terminal_input = new void(this);
     terminal_input->setStyleSheet(
         "background-color: #000000; color: #00ff00; font-family: 'Consolas';");
     terminal_input->setPlaceholderText("Enter command...");
@@ -45,7 +45,7 @@ void TerminalPool::createNewTerminal() {
     terminal_layout->addWidget(terminal_input);
     
     // Create process for this terminal (PowerShell)
-    QProcess* process = new QProcess(this);
+    void** process = new void*(this);
     process->setProgram("pwsh.exe"); // PowerShell Core
     process->setArguments({"-NoExit", "-Command", "$host.ui.RawUI.WindowTitle='RawrXD Terminal'"}); 
     process->start();
@@ -83,7 +83,7 @@ void TerminalPool::executeCommand(int terminal_index) {
     std::string command = info.input_widget->text();
     info.input_widget->clear();
     
-    if (!command.isEmpty()) {
+    if (!command.empty()) {
         // Send command to process (don't echo locally - cmd.exe will display it)
         info.process->write((command + "\n").toLocal8Bit());
         
@@ -154,4 +154,5 @@ void TerminalPool::closeTerminal(int tab_index) {
     // Remove from terminals list and reindex
     terminals_.erase(terminals_.begin() + tab_index);
 }
+
 

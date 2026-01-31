@@ -24,57 +24,57 @@ MetricsDashboard::~MetricsDashboard()
 
 void MetricsDashboard::createUI()
 {
-    QVBoxLayout *main_layout = new QVBoxLayout(this);
+    void *main_layout = new void(this);
     main_layout->setContentsMargins(8, 8, 8, 8);
     main_layout->setSpacing(8);
 
     // === Summary Panel ===
-    QGroupBox *summary_group = new QGroupBox("Summary Statistics", this);
-    QGridLayout *summary_grid = new QGridLayout(summary_group);
+    void *summary_group = new void("Summary Statistics", this);
+    void *summary_grid = new void(summary_group);
 
-    m_total_cost_label = new QLabel("$0.00", this);
+    m_total_cost_label = new void("$0.00", this);
     m_total_cost_label->setStyleSheet("font-size: 24pt; font-weight: bold; color: #0066cc;");
-    summary_grid->addWidget(new QLabel("Total Cost:", this), 0, 0);
+    summary_grid->addWidget(new void("Total Cost:", this), 0, 0);
     summary_grid->addWidget(m_total_cost_label, 0, 1);
 
-    m_total_requests_label = new QLabel("0", this);
+    m_total_requests_label = new void("0", this);
     m_total_requests_label->setStyleSheet("font-size: 18pt; font-weight: bold;");
-    summary_grid->addWidget(new QLabel("Total Requests:", this), 0, 2);
+    summary_grid->addWidget(new void("Total Requests:", this), 0, 2);
     summary_grid->addWidget(m_total_requests_label, 0, 3);
 
-    m_avg_latency_label = new QLabel("— ms", this);
+    m_avg_latency_label = new void("— ms", this);
     m_avg_latency_label->setStyleSheet("font-size: 18pt; font-weight: bold;");
-    summary_grid->addWidget(new QLabel("Avg Latency:", this), 1, 0);
+    summary_grid->addWidget(new void("Avg Latency:", this), 1, 0);
     summary_grid->addWidget(m_avg_latency_label, 1, 1);
 
-    m_avg_success_rate_label = new QLabel("—%", this);
+    m_avg_success_rate_label = new void("—%", this);
     m_avg_success_rate_label->setStyleSheet("font-size: 18pt; font-weight: bold;");
-    summary_grid->addWidget(new QLabel("Success Rate:", this), 1, 2);
+    summary_grid->addWidget(new void("Success Rate:", this), 1, 2);
     summary_grid->addWidget(m_avg_success_rate_label, 1, 3);
 
-    m_active_model_label = new QLabel("None", this);
+    m_active_model_label = new void("None", this);
     m_active_model_label->setStyleSheet("font-size: 14pt; color: #666;");
-    summary_grid->addWidget(new QLabel("Active Model:", this), 2, 0);
+    summary_grid->addWidget(new void("Active Model:", this), 2, 0);
     summary_grid->addWidget(m_active_model_label, 2, 1, 1, 3);
 
     main_layout->addWidget(summary_group);
 
     // === Charts Row ===
-    QHBoxLayout *charts_layout = new QHBoxLayout();
+    void *charts_layout = new void();
 
     // Cost breakdown pie chart
-    QGroupBox *cost_group = new QGroupBox("Cost Breakdown by Model", this);
-    QVBoxLayout *cost_layout = new QVBoxLayout(cost_group);
-    m_cost_chart_view = new QChartView(this);
+    void *cost_group = new void("Cost Breakdown by Model", this);
+    void *cost_layout = new void(cost_group);
+    m_cost_chart_view = nullptr;
     m_cost_chart_view->setRenderHint(QPainter::Antialiasing);
     m_cost_chart_view->setMinimumHeight(250);
     cost_layout->addWidget(m_cost_chart_view);
     charts_layout->addWidget(cost_group);
 
     // Latency bar chart
-    QGroupBox *latency_group = new QGroupBox("Average Latency by Model", this);
-    QVBoxLayout *latency_layout = new QVBoxLayout(latency_group);
-    m_latency_chart_view = new QChartView(this);
+    void *latency_group = new void("Average Latency by Model", this);
+    void *latency_layout = new void(latency_group);
+    m_latency_chart_view = nullptr;
     m_latency_chart_view->setRenderHint(QPainter::Antialiasing);
     m_latency_chart_view->setMinimumHeight(250);
     latency_layout->addWidget(m_latency_chart_view);
@@ -83,21 +83,21 @@ void MetricsDashboard::createUI()
     main_layout->addLayout(charts_layout);
 
     // === Success Rate Trend Chart ===
-    QGroupBox *success_group = new QGroupBox("Success Rate Trend", this);
-    QVBoxLayout *success_layout = new QVBoxLayout(success_group);
-    m_success_rate_chart_view = new QChartView(this);
+    void *success_group = new void("Success Rate Trend", this);
+    void *success_layout = new void(success_group);
+    m_success_rate_chart_view = nullptr;
     m_success_rate_chart_view->setRenderHint(QPainter::Antialiasing);
     m_success_rate_chart_view->setMinimumHeight(180);
     success_layout->addWidget(m_success_rate_chart_view);
     main_layout->addWidget(success_group);
 
     // === Tables ===
-    QHBoxLayout *tables_layout = new QHBoxLayout();
+    void *tables_layout = new void();
 
     // Request count table
-    QGroupBox *requests_group = new QGroupBox("Requests per Model", this);
-    QVBoxLayout *requests_layout = new QVBoxLayout(requests_group);
-    m_request_count_table = new QTableWidget(0, 2, this);
+    void *requests_group = new void("Requests per Model", this);
+    void *requests_layout = new void(requests_group);
+    m_request_count_table = nullptr;
     m_request_count_table->setHorizontalHeaderLabels({"Model", "Count"});
     m_request_count_table->horizontalHeader()->setStretchLastSection(true);
     m_request_count_table->setMaximumHeight(150);
@@ -105,9 +105,9 @@ void MetricsDashboard::createUI()
     tables_layout->addWidget(requests_group);
 
     // Provider status table
-    QGroupBox *providers_group = new QGroupBox("Provider Status", this);
-    QVBoxLayout *providers_layout = new QVBoxLayout(providers_group);
-    m_provider_status_table = new QTableWidget(0, 2, this);
+    void *providers_group = new void("Provider Status", this);
+    void *providers_layout = new void(providers_group);
+    m_provider_status_table = nullptr;
     m_provider_status_table->setHorizontalHeaderLabels({"Provider", "Status"});
     m_provider_status_table->horizontalHeader()->setStretchLastSection(true);
     m_provider_status_table->setMaximumHeight(150);
@@ -117,9 +117,9 @@ void MetricsDashboard::createUI()
     main_layout->addLayout(tables_layout);
 
     // === Error Log ===
-    QGroupBox *errors_group = new QGroupBox("Recent Errors", this);
-    QVBoxLayout *errors_layout = new QVBoxLayout(errors_group);
-    m_error_log_table = new QTableWidget(0, 3, this);
+    void *errors_group = new void("Recent Errors", this);
+    void *errors_layout = new void(errors_group);
+    m_error_log_table = nullptr;
     m_error_log_table->setHorizontalHeaderLabels({"Timestamp", "Model", "Error"});
     m_error_log_table->horizontalHeader()->setStretchLastSection(true);
     m_error_log_table->setMaximumHeight(120);
@@ -127,21 +127,21 @@ void MetricsDashboard::createUI()
     main_layout->addWidget(errors_group);
 
     // === Action Buttons ===
-    QHBoxLayout *button_layout = new QHBoxLayout();
+    void *button_layout = new void();
     
-    QPushButton *refresh_button = new QPushButton("Refresh Now", this);
+    void *refresh_button = new void("Refresh Now", this);
 // Qt connect removed
     button_layout->addWidget(refresh_button);
 
-    QPushButton *export_csv_button = new QPushButton("Export CSV", this);
+    void *export_csv_button = new void("Export CSV", this);
 // Qt connect removed
     button_layout->addWidget(export_csv_button);
 
-    QPushButton *export_json_button = new QPushButton("Export JSON", this);
+    void *export_json_button = new void("Export JSON", this);
 // Qt connect removed
     button_layout->addWidget(export_json_button);
 
-    QPushButton *clear_button = new QPushButton("Clear History", this);
+    void *clear_button = new void("Clear History", this);
 // Qt connect removed
     button_layout->addWidget(clear_button);
 
@@ -155,28 +155,28 @@ void MetricsDashboard::createUI()
 void MetricsDashboard::setupCharts()
 {
     // === Cost Pie Chart ===
-    m_cost_chart = new QChart();
+    m_cost_chart = nullptr;
     m_cost_chart->setTitle("Cost Distribution");
     m_cost_chart->setAnimationOptions(QChart::SeriesAnimations);
-    m_cost_pie_series = new QPieSeries();
+    m_cost_pie_series = nullptr;
     m_cost_chart->addSeries(m_cost_pie_series);
     m_cost_chart->legend()->setAlignment(//AlignRight);
     m_cost_chart_view->setChart(m_cost_chart);
 
     // === Latency Bar Chart ===
-    m_latency_chart = new QChart();
+    m_latency_chart = nullptr;
     m_latency_chart->setTitle("Response Latency (ms)");
     m_latency_chart->setAnimationOptions(QChart::SeriesAnimations);
-    m_latency_bar_series = new QBarSeries();
+    m_latency_bar_series = nullptr;
     m_latency_chart->addSeries(m_latency_bar_series);
     m_latency_chart->createDefaultAxes();
     m_latency_chart_view->setChart(m_latency_chart);
 
     // === Success Rate Line Chart ===
-    m_success_rate_chart = new QChart();
+    m_success_rate_chart = nullptr;
     m_success_rate_chart->setTitle("Success Rate Over Time (%)");
     m_success_rate_chart->setAnimationOptions(QChart::SeriesAnimations);
-    m_success_rate_line_series = new QLineSeries();
+    m_success_rate_line_series = nullptr;
     m_success_rate_chart->addSeries(m_success_rate_line_series);
     m_success_rate_chart->createDefaultAxes();
     m_success_rate_chart_view->setChart(m_success_rate_chart);
@@ -226,7 +226,7 @@ void MetricsDashboard::updateSummaryLabels()
     m_total_cost_label->setText(std::string("$%1"));
 
     std::string active_model = m_adapter->getActiveModel();
-    m_active_model_label->setText(active_model.isEmpty() ? "None" : active_model);
+    m_active_model_label->setText(active_model.empty() ? "None" : active_model);
 
     void* stats = m_adapter->getStatistics();
     int total_requests = stats.value("total_requests").toInt();
@@ -263,7 +263,7 @@ void MetricsDashboard::updateLatencyChart()
 
     m_latency_bar_series->clear();
     
-    QBarSet *bar_set = new QBarSet("Latency");
+    QBarSet *bar_set = nullptr;
     std::vector<std::string> categories;
     
     void* stats = m_adapter->getStatistics();
@@ -288,7 +288,7 @@ void MetricsDashboard::updateSuccessRateChart()
     void* stats = m_adapter->getStatistics();
     int success_rate = stats.value("success_rate").toInt();
     
-    qint64 now = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
+    int64_t now = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     m_timestamp_history.append(now);
     m_success_rate_history.append(success_rate);
     
@@ -320,8 +320,8 @@ void MetricsDashboard::updateRequestCountTable()
         
         int row = m_request_count_table->rowCount();
         m_request_count_table->insertRow(row);
-        m_request_count_table->setItem(row, 0, new QTableWidgetItem(name));
-        m_request_count_table->setItem(row, 1, new QTableWidgetItem(std::string::number(count)));
+        m_request_count_table->setItem(row, 0, nullptr);
+        m_request_count_table->setItem(row, 1, nullptr));
     }
 }
 
@@ -338,15 +338,15 @@ void MetricsDashboard::updateProviderStatus()
     for (const std::string& provider : providers) {
         int row = m_provider_status_table->rowCount();
         m_provider_status_table->insertRow(row);
-        m_provider_status_table->setItem(row, 0, new QTableWidgetItem(provider));
-        m_provider_status_table->setItem(row, 1, new QTableWidgetItem("Active"));
+        m_provider_status_table->setItem(row, 0, nullptr);
+        m_provider_status_table->setItem(row, 1, nullptr);
     }
 }
 
 void MetricsDashboard::exportToCsv()
 {
     std::string filename = QFileDialog::getSaveFileName(this, "Export Metrics to CSV", "", "CSV Files (*.csv)");
-    if (filename.isEmpty()) return;
+    if (filename.empty()) return;
     
     if (m_adapter && m_adapter->exportStatisticsToCsv(filename)) {
     }
@@ -355,7 +355,7 @@ void MetricsDashboard::exportToCsv()
 void MetricsDashboard::exportToJson()
 {
     std::string filename = QFileDialog::getSaveFileName(this, "Export Metrics to JSON", "", "JSON Files (*.json)");
-    if (filename.isEmpty()) return;
+    if (filename.empty()) return;
     
     if (!m_adapter) return;
     
@@ -399,4 +399,5 @@ void MetricsDashboard::onAutoRefreshTriggered()
 }
 
 // MOC removed
+
 

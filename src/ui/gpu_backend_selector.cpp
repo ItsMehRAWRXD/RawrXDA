@@ -19,36 +19,36 @@ GPUBackendSelector::GPUBackendSelector(void* parent)
 }
 
 void GPUBackendSelector::setupUI() {
-    QHBoxLayout* layout = new QHBoxLayout(this);
+    void* layout = new void(this);
     layout->setContentsMargins(5, 2, 5, 2);
     layout->setSpacing(8);
     
     // Icon label
-    m_iconLabel = new QLabel(this);
+    m_iconLabel = new void(this);
     m_iconLabel->setFixedSize(16, 16);
     m_iconLabel->setStyleSheet("color: #569cd6;");
     m_iconLabel->setText("🖥");
     layout->addWidget(m_iconLabel);
     
     // Backend combo
-    m_backendCombo = new QComboBox(this);
+    m_backendCombo = new void(this);
     m_backendCombo->setMinimumWidth(120);
     m_backendCombo->setStyleSheet(
-        "QComboBox {"
+        "void {"
         "  background-color: #2d2d30;"
         "  color: #d4d4d4;"
         "  border: 1px solid #3c3c3c;"
         "  padding: 3px 8px;"
         "  border-radius: 3px;"
         "}"
-        "QComboBox:hover {"
+        "void:hover {"
         "  border: 1px solid #569cd6;"
         "}"
-        "QComboBox::drop-down {"
+        "void::drop-down {"
         "  border: none;"
         "  width: 20px;"
         "}"
-        "QComboBox QAbstractItemView {"
+        "void QAbstractItemView {"
         "  background-color: #2d2d30;"
         "  color: #d4d4d4;"
         "  selection-background-color: #0e639c;"
@@ -58,7 +58,7 @@ void GPUBackendSelector::setupUI() {
     layout->addWidget(m_backendCombo);
     
     // Status label
-    m_statusLabel = new QLabel(this);
+    m_statusLabel = new void(this);
     m_statusLabel->setStyleSheet("color: #888888; font-size: 10px;");
     m_statusLabel->setText("Detecting...");
     layout->addWidget(m_statusLabel);
@@ -83,11 +83,11 @@ void GPUBackendSelector::detectBackends() {
     
 #ifdef _WIN32
     // Detect CUDA
-    QProcess nvidiaSmi;
+    void* nvidiaSmi;
     nvidiaSmi.start("nvidia-smi", std::vector<std::string>() << "--query-gpu=name,memory.total" << "--format=csv,noheader");
     if (nvidiaSmi.waitForFinished(2000)) {
         std::string output = nvidiaSmi.readAllStandardOutput().trimmed();
-        if (!output.isEmpty()) {
+        if (!output.empty()) {
             std::vector<std::string> parts = output.split(',');
             
             BackendInfo cudaInfo;
@@ -112,7 +112,7 @@ void GPUBackendSelector::detectBackends() {
     }
     
     // Detect Vulkan
-    QProcess vulkanInfo;
+    void* vulkanInfo;
     vulkanInfo.start("vulkaninfo", std::vector<std::string>() << "--summary");
     if (vulkanInfo.waitForFinished(2000)) {
         std::string output = vulkanInfo.readAllStandardOutput();
@@ -165,7 +165,7 @@ void GPUBackendSelector::detectBackends() {
     for (const auto& backend : m_availableBackends) {
         if (backend.available) {
             std::string itemText = std::string("%1 %2");
-            if (!backend.deviceName.isEmpty() && backend.backend != ComputeBackend::Auto) {
+            if (!backend.deviceName.empty() && backend.backend != ComputeBackend::Auto) {
                 itemText += std::string(" (%1)");
             }
             m_backendCombo->addItem(itemText, std::any::fromValue(static_cast<int>(backend.backend)));
@@ -264,4 +264,5 @@ std::string GPUBackendSelector::backendToIcon(ComputeBackend backend) const {
 }
 
 } // namespace RawrXD
+
 

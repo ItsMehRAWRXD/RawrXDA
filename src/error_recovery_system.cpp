@@ -22,8 +22,8 @@ ErrorRecoverySystem::ErrorRecoverySystem(void* parent)
     
     autoRecoveryTimer->start();
     healthCheckTimer->start();
-    
-    std::cout << "[ErrorRecoverySystem] Initialized with 15+ recovery strategies" << std::endl;
+
+
 }
 
 ErrorRecoverySystem::~ErrorRecoverySystem() {
@@ -211,8 +211,8 @@ void ErrorRecoverySystem::setupDefaultStrategies() {
     killRestart.isAutomatic = false; // Dangerous operation
     killRestart.recoverySteps << "Save state" << "Kill hanging process" << "Restart process" << "Restore state";
     strategies["kill_restart"] = killRestart;
-    
-    std::cout << "[ErrorRecoverySystem] Loaded " << strategies.size() << " recovery strategies" << std::endl;
+
+
 }
 
 std::string ErrorRecoverySystem::recordError(const std::string& component, ErrorSeverity severity,
@@ -235,15 +235,13 @@ std::string ErrorRecoverySystem::recordError(const std::string& component, Error
     
     // Log based on severity
     std::string severityStr = errorSeverityToString(severity);
-    std::cout << "[ErrorRecoverySystem] " << severityStr.toStdString() 
-              << " in " << component.toStdString() 
-              << ": " << message.toStdString() << std::endl;
-    
+
+
     errorRecorded(error);
     
     // Auto-recovery for critical errors
     if (autoRecoveryEnabled && (severity == ErrorSeverity::Critical || severity == ErrorSeverity::Error)) {
-        std::cout << "[ErrorRecoverySystem] Attempting auto-recovery for " << error.errorId.toStdString() << std::endl;
+        
         void*::singleShot(100, this, [this, errorId = error.errorId]() {
             attemptRecovery(errorId);
         });
@@ -254,7 +252,7 @@ std::string ErrorRecoverySystem::recordError(const std::string& component, Error
 
 bool ErrorRecoverySystem::attemptRecovery(const std::string& errorId) {
     if (!activeErrors.contains(errorId)) {
-        std::cout << "[ErrorRecoverySystem] Error not found: " << errorId.toStdString() << std::endl;
+        
         return false;
     }
     
@@ -262,7 +260,7 @@ bool ErrorRecoverySystem::attemptRecovery(const std::string& errorId) {
     
     // Check retry limit
     if (error.retryCount >= maxRetries) {
-        std::cout << "[ErrorRecoverySystem] Max retries exceeded for " << errorId.toStdString() << std::endl;
+        
         error.wasRecovered = false;
         recoveryFailed(error);
         return false;
@@ -271,13 +269,12 @@ bool ErrorRecoverySystem::attemptRecovery(const std::string& errorId) {
     // Select best recovery strategy
     RecoveryStrategy strategy = selectBestStrategy(error);
     
-    if (strategy.strategyId.isEmpty()) {
-        std::cout << "[ErrorRecoverySystem] No suitable strategy found for " << errorId.toStdString() << std::endl;
+    if (strategy.strategyId.empty()) {
+        
         return false;
     }
-    
-    std::cout << "[ErrorRecoverySystem] Applying strategy: " << strategy.name.toStdString() << std::endl;
-    
+
+
     // Execute recovery
     bool success = executeRecoveryStrategy(error, strategy);
     
@@ -290,20 +287,19 @@ bool ErrorRecoverySystem::attemptRecovery(const std::string& errorId) {
         // Move to recovered errors
         recoveredErrors.append(error);
         activeErrors.remove(errorId);
-        
-        std::cout << "[ErrorRecoverySystem] Recovery successful for " << errorId.toStdString() << std::endl;
+
+
         errorRecoveredRecord(error);
         
         return true;
     } else {
-        std::cout << "[ErrorRecoverySystem] Recovery attempt " << error.retryCount 
-                  << " failed for " << errorId.toStdString() << std::endl;
-        
+
+
         // Schedule another retry if under limit
         if (error.retryCount < maxRetries && autoRecoveryEnabled) {
             int delay = retryDelayMs * (1 << error.retryCount); // Exponential backoff
-            std::cout << "[ErrorRecoverySystem] Scheduling retry in " << delay << "ms" << std::endl;
-            
+
+
             void*::singleShot(delay, this, [this, errorId]() {
                 attemptRecovery(errorId);
             });
@@ -372,7 +368,7 @@ bool ErrorRecoverySystem::executeRecoveryStrategy(ErrorRecord& error, const Reco
     } else if (strategy.strategyId == "escalate_admin") {
         success = recoverEscalateAdmin(error);
     } else {
-        std::cout << "[ErrorRecoverySystem] Unknown strategy: " << strategy.strategyId.toStdString() << std::endl;
+        
     }
     
     return success;
@@ -380,13 +376,13 @@ bool ErrorRecoverySystem::executeRecoveryStrategy(ErrorRecord& error, const Reco
 
 bool ErrorRecoverySystem::recoverWithRetry(ErrorRecord& error) {
     // Simple retry with delay - actual retry happens in attemptRecovery
-    std::cout << "[ErrorRecoverySystem] Retry recovery for " << error.component.toStdString() << std::endl;
+    
     return true; // Indicate retry should continue
 }
 
 bool ErrorRecoverySystem::recoverFallbackLocal(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Falling back to local model for " << error.component.toStdString() << std::endl;
-    
+
+
     // Signal to switch to local execution
     fallbackToLocalRequested(error.component);
     
@@ -394,8 +390,8 @@ bool ErrorRecoverySystem::recoverFallbackLocal(ErrorRecord& error) {
 }
 
 bool ErrorRecoverySystem::recoverClearCache(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Clearing cache for " << error.component.toStdString() << std::endl;
-    
+
+
     // Signal cache clear
     cacheClearRequested(error.component);
     
@@ -404,64 +400,64 @@ bool ErrorRecoverySystem::recoverClearCache(ErrorRecord& error) {
 }
 
 bool ErrorRecoverySystem::recoverRestartComponent(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Restarting component: " << error.component.toStdString() << std::endl;
-    
+
+
     componentRestartRequested(error.component);
     
     return true;
 }
 
 bool ErrorRecoverySystem::recoverReconnectNetwork(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Reconnecting network for " << error.component.toStdString() << std::endl;
-    
+
+
     networkReconnectRequested();
     
     return true;
 }
 
 bool ErrorRecoverySystem::recoverReloadData(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Reloading data for " << error.component.toStdString() << std::endl;
-    
+
+
     dataReloadRequested(error.component);
     
     return true;
 }
 
 bool ErrorRecoverySystem::recoverReduceResources(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Reducing resource usage for " << error.component.toStdString() << std::endl;
-    
+
+
     resourceReductionRequested();
     
     return true;
 }
 
 bool ErrorRecoverySystem::recoverSwitchEndpoint(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Switching to backup endpoint" << std::endl;
-    
+
+
     endpointSwitchRequested(error.component);
     
     return true;
 }
 
 bool ErrorRecoverySystem::recoverGracefulDegradation(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Enabling graceful degradation" << std::endl;
-    
+
+
     gracefulDegradationEnabled();
     
     return true;
 }
 
 bool ErrorRecoverySystem::recoverReauthenticate(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Re-authenticating for " << error.component.toStdString() << std::endl;
-    
+
+
     reauthenticationRequested(error.component);
     
     return true;
 }
 
 bool ErrorRecoverySystem::recoverEscalateAdmin(ErrorRecord& error) {
-    std::cout << "[ErrorRecoverySystem] Escalating to administrator: " << error.message.toStdString() << std::endl;
-    
+
+
     adminEscalationRequired(error);
     
     return true; // Notification always succeeds
@@ -478,8 +474,8 @@ void ErrorRecoverySystem::resolveError(const std::string& errorId) {
     
     recoveredErrors.append(error);
     activeErrors.remove(errorId);
-    
-    std::cout << "[ErrorRecoverySystem] Manually resolved error: " << errorId.toStdString() << std::endl;
+
+
     errorRecoveredRecord(error);
 }
 
@@ -572,7 +568,7 @@ void ErrorRecoverySystem::processAutoRecovery() {
         // Only auto-recover errors that haven't exceeded retry limit
         if (error.retryCount < maxRetries) {
             std::chrono::system_clock::time_point now = std::chrono::system_clock::time_point::currentDateTime();
-            qint64 msSinceError = error.timestamp.msecsTo(now);
+            int64_t msSinceError = error.timestamp.msecsTo(now);
             
             // Wait before first retry
             if (error.retryCount == 0 && msSinceError > retryDelayMs) {
@@ -584,8 +580,7 @@ void ErrorRecoverySystem::processAutoRecovery() {
 
 void ErrorRecoverySystem::enableAutoRecovery(bool enable) {
     autoRecoveryEnabled = enable;
-    std::cout << "[ErrorRecoverySystem] Auto-recovery " 
-              << (enable ? "enabled" : "disabled") << std::endl;
+    
 }
 
 void ErrorRecoverySystem::setMaxRetries(int retries) {
@@ -599,12 +594,12 @@ void ErrorRecoverySystem::setRetryDelay(int milliseconds) {
 
 void ErrorRecoverySystem::clearErrorHistory() {
     errorHistory.clear();
-    std::cout << "[ErrorRecoverySystem] Error history cleared" << std::endl;
+    
 }
 
 void ErrorRecoverySystem::clearRecoveredErrors() {
     recoveredErrors.clear();
-    std::cout << "[ErrorRecoverySystem] Recovered errors cleared" << std::endl;
+    
 }
 
 std::string ErrorRecoverySystem::generateErrorId() {
@@ -664,4 +659,5 @@ void* ErrorRecoverySystem::getErrorStatistics() const {
     
     return stats;
 }
+
 

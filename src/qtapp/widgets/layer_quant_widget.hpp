@@ -1,10 +1,10 @@
 #pragma once
 
 
-QT_BEGIN_NAMESPACE
+// REMOVED_QT: // QT_BEGIN_NAMESPACE
 
 
-QT_END_NAMESPACE
+// REMOVED_QT: // QT_END_NAMESPACE
 
 /**
  * \class LayerQuantWidget
@@ -50,11 +50,11 @@ private:
 private:
     void setupUI();
 
-    QComboBox* m_quantModeCombo{};
-    QSpinBox* m_layerStartSpin{};
-    QSpinBox* m_layerEndSpin{};
-    QPushButton* m_applyButton{};
-    QLabel* m_statusLabel{};
+    void* m_quantModeCombo{};
+    void* m_layerStartSpin{};
+    void* m_layerEndSpin{};
+    void* m_applyButton{};
+    void* m_statusLabel{};
     std::string m_currentMode{"Q4_0"};
 };
 
