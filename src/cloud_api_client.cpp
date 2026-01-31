@@ -126,7 +126,7 @@ void CloudApiClient::generateAsync(const std::string& prompt,
     auto result = generate(prompt, config);
     ApiResponse response;
     response.content = result;
-    response.success = !result.isEmpty();
+    response.success = !result.empty();
     callback(response);
 }
 
@@ -139,7 +139,7 @@ void CloudApiClient::generateStream(const std::string& prompt,
     // In production, use SSE (Server-Sent Events) support
     std::string result = generate(prompt, config);
     
-    if (!result.isEmpty()) {
+    if (!result.empty()) {
         // Split result into chunks (simulate streaming)
         int chunk_size = 50;
         for (int i = 0; i < result.length(); i += chunk_size) {
@@ -158,7 +158,7 @@ bool CloudApiClient::checkProviderHealth(const ModelConfig& config)
 {
     // Simple health check by attempting to list models
     std::vector<std::string> models = listModels(config);
-    bool healthy = !models.isEmpty();
+    bool healthy = !models.empty();
     
     ApiCallLog log;
     log.timestamp = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
@@ -313,7 +313,7 @@ void* CloudApiClient::buildAwsBedrockRequest(const std::string& prompt, const Mo
 
 std::string CloudApiClient::parseAnthropicResponse(const void*& response)
 {
-    if (!response.contains("content") || response["content"].toArray().isEmpty()) {
+    if (!response.contains("content") || response["content"].toArray().empty()) {
         return "";
     }
     
@@ -327,7 +327,7 @@ std::string CloudApiClient::parseAnthropicResponse(const void*& response)
 
 std::string CloudApiClient::parseOpenAIResponse(const void*& response)
 {
-    if (!response.contains("choices") || response["choices"].toArray().isEmpty()) {
+    if (!response.contains("choices") || response["choices"].toArray().empty()) {
         return "";
     }
     
@@ -343,7 +343,7 @@ std::string CloudApiClient::parseOpenAIResponse(const void*& response)
 
 std::string CloudApiClient::parseGoogleResponse(const void*& response)
 {
-    if (!response.contains("candidates") || response["candidates"].toArray().isEmpty()) {
+    if (!response.contains("candidates") || response["candidates"].toArray().empty()) {
         return "";
     }
     
@@ -352,7 +352,7 @@ std::string CloudApiClient::parseGoogleResponse(const void*& response)
     
     if (candidate.contains("content") && candidate["content"].toObject().contains("parts")) {
         void* parts = candidate["content"].toObject()["parts"].toArray();
-        if (!parts.isEmpty()) {
+        if (!parts.empty()) {
             return parts[0].toObject()["text"].toString();
         }
     }
@@ -436,7 +436,7 @@ void CloudApiClient::clearCallHistory()
 
 ApiCallLog CloudApiClient::getLastCall() const
 {
-    if (call_history.isEmpty()) {
+    if (call_history.empty()) {
         return ApiCallLog();
     }
     return call_history.last();
@@ -444,7 +444,7 @@ ApiCallLog CloudApiClient::getLastCall() const
 
 double CloudApiClient::getAverageLatency() const
 {
-    if (call_history.isEmpty()) {
+    if (call_history.empty()) {
         return 0.0;
     }
     
@@ -458,7 +458,7 @@ double CloudApiClient::getAverageLatency() const
 
 int CloudApiClient::getSuccessRate() const
 {
-    if (call_history.isEmpty()) {
+    if (call_history.empty()) {
         return 0;
     }
     
@@ -471,4 +471,5 @@ int CloudApiClient::getSuccessRate() const
     
     return (successful * 100) / call_history.size();
 }
+
 

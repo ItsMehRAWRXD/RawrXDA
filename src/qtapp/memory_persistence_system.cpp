@@ -478,8 +478,8 @@ nlohmann::json MemoryPersistenceSystem::deserializeContext(const nlohmann::json&
 nlohmann::json MemoryPersistenceSystem::createCurrentContext() {
     nlohmann::json context;
     context["timestamp"] = // DateTime::currentDateTime().toString(ISODate);
-    context["application"] = QApplication::applicationName();
-    context["version"] = QApplication::applicationVersion();
+    context["application"] = void::applicationName();
+    context["version"] = void::applicationVersion();
     
     // Add current IDE state
     context["active_files"] = nlohmann::json(); // Would be populated from MainWindow

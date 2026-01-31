@@ -85,11 +85,11 @@ private:
     // UI components
     QPlainTextEdit *m_log_display;
     QTableWidget *m_log_table;
-    QLineEdit *m_search_input;
-    QComboBox *m_filter_level_combo;
-    QCheckBox *m_auto_scroll_checkbox;
-    QPushButton *m_clear_button;
-    QPushButton *m_export_button;
+    void *m_search_input;
+    void *m_filter_level_combo;
+    void *m_auto_scroll_checkbox;
+    void *m_clear_button;
+    void *m_export_button;
 
     // Log storage
     std::vector<LogEntry> m_log_entries;

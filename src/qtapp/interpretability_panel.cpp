@@ -189,12 +189,12 @@ void InterpretabilityPanel::clearVisualizations()
 
 void InterpretabilityPanel::setupUI()
 {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     
     // Visualization type selector
-    QHBoxLayout* typeLayout = new QHBoxLayout();
-    QLabel* typeLabel = new QLabel("Visualization Type:");
-    m_vizTypeCombo = new QComboBox();
+    void* typeLayout = new void();
+    void* typeLabel = new void("Visualization Type:");
+    m_vizTypeCombo = new void();
     m_vizTypeCombo->addItem("Attention Heatmap", static_cast<int>(VisualizationType::AttentionHeatmap));
     m_vizTypeCombo->addItem("Feature Importance", static_cast<int>(VisualizationType::FeatureImportance));
     m_vizTypeCombo->addItem("Gradient Flow", static_cast<int>(VisualizationType::GradientFlow));
@@ -212,9 +212,9 @@ void InterpretabilityPanel::setupUI()
     mainLayout->addLayout(typeLayout);
     
     // Layer selector
-    QHBoxLayout* layerLayout = new QHBoxLayout();
-    QLabel* layerLabel = new QLabel("Layer:");
-    m_layerSlider = new QSlider(//Horizontal);
+    void* layerLayout = new void();
+    void* layerLabel = new void("Layer:");
+    m_layerSlider = nullptr;
     m_layerSlider->setRange(0, 50);
     m_layerSlider->setValue(0);
     
@@ -223,9 +223,9 @@ void InterpretabilityPanel::setupUI()
     mainLayout->addLayout(layerLayout);
     
     // Attention head selector
-    QHBoxLayout* attentionLayout = new QHBoxLayout();
-    QLabel* attentionLabel = new QLabel("Attention Head:");
-    m_attentionHeadCombo = new QComboBox();
+    void* attentionLayout = new void();
+    void* attentionLabel = new void("Attention Head:");
+    m_attentionHeadCombo = new void();
     for (int i = 0; i < 12; ++i) {
         m_attentionHeadCombo->addItem(std::string("Head %1"), i);
     }
@@ -236,20 +236,20 @@ void InterpretabilityPanel::setupUI()
     mainLayout->addLayout(attentionLayout);
     
     // Tab widget for different visualizations
-    m_tabWidget = new QTabWidget();
-    m_chart = new QChart();
-    m_chartView = new QChartView(m_chart);
+    m_tabWidget = new void();
+    m_chart = nullptr;
+    m_chartView = nullptr;
     m_chartView->setRenderHint(QPainter::Antialiasing);
     m_tabWidget->addTab(m_chartView, "Chart");
     
     mainLayout->addWidget(m_tabWidget);
     
     // Stats label
-    m_statsLabel = new QLabel("Ready");
+    m_statsLabel = new void("Ready");
     mainLayout->addWidget(m_statsLabel);
     
     // Problems label
-    m_problemsLabel = new QLabel("No issues detected");
+    m_problemsLabel = new void("No issues detected");
     mainLayout->addWidget(m_problemsLabel);
     
     setLayout(mainLayout);

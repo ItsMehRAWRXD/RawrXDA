@@ -83,13 +83,13 @@ public:
     
     // Statistics
     struct Stats {
-        qint64 requestsProcessed = 0;
-        qint64 responsesProcessed = 0;
-        qint64 chunksProcessed = 0;
-        qint64 cacheHits = 0;
-        qint64 cacheMisses = 0;
-        qint64 bytesPatched = 0;
-        qint64 patchesApplied = 0;
+        int64_t requestsProcessed = 0;
+        int64_t responsesProcessed = 0;
+        int64_t chunksProcessed = 0;
+        int64_t cacheHits = 0;
+        int64_t cacheMisses = 0;
+        int64_t bytesPatched = 0;
+        int64_t patchesApplied = 0;
         double avgProcessingTimeMs = 0.0;
     };
     
@@ -117,7 +117,7 @@ public:
     PatchResult cloneTensor(const std::string& sourceTensor, const std::string& destTensor);
     PatchResult swapTensors(const std::string& tensor1, const std::string& tensor2);
     PatchResult applyMemoryPatch(const std::unordered_map<size_t, std::vector<uint8_t>>& patches);
-    qint64 searchModelMemory(size_t startOffset, const std::vector<uint8_t>& pattern) const;
+    int64_t searchModelMemory(size_t startOffset, const std::vector<uint8_t>& pattern) const;
     
     void* getModelMemoryPointer(size_t offset = 0);
     PatchResult lockMemoryRegion(size_t offset, size_t size);
@@ -140,7 +140,7 @@ public:
 private:
     // Helper methods
     std::vector<uint8_t> bytePatchInPlace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement);
-    qint64 findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, qint64 startPos = 0) const;
+    int64_t findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, int64_t startPos = 0) const;
     void* injectSystemPrompt(const void*& request, const std::string& prompt);
     void* modifyParameter(const void*& request, const std::string& param, const std::any& value);
     void* filterResponse(const void*& response, const std::vector<std::string>& patterns);
@@ -163,4 +163,5 @@ private:
     
     std::chrono::system_clock::time_point m_lastProcessTime;
 };
+
 

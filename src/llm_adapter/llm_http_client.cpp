@@ -84,7 +84,7 @@ bool LLMHttpClient::initialize(
 
     // Validate base URL
     if (!isValidURL(config.baseUrl)) {
-        std::cerr << "[LLMHttpClient] Invalid base URL: " << config.baseUrl << std::endl;
+        
         return false;
     }
 
@@ -97,10 +97,6 @@ bool LLMHttpClient::initialize(
         }
     }
 
-    std::cout << "[LLMHttpClient] Initialized for backend: " << (int)backend
-              << " | Endpoint: " << config.baseUrl
-              << " | Timeout: " << config.timeoutMs << "ms"
-              << " | Max retries: " << config.maxRetries << std::endl;
 
     return testConnectivity();
 }
@@ -216,7 +212,7 @@ APIResponse LLMHttpClient::makeStreamingRequest(
                                 chunkCallback(chunk);
                             }
                         } catch (const std::exception& e) {
-                            std::cerr << "[LLMHttpClient] Error parsing Ollama chunk: " << e.what() << std::endl;
+                            
                         }
                     }
                 }
@@ -231,7 +227,7 @@ APIResponse LLMHttpClient::makeStreamingRequest(
                                 chunkCallback(chunk);
                             }
                         } catch (const std::exception& e) {
-                            std::cerr << "[LLMHttpClient] Error parsing OpenAI chunk: " << e.what() << std::endl;
+                            
                         }
                     }
                 }
@@ -246,7 +242,7 @@ APIResponse LLMHttpClient::makeStreamingRequest(
                                 chunkCallback(chunk);
                             }
                         } catch (const std::exception& e) {
-                            std::cerr << "[LLMHttpClient] Error parsing Anthropic chunk: " << e.what() << std::endl;
+                            
                         }
                     }
                 }
@@ -457,7 +453,7 @@ StreamChunk LLMHttpClient::parseOllamaStreamChunk(const std::string& chunk) {
         parsed.metadata = jsonChunk;
 
     } catch (const std::exception& e) {
-        std::cerr << "[LLMHttpClient] Failed to parse Ollama chunk: " << e.what() << std::endl;
+        
     }
 
     return parsed;
@@ -509,7 +505,7 @@ StreamChunk LLMHttpClient::parseOpenAIStreamChunk(const std::string& line) {
         }
 
     } catch (const std::exception& e) {
-        std::cerr << "[LLMHttpClient] Failed to parse OpenAI chunk: " << e.what() << std::endl;
+        
     }
 
     return parsed;
@@ -551,7 +547,7 @@ StreamChunk LLMHttpClient::parseAnthropicStreamChunk(const std::string& line) {
         }
 
     } catch (const std::exception& e) {
-        std::cerr << "[LLMHttpClient] Failed to parse Anthropic chunk: " << e.what() << std::endl;
+        
     }
 
     return parsed;
@@ -603,13 +599,12 @@ bool LLMHttpClient::testConnectivity() {
         curl_easy_cleanup(curl);
 
         bool connected = (res == CURLE_OK && responseCode >= 200 && responseCode < 300);
-        std::cout << "[LLMHttpClient] Connectivity test: " << (connected ? "SUCCESS" : "FAILED")
-                  << " (response code: " << responseCode << ")" << std::endl;
+        
         return connected;
 
     } catch (const std::exception& e) {
         curl_easy_cleanup(curl);
-        std::cerr << "[LLMHttpClient] Connectivity test exception: " << e.what() << std::endl;
+        
         return false;
     }
 }
@@ -836,8 +831,7 @@ APIResponse LLMHttpClient::sendHTTPRequest(const APIRequest& request, bool retry
             // Check if we should retry
             if (!response.success && retry && shouldRetry(static_cast<int>(responseCode), retryCount)) {
                 int delayMs = calculateBackoffDelay(retryCount);
-                std::cout << "[LLMHttpClient] Retry " << (retryCount + 1) << "/" << m_config.maxRetries
-                          << " after " << delayMs << "ms..." << std::endl;
+                
                 std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
                 retryCount++;
                 continue;
@@ -983,7 +977,7 @@ bool LLMHttpClient::isTokenExpired() const {
 
 bool LLMHttpClient::refreshOAuth2Token() {
     // Placeholder for OAuth2 token refresh
-    std::cout << "[LLMHttpClient] OAuth2 token refresh not yet implemented" << std::endl;
+    
     return false;
 }
 

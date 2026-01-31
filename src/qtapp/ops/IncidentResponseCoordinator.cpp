@@ -13,7 +13,7 @@ int64_t NowMs() {
 }
 
 void LogInfo(const std::string& event, const std::string& detail) {
-    std::cout << "[INFO] ops.incident " << event << " " << detail << "\n";
+    
 }
 }
 

@@ -6,7 +6,7 @@ ChatWorkspace::ChatWorkspace(void* parent) : void(parent) {
 }
 
 void ChatWorkspace::initialize() {
-    QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->addWidget(new QLabel("Chat Workspace"));
+    void* layout = new void(this);
+    layout->addWidget(new void("Chat Workspace"));
 }
 

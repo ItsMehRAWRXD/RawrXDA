@@ -13,13 +13,13 @@ LayerQuantWidget::~LayerQuantWidget()
 
 void LayerQuantWidget::setupUI()
 {
-    auto layout = new QVBoxLayout(this);
+    auto layout = new void(this);
 
     // Mode selection
-    auto modeLayout = new QHBoxLayout();
-    modeLayout->addWidget(new QLabel("Quantization Mode:"));
+    auto modeLayout = new void();
+    modeLayout->addWidget(new void("Quantization Mode:"));
     
-    m_quantModeCombo = new QComboBox(this);
+    m_quantModeCombo = new void(this);
     m_quantModeCombo->addItems({"Q4_0", "Q4_1", "Q5_0", "Q5_1", "Q6_K", "Q8_0", "F16", "F32"});
     m_quantModeCombo->setCurrentText("Q4_0");
 // Qt connect removed
@@ -27,31 +27,31 @@ void LayerQuantWidget::setupUI()
     layout->addLayout(modeLayout);
 
     // Layer range selection
-    auto layerLayout = new QHBoxLayout();
-    layerLayout->addWidget(new QLabel("Quantize layers:"));
+    auto layerLayout = new void();
+    layerLayout->addWidget(new void("Quantize layers:"));
     
-    m_layerStartSpin = new QSpinBox(this);
+    m_layerStartSpin = nullptr;
     m_layerStartSpin->setMinimum(0);
     m_layerStartSpin->setMaximum(1000);
     m_layerStartSpin->setValue(0);
-    layerLayout->addWidget(new QLabel("From:"));
+    layerLayout->addWidget(new void("From:"));
     layerLayout->addWidget(m_layerStartSpin);
 
-    m_layerEndSpin = new QSpinBox(this);
+    m_layerEndSpin = nullptr;
     m_layerEndSpin->setMinimum(0);
     m_layerEndSpin->setMaximum(1000);
     m_layerEndSpin->setValue(1000);
-    layerLayout->addWidget(new QLabel("To:"));
+    layerLayout->addWidget(new void("To:"));
     layerLayout->addWidget(m_layerEndSpin);
     layout->addLayout(layerLayout);
 
     // Apply button
-    m_applyButton = new QPushButton("Apply Quantization", this);
+    m_applyButton = new void("Apply Quantization", this);
 // Qt connect removed
     layout->addWidget(m_applyButton);
 
     // Status label
-    m_statusLabel = new QLabel("Ready", this);
+    m_statusLabel = new void("Ready", this);
     layout->addWidget(m_statusLabel);
 
     layout->addStretch();

@@ -104,7 +104,7 @@ void* GGUFServerHotpatch::processRequest(const void*& request)
     
     m_stats.requestsProcessed++;
     
-    qint64 elapsed = timer.nsecsElapsed() / 1000000;
+    int64_t elapsed = timer.nsecsElapsed() / 1000000;
     m_stats.avgProcessingTimeMs = (m_stats.avgProcessingTimeMs * (m_stats.requestsProcessed - 1) + elapsed) / m_stats.requestsProcessed;
     
     if (modified != request) {
@@ -148,7 +148,7 @@ void* GGUFServerHotpatch::processResponse(const void*& response)
     
     m_stats.responsesProcessed++;
     
-    qint64 elapsed = timer.nsecsElapsed() / 1000000;
+    int64_t elapsed = timer.nsecsElapsed() / 1000000;
     m_stats.avgProcessingTimeMs = (m_stats.avgProcessingTimeMs * (m_stats.responsesProcessed - 1) + elapsed) / m_stats.responsesProcessed;
     
     if (modified != response) {
@@ -201,7 +201,7 @@ std::vector<uint8_t> GGUFServerHotpatch::patchRequestBytes(const std::vector<uin
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
-    if (!m_enabled || m_defaultParams.isEmpty()) {
+    if (!m_enabled || m_defaultParams.empty()) {
         return requestData;
     }
     
@@ -353,13 +353,13 @@ bool GGUFServerHotpatch::isEnabled() const
 
 std::vector<uint8_t> GGUFServerHotpatch::bytePatchInPlace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement)
 {
-    if (pattern.isEmpty() || pattern.size() != replacement.size()) {
+    if (pattern.empty() || pattern.size() != replacement.size()) {
         std::vector<uint8_t> result = data;
         return result.replace(pattern, replacement);
     }
     
     std::vector<uint8_t> result = data;
-    qint64 pos = 0;
+    int64_t pos = 0;
     
     while ((pos = findPattern(result, pattern, pos)) != -1) {
         std::memcpy(result.data() + pos, replacement.constData(), replacement.size());
@@ -370,18 +370,18 @@ std::vector<uint8_t> GGUFServerHotpatch::bytePatchInPlace(const std::vector<uint
     return result;
 }
 
-qint64 GGUFServerHotpatch::findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, qint64 startPos) const
+int64_t GGUFServerHotpatch::findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, int64_t startPos) const
 {
-    if (pattern.isEmpty() || startPos >= data.size()) {
+    if (pattern.empty() || startPos >= data.size()) {
         return -1;
     }
     
     const char* dataPtr = data.constData() + startPos;
     const char* patternPtr = pattern.constData();
-    qint64 dataLen = data.size() - startPos;
-    qint64 patternLen = pattern.size();
+    int64_t dataLen = data.size() - startPos;
+    int64_t patternLen = pattern.size();
     
-    for (qint64 i = 0; i <= dataLen - patternLen; ++i) {
+    for (int64_t i = 0; i <= dataLen - patternLen; ++i) {
         if (std::memcmp(dataPtr + i, patternPtr, patternLen) == 0) {
             return startPos + i;
         }
@@ -394,7 +394,7 @@ void* GGUFServerHotpatch::injectSystemPrompt(const void*& request, const std::st
 {
     void* modified = request;
     
-    if (prompt.isEmpty()) {
+    if (prompt.empty()) {
         return modified;
     }
     
@@ -428,7 +428,7 @@ void* GGUFServerHotpatch::filterResponse(const void*& response, const std::vecto
 {
     void* modified = response;
     
-    if (patterns.isEmpty()) {
+    if (patterns.empty()) {
         return modified;
     }
     
@@ -501,7 +501,7 @@ PatchResult GGUFServerHotpatch::detachFromModelMemory()
 std::vector<uint8_t> GGUFServerHotpatch::readModelMemory(size_t offset, size_t size) const
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
-    if (m_modelData.isEmpty() || offset >= (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset >= (size_t)m_modelData.size()) {
         return std::vector<uint8_t>();
     }
     
@@ -512,7 +512,7 @@ std::vector<uint8_t> GGUFServerHotpatch::readModelMemory(size_t offset, size_t s
 PatchResult GGUFServerHotpatch::writeModelMemory(size_t offset, const std::vector<uint8_t>& data)
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
-    if (m_modelData.isEmpty() || offset + data.size() > (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset + data.size() > (size_t)m_modelData.size()) {
         return PatchResult::error(8001, "Write out of bounds");
     }
     
@@ -591,10 +591,10 @@ PatchResult GGUFServerHotpatch::applyMemoryPatch(const std::unordered_map<size_t
     return PatchResult::ok("Memory patches applied successfully", totalBytes);
 }
 
-qint64 GGUFServerHotpatch::searchModelMemory(size_t startOffset, const std::vector<uint8_t>& pattern) const
+int64_t GGUFServerHotpatch::searchModelMemory(size_t startOffset, const std::vector<uint8_t>& pattern) const
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
-    if (m_modelData.isEmpty() || pattern.isEmpty() || startOffset >= (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || pattern.empty() || startOffset >= (size_t)m_modelData.size()) {
         return -1;
     }
     
@@ -611,7 +611,7 @@ qint64 GGUFServerHotpatch::searchModelMemory(size_t startOffset, const std::vect
 void* GGUFServerHotpatch::getModelMemoryPointer(size_t offset)
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
-    if (m_modelData.isEmpty() || offset >= (size_t)m_modelData.size()) {
+    if (m_modelData.empty() || offset >= (size_t)m_modelData.size()) {
         return nullptr;
     }
     return (void*)(m_modelData.data() + offset);
@@ -651,7 +651,7 @@ PatchResult GGUFServerHotpatch::patchVocabularyEntry(int tokenId, const std::str
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
-    if (tokenId < 0 || newToken.isEmpty()) {
+    if (tokenId < 0 || newToken.empty()) {
         return PatchResult::error(8010, "Invalid token ID or empty token string");
     }
     
@@ -664,4 +664,6 @@ PatchResult GGUFServerHotpatch::patchVocabularyEntry(int tokenId, const std::str
     
     return PatchResult::ok(std::string("Vocabulary entry %1 patched to '%2'"));
 }
+
+
 

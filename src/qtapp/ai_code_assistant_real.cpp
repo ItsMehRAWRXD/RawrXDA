@@ -4,7 +4,7 @@
 AICodeAssistant::AICodeAssistant(void *parent)
     : void(parent)
     , m_networkManager(new void*(this))
-    , m_process(new QProcess(this))
+    , m_process(new void*(this))
     , m_ollamaUrl("http://localhost:11434")
     , m_model("ministral-3")
     , m_temperature(0.3f)
@@ -19,7 +19,7 @@ AICodeAssistant::AICodeAssistant(void *parent)
 
 AICodeAssistant::~AICodeAssistant()
 {
-    if (m_process->state() == QProcess::Running) {
+    if (m_process->state() == void*::Running) {
         m_process->kill();
     }
 }
@@ -75,8 +75,8 @@ void AICodeAssistant::searchFiles(const std::string &pattern, const std::string 
     startTiming();
     commandProgress("Searching files...");
     
-    std::string searchDir = directory.isEmpty() ? m_workspaceRoot : directory;
-    if (searchDir.isEmpty()) {
+    std::string searchDir = directory.empty() ? m_workspaceRoot : directory;
+    if (searchDir.empty()) {
         searchDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
     }
     
@@ -94,8 +94,8 @@ void AICodeAssistant::grepFiles(const std::string &pattern, const std::string &d
     startTiming();
     commandProgress("Grepping files...");
     
-    std::string searchDir = directory.isEmpty() ? m_workspaceRoot : directory;
-    if (searchDir.isEmpty()) {
+    std::string searchDir = directory.empty() ? m_workspaceRoot : directory;
+    if (searchDir.empty()) {
         searchDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
     }
     
@@ -204,7 +204,7 @@ void AICodeAssistant::performOllamaRequest(const std::string &systemPrompt, cons
     commandProgress(std::string("Requesting %1..."));
     
     std::string url(std::string("%1/api/generate"));
-    QNetworkRequest request(url);
+    void* request(url);
     setupNetworkRequest(request);
     
     void* payload;
@@ -236,15 +236,15 @@ void AICodeAssistant::performOllamaRequest(const std::string &systemPrompt, cons
     });
 }
 
-void AICodeAssistant::setupNetworkRequest(QNetworkRequest &request)
+void AICodeAssistant::setupNetworkRequest(void* &request)
 {
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setHeader(QNetworkRequest::UserAgentHeader, "AICodeAssistant/1.0");
+    request.setHeader(void*::ContentTypeHeader, "application/json");
+    request.setHeader(void*::UserAgentHeader, "AICodeAssistant/1.0");
 }
 
 void AICodeAssistant::onNetworkReply()
 {
-    void* *reply = qobject_cast<void* *>(sender());
+// REMOVED_QT:     void* *reply = qobject_cast<void* *>(sender());
     if (!reply) return;
     
     if (reply->error() != void*::NoError) {
@@ -270,7 +270,7 @@ void AICodeAssistant::onNetworkReply()
         }
     }
     
-    if (!fullResponse.isEmpty()) {
+    if (!fullResponse.empty()) {
         std::string suggestion = parseAIResponse(fullResponse);
         suggestionReceived(suggestion, m_currentSuggestionType);
         logStructured("INFO", "Suggestion received",
@@ -343,7 +343,7 @@ std::vector<std::string> AICodeAssistant::performGrep(const std::string &directo
 
 std::string AICodeAssistant::executePowerShellSync(const std::string &command, bool &success)
 {
-    m_process->setProcessChannelMode(QProcess::MergedChannels);
+    m_process->setProcessChannelMode(void*::MergedChannels);
     m_process->start("pwsh.exe", std::vector<std::string>() << "-Command" << command);
     
     if (!m_process->waitForFinished(30000)) {
@@ -357,23 +357,23 @@ std::string AICodeAssistant::executePowerShellSync(const std::string &command, b
 
 void AICodeAssistant::executePowerShellAsync(const std::string &command)
 {
-    m_process->setProcessChannelMode(QProcess::MergedChannels);
+    m_process->setProcessChannelMode(void*::MergedChannels);
     m_process->start("pwsh.exe", std::vector<std::string>() << "-Command" << command);
 }
 
-void AICodeAssistant::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
+void AICodeAssistant::onProcessFinished(int exitCode, void*::ExitStatus exitStatus)
 {
     std::string output = std::string::fromUtf8(m_process->readAllStandardOutput());
     
     logStructured("INFO", "Process finished",
-        void*{{"exitCode", exitCode}, {"status", exitStatus == QProcess::NormalExit ? "Normal" : "Crashed"}});
+        void*{{"exitCode", exitCode}, {"status", exitStatus == void*::NormalExit ? "Normal" : "Crashed"}});
     
     commandOutputReceived(output);
     commandCompleted(exitCode);
     endTiming("Process Execution");
 }
 
-void AICodeAssistant::onProcessError(QProcess::ProcessError error)
+void AICodeAssistant::onProcessError(void*::ProcessError error)
 {
     std::string errorMsg = m_process->errorString();
     logStructured("ERROR", "Process error", void*{{"error", errorMsg}});
@@ -389,7 +389,7 @@ void AICodeAssistant::onProcessOutput()
 std::string AICodeAssistant::parseAIResponse(const std::string &response)
 {
     std::string cleaned = response;
-    cleaned.replace(QRegExp("^\\\[a-z]*\n"), "");
+    cleaned.replace(std::regex("^\\\[a-z]*\n"), "");
     cleaned.replace("`", "");
     return cleaned.trimmed();
 }
@@ -406,7 +406,7 @@ void AICodeAssistant::startTiming()
 
 void AICodeAssistant::endTiming(const std::string &operation)
 {
-    qint64 elapsed = m_timer.elapsed();
+    int64_t elapsed = m_timer.elapsed();
     latencyMeasured(elapsed);
     logStructured("DEBUG", "Operation timing",
         void*{{"operation", operation}, {"milliseconds", static_cast<int>(elapsed)}});
@@ -423,4 +423,6 @@ void AICodeAssistant::logStructured(const std::string &level, const std::string 
     
     void* doc(logEntry);
 }
+
+
 

@@ -36,25 +36,21 @@ endif()
 set(Qt6_DIR "C:/Qt/6.7.3/msvc2022_64/lib/cmake/Qt6")
 list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.7.3/msvc2022_64")
 
-find_package(Qt6 REQUIRED COMPONENTS Core)
 
 if(Qt6_FOUND)
     message(STATUS "Qt6 found: ${Qt6_VERSION}")
     add_definitions(-DHAVE_QT_CORE)
     include_directories(${Qt6_INCLUDE_DIRS})
-    link_libraries(Qt6::Core)
 else()
     message(WARNING "Qt6 not found. Qt-based benchmarks will be skipped.")
 endif()
 
 # Qt-based IDE shell (separate executable, no Vulkan)
 if(MSVC)
-    find_package(Qt6 COMPONENTS Widgets Network QUIET)
     if(FALSE AND Qt6_FOUND) # Disabled until headers exist
         message(STATUS "Building Qt Shell with Qt version: ${Qt6_VERSION}")
         
         # Enable Qt MOC for QObject classes
-        set(CMAKE_AUTOMOC ON)
 
         # Create a separate Qt target that doesn't depend on problematic files
         add_executable(RawrXD-QtShell 
@@ -88,7 +84,6 @@ if(MSVC)
             )
         endif()
         
-        target_link_libraries(RawrXD-QtShell PRIVATE Qt6::Widgets Qt6::Network Qt6::Core)
         target_include_directories(RawrXD-QtShell PRIVATE include ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/qtapp)
         
         set_target_properties(RawrXD-QtShell PROPERTIES

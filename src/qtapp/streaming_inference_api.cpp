@@ -12,9 +12,9 @@ StreamingInferenceAPI::~StreamingInferenceAPI() {
     }
 }
 
-qint64 StreamingInferenceAPI::startStream(const std::string& modelPath, const std::string& prompt,
+int64_t StreamingInferenceAPI::startStream(const std::string& modelPath, const std::string& prompt,
                                           int maxTokens, float temperature) {
-    qint64 streamId = m_nextStreamId++;
+    int64_t streamId = m_nextStreamId++;
     
     StreamState state;
     state.id = streamId;
@@ -33,7 +33,7 @@ qint64 StreamingInferenceAPI::startStream(const std::string& modelPath, const st
     return streamId;
 }
 
-bool StreamingInferenceAPI::cancelStream(qint64 streamId) {
+bool StreamingInferenceAPI::cancelStream(int64_t streamId) {
     if (!m_activeStreams.contains(streamId)) {
         return false;
     }
@@ -44,7 +44,7 @@ bool StreamingInferenceAPI::cancelStream(qint64 streamId) {
     return true;
 }
 
-bool StreamingInferenceAPI::isStreamActive(qint64 streamId) const {
+bool StreamingInferenceAPI::isStreamActive(int64_t streamId) const {
     return m_activeStreams.contains(streamId) && m_activeStreams[streamId].active;
 }
 
@@ -64,7 +64,7 @@ void StreamingInferenceAPI::setErrorCallback(ErrorCallback callback) {
     m_errorCallback = callback;
 }
 
-void StreamingInferenceAPI::onTokenReady(qint64 streamId, const std::string& token) {
+void StreamingInferenceAPI::onTokenReady(int64_t streamId, const std::string& token) {
     if (!m_activeStreams.contains(streamId)) return;
     
     StreamState& state = m_activeStreams[streamId];
@@ -85,7 +85,7 @@ void StreamingInferenceAPI::onTokenReady(qint64 streamId, const std::string& tok
     onStreamProgress(streamId, state.tokensGenerated, state.maxTokens);
 }
 
-void StreamingInferenceAPI::onStreamProgress(qint64 streamId, int current, int total) {
+void StreamingInferenceAPI::onStreamProgress(int64_t streamId, int current, int total) {
     if (!m_activeStreams.contains(streamId)) return;
     
     progressUpdated(streamId, current, total);
@@ -95,7 +95,7 @@ void StreamingInferenceAPI::onStreamProgress(qint64 streamId, int current, int t
     }
 }
 
-void StreamingInferenceAPI::onStreamComplete(qint64 streamId, const std::string& result) {
+void StreamingInferenceAPI::onStreamComplete(int64_t streamId, const std::string& result) {
     if (!m_activeStreams.contains(streamId)) return;
     
     StreamState& state = m_activeStreams[streamId];
@@ -113,7 +113,7 @@ void StreamingInferenceAPI::onStreamComplete(qint64 streamId, const std::string&
             << result.length() << "chars";
 }
 
-void StreamingInferenceAPI::onStreamError(qint64 streamId, const std::string& error) {
+void StreamingInferenceAPI::onStreamError(int64_t streamId, const std::string& error) {
     if (!m_activeStreams.contains(streamId)) return;
     
     StreamState& state = m_activeStreams[streamId];
@@ -129,4 +129,5 @@ void StreamingInferenceAPI::onStreamError(qint64 streamId, const std::string& er
     m_activeStreams.remove(streamId);
     
 }
+
 

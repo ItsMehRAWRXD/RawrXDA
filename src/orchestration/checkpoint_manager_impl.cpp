@@ -16,7 +16,7 @@ void initializeCheckpointManager() {
 }
 
 std::string saveCheckpointReal(const void*& metadata, const std::vector<uint8_t>& stateData, int compressionLevel) {
-    if (s_checkpointDir.isEmpty()) {
+    if (s_checkpointDir.empty()) {
         initializeCheckpointManager();
     }
     
@@ -50,8 +50,8 @@ std::string saveCheckpointReal(const void*& metadata, const std::vector<uint8_t>
         metaWithId["id"] = checkpointId;
         metaWithId["filePath"] = filePath;
         metaWithId["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
-        metaWithId["compressedSize"] = static_cast<qint64>(compressedData.size());
-        metaWithId["originalSize"] = static_cast<qint64>(stateData.size());
+        metaWithId["compressedSize"] = static_cast<int64_t>(compressedData.size());
+        metaWithId["originalSize"] = static_cast<int64_t>(stateData.size());
         
         s_checkpointRegistry[checkpointId] = metaWithId;
         
@@ -111,4 +111,6 @@ void* getCheckpointInfoReal(const std::string& checkpointId) {
     }
     return void*();
 }
+
+
 

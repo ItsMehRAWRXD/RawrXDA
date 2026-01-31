@@ -15,11 +15,8 @@ static void LogApiOperation(const std::string& severity, const std::string& oper
     auto time_t = std::chrono::system_clock::to_time_t(now);
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         now.time_since_epoch()).count() % 1000;
-    
-    std::cout << "[" << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S") 
-              << "." << std::setfill('0') << std::setw(3) << ms 
-              << "] [APIServer] [" << severity << "] " << operation 
-              << " - " << details << std::endl;
+
+
 }
 
 APIServer::APIServer(AppState& app_state)
@@ -553,9 +550,7 @@ void APIServer::RecordRequestMetrics(const std::string& endpoint,
                                     std::chrono::milliseconds duration,
                                     bool success) {
     // Record request duration and success rate for monitoring
-    std::cout << "Request metrics - Endpoint: " << endpoint 
-              << ", Duration: " << duration.count() << "ms"
-              << ", Success: " << (success ? "true" : "false") << std::endl;
+    
 }
 
 void APIServer::UpdateConnectionMetrics(int active_connections) {

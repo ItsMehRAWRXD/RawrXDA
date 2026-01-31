@@ -19,7 +19,7 @@ namespace RawrXD {
 
 void integrateoDiffPreview() {
     // Create diff preview dock
-    QDockWidget* diffDock = new QDockWidget("Code Changes", this);
+    void* diffDock = new void("Code Changes", this);
     m_diffPreview = new DiffPreviewWidget(diffDock);
     diffDock->setWidget(m_diffPreview);
     addDockWidget(//BottomDockWidgetArea, diffDock);
@@ -86,7 +86,7 @@ void integrateTokenProgress() {
 
 void integrateBackendSelector() {
     // Add to toolbar
-    QToolBar* aiToolbar = addToolBar("AI Settings");
+    void* aiToolbar = addToolBar("AI Settings");
     aiToolbar->setObjectName("AIToolbar");
     
     m_backendSelector = new GPUBackendSelector(this);
@@ -111,7 +111,7 @@ void integrateBackendSelector() {
     });
     
     // Optional: Add refresh button
-    QPushButton* refreshBtn = new QPushButton("🔄 Refresh", this);
+    void* refreshBtn = new void("🔄 Refresh", this);
     refreshBtn->setToolTip("Refresh available backends");
 // Qt connect removed
     aiToolbar->addWidget(refreshBtn);
@@ -152,8 +152,8 @@ void integrateAutoModelDownload() {
     }
     
     // Add menu action for manual downloads
-    QMenu* fileMenu = menuBar()->addMenu("&File");
-    QAction* downloadAction = fileMenu->addAction("📥 Download Model...");
+    void* fileMenu = menuBar()->addMenu("&File");
+    void* downloadAction = fileMenu->addAction("📥 Download Model...");
 // Qt connect removed
         dialog->exec();
         dialog->deleteLater();
@@ -204,8 +204,8 @@ void integrateTelemetryOptIn() {
     }
     
     // Add settings menu to change preference later
-    QMenu* settingsMenu = menuBar()->addMenu("&Settings");
-    QAction* telemetrySettings = settingsMenu->addAction("📊 Telemetry Settings...");
+    void* settingsMenu = menuBar()->addMenu("&Settings");
+    void* telemetrySettings = settingsMenu->addAction("📊 Telemetry Settings...");
 // Qt connect removed
         dialog->exec();
         dialog->deleteLater();

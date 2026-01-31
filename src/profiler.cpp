@@ -196,7 +196,7 @@ void Profiler::collectSystemMetrics()
 
     // Calculate batch latency
     if (!m_batchLatencies.empty()) {
-        qint64 totalLatency = 0;
+        int64_t totalLatency = 0;
         for (auto lat : m_batchLatencies) {
             totalLatency += lat;
         }
@@ -266,8 +266,8 @@ void* Profiler::getProfilingReport() const
         phaseData["callCount"] = static_cast<int>(it->durations.size());
         
         if (!it->durations.empty()) {
-            qint64 minDuration = *std::min_element(it->durations.begin(), it->durations.end());
-            qint64 maxDuration = *std::max_element(it->durations.begin(), it->durations.end());
+            int64_t minDuration = *std::min_element(it->durations.begin(), it->durations.end());
+            int64_t maxDuration = *std::max_element(it->durations.begin(), it->durations.end());
             
             phaseData["minMs"] = static_cast<int>(minDuration);
             phaseData["maxMs"] = static_cast<int>(maxDuration);
@@ -288,7 +288,7 @@ void* Profiler::getProfilingReport() const
 
     // Latency percentiles for batches
     if (!m_batchLatencies.empty()) {
-        std::vector<qint64> sorted = m_batchLatencies;
+        std::vector<int64_t> sorted = m_batchLatencies;
         std::sort(sorted.begin(), sorted.end());
         
         void* latency;
@@ -306,7 +306,7 @@ void* Profiler::getProfilingReport() const
     size_t start = m_snapshots.size() > 100 ? m_snapshots.size() - 100 : 0;
     for (size_t i = start; i < m_snapshots.size(); ++i) {
         void* snap;
-        snap["timestamp"] = static_cast<qint64>(m_snapshots[i].timestamp);
+        snap["timestamp"] = static_cast<int64_t>(m_snapshots[i].timestamp);
         snap["cpuPercent"] = static_cast<double>(m_snapshots[i].cpuUsagePercent);
         snap["memoryMB"] = static_cast<double>(m_snapshots[i].memoryUsageMB);
         snap["gpuPercent"] = static_cast<double>(m_snapshots[i].gpuUsagePercent);
@@ -355,4 +355,5 @@ void Profiler::analyzeMetrics()
         
     }
 }
+
 

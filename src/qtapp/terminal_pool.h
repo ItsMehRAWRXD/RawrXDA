@@ -6,9 +6,9 @@
 
 
 struct TerminalInfo {
-    QTextEdit* output_widget;
-    QLineEdit* input_widget;
-    QProcess* process;
+    void* output_widget;
+    void* input_widget;
+    void** process;
 };
 
 class TerminalPool : public void {
@@ -23,13 +23,13 @@ public:
     void readProcessOutput(int terminal_index);
     void readProcessError(int terminal_index);
     void closeTerminal(int tab_index);
-    
+
 
     void commandExecuted(const std::string& command);
     
 private:
     uint32_t pool_size_;
-    QTabWidget* tab_widget_;
+    void* tab_widget_;
     std::vector<TerminalInfo> terminals_;
 };
 

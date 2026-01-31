@@ -45,14 +45,14 @@ public:
             // Step 1: Detect compression format
             CompressionFormat format = detectFormat(inputPath);
             if (format == CompressionFormat::UNKNOWN) {
-                std::cerr << "❌ Unknown compression format: " << inputPath << std::endl;
+                
                 return false;
             }
 
             // Step 2: Read compressed file
             std::ifstream input(inputPath, std::ios::binary);
             if (!input) {
-                std::cerr << "❌ Cannot open file: " << inputPath << std::endl;
+                
                 return false;
             }
 
@@ -70,17 +70,17 @@ public:
 
             switch (format) {
                 case CompressionFormat::ZSTD:
-                    std::cout << "📦 Decompressing with Zstandard..." << std::endl;
+                    
                     success = decompressZstd(compressedData, decompressedData);
                     break;
 
                 case CompressionFormat::GZIP:
-                    std::cout << "📦 Decompressing with Gzip..." << std::endl;
+                    
                     success = decompressGzip(compressedData, decompressedData);
                     break;
 
                 case CompressionFormat::LZ4:
-                    std::cout << "📦 Decompressing with LZ4..." << std::endl;
+                    
                     success = decompressLz4(compressedData, decompressedData);
                     break;
 
@@ -89,20 +89,20 @@ public:
             }
 
             if (!success) {
-                std::cerr << "❌ Decompression failed" << std::endl;
+                
                 return false;
             }
 
             // Step 4: Validate GGUF magic
             if (!isValidGGUF(decompressedData)) {
-                std::cerr << "❌ Decompressed data is not valid GGUF" << std::endl;
+                
                 return false;
             }
 
             // Step 5: Write decompressed file
             std::ofstream output(outputPath, std::ios::binary);
             if (!output) {
-                std::cerr << "❌ Cannot create output file: " << outputPath << std::endl;
+                
                 return false;
             }
 
@@ -111,15 +111,12 @@ public:
 
             // Step 6: Log success with metrics
             double compressionRatio = (double)decompressedData.size() / compressedSize;
-            std::cout << "✅ Decompression successful!" << std::endl;
-            std::cout << "   Original: " << compressedSize << " bytes" << std::endl;
-            std::cout << "   Decompressed: " << decompressedData.size() << " bytes" << std::endl;
-            std::cout << "   Ratio: " << compressionRatio << ":1" << std::endl;
+
 
             return true;
 
         } catch (const std::exception& e) {
-            std::cerr << "❌ Exception during decompression: " << e.what() << std::endl;
+            
             return false;
         }
     }
@@ -178,7 +175,7 @@ private:
         try {
             // Parse Zstd frame header to get content size
             if (compressed.size() < 18) {
-                std::cerr << "ZSTD: Input too small" << std::endl;
+                
                 return false;
             }
 
@@ -187,7 +184,7 @@ private:
                 compressed.data(), compressed.size());
             
             if (contentSize == ZSTD_CONTENTSIZE_ERROR) {
-                std::cerr << "ZSTD: Not a valid Zstandard frame" << std::endl;
+                
                 return false;
             }
             
@@ -199,13 +196,13 @@ private:
                 
                 ZSTD_DStream* const dstream = ZSTD_createDStream();
                 if (!dstream) {
-                    std::cerr << "ZSTD: Failed to create decompression stream" << std::endl;
+                    
                     return false;
                 }
                 
                 size_t const initResult = ZSTD_initDStream(dstream);
                 if (ZSTD_isError(initResult)) {
-                    std::cerr << "ZSTD init error: " << ZSTD_getErrorName(initResult) << std::endl;
+                    
                     ZSTD_freeDStream(dstream);
                     return false;
                 }
@@ -224,7 +221,7 @@ private:
                     size_t const result = ZSTD_decompressStream(dstream, &output, &input);
                     
                     if (ZSTD_isError(result)) {
-                        std::cerr << "ZSTD streaming error: " << ZSTD_getErrorName(result) << std::endl;
+                        
                         ZSTD_freeDStream(dstream);
                         return false;
                     }
@@ -245,19 +242,18 @@ private:
                 );
                 
                 if (ZSTD_isError(result)) {
-                    std::cerr << "ZSTD error: " << ZSTD_getErrorName(result) << std::endl;
+                    
                     return false;
                 }
                 
                 decompressed.resize(result);
             }
-            
-            std::cout << "ZSTD: Decompressed " << compressed.size() 
-                     << " -> " << decompressed.size() << " bytes" << std::endl;
+
+
             return true;
 
         } catch (const std::exception& e) {
-            std::cerr << "Zstd decompression exception: " << e.what() << std::endl;
+            
             return false;
         }
     }
@@ -269,21 +265,21 @@ private:
                               std::vector<char>& decompressed) {
         try {
             if (compressed.size() < 10) {
-                std::cerr << "GZIP: Input too small" << std::endl;
+                
                 return false;
             }
 
             // Verify gzip magic bytes
             if (static_cast<unsigned char>(compressed[0]) != 0x1F || 
                 static_cast<unsigned char>(compressed[1]) != 0x8B) {
-                std::cerr << "GZIP: Invalid magic bytes" << std::endl;
+                
                 return false;
             }
 
             // Extract compression method (byte 2)
             uint8_t method = static_cast<unsigned char>(compressed[2]);
             if (method != 8) {
-                std::cerr << "GZIP: Unsupported compression method: " << (int)method << std::endl;
+                
                 return false;
             }
 
@@ -295,7 +291,7 @@ private:
             // inflateInit2 with 16 + MAX_WBITS for gzip format
             int ret = inflateInit2(&stream, 16 + MAX_WBITS);
             if (ret != Z_OK) {
-                std::cerr << "GZIP: inflateInit2 failed: " << ret << std::endl;
+                
                 return false;
             }
 
@@ -315,7 +311,7 @@ private:
                 
                 if (ret != Z_OK && ret != Z_STREAM_END) {
                     inflateEnd(&stream);
-                    std::cerr << "GZIP: inflate failed: " << ret << std::endl;
+                    
                     return false;
                 }
                 
@@ -330,13 +326,12 @@ private:
             
             // Copy to output
             decompressed = std::move(tempBuffer);
-            
-            std::cout << "GZIP: Decompressed " << compressed.size() 
-                     << " -> " << decompressed.size() << " bytes" << std::endl;
+
+
             return true;
 
         } catch (const std::exception& e) {
-            std::cerr << "Gzip decompression error: " << e.what() << std::endl;
+            
             return false;
         }
     }
@@ -348,7 +343,7 @@ private:
                              std::vector<char>& decompressed) {
         try {
             if (compressed.size() < 15) {
-                std::cerr << "LZ4: Input too small" << std::endl;
+                
                 return false;
             }
 
@@ -357,7 +352,7 @@ private:
                 static_cast<unsigned char>(compressed[1]) != 0x22 ||
                 static_cast<unsigned char>(compressed[2]) != 0x4D || 
                 static_cast<unsigned char>(compressed[3]) != 0x18) {
-                std::cerr << "LZ4: Invalid magic bytes" << std::endl;
+                
                 return false;
             }
 
@@ -365,7 +360,7 @@ private:
             LZ4F_dctx* dctx = nullptr;
             LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&dctx, LZ4F_VERSION);
             if (LZ4F_isError(err)) {
-                std::cerr << "LZ4: Failed to create context: " << LZ4F_getErrorName(err) << std::endl;
+                
                 return false;
             }
 
@@ -375,7 +370,7 @@ private:
             size_t consumedSize = srcSize;
             err = LZ4F_getFrameInfo(dctx, &frameInfo, compressed.data(), &consumedSize);
             if (LZ4F_isError(err)) {
-                std::cerr << "LZ4: Failed to get frame info: " << LZ4F_getErrorName(err) << std::endl;
+                
                 LZ4F_freeDecompressionContext(dctx);
                 return false;
             }
@@ -400,7 +395,7 @@ private:
                                                nullptr);
                 
                 if (LZ4F_isError(result)) {
-                    std::cerr << "LZ4: Decompression error: " << LZ4F_getErrorName(result) << std::endl;
+                    
                     LZ4F_freeDecompressionContext(dctx);
                     return false;
                 }
@@ -418,13 +413,12 @@ private:
             
             // Copy to output
             decompressed = std::move(tempBuffer);
-            
-            std::cout << "LZ4: Decompressed " << compressed.size() 
-                     << " -> " << decompressed.size() << " bytes" << std::endl;
+
+
             return true;
 
         } catch (const std::exception& e) {
-            std::cerr << "LZ4 decompression exception: " << e.what() << std::endl;
+            
             return false;
         }
     }

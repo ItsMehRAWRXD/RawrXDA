@@ -38,9 +38,8 @@ void MainWindow::LogNavigationAction(const std::string& action, int lineNumber) 
     // Production logging
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
-    
-    std::cout << "[" << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S")
-              << "] Navigation: " << action << " to line " << lineNumber << std::endl;
+
+
 }
 
 // Language-aware comment toggling
@@ -317,8 +316,6 @@ std::string MainWindow::GetDebugCommandForFile(const std::string& filename) {
 void MainWindow::LogDebuggingSession(const std::string& filename, const std::string& command) {
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
-    
-    std::cout << "[" << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S")
-              << "] Debug session started - File: " << filename 
-              << ", Command: " << command << std::endl;
+
+
 }

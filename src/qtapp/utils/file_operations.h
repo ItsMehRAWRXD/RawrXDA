@@ -243,7 +243,7 @@ public:
      * \param path Path to file
      * \return File size, or -1 if file doesn't exist
      */
-    static qint64 fileSize(const std::string& path);
+    static int64_t fileSize(const std::string& path);
     
     /**
      * \brief Get file modification time
@@ -285,4 +285,5 @@ private:
 };
 
 } // namespace RawrXD
+
 

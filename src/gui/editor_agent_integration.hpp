@@ -49,7 +49,7 @@ struct GhostTextSuggestion {
  * - Periodic background suggestions
  * - Ghost text rendering overlay
  *
- * @note Works with both QTextEdit and QPlainTextEdit
+ * @note Works with both void and QPlainTextEdit
  * @note Non-blocking suggestion generation
  *
  * @example
@@ -138,7 +138,7 @@ public:
      * @param font Font to use for ghost text display
      * @param color Color for ghost text
      */
-    void setGhostTextStyle(const QFont& font, const QColor& color);
+    void setGhostTextStyle(const std::string& font, const uint32_t& color);
 
     /**
      * @brief Emitted when suggestion generation starts
@@ -173,7 +173,7 @@ private:
      * @brief Handle editor key press events
      * @param event Key event
      */
-    void onEditorKeyPressed(QKeyEvent* event);
+    void onEditorKeyPressed(void*  event);
 
     /**
      * @brief Handle agent suggestion completion
@@ -258,8 +258,8 @@ private:
     int m_ghostTextRow = -1;                ///< Where ghost text is displayed
     int m_ghostTextColumn = -1;
 
-    QFont m_ghostTextFont;                  ///< Font for ghost text display
-    QColor m_ghostTextColor;                ///< Color for ghost text (usually dim)
+    std::string m_ghostTextFont;                  ///< Font for ghost text display
+    uint32_t m_ghostTextColor;                ///< Color for ghost text (usually dim)
 
     void** m_autoSuggestionTimer = nullptr; ///< Timer for periodic suggestions
 };

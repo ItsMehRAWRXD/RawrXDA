@@ -20,21 +20,21 @@ ThermalDashboard::ThermalDashboard(void* parent)
 
 void ThermalDashboard::setupUI()
 {
-    auto* mainLayout = new QVBoxLayout(this);
+    auto* mainLayout = new void(this);
     mainLayout->setSpacing(10);
     mainLayout->setContentsMargins(15, 15, 15, 15);
     
     // Title
-    auto* titleLabel = new QLabel("🌡️ RawrXD Thermal Dashboard", this);
+    auto* titleLabel = new void("🌡️ RawrXD Thermal Dashboard", this);
     titleLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #00ff88;");
     mainLayout->addWidget(titleLabel);
     
     // ═══════════════════════════════════════════════════════════════════════════
     // NVMe Section
     // ═══════════════════════════════════════════════════════════════════════════
-    auto* nvmeGroup = new QGroupBox("NVMe Drives", this);
+    auto* nvmeGroup = new void("NVMe Drives", this);
     nvmeGroup->setStyleSheet(R"(
-        QGroupBox {
+        void {
             border: 2px solid #444;
             border-radius: 8px;
             margin-top: 10px;
@@ -42,14 +42,14 @@ void ThermalDashboard::setupUI()
             font-weight: bold;
             color: #aaa;
         }
-        QGroupBox::title {
+        void::title {
             subcontrol-origin: margin;
             left: 10px;
             padding: 0 5px;
         }
     )");
     
-    auto* nvmeLayout = new QVBoxLayout(nvmeGroup);
+    auto* nvmeLayout = new void(nvmeGroup);
     
     const char* nvmeNames[] = {
         "NVMe0 (SK hynix P41)",
@@ -60,31 +60,31 @@ void ThermalDashboard::setupUI()
     };
     
     for (int i = 0; i < 5; ++i) {
-        auto* row = new QHBoxLayout();
+        auto* row = new void();
         
-        m_nvmeWidgets[i].nameLabel = new QLabel(nvmeNames[i], this);
+        m_nvmeWidgets[i].nameLabel = new void(nvmeNames[i], this);
         m_nvmeWidgets[i].nameLabel->setMinimumWidth(180);
         m_nvmeWidgets[i].nameLabel->setStyleSheet("color: #ccc;");
         
-        m_nvmeWidgets[i].tempBar = new QProgressBar(this);
+        m_nvmeWidgets[i].tempBar = new void(this);
         m_nvmeWidgets[i].tempBar->setRange(0, 100);
         m_nvmeWidgets[i].tempBar->setValue(50);
         m_nvmeWidgets[i].tempBar->setTextVisible(false);
         m_nvmeWidgets[i].tempBar->setFixedHeight(20);
         m_nvmeWidgets[i].tempBar->setStyleSheet(R"(
-            QProgressBar {
+            void {
                 border: 1px solid #555;
                 border-radius: 4px;
                 background: #222;
             }
-            QProgressBar::chunk {
+            void::chunk {
                 border-radius: 3px;
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #00cc66, stop:0.6 #ffcc00, stop:1 #ff3333);
             }
         )");
         
-        m_nvmeWidgets[i].tempLabel = new QLabel("--°C", this);
+        m_nvmeWidgets[i].tempLabel = new void("--°C", this);
         m_nvmeWidgets[i].tempLabel->setMinimumWidth(60);
         m_nvmeWidgets[i].tempLabel->setAlignment(//AlignRight | //AlignVCenter);
         m_nvmeWidgets[i].tempLabel->setStyleSheet("color: #0f0; font-weight: bold;");
@@ -101,25 +101,25 @@ void ThermalDashboard::setupUI()
     // ═══════════════════════════════════════════════════════════════════════════
     // GPU/CPU Section
     // ═══════════════════════════════════════════════════════════════════════════
-    auto* systemGroup = new QGroupBox("System Thermals", this);
+    auto* systemGroup = new void("System Thermals", this);
     systemGroup->setStyleSheet(nvmeGroup->styleSheet());
     
-    auto* systemLayout = new QVBoxLayout(systemGroup);
+    auto* systemLayout = new void(systemGroup);
     
     // GPU
-    auto* gpuRow = new QHBoxLayout();
-    auto* gpuLabel = new QLabel("7800 XT Junction", this);
+    auto* gpuRow = new void();
+    auto* gpuLabel = new void("7800 XT Junction", this);
     gpuLabel->setMinimumWidth(180);
     gpuLabel->setStyleSheet("color: #ff6666;");
     
-    m_gpuTempBar = new QProgressBar(this);
+    m_gpuTempBar = new void(this);
     m_gpuTempBar->setRange(0, 110);
     m_gpuTempBar->setValue(65);
     m_gpuTempBar->setTextVisible(false);
     m_gpuTempBar->setFixedHeight(20);
     m_gpuTempBar->setStyleSheet(m_nvmeWidgets[0].tempBar->styleSheet());
     
-    m_gpuTempLabel = new QLabel("--°C", this);
+    m_gpuTempLabel = new void("--°C", this);
     m_gpuTempLabel->setMinimumWidth(60);
     m_gpuTempLabel->setAlignment(//AlignRight | //AlignVCenter);
     m_gpuTempLabel->setStyleSheet("color: #ff6666; font-weight: bold;");
@@ -130,19 +130,19 @@ void ThermalDashboard::setupUI()
     systemLayout->addLayout(gpuRow);
     
     // CPU
-    auto* cpuRow = new QHBoxLayout();
-    auto* cpuLabel = new QLabel("7800X3D Package", this);
+    auto* cpuRow = new void();
+    auto* cpuLabel = new void("7800X3D Package", this);
     cpuLabel->setMinimumWidth(180);
     cpuLabel->setStyleSheet("color: #6699ff;");
     
-    m_cpuTempBar = new QProgressBar(this);
+    m_cpuTempBar = new void(this);
     m_cpuTempBar->setRange(0, 95);
     m_cpuTempBar->setValue(55);
     m_cpuTempBar->setTextVisible(false);
     m_cpuTempBar->setFixedHeight(20);
     m_cpuTempBar->setStyleSheet(m_nvmeWidgets[0].tempBar->styleSheet());
     
-    m_cpuTempLabel = new QLabel("--°C", this);
+    m_cpuTempLabel = new void("--°C", this);
     m_cpuTempLabel->setMinimumWidth(60);
     m_cpuTempLabel->setAlignment(//AlignRight | //AlignVCenter);
     m_cpuTempLabel->setStyleSheet("color: #6699ff; font-weight: bold;");
@@ -157,36 +157,36 @@ void ThermalDashboard::setupUI()
     // ═══════════════════════════════════════════════════════════════════════════
     // Throttle Status
     // ═══════════════════════════════════════════════════════════════════════════
-    auto* throttleGroup = new QGroupBox("Burst Governor", this);
+    auto* throttleGroup = new void("Burst Governor", this);
     throttleGroup->setStyleSheet(nvmeGroup->styleSheet());
     
-    auto* throttleLayout = new QVBoxLayout(throttleGroup);
+    auto* throttleLayout = new void(throttleGroup);
     
     // Throttle bar
-    auto* throttleRow = new QHBoxLayout();
-    auto* throttleLbl = new QLabel("Current Throttle", this);
+    auto* throttleRow = new void();
+    auto* throttleLbl = new void("Current Throttle", this);
     throttleLbl->setStyleSheet("color: #ffcc00;");
     throttleLbl->setMinimumWidth(180);
     
-    m_throttleBar = new QProgressBar(this);
+    m_throttleBar = new void(this);
     m_throttleBar->setRange(0, 100);
     m_throttleBar->setValue(0);
     m_throttleBar->setTextVisible(false);
     m_throttleBar->setFixedHeight(20);
     m_throttleBar->setStyleSheet(R"(
-        QProgressBar {
+        void {
             border: 1px solid #555;
             border-radius: 4px;
             background: #222;
         }
-        QProgressBar::chunk {
+        void::chunk {
             border-radius: 3px;
             background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                 stop:0 #00ff00, stop:0.5 #ffff00, stop:1 #ff0000);
         }
     )");
     
-    m_throttleLabel = new QLabel("0%", this);
+    m_throttleLabel = new void("0%", this);
     m_throttleLabel->setMinimumWidth(60);
     m_throttleLabel->setAlignment(//AlignRight | //AlignVCenter);
     m_throttleLabel->setStyleSheet("color: #0f0; font-weight: bold;");
@@ -197,17 +197,17 @@ void ThermalDashboard::setupUI()
     throttleLayout->addLayout(throttleRow);
     
     // Mode selector
-    auto* modeRow = new QHBoxLayout();
-    auto* modeLbl = new QLabel("Burst Mode:", this);
+    auto* modeRow = new void();
+    auto* modeLbl = new void("Burst Mode:", this);
     modeLbl->setStyleSheet("color: #aaa;");
     
-    m_burstModeCombo = new QComboBox(this);
+    m_burstModeCombo = new void(this);
     m_burstModeCombo->addItem("🚀 SOVEREIGN-MAX (142μs)", 0);
     m_burstModeCombo->addItem("🌡️ THERMAL-GOVERNED (237μs)", 1);
     m_burstModeCombo->addItem("⚡ ADAPTIVE-HYBRID (dynamic)", 2);
     m_burstModeCombo->setCurrentIndex(2);
     m_burstModeCombo->setStyleSheet(R"(
-        QComboBox {
+        void {
             background: #333;
             color: #fff;
             border: 1px solid #555;
@@ -215,18 +215,18 @@ void ThermalDashboard::setupUI()
             padding: 5px 10px;
             min-width: 250px;
         }
-        QComboBox:hover {
+        void:hover {
             border-color: #00ff88;
         }
-        QComboBox::drop-down {
+        void::drop-down {
             border: none;
             width: 20px;
         }
     )");
     
-    m_applyButton = new QPushButton("Apply", this);
+    m_applyButton = new void("Apply", this);
     m_applyButton->setStyleSheet(R"(
-        QPushButton {
+        void {
             background: #00aa55;
             color: white;
             border: none;
@@ -234,10 +234,10 @@ void ThermalDashboard::setupUI()
             padding: 6px 20px;
             font-weight: bold;
         }
-        QPushButton:hover {
+        void:hover {
             background: #00cc66;
         }
-        QPushButton:pressed {
+        void:pressed {
             background: #008844;
         }
     )");
@@ -255,7 +255,7 @@ void ThermalDashboard::setupUI()
     // ═══════════════════════════════════════════════════════════════════════════
     // Status Bar
     // ═══════════════════════════════════════════════════════════════════════════
-    m_statusLabel = new QLabel("⏳ Initializing thermal monitoring...", this);
+    m_statusLabel = new void("⏳ Initializing thermal monitoring...", this);
     m_statusLabel->setStyleSheet("color: #888; font-style: italic;");
     mainLayout->addWidget(m_statusLabel);
     
@@ -350,16 +350,16 @@ std::string ThermalDashboard::getTempColor(float temp)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 ThermalCompactWidget::ThermalCompactWidget(void* parent)
-    : QFrame(parent)
+    : void(parent)
 {
     setupUI();
 }
 
 void ThermalCompactWidget::setupUI()
 {
-    setFrameStyle(QFrame::StyledPanel | QFrame::Raised);
+    setFrameStyle(void::StyledPanel | void::Raised);
     setStyleSheet(R"(
-        QFrame {
+        void {
             background: #2a2a2a;
             border: 1px solid #444;
             border-radius: 4px;
@@ -367,22 +367,22 @@ void ThermalCompactWidget::setupUI()
         }
     )");
     
-    auto* layout = new QHBoxLayout(this);
+    auto* layout = new void(this);
     layout->setSpacing(8);
     layout->setContentsMargins(8, 4, 8, 4);
     
     // Temp icon + value
-    m_maxTempLabel = new QLabel("🌡️ --°C", this);
+    m_maxTempLabel = new void("🌡️ --°C", this);
     m_maxTempLabel->setStyleSheet("color: #0f0; font-weight: bold;");
     layout->addWidget(m_maxTempLabel);
     
     // Throttle status icon
-    m_throttleIcon = new QLabel("⚡", this);
+    m_throttleIcon = new void("⚡", this);
     m_throttleIcon->setToolTip("Throttle status");
     layout->addWidget(m_throttleIcon);
     
     // Mode icon
-    m_modeIcon = new QLabel("🔄", this);
+    m_modeIcon = new void("🔄", this);
     m_modeIcon->setToolTip("Adaptive Hybrid mode");
     layout->addWidget(m_modeIcon);
     

@@ -6,8 +6,8 @@
 class ClassName : public void { \
 public: \
     explicit ClassName(void* parent = nullptr) : void(parent) { \
-        QVBoxLayout* layout = new QVBoxLayout(this); \
-        layout->addWidget(new QLabel(#ClassName " - Not Implemented Yet", this)); \
+        void* layout = new void(this); \
+        layout->addWidget(new void(#ClassName " - Not Implemented Yet", this)); \
     } \
 };
 

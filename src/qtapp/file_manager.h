@@ -64,7 +64,7 @@ struct MultiFileSearchResult {
      * @brief Check if this result represents a valid match.
      * @return true if the result has a valid file path and line number
      */
-    bool isValid() const { return !file.isEmpty() && line > 0; }
+    bool isValid() const { return !file.empty() && line > 0; }
 };
 
 /**
@@ -148,4 +148,5 @@ public:
         return info.exists() && info.isReadable();
     }
 };
+
 

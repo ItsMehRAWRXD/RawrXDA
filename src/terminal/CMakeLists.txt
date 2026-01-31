@@ -8,8 +8,6 @@ add_library(RawrXDTerminal STATIC
 
 target_link_libraries(RawrXDTerminal
     PUBLIC
-        Qt6::Core
-        Qt6::Network
     PRIVATE
         RawrXDOrchestration
 )

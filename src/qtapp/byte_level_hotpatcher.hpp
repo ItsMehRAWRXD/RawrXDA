@@ -68,7 +68,7 @@ public:
     bool loadModel(const std::string& filePath);
     bool saveModel(const std::string& filePath);
     const std::vector<uint8_t>& getModelData() const { return m_modelData; }
-    bool isModelLoaded() const { return !m_modelData.isEmpty(); }
+    bool isModelLoaded() const { return !m_modelData.empty(); }
 
     bool addPatch(const BytePatch& patch);
     bool removePatch(const std::string& name);
@@ -93,21 +93,21 @@ public:
     std::vector<uint8_t> directRead(size_t offset, size_t size) const;
     PatchResult directWrite(size_t offset, const std::vector<uint8_t>& data);
     PatchResult directWriteBatch(const std::unordered_map<size_t, std::vector<uint8_t>>& writes);
-    PatchResult directFill(size_t offset, size_t size, quint8 value);
+    PatchResult directFill(size_t offset, size_t size, uint8_t value);
     PatchResult directCopy(size_t srcOffset, size_t dstOffset, size_t size);
     bool directCompare(size_t offset, const std::vector<uint8_t>& data) const;
     std::vector<uint8_t> directXOR(size_t offset, size_t size, const std::vector<uint8_t>& key);
     PatchResult directBitOperation(size_t offset, size_t size, ByteOperation op, uint8_t operand);
     PatchResult directRotate(size_t offset, size_t size, int bitShift, bool leftShift = true);
     PatchResult directReverse(size_t offset, size_t size);
-    qint64 directSearch(size_t startOffset, const std::vector<uint8_t>& pattern) const;
+    int64_t directSearch(size_t startOffset, const std::vector<uint8_t>& pattern) const;
     PatchResult atomicByteSwap(size_t offset1, size_t offset2, size_t size);
 
     struct BytePatchStats {
-        quint64 totalPatches = 0;
-        quint64 bytesPatched = 0;
-        quint64 patchesApplied = 0;
-        quint64 patchesReverted = 0;
+        uint64_t totalPatches = 0;
+        uint64_t bytesPatched = 0;
+        uint64_t patchesApplied = 0;
+        uint64_t patchesReverted = 0;
         size_t modelSize = 0;
         std::unordered_map<ByteOperation, int> operationCounts;
     };
@@ -128,4 +128,6 @@ private:
     
     static constexpr size_t MAX_MODEL_SIZE = 100ULL * 1024 * 1024 * 1024;
 };
+
+
 

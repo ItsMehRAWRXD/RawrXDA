@@ -4,8 +4,11 @@
 #include "agentic_failure_detector.hpp"
 #include "proxy_hotpatcher.hpp"
 
-
 #include <functional>
+#include <mutex>
+#include <string>
+#include <vector>
+#include <cstdint>
 
 // Correction strategy
 enum class CorrectionStrategy {
@@ -35,12 +38,12 @@ struct CorrectionResult {
     }
 };
 
-class AgenticPuppeteer : public void
+class AgenticPuppeteer
 {
 
 public:
-    explicit AgenticPuppeteer(void* parent = nullptr);
-    ~AgenticPuppeteer() override;
+    explicit AgenticPuppeteer();
+    virtual ~AgenticPuppeteer();
 
     // Main correction method
     CorrectionResult correctFailure(
@@ -86,13 +89,13 @@ public:
     
     // Statistics
     struct Stats {
-        qint64 totalCorrections = 0;
-        qint64 successfulCorrections = 0;
-        qint64 failedCorrections = 0;
-        qint64 refusalsBypassed = 0;
-        qint64 hallucinationsCorrected = 0;
-        qint64 formatsCorrected = 0;
-        qint64 loopsBroken = 0;
+        int64_t totalCorrections = 0;
+        int64_t successfulCorrections = 0;
+        int64_t failedCorrections = 0;
+        int64_t refusalsBypassed = 0;
+        int64_t hallucinationsCorrected = 0;
+        int64_t formatsCorrected = 0;
+        int64_t loopsBroken = 0;
         double successRate = 0.0;
     };
     
@@ -141,7 +144,7 @@ class RefusalBypassPuppeteer : public AgenticPuppeteer
 {
 
 public:
-    explicit RefusalBypassPuppeteer(void* parent = nullptr);
+    explicit RefusalBypassPuppeteer();
     
     // Override with refusal-specific logic
     CorrectionResult bypassRefusal(
@@ -158,7 +161,7 @@ class HallucinationCorrectorPuppeteer : public AgenticPuppeteer
 {
 
 public:
-    explicit HallucinationCorrectorPuppeteer(void* parent = nullptr);
+    explicit HallucinationCorrectorPuppeteer();
     
     CorrectionResult correctWithGrounding(
         const std::string& prompt,
@@ -175,7 +178,7 @@ class FormatEnforcerPuppeteer : public AgenticPuppeteer
 {
 
 public:
-    explicit FormatEnforcerPuppeteer(void* parent = nullptr);
+    explicit FormatEnforcerPuppeteer();
     
     CorrectionResult enforceFormat(
         const std::string& prompt,

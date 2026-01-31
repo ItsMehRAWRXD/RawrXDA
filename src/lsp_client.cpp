@@ -25,7 +25,7 @@ LSPClient::~LSPClient()
 void LSPClient::initialize() {
     if (m_serverProcess) return;  // Already initialized
     
-    m_serverProcess = new QProcess(this);
+    m_serverProcess = new void*(this);
 // Qt connect removed
 // Qt connect removed
 // Qt connect removed
@@ -39,8 +39,8 @@ bool LSPClient::startServer()
     if (m_serverRunning) {
         return true;
     }
-    
-    
+
+
     m_serverProcess->setProgram(m_config.command);
     m_serverProcess->setArguments(m_config.arguments);
     m_serverProcess->setWorkingDirectory(m_config.workspaceRoot);
@@ -55,7 +55,7 @@ bool LSPClient::startServer()
     
     // Send initialize request
     void* initializeParams;
-    initializeParams["processId"] = static_cast<qint64>(QCoreApplication::applicationPid());
+    initializeParams["processId"] = static_cast<int64_t>(QCoreApplication::applicationPid());
     initializeParams["rootUri"] = buildDocumentUri(m_config.workspaceRoot);
     
     void* capabilities;
@@ -358,14 +358,14 @@ void LSPClient::onServerReadyRead()
     }
 }
 
-void LSPClient::onServerError(QProcess::ProcessError error)
+void LSPClient::onServerError(void*::ProcessError error)
 {
     std::string errorStr;
     switch (error) {
-        case QProcess::FailedToStart:
+        case void*::FailedToStart:
             errorStr = "Failed to start LSP server";
             break;
-        case QProcess::Crashed:
+        case void*::Crashed:
             errorStr = "LSP server crashed";
             break;
         default:
@@ -376,7 +376,7 @@ void LSPClient::onServerError(QProcess::ProcessError error)
     m_serverRunning = false;
 }
 
-void LSPClient::onServerFinished(int exitCode, QProcess::ExitStatus status)
+void LSPClient::onServerFinished(int exitCode, void*::ExitStatus status)
 {
     m_serverRunning = false;
     m_initialized = false;
@@ -540,7 +540,7 @@ void LSPClient::handleDefinitionResponse(const void*& result, int requestId)
         void* doc(result);
         if (doc.isArray()) {
             void* arr = doc.array();
-            if (!arr.isEmpty()) {
+            if (!arr.empty()) {
                 location = arr.first().toObject();
             }
         }
@@ -595,4 +595,5 @@ std::string LSPClient::buildDocumentUri(const std::string& filePath) const
 }
 
 } // namespace RawrXD
+
 

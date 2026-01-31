@@ -8,8 +8,6 @@ add_library(RawrXDGit STATIC
 
 target_link_libraries(RawrXDGit
     PUBLIC
-        Qt6::Core
-        Qt6::Sql
     PRIVATE
         RawrXDOrchestration
 )

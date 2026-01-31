@@ -108,7 +108,7 @@ void ShortcutManager::registerShortcut(const std::string& id,
                                       const QKeySequence& defaultKey,
                                       Context context,
                                       const std::string& description,
-                                      QAction* action)
+                                      void* action)
 {
     ShortcutInfo info;
     info.id = id;
@@ -142,7 +142,7 @@ bool ShortcutManager::setKeySequence(const std::string& id, const QKeySequence& 
     
     // Check for conflicts
     std::string conflict = findConflict(key, info.context, id);
-    if (!conflict.isEmpty()) {
+    if (!conflict.empty()) {
         return false;
     }
     
@@ -183,7 +183,7 @@ void ShortcutManager::resetAllToDefaults() {
 }
 
 std::string ShortcutManager::findConflict(const QKeySequence& key, Context context, const std::string& excludeId) const {
-    if (key.isEmpty()) {
+    if (key.empty()) {
         return std::string();
     }
     
@@ -324,4 +324,5 @@ std::string ShortcutManager::getKeybindingsPath() const {
 }
 
 } // namespace RawrXD
+
 

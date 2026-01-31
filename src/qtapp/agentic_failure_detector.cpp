@@ -3,9 +3,35 @@
 
 
 #include <algorithm>
+#include <mutex>
 
-AgenticFailureDetector::AgenticFailureDetector(void* parent)
-    : void(parent)
+static bool stringContains(const std::string& haystack, const std::string& needle) {
+    return haystack.find(needle) != std::string::npos;
+}
+
+static std::string stringTrimmed(std::string s) {
+    s.erase(0, s.find_first_not_of(" \t\n\r\f\v"));
+    s.erase(s.find_last_not_of(" \t\n\r\f\v") + 1);
+    return s;
+}
+
+static std::string stringToLower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); });
+    return s;
+}
+
+static std::vector<std::string> stringSplit(const std::string& s, const std::regex& re) {
+    std::vector<std::string> result;
+    std::sregex_token_iterator it(s.begin(), s.end(), re, -1);
+    std::sregex_token_iterator end;
+    for (; it != end; ++it) {
+        std::string part = *it;
+        if (!part.empty()) result.push_back(part);
+    }
+    return result;
+}
+
+AgenticFailureDetector::AgenticFailureDetector()
 {
     initializePatterns();
 }
@@ -78,7 +104,7 @@ FailureDetection AgenticFailureDetector::detectFailure(const std::string& respon
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
-    if (response.isEmpty()) {
+    if (response.empty()) {
         return FailureDetection::none();
     }
     
@@ -100,7 +126,7 @@ FailureDetection AgenticFailureDetector::detectFailure(const std::string& respon
         if (result.isFailure()) return result;
     }
     
-    if (m_enableFormatDetection && !prompt.isEmpty()) {
+    if (m_enableFormatDetection && !prompt.empty()) {
         result = detectFormatViolation(response, "");
         if (result.isFailure()) return result;
     }
@@ -115,7 +141,7 @@ FailureDetection AgenticFailureDetector::detectFailure(const std::string& respon
         if (result.isFailure()) return result;
     }
     
-    if (m_enableContextDetection && !prompt.isEmpty()) {
+    if (m_enableContextDetection && !prompt.empty()) {
         result = detectContextLoss(response, prompt);
         if (result.isFailure()) return result;
     }
@@ -137,7 +163,7 @@ FailureDetection AgenticFailureDetector::detectRefusal(const std::string& respon
     }
     
     for (const std::string& pattern : m_refusalPatterns) {
-        if (response.contains(pattern, //CaseInsensitive)) {
+        if (stringContainsIgnoreCase(response, pattern)) {
             double confidence = calculateConfidence(response, FailureType::Refusal);
             
             if (confidence >= m_refusalThreshold) {
@@ -169,7 +195,7 @@ FailureDetection AgenticFailureDetector::detectHallucination(const std::string& 
     }
     
     for (const std::string& pattern : m_hallucinationPatterns) {
-        if (response.contains(pattern, //CaseInsensitive)) {
+        if (stringContainsIgnoreCase(response, pattern)) {
             double confidence = 0.8; // High confidence for known hallucination patterns
             
             m_stats.hallucinationsDetected++;
@@ -203,20 +229,20 @@ FailureDetection AgenticFailureDetector::detectFormatViolation(const std::string
     std::string violation;
     
     // Check for incomplete JSON
-    if (response.contains("{") && !response.contains("}")) {
+    if (stringContains(response, "{") && !stringContains(response, "}")) {
         hasFormatIssue = true;
         violation = "Incomplete JSON object";
     }
     
     // Check for incomplete code blocks
-    if (response.count("```") % 2 != 0) {
+    if (std::count(response.begin(), response.end(), '`') / 3 % 2 != 0) {
         hasFormatIssue = true;
         violation = "Unclosed code block";
     }
     
     // Check for mismatched parentheses
-    int openParen = response.count('(');
-    int closeParen = response.count(')');
+    int openParen = std::count(response.begin(), response.end(), '(');
+    int closeParen = std::count(response.begin(), response.end(), ')');
     if (openParen != closeParen && openParen > 2) {
         hasFormatIssue = true;
         violation = "Mismatched parentheses";
@@ -261,7 +287,7 @@ FailureDetection AgenticFailureDetector::detectInfiniteLoop(const std::string& r
         return FailureDetection::detected(
             FailureType::InfiniteLoop,
             confidence,
-            std::string("Model is repeating itself (%1 times)")
+            "Model is repeating itself (" + std::to_string(repetitionCount) + " times)"
         );
     }
     
@@ -289,7 +315,7 @@ FailureDetection AgenticFailureDetector::detectQualityDegradation(const std::str
         return FailureDetection::detected(
             FailureType::QualityDegradation,
             confidence,
-            std::string("Response quality too low (%1)")
+            "Response quality too low (" + std::to_string(quality) + ")"
         );
     }
     
@@ -338,22 +364,22 @@ FailureDetection AgenticFailureDetector::detectContextLoss(const std::string& re
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
-    if (!m_enableContextDetection || context.isEmpty()) {
+    if (!m_enableContextDetection || context.empty()) {
         return FailureDetection::none();
     }
     
     // Simple heuristic: check if response mentions key context elements
-    std::vector<std::string> contextKeywords = context.split(std::regex("\\W+"), //SkipEmptyParts);
+    std::vector<std::string> contextKeywords = stringSplit(context, std::regex("\\W+"));
     
     int mentionedKeywords = 0;
     for (const std::string& keyword : contextKeywords) {
         if (keyword.length() < 4) continue; // Skip short words
-        if (response.contains(keyword, //CaseInsensitive)) {
+        if (stringContainsIgnoreCase(response, keyword)) {
             mentionedKeywords++;
         }
     }
     
-    double contextRetention = contextKeywords.isEmpty() ? 1.0 : 
+    double contextRetention = contextKeywords.empty() ? 1.0 : 
         static_cast<double>(mentionedKeywords) / contextKeywords.size();
     
     if (contextRetention < 0.2 && contextKeywords.size() > 5) {
@@ -366,7 +392,7 @@ FailureDetection AgenticFailureDetector::detectContextLoss(const std::string& re
         return FailureDetection::detected(
             FailureType::ContextLoss,
             confidence,
-            std::string("Model lost track of context (retention: %1%)")
+            "Model lost track of context (retention: " + std::to_string(static_cast<int>(contextRetention * 100)) + "%)"
         );
     }
     
@@ -382,7 +408,7 @@ FailureDetection AgenticFailureDetector::detectSafetyViolation(const std::string
     }
     
     for (const std::string& pattern : m_safetyPatterns) {
-        if (response.contains(pattern, //CaseInsensitive)) {
+        if (stringContainsIgnoreCase(response, pattern)) {
             double confidence = 0.95;
             m_stats.safetyViolations++;
             m_stats.totalDetections++;
@@ -407,24 +433,24 @@ FailureDetection AgenticFailureDetector::detectSafetyViolation(const std::string
 void AgenticFailureDetector::addRefusalPattern(const std::string& pattern)
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
-    if (!m_refusalPatterns.contains(pattern)) {
-        m_refusalPatterns.append(pattern);
+    if (std::find(m_refusalPatterns.begin(), m_refusalPatterns.end(), pattern) == m_refusalPatterns.end()) {
+        m_refusalPatterns.push_back(pattern);
     }
 }
 
 void AgenticFailureDetector::addHallucinationPattern(const std::string& pattern)
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
-    if (!m_hallucinationPatterns.contains(pattern)) {
-        m_hallucinationPatterns.append(pattern);
+    if (std::find(m_hallucinationPatterns.begin(), m_hallucinationPatterns.end(), pattern) == m_hallucinationPatterns.end()) {
+        m_hallucinationPatterns.push_back(pattern);
     }
 }
 
 void AgenticFailureDetector::addSafetyPattern(const std::string& pattern)
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
-    if (!m_safetyPatterns.contains(pattern)) {
-        m_safetyPatterns.append(pattern);
+    if (std::find(m_safetyPatterns.begin(), m_safetyPatterns.end(), pattern) == m_safetyPatterns.end()) {
+        m_safetyPatterns.push_back(pattern);
     }
 }
 
@@ -531,7 +557,7 @@ void AgenticFailureDetector::resetStatistics()
 bool AgenticFailureDetector::matchesAnyPattern(const std::string& text, const std::vector<std::string>& patterns) const
 {
     for (const std::string& pattern : patterns) {
-        if (text.contains(pattern, //CaseInsensitive)) {
+        if (stringContainsIgnoreCase(text, pattern)) {
             return true;
         }
     }
@@ -540,7 +566,7 @@ bool AgenticFailureDetector::matchesAnyPattern(const std::string& text, const st
 
 double AgenticFailureDetector::calculateResponseQuality(const std::string& response) const
 {
-    if (response.isEmpty()) return 0.0;
+    if (response.empty()) return 0.0;
     
     double quality = 0.5; // Start at medium
     
@@ -553,13 +579,15 @@ double AgenticFailureDetector::calculateResponseQuality(const std::string& respo
     }
     
     // Coherence check (simple heuristic: sentence count)
-    int sentences = response.count('.') + response.count('!') + response.count('?');
+    int sentences = std::count(response.begin(), response.end(), '.') + 
+                    std::count(response.begin(), response.end(), '!') + 
+                    std::count(response.begin(), response.end(), '?');
     if (sentences > 0 && sentences < 20) {
         quality += 0.1;
     }
     
     // Check for markdown formatting
-    if (response.contains("```") || response.contains("**") || response.contains("##")) {
+    if (stringContains(response, "```") || stringContains(response, "**") || stringContains(response, "##")) {
         quality += 0.1;
     }
     
@@ -573,20 +601,20 @@ double AgenticFailureDetector::calculateResponseQuality(const std::string& respo
 
 int AgenticFailureDetector::detectRepetitionCount(const std::string& response) const
 {
-    std::vector<std::string> sentences = response.split(std::regex("[.!?]"), //SkipEmptyParts);
+    std::vector<std::string> sentences = stringSplit(response, std::regex("[.!?]"));
     
     if (sentences.size() < 2) return 0;
     
     int maxRepetitions = 0;
     
     for (int i = 0; i < sentences.size(); ++i) {
-        std::string sent1 = sentences[i].trimmed().toLower();
+        std::string sent1 = stringToLower(stringTrimmed(sentences[i]));
         if (sent1.length() < 10) continue;
         
         int repetitions = 1;
         for (int j = i + 1; j < sentences.size(); ++j) {
-            std::string sent2 = sentences[j].trimmed().toLower();
-            if (sent1 == sent2 || sent1.contains(sent2) || sent2.contains(sent1)) {
+            std::string sent2 = stringToLower(stringTrimmed(sentences[j]));
+            if (sent1 == sent2 || stringContains(sent1, sent2) || stringContains(sent2, sent1)) {
                 repetitions++;
             }
         }
@@ -599,14 +627,14 @@ int AgenticFailureDetector::detectRepetitionCount(const std::string& response) c
 
 bool AgenticFailureDetector::containsToolCalls(const std::string& response) const
 {
-    return response.contains("<invoke") || response.contains("<tool_call>");
+    return stringContains(response, "<invoke") || stringContains(response, "<tool_call>");
 }
 
 bool AgenticFailureDetector::isValidToolCall(const std::string& toolCall) const
 {
     // Check for properly formatted tool call
-    return toolCall.contains("name=") && 
-           (toolCall.contains("<parameter") || !toolCall.contains("parameter"));
+    return stringContains(toolCall, "name=") && 
+           (stringContains(toolCall, "<parameter") || !stringContains(toolCall, "parameter"));
 }
 
 double AgenticFailureDetector::calculateConfidence(const std::string& response, FailureType type) const

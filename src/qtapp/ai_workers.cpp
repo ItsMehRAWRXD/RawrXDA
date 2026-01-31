@@ -41,8 +41,8 @@ void DigestionWorker::processFiles(const std::stringList& files, const Digestion
         error("Engine is null");
         return;
     }
-    
-    
+
+
     // Process each file through the engine
     for (const std::string& file : files) {
         // SOVEREIGN KERNEL INTEGRATION: Check thermal throttle
@@ -77,8 +77,8 @@ void TrainingWorker::startTraining(const AIDigestionDataset& dataset, const Dige
         error("Engine is null");
         return;
     }
-    
-    
+
+
     // progress updates
     for (int i = 0; i < 10; ++i) {
         trainingProgress(static_cast<double>(i + 1) / 10.0);
@@ -1428,12 +1428,12 @@ std::vector<AITrainingWorker*> AIWorkerManager::activeTrainingWorkers() const {
 void AIWorkerManager::onWorkerFinished() {
     std::mutexLocker locker(&m_workersMutex);
     
-    auto digestionWorker = qobject_cast<AIDigestionWorker*>(sender());
+// REMOVED_QT:     auto digestionWorker = qobject_cast<AIDigestionWorker*>(sender());
     if (digestionWorker) {
         m_digestionWorkers.removeAll(digestionWorker);
         digestionWorker->deleteLater();
     } else {
-        auto trainingWorker = qobject_cast<AITrainingWorker*>(sender());
+// REMOVED_QT:         auto trainingWorker = qobject_cast<AITrainingWorker*>(sender());
         if (trainingWorker) {
             m_trainingWorkers.removeAll(trainingWorker);
             trainingWorker->deleteLater();

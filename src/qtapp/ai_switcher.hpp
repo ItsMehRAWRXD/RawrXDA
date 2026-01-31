@@ -11,7 +11,7 @@
  * - Claude (Anthropic API key required)
  * - Gemini (Google API key required)
  */
-class AISwitcher : public QMenu {
+class AISwitcher : public void {
 
 public:
     explicit AISwitcher(void* parent = nullptr);

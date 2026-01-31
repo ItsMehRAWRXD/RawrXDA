@@ -49,7 +49,7 @@ class EditorTabBar : public QTabBar {
 
 public:
     explicit EditorTabBar(void* parent = nullptr);
-    
+
 
     void tabCloseRequested(int index);
     void tabRenameRequested(int index);
@@ -57,8 +57,8 @@ public:
     void closeOthersRequested(int index);
     
 protected:
-    void contextMenuEvent(QContextMenuEvent* event) override;
-    void mouseDoubleClickEvent(QMouseEvent* event) override;
+    void contextMenuEvent(void*  event) override;
+    void mouseDoubleClickEvent(void*  event) override;
 };
 
 // Main editor widget
@@ -106,7 +106,7 @@ public:
     int getLineCount(int index = -1) const;
     int getCharCount(int index = -1) const;
     std::pair<int, int> getCursorPosition(int index = -1) const;
-    
+
 
     void tabChanged(int index);
     void contentModified(int index);
@@ -126,19 +126,19 @@ private:
     void setupUI();
     void setupToolbar();
     void setupConnections();
-    QTextEdit* createEditor();
+    void* createEditor();
     void updateTabTitle(int index);
     int resolveIndex(int index) const;
     
     // UI components
-    QVBoxLayout* mainLayout;
-    QToolBar* toolBar;
+    void* mainLayout;
+    void* toolBar;
     EditorTabBar* tabBar;
-    QStackedWidget* editorStack;
-    QStatusBar* statusBar;
+    void* editorStack;
+    void* statusBar;
     
     // Data
-    std::vector<QTextEdit*> editors;
+    std::vector<void*> editors;
     std::vector<std::unique_ptr<AssemblyHighlighter>> highlighters;
     std::vector<TabData> tabData;
     

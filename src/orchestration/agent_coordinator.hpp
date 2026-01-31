@@ -107,7 +107,7 @@ private:
         void* context;
     };
 
-    mutable QReadWriteLock m_lock;
+    mutable std::shared_mutex m_lock;
     std::map<std::string, AgentMetadata> m_agents;
     std::map<std::string, PlanState> m_plans;
     
@@ -127,6 +127,3 @@ private:
     void invalidateStatusCache(const std::string& planId);
     void* buildPlanStatus(const PlanState& plan) const;
 };
-
-Q_DECLARE_METATYPE(AgentCoordinator::AgentTask)
-

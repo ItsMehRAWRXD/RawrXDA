@@ -128,7 +128,7 @@ std::string AgenticAgentCoordinator::assignTask(
     // Find best agent for task
     std::string agentId = selectBestAgentForTask(taskDescription);
 
-    if (agentId.isEmpty()) {
+    if (agentId.empty()) {
         return "";
     }
 
@@ -460,7 +460,7 @@ void AgenticAgentCoordinator::saveCheckpoint()
 
 bool AgenticAgentCoordinator::restoreFromCheckpoint()
 {
-    if (m_lastCheckpoint.isEmpty()) {
+    if (m_lastCheckpoint.empty()) {
         return false;
     }
 
@@ -521,4 +521,5 @@ void AgenticAgentCoordinator::updateAgentMetrics(const std::string& agentId)
     // Calculate and update metrics
     coordinationMetricsUpdated();
 }
+
 

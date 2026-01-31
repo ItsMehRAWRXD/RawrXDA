@@ -28,11 +28,11 @@ public:
     bool isHovered() const { return m_isHovered; }
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
-    void enterEvent(QEnterEvent* event) override;
+    void paintEvent(void*  event) override;
+    void enterEvent(void*  event) override;
     void leaveEvent(QEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mousePressEvent(void*  event) override;
+    void mouseReleaseEvent(void*  event) override;
 
 private:
     bool m_isActive;

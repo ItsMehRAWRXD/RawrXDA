@@ -41,7 +41,7 @@ public:
     void securitySettingsChanged();
 
 private:
-    QSettings* m_settings;
+    void** m_settings;
     std::map<std::string, void*> m_agentSettings;
     std::map<std::string, void*> m_modelSettings;
     std::map<std::string, void*> m_gpuBackends;

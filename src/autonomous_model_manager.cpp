@@ -1,85 +1,40 @@
 #include "autonomous_model_manager.h"
-
-
 #include <iostream>
+#include <fstream>
+#include <filesystem>
+#include <thread>
+#include <chrono>
 
-#ifdef 
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
-AutonomousModelManager::AutonomousModelManager(void* parent)
-    : void(parent) {
-    setupNetworkManager();
-    setupTimers();
+AutonomousModelManager::AutonomousModelManager() {
+    setupNetworking();
+    startMaintenanceThreads();
     loadAvailableModels();
     loadInstalledModels();
 }
 
 AutonomousModelManager::~AutonomousModelManager() {
-    if (autoUpdateTimer) autoUpdateTimer->stop();
-    if (optimizationTimer) optimizationTimer->stop();
+    // Cleanup threads if any
 }
 
-void AutonomousModelManager::setupNetworkManager() {
-    networkManager = new void*(this);
-    networkManager->setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
+void AutonomousModelManager::setupNetworking() {
+    // Initialize WinHTTP or similar here if needed
 }
 
-void AutonomousModelManager::setupTimers() {
-    // Auto-update timer
-    autoUpdateTimer = new void*(this);
-    autoUpdateTimer->setInterval(autoUpdateInterval);
-// Qt connect removed
-    autoUpdateTimer->start();
-    
-    // Optimization timer
-    optimizationTimer = new void*(this);
-    optimizationTimer->setInterval(optimizationInterval);
-// Qt connect removed
-        }
-    });
-    optimizationTimer->start();
+void AutonomousModelManager::startMaintenanceThreads() {
+    // Logic for periodic updates or optimization
 }
 
 void AutonomousModelManager::loadAvailableModels() {
-    // Load default model catalog
-    availableModels = void*{
-        void*{
-            {"id", "microsoft/phi-3-mini"},
-            {"name", "Phi-3 Mini"},
-            {"size", 3800000000LL},
-            {"task_type", "completion"},
-            {"gpu_optimized", true},
-            {"complexity_level", "medium"}
-        },
-        void*{
-            {"id", "codellama/CodeLlama-7b"},
-            {"name", "CodeLlama 7B"},
-            {"size", 7000000000LL},
-            {"task_type", "completion"},
-            {"gpu_optimized", true},
-            {"complexity_level", "complex"}
-        },
-        void*{
-            {"id", "mistralai/Mistral-7B"},
-            {"name", "Mistral 7B"},
-            {"size", 7200000000LL},
-            {"task_type", "general"},
-            {"gpu_optimized", true},
-            {"complexity_level", "complex"}
-        }
-    };
+    // Load from local cache or API
+    availableModels = nlohmann::json::array();
 }
 
 void AutonomousModelManager::loadInstalledModels() {
-    std::string configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/models/installed.json";
-    std::fstream file(configPath);
-    
-    if (file.open(QIODevice::ReadOnly)) {
-        void* doc = void*::fromJson(file.readAll());
-        installedModels = doc.array();
-        file.close();
-    }
+    installedModels = nlohmann::json::array();
 }
 
 void AutonomousModelManager::saveInstalledModels() {
@@ -95,9 +50,8 @@ void AutonomousModelManager::saveInstalledModels() {
 }
 
 ModelRecommendation AutonomousModelManager::autoDetectBestModel(const std::string& taskType, const std::string& language) {
-    std::cout << "[AutonomousModelManager] Auto-detecting best model for task: " << taskType.toStdString() 
-              << ", language: " << language.toStdString() << std::endl;
-    
+
+
     // Analyze system capabilities
     SystemAnalysis system = analyzeSystemCapabilities();
     
@@ -125,20 +79,18 @@ ModelRecommendation AutonomousModelManager::autoDetectBestModel(const std::strin
             bestRecommendation.complexityLevel = determineComplexityLevel(model);
         }
     }
-    
-    std::cout << "[AutonomousModelManager] Recommended model: " << bestRecommendation.modelId.toStdString()
-              << " (score: " << bestRecommendation.suitabilityScore << ")" << std::endl;
-    
+
+
     modelRecommended(bestRecommendation);
     return bestRecommendation;
 }
 
 bool AutonomousModelManager::autoDownloadAndSetup(const std::string& modelId) {
-    std::cout << "[AutonomousModelManager] Auto-downloading and setting up: " << modelId.toStdString() << std::endl;
-    
+
+
     // Get model information
     void* modelInfo = fetchModelInfo(modelId);
-    if (modelInfo.isEmpty()) {
+    if (modelInfo.empty()) {
         errorOccurred("Failed to fetch model information");
         return false;
     }
@@ -156,7 +108,7 @@ bool AutonomousModelManager::autoDownloadAndSetup(const std::string& modelId) {
     
     // Validate downloaded model
     if (!std::fstream::exists(localPath)) {
-        std::cout << "[AutonomousModelManager] Model file would be downloaded to: " << localPath.toStdString() << std::endl;
+        
         // In production, would download from HuggingFace
     }
     
@@ -172,14 +124,14 @@ bool AutonomousModelManager::autoDownloadAndSetup(const std::string& modelId) {
     saveInstalledModels();
     
     modelInstalled(modelId);
-    std::cout << "[AutonomousModelManager] Model setup completed: " << modelId.toStdString() << std::endl;
-    
+
+
     return true;
 }
 
 bool AutonomousModelManager::autoUpdateModels() {
-    std::cout << "[AutonomousModelManager] Checking for model updates..." << std::endl;
-    
+
+
     int updatedCount = 0;
     for (const void*& value : installedModels) {
         void* model = value.toObject();
@@ -190,115 +142,92 @@ bool AutonomousModelManager::autoUpdateModels() {
             updatedCount++;
         }
     }
-    
-    std::cout << "[AutonomousModelManager] Updated " << updatedCount << " models" << std::endl;
+
+
     autoUpdateCompleted();
     
     return true;
 }
 
 bool AutonomousModelManager::autoOptimizeModel(const std::string& modelId) {
-    std::cout << "[AutonomousModelManager] Optimizing model: " << modelId.toStdString() << std::endl;
+    
     return optimizeModelForSystem(modelId);
 }
 
 SystemAnalysis AutonomousModelManager::analyzeSystemCapabilities() {
     SystemAnalysis analysis;
     
-    // Analyze available RAM
-    analysis.availableRAM = getAvailableRAM();
-    
-    // Analyze available disk space
-    analysis.availableDiskSpace = getAvailableDiskSpace();
-    
-    // Analyze CPU cores
-    analysis.cpuCores = std::thread::idealThreadCount();
-    
-    // Analyze GPU capabilities
-    analysis.hasGPU = detectGPU();
-    if (analysis.hasGPU) {
-        analysis.gpuType = "CUDA/DirectX";
-        analysis.gpuMemory = 8LL * 1024 * 1024 * 1024; // 8GB default
+#ifdef _WIN32
+    MEMORYSTATUSEX memStatus;
+    memStatus.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memStatus);
+    analysis.availableRAM = memStatus.ullAvailPhys;
+
+    ULARGE_INTEGER freeBytes, totalBytes, totalFree;
+    if (GetDiskFreeSpaceExA("C:\\", &freeBytes, &totalBytes, &totalFree)) {
+        analysis.availableDiskSpace = freeBytes.QuadPart;
     }
-    
-    std::cout << "[AutonomousModelManager] System analysis complete:" << std::endl;
-    std::cout << "  RAM: " << (analysis.availableRAM / 1024 / 1024 / 1024) << " GB" << std::endl;
-    std::cout << "  Disk: " << (analysis.availableDiskSpace / 1024 / 1024 / 1024) << " GB" << std::endl;
-    std::cout << "  CPU Cores: " << analysis.cpuCores << std::endl;
-    std::cout << "  GPU: " << (analysis.hasGPU ? analysis.gpuType.toStdString() : "None") << std::endl;
-    
-    currentSystem = analysis;
-    systemAnalysisComplete(analysis);
+
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+    analysis.cpuCores = sysInfo.dwNumberOfProcessors;
+#else
+    analysis.availableRAM = 8LL * 1024 * 1024 * 1024;
+    analysis.availableDiskSpace = 100LL * 1024 * 1024 * 1024;
+    analysis.cpuCores = 8;
+#endif
+
+    analysis.hasGPU = false; // Simplified
     return analysis;
 }
 
-double AutonomousModelManager::calculateModelSuitability(const void*& model, const std::string& taskType) {
-    double score = 0.0;
+double AutonomousModelManager::calculateModelSuitability(const nlohmann::json& model, const std::string& taskType) {
+    double score = 0.5; // Base score
     
-    // Task type compatibility (40% weight)
-    std::string modelTaskType = model["task_type"].toString();
-    if (modelTaskType == taskType) {
-        score += 0.4;
-    } else if (modelTaskType == "general") {
-        score += 0.3;
+    SystemAnalysis system = analyzeSystemCapabilities();
+    
+    // Logic to calculate score based on RAM, Disk, Task Type, etc.
+    if (model.contains("memory_required") && model["memory_required"].is_number()) {
+        int64_t reqMem = model["memory_required"].get<int64_t>();
+        if (reqMem > system.availableRAM) score -= 0.4;
+        else score += 0.2;
     }
-    
-    // Size appropriateness (30% weight)
-    qint64 modelSize = static_cast<qint64>(model["size"].toDouble());
-    SystemAnalysis system = currentSystem.availableRAM > 0 ? currentSystem : analyzeSystemCapabilities();
-    
-    if (modelSize < system.availableRAM * 0.8) {
-        score += 0.3;
-    } else if (modelSize < system.availableRAM) {
-        score += 0.2;
-    } else {
-        score += 0.1;
-    }
-    
-    // Performance characteristics (20% weight)
-    double estimatedLatency = estimateLatency(model);
-    if (estimatedLatency < 100) {
-        score += 0.2;
-    } else if (estimatedLatency < 500) {
-        score += 0.15;
-    } else {
-        score += 0.1;
-    }
-    
-    // GPU optimization (10% weight)
-    if (system.hasGPU && model["gpu_optimized"].toBool()) {
-        score += 0.1;
-    }
-    
-    return qMin(1.0, score);
+
+    return (std::max)(0.0, (std::min)(1.0, score));
 }
 
-void* AutonomousModelManager::analyzeCodebaseRequirements(const std::string& projectPath) {
-    void* requirements;
+nlohmann::json AutonomousModelManager::analyzeCodebaseRequirements(const std::string& projectPath) {
+    nlohmann::json requirements = nlohmann::json::array();
     
     // Analyze project size and complexity (simplified)
-    std::filesystem::path projectDir(projectPath);
-    if (projectDir.exists()) {
-        std::vector<std::string> filters;
-        filters << "*.cpp" << "*.h" << "*.py" << "*.js" << "*.ts";
+    if (std::filesystem::exists(projectPath)) {
+        size_t fileCount = 0;
+        try {
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(projectPath)) {
+                if (entry.is_regular_file()) {
+                    auto ext = entry.path().extension().string();
+                    if (ext == ".cpp" || ext == ".h" || ext == ".py" || ext == ".js" || ext == ".ts") {
+                        fileCount++;
+                    }
+                }
+            }
+        } catch (...) {}
         
-        QFileInfoList files = projectDir.entryInfoList(filters, std::filesystem::path::Files);
-        
-        requirements.append(void*{
+        requirements.push_back({
             {"type", "project_size"},
-            {"file_count", files.size()},
-            {"recommended_model_size", files.size() > 100 ? "large" : "medium"}
+            {"file_count", fileCount},
+            {"recommended_model_size", fileCount > 100 ? "large" : "medium"}
         });
     }
     
     return requirements;
 }
 
-void* AutonomousModelManager::getAvailableModels() {
+nlohmann::json AutonomousModelManager::getAvailableModels() {
     return availableModels;
 }
 
-void* AutonomousModelManager::getInstalledModels() {
+nlohmann::json AutonomousModelManager::getInstalledModels() {
     return installedModels;
 }
 
@@ -309,7 +238,7 @@ void* AutonomousModelManager::getRecommendedModels(const std::string& taskType) 
         void* model = value.toObject();
         std::string modelTaskType = model["task_type"].toString();
         
-        if (taskType.isEmpty() || modelTaskType == taskType || modelTaskType == "general") {
+        if (taskType.empty() || modelTaskType == taskType || modelTaskType == "general") {
             double score = calculateModelSuitability(model, taskType);
             if (score >= minimumSuitabilityScore) {
                 void* modelWithScore = model;
@@ -327,8 +256,8 @@ bool AutonomousModelManager::installModel(const std::string& modelId) {
 }
 
 bool AutonomousModelManager::uninstallModel(const std::string& modelId) {
-    std::cout << "[AutonomousModelManager] Uninstalling model: " << modelId.toStdString() << std::endl;
-    
+
+
     for (int i = 0; i < installedModels.size(); ++i) {
         if (installedModels[i].toObject()["id"].toString() == modelId) {
             std::string path = installedModels[i].toObject()["path"].toString();
@@ -343,8 +272,8 @@ bool AutonomousModelManager::uninstallModel(const std::string& modelId) {
 }
 
 bool AutonomousModelManager::updateModel(const std::string& modelId) {
-    std::cout << "[AutonomousModelManager] Updating model: " << modelId.toStdString() << std::endl;
-    
+
+
     // Check for updates (simplified)
     modelUpdated(modelId);
     return true;
@@ -359,7 +288,7 @@ ModelRecommendation AutonomousModelManager::recommendModelForCodebase(const std:
     return autoDetectBestModel("completion", "cpp");
 }
 
-ModelRecommendation AutonomousModelManager::recommendModelForPerformance(qint64 targetLatency) {
+ModelRecommendation AutonomousModelManager::recommendModelForPerformance(int64_t targetLatency) {
     ModelRecommendation best;
     best.suitabilityScore = 0.0;
     
@@ -383,21 +312,19 @@ ModelRecommendation AutonomousModelManager::recommendModelForPerformance(qint64 
 }
 
 bool AutonomousModelManager::integrateWithHuggingFace() {
-    std::cout << "[AutonomousModelManager] Integrating with HuggingFace API..." << std::endl;
-    
-    QNetworkRequest request(std::string(huggingFaceApiEndpoint + "/models"));
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+
+    void* request(std::string(huggingFaceApiEndpoint + "/models"));
+    request.setHeader(void*::ContentTypeHeader, "application/json");
     
     void** reply = networkManager->get(request);
 // Qt connect removed
             void* models = doc.array();
-            
-            std::cout << "[AutonomousModelManager] Fetched " << models.size() 
-                      << " models from HuggingFace" << std::endl;
-            
+
+
             availableModels = models;
         } else {
-            std::cerr << "[AutonomousModelManager] Failed to fetch models from HuggingFace" << std::endl;
+            
         }
         
         reply->deleteLater();
@@ -407,13 +334,13 @@ bool AutonomousModelManager::integrateWithHuggingFace() {
 }
 
 bool AutonomousModelManager::syncWithModelRegistry() {
-    std::cout << "[AutonomousModelManager] Syncing with model registry..." << std::endl;
+    
     return true;
 }
 
 bool AutonomousModelManager::validateModelIntegrity(const std::string& modelId) {
-    std::cout << "[AutonomousModelManager] Validating model integrity: " << modelId.toStdString() << std::endl;
-    
+
+
     for (const void*& value : installedModels) {
         if (value.toObject()["id"].toString() == modelId) {
             std::string path = value.toObject()["path"].toString();
@@ -436,8 +363,7 @@ void* AutonomousModelManager::fetchModelInfo(const std::string& modelId) {
 }
 
 bool AutonomousModelManager::downloadModelFile(const std::string& url, const std::string& destination) {
-    std::cout << "[AutonomousModelManager] Would download from: " << url.toStdString() 
-              << " to: " << destination.toStdString() << std::endl;
+    
     return true;
 }
 
@@ -446,7 +372,7 @@ bool AutonomousModelManager::validateDownloadedModel(const std::string& modelPat
 }
 
 bool AutonomousModelManager::optimizeModelForSystem(const std::string& modelId) {
-    std::cout << "[AutonomousModelManager] Optimizing model for system: " << modelId.toStdString() << std::endl;
+    
     return true;
 }
 
@@ -454,7 +380,7 @@ SystemAnalysis AutonomousModelManager::getCurrentSystemAnalysis() {
     return currentSystem;
 }
 
-qint64 AutonomousModelManager::getAvailableRAM() {
+int64_t AutonomousModelManager::getAvailableRAM() {
 #ifdef 
     MEMORYSTATUSEX memStatus;
     memStatus.dwLength = sizeof(MEMORYSTATUSEX);
@@ -465,7 +391,7 @@ qint64 AutonomousModelManager::getAvailableRAM() {
 #endif
 }
 
-qint64 AutonomousModelManager::getAvailableDiskSpace() {
+int64_t AutonomousModelManager::getAvailableDiskSpace() {
     std::string path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QStorageInfo storage(path);
     return storage.bytesAvailable();
@@ -491,8 +417,8 @@ std::string AutonomousModelManager::generateRecommendationReasoning(const void*&
     return reasons.join(". ");
 }
 
-qint64 AutonomousModelManager::estimateMemoryUsage(const void*& model) {
-    return static_cast<qint64>(model["size"].toDouble() * 1.2); // 20% overhead
+int64_t AutonomousModelManager::estimateMemoryUsage(const void*& model) {
+    return static_cast<int64_t>(model["size"].toDouble() * 1.2); // 20% overhead
 }
 
 std::string AutonomousModelManager::determineComplexityLevel(const void*& model) {
@@ -500,8 +426,9 @@ std::string AutonomousModelManager::determineComplexityLevel(const void*& model)
 }
 
 double AutonomousModelManager::estimateLatency(const void*& model) {
-    qint64 size = static_cast<qint64>(model["size"].toDouble());
+    int64_t size = static_cast<int64_t>(model["size"].toDouble());
     // Simplified latency estimation based on model size
     return (size / 1000000.0); // Rough estimate in ms
 }
+
 

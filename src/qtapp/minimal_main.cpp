@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 {
     try {
         
-        QApplication app(argc, argv);
+        void app(argc, argv);
         app.setApplicationName("RawrXD-Minimal");
         app.setApplicationVersion("1.0.0");
         

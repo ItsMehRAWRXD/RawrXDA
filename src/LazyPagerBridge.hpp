@@ -126,7 +126,7 @@ public:
         if (!m_hPager) return false;
         m_attached = (LazyPager_AttachModel(m_hPager, fileSize) != 0);
         if (!m_attached) {
-            fprintf(stderr, "[LazyPagerBridge] Attach failed. LastError=%lu\n", GetLastError());
+
         }
         return m_attached;
     }

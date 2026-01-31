@@ -133,13 +133,13 @@ private:
     TodoDock *m_todoDock;
 
     RawrXD::TelemetryWindow *m_telemetryWindow{nullptr};
-    QAction *m_telemetryAction{nullptr};
+    void *m_telemetryAction{nullptr};
     
     // Dock widgets
-    QDockWidget *m_chatDock;
-    QDockWidget *m_terminalDock;
-    QDockWidget *m_fileDock;
-    QDockWidget *m_todoDockWidget;
+    void *m_chatDock;
+    void *m_terminalDock;
+    void *m_fileDock;
+    void *m_todoDockWidget;
     
     // Phase 2: Polish feature widgets
     DiffDock *m_diffPreviewDock{nullptr};  // Day 2: Simplified diff viewer
@@ -147,8 +147,8 @@ private:
     
     // Splash screen for initialization
     void *m_splashWidget;
-    QLabel *m_splashLabel;
-    QProgressBar *m_splashProgress;
+    void *m_splashLabel;
+    void *m_splashProgress;
 };
 
 } // namespace RawrXD

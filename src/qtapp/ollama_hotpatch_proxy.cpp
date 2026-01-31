@@ -61,7 +61,7 @@ OllamaHotpatchRule OllamaHotpatchProxy::getRule(const std::string& name) const
 std::vector<std::string> OllamaHotpatchProxy::listRules(const std::string& modelPattern) const
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
-    if (modelPattern.isEmpty()) {
+    if (modelPattern.empty()) {
         return m_ruleOrder;
     }
     
@@ -185,7 +185,7 @@ std::vector<uint8_t> OllamaHotpatchProxy::processStreamChunk(const std::vector<u
             continue;
         }
         
-        if (!rule.searchPattern.isEmpty() && !rule.replacementData.isEmpty()) {
+        if (!rule.searchPattern.empty() && !rule.replacementData.empty()) {
             result = applyBytePatching(result, rule.searchPattern, rule.replacementData);
             m_stats.bytesModified += rule.replacementData.size();
             m_stats.rulesApplied++;
@@ -274,7 +274,7 @@ std::unordered_map<std::string, std::any> OllamaHotpatchProxy::getParameterOverr
 
 bool OllamaHotpatchProxy::matchesModel(const std::string& modelName, const std::string& pattern) const
 {
-    if (pattern.isEmpty()) return true;
+    if (pattern.empty()) return true;
     if (modelName == pattern) return true;
     
     // Simple wildcard matching
@@ -397,7 +397,7 @@ void* OllamaHotpatchProxy::applyContextInjection(const void*& request, const std
     
     if (result.contains("messages") && result["messages"].isArray()) {
         void* messages = result["messages"].toArray();
-        if (!messages.isEmpty()) {
+        if (!messages.empty()) {
             void* systemMsg;
             systemMsg["role"] = "system";
             systemMsg["content"] = context;
@@ -443,4 +443,5 @@ void OllamaHotpatchProxy::logDiagnostic(const std::string& message)
         diagnosticMessage(message);
     }
 }
+
 

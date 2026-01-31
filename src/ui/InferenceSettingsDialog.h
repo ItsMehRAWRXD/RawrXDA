@@ -37,17 +37,17 @@ private:
     InferenceSettingsManager& m_settings;
     
     // UI elements
-    QComboBox* m_presetCombo;
+    void* m_presetCombo;
     QDoubleSpinBox* m_temperatureSpin;
     QDoubleSpinBox* m_topPSpin;
-    QSpinBox* m_topKSpin;
-    QSpinBox* m_maxTokensSpin;
+    void* m_topKSpin;
+    void* m_maxTokensSpin;
     QDoubleSpinBox* m_repetitionPenaltySpin;
-    QCheckBox* m_useOllamaCheck;
-    QLineEdit* m_ollamaModelEdit;
+    void* m_useOllamaCheck;
+    void* m_ollamaModelEdit;
     QListWidget* m_recentModelsList;
-    QPushButton* m_clearRecentButton;
-    QLabel* m_presetIndicator;
+    void* m_clearRecentButton;
+    void* m_presetIndicator;
     QDialogButtonBox* m_buttonBox;
 };
 

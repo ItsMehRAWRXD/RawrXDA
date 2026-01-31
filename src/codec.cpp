@@ -12,7 +12,7 @@ std::vector<uint8_t> deflate(const std::vector<uint8_t>& input, bool* success) {
         *success = false;
     }
 
-    if (input.isEmpty()) {
+    if (input.empty()) {
         if (success) {
             *success = true;
         }
@@ -55,7 +55,7 @@ std::vector<uint8_t> inflate(const std::vector<uint8_t>& input, bool* success) {
         *success = false;
     }
 
-    if (input.isEmpty()) {
+    if (input.empty()) {
         if (success) {
             *success = true;
         }
@@ -152,4 +152,5 @@ void* deflate_brutal_neon(const void* src, size_t len, size_t* out_len) {
     return deflate_brutal_masm(src, len, out_len);
 }
 }
+
 

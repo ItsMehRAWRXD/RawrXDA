@@ -65,7 +65,7 @@ std::vector<uint8_t> ProxyHotpatcher::processRequest(const std::vector<uint8_t>&
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
-    if (!m_enabled || requestData.isEmpty()) {
+    if (!m_enabled || requestData.empty()) {
         return requestData;
     }
     
@@ -79,7 +79,7 @@ std::vector<uint8_t> ProxyHotpatcher::processRequest(const std::vector<uint8_t>&
             continue;
         }
         
-        if (!rule.searchPattern.isEmpty() && !rule.replacement.isEmpty()) {
+        if (!rule.searchPattern.empty() && !rule.replacement.empty()) {
             modified = bytePatchInPlace(modified, rule.searchPattern, rule.replacement);
             m_stats.patchesApplied++;
             ruleApplied(rule.name, "Request:ParameterOverride");
@@ -88,7 +88,7 @@ std::vector<uint8_t> ProxyHotpatcher::processRequest(const std::vector<uint8_t>&
     
     m_stats.requestsProcessed++;
     
-    qint64 elapsed = m_timer.nsecsElapsed() / 1000000;
+    int64_t elapsed = m_timer.nsecsElapsed() / 1000000;
     m_stats.avgProcessingTimeMs = (m_stats.avgProcessingTimeMs * (m_stats.requestsProcessed - 1) + elapsed) / m_stats.requestsProcessed;
     
     if (modified != requestData) {
@@ -114,7 +114,7 @@ void* ProxyHotpatcher::processRequestJson(const void*& request)
             continue;
         }
         
-        if (!rule.parameterName.isEmpty()) {
+        if (!rule.parameterName.empty()) {
             modified[rule.parameterName] = void*::fromVariant(rule.parameterValue);
             m_stats.patchesApplied++;
             ruleApplied(rule.name, "Request:JSONParameterOverride");
@@ -128,7 +128,7 @@ std::vector<uint8_t> ProxyHotpatcher::processResponse(const std::vector<uint8_t>
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
-    if (!m_enabled || responseData.isEmpty()) {
+    if (!m_enabled || responseData.empty()) {
         return responseData;
     }
     
@@ -149,7 +149,7 @@ std::vector<uint8_t> ProxyHotpatcher::processResponse(const std::vector<uint8_t>
                 m_stats.validationFailures++;
                 validationFailed(validation.errorMessage, validation.violations);
                 
-                if (!validation.correctedOutput.isEmpty()) {
+                if (!validation.correctedOutput.empty()) {
                     modified = validation.correctedOutput.toUtf8();
                     m_stats.correctionsApplied++;
                     agentOutputCorrected(validation.errorMessage, modified);
@@ -157,7 +157,7 @@ std::vector<uint8_t> ProxyHotpatcher::processResponse(const std::vector<uint8_t>
             }
         }
         else if (rule.type == ProxyHotpatchRule::ResponseCorrection) {
-            if (!rule.searchPattern.isEmpty() && !rule.replacement.isEmpty()) {
+            if (!rule.searchPattern.empty() && !rule.replacement.empty()) {
                 modified = bytePatchInPlace(modified, rule.searchPattern, rule.replacement);
                 m_stats.patchesApplied++;
                 ruleApplied(rule.name, "Response:Correction");
@@ -167,7 +167,7 @@ std::vector<uint8_t> ProxyHotpatcher::processResponse(const std::vector<uint8_t>
     
     m_stats.responsesProcessed++;
     
-    qint64 elapsed = m_timer.nsecsElapsed() / 1000000;
+    int64_t elapsed = m_timer.nsecsElapsed() / 1000000;
     m_stats.avgProcessingTimeMs = (m_stats.avgProcessingTimeMs * (m_stats.responsesProcessed - 1) + elapsed) / m_stats.responsesProcessed;
     
     if (modified != responseData) {
@@ -193,14 +193,14 @@ void* ProxyHotpatcher::processResponseJson(const void*& response)
         content = response["text"].toString();
     }
     
-    if (content.isEmpty()) {
+    if (content.empty()) {
         return response;
     }
     
     // Validate and correct agent output
     AgentValidation validation = validateAgentOutput(content.toUtf8());
     
-    if (!validation.isValid && !validation.correctedOutput.isEmpty()) {
+    if (!validation.isValid && !validation.correctedOutput.empty()) {
         void* modified = response;
         
         if (modified.contains("content")) {
@@ -241,7 +241,7 @@ std::vector<uint8_t> ProxyHotpatcher::processStreamChunk(const std::vector<uint8
             continue;
         }
         
-        if (!rule.searchPattern.isEmpty() && !rule.replacement.isEmpty()) {
+        if (!rule.searchPattern.empty() && !rule.replacement.empty()) {
             modified = bytePatchInPlace(modified, rule.searchPattern, rule.replacement);
             m_stats.patchesApplied++;
         }
@@ -255,7 +255,7 @@ std::vector<uint8_t> ProxyHotpatcher::processStreamChunk(const std::vector<uint8
 
 std::vector<uint8_t> ProxyHotpatcher::bytePatchInPlace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement)
 {
-    if (pattern.isEmpty() || data.isEmpty()) {
+    if (pattern.empty() || data.empty()) {
         return data;
     }
     
@@ -279,9 +279,9 @@ std::vector<uint8_t> ProxyHotpatcher::bytePatchInPlace(const std::vector<uint8_t
     return result.replace(pattern, replacement);
 }
 
-PatternMatch ProxyHotpatcher::findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, qint64 startPos) const
+PatternMatch ProxyHotpatcher::findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, int64_t startPos) const
 {
-    if (pattern.isEmpty() || startPos >= data.size()) {
+    if (pattern.empty() || startPos >= data.size()) {
         return PatternMatch{-1, 0, std::vector<uint8_t>()};
     }
     
@@ -293,10 +293,10 @@ PatternMatch ProxyHotpatcher::findPattern(const std::vector<uint8_t>& data, cons
     // Simple search for small patterns
     const char* dataPtr = data.constData() + startPos;
     const char* patternPtr = pattern.constData();
-    qint64 dataLen = data.size() - startPos;
-    qint64 patternLen = pattern.size();
+    int64_t dataLen = data.size() - startPos;
+    int64_t patternLen = pattern.size();
     
-    for (qint64 i = 0; i <= dataLen - patternLen; ++i) {
+    for (int64_t i = 0; i <= dataLen - patternLen; ++i) {
         if (std::memcmp(dataPtr + i, patternPtr, patternLen) == 0) {
             return PatternMatch{startPos + i, patternLen, pattern};
         }
@@ -312,25 +312,25 @@ std::vector<uint8_t> ProxyHotpatcher::findAndReplace(const std::vector<uint8_t>&
 
 PatternMatch ProxyHotpatcher::boyerMooreSearch(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern) const
 {
-    if (pattern.isEmpty() || data.isEmpty()) {
+    if (pattern.empty() || data.empty()) {
         return PatternMatch{-1, 0, std::vector<uint8_t>()};
     }
     
-    qint64 n = data.size();
-    qint64 m = pattern.size();
+    int64_t n = data.size();
+    int64_t m = pattern.size();
     
     if (m > n) {
         return PatternMatch{-1, 0, std::vector<uint8_t>()};
     }
     
     // Build bad character table
-    std::unordered_map<quint8, qint64> badChar = buildBadCharTable(pattern);
+    std::unordered_map<uint8_t, int64_t> badChar = buildBadCharTable(pattern);
     
     // Search
-    qint64 s = 0; // shift of the pattern relative to data
+    int64_t s = 0; // shift of the pattern relative to data
     
     while (s <= n - m) {
-        qint64 j = m - 1;
+        int64_t j = m - 1;
         
         // Keep reducing j while characters match
         while (j >= 0 && pattern[j] == data[s + j]) {
@@ -343,8 +343,8 @@ PatternMatch ProxyHotpatcher::boyerMooreSearch(const std::vector<uint8_t>& data,
         }
         
         // Shift pattern so that bad character aligns with last occurrence in pattern
-        quint8 badCharValue = static_cast<quint8>(data[s + j]);
-        qint64 shift = badChar.value(badCharValue, -1);
+        uint8_t badCharValue = static_cast<uint8_t>(data[s + j]);
+        int64_t shift = badChar.value(badCharValue, -1);
         s += std::max(1LL, j - shift);
     }
     
@@ -371,7 +371,7 @@ AgentValidation ProxyHotpatcher::validateAgentOutput(const std::vector<uint8_t>&
         }
         
         // Check forbidden patterns
-        if (!rule.forbiddenPatterns.isEmpty()) {
+        if (!rule.forbiddenPatterns.empty()) {
             if (!checkForbiddenPatterns(output, result.violations)) {
                 result.isValid = false;
                 result.errorMessage = "Forbidden patterns detected in agent output";
@@ -380,7 +380,7 @@ AgentValidation ProxyHotpatcher::validateAgentOutput(const std::vector<uint8_t>&
         }
         
         // Check required patterns
-        if (!rule.requiredPatterns.isEmpty()) {
+        if (!rule.requiredPatterns.empty()) {
             if (!checkRequiredPatterns(output, result.violations)) {
                 result.isValid = false;
                 result.errorMessage = "Required patterns missing from agent output";
@@ -444,7 +444,7 @@ AgentValidation ProxyHotpatcher::validateAskMode(const std::vector<uint8_t>& out
 
 std::vector<uint8_t> ProxyHotpatcher::correctAgentOutput(const std::vector<uint8_t>& output, const AgentValidation& validation)
 {
-    if (validation.isValid || validation.correctedOutput.isEmpty()) {
+    if (validation.isValid || validation.correctedOutput.empty()) {
         return output;
     }
     
@@ -528,29 +528,29 @@ bool ProxyHotpatcher::isEnabled() const
 
 // Private helper methods
 
-std::unordered_map<quint8, qint64> ProxyHotpatcher::buildBadCharTable(const std::vector<uint8_t>& pattern) const
+std::unordered_map<uint8_t, int64_t> ProxyHotpatcher::buildBadCharTable(const std::vector<uint8_t>& pattern) const
 {
-    std::unordered_map<quint8, qint64> table;
-    qint64 m = pattern.size();
+    std::unordered_map<uint8_t, int64_t> table;
+    int64_t m = pattern.size();
     
     // Initialize all characters to -1
-    for (qint64 i = 0; i < m - 1; ++i) {
-        quint8 ch = static_cast<quint8>(pattern[i]);
+    for (int64_t i = 0; i < m - 1; ++i) {
+        uint8_t ch = static_cast<uint8_t>(pattern[i]);
         table[ch] = i;
     }
     
     return table;
 }
 
-std::vector<qint64> ProxyHotpatcher::buildGoodSuffixTable(const std::vector<uint8_t>& pattern) const
+std::vector<int64_t> ProxyHotpatcher::buildGoodSuffixTable(const std::vector<uint8_t>& pattern) const
 {
-    qint64 m = pattern.size();
-    std::vector<qint64> shift(m + 1, 0);
-    std::vector<qint64> border(m + 1, 0);
+    int64_t m = pattern.size();
+    std::vector<int64_t> shift(m + 1, 0);
+    std::vector<int64_t> border(m + 1, 0);
     
     // Preprocessing for good suffix heuristic
-    qint64 i = m;
-    qint64 j = m + 1;
+    int64_t i = m;
+    int64_t j = m + 1;
     border[i] = j;
     
     while (i > 0) {
@@ -658,8 +658,8 @@ PatchResult ProxyHotpatcher::directMemoryInjectBatch(const std::unordered_map<si
     for (auto it = injections.constBegin(); it != injections.constEnd(); ++it) {
         totalBytes += it.value().size();
     }
-    
-    
+
+
     m_stats.bytesPatched += totalBytes;
     m_stats.patchesApplied += injections.size();
     
@@ -734,14 +734,14 @@ PatchResult ProxyHotpatcher::modifyLogitsBatch(const std::unordered_map<size_t, 
     return PatchResult::ok("Logits modified", logitModifications.size());
 }
 
-qint64 ProxyHotpatcher::searchInRequestBuffer(const std::vector<uint8_t>& pattern) const
+int64_t ProxyHotpatcher::searchInRequestBuffer(const std::vector<uint8_t>& pattern) const
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     // Returns position or -1 if not found
     return -1;
 }
 
-qint64 ProxyHotpatcher::searchInResponseBuffer(const std::vector<uint8_t>& pattern) const
+int64_t ProxyHotpatcher::searchInResponseBuffer(const std::vector<uint8_t>& pattern) const
 {
     std::lock_guard<std::mutex> locker(&m_mutex);
     // Returns position or -1 if not found
@@ -767,4 +767,6 @@ PatchResult ProxyHotpatcher::cloneBufferRegion(size_t sourceOffset, size_t destO
     
     return PatchResult::ok("Buffer region cloned");
 }
+
+
 

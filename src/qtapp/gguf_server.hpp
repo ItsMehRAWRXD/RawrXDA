@@ -55,11 +55,11 @@ public:
      * @brief Get server statistics
      */
     struct ServerStats {
-        quint64 totalRequests = 0;
-        quint64 successfulRequests = 0;
-        quint64 failedRequests = 0;
-        quint64 totalTokensGenerated = 0;
-        qint64 uptimeSeconds = 0;
+        uint64_t totalRequests = 0;
+        uint64_t successfulRequests = 0;
+        uint64_t failedRequests = 0;
+        uint64_t totalTokensGenerated = 0;
+        int64_t uptimeSeconds = 0;
         std::string startTime;
     };
     ServerStats getStats() const;
@@ -67,7 +67,7 @@ public:
     void serverStarted(quint16 port);
     void serverStopped();
     void requestReceived(const std::string& endpoint, const std::string& method);
-    void requestCompleted(const std::string& endpoint, bool success, qint64 durationMs);
+    void requestCompleted(const std::string& endpoint, bool success, int64_t durationMs);
     void error(const std::string& errorMessage);
 
 private:
@@ -146,4 +146,5 @@ private:
     static constexpr int HEALTH_CHECK_INTERVAL_MS = 30000;     // 30 seconds
     static constexpr int DEFAULT_TIMEOUT_MS = 120000;          // 2 minutes
 };
+
 

@@ -55,7 +55,7 @@ bool BPETokenizer::loadFromFiles(const std::string& vocabPath, const std::string
     
     while (!vocabStream.atEnd()) {
         std::string line = vocabStream.readLine().trimmed();
-        if (line.isEmpty()) continue;
+        if (line.empty()) continue;
         
         std::vector<std::string> parts = line.split('\t');
         if (parts.size() >= 2) {
@@ -80,7 +80,7 @@ bool BPETokenizer::loadFromFiles(const std::string& vocabPath, const std::string
     int priority = 0;
     while (!mergesStream.atEnd()) {
         std::string line = mergesStream.readLine().trimmed();
-        if (line.isEmpty() || line.startsWith("#")) continue;
+        if (line.empty() || line.startsWith("#")) continue;
         
         std::vector<std::string> parts = line.split(' ');
         if (parts.size() >= 2) {
@@ -90,7 +90,7 @@ bool BPETokenizer::loadFromFiles(const std::string& vocabPath, const std::string
     }
     mergesFile.close();
     
-    m_ready = !m_vocab.isEmpty();
+    m_ready = !m_vocab.empty();
     return m_ready;
 }
 
@@ -113,7 +113,7 @@ bool BPETokenizer::loadFromGGUFMetadata(const std::unordered_map<std::string, st
         stream >> numTokens;
         
         for (int32_t i = 0; i < numTokens; ++i) {
-            quint32 len;
+            uint32_t len;
             stream >> len;
             std::vector<uint8_t> tokenBytes(len, //Uninitialized);
             stream.readRawData(tokenBytes.data(), len);
@@ -132,7 +132,7 @@ bool BPETokenizer::loadFromGGUFMetadata(const std::unordered_map<std::string, st
         int priority = 0;
         while (!stream.atEnd()) {
             std::string line = stream.readLine().trimmed();
-            if (line.isEmpty()) continue;
+            if (line.empty()) continue;
             
             std::vector<std::string> parts = line.split(' ');
             if (parts.size() >= 2) {
@@ -142,7 +142,7 @@ bool BPETokenizer::loadFromGGUFMetadata(const std::unordered_map<std::string, st
         }
     }
     
-    m_ready = !m_vocab.isEmpty();
+    m_ready = !m_vocab.empty();
     return m_ready;
 }
 
@@ -270,7 +270,7 @@ std::vector<int32_t> BPETokenizer::encode(const std::string& text) {
 
     std::vector<int32_t> result;
 
-    if (!m_merges.isEmpty()) {
+    if (!m_merges.empty()) {
         std::vector<TextSplit> splits = splitText(text);
         for (const TextSplit& split : splits) {
             std::vector<std::string> byteTokens = byteEncode(split.text);
@@ -347,4 +347,6 @@ bool BPETokenizer::greedyLongestMatch(const std::string& text, std::vector<int32
     }
     return ok;
 }
+
+
 

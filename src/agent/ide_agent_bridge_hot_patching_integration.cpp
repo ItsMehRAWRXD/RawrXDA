@@ -58,7 +58,7 @@ static std::vector<CorrectionPatternRecord> fetchCorrectionPatternsFromDb(
     }
 
     // Use unique connection name based on timestamp to avoid reuse conflicts
-    std::string connName = QStringLiteral("corrPat_%1")
+    std::string connName = "corrPat_%1"
                            );
 
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connName);
@@ -112,7 +112,7 @@ static std::vector<BehaviorPatchRecord> fetchBehaviorPatchesFromDb(
     }
 
     // Use unique connection name based on timestamp to avoid reuse conflicts
-    std::string connName = QStringLiteral("behPatch_%1")
+    std::string connName = "behPatch_%1"
                            );
 
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connName);
@@ -237,13 +237,13 @@ bool IDEAgentBridgeWithHotPatching::startHotPatchingProxy()
         int proxyPort = m_proxyPort.toInt();
         if (!isValidPort(proxyPort)) {
             throw std::runtime_error(
-                QStringLiteral("Invalid proxy port: %1").toStdString());
+                "Invalid proxy port: %1".toStdString());
         }
 
         // Validate GGUF endpoint
         if (!isValidEndpoint(m_ggufEndpoint)) {
             throw std::runtime_error(
-                QStringLiteral("Invalid GGUF endpoint: %1").toStdString());
+                "Invalid GGUF endpoint: %1".toStdString());
         }
 
         // Initialize proxy server
@@ -333,7 +333,7 @@ void IDEAgentBridgeWithHotPatching::loadCorrectionPatterns(
     std::vector<CorrectionPatternRecord> patterns = 
         fetchCorrectionPatternsFromDb(databasePath);
     
-    if (patterns.isEmpty()) {
+    if (patterns.empty()) {
                 << databasePath
                 << "- using default patterns only";
         return;
@@ -371,7 +371,7 @@ void IDEAgentBridgeWithHotPatching::loadBehaviorPatches(
     std::vector<BehaviorPatchRecord> patches = 
         fetchBehaviorPatchesFromDb(databasePath);
 
-    if (patches.isEmpty()) {
+    if (patches.empty()) {
                 << databasePath
                 << "- using default behaviors only";
         return;
@@ -441,7 +441,7 @@ void IDEAgentBridgeWithHotPatching::onBehaviorPatchApplied(
 void IDEAgentBridgeWithHotPatching::onModelInvokerReplaced()
 {
     if (this->getModelInvoker() && m_hotPatchingEnabled) {
-        std::string endpoint = QStringLiteral("http://localhost:%1");
+        std::string endpoint = "http://localhost:%1";
         this->getModelInvoker()->setEndpoint(endpoint);
                 << endpoint;
     }
@@ -492,4 +492,5 @@ void IDEAgentBridgeWithHotPatching::logNavigationFix(
 
     logFile.close();
 }
+
 

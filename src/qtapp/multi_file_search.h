@@ -51,8 +51,7 @@
  * MultiFileSearchWidget* searchWidget = new MultiFileSearchWidget(this);
  * searchWidget->setProjectRoot("/path/to/project");
  *
- * connect(searchWidget, &MultiFileSearchWidget::resultClicked,
- *         this, &MainWindow::navigateToSearchResult);
+ * // connect removed
  *
  * // Optionally trigger search programmatically:
  * searchWidget->setSearchQuery("TODO:");
@@ -168,9 +167,7 @@ public:
      *
      * Connect to this signal to implement navigation to the match location:
      * @code
-     * connect(searchWidget, &MultiFileSearchWidget::resultClicked,
-     *         [this](const MultiFileSearchResult& r) {
-     *             openFile(r.file);
+     * // connect removed
      *             goToLine(r.line, r.column);
      *         });
      * @endcode
@@ -262,14 +259,14 @@ private:
     // UI Components
     // ─────────────────────────────────────────────────────────────────────
 
-    QLineEdit* m_searchInput;          ///< Main search query input field
-    QLineEdit* m_fileFilterInput;      ///< File pattern filter (e.g., "*.cpp, *.h")
-    QCheckBox* m_caseSensitiveCheck;   ///< Case sensitivity toggle
-    QCheckBox* m_regexCheck;           ///< Regex mode toggle
-    QCheckBox* m_wholeWordCheck;       ///< Whole word matching toggle
-    QPushButton* m_searchButton;       ///< Search/Cancel button
+    void* m_searchInput;          ///< Main search query input field
+    void* m_fileFilterInput;      ///< File pattern filter (e.g., "*.cpp, *.h")
+    void* m_caseSensitiveCheck;   ///< Case sensitivity toggle
+    void* m_regexCheck;           ///< Regex mode toggle
+    void* m_wholeWordCheck;       ///< Whole word matching toggle
+    void* m_searchButton;       ///< Search/Cancel button
     QTreeWidget* m_resultsTree;        ///< Grouped results display
-    QLabel* m_statusLabel;             ///< Search status and result count
+    void* m_statusLabel;             ///< Search status and result count
 
     // ─────────────────────────────────────────────────────────────────────
     // Search State

@@ -454,7 +454,7 @@ bool AgenticLoopState::validateAgainstConstraints(const void*& action) const
     // Simple constraint validation - can be extended
     for (auto it = m_constraints.constBegin(); it != m_constraints.constEnd(); ++it) {
         const std::string& constraintValue = it.value().toString();
-        if (!action.contains(it.key()) && !constraintValue.isEmpty()) {
+        if (!action.contains(it.key()) && !constraintValue.empty()) {
             return false;
         }
     }
@@ -650,4 +650,5 @@ AgenticLoopState::IterationStatus AgenticLoopState::stringToStatus(const std::st
     if (str == "MaxAttemptsReached") return IterationStatus::MaxAttemptsReached;
     return IterationStatus::NotStarted;
 }
+
 

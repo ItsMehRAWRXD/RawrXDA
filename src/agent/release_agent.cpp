@@ -225,7 +225,7 @@ bool ReleaseAgent::tagAndUpload() {
         runProcess("git", {"tag", "-a", m_version, "-m", "Auto-release " + m_version});
     }
     
-    ProcessResult buildProc = runProcess("cmake", {"--build", "build", "--config", "Release", "--target", "RawrXD-QtShell"});
+    ProcessResult buildProc = runProcess("cmake", {"--build", "build", "--config", "Release", "--target", "RawrXD-Agent"});
     if (buildProc.exitCode != 0) {
         if (onError) onError("Build failed: " + buildProc.stdErr);
         return false;
@@ -239,7 +239,7 @@ bool ReleaseAgent::tagAndUpload() {
 
     if (devMode) return true;
     
-    std::string binPath = fs::absolute("build/bin/Release/RawrXD-QtShell.exe").string();
+    std::string binPath = fs::absolute("build/bin/Release/RawrXD-Agent.exe").string();
     if (!fs::exists(binPath)) {
         if (onError) onError("Binary not found: " + binPath);
         return false;
@@ -256,7 +256,7 @@ bool ReleaseAgent::tagAndUpload() {
         return false;
     }
 
-    std::string blobName = "RawrXD-QtShell-" + m_version + ".exe";
+    std::string blobName = "RawrXD-Agent-" + m_version + ".exe";
 
     if (!uploadToCDN(binPath, blobName)) return false;
     if (!createGitHubRelease(m_version, m_changelog)) return false;
@@ -374,7 +374,7 @@ bool ReleaseAgent::createGitHubRelease(const std::string& tag, const std::string
 bool ReleaseAgent::updateUpdateManifest(const std::string& tag, const std::string& sha256) {
     nlohmann::json manifest = {
         {"version", tag}, {"sha256", sha256},
-        {"url", "https://rawrxd.blob.core.windows.net/updates/RawrXD-QtShell-" + tag + ".exe"},
+        {"url", "https://rawrxd.blob.core.windows.net/updates/RawrXD-Agent-" + tag + ".exe"},
         {"changelog", m_changelog}
     };
 

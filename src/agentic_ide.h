@@ -1,5 +1,10 @@
 #pragma once
 
+#include <string>
+#include <memory>
+#include <vector>
+#include <filesystem>
+
 class MultiTabEditor;
 class ChatInterface;
 class TerminalPool;
@@ -13,30 +18,32 @@ namespace RawrXD {
     class PlanOrchestrator;
 }
 
-class AgenticIDE : public void {
+/**
+ * @class AgenticIDE
+ * @brief Main coordinator for the Agentic IDE systems (Pure C++ / No Qt)
+ */
+class AgenticIDE {
 public:
-    explicit AgenticIDE(void *parent = nullptr);
+    explicit AgenticIDE();
     ~AgenticIDE();
 
-protected:
-    void showEvent(QShowEvent *ev) override;
+    void initialize();
+    void run();
 
 private:
-    // Core UI components
+    // Core systems
+    std::unique_ptr<AgenticEngine> m_agenticEngine;
+    std::unique_ptr<ZeroDayAgenticEngine> m_zeroDayAgent;
+    std::unique_ptr<UniversalModelRouter> m_modelRouter;
+    std::unique_ptr<ToolRegistry> m_toolRegistry;
+    
+    // Orchestration
+    std::unique_ptr<RawrXD::PlanOrchestrator> m_planOrchestrator;
+    std::unique_ptr<RawrXD::LSPClient> m_lspClient;
+    
+    // UI Stubs (to be replaced by Win32 or other UI if needed)
     MultiTabEditor *m_multiTabEditor = nullptr;
     ChatInterface *m_chatInterface = nullptr;
     TerminalPool *m_terminalPool = nullptr;
-    class QDockWidget *m_chatDock = nullptr;
-    class QDockWidget *m_terminalDock = nullptr;
-    
-    // Agent engine
-    AgenticEngine *m_agenticEngine = nullptr;
-    ZeroDayAgenticEngine *m_zeroDayAgent = nullptr;
-    UniversalModelRouter *m_modelRouter = nullptr;
-    ToolRegistry *m_toolRegistry = nullptr;
-    
-    // Multi-file orchestration
-    RawrXD::PlanOrchestrator *m_planOrchestrator = nullptr;
-    RawrXD::LSPClient *m_lspClient = nullptr;
 };
 

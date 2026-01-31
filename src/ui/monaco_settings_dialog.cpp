@@ -56,7 +56,7 @@ void MonacoSettingsDialog::createThemeTab(void* tabs) {
     
     // Variant selection
     auto* variantGroup = new void(tr("Editor Variant"), widget);
-    auto* variantLayout = new QFormLayout(variantGroup);
+    auto* variantLayout = nullptr;
     
     variantCombo_ = new void(variantGroup);
     variantCombo_->addItem(tr("Core (Pure Monaco)"));
@@ -70,7 +70,7 @@ void MonacoSettingsDialog::createThemeTab(void* tabs) {
     
     // Theme preset selection
     auto* themeGroup = new void(tr("Theme Preset"), widget);
-    auto* themeLayout = new QFormLayout(themeGroup);
+    auto* themeLayout = nullptr;
     
     themePresetCombo_ = new void(themeGroup);
     themePresetCombo_->addItem(tr("Default (VS Code Dark+)"));
@@ -119,7 +119,7 @@ void MonacoSettingsDialog::createThemeTab(void* tabs) {
 
 void MonacoSettingsDialog::createFontTab(void* tabs) {
     auto* widget = new // Widget();
-    auto* layout = new QFormLayout(widget);
+    auto* layout = nullptr;
     
     fontFamilyCombo_ = new voidComboBox(widget);
     layout->addRow(tr("Font Family:"), fontFamilyCombo_);
@@ -157,7 +157,7 @@ void MonacoSettingsDialog::createEditorTab(void* tabs) {
     
     // Editor behavior
     auto* behaviorGroup = new void(tr("Editor Behavior"), widget);
-    auto* behaviorLayout = new QFormLayout(behaviorGroup);
+    auto* behaviorLayout = nullptr;
     
     wordWrapCheck_ = new void(tr("Word Wrap"));
     behaviorLayout->addRow(wordWrapCheck_);
@@ -190,7 +190,7 @@ void MonacoSettingsDialog::createEditorTab(void* tabs) {
     
     // Minimap
     auto* minimapGroup = new void(tr("Minimap"), widget);
-    auto* minimapLayout = new QFormLayout(minimapGroup);
+    auto* minimapLayout = nullptr;
     
     minimapEnabledCheck_ = new void(tr("Enable Minimap"));
     minimapEnabledCheck_->setChecked(true);
@@ -209,7 +209,7 @@ void MonacoSettingsDialog::createEditorTab(void* tabs) {
     
     // IntelliSense (Enterprise only)
     auto* intellisenseGroup = new void(tr("IntelliSense (Enterprise Only)"), widget);
-    auto* intellisenseLayout = new QFormLayout(intellisenseGroup);
+    auto* intellisenseLayout = nullptr;
     
     intellisenseCheck_ = new void(tr("Enable IntelliSense"));
     intellisenseCheck_->setChecked(true);
@@ -240,7 +240,7 @@ void MonacoSettingsDialog::createNeonTab(void* tabs) {
     
     // Neon Visual Effects
     auto* neonGroup = new void(tr("Neon Visual Effects"), widget);
-    auto* neonLayout = new QFormLayout(neonGroup);
+    auto* neonLayout = nullptr;
     
     neonEffectsCheck_ = new void(tr("Enable Neon Effects"));
     neonEffectsCheck_->setChecked(true);
@@ -279,7 +279,7 @@ void MonacoSettingsDialog::createNeonTab(void* tabs) {
     
     // ESP Mode (NeonHack only)
     espModeGroup_ = new void(tr("ESP Mode (NeonHack Variant Only)"), widget);
-    auto* espLayout = new QFormLayout(espModeGroup_);
+    auto* espLayout = nullptr;
     
     espModeCheck_ = new void(tr("Enable ESP Mode"));
     espLayout->addRow(espModeCheck_);
@@ -304,7 +304,7 @@ void MonacoSettingsDialog::createNeonTab(void* tabs) {
 
 void MonacoSettingsDialog::createPerformanceTab(void* tabs) {
     auto* widget = new // Widget();
-    auto* layout = new QFormLayout(widget);
+    auto* layout = nullptr;
     
     renderDelaySpin_ = new void();
     renderDelaySpin_->setRange(1, 100);
@@ -542,7 +542,7 @@ void MonacoSettingsDialog::onFontWeightChanged(int weight) {
 }
 
 void MonacoSettingsDialog::onColorButtonClicked() {
-    auto* button = qobject_cast<void*>(sender());
+// REMOVED_QT:     auto* button = qobject_cast<void*>(sender());
     if (!button) return;
     
     uint32_t currentColor = button->property("colorValue").toUInt();

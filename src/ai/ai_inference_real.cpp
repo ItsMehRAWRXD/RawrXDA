@@ -20,18 +20,18 @@
 static void LogError(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    fprintf(stderr, "[ERROR] ");
-    vfprintf(stderr, fmt, args);
-    fprintf(stderr, "\n");
+
+    v
+
     va_end(args);
 }
 
 static void LogInfo(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    fprintf(stderr, "[INFO] ");
-    vfprintf(stderr, fmt, args);
-    fprintf(stderr, "\n");
+
+    v
+
     va_end(args);
 }
 

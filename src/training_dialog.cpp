@@ -22,24 +22,24 @@ void TrainingDialog::initialize() {
 
 void TrainingDialog::setupUI()
 {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
 
     // ===== Dataset Selection Group =====
-    QGroupBox* datasetGroup = new QGroupBox("Dataset Configuration", this);
-    QVBoxLayout* datasetLayout = new QVBoxLayout(datasetGroup);
+    void* datasetGroup = new void("Dataset Configuration", this);
+    void* datasetLayout = new void(datasetGroup);
 
-    QHBoxLayout* datasetPathLayout = new QHBoxLayout();
-    QLabel* datasetLabel = new QLabel("Dataset Path:", this);
-    m_datasetPathEdit = new QLineEdit(this);
+    void* datasetPathLayout = new void();
+    void* datasetLabel = new void("Dataset Path:", this);
+    m_datasetPathEdit = new void(this);
     m_datasetPathEdit->setPlaceholderText("Path to training dataset (CSV, JSON-L, or plain text)");
-    m_browseDatasetBtn = new QPushButton("Browse...", this);
+    m_browseDatasetBtn = new void("Browse...", this);
     datasetPathLayout->addWidget(datasetLabel, 0);
     datasetPathLayout->addWidget(m_datasetPathEdit, 1);
     datasetPathLayout->addWidget(m_browseDatasetBtn, 0);
 
-    QHBoxLayout* formatLayout = new QHBoxLayout();
-    QLabel* formatLabel = new QLabel("Dataset Format:", this);
-    m_datasetFormatCombo = new QComboBox(this);
+    void* formatLayout = new void();
+    void* formatLabel = new void("Dataset Format:", this);
+    m_datasetFormatCombo = new void(this);
     m_datasetFormatCombo->addItem("Auto-detect", -1);
     m_datasetFormatCombo->addItem("Plain Text", 0);
     m_datasetFormatCombo->addItem("JSON Lines", 1);
@@ -48,41 +48,41 @@ void TrainingDialog::setupUI()
     formatLayout->addWidget(m_datasetFormatCombo);
     formatLayout->addStretch();
 
-    m_datasetInfoLabel = new QLabel("", this);
-    m_datasetInfoLabel->setStyleSheet("QLabel { color: gray; font-style: italic; }");
+    m_datasetInfoLabel = new void("", this);
+    m_datasetInfoLabel->setStyleSheet("void { color: gray; font-style: italic; }");
 
     datasetLayout->addLayout(datasetPathLayout);
     datasetLayout->addLayout(formatLayout);
     datasetLayout->addWidget(m_datasetInfoLabel);
 
     // ===== Model Selection Group =====
-    QGroupBox* modelGroup = new QGroupBox("Base Model Configuration", this);
-    QVBoxLayout* modelLayout = new QVBoxLayout(modelGroup);
+    void* modelGroup = new void("Base Model Configuration", this);
+    void* modelLayout = new void(modelGroup);
 
-    QHBoxLayout* modelPathLayout = new QHBoxLayout();
-    QLabel* modelLabel = new QLabel("Model Path:", this);
-    m_modelPathEdit = new QLineEdit(this);
+    void* modelPathLayout = new void();
+    void* modelLabel = new void("Model Path:", this);
+    m_modelPathEdit = new void(this);
     m_modelPathEdit->setPlaceholderText("Path to base GGUF model");
-    m_browseModelBtn = new QPushButton("Browse...", this);
+    m_browseModelBtn = new void("Browse...", this);
     modelPathLayout->addWidget(modelLabel, 0);
     modelPathLayout->addWidget(m_modelPathEdit, 1);
     modelPathLayout->addWidget(m_browseModelBtn, 0);
 
-    m_modelInfoLabel = new QLabel("", this);
-    m_modelInfoLabel->setStyleSheet("QLabel { color: gray; font-style: italic; }");
+    m_modelInfoLabel = new void("", this);
+    m_modelInfoLabel->setStyleSheet("void { color: gray; font-style: italic; }");
 
     modelLayout->addLayout(modelPathLayout);
     modelLayout->addWidget(m_modelInfoLabel);
 
     // ===== Output Configuration Group =====
-    QGroupBox* outputGroup = new QGroupBox("Output Configuration", this);
-    QVBoxLayout* outputLayout = new QVBoxLayout(outputGroup);
+    void* outputGroup = new void("Output Configuration", this);
+    void* outputLayout = new void(outputGroup);
 
-    QHBoxLayout* outputPathLayout = new QHBoxLayout();
-    QLabel* outputLabel = new QLabel("Output Path:", this);
-    m_outputPathEdit = new QLineEdit(this);
+    void* outputPathLayout = new void();
+    void* outputLabel = new void("Output Path:", this);
+    m_outputPathEdit = new void(this);
     m_outputPathEdit->setPlaceholderText("Path to save fine-tuned model (will create .gguf file)");
-    m_browseOutputBtn = new QPushButton("Browse...", this);
+    m_browseOutputBtn = new void("Browse...", this);
     outputPathLayout->addWidget(outputLabel, 0);
     outputPathLayout->addWidget(m_outputPathEdit, 1);
     outputPathLayout->addWidget(m_browseOutputBtn, 0);
@@ -90,12 +90,12 @@ void TrainingDialog::setupUI()
     outputLayout->addLayout(outputPathLayout);
 
     // ===== Hyperparameters Group =====
-    QGroupBox* hyperparamsGroup = new QGroupBox("Training Hyperparameters", this);
-    QGridLayout* hyperparamsLayout = new QGridLayout(hyperparamsGroup);
+    void* hyperparamsGroup = new void("Training Hyperparameters", this);
+    void* hyperparamsLayout = new void(hyperparamsGroup);
 
     // Epochs
-    QLabel* epochsLabel = new QLabel("Epochs:", this);
-    m_epochsSpinBox = new QSpinBox(this);
+    void* epochsLabel = new void("Epochs:", this);
+    m_epochsSpinBox = nullptr;
     m_epochsSpinBox->setMinimum(1);
     m_epochsSpinBox->setMaximum(1000);
     m_epochsSpinBox->setValue(3);
@@ -104,8 +104,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(m_epochsSpinBox, 0, 1);
 
     // Learning Rate
-    QLabel* lrLabel = new QLabel("Learning Rate:", this);
-    m_learningRateSpinBox = new QDoubleSpinBox(this);
+    void* lrLabel = new void("Learning Rate:", this);
+    m_learningRateSpinBox = nullptr;
     m_learningRateSpinBox->setMinimum(0.000001);
     m_learningRateSpinBox->setMaximum(1.0);
     m_learningRateSpinBox->setDecimals(6);
@@ -116,8 +116,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(m_learningRateSpinBox, 0, 3);
 
     // Batch Size
-    QLabel* batchLabel = new QLabel("Batch Size:", this);
-    m_batchSizeSpinBox = new QSpinBox(this);
+    void* batchLabel = new void("Batch Size:", this);
+    m_batchSizeSpinBox = nullptr;
     m_batchSizeSpinBox->setMinimum(1);
     m_batchSizeSpinBox->setMaximum(256);
     m_batchSizeSpinBox->setValue(4);
@@ -126,8 +126,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(m_batchSizeSpinBox, 1, 1);
 
     // Sequence Length
-    QLabel* seqLenLabel = new QLabel("Sequence Length:", this);
-    m_sequenceLengthSpinBox = new QSpinBox(this);
+    void* seqLenLabel = new void("Sequence Length:", this);
+    m_sequenceLengthSpinBox = nullptr;
     m_sequenceLengthSpinBox->setMinimum(128);
     m_sequenceLengthSpinBox->setMaximum(4096);
     m_sequenceLengthSpinBox->setSingleStep(128);
@@ -137,8 +137,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(m_sequenceLengthSpinBox, 1, 3);
 
     // Gradient Clipping
-    QLabel* gradClipLabel = new QLabel("Gradient Clip:", this);
-    m_gradientClipSpinBox = new QDoubleSpinBox(this);
+    void* gradClipLabel = new void("Gradient Clip:", this);
+    m_gradientClipSpinBox = nullptr;
     m_gradientClipSpinBox->setMinimum(0.1);
     m_gradientClipSpinBox->setMaximum(10.0);
     m_gradientClipSpinBox->setDecimals(2);
@@ -149,8 +149,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(m_gradientClipSpinBox, 2, 1);
 
     // Weight Decay
-    QLabel* weightDecayLabel = new QLabel("Weight Decay:", this);
-    m_weightDecaySpinBox = new QDoubleSpinBox(this);
+    void* weightDecayLabel = new void("Weight Decay:", this);
+    m_weightDecaySpinBox = nullptr;
     m_weightDecaySpinBox->setMinimum(0.0);
     m_weightDecaySpinBox->setMaximum(1.0);
     m_weightDecaySpinBox->setDecimals(4);
@@ -161,8 +161,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(m_weightDecaySpinBox, 2, 3);
 
     // Warmup Steps
-    QLabel* warmupLabel = new QLabel("Warmup Ratio:", this);
-    m_warmupStepsSpinBox = new QDoubleSpinBox(this);
+    void* warmupLabel = new void("Warmup Ratio:", this);
+    m_warmupStepsSpinBox = nullptr;
     m_warmupStepsSpinBox->setMinimum(0.0);
     m_warmupStepsSpinBox->setMaximum(0.5);
     m_warmupStepsSpinBox->setDecimals(2);
@@ -173,11 +173,11 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(m_warmupStepsSpinBox, 3, 1);
 
     // ===== Validation Options Group =====
-    QGroupBox* validationGroup = new QGroupBox("Validation Options", this);
-    QHBoxLayout* validationLayout = new QHBoxLayout(validationGroup);
+    void* validationGroup = new void("Validation Options", this);
+    void* validationLayout = new void(validationGroup);
 
-    QLabel* valSplitLabel = new QLabel("Validation Split:", this);
-    m_validationSplitSpinBox = new QDoubleSpinBox(this);
+    void* valSplitLabel = new void("Validation Split:", this);
+    m_validationSplitSpinBox = nullptr;
     m_validationSplitSpinBox->setMinimum(0.0);
     m_validationSplitSpinBox->setMaximum(0.5);
     m_validationSplitSpinBox->setDecimals(2);
@@ -185,7 +185,7 @@ void TrainingDialog::setupUI()
     m_validationSplitSpinBox->setValue(0.1);
     m_validationSplitSpinBox->setToolTip("Fraction of data reserved for validation (e.g., 0.1 = 10%)");
 
-    m_validateEveryEpochCheckBox = new QCheckBox("Validate Every Epoch", this);
+    m_validateEveryEpochCheckBox = nullptr;
     m_validateEveryEpochCheckBox->setChecked(true);
     m_validateEveryEpochCheckBox->setToolTip("Run validation after each training epoch");
 
@@ -196,12 +196,12 @@ void TrainingDialog::setupUI()
     validationLayout->addStretch();
 
     // ===== Action Buttons =====
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     buttonLayout->addStretch();
-    m_startTrainingBtn = new QPushButton("Start Training", this);
+    m_startTrainingBtn = new void("Start Training", this);
     m_startTrainingBtn->setDefault(true);
     m_startTrainingBtn->setEnabled(false); // Disabled until valid config
-    m_cancelBtn = new QPushButton("Cancel", this);
+    m_cancelBtn = new void("Cancel", this);
     buttonLayout->addWidget(m_startTrainingBtn);
     buttonLayout->addWidget(m_cancelBtn);
 
@@ -233,7 +233,7 @@ void TrainingDialog::setupConnections()
 
 void TrainingDialog::loadDefaultSettings()
 {
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
 
     // Load last used paths
     m_datasetPathEdit->setText(settings.value("training/lastDatasetPath", "").toString());
@@ -256,7 +256,7 @@ void TrainingDialog::loadDefaultSettings()
 
 void TrainingDialog::saveSettings()
 {
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
 
     // Save paths
     settings.setValue("training/lastDatasetPath", m_datasetPathEdit->text());
@@ -284,7 +284,7 @@ void TrainingDialog::onBrowseDataset()
         "Dataset Files (*.csv *.jsonl *.txt);;CSV Files (*.csv);;JSON Lines (*.jsonl);;Text Files (*.txt);;All Files (*)"
     );
 
-    if (!path.isEmpty()) {
+    if (!path.empty()) {
         m_datasetPathEdit->setText(path);
 
         // Auto-detect format
@@ -317,7 +317,7 @@ void TrainingDialog::onBrowseModel()
         "GGUF Files (*.gguf);;All Files (*)"
     );
 
-    if (!path.isEmpty()) {
+    if (!path.empty()) {
         m_modelPathEdit->setText(path);
 
         // Show file info
@@ -337,7 +337,7 @@ void TrainingDialog::onBrowseOutputPath()
         "GGUF Files (*.gguf);;All Files (*)"
     );
 
-    if (!path.isEmpty()) {
+    if (!path.empty()) {
         // Ensure .gguf extension
         if (!path.endsWith(".gguf", //CaseInsensitive)) {
             path += ".gguf";
@@ -374,9 +374,9 @@ void TrainingDialog::onDatasetFormatChanged(int index)
 
 void TrainingDialog::validateInputs()
 {
-    bool isValid = !m_datasetPathEdit->text().isEmpty() &&
-                   !m_modelPathEdit->text().isEmpty() &&
-                   !m_outputPathEdit->text().isEmpty() &&
+    bool isValid = !m_datasetPathEdit->text().empty() &&
+                   !m_modelPathEdit->text().empty() &&
+                   !m_outputPathEdit->text().empty() &&
                    std::filesystem::path::exists(m_datasetPathEdit->text()) &&
                    std::filesystem::path::exists(m_modelPathEdit->text());
 
@@ -386,11 +386,11 @@ void TrainingDialog::validateInputs()
     if (isValid) {
         m_startTrainingBtn->setToolTip("Start training with current configuration");
     } else {
-        if (m_datasetPathEdit->text().isEmpty()) {
+        if (m_datasetPathEdit->text().empty()) {
             m_startTrainingBtn->setToolTip("Please select a dataset file");
-        } else if (m_modelPathEdit->text().isEmpty()) {
+        } else if (m_modelPathEdit->text().empty()) {
             m_startTrainingBtn->setToolTip("Please select a base model file");
-        } else if (m_outputPathEdit->text().isEmpty()) {
+        } else if (m_outputPathEdit->text().empty()) {
             m_startTrainingBtn->setToolTip("Please specify output path");
         } else if (!std::filesystem::path::exists(m_datasetPathEdit->text())) {
             m_startTrainingBtn->setToolTip("Dataset file does not exist");
@@ -403,19 +403,19 @@ void TrainingDialog::validateInputs()
 bool TrainingDialog::validateConfiguration() const
 {
     // Check required fields
-    if (m_datasetPathEdit->text().isEmpty()) {
+    if (m_datasetPathEdit->text().empty()) {
         QMessageBox::warning(const_cast<TrainingDialog*>(this), "Missing Dataset",
             "Please select a training dataset file.");
         return false;
     }
 
-    if (m_modelPathEdit->text().isEmpty()) {
+    if (m_modelPathEdit->text().empty()) {
         QMessageBox::warning(const_cast<TrainingDialog*>(this), "Missing Model",
             "Please select a base model file.");
         return false;
     }
 
-    if (m_outputPathEdit->text().isEmpty()) {
+    if (m_outputPathEdit->text().empty()) {
         QMessageBox::warning(const_cast<TrainingDialog*>(this), "Missing Output Path",
             "Please specify where to save the fine-tuned model.");
         return false;
@@ -505,4 +505,5 @@ void* TrainingDialog::getTrainingConfig() const
 
     return config;
 }
+
 

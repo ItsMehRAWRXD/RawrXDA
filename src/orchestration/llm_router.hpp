@@ -62,7 +62,7 @@ struct RoutingDecision {
     ModelInfo selectedInfo;            // Full model info
     
     // Metadata
-    qint64 decisionTimeMs = 0;
+    int64_t decisionTimeMs = 0;
     std::string routingStrategy;           // Strategy used for routing
 };
 
@@ -234,4 +234,5 @@ private:
     // Load balancing
     std::string selectFromCandidates(const std::vector<std::string>& candidates);
 };
+
 

@@ -60,9 +60,9 @@
     int32_t id = -1;
     aclrtGetDevice(&id);
 
-    GGML_LOG_ERROR("CANN error: %s\n", msg);
-    GGML_LOG_ERROR("  current device: %d, in function %s at %s:%d\n", id, func, file, line);
-    GGML_LOG_ERROR("  %s\n", stmt);
+    GGML_
+    GGML_
+    GGML_
     // abort with GGML_ASSERT to get a stack trace
     GGML_ABORT("CANN error");
 }
@@ -158,7 +158,7 @@ static ggml_cann_device_info ggml_cann_init() {
     aclError err = aclrtGetDeviceCount((uint32_t *) &info.device_count);
 
     if (err != ACL_SUCCESS) {
-        GGML_LOG_ERROR("%s: failed to initialize CANN: %s\n", __func__, aclGetRecentErrMsg());
+        GGML_
         return info;
     }
 
@@ -305,14 +305,7 @@ struct ggml_cann_pool_buf_prio : public ggml_cann_pool {
                     *actual_size = b.size;
                     ptr          = b.ptr;
 #ifdef DEBUG_CANN_MALLOC
-                    GGML_LOG_INFO(
-                        "cann pool[%d]: reused   %p, "
-                        "pool_size = %5u MB, "
-                        "size = %5u MB, "
-                        "margin = %5u MB\n",
-                        device, b.ptr, (uint32_t) (GGML_PAD(pool_size, 1048576) / 1048576),
-                        (uint32_t) (GGML_PAD(size, 1048576) / 1048576),
-                        (uint32_t) (GGML_PAD(margin, 1048576) / 1048576));
+                    GGML_
 #endif
                     break;
                 }
@@ -326,12 +319,7 @@ struct ggml_cann_pool_buf_prio : public ggml_cann_pool {
                 pool_size -= b.size;
                 buffer_pool.erase(b.ptr);
 #ifdef DEBUG_CANN_MALLOC
-                GGML_LOG_INFO(
-                    "cann pool[%d]: clean    %p, "
-                    "pool_size = %5u MB, "
-                    "size = %5u MB\n",
-                    device, b.ptr, (uint32_t) (GGML_PAD(pool_size, 1048576) / 1048576),
-                    (uint32_t) (GGML_PAD(b.size, 1048576) / 1048576));
+                GGML_
 #endif
                 continue;
             }
@@ -342,8 +330,7 @@ struct ggml_cann_pool_buf_prio : public ggml_cann_pool {
         }
 
 #ifdef DEBUG_CANN_MALLOC
-        GGML_LOG_INFO("cann pool[%d] free pool_size = %5u MB\n\n", device,
-                      (uint32_t) (GGML_PAD(pool_size, 1048576) / 1048576));
+        GGML_
 #endif
         if (ptr != nullptr) {
             return ptr;
@@ -355,12 +342,7 @@ struct ggml_cann_pool_buf_prio : public ggml_cann_pool {
         *actual_size = size;
         pool_size += size;
 #ifdef DEBUG_CANN_MALLOC
-        GGML_LOG_INFO(
-            "cann pool[%d]: allocate %p, "
-            "pool_size = %5u MB, "
-            "size = %5u MB\n",
-            device, ptr, (uint32_t) (GGML_PAD(pool_size, 1048576) / 1048576),
-            (uint32_t) (GGML_PAD(size, 1048576) / 1048576));
+        GGML_
 #endif
         buffer_pool.emplace(ptr, size);
         return ptr;
@@ -382,10 +364,7 @@ struct ggml_cann_pool_buf_prio : public ggml_cann_pool {
         auto now = std::chrono::steady_clock::now();
         free_buffers.emplace(ggml_cann_buffer{ ptr, it->second, now });
 #ifdef DEBUG_CANN_MALLOC
-        GGML_LOG_INFO(
-            "cann pool[%d]: return   %p, "
-            "pool_size = %5u MB\n",
-            device, ptr, (uint32_t) (GGML_PAD(pool_size, 1048576) / 1048576));
+        GGML_
 #endif
     }
 };
@@ -504,14 +483,7 @@ struct ggml_cann_pool_buf : public ggml_cann_pool {
                     b.used       = true;
                     ptr          = b.ptr;
 #ifdef DEBUG_CANN_MALLOC
-                    GGML_LOG_INFO(
-                        "cann pool[%d]: reused   %p, "
-                        "pool_size = %5u MB, "
-                        "size = %5u MB, "
-                        "margin = %5u MB\n",
-                        device, b.ptr, (uint32_t) (GGML_PAD(pool_size, 1048576) / 1048576),
-                        (uint32_t) (GGML_PAD(size, 1048576) / 1048576),
-                        (uint32_t) (GGML_PAD(margin, 1048576) / 1048576));
+                    GGML_
 #endif
                     break;
                 }
@@ -524,12 +496,7 @@ struct ggml_cann_pool_buf : public ggml_cann_pool {
                 ACL_CHECK(aclrtFree(b.ptr));
                 pool_size -= b.size;
 #ifdef DEBUG_CANN_MALLOC
-                GGML_LOG_INFO(
-                    "cann pool[%d]: clean    %p, "
-                    "pool_size = %5u MB, "
-                    "size = %5u MB\n",
-                    device, b.ptr, (uint32_t) (GGML_PAD(pool_size, 1048576) / 1048576),
-                    (uint32_t) (GGML_PAD(b.size, 1048576) / 1048576));
+                GGML_
 #endif
                 b.ptr = nullptr;
             }
@@ -548,15 +515,10 @@ struct ggml_cann_pool_buf : public ggml_cann_pool {
             b.size       = size;
             b.used       = true;
             if (i >= MAX_BUFFERS - 8) {
-                GGML_LOG_WARN("cann pool[%d]: slots almost full\n", device);
+                GGML_
             }
 #ifdef DEBUG_CANN_MALLOC
-            GGML_LOG_INFO(
-                "cann pool[%d]: allocate %p, "
-                "pool_size = %5u MB, "
-                "size = %5u MB\n",
-                device, b.ptr, (uint32_t) (GGML_PAD(pool_size, 1048576) / 1048576),
-                (uint32_t) (GGML_PAD(b.size, 1048576) / 1048576));
+            GGML_
 #endif
             return b.ptr;
         }
@@ -580,10 +542,7 @@ struct ggml_cann_pool_buf : public ggml_cann_pool {
             b.used      = false;
             b.last_used = std::chrono::steady_clock::now();
 #ifdef DEBUG_CANN_MALLOC
-            GGML_LOG_INFO(
-                "cann pool[%d]: return   %p, "
-                "pool_size = %5u MB\n",
-                device, b.ptr, (uint32_t) (GGML_PAD(pool_size, 1048576) / 1048576));
+            GGML_
 #endif
             return;
         }
@@ -717,9 +676,7 @@ struct ggml_cann_pool_vmm : public ggml_cann_pool {
             pool_size += reserve_size;
 
 #ifdef DEBUG_CANN_MALLOC
-            GGML_LOG_INFO("cann pool[%d]: size increased to %llu MB (reserved %llu MB)\n", device,
-                          (unsigned long long) (pool_size / 1024 / 1024),
-                          (unsigned long long) (reserve_size / 1024 / 1024));
+            GGML_
 #endif
         }
 
@@ -730,8 +687,7 @@ struct ggml_cann_pool_vmm : public ggml_cann_pool {
         pool_used += size;
 
 #ifdef DEBUG_CANN_MALLOC
-        GGML_LOG_INFO("cann pool[%d]: allocated %llu bytes at %llx\n", device, (unsigned long long) size,
-                      (unsigned long long) ptr);
+        GGML_
 #endif
         return ptr;
     }
@@ -744,8 +700,7 @@ struct ggml_cann_pool_vmm : public ggml_cann_pool {
      */
     void free(void * ptr, size_t size) override {
 #ifdef DEBUG_CANN_MALLOC
-        GGML_LOG_INFO("cann pool[%d]: freed %llu bytes at %llx\n", device, (unsigned long long) size,
-                      (unsigned long long) ptr);
+        GGML_
 #endif
 
         pool_used -= size;
@@ -767,16 +722,16 @@ std::unique_ptr<ggml_cann_pool> ggml_backend_cann_context::new_pool_for_device(i
     std::string mem_pool_type = get_env("GGML_CANN_MEM_POOL").value_or("");
 
     if (mem_pool_type == "prio") {
-        GGML_LOG_INFO("%s: device %d use buffer pool with priority queue\n", __func__, device);
+        GGML_
         return std::unique_ptr<ggml_cann_pool>(new ggml_cann_pool_buf_prio(device));
     }
 
     if (ggml_cann_info().devices[device].vmm && mem_pool_type != "leg") {
-        GGML_LOG_INFO("%s: device %d use vmm pool\n", __func__, device);
+        GGML_
         return std::unique_ptr<ggml_cann_pool>(new ggml_cann_pool_vmm(device));
     }
 
-    GGML_LOG_INFO("%s: device %d use buffer pool\n", __func__, device);
+    GGML_
     return std::unique_ptr<ggml_cann_pool>(new ggml_cann_pool_buf(device));
 }
 
@@ -1394,8 +1349,7 @@ static ggml_backend_buffer_t ggml_backend_cann_buffer_type_alloc_buffer(ggml_bac
     void *   dev_ptr;
     aclError err = aclrtMalloc(&dev_ptr, size, ACL_MEM_MALLOC_HUGE_FIRST);
     if (err != ACL_SUCCESS) {
-        GGML_LOG_ERROR("%s: allocating %.2f MiB on device %d: aclrtMalloc failed: %s\n", __func__,
-                       size / 1024.0 / 1024.0, buft_ctx->device, aclGetRecentErrMsg());
+        GGML_
         return nullptr;
     }
 
@@ -1593,8 +1547,7 @@ static void * ggml_cann_host_malloc(size_t size) {
     void *   hostPtr = nullptr;
     aclError err     = aclrtMallocHost((void **) &hostPtr, size);
     if (err != ACL_SUCCESS) {
-        GGML_LOG_WARN("%s: failed to allocate %.2f MiB of pinned memory: %s\n", __func__, size / 1024.0 / 1024.0,
-                      aclGetRecentErrMsg());
+        GGML_
         return nullptr;
     }
     return hostPtr;
@@ -2264,7 +2217,7 @@ static void evaluate_and_capture_cann_graph(ggml_backend_cann_context * cann_ctx
 
             bool ok = ggml_cann_compute_forward(*cann_ctx, node);
             if (!ok) {
-                GGML_LOG_ERROR("%s: op not supported %s (%s)\n", __func__, node->name, ggml_op_name(node->op));
+                GGML_
             }
             GGML_ASSERT(ok);
         }
@@ -2949,13 +2902,13 @@ ggml_backend_reg_t ggml_backend_cann_reg() {
 ggml_backend_t ggml_backend_cann_init(int32_t device) {
     aclInit(nullptr);
     if (device < 0 || device >= ggml_backend_cann_get_device_count()) {
-        GGML_LOG_ERROR("%s: error: invalid device %d\n", __func__, device);
+        GGML_
         return nullptr;
     }
 
     ggml_backend_cann_context * ctx = new ggml_backend_cann_context(device);
     if (ctx == nullptr) {
-        GGML_LOG_ERROR("%s: error: failed to allocate context\n", __func__);
+        GGML_
         return nullptr;
     }
     ggml_cann_set_device(ctx->device);

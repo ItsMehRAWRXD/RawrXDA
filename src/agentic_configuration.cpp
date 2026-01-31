@@ -62,7 +62,7 @@ bool AgenticConfiguration::loadFromEnv(const std::string& filePath)
     while (!file.atEnd()) {
         std::string line = file.readLine().trimmed();
 
-        if (line.isEmpty() || line.startsWith("#")) continue;
+        if (line.empty() || line.startsWith("#")) continue;
 
         int eqIdx = line.indexOf('=');
         if (eqIdx < 0) continue;
@@ -631,4 +631,5 @@ void AgenticConfiguration::applyEnvironmentOverrides()
     // Apply environment-specific configuration overrides
     // For example, different models or log levels for different environments
 }
+
 

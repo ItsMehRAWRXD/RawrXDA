@@ -97,10 +97,10 @@ public:
 
 private:
     /// Handle AI backend streaming
-    void onStreamToken(qint64 reqId, const std::string& token);
+    void onStreamToken(int64_t reqId, const std::string& token);
 
     /// Handle AI backend error
-    void onError(qint64 reqId, const std::string& error);
+    void onError(int64_t reqId, const std::string& error);
 
 private:
     /**
@@ -123,7 +123,8 @@ private:
     MetaPlanner* m_planner;
     Answer m_lastAnswer;
     std::string m_accumulatedText;
-    qint64 m_currentRequestId = -1;
+    int64_t m_currentRequestId = -1;
     bool m_isAnswering = false;
 };
+
 

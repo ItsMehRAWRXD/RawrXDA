@@ -101,14 +101,14 @@ private:
                 metrics.recordTokenGeneration(requestId, 100);  // 100 tokens
                 metrics.recordRequestEnd(requestId);
             }
-            
-            
+
+
             // Get aggregate statistics
             auto stats = metrics.getAggregateStats();
             
             // Export metrics
             std::string json = metrics.exportMetrics();
-            if (!json.isEmpty()) {
+            if (!json.empty()) {
             }
             
             testResults[1] = true;
@@ -132,8 +132,8 @@ private:
                                               ModelQueue::Priority::NORMAL);
             std::string req3 = queue.submitRequest("model1.gguf", "Test prompt 3", 
                                               ModelQueue::Priority::LOW);
-            
-            
+
+
             // Check queue status
             auto status = queue.getQueueStatus();
             
@@ -157,16 +157,16 @@ private:
             api.setProgressCallback([](int current, int total) {
                 // Progress tracking
             });
-            
-            
+
+
             // Simulate streaming (in real scenario, would connect to model)
             std::vector<std::string> testTokens = {"Hello", " ", "world", "!", " ", "Test", " ", "stream"};
             for (const std::string& token : testTokens) {
                 // In production, this would come from actual model inference
                 // api would call tokenCallback internally
             }
-            
-            
+
+
             testResults[3] = true;
         } catch (const std::exception& e) {
             testResults[3] = false;
@@ -208,11 +208,11 @@ private:
             logger.logDataAccess("test-user", "sensitive_data.txt", "read");
             logger.logUserLogin("test-user", true, "127.0.0.1");
             logger.logConfigChange("test-user", "backup_interval", "10", "15");
-            
-            
+
+
             // Export audit log
             std::string auditLog = logger.exportAuditLog();
-            if (!auditLog.isEmpty()) {
+            if (!auditLog.empty()) {
             }
             
             testResults[5] = true;
@@ -242,7 +242,7 @@ private:
             
             // Generate report
             std::string report = sla.generateMonthlyReport();
-            if (!report.isEmpty()) {
+            if (!report.empty()) {
             }
             
             testResults[6] = true;
@@ -268,8 +268,8 @@ private:
             std::string status = testResults[i] ? "✓ PASS" : "✗ FAIL";
             if (testResults[i]) passed++;
         }
-        
-        
+
+
         if (passed == 7) {
         } else {
         }
@@ -290,4 +290,5 @@ int main(int argc, char *argv[]) {
 }
 
 // MOC removed
+
 

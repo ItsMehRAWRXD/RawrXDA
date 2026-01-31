@@ -1,8 +1,11 @@
-// agentic_puppeteer.hpp - Response correction via pattern matching
 #pragma once
 
-
+#include <string>
+#include <vector>
+#include <mutex>
 #include <memory>
+#include <algorithm>
+#include <nlohmann/json.hpp>
 
 // Failure types the puppeteer can correct
 enum class FailureType {
@@ -18,119 +21,64 @@ enum class FailureType {
 struct CorrectionResult {
     bool success = false;
     std::string correctedOutput;
-    FailureType detectedFailure = FailureType::None;
-    std::string diagnosticMessage;
-    
-    static CorrectionResult ok(const std::string& output, FailureType failure) {
-        return CorrectionResult{true, output, failure, "Correction applied"};
+    FailureType originalFailure = FailureType::None;
+    std::string reason;
+
+    static CorrectionResult ok(const std::string& output, FailureType fail) {
+        CorrectionResult r;
+        r.success = true;
+        r.correctedOutput = output;
+        r.originalFailure = fail;
+        return r;
     }
-    
-    static CorrectionResult error(FailureType failureType, const std::string& diagnostic) {
-        return CorrectionResult{false, std::string(), failureType, diagnostic};
+
+    static CorrectionResult error(FailureType fail, const std::string& reason) {
+        CorrectionResult r;
+        r.success = false;
+        r.originalFailure = fail;
+        r.reason = reason;
+        return r;
     }
 };
 
-// Base puppeteer for general response correction
-class AgenticPuppeteer : public void
-{
+struct PuppeteerStats {
+    uint64_t responsesAnalyzed = 0;
+    uint64_t failuresDetected = 0;
+    std::vector<int> failureTypeCount = std::vector<int>(6, 0);
+    uint64_t successfulCorrections = 0;
+    uint64_t failedCorrections = 0;
+};
 
+class AgenticPuppeteer {
 public:
-    explicit AgenticPuppeteer(void* parent = nullptr);
-    ~AgenticPuppeteer() override;
+    AgenticPuppeteer();
+    ~AgenticPuppeteer();
 
-    // Main correction API
-    CorrectionResult correctResponse(const std::string& originalResponse, const std::string& userPrompt = std::string());
-    CorrectionResult correctJsonResponse(const void*& response, const std::string& context = std::string());
+    CorrectionResult correctResponse(const std::string& originalResponse, const std::string& userPrompt);
+    CorrectionResult correctJsonResponse(const nlohmann::json& response, const std::string& context);
     
-    // Detection and diagnosis
+    // Setters
+    void setEnabled(bool enabled) { m_enabled = enabled; }
+
+private:
     FailureType detectFailure(const std::string& response);
     std::string diagnoseFailure(const std::string& response);
     
-    // Pattern configuration
-    void addRefusalPattern(const std::string& pattern);
-    void addHallucinationPattern(const std::string& pattern);
-    void addLoopPattern(const std::string& pattern);
-    std::vector<std::string> getRefusalPatterns() const;
-    std::vector<std::string> getHallucinationPatterns() const;
-    
-    // Statistics
-    struct Stats {
-        qint64 responsesAnalyzed = 0;
-        qint64 failuresDetected = 0;
-        qint64 successfulCorrections = 0;
-        qint64 failedCorrections = 0;
-        std::unordered_map<int, qint64> failureTypeCount;
-    };
-    
-    Stats getStatistics() const;
-    void resetStatistics();
-    
-    // Enable/disable
-    void setEnabled(bool enable);
-    bool isEnabled() const;
-
-    void failureDetected(FailureType type, const std::string& diagnostic);
-    void correctionApplied(const std::string& correctedOutput);
-    void correctionFailed(FailureType type, const std::string& error);
-
-protected:
-    // Helper methods
+    // Correction strategies
     std::string applyRefusalBypass(const std::string& response);
     std::string correctHallucination(const std::string& response);
     std::string enforceFormat(const std::string& response);
     std::string handleInfiniteLoop(const std::string& response);
-    
+
+    // Callbacks placeholder
+    void failureDetected(FailureType type, const std::string& diagnosis);
+    void correctionApplied(const std::string& corrected);
+    void correctionFailed(FailureType type, const std::string& reason);
+
+    bool m_enabled = true;
     mutable std::mutex m_mutex;
+    PuppeteerStats m_stats;
+    
     std::vector<std::string> m_refusalPatterns;
     std::vector<std::string> m_hallucinationPatterns;
-    std::vector<std::string> m_loopPatterns;
-    Stats m_stats;
-    bool m_enabled = true;
 };
-
-// Specialized: Refusal bypass (jailbreak recovery)
-class RefusalBypassPuppeteer : public AgenticPuppeteer
-{
-
-public:
-    explicit RefusalBypassPuppeteer(void* parent = nullptr);
-
-    CorrectionResult bypassRefusal(const std::string& refusedResponse, const std::string& originalPrompt);
-    std::string reframePrompt(const std::string& refusedResponse);
-    
-private:
-    std::string generateAlternativePrompt(const std::string& original);
-};
-
-// Specialized: Hallucination correction
-class HallucinationCorrectorPuppeteer : public AgenticPuppeteer
-{
-
-public:
-    explicit HallucinationCorrectorPuppeteer(void* parent = nullptr);
-
-    CorrectionResult detectAndCorrectHallucination(const std::string& response, const std::vector<std::string>& knownFacts);
-    std::string validateFactuality(const std::string& claim);
-    
-private:
-    std::vector<std::string> m_knownFactDatabase;
-};
-
-// Specialized: Format enforcement
-class FormatEnforcerPuppeteer : public AgenticPuppeteer
-{
-
-public:
-    explicit FormatEnforcerPuppeteer(void* parent = nullptr);
-
-    CorrectionResult enforceJsonFormat(const std::string& response);
-    CorrectionResult enforceMarkdownFormat(const std::string& response);
-    CorrectionResult enforceCodeBlockFormat(const std::string& response);
-    
-    void setRequiredJsonSchema(const void*& schema);
-    void* getRequiredJsonSchema() const;
-    
-private:
-    void* m_requiredSchema;
-};
-

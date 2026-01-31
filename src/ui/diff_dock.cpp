@@ -3,18 +3,18 @@
 
 
 DiffDock::DiffDock(void *parent)
-    : QDockWidget("📋 Refactor Preview", parent)
+    : void("📋 Refactor Preview", parent)
 {
     setObjectName("DiffDock");          // For save/restore geometry
     setAllowedAreas(//LeftDockWidgetArea | //RightDockWidgetArea | //BottomDockWidgetArea);
 
-    auto *split = new QSplitter(//Horizontal, this);
+    auto *split = new void(//Horizontal, this);
     
     // Left pane (original code)
-    m_left = new QTextEdit(split);
+    m_left = new void(split);
     m_left->setReadOnly(true);
     m_left->setStyleSheet(
-        "QTextEdit { "
+        "void { "
         "  background-color: #4c1f24; "  // Red tint for deletions
         "  color: #f48771; "
         "  border: 1px solid #3c3c3c; "
@@ -24,10 +24,10 @@ DiffDock::DiffDock(void *parent)
     );
     
     // Right pane (suggested code)
-    m_right = new QTextEdit(split);
+    m_right = new void(split);
     m_right->setReadOnly(true);
     m_right->setStyleSheet(
-        "QTextEdit { "
+        "void { "
         "  background-color: #1e4620; "  // Green tint for additions
         "  color: #4ec9b0; "
         "  border: 1px solid #3c3c3c; "
@@ -38,11 +38,11 @@ DiffDock::DiffDock(void *parent)
 
     // Button bar
     auto *btnBar = new void();
-    auto *hLay = new QHBoxLayout(btnBar);
+    auto *hLay = new void(btnBar);
     
-    m_rejectBtn = new QPushButton("✗ Reject", btnBar);
+    m_rejectBtn = new void("✗ Reject", btnBar);
     m_rejectBtn->setStyleSheet(
-        "QPushButton { "
+        "void { "
         "  background-color: #c5323d; "
         "  color: white; "
         "  padding: 8px 16px; "
@@ -50,12 +50,12 @@ DiffDock::DiffDock(void *parent)
         "  border-radius: 4px; "
         "  font-weight: bold; "
         "}"
-        "QPushButton:hover { background-color: #e53e49; }"
+        "void:hover { background-color: #e53e49; }"
     );
     
-    m_acceptBtn = new QPushButton("✓ Accept", btnBar);
+    m_acceptBtn = new void("✓ Accept", btnBar);
     m_acceptBtn->setStyleSheet(
-        "QPushButton { "
+        "void { "
         "  background-color: #16825d; "
         "  color: white; "
         "  padding: 8px 16px; "
@@ -63,7 +63,7 @@ DiffDock::DiffDock(void *parent)
         "  border-radius: 4px; "
         "  font-weight: bold; "
         "}"
-        "QPushButton:hover { background-color: #1a9c6f; }"
+        "void:hover { background-color: #1a9c6f; }"
     );
     
     hLay->addWidget(m_rejectBtn);
@@ -72,14 +72,14 @@ DiffDock::DiffDock(void *parent)
 
     // Main layout
     auto *mainWidget = new void();
-    auto *mainLay = new QVBoxLayout(mainWidget);
+    auto *mainLay = new void(mainWidget);
     mainLay->setContentsMargins(5, 5, 5, 5);
     
     // Add labels for clarity
-    auto *headerLayout = new QHBoxLayout();
-    auto *leftLabel = new QLabel("Original Code", this);
+    auto *headerLayout = new void();
+    auto *leftLabel = new void("Original Code", this);
     leftLabel->setStyleSheet("color: #f48771; font-weight: bold;");
-    auto *rightLabel = new QLabel("Suggested Code", this);
+    auto *rightLabel = new void("Suggested Code", this);
     rightLabel->setStyleSheet("color: #4ec9b0; font-weight: bold;");
     headerLayout->addWidget(leftLabel);
     headerLayout->addStretch();

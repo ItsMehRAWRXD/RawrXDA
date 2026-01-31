@@ -72,9 +72,6 @@ bool Rollback::detectRegression() {
     bool tpsReg = lastTPS < prevTPS * 0.95;
     bool pplReg = lastPPL > prevPPL * 1.02;
 
-    std::cout << "[Rollback] detectRegression" << " tpsReg=" << tpsReg << " pplReg=" << pplReg
-            << " lastTPS=" << lastTPS << " prevTPS=" << prevTPS
-            << " lastPPL=" << lastPPL << " prevPPL=" << prevPPL << std::endl;
 
     return tpsReg || pplReg;
 }
@@ -82,10 +79,10 @@ bool Rollback::detectRegression() {
 // ---------- 2. git revert ----------
 bool Rollback::revertLastCommit() {
     if (!runProcess("git", {"revert", "--no-edit", "HEAD"}, 60000)) {
-        std::cerr << "[Rollback] git revert failed or timed out" << std::endl;
+        
         return false;
     }
-    std::cout << "[Rollback] git revert SUCCESS" << std::endl;
+    
     return true;
 }
 
@@ -96,7 +93,7 @@ bool Rollback::openIssue(const std::string& title, const std::string& body) {
     _dupenv_s(&token, &len, "GITHUB_TOKEN");
     
     if (!token || len == 0) {
-        std::cerr << "[Rollback] GITHUB_TOKEN not set - skipping issue" << std::endl;
+        
         if (token) free(token);
         return true; // allow in dev
     }
@@ -115,7 +112,7 @@ bool Rollback::openIssue(const std::string& title, const std::string& body) {
     // Let's implement a simple WinHTTP POST.
     
     // ... Mocking/Simplifying for now as this is a "SelfCode" agent that edits code.
-    // std::cout << "Would post issue to GitHub: " << title << std::endl;
+    // 
     
     std::string jsonStr = issue.dump();
     // Escape quotes for command line
@@ -130,10 +127,10 @@ bool Rollback::openIssue(const std::string& title, const std::string& body) {
     std::string cmd = "curl -X POST -H \"Authorization: Bearer " + tokenStr + "\" -H \"Content-Type: application/json\" -d \"" + escapedJson + "\" https://api.github.com/repos/ItsMehRAWRXD/RawrXD-ModelLoader/issues";
     
     if (system(cmd.c_str()) == 0) {
-        std::cout << "[Rollback] GitHub issue opened: " << title << std::endl;
+        
         return true;
     } else {
-        std::cerr << "[Rollback] GitHub issue failed" << std::endl;
+        
         return false;
     }
 }

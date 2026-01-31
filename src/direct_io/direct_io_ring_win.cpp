@@ -49,7 +49,7 @@ extern "C" bool DirectIO_Prefetch(DirectIOContext* ctx, uint64_t offset, size_t 
 
     // Direct I/O check: offset and size must be sector aligned (usually 512)
     if (offset % 512 != 0 || size % 512 != 0) {
-        std::cerr << "Alignment error: offset=" << offset << ", size=" << size << std::endl;
+        
         return false;
     }
 
@@ -70,7 +70,7 @@ extern "C" bool DirectIO_Prefetch(DirectIOContext* ctx, uint64_t offset, size_t 
         SubmitIoRing(ctx->hRing, 0, 0, &submitted);
         return true;
     } else {
-        std::cerr << "BuildIoRingReadFile failed: 0x" << std::hex << hr << std::dec << std::endl;
+        
     }
     return false;
 }

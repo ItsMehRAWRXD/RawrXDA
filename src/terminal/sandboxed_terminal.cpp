@@ -14,7 +14,7 @@ SandboxedTerminal::~SandboxedTerminal()
     logStructured("INFO", "SandboxedTerminal shutting down", void*{{"component", "SandboxedTerminal"}});
     
     if (m_process) {
-        if (m_process->state() != QProcess::NotRunning) {
+        if (m_process->state() != void*::NotRunning) {
             m_process->terminate();
             if (!m_process->waitForFinished(5000)) {
                 m_process->kill();
@@ -92,7 +92,7 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const std::st
         {
             std::lock_guard<std::mutex> processLocker(&m_processMutex);
             
-            if (m_process && m_process->state() != QProcess::NotRunning) {
+            if (m_process && m_process->state() != void*::NotRunning) {
                 logStructured("ERROR", "Process already running", void*{});
                 result.error = "Another command is already executing";
                 std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
@@ -105,16 +105,16 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const std::st
                 delete m_process;
             }
             
-            m_process = new QProcess(this);
+            m_process = new void*(this);
             
             // Set working directory
-            if (!config.workingDirectory.isEmpty()) {
+            if (!config.workingDirectory.empty()) {
                 m_process->setWorkingDirectory(config.workingDirectory);
             }
             
             // Set sanitized environment
             m_process->setProcessEnvironment(QProcessEnvironment::systemEnvironment());
-            if (!config.allowedEnvironmentVars.isEmpty()) {
+            if (!config.allowedEnvironmentVars.empty()) {
                 QProcessEnvironment env;
                 QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
                 for (const std::string& var : config.allowedEnvironmentVars) {
@@ -193,7 +193,7 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const std::st
                 result.output = sanitizeOutput(rawOutput);
                 result.error = sanitizeOutput(rawError);
                 
-                qint64 filteredBytes = (rawOutput.length() - result.output.length()) + 
+                int64_t filteredBytes = (rawOutput.length() - result.output.length()) + 
                                        (rawError.length() - result.error.length());
                 
                 {
@@ -263,13 +263,13 @@ std::string SandboxedTerminal::sanitizeOutput(const std::string& output) const
 bool SandboxedTerminal::isRunning() const
 {
     std::lock_guard<std::mutex> locker(&m_processMutex);
-    return m_process && m_process->state() != QProcess::NotRunning;
+    return m_process && m_process->state() != void*::NotRunning;
 }
 
 void SandboxedTerminal::terminate()
 {
     std::lock_guard<std::mutex> locker(&m_processMutex);
-    if (m_process && m_process->state() != QProcess::NotRunning) {
+    if (m_process && m_process->state() != void*::NotRunning) {
         m_process->terminate();
         logStructured("INFO", "Process terminated", void*{});
     }
@@ -278,7 +278,7 @@ void SandboxedTerminal::terminate()
 void SandboxedTerminal::kill()
 {
     std::lock_guard<std::mutex> locker(&m_processMutex);
-    if (m_process && m_process->state() != QProcess::NotRunning) {
+    if (m_process && m_process->state() != void*::NotRunning) {
         m_process->kill();
         logStructured("INFO", "Process killed", void*{});
     }
@@ -338,7 +338,7 @@ void SandboxedTerminal::logAudit(const std::string& action, const void*& details
         config = m_config;
     }
     
-    if (!config.enableAuditLog || config.auditLogPath.isEmpty()) {
+    if (!config.enableAuditLog || config.auditLogPath.empty()) {
         return;
     }
     
@@ -419,7 +419,7 @@ std::vector<std::string> SandboxedTerminal::buildSanitizedEnvironment() const
     std::vector<std::string> env;
     QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
     
-    if (config.allowedEnvironmentVars.isEmpty()) {
+    if (config.allowedEnvironmentVars.empty()) {
         // Default safe environment variables
         std::vector<std::string> safeVars = {"PATH", "HOME", "USER", "TEMP", "TMP"};
         for (const std::string& var : safeVars) {
@@ -482,4 +482,6 @@ std::string SandboxedTerminal::filterSensitiveData(const std::string& data) cons
     
     return filtered;
 }
+
+
 

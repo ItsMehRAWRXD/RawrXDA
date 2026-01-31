@@ -209,7 +209,7 @@ void ggml_sycl_op_get_rows(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
             break;
         default:
             // TODO: k-quants
-            GGML_LOG_ERROR("%s: unsupported type: %s\n", __func__, ggml_type_name(dst->src[0]->type));
+            GGML_
             GGML_ABORT("fatal error");
     }
 }

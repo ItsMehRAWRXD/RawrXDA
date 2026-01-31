@@ -466,7 +466,7 @@ private:
                         }
                     } catch (const std::exception& e) {
                         // Handle potential parsing errors if a line is incomplete or invalid
-                        std::cerr << "JSON parse error: " << e.what() << std::endl;
+                        
                     }
 
                     // Remove the processed line from the buffer

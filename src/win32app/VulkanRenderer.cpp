@@ -23,7 +23,7 @@ public:
         // when Vulkan is not installed.
         m_vkModule = LoadLibraryA("vulkan-1.dll");
         if (!m_vkModule) {
-            std::cerr << "VulkanRenderer: vulkan-1.dll not found; Vulkan backend disabled" << std::endl;
+             Vulkan backend disabled" << std::endl;
             m_initialized = false;
             return false;
         }
@@ -31,14 +31,14 @@ public:
         // Basic sanity check: ensure vkGetInstanceProcAddr exists
         FARPROC proc = GetProcAddress(m_vkModule, "vkGetInstanceProcAddr");
         if (!proc) {
-            std::cerr << "VulkanRenderer: vkGetInstanceProcAddr missing; Vulkan backend disabled" << std::endl;
+             Vulkan backend disabled" << std::endl;
             FreeLibrary(m_vkModule);
             m_vkModule = nullptr;
             m_initialized = false;
             return false;
         }
 
-        std::cout << "VulkanRenderer: Vulkan runtime detected, backend ready (surface creation deferred)" << std::endl;
+
         m_initialized = true;
         return true;
     }

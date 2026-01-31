@@ -19,8 +19,8 @@ PerformanceMonitor::PerformanceMonitor(void* parent)
     setupDefaultThresholds();
     
     snapshotTimer->start();
-    
-    std::cout << "[PerformanceMonitor] Initialized with 99.9% SLA target" << std::endl;
+
+
 }
 
 PerformanceMonitor::~PerformanceMonitor() {
@@ -75,8 +75,8 @@ void PerformanceMonitor::setupDefaultSLAs() {
     memorySLA.timeWindow = "1h";
     memorySLA.isActive = true;
     slaDefinitions["memory_usage"] = memorySLA;
-    
-    std::cout << "[PerformanceMonitor] Configured " << slaDefinitions.size() << " SLA definitions" << std::endl;
+
+
 }
 
 void PerformanceMonitor::setupDefaultThresholds() {
@@ -106,8 +106,8 @@ void PerformanceMonitor::setupDefaultThresholds() {
     latencyThreshold.criticalThreshold = 5000.0;
     latencyThreshold.isEnabled = true;
     thresholds["ai_latency"] = latencyThreshold;
-    
-    std::cout << "[PerformanceMonitor] Configured " << thresholds.size() << " performance thresholds" << std::endl;
+
+
 }
 
 void PerformanceMonitor::recordMetric(const std::string& component, const std::string& operation, 
@@ -200,16 +200,12 @@ void PerformanceMonitor::checkThreshold(const MetricData& metric) {
     }
     
     if (metric.value >= threshold.criticalThreshold) {
-        std::cout << "[PerformanceMonitor] CRITICAL threshold exceeded: " 
-                  << metric.component.toStdString() << "." << metric.operation.toStdString()
-                  << " = " << metric.value << " (threshold: " << threshold.criticalThreshold << ")" << std::endl;
-        
+
+
         thresholdViolation(metric, "critical");
     } else if (metric.value >= threshold.warningThreshold) {
-        std::cout << "[PerformanceMonitor] WARNING threshold exceeded: "
-                  << metric.component.toStdString() << "." << metric.operation.toStdString()
-                  << " = " << metric.value << " (threshold: " << threshold.warningThreshold << ")" << std::endl;
-        
+
+
         thresholdViolation(metric, "warning");
     }
 }
@@ -253,7 +249,7 @@ double PerformanceMonitor::getAverageMetric(const std::string& component, const 
                                            const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime) const {
     std::vector<MetricData> metrics = getMetrics(component, operation, startTime, endTime);
     
-    if (metrics.isEmpty()) {
+    if (metrics.empty()) {
         return 0.0;
     }
     
@@ -283,7 +279,7 @@ double PerformanceMonitor::getPercentile(const std::string& component, const std
     
     const std::vector<MetricData>& metrics = metricHistory[metricKey];
     
-    if (metrics.isEmpty()) {
+    if (metrics.empty()) {
         return 0.0;
     }
     
@@ -325,7 +321,7 @@ SLACompliance PerformanceMonitor::evaluateSLA(const std::string& slaId) const {
     // Get metrics for this SLA
     std::vector<MetricData> metrics = getMetrics(sla.component, sla.metric, startTime, endTime);
     
-    if (metrics.isEmpty()) {
+    if (metrics.empty()) {
         compliance.currentValue = 0.0;
         compliance.targetValue = sla.targetValue;
         return compliance;
@@ -390,14 +386,14 @@ std::vector<SLACompliance> PerformanceMonitor::evaluateAllSLAs() const {
 double PerformanceMonitor::calculateUptimePercentage(const std::chrono::system_clock::time_point& startTime, 
                                                      const std::chrono::system_clock::time_point& endTime) const {
     // Calculate total minutes in window
-    qint64 totalMinutes = startTime.secsTo(endTime) / 60;
+    int64_t totalMinutes = startTime.secsTo(endTime) / 60;
     
     if (totalMinutes <= 0) {
         return 100.0;
     }
     
     // Count downtime minutes (when system had critical errors or was unavailable)
-    qint64 downtimeMinutes = 0;
+    int64_t downtimeMinutes = 0;
     
     // This would integrate with ErrorRecoverySystem to get actual downtime
     // For now, simulate with performance data
@@ -461,7 +457,7 @@ PerformanceSnapshot PerformanceMonitor::capturePerformanceSnapshot() {
     std::string metricKey = "ai_execution_latency";
     if (metricHistory.contains(metricKey)) {
         const std::vector<MetricData>& metrics = metricHistory[metricKey];
-        if (!metrics.isEmpty()) {
+        if (!metrics.empty()) {
             double sum = 0.0;
             for (const MetricData& m : metrics) {
                 sum += m.value;
@@ -519,7 +515,7 @@ double PerformanceMonitor::getMemoryUsageMac() const {
 }
 
 std::vector<PerformanceSnapshot> PerformanceMonitor::getPerformanceHistory(int minutes) const {
-    if (minutes <= 0 || performanceHistory.isEmpty()) {
+    if (minutes <= 0 || performanceHistory.empty()) {
         return performanceHistory;
     }
     
@@ -539,7 +535,7 @@ std::vector<Bottleneck> PerformanceMonitor::detectBottlenecks() const {
     std::vector<Bottleneck> bottlenecks;
     
     // Check CPU bottleneck
-    if (!performanceHistory.isEmpty()) {
+    if (!performanceHistory.empty()) {
         double avgCPU = 0.0;
         for (const PerformanceSnapshot& snapshot : performanceHistory) {
             avgCPU += snapshot.cpuUsage;
@@ -657,8 +653,7 @@ TrendAnalysis PerformanceMonitor::analyzeTrend(const std::string& component, con
 bool PerformanceMonitor::exportToPrometheus(const std::string& outputPath) const {
     std::fstream file(outputPath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        std::cerr << "[PerformanceMonitor] Failed to open Prometheus export file: " 
-                  << outputPath.toStdString() << std::endl;
+        
         return false;
     }
     
@@ -669,7 +664,7 @@ bool PerformanceMonitor::exportToPrometheus(const std::string& outputPath) const
         std::string metricKey = it.key();
         const std::vector<MetricData>& metrics = it.value();
         
-        if (metrics.isEmpty()) {
+        if (metrics.empty()) {
             continue;
         }
         
@@ -683,7 +678,7 @@ bool PerformanceMonitor::exportToPrometheus(const std::string& outputPath) const
         out << prometheusName << "{";
         
         // Add tags as labels
-        if (!metric.tags.isEmpty()) {
+        if (!metric.tags.empty()) {
             std::vector<std::string> labels;
             for (auto tagIt = metric.tags.begin(); tagIt != metric.tags.end(); ++tagIt) {
                 labels << std::string("%1=\"%2\"")).toString());
@@ -695,10 +690,8 @@ bool PerformanceMonitor::exportToPrometheus(const std::string& outputPath) const
     }
     
     file.close();
-    
-    std::cout << "[PerformanceMonitor] Exported metrics to Prometheus format: " 
-              << outputPath.toStdString() << std::endl;
-    
+
+
     return true;
 }
 
@@ -709,7 +702,7 @@ void PerformanceMonitor::enableMonitoring(bool enable) {
     } else {
         snapshotTimer->stop();
     }
-    std::cout << "[PerformanceMonitor] Monitoring " << (enable ? "enabled" : "disabled") << std::endl;
+    
 }
 
 void PerformanceMonitor::setSnapshotInterval(int milliseconds) {
@@ -724,7 +717,7 @@ void PerformanceMonitor::setMetricsRetention(int hours) {
 void PerformanceMonitor::clearMetrics() {
     metricHistory.clear();
     performanceHistory.clear();
-    std::cout << "[PerformanceMonitor] All metrics cleared" << std::endl;
+    
 }
 
 // ScopedTimer implementation
@@ -737,4 +730,5 @@ ScopedTimer::ScopedTimer(PerformanceMonitor* monitor, const std::string& compone
 ScopedTimer::~ScopedTimer() {
     performanceMonitor->stopTimer(timerId);
 }
+
 

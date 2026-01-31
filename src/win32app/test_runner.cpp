@@ -9,19 +9,16 @@
 #include <fstream>
 
 int main(int argc, char* argv[]) {
-    std::cout << "Test runner entry point reached\n";
+    
     std::ofstream test("test_file_write.txt");
     test << "File write test successful" << std::endl;
     test.close();
-    std::cout << "RawrXD IDE Test Runner\n";
-    std::cout << "======================\n\n";
+
 
     // Initialize logging to a specific test log file
-    std::cout << "Step 1: Initializing logger...\n";
+    
     IDELogger::getInstance().initialize();
-    std::cout << "Step 2: Logger initialized\n";
 
-    std::cout << "Step 3: Log message sent\n";
 
     try {
         // Create IDE instance
@@ -31,7 +28,7 @@ int main(int argc, char* argv[]) {
         // Create main window (but don't show it if in automated mode)
         if (!ide.createWindow()) {
 
-            std::cerr << "ERROR: Failed to create IDE window\n";
+
             return 1;
         }
 
@@ -58,32 +55,26 @@ int main(int argc, char* argv[]) {
         IDETestAgent testAgent(&ide);
 
         // Run all tests
-        std::cout << "Running comprehensive IDE tests...\n\n";
+        
         testAgent.runAllTests();
 
         // Get results
         const auto& results = testAgent.getResults();
         
         // Print results to console
-        std::cout << "\n===========================================\n";
-        std::cout << "Test Results Summary\n";
-        std::cout << "===========================================\n";
-        
+
+
         int passed = 0, failed = 0;
         for (const auto& result : results) {
             if (result.passed) {
                 passed++;
-                std::cout << "✓ " << result.testName << " (" << result.durationMs << "ms)\n";
+                
             } else {
                 failed++;
-                std::cout << "✗ " << result.testName << " - " << result.errorMessage << "\n";
+                
             }
         }
-        
-        std::cout << "\nTotal: " << results.size() << " tests\n";
-        std::cout << "Passed: " << passed << " (" << (results.size() > 0 ? (passed * 100 / results.size()) : 0) << "%)\n";
-        std::cout << "Failed: " << failed << "\n";
-        std::cout << "===========================================\n";
+
 
         // Write detailed results to file
         std::ofstream resultFile("C:\\RawrXD_IDE_TestResults.txt");
@@ -107,16 +98,14 @@ int main(int argc, char* argv[]) {
             resultFile << "Passed: " << passed << "\n";
             resultFile << "Failed: " << failed << "\n";
             resultFile.close();
-            
-            std::cout << "\nDetailed results written to: C:\\RawrXD_IDE_TestResults.txt\n";
+
 
         }
 
-        std::cout << "Log file: C:\\RawrXD_IDE_TestRun.log\n";
 
         // If not headless, keep window open for manual inspection
         if (!headless) {
-            std::cout << "\nPress Enter to close IDE and exit...\n";
+            
             std::cin.get();
         }
 
@@ -124,11 +113,11 @@ int main(int argc, char* argv[]) {
 
     } catch (const std::exception& e) {
         LOG_CRITICAL("Test runner exception: " + std::string(e.what()));
-        std::cerr << "CRITICAL ERROR: " << e.what() << "\n";
+        
         return 2;
     } catch (...) {
         LOG_CRITICAL("Unknown test runner exception");
-        std::cerr << "CRITICAL ERROR: Unknown exception\n";
+        
         return 2;
     }
 }

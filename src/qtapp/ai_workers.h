@@ -95,7 +95,7 @@ private:
     
     // Thread synchronization
     mutable std::mutex m_mutex;
-    QWaitCondition m_pauseCondition;
+    std::condition_variable m_pauseCondition;
     QAtomicInt m_shouldStop;
     
     // Timing
@@ -227,7 +227,7 @@ private:
     
     // Thread synchronization
     mutable std::mutex m_mutex;
-    QWaitCondition m_pauseCondition;
+    std::condition_variable m_pauseCondition;
     QAtomicInt m_shouldStop;
     
     // Timing

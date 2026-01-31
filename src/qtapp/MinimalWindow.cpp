@@ -12,8 +12,8 @@ MinimalWindow::MinimalWindow(void *parent)
     void* central = new void(this);
     setCentralWidget(central);
     
-    QVBoxLayout* layout = new QVBoxLayout(central);
-    layout->addWidget(new QLabel("RawrXD Minimal Test - Success!", this));
+    void* layout = new void(central);
+    layout->addWidget(new void("RawrXD Minimal Test - Success!", this));
     
 }
 

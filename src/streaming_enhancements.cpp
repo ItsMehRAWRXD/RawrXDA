@@ -274,7 +274,7 @@ BPETokenizer::BPETokenizer() {}
 bool BPETokenizer::loadMerges(const std::string& mergesFile) {
     std::ifstream file(mergesFile);
     if (!file.is_open()) {
-        std::cerr << "Failed to open merges file: " << mergesFile << std::endl;
+        
         return false;
     }
     
@@ -320,7 +320,7 @@ SentencePieceTokenizer::SentencePieceTokenizer() {}
 bool SentencePieceTokenizer::loadModel(const std::string& modelPath) {
     std::ifstream file(modelPath);
     if (!file.is_open()) {
-        std::cerr << "Failed to open SentencePiece model: " << modelPath << std::endl;
+        
         return false;
     }
     
@@ -539,7 +539,7 @@ StreamingWebServer::~StreamingWebServer() {
 
 void StreamingWebServer::start() {
     // Implement HTTP server listening on m_port
-    std::cout << "[WebServer] Starting on port " << m_port << std::endl;
+    
     m_running = true;
     
     // This would integrate with a real HTTP library like crow, pistache, or cpp-httplib

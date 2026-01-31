@@ -992,8 +992,8 @@ bool initializeAllTools(ToolRegistry* registry) {
     }
     
     int totalRegistered = 0;
-    
-    
+
+
     totalRegistered += registerFileSystemTools(registry);
     totalRegistered += registerVersionControlTools(registry);
     totalRegistered += registerBuildTestTools(registry);
@@ -1002,8 +1002,8 @@ bool initializeAllTools(ToolRegistry* registry) {
     totalRegistered += registerCodeAnalysisTools(registry);
     totalRegistered += registerDeploymentTools(registry);
     totalRegistered += registerThermalTools(registry);  // NVMe thermal tools
-    
-    
+
+
     return totalRegistered > 0;
 }
 

@@ -27,7 +27,7 @@ ModelQueue::~ModelQueue() {
     }
 }
 
-qint64 ModelQueue::enqueue(const std::string& modelPath, const std::string& prompt,
+int64_t ModelQueue::enqueue(const std::string& modelPath, const std::string& prompt,
                            int maxTokens, float temperature, Priority priority) {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
@@ -56,7 +56,7 @@ qint64 ModelQueue::enqueue(const std::string& modelPath, const std::string& prom
     return req.id;
 }
 
-bool ModelQueue::cancelRequest(qint64 requestId) {
+bool ModelQueue::cancelRequest(int64_t requestId) {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
     // Remove from pending queue
@@ -151,12 +151,12 @@ void ModelQueue::processQueue() {
             std::lock_guard<std::mutex> locker(&m_mutex);
             
             // Wait for requests
-            while (m_queue.isEmpty() && m_running) {
+            while (m_queue.empty() && m_running) {
                 m_condition.wait(&m_mutex, 100);
             }
             
             if (!m_running) break;
-            if (m_queue.isEmpty()) continue;
+            if (m_queue.empty()) continue;
             
             // Check for available slot
             ModelSlot* slot = allocateSlot(m_queue.head().modelPath);
@@ -192,14 +192,14 @@ void ModelQueue::processQueue() {
         
         // Start inference (thread-safe via QMetaObject)
         QMetaObject::invokeMethod(engine, "runInference", //QueuedConnection,
-            (qint64, req.id),
+            (int64_t, req.id),
             (std::string, req.prompt),
             (int, req.maxTokens),
             (float, req.temperature));
     }
 }
 
-void ModelQueue::onInferenceComplete(qint64 reqId, const std::string& result) {
+void ModelQueue::onInferenceComplete(int64_t reqId, const std::string& result) {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_activeRequests.contains(reqId)) return;
@@ -216,14 +216,14 @@ void ModelQueue::onInferenceComplete(qint64 reqId, const std::string& result) {
     
     requestCompleted(reqId, result);
     
-    if (m_queue.isEmpty() && m_activeRequests.isEmpty()) {
+    if (m_queue.empty() && m_activeRequests.empty()) {
         queueEmpty();
     }
     
     m_condition.wakeOne();
 }
 
-void ModelQueue::onInferenceError(qint64 reqId, const std::string& error) {
+void ModelQueue::onInferenceError(int64_t reqId, const std::string& error) {
     std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_activeRequests.contains(reqId)) return;
@@ -304,4 +304,6 @@ InferenceEngine* ModelQueue::getOrLoadModel(const std::string& modelPath) {
     
     return nullptr;
 }
+
+
 

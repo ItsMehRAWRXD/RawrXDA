@@ -29,7 +29,7 @@ AgentModeHandler::~AgentModeHandler() = default;
 
 void AgentModeHandler::executeplan(const Plan& plan)
 {
-    if (plan.steps.isEmpty()) {
+    if (plan.steps.empty()) {
         executionFailed(-1, "Plan is empty");
         return;
     }
@@ -86,7 +86,7 @@ void AgentModeHandler::cancelExecution()
 
 float AgentModeHandler::getProgressPercentage() const
 {
-    if (m_executionSteps.isEmpty()) {
+    if (m_executionSteps.empty()) {
         return 0.0f;
     }
 
@@ -252,4 +252,5 @@ void AgentModeHandler::mapPlanToExecutionSteps(const Plan& plan)
         m_executionSteps.append(execStep);
     }
 }
+
 

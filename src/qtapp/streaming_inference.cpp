@@ -6,7 +6,7 @@ StreamingInference::StreamingInference(QPlainTextEdit* target, void* parent)
 {
 }
 
-void StreamingInference::startStream(qint64 reqId, const std::string& prompt)
+void StreamingInference::startStream(int64_t reqId, const std::string& prompt)
 {
     m_reqId = reqId;
     m_buffer.clear();
@@ -45,4 +45,5 @@ void StreamingInference::finishStream()
         m_out->appendPlainText("");   // Newline after stream
     }, //QueuedConnection);
 }
+
 

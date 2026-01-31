@@ -32,7 +32,7 @@ FileOperationResult QtFileWriter::writeFileRaw(const std::string& path,
     std::string backupPath;
     if (createBackup && exists(absolutePath)) {
         backupPath = this->createBackup(absolutePath);
-        if (backupPath.isEmpty()) {
+        if (backupPath.empty()) {
             return FileOperationResult(false, "Failed to create backup");
         }
     }
@@ -56,7 +56,7 @@ FileOperationResult QtFileWriter::writeFileRaw(const std::string& path,
         );
     }
     
-    qint64 written = file.write(data);
+    int64_t written = file.write(data);
     if (written != data.size()) {
         file.cancelWriting();
         return FileOperationResult(false, "Failed to write all data");
@@ -216,4 +216,5 @@ bool QtFileWriter::exists(const std::string& path) const {
 }
 
 } // namespace RawrXD
+
 

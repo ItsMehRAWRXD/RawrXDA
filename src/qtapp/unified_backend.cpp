@@ -14,7 +14,7 @@ void UnifiedBackend::submit(const UnifiedRequest& req)
         if (m_localEngine) {
             QMetaObject::invokeMethod(m_localEngine, "request", //QueuedConnection,
                                       (std::string, req.prompt), 
-                                      (qint64, req.reqId));
+                                      (int64_t, req.reqId));
         } else {
             error(req.reqId, "Local engine not initialized");
         }
@@ -40,14 +40,14 @@ void UnifiedBackend::submitLlamaCpp(const UnifiedRequest& req)
         {"n_predict", 100}
     };
     
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* request(url);
+    request.setHeader(void*::ContentTypeHeader, "application/json");
     
     void** reply = m_nam->post(request, void*(body).toJson());
 // Qt connect removed
             auto doc = void*::fromJson(line);
             std::string token = doc["content"].toString();
-            if (!token.isEmpty()) {
+            if (!token.empty()) {
                 streamToken(req.reqId, token);
             }
         }
@@ -70,9 +70,9 @@ void UnifiedBackend::submitOpenAI(const UnifiedRequest& req)
         {"stream", true}
     };
     
-    QNetworkRequest request(url);
+    void* request(url);
     request.setRawHeader("Authorization", ("Bearer " + req.apiKey).toUtf8());
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setHeader(void*::ContentTypeHeader, "application/json");
     
     void** reply = m_nam->post(request, void*(body).toJson());
 // Qt connect removed
@@ -86,9 +86,9 @@ void UnifiedBackend::submitOpenAI(const UnifiedRequest& req)
             
             auto doc = void*::fromJson(line);
             auto choices = doc["choices"].toArray();
-            if (!choices.isEmpty()) {
+            if (!choices.empty()) {
                 std::string token = choices[0].toObject()["delta"].toObject()["content"].toString();
-                if (!token.isEmpty()) {
+                if (!token.empty()) {
                     streamToken(req.reqId, token);
                 }
             }
@@ -113,10 +113,10 @@ void UnifiedBackend::submitClaude(const UnifiedRequest& req)
         {"stream", true}
     };
     
-    QNetworkRequest request(url);
+    void* request(url);
     request.setRawHeader("x-api-key", req.apiKey.toUtf8());
     request.setRawHeader("anthropic-version", "2023-06-01");
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setHeader(void*::ContentTypeHeader, "application/json");
     
     void** reply = m_nam->post(request, void*(body).toJson());
 // Qt connect removed
@@ -129,7 +129,7 @@ void UnifiedBackend::submitClaude(const UnifiedRequest& req)
             std::string type = doc["type"].toString();
             if (type == "content_block_delta") {
                 std::string token = doc["delta"].toObject()["text"].toString();
-                if (!token.isEmpty()) {
+                if (!token.empty()) {
                     streamToken(req.reqId, token);
                 }
             } else if (type == "message_stop") {
@@ -158,8 +158,8 @@ void UnifiedBackend::submitGemini(const UnifiedRequest& req)
         }}
     };
     
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* request(url);
+    request.setHeader(void*::ContentTypeHeader, "application/json");
     
     void** reply = m_nam->post(request, void*(body).toJson());
 // Qt connect removed
@@ -169,12 +169,12 @@ void UnifiedBackend::submitGemini(const UnifiedRequest& req)
             auto doc = void*::fromJson(line);
             auto candidates = doc["candidates"].toArray();
             
-            if (!candidates.isEmpty()) {
+            if (!candidates.empty()) {
                 auto content = candidates[0].toObject()["content"].toObject();
                 auto parts = content["parts"].toArray();
-                if (!parts.isEmpty()) {
+                if (!parts.empty()) {
                     std::string token = parts[0].toObject()["text"].toString();
-                    if (!token.isEmpty()) {
+                    if (!token.empty()) {
                         streamToken(req.reqId, token);
                     }
                 }
@@ -188,10 +188,12 @@ void UnifiedBackend::submitGemini(const UnifiedRequest& req)
     });
 }
 
-void UnifiedBackend::onLocalDone(qint64 id, const std::string& answer)
+void UnifiedBackend::onLocalDone(int64_t id, const std::string& answer)
 {
     // Local engine doesn't stream by default - as single token
     streamToken(id, answer);
     streamFinished(id);
 }
+
+
 

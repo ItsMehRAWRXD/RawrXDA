@@ -30,22 +30,22 @@ void HardwareBackendSelector::initialize() {
 
 void HardwareBackendSelector::setupUI()
 {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
 
     // ===== Backend Selection Section =====
-    QGroupBox* backendGroup = new QGroupBox("Available Backends", this);
-    QVBoxLayout* backendLayout = new QVBoxLayout(backendGroup);
+    void* backendGroup = new void("Available Backends", this);
+    void* backendLayout = new void(backendGroup);
 
-    QHBoxLayout* selectorLayout = new QHBoxLayout();
-    QLabel* backendLabel = new QLabel("Select Backend:", this);
-    m_backendCombo = new QComboBox(this);
+    void* selectorLayout = new void();
+    void* backendLabel = new void("Select Backend:", this);
+    m_backendCombo = new void(this);
     selectorLayout->addWidget(backendLabel);
     selectorLayout->addWidget(m_backendCombo);
     selectorLayout->addStretch();
 
     backendLayout->addLayout(selectorLayout);
     
-    m_detailsText = new QTextEdit(this);
+    m_detailsText = new void(this);
     m_detailsText->setReadOnly(true);
     m_detailsText->setMinimumHeight(150);
     backendLayout->addWidget(m_detailsText);
@@ -53,33 +53,33 @@ void HardwareBackendSelector::setupUI()
     mainLayout->addWidget(backendGroup);
 
     // ===== Device Selection =====
-    QGroupBox* deviceGroup = new QGroupBox("Device Configuration", this);
-    QVBoxLayout* deviceLayout = new QVBoxLayout(deviceGroup);
+    void* deviceGroup = new void("Device Configuration", this);
+    void* deviceLayout = new void(deviceGroup);
 
-    QHBoxLayout* deviceComboLayout = new QHBoxLayout();
-    QLabel* deviceLabel = new QLabel("Device:", this);
-    m_deviceCombo = new QComboBox(this);
+    void* deviceComboLayout = new void();
+    void* deviceLabel = new void("Device:", this);
+    m_deviceCombo = new void(this);
     m_deviceCombo->addItem("Default Device");
     deviceComboLayout->addWidget(deviceLabel);
     deviceComboLayout->addWidget(m_deviceCombo);
     deviceComboLayout->addStretch();
     deviceLayout->addLayout(deviceComboLayout);
 
-    m_deviceInfoLabel = new QLabel("", this);
+    m_deviceInfoLabel = new void("", this);
     m_deviceInfoLabel->setStyleSheet("color: gray; font-size: 10px;");
     deviceLayout->addWidget(m_deviceInfoLabel);
 
     mainLayout->addWidget(deviceGroup);
 
     // ===== Precision Selection =====
-    m_precisionGroup = new QGroupBox("Precision/Quantization", this);
-    QVBoxLayout* precisionLayout = new QVBoxLayout(m_precisionGroup);
-    m_precisionGroup_impl = new QButtonGroup(this);
+    m_precisionGroup = new void("Precision/Quantization", this);
+    void* precisionLayout = new void(m_precisionGroup);
+    m_precisionGroup_impl = nullptr;
 
-    m_fp32Radio = new QRadioButton("FP32 (Full Precision - Default)", this);
+    m_fp32Radio = nullptr", this);
     m_fp32Radio->setChecked(true);
-    m_fp16Radio = new QRadioButton("FP16 (Half Precision - Faster, Lower Memory)", this);
-    m_int8Radio = new QRadioButton("INT8 (Quantized - Fastest, Lowest Memory)", this);
+    m_fp16Radio = nullptr", this);
+    m_int8Radio = nullptr", this);
 
     m_precisionGroup_impl->addButton(m_fp32Radio, 0);
     m_precisionGroup_impl->addButton(m_fp16Radio, 1);
@@ -92,25 +92,25 @@ void HardwareBackendSelector::setupUI()
     mainLayout->addWidget(m_precisionGroup);
 
     // ===== Memory Configuration =====
-    m_memoryGroup = new QGroupBox("Memory Configuration", this);
-    QGridLayout* memoryLayout = new QGridLayout(m_memoryGroup);
+    m_memoryGroup = new void("Memory Configuration", this);
+    void* memoryLayout = new void(m_memoryGroup);
 
-    QLabel* vramLabel = new QLabel("Available VRAM:", this);
-    m_vramLabel = new QLabel("N/A", this);
+    void* vramLabel = new void("Available VRAM:", this);
+    m_vramLabel = new void("N/A", this);
     m_vramLabel->setStyleSheet("font-weight: bold;");
     memoryLayout->addWidget(vramLabel, 0, 0);
     memoryLayout->addWidget(m_vramLabel, 0, 1);
 
-    QLabel* poolLabel = new QLabel("Memory Pool Type:", this);
-    m_memoryPoolCombo = new QComboBox(this);
+    void* poolLabel = new void("Memory Pool Type:", this);
+    m_memoryPoolCombo = new void(this);
     m_memoryPoolCombo->addItem("Unified Memory (Default)", 0);
     m_memoryPoolCombo->addItem("Device Memory Only", 1);
     m_memoryPoolCombo->addItem("Host Pinned Memory", 2);
     memoryLayout->addWidget(poolLabel, 1, 0);
     memoryLayout->addWidget(m_memoryPoolCombo, 1, 1);
 
-    QLabel* usageLabel = new QLabel("Estimated VRAM Usage:", this);
-    m_vramUsageLabel = new QLabel("0 MB", this);
+    void* usageLabel = new void("Estimated VRAM Usage:", this);
+    m_vramUsageLabel = new void("0 MB", this);
     m_vramUsageLabel->setStyleSheet("color: blue;");
     memoryLayout->addWidget(usageLabel, 2, 0);
     memoryLayout->addWidget(m_vramUsageLabel, 2, 1);
@@ -118,11 +118,11 @@ void HardwareBackendSelector::setupUI()
     mainLayout->addWidget(m_memoryGroup);
 
     // ===== Optimization Options =====
-    m_optimizationGroup = new QGroupBox("Optimization Options", this);
-    QVBoxLayout* optimLayout = new QVBoxLayout(m_optimizationGroup);
+    m_optimizationGroup = new void("Optimization Options", this);
+    void* optimLayout = new void(m_optimizationGroup);
 
-    m_enableTensorCoresLabel = new QLabel("Tensor Cores: Disabled", this);
-    m_enableGraphsLabel = new QLabel("Graph Optimization: Disabled", this);
+    m_enableTensorCoresLabel = new void("Tensor Cores: Disabled", this);
+    m_enableGraphsLabel = new void("Graph Optimization: Disabled", this);
 
     optimLayout->addWidget(m_enableTensorCoresLabel);
     optimLayout->addWidget(m_enableGraphsLabel);
@@ -130,11 +130,11 @@ void HardwareBackendSelector::setupUI()
     mainLayout->addWidget(m_optimizationGroup);
 
     // ===== Action Buttons =====
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     
-    m_detectBtn = new QPushButton("Detect Hardware", this);
-    m_resetBtn = new QPushButton("Reset to Defaults", this);
-    m_applyBtn = new QPushButton("Apply Configuration", this);
+    m_detectBtn = new void("Detect Hardware", this);
+    m_resetBtn = new void("Reset to Defaults", this);
+    m_applyBtn = new void("Apply Configuration", this);
     m_applyBtn->setStyleSheet("background-color: green; color: white; font-weight: bold;");
 
     buttonLayout->addWidget(m_detectBtn);

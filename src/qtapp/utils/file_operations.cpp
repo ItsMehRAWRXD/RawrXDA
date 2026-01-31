@@ -71,7 +71,7 @@ bool FileManager::readFileRaw(const std::string& path, std::vector<uint8_t>& dat
 }
 
 Encoding FileManager::detectEncoding(const std::vector<uint8_t>& data) {
-    if (data.isEmpty()) {
+    if (data.empty()) {
         return Encoding::UTF8;  // Default to UTF-8
     }
     
@@ -139,7 +139,7 @@ FileOperationResult FileManager::writeFileRaw(const std::string& path, const std
     std::string backupPath;
     if (createBackup && exists(absolutePath)) {
         backupPath = this->createBackup(absolutePath);
-        if (backupPath.isEmpty()) {
+        if (backupPath.empty()) {
             return FileOperationResult(false, "Failed to create backup");
         }
     }
@@ -157,7 +157,7 @@ FileOperationResult FileManager::writeFileRaw(const std::string& path, const std
         return FileOperationResult(false, std::string("Failed to open file for writing: %1")));
     }
     
-    qint64 written = file.write(data);
+    int64_t written = file.write(data);
     if (written != data.size()) {
         file.cancelWriting();
         return FileOperationResult(false, "Failed to write all data");
@@ -361,7 +361,7 @@ std::string FileManager::toAbsolutePath(const std::string& relativePath, const s
         return std::filesystem::path::cleanPath(relativePath);
     }
     
-    std::string base = basePath.isEmpty() ? std::filesystem::path::currentPath() : basePath;
+    std::string base = basePath.empty() ? std::filesystem::path::currentPath() : basePath;
     return std::filesystem::path(base).absoluteFilePath(relativePath);
 }
 
@@ -399,7 +399,7 @@ bool FileManager::isWritable(const std::string& path) {
     return info.isWritable();
 }
 
-qint64 FileManager::fileSize(const std::string& path) {
+int64_t FileManager::fileSize(const std::string& path) {
     std::filesystem::path info(path);
     return info.exists() ? info.size() : -1;
 }
@@ -445,4 +445,5 @@ std::string FileManager::createTempPath(const std::string& originalPath) {
 }
 
 } // namespace RawrXD
+
 

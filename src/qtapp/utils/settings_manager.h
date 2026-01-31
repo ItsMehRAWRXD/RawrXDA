@@ -175,7 +175,7 @@ public:
     bool searchCaseSensitive() const;
     bool searchWholeWord() const;
     bool searchUseRegex() const;
-    
+
 
     /**
      * \brief Emitted when any setting changes

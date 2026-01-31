@@ -29,47 +29,47 @@ void TrainingProgressDock::initialize() {
 
 void TrainingProgressDock::setupUI()
 {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     mainLayout->setContentsMargins(8, 8, 8, 8);
     mainLayout->setSpacing(8);
 
     // ===== Status Section =====
-    QGroupBox* statusGroup = new QGroupBox("Training Status", this);
-    QGridLayout* statusLayout = new QGridLayout(statusGroup);
+    void* statusGroup = new void("Training Status", this);
+    void* statusLayout = new void(statusGroup);
 
-    m_statusLabel = new QLabel("Idle", this);
-    m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; }");
-    statusLayout->addWidget(new QLabel("Status:", this), 0, 0);
+    m_statusLabel = new void("Idle", this);
+    m_statusLabel->setStyleSheet("void { font-weight: bold; font-size: 14px; }");
+    statusLayout->addWidget(new void("Status:", this), 0, 0);
     statusLayout->addWidget(m_statusLabel, 0, 1, 1, 3);
 
-    m_epochLabel = new QLabel("Epoch: 0 / 0", this);
+    m_epochLabel = new void("Epoch: 0 / 0", this);
     statusLayout->addWidget(m_epochLabel, 1, 0, 1, 2);
 
-    m_batchLabel = new QLabel("Batch: 0 / 0", this);
+    m_batchLabel = new void("Batch: 0 / 0", this);
     statusLayout->addWidget(m_batchLabel, 1, 2, 1, 2);
 
-    m_timeElapsedLabel = new QLabel("Elapsed: 00:00:00", this);
+    m_timeElapsedLabel = new void("Elapsed: 00:00:00", this);
     statusLayout->addWidget(m_timeElapsedLabel, 2, 0, 1, 2);
 
-    m_timeRemainingLabel = new QLabel("Remaining: --:--:--", this);
+    m_timeRemainingLabel = new void("Remaining: --:--:--", this);
     statusLayout->addWidget(m_timeRemainingLabel, 2, 2, 1, 2);
 
     mainLayout->addWidget(statusGroup);
 
     // ===== Progress Bars =====
-    QGroupBox* progressGroup = new QGroupBox("Progress", this);
-    QGridLayout* progressLayout = new QGridLayout(progressGroup);
+    void* progressGroup = new void("Progress", this);
+    void* progressLayout = new void(progressGroup);
 
-    progressLayout->addWidget(new QLabel("Epoch Progress:", this), 0, 0);
-    m_epochProgressBar = new QProgressBar(this);
+    progressLayout->addWidget(new void("Epoch Progress:", this), 0, 0);
+    m_epochProgressBar = new void(this);
     m_epochProgressBar->setMinimum(0);
     m_epochProgressBar->setMaximum(100);
     m_epochProgressBar->setValue(0);
     m_epochProgressBar->setTextVisible(true);
     progressLayout->addWidget(m_epochProgressBar, 0, 1);
 
-    progressLayout->addWidget(new QLabel("Batch Progress:", this), 1, 0);
-    m_batchProgressBar = new QProgressBar(this);
+    progressLayout->addWidget(new void("Batch Progress:", this), 1, 0);
+    m_batchProgressBar = new void(this);
     m_batchProgressBar->setMinimum(0);
     m_batchProgressBar->setMaximum(100);
     m_batchProgressBar->setValue(0);
@@ -79,55 +79,55 @@ void TrainingProgressDock::setupUI()
     mainLayout->addWidget(progressGroup);
 
     // ===== Metrics Section =====
-    QGroupBox* metricsGroup = new QGroupBox("Training Metrics", this);
-    QGridLayout* metricsLayout = new QGridLayout(metricsGroup);
+    void* metricsGroup = new void("Training Metrics", this);
+    void* metricsLayout = new void(metricsGroup);
 
-    metricsLayout->addWidget(new QLabel("Current Loss:", this), 0, 0);
-    m_currentLossLabel = new QLabel("--", this);
-    m_currentLossLabel->setStyleSheet("QLabel { font-weight: bold; color: #2196F3; }");
+    metricsLayout->addWidget(new void("Current Loss:", this), 0, 0);
+    m_currentLossLabel = new void("--", this);
+    m_currentLossLabel->setStyleSheet("void { font-weight: bold; color: #2196F3; }");
     metricsLayout->addWidget(m_currentLossLabel, 0, 1);
 
-    metricsLayout->addWidget(new QLabel("Average Loss:", this), 0, 2);
-    m_avgLossLabel = new QLabel("--", this);
-    m_avgLossLabel->setStyleSheet("QLabel { font-weight: bold; }");
+    metricsLayout->addWidget(new void("Average Loss:", this), 0, 2);
+    m_avgLossLabel = new void("--", this);
+    m_avgLossLabel->setStyleSheet("void { font-weight: bold; }");
     metricsLayout->addWidget(m_avgLossLabel, 0, 3);
 
-    metricsLayout->addWidget(new QLabel("Perplexity:", this), 1, 0);
-    m_perplexityLabel = new QLabel("--", this);
-    m_perplexityLabel->setStyleSheet("QLabel { font-weight: bold; color: #4CAF50; }");
+    metricsLayout->addWidget(new void("Perplexity:", this), 1, 0);
+    m_perplexityLabel = new void("--", this);
+    m_perplexityLabel->setStyleSheet("void { font-weight: bold; color: #4CAF50; }");
     metricsLayout->addWidget(m_perplexityLabel, 1, 1);
 
-    metricsLayout->addWidget(new QLabel("Throughput:", this), 1, 2);
-    m_throughputLabel = new QLabel("-- batches/sec", this);
+    metricsLayout->addWidget(new void("Throughput:", this), 1, 2);
+    m_throughputLabel = new void("-- batches/sec", this);
     metricsLayout->addWidget(m_throughputLabel, 1, 3);
 
     mainLayout->addWidget(metricsGroup);
 
     // ===== Logs Section =====
-    m_tabWidget = new QTabWidget(this);
+    m_tabWidget = new void(this);
 
-    m_trainingLogEdit = new QTextEdit(this);
+    m_trainingLogEdit = new void(this);
     m_trainingLogEdit->setReadOnly(true);
-    m_trainingLogEdit->setStyleSheet("QTextEdit { font-family: 'Consolas', monospace; font-size: 9pt; }");
+    m_trainingLogEdit->setStyleSheet("void { font-family: 'Consolas', monospace; font-size: 9pt; }");
     m_tabWidget->addTab(m_trainingLogEdit, "Training Log");
 
-    m_validationLogEdit = new QTextEdit(this);
+    m_validationLogEdit = new void(this);
     m_validationLogEdit->setReadOnly(true);
-    m_validationLogEdit->setStyleSheet("QTextEdit { font-family: 'Consolas', monospace; font-size: 9pt; }");
+    m_validationLogEdit->setStyleSheet("void { font-family: 'Consolas', monospace; font-size: 9pt; }");
     m_tabWidget->addTab(m_validationLogEdit, "Validation Log");
 
     mainLayout->addWidget(m_tabWidget, 1); // Stretch factor 1
 
     // ===== Control Buttons =====
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     buttonLayout->addStretch();
 
-    m_clearLogsButton = new QPushButton("Clear Logs", this);
+    m_clearLogsButton = new void("Clear Logs", this);
     buttonLayout->addWidget(m_clearLogsButton);
 
-    m_stopButton = new QPushButton("Stop Training", this);
+    m_stopButton = new void("Stop Training", this);
     m_stopButton->setEnabled(false);
-    m_stopButton->setStyleSheet("QPushButton { background-color: #f44336; color: white; font-weight: bold; }");
+    m_stopButton->setStyleSheet("void { background-color: #f44336; color: white; font-weight: bold; }");
     buttonLayout->addWidget(m_stopButton);
 
     mainLayout->addLayout(buttonLayout);
@@ -169,7 +169,7 @@ void TrainingProgressDock::resetMetrics()
     m_perplexityHistory.clear();
 
     m_statusLabel->setText("Idle");
-    m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: gray; }");
+    m_statusLabel->setStyleSheet("void { font-weight: bold; font-size: 14px; color: gray; }");
     m_epochLabel->setText("Epoch: 0 / 0");
     m_batchLabel->setText("Batch: 0 / 0");
     m_timeElapsedLabel->setText("Elapsed: 00:00:00");
@@ -190,7 +190,7 @@ void TrainingProgressDock::onTrainingStarted()
     m_lastBatchTime = m_trainingStartTime;
 
     m_statusLabel->setText("Training...");
-    m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #4CAF50; }");
+    m_statusLabel->setStyleSheet("void { font-weight: bold; font-size: 14px; color: #4CAF50; }");
     m_stopButton->setEnabled(true);
 
     std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
@@ -287,7 +287,7 @@ void TrainingProgressDock::onEpochCompleted(int epoch, float avgLoss, float perp
 void TrainingProgressDock::onTrainingCompleted(const std::string& modelPath, float finalLoss)
 {
     m_statusLabel->setText("Completed");
-    m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #4CAF50; }");
+    m_statusLabel->setStyleSheet("void { font-weight: bold; font-size: 14px; color: #4CAF50; }");
     m_stopButton->setEnabled(false);
 
     m_epochProgressBar->setValue(100);
@@ -306,7 +306,7 @@ void TrainingProgressDock::onTrainingCompleted(const std::string& modelPath, flo
 void TrainingProgressDock::onTrainingStopped()
 {
     m_statusLabel->setText("Stopped");
-    m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #FF9800; }");
+    m_statusLabel->setStyleSheet("void { font-weight: bold; font-size: 14px; color: #FF9800; }");
     m_stopButton->setEnabled(false);
 
     std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
@@ -320,7 +320,7 @@ void TrainingProgressDock::onTrainingStopped()
 void TrainingProgressDock::onTrainingError(const std::string& error)
 {
     m_statusLabel->setText("Error");
-    m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #f44336; }");
+    m_statusLabel->setStyleSheet("void { font-weight: bold; font-size: 14px; color: #f44336; }");
     m_stopButton->setEnabled(false);
 
     std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
@@ -350,7 +350,7 @@ void TrainingProgressDock::onValidationResults(float perplexity, const std::stri
         
         );
 
-    if (!details.isEmpty()) {
+    if (!details.empty()) {
         m_validationLogEdit->append(std::string("[%1] Details: %2"));
     }
 
@@ -377,8 +377,8 @@ void TrainingProgressDock::onClearLogsClicked()
 
 void TrainingProgressDock::updateTimeEstimate()
 {
-    qint64 currentTime = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
-    qint64 elapsed = currentTime - m_trainingStartTime;
+    int64_t currentTime = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
+    int64_t elapsed = currentTime - m_trainingStartTime;
 
     // Update elapsed time
     m_timeElapsedLabel->setText(std::string("Elapsed: %1")));
@@ -394,14 +394,14 @@ void TrainingProgressDock::updateTimeEstimate()
                                        + (m_totalBatches - m_currentBatch);
             
             if (batchesPerSec > 0) {
-                qint64 remainingSeconds = static_cast<qint64>(totalBatchesRemaining / batchesPerSec);
+                int64_t remainingSeconds = static_cast<int64_t>(totalBatchesRemaining / batchesPerSec);
                 m_timeRemainingLabel->setText(std::string("Remaining: %1")));
             }
         }
     }
 }
 
-std::string TrainingProgressDock::formatDuration(qint64 seconds) const
+std::string TrainingProgressDock::formatDuration(int64_t seconds) const
 {
     int hours = seconds / 3600;
     int minutes = (seconds % 3600) / 60;
@@ -412,4 +412,5 @@ std::string TrainingProgressDock::formatDuration(qint64 seconds) const
         )
         );
 }
+
 

@@ -146,12 +146,12 @@ void* AdvancedCheckpointManager::getCheckpointStats() const
     stats["encryption_enabled"] = m_encryptionEnabled;
     
     // Calculate total size
-    qint64 totalSize = 0;
+    int64_t totalSize = 0;
     std::filesystem::path dir(m_checkpointDir);
     for (const auto& file : dir.entryList(std::filesystem::path::Files)) {
         totalSize += std::filesystem::path(m_checkpointDir + "/" + file).size();
     }
-    stats["total_size_bytes"] = static_cast<qint64>(totalSize);
+    stats["total_size_bytes"] = static_cast<int64_t>(totalSize);
     
     return stats;
 }
@@ -164,7 +164,7 @@ void AdvancedCheckpointManager::setCompressionEnabled(bool enabled)
 void AdvancedCheckpointManager::setEncryptionEnabled(bool enabled, const std::string& key)
 {
     m_encryptionEnabled = enabled;
-    if (!key.isEmpty()) {
+    if (!key.empty()) {
         m_encryptionKey = key;
     }
 }
@@ -181,4 +181,6 @@ bool AdvancedCheckpointManager::backupToCloud(const std::string& cloudConfig)
     syncCompleted(true);
     return true;
 }
+
+
 

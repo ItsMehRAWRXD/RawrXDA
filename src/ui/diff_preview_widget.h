@@ -49,13 +49,13 @@ private:
     std::string generateUnifiedDiff(const std::string& original, const std::string& proposed);
     
     // UI Components
-    QLabel* m_fileLabel{nullptr};
-    QLabel* m_descriptionLabel{nullptr};
-    QTextEdit* m_diffDisplay{nullptr};
-    QPushButton* m_acceptButton{nullptr};
-    QPushButton* m_rejectButton{nullptr};
-    QPushButton* m_acceptAllButton{nullptr};
-    QPushButton* m_rejectAllButton{nullptr};
+    void* m_fileLabel{nullptr};
+    void* m_descriptionLabel{nullptr};
+    void* m_diffDisplay{nullptr};
+    void* m_acceptButton{nullptr};
+    void* m_rejectButton{nullptr};
+    void* m_acceptAllButton{nullptr};
+    void* m_rejectAllButton{nullptr};
     
     // State
     DiffChange m_currentDiff;

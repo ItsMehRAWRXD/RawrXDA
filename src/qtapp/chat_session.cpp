@@ -8,7 +8,7 @@ ChatSession::ChatSession(const std::string& model_name)
 {
     // Generate a simple session ID (in production use UUID)
     session_id = "session_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
-    std::cout << "[ChatSession] Created session: " << session_id << " for model: " << model_name << std::endl;
+    
 }
 
 void ChatSession::addMessage(const std::string& role, const std::string& content) {
@@ -61,7 +61,7 @@ std::vector<ChatMessage> ChatSession::getRecentMessages(int count) {
 void ChatSession::clearHistory() {
     messages.clear();
     current_partial_response.clear();
-    std::cout << "[ChatSession] History cleared" << std::endl;
+    
 }
 
 void ChatSession::appendToPartial(const std::string& token) {

@@ -35,11 +35,11 @@ public:
     void setFadeEnabled(bool enabled);
     
     // Position override (default: auto-track parent)
-    void setCustomPosition(const QPoint& pos);
+    void setCustomPosition(const void*& pos);
     void resetPosition(); // Return to auto-tracking
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
+    void paintEvent(void*  event) override;
     bool eventFilter(void* watched, QEvent* event) override;
 
 private:
@@ -53,7 +53,7 @@ private:
     int m_opacity = 120; // Default semi-transparent
     bool m_fadeEnabled = false;
     bool m_customPositionSet = false;
-    QPoint m_customPosition;
+    void* m_customPosition;
     
     void** m_fadeTimer = nullptr;
     int m_currentFadeAlpha = 0;

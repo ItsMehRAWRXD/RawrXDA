@@ -41,16 +41,15 @@ static bool runBuild(const std::string& target, int timeoutMs) {
 }
 
 bool HotReload::reloadQuant(const std::string& quantType) {
-    std::cout << "[HotReload] Reloading quantization: " << quantType << std::endl;
-    
+
+
     // Step 1: Rebuild only the quant library
     if (!runBuild("quant_ladder_avx2", 30000)) {
         if (onReloadFailed) onReloadFailed("Build failed or timed out for quant_ladder_avx2");
         return false;
     }
-    
-    std::cout << "[HotReload] Quant library rebuilt successfully" << std::endl;
-    
+
+
     // Step 2: Signal upper layer
     if (onQuantReloaded) onQuantReloaded(quantType);
     
@@ -58,8 +57,8 @@ bool HotReload::reloadQuant(const std::string& quantType) {
 }
 
 bool HotReload::reloadModule(const std::string& moduleName) {
-    std::cout << "[HotReload] Reloading module: " << moduleName << std::endl;
-    
+
+
     // Build specific target
     if (!runBuild(moduleName, 60000)) {
         if (onReloadFailed) onReloadFailed("Build failed or timed out for " + moduleName);

@@ -440,14 +440,14 @@ private:
     } m_perf_metrics;
     
     // Qt UI components
-    class QChartView* m_chart_view = nullptr;
+// REMOVED_QT:     class QChartView* m_chart_view = nullptr;
     class QChart* m_chart = nullptr;
-    class QTabWidget* m_tab_widget = nullptr;
-    class QComboBox* m_viz_type_combo = nullptr;
-    class QSlider* m_layer_slider = nullptr;
-    class QComboBox* m_attention_head_combo = nullptr;
-    class QLabel* m_stats_label = nullptr;
-    class QLabel* m_problems_label = nullptr;
-    class QLabel* m_diagnostics_label = nullptr;
+    class void* m_tab_widget = nullptr;
+    class void* m_viz_type_combo = nullptr;
+    class void* m_layer_slider = nullptr;
+    class void* m_attention_head_combo = nullptr;
+    class void* m_stats_label = nullptr;
+    class void* m_problems_label = nullptr;
+    class void* m_diagnostics_label = nullptr;
 };
 

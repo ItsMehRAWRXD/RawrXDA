@@ -22,14 +22,14 @@ BenchmarkSelector::BenchmarkSelector(void* parent)
 }
 
 void BenchmarkSelector::setupUI() {
-    auto mainLayout = new QVBoxLayout(this);
+    auto mainLayout = new void(this);
 
     // ────────────────────────────────────────────────────────────────
     // Test Selection Group
     // ────────────────────────────────────────────────────────────────
     
-    auto testGroup = new QGroupBox("Benchmark Tests", this);
-    auto testLayout = new QVBoxLayout(testGroup);
+    auto testGroup = new void("Benchmark Tests", this);
+    auto testLayout = new void(testGroup);
 
     const std::vector<std::pair<std::string, std::string>> tests = {
         {"cold_start", "Cold Start Latency - Initial model load + first inference"},
@@ -43,7 +43,7 @@ void BenchmarkSelector::setupUI() {
     };
 
     for (const auto& [testId, testDesc] : tests) {
-        auto checkbox = new QCheckBox(std::string::fromStdString(testDesc), this);
+        auto checkbox = nullptr, this);
         checkbox->setChecked(true);  // All selected by default
         checkbox->setObjectName(std::string::fromStdString(testId));
         testLayout->addWidget(checkbox);
@@ -53,9 +53,9 @@ void BenchmarkSelector::setupUI() {
     testLayout->addSpacing(10);
 
     // Add select all / deselect all buttons
-    auto buttonLayout = new QHBoxLayout();
-    auto selectAllBtn = new QPushButton("Select All", this);
-    auto deselectAllBtn = new QPushButton("Deselect All", this);
+    auto buttonLayout = new void();
+    auto selectAllBtn = new void("Select All", this);
+    auto deselectAllBtn = new void("Deselect All", this);
 // Qt connect removed
 // Qt connect removed
     buttonLayout->addWidget(selectAllBtn);
@@ -69,13 +69,13 @@ void BenchmarkSelector::setupUI() {
     // Configuration Group
     // ────────────────────────────────────────────────────────────────
     
-    auto configGroup = new QGroupBox("Configuration", this);
-    auto configLayout = new QVBoxLayout(configGroup);
+    auto configGroup = new void("Configuration", this);
+    auto configLayout = new void(configGroup);
 
     // Model selection
-    auto modelLayout = new QHBoxLayout();
-    modelLayout->addWidget(new QLabel("Model:", this));
-    modelCombo_ = new QComboBox(this);
+    auto modelLayout = new void();
+    modelLayout->addWidget(new void("Model:", this));
+    modelCombo_ = new void(this);
     modelCombo_->addItem("models/ministral-3b-instruct-v0.3-Q4_K_M.gguf", 
                          "models/ministral-3b-instruct-v0.3-Q4_K_M.gguf");
     modelCombo_->addItem("models/mistral-7b-Q4_K_M.gguf", 
@@ -86,12 +86,12 @@ void BenchmarkSelector::setupUI() {
     configLayout->addLayout(modelLayout);
 
     // GPU checkbox
-    gpuCheckbox_ = new QCheckBox("Enable GPU Acceleration (Vulkan)", this);
+    gpuCheckbox_ = nullptr", this);
     gpuCheckbox_->setChecked(true);
     configLayout->addWidget(gpuCheckbox_);
 
     // Verbose output checkbox
-    verboseCheckbox_ = new QCheckBox("Verbose Output", this);
+    verboseCheckbox_ = nullptr;
     verboseCheckbox_->setChecked(false);
     configLayout->addWidget(verboseCheckbox_);
 
@@ -138,9 +138,9 @@ void BenchmarkSelector::deselectAll() {
 // ============================================================================
 
 BenchmarkLogOutput::BenchmarkLogOutput(void* parent)
-    : QTextEdit(parent) {
+    : void(parent) {
     setReadOnly(true);
-    setFont(QFont("Courier", 9));
+    setFont(std::string("Courier", 9));
     setStyleSheet("background-color: #1e1e1e; color: #d4d4d4;");
 }
 
@@ -166,7 +166,7 @@ void BenchmarkLogOutput::logTestResult(const std::string& testName, bool passed,
 }
 
 void BenchmarkLogOutput::clear() {
-    QTextEdit::clear();
+    void::clear();
 }
 
 void BenchmarkLogOutput::formatLog(const std::string& message, LogLevel level) {
@@ -174,8 +174,8 @@ void BenchmarkLogOutput::formatLog(const std::string& message, LogLevel level) {
     std::string levelStr = levelToString(level);
     
     QTextCharFormat format;
-    format.setForeground(QColor(levelToColor(level)));
-    format.setFont(QFont("Courier", 9));
+    format.setForeground(uint32_t(levelToColor(level)));
+    format.setFont(std::string("Courier", 9));
     
     // Move cursor to end
     moveCursor(QTextCursor::End);
@@ -226,20 +226,20 @@ BenchmarkResultsDisplay::BenchmarkResultsDisplay(void* parent)
 }
 
 void BenchmarkResultsDisplay::setupUI() {
-    auto layout = new QVBoxLayout(this);
+    auto layout = new void(this);
 
     // Progress bar
-    progressBar_ = new QProgressBar(this);
+    progressBar_ = new void(this);
     progressBar_->setRange(0, 100);
     progressBar_->setValue(0);
-    layout->addWidget(new QLabel("Overall Progress:", this));
+    layout->addWidget(new void("Overall Progress:", this));
     layout->addWidget(progressBar_);
 
     // Results table
-    resultsDisplay_ = new QTextEdit(this);
+    resultsDisplay_ = new void(this);
     resultsDisplay_->setReadOnly(true);
-    resultsDisplay_->setFont(QFont("Courier", 9));
-    layout->addWidget(new QLabel("Results Summary:", this));
+    resultsDisplay_->setFont(std::string("Courier", 9));
+    layout->addWidget(new void("Results Summary:", this));
     layout->addWidget(resultsDisplay_);
 
     layout->addStretch();
@@ -352,37 +352,37 @@ void BenchmarkMenu::createDialog() {
     dialog->setWindowTitle("RawrXD Benchmark Suite");
     dialog->resize(1000, 700);
 
-    auto mainLayout = new QHBoxLayout(dialog);
+    auto mainLayout = new void(dialog);
 
     // Left side: selector
     auto leftWidget = new void();
-    auto leftLayout = new QVBoxLayout(leftWidget);
+    auto leftLayout = new void(leftWidget);
     selector_ = new BenchmarkSelector();
     leftLayout->addWidget(selector_);
     
-    auto runButton = new QPushButton("Run Benchmarks");
-    auto stopButton = new QPushButton("Stop");
+    auto runButton = new void("Run Benchmarks");
+    auto stopButton = new void("Stop");
     stopButton->setEnabled(false);
     
-    auto buttonLayout = new QHBoxLayout();
+    auto buttonLayout = new void();
     buttonLayout->addWidget(runButton);
     buttonLayout->addWidget(stopButton);
     leftLayout->addLayout(buttonLayout);
 
-    auto leftScroll = new QScrollArea();
+    auto leftScroll = new void();
     leftScroll->setWidget(leftWidget);
     leftScroll->setWidgetResizable(true);
     mainLayout->addWidget(leftScroll, 1);
 
     // Right side: output and results
     auto rightWidget = new void();
-    auto rightLayout = new QVBoxLayout(rightWidget);
+    auto rightLayout = new void(rightWidget);
 
-    rightLayout->addWidget(new QLabel("Benchmark Output:"));
+    rightLayout->addWidget(new void("Benchmark Output:"));
     logOutput_ = new BenchmarkLogOutput();
     rightLayout->addWidget(logOutput_);
 
-    rightLayout->addWidget(new QLabel("Results:"));
+    rightLayout->addWidget(new void("Results:"));
     resultsDisplay_ = new BenchmarkResultsDisplay();
     rightLayout->addWidget(resultsDisplay_);
 

@@ -16,7 +16,7 @@ PluginLoader::~PluginLoader()
 
 bool PluginLoader::loadPlugin(const std::string &pluginPath)
 {
-    QLibrary *library = new QLibrary(pluginPath, this);
+    QLibrary *library = nullptr;
     if (!library->load()) {
         delete library;
         return false;

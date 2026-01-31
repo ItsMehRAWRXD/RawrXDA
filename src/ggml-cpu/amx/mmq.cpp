@@ -92,7 +92,7 @@ struct is_type_qkk : std::integral_constant<bool,
                 return __VA_ARGS__();                                                  \
             }                                                                          \
             default:                                                                   \
-                fprintf(stderr, "Unsupported floating data type\n");                   \
+                                   \
         }                                                                              \
     }()
 
@@ -142,7 +142,7 @@ struct is_type_qkk : std::integral_constant<bool,
                 return __VA_ARGS__();                                                  \
             }                                                                          \
             default:                                                                   \
-                fprintf(stderr, "Unsupported quantized data type: %d\n", int(TYPE));   \
+                   \
         }                                                                              \
     }()
 
@@ -2412,7 +2412,7 @@ void ggml_backend_amx_mul_mat(const ggml_compute_params * params, struct ggml_te
                         case 0x42: LAUNCH_TINYGEMM_KERNEL_AVX(4, 2); break;
                         case 0x44: LAUNCH_TINYGEMM_KERNEL_AVX(4, 4); break;
                         case 0x46: LAUNCH_TINYGEMM_KERNEL_AVX(4, 6); break;
-                        default: fprintf(stderr, "Unexpected block size!\n");
+                        default: 
                     }
                 }
             });
@@ -2467,7 +2467,7 @@ void ggml_backend_amx_mul_mat(const ggml_compute_params * params, struct ggml_te
                         case 96: LAUNCH_TINYGEMM_KERNEL_VNNI(96); break;
                         case 64: LAUNCH_TINYGEMM_KERNEL_VNNI(64); break;
                         case 32: LAUNCH_TINYGEMM_KERNEL_VNNI(32); break;
-                        default: fprintf(stderr, "Unexpected n block size!\n");
+                        default: 
                     }
                 }
             });

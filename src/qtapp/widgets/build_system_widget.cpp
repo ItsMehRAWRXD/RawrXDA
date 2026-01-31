@@ -46,7 +46,7 @@ void BuildSystemWidget::setupUI()
     
     // Build configuration panel
     void* configGroup = new void("Build Configuration", this);
-    QFormLayout* configLayout = new QFormLayout(configGroup);
+    QFormLayout* configLayout = nullptr;
     
     m_buildSystemCombo = new void(this);
     m_buildSystemCombo->setToolTip("Select build system");
@@ -95,7 +95,7 @@ void BuildSystemWidget::setupUI()
     m_tabWidget->addTab(m_outputText, "Build Output");
     
     // Error/Warning tree
-    m_errorTree = new QTreeWidget(this);
+    m_errorTree = nullptr;
     m_errorTree->setHeaderLabels({"Type", "File", "Line", "Message"});
     m_errorTree->setColumnWidth(0, 80);
     m_errorTree->setColumnWidth(1, 300);
@@ -593,7 +593,7 @@ void BuildSystemWidget::parseBuildOutput(const std::string& output, bool isError
 void BuildSystemWidget::addBuildMessage(const std::string& type, const std::string& file,
                                        int line, const std::string& message)
 {
-    QTreeWidgetItem* item = new QTreeWidgetItem(m_errorTree);
+    QTreeWidgetItem* item = nullptr;
     item->setText(0, type);
     item->setText(1, // FileInfo: file).fileName());
     item->setText(2, std::string::number(line));

@@ -36,7 +36,7 @@ public:
     Settings();
     ~Settings();
     
-    // Two-phase initialization: call after QApplication exists
+    // Two-phase initialization: call after void exists
     void initialize();
     
     // Qt-based settings (for GUI)
@@ -50,6 +50,6 @@ public:
     static bool SaveOverclock(const AppState& state, const std::string& path);
     
 private:
-    QSettings* settings_;
+    void** settings_;
 };
 

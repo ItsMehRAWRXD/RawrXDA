@@ -49,8 +49,7 @@ struct MultiFileSearchResult {
  * auto* search = new MultiFileSearchWidget(this);
  * search->setProjectPath("/path/to/project");
  * search->show();
- * connect(search, &MultiFileSearchWidget::resultClicked,
- *         this, &MainWindow::openFileAtLine);
+ * // connect removed
  * \endcode
  */
 class MultiFileSearchWidget : public void {
@@ -155,7 +154,7 @@ public:
      * \return true if successful
      */
     bool exportResults(const std::string& filePath);
-    
+
 
     /**
      * \brief Emitted when user clicks a search result
@@ -228,25 +227,25 @@ private:
     bool shouldSkipFile(const std::string& filePath) const;
     
     // UI Components
-    QVBoxLayout* m_mainLayout;
-    QHBoxLayout* m_searchLayout;
-    QHBoxLayout* m_filterLayout;
-    QHBoxLayout* m_optionsLayout;
+    void* m_mainLayout;
+    void* m_searchLayout;
+    void* m_filterLayout;
+    void* m_optionsLayout;
     
-    QLineEdit* m_searchEdit;
-    QLineEdit* m_filterEdit;
-    QPushButton* m_searchButton;
-    QPushButton* m_cancelButton;
-    QCheckBox* m_caseSensitiveCheck;
-    QCheckBox* m_wholeWordCheck;
-    QCheckBox* m_regexCheck;
-    QCheckBox* m_gitignoreCheck;
+    void* m_searchEdit;
+    void* m_filterEdit;
+    void* m_searchButton;
+    void* m_cancelButton;
+    void* m_caseSensitiveCheck;
+    void* m_wholeWordCheck;
+    void* m_regexCheck;
+    void* m_gitignoreCheck;
     QTreeWidget* m_resultsTree;
-    QProgressBar* m_progressBar;
-    QLabel* m_statusLabel;
-    QPushButton* m_exportButton;
-    QPushButton* m_expandAllButton;
-    QPushButton* m_collapseAllButton;
+    void* m_progressBar;
+    void* m_statusLabel;
+    void* m_exportButton;
+    void* m_expandAllButton;
+    void* m_collapseAllButton;
     
     // State
     std::string m_projectPath;

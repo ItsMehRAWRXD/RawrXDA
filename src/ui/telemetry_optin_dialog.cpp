@@ -16,11 +16,11 @@ TelemetryOptInDialog::TelemetryOptInDialog(void* parent)
 }
 
 void TelemetryOptInDialog::setupUI() {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     mainLayout->setSpacing(15);
     
     // Header
-    QLabel* headerLabel = new QLabel(
+    void* headerLabel = new void(
         "<h2>📊 Help Us Improve RawrXD IDE</h2>"
         "<p>Your feedback helps make this IDE better for everyone!</p>",
         this);
@@ -29,7 +29,7 @@ void TelemetryOptInDialog::setupUI() {
     mainLayout->addWidget(headerLabel);
     
     // Explanation section
-    QTextBrowser* explanationBrowser = new QTextBrowser(this);
+    QTextBrowser* explanationBrowser = nullptr;
     explanationBrowser->setOpenExternalLinks(false);
     explanationBrowser->setHtml(getTelemetryExplanation());
     explanationBrowser->setStyleSheet(
@@ -45,7 +45,7 @@ void TelemetryOptInDialog::setupUI() {
     mainLayout->addWidget(explanationBrowser);
     
     // Privacy emphasis
-    QLabel* privacyLabel = new QLabel(
+    void* privacyLabel = new void(
         "🔒 <b>Your Privacy Matters:</b> All data is anonymous and used solely for improving the IDE. "
         "No personal information, code, or file paths are collected.",
         this);
@@ -55,7 +55,7 @@ void TelemetryOptInDialog::setupUI() {
     mainLayout->addWidget(privacyLabel);
     
     // Collected data details
-    QTextBrowser* dataBrowser = new QTextBrowser(this);
+    QTextBrowser* dataBrowser = nullptr;
     dataBrowser->setHtml(getCollectedDataDetails());
     dataBrowser->setStyleSheet(
         "QTextBrowser {"
@@ -70,47 +70,47 @@ void TelemetryOptInDialog::setupUI() {
     mainLayout->addWidget(dataBrowser);
     
     // Remind later checkbox
-    m_remindLaterCheckbox = new QCheckBox("Remind me later (ask again in 7 days)", this);
+    m_remindLaterCheckbox = nullptr", this);
     m_remindLaterCheckbox->setStyleSheet("color: #888888;");
     mainLayout->addWidget(m_remindLaterCheckbox);
     
     mainLayout->addStretch();
     
     // Buttons
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     buttonLayout->addStretch();
     
-    QPushButton* learnMoreButton = new QPushButton("📖 Learn More", this);
+    void* learnMoreButton = new void("📖 Learn More", this);
     learnMoreButton->setStyleSheet(
-        "QPushButton {"
+        "void {"
         "  background-color: #3c3c3c;"
         "  color: #d4d4d4;"
         "  padding: 8px 16px;"
         "  border: none;"
         "  border-radius: 4px;"
         "}"
-        "QPushButton:hover { background-color: #4c4c4c; }"
+        "void:hover { background-color: #4c4c4c; }"
     );
 // Qt connect removed
     buttonLayout->addWidget(learnMoreButton);
     
-    QPushButton* declineButton = new QPushButton("✗ No Thanks", this);
+    void* declineButton = new void("✗ No Thanks", this);
     declineButton->setStyleSheet(
-        "QPushButton {"
+        "void {"
         "  background-color: #c5323d;"
         "  color: white;"
         "  padding: 8px 16px;"
         "  border: none;"
         "  border-radius: 4px;"
         "}"
-        "QPushButton:hover { background-color: #e53e49; }"
+        "void:hover { background-color: #e53e49; }"
     );
 // Qt connect removed
     buttonLayout->addWidget(declineButton);
     
-    QPushButton* acceptButton = new QPushButton("✓ Yes, Help Improve", this);
+    void* acceptButton = new void("✓ Yes, Help Improve", this);
     acceptButton->setStyleSheet(
-        "QPushButton {"
+        "void {"
         "  background-color: #16825d;"
         "  color: white;"
         "  padding: 8px 16px;"
@@ -118,7 +118,7 @@ void TelemetryOptInDialog::setupUI() {
         "  border-radius: 4px;"
         "  font-weight: bold;"
         "}"
-        "QPushButton:hover { background-color: #1a9c6f; }"
+        "void:hover { background-color: #1a9c6f; }"
     );
 // Qt connect removed
     buttonLayout->addWidget(acceptButton);
@@ -178,8 +178,8 @@ std::string TelemetryOptInDialog::getCollectedDataDetails() const {
 void TelemetryOptInDialog::onAcceptClicked() {
     m_telemetryEnabled = true;
     m_remindLater = false;
-    
-    
+
+
     saveTelemetryPreference(true);
     telemetryDecisionMade(true);
     
@@ -229,14 +229,14 @@ void TelemetryOptInDialog::onLearnMoreClicked() {
     detailDialog->setWindowTitle("Telemetry Technical Details");
     detailDialog->setMinimumSize(500, 400);
     
-    QVBoxLayout* layout = new QVBoxLayout(detailDialog);
-    QTextBrowser* browser = new QTextBrowser(detailDialog);
+    void* layout = new void(detailDialog);
+    QTextBrowser* browser = nullptr;
     browser->setHtml(detailedInfo);
     browser->setOpenExternalLinks(true);
     browser->setStyleSheet("background-color: #1e1e1e; color: #d4d4d4; border: none;");
     layout->addWidget(browser);
     
-    QPushButton* closeBtn = new QPushButton("Close", detailDialog);
+    void* closeBtn = new void("Close", detailDialog);
 // Qt connect removed
     layout->addWidget(closeBtn);
     
@@ -247,12 +247,12 @@ void TelemetryOptInDialog::onLearnMoreClicked() {
 // Helper functions implementation
 
 bool hasTelemetryPreference() {
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     return settings.contains("telemetry/decision_made");
 }
 
 void saveTelemetryPreference(bool enabled) {
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     settings.setValue("telemetry/enabled", enabled);
     settings.setValue("telemetry/decision_made", true);
     settings.setValue("telemetry/decision_date", std::chrono::system_clock::time_point::currentDateTime());
@@ -261,7 +261,7 @@ void saveTelemetryPreference(bool enabled) {
 }
 
 bool getTelemetryPreference() {
-    QSettings settings("RawrXD", "AgenticIDE");
+    void* settings("RawrXD", "AgenticIDE");
     return settings.value("telemetry/enabled", false).toBool();
 }
 

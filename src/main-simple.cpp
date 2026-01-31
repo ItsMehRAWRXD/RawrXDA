@@ -21,12 +21,8 @@ struct AppState {
 };
 
 int main() {
-    std::cout << "✓ RawrXD Model Loader - Starting\n";
-    std::cout << "✓ C++20 compilation successful\n";
-    std::cout << "✓ GPU device detection...\n";
-    std::cout << "✓ Vulkan initialized\n";
-    std::cout << "✓ API server running on http://localhost:11434\n";
-    
+
+
     // Keep running
     std::this_thread::sleep_for(std::chrono::seconds(1));
     return 0;

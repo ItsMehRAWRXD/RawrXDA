@@ -81,7 +81,7 @@ public:
     void onEditorContentChanged();
     void onTrainingProgress(int epoch, int totalEpochs, float loss, float perplexity);
     void onTrainingCompleted(const std::string& modelPath, float finalPerplexity);
-    
+
 
     void completionReady(const std::string& completion);
     void analysisReady(const std::string& analysis);

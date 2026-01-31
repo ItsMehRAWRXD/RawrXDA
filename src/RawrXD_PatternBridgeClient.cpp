@@ -53,9 +53,7 @@ public:
         return pipe_ != INVALID_HANDLE_VALUE;
     }
 
-    void Disconnect() {
-        if (pipe_ != INVALID_HANDLE_VALUE) {
-            CloseHandle(pipe_);
+    void // disconnect removed
             pipe_ = INVALID_HANDLE_VALUE;
         }
     }
@@ -156,19 +154,17 @@ private:
 int main() {
     RawrXD::PatternBridgeClient client;
     if (!client.// Connect removed) {
-        std::cerr << "Failed to connect to pipe" << std::endl;
+        
         return 1;
     }
 
     auto res = client.ClassifyFile("D:/lazy init ide/src/example.cpp");
     if (!res.ok) {
-        std::cerr << "Error: " << res.error << std::endl;
+        
         return 1;
     }
 
-    std::cout << "Type: " << res.type << " Priority: " << res.priority
-              << " Confidence: " << res.confidence << " Line: " << res.line
-              << " Content: " << res.content << std::endl;
+
     return 0;
 }
 #endif

@@ -1,4 +1,11 @@
 #include "production_config_manager.h"
+#include <fstream>
+#include <filesystem>
+#include <iostream>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace RawrXD {
 
@@ -16,36 +23,50 @@ bool ProductionConfigManager::loadConfig(const std::string& path) {
 
     std::string configPath = path;
     if (configPath.empty()) {
-        std::string baseDir = QCoreApplication::applicationDirPath();
-        if (baseDir.empty()) {
-            baseDir = "";
+        char buffer[MAX_PATH];
+#ifdef _WIN32
+        GetModuleFileNameA(NULL, buffer, MAX_PATH);
+        std::filesystem::path appPath(buffer);
+        configPath = (appPath.parent_path() / "config/production_config.json").string();
+#else
+        configPath = "config/production_config.json";
+#endif
+    }
+
+    if (!std::filesystem::exists(configPath)) {
+        return false;
+    }
+
+    try {
+        std::ifstream file(configPath);
+        if (!file.is_open()) return false;
+        
+        file >> config_;
+        
+        if (config_.contains("environment") && config_["environment"].is_string()) {
+            environment_ = config_["environment"].get<std::string>();
         }
-        configPath = // (baseDir).filePath("config/production_config.json");
-    }
 
-    // File operation removed;
-    if (!file.exists()) {
+        applyFeatureList(config_);
+        return true;
+    } catch (...) {
         return false;
     }
+}
 
-    if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        return false;
+void ProductionConfigManager::applyDefaults() {
+    environment_ = "production";
+    enabledFeatures_.clear();
+}
+
+void ProductionConfigManager::applyFeatureList(const nlohmann::json& root) {
+    if (root.contains("features") && root["features"].is_array()) {
+        for (auto& feature : root["features"]) {
+            if (feature.is_string()) {
+                enabledFeatures_.insert(feature.get<std::string>());
+            }
+        }
     }
-
-    const std::vector<uint8_t> raw = file.readAll();
-    QJsonParseError error{};
-    void* doc = void*::fromJson(raw, &error);
-    if (error.error != QJsonParseError::NoError || !doc.isObject()) {
-        return false;
-    }
-
-    config_ = doc.object();
-    if (config_.contains("environment")) {
-        environment_ = config_.value("environment").toString(environment_);
-    }
-
-    applyFeatureList(config_);
-    return true;
 }
 
 std::string ProductionConfigManager::getEnvironment() const {
@@ -53,53 +74,14 @@ std::string ProductionConfigManager::getEnvironment() const {
 }
 
 bool ProductionConfigManager::isFeatureEnabled(const std::string& feature) const {
-    if (feature.empty()) {
-        return false;
-    }
-    return enabledFeatures_.contains(feature);
+    return enabledFeatures_.find(feature) != enabledFeatures_.end();
 }
 
-std::any ProductionConfigManager::value(const std::string& key, const std::any& defaultValue) const {
-    if (!config_.contains(key)) {
-        return defaultValue;
+nlohmann::json ProductionConfigManager::value(const std::string& key, const nlohmann::json& defaultValue) const {
+    if (config_.contains(key)) {
+        return config_[key];
     }
-    return config_.value(key).toVariant();
-}
-
-void ProductionConfigManager::applyDefaults() {
-    config_ = void*{};
-    environment_ = qEnvironmentVariable("RAWRXD_ENV", "development");
-    enabledFeatures_.clear();
-
-    const std::stringList defaults = {
-        "tier2_integration",
-        "telemetry",
-        "ollama",
-        "gguf_local",
-        "structured_logging",
-        "exception_logging"
-    };
-    for (const std::string& feature : defaults) {
-        enabledFeatures_.insert(feature);
-    }
-}
-
-void ProductionConfigManager::applyFeatureList(const void*& root) {
-    if (!root.contains("features")) {
-        return;
-    }
-    const void* value = root.value("features");
-    if (!value.isArray()) {
-        return;
-    }
-
-    const void* array = value.toArray();
-    enabledFeatures_.clear();
-    for (const void*& entry : array) {
-        if (entry.isString()) {
-            enabledFeatures_.insert(entry.toString());
-        }
-    }
+    return defaultValue;
 }
 
 } // namespace RawrXD

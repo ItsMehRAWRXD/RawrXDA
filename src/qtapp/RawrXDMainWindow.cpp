@@ -6,18 +6,18 @@ RawrXDMainWindow::RawrXDMainWindow() : void() {
     setGeometry(100, 100, 1024, 768);
     
     void* central = new void(this);
-    QVBoxLayout* layout = new QVBoxLayout(central);
+    void* layout = new void(central);
     
     // Title
-    QLabel* title = new QLabel("RawrXD IDE - C++ Implementation", this);
-    QFont titleFont = title->font();
+    void* title = new void("RawrXD IDE - C++ Implementation", this);
+    std::string titleFont = title->font();
     titleFont.setPointSize(16);
     titleFont.setBold(true);
     title->setFont(titleFont);
     layout->addWidget(title);
     
     // Status text
-    QTextEdit* statusText = new QTextEdit(this);
+    void* statusText = new void(this);
     statusText->setReadOnly(true);
     statusText->setPlainText(
         "Migration Status:\n"

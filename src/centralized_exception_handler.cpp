@@ -113,7 +113,7 @@ void CentralizedExceptionHandler::handleUnhandledException(const std::string& me
         ofs << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << " | " << message << "\n";
     }
 
-    std::cerr << "[CentralizedExceptionHandler] " << message << "\n";
+
 }
 
 void CentralizedExceptionHandler::terminateHandler() noexcept {

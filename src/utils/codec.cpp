@@ -4,7 +4,7 @@
 
 namespace codec {
     std::vector<uint8_t> deflate(const std::vector<uint8_t>& input, bool* success) {
-        if (input.isEmpty()) {
+        if (input.empty()) {
             if (success) *success = true;
             return std::vector<uint8_t>();
         }
@@ -28,7 +28,7 @@ namespace codec {
     }
     
     std::vector<uint8_t> inflate(const std::vector<uint8_t>& input, bool* success) {
-        if (input.isEmpty()) {
+        if (input.empty()) {
             if (success) *success = true;
             return std::vector<uint8_t>();
         }
@@ -63,3 +63,4 @@ namespace codec {
         return input; // Return original on failure
     }
 }
+

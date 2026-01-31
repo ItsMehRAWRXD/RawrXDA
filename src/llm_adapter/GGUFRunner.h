@@ -7,7 +7,7 @@
   // Quantization backend switcher
 
 // GGML tensor types
-enum class GgmlType : quint32 {
+enum class GgmlType : uint32_t {
     F32  = 0,
     F16  = 1,
     Q4_0 = 2,
@@ -21,13 +21,13 @@ enum class GgmlType : quint32 {
 // Q4_0 block: 32 weights in 16 bytes + 1 float16 delta
 struct BlockQ4_0 {
     quint16 d;      // delta (float16)
-    quint8 qs[16];  // 32 nibbles (2 per byte)
+    uint8_t qs[16];  // 32 nibbles (2 per byte)
 };
 
 // Q8_0 block: 32 weights in 32 bytes + 1 float16 delta
 struct BlockQ8_0 {
     quint16 d;      // delta (float16)
-    qint8 qs[32];   // 32 signed bytes
+    int8_t qs[32];   // 32 signed bytes
 };
 
 /**
@@ -81,7 +81,7 @@ public:
 
     void tokenChunkGenerated(const std::string& chunk);
     void inferenceComplete(bool success);
-    void modelLoaded(const std::string& path, qint64 sizeBytes);
+    void modelLoaded(const std::string& path, int64_t sizeBytes);
     void loadingProgress(int percent);
 
 private:
@@ -112,7 +112,7 @@ private:
         qsizetype headDim{0};       // embedDim / nHeads
         float ropeBase{10000.0f};   // RoPE frequency base
         std::vector<float> invFreq; // Precomputed inverse frequencies for RoPE [headDim/2]
-        qint64 modelFileSize{0};
+        int64_t modelFileSize{0};
         
         // Inference state
         std::vector<float> logits;
@@ -188,10 +188,10 @@ private:
     // GGUF tensor parsing
     bool parseGgufTensors(class std::fstream& file);
     bool parseGgufTensorTable(class std::fstream& file);
-    bool readTensorFloat32(class std::fstream& file, qint64 offset, qint64 count, std::vector<float>& out);
+    bool readTensorFloat32(class std::fstream& file, int64_t offset, int64_t count, std::vector<float>& out);
     bool loadTensor(class std::fstream& file, const std::string& name, std::vector<float>& weights);
     size_t ggmlTypeSize(GgmlType type);
-    std::vector<uint8_t> readTensorData(class std::fstream& file, quint64 offset, quint64 numBytes);
+    std::vector<uint8_t> readTensorData(class std::fstream& file, uint64_t offset, uint64_t numBytes);
 
     // Transformer forward (scalar)
 private:
@@ -202,4 +202,5 @@ private:
 
     ModelContext context_;
 };
+
 

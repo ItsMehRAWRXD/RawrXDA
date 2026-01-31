@@ -35,7 +35,7 @@ public:
     void commandExecuted(const std::string& commandId);
     
 protected:
-    void keyPressEvent(QKeyEvent* event) override;
+    void keyPressEvent(void*  event) override;
     bool eventFilter(void* obj, QEvent* event) override;
     
 private:
@@ -49,9 +49,9 @@ private:
     void applyDarkTheme();
     int fuzzyMatch(const std::string& pattern, const std::string& text) const;
     
-    QLineEdit* m_searchBox;
+    void* m_searchBox;
     QListWidget* m_resultsList;
-    QLabel* m_hintLabel;
+    void* m_hintLabel;
     
     std::map<std::string, Command> m_commands;
     std::vector<std::string> m_recentCommands;

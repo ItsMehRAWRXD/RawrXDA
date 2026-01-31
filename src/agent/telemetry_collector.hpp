@@ -92,7 +92,7 @@ private:
     std::string m_sessionId;  ///< Anonymous session identifier (not persistent)
     std::unordered_map<std::string, int> m_featureUsage;  ///< Feature name -> usage count
     std::vector<void*> m_events;  ///< Buffered events for batch sending
-    qint64 m_sessionStartTime;  ///< Session start timestamp
+    int64_t m_sessionStartTime;  ///< Session start timestamp
     
     // PRODUCTION-READY: Sanitize data to remove any PII
     std::string sanitize(const std::string& input) const;
@@ -106,4 +106,5 @@ private:
     // PRODUCTION-READY: Save user consent to settings
     void saveUserConsent(bool enabled);
 };
+
 

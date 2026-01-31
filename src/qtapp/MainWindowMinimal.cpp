@@ -10,8 +10,8 @@ MainWindowMinimal::MainWindowMinimal(void *parent)
     resize(1200, 800);
     
     // Create basic menu
-    QMenuBar* menu = menuBar();
-    QMenu* fileMenu = menu->addMenu("&File");
+    void* menu = menuBar();
+    void* fileMenu = menu->addMenu("&File");
     fileMenu->addAction("&New", this, &MainWindowMinimal::newFile);
     fileMenu->addAction("&Open", this, &MainWindowMinimal::openFile);
     fileMenu->addSeparator();
@@ -21,25 +21,25 @@ MainWindowMinimal::MainWindowMinimal(void *parent)
     void* central = new void(this);
     setCentralWidget(central);
     
-    QHBoxLayout* mainLayout = new QHBoxLayout(central);
+    void* mainLayout = new void(central);
     
     // Left sidebar (file explorer placeholder)
-    QTreeWidget* explorer = new QTreeWidget(this);
+    QTreeWidget* explorer = nullptr;
     explorer->setHeaderLabel("Explorer");
     explorer->setMaximumWidth(200);
     explorer->setMinimumWidth(150);
     
     // Main editor area
-    QTextEdit* editor = new QTextEdit(this);
+    void* editor = new void(this);
     editor->setText("// RawrXD IDE - Minimal Startup Test\n// Success! Basic Qt layout working.\n// Ready for complex components...");
     
     // Right panel (placeholder)
-    QTextEdit* output = new QTextEdit(this);
+    void* output = new void(this);
     output->setText("Output Panel\n\nIDE startup successful!");
     output->setMaximumWidth(250);
     
     // Add to splitter
-    QSplitter* splitter = new QSplitter(//Horizontal, this);
+    void* splitter = new void(//Horizontal, this);
     splitter->addWidget(explorer);
     splitter->addWidget(editor);
     splitter->addWidget(output);

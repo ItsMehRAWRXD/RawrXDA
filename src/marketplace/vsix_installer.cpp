@@ -16,7 +16,7 @@ void VsixInstaller::installFromUrl(const std::string& url, const std::string& ex
     void** reply = m_networkManager->get(request);
     
     // Create temp file for download
-    QTemporaryFile* tempFile = new QTemporaryFile(this);
+    std::fstream* tempFile = nullptr;
     if (!tempFile->open()) {
         installationError(extensionId, "Failed to create temporary file");
         delete tempFile;
@@ -80,7 +80,7 @@ std::string VsixInstaller::getExtensionInstallPath(const std::string& extensionI
 }
 
 void VsixInstaller::onDownloadFinished() {
-    void** reply = qobject_cast<void**>(sender());
+// REMOVED_QT:     void** reply = qobject_cast<void**>(sender());
     if (!reply) return;
     
     std::string extensionId = reply->property("extensionId").toString();
@@ -120,7 +120,7 @@ void VsixInstaller::onDownloadFinished() {
 
 void VsixInstaller::onDownloadProgress(int64_t bytesReceived, int64_t bytesTotal) {
     if (bytesTotal > 0) {
-        void** reply = qobject_cast<void**>(sender());
+// REMOVED_QT:         void** reply = qobject_cast<void**>(sender());
         if (reply) {
             std::string extensionId = reply->property("extensionId").toString();
             int percentage = static_cast<int>((bytesReceived * 100) / bytesTotal);

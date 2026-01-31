@@ -318,7 +318,7 @@ void ZeroRetentionManager::cleanupExpiredData()
 {
     auto startTime = std::chrono::steady_clock::now();
     int deletedCount = 0;
-    qint64 bytesDeleted = 0;
+    int64_t bytesDeleted = 0;
     
     try {
         std::vector<std::string> expiredIds;
@@ -536,7 +536,7 @@ void ZeroRetentionManager::logAudit(const std::string& action, const void*& deta
         config = m_config;
     }
     
-    if (!config.enableAuditLog || config.auditLogPath.isEmpty()) {
+    if (!config.enableAuditLog || config.auditLogPath.empty()) {
         return;
     }
     
@@ -579,7 +579,7 @@ bool ZeroRetentionManager::secureDelete(const std::string& path)
         // Secure wipe: overwrite file with random data before deletion
         std::fstream file(path);
         if (file.open(QIODevice::ReadWrite)) {
-            qint64 size = file.size();
+            int64_t size = file.size();
             std::vector<uint8_t> zeroData(size, '\0');
             file.write(zeroData);
             file.flush();
@@ -640,4 +640,6 @@ std::chrono::system_clock::time_point ZeroRetentionManager::calculateExpiry(Data
             return now.addSecs(config.sessionTtlMinutes * 60);
     }
 }
+
+
 

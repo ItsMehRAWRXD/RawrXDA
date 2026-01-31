@@ -22,8 +22,8 @@ StreamingGGUFLoader::~StreamingGGUFLoader() {
     logEntry["level"] = "INFO";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "destroyed";
-    logEntry["total_zones_loaded"] = (qint64)m_metrics.total_zones_loaded;
-    logEntry["total_tensors_accessed"] = (qint64)m_metrics.total_tensors_accessed;
+    logEntry["total_zones_loaded"] = (int64_t)m_metrics.total_zones_loaded;
+    logEntry["total_tensors_accessed"] = (int64_t)m_metrics.total_tensors_accessed;
     
 }
 
@@ -48,7 +48,7 @@ bool StreamingGGUFLoader::Open(const std::string& filePath) {
     m_totalSize = m_file.size();
     m_modelName = std::filesystem::path(filePath).baseName();
     
-    qint64 open_time_ms = timer.elapsed();
+    int64_t open_time_ms = timer.elapsed();
     
     void* logEntry;
     logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
@@ -60,8 +60,8 @@ bool StreamingGGUFLoader::Open(const std::string& filePath) {
     logEntry["file_size_bytes"] = m_totalSize;
     logEntry["file_size_mb"] = m_totalSize / (1024.0 * 1024.0);
     logEntry["open_time_ms"] = open_time_ms;
-    
-    
+
+
     return true;
 }
 
@@ -74,8 +74,8 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
     logEntry["level"] = "INFO";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "building_tensor_index";
-    
-    
+
+
     // TODO: Parse GGUF header and populate m_tensorIndex
     // For now, this is a stub implementation
     // In production, this would:
@@ -87,7 +87,7 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
     // Stub: Create dummy tensor entries for demonstration
     // In real implementation, parse actual GGUF format
     
-    qint64 index_time_ms = timer.elapsed();
+    int64_t index_time_ms = timer.elapsed();
     
     void* resultLog;
     resultLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
@@ -96,8 +96,8 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
     resultLog["event"] = "tensor_index_built";
     resultLog["tensor_count"] = m_tensorIndex.size();
     resultLog["index_time_ms"] = index_time_ms;
-    
-    
+
+
     return true;
 }
 
@@ -138,8 +138,8 @@ bool StreamingGGUFLoader::LoadZone(const std::string& zoneName) {
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "loading_zone";
     logEntry["zone_name"] = zoneName;
-    
-    
+
+
     // TODO: Compute zone boundaries from tensor index
     // For now, use stub implementation
     
@@ -188,8 +188,8 @@ bool StreamingGGUFLoader::LoadZone(const std::string& zoneName) {
     resultLog["load_time_ms"] = load_time_ms;
     resultLog["total_loaded_zones"] = m_loadedZones.size();
     resultLog["total_mapped_mb"] = m_metrics.total_bytes_mapped / (1024.0 * 1024.0);
-    
-    
+
+
     ZoneLoaded(zoneName, load_time_ms);
     return true;
 }
@@ -229,10 +229,10 @@ void StreamingGGUFLoader::UnloadZone(const std::string& zoneName) {
     logEntry["event"] = "zone_evicted";
     logEntry["zone_name"] = zoneName;
     logEntry["zone_size_mb"] = zone.size_bytes / (1024.0 * 1024.0);
-    logEntry["access_count"] = (qint64)zone.access_count;
+    logEntry["access_count"] = (int64_t)zone.access_count;
     logEntry["evict_time_ms"] = timer.elapsed();
-    
-    
+
+
     ZoneEvicted(zoneName);
 }
 
@@ -245,15 +245,15 @@ void StreamingGGUFLoader::UnloadAll() {
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "unloading_all_zones";
     logEntry["zone_count"] = keys.size();
-    
-    
+
+
     for (const auto& k : keys) {
         UnloadZone(k);
     }
 }
 
 void StreamingGGUFLoader::evictLeastRecentlyUsed() {
-    if (m_loadedZones.isEmpty()) {
+    if (m_loadedZones.empty()) {
         return;
     }
     
@@ -268,15 +268,15 @@ void StreamingGGUFLoader::evictLeastRecentlyUsed() {
         }
     }
     
-    if (!lruZone.isEmpty()) {
+    if (!lruZone.empty()) {
         void* logEntry;
         logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "DEBUG";
         logEntry["component"] = "StreamingGGUFLoader";
         logEntry["event"] = "evicting_lru_zone";
         logEntry["zone_name"] = lruZone;
-        
-        
+
+
         UnloadZone(lruZone);
     }
 }
@@ -292,8 +292,8 @@ bool StreamingGGUFLoader::GetTensorData(const std::string& tensorName, std::vect
         logEntry["component"] = "StreamingGGUFLoader";
         logEntry["event"] = "tensor_not_found";
         logEntry["tensor_name"] = tensorName;
-        
-        
+
+
         outData.clear();
         return false;
     }
@@ -323,11 +323,11 @@ bool StreamingGGUFLoader::GetTensorData(const std::string& tensorName, std::vect
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "tensor_accessed";
     logEntry["tensor_name"] = tensorName;
-    logEntry["tensor_size_bytes"] = (qint64)meta.size_bytes;
+    logEntry["tensor_size_bytes"] = (int64_t)meta.size_bytes;
     logEntry["zone_id"] = meta.zone_id;
     logEntry["access_time_ms"] = timer.elapsed();
-    
-    
+
+
     TensorAccessed(tensorName);
     
     return true;
@@ -341,11 +341,11 @@ std::string StreamingGGUFLoader::getModelName() const {
     return m_modelName; 
 }
 
-qint64 StreamingGGUFLoader::getTotalSize() const { 
+int64_t StreamingGGUFLoader::getTotalSize() const { 
     return m_totalSize; 
 }
 
-std::vector<uint8_t> StreamingGGUFLoader::readDataFromFile(qint64 offset, qint64 size) {
+std::vector<uint8_t> StreamingGGUFLoader::readDataFromFile(int64_t offset, int64_t size) {
     if (!m_file.isOpen()) {
         return {};
     }
@@ -370,4 +370,6 @@ void StreamingGGUFLoader::updateZoneAccessTime(const std::string& zoneName) {
         m_loadedZones[zoneName].access_count++;
     }
 }
+
+
 

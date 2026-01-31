@@ -21,10 +21,10 @@ void TodoDock::initialize() {
 }
 
 void TodoDock::setupUI() {
-    QVBoxLayout* layout = new QVBoxLayout(this);
+    void* layout = new void(this);
     layout->setContentsMargins(0, 0, 0, 0);
     
-    treeWidget_ = new QTreeWidget(this);
+    treeWidget_ = nullptr;
     treeWidget_->setHeaderLabels({"Description", "File", "Created", "Status"});
     treeWidget_->setStyleSheet(
         "QTreeWidget { background-color: #252526; color: #d4d4d4; border: none; }"
@@ -44,7 +44,7 @@ void TodoDock::loadTodos() {
     
     std::vector<TodoItem> todos = todoManager_->getTodos();
     for (const TodoItem& todo : todos) {
-        QTreeWidgetItem* item = new QTreeWidgetItem(treeWidget_);
+        QTreeWidgetItem* item = nullptr;
         item->setText(0, todo.description);
         item->setText(1, todo.filePath);
         item->setText(2, todo.created.toString("yyyy-MM-dd hh:mm"));
@@ -59,7 +59,7 @@ void TodoDock::refreshTodos() {
 }
 
 void TodoDock::onTodoAdded(const TodoItem& todo) {
-    QTreeWidgetItem* item = new QTreeWidgetItem(treeWidget_);
+    QTreeWidgetItem* item = nullptr;
     item->setText(0, todo.description);
     item->setText(1, todo.filePath);
     item->setText(2, todo.created.toString("yyyy-MM-dd hh:mm"));
@@ -91,7 +91,7 @@ void TodoDock::onTodoRemoved(const std::string& id) {
 
 void TodoDock::onItemDoubleClicked(QTreeWidgetItem* item, int column) {
     std::string filePath = item->text(1);
-    if (!filePath.isEmpty()) {
+    if (!filePath.empty()) {
         // Get the TODO ID from the item data
         std::string todoId = item->data(0, //UserRole).toString();
         // signal to open file in editor
@@ -102,9 +102,9 @@ void TodoDock::onItemDoubleClicked(QTreeWidgetItem* item, int column) {
 void TodoDock::onAddTodo() {
     bool ok;
     std::string description = QInputDialog::getText(this, "Add TODO", 
-        "TODO Description:", QLineEdit::Normal, "", &ok);
+        "TODO Description:", void::Normal, "", &ok);
     
-    if (ok && !description.isEmpty()) {
+    if (ok && !description.empty()) {
         todoManager_->addTodo(description, std::string(), 0);
     }
 }
@@ -130,4 +130,5 @@ void TodoDock::onScanCode() {
         "This feature will scan all project files for TODO comments.\n\n"
         "Implementation in progress...");
 }
+
 

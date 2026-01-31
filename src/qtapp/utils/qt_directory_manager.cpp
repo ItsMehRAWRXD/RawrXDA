@@ -143,7 +143,7 @@ std::string QtDirectoryManager::toAbsolutePath(const std::string& relativePath,
         return std::filesystem::path::cleanPath(pathToConvert);
     }
     
-    std::filesystem::path base = basePath.isEmpty() ? std::filesystem::path::current() : std::filesystem::path(basePath);
+    std::filesystem::path base = basePath.empty() ? std::filesystem::path::current() : std::filesystem::path(basePath);
     return base.absoluteFilePath(pathToConvert);
 }
 
@@ -261,4 +261,5 @@ void QtDirectoryManager::listDirectoriesRecursive(const std::string& path, std::
 }
 
 } // namespace RawrXD
+
 

@@ -33,7 +33,7 @@ public:
     
     // Stop current generation
     void stopGeneration();
-    
+
 
     // Emitted for each token during streaming (compatible with AgenticEngine)
     void tokenArrived(const std::string& token);

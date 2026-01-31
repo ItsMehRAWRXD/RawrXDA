@@ -3,7 +3,7 @@
 
 
 ActivityBar::ActivityBar(void* parent)
-    : QFrame(parent)
+    : void(parent)
     , m_activeView(Explorer)
 {
     setFixedWidth(ACTIVITY_BAR_WIDTH);
@@ -50,7 +50,7 @@ void ActivityBar::createButtons()
 
 void ActivityBar::layoutButtons()
 {
-    QVBoxLayout* layout = new QVBoxLayout(this);
+    void* layout = new void(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     
@@ -92,14 +92,14 @@ ActivityBarButton* ActivityBar::button(ViewType view) const
     return nullptr;
 }
 
-void ActivityBar::paintEvent(QPaintEvent* event)
+void ActivityBar::paintEvent(void*  event)
 {
     (event);
     QPainter painter(this);
-    painter.fillRect(rect(), QColor(BACKGROUND_COLOR));
+    painter.fillRect(rect(), uint32_t(BACKGROUND_COLOR));
 }
 
-void ActivityBar::resizeEvent(QResizeEvent* event)
+void ActivityBar::resizeEvent(void*  event)
 {
     (event);
     // Buttons are managed by layout

@@ -67,12 +67,12 @@ public:
 
     // Metrics
     struct Metrics {
-        qint64 conflictsDetected = 0;
-        qint64 conflictsResolved = 0;
-        qint64 autoResolved = 0;
-        qint64 manualResolved = 0;
-        qint64 breakingChangesDetected = 0;
-        qint64 errorCount = 0;
+        int64_t conflictsDetected = 0;
+        int64_t conflictsResolved = 0;
+        int64_t autoResolved = 0;
+        int64_t manualResolved = 0;
+        int64_t breakingChangesDetected = 0;
+        int64_t errorCount = 0;
         double avgResolutionConfidence = 0.0;
         double avgResolutionLatencyMs = 0.0;
     };
@@ -103,4 +103,5 @@ private:
     std::string extractConflictMarkers(const std::string& content, ConflictBlock& conflict);
     bool validateResolution(const Resolution& resolution, const ConflictBlock& conflict);
 };
+
 

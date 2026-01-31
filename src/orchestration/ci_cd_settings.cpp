@@ -1,12 +1,12 @@
 #include "ci_cd_settings.h"
 
 
-// Real CI/CD job execution with QProcess
+// Real CI/CD job execution with void*
 
 struct JobData {
     std::string id;
     TrainingJobConfig config;
-    QProcess* process;
+    void** process;
     std::chrono::system_clock::time_point startTime;
     std::string status;
     std::vector<PipelineStage> stages;
@@ -18,7 +18,7 @@ CICDSettings::CICDSettings(void* parent) : void(parent) {}
 CICDSettings::~CICDSettings() {
     // Clean up running processes
     for (auto& job : s_jobs) {
-        if (job.process && job.process->state() == QProcess::Running) {
+        if (job.process && job.process->state() == void*::Running) {
             job.process->terminate();
             job.process->waitForFinished(5000);
             delete job.process;
@@ -47,21 +47,21 @@ bool CICDSettings::startJob(const std::string& jobId) {
     
     JobData& job = s_jobs[jobId];
     
-    if (job.process && job.process->state() == QProcess::Running) {
+    if (job.process && job.process->state() == void*::Running) {
         return false;
     }
     
     // Create new process
-    job.process = new QProcess(this);
+    job.process = new void*(this);
     job.startTime = std::chrono::system_clock::time_point::currentDateTime();
     job.status = "running";
     
     // Extract command from config
-    std::string command = job.config.command.isEmpty() ? "echo Running job" : job.config.command;
-    std::string workDir = job.config.workDir.isEmpty() ? "." : job.config.workDir;
+    std::string command = job.config.command.empty() ? "echo Running job" : job.config.command;
+    std::string workDir = job.config.workDir.empty() ? "." : job.config.workDir;
     
     job.process->setWorkingDirectory(workDir);
-    job.process->setProcessChannelMode(QProcess::MergedChannels);
+    job.process->setProcessChannelMode(void*::MergedChannels);
     
     // Connect signals
 // Qt connect removed
@@ -84,7 +84,7 @@ bool CICDSettings::cancelJob(const std::string& jobId) {
     
     JobData& job = s_jobs[jobId];
     
-    if (job.process && job.process->state() == QProcess::Running) {
+    if (job.process && job.process->state() == void*::Running) {
         job.process->terminate();
         bool finished = job.process->waitForFinished(5000);
         
@@ -117,7 +117,7 @@ void* CICDSettings::getJobStatus(const std::string& jobId) const {
     
     if (job.process) {
         status["exitCode"] = job.process->exitCode();
-        status["running"] = (job.process->state() == QProcess::Running);
+        status["running"] = (job.process->state() == void*::Running);
     }
     
     return status;
@@ -153,3 +153,4 @@ std::string CICDSettings::generateDeploymentId() {
     std::string random = std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch() % 10000);
     return std::string("deploy_%1_%2");
 }
+

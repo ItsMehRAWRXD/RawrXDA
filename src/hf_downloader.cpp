@@ -27,13 +27,13 @@ bool HFDownloader::SearchModels(const std::string& query, std::vector<ModelInfo>
     std::string response;
     
     if (!FetchJSON(url, response, token)) {
-        std::cerr << "Failed to search models on HuggingFace" << std::endl;
+        
         return false;
     }
     
     // Parse JSON response (simplified - would use nlohmann/json in real implementation)
-    std::cout << "Search results: " << response.substr(0, 200) << "..." << std::endl;
-    
+
+
     return true;
 }
 
@@ -43,7 +43,7 @@ bool HFDownloader::GetModelInfo(const std::string& repo_id, ModelInfo& info,
     std::string response;
     
     if (!FetchJSON(url, response, token)) {
-        std::cerr << "Failed to fetch model info: " << repo_id << std::endl;
+        
         return false;
     }
     
@@ -67,7 +67,7 @@ bool HFDownloader::DownloadModelAsync(const std::string& repo_id, const std::str
                                       const std::string& output_dir, ProgressCallback callback,
                                       const std::string& token) {
     if (is_downloading_.load()) {
-        std::cerr << "Download already in progress" << std::endl;
+        
         return false;
     }
     
@@ -126,7 +126,7 @@ bool HFDownloader::FetchJSON(const std::string& url, std::string& response,
     // Use libcurl to perform an HTTP GET request and capture the response body.
     CURL* curl = curl_easy_init();
     if (!curl) {
-        std::cerr << "CURL init failed" << std::endl;
+        
         return false;
     }
 
@@ -146,7 +146,7 @@ bool HFDownloader::FetchJSON(const std::string& url, std::string& response,
     CURLcode res = curl_easy_perform(curl);
     bool success = (res == CURLE_OK);
     if (!success) {
-        std::cerr << "CURL error: " << curl_easy_strerror(res) << std::endl;
+        
     }
 
     curl_slist_free_all(headers);
@@ -156,18 +156,18 @@ bool HFDownloader::FetchJSON(const std::string& url, std::string& response,
 
 bool HFDownloader::DownloadFile(const std::string& url, const std::string& output_path,
                                ProgressCallback callback, const std::string& token) {
-    std::cout << "Downloading: " << url << " to " << output_path << std::endl;
-    
+
+
     // Perform download using libcurl and write directly to file
     FILE* fp = fopen(output_path.c_str(), "wb");
     if (!fp) {
-        std::cerr << "Failed to open output file: " << output_path << std::endl;
+        
         return false;
     }
 
     CURL* curl = curl_easy_init();
     if (!curl) {
-        std::cerr << "CURL init failed" << std::endl;
+        
         fclose(fp);
         return false;
     }
@@ -190,7 +190,7 @@ bool HFDownloader::DownloadFile(const std::string& url, const std::string& outpu
     CURLcode res = curl_easy_perform(curl);
     bool success = (res == CURLE_OK);
     if (!success) {
-        std::cerr << "CURL error: " << curl_easy_strerror(res) << std::endl;
+        
     }
 
     // Retrieve download size for progress reporting

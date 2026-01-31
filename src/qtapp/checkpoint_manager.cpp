@@ -38,7 +38,7 @@ bool CheckpointManager::initialize(const std::string& checkpointDir, int maxChec
 
 bool CheckpointManager::isInitialized() const
 {
-    return !m_checkpointDir.isEmpty() && std::filesystem::path(m_checkpointDir).exists();
+    return !m_checkpointDir.empty() && std::filesystem::path(m_checkpointDir).exists();
 }
 
 std::string CheckpointManager::saveCheckpoint(const CheckpointMetadata& metadata,
@@ -115,7 +115,7 @@ std::string CheckpointManager::loadLatestCheckpoint(CheckpointState& state)
 
 std::string CheckpointManager::loadBestCheckpoint(CheckpointState& state)
 {
-    if (m_bestCheckpointId.isEmpty()) {
+    if (m_bestCheckpointId.empty()) {
         return std::string();
     }
     
@@ -203,7 +203,7 @@ int CheckpointManager::pruneOldCheckpoints(int keepCount)
 
 CheckpointManager::CheckpointMetadata CheckpointManager::getBestCheckpointInfo() const
 {
-    if (m_bestCheckpointId.isEmpty()) {
+    if (m_bestCheckpointId.empty()) {
         return CheckpointMetadata();
     }
     return getCheckpointMetadata(m_bestCheckpointId);
@@ -275,7 +275,7 @@ bool CheckpointManager::validateCheckpoint(const std::string& checkpointId) cons
     file.close();
     
     // Basic validation: check if not empty
-    return !data.isEmpty();
+    return !data.empty();
 }
 
 std::map<std::string, bool> CheckpointManager::validateAllCheckpoints() const
@@ -322,7 +322,7 @@ void* CheckpointManager::generateCheckpointReport() const
 {
     void* report;
     report["totalCheckpoints"] = static_cast<int>(m_checkpointIndex.size());
-    report["totalSize"] = static_cast<qint64>(getTotalCheckpointSize());
+    report["totalSize"] = static_cast<int64_t>(getTotalCheckpointSize());
     report["bestCheckpointId"] = m_bestCheckpointId;
     
     void* checkpoints;
@@ -434,7 +434,7 @@ std::string CheckpointManager::generateCheckpointId()
 
 std::vector<uint8_t> CheckpointManager::compressState(const std::vector<uint8_t>& data, CompressionLevel level)
 {
-    if (level == CompressionLevel::None || data.isEmpty()) {
+    if (level == CompressionLevel::None || data.empty()) {
         return data;
     }
     
@@ -491,4 +491,6 @@ bool CheckpointManager::readCheckpointFromDisk(const std::string& checkpointId,
     state.modelWeights = data;
     return true;
 }
+
+
 

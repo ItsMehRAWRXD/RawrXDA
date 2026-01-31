@@ -108,37 +108,37 @@ ModelMonitor* ComponentFactory::createModelMonitor(InferenceEngine* engine, void
 }
 
 // Helper functions to convert components to void for signal connections
-void* ComponentFactory::asQObject(InferenceEngine* engine) {
-    return qobject_cast<void*>(engine);
+// REMOVED_QT: void* ComponentFactory::asQObject(InferenceEngine* engine) {
+// REMOVED_QT:     return qobject_cast<void*>(engine);
 }
 
-void* ComponentFactory::asQObject(AIChatPanel* panel) {
-    return qobject_cast<void*>(panel);
+// REMOVED_QT: void* ComponentFactory::asQObject(AIChatPanel* panel) {
+// REMOVED_QT:     return qobject_cast<void*>(panel);
 }
 
-void* ComponentFactory::asQObject(CommandPalette* palette) {
-    return qobject_cast<void*>(palette);
+// REMOVED_QT: void* ComponentFactory::asQObject(CommandPalette* palette) {
+// REMOVED_QT:     return qobject_cast<void*>(palette);
 }
 
-void* ComponentFactory::asQObject(LayerQuantWidget* widget) {
-    return qobject_cast<void*>(widget);
+// REMOVED_QT: void* ComponentFactory::asQObject(LayerQuantWidget* widget) {
+// REMOVED_QT:     return qobject_cast<void*>(widget);
 }
 
-void* ComponentFactory::asQObject(MetaPlanner* planner) {
+// REMOVED_QT: void* ComponentFactory::asQObject(MetaPlanner* planner) {
     // For now, return the object directly cast as void using reinterpret_cast
-    // This is safe since we're creating mock QObjects in createMetaPlanner
+// REMOVED_QT:     // This is safe since we're creating mock QObjects in createMetaPlanner
     return reinterpret_cast<void*>(planner);
 }
 
-void* ComponentFactory::asQObject(ActionExecutor* executor) {
+// REMOVED_QT: void* ComponentFactory::asQObject(ActionExecutor* executor) {
     // For now, return the object directly cast as void using reinterpret_cast
-    // This is safe since we're creating mock QObjects in createActionExecutor
+// REMOVED_QT:     // This is safe since we're creating mock QObjects in createActionExecutor
     return reinterpret_cast<void*>(executor);
 }
 
-void* ComponentFactory::asQObject(ExecutionContext* context) {
+// REMOVED_QT: void* ComponentFactory::asQObject(ExecutionContext* context) {
     // For now, return the object directly cast as void using reinterpret_cast
-    // This is safe since we're creating mock QObjects in createExecutionContext
+// REMOVED_QT:     // This is safe since we're creating mock QObjects in createExecutionContext
     return reinterpret_cast<void*>(context);
 }
 

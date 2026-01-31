@@ -11,7 +11,7 @@ struct ModelDownloadInfo {
     std::string name;
     std::string displayName;
     std::string url;
-    qint64 sizeBytes{0};
+    int64_t sizeBytes{0};
     std::string description;
     bool isDefault{false};
 };
@@ -42,7 +42,7 @@ public:
 
 
     void downloadStarted(const std::string& modelName);
-    void downloadProgress(const std::string& modelName, qint64 bytesReceived, qint64 bytesTotal);
+    void downloadProgress(const std::string& modelName, int64_t bytesReceived, int64_t bytesTotal);
     void downloadCompleted(const std::string& modelName, const std::string& filePath);
     void downloadFailed(const std::string& modelName, const std::string& error);
     
@@ -50,7 +50,7 @@ public:
     void modelsAvailable(int count);
 
 private:
-    void onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void onDownloadProgress(int64_t bytesReceived, int64_t bytesTotal);
     void onDownloadFinished();
     void onDownloadError(void*::NetworkError error);
 
@@ -69,4 +69,5 @@ private:
 };
 
 } // namespace RawrXD
+
 

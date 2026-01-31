@@ -12,7 +12,7 @@ public:
     
 public:
     void refreshTodos();
-    
+
 
     void openFileRequested(const std::string& filePath, const std::string& todoId);
     

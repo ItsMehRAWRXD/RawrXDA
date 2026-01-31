@@ -1,7 +1,11 @@
 #pragma once
 
-
+#include <string>
+#include <vector>
 #include <memory>
+#include <functional>
+#include <cstdint>
+#include <nlohmann/json.hpp>
 
 // Enterprise-grade model recommendation structure
 struct ModelRecommendation {
@@ -9,38 +13,32 @@ struct ModelRecommendation {
     std::string name;
     double suitabilityScore;
     std::string reasoning;
-    qint64 estimatedDownloadSize;
-    qint64 estimatedMemoryUsage;
+    int64_t estimatedDownloadSize;
+    int64_t estimatedMemoryUsage;
     std::string taskType; // "completion", "chat", "analysis"
     std::string complexityLevel; // "simple", "medium", "complex"
 };
 
 // System capability analysis structure
 struct SystemAnalysis {
-    qint64 availableRAM;
-    qint64 availableDiskSpace;
+    int64_t availableRAM;
+    int64_t availableDiskSpace;
     int cpuCores;
     bool hasGPU;
     std::string gpuType;
-    qint64 gpuMemory;
+    int64_t gpuMemory;
 };
 
 /**
  * @brief Enterprise Autonomous Model Management System
  * 
  * Provides intelligent, autonomous model selection, download, optimization, and management.
- * Integrates with HuggingFace for model discovery and implements enterprise-grade features.
  */
-class AutonomousModelManager : public void {
-
+class AutonomousModelManager {
 private:
-    void** networkManager;
-    void** autoUpdateTimer;
-    void** optimizationTimer;
-    
-    void* availableModels;
-    void* installedModels;
-    void* recommendedModels;
+    nlohmann::json availableModels;
+    nlohmann::json installedModels;
+    nlohmann::json recommendedModels;
     
     SystemAnalysis currentSystem;
     std::string lastRecommendedModel;
@@ -48,15 +46,24 @@ private:
     // Configuration
     std::string huggingFaceApiEndpoint = "https://huggingface.co/api";
     std::string modelsRepository = "models";
-    int autoUpdateInterval = 3600000; // 1 hour
-    int optimizationInterval = 1800000; // 30 minutes
+    int autoUpdateInterval = 3600; // 1 hour (seconds)
+    int optimizationInterval = 1800; // 30 minutes (seconds)
     double minimumSuitabilityScore = 0.75;
-    qint64 maxModelSize = 10LL * 1024 * 1024 * 1024; // 10GB default
+    int64_t maxModelSize = 10LL * 1024 * 1024 * 1024; // 10GB default
     
 public:
-    explicit AutonomousModelManager(void* parent = nullptr);
+    AutonomousModelManager();
     ~AutonomousModelManager();
     
+    // Callbacks
+    std::function<void(const ModelRecommendation&)> onModelRecommended;
+    std::function<void(const std::string&)> onModelInstalled;
+    std::function<void(const std::string&)> onModelUpdated;
+    std::function<void(const SystemAnalysis&)> onSystemAnalysisComplete;
+    std::function<void(const std::string&, int, int64_t, int64_t)> onDownloadProgress;
+    std::function<void(const std::string&, bool)> onDownloadCompleted;
+    std::function<void(const std::string&)> onError;
+
     // Autonomous operations
     ModelRecommendation autoDetectBestModel(const std::string& taskType, const std::string& language);
     bool autoDownloadAndSetup(const std::string& modelId);
@@ -65,13 +72,13 @@ public:
     
     // Intelligent analysis
     SystemAnalysis analyzeSystemCapabilities();
-    double calculateModelSuitability(const void*& model, const std::string& taskType);
-    void* analyzeCodebaseRequirements(const std::string& projectPath);
+    double calculateModelSuitability(const nlohmann::json& model, const std::string& taskType);
+    nlohmann::json analyzeCodebaseRequirements(const std::string& projectPath);
     
     // Model management
-    void* getAvailableModels();
-    void* getInstalledModels();
-    void* getRecommendedModels(const std::string& taskType = "");
+    nlohmann::json getAvailableModels();
+    nlohmann::json getInstalledModels();
+    nlohmann::json getRecommendedModels(const std::string& taskType = "");
     bool installModel(const std::string& modelId);
     bool uninstallModel(const std::string& modelId);
     bool updateModel(const std::string& modelId);
@@ -79,42 +86,17 @@ public:
     // Intelligent recommendations
     ModelRecommendation recommendModelForTask(const std::string& task, const std::string& language);
     ModelRecommendation recommendModelForCodebase(const std::string& projectPath);
-    ModelRecommendation recommendModelForPerformance(qint64 targetLatency);
+    ModelRecommendation recommendModelForPerformance(int64_t targetLatency);
     
     // System integration
     bool integrateWithHuggingFace();
     bool syncWithModelRegistry();
     bool validateModelIntegrity(const std::string& modelId);
-    
-
-    void modelRecommended(const ModelRecommendation& recommendation);
-    void modelInstalled(const std::string& modelId);
-    void modelUpdated(const std::string& modelId);
-    void systemAnalysisComplete(const SystemAnalysis& analysis);
-    void recommendationReady(const ModelRecommendation& recommendation);
-    void autoUpdateCompleted();
-    void errorOccurred(const std::string& error);
-    void downloadProgress(const std::string& modelId, int percentage, qint64 speedBytesPerSec, qint64 etaSeconds);
-    void downloadCompleted(const std::string& modelId, bool success);
-    void modelLoaded(const std::string& modelId);
 
 private:
-    void setupNetworkManager();
-    void setupTimers();
+    void setupNetworking();
+    void startMaintenanceThreads();
     void loadAvailableModels();
     void loadInstalledModels();
-    void saveInstalledModels();
-    void* fetchModelInfo(const std::string& modelId);
-    bool downloadModelFile(const std::string& url, const std::string& destination);
-    bool validateDownloadedModel(const std::string& modelPath);
-    bool optimizeModelForSystem(const std::string& modelId);
-    SystemAnalysis getCurrentSystemAnalysis();
-    qint64 getAvailableRAM();
-    qint64 getAvailableDiskSpace();
-    bool detectGPU();
-    std::string generateRecommendationReasoning(const void*& model, const SystemAnalysis& system, const std::string& taskType);
-    qint64 estimateMemoryUsage(const void*& model);
-    std::string determineComplexityLevel(const void*& model);
-    double estimateLatency(const void*& model);
 };
 

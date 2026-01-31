@@ -17,7 +17,7 @@ GGUFLoader::~GGUFLoader() = default;
 
 void GGUFLoader::initializeNativeLoader()
 {
-    if (m_path.isEmpty()) {
+    if (m_path.empty()) {
         throw std::runtime_error("Model path is empty");
     }
     
@@ -47,8 +47,8 @@ void GGUFLoader::initializeNativeLoader()
     // Read metadata KV count
     uint64_t kvCount;
     stream >> kvCount;
-    
-    
+
+
     // For now, just count the tensors - full parsing would be complex
     // The real loader in src/gguf_loader.cpp handles the full parsing
     m_cachedTensorNames.clear();
@@ -92,4 +92,5 @@ std::vector<std::string> GGUFLoader::tensorNames() const
 {
     return m_cachedTensorNames;
 }
+
 

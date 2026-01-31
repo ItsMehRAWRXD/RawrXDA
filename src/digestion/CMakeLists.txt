@@ -3,9 +3,7 @@ project(RawrXD_Digestion VERSION 1.0.0 LANGUAGES CXX ASM_MASM)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Concurrent Sql Test)
 
 # Core library
 add_library(digestion_core STATIC
@@ -22,9 +20,6 @@ add_library(digestion_core STATIC
 )
 
 target_link_libraries(digestion_core PUBLIC
-    Qt6::Core
-    Qt6::Concurrent
-    Qt6::Sql
 )
 
 # ASM optimization module (Windows x64 only)
@@ -42,14 +37,12 @@ add_executable(rxd-digest digestion_cli.cpp)
 target_link_libraries(rxd-digest PRIVATE digestion_core)
 
 # GUI executable (if Qt6 Widgets available)
-find_package(Qt6 COMPONENTS Widgets)
 if(Qt6Widgets_FOUND)
     add_executable(rxd-digest-gui 
         digestion_gui_widget.cpp
         digestion_gui_widget.h
         main_gui.cpp
     )
-    target_link_libraries(rxd-digest-gui PRIVATE digestion_core Qt6::Widgets)
 endif()
 
 # Install
@@ -62,11 +55,9 @@ enable_testing()
 add_executable(digestion_config_tests
     tests/digestion_config_tests.cpp
 )
-target_link_libraries(digestion_config_tests PRIVATE digestion_core Qt6::Test)
 add_test(NAME digestion_config_tests COMMAND digestion_config_tests)
 
 add_executable(digestion_db_tests
     tests/digestion_db_tests.cpp
 )
-target_link_libraries(digestion_db_tests PRIVATE digestion_core Qt6::Test)
 add_test(NAME digestion_db_tests COMMAND digestion_db_tests)

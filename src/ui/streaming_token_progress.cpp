@@ -15,31 +15,31 @@ StreamingTokenProgressBar::StreamingTokenProgressBar(void* parent)
 }
 
 void StreamingTokenProgressBar::setupUI() {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     mainLayout->setContentsMargins(5, 5, 5, 5);
     mainLayout->setSpacing(5);
     
     // Status label
-    m_statusLabel = new QLabel("Ready", this);
+    m_statusLabel = new void("Ready", this);
     m_statusLabel->setStyleSheet("color: #888888; font-size: 11px;");
     mainLayout->addWidget(m_statusLabel);
     
     // Progress bar
-    m_progressBar = new QProgressBar(this);
+    m_progressBar = new void(this);
     m_progressBar->setMinimum(0);
     m_progressBar->setMaximum(100);
     m_progressBar->setValue(0);
     m_progressBar->setTextVisible(true);
     m_progressBar->setFormat("%v tokens");
     m_progressBar->setStyleSheet(
-        "QProgressBar {"
+        "void {"
         "  border: 2px solid #3c3c3c;"
         "  border-radius: 5px;"
         "  text-align: center;"
         "  background-color: #1e1e1e;"
         "  color: #d4d4d4;"
         "}"
-        "QProgressBar::chunk {"
+        "void::chunk {"
         "  background: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
         "    stop:0 #4ec9b0, stop:0.5 #569cd6, stop:1 #4ec9b0);"
         "  border-radius: 3px;"
@@ -48,7 +48,7 @@ void StreamingTokenProgressBar::setupUI() {
     mainLayout->addWidget(m_progressBar);
     
     // Metrics label
-    m_metricsLabel = new QLabel("", this);
+    m_metricsLabel = new void("", this);
     m_metricsLabel->setStyleSheet("color: #569cd6; font-size: 10px; font-family: 'Consolas', monospace;");
     m_metricsLabel->setVisible(false);
     mainLayout->addWidget(m_metricsLabel);
@@ -140,8 +140,8 @@ void StreamingTokenProgressBar::completeGeneration() {
                             );
     
     m_statusLabel->setText(completionMsg);
-    
-    
+
+
     generationCompleted(m_totalTokens, m_tokensPerSecond);
     
     // Auto-hide metrics after 3 seconds

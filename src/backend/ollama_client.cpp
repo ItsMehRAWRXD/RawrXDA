@@ -45,7 +45,7 @@ std::string OllamaClient::getVersion() {
         json j = json::parse(response);
         return j.value("version", std::string());
     } catch (const json::exception& e) {
-        std::cerr << "JSON parsing error in getVersion: " << e.what() << std::endl;
+        
         return "";
     }
 }
@@ -193,7 +193,7 @@ OllamaResponse OllamaClient::parseResponse(const std::string& json_str) {
         
     } catch (const json::exception& e) {
         // Log parsing error and return partial response
-        std::cerr << "JSON parsing error in parseResponse: " << e.what() << std::endl;
+        
         // resp already initialized with defaults
     }
     
@@ -233,7 +233,7 @@ std::vector<OllamaModel> OllamaClient::parseModels(const std::string& json_str) 
         
     } catch (const json::exception& e) {
         // Log parsing error and return empty list
-        std::cerr << "JSON parsing error in parseModels: " << e.what() << std::endl;
+        
     }
     
     return models;

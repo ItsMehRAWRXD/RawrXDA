@@ -29,7 +29,7 @@ bool Win32TerminalManager::start(ShellType shell)
     if (!CreatePipe(&m_hStdOutRead, &m_hStdOutWrite, &sa, 0) ||
         !CreatePipe(&m_hStdErrRead, &m_hStdErrWrite, &sa, 0) ||
         !CreatePipe(&m_hStdInRead, &m_hStdInWrite, &sa, 0)) {
-        std::cerr << "Failed to create pipes" << std::endl;
+        
         return false;
     }
 
@@ -61,7 +61,7 @@ bool Win32TerminalManager::start(ShellType shell)
     // Create the process
     if (!CreateProcessA(nullptr, const_cast<char*>(cmd.c_str()), nullptr, nullptr,
                        TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
-        std::cerr << "Failed to create process: " << GetLastError() << std::endl;
+        
         return false;
     }
 

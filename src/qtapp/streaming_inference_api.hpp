@@ -32,18 +32,18 @@ public:
      * @param temperature Sampling temperature
      * @return Stream ID for tracking
      */
-    qint64 startStream(const std::string& modelPath, const std::string& prompt,
+    int64_t startStream(const std::string& modelPath, const std::string& prompt,
                        int maxTokens = 256, float temperature = 0.7f);
 
     /**
      * @brief Cancel an active stream
      */
-    bool cancelStream(qint64 streamId);
+    bool cancelStream(int64_t streamId);
 
     /**
      * @brief Check if stream is active
      */
-    bool isStreamActive(qint64 streamId) const;
+    bool isStreamActive(int64_t streamId) const;
 
     /**
      * @brief Set token callback (called for each generated token)
@@ -65,21 +65,21 @@ public:
      */
     void setErrorCallback(ErrorCallback callback);
 
-    void tokenGenerated(qint64 streamId, const std::string& token, int position);
-    void progressUpdated(qint64 streamId, int tokensGenerated, int totalTokens);
-    void streamCompleted(qint64 streamId, const std::string& fullResult);
-    void streamFailed(qint64 streamId, const std::string& error);
-    void streamCancelled(qint64 streamId);
+    void tokenGenerated(int64_t streamId, const std::string& token, int position);
+    void progressUpdated(int64_t streamId, int tokensGenerated, int totalTokens);
+    void streamCompleted(int64_t streamId, const std::string& fullResult);
+    void streamFailed(int64_t streamId, const std::string& error);
+    void streamCancelled(int64_t streamId);
 
 public:
-    void onTokenReady(qint64 streamId, const std::string& token);
-    void onStreamProgress(qint64 streamId, int current, int total);
-    void onStreamComplete(qint64 streamId, const std::string& result);
-    void onStreamError(qint64 streamId, const std::string& error);
+    void onTokenReady(int64_t streamId, const std::string& token);
+    void onStreamProgress(int64_t streamId, int current, int total);
+    void onStreamComplete(int64_t streamId, const std::string& result);
+    void onStreamError(int64_t streamId, const std::string& error);
 
 private:
     struct StreamState {
-        qint64 id;
+        int64_t id;
         std::string modelPath;
         std::string prompt;
         std::string partialResult;
@@ -88,12 +88,13 @@ private:
         bool active = true;
     };
 
-    std::unordered_map<qint64, StreamState> m_activeStreams;
-    qint64 m_nextStreamId = 1;
+    std::unordered_map<int64_t, StreamState> m_activeStreams;
+    int64_t m_nextStreamId = 1;
     
     TokenCallback m_tokenCallback;
     ProgressCallback m_progressCallback;
     CompletionCallback m_completionCallback;
     ErrorCallback m_errorCallback;
 };
+
 

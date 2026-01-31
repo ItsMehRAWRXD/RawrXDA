@@ -23,7 +23,7 @@ void OllamaProxy::setModel(const std::string& modelName)
 bool OllamaProxy::isOllamaAvailable()
 {
     // Quick sync check if Ollama is running
-    QNetworkRequest request(std::string(m_ollamaUrl + "/api/tags"));
+    void* request(std::string(m_ollamaUrl + "/api/tags"));
     void** reply = m_networkManager->get(request);
     
     // Wait up to 1 second for response
@@ -41,7 +41,7 @@ bool OllamaProxy::isOllamaAvailable()
 bool OllamaProxy::isModelAvailable(const std::string& modelName)
 {
     // Check if model exists in Ollama registry
-    QNetworkRequest request(std::string(m_ollamaUrl + "/api/tags"));
+    void* request(std::string(m_ollamaUrl + "/api/tags"));
     void** reply = m_networkManager->get(request);
     
     void* loop;
@@ -72,15 +72,15 @@ bool OllamaProxy::isModelAvailable(const std::string& modelName)
 
 void OllamaProxy::generateResponse(const std::string& prompt, float temperature, int maxTokens)
 {
-    if (m_modelName.isEmpty()) {
+    if (m_modelName.empty()) {
         error("No model selected");
         return;
     }
     
     // Stop any ongoing generation
     stopGeneration();
-    
-    
+
+
     // Build JSON request for Ollama API
     void* request;
     request["model"] = m_modelName;
@@ -96,8 +96,8 @@ void OllamaProxy::generateResponse(const std::string& prompt, float temperature,
     std::vector<uint8_t> jsonData = doc.toJson(void*::Compact);
     
     // Send POST request to /api/generate
-    QNetworkRequest netRequest(std::string(m_ollamaUrl + "/api/generate"));
-    netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* netRequest(std::string(m_ollamaUrl + "/api/generate"));
+    netRequest.setHeader(void*::ContentTypeHeader, "application/json");
     
     m_currentReply = m_networkManager->post(netRequest, jsonData);
     m_buffer.clear();
@@ -137,7 +137,7 @@ void OllamaProxy::onNetworkReply()
         std::vector<uint8_t> line = m_buffer.left(newlinePos);
         m_buffer.remove(0, newlinePos + 1);
         
-        if (line.trimmed().isEmpty()) continue;
+        if (line.trimmed().empty()) continue;
         
         // Parse JSON response
         void* doc = void*::fromJson(line);
@@ -157,7 +157,7 @@ void OllamaProxy::onNetworkReply()
         // Extract token from response
         if (obj.contains("response")) {
             std::string token = obj["response"].toString();
-            if (!token.isEmpty()) {
+            if (!token.empty()) {
                 tokenArrived(token);
             }
         }
@@ -178,4 +178,5 @@ void OllamaProxy::onNetworkError(void*::NetworkError code)
     
     error(errorMsg);
 }
+
 

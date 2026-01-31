@@ -105,14 +105,14 @@ static std::string getUpdateURL() {
 }
 
 static void logUpdateEvent(const std::string& event, const std::string& detail = "", int64_t latencyMs = -1) {
-    std::cout << "[AutoUpdate] " << event;
+    
     if (!detail.empty()) {
-        std::cout << " | Detail: " << detail;
+        
     }
     if (latencyMs >= 0) {
-        std::cout << " | Latency: " << latencyMs << "ms";
+        
     }
-    std::cout << std::endl;
+    
 }
 
 // Compute SHA256 of data using BCrypt

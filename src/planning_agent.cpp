@@ -24,7 +24,7 @@ void PlanningAgent::createPlan(const std::string& goal) {
 }
 
 void PlanningAgent::executePlan() {
-    if (!tasks_.isEmpty()) {
+    if (!tasks_.empty()) {
         currentTaskIndex_ = -1;
         taskProcessor_->start();
     }
@@ -39,7 +39,7 @@ std::vector<Task> PlanningAgent::getTasks() const {
 }
 
 void PlanningAgent::processNextTask() {
-    if (tasks_.isEmpty()) {
+    if (tasks_.empty()) {
         taskProcessor_->stop();
         planCompleted();
         return;
@@ -112,3 +112,4 @@ void PlanningAgent::updateTaskStatus(const std::string& taskId, const std::strin
         }
     }
 }
+

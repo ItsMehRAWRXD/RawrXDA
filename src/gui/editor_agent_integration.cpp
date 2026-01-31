@@ -16,7 +16,7 @@ EditorAgentIntegration::EditorAgentIntegration(QPlainTextEdit* editor, void* par
     : void(parent)
     , m_editor(editor)
 {
-    m_ghostTextColor = QColor(102, 102, 102);  // Gray
+    m_ghostTextColor = uint32_t(102, 102, 102);  // Gray
     m_ghostTextFont = m_editor->font();
     m_ghostTextFont.setItalic(true);
 
@@ -85,7 +85,7 @@ void EditorAgentIntegration::triggerSuggestion(const GhostTextContext& context)
         return;
     }
 
-    GhostTextContext ctx = context.currentLine.isEmpty() ? extractContext() : context;
+    GhostTextContext ctx = context.currentLine.empty() ? extractContext() : context;
 
     suggestionGenerating();
     generateSuggestion(ctx);
@@ -96,7 +96,7 @@ void EditorAgentIntegration::triggerSuggestion(const GhostTextContext& context)
  */
 bool EditorAgentIntegration::acceptSuggestion()
 {
-    if (m_currentSuggestion.text.isEmpty()) {
+    if (m_currentSuggestion.text.empty()) {
         return false;
     }
 
@@ -137,7 +137,7 @@ void EditorAgentIntegration::clearGhostText()
 /**
  * @brief Set ghost text style
  */
-void EditorAgentIntegration::setGhostTextStyle(const QFont& font, const QColor& color)
+void EditorAgentIntegration::setGhostTextStyle(const std::string& font, const uint32_t& color)
 {
     m_ghostTextFont = font;
     m_ghostTextColor = color;
@@ -150,7 +150,7 @@ void EditorAgentIntegration::setGhostTextStyle(const QFont& font, const QColor& 
 /**
  * @brief Handle key press in editor
  */
-void EditorAgentIntegration::onEditorKeyPressed(QKeyEvent* event)
+void EditorAgentIntegration::onEditorKeyPressed(void*  event)
 {
     if (!m_ghostTextEnabled || !m_agentBridge) {
         return;
@@ -164,7 +164,7 @@ void EditorAgentIntegration::onEditorKeyPressed(QKeyEvent* event)
     }
 
     // ENTER: Accept suggestion
-    if (event->key() == //Key_Return && !m_currentSuggestion.text.isEmpty()) {
+    if (event->key() == //Key_Return && !m_currentSuggestion.text.empty()) {
         if (event->modifiers() & //ControlModifier) {
             event->accept();
             acceptSuggestion();
@@ -173,7 +173,7 @@ void EditorAgentIntegration::onEditorKeyPressed(QKeyEvent* event)
     }
 
     // ESC: Dismiss suggestion
-    if (event->key() == //Key_Escape && !m_currentSuggestion.text.isEmpty()) {
+    if (event->key() == //Key_Escape && !m_currentSuggestion.text.empty()) {
         event->accept();
         dismissSuggestion();
         return;
@@ -285,7 +285,7 @@ GhostTextSuggestion EditorAgentIntegration::parseSuggestion(const void*& respons
 
     // Extract suggested code from action results
     auto actions = response.value("actions").toArray();
-    if (!actions.isEmpty()) {
+    if (!actions.empty()) {
         auto firstAction = actions[0].toObject();
         suggestion.text = firstAction.value("result").toString();
         suggestion.explanation = firstAction.value("description").toString();
@@ -359,7 +359,7 @@ std::string EditorAgentIntegration::getWordUnderCursor() const
 bool EditorAgentIntegration::eventFilter(void* obj, QEvent* event)
 {
     if (obj == m_editor && event->type() == QEvent::KeyPress) {
-        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+        void*  keyEvent = static_cast<void* >(event);
         onEditorKeyPressed(keyEvent);
 
         if (keyEvent->isAccepted()) {
@@ -369,4 +369,5 @@ bool EditorAgentIntegration::eventFilter(void* obj, QEvent* event)
 
     return void::eventFilter(obj, event);
 }
+
 

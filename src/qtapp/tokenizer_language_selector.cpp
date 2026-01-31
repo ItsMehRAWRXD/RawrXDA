@@ -64,7 +64,7 @@ TokenizerLanguageSelector::~TokenizerLanguageSelector()
 void TokenizerLanguageSelector::setLanguage(Language language, const void*& config)
 {
     m_currentLanguage = language;
-    if (!config.isEmpty()) {
+    if (!config.empty()) {
         m_languageConfigs[language] = config;
     }
     languageChanged(language);
@@ -87,7 +87,7 @@ void* TokenizerLanguageSelector::getLanguageConfig(Language language) const
 void TokenizerLanguageSelector::setTokenizer(TokenizerType type, const void*& params)
 {
     m_currentTokenizer = type;
-    if (!params.isEmpty()) {
+    if (!params.empty()) {
         m_tokenizerParams[type] = params;
     }
     tokenizerChanged(type);
@@ -118,7 +118,7 @@ bool TokenizerLanguageSelector::loadVocabulary(const std::string& filePath)
     int lineCount = 0;
     while (!file.atEnd()) {
         std::string line = file.readLine().trimmed();
-        if (!line.isEmpty()) {
+        if (!line.empty()) {
             m_vocabulary.push_back(line);
             lineCount++;
         }
@@ -178,4 +178,5 @@ int TokenizerLanguageSelector::getOptimizationLevel() const
 {
     return m_optimizationLevel;
 }
+
 

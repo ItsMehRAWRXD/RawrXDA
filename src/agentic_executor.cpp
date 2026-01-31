@@ -3,6 +3,10 @@
 #include "agentic_engine.h"
 #include "qtapp/inference_engine.hpp"
 #include "model_trainer.h"
+#include <fstream>
+#include <filesystem>
+#include <iostream>
+#include <sstream>
 
 
 AgenticExecutor::AgenticExecutor(void* parent)
@@ -185,7 +189,7 @@ bool AgenticExecutor::executeStep(const void*& step)
             std::string content = params["content"].toString();
             
             // If content not in params, generate it
-            if (content.isEmpty() && params.contains("specification")) {
+            if (content.empty() && params.contains("specification")) {
                 void* codeGen = generateCode(params["specification"].toString());
                 content = codeGen["code"].toString();
             }
@@ -232,7 +236,7 @@ bool AgenticExecutor::executeStep(const void*& step)
 bool AgenticExecutor::verifyStepCompletion(const void*& step, const std::string& result)
 {
     std::string criteria = step["criteria"].toString();
-    if (criteria.isEmpty()) return true;
+    if (criteria.empty()) return true;
 
     // Use model to verify completion
     std::string prompt = std::string(
@@ -265,65 +269,56 @@ bool AgenticExecutor::createDirectory(const std::string& path)
 bool AgenticExecutor::createFile(const std::string& path, const std::string& content)
 {
     // Ensure parent directory exists
-    std::filesystem::path fileInfo(path);
-    if (!fileInfo.dir().exists()) {
-        createDirectory(fileInfo.dir().absolutePath());
+    std::filesystem::path fp(path);
+    if (!std::filesystem::exists(fp.parent_path())) {
+        std::filesystem::create_directories(fp.parent_path());
     }
 
-    std::fstream file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    std::ofstream file(path);
+    if (!file.is_open()) {
         return false;
     }
 
-    QTextStream out(&file);
-    out << content;
+    file << content;
     file.close();
 
-    logMessage("Created file: " + path);
-    addToMemory("last_created_file", path);
-    
+    logAction("Created file: " + path);
     return true;
 }
 
 bool AgenticExecutor::writeFile(const std::string& path, const std::string& content)
 {
-    return createFile(path, content); // Same implementation
+    return createFile(path, content);
 }
 
 std::string AgenticExecutor::readFile(const std::string& path)
 {
-    std::fstream file(path);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return std::string();
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        return "";
     }
 
-    QTextStream in(&file);
-    std::string content = in.readAll();
-    file.close();
-
-    return content;
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
 }
 
 bool AgenticExecutor::deleteFile(const std::string& path)
 {
-    std::fstream file(path);
-    bool success = file.remove();
-    
-    if (success) {
+    try {
+        return std::filesystem::remove(path);
+    } catch (...) {
+        return false;
     }
-    
-    return success;
 }
 
 bool AgenticExecutor::deleteDirectory(const std::string& path)
 {
-    std::filesystem::path dir(path);
-    bool success = dir.removeRecursively();
-    
-    if (success) {
+    try {
+        return std::filesystem::remove_all(path) > 0;
+    } catch (...) {
+        return false;
     }
-    
-    return success;
 }
 
 std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path)
@@ -344,7 +339,7 @@ void* AgenticExecutor::compileProject(const std::string& projectPath, const std:
 
     logMessage("Compiling with " + compiler + "...");
 
-    QProcess process;
+    void* process;
     process.setWorkingDirectory(projectPath);
 
     // Detect build system and compile
@@ -388,7 +383,7 @@ void* AgenticExecutor::compileProject(const std::string& projectPath, const std:
         std::filesystem::path dir(projectPath);
         files = dir.entryList(std::vector<std::string>() << "*.cpp" << "*.c", std::filesystem::path::Files);
         
-        if (files.isEmpty()) {
+        if (files.empty()) {
             result["success"] = false;
             result["error"] = "No source files found";
             return result;
@@ -428,7 +423,7 @@ void* AgenticExecutor::runExecutable(const std::string& executablePath, const st
 
     logMessage("Running: " + executablePath);
 
-    QProcess process;
+    void* process;
     process.start(executablePath, args);
     
     if (!process.waitForStarted()) {
@@ -464,7 +459,7 @@ void* AgenticExecutor::generateCode(const std::string& specification)
         return result;
     }
 
-    
+
     std::string prompt = std::string(
         "Generate production-ready C++ code for the following specification:\n\n"
         "%1\n\n"
@@ -482,7 +477,7 @@ void* AgenticExecutor::generateCode(const std::string& specification)
 
     result["specification"] = specification;
     result["code"] = code;
-    result["success"] = !code.isEmpty();
+    result["success"] = !code.empty();
 
     return result;
 }
@@ -542,7 +537,7 @@ void* AgenticExecutor::callTool(const std::string& toolName, const void*& params
     }
     else if (toolName == "read_file") {
         std::string content = readFile(params["path"].toString());
-        result["success"] = !content.isEmpty();
+        result["success"] = !content.empty();
         result["content"] = content;
     }
     else if (toolName == "delete_file") {
@@ -730,4 +725,5 @@ bool AgenticExecutor::isTrainingModel() const
 {
     return m_modelTrainer && m_modelTrainer->isTraining();
 }
+
 

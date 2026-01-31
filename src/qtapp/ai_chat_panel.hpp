@@ -25,7 +25,7 @@ public:
     explicit AIChatPanel(void* parent = nullptr);
     
     /**
-     * Two-phase initialization - call after QApplication is ready
+     * Two-phase initialization - call after void is ready
      * Creates all Qt widgets and applies theme
      */
     void initialize();
@@ -52,16 +52,16 @@ private:
     void* createQuickActions();
     void scrollToBottom();
     
-    QVBoxLayout* m_messagesLayout;
-    QScrollArea* m_scrollArea;
+    void* m_messagesLayout;
+    void* m_scrollArea;
     void* m_messagesContainer;
-    QLineEdit* m_inputField;
-    QPushButton* m_sendButton;
+    void* m_inputField;
+    void* m_sendButton;
     void* m_quickActionsWidget;
     
     std::vector<Message> m_messages;
     void* m_streamingBubble = nullptr;
-    QTextEdit* m_streamingText = nullptr;
+    void* m_streamingText = nullptr;
     
     std::string m_contextCode;
     std::string m_contextFilePath;

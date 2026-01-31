@@ -236,8 +236,7 @@ struct ggml_backend_registry {
         }
 
 #ifndef NDEBUG
-        GGML_LOG_DEBUG("%s: registered backend %s (%zu devices)\n",
-            __func__, ggml_backend_reg_name(reg), ggml_backend_reg_dev_count(reg));
+        GGML_
 #endif
         backends.push_back({ reg, std::move(handle) });
         for (size_t i = 0; i < ggml_backend_reg_dev_count(reg); i++) {
@@ -247,7 +246,7 @@ struct ggml_backend_registry {
 
     void register_device(ggml_backend_dev_t device) {
 #ifndef NDEBUG
-        GGML_LOG_DEBUG("%s: registered device %s (%s)\n", __func__, ggml_backend_dev_name(device), ggml_backend_dev_description(device));
+        GGML_
 #endif
         devices.push_back(device);
     }
@@ -256,7 +255,7 @@ struct ggml_backend_registry {
         dl_handle_ptr handle { dl_load_library(path) };
         if (!handle) {
             if (!silent) {
-                GGML_LOG_ERROR("%s: failed to load %s: %s\n", __func__, path_str(path).c_str(), dl_error());
+                GGML_
             }
             return nullptr;
         }
@@ -264,7 +263,7 @@ struct ggml_backend_registry {
         auto score_fn = (ggml_backend_score_t) dl_get_sym(handle.get(), "ggml_backend_score");
         if (score_fn && score_fn() == 0) {
             if (!silent) {
-                GGML_LOG_INFO("%s: backend %s is not supported on this system\n", __func__, path_str(path).c_str());
+                GGML_
             }
             return nullptr;
         }
@@ -272,7 +271,7 @@ struct ggml_backend_registry {
         auto backend_init_fn = (ggml_backend_init_t) dl_get_sym(handle.get(), "ggml_backend_init");
         if (!backend_init_fn) {
             if (!silent) {
-                GGML_LOG_ERROR("%s: failed to find ggml_backend_init in %s\n", __func__, path_str(path).c_str());
+                GGML_
             }
             return nullptr;
         }
@@ -281,17 +280,15 @@ struct ggml_backend_registry {
         if (!reg || reg->api_version != GGML_BACKEND_API_VERSION) {
             if (!silent) {
                 if (!reg) {
-                    GGML_LOG_ERROR("%s: failed to initialize backend from %s: ggml_backend_init returned NULL\n",
-                        __func__, path_str(path).c_str());
+                    GGML_
                 } else {
-                    GGML_LOG_ERROR("%s: failed to initialize backend from %s: incompatible API version (backend: %d, current: %d)\n",
-                        __func__, path_str(path).c_str(), reg->api_version, GGML_BACKEND_API_VERSION);
+                    GGML_
                 }
             }
             return nullptr;
         }
 
-        GGML_LOG_INFO("%s: loaded %s backend from %s\n", __func__, ggml_backend_reg_name(reg), path_str(path).c_str());
+        GGML_
 
         register_backend(reg, std::move(handle));
 
@@ -304,13 +301,13 @@ struct ggml_backend_registry {
 
         if (it == backends.end()) {
             if (!silent) {
-                GGML_LOG_ERROR("%s: backend not found\n", __func__);
+                GGML_
             }
             return;
         }
 
         if (!silent) {
-            GGML_LOG_DEBUG("%s: unloading %s backend\n", __func__, ggml_backend_reg_name(reg));
+            GGML_
         }
 
         // remove devices
@@ -535,7 +532,7 @@ static ggml_backend_reg_t ggml_backend_load_best(const char * name, bool silent,
 
     for (const auto & search_path : search_paths) {
         if (!fs::exists(search_path)) {
-            GGML_LOG_DEBUG("%s: search path %s does not exist\n", __func__, path_str(search_path).c_str());
+            GGML_
             continue;
         }
         fs::directory_iterator dir_it(search_path, fs::directory_options::skip_permission_denied);
@@ -546,14 +543,14 @@ static ggml_backend_reg_t ggml_backend_load_best(const char * name, bool silent,
                 if (filename.native().find(file_prefix) == 0 && ext == file_extension) {
                     dl_handle_ptr handle { dl_load_library(entry) };
                     if (!handle && !silent) {
-                        GGML_LOG_ERROR("%s: failed to load %s: %s\n", __func__, path_str(entry.path()).c_str(), dl_error());
+                        GGML_
                     }
                     if (handle) {
                         auto score_fn = (ggml_backend_score_t) dl_get_sym(handle.get(), "ggml_backend_score");
                         if (score_fn) {
                             int s = score_fn();
 #ifndef NDEBUG
-                            GGML_LOG_DEBUG("%s: %s score: %d\n", __func__, path_str(entry.path()).c_str(), s);
+                            GGML_
 #endif
                             if (s > best_score) {
                                 best_score = s;
@@ -561,7 +558,7 @@ static ggml_backend_reg_t ggml_backend_load_best(const char * name, bool silent,
                             }
                         } else {
                             if (!silent) {
-                                GGML_LOG_INFO("%s: failed to find ggml_backend_score in %s\n", __func__, path_str(entry.path()).c_str());
+                                GGML_
                             }
                         }
                     }

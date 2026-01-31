@@ -393,7 +393,7 @@ bool GPUBackend::initializeCUDA() {
     cudaMemGetInfo(&free, &total);
     m_totalMemory = total;
 
-    
+
     return true;
 #else
     return false;
@@ -422,7 +422,7 @@ bool GPUBackend::initializeHIP() {
     hipMemGetInfo(&free, &total);
     m_totalMemory = total;
 
-    
+
     return true;
 #else
     return false;
@@ -500,7 +500,7 @@ bool GPUBackend::initializeVulkan() {
         }
     }
 
-    
+
     // Store instance for later cleanup
     m_vulkanContext = (void*)instance;
     

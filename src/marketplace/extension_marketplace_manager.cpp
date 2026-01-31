@@ -182,7 +182,7 @@ void ExtensionMarketplaceManager::preloadExtensions(const std::stringList& exten
 }
 
 void ExtensionMarketplaceManager::onSearchReplyFinished() {
-    void** reply = qobject_cast<void**>(sender());
+// REMOVED_QT:     void** reply = qobject_cast<void**>(sender());
     if (!reply) return;
     
     if (reply->error() != void*::NoError) {
@@ -205,7 +205,7 @@ void ExtensionMarketplaceManager::onSearchReplyFinished() {
 }
 
 void ExtensionMarketplaceManager::onExtensionDetailsReplyFinished() {
-    void** reply = qobject_cast<void**>(sender());
+// REMOVED_QT:     void** reply = qobject_cast<void**>(sender());
     if (!reply) return;
     
     if (reply->error() != void*::NoError) {
@@ -290,7 +290,7 @@ void ExtensionMarketplaceManager::checkForUpdates() {
 }
 
 void ExtensionMarketplaceManager::onInstallReplyFinished() {
-    auto* reply = qobject_cast<void**>(sender());
+// REMOVED_QT:     auto* reply = qobject_cast<void**>(sender());
     if (!reply) {
         return;
     }
@@ -303,8 +303,8 @@ void ExtensionMarketplaceManager::onInstallReplyFinished() {
     
     std::vector<uint8_t> data = reply->readAll();
     std::string extensionId = reply->property("extensionId").toString();
-    
-    
+
+
     // Save to temp file and install
     std::string tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + extensionId + ".vsix";
     // File operation removed;
@@ -323,7 +323,7 @@ void ExtensionMarketplaceManager::onInstallReplyFinished() {
 }
 
 void ExtensionMarketplaceManager::onUpdateCheckReplyFinished() {
-    auto* reply = qobject_cast<void**>(sender());
+// REMOVED_QT:     auto* reply = qobject_cast<void**>(sender());
     if (!reply) {
         return;
     }

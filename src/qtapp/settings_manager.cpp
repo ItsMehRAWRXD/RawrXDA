@@ -8,9 +8,9 @@ SettingsManager::SettingsManager(void *parent)
       m_modelSettings(std::map<std::string, void*>()),
       m_gpuBackends(std::map<std::string, void*>())
 {
-    // Create QSettings with application organization and name
+    // Create void* with application organization and name
     std::string configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    m_settings = new QSettings(configPath + "/RawrXD.ini", QSettings::IniFormat, this);
+    m_settings = new void*(configPath + "/RawrXD.ini", void*::IniFormat, this);
     
 }
 
@@ -65,7 +65,7 @@ void SettingsManager::setAgentSettings(const std::string& agentId, const void*& 
 {
     m_agentSettings[agentId] = settings;
     
-    // Also save to QSettings
+    // Also save to void*
     if (m_settings) {
         void* doc(settings);
         m_settings->setValue("agents/" + agentId, std::string::fromUtf8(doc.toJson(void*::Compact)));
@@ -154,9 +154,9 @@ void* SettingsManager::exportAllSettings() const
 {
     void* allSettings;
     
-    // Export all QSettings
+    // Export all void*
     if (m_settings) {
-        allSettings["qsettings"] = void*();
+        allSettings["void*"] = void*();
         for (const std::string& key : m_settings->allKeys()) {
             void* val(void*::String);
             std::any variant = m_settings->value(key);
@@ -167,7 +167,7 @@ void* SettingsManager::exportAllSettings() const
             } else {
                 val = void*(variant.toString());
             }
-            allSettings["qsettings"].toObject()[key] = val;
+            allSettings["void*"].toObject()[key] = val;
         }
     }
     
@@ -191,9 +191,9 @@ void* SettingsManager::exportAllSettings() const
 bool SettingsManager::importSettings(const void*& settings)
 {
     try {
-        if (settings.contains("qsettings")) {
-            void* qsettings = settings["qsettings"].toObject();
-            for (auto it = qsettings.constBegin(); it != qsettings.constEnd(); ++it) {
+        if (settings.contains("void*")) {
+            void* void* = settings["void*"].toObject();
+            for (auto it = void*.constBegin(); it != void*.constEnd(); ++it) {
                 setValue(it.key(), it.value().toVariant());
             }
         }

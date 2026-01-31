@@ -2,7 +2,7 @@
 
 
 #include <vector>
-// QtCharts includes - commented out for now to avoid build issues
+// REMOVED_QT: // QtCharts includes - commented out for now to avoid build issues
 
 
 class InterpretabilityPanel : public void {
@@ -43,9 +43,9 @@ private:
     void updateChart();
     void updateStats();
 
-    // QtCharts components - commented out for now
-    // QtCharts::QChartView* m_chartView;
-    // QtCharts::QChart* m_chart;
+// REMOVED_QT:     // QtCharts components - commented out for now
+// REMOVED_QT:     // QtCharts::QChartView* m_chartView;
+// REMOVED_QT:     // QtCharts::QChart* m_chart;
     VisualizationType m_currentType;
     void* m_currentData;
     int m_minLayer;

@@ -31,7 +31,7 @@ PlanModeHandler::~PlanModeHandler() = default;
 
 void PlanModeHandler::startPlanning(const std::string& wish, const std::string& context)
 {
-    if (wish.isEmpty()) {
+    if (wish.empty()) {
         planningError("Please provide a task description");
         return;
     }
@@ -102,11 +102,11 @@ std::string PlanModeHandler::getPlanAsText() const
     planText += std::string("⏱️  Estimated Time: %1\n");
     planText += std::string("📊 Confidence: %.0f%%\n\n");
 
-    if (!m_currentPlan.assumptions.isEmpty()) {
+    if (!m_currentPlan.assumptions.empty()) {
         planText += std::string("📌 Assumptions:\n%1\n\n");
     }
 
-    if (!m_currentPlan.risks.isEmpty()) {
+    if (!m_currentPlan.risks.empty()) {
         planText += "⚠️  Risks Identified:\n";
         for (const auto& risk : m_currentPlan.risks) {
             planText += std::string("• %1\n");
@@ -122,10 +122,10 @@ std::string PlanModeHandler::getPlanAsText() const
             , step.title, step.estimatedTime);
         planText += std::string("   %1\n");
 
-        if (!step.requiredFiles.isEmpty()) {
+        if (!step.requiredFiles.empty()) {
             planText += "   Files: " + step.requiredFiles.join(", ") + "\n";
         }
-        if (!step.tools.isEmpty()) {
+        if (!step.tools.empty()) {
             planText += "   Tools: " + step.tools.join(", ") + "\n";
         }
         planText += "\n";
@@ -136,7 +136,7 @@ std::string PlanModeHandler::getPlanAsText() const
 
 void PlanModeHandler::approvePlan()
 {
-    if (m_currentPlan.steps.isEmpty()) {
+    if (m_currentPlan.steps.empty()) {
         planningError("Plan is empty, cannot approve");
         return;
     }
@@ -193,7 +193,7 @@ void PlanModeHandler::onPlanCompleted(const Plan& plan)
     }
 }
 
-void PlanModeHandler::onStreamToken(qint64 reqId, const std::string& token)
+void PlanModeHandler::onStreamToken(int64_t reqId, const std::string& token)
 {
     if (reqId != m_currentRequestId) {
         return;
@@ -203,7 +203,7 @@ void PlanModeHandler::onStreamToken(qint64 reqId, const std::string& token)
     parseStreamedPlanToken(token);
 }
 
-void PlanModeHandler::onError(qint64 reqId, const std::string& error)
+void PlanModeHandler::onError(int64_t reqId, const std::string& error)
 {
     if (reqId != m_currentRequestId) {
         return;
@@ -275,21 +275,23 @@ void PlanModeHandler::parseStreamedPlanToken(const std::string& token)
 bool PlanModeHandler::validatePlan(const Plan& plan)
 {
     // Validate plan structure
-    if (plan.title.isEmpty()) {
+    if (plan.title.empty()) {
         return false;
     }
 
-    if (plan.steps.isEmpty()) {
+    if (plan.steps.empty()) {
         return false;
     }
 
     // At least one step should have a valid title
     for (const auto& step : plan.steps) {
-        if (!step.title.isEmpty()) {
+        if (!step.title.empty()) {
             return true;
         }
     }
 
     return false;
 }
+
+
 

@@ -20,7 +20,7 @@ CICDSettings::~CICDSettings()
 
 bool CICDSettings::createJob(const TrainingJob& job)
 {
-    std::string jobId = job.jobId.isEmpty() ? generateJobId() : job.jobId;
+    std::string jobId = job.jobId.empty() ? generateJobId() : job.jobId;
     TrainingJob newJob = job;
     newJob.jobId = jobId;
     newJob.createdAt = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
@@ -293,7 +293,7 @@ bool CICDSettings::storeArtifact(const std::string& artifactId, const std::strin
 {
     void* artifact = metadata;
     artifact["path"] = artifactPath;
-    artifact["storedAt"] = static_cast<qint64>(std::chrono::system_clock::time_point::currentSecsSinceEpoch());
+    artifact["storedAt"] = static_cast<int64_t>(std::chrono::system_clock::time_point::currentSecsSinceEpoch());
 
     m_artifacts[artifactId] = artifact;
     return true;
@@ -323,11 +323,11 @@ std::vector<std::string> CICDSettings::listArtifacts(const std::string& jobId) c
 
 int CICDSettings::cleanupOldArtifacts(int olderThanDays)
 {
-    qint64 threshold = std::chrono::system_clock::time_point::currentSecsSinceEpoch() - (olderThanDays * 86400);
+    int64_t threshold = std::chrono::system_clock::time_point::currentSecsSinceEpoch() - (olderThanDays * 86400);
     int deleted = 0;
 
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ) {
-        qint64 storedAt = it->second["storedAt"].toVariant().toLongLong();
+        int64_t storedAt = it->second["storedAt"].toVariant().toLongLong();
         if (storedAt < threshold) {
             it = m_artifacts.erase(it);
             deleted++;
@@ -500,4 +500,5 @@ std::string CICDSettings::generateDeploymentId()
 {
     return "deploy_" + QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
 }
+
 

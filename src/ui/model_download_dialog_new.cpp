@@ -36,8 +36,8 @@ void ModelDownloadDialog::onDownloadClicked()
     }
     
     const auto& model = m_models[modelIndex];
-    
-    
+
+
     // Disable UI during download
     m_downloadButton->setEnabled(false);
     m_skipButton->setEnabled(false);
@@ -57,7 +57,7 @@ void ModelDownloadDialog::onSkipClicked()
     reject();  // User chose to skip download
 }
 
-void ModelDownloadDialog::onDownloadProgress(const std::string& modelName, qint64 bytesReceived, qint64 bytesTotal)
+void ModelDownloadDialog::onDownloadProgress(const std::string& modelName, int64_t bytesReceived, int64_t bytesTotal)
 {
     (modelName);
     if (bytesTotal <= 0) return;
@@ -102,10 +102,10 @@ void ModelDownloadDialog::onDownloadFailed(const std::string& modelName, const s
 
 void ModelDownloadDialog::setupUI()
 {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     
     // Header
-    QLabel* headerLabel = new QLabel(
+    void* headerLabel = new void(
         "<h2>Welcome to RawrXD IDE!</h2>"
         "<p>No local models were detected. Would you like to download a small, fast model to get started?</p>",
         this);
@@ -114,11 +114,11 @@ void ModelDownloadDialog::setupUI()
     mainLayout->addWidget(headerLabel);
     
     // Model list
-    QLabel* listLabel = new QLabel("📦 <b>Recommended Models:</b>", this);
+    void* listLabel = new void("📦 <b>Recommended Models:</b>", this);
     listLabel->setStyleSheet("color: #4ec9b0;");
     mainLayout->addWidget(listLabel);
     
-    m_modelList = new QListWidget(this);
+    m_modelList = nullptr;
     m_modelList->setStyleSheet(
         "QListWidget {"
         "  background-color: #1e1e1e;"
@@ -133,45 +133,45 @@ void ModelDownloadDialog::setupUI()
     mainLayout->addWidget(m_modelList);
     
     // Progress bar (hidden initially)
-    m_progressBar = new QProgressBar(this);
+    m_progressBar = new void(this);
     m_progressBar->setVisible(false);
     m_progressBar->setStyleSheet(
-        "QProgressBar {"
+        "void {"
         "  border: 2px solid #3c3c3c;"
         "  border-radius: 5px;"
         "  text-align: center;"
         "}"
-        "QProgressBar::chunk {"
+        "void::chunk {"
         "  background-color: #16825d;"
         "}"
     );
     mainLayout->addWidget(m_progressBar);
     
     // Status label
-    m_statusLabel = new QLabel("Select a model and click Download", this);
+    m_statusLabel = new void("Select a model and click Download", this);
     m_statusLabel->setStyleSheet("color: #888888; font-style: italic;");
     mainLayout->addWidget(m_statusLabel);
     
     // Buttons
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     buttonLayout->addStretch();
     
-    m_skipButton = new QPushButton("Skip (I'll add models manually)", this);
+    m_skipButton = new void("Skip (I'll add models manually)", this);
     m_skipButton->setStyleSheet(
-        "QPushButton {"
+        "void {"
         "  background-color: #3c3c3c;"
         "  color: #d4d4d4;"
         "  padding: 8px 16px;"
         "  border: none;"
         "  border-radius: 4px;"
         "}"
-        "QPushButton:hover { background-color: #4c4c4c; }"
+        "void:hover { background-color: #4c4c4c; }"
     );
     buttonLayout->addWidget(m_skipButton);
     
-    m_downloadButton = new QPushButton("⬇ Download Selected Model", this);
+    m_downloadButton = new void("⬇ Download Selected Model", this);
     m_downloadButton->setStyleSheet(
-        "QPushButton {"
+        "void {"
         "  background-color: #0e639c;"
         "  color: white;"
         "  padding: 8px 16px;"
@@ -179,8 +179,8 @@ void ModelDownloadDialog::setupUI()
         "  border-radius: 4px;"
         "  font-weight: bold;"
         "}"
-        "QPushButton:hover { background-color: #1177bb; }"
-        "QPushButton:disabled { background-color: #3c3c3c; }"
+        "void:hover { background-color: #1177bb; }"
+        "void:disabled { background-color: #3c3c3c; }"
     );
     buttonLayout->addWidget(m_downloadButton);
     
@@ -201,17 +201,17 @@ void ModelDownloadDialog::setupConnections()
 void ModelDownloadDialog::loadRecommendedModels()
 {
     m_models = m_downloader->getRecommendedModels();
-    
-    
+
+
     for (const auto& model : m_models) {
         std::string itemText = std::string("%1\n   %2\n   Size: %3 MB")
 
 
             ;
         
-        QListWidgetItem* item = new QListWidgetItem(itemText);
+        QListWidgetItem* item = nullptr;
         if (model.isDefault) {
-            item->setBackground(QColor(30, 100, 60, 50));  // Slight green tint
+            item->setBackground(uint32_t(30, 100, 60, 50));  // Slight green tint
         }
         m_modelList->addItem(item);
     }
@@ -226,4 +226,5 @@ void ModelDownloadDialog::loadRecommendedModels()
 }
 
 } // namespace RawrXD
+
 

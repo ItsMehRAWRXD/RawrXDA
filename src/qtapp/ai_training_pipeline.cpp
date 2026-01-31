@@ -351,8 +351,8 @@ bool AITrainingPipeline::prepareTrainingData(const AIDigestionDataset& dataset) 
     // Calculate total training steps
     int batchSize = m_hyperparameters.batchSize * m_hyperparameters.gradientAccumulationSteps;
     m_totalSteps = (dataset.totalSamples / batchSize) * m_config.epochs;
-    
-    
+
+
     return true;
 }
 
@@ -623,8 +623,8 @@ void AITrainingPipeline::handleTrainingOutput() {
     
     std::vector<uint8_t> data = m_trainingProcess->readAllStandardOutput();
     std::string output = std::string::fromUtf8(data);
-    
-    
+
+
     // Parse training progress from output
     parseTrainingLogs();
 }

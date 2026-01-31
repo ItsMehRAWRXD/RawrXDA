@@ -42,7 +42,7 @@ TodoManager::TodoManager(void* parent) : void(parent) {
 void TodoManager::addTodo(const std::string& description, const std::string& filePath, int lineNumber) {
     try {
         // Validate inputs
-        if (description.isEmpty()) {
+        if (description.empty()) {
             LogTodoOperation("WARN", "Attempted to add TODO with empty description");
             return;
         }
@@ -75,7 +75,7 @@ void TodoManager::addTodo(const std::string& description, const std::string& fil
 void TodoManager::completeTodo(const std::string& id) {
     try {
         // Validate input
-        if (id.isEmpty()) {
+        if (id.empty()) {
             LogTodoOperation("WARN", "Attempted to complete TODO with empty ID");
             return;
         }
@@ -109,7 +109,7 @@ void TodoManager::completeTodo(const std::string& id) {
 void TodoManager::removeTodo(const std::string& id) {
     try {
         // Validate input
-        if (id.isEmpty()) {
+        if (id.empty()) {
             LogTodoOperation("WARN", "Attempted to remove TODO with empty ID");
             return;
         }
@@ -169,7 +169,7 @@ std::vector<TodoItem> TodoManager::getCompletedTodos() const {
 void TodoManager::saveTodos() {
     try {
         // Save TODO items to persistent storage
-        QSettings settings("RawrXD", "AgenticIDE");
+        void* settings("RawrXD", "AgenticIDE");
         
         // Clear previous data
         settings.remove("todos");
@@ -206,7 +206,7 @@ void TodoManager::saveTodos() {
 void TodoManager::loadTodos() {
     try {
         // Load TODO items from persistent storage
-        QSettings settings("RawrXD", "AgenticIDE");
+        void* settings("RawrXD", "AgenticIDE");
         
         int size = settings.beginReadArray("todos");
         todos_.clear();
@@ -226,7 +226,7 @@ void TodoManager::loadTodos() {
             todo.isCompleted = settings.value("isCompleted", false).toBool();
             
             // Validate loaded data
-            if (!todo.id.isEmpty() && !todo.description.isEmpty()) {
+            if (!todo.id.empty() && !todo.description.empty()) {
                 todos_.append(todo);
                 validCount++;
             } else {
@@ -244,4 +244,5 @@ void TodoManager::loadTodos() {
         LogTodoOperation("ERROR", std::string("Failed to load TODOs: %1")));
     }
 }
+
 

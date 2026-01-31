@@ -46,30 +46,25 @@ public:
      * @return true if initialization succeeded
      */
     bool initialize(const std::string& model_path) {
-        std::cout << "\n=== Initializing Chat Engine ===" << std::endl;
-        std::cout << "[Init] Creating InferenceEngine..." << std::endl;
-        
+
+
         try {
             engine = std::make_unique<InferenceEngine>(model_path);
-            std::cout << "[Init] InferenceEngine created successfully" << std::endl;
+            
         } catch (const std::exception& e) {
-            std::cerr << "[ERROR] Failed to create InferenceEngine: " << e.what() << std::endl;
+            
             return false;
         }
-        
-        std::cout << "[Init] Loading model from: " << model_path.toStdString() << std::endl;
-        
+
+
         // Load model (this will block)
         bool loaded = engine->loadModel(model_path);
         if (!loaded) {
-            std::cerr << "[ERROR] Failed to load model: " << model_path.toStdString() << std::endl;
+            
             return false;
         }
-        
-        std::cout << "[Init] ✓ Model loaded successfully!" << std::endl;
-        std::cout << "[Init] Model path: " << engine->modelPath().toStdString() << std::endl;
-        std::cout << "[Init] Memory usage: " << engine->memoryUsageMB() << " MB" << std::endl;
-        
+
+
         return true;
     }
     
@@ -77,25 +72,23 @@ public:
      * @brief Run the interactive chat loop
      */
     void runInteractiveChat() {
-        std::cout << "\n=== AI Chat Console ===" << std::endl;
-        std::cout << "Type 'quit' to exit, 'clear' to clear history, 'stats' for info" << std::endl;
-        std::cout << "(Responses may be slow on first run as model warms up)\n" << std::endl;
-        
+
+
         std::string user_input;
         
         while (true) {
-            std::cout << "You: ";
+            
             std::getline(std::cin, user_input);
             
             // Handle special commands
             if (user_input == "quit" || user_input == "exit") {
-                std::cout << "Goodbye!" << std::endl;
+                
                 break;
             }
             
             if (user_input == "clear") {
                 session->clearHistory();
-                std::cout << "[Chat] Conversation cleared" << std::endl;
+                
                 continue;
             }
             
@@ -117,8 +110,8 @@ public:
      * @brief Run a quick test with predefined exchanges
      */
     void runQuickTest() {
-        std::cout << "\n=== Quick Chat Test ===" << std::endl;
-        
+
+
         std::vector<std::string> test_messages = {
             "Hello!",
             "What is 2+2?",
@@ -126,9 +119,9 @@ public:
         };
         
         for (const auto& msg : test_messages) {
-            std::cout << "\n[TEST] User: " << msg << std::endl;
+            
             processUserMessage(msg);
-            std::cout << std::endl;
+            
         }
     }
     
@@ -139,12 +132,12 @@ private:
      */
     void processUserMessage(const std::string& user_message) {
         if (!engine) {
-            std::cerr << "[ERROR] Engine not initialized" << std::endl;
+            
             return;
         }
         
         if (is_waiting_for_response) {
-            std::cout << "[Chat] Please wait for the previous response to finish..." << std::endl;
+            
             return;
         }
         
@@ -153,31 +146,30 @@ private:
         
         // Build prompt with conversation context
         std::string full_prompt = session->buildPromptWithHistory();
-        
-        std::cout << "\nAI: ";
+
+
         std::cout.flush();
         
         is_waiting_for_response = true;
         
         try {
             // === METHOD 1: Try synchronous generation with detokenization ===
-            std::cout << "[Generating tokens..." << std::endl;
-            
+
+
             // Tokenize the prompt
             auto prompt_tokens = engine->tokenize(std::string::fromStdString(full_prompt));
-            
-            
+
+
             if (prompt_tokens.empty()) {
-                std::cout << "Could not tokenize prompt. Check model vocabulary." << std::endl;
+                
                 is_waiting_for_response = false;
                 return;
             }
             
             // Generate tokens
             auto generated_tokens = engine->generate(prompt_tokens, MAX_TOKENS);
-            
-            std::cout << "tokens generated: " << (generated_tokens.size() - prompt_tokens.size()) << "]" << std::endl;
-            
+
+
             // Extract only the newly generated tokens (skip input tokens)
             if (generated_tokens.size() > prompt_tokens.size()) {
                 std::vector<int32_t> new_tokens(
@@ -193,23 +185,23 @@ private:
                 response = cleanupResponse(response);
                 
                 if (!response.empty()) {
-                    std::cout << response;
+                    
                     // Add to session history
                     session->addMessage("assistant", response);
                 } else {
-                    std::cout << "(No response generated)";
+                    
                 }
             } else {
-                std::cout << "(No new tokens generated - model may need more context or longer token limit)";
+                
             }
             
         } catch (const std::exception& e) {
-            std::cerr << "\n[ERROR] Generation failed: " << e.what() << std::endl;
+            
         } catch (...) {
-            std::cerr << "\n[ERROR] Unknown error during generation" << std::endl;
+            
         }
-        
-        std::cout << "\n" << std::endl;
+
+
         is_waiting_for_response = false;
     }
     
@@ -247,24 +239,21 @@ private:
      * @brief Print chat statistics
      */
     void printStats() {
-        std::cout << "\n--- Chat Statistics ---" << std::endl;
-        std::cout << "Messages: " << session->getMessageCount() << std::endl;
-        std::cout << "Model: " << session->getModelName() << std::endl;
-        
+
+
         if (engine) {
-            std::cout << "Memory: " << engine->memoryUsageMB() << " MB" << std::endl;
-            std::cout << "Tokens/sec: " << engine->tokensPerSecond() << std::endl;
-            std::cout << "Temperature: " << engine->temperature() << std::endl;
+
+
         }
-        
-        std::cout << "\nRecent messages:" << std::endl;
+
+
         auto recent = session->getRecentMessages(4);
         for (const auto& msg : recent) {
-            std::cout << "  [" << msg.role << "] " << msg.content.substr(0, 60);
-            if (msg.content.size() > 60) std::cout << "...";
-            std::cout << std::endl;
+            
+            if (msg.content.size() > 60) 
+            
         }
-        std::cout << std::endl;
+        
     }
 };
 
@@ -275,12 +264,8 @@ int main(int argc, char *argv[])
 {
     // Initialize Qt (needed for signals/slots and threading)
     QCoreApplication app(argc, argv);
-    
-    std::cout << "╔════════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║      RawrXD Agentic IDE - Console Chat Test            ║" << std::endl;
-    std::cout << "║      Testing conversational AI capabilities            ║" << std::endl;
-    std::cout << "╚════════════════════════════════════════════════════════╝" << std::endl;
-    
+
+
     try {
         auto chat = std::make_unique<ConsoleChat>();
         
@@ -293,30 +278,26 @@ int main(int argc, char *argv[])
         
         if (argc > 1) {
             model_path = std::string::fromLocal8Bit(argv[1]);
-            std::cout << "[Main] Using model from command line: " << model_path.toStdString() << std::endl;
+            
         } else if (const char* env_model = std::getenv("CHAT_MODEL")) {
             model_path = std::string::fromLocal8Bit(env_model);
-            std::cout << "[Main] Using model from CHAT_MODEL: " << model_path.toStdString() << std::endl;
+            
         } else {
             // Default to a common model (you can customize this)
             model_path = "gemma3";  // or could be a local path
-            std::cout << "[Main] Using default model: " << model_path.toStdString() << std::endl;
-            std::cout << "[Main] To use different model, pass as argument: ./test_chat_console /path/to/model.gguf" << std::endl;
-            std::cout << "[Main] Or set CHAT_MODEL environment variable" << std::endl;
+
+
         }
         
         // Initialize chat engine
         if (!chat->initialize(model_path)) {
-            std::cerr << "\n[FATAL] Failed to initialize chat engine" << std::endl;
+            
             return 1;
         }
         
         // Choose test mode
-        std::cout << "\n[Main] Choose mode:" << std::endl;
-        std::cout << "  1 = Interactive chat (default)" << std::endl;
-        std::cout << "  2 = Quick test (predefined messages)" << std::endl;
-        std::cout << "> ";
-        
+
+
         std::string mode_input;
         std::getline(std::cin, mode_input);
         
@@ -325,15 +306,15 @@ int main(int argc, char *argv[])
         } else {
             chat->runInteractiveChat();
         }
-        
-        std::cout << "\n[Main] Chat test completed" << std::endl;
+
+
         return 0;
         
     } catch (const std::exception& e) {
-        std::cerr << "[FATAL] Uncaught exception: " << e.what() << std::endl;
+        
         return 1;
     } catch (...) {
-        std::cerr << "[FATAL] Unknown error" << std::endl;
+        
         return 1;
     }
 }

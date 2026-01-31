@@ -56,7 +56,7 @@ void AutoModelDownloader::checkLocalModels() {
     // Check for .gguf files
     std::vector<std::string> ggufFiles = modelsDir.entryList(std::vector<std::string>() << "*.gguf", std::filesystem::path::Files);
     
-    if (ggufFiles.isEmpty()) {
+    if (ggufFiles.empty()) {
         noModelsDetected();
     } else {
         modelsAvailable(ggufFiles.size());
@@ -68,7 +68,7 @@ bool AutoModelDownloader::hasLocalModels() const {
     if (!modelsDir.exists()) return false;
     
     std::vector<std::string> ggufFiles = modelsDir.entryList(std::vector<std::string>() << "*.gguf", std::filesystem::path::Files);
-    return !ggufFiles.isEmpty();
+    return !ggufFiles.empty();
 }
 
 std::vector<ModelDownloadInfo> AutoModelDownloader::getRecommendedModels() const {
@@ -111,8 +111,8 @@ void AutoModelDownloader::downloadModel(const ModelDownloadInfo& model, const st
     if (m_downloadInProgress) {
         return;
     }
-    
-    
+
+
     m_currentModelName = model.name;
     m_currentDestination = destinationPath;
     m_downloadInProgress = true;
@@ -122,8 +122,8 @@ void AutoModelDownloader::downloadModel(const ModelDownloadInfo& model, const st
     std::filesystem::path().mkpath(destInfo.absolutePath());
     
     // Start download
-    QNetworkRequest request(model.url);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    void* request(model.url);
+    request.setAttribute(void*::RedirectPolicyAttribute, void*::NoLessSafeRedirectPolicy);
     
     m_currentReply = m_networkManager->get(request);
 // Qt connect removed
@@ -154,7 +154,7 @@ void AutoModelDownloader::cancelDownload() {
     }
 }
 
-void AutoModelDownloader::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal) {
+void AutoModelDownloader::onDownloadProgress(int64_t bytesReceived, int64_t bytesTotal) {
     downloadProgress(m_currentModelName, bytesReceived, bytesTotal);
     
     // Log progress every 10%
@@ -178,8 +178,8 @@ void AutoModelDownloader::onDownloadFinished() {
         if (file.open(QIODevice::WriteOnly)) {
             file.write(m_currentReply->readAll());
             file.close();
-            
-            
+
+
             downloadCompleted(m_currentModelName, m_currentDestination);
         } else {
             std::string error = std::string("Failed to save file: %1"));
@@ -197,12 +197,14 @@ void AutoModelDownloader::onDownloadFinished() {
 
 void AutoModelDownloader::onDownloadError(void*::NetworkError error) {
     std::string errorString = m_currentReply ? m_currentReply->errorString() : "Unknown error";
-    
-    
+
+
     downloadFailed(m_currentModelName, errorString);
     
     m_downloadInProgress = false;
 }
 
 } // namespace RawrXD
+
+
 

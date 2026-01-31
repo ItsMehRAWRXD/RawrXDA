@@ -42,9 +42,9 @@ private:
     std::string formatElapsedTime(std::chrono::milliseconds elapsed) const;
     
     // UI Components
-    QProgressBar* m_progressBar{nullptr};
-    QLabel* m_statusLabel{nullptr};
-    QLabel* m_metricsLabel{nullptr};
+    void* m_progressBar{nullptr};
+    void* m_statusLabel{nullptr};
+    void* m_metricsLabel{nullptr};
     
     // State tracking
     bool m_isGenerating{false};

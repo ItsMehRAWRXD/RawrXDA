@@ -43,8 +43,8 @@ InterpretabilityPanelEnhanced::~InterpretabilityPanelEnhanced()
 void InterpretabilityPanelEnhanced::updateAttentionHeads(const std::vector<AttentionHead>& attention_heads)
 {
     auto start_time = std::chrono::high_resolution_clock::now();
-    
-    
+
+
     for (const auto& head : attention_heads) {
         m_attention_heads[head.layer_idx][head.head_idx] = head;
     }
@@ -217,8 +217,8 @@ void InterpretabilityPanelEnhanced::updateTokenLogits(int token_idx, const std::
 InterpretabilityPanelEnhanced::ModelDiagnostics InterpretabilityPanelEnhanced::runDiagnostics()
 {
     auto start_time = std::chrono::high_resolution_clock::now();
-    
-    
+
+
     ModelDiagnostics diagnostics;
     diagnostics.timestamp = std::chrono::system_clock::now();
     
@@ -600,7 +600,7 @@ bool InterpretabilityPanelEnhanced::exportAsPNG(const std::string& file_path) co
     
     try {
         // Render chart to pixmap
-        QPixmap pixmap = m_chart_view->grab();
+        std::string pixmap = m_chart_view->grab();
         bool success = pixmap.save(file_path, "PNG");
         
         if (success) {
@@ -748,12 +748,12 @@ void* InterpretabilityPanelEnhanced::getPerformanceStats() const
 void InterpretabilityPanelEnhanced::setupUI()
 {
     
-    QVBoxLayout* main_layout = new QVBoxLayout(this);
+    void* main_layout = new void(this);
     
     // Visualization type selector
-    QHBoxLayout* type_layout = new QHBoxLayout();
-    QLabel* type_label = new QLabel("Visualization Type:");
-    m_viz_type_combo = new QComboBox();
+    void* type_layout = new void();
+    void* type_label = new void("Visualization Type:");
+    m_viz_type_combo = new void();
     
     m_viz_type_combo->addItem("Attention Heatmap", static_cast<int>(VisualizationType::AttentionHeatmap));
     m_viz_type_combo->addItem("Feature Importance", static_cast<int>(VisualizationType::FeatureImportance));
@@ -769,9 +769,9 @@ void InterpretabilityPanelEnhanced::setupUI()
     main_layout->addLayout(type_layout);
     
     // Layer selector
-    QHBoxLayout* layer_layout = new QHBoxLayout();
-    QLabel* layer_label = new QLabel("Layer:");
-    m_layer_slider = new QSlider(//Horizontal);
+    void* layer_layout = new void();
+    void* layer_label = new void("Layer:");
+    m_layer_slider = nullptr;
     m_layer_slider->setRange(0, 100);
     m_layer_slider->setValue(0);
     
@@ -780,9 +780,9 @@ void InterpretabilityPanelEnhanced::setupUI()
     main_layout->addLayout(layer_layout);
     
     // Attention head selector
-    QHBoxLayout* attention_layout = new QHBoxLayout();
-    QLabel* attention_label = new QLabel("Attention Head:");
-    m_attention_head_combo = new QComboBox();
+    void* attention_layout = new void();
+    void* attention_label = new void("Attention Head:");
+    m_attention_head_combo = new void();
     for (int i = 0; i < 12; ++i) {
         m_attention_head_combo->addItem(std::string("Head %1"), i);
     }
@@ -793,18 +793,18 @@ void InterpretabilityPanelEnhanced::setupUI()
     main_layout->addLayout(attention_layout);
     
     // Tab widget for visualizations
-    m_tab_widget = new QTabWidget();
-    m_chart = new QChart();
-    m_chart_view = new QChartView(m_chart);
+    m_tab_widget = new void();
+    m_chart = nullptr;
+    m_chart_view = nullptr;
     m_chart_view->setRenderHint(QPainter::Antialiasing);
     m_tab_widget->addTab(m_chart_view, "Chart");
     
     main_layout->addWidget(m_tab_widget);
     
     // Status labels
-    m_stats_label = new QLabel("Ready");
-    m_problems_label = new QLabel("No issues detected");
-    m_diagnostics_label = new QLabel("Diagnostics: idle");
+    m_stats_label = new void("Ready");
+    m_problems_label = new void("No issues detected");
+    m_diagnostics_label = new void("Diagnostics: idle");
     
     main_layout->addWidget(m_stats_label);
     main_layout->addWidget(m_problems_label);
@@ -839,7 +839,7 @@ void InterpretabilityPanelEnhanced::createCharts()
     switch (m_current_visualization) {
         case VisualizationType::GradientFlow: {
             // Create line series for gradient norms
-            auto series = new QLineSeries();
+            auto series = nullptr;
             series->setName("Gradient Norm");
             
             for (const auto& [layer_idx, metrics] : m_gradient_flow_data) {
@@ -851,13 +851,13 @@ void InterpretabilityPanelEnhanced::createCharts()
             m_chart->addSeries(series);
             
             // Create axes
-            auto x_axis = new QValueAxis();
+            auto x_axis = nullptr;
             x_axis->setTitleText("Layer");
             x_axis->setRange(m_min_layer, m_max_layer);
             m_chart->addAxis(x_axis, //AlignBottom);
             series->attachAxis(x_axis);
             
-            auto y_axis = new QValueAxis();
+            auto y_axis = nullptr;
             y_axis->setTitleText("Gradient Norm");
             m_chart->addAxis(y_axis, //AlignLeft);
             series->attachAxis(y_axis);
@@ -867,7 +867,7 @@ void InterpretabilityPanelEnhanced::createCharts()
         
         case VisualizationType::ActivationDistribution: {
             // Create bar series for sparsity
-            auto bar_set = new QBarSet("Sparsity");
+            auto bar_set = nullptr;
             
             for (const auto& [layer_idx, stats] : m_activation_stats) {
                 if (layer_idx >= m_min_layer && layer_idx <= m_max_layer) {
@@ -875,17 +875,17 @@ void InterpretabilityPanelEnhanced::createCharts()
                 }
             }
             
-            auto bar_series = new QBarSeries();
+            auto bar_series = nullptr;
             bar_series->append(bar_set);
             m_chart->addSeries(bar_series);
             
             // Create axes
-            auto x_axis = new QCategoryAxis();
+            auto x_axis = nullptr;
             x_axis->setTitleText("Layer");
             m_chart->addAxis(x_axis, //AlignBottom);
             bar_series->attachAxis(x_axis);
             
-            auto y_axis = new QValueAxis();
+            auto y_axis = nullptr;
             y_axis->setTitleText("Sparsity (%)");
             y_axis->setRange(0, 100);
             m_chart->addAxis(y_axis, //AlignLeft);

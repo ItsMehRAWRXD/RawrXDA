@@ -56,7 +56,7 @@ public:
     /**
      * @brief Check if ready
      */
-    bool isReady() const { return !m_pieces.isEmpty(); }
+    bool isReady() const { return !m_pieces.empty(); }
     
     /**
      * @brief Get special token IDs
@@ -117,4 +117,5 @@ private:
     bool m_byteFallback{true};
     std::unordered_map<uint8_t, int32_t> m_byteTokens;
 };
+
 

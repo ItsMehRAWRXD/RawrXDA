@@ -23,7 +23,7 @@ InferenceEngine::InferenceEngine(const std::string& ggufPath, void* parent)
     // DO NOT load model in constructor - causes stack buffer overrun crashes
     // Model loading must be deferred to avoid blocking main thread
     // Call loadModel() explicitly after construction
-    if (!ggufPath.isEmpty()) {
+    if (!ggufPath.empty()) {
         // Store path for later use if needed
         m_modelPath = ggufPath;
     }
@@ -60,13 +60,13 @@ bool InferenceEngine::loadModel(const std::string& path)
             m_loader = nullptr;
         }
         
-        if (path.isEmpty()) {
+        if (path.empty()) {
             QMetaObject::invokeMethod(this, "modelLoadedChanged", //QueuedConnection,
                 (bool, false), (std::string, std::string()));
             return false;
         }
-        
-        
+
+
         // Create loader with error checking and exception safety
         try {
             m_loader = new GGUFLoaderQt(path);
@@ -91,8 +91,8 @@ bool InferenceEngine::loadModel(const std::string& path)
                 (bool, false), (std::string, std::string()));
             return false;
         }
-        
-        
+
+
         m_modelPath = path;
         std::string modelName = extractModelName(path);
 
@@ -151,8 +151,8 @@ bool InferenceEngine::loadModel(const std::string& path)
             // Continue anyway - we'll use fallback detokenization
         } catch (...) {
         }
-        
-        std::cerr << "[InferenceEngine] ===== CHECKPOINT B: About to enter initializeTokenizer =====" << std::endl;
+
+
         std::cerr.flush();
         
         // Build initial quantized tensor cache (with full exception safety)
@@ -172,8 +172,8 @@ bool InferenceEngine::loadModel(const std::string& path)
             }
         } else {
         }
-        
-        
+
+
         // === FIX: Dynamically read model architecture from GGUF metadata ===
         // These values are now read from the actual GGUF file instead of hardcoded
         int nLayers = m_loader->getParam("n_layer", 12).toInt();
@@ -184,7 +184,7 @@ bool InferenceEngine::loadModel(const std::string& path)
         // Log the actual parameters read from the GGUF file
                      ;
         
-        if (!m_tensorCache.isEmpty()) {
+        if (!m_tensorCache.empty()) {
             try {
                 // Convert CachedTensorData -> (std::vector<uint8_t>, int) pairs to preserve type information
                 std::unordered_map<std::string, std::pair<std::vector<uint8_t>, int>> tensorCacheWithTypes;
@@ -211,13 +211,13 @@ bool InferenceEngine::loadModel(const std::string& path)
         
         QMetaObject::invokeMethod(this, "modelLoadedChanged", //QueuedConnection,
             (bool, true), (std::string, modelName));
-        
-        
+
+
         // FIX 6: Skip processNextRequest during model load to avoid deadlock
         // The queue will be processed when the first request comes in
         // processNextRequest();
-        
-        
+
+
         // FIX 3.2: the signal to notify listeners (thread-safe)
         QMetaObject::invokeMethod(this, "transformerReady", //QueuedConnection);
         
@@ -244,10 +244,10 @@ std::string InferenceEngine::processChat(const std::string& prompt)
 {
     // Tokenize, run a short generation, and detokenize
     auto &telemetry = RawrXD::EnterpriseTelemetry::instance();
-    auto timer = telemetry.startTimer(QStringLiteral("inference.processChat"));
-    telemetry.recordEvent(QStringLiteral("inference"), QStringLiteral("processChat.begin"), QStringLiteral("len=%1")));
+    auto timer = telemetry.startTimer("inference.processChat");
+    telemetry.recordEvent("inference", "processChat.begin", "len=%1"));
 
-    
+
     auto input = tokenize(prompt);
     for (int i = 0; i < std::min(10, (int)input.size()); i++) {
     }
@@ -256,7 +256,7 @@ std::string InferenceEngine::processChat(const std::string& prompt)
     
     auto result = detokenize(out);
 
-    telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("processChat.complete"), timer.elapsedMs(), QStringLiteral("tokens_in=%1 tokens_out=%2"))));
+    telemetry.recordTiming("inference", "processChat.complete", timer.elapsedMs(), "tokens_in=%1 tokens_out=%2")));
     
     return result;
 }
@@ -291,7 +291,7 @@ std::vector<std::string> InferenceEngine::tensorNames() const
     return m_loader ? m_loader->tensorNames() : std::vector<std::string>();
 }
 
-qint64 InferenceEngine::memoryUsageMB() const
+int64_t InferenceEngine::memoryUsageMB() const
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
     return m_memoryUsageMB;
@@ -316,12 +316,12 @@ std::string InferenceEngine::quantMode() const
 }
 
 
-void InferenceEngine::request(const std::string& prompt, qint64 reqId)
+void InferenceEngine::request(const std::string& prompt, int64_t reqId)
 {
     request(prompt, reqId, false);  // Default to non-streaming
 }
 
-void InferenceEngine::request(const std::string& prompt, qint64 reqId, bool streaming)
+void InferenceEngine::request(const std::string& prompt, int64_t reqId, bool streaming)
 {
     std::lock_guard<std::mutex> lock(&m_mutex);
     
@@ -419,7 +419,7 @@ void InferenceEngine::rebuildTensorCache()
                 const std::string qmode = m_perLayerQuant.contains(name) ? m_perLayerQuant.value(name) : m_quantMode;
                 std::vector<uint8_t> raw = m_loader->inflateWeight(name);
                 
-                if (raw.isEmpty()) {
+                if (raw.empty()) {
                     continue;
                 }
                 
@@ -428,7 +428,7 @@ void InferenceEngine::rebuildTensorCache()
                     // Use the new function that returns both data and type
                     auto [quantized, resulting_type_id] = apply_quant_with_type(raw, qmode);
 
-                    if (!quantized.isEmpty()) {
+                    if (!quantized.empty()) {
                         CachedTensorData tensorData;
                         tensorData.data = quantized;
                         tensorData.ggml_type_id = resulting_type_id;
@@ -448,7 +448,7 @@ void InferenceEngine::rebuildTensorCache()
         // FIX: Removed dangerous premature weight loading with hardcoded dimensions.
         // Weights should only be loaded in loadModel() after correct dimensions are read.
         /*
-        if (!m_tensorCache.isEmpty() && m_loader) {
+        if (!m_tensorCache.empty() && m_loader) {
             try {
                 m_transformer.loadWeights(m_tensorCache, 12, 768, 12, 50257);
             } catch (const std::exception& e) {
@@ -588,7 +588,7 @@ std::string InferenceEngine::detokenize(const std::vector<int32_t>& tokens)
             
             // Look up in vocabulary
             VocabularyLoader::Token vocabToken = m_vocab.getToken(tokenId);
-            if (vocabToken.id >= 0 && !vocabToken.text.isEmpty()) {
+            if (vocabToken.id >= 0 && !vocabToken.text.empty()) {
                 result += vocabToken.text;
                 if (!vocabToken.text.endsWith(" ") && i + 1 < tokens.size()) {
                     result += " ";
@@ -625,22 +625,20 @@ std::string InferenceEngine::detokenize(const std::vector<int32_t>& tokens)
 void InferenceEngine::initializeTokenizer()
 {
     try {
-        std::cerr << "[InferenceEngine::initializeTokenizer] ENTRY" << std::endl;
+        
         std::cerr.flush();
         
         // Try to load vocabulary from GGUF file
         if (!m_loader) {
             return;
         }
-        
-        std::cerr << "[InferenceEngine::initializeTokenizer] About to call m_vocab.loadFromGGUF" << std::endl;
-        
+
+
         if (!m_vocab.loadFromGGUF(m_modelPath)) {
             return;
         }
-        
-        
-        std::cerr << "[InferenceEngine::initializeTokenizer] Attempting tokenizer init with 5s timeout" << std::endl;
+
+
         std::cerr.flush();
         
         // Use timeout-protected initialization
@@ -704,28 +702,28 @@ void InferenceEngine::initializeTokenizer()
 std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& inputTokens, int maxTokens)
 {
     auto &telemetry = RawrXD::EnterpriseTelemetry::instance();
-    auto timer = telemetry.startTimer(QStringLiteral("inference.generate"));
-    telemetry.recordEvent(QStringLiteral("inference"), QStringLiteral("generate.begin"), QStringLiteral("tokens_in=%1 max=%2")));
-    
-    
+    auto timer = telemetry.startTimer("inference.generate");
+    telemetry.recordEvent("inference", "generate.begin", "tokens_in=%1 max=%2"));
+
+
     // Check model loaded (with brief lock for safety)
     {
         std::lock_guard<std::mutex> lock(&m_mutex);
         if (!m_loader || !m_loader->isOpen()) {
-            telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.no_model"), timer.elapsedMs(), QStringLiteral("tokens_in=%1")));
+            telemetry.recordTiming("inference", "generate.no_model", timer.elapsedMs(), "tokens_in=%1"));
             return inputTokens;
         }
     }
-    
-    
+
+
     std::vector<int32_t> result = inputTokens;
     
     // Check if transformer is ready
     if (m_transformer.isReady()) {
         std::chrono::steady_clock localTimer;
         localTimer.start();
-        
-        
+
+
         // === FIXED: Process entire prompt to get proper starting context ===
         // Phase 1: Context prefill - process the entire input prompt once
         // The transformer builds the KV-cache (Key-Value cache) for efficient generation.
@@ -746,13 +744,13 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
             if (logits.empty()) {
                 break;
             }
-            
-            
+
+
             // === Elegant Sampling Logic using Top-P ===
             // Delegate complex sampling to helper function
             currentToken = sampleNextToken(logits, m_temperature, m_topP);
-            
-            
+
+
             // Check for EOS token (2 is common EOS)
             if (currentToken == 2 || currentToken == 0) {
                 break;
@@ -762,7 +760,7 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         }
         
         // Update performance metrics based on this generation step
-        qint64 elapsed = localTimer.elapsed();
+        int64_t elapsed = localTimer.elapsed();
         int tokensGenerated = result.size() - inputTokens.size();
         if (elapsed > 0 && tokensGenerated > 0) {
             m_tokensPerSecond = (tokensGenerated * 1000.0) / elapsed;
@@ -770,7 +768,7 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         
                 << "ms (" << std::string::number(m_tokensPerSecond, 'f', 1) << " tok/s)";
 
-        telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.complete"), timer.elapsedMs(), QStringLiteral("tokens_out=%1 tok_s=%2")));
+        telemetry.recordTiming("inference", "generate.complete", timer.elapsedMs(), "tokens_out=%1 tok_s=%2"));
         
     } else {
         // Fallback: Simple echo with placeholder
@@ -779,7 +777,7 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         for (int i = 0; i < std::min(maxTokens, 10); ++i) {
             result.push_back(1000 + i);  // Placeholder tokens
         }
-        telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.fallback"), timer.elapsedMs(), QStringLiteral("tokens_out=%1")));
+        telemetry.recordTiming("inference", "generate.fallback", timer.elapsedMs(), "tokens_out=%1"));
     }
     
     return result;
@@ -816,14 +814,14 @@ void InferenceEngine::streamingGenerateWorker(std::vector<int32_t> inputTokens,
                                               CompleteCallback onComplete)
 {
     auto &telemetry = RawrXD::EnterpriseTelemetry::instance();
-    auto timer = telemetry.startTimer(QStringLiteral("inference.generate.streaming"));
-    telemetry.recordEvent(QStringLiteral("inference"), QStringLiteral("stream.begin"), QStringLiteral("tokens_in=%1 max=%2")));
+    auto timer = telemetry.startTimer("inference.generate.streaming");
+    telemetry.recordEvent("inference", "stream.begin", "tokens_in=%1 max=%2"));
 
     // Ensure model loaded
     {
         std::lock_guard<std::mutex> lock(&m_mutex);
         if (!m_loader || !m_loader->isOpen()) {
-            telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("stream.no_model"), timer.elapsedMs(), QStringLiteral("tokens_in=%1")));
+            telemetry.recordTiming("inference", "stream.no_model", timer.elapsedMs(), "tokens_in=%1"));
             if (onComplete) onComplete();
             return;
         }
@@ -854,7 +852,7 @@ void InferenceEngine::streamingGenerateWorker(std::vector<int32_t> inputTokens,
 
         // Detokenize incrementally; token fragment
         std::string frag = detokenize(std::vector<int32_t>{ currentToken });
-        if (!frag.isEmpty() && onToken) {
+        if (!frag.empty() && onToken) {
             // Marshal back to void thread if needed
             QMetaObject::invokeMethod(this, [onToken, frag]() {
                 onToken(frag);
@@ -877,7 +875,7 @@ void InferenceEngine::streamingGenerateWorker(std::vector<int32_t> inputTokens,
 
     // Reset KV-cache for next request
     m_kvCacheReady = false;
-    telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("stream.end"), timer.elapsedMs(), QStringLiteral("tokens_out=%1")));
+    telemetry.recordTiming("inference", "stream.end", timer.elapsedMs(), "tokens_out=%1"));
 }
 
 void InferenceEngine::generateStreaming(const std::string& prompt,
@@ -947,7 +945,7 @@ void InferenceEngine::streamingGenerateWorker(const std::vector<int32_t> inputTo
             std::vector<int32_t> singleToken = { currentToken };
             std::string tokenText = detokenize(singleToken);
 
-            if (!tokenText.isEmpty() && tokenCallback) {
+            if (!tokenText.empty() && tokenCallback) {
                 std::string tokenStr = tokenText.toStdString();
                 accumulatedText += tokenStr;
                 tokenCallback(tokenStr);
@@ -969,7 +967,7 @@ void InferenceEngine::streamingGenerateWorker(const std::vector<int32_t> inputTo
     }
 }
 
-void InferenceEngine::generateStreaming(qint64 reqId, const std::string& prompt, int maxTokens)
+void InferenceEngine::generateStreaming(int64_t reqId, const std::string& prompt, int maxTokens)
 {
     if (m_threadingEnabled.load()) {
         // Run in background thread to avoid blocking UI thread
@@ -981,7 +979,7 @@ void InferenceEngine::generateStreaming(qint64 reqId, const std::string& prompt,
     }
 }
 
-void InferenceEngine::streamingGenerateWorkerSignals(qint64 reqId, const std::string& prompt, int maxTokens)
+void InferenceEngine::streamingGenerateWorkerSignals(int64_t reqId, const std::string& prompt, int maxTokens)
 {
     try {
 
@@ -1024,7 +1022,7 @@ void InferenceEngine::streamingGenerateWorkerSignals(qint64 reqId, const std::st
             std::vector<int32_t> singleToken = { currentToken };
             std::string tokenText = detokenize(singleToken);
 
-            if (!tokenText.isEmpty()) {
+            if (!tokenText.empty()) {
                 // signal for this token
                 streamToken(reqId, tokenText);
             }
@@ -1197,7 +1195,7 @@ void InferenceEngine::processNextRequest()
         return;
     }
 
-    if (m_requestQueue.isEmpty()) {
+    if (m_requestQueue.empty()) {
         // Nothing to do. Engine is idle.
         return;
     }
@@ -1219,7 +1217,7 @@ void InferenceEngine::processNextRequest()
         return;
     }
 
-                   
+
                    );
 
     // --- EXECUTE INFERENCE ---
@@ -1248,7 +1246,7 @@ void InferenceEngine::processNextRequest()
     std::string response = detokenize(outputTokens);
 
     // 4. Performance metrics
-    qint64 elapsed = m_inferenceTimer.elapsed();
+    int64_t elapsed = m_inferenceTimer.elapsed();
     int generatedTokens = std::max(0, (int)outputTokens.size() - (int)tokens.size());
     if (generatedTokens > 0 && elapsed > 0) {
         m_tokensPerSecond = (generatedTokens * 1000.0) / elapsed;
@@ -1303,20 +1301,19 @@ bool InferenceEngine::initializeTokenizerWithTimeout(int timeoutMs)
     
     std::unordered_map<std::string, std::vector<uint8_t>> tokenizerMetadata = future.result();
     
-    if (tokenizerMetadata.isEmpty()) {
+    if (tokenizerMetadata.empty()) {
         return false;
     }
-    
-    std::cerr << "[InferenceEngine::initializeTokenizerWithTimeout] About to determine tokenizer type" << std::endl;
-    
+
+
     // Determine tokenizer type and load
     VocabularyLoader::TokenizerType vocabType = m_vocab.getType();
-    std::cerr << "[InferenceEngine::initializeTokenizerWithTimeout] Vocab type: " << static_cast<int>(vocabType) << std::endl;
-    
+
+
     if (vocabType == VocabularyLoader::BPE) {
         try {
-            std::cerr << "[InferenceEngine::initializeTokenizerWithTimeout] About to call m_bpeTokenizer.loadFromGGUFMetadata()" << std::endl;
-            
+
+
             if (m_bpeTokenizer.loadFromGGUFMetadata(tokenizerMetadata)) {
                 m_tokenizerMode = TOKENIZER_BPE;
                 return true;
@@ -1324,14 +1321,14 @@ bool InferenceEngine::initializeTokenizerWithTimeout(int timeoutMs)
         } catch (const std::exception& e) {
         }
     } else if (vocabType == VocabularyLoader::SENTENCEPIECE) {
-        std::cerr << "[InferenceEngine::initializeTokenizerWithTimeout] SKIPPING m_spTokenizer.loadFromGGUFMetadata() - known freeze" << std::endl;
+        
         // HOTFIX: SentencePiece tokenizer initialization causes a freeze
         // Since we already have the vocabulary loaded (32k tokens), we can use fallback mode
         // The vocabulary-based tokenizer will work for basic chat functionality
         return false;  // Will trigger fallback
     }
-    
-    std::cerr << "[InferenceEngine::initializeTokenizerWithTimeout] No valid tokenizer loaded, returning false" << std::endl;
+
+
     return false;
 }
 
@@ -1349,4 +1346,6 @@ bool InferenceEngine::loadFallbackTokenizer()
     
     return false;
 }
+
+
 

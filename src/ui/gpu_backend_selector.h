@@ -55,9 +55,9 @@ private:
     std::string backendToIcon(ComputeBackend backend) const;
     
     // UI Components
-    QLabel* m_iconLabel{nullptr};
-    QComboBox* m_backendCombo{nullptr};
-    QLabel* m_statusLabel{nullptr};
+    void* m_iconLabel{nullptr};
+    void* m_backendCombo{nullptr};
+    void* m_statusLabel{nullptr};
     
     // State
     std::vector<BackendInfo> m_availableBackends;

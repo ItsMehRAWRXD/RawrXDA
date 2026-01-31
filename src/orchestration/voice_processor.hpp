@@ -53,11 +53,11 @@ public:
     
     // Metrics
     struct Metrics {
-        qint64 recordingCount = 0;
-        qint64 transcriptionCount = 0;
-        qint64 intentDetectionCount = 0;
-        qint64 ttsCount = 0;
-        qint64 errorCount = 0;
+        int64_t recordingCount = 0;
+        int64_t transcriptionCount = 0;
+        int64_t intentDetectionCount = 0;
+        int64_t ttsCount = 0;
+        int64_t errorCount = 0;
         double avgRecordingDurationMs = 0.0;
         double avgTranscriptionLatencyMs = 0.0;
         double avgIntentDetectionLatencyMs = 0.0;
@@ -84,7 +84,7 @@ private:
     // Audio capture
     QAudioSource* m_audioSource;  // Qt 6: QAudioInput renamed to QAudioSource
     QAudioDevice m_audioDevice;
-    QBuffer* m_audioBuffer;
+    std::stringstream* m_audioBuffer;
     QAudioFormat m_audioFormat;
     void** m_recordingTimer;
     
@@ -103,9 +103,10 @@ private:
     // Helper methods
     void setupAudioFormat();
     void logStructured(const std::string& level, const std::string& message, const void*& context = void*());
-    void updateMetric(const std::string& metricName, qint64 value);
+    void updateMetric(const std::string& metricName, int64_t value);
     void recordLatency(const std::string& operation, const std::chrono::milliseconds& duration);
     void* makeApiRequest(const std::string& endpoint, const void*& payload);
     bool validateAudioData(const std::vector<uint8_t>& audioData);
 };
+
 

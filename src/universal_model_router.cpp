@@ -135,7 +135,7 @@ bool UniversalModelRouter::loadConfigFromJson(const void*& config_json)
         if (config.api_key.startsWith("${") && config.api_key.endsWith("}")) {
             std::string env_var = config.api_key.mid(2, config.api_key.length() - 3);
             std::string env_value = std::string::fromStdString(std::getenv(env_var.toStdString().c_str()));
-            if (!env_value.isEmpty()) {
+            if (!env_value.empty()) {
                 config.api_key = env_value;
             }
         }
@@ -238,4 +238,5 @@ void UniversalModelRouter::onEngineError(const std::string& error)
 {
     routerError(error);
 }
+
 

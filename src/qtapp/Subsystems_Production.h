@@ -31,14 +31,14 @@ private:
         
         // Configuration list
         void* configLabel = new void("Run Configurations:", this);
-        configList_ = new QListWidget(this);
+        configList_ = nullptr;
         configList_->addItem("Default");
         layout->addWidget(configLabel);
         layout->addWidget(configList_);
         
         // Breakpoints
         void* bpLabel = new void("Breakpoints:", this);
-        breakpointList_ = new QListWidget(this);
+        breakpointList_ = nullptr;
         layout->addWidget(bpLabel);
         layout->addWidget(breakpointList_);
         
@@ -80,7 +80,7 @@ private:
         layout->addWidget(toolbar);
         
         // Profile data view
-        profileTree_ = new QTreeWidget(this);
+        profileTree_ = nullptr;
         profileTree_->setColumnCount(4);
         profileTree_->setHeaderLabels({"Function", "Calls", "Time (ms)", "% Total"});
         layout->addWidget(profileTree_);
@@ -136,7 +136,7 @@ private:
         layout->addWidget(toolbar);
         
         // Test tree
-        testTree_ = new QTreeWidget(this);
+        testTree_ = nullptr;
         testTree_->setColumnCount(2);
         testTree_->setHeaderLabels({"Test", "Status"});
         layout->addWidget(testTree_);
@@ -201,7 +201,7 @@ private:
         layout->addWidget(queryEdit_);
         
         // Results
-        resultTable_ = new QTreeWidget(this);
+        resultTable_ = nullptr;
         layout->addWidget(new void("Results:"));
         layout->addWidget(resultTable_);
     }
@@ -245,7 +245,7 @@ private:
         layout->addWidget(toolbar);
         
         // Containers list
-        containerList_ = new QTreeWidget(this);
+        containerList_ = nullptr;
         containerList_->setColumnCount(3);
         containerList_->setHeaderLabels({"Container", "Status", "Ports"});
         layout->addWidget(containerList_);
@@ -292,7 +292,7 @@ private:
         layout->addLayout(hbox);
         
         // Resource tree
-        resourceTree_ = new QTreeWidget(this);
+        resourceTree_ = nullptr;
         resourceTree_->setColumnCount(3);
         resourceTree_->setHeaderLabels({"Resource", "Status", "Cost/Month"});
         layout->addWidget(resourceTree_);
@@ -322,7 +322,7 @@ private:
         layout->addLayout(hbox);
         
         // Installed packages
-        packageList_ = new QListWidget(this);
+        packageList_ = nullptr;
         layout->addWidget(new void("Installed Packages:"));
         layout->addWidget(packageList_);
         
@@ -357,7 +357,7 @@ private:
         layout->addWidget(searchEdit_);
         
         // Documentation tree
-        docTree_ = new QTreeWidget(this);
+        docTree_ = nullptr;
         docTree_->setColumnCount(1);
         docTree_->setHeaderLabels({"Documentation"});
         layout->addWidget(docTree_);
@@ -491,7 +491,7 @@ private:
         layout->addWidget(colorValue_);
         
         // Recent colors
-        recentColors_ = new QListWidget(this);
+        recentColors_ = nullptr;
         layout->addWidget(new void("Recent Colors:"));
         layout->addWidget(recentColors_);
     }
@@ -521,7 +521,7 @@ private:
         layout->addWidget(statusLabel_);
         
         // Participant list
-        participantList_ = new QListWidget(this);
+        participantList_ = nullptr;
         layout->addWidget(new void("Participants:"));
         layout->addWidget(participantList_);
         
@@ -734,7 +734,7 @@ private:
         layout->addWidget(searchBox_);
         
         // Results
-        resultsList_ = new QListWidget(this);
+        resultsList_ = nullptr;
         layout->addWidget(resultsList_);
     }
     
@@ -747,7 +747,7 @@ class BookmarkWidget {
 public:
     explicit BookmarkWidget(void* parent = nullptr) : // Widget(parent) {
         void* layout = new void(this);
-        bookmarkList_ = new QListWidget(this);
+        bookmarkList_ = nullptr;
         layout->addWidget(bookmarkList_);
     }
     
@@ -1003,7 +1003,7 @@ private:
         layout->addWidget(addGroup);
         
         // TODO list
-        todoList_ = new QListWidget(this);
+        todoList_ = nullptr;
         todoList_->setDragDropMode(QAbstractItemView::InternalMove);
         todoList_->setSelectionMode(QAbstractItemView::SingleSelection);
         todoList_->setStyleSheet(
@@ -1115,7 +1115,7 @@ private:
                 displayText += std::string(" [%1]");
             }
             
-            QListWidgetItem* listItem = new QListWidgetItem(displayText, todoList_);
+            QListWidgetItem* listItem = nullptr;
             listItem->setData(UserRole, item.id);
             
             if (item.completed) {

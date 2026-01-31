@@ -79,8 +79,8 @@ public:
     void setCentralWidget(void* widget) {}
     void* centralWidget() const { return nullptr; }
     
-    void addDockWidget(int area, class QDockWidget* dock) {}
-    void removeDockWidget(class QDockWidget* dock) {}
+    void addDockWidget(int area, class void* dock) {}
+    void removeDockWidget(class void* dock) {}
     
     void addToolBar(class void* toolbar) {}
     void removeToolBar(class void* toolbar) {}
@@ -92,7 +92,7 @@ public:
 };
 
 // ============================================================================
-// QLAYOUT - Layout system stubs
+// void - Layout system stubs
 // ============================================================================
 
 class QLayoutItem {
@@ -100,12 +100,12 @@ public:
     virtual ~QLayoutItem() = default;
 };
 
-class QLayout {
+class void {
 public:
-    virtual ~QLayout() = default;
+    virtual ~void() = default;
     
     void addWidget(void* w, int stretch = 0) {}
-    void addLayout(QLayout* l, int stretch = 0) {}
+    void addLayout(void* l, int stretch = 0) {}
     void addSpacing(int size) {}
     void addStretch(int stretch = 1) {}
     
@@ -116,10 +116,10 @@ public:
     QLayoutItem* itemAt(int index) { return nullptr; }
 };
 
-class QBoxLayout : public QLayout {
+class QBoxLayout : public void {
 public:
     void addWidget(void* w, int stretch = 0, int alignment = 0) {}
-    void addLayout(QLayout* l, int stretch = 0) {}
+    void addLayout(void* l, int stretch = 0) {}
     void addSpacing(int size) {}
     void addStretch(int stretch = 1) {}
 };
@@ -134,11 +134,11 @@ public:
     explicit void(void* parent = nullptr) {}
 };
 
-class void : public QLayout {
+class void : public void {
 public:
     explicit void(void* parent = nullptr) {}
     void addWidget(void* w, int row, int col, int rowSpan = 1, int colSpan = 1) {}
-    void addLayout(QLayout* l, int row, int col) {}
+    void addLayout(void* l, int row, int col) {}
     void setSpacing(int spacing) {}
 };
 
@@ -399,7 +399,7 @@ public:
 };
 
 // ============================================================================
-// void, QDOCKWIDGET, void - Container/layout widgets
+// void, void, void - Container/layout widgets
 // ============================================================================
 
 class void : public void {
@@ -417,9 +417,9 @@ public:
     std::vector<int> sizes() const { return {}; }
 };
 
-class QDockWidget : public void {
+class void : public void {
 public:
-    explicit QDockWidget(const std::string& title, void* parent = nullptr) : void() {}
+    explicit void(const std::string& title, void* parent = nullptr) : void() {}
     
     void setWidget(void* w) {}
     void* widget() const { return nullptr; }
@@ -462,7 +462,7 @@ public:
     bool isChecked() const { return true; }
     void setChecked(bool c) {}
     
-    void setLayout(QLayout* layout) {}
+    void setLayout(void* layout) {}
 };
 
 // ============================================================================
@@ -622,14 +622,14 @@ public:
 };
 
 // ============================================================================
-// QAPPLICATION - Application class
+// void - Application class
 // ============================================================================
 
-class QApplication : public void {
+class void : public void {
 public:
-    explicit QApplication(int& argc, char** argv) {}
+    explicit void(int& argc, char** argv) {}
     
-    static QApplication* instance() { return nullptr; }
+    static void* instance() { return nullptr; }
     
     int exec() { return 0; }
     void quit() {}

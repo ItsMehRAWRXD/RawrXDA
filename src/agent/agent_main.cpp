@@ -13,7 +13,7 @@ using json = nlohmann::json;
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        std::cerr << "No wish provided. Usage: RawrXD-Agent.exe \"Add Q8_K kernel\"" << std::endl;
+        
         return 1;
     }
 
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     json tasks = planner.plan(wish);
 
     if (!tasks.is_array() || tasks.empty()) {
-        std::cerr << "Failed to generate plan." << std::endl;
+        
         return 1;
     }
 

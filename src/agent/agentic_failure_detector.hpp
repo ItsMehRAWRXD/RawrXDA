@@ -1,102 +1,65 @@
-// agentic_failure_detector.hpp - Detects 8 failure types in model outputs
 #pragma once
+#include <vector>
+#include <string>
+#include <mutex>
+#include <chrono>
 
-
-// 8 detectable failure types
 enum class AgentFailureType {
-    Refusal = 0,                // Model refuses to respond
-    Hallucination = 1,          // False/made-up information
-    FormatViolation = 2,        // Wrong output format
-    InfiniteLoop = 3,           // Repeating content
-    TokenLimitExceeded = 4,     // Truncated response
-    ResourceExhausted = 5,      // Out of memory/compute
-    Timeout = 6,                // Inference took too long
-    SafetyViolation = 7,        // Triggered safety filters
-    None = 255                  // No failure
+    Refusal = 0,
+    Hallucination = 1,
+    FormatViolation = 2,
+    InfiniteLoop = 3,
+    TokenLimitExceeded = 4,
+    ResourceExhausted = 5,
+    Timeout = 6,
+    SafetyViolation = 7,
+    None = 255
 };
 
 struct FailureInfo {
     AgentFailureType type = AgentFailureType::None;
     std::string description;
     double confidence = 0.0;
-    std::string evidence;
+    std::string detectedReason;
     std::chrono::system_clock::time_point detectedAt;
-    qint64 sequenceNumber = 0;
+    uint64_t sequenceNumber = 0;
 };
 
-class AgenticFailureDetector : public void
-{
+struct FailureDetectorStats {
+    uint64_t totalOutputsAnalyzed = 0;
+    std::vector<int> failureTypeCounts = std::vector<int>(8, 0);
+};
 
+class AgenticFailureDetector {
 public:
-    explicit AgenticFailureDetector(void* parent = nullptr);
-    ~AgenticFailureDetector() override;
+    AgenticFailureDetector();
+    ~AgenticFailureDetector();
 
-    // Main detection API
-    FailureInfo detectFailure(const std::string& modelOutput, const std::string& context = std::string());
-    std::vector<FailureInfo> detectMultipleFailures(const std::string& modelOutput);
+    FailureInfo detectFailure(const std::string& modelOutput, const std::string& context);
     
-    // Specific detection methods
-    bool isRefusal(const std::string& output) const;
-    bool isHallucination(const std::string& output) const;
-    bool isFormatViolation(const std::string& output) const;
-    bool isInfiniteLoop(const std::string& output) const;
-    bool isTokenLimitExceeded(const std::string& output) const;
-    bool isResourceExhausted(const std::string& output) const;
-    bool isTimeout(const std::string& output) const;
-    bool isSafetyViolation(const std::string& output) const;
-    
-    // Configuration
-    void setRefusalThreshold(double threshold);
-    void setQualityThreshold(double threshold);
-    void enableToolValidation(bool enable);
-    
-    void addRefusalPattern(const std::string& pattern);
-    void addHallucinationPattern(const std::string& pattern);
-    void addLoopPattern(const std::string& pattern);
-    void addSafetyPattern(const std::string& pattern);
-    
-    // Statistics
-    struct Stats {
-        qint64 totalOutputsAnalyzed = 0;
-        std::unordered_map<int, qint64> failureTypeCounts;
-        double avgConfidence = 0.0;
-        qint64 truePredictions = 0;
-        qint64 falsePredictions = 0;
-    };
-    
-    Stats getStatistics() const;
-    void resetStatistics();
-    
-    // Enable/disable
-    void setEnabled(bool enable);
-    bool isEnabled() const;
+    // Setters
+    void setEnabled(bool enabled) { m_enabled = enabled; }
 
-    void failureDetected(AgentFailureType type, const std::string& description);
-    void multipleFailuresDetected(const std::vector<FailureInfo>& failures);
-    void highConfidenceDetection(AgentFailureType type, double confidence);
+    FailureDetectorStats getStats() const { return m_stats; }
 
 private:
     void initializePatterns();
+    bool isRefusal(const std::string& output);
+    bool isSafetyViolation(const std::string& output);
+    bool isTokenLimitExceeded(const std::string& output);
+    bool isTimeout(const std::string& output);
+    bool isResourceExhausted(const std::string& output);
     double calculateConfidence(AgentFailureType type, const std::string& output);
-    
+
+    bool m_enabled = true;
     mutable std::mutex m_mutex;
-    
-    // Pattern collections
+    FailureDetectorStats m_stats;
+    uint64_t m_sequenceNumber = 0;
+
     std::vector<std::string> m_refusalPatterns;
     std::vector<std::string> m_hallucinationPatterns;
     std::vector<std::string> m_loopPatterns;
     std::vector<std::string> m_safetyPatterns;
     std::vector<std::string> m_timeoutIndicators;
     std::vector<std::string> m_resourceExhaustionIndicators;
-    
-    // Thresholds
-    double m_refusalThreshold = 0.7;
-    double m_qualityThreshold = 0.6;
-    bool m_enableToolValidation = true;
-    
-    // Statistics
-    Stats m_stats;
-    bool m_enabled = true;
-    qint64 m_sequenceNumber = 0;
 };
-

@@ -631,7 +631,7 @@ void MainWindow::show()
         UpdateWindow(m_hwnd);
     }
 #else
-    std::cout << "RawrXD IDE - Simple C++ Implementation" << std::endl;
+    
 #endif
 }
 
@@ -661,7 +661,7 @@ int MainWindow::exec()
     return static_cast<int>(msg.wParam);
 #else
     std::atomic<bool> running{true};
-    std::cout << "Press 'q' then Enter to quit.\n";
+    
     while (running) {
         int c = std::cin.get();
         if (c == 'q' || c == 'Q') running = false;
@@ -782,7 +782,7 @@ void MainWindow::loadFileWithLazyLoading(const std::string& filename) {
         chunk.resize(file.gcount());
         m_editorBuffer.clear();
         m_editorBuffer.push_back(chunk);
-        std::cout << "Loaded first chunk of large file: " << filename << std::endl;
+        
     } else {
         // Normal loading
         std::ifstream file(filePath);
@@ -794,50 +794,50 @@ void MainWindow::loadFileWithLazyLoading(const std::string& filename) {
 
 void MainWindow::runPesterTests() {
     if (!m_pesterAvailable) {
-        std::cout << "Pester not available. Run initUnitTesting first." << std::endl;
+        
         return;
     }
     std::string testCommand = "powershell -Command \"Invoke-Pester -Path . -OutputFormat NUnitXml -OutputFile TestResults.xml\"";
     handleCommand(testCommand);
-    std::cout << "Running Pester tests..." << std::endl;
+    
 }
 
 void MainWindow::buildWithMSBuild() {
     if (m_msbuildPath.empty()) {
-        std::cout << "MSBuild not found. Run initBuildSystem first." << std::endl;
+        
         return;
     }
     
     std::string buildCommand = "\"" + m_msbuildPath + "\" RawrXD-ModelLoader.sln /p:Configuration=Release";
     handleCommand(buildCommand);
-    std::cout << "Building with MSBuild..." << std::endl;
+    
 }
 
 void MainWindow::publishToGallery() {
     if (!m_galleryReady) {
-        std::cout << "Gallery not ready. Run initScriptPublishing first." << std::endl;
+        
         return;
     }
     
     std::string publishCommand = "powershell -Command \"Publish-Script -Path script.ps1 -NuGetApiKey $env:NUGET_API_KEY\"";
     handleCommand(publishCommand);
-    std::cout << "Publishing to PowerShell Gallery..." << std::endl;
+    
 }
 
 void MainWindow::startRemoteSession(const std::string& remoteHost) {
     if (!m_remoteDebugEnabled) {
-        std::cout << "Remote debugging not enabled. Run initRemoteDebugging first." << std::endl;
+        
         return;
     }
     
     std::string remoteCommand = "powershell -Command \"Enter-PSSession -ComputerName " + remoteHost + "\"";
     handleCommand(remoteCommand);
-    std::cout << "Starting remote session with: " << remoteHost << std::endl;
+    
 }
 
 void MainWindow::handleCommand(const std::string& cmd) {
     // Stub implementation - prints command to console
-    std::cout << "Command: " << cmd << std::endl;
+    
     // TODO: Implement actual command execution
 }
 
@@ -851,7 +851,7 @@ void MainWindow::setEditorTheme(const std::string& theme) {
         SendMessage(m_editorHwnd, EM_SETBKGNDCOLOR, 0, bgColor);
     }
 #endif
-    std::cout << "Editor theme set to: " << theme << std::endl;
+    
 }
 
 void MainWindow::setEditorFont(const std::string& fontName, int fontSize) {
@@ -865,7 +865,7 @@ void MainWindow::setEditorFont(const std::string& fontName, int fontSize) {
         SendMessage(m_editorHwnd, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
 #endif
-    std::cout << "Font set to: " << fontName << " @ " << fontSize << "pt" << std::endl;
+    
 }
 
 void MainWindow::setTabSize(int spaces) {
@@ -876,17 +876,17 @@ void MainWindow::setTabSize(int spaces) {
         SendMessage(m_editorHwnd, EM_SETTABSTOPS, 1, (LPARAM)&tabStops);
     }
 #endif
-    std::cout << "Tab size set to: " << spaces << " spaces" << std::endl;
+    
 }
 
 void MainWindow::toggleMinimap() {
     m_minimapEnabled = !m_minimapEnabled;
-    std::cout << "Minimap " << (m_minimapEnabled ? "enabled" : "disabled") << std::endl;
+    
 }
 
 void MainWindow::toggleLineNumbers() {
     m_lineNumbersEnabled = !m_lineNumbersEnabled;
-    std::cout << "Line numbers " << (m_lineNumbersEnabled ? "enabled" : "disabled") << std::endl;
+    
 }
 
 void MainWindow::toggleWordWrap() {
@@ -904,27 +904,27 @@ void MainWindow::toggleWordWrap() {
         InvalidateRect(m_editorHwnd, nullptr, TRUE);
     }
 #endif
-    std::cout << "Word wrap " << (m_wordWrapEnabled ? "enabled" : "disabled") << std::endl;
+    
 }
 
 void MainWindow::setColorScheme(const std::string& scheme) {
     m_colorScheme = scheme;
-    std::cout << "Color scheme set to: " << scheme << std::endl;
+    
 }
 
 void MainWindow::toggleAutocomplete() {
     m_autocompleteEnabled = !m_autocompleteEnabled;
-    std::cout << "Autocomplete " << (m_autocompleteEnabled ? "enabled" : "disabled") << std::endl;
+    
 }
 
 void MainWindow::setIndentStyle(bool useTabs) {
     m_useTabsForIndent = useTabs;
-    std::cout << "Indent style: " << (useTabs ? "tabs" : "spaces") << std::endl;
+    
 }
 
 void MainWindow::toggleBracketMatching() {
     m_bracketMatchingEnabled = !m_bracketMatchingEnabled;
-    std::cout << "Bracket matching " << (m_bracketMatchingEnabled ? "enabled" : "disabled") << std::endl;
+    
 }
 
 // Problems Panel (10 features)
@@ -954,7 +954,7 @@ void MainWindow::createProblemsPanel() {
         SendMessage(m_problemsPanelHwnd, EM_SETBKGNDCOLOR, 0, RGB(40, 40, 40));
     }
 #endif
-    std::cout << "Problems panel created" << std::endl;
+    
 }
 
 void MainWindow::addProblem(const std::string& file, int line, const std::string& message, const std::string& severity) {
@@ -971,7 +971,7 @@ void MainWindow::addProblem(const std::string& file, int line, const std::string
         SendMessage(m_problemsPanelHwnd, EM_REPLACESEL, FALSE, (LPARAM)problemText.c_str());
     }
 #endif
-    std::cout << "Problem added: " << severity << " in " << file << ":" << line << std::endl;
+    
 }
 
 void MainWindow::clearProblems() {
@@ -981,27 +981,27 @@ void MainWindow::clearProblems() {
         SetWindowTextA(m_problemsPanelHwnd, "Problems Panel\r\n");
     }
 #endif
-    std::cout << "Problems cleared" << std::endl;
+    
 }
 
 void MainWindow::autoRepairProblem(int problemIndex) {
     if (problemIndex < 0 || problemIndex >= static_cast<int>(m_problems.size())) {
-        std::cout << "Invalid problem index" << std::endl;
+        
         return;
     }
     
     const Problem& p = m_problems[problemIndex];
-    std::cout << "Auto-repairing: " << p.message << " in " << p.file << ":" << p.line << std::endl;
-    
+
+
     // Simple auto-repair heuristics
     if (p.message.find("missing semicolon") != std::string::npos) {
-        std::cout << "  -> Adding semicolon at line " << p.line << std::endl;
+        
     } else if (p.message.find("undeclared identifier") != std::string::npos) {
-        std::cout << "  -> Suggesting declaration for identifier" << std::endl;
+        
     } else if (p.message.find("unused variable") != std::string::npos) {
-        std::cout << "  -> Removing unused variable" << std::endl;
+        
     } else {
-        std::cout << "  -> No auto-repair available for this problem type" << std::endl;
+        
     }
 }
 
@@ -1012,7 +1012,7 @@ void MainWindow::toggleProblemsPanel() {
         ShowWindow(m_problemsPanelHwnd, m_problemsPanelVisible ? SW_SHOW : SW_HIDE);
     }
 #endif
-    std::cout << "Problems panel " << (m_problemsPanelVisible ? "shown" : "hidden") << std::endl;
+    
 }
 
 void MainWindow::sortProblemsBySeverity() {
@@ -1028,7 +1028,7 @@ void MainWindow::sortProblemsBySeverity() {
     for (const auto& p : m_problems) {
         addProblem(p.file, p.line, p.message, p.severity);
     }
-    std::cout << "Problems sorted by severity" << std::endl;
+    
 }
 
 void MainWindow::filterProblemsByType(const std::string& type) {
@@ -1049,13 +1049,13 @@ void MainWindow::filterProblemsByType(const std::string& type) {
         }
     }
 #endif
-    std::cout << "Problems filtered by: " << type << std::endl;
+    
 }
 
 void MainWindow::exportProblems(const std::string& filename) {
     std::ofstream outFile(filename);
     if (!outFile) {
-        std::cout << "Failed to open file for export: " << filename << std::endl;
+        
         return;
     }
     
@@ -1067,18 +1067,18 @@ void MainWindow::exportProblems(const std::string& filename) {
     }
     
     outFile.close();
-    std::cout << "Problems exported to: " << filename << std::endl;
+    
 }
 
 void MainWindow::jumpToProblem(int problemIndex) {
     if (problemIndex < 0 || problemIndex >= static_cast<int>(m_problems.size())) {
-        std::cout << "Invalid problem index" << std::endl;
+        
         return;
     }
     
     const Problem& p = m_problems[problemIndex];
-    std::cout << "Jumping to: " << p.file << ":" << p.line << std::endl;
-    
+
+
     // Load file and jump to line
     loadFileWithLazyLoading(p.file);
 #ifdef _WIN32
@@ -1091,41 +1091,37 @@ void MainWindow::jumpToProblem(int problemIndex) {
 
 void MainWindow::showProblemDetails(int problemIndex) {
     if (problemIndex < 0 || problemIndex >= static_cast<int>(m_problems.size())) {
-        std::cout << "Invalid problem index" << std::endl;
+        
         return;
     }
     
     const Problem& p = m_problems[problemIndex];
-    std::cout << "\n=== Problem Details ===" << std::endl;
-    std::cout << "File: " << p.file << std::endl;
-    std::cout << "Line: " << p.line << std::endl;
-    std::cout << "Severity: " << p.severity << std::endl;
-    std::cout << "Message: " << p.message << std::endl;
-    std::cout << "======================\n" << std::endl;
+
+
 }
 
 // AI Metrics & Telemetry
 void MainWindow::simulateAIRequest(const std::string& model, bool success) {
     (void)model; (void)success;
     // Telemetry disabled for SimpleIDE minimal build
-    std::cout << "Simulated AI request (telemetry disabled)" << std::endl;
+    
 }
 
 void MainWindow::exportMetrics(const std::string& format) {
     (void)format;
-    std::cout << "Metrics export disabled in SimpleIDE build" << std::endl;
+    
 }
 
 void MainWindow::clearMetrics() {
-    std::cout << "Metrics cleared (telemetry disabled)" << std::endl;
+    
 }
 
 void MainWindow::showMetricsReport() {
-    std::cout << "Telemetry report disabled in SimpleIDE" << std::endl;
+    
 }
 
 void MainWindow::initExtensionSystem() {
-    std::cout << "Initializing extension system..." << std::endl;
+    
     // Basic plugin architecture: load DLLs from plugins directory
     fs::path pluginDir = fs::current_path() / "plugins";
     if (fs::exists(pluginDir)) {
@@ -1135,34 +1131,34 @@ void MainWindow::initExtensionSystem() {
                 HMODULE hModule = LoadLibraryW(entry.path().c_str());
                 if (hModule) {
                     m_loadedPlugins.push_back(hModule);
-                    std::cout << "Loaded plugin: " << entry.path().string() << std::endl;
+                    
                 }
 #endif
             }
         }
     }
-    std::cout << "Extension system initialized." << std::endl;
+    
 }
 
 void MainWindow::initRemoteDebugging() {
-    std::cout << "Initializing remote debugging..." << std::endl;
+    
     // Basic PSRemoting support: enable remoting and prepare for remote sessions
     m_remoteDebugEnabled = true;
     // Execute: Enable-PSRemoting -Force
     handleCommand("powershell -Command \"Enable-PSRemoting -Force -SkipNetworkProfileCheck\"");
-    std::cout << "Remote debugging initialized." << std::endl;
+    
 }
 
 void MainWindow::initUnitTesting() {
-    std::cout << "Initializing unit testing..." << std::endl;
+    
     // Pester integration: install and prepare Pester
     handleCommand("powershell -Command \"if (!(Get-Module -ListAvailable -Name Pester)) { Install-Module -Name Pester -Force -SkipPublisherCheck }\"");
     m_pesterAvailable = true;
-    std::cout << "Unit testing initialized." << std::endl;
+    
 }
 
 void MainWindow::initBuildSystem() {
-    std::cout << "Initializing build system..." << std::endl;
+    
     // MSBuild integration: detect MSBuild path
 #ifdef _WIN32
     // Try to find MSBuild in common locations
@@ -1175,34 +1171,34 @@ void MainWindow::initBuildSystem() {
     for (const auto& path : msbuildPaths) {
         if (fs::exists(path)) {
             m_msbuildPath = path;
-            std::cout << "Found MSBuild: " << path << std::endl;
+            
             break;
         }
     }
 #endif
-    std::cout << "Build system initialized." << std::endl;
+    
 }
 
 void MainWindow::initScriptPublishing() {
-    std::cout << "Initializing script publishing..." << std::endl;
+    
     // PowerShell Gallery integration: install PowerShellGet
     handleCommand("powershell -Command \"Install-Module -Name PowerShellGet -Force -SkipPublisherCheck\"");
     m_galleryReady = true;
-    std::cout << "Script publishing initialized." << std::endl;
+    
 }
 
 void MainWindow::wireOverclockPanel() { 
-    std::cout << "Wiring overclock panel to backend..." << std::endl;
+    
     /* Wired to backend via updateTelemetry */ 
-    std::cout << "Overclock panel wired." << std::endl;
+    
 }
 
 void MainWindow::initPerformanceOpts() {
-    std::cout << "Initializing performance optimizations..." << std::endl;
+    
     // Lazy loading for large files: implement basic chunked loading
     m_lazyLoadingEnabled = true;
     m_maxFileSizeForLazyLoad = 1024 * 1024; // 1MB
-    std::cout << "Performance optimizations initialized." << std::endl;
+    
 }
 
 #ifdef _WIN32
@@ -2186,7 +2182,7 @@ void MainWindow::showModelInfo() {
         auto metaKeys = {"general.architecture", "general.name", "general.quantization_version"};
         for (const auto& key : metaKeys) {
             std::any value = m_ggufLoader->getParam(std::string::fromStdString(key), std::any());
-            if (value.isValid() && !value.toString().isEmpty()) {
+            if (value.isValid() && !value.toString().empty()) {
                 info << "  " << key << ": " << value.toString().toStdString() << "\n";
             }
         }
@@ -2345,3 +2341,4 @@ void MainWindow::toggleFloatingPanel() {
     }
 }
 #endif
+

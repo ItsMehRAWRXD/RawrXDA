@@ -19,7 +19,7 @@ public:
     explicit ModelMonitor(InferenceEngine* engine, void* parent = nullptr);
     
     /**
-     * Two-phase initialization - call after QApplication is ready
+     * Two-phase initialization - call after void is ready
      * Creates all Qt widgets and starts refresh timer
      */
     void initialize();
@@ -30,9 +30,9 @@ private:
 private:
     InferenceEngine* m_engine;
     void**          m_timer;
-    QLabel*          m_memLabel;
-    QLabel*          m_tokensLabel;
-    QLabel*          m_tempLabel;
-    QLabel*          m_modelLabel;
+    void*          m_memLabel;
+    void*          m_tokensLabel;
+    void*          m_tempLabel;
+    void*          m_modelLabel;
 };
 

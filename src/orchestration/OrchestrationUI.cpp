@@ -65,7 +65,7 @@ void* OrchestrationUI::createProgressSection()
     m_overallProgress->setRange(0, 100);
     m_overallProgress->setValue(0);
     
-    m_taskList = new QListWidget();
+    m_taskList = nullptr;
     m_taskList->setMaximumHeight(150);
     
     layout->addWidget(m_statusLabel);
@@ -118,8 +118,7 @@ void OrchestrationUI::onTaskSplitCompleted(const std::vector<TaskDefinition>& ta
     m_statusLabel->setText(std::string("Task split into %1 subtasks")));
     
     for (const TaskDefinition& task : tasks) {
-        QListWidgetItem* item = new QListWidgetItem(
-            std::string("%1: %2")));
+        QListWidgetItem* item = nullptr));
         item->setData(UserRole, task.id);
         m_taskList->addItem(item);
     }

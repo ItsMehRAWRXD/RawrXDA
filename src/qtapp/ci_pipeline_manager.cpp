@@ -10,7 +10,7 @@ CIPipelineManager::~CIPipelineManager()
 {
     // Clean up any running processes
     for (auto& [id, pipeline] : m_pipelines) {
-        if (pipeline.process && pipeline.process->state() == QProcess::Running) {
+        if (pipeline.process && pipeline.process->state() == void*::Running) {
             pipeline.process->terminate();
             pipeline.process->waitForFinished(5000);
             delete pipeline.process;
@@ -60,7 +60,7 @@ bool CIPipelineManager::deletePipeline(const std::string& pipelineId)
     }
     
     if (it->second.process) {
-        if (it->second.process->state() == QProcess::Running) {
+        if (it->second.process->state() == void*::Running) {
             it->second.process->terminate();
             it->second.process->waitForFinished(5000);
         }
@@ -86,7 +86,7 @@ bool CIPipelineManager::startPipeline(const std::string& pipelineId)
     
     pipeline.status = PipelineStatus::Running;
     pipeline.startTime = std::chrono::system_clock::time_point::currentDateTime();
-    pipeline.process = new QProcess(this);
+    pipeline.process = new void*(this);
     
     // Extract build command from config
     std::string buildCommand = pipeline.config.contains("buildCommand") 

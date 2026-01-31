@@ -46,9 +46,9 @@ public:
     
     // Statistics
     struct Stats {
-        qint64 totalAttempts = 0;
-        qint64 successfulCorrections = 0;
-        qint64 failedCorrections = 0;
+        int64_t totalAttempts = 0;
+        int64_t successfulCorrections = 0;
+        int64_t failedCorrections = 0;
         double avgConfidenceScore = 0.0;
         std::unordered_map<std::string, int> methodSuccessCounts;
     };
@@ -75,4 +75,5 @@ private:
     double m_confidenceThreshold = 0.7;
     std::unordered_map<std::string, bool> m_enabledMethods;
 };
+
 

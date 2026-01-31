@@ -37,9 +37,9 @@ public:
     
     // Production metrics
     struct Metrics {
-        quint64 total_requests = 0;
-        quint64 successful_requests = 0;
-        quint64 failed_requests = 0;
+        uint64_t total_requests = 0;
+        uint64_t successful_requests = 0;
+        uint64_t failed_requests = 0;
         double avg_response_time_ms = 0.0;
         double p95_response_time_ms = 0.0;
         double p99_response_time_ms = 0.0;
@@ -84,4 +84,5 @@ private:
     void updateMetrics(bool success, double latency_ms);
     void calculatePercentiles();
 };
+
 

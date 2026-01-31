@@ -158,27 +158,27 @@ private:
     ModelRouterAdapter *m_adapter;
     
     // Top toolbar widgets
-    QLabel *m_model_label;
-    QComboBox *m_model_combo;
-    QPushButton *m_generate_button;
-    QPushButton *m_stop_button;
-    QPushButton *m_settings_button;
-    QPushButton *m_api_key_button;
-    QPushButton *m_dashboard_button;
-    QPushButton *m_console_button;
-    QPushButton *m_clear_output_button;
+    void *m_model_label;
+    void *m_model_combo;
+    void *m_generate_button;
+    void *m_stop_button;
+    void *m_settings_button;
+    void *m_api_key_button;
+    void *m_dashboard_button;
+    void *m_console_button;
+    void *m_clear_output_button;
     
     // Status widgets
-    QLabel *m_status_label;
-    QProgressBar *m_progress_bar;
+    void *m_status_label;
+    void *m_progress_bar;
     
     // Metrics display
-    QLabel *m_latency_label;      // "Latency: 150 ms"
-    QLabel *m_cost_label;         // "Cost: $0.05"
-    QLabel *m_success_label;      // "Success: 95%"
+    void *m_latency_label;      // "Latency: 150 ms"
+    void *m_cost_label;         // "Cost: $0.05"
+    void *m_success_label;      // "Success: 95%"
     
     // Error display
-    QLabel *m_error_label;
+    void *m_error_label;
     
     // Input/Output widgets
     QPlainTextEdit *m_prompt_input;

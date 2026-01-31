@@ -355,9 +355,8 @@ bool EnhancedStreamingGGUFLoader::LoadWithNVMe(uint32_t zone_id, std::vector<uin
     
     // Direct NVMe I/O (kernel-bypass SQ/CQ submission)
     // This is a placeholder - actual implementation requires driver interaction
-    
-    std::cerr << "[EnhancedLoader] NVMe I/O: zone " << zone_id << "\n";
-    
+
+
     return true;  // Delegate to base class for now
 }
 
@@ -402,9 +401,8 @@ bool EnhancedStreamingGGUFLoader::LoadWithIOring(uint32_t zone_id, std::vector<u
     
     // Batch I/O via IORING (Windows 11 22H2+)
     // This is a placeholder - actual implementation requires IORING API
-    
-    std::cerr << "[EnhancedLoader] IORING I/O: zone " << zone_id << "\n";
-    
+
+
     return true;  // Delegate to base class for now
 }
 

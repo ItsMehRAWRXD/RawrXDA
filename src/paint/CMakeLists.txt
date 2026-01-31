@@ -30,9 +30,6 @@ if(Qt6_FOUND)
     )
 
     target_link_libraries(RawrXD-Paint
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
     )
 
     # Enable Qt MOC and UIC

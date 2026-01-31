@@ -43,8 +43,7 @@ class GitignoreFilter;
  * \code
  * auto* explorer = new ProjectExplorerWidget(this);
  * explorer->openProject("/path/to/project");
- * connect(explorer, &ProjectExplorerWidget::fileDoubleClicked,
- *         this, &MainWindow::openFileInEditor);
+ * // connect removed
  * \endcode
  */
 class ProjectExplorerWidget : public void {
@@ -137,7 +136,7 @@ public:
      * \param pattern Wildcard pattern (e.g., "*.cpp *.h")
      */
     void setFileFilter(const std::string& pattern);
-    
+
 
     /**
      * \brief Emitted when file is double-clicked (should open in editor)
@@ -184,7 +183,7 @@ public:
 private:
     void onTreeDoubleClicked(const QModelIndex& index);
     void onTreeClicked(const QModelIndex& index);
-    void onContextMenuRequested(const QPoint& pos);
+    void onContextMenuRequested(const void*& pos);
     void onFilterTextChanged(const std::string& text);
     
     // Context menu actions
@@ -221,11 +220,11 @@ private:
     void loadGitignorePatterns();
     
     // UI Components
-    QVBoxLayout* m_mainLayout;
-    QToolBar* m_toolbar;
-    QLineEdit* m_filterEdit;
+    void* m_mainLayout;
+    void* m_toolbar;
+    void* m_filterEdit;
     QTreeView* m_treeView;
-    QLabel* m_projectInfoLabel;
+    void* m_projectInfoLabel;
     
     // Data model
     QFileSystemModel* m_fileSystemModel;
@@ -242,18 +241,18 @@ private:
     bool m_ownsDirManager = false;
     
     // Context menu
-    QMenu* m_contextMenu;
-    QAction* m_actionNewFile;
-    QAction* m_actionNewFolder;
-    QAction* m_actionRename;
-    QAction* m_actionDelete;
-    QAction* m_actionCopy;
-    QAction* m_actionCut;
-    QAction* m_actionPaste;
-    QAction* m_actionRevealInExplorer;
-    QAction* m_actionCopyPath;
-    QAction* m_actionCopyRelativePath;
-    QAction* m_actionRefresh;
+    void* m_contextMenu;
+    void* m_actionNewFile;
+    void* m_actionNewFolder;
+    void* m_actionRename;
+    void* m_actionDelete;
+    void* m_actionCopy;
+    void* m_actionCut;
+    void* m_actionPaste;
+    void* m_actionRevealInExplorer;
+    void* m_actionCopyPath;
+    void* m_actionCopyRelativePath;
+    void* m_actionRefresh;
     
     // Clipboard state
     std::string m_clipboardPath;

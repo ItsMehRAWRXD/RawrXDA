@@ -37,7 +37,7 @@ public:
         std::string workingDirectory;
         std::vector<std::string> allowedEnvironmentVars;  // Environment variables to preserve
         bool enableResourceLimits = true;
-        qint64 maxMemoryBytes = 536870912;   // 512MB
+        int64_t maxMemoryBytes = 536870912;   // 512MB
         int maxCpuPercent = 80;
         bool enableMetrics = true;
     };
@@ -53,7 +53,7 @@ public:
         bool timedOut;
         bool wasBlocked;
         std::string blockReason;
-        qint64 executionTimeMs;
+        int64_t executionTimeMs;
     };
 
     CommandResult executeCommand(const std::string& command, const std::vector<std::string>& args = std::vector<std::string>());
@@ -67,12 +67,12 @@ public:
 
     // Metrics
     struct Metrics {
-        qint64 commandsExecuted = 0;
-        qint64 commandsBlocked = 0;
-        qint64 commandsTimedOut = 0;
-        qint64 outputBytesFiltered = 0;
-        qint64 securityViolations = 0;
-        qint64 errorCount = 0;
+        int64_t commandsExecuted = 0;
+        int64_t commandsBlocked = 0;
+        int64_t commandsTimedOut = 0;
+        int64_t outputBytesFiltered = 0;
+        int64_t securityViolations = 0;
+        int64_t errorCount = 0;
         double avgExecutionTimeMs = 0.0;
     };
 
@@ -92,7 +92,7 @@ private:
     mutable std::mutex m_configMutex;
 
     // Process
-    QProcess* m_process;
+    void** m_process;
     mutable std::mutex m_processMutex;
 
     // Metrics
@@ -109,4 +109,5 @@ private:
     bool enforceResourceLimits();
     std::string filterSensitiveData(const std::string& data) const;
 };
+
 

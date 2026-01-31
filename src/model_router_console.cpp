@@ -23,35 +23,35 @@ ModelRouterConsole::~ModelRouterConsole()
 
 void ModelRouterConsole::createUI()
 {
-    QVBoxLayout *main_layout = new QVBoxLayout(this);
+    void *main_layout = new void(this);
     main_layout->setContentsMargins(8, 8, 8, 8);
     main_layout->setSpacing(8);
 
     // === Control Panel ===
-    QHBoxLayout *control_layout = new QHBoxLayout();
+    void *control_layout = new void();
 
-    control_layout->addWidget(new QLabel("Search:", this));
-    m_search_input = new QLineEdit(this);
+    control_layout->addWidget(new void("Search:", this));
+    m_search_input = new void(this);
     m_search_input->setPlaceholderText("Filter logs...");
 // Qt connect removed
     control_layout->addWidget(m_search_input);
 
-    control_layout->addWidget(new QLabel("Level:", this));
-    m_filter_level_combo = new QComboBox(this);
+    control_layout->addWidget(new void("Level:", this));
+    m_filter_level_combo = new void(this);
     m_filter_level_combo->addItems({"All", "INFO", "WARNING", "ERROR"});
 // Qt connect removed
     control_layout->addWidget(m_filter_level_combo);
 
-    m_auto_scroll_checkbox = new QCheckBox("Auto-scroll", this);
+    m_auto_scroll_checkbox = nullptr;
     m_auto_scroll_checkbox->setChecked(true);
 // Qt connect removed
     control_layout->addWidget(m_auto_scroll_checkbox);
 
-    m_clear_button = new QPushButton("Clear Logs", this);
+    m_clear_button = new void("Clear Logs", this);
 // Qt connect removed
     control_layout->addWidget(m_clear_button);
 
-    m_export_button = new QPushButton("Export Logs", this);
+    m_export_button = new void("Export Logs", this);
 // Qt connect removed
     control_layout->addWidget(m_export_button);
 
@@ -59,7 +59,7 @@ void ModelRouterConsole::createUI()
     main_layout->addLayout(control_layout);
 
     // === Log Display (Plain Text) ===
-    m_log_display = new QPlainTextEdit(this);
+    m_log_display = nullptr;
     m_log_display->setReadOnly(true);
     m_log_display->setMaximumBlockCount(m_max_log_entries);
     m_log_display->setStyleSheet(
@@ -73,7 +73,7 @@ void ModelRouterConsole::createUI()
     main_layout->addWidget(m_log_display);
 
     // === Log Table (Detailed View) ===
-    m_log_table = new QTableWidget(0, 6, this);
+    m_log_table = nullptr;
     m_log_table->setHorizontalHeaderLabels({
         "Timestamp", "Level", "Model", "Message", "Latency", "Status"
     });
@@ -123,21 +123,21 @@ void ModelRouterConsole::addLogToDisplay(const LogEntry& entry)
     // Add to table
     int row = m_log_table->rowCount();
     m_log_table->insertRow(row);
-    m_log_table->setItem(row, 0, new QTableWidgetItem(entry.timestamp.toString("hh:mm:ss.zzz")));
-    m_log_table->setItem(row, 1, new QTableWidgetItem(entry.level));
-    m_log_table->setItem(row, 2, new QTableWidgetItem(entry.model));
-    m_log_table->setItem(row, 3, new QTableWidgetItem(entry.message));
-    m_log_table->setItem(row, 4, new QTableWidgetItem(std::string::number(entry.latency_ms) + "ms"));
-    m_log_table->setItem(row, 5, new QTableWidgetItem(entry.success ? "✓" : "✗"));
+    m_log_table->setItem(row, 0, nullptr));
+    m_log_table->setItem(row, 1, nullptr);
+    m_log_table->setItem(row, 2, nullptr);
+    m_log_table->setItem(row, 3, nullptr);
+    m_log_table->setItem(row, 4, nullptr + "ms"));
+    m_log_table->setItem(row, 5, nullptr);
 
     // Color-code table row
     if (entry.level == "ERROR") {
         for (int col = 0; col < 6; ++col) {
-            m_log_table->item(row, col)->setBackground(QColor(255, 230, 230));
+            m_log_table->item(row, col)->setBackground(uint32_t(255, 230, 230));
         }
     } else if (entry.level == "WARNING") {
         for (int col = 0; col < 6; ++col) {
-            m_log_table->item(row, col)->setBackground(QColor(255, 255, 230));
+            m_log_table->item(row, col)->setBackground(uint32_t(255, 255, 230));
         }
     }
 }
@@ -172,7 +172,7 @@ void ModelRouterConsole::exportLogs(const std::string& filename)
 
     for (const auto& entry : m_log_entries) {
         stream << formatLogEntry(entry) << "\n";
-        if (!entry.details.isEmpty()) {
+        if (!entry.details.empty()) {
             stream << "  Details: " << entry.details << "\n";
         }
     }
@@ -292,7 +292,7 @@ void ModelRouterConsole::onExportButtonClicked()
     std::string filename = QFileDialog::getSaveFileName(this,
         "Export Console Logs", "", "Log Files (*.log);;Text Files (*.txt)");
     
-    if (!filename.isEmpty()) {
+    if (!filename.empty()) {
         exportLogs(filename);
     }
 }
@@ -303,4 +303,5 @@ void ModelRouterConsole::onAutoScrollChanged(bool checked)
 }
 
 // MOC removed
+
 

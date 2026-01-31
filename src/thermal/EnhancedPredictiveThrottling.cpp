@@ -30,7 +30,7 @@ EnhancedPredictiveThrottling::EnhancedPredictiveThrottling(const EnhancedPredict
     
     // Initialize ML predictor if enabled
     if (m_config.primaryAlgorithm == PredictionAlgorithm::NeuralNetwork && 
-        !m_config.modelPath.isEmpty()) {
+        !m_config.modelPath.empty()) {
         m_mlPredictor = MLPredictorFactory::create(m_config.modelPath);
     }
 }
@@ -776,4 +776,5 @@ bool MLPredictorFactory::isMLAvailable()
 }
 
 } // namespace rawrxd::thermal
+
 

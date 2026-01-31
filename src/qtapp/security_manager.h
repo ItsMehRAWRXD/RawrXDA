@@ -45,14 +45,14 @@ public:
         std::string email;
         std::string tokenType;      // "bearer", "basic", "api_key"
         std::string token;          // Encrypted
-        qint64 issuedAt;        // Unix timestamp
-        qint64 expiresAt;       // Unix timestamp
+        int64_t issuedAt;        // Unix timestamp
+        int64_t expiresAt;       // Unix timestamp
         bool isRefreshable;
         std::string refreshToken;   // For OAuth2
     };
 
     struct SecurityAuditEntry {
-        qint64 timestamp;
+        int64_t timestamp;
         std::string eventType;      // "login", "key_rotation", "decryption", "auth_failed"
         std::string actor;          // User or service
         std::string resource;
@@ -118,7 +118,7 @@ public:
      * @brief Get key expiration date
      * @return Unix timestamp when key expires
      */
-    qint64 getKeyExpirationTime() const;
+    int64_t getKeyExpirationTime() const;
 
     // ===== Credential Management =====
     /**
@@ -131,7 +131,7 @@ public:
      * @return true if successful
      */
     bool storeCredential(const std::string& username, const std::string& token,
-                        const std::string& tokenType = "bearer", qint64 expiresAt = 0,
+                        const std::string& tokenType = "bearer", int64_t expiresAt = 0,
                         const std::string& refreshToken = "");
 
     /**
@@ -279,8 +279,8 @@ private:
     // ===== Internal State =====
     std::vector<uint8_t> m_masterKey;                           // Primary encryption key
     std::string m_currentKeyId;                           // ID of active key
-    qint64 m_keyRotationInterval;                     // Seconds between key rotations
-    qint64 m_lastKeyRotation;                         // Last rotation timestamp
+    int64_t m_keyRotationInterval;                     // Seconds between key rotations
+    int64_t m_lastKeyRotation;                         // Last rotation timestamp
     
     // Credentials storage (encrypted)
     std::map<std::string, CredentialInfo> m_credentials;  // username -> CredentialInfo
@@ -297,4 +297,5 @@ private:
     bool m_initialized;
     bool m_debugMode;                                 // Log detailed security events
 };
+
 

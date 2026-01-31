@@ -95,13 +95,13 @@ public:
     
     // Statistics
     struct Stats {
-        qint64 requestsProcessed = 0;
-        qint64 responsesProcessed = 0;
-        qint64 chunksProcessed = 0;
-        qint64 rulesApplied = 0;
-        qint64 bytesModified = 0;
-        qint64 cachesHits = 0;
-        qint64 transformationsApplied = 0;
+        int64_t requestsProcessed = 0;
+        int64_t responsesProcessed = 0;
+        int64_t chunksProcessed = 0;
+        int64_t rulesApplied = 0;
+        int64_t bytesModified = 0;
+        int64_t cachesHits = 0;
+        int64_t transformationsApplied = 0;
         double avgProcessingTimeMs = 0.0;
     };
     
@@ -159,4 +159,5 @@ private:
 };
 
 #endif // OLLAMA_HOTPATCH_PROXY_HPP
+
 

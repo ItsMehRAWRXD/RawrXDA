@@ -41,8 +41,7 @@ static void MatMul(const std::vector<float>& A, const std::vector<float>& B, std
 
 int main(int argc, char* argv[]) {
     Args args = Parse(argc, argv);
-    std::cout << "RawrXD Stress Harness\n";
-    std::cout << "Target runtime: " << args.seconds << "s size=" << args.size << " threshold CPU=" << args.cpuMax << "C GPU=" << args.gpuMax << "C\n";
+
 
     telemetry::Initialize();
 
@@ -68,27 +67,22 @@ int main(int argc, char* argv[]) {
         if (snap.gpuTempValid && snap.gpuTempC > worstGpuTemp) worstGpuTemp = snap.gpuTempC;
 
         if ((snap.cpuTempValid && snap.cpuTempC >= args.cpuMax) || (snap.gpuTempValid && snap.gpuTempC >= args.gpuMax)) {
-            std::cout << "ABORT: Thermal threshold exceeded (CPU="
-                      << (snap.cpuTempValid? snap.cpuTempC : -1) << "C GPU="
-                      << (snap.gpuTempValid? snap.gpuTempC : -1) << "C) after " << iters << " iterations\n";
+            
             break;
         }
 
         auto now = std::chrono::steady_clock::now();
         double elapsed = std::chrono::duration<double>(now - start).count();
         if (elapsed >= args.seconds) {
-            std::cout << "Completed duration: " << elapsed << "s iterations=" << iters << "\n";
+            
             break;
         }
         if (iters % 5 == 0) {
-            std::cout << "[Status] iter=" << iters
-                      << " CPU=" << (snap.cpuTempValid? snap.cpuTempC : -1)
-                      << "C GPU=" << (snap.gpuTempValid? snap.gpuTempC : -1)
-                      << "C\n";
+            
         }
     }
 
-    std::cout << "Peak CPU temp: " << worstCpuTemp << "C Peak GPU temp: " << worstGpuTemp << "C\n";
+
     telemetry::Shutdown();
     return 0;
 }

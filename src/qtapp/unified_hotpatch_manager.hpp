@@ -73,11 +73,11 @@ public:
     
     struct UnifiedStats {
         ModelMemoryHotpatch::MemoryPatchStats memoryStats;
-        quint64 totalPatchesApplied = 0;
-        quint64 totalBytesModified = 0;
+        uint64_t totalPatchesApplied = 0;
+        uint64_t totalBytesModified = 0;
         std::chrono::system_clock::time_point sessionStarted;
         std::chrono::system_clock::time_point lastCoordinatedAction;
-        quint64 coordinatedActionsCompleted = 0;
+        uint64_t coordinatedActionsCompleted = 0;
     };
     
     UnifiedStats getStatistics() const;
@@ -129,4 +129,5 @@ private:
     void updateStatistics(const UnifiedResult& result);
     std::vector<UnifiedResult> logCoordinatedResults(const std::string& operation, const std::vector<UnifiedResult>& results);
 };
+
 

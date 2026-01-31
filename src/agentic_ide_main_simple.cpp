@@ -24,9 +24,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     LocalFree(argvW);
     
     // Create Qt application FIRST
-    QApplication app(argc, argv);
+    void app(argc, argv);
     
-    // NOW initialize the logger - after QApplication exists
+    // NOW initialize the logger - after void exists
     DebugLogger::getInstance().init("D:\\temp\\ide_startup.log");
 
     // Create minimal main window
@@ -35,8 +35,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     window.setMinimumSize(1200, 800);
     
     void *central = new void();
-    QVBoxLayout *layout = new QVBoxLayout(central);
-    QLabel *label = new QLabel("RawrXD Agentic IDE - Starting up...");
+    void *layout = new void(central);
+    void *label = new void("RawrXD Agentic IDE - Starting up...");
     layout->addWidget(label);
     window.setCentralWidget(central);
 

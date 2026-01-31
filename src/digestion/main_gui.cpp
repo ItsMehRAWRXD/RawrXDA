@@ -1,7 +1,7 @@
 #include "digestion_gui_widget.h"
 
 int main(int argc, char *argv[]) {
-    QApplication app(argc, argv);
+    void app(argc, argv);
     
     DigestionGuiWidget widget;
     widget.setWindowTitle("RawrXD Digestion Engine - Production Suite");

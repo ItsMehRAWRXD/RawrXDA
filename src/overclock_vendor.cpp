@@ -45,18 +45,18 @@ bool DetectAdrenalinCLI(AppState& st) {
 bool ApplyCpuOffsetMhz(int offset) {
     std::lock_guard<std::mutex> guard(g_lock);
     // Real implementation would invoke vendor tool or driver API if available.
-    std::cout << "[vendor] Request CPU offset=" << offset << " MHz" << std::endl;
+    
     const char* ryzenCliEnv = std::getenv("RYZEN_MASTER_CLI");
     if (ryzenCliEnv && std::filesystem::exists(ryzenCliEnv)) {
         std::string cmd = std::string(ryzenCliEnv) + " --set-core-offset " + std::to_string(offset);
-        std::cout << "[vendor] Executing: " << cmd << std::endl;
+        
         FILE* pipe = _popen(cmd.c_str(), "r");
         if (!pipe) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "failed_to_execute_ryzen_cli"; return false; }
         std::array<char, 256> buf{};
         std::string out;
         while (fgets(buf.data(), (int)buf.size(), pipe)) out += buf.data();
         int rc = _pclose(pipe);
-        if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "ryzen_cli_failed:" + std::to_string(rc); std::cerr << out; return false; }
+        if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "ryzen_cli_failed:" + std::to_string(rc);  return false; }
         { std::lock_guard<std::mutex> guard(g_lock); g_lastError.clear(); }
         return true;
     }
@@ -72,7 +72,7 @@ bool ApplyCpuOffsetMhz(int offset) {
             std::string out;
             while (fgets(buf.data(), (int)buf.size(), pipe)) out += buf.data();
             int rc = _pclose(pipe);
-            if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "rm_cli_failed:" + std::to_string(rc); std::cerr << out; return false; }
+            if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "rm_cli_failed:" + std::to_string(rc);  return false; }
             { std::lock_guard<std::mutex> guard(g_lock); g_lastError.clear(); }
             return true;
         }
@@ -83,13 +83,13 @@ bool ApplyCpuOffsetMhz(int offset) {
 
 bool ApplyCpuTargetAllCoreMhz(int mhz) {
     std::lock_guard<std::mutex> guard(g_lock);
-    std::cout << "[vendor] Request CPU all-core target=" << mhz << " MHz (simulation)" << std::endl;
+    
     return true;
 }
 
 bool ApplyGpuClockOffsetMhz(int offset) {
     std::lock_guard<std::mutex> guard(g_lock);
-    std::cout << "[vendor] Request GPU offset=" << offset << " MHz" << std::endl;
+    
     const char* adrenalinEnv = std::getenv("ADRENALIN_CLI");
     if (adrenalinEnv && std::filesystem::exists(adrenalinEnv)) {
         std::string cmd = std::string(adrenalinEnv) + " --set-gpu-offset " + std::to_string(offset);
@@ -99,18 +99,18 @@ bool ApplyGpuClockOffsetMhz(int offset) {
         std::string out;
         while (fgets(buf.data(), (int)buf.size(), pipe)) out += buf.data();
         int rc = _pclose(pipe);
-        if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "adrenalin_cli_failed:" + std::to_string(rc); std::cerr << out; return false; }
+        if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "adrenalin_cli_failed:" + std::to_string(rc);  return false; }
         { std::lock_guard<std::mutex> guard(g_lock); g_lastError.clear(); }
         return true;
     }
     // If AMD SMI is present, a limited command may be possible; nvidia-smi can also set clocks on NVIDIA GPUs.
     if (ExistsOne({"C:/Windows/System32/nvidia-smi.exe", "nvidia-smi"})) {
         // We don't apply a direct offset using nvidia-smi here; it's a noop for now with a log.
-        std::cout << "[vendor] NVIDIA SMI present - clock offset application not implemented" << std::endl;
+        
         return true;
     }
     if (ExistsOne({"C:/Windows/System32/amd-smi.exe", "C:/Program Files/AMD/amd-smi.exe", "amd-smi"})) {
-        std::cout << "[vendor] AMD SMI present - clock offset application not implemented (sysctl varies)" << std::endl;
+        
         return true;
     }
     // No real tool; simulation.

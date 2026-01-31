@@ -447,7 +447,7 @@ static QuadBufferOrchestrator* g_orchestrator = nullptr;
 extern "C" {
     
     void* QuadBuffer_Create(void) {
-        g_orchestrator = new QuadBufferOrchestrator();
+        g_orchestrator = nullptr;
         return g_orchestrator;
     }
     

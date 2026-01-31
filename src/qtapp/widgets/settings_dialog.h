@@ -26,10 +26,10 @@ public:
     void resetToDefaults();
     
 private:
-    QCheckBox* m_autoSaveCheckBox;
-    QSpinBox* m_autoSaveIntervalSpinBox;
-    QCheckBox* m_restoreSessionCheckBox;
-    QCheckBox* m_checkUpdatesCheckBox;
+    void* m_autoSaveCheckBox;
+    void* m_autoSaveIntervalSpinBox;
+    void* m_restoreSessionCheckBox;
+    void* m_checkUpdatesCheckBox;
 };
 
 /**
@@ -45,7 +45,7 @@ public:
     void loadSettings();
     void saveSettings();
     void resetToDefaults();
-    
+
 
     void themeChanged(const std::string& theme);
     void fontChanged(const std::string& family, int size);
@@ -56,13 +56,13 @@ private:
     void onFontSizeChanged(int size);
     
 private:
-    QComboBox* m_themeComboBox;
-    QComboBox* m_colorSchemeComboBox;
-    QComboBox* m_fontFamilyComboBox;
-    QSpinBox* m_fontSizeSpinBox;
-    QCheckBox* m_lineNumbersCheckBox;
-    QCheckBox* m_minimapCheckBox;
-    QLabel* m_previewLabel;
+    void* m_themeComboBox;
+    void* m_colorSchemeComboBox;
+    void* m_fontFamilyComboBox;
+    void* m_fontSizeSpinBox;
+    void* m_lineNumbersCheckBox;
+    void* m_minimapCheckBox;
+    void* m_previewLabel;
     
     void updatePreview();
 };
@@ -82,17 +82,17 @@ public:
     void resetToDefaults();
     
 private:
-    QSpinBox* m_tabSizeSpinBox;
-    QCheckBox* m_insertSpacesCheckBox;
-    QCheckBox* m_trimWhitespaceCheckBox;
-    QCheckBox* m_insertNewlineCheckBox;
-    QCheckBox* m_formatOnSaveCheckBox;
-    QComboBox* m_lineEndingsComboBox;
-    QCheckBox* m_wordWrapCheckBox;
-    QComboBox* m_cursorStyleComboBox;
-    QCheckBox* m_bracketMatchingCheckBox;
-    QCheckBox* m_autoCloseBracketsCheckBox;
-    QCheckBox* m_autoIndentCheckBox;
+    void* m_tabSizeSpinBox;
+    void* m_insertSpacesCheckBox;
+    void* m_trimWhitespaceCheckBox;
+    void* m_insertNewlineCheckBox;
+    void* m_formatOnSaveCheckBox;
+    void* m_lineEndingsComboBox;
+    void* m_wordWrapCheckBox;
+    void* m_cursorStyleComboBox;
+    void* m_bracketMatchingCheckBox;
+    void* m_autoCloseBracketsCheckBox;
+    void* m_autoIndentCheckBox;
 };
 
 /**
@@ -120,11 +120,11 @@ private:
     void populateTable();
     void filterTable();
     
-    QLineEdit* m_searchEdit;
+    void* m_searchEdit;
     QTableWidget* m_shortcutsTable;
-    QPushButton* m_resetAllButton;
-    QPushButton* m_importButton;
-    QPushButton* m_exportButton;
+    void* m_resetAllButton;
+    void* m_importButton;
+    void* m_exportButton;
 };
 
 /**
@@ -142,10 +142,10 @@ public:
     void resetToDefaults();
     
 private:
-    QLineEdit* m_shellEdit;
-    QSpinBox* m_fontSizeSpinBox;
-    QCheckBox* m_cursorBlinkingCheckBox;
-    QSpinBox* m_scrollbackLinesSpinBox;
+    void* m_shellEdit;
+    void* m_fontSizeSpinBox;
+    void* m_cursorBlinkingCheckBox;
+    void* m_scrollbackLinesSpinBox;
 };
 
 /**
@@ -163,10 +163,10 @@ public:
     void resetToDefaults();
     
 private:
-    QCheckBox* m_enableSuggestionsCheckBox;
-    QSpinBox* m_suggestionDelaySpinBox;
-    QCheckBox* m_streamingCheckBox;
-    QCheckBox* m_autoApplyFixesCheckBox;
+    void* m_enableSuggestionsCheckBox;
+    void* m_suggestionDelaySpinBox;
+    void* m_streamingCheckBox;
+    void* m_autoApplyFixesCheckBox;
 };
 
 /**
@@ -190,7 +190,7 @@ public:
      * \brief Open dialog to specific tab
      */
     void openToTab(int index);
-    
+
 
     void settingsApplied();
     
@@ -206,7 +206,7 @@ private:
     void saveAllSettings();
     void resetAllToDefaults();
     
-    QTabWidget* m_tabWidget;
+    void* m_tabWidget;
     
     GeneralSettingsWidget* m_generalWidget;
     AppearanceSettingsWidget* m_appearanceWidget;
@@ -215,10 +215,10 @@ private:
     TerminalSettingsWidget* m_terminalWidget;
     AISettingsWidget* m_aiWidget;
     
-    QPushButton* m_applyButton;
-    QPushButton* m_okButton;
-    QPushButton* m_cancelButton;
-    QPushButton* m_resetButton;
+    void* m_applyButton;
+    void* m_okButton;
+    void* m_cancelButton;
+    void* m_resetButton;
 };
 
 } // namespace RawrXD

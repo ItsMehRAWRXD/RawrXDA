@@ -18,8 +18,8 @@ HybridCloudManager::HybridCloudManager(void* parent)
 // Qt connect removed
     setupDefaultProviders();
     healthCheckTimer->start();
-    
-    std::cout << "[HybridCloudManager] Initialized with multi-cloud + Ollama support" << std::endl;
+
+
 }
 
 HybridCloudManager::~HybridCloudManager() {
@@ -106,18 +106,18 @@ void HybridCloudManager::setupDefaultProviders() {
     gcp.costPerRequest = 0.003;
     gcp.averageLatency = 1600.0;
     providers["gcp"] = gcp;
-    
-    std::cout << "[HybridCloudManager] Configured 5 providers (Ollama, HuggingFace, AWS, Azure, GCP)" << std::endl;
+
+
 }
 
 bool HybridCloudManager::addProvider(const CloudProvider& provider) {
     if (providers.contains(provider.providerId)) {
-        std::cout << "[HybridCloudManager] Provider already exists: " << provider.providerId.toStdString() << std::endl;
+        
         return false;
     }
     
     providers[provider.providerId] = provider;
-    std::cout << "[HybridCloudManager] Added provider: " << provider.name.toStdString() << std::endl;
+    
     return true;
 }
 
@@ -127,28 +127,26 @@ bool HybridCloudManager::removeProvider(const std::string& providerId) {
     }
     
     providers.remove(providerId);
-    std::cout << "[HybridCloudManager] Removed provider: " << providerId.toStdString() << std::endl;
+    
     return true;
 }
 
 bool HybridCloudManager::configureProvider(const std::string& providerId, const std::string& apiKey, 
                                           const std::string& endpoint, const std::string& region) {
     if (!providers.contains(providerId)) {
-        std::cout << "[HybridCloudManager] Provider not found: " << providerId.toStdString() << std::endl;
+        
         return false;
     }
     
     CloudProvider& provider = providers[providerId];
     
-    if (!apiKey.isEmpty()) provider.apiKey = apiKey;
-    if (!endpoint.isEmpty()) provider.endpoint = endpoint;
-    if (!region.isEmpty()) provider.region = region;
+    if (!apiKey.empty()) provider.apiKey = apiKey;
+    if (!endpoint.empty()) provider.endpoint = endpoint;
+    if (!region.empty()) provider.region = region;
     
-    provider.isEnabled = !provider.apiKey.isEmpty() || providerId == "ollama"; // Ollama doesn't need API key
-    
-    std::cout << "[HybridCloudManager] Configured " << provider.name.toStdString() 
-              << " - Enabled: " << (provider.isEnabled ? "yes" : "no") << std::endl;
-    
+    provider.isEnabled = !provider.apiKey.empty() || providerId == "ollama"; // Ollama doesn't need API key
+
+
     return true;
 }
 
@@ -195,7 +193,7 @@ HybridExecution HybridCloudManager::planExecution(const ExecutionRequest& reques
     // Find best cloud provider based on cost, latency, and health
     std::vector<CloudProvider> healthyProviders = getHealthyProviders();
     
-    if (healthyProviders.isEmpty()) {
+    if (healthyProviders.empty()) {
         plan.reasoning = "No healthy providers available";
         plan.confidenceScore = 0.0;
         return plan;
@@ -263,15 +261,15 @@ ExecutionResult HybridCloudManager::executeWithFailover(const ExecutionRequest& 
     std::vector<CloudProvider> healthyProviders = getHealthyProviders();
     
     // Try primary provider first
-    if (plan.useCloud && !plan.selectedProvider.isEmpty()) {
+    if (plan.useCloud && !plan.selectedProvider.empty()) {
         result = executeOnCloud(request, plan.selectedProvider, plan.selectedModel);
         
         if (result.success) {
             recordExecution(result);
             return result;
         }
-        
-        std::cout << "[HybridCloudManager] Primary provider failed, trying failover..." << std::endl;
+
+
     }
     
     // Failover to other providers
@@ -284,20 +282,19 @@ ExecutionResult HybridCloudManager::executeWithFailover(const ExecutionRequest& 
             result = executeOnCloud(request, provider.providerId, request.taskType);
             
             if (result.success) {
-                std::cout << "[HybridCloudManager] Failover successful with " 
-                         << provider.name.toStdString() << std::endl;
+                
                 recordExecution(result);
                 return result;
             }
         }
         
         attempt++;
-        std::cout << "[HybridCloudManager] Retry attempt " << attempt << "/" << maxRetries << std::endl;
+        
     }
     
     // Final fallback to local Ollama if available
     if (providers.contains("ollama") && providers["ollama"].isHealthy) {
-        std::cout << "[HybridCloudManager] All cloud providers failed, falling back to local Ollama" << std::endl;
+        
         result = executeOnOllama(request);
     }
     
@@ -357,8 +354,8 @@ ExecutionResult HybridCloudManager::executeOnOllama(const ExecutionRequest& requ
     options["num_predict"] = request.maxTokens;
     requestBody["options"] = options;
     
-    QNetworkRequest netRequest(std::string(ollama.endpoint + "/api/generate"));
-    netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* netRequest(std::string(ollama.endpoint + "/api/generate"));
+    netRequest.setHeader(void*::ContentTypeHeader, "application/json");
     
     std::vector<uint8_t> requestData = void*(requestBody).toJson();
     
@@ -384,16 +381,13 @@ ExecutionResult HybridCloudManager::executeOnOllama(const ExecutionRequest& requ
         result.tokensUsed = responseObj["eval_count"].toInt();
         result.cost = 0.0; // Free for local Ollama
         result.success = true;
-        
-        std::cout << "[HybridCloudManager] Ollama execution successful - Model: " 
-                  << result.modelUsed.toStdString() << ", Tokens: " << result.tokensUsed 
-                  << ", Latency: " << result.latencyMs << "ms" << std::endl;
+
+
     } else {
         result.errorMessage = reply->errorString();
         result.success = false;
-        
-        std::cout << "[HybridCloudManager] Ollama execution failed: " 
-                  << result.errorMessage.toStdString() << std::endl;
+
+
     }
     
     reply->deleteLater();
@@ -407,12 +401,12 @@ ExecutionResult HybridCloudManager::executeOnHuggingFace(const ExecutionRequest&
     ExecutionResult result;
     result.requestId = request.requestId;
     result.executionLocation = "huggingface";
-    result.modelUsed = modelId.isEmpty() ? "bigcode/starcoder" : modelId;
+    result.modelUsed = modelId.empty() ? "bigcode/starcoder" : modelId;
     result.success = false;
     
     CloudProvider hf = providers["huggingface"];
     
-    if (hf.apiKey.isEmpty()) {
+    if (hf.apiKey.empty()) {
         result.errorMessage = "HuggingFace API key not configured";
         return result;
     }
@@ -430,8 +424,8 @@ ExecutionResult HybridCloudManager::executeOnHuggingFace(const ExecutionRequest&
     requestBody["parameters"] = parameters;
     
     std::string requestUrl(apiUrl);
-    QNetworkRequest netRequest(requestUrl);
-    netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    void* netRequest(requestUrl);
+    netRequest.setHeader(void*::ContentTypeHeader, "application/json");
     netRequest.setRawHeader("Authorization", ("Bearer " + hf.apiKey).toUtf8());
     
     std::vector<uint8_t> requestData = void*(requestBody).toJson();
@@ -453,7 +447,7 @@ ExecutionResult HybridCloudManager::executeOnHuggingFace(const ExecutionRequest&
         
         if (responseDoc.isArray()) {
             void* responseArray = responseDoc.array();
-            if (!responseArray.isEmpty()) {
+            if (!responseArray.empty()) {
                 void* firstResult = responseArray[0].toObject();
                 result.response = firstResult["generated_text"].toString();
                 result.success = true;
@@ -462,13 +456,11 @@ ExecutionResult HybridCloudManager::executeOnHuggingFace(const ExecutionRequest&
         
         result.tokensUsed = request.maxTokens; // Estimate
         result.cost = hf.costPerRequest;
-        
-        std::cout << "[HybridCloudManager] HuggingFace execution successful - Latency: " 
-                  << result.latencyMs << "ms" << std::endl;
+
+
     } else {
         result.errorMessage = reply->errorString();
-        std::cout << "[HybridCloudManager] HuggingFace execution failed: " 
-                  << result.errorMessage.toStdString() << std::endl;
+        
     }
     
     reply->deleteLater();
@@ -579,7 +571,7 @@ void HybridCloudManager::checkProviderHealth(const std::string& providerId) {
     
     // Special handling for Ollama - check /api/tags endpoint
     if (providerId == "ollama") {
-        QNetworkRequest request(std::string(provider.endpoint + "/api/tags"));
+        void* request(std::string(provider.endpoint + "/api/tags"));
         void** reply = networkManager->get(request);
         
         void* loop;
@@ -593,11 +585,10 @@ void HybridCloudManager::checkProviderHealth(const std::string& providerId) {
         
         if (reply->error() == void*::NoError) {
             provider.isHealthy = true;
-            std::cout << "[HybridCloudManager] Ollama health check: HEALTHY" << std::endl;
+            
         } else {
             provider.isHealthy = false;
-            std::cout << "[HybridCloudManager] Ollama health check: FAILED - " 
-                     << reply->errorString().toStdString() << std::endl;
+            
         }
         
         reply->deleteLater();
@@ -606,8 +597,8 @@ void HybridCloudManager::checkProviderHealth(const std::string& providerId) {
     }
     
     // For other providers, do a simple ping
-    QNetworkRequest request(std::string(provider.endpoint));
-    if (!provider.apiKey.isEmpty()) {
+    void* request(std::string(provider.endpoint));
+    if (!provider.apiKey.empty()) {
         request.setRawHeader("Authorization", ("Bearer " + provider.apiKey).toUtf8());
     }
     
@@ -627,14 +618,13 @@ void HybridCloudManager::checkProviderHealth(const std::string& providerId) {
     provider.lastHealthCheck = std::chrono::system_clock::time_point::currentDateTime();
     
     reply->deleteLater();
-    
-    std::cout << "[HybridCloudManager] " << provider.name.toStdString() 
-              << " health check: " << (provider.isHealthy ? "HEALTHY" : "FAILED") << std::endl;
+
+
 }
 
 void HybridCloudManager::checkAllProvidersHealth() {
-    std::cout << "[HybridCloudManager] Running health checks for all providers..." << std::endl;
-    
+
+
     for (const std::string& providerId : providers.keys()) {
         if (providers[providerId].isEnabled) {
             checkProviderHealth(providerId);
@@ -680,25 +670,23 @@ std::vector<ExecutionResult> HybridCloudManager::getExecutionHistory(int limit) 
 
 void HybridCloudManager::clearExecutionHistory() {
     executionHistory.clear();
-    std::cout << "[HybridCloudManager] Execution history cleared" << std::endl;
+    
 }
 
 void HybridCloudManager::enableLocalExecution(bool enable) {
     localExecutionEnabled = enable;
-    std::cout << "[HybridCloudManager] Local execution " 
-              << (enable ? "enabled" : "disabled") << std::endl;
+    
 }
 
 void HybridCloudManager::setCostThreshold(double thresholdUSD) {
     costThresholdUSD = thresholdUSD;
-    std::cout << "[HybridCloudManager] Cost threshold set to $" << thresholdUSD << std::endl;
+    
 }
 
 void HybridCloudManager::setHealthCheckInterval(int milliseconds) {
     healthCheckIntervalMs = milliseconds;
     healthCheckTimer->setInterval(milliseconds);
-    std::cout << "[HybridCloudManager] Health check interval set to " 
-              << milliseconds << "ms" << std::endl;
+    
 }
 
 void HybridCloudManager::setMaxRetries(int retries) {
@@ -713,7 +701,7 @@ void HybridCloudManager::onNetworkReplyFinished(void** reply) {
     // Handle async network replies if needed
     if (reply) {
         std::string requestId = reply->property("requestId").toString();
-        if (!requestId.isEmpty()) {
+        if (!requestId.empty()) {
             activeRequests.remove(requestId);
         }
         reply->deleteLater();
@@ -723,4 +711,5 @@ void HybridCloudManager::onNetworkReplyFinished(void** reply) {
 void HybridCloudManager::onHealthCheckTimerTimeout() {
     checkAllProvidersHealth();
 }
+
 

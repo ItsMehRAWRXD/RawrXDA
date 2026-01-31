@@ -56,7 +56,7 @@ public:
         DataClass classification;
         std::chrono::system_clock::time_point createdAt;
         std::chrono::system_clock::time_point expiresAt;
-        qint64 sizeBytes;
+        int64_t sizeBytes;
         bool isAnonymized;
     };
 
@@ -75,23 +75,23 @@ public:
 
     // Metrics
     struct Metrics {
-        qint64 dataEntriesTracked = 0;
-        qint64 dataEntriesDeleted = 0;
-        qint64 bytesDeleted = 0;
-        qint64 sessionsCleanedUp = 0;
-        qint64 anonymizationCount = 0;
-        qint64 auditEntriesCreated = 0;
-        qint64 errorCount = 0;
+        int64_t dataEntriesTracked = 0;
+        int64_t dataEntriesDeleted = 0;
+        int64_t bytesDeleted = 0;
+        int64_t sessionsCleanedUp = 0;
+        int64_t anonymizationCount = 0;
+        int64_t auditEntriesCreated = 0;
+        int64_t errorCount = 0;
         double avgCleanupLatencyMs = 0.0;
     };
 
     Metrics getMetrics() const;
     void resetMetrics();
 
-    void dataDeleted(const std::string& id, qint64 sizeBytes);
+    void dataDeleted(const std::string& id, int64_t sizeBytes);
     void dataExpired(const std::string& id);
     void sessionCleaned(const std::string& sessionId);
-    void cleanupCompleted(int itemsDeleted, qint64 bytesDeleted);
+    void cleanupCompleted(int itemsDeleted, int64_t bytesDeleted);
     void errorOccurred(const std::string& error);
     void metricsUpdated(const Metrics& metrics);
 
@@ -123,4 +123,5 @@ private:
     bool isExpired(const DataEntry& entry) const;
     std::chrono::system_clock::time_point calculateExpiry(DataClass classification, int customTtlMinutes) const;
 };
+
 

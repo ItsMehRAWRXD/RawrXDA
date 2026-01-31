@@ -3,7 +3,6 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
 set(SETUP_WIZARD_SOURCES
     SetupWizard.cpp
@@ -25,8 +24,6 @@ set_target_properties(rawrxd_setup PROPERTIES
 )
 
 target_link_libraries(rawrxd_setup PUBLIC
-    Qt6::Core
-    Qt6::Widgets
 )
 
 target_include_directories(rawrxd_setup PUBLIC

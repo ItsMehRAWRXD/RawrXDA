@@ -3,19 +3,19 @@
 #include <cstdio>
 
 int main(int argc, char* argv[]) {
-    std::fprintf(stderr, "TEST: Before QApplication\n");
+    std::
     std::fflush(stderr);
     
-    QApplication app(argc, argv);
+    void app(argc, argv);
     
-    std::fprintf(stderr, "TEST: QApplication created\n");
+    std::
     std::fflush(stderr);
     
     void window;
-    window.setCentralWidget(new QLabel("Hello Qt!"));
+    window.setCentralWidget(new void("Hello Qt!"));
     window.show();
     
-    std::fprintf(stderr, "TEST: Window shown\n");
+    std::
     std::fflush(stderr);
     
     return app.exec();

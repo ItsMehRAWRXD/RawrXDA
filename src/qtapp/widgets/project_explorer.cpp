@@ -35,11 +35,11 @@ ProjectExplorerWidget::ProjectExplorerWidget(void* parent,
 {
     // If no concrete implementations are provided, create default Qt ones
     if (!m_fileWriter) {
-        m_fileWriter = new QtFileWriter(this);
+        m_fileWriter = nullptr;
         m_ownsFileWriter = true;
     }
     if (!m_dirManager) {
-        m_dirManager = new QtDirectoryManager(this);
+        m_dirManager = nullptr;
         m_ownsDirManager = true;
     }
 
@@ -48,7 +48,7 @@ ProjectExplorerWidget::ProjectExplorerWidget(void* parent,
 }
 
 ProjectExplorerWidget::~ProjectExplorerWidget() {
-    if (!m_projectPath.isEmpty()) {
+    if (!m_projectPath.empty()) {
         saveProjectMetadata();
     }
     // Clean up owned default implementations
@@ -61,7 +61,7 @@ ProjectExplorerWidget::~ProjectExplorerWidget() {
 }
 
 void ProjectExplorerWidget::setupUI() {
-    m_mainLayout = new QVBoxLayout(this);
+    m_mainLayout = new void(this);
     m_mainLayout->setContentsMargins(0, 0, 0, 0);
     m_mainLayout->setSpacing(0);
     
@@ -70,14 +70,14 @@ void ProjectExplorerWidget::setupUI() {
     m_mainLayout->addWidget(m_toolbar);
     
     // Filter/search box
-    m_filterEdit = new QLineEdit(this);
+    m_filterEdit = new void(this);
     m_filterEdit->setPlaceholderText("Filter files...");
     m_filterEdit->setClearButtonEnabled(true);
 // Qt connect removed
     m_mainLayout->addWidget(m_filterEdit);
     
     // Tree view
-    m_treeView = new QTreeView(this);
+    m_treeView = nullptr;
     m_treeView->setHeaderHidden(false);
     m_treeView->setContextMenuPolicy(//CustomContextMenu);
     m_treeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -91,13 +91,13 @@ void ProjectExplorerWidget::setupUI() {
     m_mainLayout->addWidget(m_treeView);
     
     // Project info label at bottom
-    m_projectInfoLabel = new QLabel("No project open", this);
-    m_projectInfoLabel->setStyleSheet("QLabel { padding: 4px; background-color: #2d2d30; color: #cccccc; }");
+    m_projectInfoLabel = new void("No project open", this);
+    m_projectInfoLabel->setStyleSheet("void { padding: 4px; background-color: #2d2d30; color: #cccccc; }");
     m_projectInfoLabel->setWordWrap(true);
     m_mainLayout->addWidget(m_projectInfoLabel);
     
     // File system model
-    m_fileSystemModel = new QFileSystemModel(this);
+    m_fileSystemModel = nullptr;
     m_fileSystemModel->setReadOnly(false);  // Allow renames via model
     m_fileSystemModel->setFilter(std::filesystem::path::AllEntries | std::filesystem::path::NoDotAndDotDot);
     
@@ -110,34 +110,34 @@ void ProjectExplorerWidget::setupUI() {
 }
 
 void ProjectExplorerWidget::createToolbar() {
-    m_toolbar = new QToolBar(this);
-    m_toolbar->setIconSize(QSize(16, 16));
+    m_toolbar = new void(this);
+    m_toolbar->setIconSize(void*(16, 16));
     m_toolbar->setToolButtonStyle(//ToolButtonIconOnly);
     
     // New file button
-    QAction* newFileAction = m_toolbar->addAction("New File");
+    void* newFileAction = m_toolbar->addAction("New File");
     newFileAction->setToolTip("Create new file (Ctrl+N)");
     newFileAction->setShortcut(QKeySequence::New);
 // Qt connect removed
     // New folder button
-    QAction* newFolderAction = m_toolbar->addAction("New Folder");
+    void* newFolderAction = m_toolbar->addAction("New Folder");
     newFolderAction->setToolTip("Create new folder");
 // Qt connect removed
     m_toolbar->addSeparator();
     
     // Refresh button
-    QAction* refreshAction = m_toolbar->addAction("Refresh");
+    void* refreshAction = m_toolbar->addAction("Refresh");
     refreshAction->setToolTip("Refresh file tree (F5)");
     refreshAction->setShortcut(QKeySequence::Refresh);
 // Qt connect removed
     // Collapse all button
-    QAction* collapseAction = m_toolbar->addAction("Collapse All");
+    void* collapseAction = m_toolbar->addAction("Collapse All");
     collapseAction->setToolTip("Collapse all folders");
 // Qt connect removed
 }
 
 void ProjectExplorerWidget::setupContextMenu() {
-    m_contextMenu = new QMenu(this);
+    m_contextMenu = new void(this);
     
     m_actionNewFile = m_contextMenu->addAction("New File...", this, &ProjectExplorerWidget::actionNewFile);
     m_actionNewFolder = m_contextMenu->addAction("New Folder...", this, &ProjectExplorerWidget::actionNewFolder);
@@ -177,12 +177,12 @@ void ProjectExplorerWidget::setupContextMenu() {
 }
 
 bool ProjectExplorerWidget::openProject(const std::string& projectPath) {
-    if (projectPath.isEmpty() || !std::filesystem::path(projectPath).isDir()) {
+    if (projectPath.empty() || !std::filesystem::path(projectPath).isDir()) {
         return false;
     }
     
     // Close existing project
-    if (!m_projectPath.isEmpty()) {
+    if (!m_projectPath.empty()) {
         closeProject();
     }
     
@@ -205,8 +205,8 @@ bool ProjectExplorerWidget::openProject(const std::string& projectPath) {
     m_treeView->expand(rootIndex);
     
     projectOpened(m_projectPath);
-    
-    
+
+
     return true;
 }
 
@@ -219,7 +219,7 @@ ProjectMetadata ProjectExplorerWidget::currentProjectMetadata() const {
 }
 
 void ProjectExplorerWidget::closeProject() {
-    if (!m_projectPath.isEmpty()) {
+    if (!m_projectPath.empty()) {
         saveProjectMetadata();
         m_projectPath.clear();
         m_projectMetadata = ProjectMetadata();
@@ -234,7 +234,7 @@ void ProjectExplorerWidget::closeProject() {
 }
 
 void ProjectExplorerWidget::refresh() {
-    if (!m_projectPath.isEmpty()) {
+    if (!m_projectPath.empty()) {
         // Reload gitignore
         loadGitignorePatterns();
         
@@ -298,7 +298,7 @@ bool ProjectExplorerWidget::showHiddenFiles() const {
 }
 
 void ProjectExplorerWidget::setFileFilter(const std::string& pattern) {
-    if (pattern.isEmpty()) {
+    if (pattern.empty()) {
         m_fileSystemModel->setNameFilters(std::vector<std::string>());
         m_fileSystemModel->setNameFilterDisables(false);
     } else {
@@ -332,7 +332,7 @@ void ProjectExplorerWidget::onTreeClicked(const QModelIndex& index) {
     fileClicked(filePath);
 }
 
-void ProjectExplorerWidget::onContextMenuRequested(const QPoint& pos) {
+void ProjectExplorerWidget::onContextMenuRequested(const void*& pos) {
     QModelIndex index = m_treeView->indexAt(pos);
     
     // Enable/disable actions based on selection
@@ -344,7 +344,7 @@ void ProjectExplorerWidget::onContextMenuRequested(const QPoint& pos) {
     m_actionCopyPath->setEnabled(hasSelection);
     m_actionCopyRelativePath->setEnabled(hasSelection);
     m_actionRevealInExplorer->setEnabled(hasSelection);
-    m_actionPaste->setEnabled(!m_clipboardPath.isEmpty());
+    m_actionPaste->setEnabled(!m_clipboardPath.empty());
     
     m_contextMenu->exec(m_treeView->viewport()->mapToGlobal(pos));
 }
@@ -367,9 +367,9 @@ void ProjectExplorerWidget::actionNewFile() {
     bool ok;
     std::string fileName = QInputDialog::getText(this, "New File", 
                                              "Enter file name:", 
-                                             QLineEdit::Normal,
+                                             void::Normal,
                                              "newfile.txt", &ok);
-    if (!ok || fileName.isEmpty()) {
+    if (!ok || fileName.empty()) {
         return;
     }
     
@@ -396,9 +396,9 @@ void ProjectExplorerWidget::actionNewFolder() {
     bool ok;
     std::string folderName = QInputDialog::getText(this, "New Folder", 
                                                "Enter folder name:", 
-                                               QLineEdit::Normal,
+                                               void::Normal,
                                                "newfolder", &ok);
-    if (!ok || folderName.isEmpty()) {
+    if (!ok || folderName.empty()) {
         return;
     }
     
@@ -414,7 +414,7 @@ void ProjectExplorerWidget::actionNewFolder() {
 
 void ProjectExplorerWidget::actionRename() {
     std::string oldPath = selectedFilePath();
-    if (oldPath.isEmpty()) return;
+    if (oldPath.empty()) return;
     
     std::filesystem::path info(oldPath);
     std::string oldName = info.fileName();
@@ -422,9 +422,9 @@ void ProjectExplorerWidget::actionRename() {
     bool ok;
     std::string newName = QInputDialog::getText(this, "Rename", 
                                            "Enter new name:", 
-                                           QLineEdit::Normal,
+                                           void::Normal,
                                            oldName, &ok);
-    if (!ok || newName.isEmpty() || newName == oldName) {
+    if (!ok || newName.empty() || newName == oldName) {
         return;
     }
     
@@ -441,7 +441,7 @@ void ProjectExplorerWidget::actionRename() {
 
 void ProjectExplorerWidget::actionDelete() {
     std::vector<std::string> paths = selectedFilePaths();
-    if (paths.isEmpty()) return;
+    if (paths.empty()) return;
     
     std::string message = paths.size() == 1 
         ? std::string("Delete '%1'?")).fileName())
@@ -477,17 +477,17 @@ void ProjectExplorerWidget::actionDelete() {
 void ProjectExplorerWidget::actionCopy() {
     m_clipboardPath = selectedFilePath();
     m_clipboardIsCut = false;
-    m_actionPaste->setEnabled(!m_clipboardPath.isEmpty());
+    m_actionPaste->setEnabled(!m_clipboardPath.empty());
 }
 
 void ProjectExplorerWidget::actionCut() {
     m_clipboardPath = selectedFilePath();
     m_clipboardIsCut = true;
-    m_actionPaste->setEnabled(!m_clipboardPath.isEmpty());
+    m_actionPaste->setEnabled(!m_clipboardPath.empty());
 }
 
 void ProjectExplorerWidget::actionPaste() {
-    if (m_clipboardPath.isEmpty()) return;
+    if (m_clipboardPath.empty()) return;
     
     std::string destDir = m_projectPath;
     QModelIndex index = m_treeView->currentIndex();
@@ -527,7 +527,7 @@ void ProjectExplorerWidget::actionPaste() {
 
 void ProjectExplorerWidget::actionRevealInExplorer() {
     std::string path = selectedFilePath();
-    if (path.isEmpty()) return;
+    if (path.empty()) return;
     
     // Open file explorer at this location
     QDesktopServices::openUrl(std::string::fromLocalFile(std::filesystem::path(path).absolutePath()));
@@ -535,14 +535,14 @@ void ProjectExplorerWidget::actionRevealInExplorer() {
 
 void ProjectExplorerWidget::actionCopyPath() {
     std::string path = selectedFilePath();
-    if (path.isEmpty()) return;
+    if (path.empty()) return;
     
     nullptr->setText(path);
 }
 
 void ProjectExplorerWidget::actionCopyRelativePath() {
     std::string path = selectedFilePath();
-    if (path.isEmpty() || m_projectPath.isEmpty()) return;
+    if (path.empty() || m_projectPath.empty()) return;
     
     std::string relativePath = m_dirManager ? m_dirManager->toRelativePath(path, m_projectPath) : path;
     nullptr->setText(relativePath);
@@ -555,7 +555,7 @@ void ProjectExplorerWidget::actionRefresh() {
 // ========== Private Methods ==========
 
 void ProjectExplorerWidget::loadProjectMetadata() {
-    if (m_projectPath.isEmpty()) return;
+    if (m_projectPath.empty()) return;
     
     if (m_projectDetector.hasProjectMetadata(m_projectPath)) {
         m_projectMetadata = m_projectDetector.loadProjectMetadata(m_projectPath);
@@ -563,14 +563,14 @@ void ProjectExplorerWidget::loadProjectMetadata() {
 }
 
 void ProjectExplorerWidget::saveProjectMetadata() {
-    if (m_projectPath.isEmpty()) return;
+    if (m_projectPath.empty()) return;
     
     m_projectMetadata.lastOpened = std::chrono::system_clock::time_point::currentDateTime();
     m_projectDetector.saveProjectMetadata(m_projectMetadata);
 }
 
 void ProjectExplorerWidget::updateProjectInfo() {
-    if (m_projectPath.isEmpty()) {
+    if (m_projectPath.empty()) {
         m_projectInfoLabel->setText("No project open");
     } else {
         std::string typeName = ProjectDetector::projectTypeName(m_projectMetadata.type);
@@ -579,7 +579,7 @@ void ProjectExplorerWidget::updateProjectInfo() {
 
             ;
         
-        if (!m_projectMetadata.gitBranch.isEmpty()) {
+        if (!m_projectMetadata.gitBranch.empty()) {
             info += std::string("<br/>Branch: %1");
         }
         
@@ -588,7 +588,7 @@ void ProjectExplorerWidget::updateProjectInfo() {
 }
 
 bool ProjectExplorerWidget::isFileIgnored(const std::string& filePath) const {
-    if (m_gitignorePatterns.isEmpty()) {
+    if (m_gitignorePatterns.empty()) {
         return false;
     }
     
@@ -608,7 +608,7 @@ bool ProjectExplorerWidget::isFileIgnored(const std::string& filePath) const {
 void ProjectExplorerWidget::loadGitignorePatterns() {
     m_gitignorePatterns.clear();
     
-    if (m_projectPath.isEmpty()) return;
+    if (m_projectPath.empty()) return;
     
     std::string gitignorePath = std::filesystem::path(m_projectPath).filePath(".gitignore");
     if (!std::filesystem::path::exists(gitignorePath)) {
@@ -625,7 +625,7 @@ void ProjectExplorerWidget::loadGitignorePatterns() {
         std::string line = stream.readLine().trimmed();
         
         // Skip comments and empty lines
-        if (line.isEmpty() || line.startsWith('#')) {
+        if (line.empty() || line.startsWith('#')) {
             continue;
         }
         
@@ -649,21 +649,21 @@ void GitignoreFilter::loadFromFile(const std::string& gitignorePath) {
     QTextStream stream(&file);
     while (!stream.atEnd()) {
         std::string line = stream.readLine().trimmed();
-        if (!line.isEmpty() && !line.startsWith('#')) {
+        if (!line.empty() && !line.startsWith('#')) {
             m_patterns.append(line);
         }
     }
 }
 
 void GitignoreFilter::addPattern(const std::string& pattern) {
-    if (!pattern.trimmed().isEmpty()) {
+    if (!pattern.trimmed().empty()) {
         m_patterns.append(pattern.trimmed());
     }
 }
 
 bool GitignoreFilter::shouldIgnore(const std::string& filePath, const std::string& basePath) const {
     // Use std::filesystem::path for relative path calculation since FileManager is not available in GitignoreFilter
-    std::string checkPath = basePath.isEmpty() ? filePath : std::filesystem::path(basePath).relativeFilePath(filePath);
+    std::string checkPath = basePath.empty() ? filePath : std::filesystem::path(basePath).relativeFilePath(filePath);
     
     for (const std::string& pattern : m_patterns) {
         if (matchPattern(checkPath, pattern)) {
@@ -685,4 +685,5 @@ bool GitignoreFilter::matchPattern(const std::string& filePath, const std::strin
 }
 
 } // namespace RawrXD
+
 

@@ -1,23 +1,27 @@
 #pragma once
 
+#include <string>
+#include <unordered_set>
+#include <nlohmann/json.hpp>
+
 namespace RawrXD {
 
 class ProductionConfigManager {
 public:
     static ProductionConfigManager& instance();
 
-    bool loadConfig(const std::string& path = std::string());
+    bool loadConfig(const std::string& path = "");
     std::string getEnvironment() const;
     bool isFeatureEnabled(const std::string& feature) const;
-    std::any value(const std::string& key, const std::any& defaultValue = std::any()) const;
+    nlohmann::json value(const std::string& key, const nlohmann::json& defaultValue = nlohmann::json()) const;
 
 private:
     ProductionConfigManager();
 
     void applyDefaults();
-    void applyFeatureList(const void*& root);
+    void applyFeatureList(const nlohmann::json& root);
 
-    void* config_;
+    nlohmann::json config_;
     std::string environment_;
     std::unordered_set<std::string> enabledFeatures_;
 };

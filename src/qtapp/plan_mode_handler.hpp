@@ -141,10 +141,10 @@ private:
     void onPlanCompleted(const Plan& plan);
 
     /// Handle AI backend streaming a plan line
-    void onStreamToken(qint64 reqId, const std::string& token);
+    void onStreamToken(int64_t reqId, const std::string& token);
 
     /// Handle AI backend error
-    void onError(qint64 reqId, const std::string& error);
+    void onError(int64_t reqId, const std::string& error);
 
 private:
     /**
@@ -167,6 +167,7 @@ private:
     std::string m_userWish;                 ///< Original user request
     std::string m_researchContext;          ///< Context from workspace research
     std::string m_streamedPlanText;         ///< Accumulated streamed plan text
-    qint64 m_currentRequestId;          ///< ID of current AI request
+    int64_t m_currentRequestId;          ///< ID of current AI request
 };
+
 

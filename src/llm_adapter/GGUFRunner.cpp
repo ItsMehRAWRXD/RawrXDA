@@ -30,26 +30,26 @@ namespace {
 constexpr const char* kDefaultModelPath = "model/llama-7b-q4_0.gguf";
 struct GGUFHeader { uint32_t magic{0}; uint32_t version{0}; uint64_t tensorCount{0}; uint64_t kvCount{0}; };
 
-void skipGgufValue(QDataStream& ds, quint32 type) {
+void skipGgufValue(QDataStream& ds, uint32_t type) {
     // Skip GGUF value based on type
     switch (type) {
-        case 0: { quint8 v; ds >> v; break; }  // UINT8
-        case 1: { qint8 v; ds >> v; break; }   // INT8
+        case 0: { uint8_t v; ds >> v; break; }  // UINT8
+        case 1: { int8_t v; ds >> v; break; }   // INT8
         case 2: { quint16 v; ds >> v; break; } // UINT16
         case 3: { qint16 v; ds >> v; break; }  // INT16
-        case 4: { quint32 v; ds >> v; break; } // UINT32
-        case 5: { qint32 v; ds >> v; break; }  // INT32
+        case 4: { uint32_t v; ds >> v; break; } // UINT32
+        case 5: { int32_t v; ds >> v; break; }  // INT32
         case 6: { float v; ds >> v; break; }   // FLOAT32
         case 7: { bool v; ds >> v; break; }    // BOOL
         case 8: { // STRING
-            quint64 len; ds >> len;
+            uint64_t len; ds >> len;
             ds.skipRawData(static_cast<int>(len));
             break;
         }
         case 9: { // ARRAY
-            quint32 elemType; ds >> elemType;
-            quint64 len; ds >> len;
-            for (quint64 i = 0; i < len; ++i) {
+            uint32_t elemType; ds >> elemType;
+            uint64_t len; ds >> len;
+            for (uint64_t i = 0; i < len; ++i) {
                 skipGgufValue(ds, elemType);
             }
             break;
@@ -61,7 +61,7 @@ void skipGgufValue(QDataStream& ds, quint32 type) {
 }
 
 std::string readGgufStr(QDataStream& ds) {
-    quint64 len; ds >> len;
+    uint64_t len; ds >> len;
     std::vector<uint8_t> ba(static_cast<int>(len), '\0');
     ds.readRawData(ba.data(), static_cast<int>(len));
     return std::string::fromUtf8(ba);
@@ -69,9 +69,9 @@ std::string readGgufStr(QDataStream& ds) {
 
 // F16 to F32 conversion
 float f16ToF32(quint16 h) {
-    quint32 sign = (h >> 15) & 1;
-    quint32 exp  = (h >> 10) & 0x1F;
-    quint32 mant = h & 0x3FF;
+    uint32_t sign = (h >> 15) & 1;
+    uint32_t exp  = (h >> 10) & 0x1F;
+    uint32_t mant = h & 0x3FF;
     
     if (exp == 0) {
         if (mant == 0) return sign ? -0.0f : 0.0f;
@@ -83,7 +83,7 @@ float f16ToF32(quint16 h) {
     }
     
     exp = exp - 15 + 127;
-    quint32 f32 = (sign << 31) | (exp << 23) | (mant << 13);
+    uint32_t f32 = (sign << 31) | (exp << 23) | (mant << 13);
     float result;
     std::memcpy(&result, &f32, sizeof(float));
     return result;
@@ -126,18 +126,18 @@ bool GGUFRunner::parseGgufTensorTable(std::fstream& file)
     QDataStream ds(&file);
     ds.setByteOrder(QDataStream::LittleEndian);
 
-    quint32 magic, version;
-    quint64 tensorCount, kvCount;
+    uint32_t magic, version;
+    uint64_t tensorCount, kvCount;
     ds >> magic >> version >> tensorCount >> kvCount;
     if (magic != 0x46554747) return false; // 'GGUF'
     if (version < 2) return false;
 
     // Consume KV section to reach tensor table
-    for (quint64 i = 0; i < kvCount; ++i) {
-        quint64 keyLen; ds >> keyLen;
+    for (uint64_t i = 0; i < kvCount; ++i) {
+        uint64_t keyLen; ds >> keyLen;
         if (ds.status() != QDataStream::Ok) return false;
-        if (keyLen > 0) { file.read(static_cast<qint64>(keyLen)); }
-        quint32 valueType; ds >> valueType;
+        if (keyLen > 0) { file.read(static_cast<int64_t>(keyLen)); }
+        uint32_t valueType; ds >> valueType;
         if (ds.status() != QDataStream::Ok) return false;
         skipGgufValue(ds, valueType);
         if (ds.status() != QDataStream::Ok) return false;
@@ -145,19 +145,19 @@ bool GGUFRunner::parseGgufTensorTable(std::fstream& file)
 
     // Tensor table
     context_.tensorTable.clear();
-    for (quint64 i = 0; i < tensorCount; ++i) {
+    for (uint64_t i = 0; i < tensorCount; ++i) {
         ModelContext::TensorDesc desc;
-        quint64 nameLen; ds >> nameLen;
-        std::vector<uint8_t> nameBa = file.read(static_cast<qint64>(nameLen));
+        uint64_t nameLen; ds >> nameLen;
+        std::vector<uint8_t> nameBa = file.read(static_cast<int64_t>(nameLen));
         desc.name = std::string::fromUtf8(nameBa);
-        quint32 nDims; ds >> nDims;
+        uint32_t nDims; ds >> nDims;
         desc.dims.resize(nDims);
-        for (quint32 d = 0; d < nDims; ++d) {
-            quint64 dim; ds >> dim; desc.dims[d] = static_cast<uint32_t>(dim);
+        for (uint32_t d = 0; d < nDims; ++d) {
+            uint64_t dim; ds >> dim; desc.dims[d] = static_cast<uint32_t>(dim);
         }
-        quint32 typeRaw; ds >> typeRaw;
+        uint32_t typeRaw; ds >> typeRaw;
         desc.type = static_cast<GgmlType>(typeRaw);
-        quint64 offset; ds >> offset; desc.offset = offset;
+        uint64_t offset; ds >> offset; desc.offset = offset;
         context_.tensorTable.insert(desc.name, desc);
     }
     return ds.status() == QDataStream::Ok;
@@ -351,9 +351,9 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
 
     std::fstream file(filePath);
     if (!file.exists()) {
-        context_.modelFileSize = static_cast<qint64>(context_.embedDim * context_.vocabSize * sizeof(float));
+        context_.modelFileSize = static_cast<int64_t>(context_.embedDim * context_.vocabSize * sizeof(float));
         context_.mappedData = new float[context_.embedDim * context_.vocabSize]{};
-        loadVocabulary(filePath + QStringLiteral(".vocab"));
+        loadVocabulary(filePath + ".vocab");
         return;
     }
 
@@ -375,7 +375,7 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
         }
         
         file.seek(0);
-        std::vector<uint8_t> head = file.read(qMin<qint64>(context_.modelFileSize, 8 * 1024 * 1024));  // Read 8MB for metadata
+        std::vector<uint8_t> head = file.read(qMin<int64_t>(context_.modelFileSize, 8 * 1024 * 1024));  // Read 8MB for metadata
         
         auto findInt = [&](const char* key, int defVal) {
             int idx = head.indexOf(key);
@@ -462,7 +462,7 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
     if (!context_.mappedData) {
         const qsizetype floatCount = static_cast<qsizetype>(context_.modelFileSize / sizeof(float));
         context_.mappedData = new float[floatCount];
-        const qint64 bytesRead = file.read(reinterpret_cast<char*>(context_.mappedData), context_.modelFileSize);
+        const int64_t bytesRead = file.read(reinterpret_cast<char*>(context_.mappedData), context_.modelFileSize);
         if (bytesRead != context_.modelFileSize) {
         }
     }
@@ -485,11 +485,11 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
     }
 
     file.close();
-    loadVocabulary(filePath + QStringLiteral(".vocab"));
-    if (context_.vocabulary.isEmpty()) {
+    loadVocabulary(filePath + ".vocab");
+    if (context_.vocabulary.empty()) {
         context_.vocabulary.reserve(static_cast<int>(context_.vocabSize));
         for (qsizetype i = 0; i < context_.vocabSize; ++i) {
-            context_.vocabulary.append(QStringLiteral("<%1>"));
+            context_.vocabulary.append("<%1>");
         }
     }
 }
@@ -587,11 +587,11 @@ size_t GGUFRunner::sampleNextToken(float* buffer)
 
 std::string GGUFRunner::decodeToken(size_t tokenId) const
 {
-    if (!context_.vocabulary.isEmpty() && tokenId < static_cast<size_t>(context_.vocabulary.size())) {
+    if (!context_.vocabulary.empty() && tokenId < static_cast<size_t>(context_.vocabulary.size())) {
         return context_.vocabulary[static_cast<qsizetype>(tokenId)];
     }
 
-    return QStringLiteral("<token_%1>"));
+    return "<token_%1>");
 }
 
 void GGUFRunner::applyTemperature(float* buffer, float temperature)
@@ -869,10 +869,10 @@ size_t GGUFRunner::ggmlTypeSize(GgmlType type)
     }
 }
 
-std::vector<uint8_t> GGUFRunner::readTensorData(std::fstream& file, quint64 offset, quint64 numBytes)
+std::vector<uint8_t> GGUFRunner::readTensorData(std::fstream& file, uint64_t offset, uint64_t numBytes)
 {
-    if (!file.seek(static_cast<qint64>(offset))) return std::vector<uint8_t>();
-    return file.read(static_cast<qint64>(numBytes));
+    if (!file.seek(static_cast<int64_t>(offset))) return std::vector<uint8_t>();
+    return file.read(static_cast<int64_t>(numBytes));
 }
 
 bool GGUFRunner::loadTensor(std::fstream& file, const std::string& name, std::vector<float>& weights)
@@ -894,7 +894,7 @@ bool GGUFRunner::loadTensor(std::fstream& file, const std::string& name, std::ve
     }
 
     std::vector<uint8_t> rawData = readTensorData(file, desc.offset, numBytes);
-    if (rawData.isEmpty()) return false;
+    if (rawData.empty()) return false;
 
     weights.resize(totalElements);
     if (desc.type == GgmlType::F32) {
@@ -902,7 +902,7 @@ bool GGUFRunner::loadTensor(std::fstream& file, const std::string& name, std::ve
         std::copy(ptr, ptr + totalElements, weights.begin());
     } else if (desc.type == GgmlType::Q4_0) {
         // Keep raw bytes for output.weight to enable runtime-dispatched GEMM
-        if (name == QLatin1String("output.weight")) {
+        if (name == "output.weight") {
             context_.raw_q4_output.assign(reinterpret_cast<const uint8_t*>(rawData.constData()),
                                           reinterpret_cast<const uint8_t*>(rawData.constData()) + rawData.size());
         }
@@ -929,12 +929,12 @@ bool GGUFRunner::parseGgufTensors(std::fstream& file)
     return true;
 }
 
-bool GGUFRunner::readTensorFloat32(std::fstream& file, qint64 offset, qint64 count, std::vector<float>& out)
+bool GGUFRunner::readTensorFloat32(std::fstream& file, int64_t offset, int64_t count, std::vector<float>& out)
 {
     // 1. Look up the tensor that owns this byte range (exact offset match)
     const ModelContext::TensorDesc* desc = nullptr;
     for (const auto& d : context_.tensorTable) {
-        if (d.offset == static_cast<quint64>(offset)) {
+        if (d.offset == static_cast<uint64_t>(offset)) {
             desc = &d;
             break;
         }
@@ -944,16 +944,16 @@ bool GGUFRunner::readTensorFloat32(std::fstream& file, qint64 offset, qint64 cou
     }
 
     // 2. Compute element count from shape
-    quint64 expect = 1;
-    for (quint64 dim : desc->dims) expect *= dim;
-    if (expect != static_cast<quint64>(count)) {
+    uint64_t expect = 1;
+    for (uint64_t dim : desc->dims) expect *= dim;
+    if (expect != static_cast<uint64_t>(count)) {
                    << "expected" << expect << "got" << count;
         return false;
     }
 
     // 3. Compute byte size on disk
-    quint64 typeSize = ggmlTypeSize(desc->type);
-    quint64 byteSize = 0;
+    uint64_t typeSize = ggmlTypeSize(desc->type);
+    uint64_t byteSize = 0;
     if (desc->type == GgmlType::F32 || desc->type == GgmlType::F16) {
         byteSize = expect * typeSize;
     } else if (desc->type == GgmlType::Q4_0 || desc->type == GgmlType::Q8_0) {
@@ -962,7 +962,7 @@ bool GGUFRunner::readTensorFloat32(std::fstream& file, qint64 offset, qint64 cou
 
     // 4. Read raw bytes
     if (!file.seek(offset)) return false;
-    std::vector<uint8_t> raw = file.read(static_cast<qint64>(byteSize));
+    std::vector<uint8_t> raw = file.read(static_cast<int64_t>(byteSize));
     if (raw.size() != static_cast<qsizetype>(byteSize)) {
         return false;
     }
@@ -977,7 +977,7 @@ bool GGUFRunner::readTensorFloat32(std::fstream& file, qint64 offset, qint64 cou
 
     case GgmlType::F16: {
         const quint16* h = reinterpret_cast<const quint16*>(src);
-        for (quint64 i = 0; i < expect; ++i)
+        for (uint64_t i = 0; i < expect; ++i)
             out[i] = f16ToF32(h[i]);
         break;
     }
@@ -1043,4 +1043,6 @@ QuantMode GGUFRunner::currentQuantMode() const {
 float GGUFRunner::getCompressionRatio() const {
     return QuantBackend::instance().getCompressionRatio();
 }
+
+
 

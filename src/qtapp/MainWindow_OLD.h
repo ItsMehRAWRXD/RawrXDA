@@ -8,17 +8,17 @@
     the box for every panel.                                                     */
 
 
-QT_BEGIN_NAMESPACE
+// REMOVED_QT: // QT_BEGIN_NAMESPACE
 /* ---------------  Qt primitives  --------------- */
 
 
 /* ---------------  Qt advanced  --------------- */
 
 
-// class QtCharts::QChartView; // Forward declaration for charts if needed
+// REMOVED_QT: // class QtCharts::QChartView; // Forward declaration for charts if needed
 
 
-QT_END_NAMESPACE
+// REMOVED_QT: // QT_END_NAMESPACE
 
 /* ---------------  Our own forward decls  --------------- */
 class StreamerClient;
@@ -104,9 +104,9 @@ public:
 
 protected:
     bool eventFilter(void* watched, QEvent* event) override;
-    void closeEvent(QCloseEvent* event) override;
-    void dragEnterEvent(QDragEnterEvent* event) override;
-    void dropEvent(QDropEvent* event) override;
+    void closeEvent(void*  event) override;
+    void dragEnterEvent(void*  event) override;
+    void dropEvent(void*  event) override;
 
 private: /* ----------  original slots  ---------- */
     // Basic Editor Slots
@@ -145,7 +145,7 @@ private: /* ----------  original slots  ---------- */
     void handleAddFile();
     void handleAddFolder();
     void handleAddSymbol();
-    void showContextMenu(const QPoint& pos);
+    void showContextMenu(const void*& pos);
     void loadContextItemIntoEditor(QListWidgetItem* item);
     void handleTabClose(int index);
     void handlePwshCommand();
@@ -155,7 +155,7 @@ private: /* ----------  original slots  ---------- */
     void clearDebugLog();
     void saveDebugLog();
     void filterLogLevel(const std::string& level);
-    void showEditorContextMenu(const QPoint& pos);
+    void showEditorContextMenu(const void*& pos);
     void explainCode();
     void fixCode();
     void refactorCode();
@@ -187,7 +187,7 @@ private: /* ----------  new IDE-wide slots  ---------- */
     void onSnippetInserted(const std::string& id);
     void onRegexTested(const std::string& pattern);
     void onDiffMerged();
-    void onColorPicked(const QColor& c);
+    void onColorPicked(const uint32_t& c);
     void onIconSelected(const std::string& name);
     void onPluginLoaded(const std::string& name);
     void onSettingsSaved();
@@ -305,34 +305,34 @@ private: /* ---------------  UI creators  --------------- */
 
 private: /* ---------------  original members  --------------- */
     // Basic UI
-    QSplitter* m_mainSplitter = nullptr;
-    QSplitter* m_editorSplitter = nullptr;
-    QTabWidget* m_editorTabs = nullptr;
-    QTextEdit* m_editor = nullptr;
+    void* m_mainSplitter = nullptr;
+    void* m_editorSplitter = nullptr;
+    void* m_editorTabs = nullptr;
+    void* m_editor = nullptr;
     QPlainTextEdit* m_terminalOutput = nullptr;
-    QLineEdit* m_commandInput = nullptr;
-    QTextEdit* m_outputPanel = nullptr;
+    void* m_commandInput = nullptr;
+    void* m_outputPanel = nullptr;
     void* m_overclockWidget = nullptr;
-    QLabel* m_cpuTelemetryLabel = nullptr;
-    QLabel* m_gpuTelemetryLabel = nullptr;
-    QLabel* m_offsetLabel = nullptr;
-    QLabel* m_statusLabel = nullptr;
-    QPushButton* m_applyButton = nullptr;
-    QPushButton* m_resetButton = nullptr;
+    void* m_cpuTelemetryLabel = nullptr;
+    void* m_gpuTelemetryLabel = nullptr;
+    void* m_offsetLabel = nullptr;
+    void* m_statusLabel = nullptr;
+    void* m_applyButton = nullptr;
+    void* m_resetButton = nullptr;
     PowerShellHighlighter* m_highlighter = nullptr;
     QFileSystemModel* m_fileSystemModel = nullptr;
     QTreeView* m_fileExplorer = nullptr;
-    QProcess* m_powerShellProcess = nullptr;
+    void** m_powerShellProcess = nullptr;
     TerminalWidget* m_terminalWidget = nullptr;
     
     // Advanced UI (original)
-    QLineEdit* goalInput_{};
-    QLabel* mockStatusBadge_{};
-    QComboBox* agentSelector_{};
+    void* goalInput_{};
+    void* mockStatusBadge_{};
+    void* agentSelector_{};
     QListWidget* chatHistory_{};
     QListWidget* contextList_{};
-    QTabWidget* editorTabs_{};
-    QTextEdit* codeView_{};
+    void* editorTabs_{};
+    void* codeView_{};
     AISuggestionOverlay* overlay_{};
     std::string suggestionBuffer_{};
     std::string architectBuffer_{};
@@ -341,19 +341,19 @@ private: /* ---------------  original members  --------------- */
     bool architectRunning_{false};
     std::unordered_map<std::string, QListWidgetItem*> proposalItemMap_{};
     std::unordered_map<std::string, TaskProposalWidget*> proposalWidgetMap_{};
-    QTextEdit* qshellOutput_{};
-    QLineEdit* qshellInput_{};
+    void* qshellOutput_{};
+    void* qshellInput_{};
     StreamerClient* streamer_{};
-    std::string streamerUrl_{QStringLiteral("http://localhost:11434")};
+    std::string streamerUrl_{"http://localhost:11434"};
     AgentOrchestrator* orchestrator_{};
-    QDockWidget* terminalDock_{};
-    QTabWidget* terminalTabs_{};
+    void* terminalDock_{};
+    void* terminalTabs_{};
     QPlainTextEdit* pwshOutput_{};
     QPlainTextEdit* cmdOutput_{};
-    QLineEdit* pwshInput_{};
-    QLineEdit* cmdInput_{};
-    QProcess* pwshProcess_{};
-    QProcess* cmdProcess_{};
+    void* pwshInput_{};
+    void* cmdInput_{};
+    void** pwshProcess_{};
+    void** cmdProcess_{};
 
 private: /* ---------------  new IDE subsystem members  --------------- */
     /* Core */

@@ -31,7 +31,7 @@ void ExtensionPanel::setupUI() {
     auto* listGroup = new void("Installed Extensions", this);
     auto* listLayout = new void(listGroup);
     
-    extensionList_ = new QListWidget(this);  // Signal connection removed\nlistLayout->addWidget(extensionList_);
+    extensionList_ = nullptr;  // Signal connection removed\nlistLayout->addWidget(extensionList_);
     
     mainLayout->addWidget(listGroup);
 
@@ -85,7 +85,7 @@ void ExtensionPanel::refreshExtensionList() {
         std::string itemText = icon + std::string::fromStdString(ext.name) + 
                           " (" + std::string::fromStdString(ext.type) + ")";
         
-        auto* item = new QListWidgetItem(itemText);
+        auto* item = nullptr;
         item->setData(UserRole, std::string::fromStdString(ext.name));
         extensionList_->addItem(item);
     }

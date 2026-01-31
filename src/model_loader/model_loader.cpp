@@ -28,8 +28,8 @@ bool ModelLoader::loadModel(const std::string& modelPath)
 {
     const auto start = std::chrono::steady_clock::now();
     
-    if (modelPath.isEmpty()) {
-        error(QStringLiteral("Model path is empty"));
+    if (modelPath.empty()) {
+        error("Model path is empty");
         return false;
     }
     
@@ -50,7 +50,7 @@ bool ModelLoader::loadModel(const std::string& modelPath)
 bool ModelLoader::initializeInference()
 {
     if (!m_engine) {
-        error(QStringLiteral("Inference engine not initialized"));
+        error("Inference engine not initialized");
         return false;
     }
     return true;
@@ -76,7 +76,7 @@ bool ModelLoader::startServer(quint16 port)
     
     // Start the server
     if (!m_server->start(port)) {
-        error(QStringLiteral("Failed to start GGUF server on port %1"));
+        error("Failed to start GGUF server on port %1");
         return false;
     }
     
@@ -98,9 +98,9 @@ bool ModelLoader::isServerRunning() const
 std::string ModelLoader::getModelInfo() const
 {
     if (m_engine && m_engine->isModelLoaded()) {
-        return QStringLiteral("GGUF Model loaded");
+        return "GGUF Model loaded";
     }
-    return QStringLiteral("No model loaded");
+    return "No model loaded";
 }
 
 quint16 ModelLoader::getServerPort() const
@@ -110,6 +110,7 @@ quint16 ModelLoader::getServerPort() const
 
 std::string ModelLoader::getServerUrl() const
 {
-    return QStringLiteral("http://localhost:%1");
+    return "http://localhost:%1";
 }
+
 

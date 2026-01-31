@@ -101,7 +101,7 @@ std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogs(
 
     for (const auto& entry : m_logs) {
         if (entry.level < minLevel) continue;
-        if (!component.isEmpty() && entry.component != component) continue;
+        if (!component.empty() && entry.component != component) continue;
         filtered.push_back(entry);
     }
 
@@ -270,7 +270,7 @@ std::vector<AgenticObservability::MetricPoint> AgenticObservability::getMetrics(
     std::vector<MetricPoint> filtered;
 
     for (const auto& metric : m_metrics) {
-        if (!pattern.isEmpty() && !metric.metricName.contains(pattern)) {
+        if (!pattern.empty() && !metric.metricName.contains(pattern)) {
             continue;
         }
         filtered.push_back(metric);
@@ -655,4 +655,5 @@ void AgenticObservability::prune()
 {
     checkAndRotateLogs();
 }
+
 

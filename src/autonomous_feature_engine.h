@@ -48,7 +48,7 @@ struct PerformanceOptimization {
     std::string optimizedImplementation;
     std::string reasoning;
     double expectedSpeedup;    // Multiplier (e.g., 2.0 = 2x faster)
-    qint64 expectedMemorySaving; // Bytes
+    int64_t expectedMemorySaving; // Bytes
     double confidence;
 };
 
@@ -275,4 +275,5 @@ private:
 };
 
 #endif // AUTONOMOUS_FEATURE_ENGINE_H
+
 

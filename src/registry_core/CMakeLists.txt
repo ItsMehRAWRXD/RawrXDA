@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find Qt6 components
-find_package(Qt6 REQUIRED COMPONENTS Core Sql HttpServer)
 
 # Qt6 requires C++17 minimum, but we use C++20
 set(CMAKE_CXX_STANDARD 20)
@@ -38,9 +37,6 @@ add_executable(registry_core ${SOURCES} ${HEADERS})
 
 # Link Qt6 libraries
 target_link_libraries(registry_core
-    Qt6::Core
-    Qt6::Sql
-    Qt6::HttpServer
 )
 
 # Platform-specific settings

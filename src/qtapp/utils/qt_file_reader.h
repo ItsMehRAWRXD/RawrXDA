@@ -39,9 +39,10 @@ public:
     
     bool isReadable(const std::string& path) const override;
     
-    qint64 fileSize(const std::string& path) const override;
+    int64_t fileSize(const std::string& path) const override;
 };
 
 } // namespace RawrXD
 
 #endif // RAWRXD_QT_FILE_READER_H
+

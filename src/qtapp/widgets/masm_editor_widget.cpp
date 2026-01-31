@@ -14,29 +14,29 @@ AssemblyHighlighter::AssemblyHighlighter(QTextDocument* parent)
     : QSyntaxHighlighter(parent) {
     
     // Keyword format (blue, bold)
-    keywordFormat.setForeground(QColor(86, 156, 214));
-    keywordFormat.setFontWeight(QFont::Bold);
+    keywordFormat.setForeground(uint32_t(86, 156, 214));
+    keywordFormat.setFontWeight(std::string::Bold);
     
     // Register format (magenta)
-    registerFormat.setForeground(QColor(206, 145, 120));
-    registerFormat.setFontWeight(QFont::Bold);
+    registerFormat.setForeground(uint32_t(206, 145, 120));
+    registerFormat.setFontWeight(std::string::Bold);
     
     // Comment format (green, italic)
-    commentFormat.setForeground(QColor(106, 153, 85));
+    commentFormat.setForeground(uint32_t(106, 153, 85));
     commentFormat.setFontItalic(true);
     
     // Label format (red)
-    labelFormat.setForeground(QColor(220, 220, 170));
-    labelFormat.setFontWeight(QFont::Bold);
+    labelFormat.setForeground(uint32_t(220, 220, 170));
+    labelFormat.setFontWeight(std::string::Bold);
     
     // Number format (light green)
-    numberFormat.setForeground(QColor(181, 206, 168));
+    numberFormat.setForeground(uint32_t(181, 206, 168));
     
     // String format (orange)
-    stringFormat.setForeground(QColor(206, 145, 120));
+    stringFormat.setForeground(uint32_t(206, 145, 120));
     
     // Directive format (purple)
-    directiveFormat.setForeground(QColor(197, 134, 192));
+    directiveFormat.setForeground(uint32_t(197, 134, 192));
     
     // x64 assembly instructions
     std::vector<std::string> instructions;
@@ -171,34 +171,34 @@ EditorTabBar::EditorTabBar(void* parent) : QTabBar(parent) {
     setDocumentMode(true);
 }
 
-void EditorTabBar::contextMenuEvent(QContextMenuEvent* event) {
+void EditorTabBar::contextMenuEvent(void*  event) {
     int index = tabAt(event->pos());
     if (index < 0) return;
     
-    QMenu menu(this);
+    void menu(this);
     
-    QAction* closeAction = menu.addAction("Close Tab");
+    void* closeAction = menu.addAction("Close Tab");
 // Qt connect removed
     });
     
-    QAction* closeOthersAction = menu.addAction("Close Other Tabs");
+    void* closeOthersAction = menu.addAction("Close Other Tabs");
 // Qt connect removed
     });
     
-    QAction* closeAllAction = menu.addAction("Close All Tabs");
+    void* closeAllAction = menu.addAction("Close All Tabs");
 // Qt connect removed
     });
     
     menu.addSeparator();
     
-    QAction* renameAction = menu.addAction("Rename Tab");
+    void* renameAction = menu.addAction("Rename Tab");
 // Qt connect removed
     });
     
     menu.exec(event->globalPos());
 }
 
-void EditorTabBar::mouseDoubleClickEvent(QMouseEvent* event) {
+void EditorTabBar::mouseDoubleClickEvent(void*  event) {
     int index = tabAt(event->pos());
     if (index >= 0) {
         tabRenameRequested(index);
@@ -234,13 +234,13 @@ MASMEditorWidget::~MASMEditorWidget() {
 }
 
 void MASMEditorWidget::setupUI() {
-    mainLayout = new QVBoxLayout(this);
+    mainLayout = new void(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
     
     // Toolbar
-    toolBar = new QToolBar("Editor");
-    toolBar->setIconSize(QSize(16, 16));
+    toolBar = new void("Editor");
+    toolBar->setIconSize(void*(16, 16));
     mainLayout->addWidget(toolBar);
     
     // Tab bar
@@ -248,59 +248,59 @@ void MASMEditorWidget::setupUI() {
     mainLayout->addWidget(tabBar);
     
     // Editor stack
-    editorStack = new QStackedWidget();
+    editorStack = new void();
     mainLayout->addWidget(editorStack, 1);
     
     // Status bar
-    statusBar = new QStatusBar();
+    statusBar = new void();
     statusBar->setSizeGripEnabled(false);
     mainLayout->addWidget(statusBar);
 }
 
 void MASMEditorWidget::setupToolbar() {
     // New tab
-    QAction* newAction = toolBar->addAction("New");
-    connect(newAction, &QAction::triggered, this, [this]() { newTab(); });
+    void* newAction = toolBar->addAction("New");
+    // connect removed });
     
     // Open file
-    QAction* openAction = toolBar->addAction("Open");
+    void* openAction = toolBar->addAction("Open");
 // Qt connect removed
             std::string(), "Assembly Files (*.asm *.s *.inc);;All Files (*)");
-        if (!filePath.isEmpty()) {
+        if (!filePath.empty()) {
             int idx = newTab(std::filesystem::path(filePath).fileName());
             loadFile(filePath, idx);
         }
     });
     
     // Save
-    QAction* saveAction = toolBar->addAction("Save");
+    void* saveAction = toolBar->addAction("Save");
 // Qt connect removed
     });
     
     toolBar->addSeparator();
     
     // Undo/Redo
-    QAction* undoAction = toolBar->addAction("Undo");
+    void* undoAction = toolBar->addAction("Undo");
 // Qt connect removed
-    QAction* redoAction = toolBar->addAction("Redo");
+    void* redoAction = toolBar->addAction("Redo");
 // Qt connect removed
     toolBar->addSeparator();
     
     // Cut/Copy/Paste
-    QAction* cutAction = toolBar->addAction("Cut");
+    void* cutAction = toolBar->addAction("Cut");
 // Qt connect removed
-    QAction* copyAction = toolBar->addAction("Copy");
+    void* copyAction = toolBar->addAction("Copy");
 // Qt connect removed
-    QAction* pasteAction = toolBar->addAction("Paste");
+    void* pasteAction = toolBar->addAction("Paste");
 // Qt connect removed
     toolBar->addSeparator();
     
     // Find
-    QAction* findAction = toolBar->addAction("Find");
+    void* findAction = toolBar->addAction("Find");
 // Qt connect removed
         std::string text = QInputDialog::getText(this, "Find", "Search for:",
-            QLineEdit::Normal, lastSearchText, &ok);
-        if (ok && !text.isEmpty()) {
+            void::Normal, lastSearchText, &ok);
+        if (ok && !text.empty()) {
             find(text);
         }
     });
@@ -314,23 +314,23 @@ void MASMEditorWidget::setupConnections() {
 // Qt connect removed
 }
 
-QTextEdit* MASMEditorWidget::createEditor() {
-    QTextEdit* editor = new QTextEdit();
+void* MASMEditorWidget::createEditor() {
+    void* editor = new void();
     
     // Set monospace font
-    QFont font("Consolas", 11);
+    std::string font("Consolas", 11);
     font.setFixedPitch(true);
     editor->setFont(font);
     
     // Configure editor
-    editor->setLineWrapMode(QTextEdit::NoWrap);
+    editor->setLineWrapMode(void::NoWrap);
     editor->setTabStopDistance(QFontMetrics(font).horizontalAdvance(' ') * 4);
     editor->setAcceptRichText(false);
     
     // Dark theme colors
     QPalette p = editor->palette();
-    p.setColor(QPalette::Base, QColor(30, 30, 30));
-    p.setColor(QPalette::Text, QColor(212, 212, 212));
+    p.setColor(QPalette::Base, uint32_t(30, 30, 30));
+    p.setColor(QPalette::Text, uint32_t(212, 212, 212));
     editor->setPalette(p);
     
     // Connect signals
@@ -340,11 +340,11 @@ QTextEdit* MASMEditorWidget::createEditor() {
 }
 
 int MASMEditorWidget::newTab(const std::string& name) {
-    std::string tabName = name.isEmpty() ?
+    std::string tabName = name.empty() ?
         std::string("Untitled%1.asm") : name;
     
     // Create editor
-    QTextEdit* editor = createEditor();
+    void* editor = createEditor();
     editors.push_back(editor);
     editorStack->addWidget(editor);
     
@@ -513,13 +513,13 @@ bool MASMEditorWidget::saveFile(const std::string& filePath, int index) {
     if (idx < 0 || idx >= static_cast<int>(editors.size())) return false;
     
     std::string path = filePath;
-    if (path.isEmpty()) {
+    if (path.empty()) {
         path = tabData[idx].filePath;
     }
-    if (path.isEmpty()) {
+    if (path.empty()) {
         path = QFileDialog::getSaveFileName(this, "Save File",
             tabData[idx].name, "Assembly Files (*.asm *.s *.inc);;All Files (*)");
-        if (path.isEmpty()) return false;
+        if (path.empty()) return false;
     }
     
     std::fstream file(path);
@@ -604,7 +604,7 @@ void MASMEditorWidget::find(const std::string& text) {
 }
 
 void MASMEditorWidget::findNext() {
-    if (!lastSearchText.isEmpty()) {
+    if (!lastSearchText.empty()) {
         find(lastSearchText);
     }
 }
@@ -684,9 +684,9 @@ void MASMEditorWidget::onTabRenameRequested(int index) {
     
     bool ok;
     std::string newName = QInputDialog::getText(this, "Rename Tab",
-        "New name:", QLineEdit::Normal, tabData[index].name, &ok);
+        "New name:", void::Normal, tabData[index].name, &ok);
     
-    if (ok && !newName.isEmpty()) {
+    if (ok && !newName.empty()) {
         setTabName(index, newName);
     }
 }
@@ -724,4 +724,5 @@ int MASMEditorWidget::resolveIndex(int index) const {
     }
     return index;
 }
+
 

@@ -181,14 +181,14 @@ std::string ModelInterface::selectBestModel(const std::string& task_type,
     // Smart model selection logic
     auto available = getAvailableModels();
     
-    if (available.isEmpty()) {
+    if (available.empty()) {
         return "";
     }
     
     // Prefer local if requested
     if (prefer_local) {
         auto local_models = getLocalModels();
-        if (!local_models.isEmpty()) {
+        if (!local_models.empty()) {
             return local_models.first();
         }
     }
@@ -218,7 +218,7 @@ std::string ModelInterface::selectFastestModel(const std::string& model_type)
     // Select model based on latency metrics
     auto models = getAvailableModels();
     
-    if (models.isEmpty()) {
+    if (models.empty()) {
         return "";
     }
     
@@ -306,7 +306,7 @@ void* ModelInterface::getModelStats(const std::string& model_name) const
 
 double ModelInterface::getAverageLatency(const std::string& model_name) const
 {
-    if (model_name.isEmpty()) {
+    if (model_name.empty()) {
         // Return average across all models
         double total_latency = 0.0;
         int total_calls = 0;
@@ -330,7 +330,7 @@ double ModelInterface::getAverageLatency(const std::string& model_name) const
 
 int ModelInterface::getSuccessRate(const std::string& model_name) const
 {
-    if (model_name.isEmpty()) {
+    if (model_name.empty()) {
         // Return success rate across all models
         int total_calls = 0;
         int total_successes = 0;
@@ -421,7 +421,7 @@ void* ModelInterface::getModelListAsJson() const
     auto models = getAvailableModels();
     for (const auto& model : models) {
         auto info = getModelInfo(model);
-        if (!info.isEmpty()) {
+        if (!info.empty()) {
             array.append(info);
         }
     }
@@ -450,7 +450,7 @@ GenerationResult ModelInterface::generateInternal(const std::string& prompt,
         result.backend = "CLOUD";
     }
     
-    result.success = !result.content.isEmpty();
+    result.success = !result.content.empty();
     
     // Update statistics
     if (stats_map.contains(model_name)) {
@@ -508,7 +508,7 @@ ModelConfig ModelInterface::getModelConfigOrThrow(const std::string& model_name)
     }
     
     auto config = router->getModelConfig(model_name);
-    if (config.model_id.isEmpty()) {
+    if (config.model_id.empty()) {
         throw std::runtime_error(std::string("Model not found: %1").toStdString());
     }
     
@@ -525,4 +525,5 @@ void ModelInterface::onModelRegistered(const std::string& model_name)
 {
     modelListUpdated(getAvailableModels());
 }
+
 

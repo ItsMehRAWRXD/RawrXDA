@@ -187,7 +187,7 @@ public:
         double z = 0.0;                             ///< Z coordinate (optional for 3D)
         std::string label;                              ///< Point label
         int cluster = -1;                           ///< Cluster assignment
-        QColor color;                               ///< Display color
+        uint32_t color;                               ///< Display color
     };
     
     /**
@@ -205,11 +205,11 @@ public:
      * @brief Production metrics for the panel
      */
     struct PanelMetrics {
-        quint64 totalUpdates = 0;                   ///< Total visualization updates
-        quint64 totalExports = 0;                   ///< Total exports performed
+        uint64_t totalUpdates = 0;                   ///< Total visualization updates
+        uint64_t totalExports = 0;                   ///< Total exports performed
         double avgUpdateTimeMs = 0.0;               ///< Average update latency
         double maxUpdateTimeMs = 0.0;               ///< Maximum update latency
-        quint64 problemsDetected = 0;               ///< Gradient problems detected
+        uint64_t problemsDetected = 0;               ///< Gradient problems detected
         std::chrono::system_clock::time_point lastUpdate;
     };
     
@@ -615,7 +615,7 @@ private:
     void renderEmbeddingSpace();
     void renderTokenAttribution();
     
-    QColor getColorForValue(float value, float min = 0.0f, float max = 1.0f) const;
+    uint32_t getColorForValue(float value, float min = 0.0f, float max = 1.0f) const;
     QImage createHeatmapImage(const std::vector<std::vector<float>>& data) const;
     QImage createBarChartImage(const std::vector<double>& values, 
                                const std::vector<std::string>& labels) const;
@@ -656,21 +656,21 @@ private:
     
     // Metrics
     PanelMetrics m_metrics;
-    QElapsedTimer m_updateTimer;
+    std::chrono::steady_clock::time_point m_updateTimer;
     
     // UI Components
-    QVBoxLayout* m_mainLayout = nullptr;
-    QTabWidget* m_tabWidget = nullptr;
-    QComboBox* m_vizTypeCombo = nullptr;
-    QComboBox* m_colorSchemeCombo = nullptr;
-    QSlider* m_layerSlider = nullptr;
-    QComboBox* m_headCombo = nullptr;
-    QLabel* m_statsLabel = nullptr;
-    QLabel* m_problemsLabel = nullptr;
-    QProgressBar* m_updateProgress = nullptr;
-    QPushButton* m_exportButton = nullptr;
-    QPushButton* m_refreshButton = nullptr;
-    QScrollArea* m_visualizationArea = nullptr;
+    void* m_mainLayout = nullptr;
+    void* m_tabWidget = nullptr;
+    void* m_vizTypeCombo = nullptr;
+    void* m_colorSchemeCombo = nullptr;
+    void* m_layerSlider = nullptr;
+    void* m_headCombo = nullptr;
+    void* m_statsLabel = nullptr;
+    void* m_problemsLabel = nullptr;
+    void* m_updateProgress = nullptr;
+    void* m_exportButton = nullptr;
+    void* m_refreshButton = nullptr;
+    void* m_visualizationArea = nullptr;
     void* m_visualizationCanvas = nullptr;
     QTableWidget* m_dataTable = nullptr;
     
@@ -679,8 +679,9 @@ private:
     std::function<void()> m_updateCallback;
     
     // Rendered images
-    QPixmap m_currentVisualization;
+    std::string m_currentVisualization;
 };
 
 } // namespace RawrXD
+
 

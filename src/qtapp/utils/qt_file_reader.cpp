@@ -78,7 +78,7 @@ bool QtFileReader::readFileRaw(const std::string& path, std::vector<uint8_t>& da
 }
 
 Encoding QtFileReader::detectEncoding(const std::vector<uint8_t>& data) const {
-    if (data.isEmpty()) {
+    if (data.empty()) {
         return Encoding::UTF8; // Default to UTF-8
     }
     
@@ -149,10 +149,11 @@ bool QtFileReader::isReadable(const std::string& path) const {
     return info.isReadable();
 }
 
-qint64 QtFileReader::fileSize(const std::string& path) const {
+int64_t QtFileReader::fileSize(const std::string& path) const {
     std::filesystem::path info(path);
     return info.exists() ? info.size() : -1;
 }
 
 } // namespace RawrXD
+
 

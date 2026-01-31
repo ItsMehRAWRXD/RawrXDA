@@ -12,7 +12,7 @@ void SignalHandler(int) {
 }
 
 int main(int argc, char* argv[]) {
-    std::cout << "=== Sovereign NVMe Thermal Governor ===" << std::endl;
+    
     std::signal(SIGINT, SignalHandler);
     
     ThermalGovernor governor;
@@ -21,26 +21,26 @@ int main(int argc, char* argv[]) {
     // governor.SetGlobalConfig(75, 65, 85);
 
     if (!governor.Initialize()) {
-        std::cout << "Initial connection failed, retrying in loop..." << std::endl;
+        
     } else {
-        std::cout << "Governor Active. Monitoring..." << std::endl;
+        
     }
 
     // Spawn the MASM Agent Bridge Thread
     HANDLE hBridge = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AgentBridgeEntry, NULL, 0, NULL);
     if (hBridge) {
-        std::cout << "Agentic Bridge Spurred on Thread ID: " << GetThreadId(hBridge) << std::endl;
+        
         CloseHandle(hBridge); // We don't join, it runs forever
     } else {
-        std::cerr << "Failed to spawn Agentic Bridge!" << std::endl;
+        
     }
 
     while (keepRunning) {
         governor.Update();
         Sleep(1000); // 1Hz Governor Loop
     }
-    
-    std::cout << "Shutting down." << std::endl;
+
+
     governor.Shutdown();
     return 0;
 }

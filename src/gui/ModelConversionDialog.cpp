@@ -44,12 +44,12 @@ ModelConversionDialog::~ModelConversionDialog()
 
 void ModelConversionDialog::setupUI()
 {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    void* mainLayout = new void(this);
     mainLayout->setSpacing(12);
     mainLayout->setContentsMargins(16, 16, 16, 16);
     
     // Title
-    m_titleLabel = new QLabel(
+    m_titleLabel = new void(
         "<b>Model Quantization Incompatibility Detected</b>",
         this
     );
@@ -57,7 +57,7 @@ void ModelConversionDialog::setupUI()
     mainLayout->addWidget(m_titleLabel);
     
     // Main message
-    m_messageLabel = new QLabel(this);
+    m_messageLabel = new void(this);
     m_messageLabel->setWordWrap(true);
     std::string message = std::string(
         "Your model uses unsupported quantization type(s) that your GGML library doesn't support yet:\n\n"
@@ -74,7 +74,7 @@ void ModelConversionDialog::setupUI()
     mainLayout->addWidget(m_messageLabel);
     
     // Details text (initially hidden, shown on "More Info")
-    m_detailsText = new QTextEdit(this);
+    m_detailsText = new void(this);
     m_detailsText->setReadOnly(true);
     m_detailsText->setMaximumHeight(150);
     m_detailsText->setVisible(false);
@@ -98,14 +98,14 @@ void ModelConversionDialog::setupUI()
     mainLayout->addWidget(m_detailsText);
     
     // Progress bar (hidden initially)
-    m_progressBar = new QProgressBar(this);
+    m_progressBar = new void(this);
     m_progressBar->setRange(0, 100);  // Percentage-based progress (0-100%)
     m_progressBar->setValue(0);
     m_progressBar->setVisible(false);
     mainLayout->addWidget(m_progressBar);
     
     // Status label (for progress messages)
-    m_statusLabel = new QLabel(this);
+    m_statusLabel = new void(this);
     m_statusLabel->setStyleSheet("color: #5cb85c; font-style: italic;");
     m_statusLabel->setVisible(false);
     mainLayout->addWidget(m_statusLabel);
@@ -114,10 +114,10 @@ void ModelConversionDialog::setupUI()
     mainLayout->addStretch();
     
     // Button layout
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    void* buttonLayout = new void();
     buttonLayout->setSpacing(8);
     
-    m_moreInfoButton = new QPushButton("More Info", this);
+    m_moreInfoButton = new void("More Info", this);
     m_moreInfoButton->setFlat(true);
 // Qt connect removed
     buttonLayout->addWidget(m_moreInfoButton);
@@ -125,28 +125,28 @@ void ModelConversionDialog::setupUI()
     buttonLayout->addStretch();
     
     // Cancel Conversion button (shown only during active conversion)
-    m_cancelConversionButton = new QPushButton("Cancel Conversion", this);
+    m_cancelConversionButton = new void("Cancel Conversion", this);
     m_cancelConversionButton->setMinimumWidth(140);
     m_cancelConversionButton->setStyleSheet(
-        "QPushButton { background-color: #d9534f; color: white; font-weight: bold; padding: 6px; border-radius: 3px; }"
-        "QPushButton:hover { background-color: #c9302c; }"
-        "QPushButton:pressed { background-color: #ac2925; }"
+        "void { background-color: #d9534f; color: white; font-weight: bold; padding: 6px; border-radius: 3px; }"
+        "void:hover { background-color: #c9302c; }"
+        "void:pressed { background-color: #ac2925; }"
     );
     m_cancelConversionButton->setVisible(false);
 // Qt connect removed
     buttonLayout->addWidget(m_cancelConversionButton);
     
-    m_cancelButton = new QPushButton("Cancel", this);
+    m_cancelButton = new void("Cancel", this);
     m_cancelButton->setMinimumWidth(100);
 // Qt connect removed
     buttonLayout->addWidget(m_cancelButton);
     
-    m_convertButton = new QPushButton("Yes, Convert", this);
+    m_convertButton = new void("Yes, Convert", this);
     m_convertButton->setMinimumWidth(120);
     m_convertButton->setStyleSheet(
-        "QPushButton { background-color: #5cb85c; color: white; font-weight: bold; padding: 6px; border-radius: 3px; }"
-        "QPushButton:hover { background-color: #4cae4c; }"
-        "QPushButton:pressed { background-color: #398439; }"
+        "void { background-color: #5cb85c; color: white; font-weight: bold; padding: 6px; border-radius: 3px; }"
+        "void:hover { background-color: #4cae4c; }"
+        "void:pressed { background-color: #398439; }"
     );
 // Qt connect removed
     buttonLayout->addWidget(m_convertButton);
@@ -207,7 +207,7 @@ void ModelConversionDialog::onCancelConversion()
         }
         
         // Log cancellation
-        qint64 duration = std::chrono::system_clock::time_point::currentMSecsSinceEpoch() - m_conversionStartTime;
+        int64_t duration = std::chrono::system_clock::time_point::currentMSecsSinceEpoch() - m_conversionStartTime;
         logConversionHistory(false, duration);
         
         m_conversionInProgress = false;
@@ -247,7 +247,7 @@ void ModelConversionDialog::startConversion()
     
     // Extract output directory from model path
     std::string outputDir = m_modelPath.left(m_modelPath.lastIndexOf('/'));
-    if (outputDir.isEmpty()) {
+    if (outputDir.empty()) {
         outputDir = ".";
     }
     
@@ -358,9 +358,9 @@ void ModelConversionDialog::updateProgressPercentage(int current, int total)
     
     // Calculate ETA if we have timing data
     if (m_conversionStartTime > 0 && current > 0) {
-        qint64 elapsed = std::chrono::system_clock::time_point::currentMSecsSinceEpoch() - m_conversionStartTime;
-        qint64 estimatedTotal = (elapsed * total) / current;
-        qint64 remaining = estimatedTotal - elapsed;
+        int64_t elapsed = std::chrono::system_clock::time_point::currentMSecsSinceEpoch() - m_conversionStartTime;
+        int64_t estimatedTotal = (elapsed * total) / current;
+        int64_t remaining = estimatedTotal - elapsed;
         
         if (remaining > 0) {
             int remainingMinutes = remaining / 60000;
@@ -385,7 +385,7 @@ void ModelConversionDialog::onTerminalFinished(int exitCode)
         void*::singleShot(10000, m_verifyTimer, &void*::stop);
     } else {
         // Conversion failed - log failure
-        qint64 duration = std::chrono::system_clock::time_point::currentMSecsSinceEpoch() - m_conversionStartTime;
+        int64_t duration = std::chrono::system_clock::time_point::currentMSecsSinceEpoch() - m_conversionStartTime;
         logConversionHistory(false, duration);
         
         updateProgress(std::string("✗ Conversion process exited with code %1"));
@@ -408,7 +408,7 @@ void ModelConversionDialog::onVerifyAndReload()
         m_verifyTimer->stop();
         
         // Log successful conversion
-        qint64 duration = std::chrono::system_clock::time_point::currentMSecsSinceEpoch() - m_conversionStartTime;
+        int64_t duration = std::chrono::system_clock::time_point::currentMSecsSinceEpoch() - m_conversionStartTime;
         logConversionHistory(true, duration);
         
         m_conversionInProgress = false;
@@ -444,7 +444,7 @@ bool ModelConversionDialog::verifyConvertedModelExists()
     return exists;
 }
 
-void ModelConversionDialog::logConversionHistory(bool success, qint64 durationMs)
+void ModelConversionDialog::logConversionHistory(bool success, int64_t durationMs)
 {
     // Get application data directory for log file
     std::string appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
@@ -474,7 +474,7 @@ void ModelConversionDialog::logConversionHistory(bool success, qint64 durationMs
     }
 }
 
-void ModelConversionDialog::closeEvent(QCloseEvent* event)
+void ModelConversionDialog::closeEvent(void*  event)
 {
     if (m_conversionInProgress) {
         event->ignore();  // Don't close while conversion is running
@@ -482,4 +482,6 @@ void ModelConversionDialog::closeEvent(QCloseEvent* event)
     }
     event->accept();
 }
+
+
 
