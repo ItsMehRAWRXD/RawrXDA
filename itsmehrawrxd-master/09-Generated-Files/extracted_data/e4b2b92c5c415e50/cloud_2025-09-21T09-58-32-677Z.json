@@ -1,0 +1,33 @@
+{
+  "type": "cloud",
+  "services": [
+    {
+      "service": "Google Drive",
+      "files": 1234,
+      "storage": "15.2 GB",
+      "folders": 45,
+      "lastSync": "2025-09-21T09:58:32.675Z"
+    },
+    {
+      "service": "Dropbox",
+      "files": 567,
+      "storage": "8.7 GB",
+      "folders": 23,
+      "lastSync": "2025-09-21T09:58:32.675Z"
+    },
+    {
+      "service": "OneDrive",
+      "files": 890,
+      "storage": "12.1 GB",
+      "folders": 34,
+      "lastSync": "2025-09-21T09:58:32.675Z"
+    },
+    {
+      "service": "iCloud",
+      "files": 345,
+      "storage": "5.3 GB",
+      "folders": 12,
+      "lastSync": "2025-09-21T09:58:32.675Z"
+    }
+  ]
+}

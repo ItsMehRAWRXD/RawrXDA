@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "a5e3f28a26b2cded",
+  "result": "error",
+  "details": "Unknown command: start_reverse_proxy",
+  "timestamp": "2025-09-21T09:58:55.163Z"
+}

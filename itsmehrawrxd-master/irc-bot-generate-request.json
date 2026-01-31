@@ -1,0 +1,20 @@
+{
+    "config": {
+        "name": "RawrZBot",
+        "server": "irc.rizon.net",
+        "port": 6667,
+        "channels": ["#rawr"],
+        "username": "bibbles11",
+        "realname": "RawrZ Security Platform Monitor",
+        "password": "bibbles11"
+    },
+    "features": ["stealth", "encryption", "persistence", "antiDebug", "antiVM"],
+    "extensions": ["cpp"],
+    "encryptionOptions": {
+        "algorithm": "aes-256-gcm",
+        "stealthMode": true,
+        "antiDebug": true,
+        "antiVM": true,
+        "antiSandbox": true
+    }
+}

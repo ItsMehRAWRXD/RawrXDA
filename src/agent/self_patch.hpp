@@ -1,27 +1,27 @@
 #pragma once
-#include <QString>
-#include <QObject>
+#include <string>
+#include <functional>
 
-class SelfPatch : public QObject {
-    Q_OBJECT
+class SelfPatch {
 public:
-    explicit SelfPatch(QObject* parent = nullptr);
+    explicit SelfPatch();
+    virtual ~SelfPatch() = default;
     
     // Add Vulkan kernel from template
-    bool addKernel(const QString& name, const QString& templateName);
+    bool addKernel(const std::string& name, const std::string& templateName);
     
     // Add C++ wrapper for kernel
-    bool addCpp(const QString& name, const QString& deps);
+    bool addCpp(const std::string& name, const std::string& deps);
     
     // Hot-reload the binary (rebuild + restart)
     bool hotReload();
     
     // Patch existing file
-    bool patchFile(const QString& filename, const QString& patch);
+    bool patchFile(const std::string& filename, const std::string& patch);
     
-signals:
-    void kernelAdded(const QString& name);
-    void cppAdded(const QString& name);
-    void reloadStarted();
-    void reloadCompleted(bool success);
+    // Callbacks (replacing signals)
+    std::function<void(const std::string&)> onKernelAdded;
+    std::function<void(const std::string&)> onCppAdded;
+    std::function<void()> onReloadStarted;
+    std::function<void(bool)> onReloadCompleted;
 };

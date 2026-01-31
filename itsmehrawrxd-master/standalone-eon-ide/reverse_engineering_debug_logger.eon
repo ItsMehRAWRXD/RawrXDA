@@ -1,0 +1,604 @@
+; reverse_engineering_debug_logger.eon
+; Advanced Debug Logging and Process Monitoring for Reverse Engineering IDE
+; Real-time process monitoring, API hooking, and debug log generation
+; Written entirely in EON ASM
+
+module reverse_engineering_debug_logger
+
+import std.io
+import std.collections
+import std.string
+import std.filesystem
+import std.process
+import std.debug
+import std.time
+import std.threads
+import std.network
+
+; === Debug Logging Constants ===
+const DEBUG_LOGGER_VERSION = "2.0.0"
+const MAX_LOG_ENTRIES = 100000
+const LOG_BUFFER_SIZE = 16777216  ; 16MB
+
+; === Log Entry Types ===
+enum LogEntryType {
+    API_CALL = 1,
+    SYSTEM_CALL = 2,
+    MEMORY_ACCESS = 3,
+    FILE_OPERATION = 4,
+    NETWORK_ACTIVITY = 5,
+    REGISTRY_ACCESS = 6,
+    PROCESS_EVENT = 7,
+    THREAD_EVENT = 8,
+    MODULE_EVENT = 9,
+    EXCEPTION_EVENT = 10,
+    DEBUG_OUTPUT = 11,
+    CUSTOM_EVENT = 12
+}
+
+; === Hook Types ===
+enum HookType {
+    INLINE_HOOK = 1,
+    IAT_HOOK = 2,
+    DETOUR_HOOK = 3,
+    VTABLE_HOOK = 4,
+    EXCEPTION_HOOK = 5,
+    HARDWARE_BREAKPOINT = 6,
+    SOFTWARE_BREAKPOINT = 7
+}
+
+; === Log Entry Structure ===
+struct LogEntry {
+    timestamp: uint64,
+    thread_id: uint32,
+    process_id: uint32,
+    entry_type: LogEntryType,
+    api_name: string,
+    module_name: string,
+    address: uint64,
+    parameters: Array<Parameter>,
+    return_value: uint64,
+    stack_trace: Array<uint64>,
+    cpu_context: CPUContext,
+    memory_context: MemorySnapshot,
+    custom_data: Map<string, any>
+}
+
+struct CPUContext {
+    rax: uint64, rbx: uint64, rcx: uint64, rdx: uint64,
+    rsi: uint64, rdi: uint64, rbp: uint64, rsp: uint64,
+    r8: uint64, r9: uint64, r10: uint64, r11: uint64,
+    r12: uint64, r13: uint64, r14: uint64, r15: uint64,
+    rip: uint64, rflags: uint64,
+    cs: uint16, ds: uint16, es: uint16, fs: uint16, gs: uint16, ss: uint16
+}
+
+struct MemorySnapshot {
+    stack_data: Array<uint8>,
+    heap_regions: Array<MemoryRegion>,
+    modified_pages: Array<ModifiedPage>
+}
+
+struct Hook {
+    hook_id: uint32,
+    hook_type: HookType,
+    target_address: uint64,
+    target_function: string,
+    target_module: string,
+    original_bytes: Array<uint8>,
+    hook_bytes: Array<uint8>,
+    is_active: bool,
+    hit_count: uint64,
+    callback_function: function_ptr
+}
+
+; === Advanced Debug Logger Class ===
+class AdvancedDebugLogger {
+    var log_entries: Array<LogEntry>
+    var active_hooks: Map<uint64, Hook>
+    var monitored_processes: Map<uint32, ProcessMonitor>
+    var log_filters: Array<LogFilter>
+    var log_buffer: RingBuffer
+    var export_formats: Map<string, ExportFormatter>
+    var real_time_viewers: Array<LogViewer>
+    
+    ; Performance monitoring
+    var performance_counters: PerformanceCounters
+    var memory_profiler: MemoryProfiler
+    var cpu_profiler: CPUProfiler
+    
+    function init() {
+        println("Initializing Advanced Debug Logger v" + DEBUG_LOGGER_VERSION)
+        
+        log_entries = Array<LogEntry>()
+        active_hooks = Map<uint64, Hook>()
+        monitored_processes = Map<uint32, ProcessMonitor>()
+        log_filters = Array<LogFilter>()
+        log_buffer = RingBuffer(LOG_BUFFER_SIZE)
+        export_formats = Map<string, ExportFormatter>()
+        real_time_viewers = Array<LogViewer>()
+        
+        performance_counters = PerformanceCounters()
+        memory_profiler = MemoryProfiler()
+        cpu_profiler = CPUProfiler()
+        
+        initializeExportFormats()
+        setupDefaultFilters()
+        startBackgroundThreads()
+        
+        println("Debug Logger initialized successfully")
+    }
+    
+    function startProcessMonitoring(process_name: string, monitoring_config: MonitoringConfig) -> ProcessMonitor {
+        var monitor = ProcessMonitor()
+        monitor.process_name = process_name
+        monitor.config = monitoring_config
+        monitor.logger = this
+        
+        ; Attach to process
+        var process_info = attachToProcess(process_name)
+        if (process_info == null) {
+            throw Exception("Failed to attach to process: " + process_name)
+        }
+        
+        monitor.process_id = process_info.pid
+        monitor.base_address = process_info.base_address
+        monitor.modules = process_info.modules
+        
+        ; Install hooks based on configuration
+        installMonitoringHooks(monitor)
+        
+        ; Start monitoring thread
+        var monitor_thread = Thread(processMonitoringThread, monitor)
+        monitor.monitoring_thread = monitor_thread
+        monitor_thread.start()
+        
+        monitored_processes[process_info.pid] = monitor
+        
+        println("Started monitoring process: " + process_name + " (PID: " + process_info.pid + ")")
+        return monitor
+    }
+    
+    function installMonitoringHooks(monitor: ProcessMonitor) {
+        var config = monitor.config
+        
+        ; Install API hooks
+        if (config.monitor_api_calls) {
+            installAPIHooks(monitor)
+        }
+        
+        ; Install system call hooks
+        if (config.monitor_system_calls) {
+            installSystemCallHooks(monitor)
+        }
+        
+        ; Install memory access hooks
+        if (config.monitor_memory_access) {
+            installMemoryHooks(monitor)
+        }
+        
+        ; Install file operation hooks
+        if (config.monitor_file_operations) {
+            installFileHooks(monitor)
+        }
+        
+        ; Install network hooks
+        if (config.monitor_network_activity) {
+            installNetworkHooks(monitor)
+        }
+        
+        ; Install registry hooks
+        if (config.monitor_registry_access) {
+            installRegistryHooks(monitor)
+        }
+    }
+    
+    function installAPIHooks(monitor: ProcessMonitor) {
+        var common_apis = [
+            ; Memory APIs
+            "VirtualAlloc", "VirtualFree", "VirtualProtect", "VirtualQuery",
+            "HeapAlloc", "HeapFree", "HeapCreate", "HeapDestroy",
+            "malloc", "free", "calloc", "realloc",
+            
+            ; Process/Thread APIs
+            "CreateProcess", "CreateProcessA", "CreateProcessW",
+            "CreateThread", "CreateRemoteThread", "OpenProcess", "OpenThread",
+            "TerminateProcess", "TerminateThread", "SuspendThread", "ResumeThread",
+            
+            ; File APIs
+            "CreateFile", "CreateFileA", "CreateFileW",
+            "ReadFile", "WriteFile", "DeleteFile", "MoveFile",
+            "FindFirstFile", "FindNextFile",
+            
+            ; Registry APIs
+            "RegOpenKey", "RegCreateKey", "RegQueryValue", "RegSetValue",
+            "RegDeleteKey", "RegDeleteValue",
+            
+            ; Network APIs
+            "socket", "connect", "send", "recv", "bind", "listen",
+            "WSAStartup", "WSASocket", "WSAConnect", "WSASend", "WSARecv",
+            
+            ; Crypto APIs
+            "CryptAcquireContext", "CryptCreateHash", "CryptHashData",
+            "CryptEncrypt", "CryptDecrypt", "CryptGenKey",
+            
+            ; Debug APIs
+            "IsDebuggerPresent", "CheckRemoteDebuggerPresent",
+            "OutputDebugString", "OutputDebugStringA", "OutputDebugStringW"
+        ]
+        
+        for api_name in common_apis {
+            var hook_address = resolveAPIAddress(monitor.process_id, api_name)
+            if (hook_address != 0) {
+                var hook = installInlineHook(monitor.process_id, hook_address, api_name)
+                if (hook != null) {
+                    active_hooks[hook_address] = hook
+                    println("Installed hook for " + api_name + " at 0x" + hook_address.toHex())
+                }
+            }
+        }
+    }
+    
+    function installInlineHook(pid: uint32, target_address: uint64, function_name: string) -> Hook {
+        var hook = Hook()
+        hook.hook_id = generateHookID()
+        hook.hook_type = INLINE_HOOK
+        hook.target_address = target_address
+        hook.target_function = function_name
+        hook.is_active = false
+        hook.hit_count = 0
+        
+        ; Read original bytes
+        var original_bytes = readProcessMemory(pid, target_address, 16)
+        if (original_bytes == null) {
+            return null
+        }
+        hook.original_bytes = original_bytes
+        
+        ; Generate hook shellcode
+        var hook_shellcode = generateHookShellcode(hook)
+        hook.hook_bytes = hook_shellcode
+        
+        ; Install the hook
+        if (writeProcessMemory(pid, target_address, hook_shellcode)) {
+            hook.is_active = true
+            hook.callback_function = createHookCallback(hook)
+            return hook
+        }
+        
+        return null
+    }
+    
+    function generateHookShellcode(hook: Hook) -> Array<uint8> {
+        var shellcode = Array<uint8>()
+        
+        ; Save all registers
+        shellcode.addAll([
+            0x50,                    ; push rax
+            0x51,                    ; push rcx
+            0x52,                    ; push rdx
+            0x53,                    ; push rbx
+            0x54,                    ; push rsp
+            0x55,                    ; push rbp
+            0x56,                    ; push rsi
+            0x57,                    ; push rdi
+            0x41, 0x50,              ; push r8
+            0x41, 0x51,              ; push r9
+            0x41, 0x52,              ; push r10
+            0x41, 0x53,              ; push r11
+            0x41, 0x54,              ; push r12
+            0x41, 0x55,              ; push r13
+            0x41, 0x56,              ; push r14
+            0x41, 0x57               ; push r15
+        ])
+        
+        ; Call our hook handler
+        var handler_address = getHookHandlerAddress()
+        var call_offset = handler_address - (hook.target_address + shellcode.length + 5)
+        
+        shellcode.add(0xE8)          ; call
+        shellcode.addAll(call_offset.toBytes(4, true)) ; relative offset
+        
+        ; Restore all registers
+        shellcode.addAll([
+            0x41, 0x5F,              ; pop r15
+            0x41, 0x5E,              ; pop r14
+            0x41, 0x5D,              ; pop r13
+            0x41, 0x5C,              ; pop r12
+            0x41, 0x5B,              ; pop r11
+            0x41, 0x5A,              ; pop r10
+            0x41, 0x59,              ; pop r9
+            0x41, 0x58,              ; pop r8
+            0x5F,                    ; pop rdi
+            0x5E,                    ; pop rsi
+            0x5D,                    ; pop rbp
+            0x5C,                    ; pop rsp
+            0x5B,                    ; pop rbx
+            0x5A,                    ; pop rdx
+            0x59,                    ; pop rcx
+            0x58                     ; pop rax
+        ])
+        
+        ; Execute original bytes
+        shellcode.addAll(hook.original_bytes)
+        
+        ; Jump back to original function + hook size
+        var return_address = hook.target_address + shellcode.length + 5
+        var jump_offset = return_address - (hook.target_address + shellcode.length + 5)
+        
+        shellcode.add(0xE9)          ; jmp
+        shellcode.addAll(jump_offset.toBytes(4, true))
+        
+        return shellcode
+    }
+    
+    function logAPICall(hook: Hook, context: CPUContext, parameters: Array<any>) {
+        var entry = LogEntry()
+        entry.timestamp = getCurrentTimestamp()
+        entry.thread_id = getCurrentThreadId()
+        entry.process_id = hook.process_id
+        entry.entry_type = API_CALL
+        entry.api_name = hook.target_function
+        entry.module_name = hook.target_module
+        entry.address = hook.target_address
+        entry.cpu_context = context
+        entry.parameters = convertParameters(parameters)
+        
+        ; Capture stack trace
+        entry.stack_trace = captureStackTrace(context.rsp, 16)
+        
+        ; Capture memory snapshot if configured
+        if (shouldCaptureMemory(hook)) {
+            entry.memory_context = captureMemorySnapshot(hook.process_id)
+        }
+        
+        ; Add to log
+        addLogEntry(entry)
+        
+        ; Update hook statistics
+        hook.hit_count++
+        
+        ; Notify real-time viewers
+        notifyRealTimeViewers(entry)
+    }
+    
+    function generateDebugReport(process_id: uint32, output_format: string) -> string {
+        var report = StringBuilder()
+        var process_logs = getProcessLogs(process_id)
+        
+        match output_format.toLowerCase() {
+            case "json":
+                return generateJSONReport(process_logs)
+            case "xml":
+                return generateXMLReport(process_logs)
+            case "csv":
+                return generateCSVReport(process_logs)
+            case "html":
+                return generateHTMLReport(process_logs)
+            default:
+                return generateTextReport(process_logs)
+        }
+    }
+    
+    function generateJSONReport(logs: Array<LogEntry>) -> string {
+        var json = StringBuilder()
+        json.appendLine("{")
+        json.appendLine('  "debug_report": {')
+        json.appendLine('    "version": "' + DEBUG_LOGGER_VERSION + '",')
+        json.appendLine('    "timestamp": "' + getCurrentTimestamp().toISO8601() + '",')
+        json.appendLine('    "total_entries": ' + logs.length + ',')
+        json.appendLine('    "entries": [')
+        
+        for i in 0 to logs.length {
+            var entry = logs[i]
+            json.appendLine('      {')
+            json.appendLine('        "timestamp": ' + entry.timestamp + ',')
+            json.appendLine('        "thread_id": ' + entry.thread_id + ',')
+            json.appendLine('        "process_id": ' + entry.process_id + ',')
+            json.appendLine('        "type": "' + entry.entry_type.toString() + '",')
+            json.appendLine('        "api_name": "' + entry.api_name + '",')
+            json.appendLine('        "module": "' + entry.module_name + '",')
+            json.appendLine('        "address": "0x' + entry.address.toHex() + '",')
+            json.appendLine('        "return_value": "0x' + entry.return_value.toHex() + '",')
+            
+            ; Add parameters
+            json.appendLine('        "parameters": [')
+            for j in 0 to entry.parameters.length {
+                var param = entry.parameters[j]
+                json.appendLine('          {')
+                json.appendLine('            "name": "' + param.name + '",')
+                json.appendLine('            "type": "' + param.type + '",')
+                json.appendLine('            "value": "' + param.value + '"')
+                json.append('          }')
+                if (j < entry.parameters.length - 1) json.append(',')
+                json.appendLine('')
+            }
+            json.appendLine('        ],')
+            
+            ; Add stack trace
+            json.appendLine('        "stack_trace": [')
+            for k in 0 to entry.stack_trace.length {
+                json.append('          "0x' + entry.stack_trace[k].toHex() + '"')
+                if (k < entry.stack_trace.length - 1) json.append(',')
+                json.appendLine('')
+            }
+            json.appendLine('        ]')
+            
+            json.append('      }')
+            if (i < logs.length - 1) json.append(',')
+            json.appendLine('')
+        }
+        
+        json.appendLine('    ]')
+        json.appendLine('  }')
+        json.appendLine('}')
+        
+        return json.toString()
+    }
+    
+    function exportLogs(filename: string, format: string, filter_criteria: LogFilter) -> bool {
+        var filtered_logs = applyLogFilter(log_entries, filter_criteria)
+        var report_content = generateDebugReport(filter_criteria.process_id, format)
+        
+        try {
+            writeFile(filename, report_content)
+            println("Debug logs exported to: " + filename)
+            return true
+        } catch (error) {
+            println("Failed to export logs: " + error.message)
+            return false
+        }
+    }
+    
+    function startRealTimeMonitoring(viewer: LogViewer) {
+        real_time_viewers.add(viewer)
+        
+        var monitoring_thread = Thread(realTimeMonitoringThread, viewer)
+        monitoring_thread.start()
+        
+        println("Started real-time monitoring for viewer: " + viewer.name)
+    }
+    
+    function realTimeMonitoringThread(viewer: LogViewer) {
+        while (viewer.isActive()) {
+            var new_entries = getNewLogEntries(viewer.last_processed_timestamp)
+            
+            for entry in new_entries {
+                if (viewer.filter.matches(entry)) {
+                    viewer.displayLogEntry(entry)
+                }
+            }
+            
+            viewer.last_processed_timestamp = getCurrentTimestamp()
+            sleep(100) ; Check every 100ms
+        }
+    }
+    
+    function generateNativeHeaders(process_analysis: ProcessAnalysis) -> NativeHeaderGen {
+        var header_gen = NativeHeaderGenerator()
+        
+        ; Extract function signatures from logged API calls
+        var discovered_functions = extractDiscoveredFunctions()
+        
+        ; Generate headers based on analysis
+        return header_gen.generateHeaders(process_analysis, discovered_functions)
+    }
+    
+    function extractDiscoveredFunctions() -> Array<Function> {
+        var functions = Array<Function>()
+        var function_signatures = Map<string, FunctionSignature>()
+        
+        ; Analyze logged API calls to discover function signatures
+        for entry in log_entries {
+            if (entry.entry_type == API_CALL) {
+                var signature = analyzeFunctionSignature(entry)
+                if (!function_signatures.containsKey(signature.name)) {
+                    function_signatures[signature.name] = signature
+                }
+            }
+        }
+        
+        ; Convert signatures to function objects
+        for signature in function_signatures.values() {
+            var func = Function()
+            func.name = signature.name
+            func.return_type = signature.return_type
+            func.parameters = signature.parameters
+            func.calling_convention = signature.calling_convention
+            functions.add(func)
+        }
+        
+        return functions
+    }
+}
+
+; === Process Monitor Thread ===
+function processMonitoringThread(monitor: ProcessMonitor) {
+    println("Starting monitoring thread for PID: " + monitor.process_id)
+    
+    while (monitor.isActive()) {
+        try {
+            ; Check if process is still running
+            if (!isProcessRunning(monitor.process_id)) {
+                println("Process " + monitor.process_id + " has terminated")
+                break
+            }
+            
+            ; Update performance counters
+            monitor.logger.performance_counters.update(monitor.process_id)
+            
+            ; Check for new modules
+            var current_modules = enumerateModules(monitor.process_id)
+            var new_modules = findNewModules(monitor.modules, current_modules)
+            
+            for module in new_modules {
+                println("New module loaded: " + module.name + " at 0x" + module.base_address.toHex())
+                ; Install hooks in new module if needed
+                installModuleHooks(monitor, module)
+            }
+            
+            monitor.modules = current_modules
+            
+            ; Sleep before next check
+            sleep(1000) ; Check every second
+            
+        } catch (error) {
+            println("Error in monitoring thread: " + error.message)
+            sleep(5000) ; Wait longer after error
+        }
+    }
+    
+    println("Monitoring thread for PID " + monitor.process_id + " terminated")
+}
+
+; === Export Functions ===
+function createDebugLogger() -> AdvancedDebugLogger {
+    var logger = AdvancedDebugLogger()
+    logger.init()
+    return logger
+}
+
+function startProcessDebugging(process_name: string) -> ProcessMonitor {
+    var logger = createDebugLogger()
+    
+    var config = MonitoringConfig()
+    config.monitor_api_calls = true
+    config.monitor_system_calls = true
+    config.monitor_memory_access = true
+    config.monitor_file_operations = true
+    config.monitor_network_activity = true
+    config.monitor_registry_access = true
+    config.capture_stack_traces = true
+    config.capture_memory_snapshots = false ; Expensive, enable as needed
+    
+    return logger.startProcessMonitoring(process_name, config)
+}
+
+; === Example Usage Functions ===
+function debugProcessAndGenerateHeaders(process_name: string, output_dir: string) {
+    println(" Starting comprehensive process analysis for: " + process_name)
+    
+    ; Start debug logging
+    var monitor = startProcessDebugging(process_name)
+    
+    println("⏱ Monitoring for 30 seconds to gather API calls...")
+    sleep(30000) ; Monitor for 30 seconds
+    
+    ; Generate debug report
+    var json_report = monitor.logger.generateDebugReport(monitor.process_id, "json")
+    writeFile(output_dir + "/" + process_name + "_debug_log.json", json_report)
+    
+    ; Generate headers from discovered APIs
+    var process_analysis = monitor.logger.getProcessAnalysis(monitor.process_id)
+    var native_headers = monitor.logger.generateNativeHeaders(process_analysis)
+    
+    ; Export headers
+    writeFile(output_dir + "/" + process_name + "_headers.h", native_headers.c_header)
+    writeFile(output_dir + "/" + process_name + "_bindings.py", native_headers.python_ctypes)
+    writeFile(output_dir + "/" + process_name + "_bindings.rs", native_headers.rust_definitions)
+    
+    ; Stop monitoring
+    monitor.stop()
+    
+    println(" Analysis complete! Files generated in: " + output_dir)
+}

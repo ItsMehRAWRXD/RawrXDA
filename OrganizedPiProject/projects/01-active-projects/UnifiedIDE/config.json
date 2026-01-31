@@ -1,0 +1,15 @@
+{
+    "scripts": [
+        "Script1",
+        "Script2",
+        "Script3"
+    ],
+    "debuggers": [
+        "DebuggerA",
+        "DebuggerB"
+    ],
+    "compilers": [
+        "CompilerX",
+        "CompilerY"
+    ]
+}

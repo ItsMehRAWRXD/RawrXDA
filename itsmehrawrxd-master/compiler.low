@@ -1,0 +1,532 @@
+// Filename: compiler.low
+// The core logic for our custom compiler, starting with the tokenizer.
+
+// A structure to represent a token from our source language
+STRUCT Token
+    TokenType token_type
+    STRING token_value
+END
+
+// An ENUM for our token types
+ENUM TokenType
+    KEYWORD
+    IDENTIFIER
+    LITERAL
+    OPERATOR
+    END_OF_FILE
+END
+
+// The tokenizer function. It reads from the source file
+// and produces a list of tokens.
+FUNC tokenize(source_code)
+    VAR tokens = ARRAY_NEW()
+    VAR cursor = 0
+
+    WHILE cursor < LENGTH(source_code)
+        VAR char = source_code[cursor]
+
+        IF IS_WHITESPACE(char)
+            cursor = cursor + 1
+            CONTINUE
+        END
+
+        IF IS_ALPHA(char)
+            VAR start = cursor
+            WHILE IS_ALPHA(source_code[cursor])
+                cursor = cursor + 1
+            END
+            VAR value = SUBSTRING(source_code, start, cursor)
+            IF IS_KEYWORD(value)
+                ADD_TO_ARRAY(tokens, Token(KEYWORD, value))
+            ELSE
+                ADD_TO_ARRAY(tokens, Token(IDENTIFIER, value))
+            END
+            CONTINUE
+        END
+
+        IF IS_DIGIT(char)
+            VAR start = cursor
+            WHILE IS_DIGIT(source_code[cursor])
+                cursor = cursor + 1
+            END
+            VAR value = SUBSTRING(source_code, start, cursor)
+            ADD_TO_ARRAY(tokens, Token(LITERAL, value))
+            CONTINUE
+        END
+
+        // Handle simple operators
+        IF char == '+'
+            ADD_TO_ARRAY(tokens, Token(OPERATOR, "+"))
+            cursor = cursor + 1
+            CONTINUE
+        END
+
+        // Other operators and syntax (e.g., '=', '(', ')') would be added here
+
+    END
+    ADD_TO_ARRAY(tokens, Token(END_OF_FILE, "EOF"))
+    RETURN tokens
+END
+
+// Complete parser function implementation for AST building
+FUNC parse(tokens)
+    VAR ast = CREATE_AST_NODE("PROGRAM")
+    VAR current_token_index = 0
+    VAR token_count = LENGTH(tokens)
+    
+    WHILE current_token_index < token_count
+        VAR token = tokens[current_token_index]
+        
+        IF token.type == "DEF"
+            VAR func_node = parse_function_definition(tokens, current_token_index)
+            ADD_CHILD(ast, func_node)
+            current_token_index = func_node.end_index
+        ELSE IF token.type == "STRUCT"
+            VAR struct_node = parse_struct_definition(tokens, current_token_index)
+            ADD_CHILD(ast, struct_node)
+            current_token_index = struct_node.end_index
+        ELSE IF token.type == "LET"
+            VAR var_node = parse_variable_declaration(tokens, current_token_index)
+            ADD_CHILD(ast, var_node)
+            current_token_index = var_node.end_index
+        ELSE IF token.type == "IF"
+            VAR if_node = parse_if_statement(tokens, current_token_index)
+            ADD_CHILD(ast, if_node)
+            current_token_index = if_node.end_index
+        ELSE IF token.type == "LOOP"
+            VAR loop_node = parse_loop_statement(tokens, current_token_index)
+            ADD_CHILD(ast, loop_node)
+            current_token_index = loop_node.end_index
+        ELSE IF token.type == "RET"
+            VAR ret_node = parse_return_statement(tokens, current_token_index)
+            ADD_CHILD(ast, ret_node)
+            current_token_index = ret_node.end_index
+        ELSE
+            current_token_index = current_token_index + 1
+        END
+    END
+    
+    RETURN ast
+END
+
+// Parse function definition
+FUNC parse_function_definition(tokens, start_index)
+    VAR node = CREATE_AST_NODE("FUNCTION_DEFINITION")
+    VAR index = start_index + 1  // Skip DEF
+    
+    // Parse function name
+    IF tokens[index].type == "IDENTIFIER"
+        node.name = tokens[index].value
+        index = index + 1
+    ELSE
+        ERROR "Expected function name"
+    END
+    
+    // Parse parameters
+    IF tokens[index].type == "LPAREN"
+        index = index + 1
+        VAR params = []
+        WHILE tokens[index].type != "RPAREN"
+            IF tokens[index].type == "IDENTIFIER"
+                ADD_ELEMENT(params, tokens[index].value)
+                index = index + 1
+                IF tokens[index].type == "COMMA"
+                    index = index + 1
+                END
+            END
+        END
+        node.parameters = params
+        index = index + 1  // Skip RPAREN
+    END
+    
+    // Parse return type (optional)
+    IF tokens[index].type == "ARROW"
+        index = index + 1
+        IF tokens[index].type == "IDENTIFIER"
+            node.return_type = tokens[index].value
+            index = index + 1
+        END
+    END
+    
+    // Parse function body
+    IF tokens[index].type == "LBRACE"
+        index = index + 1
+        VAR body = parse_block(tokens, index)
+        node.body = body
+        index = body.end_index + 1  // Skip RBRACE
+    END
+    
+    node.end_index = index
+    RETURN node
+END
+
+// Parse struct definition
+FUNC parse_struct_definition(tokens, start_index)
+    VAR node = CREATE_AST_NODE("STRUCT_DEFINITION")
+    VAR index = start_index + 1  // Skip STRUCT
+    
+    // Parse struct name
+    IF tokens[index].type == "IDENTIFIER"
+        node.name = tokens[index].value
+        index = index + 1
+    ELSE
+        ERROR "Expected struct name"
+    END
+    
+    // Parse struct body
+    IF tokens[index].type == "LBRACE"
+        index = index + 1
+        VAR fields = []
+        WHILE tokens[index].type != "RBRACE"
+            IF tokens[index].type == "IDENTIFIER"
+                VAR field = {}
+                field.name = tokens[index].value
+                index = index + 1
+                IF tokens[index].type == "COLON"
+                    index = index + 1
+                    IF tokens[index].type == "IDENTIFIER"
+                        field.type = tokens[index].value
+                        index = index + 1
+                    END
+                END
+                ADD_ELEMENT(fields, field)
+                IF tokens[index].type == "COMMA"
+                    index = index + 1
+                END
+            ELSE
+                index = index + 1
+            END
+        END
+        node.fields = fields
+        index = index + 1  // Skip RBRACE
+    END
+    
+    node.end_index = index
+    RETURN node
+END
+
+// Parse variable declaration
+FUNC parse_variable_declaration(tokens, start_index)
+    VAR node = CREATE_AST_NODE("VARIABLE_DECLARATION")
+    VAR index = start_index + 1  // Skip LET
+    
+    // Parse variable name
+    IF tokens[index].type == "IDENTIFIER"
+        node.name = tokens[index].value
+        index = index + 1
+    ELSE
+        ERROR "Expected variable name"
+    END
+    
+    // Parse type (optional)
+    IF tokens[index].type == "COLON"
+        index = index + 1
+        IF tokens[index].type == "IDENTIFIER"
+            node.type = tokens[index].value
+            index = index + 1
+        END
+    END
+    
+    // Parse initial value (optional)
+    IF tokens[index].type == "ASSIGN"
+        index = index + 1
+        VAR expr = parse_expression(tokens, index)
+        node.initial_value = expr
+        index = expr.end_index
+    END
+    
+    node.end_index = index
+    RETURN node
+END
+
+// Parse if statement
+FUNC parse_if_statement(tokens, start_index)
+    VAR node = CREATE_AST_NODE("IF_STATEMENT")
+    VAR index = start_index + 1  // Skip IF
+    
+    // Parse condition
+    IF tokens[index].type == "LPAREN"
+        index = index + 1
+        VAR condition = parse_expression(tokens, index)
+        node.condition = condition
+        index = condition.end_index + 1  // Skip RPAREN
+    END
+    
+    // Parse then block
+    VAR then_block = parse_block(tokens, index)
+    node.then_block = then_block
+    index = then_block.end_index + 1  // Skip RBRACE
+    
+    // Parse else block (optional)
+    IF index < LENGTH(tokens) AND tokens[index].type == "ELSE"
+        index = index + 1
+        VAR else_block = parse_block(tokens, index)
+        node.else_block = else_block
+        index = else_block.end_index + 1  // Skip RBRACE
+    END
+    
+    node.end_index = index
+    RETURN node
+END
+
+// Parse loop statement
+FUNC parse_loop_statement(tokens, start_index)
+    VAR node = CREATE_AST_NODE("LOOP_STATEMENT")
+    VAR index = start_index + 1  // Skip LOOP
+    
+    // Parse loop body
+    VAR body = parse_block(tokens, index)
+    node.body = body
+    index = body.end_index + 1  // Skip RBRACE
+    
+    node.end_index = index
+    RETURN node
+END
+
+// Parse return statement
+FUNC parse_return_statement(tokens, start_index)
+    VAR node = CREATE_AST_NODE("RETURN_STATEMENT")
+    VAR index = start_index + 1  // Skip RET
+    
+    // Parse return value (optional)
+    IF index < LENGTH(tokens) AND tokens[index].type != "SEMICOLON"
+        VAR expr = parse_expression(tokens, index)
+        node.value = expr
+        index = expr.end_index
+    END
+    
+    node.end_index = index
+    RETURN node
+END
+
+// Parse block statement
+FUNC parse_block(tokens, start_index)
+    VAR node = CREATE_AST_NODE("BLOCK")
+    VAR index = start_index + 1  // Skip LBRACE
+    VAR statements = []
+    
+    WHILE index < LENGTH(tokens) AND tokens[index].type != "RBRACE"
+        VAR stmt = parse_statement(tokens, index)
+        ADD_ELEMENT(statements, stmt)
+        index = stmt.end_index
+        IF tokens[index].type == "SEMICOLON"
+            index = index + 1
+        END
+    END
+    
+    node.statements = statements
+    node.end_index = index
+    RETURN node
+END
+
+// Parse statement
+FUNC parse_statement(tokens, start_index)
+    VAR token = tokens[start_index]
+    
+    IF token.type == "LET"
+        RETURN parse_variable_declaration(tokens, start_index)
+    ELSE IF token.type == "IF"
+        RETURN parse_if_statement(tokens, start_index)
+    ELSE IF token.type == "LOOP"
+        RETURN parse_loop_statement(tokens, start_index)
+    ELSE IF token.type == "RET"
+        RETURN parse_return_statement(tokens, start_index)
+    ELSE
+        RETURN parse_expression_statement(tokens, start_index)
+    END
+END
+
+// Parse expression statement
+FUNC parse_expression_statement(tokens, start_index)
+    VAR node = CREATE_AST_NODE("EXPRESSION_STATEMENT")
+    VAR expr = parse_expression(tokens, start_index)
+    node.expression = expr
+    node.end_index = expr.end_index
+    RETURN node
+END
+
+// Parse expression with precedence
+FUNC parse_expression(tokens, start_index)
+    RETURN parse_logical_or(tokens, start_index)
+END
+
+// Parse logical OR
+FUNC parse_logical_or(tokens, start_index)
+    VAR left = parse_logical_and(tokens, start_index)
+    VAR index = left.end_index
+    
+    WHILE index < LENGTH(tokens) AND tokens[index].type == "OR"
+        VAR node = CREATE_AST_NODE("BINARY_OPERATION")
+        node.operator = "OR"
+        node.left = left
+        index = index + 1
+        node.right = parse_logical_and(tokens, index)
+        left = node
+        index = node.right.end_index
+    END
+    
+    left.end_index = index
+    RETURN left
+END
+
+// Parse logical AND
+FUNC parse_logical_and(tokens, start_index)
+    VAR left = parse_equality(tokens, start_index)
+    VAR index = left.end_index
+    
+    WHILE index < LENGTH(tokens) AND tokens[index].type == "AND"
+        VAR node = CREATE_AST_NODE("BINARY_OPERATION")
+        node.operator = "AND"
+        node.left = left
+        index = index + 1
+        node.right = parse_equality(tokens, index)
+        left = node
+        index = node.right.end_index
+    END
+    
+    left.end_index = index
+    RETURN left
+END
+
+// Parse equality
+FUNC parse_equality(tokens, start_index)
+    VAR left = parse_relational(tokens, start_index)
+    VAR index = left.end_index
+    
+    WHILE index < LENGTH(tokens) AND (tokens[index].type == "EQUALS" OR tokens[index].type == "NOT_EQUALS")
+        VAR node = CREATE_AST_NODE("BINARY_OPERATION")
+        node.operator = tokens[index].type
+        node.left = left
+        index = index + 1
+        node.right = parse_relational(tokens, index)
+        left = node
+        index = node.right.end_index
+    END
+    
+    left.end_index = index
+    RETURN left
+END
+
+// Parse relational
+FUNC parse_relational(tokens, start_index)
+    VAR left = parse_additive(tokens, start_index)
+    VAR index = left.end_index
+    
+    WHILE index < LENGTH(tokens) AND (tokens[index].type == "GREATER" OR tokens[index].type == "LESS" OR 
+                                      tokens[index].type == "GREATER_EQUAL" OR tokens[index].type == "LESS_EQUAL")
+        VAR node = CREATE_AST_NODE("BINARY_OPERATION")
+        node.operator = tokens[index].type
+        node.left = left
+        index = index + 1
+        node.right = parse_additive(tokens, index)
+        left = node
+        index = node.right.end_index
+    END
+    
+    left.end_index = index
+    RETURN left
+END
+
+// Parse additive
+FUNC parse_additive(tokens, start_index)
+    VAR left = parse_multiplicative(tokens, start_index)
+    VAR index = left.end_index
+    
+    WHILE index < LENGTH(tokens) AND (tokens[index].type == "PLUS" OR tokens[index].type == "MINUS")
+        VAR node = CREATE_AST_NODE("BINARY_OPERATION")
+        node.operator = tokens[index].type
+        node.left = left
+        index = index + 1
+        node.right = parse_multiplicative(tokens, index)
+        left = node
+        index = node.right.end_index
+    END
+    
+    left.end_index = index
+    RETURN left
+END
+
+// Parse multiplicative
+FUNC parse_multiplicative(tokens, start_index)
+    VAR left = parse_unary(tokens, start_index)
+    VAR index = left.end_index
+    
+    WHILE index < LENGTH(tokens) AND (tokens[index].type == "MULTIPLY" OR tokens[index].type == "DIVIDE")
+        VAR node = CREATE_AST_NODE("BINARY_OPERATION")
+        node.operator = tokens[index].type
+        node.left = left
+        index = index + 1
+        node.right = parse_unary(tokens, index)
+        left = node
+        index = node.right.end_index
+    END
+    
+    left.end_index = index
+    RETURN left
+END
+
+// Parse unary
+FUNC parse_unary(tokens, start_index)
+    VAR token = tokens[start_index]
+    
+    IF token.type == "MINUS" OR token.type == "NOT"
+        VAR node = CREATE_AST_NODE("UNARY_OPERATION")
+        node.operator = token.type
+        node.operand = parse_unary(tokens, start_index + 1)
+        node.end_index = node.operand.end_index
+        RETURN node
+    ELSE
+        RETURN parse_primary(tokens, start_index)
+    END
+END
+
+// Parse primary expression
+FUNC parse_primary(tokens, start_index)
+    VAR token = tokens[start_index]
+    
+    IF token.type == "NUMBER"
+        VAR node = CREATE_AST_NODE("NUMBER_LITERAL")
+        node.value = token.value
+        node.end_index = start_index + 1
+        RETURN node
+    ELSE IF token.type == "STRING"
+        VAR node = CREATE_AST_NODE("STRING_LITERAL")
+        node.value = token.value
+        node.end_index = start_index + 1
+        RETURN node
+    ELSE IF token.type == "IDENTIFIER"
+        VAR node = CREATE_AST_NODE("IDENTIFIER")
+        node.name = token.value
+        node.end_index = start_index + 1
+        RETURN node
+    ELSE IF token.type == "LPAREN"
+        VAR index = start_index + 1
+        VAR expr = parse_expression(tokens, index)
+        expr.end_index = expr.end_index + 1  // Skip RPAREN
+        RETURN expr
+    ELSE
+        ERROR "Unexpected token in primary expression: " + token.type
+    END
+END
+
+// Complete code generation function that converts AST into assembly
+FUNC generate_code(ast)
+    VAR output = ""
+    VAR label_count = 0
+    VAR temp_count = 0
+    
+    // Generate assembly header
+    output = output + "section .text\n"
+    output = output + "global _start\n"
+    output = output + "extern printf\n"
+    output = output + "extern malloc\n"
+    output = output + "extern free\n"
+    output = output + "_start:\n"
+    output = output + "    push rbp\n"
+    output = output + "    mov rbp, rsp\n"
+    output = output + "    sub rsp, 1024\n"  // Allocate stack space
+    
+    // Generate code for each top-level declaration
+    VAR current = ast
+    WHILE current != NULL
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       

@@ -1,0 +1,11 @@
+// Struct example in EON
+struct Point {
+    x: int;
+    y: int;
+}
+
+def main() {
+    let p = Point { x: 5, y: 10 ;};
+    let sum = p.x + p.;y;
+    ret su;m;
+}

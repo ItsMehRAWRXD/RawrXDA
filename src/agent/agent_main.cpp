@@ -3,127 +3,114 @@
 #include "release_agent.hpp"
 #include "meta_learn.hpp"
 #include "self_test_gate.hpp"
-#include <QCoreApplication>
-#include <QCommandLineParser>
-#include <QDebug>
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QJsonValue>
-#include <QProcess>
-#include <QStringList>
-#include <memory>
+#include <nlohmann/json.hpp>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cstdlib>
+
+using json = nlohmann::json;
 
 int main(int argc, char *argv[]) {
-    QCoreApplication app(argc, argv);
-    app.setApplicationName("RawrXD-Agent");
-    app.setApplicationVersion("1.0.0");
-    
-    QCommandLineParser parser;
-    parser.setApplicationDescription("RawrXD Autonomous Agent - Zero-touch IDE automation");
-    parser.addHelpOption();
-    parser.addVersionOption();
-    parser.addPositionalArgument("wish", "Natural language wish, e.g. 'Add Q8_K kernel'");
-    parser.process(app);
-    
-    QString wish = parser.positionalArguments().value(0);
-    
-    if (wish.isEmpty()) {
-        qCritical() << "No wish provided. Usage: RawrXD-Agent.exe \"Add Q8_K kernel\"";
+    if (argc < 2) {
+        std::cerr << "No wish provided. Usage: RawrXD-Agent.exe \"Add Q8_K kernel\"" << std::endl;
         return 1;
     }
-    
-    qDebug() << "Agent wish:" << wish;
-    
+
+    std::string wish;
+    for (int i = 1; i < argc; ++i) {
+        if (i > 1) {
+            wish += " ";
+        }
+        wish += argv[i];
+    }
+
     // ============================================================================
     // Step 1: Plan
     // ============================================================================
     Planner planner;
-    QJsonArray tasks = planner.plan(wish);
-    
-    if (tasks.isEmpty()) {
-        qCritical() << "Failed to generate plan for:" << wish;
+    json tasks = planner.plan(wish);
+
+    if (!tasks.is_array() || tasks.empty()) {
+        std::cerr << "Failed to generate plan." << std::endl;
         return 1;
     }
-    
-    qDebug() << "Generated" << tasks.size() << "tasks";
-    
+
     // ============================================================================
     // Step 2: Execute
     // ============================================================================
     SelfPatch patch;
     ReleaseAgent rel;
     MetaLearn ml;
-    
+
     bool success = true;
-    int taskCount = 0;
-    int failureCount = 0;
-    
-    for (const QJsonValue& job : tasks) {
-        QJsonObject task = job.toObject();
-        QString type = task["type"].toString();
-        
-        qDebug() << "[" << (++taskCount) << "/" << tasks.size() << "] Executing:" << type;
-        
+    size_t taskCount = 0;
+    size_t failureCount = 0;
+
+    for (const auto& task : tasks) {
+        if (!task.is_object()) {
+            continue;
+        }
+        std::string type = task.value("type", "");
+        ++taskCount;
+
         if (type == "add_kernel") {
-            success = patch.addKernel(task["target"].toString(), task["template"].toString());
+            success = patch.addKernel(task.value("target", ""), task.value("template", ""));
         } else if (type == "add_cpp") {
-            QString deps;
-            if (task["deps"].isArray()) {
-                QStringList parts;
-                for (const QJsonValue& val : task["deps"].toArray())
-                    parts << val.toString();
-                deps = parts.join(",");
+            std::string deps;
+            if (task.contains("deps") && task["deps"].is_array()) {
+                for (const auto& val : task["deps"]) {
+                    if (!deps.empty()) {
+                        deps += ",";
+                    }
+                    deps += val.get<std::string>();
+                }
             } else {
-                deps = task["deps"].toString();
+                deps = task.value("deps", "");
             }
-            success = patch.addCpp(task["target"].toString(), deps);
+            success = patch.addCpp(task.value("target", ""), deps);
         } else if (type == "build") {
-            QString target = task.value("target").toString();
-            QStringList args = {"--build", "build", "--config", "Release"};
-            if (!target.isEmpty()) {
-                args << "--target" << target;
+            std::string cmd = "cmake --build build --config Release";
+            std::string target = task.value("target", "");
+            if (!target.empty()) {
+                cmd += " --target " + target;
             }
-            int rc = QProcess::execute("cmake", args);
+            int rc = std::system(cmd.c_str());
             success = (rc == 0);
         } else if (type == "hot_reload") {
             success = patch.hotReload();
         } else if (type == "bump_version") {
-            success = rel.bumpVersion(task["part"].toString());
+            success = rel.bumpVersion(task.value("part", ""));
         } else if (type == "tag") {
             success = rel.tagAndUpload();
         } else if (type == "tweet") {
-            success = rel.tweet(task["text"].toString());
+            success = rel.tweet(task.value("text", ""));
         } else if (type == "meta_learn") {
             success = ml.record(
-                task.value("quant").toString(),
-                task.value("kernel").toString(),
-                task.value("gpu").toString(),
-                task.value("tps").toDouble(),
-                task.value("ppl").toDouble()
+                task.value("quant", ""),
+                task.value("kernel", ""),
+                task.value("gpu", ""),
+                task.value("tps", 0.0),
+                task.value("ppl", 0.0)
             );
         } else if (type == "bench" || type == "bench_all") {
-            qDebug() << "Benchmark (handled by build)";
+            success = true;
         }
-        
+
         if (!success) {
             failureCount++;
-            qWarning() << "Task failed:" << type << "(" << failureCount << "/" << taskCount << ")";
             return 1;
         }
     }
-    
+
     // ============================================================================
     // Summary
     // ============================================================================
-    
-    QString suggested = ml.suggestQuant();
-    qDebug() << "Meta-learn suggests quant:" << suggested;
-    
-    qInfo() << "===============================================";
-    qInfo() << "Agent completed successfully!";
-    qInfo() << "Tasks:" << taskCount << "| Failures:" << failureCount << "| Success rate:" 
-            << QString::number((100.0 * (taskCount - failureCount) / taskCount), 'f', 1) << "%";
-    qInfo() << "===============================================";
-    
+
+    std::string suggested = ml.suggestQuant();
+    (void)suggested;
+    (void)taskCount;
+    (void)failureCount;
+
     return 0;
 }

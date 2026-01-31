@@ -1,0 +1,5 @@
+"Iteration","RawOutput","HasToolFormat","HasAnswerFormat","ToolCall","IsValidJSON"
+"1","TOOL:shell
+ARGUMENTS: |
+dir /b *.ps1 | wc -l","True","False","TOOL:shell
+ARGUMENTS: |","False"

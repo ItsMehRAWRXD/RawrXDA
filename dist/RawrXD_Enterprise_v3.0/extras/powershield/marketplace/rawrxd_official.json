@@ -1,0 +1,14 @@
+{
+    "extensions": [
+        {
+            "Id": "rawrxd-official-theme",
+            "Name": "RawrXD Official Theme",
+            "Description": "The default theme for RawrXD IDE.",
+            "Author": "RawrXD",
+            "Version": "1.0.0",
+            "Category": "Themes",
+            "Tags": ["theme", "official"],
+            "MarketplaceId": "rawrxd-official"
+        }
+    ]
+}

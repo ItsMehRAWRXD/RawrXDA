@@ -1,0 +1,24 @@
+# LLM API Configuration
+# This file contains the API configuration for the language model
+
+API_KEY=your_api_key_here
+API_ENDPOINT=https://api.gemini.google.com/v1
+API_VERSION=v1
+TIMEOUT=30
+MAX_RETRIES=3
+
+# Alternative API configurations
+OPENAI_API_KEY=your_openai_key_here
+OPENAI_ENDPOINT=https://api.openai.com/v1
+CLAUDE_API_KEY=your_claude_key_here
+CLAUDE_ENDPOINT=https://api.anthropic.com/v1
+
+# Rate limiting
+REQUESTS_PER_MINUTE=60
+REQUESTS_PER_HOUR=1000
+BURST_LIMIT=10
+
+# Authentication
+AUTH_TYPE=Bearer
+HEADER_NAME=Authorization
+HEADER_PREFIX=Bearer

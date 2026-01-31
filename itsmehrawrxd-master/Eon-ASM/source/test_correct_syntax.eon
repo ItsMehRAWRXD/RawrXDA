@@ -1,0 +1,12 @@
+// Test EON file with correct syntax
+def func add(a: int, b: int) -> int {
+    let result: int = a + ;b;
+    ret resul;t;
+}
+
+def func main() -> void {
+    let x: int = ;5;
+    let y: int = ;3;
+    let sum: int = add(x, y;);
+    ret 0;
+}

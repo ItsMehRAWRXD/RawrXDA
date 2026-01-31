@@ -1,0 +1,1055 @@
+; eon_marketplace.eon
+; Marketplace and Extension System for RawrZ IDE
+; Written in EON ASM - No dependencies required
+
+module marketplace
+
+import std.io
+import std.network
+import std.json
+import std.collections
+import std.string
+import std.filesystem
+import std.gui
+import std.threads
+import std.crypto
+
+; === Marketplace Categories ===
+const CATEGORY_LANGUAGE_SUPPORT = "Language Support"
+const CATEGORY_THEMES = "Themes"
+const CATEGORY_DEBUGGERS = "Debuggers"
+const CATEGORY_FORMATTERS = "Code Formatters"
+const CATEGORY_LINTERS = "Linters"
+const CATEGORY_SNIPPETS = "Code Snippets"
+const CATEGORY_PRODUCTIVITY = "Productivity"
+const CATEGORY_TOOLS = "Development Tools"
+const CATEGORY_KEYMAPS = "Keymaps"
+const CATEGORY_VISUALIZERS = "Data Visualizers"
+const CATEGORY_TESTING = "Testing Tools"
+const CATEGORY_VERSION_CONTROL = "Version Control"
+const CATEGORY_DEPLOYMENT = "Deployment"
+const CATEGORY_DOCUMENTATION = "Documentation"
+const CATEGORY_AI_ASSISTANCE = "AI Assistance"
+
+; === Extension Manifest Structure ===
+struct ExtensionManifest {
+    id: string,
+    name: string,
+    version: string,
+    description: string,
+    author: string,
+    publisher: string,
+    category: string,
+    tags: Array<string>,
+    language_support: Array<string>,
+    main_file: string,
+    icon: string,
+    license: string,
+    homepage: string,
+    repository: string,
+    bugs: string,
+    min_ide_version: string,
+    max_ide_version: string,
+    dependencies: Array<ExtensionDependency>,
+    api_version: string,
+    permissions: Array<string>,
+    activation_events: Array<string>,
+    contributes: ExtensionContributions,
+    scripts: Map<string, string>,
+    files: Array<string>,
+    keywords: Array<string>,
+    download_count: int,
+    rating: float,
+    last_updated: string,
+    file_size: int,
+    checksum: string
+}
+
+struct ExtensionDependency {
+    id: string,
+    version: string,
+    optional: bool
+}
+
+struct ExtensionContributions {
+    commands: Array<CommandContribution>,
+    menus: Array<MenuContribution>,
+    keybindings: Array<KeybindingContribution>,
+    languages: Array<LanguageContribution>,
+    grammars: Array<GrammarContribution>,
+    themes: Array<ThemeContribution>,
+    snippets: Array<SnippetContribution>,
+    debuggers: Array<DebuggerContribution>,
+    task_types: Array<TaskTypeContribution>,
+    views: Array<ViewContribution>,
+    view_containers: Array<ViewContainerContribution>,
+    configuration: ConfigurationContribution,
+    icons: Array<IconContribution>
+}
+
+; === Marketplace API Client ===
+class MarketplaceApiClient {
+    var base_url: string
+    var api_key: string
+    var http_client: HttpClient
+    var cache: ApiCache
+    var rate_limiter: RateLimiter
+    
+    function init(base_url: string, api_key: string) {
+        this.base_url = base_url
+        this.api_key = api_key
+        http_client = HttpClient()
+        cache = ApiCache(60 * 5) ; 5 minute cache
+        rate_limiter = RateLimiter(100, 60) ; 100 requests per minute
+    }
+    
+    function searchExtensions(query: string, category: string = "", page: int = 1, per_page: int = 20) -> SearchResult<ExtensionManifest> {
+        var cache_key = "search:" + query + ":" + category + ":" + page.toString()
+        var cached = cache.get(cache_key)
+        if cached != null {
+            return cached as SearchResult<ExtensionManifest>
+        }
+        
+        rate_limiter.waitForPermit()
+        
+        var params = Map<string, string>()
+        params["q"] = query
+        params["page"] = page.toString()
+        params["per_page"] = per_page.toString()
+        
+        if category != "" {
+            params["category"] = category
+        }
+        
+        var url = base_url + "/search?" + buildQueryString(params)
+        var response = http_client.get(url, getHeaders())
+        
+        if response.status_code == 200 {
+            var result = Json.parse(response.body) as SearchResult<ExtensionManifest>
+            cache.put(cache_key, result)
+            return result
+        } else {
+            throw ApiError("Search failed: " + response.status_code.toString())
+        }
+    }
+    
+    function getExtension(extension_id: string) -> ExtensionManifest {
+        var cache_key = "extension:" + extension_id
+        var cached = cache.get(cache_key)
+        if cached != null {
+            return cached as ExtensionManifest
+        }
+        
+        rate_limiter.waitForPermit()
+        
+        var url = base_url + "/extensions/" + extension_id
+        var response = http_client.get(url, getHeaders())
+        
+        if response.status_code == 200 {
+            var extension = Json.parse(response.body) as ExtensionManifest
+            cache.put(cache_key, extension)
+            return extension
+        } else if response.status_code == 404 {
+            throw NotFoundError("Extension not found: " + extension_id)
+        } else {
+            throw ApiError("Get extension failed: " + response.status_code.toString())
+        }
+    }
+    
+    function getExtensionsByCategory(category: string, page: int = 1, per_page: int = 20) -> SearchResult<ExtensionManifest> {
+        var cache_key = "category:" + category + ":" + page.toString()
+        var cached = cache.get(cache_key)
+        if cached != null {
+            return cached as SearchResult<ExtensionManifest>
+        }
+        
+        rate_limiter.waitForPermit()
+        
+        var params = Map<string, string>()
+        params["category"] = category
+        params["page"] = page.toString()
+        params["per_page"] = per_page.toString()
+        
+        var url = base_url + "/categories?" + buildQueryString(params)
+        var response = http_client.get(url, getHeaders())
+        
+        if response.status_code == 200 {
+            var result = Json.parse(response.body) as SearchResult<ExtensionManifest>
+            cache.put(cache_key, result)
+            return result
+        } else {
+            throw ApiError("Get category failed: " + response.status_code.toString())
+        }
+    }
+    
+    function getFeaturedExtensions() -> Array<ExtensionManifest> {
+        var cache_key = "featured"
+        var cached = cache.get(cache_key)
+        if cached != null {
+            return cached as Array<ExtensionManifest>
+        }
+        
+        rate_limiter.waitForPermit()
+        
+        var url = base_url + "/featured"
+        var response = http_client.get(url, getHeaders())
+        
+        if response.status_code == 200 {
+            var extensions = Json.parse(response.body) as Array<ExtensionManifest>
+            cache.put(cache_key, extensions)
+            return extensions
+        } else {
+            throw ApiError("Get featured failed: " + response.status_code.toString())
+        }
+    }
+    
+    function getPopularExtensions(timeframe: string = "week") -> Array<ExtensionManifest> {
+        var cache_key = "popular:" + timeframe
+        var cached = cache.get(cache_key)
+        if cached != null {
+            return cached as Array<ExtensionManifest>
+        }
+        
+        rate_limiter.waitForPermit()
+        
+        var url = base_url + "/popular?timeframe=" + timeframe
+        var response = http_client.get(url, getHeaders())
+        
+        if response.status_code == 200 {
+            var extensions = Json.parse(response.body) as Array<ExtensionManifest>
+            cache.put(cache_key, extensions)
+            return extensions
+        } else {
+            throw ApiError("Get popular failed: " + response.status_code.toString())
+        }
+    }
+    
+    function downloadExtension(extension_id: string, version: string, output_path: string, progress_callback: function(int, int)) -> bool {
+        rate_limiter.waitForPermit()
+        
+        var url = base_url + "/extensions/" + extension_id + "/download?version=" + version
+        
+        try {
+            return http_client.downloadFile(url, output_path, getHeaders(), progress_callback)
+        } catch DownloadError error {
+            throw ApiError("Download failed: " + error.message)
+        }
+    }
+    
+    function publishExtension(extension_package: string, manifest: ExtensionManifest) -> PublishResult {
+        rate_limiter.waitForPermit()
+        
+        var form_data = MultipartFormData()
+        form_data.addFile("package", extension_package)
+        form_data.addField("manifest", Json.stringify(manifest))
+        
+        var url = base_url + "/publish"
+        var response = http_client.post(url, form_data, getHeaders())
+        
+        if response.status_code == 201 {
+            return Json.parse(response.body) as PublishResult
+        } else {
+            throw ApiError("Publish failed: " + response.status_code.toString())
+        }
+    }
+    
+    function updateExtension(extension_id: string, extension_package: string, manifest: ExtensionManifest) -> UpdateResult {
+        rate_limiter.waitForPermit()
+        
+        var form_data = MultipartFormData()
+        form_data.addFile("package", extension_package)
+        form_data.addField("manifest", Json.stringify(manifest))
+        
+        var url = base_url + "/extensions/" + extension_id + "/update"
+        var response = http_client.put(url, form_data, getHeaders())
+        
+        if response.status_code == 200 {
+            return Json.parse(response.body) as UpdateResult
+        } else {
+            throw ApiError("Update failed: " + response.status_code.toString())
+        }
+    }
+    
+    function getCategories() -> Array<string> {
+        var cache_key = "categories"
+        var cached = cache.get(cache_key)
+        if cached != null {
+            return cached as Array<string>
+        }
+        
+        rate_limiter.waitForPermit()
+        
+        var url = base_url + "/categories/list"
+        var response = http_client.get(url, getHeaders())
+        
+        if response.status_code == 200 {
+            var categories = Json.parse(response.body) as Array<string>
+            cache.put(cache_key, categories)
+            return categories
+        } else {
+            throw ApiError("Get categories failed: " + response.status_code.toString())
+        }
+    }
+    
+    private function getHeaders() -> Map<string, string> {
+        var headers = Map<string, string>()
+        headers["Authorization"] = "Bearer " + api_key
+        headers["Content-Type"] = "application/json"
+        headers["User-Agent"] = "RawrZ-IDE/5.0"
+        return headers
+    }
+    
+    private function buildQueryString(params: Map<string, string>) -> string {
+        var query_parts = Array<string>()
+        for key, value in params {
+            query_parts.add(key + "=" + encodeURIComponent(value))
+        }
+        return String.join("&", query_parts)
+    }
+}
+
+; === Extension Package Manager ===
+class ExtensionPackageManager {
+    var installation_directory: string
+    var temp_directory: string
+    var installed_extensions: Map<string, InstalledExtension>
+    var dependency_resolver: DependencyResolver
+    var signature_validator: SignatureValidator
+    
+    function init(installation_directory: string) {
+        this.installation_directory = installation_directory
+        temp_directory = Path.combine(installation_directory, "temp")
+        
+        Directory.createIfNotExists(installation_directory)
+        Directory.createIfNotExists(temp_directory)
+        
+        dependency_resolver = DependencyResolver()
+        signature_validator = SignatureValidator()
+        
+        loadInstalledExtensions()
+    }
+    
+    function installExtension(extension_package: string, verify_signature: bool = true) -> InstallResult {
+        try {
+            ; Extract package to temporary location
+            var temp_extract_path = Path.combine(temp_directory, generateTempId())
+            var extractor = PackageExtractor()
+            extractor.extract(extension_package, temp_extract_path)
+            
+            ; Read and validate manifest
+            var manifest_path = Path.combine(temp_extract_path, "manifest.json")
+            if !File.exists(manifest_path) {
+                throw InstallError("Package does not contain a manifest.json file")
+            }
+            
+            var manifest = Json.parseFile(manifest_path) as ExtensionManifest
+            
+            ; Verify package signature if required
+            if verify_signature {
+                var signature_path = Path.combine(temp_extract_path, "signature.sig")
+                if File.exists(signature_path) {
+                    var signature = File.readAllBytes(signature_path)
+                    if !signature_validator.verifyPackage(extension_package, signature) {
+                        throw SecurityError("Package signature verification failed")
+                    }
+                } else if !signature_validator.isTrustedPublisher(manifest.publisher) {
+                    throw SecurityError("Package is not signed and publisher is not trusted")
+                }
+            }
+            
+            ; Check IDE compatibility
+            if !isCompatibleWithIDE(manifest) {
+                throw CompatibilityError("Extension is not compatible with this IDE version")
+            }
+            
+            ; Resolve dependencies
+            var missing_deps = dependency_resolver.checkDependencies(manifest.dependencies, installed_extensions)
+            if missing_deps.size() > 0 {
+                ; Try to auto-install dependencies
+                for dep in missing_deps {
+                    var dep_result = installDependency(dep)
+                    if !dep_result.success {
+                        throw DependencyError("Failed to install required dependency: " + dep.id)
+                    }
+                }
+            }
+            
+            ; Check for conflicts
+            var conflicts = checkForConflicts(manifest)
+            if conflicts.size() > 0 {
+                throw ConflictError("Extension conflicts with installed extensions: " + String.join(", ", conflicts))
+            }
+            
+            ; Install to final location
+            var install_path = Path.combine(installation_directory, manifest.id)
+            if Directory.exists(install_path) {
+                ; Update existing installation
+                Directory.delete(install_path)
+            }
+            
+            Directory.move(temp_extract_path, install_path)
+            
+            ; Register extension
+            var installed_ext = InstalledExtension()
+            installed_ext.manifest = manifest
+            installed_ext.install_path = install_path
+            installed_ext.install_date = getCurrentTimestamp()
+            installed_ext.enabled = true
+            
+            installed_extensions[manifest.id] = installed_ext
+            saveInstalledExtensions()
+            
+            ; Run post-install scripts
+            runPostInstallScripts(installed_ext)
+            
+            return InstallResult(true, "Extension installed successfully")
+            
+        } catch InstallError error {
+            ; Cleanup on failure
+            cleanupFailedInstall(temp_extract_path)
+            return InstallResult(false, error.message)
+        }
+    }
+    
+    function uninstallExtension(extension_id: string) -> UninstallResult {
+        if !installed_extensions.containsKey(extension_id) {
+            return UninstallResult(false, "Extension not found")
+        }
+        
+        try {
+            var extension = installed_extensions[extension_id]
+            
+            ; Check if other extensions depend on this one
+            var dependents = findDependentExtensions(extension_id)
+            if dependents.size() > 0 {
+                return UninstallResult(false, "Cannot uninstall: Other extensions depend on this one: " + String.join(", ", dependents))
+            }
+            
+            ; Run pre-uninstall scripts
+            runPreUninstallScripts(extension)
+            
+            ; Remove files
+            if Directory.exists(extension.install_path) {
+                Directory.delete(extension.install_path)
+            }
+            
+            ; Unregister extension
+            installed_extensions.remove(extension_id)
+            saveInstalledExtensions()
+            
+            return UninstallResult(true, "Extension uninstalled successfully")
+            
+        } catch UninstallError error {
+            return UninstallResult(false, error.message)
+        }
+    }
+    
+    function updateExtension(extension_id: string, new_package: string) -> UpdateResult {
+        if !installed_extensions.containsKey(extension_id) {
+            return UpdateResult(false, "Extension not found")
+        }
+        
+        try {
+            var current_extension = installed_extensions[extension_id]
+            
+            ; Create backup
+            var backup_path = createBackup(current_extension)
+            
+            try {
+                ; Install new version
+                var install_result = installExtension(new_package)
+                if !install_result.success {
+                    throw UpdateError("Failed to install new version: " + install_result.message)
+                }
+                
+                ; Remove backup if successful
+                Directory.delete(backup_path)
+                
+                return UpdateResult(true, "Extension updated successfully")
+                
+            } catch UpdateError error {
+                ; Restore from backup on failure
+                restoreFromBackup(backup_path, current_extension.install_path)
+                throw error
+            }
+            
+        } catch UpdateError error {
+            return UpdateResult(false, error.message)
+        }
+    }
+    
+    function enableExtension(extension_id: string) -> bool {
+        if installed_extensions.containsKey(extension_id) {
+            installed_extensions[extension_id].enabled = true
+            saveInstalledExtensions()
+            return true
+        }
+        return false
+    }
+    
+    function disableExtension(extension_id: string) -> bool {
+        if installed_extensions.containsKey(extension_id) {
+            installed_extensions[extension_id].enabled = false
+            saveInstalledExtensions()
+            return true
+        }
+        return false
+    }
+    
+    function getInstalledExtensions() -> Array<InstalledExtension> {
+        return installed_extensions.values()
+    }
+    
+    function getEnabledExtensions() -> Array<InstalledExtension> {
+        var enabled = Array<InstalledExtension>()
+        for extension in installed_extensions.values() {
+            if extension.enabled {
+                enabled.add(extension)
+            }
+        }
+        return enabled
+    }
+    
+    function checkForUpdates() -> Array<UpdateInfo> {
+        var updates = Array<UpdateInfo>()
+        var api_client = MarketplaceApiClient("https://marketplace.rawrz.dev", getApiKey())
+        
+        for extension in installed_extensions.values() {
+            try {
+                var latest = api_client.getExtension(extension.manifest.id)
+                if isNewerVersion(latest.version, extension.manifest.version) {
+                    var update_info = UpdateInfo()
+                    update_info.extension_id = extension.manifest.id
+                    update_info.current_version = extension.manifest.version
+                    update_info.latest_version = latest.version
+                    update_info.latest_manifest = latest
+                    updates.add(update_info)
+                }
+            } catch ApiError {
+                ; Skip if can't check this extension
+                continue
+            }
+        }
+        
+        return updates
+    }
+    
+    private function loadInstalledExtensions() {
+        var registry_file = Path.combine(installation_directory, "registry.json")
+        if File.exists(registry_file) {
+            try {
+                var registry_data = Json.parseFile(registry_file)
+                installed_extensions = registry_data["extensions"] as Map<string, InstalledExtension>
+            } catch ParseError {
+                ; Start with empty registry if parsing fails
+                installed_extensions = Map<string, InstalledExtension>()
+            }
+        } else {
+            installed_extensions = Map<string, InstalledExtension>()
+        }
+    }
+    
+    private function saveInstalledExtensions() {
+        var registry_file = Path.combine(installation_directory, "registry.json")
+        var registry_data = Map<string, any>()
+        registry_data["extensions"] = installed_extensions
+        registry_data["last_updated"] = getCurrentTimestamp()
+        
+        File.writeAllText(registry_file, Json.stringify(registry_data, true))
+    }
+}
+
+; === Marketplace GUI Components ===
+class MarketplaceDialog extends Dialog {
+    var search_box: TextBox
+    var category_list: ListBox
+    var extension_list: ListView
+    var detail_panel: Panel
+    var install_button: Button
+    var uninstall_button: Button
+    var update_button: Button
+    var api_client: MarketplaceApiClient
+    var package_manager: ExtensionPackageManager
+    var selected_extension: ExtensionManifest
+    
+    function init() {
+        super.init("Extension Marketplace", 900, 600)
+        setupUI()
+        setupEventHandlers()
+        loadInitialData()
+    }
+    
+    function setupUI() {
+        var main_layout = HorizontalSplitLayout()
+        
+        ; Left panel - search and categories
+        var left_panel = Panel()
+        var left_layout = VerticalLayout()
+        
+        ; Search box
+        search_box = TextBox()
+        search_box.setPlaceholder("Search extensions...")
+        left_layout.add(search_box)
+        
+        ; Category list
+        var category_label = Label("Categories")
+        category_list = ListBox()
+        left_layout.add(category_label)
+        left_layout.add(category_list)
+        
+        left_panel.setLayout(left_layout)
+        main_layout.setLeftPanel(left_panel, 200)
+        
+        ; Right panel - extension list and details
+        var right_panel = Panel()
+        var right_layout = VerticalSplitLayout()
+        
+        ; Extension list
+        extension_list = ListView()
+        extension_list.addColumn("Name", 200)
+        extension_list.addColumn("Author", 150)
+        extension_list.addColumn("Rating", 100)
+        extension_list.addColumn("Downloads", 100)
+        extension_list.addColumn("Updated", 120)
+        
+        ; Detail panel
+        detail_panel = Panel()
+        setupDetailPanel()
+        
+        right_layout.setTopPanel(extension_list, 300)
+        right_layout.setBottomPanel(detail_panel, 200)
+        
+        right_panel.setLayout(right_layout)
+        main_layout.setRightPanel(right_panel)
+        
+        setLayout(main_layout)
+    }
+    
+    function setupDetailPanel() {
+        var detail_layout = VerticalLayout()
+        
+        ; Extension info
+        var info_panel = Panel()
+        var info_layout = FormLayout()
+        
+        var name_label = Label("")
+        var author_label = Label("")
+        var version_label = Label("")
+        var description_label = Label("")
+        
+        info_layout.addRow("Name:", name_label)
+        info_layout.addRow("Author:", author_label)
+        info_layout.addRow("Version:", version_label)
+        info_layout.addRow("Description:", description_label)
+        
+        info_panel.setLayout(info_layout)
+        detail_layout.add(info_panel)
+        
+        ; Action buttons
+        var button_panel = Panel()
+        var button_layout = HorizontalLayout()
+        
+        install_button = Button("Install")
+        update_button = Button("Update")
+        uninstall_button = Button("Uninstall")
+        
+        button_layout.add(install_button)
+        button_layout.add(update_button)
+        button_layout.add(uninstall_button)
+        
+        button_panel.setLayout(button_layout)
+        detail_layout.add(button_panel)
+        
+        detail_panel.setLayout(detail_layout)
+    }
+    
+    function setupEventHandlers() {
+        search_box.onTextChanged = handleSearchTextChanged
+        category_list.onSelectionChanged = handleCategorySelectionChanged
+        extension_list.onSelectionChanged = handleExtensionSelectionChanged
+        
+        install_button.onClick = handleInstallClick
+        update_button.onClick = handleUpdateClick
+        uninstall_button.onClick = handleUninstallClick
+    }
+    
+    function loadInitialData() {
+        ; Load categories
+        try {
+            var categories = api_client.getCategories()
+            category_list.clear()
+            category_list.addItem("All Categories")
+            for category in categories {
+                category_list.addItem(category)
+            }
+            category_list.selectItem(0)
+        } catch ApiError error {
+            showError("Failed to load categories: " + error.message)
+        }
+        
+        ; Load featured extensions
+        loadFeaturedExtensions()
+    }
+    
+    function loadFeaturedExtensions() {
+        try {
+            var featured = api_client.getFeaturedExtensions()
+            populateExtensionList(featured)
+        } catch ApiError error {
+            showError("Failed to load featured extensions: " + error.message)
+        }
+    }
+    
+    function handleSearchTextChanged() {
+        var query = search_box.getText()
+        if query.length() >= 3 {
+            performSearch(query)
+        } else if query.length() == 0 {
+            loadFeaturedExtensions()
+        }
+    }
+    
+    function performSearch(query: string) {
+        try {
+            var selected_category = ""
+            var selected_index = category_list.getSelectedIndex()
+            if selected_index > 0 {
+                selected_category = category_list.getItemText(selected_index)
+            }
+            
+            var results = api_client.searchExtensions(query, selected_category)
+            populateExtensionList(results.items)
+        } catch ApiError error {
+            showError("Search failed: " + error.message)
+        }
+    }
+    
+    function handleCategorySelectionChanged() {
+        var selected_index = category_list.getSelectedIndex()
+        if selected_index > 0 {
+            var category = category_list.getItemText(selected_index)
+            loadExtensionsByCategory(category)
+        } else {
+            loadFeaturedExtensions()
+        }
+    }
+    
+    function loadExtensionsByCategory(category: string) {
+        try {
+            var results = api_client.getExtensionsByCategory(category)
+            populateExtensionList(results.items)
+        } catch ApiError error {
+            showError("Failed to load category: " + error.message)
+        }
+    }
+    
+    function populateExtensionList(extensions: Array<ExtensionManifest>) {
+        extension_list.clear()
+        
+        for extension in extensions {
+            var item = ListViewItem()
+            item.setText(0, extension.name)
+            item.setText(1, extension.author)
+            item.setText(2, extension.rating.toString() + "/5")
+            item.setText(3, formatDownloadCount(extension.download_count))
+            item.setText(4, formatDate(extension.last_updated))
+            item.setData(extension)
+            
+            extension_list.addItem(item)
+        }
+    }
+    
+    function handleExtensionSelectionChanged() {
+        var selected_items = extension_list.getSelectedItems()
+        if selected_items.size() > 0 {
+            selected_extension = selected_items[0].getData() as ExtensionManifest
+            updateDetailPanel()
+            updateButtonStates()
+        }
+    }
+    
+    function updateDetailPanel() {
+        if selected_extension == null {
+            return
+        }
+        
+        ; Update info labels with selected extension details
+        detail_panel.findChild("name_label").setText(selected_extension.name)
+        detail_panel.findChild("author_label").setText(selected_extension.author)
+        detail_panel.findChild("version_label").setText(selected_extension.version)
+        detail_panel.findChild("description_label").setText(selected_extension.description)
+    }
+    
+    function updateButtonStates() {
+        if selected_extension == null {
+            install_button.setEnabled(false)
+            update_button.setEnabled(false)
+            uninstall_button.setEnabled(false)
+            return
+        }
+        
+        var installed_extensions = package_manager.getInstalledExtensions()
+        var is_installed = false
+        var has_update = false
+        
+        for installed in installed_extensions {
+            if installed.manifest.id == selected_extension.id {
+                is_installed = true
+                has_update = isNewerVersion(selected_extension.version, installed.manifest.version)
+                break
+            }
+        }
+        
+        install_button.setEnabled(!is_installed)
+        update_button.setEnabled(is_installed && has_update)
+        uninstall_button.setEnabled(is_installed)
+    }
+    
+    function handleInstallClick() {
+        if selected_extension == null {
+            return
+        }
+        
+        installExtension(selected_extension)
+    }
+    
+    function installExtension(extension: ExtensionManifest) {
+        var progress_dialog = ProgressDialog("Installing Extension", "Downloading " + extension.name + "...")
+        progress_dialog.show()
+        
+        ; Download extension in background thread
+        var download_thread = Thread(function() {
+            try {
+                var temp_file = Path.combine(Path.getTempDirectory(), extension.id + ".zip")
+                
+                var download_success = api_client.downloadExtension(extension.id, extension.version, temp_file, 
+                    function(downloaded: int, total: int) {
+                        var percent = (downloaded * 100) / total
+                        progress_dialog.setProgress(percent)
+                        progress_dialog.setText("Downloaded " + formatBytes(downloaded) + " of " + formatBytes(total))
+                    })
+                
+                if download_success {
+                    progress_dialog.setText("Installing...")
+                    var install_result = package_manager.installExtension(temp_file)
+                    
+                    progress_dialog.close()
+                    
+                    if install_result.success {
+                        showInfo("Extension installed successfully!")
+                        updateButtonStates()
+                    } else {
+                        showError("Installation failed: " + install_result.message)
+                    }
+                } else {
+                    progress_dialog.close()
+                    showError("Download failed")
+                }
+                
+                ; Cleanup temp file
+                if File.exists(temp_file) {
+                    File.delete(temp_file)
+                }
+                
+            } catch error {
+                progress_dialog.close()
+                showError("Installation error: " + error.message)
+            }
+        })
+        
+        download_thread.start()
+    }
+    
+    function handleUpdateClick() {
+        if selected_extension == null {
+            return
+        }
+        
+        installExtension(selected_extension) ; Same process as install for updates
+    }
+    
+    function handleUninstallClick() {
+        if selected_extension == null {
+            return
+        }
+        
+        var result = showConfirmDialog("Uninstall Extension", 
+            "Are you sure you want to uninstall " + selected_extension.name + "?",
+            ["Uninstall", "Cancel"])
+        
+        if result == 0 {
+            var uninstall_result = package_manager.uninstallExtension(selected_extension.id)
+            if uninstall_result.success {
+                showInfo("Extension uninstalled successfully!")
+                updateButtonStates()
+            } else {
+                showError("Uninstall failed: " + uninstall_result.message)
+            }
+        }
+    }
+}
+
+; === Extension Development Tools ===
+class ExtensionDeveloperTools {
+    var project_templates: Map<string, ExtensionTemplate>
+    var scaffolder: ExtensionScaffolder
+    var packager: ExtensionPackager
+    var validator: ExtensionValidator
+    var publisher: ExtensionPublisher
+    
+    function init() {
+        loadProjectTemplates()
+        scaffolder = ExtensionScaffolder()
+        packager = ExtensionPackager()
+        validator = ExtensionValidator()
+        publisher = ExtensionPublisher()
+    }
+    
+    function createExtensionProject(name: string, template: string, output_path: string) -> bool {
+        if !project_templates.containsKey(template) {
+            return false
+        }
+        
+        var template_data = project_templates[template]
+        return scaffolder.createProject(name, template_data, output_path)
+    }
+    
+    function validateExtension(extension_path: string) -> ValidationResult {
+        return validator.validate(extension_path)
+    }
+    
+    function packageExtension(extension_path: string, output_file: string) -> bool {
+        return packager.package(extension_path, output_file)
+    }
+    
+    function publishExtension(package_file: string, api_key: string) -> PublishResult {
+        return publisher.publish(package_file, api_key)
+    }
+    
+    private function loadProjectTemplates() {
+        project_templates = Map<string, ExtensionTemplate>()
+        
+        ; Basic extension template
+        var basic_template = ExtensionTemplate()
+        basic_template.name = "Basic Extension"
+        basic_template.description = "A basic extension template"
+        basic_template.files = getBasicExtensionFiles()
+        project_templates["basic"] = basic_template
+        
+        ; Language support template
+        var language_template = ExtensionTemplate()
+        language_template.name = "Language Support"
+        language_template.description = "Template for adding new language support"
+        language_template.files = getLanguageSupportFiles()
+        project_templates["language"] = language_template
+        
+        ; Theme template
+        var theme_template = ExtensionTemplate()
+        theme_template.name = "Theme Extension"
+        theme_template.description = "Template for creating IDE themes"
+        theme_template.files = getThemeExtensionFiles()
+        project_templates["theme"] = theme_template
+    }
+}
+
+; === Built-in Extension Registry ===
+var built_in_extensions = [
+    ; Core Language Support
+    {
+        "id": "rawrz.eon-language-support",
+        "name": "EON Language Support",
+        "description": "Full language support for EON including syntax highlighting, IntelliSense, and debugging",
+        "category": CATEGORY_LANGUAGE_SUPPORT,
+        "built_in": true
+    },
+    {
+        "id": "rawrz.c-language-support", 
+        "name": "C Language Support",
+        "description": "Complete C language support with compiler integration",
+        "category": CATEGORY_LANGUAGE_SUPPORT,
+        "built_in": true
+    },
+    {
+        "id": "rawrz.cpp-language-support",
+        "name": "C++ Language Support", 
+        "description": "Modern C++ language support with C++20 features",
+        "category": CATEGORY_LANGUAGE_SUPPORT,
+        "built_in": true
+    },
+    
+    ; Popular Extensions
+    {
+        "id": "rawrz.dark-theme",
+        "name": "RawrZ Dark Theme",
+        "description": "Professional dark theme optimized for long coding sessions",
+        "category": CATEGORY_THEMES,
+        "featured": true
+    },
+    {
+        "id": "rawrz.ai-assistant",
+        "name": "AI Code Assistant", 
+        "description": "Intelligent code completion and refactoring suggestions",
+        "category": CATEGORY_AI_ASSISTANCE,
+        "featured": true
+    },
+    {
+        "id": "rawrz.git-integration",
+        "name": "Git Integration",
+        "description": "Full Git version control integration",
+        "category": CATEGORY_VERSION_CONTROL,
+        "popular": true
+    }
+]
+
+; === Utility Functions ===
+function formatDownloadCount(count: int) -> string {
+    if count < 1000 {
+        return count.toString()
+    } else if count < 1000000 {
+        return (count / 1000).toString() + "K"
+    } else {
+        return (count / 1000000).toString() + "M"
+    }
+}
+
+function formatBytes(bytes: int) -> string {
+    if bytes < 1024 {
+        return bytes.toString() + " B"
+    } else if bytes < 1048576 {
+        return (bytes / 1024).toString() + " KB"
+    } else {
+        return (bytes / 1048576).toString() + " MB"
+    }
+}
+
+function isNewerVersion(version1: string, version2: string) -> bool {
+    ; Simple semantic version comparison
+    var parts1 = version1.split(".")
+    var parts2 = version2.split(".")
+    
+    for i in 0..3 {
+        var v1 = (i < parts1.size()) ? parseInt(parts1[i]) : 0
+        var v2 = (i < parts2.size()) ? parseInt(parts2[i]) : 0
+        
+        if v1 > v2 {
+            return true
+        } else if v1 < v2 {
+            return false
+        }
+    }
+    
+    return false
+}
+
+function generateTempId() -> string {
+    return "temp_" + getCurrentTimestamp().toString() + "_" + Random.next(1000, 9999).toString()
+}
+
+function getCurrentTimestamp() -> int {
+    return System.getCurrentTime()
+}
+
+function getApiKey() -> string {
+    ; Get API key from settings or environment
+    return Settings.get("marketplace.api_key", "")
+}

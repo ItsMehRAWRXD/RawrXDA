@@ -1,0 +1,68 @@
+{
+  "monitoring": {
+    "healthCheckIntervalMs": 60000,
+    "pollIntervalMs": 5000
+  },
+  "prediction": {
+    "historySize": 10,
+    "enableML": false,
+    "algorithm": "EWMA",
+    "alpha": 0.3
+  },
+  "version": "2.0.0",
+  "loadBalancing": {
+    "enabled": true,
+    "hysteresisThreshold": 0.05,
+    "loadWeight": 0.3,
+    "thermalWeight": 0.5,
+    "healthWeight": 0.2
+  },
+  "generated": "2026-01-26T20:31:20",
+  "thresholds": {
+    "warning": 65.0,
+    "shutdown": 95,
+    "critical": 85.0
+  },
+  "drives": [
+    {
+      "warningTemp": 65.0,
+      "baseline": 40.0,
+      "criticalTemp": 85.0,
+      "model": "CT1000P3PSSD8",
+      "deviceId": "0",
+      "ratedTBW": 0
+    },
+    {
+      "warningTemp": 65.0,
+      "baseline": 40.0,
+      "criticalTemp": 85.0,
+      "model": "CT1000P3PSSD8",
+      "deviceId": "1",
+      "ratedTBW": 0
+    },
+    {
+      "warningTemp": 65.0,
+      "baseline": 40.0,
+      "criticalTemp": 85.0,
+      "model": "CT1000P3PSSD8",
+      "deviceId": "2",
+      "ratedTBW": 0
+    },
+    {
+      "warningTemp": 65.0,
+      "baseline": 40.0,
+      "criticalTemp": 85.0,
+      "model": "CT4000X10PROSSD9",
+      "deviceId": "4",
+      "ratedTBW": 0
+    },
+    {
+      "warningTemp": 65.0,
+      "baseline": 40.0,
+      "criticalTemp": 85.0,
+      "model": "CT4000X10PROSSD9",
+      "deviceId": "5",
+      "ratedTBW": 0
+    }
+  ]
+}

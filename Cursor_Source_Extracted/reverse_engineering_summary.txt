@@ -1,0 +1,19 @@
+Universal Reverse Engineering Summary
+=====================================
+Generated: 2026-01-24 11:16:48
+Input File: C:\Users\HiH8e\AppData\Local\Programs\cursor\Cursor.exe
+File Type: pe
+Electron App: True
+
+Statistics:
+- Total Files: 14006
+- Total Size: 434.15 MB
+- Source Files: 8456
+- Binary Files: 33
+- Extracted Strings: 0
+
+Analysis Results:
+- ElectronPackage: 
+- PE: Resources, Strings, Headers, FileInfo, Imports, Exports, Sections
+
+Output Directory: Cursor_Source_Extracted

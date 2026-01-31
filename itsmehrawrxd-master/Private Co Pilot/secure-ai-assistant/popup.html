@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Secure AI Desktop Helper</title>
+    <style>
+        body {
+            width: 350px;
+            min-height: 400px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 300;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary {
+            background: rgba(76, 175, 80, 0.8);
+        }
+        
+        .btn-primary:hover {
+            background: rgba(76, 175, 80, 1);
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            margin-top: 10px;
+            font-size: 12px;
+            text-align: center;
+            min-height: 20px;
+        }
+        
+        .api-key-section {
+            margin-bottom: 15px;
+        }
+        
+        .api-key-input {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .api-key-input::placeholder {
+            color: #666;
+        }
+        
+        .save-key-btn {
+            width: 100%;
+            padding: 6px;
+            background: rgba(33, 150, 243, 0.8);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        
+        .save-key-btn:hover {
+            background: rgba(33, 150, 243, 1);
+        }
+        
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.2);
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>🔒 Secure AI Assistant</h2>
+    </div>
+    
+    <div class="api-key-section">
+        <input type="password" id="apiKeyInput" class="api-key-input" placeholder="Enter OpenAI API Key (stored locally only)">
+        <button id="saveApiKey" class="save-key-btn">Save API Key</button>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="control-group">
+        <button id="openChat" class="btn btn-primary">💬 Open Chat Panel</button>
+        <button id="quickCommand" class="btn">⚡ Quick Command</button>
+        <button id="sendFile" class="btn">📁 Send Selected File</button>
+        <button id="capturePage" class="btn">📄 Capture Page Content</button>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="control-group">
+        <button id="clearHistory" class="btn">🗑️ Clear Chat History</button>
+        <button id="exportData" class="btn">💾 Export Data</button>
+        <button id="settings" class="btn">⚙️ Settings</button>
+    </div>
+    
+    <div id="status" class="status">Ready</div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[
+  {
+    "Method": "Invoke-SourceDigestionOrchestratorAuto",
+    "Result": "success"
+  },
+  {
+    "Method": "Invoke-Test-Security-Settings-FixAuto",
+    "Result": "success"
+  }
+]

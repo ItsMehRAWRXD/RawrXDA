@@ -1,0 +1,11 @@
+{
+  "name": "New EON Project",
+  "version": "1.0.0",
+  "description": "A new EON project",
+  "files": [],
+  "settings": {
+    "compiler": "eon-compiler",
+    "debugger": "eon-debugger",
+    "editor": "eon-editor"
+  }
+}

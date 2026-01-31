@@ -1,0 +1,104 @@
+// n0mn0m Meta-Engine Protocol Buffers
+// "No cons, only choices" - Real-time trade-off optimization
+
+syntax = "proto3";
+
+package n0mn0m.meta;
+
+option go_package = "github.com/n0mn0m/engine-18/meta";
+
+// Core trade-off decision model
+message TradeOff {
+  string engine = 1;           // Engine identifier (eon-jit, quantum-asm, transpiler, daemon)
+  float latency = 2;           // P99 latency in milliseconds
+  float cost = 3;              // Cost per operation (CPU cycles, memory, etc.)
+  float risk = 4;              // Risk score (0.0 = safe, 1.0 = high risk)
+  float throughput = 5;        // Operations per second
+  float accuracy = 6;          // Result accuracy (0.0-1.0)
+  int64 timestamp = 7;         // Unix timestamp
+  string context = 8;          // Execution context (batch, realtime, etc.)
+}
+
+// Meta-engine decision request
+message MetaDecisionRequest {
+  repeated TradeOff options = 1;    // Available engine options
+  string objective = 2;             // Primary objective (latency, cost, accuracy)
+  map<string, float> constraints = 3; // Constraints (max_latency: 50.0, max_cost: 100.0)
+  string session_id = 4;            // User session identifier
+}
+
+// Meta-engine decision response
+message MetaDecisionResponse {
+  string chosen_engine = 1;         // Selected engine
+  float confidence = 2;             // Decision confidence (0.0-1.0)
+  string reasoning = 3;             // Human-readable reasoning
+  TradeOff trade_off = 4;           // Chosen trade-off details
+  int64 decision_time_ms = 5;       // Decision time in milliseconds
+}
+
+// Real-time performance reporting
+message PerformanceReport {
+  string engine = 1;                // Engine that generated the report
+  float latency_ms = 2;             // Actual latency observed
+  float cpu_usage = 3;              // CPU utilization percentage
+  float memory_usage = 4;           // Memory utilization percentage
+  int64 operations_count = 5;       // Number of operations
+  float error_rate = 6;             // Error rate (0.0-1.0)
+  int64 timestamp = 7;              // Report timestamp
+  string session_id = 8;            // Session identifier
+}
+
+// Auto-rollback trigger
+message RollbackTrigger {
+  string engine = 1;                // Engine to rollback
+  string reason = 2;                // Rollback reason
+  float threshold_exceeded = 3;     // Threshold that was exceeded
+  int64 timestamp = 4;              // Trigger timestamp
+}
+
+// Meta-Engine Service Definition
+service MetaEngine {
+  // Make optimal engine choice based on trade-offs
+  rpc ChooseEngine(MetaDecisionRequest) returns (MetaDecisionResponse);
+  
+  // Report real-time performance metrics
+  rpc ReportPerformance(PerformanceReport) returns (google.protobuf.Empty);
+  
+  // Trigger automatic rollback
+  rpc TriggerRollback(RollbackTrigger) returns (google.protobuf.Empty);
+  
+  // Get current engine recommendations
+  rpc GetRecommendations(google.protobuf.Empty) returns (stream MetaDecisionResponse);
+  
+  // Update engine performance models
+  rpc UpdateModels(stream PerformanceReport) returns (google.protobuf.Empty);
+}
+
+// Multi-armed bandit configuration
+message BanditConfig {
+  string algorithm = 1;             // UCB, Thompson Sampling, Epsilon-Greedy
+  float exploration_rate = 2;       // Exploration vs exploitation balance
+  int32 window_size = 3;            // Performance window size
+  float confidence_threshold = 4;   // Minimum confidence for decisions
+}
+
+// Engine capability matrix
+message EngineCapabilities {
+  string engine = 1;
+  repeated string supported_languages = 2;
+  repeated string supported_architectures = 3;
+  map<string, float> performance_characteristics = 4; // latency, throughput, etc.
+  map<string, float> resource_requirements = 5;       // cpu, memory, gpu
+}
+
+// Meta-engine configuration
+message MetaEngineConfig {
+  BanditConfig bandit = 1;
+  repeated EngineCapabilities engines = 2;
+  map<string, float> global_constraints = 3;
+  bool auto_rollback_enabled = 4;
+  float rollback_threshold = 5;
+}
+
+// Import Google's empty message
+import "google/protobuf/empty.proto";

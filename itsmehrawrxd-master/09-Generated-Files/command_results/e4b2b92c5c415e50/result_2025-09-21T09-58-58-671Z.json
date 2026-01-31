@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "0e7a48dc5f15d7c1",
+  "result": "error",
+  "details": "Unknown command: stop_ddos",
+  "timestamp": "2025-09-21T09:58:58.671Z"
+}

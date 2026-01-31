@@ -1,0 +1,29 @@
+{
+  "type": "gaming",
+  "platforms": [
+    {
+      "platform": "Steam",
+      "games": 45,
+      "playtime": "234 hours",
+      "achievements": 156,
+      "friends": 23,
+      "lastPlayed": "2025-09-21T09:58:34.739Z"
+    },
+    {
+      "platform": "Epic Games",
+      "games": 12,
+      "playtime": "89 hours",
+      "achievements": 34,
+      "friends": 8,
+      "lastPlayed": "2025-09-21T09:58:34.739Z"
+    },
+    {
+      "platform": "Battle.net",
+      "games": 8,
+      "playtime": "456 hours",
+      "achievements": 78,
+      "friends": 15,
+      "lastPlayed": "2025-09-21T09:58:34.739Z"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+# Safe RawrZ Deployment Container
+FROM node:18-alpine
+
+# Create isolated user (not root)
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S rawrz -u 1001
+
+# Set up isolated workspace
+WORKDIR /app
+RUN chown -R rawrz:nodejs /app
+
+# Copy only necessary files (no temp/generated files)
+COPY package*.json ./
+COPY src/ ./src/
+COPY public/ ./public/
+COPY server.js ./
+COPY rawrz-standalone.js ./
+
+# Install dependencies safely
+RUN npm install --production
+
+# Switch to non-root user
+USER rawrz
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/ || exit 1
+
+# Start the application
+CMD ["node", "server.js"]

@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "3c63c522567d6660",
+  "result": "error",
+  "details": "Unknown command: stop_mining",
+  "timestamp": "2025-09-21T09:58:59.395Z"
+}

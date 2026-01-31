@@ -1,0 +1,81 @@
+﻿{
+    "Tasks":  {
+
+              },
+    "Version":  "1.0.0",
+    "LastUpdate":  "2025-11-25T19:06:34.7429126-05:00",
+    "Reminders":  {
+                      "bcec41c8-8c6c-457e-84ba-797bb83a4013":  {
+                                                                   "Id":  "bcec41c8-8c6c-457e-84ba-797bb83a4013",
+                                                                   "Triggered":  false,
+                                                                   "Title":  "Test Reminder",
+                                                                   "Priority":  "Normal",
+                                                                   "Message":  "Test reminder",
+                                                                   "Metadata":  {
+                                                                                    "CreatedBy":  "FCUKED\\HiH8e"
+                                                                                },
+                                                                   "CreatedAt":  {
+                                                                                     "value":  "\/Date(1764115594637)\/",
+                                                                                     "DisplayHint":  2,
+                                                                                     "DateTime":  "Tuesday, November 25, 2025 7:06:34 PM"
+                                                                                 },
+                                                                   "DateTime":  "\/Date(1764115894634)\/"
+                                                               },
+                      "0540e93e-9e7b-4878-a411-6ad2af1b7c30":  {
+                                                                   "Id":  "0540e93e-9e7b-4878-a411-6ad2af1b7c30",
+                                                                   "Triggered":  false,
+                                                                   "Title":  "Test Reminder",
+                                                                   "Priority":  "Normal",
+                                                                   "Message":  "Test reminder",
+                                                                   "Metadata":  {
+                                                                                    "CreatedBy":  "FCUKED\\HiH8e"
+                                                                                },
+                                                                   "CreatedAt":  {
+                                                                                     "value":  "2025-11-25T23:28:24.401Z",
+                                                                                     "DisplayHint":  2,
+                                                                                     "DateTime":  "Tuesday, November 25, 2025 6:28:24 PM"
+                                                                                 },
+                                                                   "DateTime":  "2025-11-25T23:33:24.398Z"
+                                                               },
+                      "e0cb900e-b321-4b2b-b574-f3f5b0519482":  {
+                                                                   "Id":  "e0cb900e-b321-4b2b-b574-f3f5b0519482",
+                                                                   "Triggered":  false,
+                                                                   "Title":  "Test Reminder",
+                                                                   "Priority":  "Normal",
+                                                                   "Message":  "Test reminder",
+                                                                   "Metadata":  {
+                                                                                    "CreatedBy":  "FCUKED\\HiH8e"
+                                                                                },
+                                                                   "CreatedAt":  {
+                                                                                     "value":  "2025-11-25T22:51:05.209Z",
+                                                                                     "DisplayHint":  2,
+                                                                                     "DateTime":  "Tuesday, November 25, 2025 5:51:05 PM"
+                                                                                 },
+                                                                   "DateTime":  "2025-11-25T22:56:05.206Z"
+                                                               },
+                      "5db716b6-ac1f-4385-b1b7-97778f73fab5":  {
+                                                                   "Id":  "5db716b6-ac1f-4385-b1b7-97778f73fab5",
+                                                                   "Triggered":  false,
+                                                                   "DateTime":  "2025-11-25T18:35:44.0260056-05:00",
+                                                                   "Priority":  "Normal",
+                                                                   "CreatedAt":  "2025-11-25T18:30:44.0270221-05:00",
+                                                                   "Title":  "Test Reminder",
+                                                                   "Message":  "Test reminder",
+                                                                   "Metadata":  {
+                                                                                    "CreatedBy":  "FCUKED\\HiH8e"
+                                                                                }
+                                                               },
+                      "df71af28-8b02-4229-88bc-9d2cc6db75e7":  {
+                                                                   "Id":  "df71af28-8b02-4229-88bc-9d2cc6db75e7",
+                                                                   "Triggered":  false,
+                                                                   "DateTime":  "2025-11-25T18:29:18.5789787-05:00",
+                                                                   "Priority":  "Normal",
+                                                                   "CreatedAt":  "2025-11-25T18:24:18.581871-05:00",
+                                                                   "Title":  "Test Reminder",
+                                                                   "Message":  "Test reminder",
+                                                                   "Metadata":  {
+                                                                                    "CreatedBy":  "FCUKED\\HiH8e"
+                                                                                }
+                                                               }
+                  }
+}

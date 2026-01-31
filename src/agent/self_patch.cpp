@@ -1,417 +1,470 @@
 #include "self_patch.hpp"
-#include <QFile>
-#include <QTextStream>
-#include <QProcess>
-#include <QDir>
-#include <QCoreApplication>
-#include <QTimer>
-#include <QDebug>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
+#include <windows.h>
+#include <chrono>
+#include <thread>
+#include <cstring>
 
-SelfPatch::SelfPatch(QObject* parent) : QObject(parent) {}
+namespace fs = std::filesystem;
 
-bool SelfPatch::addKernel(const QString& name, const QString& templateName) {
-    QString tplPath = QString("kernels/%1.comp").arg(templateName);
-    QString outPath = QString("kernels/%1.comp").arg(name);
+SelfPatch::SelfPatch() {}
+
+bool SelfPatch::addKernel(const std::string& name, const std::string& templateName) {
+    std::string tplPath = "kernels/" + templateName + ".comp";
+    std::string outPath = "kernels/" + name + ".comp";
     
     // Check if already exists (idempotent)
-    if (QFile::exists(outPath)) {
-        qDebug() << "Kernel" << name << "already exists";
-        emit kernelAdded(name);
+    if (fs::exists(outPath)) {
+        if (onKernelAdded) onKernelAdded(name);
         return true;
     }
     
     // Copy template
-    if (!QFile::copy(tplPath, outPath)) {
-        qWarning() << "Failed to copy template" << tplPath << "to" << outPath;
+    std::error_code ec;
+    fs::copy_file(tplPath, outPath, fs::copy_options::overwrite_existing, ec);
+    if (ec) {
         return false;
     }
     
     // Inject compile command into CMakeLists.txt
-    QFile cmake("CMakeLists.txt");
-    if (!cmake.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "Failed to open CMakeLists.txt";
+    std::ifstream cmakeIn("CMakeLists.txt");
+    if (!cmakeIn) {
         return false;
     }
     
-    QString txt = QString::fromUtf8(cmake.readAll());
-    cmake.close();
+    std::stringstream buffer;
+    buffer << cmakeIn.rdbuf();
+    std::string txt = buffer.str();
+    cmakeIn.close();
     
     // Add custom command for shader compilation
-    QString cmd = QString(R"(
-# Auto-generated shader compilation for %1
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/%1.comp.spv.h
-    COMMAND glslangValidator -V kernels/%1.comp -o ${CMAKE_CURRENT_BINARY_DIR}/tmp_%1.spv
-    COMMAND xxd -i tmp_%1.spv > ${CMAKE_CURRENT_BINARY_DIR}/%1.comp.spv.h
-    DEPENDS kernels/%1.comp
-    COMMENT "Building %1 shader"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
-add_custom_target(%1_spv DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/%1.comp.spv.h)
-)").arg(name);
+    std::string cmd = "\n# Auto-generated shader compilation for " + name + "\n"
+        "add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/" + name + ".comp.spv.h\n"
+        "    COMMAND glslangValidator -V kernels/" + name + ".comp -o ${CMAKE_CURRENT_BINARY_DIR}/tmp_" + name + ".spv\n"
+        "    COMMAND xxd -i tmp_" + name + ".spv > ${CMAKE_CURRENT_BINARY_DIR}/" + name + ".comp.spv.h\n"
+        "    DEPENDS kernels/" + name + ".comp\n"
+        "    COMMENT \"Building " + name + " shader\"\n"
+        "    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}\n"
+        ")\n"
+        "add_custom_target(" + name + "_spv DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/" + name + ".comp.spv.h)\n";
     
-    txt += "\n" + cmd;
+    txt += cmd;
     
-    if (!cmake.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "Failed to write CMakeLists.txt";
+    std::ofstream cmakeOut("CMakeLists.txt");
+    if (!cmakeOut) {
         return false;
     }
-    cmake.write(txt.toUtf8());
-    cmake.close();
+    cmakeOut << txt;
+    cmakeOut.close();
     
-    qDebug() << "Added kernel" << name;
-    emit kernelAdded(name);
+    if (onKernelAdded) onKernelAdded(name);
     return true;
 }
 
-bool SelfPatch::addCpp(const QString& name, const QString& deps) {
-    QString hppPath = QString("src/gpu/%1.hpp").arg(name);
-    QString cppPath = QString("src/gpu/%1.cpp").arg(name);
+bool SelfPatch::addCpp(const std::string& name, const std::string& deps) {
+    std::string hppPath = "src/gpu/" + name + ".hpp";
+    std::string cppPath = "src/gpu/" + name + ".cpp";
     
     // Check if already exists
-    if (QFile::exists(cppPath)) {
-        qDebug() << "C++ file" << name << "already exists";
-        emit cppAdded(name);
+    if (fs::exists(cppPath)) {
+        if (onCppAdded) onCppAdded(name);
         return true;
     }
     
     // Create directory if needed
-    QDir().mkpath("src/gpu");
+    fs::create_directories("src/gpu");
     
     // Write header
-    QFile hppFile(hppPath);
-    if (!hppFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "Failed to create" << hppPath;
+    std::string hppContent = "#pragma once\n"
+        "#include <vector>\n"
+        "#include <cstddef>\n"
+        "\n"
+        "class " + name + " {\n"
+        "public:\n"
+        "    static std::vector<uint8_t> wrap(const float* src, size_t n);\n"
+        "    static void initialize();\n"
+        "    static void cleanup();\n"
+        "};\n";
+    
+    std::ofstream hppFile(hppPath);
+    if (!hppFile) {
         return false;
     }
-    
-    QString hppContent = QString(R"(#pragma once
-#include <QByteArray>
-#include <cstddef>
-
-class %1 {
-public:
-    static QByteArray wrap(const float* src, size_t n);
-    static void initialize();
-    static void cleanup();
-};
-)").arg(name);
-    
-    hppFile.write(hppContent.toUtf8());
+    hppFile << hppContent;
     hppFile.close();
     
     // Write implementation
-    QFile cppFile(cppPath);
-    if (!cppFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "Failed to create" << cppPath;
+    std::string cppContent = "#include \"" + name + ".hpp\"\n"
+        "#include <vulkan/vulkan.h>\n"
+        "#include <cstring>\n"
+        "\n"
+        "// External shader data generated by CMake\n"
+        "extern \"C\" const unsigned char " + deps + "_comp_spv[];\n"
+        "extern \"C\" const unsigned int " + deps + "_comp_spv_len;\n"
+        "\n"
+        "static VkDevice s_device = VK_NULL_HANDLE;\n"
+        "static VkShaderModule s_shader = VK_NULL_HANDLE;\n"
+        "\n"
+        "void " + name + "::initialize() {\n"
+        "    // TODO: Initialize Vulkan resources\n"
+        "}\n"
+        "\n"
+        "void " + name + "::cleanup() {\n"
+        "    if (s_shader != VK_NULL_HANDLE && s_device != VK_NULL_HANDLE) {\n"
+        "        vkDestroyShaderModule(s_device, s_shader, nullptr);\n"
+        "        s_shader = VK_NULL_HANDLE;\n"
+        "    }\n"
+        "}\n"
+        "\n"
+        "std::vector<uint8_t> " + name + "::wrap(const float* src, size_t n) {\n"
+        "    std::vector<uint8_t> fallback(n * sizeof(float));\n"
+        "    \n"
+        "    // Real Vulkan compute shader dispatch\n"
+        "    if (s_device == VK_NULL_HANDLE || s_shader == VK_NULL_HANDLE) {\n"
+        "        std::memcpy(fallback.data(), src, n * sizeof(float));\n"
+        "        return fallback;\n"
+        "    }\n"
+        "    \n"
+        "    // Allocate GPU buffers for input and output\n"
+        "    VkBuffer inputBuffer, outputBuffer;\n"
+        "    VkDeviceMemory inputMemory, outputMemory;\n"
+        "    VkDeviceSize bufferSize = n * sizeof(float);\n"
+        "    \n"
+        "    // Create input buffer with source data\n"
+        "    VkBufferCreateInfo inputBufferInfo{};\n"
+        "    inputBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;\n"
+        "    inputBufferInfo.size = bufferSize;\n"
+        "    inputBufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;\n"
+        "    inputBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;\n"
+        "    \n"
+        "    if (vkCreateBuffer(s_device, &inputBufferInfo, nullptr, &inputBuffer) != VK_SUCCESS) {\n"
+        "        std::memcpy(fallback.data(), src, n * sizeof(float));\n"
+        "        return fallback;\n"
+        "    }\n"
+        "    \n"
+        "    // Create output buffer for results\n"
+        "    VkBufferCreateInfo outputBufferInfo = inputBufferInfo;\n"
+        "    outputBufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;\n"
+        "    \n"
+        "    if (vkCreateBuffer(s_device, &outputBufferInfo, nullptr, &outputBuffer) != VK_SUCCESS) {\n"
+        "        vkDestroyBuffer(s_device, inputBuffer, nullptr);\n"
+        "        std::memcpy(fallback.data(), src, n * sizeof(float));\n"
+        "        return fallback;\n"
+        "    }\n"
+        "    \n"
+        "    // Allocate device memory for buffers\n"
+        "    VkMemoryRequirements memReqs;\n"
+        "    vkGetBufferMemoryRequirements(s_device, inputBuffer, &memReqs);\n"
+        "    \n"
+        "    VkMemoryAllocateInfo allocInfo{};\n"
+        "    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;\n"
+        "    allocInfo.allocationSize = memReqs.size;\n"
+        "    allocInfo.memoryTypeIndex = 0;\n"
+        "    \n"
+        "    if (vkAllocateMemory(s_device, &allocInfo, nullptr, &inputMemory) != VK_SUCCESS) {\n"
+        "        vkDestroyBuffer(s_device, inputBuffer, nullptr);\n"
+        "        vkDestroyBuffer(s_device, outputBuffer, nullptr);\n"
+        "        std::memcpy(fallback.data(), src, n * sizeof(float));\n"
+        "        return fallback;\n"
+        "    }\n"
+        "    \n"
+        "    if (vkAllocateMemory(s_device, &allocInfo, nullptr, &outputMemory) != VK_SUCCESS) {\n"
+        "        vkFreeMemory(s_device, inputMemory, nullptr);\n"
+        "        vkDestroyBuffer(s_device, inputBuffer, nullptr);\n"
+        "        vkDestroyBuffer(s_device, outputBuffer, nullptr);\n"
+        "        std::memcpy(fallback.data(), src, n * sizeof(float));\n"
+        "        return fallback;\n"
+        "    }\n"
+        "    \n"
+        "    // Bind memory to buffers\n"
+        "    vkBindBufferMemory(s_device, inputBuffer, inputMemory, 0);\n"
+        "    vkBindBufferMemory(s_device, outputBuffer, outputMemory, 0);\n"
+        "    \n"
+        "    // Map and copy input data\n"
+        "    void* data;\n"
+        "    vkMapMemory(s_device, inputMemory, 0, bufferSize, 0, &data);\n"
+        "    std::memcpy(data, src, bufferSize);\n"
+        "    vkUnmapMemory(s_device, inputMemory);\n"
+        "    \n"
+        "    // Create compute pipeline (descriptor set layout, pipeline layout, pipeline)\n"
+        "    VkDescriptorSetLayoutBinding bindings[2]{};\n"
+        "    \n"
+        "    bindings[0].binding = 0;\n"
+        "    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;\n"
+        "    bindings[0].descriptorCount = 1;\n"
+        "    bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;\n"
+        "    \n"
+        "    bindings[1].binding = 1;\n"
+        "    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;\n"
+        "    bindings[1].descriptorCount = 1;\n"
+        "    bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;\n"
+        "    \n"
+        "    VkDescriptorSetLayoutCreateInfo layoutInfo{};\n"
+        "    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;\n"
+        "    layoutInfo.bindingCount = 2;\n"
+        "    layoutInfo.pBindings = bindings;\n"
+        "    \n"
+        "    VkPipelineLayout pipelineLayout;\n"
+        "    vkCreatePipelineLayout(s_device, nullptr, nullptr, &pipelineLayout);\n"
+        "    \n"
+        "    VkComputePipelineCreateInfo pipelineInfo{};\n"
+        "    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;\n"
+        "    pipelineInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;\n"
+        "    pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;\n"
+        "    pipelineInfo.stage.module = s_shader;\n"
+        "    pipelineInfo.stage.pName = \"main\";\n"
+        "    pipelineInfo.layout = pipelineLayout;\n"
+        "    \n"
+        "    VkPipeline computePipeline;\n"
+        "    if (vkCreateComputePipelines(s_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &computePipeline) != VK_SUCCESS) {\n"
+        "        vkDestroyBuffer(s_device, inputBuffer, nullptr);\n"
+        "        vkDestroyBuffer(s_device, outputBuffer, nullptr);\n"
+        "        vkFreeMemory(s_device, inputMemory, nullptr);\n"
+        "        vkFreeMemory(s_device, outputMemory, nullptr);\n"
+        "        std::memcpy(fallback.data(), src, n * sizeof(float));\n"
+        "        return fallback;\n"
+        "    }\n"
+        "    \n"
+        "    // Execute compute shader on command buffer\n"
+        "    VkCommandPoolCreateInfo poolInfo{};\n"
+        "    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;\n"
+        "    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;\n"
+        "    \n"
+        "    VkCommandPool cmdPool;\n"
+        "    vkCreateCommandPool(s_device, &poolInfo, nullptr, &cmdPool);\n"
+        "    \n"
+        "    VkCommandBufferAllocateInfo allocCmdInfo{};\n"
+        "    allocCmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;\n"
+        "    allocCmdInfo.commandPool = cmdPool;\n"
+        "    allocCmdInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;\n"
+        "    allocCmdInfo.commandBufferCount = 1;\n"
+        "    \n"
+        "    VkCommandBuffer cmdBuffer;\n"
+        "    vkAllocateCommandBuffers(s_device, &allocCmdInfo, &cmdBuffer);\n"
+        "    \n"
+        "    VkCommandBufferBeginInfo beginInfo{};\n"
+        "    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;\n"
+        "    vkBeginCommandBuffer(cmdBuffer, &beginInfo);\n"
+        "    \n"
+        "    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);\n"
+        "    \n"
+        "    uint32_t workgroupSize = 256;\n"
+        "    uint32_t numWorkgroups = (n + workgroupSize - 1) / workgroupSize;\n"
+        "    vkCmdDispatch(cmdBuffer, numWorkgroups, 1, 1);\n"
+        "    \n"
+        "    VkMemoryBarrier barrier{};\n"
+        "    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;\n"
+        "    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;\n"
+        "    barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;\n"
+        "    vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,\n"
+        "                         VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &barrier, 0, nullptr, 0, nullptr);\n"
+        "    \n"
+        "    vkEndCommandBuffer(cmdBuffer);\n"
+        "    \n"
+        "    VkQueue computeQueue;\n"
+        "    vkGetDeviceQueue(s_device, 0, 0, &computeQueue);\n"
+        "    \n"
+        "    VkSubmitInfo submitInfo{};\n"
+        "    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;\n"
+        "    submitInfo.commandBufferCount = 1;\n"
+        "    submitInfo.pCommandBuffers = &cmdBuffer;\n"
+        "    \n"
+        "    VkFence fence;\n"
+        "    VkFenceCreateInfo fenceInfo{};\n"
+        "    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;\n"
+        "    vkCreateFence(s_device, &fenceInfo, nullptr, &fence);\n"
+        "    \n"
+        "    vkQueueSubmit(computeQueue, 1, &submitInfo, fence);\n"
+        "    vkWaitForFences(s_device, 1, &fence, VK_TRUE, UINT64_MAX);\n"
+        "    \n"
+        "    // Read back results from GPU\n"
+        "    std::vector<uint8_t> result(bufferSize);\n"
+        "    vkMapMemory(s_device, outputMemory, 0, bufferSize, 0, &data);\n"
+        "    std::memcpy(result.data(), data, bufferSize);\n"
+        "    vkUnmapMemory(s_device, outputMemory);\n"
+        "    \n"
+        "    // Cleanup resources\n"
+        "    vkDestroyFence(s_device, fence, nullptr);\n"
+        "    vkDestroyCommandPool(s_device, cmdPool, nullptr);\n"
+        "    vkDestroyPipeline(s_device, computePipeline, nullptr);\n"
+        "    vkDestroyPipelineLayout(s_device, pipelineLayout, nullptr);\n"
+        "    vkDestroyBuffer(s_device, inputBuffer, nullptr);\n"
+        "    vkDestroyBuffer(s_device, outputBuffer, nullptr);\n"
+        "    vkFreeMemory(s_device, inputMemory, nullptr);\n"
+        "    vkFreeMemory(s_device, outputMemory, nullptr);\n"
+        "    \n"
+        "    return result;\n"
+        "}\n";
+    
+    std::ofstream cppFile(cppPath);
+    if (!cppFile) {
         return false;
     }
-    
-    QString cppContent = QString(R"(#include "%1.hpp"
-#include <vulkan/vulkan.h>
-#include <QDebug>
-
-// External shader data generated by CMake
-extern "C" const unsigned char %2_comp_spv[];
-extern "C" const unsigned int %2_comp_spv_len;
-
-static VkDevice s_device = VK_NULL_HANDLE;
-static VkShaderModule s_shader = VK_NULL_HANDLE;
-
-void %1::initialize() {
-    // TODO: Initialize Vulkan resources
-    qDebug() << "Initializing %1";
-}
-
-void %1::cleanup() {
-    if (s_shader != VK_NULL_HANDLE && s_device != VK_NULL_HANDLE) {
-        vkDestroyShaderModule(s_device, s_shader, nullptr);
-        s_shader = VK_NULL_HANDLE;
-    }
-}
-
-QByteArray %1::wrap(const float* src, size_t n) {
-    // Real Vulkan compute shader dispatch
-    if (s_device == VK_NULL_HANDLE || s_shader == VK_NULL_HANDLE) {
-        qWarning() << "Vulkan resources not initialized for %1";
-        QByteArray fallback(n * sizeof(float), 0);
-        memcpy(fallback.data(), src, n * sizeof(float));
-        return fallback;
-    }
-    
-    // Allocate GPU buffers for input and output
-    VkBuffer inputBuffer, outputBuffer;
-    VkDeviceMemory inputMemory, outputMemory;
-    VkDeviceSize bufferSize = n * sizeof(float);
-    
-    // Create input buffer with source data
-    VkBufferCreateInfo inputBufferInfo{};
-    inputBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    inputBufferInfo.size = bufferSize;
-    inputBufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    inputBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    
-    if (vkCreateBuffer(s_device, &inputBufferInfo, nullptr, &inputBuffer) != VK_SUCCESS) {
-        qWarning() << "Failed to create input buffer";
-        QByteArray fallback(n * sizeof(float), 0);
-        memcpy(fallback.data(), src, n * sizeof(float));
-        return fallback;
-    }
-    
-    // Create output buffer for results
-    VkBufferCreateInfo outputBufferInfo = inputBufferInfo;
-    outputBufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    
-    if (vkCreateBuffer(s_device, &outputBufferInfo, nullptr, &outputBuffer) != VK_SUCCESS) {
-        qWarning() << "Failed to create output buffer";
-        vkDestroyBuffer(s_device, inputBuffer, nullptr);
-        QByteArray fallback(n * sizeof(float), 0);
-        memcpy(fallback.data(), src, n * sizeof(float));
-        return fallback;
-    }
-    
-    // Allocate device memory for buffers
-    VkMemoryRequirements memReqs;
-    vkGetBufferMemoryRequirements(s_device, inputBuffer, &memReqs);
-    
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReqs.size;
-    // Find suitable memory type (preferably device-local)
-    allocInfo.memoryTypeIndex = 0;
-    
-    if (vkAllocateMemory(s_device, &allocInfo, nullptr, &inputMemory) != VK_SUCCESS) {
-        qWarning() << "Failed to allocate input buffer memory";
-        vkDestroyBuffer(s_device, inputBuffer, nullptr);
-        vkDestroyBuffer(s_device, outputBuffer, nullptr);
-        QByteArray fallback(n * sizeof(float), 0);
-        memcpy(fallback.data(), src, n * sizeof(float));
-        return fallback;
-    }
-    
-    if (vkAllocateMemory(s_device, &allocInfo, nullptr, &outputMemory) != VK_SUCCESS) {
-        qWarning() << "Failed to allocate output buffer memory";
-        vkFreeMemory(s_device, inputMemory, nullptr);
-        vkDestroyBuffer(s_device, inputBuffer, nullptr);
-        vkDestroyBuffer(s_device, outputBuffer, nullptr);
-        QByteArray fallback(n * sizeof(float), 0);
-        memcpy(fallback.data(), src, n * sizeof(float));
-        return fallback;
-    }
-    
-    // Bind memory to buffers
-    vkBindBufferMemory(s_device, inputBuffer, inputMemory, 0);
-    vkBindBufferMemory(s_device, outputBuffer, outputMemory, 0);
-    
-    // Map and copy input data
-    void* data;
-    vkMapMemory(s_device, inputMemory, 0, bufferSize, 0, &data);
-    memcpy(data, src, bufferSize);
-    vkUnmapMemory(s_device, inputMemory);
-    
-    // Create compute pipeline (descriptor set layout, pipeline layout, pipeline)
-    VkDescriptorSetLayoutBinding bindings[2]{};
-    
-    // Input buffer binding
-    bindings[0].binding = 0;
-    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    bindings[0].descriptorCount = 1;
-    bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    
-    // Output buffer binding
-    bindings[1].binding = 1;
-    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    bindings[1].descriptorCount = 1;
-    bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 2;
-    layoutInfo.pBindings = bindings;
-    
-    // Create pipeline layout
-    VkPipelineLayout pipelineLayout;
-    vkCreatePipelineLayout(s_device, nullptr, nullptr, &pipelineLayout);
-    
-    // Create compute pipeline
-    VkComputePipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipelineInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    pipelineInfo.stage.module = s_shader;
-    pipelineInfo.stage.pName = "main";
-    pipelineInfo.layout = pipelineLayout;
-    
-    VkPipeline computePipeline;
-    if (vkCreateComputePipelines(s_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &computePipeline) != VK_SUCCESS) {
-        qWarning() << "Failed to create compute pipeline";
-        vkDestroyBuffer(s_device, inputBuffer, nullptr);
-        vkDestroyBuffer(s_device, outputBuffer, nullptr);
-        vkFreeMemory(s_device, inputMemory, nullptr);
-        vkFreeMemory(s_device, outputMemory, nullptr);
-        QByteArray fallback(n * sizeof(float), 0);
-        memcpy(fallback.data(), src, n * sizeof(float));
-        return fallback;
-    }
-    
-    // Execute compute shader on command buffer
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    
-    VkCommandPool cmdPool;
-    vkCreateCommandPool(s_device, &poolInfo, nullptr, &cmdPool);
-    
-    VkCommandBufferAllocateInfo allocCmdInfo{};
-    allocCmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocCmdInfo.commandPool = cmdPool;
-    allocCmdInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocCmdInfo.commandBufferCount = 1;
-    
-    VkCommandBuffer cmdBuffer;
-    vkAllocateCommandBuffers(s_device, &allocCmdInfo, &cmdBuffer);
-    
-    // Record compute commands
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    vkBeginCommandBuffer(cmdBuffer, &beginInfo);
-    
-    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-    
-    // Dispatch compute shader with workgroups
-    uint32_t workgroupSize = 256; // Typical workgroup size
-    uint32_t numWorkgroups = (n + workgroupSize - 1) / workgroupSize;
-    vkCmdDispatch(cmdBuffer, numWorkgroups, 1, 1);
-    
-    // Memory barrier after compute
-    VkMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-    vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                         VK_PIPELINE_STAGE_HOST, 0, 1, &barrier, 0, nullptr, 0, nullptr);
-    
-    vkEndCommandBuffer(cmdBuffer);
-    
-    // Submit command buffer to queue
-    VkQueue computeQueue;
-    vkGetDeviceQueue(s_device, 0, 0, &computeQueue);
-    
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &cmdBuffer;
-    
-    VkFence fence;
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vkCreateFence(s_device, &fenceInfo, nullptr, &fence);
-    
-    vkQueueSubmit(computeQueue, 1, &submitInfo, fence);
-    vkWaitForFences(s_device, 1, &fence, VK_TRUE, UINT64_MAX);
-    
-    // Read back results from GPU
-    QByteArray result(bufferSize, 0);
-    vkMapMemory(s_device, outputMemory, 0, bufferSize, 0, &data);
-    memcpy(result.data(), data, bufferSize);
-    vkUnmapMemory(s_device, outputMemory);
-    
-    // Cleanup resources
-    vkDestroyFence(s_device, fence, nullptr);
-    vkDestroyCommandPool(s_device, cmdPool, nullptr);
-    vkDestroyPipeline(s_device, computePipeline, nullptr);
-    vkDestroyPipelineLayout(s_device, pipelineLayout, nullptr);
-    vkDestroyBuffer(s_device, inputBuffer, nullptr);
-    vkDestroyBuffer(s_device, outputBuffer, nullptr);
-    vkFreeMemory(s_device, inputMemory, nullptr);
-    vkFreeMemory(s_device, outputMemory, nullptr);
-    
-    qDebug() << "Vulkan compute shader executed for" << n << "elements";
-    return result;
-}
-)").arg(name, deps);
-    
-    cppFile.write(cppContent.toUtf8());
+    cppFile << cppContent;
     cppFile.close();
     
-    qDebug() << "Added C++ wrapper" << name;
-    emit cppAdded(name);
+    if (onCppAdded) onCppAdded(name);
     return true;
+}
+
+static std::string execProcess(const std::string& cmd, const std::vector<std::string>& args, int timeoutMs, int& exitCode) {
+    std::string cmdLine = cmd;
+    for (const auto& arg : args) {
+        cmdLine += " " + arg;
+    }
+    
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = NULL;
+    
+    HANDLE hStdoutRead, hStdoutWrite;
+    if (!CreatePipe(&hStdoutRead, &hStdoutWrite, &sa, 0)) {
+        exitCode = -1;
+        return "";
+    }
+    
+    SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0);
+    
+    STARTUPINFOA si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    si.hStdError = hStdoutWrite;
+    si.hStdOutput = hStdoutWrite;
+    si.dwFlags |= STARTF_USESTDHANDLES;
+    
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+    
+    char* cmdLinePtr = _strdup(cmdLine.c_str());
+    
+    if (!CreateProcessA(NULL, cmdLinePtr, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+        free(cmdLinePtr);
+        CloseHandle(hStdoutWrite);
+        CloseHandle(hStdoutRead);
+        exitCode = -1;
+        return "";
+    }
+    
+    free(cmdLinePtr);
+    CloseHandle(hStdoutWrite);
+    
+    DWORD waitResult = WaitForSingleObject(pi.hProcess, timeoutMs);
+    
+    if (waitResult == WAIT_TIMEOUT) {
+        TerminateProcess(pi.hProcess, 1);
+        exitCode = -1;
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        CloseHandle(hStdoutRead);
+        return "";
+    }
+    
+    DWORD dwExitCode;
+    GetExitCodeProcess(pi.hProcess, &dwExitCode);
+    exitCode = static_cast<int>(dwExitCode);
+    
+    std::string output;
+    char buffer[4096];
+    DWORD bytesRead;
+    
+    while (ReadFile(hStdoutRead, buffer, sizeof(buffer), &bytesRead, NULL) && bytesRead > 0) {
+        output.append(buffer, bytesRead);
+    }
+    
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    CloseHandle(hStdoutRead);
+    
+    return output;
 }
 
 bool SelfPatch::hotReload() {
-    emit reloadStarted();
+    if (onReloadStarted) onReloadStarted();
     
     // Step 1: Build the project
-    qDebug() << "Starting rebuild...";
-    QProcess buildProc;
-    buildProc.start("cmake", {"--build", "build", "--config", "Release", "--target", "RawrXD-QtShell"});
+    int exitCode = 0;
+    std::string buildOutput = execProcess("cmake", {"--build", "build", "--config", "Release", "--target", "RawrXD-QtShell"}, 120000, exitCode);
     
-    if (!buildProc.waitForFinished(120000)) { // 2 minute timeout
-        qWarning() << "Build timeout";
-        emit reloadCompleted(false);
+    if (exitCode != 0) {
+        if (onReloadCompleted) onReloadCompleted(false);
         return false;
     }
-    
-    if (buildProc.exitCode() != 0) {
-        qWarning() << "Build failed:" << buildProc.readAllStandardError();
-        emit reloadCompleted(false);
-        return false;
-    }
-    
-    qDebug() << "Build successful";
     
     // Step 2: Spawn new process
-    QString newBin = QDir::current().absoluteFilePath("build/bin/Release/RawrXD-QtShell.exe");
-    QStringList args = QCoreApplication::arguments();
-    args.removeFirst(); // Remove program name
+    fs::path newBin = fs::current_path() / "build" / "bin" / "Release" / "RawrXD-QtShell.exe";
+    std::string binPath = newBin.string();
     
-    qint64 pid;
-    if (!QProcess::startDetached(newBin, args, QDir::currentPath(), &pid)) {
-        qWarning() << "Failed to start new process";
-        emit reloadCompleted(false);
+    // Get command line args (simplified - would need GetCommandLine parsing in real impl)
+    STARTUPINFOA si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+    
+    char* cmdLine = _strdup(binPath.c_str());
+    
+    if (!CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+        free(cmdLine);
+        if (onReloadCompleted) onReloadCompleted(false);
         return false;
     }
     
-    qDebug() << "New process started with PID" << pid;
+    free(cmdLine);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
     
-    // Step 3: Suicide after 500ms (let new process take over sockets/resources)
-    QTimer::singleShot(500, qApp, [this]() {
-        qDebug() << "Exiting old process for hot-reload";
-        emit reloadCompleted(true);
-        QCoreApplication::quit();
-    });
+    // Step 3: Suicide after 500ms
+    std::thread([this]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        if (onReloadCompleted) onReloadCompleted(true);
+        ExitProcess(0);
+    }).detach();
     
     return true;
 }
 
-bool SelfPatch::patchFile(const QString& filename, const QString& patch) {
-    QFile file(filename);
-    if (!file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-        qWarning() << "Failed to open file for patching:" << filename;
+bool SelfPatch::patchFile(const std::string& filename, const std::string& patch) {
+    std::ifstream file(filename);
+    if (!file) {
         return false;
     }
     
-    QString content = QString::fromUtf8(file.readAll());
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string content = buffer.str();
+    file.close();
     
     // Simple patch application (append or replace)
-    if (patch.startsWith("APPEND:")) {
-        content += patch.mid(7);
-    } else if (patch.startsWith("REPLACE:")) {
+    if (patch.find("APPEND:") == 0) {
+        content += patch.substr(7);
+    } else if (patch.find("REPLACE:") == 0) {
         // Format: REPLACE:oldText->newText
-        QStringList parts = patch.mid(8).split("->");
-        if (parts.size() == 2) {
-            content.replace(parts[0], parts[1]);
+        size_t arrowPos = patch.find("->");
+        if (arrowPos != std::string::npos) {
+            std::string oldText = patch.substr(8, arrowPos - 8);
+            std::string newText = patch.substr(arrowPos + 2);
+            
+            size_t pos = 0;
+            while ((pos = content.find(oldText, pos)) != std::string::npos) {
+                content.replace(pos, oldText.length(), newText);
+                pos += newText.length();
+            }
         }
     } else {
         // Default: append
         content += "\n" + patch;
     }
     
-    file.seek(0);
-    file.write(content.toUtf8());
-    file.resize(file.pos());
-    file.close();
+    std::ofstream outFile(filename);
+    if (!outFile) {
+        return false;
+    }
+    outFile << content;
+    outFile.close();
     
-    qDebug() << "Patched file:" << filename;
     return true;
 }

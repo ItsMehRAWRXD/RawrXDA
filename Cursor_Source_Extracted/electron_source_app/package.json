@@ -1,0 +1,19 @@
+{
+  "name": "Cursor",
+  "version": "2.4.21",
+  "distro": "21c8d8ea1e46d97c5639a7cabda6c0e063cc8dd5",
+  "author": {
+    "name": "Anysphere, Inc."
+  },
+  "packageManager": "npm@1.10.4",
+  "main": "./out/main.js",
+  "type": "module",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/microsoft/vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/microsoft/vscode/issues"
+  }
+}

@@ -1,0 +1,660 @@
+; git_gui_integration.eon
+; GUI integration for Git features in EON IDE
+; Visual Git interface with diff viewer, branch manager, and commit history
+
+module GitGUIIntegration
+
+; === Git GUI Manager ===
+class GitGUIManager {
+    var main_window: Window
+    var git_manager: GitIntegrationManager
+    var sidebar: GitSidebar
+    var diff_area: DiffArea
+    var commit_panel: CommitPanel
+    var branch_panel: BranchPanel
+    var history_panel: HistoryPanel
+    
+    function init(main_window: Window) {
+        this.main_window = main_window
+        git_manager = GitIntegrationManager()
+        createGitInterface()
+    }
+    
+    function createGitInterface() {
+        ; Create Git sidebar
+        sidebar = GitSidebar(git_manager)
+        main_window.addSidebar("Git", sidebar.getWidget())
+        
+        ; Create Git panels
+        createGitPanels()
+        
+        ; Setup event handlers
+        setupEventHandlers()
+    }
+    
+    function createGitPanels() {
+        ; Diff area (main content)
+        diff_area = DiffArea(git_manager.getDiffViewer())
+        
+        ; Commit panel
+        commit_panel = CommitPanel(git_manager)
+        
+        ; Branch panel  
+        branch_panel = BranchPanel(git_manager)
+        
+        ; History panel
+        history_panel = HistoryPanel(git_manager)
+        
+        ; Add panels to main window
+        main_window.addPanel("Git Diff", diff_area.getWidget())
+        main_window.addBottomPanel("Git Commit", commit_panel.getWidget())
+        main_window.addBottomPanel("Branches", branch_panel.getWidget())
+        main_window.addBottomPanel("History", history_panel.getWidget())
+    }
+    
+    function setupEventHandlers() {
+        ; File change notifications
+        main_window.onFileChanged = function(file_path: string) {
+            refreshGitStatus()
+        }
+        
+        ; Project opened
+        main_window.onProjectOpened = function(project_path: string) {
+            openGitRepository(project_path)
+        }
+    }
+    
+    function openGitRepository(path: string) {
+        var repo = git_manager.openRepository(path)
+        
+        ; Update all panels
+        sidebar.setRepository(repo)
+        commit_panel.setRepository(repo)
+        branch_panel.setRepository(repo)
+        history_panel.setRepository(repo)
+        
+        ; Refresh status
+        refreshGitStatus()
+    }
+    
+    function refreshGitStatus() {
+        if (git_manager.getCurrentRepository() != null) {
+            sidebar.refresh()
+            commit_panel.refresh()
+            branch_panel.refresh()
+            history_panel.refresh()
+        }
+    }
+    
+    function showFileDiff(file_path: string) {
+        diff_area.showFileDiff(file_path)
+    }
+}
+
+; === Git Sidebar ===
+class GitSidebar {
+    var widget: Widget
+    var repository: GitRepository
+    var status_tree: TreeWidget
+    var action_buttons: ButtonGroup
+    
+    function init(git_manager: GitIntegrationManager) {
+        createSidebarUI()
+    }
+    
+    function createSidebarUI() {
+        widget = Widget()
+        var layout = VerticalLayout()
+        
+        ; Repository info
+        var repo_label = Label("Repository Status")
+        repo_label.setStyleClass("section-header")
+        layout.addWidget(repo_label)
+        
+        ; Action buttons
+        action_buttons = ButtonGroup()
+        createActionButtons()
+        layout.addWidget(action_buttons)
+        
+        ; Status tree
+        status_tree = TreeWidget()
+        status_tree.setHeaderLabel("Files")
+        status_tree.onItemDoubleClick = onFileDoubleClick
+        layout.addWidget(status_tree)
+        
+        widget.setLayout(layout)
+    }
+    
+    function createActionButtons() {
+        var refresh_btn = Button("Refresh")
+        refresh_btn.onClick = refresh
+        action_buttons.addButton(refresh_btn)
+        
+        var stage_all_btn = Button("Stage All")
+        stage_all_btn.onClick = stageAllFiles
+        action_buttons.addButton(stage_all_btn)
+        
+        var commit_btn = Button("Commit...")
+        commit_btn.onClick = showCommitDialog
+        action_buttons.addButton(commit_btn)
+        
+        var push_btn = Button("Push")
+        push_btn.onClick = pushChanges
+        action_buttons.addButton(push_btn)
+        
+        var pull_btn = Button("Pull")
+        pull_btn.onClick = pullChanges
+        action_buttons.addButton(pull_btn)
+    }
+    
+    function setRepository(repo: GitRepository) {
+        repository = repo
+        refresh()
+    }
+    
+    function refresh() {
+        if (repository == null) return
+        
+        repository.refreshStatus()
+        updateStatusTree()
+    }
+    
+    function updateStatusTree() {
+        status_tree.clear()
+        
+        ; Create category nodes
+        var staged_node = TreeItem("Staged Changes")
+        var unstaged_node = TreeItem("Unstaged Changes") 
+        var untracked_node = TreeItem("Untracked Files")
+        
+        status_tree.addTopLevelItem(staged_node)
+        status_tree.addTopLevelItem(unstaged_node)
+        status_tree.addTopLevelItem(untracked_node)
+        
+        ; Add files to categories
+        for git_file in repository.status_cache.files {
+            var item = TreeItem(git_file.path)
+            item.setIcon(getStatusIcon(git_file.status))
+            item.setData(git_file)
+            
+            ; Add context menu
+            item.setContextMenu(createFileContextMenu(git_file))
+            
+            match git_file.status {
+                case GitFileStatus.ADDED:
+                case GitFileStatus.MODIFIED:
+                    staged_node.addChild(item)
+                    
+                case GitFileStatus.MODIFIED_UNSTAGED:
+                    unstaged_node.addChild(item)
+                    
+                case GitFileStatus.UNTRACKED:
+                    untracked_node.addChild(item)
+            }
+        }
+        
+        ; Expand nodes with content
+        if (staged_node.childCount() > 0) staged_node.setExpanded(true)
+        if (unstaged_node.childCount() > 0) unstaged_node.setExpanded(true)
+        if (untracked_node.childCount() > 0) untracked_node.setExpanded(true)
+    }
+    
+    function createFileContextMenu(git_file: GitFile) -> ContextMenu {
+        var menu = ContextMenu()
+        
+        ; Stage/Unstage
+        if (git_file.status == GitFileStatus.MODIFIED_UNSTAGED || 
+            git_file.status == GitFileStatus.UNTRACKED) {
+            menu.addAction("Stage File", function() { stageFile(git_file.path) })
+        } else {
+            menu.addAction("Unstage File", function() { unstageFile(git_file.path) })
+        }
+        
+        menu.addSeparator()
+        
+        ; Diff actions
+        menu.addAction("Show Diff", function() { showFileDiff(git_file.path) })
+        menu.addAction("Show in External Diff", function() { showExternalDiff(git_file.path) })
+        
+        menu.addSeparator()
+        
+        ; File actions
+        menu.addAction("Open File", function() { openFile(git_file.path) })
+        menu.addAction("Discard Changes", function() { discardChanges(git_file.path) })
+        
+        return menu
+    }
+    
+    function onFileDoubleClick(item: TreeItem) {
+        var git_file = cast<GitFile>(item.getData())
+        if (git_file != null) {
+            showFileDiff(git_file.path)
+        }
+    }
+    
+    function stageFile(file_path: string) {
+        if (repository.addFile(file_path)) {
+            refresh()
+        }
+    }
+    
+    function unstageFile(file_path: string) {
+        var command = "reset HEAD " + file_path
+        var result = repository.executeGitCommand(command)
+        if (result.success) {
+            refresh()
+        }
+    }
+    
+    function stageAllFiles() {
+        if (repository.addAllFiles()) {
+            refresh()
+        }
+    }
+    
+    function showFileDiff(file_path: string) {
+        repository.showVisualDiff(file_path)
+    }
+    
+    function getWidget() -> Widget {
+        return widget
+    }
+}
+
+; === Diff Area ===
+class DiffArea {
+    var widget: Widget
+    var diff_viewer: VisualDiffViewer
+    var current_file: string
+    var toolbar: ToolBar
+    
+    function init(viewer: VisualDiffViewer) {
+        diff_viewer = viewer
+        createDiffAreaUI()
+    }
+    
+    function createDiffAreaUI() {
+        widget = Widget()
+        var layout = VerticalLayout()
+        
+        ; Toolbar
+        toolbar = ToolBar()
+        createDiffToolbar()
+        layout.addWidget(toolbar)
+        
+        ; Embed diff viewer
+        layout.addWidget(diff_viewer.getWidget())
+        
+        widget.setLayout(layout)
+    }
+    
+    function createDiffToolbar() {
+        ; File navigation
+        var prev_file_btn = Button("Previous File")
+        prev_file_btn.onClick = previousFile
+        toolbar.addWidget(prev_file_btn)
+        
+        var next_file_btn = Button("Next File")  
+        next_file_btn.onClick = nextFile
+        toolbar.addWidget(next_file_btn)
+        
+        toolbar.addSeparator()
+        
+        ; Diff navigation
+        var prev_change_btn = Button("Previous Change")
+        prev_change_btn.onClick = diff_viewer.previousChange
+        toolbar.addWidget(prev_change_btn)
+        
+        var next_change_btn = Button("Next Change")
+        next_change_btn.onClick = diff_viewer.nextChange
+        toolbar.addWidget(next_change_btn)
+        
+        toolbar.addSeparator()
+        
+        ; View options
+        var view_combo = ComboBox()
+        view_combo.addItem("Side by Side")
+        view_combo.addItem("Unified")
+        view_combo.onCurrentTextChanged = changeViewMode
+        toolbar.addWidget(view_combo)
+        
+        ; Options
+        var ignore_whitespace_check = CheckBox("Ignore Whitespace")
+        ignore_whitespace_check.onToggled = toggleIgnoreWhitespace
+        toolbar.addWidget(ignore_whitespace_check)
+    }
+    
+    function showFileDiff(file_path: string) {
+        current_file = file_path
+        diff_viewer.showDiff(file_path, getDiffText(file_path))
+    }
+    
+    function getDiffText(file_path: string) -> string {
+        ; Get diff text from repository
+        if (repository != null) {
+            return repository.showFileDiff(file_path)
+        }
+        return ""
+    }
+    
+    function getWidget() -> Widget {
+        return widget
+    }
+}
+
+; === Commit Panel ===
+class CommitPanel {
+    var widget: Widget
+    var repository: GitRepository
+    var message_editor: TextEditor
+    var commit_button: Button
+    var amend_checkbox: CheckBox
+    var staged_files_list: ListWidget
+    
+    function init(git_manager: GitIntegrationManager) {
+        createCommitPanelUI()
+    }
+    
+    function createCommitPanelUI() {
+        widget = Widget()
+        var layout = HorizontalLayout()
+        
+        ; Left side - staged files
+        var files_layout = VerticalLayout()
+        files_layout.addWidget(Label("Staged Files"))
+        
+        staged_files_list = ListWidget()
+        staged_files_list.setMaximumWidth(300)
+        files_layout.addWidget(staged_files_list)
+        
+        layout.addLayout(files_layout)
+        
+        ; Right side - commit message
+        var commit_layout = VerticalLayout()
+        commit_layout.addWidget(Label("Commit Message"))
+        
+        message_editor = TextEditor()
+        message_editor.setPlaceholderText("Enter commit message...")
+        message_editor.setMaximumHeight(150)
+        commit_layout.addWidget(message_editor)
+        
+        ; Commit options
+        var options_layout = HorizontalLayout()
+        
+        amend_checkbox = CheckBox("Amend last commit")
+        options_layout.addWidget(amend_checkbox)
+        
+        commit_button = Button("Commit")
+        commit_button.onClick = commitChanges
+        options_layout.addWidget(commit_button)
+        
+        commit_layout.addLayout(options_layout)
+        layout.addLayout(commit_layout)
+        
+        widget.setLayout(layout)
+    }
+    
+    function setRepository(repo: GitRepository) {
+        repository = repo
+        refresh()
+    }
+    
+    function refresh() {
+        if (repository == null) return
+        
+        updateStagedFilesList()
+        updateCommitButton()
+    }
+    
+    function updateStagedFilesList() {
+        staged_files_list.clear()
+        
+        for git_file in repository.status_cache.files {
+            if (git_file.status == GitFileStatus.ADDED || 
+                git_file.status == GitFileStatus.MODIFIED) {
+                
+                var item = ListItem(git_file.path)
+                item.setIcon(getStatusIcon(git_file.status))
+                staged_files_list.addItem(item)
+            }
+        }
+    }
+    
+    function updateCommitButton() {
+        var has_staged_files = (staged_files_list.count() > 0)
+        var has_message = (message_editor.getText().trim().length() > 0)
+        
+        commit_button.setEnabled(has_staged_files && has_message)
+    }
+    
+    function commitChanges() {
+        var message = message_editor.getText().trim()
+        if (message.length() == 0) {
+            showError("Please enter a commit message")
+            return
+        }
+        
+        var success = false
+        if (amend_checkbox.isChecked()) {
+            success = repository.amendCommit(message)
+        } else {
+            success = repository.commitChanges(message)
+        }
+        
+        if (success) {
+            message_editor.clear()
+            showMessage("Commit successful!")
+            refresh()
+        } else {
+            showError("Commit failed!")
+        }
+    }
+    
+    function getWidget() -> Widget {
+        return widget
+    }
+}
+
+; === Branch Panel ===
+class BranchPanel {
+    var widget: Widget
+    var repository: GitRepository
+    var branch_list: ListWidget
+    var current_branch_label: Label
+    var create_branch_button: Button
+    var merge_button: Button
+    
+    function init(git_manager: GitIntegrationManager) {
+        createBranchPanelUI()
+    }
+    
+    function createBranchPanelUI() {
+        widget = Widget()
+        var layout = VerticalLayout()
+        
+        ; Current branch info
+        current_branch_label = Label("Current: main")
+        current_branch_label.setStyleClass("current-branch")
+        layout.addWidget(current_branch_label)
+        
+        ; Branch actions
+        var actions_layout = HorizontalLayout()
+        
+        create_branch_button = Button("New Branch")
+        create_branch_button.onClick = createBranch
+        actions_layout.addWidget(create_branch_button)
+        
+        merge_button = Button("Merge...")
+        merge_button.onClick = mergeBranch
+        actions_layout.addWidget(merge_button)
+        
+        layout.addLayout(actions_layout)
+        
+        ; Branch list
+        branch_list = ListWidget()
+        branch_list.onItemDoubleClick = switchToBranch
+        layout.addWidget(branch_list)
+        
+        widget.setLayout(layout)
+    }
+    
+    function setRepository(repo: GitRepository) {
+        repository = repo
+        refresh()
+    }
+    
+    function refresh() {
+        if (repository == null) return
+        
+        updateCurrentBranch()
+        updateBranchList()
+    }
+    
+    function updateCurrentBranch() {
+        current_branch_label.setText("Current: " + repository.current_branch)
+    }
+    
+    function updateBranchList() {
+        branch_list.clear()
+        
+        var branches = repository.getBranches()
+        for branch in branches {
+            var item = ListItem(branch)
+            
+            if (branch == repository.current_branch) {
+                item.setIcon(Icon.CURRENT_BRANCH)
+                item.setStyleClass("current-branch-item")
+            } else {
+                item.setIcon(Icon.BRANCH)
+            }
+            
+            ; Add context menu
+            item.setContextMenu(createBranchContextMenu(branch))
+            
+            branch_list.addItem(item)
+        }
+    }
+    
+    function createBranchContextMenu(branch_name: string) -> ContextMenu {
+        var menu = ContextMenu()
+        
+        if (branch_name != repository.current_branch) {
+            menu.addAction("Switch to Branch", function() { switchToBranch(branch_name) })
+            menu.addAction("Merge into Current", function() { mergeBranch(branch_name) })
+            menu.addSeparator()
+            menu.addAction("Delete Branch", function() { deleteBranch(branch_name) })
+        }
+        
+        menu.addAction("Rename Branch", function() { renameBranch(branch_name) })
+        
+        return menu
+    }
+    
+    function createBranch() {
+        var dialog = InputDialog("Create Branch", "Branch name:")
+        if (dialog.exec() == Dialog.ACCEPTED) {
+            var branch_name = dialog.getValue()
+            if (repository.createBranch(branch_name)) {
+                refresh()
+            }
+        }
+    }
+    
+    function switchToBranch(branch_name: string) {
+        if (repository.switchBranch(branch_name)) {
+            refresh()
+        }
+    }
+    
+    function getWidget() -> Widget {
+        return widget
+    }
+}
+
+; === History Panel ===
+class HistoryPanel {
+    var widget: Widget
+    var repository: GitRepository
+    var commit_list: ListWidget
+    var commit_details: TextEditor
+    
+    function init(git_manager: GitIntegrationManager) {
+        createHistoryPanelUI()
+    }
+    
+    function createHistoryPanelUI() {
+        widget = Widget()
+        var layout = HorizontalLayout()
+        
+        ; Commit list
+        var list_layout = VerticalLayout()
+        list_layout.addWidget(Label("Commit History"))
+        
+        commit_list = ListWidget()
+        commit_list.onItemSelectionChanged = showCommitDetails
+        commit_list.setMaximumWidth(400)
+        list_layout.addWidget(commit_list)
+        
+        layout.addLayout(list_layout)
+        
+        ; Commit details
+        var details_layout = VerticalLayout()
+        details_layout.addWidget(Label("Commit Details"))
+        
+        commit_details = TextEditor()
+        commit_details.setReadOnly(true)
+        details_layout.addWidget(commit_details)
+        
+        layout.addLayout(details_layout)
+        widget.setLayout(layout)
+    }
+    
+    function setRepository(repo: GitRepository) {
+        repository = repo
+        refresh()
+    }
+    
+    function refresh() {
+        if (repository == null) return
+        
+        updateCommitList()
+    }
+    
+    function updateCommitList() {
+        commit_list.clear()
+        
+        var commits = repository.getCommitHistory(100)
+        for commit in commits {
+            var item = ListItem(commit.message)
+            item.setToolTip(commit.hash)
+            item.setData(commit)
+            
+            commit_list.addItem(item)
+        }
+    }
+    
+    function showCommitDetails(item: ListItem) {
+        var commit = cast<GitCommit>(item.getData())
+        if (commit != null) {
+            var details = getCommitDetails(commit.hash)
+            commit_details.setText(details)
+        }
+    }
+    
+    function getCommitDetails(commit_hash: string) -> string {
+        var command = "show " + commit_hash
+        var result = repository.executeGitCommand(command)
+        return result.output
+    }
+    
+    function getWidget() -> Widget {
+        return widget
+    }
+}
+
+export GitGUIManager
+export GitSidebar
+export DiffArea
+export CommitPanel
+export BranchPanel
+export HistoryPanel

@@ -1,0 +1,200 @@
+// example_api_bindings.eont
+// Template for generating Eon API bindings from OpenAPI/Swagger specification
+
+// Generate API client class
+def model {{api.name}}Client {
+    var base_url: String;
+    var api_key: String?;
+    var timeout: int32;
+    
+    def func new(base_url: String, api_key: String? = null, timeout: int32 = 30000): {{api.name}}Client {
+        var client = new {{api.name}}Client();
+        client.base_url = base_url;
+        client.api_key = api_key;
+        client.timeout = timeout;
+        return client;
+    }
+    
+    // HTTP request helper
+    def func make_request(method: String, path: String, body: String? = null, headers: [String]? = null): HttpResponse {
+        var url = base_url + path;
+        var request = HttpRequest.new(method, url);
+        
+        if (api_key != null) {
+            request.add_header("Authorization", "Bearer " + api_key);
+        }
+        
+        if (headers != null) {
+            for (header in headers) {
+                request.add_header(header.key, header.value);
+            }
+        }
+        
+        if (body != null) {
+            request.set_body(body);
+        }
+        
+        return request.execute(timeout);
+    }
+    
+    {{#for path in api.paths}}
+    // {{path.method}} {{path.path}}
+    {{#if path.summary}}
+    // {{path.summary}}
+    {{/if}}
+    def func {{path.operation_id}}(
+        {{#for param in path.parameters}}
+        {{param.name}}: {{param.eon_type}}{{#if param.required}}{{else}}?{{/if}}{{#unless @last}}, {{/unless}}
+        {{/for}}
+        {{#if path.request_body}}
+        {{#if path.parameters}}, {{/if}}body: {{path.request_body.eon_type}}? = null
+        {{/if}}
+    ): {{path.response.eon_type}} {
+        var path = "{{path.path}}";
+        
+        {{#for param in path.parameters}}
+        {{#if param.in == "path"}}
+        path = path.replace("{{param.name}}", {{param.name}}.to_string());
+        {{/if}}
+        {{/if}}
+        {{/for}}
+        
+        var query_params: [String] = [];
+        {{#for param in path.parameters}}
+        {{#if param.in == "query"}}
+        if ({{param.name}} != null) {
+            query_params.push("{{param.name}}=" + {{param.name}}.to_string());
+        }
+        {{/if}}
+        {{/for}}
+        
+        if (query_params.length > 0) {
+            path = path + "?" + query_params.join("&");
+        }
+        
+        var body_str: String? = null;
+        {{#if path.request_body}}
+        if (body != null) {
+            body_str = body.to_json();
+        }
+        {{/if}}
+        
+        var response = make_request("{{path.method}}", path, body_str);
+        
+        if (response.status_code >= 200 && response.status_code < 300) {
+            {{#if path.response.is_array}}
+            return response.body.parse_json_array<{{path.response.item_type}}>();
+            {{else}}
+            return response.body.parse_json<{{path.response.eon_type}}>();
+            {{/if}}
+        } else {
+            throw new ApiException("{{path.operation_id}} failed: " + response.status_code.to_string());
+        }
+    }
+    {{/for}}
+}
+
+// Generate data models
+{{#for model in api.models}}
+def model {{model.name}} {
+    {{#for property in model.properties}}
+    var {{property.name}}: {{property.eon_type}}{{#if property.required}}{{else}}?{{/if}};
+    {{/for}}
+    
+    def func new(): {{model.name}} {
+        return new {{model.name}}();
+    }
+    
+    def func to_json(): String {
+        var json = "{";
+        var first = true;
+        
+        {{#for property in model.properties}}
+        if ({{property.name}} != null) {
+            if (!first) {
+                json = json + ",";
+            }
+            json = json + "\"{{property.name}}\": " + {{property.name}}.to_json();
+            first = false;
+        }
+        {{/for}}
+        
+        json = json + "}";
+        return json;
+    }
+    
+    def func from_json(json: String): {{model.name}} {
+        var obj = json.parse_json();
+        var instance = new {{model.name}}();
+        
+        {{#for property in model.properties}}
+        if (obj.has("{{property.name}}")) {
+            instance.{{property.name}} = obj.get("{{property.name}}").as_{{property.eon_type}}();
+        }
+        {{/for}}
+        
+        return instance;
+    }
+}
+{{/for}}
+
+// Generate exception classes
+def model ApiException inherits Exception {
+    var status_code: int32;
+    var error_message: String;
+    
+    def func new(message: String, status_code: int32 = 0): ApiException {
+        var exception = new ApiException();
+        exception.error_message = message;
+        exception.status_code = status_code;
+        return exception;
+    }
+    
+    def func get_message(): String {
+        return error_message;
+    }
+}
+
+// Generate HTTP utilities
+def model HttpRequest {
+    var method: String;
+    var url: String;
+    var headers: [String];
+    var body: String?;
+    
+    def func new(method: String, url: String): HttpRequest {
+        var request = new HttpRequest();
+        request.method = method;
+        request.url = url;
+        request.headers = [];
+        return request;
+    }
+    
+    def func add_header(key: String, value: String) {
+        headers.push(key + ": " + value);
+    }
+    
+    def func set_body(body: String) {
+        this.body = body;
+    }
+    
+    def func execute(timeout: int32): HttpResponse {
+        // Implementation would use system HTTP client
+        // This is a placeholder
+        return new HttpResponse();
+    }
+}
+
+def model HttpResponse {
+    var status_code: int32;
+    var body: String;
+    var headers: [String];
+    
+    def func new(): HttpResponse {
+        var response = new HttpResponse();
+        response.status_code = 200;
+        response.body = "";
+        response.headers = [];
+        return response;
+    }
+}

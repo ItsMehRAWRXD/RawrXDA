@@ -7,27 +7,24 @@
  */
 
 #include "action_executor.hpp"
+#include <fstream>
+#include <sstream>
+#include <filesystem>
+#include <thread>
+#include <future>
+#include <chrono>
+#include <windows.h>
+#include <nlohmann/json.hpp>
 
-#include <QFile>
-#include <QDir>
-#include <QFileInfo>
-#include <QProcess>
-#include <QStandardPaths>
-#include <QDateTime>
-#include <QJsonDocument>
-#include <QDebug>
-#include <QTimer>
-#include <QtConcurrent>
-#include <QFuture>
+namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 /**
  * @brief Constructor
  */
-ActionExecutor::ActionExecutor(QObject* parent)
-    : QObject(parent)
-    , m_process(std::make_unique<QProcess>(this))
+ActionExecutor::ActionExecutor()
 {
-    m_context.projectRoot = QDir::currentPath();
+    m_context.projectRoot = fs::current_path().string();
 }
 
 /**
@@ -41,7 +38,6 @@ ActionExecutor::~ActionExecutor() = default;
 void ActionExecutor::setContext(const ExecutionContext& context)
 {
     m_context = context;
-    qDebug() << "[ActionExecutor] Context set - projectRoot:" << m_context.projectRoot;
 }
 
 /**
@@ -49,8 +45,6 @@ void ActionExecutor::setContext(const ExecutionContext& context)
  */
 bool ActionExecutor::executeAction(Action& action)
 {
-    qDebug() << "[ActionExecutor] Executing action:" << action.description;
-
     switch (action.type) {
     case ActionType::FileEdit:
         return handleFileEdit(action);
@@ -77,7 +71,7 @@ bool ActionExecutor::executeAction(Action& action)
 /**
  * @brief Execute complete plan (asynchronous)
  */
-void ActionExecutor::executePlan(const QJsonArray& actions, bool stopOnError)
+void ActionExecutor::executePlan(const json& actions, bool stopOnError)
 {
     m_isExecuting = true;
     m_stopOnError = stopOnError;
@@ -86,50 +80,48 @@ void ActionExecutor::executePlan(const QJsonArray& actions, bool stopOnError)
     m_backups.clear();
 
     m_context.totalActions = actions.size();
-    emit planStarted(actions.size());
+    if (onPlanStarted) onPlanStarted(actions.size());
 
     // Run on background thread
-    QtConcurrent::run([this, actions]() {
+    std::thread([this, actions]() {
         bool overallSuccess = true;
 
-        for (int i = 0; i < actions.size() && !m_cancelled; ++i) {
-            if (!actions[i].isObject()) {
-                qWarning() << "[ActionExecutor] Invalid action at index" << i;
+        for (size_t i = 0; i < actions.size() && !m_cancelled; ++i) {
+            if (!actions[i].is_object()) {
                 overallSuccess = false;
                 if (m_stopOnError) break;
                 continue;
             }
 
-            Action action = parseJsonAction(actions[i].toObject());
-            m_context.currentActionIndex = i;
+            Action action = parseJsonAction(actions[i]);
+            m_context.currentActionIndex = static_cast<int>(i);
 
-            emit actionStarted(i, action.description);
-            emit progressUpdated(i, m_context.totalActions);
+            if (onActionStarted) onActionStarted(static_cast<int>(i), action.description);
+            if (onProgressUpdated) onProgressUpdated(static_cast<int>(i), m_context.totalActions);
 
             bool success = executeAction(action);
             action.executed = true;
             action.success = success;
 
-            m_executedActions.append(action);
+            m_executedActions.push_back(action);
 
-            QJsonObject result;
+            json result;
             result["target"] = action.target;
             result["success"] = success;
-            if (!action.error.isEmpty()) {
+            if (!action.error.empty()) {
                 result["error"] = action.error;
             }
-            if (!action.result.isEmpty()) {
+            if (!action.result.empty()) {
                 result["result"] = action.result;
             }
 
-            emit actionCompleted(i, success, result);
+            if (onActionCompleted) onActionCompleted(static_cast<int>(i), success, result);
 
             if (!success) {
                 overallSuccess = false;
-                emit actionFailed(i, action.error, m_stopOnError);
+                if (onActionFailed) onActionFailed(static_cast<int>(i), action.error, m_stopOnError);
 
                 if (m_stopOnError) {
-                    qWarning() << "[ActionExecutor] Stopping due to error";
                     break;
                 }
             }
@@ -137,13 +129,13 @@ void ActionExecutor::executePlan(const QJsonArray& actions, bool stopOnError)
 
         m_isExecuting = false;
 
-        QJsonObject finalResult;
+        json finalResult;
         finalResult["success"] = overallSuccess;
         finalResult["actionsExecuted"] = m_executedActions.size();
         finalResult["state"] = m_context.state;
 
-        emit planCompleted(overallSuccess, finalResult);
-    });
+        if (onPlanCompleted) onPlanCompleted(overallSuccess, finalResult);
+    }).detach();
 }
 
 /**
@@ -152,11 +144,11 @@ void ActionExecutor::executePlan(const QJsonArray& actions, bool stopOnError)
 void ActionExecutor::cancelExecution()
 {
     m_cancelled = true;
-    if (m_process->state() == QProcess::Running) {
-        m_process->terminate();
-        m_process->waitForFinished(5000);
+    if (m_processHandle) {
+        TerminateProcess(m_processHandle, 1);
+        CloseHandle(m_processHandle);
+        m_processHandle = nullptr;
     }
-    qDebug() << "[ActionExecutor] Execution cancelled";
 }
 
 /**
@@ -164,7 +156,7 @@ void ActionExecutor::cancelExecution()
  */
 bool ActionExecutor::rollbackAction(int actionIndex)
 {
-    if (actionIndex < 0 || actionIndex >= m_executedActions.size()) {
+    if (actionIndex < 0 || actionIndex >= static_cast<int>(m_executedActions.size())) {
         return false;
     }
 
@@ -172,12 +164,10 @@ bool ActionExecutor::rollbackAction(int actionIndex)
 
     // Only file edits are rollbackable
     if (action.type != ActionType::FileEdit) {
-        qWarning() << "[ActionExecutor] Action type not rollbackable";
         return false;
     }
 
-    if (!m_backups.contains(action.target)) {
-        qWarning() << "[ActionExecutor] No backup found for" << action.target;
+    if (m_backups.find(action.target) == m_backups.end()) {
         return false;
     }
 
@@ -187,20 +177,20 @@ bool ActionExecutor::rollbackAction(int actionIndex)
 /**
  * @brief Get aggregated result
  */
-QJsonObject ActionExecutor::getAggregatedResult() const
+json ActionExecutor::getAggregatedResult() const
 {
-    QJsonObject result;
-    QJsonArray actions;
+    json result;
+    json actions = json::array();
 
     for (const auto& action : m_executedActions) {
-        QJsonObject actionObj;
+        json actionObj;
         actionObj["description"] = action.description;
         actionObj["success"] = action.success;
         actionObj["result"] = action.result;
-        if (!action.error.isEmpty()) {
+        if (!action.error.empty()) {
             actionObj["error"] = action.error;
         }
-        actions.append(actionObj);
+        actions.push_back(actionObj);
     }
 
     result["actions"] = actions;
@@ -218,68 +208,71 @@ QJsonObject ActionExecutor::getAggregatedResult() const
  */
 bool ActionExecutor::handleFileEdit(Action& action)
 {
-    QString filePath = m_context.projectRoot + "/" + action.target;
-    QString editAction = action.params.value("action").toString();
-    QString content = action.params.value("content").toString();
+    fs::path filePath = fs::path(m_context.projectRoot) / action.target;
+    std::string editAction = action.params.value("action", "");
+    std::string content = action.params.value("content", "");
 
     // Validate safety
-    if (!validateFileEditSafety(filePath, editAction)) {
+    if (!validateFileEditSafety(filePath.string(), editAction)) {
         action.error = "File edit failed safety validation";
         return false;
     }
 
     if (m_context.dryRun) {
-        action.result = "DRY RUN: Would edit " + filePath;
+        action.result = "DRY RUN: Would edit " + filePath.string();
         return true;
     }
 
     // Create backup
-    if (!createBackup(filePath)) {
-        qWarning() << "[ActionExecutor] Failed to backup" << filePath;
+    if (!createBackup(filePath.string())) {
+        // Log warning but continue
     }
-
-    QFile file(filePath);
 
     if (editAction == "create") {
         // Create new file
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            action.error = "Failed to create file: " + file.errorString();
+        std::ofstream file(filePath);
+        if (!file) {
+            action.error = "Failed to create file";
             return false;
         }
-        file.write(content.toUtf8());
+        file << content;
         file.close();
-        action.result = "File created: " + filePath;
+        action.result = "File created: " + filePath.string();
         return true;
 
     } else if (editAction == "append") {
         // Append to existing file
-        if (!file.open(QIODevice::Append | QIODevice::Text)) {
-            action.error = "Failed to open file for append: " + file.errorString();
+        std::ofstream file(filePath, std::ios::app);
+        if (!file) {
+            action.error = "Failed to open file for append";
             return false;
         }
-        file.write(content.toUtf8());
+        file << content;
         file.close();
-        action.result = "Appended to: " + filePath;
+        action.result = "Appended to: " + filePath.string();
         return true;
 
     } else if (editAction == "replace") {
         // Replace entire file
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            action.error = "Failed to open file for writing: " + file.errorString();
+        std::ofstream file(filePath);
+        if (!file) {
+            action.error = "Failed to open file for writing";
             return false;
         }
-        file.write(content.toUtf8());
+        file << content;
         file.close();
-        action.result = "Replaced: " + filePath;
+        action.result = "Replaced: " + filePath.string();
         return true;
 
     } else if (editAction == "delete") {
         // Delete file
-        if (!QFile::remove(filePath)) {
+        std::error_code ec;
+        fs::remove(filePath, ec);
+        if (ec) {
             action.error = "Failed to delete file";
             return false;
         }
-        action.result = "Deleted: " + filePath;
+        action.result = "Deleted: " + filePath.string();
         return true;
 
     } else {
@@ -293,52 +286,62 @@ bool ActionExecutor::handleFileEdit(Action& action)
  */
 bool ActionExecutor::handleSearchFiles(Action& action)
 {
-    QString searchPath = m_context.projectRoot + "/" + action.params.value("path").toString();
-    QString pattern = action.params.value("pattern").toString();
-    QString query = action.params.value("query").toString();
+    fs::path searchPath = fs::path(m_context.projectRoot) / action.params.value("path", "");
+    std::string pattern = action.params.value("pattern", "*");
+    std::string query = action.params.value("query", "");
 
-    QDir dir(searchPath);
-    if (!dir.exists()) {
-        action.error = "Search path does not exist: " + searchPath;
+    if (!fs::exists(searchPath) || !fs::is_directory(searchPath)) {
+        action.error = "Search path does not exist: " + searchPath.string();
         return false;
     }
 
-    QFileInfoList files = dir.entryInfoList(pattern.split(","), QDir::Files, QDir::Name);
-
-    QJsonArray results;
+    json results = json::array();
     int matchCount = 0;
+    int filesSearched = 0;
 
-    for (const QFileInfo& fileInfo : files) {
-        if (query.isEmpty()) {
+    for (const auto& entry : fs::directory_iterator(searchPath)) {
+        if (!entry.is_regular_file()) continue;
+        filesSearched++;
+
+        if (query.empty()) {
             // Just list files
-            QJsonObject fileObj;
-            fileObj["path"] = fileInfo.absoluteFilePath();
-            fileObj["size"] = (int)fileInfo.size();
-            results.append(fileObj);
+            json fileObj;
+            fileObj["path"] = entry.path().string();
+            fileObj["size"] = entry.file_size();
+            results.push_back(fileObj);
         } else {
             // Search content
-            QFile file(fileInfo.absoluteFilePath());
-            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                QString content = file.readAll();
+            std::ifstream file(entry.path());
+            if (file) {
+                std::stringstream buffer;
+                buffer << file.rdbuf();
+                std::string content = buffer.str();
                 file.close();
 
-                if (content.contains(query)) {
-                    QJsonObject match;
-                    match["file"] = fileInfo.absoluteFilePath();
-                    match["matches"] = content.count(query);
-                    results.append(match);
+                size_t pos = 0;
+                int count = 0;
+                while ((pos = content.find(query, pos)) != std::string::npos) {
+                    count++;
+                    pos += query.length();
+                }
+
+                if (count > 0) {
+                    json match;
+                    match["file"] = entry.path().string();
+                    match["matches"] = count;
+                    results.push_back(match);
                     matchCount++;
                 }
             }
         }
     }
 
-    QJsonObject result;
-    result["files_searched"] = files.size();
+    json result;
+    result["files_searched"] = filesSearched;
     result["matches"] = matchCount;
     result["results"] = results;
 
-    action.result = QJsonDocument(result).toJson(QJsonDocument::Compact);
+    action.result = result.dump(2);
     return true;
 }
 
@@ -347,18 +350,19 @@ bool ActionExecutor::handleSearchFiles(Action& action)
  */
 bool ActionExecutor::handleRunBuild(Action& action)
 {
-    QString target = action.params.value("target").toString("all");
-    QString config = action.params.value("config").toString("Release");
+    std::string target = action.params.value("target", "all");
+    std::string config = action.params.value("config", "Release");
 
-    QStringList args = {"--build", "build", "--config", config};
+    std::vector<std::string> args = {"--build", "build", "--config", config};
     if (target != "all") {
-        args << "--target" << target;
+        args.push_back("--target");
+        args.push_back(target);
     }
 
-    QJsonObject result = executeCommand("cmake", args, m_context.timeoutMs);
+    json result = executeCommand("cmake", args, m_context.timeoutMs);
 
-    action.result = QJsonDocument(result).toJson(QJsonDocument::Compact);
-    return result.value("exitCode").toInt() == 0;
+    action.result = result.dump(2);
+    return result.value("exitCode", -1) == 0;
 }
 
 /**
@@ -366,17 +370,17 @@ bool ActionExecutor::handleRunBuild(Action& action)
  */
 bool ActionExecutor::handleExecuteTests(Action& action)
 {
-    QString testTarget = action.params.value("target").toString("all_tests");
+    std::string testTarget = action.params.value("target", "all_tests");
 
-    QStringList args;
+    std::vector<std::string> args;
     if (testTarget != "all_tests") {
-        args << testTarget;
+        args.push_back(testTarget);
     }
 
-    QJsonObject result = executeCommand("ctest", args, m_context.timeoutMs);
+    json result = executeCommand("ctest", args, m_context.timeoutMs);
 
-    action.result = QJsonDocument(result).toJson(QJsonDocument::Compact);
-    return result.value("exitCode").toInt() == 0;
+    action.result = result.dump(2);
+    return result.value("exitCode", -1) == 0;
 }
 
 /**
@@ -384,27 +388,27 @@ bool ActionExecutor::handleExecuteTests(Action& action)
  */
 bool ActionExecutor::handleCommitGit(Action& action)
 {
-    QString gitAction = action.params.value("action").toString();
-    QString message = action.params.value("message").toString();
-    QString branch = action.params.value("branch").toString();
+    std::string gitAction = action.params.value("action", "");
+    std::string message = action.params.value("message", "");
+    std::string branch = action.params.value("branch", "");
 
-    QStringList args;
+    std::vector<std::string> args;
 
     if (gitAction == "commit") {
-        args << "commit" << "-m" << message;
+        args = {"commit", "-m", message};
     } else if (gitAction == "push") {
-        args << "push" << (branch.isEmpty() ? "origin" : "origin " + branch);
+        args = {"push", branch.empty() ? "origin" : ("origin " + branch)};
     } else if (gitAction == "add") {
-        args << "add" << action.params.value("files").toString();
+        args = {"add", action.params.value("files", "")};
     } else {
         action.error = "Unknown git action: " + gitAction;
         return false;
     }
 
-    QJsonObject result = executeCommand("git", args, m_context.timeoutMs);
+    json result = executeCommand("git", args, m_context.timeoutMs);
 
-    action.result = QJsonDocument(result).toJson(QJsonDocument::Compact);
-    return result.value("exitCode").toInt() == 0;
+    action.result = result.dump(2);
+    return result.value("exitCode", -1) == 0;
 }
 
 /**
@@ -412,23 +416,23 @@ bool ActionExecutor::handleCommitGit(Action& action)
  */
 bool ActionExecutor::handleInvokeCommand(Action& action)
 {
-    QString command = action.params.value("command").toString();
-    QStringList args;
+    std::string command = action.params.value("command", "");
+    std::vector<std::string> args;
 
     if (action.params.contains("args")) {
-        if (action.params.value("args").isArray()) {
-            for (const QJsonValue& arg : action.params.value("args").toArray()) {
-                args << arg.toString();
+        if (action.params["args"].is_array()) {
+            for (const auto& arg : action.params["args"]) {
+                args.push_back(arg.get<std::string>());
             }
         } else {
-            args << action.params.value("args").toString();
+            args.push_back(action.params.value("args", ""));
         }
     }
 
-    QJsonObject result = executeCommand(command, args, m_context.timeoutMs);
+    json result = executeCommand(command, args, m_context.timeoutMs);
 
-    action.result = QJsonDocument(result).toJson(QJsonDocument::Compact);
-    return result.value("exitCode").toInt() == 0;
+    action.result = result.dump(2);
+    return result.value("exitCode", -1) == 0;
 }
 
 /**
@@ -437,7 +441,6 @@ bool ActionExecutor::handleInvokeCommand(Action& action)
 bool ActionExecutor::handleRecursiveAgent(Action& action)
 {
     // Placeholder for recursive agent call
-    // Would invoke ModelInvoker again with new wish
     action.result = "Recursive agent invocation not yet implemented";
     return false;
 }
@@ -447,18 +450,17 @@ bool ActionExecutor::handleRecursiveAgent(Action& action)
  */
 bool ActionExecutor::handleQueryUser(Action& action)
 {
-    QString query = action.params.value("query").toString();
-    QStringList options;
+    std::string query = action.params.value("query", "");
+    std::vector<std::string> options;
 
-    if (action.params.value("options").isArray()) {
-        for (const QJsonValue& opt : action.params.value("options").toArray()) {
-            options << opt.toString();
+    if (action.params.contains("options") && action.params["options"].is_array()) {
+        for (const auto& opt : action.params["options"]) {
+            options.push_back(opt.get<std::string>());
         }
     }
 
-    emit userInputNeeded(query, options);
+    if (onUserInputNeeded) onUserInputNeeded(query, options);
 
-    // Wait for user response (would be connected externally)
     action.result = "User query: " + query;
     return true;
 }
@@ -470,13 +472,13 @@ bool ActionExecutor::handleQueryUser(Action& action)
 /**
  * @brief Parse JSON action
  */
-Action ActionExecutor::parseJsonAction(const QJsonObject& jsonAction)
+Action ActionExecutor::parseJsonAction(const json& jsonAction)
 {
     Action action;
-    action.type = stringToActionType(jsonAction.value("type").toString());
-    action.target = jsonAction.value("target").toString();
-    action.params = jsonAction.value("params").toObject();
-    action.description = jsonAction.value("description").toString();
+    action.type = stringToActionType(jsonAction.value("type", ""));
+    action.target = jsonAction.value("target", "");
+    action.params = jsonAction.value("params", json::object());
+    action.description = jsonAction.value("description", "");
 
     return action;
 }
@@ -484,72 +486,169 @@ Action ActionExecutor::parseJsonAction(const QJsonObject& jsonAction)
 /**
  * @brief Create backup
  */
-bool ActionExecutor::createBackup(const QString& filePath)
+bool ActionExecutor::createBackup(const std::string& filePath)
 {
-    if (!QFileInfo::exists(filePath)) {
+    if (!fs::exists(filePath)) {
         return true; // No need to backup non-existent file
     }
 
-    QString backupPath = filePath + ".backup." + QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
+    auto now = std::chrono::system_clock::now();
+    auto time = std::chrono::system_clock::to_time_t(now);
+    
+    std::stringstream ss;
+    ss << filePath << ".backup." << time;
+    std::string backupPath = ss.str();
 
-    bool success = QFile::copy(filePath, backupPath);
-    if (success) {
+    std::error_code ec;
+    fs::copy_file(filePath, backupPath, fs::copy_options::overwrite_existing, ec);
+    
+    if (!ec) {
         m_backups[filePath] = backupPath;
-        qDebug() << "[ActionExecutor] Backup created:" << backupPath;
     }
 
-    return success;
+    return !ec;
 }
 
 /**
  * @brief Restore from backup
  */
-bool ActionExecutor::restoreFromBackup(const QString& filePath)
+bool ActionExecutor::restoreFromBackup(const std::string& filePath)
 {
-    if (!m_backups.contains(filePath)) {
+    if (m_backups.find(filePath) == m_backups.end()) {
         return false;
     }
 
-    QString backupPath = m_backups[filePath];
+    std::string backupPath = m_backups[filePath];
 
-    if (!QFile::copy(backupPath, filePath)) {
-        return false;
-    }
+    std::error_code ec;
+    fs::copy_file(backupPath, filePath, fs::copy_options::overwrite_existing, ec);
 
-    qDebug() << "[ActionExecutor] Restored from backup:" << backupPath;
-    return true;
+    return !ec;
 }
 
 /**
  * @brief Execute command
  */
-QJsonObject ActionExecutor::executeCommand(const QString& command,
-                                            const QStringList& args,
-                                            int timeoutMs)
+json ActionExecutor::executeCommand(const std::string& command,
+                                    const std::vector<std::string>& args,
+                                    int timeoutMs)
 {
-    QJsonObject result;
+    json result;
     result["command"] = command;
-    result["args"] = QJsonArray::fromStringList(args);
+    result["args"] = args;
 
     if (m_context.dryRun) {
         result["exitCode"] = 0;
-        result["stdout"] = "DRY RUN: Would execute " + command + " " + args.join(" ");
+        std::string cmdStr = command;
+        for (const auto& arg : args) {
+            cmdStr += " " + arg;
+        }
+        result["stdout"] = "DRY RUN: Would execute " + cmdStr;
         return result;
     }
 
-    m_process->setWorkingDirectory(m_context.projectRoot);
-    m_process->start(command, args);
+    // Build command line
+    std::string cmdLine = command;
+    for (const auto& arg : args) {
+        cmdLine += " \"" + arg + "\"";
+    }
 
-    if (!m_process->waitForFinished(timeoutMs)) {
-        m_process->kill();
+    // Create pipes for stdout/stderr
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = NULL;
+
+    HANDLE hStdoutRead, hStdoutWrite;
+    HANDLE hStderrRead, hStderrWrite;
+    
+    if (!CreatePipe(&hStdoutRead, &hStdoutWrite, &sa, 0)) {
         result["exitCode"] = -1;
-        result["error"] = "Command timed out after " + QString::number(timeoutMs) + "ms";
+        result["error"] = "Failed to create stdout pipe";
+        return result;
+    }
+    
+    if (!CreatePipe(&hStderrRead, &hStderrWrite, &sa, 0)) {
+        CloseHandle(hStdoutRead);
+        CloseHandle(hStdoutWrite);
+        result["exitCode"] = -1;
+        result["error"] = "Failed to create stderr pipe";
         return result;
     }
 
-    result["exitCode"] = m_process->exitCode();
-    result["stdout"] = QString::fromUtf8(m_process->readAllStandardOutput());
-    result["stderr"] = QString::fromUtf8(m_process->readAllStandardError());
+    SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(hStderrRead, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOA si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    si.hStdError = hStderrWrite;
+    si.hStdOutput = hStdoutWrite;
+    si.dwFlags |= STARTF_USESTDHANDLES;
+
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+
+    char* cmdLinePtr = _strdup(cmdLine.c_str());
+    
+    if (!CreateProcessA(NULL, cmdLinePtr, NULL, NULL, TRUE, 0, NULL, 
+                        m_context.projectRoot.c_str(), &si, &pi)) {
+        free(cmdLinePtr);
+        CloseHandle(hStdoutWrite);
+        CloseHandle(hStdoutRead);
+        CloseHandle(hStderrWrite);
+        CloseHandle(hStderrRead);
+        result["exitCode"] = -1;
+        result["error"] = "Failed to create process";
+        return result;
+    }
+
+    free(cmdLinePtr);
+    m_processHandle = pi.hProcess;
+    
+    CloseHandle(hStdoutWrite);
+    CloseHandle(hStderrWrite);
+
+    DWORD waitResult = WaitForSingleObject(pi.hProcess, timeoutMs);
+
+    if (waitResult == WAIT_TIMEOUT) {
+        TerminateProcess(pi.hProcess, 1);
+        result["exitCode"] = -1;
+        result["error"] = "Command timed out after " + std::to_string(timeoutMs) + "ms";
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        CloseHandle(hStdoutRead);
+        CloseHandle(hStderrRead);
+        m_processHandle = nullptr;
+        return result;
+    }
+
+    DWORD exitCode;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+    result["exitCode"] = static_cast<int>(exitCode);
+
+    // Read stdout
+    std::string stdout_str;
+    char buffer[4096];
+    DWORD bytesRead;
+    while (ReadFile(hStdoutRead, buffer, sizeof(buffer), &bytesRead, NULL) && bytesRead > 0) {
+        stdout_str.append(buffer, bytesRead);
+    }
+
+    // Read stderr
+    std::string stderr_str;
+    while (ReadFile(hStderrRead, buffer, sizeof(buffer), &bytesRead, NULL) && bytesRead > 0) {
+        stderr_str.append(buffer, bytesRead);
+    }
+
+    result["stdout"] = stdout_str;
+    result["stderr"] = stderr_str;
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    CloseHandle(hStdoutRead);
+    CloseHandle(hStderrRead);
+    m_processHandle = nullptr;
 
     return result;
 }
@@ -557,19 +656,17 @@ QJsonObject ActionExecutor::executeCommand(const QString& command,
 /**
  * @brief Validate file edit safety
  */
-bool ActionExecutor::validateFileEditSafety(const QString& filePath, const QString& action)
+bool ActionExecutor::validateFileEditSafety(const std::string& filePath, const std::string& action)
 {
     // Prevent modifications to system files
-    if (filePath.contains("C:\\Windows") || filePath.contains("/etc/") || 
-        filePath.contains("/System/")) {
-        qWarning() << "[ActionExecutor] Blocked system file modification:" << filePath;
+    if (filePath.find("C:\\Windows") != std::string::npos || 
+        filePath.find("/etc/") != std::string::npos || 
+        filePath.find("/System/") != std::string::npos) {
         return false;
     }
 
     // For delete operations, require explicit confirmation
     if (action == "delete") {
-        qWarning() << "[ActionExecutor] File deletion requires explicit approval:" << filePath;
-        // In real implementation, would query user
         return false;
     }
 
@@ -579,7 +676,7 @@ bool ActionExecutor::validateFileEditSafety(const QString& filePath, const QStri
 /**
  * @brief String to ActionType conversion
  */
-ActionType ActionExecutor::stringToActionType(const QString& typeStr) const
+ActionType ActionExecutor::stringToActionType(const std::string& typeStr) const
 {
     if (typeStr == "file_edit") return ActionType::FileEdit;
     if (typeStr == "search_files") return ActionType::SearchFiles;
@@ -592,18 +689,3 @@ ActionType ActionExecutor::stringToActionType(const QString& typeStr) const
 
     return ActionType::Unknown;
 }
-
-// Private slot implementations - called by Qt signal/slot mechanism
-void ActionExecutor::onActionTaskFinished()
-{
-    qDebug() << "[ActionExecutor] Action task finished";
-    // Process completion of current action task
-}
-
-void ActionExecutor::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
-{
-    qDebug() << "[ActionExecutor] Process finished with exit code:" << exitCode
-             << "status:" << static_cast<int>(exitStatus);
-    // Process completion of external process execution
-}
-

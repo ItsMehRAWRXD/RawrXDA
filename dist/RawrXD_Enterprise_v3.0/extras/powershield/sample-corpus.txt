@@ -1,0 +1,38 @@
+Hello world, this is a test.
+PowerShell is a powerful scripting language.
+Machine learning is fascinating and complex.
+Artificial intelligence will change the world.
+Neural networks can learn complex patterns.
+Custom language models are interesting to build.
+Programming requires logic and creativity.
+The quick brown fox jumps over the lazy dog.
+Natural language processing is a key AI technology.
+Large language models have transformed AI research.
+From scratch implementations teach fundamental concepts.
+Transformer architectures revolutionized NLP.
+Attention mechanisms allow models to focus on relevant information.
+Self-attention computes relationships between all positions.
+Multi-head attention captures different types of relationships.
+Positional encoding provides sequence information.
+Feed-forward networks process individual positions.
+Layer normalization stabilizes training.
+Dropout prevents overfitting.
+Gradient clipping handles exploding gradients.
+Adam optimizer adapts learning rates.
+Cross-entropy loss measures classification error.
+Perplexity evaluates language model quality.
+BLEU score measures translation quality.
+ROUGE score evaluates summarization.
+F1 score balances precision and recall.
+Accuracy measures correct predictions.
+Precision measures true positives.
+Recall measures found positives.
+Specificity measures true negatives.
+Negative predictive value measures true negatives.
+Area under curve evaluates ranking.
+Mean absolute error measures regression.
+Root mean squared error penalizes large errors.
+R-squared measures explained variance.
+Silhouette score evaluates clustering.
+Davies-Bouldin index measures cluster separation.
+Calinski-Harabasz index measures cluster density.

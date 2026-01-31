@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "6040d7725be10a1b",
+  "result": "error",
+  "details": "Unknown command: extract_crypto_data",
+  "timestamp": "2025-09-21T09:51:35.573Z"
+}

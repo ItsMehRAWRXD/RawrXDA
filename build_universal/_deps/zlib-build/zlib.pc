@@ -1,0 +1,13 @@
+prefix=C:/Program Files/RawrXD-ModelLoader
+exec_prefix=C:/Program Files/RawrXD-ModelLoader
+libdir=C:/Program Files/RawrXD-ModelLoader/lib
+sharedlibdir=C:/Program Files/RawrXD-ModelLoader/lib
+includedir=C:/Program Files/RawrXD-ModelLoader/include
+
+Name: zlib
+Description: zlib compression library
+Version: 1.3
+
+Requires:
+Libs: -L${libdir} -L${sharedlibdir} -lz
+Cflags: -I${includedir}

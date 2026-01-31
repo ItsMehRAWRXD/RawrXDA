@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "e3677982c60b208b",
+  "result": "error",
+  "details": "Unknown command: stop_clipper",
+  "timestamp": "2025-09-21T09:58:57.785Z"
+}

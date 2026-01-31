@@ -1,0 +1,1 @@
+{"engineId":"stub-generator","action":"generateStub","params":{"target":"test-executable.exe","stubType":"windows-x64","encryptionMethod":"aes-256-gcm","options":{"stealth":true,"antiAnalysis":true,"mutex":true,"upx":true,"obfuscation":true}}}

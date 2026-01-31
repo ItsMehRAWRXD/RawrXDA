@@ -1,0 +1,33 @@
+{
+  "GUI": {
+    "Description": "RawrXD Main IDE Interfaces",
+    "Binaries": [
+      "../build/RawrXD.exe",
+      "../build/bin/Release/RawrXD-AgenticIDE.exe"
+    ],
+    "Qt_Widgets": [
+      "SovereignDashboardWidget"
+    ]
+  },
+  "CLI": {
+    "Description": "Pocket-Lab / Native Kernels",
+    "Binaries": [
+      "../build/pocket_lab.exe"
+    ],
+    "Expected_Exports": {
+      "pocket_lab.exe": [
+        "NT Syscall Thunks"
+      ]
+    }
+  },
+  "Shared": {
+    "Description": "IPC & Telemetry",
+    "MMF_Names": [
+      "Global\\SOVEREIGN_STATS"
+    ],
+    "Critical_Files": [
+      "../src/gui/sovereign_dashboard_widget.cpp",
+      "../src/thermal/masm/pocket_lab.asm"
+    ]
+  }
+}

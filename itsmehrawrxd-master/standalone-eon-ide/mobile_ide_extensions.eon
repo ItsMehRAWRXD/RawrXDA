@@ -1,0 +1,502 @@
+; mobile_ide_extensions.eon
+; Mobile-specific IDE extensions for Android and iOS
+; Touch-optimized interface and mobile development features
+
+module MobileIDE
+
+import cross_platform_compatibility
+
+; === Mobile-Optimized UI Components ===
+class MobileTouchInterface {
+    var touch_keyboard: VirtualKeyboard
+    var gesture_recognizer: GestureRecognizer
+    var mobile_toolbar: MobileToolbar
+    var adaptive_layout: AdaptiveLayout
+    
+    function init() {
+        touch_keyboard = VirtualKeyboard()
+        gesture_recognizer = GestureRecognizer()
+        mobile_toolbar = MobileToolbar()
+        adaptive_layout = AdaptiveLayout()
+        
+        ; Configure touch-friendly sizes
+        configureTouchTargets()
+        setupGestureHandling()
+        initializeVirtualKeyboard()
+    }
+    
+    function configureTouchTargets() {
+        ; Ensure minimum touch target size (44pt on iOS, 48dp on Android)
+        var platform = PlatformManager.current_platform
+        var min_size = (platform.name == "ios") ? 44 : 48
+        
+        ; Apply to all interactive elements
+        setMinimumTouchTargetSize(min_size)
+        setTouchTargetSpacing(8)  ; Minimum spacing between targets
+    }
+    
+    function setupGestureHandling() {
+        ; Code editor gestures
+        gesture_recognizer.addGesture("pinch_zoom", handlePinchZoom)
+        gesture_recognizer.addGesture("two_finger_scroll", handleTwoFingerScroll)
+        gesture_recognizer.addGesture("long_press", handleLongPress)
+        gesture_recognizer.addGesture("double_tap", handleDoubleTap)
+        gesture_recognizer.addGesture("swipe_left", handleSwipeLeft)
+        gesture_recognizer.addGesture("swipe_right", handleSwipeRight)
+        gesture_recognizer.addGesture("three_finger_tap", handleThreeFingerTap)
+        
+        ; IDE-specific gestures
+        gesture_recognizer.addGesture("two_finger_tap", showContextMenu)
+        gesture_recognizer.addGesture("force_touch", showQuickActions)  ; iOS 3D Touch
+    }
+    
+    function handlePinchZoom(scale: float, center: Point2D) {
+        ; Zoom code editor
+        var current_font_size = editor.getFontSize()
+        var new_font_size = current_font_size * scale
+        
+        ; Clamp zoom level
+        new_font_size = clamp(new_font_size, 8.0, 32.0)
+        
+        editor.setFontSize(new_font_size)
+        editor.centerOnPoint(center)
+    }
+    
+    function handleLongPress(position: Point2D) {
+        ; Show text selection handles and context menu
+        var word_bounds = editor.getWordAt(position)
+        if (word_bounds.isValid()) {
+            editor.selectText(word_bounds)
+            showTextSelectionMenu(position)
+        }
+    }
+    
+    function showTextSelectionMenu(position: Point2D) {
+        var menu = ContextMenu()
+        menu.addItem("Copy", copySelectedText)
+        menu.addItem("Cut", cutSelectedText)
+        menu.addItem("Paste", pasteText)
+        menu.addItem("Select All", selectAllText)
+        menu.addItem("Find in File", findSelectedText)
+        menu.addItem("Go to Definition", goToDefinition)
+        menu.showAt(position)
+    }
+}
+
+; === Virtual Keyboard for Code Editing ===
+class VirtualKeyboard {
+    var layout: KeyboardLayout
+    var suggestions: Array<string>
+    var auto_complete: bool
+    var haptic_feedback: bool
+    
+    function init() {
+        layout = createCodeKeyboardLayout()
+        auto_complete = true
+        haptic_feedback = true
+        
+        setupKeyboardExtensions()
+    }
+    
+    function createCodeKeyboardLayout() -> KeyboardLayout {
+        var layout = KeyboardLayout()
+        
+        ; Standard QWERTY with programming symbols easily accessible
+        layout.addRow([
+            Key("1", "!"), Key("2", "@"), Key("3", "#"), Key("4", "$"),
+            Key("5", "%"), Key("6", "^"), Key("7", "&"), Key("8", "*"),
+            Key("9", "("), Key("0", ")")
+        ])
+        
+        layout.addRow([
+            Key("q"), Key("w"), Key("e"), Key("r"), Key("t"),
+            Key("y"), Key("u"), Key("i"), Key("o"), Key("p"),
+            Key("[", "{"), Key("]", "}")
+        ])
+        
+        layout.addRow([
+            Key("a"), Key("s"), Key("d"), Key("f"), Key("g"),
+            Key("h"), Key("j"), Key("k"), Key("l"),
+            Key(";", ":"), Key("'", "\"")
+        ])
+        
+        layout.addRow([
+            Key("z"), Key("x"), Key("c"), Key("v"), Key("b"),
+            Key("n"), Key("m"), Key(",", "<"), Key(".", ">"),
+            Key("/", "?")
+        ])
+        
+        ; Programming symbols row
+        layout.addRow([
+            Key("Tab", width: 80), Key("`", "~"), Key("-", "_"),
+            Key("=", "+"), Key("\\", "|"), Key("Space", width: 120)
+        ])
+        
+        return layout
+    }
+    
+    function setupKeyboardExtensions() {
+        ; Add code completion suggestions bar
+        addSuggestionBar()
+        
+        ; Add quick access buttons for common operations
+        addQuickAccessButtons([
+            "Save", "Run", "Debug", "Search", "Undo", "Redo"
+        ])
+        
+        ; Add cursor movement controls
+        addCursorControls()
+    }
+    
+    function addSuggestionBar() {
+        var suggestion_bar = SuggestionBar()
+        suggestion_bar.onSuggestionSelected = handleSuggestionSelected
+        keyboard.addAccessoryView(suggestion_bar)
+    }
+    
+    function handleSuggestionSelected(suggestion: string) {
+        editor.insertTextAtCursor(suggestion)
+        
+        ; Provide haptic feedback
+        if (haptic_feedback) {
+            triggerHapticFeedback(HapticType.SELECTION)
+        }
+    }
+}
+
+; === Mobile Development Tools ===
+class MobileDevelopmentTools {
+    var device_simulator: DeviceSimulator
+    var remote_debugging: RemoteDebugging
+    var mobile_emulator: MobileEmulator
+    var app_packager: AppPackager
+    
+    function init() {
+        device_simulator = DeviceSimulator()
+        remote_debugging = RemoteDebugging()
+        mobile_emulator = MobileEmulator()
+        app_packager = AppPackager()
+    }
+    
+    function createMobileProject(project_type: MobileProjectType) -> Project {
+        var project = Project()
+        project.type = project_type
+        
+        match project_type {
+            case ANDROID_APP:
+                setupAndroidProject(project)
+            case IOS_APP:
+                setupiOSProject(project)
+            case REACT_NATIVE:
+                setupReactNativeProject(project)
+            case FLUTTER:
+                setupFlutterProject(project)
+            case CORDOVA:
+                setupCordovaProject(project)
+            case XAMARIN:
+                setupXamarinProject(project)
+        }
+        
+        return project
+    }
+    
+    function setupAndroidProject(project: Project) {
+        ; Create Android project structure
+        project.addDirectory("app/src/main/java")
+        project.addDirectory("app/src/main/res")
+        project.addDirectory("app/src/main/assets")
+        
+        ; Generate manifest
+        var manifest = generateAndroidManifest(project)
+        project.addFile("app/src/main/AndroidManifest.xml", manifest)
+        
+        ; Generate build.gradle files
+        var build_gradle = generateBuildGradle(project)
+        project.addFile("app/build.gradle", build_gradle)
+        
+        ; Generate main activity
+        var main_activity = generateMainActivity(project)
+        project.addFile("app/src/main/java/MainActivity.java", main_activity)
+    }
+    
+    function setupiOSProject(project: Project) {
+        ; Create iOS project structure
+        project.addDirectory("Sources")
+        project.addDirectory("Resources")
+        project.addDirectory("Tests")
+        
+        ; Generate Info.plist
+        var info_plist = generateInfoPlist(project)
+        project.addFile("Info.plist", info_plist)
+        
+        ; Generate main app delegate
+        var app_delegate = generateAppDelegate(project)
+        project.addFile("Sources/AppDelegate.swift", app_delegate)
+        
+        ; Generate main view controller
+        var view_controller = generateViewController(project)
+        project.addFile("Sources/ViewController.swift", view_controller)
+    }
+    
+    function buildMobileApp(project: Project) -> BuildResult {
+        var platform = PlatformManager.current_platform
+        
+        match project.type {
+            case ANDROID_APP:
+                if (platform.name == "android") {
+                    return buildAndroidAppOnDevice(project)
+                } else {
+                    return buildAndroidAppCrossPlatform(project)
+                }
+            case IOS_APP:
+                if (platform.name == "ios") {
+                    return buildiOSAppOnDevice(project)
+                } else {
+                    return buildiOSAppCrossPlatform(project)
+                }
+        }
+        
+        return BuildResult.failure("Unsupported project type")
+    }
+}
+
+; === Device Testing and Debugging ===
+class DeviceTestingFramework {
+    var connected_devices: Array<Device>
+    var wireless_debugging: WirelessDebugging
+    var device_logs: DeviceLogs
+    var performance_monitor: PerformanceMonitor
+    
+    function scanForDevices() -> Array<Device> {
+        var devices = Array<Device>()
+        
+        ; Scan for Android devices via ADB
+        var adb_devices = scanADBDevices()
+        devices.addAll(adb_devices)
+        
+        ; Scan for iOS devices via libimobiledevice
+        var ios_devices = scaniOSDevices()
+        devices.addAll(ios_devices)
+        
+        ; Scan for wireless devices
+        var wireless_devices = scanWirelessDevices()
+        devices.addAll(wireless_devices)
+        
+        connected_devices = devices
+        return devices
+    }
+    
+    function deployToDevice(device: Device, app_path: string) -> DeployResult {
+        match device.platform {
+            case "android":
+                return deployAndroidApp(device, app_path)
+            case "ios":
+                return deployiOSApp(device, app_path)
+        }
+        
+        return DeployResult.failure("Unsupported device platform")
+    }
+    
+    function startRemoteDebugging(device: Device) -> DebugSession {
+        var session = DebugSession(device)
+        
+        ; Setup debug connection
+        if (device.platform == "android") {
+            session.connect("adb", device.adb_id)
+        } else if (device.platform == "ios") {
+            session.connect("ios_webkit_debug", device.udid)
+        }
+        
+        ; Start log streaming
+        startLogStreaming(device, session)
+        
+        ; Setup breakpoint synchronization
+        setupBreakpointSync(session)
+        
+        return session
+    }
+    
+    function monitorDevicePerformance(device: Device) -> PerformanceData {
+        var perf_data = PerformanceData()
+        
+        ; Monitor CPU usage
+        perf_data.cpu_usage = device.getCPUUsage()
+        
+        ; Monitor memory usage
+        perf_data.memory_usage = device.getMemoryUsage()
+        
+        ; Monitor battery usage (mobile only)
+        if (device.type == MOBILE_DEVICE) {
+            perf_data.battery_usage = device.getBatteryUsage()
+        }
+        
+        ; Monitor network activity
+        perf_data.network_activity = device.getNetworkActivity()
+        
+        ; Monitor GPU usage (if available)
+        if (device.hasGPU()) {
+            perf_data.gpu_usage = device.getGPUUsage()
+        }
+        
+        return perf_data
+    }
+}
+
+; === Mobile UI Adaptation ===
+class AdaptiveMobileUI {
+    var orientation: DeviceOrientation
+    var screen_size: ScreenSize
+    var safe_areas: SafeAreas
+    var dynamic_type: DynamicType
+    
+    function adaptToOrientation(orientation: DeviceOrientation) {
+        this.orientation = orientation
+        
+        if (orientation == LANDSCAPE) {
+            ; Optimize for landscape coding
+            showSidebarCollapsed()
+            expandCodeEditor()
+            showBottomToolbar()
+        } else if (orientation == PORTRAIT) {
+            ; Optimize for portrait navigation
+            showSidebarExpanded()
+            showTopToolbar()
+            optimizeForVerticalSpace()
+        }
+        
+        ; Notify components of orientation change
+        notifyOrientationChange(orientation)
+    }
+    
+    function handleSafeAreas() {
+        var platform = PlatformManager.current_platform
+        
+        if (platform.name == "ios") {
+            ; Handle iOS safe areas (notch, home indicator)
+            safe_areas = getIOSSafeAreas()
+            
+            ; Adjust UI to avoid safe areas
+            adjustForTopSafeArea(safe_areas.top)
+            adjustForBottomSafeArea(safe_areas.bottom)
+        } else if (platform.name == "android") {
+            ; Handle Android display cutouts and navigation
+            safe_areas = getAndroidSafeAreas()
+            
+            ; Adjust for system UI
+            adjustForSystemBars()
+        }
+    }
+    
+    function enableDynamicType() {
+        var platform = PlatformManager.current_platform
+        
+        if (platform.name == "ios") {
+            ; Support iOS Dynamic Type
+            var preferred_size = UIFont.preferredContentSizeCategory()
+            adjustFontSizes(preferred_size)
+            
+            ; Listen for accessibility changes
+            NotificationCenter.defaultCenter().addObserver(
+                self, @selector(contentSizeCategoryChanged:),
+                UIContentSizeCategoryDidChangeNotification, null)
+        } else if (platform.name == "android") {
+            ; Support Android font scaling
+            var font_scale = Resources.getSystem().getConfiguration().fontScale
+            adjustFontSizes(font_scale)
+        }
+    }
+}
+
+; === Cloud IDE for Mobile ===
+class CloudMobileIDE {
+    var cloud_workspace: CloudWorkspace
+    var sync_manager: SyncManager
+    var offline_cache: OfflineCache
+    var bandwidth_optimizer: BandwidthOptimizer
+    
+    function init() {
+        cloud_workspace = CloudWorkspace()
+        sync_manager = SyncManager()
+        offline_cache = OfflineCache()
+        bandwidth_optimizer = BandwidthOptimizer()
+        
+        ; Optimize for mobile data usage
+        bandwidth_optimizer.setDataSavingMode(true)
+        bandwidth_optimizer.setImageCompression(0.7)
+        bandwidth_optimizer.setDeltaSyncEnabled(true)
+    }
+    
+    function connectToCloudWorkspace(workspace_url: string) -> bool {
+        ; Check network conditions
+        var network_info = getNetworkInfo()
+        if (network_info.isMetered()) {
+            showDataUsageWarning()
+        }
+        
+        ; Attempt connection
+        try {
+            cloud_workspace.connect(workspace_url)
+            sync_manager.startSync()
+            return true
+        } catch (NetworkError e) {
+            ; Fall back to offline mode
+            enableOfflineMode()
+            return false
+        }
+    }
+    
+    function enableOfflineMode() {
+        ; Cache current workspace
+        offline_cache.cacheWorkspace(cloud_workspace.getCurrentState())
+        
+        ; Switch to offline editing
+        editor.setOfflineMode(true)
+        
+        ; Show offline indicator
+        showOfflineIndicator()
+        
+        ; Queue changes for later sync
+        sync_manager.enableQueueMode(true)
+    }
+    
+    function optimizeForMobileData() {
+        ; Reduce sync frequency on mobile data
+        if (isOnMobileData()) {
+            sync_manager.setSyncInterval(60000)  ; 1 minute
+            sync_manager.setDeltaSyncOnly(true)
+        } else {
+            sync_manager.setSyncInterval(5000)   ; 5 seconds
+            sync_manager.setDeltaSyncOnly(false)
+        }
+    }
+}
+
+; === Entry Point for Mobile IDE ===
+function main() -> int {
+    println(" Starting n0mn0m Mobile IDE...")
+    
+    var mobile_ide = MobileTouchInterface()
+    mobile_ide.init()
+    
+    var dev_tools = MobileDevelopmentTools()
+    dev_tools.init()
+    
+    var testing_framework = DeviceTestingFramework()
+    var adaptive_ui = AdaptiveMobileUI()
+    var cloud_ide = CloudMobileIDE()
+    
+    adaptive_ui.handleSafeAreas()
+    adaptive_ui.enableDynamicType()
+    
+    cloud_ide.init()
+    
+    println(" Mobile IDE initialized successfully!")
+    
+    return 0
+}
+
+export MobileTouchInterface
+export MobileDevelopmentTools
+export DeviceTestingFramework
+export AdaptiveMobileUI
+export CloudMobileIDE

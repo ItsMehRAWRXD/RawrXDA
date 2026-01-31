@@ -1,0 +1,854 @@
+; cross_platform_compatibility.eon
+; Universal Cross-Platform IDE Framework
+; Supports: Windows, macOS, Linux, Android, iOS, and more
+; Written entirely in EON ASM for maximum portability
+
+module CrossPlatformIDE
+
+import std.os
+import std.filesystem
+import std.threading
+import std.graphics
+
+; === Platform Detection and Abstraction ===
+class PlatformManager {
+    var current_platform: Platform
+    var platform_apis: Map<string, PlatformAPI>
+    var native_bridges: Map<string, NativeBridge>
+    
+    function init() {
+        current_platform = detectPlatform()
+        
+        ; Initialize platform-specific APIs
+        platform_apis.set("windows", WindowsPlatformAPI())
+        platform_apis.set("macos", macOSPlatformAPI())
+        platform_apis.set("linux", LinuxPlatformAPI())
+        platform_apis.set("android", AndroidPlatformAPI())
+        platform_apis.set("ios", iOSPlatformAPI())
+        platform_apis.set("web", WebPlatformAPI())
+        
+        println(" Platform detected: " + current_platform.name)
+        println(" Architecture: " + current_platform.architecture)
+        println(" Available memory: " + current_platform.total_memory + " MB")
+    }
+    
+    function detectPlatform() -> Platform {
+        var platform = Platform()
+        
+        ; Detect operating system
+        if (OS_NAME == "Windows_NT") {
+            platform.name = "windows"
+            platform.type = DESKTOP
+            platform.window_system = "win32"
+        } else if (OS_NAME == "Darwin") {
+            if (DEVICE_TYPE == "iPhone" || DEVICE_TYPE == "iPad") {
+                platform.name = "ios"
+                platform.type = MOBILE
+                platform.window_system = "cocoa_touch"
+            } else {
+                platform.name = "macos"
+                platform.type = DESKTOP
+                platform.window_system = "cocoa"
+            }
+        } else if (OS_NAME == "Linux") {
+            if (ENV_VAR("ANDROID_ROOT") != null) {
+                platform.name = "android"
+                platform.type = MOBILE
+                platform.window_system = "android"
+            } else {
+                platform.name = "linux"
+                platform.type = DESKTOP
+                platform.window_system = detectLinuxWindowSystem()
+            }
+        } else if (BROWSER_CONTEXT) {
+            platform.name = "web"
+            platform.type = WEB
+            platform.window_system = "dom"
+        }
+        
+        ; Detect architecture
+        platform.architecture = CPU_ARCH
+        platform.is_64bit = (POINTER_SIZE == 8)
+        
+        ; Detect capabilities
+        platform.has_filesystem = (platform.name != "web")
+        platform.has_networking = true
+        platform.supports_multithreading = (platform.name != "web")
+        platform.supports_gpu_acceleration = detectGPUSupport()
+        
+        return platform
+    }
+    
+    function detectLinuxWindowSystem() -> string {
+        ; Check for different Linux display systems
+        if (ENV_VAR("WAYLAND_DISPLAY") != null) {
+            return "wayland"
+        } else if (ENV_VAR("DISPLAY") != null) {
+            return "x11"
+        } else {
+            return "framebuffer"  ; Headless or embedded
+        }
+    }
+}
+
+; === Universal Window System ===
+class UniversalWindowSystem {
+    var native_window_manager: NativeWindowManager
+    var render_backend: RenderBackend
+    var input_handler: InputHandler
+    var touch_manager: TouchManager
+    
+    function createWindow(config: WindowConfig) -> WindowHandle {
+        var platform = PlatformManager.current_platform
+        
+        match platform.name {
+            case "windows":
+                return createWin32Window(config)
+            case "macos":
+                return createCocoaWindow(config)
+            case "linux":
+                return createLinuxWindow(config)
+            case "android":
+                return createAndroidActivity(config)
+            case "ios":
+                return createiOSViewController(config)
+            case "web":
+                return createWebCanvas(config)
+            default:
+                throw Error("Unsupported platform: " + platform.name)
+        }
+    }
+    
+    ; Windows-specific window creation
+    function createWin32Window(config: WindowConfig) -> WindowHandle {
+        var window_class = WNDCLASSEX {
+            cbSize: sizeof(WNDCLASSEX),
+            style: CS_HREDRAW | CS_VREDRAW,
+            lpfnWndProc: universalWndProc,
+            hInstance: GetModuleHandle(null),
+            hIcon: LoadIcon(null, IDI_APPLICATION),
+            hCursor: LoadCursor(null, IDC_ARROW),
+            hbrBackground: COLOR_WINDOW + 1,
+            lpszClassName: "n0mn0mIDEWindow"
+        }
+        
+        RegisterClassEx(&window_class)
+        
+        var hwnd = CreateWindowEx(
+            0,
+            "n0mn0mIDEWindow",
+            config.title.cstr(),
+            WS_OVERLAPPEDWINDOW,
+            CW_USEDEFAULT, CW_USEDEFAULT,
+            config.width, config.height,
+            null, null,
+            GetModuleHandle(null),
+            null
+        )
+        
+        if (config.fullscreen) {
+            enableFullscreen(hwnd)
+        }
+        
+        ShowWindow(hwnd, SW_SHOW)
+        UpdateWindow(hwnd)
+        
+        return WindowHandle(hwnd, "win32")
+    }
+    
+    ; macOS-specific window creation
+    function createCocoaWindow(config: WindowConfig) -> WindowHandle {
+        var window = NSWindow.alloc().initWithContentRect(
+            NSRect(0, 0, config.width, config.height),
+            NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | 
+            NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable,
+            NSBackingStoreBuffered,
+            false
+        )
+        
+        window.setTitle(NSString.stringWithUTF8String(config.title.cstr()))
+        window.center()
+        window.makeKeyAndOrderFront(null)
+        
+        ; Enable native fullscreen support
+        window.setCollectionBehavior(NSWindowCollectionBehaviorFullScreenPrimary)
+        
+        return WindowHandle(window, "cocoa")
+    }
+    
+    ; Linux window creation (X11/Wayland)
+    function createLinuxWindow(config: WindowConfig) -> WindowHandle {
+        var platform = PlatformManager.current_platform
+        
+        if (platform.window_system == "wayland") {
+            return createWaylandWindow(config)
+        } else if (platform.window_system == "x11") {
+            return createX11Window(config)
+        } else {
+            return createFramebufferWindow(config)
+        }
+    }
+    
+    function createX11Window(config: WindowConfig) -> WindowHandle {
+        var display = XOpenDisplay(null)
+        var screen = DefaultScreen(display)
+        var root = RootWindow(display, screen)
+        
+        var window = XCreateSimpleWindow(
+            display, root,
+            0, 0, config.width, config.height, 1,
+            BlackPixel(display, screen),
+            WhitePixel(display, screen)
+        )
+        
+        XStoreName(display, window, config.title.cstr())
+        XSelectInput(display, window, 
+            ExposureMask | KeyPressMask | KeyReleaseMask | 
+            ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
+            StructureNotifyMask)
+        
+        XMapWindow(display, window)
+        XFlush(display)
+        
+        return WindowHandle(window, "x11", display)
+    }
+    
+    ; Android Activity creation
+    function createAndroidActivity(config: WindowConfig) -> WindowHandle {
+        ; Use JNI to create Android Activity
+        var env = getJNIEnv()
+        var activity_class = env->FindClass("com/n0mn0m/ide/IDEActivity")
+        var constructor = env->GetMethodID(activity_class, "<init>", "()V")
+        var activity = env->NewObject(activity_class, constructor)
+        
+        ; Set window properties
+        var set_title_method = env->GetMethodID(activity_class, "setTitle", "(Ljava/lang/String;)V")
+        var title_string = env->NewStringUTF(config.title.cstr())
+        env->CallVoidMethod(activity, set_title_method, title_string)
+        
+        ; Enable immersive mode for fullscreen
+        if (config.fullscreen) {
+            var flags = View.SYSTEM_UI_FLAG_FULLSCREEN |
+                       View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                       View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            setSystemUIVisibility(activity, flags)
+        }
+        
+        return WindowHandle(activity, "android")
+    }
+    
+    ; iOS ViewController creation
+    function createiOSViewController(config: WindowConfig) -> WindowHandle {
+        var view_controller = UIViewController.alloc().init()
+        view_controller.title = NSString.stringWithUTF8String(config.title.cstr())
+        
+        ; Create main view
+        var main_view = UIView.alloc().initWithFrame(UIScreen.mainScreen().bounds)
+        main_view.backgroundColor = UIColor.whiteColor()
+        view_controller.view = main_view
+        
+        ; Present the view controller
+        var window = UIApplication.sharedApplication().keyWindow
+        window.rootViewController = view_controller
+        window.makeKeyAndVisible()
+        
+        return WindowHandle(view_controller, "ios")
+    }
+    
+    ; Web Canvas creation
+    function createWebCanvas(config: WindowConfig) -> WindowHandle {
+        var canvas = document.createElement("canvas")
+        canvas.id = "n0mn0m-ide-canvas"
+        canvas.width = config.width
+        canvas.height = config.height
+        canvas.style.width = config.width + "px"
+        canvas.style.height = config.height + "px"
+        
+        ; Set title
+        document.title = config.title
+        
+        ; Add to DOM
+        document.body.appendChild(canvas)
+        
+        ; Setup WebGL context
+        var gl_context = canvas.getContext("webgl2") || canvas.getContext("webgl")
+        
+        return WindowHandle(canvas, "web", gl_context)
+    }
+}
+
+; === Universal Input System ===
+class UniversalInputSystem {
+    var keyboard_state: KeyboardState
+    var mouse_state: MouseState  
+    var touch_state: TouchState
+    var gamepad_state: GamepadState
+    
+    function initializeInput(window: WindowHandle) {
+        var platform = PlatformManager.current_platform
+        
+        match platform.name {
+            case "windows":
+                setupWin32Input(window)
+            case "macos":
+                setupCocoaInput(window)
+            case "linux":
+                setupLinuxInput(window)
+            case "android":
+                setupAndroidInput(window)
+            case "ios":
+                setupiOSInput(window)
+            case "web":
+                setupWebInput(window)
+        }
+        
+        ; Initialize touch support for mobile platforms
+        if (platform.type == MOBILE) {
+            initializeTouchInput()
+        }
+    }
+    
+    function setupAndroidInput(window: WindowHandle) {
+        ; Setup Android input handling
+        var env = getJNIEnv()
+        var activity = cast<jobject>(window.native_handle)
+        
+        ; Setup touch listener
+        var touch_listener_class = env->FindClass("com/n0mn0m/ide/TouchListener")
+        var touch_listener = env->NewObject(touch_listener_class, 
+            env->GetMethodID(touch_listener_class, "<init>", "()V"))
+        
+        ; Attach to main view
+        var get_view_method = env->GetMethodID(
+            env->GetObjectClass(activity), "findViewById", "(I)Landroid/view/View;")
+        var main_view = env->CallObjectMethod(activity, get_view_method, android.R.id.content)
+        
+        var set_touch_listener = env->GetMethodID(
+            env->GetObjectClass(main_view), "setOnTouchListener", 
+            "(Landroid/view/View$OnTouchListener;)V")
+        env->CallVoidMethod(main_view, set_touch_listener, touch_listener)
+        
+        ; Setup hardware keyboard support
+        setupAndroidKeyboard(activity)
+    }
+    
+    function setupiOSInput(window: WindowHandle) {
+        var view_controller = cast<UIViewController*>(window.native_handle)
+        var main_view = view_controller.view
+        
+        ; Setup gesture recognizers
+        var tap_gesture = UITapGestureRecognizer.alloc().initWithTarget(
+            self, @selector(handleTap:))
+        main_view.addGestureRecognizer(tap_gesture)
+        
+        var pan_gesture = UIPanGestureRecognizer.alloc().initWithTarget(
+            self, @selector(handlePan:))
+        main_view.addGestureRecognizer(pan_gesture)
+        
+        var pinch_gesture = UIPinchGestureRecognizer.alloc().initWithTarget(
+            self, @selector(handlePinch:))
+        main_view.addGestureRecognizer(pinch_gesture)
+        
+        ; Enable external keyboard support
+        if (UIDevice.currentDevice().userInterfaceIdiom == UIUserInterfaceIdiomPad) {
+            setupExternalKeyboard(view_controller)
+        }
+    }
+    
+    function handleTouchInput(touches: Array<TouchPoint>) {
+        for touch in touches {
+            var event = InputEvent {
+                type: TOUCH_EVENT,
+                touch_id: touch.id,
+                position: Point2D(touch.x, touch.y),
+                pressure: touch.pressure,
+                timestamp: getCurrentTime()
+            }
+            
+            dispatchInputEvent(event)
+        }
+    }
+}
+
+; === Universal File System ===
+class UniversalFileSystem {
+    var platform_fs: PlatformFileSystem
+    var sandbox_manager: SandboxManager
+    var permission_manager: PermissionManager
+    
+    function init() {
+        var platform = PlatformManager.current_platform
+        
+        match platform.name {
+            case "windows":
+                platform_fs = Win32FileSystem()
+            case "macos":
+                platform_fs = POSIXFileSystem()
+            case "linux":
+                platform_fs = POSIXFileSystem()
+            case "android":
+                platform_fs = AndroidFileSystem()
+            case "ios":
+                platform_fs = iOSFileSystem()
+            case "web":
+                platform_fs = WebFileSystem()
+        }
+        
+        ; Initialize sandbox restrictions
+        if (platform.name == "android" || platform.name == "ios" || platform.name == "web") {
+            sandbox_manager.enableSandbox()
+        }
+    }
+    
+    function openFile(path: string, mode: FileMode) -> FileHandle {
+        ; Check permissions first
+        if (!permission_manager.hasFilePermission(path, mode)) {
+            if (PlatformManager.current_platform.name == "android") {
+                requestAndroidStoragePermission()
+            } else if (PlatformManager.current_platform.name == "ios") {
+                requestiOSDocumentAccess()
+            }
+        }
+        
+        return platform_fs.openFile(resolvePlatformPath(path), mode)
+    }
+    
+    function resolvePlatformPath(path: string) -> string {
+        var platform = PlatformManager.current_platform
+        
+        match platform.name {
+            case "android":
+                ; Use Android external storage or app-specific directory
+                if (path.startsWith("/")) {
+                    return Environment.getExternalStorageDirectory().getAbsolutePath() + path
+                } else {
+                    return getApplicationContext().getFilesDir().getAbsolutePath() + "/" + path
+                }
+                
+            case "ios":
+                ; Use iOS document directory
+                var doc_dir = NSSearchPathForDirectoriesInDomains(
+                    NSDocumentDirectory, NSUserDomainMask, true)[0]
+                return doc_dir + "/" + path
+                
+            case "web":
+                ; Use Web File System API or IndexedDB
+                return "idb://" + path
+                
+            default:
+                return path  ; Desktop platforms use path as-is
+        }
+    }
+}
+
+; === Universal Graphics and Rendering ===
+class UniversalRenderSystem {
+    var render_backend: RenderBackend
+    var gpu_context: GPUContext
+    var ui_renderer: UIRenderer
+    
+    function initializeRenderer(window: WindowHandle) {
+        var platform = PlatformManager.current_platform
+        
+        ; Choose best rendering backend for platform
+        if (platform.supports_gpu_acceleration) {
+            if (platform.name == "web") {
+                render_backend = WebGLRenderBackend()
+            } else if (platform.name == "android") {
+                render_backend = OpenGLESRenderBackend()
+            } else if (platform.name == "ios") {
+                render_backend = MetalRenderBackend()
+            } else if (platform.name == "macos") {
+                render_backend = MetalRenderBackend()  ; Prefer Metal on macOS
+            } else {
+                render_backend = OpenGLRenderBackend()
+            }
+        } else {
+            render_backend = SoftwareRenderBackend()
+        }
+        
+        gpu_context = render_backend.createContext(window)
+        ui_renderer = UIRenderer(render_backend)
+        
+        println(" Renderer initialized: " + render_backend.getName())
+    }
+    
+    function renderFrame(ui_elements: Array<UIElement>) {
+        render_backend.beginFrame()
+        
+        ; Clear background
+        render_backend.clear(Color.fromRGB(30, 30, 30))
+        
+        ; Render UI elements
+        for element in ui_elements {
+            ui_renderer.renderElement(element)
+        }
+        
+        render_backend.endFrame()
+    }
+    
+    ; Platform-specific optimizations
+    function optimizeForPlatform() {
+        var platform = PlatformManager.current_platform
+        
+        if (platform.name == "android") {
+            ; Optimize for Android battery life
+            render_backend.setTargetFPS(60)
+            render_backend.enableDynamicResolution(true)
+        } else if (platform.name == "ios") {
+            ; Optimize for iOS retina displays
+            var scale = UIScreen.mainScreen().scale
+            render_backend.setContentScale(scale)
+        } else if (platform.name == "web") {
+            ; Optimize for web performance
+            render_backend.setTargetFPS(30)  ; Conservative for web
+            render_backend.enableBatching(true)
+        }
+    }
+}
+
+; === Universal Networking ===
+class UniversalNetworking {
+    var http_client: HTTPClient
+    var websocket_client: WebSocketClient
+    var platform_networking: PlatformNetworking
+    
+    function init() {
+        var platform = PlatformManager.current_platform
+        
+        match platform.name {
+            case "windows":
+                platform_networking = WinHTTPNetworking()
+            case "macos":
+                platform_networking = NSURLSessionNetworking()
+            case "linux":
+                platform_networking = CurlNetworking()
+            case "android":
+                platform_networking = AndroidNetworking()
+            case "ios":
+                platform_networking = NSURLSessionNetworking()
+            case "web":
+                platform_networking = FetchAPINetworking()
+        }
+        
+        http_client = HTTPClient(platform_networking)
+        websocket_client = WebSocketClient(platform_networking)
+    }
+    
+    function sendHTTPRequest(request: HTTPRequest) -> HTTPResponse {
+        ; Handle platform-specific networking restrictions
+        var platform = PlatformManager.current_platform
+        
+        if (platform.name == "android" && !hasNetworkPermission()) {
+            requestAndroidNetworkPermission()
+        }
+        
+        if (platform.name == "ios" && request.url.startsWith("http://")) {
+            ; iOS requires HTTPS by default (App Transport Security)
+            throw NetworkError("HTTP connections not allowed on iOS. Use HTTPS.")
+        }
+        
+        return http_client.send(request)
+    }
+}
+
+; === Universal Audio System ===
+class UniversalAudioSystem {
+    var audio_engine: AudioEngine
+    var platform_audio: PlatformAudio
+    
+    function init() {
+        var platform = PlatformManager.current_platform
+        
+        match platform.name {
+            case "windows":
+                platform_audio = WASAPIAudio()
+            case "macos":
+                platform_audio = CoreAudioSystem()
+            case "linux":
+                platform_audio = ALSAAudio()
+            case "android":
+                platform_audio = AAudioSystem()
+            case "ios":
+                platform_audio = AVAudioEngineSystem()
+            case "web":
+                platform_audio = WebAudioAPI()
+        }
+        
+        audio_engine = AudioEngine(platform_audio)
+        
+        ; Request audio permissions on mobile
+        if (platform.type == MOBILE) {
+            requestAudioPermissions()
+        }
+    }
+    
+    function playSound(sound_id: string, volume: float = 1.0) {
+        audio_engine.playSound(sound_id, volume)
+    }
+    
+    function enableMicrophone() -> bool {
+        var platform = PlatformManager.current_platform
+        
+        if (platform.name == "android") {
+            return requestAndroidMicrophonePermission()
+        } else if (platform.name == "ios") {
+            return requestiOSMicrophonePermission()
+        } else if (platform.name == "web") {
+            return requestWebMicrophonePermission()
+        }
+        
+        return true  ; Desktop platforms typically allow microphone access
+    }
+}
+
+; === Platform-Specific Extensions ===
+
+; Android Extensions
+class AndroidExtensions {
+    function enableImmersiveMode(activity: jobject) {
+        var env = getJNIEnv()
+        var window = getActivityWindow(activity)
+        var flags = View.SYSTEM_UI_FLAG_FULLSCREEN |
+                   View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                   View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        setSystemUIVisibility(window, flags)
+    }
+    
+    function handleBackButton() -> bool {
+        ; Custom back button handling for IDE
+        if (hasUnsavedChanges()) {
+            showSaveDialog()
+            return true  ; Consume the event
+        }
+        return false  ; Let system handle it
+    }
+    
+    function enableDarkMode() {
+        ; Follow Android system dark mode
+        var night_mode = AppCompatDelegate.getDefaultNightMode()
+        if (night_mode == AppCompatDelegate.MODE_NIGHT_YES) {
+            applyDarkTheme()
+        }
+    }
+}
+
+; iOS Extensions
+class iOSExtensions {
+    function enableSplitView() {
+        ; Support iPad split view
+        if (UIDevice.currentDevice().userInterfaceIdiom == UIUserInterfaceIdiomPad) {
+            var split_controller = UISplitViewController()
+            ; Configure split view setup
+        }
+    }
+    
+    function handleKeyboardNotifications() {
+        ; Adjust UI when keyboard appears/disappears
+        NotificationCenter.defaultCenter().addObserver(
+            self,
+            @selector(keyboardWillShow:),
+            UIKeyboardWillShowNotification,
+            null
+        )
+        
+        NotificationCenter.defaultCenter().addObserver(
+            self,
+            @selector(keyboardWillHide:),
+            UIKeyboardWillHideNotification,
+            null
+        )
+    }
+    
+    function supportShortcuts() {
+        ; iOS 13+ keyboard shortcuts
+        var keyCommand = UIKeyCommand.keyCommandWithInput(
+            "s",
+            UIKeyModifierCommand,
+            "Save File"
+        )
+        addKeyCommand(keyCommand)
+    }
+}
+
+; === Universal IDE Features ===
+class CrossPlatformIDE {
+    var platform_manager: PlatformManager
+    var window_system: UniversalWindowSystem
+    var input_system: UniversalInputSystem
+    var file_system: UniversalFileSystem
+    var render_system: UniversalRenderSystem
+    var networking: UniversalNetworking
+    var audio_system: UniversalAudioSystem
+    var main_window: WindowHandle
+    
+    function init() -> bool {
+        println(" Initializing n0mn0m Universal IDE...")
+        
+        ; Initialize platform detection
+        platform_manager = PlatformManager()
+        platform_manager.init()
+        
+        ; Initialize subsystems
+        window_system = UniversalWindowSystem()
+        input_system = UniversalInputSystem()
+        file_system = UniversalFileSystem()
+        render_system = UniversalRenderSystem()
+        networking = UniversalNetworking()
+        audio_system = UniversalAudioSystem()
+        
+        file_system.init()
+        networking.init()
+        audio_system.init()
+        
+        ; Create main window
+        var window_config = WindowConfig {
+            title: "n0mn0m IDE - Universal",
+            width: getOptimalWindowWidth(),
+            height: getOptimalWindowHeight(),
+            fullscreen: shouldStartFullscreen(),
+            resizable: true,
+            dark_theme: shouldUseDarkTheme()
+        }
+        
+        main_window = window_system.createWindow(window_config)
+        
+        ; Initialize input and rendering
+        input_system.initializeInput(main_window)
+        render_system.initializeRenderer(main_window)
+        render_system.optimizeForPlatform()
+        
+        println(" Universal IDE initialized successfully!")
+        println(" Platform: " + platform_manager.current_platform.name)
+        println(" Renderer: " + render_system.render_backend.getName())
+        
+        return true
+    }
+    
+    function getOptimalWindowWidth() -> int {
+        var platform = platform_manager.current_platform
+        
+        if (platform.type == MOBILE) {
+            ; Use full screen width on mobile
+            if (platform.name == "android") {
+                var metrics = DisplayMetrics()
+                getWindowManager().getDefaultDisplay().getMetrics(metrics)
+                return metrics.widthPixels
+            } else if (platform.name == "ios") {
+                return int(UIScreen.mainScreen().bounds.size.width)
+            }
+        }
+        
+        return 1200  ; Default desktop width
+    }
+    
+    function shouldUseDarkTheme() -> bool {
+        var platform = platform_manager.current_platform
+        
+        if (platform.name == "android") {
+            ; Follow Android system theme
+            var night_mode = Resources.getSystem().getConfiguration().uiMode & 
+                           Configuration.UI_MODE_NIGHT_MASK
+            return (night_mode == Configuration.UI_MODE_NIGHT_YES)
+        } else if (platform.name == "ios") {
+            ; Follow iOS system theme
+            if (@available(iOS 13.0, *)) {
+                return (UITraitCollection.currentTraitCollection().userInterfaceStyle == 
+                       UIUserInterfaceStyleDark)
+            }
+        } else if (platform.name == "macos") {
+            ; Follow macOS system theme
+            var appearance = NSApp.effectiveAppearance.name
+            return appearance.containsString("Dark")
+        }
+        
+        return true  ; Default to dark theme
+    }
+    
+    function runMainLoop() {
+        var platform = platform_manager.current_platform
+        
+        if (platform.name == "android" || platform.name == "ios") {
+            ; Mobile platforms handle the main loop
+            runMobileMainLoop()
+        } else if (platform.name == "web") {
+            ; Web uses requestAnimationFrame
+            runWebMainLoop()
+        } else {
+            ; Desktop platforms use traditional event loop
+            runDesktopMainLoop()
+        }
+    }
+    
+    function runDesktopMainLoop() {
+        var running = true
+        
+        while (running) {
+            ; Process platform events
+            var events = window_system.pollEvents()
+            for event in events {
+                if (event.type == QUIT_EVENT) {
+                    running = false
+                } else {
+                    input_system.processEvent(event)
+                }
+            }
+            
+            ; Update IDE
+            update()
+            
+            ; Render frame
+            render()
+            
+            ; Maintain target FPS
+            maintainFrameRate()
+        }
+    }
+    
+    function runMobileMainLoop() {
+        ; Mobile main loop is event-driven
+        ; Set up callbacks for lifecycle events
+        
+        if (platform_manager.current_platform.name == "android") {
+            setupAndroidLifecycleCallbacks()
+        } else if (platform_manager.current_platform.name == "ios") {
+            setupiOSApplicationCallbacks()
+        }
+    }
+    
+    function update() {
+        ; Update IDE logic
+        updateEditor()
+        updateCompiler()
+        updateDebugger()
+        updateProjectManager()
+    }
+    
+    function render() {
+        var ui_elements = buildUIElements()
+        render_system.renderFrame(ui_elements)
+    }
+}
+
+; === Entry Point ===
+function main() -> int {
+    var ide = CrossPlatformIDE()
+    
+    if (!ide.init()) {
+        println(" Failed to initialize IDE")
+        return 1
+    }
+    
+    ide.runMainLoop()
+    
+    println(" IDE shutdown complete")
+    return 0
+}
+
+; Export the universal IDE
+export CrossPlatformIDE
+export PlatformManager
+export UniversalWindowSystem
+export UniversalInputSystem
+export UniversalFileSystem
+export UniversalRenderSystem

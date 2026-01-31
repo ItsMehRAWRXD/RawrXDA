@@ -1,0 +1,6 @@
+// RawrZ IRC Bot - Default Implementation
+// Generated: 2025-09-21T13:25:25.764Z
+// Bot ID: rawrz_bot_1758461125764
+// Please select a supported language for full implementation.
+// Core Features: stealth, antiDebug, antiVM, encryption, persistence
+// Custom Features: customFeatures.join(', ')

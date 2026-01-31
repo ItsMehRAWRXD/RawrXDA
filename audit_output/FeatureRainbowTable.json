@@ -1,0 +1,25 @@
+﻿{
+    "SecurityFeatures":  {
+
+                         },
+    "IntegrationFeatures":  {
+
+                            },
+    "OptionalFeatures":  {
+
+                         },
+    "Metadata":  {
+                     "SourceFile":  "D:\\lazy init ide\\RawrXD.UI.psm1",
+                     "TotalFeatures":  20,
+                     "GeneratedDate":  "2026-01-23 22:44:16"
+                 },
+    "UI_Features":  {
+
+                    },
+    "PerformanceFeatures":  {
+
+                            },
+    "CoreFeatures":  {
+
+                     }
+}

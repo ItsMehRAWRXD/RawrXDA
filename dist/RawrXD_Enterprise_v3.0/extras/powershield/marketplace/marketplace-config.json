@@ -1,0 +1,360 @@
+{
+  "marketplace": {
+    "name": "RawrXD Marketplace Configuration",
+    "version": "1.0.0",
+    "lastUpdated": "2025-11-27T10:30:00Z"
+  },
+  "endpoints": {
+    "production": {
+      "baseUrl": "https://marketplace.rawrxd.dev/api/v2",
+      "extensions": "https://marketplace.rawrxd.dev/api/v2/extensions",
+      "community": "https://marketplace.rawrxd.dev/api/v2/community",
+      "search": "https://marketplace.rawrxd.dev/api/v2/search",
+      "download": "https://marketplace.rawrxd.dev/api/v2/download",
+      "analytics": "https://marketplace.rawrxd.dev/api/v2/analytics"
+    },
+    "staging": {
+      "baseUrl": "https://staging-marketplace.rawrxd.dev/api/v2",
+      "extensions": "https://staging-marketplace.rawrxd.dev/api/v2/extensions",
+      "community": "https://staging-marketplace.rawrxd.dev/api/v2/community",
+      "search": "https://staging-marketplace.rawrxd.dev/api/v2/search",
+      "download": "https://staging-marketplace.rawrxd.dev/api/v2/download",
+      "analytics": "https://staging-marketplace.rawrxd.dev/api/v2/analytics"
+    },
+    "local": {
+      "baseUrl": "http://localhost:8080/api/v2",
+      "extensions": "http://localhost:8080/api/v2/extensions",
+      "community": "http://localhost:8080/api/v2/community",
+      "search": "http://localhost:8080/api/v2/search",
+      "download": "http://localhost:8080/api/v2/download",
+      "analytics": "http://localhost:8080/api/v2/analytics"
+    }
+  },
+  "realMarketplaceSources": {
+    "vscode": {
+      "name": "Visual Studio Code Marketplace",
+      "apiUrl": "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery",
+      "searchUrl": "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery",
+      "downloadUrl": "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/{publisher}/vsextensions/{extensionName}/{version}/vspackage",
+      "enabled": true,
+      "categories": [
+        "Languages",
+        "Themes",
+        "Debuggers",
+        "Formatters",
+        "Linters",
+        "Snippets",
+        "Other"
+      ],
+      "rateLimitMs": 1000
+    },
+    "powershellGallery": {
+      "name": "PowerShell Gallery",
+      "apiUrl": "https://www.powershellgallery.com/api/v2",
+      "searchUrl": "https://www.powershellgallery.com/api/v2/Search()?$filter=IsLatestVersion&searchTerm='{query}'&targetFramework=''&includePrerelease=false",
+      "downloadUrl": "https://www.powershellgallery.com/api/v2/package/{id}/{version}",
+      "enabled": true,
+      "categories": [
+        "PowerShell",
+        "Modules",
+        "Scripts"
+      ],
+      "rateLimitMs": 500
+    },
+    "github": {
+      "name": "GitHub Extensions",
+      "apiUrl": "https://api.github.com",
+      "searchUrl": "https://api.github.com/search/repositories?q={query}+language:powershell+topic:vscode-extension",
+      "releasesUrl": "https://api.github.com/repos/{owner}/{repo}/releases/latest",
+      "enabled": true,
+      "categories": [
+        "Community",
+        "Open Source"
+      ],
+      "rateLimitMs": 1000
+    },
+    "openVSX": {
+      "name": "Open VSX Registry",
+      "apiUrl": "https://open-vsx.org/api",
+      "searchUrl": "https://open-vsx.org/api/-/search?query={query}",
+      "downloadUrl": "https://open-vsx.org/api/{publisher}/{name}/{version}/file/{publisher}.{name}-{version}.vsix",
+      "enabled": true,
+      "categories": [
+        "Languages",
+        "Themes",
+        "Debuggers",
+        "Formatters",
+        "Linters",
+        "Snippets",
+        "Other"
+      ],
+      "rateLimitMs": 200,
+      "maxResults": 100
+    },
+    "chocolatey": {
+      "name": "Chocolatey Packages",
+      "apiUrl": "https://chocolatey.org/api/v2",
+      "searchUrl": "https://chocolatey.org/api/v2/Search()?$filter=IsLatestVersion&searchTerm='{query}'&targetFramework=''&includePrerelease=false",
+      "enabled": false,
+      "categories": [
+        "Tools",
+        "Development"
+      ],
+      "rateLimitMs": 2000
+    },
+    "nuget": {
+      "name": "NuGet Packages",
+      "apiUrl": "https://api.nuget.org/v3-flatcontainer",
+      "searchUrl": "https://azuresearch-usnc.nuget.org/query?q={query}&packageType=DotnetTool",
+      "enabled": false,
+      "categories": [
+        "DotNet",
+        "Tools"
+      ],
+      "rateLimitMs": 1000
+    }
+  },
+  "fallbackUrls": [
+    "https://cdn.rawrxd.dev/marketplace",
+    "https://backup-marketplace.rawrxd.dev/api/v2",
+    "./marketplace"
+  ],
+  "dataRefresh": {
+    "enabled": true,
+    "intervalHours": 6,
+    "autoRefreshOnStartup": true,
+    "maxConcurrentRequests": 5,
+    "timeoutSeconds": 30,
+    "retryAttempts": 3,
+    "sources": {
+      "vscode": {
+        "maxResults": 100,
+        "popularityThreshold": 1000,
+        "categories": [
+          "Languages",
+          "Themes",
+          "Debuggers",
+          "Formatters",
+          "Linters",
+          "Snippets",
+          "Keymaps",
+          "Other"
+        ]
+      },
+      "powershellGallery": {
+        "maxResults": 50,
+        "downloadThreshold": 500,
+        "tags": [
+          "vscode",
+          "editor",
+          "ide",
+          "development",
+          "automation"
+        ]
+      },
+      "github": {
+        "maxResults": 50,
+        "starsThreshold": 10,
+        "topics": [
+          "vscode-extension",
+          "powershell",
+          "ide",
+          "editor"
+        ]
+      },
+      "openVSX": {
+        "maxResults": 100,
+        "rateLimitMs": 200
+      }
+    }
+  },
+  "caching": {
+    "enabled": true,
+    "duration": 3600,
+    "maxSize": "50MB",
+    "strategy": "LRU"
+  },
+  "authentication": {
+    "type": "bearer",
+    "tokenStorage": "encrypted",
+    "refreshThreshold": 300,
+    "scopes": [
+      "marketplace:read",
+      "marketplace:install",
+      "community:read",
+      "community:write",
+      "analytics:write"
+    ]
+  },
+  "security": {
+    "allowUnsignedExtensions": false,
+    "requireTLSVerification": true,
+    "maxFileSize": "100MB",
+    "allowedFileTypes": [
+      ".vsix",
+      ".zip",
+      ".json",
+      ".ps1",
+      ".psm1",
+      ".psd1"
+    ],
+    "scanForMalware": true,
+    "sandboxExecution": true
+  },
+  "ui": {
+    "defaultView": "featured",
+    "itemsPerPage": 20,
+    "categories": [
+      {
+        "id": "languages",
+        "name": "Programming Languages",
+        "icon": "code",
+        "color": "#007ACC"
+      },
+      {
+        "id": "themes",
+        "name": "Themes & Colors",
+        "icon": "palette",
+        "color": "#FF6B6B"
+      },
+      {
+        "id": "productivity",
+        "name": "Productivity Tools",
+        "icon": "zap",
+        "color": "#4ECDC4"
+      },
+      {
+        "id": "ai",
+        "name": "AI & Automation",
+        "icon": "cpu",
+        "color": "#A8E6CF"
+      },
+      {
+        "id": "git",
+        "name": "Version Control",
+        "icon": "git-branch",
+        "color": "#FFA726"
+      },
+      {
+        "id": "testing",
+        "name": "Testing & Debugging",
+        "icon": "bug",
+        "color": "#EF5350"
+      },
+      {
+        "id": "web",
+        "name": "Web Development",
+        "icon": "globe",
+        "color": "#66BB6A"
+      },
+      {
+        "id": "snippets",
+        "name": "Code Snippets",
+        "icon": "code-snippet",
+        "color": "#AB47BC"
+      },
+      {
+        "id": "other",
+        "name": "Other Tools",
+        "icon": "package",
+        "color": "#78909C"
+      }
+    ],
+    "sorting": [
+      {
+        "id": "relevance",
+        "name": "Relevance",
+        "default": true
+      },
+      {
+        "id": "downloads",
+        "name": "Most Downloaded"
+      },
+      {
+        "id": "rating",
+        "name": "Highest Rated"
+      },
+      {
+        "id": "updated",
+        "name": "Recently Updated"
+      },
+      {
+        "id": "name",
+        "name": "Name (A-Z)"
+      },
+      {
+        "id": "price",
+        "name": "Price (Low to High)"
+      }
+    ],
+    "filters": {
+      "pricing": [
+        "free",
+        "paid",
+        "freemium"
+      ],
+      "verification": [
+        "verified",
+        "community"
+      ],
+      "features": [
+        "featured",
+        "trending",
+        "new",
+        "staff-pick"
+      ]
+    }
+  },
+  "analytics": {
+    "enabled": true,
+    "trackDownloads": true,
+    "trackInstalls": true,
+    "trackUsage": false,
+    "anonymizeData": true,
+    "retentionDays": 90
+  },
+  "offline": {
+    "enabled": true,
+    "cacheDuration": 86400,
+    "essentialExtensions": [
+      "rawrxd-powershell-pro",
+      "rawrxd-dark-theme-pro",
+      "rawrxd-code-snippets-pro"
+    ],
+    "fallbackContent": "./marketplace/offline-cache.json"
+  },
+  "updates": {
+    "checkInterval": 21600,
+    "autoUpdate": false,
+    "notifyUser": true,
+    "downloadInBackground": true,
+    "allowBetaVersions": false
+  },
+  "community": {
+    "allowUploads": true,
+    "moderationRequired": true,
+    "maxFileSize": "10MB",
+    "allowedContentTypes": [
+      "theme",
+      "snippet",
+      "template",
+      "keybinding",
+      "setting-preset",
+      "workflow",
+      "macro"
+    ],
+    "ratingSystem": {
+      "enabled": true,
+      "allowComments": true,
+      "requireLogin": false,
+      "moderateComments": true
+    }
+  },
+  "development": {
+    "enableDevMode": false,
+    "localMarketplace": "./marketplace",
+    "hotReload": false,
+    "debugLogging": false,
+    "mockApi": false
+  }
+}

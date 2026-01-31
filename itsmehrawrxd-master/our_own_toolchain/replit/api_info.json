@@ -1,0 +1,19 @@
+{
+  "target": "replit",
+  "name": "Replit",
+  "languages": [
+    "python",
+    "javascript",
+    "java",
+    "cpp",
+    "c",
+    "rust",
+    "go"
+  ],
+  "endpoints": [
+    "/api/v0/repls",
+    "/api/v0/exec",
+    "/api/v0/compile"
+  ],
+  "reverse_engineered": "2025-09-25T21:43:56.548538"
+}

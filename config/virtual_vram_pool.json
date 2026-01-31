@@ -1,0 +1,65 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-01-26T20:31:20",
+  "thermal": {
+    "enableThermalAwareness": true,
+    "coolingPeriodMs": 30000,
+    "suspendDriveOnCritical": true,
+    "redistributeOnWarning": true
+  },
+  "pool": {
+    "allocationTable": {
+      "evictablePages": 0,
+      "freePages": 147550.0,
+      "dirtyPages": 0,
+      "usedPages": 0
+    },
+    "totalPages": 147550.0,
+    "driveMapping": [
+      {
+        "startPage": 0,
+        "deviceId": "0",
+        "endPage": 13412.0,
+        "pageCount": 13413.0
+      },
+      {
+        "startPage": 13413.0,
+        "deviceId": "1",
+        "endPage": 26825.0,
+        "pageCount": 13413.0
+      },
+      {
+        "startPage": 26826.0,
+        "deviceId": "2",
+        "endPage": 40238.0,
+        "pageCount": 13413.0
+      },
+      {
+        "startPage": 40239.0,
+        "deviceId": "4",
+        "endPage": 93892.0,
+        "pageCount": 53654.0
+      },
+      {
+        "startPage": 93893.0,
+        "deviceId": "5",
+        "endPage": 147546.0,
+        "pageCount": 53654.0
+      }
+    ],
+    "pageSizeMB": 64,
+    "totalCapacityGB": 9221.91,
+    "hints": {
+      "writeCoalescePages": 4,
+      "preferredDriveType": "NVMe",
+      "maxConcurrentIO": 32,
+      "sequentialReadAheadPages": 8
+    }
+  },
+  "eviction": {
+    "evictionThreshold": 0.85,
+    "emergencyThreshold": 0.95,
+    "maxDirtyRatio": 0.3,
+    "policy": "LRU_THERMAL_AWARE"
+  }
+}

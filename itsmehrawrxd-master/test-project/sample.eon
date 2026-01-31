@@ -1,0 +1,15 @@
+{
+  "name": "Sample EON Project",
+  "version": "1.0.0",
+  "description": "This is a sample EON file",
+  "features": [
+    "Efficient Object Notation",
+    "No missing 'e'",
+    "No blackholing"
+  ],
+  "settings": {
+    "debug": true,
+    "optimize": true,
+    "target": "production"
+  }
+}

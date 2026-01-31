@@ -1,0 +1,86 @@
+// Hello World in Eon
+// Simple demonstration of Eon syntax and features
+
+def func main() -> int {
+    // String interpolation example
+    let name = "Eon"
+    let version = "1.0"
+    
+    // Print with interpolation
+    println("Hello, ${name} v${version}!")
+    
+    // Arithmetic operations
+    let a = 10
+    let b = 20
+    let sum = a + b
+    
+    // Conditional expression
+    let message = if sum > 25 {
+        "Sum is greater than 25"
+    } else {
+        "Sum is 25 or less"
+    }
+    
+    println("${a} + ${b} = ${sum}")
+    println(message)
+    
+    // Loop example
+    let mut counter = 0
+    while counter < 5 {
+        println("Counter: ${counter}")
+        counter += 1
+    }
+    
+    // Function call
+    let result = fibonacci(8)
+    println("Fibonacci(8) = ${result}")
+    
+    ret 0
+}
+
+// Recursive function example
+def func fibonacci(n: int) -> int {
+    if n <= 1 {
+        ret n
+    }
+    ret fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+// Function with multiple parameters
+def func add_numbers(a: int, b: int, c: int) -> int {
+    ret a + b + c
+}
+
+// Function with different return types
+def func get_greeting() -> string {
+    ret "Hello from Eon!"
+}
+
+// Function with no parameters
+def func print_separator() -> void {
+    println("---")
+}
+
+// Struct example
+struct Point {
+    x: int
+    y: int
+}
+
+// Function using struct
+def func create_point(x: int, y: int) -> Point {
+    ret Point{x: x, y: y}
+}
+
+// Function with array parameter
+def func sum_array(numbers: [int], length: int) -> int {
+    let mut total = 0
+    let mut i = 0
+    
+    while i < length {
+        total += numbers[i]
+        i += 1
+    }
+    
+    ret total
+}

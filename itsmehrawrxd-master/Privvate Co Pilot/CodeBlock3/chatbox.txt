@@ -1,0 +1,7 @@
+"permissions": [
+  "activeTab",
+  "storage"
+],
+"host_permissions": [
+  "https://api.openai.com/"
+]

@@ -1,0 +1,71 @@
+// example_template.eont
+// Example template for generating Eon bindings from C++ headers
+// This template demonstrates the template language features
+
+// Generate module header
+module {{module.name}} {
+    // Generate imports
+    {% for import in module.imports %}
+    import {{import.name}};
+    {% endfor %}
+
+    // Generate class definitions
+    {% for class in module.classes %}
+    def model {{class.name}} {
+        // Generate constructor
+        def func {{class.name}}() {
+            // Constructor body
+        }
+
+        // Generate methods
+        {% for method in class.methods %}
+        def func {{method.name}}(
+            {% for param in method.parameters %}
+            var {{param.name}}: {{param.type}}{{#unless @last}}, {{/unless}}
+            {% endfor %}
+        ): {{method.return_type}} {
+            // Method implementation placeholder
+            return {{method.default_return}};
+        }
+        {% endfor %}
+
+        // Generate properties
+        {% for property in class.properties %}
+        var {{property.name}}: {{property.type}};
+        {% endfor %}
+    }
+    {% endfor %}
+
+    // Generate function definitions
+    {% for function in module.functions %}
+    def func {{function.name}}(
+        {% for param in function.parameters %}
+        var {{param.name}}: {{param.type}}{{#unless @last}}, {{/unless}}
+        {% endfor %}
+    ): {{function.return_type}} {
+        // Function implementation placeholder
+        return {{function.default_return}};
+    }
+    {% endfor %}
+
+    // Generate enums
+    {% for enum in module.enums %}
+    def model {{enum.name}} {
+        {% for value in enum.values %}
+        var {{value.name}}: {{enum.name}} = {{value.value}};
+        {% endfor %}
+    }
+    {% endfor %}
+}
+
+// Generate utility functions
+{% if module.has_utilities %}
+// Utility functions for {{module.name}}
+def func create_{{module.name}}(): {{module.name}} {
+    return new {{module.name}}();
+}
+
+def func destroy_{{module.name}}(instance: {{module.name}}): void {
+    // Cleanup logic
+}
+{% endif %}

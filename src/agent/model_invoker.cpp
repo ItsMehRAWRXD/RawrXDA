@@ -7,39 +7,23 @@
  */
 
 #include "model_invoker.hpp"
+#include <regex>
+#include <future>
+#include <algorithm>
+#include <iostream>
+#include <vector>
+#include <windows.h>
+#include <winhttp.h>
 
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QUrl>
-#include <QJsonDocument>
-#include <QJsonValue>
-#include <QRegularExpression>
-#include <QTimer>
-#include <QEventLoop>
-#include <QDebug>
-#include <QStandardPaths>
-#include <QFile>
-#include <QDir>
-#include <QtConcurrent>
+#pragma comment(lib, "winhttp.lib")
 
 /**
- * @brief Constructor - initializes network manager and default settings
+ * @brief Constructor
  */
-ModelInvoker::ModelInvoker(QObject* parent)
-    : QObject(parent)
-    , m_networkManager(std::make_unique<QNetworkAccessManager>(this))
+ModelInvoker::ModelInvoker()
 {
     m_backend = "ollama";
     m_endpoint = "http://localhost:11434";
-
-    // Load cached responses from disk if available
-    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    if (!cacheDir.isEmpty()) {
-        QDir dir(cacheDir);
-        if (!dir.exists("agent_cache")) {
-            dir.mkdir("agent_cache");
-        }
-    }
 }
 
 /**
@@ -50,11 +34,12 @@ ModelInvoker::~ModelInvoker() = default;
 /**
  * @brief Set the LLM backend and endpoint
  */
-void ModelInvoker::setLLMBackend(const QString& backend,
-                                  const QString& endpoint,
-                                  const QString& apiKey)
+void ModelInvoker::setLLMBackend(const std::string& backend,
+                                  const std::string& endpoint,
+                                  const std::string& apiKey)
 {
-    m_backend = backend.toLower();
+    m_backend = backend;
+    std::transform(m_backend.begin(), m_backend.end(), m_backend.begin(), ::tolower);
     m_endpoint = endpoint;
     m_apiKey = apiKey;
 
@@ -66,14 +51,12 @@ void ModelInvoker::setLLMBackend(const QString& backend,
     } else if (m_backend == "openai") {
         m_model = "gpt-4-turbo";
     }
-
-    qInfo() << "[ModelInvoker] Backend set to" << m_backend << "at" << m_endpoint;
 }
 
 /**
  * @brief Set custom system prompt template
  */
-void ModelInvoker::setSystemPromptTemplate(const QString& template_)
+void ModelInvoker::setSystemPromptTemplate(const std::string& template_)
 {
     m_customSystemPrompt = template_;
 }
@@ -81,7 +64,7 @@ void ModelInvoker::setSystemPromptTemplate(const QString& template_)
 /**
  * @brief Set codebase embeddings for RAG
  */
-void ModelInvoker::setCodebaseEmbeddings(const QMap<QString, float>& embeddings)
+void ModelInvoker::setCodebaseEmbeddings(const std::map<std::string, float>& embeddings)
 {
     m_codebaseEmbeddings = embeddings;
 }
@@ -93,28 +76,28 @@ LLMResponse ModelInvoker::invoke(const InvocationParams& params)
 {
     // Check cache first
     if (m_cachingEnabled) {
-        QString cacheKey = getCacheKey(params);
+        std::string cacheKey = getCacheKey(params);
         LLMResponse cached = getCachedResponse(cacheKey);
         if (cached.success) {
-            qDebug() << "[ModelInvoker] Cache hit for:" << params.wish;
             return cached;
         }
     }
 
-    qDebug() << "[ModelInvoker] Invoking LLM with wish:" << params.wish;
     m_isInvoking = true;
-    emit planGenerationStarted(params.wish);
+    if (onPlanGenerationStarted) {
+        onPlanGenerationStarted(params.wish);
+    }
 
     LLMResponse response;
 
     try {
         // Build prompts
-        QString systemPrompt = m_customSystemPrompt.isEmpty()
+        std::string systemPrompt = m_customSystemPrompt.empty()
                                    ? buildSystemPrompt(params.availableTools)
                                    : m_customSystemPrompt;
-        QString userMessage = buildUserMessage(params);
+        std::string userMessage = buildUserMessage(params);
 
-        QJsonObject llmResponse;
+        nlohmann::json llmResponse;
 
         // Invoke appropriate backend
         if (m_backend == "ollama") {
@@ -130,33 +113,35 @@ LLMResponse ModelInvoker::invoke(const InvocationParams& params)
         }
 
         // Extract response text
-        if (llmResponse.isEmpty()) {
+        if (llmResponse.empty()) {
             response.error = "Empty response from LLM";
             m_isInvoking = false;
-            emit invocationError(response.error, true);
+            if (onInvocationError) onInvocationError(response.error, true);
             return response;
         }
 
         // Parse backend-specific response format
         if (m_backend == "ollama") {
-            response.rawOutput = llmResponse.value("response").toString();
-            response.tokensUsed = llmResponse.value("eval_count").toInt() + 
-                                  llmResponse.value("prompt_eval_count").toInt();
+            if (llmResponse.contains("response")) response.rawOutput = llmResponse["response"].get<std::string>();
+            if (llmResponse.contains("eval_count") && llmResponse.contains("prompt_eval_count")) {
+                response.tokensUsed = llmResponse["eval_count"].get<int>() + 
+                                      llmResponse["prompt_eval_count"].get<int>();
+            }
         } else if (m_backend == "claude") {
-            auto content = llmResponse.value("content").toArray();
-            if (!content.isEmpty()) {
-                response.rawOutput = content[0].toObject().value("text").toString();
+            if (llmResponse.contains("content") && llmResponse["content"].is_array() && !llmResponse["content"].empty()) {
+                response.rawOutput = llmResponse["content"][0]["text"].get<std::string>();
             }
-            response.tokensUsed = llmResponse.value("usage").toObject().value("output_tokens").toInt();
+            if (llmResponse.contains("usage")) {
+                response.tokensUsed = llmResponse["usage"]["output_tokens"].get<int>();
+            }
         } else if (m_backend == "openai") {
-            auto choices = llmResponse.value("choices").toArray();
-            if (!choices.isEmpty()) {
-                response.rawOutput = choices[0].toObject().value("message").toObject().value("content").toString();
+            if (llmResponse.contains("choices") && llmResponse["choices"].is_array() && !llmResponse["choices"].empty()) {
+                response.rawOutput = llmResponse["choices"][0]["message"]["content"].get<std::string>();
             }
-            response.tokensUsed = llmResponse.value("usage").toObject().value("completion_tokens").toInt();
+            if (llmResponse.contains("usage")) {
+                response.tokensUsed = llmResponse["usage"]["completion_tokens"].get<int>();
+            }
         }
-
-        qDebug() << "[ModelInvoker] LLM response:" << response.rawOutput.left(200);
 
         // Parse into structured plan
         response.parsedPlan = parsePlan(response.rawOutput);
@@ -166,24 +151,22 @@ LLMResponse ModelInvoker::invoke(const InvocationParams& params)
             response.error = "Plan failed sanity checks";
             response.success = false;
             m_isInvoking = false;
-            emit invocationError(response.error, true);
+            if (onInvocationError) onInvocationError(response.error, true);
             return response;
         }
 
         response.success = true;
-        response.reasoning = llmResponse.value("reasoning").toString();
+        if (llmResponse.contains("reasoning")) response.reasoning = llmResponse["reasoning"].get<std::string>();
 
         // Cache successful response
         if (m_cachingEnabled) {
             cacheResponse(getCacheKey(params), response);
         }
 
-        qInfo() << "[ModelInvoker] Generated plan with" << response.parsedPlan.size() << "actions";
-
     } catch (const std::exception& e) {
-        response.error = "Exception: " + QString::fromStdString(e.what());
+        response.error = "Exception: " + std::string(e.what());
         response.success = false;
-        emit invocationError(response.error, false);
+        if (onInvocationError) onInvocationError(response.error, false);
     }
 
     m_isInvoking = false;
@@ -195,10 +178,12 @@ LLMResponse ModelInvoker::invoke(const InvocationParams& params)
  */
 void ModelInvoker::invokeAsync(const InvocationParams& params)
 {
-    QtConcurrent::run([this, params]() {
+    std::thread([this, params]() {
         LLMResponse response = invoke(params);
-        emit planGenerated(response);
-    });
+        if (onPlanGenerated) {
+            onPlanGenerated(response);
+        }
+    }).detach();
 }
 
 /**
@@ -207,15 +192,14 @@ void ModelInvoker::invokeAsync(const InvocationParams& params)
 void ModelInvoker::cancelPendingRequest()
 {
     m_isInvoking = false;
-    qDebug() << "[ModelInvoker] Request cancelled";
 }
 
 /**
  * @brief Build system prompt with tool descriptions
  */
-QString ModelInvoker::buildSystemPrompt(const QStringList& tools)
+std::string ModelInvoker::buildSystemPrompt(const std::vector<std::string>& tools)
 {
-    QString prompt = R"(You are an intelligent IDE agent for the RawrXD code generation framework.
+    std::string prompt = R"(You are an intelligent IDE agent for the RawrXD code generation framework.
 
 Your role is to transform natural language wishes into structured action plans that can be executed by an automated system.
 
@@ -223,7 +207,7 @@ Your role is to transform natural language wishes into structured action plans t
 You can use the following tools:
 )";
 
-    for (const QString& tool : tools) {
+    for (const auto& tool : tools) {
         prompt += "- " + tool + "\n";
     }
 
@@ -243,18 +227,6 @@ Example:
     "target": "src/",
     "params": { "pattern": "*.cpp", "query": "TODO" },
     "description": "Find all TODO comments in C++ files"
-  },
-  {
-    "type": "file_edit",
-    "target": "src/main.cpp",
-    "params": { "action": "append", "content": "// new code" },
-    "description": "Add new functionality"
-  },
-  {
-    "type": "build",
-    "target": "all",
-    "params": { "config": "Release" },
-    "description": "Build all targets"
   }
 ]
 ```
@@ -277,15 +249,15 @@ Current capabilities include: file search, text editing, project builds, test ex
 /**
  * @brief Build user message with wish and context
  */
-QString ModelInvoker::buildUserMessage(const InvocationParams& params)
+std::string ModelInvoker::buildUserMessage(const InvocationParams& params)
 {
-    QString message = "User Wish: " + params.wish + "\n\n";
+    std::string message = "User Wish: " + params.wish + "\n\n";
 
-    if (!params.context.isEmpty()) {
+    if (!params.context.empty()) {
         message += "Context: " + params.context + "\n\n";
     }
 
-    if (!params.codebaseContext.isEmpty()) {
+    if (!params.codebaseContext.empty()) {
         message += "Relevant Codebase:\n" + params.codebaseContext + "\n\n";
     }
 
@@ -295,249 +267,245 @@ QString ModelInvoker::buildUserMessage(const InvocationParams& params)
     return message;
 }
 
-/**
- * @brief Send request to Ollama API
- */
-QJsonObject ModelInvoker::sendOllamaRequest(const QString& model,
-                                            const QString& prompt,
-                                            int maxTokens,
-                                            double temperature)
+nlohmann::json ModelInvoker::sendOllamaRequest(const std::string& model,
+                                                const std::string& prompt,
+                                                int maxTokens,
+                                                double temperature)
 {
-    QUrl url(m_endpoint + "/api/generate");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-    QJsonObject payload;
+    nlohmann::json payload;
     payload["model"] = model;
     payload["prompt"] = prompt;
     payload["temperature"] = temperature;
     payload["num_predict"] = maxTokens;
     payload["stream"] = false;
 
-    QJsonDocument doc(payload);
-    QByteArray data = doc.toJson();
+    std::string url = m_endpoint + "/api/generate";
+    std::string responseData = performHttpRequest(url, "POST", payload.dump(), {{"Content-Type", "application/json"}});
 
-    qDebug() << "[ModelInvoker] Sending request to Ollama:" << url.toString();
-
-    // Synchronous request using event loop
-    QEventLoop loop;
-    QNetworkReply* reply = m_networkManager->post(request, data);
-
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-
-    QTimer::singleShot(30000, &loop, &QEventLoop::quit); // 30s timeout
-
-    loop.exec();
-
-    if (reply->error() != QNetworkReply::NoError) {
-        qWarning() << "[ModelInvoker] Network error:" << reply->errorString();
-        reply->deleteLater();
-        return QJsonObject();
+    try {
+        return nlohmann::json::parse(responseData);
+    } catch (...) {
+        return nlohmann::json::object();
     }
-
-    QByteArray responseData = reply->readAll();
-    reply->deleteLater();
-
-    QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
-    return responseDoc.object();
 }
 
-/**
- * @brief Send request to Claude API
- */
-QJsonObject ModelInvoker::sendClaudeRequest(const QString& prompt,
-                                            int maxTokens,
-                                            double temperature)
+nlohmann::json ModelInvoker::sendClaudeRequest(const std::string& prompt,
+                                                int maxTokens,
+                                                double temperature)
 {
-    QUrl url("https://api.anthropic.com/v1/messages");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("x-api-key", m_apiKey.toUtf8());
-    request.setRawHeader("anthropic-version", "2023-06-01");
-
-    QJsonObject payload;
+    nlohmann::json payload;
     payload["model"] = m_model;
     payload["max_tokens"] = maxTokens;
     payload["temperature"] = temperature;
+    payload["messages"] = nlohmann::json::array({{{"role", "user"}, {"content", prompt}}});
 
-    QJsonArray messages;
-    QJsonObject message;
-    message["role"] = "user";
-    message["content"] = prompt;
-    messages.append(message);
-    payload["messages"] = messages;
+    std::string url = "https://api.anthropic.com/v1/messages";
+    std::map<std::string, std::string> headers = {
+        {"Content-Type", "application/json"},
+        {"x-api-key", m_apiKey},
+        {"anthropic-version", "2023-06-01"}
+    };
 
-    QJsonDocument doc(payload);
-    QByteArray data = doc.toJson();
+    std::string responseData = performHttpRequest(url, "POST", payload.dump(), headers);
 
-    QEventLoop loop;
-    QNetworkReply* reply = m_networkManager->post(request, data);
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    QTimer::singleShot(30000, &loop, &QEventLoop::quit);
-    loop.exec();
-
-    if (reply->error() != QNetworkReply::NoError) {
-        qWarning() << "[ModelInvoker] Claude API error:" << reply->errorString();
-        reply->deleteLater();
-        return QJsonObject();
+    try {
+        return nlohmann::json::parse(responseData);
+    } catch (...) {
+        return nlohmann::json::object();
     }
-
-    QByteArray responseData = reply->readAll();
-    reply->deleteLater();
-
-    QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
-    return responseDoc.object();
 }
 
-/**
- * @brief Send request to OpenAI API
- */
-QJsonObject ModelInvoker::sendOpenAIRequest(const QString& prompt,
-                                            int maxTokens,
-                                            double temperature)
+nlohmann::json ModelInvoker::sendOpenAIRequest(const std::string& prompt,
+                                                int maxTokens,
+                                                double temperature)
 {
-    QUrl url("https://api.openai.com/v1/chat/completions");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("Authorization", ("Bearer " + m_apiKey).toUtf8());
-
-    QJsonObject payload;
+    nlohmann::json payload;
     payload["model"] = m_model;
     payload["max_tokens"] = maxTokens;
     payload["temperature"] = temperature;
+    payload["messages"] = nlohmann::json::array({{{"role", "user"}, {"content", prompt}}});
 
-    QJsonArray messages;
-    QJsonObject message;
-    message["role"] = "user";
-    message["content"] = prompt;
-    messages.append(message);
-    payload["messages"] = messages;
+    std::string url = "https://api.openai.com/v1/chat/completions";
+    std::map<std::string, std::string> headers = {
+        {"Content-Type", "application/json"},
+        {"Authorization", "Bearer " + m_apiKey}
+    };
 
-    QJsonDocument doc(payload);
-    QByteArray data = doc.toJson();
+    std::string responseData = performHttpRequest(url, "POST", payload.dump(), headers);
 
-    QEventLoop loop;
-    QNetworkReply* reply = m_networkManager->post(request, data);
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    QTimer::singleShot(30000, &loop, &QEventLoop::quit);
-    loop.exec();
-
-    if (reply->error() != QNetworkReply::NoError) {
-        qWarning() << "[ModelInvoker] OpenAI API error:" << reply->errorString();
-        reply->deleteLater();
-        return QJsonObject();
+    try {
+        return nlohmann::json::parse(responseData);
+    } catch (...) {
+        return nlohmann::json::object();
     }
-
-    QByteArray responseData = reply->readAll();
-    reply->deleteLater();
-
-    QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
-    return responseDoc.object();
 }
 
-/**
- * @brief Parse LLM response into structured plan
- */
-QJsonArray ModelInvoker::parsePlan(const QString& llmOutput)
+nlohmann::json ModelInvoker::parsePlan(const std::string& llmOutput)
 {
-    // Strategy 1: Direct JSON extraction (```json ... ```)
-    QRegularExpression jsonBlockRegex(R"(```(?:json)?\s*\n?([\s\S]*?)\n?```)", 
-                                       QRegularExpression::MultilineOption);
-    QRegularExpressionMatch match = jsonBlockRegex.match(llmOutput);
+    std::regex jsonBlockRegex(R"(```(?:json)?\s*\n?([\s\S]*?)\n?```)");
+    std::smatch match;
 
-    if (match.hasMatch()) {
-        QString jsonStr = match.captured(1);
-        QJsonDocument doc = QJsonDocument::fromJson(jsonStr.toUtf8());
-        if (doc.isArray()) {
-            return doc.array();
-        }
+    if (std::regex_search(llmOutput, match, jsonBlockRegex)) {
+        try {
+            return nlohmann::json::parse(match.str(1));
+        } catch (...) {}
     }
 
-    // Strategy 2: Try parsing entire output as JSON
-    QJsonDocument doc = QJsonDocument::fromJson(llmOutput.toUtf8());
-    if (doc.isArray()) {
-        return doc.array();
-    }
+    try {
+        return nlohmann::json::parse(llmOutput);
+    } catch (...) {}
 
-    // Strategy 3: Fallback - create generic action
-    qWarning() << "[ModelInvoker] Failed to parse plan from LLM output";
-    QJsonArray fallback;
-    QJsonObject action;
-    action["type"] = "user_input";
-    action["description"] = llmOutput.left(500);
-    fallback.append(action);
+    nlohmann::json fallback = nlohmann::json::array();
+    fallback.push_back({{"type", "user_input"}, {"description", llmOutput.substr(0, 500)}});
     return fallback;
 }
 
-/**
- * @brief Validate plan sanity
- */
-bool ModelInvoker::validatePlanSanity(const QJsonArray& plan)
+bool ModelInvoker::validatePlanSanity(const nlohmann::json& plan)
 {
-    if (plan.isEmpty()) {
-        qWarning() << "[ModelInvoker] Empty plan detected";
-        return false;
-    }
+    if (!plan.is_array() || plan.empty()) return false;
 
     int actionCount = 0;
-    QStringList seenTargets;
+    std::vector<std::string> seenTargets;
 
-    for (const QJsonValue& val : plan) {
-        if (!val.isObject()) {
-            qWarning() << "[ModelInvoker] Non-object in plan";
-            return false;
+    for (const auto& action : plan) {
+        if (!action.is_object()) return false;
+
+        std::string type = action.value("type", "");
+        if (type == "file_delete" || type == "format_drive" || type == "system_reboot") return false;
+
+        std::string target = action.value("target", "");
+        if (!target.empty()) {
+            if (std::find(seenTargets.begin(), seenTargets.end(), target) != seenTargets.end()) return false;
+            seenTargets.push_back(target);
         }
 
-        QJsonObject action = val.toObject();
-        QString type = action.value("type").toString();
-
-        // Check for dangerous operations
-        if (type == "file_delete" || type == "format_drive" || type == "system_reboot") {
-            qWarning() << "[ModelInvoker] Dangerous operation detected:" << type;
-            return false;
-        }
-
-        // Check for circular dependencies
-        QString target = action.value("target").toString();
-        if (seenTargets.contains(target)) {
-            qWarning() << "[ModelInvoker] Circular dependency on target:" << target;
-            return false;
-        }
-        seenTargets.append(target);
-
-        actionCount++;
-        if (actionCount > 100) {
-            qWarning() << "[ModelInvoker] Plan too large (>100 actions)";
-            return false;
-        }
+        if (++actionCount > 100) return false;
     }
 
     return true;
 }
 
-/**
- * @brief Get cache key for request
- */
-QString ModelInvoker::getCacheKey(const InvocationParams& params) const
+std::string ModelInvoker::getCacheKey(const InvocationParams& params) const
 {
-    return params.wish.mid(0, 100);
+    return params.wish.substr(0, 100);
 }
 
-/**
- * @brief Load cached response
- */
-LLMResponse ModelInvoker::getCachedResponse(const QString& key) const
+LLMResponse ModelInvoker::getCachedResponse(const std::string& key) const
 {
-    if (m_responseCache.contains(key)) {
-        return m_responseCache[key];
-    }
+    auto it = m_responseCache.find(key);
+    if (it != m_responseCache.end()) return it->second;
     return LLMResponse();
 }
 
-/**
- * @brief Store response in cache
- */
-void ModelInvoker::cacheResponse(const QString& key, const LLMResponse& response)
+void ModelInvoker::cacheResponse(const std::string& key, const LLMResponse& response)
 {
     m_responseCache[key] = response;
+}
+
+std::string ModelInvoker::performHttpRequest(const std::string& url, 
+                                             const std::string& method, 
+                                             const std::string& body, 
+                                             const std::map<std::string, std::string>& headers)
+{
+    auto toWide = [](const std::string& input) -> std::wstring {
+        if (input.empty()) return L"";
+        int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, nullptr, 0);
+        if (sizeNeeded <= 0) return L"";
+        std::wstring output(sizeNeeded - 1, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, output.data(), sizeNeeded);
+        return output;
+    };
+
+    std::wstring urlW = toWide(url);
+    if (urlW.empty()) return std::string();
+
+    URL_COMPONENTS components{};
+    components.dwStructSize = sizeof(components);
+    components.dwSchemeLength = static_cast<DWORD>(-1);
+    components.dwHostNameLength = static_cast<DWORD>(-1);
+    components.dwUrlPathLength = static_cast<DWORD>(-1);
+    components.dwExtraInfoLength = static_cast<DWORD>(-1);
+
+    if (!WinHttpCrackUrl(urlW.c_str(), 0, 0, &components)) {
+        return std::string();
+    }
+
+    std::wstring host(components.lpszHostName, components.dwHostNameLength);
+    std::wstring path(components.lpszUrlPath, components.dwUrlPathLength);
+    if (components.lpszExtraInfo && components.dwExtraInfoLength > 0) {
+        path.append(components.lpszExtraInfo, components.dwExtraInfoLength);
+    }
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD/1.0",
+                                    WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                    WINHTTP_NO_PROXY_NAME,
+                                    WINHTTP_NO_PROXY_BYPASS,
+                                    0);
+    if (!hSession) return std::string();
+
+    HINTERNET hConnect = WinHttpConnect(hSession, host.c_str(), components.nPort, 0);
+    if (!hConnect) {
+        WinHttpCloseHandle(hSession);
+        return std::string();
+    }
+
+    std::wstring methodW = toWide(method);
+    DWORD flags = (components.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect,
+                                            methodW.c_str(),
+                                            path.c_str(),
+                                            nullptr,
+                                            WINHTTP_NO_REFERER,
+                                            WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                            flags);
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return std::string();
+    }
+
+    for (const auto& header : headers) {
+        std::string headerLine = header.first + ": " + header.second + "\r\n";
+        std::wstring headerWide = toWide(headerLine);
+        WinHttpAddRequestHeaders(hRequest, headerWide.c_str(), static_cast<DWORD>(-1), WINHTTP_ADDREQ_FLAG_ADD);
+    }
+
+    DWORD bodySize = static_cast<DWORD>(body.size());
+    BOOL sent = WinHttpSendRequest(hRequest,
+                                   WINHTTP_NO_ADDITIONAL_HEADERS,
+                                   0,
+                                   bodySize > 0 ? (LPVOID)body.data() : WINHTTP_NO_REQUEST_DATA,
+                                   bodySize,
+                                   bodySize,
+                                   0);
+    if (!sent || !WinHttpReceiveResponse(hRequest, nullptr)) {
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return std::string();
+    }
+
+    std::string response;
+    DWORD bytesAvailable = 0;
+    do {
+        bytesAvailable = 0;
+        if (!WinHttpQueryDataAvailable(hRequest, &bytesAvailable)) {
+            break;
+        }
+        if (bytesAvailable == 0) {
+            break;
+        }
+        std::vector<char> buffer(bytesAvailable + 1, 0);
+        DWORD bytesRead = 0;
+        if (!WinHttpReadData(hRequest, buffer.data(), bytesAvailable, &bytesRead)) {
+            break;
+        }
+        response.append(buffer.data(), bytesRead);
+    } while (bytesAvailable > 0);
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    return response;
 }

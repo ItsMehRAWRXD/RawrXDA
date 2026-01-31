@@ -1,0 +1,3528 @@
+{
+  "Summary": {
+    "InferredTypeScript": 0,
+    "ReconstructedFiles": 3,
+    "SourceMapFiles": 28,
+    "ControlScenarios": 49,
+    "DeobfuscatedFiles": 0,
+    "ObfuscatedFiles": 303
+  },
+  "Reconstruction": {
+    "InferredTypeScript": 0,
+    "TotalFiles": 28,
+    "Statistics": {
+      "Savings": 97.42,
+      "ReconstructedSize": 1534459,
+      "OriginalSize": 59395432
+    },
+    "SourceMapFiles": 28,
+    "FileMappings": [
+      {
+        "HasSourceMap": true,
+        "Original": "on_source_app\\out\\bootstrap-fork.js",
+        "Reconstructed": "sourcemaps\\dc8361355d709f306d5159635a677a571b277bc0\\core",
+        "Deobfuscated": false
+      },
+      {
+        "HasSourceMap": true,
+        "Original": "on_source_app\\out\\cli.js",
+        "Reconstructed": "sourcemaps\\dc8361355d709f306d5159635a677a571b277bc0\\core",
+        "Deobfuscated": false
+      },
+      {
+        "HasSourceMap": true,
+        "Original": "on_source_app\\out\\main.js",
+        "Reconstructed": "sourcemaps\\dc8361355d709f306d5159635a677a571b277bc0\\core",
+        "Deobfuscated": false
+      }
+    ],
+    "DeobfuscatedFiles": 0,
+    "ReconstructedFiles": 3
+  },
+  "Metadata": {
+    "Tool": "Reverse-Engineer-Advanced.ps1",
+    "Version": "1.0",
+    "InputDirectory": "Cursor_Source_Extracted\\electron_source_app",
+    "GeneratedAt": "2026-01-24 11:42:04",
+    "OutputDirectory": "Advanced_Reverse_Engineered"
+  },
+  "Recommendations": [
+    "Use the SelfReverse.ps1 script to reverse the reconstruction if needed",
+    "Run ControlHandler.ps1 to manage protected files",
+    "Verify integrity with the -Verify flag",
+    "Create backups before modifications"
+  ],
+  "ControlScenarios": {
+    "TotalScenarios": 49,
+    "ReleaseMechanisms": [
+      {
+        "Type": "Archive",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules.asar\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules.asar\"",
+        "File": "ectron_source_app\\node_modules.asar",
+        "Action": "ExtractAndReverse"
+      },
+      {
+        "Type": "Protected",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\vscode-languagedetection\\model\\group1-shard1of1.bin\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\vscode-languagedetection\\model\\group1-shard1of1.bin\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\vscode-languagedetection\\model\\group1-shard1of1.bin",
+        "Action": "ReverseEngineer"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\vendor\\ripgrep\\x64-win32\\ripgrep.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\vendor\\ripgrep\\x64-win32\\ripgrep.node\"",
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\vendor\\ripgrep\\x64-win32\\ripgrep.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\cursor-retrieval\\node_modules\\@anysphere\\file-service\\file_service.win32-x64-msvc.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\cursor-retrieval\\node_modules\\@anysphere\\file-service\\file_service.win32-x64-msvc.node\"",
+        "File": "ectron_source_app\\extensions\\cursor-retrieval\\node_modules\\@anysphere\\file-service\\file_service.win32-x64-msvc.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\microsoft-authentication\\dist\\msal-node-runtime.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\microsoft-authentication\\dist\\msal-node-runtime.node\"",
+        "File": "ectron_source_app\\extensions\\microsoft-authentication\\dist\\msal-node-runtime.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\w32appcontainertokens-XTRA77NA.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\w32appcontainertokens-XTRA77NA.node\"",
+        "File": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\w32appcontainertokens-XTRA77NA.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@anysphere\\policy-watcher\\build\\Release\\vscode-policy-watcher.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@anysphere\\policy-watcher\\build\\Release\\vscode-policy-watcher.node\"",
+        "File": "ectron_source_app\\node_modules\\@anysphere\\policy-watcher\\build\\Release\\vscode-policy-watcher.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@parcel\\watcher\\build\\Release\\watcher.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@parcel\\watcher\\build\\Release\\watcher.node\"",
+        "File": "ectron_source_app\\node_modules\\@parcel\\watcher\\build\\Release\\watcher.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\deviceid\\build\\Release\\windows.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\deviceid\\build\\Release\\windows.node\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\deviceid\\build\\Release\\windows.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\spdlog\\build\\Release\\spdlog.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\spdlog\\build\\Release\\spdlog.node\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\spdlog\\build\\Release\\spdlog.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\sqlite3\\build\\Release\\vscode-sqlite3.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\sqlite3\\build\\Release\\vscode-sqlite3.node\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\sqlite3\\build\\Release\\vscode-sqlite3.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\windows-ca-certs\\build\\Release\\crypt32.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\windows-ca-certs\\build\\Release\\crypt32.node\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\windows-ca-certs\\build\\Release\\crypt32.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\windows-mutex\\build\\Release\\CreateMutex.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\windows-mutex\\build\\Release\\CreateMutex.node\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\windows-mutex\\build\\Release\\CreateMutex.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\windows-process-tree\\build\\Release\\windows_process_tree.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\windows-process-tree\\build\\Release\\windows_process_tree.node\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\windows-process-tree\\build\\Release\\windows_process_tree.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\windows-registry\\build\\Release\\winregistry.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\windows-registry\\build\\Release\\winregistry.node\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\windows-registry\\build\\Release\\winregistry.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\cursor-proclist\\build\\Release\\cursor_proclist.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\cursor-proclist\\build\\Release\\cursor_proclist.node\"",
+        "File": "ectron_source_app\\node_modules\\cursor-proclist\\build\\Release\\cursor_proclist.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\kerberos\\build\\Release\\kerberos.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\kerberos\\build\\Release\\kerberos.node\"",
+        "File": "ectron_source_app\\node_modules\\kerberos\\build\\Release\\kerberos.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\native-is-elevated\\build\\Release\\iselevated.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\native-is-elevated\\build\\Release\\iselevated.node\"",
+        "File": "ectron_source_app\\node_modules\\native-is-elevated\\build\\Release\\iselevated.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\native-keymap\\build\\Release\\keymapping.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\native-keymap\\build\\Release\\keymapping.node\"",
+        "File": "ectron_source_app\\node_modules\\native-keymap\\build\\Release\\keymapping.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\native-watchdog\\build\\Release\\watchdog.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\native-watchdog\\build\\Release\\watchdog.node\"",
+        "File": "ectron_source_app\\node_modules\\native-watchdog\\build\\Release\\watchdog.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty_console_list.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty_console_list.node\"",
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty_console_list.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty.node\"",
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\pty.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\pty.node\"",
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\pty.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "NativeModule",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\windows-foreground-love\\build\\Release\\foreground_love.node\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\windows-foreground-love\\build\\Release\\foreground_love.node\"",
+        "File": "ectron_source_app\\node_modules\\windows-foreground-love\\build\\Release\\foreground_love.node",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Type": "WindowsLibrary",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\microsoft-authentication\\dist\\msalruntime.dll\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\microsoft-authentication\\dist\\msalruntime.dll\"",
+        "File": "ectron_source_app\\extensions\\microsoft-authentication\\dist\\msalruntime.dll",
+        "Action": "AnalyzeExports"
+      },
+      {
+        "Type": "WindowsLibrary",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\winpty.dll\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\winpty.dll\"",
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\winpty.dll",
+        "Action": "AnalyzeExports"
+      },
+      {
+        "Type": "WindowsLibrary",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty\\conpty.dll\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty\\conpty.dll\"",
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty\\conpty.dll",
+        "Action": "AnalyzeExports"
+      },
+      {
+        "Type": "Executable",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\bin\\code-tunnel.exe\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\bin\\code-tunnel.exe\"",
+        "File": "ectron_source_app\\bin\\code-tunnel.exe",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Type": "Executable",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\bin\\cursor-tunnel.exe\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\bin\\cursor-tunnel.exe\"",
+        "File": "ectron_source_app\\bin\\cursor-tunnel.exe",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Type": "Executable",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\vendor\\ripgrep\\x64-win32\\rg.exe\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\vendor\\ripgrep\\x64-win32\\rg.exe\"",
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\vendor\\ripgrep\\x64-win32\\rg.exe",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Type": "Executable",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\ripgrep\\bin\\rg.exe\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\ripgrep\\bin\\rg.exe\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\ripgrep\\bin\\rg.exe",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Type": "Executable",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\winpty-agent.exe\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\winpty-agent.exe\"",
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\winpty-agent.exe",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Type": "Executable",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty\\OpenConsole.exe\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty\\OpenConsole.exe\"",
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty\\OpenConsole.exe",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Type": "Executable",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\resources\\helpers\\cursorsandbox.exe\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\resources\\helpers\\cursorsandbox.exe\"",
+        "File": "ectron_source_app\\resources\\helpers\\cursorsandbox.exe",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Type": "Executable",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\resources\\helpers\\node.exe\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\resources\\helpers\\node.exe\"",
+        "File": "ectron_source_app\\resources\\helpers\\node.exe",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\resvg.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\resvg.wasm\"",
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\resvg.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\tree-sitter-bash.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\tree-sitter-bash.wasm\"",
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\tree-sitter-bash.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\tree-sitter.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\tree-sitter.wasm\"",
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\tree-sitter.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\chromehash_bg.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\chromehash_bg.wasm\"",
+        "File": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\chromehash_bg.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\a443ca1a33b96237dd48.module.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\a443ca1a33b96237dd48.module.wasm\"",
+        "File": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\a443ca1a33b96237dd48.module.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\dbd61d846b1102299709.module.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\dbd61d846b1102299709.module.wasm\"",
+        "File": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\dbd61d846b1102299709.module.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp_simd.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp_simd.wasm\"",
+        "File": "ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp_simd.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp.wasm\"",
+        "File": "ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-css.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-css.wasm\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-css.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-ini.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-ini.wasm\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-ini.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-regex.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-regex.wasm\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-regex.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-typescript.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-typescript.wasm\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-typescript.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter.wasm\"",
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter.wasm",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Type": "WebAssembly",
+        "Status": "Created",
+        "VerifyCommand": "ControlHandler.ps1 -Action verify -Target \"ectron_source_app\\node_modules\\vscode-oniguruma\\release\\onig.wasm\"",
+        "ReleaseCommand": "ControlHandler.ps1 -Action release -Target \"ectron_source_app\\node_modules\\vscode-oniguruma\\release\\onig.wasm\"",
+        "File": "ectron_source_app\\node_modules\\vscode-oniguruma\\release\\onig.wasm",
+        "Action": "DecompileToWAT"
+      }
+    ],
+    "LockedResources": [],
+    "UnextractableFiles": [],
+    "ProtectedFiles": [
+      {
+        "Status": "Pending",
+        "Size": 28,
+        "File": "ectron_source_app\\node_modules.asar",
+        "Type": "Archive",
+        "Action": "ExtractAndReverse"
+      },
+      {
+        "Action": "ReverseEngineer",
+        "File": "ectron_source_app\\node_modules\\@vscode\\vscode-languagedetection\\model\\group1-shard1of1.bin",
+        "Type": "Protected",
+        "Status": "Pending",
+        "Size": 715908
+      },
+      {
+        "Status": "Pending",
+        "Size": 6981608,
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\vendor\\ripgrep\\x64-win32\\ripgrep.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 14328296,
+        "File": "ectron_source_app\\extensions\\cursor-retrieval\\node_modules\\@anysphere\\file-service\\file_service.win32-x64-msvc.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 323048,
+        "File": "ectron_source_app\\extensions\\microsoft-authentication\\dist\\msal-node-runtime.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 279008,
+        "File": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\w32appcontainertokens-XTRA77NA.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 191464,
+        "File": "ectron_source_app\\node_modules\\@anysphere\\policy-watcher\\build\\Release\\vscode-policy-watcher.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 538088,
+        "File": "ectron_source_app\\node_modules\\@parcel\\watcher\\build\\Release\\watcher.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 131048,
+        "File": "ectron_source_app\\node_modules\\@vscode\\deviceid\\build\\Release\\windows.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 577000,
+        "File": "ectron_source_app\\node_modules\\@vscode\\spdlog\\build\\Release\\spdlog.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 1849320,
+        "File": "ectron_source_app\\node_modules\\@vscode\\sqlite3\\build\\Release\\vscode-sqlite3.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 158696,
+        "File": "ectron_source_app\\node_modules\\@vscode\\windows-ca-certs\\build\\Release\\crypt32.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 159200,
+        "File": "ectron_source_app\\node_modules\\@vscode\\windows-mutex\\build\\Release\\CreateMutex.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 166888,
+        "File": "ectron_source_app\\node_modules\\@vscode\\windows-process-tree\\build\\Release\\windows_process_tree.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 132072,
+        "File": "ectron_source_app\\node_modules\\@vscode\\windows-registry\\build\\Release\\winregistry.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 750056,
+        "File": "ectron_source_app\\node_modules\\cursor-proclist\\build\\Release\\cursor_proclist.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 210408,
+        "File": "ectron_source_app\\node_modules\\kerberos\\build\\Release\\kerberos.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 124904,
+        "File": "ectron_source_app\\node_modules\\native-is-elevated\\build\\Release\\iselevated.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 184296,
+        "File": "ectron_source_app\\node_modules\\native-keymap\\build\\Release\\keymapping.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 126432,
+        "File": "ectron_source_app\\node_modules\\native-watchdog\\build\\Release\\watchdog.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 150504,
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty_console_list.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 328168,
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 318952,
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\pty.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 125928,
+        "File": "ectron_source_app\\node_modules\\windows-foreground-love\\build\\Release\\foreground_love.node",
+        "Type": "NativeModule",
+        "Action": "DecompileOrStub"
+      },
+      {
+        "Status": "Pending",
+        "Size": 2957288,
+        "File": "ectron_source_app\\extensions\\microsoft-authentication\\dist\\msalruntime.dll",
+        "Type": "WindowsLibrary",
+        "Action": "AnalyzeExports"
+      },
+      {
+        "Status": "Pending",
+        "Size": 272872,
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\winpty.dll",
+        "Type": "WindowsLibrary",
+        "Action": "AnalyzeExports"
+      },
+      {
+        "Status": "Pending",
+        "Size": 115176,
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty\\conpty.dll",
+        "Type": "WindowsLibrary",
+        "Action": "AnalyzeExports"
+      },
+      {
+        "Status": "Pending",
+        "Size": 19465192,
+        "File": "ectron_source_app\\bin\\code-tunnel.exe",
+        "Type": "Executable",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Status": "Pending",
+        "Size": 19465192,
+        "File": "ectron_source_app\\bin\\cursor-tunnel.exe",
+        "Type": "Executable",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Status": "Pending",
+        "Size": 5423592,
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\vendor\\ripgrep\\x64-win32\\rg.exe",
+        "Type": "Executable",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Status": "Pending",
+        "Size": 4309480,
+        "File": "ectron_source_app\\node_modules\\@vscode\\ripgrep\\bin\\rg.exe",
+        "Type": "Executable",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Status": "Pending",
+        "Size": 324072,
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\winpty-agent.exe",
+        "Type": "Executable",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Status": "Pending",
+        "Size": 1154024,
+        "File": "ectron_source_app\\node_modules\\node-pty\\build\\Release\\conpty\\OpenConsole.exe",
+        "Type": "Executable",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Status": "Pending",
+        "Size": 3503080,
+        "File": "ectron_source_app\\resources\\helpers\\cursorsandbox.exe",
+        "Type": "Executable",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Status": "Pending",
+        "Size": 85800424,
+        "File": "ectron_source_app\\resources\\helpers\\node.exe",
+        "Type": "Executable",
+        "Action": "AnalyzePE"
+      },
+      {
+        "Status": "Pending",
+        "Size": 2478606,
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\resvg.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 1380769,
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\tree-sitter-bash.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 205498,
+        "File": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\tree-sitter.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 16908,
+        "File": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\chromehash_bg.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 180756,
+        "File": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\a443ca1a33b96237dd48.module.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 180767,
+        "File": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\dbd61d846b1102299709.module.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 55450,
+        "File": "ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp_simd.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 55466,
+        "File": "ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 99067,
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-css.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 4461,
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-ini.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 12592,
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-regex.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 1429463,
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter-typescript.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 204548,
+        "File": "ectron_source_app\\node_modules\\@vscode\\tree-sitter-wasm\\wasm\\tree-sitter.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      },
+      {
+        "Status": "Pending",
+        "Size": 466610,
+        "File": "ectron_source_app\\node_modules\\vscode-oniguruma\\release\\onig.wasm",
+        "Type": "WebAssembly",
+        "Action": "DecompileToWAT"
+      }
+    ]
+  },
+  "ObfuscatedFiles": [
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 69408.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\configuration-editing\\dist\\configurationEditingMain.js",
+      "Path": "ectron_source_app\\extensions\\configuration-editing\\dist\\configurationEditingMain.js",
+      "Confidence": "Medium",
+      "Size": 138817
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 222312.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\css-language-features\\client\\dist\\node\\cssClientMain.js",
+      "Path": "ectron_source_app\\extensions\\css-language-features\\client\\dist\\node\\cssClientMain.js",
+      "Confidence": "Medium",
+      "Size": 444626
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 7238.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\css-language-features\\server\\dist\\node\\85.cssServerMain.js",
+      "Path": "ectron_source_app\\extensions\\css-language-features\\server\\dist\\node\\85.cssServerMain.js",
+      "Confidence": "Medium",
+      "Size": 14477
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 519373.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\css-language-features\\server\\dist\\node\\920.cssServerMain.js",
+      "Path": "ectron_source_app\\extensions\\css-language-features\\server\\dist\\node\\920.cssServerMain.js",
+      "Confidence": "Medium",
+      "Size": 1039010
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 2360.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\css-language-features\\server\\dist\\node\\cssServerMain.js",
+      "Path": "ectron_source_app\\extensions\\css-language-features\\server\\dist\\node\\cssServerMain.js",
+      "Confidence": "Medium",
+      "Size": 4721
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 262824.6666666667,
+      "Lines": 9,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-agent\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-agent\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 2383395
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 1169254.0,
+      "Lines": 9,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\cli.js",
+      "Path": "ectron_source_app\\extensions\\cursor-agent\\dist\\claude-agent-sdk\\cli.js",
+      "Confidence": "Medium",
+      "Size": 10583313
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 1387.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-agent-exec\\dist\\621.js",
+      "Path": "ectron_source_app\\extensions\\cursor-agent-exec\\dist\\621.js",
+      "Confidence": "Medium",
+      "Size": 2776
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 1262608.6666666667,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-agent-exec\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-agent-exec\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 3926187
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 2429.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-always-local\\dist\\gitWorker.js",
+      "Path": "ectron_source_app\\extensions\\cursor-always-local\\dist\\gitWorker.js",
+      "Confidence": "Medium",
+      "Size": 4860
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 1252692.3333333333,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-always-local\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-always-local\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 3775062
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 69521.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-android-emulator-connect\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-android-emulator-connect\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 139044
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 116092.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-browser-automation\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\cursor-browser-automation\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 232185
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 2285.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-browser-extension\\dist\\460.js",
+      "Path": "ectron_source_app\\extensions\\cursor-browser-extension\\dist\\460.js",
+      "Confidence": "Medium",
+      "Size": 4572
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 1217608.6666666667,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-browser-extension\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-browser-extension\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 3655245
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 755190.6666666666,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-commits\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-commits\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 2265886
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 113727.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-commits\\worker\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-commits\\worker\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 227461
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 296604.6666666667,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-deeplink\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-deeplink\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 890128
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 60085.6,
+      "Lines": 15,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-ios-simulator-connect\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-ios-simulator-connect\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 901494
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 1746.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-mcp\\dist\\138.js",
+      "Path": "ectron_source_app\\extensions\\cursor-mcp\\dist\\138.js",
+      "Confidence": "Medium",
+      "Size": 3493
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 372338.0,
+      "Lines": 9,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-mcp\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-mcp\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 3489407
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 4093.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-ndjson-ingest\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-ndjson-ingest\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 8187
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 50672.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-polyfills-remote\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-polyfills-remote\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 101357
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 1020752.0,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-retrieval\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-retrieval\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 3062574
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 6429.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-retrieval\\node_modules\\@anysphere\\file-service\\index.js",
+      "Path": "ectron_source_app\\extensions\\cursor-retrieval\\node_modules\\@anysphere\\file-service\\index.js",
+      "Confidence": "High",
+      "Size": 6429
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 113736.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-retrieval\\worker\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\cursor-retrieval\\worker\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 227478
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 389096.6666666667,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\cursor-shadow-workspace\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\cursor-shadow-workspace\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 1167604
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 3193.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\debug-auto-launch\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\debug-auto-launch\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 6387
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 3432.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\debug-server-ready\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\debug-server-ready\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 6866
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 131006.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\emmet\\dist\\node\\emmetNodeMain.js",
+      "Path": "ectron_source_app\\extensions\\emmet\\dist\\node\\emmetNodeMain.js",
+      "Confidence": "Medium",
+      "Size": 263220
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 160317.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\extension-editing\\dist\\extensionEditingMain.js",
+      "Path": "ectron_source_app\\extensions\\extension-editing\\dist\\extensionEditingMain.js",
+      "Confidence": "Medium",
+      "Size": 324597
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 1998.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\git\\dist\\askpass-main.js",
+      "Path": "ectron_source_app\\extensions\\git\\dist\\askpass-main.js",
+      "Confidence": "Medium",
+      "Size": 3998
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 1191.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\git\\dist\\git-editor-main.js",
+      "Path": "ectron_source_app\\extensions\\git\\dist\\git-editor-main.js",
+      "Confidence": "Medium",
+      "Size": 2383
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 255508.0,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\git\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\git\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 766562
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 4159.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\git-base\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\git-base\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 8320
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 106685.33333333333,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\github\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\github\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 320058
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 73886.33333333333,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\github-authentication\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\github-authentication\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 221661
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 3417.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\grunt\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\grunt\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 6835
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 3436.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\gulp\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\gulp\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 6874
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 204256.33333333334,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\html-language-features\\client\\dist\\node\\htmlClientMain.js",
+      "Path": "ectron_source_app\\extensions\\html-language-features\\client\\dist\\node\\htmlClientMain.js",
+      "Confidence": "Medium",
+      "Size": 612771
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 23866.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\html-language-features\\server\\dist\\node\\421.htmlServerMain.js",
+      "Path": "ectron_source_app\\extensions\\html-language-features\\server\\dist\\node\\421.htmlServerMain.js",
+      "Confidence": "Medium",
+      "Size": 47734
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 783060.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\html-language-features\\server\\dist\\node\\769.htmlServerMain.js",
+      "Path": "ectron_source_app\\extensions\\html-language-features\\server\\dist\\node\\769.htmlServerMain.js",
+      "Confidence": "Medium",
+      "Size": 1570599
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 2382.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\html-language-features\\server\\dist\\node\\htmlServerMain.js",
+      "Path": "ectron_source_app\\extensions\\html-language-features\\server\\dist\\node\\htmlServerMain.js",
+      "Confidence": "Medium",
+      "Size": 4765
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 87636.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ipynb\\dist\\ipynbMain.node.js",
+      "Path": "ectron_source_app\\extensions\\ipynb\\dist\\ipynbMain.node.js",
+      "Confidence": "Medium",
+      "Size": 175273
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 3631.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ipynb\\dist\\notebookSerializerWorker.js",
+      "Path": "ectron_source_app\\extensions\\ipynb\\dist\\notebookSerializerWorker.js",
+      "Confidence": "Medium",
+      "Size": 7264
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 3202.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\jake\\dist\\main.js",
+      "Path": "ectron_source_app\\extensions\\jake\\dist\\main.js",
+      "Confidence": "Medium",
+      "Size": 6406
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 211223.33333333334,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\json-language-features\\client\\dist\\node\\jsonClientMain.js",
+      "Path": "ectron_source_app\\extensions\\json-language-features\\client\\dist\\node\\jsonClientMain.js",
+      "Confidence": "Medium",
+      "Size": 633672
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 6901.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\json-language-features\\server\\dist\\node\\774.jsonServerMain.js",
+      "Path": "ectron_source_app\\extensions\\json-language-features\\server\\dist\\node\\774.jsonServerMain.js",
+      "Confidence": "Medium",
+      "Size": 13804
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 167850.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\json-language-features\\server\\dist\\node\\875.jsonServerMain.js",
+      "Path": "ectron_source_app\\extensions\\json-language-features\\server\\dist\\node\\875.jsonServerMain.js",
+      "Confidence": "Medium",
+      "Size": 335705
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 2696.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\json-language-features\\server\\dist\\node\\jsonServerMain.js",
+      "Path": "ectron_source_app\\extensions\\json-language-features\\server\\dist\\node\\jsonServerMain.js",
+      "Confidence": "Medium",
+      "Size": 5393
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 551332.0,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\markdown-language-features\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\markdown-language-features\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 1687062
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 285231.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\markdown-language-features\\dist\\serverWorkerMain.js",
+      "Path": "ectron_source_app\\extensions\\markdown-language-features\\dist\\serverWorkerMain.js",
+      "Confidence": "Medium",
+      "Size": 588356
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 7975.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\markdown-language-features\\media\\index.js",
+      "Path": "ectron_source_app\\extensions\\markdown-language-features\\media\\index.js",
+      "Confidence": "High",
+      "Size": 15952
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 1067.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\markdown-language-features\\media\\pre.js",
+      "Path": "ectron_source_app\\extensions\\markdown-language-features\\media\\pre.js",
+      "Confidence": "High",
+      "Size": 2135
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 753.1264367816092,
+      "Lines": 174,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\markdown-language-features\\notebook-out\\index.js",
+      "Path": "ectron_source_app\\extensions\\markdown-language-features\\notebook-out\\index.js",
+      "Confidence": "Medium",
+      "Size": 131310
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 136937.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\markdown-math\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\markdown-math\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 276712
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 1024.5625,
+      "Lines": 272,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\markdown-math\\notebook-out\\katex.js",
+      "Path": "ectron_source_app\\extensions\\markdown-math\\notebook-out\\katex.js",
+      "Confidence": "Medium",
+      "Size": 279030
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 17113.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\media-preview\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\media-preview\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 34228
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 66329.66666666667,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\merge-conflict\\dist\\mergeConflictMain.js",
+      "Path": "ectron_source_app\\extensions\\merge-conflict\\dist\\mergeConflictMain.js",
+      "Confidence": "Medium",
+      "Size": 198993
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 188485.66666666666,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\microsoft-authentication\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\microsoft-authentication\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 565459
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 2500.162162162162,
+      "Lines": 37,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.js-debug\\src\\bootloader.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\bootloader.js",
+      "Confidence": "Medium",
+      "Size": 92542
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 9592.333333333334,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.js-debug\\src\\diagnosticTool.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\diagnosticTool.js",
+      "Confidence": "Medium",
+      "Size": 28779
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 4708.055837563452,
+      "Lines": 197,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.js-debug\\src\\extension.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\extension.js",
+      "Confidence": "Medium",
+      "Size": 927684
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 1033.6666666666667,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.js-debug\\src\\hash.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\hash.js",
+      "Confidence": "High",
+      "Size": 6207
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 1518.3333333333333,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.js-debug\\src\\renameWorker.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\renameWorker.js",
+      "Confidence": "High",
+      "Size": 4557
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 5692.289473684211,
+      "Lines": 38,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.js-debug\\src\\watchdog.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\watchdog.js",
+      "Confidence": "Medium",
+      "Size": 216344
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 8670.25,
+      "Lines": 4,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.js-debug\\src\\vendor\\acorn-loose.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\vendor\\acorn-loose.js",
+      "Confidence": "Medium",
+      "Size": 34684
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 14352.0,
+      "Lines": 8,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.js-debug\\src\\vendor\\acorn.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.js-debug\\src\\vendor\\acorn.js",
+      "Confidence": "Medium",
+      "Size": 114823
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 7731.461538461538,
+      "Lines": 13,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.js-debug-companion\\out\\extension.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.js-debug-companion\\out\\extension.js",
+      "Confidence": "Medium",
+      "Size": 100521
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 9511.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\425.heapsnapshotWorker.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\425.heapsnapshotWorker.js",
+      "Confidence": "Medium",
+      "Size": 9511
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 9172.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\848.extension.web.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\848.extension.web.js",
+      "Confidence": "Medium",
+      "Size": 9172
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 42207.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\cpu-client.bundle.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\cpu-client.bundle.js",
+      "Confidence": "Medium",
+      "Size": 42207
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 17983.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\extension.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\extension.js",
+      "Confidence": "Medium",
+      "Size": 17983
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 26010.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\extension.web.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\extension.web.js",
+      "Confidence": "Medium",
+      "Size": 26010
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 42283.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\heap-client.bundle.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\heap-client.bundle.js",
+      "Confidence": "Medium",
+      "Size": 42283
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 43475.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\heapsnapshot-client.bundle.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\heapsnapshot-client.bundle.js",
+      "Confidence": "Medium",
+      "Size": 43475
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 3505.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\heapsnapshotWorker.js",
+      "Path": "ectron_source_app\\extensions\\ms-vscode.vscode-js-profile-table\\out\\heapsnapshotWorker.js",
+      "Confidence": "High",
+      "Size": 3505
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 44.50061921359873,
+      "Lines": 200254,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\node_modules\\typescript\\lib\\typescript.js",
+      "Path": "ectron_source_app\\extensions\\node_modules\\typescript\\lib\\typescript.js",
+      "Confidence": "Medium",
+      "Size": 9111680
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 238.3360655737705,
+      "Lines": 122,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\notebook-renderers\\renderer-out\\index.js",
+      "Path": "ectron_source_app\\extensions\\notebook-renderers\\renderer-out\\index.js",
+      "Confidence": "Medium",
+      "Size": 29198
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 113009.33333333333,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\npm\\dist\\npmMain.js",
+      "Path": "ectron_source_app\\extensions\\npm\\dist\\npmMain.js",
+      "Confidence": "Medium",
+      "Size": 339383
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 114076.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\php-language-features\\dist\\phpMain.js",
+      "Path": "ectron_source_app\\extensions\\php-language-features\\dist\\phpMain.js",
+      "Confidence": "Medium",
+      "Size": 228157
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 18653.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\references-view\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\references-view\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 37310
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 2956.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\search-result\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\search-result\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 5919
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 4377.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\simple-browser\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\simple-browser\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 8756
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 753.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\simple-browser\\media\\index.js",
+      "Path": "ectron_source_app\\extensions\\simple-browser\\media\\index.js",
+      "Confidence": "High",
+      "Size": 1507
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 511269.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\terminal-suggest\\dist\\terminalSuggestMain.js",
+      "Path": "ectron_source_app\\extensions\\terminal-suggest\\dist\\terminalSuggestMain.js",
+      "Confidence": "Medium",
+      "Size": 1023055
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 4016.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\tunnel-forwarding\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\tunnel-forwarding\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 8034
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 200321.33333333334,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\extensions\\typescript-language-features\\dist\\extension.js",
+      "Path": "ectron_source_app\\extensions\\typescript-language-features\\dist\\extension.js",
+      "Confidence": "Medium",
+      "Size": 600976
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 40.20601851851852,
+      "Lines": 432,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@bufbuild\\protobuf\\dist\\cjs\\private\\binary-format.js",
+      "Path": "ectron_source_app\\node_modules\\@bufbuild\\protobuf\\dist\\cjs\\private\\binary-format.js",
+      "Confidence": "Medium",
+      "Size": 17800
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 37.92056074766355,
+      "Lines": 428,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@bufbuild\\protobuf\\dist\\esm\\private\\binary-format.js",
+      "Path": "ectron_source_app\\node_modules\\@bufbuild\\protobuf\\dist\\esm\\private\\binary-format.js",
+      "Confidence": "Medium",
+      "Size": 16657
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 48.19444444444444,
+      "Lines": 756,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@c4312\\eventsource-umd\\dist\\index.umd.js",
+      "Path": "ectron_source_app\\node_modules\\@c4312\\eventsource-umd\\dist\\index.umd.js",
+      "Confidence": "Medium",
+      "Size": 37234
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 26.874,
+      "Lines": 500,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\core\\request.js",
+      "Path": "ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\core\\request.js",
+      "Confidence": "Medium",
+      "Size": 13936
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 39.227436823104696,
+      "Lines": 277,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\constants.js",
+      "Path": "ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\constants.js",
+      "Confidence": "Medium",
+      "Size": 11142
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 36977.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp_simd-wasm.js",
+      "Path": "ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp_simd-wasm.js",
+      "Confidence": "High",
+      "Size": 73956
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 36987.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp-wasm.js",
+      "Path": "ectron_source_app\\node_modules\\@connectrpc\\connect-node\\node_modules\\undici\\lib\\llhttp\\llhttp-wasm.js",
+      "Confidence": "High",
+      "Size": 73976
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 26.465346534653467,
+      "Lines": 101,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@fastify\\busboy\\deps\\dicer\\lib\\HeaderParser.js",
+      "Path": "ectron_source_app\\node_modules\\@fastify\\busboy\\deps\\dicer\\lib\\HeaderParser.js",
+      "Confidence": "Medium",
+      "Size": 2773
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 49.36548223350254,
+      "Lines": 197,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@fastify\\busboy\\lib\\utils\\parseParams.js",
+      "Path": "ectron_source_app\\node_modules\\@fastify\\busboy\\lib\\utils\\parseParams.js",
+      "Confidence": "Medium",
+      "Size": 9921
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 2247.0,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\index.js",
+      "Confidence": "Medium",
+      "Size": 15735
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 1852.857142857143,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\RGI_Emoji.js",
+      "Path": "ectron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\RGI_Emoji.js",
+      "Confidence": "Medium",
+      "Size": 12976
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 2066.0,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\text.js",
+      "Path": "ectron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\text.js",
+      "Confidence": "Medium",
+      "Size": 14468
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 2485.5714285714284,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\es2015\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\es2015\\index.js",
+      "Confidence": "Medium",
+      "Size": 17405
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 2002.5714285714287,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\es2015\\RGI_Emoji.js",
+      "Path": "ectron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\es2015\\RGI_Emoji.js",
+      "Confidence": "Medium",
+      "Size": 14024
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 2255.714285714286,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\es2015\\text.js",
+      "Path": "ectron_source_app\\node_modules\\@isaacs\\cliui\\node_modules\\emoji-regex\\es2015\\text.js",
+      "Confidence": "Medium",
+      "Size": 15796
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 25894.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\core\\node_modules\\mime\\types\\other.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\core\\node_modules\\mime\\types\\other.js",
+      "Confidence": "High",
+      "Size": 25894
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 9530.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\core\\node_modules\\mime\\types\\standard.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\core\\node_modules\\mime\\types\\standard.js",
+      "Confidence": "High",
+      "Size": 9530
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-blit\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-blit\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-circle\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-circle\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-color\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-color\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-contain\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-contain\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-cover\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-cover\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-crop\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-crop\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-displace\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-displace\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-fisheye\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-fisheye\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-flip\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-flip\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-mask\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-mask\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-print\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-print\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-quantize\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-quantize\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-resize\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-resize\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-rotate\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-rotate\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\plugin-threshold\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\plugin-threshold\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.52003248511099,
+      "Lines": 3694,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@jimp\\types\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\@jimp\\types\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131212
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 851.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@lukeed\\ms\\dist\\index.min.js",
+      "Path": "ectron_source_app\\node_modules\\@lukeed\\ms\\dist\\index.min.js",
+      "Confidence": "High",
+      "Size": 851
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 7983.428571428572,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-core-js\\bundle\\ms.core-3.2.13.gbl.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-core-js\\bundle\\ms.core-3.2.13.gbl.min.js",
+      "Confidence": "Medium",
+      "Size": 55890
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 8009.571428571428,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-core-js\\bundle\\ms.core-3.2.13.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-core-js\\bundle\\ms.core-3.2.13.min.js",
+      "Confidence": "Medium",
+      "Size": 56073
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 7982.428571428572,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-core-js\\bundle\\ms.core.gbl.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-core-js\\bundle\\ms.core.gbl.min.js",
+      "Confidence": "Medium",
+      "Size": 55883
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 8008.571428571428,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-core-js\\bundle\\ms.core.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-core-js\\bundle\\ms.core.min.js",
+      "Confidence": "Medium",
+      "Size": 56066
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 2845.285714285714,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-core-js\\dist\\ms.core.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-core-js\\dist\\ms.core.min.js",
+      "Confidence": "Medium",
+      "Size": 19923
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 6236.285714285715,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-post-js\\bundle\\ms.post-3.2.13.gbl.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-post-js\\bundle\\ms.post-3.2.13.gbl.min.js",
+      "Confidence": "Medium",
+      "Size": 43660
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 6262.428571428572,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-post-js\\bundle\\ms.post-3.2.13.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-post-js\\bundle\\ms.post-3.2.13.min.js",
+      "Confidence": "Medium",
+      "Size": 43843
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 6235.285714285715,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-post-js\\bundle\\ms.post.gbl.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-post-js\\bundle\\ms.post.gbl.min.js",
+      "Confidence": "Medium",
+      "Size": 43653
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 6261.428571428572,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-post-js\\bundle\\ms.post.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-post-js\\bundle\\ms.post.min.js",
+      "Confidence": "Medium",
+      "Size": 43836
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 3494.714285714286,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\1ds-post-js\\dist\\ms.post.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\1ds-post-js\\dist\\ms.post.min.js",
+      "Confidence": "Medium",
+      "Size": 24469
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 7810.0,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\applicationinsights-core-js\\browser\\applicationinsights-core-js.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\applicationinsights-core-js\\browser\\applicationinsights-core-js.min.js",
+      "Confidence": "Medium",
+      "Size": 46865
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 7778.333333333333,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\applicationinsights-core-js\\dist\\applicationinsights-core-js.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\applicationinsights-core-js\\dist\\applicationinsights-core-js.min.js",
+      "Confidence": "Medium",
+      "Size": 46675
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 720.8333333333334,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\applicationinsights-shims\\browser\\applicationinsights-shims.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\applicationinsights-shims\\browser\\applicationinsights-shims.min.js",
+      "Confidence": "Medium",
+      "Size": 4330
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 720.8333333333334,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\applicationinsights-shims\\dist\\umd\\applicationinsights-shims.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\applicationinsights-shims\\dist\\umd\\applicationinsights-shims.min.js",
+      "Confidence": "Medium",
+      "Size": 4330
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 487.0,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\amd\\dynamicproto-js.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\amd\\dynamicproto-js.min.js",
+      "Confidence": "Medium",
+      "Size": 2927
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 485.0,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\cjs\\dynamicproto-js.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\cjs\\dynamicproto-js.min.js",
+      "Confidence": "Medium",
+      "Size": 2915
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 497.5,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\iife\\dynamicproto-js.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\iife\\dynamicproto-js.min.js",
+      "Confidence": "Medium",
+      "Size": 2990
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 527.5,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\node\\dynamicproto-js.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\node\\dynamicproto-js.min.js",
+      "Confidence": "Medium",
+      "Size": 3170
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 500.6666666666667,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\system\\dynamicproto-js.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\system\\dynamicproto-js.min.js",
+      "Confidence": "Medium",
+      "Size": 3009
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 527.3333333333334,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\umd\\dynamicproto-js.min.js",
+      "Path": "ectron_source_app\\node_modules\\@microsoft\\dynamicproto-js\\lib\\dist\\umd\\dynamicproto-js.min.js",
+      "Confidence": "Medium",
+      "Size": 3169
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 63.61863578250733,
+      "Lines": 13297,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\build\\esm\\generated\\root.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\build\\esm\\generated\\root.js",
+      "Confidence": "Medium",
+      "Size": 859233
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 63.61886139730766,
+      "Lines": 13297,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\build\\esnext\\generated\\root.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\build\\esnext\\generated\\root.js",
+      "Confidence": "Medium",
+      "Size": 859236
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 63.618514062265,
+      "Lines": 13298,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\build\\src\\generated\\root.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\build\\src\\generated\\root.js",
+      "Confidence": "Medium",
+      "Size": 859296
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 29.944796098370862,
+      "Lines": 9637,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\protobuf.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\protobuf.js",
+      "Confidence": "Medium",
+      "Size": 298214
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 9965.5,
+      "Lines": 8,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\protobuf.min.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\protobuf.min.js",
+      "Confidence": "Medium",
+      "Size": 79731
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 30.41159198263756,
+      "Lines": 7833,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\light\\protobuf.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\light\\protobuf.js",
+      "Confidence": "Medium",
+      "Size": 246046
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 8517.875,
+      "Lines": 8,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\light\\protobuf.min.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\light\\protobuf.min.js",
+      "Confidence": "Medium",
+      "Size": 68150
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 28.04824561403509,
+      "Lines": 2736,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\minimal\\protobuf.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\minimal\\protobuf.js",
+      "Confidence": "Medium",
+      "Size": 79475
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 2638.5,
+      "Lines": 8,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\minimal\\protobuf.min.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\dist\\minimal\\protobuf.min.js",
+      "Confidence": "Medium",
+      "Size": 21115
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 32.35941530524506,
+      "Lines": 1163,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\ext\\descriptor\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\ext\\descriptor\\index.js",
+      "Confidence": "Medium",
+      "Size": 38796
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 31.484848484848484,
+      "Lines": 33,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\scripts\\postinstall.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\scripts\\postinstall.js",
+      "Confidence": "Medium",
+      "Size": 1071
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 29.157175398633257,
+      "Lines": 439,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\src\\util\\minimal.js",
+      "Path": "ectron_source_app\\node_modules\\@opentelemetry\\otlp-transformer\\node_modules\\protobufjs\\src\\util\\minimal.js",
+      "Confidence": "Medium",
+      "Size": 13238
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 46.34375,
+      "Lines": 32,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry\\core\\build\\cjs\\utils\\parameterize.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry\\core\\build\\cjs\\utils\\parameterize.js",
+      "Confidence": "Medium",
+      "Size": 1514
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 58.56410256410256,
+      "Lines": 39,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry\\core\\build\\cjs\\vendor\\escapeStringForRegex.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry\\core\\build\\cjs\\vendor\\escapeStringForRegex.js",
+      "Confidence": "Medium",
+      "Size": 2322
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 47.793103448275865,
+      "Lines": 29,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry\\core\\build\\esm\\utils\\parameterize.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry\\core\\build\\esm\\utils\\parameterize.js",
+      "Confidence": "Medium",
+      "Size": 1414
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 59.24324324324324,
+      "Lines": 37,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry\\core\\build\\esm\\vendor\\escapeStringForRegex.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry\\core\\build\\esm\\vendor\\escapeStringForRegex.js",
+      "Confidence": "Medium",
+      "Size": 2228
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 783.0,
+      "Lines": 4,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry\\electron\\esm\\utility\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry\\electron\\esm\\utility\\index.js",
+      "Confidence": "High",
+      "Size": 3135
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 11132.0,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry\\node-core\\build\\esm\\integrations\\anr\\worker-script.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry\\node-core\\build\\esm\\integrations\\anr\\worker-script.js",
+      "Confidence": "Medium",
+      "Size": 33398
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 1058.3333333333333,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry\\node-core\\build\\esm\\integrations\\local-variables\\worker-script.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry\\node-core\\build\\esm\\integrations\\local-variables\\worker-script.js",
+      "Confidence": "Medium",
+      "Size": 3177
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 34.903758020164986,
+      "Lines": 2182,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry-internal\\feedback\\build\\npm\\cjs\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry-internal\\feedback\\build\\npm\\cjs\\index.js",
+      "Confidence": "Medium",
+      "Size": 78341
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 34.92601102941177,
+      "Lines": 2176,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry-internal\\feedback\\build\\npm\\esm\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry-internal\\feedback\\build\\npm\\esm\\index.js",
+      "Confidence": "Medium",
+      "Size": 78174
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 29.101711684970812,
+      "Lines": 10107,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry-internal\\replay\\build\\npm\\cjs\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry-internal\\replay\\build\\npm\\cjs\\index.js",
+      "Confidence": "Medium",
+      "Size": 304243
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 5200.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry-internal\\replay\\build\\npm\\cjs\\worker-bundler.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry-internal\\replay\\build\\npm\\cjs\\worker-bundler.js",
+      "Confidence": "Medium",
+      "Size": 10401
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 29.14400237529691,
+      "Lines": 10104,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry-internal\\replay\\build\\npm\\esm\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry-internal\\replay\\build\\npm\\esm\\index.js",
+      "Confidence": "Medium",
+      "Size": 304580
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 5200.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry-internal\\replay\\build\\npm\\esm\\worker-bundler.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry-internal\\replay\\build\\npm\\esm\\worker-bundler.js",
+      "Confidence": "Medium",
+      "Size": 10401
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 29.517436380772857,
+      "Lines": 1061,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry-internal\\replay-canvas\\build\\npm\\cjs\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry-internal\\replay-canvas\\build\\npm\\cjs\\index.js",
+      "Confidence": "Medium",
+      "Size": 32378
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 29.490084985835693,
+      "Lines": 1059,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@sentry-internal\\replay-canvas\\build\\npm\\esm\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@sentry-internal\\replay-canvas\\build\\npm\\esm\\index.js",
+      "Confidence": "Medium",
+      "Size": 32288
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 13122.333333333334,
+      "Lines": 12,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@vscode\\iconv-lite-umd\\lib\\iconv-lite-umd.js",
+      "Path": "ectron_source_app\\node_modules\\@vscode\\iconv-lite-umd\\lib\\iconv-lite-umd.js",
+      "Confidence": "Medium",
+      "Size": 295295
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 259213.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@vscode\\vscode-languagedetection\\dist\\lib\\index.js",
+      "Path": "ectron_source_app\\node_modules\\@vscode\\vscode-languagedetection\\dist\\lib\\index.js",
+      "Confidence": "Medium",
+      "Size": 518430
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 6461.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-clipboard\\lib\\addon-clipboard.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-clipboard\\lib\\addon-clipboard.js",
+      "Confidence": "Medium",
+      "Size": 6461
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 39.63174603174603,
+      "Lines": 315,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-clipboard\\node_modules\\js-base64\\base64.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-clipboard\\node_modules\\js-base64\\base64.js",
+      "Confidence": "Medium",
+      "Size": 12800
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 39752.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-image\\lib\\addon-image.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-image\\lib\\addon-image.js",
+      "Confidence": "Medium",
+      "Size": 79506
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 44.42307692307692,
+      "Lines": 260,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-image\\out\\ImageAddon.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-image\\out\\ImageAddon.js",
+      "Confidence": "Medium",
+      "Size": 11809
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 97072.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-ligatures\\lib\\addon-ligatures.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-ligatures\\lib\\addon-ligatures.js",
+      "Confidence": "Medium",
+      "Size": 197429
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 1539.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-progress\\lib\\addon-progress.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-progress\\lib\\addon-progress.js",
+      "Confidence": "High",
+      "Size": 1539
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 51479.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-search\\lib\\addon-search.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-search\\lib\\addon-search.js",
+      "Confidence": "High",
+      "Size": 51479
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 16419.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-serialize\\lib\\addon-serialize.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-serialize\\lib\\addon-serialize.js",
+      "Confidence": "Medium",
+      "Size": 16419
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 52600.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-unicode11\\lib\\addon-unicode11.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-unicode11\\lib\\addon-unicode11.js",
+      "Confidence": "High",
+      "Size": 52600
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 247218.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\addon-webgl\\lib\\addon-webgl.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\addon-webgl\\lib\\addon-webgl.js",
+      "Confidence": "Medium",
+      "Size": 247647
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 181863.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\headless\\lib-headless\\xterm-headless.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\headless\\lib-headless\\xterm-headless.js",
+      "Confidence": "Medium",
+      "Size": 182045
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 486034.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\@xterm\\xterm\\lib\\xterm.js",
+      "Path": "ectron_source_app\\node_modules\\@xterm\\xterm\\lib\\xterm.js",
+      "Confidence": "Medium",
+      "Size": 486225
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 1873.6,
+      "Lines": 5,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\abort-controller\\dist\\abort-controller.umd.js",
+      "Path": "ectron_source_app\\node_modules\\abort-controller\\dist\\abort-controller.umd.js",
+      "Confidence": "Medium",
+      "Size": 9372
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 37.56745968385758,
+      "Lines": 6263,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\acorn\\dist\\acorn.js",
+      "Path": "ectron_source_app\\node_modules\\acorn\\dist\\acorn.js",
+      "Confidence": "Medium",
+      "Size": 241575
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 768.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\any-base\\dist\\any-base.min.js",
+      "Path": "ectron_source_app\\node_modules\\any-base\\dist\\any-base.min.js",
+      "Confidence": "High",
+      "Size": 1538
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 21804.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\archiver\\node_modules\\async\\dist\\async.min.js",
+      "Path": "ectron_source_app\\node_modules\\archiver\\node_modules\\async\\dist\\async.min.js",
+      "Confidence": "High",
+      "Size": 21804
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 26.695301376364498,
+      "Lines": 2107,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\archiver\\node_modules\\buffer\\index.js",
+      "Path": "ectron_source_app\\node_modules\\archiver\\node_modules\\buffer\\index.js",
+      "Confidence": "Medium",
+      "Size": 58353
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 25.717391304347824,
+      "Lines": 322,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\archiver\\node_modules\\tar-stream\\headers.js",
+      "Path": "ectron_source_app\\node_modules\\archiver\\node_modules\\tar-stream\\headers.js",
+      "Confidence": "Medium",
+      "Size": 8602
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 26.695301376364498,
+      "Lines": 2107,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\archiver-utils\\node_modules\\buffer\\index.js",
+      "Path": "ectron_source_app\\node_modules\\archiver-utils\\node_modules\\buffer\\index.js",
+      "Confidence": "Medium",
+      "Size": 58353
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 2192.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\base64-js\\base64js.min.js",
+      "Path": "ectron_source_app\\node_modules\\base64-js\\base64js.min.js",
+      "Confidence": "High",
+      "Size": 2192
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 26.556655665566556,
+      "Lines": 1818,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\buffer\\index.js",
+      "Path": "ectron_source_app\\node_modules\\buffer\\index.js",
+      "Confidence": "Medium",
+      "Size": 50097
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 700038.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\chrome-remote-interface\\chrome-remote-interface.js",
+      "Path": "ectron_source_app\\node_modules\\chrome-remote-interface\\chrome-remote-interface.js",
+      "Confidence": "Medium",
+      "Size": 700082
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 25.96153846153846,
+      "Lines": 312,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\chrome-remote-interface\\bin\\client.js",
+      "Path": "ectron_source_app\\node_modules\\chrome-remote-interface\\bin\\client.js",
+      "Confidence": "Medium",
+      "Size": 8411
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 36.198753462603875,
+      "Lines": 1444,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\cjs-module-lexer\\lexer.js",
+      "Path": "ectron_source_app\\node_modules\\cjs-module-lexer\\lexer.js",
+      "Confidence": "Medium",
+      "Size": 53714
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 33507.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\cjs-module-lexer\\dist\\lexer.js",
+      "Path": "ectron_source_app\\node_modules\\cjs-module-lexer\\dist\\lexer.js",
+      "Confidence": "High",
+      "Size": 33507
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 26.695301376364498,
+      "Lines": 2107,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\compress-commons\\node_modules\\buffer\\index.js",
+      "Path": "ectron_source_app\\node_modules\\compress-commons\\node_modules\\buffer\\index.js",
+      "Confidence": "Medium",
+      "Size": 58353
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 26.695301376364498,
+      "Lines": 2107,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\crc32-stream\\node_modules\\buffer\\index.js",
+      "Path": "ectron_source_app\\node_modules\\crc32-stream\\node_modules\\buffer\\index.js",
+      "Confidence": "Medium",
+      "Size": 58353
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 21.358974358974358,
+      "Lines": 273,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\debug\\src\\browser.js",
+      "Path": "ectron_source_app\\node_modules\\debug\\src\\browser.js",
+      "Confidence": "Medium",
+      "Size": 6103
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 16.91287878787879,
+      "Lines": 264,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\debug\\src\\node.js",
+      "Path": "ectron_source_app\\node_modules\\debug\\src\\node.js",
+      "Confidence": "Medium",
+      "Size": 4728
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 1468.5714285714287,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\emoji-regex\\index.js",
+      "Path": "ectron_source_app\\node_modules\\emoji-regex\\index.js",
+      "Confidence": "Medium",
+      "Size": 10286
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 1468.7142857142858,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\emoji-regex\\text.js",
+      "Path": "ectron_source_app\\node_modules\\emoji-regex\\text.js",
+      "Confidence": "Medium",
+      "Size": 10287
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 1585.4285714285713,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\emoji-regex\\es2015\\index.js",
+      "Path": "ectron_source_app\\node_modules\\emoji-regex\\es2015\\index.js",
+      "Confidence": "Medium",
+      "Size": 11104
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 1585.5714285714287,
+      "Lines": 7,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\emoji-regex\\es2015\\text.js",
+      "Path": "ectron_source_app\\node_modules\\emoji-regex\\es2015\\text.js",
+      "Confidence": "Medium",
+      "Size": 11105
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 41.26620956923536,
+      "Lines": 6709,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\esprima\\dist\\esprima.js",
+      "Path": "ectron_source_app\\node_modules\\esprima\\dist\\esprima.js",
+      "Confidence": "Medium",
+      "Size": 283567
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 1182.6666666666667,
+      "Lines": 6,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\event-target-shim\\dist\\event-target-shim.umd.js",
+      "Path": "ectron_source_app\\node_modules\\event-target-shim\\dist\\event-target-shim.umd.js",
+      "Confidence": "Medium",
+      "Size": 7101
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.943396226415096,
+      "Lines": 106,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\eventsource-parser\\dist\\index.js",
+      "Path": "ectron_source_app\\node_modules\\eventsource-parser\\dist\\index.js",
+      "Confidence": "Medium",
+      "Size": 3809
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 20.846521145975444,
+      "Lines": 1466,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\file-type\\core.js",
+      "Path": "ectron_source_app\\node_modules\\file-type\\core.js",
+      "Confidence": "Medium",
+      "Size": 32026
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 26.678981527708437,
+      "Lines": 4006,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\gray-matter\\node_modules\\js-yaml\\dist\\js-yaml.js",
+      "Path": "ectron_source_app\\node_modules\\gray-matter\\node_modules\\js-yaml\\dist\\js-yaml.js",
+      "Confidence": "Medium",
+      "Size": 110971
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 21070.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\gray-matter\\node_modules\\js-yaml\\dist\\js-yaml.min.js",
+      "Path": "ectron_source_app\\node_modules\\gray-matter\\node_modules\\js-yaml\\dist\\js-yaml.min.js",
+      "Confidence": "Medium",
+      "Size": 42145
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 26.015051173991573,
+      "Lines": 1661,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\gray-matter\\node_modules\\js-yaml\\lib\\js-yaml\\loader.js",
+      "Path": "ectron_source_app\\node_modules\\gray-matter\\node_modules\\js-yaml\\lib\\js-yaml\\loader.js",
+      "Confidence": "Medium",
+      "Size": 44871
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 19.2987012987013,
+      "Lines": 77,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\gray-matter\\node_modules\\js-yaml\\lib\\js-yaml\\mark.js",
+      "Path": "ectron_source_app\\node_modules\\gray-matter\\node_modules\\js-yaml\\lib\\js-yaml\\mark.js",
+      "Confidence": "Medium",
+      "Size": 1562
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 23.72222222222222,
+      "Lines": 180,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\iconv-lite\\encodings\\sbcs-data.js",
+      "Path": "ectron_source_app\\node_modules\\iconv-lite\\encodings\\sbcs-data.js",
+      "Confidence": "Medium",
+      "Size": 5116
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 1264.6666666666667,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\ip-address\\node_modules\\sprintf-js\\dist\\sprintf.min.js",
+      "Path": "ectron_source_app\\node_modules\\ip-address\\node_modules\\sprintf-js\\dist\\sprintf.min.js",
+      "Confidence": "Medium",
+      "Size": 3799
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 38.875,
+      "Lines": 232,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\ip-address\\node_modules\\sprintf-js\\src\\sprintf.js",
+      "Path": "ectron_source_app\\node_modules\\ip-address\\node_modules\\sprintf-js\\src\\sprintf.js",
+      "Confidence": "Medium",
+      "Size": 9250
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 3082.6991525423728,
+      "Lines": 236,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\jimp\\dist\\browser\\index.js",
+      "Path": "ectron_source_app\\node_modules\\jimp\\dist\\browser\\index.js",
+      "Confidence": "Medium",
+      "Size": 727760
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.236111111111114,
+      "Lines": 1152,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\jpeg-js\\lib\\decoder.js",
+      "Path": "ectron_source_app\\node_modules\\jpeg-js\\lib\\decoder.js",
+      "Confidence": "Medium",
+      "Size": 40593
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 501.525,
+      "Lines": 680,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\jschardet\\dist\\jschardet.min.js",
+      "Path": "ectron_source_app\\node_modules\\jschardet\\dist\\jschardet.min.js",
+      "Confidence": "Medium",
+      "Size": 341716
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 24.3125,
+      "Lines": 16,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\lodash\\_asciiWords.js",
+      "Path": "ectron_source_app\\node_modules\\lodash\\_asciiWords.js",
+      "Confidence": "Medium",
+      "Size": 404
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 46.388888888888886,
+      "Lines": 72,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\lodash\\_deburrLetter.js",
+      "Path": "ectron_source_app\\node_modules\\lodash\\_deburrLetter.js",
+      "Confidence": "Medium",
+      "Size": 3411
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 42.72857142857143,
+      "Lines": 70,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\lodash\\_unicodeWords.js",
+      "Path": "ectron_source_app\\node_modules\\lodash\\_unicodeWords.js",
+      "Confidence": "Medium",
+      "Size": 3060
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 436.41379310344826,
+      "Lines": 29,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\lodash\\core.min.js",
+      "Path": "ectron_source_app\\node_modules\\lodash\\core.min.js",
+      "Confidence": "Medium",
+      "Size": 12684
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.130434782608695,
+      "Lines": 46,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\lodash\\deburr.js",
+      "Path": "ectron_source_app\\node_modules\\lodash\\deburr.js",
+      "Confidence": "Medium",
+      "Size": 1617
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 30.615165601394537,
+      "Lines": 17210,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\lodash\\lodash.js",
+      "Path": "ectron_source_app\\node_modules\\lodash\\lodash.js",
+      "Confidence": "Medium",
+      "Size": 544098
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 520.5428571428571,
+      "Lines": 140,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\lodash\\lodash.min.js",
+      "Path": "ectron_source_app\\node_modules\\lodash\\lodash.min.js",
+      "Confidence": "Medium",
+      "Size": 73015
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 8506.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\lru-cache\\dist\\commonjs\\index.min.js",
+      "Path": "ectron_source_app\\node_modules\\lru-cache\\dist\\commonjs\\index.min.js",
+      "Confidence": "High",
+      "Size": 17014
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 8459.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\lru-cache\\dist\\esm\\index.min.js",
+      "Path": "ectron_source_app\\node_modules\\lru-cache\\dist\\esm\\index.min.js",
+      "Confidence": "High",
+      "Size": 16920
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 3265.75,
+      "Lines": 4,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\multiformats\\dist\\index.min.js",
+      "Path": "ectron_source_app\\node_modules\\multiformats\\dist\\index.min.js",
+      "Confidence": "High",
+      "Size": 13066
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 47.125,
+      "Lines": 8,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\multiformats\\dist\\src\\bases\\identity.js",
+      "Path": "ectron_source_app\\node_modules\\multiformats\\dist\\src\\bases\\identity.js",
+      "Confidence": "Medium",
+      "Size": 384
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 24.504499437570303,
+      "Lines": 1778,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\node-fetch\\lib\\index.es.js",
+      "Path": "ectron_source_app\\node_modules\\node-fetch\\lib\\index.es.js",
+      "Confidence": "Medium",
+      "Size": 45346
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 24.60178970917226,
+      "Lines": 1788,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\node-fetch\\lib\\index.js",
+      "Path": "ectron_source_app\\node_modules\\node-fetch\\lib\\index.js",
+      "Confidence": "Medium",
+      "Size": 45775
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 38.957671957671955,
+      "Lines": 189,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\node-pty\\lib\\terminal.js",
+      "Path": "ectron_source_app\\node_modules\\node-pty\\lib\\terminal.js",
+      "Confidence": "Medium",
+      "Size": 7551
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 20.767441860465116,
+      "Lines": 43,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\once\\once.js",
+      "Path": "ectron_source_app\\node_modules\\once\\once.js",
+      "Confidence": "Medium",
+      "Size": 935
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 30.71646708993008,
+      "Lines": 12443,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\opentype.js\\dist\\opentype.js",
+      "Path": "ectron_source_app\\node_modules\\opentype.js\\dist\\opentype.js",
+      "Confidence": "Medium",
+      "Size": 396577
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 144257.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\opentype.js\\dist\\opentype.min.js",
+      "Path": "ectron_source_app\\node_modules\\opentype.js\\dist\\opentype.min.js",
+      "Confidence": "Medium",
+      "Size": 145904
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 13751.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\pako\\dist\\pako_deflate.min.js",
+      "Path": "ectron_source_app\\node_modules\\pako\\dist\\pako_deflate.min.js",
+      "Confidence": "Medium",
+      "Size": 27503
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 11340.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\pako\\dist\\pako_inflate.min.js",
+      "Path": "ectron_source_app\\node_modules\\pako\\dist\\pako_inflate.min.js",
+      "Confidence": "Medium",
+      "Size": 22682
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 22993.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\pako\\dist\\pako.min.js",
+      "Path": "ectron_source_app\\node_modules\\pako\\dist\\pako.min.js",
+      "Confidence": "Medium",
+      "Size": 45988
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 8608.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\path-scurry\\node_modules\\lru-cache\\dist\\commonjs\\index.min.js",
+      "Path": "ectron_source_app\\node_modules\\path-scurry\\node_modules\\lru-cache\\dist\\commonjs\\index.min.js",
+      "Confidence": "High",
+      "Size": 17218
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 8561.5,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\path-scurry\\node_modules\\lru-cache\\dist\\esm\\index.min.js",
+      "Path": "ectron_source_app\\node_modules\\path-scurry\\node_modules\\lru-cache\\dist\\esm\\index.min.js",
+      "Confidence": "High",
+      "Size": 17124
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 23.716666666666665,
+      "Lines": 180,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\picomatch\\lib\\constants.js",
+      "Path": "ectron_source_app\\node_modules\\picomatch\\lib\\constants.js",
+      "Confidence": "Medium",
+      "Size": 4448
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 29.231648162121374,
+      "Lines": 18554,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\pixelmatch\\node_modules\\pngjs\\browser.js",
+      "Path": "ectron_source_app\\node_modules\\pixelmatch\\node_modules\\pngjs\\browser.js",
+      "Confidence": "Medium",
+      "Size": 560917
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 29.16496365743179,
+      "Lines": 18986,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\pngjs\\browser.js",
+      "Path": "ectron_source_app\\node_modules\\pngjs\\browser.js",
+      "Confidence": "Medium",
+      "Size": 572711
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 42.64,
+      "Lines": 25,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\react\\cjs\\react-compiler-runtime.development.js",
+      "Path": "ectron_source_app\\node_modules\\react\\cjs\\react-compiler-runtime.development.js",
+      "Confidence": "Medium",
+      "Size": 1090
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 26.294117647058822,
+      "Lines": 17,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\react\\cjs\\react-compiler-runtime.production.js",
+      "Path": "ectron_source_app\\node_modules\\react\\cjs\\react-compiler-runtime.production.js",
+      "Confidence": "Medium",
+      "Size": 463
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 26.235294117647058,
+      "Lines": 17,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\react\\cjs\\react-compiler-runtime.profiling.js",
+      "Path": "ectron_source_app\\node_modules\\react\\cjs\\react-compiler-runtime.profiling.js",
+      "Confidence": "Medium",
+      "Size": 462
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 26.695301376364498,
+      "Lines": 2107,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\readable-web-to-node-stream\\node_modules\\buffer\\index.js",
+      "Path": "ectron_source_app\\node_modules\\readable-web-to-node-stream\\node_modules\\buffer\\index.js",
+      "Confidence": "Medium",
+      "Size": 58353
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 2063.0,
+      "Lines": 2,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\simple-xml-to-json\\lib\\simpleXmlToJson.min.js",
+      "Path": "ectron_source_app\\node_modules\\simple-xml-to-json\\lib\\simpleXmlToJson.min.js",
+      "Confidence": "Medium",
+      "Size": 4127
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 1089.0,
+      "Lines": 3,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\sprintf-js\\dist\\sprintf.min.js",
+      "Path": "ectron_source_app\\node_modules\\sprintf-js\\dist\\sprintf.min.js",
+      "Confidence": "Medium",
+      "Size": 3269
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 37.81818181818182,
+      "Lines": 209,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\sprintf-js\\src\\sprintf.js",
+      "Path": "ectron_source_app\\node_modules\\sprintf-js\\src\\sprintf.js",
+      "Confidence": "Medium",
+      "Size": 8112
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 25.925675675675677,
+      "Lines": 296,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\tar-stream\\headers.js",
+      "Path": "ectron_source_app\\node_modules\\tar-stream\\headers.js",
+      "Confidence": "Medium",
+      "Size": 7969
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 9142.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\tas-client-umd\\lib\\tas-client-umd.js",
+      "Path": "ectron_source_app\\node_modules\\tas-client-umd\\lib\\tas-client-umd.js",
+      "Confidence": "High",
+      "Size": 9142
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 3120.2,
+      "Lines": 5,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\tinycolor2\\dist\\tinycolor-min.js",
+      "Path": "ectron_source_app\\node_modules\\tinycolor2\\dist\\tinycolor-min.js",
+      "Confidence": "Medium",
+      "Size": 15605
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 25.545226130653266,
+      "Lines": 398,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\undici\\lib\\core\\request.js",
+      "Path": "ectron_source_app\\node_modules\\undici\\lib\\core\\request.js",
+      "Confidence": "Medium",
+      "Size": 10564
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 23.911281489594742,
+      "Lines": 913,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\undici\\lib\\core\\util.js",
+      "Path": "ectron_source_app\\node_modules\\undici\\lib\\core\\util.js",
+      "Confidence": "Medium",
+      "Size": 22743
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 31.362173038229376,
+      "Lines": 497,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\undici\\lib\\llhttp\\constants.js",
+      "Path": "ectron_source_app\\node_modules\\undici\\lib\\llhttp\\constants.js",
+      "Confidence": "Medium",
+      "Size": 16083
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 4354.5,
+      "Lines": 16,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\undici\\lib\\llhttp\\llhttp_simd-wasm.js",
+      "Path": "ectron_source_app\\node_modules\\undici\\lib\\llhttp\\llhttp_simd-wasm.js",
+      "Confidence": "High",
+      "Size": 69687
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 4352.25,
+      "Lines": 16,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\undici\\lib\\llhttp\\llhttp-wasm.js",
+      "Path": "ectron_source_app\\node_modules\\undici\\lib\\llhttp\\llhttp-wasm.js",
+      "Confidence": "High",
+      "Size": 69651
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 30.150308468872687,
+      "Lines": 1783,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\undici\\lib\\web\\fetch\\util.js",
+      "Path": "ectron_source_app\\node_modules\\undici\\lib\\web\\fetch\\util.js",
+      "Confidence": "Medium",
+      "Size": 55692
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 57.0582171012735,
+      "Lines": 1649,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\utif2\\UTIF.js",
+      "Path": "ectron_source_app\\node_modules\\utif2\\UTIF.js",
+      "Confidence": "Medium",
+      "Size": 95737
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 11728.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\vscode-oniguruma\\release\\main.js",
+      "Path": "ectron_source_app\\node_modules\\vscode-oniguruma\\release\\main.js",
+      "Confidence": "Medium",
+      "Size": 11728
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 58034.0,
+      "Lines": 1,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\vscode-textmate\\release\\main.js",
+      "Path": "ectron_source_app\\node_modules\\vscode-textmate\\release\\main.js",
+      "Confidence": "Medium",
+      "Size": 58046
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 32.1758034026465,
+      "Lines": 529,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\xmlbuilder\\lib\\XMLDocumentCB.js",
+      "Path": "ectron_source_app\\node_modules\\xmlbuilder\\lib\\XMLDocumentCB.js",
+      "Confidence": "Medium",
+      "Size": 17549
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 30.91304347826087,
+      "Lines": 299,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\xmlbuilder\\lib\\XMLElement.js",
+      "Path": "ectron_source_app\\node_modules\\xmlbuilder\\lib\\XMLElement.js",
+      "Confidence": "Medium",
+      "Size": 9541
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 29.734096692111958,
+      "Lines": 786,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\xmlbuilder\\lib\\XMLNode.js",
+      "Path": "ectron_source_app\\node_modules\\xmlbuilder\\lib\\XMLNode.js",
+      "Confidence": "Medium",
+      "Size": 24156
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 29.13278008298755,
+      "Lines": 241,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\xmlbuilder\\lib\\XMLStringifier.js",
+      "Path": "ectron_source_app\\node_modules\\xmlbuilder\\lib\\XMLStringifier.js",
+      "Confidence": "Medium",
+      "Size": 7261
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 31.602678571428573,
+      "Lines": 224,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\browser\\dist\\compose\\resolve-flow-scalar.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\browser\\dist\\compose\\resolve-flow-scalar.js",
+      "Confidence": "Medium",
+      "Size": 7302
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 30.625,
+      "Lines": 72,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\browser\\dist\\doc\\anchors.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\browser\\dist\\doc\\anchors.js",
+      "Confidence": "Medium",
+      "Size": 2276
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 28.161616161616163,
+      "Lines": 99,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\browser\\dist\\parse\\cst.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\browser\\dist\\parse\\cst.js",
+      "Confidence": "Medium",
+      "Size": 2886
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 32.513927576601674,
+      "Lines": 718,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\browser\\dist\\parse\\lexer.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\browser\\dist\\parse\\lexer.js",
+      "Confidence": "Medium",
+      "Size": 24062
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 38.06528189910979,
+      "Lines": 337,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\browser\\dist\\stringify\\stringifyString.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\browser\\dist\\stringify\\stringifyString.js",
+      "Confidence": "Medium",
+      "Size": 13164
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 30.666666666666668,
+      "Lines": 135,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\dist\\test-events.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\dist\\test-events.js",
+      "Confidence": "Medium",
+      "Size": 4274
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 31.588495575221238,
+      "Lines": 226,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\dist\\compose\\resolve-flow-scalar.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\dist\\compose\\resolve-flow-scalar.js",
+      "Confidence": "Medium",
+      "Size": 7364
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 30.0,
+      "Lines": 77,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\dist\\doc\\anchors.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\dist\\doc\\anchors.js",
+      "Confidence": "Medium",
+      "Size": 2386
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 27.699115044247787,
+      "Lines": 113,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\dist\\parse\\cst.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\dist\\parse\\cst.js",
+      "Confidence": "Medium",
+      "Size": 3242
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 32.43611111111111,
+      "Lines": 720,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\dist\\parse\\lexer.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\dist\\parse\\lexer.js",
+      "Confidence": "Medium",
+      "Size": 24073
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 38.36873156342183,
+      "Lines": 339,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\yaml\\dist\\stringify\\stringifyString.js",
+      "Path": "ectron_source_app\\node_modules\\yaml\\dist\\stringify\\stringifyString.js",
+      "Confidence": "Medium",
+      "Size": 13345
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 26.695301376364498,
+      "Lines": 2107,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\zip-stream\\node_modules\\buffer\\index.js",
+      "Path": "ectron_source_app\\node_modules\\zip-stream\\node_modules\\buffer\\index.js",
+      "Confidence": "Medium",
+      "Size": 58353
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 34.5159632034632,
+      "Lines": 3696,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\node_modules\\zod\\v3\\types.js",
+      "Path": "ectron_source_app\\node_modules\\zod\\v3\\types.js",
+      "Confidence": "Medium",
+      "Size": 131268
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 796.6666666666666,
+      "Lines": 24,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\bootstrap-fork.js",
+      "Path": "ectron_source_app\\out\\bootstrap-fork.js",
+      "Confidence": "Medium",
+      "Size": 19143
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 4295.0,
+      "Lines": 49,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\cli.js",
+      "Path": "ectron_source_app\\out\\cli.js",
+      "Confidence": "Medium",
+      "Size": 210503
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 4659.05,
+      "Lines": 280,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\main.js",
+      "Path": "ectron_source_app\\out\\main.js",
+      "Confidence": "Medium",
+      "Size": 1304813
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 449.1818181818182,
+      "Lines": 22,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\code\\electron-sandbox\\extensionMonitor\\extensionMonitor.js",
+      "Path": "ectron_source_app\\out\\vs\\code\\electron-sandbox\\extensionMonitor\\extensionMonitor.js",
+      "Confidence": "Medium",
+      "Size": 9903
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 2258.1008403361343,
+      "Lines": 119,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\code\\electron-sandbox\\extensionMonitor\\extensionMonitorMain.js",
+      "Path": "ectron_source_app\\out\\vs\\code\\electron-sandbox\\extensionMonitor\\extensionMonitorMain.js",
+      "Confidence": "Medium",
+      "Size": 268832
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 449.0,
+      "Lines": 22,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\code\\electron-sandbox\\processExplorer\\processExplorer.js",
+      "Path": "ectron_source_app\\out\\vs\\code\\electron-sandbox\\processExplorer\\processExplorer.js",
+      "Confidence": "Medium",
+      "Size": 9899
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 3591.7830687830688,
+      "Lines": 189,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\code\\electron-sandbox\\processExplorer\\processExplorerMain.js",
+      "Path": "ectron_source_app\\out\\vs\\code\\electron-sandbox\\processExplorer\\processExplorerMain.js",
+      "Confidence": "Medium",
+      "Size": 679035
+    },
+    {
+      "Type": "Variable Obfuscation",
+      "AvgLineLength": 717.2272727272727,
+      "Lines": 22,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\code\\electron-sandbox\\workbench\\workbench.js",
+      "Path": "ectron_source_app\\out\\vs\\code\\electron-sandbox\\workbench\\workbench.js",
+      "Confidence": "Medium",
+      "Size": 15800
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 8600.467741935483,
+      "Lines": 124,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\code\\electron-utility\\sharedProcess\\sharedProcessMain.js",
+      "Path": "ectron_source_app\\out\\vs\\code\\electron-utility\\sharedProcess\\sharedProcessMain.js",
+      "Confidence": "Medium",
+      "Size": 1066581
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 8458.234567901234,
+      "Lines": 81,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\code\\node\\cliProcessMain.js",
+      "Path": "ectron_source_app\\out\\vs\\code\\node\\cliProcessMain.js",
+      "Confidence": "Medium",
+      "Size": 685197
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 8239.064516129032,
+      "Lines": 62,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\editor\\common\\services\\editorWebWorkerMain.js",
+      "Path": "ectron_source_app\\out\\vs\\editor\\common\\services\\editorWebWorkerMain.js",
+      "Confidence": "Medium",
+      "Size": 510883
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 4656.851063829788,
+      "Lines": 47,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\platform\\files\\node\\watcher\\watcherMain.js",
+      "Path": "ectron_source_app\\out\\vs\\platform\\files\\node\\watcher\\watcherMain.js",
+      "Confidence": "Medium",
+      "Size": 218918
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 4179.606060606061,
+      "Lines": 33,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\platform\\profiling\\electron-sandbox\\profileAnalysisWorkerMain.js",
+      "Path": "ectron_source_app\\out\\vs\\platform\\profiling\\electron-sandbox\\profileAnalysisWorkerMain.js",
+      "Confidence": "Medium",
+      "Size": 137959
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 6611.7962962962965,
+      "Lines": 54,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\platform\\terminal\\node\\ptyHostMain.js",
+      "Path": "ectron_source_app\\out\\vs\\platform\\terminal\\node\\ptyHostMain.js",
+      "Confidence": "Medium",
+      "Size": 357090
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 1209.8204917808594,
+      "Lines": 36561,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\workbench.desktop.main.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\workbench.desktop.main.js",
+      "Confidence": "Medium",
+      "Size": 44269006
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 6530.531065088758,
+      "Lines": 676,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\api\\node\\extensionHostProcess.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\api\\node\\extensionHostProcess.js",
+      "Confidence": "Medium",
+      "Size": 4415314
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 20690.729591836734,
+      "Lines": 196,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\api\\worker\\extensionHostWorkerMain.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\api\\worker\\extensionHostWorkerMain.js",
+      "Confidence": "Medium",
+      "Size": 4055578
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 4399.0,
+      "Lines": 35,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\contrib\\debug\\node\\telemetryApp.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\contrib\\debug\\node\\telemetryApp.js",
+      "Confidence": "Medium",
+      "Size": 153999
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 4465.474576271186,
+      "Lines": 59,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\contrib\\notebook\\common\\services\\notebookWebWorkerMain.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\contrib\\notebook\\common\\services\\notebookWebWorkerMain.js",
+      "Confidence": "Medium",
+      "Size": 263521
+    },
+    {
+      "Type": "String Obfuscation",
+      "AvgLineLength": 3917.74358974359,
+      "Lines": 39,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\contrib\\output\\common\\outputLinkComputerMain.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\contrib\\output\\common\\outputLinkComputerMain.js",
+      "Confidence": "Medium",
+      "Size": 152830
+    },
+    {
+      "Type": "Minified",
+      "AvgLineLength": 826.5,
+      "Lines": 8,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\contrib\\webview\\browser\\pre\\service-worker.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\contrib\\webview\\browser\\pre\\service-worker.js",
+      "Confidence": "High",
+      "Size": 6619
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 4055.2051282051284,
+      "Lines": 39,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\services\\languageDetection\\browser\\languageDetectionWebWorkerMain.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\services\\languageDetection\\browser\\languageDetectionWebWorkerMain.js",
+      "Confidence": "Medium",
+      "Size": 158191
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 3844.951219512195,
+      "Lines": 41,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\services\\search\\worker\\localFileSearchMain.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\services\\search\\worker\\localFileSearchMain.js",
+      "Confidence": "Medium",
+      "Size": 157683
+    },
+    {
+      "Type": "Control Flow Obfuscation",
+      "AvgLineLength": 6092.238095238095,
+      "Lines": 42,
+      "FullPath": "D:\\lazy init ide\\Cursor_Source_Extracted\\electron_source_app\\out\\vs\\workbench\\services\\textMate\\browser\\backgroundTokenization\\worker\\textMateTokenizationWorker.workerMain.js",
+      "Path": "ectron_source_app\\out\\vs\\workbench\\services\\textMate\\browser\\backgroundTokenization\\worker\\textMateTokenizationWorker.workerMain.js",
+      "Confidence": "Medium",
+      "Size": 255915
+    }
+  ]
+}

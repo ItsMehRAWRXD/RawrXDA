@@ -1,0 +1,15 @@
+{
+  "target": "codepen",
+  "name": "CodePen",
+  "languages": [
+    "html",
+    "css",
+    "javascript",
+    "typescript"
+  ],
+  "endpoints": [
+    "/api/v1/pens",
+    "/api/v1/compile"
+  ],
+  "reverse_engineered": "2025-09-25T21:43:56.549922"
+}

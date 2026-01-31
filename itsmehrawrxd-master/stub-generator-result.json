@@ -1,0 +1,1 @@
+{"success":true,"data":{"id":"7ef52b68-1b50-40da-b070-29b81ae78e1c","target":"test-advanced-data.txt","stubType":"cpp","encryptionMethod":"aes-256-gcm","outputPath":"test-advanced-data_aes-256-gcm_stub.cpp","payloadSize":43,"encryptedSize":71,"features":{"antiDebug":true,"antiVM":true,"antiSandbox":true},"timestamp":"2025-09-20T00:56:56.567Z","duration":1}}

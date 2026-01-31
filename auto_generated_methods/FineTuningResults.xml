@@ -1,0 +1,52 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>System.Collections.Hashtable</T>
+      <T>System.Object</T>
+    </TN>
+    <DCT>
+      <En>
+        <S N="Key">Errors</S>
+        <Obj N="Value" RefId="1">
+          <TN RefId="1">
+            <T>System.Object[]</T>
+            <T>System.Array</T>
+            <T>System.Object</T>
+          </TN>
+          <LST />
+        </Obj>
+      </En>
+      <En>
+        <S N="Key">HighPriorityOptimizations</S>
+        <I32 N="Value">29</I32>
+      </En>
+      <En>
+        <S N="Key">LowPriorityOptimizations</S>
+        <I32 N="Value">0</I32>
+      </En>
+      <En>
+        <S N="Key">Warnings</S>
+        <Obj N="Value" RefId="2">
+          <TNRef RefId="1" />
+          <LST />
+        </Obj>
+      </En>
+      <En>
+        <S N="Key">IssuesFixed</S>
+        <I32 N="Value">30</I32>
+      </En>
+      <En>
+        <S N="Key">CriticalFixesApplied</S>
+        <I32 N="Value">1</I32>
+      </En>
+      <En>
+        <S N="Key">ModulesProcessed</S>
+        <I32 N="Value">23</I32>
+      </En>
+      <En>
+        <S N="Key">MediumPriorityOptimizations</S>
+        <I32 N="Value">0</I32>
+      </En>
+    </DCT>
+  </Obj>
+</Objs>

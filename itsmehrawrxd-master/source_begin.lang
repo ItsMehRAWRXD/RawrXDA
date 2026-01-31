@@ -1,0 +1,13 @@
+// Filename: source_begin.lang
+// This file serves as the input to our self-built compiler.
+// It defines a simple "main" function that performs a calculation.
+
+FUNC main()
+    LET a = 5
+    LET b = 10
+    LET result = a + b
+    PRINT result
+END
+
+// The goal of our custom compiler will be to parse this code and
+// translate it into assembly for a target machine.

@@ -1,0 +1,37 @@
+; demo_executable.eon  
+; This file will become demo_executable.exe when compiled!
+; Just double-click to run - no CLI needed!
+
+module DemoExecutable
+
+; === Simple Demo Program ===
+function main() -> int {
+    println("Hello! This .eon file is now an executable!")
+    println("")
+    println("Features:")
+    println("- No CLI needed")
+    println("- Runs like a .exe file") 
+    println("- Can be distributed anywhere")
+    println("- Double-click to run")
+    println("")
+    println("This proves .eon files can be true executables!")
+    
+    ; Keep window open
+    println("Press any key to exit...")
+    readKey()
+    
+    return 0
+}
+
+function readKey() {
+    ; Wait for user input before closing
+    ifdef WINDOWS
+        system("pause >nul")
+    endif
+    
+    ifdef LINUX || MACOS
+        system("read -n1 -r -p ''")
+    endif
+}
+
+export main

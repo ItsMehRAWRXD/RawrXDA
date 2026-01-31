@@ -1,0 +1,114 @@
+{
+  "Metadata": {
+    "Tool": "Scrape-Cursor-Accurate.ps1",
+    "Version": "1.0",
+    "GeneratedAt": "2026-01-24 11:12:28"
+  },
+  "Summary": {
+    "Categories": 5,
+    "TotalFeatures": 77,
+    "Sources": [
+      "Website Scraping",
+      "Installation Analysis"
+    ]
+  },
+  "Changelog": null,
+  "Features": {
+    "IntegrationFeatures": [
+      "Docker Support",
+      "Git Integration",
+      "GitHub Copilot Integration",
+      "JavaScript Debugger",
+      "JavaScript Debugger Companion Extension",
+      "Live Share",
+      "Remote Development",
+      "Task Runner Integration",
+      "Terminal Integration"
+    ],
+    "CoreFeatures": [
+      "%displayName%",
+      "1-click import",
+      "Across the entire development process",
+      "Agent",
+      "AI-Powered Code Editor",
+      "Changelog",
+      "CLI",
+      "Command Palette",
+      "Company",
+      "Connect",
+      "Cursor",
+      "Cursor Browser Automation",
+      "Cursor NDJSON Ingest",
+      "cursor-themes",
+      "Debugging Support",
+      "Electron-based Application",
+      "Emmet",
+      "Extension Marketplace",
+      "File Explorer",
+      "Grunt support for VS Code",
+      "IDE",
+      "Integrated Terminal",
+      "Jupyter Keymap",
+      "Legal",
+      "MCP servers",
+      "Multi-cursor Editing",
+      "Multi-line edits",
+      "Powerful, yet flexible",
+      "Product",
+      "Resources",
+      "Review with Bugbot",
+      "Rules &amp; memories",
+      "Scoped changes",
+      "Search and Replace",
+      "Settings Sync",
+      "Skills",
+      "Smart rewrites",
+      "Source Control Integration",
+      "Split Editor Layout",
+      "Tab",
+      "Tab, Tab, Tab",
+      "Table Visualizer for JavaScript Profiles",
+      "Top model access",
+      "Try Cursor now.",
+      "Version 2.4.21",
+      "Worktree TextMate Syntax"
+    ],
+    "EditorFeatures": [
+      "Auto-indentation",
+      "Bracket Matching",
+      "Code Folding",
+      "Code Formatting",
+      "Codebase understanding",
+      "IntelliSense",
+      "Linting",
+      "Snippet Support",
+      "Syntax Highlighting"
+    ],
+    "AIFeatures": [
+      "AI Bug Detection",
+      "AI Chat Integration",
+      "AI Code Completion",
+      "AI Code Explanation",
+      "AI Code Generation",
+      "AI Code Review",
+      "AI Refactoring Suggestions"
+    ],
+    "AdvancedFeatures": [
+      "API Key Management",
+      "Custom AI Model Integration",
+      "MCP (Model Context Protocol) Support",
+      "Offline Mode",
+      "Proxy Support",
+      "Telemetry Controls"
+    ]
+  },
+  "Installation": {
+    "Modified": "2026-01-22T17:37:28-05:00",
+    "Version": "2.4.21",
+    "Directory": "C:\\Users\\HiH8e\\AppData\\Local\\Programs\\cursor",
+    "Size": 210966504,
+    "Created": "2026-01-22T20:33:31.98748-05:00",
+    "ProductVersion": "2.4.21",
+    "Executable": "C:\\Users\\HiH8e\\AppData\\Local\\Programs\\cursor\\Cursor.exe"
+  }
+}

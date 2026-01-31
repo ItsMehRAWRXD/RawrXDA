@@ -1,0 +1,587 @@
+; eon_native_gui.eon
+; Native GUI Framework built from scratch in EON ASM
+; Zero dependencies - direct Win32/X11/Cocoa calls
+; Our own tkinter-like API but completely native
+
+module NativeGUI
+
+; === Platform Detection ===
+ifdef WINDOWS
+    import win32.user32
+    import win32.gdi32  
+    import win32.kernel32
+endif
+
+ifdef LINUX
+    import x11.xlib
+    import x11.xcb
+endif
+
+ifdef MACOS
+    import cocoa.foundation
+    import cocoa.appkit
+endif
+
+; === Core GUI Classes ===
+class Window {
+    var handle: qword
+    var title: string
+    var width: int
+    var height: int
+    var x: int
+    var y: int
+    var is_visible: bool
+    var children: Array<Widget>
+    var background_color: Color
+    
+    function init(title: string, width: int, height: int) {
+        this.title = title
+        this.width = width
+        this.height = height
+        this.x = 100
+        this.y = 100
+        this.is_visible = false
+        this.children = Array<Widget>()
+        this.background_color = Color(240, 240, 240) ; Light gray
+        
+        createNativeWindow()
+    }
+    
+    function createNativeWindow() {
+        ifdef WINDOWS
+            createWin32Window()
+        endif
+        
+        ifdef LINUX
+            createX11Window()
+        endif
+        
+        ifdef MACOS
+            createCocoaWindow()
+        endif
+    }
+    
+    ifdef WINDOWS
+    function createWin32Window() {
+        ; Register window class
+        var wc: WNDCLASSEX
+        wc.cbSize = sizeof(WNDCLASSEX)
+        wc.style = CS_HREDRAW | CS_VREDRAW
+        wc.lpfnWndProc = cast<WNDPROC>(&windowProc)
+        wc.hInstance = GetModuleHandle(null)
+        wc.hIcon = LoadIcon(null, IDI_APPLICATION)
+        wc.hCursor = LoadCursor(null, IDC_ARROW)
+        wc.hbrBackground = CreateSolidBrush(RGB(background_color.r, background_color.g, background_color.b))
+        wc.lpszClassName = "EONWindow"
+        
+        RegisterClassEx(&wc)
+        
+        ; Create window
+        handle = CreateWindowEx(
+            0,
+            "EONWindow",
+            title.cstr(),
+            WS_OVERLAPPEDWINDOW,
+            x, y, width, height,
+            null, null,
+            GetModuleHandle(null),
+            cast<LPVOID>(this)
+        )
+    }
+    endif
+    
+    ifdef LINUX
+    function createX11Window() {
+        var display = XOpenDisplay(null)
+        var screen = DefaultScreen(display)
+        var root = RootWindow(display, screen)
+        
+        handle = XCreateSimpleWindow(
+            display, root,
+            x, y, width, height,
+            1,
+            BlackPixel(display, screen),
+            WhitePixel(display, screen)
+        )
+        
+        XStoreName(display, handle, title.cstr())
+        XSelectInput(display, handle, 
+            ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask)
+    }
+    endif
+    
+    function show() {
+        is_visible = true
+        
+        ifdef WINDOWS
+            ShowWindow(handle, SW_SHOW)
+            UpdateWindow(handle)
+        endif
+        
+        ifdef LINUX
+            XMapWindow(display, handle)
+            XFlush(display)
+        endif
+    }
+    
+    function hide() {
+        is_visible = false
+        
+        ifdef WINDOWS
+            ShowWindow(handle, SW_HIDE)
+        endif
+        
+        ifdef LINUX
+            XUnmapWindow(display, handle)
+        endif
+    }
+    
+    function addWidget(widget: Widget) {
+        widget.parent = this
+        children.append(widget)
+        widget.createNative()
+    }
+    
+    function setTitle(new_title: string) {
+        title = new_title
+        
+        ifdef WINDOWS
+            SetWindowText(handle, title.cstr())
+        endif
+        
+        ifdef LINUX
+            XStoreName(display, handle, title.cstr())
+        endif
+    }
+    
+    function onPaint() {
+        ; Paint background
+        paintBackground()
+        
+        ; Paint all child widgets
+        for widget in children {
+            widget.paint()
+        }
+    }
+    
+    function paintBackground() {
+        ifdef WINDOWS
+            var hdc = GetDC(handle)
+            var brush = CreateSolidBrush(RGB(background_color.r, background_color.g, background_color.b))
+            var rect: RECT
+            GetClientRect(handle, &rect)
+            FillRect(hdc, &rect, brush)
+            DeleteObject(brush)
+            ReleaseDC(handle, hdc)
+        endif
+    }
+}
+
+; === Base Widget Class ===
+class Widget {
+    var parent: Window
+    var handle: qword
+    var x: int
+    var y: int
+    var width: int
+    var height: int
+    var text: string
+    var font: Font
+    var background_color: Color
+    var text_color: Color
+    var is_visible: bool
+    
+    function init() {
+        is_visible = true
+        background_color = Color(240, 240, 240)
+        text_color = Color(0, 0, 0)
+        font = Font("Segoe UI", 12)
+    }
+    
+    function createNative() {
+        ; Override in subclasses
+    }
+    
+    function paint() {
+        if (!is_visible) return
+        
+        ifdef WINDOWS
+            paintWin32()
+        endif
+        
+        ifdef LINUX
+            paintX11()
+        endif
+    }
+    
+    ifdef WINDOWS
+    function paintWin32() {
+        var hdc = GetDC(parent.handle)
+        
+        ; Set colors
+        SetTextColor(hdc, RGB(text_color.r, text_color.g, text_color.b))
+        SetBkColor(hdc, RGB(background_color.r, background_color.g, background_color.b))
+        
+        ; Select font
+        var hfont = font.getHandle()
+        SelectObject(hdc, hfont)
+        
+        ; Draw text
+        TextOut(hdc, x, y, text.cstr(), text.length())
+        
+        ReleaseDC(parent.handle, hdc)
+    }
+    endif
+}
+
+; === Button Widget ===
+class Button : Widget {
+    var onClick: function()
+    
+    function init(text: string, callback: function()) {
+        super.init()
+        this.text = text
+        this.onClick = callback
+        this.width = 100
+        this.height = 30
+    }
+    
+    ifdef WINDOWS
+    function createNative() {
+        handle = CreateWindow(
+            "BUTTON",
+            text.cstr(),
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            x, y, width, height,
+            parent.handle,
+            cast<HMENU>(1001), ; ID
+            GetModuleHandle(null),
+            null
+        )
+    }
+    endif
+    
+    function handleClick() {
+        if (onClick) {
+            onClick()
+        }
+    }
+}
+
+; === TextBox Widget ===
+class TextBox : Widget {
+    var is_multiline: bool
+    var is_readonly: bool
+    var content: string
+    
+    function init(multiline: bool = false) {
+        super.init()
+        this.is_multiline = multiline
+        this.is_readonly = false
+        this.width = 200
+        this.height = multiline ? 100 : 25
+        this.content = ""
+    }
+    
+    ifdef WINDOWS
+    function createNative() {
+        var style = WS_CHILD | WS_VISIBLE | WS_BORDER
+        
+        if (is_multiline) {
+            style |= ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL
+        }
+        
+        if (is_readonly) {
+            style |= ES_READONLY
+        }
+        
+        handle = CreateWindow(
+            "EDIT",
+            content.cstr(),
+            style,
+            x, y, width, height,
+            parent.handle,
+            cast<HMENU>(2001), ; ID
+            GetModuleHandle(null),
+            null
+        )
+    }
+    endif
+    
+    function setText(text: string) {
+        content = text
+        
+        ifdef WINDOWS
+            SetWindowText(handle, content.cstr())
+        endif
+    }
+    
+    function getText() -> string {
+        ifdef WINDOWS
+            var length = GetWindowTextLength(handle)
+            var buffer = allocate(length + 1)
+            GetWindowText(handle, buffer, length + 1)
+            content = string(buffer, length)
+            deallocate(buffer)
+        endif
+        
+        return content
+    }
+}
+
+; === Label Widget ===
+class Label : Widget {
+    function init(text: string) {
+        super.init()
+        this.text = text
+        this.width = text.length() * 8  ; Rough estimation
+        this.height = 20
+    }
+    
+    ifdef WINDOWS
+    function createNative() {
+        handle = CreateWindow(
+            "STATIC",
+            text.cstr(),
+            WS_CHILD | WS_VISIBLE,
+            x, y, width, height,
+            parent.handle,
+            cast<HMENU>(3001), ; ID
+            GetModuleHandle(null),
+            null
+        )
+    }
+    endif
+}
+
+; === Layout Managers ===
+class HorizontalLayout {
+    var widgets: Array<Widget>
+    var spacing: int
+    var margin: int
+    
+    function init(spacing: int = 5, margin: int = 10) {
+        this.spacing = spacing
+        this.margin = margin
+        this.widgets = Array<Widget>()
+    }
+    
+    function addWidget(widget: Widget) {
+        widgets.append(widget)
+        updateLayout()
+    }
+    
+    function updateLayout() {
+        var current_x = margin
+        
+        for widget in widgets {
+            widget.x = current_x
+            widget.y = margin
+            current_x += widget.width + spacing
+        }
+    }
+}
+
+class VerticalLayout {
+    var widgets: Array<Widget>
+    var spacing: int
+    var margin: int
+    
+    function init(spacing: int = 5, margin: int = 10) {
+        this.spacing = spacing
+        this.margin = margin
+        this.widgets = Array<Widget>()
+    }
+    
+    function addWidget(widget: Widget) {
+        widgets.append(widget)
+        updateLayout()
+    }
+    
+    function updateLayout() {
+        var current_y = margin
+        
+        for widget in widgets {
+            widget.x = margin
+            widget.y = current_y
+            current_y += widget.height + spacing
+        }
+    }
+}
+
+; === Color and Font Classes ===
+struct Color {
+    var r: byte
+    var g: byte
+    var b: byte
+    var a: byte
+    
+    function init(red: byte, green: byte, blue: byte, alpha: byte = 255) {
+        r = red
+        g = green
+        b = blue
+        a = alpha
+    }
+}
+
+class Font {
+    var family: string
+    var size: int
+    var bold: bool
+    var italic: bool
+    var handle: qword
+    
+    function init(family: string, size: int, bold: bool = false, italic: bool = false) {
+        this.family = family
+        this.size = size
+        this.bold = bold
+        this.italic = italic
+        
+        createNativeFont()
+    }
+    
+    ifdef WINDOWS
+    function createNativeFont() {
+        handle = CreateFont(
+            size,                           ; Height
+            0,                              ; Width
+            0,                              ; Escapement
+            0,                              ; Orientation
+            bold ? FW_BOLD : FW_NORMAL,     ; Weight
+            italic ? 1 : 0,                 ; Italic
+            0,                              ; Underline
+            0,                              ; StrikeOut
+            DEFAULT_CHARSET,                ; CharSet
+            OUT_DEFAULT_PRECIS,             ; OutPrecision
+            CLIP_DEFAULT_PRECIS,            ; ClipPrecision
+            DEFAULT_QUALITY,                ; Quality
+            DEFAULT_PITCH | FF_DONTCARE,    ; PitchAndFamily
+            family.cstr()                   ; FaceName
+        )
+    }
+    endif
+    
+    function getHandle() -> qword {
+        return handle
+    }
+}
+
+; === Application Class ===
+class Application {
+    var windows: Array<Window>
+    var is_running: bool
+    
+    function init() {
+        windows = Array<Window>()
+        is_running = false
+    }
+    
+    function addWindow(window: Window) {
+        windows.append(window)
+    }
+    
+    function run() {
+        is_running = true
+        
+        ifdef WINDOWS
+            runWin32MessageLoop()
+        endif
+        
+        ifdef LINUX
+            runX11EventLoop()
+        endif
+    }
+    
+    ifdef WINDOWS
+    function runWin32MessageLoop() {
+        var msg: MSG
+        
+        while (is_running) {
+            var result = GetMessage(&msg, null, 0, 0)
+            
+            if (result == 0 || result == -1) {
+                break
+            }
+            
+            TranslateMessage(&msg)
+            DispatchMessage(&msg)
+        }
+    }
+    endif
+    
+    function quit() {
+        is_running = false
+        
+        ifdef WINDOWS
+            PostQuitMessage(0)
+        endif
+    }
+}
+
+; === Window Procedure ===
+ifdef WINDOWS
+function windowProc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    var window = cast<Window>(GetWindowLongPtr(hwnd, GWLP_USERDATA))
+    
+    match msg {
+        case WM_PAINT:
+            if (window) {
+                window.onPaint()
+            }
+            return 0
+            
+        case WM_COMMAND:
+            var control_id = LOWORD(wparam)
+            var notification = HIWORD(wparam)
+            
+            if (notification == BN_CLICKED && window) {
+                ; Find button with this ID and trigger click
+                for widget in window.children {
+                    if (widget instanceof Button && widget.handle == cast<qword>(lparam)) {
+                        cast<Button>(widget).handleClick()
+                        break
+                    }
+                }
+            }
+            return 0
+            
+        case WM_DESTROY:
+            PostQuitMessage(0)
+            return 0
+            
+        default:
+            return DefWindowProc(hwnd, msg, wparam, lparam)
+    }
+}
+endif
+
+; === Constants ===
+ifdef WINDOWS
+const WS_OVERLAPPEDWINDOW = 0x00CF0000
+const WS_CHILD = 0x40000000
+const WS_VISIBLE = 0x10000000
+const WS_BORDER = 0x00800000
+const WS_VSCROLL = 0x00200000
+const ES_MULTILINE = 0x0004
+const ES_AUTOVSCROLL = 0x0040
+const ES_READONLY = 0x0800
+const BS_PUSHBUTTON = 0x0000
+const WM_PAINT = 0x000F
+const WM_COMMAND = 0x0111
+const WM_DESTROY = 0x0002
+const BN_CLICKED = 0
+const SW_SHOW = 5
+const FW_NORMAL = 400
+const FW_BOLD = 700
+endif
+
+; === Export Main Classes ===
+export Window
+export Button
+export TextBox
+export Label
+export Application
+export HorizontalLayout
+export VerticalLayout
+export Color
+export Font

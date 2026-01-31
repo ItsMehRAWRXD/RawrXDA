@@ -1,0 +1,7 @@
+// Test EON source
+module TestApp
+
+function main() -> int {
+    println("Hello from working EON ASM Toolchain!")
+    return 0
+}

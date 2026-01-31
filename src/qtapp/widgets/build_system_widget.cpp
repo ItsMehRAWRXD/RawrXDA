@@ -1,0 +1,829 @@
+#include "build_system_widget.h"
+BuildSystemWidget::BuildSystemWidget(void* parent)
+    : // Widget(parent)
+{
+    setupUI();
+    loadSettings();
+    connectSignals();
+    
+    // Initialize regex patterns for error/warning detection
+    m_errorRegex = std::regex(
+        R"((error|ERROR|Error|fatal|FATAL):?\s+(.*))",
+        std::regex::CaseInsensitiveOption
+    );
+    
+    m_warningRegex = std::regex(
+        R"((warning|WARNING|Warning):?\s+(.*))",
+        std::regex::CaseInsensitiveOption
+    );
+    
+    m_fileLineRegex = std::regex(
+        R"(([a-zA-Z]:)?[^:]+\.(cpp|h|c|hpp|cc|cxx|py|js|ts):(\d+):(\d+)?:?\s*(.*))"
+    );
+    
+    logBuildEvent("widget_initialized");
+}
+
+BuildSystemWidget::~BuildSystemWidget()
+{
+    if (m_buildProcess && m_buildProcess->state() != void*::NotRunning) {
+        m_buildProcess->kill();
+        m_buildProcess->waitForFinished(3000);
+    }
+    saveSettings();
+    logBuildEvent("widget_destroyed", nlohmann::json{{"total_builds", m_stats.totalBuilds}});
+}
+
+void BuildSystemWidget::setupUI()
+{
+    void* mainLayout = new void(this);
+    mainLayout->setContentsMargins(4, 4, 4, 4);
+    mainLayout->setSpacing(4);
+    
+    // Toolbar
+    createToolBar();
+    mainLayout->addWidget(m_toolBar);
+    
+    // Build configuration panel
+    void* configGroup = new void("Build Configuration", this);
+    QFormLayout* configLayout = new QFormLayout(configGroup);
+    
+    m_buildSystemCombo = new void(this);
+    m_buildSystemCombo->setToolTip("Select build system");
+    configLayout->addRow("Build System:", m_buildSystemCombo);
+    
+    m_configCombo = new void(this);
+    m_configCombo->setToolTip("Select build configuration");
+    configLayout->addRow("Configuration:", m_configCombo);
+    
+    m_targetCombo = new void(this);
+    m_targetCombo->setToolTip("Select build target");
+    m_targetCombo->addItem("all");
+    configLayout->addRow("Target:", m_targetCombo);
+    
+    void* jobsSpinBox = new void(this);
+    jobsSpinBox->setRange(1, 128);
+    jobsSpinBox->setValue(4);
+    jobsSpinBox->setToolTip("Number of parallel jobs");
+    configLayout->addRow("Parallel Jobs:", jobsSpinBox);  // Signal connection removed\nmainLayout->addWidget(configGroup);
+    
+    // Status and progress
+    void* statusLayout = new void();
+    m_statusLabel = new void("Ready", this);
+    m_statusLabel->setStyleSheet("void { padding: 4px; }");
+    statusLayout->addWidget(m_statusLabel, 1);
+    
+    m_progressBar = new void(this);
+    m_progressBar->setRange(0, 100);
+    m_progressBar->setValue(0);
+    m_progressBar->setVisible(false);
+    m_progressBar->setTextVisible(true);
+    statusLayout->addWidget(m_progressBar, 1);
+    
+    mainLayout->addLayout(statusLayout);
+    
+    // Splitter for output and errors
+    m_splitter = new void(Vertical, this);
+    
+    // Build output
+    m_tabWidget = new void(this);
+    
+    m_outputText = new void(this);
+    m_outputText->setReadOnly(true);
+    m_outputText->setFont(void("Consolas", 9));
+    m_outputText->setStyleSheet("void { background-color: #1e1e1e; color: #d4d4d4; }");
+    m_tabWidget->addTab(m_outputText, "Build Output");
+    
+    // Error/Warning tree
+    m_errorTree = new QTreeWidget(this);
+    m_errorTree->setHeaderLabels({"Type", "File", "Line", "Message"});
+    m_errorTree->setColumnWidth(0, 80);
+    m_errorTree->setColumnWidth(1, 300);
+    m_errorTree->setColumnWidth(2, 60);
+    m_errorTree->setAlternatingRowColors(true);
+    m_tabWidget->addTab(m_errorTree, "Problems (0)");
+    
+    m_splitter->addWidget(m_tabWidget);
+    m_splitter->setStretchFactor(0, 3);
+    
+    mainLayout->addWidget(m_splitter, 1);
+    
+    // Load build systems and configs
+    loadBuildSystems();
+    loadBuildConfigs();
+}
+
+void BuildSystemWidget::createToolBar()
+{
+    m_toolBar = new void("Build Tools", this);
+    m_toolBar->setIconSize(struct { int w; int h; }(16, 16));
+    
+    // Build button
+    m_buildButton = new void(void(":/icons/build.png"), "Build", this);
+    m_buildButton->setToolTip("Build project (F7)");
+    m_buildButton->setShortcut(Key_F7);
+    m_toolBar->addWidget(m_buildButton);
+    
+    // Stop button
+    m_stopButton = new void(void(":/icons/stop.png"), "Stop", this);
+    m_stopButton->setToolTip("Stop build (Shift+F7)");
+    m_stopButton->setShortcut(SHIFT | Key_F7);
+    m_stopButton->setEnabled(false);
+    m_toolBar->addWidget(m_stopButton);
+    
+    m_toolBar->addSeparator();
+    
+    // Clean button
+    m_cleanButton = new void(void(":/icons/clean.png"), "Clean", this);
+    m_cleanButton->setToolTip("Clean build artifacts");
+    m_toolBar->addWidget(m_cleanButton);
+    
+    // Rebuild button
+    m_rebuildButton = new void(void(":/icons/rebuild.png"), "Rebuild", this);
+    m_rebuildButton->setToolTip("Clean and rebuild");
+    m_toolBar->addWidget(m_rebuildButton);
+    
+    m_toolBar->addSeparator();
+    
+    // Configure button
+    m_configureButton = new void(void(":/icons/configure.png"), "Configure", this);
+    m_configureButton->setToolTip("Run configuration step");
+    m_toolBar->addWidget(m_configureButton);
+    
+    m_toolBar->addSeparator();
+    
+    // Clear output button
+    void* clearBtn = new void(void(":/icons/clear.png"), "Clear", this);
+    clearBtn->setToolTip("Clear build output");  // Signal connection removed\nm_toolBar->addWidget(clearBtn);
+    
+    // Save output button
+    void* saveBtn = new void(void(":/icons/save.png"), "Save Log", this);
+    saveBtn->setToolTip("Save build output to file");  // Signal connection removed\nm_toolBar->addWidget(saveBtn);
+}
+
+void BuildSystemWidget::connectSignals()
+{  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n}
+
+void BuildSystemWidget::loadBuildSystems()
+{
+    m_buildSystemCombo->clear();
+    m_buildSystemCombo->addItems(m_buildSystemsList);
+    m_buildSystemCombo->setCurrentText(m_currentBuildSystem);
+}
+
+void BuildSystemWidget::loadBuildConfigs()
+{
+    m_configCombo->clear();
+    m_configCombo->addItems(m_configsList);
+    m_configCombo->setCurrentText(m_currentConfig);
+}
+
+void BuildSystemWidget::setProjectPath(const std::string& path)
+{
+    m_projectPath = path;
+    detectBuildSystem();
+    updateBuildTargets();
+    logBuildEvent("project_path_set", nlohmann::json{{"path", path}});
+}
+
+void BuildSystemWidget::detectBuildSystem()
+{
+    if (m_projectPath.empty()) return;
+    
+    std::string detected = detectProjectBuildSystem(m_projectPath);
+    if (!detected.empty() && m_buildSystemsList.contains(detected)) {
+        m_currentBuildSystem = detected;
+        m_buildSystemCombo->setCurrentText(detected);
+        m_statusLabel->setText(std::string("Detected: %1").arg(detected));
+        logBuildEvent("build_system_detected", nlohmann::json{{"system", detected}});
+    }
+}
+
+std::string BuildSystemWidget::detectProjectBuildSystem(const std::string& path)
+{
+    // dir(path);
+    
+    if (dir.exists("CMakeLists.txt")) {
+        return "CMake";
+    } else if (dir.exists("meson.build")) {
+        return "Meson";
+    } else if (dir.exists("build.ninja")) {
+        return "Ninja";
+    } else if (!dir.entryList(std::stringList() << "*.pro", // Dir::Files).empty()) {
+        return "QMake";
+    } else if (!dir.entryList(std::stringList() << "*.sln", // Dir::Files).empty()) {
+        return "MSBuild";
+    } else if (dir.exists("Makefile") || dir.exists("makefile")) {
+        return "Make";
+    }
+    
+    return std::string();
+}
+
+void BuildSystemWidget::startBuild()
+{
+    if (m_isBuilding) {
+        void::warning(this, "Build Running", "A build is already in progress.");
+        return;
+    }
+    
+    if (m_projectPath.empty()) {
+        void::warning(this, "No Project", "Please open a project first.");
+        return;
+    }
+    
+    // Create build process if needed
+    if (!m_buildProcess) {
+        m_buildProcess = new void*(this);
+        m_buildProcess->setWorkingDirectory(m_projectPath);  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n}
+    
+    // Clear previous output
+    m_outputText->clear();
+    m_errorTree->clear();
+    
+    // Get build command
+    std::stringList buildCmd = getBuildCommand();
+    if (buildCmd.empty()) {
+        void::critical(this, "Build Error", "Failed to generate build command.");
+        return;
+    }
+    
+    // Start build
+    std::string program = buildCmd.takeFirst();
+    m_buildStartTime = // DateTime::currentDateTime();
+    m_isBuilding = true;
+    
+    m_outputText->append(std::string("=== Build started at %1 ===\n")
+                         .arg(m_buildStartTime.toString("yyyy-MM-dd HH:mm:ss")));
+    m_outputText->append(std::string("Command: %1 %2\n\n")
+                         .arg(program).arg(buildCmd.join(" ")));
+    
+    m_buildProcess->start(program, buildCmd);
+    
+    buildStarted(m_currentBuildSystem, m_currentConfig);
+}
+
+void BuildSystemWidget::stopBuild()
+{
+    if (m_buildProcess && m_isBuilding) {
+        m_buildProcess->kill();
+        m_outputText->append("\n=== Build stopped by user ===\n");
+        logBuildEvent("build_stopped_by_user");
+    }
+}
+
+void BuildSystemWidget::cleanBuild()
+{
+    if (m_isBuilding) {
+        void::warning(this, "Build Running", "Cannot clean while build is in progress.");
+        return;
+    }
+    
+    std::stringList cleanCmd = getCleanCommand();
+    if (cleanCmd.empty()) return;
+    
+    m_outputText->clear();
+    m_outputText->append("=== Cleaning build artifacts ===\n");
+    
+    // Process removed
+    cleanProcess.setWorkingDirectory(m_projectPath);
+    cleanProcess.start(cleanCmd.takeFirst(), cleanCmd);
+    cleanProcess.waitForFinished(30000);
+    
+    m_outputText->append(cleanProcess.readAllStandardOutput());
+    m_outputText->append(cleanProcess.readAllStandardError());
+    m_outputText->append("\n=== Clean completed ===\n");
+    
+    logBuildEvent("clean_completed");
+}
+
+void BuildSystemWidget::rebuildAll()
+{
+    cleanBuild();
+    // Timer operation removed
+}
+
+void BuildSystemWidget::setBuildStatus(bool building)
+{
+    m_buildInProgress = building;
+    m_isBuilding = building;
+    
+    if (m_buildButton) {
+        m_buildButton->setEnabled(!building);
+    }
+    if (m_stopButton) {
+        m_stopButton->setEnabled(building);
+    }
+    if (m_statusLabel) {
+        m_statusLabel->setText(building ? tr("Building...") : tr("Ready"));
+    }
+    if (m_progressBar) {
+        m_progressBar->setVisible(building);
+        if (building) {
+            m_progressBar->setRange(0, 0); // Indeterminate
+        }
+    }
+}
+
+std::stringList BuildSystemWidget::getBuildCommand()
+{
+    std::stringList cmd;
+    
+    if (m_currentBuildSystem == "CMake") {
+        cmd << "cmake" << "--build" << "." << "--config" << m_currentConfig;
+        if (m_parallelJobs > 1) {
+            cmd << "--parallel" << std::string::number(m_parallelJobs);
+        }
+        if (m_currentTarget != "all") {
+            cmd << "--target" << m_currentTarget;
+        }
+    } else if (m_currentBuildSystem == "Make") {
+        cmd << "make" << std::string("-j%1").arg(m_parallelJobs);
+        if (m_currentTarget != "all") {
+            cmd << m_currentTarget;
+        }
+    } else if (m_currentBuildSystem == "Ninja") {
+        cmd << "ninja";
+        if (m_parallelJobs > 1) {
+            cmd << std::string("-j%1").arg(m_parallelJobs);
+        }
+        if (m_currentTarget != "all") {
+            cmd << m_currentTarget;
+        }
+    } else if (m_currentBuildSystem == "Meson") {
+        cmd << "meson" << "compile" << "-C" << ".";
+    } else if (m_currentBuildSystem == "MSBuild") {
+        // Find solution file
+        // dir(m_projectPath);
+        std::stringList slnFiles = dir.entryList(std::stringList() << "*.sln", // Dir::Files);
+        if (!slnFiles.empty()) {
+            cmd << "msbuild" << slnFiles.first()
+                << std::string("/p:Configuration=%1").arg(m_currentConfig)
+                << std::string("/m:%1").arg(m_parallelJobs);
+        }
+    } else if (m_currentBuildSystem == "QMake") {
+        cmd << "make" << std::string("-j%1").arg(m_parallelJobs);
+    }
+    
+    return cmd;
+}
+
+std::stringList BuildSystemWidget::getCleanCommand()
+{
+    std::stringList cmd;
+    
+    if (m_currentBuildSystem == "CMake") {
+        cmd << "cmake" << "--build" << "." << "--target" << "clean";
+    } else if (m_currentBuildSystem == "Make" || m_currentBuildSystem == "QMake") {
+        cmd << "make" << "clean";
+    } else if (m_currentBuildSystem == "Ninja") {
+        cmd << "ninja" << "clean";
+    } else if (m_currentBuildSystem == "Meson") {
+        cmd << "meson" << "clean" << "-C" << ".";
+    } else if (m_currentBuildSystem == "MSBuild") {
+        // dir(m_projectPath);
+        std::stringList slnFiles = dir.entryList(std::stringList() << "*.sln", // Dir::Files);
+        if (!slnFiles.empty()) {
+            cmd << "msbuild" << slnFiles.first() << "/t:Clean";
+        }
+    }
+    
+    return cmd;
+}
+
+std::stringList BuildSystemWidget::getConfigureCommand()
+{
+    std::stringList cmd;
+    
+    if (m_currentBuildSystem == "CMake") {
+        cmd << "cmake" << "." << std::string("-DCMAKE_BUILD_TYPE=%1").arg(m_currentConfig);
+    } else if (m_currentBuildSystem == "Meson") {
+        cmd << "meson" << "setup" << "." << std::string("--buildtype=%1")
+            .arg(m_currentConfig.toLower());
+    } else if (m_currentBuildSystem == "QMake") {
+        // dir(m_projectPath);
+        std::stringList proFiles = dir.entryList(std::stringList() << "*.pro", // Dir::Files);
+        if (!proFiles.empty()) {
+            cmd << "qmake" << proFiles.first();
+        }
+    }
+    
+    return cmd;
+}
+
+void BuildSystemWidget::configure()
+{
+    std::stringList configCmd = getConfigureCommand();
+    if (configCmd.empty()) {
+        void::information(this, "Configure", 
+            std::string("Configuration not required for %1").arg(m_currentBuildSystem));
+        return;
+    }
+    
+    m_outputText->clear();
+    m_outputText->append("=== Running configuration ===\n");
+    
+    // Process removed
+    configProcess.setWorkingDirectory(m_projectPath);
+    configProcess.start(configCmd.takeFirst(), configCmd);
+    
+    if (!configProcess.waitForFinished(60000)) {
+        m_outputText->append("\n=== Configuration timeout ===\n");
+        return;
+    }
+    
+    m_outputText->append(configProcess.readAllStandardOutput());
+    m_outputText->append(configProcess.readAllStandardError());
+    m_outputText->append("\n=== Configuration completed ===\n");
+    
+    updateBuildTargets();
+    logBuildEvent("configure_completed");
+}
+
+void BuildSystemWidget::updateBuildTargets()
+{
+    // This would parse build system files to find available targets
+    // For now, keeping the default "all" target
+    m_targetCombo->clear();
+    m_targetCombo->addItem("all");
+    
+    // Could add more targets based on build system
+    if (m_currentBuildSystem == "CMake") {
+        m_targetCombo->addItems({"install", "test", "clean"});
+    }
+}
+
+void BuildSystemWidget::onProcessStarted()
+{
+    m_isBuilding = true;
+    m_buildButton->setEnabled(false);
+    m_stopButton->setEnabled(true);
+    m_cleanButton->setEnabled(false);
+    m_rebuildButton->setEnabled(false);
+    m_configureButton->setEnabled(false);
+    m_progressBar->setVisible(true);
+    m_progressBar->setValue(0);
+    m_statusLabel->setText("Building...");
+    
+    logBuildEvent("build_started");
+}
+
+void BuildSystemWidget::onProcessFinished(int exitCode, void*::ExitStatus exitStatus)
+{
+    m_isBuilding = false;
+    m_buildButton->setEnabled(true);
+    m_stopButton->setEnabled(false);
+    m_cleanButton->setEnabled(true);
+    m_rebuildButton->setEnabled(true);
+    m_configureButton->setEnabled(true);
+    m_progressBar->setVisible(false);
+    
+    int duration = m_buildStartTime.msecsTo(// DateTime::currentDateTime());
+    bool success = (exitCode == 0 && exitStatus == void*::NormalExit);
+    
+    std::string statusMsg = success ? "Build succeeded" : "Build failed";
+    m_statusLabel->setText(std::string("%1 in %2s")
+                          .arg(statusMsg)
+                          .arg(duration / 1000.0, 0, 'f', 2));
+    
+    m_outputText->append(std::string("\n=== %1 (exit code: %2, duration: %3s) ===\n")
+                         .arg(statusMsg)
+                         .arg(exitCode)
+                         .arg(duration / 1000.0, 0, 'f', 2));
+    
+    updateStatistics(success, duration);
+    buildFinished(success, duration);
+    
+    logBuildEvent("build_finished", nlohmann::json{
+        {"success", success},
+        {"exit_code", exitCode},
+        {"duration_ms", duration}
+    });
+}
+
+void BuildSystemWidget::onProcessError(void*::ProcessError error)
+{
+    std::string errorMsg;
+    switch (error) {
+        case void*::FailedToStart:
+            errorMsg = "Failed to start build process. Check if build tools are installed.";
+            break;
+        case void*::Crashed:
+            errorMsg = "Build process crashed.";
+            break;
+        case void*::Timedout:
+            errorMsg = "Build process timed out.";
+            break;
+        default:
+            errorMsg = "Unknown build process error.";
+    }
+    
+    m_outputText->append(std::string("\n=== ERROR: %1 ===\n").arg(errorMsg));
+    m_statusLabel->setText(errorMsg);
+    
+    logBuildEvent("build_error", nlohmann::json{{"error", errorMsg}});
+}
+
+void BuildSystemWidget::onProcessReadyReadStdOut()
+{
+    std::string output = m_buildProcess->readAllStandardOutput();
+    parseBuildOutput(output, false);
+    m_outputText->append(output);
+    buildOutputReceived(output);
+    
+    // Auto-scroll to bottom
+    QScrollBar* scrollBar = m_outputText->verticalScrollBar();
+    scrollBar->setValue(scrollBar->maximum());
+}
+
+void BuildSystemWidget::onProcessReadyReadStdErr()
+{
+    std::string output = m_buildProcess->readAllStandardError();
+    parseBuildOutput(output, true);
+    
+    // Highlight errors in red
+    QTextCharFormat errorFormat;
+    errorFormat.setForeground(void("#ff6b6b"));
+    QTextCursor cursor(m_outputText->document());
+    cursor.movePosition(QTextCursor::End);
+    cursor.insertText(output, errorFormat);
+    
+    buildOutputReceived(output);
+}
+
+void BuildSystemWidget::parseBuildOutput(const std::string& output, bool isError)
+{
+    std::stringList lines = output.split('\n');
+    
+    for (const std::string& line : lines) {
+        // Check for errors
+        std::regexMatch errorMatch = m_errorRegex.match(line);
+        if (errorMatch.hasMatch()) {
+            std::regexMatch fileMatch = m_fileLineRegex.match(line);
+            if (fileMatch.hasMatch()) {
+                std::string file = fileMatch.captured(1);
+                int lineNum = fileMatch.captured(3);
+                std::string message = fileMatch.captured(5);
+                addBuildMessage("Error", file, lineNum, message);
+                errorDetected(file, lineNum, message);
+                m_stats.totalErrors++;
+            }
+        }
+        
+        // Check for warnings
+        std::regexMatch warningMatch = m_warningRegex.match(line);
+        if (warningMatch.hasMatch()) {
+            std::regexMatch fileMatch = m_fileLineRegex.match(line);
+            if (fileMatch.hasMatch()) {
+                std::string file = fileMatch.captured(1);
+                int lineNum = fileMatch.captured(3);
+                std::string message = fileMatch.captured(5);
+                addBuildMessage("Warning", file, lineNum, message);
+                warningDetected(file, lineNum, message);
+                m_stats.totalWarnings++;
+            }
+        }
+    }
+    
+    // Update problems tab title
+    int problemCount = m_errorTree->topLevelItemCount();
+    m_tabWidget->setTabText(1, std::string("Problems (%1)").arg(problemCount));
+}
+
+void BuildSystemWidget::addBuildMessage(const std::string& type, const std::string& file,
+                                       int line, const std::string& message)
+{
+    QTreeWidgetItem* item = new QTreeWidgetItem(m_errorTree);
+    item->setText(0, type);
+    item->setText(1, // FileInfo: file).fileName());
+    item->setText(2, std::string::number(line));
+    item->setText(3, message);
+    item->setData(0, UserRole, file); // Store full path
+    item->setData(1, UserRole, line);
+    
+    // Color code by type
+    if (type == "Error") {
+        item->setForeground(0, void("#ff6b6b"));
+        item->setIcon(0, void(":/icons/error.png"));
+    } else if (type == "Warning") {
+        item->setForeground(0, void("#ffa500"));
+        item->setIcon(0, void(":/icons/warning.png"));
+    }
+}
+
+void BuildSystemWidget::updateStatistics(bool success, int duration)
+{
+    m_stats.totalBuilds++;
+    if (success) {
+        m_stats.successfulBuilds++;
+    } else {
+        m_stats.failedBuilds++;
+    }
+    m_stats.lastBuildTime = // DateTime::currentDateTime();
+    m_stats.lastBuildDuration = duration;
+    
+    // Add to history
+    std::string historyEntry = std::string("[%1] %2 %3 - %4")
+        .arg(m_stats.lastBuildTime.toString("yyyy-MM-dd HH:mm:ss"))
+        .arg(m_currentBuildSystem)
+        .arg(m_currentConfig)
+        .arg(success ? "Success" : "Failed");
+    m_buildHistory.append({m_stats.lastBuildTime, historyEntry});
+    
+    // Keep only last 100 entries
+    if (m_buildHistory.size() > 100) {
+        m_buildHistory.removeFirst();
+    }
+}
+
+void BuildSystemWidget::onBuildOutputItemDoubleClicked(QTreeWidgetItem* item, int column)
+{
+    (void)(column);
+    
+    std::string file = item->data(0, UserRole).toString();
+    int line = item->data(1, UserRole);
+    
+    if (!file.empty()) {
+        // Emit signal or open file in editor
+        // // qDebug:  "Open file:" << file << "at line:" << line;
+        // This would trigger opening the file in the main editor
+    }
+}
+
+void BuildSystemWidget::onClearOutputClicked()
+{
+    m_outputText->clear();
+    m_errorTree->clear();
+    m_tabWidget->setTabText(1, "Problems (0)");
+}
+
+void BuildSystemWidget::onSaveOutputClicked()
+{
+    std::string fileName = // Dialog::getSaveFileName(this,
+        "Save Build Output",
+        "" + std::string("/build_%1.log")
+            .arg(// DateTime::currentDateTime().toString("yyyyMMdd_HHmmss")),
+        "Log Files (*.log);;Text Files (*.txt);;All Files (*)");
+    
+    if (!fileName.empty()) {
+        // File operation removed;
+        if (file.open(std::iostream::WriteOnly | std::iostream::Text)) {
+            std::stringstream out(&file);
+            out << m_outputText->toPlainText();
+            file.close();
+            void::information(this, "Saved", 
+                std::string("Build output saved to:\n%1").arg(fileName));
+        }
+    }
+}
+
+void BuildSystemWidget::onBuildSystemChanged(int index)
+{
+    (void)(index);
+    m_currentBuildSystem = m_buildSystemCombo->currentText();
+    updateBuildTargets();
+    saveSettings();
+}
+
+void BuildSystemWidget::onConfigChanged(int index)
+{
+    (void)(index);
+    m_currentConfig = m_configCombo->currentText();
+    saveSettings();
+}
+
+void BuildSystemWidget::onTargetChanged(int index)
+{
+    (void)(index);
+    m_currentTarget = m_targetCombo->currentText();
+    saveSettings();
+}
+
+void BuildSystemWidget::onBuildButtonClicked()
+{
+    startBuild();
+}
+
+void BuildSystemWidget::onStopButtonClicked()
+{
+    stopBuild();
+}
+
+void BuildSystemWidget::onCleanButtonClicked()
+{
+    cleanBuild();
+}
+
+void BuildSystemWidget::onRebuildButtonClicked()
+{
+    rebuildAll();
+}
+
+void BuildSystemWidget::onConfigureButtonClicked()
+{
+    configure();
+}
+
+void BuildSystemWidget::updateParallelJobs(int value)
+{
+    m_parallelJobs = value;
+    saveSettings();
+}
+
+void BuildSystemWidget::saveSettings()
+{
+    // Settings initialization removed
+    settings.beginGroup("BuildSystem");
+    settings.setValue("system", m_currentBuildSystem);
+    settings.setValue("config", m_currentConfig);
+    settings.setValue("target", m_currentTarget);
+    settings.setValue("parallelJobs", m_parallelJobs);
+    settings.setValue("projectPath", m_projectPath);
+    settings.endGroup();
+}
+
+void BuildSystemWidget::loadSettings()
+{
+    // Settings initialization removed
+    settings.beginGroup("BuildSystem");
+    m_currentBuildSystem = settings.value("system", "CMake").toString();
+    m_currentConfig = settings.value("config", "Debug").toString();
+    m_currentTarget = settings.value("target", "all").toString();
+    m_parallelJobs = settings.value("parallelJobs", 4);
+    m_projectPath = settings.value("projectPath", "").toString();
+    settings.endGroup();
+}
+
+void BuildSystemWidget::logBuildEvent(const std::string& event, const nlohmann::json& data)
+{
+    nlohmann::json logEntry;
+    logEntry["timestamp"] = // DateTime::currentDateTime().toString(ISODate);
+    logEntry["component"] = "BuildSystemWidget";
+    logEntry["event"] = event;
+    logEntry["data"] = data;
+    
+    // // qDebug().noquote() << "BUILD_EVENT:" << nlohmann::json(logEntry).toJson(nlohmann::json::Compact);
+}
+
+std::stringList BuildSystemWidget::buildHistory() const
+{
+    std::stringList history;
+    for (const auto& entry : m_buildHistory) {
+        history.append(entry.second);
+    }
+    return history;
+}
+
+void BuildSystemWidget::clearHistory()
+{
+    m_buildHistory.clear();
+}
+
+void BuildSystemWidget::setBuildSystem(const std::string& system)
+{
+    if (m_buildSystemsList.contains(system)) {
+        m_currentBuildSystem = system;
+        m_buildSystemCombo->setCurrentText(system);
+    }
+}
+
+void BuildSystemWidget::setBuildConfig(const std::string& config)
+{
+    if (m_configsList.contains(config)) {
+        m_currentConfig = config;
+        m_configCombo->setCurrentText(config);
+    }
+}
+
+void BuildSystemWidget::generate()
+{
+    // For build systems that have a generate step separate from configure
+    configure();
+}
+
+void BuildSystemWidget::install()
+{
+    if (m_currentBuildSystem == "CMake") {
+        m_currentTarget = "install";
+        m_targetCombo->setCurrentText("install");
+        startBuild();
+    }
+}
+
+void BuildSystemWidget::test()
+{
+    if (m_currentBuildSystem == "CMake") {
+        m_currentTarget = "test";
+        m_targetCombo->setCurrentText("test");
+        startBuild();
+    }
+}
+
+
+
+
+
+
+
+
+

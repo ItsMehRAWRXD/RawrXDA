@@ -1,0 +1,11 @@
+{
+  "environment": "production",
+  "features": [
+    "structured_logging",
+    "exception_logging",
+    "otlp_export",
+    "prometheus_export"
+  ],
+  "otlp_endpoint": "http://localhost:4317",
+  "prometheus_endpoint": "http://localhost:9090"
+}

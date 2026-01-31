@@ -1,0 +1,2 @@
+connectivity.backend_rpc_host https://gue1-spclient.spotify.com:443
+connectivity.backend_streaming_host wss://gue1-dealer.g2.spotify.com:443

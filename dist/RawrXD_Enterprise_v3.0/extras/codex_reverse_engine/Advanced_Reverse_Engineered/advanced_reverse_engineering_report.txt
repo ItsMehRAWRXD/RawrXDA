@@ -1,0 +1,54 @@
+Advanced Reverse Engineering Report
+=====================================
+Generated: 2026-01-24 14:42:59
+Tool: Reverse-Engineer-Advanced.ps1
+Version: 1.0
+
+SUMMARY
+-------
+Obfuscated Files: 2
+Reconstructed Files: 
+Control Scenarios: 
+Deobfuscated Files: 
+Source Map Files: 
+Inferred TypeScript: 
+
+RECONSTRUCTION STATISTICS
+-------------------------
+Original Size: 0 MB
+Reconstructed Size: 0 MB
+Size Savings: %
+
+OBLFUSCATED FILES
+------------------ dist\main.js (Control Flow Obfuscation) - Confidence: Medium
+- dist\claude-agent-sdk\cli.js (Control Flow Obfuscation) - Confidence: Medium
+
+CONTROL SCENARIOS
+-----------------
+RECOMMENDATIONS
+---------------- Use the SelfReverse.ps1 script to reverse the reconstruction if needed
+- Run ControlHandler.ps1 to manage protected files
+- Verify integrity with the -Verify flag
+- Create backups before modifications
+
+NEXT STEPS
+----------
+1. Review the reconstructed source in src/
+2. Examine the self-reversing mechanisms
+3. Test the control handlers
+4. Verify integrity with -Verify flag
+5. Create backups before modifications
+
+FILES CREATED
+-------------
+- advanced_reverse_engineering_report.json
+- advanced_reverse_engineering_report.txt
+- SelfReverse.ps1
+- CreateBackup.ps1
+- ControlHandler.ps1
+- RECONSTRUCTION.json
+- MANIFEST.json
+- README.md
+
+For detailed analysis, review the JSON report at:
+Advanced_Reverse_Engineered\advanced_reverse_engineering_report.json

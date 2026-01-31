@@ -1,0 +1,1 @@
+{"module":"stub-generator","config":{"platform":"windows-x64","stealth":true,"antiAnalysis":true,"mutex":true,"upx":true,"obfuscation":true}}

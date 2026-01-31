@@ -1,0 +1,157 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rawrxd-production
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rawrxd-config
+  namespace: rawrxd-production
+data:
+  config.json: |
+    {
+      "version": "1.0.0",
+      "environment": "production",
+      "log_level": "INFO"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rawrxd-core
+  namespace: rawrxd-production
+  labels:
+    app: rawrxd
+    component: core
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rawrxd
+      component: core
+  template:
+    metadata:
+      labels:
+        app: rawrxd
+        component: core
+    spec:
+      containers:
+      - name: rawrxd-core
+        image: rawrxd/production:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        env:
+        - name: LAZY_INIT_IDE_ROOT
+          value: "/app"
+        - name: RAWRXD_ENV
+          value: "production"
+        - name: RAWRXD_LOG_LEVEL
+          value: "INFO"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: logs
+          mountPath: /app/logs
+        - name: data
+          mountPath: /app/data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          exec:
+            command:
+            - pwsh
+            - -c
+            - Test-Path /app/modules/RawrXD.Core.psm1
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: config
+        configMap:
+          name: rawrxd-config
+      - name: logs
+        emptyDir: {}
+      - name: data
+        persistentVolumeClaim:
+          claimName: rawrxd-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rawrxd-core
+  namespace: rawrxd-production
+  labels:
+    app: rawrxd
+    component: core
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: metrics
+  selector:
+    app: rawrxd
+    component: core
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rawrxd-data-pvc
+  namespace: rawrxd-production
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rawrxd-core-hpa
+  namespace: rawrxd-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rawrxd-core
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

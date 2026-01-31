@@ -1,0 +1,21 @@
+{
+  "target": "replit",
+  "endpoints": [
+    "https://replit.com/api/v0/repls",
+    "https://replit.com/api/v0/exec",
+    "https://replit.com/api/v0/compile"
+  ],
+  "methods": [
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE"
+  ],
+  "authentication": "token_based",
+  "rate_limits": "unknown",
+  "response_formats": [
+    "json",
+    "text",
+    "binary"
+  ]
+}

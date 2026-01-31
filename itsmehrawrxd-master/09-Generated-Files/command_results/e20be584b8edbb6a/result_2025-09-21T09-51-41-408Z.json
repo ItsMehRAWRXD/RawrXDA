@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "0bd400322604e6fd",
+  "result": "error",
+  "details": "Unknown command: extract_cloud_data",
+  "timestamp": "2025-09-21T09:51:41.407Z"
+}

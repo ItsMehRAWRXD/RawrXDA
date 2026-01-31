@@ -1,0 +1,18 @@
+{
+  "type": "browser",
+  "browser": "Chrome",
+  "entries": [
+    {
+      "url": "https://example.com",
+      "username": "testuser",
+      "password": "testpass123",
+      "timestamp": "2025-09-21T09:58:31.770Z"
+    },
+    {
+      "url": "https://bank.com",
+      "username": "bankuser",
+      "password": "bankpass456",
+      "timestamp": "2025-09-21T09:58:31.770Z"
+    }
+  ]
+}
