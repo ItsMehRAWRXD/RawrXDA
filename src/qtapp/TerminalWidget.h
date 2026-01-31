@@ -1,20 +1,15 @@
 #pragma once
 
-#include <QWidget>
-#include <QProcess>
+
 #include <memory>
 #include "TerminalManager.h"
 
-class QPlainTextEdit;
-class QLineEdit;
-class QComboBox;
-class QPushButton;
 
-class TerminalWidget : public QWidget
+class TerminalWidget : public void
 {
-    Q_OBJECT
+
 public:
-    explicit TerminalWidget(QWidget* parent = nullptr);
+    explicit TerminalWidget(void* parent = nullptr);
     ~TerminalWidget() override;
     
     /**
@@ -28,10 +23,10 @@ public:
     bool isRunning() const;
     qint64 pid() const;
 
-private slots:
+private:
     void onUserCommand();
-    void onOutputReady(const QByteArray& data);
-    void onErrorReady(const QByteArray& data);
+    void onOutputReady(const std::vector<uint8_t>& data);
+    void onErrorReady(const std::vector<uint8_t>& data);
     void onStarted();
     void onFinished(int exitCode, QProcess::ExitStatus status);
 
@@ -41,5 +36,6 @@ private:
     QLineEdit* m_input;
     QComboBox* m_shellSelect;
     QPushButton* m_startStopBtn;
-    void appendOutput(const QString& text);
+    void appendOutput(const std::string& text);
 };
+

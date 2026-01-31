@@ -1,19 +1,10 @@
 #pragma once
 
-#include <QDialog>
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
+
 #include <vector>
 
 // Forward declarations
-class QComboBox;
-class QLabel;
-class QTextEdit;
-class QPushButton;
-class QGroupBox;
-class QRadioButton;
-class QButtonGroup;
+
 
 /**
  * @class HardwareBackendSelector
@@ -26,9 +17,8 @@ class QButtonGroup;
  * - Configure backend-specific options (precision, memory pool, etc.)
  * - Runtime backend switching
  */
-class HardwareBackendSelector : public QDialog
+class HardwareBackendSelector : public void
 {
-    Q_OBJECT
 
 public:
     /**
@@ -50,22 +40,22 @@ public:
      */
     struct BackendInfo {
         Backend backend;
-        QString name;
-        QString version;
+        std::string name;
+        std::string version;
         bool available = false;
-        QString deviceName;
+        std::string deviceName;
         uint64_t vramBytes = 0;
-        QString computeCapability;
+        std::string computeCapability;
         bool supportsFP16 = false;
         bool supportsInt8 = false;
-        QString details;
+        std::string details;
     };
 
     /**
      * @brief Constructor
      * @param parent Parent widget
      */
-    explicit HardwareBackendSelector(QWidget* parent = nullptr);
+    explicit HardwareBackendSelector(void* parent = nullptr);
     ~HardwareBackendSelector() override = default;
     
     /**
@@ -84,19 +74,19 @@ public:
      * @brief Get selected backend as string
      * @return Backend name as string
      */
-    QString getSelectedBackendName() const;
+    std::string getSelectedBackendName() const;
 
     /**
      * @brief Get configuration for selected backend
      * @return JSON object with backend configuration
      */
-    QJsonObject getBackendConfig() const;
+    void* getBackendConfig() const;
 
     /**
      * @brief Set backend configuration
      * @param config Configuration JSON object
      */
-    void setBackendConfig(const QJsonObject& config);
+    void setBackendConfig(const void*& config);
 
     /**
      * @brief Check if backend is available
@@ -111,7 +101,7 @@ public:
      */
     std::vector<BackendInfo> getAvailableBackends() const;
 
-signals:
+
     /**
      * @brief Emitted when backend selection changes
      * @param backend Selected backend
@@ -122,14 +112,14 @@ signals:
      * @brief Emitted when backend configuration changes
      * @param config New configuration
      */
-    void configurationChanged(const QJsonObject& config);
+    void configurationChanged(const void*& config);
 
     /**
      * @brief Emitted when user confirms selection
      */
     void backendConfirmed(int backend);
 
-private slots:
+private:
     void onBackendSelected(int index);
     void onPrecisionChanged();
     void onMemoryPoolChanged();

@@ -24,6 +24,3 @@ private:
     void* m_lastReport;
 };
 
-
-
-

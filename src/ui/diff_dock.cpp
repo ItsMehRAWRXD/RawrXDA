@@ -1,21 +1,14 @@
 // Diff Preview Dock - Implementation
 #include "diff_dock.h"
-#include <QTextEdit>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QSplitter>
-#include <QLabel>
-#include <QDebug>
-#include <QDateTime>
 
-DiffDock::DiffDock(QWidget *parent)
+
+DiffDock::DiffDock(void *parent)
     : QDockWidget("📋 Refactor Preview", parent)
 {
     setObjectName("DiffDock");          // For save/restore geometry
-    setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea);
+    setAllowedAreas(//LeftDockWidgetArea | //RightDockWidgetArea | //BottomDockWidgetArea);
 
-    auto *split = new QSplitter(Qt::Horizontal, this);
+    auto *split = new QSplitter(//Horizontal, this);
     
     // Left pane (original code)
     m_left = new QTextEdit(split);
@@ -44,7 +37,7 @@ DiffDock::DiffDock(QWidget *parent)
     );
 
     // Button bar
-    auto *btnBar = new QWidget();
+    auto *btnBar = new void();
     auto *hLay = new QHBoxLayout(btnBar);
     
     m_rejectBtn = new QPushButton("✗ Reject", btnBar);
@@ -78,7 +71,7 @@ DiffDock::DiffDock(QWidget *parent)
     hLay->addWidget(m_acceptBtn);
 
     // Main layout
-    auto *mainWidget = new QWidget();
+    auto *mainWidget = new void();
     auto *mainLay = new QVBoxLayout(mainWidget);
     mainLay->setContentsMargins(5, 5, 5, 5);
     
@@ -99,27 +92,23 @@ DiffDock::DiffDock(QWidget *parent)
     setWidget(mainWidget);
 
     // Connect buttons
-    connect(m_acceptBtn, &QPushButton::clicked, this, [this]() {
-        qDebug() << "[DiffDock] User accepted refactor at" << QDateTime::currentDateTime().toString(Qt::ISODate);
-        emit accepted(m_right->toPlainText());
+// Qt connect removed
+        accepted(m_right->toPlainText());
+    });
+// Qt connect removed
+        rejected();
     });
     
-    connect(m_rejectBtn, &QPushButton::clicked, this, [this]() {
-        qDebug() << "[DiffDock] User rejected refactor at" << QDateTime::currentDateTime().toString(Qt::ISODate);
-        emit rejected();
-    });
-    
-    qDebug() << "[DiffDock] Initialized";
 }
 
-void DiffDock::setDiff(const QString &original, const QString &suggested)
+void DiffDock::setDiff(const std::string &original, const std::string &suggested)
 {
     m_left->setPlainText(original);
     m_right->setPlainText(suggested);
     raise();               // Pop to front
     show();
     
-    qDebug() << "[DiffDock] Showing diff:"
              << "original" << original.length() << "chars,"
              << "suggested" << suggested.length() << "chars";
 }
+

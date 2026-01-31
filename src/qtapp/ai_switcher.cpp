@@ -1,31 +1,29 @@
 #include "ai_switcher.hpp"
 
-AISwitcher::AISwitcher(QWidget* parent) : QMenu("AI Backend", parent)
+AISwitcher::AISwitcher(void* parent) : QMenu("AI Backend", parent)
 {
     m_backends = new QActionGroup(this);
     m_backends->setExclusive(true);
 
     // Backend options
-    QStringList backends = {"Local GGUF", "llama.cpp HTTP", "OpenAI", "Claude", "Gemini"};
+    std::vector<std::string> backends = {"Local GGUF", "llama.cpp HTTP", "OpenAI", "Claude", "Gemini"};
     
-    for (const QString& backend : backends) {
+    for (const std::string& backend : backends) {
         QAction* action = m_backends->addAction(backend);
         action->setCheckable(true);
         
         // Extract ID from name (e.g., "Local GGUF" -> "local")
-        QString id = backend.split(' ').first().toLower();
+        std::string id = backend.split(' ').first().toLower();
         action->setData(id);
         
         addAction(action);
     }
 
     // Connect backend switching
-    connect(m_backends, &QActionGroup::triggered, this, [this](QAction* action) {
-        QString id = action->data().toString();
-        
+// Qt connect removed
         // Local backend doesn't need API key
         if (id == "local") {
-            emit backendChanged("local", QString());
+            backendChanged("local", std::string());
         } else {
             // Remote backends need API key
             pickKey();
@@ -45,24 +43,24 @@ void AISwitcher::pickKey()
     }
     if (!action) return;
 
-    QString id = action->data().toString();
-    QString backendName = action->text();
+    std::string id = action->data().toString();
+    std::string backendName = action->text();
     
     bool ok = false;
-    QString key = QInputDialog::getText(
+    std::string key = QInputDialog::getText(
         this,
         backendName + " API Key",
         "Enter your API key:",
         QLineEdit::Password,
-        QString(),
+        std::string(),
         &ok
     );
 
     if (ok && !key.isEmpty()) {
-        emit backendChanged(id, key);
+        backendChanged(id, key);
     } else if (ok && key.isEmpty()) {
         // User clicked OK but didn't enter a key - revert to local
         m_backends->actions().first()->setChecked(true);
-        emit backendChanged("local", QString());
+        backendChanged("local", std::string());
     }
 }

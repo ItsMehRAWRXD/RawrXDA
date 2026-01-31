@@ -3,7 +3,6 @@
 #include <memory>
 
 
-
 struct LanguageProfile {
     std::string name;
     std::stringList extensions;
@@ -148,7 +147,7 @@ private:
     
     // Threading control
     mutable std::mutex m_mutex;
-    mutable QReadWriteLock m_statsLock;
+    mutable std::shared_mutex m_statsLock;
     QSemaphore m_pauseSemaphore{0};
     QAtomicInt m_running{0};
     QAtomicInt m_paused{0};
@@ -174,9 +173,4 @@ private:
     DigestionCheckpoint m_checkpoint;
     bool m_hasCheckpoint = false;
 };
-
-
-
-
-
 

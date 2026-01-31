@@ -354,7 +354,7 @@ private:
     
     uint8_t AssignDrive(const std::string& name, uint64_t size) {
         // HOT PATH: Attention heads → NVMe (drives 1-2)
-        if (name.find(".q_proj") != std::string::npos ||
+        if (name.find(".") != std::string::npos ||
             name.find("_q.") != std::string::npos ||
             name.find(".k_proj") != std::string::npos ||
             name.find("_k.") != std::string::npos) {

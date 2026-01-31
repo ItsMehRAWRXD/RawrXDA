@@ -8,7 +8,7 @@ ResponseParser::ResponseParser(
     std::shared_ptr<Metrics> metrics)
     : m_logger(logger), m_metrics(metrics) {
     if (m_logger) {
-        m_logger->info("ResponseParser initialized with {} statement boundaries, {} custom delimiters",
+
                        m_statementBoundaries.size(), m_customDelimiters.size());
     }
 }
@@ -57,7 +57,7 @@ std::vector<ParsedCompletion> ResponseParser::parseResponse(const std::string& r
 }
 
 std::vector<ParsedCompletion> ResponseParser::parseChunk(const std::string& chunk) {
-    m_logger->debug("Parsing chunk ({} chars, buffer size: {})", chunk.length(), m_buffer.length());
+
 
     // Add to buffer
     m_buffer += chunk;

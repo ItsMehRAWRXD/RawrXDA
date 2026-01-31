@@ -1,8 +1,6 @@
 #pragma once
 
-#include <QWidget>
-#include <QJsonObject>
-#include <QJsonArray>
+
 #include <vector>
 #include <map>
 #include <memory>
@@ -30,11 +28,10 @@
  * - Prometheus metrics integration
  */
 
-class InterpretabilityPanelEnhanced : public QWidget {
-    Q_OBJECT
+class InterpretabilityPanelEnhanced : public void {
 
 public:
-    explicit InterpretabilityPanelEnhanced(QWidget* parent = nullptr);
+    explicit InterpretabilityPanelEnhanced(void* parent = nullptr);
     ~InterpretabilityPanelEnhanced();
 
     // ========== VISUALIZATION TYPES ==========
@@ -92,7 +89,7 @@ public:
     };
 
     struct FeatureAttribution {
-        QString feature_name;
+        std::string feature_name;
         float attribution_score = 0.0f;
         float positive_contribution = 0.0f;
         float negative_contribution = 0.0f;
@@ -171,7 +168,7 @@ public:
      * @param input_name Name of input being analyzed
      * @param attributions Per-element attribution values
      */
-    void updateIntegratedGradients(const QString& input_name, const std::vector<float>& attributions);
+    void updateIntegratedGradients(const std::string& input_name, const std::vector<float>& attributions);
     
     /**
      * Update input saliency map (gradient magnitude)
@@ -286,14 +283,14 @@ public:
      * Export current visualization as JSON
      * @return JSON object containing all visualization data
      */
-    QJsonObject exportAsJSON() const;
+    void* exportAsJSON() const;
     
     /**
      * Export data as JSON file
      * @param file_path Path to save JSON file
      * @return Success status
      */
-    bool exportAsJSON(const QString& file_path);
+    bool exportAsJSON(const std::string& file_path);
     
     /**
      * Export data as CSV format
@@ -301,28 +298,28 @@ public:
      * @param viz_type Which visualization type to export
      * @return Success status
      */
-    bool exportAsCSV(const QString& file_path, VisualizationType viz_type) const;
+    bool exportAsCSV(const std::string& file_path, VisualizationType viz_type) const;
     
     /**
      * Export data as CSV file
      * @param file_path Path to save CSV
      * @return Success status
      */
-    bool exportAsCSV(const QString& file_path);
+    bool exportAsCSV(const std::string& file_path);
     
     /**
      * Export visualization as image (PNG)
      * @param file_path Path to save PNG
      * @return Success status
      */
-    bool exportAsPNG(const QString& file_path) const;
+    bool exportAsPNG(const std::string& file_path) const;
     
     /**
      * Load interpretability data from JSON
      * @param data JSON object containing serialized data
      * @return Success status
      */
-    bool loadFromJSON(const QJsonObject& data);
+    bool loadFromJSON(const void*& data);
     
     /**
      * Clear all stored visualizations
@@ -335,32 +332,31 @@ public:
      * Get health status for Kubernetes probes
      * @return JSON object with health metrics
      */
-    QJsonObject getHealthStatus() const;
+    void* getHealthStatus() const;
     
     /**
      * Get Prometheus metrics
      * @return Text formatted for Prometheus scraping
      */
-    QString getPrometheusMetrics() const;
+    std::string getPrometheusMetrics() const;
     
     /**
      * Get performance statistics
      * @return JSON object with timing and memory info
      */
-    QJsonObject getPerformanceStats() const;
+    void* getPerformanceStats() const;
 
     // ========== SIGNALS ==========
 
-signals:
     void visualizationUpdated(int viz_type);
     void layerSelectionChanged(int layer_index);
     void attentionHeadSelectionChanged(int head_index);
-    void diagnosticsCompleted(const QJsonObject& diagnostics);
-    void anomalyDetected(const QString& anomaly_description);
-    void exportCompleted(bool success, const QString& file_path);
-    void exportRequested(const QString& format);
+    void diagnosticsCompleted(const void*& diagnostics);
+    void anomalyDetected(const std::string& anomaly_description);
+    void exportCompleted(bool success, const std::string& file_path);
+    void exportRequested(const std::string& format);
 
-private slots:
+private:
     void onRefreshDisplay();
 
 private:
@@ -398,12 +394,12 @@ private:
     /**
      * Convert visualization to JSON format
      */
-    QJsonObject visualizationToJSON() const;
+    void* visualizationToJSON() const;
     
     /**
      * Log event with structured format
      */
-    void logEvent(const QString& event_type, const QJsonObject& event_data) const;
+    void logEvent(const std::string& event_type, const void*& event_data) const;
 
     // ========== MEMBER VARIABLES ==========
     
@@ -426,7 +422,7 @@ private:
     std::vector<FeatureAttribution> m_feature_attributions;
     std::vector<LayerAttribution> m_layer_attributions;
     std::map<int, GradCAMMap> m_gradcam_data;                      // layer -> data
-    std::map<QString, std::vector<float>> m_integrated_gradients;   // input_name -> values
+    std::map<std::string, std::vector<float>> m_integrated_gradients;   // input_name -> values
     std::vector<float> m_saliency_map;
     std::map<int, std::vector<float>> m_token_logits;              // token_idx -> logits
     
@@ -454,3 +450,4 @@ private:
     class QLabel* m_problems_label = nullptr;
     class QLabel* m_diagnostics_label = nullptr;
 };
+

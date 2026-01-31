@@ -2,19 +2,13 @@
 // Production-ready with clear explanation and user control
 #pragma once
 
-#include <QDialog>
-#include <QCheckBox>
-#include <QLabel>
-#include <QPushButton>
-#include <QString>
 
 namespace RawrXD {
 
-class TelemetryOptInDialog : public QDialog {
-    Q_OBJECT
+class TelemetryOptInDialog : public void {
 
 public:
-    explicit TelemetryOptInDialog(QWidget* parent = nullptr);
+    explicit TelemetryOptInDialog(void* parent = nullptr);
     ~TelemetryOptInDialog() override = default;
 
     // Returns true if user opted in to telemetry
@@ -23,18 +17,18 @@ public:
     // Returns true if user wants to see this dialog again
     bool shouldRemindLater() const { return m_remindLater; }
 
-signals:
+
     void telemetryDecisionMade(bool enabled);
 
-private slots:
+private:
     void onAcceptClicked();
     void onDeclineClicked();
     void onLearnMoreClicked();
 
 private:
     void setupUI();
-    QString getTelemetryExplanation() const;
-    QString getCollectedDataDetails() const;
+    std::string getTelemetryExplanation() const;
+    std::string getCollectedDataDetails() const;
     
     QCheckBox* m_remindLaterCheckbox{nullptr};
     bool m_telemetryEnabled{false};
@@ -51,3 +45,4 @@ void saveTelemetryPreference(bool enabled);
 bool getTelemetryPreference();
 
 } // namespace RawrXD
+

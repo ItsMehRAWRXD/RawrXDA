@@ -23,7 +23,6 @@ void AgenticCommandExecutor::executeCommand(const std::string &command, const st
     // Check if approval is required
     if (requireApproval && !isAutoApproved(command)) {
         if (!requestApproval(command)) {
-            // // qDebug:  "Command execution rejected by user:" << command;
             return;
         }
     }
@@ -32,11 +31,9 @@ void AgenticCommandExecutor::executeCommand(const std::string &command, const st
     executionStarted(command);
 
     // Start the process
-    // // qDebug:  "Executing command:" << command << "with arguments:" << arguments;
     m_process->start(command, arguments);
 
     if (!m_process->waitForStarted()) {
-        // // qWarning:  "Failed to start process:" << command << m_process->errorString();
         executionFinished(false, -1);
     }
 }
@@ -50,7 +47,6 @@ void AgenticCommandExecutor::cancelCommand()
 {
     if (m_process->state() == void*::Running) {
         m_process->kill();
-        // // qDebug:  "Command execution canceled";
     }
 }
 
@@ -71,7 +67,6 @@ void AgenticCommandExecutor::onProcessReadyReadStandardError()
 void AgenticCommandExecutor::onProcessFinished(int exitCode, void*::ExitStatus exitStatus)
 {
     bool success = (exitStatus == void*::NormalExit && exitCode == 0);
-    // // qDebug:  "Process finished with exit code:" << exitCode << "success:" << success;
     executionFinished(success, exitCode);
 }
 
@@ -80,7 +75,6 @@ bool AgenticCommandExecutor::isAutoApproved(const std::string &command)
     // Check if command is in the auto-approve list
     for (const std::string &approvedCmd : m_autoApproveList) {
         if (command.contains(approvedCmd, CaseInsensitive)) {
-            // // qDebug:  "Command auto-approved:" << command;
             return true;
         }
     }
@@ -93,16 +87,11 @@ bool AgenticCommandExecutor::requestApproval(const std::string &command)
     void::StandardButton result = void::question(
         nullptr,
         "Command Execution",
-        std::string("Execute this command?\n\n%1").arg(command),
+        std::string("Execute this command?\n\n%1"),
         void::Yes | void::No,
         void::No
     );
 
     return result == void::Yes;
 }
-
-
-
-
-
 

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
 
 /**
  * @brief Sentry crash reporting integration for production error tracking
@@ -14,9 +11,8 @@
  * - Environment-based configuration (DSN from env var)
  * - Privacy-respecting (no PII collection)
  */
-class SentryIntegration : public QObject
+class SentryIntegration : public void
 {
-    Q_OBJECT
 
 public:
     static SentryIntegration* instance();
@@ -32,56 +28,56 @@ public:
      * @param exception Exception message
      * @param context Additional context (file, function, line)
      */
-    void captureException(const QString& exception, const QJsonObject& context = QJsonObject());
+    void captureException(const std::string& exception, const void*& context = void*());
     
     /**
      * @brief Capture a message (non-error event)
      * @param message Message to log
      * @param level Severity level (info, warning, error)
      */
-    void captureMessage(const QString& message, const QString& level = "info");
+    void captureMessage(const std::string& message, const std::string& level = "info");
     
     /**
      * @brief Add breadcrumb for debugging trail
      * @param message Breadcrumb message
      * @param category Event category (navigation, http, etc.)
      */
-    void addBreadcrumb(const QString& message, const QString& category = "default");
+    void addBreadcrumb(const std::string& message, const std::string& category = "default");
     
     /**
      * @brief Start performance transaction
      * @param operation Operation name (e.g., "model.load", "inference.generate")
      * @return Transaction ID
      */
-    QString startTransaction(const QString& operation);
+    std::string startTransaction(const std::string& operation);
     
     /**
      * @brief Finish performance transaction
      * @param transactionId Transaction ID from startTransaction
      */
-    void finishTransaction(const QString& transactionId);
+    void finishTransaction(const std::string& transactionId);
     
     /**
      * @brief Set user context (only non-PII data like user ID hash)
      * @param userId Anonymized user identifier
      */
-    void setUser(const QString& userId);
+    void setUser(const std::string& userId);
 
-signals:
-    void errorReported(const QString& errorId);
-    void transactionCompleted(const QString& transactionId, qint64 durationMs);
+    void errorReported(const std::string& errorId);
+    void transactionCompleted(const std::string& transactionId, qint64 durationMs);
 
 private:
-    explicit SentryIntegration(QObject* parent = nullptr);
+    explicit SentryIntegration(void* parent = nullptr);
     ~SentryIntegration();
     
     static SentryIntegration* s_instance;
     
     bool m_initialized;
-    QString m_dsn;
-    QHash<QString, qint64> m_activeTransactions;  ///< Transaction ID -> start timestamp
-    QList<QJsonObject> m_breadcrumbs;  ///< Breadcrumb trail for context
+    std::string m_dsn;
+    std::unordered_map<std::string, qint64> m_activeTransactions;  ///< Transaction ID -> start timestamp
+    std::vector<void*> m_breadcrumbs;  ///< Breadcrumb trail for context
     
     // PRODUCTION-READY: Send event to Sentry HTTP API
-    void sendEvent(const QJsonObject& event);
+    void sendEvent(const void*& event);
 };
+

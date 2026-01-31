@@ -100,7 +100,6 @@ static void cpy_blck_q8_0_f32(const char * cxi, char * cdsti) {
 }
 
 
-
 template <dequantize_kernel_t dequant, int qk> static void cpy_blck_q_f32(const char * cxi, char * cdsti) {
     float * cdstf = (float *) (cdsti);
 

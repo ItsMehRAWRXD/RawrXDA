@@ -992,9 +992,3 @@ inline std::string formatDuration(int64_t ms) {
 
 #endif // RAWRXD_COMPILER_QT_HPP
 
-
-
-
-
-
-

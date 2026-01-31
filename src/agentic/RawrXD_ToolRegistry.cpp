@@ -103,14 +103,14 @@ void ToolRegistry::SetConsentCallback(ConsentCallback callback) {
 }
 
 bool ToolRegistry::LoadFromDisk(const std::wstring& path) {
-    LOG_INFO("ToolRegistry::LoadFromDisk");
+
     std::lock_guard<std::mutex> lock(m_mutex);
 
     m_registryPath = NormalizePath(path);
     std::string regPathStr = ToUtf8(m_registryPath);
     std::ifstream registryFile(regPathStr);
     if (!registryFile.is_open()) {
-        LOG_ERROR("ToolRegistry: failed to open registry: " + regPathStr);
+
         return false;
     }
 
@@ -122,20 +122,19 @@ bool ToolRegistry::LoadFromDisk(const std::wstring& path) {
     try {
         root = json::parse(buffer.str());
     } catch (const std::exception& ex) {
-        LOG_ERROR(std::string("ToolRegistry: JSON parse failed: ") + ex.what());
+
         return false;
     }
 
     std::string error;
     if (!ParseRegistry(root, error)) {
-        LOG_ERROR("ToolRegistry: parse error: " + error);
+
         return false;
     }
 
     m_registryJson = root;
     m_lastWriteTime = GetLastWriteTime(m_registryPath);
 
-    LOG_INFO("ToolRegistry: loaded registry with " + std::to_string(m_tools.size()) + " tools");
     return true;
 }
 
@@ -174,7 +173,7 @@ ToolResult ToolRegistry::Execute(const std::string& tool_name, const std::string
         if (!tool) {
             output = "Tool not found: " + tool_name;
             m_totalErrors.fetch_add(1);
-            LOG_ERROR(output);
+
             return ToolResult::ValidationFailed;
         }
 
@@ -218,7 +217,6 @@ ToolResult ToolRegistry::Execute(const std::string& tool_name, const std::string
         g_activeTool = nullptr;
 
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
-        LOG_INFO("Tool execution " + tool_name + " finished in " + std::to_string(elapsed) + " ms");
 
         if (result != ToolResult::Success) {
             m_totalErrors.fetch_add(1);
@@ -228,12 +226,12 @@ ToolResult ToolRegistry::Execute(const std::string& tool_name, const std::string
     } catch (const std::exception& ex) {
         m_totalErrors.fetch_add(1);
         output = std::string("Tool execution error: ") + ex.what();
-        LOG_ERROR(output);
+
         return ToolResult::ExecutionError;
     } catch (...) {
         m_totalErrors.fetch_add(1);
         output = "Tool execution error: unknown exception";
-        LOG_ERROR(output);
+
         return ToolResult::ExecutionError;
     }
 }

@@ -1,6 +1,5 @@
-#include <QApplication>
-#include <QMainWindow>
-#include <QLabel>
+
+
 #include <cstdio>
 
 int main(int argc, char* argv[]) {
@@ -12,7 +11,7 @@ int main(int argc, char* argv[]) {
     std::fprintf(stderr, "TEST: QApplication created\n");
     std::fflush(stderr);
     
-    QMainWindow window;
+    void window;
     window.setCentralWidget(new QLabel("Hello Qt!"));
     window.show();
     
@@ -21,3 +20,4 @@ int main(int argc, char* argv[]) {
     
     return app.exec();
 }
+

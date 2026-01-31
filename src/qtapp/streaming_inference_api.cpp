@@ -1,8 +1,7 @@
 #include "streaming_inference_api.hpp"
-#include <QDebug>
 
-StreamingInferenceAPI::StreamingInferenceAPI(QObject* parent)
-    : QObject(parent)
+StreamingInferenceAPI::StreamingInferenceAPI(void* parent)
+    : void(parent)
 {
 }
 
@@ -13,7 +12,7 @@ StreamingInferenceAPI::~StreamingInferenceAPI() {
     }
 }
 
-qint64 StreamingInferenceAPI::startStream(const QString& modelPath, const QString& prompt,
+qint64 StreamingInferenceAPI::startStream(const std::string& modelPath, const std::string& prompt,
                                           int maxTokens, float temperature) {
     qint64 streamId = m_nextStreamId++;
     
@@ -26,25 +25,22 @@ qint64 StreamingInferenceAPI::startStream(const QString& modelPath, const QStrin
     
     m_activeStreams[streamId] = state;
     
-    qInfo() << "[StreamingAPI] Started stream" << streamId 
             << "for model" << modelPath;
     
-    // Emit initial progress
-    emit progressUpdated(streamId, 0, maxTokens);
+    // initial progress
+    progressUpdated(streamId, 0, maxTokens);
     
     return streamId;
 }
 
 bool StreamingInferenceAPI::cancelStream(qint64 streamId) {
     if (!m_activeStreams.contains(streamId)) {
-        qWarning() << "[StreamingAPI] Stream not found:" << streamId;
         return false;
     }
     
     m_activeStreams.remove(streamId);
-    emit streamCancelled(streamId);
+    streamCancelled(streamId);
     
-    qInfo() << "[StreamingAPI] Cancelled stream" << streamId;
     return true;
 }
 
@@ -68,7 +64,7 @@ void StreamingInferenceAPI::setErrorCallback(ErrorCallback callback) {
     m_errorCallback = callback;
 }
 
-void StreamingInferenceAPI::onTokenReady(qint64 streamId, const QString& token) {
+void StreamingInferenceAPI::onTokenReady(qint64 streamId, const std::string& token) {
     if (!m_activeStreams.contains(streamId)) return;
     
     StreamState& state = m_activeStreams[streamId];
@@ -77,8 +73,8 @@ void StreamingInferenceAPI::onTokenReady(qint64 streamId, const QString& token) 
     state.partialResult += token;
     state.tokensGenerated++;
     
-    // Emit signal
-    emit tokenGenerated(streamId, token, state.tokensGenerated);
+    // signal
+    tokenGenerated(streamId, token, state.tokensGenerated);
     
     // Call user callback if set
     if (m_tokenCallback) {
@@ -92,20 +88,20 @@ void StreamingInferenceAPI::onTokenReady(qint64 streamId, const QString& token) 
 void StreamingInferenceAPI::onStreamProgress(qint64 streamId, int current, int total) {
     if (!m_activeStreams.contains(streamId)) return;
     
-    emit progressUpdated(streamId, current, total);
+    progressUpdated(streamId, current, total);
     
     if (m_progressCallback) {
         m_progressCallback(current, total);
     }
 }
 
-void StreamingInferenceAPI::onStreamComplete(qint64 streamId, const QString& result) {
+void StreamingInferenceAPI::onStreamComplete(qint64 streamId, const std::string& result) {
     if (!m_activeStreams.contains(streamId)) return;
     
     StreamState& state = m_activeStreams[streamId];
     state.active = false;
     
-    emit streamCompleted(streamId, result);
+    streamCompleted(streamId, result);
     
     if (m_completionCallback) {
         m_completionCallback(result);
@@ -114,17 +110,16 @@ void StreamingInferenceAPI::onStreamComplete(qint64 streamId, const QString& res
     // Clean up
     m_activeStreams.remove(streamId);
     
-    qInfo() << "[StreamingAPI] Stream" << streamId << "completed with"
             << result.length() << "chars";
 }
 
-void StreamingInferenceAPI::onStreamError(qint64 streamId, const QString& error) {
+void StreamingInferenceAPI::onStreamError(qint64 streamId, const std::string& error) {
     if (!m_activeStreams.contains(streamId)) return;
     
     StreamState& state = m_activeStreams[streamId];
     state.active = false;
     
-    emit streamFailed(streamId, error);
+    streamFailed(streamId, error);
     
     if (m_errorCallback) {
         m_errorCallback(error);
@@ -133,5 +128,5 @@ void StreamingInferenceAPI::onStreamError(qint64 streamId, const QString& error)
     // Clean up
     m_activeStreams.remove(streamId);
     
-    qWarning() << "[StreamingAPI] Stream" << streamId << "failed:" << error;
 }
+

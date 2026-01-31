@@ -23,8 +23,7 @@
 #include <memory>
 #include <functional>
 #include <numeric>
-#include <QCoreApplication>
-#include <QDebug>
+
 
 #include "inference_engine.hpp"
 
@@ -52,7 +51,7 @@ private:
     std::unique_ptr<InferenceEngine> engine;
 
 public:
-    bool init(const QString &model_path) {
+    bool init(const std::string &model_path) {
         auto t0 = now_ms();
         try {
             engine = std::make_unique<InferenceEngine>(model_path);
@@ -76,7 +75,7 @@ public:
 
         // Tokenize
         auto t_tok0 = now_ms();
-        auto tokens = engine->tokenize(QString::fromStdString(prompt));
+        auto tokens = engine->tokenize(std::string::fromStdString(prompt));
         auto t_tok1 = now_ms();
         r.tokenize_ms = t_tok1 - t_tok0;
         r.tokens_in = tokens.size();
@@ -138,12 +137,12 @@ int main(int argc, char *argv[]) {
     std::cout <<   "║ RawrXD Model Benchmark (Console)           ║\n";
     std::cout <<   "╚══════════════════════════════════════════════╝\n";
 
-    QString model_path;
+    std::string model_path;
     if (argc > 1) {
-        model_path = QString::fromLocal8Bit(argv[1]);
+        model_path = std::string::fromLocal8Bit(argv[1]);
         std::cout << "[CLI] Model: " << model_path.toStdString() << std::endl;
     } else if (const char* env = std::getenv("BENCH_MODEL")) {
-        model_path = QString::fromLocal8Bit(env);
+        model_path = std::string::fromLocal8Bit(env);
         std::cout << "[ENV] Model: " << model_path.toStdString() << std::endl;
     } else {
         model_path = "gemma3";
@@ -190,3 +189,4 @@ int main(int argc, char *argv[]) {
     std::cout << "\nBenchmark complete" << std::endl;
     return 0;
 }
+

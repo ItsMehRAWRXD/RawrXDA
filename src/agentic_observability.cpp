@@ -1,21 +1,18 @@
 // AgenticObservability Implementation
 #include "agentic_observability.h"
-#include <QDebug>
-#include <QUuid>
-#include <QJsonDocument>
+
+
 #include <algorithm>
 #include <cmath>
 
-AgenticObservability::AgenticObservability(QObject* parent)
-    : QObject(parent),
-      m_systemStartTime(QDateTime::currentDateTime())
+AgenticObservability::AgenticObservability(void* parent)
+    : void(parent),
+      m_systemStartTime(std::chrono::system_clock::time_point::currentDateTime())
 {
-    qDebug() << "[AgenticObservability] Initialized - Ready for comprehensive observability";
 }
 
 AgenticObservability::~AgenticObservability()
 {
-    qDebug() << "[AgenticObservability] Destroyed - Logged"
              << m_totalLogsWritten << "entries and"
              << m_totalMetricsRecorded << "metrics";
 }
@@ -24,9 +21,9 @@ AgenticObservability::~AgenticObservability()
 
 void AgenticObservability::log(
     LogLevel level,
-    const QString& component,
-    const QString& message,
-    const QJsonObject& context)
+    const std::string& component,
+    const std::string& message,
+    const void*& context)
 {
     // Apply sampling
     if (QRandomGenerator::global()->generateDouble() > m_samplingRate) {
@@ -34,7 +31,7 @@ void AgenticObservability::log(
     }
 
     LogEntry entry;
-    entry.timestamp = QDateTime::currentDateTime();
+    entry.timestamp = std::chrono::system_clock::time_point::currentDateTime();
     entry.level = level;
     entry.component = component;
     entry.message = message;
@@ -50,46 +47,46 @@ void AgenticObservability::log(
         m_logs.erase(m_logs.begin());
     }
 
-    emit logWritten(entry);
+    logWritten(entry);
 }
 
 void AgenticObservability::logDebug(
-    const QString& component,
-    const QString& message,
-    const QJsonObject& context)
+    const std::string& component,
+    const std::string& message,
+    const void*& context)
 {
     log(LogLevel::DEBUG, component, message, context);
 }
 
 void AgenticObservability::logInfo(
-    const QString& component,
-    const QString& message,
-    const QJsonObject& context)
+    const std::string& component,
+    const std::string& message,
+    const void*& context)
 {
     log(LogLevel::INFO, component, message, context);
 }
 
 void AgenticObservability::logWarn(
-    const QString& component,
-    const QString& message,
-    const QJsonObject& context)
+    const std::string& component,
+    const std::string& message,
+    const void*& context)
 {
     log(LogLevel::WARN, component, message, context);
 }
 
 void AgenticObservability::logError(
-    const QString& component,
-    const QString& message,
-    const QJsonObject& context)
+    const std::string& component,
+    const std::string& message,
+    const void*& context)
 {
     log(LogLevel::ERROR, component, message, context);
     m_errorCounts[component.toStdString()]++;
 }
 
 void AgenticObservability::logCritical(
-    const QString& component,
-    const QString& message,
-    const QJsonObject& context)
+    const std::string& component,
+    const std::string& message,
+    const void*& context)
 {
     log(LogLevel::CRITICAL, component, message, context);
     m_errorCounts[component.toStdString()]++;
@@ -98,7 +95,7 @@ void AgenticObservability::logCritical(
 std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogs(
     int limit,
     LogLevel minLevel,
-    const QString& component)
+    const std::string& component)
 {
     std::vector<LogEntry> filtered;
 
@@ -116,8 +113,8 @@ std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogs(
 }
 
 std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogsByTimeRange(
-    const QDateTime& start,
-    const QDateTime& end,
+    const std::chrono::system_clock::time_point& start,
+    const std::chrono::system_clock::time_point& end,
     LogLevel minLevel)
 {
     std::vector<LogEntry> filtered;
@@ -134,16 +131,16 @@ std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogsByTimeR
 // ===== METRICS =====
 
 void AgenticObservability::recordMetric(
-    const QString& metricName,
+    const std::string& metricName,
     float value,
-    const QJsonObject& labels,
-    const QString& unit)
+    const void*& labels,
+    const std::string& unit)
 {
     MetricPoint point;
     point.metricName = metricName;
     point.value = value;
     point.labels = labels;
-    point.timestamp = QDateTime::currentDateTime();
+    point.timestamp = std::chrono::system_clock::time_point::currentDateTime();
     point.unit = unit;
 
     m_metrics.push_back(point);
@@ -154,18 +151,18 @@ void AgenticObservability::recordMetric(
         m_metrics.erase(m_metrics.begin());
     }
 
-    emit metricRecorded(metricName);
+    metricRecorded(metricName);
 }
 
 void AgenticObservability::incrementCounter(
-    const QString& metricName,
+    const std::string& metricName,
     int delta,
-    const QJsonObject& labels)
+    const void*& labels)
 {
     recordMetric(metricName, delta, labels, "count");
 }
 
-float AgenticObservability::getCounterValue(const QString& metricName) const
+float AgenticObservability::getCounterValue(const std::string& metricName) const
 {
     float sum = 0.0f;
     for (const auto& metric : m_metrics) {
@@ -177,14 +174,14 @@ float AgenticObservability::getCounterValue(const QString& metricName) const
 }
 
 void AgenticObservability::setGauge(
-    const QString& metricName,
+    const std::string& metricName,
     float value,
-    const QJsonObject& labels)
+    const void*& labels)
 {
     recordMetric(metricName, value, labels, "gauge");
 }
 
-float AgenticObservability::getGaugeValue(const QString& metricName) const
+float AgenticObservability::getGaugeValue(const std::string& metricName) const
 {
     // Return most recent value
     for (auto it = m_metrics.rbegin(); it != m_metrics.rend(); ++it) {
@@ -196,14 +193,14 @@ float AgenticObservability::getGaugeValue(const QString& metricName) const
 }
 
 void AgenticObservability::recordHistogram(
-    const QString& metricName,
+    const std::string& metricName,
     float value,
-    const QJsonObject& labels)
+    const void*& labels)
 {
     recordMetric(metricName + "_histogram", value, labels, "histogram");
 }
 
-QJsonObject AgenticObservability::getHistogramStats(const QString& metricName) const
+void* AgenticObservability::getHistogramStats(const std::string& metricName) const
 {
     std::vector<float> values;
 
@@ -213,7 +210,7 @@ QJsonObject AgenticObservability::getHistogramStats(const QString& metricName) c
         }
     }
 
-    QJsonObject stats;
+    void* stats;
 
     if (values.empty()) {
         stats["count"] = 0;
@@ -244,7 +241,7 @@ QJsonObject AgenticObservability::getHistogramStats(const QString& metricName) c
 
 AgenticObservability::TimingGuard::TimingGuard(
     AgenticObservability* obs,
-    const QString& metricName)
+    const std::string& metricName)
     : m_obs(obs), m_metricName(metricName),
       m_start(std::chrono::high_resolution_clock::now())
 {
@@ -261,13 +258,13 @@ AgenticObservability::TimingGuard::~TimingGuard()
 }
 
 std::unique_ptr<AgenticObservability::TimingGuard> AgenticObservability::measureDuration(
-    const QString& metricName)
+    const std::string& metricName)
 {
     return std::make_unique<TimingGuard>(this, metricName);
 }
 
 std::vector<AgenticObservability::MetricPoint> AgenticObservability::getMetrics(
-    const QString& pattern,
+    const std::string& pattern,
     int limit)
 {
     std::vector<MetricPoint> filtered;
@@ -286,9 +283,9 @@ std::vector<AgenticObservability::MetricPoint> AgenticObservability::getMetrics(
     return filtered;
 }
 
-QJsonObject AgenticObservability::getMetricsSummary() const
+void* AgenticObservability::getMetricsSummary() const
 {
-    QJsonObject summary;
+    void* summary;
 
     // Group metrics by name
     std::unordered_map<std::string, std::vector<float>> metricGroups;
@@ -296,17 +293,17 @@ QJsonObject AgenticObservability::getMetricsSummary() const
         metricGroups[metric.metricName.toStdString()].push_back(metric.value);
     }
 
-    QJsonObject metrics;
+    void* metrics;
     for (const auto& pair : metricGroups) {
         float sum = 0.0f;
         for (float v : pair.second) sum += v;
 
-        QJsonObject metricInfo;
+        void* metricInfo;
         metricInfo["count"] = static_cast<int>(pair.second.size());
         metricInfo["latest"] = pair.second.back();
         metricInfo["avg"] = sum / pair.second.size();
 
-        metrics[QString::fromStdString(pair.first)] = metricInfo;
+        metrics[std::string::fromStdString(pair.first)] = metricInfo;
     }
 
     summary["metrics"] = metrics;
@@ -315,7 +312,7 @@ QJsonObject AgenticObservability::getMetricsSummary() const
     return summary;
 }
 
-QJsonObject AgenticObservability::getPercentiles(const QString& metricName) const
+void* AgenticObservability::getPercentiles(const std::string& metricName) const
 {
     std::vector<float> values;
 
@@ -325,7 +322,7 @@ QJsonObject AgenticObservability::getPercentiles(const QString& metricName) cons
         }
     }
 
-    QJsonObject percentiles;
+    void* percentiles;
 
     if (values.empty()) {
         return percentiles;
@@ -342,27 +339,27 @@ QJsonObject AgenticObservability::getPercentiles(const QString& metricName) cons
 
 // ===== DISTRIBUTED TRACING =====
 
-QString AgenticObservability::startTrace(const QString& operation)
+std::string AgenticObservability::startTrace(const std::string& operation)
 {
     if (!m_tracingEnabled) return "";
 
-    QString traceId = generateTraceId();
+    std::string traceId = generateTraceId();
     m_traceSpans[traceId.toStdString()] = {};
 
     return traceId;
 }
 
-QString AgenticObservability::startSpan(const QString& spanName, const QString& parentSpanId)
+std::string AgenticObservability::startSpan(const std::string& spanName, const std::string& parentSpanId)
 {
     if (!m_tracingEnabled) return "";
 
-    QString spanId = generateSpanId();
+    std::string spanId = generateSpanId();
     
     TraceSpan span;
     span.spanId = spanId;
     span.parentSpanId = parentSpanId;
     span.operation = spanName;
-    span.startTime = QDateTime::currentDateTime();
+    span.startTime = std::chrono::system_clock::time_point::currentDateTime();
     span.hasError = false;
     span.statusCode = 0;
 
@@ -372,53 +369,53 @@ QString AgenticObservability::startSpan(const QString& spanName, const QString& 
 }
 
 void AgenticObservability::endSpan(
-    const QString& spanId,
+    const std::string& spanId,
     bool hasError,
-    const QString& errorMessage,
+    const std::string& errorMessage,
     int statusCode)
 {
     auto it = m_spans.find(spanId.toStdString());
     if (it != m_spans.end()) {
-        it->second.endTime = QDateTime::currentDateTime();
+        it->second.endTime = std::chrono::system_clock::time_point::currentDateTime();
         it->second.hasError = hasError;
         it->second.errorMessage = errorMessage;
         it->second.statusCode = statusCode;
 
-        emit spanCompleted(spanId);
+        spanCompleted(spanId);
     }
 }
 
 void AgenticObservability::setSpanAttribute(
-    const QString& spanId,
-    const QString& key,
-    const QVariant& value)
+    const std::string& spanId,
+    const std::string& key,
+    const std::any& value)
 {
     auto it = m_spans.find(spanId.toStdString());
     if (it != m_spans.end()) {
-        it->second.attributes[key] = QJsonValue::fromVariant(value);
+        it->second.attributes[key] = void*::fromVariant(value);
     }
 }
 
 void AgenticObservability::addSpanEvent(
-    const QString& spanId,
-    const QString& eventName,
-    const QJsonObject& attributes)
+    const std::string& spanId,
+    const std::string& eventName,
+    const void*& attributes)
 {
     auto it = m_spans.find(spanId.toStdString());
     if (it != m_spans.end()) {
-        QJsonObject event;
+        void* event;
         event["name"] = eventName;
-        event["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        event["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         event["attributes"] = attributes;
         
         // Store event in attributes array
-        QJsonArray events = it->second.attributes.value("events").toArray();
+        void* events = it->second.attributes.value("events").toArray();
         events.append(event);
         it->second.attributes["events"] = events;
     }
 }
 
-AgenticObservability::TraceSpan* AgenticObservability::getSpan(const QString& spanId)
+AgenticObservability::TraceSpan* AgenticObservability::getSpan(const std::string& spanId)
 {
     auto it = m_spans.find(spanId.toStdString());
     if (it != m_spans.end()) {
@@ -428,7 +425,7 @@ AgenticObservability::TraceSpan* AgenticObservability::getSpan(const QString& sp
 }
 
 std::vector<AgenticObservability::TraceSpan> AgenticObservability::getTraceSpans(
-    const QString& traceId)
+    const std::string& traceId)
 {
     std::vector<TraceSpan> spans;
 
@@ -445,15 +442,15 @@ std::vector<AgenticObservability::TraceSpan> AgenticObservability::getTraceSpans
     return spans;
 }
 
-QJsonObject AgenticObservability::getTraceVisualization(const QString& traceId)
+void* AgenticObservability::getTraceVisualization(const std::string& traceId)
 {
-    QJsonObject visualization;
+    void* visualization;
 
     auto spans = getTraceSpans(traceId);
-    QJsonArray spanArray;
+    void* spanArray;
 
     for (const auto& span : spans) {
-        QJsonObject spanObj;
+        void* spanObj;
         spanObj["spanId"] = span.spanId;
         spanObj["operation"] = span.operation;
         spanObj["duration"] = static_cast<int>(
@@ -472,16 +469,16 @@ QJsonObject AgenticObservability::getTraceVisualization(const QString& traceId)
 
 // ===== DIAGNOSTICS =====
 
-QJsonObject AgenticObservability::getSystemHealth() const
+void* AgenticObservability::getSystemHealth() const
 {
-    QJsonObject health;
+    void* health;
 
     int errorCount = 0;
     for (const auto& pair : m_errorCounts) {
         errorCount += pair.second;
     }
 
-    float uptime = m_systemStartTime.msecsTo(QDateTime::currentDateTime()) / 1000.0f;
+    float uptime = m_systemStartTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime()) / 1000.0f;
 
     health["uptime_seconds"] = uptime;
     health["total_logs"] = m_totalLogsWritten;
@@ -499,9 +496,9 @@ bool AgenticObservability::isHealthy() const
     return getSystemHealth().value("healthy").toBool(true);
 }
 
-QJsonObject AgenticObservability::getPerformanceSummary() const
+void* AgenticObservability::getPerformanceSummary() const
 {
-    QJsonObject summary;
+    void* summary;
 
     // Find latency-related metrics
     for (const auto& metric : m_metrics) {
@@ -514,13 +511,13 @@ QJsonObject AgenticObservability::getPerformanceSummary() const
     return summary;
 }
 
-QJsonObject AgenticObservability::getErrorSummary() const
+void* AgenticObservability::getErrorSummary() const
 {
-    QJsonObject summary;
+    void* summary;
 
-    QJsonObject errorsByComponent;
+    void* errorsByComponent;
     for (const auto& pair : m_errorCounts) {
-        errorsByComponent[QString::fromStdString(pair.first)] = pair.second;
+        errorsByComponent[std::string::fromStdString(pair.first)] = pair.second;
     }
 
     summary["errors_by_component"] = errorsByComponent;
@@ -529,9 +526,9 @@ QJsonObject AgenticObservability::getErrorSummary() const
     return summary;
 }
 
-std::vector<QString> AgenticObservability::detectBottlenecks()
+std::vector<std::string> AgenticObservability::detectBottlenecks()
 {
-    std::vector<QString> bottlenecks;
+    std::vector<std::string> bottlenecks;
 
     // Find slowest operations
     std::unordered_map<std::string, float> avgDurations;
@@ -545,72 +542,72 @@ std::vector<QString> AgenticObservability::detectBottlenecks()
     return bottlenecks;
 }
 
-QJsonObject AgenticObservability::analyzeLatency()
+void* AgenticObservability::analyzeLatency()
 {
     return getPerformanceSummary();
 }
 
 // ===== EXPORT/REPORTING =====
 
-QString AgenticObservability::generateReport(
-    const QDateTime& startTime,
-    const QDateTime& endTime) const
+std::string AgenticObservability::generateReport(
+    const std::chrono::system_clock::time_point& startTime,
+    const std::chrono::system_clock::time_point& endTime) const
 {
-    QString report;
+    std::string report;
     report += "=== OBSERVABILITY REPORT ===\n\n";
 
     report += "LOGS:\n";
     auto logs = getLogs(100, LogLevel::DEBUG);
     for (const auto& log : logs) {
         if (log.timestamp < startTime || log.timestamp > endTime) continue;
-        report += QString("[%1] %2: %3\n")
-                  .arg(log.timestamp.toString("hh:mm:ss"))
-                  .arg(log.component)
-                  .arg(log.message);
+        report += std::string("[%1] %2: %3\n")
+                  )
+                  
+                  ;
     }
 
     report += "\nMETRICS:\n";
     for (const auto& metric : getMetrics("", 50)) {
         if (metric.timestamp < startTime || metric.timestamp > endTime) continue;
-        report += QString("%1 = %2\n").arg(metric.metricName).arg(metric.value);
+        report += std::string("%1 = %2\n");
     }
 
     return report;
 }
 
-QString AgenticObservability::exportMetricsAsCsv() const
+std::string AgenticObservability::exportMetricsAsCsv() const
 {
-    QString csv = "timestamp,metric_name,value,unit\n";
+    std::string csv = "timestamp,metric_name,value,unit\n";
 
     for (const auto& metric : m_metrics) {
-        csv += QString("%1,%2,%3,%4\n")
-               .arg(metric.timestamp.toString(Qt::ISODate))
-               .arg(metric.metricName)
-               .arg(metric.value)
-               .arg(metric.unit);
+        csv += std::string("%1,%2,%3,%4\n")
+               )
+
+
+               ;
     }
 
     return csv;
 }
 
-QString AgenticObservability::exportTracesAsJson() const
+std::string AgenticObservability::exportTracesAsJson() const
 {
-    QJsonArray traces;
+    void* traces;
 
     for (const auto& pair : m_traceSpans) {
-        traces.append(getTraceVisualization(QString::fromStdString(pair.first)));
+        traces.append(getTraceVisualization(std::string::fromStdString(pair.first)));
     }
 
-    return QString::fromUtf8(QJsonDocument(traces).toJson());
+    return std::string::fromUtf8(void*(traces).toJson());
 }
 
-QString AgenticObservability::exportLogsAsJson() const
+std::string AgenticObservability::exportLogsAsJson() const
 {
-    QJsonArray logs;
+    void* logs;
 
     for (const auto& log : m_logs) {
-        QJsonObject obj;
-        obj["timestamp"] = log.timestamp.toString(Qt::ISODate);
+        void* obj;
+        obj["timestamp"] = log.timestamp.toString(//ISODate);
         obj["level"] = levelToString(log.level);
         obj["component"] = log.component;
         obj["message"] = log.message;
@@ -619,22 +616,22 @@ QString AgenticObservability::exportLogsAsJson() const
         logs.append(obj);
     }
 
-    return QString::fromUtf8(QJsonDocument(logs).toJson());
+    return std::string::fromUtf8(void*(logs).toJson());
 }
 
 // ===== PRIVATE HELPERS =====
 
-QString AgenticObservability::generateTraceId()
+std::string AgenticObservability::generateTraceId()
 {
     return QUuid::createUuid().toString();
 }
 
-QString AgenticObservability::generateSpanId()
+std::string AgenticObservability::generateSpanId()
 {
     return QUuid::createUuid().toString();
 }
 
-QString AgenticObservability::levelToString(LogLevel level) const
+std::string AgenticObservability::levelToString(LogLevel level) const
 {
     switch (level) {
         case LogLevel::DEBUG: return "DEBUG";
@@ -658,3 +655,4 @@ void AgenticObservability::prune()
 {
     checkAndRotateLogs();
 }
+

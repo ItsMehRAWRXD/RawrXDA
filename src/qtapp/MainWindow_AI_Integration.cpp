@@ -22,32 +22,11 @@
 #include "streaming_inference.hpp"
 #include "command_palette.hpp"
 #include "ai_chat_panel.hpp"
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QFile>
-#include <QTextStream>
-#include <QLabel>
+
+
 #include "../agent/auto_bootstrap.hpp"
 #include "../agent/hot_reload.hpp"
-#include <QWebSocket>
-#include <QInputDialog>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QActionGroup>
-#include <QMenu>
-#include <QMenuBar>
-#include <QStatusBar>
-#include <QPlainTextEdit>
-#include <QTextCursor>
-#include <QDockWidget>
-#include <QLineEdit>
-#include <QMessageBox>
-#include <QDateTime>
-#include <QAbstractSocket>
-#include <QUrl>
-#include <QShortcut>
-#include <QKeySequence>
-#include <QProcessEnvironment>
+
 
 /**
  * @brief Initialize AI backend switcher and unified backend
@@ -64,19 +43,13 @@ void MainWindow::setupAIBackendSwitcher()
     m_unifiedBackend->setLocalEngine(m_inferenceEngine);
     
     // Connect backend switching
-    connect(m_aiSwitcher, &AISwitcher::backendChanged,
-            this, &MainWindow::onAIBackendChanged);
-    
+// Qt connect removed
         // Connect unified backend to streaming (adapt signatures)
-        connect(m_unifiedBackend, &UnifiedBackend::streamToken,
-            this, [this](qint64, const QString& token) { if (m_streamer) m_streamer->pushToken(token); });
-        connect(m_unifiedBackend, &UnifiedBackend::streamFinished,
+// Qt connect removed
+            this, [this](qint64, const std::string& token) { if (m_streamer) m_streamer->pushToken(token); });
+// Qt connect removed
             this, [this](qint64) { if (m_streamer) m_streamer->finishStream(); });
-    connect(m_unifiedBackend, &UnifiedBackend::error,
-            this, [this](qint64 reqId, const QString& error) {
-                m_hexMagConsole->appendPlainText(
-                    QString("[%1] ERROR: %2").arg(reqId).arg(error)
-                );
+// Qt connect removed
             });
 }
 
@@ -90,25 +63,22 @@ void MainWindow::setupQuantizationMenu(QMenu* aiMenu)
     QActionGroup* quantGroup = new QActionGroup(quantMenu);
     quantGroup->setExclusive(true);
     
-    QStringList modes = {"Q4_0", "Q4_1", "Q5_0", "Q5_1", "Q6_K", "Q8_K", "F16", "F32"};
-    for (const QString& mode : modes) {
+    std::vector<std::string> modes = {"Q4_0", "Q4_1", "Q5_0", "Q5_1", "Q6_K", "Q8_K", "F16", "F32"};
+    for (const std::string& mode : modes) {
         QAction* action = quantGroup->addAction(mode);
         action->setCheckable(true);
         action->setChecked(mode == "Q4_0");  // Default
         action->setData(mode);
         quantMenu->addAction(action);
     }
-    
-    connect(quantGroup, &QActionGroup::triggered, this, [this](QAction* action) {
-        QString mode = action->data().toString();
+// Qt connect removed
         QMetaObject::invokeMethod(m_inferenceEngine, "setQuantMode", 
-                                  Qt::QueuedConnection,
-                                  Q_ARG(QString, mode));
+                                  //QueuedConnection,
+                                  (std::string, mode));
     });
     
     // Connect quantChanged signal to update status bar
-    connect(m_inferenceEngine, &InferenceEngine::quantChanged,
-            this, &MainWindow::onQuantModeChanged);
+// Qt connect removed
 }
 
 /**
@@ -120,28 +90,26 @@ void MainWindow::setupLayerQuantWidget()
     m_layerQuantDock = new QDockWidget("Layer Quantization", this);
     m_layerQuantWidget = new LayerQuantWidget(m_layerQuantDock);
     m_layerQuantDock->setWidget(m_layerQuantWidget);
-    addDockWidget(Qt::RightDockWidgetArea, m_layerQuantDock);
+    addDockWidget(//RightDockWidgetArea, m_layerQuantDock);
     m_layerQuantDock->hide();  // Hidden by default
     
     // Add to View menu
     // viewMenu->addAction(m_layerQuantDock->toggleViewAction());
     
     // Connect layer quant changes to inference engine
-    connect(m_layerQuantWidget, &LayerQuantWidget::quantChanged,
-            m_inferenceEngine, &InferenceEngine::setLayerQuant);
-    
+// Qt connect removed
     // Populate helper (GGUF metadata if available; else fallback examples)
     auto populate = [this]() {
         m_layerQuantWidget->clearTensors();
-        QStringList names = m_inferenceEngine ? m_inferenceEngine->tensorNames() : QStringList();
+        std::vector<std::string> names = m_inferenceEngine ? m_inferenceEngine->tensorNames() : std::vector<std::string>();
         if (!names.isEmpty()) {
-            for (const QString& n : names) {
+            for (const std::string& n : names) {
                 m_layerQuantWidget->addTensor(n, m_currentQuantMode);
             }
         } else {
             m_layerQuantWidget->addTensor("token_embed.weight", "Q4_0");
             m_layerQuantWidget->addTensor("output.weight", "Q8_K");
-            m_layerQuantWidget->addTensor("attn.q_proj.weight", "Q5_1");
+            m_layerQuantWidget->addTensor("attn..weight", "Q5_1");
             m_layerQuantWidget->addTensor("attn.k_proj.weight", "Q5_1");
             m_layerQuantWidget->addTensor("attn.v_proj.weight", "Q5_0");
             m_layerQuantWidget->addTensor("mlp.up_proj.weight", "Q4_1");
@@ -152,9 +120,7 @@ void MainWindow::setupLayerQuantWidget()
     populate();
 
     // Repopulate when a model finishes loading
-    connect(m_inferenceEngine, &InferenceEngine::modelLoadedChanged,
-            this, [populate](bool loaded, const QString&) mutable {
-                if (loaded) populate();
+// Qt connect removed
             });
 }
 
@@ -164,17 +130,11 @@ void MainWindow::setupLayerQuantWidget()
  */
 void MainWindow::setupSwarmEditing()
 {
-    m_swarmSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
-    
-    connect(m_swarmSocket, &QWebSocket::textMessageReceived,
-            this, &MainWindow::onSwarmMessage);
-    
-    connect(m_swarmSocket, &QWebSocket::connected, this, [this]() {
-        statusBar()->showMessage("Swarm session connected: " + m_swarmSessionId, 3000);
+    m_swarmSocket = new QWebSocket(std::string(), QWebSocketProtocol::VersionLatest, this);
+// Qt connect removed
+// Qt connect removed
     });
-    
-    connect(m_swarmSocket, &QWebSocket::disconnected, this, [this]() {
-        statusBar()->showMessage("Swarm session disconnected", 3000);
+// Qt connect removed
     });
     
     // TODO: Connect code editor textChanged signal to broadcastEdit()
@@ -190,12 +150,9 @@ void MainWindow::setupCollaborationMenu()
     QMenu* collabMenu = menuBar()->addMenu(tr("Collaborate"));
     
     QAction* joinSwarmAction = collabMenu->addAction(tr("Join Swarm Session..."));
-    connect(joinSwarmAction, &QAction::triggered, this, &MainWindow::joinSwarmSession);
-    
+// Qt connect removed
     QAction* leaveSwarmAction = collabMenu->addAction(tr("Leave Swarm Session"));
-    connect(leaveSwarmAction, &QAction::triggered, this, [this]() {
-        if (m_swarmSocket->state() == QAbstractSocket::ConnectedState) {
-            m_swarmSocket->close();
+// Qt connect removed
             m_swarmSessionId.clear();
         }
     });
@@ -205,12 +162,12 @@ void MainWindow::setupCollaborationMenu()
 // SLOT IMPLEMENTATIONS
 // ============================================================================
 
-void MainWindow::onAIBackendChanged(const QString& id, const QString& apiKey)
+void MainWindow::onAIBackendChanged(const std::string& id, const std::string& apiKey)
 {
     m_currentBackend = id;
     m_currentAPIKey = apiKey;
     
-    QString displayName;
+    std::string displayName;
     if (id == "local") displayName = "Local GGUF";
     else if (id == "llama") displayName = "llama.cpp HTTP";
     else if (id == "openai") displayName = "OpenAI API";
@@ -222,11 +179,11 @@ void MainWindow::onAIBackendChanged(const QString& id, const QString& apiKey)
     
     // Log to HexMag console
     m_hexMagConsole->appendPlainText(
-        QString("🔄 AI Backend switched to: %1").arg(displayName)
+        std::string("🔄 AI Backend switched to: %1")
     );
 }
 
-void MainWindow::onQuantModeChanged(const QString& mode)
+void MainWindow::onQuantModeChanged(const std::string& mode)
 {
     m_currentQuantMode = mode;
     statusBar()->showMessage("Quantization: " + mode, 3000);
@@ -238,18 +195,18 @@ void MainWindow::onQuantModeChanged(const QString& mode)
         quantLabel->setStyleSheet("QLabel { padding: 2px 8px; background: #007acc; color: white; border-radius: 3px; }");
         statusBar()->addPermanentWidget(quantLabel);
     }
-    quantLabel->setText(QString("⚡ %1").arg(mode));
+    quantLabel->setText(std::string("⚡ %1"));
 }
 
 void MainWindow::joinSwarmSession()
 {
     bool ok = false;
-    QString sessionId = QInputDialog::getText(
+    std::string sessionId = QInputDialog::getText(
         this,
         tr("Join Swarm Session"),
         tr("Enter shared document ID:"),
         QLineEdit::Normal,
-        QString(),
+        std::string(),
         &ok
     );
     
@@ -257,22 +214,22 @@ void MainWindow::joinSwarmSession()
         m_swarmSessionId = sessionId;
         
         // Connect to HexMag swarm WebSocket endpoint
-        QUrl url(QString("ws://localhost:8001/collab/%1").arg(sessionId));
+        std::string url(std::string("ws://localhost:8001/collab/%1"));
         m_swarmSocket->open(url);
     }
 }
 
-void MainWindow::onSwarmMessage(const QString& message)
+void MainWindow::onSwarmMessage(const std::string& message)
 {
-    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
-    QJsonObject obj = doc.object();
+    void* doc = void*::fromJson(message.toUtf8());
+    void* obj = doc.object();
     
-    QString delta = obj["delta"].toString();
+    std::string delta = obj["delta"].toString();
     int cursor = obj["cursor"].toInt();
     
     // For now, just log to HexMag console
     m_hexMagConsole->appendPlainText(
-        QString("📡 Swarm edit at %1: %2 chars").arg(cursor).arg(delta.length())
+        std::string("📡 Swarm edit at %1: %2 chars"))
     );
 }
 
@@ -281,7 +238,7 @@ void MainWindow::broadcastEdit()
     if (m_swarmSocket->state() != QAbstractSocket::ConnectedState) return;
     
     // Get current editor content and cursor position
-    QString content;
+    std::string content;
     int cursor = 0;
     
     if (codeView_) {
@@ -289,13 +246,13 @@ void MainWindow::broadcastEdit()
         cursor = codeView_->textCursor().position();
     }
     
-    QJsonObject msg{
+    void* msg{
         {"delta", content},
         {"cursor", cursor}
     };
     
     m_swarmSocket->sendTextMessage(
-        QJsonDocument(msg).toJson(QJsonDocument::Compact)
+        void*(msg).toJson(void*::Compact)
     );
 }
 
@@ -312,12 +269,12 @@ void MainWindow::runInference()
     }
     
     bool ok;
-    QString prompt = QInputDialog::getText(this, tr("AI Inference"), 
+    std::string prompt = QInputDialog::getText(this, tr("AI Inference"), 
                                           tr("Enter your prompt:"),
-                                          QLineEdit::Normal, QString(), &ok);
+                                          QLineEdit::Normal, std::string(), &ok);
     if (!ok || prompt.isEmpty()) return;
     
-    qint64 reqId = QDateTime::currentMSecsSinceEpoch();
+    qint64 reqId = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     m_currentStreamId = reqId;
     
     // Start streaming in console
@@ -327,7 +284,7 @@ void MainWindow::runInference()
 
     // Submit request to unified backend
     if (!m_unifiedBackend) {
-        m_hexMagConsole->appendPlainText(QString("[%1] ERROR: Backend not initialized").arg(reqId));
+        m_hexMagConsole->appendPlainText(std::string("[%1] ERROR: Backend not initialized"));
         return;
     }
 
@@ -398,20 +355,13 @@ void MainWindow::setupAgentSystem()
     m_hotReload = new HotReload(this);
     
     // Connect agent signals
-    connect(m_agentBootstrap, &AutoBootstrap::wishReceived,
-            this, &MainWindow::onAgentWishReceived);
-    connect(m_agentBootstrap, &AutoBootstrap::planGenerated,
-            this, &MainWindow::onAgentPlanGenerated);
-    connect(m_agentBootstrap, &AutoBootstrap::executionCompleted,
-            this, &MainWindow::onAgentExecutionCompleted);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     // Connect hot reload signals
-    connect(m_hotReload, &HotReload::quantReloaded,
-            this, [this](const QString& quant) {
-                statusBar()->showMessage(QString("Quantization hot-reloaded: %1").arg(quant), 3000);
+// Qt connect removed
             });
     
-    qDebug() << "Agent system initialized";
 }
 */
 
@@ -423,9 +373,7 @@ void MainWindow::setupShortcuts()
 {
     // Ctrl+Shift+A: Trigger agent mode
     QShortcut* agentShortcut = new QShortcut(QKeySequence("Ctrl+Shift+A"), this);
-    connect(agentShortcut, &QShortcut::activated, this, &MainWindow::triggerAgentMode);
-    
-    qDebug() << "Agent shortcut Ctrl+Shift+A registered";
+// Qt connect removed
 }
 
 /**
@@ -433,7 +381,7 @@ void MainWindow::setupShortcuts()
  */
 void MainWindow::triggerAgentMode()
 {
-    QString wish;
+    std::string wish;
     
     // Try to get selected text from code editor
     if (codeView_) {
@@ -468,24 +416,24 @@ void MainWindow::triggerAgentMode()
 /**
  * @brief Slot for agent wish received
  */
-void MainWindow::onAgentWishReceived(const QString& wish)
+void MainWindow::onAgentWishReceived(const std::string& wish)
 {
     // Log to HexMag console
     m_hexMagConsole->appendPlainText(
-        QString("[AGENT] Wish received: %1").arg(wish)
+        std::string("[AGENT] Wish received: %1")
     );
     
-    statusBar()->showMessage(QString("Agent processing: %1").arg(wish));
+    statusBar()->showMessage(std::string("Agent processing: %1"));
 }
 
 /**
  * @brief Slot for agent plan generated
  */
-void MainWindow::onAgentPlanGenerated(const QString& planSummary)
+void MainWindow::onAgentPlanGenerated(const std::string& planSummary)
 {
     // Log to HexMag console
     m_hexMagConsole->appendPlainText(
-        QString("[AGENT] Plan:\n%1").arg(planSummary)
+        std::string("[AGENT] Plan:\n%1")
     );
     
     statusBar()->showMessage("Agent executing plan...");
@@ -496,7 +444,7 @@ void MainWindow::onAgentPlanGenerated(const QString& planSummary)
  */
 void MainWindow::onAgentExecutionCompleted(bool success)
 {
-    QString msg = success 
+    std::string msg = success 
         ? "[AGENT] ✅ Execution completed successfully!"
         : "[AGENT] ❌ Execution failed";
     
@@ -535,13 +483,13 @@ void MainWindow::setupCommandPalette()
         "Open an existing file",
         QKeySequence("Ctrl+O"),
         [this]() { 
-            QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"),
-                QString(), tr("All Files (*);;Text Files (*.txt);;C++ Files (*.cpp *.h);;Python Files (*.py)"));
+            std::string fileName = QFileDialog::getOpenFileName(this, tr("Open File"),
+                std::string(), tr("All Files (*);;Text Files (*.txt);;C++ Files (*.cpp *.h);;Python Files (*.py)"));
             if (!fileName.isEmpty()) {
-                QFile file(fileName);
+                std::fstream file(fileName);
                 if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                     QTextStream in(&file);
-                    QString content = in.readAll();
+                    std::string content = in.readAll();
                     file.close();
                     if (codeView_) {
                         codeView_->setPlainText(content);
@@ -550,7 +498,7 @@ void MainWindow::setupCommandPalette()
                         statusBar()->showMessage("No editor available", 3000);
                     }
                 } else {
-                    QMessageBox::warning(this, tr("Open Failed"), tr("Could not read file: %1").arg(fileName));
+                    QMessageBox::warning(this, tr("Open Failed"), tr("Could not read file: %1"));
                 }
             }
         }
@@ -562,10 +510,10 @@ void MainWindow::setupCommandPalette()
         "Save the current file",
         QKeySequence("Ctrl+S"),
         [this]() {
-            QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"),
-                QString(), tr("All Files (*);;Text Files (*.txt);;C++ Files (*.cpp *.h);;Python Files (*.py)"));
+            std::string fileName = QFileDialog::getSaveFileName(this, tr("Save File"),
+                std::string(), tr("All Files (*);;Text Files (*.txt);;C++ Files (*.cpp *.h);;Python Files (*.py)"));
             if (!fileName.isEmpty()) {
-                QFile file(fileName);
+                std::fstream file(fileName);
                 if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
                     QTextStream out(&file);
                     if (codeView_) {
@@ -576,7 +524,7 @@ void MainWindow::setupCommandPalette()
                         statusBar()->showMessage("No editor content to save", 3000);
                     }
                 } else {
-                    QMessageBox::warning(this, tr("Save Failed"), tr("Could not write to file: %1").arg(fileName));
+                    QMessageBox::warning(this, tr("Save Failed"), tr("Could not write to file: %1"));
                 }
             }
         }
@@ -630,14 +578,14 @@ void MainWindow::setupCommandPalette()
         "Load a GGUF model file",
         QKeySequence(),
         [this]() {
-            QString fileName = QFileDialog::getOpenFileName(this, tr("Load GGUF Model"),
-                QString(), tr("GGUF Models (*.gguf);;All Files (*)"));
+            std::string fileName = QFileDialog::getOpenFileName(this, tr("Load GGUF Model"),
+                std::string(), tr("GGUF Models (*.gguf);;All Files (*)"));
             if (!fileName.isEmpty() && m_inferenceEngine) {
                 bool success = m_inferenceEngine->loadModel(fileName);
                 if (success) {
                     statusBar()->showMessage("Model loaded: " + fileName, 5000);
                 } else {
-                    QMessageBox::warning(this, tr("Load Failed"), tr("Failed to load model: %1").arg(fileName));
+                    QMessageBox::warning(this, tr("Load Failed"), tr("Failed to load model: %1"));
                 }
             }
         }
@@ -732,9 +680,9 @@ void MainWindow::setupCommandPalette()
         QKeySequence(),
         [this]() {
             bool ok;
-            QString apiKey = QInputDialog::getText(this, tr("OpenAI API Key"),
+            std::string apiKey = QInputDialog::getText(this, tr("OpenAI API Key"),
                 tr("Enter your OpenAI API key:"), QLineEdit::Password,
-                m_currentBackend == "openai" ? m_currentAPIKey : QString(), &ok);
+                m_currentBackend == "openai" ? m_currentAPIKey : std::string(), &ok);
             if (ok) {
                 onAIBackendChanged("openai", apiKey);
             }
@@ -748,9 +696,9 @@ void MainWindow::setupCommandPalette()
         QKeySequence(),
         [this]() {
             bool ok;
-            QString apiKey = QInputDialog::getText(this, tr("Claude API Key"),
+            std::string apiKey = QInputDialog::getText(this, tr("Claude API Key"),
                 tr("Enter your Anthropic Claude API key:"), QLineEdit::Password,
-                m_currentBackend == "claude" ? m_currentAPIKey : QString(), &ok);
+                m_currentBackend == "claude" ? m_currentAPIKey : std::string(), &ok);
             if (ok) {
                 onAIBackendChanged("claude", apiKey);
             }
@@ -758,7 +706,7 @@ void MainWindow::setupCommandPalette()
     };
     m_commandPalette->registerCommand(cmd);
     
-    qDebug() << "Command palette initialized with" << "commands";
 }
 
 // Interpretability Panel setup is in MainWindow.cpp to avoid separate compilation issues
+

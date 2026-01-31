@@ -1,10 +1,5 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QTimer>
-#include <QDateTime>
-#include <QHash>
 
 /**
  * @brief SLA (Service Level Agreement) manager for 99.99% uptime monitoring
@@ -22,8 +17,7 @@
  * - Response time: < 100ms (p95)
  * - Error rate: < 0.1%
  */
-class SLAManager : public QObject {
-    Q_OBJECT
+class SLAManager : public void {
 
 public:
     enum HealthStatus {
@@ -34,8 +28,8 @@ public:
     };
 
     struct UptimeStats {
-        QDateTime periodStart;
-        QDateTime periodEnd;
+        std::chrono::system_clock::time_point periodStart;
+        std::chrono::system_clock::time_point periodEnd;
         qint64 totalUptimeMs;
         qint64 totalDowntimeMs;
         double uptimePercentage;
@@ -85,12 +79,12 @@ public:
     /**
      * @brief Get uptime statistics for period
      */
-    UptimeStats getUptimeStats(const QDateTime& startDate, const QDateTime& endDate) const;
+    UptimeStats getUptimeStats(const std::chrono::system_clock::time_point& startDate, const std::chrono::system_clock::time_point& endDate) const;
 
     /**
      * @brief Generate monthly SLA report
      */
-    QString generateMonthlyReport() const;
+    std::string generateMonthlyReport() const;
 
     /**
      * @brief Check if system is in SLA compliance
@@ -107,15 +101,14 @@ public:
      */
     double currentUptime() const;
 
-signals:
     void statusChanged(HealthStatus status);
-    void slaViolation(const QString& details);
-    void slaWarning(const QString& message);
+    void slaViolation(const std::string& details);
+    void slaWarning(const std::string& message);
     void healthCheckFailed(qint64 responseTimeMs);
     void downtimeStarted();
     void downtimeEnded(qint64 durationMs);
 
-private slots:
+private:
     void performHealthCheck();
     void checkSLACompliance();
 
@@ -131,19 +124,20 @@ private:
     HealthStatus m_currentStatus = Healthy;
     HealthStatus m_previousStatus = Healthy;
     
-    QDateTime m_periodStart;
-    QDateTime m_downtimeStart;
+    std::chrono::system_clock::time_point m_periodStart;
+    std::chrono::system_clock::time_point m_downtimeStart;
     qint64 m_totalDowntimeMs = 0;
     int m_downtimeIncidents = 0;
     int m_violationCount = 0;
     
     double m_targetUptime = 99.99;
     
-    QTimer* m_healthCheckTimer = nullptr;
-    QTimer* m_complianceCheckTimer = nullptr;
+    void** m_healthCheckTimer = nullptr;
+    void** m_complianceCheckTimer = nullptr;
     
     bool m_running = false;
     bool m_isDown = false;
     
-    QList<qint64> m_downtimePeriods;
+    std::vector<qint64> m_downtimePeriods;
 };
+

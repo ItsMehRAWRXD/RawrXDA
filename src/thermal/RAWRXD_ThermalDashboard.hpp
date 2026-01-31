@@ -6,34 +6,22 @@
 #pragma once
 
 #include "thermal_dashboard_plugin.hpp"
-#include <QWidget>
-#include <QLabel>
-#include <QProgressBar>
-#include <QComboBox>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
-#include <QTimer>
-#include <QFrame>
-#include <QDateTime>
+
 
 namespace rawrxd::thermal {
 
 /**
  * @brief Full thermal dashboard widget
  */
-class ThermalDashboard : public QWidget {
-    Q_OBJECT
+class ThermalDashboard : public void {
 
 public:
-    explicit ThermalDashboard(QWidget* parent = nullptr);
+    explicit ThermalDashboard(void* parent = nullptr);
     ~ThermalDashboard() override = default;
 
-public slots:
+public:
     void onThermalUpdate(const ThermalSnapshot& snapshot);
 
-signals:
     void burstModeChanged(int mode);
 
 private:
@@ -42,7 +30,7 @@ private:
     void updateGPUDisplay(float temp);
     void updateCPUDisplay(float temp);
     void updateThrottleDisplay(int throttle);
-    QString getTempColor(float temp);
+    std::string getTempColor(float temp);
 
 private:
     // NVMe displays
@@ -75,13 +63,12 @@ private:
  * @brief Compact toolbar widget for thermal status
  */
 class ThermalCompactWidget : public QFrame {
-    Q_OBJECT
 
 public:
-    explicit ThermalCompactWidget(QWidget* parent = nullptr);
+    explicit ThermalCompactWidget(void* parent = nullptr);
     ~ThermalCompactWidget() override = default;
 
-public slots:
+public:
     void onThermalUpdate(const ThermalSnapshot& snapshot);
 
 private:
@@ -94,3 +81,4 @@ private:
 };
 
 } // namespace rawrxd::thermal
+

@@ -39,7 +39,6 @@ void VsixInstaller::installFromUrl(const std::string& url, const std::string& ex
 
 void VsixInstaller::installFromFile(const std::string& filePath) {
     // In a real implementation, this would install from a local VSIX file
-    // // qDebug:  "[VsixInstaller] Installing from file:" << filePath;
     installationError("local_file", "Not implemented");
 }
 
@@ -148,21 +147,18 @@ bool VsixInstaller::extractVsixPackage(const std::string& vsixPath, const std::s
         packageFile.close();
     }
     
-    // // qDebug:  "[VsixInstaller] Extracted VSIX package to:" << destination;
     return true;
 }
 
 bool VsixInstaller::activateExtension(const std::string& extensionPath) {
     // In a real implementation, this would register the extension with the IDE
     // For now, we'll just simulate success
-    // // qDebug:  "[VsixInstaller] Activated extension at:" << extensionPath;
     return true;
 }
 
 bool VsixInstaller::deactivateExtension(const std::string& extensionId) {
     // In a real implementation, this would unregister the extension from the IDE
     // For now, we'll just simulate success
-    // // qDebug:  "[VsixInstaller] Deactivated extension:" << extensionId;
     return true;
 }
 
@@ -192,8 +188,4 @@ void VsixInstaller::cleanupTempFiles() {
     }
     m_activeInstallations.clear();
 }
-
-
-
-
 

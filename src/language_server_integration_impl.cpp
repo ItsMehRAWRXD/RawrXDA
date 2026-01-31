@@ -25,13 +25,13 @@ void LanguageServerIntegrationImpl::provideHover(const std::string& uri, const P
     if(symbol) {
         result.contents.kind = "markdown";
         result.contents.value = std::string("**%1** (%2)\n\n%3")
-            .arg(symbol->name, symbol->kind, symbol->documentation);
+            ;
         result.range = symbol->range;
         
         // Check hot-patcher for hallucination corrections
         auto correction = AgentHotPatcher::instance()->checkHoverCorrection(uri, pos);
         if(correction.has_value()) {
-            result.contents.value += std::string("\n\n🔧 *AI Corrected:* %1").arg(*correction);
+            result.contents.value += std::string("\n\n🔧 *AI Corrected:* %1");
         }
     } else {
         result.contents.kind = "plaintext";
@@ -112,7 +112,7 @@ void LanguageServerIntegrationImpl::provideCompletion(const std::string& uri, co
         item.detail = s.source; // AI confidence or LSP source
         item.documentation = s.documentation;
         item.insertText = s.text;
-        item.sortText = std::string("%1").arg(int(s.score * 1000), 4, 10, QChar('0'));
+        item.sortText = std::string("%1"), 4, 10, QChar('0'));
         
         // MASM-bridge optimization: Pre-calculate edit ranges in assembly
         if(s.useAsmOptimization) {
@@ -248,7 +248,4 @@ Position LanguageServerIntegrationImpl::offsetToPosition(const std::string& text
 }
 
 } // namespace rxd::lsp
-
-
-
 

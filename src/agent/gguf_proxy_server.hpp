@@ -1,124 +1,61 @@
 #pragma once
 
-/********************************************************************
- *  gguf_proxy_server.hpp
- *
- *  A thin TCP‑proxy that sits between the IDE‑agent (ModelInvoker)
- *  and a GGUF model server.  It forwards the client request, lets
- *  AgentHotPatcher inspect/patch the model output and then sends the
- *  (possibly corrected) reply back to the client.
- *
- *  NOTE:  The implementation lives in gguf_proxy_server.cpp.
- ********************************************************************/
+#include <vector>
+#include <mutex>
+#include <thread>
+#include <atomic>
+#include <string>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
-#include <QObject>
-#include <QTcpServer>
-#include <QTcpSocket>
-#include <QMap>
-#include <QByteArray>
-#include <QJsonObject>
-#include <QMutex>
-#include <memory>
+// Link against ws2_32.lib
+#pragma comment(lib, "Ws2_32.lib")
 
-class AgentHotPatcher;          // forward declaration – defined elsewhere
+class AgentHotPatcher;
 
-/**
- * @brief Small helper that groups everything we need for a single client.
- *
- * The struct is deliberately POD‑like – it only stores raw pointers owned by
- * the server (the server is the parent of both sockets).  All buffers are
- * cleared automatically when the socket is destroyed.
- */
-struct ClientConnection
-{
-    QTcpSocket* clientSocket = nullptr;          ///< socket that talks to the IDE‑agent
-    QTcpSocket* ggufSocket   = nullptr;          ///< socket that talks to the real GGUF backend
-    QByteArray   requestBuffer;                  ///< data received from the client (not yet sent)
-    QByteArray   responseBuffer;                 ///< data received from GGUF (awaiting patch)
+struct ClientConnection {
+    SOCKET clientSocket = INVALID_SOCKET;
+    SOCKET ggufSocket = INVALID_SOCKET;
+    std::vector<uint8_t> requestBuffer;
+    std::vector<uint8_t> responseBuffer;
 };
 
-/**
- * @class GGUFProxyServer
- *
- * Inherits QTcpServer; each incoming client connection spawns a
- * `ClientConnection` entry.  The server forwards traffic to the real GGUF
- * endpoint, passes the raw model output through `AgentHotPatcher`,
- * and finally writes the corrected response back.
- *
- * The class is fully Qt‑signal‑slot aware – all public slots are queued so
- * they are safe even if the hot‑patcher lives in a different thread.
- */
-class GGUFProxyServer : public QTcpServer
-{
-    Q_OBJECT
-    Q_DISABLE_COPY(GGUFProxyServer)
-
+class GGUFProxyServer {
 public:
-    explicit GGUFProxyServer(QObject* parent = nullptr);
-    ~GGUFProxyServer() override;
+    GGUFProxyServer();
+    ~GGUFProxyServer();
 
-    /** Configuration --------------------------------------------------- */
-    void initialize(int listenPort,
-                    AgentHotPatcher* hotPatcher,
-                    const QString& ggufEndpoint);   ///< must be called before startServer()
+    // No copy
+    GGUFProxyServer(const GGUFProxyServer&) = delete;
+    GGUFProxyServer& operator=(const GGUFProxyServer&) = delete;
 
-    /** Lifecycle -------------------------------------------------------- */
-    bool startServer();          ///< bind to m_listenPort and listen
-    void stopServer();           ///< close all client/gguf sockets and stop listening
-    bool isListening() const;          ///< same as QTcpServer::isListening()
+    void initialize(int listenPort, AgentHotPatcher* hotPatcher, const std::string& ggufEndpoint);
+    
+    // Returns true if started
+    bool startServer();
+    void stopServer();
 
-    /** Statistics ------------------------------------------------------- */
-    QJsonObject getServerStatistics() const;   ///< snapshot of counters
+    bool isListening() const { return m_isListening; }
 
-    /** Tuning ----------------------------------------------------------- */
-    void setConnectionPoolSize(int size);   ///< future‑proof – currently unused
-    void setConnectionTimeout(int ms);      ///< socket connect timeout (ms)
-
-    /** Helpers (mostly for tests) -------------------------------------- */
-    QTcpSocket* getGGUFConnection();        ///< allocate a fresh socket (caller must return it)
-    void        returnGGUFConnection(QTcpSocket* socket);
-    QString     parseIncomingRequest(const QByteArray& data);   ///< hook for custom HTTP parsing
-
-signals:
-    /** Emitted only for diagnostics – not used inside the current code. */
-    void serverStarted(int port);
-    void serverStopped();
-
-private slots:
-    /** Socket‑side event handlers */
-    void onClientDataReceived();
-    void onClientDisconnected();
-    void onGGUFDataReceived();
-    void onGGUFError();
-    void onGGUFDisconnected();               // <-- new slot (see bug‑fix below)
+    // Statistics json string
+    std::string getServerStatistics() const;
 
 private:
-    /** Overridden from QTcpServer – creates a ClientConnection */
-    void incomingConnection(qintptr socketDescriptor) override;
+    void acceptLoop();
+    void handleClient(SOCKET clientSocket);
+    SOCKET connectToBackend();
 
-    /** Core forwarding / patching helpers */
-    void forwardToGGUF(qintptr socketDescriptor);
-    void processGGUFResponse(qintptr socketDescriptor);
-    void sendResponseToClient(qintptr socketDescriptor,
-                              const QString& response);
-
-    /* -----------------------------------------------------------------
-       Member data
-       ----------------------------------------------------------------- */
-    int                 m_listenPort = 0;
-    QString             m_ggufEndpoint;               ///< e.g. "localhost:11434"
-    AgentHotPatcher*    m_hotPatcher  = nullptr;       ///< non‑owning – created elsewhere
-
-    QMap<qintptr, std::unique_ptr<ClientConnection>> m_connections;
-    int                 m_connectionPoolSize = 10;    ///< for future thread‑pool upgrades
-    int                 m_connectionTimeout  = 5000;  ///< ms for socket::connectToHost
-
-    /* statistics – atomic updates protected by m_statsMutex */
-    mutable QMutex      m_statsMutex;
-    qint64              m_requestsProcessed          = 0;
-    qint64              m_hallucinationsCorrected   = 0;
-    qint64              m_navigationErrorsFixed      = 0;
-    int                 m_activeConnections         = 0;
+    int m_listenPort = 0;
+    std::string m_ggufEndpoint;
+    AgentHotPatcher* m_hotPatcher = nullptr;
+    
+    SOCKET m_listenSocket = INVALID_SOCKET;
+    std::atomic<bool> m_isListening{false};
+    std::thread m_acceptThread;
+    
+    mutable std::mutex m_mutex;
+    std::vector<std::thread> m_clientThreads; // Or detach?
+    
+    std::atomic<long long> m_requestsProcessed{0};
+    std::atomic<long long> m_bytesTransferred{0};
 };
-
-#endif // GGUF_PROXY_SERVER_HPP

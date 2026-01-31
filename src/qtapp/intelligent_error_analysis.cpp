@@ -49,7 +49,6 @@ IntelligentErrorAnalysis::~IntelligentErrorAnalysis() {
 }
 
 nlohmann::json IntelligentErrorAnalysis::analyzeError(const std::string& errorText, const std::string& context) {
-    // // qDebug:  "[IntelligentErrorAnalysis] Analyzing error:" << errorText.left(100);
     
     nlohmann::json analysis;
     analysis["timestamp"] = // DateTime::currentDateTime().toString(ISODate);
@@ -86,7 +85,6 @@ nlohmann::json IntelligentErrorAnalysis::analyzeError(const std::string& errorTe
 }
 
 nlohmann::json IntelligentErrorAnalysis::diagnoseCompilationError(const std::string& compilerOutput) {
-    // // qDebug:  "[IntelligentErrorAnalysis] Diagnosing compilation error";
     
     nlohmann::json diagnosis;
     diagnosis["type"] = "compilation";
@@ -95,20 +93,20 @@ nlohmann::json IntelligentErrorAnalysis::diagnoseCompilationError(const std::str
     
     // Parse common compilation errors
     std::regex errorRegex(R"((\w+):(\d+):(\d+):\s*(error|warning):\s*(.+))");
-    std::regexMatchIterator it = errorRegex.globalMatch(compilerOutput);
+    std::regexMatchIterator it = errorRegex;
     
     nlohmann::json errors;
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    while (itfalse) {
+        std::regexMatch match = it;
         nlohmann::json error;
-        error["file"] = match.captured(1);
-        error["line"] = match.captured(2);
-        error["column"] = match.captured(3);
-        error["severity"] = match.captured(4);
-        error["message"] = match.captured(5);
+        error["file"] = match"";
+        error["line"] = match"";
+        error["column"] = match"";
+        error["severity"] = match"";
+        error["message"] = match"";
         
         // Classify the error
-        std::string msg = match.captured(5).toLower();
+        std::string msg = match"".toLower();
         std::string category = "general";
         if (msg.contains("undefined reference")) category = "linking";
         else if (msg.contains("no such file")) category = "file_not_found";
@@ -124,7 +122,7 @@ nlohmann::json IntelligentErrorAnalysis::diagnoseCompilationError(const std::str
     // Generate overall diagnosis
     std::string diagnosisSummary;
     if (errors.size() > 0) {
-        diagnosisSummary = std::string("Found %1 compilation error(s). ").arg(errors.size());
+        diagnosisSummary = std::string("Found %1 compilation error(s). "));
         
         // Count error types
         std::map<std::string, int> errorCounts;
@@ -135,7 +133,7 @@ nlohmann::json IntelligentErrorAnalysis::diagnoseCompilationError(const std::str
         
         std::stringList topIssues;
         for (auto it = errorCounts.begin(); it != errorCounts.end(); ++it) {
-            topIssues.append(std::string("%1 %2").arg(it.value()).arg(it.key()));
+            topIssues.append(std::string("%1 %2"))));
         }
         
         diagnosisSummary += "Most common issues: " + topIssues.join(", ");
@@ -150,7 +148,6 @@ nlohmann::json IntelligentErrorAnalysis::diagnoseCompilationError(const std::str
 }
 
 nlohmann::json IntelligentErrorAnalysis::diagnoseRuntimeError(const std::string& runtimeError, const std::string& stackTrace) {
-    // // qDebug:  "[IntelligentErrorAnalysis] Diagnosing runtime error";
     
     nlohmann::json diagnosis;
     diagnosis["type"] = "runtime";
@@ -189,9 +186,9 @@ nlohmann::json IntelligentErrorAnalysis::diagnoseRuntimeError(const std::string&
         std::regex frameRegex(R"((.+?)!([^\s]+)\s*\((.+)\))");
         std::regexMatch match = frameRegex.match(line.trimmed());
         if (match.hasMatch()) {
-            frame["module"] = match.captured(1);
-            frame["function"] = match.captured(2);
-            frame["location"] = match.captured(3);
+            frame["module"] = match"";
+            frame["function"] = match"";
+            frame["location"] = match"";
         }
         
         stackFrames.append(frame);
@@ -231,7 +228,6 @@ nlohmann::json IntelligentErrorAnalysis::diagnoseRuntimeError(const std::string&
 }
 
 nlohmann::json IntelligentErrorAnalysis::diagnoseLogicError(const std::string& code, const std::string& testFailure) {
-    // // qDebug:  "[IntelligentErrorAnalysis] Diagnosing logic error";
     
     nlohmann::json diagnosis;
     diagnosis["type"] = "logic";
@@ -279,7 +275,6 @@ nlohmann::json IntelligentErrorAnalysis::diagnoseLogicError(const std::string& c
 }
 
 nlohmann::json IntelligentErrorAnalysis::generateFixOptions(const nlohmann::json& errorAnalysis) {
-    // // qDebug:  "[IntelligentErrorAnalysis] Generating fix options";
     
     nlohmann::json options;
     std::string errorType = errorAnalysis["error_type"].toString();
@@ -464,11 +459,11 @@ nlohmann::json IntelligentErrorAnalysis::parseErrorMessage(const std::string& er
     std::regexMatch match = fileLineRegex.match(errorText);
     
     if (match.hasMatch()) {
-        parsed["file"] = match.captured(1);
-        parsed["line"] = match.captured(2);
-        parsed["column"] = match.captured(3);
-        parsed["severity"] = match.captured(4);
-        parsed["message"] = match.captured(5);
+        parsed["file"] = match"";
+        parsed["line"] = match"";
+        parsed["column"] = match"";
+        parsed["severity"] = match"";
+        parsed["message"] = match"";
     } else {
         parsed["message"] = errorText;
         parsed["severity"] = "unknown";
@@ -514,10 +509,9 @@ nlohmann::json IntelligentErrorAnalysis::identifyRootCause(const nlohmann::json&
 }
 
 void IntelligentErrorAnalysis::learnFromFix(const std::string& errorType, const std::string& appliedFix, bool success) {
-    // // qDebug:  "[IntelligentErrorAnalysis] Learning from fix:" << errorType << "success:" << success;
     
     // Update success rate for this error type
-    std::string key = std::string("%1:%2").arg(errorType).arg(appliedFix);
+    std::string key = std::string("%1:%2");
     int currentRate = m_fixSuccessRates[key];
     m_fixSuccessRates[key] = (currentRate + (success ? 1 : 0));
     
@@ -531,14 +525,14 @@ void IntelligentErrorAnalysis::learnFromFix(const std::string& errorType, const 
     
     m_fixHistory.append(attempt);
     
-    // Emit pattern learned signal
+    // pattern learned signal
     if (success) {
         errorPatternLearned(errorType, appliedFix);
     }
 }
 
 void IntelligentErrorAnalysis::processBuildError(const std::string& compiler, const std::string& output) {
-    nlohmann::json analysis = analyzeError(output, std::string("Build error from %1").arg(compiler));
+    nlohmann::json analysis = analyzeError(output, std::string("Build error from %1"));
     analysisComplete(QUuid::createUuid().toString(), analysis);
 }
 
@@ -560,7 +554,7 @@ void IntelligentErrorAnalysis::processTestFailure(const std::string& testName, c
 }
 
 void IntelligentErrorAnalysis::processCodeAnalysisWarning(const std::string& file, const std::string& line, const std::string& warning) {
-    nlohmann::json analysis = analyzeError(warning, std::string("Code analysis warning in %1:%2").arg(file).arg(line));
+    nlohmann::json analysis = analyzeError(warning, std::string("Code analysis warning in %1:%2"));
     analysis["file"] = file;
     analysis["line"] = line;
     analysis["type"] = "warning";
@@ -572,10 +566,4 @@ void IntelligentErrorAnalysis::onAutoRefresh() {
     // Automatically refresh error analysis
     // This will be called periodically to re-analyze for new errors
 }
-
-
-
-
-
-
 

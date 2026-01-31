@@ -1,21 +1,13 @@
 // Auto Model Downloader - Implementation
 #include "auto_model_downloader.h"
-#include <QDir>
-#include <QFile>
-#include <QFileInfo>
-#include <QStandardPaths>
-#include <QDebug>
-#include <QDateTime>
-#include <QProcess>
-#include <QEventLoop>
+
 
 namespace RawrXD {
 
-AutoModelDownloader::AutoModelDownloader(QObject* parent)
-    : QObject(parent)
-    , m_networkManager(new QNetworkAccessManager(this))
+AutoModelDownloader::AutoModelDownloader(void* parent)
+    : void(parent)
+    , m_networkManager(new void*(this))
 {
-    qDebug() << "[AutoModelDownloader] Initialized at" << QDateTime::currentDateTime().toString(Qt::ISODate);
     
     // Find Ollama directory
     m_modelsDirectory = findOllamaDirectory();
@@ -28,64 +20,59 @@ AutoModelDownloader::~AutoModelDownloader() {
     cancelDownload();
 }
 
-QString AutoModelDownloader::findOllamaDirectory() const {
+std::string AutoModelDownloader::findOllamaDirectory() const {
     // Common Ollama model locations
-    QStringList searchPaths = {
+    std::vector<std::string> searchPaths = {
         "D:/OllamaModels",
-        QDir::homePath() + "/.ollama/models",
+        std::filesystem::path::homePath() + "/.ollama/models",
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/ollama/models",
         "C:/Users/" + qgetenv("USERNAME") + "/.ollama/models"
     };
     
-    for (const QString& path : searchPaths) {
-        QDir dir(path);
+    for (const std::string& path : searchPaths) {
+        std::filesystem::path dir(path);
         if (dir.exists()) {
-            qDebug() << "[AutoModelDownloader] Found Ollama directory:" << path;
             return path;
         }
     }
     
     // Default to D:/OllamaModels if nothing found
-    QString defaultPath = "D:/OllamaModels";
-    qDebug() << "[AutoModelDownloader] No existing directory found, using:" << defaultPath;
+    std::string defaultPath = "D:/OllamaModels";
     return defaultPath;
 }
 
-void AutoModelDownloader::setModelsDirectory(const QString& path) {
+void AutoModelDownloader::setModelsDirectory(const std::string& path) {
     m_modelsDirectory = path;
     checkLocalModels();
 }
 
 void AutoModelDownloader::checkLocalModels() {
-    QDir modelsDir(m_modelsDirectory);
+    std::filesystem::path modelsDir(m_modelsDirectory);
     if (!modelsDir.exists()) {
-        qDebug() << "[AutoModelDownloader] Models directory does not exist:" << m_modelsDirectory;
-        emit noModelsDetected();
+        noModelsDetected();
         return;
     }
     
     // Check for .gguf files
-    QStringList ggufFiles = modelsDir.entryList(QStringList() << "*.gguf", QDir::Files);
+    std::vector<std::string> ggufFiles = modelsDir.entryList(std::vector<std::string>() << "*.gguf", std::filesystem::path::Files);
     
     if (ggufFiles.isEmpty()) {
-        qDebug() << "[AutoModelDownloader] No .gguf models found in" << m_modelsDirectory;
-        emit noModelsDetected();
+        noModelsDetected();
     } else {
-        qDebug() << "[AutoModelDownloader] Found" << ggufFiles.size() << "local models";
-        emit modelsAvailable(ggufFiles.size());
+        modelsAvailable(ggufFiles.size());
     }
 }
 
 bool AutoModelDownloader::hasLocalModels() const {
-    QDir modelsDir(m_modelsDirectory);
+    std::filesystem::path modelsDir(m_modelsDirectory);
     if (!modelsDir.exists()) return false;
     
-    QStringList ggufFiles = modelsDir.entryList(QStringList() << "*.gguf", QDir::Files);
+    std::vector<std::string> ggufFiles = modelsDir.entryList(std::vector<std::string>() << "*.gguf", std::filesystem::path::Files);
     return !ggufFiles.isEmpty();
 }
 
-QVector<ModelDownloadInfo> AutoModelDownloader::getRecommendedModels() const {
-    QVector<ModelDownloadInfo> models;
+std::vector<ModelDownloadInfo> AutoModelDownloader::getRecommendedModels() const {
+    std::vector<ModelDownloadInfo> models;
     
     // TinyLlama 1.1B - Excellent for testing and low-resource environments
     ModelDownloadInfo tinyLlama;
@@ -120,57 +107,46 @@ QVector<ModelDownloadInfo> AutoModelDownloader::getRecommendedModels() const {
     return models;
 }
 
-void AutoModelDownloader::downloadModel(const ModelDownloadInfo& model, const QString& destinationPath) {
+void AutoModelDownloader::downloadModel(const ModelDownloadInfo& model, const std::string& destinationPath) {
     if (m_downloadInProgress) {
-        qWarning() << "[AutoModelDownloader] Download already in progress";
         return;
     }
     
-    qDebug() << "[AutoModelDownloader] Starting download of" << model.displayName;
-    qDebug() << "  URL:" << model.url;
-    qDebug() << "  Destination:" << destinationPath;
     
     m_currentModelName = model.name;
     m_currentDestination = destinationPath;
     m_downloadInProgress = true;
     
     // Ensure destination directory exists
-    QFileInfo destInfo(destinationPath);
-    QDir().mkpath(destInfo.absolutePath());
+    std::filesystem::path destInfo(destinationPath);
+    std::filesystem::path().mkpath(destInfo.absolutePath());
     
     // Start download
     QNetworkRequest request(model.url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     
     m_currentReply = m_networkManager->get(request);
-    
-    connect(m_currentReply, &QNetworkReply::downloadProgress,
-            this, &AutoModelDownloader::onDownloadProgress);
-    connect(m_currentReply, &QNetworkReply::finished,
-            this, &AutoModelDownloader::onDownloadFinished);
-    connect(m_currentReply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::errorOccurred),
-            this, &AutoModelDownloader::onDownloadError);
-    
-    emit downloadStarted(model.displayName);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+    downloadStarted(model.displayName);
 }
 
-void AutoModelDownloader::downloadDefaultModel(const QString& destinationPath) {
-    QVector<ModelDownloadInfo> models = getRecommendedModels();
+void AutoModelDownloader::downloadDefaultModel(const std::string& destinationPath) {
+    std::vector<ModelDownloadInfo> models = getRecommendedModels();
     
     for (const auto& model : models) {
         if (model.isDefault) {
-            QString fullPath = QDir(destinationPath).filePath(model.name + ".gguf");
+            std::string fullPath = std::filesystem::path(destinationPath).filePath(model.name + ".gguf");
             downloadModel(model, fullPath);
             return;
         }
     }
     
-    qWarning() << "[AutoModelDownloader] No default model found in recommendations";
 }
 
 void AutoModelDownloader::cancelDownload() {
     if (m_currentReply && m_downloadInProgress) {
-        qDebug() << "[AutoModelDownloader] Cancelling download of" << m_currentModelName;
         m_currentReply->abort();
         m_currentReply->deleteLater();
         m_currentReply = nullptr;
@@ -179,14 +155,13 @@ void AutoModelDownloader::cancelDownload() {
 }
 
 void AutoModelDownloader::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal) {
-    emit downloadProgress(m_currentModelName, bytesReceived, bytesTotal);
+    downloadProgress(m_currentModelName, bytesReceived, bytesTotal);
     
     // Log progress every 10%
     if (bytesTotal > 0) {
         int progress = static_cast<int>((bytesReceived * 100) / bytesTotal);
         static int lastLoggedProgress = -1;
         if (progress / 10 != lastLoggedProgress / 10) {
-            qDebug() << "[AutoModelDownloader]" << m_currentModelName 
                      << "download progress:" << progress << "%"
                      << "(" << (bytesReceived / 1024 / 1024) << "/" << (bytesTotal / 1024 / 1024) << "MB)";
             lastLoggedProgress = progress;
@@ -197,21 +172,18 @@ void AutoModelDownloader::onDownloadProgress(qint64 bytesReceived, qint64 bytesT
 void AutoModelDownloader::onDownloadFinished() {
     if (!m_currentReply) return;
     
-    if (m_currentReply->error() == QNetworkReply::NoError) {
+    if (m_currentReply->error() == void*::NoError) {
         // Save downloaded data
-        QFile file(m_currentDestination);
+        std::fstream file(m_currentDestination);
         if (file.open(QIODevice::WriteOnly)) {
             file.write(m_currentReply->readAll());
             file.close();
             
-            qDebug() << "[AutoModelDownloader] ✓ Download completed:" << m_currentModelName;
-            qDebug() << "  Saved to:" << m_currentDestination;
             
-            emit downloadCompleted(m_currentModelName, m_currentDestination);
+            downloadCompleted(m_currentModelName, m_currentDestination);
         } else {
-            QString error = QString("Failed to save file: %1").arg(file.errorString());
-            qWarning() << "[AutoModelDownloader] ✗" << error;
-            emit downloadFailed(m_currentModelName, error);
+            std::string error = std::string("Failed to save file: %1"));
+            downloadFailed(m_currentModelName, error);
         }
     }
     
@@ -223,16 +195,14 @@ void AutoModelDownloader::onDownloadFinished() {
     checkLocalModels();
 }
 
-void AutoModelDownloader::onDownloadError(QNetworkReply::NetworkError error) {
-    QString errorString = m_currentReply ? m_currentReply->errorString() : "Unknown error";
+void AutoModelDownloader::onDownloadError(void*::NetworkError error) {
+    std::string errorString = m_currentReply ? m_currentReply->errorString() : "Unknown error";
     
-    qWarning() << "[AutoModelDownloader] ✗ Download failed:" << m_currentModelName;
-    qWarning() << "  Error code:" << error;
-    qWarning() << "  Error message:" << errorString;
     
-    emit downloadFailed(m_currentModelName, errorString);
+    downloadFailed(m_currentModelName, errorString);
     
     m_downloadInProgress = false;
 }
 
 } // namespace RawrXD
+

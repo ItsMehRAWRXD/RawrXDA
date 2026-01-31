@@ -1,26 +1,12 @@
 #include "tokenizer_selector.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QCheckBox>
-#include <QTextEdit>
-#include <QPushButton>
-#include <QDialogButtonBox>
-#include <QDebug>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QFile>
-#include <QFileDialog>
-#include <QStandardPaths>
+
+
 #include <algorithm>
 #include <cctype>
 
 // Constructor
-TokenizerSelector::TokenizerSelector(QWidget* parent)
-    : QDialog(parent),
+TokenizerSelector::TokenizerSelector(void* parent)
+    : void(parent),
       m_languageCombo(nullptr),
       m_tokenizerTypeCombo(nullptr),
       m_vocabSizeSpinBox(nullptr),
@@ -57,7 +43,6 @@ TokenizerSelector::TokenizerSelector(QWidget* parent)
 void TokenizerSelector::initialize() {
     if (m_languageCombo) return;  // Already initialized
     
-    qDebug() << "[TokenizerSelector] Initializing tokenizer selector";
     setupUI();
     setupConnections();
 }
@@ -65,13 +50,11 @@ void TokenizerSelector::initialize() {
 // Destructor
 TokenizerSelector::~TokenizerSelector()
 {
-    qDebug() << "[TokenizerSelector] Tokenizer selector destroyed";
 }
 
 void TokenizerSelector::setConfiguration(const TokenizerConfig& config)
 {
     m_config = config;
-    qDebug() << "[TokenizerSelector] Configuration set";
 }
 
 TokenizerSelector::TokenizerConfig TokenizerSelector::getConfiguration() const
@@ -79,56 +62,48 @@ TokenizerSelector::TokenizerConfig TokenizerSelector::getConfiguration() const
     return m_config;
 }
 
-bool TokenizerSelector::loadTokenizer(const QString& filePath)
+bool TokenizerSelector::loadTokenizer(const std::string& filePath)
 {
-    qDebug() << "[TokenizerSelector] Loading tokenizer from" << filePath;
     
     try {
-        QFile file(filePath);
+        std::fstream file(filePath);
         if (!file.open(QIODevice::ReadOnly)) {
-            qCritical() << "[TokenizerSelector] Cannot open tokenizer file";
             return false;
         }
         
-        QByteArray data = file.readAll();
+        std::vector<uint8_t> data = file.readAll();
         file.close();
         
-        QJsonDocument doc = QJsonDocument::fromJson(data);
+        void* doc = void*::fromJson(data);
         if (!doc.isObject()) {
-            qCritical() << "[TokenizerSelector] Invalid tokenizer file format";
             return false;
         }
         
         return fromJson(doc.object());
     }
     catch (const std::exception& e) {
-        qCritical() << "[TokenizerSelector] Error loading tokenizer:" << e.what();
         return false;
     }
 }
 
-bool TokenizerSelector::saveTokenizer(const QString& filePath) const
+bool TokenizerSelector::saveTokenizer(const std::string& filePath) const
 {
-    qDebug() << "[TokenizerSelector] Saving tokenizer to" << filePath;
     
     try {
-        QJsonObject obj = const_cast<TokenizerSelector*>(this)->toJson();
-        QJsonDocument doc(obj);
+        void* obj = const_cast<TokenizerSelector*>(this)->toJson();
+        void* doc(obj);
         
-        QFile file(filePath);
+        std::fstream file(filePath);
         if (!file.open(QIODevice::WriteOnly)) {
-            qCritical() << "[TokenizerSelector] Cannot open file for writing";
             return false;
         }
         
         file.write(doc.toJson());
         file.close();
         
-        qDebug() << "[TokenizerSelector] Tokenizer saved successfully";
         return true;
     }
     catch (const std::exception& e) {
-        qCritical() << "[TokenizerSelector] Error saving tokenizer:" << e.what();
         return false;
     }
 }
@@ -144,12 +119,12 @@ TokenizerSelector::TokenizerMetrics TokenizerSelector::getTokenizerMetrics() con
     return metrics;
 }
 
-std::vector<QString> TokenizerSelector::previewTokenization(const QString& text) const
+std::vector<std::string> TokenizerSelector::previewTokenization(const std::string& text) const
 {
-    std::vector<QString> tokens;
+    std::vector<std::string> tokens;
     
     // Simple tokenization preview
-    QString current;
+    std::string current;
     for (const QChar& c : text) {
         if (c.isSpace()) {
             if (!current.isEmpty()) {
@@ -161,7 +136,7 @@ std::vector<QString> TokenizerSelector::previewTokenization(const QString& text)
                 tokens.push_back(current);
                 current.clear();
             }
-            tokens.push_back(QString(c));
+            tokens.push_back(std::string(c));
         } else {
             current += c;
         }
@@ -174,9 +149,9 @@ std::vector<QString> TokenizerSelector::previewTokenization(const QString& text)
     return tokens;
 }
 
-QJsonObject TokenizerSelector::toJson() const
+void* TokenizerSelector::toJson() const
 {
-    QJsonObject obj;
+    void* obj;
     obj["language"] = static_cast<int>(m_config.language);
     obj["tokenizerType"] = static_cast<int>(m_config.tokenizerType);
     obj["name"] = m_config.name;
@@ -192,7 +167,7 @@ QJsonObject TokenizerSelector::toJson() const
     return obj;
 }
 
-bool TokenizerSelector::fromJson(const QJsonObject& config)
+bool TokenizerSelector::fromJson(const void*& config)
 {
     try {
         m_config.language = static_cast<Language>(config["language"].toInt());
@@ -210,16 +185,14 @@ bool TokenizerSelector::fromJson(const QJsonObject& config)
         return true;
     }
     catch (const std::exception& e) {
-        qCritical() << "[TokenizerSelector] Error loading from JSON:" << e.what();
         return false;
     }
 }
 
 void TokenizerSelector::accept()
 {
-    qDebug() << "[TokenizerSelector] Configuration accepted";
-    emit tokenizerSelected(m_config);
-    QDialog::accept();
+    tokenizerSelected(m_config);
+    void::accept();
 }
 
 void TokenizerSelector::setupUI()
@@ -295,11 +268,8 @@ void TokenizerSelector::setupUI()
     coverageSpinBox->setRange(0, 100);
     coverageSpinBox->setValue(99);
     coverageSpinBox->setSuffix("%");
-    
-    connect(coverageSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
-            [this, coverageSpinBox]() {
-                float val = coverageSpinBox->value() / 100.0f;
-                m_characterCoverageLabel->setText(QString::asprintf("Character Coverage: %.2f%%", val * 100));
+// Qt connect removed
+                m_characterCoverageLabel->setText(std::string::asprintf("Character Coverage: %.2f%%", val * 100));
                 m_config.characterCoverage = val;
             });
     
@@ -367,13 +337,12 @@ void TokenizerSelector::setupUI()
     
     // Preview button
     QPushButton* previewBtn = new QPushButton("Preview Tokenization");
-    connect(previewBtn, &QPushButton::clicked, [this]() {
-        QString text = m_tokensEdit->toPlainText();
-        std::vector<QString> tokens = previewTokenization(text);
+// Qt connect removed
+        std::vector<std::string> tokens = previewTokenization(text);
         
-        QString preview;
+        std::string preview;
         for (size_t i = 0; i < tokens.size(); ++i) {
-            preview += QString::number(i) + ": " + tokens[i] + "\n";
+            preview += std::string::number(i) + ": " + tokens[i] + "\n";
         }
         
         m_previewEdit->setText(preview);
@@ -382,8 +351,8 @@ void TokenizerSelector::setupUI()
     
     // Buttons
     QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    connect(buttonBox, &QDialogButtonBox::accepted, this, &TokenizerSelector::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+// Qt connect removed
+// Qt connect removed
     mainLayout->addWidget(buttonBox);
     
     setLayout(mainLayout);
@@ -391,58 +360,46 @@ void TokenizerSelector::setupUI()
 
 void TokenizerSelector::setupConnections()
 {
-    connect(m_languageCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &TokenizerSelector::onLanguageChanged);
-    
-    connect(m_tokenizerTypeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &TokenizerSelector::onTokenizerTypeChanged);
-    
-    connect(m_vocabSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
             this, [this](int val) { m_config.vocabSize = val; });
-    
-    connect(m_minFrequencySpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+// Qt connect removed
             this, [this](int val) { m_config.minFrequency = val; });
-    
-    connect(m_lowercaseCheckBox, &QCheckBox::toggled,
+// Qt connect removed
             this, [this](bool checked) { m_config.lowercaseTokens = checked; });
-    
-    connect(m_addSpecialTokensCheckBox, &QCheckBox::toggled,
+// Qt connect removed
             this, [this](bool checked) { m_config.addSpecialTokens = checked; });
-    
-    connect(m_maxTokenLengthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+// Qt connect removed
             this, [this](int val) { m_config.maxTokenLength = val; });
-    
-    connect(m_subwordRegularizationCheckBox, &QCheckBox::toggled,
+// Qt connect removed
             this, [this](bool checked) { m_config.enableSubwordRegularization = checked; });
 }
 
 void TokenizerSelector::updateAvailableTokenizers()
 {
-    qDebug() << "[TokenizerSelector] Updating available tokenizers";
 }
 
 void TokenizerSelector::updateMetricsDisplay()
 {
     TokenizerMetrics metrics = getTokenizerMetrics();
-    QString metricsStr = QString("Vocab: %1 | Tokens: %2 | OOV: %3% | Encoding: %4")
-                            .arg(metrics.vocabularySize)
-                            .arg(metrics.uniqueTokens)
-                            .arg(static_cast<int>(metrics.oovRate * 100))
-                            .arg(metrics.encoding);
+    std::string metricsStr = std::string("Vocab: %1 | Tokens: %2 | OOV: %3% | Encoding: %4")
+
+
+                            )
+                            ;
     m_metricsLabel->setText(metricsStr);
 }
 
 void TokenizerSelector::onLanguageChanged(int index)
 {
     m_config.language = static_cast<Language>(index);
-    qDebug() << "[TokenizerSelector] Language changed to" << index;
     updateAvailableTokenizers();
 }
 
 void TokenizerSelector::onTokenizerTypeChanged(int index)
 {
     m_config.tokenizerType = static_cast<TokenizerType>(index);
-    qDebug() << "[TokenizerSelector] Tokenizer type changed to" << index;
 }
 
 void TokenizerSelector::initializeTokenizerMap()

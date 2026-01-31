@@ -4,7 +4,6 @@ EnterprisePolicyEngine::EnterprisePolicyEngine()
     , m_compliant(true)
 {
     m_settings.requireSignature = false;
-    // // qDebug:  "[EnterprisePolicyEngine] Initialized";
 }
 
 EnterprisePolicyEngine::~EnterprisePolicyEngine() {
@@ -56,7 +55,6 @@ bool EnterprisePolicyEngine::verifyExtensionSignature(const std::string& extensi
     }
     
     // Simulate signature verification
-    // // qDebug:  "[EnterprisePolicyEngine] Verifying signature for:" << extensionId;
     return !signature.empty(); // Simple check for demo
 }
 
@@ -108,8 +106,8 @@ std::string EnterprisePolicyEngine::generateJwtToken(const std::string& userId, 
     // In a real implementation, this would generate a proper JWT token
     // For now, we'll just return a placeholder
     return std::string("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.%1.%2")
-            .arg(userId)
-            .arg(QUuid::createUuid().toString());
+            
+            .toString());
 }
 
 bool EnterprisePolicyEngine::checkAllowList(const std::string& extensionId) {
@@ -130,7 +128,7 @@ void EnterprisePolicyEngine::addToAuditLog(const std::string& userId, const std:
     
     m_auditLog.append(entry);
     
-    // Emit audit log entry signal
+    // audit log entry signal
     void* obj;
     obj["timestamp"] = entry.timestamp;
     obj["userId"] = entry.userId;
@@ -151,8 +149,4 @@ bool EnterprisePolicyEngine::verifyJwtSignature(const std::string& token) {
     std::stringList parts = token.split('.');
     return parts.size() == 3;
 }
-
-
-
-
 

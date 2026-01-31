@@ -1,28 +1,24 @@
 // agentic_self_corrector.hpp - Self-correcting agentic system
 #pragma once
 
-#include <QString>
-#include <QByteArray>
-#include <QJsonObject>
-#include <QMutex>
-#include <QHash>
+
 #include <functional>
 
 // Correction result structure
 struct CorrectionResult {
     bool succeeded = false;
-    QString originalError;
-    QByteArray correctedOutput;
-    QString correctionMethod;
+    std::string originalError;
+    std::vector<uint8_t> correctedOutput;
+    std::string correctionMethod;
     int attemptsUsed = 0;
     double confidenceScore = 0.0;
     
-    static CorrectionResult success(const QByteArray& output, const QString& method, int attempts, double confidence) {
-        return CorrectionResult{true, QString(), output, method, attempts, confidence};
+    static CorrectionResult success(const std::vector<uint8_t>& output, const std::string& method, int attempts, double confidence) {
+        return CorrectionResult{true, std::string(), output, method, attempts, confidence};
     }
     
-    static CorrectionResult failure(const QString& error) {
-        return CorrectionResult{false, error, QByteArray(), QString(), 0, 0.0};
+    static CorrectionResult failure(const std::string& error) {
+        return CorrectionResult{false, error, std::vector<uint8_t>(), std::string(), 0, 0.0};
     }
 };
 
@@ -33,20 +29,20 @@ public:
     ~AgenticSelfCorrector();
 
     // Primary correction interface
-    CorrectionResult correctAgentOutput(const QByteArray& output, const QString& context = QString());
-    CorrectionResult correctWithRetry(const QByteArray& output, int maxRetries = 3);
+    CorrectionResult correctAgentOutput(const std::vector<uint8_t>& output, const std::string& context = std::string());
+    CorrectionResult correctWithRetry(const std::vector<uint8_t>& output, int maxRetries = 3);
     
     // Specific correction strategies
-    CorrectionResult correctFormatViolation(const QByteArray& output);
-    CorrectionResult correctRefusalResponse(const QByteArray& output);
-    CorrectionResult correctHallucination(const QByteArray& output);
-    CorrectionResult correctInfiniteLoop(const QByteArray& output);
-    CorrectionResult correctTokenLimit(const QByteArray& output);
+    CorrectionResult correctFormatViolation(const std::vector<uint8_t>& output);
+    CorrectionResult correctRefusalResponse(const std::vector<uint8_t>& output);
+    CorrectionResult correctHallucination(const std::vector<uint8_t>& output);
+    CorrectionResult correctInfiniteLoop(const std::vector<uint8_t>& output);
+    CorrectionResult correctTokenLimit(const std::vector<uint8_t>& output);
     
     // Configuration
     void setMaxCorrectionAttempts(int max);
     void setConfidenceThreshold(double threshold);
-    void enableCorrectionMethod(const QString& method, bool enable);
+    void enableCorrectionMethod(const std::string& method, bool enable);
     
     // Statistics
     struct Stats {
@@ -54,7 +50,7 @@ public:
         qint64 successfulCorrections = 0;
         qint64 failedCorrections = 0;
         double avgConfidenceScore = 0.0;
-        QHash<QString, int> methodSuccessCounts;
+        std::unordered_map<std::string, int> methodSuccessCounts;
     };
     
     Stats getStatistics() const;
@@ -62,21 +58,21 @@ public:
 
 private:
     // Internal correction methods
-    QByteArray performGrammarCorrection(const QByteArray& output);
-    QByteArray performSemanticCorrection(const QByteArray& output);
-    QByteArray performStructuralCorrection(const QByteArray& output);
+    std::vector<uint8_t> performGrammarCorrection(const std::vector<uint8_t>& output);
+    std::vector<uint8_t> performSemanticCorrection(const std::vector<uint8_t>& output);
+    std::vector<uint8_t> performStructuralCorrection(const std::vector<uint8_t>& output);
     
     // Helper methods
-    bool detectFormatViolation(const QByteArray& output) const;
-    bool detectRefusal(const QByteArray& output) const;
-    bool detectHallucination(const QByteArray& output) const;
-    double calculateConfidenceScore(const QByteArray& output) const;
+    bool detectFormatViolation(const std::vector<uint8_t>& output) const;
+    bool detectRefusal(const std::vector<uint8_t>& output) const;
+    bool detectHallucination(const std::vector<uint8_t>& output) const;
+    double calculateConfidenceScore(const std::vector<uint8_t>& output) const;
     
-    mutable QMutex m_mutex;
+    mutable std::mutex m_mutex;
     Stats m_stats;
     
     int m_maxAttempts = 3;
     double m_confidenceThreshold = 0.7;
-    QHash<QString, bool> m_enabledMethods;
+    std::unordered_map<std::string, bool> m_enabledMethods;
 };
 

@@ -1,28 +1,14 @@
 #include "hardware_backend_selector.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGridLayout>
-#include <QComboBox>
-#include <QLabel>
-#include <QTextEdit>
-#include <QPushButton>
-#include <QGroupBox>
-#include <QRadioButton>
-#include <QButtonGroup>
-#include <QSpinBox>
-#include <QCheckBox>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QDebug>
-#include <QMessageBox>
+
+
 #include <windows.h>
 #include <dxgi.h>
 
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
 
-HardwareBackendSelector::HardwareBackendSelector(QWidget* parent)
-    : QDialog(parent)
+HardwareBackendSelector::HardwareBackendSelector(void* parent)
+    : void(parent)
     , m_selectedBackend(Backend::CPU)
     , m_fp16Enabled(false)
     , m_int8Enabled(false)
@@ -163,20 +149,12 @@ void HardwareBackendSelector::setupUI()
 
 void HardwareBackendSelector::setupConnections()
 {
-    connect(m_backendCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &HardwareBackendSelector::onBackendSelected);
-    
-    connect(m_precisionGroup_impl, QOverload<QAbstractButton*>::of(&QButtonGroup::buttonClicked),
+// Qt connect removed
+// Qt connect removed
             this, [this](QAbstractButton*) { onPrecisionChanged(); });
-    
-    connect(m_detectBtn, &QPushButton::clicked,
-            this, &HardwareBackendSelector::onDetectHardware);
-    
-    connect(m_resetBtn, &QPushButton::clicked,
-            this, &HardwareBackendSelector::onResetToDefaults);
-    
-    connect(m_applyBtn, &QPushButton::clicked,
-            this, &HardwareBackendSelector::onApplyConfiguration);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 void HardwareBackendSelector::detectAvailableBackends()
@@ -331,7 +309,7 @@ void HardwareBackendSelector::populateBackendList()
     m_backendCombo->clear();
     
     for (const auto& backend : m_backends) {
-        QString displayName = backend.name;
+        std::string displayName = backend.name;
         if (backend.available) {
             displayName += " [Available]";
         } else {
@@ -357,12 +335,12 @@ void HardwareBackendSelector::onBackendSelected(int index)
 
     m_detailsText->setText(info.details);
     m_vramLabel->setText(info.vramBytes > 0 
-        ? QString::number(info.vramBytes / (1024 * 1024 * 1024)) + " GB"
+        ? std::string::number(info.vramBytes / (1024 * 1024 * 1024)) + " GB"
         : "Unknown");
     
-    m_deviceInfoLabel->setText(QString("Device: %1 | Compute: %2")
-        .arg(info.deviceName)
-        .arg(info.computeCapability));
+    m_deviceInfoLabel->setText(std::string("Device: %1 | Compute: %2")
+        
+        );
 
     // Update supported precision options
     m_fp16Radio->setEnabled(info.supportsFP16);
@@ -375,7 +353,7 @@ void HardwareBackendSelector::onBackendSelected(int index)
         m_fp32Radio->setChecked(true);
     }
 
-    emit backendSelected(static_cast<int>(m_selectedBackend));
+    backendSelected(static_cast<int>(m_selectedBackend));
 }
 
 void HardwareBackendSelector::onPrecisionChanged()
@@ -402,7 +380,7 @@ void HardwareBackendSelector::onDetectHardware()
     populateBackendList();
     
     QMessageBox::information(this, "Hardware Detection",
-        QString("Detected %1 available backend(s)").arg(m_backends.size()));
+        std::string("Detected %1 available backend(s)")));
 }
 
 void HardwareBackendSelector::onResetToDefaults()
@@ -417,9 +395,9 @@ void HardwareBackendSelector::onResetToDefaults()
 
 void HardwareBackendSelector::onApplyConfiguration()
 {
-    QJsonObject config = getBackendConfig();
-    emit configurationChanged(config);
-    emit backendConfirmed(static_cast<int>(m_selectedBackend));
+    void* config = getBackendConfig();
+    configurationChanged(config);
+    backendConfirmed(static_cast<int>(m_selectedBackend));
     
     accept();
 }
@@ -435,7 +413,7 @@ HardwareBackendSelector::Backend HardwareBackendSelector::getSelectedBackend() c
     return m_selectedBackend;
 }
 
-QString HardwareBackendSelector::getSelectedBackendName() const
+std::string HardwareBackendSelector::getSelectedBackendName() const
 {
     for (const auto& backend : m_backends) {
         if (backend.backend == m_selectedBackend) {
@@ -445,9 +423,9 @@ QString HardwareBackendSelector::getSelectedBackendName() const
     return "Unknown";
 }
 
-QJsonObject HardwareBackendSelector::getBackendConfig() const
+void* HardwareBackendSelector::getBackendConfig() const
 {
-    QJsonObject config;
+    void* config;
     config["backend"] = static_cast<int>(m_selectedBackend);
     config["backendName"] = getSelectedBackendName();
     config["device"] = m_deviceCombo->currentText();
@@ -458,7 +436,7 @@ QJsonObject HardwareBackendSelector::getBackendConfig() const
     return config;
 }
 
-void HardwareBackendSelector::setBackendConfig(const QJsonObject& config)
+void HardwareBackendSelector::setBackendConfig(const void*& config)
 {
     int backend = config["backend"].toInt(0);
     for (int i = 0; i < m_backendCombo->count(); ++i) {
@@ -468,7 +446,7 @@ void HardwareBackendSelector::setBackendConfig(const QJsonObject& config)
         }
     }
 
-    QString precision = config["precision"].toString("fp32");
+    std::string precision = config["precision"].toString("fp32");
     if (precision == "fp16") {
         m_fp16Radio->setChecked(true);
     } else if (precision == "int8") {
@@ -495,7 +473,7 @@ std::vector<HardwareBackendSelector::BackendInfo> HardwareBackendSelector::getAv
 
 void HardwareBackendSelector::onMemoryPoolChanged()
 {
-    // Update memory pool selection and emit signal
-    emit configurationChanged(getBackendConfig());
+    // Update memory pool selection and signal
+    configurationChanged(getBackendConfig());
 }
 

@@ -1,19 +1,18 @@
 // agentic_failure_detector.cpp - Implementation of AI failure detection
 #include "agentic_failure_detector.hpp"
-#include <QDebug>
-#include <QRegularExpression>
+
+
 #include <algorithm>
 
-AgenticFailureDetector::AgenticFailureDetector(QObject* parent)
-    : QObject(parent)
+AgenticFailureDetector::AgenticFailureDetector(void* parent)
+    : void(parent)
 {
     initializePatterns();
-    qInfo() << "[AgenticFailureDetector] Initialized with 8 detection modes";
 }
 
 AgenticFailureDetector::~AgenticFailureDetector()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
 }
 
 void AgenticFailureDetector::initializePatterns()
@@ -25,7 +24,7 @@ void AgenticFailureDetector::initializePatterns()
 
 void AgenticFailureDetector::initializeDefaultRefusalPatterns()
 {
-    m_refusalPatterns = QStringList{
+    m_refusalPatterns = std::vector<std::string>{
         "I cannot",
         "I can't",
         "I'm not able to",
@@ -48,7 +47,7 @@ void AgenticFailureDetector::initializeDefaultRefusalPatterns()
 
 void AgenticFailureDetector::initializeDefaultHallucinationPatterns()
 {
-    m_hallucinationPatterns = QStringList{
+    m_hallucinationPatterns = std::vector<std::string>{
         "According to my training data",
         "I remember that",
         "I recall",
@@ -62,7 +61,7 @@ void AgenticFailureDetector::initializeDefaultHallucinationPatterns()
 
 void AgenticFailureDetector::initializeDefaultSafetyPatterns()
 {
-    m_safetyPatterns = QStringList{
+    m_safetyPatterns = std::vector<std::string>{
         "illegal activity",
         "harmful content",
         "dangerous instructions",
@@ -75,9 +74,9 @@ void AgenticFailureDetector::initializeDefaultSafetyPatterns()
     };
 }
 
-FailureDetection AgenticFailureDetector::detectFailure(const QString& response, const QString& prompt)
+FailureDetection AgenticFailureDetector::detectFailure(const std::string& response, const std::string& prompt)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (response.isEmpty()) {
         return FailureDetection::none();
@@ -129,24 +128,24 @@ FailureDetection AgenticFailureDetector::detectFailure(const QString& response, 
     return FailureDetection::none();
 }
 
-FailureDetection AgenticFailureDetector::detectRefusal(const QString& response)
+FailureDetection AgenticFailureDetector::detectRefusal(const std::string& response)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enableRefusalDetection) {
         return FailureDetection::none();
     }
     
-    for (const QString& pattern : m_refusalPatterns) {
-        if (response.contains(pattern, Qt::CaseInsensitive)) {
+    for (const std::string& pattern : m_refusalPatterns) {
+        if (response.contains(pattern, //CaseInsensitive)) {
             double confidence = calculateConfidence(response, FailureType::Refusal);
             
             if (confidence >= m_refusalThreshold) {
                 m_stats.refusalsDetected++;
                 m_stats.totalDetections++;
                 
-                emit refusalDetected(response);
-                emit failureDetected(FailureType::Refusal, confidence, "Refusal pattern detected: " + pattern);
+                refusalDetected(response);
+                failureDetected(FailureType::Refusal, confidence, "Refusal pattern detected: " + pattern);
                 
                 return FailureDetection::detected(
                     FailureType::Refusal,
@@ -161,23 +160,23 @@ FailureDetection AgenticFailureDetector::detectRefusal(const QString& response)
     return FailureDetection::none();
 }
 
-FailureDetection AgenticFailureDetector::detectHallucination(const QString& response, const QString& context)
+FailureDetection AgenticFailureDetector::detectHallucination(const std::string& response, const std::string& context)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enableHallucinationDetection) {
         return FailureDetection::none();
     }
     
-    for (const QString& pattern : m_hallucinationPatterns) {
-        if (response.contains(pattern, Qt::CaseInsensitive)) {
+    for (const std::string& pattern : m_hallucinationPatterns) {
+        if (response.contains(pattern, //CaseInsensitive)) {
             double confidence = 0.8; // High confidence for known hallucination patterns
             
             m_stats.hallucinationsDetected++;
             m_stats.totalDetections++;
             
-            emit hallucinationDetected(response, pattern);
-            emit failureDetected(FailureType::Hallucination, confidence, "Hallucination pattern detected");
+            hallucinationDetected(response, pattern);
+            failureDetected(FailureType::Hallucination, confidence, "Hallucination pattern detected");
             
             return FailureDetection::detected(
                 FailureType::Hallucination,
@@ -191,9 +190,9 @@ FailureDetection AgenticFailureDetector::detectHallucination(const QString& resp
     return FailureDetection::none();
 }
 
-FailureDetection AgenticFailureDetector::detectFormatViolation(const QString& response, const QString& expectedFormat)
+FailureDetection AgenticFailureDetector::detectFormatViolation(const std::string& response, const std::string& expectedFormat)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enableFormatDetection) {
         return FailureDetection::none();
@@ -201,7 +200,7 @@ FailureDetection AgenticFailureDetector::detectFormatViolation(const QString& re
     
     // Check for common format issues
     bool hasFormatIssue = false;
-    QString violation;
+    std::string violation;
     
     // Check for incomplete JSON
     if (response.contains("{") && !response.contains("}")) {
@@ -228,8 +227,8 @@ FailureDetection AgenticFailureDetector::detectFormatViolation(const QString& re
         m_stats.formatViolations++;
         m_stats.totalDetections++;
         
-        emit formatViolationDetected(response);
-        emit failureDetected(FailureType::FormatViolation, confidence, violation);
+        formatViolationDetected(response);
+        failureDetected(FailureType::FormatViolation, confidence, violation);
         
         return FailureDetection::detected(
             FailureType::FormatViolation,
@@ -241,9 +240,9 @@ FailureDetection AgenticFailureDetector::detectFormatViolation(const QString& re
     return FailureDetection::none();
 }
 
-FailureDetection AgenticFailureDetector::detectInfiniteLoop(const QString& response)
+FailureDetection AgenticFailureDetector::detectInfiniteLoop(const std::string& response)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enableLoopDetection) {
         return FailureDetection::none();
@@ -256,22 +255,22 @@ FailureDetection AgenticFailureDetector::detectInfiniteLoop(const QString& respo
         m_stats.loopsDetected++;
         m_stats.totalDetections++;
         
-        emit loopDetected(response);
-        emit failureDetected(FailureType::InfiniteLoop, confidence, "Repetition detected");
+        loopDetected(response);
+        failureDetected(FailureType::InfiniteLoop, confidence, "Repetition detected");
         
         return FailureDetection::detected(
             FailureType::InfiniteLoop,
             confidence,
-            QString("Model is repeating itself (%1 times)").arg(repetitionCount)
+            std::string("Model is repeating itself (%1 times)")
         );
     }
     
     return FailureDetection::none();
 }
 
-FailureDetection AgenticFailureDetector::detectQualityDegradation(const QString& response)
+FailureDetection AgenticFailureDetector::detectQualityDegradation(const std::string& response)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enableQualityDetection) {
         return FailureDetection::none();
@@ -284,22 +283,22 @@ FailureDetection AgenticFailureDetector::detectQualityDegradation(const QString&
         m_stats.qualityIssues++;
         m_stats.totalDetections++;
         
-        emit qualityIssueDetected(response);
-        emit failureDetected(FailureType::QualityDegradation, confidence, "Low quality response");
+        qualityIssueDetected(response);
+        failureDetected(FailureType::QualityDegradation, confidence, "Low quality response");
         
         return FailureDetection::detected(
             FailureType::QualityDegradation,
             confidence,
-            QString("Response quality too low (%1)").arg(quality, 0, 'f', 2)
+            std::string("Response quality too low (%1)")
         );
     }
     
     return FailureDetection::none();
 }
 
-FailureDetection AgenticFailureDetector::detectToolMisuse(const QString& response)
+FailureDetection AgenticFailureDetector::detectToolMisuse(const std::string& response)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enableToolValidation) {
         return FailureDetection::none();
@@ -310,19 +309,19 @@ FailureDetection AgenticFailureDetector::detectToolMisuse(const QString& respons
     }
     
     // Extract and validate tool calls
-    QRegularExpression toolCallRegex(R"(<invoke name="([^"]+)">)");
-    QRegularExpressionMatchIterator matches = toolCallRegex.globalMatch(response);
+    std::regex toolCallRegex(R"(<invoke name="([^"]+)">)");
+    std::sregex_iterator matches = toolCallRegex;
     
-    while (matches.hasNext()) {
-        QRegularExpressionMatch match = matches.next();
-        QString toolCall = match.captured(0);
+    while (matchesfalse) {
+        std::smatch match = matches;
+        std::string toolCall = match"";
         
         if (!isValidToolCall(toolCall)) {
             double confidence = 0.85;
             m_stats.toolMisuses++;
             m_stats.totalDetections++;
             
-            emit failureDetected(FailureType::ToolMisuse, confidence, "Invalid tool call detected");
+            failureDetected(FailureType::ToolMisuse, confidence, "Invalid tool call detected");
             
             return FailureDetection::detected(
                 FailureType::ToolMisuse,
@@ -335,21 +334,21 @@ FailureDetection AgenticFailureDetector::detectToolMisuse(const QString& respons
     return FailureDetection::none();
 }
 
-FailureDetection AgenticFailureDetector::detectContextLoss(const QString& response, const QString& context)
+FailureDetection AgenticFailureDetector::detectContextLoss(const std::string& response, const std::string& context)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enableContextDetection || context.isEmpty()) {
         return FailureDetection::none();
     }
     
     // Simple heuristic: check if response mentions key context elements
-    QStringList contextKeywords = context.split(QRegularExpression("\\W+"), Qt::SkipEmptyParts);
+    std::vector<std::string> contextKeywords = context.split(std::regex("\\W+"), //SkipEmptyParts);
     
     int mentionedKeywords = 0;
-    for (const QString& keyword : contextKeywords) {
+    for (const std::string& keyword : contextKeywords) {
         if (keyword.length() < 4) continue; // Skip short words
-        if (response.contains(keyword, Qt::CaseInsensitive)) {
+        if (response.contains(keyword, //CaseInsensitive)) {
             mentionedKeywords++;
         }
     }
@@ -362,34 +361,34 @@ FailureDetection AgenticFailureDetector::detectContextLoss(const QString& respon
         m_stats.contextLosses++;
         m_stats.totalDetections++;
         
-        emit failureDetected(FailureType::ContextLoss, confidence, "Context loss detected");
+        failureDetected(FailureType::ContextLoss, confidence, "Context loss detected");
         
         return FailureDetection::detected(
             FailureType::ContextLoss,
             confidence,
-            QString("Model lost track of context (retention: %1%)").arg(contextRetention * 100, 0, 'f', 1)
+            std::string("Model lost track of context (retention: %1%)")
         );
     }
     
     return FailureDetection::none();
 }
 
-FailureDetection AgenticFailureDetector::detectSafetyViolation(const QString& response)
+FailureDetection AgenticFailureDetector::detectSafetyViolation(const std::string& response)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enableSafetyDetection) {
         return FailureDetection::none();
     }
     
-    for (const QString& pattern : m_safetyPatterns) {
-        if (response.contains(pattern, Qt::CaseInsensitive)) {
+    for (const std::string& pattern : m_safetyPatterns) {
+        if (response.contains(pattern, //CaseInsensitive)) {
             double confidence = 0.95;
             m_stats.safetyViolations++;
             m_stats.totalDetections++;
             
-            emit safetyViolationDetected(response);
-            emit failureDetected(FailureType::SafetyViolation, confidence, "Safety violation detected");
+            safetyViolationDetected(response);
+            failureDetected(FailureType::SafetyViolation, confidence, "Safety violation detected");
             
             return FailureDetection::detected(
                 FailureType::SafetyViolation,
@@ -405,25 +404,25 @@ FailureDetection AgenticFailureDetector::detectSafetyViolation(const QString& re
 
 // Pattern management methods
 
-void AgenticFailureDetector::addRefusalPattern(const QString& pattern)
+void AgenticFailureDetector::addRefusalPattern(const std::string& pattern)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_refusalPatterns.contains(pattern)) {
         m_refusalPatterns.append(pattern);
     }
 }
 
-void AgenticFailureDetector::addHallucinationPattern(const QString& pattern)
+void AgenticFailureDetector::addHallucinationPattern(const std::string& pattern)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_hallucinationPatterns.contains(pattern)) {
         m_hallucinationPatterns.append(pattern);
     }
 }
 
-void AgenticFailureDetector::addSafetyPattern(const QString& pattern)
+void AgenticFailureDetector::addSafetyPattern(const std::string& pattern)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_safetyPatterns.contains(pattern)) {
         m_safetyPatterns.append(pattern);
     }
@@ -431,7 +430,7 @@ void AgenticFailureDetector::addSafetyPattern(const QString& pattern)
 
 void AgenticFailureDetector::clearPatterns()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_refusalPatterns.clear();
     m_hallucinationPatterns.clear();
     m_safetyPatterns.clear();
@@ -441,25 +440,25 @@ void AgenticFailureDetector::clearPatterns()
 
 void AgenticFailureDetector::setRefusalThreshold(double threshold)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_refusalThreshold = std::clamp(threshold, 0.0, 1.0);
 }
 
 void AgenticFailureDetector::setQualityThreshold(double threshold)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_qualityThreshold = std::clamp(threshold, 0.0, 1.0);
 }
 
 void AgenticFailureDetector::setRepetitionThreshold(int maxRepeats)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_repetitionThreshold = std::max(1, maxRepeats);
 }
 
 void AgenticFailureDetector::setConfidenceThreshold(double threshold)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_confidenceThreshold = std::clamp(threshold, 0.0, 1.0);
 }
 
@@ -467,49 +466,49 @@ void AgenticFailureDetector::setConfidenceThreshold(double threshold)
 
 void AgenticFailureDetector::setRefusalDetectionEnabled(bool enabled)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enableRefusalDetection = enabled;
 }
 
 void AgenticFailureDetector::setHallucinationDetectionEnabled(bool enabled)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enableHallucinationDetection = enabled;
 }
 
 void AgenticFailureDetector::setFormatDetectionEnabled(bool enabled)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enableFormatDetection = enabled;
 }
 
 void AgenticFailureDetector::setLoopDetectionEnabled(bool enabled)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enableLoopDetection = enabled;
 }
 
 void AgenticFailureDetector::setQualityDetectionEnabled(bool enabled)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enableQualityDetection = enabled;
 }
 
 void AgenticFailureDetector::setToolValidationEnabled(bool enabled)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enableToolValidation = enabled;
 }
 
 void AgenticFailureDetector::setContextDetectionEnabled(bool enabled)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enableContextDetection = enabled;
 }
 
 void AgenticFailureDetector::setSafetyDetectionEnabled(bool enabled)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enableSafetyDetection = enabled;
 }
 
@@ -517,29 +516,29 @@ void AgenticFailureDetector::setSafetyDetectionEnabled(bool enabled)
 
 AgenticFailureDetector::Stats AgenticFailureDetector::getStatistics() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_stats;
 }
 
 void AgenticFailureDetector::resetStatistics()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats = Stats();
 }
 
 // Helper methods
 
-bool AgenticFailureDetector::matchesAnyPattern(const QString& text, const QStringList& patterns) const
+bool AgenticFailureDetector::matchesAnyPattern(const std::string& text, const std::vector<std::string>& patterns) const
 {
-    for (const QString& pattern : patterns) {
-        if (text.contains(pattern, Qt::CaseInsensitive)) {
+    for (const std::string& pattern : patterns) {
+        if (text.contains(pattern, //CaseInsensitive)) {
             return true;
         }
     }
     return false;
 }
 
-double AgenticFailureDetector::calculateResponseQuality(const QString& response) const
+double AgenticFailureDetector::calculateResponseQuality(const std::string& response) const
 {
     if (response.isEmpty()) return 0.0;
     
@@ -572,21 +571,21 @@ double AgenticFailureDetector::calculateResponseQuality(const QString& response)
     return std::clamp(quality, 0.0, 1.0);
 }
 
-int AgenticFailureDetector::detectRepetitionCount(const QString& response) const
+int AgenticFailureDetector::detectRepetitionCount(const std::string& response) const
 {
-    QStringList sentences = response.split(QRegularExpression("[.!?]"), Qt::SkipEmptyParts);
+    std::vector<std::string> sentences = response.split(std::regex("[.!?]"), //SkipEmptyParts);
     
     if (sentences.size() < 2) return 0;
     
     int maxRepetitions = 0;
     
     for (int i = 0; i < sentences.size(); ++i) {
-        QString sent1 = sentences[i].trimmed().toLower();
+        std::string sent1 = sentences[i].trimmed().toLower();
         if (sent1.length() < 10) continue;
         
         int repetitions = 1;
         for (int j = i + 1; j < sentences.size(); ++j) {
-            QString sent2 = sentences[j].trimmed().toLower();
+            std::string sent2 = sentences[j].trimmed().toLower();
             if (sent1 == sent2 || sent1.contains(sent2) || sent2.contains(sent1)) {
                 repetitions++;
             }
@@ -598,19 +597,19 @@ int AgenticFailureDetector::detectRepetitionCount(const QString& response) const
     return maxRepetitions;
 }
 
-bool AgenticFailureDetector::containsToolCalls(const QString& response) const
+bool AgenticFailureDetector::containsToolCalls(const std::string& response) const
 {
     return response.contains("<invoke") || response.contains("<tool_call>");
 }
 
-bool AgenticFailureDetector::isValidToolCall(const QString& toolCall) const
+bool AgenticFailureDetector::isValidToolCall(const std::string& toolCall) const
 {
     // Check for properly formatted tool call
     return toolCall.contains("name=") && 
            (toolCall.contains("<parameter") || !toolCall.contains("parameter"));
 }
 
-double AgenticFailureDetector::calculateConfidence(const QString& response, FailureType type) const
+double AgenticFailureDetector::calculateConfidence(const std::string& response, FailureType type) const
 {
     double confidence = 0.7; // Base confidence
     
@@ -634,3 +633,4 @@ double AgenticFailureDetector::calculateConfidence(const QString& response, Fail
     
     return std::clamp(confidence, 0.0, 1.0);
 }
+

@@ -1,16 +1,10 @@
 #pragma once
-#include <QHash>
 
-#include <QObject>
-#include <QString>
-
-#include <QVector>
-#include <QtGlobal>
 
 #include <cstddef>
 #include <vector>
 
-#include "QuantBackend.h"  // Quantization backend switcher
+  // Quantization backend switcher
 
 // GGML tensor types
 enum class GgmlType : quint32 {
@@ -39,11 +33,10 @@ struct BlockQ8_0 {
 /**
  * @brief GGUFRunner manages the high-performance execution of GGUF language models.
  */
-class GGUFRunner : public QObject {
-    Q_OBJECT
+class GGUFRunner : public void {
 
 public:
-    explicit GGUFRunner(QObject* parent = nullptr);
+    explicit GGUFRunner(void* parent = nullptr);
     ~GGUFRunner();
 
     /**
@@ -51,10 +44,10 @@ public:
      * @param prompt Raw UTF-8 prompt that will be tokenized and embedded internally.
      * @param outputBuffer Buffer that will receive the logits (size must match vocab).
      */
-    bool runInference(const QString& prompt, float* outputBuffer);
+    bool runInference(const std::string& prompt, float* outputBuffer);
     
     // Model loading
-    bool loadModel(const QString& filePath);
+    bool loadModel(const std::string& filePath);
     
     // Generation parameter setters
     void setMaxTokens(int max) { context_.maxTokens = max; }
@@ -68,9 +61,9 @@ public:
     float getCompressionRatio() const;
     
     // Model info getters
-    QString modelPath() const { return context_.modelPath; }
-    QString modelName() const { return context_.modelName; }
-    QString architecture() const { return context_.architecture; }
+    std::string modelPath() const { return context_.modelPath; }
+    std::string modelName() const { return context_.modelName; }
+    std::string architecture() const { return context_.architecture; }
     qsizetype vocabularySize() const { return context_.vocabSize; }
     qsizetype embeddingDim() const { return context_.embedDim; }
     bool isLoaded() const { return context_.mappedData != nullptr; }
@@ -81,14 +74,14 @@ public:
      *        Useful for wrapping data in gzip format for compatibility without CPU cost.
      * @param data Pointer to raw data
      * @param len Length of data
-     * @return QByteArray containing the gzip stream
+     * @return std::vector<uint8_t> containing the gzip stream
      */
-    static QByteArray compressBrutal(const void* data, size_t len);
+    static std::vector<uint8_t> compressBrutal(const void* data, size_t len);
 
-signals:
-    void tokenChunkGenerated(const QString& chunk);
+
+    void tokenChunkGenerated(const std::string& chunk);
     void inferenceComplete(bool success);
-    void modelLoaded(const QString& path, qint64 sizeBytes);
+    void modelLoaded(const std::string& path, qint64 sizeBytes);
     void loadingProgress(int percent);
 
 private:
@@ -123,8 +116,8 @@ private:
         
         // Inference state
         std::vector<float> logits;
-        QVector<QString> vocabulary;
-        QString modelPath;
+        std::vector<std::string> vocabulary;
+        std::string modelPath;
         
         // Generation parameters
         int maxTokens{64};
@@ -138,8 +131,8 @@ private:
         
         // GGUF metadata
         uint32_t ggufVersion{0};
-        QString modelName;
-        QString architecture;
+        std::string modelName;
+        std::string architecture;
 
         // GGUF tensors (essential weights)
         std::vector<float> tok_embeddings;           // [vocabSize, embedDim]
@@ -174,31 +167,31 @@ private:
         size_t kvLen{0};
 
         // Tensor directory
-        struct TensorDesc { QString name; std::vector<uint32_t> dims; GgmlType type; uint64_t offset; };
-        QHash<QString, TensorDesc> tensorTable;
+        struct TensorDesc { std::string name; std::vector<uint32_t> dims; GgmlType type; uint64_t offset; };
+        std::unordered_map<std::string, TensorDesc> tensorTable;
     };
 
     void checkCpuFeatures();
-    void loadGGUFModel(const QString& filePath);
-    void loadVocabulary(const QString& vocabPath);
+    void loadGGUFModel(const std::string& filePath);
+    void loadVocabulary(const std::string& vocabPath);
     float* getLayerWeights();
-    bool prepareLLMInput(const QString& prompt, std::vector<float>& embeddings);
+    bool prepareLLMInput(const std::string& prompt, std::vector<float>& embeddings);
     void applySoftmax(float* buffer);
     void applyTemperature(float* buffer, float temperature);
     size_t sampleNextToken(float* buffer);
     size_t sampleTopP(float* buffer, float topP);
     size_t sampleGreedy(float* buffer);
-    QString decodeToken(size_t tokenId) const;
+    std::string decodeToken(size_t tokenId) const;
     void fallback_matrix_multiply(float* A, float* B, float* C, int N, int M, int K);
     void detectExtendedCpuFeatures();
 
     // GGUF tensor parsing
-    bool parseGgufTensors(class QFile& file);
-    bool parseGgufTensorTable(class QFile& file);
-    bool readTensorFloat32(class QFile& file, qint64 offset, qint64 count, std::vector<float>& out);
-    bool loadTensor(class QFile& file, const QString& name, std::vector<float>& weights);
+    bool parseGgufTensors(class std::fstream& file);
+    bool parseGgufTensorTable(class std::fstream& file);
+    bool readTensorFloat32(class std::fstream& file, qint64 offset, qint64 count, std::vector<float>& out);
+    bool loadTensor(class std::fstream& file, const std::string& name, std::vector<float>& weights);
     size_t ggmlTypeSize(GgmlType type);
-    QByteArray readTensorData(class QFile& file, quint64 offset, quint64 numBytes);
+    std::vector<uint8_t> readTensorData(class std::fstream& file, quint64 offset, quint64 numBytes);
 
     // Transformer forward (scalar)
 private:
@@ -209,3 +202,4 @@ private:
 
     ModelContext context_;
 };
+

@@ -1,8 +1,6 @@
 #include "sentencepiece_tokenizer.hpp"
-#include <QFile>
-#include <QDataStream>
-#include <QDebug>
-#include <QRegularExpression>
+
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -22,10 +20,10 @@ struct SentencePieceTokenizer::Lattice {
         int32_t tokenId;                      // Token at this position
     };
     
-    QVector<QVector<Node>> nodes;  // nodes[pos] = possible tokens starting at pos
-    QString text;
+    std::vector<std::vector<Node>> nodes;  // nodes[pos] = possible tokens starting at pos
+    std::string text;
     
-    Lattice(const QString& t) : text(t) {
+    Lattice(const std::string& t) : text(t) {
         nodes.resize(t.length() + 1);
         // Initialize start node
         Node start{0, 0.0f, -1, -1};
@@ -49,15 +47,14 @@ SentencePieceTokenizer::~SentencePieceTokenizer() {
     }
 }
 
-bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
+bool SentencePieceTokenizer::loadFromFile(const std::string& modelPath) {
 #ifdef USE_SENTENCEPIECE
     // Production-ready implementation using SentencePiece library
     m_spProcessor = std::make_unique<sentencepiece::SentencePieceProcessor>();
     
     const auto status = m_spProcessor->Load(modelPath.toStdString());
     if (!status.ok()) {
-        qWarning() << "Failed to load SentencePiece model:" << modelPath 
-                   << "Error:" << QString::fromStdString(status.ToString());
+                   << "Error:" << std::string::fromStdString(status.ToString());
         m_spProcessor.reset();
         return false;
     }
@@ -76,7 +73,7 @@ bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
         const bool isByte = m_spProcessor->IsByte(i);
         
         TokenPiece tp;
-        tp.piece = QString::fromStdString(piece);
+        tp.piece = std::string::fromStdString(piece);
         tp.score = score;
         tp.type = isControl ? TokenType::Control :
                   isUnused ? TokenType::Unused :
@@ -88,16 +85,13 @@ bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
         m_stringToTokenId[tp.piece] = i;
     }
     
-    qDebug() << "Loaded SentencePiece model with" << vocabSize << "tokens";
     buildTrie();
     return true;
     
 #else
     // Fallback: simplified protobuf parser (not production-ready)
-    QFile file(modelPath);
+    std::fstream file(modelPath);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open SentencePiece model:" << modelPath;
-        qWarning() << "Note: Compile with USE_SENTENCEPIECE for production-ready tokenization";
         return false;
     }
     
@@ -116,14 +110,14 @@ bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
         quint32 pieceLen;
         stream >> pieceLen;
         
-        QByteArray pieceBytes(pieceLen, Qt::Uninitialized);
+        std::vector<uint8_t> pieceBytes(pieceLen, //Uninitialized);
         stream.readRawData(pieceBytes.data(), pieceLen);
         
         float score;
         stream >> score;
         
         SentencePiece piece;
-        piece.piece = QString::fromUtf8(pieceBytes);
+        piece.piece = std::string::fromUtf8(pieceBytes);
         piece.score = score;
         piece.id = i;
         piece.type = SentencePiece::NORMAL;
@@ -140,16 +134,14 @@ bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
     
     buildTrie();
     
-    qInfo() << "SentencePiece loaded (fallback mode):" << m_pieces.size() << "pieces";
-    qWarning() << "WARNING: Using simplified tokenizer. Compile with USE_SENTENCEPIECE for production.";
     return true;
 #endif
 }
 
-bool SentencePieceTokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArray>& metadata) {
+bool SentencePieceTokenizer::loadFromGGUFMetadata(const std::unordered_map<std::string, std::vector<uint8_t>>& metadata) {
     // Load from GGUF tokenizer metadata
     if (metadata.contains("tokenizer.ggml.tokens")) {
-        QByteArray tokensData = metadata["tokenizer.ggml.tokens"];
+        std::vector<uint8_t> tokensData = metadata["tokenizer.ggml.tokens"];
         QDataStream stream(tokensData);
         stream.setByteOrder(QDataStream::LittleEndian);
         
@@ -162,11 +154,11 @@ bool SentencePieceTokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArra
             quint32 len;
             stream >> len;
             
-            QByteArray tokenBytes(len, Qt::Uninitialized);
+            std::vector<uint8_t> tokenBytes(len, //Uninitialized);
             stream.readRawData(tokenBytes.data(), len);
             
             SentencePiece piece;
-            piece.piece = QString::fromUtf8(tokenBytes);
+            piece.piece = std::string::fromUtf8(tokenBytes);
             piece.score = 0.0f;  // Default score if not provided
             piece.id = i;
             piece.type = SentencePiece::NORMAL;
@@ -182,7 +174,7 @@ bool SentencePieceTokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArra
         
         // Load scores if available
         if (metadata.contains("tokenizer.ggml.scores")) {
-            QByteArray scoresData = metadata["tokenizer.ggml.scores"];
+            std::vector<uint8_t> scoresData = metadata["tokenizer.ggml.scores"];
             QDataStream scoreStream(scoresData);
             scoreStream.setByteOrder(QDataStream::LittleEndian);
             
@@ -194,7 +186,6 @@ bool SentencePieceTokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArra
         }
         
         buildTrie();
-        qInfo() << "SentencePiece loaded from GGUF:" << m_pieces.size() << "pieces";
         return true;
     }
     
@@ -208,7 +199,7 @@ void SentencePieceTokenizer::buildTrie() {
     }
 }
 
-void SentencePieceTokenizer::insertTrie(const QString& piece, int32_t id) {
+void SentencePieceTokenizer::insertTrie(const std::string& piece, int32_t id) {
     TrieNode* node = m_trie;
     for (QChar ch : piece) {
         if (!node->children.contains(ch)) {
@@ -219,8 +210,8 @@ void SentencePieceTokenizer::insertTrie(const QString& piece, int32_t id) {
     node->tokenId = id;
 }
 
-QVector<int32_t> SentencePieceTokenizer::findMatchingPieces(const QString& text, int pos) {
-    QVector<int32_t> matches;
+std::vector<int32_t> SentencePieceTokenizer::findMatchingPieces(const std::string& text, int pos) {
+    std::vector<int32_t> matches;
     TrieNode* node = m_trie;
     
     for (int i = pos; i < text.length(); ++i) {
@@ -236,12 +227,12 @@ QVector<int32_t> SentencePieceTokenizer::findMatchingPieces(const QString& text,
     return matches;
 }
 
-QString SentencePieceTokenizer::normalize(const QString& text) {
+std::string SentencePieceTokenizer::normalize(const std::string& text) {
     // Basic NFKC normalization (simplified)
-    QString result = text;
+    std::string result = text;
     
     // Replace various whitespace with standard space
-    result.replace(QRegularExpression("[\\t\\n\\r]+"), " ");
+    result.replace(std::regex("[\\t\\n\\r]+"), " ");
     
     // Trim
     result = result.trimmed();
@@ -249,28 +240,28 @@ QString SentencePieceTokenizer::normalize(const QString& text) {
     return result;
 }
 
-QString SentencePieceTokenizer::replaceSP(const QString& text) {
+std::string SentencePieceTokenizer::replaceSP(const std::string& text) {
     // Replace space with ▁ (U+2581)
-    QString result = text;
+    std::string result = text;
     result.replace(' ', QChar(0x2581));
     return result;
 }
 
-QString SentencePieceTokenizer::unreplaceSP(const QString& text) {
+std::string SentencePieceTokenizer::unreplaceSP(const std::string& text) {
     // Replace ▁ with space
-    QString result = text;
+    std::string result = text;
     result.replace(QChar(0x2581), ' ');
     return result;
 }
 
-SentencePieceTokenizer::Lattice* SentencePieceTokenizer::buildLattice(const QString& text) {
+SentencePieceTokenizer::Lattice* SentencePieceTokenizer::buildLattice(const std::string& text) {
     Lattice* lattice = new Lattice(text);
     
     for (int pos = 0; pos < text.length(); ++pos) {
         if (lattice->nodes[pos].isEmpty()) continue;
         
         // Find all pieces that can start at this position
-        QVector<int32_t> matches = findMatchingPieces(text, pos);
+        std::vector<int32_t> matches = findMatchingPieces(text, pos);
         
         for (int32_t tokenId : matches) {
             const SentencePiece& piece = m_pieces[tokenId];
@@ -312,7 +303,6 @@ std::vector<int32_t> SentencePieceTokenizer::viterbi(Lattice* lattice) {
     
     int endPos = lattice->text.length();
     if (lattice->nodes[endPos].isEmpty()) {
-        qWarning() << "No valid tokenization found";
         delete lattice;
         return result;
     }
@@ -358,9 +348,8 @@ std::vector<int32_t> SentencePieceTokenizer::viterbi(Lattice* lattice) {
     return result;
 }
 
-std::vector<int32_t> SentencePieceTokenizer::encode(const QString& text, bool addBos, bool addEos) {
+std::vector<int32_t> SentencePieceTokenizer::encode(const std::string& text, bool addBos, bool addEos) {
     if (!isReady()) {
-        qWarning() << "SentencePiece not initialized";
         return {};
     }
     
@@ -371,8 +360,8 @@ std::vector<int32_t> SentencePieceTokenizer::encode(const QString& text, bool ad
     }
     
     // Normalize and preprocess
-    QString normalized = normalize(text);
-    QString withSP = replaceSP(" " + normalized);  // Add leading space
+    std::string normalized = normalize(text);
+    std::string withSP = replaceSP(" " + normalized);  // Add leading space
     
     // Build lattice and find best tokenization
     Lattice* lattice = buildLattice(withSP);
@@ -387,14 +376,13 @@ std::vector<int32_t> SentencePieceTokenizer::encode(const QString& text, bool ad
     return result;
 }
 
-QString SentencePieceTokenizer::decode(const std::vector<int32_t>& tokens, bool skipSpecial) {
-    if (!isReady()) return QString();
+std::string SentencePieceTokenizer::decode(const std::vector<int32_t>& tokens, bool skipSpecial) {
+    if (!isReady()) return std::string();
     
-    QString result;
+    std::string result;
     
     for (int32_t tokenId : tokens) {
         if (tokenId < 0 || tokenId >= m_pieces.size()) {
-            qWarning() << "Invalid token ID:" << tokenId;
             continue;
         }
         
@@ -416,3 +404,4 @@ QString SentencePieceTokenizer::decode(const std::vector<int32_t>& tokens, bool 
     
     return result.trimmed();
 }
+

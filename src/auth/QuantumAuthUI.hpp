@@ -18,16 +18,6 @@
 // Forward declarations
 
 
-
-
-
-
-
-
-
-
-
-
 namespace rawrxd::auth {
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -531,10 +521,4 @@ private:
 } // namespace rawrxd::auth
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(rawrxd::auth::KeyPurposes)
-
-
-
-
-
-
 

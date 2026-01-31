@@ -106,7 +106,6 @@ void BreadcrumbChain::fromJSON(const void*& json) {
 
 BreadcrumbContextManager::BreadcrumbContextManager()
     , m_workspacePath("") {
-    // // qDebug:  "BreadcrumbContextManager initialized";
 }
 
 BreadcrumbContextManager::~BreadcrumbContextManager() {
@@ -115,7 +114,6 @@ BreadcrumbContextManager::~BreadcrumbContextManager() {
 
 void BreadcrumbContextManager::initialize(const std::string& workspacePath) {
     m_workspacePath = workspacePath;
-    // // qDebug:  "BreadcrumbContextManager initializing with workspace:" << workspacePath;
     
     // Create initial workspace structure
     // wsDir(workspacePath);
@@ -130,7 +128,6 @@ void BreadcrumbContextManager::initialize(const std::string& workspacePath) {
 }
 
 void BreadcrumbContextManager::shutdown() {
-    // // qDebug:  "BreadcrumbContextManager shutting down";
     m_toolRegistry.clear();
     m_symbolRegistry.clear();
     m_fileRegistry.clear();
@@ -145,7 +142,6 @@ void BreadcrumbContextManager::shutdown() {
 
 void BreadcrumbContextManager::registerTool(const std::string& toolName, const ToolContext& context) {
     m_toolRegistry[toolName] = context;
-    // // qDebug:  "Tool registered:" << toolName;
     
     // Add breadcrumb
     Breadcrumb crumb;
@@ -172,7 +168,6 @@ std::vector<ToolContext> BreadcrumbContextManager::getAllTools() const {
 
 void BreadcrumbContextManager::unregisterTool(const std::string& toolName) {
     m_toolRegistry.remove(toolName);
-    // // qDebug:  "Tool unregistered:" << toolName;
 }
 
 // ========== SYMBOL CONTEXT ==========
@@ -186,13 +181,12 @@ void BreadcrumbContextManager::registerSymbol(const std::string& filePath, const
         m_fileSymbols[filePath].append(symbol);
     }
     
-    // // qDebug:  "Symbol registered:" << symbol.name << "in" << filePath;
     
     // Add breadcrumb
     Breadcrumb crumb;
     crumb.id = key;
     crumb.label = symbol.name;
-    crumb.displayName = std::string("%1 (%2)").arg(symbol.name, std::string::number(symbol.lineNumber));
+    crumb.displayName = std::string("%1 (%2)"));
     crumb.type = ContextType::Symbol;
     crumb.metadata["kind"] = static_cast<int>(symbol.kind);
     crumb.metadata["file"] = filePath;
@@ -227,7 +221,6 @@ std::vector<SymbolContext> BreadcrumbContextManager::findSymbolsByKind(SymbolKin
 
 void BreadcrumbContextManager::updateSymbolUsage(const std::string& symbolName) {
     if (m_symbolRegistry.contains(symbolName)) {
-        // // qDebug:  "Symbol usage updated:" << symbolName;
     }
 }
 
@@ -246,7 +239,6 @@ void BreadcrumbContextManager::registerFile(const std::string& filePath) {
     ctx.projectRoot = m_workspacePath;
     
     m_fileRegistry[filePath] = ctx;
-    // // qDebug:  "File registered:" << filePath;
     
     // Add breadcrumb
     Breadcrumb crumb;
@@ -293,7 +285,6 @@ void BreadcrumbContextManager::updateFileMetadata(const std::string& filePath) {
         // Info fileInfo(filePath);
         m_fileRegistry[filePath].lastModified = fileInfo.lastModified();
         m_fileRegistry[filePath].fileSize = fileInfo.size();
-        // // qDebug:  "File metadata updated:" << filePath;
     }
 }
 
@@ -318,7 +309,6 @@ std::vector<FileContext> BreadcrumbContextManager::searchFiles(const std::string
 
 void BreadcrumbContextManager::updateSourceControlContext(const std::string& repository) {
     m_scContext.repository = repository;
-    // // qDebug:  "Source control context updated for:" << repository;
     scanRepositoryStatus();
     sourceControlUpdated();
 }
@@ -337,18 +327,15 @@ std::string BreadcrumbContextManager::getLatestCommitInfo() const {
 
 void BreadcrumbContextManager::scanRepositoryStatus() {
     // Implementation would query git/version control system
-    // // qDebug:  "Scanning repository status";
 }
 
 // ========== SCREENSHOT CONTEXT ==========
 
 void BreadcrumbContextManager::captureScreenshot(const std::string& filePath) {
-    // // qDebug:  "Screenshot captured:" << filePath;
 }
 
 void BreadcrumbContextManager::addScreenshotAnnotation(const ScreenshotAnnotation& annotation) {
     m_screenshots[annotation.id].append(annotation);
-    // // qDebug:  "Screenshot annotation added:" << annotation.id;
 }
 
 std::vector<ScreenshotAnnotation> BreadcrumbContextManager::getScreenshotAnnotations(const std::string& screenshotId) const {
@@ -359,7 +346,6 @@ std::vector<ScreenshotAnnotation> BreadcrumbContextManager::getScreenshotAnnotat
 
 void BreadcrumbContextManager::registerInstruction(const InstructionBlock& instruction) {
     m_instructions[instruction.id] = instruction;
-    // // qDebug:  "Instruction registered:" << instruction.id;
     
     // Add breadcrumb
     Breadcrumb crumb;
@@ -395,7 +381,6 @@ std::vector<InstructionBlock> BreadcrumbContextManager::getAllInstructions() con
 void BreadcrumbContextManager::toggleInstructionVisibility(const std::string& instructionId) {
     if (m_instructions.contains(instructionId)) {
         m_instructions[instructionId].isVisible = !m_instructions[instructionId].isVisible;
-        // // qDebug:  "Instruction visibility toggled:" << instructionId;
     }
 }
 
@@ -404,7 +389,6 @@ void BreadcrumbContextManager::toggleInstructionVisibility(const std::string& in
 void BreadcrumbContextManager::registerRelationship(const RelationshipContext& relationship) {
     std::string key = relationship.sourceId + "->" + relationship.targetId;
     m_relationships[key] = relationship;
-    // // qDebug:  "Relationship registered:" << key;
 }
 
 std::vector<RelationshipContext> BreadcrumbContextManager::getRelationshipsFor(const std::string& entityId) const {
@@ -441,7 +425,6 @@ std::vector<std::string> BreadcrumbContextManager::getDependents(const std::stri
 
 void BreadcrumbContextManager::registerOpenEditor(const std::string& filePath, const OpenEditorContext& editorCtx) {
     m_openEditors[filePath] = editorCtx;
-    // // qDebug:  "Editor registered:" << filePath;
     
     // Add breadcrumb
     Breadcrumb crumb;
@@ -462,7 +445,6 @@ void BreadcrumbContextManager::updateEditorState(const std::string& filePath, in
         m_openEditors[filePath].cursorColumn = column;
         m_openEditors[filePath].selectedText = selectedText;
         m_openEditors[filePath].lastAccessed = // DateTime::currentDateTime();
-        // // qDebug:  "Editor state updated:" << filePath << "at" << line << ":" << column;
         contextChanged("editor_" + filePath);
     }
 }
@@ -477,7 +459,6 @@ OpenEditorContext BreadcrumbContextManager::getEditorContext(const std::string& 
 
 void BreadcrumbContextManager::closeEditor(const std::string& filePath) {
     m_openEditors.remove(filePath);
-    // // qDebug:  "Editor closed:" << filePath;
 }
 
 // ========== BREADCRUMB NAVIGATION ==========
@@ -494,13 +475,11 @@ void BreadcrumbContextManager::pushContextBreadcrumb(const ContextType& type, co
     crumb.type = type;
     m_breadcrumbs.push(crumb);
     
-    // // qDebug:  "Context breadcrumb pushed:" << identifier;
     breadcrumbNavigated(m_breadcrumbs.getCurrentIndex());
 }
 
 void BreadcrumbContextManager::navigateToBreadcrumb(int index) {
     m_breadcrumbs.jump(index);
-    // // qDebug:  "Navigated to breadcrumb index:" << index;
     breadcrumbNavigated(index);
 }
 
@@ -558,17 +537,14 @@ void BreadcrumbContextManager::exportContextToJSON(const std::string& filePath) 
     root["statistics"] = stats;
     
     void* doc(root);
-    // // qDebug:  "Context exported to:" << filePath;
 }
 
 void BreadcrumbContextManager::importContextFromJSON(const std::string& filePath) {
-    // // qDebug:  "Context imported from:" << filePath;
 }
 
 // ========== PERFORMANCE ==========
 
 void BreadcrumbContextManager::indexWorkspace() {
-    // // qDebug:  "Indexing workspace:" << m_workspacePath;
     indexingProgressChanged(0.0);
     
     // dir(m_workspacePath);
@@ -587,11 +563,9 @@ void BreadcrumbContextManager::indexWorkspace() {
     }
     
     indexingProgressChanged(100.0);
-    // // qDebug:  "Workspace indexing complete. Registered" << count << "source files.";
 }
 
 void BreadcrumbContextManager::rebuildIndices() {
-    // // qDebug:  "Rebuilding indices";
     m_symbolRegistry.clear();
     m_fileSymbols.clear();
     indexWorkspace();
@@ -605,23 +579,14 @@ double BreadcrumbContextManager::getIndexingProgress() const {
 
 void BreadcrumbContextManager::scanSymbols(const std::string& filePath) {
     // Implementation would parse source file for symbols
-    // // qDebug:  "Scanning symbols in:" << filePath;
 }
 
 void BreadcrumbContextManager::analyzeFileRelationships() {
-    // // qDebug:  "Analyzing file relationships";
 }
 
 void BreadcrumbContextManager::cacheSymbolReferences() {
-    // // qDebug:  "Caching symbol references";
 }
 
 } // namespace Context
 } // namespace RawrXD
-
-
-
-
-
-
 

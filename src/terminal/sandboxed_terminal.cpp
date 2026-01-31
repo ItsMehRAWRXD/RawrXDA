@@ -1,24 +1,17 @@
 #include "sandboxed_terminal.hpp"
-#include <QDebug>
-#include <QFile>
-#include <QTextStream>
-#include <QDateTime>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QTimer>
-#include <QDir>
 
-SandboxedTerminal::SandboxedTerminal(QObject* parent)
-    : QObject(parent),
+
+SandboxedTerminal::SandboxedTerminal(void* parent)
+    : void(parent),
       m_process(nullptr)
 {
-    logStructured("INFO", "SandboxedTerminal initializing", QJsonObject{{"component", "SandboxedTerminal"}});
-    logStructured("INFO", "SandboxedTerminal initialized successfully", QJsonObject{{"component", "SandboxedTerminal"}});
+    logStructured("INFO", "SandboxedTerminal initializing", void*{{"component", "SandboxedTerminal"}});
+    logStructured("INFO", "SandboxedTerminal initialized successfully", void*{{"component", "SandboxedTerminal"}});
 }
 
 SandboxedTerminal::~SandboxedTerminal()
 {
-    logStructured("INFO", "SandboxedTerminal shutting down", QJsonObject{{"component", "SandboxedTerminal"}});
+    logStructured("INFO", "SandboxedTerminal shutting down", void*{{"component", "SandboxedTerminal"}});
     
     if (m_process) {
         if (m_process->state() != QProcess::NotRunning) {
@@ -30,14 +23,14 @@ SandboxedTerminal::~SandboxedTerminal()
         delete m_process;
     }
     
-    logStructured("INFO", "SandboxedTerminal shutdown complete", QJsonObject{{"component", "SandboxedTerminal"}});
+    logStructured("INFO", "SandboxedTerminal shutdown complete", void*{{"component", "SandboxedTerminal"}});
 }
 
 void SandboxedTerminal::setConfig(const Config& config)
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     m_config = config;
-    logStructured("INFO", "Configuration updated", QJsonObject{
+    logStructured("INFO", "Configuration updated", void*{
         {"useWhitelistMode", config.useWhitelistMode},
         {"maxExecutionTimeMs", config.maxExecutionTimeMs},
         {"maxOutputSize", config.maxOutputSize},
@@ -47,11 +40,11 @@ void SandboxedTerminal::setConfig(const Config& config)
 
 SandboxedTerminal::Config SandboxedTerminal::getConfig() const
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     return m_config;
 }
 
-SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const QString& command, const QStringList& args)
+SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const std::string& command, const std::vector<std::string>& args)
 {
     auto startTime = std::chrono::steady_clock::now();
     CommandResult result;
@@ -62,49 +55,49 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const QString
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         // Validate command
-        QString blockReason;
+        std::string blockReason;
         if (!validateCommand(command, blockReason)) {
             result.wasBlocked = true;
             result.blockReason = blockReason;
             
             {
-                QMutexLocker metricsLocker(&m_metricsMutex);
+                std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
                 m_metrics.commandsBlocked++;
                 m_metrics.securityViolations++;
             }
             
-            logStructured("WARN", "Command blocked", QJsonObject{
+            logStructured("WARN", "Command blocked", void*{
                 {"command", command},
                 {"reason", blockReason}
             });
             
             if (config.enableAuditLog) {
-                logAudit("command_blocked", QJsonObject{
+                logAudit("command_blocked", void*{
                     {"command", command},
-                    {"args", QJsonArray::fromStringList(args)},
+                    {"args", void*::fromStringList(args)},
                     {"reason", blockReason}
                 });
             }
             
-            emit commandBlocked(command, blockReason);
-            emit securityViolation(QString("Blocked command: %1 - %2").arg(command, blockReason));
+            commandBlocked(command, blockReason);
+            securityViolation(std::string("Blocked command: %1 - %2"));
             return result;
         }
         
         {
-            QMutexLocker processLocker(&m_processMutex);
+            std::lock_guard<std::mutex> processLocker(&m_processMutex);
             
             if (m_process && m_process->state() != QProcess::NotRunning) {
-                logStructured("ERROR", "Process already running", QJsonObject{});
+                logStructured("ERROR", "Process already running", void*{});
                 result.error = "Another command is already executing";
-                QMutexLocker metricsLocker(&m_metricsMutex);
+                std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
                 m_metrics.errorCount++;
-                emit errorOccurred(result.error);
+                errorOccurred(result.error);
                 return result;
             }
             
@@ -124,7 +117,7 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const QString
             if (!config.allowedEnvironmentVars.isEmpty()) {
                 QProcessEnvironment env;
                 QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
-                for (const QString& var : config.allowedEnvironmentVars) {
+                for (const std::string& var : config.allowedEnvironmentVars) {
                     if (sysEnv.contains(var)) {
                         env.insert(var, sysEnv.value(var));
                     }
@@ -133,24 +126,24 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const QString
             }
             
             // Start process
-            logStructured("INFO", "Starting command", QJsonObject{
+            logStructured("INFO", "Starting command", void*{
                 {"command", command},
-                {"args", QJsonArray::fromStringList(args)}
+                {"args", void*::fromStringList(args)}
             });
             
-            emit commandStarted(command);
+            commandStarted(command);
             
             m_process->start(command, args);
             
             if (!m_process->waitForStarted(5000)) {
-                logStructured("ERROR", "Failed to start process", QJsonObject{
+                logStructured("ERROR", "Failed to start process", void*{
                     {"command", command},
                     {"error", m_process->errorString()}
                 });
                 result.error = m_process->errorString();
-                QMutexLocker metricsLocker(&m_metricsMutex);
+                std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
                 m_metrics.errorCount++;
-                emit errorOccurred(result.error);
+                errorOccurred(result.error);
                 return result;
             }
             
@@ -162,30 +155,30 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const QString
                 result.timedOut = true;
                 
                 {
-                    QMutexLocker metricsLocker(&m_metricsMutex);
+                    std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
                     m_metrics.commandsTimedOut++;
                 }
                 
-                logStructured("WARN", "Command timed out", QJsonObject{
+                logStructured("WARN", "Command timed out", void*{
                     {"command", command},
                     {"timeoutMs", config.maxExecutionTimeMs}
                 });
                 
                 if (config.enableAuditLog) {
-                    logAudit("command_timeout", QJsonObject{
+                    logAudit("command_timeout", void*{
                         {"command", command},
-                        {"args", QJsonArray::fromStringList(args)},
+                        {"args", void*::fromStringList(args)},
                         {"timeoutMs", config.maxExecutionTimeMs}
                     });
                 }
             }
             
             // Read output
-            QByteArray stdoutData = m_process->readAllStandardOutput();
-            QByteArray stderrData = m_process->readAllStandardError();
+            std::vector<uint8_t> stdoutData = m_process->readAllStandardOutput();
+            std::vector<uint8_t> stderrData = m_process->readAllStandardError();
             
-            QString rawOutput = QString::fromUtf8(stdoutData);
-            QString rawError = QString::fromUtf8(stderrData);
+            std::string rawOutput = std::string::fromUtf8(stdoutData);
+            std::string rawError = std::string::fromUtf8(stderrData);
             
             // Limit output size
             if (rawOutput.length() > config.maxOutputSize) {
@@ -204,7 +197,7 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const QString
                                        (rawError.length() - result.error.length());
                 
                 {
-                    QMutexLocker metricsLocker(&m_metricsMutex);
+                    std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
                     m_metrics.outputBytesFiltered += filteredBytes;
                 }
             } else {
@@ -221,11 +214,11 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const QString
         recordLatency("command_execution", duration);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.commandsExecuted++;
         }
         
-        logStructured("INFO", "Command completed", QJsonObject{
+        logStructured("INFO", "Command completed", void*{
             {"command", command},
             {"exitCode", result.exitCode},
             {"executionTimeMs", result.executionTimeMs},
@@ -234,92 +227,91 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(const QString
         });
         
         if (config.enableAuditLog) {
-            logAudit("command_executed", QJsonObject{
+            logAudit("command_executed", void*{
                 {"command", command},
-                {"args", QJsonArray::fromStringList(args)},
+                {"args", void*::fromStringList(args)},
                 {"exitCode", result.exitCode},
                 {"executionTimeMs", result.executionTimeMs},
                 {"timedOut", result.timedOut}
             });
         }
         
-        emit commandFinished(result);
+        commandFinished(result);
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Command execution failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Execution failed: %1").arg(e.what()));
+        logStructured("ERROR", "Command execution failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Execution failed: %1")));
         result.error = e.what();
     }
     
     return result;
 }
 
-bool SandboxedTerminal::isCommandAllowed(const QString& command) const
+bool SandboxedTerminal::isCommandAllowed(const std::string& command) const
 {
-    QString blockReason;
+    std::string blockReason;
     return validateCommand(command, blockReason);
 }
 
-QString SandboxedTerminal::sanitizeOutput(const QString& output) const
+std::string SandboxedTerminal::sanitizeOutput(const std::string& output) const
 {
     return filterSensitiveData(output);
 }
 
 bool SandboxedTerminal::isRunning() const
 {
-    QMutexLocker locker(&m_processMutex);
+    std::lock_guard<std::mutex> locker(&m_processMutex);
     return m_process && m_process->state() != QProcess::NotRunning;
 }
 
 void SandboxedTerminal::terminate()
 {
-    QMutexLocker locker(&m_processMutex);
+    std::lock_guard<std::mutex> locker(&m_processMutex);
     if (m_process && m_process->state() != QProcess::NotRunning) {
         m_process->terminate();
-        logStructured("INFO", "Process terminated", QJsonObject{});
+        logStructured("INFO", "Process terminated", void*{});
     }
 }
 
 void SandboxedTerminal::kill()
 {
-    QMutexLocker locker(&m_processMutex);
+    std::lock_guard<std::mutex> locker(&m_processMutex);
     if (m_process && m_process->state() != QProcess::NotRunning) {
         m_process->kill();
-        logStructured("INFO", "Process killed", QJsonObject{});
+        logStructured("INFO", "Process killed", void*{});
     }
 }
 
 SandboxedTerminal::Metrics SandboxedTerminal::getMetrics() const
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     return m_metrics;
 }
 
 void SandboxedTerminal::resetMetrics()
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     m_metrics = Metrics();
-    logStructured("INFO", "Metrics reset", QJsonObject{});
+    logStructured("INFO", "Metrics reset", void*{});
 }
 
-void SandboxedTerminal::logStructured(const QString& level, const QString& message, const QJsonObject& context)
+void SandboxedTerminal::logStructured(const std::string& level, const std::string& message, const void*& context)
 {
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = level;
     logEntry["component"] = "SandboxedTerminal";
     logEntry["message"] = message;
     logEntry["context"] = context;
     
-    QJsonDocument doc(logEntry);
-    qDebug().noquote() << doc.toJson(QJsonDocument::Compact);
+    void* doc(logEntry);
 }
 
-void SandboxedTerminal::recordLatency(const QString& operation, const std::chrono::milliseconds& duration)
+void SandboxedTerminal::recordLatency(const std::string& operation, const std::chrono::milliseconds& duration)
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     
     if (operation == "command_execution") {
         m_metrics.avgExecutionTimeMs = 
@@ -329,20 +321,20 @@ void SandboxedTerminal::recordLatency(const QString& operation, const std::chron
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     if (config.enableMetrics) {
-        emit metricsUpdated(m_metrics);
+        metricsUpdated(m_metrics);
     }
 }
 
-void SandboxedTerminal::logAudit(const QString& action, const QJsonObject& details)
+void SandboxedTerminal::logAudit(const std::string& action, const void*& details)
 {
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
@@ -350,36 +342,36 @@ void SandboxedTerminal::logAudit(const QString& action, const QJsonObject& detai
         return;
     }
     
-    QJsonObject auditEntry;
-    auditEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* auditEntry;
+    auditEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     auditEntry["action"] = action;
     auditEntry["details"] = details;
     
-    QFile auditFile(config.auditLogPath);
+    std::fstream auditFile(config.auditLogPath);
     if (auditFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         QTextStream out(&auditFile);
-        QJsonDocument doc(auditEntry);
-        out << doc.toJson(QJsonDocument::Compact) << "\n";
+        void* doc(auditEntry);
+        out << doc.toJson(void*::Compact) << "\n";
         auditFile.close();
     } else {
-        logStructured("ERROR", "Failed to write audit log", QJsonObject{
+        logStructured("ERROR", "Failed to write audit log", void*{
             {"path", config.auditLogPath},
             {"error", auditFile.errorString()}
         });
     }
 }
 
-bool SandboxedTerminal::validateCommand(const QString& command, QString& blockReason) const
+bool SandboxedTerminal::validateCommand(const std::string& command, std::string& blockReason) const
 {
     Config config;
     {
-        QMutexLocker locker(&m_configMutex);  // Fixed: take address of mutable member
+        std::lock_guard<std::mutex> locker(&m_configMutex);  // Fixed: take address of mutable member
         config = m_config;
     }
     
-    QString baseCommand = command.split(' ').first();
-    QFileInfo cmdInfo(baseCommand);
-    QString cmdName = cmdInfo.fileName();
+    std::string baseCommand = command.split(' ').first();
+    std::filesystem::path cmdInfo(baseCommand);
+    std::string cmdName = cmdInfo.fileName();
     
     // Check blacklist first
     if (config.commandBlacklist.contains(cmdName) || config.commandBlacklist.contains(baseCommand)) {
@@ -388,7 +380,7 @@ bool SandboxedTerminal::validateCommand(const QString& command, QString& blockRe
     }
     
     // Check for dangerous patterns
-    QStringList dangerousPatterns = {
+    std::vector<std::string> dangerousPatterns = {
         "rm -rf /",
         ":(){ :|:& };:",  // Fork bomb
         "dd if=/dev/random",
@@ -396,9 +388,9 @@ bool SandboxedTerminal::validateCommand(const QString& command, QString& blockRe
         "format"
     };
     
-    for (const QString& pattern : dangerousPatterns) {
-        if (command.contains(pattern, Qt::CaseInsensitive)) {
-            blockReason = QString("Dangerous pattern detected: %1").arg(pattern);
+    for (const std::string& pattern : dangerousPatterns) {
+        if (command.contains(pattern, //CaseInsensitive)) {
+            blockReason = std::string("Dangerous pattern detected: %1");
             return false;
         }
     }
@@ -416,29 +408,29 @@ bool SandboxedTerminal::validateCommand(const QString& command, QString& blockRe
     return true;
 }
 
-QStringList SandboxedTerminal::buildSanitizedEnvironment() const
+std::vector<std::string> SandboxedTerminal::buildSanitizedEnvironment() const
 {
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
-    QStringList env;
+    std::vector<std::string> env;
     QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
     
     if (config.allowedEnvironmentVars.isEmpty()) {
         // Default safe environment variables
-        QStringList safeVars = {"PATH", "HOME", "USER", "TEMP", "TMP"};
-        for (const QString& var : safeVars) {
+        std::vector<std::string> safeVars = {"PATH", "HOME", "USER", "TEMP", "TMP"};
+        for (const std::string& var : safeVars) {
             if (sysEnv.contains(var)) {
-                env.append(QString("%1=%2").arg(var, sysEnv.value(var)));
+                env.append(std::string("%1=%2")));
             }
         }
     } else {
-        for (const QString& var : config.allowedEnvironmentVars) {
+        for (const std::string& var : config.allowedEnvironmentVars) {
             if (sysEnv.contains(var)) {
-                env.append(QString("%1=%2").arg(var, sysEnv.value(var)));
+                env.append(std::string("%1=%2")));
             }
         }
     }
@@ -450,7 +442,7 @@ bool SandboxedTerminal::enforceResourceLimits()
 {
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
@@ -463,7 +455,7 @@ bool SandboxedTerminal::enforceResourceLimits()
     // On Linux/Unix, use setrlimit()
     // This is a simplified implementation
     
-    logStructured("DEBUG", "Resource limits enforcement", QJsonObject{
+    logStructured("DEBUG", "Resource limits enforcement", void*{
         {"maxMemoryBytes", config.maxMemoryBytes},
         {"maxCpuPercent", config.maxCpuPercent}
     });
@@ -471,16 +463,16 @@ bool SandboxedTerminal::enforceResourceLimits()
     return true;
 }
 
-QString SandboxedTerminal::filterSensitiveData(const QString& data) const
+std::string SandboxedTerminal::filterSensitiveData(const std::string& data) const
 {
-    QString filtered = data;
+    std::string filtered = data;
     
     // Filter common sensitive patterns
-    QRegularExpression apiKeyPattern(R"(api[_-]?key[\s=:]+['\"]?([a-zA-Z0-9_-]{20,})['\"]?)", QRegularExpression::CaseInsensitiveOption);
-    QRegularExpression passwordPattern(R"(password[\s=:]+['\"]?([^'\"\s]+)['\"]?)", QRegularExpression::CaseInsensitiveOption);
-    QRegularExpression tokenPattern(R"(token[\s=:]+['\"]?([a-zA-Z0-9_-]{20,})['\"]?)", QRegularExpression::CaseInsensitiveOption);
-    QRegularExpression emailPattern(R"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})");
-    QRegularExpression ipPattern(R"(\b(?:\d{1,3}\.){3}\d{1,3}\b)");
+    std::regex apiKeyPattern(R"(api[_-]?key[\s=:]+['\"]?([a-zA-Z0-9_-]{20,})['\"]?)", std::regex::CaseInsensitiveOption);
+    std::regex passwordPattern(R"(password[\s=:]+['\"]?([^'\"\s]+)['\"]?)", std::regex::CaseInsensitiveOption);
+    std::regex tokenPattern(R"(token[\s=:]+['\"]?([a-zA-Z0-9_-]{20,})['\"]?)", std::regex::CaseInsensitiveOption);
+    std::regex emailPattern(R"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})");
+    std::regex ipPattern(R"(\b(?:\d{1,3}\.){3}\d{1,3}\b)");
     
     filtered.replace(apiKeyPattern, "api_key=[REDACTED]");
     filtered.replace(passwordPattern, "password=[REDACTED]");
@@ -490,3 +482,4 @@ QString SandboxedTerminal::filterSensitiveData(const QString& data) const
     
     return filtered;
 }
+

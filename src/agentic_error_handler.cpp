@@ -2,14 +2,13 @@
 #include "agentic_error_handler.h"
 #include "agentic_observability.h"
 #include "agentic_loop_state.h"
-#include <QDebug>
-#include <QDateTime>
+
+
 #include <exception>
 
-AgenticErrorHandler::AgenticErrorHandler(QObject* parent)
-    : QObject(parent)
+AgenticErrorHandler::AgenticErrorHandler(void* parent)
+    : void(parent)
 {
-    qDebug() << "[AgenticErrorHandler] Initialized - Ready for error handling and recovery";
 
     // Set up default recovery policies
     setRecoveryPolicy(RecoveryPolicy{
@@ -55,7 +54,6 @@ AgenticErrorHandler::AgenticErrorHandler(QObject* parent)
 
 AgenticErrorHandler::~AgenticErrorHandler()
 {
-    qDebug() << "[AgenticErrorHandler] Destroyed - Handled" << m_totalErrors << "errors with"
              << m_successfulRecoveries << "successful recoveries";
 }
 
@@ -72,20 +70,20 @@ void AgenticErrorHandler::initialize(AgenticObservability* obs, AgenticLoopState
 
 // ===== ERROR CAPTURE AND HANDLING =====
 
-QJsonObject AgenticErrorHandler::handleError(
+void* AgenticErrorHandler::handleError(
     const std::exception& e,
-    const QString& component,
-    const QJsonObject& context)
+    const std::string& component,
+    const void*& context)
 {
-    QString errorId = recordError(
+    std::string errorId = recordError(
         ErrorType::InternalError,
-        QString::fromStdString(e.what()),
+        std::string::fromStdString(e.what()),
         component,
         extractStackTrace(),
         context
     );
 
-    QJsonObject result;
+    void* result;
     result["error_id"] = errorId;
     result["handled"] = false;
 
@@ -103,12 +101,12 @@ QJsonObject AgenticErrorHandler::handleError(
     return result;
 }
 
-QString AgenticErrorHandler::recordError(
+std::string AgenticErrorHandler::recordError(
     ErrorType type,
-    const QString& message,
-    const QString& component,
-    const QString& stackTrace,
-    const QJsonObject& context)
+    const std::string& message,
+    const std::string& component,
+    const std::string& stackTrace,
+    const void*& context)
 {
     ErrorContext errorContext;
     errorContext.errorId = QUuid::createUuid().toString();
@@ -129,22 +127,22 @@ QString AgenticErrorHandler::recordError(
     }
 
     if (m_observability) {
-        QJsonObject logContext = context;
+        void* logContext = context;
         logContext["error_id"] = errorContext.errorId;
-        logContext["error_type"] = QString::number(static_cast<int>(type));
+        logContext["error_type"] = std::string::number(static_cast<int>(type));
 
         m_observability->logError(component, message, logContext);
     }
 
     if (m_state) {
         m_state->recordError(
-            QString::number(static_cast<int>(type)),
+            std::string::number(static_cast<int>(type)),
             message,
             stackTrace
         );
     }
 
-    emit errorRecorded(errorContext.errorId, message);
+    errorRecorded(errorContext.errorId, message);
 
     // Check circuit breaker
     checkCircuitBreaker(component);
@@ -154,11 +152,11 @@ QString AgenticErrorHandler::recordError(
 
 // ===== RECOVERY EXECUTION =====
 
-bool AgenticErrorHandler::executeRecovery(const QString& errorId)
+bool AgenticErrorHandler::executeRecovery(const std::string& errorId)
 {
     for (auto& errorContext : m_errorHistory) {
         if (errorContext.errorId == errorId) {
-            emit recoveryStarted(errorId);
+            recoveryStarted(errorId);
 
             bool success = false;
 
@@ -182,9 +180,9 @@ bool AgenticErrorHandler::executeRecovery(const QString& errorId)
 
             if (success) {
                 m_successfulRecoveries++;
-                emit recoverySucceeded(errorId);
+                recoverySucceeded(errorId);
             } else {
-                emit recoveryFailed(errorId);
+                recoveryFailed(errorId);
             }
 
             return success;
@@ -195,7 +193,7 @@ bool AgenticErrorHandler::executeRecovery(const QString& errorId)
 }
 
 bool AgenticErrorHandler::retry(
-    const QString& errorId,
+    const std::string& errorId,
     std::function<bool()> operation,
     int maxAttempts)
 {
@@ -208,28 +206,26 @@ bool AgenticErrorHandler::retry(
     return false;
 }
 
-bool AgenticErrorHandler::backtrack(const QString& targetStateId)
+bool AgenticErrorHandler::backtrack(const std::string& targetStateId)
 {
     if (!m_state) return false;
 
-    qInfo() << "[AgenticErrorHandler] Backtracking to state:" << targetStateId;
 
     // In production, would restore from checkpoint
     return true;
 }
 
-bool AgenticErrorHandler::fallback(const QString& errorId, const QString& fallbackPlan)
+bool AgenticErrorHandler::fallback(const std::string& errorId, const std::string& fallbackPlan)
 {
     for (auto& errorContext : m_errorHistory) {
         if (errorContext.errorId == errorId) {
-            qInfo() << "[AgenticErrorHandler] Executing fallback for" << errorId;
             return true;
         }
     }
     return false;
 }
 
-void AgenticErrorHandler::escalate(const QString& errorId, const QString& reason)
+void AgenticErrorHandler::escalate(const std::string& errorId, const std::string& reason)
 {
     for (auto& errorContext : m_errorHistory) {
         if (errorContext.errorId == errorId) {
@@ -271,14 +267,14 @@ AgenticErrorHandler::RecoveryPolicy AgenticErrorHandler::getRecoveryPolicy(Error
     };
 }
 
-QJsonArray AgenticErrorHandler::getAllRecoveryPolicies() const
+void* AgenticErrorHandler::getAllRecoveryPolicies() const
 {
-    QJsonArray policies;
+    void* policies;
 
     for (const auto& policy : m_recoveryPolicies) {
-        QJsonObject policyObj;
-        policyObj["error_type"] = QString::number(static_cast<int>(policy.errorType));
-        policyObj["strategy"] = QString::number(static_cast<int>(policy.strategy));
+        void* policyObj;
+        policyObj["error_type"] = std::string::number(static_cast<int>(policy.errorType));
+        policyObj["strategy"] = std::string::number(static_cast<int>(policy.strategy));
         policyObj["max_retries"] = policy.maxRetries;
         policyObj["initial_delay_ms"] = policy.initialDelayMs;
         policyObj["backoff_multiplier"] = policy.backoffMultiplier;
@@ -291,21 +287,21 @@ QJsonArray AgenticErrorHandler::getAllRecoveryPolicies() const
 
 // ===== ERROR CLASSIFICATION =====
 
-AgenticErrorHandler::ErrorType AgenticErrorHandler::classifyError(const QString& errorMessage)
+AgenticErrorHandler::ErrorType AgenticErrorHandler::classifyError(const std::string& errorMessage)
 {
-    if (errorMessage.contains("timeout", Qt::CaseInsensitive)) {
+    if (errorMessage.contains("timeout", //CaseInsensitive)) {
         return ErrorType::TimeoutError;
-    } else if (errorMessage.contains("validation", Qt::CaseInsensitive)) {
+    } else if (errorMessage.contains("validation", //CaseInsensitive)) {
         return ErrorType::ValidationError;
-    } else if (errorMessage.contains("resource", Qt::CaseInsensitive) ||
-               errorMessage.contains("memory", Qt::CaseInsensitive)) {
+    } else if (errorMessage.contains("resource", //CaseInsensitive) ||
+               errorMessage.contains("memory", //CaseInsensitive)) {
         return ErrorType::ResourceError;
-    } else if (errorMessage.contains("network", Qt::CaseInsensitive) ||
-               errorMessage.contains("connection", Qt::CaseInsensitive)) {
+    } else if (errorMessage.contains("network", //CaseInsensitive) ||
+               errorMessage.contains("connection", //CaseInsensitive)) {
         return ErrorType::NetworkError;
-    } else if (errorMessage.contains("config", Qt::CaseInsensitive)) {
+    } else if (errorMessage.contains("config", //CaseInsensitive)) {
         return ErrorType::ConfigurationError;
-    } else if (errorMessage.contains("state", Qt::CaseInsensitive)) {
+    } else if (errorMessage.contains("state", //CaseInsensitive)) {
         return ErrorType::StateError;
     }
 
@@ -326,9 +322,9 @@ bool AgenticErrorHandler::isFallbackable(ErrorType type) const
 
 // ===== MONITORING =====
 
-QJsonObject AgenticErrorHandler::getErrorStatistics() const
+void* AgenticErrorHandler::getErrorStatistics() const
 {
-    QJsonObject stats;
+    void* stats;
     stats["total_errors"] = m_totalErrors;
     stats["total_recoveries"] = m_totalRecoveries;
     stats["successful_recoveries"] = m_successfulRecoveries;
@@ -367,9 +363,9 @@ std::vector<AgenticErrorHandler::ErrorContext> AgenticErrorHandler::getRecentErr
     return recent;
 }
 
-QJsonObject AgenticErrorHandler::getRecoverySuccess() const
+void* AgenticErrorHandler::getRecoverySuccess() const
 {
-    QJsonObject success;
+    void* success;
 
     std::unordered_map<int, int> recoveryByType;
     for (const auto& error : m_errorHistory) {
@@ -378,9 +374,9 @@ QJsonObject AgenticErrorHandler::getRecoverySuccess() const
         }
     }
 
-    QJsonObject byType;
+    void* byType;
     for (const auto& pair : recoveryByType) {
-        byType[QString::number(pair.first)] = pair.second;
+        byType[std::string::number(pair.first)] = pair.second;
     }
 
     success["by_type"] = byType;
@@ -391,14 +387,14 @@ QJsonObject AgenticErrorHandler::getRecoverySuccess() const
 
 // ===== CIRCUIT BREAKER =====
 
-void AgenticErrorHandler::enableCircuitBreaker(const QString& component, int failureThreshold)
+void AgenticErrorHandler::enableCircuitBreaker(const std::string& component, int failureThreshold)
 {
     auto breaker = getOrCreateCircuitBreaker(component);
     breaker->failureThreshold = failureThreshold;
 }
 
 AgenticErrorHandler::CircuitBreaker* AgenticErrorHandler::getOrCreateCircuitBreaker(
-    const QString& component)
+    const std::string& component)
 {
     auto it = m_circuitBreakers.find(component.toStdString());
     
@@ -418,17 +414,16 @@ AgenticErrorHandler::CircuitBreaker* AgenticErrorHandler::getOrCreateCircuitBrea
     return &it2->second;
 }
 
-void AgenticErrorHandler::checkCircuitBreaker(const QString& component)
+void AgenticErrorHandler::checkCircuitBreaker(const std::string& component)
 {
     auto breaker = getOrCreateCircuitBreaker(component);
     breaker->failureCount++;
 
     if (!breaker->isTripped && breaker->failureCount >= breaker->failureThreshold) {
         breaker->isTripped = true;
-        breaker->tripTime = QDateTime::currentDateTime();
+        breaker->tripTime = std::chrono::system_clock::time_point::currentDateTime();
 
-        qCritical() << "[AgenticErrorHandler] Circuit breaker tripped for" << component;
-        emit circuitBreakerTripped(component);
+        circuitBreakerTripped(component);
     }
 }
 
@@ -444,29 +439,26 @@ bool AgenticErrorHandler::executeRetryStrategy(
     for (int attempt = 0; attempt < policy.maxRetries; ++attempt) {
         if (attempt > 0) {
             // Exponential backoff
-            QThread::msleep(delayMs);
+            std::thread::msleep(delayMs);
             delayMs = static_cast<int>(delayMs * policy.backoffMultiplier);
         }
 
         if (operation()) {
-            qInfo() << "[AgenticErrorHandler] Retry succeeded for" << context.errorId;
             m_totalRecoveries++;
             return true;
         }
     }
 
-    qWarning() << "[AgenticErrorHandler] All retry attempts failed for" << context.errorId;
     m_totalRecoveries++;
     return false;
 }
 
 bool AgenticErrorHandler::executeBacktrackStrategy(const ErrorContext& context)
 {
-    qInfo() << "[AgenticErrorHandler] Backtracking from error" << context.errorId;
 
     if (m_state) {
         // Restore from checkpoint
-        QJsonObject snapshot = m_state->getLastSnapshot();
+        void* snapshot = m_state->getLastSnapshot();
         if (!snapshot.isEmpty()) {
             m_state->restoreFromSnapshot(snapshot);
             m_totalRecoveries++;
@@ -480,7 +472,6 @@ bool AgenticErrorHandler::executeBacktrackStrategy(const ErrorContext& context)
 
 bool AgenticErrorHandler::executeFallbackStrategy(const ErrorContext& context)
 {
-    qInfo() << "[AgenticErrorHandler] Executing fallback for" << context.errorId;
 
     // Use alternative code path
     m_totalRecoveries++;
@@ -489,19 +480,18 @@ bool AgenticErrorHandler::executeFallbackStrategy(const ErrorContext& context)
 
 void AgenticErrorHandler::executeEscalateStrategy(const ErrorContext& context)
 {
-    qCritical() << "[AgenticErrorHandler] Escalating error" << context.errorId
-                << "- Type:" << QString::number(static_cast<int>(context.type))
+                << "- Type:" << std::string::number(static_cast<int>(context.type))
                 << "- Message:" << context.message;
 
     // Would notify higher-level handlers or administrators
 }
 
-QString AgenticErrorHandler::analyzeError(const std::exception& e)
+std::string AgenticErrorHandler::analyzeError(const std::exception& e)
 {
-    return QString::fromStdString(e.what());
+    return std::string::fromStdString(e.what());
 }
 
-QString AgenticErrorHandler::extractStackTrace()
+std::string AgenticErrorHandler::extractStackTrace()
 {
     // Platform-specific stack trace extraction would go here
     return "Stack trace not available on this platform";
@@ -512,7 +502,7 @@ void AgenticErrorHandler::recordMetrics(const ErrorContext& context)
     if (m_observability) {
         m_observability->incrementCounter("errors_total");
         m_observability->incrementCounter(
-            "errors_by_type_" + QString::number(static_cast<int>(context.type))
+            "errors_by_type_" + std::string::number(static_cast<int>(context.type))
         );
     }
 }
@@ -521,8 +511,8 @@ void AgenticErrorHandler::recordMetrics(const ErrorContext& context)
 
 ErrorSafeOperation::ErrorSafeOperation(
     AgenticErrorHandler* handler,
-    const QString& operationName,
-    const QString& component)
+    const std::string& operationName,
+    const std::string& component)
     : m_handler(handler), m_operationName(operationName), m_component(component)
 {
 }
@@ -530,3 +520,4 @@ ErrorSafeOperation::ErrorSafeOperation(
 ErrorSafeOperation::~ErrorSafeOperation()
 {
 }
+

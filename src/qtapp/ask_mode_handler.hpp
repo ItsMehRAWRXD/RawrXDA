@@ -11,9 +11,7 @@
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QStringList>
+
 #include <memory>
 
 class UnifiedBackend;
@@ -24,22 +22,21 @@ class MetaPlanner;
  * @brief Represents an AI-generated answer with citations
  */
 struct Answer {
-    QString text;                   ///< Main answer text
-    QStringList citations;          ///< Source citations
-    QStringList relevantFiles;      ///< Files examined for answer
+    std::string text;                   ///< Main answer text
+    std::vector<std::string> citations;          ///< Source citations
+    std::vector<std::string> relevantFiles;      ///< Files examined for answer
     float confidence = 0.0f;        ///< Answer confidence (0-100)
-    QString followUpSuggestion;     ///< Suggested follow-up question
+    std::string followUpSuggestion;     ///< Suggested follow-up question
 };
 
 /**
  * @class AskModeHandler
  * @brief Handles simple Q&A interactions
  */
-class AskModeHandler : public QObject {
-    Q_OBJECT
+class AskModeHandler : public void {
 
 public:
-    explicit AskModeHandler(UnifiedBackend* backend, MetaPlanner* planner, QObject* parent = nullptr);
+    explicit AskModeHandler(UnifiedBackend* backend, MetaPlanner* planner, void* parent = nullptr);
     ~AskModeHandler();
 
     /**
@@ -47,7 +44,7 @@ public:
      * @param question The question to ask
      * @param context Optional context (selected code, file content, etc.)
      */
-    void askQuestion(const QString& question, const QString& context = "");
+    void askQuestion(const std::string& question, const std::string& context = "");
 
     /**
      * @brief Get the most recent answer
@@ -63,7 +60,7 @@ public:
      * @brief Refine the last answer with feedback
      * @param feedback User feedback or clarification
      */
-    void refineAnswer(const QString& feedback);
+    void refineAnswer(const std::string& feedback);
 
     /**
      * @brief Verify answer accuracy
@@ -71,21 +68,20 @@ public:
      */
     void verifyAnswer(bool verified);
 
-signals:
     /// Question received and processing started
-    void questionReceived(const QString& question);
+    void questionReceived(const std::string& question);
 
     /// Research phase started
     void researchStarted();
 
     /// Research progress
-    void researchProgress(const QString& message);
+    void researchProgress(const std::string& message);
 
     /// Answer token received (streamed)
-    void answerTokenReceived(const QString& token);
+    void answerTokenReceived(const std::string& token);
 
     /// Citation/source found
-    void citationFound(const QString& citation);
+    void citationFound(const std::string& citation);
 
     /// Answer generation completed
     void answerGenerated(const Answer& answer);
@@ -97,14 +93,14 @@ signals:
     void answerIncorrect();
 
     /// Error occurred during Q&A
-    void qaError(const QString& error);
+    void qaError(const std::string& error);
 
-private slots:
+private:
     /// Handle AI backend streaming
-    void onStreamToken(qint64 reqId, const QString& token);
+    void onStreamToken(qint64 reqId, const std::string& token);
 
     /// Handle AI backend error
-    void onError(qint64 reqId, const QString& error);
+    void onError(qint64 reqId, const std::string& error);
 
 private:
     /**
@@ -115,18 +111,19 @@ private:
     /**
      * @brief Extract citations from answer text
      */
-    void extractCitations(const QString& text);
+    void extractCitations(const std::string& text);
 
     /**
      * @brief Research relevant files for context
      */
-    void researchRelevantFiles(const QString& question);
+    void researchRelevantFiles(const std::string& question);
 
     // Members
     UnifiedBackend* m_backend;
     MetaPlanner* m_planner;
     Answer m_lastAnswer;
-    QString m_accumulatedText;
+    std::string m_accumulatedText;
     qint64 m_currentRequestId = -1;
     bool m_isAnswering = false;
 };
+

@@ -131,6 +131,3 @@ LONG WINAPI CentralizedExceptionHandler::unhandledExceptionFilter(EXCEPTION_POIN
 
 } // namespace RawrXD
 
-
-
-

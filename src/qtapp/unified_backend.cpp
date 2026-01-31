@@ -1,13 +1,9 @@
 #include "unified_backend.hpp"
-#include <QNetworkRequest>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QMetaObject>
 
-UnifiedBackend::UnifiedBackend(QObject* parent) 
-    : QObject(parent)
-    , m_nam(new QNetworkAccessManager(this))
+
+UnifiedBackend::UnifiedBackend(void* parent) 
+    : void(parent)
+    , m_nam(new void*(this))
 {
 }
 
@@ -16,11 +12,11 @@ void UnifiedBackend::submit(const UnifiedRequest& req)
     if (req.backend == "local") {
         // Forward to existing InferenceEngine (worker thread)
         if (m_localEngine) {
-            QMetaObject::invokeMethod(m_localEngine, "request", Qt::QueuedConnection,
-                                      Q_ARG(QString, req.prompt), 
-                                      Q_ARG(qint64, req.reqId));
+            QMetaObject::invokeMethod(m_localEngine, "request", //QueuedConnection,
+                                      (std::string, req.prompt), 
+                                      (qint64, req.reqId));
         } else {
-            emit error(req.reqId, "Local engine not initialized");
+            error(req.reqId, "Local engine not initialized");
         }
     } else if (req.backend == "llama") {
         submitLlamaCpp(req);
@@ -31,14 +27,14 @@ void UnifiedBackend::submit(const UnifiedRequest& req)
     } else if (req.backend == "gemini") {
         submitGemini(req);
     } else {
-        emit error(req.reqId, "Unknown backend: " + req.backend);
+        error(req.reqId, "Unknown backend: " + req.backend);
     }
 }
 
 void UnifiedBackend::submitLlamaCpp(const UnifiedRequest& req)
 {
-    QUrl url("http://localhost:8080/completion");
-    QJsonObject body{
+    std::string url("http://localhost:8080/completion");
+    void* body{
         {"prompt", req.prompt},
         {"stream", true},
         {"n_predict", 100}
@@ -47,35 +43,29 @@ void UnifiedBackend::submitLlamaCpp(const UnifiedRequest& req)
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QNetworkReply* reply = m_nam->post(request, QJsonDocument(body).toJson());
-    
-    connect(reply, &QNetworkReply::readyRead, this, [this, reply, req]() {
-        while (reply->canReadLine()) {
-            QByteArray line = reply->readLine();
-            auto doc = QJsonDocument::fromJson(line);
-            QString token = doc["content"].toString();
+    void** reply = m_nam->post(request, void*(body).toJson());
+// Qt connect removed
+            auto doc = void*::fromJson(line);
+            std::string token = doc["content"].toString();
             if (!token.isEmpty()) {
-                emit streamToken(req.reqId, token);
+                streamToken(req.reqId, token);
             }
         }
     });
-    
-    connect(reply, &QNetworkReply::finished, this, [this, reply, req]() {
-        if (reply->error() != QNetworkReply::NoError) {
-            emit error(req.reqId, "llama.cpp error: " + reply->errorString());
+// Qt connect removed
         }
-        emit streamFinished(req.reqId);
+        streamFinished(req.reqId);
         reply->deleteLater();
     });
 }
 
 void UnifiedBackend::submitOpenAI(const UnifiedRequest& req)
 {
-    QUrl url("https://api.openai.com/v1/chat/completions");
-    QJsonObject body{
+    std::string url("https://api.openai.com/v1/chat/completions");
+    void* body{
         {"model", "gpt-3.5-turbo"},
-        {"messages", QJsonArray{
-            QJsonObject{{"role", "user"}, {"content", req.prompt}}
+        {"messages", void*{
+            void*{{"role", "user"}, {"content", req.prompt}}
         }},
         {"stream", true}
     };
@@ -84,47 +74,41 @@ void UnifiedBackend::submitOpenAI(const UnifiedRequest& req)
     request.setRawHeader("Authorization", ("Bearer " + req.apiKey).toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QNetworkReply* reply = m_nam->post(request, QJsonDocument(body).toJson());
-    
-    connect(reply, &QNetworkReply::readyRead, this, [this, reply, req]() {
-        while (reply->canReadLine()) {
-            QByteArray line = reply->readLine().trimmed();
+    void** reply = m_nam->post(request, void*(body).toJson());
+// Qt connect removed
             if (!line.startsWith("data: ")) continue;
             
             line = line.mid(6); // Remove "data: " prefix
             if (line == "[DONE]") {
-                emit streamFinished(req.reqId);
+                streamFinished(req.reqId);
                 continue;
             }
             
-            auto doc = QJsonDocument::fromJson(line);
+            auto doc = void*::fromJson(line);
             auto choices = doc["choices"].toArray();
             if (!choices.isEmpty()) {
-                QString token = choices[0].toObject()["delta"].toObject()["content"].toString();
+                std::string token = choices[0].toObject()["delta"].toObject()["content"].toString();
                 if (!token.isEmpty()) {
-                    emit streamToken(req.reqId, token);
+                    streamToken(req.reqId, token);
                 }
             }
         }
     });
-    
-    connect(reply, &QNetworkReply::finished, this, [this, reply, req]() {
-        if (reply->error() != QNetworkReply::NoError) {
-            emit error(req.reqId, "OpenAI error: " + reply->errorString());
+// Qt connect removed
         }
-        emit streamFinished(req.reqId);
+        streamFinished(req.reqId);
         reply->deleteLater();
     });
 }
 
 void UnifiedBackend::submitClaude(const UnifiedRequest& req)
 {
-    QUrl url("https://api.anthropic.com/v1/messages");
-    QJsonObject body{
+    std::string url("https://api.anthropic.com/v1/messages");
+    void* body{
         {"model", "claude-3-sonnet-20240229"},
         {"max_tokens", 1000},
-        {"messages", QJsonArray{
-            QJsonObject{{"role", "user"}, {"content", req.prompt}}
+        {"messages", void*{
+            void*{{"role", "user"}, {"content", req.prompt}}
         }},
         {"stream", true}
     };
@@ -134,48 +118,42 @@ void UnifiedBackend::submitClaude(const UnifiedRequest& req)
     request.setRawHeader("anthropic-version", "2023-06-01");
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QNetworkReply* reply = m_nam->post(request, QJsonDocument(body).toJson());
-    
-    connect(reply, &QNetworkReply::readyRead, this, [this, reply, req]() {
-        while (reply->canReadLine()) {
-            QByteArray line = reply->readLine().trimmed();
+    void** reply = m_nam->post(request, void*(body).toJson());
+// Qt connect removed
             if (!line.startsWith("data: ")) continue;
             
             line = line.mid(6); // Remove "data: " prefix
-            auto doc = QJsonDocument::fromJson(line);
+            auto doc = void*::fromJson(line);
             
             // Claude streaming format: {"type":"content_block_delta","delta":{"text":"..."}}
-            QString type = doc["type"].toString();
+            std::string type = doc["type"].toString();
             if (type == "content_block_delta") {
-                QString token = doc["delta"].toObject()["text"].toString();
+                std::string token = doc["delta"].toObject()["text"].toString();
                 if (!token.isEmpty()) {
-                    emit streamToken(req.reqId, token);
+                    streamToken(req.reqId, token);
                 }
             } else if (type == "message_stop") {
-                emit streamFinished(req.reqId);
+                streamFinished(req.reqId);
             }
         }
     });
-    
-    connect(reply, &QNetworkReply::finished, this, [this, reply, req]() {
-        if (reply->error() != QNetworkReply::NoError) {
-            emit error(req.reqId, "Claude error: " + reply->errorString());
+// Qt connect removed
         }
-        emit streamFinished(req.reqId);
+        streamFinished(req.reqId);
         reply->deleteLater();
     });
 }
 
 void UnifiedBackend::submitGemini(const UnifiedRequest& req)
 {
-    QUrl url("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?alt=sse&key=" + req.apiKey);
-    QJsonObject body{
-        {"contents", QJsonArray{
-            QJsonObject{{"parts", QJsonArray{
-                QJsonObject{{"text", req.prompt}}
+    std::string url("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?alt=sse&key=" + req.apiKey);
+    void* body{
+        {"contents", void*{
+            void*{{"parts", void*{
+                void*{{"text", req.prompt}}
             }}}
         }},
-        {"generationConfig", QJsonObject{
+        {"generationConfig", void*{
             {"temperature", 0.8}
         }}
     };
@@ -183,42 +161,37 @@ void UnifiedBackend::submitGemini(const UnifiedRequest& req)
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QNetworkReply* reply = m_nam->post(request, QJsonDocument(body).toJson());
-    
-    connect(reply, &QNetworkReply::readyRead, this, [this, reply, req]() {
-        while (reply->canReadLine()) {
-            QByteArray line = reply->readLine().trimmed();
+    void** reply = m_nam->post(request, void*(body).toJson());
+// Qt connect removed
             if (!line.startsWith("data: ")) continue;
             
             line = line.mid(6); // Remove "data: " prefix
-            auto doc = QJsonDocument::fromJson(line);
+            auto doc = void*::fromJson(line);
             auto candidates = doc["candidates"].toArray();
             
             if (!candidates.isEmpty()) {
                 auto content = candidates[0].toObject()["content"].toObject();
                 auto parts = content["parts"].toArray();
                 if (!parts.isEmpty()) {
-                    QString token = parts[0].toObject()["text"].toString();
+                    std::string token = parts[0].toObject()["text"].toString();
                     if (!token.isEmpty()) {
-                        emit streamToken(req.reqId, token);
+                        streamToken(req.reqId, token);
                     }
                 }
             }
         }
     });
-    
-    connect(reply, &QNetworkReply::finished, this, [this, reply, req]() {
-        if (reply->error() != QNetworkReply::NoError) {
-            emit error(req.reqId, "Gemini error: " + reply->errorString());
+// Qt connect removed
         }
-        emit streamFinished(req.reqId);
+        streamFinished(req.reqId);
         reply->deleteLater();
     });
 }
 
-void UnifiedBackend::onLocalDone(qint64 id, const QString& answer)
+void UnifiedBackend::onLocalDone(qint64 id, const std::string& answer)
 {
-    // Local engine doesn't stream by default - emit as single token
-    emit streamToken(id, answer);
-    emit streamFinished(id);
+    // Local engine doesn't stream by default - as single token
+    streamToken(id, answer);
+    streamFinished(id);
 }
+

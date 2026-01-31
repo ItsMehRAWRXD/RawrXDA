@@ -1,13 +1,12 @@
 #include "llm_router.hpp"
-#include <QDebug>
-#include <QDateTime>
+
+
 #include <algorithm>
 #include <vector>
 
-LLMRouter::LLMRouter(QObject* parent)
-    : QObject(parent)
+LLMRouter::LLMRouter(void* parent)
+    : void(parent)
 {
-    qDebug() << "LLMRouter initialized";
 }
 
 LLMRouter::~LLMRouter()
@@ -26,12 +25,11 @@ void LLMRouter::registerModel(const ModelInfo& model)
     }
     m_metrics[model.id] = new PerformanceMetrics();
     
-    qDebug() << "Registered model:" << model.id 
              << "Provider:" << model.provider;
-    emit modelRegistered(model.id);
+    modelRegistered(model.id);
 }
 
-void LLMRouter::unregisterModel(const QString& modelId)
+void LLMRouter::unregisterModel(const std::string& modelId)
 {
     m_models.remove(modelId);
     if (m_metrics.contains(modelId)) {
@@ -39,18 +37,17 @@ void LLMRouter::unregisterModel(const QString& modelId)
         m_metrics.remove(modelId);
     }
     
-    qDebug() << "Unregistered model:" << modelId;
-    emit modelUnregistered(modelId);
+    modelUnregistered(modelId);
 }
 
-ModelInfo LLMRouter::getModel(const QString& modelId) const
+ModelInfo LLMRouter::getModel(const std::string& modelId) const
 {
     return m_models.value(modelId);
 }
 
-QStringList LLMRouter::getAvailableModels() const
+std::vector<std::string> LLMRouter::getAvailableModels() const
 {
-    QStringList result;
+    std::vector<std::string> result;
     for (auto it = m_models.begin(); it != m_models.end(); ++it) {
         if (it.value().available) {
             result.append(it.key());
@@ -60,12 +57,12 @@ QStringList LLMRouter::getAvailableModels() const
 }
 
 RoutingDecision LLMRouter::route(
-    const QString& taskDescription,
-    const QString& preferredCapability,
+    const std::string& taskDescription,
+    const std::string& preferredCapability,
     int maxCostTokens)
 {
     RoutingDecision decision;
-    decision.decisionTimeMs = QDateTime::currentMSecsSinceEpoch();
+    decision.decisionTimeMs = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     
     // Get available models
     auto availableModels = getAvailableModels();
@@ -73,12 +70,11 @@ RoutingDecision LLMRouter::route(
         decision.selectedModelId = "";
         decision.routingReason = "No models available";
         decision.confidenceScore = 0;
-        qWarning() << "No available models for routing";
         return decision;
     }
     
     // Score each model
-    QMap<QString, int> scores;
+    std::map<std::string, int> scores;
     for (const auto& modelId : availableModels) {
         const auto& model = m_models[modelId];
         
@@ -93,7 +89,6 @@ RoutingDecision LLMRouter::route(
         
         scores[modelId] = totalScore;
         
-        qDebug() << "Model" << modelId 
                  << "Relevance:" << relevanceScore
                  << "Cost:" << costScore
                  << "Latency:" << latencyScore
@@ -102,7 +97,7 @@ RoutingDecision LLMRouter::route(
     }
     
     // Select best model
-    QString bestModelId;
+    std::string bestModelId;
     int bestScore = -1;
     for (auto it = scores.begin(); it != scores.end(); ++it) {
         if (it.value() > bestScore) {
@@ -115,15 +110,14 @@ RoutingDecision LLMRouter::route(
     decision.confidenceScore = bestScore;
     decision.selectedInfo = m_models[decision.selectedModelId];
     decision.routingStrategy = m_routingStrategy;
-    decision.routingReason = QString("Selected %1 for %2 (score: %3, strategy: %4)")
-        .arg(decision.selectedModelId, preferredCapability, 
-             QString::number(decision.confidenceScore), m_routingStrategy);
+    decision.routingReason = std::string("Selected %1 for %2 (score: %3, strategy: %4)")
+        , m_routingStrategy);
     
     // Get top 2 alternatives - iterate through scores and find top 2
     int topScore1 = bestScore;
-    QString topModel1 = bestModelId;
+    std::string topModel1 = bestModelId;
     int topScore2 = -1;
-    QString topModel2;
+    std::string topModel2;
     
     for (auto it = scores.begin(); it != scores.end(); ++it) {
         if (it.value() < topScore1 && it.value() > topScore2 && it.key() != bestModelId) {
@@ -138,7 +132,7 @@ RoutingDecision LLMRouter::route(
     
     // Find third best for second alternative
     int topScore3 = -1;
-    QString topModel3;
+    std::string topModel3;
     for (auto it = scores.begin(); it != scores.end(); ++it) {
         if (it.value() < topScore2 && it.value() > topScore3 && it.key() != bestModelId && it.key() != topModel2) {
             topScore3 = it.value();
@@ -150,17 +144,16 @@ RoutingDecision LLMRouter::route(
         decision.alternativeModels.append(topModel3);
     }
     
-    qDebug() << "Routing Decision:" << decision.selectedModelId 
              << "Confidence:" << decision.confidenceScore;
     
-    emit routingDecisionMade(decision);
+    routingDecisionMade(decision);
     return decision;
 }
 
 EnsembleResult LLMRouter::routeEnsemble(
-    const QString& taskDescription,
+    const std::string& taskDescription,
     int numModels,
-    const QString& consensusMethod)
+    const std::string& consensusMethod)
 {
     EnsembleResult result;
     auto availableModels = getAvailableModels();
@@ -171,7 +164,7 @@ EnsembleResult LLMRouter::routeEnsemble(
     }
     
     // Score all models and select top N
-    QMap<QString, int> scores;
+    std::map<std::string, int> scores;
     for (const auto& modelId : availableModels) {
         const auto& model = m_models[modelId];
         // For ensemble, prefer reasoning capability
@@ -184,7 +177,7 @@ EnsembleResult LLMRouter::routeEnsemble(
     // Select top N models - manually find top N
     for (int n = 0; n < numModels; ++n) {
         int topScore = -1;
-        QString topModel;
+        std::string topModel;
         
         // Find highest score model not yet selected
         for (auto it = scores.begin(); it != scores.end(); ++it) {
@@ -201,27 +194,25 @@ EnsembleResult LLMRouter::routeEnsemble(
         }
     }
     
-    result.consensus = QString("Ensemble of %1 models: %2 using %3 strategy")
-        .arg(QString::number(result.selectedModels.size()), 
+    result.consensus = std::string("Ensemble of %1 models: %2 using %3 strategy")
+        ), 
              result.selectedModels.join(", "), 
              consensusMethod);
     
     result.agreementLevel = 0.85f;  // Placeholder: would be calculated from actual responses
     result.finalConfidence = 0.90f;
     
-    qDebug() << "Ensemble Result:" << result.selectedModels.join(", ");
     
     return result;
 }
 
 void LLMRouter::recordPerformance(
-    const QString& modelId,
+    const std::string& modelId,
     int taskDurationMs,
     int tokensUsed,
     double qualityScore)
 {
     if (!m_metrics.contains(modelId)) {
-        qWarning() << "Model not found for performance recording:" << modelId;
         return;
     }
     
@@ -230,7 +221,7 @@ void LLMRouter::recordPerformance(
     metrics->successfulRequests.fetch_add(1);
     metrics->totalLatencyMs.fetch_add(taskDurationMs);
     metrics->totalTokensUsed.fetch_add(tokensUsed);
-    metrics->lastUsed = QDateTime::currentDateTime();
+    metrics->lastUsed = std::chrono::system_clock::time_point::currentDateTime();
     
     // Update average quality using exponential moving average
     double alpha = 0.1;  // Weight for new value (0.1 = 10% new, 90% historical)
@@ -238,15 +229,14 @@ void LLMRouter::recordPerformance(
         (1.0 - alpha) * metrics->averageQualityScore + 
         alpha * qualityScore;
     
-    qDebug() << "Performance recorded for" << modelId 
              << "Duration:" << taskDurationMs << "ms"
              << "Tokens:" << tokensUsed
              << "Quality:" << qualityScore;
 }
 
-QJsonObject LLMRouter::getModelStatus(const QString& modelId) const
+void* LLMRouter::getModelStatus(const std::string& modelId) const
 {
-    QJsonObject status;
+    void* status;
     
     if (!m_models.contains(modelId)) {
         status["error"] = "Model not found";
@@ -265,7 +255,7 @@ QJsonObject LLMRouter::getModelStatus(const QString& modelId) const
     status["avgLatencyMs"] = model.avgLatencyMs;
     
     // Capabilities
-    QJsonObject capabilities;
+    void* capabilities;
     capabilities["reasoning"] = model.capabilities.reasoning;
     capabilities["coding"] = model.capabilities.coding;
     capabilities["planning"] = model.capabilities.planning;
@@ -275,7 +265,7 @@ QJsonObject LLMRouter::getModelStatus(const QString& modelId) const
     status["capabilities"] = capabilities;
     
     // Performance metrics
-    QJsonObject perf;
+    void* perf;
     if (metrics) {
         perf["totalRequests"] = metrics->totalRequests.load();
         perf["successfulRequests"] = metrics->successfulRequests.load();
@@ -283,7 +273,7 @@ QJsonObject LLMRouter::getModelStatus(const QString& modelId) const
         perf["totalLatencyMs"] = metrics->totalLatencyMs.load();
         perf["totalTokensUsed"] = metrics->totalTokensUsed.load();
         perf["averageQualityScore"] = metrics->averageQualityScore;
-        perf["lastUsed"] = metrics->lastUsed.toString(Qt::ISODate);
+        perf["lastUsed"] = metrics->lastUsed.toString(//ISODate);
         status["performance"] = perf;
         
         // Calculate success rate
@@ -297,19 +287,18 @@ QJsonObject LLMRouter::getModelStatus(const QString& modelId) const
     return status;
 }
 
-QJsonArray LLMRouter::getAllModelStatus() const
+void* LLMRouter::getAllModelStatus() const
 {
-    QJsonArray array;
+    void* array;
     for (const auto& modelId : m_models.keys()) {
         array.append(getModelStatus(modelId));
     }
     return array;
 }
 
-void LLMRouter::handleModelFailure(const QString& modelId, const QString& error)
+void LLMRouter::handleModelFailure(const std::string& modelId, const std::string& error)
 {
     if (!m_models.contains(modelId)) {
-        qWarning() << "Model not found for failure handling:" << modelId;
         return;
     }
     
@@ -318,17 +307,16 @@ void LLMRouter::handleModelFailure(const QString& modelId, const QString& error)
         m_metrics[modelId]->failedRequests.fetch_add(1);
     }
     
-    qWarning() << "Model failure:" << modelId << "Error:" << error;
-    emit modelHealthChanged(modelId, false);
+    modelHealthChanged(modelId, false);
     
     // Trigger failover
     RoutingDecision fallback = getFallbackModel(modelId);
     if (!fallback.selectedModelId.isEmpty()) {
-        emit failoverTriggered(modelId, fallback.selectedModelId);
+        failoverTriggered(modelId, fallback.selectedModelId);
     }
 }
 
-RoutingDecision LLMRouter::getFallbackModel(const QString& failedModelId)
+RoutingDecision LLMRouter::getFallbackModel(const std::string& failedModelId)
 {
     auto available = getAvailableModels();
     available.removeAll(failedModelId);
@@ -346,7 +334,7 @@ RoutingDecision LLMRouter::getFallbackModel(const QString& failedModelId)
 
 int LLMRouter::calculateTaskRelevanceScore(
     const ModelInfo& model,
-    const QString& capability)
+    const std::string& capability)
 {
     return model.capabilities.getCapabilityScore(capability);
 }
@@ -382,7 +370,7 @@ int LLMRouter::calculateLatencyScore(const ModelInfo& model)
     return qBound(0, score, 100);
 }
 
-int LLMRouter::calculateReliabilityScore(const QString& modelId)
+int LLMRouter::calculateReliabilityScore(const std::string& modelId)
 {
     if (!m_metrics.contains(modelId)) {
         return 50;  // Unknown model gets middle score
@@ -404,7 +392,7 @@ int LLMRouter::calculateReliabilityScore(const QString& modelId)
     return successRate;
 }
 
-QString LLMRouter::selectFromCandidates(const QStringList& candidates)
+std::string LLMRouter::selectFromCandidates(const std::vector<std::string>& candidates)
 {
     if (candidates.isEmpty()) {
         return "";
@@ -415,14 +403,14 @@ QString LLMRouter::selectFromCandidates(const QStringList& candidates)
     }
     
     // Load balance: select least recently used
-    QString lruCandidate = candidates.first();
-    QDateTime lruTime;
+    std::string lruCandidate = candidates.first();
+    std::chrono::system_clock::time_point lruTime;
     if (m_metrics.contains(lruCandidate) && m_metrics[lruCandidate]) {
         lruTime = m_metrics[lruCandidate]->lastUsed;
     }
     
     for (int i = 1; i < candidates.size(); ++i) {
-        QDateTime candidateTime;
+        std::chrono::system_clock::time_point candidateTime;
         if (m_metrics.contains(candidates[i]) && m_metrics[candidates[i]]) {
             candidateTime = m_metrics[candidates[i]]->lastUsed;
         }
@@ -435,20 +423,18 @@ QString LLMRouter::selectFromCandidates(const QStringList& candidates)
     return lruCandidate;
 }
 
-void LLMRouter::setRoutingStrategy(const QString& strategy)
+void LLMRouter::setRoutingStrategy(const std::string& strategy)
 {
     m_routingStrategy = strategy;
-    qDebug() << "Routing strategy changed to:" << strategy;
 }
 
 void LLMRouter::setLoadBalancingEnabled(bool enabled)
 {
     m_loadBalancingEnabled = enabled;
-    qDebug() << "Load balancing" << (enabled ? "enabled" : "disabled");
 }
 
 void LLMRouter::setCostOptimizationEnabled(bool enabled)
 {
     m_costOptimizationEnabled = enabled;
-    qDebug() << "Cost optimization" << (enabled ? "enabled" : "disabled");
 }
+

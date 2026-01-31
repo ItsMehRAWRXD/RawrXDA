@@ -8,8 +8,6 @@
 #ifndef RAWRXD_IFILE_WRITER_H
 #define RAWRXD_IFILE_WRITER_H
 
-#include <QString>
-#include <QByteArray>
 
 namespace RawrXD {
 
@@ -18,10 +16,10 @@ namespace RawrXD {
  */
 struct FileOperationResult {
     bool success;
-    QString errorMessage;
-    QString backupPath;  ///< Path to backup file (if created)
+    std::string errorMessage;
+    std::string backupPath;  ///< Path to backup file (if created)
     
-    FileOperationResult(bool ok = false, const QString& error = QString())
+    FileOperationResult(bool ok = false, const std::string& error = std::string())
         : success(ok), errorMessage(error) {}
 };
 
@@ -47,8 +45,8 @@ public:
      * \param createBackup Create backup before overwriting
      * \return Operation result with success status and error details
      */
-    virtual FileOperationResult writeFile(const QString& path,
-                                         const QString& content,
+    virtual FileOperationResult writeFile(const std::string& path,
+                                         const std::string& content,
                                          bool createBackup = false) = 0;
     
     /**
@@ -58,8 +56,8 @@ public:
      * \param createBackup Create backup before overwriting
      * \return Operation result with success status and error details
      */
-    virtual FileOperationResult writeFileRaw(const QString& path,
-                                            const QByteArray& data,
+    virtual FileOperationResult writeFileRaw(const std::string& path,
+                                            const std::vector<uint8_t>& data,
                                             bool createBackup = false) = 0;
     
     /**
@@ -67,7 +65,7 @@ public:
      * \param path File path
      * \return Operation result
      */
-    virtual FileOperationResult createFile(const QString& path) = 0;
+    virtual FileOperationResult createFile(const std::string& path) = 0;
     
     /**
      * \brief Delete a file
@@ -75,7 +73,7 @@ public:
      * \param moveToTrash Move to trash instead of permanent delete
      * \return Operation result
      */
-    virtual FileOperationResult deleteFile(const QString& path, 
+    virtual FileOperationResult deleteFile(const std::string& path, 
                                           bool moveToTrash = true) = 0;
     
     /**
@@ -84,8 +82,8 @@ public:
      * \param newPath Destination path
      * \return Operation result
      */
-    virtual FileOperationResult renameFile(const QString& oldPath,
-                                          const QString& newPath) = 0;
+    virtual FileOperationResult renameFile(const std::string& oldPath,
+                                          const std::string& newPath) = 0;
     
     /**
      * \brief Copy a file
@@ -94,8 +92,8 @@ public:
      * \param overwrite Allow overwriting existing file
      * \return Operation result
      */
-    virtual FileOperationResult copyFile(const QString& sourcePath,
-                                        const QString& destPath,
+    virtual FileOperationResult copyFile(const std::string& sourcePath,
+                                        const std::string& destPath,
                                         bool overwrite = false) = 0;
     
     /**
@@ -103,7 +101,7 @@ public:
      * \param path File path
      * \return Path to backup file, or empty string on failure
      */
-    virtual QString createBackup(const QString& path) = 0;
+    virtual std::string createBackup(const std::string& path) = 0;
     
     /**
      * \brief Enable/disable automatic backups
@@ -121,3 +119,4 @@ public:
 } // namespace RawrXD
 
 #endif // RAWRXD_IFILE_WRITER_H
+

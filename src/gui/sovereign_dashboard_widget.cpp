@@ -47,6 +47,3 @@ void SovereignDashboardWidget::updateDashboard() {
     }
 }
 
-
-
-

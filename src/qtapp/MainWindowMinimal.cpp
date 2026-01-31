@@ -1,19 +1,10 @@
 // Stripped down MainWindow for startup testing
 #include "MainWindowMinimal.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QMenuBar>
-#include <QStatusBar>
-#include <QTextEdit>
-#include <QSplitter>
-#include <QTreeWidget>
-#include <QDebug>
 
-MainWindowMinimal::MainWindowMinimal(QWidget *parent)
-    : QMainWindow(parent)
+
+MainWindowMinimal::MainWindowMinimal(void *parent)
+    : void(parent)
 {
-    qDebug() << "MainWindowMinimal constructor starting...";
     
     setWindowTitle("RawrXD IDE - Minimal Startup Test");
     resize(1200, 800);
@@ -27,7 +18,7 @@ MainWindowMinimal::MainWindowMinimal(QWidget *parent)
     fileMenu->addAction("E&xit", this, &MainWindowMinimal::close);
     
     // Create basic layout similar to VS Code
-    QWidget* central = new QWidget(this);
+    void* central = new void(this);
     setCentralWidget(central);
     
     QHBoxLayout* mainLayout = new QHBoxLayout(central);
@@ -48,7 +39,7 @@ MainWindowMinimal::MainWindowMinimal(QWidget *parent)
     output->setMaximumWidth(250);
     
     // Add to splitter
-    QSplitter* splitter = new QSplitter(Qt::Horizontal, this);
+    QSplitter* splitter = new QSplitter(//Horizontal, this);
     splitter->addWidget(explorer);
     splitter->addWidget(editor);
     splitter->addWidget(output);
@@ -59,20 +50,17 @@ MainWindowMinimal::MainWindowMinimal(QWidget *parent)
     // Status bar
     statusBar()->showMessage("RawrXD IDE - Minimal startup complete", 5000);
     
-    qDebug() << "MainWindowMinimal constructor completed successfully";
 }
 
 void MainWindowMinimal::newFile()
 {
-    qDebug() << "New file action";
 }
 
 void MainWindowMinimal::openFile()
 {
-    qDebug() << "Open file action";
 }
 
 MainWindowMinimal::~MainWindowMinimal()
 {
-    qDebug() << "MainWindowMinimal destructor";
 }
+

@@ -144,7 +144,7 @@ void ContextPanelRenderer::renderSymbolPanel(DrawingContext& ctx, const std::str
     
     for (const auto& symbol : symbols) {
         Rect itemBounds(bounds.x, y, bounds.width, 24.0f);
-        std::string itemText = std::string("%1 (%2)").arg(symbol.name, std::string::number(symbol.lineNumber));
+        std::string itemText = std::string("%1 (%2)"));
         renderListItem(ctx, itemText, itemBounds);
         y += 28.0f;
     }
@@ -158,21 +158,21 @@ void ContextPanelRenderer::renderFilePanel(DrawingContext& ctx, const std::strin
     
     // Display file info
     ctx.drawText(
-        std::string("Path: %1").arg(fileCtx.fileName),
+        std::string("Path: %1"),
         Point(bounds.x + 10, y),
         "Arial", 11.0f, Color(0, 0, 0, 255)
     );
     y += 20.0f;
     
     ctx.drawText(
-        std::string("Size: %1 bytes").arg(fileCtx.fileSize),
+        std::string("Size: %1 bytes"),
         Point(bounds.x + 10, y),
         "Arial", 11.0f, Color(0, 0, 0, 255)
     );
     y += 20.0f;
     
     ctx.drawText(
-        std::string("Modified: %1").arg(fileCtx.lastModified.toString("yyyy-MM-dd hh:mm")),
+        std::string("Modified: %1")),
         Point(bounds.x + 10, y),
         "Arial", 11.0f, Color(0, 0, 0, 255)
     );
@@ -187,7 +187,7 @@ void ContextPanelRenderer::renderToolsPanel(DrawingContext& ctx, const Rect& bou
     for (const auto& tool : tools) {
         Rect itemBounds(bounds.x, y, bounds.width, 24.0f);
         std::string status = tool.isAvailable ? "✓" : "✗";
-        std::string itemText = std::string("[%1] %2").arg(status, tool.toolName);
+        std::string itemText = std::string("[%1] %2");
         renderListItem(ctx, itemText, itemBounds);
         y += 28.0f;
     }
@@ -200,21 +200,21 @@ void ContextPanelRenderer::renderSourceControlPanel(DrawingContext& ctx, const R
     float y = bounds.y + 40.0f;
     
     ctx.drawText(
-        std::string("Repository: %1").arg(scCtx.repository),
+        std::string("Repository: %1"),
         Point(bounds.x + 10, y),
         "Arial", 11.0f, Color(0, 0, 0, 255)
     );
     y += 20.0f;
     
     ctx.drawText(
-        std::string("Branch: %1").arg(scCtx.branch),
+        std::string("Branch: %1"),
         Point(bounds.x + 10, y),
         "Arial", 11.0f, Color(0, 0, 0, 255)
     );
     y += 20.0f;
     
     ctx.drawText(
-        std::string("Commit: %1...").arg(scCtx.commitHash.left(8)),
+        std::string("Commit: %1...")),
         Point(bounds.x + 10, y),
         "Arial", 11.0f, Color(0, 0, 0, 255)
     );
@@ -244,7 +244,7 @@ void ContextPanelRenderer::renderRelationshipsPanel(DrawingContext& ctx, const s
     for (const auto& rel : relationships) {
         Rect itemBounds(bounds.x, y, bounds.width, 24.0f);
         std::string relText = std::string("%1 %2 %3")
-            .arg(rel.sourceId, rel.relationshipType, rel.targetId);
+            ;
         renderListItem(ctx, relText, itemBounds);
         y += 28.0f;
     }
@@ -258,7 +258,7 @@ void ContextPanelRenderer::renderOpenEditorsPanel(DrawingContext& ctx, const Rec
     
     for (const auto& editor : editors) {
         Rect itemBounds(bounds.x, y, bounds.width, 24.0f);
-        std::string editorText = std::string("%1:%2").arg(editor.cursorLine).arg(editor.cursorColumn);
+        std::string editorText = std::string("%1:%2");
         renderListItem(ctx, editorText, itemBounds);
         y += 28.0f;
     }
@@ -319,7 +319,6 @@ ContextGraphRenderer::ContextGraphRenderer(BreadcrumbContextManager& contextMana
 ContextGraphRenderer::~ContextGraphRenderer() {}
 
 void ContextGraphRenderer::renderDependencyGraph(DrawingContext& ctx, const std::string& centerEntity, const Rect& bounds) {
-    // // qDebug:  "Rendering dependency graph for:" << centerEntity;
     
     auto dependencies = m_contextManager.getDependencies(centerEntity);
     auto dependents = m_contextManager.getDependents(centerEntity);
@@ -366,7 +365,6 @@ void ContextGraphRenderer::renderDependencyGraph(DrawingContext& ctx, const std:
 }
 
 void ContextGraphRenderer::renderFileRelationships(DrawingContext& ctx, const std::string& filePath, const Rect& bounds) {
-    // // qDebug:  "Rendering file relationships for:" << filePath;
     
     auto relatedFiles = m_contextManager.getRelatedFiles(filePath);
     
@@ -388,7 +386,6 @@ void ContextGraphRenderer::renderFileRelationships(DrawingContext& ctx, const st
 }
 
 void ContextGraphRenderer::renderSymbolCallGraph(DrawingContext& ctx, const std::string& symbolName, const Rect& bounds) {
-    // // qDebug:  "Rendering call graph for symbol:" << symbolName;
 }
 
 void ContextGraphRenderer::layoutNodes(std::vector<Node>& nodes, const Rect& bounds) {
@@ -661,8 +658,4 @@ void FileBrowser::collapseFolder(const std::string& folderPath) {
 
 } // namespace Visualization
 } // namespace RawrXD
-
-
-
-
 

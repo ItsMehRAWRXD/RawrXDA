@@ -1,17 +1,11 @@
 #include "OverlayWidget.hpp"
-#include <QPainter>
-#include <QStyle>
-#include <QEvent>
-#include <QDateTime>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QDebug>
 
-OverlayWidget::OverlayWidget(QWidget* parent)
-    : QWidget(parent) {
+
+OverlayWidget::OverlayWidget(void* parent)
+    : void(parent) {
     
-    setAttribute(Qt::WA_TransparentForMouseEvents, true);
-    setAttribute(Qt::WA_TranslucentBackground, true);
+    setAttribute(//WA_TransparentForMouseEvents, true);
+    setAttribute(//WA_TranslucentBackground, true);
     setAutoFillBackground(false);
     setVisible(true);
 
@@ -22,14 +16,13 @@ OverlayWidget::OverlayWidget(QWidget* parent)
     }
     
     // Initialize fade timer (not started by default)
-    m_fadeTimer = new QTimer(this);
+    m_fadeTimer = new void*(this);
     m_fadeTimer->setInterval(50); // 50ms updates for smooth fade
-    connect(m_fadeTimer, &QTimer::timeout, this, &OverlayWidget::onFadeTimerTimeout);
-    
-    logEvent("initialized", QString("parent=%1").arg(parent ? "set" : "null"));
+// Qt connect removed
+    logEvent("initialized", std::string("parent=%1"));
 }
 
-void OverlayWidget::setGhostText(const QString& text) {
+void OverlayWidget::setGhostText(const std::string& text) {
     m_ghostText = text;
     
     if (m_fadeEnabled) {
@@ -39,9 +32,9 @@ void OverlayWidget::setGhostText(const QString& text) {
     
     update();
     
-    logEvent("ghost_text_set", QString("length=%1 fade=%2")
-        .arg(text.length())
-        .arg(m_fadeEnabled ? "enabled" : "disabled"));
+    logEvent("ghost_text_set", std::string("length=%1 fade=%2")
+        )
+        );
 }
 
 void OverlayWidget::clear() {
@@ -60,7 +53,7 @@ void OverlayWidget::setOpacity(int alpha) {
     m_opacity = qBound(0, alpha, 255);
     update();
     
-    logEvent("opacity_changed", QString("alpha=%1").arg(m_opacity));
+    logEvent("opacity_changed", std::string("alpha=%1"));
 }
 
 void OverlayWidget::setFadeEnabled(bool enabled) {
@@ -78,7 +71,7 @@ void OverlayWidget::setCustomPosition(const QPoint& pos) {
     m_customPositionSet = true;
     move(pos);
     
-    logEvent("custom_position_set", QString("x=%1 y=%2").arg(pos.x()).arg(pos.y()));
+    logEvent("custom_position_set", std::string("x=%1 y=%2"))));
 }
 
 void OverlayWidget::resetPosition() {
@@ -89,7 +82,7 @@ void OverlayWidget::resetPosition() {
 }
 
 void OverlayWidget::paintEvent(QPaintEvent* event) {
-    Q_UNUSED(event);
+    (event);
 
     if (m_ghostText.isEmpty()) {
         return;
@@ -116,16 +109,16 @@ void OverlayWidget::paintEvent(QPaintEvent* event) {
     // Render ghost text with margin
     const int margin = 8;
     const QRect textRect = rect().adjusted(margin, margin, -margin, -margin);
-    p.drawText(textRect, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, m_ghostText);
+    p.drawText(textRect, //AlignLeft | //AlignTop | //TextWordWrap, m_ghostText);
 }
 
-bool OverlayWidget::eventFilter(QObject* watched, QEvent* event) {
+bool OverlayWidget::eventFilter(void* watched, QEvent* event) {
     if (watched == parentWidget() && !m_customPositionSet) {
         if (event->type() == QEvent::Resize || event->type() == QEvent::Show) {
             updatePositionAndSize();
         }
     }
-    return QWidget::eventFilter(watched, event);
+    return void::eventFilter(watched, event);
 }
 
 void OverlayWidget::onFadeTimerTimeout() {
@@ -149,9 +142,9 @@ void OverlayWidget::updatePositionAndSize() {
     move(0, 0);
 }
 
-void OverlayWidget::logEvent(const QString& event, const QString& detail) {
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+void OverlayWidget::logEvent(const std::string& event, const std::string& detail) {
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "DEBUG";
     logEntry["component"] = "OverlayWidget";
     logEntry["event"] = event;
@@ -161,10 +154,10 @@ void OverlayWidget::logEvent(const QString& event, const QString& detail) {
     }
     
     if (parentWidget()) {
-        logEntry["parent_size"] = QString("%1x%2")
-            .arg(parentWidget()->width())
-            .arg(parentWidget()->height());
+        logEntry["parent_size"] = std::string("%1x%2")
+            ->width())
+            ->height());
     }
     
-    qDebug().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
 }
+

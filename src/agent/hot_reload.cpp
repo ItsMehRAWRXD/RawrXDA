@@ -1,68 +1,72 @@
 #include "hot_reload.hpp"
-#include <QProcess>
-#include <QDir>
-#include <QTimer>
-#include <QDebug>
+#include <windows.h>
+#include <string>
+#include <vector>
+#include <iostream>
 
-HotReload::HotReload(QObject* parent) : QObject(parent) {}
+HotReload::HotReload() {}
 
-bool HotReload::reloadQuant(const QString& quantType) {
-    qDebug() << "Hot-reloading quantization:" << quantType;
+static bool runBuild(const std::string& target, int timeoutMs) {
+    std::string cmd = "cmake --build build --config Release --target " + target;
+    
+    STARTUPINFOA si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+    
+    char* cmdLine = _strdup(cmd.c_str());
+    if (!CreateProcessA(NULL, cmdLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+        free(cmdLine);
+        return false;
+    }
+    free(cmdLine);
+    
+    DWORD waitResult = WaitForSingleObject(pi.hProcess, timeoutMs);
+    
+    if (waitResult == WAIT_TIMEOUT) {
+        TerminateProcess(pi.hProcess, 1);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        return false;
+    }
+    
+    DWORD exitCode = 0;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+    
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    
+    return exitCode == 0;
+}
+
+bool HotReload::reloadQuant(const std::string& quantType) {
+    std::cout << "[HotReload] Reloading quantization: " << quantType << std::endl;
     
     // Step 1: Rebuild only the quant library
-    QProcess buildProc;
-    buildProc.start("cmake", {
-        "--build", "build", 
-        "--config", "Release", 
-        "--target", "quant_ladder_avx2"
-    });
-    
-    if (!buildProc.waitForFinished(30000)) {
-        emit reloadFailed("Build timeout for quant_ladder_avx2");
+    if (!runBuild("quant_ladder_avx2", 30000)) {
+        if (onReloadFailed) onReloadFailed("Build failed or timed out for quant_ladder_avx2");
         return false;
     }
     
-    if (buildProc.exitCode() != 0) {
-        QString error = QString::fromUtf8(buildProc.readAllStandardError());
-        qWarning() << "Quant rebuild failed:" << error;
-        emit reloadFailed(QString("Build failed: %1").arg(error));
-        return false;
-    }
+    std::cout << "[HotReload] Quant library rebuilt successfully" << std::endl;
     
-    qDebug() << "Quant library rebuilt successfully";
-    
-    // Step 2: Signal upper layer to re-map tensors
-    // The actual reload happens in InferenceEngine when it receives this signal
-    emit quantReloaded(quantType);
+    // Step 2: Signal upper layer
+    if (onQuantReloaded) onQuantReloaded(quantType);
     
     return true;
 }
 
-bool HotReload::reloadModule(const QString& moduleName) {
-    qDebug() << "Hot-reloading module:" << moduleName;
+bool HotReload::reloadModule(const std::string& moduleName) {
+    std::cout << "[HotReload] Reloading module: " << moduleName << std::endl;
     
     // Build specific target
-    QProcess buildProc;
-    buildProc.start("cmake", {
-        "--build", "build", 
-        "--config", "Release", 
-        "--target", moduleName
-    });
-    
-    if (!buildProc.waitForFinished(60000)) {
-        emit reloadFailed(QString("Build timeout for %1").arg(moduleName));
+    if (!runBuild(moduleName, 60000)) {
+        if (onReloadFailed) onReloadFailed("Build failed or timed out for " + moduleName);
         return false;
     }
     
-    if (buildProc.exitCode() != 0) {
-        QString error = QString::fromUtf8(buildProc.readAllStandardError());
-        qWarning() << "Module rebuild failed:" << error;
-        emit reloadFailed(QString("Build failed: %1").arg(error));
-        return false;
-    }
-    
-    qDebug() << "Module rebuilt successfully:" << moduleName;
-    emit moduleReloaded(moduleName);
+    if (onModuleReloaded) onModuleReloaded(moduleName);
     
     return true;
 }

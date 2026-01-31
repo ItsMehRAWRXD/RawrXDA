@@ -16,16 +16,7 @@
  * - Search/filter capabilities
  */
 
-#include <QWidget>
-#include <QTreeView>
-#include <QFileSystemModel>
-#include <QMenu>
-#include <QLineEdit>
-#include <QVBoxLayout>
-#include <QLabel>
-#include <QPushButton>
-#include <QToolBar>
-#include <QSet>
+
 #include "../utils/project_detector.h"
 // Interfaces for file and directory operations (Dependency Inversion)
 #include "../interfaces/ifile_writer.h"
@@ -56,17 +47,16 @@ class GitignoreFilter;
  *         this, &MainWindow::openFileInEditor);
  * \endcode
  */
-class ProjectExplorerWidget : public QWidget {
-    Q_OBJECT
-    
+class ProjectExplorerWidget : public void {
+
 public:
     /**
      * \brief Construct the widget with optional injected dependencies.
-     * \param parent QWidget parent.
+     * \param parent void parent.
      * \param fileWriter Concrete IFileWriter implementation. If nullptr, a QtFileWriter is created.
      * \param dirManager Concrete IDirectoryManager implementation. If nullptr, a QtDirectoryManager is created.
      */
-    explicit ProjectExplorerWidget(QWidget* parent = nullptr,
+    explicit ProjectExplorerWidget(void* parent = nullptr,
                                    IFileWriter* fileWriter = nullptr,
                                    IDirectoryManager* dirManager = nullptr);
     ~ProjectExplorerWidget() override;
@@ -76,13 +66,13 @@ public:
      * \param projectPath Absolute path to project root directory
      * \return true if successful
      */
-    bool openProject(const QString& projectPath);
+    bool openProject(const std::string& projectPath);
     
     /**
      * \brief Get current project root path
      * \return Absolute path to project root, or empty if no project open
      */
-    QString currentProjectPath() const;
+    std::string currentProjectPath() const;
     
     /**
      * \brief Get project metadata for current project
@@ -104,31 +94,31 @@ public:
      * \brief Get currently selected file path
      * \return Absolute path to selected file, or empty if none selected
      */
-    QString selectedFilePath() const;
+    std::string selectedFilePath() const;
     
     /**
      * \brief Get all selected file paths (multi-selection)
      * \return List of absolute paths to selected files
      */
-    QStringList selectedFilePaths() const;
+    std::vector<std::string> selectedFilePaths() const;
     
     /**
      * \brief Select and scroll to specific file
      * \param filePath Absolute path to file
      */
-    void selectFile(const QString& filePath);
+    void selectFile(const std::string& filePath);
     
     /**
      * \brief Expand directory at path
      * \param dirPath Absolute path to directory
      */
-    void expandDirectory(const QString& dirPath);
+    void expandDirectory(const std::string& dirPath);
     
     /**
      * \brief Collapse directory at path
      * \param dirPath Absolute path to directory
      */
-    void collapseDirectory(const QString& dirPath);
+    void collapseDirectory(const std::string& dirPath);
     
     /**
      * \brief Set whether to show hidden files (.dotfiles)
@@ -146,56 +136,56 @@ public:
      * \brief Set filter pattern for visible files
      * \param pattern Wildcard pattern (e.g., "*.cpp *.h")
      */
-    void setFileFilter(const QString& pattern);
+    void setFileFilter(const std::string& pattern);
     
-signals:
+
     /**
      * \brief Emitted when file is double-clicked (should open in editor)
      * \param filePath Absolute path to file
      */
-    void fileDoubleClicked(const QString& filePath);
+    void fileDoubleClicked(const std::string& filePath);
     
     /**
      * \brief Emitted when file is single-clicked
      * \param filePath Absolute path to file
      */
-    void fileClicked(const QString& filePath);
+    void fileClicked(const std::string& filePath);
     
     /**
      * \brief Emitted when file is created
      * \param filePath Absolute path to new file
      */
-    void fileCreated(const QString& filePath);
+    void fileCreated(const std::string& filePath);
     
     /**
      * \brief Emitted when file is deleted
      * \param filePath Absolute path to deleted file
      */
-    void fileDeleted(const QString& filePath);
+    void fileDeleted(const std::string& filePath);
     
     /**
      * \brief Emitted when file is renamed
      * \param oldPath Previous absolute path
      * \param newPath New absolute path
      */
-    void fileRenamed(const QString& oldPath, const QString& newPath);
+    void fileRenamed(const std::string& oldPath, const std::string& newPath);
     
     /**
      * \brief Emitted when project is opened
      * \param projectPath Absolute path to project root
      */
-    void projectOpened(const QString& projectPath);
+    void projectOpened(const std::string& projectPath);
     
     /**
      * \brief Emitted when project is closed
      */
     void projectClosed();
     
-private slots:
+private:
     void onTreeDoubleClicked(const QModelIndex& index);
     void onTreeClicked(const QModelIndex& index);
     void onContextMenuRequested(const QPoint& pos);
-    void onFilterTextChanged(const QString& text);
+    void onFilterTextChanged(const std::string& text);
     
     // Context menu actions
     void actionNewFile();
@@ -223,7 +213,7 @@ private:
      * \param filePath Absolute path to file
      * \return true if file should be ignored
      */
-    bool isFileIgnored(const QString& filePath) const;
+    bool isFileIgnored(const std::string& filePath) const;
     
     /**
      * \brief Load .gitignore patterns from project
@@ -241,7 +231,7 @@ private:
     QFileSystemModel* m_fileSystemModel;
     
     // Project state
-    QString m_projectPath;
+    std::string m_projectPath;
     ProjectMetadata m_projectMetadata;
     ProjectDetector m_projectDetector;
     // Abstracted file and directory managers injected via constructor
@@ -266,11 +256,11 @@ private:
     QAction* m_actionRefresh;
     
     // Clipboard state
-    QString m_clipboardPath;
+    std::string m_clipboardPath;
     bool m_clipboardIsCut;  // true = cut, false = copy
     
     // .gitignore patterns
-    QSet<QString> m_gitignorePatterns;
+    std::unordered_set<std::string> m_gitignorePatterns;
     
     // Settings
     bool m_showHiddenFiles;
@@ -288,13 +278,13 @@ public:
      * \brief Load patterns from .gitignore file
      * \param gitignorePath Absolute path to .gitignore
      */
-    void loadFromFile(const QString& gitignorePath);
+    void loadFromFile(const std::string& gitignorePath);
     
     /**
      * \brief Add pattern manually
      * \param pattern .gitignore style pattern
      */
-    void addPattern(const QString& pattern);
+    void addPattern(const std::string& pattern);
     
     /**
      * \brief Check if file matches any ignore pattern
@@ -302,7 +292,7 @@ public:
      * \param basePath Base directory for relative paths
      * \return true if file should be ignored
      */
-    bool shouldIgnore(const QString& filePath, const QString& basePath = QString()) const;
+    bool shouldIgnore(const std::string& filePath, const std::string& basePath = std::string()) const;
     
     /**
      * \brief Clear all patterns
@@ -310,7 +300,7 @@ public:
     void clear();
     
 private:
-    QStringList m_patterns;
+    std::vector<std::string> m_patterns;
     
     /**
      * \brief Match file against single .gitignore pattern
@@ -318,7 +308,8 @@ private:
      * \param pattern .gitignore pattern
      * \return true if matches
      */
-    static bool matchPattern(const QString& filePath, const QString& pattern);
+    static bool matchPattern(const std::string& filePath, const std::string& pattern);
 };
 
 } // namespace RawrXD
+

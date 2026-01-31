@@ -62,14 +62,14 @@ bool IocpFileWatcher::Start(const std::wstring& path) {
     );
 
     if (m_dirHandle == INVALID_HANDLE_VALUE) {
-        LOG_ERROR("IocpFileWatcher: failed to open directory handle");
+
         m_running = false;
         return false;
     }
 
     m_iocp = CreateIoCompletionPort(m_dirHandle, nullptr, reinterpret_cast<ULONG_PTR>(this), 0);
     if (!m_iocp) {
-        LOG_ERROR("IocpFileWatcher: failed to create IOCP");
+
         CloseHandle(m_dirHandle);
         m_dirHandle = INVALID_HANDLE_VALUE;
         m_running = false;
@@ -82,7 +82,7 @@ bool IocpFileWatcher::Start(const std::wstring& path) {
     }
 
     m_worker = std::thread([this]() { WorkerLoop(); });
-    LOG_INFO("IocpFileWatcher started");
+
     return true;
 }
 
@@ -111,7 +111,6 @@ void IocpFileWatcher::Stop() {
         m_iocp = nullptr;
     }
 
-    LOG_INFO("IocpFileWatcher stopped");
 }
 
 bool IocpFileWatcher::ArmWatch() {
@@ -133,7 +132,7 @@ bool IocpFileWatcher::ArmWatch() {
     );
 
     if (!ok) {
-        LOG_ERROR("IocpFileWatcher: ReadDirectoryChangesW failed");
+
         return false;
     }
 

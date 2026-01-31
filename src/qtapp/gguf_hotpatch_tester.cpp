@@ -10,8 +10,8 @@
 #include <string>
 #include <chrono>
 #include <iomanip>
-#include <QCoreApplication>
-#include <QString>
+
+
 #include "inference_engine.hpp"
 #include "gpu_backend.hpp"
 
@@ -94,7 +94,7 @@ TestResult runRealInference(const TestConfig& config) {
         std::cerr << "[REAL TEST] Loading GGUF model: " << config.model_path << "\n";
         auto load_start = std::chrono::high_resolution_clock::now();
         
-        bool loaded = engine.loadModel(QString::fromStdString(config.model_path));
+        bool loaded = engine.loadModel(std::string::fromStdString(config.model_path));
         
         auto load_end = std::chrono::high_resolution_clock::now();
         result.load_time_ms = std::chrono::duration<double, std::milli>(load_end - load_start).count();
@@ -114,7 +114,7 @@ TestResult runRealInference(const TestConfig& config) {
         
         // Tokenize prompt - THIS IS REAL
         std::cerr << "[REAL TEST] Tokenizing prompt: \"" << config.prompt << "\"\n";
-        std::vector<int32_t> input_tokens = engine.tokenize(QString::fromStdString(config.prompt));
+        std::vector<int32_t> input_tokens = engine.tokenize(std::string::fromStdString(config.prompt));
         std::cerr << "[REAL TEST] Prompt tokenized to " << input_tokens.size() << " tokens\n";
         
         // Generate tokens - THIS IS REAL GPU INFERENCE
@@ -131,7 +131,7 @@ TestResult runRealInference(const TestConfig& config) {
                   << result.total_time_ms << " ms\n";
         
         // Detokenize to verify output is real
-        QString output_text = engine.detokenize(output_tokens);
+        std::string output_text = engine.detokenize(output_tokens);
         result.output_length = output_text.length();
         std::cerr << "[REAL TEST] Output text: " << result.output_length << " characters\n";
         std::cerr << "[REAL TEST] First 50 chars: " << output_text.left(50).toStdString() << "...\n";
@@ -202,3 +202,4 @@ int main(int argc, char* argv[]) {
     
     return result.success ? 0 : 1;
 }
+

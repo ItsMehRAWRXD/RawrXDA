@@ -41,5 +41,3 @@ void CursorWidget::paintEvent(void *event)
     }
 }
 
-
-

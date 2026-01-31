@@ -33,7 +33,7 @@ int main() {
         std::cout << "  Line:     " << result.Line << std::endl;
         
         std::cout << "\n[Test] Test sequence complete." << std::endl;
-        client.Disconnect();
+        client;
     }
     catch (const std::exception& e) {
         std::cerr << "[Fatal] " << e.what() << std::endl;

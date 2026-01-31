@@ -204,7 +204,6 @@ void AIDigestionEngine::initializeEngine() {
     m_dataset.totalSamples = 0;
     m_dataset.description = "AI model trained from digested content";
     
-    // // qDebug:  "AIDigestionEngine initialized";
 }
 
 void AIDigestionEngine::setConfig(const DigestionConfig& config) {
@@ -219,11 +218,9 @@ DigestionConfig AIDigestionEngine::getConfig() const {
 
 void AIDigestionEngine::startDigestion(const std::stringList& inputPaths) {
     if (m_isDigesting) {
-        // // qWarning:  "Digestion already in progress";
         return;
     }
 
-    // // qInfo:  "Starting AIDigestionEngine::startDigestion with" << inputPaths.size() << "input paths";
     
     m_isDigesting = true;
     m_shouldStop = false;
@@ -248,14 +245,12 @@ void AIDigestionEngine::startDigestion(const std::stringList& inputPaths) {
     }
     
     m_totalFiles = m_filesToProcess.size();
-    // // qInfo:  "Found" << m_totalFiles << "valid files for digestion";
-    m_statusMessage = std::string("Starting digestion of %1 files...").arg(m_totalFiles);
+    m_statusMessage = std::string("Starting digestion of %1 files...");
     
     // Start processing in background thread
     m_digestionThread = std::make_unique<std::thread>();
     auto* worker = new DigestionWorker(this);
-    worker->moveToThread(m_digestionThread.get());  // Signal connection removed\n});  // Signal connection removed\n  // Signal connection removed\nconnect(worker, &DigestionWorker::error, this, [this](const std::string& error) {
-        // // qCritical:  "Digestion failed:" << error;
+    worker->);  // Signal connection removed\n});  // Signal connection removed\n  // Signal connection removed\nconnect(worker, &DigestionWorker::error, this, [this](const std::string& error) {
         digestionFailed(error);
         m_isDigesting = false;
     });  // Signal connection removed\nm_digestionThread->start();
@@ -318,7 +313,6 @@ bool AIDigestionEngine::saveDataset(const std::string& filePath) const {
     
     // File operation removed;
     if (!file.open(std::iostream::WriteOnly)) {
-        // // qWarning:  "Cannot open file for writing:" << filePath;
         return false;
     }
     
@@ -329,7 +323,6 @@ bool AIDigestionEngine::saveDataset(const std::string& filePath) const {
 bool AIDigestionEngine::loadDataset(const std::string& filePath) {
     // File operation removed;
     if (!file.open(std::iostream::ReadOnly)) {
-        // // qWarning:  "Cannot open file for reading:" << filePath;
         return false;
     }
     
@@ -338,7 +331,6 @@ bool AIDigestionEngine::loadDataset(const std::string& filePath) {
     nlohmann::json doc = nlohmann::json::fromJson(data, &error);
     
     if (error.error != QJsonParseError::NoError) {
-        // // qWarning:  "JSON parse error:" << error.errorString();
         return false;
     }
     
@@ -384,7 +376,6 @@ FileType AIDigestionEngine::detectFileType(const std::string& filePath) {
 std::string AIDigestionEngine::extractFileContent(const std::string& filePath) {
     // File operation removed;
     if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        // // qWarning:  "Cannot read file:" << filePath;
         return std::string();
     }
     
@@ -395,11 +386,9 @@ std::string AIDigestionEngine::extractFileContent(const std::string& filePath) {
 
 void AIDigestionEngine::startTraining() {
     if (m_isTraining) {
-        // // qWarning:  "Training already in progress";
         return;
     }
     
-    // // qInfo:  "Starting training with" << m_dataset.totalSamples << "samples and" << m_dataset.totalTokens << "tokens";
 
     if (m_dataset.totalSamples == 0) {
         trainingFailed("No training data available. Please digest content first.");
@@ -416,9 +405,8 @@ void AIDigestionEngine::startTraining() {
     // Start training in background thread
     m_trainingThread = std::make_unique<std::thread>();
     auto* worker = new TrainingWorker(this);
-    worker->moveToThread(m_trainingThread.get());  // Signal connection removed\n});  // Signal connection removed\nstatusChanged(m_statusMessage);
+    worker->);  // Signal connection removed\n});  // Signal connection removed\nstatusChanged(m_statusMessage);
     });  // Signal connection removed\nconnect(worker, &TrainingWorker::error, this, [this](const std::string& error) {
-        // // qCritical:  "Training failed:" << error;
         trainingFailed(error);
         m_isTraining = false;
     });  // Signal connection removed\nm_trainingThread->start();
@@ -505,7 +493,7 @@ void AIDigestionEngine::onDigestionThreadFinished() {
     
     m_dataset.statistics = generateStatistics();
     m_statusMessage = std::string("Digestion completed. Processed %1 files, extracted %2 knowledge samples.")
-                      .arg(m_processedFiles).arg(m_dataset.totalSamples);
+                      ;
     
     digestionCompleted(m_dataset);
     statusChanged(m_statusMessage);
@@ -515,7 +503,7 @@ void AIDigestionEngine::onTrainingThreadFinished() {
     m_isTraining = false;
     
     std::string modelPath = // (m_config.outputDirectory).filePath(m_config.modelName + ".gguf");
-    m_statusMessage = std::string("Training completed. Model saved to: %1").arg(modelPath);
+    m_statusMessage = std::string("Training completed. Model saved to: %1");
     
     trainingCompleted(modelPath);
     statusChanged(m_statusMessage);
@@ -524,8 +512,8 @@ void AIDigestionEngine::onTrainingThreadFinished() {
 void AIDigestionEngine::processDirectory(const std::string& dirPath) {
     // DirIterator iterator(dirPath, // Dir::Files, // DirIterator::Subdirectories);
     
-    while (iterator.hasNext()) {
-        std::string filePath = iterator.next();
+    while (iteratorfalse) {
+        std::string filePath = iterator;
         if (shouldProcessFile(filePath)) {
             m_filesToProcess.append(filePath);
         }
@@ -551,10 +539,8 @@ void AIDigestionEngine::processFile(const std::string& filePath) {
             knowledgeExtracted(knowledge);
         }
         
-        // // qInfo:  "Processed" << filePath << "in" << timer.elapsed() << "ms";
         
     } catch (const std::exception& e) {
-        // // qWarning:  "Error processing file" << filePath << ":" << e.what();
     }
 }
 
@@ -618,11 +604,11 @@ std::stringList AIDigestionEngine::tokenizeContent(const std::string& content, F
     
     // Simple tokenization based on whitespace and punctuation
     std::regex tokenRegex(R"(\b\w+\b)");
-    auto matches = tokenRegex.globalMatch(cleaned);
+    auto matches = tokenRegex;
     
-    while (matches.hasNext()) {
-        auto match = matches.next();
-        std::string token = match.captured(0).toLower();
+    while (matchesfalse) {
+        auto match = matches;
+        std::string token = match"".toLower();
         if (token.length() > 2) {  // Filter out very short tokens
             tokens << token;
         }
@@ -647,40 +633,40 @@ std::stringList AIDigestionEngine::extractKeywords(const std::string& content, F
     switch (type) {
         case FileType::CPlusPlus: {
             std::regex cppRegex("\\b(class|struct|namespace|template|virtual|override|const|static|public|private|protected)\\b");
-            auto matches = cppRegex.globalMatch(content);
-            while (matches.hasNext()) {
-                auto match = matches.next();
-                keywords << match.captured(0);
+            auto matches = cppRegex;
+            while (matchesfalse) {
+                auto match = matches;
+                keywords << match"";
             }
             break;
         }
             
         case FileType::Python: {
             std::regex pyRegex("\\b(def|class|import|from|if|elif|else|for|while|try|except|finally|with|async|await)\\b");
-            auto matches = pyRegex.globalMatch(content);
-            while (matches.hasNext()) {
-                auto match = matches.next();
-                keywords << match.captured(0);
+            auto matches = pyRegex;
+            while (matchesfalse) {
+                auto match = matches;
+                keywords << match"";
             }
             break;
         }
             
         case FileType::Assembly: {
             std::regex asmRegex("\\b(mov|add|sub|mul|div|cmp|jmp|je|jne|call|ret|push|pop|lea)\\b", std::regex::CaseInsensitiveOption);
-            auto matches = asmRegex.globalMatch(content);
-            while (matches.hasNext()) {
-                auto match = matches.next();
-                keywords << match.captured(0);
+            auto matches = asmRegex;
+            while (matchesfalse) {
+                auto match = matches;
+                keywords << match"";
             }
             break;
         }
             
         case FileType::JavaScript: {
             std::regex jsRegex("\\b(function|const|let|var|if|else|for|while|class|extends|async|await|Promise)\\b");
-            auto matches = jsRegex.globalMatch(content);
-            while (matches.hasNext()) {
-                auto match = matches.next();
-                keywords << match.captured(0);
+            auto matches = jsRegex;
+            while (matchesfalse) {
+                auto match = matches;
+                keywords << match"";
             }
             break;
         }
@@ -688,10 +674,10 @@ std::stringList AIDigestionEngine::extractKeywords(const std::string& content, F
         default: {
             // Generic keyword extraction
             std::regex genericRegex("\\b[A-Z][a-zA-Z0-9_]*\\b");
-            auto matches = genericRegex.globalMatch(content);
-            while (matches.hasNext()) {
-                auto match = matches.next();
-                keywords << match.captured(0);
+            auto matches = genericRegex;
+            while (matchesfalse) {
+                auto match = matches;
+                keywords << match"";
             }
             break;
         }
@@ -707,50 +693,50 @@ std::stringList AIDigestionEngine::extractComments(const std::string& content, F
     if (type == FileType::CPlusPlus || type == FileType::JavaScript) {
         // Single line comments
         std::regex singleLineRegex("//\\s*(.*)");
-        auto singleMatches = singleLineRegex.globalMatch(content);
-        while (singleMatches.hasNext()) {
-            auto match = singleMatches.next();
-            comments << match.captured(1);
+        auto singleMatches = singleLineRegex;
+        while (singleMatchesfalse) {
+            auto match = singleMatches;
+            comments << match"";
         }
         
         // Multi-line comments
         std::regex multiLineRegex("/\\*\\s*(.*?)\\s*\\*/", std::regex::DotMatchesEverythingOption);
-        auto multiMatches = multiLineRegex.globalMatch(content);
-        while (multiMatches.hasNext()) {
-            auto match = multiMatches.next();
-            comments << match.captured(1);
+        auto multiMatches = multiLineRegex;
+        while (multiMatchesfalse) {
+            auto match = multiMatches;
+            comments << match"";
         }
     } else if (type == FileType::Python) {
         // Single line comments
         std::regex pythonRegex("#\\s*(.*)");
-        auto pyMatches = pythonRegex.globalMatch(content);
-        while (pyMatches.hasNext()) {
-            auto match = pyMatches.next();
-            comments << match.captured(1);
+        auto pyMatches = pythonRegex;
+        while (pyMatchesfalse) {
+            auto match = pyMatches;
+            comments << match"";
         }
         
         // Triple-quoted strings (docstrings)
         std::regex docstringRegex("\\\"\\\"\\\"(.*?)\\\"\\\"\\\"", std::regex::DotMatchesEverythingOption);
-        auto docMatches = docstringRegex.globalMatch(content);
-        while (docMatches.hasNext()) {
-            auto match = docMatches.next();
-            comments << match.captured(1);
+        auto docMatches = docstringRegex;
+        while (docMatchesfalse) {
+            auto match = docMatches;
+            comments << match"";
         }
     } else if (type == FileType::Assembly) {
         // Semicolon comments
         std::regex asmRegex(";\\s*(.*)");
-        auto asmMatches = asmRegex.globalMatch(content);
-        while (asmMatches.hasNext()) {
-            auto match = asmMatches.next();
-            comments << match.captured(1);
+        auto asmMatches = asmRegex;
+        while (asmMatchesfalse) {
+            auto match = asmMatches;
+            comments << match"";
         }
     } else {
         // Try to extract any comment-like patterns
         std::regex genericRegex("[#;]\\s*(.*)");
-        auto genericMatches = genericRegex.globalMatch(content);
-        while (genericMatches.hasNext()) {
-            auto match = genericMatches.next();
-            comments << match.captured(1);
+        auto genericMatches = genericRegex;
+        while (genericMatchesfalse) {
+            auto match = genericMatches;
+            comments << match"";
         }
     }
     
@@ -944,7 +930,6 @@ void AIDigestionEngine::prepareTrainingData() {
         m_dataset.totalTokens += sample.content.split(' ', SkipEmptyParts).size();
     }
     
-    // // qInfo:  "Prepared training dataset with" << m_dataset.totalSamples << "samples and" << m_dataset.totalTokens << "tokens";
 }
 
 // Specialized content extractors
@@ -964,28 +949,28 @@ KnowledgeRepresentation AIDigestionEngine::extractFromSourceCode(const std::stri
         case FileType::CPlusPlus:
         case FileType::C: {
             std::regex funcRegex(R"(\b\w+\s+(\w+)\s*\([^)]*\)\s*\{)", std::regex::MultilineOption);
-            auto matches = funcRegex.globalMatch(content);
-            while (matches.hasNext()) {
-                auto match = matches.next();
-                functions << match.captured(1);
+            auto matches = funcRegex;
+            while (matchesfalse) {
+                auto match = matches;
+                functions << match"";
             }
             break;
         }
         case FileType::Python: {
             std::regex pyRegex(R"(def\s+(\w+)\s*\()", std::regex::MultilineOption);
-            auto matches = pyRegex.globalMatch(content);
-            while (matches.hasNext()) {
-                auto match = matches.next();
-                functions << match.captured(1);
+            auto matches = pyRegex;
+            while (matchesfalse) {
+                auto match = matches;
+                functions << match"";
             }
             break;
         }
         case FileType::JavaScript: {
             std::regex jsRegex(R"(function\s+(\w+)\s*\()", std::regex::MultilineOption);
-            auto matches = jsRegex.globalMatch(content);
-            while (matches.hasNext()) {
-                auto match = matches.next();
-                functions << match.captured(1);
+            auto matches = jsRegex;
+            while (matchesfalse) {
+                auto match = matches;
+                functions << match"";
             }
             break;
         }
@@ -997,24 +982,24 @@ KnowledgeRepresentation AIDigestionEngine::extractFromSourceCode(const std::stri
     std::stringList classes;
     if (fileType == FileType::CPlusPlus || fileType == FileType::C) {
         std::regex classRegex(R"(\b(?:class|struct)\s+(\w+))", std::regex::MultilineOption);
-        auto matches = classRegex.globalMatch(content);
-        while (matches.hasNext()) {
-            auto match = matches.next();
-            classes << match.captured(1);
+        auto matches = classRegex;
+        while (matchesfalse) {
+            auto match = matches;
+            classes << match"";
         }
     } else if (fileType == FileType::Python) {
         std::regex pyClassRegex(R"(class\s+(\w+)\s*[:\(])", std::regex::MultilineOption);
-        auto matches = pyClassRegex.globalMatch(content);
-        while (matches.hasNext()) {
-            auto match = matches.next();
-            classes << match.captured(1);
+        auto matches = pyClassRegex;
+        while (matchesfalse) {
+            auto match = matches;
+            classes << match"";
         }
     }
     
     knowledge.content = std::string("File: %1\nFunctions: %2\nClasses: %3")
-                            .arg(info.fileName())
-                            .arg(functions.join(", "))
-                            .arg(classes.join(", "));
+                            )
+                            )
+                            );
     knowledge.tokens = tokenizeContent(content, fileType);
     knowledge.keywords = extractKeywords(content, fileType);
     knowledge.semanticWeights = calculateSemanticWeights(knowledge.tokens);
@@ -1037,26 +1022,26 @@ KnowledgeRepresentation AIDigestionEngine::extractFromDocumentation(const std::s
     // Extract headers/sections
     std::stringList headers;
     std::regex headerRegex("^#+\\s+(.+)$", std::regex::MultilineOption);
-    auto headerMatches = headerRegex.globalMatch(content);
-    while (headerMatches.hasNext()) {
-        auto match = headerMatches.next();
-        headers << match.captured(1);
+    auto headerMatches = headerRegex;
+    while (headerMatchesfalse) {
+        auto match = headerMatches;
+        headers << match"";
     }
     
     // Extract code blocks
     std::stringList codeBlocks;
     std::regex codeRegex("```[\\w]*\\n(.*?)\\n```", 
                                 std::regex::DotMatchesEverythingOption | std::regex::MultilineOption);
-    auto codeMatches = codeRegex.globalMatch(content);
-    while (codeMatches.hasNext()) {
-        auto match = codeMatches.next();
-        codeBlocks << match.captured(1);
+    auto codeMatches = codeRegex;
+    while (codeMatchesfalse) {
+        auto match = codeMatches;
+        codeBlocks << match"";
     }
     
     knowledge.content = std::string("Documentation: %1\nSections: %2\nCode examples: %3")
-                            .arg(// FileInfo: filePath).baseName())
-                            .arg(headers.join(", "))
-                            .arg(std::string::number(codeBlocks.size()));
+                            .baseName())
+                            )
+                            ));
     
     knowledge.tokens = tokenizeContent(content, FileType::Documentation);
     knowledge.keywords = extractKeywords(content, FileType::Documentation);
@@ -1079,20 +1064,20 @@ KnowledgeRepresentation AIDigestionEngine::extractFromAssembly(const std::string
     // Extract labels/functions
     std::stringList labels;
     std::regex labelRegex(R"(^(\w+):)", std::regex::MultilineOption);
-    auto labelMatches = labelRegex.globalMatch(content);
-    while (labelMatches.hasNext()) {
-        auto match = labelMatches.next();
-        labels << match.captured(1);
+    auto labelMatches = labelRegex;
+    while (labelMatchesfalse) {
+        auto match = labelMatches;
+        labels << match"";
     }
     
     // Extract instructions
     std::stringList instructions;
     std::regex instrRegex(R"(\b(mov|add|sub|mul|div|cmp|jmp|je|jne|jz|jnz|call|ret|push|pop|lea|xor|and|or|not|shl|shr)\b)", 
                                 std::regex::CaseInsensitiveOption);
-    auto instrMatches = instrRegex.globalMatch(content);
-    while (instrMatches.hasNext()) {
-        auto match = instrMatches.next();
-        instructions << match.captured(1);
+    auto instrMatches = instrRegex;
+    while (instrMatchesfalse) {
+        auto match = instrMatches;
+        instructions << match"";
     }
     
     // Count instruction frequencies
@@ -1102,9 +1087,9 @@ KnowledgeRepresentation AIDigestionEngine::extractFromAssembly(const std::string
     }
     
     knowledge.content = std::string("Assembly file: %1\nLabels: %2\nUnique instructions: %3")
-                            .arg(// FileInfo: filePath).baseName())
-                            .arg(labels.join(", "))
-                            .arg(instrFreq.keys().join(", "));
+                            .baseName())
+                            )
+                            .join(", "));
     
     knowledge.tokens = tokenizeContent(content, FileType::Assembly);
     knowledge.keywords = extractKeywords(content, FileType::Assembly);
@@ -1127,35 +1112,35 @@ KnowledgeRepresentation AIDigestionEngine::extractFromCPlusPlus(const std::strin
     // Extract includes
     std::stringList includes;
     std::regex includeRegex(R"(#include\s*[<"]([^>"]+)[>"])", std::regex::MultilineOption);
-    auto includeMatches = includeRegex.globalMatch(content);
-    while (includeMatches.hasNext()) {
-        auto match = includeMatches.next();
-        includes << match.captured(1);
+    auto includeMatches = includeRegex;
+    while (includeMatchesfalse) {
+        auto match = includeMatches;
+        includes << match"";
     }
     
     // Extract namespaces
     std::stringList namespaces;
     std::regex nsRegex(R"(namespace\s+(\w+))", std::regex::MultilineOption);
-    auto nsMatches = nsRegex.globalMatch(content);
-    while (nsMatches.hasNext()) {
-        auto match = nsMatches.next();
-        namespaces << match.captured(1);
+    auto nsMatches = nsRegex;
+    while (nsMatchesfalse) {
+        auto match = nsMatches;
+        namespaces << match"";
     }
     
     // Extract templates
     std::stringList templates;
     std::regex templateRegex(R"(template\s*<[^>]+>\s*(?:class|struct)\s+(\w+))", std::regex::MultilineOption);
-    auto templateMatches = templateRegex.globalMatch(content);
-    while (templateMatches.hasNext()) {
-        auto match = templateMatches.next();
-        templates << match.captured(1);
+    auto templateMatches = templateRegex;
+    while (templateMatchesfalse) {
+        auto match = templateMatches;
+        templates << match"";
     }
     
     knowledge.content = std::string("C++ file: %1\nIncludes: %2\nNamespaces: %3\nTemplates: %4")
-                            .arg(// FileInfo: filePath).baseName())
-                            .arg(includes.join(", "))
-                            .arg(namespaces.join(", "))
-                            .arg(templates.join(", "));
+                            .baseName())
+                            )
+                            )
+                            );
     
     knowledge.tokens = tokenizeContent(content, FileType::CPlusPlus);
     knowledge.keywords = extractKeywords(content, FileType::CPlusPlus);
@@ -1179,36 +1164,36 @@ KnowledgeRepresentation AIDigestionEngine::extractFromPython(const std::string& 
     // Extract imports  
     std::stringList imports;
     std::regex importRegex(R"((?:from\s+(\w+(?:\.\w+)*)\s+)?import\s+([^\n]+))", std::regex::MultilineOption);
-    auto importMatches = importRegex.globalMatch(content);
-    while (importMatches.hasNext()) {
-        auto match = importMatches.next();
-        std::string importStr = match.captured(1).empty() ? match.captured(2) : match.captured(1) + "." + match.captured(2);
+    auto importMatches = importRegex;
+    while (importMatchesfalse) {
+        auto match = importMatches;
+        std::string importStr = match"".empty() ? match"" : match"" + "." + match"";
         imports << importStr;
     }
     
     // Extract decorators
     std::stringList decorators;
     std::regex decoratorRegex(R"(@(\w+))", std::regex::MultilineOption);
-    auto decoratorMatches = decoratorRegex.globalMatch(content);
-    while (decoratorMatches.hasNext()) {
-        auto match = decoratorMatches.next();
-        decorators << match.captured(1);
+    auto decoratorMatches = decoratorRegex;
+    while (decoratorMatchesfalse) {
+        auto match = decoratorMatches;
+        decorators << match"";
     }
     
     // Extract class methods
     std::stringList methods;
     std::regex methodRegex(R"(def\s+(\w+)\s*\(self)", std::regex::MultilineOption);
-    auto methodMatches = methodRegex.globalMatch(content);
-    while (methodMatches.hasNext()) {
-        auto match = methodMatches.next();
-        methods << match.captured(1);
+    auto methodMatches = methodRegex;
+    while (methodMatchesfalse) {
+        auto match = methodMatches;
+        methods << match"";
     }
     
     knowledge.content = std::string("Python file: %1\nImports: %2\nDecorators: %3\nMethods: %4")
-                            .arg(// FileInfo: filePath).baseName())
-                            .arg(imports.join(", "))
-                            .arg(decorators.join(", "))
-                            .arg(methods.join(", "));
+                            .baseName())
+                            )
+                            )
+                            );
     
     knowledge.tokens = tokenizeContent(content, FileType::Python);
     knowledge.keywords = extractKeywords(content, FileType::Python);
@@ -1283,12 +1268,5 @@ void AIDigestionEngine::initialize() {
                                            << "*.py" << "*.js" << "*.ts" << "*.asm"
                                            << "*.md" << "*.txt" << "*.json";
     
-    // // qInfo:  "AIDigestionEngine initialized with default configuration";
 }nlohmann::json AIDigestionEngine::generateTrainingPrompts(const KnowledgeRepresentation& knowledge) { return nlohmann::json(); }
-
-
-
-
-
-
 

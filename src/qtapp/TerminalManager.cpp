@@ -1,13 +1,12 @@
 #include "TerminalManager.h"
-#include <QOperatingSystemVersion>
 
-TerminalManager::TerminalManager(QObject* parent)
-    : QObject(parent), m_process(new QProcess(this)), m_shellType(PowerShell)
+TerminalManager::TerminalManager(void* parent)
+    : void(parent), m_process(new QProcess(this)), m_shellType(PowerShell)
 {
-    connect(m_process, &QProcess::readyReadStandardOutput, this, &TerminalManager::onStdoutReady);
-    connect(m_process, &QProcess::readyReadStandardError, this, &TerminalManager::onStderrReady);
-    connect(m_process, &QProcess::started, this, &TerminalManager::onProcessStarted);
-    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &TerminalManager::onProcessFinished);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 TerminalManager::~TerminalManager() = default;
@@ -19,8 +18,8 @@ bool TerminalManager::start(ShellType shell)
     }
 
     m_shellType = shell;
-    QString program;
-    QStringList args;
+    std::string program;
+    std::vector<std::string> args;
 
     if (m_shellType == PowerShell) {
         // prefer modern pwsh.exe when available
@@ -55,7 +54,7 @@ bool TerminalManager::isRunning() const
     return m_process->state() == QProcess::Running;
 }
 
-void TerminalManager::writeInput(const QByteArray& data)
+void TerminalManager::writeInput(const std::vector<uint8_t>& data)
 {
     if (m_process->state() == QProcess::Running) {
         m_process->write(data);
@@ -67,21 +66,22 @@ void TerminalManager::writeInput(const QByteArray& data)
 void TerminalManager::onStdoutReady()
 {
     auto data = m_process->readAllStandardOutput();
-    emit outputReady(data);
+    outputReady(data);
 }
 
 void TerminalManager::onStderrReady()
 {
     auto data = m_process->readAllStandardError();
-    emit errorReady(data);
+    errorReady(data);
 }
 
 void TerminalManager::onProcessStarted()
 {
-    emit started();
+    started();
 }
 
 void TerminalManager::onProcessFinished(int exitCode, QProcess::ExitStatus status)
 {
-    emit finished(exitCode, status);
+    finished(exitCode, status);
 }
+

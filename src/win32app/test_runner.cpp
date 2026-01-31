@@ -20,22 +20,20 @@ int main(int argc, char* argv[]) {
     std::cout << "Step 1: Initializing logger...\n";
     IDELogger::getInstance().initialize();
     std::cout << "Step 2: Logger initialized\n";
-    LOG_INFO("Test runner started");
+
     std::cout << "Step 3: Log message sent\n";
 
     try {
         // Create IDE instance
         HINSTANCE hInstance = GetModuleHandle(NULL);
         Win32IDE ide(hInstance);
-        LOG_INFO("IDE instance created");
 
         // Create main window (but don't show it if in automated mode)
         if (!ide.createWindow()) {
-            LOG_ERROR("Failed to create IDE window");
+
             std::cerr << "ERROR: Failed to create IDE window\n";
             return 1;
         }
-        LOG_INFO("IDE window created");
 
         // Show window if not in headless mode
         bool headless = false;
@@ -48,9 +46,9 @@ int main(int argc, char* argv[]) {
 
         if (!headless) {
             ide.showWindow();
-            LOG_INFO("IDE window shown");
+
         } else {
-            LOG_INFO("Running in headless mode");
+
         }
 
         // Give the window time to fully initialize
@@ -58,7 +56,6 @@ int main(int argc, char* argv[]) {
         
         // Create test agent
         IDETestAgent testAgent(&ide);
-        LOG_INFO("Test agent created");
 
         // Run all tests
         std::cout << "Running comprehensive IDE tests...\n\n";
@@ -112,13 +109,11 @@ int main(int argc, char* argv[]) {
             resultFile.close();
             
             std::cout << "\nDetailed results written to: C:\\RawrXD_IDE_TestResults.txt\n";
-            LOG_INFO("Test results written to file");
+
         }
 
         std::cout << "Log file: C:\\RawrXD_IDE_TestRun.log\n";
-        
-        LOG_INFO("Test runner completed");
-        
+
         // If not headless, keep window open for manual inspection
         if (!headless) {
             std::cout << "\nPress Enter to close IDE and exit...\n";

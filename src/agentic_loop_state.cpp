@@ -1,31 +1,28 @@
 // AgenticLoopState Implementation
 #include "agentic_loop_state.h"
-#include <QDebug>
-#include <QJsonDocument>
-#include <QDateTime>
+
+
 #include <algorithm>
 
 AgenticLoopState::AgenticLoopState()
     : m_currentPhase(ReasoningPhase::Analysis)
     , m_currentStatus(IterationStatus::NotStarted)
-    , m_stateStartTime(QDateTime::currentDateTime())
-    , m_lastUpdateTime(QDateTime::currentDateTime())
+    , m_stateStartTime(std::chrono::system_clock::time_point::currentDateTime())
+    , m_lastUpdateTime(std::chrono::system_clock::time_point::currentDateTime())
 {
-    qDebug() << "[AgenticLoopState] Initialized - Ready for iterative reasoning";
 }
 
 AgenticLoopState::~AgenticLoopState()
 {
-    qDebug() << "[AgenticLoopState] Destroyed - Cleaned up" << m_iterations.size() << "iterations";
 }
 
 // ===== ITERATION MANAGEMENT =====
 
-void AgenticLoopState::startIteration(const QString& goal)
+void AgenticLoopState::startIteration(const std::string& goal)
 {
     Iteration iteration;
     iteration.iterationNumber = m_iterations.size() + 1;
-    iteration.startTime = QDateTime::currentDateTime();
+    iteration.startTime = std::chrono::system_clock::time_point::currentDateTime();
     iteration.currentPhase = ReasoningPhase::Analysis;
     iteration.status = IterationStatus::InProgress;
     iteration.goalStatement = goal;
@@ -37,16 +34,15 @@ void AgenticLoopState::startIteration(const QString& goal)
     m_currentStatus = IterationStatus::InProgress;
 
     if (m_debugMode) {
-        qDebug() << "[AgenticLoopState] Started iteration" << iteration.iterationNumber << "-" << goal;
     }
 }
 
-void AgenticLoopState::endIteration(IterationStatus status, const QString& result)
+void AgenticLoopState::endIteration(IterationStatus status, const std::string& result)
 {
     if (m_iterations.empty()) return;
 
     Iteration& iteration = m_iterations.back();
-    iteration.endTime = QDateTime::currentDateTime();
+    iteration.endTime = std::chrono::system_clock::time_point::currentDateTime();
     iteration.status = status;
     iteration.resultSummary = result;
 
@@ -57,10 +53,9 @@ void AgenticLoopState::endIteration(IterationStatus status, const QString& resul
     }
 
     m_currentStatus = status;
-    m_lastUpdateTime = QDateTime::currentDateTime();
+    m_lastUpdateTime = std::chrono::system_clock::time_point::currentDateTime();
 
     if (m_debugMode) {
-        qDebug() << "[AgenticLoopState] Ended iteration" << iteration.iterationNumber
                  << "- Status:" << statusToString(status);
     }
 }
@@ -76,10 +71,9 @@ AgenticLoopState::Iteration* AgenticLoopState::getCurrentIteration()
 void AgenticLoopState::setCurrentPhase(ReasoningPhase phase)
 {
     m_currentPhase = phase;
-    m_lastUpdateTime = QDateTime::currentDateTime();
+    m_lastUpdateTime = std::chrono::system_clock::time_point::currentDateTime();
 
     if (m_debugMode) {
-        qDebug() << "[AgenticLoopState] Phase transitioned to" << phaseToString(phase);
     }
 }
 
@@ -107,9 +101,9 @@ float AgenticLoopState::getPhaseProgress() const
     return std::min(99.9f, baseProgress + iterationProgress);
 }
 
-QStringList AgenticLoopState::getAllPhaseTransitions() const
+std::vector<std::string> AgenticLoopState::getAllPhaseTransitions() const
 {
-    QStringList transitions;
+    std::vector<std::string> transitions;
     for (const auto& iteration : m_iterations) {
         transitions.append(phaseToString(iteration.currentPhase));
     }
@@ -119,14 +113,14 @@ QStringList AgenticLoopState::getAllPhaseTransitions() const
 // ===== DECISION TRACKING =====
 
 void AgenticLoopState::recordDecision(
-    const QString& description,
-    const QJsonObject& reasoning,
+    const std::string& description,
+    const void*& reasoning,
     float confidence)
 {
     if (m_iterations.empty()) return;
 
     Decision decision;
-    decision.timestamp = QDateTime::currentDateTime();
+    decision.timestamp = std::chrono::system_clock::time_point::currentDateTime();
     decision.phase = m_currentPhase;
     decision.description = description;
     decision.reasoning = reasoning;
@@ -137,14 +131,13 @@ void AgenticLoopState::recordDecision(
     m_iterations.back().decisions.push_back(decision);
 
     if (m_debugMode) {
-        qDebug() << "[AgenticLoopState] Recorded decision:" << description
                  << "- Confidence:" << confidence;
     }
 }
 
 void AgenticLoopState::recordDecisionOutcome(
     int decisionIndex,
-    const QJsonObject& outcome,
+    const void*& outcome,
     bool success)
 {
     if (m_iterations.empty() || decisionIndex >= m_iterations.back().decisions.size()) {
@@ -156,7 +149,6 @@ void AgenticLoopState::recordDecisionOutcome(
     decision.success = success;
 
     if (m_debugMode) {
-        qDebug() << "[AgenticLoopState] Decision outcome recorded - Success:" << success;
     }
 }
 
@@ -214,12 +206,12 @@ float AgenticLoopState::getDecisionSuccessRate() const
 // ===== ERROR TRACKING =====
 
 void AgenticLoopState::recordError(
-    const QString& errorType,
-    const QString& message,
-    const QString& stackTrace)
+    const std::string& errorType,
+    const std::string& message,
+    const std::string& stackTrace)
 {
     ErrorRecord error;
-    error.timestamp = QDateTime::currentDateTime();
+    error.timestamp = std::chrono::system_clock::time_point::currentDateTime();
     error.errorType = errorType;
     error.errorMessage = message;
     error.stackTrace = stackTrace;
@@ -239,13 +231,12 @@ void AgenticLoopState::recordError(
     }
 
     if (m_debugMode) {
-        qDebug() << "[AgenticLoopState] Error recorded:" << errorType << "-" << message;
     }
 }
 
 void AgenticLoopState::recordErrorRecovery(
     int errorIndex,
-    const QString& strategy,
+    const std::string& strategy,
     bool succeeded)
 {
     if (errorIndex >= m_errorHistory.size()) return;
@@ -255,7 +246,6 @@ void AgenticLoopState::recordErrorRecovery(
     error.recoverySucceeded = succeeded;
 
     if (m_debugMode) {
-        qDebug() << "[AgenticLoopState] Error recovery recorded - Strategy:" << strategy
                  << "- Success:" << succeeded;
     }
 }
@@ -282,9 +272,9 @@ float AgenticLoopState::getErrorRate() const
     return (totalErrors * 100.0f) / m_iterations.size();
 }
 
-QString AgenticLoopState::generateErrorAnalysis() const
+std::string AgenticLoopState::generateErrorAnalysis() const
 {
-    QJsonObject analysis;
+    void* analysis;
     analysis["total_errors"] = getTotalErrorCount();
     analysis["error_rate"] = getErrorRate();
 
@@ -294,21 +284,21 @@ QString AgenticLoopState::generateErrorAnalysis() const
         errorTypeCounts[error.errorType.toStdString()]++;
     }
 
-    QJsonObject errorTypes;
+    void* errorTypes;
     for (const auto& pair : errorTypeCounts) {
-        errorTypes[QString::fromStdString(pair.first)] = pair.second;
+        errorTypes[std::string::fromStdString(pair.first)] = pair.second;
     }
     analysis["error_types"] = errorTypes;
 
-    return QString::fromUtf8(QJsonDocument(analysis).toJson());
+    return std::string::fromUtf8(void*(analysis).toJson());
 }
 
 // ===== STATE SNAPSHOTS =====
 
-QJsonObject AgenticLoopState::takeSnapshot()
+void* AgenticLoopState::takeSnapshot()
 {
-    QJsonObject snapshot;
-    snapshot["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* snapshot;
+    snapshot["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     snapshot["phase"] = phaseToString(m_currentPhase);
     snapshot["status"] = statusToString(m_currentStatus);
     snapshot["iterations_completed"] = getCompletedIterations();
@@ -324,7 +314,7 @@ QJsonObject AgenticLoopState::takeSnapshot()
     return snapshot;
 }
 
-bool AgenticLoopState::restoreFromSnapshot(const QJsonObject& snapshot)
+bool AgenticLoopState::restoreFromSnapshot(const void*& snapshot)
 {
     // Restore limited state from snapshot
     // Note: Full state restoration would require serializing entire iteration history
@@ -333,7 +323,6 @@ bool AgenticLoopState::restoreFromSnapshot(const QJsonObject& snapshot)
     m_lastSnapshot = snapshot;
 
     if (m_debugMode) {
-        qDebug() << "[AgenticLoopState] Restored from snapshot";
     }
 
     return true;
@@ -341,38 +330,38 @@ bool AgenticLoopState::restoreFromSnapshot(const QJsonObject& snapshot)
 
 // ===== MEMORY MANAGEMENT =====
 
-void AgenticLoopState::addToMemory(const QString& key, const QVariant& value)
+void AgenticLoopState::addToMemory(const std::string& key, const std::any& value)
 {
     m_memory[key.toStdString()] = value;
-    m_lastUpdateTime = QDateTime::currentDateTime();
+    m_lastUpdateTime = std::chrono::system_clock::time_point::currentDateTime();
 }
 
-QVariant AgenticLoopState::getFromMemory(const QString& key)
+std::any AgenticLoopState::getFromMemory(const std::string& key)
 {
     auto it = m_memory.find(key.toStdString());
     if (it != m_memory.end()) {
         return it->second;
     }
-    return QVariant();
+    return std::any();
 }
 
-void AgenticLoopState::removeFromMemory(const QString& key)
+void AgenticLoopState::removeFromMemory(const std::string& key)
 {
     m_memory.erase(key.toStdString());
 }
 
-QJsonObject AgenticLoopState::getAllMemory() const
+void* AgenticLoopState::getAllMemory() const
 {
-    QJsonObject obj;
+    void* obj;
     for (const auto& pair : m_memory) {
-        obj[QString::fromStdString(pair.first)] = QJsonValue::fromVariant(pair.second);
+        obj[std::string::fromStdString(pair.first)] = void*::fromVariant(pair.second);
     }
     return obj;
 }
 
-void AgenticLoopState::clearMemoryExcept(const QStringList& keysToKeep)
+void AgenticLoopState::clearMemoryExcept(const std::vector<std::string>& keysToKeep)
 {
-    std::unordered_map<std::string, QVariant> newMemory;
+    std::unordered_map<std::string, std::any> newMemory;
     for (const auto& key : keysToKeep) {
         auto it = m_memory.find(key.toStdString());
         if (it != m_memory.end()) {
@@ -387,11 +376,11 @@ void AgenticLoopState::setContextWindowSize(int size)
     m_contextWindowSize = size;
 }
 
-QJsonArray AgenticLoopState::getContextWindow() const
+void* AgenticLoopState::getContextWindow() const
 {
-    QJsonArray array;
+    void* array;
     for (const auto& iteration : m_contextWindow) {
-        QJsonObject obj;
+        void* obj;
         obj["iteration"] = iteration.iterationNumber;
         obj["goal"] = iteration.goalStatement;
         obj["status"] = statusToString(iteration.status);
@@ -400,21 +389,21 @@ QJsonArray AgenticLoopState::getContextWindow() const
     return array;
 }
 
-QString AgenticLoopState::formatContextForModel() const
+std::string AgenticLoopState::formatContextForModel() const
 {
-    QString context;
+    std::string context;
     context += "=== REASONING CONTEXT ===\n";
-    context += QString("Current Goal: %1\n").arg(m_currentGoal);
-    context += QString("Current Phase: %1\n").arg(phaseToString(m_currentPhase));
-    context += QString("Total Iterations: %1\n").arg(getTotalIterations());
-    context += QString("Progress: %1%\n").arg(static_cast<int>(getProgressPercentage()));
+    context += std::string("Current Goal: %1\n");
+    context += std::string("Current Phase: %1\n"));
+    context += std::string("Total Iterations: %1\n"));
+    context += std::string("Progress: %1%\n")));
 
     context += "\n=== RECENT DECISIONS ===\n";
     auto decisions = getDecisionHistory(5);
     for (const auto& decision : decisions) {
-        context += QString("- %1 (Confidence: %2)\n")
-                  .arg(decision.description)
-                  .arg(decision.confidence);
+        context += std::string("- %1 (Confidence: %2)\n")
+                  
+                  ;
     }
 
     return context;
@@ -426,7 +415,7 @@ void AgenticLoopState::updateProgress(int current, int total)
 {
     m_progressCurrent = current;
     m_progressTotal = total;
-    m_lastUpdateTime = QDateTime::currentDateTime();
+    m_lastUpdateTime = std::chrono::system_clock::time_point::currentDateTime();
 }
 
 float AgenticLoopState::getProgressPercentage() const
@@ -437,9 +426,9 @@ float AgenticLoopState::getProgressPercentage() const
     return (m_progressCurrent * 100.0f) / m_progressTotal;
 }
 
-QJsonObject AgenticLoopState::getProgressInfo() const
+void* AgenticLoopState::getProgressInfo() const
 {
-    QJsonObject info;
+    void* info;
     info["current"] = m_progressCurrent;
     info["total"] = m_progressTotal;
     info["percentage"] = getProgressPercentage();
@@ -450,21 +439,21 @@ QJsonObject AgenticLoopState::getProgressInfo() const
 
 // ===== CONSTRAINTS =====
 
-void AgenticLoopState::addConstraint(const QString& key, const QString& constraint)
+void AgenticLoopState::addConstraint(const std::string& key, const std::string& constraint)
 {
     m_constraints[key] = constraint;
 }
 
-void AgenticLoopState::removeConstraint(const QString& key)
+void AgenticLoopState::removeConstraint(const std::string& key)
 {
     m_constraints.erase(key);
 }
 
-bool AgenticLoopState::validateAgainstConstraints(const QJsonObject& action) const
+bool AgenticLoopState::validateAgainstConstraints(const void*& action) const
 {
     // Simple constraint validation - can be extended
     for (auto it = m_constraints.constBegin(); it != m_constraints.constEnd(); ++it) {
-        const QString& constraintValue = it.value().toString();
+        const std::string& constraintValue = it.value().toString();
         if (!action.contains(it.key()) && !constraintValue.isEmpty()) {
             return false;
         }
@@ -474,7 +463,7 @@ bool AgenticLoopState::validateAgainstConstraints(const QJsonObject& action) con
 
 // ===== STRATEGY TRACKING =====
 
-void AgenticLoopState::recordAppliedStrategy(const QString& strategy)
+void AgenticLoopState::recordAppliedStrategy(const std::string& strategy)
 {
     m_appliedStrategies.append(strategy);
     if (!m_iterations.empty()) {
@@ -482,16 +471,16 @@ void AgenticLoopState::recordAppliedStrategy(const QString& strategy)
     }
 }
 
-void AgenticLoopState::setSuggestedStrategies(const QStringList& strategies)
+void AgenticLoopState::setSuggestedStrategies(const std::vector<std::string>& strategies)
 {
     m_suggestedStrategies = strategies;
 }
 
 // ===== METRICS =====
 
-QJsonObject AgenticLoopState::getMetrics() const
+void* AgenticLoopState::getMetrics() const
 {
-    QJsonObject metrics;
+    void* metrics;
     metrics["total_iterations"] = getTotalIterations();
     metrics["completed_iterations"] = getCompletedIterations();
     metrics["failed_iterations"] = getFailedIterations();
@@ -534,26 +523,26 @@ float AgenticLoopState::getOverallSuccessRate() const
     return (completed * 100.0f) / m_iterations.size();
 }
 
-QString AgenticLoopState::getStateAsSummary() const
+std::string AgenticLoopState::getStateAsSummary() const
 {
-    QString summary;
-    summary += QString("=== AGENTIC LOOP STATE ===\n");
-    summary += QString("Current Phase: %1\n").arg(phaseToString(m_currentPhase));
-    summary += QString("Status: %1\n").arg(statusToString(m_currentStatus));
-    summary += QString("Iterations: %1/%2 completed\n")
-              .arg(getCompletedIterations())
-              .arg(getTotalIterations());
-    summary += QString("Success Rate: %1%\n").arg(static_cast<int>(getOverallSuccessRate()));
-    summary += QString("Errors: %1\n").arg(getTotalErrorCount());
+    std::string summary;
+    summary += std::string("=== AGENTIC LOOP STATE ===\n");
+    summary += std::string("Current Phase: %1\n"));
+    summary += std::string("Status: %1\n"));
+    summary += std::string("Iterations: %1/%2 completed\n")
+              )
+              );
+    summary += std::string("Success Rate: %1%\n")));
+    summary += std::string("Errors: %1\n"));
 
     return summary;
 }
 
 // ===== SERIALIZATION =====
 
-QString AgenticLoopState::serializeState() const
+std::string AgenticLoopState::serializeState() const
 {
-    QJsonObject state;
+    void* state;
     state["phase"] = phaseToString(m_currentPhase);
     state["status"] = statusToString(m_currentStatus);
     state["goal"] = m_currentGoal;
@@ -561,15 +550,15 @@ QString AgenticLoopState::serializeState() const
     state["memory"] = getAllMemory();
     state["constraints"] = m_constraints;
 
-    return QString::fromUtf8(QJsonDocument(state).toJson());
+    return std::string::fromUtf8(void*(state).toJson());
 }
 
-bool AgenticLoopState::deserializeState(const QString& jsonStr)
+bool AgenticLoopState::deserializeState(const std::string& jsonStr)
 {
-    QJsonDocument doc = QJsonDocument::fromJson(jsonStr.toUtf8());
+    void* doc = void*::fromJson(jsonStr.toUtf8());
     if (!doc.isObject()) return false;
 
-    QJsonObject state = doc.object();
+    void* state = doc.object();
     m_currentPhase = stringToPhase(state["phase"].toString());
     m_currentStatus = stringToStatus(state["status"].toString());
     m_currentGoal = state["goal"].toString();
@@ -579,34 +568,34 @@ bool AgenticLoopState::deserializeState(const QString& jsonStr)
 
 // ===== DEBUGGING =====
 
-QString AgenticLoopState::generateDebugReport() const
+std::string AgenticLoopState::generateDebugReport() const
 {
-    QString report;
+    std::string report;
     report += "=== AGENTIC LOOP STATE DEBUG REPORT ===\n\n";
 
     report += "ITERATIONS:\n";
     for (const auto& iteration : m_iterations) {
-        report += QString("  %1. %2 - %3\n")
-                  .arg(iteration.iterationNumber)
-                  .arg(iteration.goalStatement)
-                  .arg(statusToString(iteration.status));
-        report += QString("     Decisions: %1, Errors: %2\n")
-                  .arg(iteration.decisions.size())
-                  .arg(iteration.errorCount);
+        report += std::string("  %1. %2 - %3\n")
+
+
+                  );
+        report += std::string("     Decisions: %1, Errors: %2\n")
+                  )
+                  ;
     }
 
     report += "\nERRORS:\n";
     for (const auto& error : m_errorHistory) {
-        report += QString("  [%1] %2 - %3\n")
-                  .arg(error.timestamp.toString("hh:mm:ss"))
-                  .arg(error.errorType)
-                  .arg(error.errorMessage);
+        report += std::string("  [%1] %2 - %3\n")
+                  )
+                  
+                  ;
     }
 
     report += "\nMETRICS:\n";
-    QJsonObject metrics = getMetrics();
+    void* metrics = getMetrics();
     for (auto it = metrics.constBegin(); it != metrics.constEnd(); ++it) {
-        report += QString("  %1: %2\n").arg(it.key()).arg(it.value().toVariant().toString());
+        report += std::string("  %1: %2\n")).toVariant().toString());
     }
 
     return report;
@@ -614,7 +603,7 @@ QString AgenticLoopState::generateDebugReport() const
 
 // ===== HELPER METHODS =====
 
-QString AgenticLoopState::phaseToString(ReasoningPhase phase) const
+std::string AgenticLoopState::phaseToString(ReasoningPhase phase) const
 {
     switch (phase) {
         case ReasoningPhase::Analysis: return "Analysis";
@@ -627,7 +616,7 @@ QString AgenticLoopState::phaseToString(ReasoningPhase phase) const
     }
 }
 
-AgenticLoopState::ReasoningPhase AgenticLoopState::stringToPhase(const QString& str) const
+AgenticLoopState::ReasoningPhase AgenticLoopState::stringToPhase(const std::string& str) const
 {
     if (str == "Analysis") return ReasoningPhase::Analysis;
     if (str == "Planning") return ReasoningPhase::Planning;
@@ -638,7 +627,7 @@ AgenticLoopState::ReasoningPhase AgenticLoopState::stringToPhase(const QString& 
     return ReasoningPhase::Analysis;
 }
 
-QString AgenticLoopState::statusToString(IterationStatus status) const
+std::string AgenticLoopState::statusToString(IterationStatus status) const
 {
     switch (status) {
         case IterationStatus::NotStarted: return "NotStarted";
@@ -651,7 +640,7 @@ QString AgenticLoopState::statusToString(IterationStatus status) const
     }
 }
 
-AgenticLoopState::IterationStatus AgenticLoopState::stringToStatus(const QString& str) const
+AgenticLoopState::IterationStatus AgenticLoopState::stringToStatus(const std::string& str) const
 {
     if (str == "NotStarted") return IterationStatus::NotStarted;
     if (str == "InProgress") return IterationStatus::InProgress;
@@ -661,3 +650,4 @@ AgenticLoopState::IterationStatus AgenticLoopState::stringToStatus(const QString
     if (str == "MaxAttemptsReached") return IterationStatus::MaxAttemptsReached;
     return IterationStatus::NotStarted;
 }
+

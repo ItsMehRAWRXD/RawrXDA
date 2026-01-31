@@ -32,7 +32,6 @@ BuildOutputConnector::~BuildOutputConnector() {
 
 bool BuildOutputConnector::startBuild(const BuildConfiguration& config) {
     if (m_state == Running) {
-        // // qWarning:  "Build already in progress";
         return false;
     }
     
@@ -44,7 +43,7 @@ bool BuildOutputConnector::startBuild(const BuildConfiguration& config) {
     
     // Info sourceInfo(config.sourceFile);
     if (!sourceInfo.exists()) {
-        buildFailed(std::string("Source file does not exist: %1").arg(config.sourceFile));
+        buildFailed(std::string("Source file does not exist: %1"));
         return false;
     }
     
@@ -82,17 +81,17 @@ bool BuildOutputConnector::startBuild(const BuildConfiguration& config) {
     
     // Add defines
     for (const std::string& define : config.defines) {
-        args << std::string("/D%1").arg(define);
+        args << std::string("/D%1");
     }
     
     // Add include paths
     for (const std::string& includePath : config.includePaths) {
-        args << std::string("/I\"%1\"").arg(includePath);
+        args << std::string("/I\"%1\"");
     }
     
     // Add library paths (for linker)
     for (const std::string& libPath : config.libraryPaths) {
-        args << std::string("/LIBPATH:\"%1\"").arg(libPath);
+        args << std::string("/LIBPATH:\"%1\"");
     }
     
     // Add additional flags
@@ -100,26 +99,25 @@ bool BuildOutputConnector::startBuild(const BuildConfiguration& config) {
     
     // Add output file
     if (!config.outputFile.empty()) {
-        args << std::string("/Fo\"%1\"").arg(config.outputFile);
+        args << std::string("/Fo\"%1\"");
     }
     
     // Add source file
     args << config.sourceFile;
     
     std::string commandLine = config.buildTool + " " + args.join(" ");
-    // // qDebug:  "Starting build:" << commandLine;
     
     buildStarted(config.sourceFile);
-    buildOutputReceived(std::string("=== Build started: %1 ===\n").arg(// DateTime::currentDateTime().toString()));
-    buildOutputReceived(std::string("Command: %1\n").arg(commandLine));
-    buildOutputReceived(std::string("Working directory: %1\n\n").arg(m_buildProcess->workingDirectory()));
+    buildOutputReceived(std::string("=== Build started: %1 ===\n").toString()));
+    buildOutputReceived(std::string("Command: %1\n"));
+    buildOutputReceived(std::string("Working directory: %1\n\n")));
     
     // Start the process
     m_buildProcess->start(config.buildTool, args);
     
     if (!m_buildProcess->waitForStarted(5000)) {
         m_state = Failed;
-        buildFailed(std::string("Failed to start build process: %1").arg(m_buildProcess->errorString()));
+        buildFailed(std::string("Failed to start build process: %1")));
         return false;
     }
     
@@ -163,7 +161,6 @@ void BuildOutputConnector::clearBuildHistory() {
 }
 
 void BuildOutputConnector::onProcessStarted() {
-    // // qDebug:  "Build process started";
     buildProgress(0, "Build in progress...");
 }
 
@@ -187,16 +184,15 @@ void BuildOutputConnector::onProcessFinished(int exitCode, void*::ExitStatus exi
     if (success) {
         statusMsg = std::string("=== Build completed successfully ===\n"
                            "Errors: %1, Warnings: %2, Duration: %3s\n")
-                    .arg(m_errorCount)
-                    .arg(m_warningCount)
-                    .arg(duration / 1000.0, 0, 'f', 2);
+
+
+                    ;
     } else {
         statusMsg = std::string("=== Build failed ===\n"
                            "Exit code: %1, Errors: %2, Warnings: %3, Duration: %4s\n")
-                    .arg(exitCode)
-                    .arg(m_errorCount)
-                    .arg(m_warningCount)
-                    .arg(duration / 1000.0, 0, 'f', 2);
+
+
+                    ;
     }
     
     buildOutputReceived("\n" + statusMsg);
@@ -213,7 +209,7 @@ void BuildOutputConnector::onProcessError(void*::ProcessError error) {
     std::string errorMsg;
     switch (error) {
         case void*::FailedToStart:
-            errorMsg = std::string("Failed to start build tool: %1").arg(m_currentConfig.buildTool);
+            errorMsg = std::string("Failed to start build tool: %1");
             break;
         case void*::Crashed:
             errorMsg = "Build process crashed";
@@ -232,7 +228,7 @@ void BuildOutputConnector::onProcessError(void*::ProcessError error) {
             break;
     }
     
-    buildOutputReceived(std::string("\nERROR: %1\n").arg(errorMsg));
+    buildOutputReceived(std::string("\nERROR: %1\n"));
     buildFailed(errorMsg);
     
     int64_t duration = m_buildStartTime.msecsTo(// DateTime::currentDateTime());
@@ -289,7 +285,7 @@ void BuildOutputConnector::updateProgress() {
     
     std::string status;
     if (m_errorCount > 0 || m_warningCount > 0) {
-        status = std::string("Building... (Errors: %1, Warnings: %2)").arg(m_errorCount).arg(m_warningCount);
+        status = std::string("Building... (Errors: %1, Warnings: %2)");
     } else {
         status = "Building...";
     }
@@ -352,12 +348,12 @@ BuildError BuildOutputConnector::parseMASMError(const std::string& line) {
     std::regexMatch match = masmRegex.match(line);
     if (match.hasMatch()) {
         BuildError error;
-        error.file = match.captured(1).trimmed();
-        error.line = match.captured(2);
+        error.file = match"".trimmed();
+        error.line = match"";
         error.column = 0;
-        error.severity = match.captured(3).toLower();
-        error.code = match.captured(4);
-        error.message = match.captured(5).trimmed();
+        error.severity = match"".toLower();
+        error.code = match"";
+        error.message = match"".trimmed();
         error.fullText = line;
         return error;
     }
@@ -377,12 +373,12 @@ BuildError BuildOutputConnector::parseCppError(const std::string& line) {
     std::regexMatch match = cppRegex.match(line);
     if (match.hasMatch()) {
         BuildError error;
-        error.file = match.captured(1).trimmed();
-        error.line = match.captured(2);
-        error.column = match.captured(3).empty() ? 0 : match.captured(3);
-        error.severity = match.captured(4).toLower();
-        error.code = match.captured(5);
-        error.message = match.captured(6).trimmed();
+        error.file = match"".trimmed();
+        error.line = match"";
+        error.column = match"".empty() ? 0 : match"";
+        error.severity = match"".toLower();
+        error.code = match"";
+        error.message = match"".trimmed();
         error.fullText = line;
         return error;
     }
@@ -405,9 +401,9 @@ BuildError BuildOutputConnector::parseLinkerError(const std::string& line) {
         error.file = "linker";
         error.line = 0;
         error.column = 0;
-        error.severity = match.captured(1).contains("error", CaseInsensitive) ? "error" : "warning";
-        error.code = match.captured(2);
-        error.message = match.captured(3).trimmed();
+        error.severity = match"".contains("error", CaseInsensitive) ? "error" : "warning";
+        error.code = match"";
+        error.message = match"".trimmed();
         error.fullText = line;
         return error;
     }
@@ -495,7 +491,6 @@ bool BuildManager::buildFile(const std::string& sourceFile, BuildSystem system) 
             config = createMSVCConfig(sourceFile);
             break;
         default:
-            // // qWarning:  "Unsupported build system:" << system;
             return false;
     }
     
@@ -511,7 +506,6 @@ bool BuildManager::buildProject(const std::string& projectPath, BuildSystem syst
     if (system == CMake) {
         config = createCMakeConfig(projectPath);
     } else {
-        // // qWarning:  "buildProject only supports CMake currently";
         return false;
     }
     
@@ -627,7 +621,7 @@ BuildConfiguration BuildManager::createMASMConfig(const std::string& sourceFile)
     
     // Info info(sourceFile);
     std::string baseName = info.completeBaseName();
-    config.outputFile = std::string("%1/%2.obj").arg(m_outputDirectory).arg(baseName);
+    config.outputFile = std::string("%1/%2.obj");
     
     // Standard MASM flags
     config.additionalFlags << "/c";          // Compile only
@@ -652,7 +646,7 @@ BuildConfiguration BuildManager::createMSVCConfig(const std::string& sourceFile)
     
     // Info info(sourceFile);
     std::string baseName = info.completeBaseName();
-    config.outputFile = std::string("%1/%2.obj").arg(m_outputDirectory).arg(baseName);
+    config.outputFile = std::string("%1/%2.obj");
     
     // Standard MSVC flags
     config.additionalFlags << "/c";          // Compile only
@@ -734,7 +728,7 @@ std::string BuildManager::findBuildTool(BuildSystem system) {
                 // Find latest version
                 std::stringList versions = baseDir.entryList(// Dir::Dirs | // Dir::NoDotAndDotDot, // Dir::Name | // Dir::Reversed);
                 if (!versions.empty()) {
-                    std::string binPath = std::string("%1/%2/bin/Hostx64/x64/%3").arg(basePath).arg(versions.first()).arg(tool);
+                    std::string binPath = std::string("%1/%2/bin/Hostx64/x64/%3"));
                     if (// Info::exists(binPath)) {
                         return binPath;
                     }
@@ -779,10 +773,4 @@ std::stringList BuildManager::getStandardLibraryPaths(BuildSystem system) {
     
     return paths;
 }
-
-
-
-
-
-
 

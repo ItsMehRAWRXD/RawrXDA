@@ -1,14 +1,10 @@
 // unified_hotpatch_manager.cpp - Implementation of unified hotpatch system coordinator
 #include "unified_hotpatch_manager.hpp"
-#include <QDebug>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QFile>
 
-UnifiedHotpatchManager::UnifiedHotpatchManager(QObject* parent)
-    : QObject(parent), m_sessionStart(QDateTime::currentDateTime())
+
+UnifiedHotpatchManager::UnifiedHotpatchManager(void* parent)
+    : void(parent), m_sessionStart(std::chrono::system_clock::time_point::currentDateTime())
 {
-    qInfo() << "[UnifiedHotpatch] Initializing unified hotpatch manager";
 }
 
 UnifiedHotpatchManager::~UnifiedHotpatchManager()
@@ -18,7 +14,7 @@ UnifiedHotpatchManager::~UnifiedHotpatchManager()
 
 UnifiedResult UnifiedHotpatchManager::initialize()
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     if (m_initialized) {
         return UnifiedResult::failureResult("initialize", "Already initialized", PatchLayer::System);
@@ -36,20 +32,18 @@ UnifiedResult UnifiedHotpatchManager::initialize()
         m_initialized = true;
         m_stats.sessionStarted = m_sessionStart;
         
-        qInfo() << "[UnifiedHotpatch] All hotpatch systems initialized successfully";
-        emit initialized();
+        initialized();
         
         return UnifiedResult::successResult("initialize", PatchLayer::System, "All systems ready");
         
     } catch (const std::exception& e) {
-        qWarning() << "[UnifiedHotpatch] Exception during initialization:" << e.what();
-        return UnifiedResult::failureResult("initialize", QString("Exception: %1").arg(e.what()), PatchLayer::System);
+        return UnifiedResult::failureResult("initialize", std::string("Exception: %1")), PatchLayer::System);
     }
 }
 
 bool UnifiedHotpatchManager::isInitialized() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     return m_initialized;
 }
 
@@ -68,9 +62,9 @@ GGUFServerHotpatch* UnifiedHotpatchManager::serverHotpatcher() const
     return m_serverHotpatch.get();
 }
 
-UnifiedResult UnifiedHotpatchManager::attachToModel(void* modelPtr, size_t modelSize, const QString& modelPath)
+UnifiedResult UnifiedHotpatchManager::attachToModel(void* modelPtr, size_t modelSize, const std::string& modelPath)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     if (!m_initialized) {
         return UnifiedResult::failureResult("attachToModel", "Not initialized", PatchLayer::System);
@@ -90,7 +84,6 @@ UnifiedResult UnifiedHotpatchManager::attachToModel(void* modelPtr, size_t model
     // Load model for byte-level patching
     if (m_byteEnabled && m_byteHotpatch && !modelPath.isEmpty()) {
         if (!m_byteHotpatch->loadModel(modelPath)) {
-            qWarning() << "[UnifiedHotpatch] Byte hotpatcher failed to load model file";
         }
     }
     
@@ -98,16 +91,15 @@ UnifiedResult UnifiedHotpatchManager::attachToModel(void* modelPtr, size_t model
     m_currentModelSize = modelSize;
     m_currentModelPath = modelPath;
     
-    qInfo() << "[UnifiedHotpatch] Attached to model:" << modelPath << "(" << modelSize << "bytes)";
-    emit modelAttached(modelPath, modelSize);
+    modelAttached(modelPath, modelSize);
     
     return UnifiedResult::successResult("attachToModel", PatchLayer::System, 
-        QString("Attached to %1").arg(modelPath));
+        std::string("Attached to %1"));
 }
 
 UnifiedResult UnifiedHotpatchManager::detachAll()
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     if (m_memoryHotpatch) {
         m_memoryHotpatch->detach();
@@ -117,13 +109,12 @@ UnifiedResult UnifiedHotpatchManager::detachAll()
     m_currentModelSize = 0;
     m_currentModelPath.clear();
     
-    qInfo() << "[UnifiedHotpatch] Detached from all models";
-    emit modelDetached();
+    modelDetached();
     
     return UnifiedResult::successResult("detachAll", PatchLayer::System);
 }
 
-PatchResult UnifiedHotpatchManager::applyMemoryPatch(const QString& name, const MemoryPatch& patch)
+PatchResult UnifiedHotpatchManager::applyMemoryPatch(const std::string& name, const MemoryPatch& patch)
 {
     if (!m_memoryEnabled || !m_memoryHotpatch) {
         return PatchResult::error(1, "Memory hotpatching disabled", 0);
@@ -138,13 +129,13 @@ PatchResult UnifiedHotpatchManager::applyMemoryPatch(const QString& name, const 
     if (result.success) {
         m_stats.totalPatchesApplied++;
         m_stats.totalBytesModified += patch.size;
-        emit patchApplied(name, PatchLayer::Memory);
+        patchApplied(name, PatchLayer::Memory);
     }
     
     return result;
 }
 
-PatchResult UnifiedHotpatchManager::scaleWeights(const QString& tensorName, double factor)
+PatchResult UnifiedHotpatchManager::scaleWeights(const std::string& tensorName, double factor)
 {
     if (!m_memoryEnabled || !m_memoryHotpatch) {
         return PatchResult::error(1, "Memory hotpatching disabled", 0);
@@ -154,7 +145,7 @@ PatchResult UnifiedHotpatchManager::scaleWeights(const QString& tensorName, doub
     
     if (result.success) {
         m_stats.totalPatchesApplied++;
-        emit patchApplied("scale_" + tensorName, PatchLayer::Memory);
+        patchApplied("scale_" + tensorName, PatchLayer::Memory);
     }
     
     return result;
@@ -170,13 +161,13 @@ PatchResult UnifiedHotpatchManager::bypassLayer(int layerIndex)
     
     if (result.success) {
         m_stats.totalPatchesApplied++;
-        emit patchApplied(QString("bypass_layer_%1").arg(layerIndex), PatchLayer::Memory);
+        patchApplied(std::string("bypass_layer_%1"), PatchLayer::Memory);
     }
     
     return result;
 }
 
-UnifiedResult UnifiedHotpatchManager::applyBytePatch(const QString& name, const BytePatch& patch)
+UnifiedResult UnifiedHotpatchManager::applyBytePatch(const std::string& name, const BytePatch& patch)
 {
     if (!m_byteEnabled || !m_byteHotpatch) {
         return UnifiedResult::failureResult("applyBytePatch", "Byte hotpatching disabled", PatchLayer::Byte);
@@ -192,12 +183,12 @@ UnifiedResult UnifiedHotpatchManager::applyBytePatch(const QString& name, const 
     
     m_stats.totalPatchesApplied++;
     m_stats.totalBytesModified += patch.length;
-    emit patchApplied(name, PatchLayer::Byte);
+    patchApplied(name, PatchLayer::Byte);
     
     return UnifiedResult::successResult("applyBytePatch", PatchLayer::Byte, "Byte patch applied");
 }
 
-UnifiedResult UnifiedHotpatchManager::savePatchedModel(const QString& outputPath)
+UnifiedResult UnifiedHotpatchManager::savePatchedModel(const std::string& outputPath)
 {
     if (!m_byteEnabled || !m_byteHotpatch) {
         return UnifiedResult::failureResult("savePatchedModel", "Byte hotpatching disabled", PatchLayer::Byte);
@@ -208,18 +199,18 @@ UnifiedResult UnifiedHotpatchManager::savePatchedModel(const QString& outputPath
     }
     
     return UnifiedResult::successResult("savePatchedModel", PatchLayer::Byte, 
-        QString("Saved to %1").arg(outputPath));
+        std::string("Saved to %1"));
 }
 
-UnifiedResult UnifiedHotpatchManager::patchGGUFMetadata(const QString& key, const QVariant& value)
+UnifiedResult UnifiedHotpatchManager::patchGGUFMetadata(const std::string& key, const std::any& value)
 {
     // Stub - would patch GGUF metadata in byte-level hotpatcher
-    Q_UNUSED(key);
-    Q_UNUSED(value);
+    (key);
+    (value);
     return UnifiedResult::failureResult("patchGGUFMetadata", "Not implemented", PatchLayer::Byte);
 }
 
-UnifiedResult UnifiedHotpatchManager::addServerHotpatch(const QString& name, const ServerHotpatch& patch)
+UnifiedResult UnifiedHotpatchManager::addServerHotpatch(const std::string& name, const ServerHotpatch& patch)
 {
     if (!m_serverEnabled || !m_serverHotpatch) {
         return UnifiedResult::failureResult("addServerHotpatch", "Server hotpatching disabled", PatchLayer::Server);
@@ -228,10 +219,10 @@ UnifiedResult UnifiedHotpatchManager::addServerHotpatch(const QString& name, con
     m_serverHotpatch->addHotpatch(patch);
     
     return UnifiedResult::successResult("addServerHotpatch", PatchLayer::Server, 
-        QString("Added server patch: %1").arg(name));
+        std::string("Added server patch: %1"));
 }
 
-UnifiedResult UnifiedHotpatchManager::enableSystemPromptInjection(const QString& prompt)
+UnifiedResult UnifiedHotpatchManager::enableSystemPromptInjection(const std::string& prompt)
 {
     if (!m_serverEnabled || !m_serverHotpatch) {
         return UnifiedResult::failureResult("enableSystemPromptInjection", 
@@ -268,7 +259,7 @@ UnifiedResult UnifiedHotpatchManager::setTemperatureOverride(double temperature)
     m_serverHotpatch->addHotpatch(patch);
     
     return UnifiedResult::successResult("setTemperatureOverride", PatchLayer::Server, 
-        QString("Temperature set to %1").arg(temperature));
+        std::string("Temperature set to %1"));
 }
 
 UnifiedResult UnifiedHotpatchManager::enableResponseCaching(bool enable)
@@ -284,11 +275,10 @@ UnifiedResult UnifiedHotpatchManager::enableResponseCaching(bool enable)
         enable ? "Caching enabled" : "Caching disabled");
 }
 
-QList<UnifiedResult> UnifiedHotpatchManager::optimizeModel()
+std::vector<UnifiedResult> UnifiedHotpatchManager::optimizeModel()
 {
-    QList<UnifiedResult> results;
+    std::vector<UnifiedResult> results;
     
-    qInfo() << "[UnifiedHotpatch] Running coordinated model optimization";
     
     results.append(UnifiedResult::successResult("optimize:quantization", PatchLayer::Byte, 
         "Quantization optimization applied"));
@@ -296,18 +286,17 @@ QList<UnifiedResult> UnifiedHotpatchManager::optimizeModel()
         "Temperature optimized"));
     
     m_stats.coordinatedActionsCompleted++;
-    m_stats.lastCoordinatedAction = QDateTime::currentDateTime();
+    m_stats.lastCoordinatedAction = std::chrono::system_clock::time_point::currentDateTime();
     
-    emit optimizationComplete("model_optimization", 15);
+    optimizationComplete("model_optimization", 15);
     
     return results;
 }
 
-QList<UnifiedResult> UnifiedHotpatchManager::applySafetyFilters()
+std::vector<UnifiedResult> UnifiedHotpatchManager::applySafetyFilters()
 {
-    QList<UnifiedResult> results;
+    std::vector<UnifiedResult> results;
     
-    qInfo() << "[UnifiedHotpatch] Applying coordinated safety filters";
     
     results.append(UnifiedResult::successResult("safety:prompt", PatchLayer::Server, 
         "Safety prompt injected"));
@@ -315,16 +304,15 @@ QList<UnifiedResult> UnifiedHotpatchManager::applySafetyFilters()
         "Weight clamping applied"));
     
     m_stats.coordinatedActionsCompleted++;
-    m_stats.lastCoordinatedAction = QDateTime::currentDateTime();
+    m_stats.lastCoordinatedAction = std::chrono::system_clock::time_point::currentDateTime();
     
     return results;
 }
 
-QList<UnifiedResult> UnifiedHotpatchManager::boostInferenceSpeed()
+std::vector<UnifiedResult> UnifiedHotpatchManager::boostInferenceSpeed()
 {
-    QList<UnifiedResult> results;
+    std::vector<UnifiedResult> results;
     
-    qInfo() << "[UnifiedHotpatch] Boosting inference speed";
     
     results.append(UnifiedResult::successResult("speed:temperature", PatchLayer::Server, 
         "Low temperature for speed"));
@@ -332,16 +320,16 @@ QList<UnifiedResult> UnifiedHotpatchManager::boostInferenceSpeed()
         "Response caching enabled"));
     
     m_stats.coordinatedActionsCompleted++;
-    m_stats.lastCoordinatedAction = QDateTime::currentDateTime();
+    m_stats.lastCoordinatedAction = std::chrono::system_clock::time_point::currentDateTime();
     
-    emit optimizationComplete("inference_speed", 25);
+    optimizationComplete("inference_speed", 25);
     
     return results;
 }
 
 UnifiedHotpatchManager::UnifiedStats UnifiedHotpatchManager::getStatistics() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     UnifiedStats stats = m_stats;
     
@@ -354,7 +342,7 @@ UnifiedHotpatchManager::UnifiedStats UnifiedHotpatchManager::getStatistics() con
 
 void UnifiedHotpatchManager::resetStatistics()
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     m_stats = UnifiedStats();
     m_stats.sessionStarted = m_sessionStart;
@@ -364,13 +352,13 @@ void UnifiedHotpatchManager::resetStatistics()
     }
 }
 
-UnifiedResult UnifiedHotpatchManager::savePreset(const QString& name)
+UnifiedResult UnifiedHotpatchManager::savePreset(const std::string& name)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
-    QJsonObject preset;
+    void* preset;
     preset["name"] = name;
-    preset["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    preset["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     preset["memoryEnabled"] = m_memoryEnabled;
     preset["byteEnabled"] = m_byteEnabled;
     preset["serverEnabled"] = m_serverEnabled;
@@ -378,50 +366,50 @@ UnifiedResult UnifiedHotpatchManager::savePreset(const QString& name)
     m_presets[name] = preset;
     
     return UnifiedResult::successResult("savePreset", PatchLayer::System, 
-        QString("Preset '%1' saved").arg(name));
+        std::string("Preset '%1' saved"));
 }
 
-UnifiedResult UnifiedHotpatchManager::loadPreset(const QString& name)
+UnifiedResult UnifiedHotpatchManager::loadPreset(const std::string& name)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     if (!m_presets.contains(name)) {
         return UnifiedResult::failureResult("loadPreset", "Preset not found", PatchLayer::System);
     }
     
-    const QJsonObject& preset = m_presets[name];
+    const void*& preset = m_presets[name];
     m_memoryEnabled = preset["memoryEnabled"].toBool();
     m_byteEnabled = preset["byteEnabled"].toBool();
     m_serverEnabled = preset["serverEnabled"].toBool();
     
     return UnifiedResult::successResult("loadPreset", PatchLayer::System, 
-        QString("Preset '%1' loaded").arg(name));
+        std::string("Preset '%1' loaded"));
 }
 
-UnifiedResult UnifiedHotpatchManager::deletePreset(const QString& name)
+UnifiedResult UnifiedHotpatchManager::deletePreset(const std::string& name)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     if (!m_presets.remove(name)) {
         return UnifiedResult::failureResult("deletePreset", "Preset not found", PatchLayer::System);
     }
     
     return UnifiedResult::successResult("deletePreset", PatchLayer::System, 
-        QString("Preset '%1' deleted").arg(name));
+        std::string("Preset '%1' deleted"));
 }
 
-QStringList UnifiedHotpatchManager::listPresets() const
+std::vector<std::string> UnifiedHotpatchManager::listPresets() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     return m_presets.keys();
 }
 
-UnifiedResult UnifiedHotpatchManager::exportConfiguration(const QString& filePath)
+UnifiedResult UnifiedHotpatchManager::exportConfiguration(const std::string& filePath)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
-    QJsonObject config;
-    QJsonArray presetArray;
+    void* config;
+    void* presetArray;
     
     for (auto it = m_presets.begin(); it != m_presets.end(); ++it) {
         presetArray.append(it.value());
@@ -430,63 +418,60 @@ UnifiedResult UnifiedHotpatchManager::exportConfiguration(const QString& filePat
     config["presets"] = presetArray;
     config["version"] = "1.0";
     
-    QJsonDocument doc(config);
-    QFile file(filePath);
+    void* doc(config);
+    std::fstream file(filePath);
     
     if (!file.open(QIODevice::WriteOnly)) {
         return UnifiedResult::failureResult("exportConfiguration", "Failed to open file", PatchLayer::System);
     }
     
-    file.write(doc.toJson(QJsonDocument::Indented));
+    file.write(doc.toJson(void*::Indented));
     
     return UnifiedResult::successResult("exportConfiguration", PatchLayer::System, 
-        QString("Exported to %1").arg(filePath));
+        std::string("Exported to %1"));
 }
 
-UnifiedResult UnifiedHotpatchManager::importConfiguration(const QString& filePath)
+UnifiedResult UnifiedHotpatchManager::importConfiguration(const std::string& filePath)
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     
     if (!file.open(QIODevice::ReadOnly)) {
         return UnifiedResult::failureResult("importConfiguration", "Failed to open file", PatchLayer::System);
     }
     
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    QJsonObject config = doc.object();
+    void* doc = void*::fromJson(file.readAll());
+    void* config = doc.object();
     
-    QJsonArray presetArray = config["presets"].toArray();
+    void* presetArray = config["presets"].toArray();
     
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
-    for (const QJsonValue& val : presetArray) {
-        QJsonObject preset = val.toObject();
-        QString name = preset["name"].toString();
+    for (const void*& val : presetArray) {
+        void* preset = val.toObject();
+        std::string name = preset["name"].toString();
         m_presets[name] = preset;
     }
     
     return UnifiedResult::successResult("importConfiguration", PatchLayer::System, 
-        QString("Imported from %1").arg(filePath));
+        std::string("Imported from %1"));
 }
 
 void UnifiedHotpatchManager::setMemoryHotpatchEnabled(bool enabled)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_memoryEnabled = enabled;
-    qInfo() << "[UnifiedHotpatch] Memory hotpatching" << (enabled ? "enabled" : "disabled");
 }
 
 void UnifiedHotpatchManager::setByteHotpatchEnabled(bool enabled)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_byteEnabled = enabled;
-    qInfo() << "[UnifiedHotpatch] Byte hotpatching" << (enabled ? "enabled" : "disabled");
 }
 
 void UnifiedHotpatchManager::setServerHotpatchEnabled(bool enabled)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_serverEnabled = enabled;
-    qInfo() << "[UnifiedHotpatch] Server hotpatching" << (enabled ? "enabled" : "disabled");
 }
 
 void UnifiedHotpatchManager::enableAllLayers()
@@ -516,22 +501,15 @@ void UnifiedHotpatchManager::connectSignals()
 {
     // Forward signals from subsystems to unified manager
     if (m_memoryHotpatch) {
-        connect(m_memoryHotpatch.get(), &ModelMemoryHotpatch::patchApplied,
-            this, [this](const QString& name) {
-                emit patchApplied(name, PatchLayer::Memory);
+// Qt connect removed
             });
-        
-        connect(m_memoryHotpatch.get(), &ModelMemoryHotpatch::errorOccurred,
-            this, [this](const PatchResult& result) {
-                UnifiedResult ur = UnifiedResult::failureResult("memory_error", result.detail, PatchLayer::Memory);
-                emit errorOccurred(ur);
+// Qt connect removed
+                errorOccurred(ur);
             });
     }
     
     if (m_byteHotpatch) {
-        connect(m_byteHotpatch.get(), &ByteLevelHotpatcher::patchApplied,
-            this, [this](const QString& name, size_t, size_t) {
-                emit patchApplied(name, PatchLayer::Byte);
+// Qt connect removed
             });
     }
 }
@@ -543,8 +521,8 @@ void UnifiedHotpatchManager::updateStatistics(const UnifiedResult& result)
     }
 }
 
-QList<UnifiedResult> UnifiedHotpatchManager::logCoordinatedResults(const QString& operation, 
-    const QList<UnifiedResult>& results)
+std::vector<UnifiedResult> UnifiedHotpatchManager::logCoordinatedResults(const std::string& operation, 
+    const std::vector<UnifiedResult>& results)
 {
     int successCount = 0;
     int failureCount = 0;
@@ -557,8 +535,8 @@ QList<UnifiedResult> UnifiedHotpatchManager::logCoordinatedResults(const QString
         }
     }
     
-    qInfo() << "[UnifiedHotpatch]" << operation << "completed:" 
             << successCount << "succeeded," << failureCount << "failed";
     
     return results;
 }
+

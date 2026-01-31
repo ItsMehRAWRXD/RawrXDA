@@ -1,0 +1,33 @@
+# Refactoring Status Report
+
+## Refactored Files (Qt Removed -> C++/WinAPI/nlohmann::json)
+
+### Core Logic
+- `action_executor.cpp/hpp`: Process management using `CreateProcessA`.
+- `meta_learn.cpp/hpp`: Performance DB using `nlohmann::json` and file locking.
+- `rollback.cpp/hpp`: Git operations and WinHTTP issue reporting.
+- `self_code.cpp/hpp`: File manipulation and CMake execution.
+- `self_test.cpp/hpp`: Test runner and linting.
+- `telemetry_collector.cpp/hpp`: WinHTTP telemetry and local storage.
+
+### Automation
+- `auto_bootstrap.cpp/hpp`: Console interaction and clipboard.
+- `auto_update.cpp/hpp`: WinHTTP downloader and self-updater.
+- `code_signer.cpp/hpp`: Binary signing execution.
+- `hot_reload.cpp/hpp`: Process restarting.
+- `zero_touch.cpp/hpp`: File watching polling loop.
+
+### Bridges & Servers
+- `agent_hot_patcher.cpp/hpp`: JSON logic and heuristics.
+- `gguf_proxy_server.cpp/hpp`: Winsock TCP Proxy.
+- `ide_agent_bridge.cpp/hpp`: Controller logic using callbacks.
+- `agentic_copilot_bridge.cpp/hpp`: Bridge logic.
+
+## Remaining Candidates
+- `agentic_failure_detector.cpp/hpp`
+- `agentic_puppeteer.cpp/hpp`
+- `release_agent.cpp/hpp`
+- `self_test_gate.cpp/hpp`
+- `sign_binary.cpp/hpp`
+- `sentry_integration.cpp/hpp`
+- `planner.cpp/hpp` & `meta_planner.cpp/hpp` (likely pure, but verify)

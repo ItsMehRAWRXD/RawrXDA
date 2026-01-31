@@ -15,31 +15,9 @@
 #include "DynamicLoadBalancer.h"
 #include "SovereignControlBlock.h"
 
-#include <QWidget>
-#include <QLabel>
-#include <QProgressBar>
-#include <QComboBox>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
-#include <QTimer>
-#include <QFrame>
-#include <QDateTime>
-#include <QTabWidget>
-#include <QTableWidget>
-#include <QSpinBox>
-#include <QDoubleSpinBox>
-#include <QCheckBox>
-#include <QSlider>
 
 // QtCharts
-#include <QChartView>
-#include <QLineSeries>
-#include <QAreaSeries>
-#include <QValueAxis>
-#include <QDateTimeAxis>
-#include <QScatterSeries>
+
 
 #include <memory>
 #include <vector>
@@ -63,14 +41,13 @@ struct TemperatureDataPoint {
 /**
  * @brief Enhanced Thermal Dashboard with Predictive Visualization
  */
-class ThermalDashboardEnhanced : public QWidget {
-    Q_OBJECT
+class ThermalDashboardEnhanced : public void {
 
 public:
-    explicit ThermalDashboardEnhanced(QWidget* parent = nullptr);
+    explicit ThermalDashboardEnhanced(void* parent = nullptr);
     ~ThermalDashboardEnhanced() override;
 
-public slots:
+public:
     /**
      * @brief Handle thermal snapshot update
      * @param snapshot Current thermal data
@@ -87,7 +64,6 @@ public slots:
      */
     void clearHistory();
 
-signals:
     /**
      * @brief Emitted when burst mode changes
      * @param mode New burst mode (0=sovereign, 1=thermal, 2=hybrid)
@@ -106,7 +82,7 @@ signals:
      */
     void driveSelected(int driveIndex);
 
-private slots:
+private:
     void onBurstModeApply();
     void onThrottleSliderChanged(int value);
     void onDriveOverrideToggled(bool checked);
@@ -141,8 +117,8 @@ private:
     void updateTemperatureChart(const ThermalSnapshot& snapshot);
     void updateDriveSelectionTable();
     
-    QString getTempColor(float temp);
-    QString getThrottleActionString(ThrottleAction action);
+    std::string getTempColor(float temp);
+    std::string getThrottleActionString(ThrottleAction action);
     QColor getThrottleActionColor(ThrottleAction action);
 
 private:
@@ -262,17 +238,15 @@ private:
  * @brief Compact toolbar widget for thermal status (enhanced)
  */
 class ThermalCompactWidgetEnhanced : public QFrame {
-    Q_OBJECT
 
 public:
-    explicit ThermalCompactWidgetEnhanced(QWidget* parent = nullptr);
+    explicit ThermalCompactWidgetEnhanced(void* parent = nullptr);
     ~ThermalCompactWidgetEnhanced() override = default;
 
-public slots:
+public:
     void onThermalUpdate(const ThermalSnapshot& snapshot);
     void onPredictionUpdate(const PredictionResult& prediction);
 
-signals:
     void expandRequested();
 
 private:
@@ -287,3 +261,4 @@ private:
 };
 
 } // namespace rawrxd::thermal
+

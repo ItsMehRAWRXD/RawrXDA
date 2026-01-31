@@ -1,12 +1,12 @@
 #include <cstdint>
 #include <cstring>
-#include <QByteArray>
+
 #include "brutal_gzip.h"
 
 namespace codec {
 
 // Use brutal_gzip MASM deflate for compression
-QByteArray deflate(const QByteArray& in, bool* ok = nullptr)
+std::vector<uint8_t> deflate(const std::vector<uint8_t>& in, bool* ok = nullptr)
 {
 #if defined(HAS_BRUTAL_GZIP_MASM) || defined(HAS_BRUTAL_GZIP_NEON)
     size_t out_len = 0;
@@ -19,7 +19,7 @@ QByteArray deflate(const QByteArray& in, bool* ok = nullptr)
 #endif
     
     if (compressed && out_len > 0) {
-        QByteArray result(static_cast<const char*>(compressed), out_len);
+        std::vector<uint8_t> result(static_cast<const char*>(compressed), out_len);
         free(compressed);  // brutal_gzip uses malloc
         if (ok) *ok = true;
         return result;
@@ -27,12 +27,12 @@ QByteArray deflate(const QByteArray& in, bool* ok = nullptr)
 #endif
     
     if (ok) *ok = false;
-    return QByteArray();
+    return std::vector<uint8_t>();
 }
 
 // Placeholder for inflate - add your inflate implementation here
 // For now, return uncompressed data for testing
-QByteArray inflate(const QByteArray& in, bool* ok = nullptr)
+std::vector<uint8_t> inflate(const std::vector<uint8_t>& in, bool* ok = nullptr)
 {
     // TODO: Implement inflate using your existing inflate kernel
     // For now, assume data is not compressed and return as-is
@@ -41,3 +41,4 @@ QByteArray inflate(const QByteArray& in, bool* ok = nullptr)
 }
 
 } // namespace codec
+

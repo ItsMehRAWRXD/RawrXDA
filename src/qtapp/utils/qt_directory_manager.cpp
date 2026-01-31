@@ -6,36 +6,33 @@
  */
 
 #include "qt_directory_manager.h"
-#include <QDir>
-#include <QFileInfo>
-#include <QFile>
-#include <QDebug>
+
 
 namespace RawrXD {
 
-QtDirectoryManager::QtDirectoryManager(QObject* parent) : QObject(parent) {}
+QtDirectoryManager::QtDirectoryManager(void* parent) : void(parent) {}
 
-FileOperationResult QtDirectoryManager::createDirectory(const QString& path) 
+FileOperationResult QtDirectoryManager::createDirectory(const std::string& path) 
 {
-    QString absPath = toAbsolutePath(path, QString());
-    QDir dir;
+    std::string absPath = toAbsolutePath(path, std::string());
+    std::filesystem::path dir;
     
     bool success = dir.mkpath(absPath);
     
     if (!success) {
         return FileOperationResult(
             false, 
-            QString("Failed to create directory: %1").arg(absPath)
+            std::string("Failed to create directory: %1")
         );
     }
     
     return FileOperationResult(true);
 }
 
-FileOperationResult QtDirectoryManager::deleteDirectory(const QString& path,
+FileOperationResult QtDirectoryManager::deleteDirectory(const std::string& path,
                                                        bool moveToTrash) 
 {
-    QString absolutePath = toAbsolutePath(path, QString());
+    std::string absolutePath = toAbsolutePath(path, std::string());
     
     if (!exists(absolutePath)) {
         return FileOperationResult(false, "Directory does not exist");
@@ -45,7 +42,7 @@ FileOperationResult QtDirectoryManager::deleteDirectory(const QString& path,
         return FileOperationResult(false, "Path is not a directory");
     }
     
-    QDir dir(absolutePath);
+    std::filesystem::path dir(absolutePath);
     
     // moveToTrash not implemented - always do hard delete
     // For production: integrate with platform trash APIs
@@ -57,11 +54,11 @@ FileOperationResult QtDirectoryManager::deleteDirectory(const QString& path,
     return FileOperationResult(true);
 }
 
-FileOperationResult QtDirectoryManager::copyDirectory(const QString& sourcePath,
-                                                     const QString& destPath) 
+FileOperationResult QtDirectoryManager::copyDirectory(const std::string& sourcePath,
+                                                     const std::string& destPath) 
 {
-    QString absoluteSource = toAbsolutePath(sourcePath, QString());
-    QString absoluteDest = toAbsolutePath(destPath, QString());
+    std::string absoluteSource = toAbsolutePath(sourcePath, std::string());
+    std::string absoluteDest = toAbsolutePath(destPath, std::string());
     
     if (!exists(absoluteSource)) {
         return FileOperationResult(false, "Source directory does not exist");
@@ -82,17 +79,17 @@ FileOperationResult QtDirectoryManager::copyDirectory(const QString& sourcePath,
     return FileOperationResult(true);
 }
 
-bool QtDirectoryManager::exists(const QString& path) const {
-    return QFileInfo::exists(path);
+bool QtDirectoryManager::exists(const std::string& path) const {
+    return std::filesystem::path::exists(path);
 }
 
-bool QtDirectoryManager::isDirectory(const QString& path) const {
-    QFileInfo info(path);
+bool QtDirectoryManager::isDirectory(const std::string& path) const {
+    std::filesystem::path info(path);
     return info.exists() && info.isDir();
 }
 
-QStringList QtDirectoryManager::listFiles(const QString& path, bool recursive) const {
-    QStringList files;
+std::vector<std::string> QtDirectoryManager::listFiles(const std::string& path, bool recursive) const {
+    std::vector<std::string> files;
     
     if (!isDirectory(path)) {
         return files;
@@ -101,13 +98,13 @@ QStringList QtDirectoryManager::listFiles(const QString& path, bool recursive) c
     if (recursive) {
         listFilesRecursive(path, files);
     } else {
-        QDir dir(path);
+        std::filesystem::path dir(path);
         QFileInfoList entries = dir.entryInfoList(
-            QDir::Files | QDir::NoDotAndDotDot,
-            QDir::Name
+            std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot,
+            std::filesystem::path::Name
         );
         
-        for (const QFileInfo& info : entries) {
+        for (const std::filesystem::path& info : entries) {
             files.append(info.absoluteFilePath());
         }
     }
@@ -115,8 +112,8 @@ QStringList QtDirectoryManager::listFiles(const QString& path, bool recursive) c
     return files;
 }
 
-QStringList QtDirectoryManager::listDirectories(const QString& path, bool recursive) const {
-    QStringList dirs;
+std::vector<std::string> QtDirectoryManager::listDirectories(const std::string& path, bool recursive) const {
+    std::vector<std::string> dirs;
     
     if (!isDirectory(path)) {
         return dirs;
@@ -125,13 +122,13 @@ QStringList QtDirectoryManager::listDirectories(const QString& path, bool recurs
     if (recursive) {
         listDirectoriesRecursive(path, dirs);
     } else {
-        QDir dir(path);
+        std::filesystem::path dir(path);
         QFileInfoList entries = dir.entryInfoList(
-            QDir::Dirs | QDir::NoDotAndDotDot,
-            QDir::Name
+            std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot,
+            std::filesystem::path::Name
         );
         
-        for (const QFileInfo& info : entries) {
+        for (const std::filesystem::path& info : entries) {
             dirs.append(info.absoluteFilePath());
         }
     }
@@ -139,28 +136,28 @@ QStringList QtDirectoryManager::listDirectories(const QString& path, bool recurs
     return dirs;
 }
 
-QString QtDirectoryManager::toAbsolutePath(const QString& relativePath,
-                                          const QString& basePath) const {
-    QString pathToConvert = relativePath;
-    if (QFileInfo(pathToConvert).isAbsolute()) {
-        return QDir::cleanPath(pathToConvert);
+std::string QtDirectoryManager::toAbsolutePath(const std::string& relativePath,
+                                          const std::string& basePath) const {
+    std::string pathToConvert = relativePath;
+    if (std::filesystem::path(pathToConvert).isAbsolute()) {
+        return std::filesystem::path::cleanPath(pathToConvert);
     }
     
-    QDir base = basePath.isEmpty() ? QDir::current() : QDir(basePath);
+    std::filesystem::path base = basePath.isEmpty() ? std::filesystem::path::current() : std::filesystem::path(basePath);
     return base.absoluteFilePath(pathToConvert);
 }
 
-QString QtDirectoryManager::toRelativePath(const QString& absolutePath,
-                                          const QString& basePath) const 
+std::string QtDirectoryManager::toRelativePath(const std::string& absolutePath,
+                                          const std::string& basePath) const 
 {
-    QDir baseDir(basePath);
+    std::filesystem::path baseDir(basePath);
     return baseDir.relativeFilePath(absolutePath);
 }
 
 // Private helper methods
 
-bool QtDirectoryManager::removeDirectoryRecursive(const QString& path) const {
-    QDir dir(path);
+bool QtDirectoryManager::removeDirectoryRecursive(const std::string& path) const {
+    std::filesystem::path dir(path);
     
     if (!dir.exists()) {
         return false;
@@ -168,17 +165,16 @@ bool QtDirectoryManager::removeDirectoryRecursive(const QString& path) const {
     
     // Remove all files and subdirectories
     QFileInfoList entries = dir.entryInfoList(
-        QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden
+        std::filesystem::path::Files | std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot | std::filesystem::path::Hidden
     );
     
-    for (const QFileInfo& info : entries) {
+    for (const std::filesystem::path& info : entries) {
         if (info.isDir()) {
             if (!removeDirectoryRecursive(info.absoluteFilePath())) {
                 return false;
             }
         } else {
-            if (!QFile::remove(info.absoluteFilePath())) {
-                qWarning() << "Failed to remove file:" << info.absoluteFilePath();
+            if (!std::fstream::remove(info.absoluteFilePath())) {
                 return false;
             }
         }
@@ -188,37 +184,35 @@ bool QtDirectoryManager::removeDirectoryRecursive(const QString& path) const {
     return dir.rmdir(path);
 }
 
-bool QtDirectoryManager::copyDirectoryRecursive(const QString& sourcePath,
-                                               const QString& destPath) const 
+bool QtDirectoryManager::copyDirectoryRecursive(const std::string& sourcePath,
+                                               const std::string& destPath) const 
 {
-    QDir sourceDir(sourcePath);
+    std::filesystem::path sourceDir(sourcePath);
     
     if (!sourceDir.exists()) {
         return false;
     }
     
     // Create destination directory
-    QDir destDir;
+    std::filesystem::path destDir;
     if (!destDir.mkpath(destPath)) {
-        qWarning() << "Failed to create destination directory:" << destPath;
         return false;
     }
     
     // Copy all files and subdirectories
     QFileInfoList entries = sourceDir.entryInfoList(
-        QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden
+        std::filesystem::path::Files | std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot | std::filesystem::path::Hidden
     );
     
-    for (const QFileInfo& info : entries) {
-        QString destFilePath = destPath + "/" + info.fileName();
+    for (const std::filesystem::path& info : entries) {
+        std::string destFilePath = destPath + "/" + info.fileName();
         
         if (info.isDir()) {
             if (!copyDirectoryRecursive(info.absoluteFilePath(), destFilePath)) {
                 return false;
             }
         } else {
-            if (!QFile::copy(info.absoluteFilePath(), destFilePath)) {
-                qWarning() << "Failed to copy file:" << info.absoluteFilePath();
+            if (!std::fstream::copy(info.absoluteFilePath(), destFilePath)) {
                 return false;
             }
         }
@@ -227,39 +221,39 @@ bool QtDirectoryManager::copyDirectoryRecursive(const QString& sourcePath,
     return true;
 }
 
-void QtDirectoryManager::listFilesRecursive(const QString& path, QStringList& files) const {
-    QDir dir(path);
+void QtDirectoryManager::listFilesRecursive(const std::string& path, std::vector<std::string>& files) const {
+    std::filesystem::path dir(path);
     
     // Add files in current directory
     QFileInfoList fileEntries = dir.entryInfoList(
-        QDir::Files | QDir::NoDotAndDotDot,
-        QDir::Name
+        std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot,
+        std::filesystem::path::Name
     );
     
-    for (const QFileInfo& info : fileEntries) {
+    for (const std::filesystem::path& info : fileEntries) {
         files.append(info.absoluteFilePath());
     }
     
     // Recurse into subdirectories
     QFileInfoList dirEntries = dir.entryInfoList(
-        QDir::Dirs | QDir::NoDotAndDotDot,
-        QDir::Name
+        std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot,
+        std::filesystem::path::Name
     );
     
-    for (const QFileInfo& info : dirEntries) {
+    for (const std::filesystem::path& info : dirEntries) {
         listFilesRecursive(info.absoluteFilePath(), files);
     }
 }
 
-void QtDirectoryManager::listDirectoriesRecursive(const QString& path, QStringList& dirs) const {
-    QDir dir(path);
+void QtDirectoryManager::listDirectoriesRecursive(const std::string& path, std::vector<std::string>& dirs) const {
+    std::filesystem::path dir(path);
     
     QFileInfoList entries = dir.entryInfoList(
-        QDir::Dirs | QDir::NoDotAndDotDot,
-        QDir::Name
+        std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot,
+        std::filesystem::path::Name
     );
     
-    for (const QFileInfo& info : entries) {
+    for (const std::filesystem::path& info : entries) {
         dirs.append(info.absoluteFilePath());
         // Recurse into subdirectory
         listDirectoriesRecursive(info.absoluteFilePath(), dirs);
@@ -267,3 +261,4 @@ void QtDirectoryManager::listDirectoriesRecursive(const QString& path, QStringLi
 }
 
 } // namespace RawrXD
+

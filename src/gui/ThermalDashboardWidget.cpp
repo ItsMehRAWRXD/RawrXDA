@@ -11,9 +11,8 @@
  * Refreshes every 1 second from pocket_lab_turbo.dll
  */
 #include "ThermalDashboardWidget.h"
-#include <QPainter>
-#include <QVBoxLayout>
-#include <QDebug>
+
+
 #include <cmath>
 
 #ifdef _WIN32
@@ -44,9 +43,9 @@ static const QColor COLOR_BG(30, 30, 35);         // Dark background
 static const QColor COLOR_TEXT(220, 220, 220);    // Light text
 static const QColor COLOR_ACCENT(100, 200, 255);  // Accent blue
 
-ThermalDashboardWidget::ThermalDashboardWidget(QWidget* parent)
-    : QWidget(parent)
-    , m_timer(new QTimer(this))
+ThermalDashboardWidget::ThermalDashboardWidget(void* parent)
+    : void(parent)
+    , m_timer(new void*(this))
     , m_dllLoaded(false)
     , m_hDll(nullptr)
     , m_pfnInit(nullptr)
@@ -75,7 +74,7 @@ ThermalDashboardWidget::ThermalDashboardWidget(QWidget* parent)
     loadDll();
 
     // Timer for refresh
-    connect(m_timer, &QTimer::timeout, this, &ThermalDashboardWidget::onTimerTick);
+// Qt connect removed
     m_timer->start(1000);  // 1 second refresh
 
     // Initial refresh
@@ -105,13 +104,11 @@ void ThermalDashboardWidget::loadDll()
     for (const char* path : paths) {
         m_hDll = LoadLibraryA(path);
         if (m_hDll) {
-            qDebug() << "[ThermalDashboard] Loaded DLL from:" << path;
             break;
         }
     }
 
     if (!m_hDll) {
-        qWarning() << "[ThermalDashboard] Failed to load pocket_lab_turbo.dll";
         return;
     }
 
@@ -122,7 +119,6 @@ void ThermalDashboardWidget::loadDll()
         GetProcAddress(static_cast<HMODULE>(m_hDll), "PocketLabGetThermal"));
 
     if (!m_pfnInit || !m_pfnGetThermal) {
-        qWarning() << "[ThermalDashboard] Failed to get DLL exports";
         FreeLibrary(static_cast<HMODULE>(m_hDll));
         m_hDll = nullptr;
         return;
@@ -132,12 +128,9 @@ void ThermalDashboardWidget::loadDll()
     int result = m_pfnInit();
     if (result == 0) {
         m_dllLoaded = true;
-        qDebug() << "[ThermalDashboard] Pocket-Lab initialized successfully";
     } else {
-        qWarning() << "[ThermalDashboard] Pocket-Lab init failed:" << result;
     }
 #else
-    qWarning() << "[ThermalDashboard] DLL loading only supported on Windows";
 #endif
 }
 
@@ -186,11 +179,11 @@ void ThermalDashboardWidget::refresh()
         int t = static_cast<int>(m_temps[i]);
         if (t > maxTemp) maxTemp = t;
         if (t >= TEMP_CRIT) {
-            emit thermalWarning(i, t);
+            thermalWarning(i, t);
         }
     }
 
-    emit thermalStateChanged(m_tier, maxTemp);
+    thermalStateChanged(m_tier, maxTemp);
 
     update();  // Trigger repaint
 }
@@ -222,22 +215,22 @@ void ThermalDashboardWidget::paintEvent(QPaintEvent*)
     p.setPen(COLOR_TEXT);
 
     // Tier label
-    QString tierStr = QString("Tier: %1 (%2)").arg(m_tier).arg(tierName(m_tier));
+    std::string tierStr = std::string("Tier: %1 (%2)"));
     p.drawText(margin, margin + 15, tierStr);
 
     // TurboSparse
-    QString sparseStr = QString("TurboSparse Skip: %1%").arg(m_sparseSkipPct);
+    std::string sparseStr = std::string("TurboSparse Skip: %1%");
     p.drawText(margin, margin + 32, sparseStr);
 
     // PowerInfer
-    QString gpuStr = QString("PowerInfer: GPU %1% / CPU %2%")
-                     .arg(m_gpuSplit).arg(100 - m_gpuSplit);
+    std::string gpuStr = std::string("PowerInfer: GPU %1% / CPU %2%")
+                     ;
     p.drawText(margin, margin + 49, gpuStr);
 
     // Connection status indicator
     QColor statusColor = m_dllLoaded ? QColor(0, 200, 100) : QColor(200, 100, 0);
     p.setBrush(statusColor);
-    p.setPen(Qt::NoPen);
+    p.setPen(//NoPen);
     p.drawEllipse(w - margin - 12, margin + 5, 10, 10);
 
     // Temperature bars
@@ -278,21 +271,21 @@ void ThermalDashboardWidget::paintEvent(QPaintEvent*)
 
         // Temperature label
         p.setPen(COLOR_TEXT);
-        QString tempStr = QString("%1°").arg(temp, 0, 'f', 1);
+        std::string tempStr = std::string("%1°");
         QRect labelRect(x, barY + barArea - 18, totalBarWidth, 16);
-        p.drawText(labelRect, Qt::AlignCenter, tempStr);
+        p.drawText(labelRect, //AlignCenter, tempStr);
 
         // Drive label
         p.setPen(COLOR_ACCENT);
-        QString driveStr = QString("D%1").arg(i);
+        std::string driveStr = std::string("D%1");
         QRect driveRect(x, barY - 2, totalBarWidth, 14);
-        p.drawText(driveRect, Qt::AlignCenter, driveStr);
+        p.drawText(driveRect, //AlignCenter, driveStr);
     }
 }
 
 void ThermalDashboardWidget::resizeEvent(QResizeEvent* event)
 {
-    QWidget::resizeEvent(event);
+    void::resizeEvent(event);
     updateLayout();
 }
 
@@ -302,7 +295,7 @@ void ThermalDashboardWidget::updateLayout()
     m_barMaxHeight = height() - 100;
 }
 
-QString ThermalDashboardWidget::tierName(unsigned int tier) const
+std::string ThermalDashboardWidget::tierName(unsigned int tier) const
 {
     switch (tier) {
         case 0: return "70B Mobile";
@@ -318,3 +311,4 @@ QColor ThermalDashboardWidget::tempColor(double tempC) const
     if (tempC < 55.0) return COLOR_WARM;
     return COLOR_HOT;
 }
+

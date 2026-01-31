@@ -17,7 +17,6 @@ bool Sandbox::executeCommand(const std::string &command, const std::stringList &
 {
     // Check if command is in allow-list
     if (!m_allowList.empty() && !m_allowList.contains(command)) {
-        // // qWarning:  "Command not in allow-list:" << command;
         return false;
     }
     
@@ -43,12 +42,10 @@ bool Sandbox::executeCommandWindows(const std::string &command, const std::strin
     process.start(command, arguments);
     
     if (!process.waitForStarted()) {
-        // // qWarning:  "Failed to start process:" << command << process.errorString();
         return false;
     }
     
     if (!process.waitForFinished(30000)) { // 30 second timeout
-        // // qWarning:  "Process timed out:" << command;
         process.kill();
         return false;
     }
@@ -57,7 +54,6 @@ bool Sandbox::executeCommandWindows(const std::string &command, const std::strin
     std::vector<uint8_t> errorOutput = process.readAllStandardError();
     
     if (!errorOutput.empty()) {
-        // // qWarning:  "Process error output:" << errorOutput;
     }
     
     return process.exitCode() == 0;
@@ -71,12 +67,10 @@ bool Sandbox::executeCommandLinux(const std::string &command, const std::stringL
     process.start(command, arguments);
     
     if (!process.waitForStarted()) {
-        // // qWarning:  "Failed to start process:" << command << process.errorString();
         return false;
     }
     
     if (!process.waitForFinished(30000)) { // 30 second timeout
-        // // qWarning:  "Process timed out:" << command;
         process.kill();
         return false;
     }
@@ -85,14 +79,8 @@ bool Sandbox::executeCommandLinux(const std::string &command, const std::stringL
     std::vector<uint8_t> errorOutput = process.readAllStandardError();
     
     if (!errorOutput.empty()) {
-        // // qWarning:  "Process error output:" << errorOutput;
     }
     
     return process.exitCode() == 0;
 }
-
-
-
-
-
 

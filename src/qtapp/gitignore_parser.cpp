@@ -136,12 +136,10 @@ bool GitignoreParser::load()
     }
 
     if (m_rules.empty()) {
-        // // qWarning:  "[GitignoreParser] No .gitignore found, loading defaults";
         loadDefaultPatterns();
         return false;
     }
 
-    // // qInfo:  "[GitignoreParser] Loaded" << m_rules.size() << "rules from" << m_gitignorePaths.size() << "files";
     return true;
 }
 
@@ -149,7 +147,6 @@ void GitignoreParser::loadFromFile(const std::string& filePath)
 {
     // File operation removed;
     if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        // // qWarning:  "[GitignoreParser] Could not open:" << filePath;
         return;
     }
 
@@ -173,7 +170,6 @@ void GitignoreParser::loadFromFile(const std::string& filePath)
         }
 
         m_rules.append(rule);
-        // // qDebug:  "[GitignoreParser]" << filePath << "line" << lineNum << ":" << line;
     }
 
     file.close();
@@ -204,7 +200,6 @@ void GitignoreParser::loadDefaultPatterns()
         m_rules.append(GitignoreRule(pattern));
     }
 
-    // // qInfo:  "[GitignoreParser] Loaded" << defaults.size() << "default patterns";
 }
 
 bool GitignoreParser::isIgnored(const std::string& filePath) const
@@ -218,7 +213,6 @@ bool GitignoreParser::isIgnored(const std::string& filePath) const
     for (const GitignoreRule& rule : m_rules) {
         if (rule.matches(normalized)) {
             ignored = !rule.isNegation();
-            // // qDebug:  "[GitignoreParser] File:" << normalized << "Rule:" << rule.pattern() << "Match:" << ignored;
         }
     }
 
@@ -278,8 +272,4 @@ std::string GitignoreParser::normalizePath(const std::string& path) const
 
     return normalized;
 }
-
-
-
-
 

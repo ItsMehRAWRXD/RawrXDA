@@ -1,25 +1,21 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
-
-class QTabWidget;
 
 namespace RawrXD {
     class LSPClient;
     class AgenticTextEdit;
 }
 
-class MultiTabEditor : public QWidget {
-    Q_OBJECT
+class MultiTabEditor : public void {
+
 public:
-    explicit MultiTabEditor(QWidget* parent = nullptr);
+    explicit MultiTabEditor(void* parent = nullptr);
     
     // Two-phase initialization: call after QApplication exists
     void initialize();
     
-public slots:
-    void openFile(const QString& filepath);
+public:
+    void openFile(const std::string& filepath);
     void newFile();
     void saveCurrentFile();
     void undo();
@@ -27,9 +23,9 @@ public slots:
     void find();
     void replace();
 
-    QString getCurrentText() const;
-    QString getSelectedText() const;
-    QString getCurrentFilePath() const;
+    std::string getCurrentText() const;
+    std::string getSelectedText() const;
+    std::string getCurrentFilePath() const;
     
     // LSP integration
     void setLSPClient(RawrXD::LSPClient* client);
@@ -38,6 +34,7 @@ public slots:
 
 private:
     QTabWidget* tab_widget_;
-    QMap<QWidget*, QString> tab_file_paths_;  // Maps editor widget to file path
+    std::map<void*, std::string> tab_file_paths_;  // Maps editor widget to file path
     RawrXD::LSPClient* m_lspClient{};  // Shared LSP client for all tabs
 };
+

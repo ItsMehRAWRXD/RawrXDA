@@ -1,26 +1,21 @@
 // ollama_hotpatch_proxy.cpp - Implementation of Ollama hotpatch proxy
 #include "ollama_hotpatch_proxy.hpp"
-#include <QJsonDocument>
-#include <QCryptographicHash>
-#include <QElapsedTimer>
-#include <QDebug>
+
+
 #include <algorithm>
 
-OllamaHotpatchProxy::OllamaHotpatchProxy(QObject* parent)
-    : QObject(parent)
+OllamaHotpatchProxy::OllamaHotpatchProxy(void* parent)
+    : void(parent)
 {
-    qInfo() << "[OllamaHotpatchProxy] Initialized";
     
-    m_statsReportTimer = new QTimer(this);
-    connect(m_statsReportTimer, &QTimer::timeout, this, [this]() {
-        qDebug() << "[OllamaHotpatchProxy] Stats - Requests:" << m_stats.requestsProcessed 
-                 << "Rules applied:" << m_stats.rulesApplied;
+    m_statsReportTimer = new void*(this);
+// Qt connect removed
     });
 }
 
 OllamaHotpatchProxy::~OllamaHotpatchProxy()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_rules.clear();
     m_responseCache.clear();
     m_activeStreams.clear();
@@ -28,52 +23,49 @@ OllamaHotpatchProxy::~OllamaHotpatchProxy()
 
 void OllamaHotpatchProxy::addRule(const OllamaHotpatchRule& rule)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_rules[rule.name] = rule;
     if (!m_ruleOrder.contains(rule.name)) {
         m_ruleOrder.append(rule.name);
     }
-    qInfo() << "[OllamaHotpatchProxy] Added rule:" << rule.name << "priority:" << rule.priority;
 }
 
-void OllamaHotpatchProxy::removeRule(const QString& name)
+void OllamaHotpatchProxy::removeRule(const std::string& name)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_rules.remove(name)) {
         m_ruleOrder.removeAll(name);
-        qInfo() << "[OllamaHotpatchProxy] Removed rule:" << name;
     }
 }
 
-void OllamaHotpatchProxy::enableRule(const QString& name, bool enable)
+void OllamaHotpatchProxy::enableRule(const std::string& name, bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_rules.contains(name)) {
         m_rules[name].enabled = enable;
-        qInfo() << "[OllamaHotpatchProxy] Rule" << name << (enable ? "enabled" : "disabled");
     }
 }
 
-bool OllamaHotpatchProxy::hasRule(const QString& name) const
+bool OllamaHotpatchProxy::hasRule(const std::string& name) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_rules.contains(name);
 }
 
-OllamaHotpatchRule OllamaHotpatchProxy::getRule(const QString& name) const
+OllamaHotpatchRule OllamaHotpatchProxy::getRule(const std::string& name) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_rules.value(name);
 }
 
-QStringList OllamaHotpatchProxy::listRules(const QString& modelPattern) const
+std::vector<std::string> OllamaHotpatchProxy::listRules(const std::string& modelPattern) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (modelPattern.isEmpty()) {
         return m_ruleOrder;
     }
     
-    QStringList filtered;
+    std::vector<std::string> filtered;
     for (const auto& name : m_ruleOrder) {
         const auto& rule = m_rules[name];
         if (matchesModel(m_activeModel, rule.targetModel)) {
@@ -85,29 +77,27 @@ QStringList OllamaHotpatchProxy::listRules(const QString& modelPattern) const
 
 void OllamaHotpatchProxy::clearAllRules()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_rules.clear();
     m_ruleOrder.clear();
-    qInfo() << "[OllamaHotpatchProxy] Cleared all rules";
 }
 
-void OllamaHotpatchProxy::setPriorityOrder(const QStringList& ruleNames)
+void OllamaHotpatchProxy::setPriorityOrder(const std::vector<std::string>& ruleNames)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_ruleOrder = ruleNames;
-    qInfo() << "[OllamaHotpatchProxy] Set priority order for" << ruleNames.size() << "rules";
 }
 
-QJsonObject OllamaHotpatchProxy::processRequestJson(const QJsonObject& request)
+void* OllamaHotpatchProxy::processRequestJson(const void*& request)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_enabled) return request;
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
     m_stats.requestsProcessed++;
-    QJsonObject result = request;
+    void* result = request;
     
     for (const auto& ruleName : m_ruleOrder) {
         const auto& rule = m_rules[ruleName];
@@ -133,25 +123,25 @@ QJsonObject OllamaHotpatchProxy::processRequestJson(const QJsonObject& request)
     return result;
 }
 
-QByteArray OllamaHotpatchProxy::processRequestBytes(const QByteArray& requestData)
+std::vector<uint8_t> OllamaHotpatchProxy::processRequestBytes(const std::vector<uint8_t>& requestData)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_enabled) return requestData;
     
-    QJsonDocument doc = QJsonDocument::fromJson(requestData);
+    void* doc = void*::fromJson(requestData);
     if (!doc.isObject()) return requestData;
     
     auto processed = processRequestJson(doc.object());
-    return QJsonDocument(processed).toJson(QJsonDocument::Compact);
+    return void*(processed).toJson(void*::Compact);
 }
 
-QJsonObject OllamaHotpatchProxy::processResponseJson(const QJsonObject& response)
+void* OllamaHotpatchProxy::processResponseJson(const void*& response)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_enabled) return response;
     
     m_stats.responsesProcessed++;
-    QJsonObject result = response;
+    void* result = response;
     
     for (const auto& ruleName : m_ruleOrder) {
         const auto& rule = m_rules[ruleName];
@@ -168,25 +158,25 @@ QJsonObject OllamaHotpatchProxy::processResponseJson(const QJsonObject& response
     return result;
 }
 
-QByteArray OllamaHotpatchProxy::processResponseBytes(const QByteArray& responseData)
+std::vector<uint8_t> OllamaHotpatchProxy::processResponseBytes(const std::vector<uint8_t>& responseData)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_enabled) return responseData;
     
-    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+    void* doc = void*::fromJson(responseData);
     if (!doc.isObject()) return responseData;
     
     auto processed = processResponseJson(doc.object());
-    return QJsonDocument(processed).toJson(QJsonDocument::Compact);
+    return void*(processed).toJson(void*::Compact);
 }
 
-QByteArray OllamaHotpatchProxy::processStreamChunk(const QByteArray& chunk, int chunkIndex)
+std::vector<uint8_t> OllamaHotpatchProxy::processStreamChunk(const std::vector<uint8_t>& chunk, int chunkIndex)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_enabled) return chunk;
     
     m_stats.chunksProcessed++;
-    QByteArray result = chunk;
+    std::vector<uint8_t> result = chunk;
     
     // Apply byte-level patching rules
     for (const auto& ruleName : m_ruleOrder) {
@@ -205,214 +195,210 @@ QByteArray OllamaHotpatchProxy::processStreamChunk(const QByteArray& chunk, int 
     return result;
 }
 
-void OllamaHotpatchProxy::beginStreamProcessing(const QString& streamId)
+void OllamaHotpatchProxy::beginStreamProcessing(const std::string& streamId)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_activeStreams[streamId] = 0;
-    logDiagnostic(QString("Stream processing started: %1").arg(streamId));
+    logDiagnostic(std::string("Stream processing started: %1"));
 }
 
-void OllamaHotpatchProxy::endStreamProcessing(const QString& streamId)
+void OllamaHotpatchProxy::endStreamProcessing(const std::string& streamId)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_activeStreams.remove(streamId);
-    logDiagnostic(QString("Stream processing ended: %1").arg(streamId));
+    logDiagnostic(std::string("Stream processing ended: %1"));
 }
 
-PatchResult OllamaHotpatchProxy::injectIntoRequest(const QString& key, const QVariant& value)
+PatchResult OllamaHotpatchProxy::injectIntoRequest(const std::string& key, const std::any& value)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_parameterOverrides[key] = value;
     m_stats.transformationsApplied++;
-    emit parameterInjected(key, value);
-    return PatchResult::ok(QString("Injected parameter %1").arg(key));
+    parameterInjected(key, value);
+    return PatchResult::ok(std::string("Injected parameter %1"));
 }
 
-PatchResult OllamaHotpatchProxy::injectIntoRequestBatch(const QHash<QString, QVariant>& injections)
+PatchResult OllamaHotpatchProxy::injectIntoRequestBatch(const std::unordered_map<std::string, std::any>& injections)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     for (auto it = injections.constBegin(); it != injections.constEnd(); ++it) {
         m_parameterOverrides[it.key()] = it.value();
     }
     m_stats.transformationsApplied += injections.size();
-    return PatchResult::ok(QString("Batch injected %1 parameters").arg(injections.size()));
+    return PatchResult::ok(std::string("Batch injected %1 parameters")));
 }
 
-QVariant OllamaHotpatchProxy::extractFromRequest(const QString& key) const
+std::any OllamaHotpatchProxy::extractFromRequest(const std::string& key) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_parameterOverrides.value(key);
 }
 
-QHash<QString, QVariant> OllamaHotpatchProxy::extractAllRequestParams() const
+std::unordered_map<std::string, std::any> OllamaHotpatchProxy::extractAllRequestParams() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_parameterOverrides;
 }
 
-PatchResult OllamaHotpatchProxy::modifyInResponse(const QString& jsonPath, const QVariant& newValue)
+PatchResult OllamaHotpatchProxy::modifyInResponse(const std::string& jsonPath, const std::any& newValue)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats.transformationsApplied++;
-    return PatchResult::ok(QString("Modified response path %1").arg(jsonPath));
+    return PatchResult::ok(std::string("Modified response path %1"));
 }
 
-QVariant OllamaHotpatchProxy::readFromResponse(const QString& jsonPath) const
+std::any OllamaHotpatchProxy::readFromResponse(const std::string& jsonPath) const
 {
-    QMutexLocker locker(&m_mutex);
-    return QVariant();
+    std::lock_guard<std::mutex> locker(&m_mutex);
+    return std::any();
 }
 
-void OllamaHotpatchProxy::setParameterOverride(const QString& paramName, const QVariant& value)
+void OllamaHotpatchProxy::setParameterOverride(const std::string& paramName, const std::any& value)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_parameterOverrides[paramName] = value;
-    logDiagnostic(QString("Parameter override set: %1 = %2").arg(paramName, value.toString()));
+    logDiagnostic(std::string("Parameter override set: %1 = %2")));
 }
 
-void OllamaHotpatchProxy::clearParameterOverride(const QString& paramName)
+void OllamaHotpatchProxy::clearParameterOverride(const std::string& paramName)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_parameterOverrides.remove(paramName);
 }
 
-QHash<QString, QVariant> OllamaHotpatchProxy::getParameterOverrides() const
+std::unordered_map<std::string, std::any> OllamaHotpatchProxy::getParameterOverrides() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_parameterOverrides;
 }
 
-bool OllamaHotpatchProxy::matchesModel(const QString& modelName, const QString& pattern) const
+bool OllamaHotpatchProxy::matchesModel(const std::string& modelName, const std::string& pattern) const
 {
     if (pattern.isEmpty()) return true;
     if (modelName == pattern) return true;
     
     // Simple wildcard matching
     if (pattern.contains('*')) {
-        QString regexPattern = pattern;
+        std::string regexPattern = pattern;
         regexPattern.replace('*', ".*");
         regexPattern.replace('?', ".");
-        QRegularExpression regex(regexPattern);
+        std::regex regex(regexPattern);
         return regex.match(modelName).hasMatch();
     }
     
     return false;
 }
 
-void OllamaHotpatchProxy::setActiveModel(const QString& modelName)
+void OllamaHotpatchProxy::setActiveModel(const std::string& modelName)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_activeModel != modelName) {
         m_activeModel = modelName;
-        logDiagnostic(QString("Active model changed to: %1").arg(modelName));
-        emit modelChanged(modelName);
+        logDiagnostic(std::string("Active model changed to: %1"));
+        modelChanged(modelName);
     }
 }
 
-QString OllamaHotpatchProxy::getActiveModel() const
+std::string OllamaHotpatchProxy::getActiveModel() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_activeModel;
 }
 
 void OllamaHotpatchProxy::setResponseCachingEnabled(bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_cachingEnabled = enable;
-    qInfo() << "[OllamaHotpatchProxy] Response caching" << (enable ? "enabled" : "disabled");
 }
 
 bool OllamaHotpatchProxy::isResponseCachingEnabled() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_cachingEnabled;
 }
 
 void OllamaHotpatchProxy::clearResponseCache()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_responseCache.clear();
-    qInfo() << "[OllamaHotpatchProxy] Response cache cleared";
 }
 
 OllamaHotpatchProxy::Stats OllamaHotpatchProxy::getStatistics() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_stats;
 }
 
 void OllamaHotpatchProxy::resetStatistics()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats = Stats();
-    qInfo() << "[OllamaHotpatchProxy] Statistics reset";
 }
 
 void OllamaHotpatchProxy::setEnabled(bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enabled = enable;
-    qInfo() << "[OllamaHotpatchProxy]" << (enable ? "Enabled" : "Disabled");
 }
 
 bool OllamaHotpatchProxy::isEnabled() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_enabled;
 }
 
 void OllamaHotpatchProxy::enableDiagnostics(bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_diagnosticsEnabled = enable;
 }
 
-QStringList OllamaHotpatchProxy::getDiagnosticLog() const
+std::vector<std::string> OllamaHotpatchProxy::getDiagnosticLog() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_diagnosticLog;
 }
 
 void OllamaHotpatchProxy::clearDiagnosticLog()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_diagnosticLog.clear();
 }
 
 // Helper implementations
-QJsonObject OllamaHotpatchProxy::applyParameterInjection(const QJsonObject& request, const OllamaHotpatchRule& rule)
+void* OllamaHotpatchProxy::applyParameterInjection(const void*& request, const OllamaHotpatchRule& rule)
 {
-    QJsonObject result = request;
+    void* result = request;
     for (auto it = rule.parameters.constBegin(); it != rule.parameters.constEnd(); ++it) {
-        result[it.key()] = QJsonValue::fromVariant(it.value());
+        result[it.key()] = void*::fromVariant(it.value());
     }
-    emit ruleApplied(rule.name, "ParameterInjection");
+    ruleApplied(rule.name, "ParameterInjection");
     return result;
 }
 
-QJsonObject OllamaHotpatchProxy::applyResponseTransform(const QJsonObject& response, const OllamaHotpatchRule& rule)
+void* OllamaHotpatchProxy::applyResponseTransform(const void*& response, const OllamaHotpatchRule& rule)
 {
-    QJsonObject result = response;
+    void* result = response;
     if (rule.customTransform) {
-        QByteArray data = QJsonDocument(response).toJson(QJsonDocument::Compact);
-        QByteArray transformed = rule.customTransform(data);
-        QJsonDocument doc = QJsonDocument::fromJson(transformed);
+        std::vector<uint8_t> data = void*(response).toJson(void*::Compact);
+        std::vector<uint8_t> transformed = rule.customTransform(data);
+        void* doc = void*::fromJson(transformed);
         if (doc.isObject()) {
             result = doc.object();
         }
     }
-    emit ruleApplied(rule.name, "ResponseTransform");
+    ruleApplied(rule.name, "ResponseTransform");
     return result;
 }
 
-QJsonObject OllamaHotpatchProxy::applyContextInjection(const QJsonObject& request, const QString& context)
+void* OllamaHotpatchProxy::applyContextInjection(const void*& request, const std::string& context)
 {
-    QJsonObject result = request;
+    void* result = request;
     
     if (result.contains("messages") && result["messages"].isArray()) {
-        QJsonArray messages = result["messages"].toArray();
+        void* messages = result["messages"].toArray();
         if (!messages.isEmpty()) {
-            QJsonObject systemMsg;
+            void* systemMsg;
             systemMsg["role"] = "system";
             systemMsg["content"] = context;
             messages.prepend(systemMsg);
@@ -423,9 +409,9 @@ QJsonObject OllamaHotpatchProxy::applyContextInjection(const QJsonObject& reques
     return result;
 }
 
-QByteArray OllamaHotpatchProxy::applyBytePatching(const QByteArray& data, const QByteArray& pattern, const QByteArray& replacement)
+std::vector<uint8_t> OllamaHotpatchProxy::applyBytePatching(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement)
 {
-    QByteArray result = data;
+    std::vector<uint8_t> result = data;
     int pos = 0;
     
     while ((pos = result.indexOf(pattern, pos)) != -1) {
@@ -436,24 +422,25 @@ QByteArray OllamaHotpatchProxy::applyBytePatching(const QByteArray& data, const 
     return result;
 }
 
-bool OllamaHotpatchProxy::shouldApplyRule(const OllamaHotpatchRule& rule, const QString& modelName) const
+bool OllamaHotpatchProxy::shouldApplyRule(const OllamaHotpatchRule& rule, const std::string& modelName) const
 {
     return !rule.enabled || matchesModel(modelName, rule.targetModel);
 }
 
-QString OllamaHotpatchProxy::getCacheKey(const QJsonObject& request) const
+std::string OllamaHotpatchProxy::getCacheKey(const void*& request) const
 {
-    QByteArray data = QJsonDocument(request).toJson(QJsonDocument::Compact);
-    return QString::fromUtf8(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
+    std::vector<uint8_t> data = void*(request).toJson(void*::Compact);
+    return std::string::fromUtf8(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
 }
 
-void OllamaHotpatchProxy::logDiagnostic(const QString& message)
+void OllamaHotpatchProxy::logDiagnostic(const std::string& message)
 {
     if (m_diagnosticsEnabled) {
-        m_diagnosticLog.append(QString("[%1] %2").arg(QDateTime::currentDateTime().toString("hh:mm:ss"), message));
+        m_diagnosticLog.append(std::string("[%1] %2").toString("hh:mm:ss"), message));
         if (m_diagnosticLog.size() > 1000) {
             m_diagnosticLog = m_diagnosticLog.mid(m_diagnosticLog.size() - 500);
         }
-        emit diagnosticMessage(message);
+        diagnosticMessage(message);
     }
 }
+

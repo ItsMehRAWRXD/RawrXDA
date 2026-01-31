@@ -9,8 +9,7 @@
 
 // Initialize the Agentic Bridge
 void Win32IDE::initializeAgenticBridge() {
-    LOG_INFO("Initializing Agentic Bridge");
-    
+
     if (!m_agenticBridge) {
         m_agenticBridge = std::make_unique<AgenticBridge>(this);
         
@@ -28,10 +27,10 @@ void Win32IDE::initializeAgenticBridge() {
         
         // Initialize with default framework path
         if (m_agenticBridge->Initialize("", "bigdaddyg-personalized-agentic:latest")) {
-            LOG_INFO("Agentic Bridge initialized successfully");
+
             appendToOutput("✅ Agentic Framework initialized\n", "Output", OutputSeverity::Info);
         } else {
-            LOG_ERROR("Failed to initialize Agentic Bridge");
+
             appendToOutput("❌ Failed to initialize Agentic Framework\n", "Errors", OutputSeverity::Error);
             MessageBoxA(m_hwndMain, 
                 "Failed to initialize Agentic Framework.\nMake sure Agentic-Framework.ps1 is in the Powershield folder.", 
@@ -42,8 +41,7 @@ void Win32IDE::initializeAgenticBridge() {
 
 // Start Agent Loop - multi-turn agentic conversation
 void Win32IDE::onAgentStartLoop() {
-    LOG_INFO("onAgentStartLoop called");
-    
+
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
@@ -90,17 +88,16 @@ void Win32IDE::onAgentStartLoop() {
     
     std::thread([this, promptStr]() {
         if (m_agenticBridge->StartAgentLoop(promptStr, 10)) {
-            LOG_INFO("Agent loop completed successfully");
+
         } else {
-            LOG_ERROR("Agent loop failed");
+
         }
     }).detach();
 }
 
 // Execute single agent command
 void Win32IDE::onAgentExecuteCommand() {
-    LOG_INFO("onAgentExecuteCommand called");
-    
+
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
@@ -148,8 +145,7 @@ void Win32IDE::onAgentExecuteCommand() {
 
 // Configure AI model
 void Win32IDE::onAgentConfigureModel() {
-    LOG_INFO("onAgentConfigureModel called");
-    
+
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
@@ -266,8 +262,7 @@ void Win32IDE::onAgentConfigureModel() {
 
 // View available agent tools
 void Win32IDE::onAgentViewTools() {
-    LOG_INFO("onAgentViewTools called");
-    
+
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
@@ -297,8 +292,7 @@ void Win32IDE::onAgentViewTools() {
 
 // View agent status
 void Win32IDE::onAgentViewStatus() {
-    LOG_INFO("onAgentViewStatus called");
-    
+
     if (!m_agenticBridge) {
         appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized.\nUse Agent > Start Loop to initialize.", "Agent Status", MB_OK | MB_ICONINFORMATION);
@@ -312,8 +306,7 @@ void Win32IDE::onAgentViewStatus() {
 
 // Stop agent loop
 void Win32IDE::onAgentStop() {
-    LOG_INFO("onAgentStop called");
-    
+
     if (!m_agenticBridge) {
         return;
     }

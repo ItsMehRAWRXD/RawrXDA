@@ -12,14 +12,11 @@
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QStringList>
+
 #include <memory>
 
 class UnifiedBackend;
 class MetaPlanner;
-class QPlainTextEdit;
 
 /**
  * @struct PlanStep
@@ -27,12 +24,12 @@ class QPlainTextEdit;
  */
 struct PlanStep {
     int id;                        ///< Step ID (1-based)
-    QString title;                 ///< Short step description
-    QString description;           ///< Detailed description
-    QStringList requiredFiles;     ///< Files this step needs
-    QStringList tools;             ///< Tools/methods to use
+    std::string title;                 ///< Short step description
+    std::string description;           ///< Detailed description
+    std::vector<std::string> requiredFiles;     ///< Files this step needs
+    std::vector<std::string> tools;             ///< Tools/methods to use
     bool completed = false;        ///< Completion status
-    QString estimatedTime;         ///< Time estimate (e.g., "5min", "1h")
+    std::string estimatedTime;         ///< Time estimate (e.g., "5min", "1h")
 };
 
 /**
@@ -40,24 +37,23 @@ struct PlanStep {
  * @brief Represents the complete generated plan
  */
 struct Plan {
-    QString title;                 ///< Plan title
-    QString description;           ///< Overall description
-    QVector<PlanStep> steps;       ///< Ordered steps
-    QString estimatedTotalTime;    ///< Total time estimate
+    std::string title;                 ///< Plan title
+    std::string description;           ///< Overall description
+    std::vector<PlanStep> steps;       ///< Ordered steps
+    std::string estimatedTotalTime;    ///< Total time estimate
     float confidence;              ///< Plan confidence score (0-100)
-    QString assumptions;           ///< Assumptions the plan makes
-    QStringList risks;             ///< Identified risks
+    std::string assumptions;           ///< Assumptions the plan makes
+    std::vector<std::string> risks;             ///< Identified risks
 };
 
 /**
  * @class PlanModeHandler
  * @brief Handles the Plan Mode phase of agentic operation
  */
-class PlanModeHandler : public QObject {
-    Q_OBJECT
+class PlanModeHandler : public void {
 
 public:
-    explicit PlanModeHandler(UnifiedBackend* backend, MetaPlanner* planner, QObject* parent = nullptr);
+    explicit PlanModeHandler(UnifiedBackend* backend, MetaPlanner* planner, void* parent = nullptr);
     ~PlanModeHandler();
 
     /**
@@ -65,7 +61,7 @@ public:
      * @param wish The user's task description or goal
      * @param context Additional context (current file, selection, etc.)
      */
-    void startPlanning(const QString& wish, const QString& context = "");
+    void startPlanning(const std::string& wish, const std::string& context = "");
 
     /**
      * @brief Get the current plan being reviewed
@@ -83,7 +79,7 @@ public:
      * @brief Get plan as formatted text for display
      * @return Human-readable plan text
      */
-    QString getPlanAsText() const;
+    std::string getPlanAsText() const;
 
     /**
      * @brief Mark plan as approved and ready to proceed
@@ -94,19 +90,18 @@ public:
      * @brief Reject plan and request regeneration
      * @param feedback User feedback on why plan was rejected
      */
-    void rejectPlan(const QString& feedback);
+    void rejectPlan(const std::string& feedback);
 
     /**
      * @brief Cancel plan mode and return to idle
      */
     void cancelPlanning();
 
-signals:
     /// Research phase started (gathering context from workspace)
     void researchStarted();
 
     /// Research progress update
-    void researchProgress(const QString& message);
+    void researchProgress(const std::string& message);
 
     /// Research completed, planning AI now
     void researchCompleted();
@@ -127,17 +122,17 @@ signals:
     void planApproved();
 
     /// Plan rejected by user
-    void planRejected(const QString& feedback);
+    void planRejected(const std::string& feedback);
 
     /// Error occurred during planning
-    void planningError(const QString& errorMessage);
+    void planningError(const std::string& errorMessage);
 
     /// Planning cancelled
     void planningCancelled();
 
-private slots:
+private:
     /// Handle subagent research completion
-    void onResearchCompleted(const QString& researchResults);
+    void onResearchCompleted(const std::string& researchResults);
 
     /// Handle planner generating a plan step
     void onPlanStepGenerated(const PlanStep& step);
@@ -146,17 +141,17 @@ private slots:
     void onPlanCompleted(const Plan& plan);
 
     /// Handle AI backend streaming a plan line
-    void onStreamToken(qint64 reqId, const QString& token);
+    void onStreamToken(qint64 reqId, const std::string& token);
 
     /// Handle AI backend error
-    void onError(qint64 reqId, const QString& error);
+    void onError(qint64 reqId, const std::string& error);
 
 private:
     /**
      * @brief Parse streamed tokens into plan structure
      * @param token Token from AI stream
      */
-    void parseStreamedPlanToken(const QString& token);
+    void parseStreamedPlanToken(const std::string& token);
 
     /**
      * @brief Validate plan structure
@@ -169,8 +164,9 @@ private:
     MetaPlanner* m_planner;             ///< Planning engine
     Plan m_currentPlan;                 ///< Currently generated plan
     bool m_planReady;                   ///< Plan approved and ready
-    QString m_userWish;                 ///< Original user request
-    QString m_researchContext;          ///< Context from workspace research
-    QString m_streamedPlanText;         ///< Accumulated streamed plan text
+    std::string m_userWish;                 ///< Original user request
+    std::string m_researchContext;          ///< Context from workspace research
+    std::string m_streamedPlanText;         ///< Accumulated streamed plan text
     qint64 m_currentRequestId;          ///< ID of current AI request
 };
+

@@ -5,8 +5,8 @@
 #include <chrono>
 #include <thread>
 #include <fstream>
-#include <QCoreApplication>
-#include <QString>
+
+
 #include "inference_engine.hpp"
 
 // Forward declaration to test if linking works
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
                 std::cout << "  Loading model..." << std::flush;
                 auto load_start = std::chrono::high_resolution_clock::now();
                 
-                bool loaded = engine.loadModel(QString::fromStdString(models[i]));
+                bool loaded = engine.loadModel(std::string::fromStdString(models[i]));
                 
                 auto load_end = std::chrono::high_resolution_clock::now();
                 double load_time = std::chrono::duration<double>(load_end - load_start).count();
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
                 std::cout << " OK (" << load_time << "s)\n";
                 
                 // Generate tokens
-                QString prompt = "Write a short story about AI:";
+                std::string prompt = "Write a short story about AI:";
                 std::vector<int32_t> tokens = engine.tokenize(prompt);
                 
                 std::cout << "  Generating " << num_tokens << " tokens..." << std::flush;
@@ -131,3 +131,4 @@ int main(int argc, char* argv[]) {
     
     return 0;
 }
+

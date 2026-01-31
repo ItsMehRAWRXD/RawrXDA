@@ -1,10 +1,8 @@
-﻿#include "settings.h"
+#include "settings.h"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
-#include <QStandardPaths>
-#include <QDir>
-#include <QSettings>
+
 
 // Lightweight constructor - no QSettings creation
 Settings::Settings() : settings_(nullptr) {
@@ -25,14 +23,14 @@ void Settings::initialize() {
     }
 }
 
-void Settings::setValue(const QString& key, const QVariant& value) {
+void Settings::setValue(const std::string& key, const std::any& value) {
     if (settings_) {
         settings_->setValue(key, value);
         settings_->sync();  // Force immediate write
     }
 }
 
-QVariant Settings::getValue(const QString& key, const QVariant& default_value) {
+std::any Settings::getValue(const std::string& key, const std::any& default_value) {
     if (settings_) {
         return settings_->value(key, default_value);
     }
@@ -134,3 +132,4 @@ bool Settings::SaveOverclock(const AppState& state, const std::string& path) {
     ofs << "gpu_pid_integral_clamp=" << state.gpu_pid_integral_clamp << "\n";
     return true;
 }
+

@@ -1,41 +1,32 @@
 #include "checkpoint_manager.h"
 #include "codec/compression.h"
-#include <QString>
-#include <QJsonObject>
-#include <QJsonDocument>
-#include <QByteArray>
-#include <QFile>
-#include <QDir>
-#include <QDateTime>
-#include <QCryptographicHash>
-#include <QStandardPaths>
-#include <QMap>
+
 
 // Real checkpoint manager implementation with file I/O and compression
 
-static QString s_checkpointDir;
-static QMap<QString, QJsonObject> s_checkpointRegistry;
+static std::string s_checkpointDir;
+static std::map<std::string, void*> s_checkpointRegistry;
 
 void initializeCheckpointManager() {
     s_checkpointDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/checkpoints";
-    QDir dir;
+    std::filesystem::path dir;
     if (!dir.exists(s_checkpointDir)) {
         dir.mkpath(s_checkpointDir);
     }
 }
 
-QString saveCheckpointReal(const QJsonObject& metadata, const QByteArray& stateData, int compressionLevel) {
+std::string saveCheckpointReal(const void*& metadata, const std::vector<uint8_t>& stateData, int compressionLevel) {
     if (s_checkpointDir.isEmpty()) {
         initializeCheckpointManager();
     }
     
     // Generate unique ID
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
-    QString random = QString::number(QDateTime::currentMSecsSinceEpoch() % 10000);
-    QString checkpointId = QString("ckpt_%1_%2").arg(timestamp, random);
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("yyyyMMdd_hhmmss");
+    std::string random = std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch() % 10000);
+    std::string checkpointId = std::string("ckpt_%1_%2");
     
     // Compress state data
-    QByteArray compressedData;
+    std::vector<uint8_t> compressedData;
     bool success = false;
     
     if (compressionLevel == 0) {
@@ -47,18 +38,18 @@ QString saveCheckpointReal(const QJsonObject& metadata, const QByteArray& stateD
     }
     
     // Write to disk
-    QString filePath = s_checkpointDir + "/" + checkpointId + ".ckpt";
-    QFile file(filePath);
+    std::string filePath = s_checkpointDir + "/" + checkpointId + ".ckpt";
+    std::fstream file(filePath);
     
     if (file.open(QIODevice::WriteOnly)) {
         file.write(compressedData);
         file.close();
         
         // Save metadata
-        QJsonObject metaWithId = metadata;
+        void* metaWithId = metadata;
         metaWithId["id"] = checkpointId;
         metaWithId["filePath"] = filePath;
-        metaWithId["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        metaWithId["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         metaWithId["compressedSize"] = static_cast<qint64>(compressedData.size());
         metaWithId["originalSize"] = static_cast<qint64>(stateData.size());
         
@@ -67,23 +58,23 @@ QString saveCheckpointReal(const QJsonObject& metadata, const QByteArray& stateD
         return checkpointId;
     }
     
-    return QString();
+    return std::string();
 }
 
-bool loadCheckpointReal(const QString& checkpointId, QByteArray& stateData) {
+bool loadCheckpointReal(const std::string& checkpointId, std::vector<uint8_t>& stateData) {
     if (!s_checkpointRegistry.contains(checkpointId)) {
         return false;
     }
     
-    QJsonObject metadata = s_checkpointRegistry[checkpointId];
-    QString filePath = metadata["filePath"].toString();
+    void* metadata = s_checkpointRegistry[checkpointId];
+    std::string filePath = metadata["filePath"].toString();
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
     
-    QByteArray compressedData = file.readAll();
+    std::vector<uint8_t> compressedData = file.readAll();
     file.close();
     
     // Decompress
@@ -93,15 +84,15 @@ bool loadCheckpointReal(const QString& checkpointId, QByteArray& stateData) {
     return success;
 }
 
-bool deleteCheckpointReal(const QString& checkpointId) {
+bool deleteCheckpointReal(const std::string& checkpointId) {
     if (!s_checkpointRegistry.contains(checkpointId)) {
         return false;
     }
     
-    QJsonObject metadata = s_checkpointRegistry[checkpointId];
-    QString filePath = metadata["filePath"].toString();
+    void* metadata = s_checkpointRegistry[checkpointId];
+    std::string filePath = metadata["filePath"].toString();
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (file.exists() && file.remove()) {
         s_checkpointRegistry.remove(checkpointId);
         return true;
@@ -110,13 +101,14 @@ bool deleteCheckpointReal(const QString& checkpointId) {
     return false;
 }
 
-QStringList listCheckpointsReal() {
+std::vector<std::string> listCheckpointsReal() {
     return s_checkpointRegistry.keys();
 }
 
-QJsonObject getCheckpointInfoReal(const QString& checkpointId) {
+void* getCheckpointInfoReal(const std::string& checkpointId) {
     if (s_checkpointRegistry.contains(checkpointId)) {
         return s_checkpointRegistry[checkpointId];
     }
-    return QJsonObject();
+    return void*();
 }
+

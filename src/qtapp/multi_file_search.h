@@ -13,7 +13,7 @@
  *
  * @par Architecture:
  * The widget uses QFutureWatcher to run searches on a background thread,
- * collecting results via thread-safe queue protected by QMutex. Results
+ * collecting results via thread-safe queue protected by std::mutex. Results
  * are batched and emitted to the UI thread via queued signal connections.
  *
  * @par Keyboard Shortcuts:
@@ -32,17 +32,7 @@
  */
 #pragma once
 
-#include <QWidget>
-#include <QLineEdit>
-#include <QTreeWidget>
-#include <QPushButton>
-#include <QCheckBox>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QMutex>
-#include <QFutureWatcher>
-#include <QRegularExpression>
+
 #include <atomic>
 #include <vector>
 
@@ -75,8 +65,7 @@
  *
  * @see MultiFileSearchResult for the result data structure
  */
-class MultiFileSearchWidget : public QWidget {
-    Q_OBJECT
+class MultiFileSearchWidget : public void {
 
 public:
     /**
@@ -90,7 +79,7 @@ public:
      * - Results tree view with custom item delegate
      * - Progress indicator and status label
      */
-    explicit MultiFileSearchWidget(QWidget* parent = nullptr);
+    explicit MultiFileSearchWidget(void* parent = nullptr);
 
     /**
      * @brief Destructor - cancels any running search and cleans up.
@@ -106,13 +95,13 @@ public:
      * - Relative path display in results
      * - .gitignore file discovery
      */
-    void setProjectRoot(const QString& path);
+    void setProjectRoot(const std::string& path);
 
     /**
      * @brief Gets the currently configured project root.
      * @return Absolute path to the project root, or empty if not set
      */
-    QString projectRoot() const { return m_projectRoot; }
+    std::string projectRoot() const { return m_projectRoot; }
 
     /**
      * @brief Programmatically sets the search query.
@@ -120,13 +109,13 @@ public:
      *
      * Does not automatically start the search - call startSearch() afterward.
      */
-    void setSearchQuery(const QString& query);
+    void setSearchQuery(const std::string& query);
 
     /**
      * @brief Gets the current search query text.
      * @return Current contents of the search input field
      */
-    QString searchQuery() const;
+    std::string searchQuery() const;
 
     /**
      * @brief Checks if a search is currently in progress.
@@ -134,7 +123,7 @@ public:
      */
     bool isSearching() const { return m_isSearching; }
 
-public slots:
+public:
     /**
      * @brief Initiates an asynchronous search operation.
      *
@@ -172,7 +161,7 @@ public slots:
      */
     void focusSearchInput();
 
-signals:
+
     /**
      * @brief Emitted when user double-clicks or presses Enter on a result.
      * @param result The selected search result with file/line/column info
@@ -201,7 +190,7 @@ signals:
      */
     void searchProgress(int filesSearched, int matchesFound);
 
-private slots:
+private:
     /**
      * @brief Handles double-click on a tree item.
      * @param item The clicked tree widget item
@@ -233,18 +222,18 @@ private:
      * Traverses the project directory, respects .gitignore rules, and
      * collects matches into the thread-safe results queue.
      */
-    void performSearch(const QString& searchText,
-                       const QString& rootPath,
+    void performSearch(const std::string& searchText,
+                       const std::string& rootPath,
                        bool useRegex,
                        bool caseSensitive,
-                       const QString& fileFilter);
+                       const std::string& fileFilter);
 
     /**
      * @brief Parses .gitignore files and builds exclusion patterns.
      * @param rootPath Project root containing .gitignore
      * @return List of compiled regex patterns for ignored paths
      */
-    QVector<QRegularExpression> loadGitignorePatterns(const QString& rootPath);
+    std::vector<std::regex> loadGitignorePatterns(const std::string& rootPath);
 
     /**
      * @brief Checks if a file path should be excluded from search.
@@ -252,8 +241,8 @@ private:
      * @param patterns Compiled gitignore patterns
      * @return true if the file should be skipped
      */
-    bool isIgnored(const QString& filePath,
-                   const QVector<QRegularExpression>& patterns);
+    bool isIgnored(const std::string& filePath,
+                   const std::vector<std::regex>& patterns);
 
     /**
      * @brief Adds a result to the tree view, grouped by file.
@@ -267,7 +256,7 @@ private:
      * @brief Updates the status label with current search state.
      * @param message Status message to display
      */
-    void updateStatus(const QString& message);
+    void updateStatus(const std::string& message);
 
     // ─────────────────────────────────────────────────────────────────────
     // UI Components
@@ -286,7 +275,7 @@ private:
     // Search State
     // ─────────────────────────────────────────────────────────────────────
 
-    QString m_projectRoot;                                    ///< Project root directory
+    std::string m_projectRoot;                                    ///< Project root directory
     std::atomic<bool> m_searchCancelled{false};               ///< Cancellation flag (atomic for thread safety)
     bool m_isSearching = false;                               ///< Search-in-progress flag
     QFutureWatcher<void>* m_searchWatcher = nullptr;          ///< Async search monitor
@@ -295,7 +284,8 @@ private:
     // Thread-Safe Result Collection
     // ─────────────────────────────────────────────────────────────────────
 
-    mutable QMutex m_resultsMutex;                            ///< Protects m_pendingResults
+    mutable std::mutex m_resultsMutex;                            ///< Protects m_pendingResults
     std::vector<MultiFileSearchResult> m_pendingResults;      ///< Results waiting for UI update
     int m_totalResultCount = 0;                               ///< Running total of matches found
 };
+

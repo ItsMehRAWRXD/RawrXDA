@@ -1,10 +1,6 @@
 #pragma once
-#include <QObject>
-#include <QString>
-#include <QByteArray>
-#include <QFile>
-#include <QHash>
-#include <QElapsedTimer>
+
+
 #include <vector>
 #include <memory>
 
@@ -30,12 +26,12 @@
  */
 
 struct TensorMetadata {
-    QString name;
+    std::string name;
     uint32_t ndims = 0;
     uint32_t ggml_type = 0;
     quint64 absolute_offset = 0;
     quint64 size_bytes = 0;
-    QString zone_id;
+    std::string zone_id;
 };
 
 struct ZoneMemory {
@@ -46,21 +42,20 @@ struct ZoneMemory {
     quint64 access_count = 0;
 };
 
-class StreamingGGUFLoader : public QObject {
-    Q_OBJECT
-    
+class StreamingGGUFLoader : public void {
+
 public:
-    explicit StreamingGGUFLoader(QObject* parent = nullptr);
+    explicit StreamingGGUFLoader(void* parent = nullptr);
     ~StreamingGGUFLoader();
 
     // Core operations
-    bool Open(const QString& filePath);
+    bool Open(const std::string& filePath);
     bool BuildTensorIndex();
     void Close();
 
     // Zone management
-    bool LoadZone(const QString& zoneName);
-    void UnloadZone(const QString& zoneName);
+    bool LoadZone(const std::string& zoneName);
+    void UnloadZone(const std::string& zoneName);
     void UnloadAll();
     
     // Automatic eviction (LRU policy)
@@ -68,11 +63,11 @@ public:
     void evictLeastRecentlyUsed();
 
     // Tensor access
-    bool GetTensorData(const QString& tensorName, std::vector<uint8_t>& outData);
-    bool HasTensor(const QString& tensorName) const;
+    bool GetTensorData(const std::string& tensorName, std::vector<uint8_t>& outData);
+    bool HasTensor(const std::string& tensorName) const;
     
     // Metadata
-    QString getModelName() const;
+    std::string getModelName() const;
     qint64 getTotalSize() const;
     int getTensorCount() const { return m_tensorIndex.size(); }
     int getLoadedZoneCount() const { return m_loadedZones.size(); }
@@ -88,24 +83,24 @@ public:
     
     LoaderMetrics getMetrics() const { return m_metrics; }
 
-signals:
-    void ZoneLoaded(const QString& zoneName, double load_time_ms);
-    void ZoneEvicted(const QString& zoneName);
-    void TensorAccessed(const QString& tensorName);
-    void ErrorOccurred(const QString& error);
+    void ZoneLoaded(const std::string& zoneName, double load_time_ms);
+    void ZoneEvicted(const std::string& zoneName);
+    void TensorAccessed(const std::string& tensorName);
+    void ErrorOccurred(const std::string& error);
 
 private:
-    QByteArray readDataFromFile(qint64 offset, qint64 size);
-    void logStructured(const QString& level, const QString& event, const QJsonObject& data);
-    void updateZoneAccessTime(const QString& zoneName);
+    std::vector<uint8_t> readDataFromFile(qint64 offset, qint64 size);
+    void logStructured(const std::string& level, const std::string& event, const void*& data);
+    void updateZoneAccessTime(const std::string& zoneName);
 
-    QFile m_file;
-    QString m_modelName;
+    std::fstream m_file;
+    std::string m_modelName;
     qint64 m_totalSize = 0;
     int m_maxLoadedZones = 8; // Default limit
     
-    QHash<QString, TensorMetadata> m_tensorIndex;
-    QHash<QString, ZoneMemory> m_loadedZones;
+    std::unordered_map<std::string, TensorMetadata> m_tensorIndex;
+    std::unordered_map<std::string, ZoneMemory> m_loadedZones;
     
     LoaderMetrics m_metrics;
 };
+

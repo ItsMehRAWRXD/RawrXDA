@@ -2,27 +2,22 @@
 // Production-ready with metrics and observability
 #pragma once
 
-#include <QWidget>
-#include <QProgressBar>
-#include <QLabel>
-#include <QString>
-#include <QTimer>
+
 #include <chrono>
 
 namespace RawrXD {
 
-class StreamingTokenProgressBar : public QWidget {
-    Q_OBJECT
+class StreamingTokenProgressBar : public void {
 
 public:
-    explicit StreamingTokenProgressBar(QWidget* parent = nullptr);
+    explicit StreamingTokenProgressBar(void* parent = nullptr);
     ~StreamingTokenProgressBar() override = default;
 
     // Start tracking token generation
     void startGeneration(int estimatedTokens = 0);
     
     // Update progress with new token
-    void onTokenGenerated(const QString& token);
+    void onTokenGenerated(const std::string& token);
     
     // Complete generation
     void completeGeneration();
@@ -34,17 +29,17 @@ public:
     void setShowTokenRate(bool show);
     void setShowElapsedTime(bool show);
 
-signals:
+
     void generationStarted();
-    void tokenReceived(const QString& token, int totalTokens);
+    void tokenReceived(const std::string& token, int totalTokens);
     void generationCompleted(int totalTokens, double tokensPerSecond);
 
-private slots:
+private:
     void updateMetrics();
 
 private:
     void setupUI();
-    QString formatElapsedTime(std::chrono::milliseconds elapsed) const;
+    std::string formatElapsedTime(std::chrono::milliseconds elapsed) const;
     
     // UI Components
     QProgressBar* m_progressBar{nullptr};
@@ -58,10 +53,11 @@ private:
     std::chrono::steady_clock::time_point m_startTime;
     
     // Metrics
-    QTimer* m_metricsTimer{nullptr};
+    void** m_metricsTimer{nullptr};
     double m_tokensPerSecond{0.0};
     bool m_showTokenRate{true};
     bool m_showElapsedTime{true};
 };
 
 } // namespace RawrXD
+

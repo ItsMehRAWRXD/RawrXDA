@@ -27,13 +27,7 @@
  * @version 2.0-production
  */
 
-#include <QWidget>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QTimer>
-#include <QElapsedTimer>
-#include <QImage>
-#include <QPixmap>
+
 #include <vector>
 #include <map>
 #include <memory>
@@ -41,19 +35,7 @@
 #include <functional>
 
 // Forward declarations
-class QVBoxLayout;
-class QHBoxLayout;
-class QTabWidget;
-class QComboBox;
-class QSlider;
-class QLabel;
-class QPushButton;
-class QSpinBox;
-class QDoubleSpinBox;
-class QCheckBox;
-class QProgressBar;
-class QTableWidget;
-class QScrollArea;
+
 
 namespace RawrXD {
 
@@ -63,8 +45,7 @@ namespace RawrXD {
  * Provides comprehensive model analysis and visualization capabilities
  * with production-ready observability and performance monitoring.
  */
-class InterpretabilityPanelProduction : public QWidget {
-    Q_OBJECT
+class InterpretabilityPanelProduction : public void {
 
 public:
     // =========================================================================
@@ -135,7 +116,7 @@ public:
         int headIndex = 0;                          ///< Attention head index
         int layerIndex = 0;                         ///< Layer index
         std::vector<std::vector<float>> weights;    ///< 2D attention weights [query][key]
-        QStringList tokens;                         ///< Token labels
+        std::vector<std::string> tokens;                         ///< Token labels
         float maxWeight = 1.0f;                     ///< Maximum weight for normalization
         float entropy = 0.0f;                       ///< Attention entropy (sparsity measure)
         std::chrono::system_clock::time_point timestamp;
@@ -145,11 +126,11 @@ public:
      * @brief Feature importance data
      */
     struct FeatureImportance {
-        QString featureName;                        ///< Feature identifier
+        std::string featureName;                        ///< Feature identifier
         double importance = 0.0;                    ///< Importance score [0, 1]
         double confidenceLow = 0.0;                 ///< Lower confidence bound
         double confidenceHigh = 0.0;                ///< Upper confidence bound
-        QString category;                           ///< Feature category
+        std::string category;                           ///< Feature category
         bool isPositive = true;                     ///< Positive or negative contribution
     };
     
@@ -158,7 +139,7 @@ public:
      */
     struct GradientFlowData {
         int layerIndex = 0;                         ///< Layer index
-        QString layerName;                          ///< Human-readable layer name
+        std::string layerName;                          ///< Human-readable layer name
         double gradientNorm = 0.0;                  ///< L2 norm of gradients
         double gradientMean = 0.0;                  ///< Mean gradient value
         double gradientStd = 0.0;                   ///< Standard deviation
@@ -174,7 +155,7 @@ public:
      */
     struct ActivationStats {
         int layerIndex = 0;                         ///< Layer index
-        QString layerName;                          ///< Human-readable layer name
+        std::string layerName;                          ///< Human-readable layer name
         double mean = 0.0;                          ///< Mean activation
         double std = 0.0;                           ///< Standard deviation
         double min = 0.0;                           ///< Minimum activation
@@ -190,11 +171,11 @@ public:
      */
     struct LayerAttribution {
         int layerIndex = 0;                         ///< Layer index
-        QString layerName;                          ///< Human-readable layer name
+        std::string layerName;                          ///< Human-readable layer name
         double contribution = 0.0;                  ///< Contribution score [0, 1]
         double positiveAttribution = 0.0;           ///< Positive contribution
         double negativeAttribution = 0.0;           ///< Negative contribution
-        QString layerType;                          ///< Layer type (attention, ffn, etc.)
+        std::string layerType;                          ///< Layer type (attention, ffn, etc.)
     };
     
     /**
@@ -204,7 +185,7 @@ public:
         double x = 0.0;                             ///< X coordinate (projected)
         double y = 0.0;                             ///< Y coordinate (projected)
         double z = 0.0;                             ///< Z coordinate (optional for 3D)
-        QString label;                              ///< Point label
+        std::string label;                              ///< Point label
         int cluster = -1;                           ///< Cluster assignment
         QColor color;                               ///< Display color
     };
@@ -213,7 +194,7 @@ public:
      * @brief Token attribution data for NLP models
      */
     struct TokenAttribution {
-        QString token;                              ///< Token text
+        std::string token;                              ///< Token text
         double attribution = 0.0;                   ///< Attribution score
         double positiveAttribution = 0.0;           ///< Positive contribution
         double negativeAttribution = 0.0;           ///< Negative contribution
@@ -236,7 +217,7 @@ public:
     // CONSTRUCTOR / DESTRUCTOR
     // =========================================================================
     
-    explicit InterpretabilityPanelProduction(QWidget* parent = nullptr);
+    explicit InterpretabilityPanelProduction(void* parent = nullptr);
     ~InterpretabilityPanelProduction() override;
     
     /**
@@ -311,7 +292,7 @@ public:
     /**
      * @brief Get features by category
      */
-    std::vector<FeatureImportance> getFeaturesByCategory(const QString& category) const;
+    std::vector<FeatureImportance> getFeaturesByCategory(const std::string& category) const;
     
     // =========================================================================
     // GRADIENT FLOW ANALYSIS
@@ -336,7 +317,7 @@ public:
     /**
      * @brief Get summary of gradient health
      */
-    QJsonObject getGradientHealthSummary() const;
+    void* getGradientHealthSummary() const;
     
     // =========================================================================
     // ACTIVATION ANALYSIS
@@ -399,13 +380,13 @@ public:
      * @param inputName Input identifier
      * @param attributions Attribution values
      */
-    void updateIntegratedGradients(const QString& inputName, 
+    void updateIntegratedGradients(const std::string& inputName, 
                                    const std::vector<float>& attributions);
     
     /**
      * @brief Get integrated gradients for a specific input
      */
-    std::vector<float> getIntegratedGradients(const QString& inputName) const;
+    std::vector<float> getIntegratedGradients(const std::string& inputName) const;
     
     // =========================================================================
     // SALIENCY MAP
@@ -535,17 +516,17 @@ public:
      * @param format Export format
      * @return Success status
      */
-    bool exportVisualization(const QString& filePath, ExportFormat format = ExportFormat::PNG);
+    bool exportVisualization(const std::string& filePath, ExportFormat format = ExportFormat::PNG);
     
     /**
      * @brief Export all data as JSON
      */
-    QJsonObject exportAllData() const;
+    void* exportAllData() const;
     
     /**
      * @brief Import data from JSON
      */
-    bool importData(const QJsonObject& data);
+    bool importData(const void*& data);
     
     // =========================================================================
     // METRICS AND OBSERVABILITY
@@ -565,7 +546,6 @@ public:
     // SIGNALS
     // =========================================================================
     
-signals:
     /**
      * @brief Emitted when visualization is updated
      */
@@ -589,18 +569,18 @@ signals:
     /**
      * @brief Emitted when export completes
      */
-    void exportCompleted(const QString& filePath, bool success);
+    void exportCompleted(const std::string& filePath, bool success);
     
     /**
      * @brief Emitted on error
      */
-    void errorOccurred(const QString& error);
+    void errorOccurred(const std::string& error);
     
     // =========================================================================
     // PRIVATE SLOTS
     // =========================================================================
     
-private slots:
+private:
     void onVisualizationTypeChanged(int index);
     void onLayerSliderChanged(int value);
     void onHeadComboChanged(int index);
@@ -638,10 +618,10 @@ private:
     QColor getColorForValue(float value, float min = 0.0f, float max = 1.0f) const;
     QImage createHeatmapImage(const std::vector<std::vector<float>>& data) const;
     QImage createBarChartImage(const std::vector<double>& values, 
-                               const QStringList& labels) const;
+                               const std::vector<std::string>& labels) const;
     
-    void logStructured(const QString& level, const QString& event, 
-                       const QJsonObject& data = QJsonObject());
+    void logStructured(const std::string& level, const std::string& event, 
+                       const void*& data = void*());
     void updateMetrics(double updateTimeMs);
     
     // =========================================================================
@@ -668,7 +648,7 @@ private:
     std::vector<LayerAttribution> m_layerAttributions;
     std::map<int, std::vector<float>> m_gradcamData;
     std::map<int, std::pair<int, int>> m_gradcamDimensions;  // layer -> (width, height)
-    std::map<QString, std::vector<float>> m_integratedGradients;
+    std::map<std::string, std::vector<float>> m_integratedGradients;
     std::vector<float> m_saliencyMap;
     std::pair<int, int> m_saliencyDimensions;
     std::vector<EmbeddingPoint> m_embeddingPoints;
@@ -691,11 +671,11 @@ private:
     QPushButton* m_exportButton = nullptr;
     QPushButton* m_refreshButton = nullptr;
     QScrollArea* m_visualizationArea = nullptr;
-    QWidget* m_visualizationCanvas = nullptr;
+    void* m_visualizationCanvas = nullptr;
     QTableWidget* m_dataTable = nullptr;
     
     // Timer for auto-refresh
-    QTimer* m_refreshTimer = nullptr;
+    void** m_refreshTimer = nullptr;
     std::function<void()> m_updateCallback;
     
     // Rendered images
@@ -703,3 +683,4 @@ private:
 };
 
 } // namespace RawrXD
+

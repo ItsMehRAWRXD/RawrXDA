@@ -37,7 +37,7 @@ BenchmarkResult benchmarkModel(const std::string& model_path, int num_tokens = 2
         
         // Measure load time
         auto load_start = std::chrono::high_resolution_clock::now();
-        if (!engine.loadModel(QString::fromStdString(model_path))) {
+        if (!engine.loadModel(std::string::fromStdString(model_path))) {
             std::cerr << "Failed to load model: " << model_path << std::endl;
             return result;
         }
@@ -45,7 +45,7 @@ BenchmarkResult benchmarkModel(const std::string& model_path, int num_tokens = 2
         result.load_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(load_end - load_start).count();
 
         // Simple prompt
-        std::vector<int32_t> prompt = engine.tokenize(QString("The meaning of life is"));
+        std::vector<int32_t> prompt = engine.tokenize(std::string("The meaning of life is"));
         
         // Measure inference time
         auto inference_start = std::chrono::high_resolution_clock::now();

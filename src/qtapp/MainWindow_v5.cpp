@@ -24,7 +24,7 @@
 #include "../ui/model_download_dialog_new.h"
 #include "../ui/telemetry_optin_dialog.h"
 
-// ALL Q_OBJECT Headers - MUST be included to force AUTOMOC processing
+// ALL  Headers - MUST be included to force AUTOMOC processing
 // MOC doesn't discover these through other .cpp file includes
 #include "agentic_ide.h"
 #include "agentic_executor.h"
@@ -48,41 +48,11 @@
 #include "tokenizer_selector.h"
 #include "checkpoint_manager.h"
 
-#include <QApplication>
-#include <QMenuBar>
-#include <QToolBar>
-#include <QStatusBar>
-#include <QDockWidget>
-#include <QTimer>
-#include <QMessageBox>
-#include <QFileDialog>
-#include <QSettings>
-#include <QDebug>
-#include <QInputDialog>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QDoubleSpinBox>
-#include <QCheckBox>
-#include <QTabWidget>
-#include <QDialogButtonBox>
-#include <QDialog>
-#include <QFileInfo>
-#include <QProgressBar>
-#include <QDir>
-#include <QDirIterator>
-#include <QRegularExpression>
-#include <QTextStream>
-#include <QFile>
 
 namespace RawrXD {
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+MainWindow::MainWindow(void *parent)
+    : void(parent)
     , m_multiTabEditor(nullptr)
     , m_chatInterface(nullptr)
     , m_terminalPool(nullptr)
@@ -105,25 +75,24 @@ MainWindow::MainWindow(QWidget *parent)
     , m_loadProgressTimer(nullptr)
     , m_pendingModelPath()
 {
-    qDebug() << "[MainWindow] Lightweight constructor - deferring all initialization";
     
     // Basic window setup only
     setWindowTitle("RawrXD Agentic IDE v5.0 - Production Ready");
     resize(1400, 900);
     
     // Create splash widget for initialization progress
-    m_splashWidget = new QWidget(this);
+    m_splashWidget = new void(this);
     m_splashWidget->setStyleSheet("background-color: #1e1e1e; color: #d4d4d4;");
     QVBoxLayout *splashLayout = new QVBoxLayout(m_splashWidget);
-    splashLayout->setAlignment(Qt::AlignCenter);
+    splashLayout->setAlignment(//AlignCenter);
     
     QLabel *titleLabel = new QLabel("<h1>RawrXD Agentic IDE</h1><p>v5.0 Production Ready</p>");
-    titleLabel->setAlignment(Qt::AlignCenter);
+    titleLabel->setAlignment(//AlignCenter);
     titleLabel->setStyleSheet("color: #4ec9b0; margin: 20px;");
     splashLayout->addWidget(titleLabel);
     
     m_splashLabel = new QLabel("Initializing...");
-    m_splashLabel->setAlignment(Qt::AlignCenter);
+    m_splashLabel->setAlignment(//AlignCenter);
     splashLayout->addWidget(m_splashLabel);
     
     m_splashProgress = new QProgressBar();
@@ -139,18 +108,16 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(m_splashWidget);
     
     // Defer all heavy initialization to after event loop starts
-    QTimer::singleShot(0, this, &MainWindow::initialize);
+    void*::singleShot(0, this, &MainWindow::initialize);
 }
 
 MainWindow::~MainWindow()
 {
-    qDebug() << "[MainWindow] Destructor - saving settings";
     saveSettings();
 }
 
 void MainWindow::initialize()
 {
-    qDebug() << "[MainWindow] Phase 1: Initializing core components";
     updateSplashProgress("⏳ Phase 1/4: Initializing core editor...", 10);
     
     try {
@@ -162,19 +129,17 @@ void MainWindow::initialize()
         updateSplashProgress("✓ Editor initialized", 25);
         
         // Schedule next initialization phase
-        QTimer::singleShot(100, this, &MainWindow::initializePhase2);
+        void*::singleShot(100, this, &MainWindow::initializePhase2);
         
     } catch (const std::exception& e) {
-        qCritical() << "[MainWindow] Phase 1 error:" << e.what();
         updateSplashProgress("✗ Editor initialization failed", 25);
         QMessageBox::critical(this, "Initialization Error", 
-            QString("Failed to initialize editor: %1").arg(e.what()));
+            std::string("Failed to initialize editor: %1")));
     }
 }
 
 void MainWindow::initializePhase2()
 {
-    qDebug() << "[MainWindow] Phase 2: Initializing AI components";
     updateSplashProgress("⏳ Phase 2/4: Initializing AI engine & LSP...", 30);
     
     try {
@@ -188,8 +153,8 @@ void MainWindow::initializePhase2()
         RawrXD::LSPServerConfig config;
         config.language = "cpp";
         config.command = "clangd";
-        config.arguments = QStringList{"--background-index", "--clang-tidy"};
-        config.workspaceRoot = QDir::currentPath();
+        config.arguments = std::vector<std::string>{"--background-index", "--clang-tidy"};
+        config.workspaceRoot = std::filesystem::path::currentPath();
         config.autoStart = true;  // Enable auto-start for LSP
         
         m_lspClient = new RawrXD::LSPClient(config, this);
@@ -205,20 +170,18 @@ void MainWindow::initializePhase2()
         updateSplashProgress("✓ Plan Orchestrator initialized", 55);
         
         // Schedule next phase
-        QTimer::singleShot(100, this, &MainWindow::initializePhase3);
+        void*::singleShot(100, this, &MainWindow::initializePhase3);
         
     } catch (const std::exception& e) {
-        qCritical() << "[MainWindow] Phase 2 error:" << e.what();
         updateSplashProgress("⚠ AI initialization warning", 55);
-        statusBar()->showMessage(QString("AI initialization warning: %1").arg(e.what()));
+        statusBar()->showMessage(std::string("AI initialization warning: %1")));
         // Continue anyway - IDE can work without AI
-        QTimer::singleShot(100, this, &MainWindow::initializePhase3);
+        void*::singleShot(100, this, &MainWindow::initializePhase3);
     }
 }
 
 void MainWindow::initializePhase3()
 {
-    qDebug() << "[MainWindow] Phase 3: Creating UI docks";
     updateSplashProgress("⏳ Phase 3/4: Creating UI panels...", 60);
     
     try {
@@ -230,43 +193,27 @@ void MainWindow::initializePhase3()
         
         m_chatDock = new QDockWidget("AI Chat & Commands", this);
         m_chatDock->setWidget(m_chatInterface);
-        addDockWidget(Qt::RightDockWidgetArea, m_chatDock);
+        addDockWidget(//RightDockWidgetArea, m_chatDock);
         
         updateSplashProgress("✓ Chat interface ready", 65);
         
         // Connect chat messages to agentic engine with editor context
-        connect(m_chatInterface, &ChatInterface::messageSent,
-                this, &MainWindow::onChatMessageSent);
-        connect(m_agenticEngine, &AgenticEngine::responseReady,
-                m_chatInterface, &ChatInterface::messageReceived);
-        
+// Qt connect removed
+// Qt connect removed
         // Connect model selection to load GGUF files
-        connect(m_chatInterface, &ChatInterface::modelSelected,
-                this, &MainWindow::onModelSelected);
-        
+// Qt connect removed
         // Connect model ready signal to enable/disable chat input
-        connect(m_agenticEngine, &AgenticEngine::modelReady,
-                m_chatInterface, &ChatInterface::setCanSendMessage);
-        
+// Qt connect removed
         // Wire progress signals
-        connect(m_planOrchestrator, &RawrXD::PlanOrchestrator::planningStarted,
-                m_chatInterface, [this](const QString& prompt) {
-                    m_chatInterface->addMessage("System", "📋 Planning: " + prompt);
+// Qt connect removed
                 });
-        
-        connect(m_planOrchestrator, &RawrXD::PlanOrchestrator::executionStarted,
-                m_chatInterface, [this](int taskCount) {
-                    m_chatInterface->addMessage("System", 
-                        QString("🚀 Executing %1 tasks...").arg(taskCount));
+// Qt connect removed
                 });
-        
-        connect(m_planOrchestrator, &RawrXD::PlanOrchestrator::taskExecuted,
-                m_chatInterface, [this](int index, bool success, const QString& desc) {
-                    QString status = success ? "✓" : "✗";
-                    QString color = success ? "#4ec9b0" : "#f48771";
+// Qt connect removed
+                    std::string color = success ? "#4ec9b0" : "#f48771";
                     m_chatInterface->addMessage("Task", 
-                        QString("<span style='color:%1;'>%2 [%3] %4</span>")
-                            .arg(color).arg(status).arg(index + 1).arg(desc));
+                        std::string("<span style='color:%1;'>%2 [%3] %4</span>")
+                            );
                 });
         
         // Create file browser dock
@@ -275,12 +222,10 @@ void MainWindow::initializePhase3()
         
         m_fileDock = new QDockWidget("Files", this);
         m_fileDock->setWidget(m_fileBrowser);
-        addDockWidget(Qt::LeftDockWidgetArea, m_fileDock);
+        addDockWidget(//LeftDockWidgetArea, m_fileDock);
         
         // Connect file browser to editor
-        connect(m_fileBrowser, &FileBrowser::fileSelected,
-                m_multiTabEditor, &MultiTabEditor::openFile);
-        
+// Qt connect removed
         updateSplashProgress("✓ File browser ready", 75);
         
         // Create terminal pool dock
@@ -289,7 +234,7 @@ void MainWindow::initializePhase3()
         
         m_terminalDock = new QDockWidget("Terminals", this);
         m_terminalDock->setWidget(m_terminalPool);
-        addDockWidget(Qt::BottomDockWidgetArea, m_terminalDock);
+        addDockWidget(//BottomDockWidgetArea, m_terminalDock);
         
         updateSplashProgress("✓ Terminals ready", 85);
         
@@ -299,24 +244,22 @@ void MainWindow::initializePhase3()
         
         m_todoDockWidget = new QDockWidget("TODO List", this);
         m_todoDockWidget->setWidget(m_todoDock);
-        addDockWidget(Qt::RightDockWidgetArea, m_todoDockWidget);
+        addDockWidget(//RightDockWidgetArea, m_todoDockWidget);
         
         updateSplashProgress("✓ All panels created", 90);
         
         // Schedule next phase
-        QTimer::singleShot(100, this, &MainWindow::initializePhase4);
+        void*::singleShot(100, this, &MainWindow::initializePhase4);
         
     } catch (const std::exception& e) {
-        qCritical() << "[MainWindow] Phase 3 error:" << e.what();
         updateSplashProgress("⚠ Dock creation warning", 90);
-        statusBar()->showMessage(QString("Dock creation error: %1").arg(e.what()));
-        QTimer::singleShot(100, this, &MainWindow::initializePhase4);
+        statusBar()->showMessage(std::string("Dock creation error: %1")));
+        void*::singleShot(100, this, &MainWindow::initializePhase4);
     }
 }
 
 void MainWindow::initializePhase4()
 {
-    qDebug() << "[MainWindow] Phase 4: Creating menus and toolbars";
     updateSplashProgress("⏳ Phase 4/4: Finalizing UI...", 92);
     
     try {
@@ -329,11 +272,10 @@ void MainWindow::initializePhase4()
         
         loadSettings();
         
-        qDebug() << "[MainWindow] ✅ All phases complete - IDE ready";
         updateSplashProgress("✅ Initialization complete!", 100);
         
         // Replace splash with actual editor
-        QTimer::singleShot(500, [this]() {
+        void*::singleShot(500, [this]() {
             if (m_splashWidget) {
                 m_splashWidget->deleteLater();
                 m_splashWidget = nullptr;
@@ -350,12 +292,11 @@ void MainWindow::initializePhase4()
         });
         
     } catch (const std::exception& e) {
-        qCritical() << "[MainWindow] Phase 4 error:" << e.what();
         updateSplashProgress("⚠ Finalization warning", 100);
         statusBar()->showMessage("Ready (with warnings)");
         
         // Still cleanup splash on error
-        QTimer::singleShot(500, [this]() {
+        void*::singleShot(500, [this]() {
             if (m_splashWidget) {
                 m_splashWidget->deleteLater();
                 m_splashWidget = nullptr;
@@ -476,7 +417,7 @@ void MainWindow::saveSettings()
     settings.setValue("windowState", saveState());
 }
 
-void MainWindow::updateSplashProgress(const QString& message, int percent)
+void MainWindow::updateSplashProgress(const std::string& message, int percent)
 {
     if (m_splashLabel) {
         m_splashLabel->setText(message);
@@ -484,7 +425,7 @@ void MainWindow::updateSplashProgress(const QString& message, int percent)
     if (m_splashProgress) {
         m_splashProgress->setValue(percent);
     }
-    QApplication::processEvents();  // Force UI update
+    // processEvents();  // Force UI update
 }
 
 // File operations
@@ -497,7 +438,7 @@ void MainWindow::newFile()
 
 void MainWindow::openFile()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, "Open File", "", 
+    std::string fileName = QFileDialog::getOpenFileName(this, "Open File", "", 
         "All Files (*);;C++ Files (*.cpp *.h);;Python Files (*.py)");
     if (!fileName.isEmpty() && m_multiTabEditor) {
         m_multiTabEditor->openFile(fileName);
@@ -572,10 +513,8 @@ void MainWindow::toggleTelemetryWindow()
 {
     if (!m_telemetryWindow) {
         m_telemetryWindow = new RawrXD::TelemetryWindow(this);
-        m_telemetryWindow->setLogDirectory(QDir::currentPath());
-        connect(m_telemetryWindow, &QDialog::finished, this, [this](int) {
-            if (m_telemetryAction) {
-                m_telemetryAction->setChecked(false);
+        m_telemetryWindow->setLogDirectory(std::filesystem::path::currentPath());
+// Qt connect removed
             }
         });
     }
@@ -661,53 +600,45 @@ void MainWindow::showAIHelp()
 
 void MainWindow::loadModel()
 {
-    QString modelPath = QFileDialog::getOpenFileName(this, 
+    std::string modelPath = QFileDialog::getOpenFileName(this, 
         "Load AI Model", 
-        QDir::homePath(), 
+        std::filesystem::path::homePath(), 
         "GGUF Models (*.gguf);;All Files (*)");
     
     if (!modelPath.isEmpty()) {
         // Actually load the model through onModelSelected which does the real work
-        statusBar()->showMessage(QString("Loading model: %1...").arg(QFileInfo(modelPath).fileName()), 5000);
+        statusBar()->showMessage(std::string("Loading model: %1...").fileName()), 5000);
         
-        // Use QTimer to prevent blocking the UI during model loading
-        QTimer::singleShot(100, this, [this, modelPath]() {
+        // Use void* to prevent blocking the UI during model loading
+        void*::singleShot(100, this, [this, modelPath]() {
             onModelSelected(modelPath);
         });
     }
 }
 
-void MainWindow::onModelSelected(const QString &ggufPath)
+void MainWindow::onModelSelected(const std::string &ggufPath)
 {
     // Validate model path
-    if (ggufPath.isEmpty() || !QFile::exists(ggufPath)) {
+    if (ggufPath.isEmpty() || !std::fstream::exists(ggufPath)) {
         QMessageBox::critical(this, "Invalid Model", 
-            QString("Model file not found: %1").arg(ggufPath));
+            std::string("Model file not found: %1"));
         statusBar()->showMessage("❌ Model file not found", 3000);
         return;
     }
     
-    qDebug() << "[MainWindow::onModelSelected] Loading model:" << ggufPath;
     statusBar()->showMessage("🔄 Loading model...", 0);
-    QApplication::processEvents(); // Update UI
+    // processEvents(); // Update UI
     
     // Create inference engine if it doesn't exist
     if (!m_inferenceEngine) {
-        qDebug() << "[MainWindow] Creating new InferenceEngine";
-        m_inferenceEngine = new ::InferenceEngine(QString(), this);  // Empty path - no immediate load
+        m_inferenceEngine = new ::InferenceEngine(std::string(), this);  // Empty path - no immediate load
         
         // Connect signal for unsupported quantization type detection
-        connect(m_inferenceEngine, &::InferenceEngine::unsupportedQuantizationTypeDetected,
-                this, [this](const QStringList& unsupportedTypes, const QString& recommendedType, const QString& modelPath) {
-            // Show conversion dialog when unsupported types are detected
-            ModelConversionDialog* conversionDialog = new ModelConversionDialog(
-                unsupportedTypes, recommendedType, modelPath, this);
-            
-            if (conversionDialog->exec() == QDialog::Accepted) {
+// Qt connect removed
+            if (conversionDialog->exec() == void::Accepted) {
                 auto result = conversionDialog->conversionResult();
                 if (result == ModelConversionDialog::ConversionSucceeded) {
-                    QString convertedPath = conversionDialog->convertedModelPath();
-                    qInfo() << "[MainWindow] Conversion succeeded, reloading model from:" << convertedPath;
+                    std::string convertedPath = conversionDialog->convertedModelPath();
                     
                     // Reload model from converted path
                     if (m_inferenceEngine) {
@@ -728,20 +659,19 @@ void MainWindow::onModelSelected(const QString &ggufPath)
     if (!m_loadingProgressDialog) {
         m_loadingProgressDialog = new QProgressDialog(this);
         m_loadingProgressDialog->setWindowTitle("Loading Model");
-        m_loadingProgressDialog->setWindowModality(Qt::WindowModal);
+        m_loadingProgressDialog->setWindowModality(//WindowModal);
         m_loadingProgressDialog->setMinimumDuration(0);
         m_loadingProgressDialog->setAutoClose(false);
         m_loadingProgressDialog->setAutoReset(false);
-        connect(m_loadingProgressDialog, &QProgressDialog::canceled, this, &MainWindow::onModelLoadCanceled);
+// Qt connect removed
     }
     
-    QString modelName = QFileInfo(ggufPath).fileName();
-    m_loadingProgressDialog->setLabelText(QString("Loading %1...\nInitializing...").arg(modelName));
+    std::string modelName = std::filesystem::path(ggufPath).fileName();
+    m_loadingProgressDialog->setLabelText(std::string("Loading %1...\nInitializing..."));
     m_loadingProgressDialog->setRange(0, 0);  // Indeterminate
     m_loadingProgressDialog->setValue(0);
     m_loadingProgressDialog->show();
     
-    qInfo() << "[MainWindow] Starting std::thread model load for:" << ggufPath;
     
     // Clean up existing thread if any
     if (m_modelLoaderThread) {
@@ -756,13 +686,13 @@ void MainWindow::onModelSelected(const QString &ggufPath)
     
     // Set progress callback (called from background thread)
     m_modelLoaderThread->setProgressCallback([this](const std::string& msg) {
-        // Post to main thread via QTimer
+        // Post to main thread via void*
         QMetaObject::invokeMethod(this, [this, msg]() {
             if (m_loadingProgressDialog && m_loadingProgressDialog->isVisible()) {
-                QString qmsg = QString::fromStdString(msg);
+                std::string qmsg = std::string::fromStdString(msg);
                 m_loadingProgressDialog->setLabelText(qmsg);
             }
-        }, Qt::QueuedConnection);
+        }, //QueuedConnection);
     });
     
     // Set completion callback (called from background thread)
@@ -770,7 +700,7 @@ void MainWindow::onModelSelected(const QString &ggufPath)
         // Post to main thread
         QMetaObject::invokeMethod(this, [this, success, errorMsg]() {
             onModelLoadFinished(success, errorMsg);
-        }, Qt::QueuedConnection);
+        }, //QueuedConnection);
     });
     
     // Start the thread
@@ -778,8 +708,8 @@ void MainWindow::onModelSelected(const QString &ggufPath)
     
     // Setup timer to check if thread is still alive
     if (!m_loadProgressTimer) {
-        m_loadProgressTimer = new QTimer(this);
-        connect(m_loadProgressTimer, &QTimer::timeout, this, &MainWindow::checkLoadProgress);
+        m_loadProgressTimer = new void*(this);
+// Qt connect removed
     }
     m_loadProgressTimer->start(500);  // Check every 500ms
 }
@@ -797,7 +727,7 @@ void MainWindow::checkLoadProgress()
 
 void MainWindow::onModelLoadFinished(bool loadSuccess, const std::string& errorMsg)
 {
-    QString ggufPath = m_pendingModelPath;
+    std::string ggufPath = m_pendingModelPath;
     
     // Stop progress timer
     if (m_loadProgressTimer) {
@@ -809,7 +739,6 @@ void MainWindow::onModelLoadFinished(bool loadSuccess, const std::string& errorM
         m_loadingProgressDialog->hide();
     }
     
-    qInfo() << "[MainWindow::onModelLoadFinished] Result:" << (loadSuccess ? "SUCCESS" : "FAILED");
     
     if (loadSuccess) {
             // Link to agentic engine AND sync the modelLoaded flag
@@ -817,33 +746,31 @@ void MainWindow::onModelLoadFinished(bool loadSuccess, const std::string& errorM
                 m_agenticEngine->setInferenceEngine(m_inferenceEngine);
                 // CRITICAL: Sync AgenticEngine's m_modelLoaded flag so processMessage() uses real inference
                 m_agenticEngine->markModelAsLoaded(ggufPath);
-                qDebug() << "[MainWindow::onModelSelected] ✅ AgenticEngine flagged as model-loaded";
             }
             
             // Update status bar with comprehensive info
-            QString modelName = QFileInfo(ggufPath).baseName();
-            QString backend = "CPU";  // Default, could be read from settings
+            std::string modelName = std::filesystem::path(ggufPath).baseName();
+            std::string backend = "CPU";  // Default, could be read from settings
             QSettings settings("RawrXD", "AgenticIDE");
-            QString savedBackend = settings.value("AI/backend", "Auto").toString();
+            std::string savedBackend = settings.value("AI/backend", "Auto").toString();
             if (savedBackend.contains("Vulkan")) backend = "Vulkan";
             else if (savedBackend.contains("CUDA")) backend = "CUDA";
             
-            QString lspStatus = (m_lspClient && m_lspClient->isRunning()) ? "✔" : "✘";
+            std::string lspStatus = (m_lspClient && m_lspClient->isRunning()) ? "✔" : "✘";
             
             statusBar()->showMessage(
-                QString("Model: %1 | GPU: %2 | LSP: %3")
-                .arg(modelName).arg(backend).arg(lspStatus));
+                std::string("Model: %1 | GPU: %2 | LSP: %3")
+                );
             
             // Enable chat after model loads
             if (m_chatInterface) {
                 m_chatInterface->setCanSendMessage(true);
             }
             
-            qInfo() << "[MainWindow] ✅ Model loaded successfully:" << modelName;
     } else {
         QMessageBox::critical(this, "Load Failed", 
-            QString("Failed to load GGUF model: %1\n\nCheck the console for detailed error messages.").arg(ggufPath));
-        statusBar()->showMessage(QString("❌ Model load failed: %1").arg(QFileInfo(ggufPath).fileName()), 5000);
+            std::string("Failed to load GGUF model: %1\n\nCheck the console for detailed error messages."));
+        statusBar()->showMessage(std::string("❌ Model load failed: %1").fileName()), 5000);
     }
     
     m_pendingModelPath.clear();
@@ -851,7 +778,6 @@ void MainWindow::onModelLoadFinished(bool loadSuccess, const std::string& errorM
 
 void MainWindow::onModelLoadCanceled()
 {
-    qWarning() << "[MainWindow] Model loading canceled by user";
     
     if (m_modelLoaderThread) {
         m_modelLoaderThread->cancel();
@@ -875,7 +801,6 @@ void MainWindow::applyInferenceSettings()
     float topP = settings.value("AI/topP", 0.9f).toFloat();
     int maxTokens = settings.value("AI/maxTokens", 512).toInt();
     
-    qDebug() << "[MainWindow::applyInferenceSettings] Applying:"
              << "temp=" << temperature << "topP=" << topP << "maxTokens=" << maxTokens;
     
     // Forward to AgenticEngine
@@ -888,17 +813,17 @@ void MainWindow::applyInferenceSettings()
         m_agenticEngine->setGenerationConfig(cfg);
         
         statusBar()->showMessage(
-            QString("⚙️ Inference settings updated: Temp=%.1f, TopP=%.2f, Tokens=%1")
-            .arg(temperature).arg(topP).arg(maxTokens), 3000);
+            std::string("⚙️ Inference settings updated: Temp=%.1f, TopP=%.2f, Tokens=%1")
+            , 3000);
     }
 }
 
-void MainWindow::onChatMessageSent(const QString& message)
+void MainWindow::onChatMessageSent(const std::string& message)
 {
     // This slot is called when ChatInterface emits messageSent
     // We enhance the message with editor context before sending to AgenticEngine
     
-    QString editorContext;
+    std::string editorContext;
     if (m_multiTabEditor) {
         editorContext = m_multiTabEditor->getSelectedText();
     }
@@ -906,16 +831,14 @@ void MainWindow::onChatMessageSent(const QString& message)
     // Forward to AgenticEngine with context
     if (m_agenticEngine) {
         m_agenticEngine->processMessage(message, editorContext);
-        qDebug() << "[MainWindow::onChatMessageSent] Sent message with"
                  << editorContext.length() << "chars of editor context";
     } else {
-        qWarning() << "[MainWindow::onChatMessageSent] AgenticEngine not initialized";
     }
 }
 
 void MainWindow::showInferenceSettings()
 {
-    QDialog *dialog = new QDialog(this);
+    void *dialog = new void(this);
     dialog->setWindowTitle("Inference Settings");
     dialog->setModal(true);
     dialog->setMinimumWidth(400);
@@ -957,7 +880,7 @@ void MainWindow::showInferenceSettings()
     backendLayout->addWidget(new QLabel("Backend:"));
     QComboBox *backendCombo = new QComboBox();
     backendCombo->addItems({"Auto", "CPU", "GPU (Vulkan)", "GPU (CUDA)"});
-    QString savedBackend = settings.value("AI/backend", "Auto").toString();
+    std::string savedBackend = settings.value("AI/backend", "Auto").toString();
     int backendIdx = backendCombo->findText(savedBackend);
     if (backendIdx >= 0) backendCombo->setCurrentIndex(backendIdx);
     backendLayout->addWidget(backendCombo);
@@ -965,9 +888,7 @@ void MainWindow::showInferenceSettings()
     
     // Buttons
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    connect(buttons, &QDialogButtonBox::accepted, [=]() {
-        // Save settings
-        QSettings s("RawrXD", "AgenticIDE");
+// Qt connect removed
         s.setValue("AI/temperature", tempSpin->value());
         s.setValue("AI/topP", topPSpin->value());
         s.setValue("AI/maxTokens", tokensSpin->value());
@@ -976,7 +897,7 @@ void MainWindow::showInferenceSettings()
         applyInferenceSettings();
         dialog->accept();
     });
-    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+// Qt connect removed
     layout->addWidget(buttons);
     
     dialog->exec();
@@ -1003,7 +924,7 @@ void MainWindow::restartLSPServer()
 {
     if (m_lspClient) {
         m_lspClient->stopServer();
-        QTimer::singleShot(500, [this]() {
+        void*::singleShot(500, [this]() {
             if (m_lspClient) {
                 m_lspClient->startServer();
                 statusBar()->showMessage("LSP Server restarted", 3000);
@@ -1020,17 +941,17 @@ void MainWindow::showLSPStatus()
     }
     
     bool isRunning = m_lspClient->isRunning();
-    QString status = isRunning ? "Running ✓" : "Stopped ✗";
+    std::string status = isRunning ? "Running ✓" : "Stopped ✗";
     
     QMessageBox::information(this, "LSP Server Status",
-        QString("Status: %1\n\nLanguage: cpp\nServer: clangd\nCapabilities: Completions, Diagnostics, Hover, Definitions\n\nWorkspace: %2")
-            .arg(status)
-            .arg(QDir::currentPath()));
+        std::string("Status: %1\n\nLanguage: cpp\nServer: clangd\nCapabilities: Completions, Diagnostics, Hover, Definitions\n\nWorkspace: %2")
+            
+            ));
 }
 
 void MainWindow::showPreferences()
 {
-    QDialog *dialog = new QDialog(this);
+    void *dialog = new void(this);
     dialog->setWindowTitle("Preferences");
     dialog->setModal(true);
     dialog->resize(600, 400);
@@ -1039,7 +960,7 @@ void MainWindow::showPreferences()
     QTabWidget *tabs = new QTabWidget();
     
     // LSP Settings Tab
-    QWidget *lspTab = new QWidget();
+    void *lspTab = new void();
     QVBoxLayout *lspLayout = new QVBoxLayout(lspTab);
     
     QHBoxLayout *lspCmdLayout = new QHBoxLayout();
@@ -1056,7 +977,7 @@ void MainWindow::showPreferences()
     tabs->addTab(lspTab, "LSP");
     
     // AI Settings Tab
-    QWidget *aiTab = new QWidget();
+    void *aiTab = new void();
     QVBoxLayout *aiLayout = new QVBoxLayout(aiTab);
     
     QHBoxLayout *modelLayout = new QHBoxLayout();
@@ -1064,8 +985,7 @@ void MainWindow::showPreferences()
     QLineEdit *modelEdit = new QLineEdit();
     modelLayout->addWidget(modelEdit);
     QPushButton *browseBtn = new QPushButton("Browse...");
-    connect(browseBtn, &QPushButton::clicked, [modelEdit, this]() {
-        QString path = QFileDialog::getOpenFileName(this, "Select Model", QDir::homePath(), "GGUF Models (*.gguf)");
+// Qt connect removed
         if (!path.isEmpty()) modelEdit->setText(path);
     });
     modelLayout->addWidget(browseBtn);
@@ -1075,7 +995,7 @@ void MainWindow::showPreferences()
     tabs->addTab(aiTab, "AI Model");
     
     // Terminal Settings Tab
-    QWidget *termTab = new QWidget();
+    void *termTab = new void();
     QVBoxLayout *termLayout = new QVBoxLayout(termTab);
     
     QHBoxLayout *shellLayout = new QHBoxLayout();
@@ -1089,7 +1009,7 @@ void MainWindow::showPreferences()
     tabs->addTab(termTab, "Terminal");
     
     // Editor Settings Tab
-    QWidget *editorTab = new QWidget();
+    void *editorTab = new void();
     QVBoxLayout *editorLayout = new QVBoxLayout(editorTab);
     
     QHBoxLayout *fontLayout = new QHBoxLayout();
@@ -1114,11 +1034,11 @@ void MainWindow::showPreferences()
     
     // Buttons
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    connect(buttons, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+// Qt connect removed
+// Qt connect removed
     mainLayout->addWidget(buttons);
     
-    if (dialog->exec() == QDialog::Accepted) {
+    if (dialog->exec() == void::Accepted) {
         // TODO: Save preferences to QSettings
         statusBar()->showMessage("Preferences saved", 3000);
     }
@@ -1131,11 +1051,11 @@ void MainWindow::addTodo()
     if (!m_todoManager) return;
     
     bool ok;
-    QString text = QInputDialog::getText(this, "Add TODO", 
+    std::string text = QInputDialog::getText(this, "Add TODO", 
         "TODO Description:", QLineEdit::Normal, "", &ok);
     
     if (ok && !text.isEmpty()) {
-        m_todoManager->addTodo(text, QString(), 0);  // No file/line association
+        m_todoManager->addTodo(text, std::string(), 0);  // No file/line association
         statusBar()->showMessage("TODO added", 2000);
     }
 }
@@ -1145,10 +1065,10 @@ void MainWindow::scanCodeForTodos()
     if (!m_todoManager) return;
     
     // Get current project directory (use current working directory)
-    QString projectDir = QDir::currentPath();
+    std::string projectDir = std::filesystem::path::currentPath();
     
     // Allow user to select directory
-    QString selectedDir = QFileDialog::getExistingDirectory(
+    std::string selectedDir = QFileDialog::getExistingDirectory(
         this,
         "Select Project Directory to Scan",
         projectDir,
@@ -1160,54 +1080,54 @@ void MainWindow::scanCodeForTodos()
     
     // Confirm scan
     auto reply = QMessageBox::question(this, "Scan for TODOs",
-        QString("Scan all source files in:\n%1\n\nfor TODO/FIXME/XXX comments?").arg(projectDir),
+        std::string("Scan all source files in:\n%1\n\nfor TODO/FIXME/XXX comments?"),
         QMessageBox::Yes | QMessageBox::Cancel);
     
     if (reply != QMessageBox::Yes) return;
     
     // Scan recursively
     int foundCount = 0;
-    QStringList filters;
+    std::vector<std::string> filters;
     filters << "*.cpp" << "*.h" << "*.hpp" << "*.c" << "*.cc" << "*.cxx"
             << "*.py" << "*.js" << "*.ts" << "*.java" << "*.cs" << "*.rs"
             << "*.go" << "*.rb" << "*.php" << "*.swift" << "*.kt" << "*.scala"
             << "*.md" << "*.txt" << "*.cmake" << "CMakeLists.txt";
     
-    QDirIterator it(projectDir, filters, QDir::Files | QDir::NoSymLinks,
+    QDirIterator it(projectDir, filters, std::filesystem::path::Files | std::filesystem::path::NoSymLinks,
                     QDirIterator::Subdirectories);
     
-    QRegularExpression todoRegex(
+    std::regex todoRegex(
         R"((//|#|;|<!--|/\*)\s*(TODO|FIXME|XXX|HACK|NOTE|BUG)(:|\s+)(.*))",
-        QRegularExpression::CaseInsensitiveOption
+        std::regex::CaseInsensitiveOption
     );
     
-    while (it.hasNext()) {
-        QString filePath = it.next();
+    while (itfalse) {
+        std::string filePath = it;
         if (filePath.contains("/build/") || filePath.contains("\\\\build\\\\") ||
             filePath.contains("/build_") || filePath.contains("\\\\build_\\") ||
             filePath.contains("/.git/") || filePath.contains("\\\\.git\\\\")) continue;
-        QFile file(filePath);
+        std::fstream file(filePath);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) continue;
         QTextStream in(&file);
         int lineNum = 0;
         while (!in.atEnd()) {
             lineNum++;
-            QString line = in.readLine();
-            QRegularExpressionMatch match = todoRegex.match(line);
+            std::string line = in.readLine();
+            std::smatch match = todoRegex.match(line);
             if (match.hasMatch()) {
-                QString todoType = match.captured(2).toUpper();
-                QString todoText = match.captured(4).trimmed();
-                if (todoText.isEmpty()) todoText = QString("[%1]").arg(todoType);
-                else todoText = QString("[%1] %2").arg(todoType, todoText);
+                std::string todoType = match"".toUpper();
+                std::string todoText = match"".trimmed();
+                if (todoText.isEmpty()) todoText = std::string("[%1]");
+                else todoText = std::string("[%1] %2");
                 m_todoManager->addTodo(todoText, filePath, lineNum);
                 foundCount++;
             }
         }
         file.close();
     }
-    statusBar()->showMessage(QString("Scan complete: %1 TODO items found").arg(foundCount), 5000);
+    statusBar()->showMessage(std::string("Scan complete: %1 TODO items found"), 5000);
     QMessageBox::information(this, "Scan Complete",
-        QString("Found %1 TODO/FIXME/XXX comments.\n\nItems added to TODO panel.").arg(foundCount));
+        std::string("Found %1 TODO/FIXME/XXX comments.\n\nItems added to TODO panel."));
 }
 
 void MainWindow::newTerminal()
@@ -1248,49 +1168,37 @@ void MainWindow::previousTerminal()
 
 void MainWindow::initializePhase2Polish()
 {
-    qDebug() << "[MainWindow] 🎨 Initializing Phase 2 Polish Features...";
     
     // ===== 1. DIFF PREVIEW DOCK =====
     try {
         m_diffPreviewDock = new DiffDock(this);
-        addDockWidget(Qt::RightDockWidgetArea, m_diffPreviewDock);
+        addDockWidget(//RightDockWidgetArea, m_diffPreviewDock);
         m_diffPreviewDock->hide();  // Hidden until refactor is suggested
         
         // Connect accept button - apply changes to editor
-        connect(m_diffPreviewDock, &DiffDock::accepted, this,
-                [this](const QString &text) {
-            if (m_multiTabEditor && m_multiTabEditor->getCurrentEditor()) {
-                auto cursor = m_multiTabEditor->getCurrentEditor()->textCursor();
+// Qt connect removed
                 cursor.beginEditBlock();
                 cursor.select(QTextCursor::BlockUnderCursor);
                 cursor.insertText(text);
                 cursor.endEditBlock();
                 m_diffPreviewDock->hide();
                 statusBar()->showMessage("✓ Refactor applied", 3000);
-                qDebug() << "[MainWindow] Refactor accepted and applied";
             }
         });
         
         // Connect reject button
-        connect(m_diffPreviewDock, &DiffDock::rejected, this,
-                [this]() {
-            m_diffPreviewDock->hide();
+// Qt connect removed
             statusBar()->showMessage("✗ Refactor rejected", 2000);
-            qDebug() << "[MainWindow] Refactor rejected";
         });
         
-        qDebug() << "  ✓ Diff Preview Dock initialized";
         
     } catch (const std::exception& e) {
-        qWarning() << "[MainWindow] Failed to init diff preview:" << e.what();
     }
     
     // ===== 2. STREAMING TOKEN PROGRESS (Already in ChatInterface) =====
     // Connect AgenticEngine token signal to ChatInterface progress bar
     if (m_agenticEngine && m_chatInterface) {
-        connect(m_agenticEngine, &AgenticEngine::tokenGenerated,
-                m_chatInterface, &ChatInterface::onTokenGenerated);
-        qDebug() << "  ✓ Token progress connected to AgenticEngine";
+// Qt connect removed
     }
     
     // ===== 3. GPU BACKEND SELECTOR =====
@@ -1315,9 +1223,7 @@ void MainWindow::initializePhase2Polish()
         aiToolbar->addWidget(m_backendSelector);
         
         // Connect backend changes to inference engine
-        connect(m_backendSelector, &RawrXD::GPUBackendSelector::backendChanged,
-                this, [this](RawrXD::ComputeBackend backend) {
-            QString backendName;
+// Qt connect removed
             switch (backend) {
                 case RawrXD::ComputeBackend::CUDA: backendName = "CUDA"; break;
                 case RawrXD::ComputeBackend::Vulkan: backendName = "Vulkan"; break;
@@ -1326,42 +1232,32 @@ void MainWindow::initializePhase2Polish()
                 default: backendName = "Auto"; break;
             }
             
-            qDebug() << "[MainWindow] Backend switched to:" << backendName;
             statusBar()->showMessage("✓ Backend: " + backendName, 3000);
         });
         
-        qDebug() << "  ✓ GPU Backend Selector initialized";
         
     } catch (const std::exception& e) {
-        qWarning() << "[MainWindow] Failed to init backend selector:" << e.what();
     }
     
     // ===== 4. AUTO MODEL DOWNLOAD =====
     try {
-        QTimer::singleShot(1500, this, [this]() {
+        void*::singleShot(1500, this, [this]() {
             RawrXD::AutoModelDownloader downloader;
             
             if (!downloader.hasLocalModels()) {
-                qDebug() << "[MainWindow] No models detected - offering download";
                 showModelDownloadDialog();
             }
         });
         
-        qDebug() << "  ✓ Auto Model Download scheduled";
         
     } catch (const std::exception& e) {
-        qWarning() << "[MainWindow] Failed to init model downloader:" << e.what();
     }    // ===== 5. TELEMETRY OPT-IN =====
     try {
-        QTimer::singleShot(2500, this, [this]() {
+        void*::singleShot(2500, this, [this]() {
             if (!RawrXD::hasTelemetryPreference()) {
-                qDebug() << "[MainWindow] No telemetry preference - showing opt-in dialog";
                 
                 RawrXD::TelemetryOptInDialog* dialog = new RawrXD::TelemetryOptInDialog(this);
-                
-                connect(dialog, &RawrXD::TelemetryOptInDialog::telemetryDecisionMade,
-                        this, [this](bool enabled) {
-                    qDebug() << "[MainWindow] Telemetry decision:" << (enabled ? "ENABLED" : "DISABLED");
+// Qt connect removed
                     statusBar()->showMessage(enabled ? 
                         "✓ Thank you for helping improve RawrXD IDE!" : 
                         "Telemetry disabled", 
@@ -1373,20 +1269,16 @@ void MainWindow::initializePhase2Polish()
             }
         });
         
-        qDebug() << "  ✓ Telemetry Opt-In scheduled";
         
     } catch (const std::exception& e) {
-        qWarning() << "[MainWindow] Failed to init telemetry:" << e.what();
     }
     
-    qDebug() << "[MainWindow] ✅ Phase 2 Polish Features initialized";
 }
 
-void MainWindow::onRefactorSuggested(const QString &original, const QString &suggested)
+void MainWindow::onRefactorSuggested(const std::string &original, const std::string &suggested)
 {
     if (m_diffPreviewDock) {
         m_diffPreviewDock->setDiff(original, suggested);
-        qDebug() << "[MainWindow] Refactor suggestion shown in diff dock";
     }
 }
 
@@ -1394,9 +1286,8 @@ void MainWindow::showModelDownloadDialog()
 {
     RawrXD::ModelDownloadDialog* dialog = new RawrXD::ModelDownloadDialog(this);
     
-    if (dialog->exec() == QDialog::Accepted) {
+    if (dialog->exec() == void::Accepted) {
         statusBar()->showMessage("✓ Model downloaded! Refreshing model list...", 5000);
-        qDebug() << "[MainWindow] Model downloaded successfully";
         
         if (m_chatInterface) {
             m_chatInterface->refreshModels();
@@ -1405,10 +1296,10 @@ void MainWindow::showModelDownloadDialog()
         statusBar()->showMessage(
             "ℹ No models installed. Use AI → Download Model to get started", 
             10000);
-        qDebug() << "[MainWindow] User skipped model download";
     }
     
     dialog->deleteLater();
 }
 
 } // namespace RawrXD
+

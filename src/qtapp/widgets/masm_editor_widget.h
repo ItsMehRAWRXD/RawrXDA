@@ -4,36 +4,23 @@
 #ifndef MASM_EDITOR_WIDGET_H
 #define MASM_EDITOR_WIDGET_H
 
-#include <QWidget>
-#include <QTextEdit>
-#include <QToolBar>
-#include <QStatusBar>
-#include <QTabBar>
-#include <QVBoxLayout>
-#include <QStackedWidget>
-#include <QSyntaxHighlighter>
-#include <QTextDocument>
-#include <QTimer>
-#include <QFileInfo>
-#include <QFile>
-#include <QTextStream>
+
 #include <vector>
 #include <memory>
 #include <unordered_map>
-#include <QRegularExpression>
 
 // Assembly language syntax highlighter
 class AssemblyHighlighter : public QSyntaxHighlighter {
-    Q_OBJECT
+
 public:
     explicit AssemblyHighlighter(QTextDocument* parent = nullptr);
     
 protected:
-    void highlightBlock(const QString& text) override;
+    void highlightBlock(const std::string& text) override;
     
 private:
     struct HighlightingRule {
-        QRegularExpression pattern;
+        std::regex pattern;
         QTextCharFormat format;
     };
     std::vector<HighlightingRule> highlightingRules;
@@ -48,8 +35,8 @@ private:
 
 // Tab data structure
 struct TabData {
-    QString name;
-    QString filePath;
+    std::string name;
+    std::string filePath;
     bool modified;
     int scrollPosition;
     int cursorPosition;
@@ -59,11 +46,11 @@ struct TabData {
 
 // Custom tab bar with context menu
 class EditorTabBar : public QTabBar {
-    Q_OBJECT
+
 public:
-    explicit EditorTabBar(QWidget* parent = nullptr);
+    explicit EditorTabBar(void* parent = nullptr);
     
-signals:
+
     void tabCloseRequested(int index);
     void tabRenameRequested(int index);
     void closeAllRequested();
@@ -75,33 +62,33 @@ protected:
 };
 
 // Main editor widget
-class MASMEditorWidget : public QWidget {
-    Q_OBJECT
+class MASMEditorWidget : public void {
+
 public:
-    explicit MASMEditorWidget(QWidget* parent = nullptr);
+    explicit MASMEditorWidget(void* parent = nullptr);
     ~MASMEditorWidget();
     
     // Tab management
-    int newTab(const QString& name = QString());
+    int newTab(const std::string& name = std::string());
     void closeTab(int index);
     void closeAllTabs();
     void closeOtherTabs(int keepIndex);
     bool switchTab(int index);
     int getTabCount() const;
     int getCurrentTabIndex() const;
-    QString getTabName(int index) const;
-    void setTabName(int index, const QString& name);
+    std::string getTabName(int index) const;
+    void setTabName(int index, const std::string& name);
     
     // Content management
-    QString getContent(int index = -1) const;
-    void setContent(const QString& content, int index = -1);
+    std::string getContent(int index = -1) const;
+    void setContent(const std::string& content, int index = -1);
     bool isModified(int index = -1) const;
     void setModified(bool modified, int index = -1);
     
     // File operations
-    bool loadFile(const QString& filePath, int index = -1);
-    bool saveFile(const QString& filePath = QString(), int index = -1);
-    QString getFilePath(int index = -1) const;
+    bool loadFile(const std::string& filePath, int index = -1);
+    bool saveFile(const std::string& filePath = std::string(), int index = -1);
+    std::string getFilePath(int index = -1) const;
     
     // Editor operations
     void undo();
@@ -110,23 +97,23 @@ public:
     void copy();
     void paste();
     void selectAll();
-    void find(const QString& text);
+    void find(const std::string& text);
     void findNext();
-    void replace(const QString& find, const QString& replaceWith);
+    void replace(const std::string& find, const std::string& replaceWith);
     void goToLine(int line);
     
     // Statistics
     int getLineCount(int index = -1) const;
     int getCharCount(int index = -1) const;
-    QPair<int, int> getCursorPosition(int index = -1) const;
+    std::pair<int, int> getCursorPosition(int index = -1) const;
     
-signals:
+
     void tabChanged(int index);
     void contentModified(int index);
     void cursorPositionChanged(int line, int column);
     void tabCountChanged(int count);
     
-private slots:
+private:
     void onTabChanged(int index);
     void onTextChanged();
     void onCursorMoved();
@@ -157,9 +144,10 @@ private:
     
     // State
     int nextTabNumber;
-    QString lastSearchText;
-    QTimer* caretTimer;
+    std::string lastSearchText;
+    void** caretTimer;
     bool caretVisible;
 };
 
 #endif // MASM_EDITOR_WIDGET_H
+

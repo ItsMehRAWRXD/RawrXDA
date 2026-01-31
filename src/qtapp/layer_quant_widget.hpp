@@ -1,7 +1,5 @@
 #pragma once
-#include <QTreeWidget>
-#include <QMenu>
-#include <QHash>
+
 
 /**
  * @brief Widget for per-layer mixed-precision quantization
@@ -13,33 +11,33 @@
  * layers use aggressive quantization (Q4_0).
  */
 class LayerQuantWidget : public QTreeWidget {
-    Q_OBJECT
+
 public:
-    explicit LayerQuantWidget(QWidget* parent = nullptr);
+    explicit LayerQuantWidget(void* parent = nullptr);
     
     /**
      * @brief Add a tensor to the tree
      * @param tensorName Name of the tensor
      * @param defaultQuant Initial quantization mode
      */
-    void addTensor(const QString& tensorName, const QString& defaultQuant = "Q4_0");
+    void addTensor(const std::string& tensorName, const std::string& defaultQuant = "Q4_0");
     
     /**
      * @brief Clear all tensors
      */
     void clearTensors();
 
-signals:
     /**
      * @brief Emitted when user changes quantization for a tensor
      * @param tensorName Name of the tensor
      * @param quant New quantization mode
      */
-    void quantChanged(const QString& tensorName, const QString& quant);
+    void quantChanged(const std::string& tensorName, const std::string& quant);
 
-private slots:
+private:
     void onCustomContextMenu(const QPoint& pos);
 
 private:
-    QHash<QString, QTreeWidgetItem*> m_tensorItems;
+    std::unordered_map<std::string, QTreeWidgetItem*> m_tensorItems;
 };
+

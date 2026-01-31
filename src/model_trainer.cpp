@@ -9,17 +9,8 @@
 #include "qtapp/inference_engine.hpp"
 #include "gguf_loader.h"
 #include "vulkan_compute.h"
-#include <QFile>
-#include <QTextStream>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QFileInfo>
-#include <QDir>
-#include <QDateTime>
-#include <QRegularExpression>
-#include <QApplication>
-#include <QDebug>
+
+
 #include <cmath>
 #include <random>
 #include <algorithm>
@@ -28,10 +19,9 @@
 #include <numeric>
 #include <chrono>
 
-ModelTrainer::ModelTrainer(QObject* parent)
-    : QObject(parent)
+ModelTrainer::ModelTrainer(void* parent)
+    : void(parent)
 {
-    qInfo() << "[ModelTrainer] Initialized - Ready for on-device fine-tuning";
 }
 
 ModelTrainer::~ModelTrainer()
@@ -42,10 +32,10 @@ ModelTrainer::~ModelTrainer()
     }
 }
 
-bool ModelTrainer::initialize(InferenceEngine* engine, const QString& modelPath)
+bool ModelTrainer::initialize(InferenceEngine* engine, const std::string& modelPath)
 {
     if (!engine) {
-        emit trainingError("Inference engine not provided");
+        trainingError("Inference engine not provided");
         return false;
     }
 
@@ -56,12 +46,12 @@ bool ModelTrainer::initialize(InferenceEngine* engine, const QString& modelPath)
     // Initialize GGUF loader
     m_modelLoader = std::make_unique<GGUFLoader>();
     if (!m_modelLoader->Open(modelPath.toStdString())) {
-        emit trainingError("Failed to load model: " + modelPath);
+        trainingError("Failed to load model: " + modelPath);
         return false;
     }
 
     if (!m_modelLoader->ParseHeader() || !m_modelLoader->ParseMetadata()) {
-        emit trainingError("Failed to parse model metadata");
+        trainingError("Failed to parse model metadata");
         return false;
     }
 
@@ -71,7 +61,6 @@ bool ModelTrainer::initialize(InferenceEngine* engine, const QString& modelPath)
     m_embeddingDim = metadata.embedding_dim;
     m_layerCount = metadata.layer_count;
 
-    qInfo() << "[ModelTrainer] Model initialized - Vocab:" << m_vocabSize 
             << "Embedding:" << m_embeddingDim << "Layers:" << m_layerCount;
 
     return true;
@@ -80,7 +69,7 @@ bool ModelTrainer::initialize(InferenceEngine* engine, const QString& modelPath)
 bool ModelTrainer::startTraining(const TrainingConfig& config)
 {
     if (m_isTraining) {
-        emit trainingError("Training already in progress");
+        trainingError("Training already in progress");
         return false;
     }
 
@@ -89,17 +78,17 @@ bool ModelTrainer::startTraining(const TrainingConfig& config)
     m_isTraining = true;
     m_currentStatus = "Initializing training...";
 
-    emit logMessage("Starting model training with configuration:");
-    emit logMessage("Dataset: " + config.datasetPath);
-    emit logMessage("Epochs: " + QString::number(config.epochs));
-    emit logMessage("Learning Rate: " + QString::number(config.learningRate));
-    emit logMessage("Batch Size: " + QString::number(config.batchSize));
+    logMessage("Starting model training with configuration:");
+    logMessage("Dataset: " + config.datasetPath);
+    logMessage("Epochs: " + std::string::number(config.epochs));
+    logMessage("Learning Rate: " + std::string::number(config.learningRate));
+    logMessage("Batch Size: " + std::string::number(config.batchSize));
 
     // Start training in separate thread
-    m_trainingThread = new QThread(this);
-    connect(m_trainingThread, &QThread::started, this, &ModelTrainer::runTraining);
-    connect(m_trainingThread, &QThread::finished, m_trainingThread, &QThread::deleteLater);
-    moveToThread(m_trainingThread);
+    m_trainingThread = new std::thread(this);
+// Qt connect removed
+// Qt connect removed
+    ;
     m_trainingThread->start();
 
     return true;
@@ -110,52 +99,52 @@ void ModelTrainer::stopTraining()
     if (m_isTraining) {
         m_shouldStop = true;
         m_currentStatus = "Stopping training...";
-        emit logMessage("Training stop requested");
+        logMessage("Training stop requested");
     }
 }
 
 void ModelTrainer::runTraining()
 {
-    emit trainingStarted();
+    trainingStarted();
     m_currentStatus = "Loading dataset...";
 
     try {
         // Step 1: Load dataset
         DatasetFormat format = detectDatasetFormat(m_config.datasetPath);
         if (!loadDataset(m_config.datasetPath, format)) {
-            emit trainingError("Failed to load dataset");
+            trainingError("Failed to load dataset");
             m_isTraining = false;
             return;
         }
 
         m_currentStatus = "Tokenizing data...";
-        emit logMessage("Dataset loaded successfully. Tokenizing...");
+        logMessage("Dataset loaded successfully. Tokenizing...");
 
         // Step 2: Tokenize dataset
         m_tokenizedData = tokenizeDataset();
         if (m_tokenizedData.empty()) {
-            emit trainingError("Tokenization failed - no data processed");
+            trainingError("Tokenization failed - no data processed");
             m_isTraining = false;
             return;
         }
 
-        emit logMessage(QString("Tokenization complete - %1 sequences processed").arg(m_tokenizedData.size()));
+        logMessage(std::string("Tokenization complete - %1 sequences processed")));
 
         // Step 3: Prepare training data
         m_currentStatus = "Preparing training data...";
         if (!prepareTrainingData()) {
-            emit trainingError("Failed to prepare training data");
+            trainingError("Failed to prepare training data");
             m_isTraining = false;
             return;
         }
 
-        emit logMessage(QString("Training data ready - %1 training batches, %2 validation batches")
-                       .arg(m_trainingBatches.size()).arg(m_validationBatches.size()));
+        logMessage(std::string("Training data ready - %1 training batches, %2 validation batches")
+                       )));
 
         // Step 4: Initialize optimizer
         m_optimizer.learningRate = m_config.learningRate;
         m_optimizer.weightDecay = m_config.weightDecay;
-        emit logMessage("Optimizer initialized");
+        logMessage("Optimizer initialized");
 
         // Step 5: Training loop
         m_totalEpochs = m_config.epochs;
@@ -163,12 +152,12 @@ void ModelTrainer::runTraining()
 
         for (int epoch = 0; epoch < m_config.epochs && !m_shouldStop; ++epoch) {
             m_currentEpoch = epoch + 1;
-            m_currentStatus = QString("Epoch %1/%2").arg(m_currentEpoch).arg(m_totalEpochs);
+            m_currentStatus = std::string("Epoch %1/%2");
             
-            emit epochStarted(m_currentEpoch, m_totalEpochs);
+            epochStarted(m_currentEpoch, m_totalEpochs);
 
             if (!executeEpoch(epoch)) {
-                emit trainingError("Epoch execution failed");
+                trainingError("Epoch execution failed");
                 break;
             }
 
@@ -178,17 +167,17 @@ void ModelTrainer::runTraining()
                 float perplexity = calculatePerplexity();
                 m_validationPerplexity = perplexity;
                 
-                emit epochCompleted(m_currentEpoch, m_currentLoss, perplexity);
+                epochCompleted(m_currentEpoch, m_currentLoss, perplexity);
                 
                 if (perplexity < bestPerplexity) {
                     bestPerplexity = perplexity;
                     // Save best model
-                    QString bestModelPath = m_config.outputPath + ".best";
+                    std::string bestModelPath = m_config.outputPath + ".best";
                     saveModel(bestModelPath);
-                    emit logMessage("New best model saved with perplexity: " + QString::number(perplexity));
+                    logMessage("New best model saved with perplexity: " + std::string::number(perplexity));
                 }
             } else {
-                emit epochCompleted(m_currentEpoch, m_currentLoss, 0.0f);
+                epochCompleted(m_currentEpoch, m_currentLoss, 0.0f);
             }
         }
 
@@ -201,18 +190,18 @@ void ModelTrainer::runTraining()
                 
                 // Final validation
                 float finalPerplexity = calculatePerplexity();
-                emit trainingCompleted(m_config.outputPath, finalPerplexity);
-                emit logMessage("Training completed successfully!");
+                trainingCompleted(m_config.outputPath, finalPerplexity);
+                logMessage("Training completed successfully!");
             } else {
-                emit trainingError("Failed to save final model");
+                trainingError("Failed to save final model");
             }
         } else {
-            emit trainingStopped();
-            emit logMessage("Training stopped by user");
+            trainingStopped();
+            logMessage("Training stopped by user");
         }
 
     } catch (const std::exception& e) {
-        emit trainingError(QString("Training failed: %1").arg(e.what()));
+        trainingError(std::string("Training failed: %1")));
     }
 
     m_isTraining = false;
@@ -221,10 +210,10 @@ void ModelTrainer::runTraining()
 
 // ========== DATASET HANDLING ==========
 
-ModelTrainer::DatasetFormat ModelTrainer::detectDatasetFormat(const QString& filePath)
+ModelTrainer::DatasetFormat ModelTrainer::detectDatasetFormat(const std::string& filePath)
 {
-    QFileInfo fileInfo(filePath);
-    QString suffix = fileInfo.suffix().toLower();
+    std::filesystem::path fileInfo(filePath);
+    std::string suffix = fileInfo.suffix().toLower();
 
     if (suffix == "jsonl" || suffix == "json") {
         return DatasetFormat::JsonLines;
@@ -235,9 +224,9 @@ ModelTrainer::DatasetFormat ModelTrainer::detectDatasetFormat(const QString& fil
     }
 }
 
-bool ModelTrainer::loadDataset(const QString& filePath, DatasetFormat format)
+bool ModelTrainer::loadDataset(const std::string& filePath, DatasetFormat format)
 {
-    emit logMessage("Loading dataset: " + filePath);
+    logMessage("Loading dataset: " + filePath);
 
     switch (format) {
     case DatasetFormat::PlainText:
@@ -254,43 +243,43 @@ bool ModelTrainer::loadDataset(const QString& filePath, DatasetFormat format)
     }
 }
 
-std::vector<std::string> ModelTrainer::readPlainTextDataset(const QString& filePath)
+std::vector<std::string> ModelTrainer::readPlainTextDataset(const std::string& filePath)
 {
     std::vector<std::string> data;
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        emit logMessage("Failed to open plain text file: " + filePath);
+        logMessage("Failed to open plain text file: " + filePath);
         return data;
     }
 
     QTextStream in(&file);
     while (!in.atEnd() && !m_shouldStop) {
-        QString line = in.readLine().trimmed();
+        std::string line = in.readLine().trimmed();
         if (!line.isEmpty()) {
             data.push_back(line.toStdString());
         }
     }
 
     file.close();
-    emit logMessage(QString("Loaded %1 lines from plain text dataset").arg(data.size()));
+    logMessage(std::string("Loaded %1 lines from plain text dataset")));
     return data;
 }
 
-std::vector<QJsonObject> ModelTrainer::readJsonLinesDataset(const QString& filePath)
+std::vector<void*> ModelTrainer::readJsonLinesDataset(const std::string& filePath)
 {
-    std::vector<QJsonObject> data;
-    QFile file(filePath);
+    std::vector<void*> data;
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        emit logMessage("Failed to open JSON lines file: " + filePath);
+        logMessage("Failed to open JSON lines file: " + filePath);
         return data;
     }
 
     QTextStream in(&file);
     int lineCount = 0;
     while (!in.atEnd() && !m_shouldStop) {
-        QString line = in.readLine().trimmed();
+        std::string line = in.readLine().trimmed();
         if (!line.isEmpty()) {
-            QJsonDocument doc = QJsonDocument::fromJson(line.toUtf8());
+            void* doc = void*::fromJson(line.toUtf8());
             if (doc.isObject()) {
                 data.push_back(doc.object());
                 lineCount++;
@@ -299,29 +288,29 @@ std::vector<QJsonObject> ModelTrainer::readJsonLinesDataset(const QString& fileP
     }
 
     file.close();
-    emit logMessage(QString("Loaded %1 JSON objects from dataset").arg(data.size()));
+    logMessage(std::string("Loaded %1 JSON objects from dataset")));
     return data;
 }
 
-std::vector<QJsonObject> ModelTrainer::readCsvDataset(const QString& filePath)
+std::vector<void*> ModelTrainer::readCsvDataset(const std::string& filePath)
 {
-    std::vector<QJsonObject> data;
-    QFile file(filePath);
+    std::vector<void*> data;
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        emit logMessage("Failed to open CSV file: " + filePath);
+        logMessage("Failed to open CSV file: " + filePath);
         return data;
     }
 
     QTextStream in(&file);
     
     // Read header
-    QString headerLine = in.readLine();
+    std::string headerLine = in.readLine();
     if (headerLine.isEmpty()) {
         file.close();
         return data;
     }
     
-    QStringList headers = headerLine.split(',');
+    std::vector<std::string> headers = headerLine.split(',');
     for (int i = 0; i < headers.size(); ++i) {
         headers[i] = headers[i].trimmed();
     }
@@ -329,10 +318,10 @@ std::vector<QJsonObject> ModelTrainer::readCsvDataset(const QString& filePath)
     // Read data rows
     int rowCount = 0;
     while (!in.atEnd() && !m_shouldStop) {
-        QString line = in.readLine().trimmed();
+        std::string line = in.readLine().trimmed();
         if (!line.isEmpty()) {
-            QStringList values = line.split(',');
-            QJsonObject row;
+            std::vector<std::string> values = line.split(',');
+            void* row;
             
             for (int i = 0; i < std::min(headers.size(), values.size()); ++i) {
                 row[headers[i]] = values[i].trimmed();
@@ -344,7 +333,7 @@ std::vector<QJsonObject> ModelTrainer::readCsvDataset(const QString& filePath)
     }
 
     file.close();
-    emit logMessage(QString("Loaded %1 rows from CSV dataset").arg(data.size()));
+    logMessage(std::string("Loaded %1 rows from CSV dataset")));
     return data;
 }
 
@@ -366,7 +355,7 @@ std::vector<std::vector<uint32_t>> ModelTrainer::tokenizeDataset()
         // JSON data (look for text fields)
         for (const auto& obj : m_jsonData) {
             if (!m_shouldStop) {
-                QString text;
+                std::string text;
                 if (obj.contains("text")) {
                     text = obj["text"].toString();
                 } else if (obj.contains("content")) {
@@ -393,7 +382,7 @@ std::vector<std::vector<uint32_t>> ModelTrainer::tokenizeDataset()
         }
     }
 
-    emit logMessage(QString("Tokenized %1 sequences").arg(tokenized.size()));
+    logMessage(std::string("Tokenized %1 sequences")));
     return tokenized;
 }
 
@@ -445,7 +434,7 @@ std::vector<uint32_t> ModelTrainer::tokenizeText(const std::string& text)
 bool ModelTrainer::prepareTrainingData()
 {
     if (m_tokenizedData.empty()) {
-        emit logMessage("No tokenized data to prepare");
+        logMessage("No tokenized data to prepare");
         return false;
     }
 
@@ -469,8 +458,8 @@ bool ModelTrainer::prepareTrainingData()
     m_trainingBatches = createBatches(trainingData);
     m_validationBatches = createBatches(validationData);
 
-    emit logMessage(QString("Prepared training data - %1 training batches, %2 validation batches")
-                   .arg(m_trainingBatches.size()).arg(m_validationBatches.size()));
+    logMessage(std::string("Prepared training data - %1 training batches, %2 validation batches")
+                   )));
 
     return !m_trainingBatches.empty();
 }
@@ -505,7 +494,7 @@ std::vector<std::vector<uint32_t>> ModelTrainer::createBatches(const std::vector
 bool ModelTrainer::executeEpoch(int epoch)
 {
     if (m_trainingBatches.empty()) {
-        emit logMessage("No training batches available");
+        logMessage("No training batches available");
         return false;
     }
 
@@ -521,19 +510,17 @@ bool ModelTrainer::executeEpoch(int epoch)
             batchCount++;
             totalLoss += m_currentLoss;
             
-            emit batchProcessed(static_cast<int>(i + 1), 
+            batchProcessed(static_cast<int>(i + 1), 
                               static_cast<int>(m_trainingBatches.size()), 
                               m_currentLoss);
         }
         
         // Update status periodically
         if (i % 10 == 0) {
-            m_currentStatus = QString("Epoch %1/%2 - Batch %3/%4")
-                             .arg(epoch + 1)
-                             .arg(m_totalEpochs)
-                             .arg(i + 1)
-                             .arg(m_trainingBatches.size());
-            qDebug() << "[ModelTrainer]" << m_currentStatus << "Loss:" << m_currentLoss;
+            m_currentStatus = std::string("Epoch %1/%2 - Batch %3/%4")
+
+
+                             );
         }
     }
 
@@ -545,8 +532,8 @@ bool ModelTrainer::executeEpoch(int epoch)
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(
         epochEndTime - epochStartTime).count();
     
-    emit logMessage(QString("Epoch %1 completed in %2s - Loss: %3")
-                   .arg(epoch + 1).arg(duration).arg(m_currentLoss, 0, 'f', 6));
+    logMessage(std::string("Epoch %1 completed in %2s - Loss: %3")
+                   );
 
     return !m_shouldStop;
 }
@@ -595,13 +582,12 @@ bool ModelTrainer::processBatch(const std::vector<std::vector<uint32_t>>& batchD
             batchEndTime - batchStartTime).count();
         
         if (duration > 100) {
-            qDebug() << "[ModelTrainer] Batch processing took" << duration << "ms";
         }
         
         return true;
         
     } catch (const std::exception& e) {
-        emit logMessage("Batch processing failed: " + QString(e.what()));
+        logMessage("Batch processing failed: " + std::string(e.what()));
         return false;
     }
 }
@@ -763,32 +749,32 @@ bool ModelTrainer::applyWeightUpdates(const std::vector<float>& newWeights)
 {
     // In a real implementation, this would apply weight updates to the model
     // For now, just return success
-    Q_UNUSED(newWeights);
+    (newWeights);
     return true;
 }
 
-bool ModelTrainer::saveModel(const QString& outputPath)
+bool ModelTrainer::saveModel(const std::string& outputPath)
 {
     if (!m_modelLoader) return false;
     
     // Ensure output directory exists
-    QFileInfo fileInfo(outputPath);
-    QDir().mkpath(fileInfo.absolutePath());
+    std::filesystem::path fileInfo(outputPath);
+    std::filesystem::path().mkpath(fileInfo.absolutePath());
     
     // In a real implementation, this would save the updated model
     // For now, we'll just copy the original model as a placeholder
-    QFile::copy(m_originalModelPath, outputPath);
+    std::fstream::copy(m_originalModelPath, outputPath);
     
-    emit logMessage("Model saved to: " + outputPath);
+    logMessage("Model saved to: " + outputPath);
     return true;
 }
 
-bool ModelTrainer::registerTrainedModel(const QString& modelPath)
+bool ModelTrainer::registerTrainedModel(const std::string& modelPath)
 {
     // This would integrate with the IDE's model selector
-    // For now, just emit a signal
-    emit modelRegistered(modelPath);
-    emit logMessage("Model registered in IDE: " + modelPath);
+    // For now, just a signal
+    modelRegistered(modelPath);
+    logMessage("Model registered in IDE: " + modelPath);
     return true;
 }
 
@@ -799,7 +785,7 @@ bool ModelTrainer::validateModel()
     float perplexity = calculatePerplexity();
     m_validationPerplexity = perplexity;
     
-    emit validationResults(perplexity, "Sample validation output");
+    validationResults(perplexity, "Sample validation output");
     return true;
 }
 
@@ -836,3 +822,5 @@ float ModelTrainer::calculatePerplexity()
     
     return perplexity;
 }
+
+

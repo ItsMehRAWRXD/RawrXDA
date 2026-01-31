@@ -33,7 +33,6 @@ DAPHandler::~DAPHandler()
 bool DAPHandler::initialize(LanguageID language, const std::string& debugAdapterCommand)
 {
     if (m_debugProcess) {
-        // // qWarning:  "[DAP] Debugger already initialized";
         return false;
     }
     
@@ -47,11 +46,9 @@ bool DAPHandler::initialize(LanguageID language, const std::string& debugAdapter
     m_debugProcess->start();
     
     if (!m_debugProcess->waitForStarted()) {
-        // // qWarning:  "[DAP] Failed to start debug adapter:" << debugAdapterCommand;
         return false;
     }
     
-    // // qDebug:  "[DAP] Initialized debug adapter for language" << static_cast<int>(language);
     return true;
 }
 
@@ -59,7 +56,6 @@ bool DAPHandler::launch(const LaunchConfiguration& config,
                        DebugCallback callback)
 {
     if (!m_debugProcess || m_debugProcess->state() != void*::Running) {
-        // // qWarning:  "[DAP] Debug process not running";
         callback(false, "Debugger not initialized");
         return false;
     }
@@ -70,12 +66,10 @@ bool DAPHandler::launch(const LaunchConfiguration& config,
     sendRequest("launch", arguments,
         [this, callback](const nlohmann::json& response) {
             if (response.value("success").toBool(false)) {
-                // // qDebug:  "[DAP] Launch successful";
                 debugStarted();
                 callback(true, "");
             } else {
                 std::string error = response.value("message").toString("Unknown error");
-                // // qWarning:  "[DAP] Launch failed:" << error;
                 callback(false, error);
             }
         });
@@ -96,7 +90,6 @@ bool DAPHandler::attach(const AttachConfiguration& config,
     sendRequest("attach", arguments,
         [this, callback](const nlohmann::json& response) {
             if (response.value("success").toBool(false)) {
-                // // qDebug:  "[DAP] Attach successful";
                 debugStarted();
                 callback(true, "");
             } else {
@@ -132,7 +125,6 @@ bool DAPHandler::setBreakpoint(const std::string& filePath, int line,
                 const auto breakpoints = response["breakpoints"].toArray();
                 if (!breakpoints.empty() && breakpoints[0].isObject()) {
                     int id = breakpoints[0].toObject().value("id").toInt(-1);
-                    // // qDebug:  "[DAP] Breakpoint set with id" << id;
                     callback(id, "");
                     return;
                 }
@@ -370,7 +362,6 @@ void DAPHandler::onDebugOutput()
 
 void DAPHandler::onDebugFinished()
 {
-    // // qDebug:  "[DAP] Debug process finished";
     debugStopped();
 }
 
@@ -477,8 +468,4 @@ nlohmann::json DAPHandler::buildAttachArguments(const AttachConfiguration& confi
 }
 
 }}  // namespace RawrXD::Language
-
-
-
-
 

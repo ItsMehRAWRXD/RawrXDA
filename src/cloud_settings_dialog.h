@@ -1,16 +1,7 @@
 #ifndef CLOUD_SETTINGS_DIALOG_H
 #define CLOUD_SETTINGS_DIALOG_H
 
-#include <QDialog>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QCheckBox>
-#include <QComboBox>
-#include <QTableWidget>
-#include <QTabWidget>
-#include <QLabel>
-#include <QSpinBox>
-#include <QDoubleSpinBox>
+
 #include <memory>
 
 class ModelRouterAdapter;
@@ -27,11 +18,10 @@ class ModelRouterAdapter;
  * - Retry policies
  * - Provider health status
  */
-class CloudSettingsDialog : public QDialog {
-    Q_OBJECT
+class CloudSettingsDialog : public void {
 
 public:
-    explicit CloudSettingsDialog(ModelRouterAdapter *adapter, QWidget *parent = nullptr);
+    explicit CloudSettingsDialog(ModelRouterAdapter *adapter, void *parent = nullptr);
     ~CloudSettingsDialog();
 
     /**
@@ -47,15 +37,15 @@ public:
 protected:
     void closeEvent(QCloseEvent *event) override;
 
-private slots:
+private:
     // API Key Management
-    void onOpenAIKeyChanged(const QString& key);
-    void onAnthropicKeyChanged(const QString& key);
-    void onGoogleKeyChanged(const QString& key);
-    void onMoonshotKeyChanged(const QString& key);
-    void onAzureOpenAIKeyChanged(const QString& key);
-    void onAwsAccessKeyChanged(const QString& key);
-    void onAwsSecretKeyChanged(const QString& key);
+    void onOpenAIKeyChanged(const std::string& key);
+    void onAnthropicKeyChanged(const std::string& key);
+    void onGoogleKeyChanged(const std::string& key);
+    void onMoonshotKeyChanged(const std::string& key);
+    void onAzureOpenAIKeyChanged(const std::string& key);
+    void onAwsAccessKeyChanged(const std::string& key);
+    void onAwsSecretKeyChanged(const std::string& key);
     
     // Key visibility toggle
     void onToggleKeyVisibility(int provider_index);
@@ -76,7 +66,7 @@ private slots:
     void onCostAlertThresholdChanged(double threshold);
     
     // Model preferences
-    void onDefaultModelChanged(const QString& model);
+    void onDefaultModelChanged(const std::string& model);
     void onPreferLocalModelsChanged(bool checked);
     void onEnableStreamingChanged(bool checked);
     void onEnableFallbackChanged(bool checked);
@@ -106,10 +96,10 @@ private:
     // Helper methods
     void updateProviderStatus();
     void validateApiKeys();
-    void saveApiKeyToEnvironment(const QString& provider, const QString& key);
-    void loadApiKeyFromEnvironment(const QString& provider);
-    QString maskApiKey(const QString& key) const;
-    bool testApiKey(const QString& provider, const QString& key);
+    void saveApiKeyToEnvironment(const std::string& provider, const std::string& key);
+    void loadApiKeyFromEnvironment(const std::string& provider);
+    std::string maskApiKey(const std::string& key) const;
+    bool testApiKey(const std::string& provider, const std::string& key);
 
     ModelRouterAdapter *m_adapter;
     
@@ -190,8 +180,9 @@ private:
     
     // State
     bool m_keys_visible[6] = {false};
-    QMap<QString, QString> m_current_keys;
+    std::map<std::string, std::string> m_current_keys;
     bool m_settings_changed = false;
 };
 
 #endif // CLOUD_SETTINGS_DIALOG_H
+

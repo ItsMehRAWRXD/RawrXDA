@@ -27,5 +27,3 @@ void IDEAgentBridgeHotPatchingIntegration::onLSPDiagnostic(const std::string& ur
     diagnosticsAvailable(uri, diags);
 }
 
-
-

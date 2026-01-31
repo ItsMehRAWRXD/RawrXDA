@@ -124,5 +124,3 @@ void* GdbMI::parseResult(const std::string &str, int &index)
     return result;
 }
 
-
-

@@ -134,7 +134,3 @@ private:
     std::stringList getGitIgnoredPatterns(const std::string &rootDir);
 };
 
-
-
-
-

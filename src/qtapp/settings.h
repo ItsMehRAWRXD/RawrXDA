@@ -1,8 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QVariant>
-#include <QSettings>
+
 #include <string>
 #include <cstdint>
 
@@ -42,8 +40,8 @@ public:
     void initialize();
     
     // Qt-based settings (for GUI)
-    void setValue(const QString& key, const QVariant& value);
-    QVariant getValue(const QString& key, const QVariant& default_value = QVariant());
+    void setValue(const std::string& key, const std::any& value);
+    std::any getValue(const std::string& key, const std::any& default_value = std::any());
     
     // File-based settings (for compute/overclock)
     static bool LoadCompute(AppState& state, const std::string& path);
@@ -54,3 +52,4 @@ public:
 private:
     QSettings* settings_;
 };
+

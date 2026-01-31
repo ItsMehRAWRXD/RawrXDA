@@ -1,30 +1,17 @@
 #pragma once
 
-#include <QDialog>
+
 #include "settings_manager.h"
 
-class QVBoxLayout;
-class QHBoxLayout;
-class QTabWidget;
-class QGroupBox;
-class QLabel;
-class QLineEdit;
-class QPushButton;
-class QCheckBox;
-class QSpinBox;
-class QDoubleSpinBox;
-class QComboBox;
-class QTextEdit;
 
-class SettingsDialog : public QDialog
+class SettingsDialog : public void
 {
-    Q_OBJECT
 
 public:
-    explicit SettingsDialog(QWidget *parent = nullptr);
+    explicit SettingsDialog(void *parent = nullptr);
     void initialize();
 
-private slots:
+private:
     void saveSettings();
     void applySettings();
     void loadSettings();
@@ -34,11 +21,11 @@ private slots:
 
 private:
     void setupUI();
-    QWidget* createGeneralTab();
-    QWidget* createModelTab();
-    QWidget* createSecurityTab();
-    QWidget* createTrainingTab();
-    QWidget* createCICDTab();
+    void* createGeneralTab();
+    void* createModelTab();
+    void* createSecurityTab();
+    void* createTrainingTab();
+    void* createCICDTab();
 
     SettingsManager *m_settings = nullptr;
     

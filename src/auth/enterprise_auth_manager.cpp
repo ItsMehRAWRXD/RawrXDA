@@ -13,7 +13,6 @@ bool EnterpriseAuthManager::loadConfig(const std::string &configPath)
 {
     // File operation removed;
     if (!configFile.open(std::iostream::ReadOnly)) {
-        // // qWarning:  "Failed to open enterprise config:" << configPath;
         return false;
     }
 
@@ -21,7 +20,6 @@ bool EnterpriseAuthManager::loadConfig(const std::string &configPath)
     configFile.close();
 
     if (!doc.isObject()) {
-        // // qWarning:  "Invalid enterprise config JSON";
         return false;
     }
 
@@ -30,7 +28,6 @@ bool EnterpriseAuthManager::loadConfig(const std::string &configPath)
     m_clientId = obj.value("client_id").toString();
     m_jwksUrl = obj.value("jwks_url").toString();
 
-    // // qDebug:  "Loaded enterprise config:" << m_provider << m_clientId;
 
     // Fetch public keys from JWKS endpoint
     if (!m_jwksUrl.empty()) {
@@ -56,7 +53,6 @@ bool EnterpriseAuthManager::authenticateWithToken(const std::string &bearerToken
     }
 
     m_authenticated = true;
-    // // qInfo:  "User authenticated:" << m_userUPN;
     authenticationSucceeded(m_userUPN);
     return true;
 }
@@ -87,7 +83,6 @@ bool EnterpriseAuthManager::fetchPublicKeys()
     // 2. Parse the JWKS response
     // 3. Cache the public keys for token validation
     
-    // // qDebug:  "Fetching public keys from:" << m_jwksUrl;
     // Simplified for this example
     return true;
 }
@@ -100,7 +95,6 @@ bool EnterpriseAuthManager::validateToken(const std::string &token)
     // 3. Check token expiration
     // 4. Validate token claims
     
-    // // qDebug:  "Validating JWT token...";
     // Simplified for this example
     return !token.empty();
 }
@@ -116,8 +110,4 @@ std::string EnterpriseAuthManager::extractUPN(const std::string &token)
     // Simplified for this example
     return "user@example.com";
 }
-
-
-
-
 

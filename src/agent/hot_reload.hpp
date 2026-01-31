@@ -1,20 +1,20 @@
 #pragma once
-#include <QString>
-#include <QObject>
 
-class HotReload : public QObject {
-    Q_OBJECT
+#include <string>
+#include <functional>
+
+class HotReload {
 public:
-    explicit HotReload(QObject* parent = nullptr);
+    explicit HotReload();
     
     // Reload quantization library on-the-fly
-    bool reloadQuant(const QString& quantType);
+    bool reloadQuant(const std::string& quantType);
     
     // Reload specific module
-    bool reloadModule(const QString& moduleName);
+    bool reloadModule(const std::string& moduleName);
     
-signals:
-    void quantReloaded(const QString& quantType);
-    void moduleReloaded(const QString& moduleName);
-    void reloadFailed(const QString& error);
+    // Callbacks replacing signals
+    std::function<void(const std::string&)> onQuantReloaded;
+    std::function<void(const std::string&)> onModuleReloaded;
+    std::function<void(const std::string&)> onReloadFailed;
 };

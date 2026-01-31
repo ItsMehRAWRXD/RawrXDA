@@ -738,4 +738,3 @@ public:
 
 #endif // QTGUISTUBS_HPP
 
-

@@ -95,7 +95,7 @@ bool TransformerInference::loadWeights(const std::map<std::string, std::pair<std
                 layer.attn_q = createTensorFromCache(qIt->second.first, qIt->second.second,
                                                      {m_nEmbd, m_nEmbd});
             } else {
-                qIt = tensorCache.find(altPrefix + "self_attn.q_proj.weight");
+                qIt = tensorCache.find(altPrefix + "self_attn..weight");
                 if (qIt != tensorCache.end()) {
                     layer.attn_q = createTensorFromCache(qIt->second.first, qIt->second.second,
                                                          {m_nEmbd, m_nEmbd});

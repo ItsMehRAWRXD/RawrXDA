@@ -1,14 +1,5 @@
 #pragma once
 
-#include <QWidget>
-#include <QTextEdit>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QLabel>
-#include <QScrollArea>
-#include <QFrame>
-#include <QList>
 
 /**
  * @brief GitHub Copilot-style AI chat panel
@@ -20,19 +11,18 @@
  * - Quick actions (explain, fix, refactor)
  * - Context awareness (selected code)
  */
-class AIChatPanel : public QWidget {
-    Q_OBJECT
+class AIChatPanel : public void {
 
 public:
     struct Message {
         enum Role { User, Assistant, System };
         Role role;
-        QString content;
-        QString timestamp;
+        std::string content;
+        std::string timestamp;
         bool isStreaming = false;
     };
 
-    explicit AIChatPanel(QWidget* parent = nullptr);
+    explicit AIChatPanel(void* parent = nullptr);
     
     /**
      * Two-phase initialization - call after QApplication is ready
@@ -40,40 +30,40 @@ public:
      */
     void initialize();
     
-    void addUserMessage(const QString& message);
-    void addAssistantMessage(const QString& message, bool streaming = false);
-    void updateStreamingMessage(const QString& content);
+    void addUserMessage(const std::string& message);
+    void addAssistantMessage(const std::string& message, bool streaming = false);
+    void updateStreamingMessage(const std::string& content);
     void finishStreaming();
     void clear();
     
-    void setContext(const QString& code, const QString& filePath);
+    void setContext(const std::string& code, const std::string& filePath);
     
-signals:
-    void messageSubmitted(const QString& message);
-    void quickActionTriggered(const QString& action, const QString& context);
+    void messageSubmitted(const std::string& message);
+    void quickActionTriggered(const std::string& action, const std::string& context);
     
-private slots:
+private:
     void onSendClicked();
-    void onQuickActionClicked(const QString& action);
+    void onQuickActionClicked(const std::string& action);
     
 private:
     void setupUI();
     void applyDarkTheme();
-    QWidget* createMessageBubble(const Message& msg);
-    QWidget* createQuickActions();
+    void* createMessageBubble(const Message& msg);
+    void* createQuickActions();
     void scrollToBottom();
     
     QVBoxLayout* m_messagesLayout;
     QScrollArea* m_scrollArea;
-    QWidget* m_messagesContainer;
+    void* m_messagesContainer;
     QLineEdit* m_inputField;
     QPushButton* m_sendButton;
-    QWidget* m_quickActionsWidget;
+    void* m_quickActionsWidget;
     
-    QList<Message> m_messages;
-    QWidget* m_streamingBubble = nullptr;
+    std::vector<Message> m_messages;
+    void* m_streamingBubble = nullptr;
     QTextEdit* m_streamingText = nullptr;
     
-    QString m_contextCode;
-    QString m_contextFilePath;
+    std::string m_contextCode;
+    std::string m_contextFilePath;
 };
+

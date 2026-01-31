@@ -1,42 +1,24 @@
 #include "cloud_settings_dialog.h"
 #include "model_router_adapter.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGridLayout>
-#include <QLabel>
-#include <QGroupBox>
-#include <QTabWidget>
-#include <QMessageBox>
-#include <QClipboard>
-#include <QApplication>
-#include <QSettings>
-#include <QFileDialog>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QDebug>
-#include <QProcess>
-#include <QHeaderView>
-#include <QTimer>
-#include <QCloseEvent>
+
+
 #include <cstdlib>
 
-CloudSettingsDialog::CloudSettingsDialog(ModelRouterAdapter *adapter, QWidget *parent)
-    : QDialog(parent), m_adapter(adapter)
+CloudSettingsDialog::CloudSettingsDialog(ModelRouterAdapter *adapter, void *parent)
+    : void(parent), m_adapter(adapter)
 {
     setWindowTitle("Cloud Provider Settings - RawrXD Model Router");
     setMinimumSize(800, 700);
-    setAttribute(Qt::WA_DeleteOnClose, false);
+    setAttribute(//WA_DeleteOnClose, false);
     
     createUI();
     setupConnections();
     loadSettings();
     
-    qDebug() << "[CloudSettingsDialog] Constructed";
 }
 
 CloudSettingsDialog::~CloudSettingsDialog()
 {
-    qDebug() << "[CloudSettingsDialog] Destroyed";
 }
 
 void CloudSettingsDialog::createUI()
@@ -60,24 +42,19 @@ void CloudSettingsDialog::createUI()
 
     m_test_all_button = new QPushButton("Test All Keys", this);
     m_test_all_button->setToolTip("Test connectivity to all configured cloud providers");
-    connect(m_test_all_button, &QPushButton::clicked, this, &CloudSettingsDialog::onTestAllKeys);
-
+// Qt connect removed
     m_load_env_button = new QPushButton("Load from Environment", this);
     m_load_env_button->setToolTip("Load API keys from environment variables");
-    connect(m_load_env_button, &QPushButton::clicked, this, &CloudSettingsDialog::onLoadEnvironmentVariables);
-
+// Qt connect removed
     m_export_button = new QPushButton("Export Settings", this);
     m_export_button->setToolTip("Export configuration to JSON file");
-    connect(m_export_button, &QPushButton::clicked, this, &CloudSettingsDialog::onExportConfiguration);
-
+// Qt connect removed
     m_import_button = new QPushButton("Import Settings", this);
     m_import_button->setToolTip("Import configuration from JSON file");
-    connect(m_import_button, &QPushButton::clicked, this, &CloudSettingsDialog::onImportConfiguration);
-
+// Qt connect removed
     m_defaults_button = new QPushButton("Load Defaults", this);
     m_defaults_button->setToolTip("Reset to default settings");
-    connect(m_defaults_button, &QPushButton::clicked, this, &CloudSettingsDialog::onLoadDefaults);
-
+// Qt connect removed
     button_layout->addWidget(m_test_all_button);
     button_layout->addWidget(m_load_env_button);
     button_layout->addWidget(m_export_button);
@@ -88,12 +65,10 @@ void CloudSettingsDialog::createUI()
     m_save_button = new QPushButton("Save Settings", this);
     m_save_button->setStyleSheet("QPushButton { background-color: #0066cc; color: white; font-weight: bold; }");
     m_save_button->setMinimumWidth(120);
-    connect(m_save_button, &QPushButton::clicked, this, &CloudSettingsDialog::onSaveSettings);
-
+// Qt connect removed
     m_cancel_button = new QPushButton("Cancel", this);
     m_cancel_button->setMinimumWidth(100);
-    connect(m_cancel_button, &QPushButton::clicked, this, &QDialog::reject);
-
+// Qt connect removed
     button_layout->addWidget(m_save_button);
     button_layout->addWidget(m_cancel_button);
 
@@ -103,7 +78,7 @@ void CloudSettingsDialog::createUI()
 
 void CloudSettingsDialog::createApiKeyTab()
 {
-    QWidget *tab = new QWidget(this);
+    void *tab = new void(this);
     QVBoxLayout *layout = new QVBoxLayout(tab);
     layout->setSpacing(12);
 
@@ -129,15 +104,13 @@ void CloudSettingsDialog::createApiKeyTab()
     openai_key_layout->addWidget(m_openai_key_input);
 
     m_openai_visible_checkbox = new QCheckBox("Show", this);
-    connect(m_openai_visible_checkbox, QOverload<int>::of(&QCheckBox::stateChanged),
-            this, [this](int state) {
-        m_openai_key_input->setEchoMode(state == Qt::Checked ? QLineEdit::Normal : QLineEdit::Password);
+// Qt connect removed
     });
     openai_key_layout->addWidget(m_openai_visible_checkbox);
 
     m_openai_test_button = new QPushButton("Test", this);
     m_openai_test_button->setMaximumWidth(70);
-    connect(m_openai_test_button, &QPushButton::clicked, this, &CloudSettingsDialog::onTestOpenAIKey);
+// Qt connect removed
     openai_key_layout->addWidget(m_openai_test_button);
 
     openai_layout->addLayout(openai_key_layout);
@@ -161,15 +134,13 @@ void CloudSettingsDialog::createApiKeyTab()
     anthropic_key_layout->addWidget(m_anthropic_key_input);
 
     m_anthropic_visible_checkbox = new QCheckBox("Show", this);
-    connect(m_anthropic_visible_checkbox, QOverload<int>::of(&QCheckBox::stateChanged),
-            this, [this](int state) {
-        m_anthropic_key_input->setEchoMode(state == Qt::Checked ? QLineEdit::Normal : QLineEdit::Password);
+// Qt connect removed
     });
     anthropic_key_layout->addWidget(m_anthropic_visible_checkbox);
 
     m_anthropic_test_button = new QPushButton("Test", this);
     m_anthropic_test_button->setMaximumWidth(70);
-    connect(m_anthropic_test_button, &QPushButton::clicked, this, &CloudSettingsDialog::onTestAnthropicKey);
+// Qt connect removed
     anthropic_key_layout->addWidget(m_anthropic_test_button);
 
     anthropic_layout->addLayout(anthropic_key_layout);
@@ -193,15 +164,13 @@ void CloudSettingsDialog::createApiKeyTab()
     google_key_layout->addWidget(m_google_key_input);
 
     m_google_visible_checkbox = new QCheckBox("Show", this);
-    connect(m_google_visible_checkbox, QOverload<int>::of(&QCheckBox::stateChanged),
-            this, [this](int state) {
-        m_google_key_input->setEchoMode(state == Qt::Checked ? QLineEdit::Normal : QLineEdit::Password);
+// Qt connect removed
     });
     google_key_layout->addWidget(m_google_visible_checkbox);
 
     m_google_test_button = new QPushButton("Test", this);
     m_google_test_button->setMaximumWidth(70);
-    connect(m_google_test_button, &QPushButton::clicked, this, &CloudSettingsDialog::onTestGoogleKey);
+// Qt connect removed
     google_key_layout->addWidget(m_google_test_button);
 
     google_layout->addLayout(google_key_layout);
@@ -220,7 +189,7 @@ void CloudSettingsDialog::createApiKeyTab()
 
 void CloudSettingsDialog::createConfigurationTab()
 {
-    QWidget *tab = new QWidget(this);
+    void *tab = new void(this);
     QVBoxLayout *layout = new QVBoxLayout(tab);
     layout->setSpacing(12);
 
@@ -311,7 +280,7 @@ void CloudSettingsDialog::createConfigurationTab()
 
 void CloudSettingsDialog::createProvidersTab()
 {
-    QWidget *tab = new QWidget(this);
+    void *tab = new void(this);
     QVBoxLayout *layout = new QVBoxLayout(tab);
     layout->setSpacing(8);
 
@@ -322,7 +291,7 @@ void CloudSettingsDialog::createProvidersTab()
     // Health check button
     QHBoxLayout *health_button_layout = new QHBoxLayout();
     m_check_health_button = new QPushButton("Check Provider Health", this);
-    connect(m_check_health_button, &QPushButton::clicked, this, &CloudSettingsDialog::onCheckProviderHealth);
+// Qt connect removed
     health_button_layout->addWidget(m_check_health_button);
     health_button_layout->addStretch();
     
@@ -377,7 +346,7 @@ void CloudSettingsDialog::createProvidersTab()
 
 void CloudSettingsDialog::createAdvancedTab()
 {
-    QWidget *tab = new QWidget(this);
+    void *tab = new void(this);
     QVBoxLayout *layout = new QVBoxLayout(tab);
     layout->setSpacing(12);
 
@@ -419,13 +388,11 @@ void CloudSettingsDialog::createAdvancedTab()
 
 void CloudSettingsDialog::setupConnections()
 {
-    connect(m_openai_key_input, &QLineEdit::textChanged, this, &CloudSettingsDialog::onOpenAIKeyChanged);
-    connect(m_anthropic_key_input, &QLineEdit::textChanged, this, &CloudSettingsDialog::onAnthropicKeyChanged);
-    connect(m_google_key_input, &QLineEdit::textChanged, this, &CloudSettingsDialog::onGoogleKeyChanged);
-    connect(m_moonshot_key_input, &QLineEdit::textChanged, this, &CloudSettingsDialog::onMoonshotKeyChanged);
-    connect(m_azure_key_input, &QLineEdit::textChanged, this, &CloudSettingsDialog::onAzureOpenAIKeyChanged);
-    
-    qDebug() << "[CloudSettingsDialog::setupConnections] Completed";
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 void CloudSettingsDialog::loadSettings()
@@ -450,7 +417,6 @@ void CloudSettingsDialog::loadSettings()
     m_enable_streaming_checkbox->setChecked(settings.value("enable_streaming", true).toBool());
     m_enable_fallback_checkbox->setChecked(settings.value("enable_fallback", true).toBool());
     
-    qDebug() << "[CloudSettingsDialog::loadSettings] Settings loaded";
 }
 
 void CloudSettingsDialog::applySettings()
@@ -482,42 +448,41 @@ void CloudSettingsDialog::applySettings()
     m_adapter->setLatencyThreshold(m_timeout_spinbox->value());
     m_adapter->setRetryPolicy(m_max_retries_spinbox->value(), m_retry_delay_spinbox->value());
     
-    qDebug() << "[CloudSettingsDialog::applySettings] Settings applied";
 }
 
 // === Slot Implementations ===
 
-void CloudSettingsDialog::onOpenAIKeyChanged(const QString& key)
+void CloudSettingsDialog::onOpenAIKeyChanged(const std::string& key)
 {
     m_settings_changed = true;
 }
 
-void CloudSettingsDialog::onAnthropicKeyChanged(const QString& key)
+void CloudSettingsDialog::onAnthropicKeyChanged(const std::string& key)
 {
     m_settings_changed = true;
 }
 
-void CloudSettingsDialog::onGoogleKeyChanged(const QString& key)
+void CloudSettingsDialog::onGoogleKeyChanged(const std::string& key)
 {
     m_settings_changed = true;
 }
 
-void CloudSettingsDialog::onMoonshotKeyChanged(const QString& key)
+void CloudSettingsDialog::onMoonshotKeyChanged(const std::string& key)
 {
     m_settings_changed = true;
 }
 
-void CloudSettingsDialog::onAzureOpenAIKeyChanged(const QString& key)
+void CloudSettingsDialog::onAzureOpenAIKeyChanged(const std::string& key)
 {
     m_settings_changed = true;
 }
 
-void CloudSettingsDialog::onAwsAccessKeyChanged(const QString& key)
+void CloudSettingsDialog::onAwsAccessKeyChanged(const std::string& key)
 {
     m_settings_changed = true;
 }
 
-void CloudSettingsDialog::onAwsSecretKeyChanged(const QString& key)
+void CloudSettingsDialog::onAwsSecretKeyChanged(const std::string& key)
 {
     m_settings_changed = true;
 }
@@ -529,7 +494,7 @@ void CloudSettingsDialog::onToggleKeyVisibility(int provider_index)
 
 void CloudSettingsDialog::onTestOpenAIKey()
 {
-    QString key = m_openai_key_input->text();
+    std::string key = m_openai_key_input->text();
     if (key.isEmpty()) {
         m_openai_status_label->setText("Status: No key provided");
         return;
@@ -551,7 +516,7 @@ void CloudSettingsDialog::onTestOpenAIKey()
 
 void CloudSettingsDialog::onTestAnthropicKey()
 {
-    QString key = m_anthropic_key_input->text();
+    std::string key = m_anthropic_key_input->text();
     if (key.isEmpty()) {
         m_anthropic_status_label->setText("Status: No key provided");
         return;
@@ -571,7 +536,7 @@ void CloudSettingsDialog::onTestAnthropicKey()
 
 void CloudSettingsDialog::onTestGoogleKey()
 {
-    QString key = m_google_key_input->text();
+    std::string key = m_google_key_input->text();
     if (key.isEmpty()) {
         m_google_status_label->setText("Status: No key provided");
         return;
@@ -629,7 +594,7 @@ void CloudSettingsDialog::onCostAlertThresholdChanged(double threshold)
     m_settings_changed = true;
 }
 
-void CloudSettingsDialog::onDefaultModelChanged(const QString& model)
+void CloudSettingsDialog::onDefaultModelChanged(const std::string& model)
 {
     m_settings_changed = true;
 }
@@ -694,19 +659,19 @@ void CloudSettingsDialog::onLoadEnvironmentVariables()
 
 void CloudSettingsDialog::onExportConfiguration()
 {
-    QString filename = QFileDialog::getSaveFileName(this, 
+    std::string filename = QFileDialog::getSaveFileName(this, 
         "Export Configuration", "", "JSON Files (*.json)");
     
     if (!filename.isEmpty()) {
-        QJsonObject config;
+        void* config;
         config["openai_api_key"] = maskApiKey(m_openai_key_input->text());
         config["anthropic_api_key"] = maskApiKey(m_anthropic_key_input->text());
         config["timeout_ms"] = m_timeout_spinbox->value();
         config["max_retries"] = m_max_retries_spinbox->value();
         config["cost_alert_threshold"] = m_cost_alert_threshold_spinbox->value();
         
-        QJsonDocument doc(config);
-        QFile file(filename);
+        void* doc(config);
+        std::fstream file(filename);
         if (file.open(QIODevice::WriteOnly)) {
             file.write(doc.toJson());
             file.close();
@@ -718,7 +683,7 @@ void CloudSettingsDialog::onExportConfiguration()
 
 void CloudSettingsDialog::onImportConfiguration()
 {
-    QString filename = QFileDialog::getOpenFileName(this,
+    std::string filename = QFileDialog::getOpenFileName(this,
         "Import Configuration", "", "JSON Files (*.json)");
     
     if (!filename.isEmpty()) {
@@ -740,7 +705,7 @@ void CloudSettingsDialog::onCheckProviderHealth()
     m_health_status_label->setText("Status: Checking provider health...");
     
     // Simulate health check
-    QTimer::singleShot(2000, this, [this]() {
+    void*::singleShot(2000, this, [this]() {
         m_health_status_label->setStyleSheet("color: green; font-weight: bold;");
         m_health_status_label->setText("Status: All providers healthy");
     });
@@ -753,7 +718,7 @@ void CloudSettingsDialog::onProviderHealthUpdated()
 
 int CloudSettingsDialog::exec()
 {
-    return QDialog::exec();
+    return void::exec();
 }
 
 void CloudSettingsDialog::closeEvent(QCloseEvent *event)
@@ -774,16 +739,15 @@ void CloudSettingsDialog::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-QString CloudSettingsDialog::maskApiKey(const QString& key) const
+std::string CloudSettingsDialog::maskApiKey(const std::string& key) const
 {
     if (key.length() <= 4) return key;
     return key.left(4) + "..." + key.right(4);
 }
 
-bool CloudSettingsDialog::testApiKey(const QString& provider, const QString& key)
+bool CloudSettingsDialog::testApiKey(const std::string& provider, const std::string& key)
 {
     // Simplified test - real implementation would make HTTP call
-    qDebug() << "[CloudSettingsDialog::testApiKey]" << provider;
     return !key.isEmpty();
 }
 
@@ -792,15 +756,15 @@ void CloudSettingsDialog::validateApiKeys()
     // Implementation for validating API key format
 }
 
-void CloudSettingsDialog::saveApiKeyToEnvironment(const QString& provider, const QString& key)
+void CloudSettingsDialog::saveApiKeyToEnvironment(const std::string& provider, const std::string& key)
 {
     // Implementation for saving to environment
 }
 
-void CloudSettingsDialog::loadApiKeyFromEnvironment(const QString& provider)
+void CloudSettingsDialog::loadApiKeyFromEnvironment(const std::string& provider)
 {
     // Implementation for loading from environment
-    QString key = qEnvironmentVariable(provider.toStdString().c_str());
+    std::string key = qEnvironmentVariable(provider.toStdString().c_str());
     
     if (provider == "OPENAI_API_KEY") {
         m_openai_key_input->setText(key);
@@ -811,4 +775,5 @@ void CloudSettingsDialog::loadApiKeyFromEnvironment(const QString& provider)
     }
 }
 
-#include "cloud_settings_dialog.moc"
+// MOC removed
+

@@ -43,7 +43,6 @@ StartupReadinessChecker::~StartupReadinessChecker()
 
 void StartupReadinessChecker::runChecks()
 {
-    // // qDebug:  "[StartupReadinessChecker] Starting comprehensive health checks";
     
     m_lastReport = AgentReadinessReport();
     m_lastReport.startTime = // DateTime::currentDateTime();
@@ -178,7 +177,6 @@ void StartupReadinessChecker::runChecks()
             m_lastReport.overallReady = m_lastReport.failures.empty();
             logReadinessMetrics(m_lastReport);
             
-            // // qDebug:  "[StartupReadinessChecker] All checks complete. Ready:" << m_lastReport.overallReady
                      << "Failures:" << m_lastReport.failures.size();
             
             readinessComplete(m_lastReport);
@@ -220,7 +218,7 @@ HealthCheckResult StartupReadinessChecker::checkLLMEndpoint(const std::string& b
             request.setRawHeader("x-api-key", apiKey.toUtf8());
             request.setRawHeader("anthropic-version", "2023-06-01");
         } else if (backend == "OpenAI") {
-            request.setRawHeader("Authorization", std::string("Bearer %1").arg(apiKey).toUtf8());
+            request.setRawHeader("Authorization", std::string("Bearer %1").toUtf8());
         }
     }
     
@@ -240,18 +238,18 @@ HealthCheckResult StartupReadinessChecker::checkLLMEndpoint(const std::string& b
         if (reply->error() == void*::NoError) {
             result.success = true;
             result.latencyMs = timer.elapsed();
-            result.message = std::string("%1 endpoint healthy (%2ms)").arg(backend).arg(result.latencyMs);
+            result.message = std::string("%1 endpoint healthy (%2ms)");
             result.technicalDetails = std::string("HTTP %1, URL: %2")
-                .arg(reply->attribute(void*::HttpStatusCodeAttribute))
-                .arg(endpoint);
+                )
+                ;
             
             checkProgress(backend, 100, result.message);
         } else {
             result.success = false;
-            result.message = std::string("%1 endpoint unreachable").arg(backend);
+            result.message = std::string("%1 endpoint unreachable");
             result.technicalDetails = std::string("Error: %1, URL: %2")
-                .arg(reply->errorString())
-                .arg(endpoint);
+                )
+                ;
             
             checkProgress(backend, 100, result.message);
         }
@@ -259,10 +257,10 @@ HealthCheckResult StartupReadinessChecker::checkLLMEndpoint(const std::string& b
         // Timeout
         reply->abort();
         result.success = false;
-        result.message = std::string("%1 endpoint timeout").arg(backend);
+        result.message = std::string("%1 endpoint timeout");
         result.technicalDetails = std::string("Timeout after %1ms, URL: %2")
-            .arg(m_timeoutMs)
-            .arg(endpoint);
+            
+            ;
         
         checkProgress(backend, 100, result.message);
     }
@@ -277,7 +275,7 @@ HealthCheckResult StartupReadinessChecker::checkGGUFServer(uint16_t port)
     result.subsystem = "GGUF Server";
     result.timestamp = // DateTime::currentDateTime();
     
-    checkProgress("GGUF Server", 20, std::string("Testing port %1...").arg(port));
+    checkProgress("GGUF Server", 20, std::string("Testing port %1..."));
     
     void* socket;
     std::chrono::steady_clock timer;
@@ -296,20 +294,20 @@ HealthCheckResult StartupReadinessChecker::checkGGUFServer(uint16_t port)
             std::vector<uint8_t> response = socket.readAll();
             
             result.success = true;
-            result.message = std::string("GGUF Server responsive on port %1 (%2ms)").arg(port).arg(result.latencyMs);
+            result.message = std::string("GGUF Server responsive on port %1 (%2ms)");
             result.technicalDetails = std::string("TCP connection successful, HTTP response received: %1 bytes")
-                .arg(response.size());
+                );
         } else {
             result.success = false;
-            result.message = std::string("GGUF Server port %1 open but not responding").arg(port);
+            result.message = std::string("GGUF Server port %1 open but not responding");
             result.technicalDetails = "TCP connected but no HTTP response";
         }
         
         socket.close();
     } else {
         result.success = false;
-        result.message = std::string("GGUF Server port %1 not accessible").arg(port);
-        result.technicalDetails = std::string("Connection failed: %1").arg(socket.errorString());
+        result.message = std::string("GGUF Server port %1 not accessible");
+        result.technicalDetails = std::string("Connection failed: %1"));
     }
     
     checkProgress("GGUF Server", 100, result.message);
@@ -346,7 +344,7 @@ HealthCheckResult StartupReadinessChecker::checkProjectRoot(const std::string& p
     result.subsystem = "Project Root";
     result.timestamp = // DateTime::currentDateTime();
     
-    checkProgress("Project Root", 30, std::string("Validating %1...").arg(projectPath));
+    checkProgress("Project Root", 30, std::string("Validating %1..."));
     
     // Info pathInfo(projectPath);
     
@@ -357,19 +355,19 @@ HealthCheckResult StartupReadinessChecker::checkProjectRoot(const std::string& p
         m_lastReport.warnings.append("Configure default project root in settings");
     } else if (!pathInfo.exists()) {
         result.success = false;
-        result.message = std::string("Project root does not exist: %1").arg(projectPath);
-        result.technicalDetails = std::string("Path: %1 (not found)").arg(pathInfo.string());
+        result.message = std::string("Project root does not exist: %1");
+        result.technicalDetails = std::string("Path: %1 (not found)"));
     } else if (!pathInfo.isDir()) {
         result.success = false;
-        result.message = std::string("Project root is not a directory: %1").arg(projectPath);
-        result.technicalDetails = std::string("Path: %1 (is a file)").arg(pathInfo.string());
+        result.message = std::string("Project root is not a directory: %1");
+        result.technicalDetails = std::string("Path: %1 (is a file)"));
     } else if (!pathInfo.isReadable()) {
         result.success = false;
-        result.message = std::string("Project root not accessible: %1").arg(projectPath);
-        result.technicalDetails = std::string("Path: %1 (permission denied)").arg(pathInfo.string());
+        result.message = std::string("Project root not accessible: %1");
+        result.technicalDetails = std::string("Path: %1 (permission denied)"));
     } else {
         result.success = true;
-        result.message = std::string("Project root ready: %1").arg(projectPath);
+        result.message = std::string("Project root ready: %1");
         
         // Get directory stats
         // dir(projectPath);
@@ -377,10 +375,10 @@ HealthCheckResult StartupReadinessChecker::checkProjectRoot(const std::string& p
         int dirCount = dir.entryList(// Dir::Dirs | // Dir::NoDotAndDotDot).size();
         
         result.technicalDetails = std::string("Path: %1\nFiles: %2, Subdirs: %3, Writable: %4")
-            .arg(pathInfo.string())
-            .arg(fileCount)
-            .arg(dirCount)
-            .arg(pathInfo.isWritable() ? "Yes" : "No");
+            )
+
+
+             ? "Yes" : "No");
     }
     
     checkProgress("Project Root", 100, result.message);
@@ -410,7 +408,7 @@ HealthCheckResult StartupReadinessChecker::checkEnvironmentVariables()
         if (value.empty()) {
             missingVars.append(varName);
         } else {
-            foundVars.append(std::string("%1=%2").arg(varName, value));
+            foundVars.append(std::string("%1=%2"));
         }
     }
     
@@ -421,13 +419,13 @@ HealthCheckResult StartupReadinessChecker::checkEnvironmentVariables()
         result.message = "All recommended environment variables set";
         result.technicalDetails = foundVars.join("\n");
     } else {
-        result.message = std::string("%1 recommended env vars set").arg(foundVars.size());
+        result.message = std::string("%1 recommended env vars set"));
         result.technicalDetails = std::string("Set: %1\nOptional but recommended: %2")
-            .arg(foundVars.join(", "))
-            .arg(missingVars.join(", "));
+            )
+            );
         
         if (!missingVars.empty()) {
-            m_lastReport.warnings.append(std::string("Optional env vars not set: %1").arg(missingVars.join(", ")));
+            m_lastReport.warnings.append(std::string("Optional env vars not set: %1")));
         }
     }
     
@@ -453,14 +451,14 @@ HealthCheckResult StartupReadinessChecker::checkNetworkConnectivity()
     if (socket.waitForConnected(3000)) {
         result.success = true;
         result.latencyMs = timer.elapsed();
-        result.message = std::string("Network connectivity OK (%1ms)").arg(result.latencyMs);
+        result.message = std::string("Network connectivity OK (%1ms)");
         result.technicalDetails = "Successfully connected to 8.8.8.8:53 (Google DNS)";
         socket.close();
     } else {
         // Network might be local-only, which is OK
         result.success = true; // Don't fail on this
         result.message = "Limited network connectivity (local only)";
-        result.technicalDetails = std::string("Cannot reach internet: %1").arg(socket.errorString());
+        result.technicalDetails = std::string("Cannot reach internet: %1"));
         m_lastReport.warnings.append("Internet connectivity limited - cloud LLM features may not work");
     }
     
@@ -489,25 +487,25 @@ HealthCheckResult StartupReadinessChecker::checkDiskSpace()
         
         if (availableBytes >= requiredBytes) {
             result.success = true;
-            result.message = std::string("Sufficient disk space: %1 available").arg(formatBytes(availableBytes));
+            result.message = std::string("Sufficient disk space: %1 available"));
             result.technicalDetails = std::string("Mount: %1\nTotal: %2\nUsed: %3 (%4%)\nAvailable: %5")
-                .arg(storage.rootPath())
-                .arg(formatBytes(totalBytes))
-                .arg(formatBytes(totalBytes - availableBytes))
-                .arg(usedPercent, 0, 'f', 1)
-                .arg(formatBytes(availableBytes));
+                )
+                )
+                )
+                
+                );
         } else {
             result.success = false;
-            result.message = std::string("Low disk space: only %1 available (need 10GB)").arg(formatBytes(availableBytes));
+            result.message = std::string("Low disk space: only %1 available (need 10GB)"));
             result.technicalDetails = std::string("Mount: %1\nAvailable: %2 (need %3)")
-                .arg(storage.rootPath())
-                .arg(formatBytes(availableBytes))
-                .arg(formatBytes(requiredBytes));
+                )
+                )
+                );
         }
     } else {
         result.success = false;
         result.message = "Cannot determine disk space";
-        result.technicalDetails = std::string("Storage info unavailable for: %1").arg(projectRoot);
+        result.technicalDetails = std::string("Storage info unavailable for: %1");
     }
     
     checkProgress("Disk Space", 100, result.message);
@@ -534,12 +532,12 @@ HealthCheckResult StartupReadinessChecker::checkModelCache()
         // Try to create it
         if (cache.mkpath(".")) {
             result.success = true;
-            result.message = std::string("Model cache created: %1").arg(cacheDir);
-            result.technicalDetails = std::string("Directory created at: %1").arg(cache.string());
+            result.message = std::string("Model cache created: %1");
+            result.technicalDetails = std::string("Directory created at: %1"));
         } else {
             result.success = false;
-            result.message = std::string("Cannot create model cache: %1").arg(cacheDir);
-            result.technicalDetails = std::string("Failed to create directory: %1").arg(cache.string());
+            result.message = std::string("Cannot create model cache: %1");
+            result.technicalDetails = std::string("Failed to create directory: %1"));
         }
     } else {
         // Check if writable
@@ -549,14 +547,14 @@ HealthCheckResult StartupReadinessChecker::checkModelCache()
             std::stringList models = cache.entryList(std::stringList() << "*.gguf" << "*.bin", // Dir::Files);
             
             result.success = true;
-            result.message = std::string("Model cache ready: %1 models cached").arg(models.size());
+            result.message = std::string("Model cache ready: %1 models cached"));
             result.technicalDetails = std::string("Path: %1\nCached models: %2\nWritable: Yes")
-                .arg(cache.string())
-                .arg(models.size());
+                )
+                );
         } else {
             result.success = false;
-            result.message = std::string("Model cache not writable: %1").arg(cacheDir);
-            result.technicalDetails = std::string("Path: %1 (read-only)").arg(cache.string());
+            result.message = std::string("Model cache not writable: %1");
+            result.technicalDetails = std::string("Path: %1 (read-only)"));
         }
     }
     
@@ -572,15 +570,15 @@ std::string StartupReadinessChecker::formatBytes(int64_t bytes)
     const int64_t TB = GB * 1024;
     
     if (bytes >= TB) {
-        return std::string("%1 TB").arg(bytes / (double)TB, 0, 'f', 2);
+        return std::string("%1 TB")TB, 0, 'f', 2);
     } else if (bytes >= GB) {
-        return std::string("%1 GB").arg(bytes / (double)GB, 0, 'f', 2);
+        return std::string("%1 GB")GB, 0, 'f', 2);
     } else if (bytes >= MB) {
-        return std::string("%1 MB").arg(bytes / (double)MB, 0, 'f', 2);
+        return std::string("%1 MB")MB, 0, 'f', 2);
     } else if (bytes >= KB) {
-        return std::string("%1 KB").arg(bytes / (double)KB, 0, 'f', 2);
+        return std::string("%1 KB")KB, 0, 'f', 2);
     } else {
-        return std::string("%1 bytes").arg(bytes);
+        return std::string("%1 bytes");
     }
 }
 
@@ -597,7 +595,6 @@ HealthCheckResult StartupReadinessChecker::runWithRetry(const std::string& subsy
             break;
         }
 
-        // // qWarning:  "[StartupReadinessChecker]" << subsystem << "attempt" << attempt
                    << "failed:" << lastResult.message;
 
         if (attempt < attempts && m_backoffMs > 0) {
@@ -640,7 +637,6 @@ void StartupReadinessChecker::logReadinessMetrics(const AgentReadinessReport& re
 
     std::string appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     if (appData.empty()) {
-        // // qWarning:  "[StartupReadinessChecker] Cannot log readiness metrics: no app data path";
         return;
     }
 
@@ -651,7 +647,6 @@ void StartupReadinessChecker::logReadinessMetrics(const AgentReadinessReport& re
 
     // File operation removed);
     if (!file.open(std::iostream::Append | std::iostream::Text)) {
-        // // qWarning:  "[StartupReadinessChecker] Cannot open readiness_metrics.log for writing";
         return;
     }
 
@@ -683,7 +678,6 @@ void StartupReadinessChecker::logReadinessMetrics(const AgentReadinessReport& re
     file.write("\n");
     file.close();
 
-    // // qDebug:  "[StartupReadinessChecker] Logged readiness metrics to" << file.fileName();
 }
 
 // ==================== StartupReadinessDialog Implementation ====================
@@ -865,7 +859,7 @@ bool StartupReadinessDialog::runChecks(UnifiedHotpatchManager* hotpatchManager,
     m_checksPassed = false;
     
     m_diagnosticsLog->append(std::string("[%1] Starting startup readiness checks...")
-        .arg(// DateTime::currentDateTime().toString("HH:mm:ss")));
+        .toString("HH:mm:ss")));
     
     // Start checks
     m_checker->runChecks();
@@ -895,7 +889,6 @@ bool StartupReadinessDialog::runChecks(UnifiedHotpatchManager* hotpatchManager,
         || qEnvironmentVariableIsSet("RAWRXD_HEADLESS_READINESS");
 
     if (headlessMode) {
-        // // qInfo:  "[StartupReadinessDialog] Headless readiness enabled - auto-continuing after checks";
         AgentReadinessReport headlessReport;
         voidLoop loop;
         QMetaObject::Connection conn = // Connect removed {
@@ -903,9 +896,7 @@ bool StartupReadinessDialog::runChecks(UnifiedHotpatchManager* hotpatchManager,
                 m_report = report;
                 m_checksPassed = report.overallReady;
                 if (!report.overallReady) {
-                    // // qWarning:  "[StartupReadinessDialog] Readiness completed with failures:" << report.failures;
                 } else {
-                    // // qInfo:  "[StartupReadinessDialog] Readiness checks passed in headless mode";
                 }
                 loop.quit();
             });
@@ -927,9 +918,9 @@ void StartupReadinessDialog::onCheckProgress(const std::string& subsystem, int p
     }
     
     m_diagnosticsLog->append(std::string("[%1] %2: %3")
-        .arg(// DateTime::currentDateTime().toString("HH:mm:ss"))
-        .arg(subsystem)
-        .arg(message));
+        .toString("HH:mm:ss"))
+        
+        );
     
     // Update overall progress
     int totalProgress = 0;
@@ -945,19 +936,19 @@ void StartupReadinessDialog::onReadinessComplete(const AgentReadinessReport& rep
     m_checksPassed = report.overallReady;
     
     m_diagnosticsLog->append(std::string("\n[%1] ========== CHECK SUMMARY ==========")
-        .arg(// DateTime::currentDateTime().toString("HH:mm:ss")));
+        .toString("HH:mm:ss")));
     
     // Update status icons
     for (auto it = report.checks.constBegin(); it != report.checks.constEnd(); ++it) {
         updateSubsystemStatus(it.key(), it.value().success, it.value().message);
         
         m_diagnosticsLog->append(std::string("[%1] %2: %3")
-            .arg(it.value().success ? "✓" : "✗")
-            .arg(it.key())
-            .arg(it.value().message));
+            .success ? "✓" : "✗")
+            )
+            .message));
         
         if (!it.value().technicalDetails.empty()) {
-            m_diagnosticsLog->append(std::string("    Details: %1").arg(it.value().technicalDetails));
+            m_diagnosticsLog->append(std::string("    Details: %1").technicalDetails));
         }
     }
     
@@ -994,8 +985,8 @@ void StartupReadinessDialog::showFinalSummary()
         m_summaryLabel->setText(
             std::string("⚠ %1 critical check(s) failed. Some features may be unavailable.\n"
                     "Failed: %2")
-            .arg(failureCount)
-            .arg(m_report.failures.join(", ")));
+            
+            ));
         m_summaryLabel->setStyleSheet(
             "background-color: #3d1a1a; color: #f48771; "
             "border: 1px solid #f48771; border-radius: 4px; "
@@ -1014,11 +1005,11 @@ void StartupReadinessDialog::showFinalSummary()
     if (!m_report.warnings.empty()) {
         m_diagnosticsLog->append(std::string("\n[WARNINGS]"));
         for (const std::string& warning : m_report.warnings) {
-            m_diagnosticsLog->append(std::string("  ⚠ %1").arg(warning));
+            m_diagnosticsLog->append(std::string("  ⚠ %1"));
         }
     }
     
-    m_diagnosticsLog->append(std::string("\nTotal validation time: %1ms").arg(m_report.totalLatency));
+    m_diagnosticsLog->append(std::string("\nTotal validation time: %1ms"));
 }
 
 void StartupReadinessDialog::onRetryClicked()
@@ -1035,7 +1026,7 @@ void StartupReadinessDialog::onRetryClicked()
     }
     
     m_diagnosticsLog->append(std::string("\n[%1] Retrying failed checks...")
-        .arg(// DateTime::currentDateTime().toString("HH:mm:ss")));
+        .toString("HH:mm:ss")));
     
     m_summaryLabel->hide();
     m_retryButton->setEnabled(false);
@@ -1063,12 +1054,4 @@ void StartupReadinessDialog::onConfigureClicked()
         "2. Settings file: " + 
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/RawrXD.ini");
 }
-
-
-
-
-
-
-
-
 

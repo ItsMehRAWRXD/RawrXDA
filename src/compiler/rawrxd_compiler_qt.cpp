@@ -19,11 +19,10 @@ CompilerEngine::CompilerEngine()
     // Create worker thread for async compilation
     m_workerThread = new std::thread(this);
     m_worker = new CompilerWorker();
-    m_worker->moveToThread(m_workerThread);
+    m_worker->;
     
     // Connect worker signals  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\nm_workerThread->start();
     
-    // // qInfo:  "[CompilerEngine] Initialized - Version" << version();
 }
 
 CompilerEngine::~CompilerEngine()
@@ -44,7 +43,7 @@ CompileResult CompilerEngine::compile(const CompileOptions& options)
     if (source.empty()) {
         CompileResult result;
         result.success = false;
-        result.errorMessage = tr("Failed to read input file: %1").arg(options.inputFile);
+        result.errorMessage = tr("Failed to read input file: %1");
         result.lastStage = CompilationStage::Failed;
         return result;
     }
@@ -80,7 +79,7 @@ void CompilerEngine::compileAsync(const CompileOptions& options)
     std::string source = readFile(options.inputFile);
     if (source.empty()) {
         m_isCompiling = false;
-        errorOccurred(tr("Failed to read input file: %1").arg(options.inputFile));
+        errorOccurred(tr("Failed to read input file: %1"));
         return;
     }
     
@@ -88,8 +87,8 @@ void CompilerEngine::compileAsync(const CompileOptions& options)
     
     // Start worker
     QMetaObject::invokeMethod(m_worker, "compile", QueuedConnection,
-                              Q_ARG(CompileOptions, options),
-                              Q_ARG(std::string, source));
+                              (CompileOptions, options),
+                              (std::string, source));
 }
 
 void CompilerEngine::cancelCompilation()
@@ -162,7 +161,7 @@ CompileResult CompilerEngine::runPipeline(const std::string& source, const Compi
     if (target == TargetArch::Auto) {
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
         target = TargetArch::X86_64;
-#elif defined(Q_PROCESSOR_ARM)
+#elif defined()
         target = TargetArch::ARM64;
 #else
         target = TargetArch::X86_64;
@@ -170,7 +169,7 @@ CompileResult CompilerEngine::runPipeline(const std::string& source, const Compi
     }
     
     emitProgress(CompilationStage::CodeGeneration, 70, 
-                 tr("Generating %1 code...").arg(Utils::targetToString(target)));
+                 tr("Generating %1 code...")));
     if (!runCodeGeneration(result, target)) {
         result.lastStage = CompilationStage::CodeGeneration;
         return result;
@@ -351,7 +350,7 @@ bool CompilerEngine::runLexer(const std::string& source, CompileResult& result)
             token.length = pos - start;
             
             // Check for keywords
-            static const QSet<std::string> keywords = {
+            static const std::unordered_set<std::string> keywords = {
                 "if", "else", "elif", "while", "for", "do", "switch", "case", "default",
                 "break", "continue", "return", "fn", "func", "function", "let", "var",
                 "const", "mut", "static", "extern", "pub", "public", "private",
@@ -362,7 +361,7 @@ bool CompilerEngine::runLexer(const std::string& source, CompileResult& result)
                 "async", "await", "yield", "match", "where", "in", "not", "and", "or", "xor"
             };
             
-            static const QSet<std::string> types = {
+            static const std::unordered_set<std::string> types = {
                 "void", "bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
                 "f32", "f64", "char", "string", "int", "float", "double", "long",
                 "short", "byte", "uint", "ulong", "ushort"
@@ -434,7 +433,7 @@ bool CompilerEngine::runLexer(const std::string& source, CompileResult& result)
         } else {
             // Unknown character
             addDiagnostic(DiagnosticSeverity::Error, 
-                          tr("Unknown character '%1'").arg(c),
+                          tr("Unknown character '%1'"),
                           line, column, result);
             return false;
         }
@@ -472,7 +471,7 @@ bool CompilerEngine::runParser(CompileResult& result)
             m_astRoot->children.append(node);
         } else if (result.diagnostics.empty()) {
             addDiagnostic(DiagnosticSeverity::Error,
-                          tr("Unexpected token '%1'").arg(m_tokens[tokenPos].text),
+                          tr("Unexpected token '%1'"),
                           m_tokens[tokenPos].line, m_tokens[tokenPos].column, result);
             return false;
         } else {
@@ -1207,10 +1206,10 @@ bool CompilerEngine::checkSemantics(ASTNode* node, CompileResult& result)
                 }
             }
             // Allow built-in functions
-            static const QSet<std::string> builtins = {"print", "println", "input", "len", "str", "int", "float"};
+            static const std::unordered_set<std::string> builtins = {"print", "println", "input", "len", "str", "int", "float"};
             if (!found && !builtins.contains(node->name)) {
                 addDiagnostic(DiagnosticSeverity::Warning,
-                              tr("Unknown function '%1'").arg(node->name),
+                              tr("Unknown function '%1'"),
                               node->line, node->column, result);
             }
             break;
@@ -1291,7 +1290,7 @@ void CompilerEngine::generateIRForStatement(ASTNode* stmt, std::stringstream& ir
     
     switch (stmt->type) {
         case 2: { // AST_VARIABLE
-            std::string tmp = std::string("%%t%1").arg(m_tempCounter++);
+            std::string tmp = std::string("%%t%1");
             if (!stmt->children.empty()) {
                 ir << prefix << tmp << " = alloca " << stmt->typeName << "\n";
                 std::string val = generateIRForExpression(stmt->children[0].data(), ir, indent);
@@ -1312,9 +1311,9 @@ void CompilerEngine::generateIRForStatement(ASTNode* stmt, std::stringstream& ir
         }
         
         case 5: { // AST_IF
-            std::string labelThen = std::string(".if_then_%1").arg(m_labelCounter++);
-            std::string labelElse = std::string(".if_else_%1").arg(m_labelCounter++);
-            std::string labelEnd = std::string(".if_end_%1").arg(m_labelCounter++);
+            std::string labelThen = std::string(".if_then_%1");
+            std::string labelElse = std::string(".if_else_%1");
+            std::string labelEnd = std::string(".if_end_%1");
             
             if (!stmt->children.empty()) {
                 std::string cond = generateIRForExpression(stmt->children[0].data(), ir, indent);
@@ -1339,9 +1338,9 @@ void CompilerEngine::generateIRForStatement(ASTNode* stmt, std::stringstream& ir
         }
         
         case 6: { // AST_WHILE
-            std::string labelCond = std::string(".while_cond_%1").arg(m_labelCounter++);
-            std::string labelBody = std::string(".while_body_%1").arg(m_labelCounter++);
-            std::string labelEnd = std::string(".while_end_%1").arg(m_labelCounter++);
+            std::string labelCond = std::string(".while_cond_%1");
+            std::string labelBody = std::string(".while_body_%1");
+            std::string labelEnd = std::string(".while_end_%1");
             
             ir << prefix << "br " << labelCond << "\n";
             ir << labelCond << ":\n";
@@ -1380,7 +1379,7 @@ std::string CompilerEngine::generateIRForExpression(ASTNode* expr, std::stringst
             if (expr->typeName == "int" || expr->typeName == "float") {
                 result = expr->name;
             } else if (expr->typeName == "string") {
-                result = std::string("@str_%1").arg(m_stringCounter++);
+                result = std::string("@str_%1");
                 m_strings[result] = expr->name;
             } else if (expr->typeName == "bool") {
                 result = (expr->name == "true") ? "1" : "0";
@@ -1390,7 +1389,7 @@ std::string CompilerEngine::generateIRForExpression(ASTNode* expr, std::stringst
         
         case 18: { // AST_IDENTIFIER
             if (m_varMap.contains(expr->name)) {
-                std::string tmp = std::string("%%t%1").arg(m_tempCounter++);
+                std::string tmp = std::string("%%t%1");
                 ir << prefix << tmp << " = load " << m_varMap[expr->name] << "\n";
                 result = tmp;
             } else {
@@ -1402,7 +1401,7 @@ std::string CompilerEngine::generateIRForExpression(ASTNode* expr, std::stringst
         case 12: { // AST_BINARY_OP
             std::string left = generateIRForExpression(expr->children[0].data(), ir, indent);
             std::string right = generateIRForExpression(expr->children[1].data(), ir, indent);
-            std::string tmp = std::string("%%t%1").arg(m_tempCounter++);
+            std::string tmp = std::string("%%t%1");
             
             std::string op = expr->attributes["operator"].toString();
             std::string irOp;
@@ -1429,7 +1428,7 @@ std::string CompilerEngine::generateIRForExpression(ASTNode* expr, std::stringst
         
         case 13: { // AST_UNARY_OP
             std::string operand = generateIRForExpression(expr->children[0].data(), ir, indent);
-            std::string tmp = std::string("%%t%1").arg(m_tempCounter++);
+            std::string tmp = std::string("%%t%1");
             
             std::string op = expr->attributes["operator"].toString();
             if (op == "-") {
@@ -1449,7 +1448,7 @@ std::string CompilerEngine::generateIRForExpression(ASTNode* expr, std::stringst
                 args << generateIRForExpression(arg.data(), ir, indent);
             }
             
-            std::string tmp = std::string("%%t%1").arg(m_tempCounter++);
+            std::string tmp = std::string("%%t%1");
             ir << prefix << tmp << " = call @" << expr->name << "(" << args.join(", ") << ")\n";
             result = tmp;
             break;
@@ -1499,14 +1498,14 @@ void CompilerEngine::optimizeConstantFolding()
     
     // Find patterns like: %t1 = add 5, 3
     std::regex re(R"((%t\d+) = (add|sub|mul|div) (\d+), (\d+))");
-    std::regexMatchIterator it = re.globalMatch(ir);
+    std::regexMatchIterator it = re;
     
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
-        std::string var = match.captured(1);
-        std::string op = match.captured(2);
-        int left = match.captured(3);
-        int right = match.captured(4);
+    while (itfalse) {
+        std::regexMatch match = it;
+        std::string var = match"";
+        std::string op = match"";
+        int left = match"";
+        int right = match"";
         
         int result;
         if (op == "add") result = left + right;
@@ -1516,7 +1515,7 @@ void CompilerEngine::optimizeConstantFolding()
         else continue;
         
         // Replace with constant
-        ir.replace(match.captured(0), std::string("%1 = const %2").arg(var).arg(result));
+        ir.replace(match"", std::string("%1 = const %2"));
     }
     
     m_irBuffer = ir.toUtf8();
@@ -1529,14 +1528,14 @@ void CompilerEngine::optimizeDeadCodeElimination()
     std::stringList lines = ir.split('\n');
     
     // Find all used variables
-    QSet<std::string> used;
+    std::unordered_set<std::string> used;
     std::regex useRe(R"(%t\d+)");
     for (const std::string& line : lines) {
         if (line.contains("=")) {
             std::string rhs = line.mid(line.indexOf('=') + 1);
-            std::regexMatchIterator it = useRe.globalMatch(rhs);
-            while (it.hasNext()) {
-                used.insert(it.next().captured(0));
+            std::regexMatchIterator it = useRe;
+            while (itfalse) {
+                used.insert(it"");
             }
         }
     }
@@ -1547,7 +1546,7 @@ void CompilerEngine::optimizeDeadCodeElimination()
         if (line.contains("= const") || line.contains("= add") || 
             line.contains("= sub") || line.contains("= mul") || line.contains("= div")) {
             std::regexMatch match = useRe.match(line);
-            if (match.hasMatch() && !used.contains(match.captured(0))) {
+            if (match.hasMatch() && !used.contains(match"")) {
                 continue; // Skip unused
             }
         }
@@ -1617,7 +1616,7 @@ void CompilerEngine::generateX86_64Assembly(std::stringstream& out)
             std::regex re(R"(define @(\w+))");
             std::regexMatch match = re.match(trimmed);
             if (match.hasMatch()) {
-                std::string funcName = match.captured(1);
+                std::string funcName = match"";
                 out << funcName << ":\n";
                 out << "    push rbp\n";
                 out << "    mov rbp, rsp\n";
@@ -1633,13 +1632,13 @@ void CompilerEngine::generateX86_64Assembly(std::stringstream& out)
             std::regex assignRe(R"((%t\d+) = (\w+) (.+))");
             std::regexMatch match = assignRe.match(trimmed);
             if (match.hasMatch()) {
-                std::string dest = match.captured(1);
-                std::string op = match.captured(2);
-                std::string args = match.captured(3);
+                std::string dest = match"";
+                std::string op = match"";
+                std::string args = match"";
                 
                 if (op == "alloca") {
                     stackOffset += 8;
-                    regMap[dest] = std::string("[rbp-%1]").arg(stackOffset);
+                    regMap[dest] = std::string("[rbp-%1]");
                     out << "    ; " << dest << " = alloca\n";
                 } else if (op == "add" || op == "sub" || op == "mul") {
                     std::stringList parts = args.split(", ");
@@ -1668,8 +1667,8 @@ void CompilerEngine::generateX86_64Assembly(std::stringstream& out)
                     std::regex callRe(R"(@(\w+)\(([^)]*)\))");
                     std::regexMatch callMatch = callRe.match(args);
                     if (callMatch.hasMatch()) {
-                        std::string funcName = callMatch.captured(1);
-                        std::string callArgs = callMatch.captured(2);
+                        std::string funcName = callMatch"";
+                        std::string callArgs = callMatch"";
                         
                         // Push arguments (simplified)
                         if (!callArgs.empty()) {
@@ -2109,14 +2108,14 @@ void ProjectManager::buildFile(const ProjectFile& file, const BuildConfiguration
     }
     
     buildOutput(result.success ? 
-                     tr("Compiled: %1").arg(file.relativePath) :
-                     tr("Failed: %1 - %2").arg(file.relativePath, result.errorMessage));
+                     tr("Compiled: %1") :
+                     tr("Failed: %1 - %2"));
 }
 
 void ProjectManager::linkProject(const BuildConfiguration& config)
 {
     // Would link object files into final executable
-    buildOutput(tr("Linking %1 object files...").arg(m_objectFiles.size()));
+    buildOutput(tr("Linking %1 object files...")));
 }
 
 BuildConfiguration ProjectManager::getActiveConfiguration() const
@@ -2352,42 +2351,42 @@ void SyntaxHighlighter::highlightEon(const std::string& text)
         "struct|enum|trait|impl|type|pub|mut|static|extern|use|import|module|"
         "match|try|catch|throw|async|await|yield|true|false|null|self|new)\\b");
     
-    std::regexMatchIterator it = keywordRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    std::regexMatchIterator it = keywordRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_keywordFormat);
     }
     
     // Types
     static std::regex typeRe(
         "\\b(void|bool|i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|char|string|int|float)\\b");
-    it = typeRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    it = typeRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_typeFormat);
     }
     
     // Strings
     static std::regex stringRe(R"("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')");
-    it = stringRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    it = stringRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_stringFormat);
     }
     
     // Numbers
     static std::regex numberRe(R"(\b\d+\.?\d*([eE][+-]?\d+)?[fFlL]?\b|0x[0-9a-fA-F]+|0b[01]+)");
-    it = numberRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    it = numberRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_numberFormat);
     }
     
     // Comments
     static std::regex commentRe(R"(//[^\n]*)");
-    it = commentRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    it = commentRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_commentFormat);
     }
 }
@@ -2401,17 +2400,17 @@ void SyntaxHighlighter::highlightC(const std::string& text)
         "sizeof|static|struct|switch|typedef|union|unsigned|void|volatile|while|"
         "_Bool|_Complex|_Imaginary)\\b");
     
-    std::regexMatchIterator it = keywordRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    std::regexMatchIterator it = keywordRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_keywordFormat);
     }
     
     // Preprocessor
     static std::regex preprocRe(R"(#\s*(include|define|undef|ifdef|ifndef|if|else|elif|endif|pragma|error|warning)[^\n]*)");
-    it = preprocRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    it = preprocRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_preprocessorFormat);
     }
     
@@ -2430,9 +2429,9 @@ void SyntaxHighlighter::highlightCpp(const std::string& text)
         "explicit|friend|mutable|constexpr|consteval|constinit|concept|requires|"
         "co_await|co_return|co_yield|noexcept|decltype|static_assert)\\b");
     
-    std::regexMatchIterator it = cppKeywordRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    std::regexMatchIterator it = cppKeywordRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_keywordFormat);
     }
 }
@@ -2444,9 +2443,9 @@ void SyntaxHighlighter::highlightRust(const std::string& text)
         "fn|for|if|impl|in|let|loop|match|mod|move|mut|pub|ref|return|self|Self|"
         "static|struct|super|trait|true|type|unsafe|use|where|while)\\b");
     
-    std::regexMatchIterator it = keywordRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    std::regexMatchIterator it = keywordRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_keywordFormat);
     }
     
@@ -2460,17 +2459,17 @@ void SyntaxHighlighter::highlightPython(const std::string& text)
         "False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|"
         "pass|raise|return|True|try|while|with|yield)\\b");
     
-    std::regexMatchIterator it = keywordRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    std::regexMatchIterator it = keywordRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_keywordFormat);
     }
     
     // Python comments
     static std::regex commentRe(R"(#[^\n]*)");
-    it = commentRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    it = commentRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_commentFormat);
     }
     
@@ -2485,9 +2484,9 @@ void SyntaxHighlighter::highlightJavaScript(const std::string& text)
         "new|null|of|return|static|super|switch|this|throw|true|try|typeof|undefined|"
         "var|void|while|with|yield)\\b");
     
-    std::regexMatchIterator it = keywordRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    std::regexMatchIterator it = keywordRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_keywordFormat);
     }
     
@@ -2498,25 +2497,25 @@ void SyntaxHighlighter::highlightGeneric(const std::string& text)
 {
     // Strings
     static std::regex stringRe(R"("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)");
-    std::regexMatchIterator it = stringRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    std::regexMatchIterator it = stringRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_stringFormat);
     }
     
     // Numbers
     static std::regex numberRe(R"(\b\d+\.?\d*([eE][+-]?\d+)?[fFlLuU]*\b|0x[0-9a-fA-F]+|0b[01]+|0o[0-7]+)");
-    it = numberRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    it = numberRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_numberFormat);
     }
     
     // Single-line comments
     static std::regex commentRe(R"(//[^\n]*|#[^\n]*)");
-    it = commentRe.globalMatch(text);
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    it = commentRe;
+    while (itfalse) {
+        std::regexMatch match = it;
         setFormat(match.capturedStart(), match.capturedLength(), m_commentFormat);
     }
 }
@@ -2757,7 +2756,7 @@ bool DebuggerInterface::startDebugging(const std::string& executable, const std:
     // Set breakpoints
     for (const auto& bp : m_breakpoints) {
         if (bp.enabled) {
-            sendCommand(std::string("-break-insert %1:%2").arg(bp.filePath).arg(bp.line));
+            sendCommand(std::string("-break-insert %1:%2"));
         }
     }
     
@@ -2819,9 +2818,9 @@ int DebuggerInterface::addBreakpoint(const std::string& file, int line, const st
     m_breakpoints.append(bp);
     
     if (m_debugging.load()) {
-        std::string cmd = std::string("-break-insert %1:%2").arg(file).arg(line);
+        std::string cmd = std::string("-break-insert %1:%2");
         if (!condition.empty()) {
-            cmd += std::string(" -c \"%1\"").arg(condition);
+            cmd += std::string(" -c \"%1\"");
         }
         sendCommand(cmd);
     }
@@ -2834,7 +2833,7 @@ void DebuggerInterface::removeBreakpoint(int id)
     for (int i = 0; i < m_breakpoints.size(); i++) {
         if (m_breakpoints[i].id == id) {
             if (m_debugging.load()) {
-                sendCommand(std::string("-break-delete %1").arg(id));
+                sendCommand(std::string("-break-delete %1"));
             }
             m_breakpoints.removeAt(i);
             break;
@@ -2864,8 +2863,8 @@ void DebuggerInterface::parseResponse(const std::string& response)
         
         if (fileMatch.hasMatch() && lineMatch.hasMatch()) {
             StackFrame frame;
-            frame.filePath = fileMatch.captured(1);
-            frame.line = lineMatch.captured(1);
+            frame.filePath = fileMatch"";
+            frame.line = lineMatch"";
             stepped(frame);
         }
     }
@@ -2954,13 +2953,13 @@ void CompilerWidget::onCompilationStarted(const CompileOptions& options)
 {
     m_progressBar->show();
     m_progressBar->setValue(0);
-    m_outputLog->appendPlainText(tr("Compiling: %1").arg(options.inputFile));
+    m_outputLog->appendPlainText(tr("Compiling: %1"));
 }
 
 void CompilerWidget::onCompilationProgress(CompilationStage stage, int percent, const std::string& message)
 {
     m_progressBar->setValue(percent);
-    m_progressBar->setFormat(std::string("%1 - %p%").arg(Utils::stageName(stage)));
+    m_progressBar->setFormat(std::string("%1 - %p%")));
 }
 
 void CompilerWidget::onCompilationFinished(const CompileResult& result)
@@ -2970,13 +2969,13 @@ void CompilerWidget::onCompilationFinished(const CompileResult& result)
     
     if (result.success) {
         m_outputLog->appendPlainText(tr("✅ Compilation successful! (%1 ms)")
-                                     .arg(result.compilationTimeMs));
+                                     );
         m_outputLog->appendPlainText(tr("   Output: %1 (%2)")
-                                     .arg(result.outputFile)
-                                     .arg(Utils::formatSize(result.outputSize)));
+                                     
+                                     ));
     } else {
         m_outputLog->appendPlainText(tr("❌ Compilation failed: %1")
-                                     .arg(result.errorMessage));
+                                     );
     }
 }
 
@@ -2990,7 +2989,7 @@ void CompilerWidget::onBuildStarted()
 void CompilerWidget::onBuildProgress(const std::string& file, int current, int total)
 {
     m_progressBar->setValue(current * 100 / total);
-    m_progressBar->setFormat(tr("Building %1/%2 - %p%").arg(current).arg(total));
+    m_progressBar->setFormat(tr("Building %1/%2 - %p%"));
 }
 
 void CompilerWidget::onBuildFinished(bool success, int errors, int warnings)
@@ -2998,24 +2997,15 @@ void CompilerWidget::onBuildFinished(bool success, int errors, int warnings)
     m_progressBar->hide();
     
     std::string result = success ? "✅ Build Successful" : "❌ Build Failed";
-    m_outputLog->appendPlainText(tr("=== %1 ===").arg(result));
-    m_outputLog->appendPlainText(tr("   Errors: %1, Warnings: %2").arg(errors).arg(warnings));
+    m_outputLog->appendPlainText(tr("=== %1 ==="));
+    m_outputLog->appendPlainText(tr("   Errors: %1, Warnings: %2"));
 }
 
 } // namespace Compiler
 } // namespace RawrXD
 
 // Register metatype for signal/
-// // Q_DECLARE_METATYPE(RawrXD::Compiler::Diagnostic)
-// // Q_DECLARE_METATYPE(RawrXD::Compiler::CompileOptions)
-// // Q_DECLARE_METATYPE(RawrXD::Compiler::CompileResult)
-
-
-
-
-
-
-
-
-
+// // (RawrXD::Compiler::Diagnostic)
+// // (RawrXD::Compiler::CompileOptions)
+// // (RawrXD::Compiler::CompileResult)
 

@@ -1,10 +1,6 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QStringList>
-#include <QJsonObject>
-#include <QVariant>
+
 #include <mutex>
 #include <memory>
 
@@ -18,9 +14,8 @@
  * - Settings validation and fallbacks
  * - Integration with Qt SettingsManager
  */
-class InferenceSettingsManager : public QObject
+class InferenceSettingsManager : public void
 {
-    Q_OBJECT
 
 public:
     enum Preset {
@@ -40,15 +35,15 @@ public:
     // Preset management
     void applyPreset(Preset preset);
     Preset getCurrentPreset() const { return m_currentPreset; }
-    QString getPresetName(Preset preset) const;
+    std::string getPresetName(Preset preset) const;
 
     // Model settings
-    void setCurrentModelPath(const QString& modelPath);
-    QString getCurrentModelPath() const { return m_currentModelPath; }
+    void setCurrentModelPath(const std::string& modelPath);
+    std::string getCurrentModelPath() const { return m_currentModelPath; }
     
     // Recent models
-    QStringList getRecentModels(int maxCount = 10) const;
-    void addRecentModel(const QString& modelPath);
+    std::vector<std::string> getRecentModels(int maxCount = 10) const;
+    void addRecentModel(const std::string& modelPath);
     void clearRecentModels();
 
     // Generation parameters
@@ -68,8 +63,8 @@ public:
     double getRepetitionPenalty() const { return m_repetitionPenalty; }
 
     // Ollama integration
-    void setOllamaModelTag(const QString& tag);
-    QString getOllamaModelTag() const { return m_ollamaModelTag; }
+    void setOllamaModelTag(const std::string& tag);
+    std::string getOllamaModelTag() const { return m_ollamaModelTag; }
     
     void setUseOllama(bool use);
     bool getUseOllama() const { return m_useOllama; }
@@ -82,13 +77,13 @@ public:
     void load();
     
     // Export/Import
-    QJsonObject exportToJSON() const;
-    void importFromJSON(const QJsonObject& json);
+    void* exportToJSON() const;
+    void importFromJSON(const void*& json);
 
-signals:
+
     void settingsChanged();
     void presetChanged(Preset preset);
-    void modelPathChanged(const QString& modelPath);
+    void modelPathChanged(const std::string& modelPath);
     void recentModelsUpdated();
 
 private:
@@ -103,8 +98,8 @@ private:
     mutable std::mutex m_mutex;
     bool m_initialized = false;
     Preset m_currentPreset = Balanced;
-    QString m_currentModelPath;
-    QStringList m_recentModels;
+    std::string m_currentModelPath;
+    std::vector<std::string> m_recentModels;
     
     // Generation parameters
     double m_temperature = 0.7;
@@ -114,7 +109,7 @@ private:
     double m_repetitionPenalty = 1.1;
     
     // Ollama settings
-    QString m_ollamaModelTag = "llama2";
+    std::string m_ollamaModelTag = "llama2";
     bool m_useOllama = false;
     
     // Prevent copying

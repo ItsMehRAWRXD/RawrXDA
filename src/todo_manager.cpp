@@ -1,33 +1,27 @@
 // TODO Manager - Production-Ready Task and TODO tracking
 // Features: Persistent storage, structured logging, error handling, metrics
 #include "todo_manager.h"
-#include <QUuid>
-#include <QDebug>
-#include <QSettings>
-#include <QDateTime>
-#include <QStandardPaths>
-#include <QDir>
-#include <QMetaType>
+
+
 #include <iostream>
 #include <iomanip>
 
 // Register custom type with Qt meta-type system AFTER class definition
-Q_DECLARE_METATYPE(TodoItem)
+(TodoItem)
 
 // Logging helper with timestamps
-static void LogTodoOperation(const QString& operation, const QString& details) {
-    auto now = QDateTime::currentDateTime();
-    QString timestamp = now.toString("yyyy-MM-dd hh:mm:ss.zzz");
-    qDebug() << QString("[%1] [TodoManager] %2 - %3").arg(timestamp, operation, details);
+static void LogTodoOperation(const std::string& operation, const std::string& details) {
+    auto now = std::chrono::system_clock::time_point::currentDateTime();
+    std::string timestamp = now.toString("yyyy-MM-dd hh:mm:ss.zzz");
 }
 
-TodoManager::TodoManager(QObject* parent) : QObject(parent) {
+TodoManager::TodoManager(void* parent) : void(parent) {
     LogTodoOperation("INIT", "Initializing TodoManager");
     
     try {
         // Ensure configuration directory exists
-        QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-        QDir dir(configPath);
+        std::string configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        std::filesystem::path dir(configPath);
         if (!dir.exists()) {
             if (!dir.mkpath(".")) {
                 LogTodoOperation("ERROR", "Failed to create config directory: " + configPath);
@@ -38,14 +32,14 @@ TodoManager::TodoManager(QObject* parent) : QObject(parent) {
         
         // Load saved TODOs from persistent storage
         loadTodos();
-        LogTodoOperation("LOAD", QString("Successfully loaded %1 TODO items").arg(todos_.size()));
+        LogTodoOperation("LOAD", std::string("Successfully loaded %1 TODO items")));
         
     } catch (const std::exception& e) {
-        LogTodoOperation("ERROR", QString("Initialization failed: %1").arg(e.what()));
+        LogTodoOperation("ERROR", std::string("Initialization failed: %1")));
     }
 }
 
-void TodoManager::addTodo(const QString& description, const QString& filePath, int lineNumber) {
+void TodoManager::addTodo(const std::string& description, const std::string& filePath, int lineNumber) {
     try {
         // Validate inputs
         if (description.isEmpty()) {
@@ -58,27 +52,27 @@ void TodoManager::addTodo(const QString& description, const QString& filePath, i
         todo.description = description;
         todo.filePath = filePath;
         todo.lineNumber = lineNumber;
-        todo.created = QDateTime::currentDateTime();
+        todo.created = std::chrono::system_clock::time_point::currentDateTime();
         todo.isCompleted = false;
         
         todos_.append(todo);
         
         // Log with detailed information
         LogTodoOperation("ADD", 
-            QString("Created TODO [%1]: %2 (file=%3, line=%4)")
-            .arg(todo.id, description, filePath, QString::number(lineNumber)));
+            std::string("Created TODO [%1]: %2 (file=%3, line=%4)")
+            ));
         
-        emit todoAdded(todo);
+        todoAdded(todo);
         
         // Persist immediately
         saveTodos();
         
     } catch (const std::exception& e) {
-        LogTodoOperation("ERROR", QString("Failed to add TODO: %1").arg(e.what()));
+        LogTodoOperation("ERROR", std::string("Failed to add TODO: %1")));
     }
 }
 
-void TodoManager::completeTodo(const QString& id) {
+void TodoManager::completeTodo(const std::string& id) {
     try {
         // Validate input
         if (id.isEmpty()) {
@@ -89,15 +83,14 @@ void TodoManager::completeTodo(const QString& id) {
         for (int i = 0; i < todos_.size(); ++i) {
             if (todos_[i].id == id) {
                 todos_[i].isCompleted = true;
-                todos_[i].completed = QDateTime::currentDateTime();
+                todos_[i].completed = std::chrono::system_clock::time_point::currentDateTime();
                 
                 // Log completion with timestamp
                 LogTodoOperation("COMPLETE", 
-                    QString("Completed TODO [%1]: %2 (duration=%3 seconds)")
-                    .arg(id, todos_[i].description, 
-                    QString::number(todos_[i].created.secsTo(todos_[i].completed))));
+                    std::string("Completed TODO [%1]: %2 (duration=%3 seconds)")
+                    )));
                 
-                emit todoCompleted(id);
+                todoCompleted(id);
                 
                 // Persist immediately
                 saveTodos();
@@ -106,14 +99,14 @@ void TodoManager::completeTodo(const QString& id) {
         }
         
         // TODO not found
-        LogTodoOperation("WARN", QString("TODO not found for completion: %1").arg(id));
+        LogTodoOperation("WARN", std::string("TODO not found for completion: %1"));
         
     } catch (const std::exception& e) {
-        LogTodoOperation("ERROR", QString("Failed to complete TODO: %1").arg(e.what()));
+        LogTodoOperation("ERROR", std::string("Failed to complete TODO: %1")));
     }
 }
 
-void TodoManager::removeTodo(const QString& id) {
+void TodoManager::removeTodo(const std::string& id) {
     try {
         // Validate input
         if (id.isEmpty()) {
@@ -123,13 +116,13 @@ void TodoManager::removeTodo(const QString& id) {
         
         for (int i = 0; i < todos_.size(); ++i) {
             if (todos_[i].id == id) {
-                QString description = todos_[i].description;
+                std::string description = todos_[i].description;
                 todos_.removeAt(i);
                 
                 LogTodoOperation("REMOVE", 
-                    QString("Removed TODO [%1]: %2").arg(id, description));
+                    std::string("Removed TODO [%1]: %2"));
                 
-                emit todoRemoved(id);
+                todoRemoved(id);
                 
                 // Persist immediately
                 saveTodos();
@@ -138,37 +131,37 @@ void TodoManager::removeTodo(const QString& id) {
         }
         
         // TODO not found
-        LogTodoOperation("WARN", QString("TODO not found for removal: %1").arg(id));
+        LogTodoOperation("WARN", std::string("TODO not found for removal: %1"));
         
     } catch (const std::exception& e) {
-        LogTodoOperation("ERROR", QString("Failed to remove TODO: %1").arg(e.what()));
+        LogTodoOperation("ERROR", std::string("Failed to remove TODO: %1")));
     }
 }
 
-QList<TodoItem> TodoManager::getTodos() const {
-    LogTodoOperation("QUERY", QString("Retrieved %1 total TODOs").arg(todos_.size()));
+std::vector<TodoItem> TodoManager::getTodos() const {
+    LogTodoOperation("QUERY", std::string("Retrieved %1 total TODOs")));
     return todos_;
 }
 
-QList<TodoItem> TodoManager::getPendingTodos() const {
-    QList<TodoItem> pending;
+std::vector<TodoItem> TodoManager::getPendingTodos() const {
+    std::vector<TodoItem> pending;
     for (const TodoItem& todo : todos_) {
         if (!todo.isCompleted) {
             pending.append(todo);
         }
     }
-    LogTodoOperation("QUERY", QString("Retrieved %1 pending TODOs").arg(pending.size()));
+    LogTodoOperation("QUERY", std::string("Retrieved %1 pending TODOs")));
     return pending;
 }
 
-QList<TodoItem> TodoManager::getCompletedTodos() const {
-    QList<TodoItem> completed;
+std::vector<TodoItem> TodoManager::getCompletedTodos() const {
+    std::vector<TodoItem> completed;
     for (const TodoItem& todo : todos_) {
         if (todo.isCompleted) {
             completed.append(todo);
         }
     }
-    LogTodoOperation("QUERY", QString("Retrieved %1 completed TODOs").arg(completed.size()));
+    LogTodoOperation("QUERY", std::string("Retrieved %1 completed TODOs")));
     return completed;
 }
 
@@ -201,13 +194,12 @@ void TodoManager::saveTodos() {
         settings.sync();
         
         // Log save operation with timestamp
-        auto now = QDateTime::currentDateTime();
-        QString timestamp = now.toString("yyyy-MM-dd hh:mm:ss.zzz");
-        qDebug() << QString("[%1] [TodoManager] PERSIST - Saved %2 TODO items to persistent storage")
-                    .arg(timestamp).arg(todos_.size());
+        auto now = std::chrono::system_clock::time_point::currentDateTime();
+        std::string timestamp = now.toString("yyyy-MM-dd hh:mm:ss.zzz");
+                    );
         
     } catch (const std::exception& e) {
-        LogTodoOperation("ERROR", QString("Failed to save TODOs: %1").arg(e.what()));
+        LogTodoOperation("ERROR", std::string("Failed to save TODOs: %1")));
     }
 }
 
@@ -238,18 +230,18 @@ void TodoManager::loadTodos() {
                 todos_.append(todo);
                 validCount++;
             } else {
-                LogTodoOperation("WARN", QString("Skipped invalid TODO entry at index %1").arg(i));
+                LogTodoOperation("WARN", std::string("Skipped invalid TODO entry at index %1"));
             }
         }
         settings.endArray();
         
         // Log load operation with statistics
-        auto now = QDateTime::currentDateTime();
-        QString timestamp = now.toString("yyyy-MM-dd hh:mm:ss.zzz");
-        qDebug() << QString("[%1] [TodoManager] LOAD - Loaded %2 TODO items from persistent storage (valid=%3, skipped=%4)")
-                    .arg(timestamp).arg(size).arg(validCount).arg(size - validCount);
+        auto now = std::chrono::system_clock::time_point::currentDateTime();
+        std::string timestamp = now.toString("yyyy-MM-dd hh:mm:ss.zzz");
+                    ;
         
     } catch (const std::exception& e) {
-        LogTodoOperation("ERROR", QString("Failed to load TODOs: %1").arg(e.what()));
+        LogTodoOperation("ERROR", std::string("Failed to load TODOs: %1")));
     }
 }
+

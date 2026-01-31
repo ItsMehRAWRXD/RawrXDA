@@ -12,7 +12,7 @@ ProductionTestSuite::ProductionTestSuite(std::shared_ptr<AIIntegrationHub> aiHub
 }
 
 bool ProductionTestSuite::runFullTestSuite() {
-    m_logger->info("Starting comprehensive production test suite");
+
 
     bool allPassed = true;
 
@@ -33,7 +33,6 @@ bool ProductionTestSuite::runFullTestSuite() {
 
     allPassed &= testEndToEndWorkflow();
 
-    m_logger->info("Test suite completed. Overall result: {}", allPassed ? "PASSED" : "FAILED");
 
     return allPassed;
 }
@@ -42,7 +41,7 @@ bool ProductionTestSuite::testModelLoading() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     try {
-        m_logger->info("Testing model loading capabilities");
+
 
         // Test: Load local GGUF model
         std::string model = "llama3:latest";
@@ -73,7 +72,7 @@ bool ProductionTestSuite::testCompletionEngine() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     try {
-        m_logger->info("Testing completion engine");
+
 
         auto completions = m_aiHub->getCompletions("test.cpp", "std::vector<int> v; v.", "", 50);
 
@@ -106,7 +105,7 @@ bool ProductionTestSuite::testSmartRewriteEngine() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     try {
-        m_logger->info("Testing smart rewrite engine");
+
 
         auto suggestions = m_aiHub->getSuggestions("int x = 5;");
 
@@ -132,7 +131,7 @@ bool ProductionTestSuite::testMultiModalRouting() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     try {
-        m_logger->info("Testing multi-modal routing");
+
 
         // Model should be available
         auto models = m_aiHub->getAvailableModels();
@@ -157,7 +156,7 @@ bool ProductionTestSuite::testLanguageServerFeatures() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     try {
-        m_logger->info("Testing language server features");
+
 
         // Language server functionality tested through other AI systems
         auto completions = m_aiHub->getCompletions("test.cpp", "std::", "", 50);
@@ -178,7 +177,7 @@ bool ProductionTestSuite::testPerformanceOptimization() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     try {
-        m_logger->info("Testing performance optimization");
+
 
         // Set latency target
         m_aiHub->setLatencyTarget(100);
@@ -202,7 +201,7 @@ bool ProductionTestSuite::testAdvancedCodingAgent() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     try {
-        m_logger->info("Testing advanced coding agent");
+
 
         auto doc = m_aiHub->generateDocumentation("int main() { return 0; }");
         if (doc.empty()) {
@@ -228,7 +227,7 @@ bool ProductionTestSuite::testAdvancedCodingAgent() {
 
 bool ProductionTestSuite::benchmarkCompletionLatency() {
     try {
-        m_logger->info("Benchmarking completion latency");
+
 
         std::vector<double> latencies;
         const int numIterations = 50;
@@ -271,7 +270,7 @@ bool ProductionTestSuite::benchmarkCompletionLatency() {
 
 bool ProductionTestSuite::benchmarkRewritePerformance() {
     try {
-        m_logger->info("Benchmarking rewrite performance");
+
 
         std::vector<double> latencies;
         for (int i = 0; i < 20; ++i) {
@@ -301,7 +300,7 @@ bool ProductionTestSuite::benchmarkRewritePerformance() {
 
 bool ProductionTestSuite::benchmarkAgentFeatures() {
     try {
-        m_logger->info("Benchmarking agent features");
+
 
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -326,7 +325,7 @@ bool ProductionTestSuite::benchmarkAgentFeatures() {
 
 bool ProductionTestSuite::testErrorRecovery() {
     try {
-        m_logger->info("Testing error recovery");
+
 
         // Try invalid operations - should handle gracefully
         auto completions = m_aiHub->getCompletions("", "", "", -1);
@@ -343,7 +342,7 @@ bool ProductionTestSuite::testErrorRecovery() {
 
 bool ProductionTestSuite::testResourceCleanup() {
     try {
-        m_logger->info("Testing resource cleanup");
+
 
         // Multiple operations
         for (int i = 0; i < 100; ++i) {
@@ -362,7 +361,7 @@ bool ProductionTestSuite::testResourceCleanup() {
 
 bool ProductionTestSuite::testEndToEndWorkflow() {
     try {
-        m_logger->info("Testing end-to-end workflow");
+
 
         // Complete workflow
         auto completions = m_aiHub->getCompletions("test.cpp", "int x = ", "", 50);

@@ -14,7 +14,7 @@ NotificationCenter::NotificationCenter(void* parent)
 
 void NotificationCenter::addNotification(const std::string& title, const std::string& message, const std::string& category) {
     auto item = new QListWidgetItem(m_list);
-    item->setText(std::stringLiteral("[%1] %2\n%3").arg(category, title, message));
+    item->setText(std::stringLiteral("[%1] %2\n%3"));
     item->setToolTip(message);
     m_list->insertItem(0, item);
     updateCountLabel();
@@ -51,7 +51,6 @@ int NotificationCenter::notificationCount() const {
 }
 
 void NotificationCenter::updateCountLabel() {
-    m_countLabel->setText(tr("Notifications: %1").arg(m_list->count()));
+    m_countLabel->setText(tr("Notifications: %1")));
 }
-
 

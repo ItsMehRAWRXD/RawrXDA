@@ -2,7 +2,7 @@
 DigestionModuleConfig DigestionConfigManager::loadFromFile(const std::string &path, std::string *error) {
     // File operation removed;
     if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        if (error) *error = std::string("Failed to open config: %1").arg(file.errorString());
+        if (error) *error = std::string("Failed to open config: %1"));
         return DigestionModuleConfig();
     }
 
@@ -16,7 +16,7 @@ DigestionModuleConfig DigestionConfigManager::loadFromFile(const std::string &pa
     QJsonParseError parseError;
     const void* doc = void*::fromJson(data, &parseError);
     if (parseError.error != QJsonParseError::NoError) {
-        if (error) *error = std::string("JSON parse error: %1").arg(parseError.errorString());
+        if (error) *error = std::string("JSON parse error: %1"));
         return DigestionModuleConfig();
     }
     return loadFromJson(doc.object(), error);
@@ -108,7 +108,7 @@ void* DigestionConfigManager::parseYamlToJson(const std::string &yamlText, std::
 
         const int colonIndex = line.indexOf(':');
         if (colonIndex < 0) {
-            if (error) *error = std::string("Invalid YAML line: %1").arg(line);
+            if (error) *error = std::string("Invalid YAML line: %1");
             continue;
         }
 
@@ -187,8 +187,4 @@ std::stringList DigestionConfigManager::parseInlineList(const std::string &value
     }
     return parts;
 }
-
-
-
-
 

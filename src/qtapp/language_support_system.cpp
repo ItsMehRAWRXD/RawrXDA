@@ -44,7 +44,6 @@ LanguageSupportManager::~LanguageSupportManager()
 
 bool LanguageSupportManager::initialize()
 {
-    // // qDebug:  "[LanguageSupport] Initializing language support system...";
     
     // Start LSP servers for languages where it's available
     const std::vector<LanguageID> lspLanguages = {
@@ -68,7 +67,6 @@ bool LanguageSupportManager::initialize()
         }
     }
     
-    // // qDebug:  "[LanguageSupport] Initialized" << successCount << "of" << lspLanguages.size() 
              << "LSP servers";
     
     return successCount > 0;
@@ -923,7 +921,6 @@ void LanguageSupportManager::initializeLanguageConfigs()
     // Continue with Scala, Go, Shell, Bash, PowerShell, Lua, R, MATLAB, Dart, Swift, etc.
     // (Omitting for brevity but all would be added similarly)
     
-    // // qDebug:  "[LanguageSupport] Initialized" << m_languages.size() << "language configurations";
 }
 
 bool LanguageSupportManager::startLSPServer(LanguageID id)
@@ -934,7 +931,6 @@ bool LanguageSupportManager::startLSPServer(LanguageID id)
     }
     
     if (!isToolAvailable(config->lspServerCommand)) {
-        // // qWarning:  "[LanguageSupport] LSP server not found:" << config->lspServerCommand;
         return false;
     }
     
@@ -944,12 +940,10 @@ bool LanguageSupportManager::startLSPServer(LanguageID id)
     process->start();
     
     if (!process->waitForStarted()) {
-        // // qWarning:  "[LanguageSupport] Failed to start LSP server:" << config->lspServerCommand;
         return false;
     }
     
     m_lspServers[id] = process.release();  // Transfer ownership to std::map
-    // // qDebug:  "[LanguageSupport] Started LSP server:" << config->lspServerCommand 
              << "for language" << config->name;
     return true;
 }
@@ -1158,7 +1152,6 @@ void LanguageSupportManager::onLSPServerStarted(LanguageID id)
 {
     const auto* config = getLanguageConfig(id);
     if (config) {
-        // // qDebug:  "[LanguageSupport] LSP server started for" << config->name;
         lspServerStarted(id);
     }
 }
@@ -1167,7 +1160,6 @@ void LanguageSupportManager::onLSPServerError(LanguageID id, const std::string& 
 {
     const auto* config = getLanguageConfig(id);
     if (config) {
-        // // qWarning:  "[LanguageSupport] LSP server error for" << config->name << ":" << error;
         languageNotSupported(id);
     }
 }
@@ -1178,9 +1170,4 @@ void LanguageSupportManager::onFormatterFinished(LanguageID id, const std::strin
 }
 
 }}  // namespace RawrXD::Language
-
-
-
-
-
 

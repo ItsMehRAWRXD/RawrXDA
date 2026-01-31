@@ -15,16 +15,6 @@
  * - Highlight all matches in editor
  */
 
-#include <QWidget>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QCheckBox>
-#include <QLabel>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
-#include <QPlainTextEdit>
-#include <QRegularExpression>
-#include <QStringList>
 
 namespace RawrXD {
 
@@ -36,10 +26,10 @@ struct SearchResult {
     int line;           ///< Line number (0-based)
     int column;         ///< Column number (0-based)
     int length;         ///< Length of match
-    QString text;       ///< Matched text
+    std::string text;       ///< Matched text
     
     SearchResult() : line(-1), column(-1), length(0) {}
-    SearchResult(int l, int c, int len, const QString& t) 
+    SearchResult(int l, int c, int len, const std::string& t) 
         : line(l), column(c), length(len), text(t) {}
 };
 
@@ -58,11 +48,10 @@ struct SearchResult {
  * findWidget->focusSearchBox();
  * \endcode
  */
-class FindWidget : public QWidget {
-    Q_OBJECT
-    
+class FindWidget : public void {
+
 public:
-    explicit FindWidget(QWidget* parent = nullptr);
+    explicit FindWidget(void* parent = nullptr);
     ~FindWidget() override;
     
     /**
@@ -91,25 +80,25 @@ public:
      * \brief Set search text programmatically
      * \param text Search term
      */
-    void setSearchText(const QString& text);
+    void setSearchText(const std::string& text);
     
     /**
      * \brief Get current search text
      * \return Search term
      */
-    QString searchText() const;
+    std::string searchText() const;
     
     /**
      * \brief Set replace text
      * \param text Replacement text
      */
-    void setReplaceText(const QString& text);
+    void setReplaceText(const std::string& text);
     
     /**
      * \brief Get replace text
      * \return Replacement text
      */
-    QString replaceText() const;
+    std::string replaceText() const;
     
     /**
      * \brief Set case-sensitive search
@@ -151,7 +140,7 @@ public:
      * \brief Get all matches in current editor
      * \return List of search results
      */
-    QList<SearchResult> findAll();
+    std::vector<SearchResult> findAll();
     
     /**
      * \brief Get current match index (e.g., "3 of 15")
@@ -165,7 +154,7 @@ public:
      */
     int matchCount() const;
     
-signals:
+
     /**
      * \brief Emitted when match count changes
      * \param current Current match index (1-based)
@@ -184,7 +173,7 @@ signals:
      */
     void closed();
     
-public slots:
+public:
     /**
      * \brief Find next occurrence
      */
@@ -215,7 +204,7 @@ public slots:
      */
     void close();
     
-private slots:
+private:
     void onSearchTextChanged();
     void onReplaceTextChanged();
     void onCaseSensitiveToggled(bool checked);
@@ -229,8 +218,8 @@ private:
     void highlightAllMatches();
     void clearHighlights();
     QTextCursor findNextMatch(const QTextCursor& from, bool forward = true);
-    QString buildRegexPattern() const;
-    void addToSearchHistory(const QString& text);
+    std::string buildRegexPattern() const;
+    void addToSearchHistory(const std::string& text);
     
     // UI Components
     QVBoxLayout* m_mainLayout;
@@ -252,13 +241,14 @@ private:
     
     // State
     QPlainTextEdit* m_editor;
-    QList<SearchResult> m_matches;
+    std::vector<SearchResult> m_matches;
     int m_currentMatchIndex;
     bool m_isReplaceMode;
-    QStringList m_searchHistory;
+    std::vector<std::string> m_searchHistory;
     
     // For highlighting
-    QList<QTextEdit::ExtraSelection> m_highlightSelections;
+    std::vector<QTextEdit::ExtraSelection> m_highlightSelections;
 };
 
 } // namespace RawrXD
+

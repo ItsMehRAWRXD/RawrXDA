@@ -1,19 +1,9 @@
 #ifndef METRICS_DASHBOARD_H
 #define METRICS_DASHBOARD_H
 
-#include <QWidget>
-#include <QLabel>
-#include <QTableWidget>
-#include <QChartView>
-#include <QPieSeries>
-#include <QBarSeries>
-#include <QLineSeries>
-#include <QChart>
-#include <QTimer>
-#include <QVector>
-#include <QMap>
+
 #include <memory>
-#include <QHeaderView>
+
 #include "model_router_adapter.h"
 
 class ModelRouterAdapter;
@@ -31,11 +21,10 @@ class ModelRouterAdapter;
  * - Recent error logs
  * - Provider health status
  */
-class MetricsDashboard : public QWidget {
-    Q_OBJECT
+class MetricsDashboard : public void {
 
 public:
-    explicit MetricsDashboard(ModelRouterAdapter *adapter, QWidget *parent = nullptr);
+    explicit MetricsDashboard(ModelRouterAdapter *adapter, void *parent = nullptr);
     ~MetricsDashboard();
 
     /**
@@ -58,7 +47,7 @@ public:
      */
     int getRefreshInterval() const { return m_refresh_interval; }
 
-public slots:
+public:
     /**
      * Refresh all metrics from adapter
      */
@@ -84,9 +73,9 @@ public slots:
      */
     void resetCharts();
 
-private slots:
+private:
     void onCostUpdated(double total_cost);
-    void onStatisticsUpdated(const QJsonObject& stats);
+    void onStatisticsUpdated(const void*& stats);
     void onAutoRefreshTriggered();
 
 private:
@@ -103,7 +92,7 @@ private:
     ModelRouterAdapter *m_adapter;
 
     // Refresh timer
-    QTimer *m_refresh_timer;
+    void* *m_refresh_timer;
     int m_refresh_interval = 500;  // ms
 
     // Summary labels
@@ -132,13 +121,14 @@ private:
     QTableWidget *m_provider_status_table;
 
     // Historical data for trend charts
-    QVector<double> m_success_rate_history;
-    QVector<qint64> m_timestamp_history;
+    std::vector<double> m_success_rate_history;
+    std::vector<qint64> m_timestamp_history;
 
     // State
-    QMap<QString, double> m_cost_by_model;
-    QMap<QString, int> m_request_count_by_model;
-    QMap<QString, double> m_latency_by_model;
+    std::map<std::string, double> m_cost_by_model;
+    std::map<std::string, int> m_request_count_by_model;
+    std::map<std::string, double> m_latency_by_model;
 };
 
 #endif // METRICS_DASHBOARD_H
+

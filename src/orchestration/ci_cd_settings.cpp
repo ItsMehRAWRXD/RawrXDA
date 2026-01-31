@@ -1,26 +1,20 @@
 #include "ci_cd_settings.h"
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QProcess>
-#include <QDateTime>
-#include <QMap>
-#include <QDebug>
+
 
 // Real CI/CD job execution with QProcess
 
 struct JobData {
-    QString id;
+    std::string id;
     TrainingJobConfig config;
     QProcess* process;
-    QDateTime startTime;
-    QString status;
-    QList<PipelineStage> stages;
+    std::chrono::system_clock::time_point startTime;
+    std::string status;
+    std::vector<PipelineStage> stages;
 };
 
-static QMap<QString, JobData> s_jobs;
+static std::map<std::string, JobData> s_jobs;
 
-CICDSettings::CICDSettings(QObject* parent) : QObject(parent) {}
+CICDSettings::CICDSettings(void* parent) : void(parent) {}
 CICDSettings::~CICDSettings() {
     // Clean up running processes
     for (auto& job : s_jobs) {
@@ -32,8 +26,8 @@ CICDSettings::~CICDSettings() {
     }
 }
 
-QString CICDSettings::createTrainingJob(const TrainingJobConfig& config) {
-    QString jobId = generateJobId();
+std::string CICDSettings::createTrainingJob(const TrainingJobConfig& config) {
+    std::string jobId = generateJobId();
     
     JobData job;
     job.id = jobId;
@@ -43,11 +37,10 @@ QString CICDSettings::createTrainingJob(const TrainingJobConfig& config) {
     
     s_jobs[jobId] = job;
     
-    qDebug() << "[CICDSettings] Created job:" << jobId;
     return jobId;
 }
 
-bool CICDSettings::startJob(const QString& jobId) {
+bool CICDSettings::startJob(const std::string& jobId) {
     if (!s_jobs.contains(jobId)) {
         return false;
     }
@@ -55,42 +48,36 @@ bool CICDSettings::startJob(const QString& jobId) {
     JobData& job = s_jobs[jobId];
     
     if (job.process && job.process->state() == QProcess::Running) {
-        qWarning() << "[CICDSettings] Job already running:" << jobId;
         return false;
     }
     
     // Create new process
     job.process = new QProcess(this);
-    job.startTime = QDateTime::currentDateTime();
+    job.startTime = std::chrono::system_clock::time_point::currentDateTime();
     job.status = "running";
     
     // Extract command from config
-    QString command = job.config.command.isEmpty() ? "echo Running job" : job.config.command;
-    QString workDir = job.config.workDir.isEmpty() ? "." : job.config.workDir;
+    std::string command = job.config.command.isEmpty() ? "echo Running job" : job.config.command;
+    std::string workDir = job.config.workDir.isEmpty() ? "." : job.config.workDir;
     
     job.process->setWorkingDirectory(workDir);
     job.process->setProcessChannelMode(QProcess::MergedChannels);
     
     // Connect signals
-    connect(job.process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, [this, jobId](int exitCode, QProcess::ExitStatus status) {
-        if (s_jobs.contains(jobId)) {
-            s_jobs[jobId].status = (exitCode == 0) ? "completed" : "failed";
-            qDebug() << "[CICDSettings] Job" << jobId << "finished with code" << exitCode;
-            emit jobCompleted(jobId, exitCode == 0);
+// Qt connect removed
+            jobCompleted(jobId, exitCode == 0);
         }
     });
     
     // Start process
-    job.process->start("pwsh.exe", QStringList() << "-Command" << command);
+    job.process->start("pwsh.exe", std::vector<std::string>() << "-Command" << command);
     
-    qDebug() << "[CICDSettings] Started job:" << jobId << "Command:" << command;
-    emit jobStarted(jobId);
+    jobStarted(jobId);
     
     return true;
 }
 
-bool CICDSettings::cancelJob(const QString& jobId) {
+bool CICDSettings::cancelJob(const std::string& jobId) {
     if (!s_jobs.contains(jobId)) {
         return false;
     }
@@ -107,25 +94,24 @@ bool CICDSettings::cancelJob(const QString& jobId) {
         }
         
         job.status = "cancelled";
-        qDebug() << "[CICDSettings] Cancelled job:" << jobId;
-        emit jobCancelled(jobId);
+        jobCancelled(jobId);
         return true;
     }
     
     return false;
 }
 
-QJsonObject CICDSettings::getJobStatus(const QString& jobId) const {
+void* CICDSettings::getJobStatus(const std::string& jobId) const {
     if (!s_jobs.contains(jobId)) {
-        return QJsonObject();
+        return void*();
     }
     
     const JobData& job = s_jobs[jobId];
     
-    QJsonObject status;
+    void* status;
     status["id"] = jobId;
     status["status"] = job.status;
-    status["startTime"] = job.startTime.toString(Qt::ISODate);
+    status["startTime"] = job.startTime.toString(//ISODate);
     status["command"] = job.config.command;
     status["workDir"] = job.config.workDir;
     
@@ -137,34 +123,33 @@ QJsonObject CICDSettings::getJobStatus(const QString& jobId) const {
     return status;
 }
 
-QStringList CICDSettings::listJobs() const {
+std::vector<std::string> CICDSettings::listJobs() const {
     return s_jobs.keys();
 }
 
-bool CICDSettings::configurePipeline(const QString& jobId, const QList<PipelineStage>& stages) {
+bool CICDSettings::configurePipeline(const std::string& jobId, const std::vector<PipelineStage>& stages) {
     if (!s_jobs.contains(jobId)) {
         return false;
     }
     
     s_jobs[jobId].stages = stages;
-    qDebug() << "[CICDSettings] Configured pipeline for job:" << jobId << "Stages:" << stages.size();
     return true;
 }
 
-QString CICDSettings::generateJobId() {
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
-    QString random = QString::number(QDateTime::currentMSecsSinceEpoch() % 10000);
-    return QString("job_%1_%2").arg(timestamp, random);
+std::string CICDSettings::generateJobId() {
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("yyyyMMdd_hhmmss");
+    std::string random = std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch() % 10000);
+    return std::string("job_%1_%2");
 }
 
-QString CICDSettings::generateRunId() {
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
-    QString random = QString::number(QDateTime::currentMSecsSinceEpoch() % 10000);
-    return QString("run_%1_%2").arg(timestamp, random);
+std::string CICDSettings::generateRunId() {
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("yyyyMMdd_hhmmss");
+    std::string random = std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch() % 10000);
+    return std::string("run_%1_%2");
 }
 
-QString CICDSettings::generateDeploymentId() {
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
-    QString random = QString::number(QDateTime::currentMSecsSinceEpoch() % 10000);
-    return QString("deploy_%1_%2").arg(timestamp, random);
+std::string CICDSettings::generateDeploymentId() {
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("yyyyMMdd_hhmmss");
+    std::string random = std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch() % 10000);
+    return std::string("deploy_%1_%2");
 }

@@ -6,18 +6,12 @@
  */
 
 #include "lsp_client.h"
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QJsonValue>
-#include <QFileInfo>
-#include <QDebug>
-#include <QUrl>
-#include <QCoreApplication>
+
 
 namespace RawrXD {
 
-LSPClient::LSPClient(const LSPServerConfig& config, QObject* parent)
-    : QObject(parent)
+LSPClient::LSPClient(const LSPServerConfig& config, void* parent)
+    : void(parent)
     , m_config(config)
 {
     // Lightweight constructor - defers process creation to initialize()
@@ -32,14 +26,9 @@ void LSPClient::initialize() {
     if (m_serverProcess) return;  // Already initialized
     
     m_serverProcess = new QProcess(this);
-    
-    connect(m_serverProcess, &QProcess::readyReadStandardOutput,
-            this, &LSPClient::onServerReadyRead);
-    connect(m_serverProcess, &QProcess::errorOccurred,
-            this, &LSPClient::onServerError);
-    connect(m_serverProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, &LSPClient::onServerFinished);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     if (m_config.autoStart) {
         startServer();
     }
@@ -48,11 +37,9 @@ void LSPClient::initialize() {
 bool LSPClient::startServer()
 {
     if (m_serverRunning) {
-        qWarning() << "[LSPClient] Server already running";
         return true;
     }
     
-    qInfo() << "[LSPClient] Starting" << m_config.language << "server:" << m_config.command;
     
     m_serverProcess->setProgram(m_config.command);
     m_serverProcess->setArguments(m_config.arguments);
@@ -60,45 +47,44 @@ bool LSPClient::startServer()
     m_serverProcess->start();
     
     if (!m_serverProcess->waitForStarted(5000)) {
-        qCritical() << "[LSPClient] Failed to start server";
-        emit serverError("Failed to start LSP server");
+        serverError("Failed to start LSP server");
         return false;
     }
     
     m_serverRunning = true;
     
     // Send initialize request
-    QJsonObject initializeParams;
+    void* initializeParams;
     initializeParams["processId"] = static_cast<qint64>(QCoreApplication::applicationPid());
     initializeParams["rootUri"] = buildDocumentUri(m_config.workspaceRoot);
     
-    QJsonObject capabilities;
-    QJsonObject textDocument;
+    void* capabilities;
+    void* textDocument;
     
     // Completion support
-    QJsonObject completion;
+    void* completion;
     completion["dynamicRegistration"] = false;
-    QJsonObject completionItem;
+    void* completionItem;
     completionItem["snippetSupport"] = false;
     completion["completionItem"] = completionItem;
     textDocument["completion"] = completion;
     
     // Hover support
-    textDocument["hover"] = QJsonObject{{"dynamicRegistration", false}};
+    textDocument["hover"] = void*{{"dynamicRegistration", false}};
     
     // Definition support
-    textDocument["definition"] = QJsonObject{{"dynamicRegistration", false}};
+    textDocument["definition"] = void*{{"dynamicRegistration", false}};
     
     // Diagnostics support
-    textDocument["publishDiagnostics"] = QJsonObject{{"relatedInformation", true}};
+    textDocument["publishDiagnostics"] = void*{{"relatedInformation", true}};
     
     // Formatting support
-    textDocument["formatting"] = QJsonObject{{"dynamicRegistration", false}};
+    textDocument["formatting"] = void*{{"dynamicRegistration", false}};
     
     capabilities["textDocument"] = textDocument;
     initializeParams["capabilities"] = capabilities;
     
-    QJsonObject initRequest;
+    void* initRequest;
     initRequest["jsonrpc"] = "2.0";
     initRequest["id"] = m_nextRequestId++;
     initRequest["method"] = "initialize";
@@ -106,7 +92,6 @@ bool LSPClient::startServer()
     
     sendMessage(initRequest);
     
-    qInfo() << "[LSPClient] Initialize request sent";
     return true;
 }
 
@@ -115,14 +100,14 @@ void LSPClient::stopServer()
     if (!m_serverRunning) return;
     
     // Send shutdown request
-    QJsonObject shutdownRequest;
+    void* shutdownRequest;
     shutdownRequest["jsonrpc"] = "2.0";
     shutdownRequest["id"] = m_nextRequestId++;
     shutdownRequest["method"] = "shutdown";
     sendMessage(shutdownRequest);
     
     // Send exit notification
-    QJsonObject exitNotification;
+    void* exitNotification;
     exitNotification["jsonrpc"] = "2.0";
     exitNotification["method"] = "exit";
     sendMessage(exitNotification);
@@ -133,26 +118,24 @@ void LSPClient::stopServer()
     m_serverRunning = false;
     m_initialized = false;
     
-    qInfo() << "[LSPClient] Server stopped";
 }
 
-void LSPClient::openDocument(const QString& uri, const QString& languageId, const QString& text)
+void LSPClient::openDocument(const std::string& uri, const std::string& languageId, const std::string& text)
 {
     if (!m_initialized) {
-        qWarning() << "[LSPClient] Server not initialized";
         return;
     }
     
-    QJsonObject textDocumentItem;
+    void* textDocumentItem;
     textDocumentItem["uri"] = buildDocumentUri(uri);
     textDocumentItem["languageId"] = languageId;
     textDocumentItem["version"] = 1;
     textDocumentItem["text"] = text;
     
-    QJsonObject params;
+    void* params;
     params["textDocument"] = textDocumentItem;
     
-    QJsonObject notification;
+    void* notification;
     notification["jsonrpc"] = "2.0";
     notification["method"] = "textDocument/didOpen";
     notification["params"] = params;
@@ -160,18 +143,17 @@ void LSPClient::openDocument(const QString& uri, const QString& languageId, cons
     sendMessage(notification);
     m_documentVersions[uri] = 1;
     
-    qDebug() << "[LSPClient] Opened document:" << uri;
 }
 
-void LSPClient::closeDocument(const QString& uri)
+void LSPClient::closeDocument(const std::string& uri)
 {
-    QJsonObject textDocumentId;
+    void* textDocumentId;
     textDocumentId["uri"] = buildDocumentUri(uri);
     
-    QJsonObject params;
+    void* params;
     params["textDocument"] = textDocumentId;
     
-    QJsonObject notification;
+    void* notification;
     notification["jsonrpc"] = "2.0";
     notification["method"] = "textDocument/didClose";
     notification["params"] = params;
@@ -180,25 +162,24 @@ void LSPClient::closeDocument(const QString& uri)
     m_documentVersions.remove(uri);
     m_diagnostics.remove(uri);
     
-    qDebug() << "[LSPClient] Closed document:" << uri;
 }
 
-void LSPClient::updateDocument(const QString& uri, const QString& text, int version)
+void LSPClient::updateDocument(const std::string& uri, const std::string& text, int version)
 {
-    QJsonObject textDocumentId;
+    void* textDocumentId;
     textDocumentId["uri"] = buildDocumentUri(uri);
     textDocumentId["version"] = version;
     
-    QJsonArray contentChanges;
-    QJsonObject change;
+    void* contentChanges;
+    void* change;
     change["text"] = text;  // Full document sync
     contentChanges.append(change);
     
-    QJsonObject params;
+    void* params;
     params["textDocument"] = textDocumentId;
     params["contentChanges"] = contentChanges;
     
-    QJsonObject notification;
+    void* notification;
     notification["jsonrpc"] = "2.0";
     notification["method"] = "textDocument/didChange";
     notification["params"] = params;
@@ -207,24 +188,24 @@ void LSPClient::updateDocument(const QString& uri, const QString& text, int vers
     m_documentVersions[uri] = version;
 }
 
-void LSPClient::requestCompletions(const QString& uri, int line, int character)
+void LSPClient::requestCompletions(const std::string& uri, int line, int character)
 {
     if (!m_initialized) return;
     
     int requestId = m_nextRequestId++;
     
-    QJsonObject textDocumentId;
+    void* textDocumentId;
     textDocumentId["uri"] = buildDocumentUri(uri);
     
-    QJsonObject position;
+    void* position;
     position["line"] = line;
     position["character"] = character;
     
-    QJsonObject params;
+    void* params;
     params["textDocument"] = textDocumentId;
     params["position"] = position;
     
-    QJsonObject request;
+    void* request;
     request["jsonrpc"] = "2.0";
     request["id"] = requestId;
     request["method"] = "textDocument/completion";
@@ -240,24 +221,24 @@ void LSPClient::requestCompletions(const QString& uri, int line, int character)
     m_pendingRequests[requestId] = pending;
 }
 
-void LSPClient::requestHover(const QString& uri, int line, int character)
+void LSPClient::requestHover(const std::string& uri, int line, int character)
 {
     if (!m_initialized) return;
     
     int requestId = m_nextRequestId++;
     
-    QJsonObject textDocumentId;
+    void* textDocumentId;
     textDocumentId["uri"] = buildDocumentUri(uri);
     
-    QJsonObject position;
+    void* position;
     position["line"] = line;
     position["character"] = character;
     
-    QJsonObject params;
+    void* params;
     params["textDocument"] = textDocumentId;
     params["position"] = position;
     
-    QJsonObject request;
+    void* request;
     request["jsonrpc"] = "2.0";
     request["id"] = requestId;
     request["method"] = "textDocument/hover";
@@ -273,24 +254,24 @@ void LSPClient::requestHover(const QString& uri, int line, int character)
     m_pendingRequests[requestId] = pending;
 }
 
-void LSPClient::requestDefinition(const QString& uri, int line, int character)
+void LSPClient::requestDefinition(const std::string& uri, int line, int character)
 {
     if (!m_initialized) return;
     
     int requestId = m_nextRequestId++;
     
-    QJsonObject textDocumentId;
+    void* textDocumentId;
     textDocumentId["uri"] = buildDocumentUri(uri);
     
-    QJsonObject position;
+    void* position;
     position["line"] = line;
     position["character"] = character;
     
-    QJsonObject params;
+    void* params;
     params["textDocument"] = textDocumentId;
     params["position"] = position;
     
-    QJsonObject request;
+    void* request;
     request["jsonrpc"] = "2.0";
     request["id"] = requestId;
     request["method"] = "textDocument/definition";
@@ -306,24 +287,24 @@ void LSPClient::requestDefinition(const QString& uri, int line, int character)
     m_pendingRequests[requestId] = pending;
 }
 
-void LSPClient::formatDocument(const QString& uri)
+void LSPClient::formatDocument(const std::string& uri)
 {
     if (!m_initialized) return;
     
     int requestId = m_nextRequestId++;
     
-    QJsonObject textDocumentId;
+    void* textDocumentId;
     textDocumentId["uri"] = buildDocumentUri(uri);
     
-    QJsonObject options;
+    void* options;
     options["tabSize"] = 4;
     options["insertSpaces"] = true;
     
-    QJsonObject params;
+    void* params;
     params["textDocument"] = textDocumentId;
     params["options"] = options;
     
-    QJsonObject request;
+    void* request;
     request["jsonrpc"] = "2.0";
     request["id"] = requestId;
     request["method"] = "textDocument/formatting";
@@ -332,7 +313,7 @@ void LSPClient::formatDocument(const QString& uri)
     sendMessage(request);
 }
 
-QVector<Diagnostic> LSPClient::getDiagnostics(const QString& uri) const
+std::vector<Diagnostic> LSPClient::getDiagnostics(const std::string& uri) const
 {
     return m_diagnostics.value(uri);
 }
@@ -347,10 +328,10 @@ void LSPClient::onServerReadyRead()
         int headerEnd = m_receiveBuffer.indexOf("\r\n\r\n");
         if (headerEnd == -1) break;
         
-        QString header = QString::fromUtf8(m_receiveBuffer.left(headerEnd));
+        std::string header = std::string::fromUtf8(m_receiveBuffer.left(headerEnd));
         int contentLength = 0;
         
-        for (const QString& line : header.split("\r\n")) {
+        for (const std::string& line : header.split("\r\n")) {
             if (line.startsWith("Content-Length:")) {
                 contentLength = line.mid(15).trimmed().toInt();
                 break;
@@ -367,10 +348,10 @@ void LSPClient::onServerReadyRead()
             break;  // Incomplete message
         }
         
-        QByteArray messageData = m_receiveBuffer.mid(messageStart, contentLength);
+        std::vector<uint8_t> messageData = m_receiveBuffer.mid(messageStart, contentLength);
         m_receiveBuffer.remove(0, messageStart + contentLength);
         
-        QJsonDocument doc = QJsonDocument::fromJson(messageData);
+        void* doc = void*::fromJson(messageData);
         if (doc.isObject()) {
             processMessage(doc.object());
         }
@@ -379,7 +360,7 @@ void LSPClient::onServerReadyRead()
 
 void LSPClient::onServerError(QProcess::ProcessError error)
 {
-    QString errorStr;
+    std::string errorStr;
     switch (error) {
         case QProcess::FailedToStart:
             errorStr = "Failed to start LSP server";
@@ -391,31 +372,29 @@ void LSPClient::onServerError(QProcess::ProcessError error)
             errorStr = "LSP server error";
     }
     
-    qCritical() << "[LSPClient]" << errorStr;
-    emit serverError(errorStr);
+    serverError(errorStr);
     m_serverRunning = false;
 }
 
 void LSPClient::onServerFinished(int exitCode, QProcess::ExitStatus status)
 {
-    qInfo() << "[LSPClient] Server finished with exit code:" << exitCode;
     m_serverRunning = false;
     m_initialized = false;
 }
 
-void LSPClient::sendMessage(const QJsonObject& message)
+void LSPClient::sendMessage(const void*& message)
 {
-    QJsonDocument doc(message);
-    QByteArray json = doc.toJson(QJsonDocument::Compact);
+    void* doc(message);
+    std::vector<uint8_t> json = doc.toJson(void*::Compact);
     
-    QString header = QString("Content-Length: %1\r\n\r\n").arg(json.size());
+    std::string header = std::string("Content-Length: %1\r\n\r\n"));
     
     m_serverProcess->write(header.toUtf8());
     m_serverProcess->write(json);
     m_serverProcess->waitForBytesWritten();
 }
 
-void LSPClient::processMessage(const QJsonObject& message)
+void LSPClient::processMessage(const void*& message)
 {
     // Check if it's a response or notification
     if (message.contains("id")) {
@@ -423,7 +402,7 @@ void LSPClient::processMessage(const QJsonObject& message)
         int id = message["id"].toInt();
         
         if (message.contains("result")) {
-            QJsonObject result = message["result"].toObject();
+            void* result = message["result"].toObject();
             
             if (m_pendingRequests.contains(id)) {
                 PendingRequest req = m_pendingRequests.take(id);
@@ -440,13 +419,12 @@ void LSPClient::processMessage(const QJsonObject& message)
                 handleInitializeResponse(result);
             }
         } else if (message.contains("error")) {
-            QJsonObject error = message["error"].toObject();
-            qWarning() << "[LSPClient] Error response:" << error["message"].toString();
+            void* error = message["error"].toObject();
         }
     } else if (message.contains("method")) {
         // Server notification
-        QString method = message["method"].toString();
-        QJsonObject params = message["params"].toObject();
+        std::string method = message["method"].toString();
+        void* params = message["params"].toObject();
         
         if (method == "textDocument/publishDiagnostics") {
             handleDiagnostics(params);
@@ -454,46 +432,45 @@ void LSPClient::processMessage(const QJsonObject& message)
     }
 }
 
-void LSPClient::handleInitializeResponse(const QJsonObject& result)
+void LSPClient::handleInitializeResponse(const void*& result)
 {
-    qInfo() << "[LSPClient] Server initialized successfully";
     m_initialized = true;
     
     // Send initialized notification
-    QJsonObject notification;
+    void* notification;
     notification["jsonrpc"] = "2.0";
     notification["method"] = "initialized";
-    notification["params"] = QJsonObject();
+    notification["params"] = void*();
     sendMessage(notification);
     
-    emit serverReady();
+    serverReady();
 }
 
-void LSPClient::handleCompletionResponse(const QJsonObject& result, int requestId)
+void LSPClient::handleCompletionResponse(const void*& result, int requestId)
 {
     if (!m_pendingRequests.contains(requestId)) return;
     
     PendingRequest req = m_pendingRequests[requestId];
-    QVector<CompletionItem> items;
+    std::vector<CompletionItem> items;
     
     // Result can be CompletionList or CompletionItem[]
-    QJsonArray itemsArray;
+    void* itemsArray;
     if (result.contains("items")) {
-        QJsonValue itemsValue = result.value("items");
+        void* itemsValue = result.value("items");
         if (itemsValue.isArray()) {
             itemsArray = itemsValue.toArray();
         }
     } else {
         // Result itself might be an array (not wrapped in CompletionList)
         // In this case, convert the entire object to a document and check
-        QJsonDocument doc(result);
+        void* doc(result);
         if (doc.isArray()) {
             itemsArray = doc.array();
         }
     }
     
-    for (const QJsonValue& val : itemsArray) {
-        QJsonObject itemObj = val.toObject();
+    for (const void*& val : itemsArray) {
+        void* itemObj = val.toObject();
         
         CompletionItem item;
         item.label = itemObj["label"].toString();
@@ -506,7 +483,7 @@ void LSPClient::handleCompletionResponse(const QJsonObject& result, int requestI
         item.filterText = itemObj["filterText"].toString();
         
         if (itemObj.contains("documentation")) {
-            QJsonValue docVal = itemObj["documentation"];
+            void* docVal = itemObj["documentation"];
             if (docVal.isString()) {
                 item.documentation = docVal.toString();
             } else if (docVal.isObject()) {
@@ -517,26 +494,25 @@ void LSPClient::handleCompletionResponse(const QJsonObject& result, int requestI
         items.append(item);
     }
     
-    qDebug() << "[LSPClient] Received" << items.size() << "completions";
-    emit completionsReceived(req.uri, req.line, req.character, items);
+    completionsReceived(req.uri, req.line, req.character, items);
 }
 
-void LSPClient::handleHoverResponse(const QJsonObject& result, int requestId)
+void LSPClient::handleHoverResponse(const void*& result, int requestId)
 {
     if (!m_pendingRequests.contains(requestId)) return;
     
     PendingRequest req = m_pendingRequests[requestId];
-    QString markdown;
+    std::string markdown;
     
     if (result.contains("contents")) {
-        QJsonValue contents = result["contents"];
+        void* contents = result["contents"];
         if (contents.isString()) {
             markdown = contents.toString();
         } else if (contents.isObject()) {
             markdown = contents.toObject()["value"].toString();
         } else if (contents.isArray()) {
-            QJsonArray arr = contents.toArray();
-            for (const QJsonValue& val : arr) {
+            void* arr = contents.toArray();
+            for (const void*& val : arr) {
                 if (val.isString()) {
                     markdown += val.toString() + "\n";
                 } else if (val.isObject()) {
@@ -546,24 +522,24 @@ void LSPClient::handleHoverResponse(const QJsonObject& result, int requestId)
         }
     }
     
-    emit hoverReceived(req.uri, markdown);
+    hoverReceived(req.uri, markdown);
 }
 
-void LSPClient::handleDefinitionResponse(const QJsonObject& result, int requestId)
+void LSPClient::handleDefinitionResponse(const void*& result, int requestId)
 {
     if (!m_pendingRequests.contains(requestId)) return;
     
     PendingRequest req = m_pendingRequests[requestId];
     
     // Result can be Location or Location[]
-    QJsonObject location;
+    void* location;
     if (result.contains("uri")) {
         location = result;
     } else {
         // Result might be an array of locations
-        QJsonDocument doc(result);
+        void* doc(result);
         if (doc.isArray()) {
-            QJsonArray arr = doc.array();
+            void* arr = doc.array();
             if (!arr.isEmpty()) {
                 location = arr.first().toObject();
             }
@@ -571,29 +547,29 @@ void LSPClient::handleDefinitionResponse(const QJsonObject& result, int requestI
     }
     
     if (location.contains("uri")) {
-        QString uri = location["uri"].toString();
-        QJsonObject range = location["range"].toObject();
-        QJsonObject start = range["start"].toObject();
+        std::string uri = location["uri"].toString();
+        void* range = location["range"].toObject();
+        void* start = range["start"].toObject();
         
         int line = start["line"].toInt();
         int character = start["character"].toInt();
         
-        emit definitionReceived(uri, line, character);
+        definitionReceived(uri, line, character);
     }
 }
 
-void LSPClient::handleDiagnostics(const QJsonObject& params)
+void LSPClient::handleDiagnostics(const void*& params)
 {
-    QString uri = params["uri"].toString();
-    QJsonArray diagnosticsArray = params["diagnostics"].toArray();
+    std::string uri = params["uri"].toString();
+    void* diagnosticsArray = params["diagnostics"].toArray();
     
-    QVector<Diagnostic> diagnostics;
-    for (const QJsonValue& val : diagnosticsArray) {
-        QJsonObject diagObj = val.toObject();
+    std::vector<Diagnostic> diagnostics;
+    for (const void*& val : diagnosticsArray) {
+        void* diagObj = val.toObject();
         
         Diagnostic diag;
-        QJsonObject range = diagObj["range"].toObject();
-        QJsonObject start = range["start"].toObject();
+        void* range = diagObj["range"].toObject();
+        void* start = range["start"].toObject();
         
         diag.line = start["line"].toInt();
         diag.column = start["character"].toInt();
@@ -605,17 +581,18 @@ void LSPClient::handleDiagnostics(const QJsonObject& params)
     }
     
     m_diagnostics[uri] = diagnostics;
-    emit diagnosticsUpdated(uri, diagnostics);
+    diagnosticsUpdated(uri, diagnostics);
 }
 
-QString LSPClient::buildDocumentUri(const QString& filePath) const
+std::string LSPClient::buildDocumentUri(const std::string& filePath) const
 {
-    QFileInfo info(filePath);
-    QString absolutePath = info.isRelative() 
-        ? QFileInfo(m_config.workspaceRoot + "/" + filePath).absoluteFilePath()
+    std::filesystem::path info(filePath);
+    std::string absolutePath = info.isRelative() 
+        ? std::filesystem::path(m_config.workspaceRoot + "/" + filePath).absoluteFilePath()
         : info.absoluteFilePath();
     
-    return QUrl::fromLocalFile(absolutePath).toString();
+    return std::string::fromLocalFile(absolutePath).toString();
 }
 
 } // namespace RawrXD
+

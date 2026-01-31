@@ -273,7 +273,3 @@ private:
 
 #endif // RAWRXD_QT_COMPILER_INTERFACE_HPP
 
-
-
-
-

@@ -67,7 +67,6 @@ void* MemorySpaceManager::readJson() const
         return void*();
     }
     if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        // // qWarning:  "[MemorySpaceManager] Failed to open memory file" << memoryFilePath();
         return void*();
     }
     std::vector<uint8_t> data = file.readAll();
@@ -83,7 +82,6 @@ bool MemorySpaceManager::writeJson(const void*& obj) const
 {
     // File operation removed);
     if (!file.open(std::iostream::WriteOnly | std::iostream::Text)) {
-        // // qWarning:  "[MemorySpaceManager] Failed to write memory file" << memoryFilePath();
         return false;
     }
     void* doc(obj);
@@ -111,7 +109,6 @@ void MemorySpaceManager::persist(const std::map<std::string, std::any>& memoryMa
         if (bytes <= m_limitBytes) break;
         std::string dropKey = keys.takeFirst();
         obj.remove(dropKey);
-        // // qWarning:  "[MemorySpaceManager] Pruned memory key to enforce limit:" << dropKey;
     }
 
     void* root;
@@ -157,9 +154,4 @@ int64_t MemorySpaceManager::currentSizeBytes() const
     if (!info.exists()) return 0;
     return info.size();
 }
-
-
-
-
-
 

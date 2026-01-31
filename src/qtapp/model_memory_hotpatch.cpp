@@ -3,8 +3,8 @@
 // REFACTOR NOTE: Updated core memory functions to return PatchResult for structured error reporting and timing.
 
 #include "model_memory_hotpatch.hpp"
-#include <QDebug>
-#include <QElapsedTimer>
+
+
 #include <numeric>
 
 // --- Platform-Specific Helper Implementation (Crucial for Direct Memory Manipulation) ---
@@ -52,7 +52,6 @@ bool ModelMemoryHotpatch::protectMemory(void* ptr, size_t size, int protectionFl
 #ifdef _WIN32
     DWORD oldProt;
     if (VirtualProtect(ptr, size, protectionFlags, &oldProt) == 0) {
-        qCritical() << "VirtualProtect failed for size" << size << "Error:" << GetLastError();
         return false;
     }
     return true;
@@ -63,7 +62,6 @@ bool ModelMemoryHotpatch::protectMemory(void* ptr, size_t size, int protectionFl
     size_t alignedSize = (startAddr + size - alignedStart + pageSize - 1) & ~(pageSize - 1);
 
     if (mprotect((void*)alignedStart, alignedSize, protectionFlags) == -1) {
-        qCritical() << "mprotect failed for size" << size << "Error:" << errno;
         return false;
     }
     return true;
@@ -72,7 +70,7 @@ bool ModelMemoryHotpatch::protectMemory(void* ptr, size_t size, int protectionFl
 
 PatchResult ModelMemoryHotpatch::beginWritableWindow(size_t offset, size_t size, void*& cookie)
 {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
 
     if (!m_modelPtr || offset + size > m_modelSize) {
@@ -93,25 +91,25 @@ PatchResult ModelMemoryHotpatch::beginWritableWindow(size_t offset, size_t size,
 #ifdef _WIN32
     if (VirtualProtect((void*)alignedStart, alignedSize, VIRTUAL_PROTECT_RW, &protectCookie->oldProtection) == 0) {
         DWORD osError = GetLastError();
-        QString detail = QString("Win: VirtualProtect failed. Error code: %1").arg(osError);
+        std::string detail = std::string("Win: VirtualProtect failed. Error code: %1");
         delete protectCookie;
         return PatchResult::error(1002, detail, timer.elapsed());
     }
 #else
     if (mprotect((void*)alignedStart, alignedSize, VIRTUAL_PROTECT_RW) == -1) {
         int osError = errno;
-        QString detail = QString("POSIX: mprotect failed. Error code: %1").arg(osError);
+        std::string detail = std::string("POSIX: mprotect failed. Error code: %1");
         delete protectCookie;
         return PatchResult::error(1003, detail, timer.elapsed());
     }
 #endif
     cookie = protectCookie;
-    return PatchResult::ok(QString("Writable window opened, size %1 bytes.").arg(alignedSize), timer.elapsed());
+    return PatchResult::ok(std::string("Writable window opened, size %1 bytes."), timer.elapsed());
 }
 
 PatchResult ModelMemoryHotpatch::endWritableWindow(void* cookie)
 {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
 
     if (!cookie) {
@@ -125,13 +123,13 @@ PatchResult ModelMemoryHotpatch::endWritableWindow(void* cookie)
     DWORD oldProt;
     if (VirtualProtect((void*)protectCookie->alignedStart, protectCookie->alignedSize, protectCookie->oldProtection, &oldProt) == 0) {
         DWORD osError = GetLastError();
-        QString detail = QString("Win: VirtualProtect restore failed. Error code: %1").arg(osError);
+        std::string detail = std::string("Win: VirtualProtect restore failed. Error code: %1");
         result = PatchResult::error(1005, detail, timer.elapsed());
     }
 #else
     if (mprotect((void*)protectCookie->alignedStart, protectCookie->alignedSize, VIRTUAL_PROTECT_RO) == -1) {
         int osError = errno;
-        QString detail = QString("POSIX: mprotect restore failed. Error code: %1").arg(osError);
+        std::string detail = std::string("POSIX: mprotect restore failed. Error code: %1");
         result = PatchResult::error(1006, detail, timer.elapsed());
     }
 #endif
@@ -140,8 +138,8 @@ PatchResult ModelMemoryHotpatch::endWritableWindow(void* cookie)
     return result;
 }
 
-ModelMemoryHotpatch::ModelMemoryHotpatch(QObject* parent)
-    : QObject(parent)
+ModelMemoryHotpatch::ModelMemoryHotpatch(void* parent)
+    : void(parent)
 {
 }
 
@@ -152,13 +150,11 @@ ModelMemoryHotpatch::~ModelMemoryHotpatch()
 
 bool ModelMemoryHotpatch::attachToModel(void* modelPtr, size_t modelSize)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_attached) {
-        qWarning() << "Already attached. Detach first.";
         return false;
     }
     if (!modelPtr || modelSize == 0) {
-        qCritical() << "Invalid model pointer or size.";
         return false;
     }
 
@@ -168,25 +164,21 @@ bool ModelMemoryHotpatch::attachToModel(void* modelPtr, size_t modelSize)
     m_stats.modelSize = modelSize;
     
     if (!parseTensorMetadata()) {
-        qCritical() << "Failed to parse tensor metadata. Cannot map tensor names.";
         detach();
         return false;
     }
 
-    qInfo() << "Successfully attached to model at" << m_modelPtr << "Size:" << m_modelSize;
-    emit modelAttached(m_modelSize);
+    modelAttached(m_modelSize);
     return true;
 }
 
 void ModelMemoryHotpatch::detach()
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (!m_attached) return;
     
     if (!m_fullBackup.isEmpty() && m_stats.appliedPatches > 0) {
-        qWarning() << "Detaching: Attempting to restore full model backup for safety...";
         if (!restoreBackup().success) {
-            qCritical() << "Failed to restore full model backup during detach! Memory state may be corrupted.";
         }
     }
 
@@ -199,8 +191,7 @@ void ModelMemoryHotpatch::detach()
     m_tensorMap.clear();
     resetStatistics();
     
-    qInfo() << "Detached from model.";
-    emit modelDetached();
+    modelDetached();
 }
 
 bool ModelMemoryHotpatch::isAttached() const
@@ -211,19 +202,17 @@ bool ModelMemoryHotpatch::isAttached() const
 bool ModelMemoryHotpatch::validateMemoryAccess(size_t offset, size_t size) const
 {
     if (!m_attached || !m_modelPtr) {
-        qWarning() << "Not attached to a model.";
         return false;
     }
     if (offset + size > m_modelSize) {
-        qWarning() << "Access out of bounds: offset" << offset << "size" << size << "Model size" << m_modelSize;
         return false;
     }
     return true;
 }
 
-PatchResult ModelMemoryHotpatch::safeMemoryWrite(size_t offset, const QByteArray& data)
+PatchResult ModelMemoryHotpatch::safeMemoryWrite(size_t offset, const std::vector<uint8_t>& data)
 {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     size_t dataSize = data.size();
 
@@ -235,7 +224,7 @@ PatchResult ModelMemoryHotpatch::safeMemoryWrite(size_t offset, const QByteArray
     
     PatchResult beginResult = beginWritableWindow(offset, dataSize, cookie);
     if (!beginResult.success) {
-        return PatchResult::error(2002, QString("Failed to open writable window: %1").arg(beginResult.detail), timer.elapsed(), beginResult.errorCode);
+        return PatchResult::error(2002, std::string("Failed to open writable window: %1"), timer.elapsed(), beginResult.errorCode);
     }
 
     bool copySuccess = false;
@@ -243,39 +232,37 @@ PatchResult ModelMemoryHotpatch::safeMemoryWrite(size_t offset, const QByteArray
         std::memcpy((char*)m_modelPtr + offset, data.constData(), dataSize);
         copySuccess = true;
     } catch (...) {
-        qCritical() << "Exception occurred during memory copy at offset" << offset;
     }
 
     PatchResult endResult = endWritableWindow(cookie);
 
     if (!copySuccess) {
-        return PatchResult::error(2003, QString("Memory copy failed at offset %1.").arg(offset), timer.elapsed());
+        return PatchResult::error(2003, std::string("Memory copy failed at offset %1."), timer.elapsed());
     }
     
     if (!endResult.success) {
-        qCritical() << "CRITICAL WARNING: Write successful but failed to restore memory protection:" << endResult.detail;
-        emit errorOccurred(PatchResult::error(2004, QString("Protection restore failed: %1").arg(endResult.detail), endResult.elapsedMs, endResult.errorCode));
+        errorOccurred(PatchResult::error(2004, std::string("Protection restore failed: %1"), endResult.elapsedMs, endResult.errorCode));
     }
 
-    return PatchResult::ok(QString("Safe write of %1 bytes successful at offset %2.").arg(dataSize).arg(offset), timer.elapsed());
+    return PatchResult::ok(std::string("Safe write of %1 bytes successful at offset %2."), timer.elapsed());
 }
 
-QByteArray ModelMemoryHotpatch::readMemory(size_t offset, size_t size)
+std::vector<uint8_t> ModelMemoryHotpatch::readMemory(size_t offset, size_t size)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (!validateMemoryAccess(offset, size)) {
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
-    QByteArray data;
+    std::vector<uint8_t> data;
     data.resize(size);
     std::memcpy(data.data(), (char*)m_modelPtr + offset, size);
     return data;
 }
 
-PatchResult ModelMemoryHotpatch::writeMemory(size_t offset, const QByteArray& data)
+PatchResult ModelMemoryHotpatch::writeMemory(size_t offset, const std::vector<uint8_t>& data)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (data.isEmpty()) {
         return PatchResult::error(2005, "Cannot write empty data.");
     }
@@ -284,48 +271,46 @@ PatchResult ModelMemoryHotpatch::writeMemory(size_t offset, const QByteArray& da
 
     if (result.success) {
         m_stats.bytesModified += data.size();
-        m_stats.lastPatch = QDateTime::currentDateTimeUtc();
+        m_stats.lastPatch = std::chrono::system_clock::time_point::currentDateTimeUtc();
     } else {
         m_stats.failedPatches++;
     }
     return result;
 }
 
-PatchResult ModelMemoryHotpatch::applyPatch(const QString& name)
+PatchResult ModelMemoryHotpatch::applyPatch(const std::string& name)
 {
-    QMutexLocker lock(&m_mutex);
-    QElapsedTimer timer;
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    std::chrono::steady_clock timer;
     timer.start();
     
     if (!m_patches.contains(name)) {
-        return PatchResult::error(3001, QString("Patch '%1' not found.").arg(name), timer.elapsed());
+        return PatchResult::error(3001, std::string("Patch '%1' not found."), timer.elapsed());
     }
 
     MemoryPatch& patch = m_patches[name];
     if (!patch.enabled) {
-        return PatchResult::ok(QString("Patch '%1' skipped (disabled).").arg(name), timer.elapsed());
+        return PatchResult::ok(std::string("Patch '%1' skipped (disabled)."), timer.elapsed());
     }
     
     size_t writeOffset = patch.offset;
-    const QByteArray& patchData = patch.patchBytes;
+    const std::vector<uint8_t>& patchData = patch.patchBytes;
     
     if (patchData.isEmpty() || patch.size == 0) {
         if (patch.transformType == MemoryPatch::TransformType::None && patch.type != MemoryPatchType::GraphRedirection) {
-             return PatchResult::error(3002, QString("Patch '%1' has no data or size for byte modification.").arg(name), timer.elapsed());
+             return PatchResult::error(3002, std::string("Patch '%1' has no data or size for byte modification."), timer.elapsed());
         }
         
         if (patch.type == MemoryPatchType::GraphRedirection) {
-            qInfo() << "Applied Graph Redirection patch:" << name;
             return PatchResult::ok("Graph Redirection applied (conceptually).", timer.elapsed());
         }
     } else {
         if (patch.verifyChecksum) {
             uint64_t currentChecksum = calculateChecksum64(writeOffset, patch.size);
             if (patch.checksumBefore != 0 && currentChecksum != patch.checksumBefore) {
-                QString reason = QString("Checksum mismatch! Expected %1, got %2.").arg(patch.checksumBefore, 16, 16, QChar('0')).arg(currentChecksum, 16, 16, QChar('0'));
-                qCritical() << "Patch failed due to checksum:" << reason;
+                std::string reason = std::string("Checksum mismatch! Expected %1, got %2.")));
                 m_stats.failedPatches++;
-                emit integrityCheckFailed(name, currentChecksum);
+                integrityCheckFailed(name, currentChecksum);
                 return PatchResult::error(3003, reason, timer.elapsed());
             }
         }
@@ -333,7 +318,7 @@ PatchResult ModelMemoryHotpatch::applyPatch(const QString& name)
         PatchResult writeResult = safeMemoryWrite(writeOffset, patchData);
         if (!writeResult.success) {
             m_stats.failedPatches++;
-            return PatchResult::error(3004, QString("Memory write failed for patch '%1': %2").arg(name).arg(writeResult.detail), writeResult.elapsedMs, writeResult.errorCode);
+            return PatchResult::error(3004, std::string("Memory write failed for patch '%1': %2"), writeResult.elapsedMs, writeResult.errorCode);
         }
         
         if (patch.verifyChecksum) {
@@ -342,39 +327,39 @@ PatchResult ModelMemoryHotpatch::applyPatch(const QString& name)
     }
     
     patch.timesApplied++;
-    patch.lastApplied = QDateTime::currentDateTimeUtc();
+    patch.lastApplied = std::chrono::system_clock::time_point::currentDateTimeUtc();
     m_stats.appliedPatches++;
     m_stats.bytesModified += patch.size;
     m_stats.lastPatch = patch.lastApplied;
     
-    emit patchApplied(name);
-    return PatchResult::ok(QString("Patch '%1' applied successfully.").arg(name), timer.elapsed());
+    patchApplied(name);
+    return PatchResult::ok(std::string("Patch '%1' applied successfully."), timer.elapsed());
 }
 
-PatchResult ModelMemoryHotpatch::revertPatch(const QString& name)
+PatchResult ModelMemoryHotpatch::revertPatch(const std::string& name)
 {
-    QMutexLocker lock(&m_mutex);
-    QElapsedTimer timer;
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    std::chrono::steady_clock timer;
     timer.start();
     
     if (!m_patches.contains(name)) {
-        return PatchResult::error(4001, QString("Patch '%1' not found for revert.").arg(name), timer.elapsed());
+        return PatchResult::error(4001, std::string("Patch '%1' not found for revert."), timer.elapsed());
     }
 
     MemoryPatch& patch = m_patches[name];
     if (patch.originalBytes.isEmpty()) {
-        return PatchResult::error(4003, QString("Patch '%1' cannot be reverted: original bytes missing.").arg(name), timer.elapsed());
+        return PatchResult::error(4003, std::string("Patch '%1' cannot be reverted: original bytes missing."), timer.elapsed());
     }
 
     PatchResult writeResult = safeMemoryWrite(patch.offset, patch.originalBytes);
     if (!writeResult.success) {
         m_stats.failedPatches++;
-        return PatchResult::error(4004, QString("Memory write failed during revert for patch '%1': %2").arg(name).arg(writeResult.detail), writeResult.elapsedMs, writeResult.errorCode);
+        return PatchResult::error(4004, std::string("Memory write failed during revert for patch '%1': %2"), writeResult.elapsedMs, writeResult.errorCode);
     }
 
     m_stats.revertedPatches++;
-    emit patchReverted(name);
-    return PatchResult::ok(QString("Patch '%1' reverted successfully.").arg(name), timer.elapsed());
+    patchReverted(name);
+    return PatchResult::ok(std::string("Patch '%1' reverted successfully."), timer.elapsed());
 }
 
 uint64_t ModelMemoryHotpatch::calculateChecksum64(size_t offset, size_t size) const
@@ -394,8 +379,8 @@ uint64_t ModelMemoryHotpatch::calculateChecksum64(size_t offset, size_t size) co
 
 PatchResult ModelMemoryHotpatch::createBackup()
 {
-    QMutexLocker lock(&m_mutex);
-    QElapsedTimer timer;
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    std::chrono::steady_clock timer;
     timer.start();
 
     if (!m_attached) {
@@ -408,14 +393,13 @@ PatchResult ModelMemoryHotpatch::createBackup()
     m_fullBackup.resize(m_modelSize);
     std::memcpy(m_fullBackup.data(), m_modelPtr, m_modelSize);
     
-    qInfo() << "Full model backup created, size:" << m_modelSize;
-    return PatchResult::ok(QString("Full model backup created, size: %1").arg(m_modelSize), timer.elapsed());
+    return PatchResult::ok(std::string("Full model backup created, size: %1"), timer.elapsed());
 }
 
 PatchResult ModelMemoryHotpatch::restoreBackup()
 {
-    QMutexLocker lock(&m_mutex);
-    QElapsedTimer timer;
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    std::chrono::steady_clock timer;
     timer.start();
 
     if (!m_attached || m_fullBackup.isEmpty()) {
@@ -429,15 +413,13 @@ PatchResult ModelMemoryHotpatch::restoreBackup()
     PatchResult result = safeMemoryWrite(0, m_fullBackup);
 
     if (result.success) {
-        qInfo() << "Full model backup restored successfully.";
         m_stats.appliedPatches = 0;
         m_stats.revertedPatches = 0;
         m_stats.bytesModified = 0;
         result.detail = "Full model backup restored successfully.";
     } else {
-        qCritical() << "Failed to restore full model backup!";
         result.errorCode = 6003;
-        result.detail = QString("Failed to restore full model backup: %1").arg(result.detail);
+        result.detail = std::string("Failed to restore full model backup: %1");
     }
     result.elapsedMs = timer.elapsed();
 
@@ -447,7 +429,6 @@ PatchResult ModelMemoryHotpatch::restoreBackup()
 bool ModelMemoryHotpatch::parseTensorMetadata()
 {
     if (m_modelSize < 100 * 1024 * 1024) {
-        qWarning() << "Model size too small for mock tensor mapping.";
         return false;
     }
 
@@ -456,21 +437,20 @@ bool ModelMemoryHotpatch::parseTensorMetadata()
     for (int i = 0; i < 4; ++i) {
         size_t block_base = 5 * 1024 * 1024 + i * (20 * 1024 * 1024);
         
-        m_tensorMap[QString("blk.%1.attn_q.weight").arg(i)] = {
-            QString("blk.%1.attn_q.weight").arg(i),
+        m_tensorMap[std::string("blk.%1.attn_q.weight")] = {
+            std::string("blk.%1.attn_q.weight"),
             block_base + 0,
             2 * 1024 * 1024,
             2, {1024, 1024}, "Q4_K"
         };
     }
     
-    qInfo() << "Mocked" << m_tensorMap.size() << "tensors for testing.";
     return true;
 }
 
-bool ModelMemoryHotpatch::findTensor(const QString& tensorName, size_t& offset, size_t& size)
+bool ModelMemoryHotpatch::findTensor(const std::string& tensorName, size_t& offset, size_t& size)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (!m_attached) return false;
     
     if (m_tensorMap.contains(tensorName)) {
@@ -484,16 +464,15 @@ bool ModelMemoryHotpatch::findTensor(const QString& tensorName, size_t& offset, 
 
 bool ModelMemoryHotpatch::addPatch(const MemoryPatch& patch)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_patches.contains(patch.name)) {
-        qWarning() << "Patch with name" << patch.name << "already exists.";
         return false;
     }
     
     PatchConflict conflict;
     if (checkPatchConflict(patch, conflict)) {
-        emit patchConflictDetected(patch.name, conflict.existingPatch.name);
-        emit patchConflictDetectedRich(conflict);
+        patchConflictDetected(patch.name, conflict.existingPatch.name);
+        patchConflictDetectedRich(conflict);
         m_stats.conflictsDetected++;
         return false;
     }
@@ -503,13 +482,12 @@ bool ModelMemoryHotpatch::addPatch(const MemoryPatch& patch)
     return true;
 }
 
-bool ModelMemoryHotpatch::removePatch(const QString& name)
+bool ModelMemoryHotpatch::removePatch(const std::string& name)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (!m_patches.contains(name)) return false;
     
     if (m_patches.value(name).timesApplied > 0) {
-        qWarning() << "Patch" << name << "is currently applied. Please revert first.";
         return false;
     }
 
@@ -520,24 +498,23 @@ bool ModelMemoryHotpatch::removePatch(const QString& name)
 
 bool ModelMemoryHotpatch::applyAllPatches()
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     bool overallSuccess = true;
     
-    QMap<size_t, QString> sortedPatches;
+    std::map<size_t, std::string> sortedPatches;
     for (const MemoryPatch& patch : m_patches.values()) {
         if (patch.enabled) {
             sortedPatches.insert(patch.offset, patch.name);
         }
     }
 
-    for (const QString& name : sortedPatches.values()) {
+    for (const std::string& name : sortedPatches.values()) {
         lock.unlock();
         PatchResult result = applyPatch(name);
         lock.relock();
 
         if (!result.success) {
             overallSuccess = false;
-            qCritical() << "Batch apply failed for" << name << ":" << result.detail;
         }
     }
     
@@ -546,16 +523,15 @@ bool ModelMemoryHotpatch::applyAllPatches()
 
 bool ModelMemoryHotpatch::revertAllPatches()
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     bool overallSuccess = true;
-    for (const QString& name : m_patches.keys()) {
+    for (const std::string& name : m_patches.keys()) {
         lock.unlock();
         PatchResult result = revertPatch(name);
         lock.relock();
 
         if (!result.success) {
             overallSuccess = false;
-            qCritical() << "Batch revert failed for" << name << ":" << result.detail;
         }
     }
     return overallSuccess;
@@ -575,7 +551,7 @@ bool ModelMemoryHotpatch::checkPatchConflict(const MemoryPatch& newPatch, PatchC
             if (newPatch.priority <= existingPatch.priority) {
                 conflict.existingPatch = existingPatch;
                 conflict.incomingPatch = newPatch;
-                conflict.reason = QString("Memory overlap detected. Incoming priority (%1) <= Existing priority (%2).").arg(newPatch.priority).arg(existingPatch.priority);
+                conflict.reason = std::string("Memory overlap detected. Incoming priority (%1) <= Existing priority (%2).");
                 return true;
             }
         }
@@ -585,18 +561,18 @@ bool ModelMemoryHotpatch::checkPatchConflict(const MemoryPatch& newPatch, PatchC
 
 ModelMemoryHotpatch::MemoryPatchStats ModelMemoryHotpatch::getStatistics() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     return m_stats;
 }
 
 void ModelMemoryHotpatch::resetStatistics()
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_stats = MemoryPatchStats();
     m_stats.modelSize = m_modelSize;
 }
 
-PatchResult ModelMemoryHotpatch::scaleTensorWeights(const QString& tensorName, double scaleFactor) {
+PatchResult ModelMemoryHotpatch::scaleTensorWeights(const std::string& tensorName, double scaleFactor) {
     return PatchResult::error(5005, "Scale operation not fully implemented (requires GGUF/quantization logic).");
 }
 
@@ -626,7 +602,7 @@ quint32 ModelMemoryHotpatch::calculateCRC32(size_t offset, size_t size) const
     return crc ^ 0xFFFFFFFF;
 }
 
-PatchResult ModelMemoryHotpatch::clampTensorWeights(const QString& tensorName, float minVal, float maxVal) {
+PatchResult ModelMemoryHotpatch::clampTensorWeights(const std::string& tensorName, float minVal, float maxVal) {
     return PatchResult::error(5006, "Clamp operation not fully implemented (requires GGUF/quantization logic).");
 }
 
@@ -638,30 +614,27 @@ bool ModelMemoryHotpatch::rebuildTensorDependencyMap() {
     return false;
 }
 
-PatchResult ModelMemoryHotpatch::patchVocabularyEntry(int tokenId, const QString& newToken) {
+PatchResult ModelMemoryHotpatch::patchVocabularyEntry(int tokenId, const std::string& newToken) {
     return PatchResult::error(5008, "Vocabulary patch not fully implemented (requires Vocab structure knowledge).");
 }
 
 bool ModelMemoryHotpatch::verifyModelIntegrity()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr || m_modelSize == 0) {
-        qWarning() << "[ModelMemoryHotpatch] verifyModelIntegrity: Model not attached";
         return false;
     }
     
     // Verify GGUF header signature
     const char* signature = static_cast<const char*>(m_modelPtr);
     if (m_modelSize < 4 || std::strncmp(signature, "GGUF", 4) != 0) {
-        qWarning() << "[ModelMemoryHotpatch] verifyModelIntegrity: Invalid GGUF signature";
         return false;
     }
     
     // Calculate and verify integrity hash
     quint32 calculatedHash = calculateCRC32(0, std::min(m_modelSize, (size_t)65536));
     if (m_integrityHash != 0 && m_integrityHash != calculatedHash) {
-        qWarning() << "[ModelMemoryHotpatch] verifyModelIntegrity: Integrity hash mismatch"
                    << "Expected:" << m_integrityHash << "Got:" << calculatedHash;
         return false;
     }
@@ -669,7 +642,6 @@ bool ModelMemoryHotpatch::verifyModelIntegrity()
     // Update current integrity hash
     m_integrityHash = calculatedHash;
     
-    qInfo() << "[ModelMemoryHotpatch] Model integrity verified (hash:" << calculatedHash << ")";
     return true;
 }
 
@@ -677,39 +649,36 @@ bool ModelMemoryHotpatch::verifyModelIntegrity()
 
 void* ModelMemoryHotpatch::getDirectMemoryPointer(size_t offset) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_attached || !m_modelPtr) {
-        qWarning() << "[ModelMemoryHotpatch] Model not attached for direct memory access";
         return nullptr;
     }
     
     if (offset >= m_modelSize) {
-        qWarning() << "[ModelMemoryHotpatch] Offset out of bounds:" << offset << ">=" << m_modelSize;
         return nullptr;
     }
     
     return static_cast<char*>(m_modelPtr) + offset;
 }
 
-QByteArray ModelMemoryHotpatch::directMemoryRead(size_t offset, size_t size) const
+std::vector<uint8_t> ModelMemoryHotpatch::directMemoryRead(size_t offset, size_t size) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_attached || !m_modelPtr) {
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     if (offset + size > m_modelSize) {
-        qWarning() << "[ModelMemoryHotpatch] directMemoryRead out of bounds";
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     char* ptr = static_cast<char*>(m_modelPtr) + offset;
-    return QByteArray(ptr, size);
+    return std::vector<uint8_t>(ptr, size);
 }
 
-PatchResult ModelMemoryHotpatch::directMemoryWrite(size_t offset, const QByteArray& data)
+PatchResult ModelMemoryHotpatch::directMemoryWrite(size_t offset, const std::vector<uint8_t>& data)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr) {
         return PatchResult::error(6001, "Model not attached");
@@ -719,7 +688,7 @@ PatchResult ModelMemoryHotpatch::directMemoryWrite(size_t offset, const QByteArr
         return PatchResult::error(6002, "Write out of bounds");
     }
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
     char* ptr = static_cast<char*>(m_modelPtr) + offset;
@@ -730,23 +699,23 @@ PatchResult ModelMemoryHotpatch::directMemoryWrite(size_t offset, const QByteArr
     return PatchResult::ok("Direct write completed", timer.elapsed());
 }
 
-PatchResult ModelMemoryHotpatch::directMemoryWriteBatch(const QHash<size_t, QByteArray>& writes)
+PatchResult ModelMemoryHotpatch::directMemoryWriteBatch(const std::unordered_map<size_t, std::vector<uint8_t>>& writes)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr) {
         return PatchResult::error(6003, "Model not attached");
     }
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
     for (auto it = writes.constBegin(); it != writes.constEnd(); ++it) {
         size_t offset = it.key();
-        const QByteArray& data = it.value();
+        const std::vector<uint8_t>& data = it.value();
         
         if (offset + data.size() > m_modelSize) {
-            return PatchResult::error(6004, "Batch write out of bounds at offset " + QString::number(offset));
+            return PatchResult::error(6004, "Batch write out of bounds at offset " + std::string::number(offset));
         }
         
         char* ptr = static_cast<char*>(m_modelPtr) + offset;
@@ -754,12 +723,12 @@ PatchResult ModelMemoryHotpatch::directMemoryWriteBatch(const QHash<size_t, QByt
         m_stats.bytesModified += data.size();
     }
     
-    return PatchResult::ok("Batch write completed (" + QString::number(writes.size()) + " writes)", timer.elapsed());
+    return PatchResult::ok("Batch write completed (" + std::string::number(writes.size()) + " writes)", timer.elapsed());
 }
 
 PatchResult ModelMemoryHotpatch::directMemoryFill(size_t offset, size_t size, quint8 value)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr) {
         return PatchResult::error(6005, "Model not attached");
@@ -769,7 +738,7 @@ PatchResult ModelMemoryHotpatch::directMemoryFill(size_t offset, size_t size, qu
         return PatchResult::error(6006, "Fill out of bounds");
     }
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
     char* ptr = static_cast<char*>(m_modelPtr) + offset;
@@ -781,7 +750,7 @@ PatchResult ModelMemoryHotpatch::directMemoryFill(size_t offset, size_t size, qu
 
 PatchResult ModelMemoryHotpatch::directMemoryCopy(size_t srcOffset, size_t dstOffset, size_t size)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr) {
         return PatchResult::error(6007, "Model not attached");
@@ -791,7 +760,7 @@ PatchResult ModelMemoryHotpatch::directMemoryCopy(size_t srcOffset, size_t dstOf
         return PatchResult::error(6008, "Copy out of bounds");
     }
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
     char* src = static_cast<char*>(m_modelPtr) + srcOffset;
@@ -802,9 +771,9 @@ PatchResult ModelMemoryHotpatch::directMemoryCopy(size_t srcOffset, size_t dstOf
     return PatchResult::ok("Copy completed", timer.elapsed());
 }
 
-bool ModelMemoryHotpatch::directMemoryCompare(size_t offset, const QByteArray& data) const
+bool ModelMemoryHotpatch::directMemoryCompare(size_t offset, const std::vector<uint8_t>& data) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr) {
         return false;
@@ -818,9 +787,9 @@ bool ModelMemoryHotpatch::directMemoryCompare(size_t offset, const QByteArray& d
     return std::memcmp(ptr, data.constData(), data.size()) == 0;
 }
 
-qint64 ModelMemoryHotpatch::directMemorySearch(size_t startOffset, const QByteArray& pattern) const
+qint64 ModelMemoryHotpatch::directMemorySearch(size_t startOffset, const std::vector<uint8_t>& pattern) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr || pattern.isEmpty()) {
         return -1;
@@ -842,7 +811,7 @@ qint64 ModelMemoryHotpatch::directMemorySearch(size_t startOffset, const QByteAr
 
 PatchResult ModelMemoryHotpatch::directMemorySwap(size_t offset1, size_t offset2, size_t size)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr) {
         return PatchResult::error(6009, "Model not attached");
@@ -852,10 +821,10 @@ PatchResult ModelMemoryHotpatch::directMemorySwap(size_t offset1, size_t offset2
         return PatchResult::error(6010, "Swap out of bounds");
     }
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QByteArray temp = directMemoryRead(offset1, size);
+    std::vector<uint8_t> temp = directMemoryRead(offset1, size);
     directMemoryWrite(offset1, directMemoryRead(offset2, size));
     directMemoryWrite(offset2, temp);
     
@@ -866,7 +835,7 @@ PatchResult ModelMemoryHotpatch::directMemorySwap(size_t offset1, size_t offset2
 
 PatchResult ModelMemoryHotpatch::setMemoryProtection(size_t offset, size_t size, int protectionFlags)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr) {
         return PatchResult::error(6011, "Model not attached");
@@ -887,15 +856,13 @@ PatchResult ModelMemoryHotpatch::setMemoryProtection(size_t offset, size_t size,
 
 void* ModelMemoryHotpatch::memoryMapRegion(size_t offset, size_t size, int flags)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_attached || !m_modelPtr) {
-        qWarning() << "[ModelMemoryHotpatch] Cannot map region: model not attached";
         return nullptr;
     }
     
     if (offset + size > m_modelSize) {
-        qWarning() << "[ModelMemoryHotpatch] Cannot map region: out of bounds";
         return nullptr;
     }
     
@@ -905,13 +872,13 @@ void* ModelMemoryHotpatch::memoryMapRegion(size_t offset, size_t size, int flags
 
 PatchResult ModelMemoryHotpatch::unmapMemoryRegion(void* mappedPtr, size_t size)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!mappedPtr) {
         return PatchResult::error(6014, "Invalid mapped pointer");
     }
     
     // Direct pointer regions don't need unmapping
-    qInfo() << "[ModelMemoryHotpatch] Memory region unmapped";
     return PatchResult::ok("Unmapped successfully");
 }
+

@@ -37,5 +37,3 @@ private:
 
 #endif // KV_CACHE_OPTIMIZER_H
 
-
-

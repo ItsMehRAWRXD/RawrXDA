@@ -30,7 +30,7 @@ public:
     TransformerInference();
     ~TransformerInference();
     
-    // Weight loading using std::map and std::vector instead of QHash/QByteArray
+    // Weight loading using std::map and std::vector instead of std::unordered_map/std::vector<uint8_t>
     bool loadWeights(const std::map<std::string, std::pair<std::vector<uint8_t>, int>>& tensorCache,
                      int nLayers, int nEmbd, int nHead, int nVocab);
     bool loadWeightsWithTypes(const std::map<std::string, std::pair<std::vector<uint8_t>, int>>& tensorCache,

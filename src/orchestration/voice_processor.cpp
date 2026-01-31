@@ -1,32 +1,23 @@
 #include "voice_processor.hpp"
-#include <QDebug>
-#include <QJsonDocument>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <QEventLoop>
-#include <QDateTime>
-#include <QFile>
 
-VoiceProcessor::VoiceProcessor(QObject* parent)
-    : QObject(parent),
+
+VoiceProcessor::VoiceProcessor(void* parent)
+    : void(parent),
       m_audioSource(nullptr),
       m_audioBuffer(new QBuffer(this)),
-      m_recordingTimer(new QTimer(this)),
+      m_recordingTimer(new void*(this)),
       m_isRecording(false)
 {
-    logStructured("INFO", "VoiceProcessor initializing", QJsonObject{{"component", "VoiceProcessor"}});
+    logStructured("INFO", "VoiceProcessor initializing", void*{{"component", "VoiceProcessor"}});
     
     setupAudioFormat();
-    
-    connect(m_recordingTimer, &QTimer::timeout, this, &VoiceProcessor::processRecordedAudio);
-    
-    logStructured("INFO", "VoiceProcessor initialized successfully", QJsonObject{{"component", "VoiceProcessor"}});
+// Qt connect removed
+    logStructured("INFO", "VoiceProcessor initialized successfully", void*{{"component", "VoiceProcessor"}});
 }
 
 VoiceProcessor::~VoiceProcessor()
 {
-    logStructured("INFO", "VoiceProcessor shutting down", QJsonObject{{"component", "VoiceProcessor"}});
+    logStructured("INFO", "VoiceProcessor shutting down", void*{{"component", "VoiceProcessor"}});
     
     if (m_isRecording) {
         stopRecording();
@@ -36,15 +27,15 @@ VoiceProcessor::~VoiceProcessor()
         delete m_audioSource;
     }
     
-    logStructured("INFO", "VoiceProcessor shutdown complete", QJsonObject{{"component", "VoiceProcessor"}});
+    logStructured("INFO", "VoiceProcessor shutdown complete", void*{{"component", "VoiceProcessor"}});
 }
 
 void VoiceProcessor::setConfig(const Config& config)
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     m_config = config;
     setupAudioFormat();
-    logStructured("INFO", "Configuration updated", QJsonObject{
+    logStructured("INFO", "Configuration updated", void*{
         {"sampleRate", config.sampleRate},
         {"channelCount", config.channelCount},
         {"maxRecordingDurationMs", config.maxRecordingDurationMs}
@@ -53,13 +44,13 @@ void VoiceProcessor::setConfig(const Config& config)
 
 VoiceProcessor::Config VoiceProcessor::getConfig() const
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     return m_config;
 }
 
 void VoiceProcessor::setupAudioFormat()
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     
     // Use Qt 6 helper to create format
     m_audioFormat = Qt6AudioHelper::createVoiceFormat(m_config.sampleRate, m_config.channelCount);
@@ -67,7 +58,7 @@ void VoiceProcessor::setupAudioFormat()
     // Get default audio input device
     m_audioDevice = Qt6AudioHelper::getDefaultInputDevice();
     
-    logStructured("DEBUG", "Audio format configured", QJsonObject{
+    logStructured("DEBUG", "Audio format configured", void*{
         {"sampleRate", m_audioFormat.sampleRate()},
         {"channelCount", m_audioFormat.channelCount()},
         {"sampleFormat", static_cast<int>(m_audioFormat.sampleFormat())}
@@ -78,29 +69,28 @@ bool VoiceProcessor::startRecording()
 {
     auto startTime = std::chrono::steady_clock::now();
     
-    QMutexLocker locker(&m_stateMutex);
+    std::lock_guard<std::mutex> locker(&m_stateMutex);
     
     if (m_isRecording) {
-        logStructured("WARN", "Recording already in progress", QJsonObject{{"state", "already_recording"}});
+        logStructured("WARN", "Recording already in progress", void*{{"state", "already_recording"}});
         return false;
     }
     
     try {
         // Qt 6: Use QMediaDevices instead of QAudioDeviceInfo
         if (!Qt6AudioHelper::isFormatSupported(m_audioDevice, m_audioFormat)) {
-            logStructured("ERROR", "Audio format not supported by device", QJsonObject{{"device", m_audioDevice.description()}});
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            logStructured("ERROR", "Audio format not supported by device", void*{{"device", m_audioDevice.description()}});
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.errorCount++;
-            emit errorOccurred("Audio format not supported");
+            errorOccurred("Audio format not supported");
             return false;
         }
         
         // Qt 6: QAudioInput renamed to QAudioSource
         m_audioSource = new QAudioSource(m_audioDevice, m_audioFormat, this);
-        connect(m_audioSource, &QAudioSource::stateChanged, this, &VoiceProcessor::handleAudioStateChanged);
-        
+// Qt connect removed
         m_audioBuffer->close();
-        m_audioBuffer->setData(QByteArray());
+        m_audioBuffer->setData(std::vector<uint8_t>());
         m_audioBuffer->open(QIODevice::ReadWrite);
         
         m_audioSource->start(m_audioBuffer);
@@ -108,33 +98,33 @@ bool VoiceProcessor::startRecording()
         
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         m_recordingTimer->start(config.maxRecordingDurationMs);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.recordingCount++;
         }
         
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         
-        logStructured("INFO", "Recording started", QJsonObject{
+        logStructured("INFO", "Recording started", void*{
             {"device", m_audioDevice.description()},
             {"maxDurationMs", config.maxRecordingDurationMs},
             {"startLatencyMs", static_cast<qint64>(duration.count())}
         });
         
-        emit recordingStarted();
+        recordingStarted();
         return true;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Exception during recording start", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Recording failed: %1").arg(e.what()));
+        logStructured("ERROR", "Exception during recording start", void*{{"error", e.what()}});
+        errorOccurred(std::string("Recording failed: %1")));
         return false;
     }
 }
@@ -143,10 +133,10 @@ bool VoiceProcessor::stopRecording()
 {
     auto startTime = std::chrono::steady_clock::now();
     
-    QMutexLocker locker(&m_stateMutex);
+    std::lock_guard<std::mutex> locker(&m_stateMutex);
     
     if (!m_isRecording) {
-        logStructured("WARN", "No recording in progress", QJsonObject{{"state", "not_recording"}});
+        logStructured("WARN", "No recording in progress", void*{{"state", "not_recording"}});
         return false;
     }
     
@@ -158,7 +148,7 @@ bool VoiceProcessor::stopRecording()
         }
         
         m_audioBuffer->close();
-        QByteArray audioData = m_audioBuffer->data();
+        std::vector<uint8_t> audioData = m_audioBuffer->data();
         
         m_isRecording = false;
         
@@ -166,21 +156,21 @@ bool VoiceProcessor::stopRecording()
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         recordLatency("recording", duration);
         
-        logStructured("INFO", "Recording stopped", QJsonObject{
+        logStructured("INFO", "Recording stopped", void*{
             {"audioBytesRecorded", audioData.size()},
             {"stopLatencyMs", duration.count()}
         });
         
-        emit recordingStopped(audioData);
+        recordingStopped(audioData);
         
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         if (config.enableAutoDelete) {
-            QTimer::singleShot(config.autoDeleteDelayMs, this, [this, audioData]() {
+            void*::singleShot(config.autoDeleteDelayMs, this, [this, audioData]() {
                 scheduleAudioDeletion(audioData);
             });
         }
@@ -188,207 +178,207 @@ bool VoiceProcessor::stopRecording()
         return true;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Exception during recording stop", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Stop recording failed: %1").arg(e.what()));
+        logStructured("ERROR", "Exception during recording stop", void*{{"error", e.what()}});
+        errorOccurred(std::string("Stop recording failed: %1")));
         return false;
     }
 }
 
 bool VoiceProcessor::isRecording() const
 {
-    QMutexLocker locker(&m_stateMutex);
+    std::lock_guard<std::mutex> locker(&m_stateMutex);
     return m_isRecording;
 }
 
-QString VoiceProcessor::transcribeAudio(const QByteArray& audioData)
+std::string VoiceProcessor::transcribeAudio(const std::vector<uint8_t>& audioData)
 {
     auto startTime = std::chrono::steady_clock::now();
     
     if (!validateAudioData(audioData)) {
-        logStructured("ERROR", "Invalid audio data for transcription", QJsonObject{{"size", audioData.size()}});
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        logStructured("ERROR", "Invalid audio data for transcription", void*{{"size", audioData.size()}});
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        emit errorOccurred("Invalid audio data");
-        return QString();
+        errorOccurred("Invalid audio data");
+        return std::string();
     }
     
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
-        QJsonObject payload;
-        payload["audio"] = QString(audioData.toBase64());
+        void* payload;
+        payload["audio"] = std::string(audioData.toBase64());
         payload["format"] = "pcm";
         payload["sampleRate"] = config.sampleRate;
         payload["channelCount"] = config.channelCount;
         
-        logStructured("DEBUG", "Sending transcription request", QJsonObject{
+        logStructured("DEBUG", "Sending transcription request", void*{
             {"audioBytesSize", audioData.size()},
             {"endpoint", config.apiEndpoint + "/transcribe"}
         });
         
-        QJsonObject response = makeApiRequest(config.apiEndpoint + "/transcribe", payload);
+        void* response = makeApiRequest(config.apiEndpoint + "/transcribe", payload);
         
-        QString transcription = response["transcription"].toString();
+        std::string transcription = response["transcription"].toString();
         
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         recordLatency("transcription", duration);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.transcriptionCount++;
         }
         
-        logStructured("INFO", "Transcription completed", QJsonObject{
+        logStructured("INFO", "Transcription completed", void*{
             {"transcriptionLength", transcription.length()},
             {"latencyMs", duration.count()}
         });
         
-        emit transcriptionReady(transcription);
+        transcriptionReady(transcription);
         return transcription;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Transcription failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Transcription failed: %1").arg(e.what()));
-        return QString();
+        logStructured("ERROR", "Transcription failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Transcription failed: %1")));
+        return std::string();
     }
 }
 
-QJsonObject VoiceProcessor::detectIntent(const QString& transcription)
+void* VoiceProcessor::detectIntent(const std::string& transcription)
 {
     auto startTime = std::chrono::steady_clock::now();
     
     if (transcription.isEmpty()) {
-        logStructured("WARN", "Empty transcription for intent detection", QJsonObject{});
-        return QJsonObject();
+        logStructured("WARN", "Empty transcription for intent detection", void*{});
+        return void*();
     }
     
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
-        QJsonObject payload;
+        void* payload;
         payload["text"] = transcription;
         payload["context"] = "ide_voice_command";
         
-        logStructured("DEBUG", "Sending intent detection request", QJsonObject{
+        logStructured("DEBUG", "Sending intent detection request", void*{
             {"transcriptionLength", transcription.length()},
             {"endpoint", config.apiEndpoint + "/intent"}
         });
         
-        QJsonObject response = makeApiRequest(config.apiEndpoint + "/intent", payload);
+        void* response = makeApiRequest(config.apiEndpoint + "/intent", payload);
         
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         recordLatency("intent_detection", duration);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.intentDetectionCount++;
         }
         
-        logStructured("INFO", "Intent detected", QJsonObject{
+        logStructured("INFO", "Intent detected", void*{
             {"intent", response["intent"].toString()},
             {"confidence", response["confidence"].toDouble()},
             {"latencyMs", duration.count()}
         });
         
-        emit intentDetected(response);
+        intentDetected(response);
         return response;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Intent detection failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Intent detection failed: %1").arg(e.what()));
-        return QJsonObject();
+        logStructured("ERROR", "Intent detection failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Intent detection failed: %1")));
+        return void*();
     }
 }
 
-QString VoiceProcessor::generateSpeech(const QString& text)
+std::string VoiceProcessor::generateSpeech(const std::string& text)
 {
     auto startTime = std::chrono::steady_clock::now();
     
     if (text.isEmpty()) {
-        logStructured("WARN", "Empty text for speech generation", QJsonObject{});
-        return QString();
+        logStructured("WARN", "Empty text for speech generation", void*{});
+        return std::string();
     }
     
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
-        QJsonObject payload;
+        void* payload;
         payload["text"] = text;
         payload["format"] = "pcm";
         payload["sampleRate"] = config.sampleRate;
         
-        logStructured("DEBUG", "Sending TTS request", QJsonObject{
+        logStructured("DEBUG", "Sending TTS request", void*{
             {"textLength", text.length()},
             {"endpoint", config.apiEndpoint + "/tts"}
         });
         
-        QJsonObject response = makeApiRequest(config.apiEndpoint + "/tts", payload);
+        void* response = makeApiRequest(config.apiEndpoint + "/tts", payload);
         
-        QString audioBase64 = response["audio"].toString();
-        QByteArray audioData = QByteArray::fromBase64(audioBase64.toUtf8());
+        std::string audioBase64 = response["audio"].toString();
+        std::vector<uint8_t> audioData = std::vector<uint8_t>::fromBase64(audioBase64.toUtf8());
         
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         recordLatency("tts", duration);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.ttsCount++;
         }
         
-        logStructured("INFO", "Speech generated", QJsonObject{
+        logStructured("INFO", "Speech generated", void*{
             {"audioBytesGenerated", audioData.size()},
             {"latencyMs", duration.count()}
         });
         
-        emit speechGenerated(audioData);
+        speechGenerated(audioData);
         return audioBase64;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Speech generation failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("TTS failed: %1").arg(e.what()));
-        return QString();
+        logStructured("ERROR", "Speech generation failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("TTS failed: %1")));
+        return std::string();
     }
 }
 
 VoiceProcessor::Metrics VoiceProcessor::getMetrics() const
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     return m_metrics;
 }
 
 void VoiceProcessor::resetMetrics()
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     m_metrics = Metrics();
-    logStructured("INFO", "Metrics reset", QJsonObject{});
+    logStructured("INFO", "Metrics reset", void*{});
 }
 
 void VoiceProcessor::handleAudioStateChanged(QAudio::State state)
 {
-    QString stateStr;
+    std::string stateStr;
     switch (state) {
         case QAudio::ActiveState: stateStr = "Active"; break;
         case QAudio::SuspendedState: stateStr = "Suspended"; break;
@@ -397,10 +387,10 @@ void VoiceProcessor::handleAudioStateChanged(QAudio::State state)
         default: stateStr = "Unknown";
     }
     
-    logStructured("DEBUG", "Audio state changed", QJsonObject{{"state", stateStr}});
+    logStructured("DEBUG", "Audio state changed", void*{{"state", stateStr}});
     
     if (state == QAudio::StoppedState && m_audioSource && m_audioSource->error() != QAudio::NoError) {
-        QString errorStr;
+        std::string errorStr;
         switch (m_audioSource->error()) {
             case QAudio::OpenError: errorStr = "Open Error"; break;
             case QAudio::IOError: errorStr = "IO Error"; break;
@@ -409,43 +399,42 @@ void VoiceProcessor::handleAudioStateChanged(QAudio::State state)
             default: errorStr = "Unknown Error";
         }
         
-        logStructured("ERROR", "Audio error occurred", QJsonObject{{"error", errorStr}});
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        logStructured("ERROR", "Audio error occurred", void*{{"error", errorStr}});
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        emit errorOccurred(QString("Audio error: %1").arg(errorStr));
+        errorOccurred(std::string("Audio error: %1"));
     }
 }
 
 void VoiceProcessor::processRecordedAudio()
 {
-    logStructured("INFO", "Max recording duration reached, stopping", QJsonObject{});
+    logStructured("INFO", "Max recording duration reached, stopping", void*{});
     stopRecording();
 }
 
-void VoiceProcessor::scheduleAudioDeletion(const QByteArray& audioData)
+void VoiceProcessor::scheduleAudioDeletion(const std::vector<uint8_t>& audioData)
 {
-    logStructured("INFO", "GDPR auto-delete executed", QJsonObject{
+    logStructured("INFO", "GDPR auto-delete executed", void*{
         {"audioDataSize", audioData.size()},
-        {"timestamp", QDateTime::currentDateTime().toString(Qt::ISODate)}
+        {"timestamp", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate)}
     });
 }
 
-void VoiceProcessor::logStructured(const QString& level, const QString& message, const QJsonObject& context)
+void VoiceProcessor::logStructured(const std::string& level, const std::string& message, const void*& context)
 {
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = level;
     logEntry["component"] = "VoiceProcessor";
     logEntry["message"] = message;
     logEntry["context"] = context;
     
-    QJsonDocument doc(logEntry);
-    qDebug().noquote() << doc.toJson(QJsonDocument::Compact);
+    void* doc(logEntry);
 }
 
-void VoiceProcessor::recordLatency(const QString& operation, const std::chrono::milliseconds& duration)
+void VoiceProcessor::recordLatency(const std::string& operation, const std::chrono::milliseconds& duration)
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     
     if (operation == "recording") {
         m_metrics.avgRecordingDurationMs = 
@@ -463,46 +452,46 @@ void VoiceProcessor::recordLatency(const QString& operation, const std::chrono::
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     if (config.enableMetrics) {
-        emit metricsUpdated(m_metrics);
+        metricsUpdated(m_metrics);
     }
 }
 
-QJsonObject VoiceProcessor::makeApiRequest(const QString& endpoint, const QJsonObject& payload)
+void* VoiceProcessor::makeApiRequest(const std::string& endpoint, const void*& payload)
 {
-    QNetworkAccessManager manager;
+    void* manager;
     QNetworkRequest request(endpoint);
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     if (!config.apiKey.isEmpty()) {
-        request.setRawHeader("Authorization", QString("Bearer %1").arg(config.apiKey).toUtf8());
+        request.setRawHeader("Authorization", std::string("Bearer %1").toUtf8());
     }
     
-    QJsonDocument doc(payload);
-    QByteArray data = doc.toJson(QJsonDocument::Compact);
+    void* doc(payload);
+    std::vector<uint8_t> data = doc.toJson(void*::Compact);
     
-    QEventLoop loop;
-    QNetworkReply* reply = manager.post(request, data);
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    void* loop;
+    void** reply = manager.post(request, data);
+// Qt connect removed
     loop.exec();
     
-    QJsonObject response;
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray responseData = reply->readAll();
-        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+    void* response;
+    if (reply->error() == void*::NoError) {
+        std::vector<uint8_t> responseData = reply->readAll();
+        void* responseDoc = void*::fromJson(responseData);
         response = responseDoc.object();
     } else {
-        logStructured("ERROR", "API request failed", QJsonObject{
+        logStructured("ERROR", "API request failed", void*{
             {"endpoint", endpoint},
             {"error", reply->errorString()}
         });
@@ -513,7 +502,7 @@ QJsonObject VoiceProcessor::makeApiRequest(const QString& endpoint, const QJsonO
     return response;
 }
 
-bool VoiceProcessor::validateAudioData(const QByteArray& audioData)
+bool VoiceProcessor::validateAudioData(const std::vector<uint8_t>& audioData)
 {
     if (audioData.isEmpty()) {
         return false;
@@ -521,7 +510,7 @@ bool VoiceProcessor::validateAudioData(const QByteArray& audioData)
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
@@ -530,7 +519,7 @@ bool VoiceProcessor::validateAudioData(const QByteArray& audioData)
     int minBytes = bytesPerSecond / 10;
     
     if (audioData.size() < minBytes) {
-        logStructured("WARN", "Audio data too short", QJsonObject{
+        logStructured("WARN", "Audio data too short", void*{
             {"actualBytes", audioData.size()},
             {"minBytes", minBytes}
         });
@@ -539,3 +528,4 @@ bool VoiceProcessor::validateAudioData(const QByteArray& audioData)
     
     return true;
 }
+

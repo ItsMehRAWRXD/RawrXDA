@@ -1,44 +1,25 @@
 #include "metrics_dashboard.h"
 #include "model_router_adapter.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGridLayout>
-#include <QGroupBox>
-#include <QPushButton>
-#include <QFileDialog>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QFile>
-#include <QTextStream>
-#include <QDateTime>
-#include <QDebug>
-#include <QBarSet>
-#include <QBarCategoryAxis>
-#include <QValueAxis>
-#include <QDateTimeAxis>
 
-MetricsDashboard::MetricsDashboard(ModelRouterAdapter *adapter, QWidget *parent)
-    : QWidget(parent), m_adapter(adapter), m_refresh_timer(nullptr)
+
+MetricsDashboard::MetricsDashboard(ModelRouterAdapter *adapter, void *parent)
+    : void(parent), m_adapter(adapter), m_refresh_timer(nullptr)
 {
     createUI();
     setupCharts();
     
     if (m_adapter) {
-        connect(m_adapter, &ModelRouterAdapter::costUpdated,
-                this, &MetricsDashboard::onCostUpdated);
-        connect(m_adapter, &ModelRouterAdapter::statisticsUpdated,
-                this, &MetricsDashboard::onStatisticsUpdated);
+// Qt connect removed
+// Qt connect removed
     }
 
     startAutoRefresh();
     
-    qDebug() << "[MetricsDashboard] Constructed with auto-refresh every" << m_refresh_interval << "ms";
 }
 
 MetricsDashboard::~MetricsDashboard()
 {
     stopAutoRefresh();
-    qDebug() << "[MetricsDashboard] Destroyed";
 }
 
 void MetricsDashboard::createUI()
@@ -149,19 +130,19 @@ void MetricsDashboard::createUI()
     QHBoxLayout *button_layout = new QHBoxLayout();
     
     QPushButton *refresh_button = new QPushButton("Refresh Now", this);
-    connect(refresh_button, &QPushButton::clicked, this, &MetricsDashboard::refreshMetrics);
+// Qt connect removed
     button_layout->addWidget(refresh_button);
 
     QPushButton *export_csv_button = new QPushButton("Export CSV", this);
-    connect(export_csv_button, &QPushButton::clicked, this, &MetricsDashboard::exportToCsv);
+// Qt connect removed
     button_layout->addWidget(export_csv_button);
 
     QPushButton *export_json_button = new QPushButton("Export JSON", this);
-    connect(export_json_button, &QPushButton::clicked, this, &MetricsDashboard::exportToJson);
+// Qt connect removed
     button_layout->addWidget(export_json_button);
 
     QPushButton *clear_button = new QPushButton("Clear History", this);
-    connect(clear_button, &QPushButton::clicked, this, &MetricsDashboard::clearHistory);
+// Qt connect removed
     button_layout->addWidget(clear_button);
 
     button_layout->addStretch();
@@ -179,7 +160,7 @@ void MetricsDashboard::setupCharts()
     m_cost_chart->setAnimationOptions(QChart::SeriesAnimations);
     m_cost_pie_series = new QPieSeries();
     m_cost_chart->addSeries(m_cost_pie_series);
-    m_cost_chart->legend()->setAlignment(Qt::AlignRight);
+    m_cost_chart->legend()->setAlignment(//AlignRight);
     m_cost_chart_view->setChart(m_cost_chart);
 
     // === Latency Bar Chart ===
@@ -204,18 +185,16 @@ void MetricsDashboard::setupCharts()
 void MetricsDashboard::startAutoRefresh()
 {
     if (!m_refresh_timer) {
-        m_refresh_timer = new QTimer(this);
-        connect(m_refresh_timer, &QTimer::timeout, this, &MetricsDashboard::onAutoRefreshTriggered);
+        m_refresh_timer = new void*(this);
+// Qt connect removed
     }
     m_refresh_timer->start(m_refresh_interval);
-    qDebug() << "[MetricsDashboard] Auto-refresh started";
 }
 
 void MetricsDashboard::stopAutoRefresh()
 {
     if (m_refresh_timer) {
         m_refresh_timer->stop();
-        qDebug() << "[MetricsDashboard] Auto-refresh stopped";
     }
 }
 
@@ -244,19 +223,19 @@ void MetricsDashboard::updateSummaryLabels()
     if (!m_adapter) return;
 
     double total_cost = m_adapter->getTotalCost();
-    m_total_cost_label->setText(QString("$%1").arg(total_cost, 0, 'f', 4));
+    m_total_cost_label->setText(std::string("$%1"));
 
-    QString active_model = m_adapter->getActiveModel();
+    std::string active_model = m_adapter->getActiveModel();
     m_active_model_label->setText(active_model.isEmpty() ? "None" : active_model);
 
-    QJsonObject stats = m_adapter->getStatistics();
+    void* stats = m_adapter->getStatistics();
     int total_requests = stats.value("total_requests").toInt();
     double avg_latency = stats.value("avg_latency_ms").toDouble();
     int success_rate = stats.value("success_rate").toInt();
 
-    m_total_requests_label->setText(QString::number(total_requests));
-    m_avg_latency_label->setText(QString("%1 ms").arg((int)avg_latency));
-    m_avg_success_rate_label->setText(QString("%1%").arg(success_rate));
+    m_total_requests_label->setText(std::string::number(total_requests));
+    m_avg_latency_label->setText(std::string("%1 ms")avg_latency));
+    m_avg_success_rate_label->setText(std::string("%1%"));
 }
 
 void MetricsDashboard::updateCostChart()
@@ -265,7 +244,7 @@ void MetricsDashboard::updateCostChart()
 
     m_cost_pie_series->clear();
     
-    QMap<QString, double> cost_breakdown = m_adapter->getCostBreakdown();
+    std::map<std::string, double> cost_breakdown = m_adapter->getCostBreakdown();
     
     for (auto it = cost_breakdown.begin(); it != cost_breakdown.end(); ++it) {
         if (it.value() > 0.0001) {
@@ -285,14 +264,14 @@ void MetricsDashboard::updateLatencyChart()
     m_latency_bar_series->clear();
     
     QBarSet *bar_set = new QBarSet("Latency");
-    QStringList categories;
+    std::vector<std::string> categories;
     
-    QJsonObject stats = m_adapter->getStatistics();
-    QJsonArray models = stats.value("models").toArray();
+    void* stats = m_adapter->getStatistics();
+    void* models = stats.value("models").toArray();
     
     for (const auto& model_val : models) {
-        QJsonObject model_obj = model_val.toObject();
-        QString name = model_obj.value("name").toString();
+        void* model_obj = model_val.toObject();
+        std::string name = model_obj.value("name").toString();
         double latency = model_obj.value("avg_latency_ms").toDouble();
         
         *bar_set << latency;
@@ -306,10 +285,10 @@ void MetricsDashboard::updateSuccessRateChart()
 {
     if (!m_adapter) return;
 
-    QJsonObject stats = m_adapter->getStatistics();
+    void* stats = m_adapter->getStatistics();
     int success_rate = stats.value("success_rate").toInt();
     
-    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    qint64 now = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     m_timestamp_history.append(now);
     m_success_rate_history.append(success_rate);
     
@@ -331,18 +310,18 @@ void MetricsDashboard::updateRequestCountTable()
 
     m_request_count_table->setRowCount(0);
     
-    QJsonObject stats = m_adapter->getStatistics();
-    QJsonArray models = stats.value("models").toArray();
+    void* stats = m_adapter->getStatistics();
+    void* models = stats.value("models").toArray();
     
     for (const auto& model_val : models) {
-        QJsonObject model_obj = model_val.toObject();
-        QString name = model_obj.value("name").toString();
+        void* model_obj = model_val.toObject();
+        std::string name = model_obj.value("name").toString();
         int count = model_obj.value("request_count").toInt();
         
         int row = m_request_count_table->rowCount();
         m_request_count_table->insertRow(row);
         m_request_count_table->setItem(row, 0, new QTableWidgetItem(name));
-        m_request_count_table->setItem(row, 1, new QTableWidgetItem(QString::number(count)));
+        m_request_count_table->setItem(row, 1, new QTableWidgetItem(std::string::number(count)));
     }
 }
 
@@ -355,8 +334,8 @@ void MetricsDashboard::updateProviderStatus()
 {
     m_provider_status_table->setRowCount(0);
     
-    QStringList providers = {"OpenAI", "Anthropic", "Google", "Moonshot", "Azure", "AWS"};
-    for (const QString& provider : providers) {
+    std::vector<std::string> providers = {"OpenAI", "Anthropic", "Google", "Moonshot", "Azure", "AWS"};
+    for (const std::string& provider : providers) {
         int row = m_provider_status_table->rowCount();
         m_provider_status_table->insertRow(row);
         m_provider_status_table->setItem(row, 0, new QTableWidgetItem(provider));
@@ -366,29 +345,27 @@ void MetricsDashboard::updateProviderStatus()
 
 void MetricsDashboard::exportToCsv()
 {
-    QString filename = QFileDialog::getSaveFileName(this, "Export Metrics to CSV", "", "CSV Files (*.csv)");
+    std::string filename = QFileDialog::getSaveFileName(this, "Export Metrics to CSV", "", "CSV Files (*.csv)");
     if (filename.isEmpty()) return;
     
     if (m_adapter && m_adapter->exportStatisticsToCsv(filename)) {
-        qDebug() << "[MetricsDashboard] Exported to CSV:" << filename;
     }
 }
 
 void MetricsDashboard::exportToJson()
 {
-    QString filename = QFileDialog::getSaveFileName(this, "Export Metrics to JSON", "", "JSON Files (*.json)");
+    std::string filename = QFileDialog::getSaveFileName(this, "Export Metrics to JSON", "", "JSON Files (*.json)");
     if (filename.isEmpty()) return;
     
     if (!m_adapter) return;
     
-    QJsonObject stats = m_adapter->getStatistics();
-    QJsonDocument doc(stats);
+    void* stats = m_adapter->getStatistics();
+    void* doc(stats);
     
-    QFile file(filename);
+    std::fstream file(filename);
     if (file.open(QIODevice::WriteOnly)) {
         file.write(doc.toJson());
         file.close();
-        qDebug() << "[MetricsDashboard] Exported to JSON:" << filename;
     }
 }
 
@@ -397,7 +374,6 @@ void MetricsDashboard::clearHistory()
     m_success_rate_history.clear();
     m_timestamp_history.clear();
     m_success_rate_line_series->clear();
-    qDebug() << "[MetricsDashboard] History cleared";
 }
 
 void MetricsDashboard::resetCharts()
@@ -409,10 +385,10 @@ void MetricsDashboard::resetCharts()
 
 void MetricsDashboard::onCostUpdated(double total_cost)
 {
-    m_total_cost_label->setText(QString("$%1").arg(total_cost, 0, 'f', 4));
+    m_total_cost_label->setText(std::string("$%1"));
 }
 
-void MetricsDashboard::onStatisticsUpdated(const QJsonObject& stats)
+void MetricsDashboard::onStatisticsUpdated(const void*& stats)
 {
     refreshMetrics();
 }
@@ -422,4 +398,5 @@ void MetricsDashboard::onAutoRefreshTriggered()
     refreshMetrics();
 }
 
-#include "metrics_dashboard.moc"
+// MOC removed
+

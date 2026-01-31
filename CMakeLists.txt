@@ -83,8 +83,6 @@ endif()
 set(Qt6_DIR "C:/Qt/6.7.3/msvc2022_64/lib/cmake/Qt6")
 list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.7.3/msvc2022_64")
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Sql Concurrent Test Charts PrintSupport)
-
 # ============================================================
 # TEST INFRASTRUCTURE CONFIGURATION
 # ============================================================
@@ -175,8 +173,8 @@ endif()
 if(Qt6_FOUND)
     message(STATUS "Qt6 found: ${Qt6_VERSION}")
     add_definitions(-DHAVE_QT_CORE -DQT_NO_OPENGL)
-    include_directories(${Qt6_INCLUDE_DIRS})
-    link_libraries(Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Concurrent Qt6::Test Qt6::Charts Qt6::PrintSupport)
+    
+    link_libraries()
     
     # Add compression definitions globally
     add_compile_definitions(HAVE_COMPRESSION=1)
@@ -217,7 +215,7 @@ if(Qt6_FOUND)
             # Additionally copy Qt6Sql.dll explicitly (sometimes missed by windeployqt)
             add_custom_command(TARGET ${target_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "$<TARGET_FILE:Qt6::Sql>"
+                    "$<TARGET_FILE:>"
                     "$<TARGET_FILE_DIR:${target_name}>/"
                 COMMENT "Ensuring Qt6Sql.dll is deployed for ${target_name}"
             )
@@ -377,7 +375,7 @@ include(cmake/AutonomousHealer.cmake)
 
 # Qt-based IDE shell (separate executable, no Vulkan)
 if(MSVC)
-    find_package(Qt6 COMPONENTS Widgets Network Concurrent QUIET)
+    
     if(Qt6_FOUND) # Enabled to build Qt shell
         message(STATUS "Building Qt Shell with Qt version: ${Qt6_VERSION}")
         
@@ -619,20 +617,20 @@ if(MSVC)
             src/qtapp/digestion_reverse_engineering_enterprise.h
             src/qtapp/digestion_reverse_engineering_enterprise.cpp
         )
-        target_link_libraries(RawrXD-DigestionCLI PRIVATE Qt6::Core)
+        target_link_libraries(RawrXD-DigestionCLI PRIVATE)
         
         add_library(self_test_gate STATIC
             src/agent/self_test.cpp
             src/agent/self_test_gate.cpp
             src/agent/rollback.cpp
         )
-        target_link_libraries(self_test_gate PRIVATE Qt6::Core Qt6::Network)
+        target_link_libraries(self_test_gate PRIVATE)
         target_include_directories(self_test_gate PRIVATE ${CMAKE_SOURCE_DIR}/src/agent)
 
         # Small shared quant utils library (used by QtShell and tests)
         add_library(quant_utils STATIC src/qtapp/quant_utils.cpp)
         target_include_directories(quant_utils PUBLIC ${CMAKE_SOURCE_DIR}/src/qtapp ${CMAKE_SOURCE_DIR}/include)
-        target_link_libraries(quant_utils PUBLIC Qt6::Core)
+        target_link_libraries(quant_utils PUBLIC)
         
         # CPU inference engine library (replaces GPU dependencies)
         add_library(cpu_inference_engine STATIC 
@@ -668,12 +666,6 @@ if(MSVC)
 
         # Link Qt modules including WebSockets for swarm collaboration
         target_link_libraries(RawrXD-QtShell PRIVATE
-            Qt6::Core
-            Qt6::Gui
-            Qt6::Widgets
-            Qt6::Network
-            Qt6::Sql
-            Qt6::Concurrent
             RawrXDOrchestration
             brutal_compression_lib
             self_test_gate
@@ -681,8 +673,8 @@ if(MSVC)
             rawrxd_compiler_qt
             cpu_inference_engine
         )        # Add include directories for QtShell to access both qtapp and main source headers
-        if(TARGET Qt6::PrintSupport)
-            target_link_libraries(RawrXD-QtShell PRIVATE Qt6::PrintSupport)
+        if(TARGET)
+            target_link_libraries(RawrXD-QtShell PRIVATE)
         endif()
         target_include_directories(RawrXD-QtShell PRIVATE 
             ${CMAKE_SOURCE_DIR}/src
@@ -706,9 +698,9 @@ if(MSVC)
         endif()
         
         # Try to find Qt WebSockets (optional for swarm editing)
-        find_package(Qt6 COMPONENTS WebSockets QUIET)
+        
         if(Qt6WebSockets_FOUND)
-            target_link_libraries(RawrXD-QtShell PRIVATE Qt6::WebSockets)
+            target_link_libraries(RawrXD-QtShell PRIVATE)
             target_compile_definitions(RawrXD-QtShell PRIVATE HAVE_QT_WEBSOCKETS=1)
             message(STATUS "Qt WebSockets found - swarm collaboration enabled")
         else()
@@ -765,10 +757,6 @@ if(MSVC)
         )
         
         target_link_libraries(production_feature_test PRIVATE
-            Qt6::Core
-            Qt6::Gui
-            Qt6::Widgets
-            Qt6::Network
             ${GPU_BACKEND_LIBS}
         )
         
@@ -809,7 +797,6 @@ if(MSVC)
         )
         
         target_link_libraries(simple_gpu_test PRIVATE
-            Qt6::Core
             ${GPU_BACKEND_LIBS}
         )
         
@@ -862,7 +849,6 @@ if(MSVC)
         )
         
         target_link_libraries(gpu_inference_benchmark PRIVATE
-            Qt6::Core
             ${GPU_BACKEND_LIBS}
             brutal_compression_lib
         )
@@ -893,9 +879,6 @@ if(MSVC)
         )
         
         target_link_libraries(minimal_qt_test PRIVATE 
-            Qt6::Core
-            Qt6::Gui
-            Qt6::Widgets
         )
         
         target_include_directories(minimal_qt_test PRIVATE 
@@ -927,7 +910,6 @@ if(MSVC)
         )
         
         target_link_libraries(gguf_hotpatch_tester PRIVATE
-            Qt6::Core
             ${GPU_BACKEND_LIBS}
             brutal_compression_lib
         )
@@ -970,9 +952,6 @@ if(MSVC)
         )
         
         target_link_libraries(test_chat_streaming PRIVATE
-            Qt6::Core
-            Qt6::Gui
-            Qt6::Widgets
             ${GPU_BACKEND_LIBS}
             brutal_compression_lib
         )
@@ -1009,10 +988,6 @@ if(MSVC)
         )
         
         target_link_libraries(RawrXD-Agent PRIVATE 
-            Qt6::Core 
-            Qt6::Network
-            Qt6::Concurrent
-            Qt6::Sql
             self_test_gate
         )
         
@@ -1049,8 +1024,6 @@ if(MSVC)
         )
         
         target_link_libraries(RawrXD-Compiler PRIVATE 
-            Qt6::Core 
-            Qt6::Concurrent
         )
         
         target_include_directories(RawrXD-Compiler PRIVATE 
@@ -1081,9 +1054,6 @@ if(MSVC)
         )
         
         target_link_libraries(rawrxd_compiler_qt PUBLIC 
-            Qt6::Core 
-            Qt6::Widgets
-            Qt6::Concurrent
         )
         
         target_include_directories(rawrxd_compiler_qt PUBLIC 
@@ -1232,10 +1202,6 @@ if(MSVC AND RAWRXD_BUILD_WIN32IDE)
         RawrXDTerminal
         brutal_compression_lib
         quant_utils
-        Qt6::Core
-        Qt6::Network
-        Qt6::Widgets
-        Qt6::Charts
     )
 
     # zlib (used by codec::deflate/inflate)
@@ -1424,7 +1390,6 @@ if(ENABLE_VULKAN)
 else()
     message(STATUS "Vulkan disabled via ENABLE_VULKAN=OFF; skipping find_package")
 endif()
-
 
 # Compiler selection: do not force MinGW globally. Let the generator/toolchain decide.
 # If you need MinGW, configure the build folder with `-G "MinGW Makefiles"`.
@@ -2050,12 +2015,6 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
     
     target_link_libraries(RawrXD-AgenticIDE
         PRIVATE
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
-        Qt6::Concurrent
-        Qt6::Network
-        Qt6::WebSockets
         brutal_compression_lib
     )
 
@@ -2095,11 +2054,6 @@ if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
         d3d11
         dxgi
         d3dcompiler
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
-        Qt6::Network
-        Qt6::Sql
         brutal_compression_lib
         quant_utils
         ggml_interface
@@ -2178,7 +2132,6 @@ set_target_properties(test_ide_main PROPERTIES
     AUTOMOC_MOC_OPTIONS "-I${CMAKE_SOURCE_DIR}/include;-I${CMAKE_CURRENT_SOURCE_DIR}/src/qtapp;-I${CMAKE_CURRENT_SOURCE_DIR}/src/ui;-I${CMAKE_CURRENT_SOURCE_DIR}/src/utils;-I${CMAKE_CURRENT_SOURCE_DIR}/src/gui"
 )
 target_link_libraries(test_ide_main PRIVATE 
-    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent Qt6::Network Qt6::Sql Qt6::WebSockets
     user32 gdi32 wbemuuid pdh winhttp ws2_32 comctl32 d3d11 dxgi d3dcompiler
 )
 if(Vulkan_FOUND)
@@ -2206,9 +2159,9 @@ target_include_directories(test_ide_main PRIVATE
 # Copy Qt DLLs for test_ide_main
 add_custom_command(TARGET test_ide_main POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:Qt6::Core>"
-        "$<TARGET_FILE:Qt6::Gui>"
-        "$<TARGET_FILE:Qt6::Widgets>"
+        "$<TARGET_FILE:>"
+        "$<TARGET_FILE:>"
+        "$<TARGET_FILE:>"
         "$<TARGET_FILE_DIR:test_ide_main>"
     COMMENT "Copying Qt DLLs for test_ide_main"
 )
@@ -2225,15 +2178,15 @@ add_custom_command(TARGET test_ide_main POST_BUILD
 # Test QMainWindow - simplest Qt GUI application
 add_executable(test_qmainwindow WIN32 src/test_qmainwindow.cpp)
 set_target_properties(test_qmainwindow PROPERTIES AUTOMOC ON)
-target_link_libraries(test_qmainwindow PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(test_qmainwindow PRIVATE)
 target_include_directories(test_qmainwindow PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 # Copy Qt DLLs for test_qmainwindow
 add_custom_command(TARGET test_qmainwindow POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:Qt6::Core>"
-        "$<TARGET_FILE:Qt6::Gui>"
-        "$<TARGET_FILE:Qt6::Widgets>"
+        "$<TARGET_FILE:>"
+        "$<TARGET_FILE:>"
+        "$<TARGET_FILE:>"
         "$<TARGET_FILE_DIR:test_qmainwindow>"
     COMMENT "Copying Qt DLLs for test_qmainwindow"
 )
@@ -2250,7 +2203,7 @@ add_custom_command(TARGET test_qmainwindow POST_BUILD
 # Test if agentic_ide.h header itself causes a crash
 add_executable(test_header src/agentic_ide_test.cpp)
 set_target_properties(test_header PROPERTIES AUTOMOC ON)
-target_link_libraries(test_header PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(test_header PRIVATE)
 target_include_directories(test_header PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 if(FALSE) # Disabled until headers exist
@@ -2419,7 +2372,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/quant_engine_smoke.cpp")
     add_executable(quant_engine_test
         tests/quant_engine_smoke.cpp
     )
-    target_link_libraries(quant_engine_test PRIVATE Qt6::Core quant_utils)
+    target_link_libraries(quant_engine_test PRIVATEquant_utils)
     set_target_properties(quant_engine_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 endif()
 
@@ -2432,7 +2385,7 @@ set_target_properties(quant_scalar_smoke PROPERTIES
 
 # Comprehensive quantization correctness tests (pack/unpack, error bounds)
 add_executable(quant_correctness_tests tests/quant_correctness_tests.cpp)
-target_link_libraries(quant_correctness_tests PRIVATE Qt6::Core quant_utils)
+target_link_libraries(quant_correctness_tests PRIVATEquant_utils)
 set_target_properties(quant_correctness_tests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
     AUTOMOC OFF
@@ -2441,8 +2394,6 @@ set_target_properties(quant_correctness_tests PROPERTIES
 # Agent Coordinator comprehensive tests (scheduling, cancellation, failure paths)
 add_executable(test_agent_coordinator tests/test_agent_coordinator.cpp)
 target_link_libraries(test_agent_coordinator PRIVATE 
-    Qt6::Core 
-    Qt6::Test 
     RawrXDOrchestration
 )
 target_include_directories(test_agent_coordinator PRIVATE 
@@ -2473,9 +2424,6 @@ add_executable(test_agent_coordinator_integration
     src/qtapp/inflate_deflate_cpp.cpp
 )
 target_link_libraries(test_agent_coordinator_integration PRIVATE
-    Qt6::Core
-    Qt6::Test
-    Qt6::Network
     RawrXDOrchestration
     brutal_compression_lib
 )
@@ -2516,7 +2464,6 @@ add_executable(test_gguf_loader
     src/qtapp/inflate_deflate_cpp.cpp
 )
 target_link_libraries(test_gguf_loader PRIVATE 
-    Qt6::Core
     brutal_compression_lib  # Supplies codec::deflate, codec::inflate, deflate_brutal_masm
 )
 target_include_directories(test_gguf_loader PRIVATE 
@@ -2536,7 +2483,6 @@ add_executable(test_gguf_loader_simple
     src/qtapp/inflate_deflate_cpp.cpp
 )
 target_link_libraries(test_gguf_loader_simple PRIVATE 
-    Qt6::Core
     brutal_compression_lib  # Supplies codec::deflate, codec::inflate, deflate_brutal_masm
 )
 target_include_directories(test_gguf_loader_simple PRIVATE 
@@ -2590,3 +2536,4 @@ message(STATUS "========================================")
 message(STATUS "RawrXD Project Configuration Summary")
 message(STATUS "========================================")
 # ... (summary messages)
+

@@ -358,12 +358,10 @@ Rect DrawingContext::getClipBounds() const {
 }
 
 void DrawingContext::stroke(const Path& path, const StrokeStyle& style) {
-    // // qDebug:  "Drawing stroked path with width" << style.width;
     // Implementation would render the stroked path
 }
 
 void DrawingContext::fill(const Path& path, const FillStyle& style) {
-    // // qDebug:  "Filling path";
     // Implementation would fill the path
 }
 
@@ -402,7 +400,6 @@ void DrawingContext::drawPolygon(const std::vector<Point>& vertices, const FillS
 
 void DrawingContext::drawText(const std::string& text, const Point& position, const std::string& fontFamily, 
                               float fontSize, const Color& color, TextAlignment align, VerticalAlignment vAlign) {
-    // // qDebug:  "Drawing text:" << text << "at" << position.x << "," << position.y;
     // Implementation would use font rendering
 }
 
@@ -488,20 +485,16 @@ bool DrawingContext::isPointInClipRegion(const Point& p) const {
 }
 
 void DrawingContext::rasterizeLine(const Point& p1, const Point& p2, const StrokeStyle& style) {
-    // // qDebug:  "Rasterizing line from" << p1.x << "," << p1.y << "to" << p2.x << "," << p2.y;
     // Bresenham's line algorithm
 }
 
 void DrawingContext::rasterizeCircle(const Point& center, float radius, const FillStyle& style) {
-    // // qDebug:  "Rasterizing circle at" << center.x << "," << center.y;
 }
 
 void DrawingContext::rasterizePolygon(const std::vector<Point>& vertices, const FillStyle& style) {
-    // // qDebug:  "Rasterizing polygon with" << vertices.size() << "vertices";
 }
 
 void DrawingContext::rasterizeCurve(const std::vector<Point>& curve, const StrokeStyle& style) {
-    // // qDebug:  "Rasterizing curve with" << curve.size() << "points";
 }
 
 // ============================================================================
@@ -636,7 +629,4 @@ void Canvas::render(DrawingContext& ctx) {
 
 } // namespace Drawing
 } // namespace RawrXD
-
-
-
 

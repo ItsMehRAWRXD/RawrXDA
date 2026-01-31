@@ -204,7 +204,7 @@ void VersionControlWidget::createBranchView()
     m_deleteBranchBtn = new void("Delete", this);  // Signal connection removed\nif (current) {
             std::string branchName = current->text().remove(0, 2); // Remove "* " prefix if present
             auto reply = void::question(this, "Delete Branch",
-                std::string("Delete branch '%1'?").arg(branchName),
+                std::string("Delete branch '%1'?"),
                 void::Yes | void::No);
             if (reply == void::Yes) {
                 deleteBranch(branchName);
@@ -270,7 +270,7 @@ void VersionControlWidget::setRepositoryPath(const std::string& path)
     m_repoPath = path;
     
     if (isValidRepository()) {
-        m_repoStatusLabel->setText(std::string("Repository: %1").arg(// FileInfo: path).fileName()));
+        m_repoStatusLabel->setText(std::string("Repository: %1").fileName()));
         refreshStatus();
         updateBranchList();
         updateCommitHistory();
@@ -330,7 +330,7 @@ void VersionControlWidget::refreshStatus()
     std::string branch = runGitCommand({"branch", "--show-current"}, &success).trimmed();
     if (success && !branch.empty()) {
         m_currentBranch = branch;
-        m_branchLabel->setText(std::string("Branch: %1").arg(branch));
+        m_branchLabel->setText(std::string("Branch: %1"));
         m_stats.currentBranch = branch;
     }
     
@@ -384,7 +384,7 @@ void VersionControlWidget::updateFileStatus()
     m_stats.modifiedFiles = unstagedCount;
     m_stats.hasUncommittedChanges = (stagedCount > 0 || unstagedCount > 0);
     
-    m_tabWidget->setTabText(0, std::string("Changes (%1)").arg(stagedCount + unstagedCount));
+    m_tabWidget->setTabText(0, std::string("Changes (%1)"));
 }
 
 void VersionControlWidget::addFileToTree(QTreeWidget* tree, const std::string& file, const std::string& status)
@@ -477,7 +477,7 @@ void VersionControlWidget::commit(const std::string& message)
         // Extract commit hash
         std::regex hashRegex("\\[\\w+\\s+(\\w+)\\]");
         std::regexMatch match = hashRegex.match(output);
-        std::string hash = match.hasMatch() ? match.captured(1) : "";
+        std::string hash = match.hasMatch() ? match"" : "";
         
         m_commitMessageEdit->clear();
         refreshStatus();
@@ -606,7 +606,7 @@ void VersionControlWidget::createBranch(const std::string& name, const std::stri
     
     if (success) {
         updateBranchList();
-        void::information(this, "Branch", std::string("Branch '%1' created").arg(name));
+        void::information(this, "Branch", std::string("Branch '%1' created"));
         logVcsEvent("branch_created", nlohmann::json{{"name", name}});
     } else {
         void::critical(this, "Branch Creation Failed", output);
@@ -638,7 +638,7 @@ void VersionControlWidget::deleteBranch(const std::string& name, bool force)
     
     if (success) {
         updateBranchList();
-        void::information(this, "Branch", std::string("Branch '%1' deleted").arg(name));
+        void::information(this, "Branch", std::string("Branch '%1' deleted"));
         logVcsEvent("branch_deleted", nlohmann::json{{"name", name}});
     } else {
         void::critical(this, "Branch Deletion Failed", output);
@@ -653,7 +653,7 @@ void VersionControlWidget::mergeBranch(const std::string& branch)
     if (success) {
         refreshStatus();
         updateCommitHistory();
-        void::information(this, "Merge", std::string("Branch '%1' merged successfully").arg(branch));
+        void::information(this, "Merge", std::string("Branch '%1' merged successfully"));
         operationCompleted("merge", true);
         logVcsEvent("branch_merged", nlohmann::json{{"branch", branch}});
     } else {
@@ -685,7 +685,7 @@ void VersionControlWidget::showConflictResolutionDialog(const std::stringList& f
 {
     std::string fileList = files.join("\n");
     void::warning(this, "Merge Conflicts",
-        std::string("The following files have conflicts:\n\n%1\n\nPlease resolve them manually.").arg(fileList));
+        std::string("The following files have conflicts:\n\n%1\n\nPlease resolve them manually."));
 }
 
 void VersionControlWidget::stash(const std::string& message)
@@ -747,7 +747,6 @@ void VersionControlWidget::logVcsEvent(const std::string& event, const nlohmann:
     logEntry["event"] = event;
     logEntry["data"] = data;
     
-    // // qDebug().noquote() << "VCS_EVENT:" << nlohmann::json(logEntry).toJson(nlohmann::json::Compact);
 }
 
 // Slot implementations
@@ -812,7 +811,7 @@ void VersionControlWidget::onMergeBranchButtonClicked()
         std::string branchName = current->text().remove(0, 2).trimmed();
         if (branchName != m_currentBranch) {
             auto reply = void::question(this, "Merge Branch",
-                std::string("Merge branch '%1' into '%2'?").arg(branchName, m_currentBranch),
+                std::string("Merge branch '%1' into '%2'?"),
                 void::Yes | void::No);
             if (reply == void::Yes) {
                 mergeBranch(branchName);
@@ -882,7 +881,7 @@ void VersionControlWidget::onContextMenuRequested(const struct { int x; int y; }
     
     menu.addAction("Show Diff", [this, file]() { showDiffForFile(file); });
     menu.addAction("Copy Filename", [file]() { 
-        QApplication::clipboard()->setText(file);
+        nullptr->setText(file);
     });
     
     menu.exec(tree->mapToGlobal(pos));
@@ -906,7 +905,7 @@ void VersionControlWidget::onAmendCheckBoxToggled(bool checked)
 void VersionControlWidget::discardChanges(const std::string& file)
 {
     auto reply = void::warning(this, "Discard Changes",
-        std::string("Discard all changes in '%1'?\nThis cannot be undone.").arg(file),
+        std::string("Discard all changes in '%1'?\nThis cannot be undone."),
         void::Yes | void::No);
     
     if (reply == void::Yes) {
@@ -939,12 +938,4 @@ bool VersionControlWidget::hasConflicts() { return false; }
 void VersionControlWidget::updateRepositoryInfo() {}
 void VersionControlWidget::showCommitDialog() {}
 void VersionControlWidget::updateStashList() {}
-
-
-
-
-
-
-
-
 

@@ -26,7 +26,6 @@ TaskRunner::~TaskRunner()
 bool TaskRunner::start(const std::string& workingDir, const std::stringList& args)
 {
     if (m_status != Status::Idle) {
-        // // qWarning:  "[TaskRunner]" << m_name << "is already running";
         return false;
     }
 
@@ -39,14 +38,12 @@ bool TaskRunner::start(const std::string& workingDir, const std::stringList& arg
     m_process->start(executable(), args);
 
     if (!m_process->waitForStarted()) {
-        // // qCritical:  "[TaskRunner]" << m_name << "failed to start:" << m_process->errorString();
         setStatus(Status::Failed);
         return false;
     }
 
     setStatus(Status::Running);
     progress("Task started: " + m_commandLine);
-    // // qInfo:  "[TaskRunner] Started:" << m_name << "cwd=" << workingDir;
 
     return true;
 }
@@ -57,11 +54,9 @@ void TaskRunner::stop()
         return;
     }
 
-    // // qInfo:  "[TaskRunner]" << m_name << "stopping...";
     m_process->terminate();
 
     if (!m_process->waitForFinished(3000)) {
-        // // qWarning:  "[TaskRunner]" << m_name << "force-killing...";
         m_process->kill();
     }
 
@@ -149,13 +144,11 @@ void TaskRunner::onProcessFinished(int exitCode)
     setStatus(newStatus);
     finished(exitCode == 0);
 
-    // // qInfo:  "[TaskRunner]" << m_name << "finished with exit code" << exitCode
             << "elapsed=" << elapsedMs() << "ms";
 }
 
 void TaskRunner::onProcessError(void*::ProcessError error)
 {
-    // // qCritical:  "[TaskRunner]" << m_name << "process error:" << error;
     setStatus(Status::Failed);
     if (m_process) {
         progress("Error: " + m_process->errorString());
@@ -214,10 +207,10 @@ TaskRunner::ParseResult CMakeTaskRunner::parseOutputLine(const std::string& line
 
     if (match.hasMatch()) {
         ParseResult result;
-        result.file = match.captured(1);
-        result.line = match.captured(2);
+        result.file = match"";
+        result.line = match"";
         result.severity = "error";
-        result.message = match.captured(3);
+        result.message = match"";
         result.source = "CMAKE";
         return result;
     }
@@ -228,10 +221,10 @@ TaskRunner::ParseResult CMakeTaskRunner::parseOutputLine(const std::string& line
 
     if (match.hasMatch()) {
         ParseResult result;
-        result.file = match.captured(1);
-        result.line = match.captured(2);
+        result.file = match"";
+        result.line = match"";
         result.severity = "warning";
-        result.message = match.captured(3);
+        result.message = match"";
         result.source = "CMAKE";
         return result;
     }
@@ -274,12 +267,12 @@ TaskRunner::ParseResult MSBuildTaskRunner::parseOutputLine(const std::string& li
 
     if (match.hasMatch()) {
         ParseResult result;
-        result.file = match.captured(1);
-        result.line = match.captured(2);
-        result.column = match.captured(3);
-        result.severity = match.captured(4);
-        result.code = match.captured(5);
-        result.message = match.captured(6);
+        result.file = match"";
+        result.line = match"";
+        result.column = match"";
+        result.severity = match"";
+        result.code = match"";
+        result.message = match"";
         result.source = "MSBUILD";
         return result;
     }
@@ -338,12 +331,12 @@ TaskRunner::ParseResult MASMTaskRunner::parseOutputLine(const std::string& line)
 
     if (match.hasMatch()) {
         ParseResult result;
-        result.file = match.captured(1);
-        result.line = match.captured(2);
-        result.column = match.captured(3);
-        result.severity = match.captured(4);
-        result.code = match.captured(5);
-        result.message = match.captured(6);
+        result.file = match"";
+        result.line = match"";
+        result.column = match"";
+        result.severity = match"";
+        result.code = match"";
+        result.message = match"";
         result.source = "MASM";
         return result;
     }
@@ -399,10 +392,4 @@ std::string CustomTaskRunner::executable() const
 {
     return m_executable;
 }
-
-
-
-
-
-
 

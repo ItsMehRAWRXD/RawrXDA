@@ -45,7 +45,7 @@ bool OSExplorerInterceptor::Initialize(DWORD targetPID, OSInterceptorCallback ca
     LOG_FUNCTION();
     
     if (m_isRunning) {
-        LOG_ERROR("Interceptor already running");
+
         return false;
     }
     
@@ -55,7 +55,7 @@ bool OSExplorerInterceptor::Initialize(DWORD targetPID, OSInterceptorCallback ca
     // Open target process
     m_hTargetProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, targetPID);
     if (!m_hTargetProcess) {
-        LOG_ERROR("Failed to open target process: " + std::to_string(GetLastError()));
+
         return false;
     }
     
@@ -63,7 +63,7 @@ bool OSExplorerInterceptor::Initialize(DWORD targetPID, OSInterceptorCallback ca
     m_interceptor = (OSInterceptor*)VirtualAlloc(NULL, sizeof(OSInterceptor), 
                                                  MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!m_interceptor) {
-        LOG_ERROR("Failed to allocate interceptor: " + std::to_string(GetLastError()));
+
         CloseHandle(m_hTargetProcess);
         return false;
     }
@@ -79,7 +79,7 @@ bool OSExplorerInterceptor::Initialize(DWORD targetPID, OSInterceptorCallback ca
     m_interceptor->hookTable = VirtualAlloc(NULL, sizeof(OSHookTable), 
                                             MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!m_interceptor->hookTable) {
-        LOG_ERROR("Failed to allocate hook table: " + std::to_string(GetLastError()));
+
         VirtualFree(m_interceptor, 0, MEM_RELEASE);
         CloseHandle(m_hTargetProcess);
         return false;
@@ -89,7 +89,7 @@ bool OSExplorerInterceptor::Initialize(DWORD targetPID, OSInterceptorCallback ca
     m_interceptor->callLog = VirtualAlloc(NULL, sizeof(void*) * 10000, 
                                           MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!m_interceptor->callLog) {
-        LOG_ERROR("Failed to allocate call log: " + std::to_string(GetLastError()));
+
         VirtualFree(m_interceptor->hookTable, 0, MEM_RELEASE);
         VirtualFree(m_interceptor, 0, MEM_RELEASE);
         CloseHandle(m_hTargetProcess);
@@ -100,7 +100,7 @@ bool OSExplorerInterceptor::Initialize(DWORD targetPID, OSInterceptorCallback ca
     m_interceptor->stats = VirtualAlloc(NULL, sizeof(InterceptionStats), 
                                         MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!m_interceptor->stats) {
-        LOG_ERROR("Failed to allocate stats: " + std::to_string(GetLastError()));
+
         VirtualFree(m_interceptor->callLog, 0, MEM_RELEASE);
         VirtualFree(m_interceptor->hookTable, 0, MEM_RELEASE);
         VirtualFree(m_interceptor, 0, MEM_RELEASE);
@@ -110,8 +110,7 @@ bool OSExplorerInterceptor::Initialize(DWORD targetPID, OSInterceptorCallback ca
     
     // Initialize stats
     ZeroMemory(m_interceptor->stats, sizeof(InterceptionStats));
-    
-    LOG_INFO("OS Explorer Interceptor initialized for PID: " + std::to_string(targetPID));
+
     return true;
 }
 
@@ -120,18 +119,18 @@ bool OSExplorerInterceptor::StartInterception() {
     LOG_FUNCTION();
     
     if (!m_interceptor) {
-        LOG_ERROR("Interceptor not initialized");
+
         return false;
     }
     
     if (m_isRunning) {
-        LOG_ERROR("Interceptor already running");
+
         return false;
     }
     
     // Hook OS APIs
     if (!HookOSAPIs()) {
-        LOG_ERROR("Failed to hook OS APIs");
+
         return false;
     }
     
@@ -140,8 +139,7 @@ bool OSExplorerInterceptor::StartInterception() {
     m_logThread = std::make_unique<std::thread>(&OSExplorerInterceptor::ProcessLogQueue, this);
     
     m_isRunning = true;
-    LOG_INFO("OS Explorer Interception started");
-    
+
     return true;
 }
 
@@ -150,7 +148,7 @@ bool OSExplorerInterceptor::StopInterception() {
     LOG_FUNCTION();
     
     if (!m_isRunning) {
-        LOG_ERROR("Interceptor not running");
+
         return false;
     }
     
@@ -164,8 +162,7 @@ bool OSExplorerInterceptor::StopInterception() {
     UnhookOSAPIs();
     
     m_isRunning = false;
-    LOG_INFO("OS Explorer Interception stopped");
-    
+
     return true;
 }
 
@@ -209,7 +206,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     LOG_FUNCTION();
     
     if (!m_interceptor || !m_interceptor->hookTable) {
-        LOG_ERROR("Invalid interceptor or hook table");
+
         return false;
     }
     
@@ -218,7 +215,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     // Hook kernel32.dll functions
     HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
     if (!hKernel32) {
-        LOG_ERROR("Failed to get kernel32.dll handle");
+
         return false;
     }
     
@@ -227,7 +224,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     if (pCreateFileW) {
         hookTable->CreateFileW = StealthHook(pCreateFileW, MyCreateFileWHook);
         if (!hookTable->CreateFileW) {
-            LOG_ERROR("Failed to hook CreateFileW");
+
             return false;
         }
     }
@@ -237,7 +234,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     if (pReadFile) {
         hookTable->ReadFile = StealthHook(pReadFile, MyReadFileHook);
         if (!hookTable->ReadFile) {
-            LOG_ERROR("Failed to hook ReadFile");
+
             return false;
         }
     }
@@ -247,7 +244,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     if (pWriteFile) {
         hookTable->WriteFile = StealthHook(pWriteFile, MyWriteFileHook);
         if (!hookTable->WriteFile) {
-            LOG_ERROR("Failed to hook WriteFile");
+
             return false;
         }
     }
@@ -255,7 +252,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     // Hook advapi32.dll functions
     HMODULE hAdvapi32 = GetModuleHandleA("advapi32.dll");
     if (!hAdvapi32) {
-        LOG_ERROR("Failed to get advapi32.dll handle");
+
         return false;
     }
     
@@ -264,7 +261,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     if (pRegOpenKeyExW) {
         hookTable->RegOpenKeyExW = StealthHook(pRegOpenKeyExW, MyRegOpenKeyExWHook);
         if (!hookTable->RegOpenKeyExW) {
-            LOG_ERROR("Failed to hook RegOpenKeyExW");
+
             return false;
         }
     }
@@ -274,7 +271,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     if (pRegQueryValueExW) {
         hookTable->RegQueryValueExW = StealthHook(pRegQueryValueExW, MyRegQueryValueExWHook);
         if (!hookTable->RegQueryValueExW) {
-            LOG_ERROR("Failed to hook RegQueryValueExW");
+
             return false;
         }
     }
@@ -282,7 +279,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     // Hook ws2_32.dll functions
     HMODULE hWS2_32 = GetModuleHandleA("ws2_32.dll");
     if (!hWS2_32) {
-        LOG_ERROR("Failed to get ws2_32.dll handle");
+
         return false;
     }
     
@@ -291,7 +288,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     if (pWSAConnect) {
         hookTable->WSAConnect = StealthHook(pWSAConnect, MyWSAConnectHook);
         if (!hookTable->WSAConnect) {
-            LOG_ERROR("Failed to hook WSAConnect");
+
             return false;
         }
     }
@@ -301,7 +298,7 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     if (pSend) {
         hookTable->send = StealthHook(pSend, MySendHook);
         if (!hookTable->send) {
-            LOG_ERROR("Failed to hook send");
+
             return false;
         }
     }
@@ -311,12 +308,11 @@ bool OSExplorerInterceptor::HookOSAPIs() {
     if (pRecv) {
         hookTable->recv = StealthHook(pRecv, MyRecvHook);
         if (!hookTable->recv) {
-            LOG_ERROR("Failed to hook recv");
+
             return false;
         }
     }
-    
-    LOG_INFO("OS APIs hooked successfully");
+
     return true;
 }
 
@@ -325,7 +321,7 @@ bool OSExplorerInterceptor::UnhookOSAPIs() {
     LOG_FUNCTION();
     
     if (!m_interceptor || !m_interceptor->hookTable) {
-        LOG_ERROR("Invalid interceptor or hook table");
+
         return false;
     }
     
@@ -333,8 +329,7 @@ bool OSExplorerInterceptor::UnhookOSAPIs() {
     
     // Unhook all functions (restore original bytes)
     // Implementation depends on StealthHook mechanism
-    
-    LOG_INFO("OS APIs unhooked");
+
     return true;
 }
 
@@ -554,14 +549,13 @@ bool InjectIntoTaskManager() {
     }
     
     if (taskmgrPID == 0) {
-        LOG_ERROR("Task Manager not found");
+
         return false;
     }
     
     // Manual map our DLL into Task Manager
     // Implementation depends on manual mapping technique
-    
-    LOG_INFO("Injected into Task Manager (PID: " + std::to_string(taskmgrPID) + ")");
+
     return true;
 }
 
@@ -572,14 +566,13 @@ bool HookTaskManager() {
     // Find Task Manager window
     HWND hTaskmgr = FindWindowA("TaskManagerWindow", NULL);
     if (!hTaskmgr) {
-        LOG_ERROR("Task Manager window not found");
+
         return false;
     }
     
     // Hook window procedure
     // Implementation depends on hooking technique
-    
-    LOG_INFO("Task Manager hooked");
+
     return true;
 }
 
@@ -589,8 +582,7 @@ bool AddContextMenuItems() {
     
     // Add "OS Intercept" to context menu
     // Implementation depends on menu modification technique
-    
-    LOG_INFO("Context menu items added");
+
     return true;
 }
 
@@ -619,14 +611,13 @@ bool InjectIntoExplorer() {
     }
     
     if (explorerPID == 0) {
-        LOG_ERROR("Explorer not found");
+
         return false;
     }
     
     // Manual map our DLL into Explorer
     // Implementation depends on manual mapping technique
-    
-    LOG_INFO("Injected into Explorer (PID: " + std::to_string(explorerPID) + ")");
+
     return true;
 }
 
@@ -636,8 +627,7 @@ bool HookExplorer() {
     
     // Hook Explorer file operations
     // Implementation depends on hooking technique
-    
-    LOG_INFO("Explorer hooked");
+
     return true;
 }
 
@@ -647,8 +637,7 @@ bool HookFileOperations() {
     
     // Hook CopyFileW, MoveFileW, DeleteFileW
     // Implementation depends on hooking technique
-    
-    LOG_INFO("File operations hooked");
+
     return true;
 }
 
@@ -658,11 +647,10 @@ bool StartNetworkInterception() {
     
     // Hook network APIs
     if (!HookNetworkAPIs()) {
-        LOG_ERROR("Failed to hook network APIs");
+
         return false;
     }
-    
-    LOG_INFO("Network interception started");
+
     return true;
 }
 
@@ -672,8 +660,7 @@ bool StopNetworkInterception() {
     
     // Unhook network APIs
     // Implementation depends on hooking technique
-    
-    LOG_INFO("Network interception stopped");
+
     return true;
 }
 
@@ -683,8 +670,7 @@ bool HookNetworkAPIs() {
     
     // Hook WSAConnect, send, recv, WSASend, WSARecv, etc.
     // Implementation depends on hooking technique
-    
-    LOG_INFO("Network APIs hooked");
+
     return true;
 }
 
@@ -694,7 +680,7 @@ bool ApplyHotpatch(void* address, void* patch, size_t size) {
     
     DWORD oldProtect;
     if (!VirtualProtect(address, size, PAGE_EXECUTE_READWRITE, &oldProtect)) {
-        LOG_ERROR("Failed to change memory protection: " + std::to_string(GetLastError()));
+
         return false;
     }
     
@@ -702,8 +688,7 @@ bool ApplyHotpatch(void* address, void* patch, size_t size) {
     
     VirtualProtect(address, size, oldProtect, &oldProtect);
     FlushInstructionCache(GetCurrentProcess(), address, size);
-    
-    LOG_INFO("Hotpatch applied at 0x" + std::to_string((ULONGLONG)address));
+
     return true;
 }
 
@@ -713,8 +698,7 @@ bool RemoveHotpatch(void* address, size_t size) {
     
     // Restore original bytes
     // Implementation depends on how original bytes were saved
-    
-    LOG_INFO("Hotpatch removed from 0x" + std::to_string((ULONGLONG)address));
+
     return true;
 }
 
@@ -724,8 +708,7 @@ bool InitializeBeaconism() {
     
     // Initialize beacon system
     // Implementation depends on beaconism technique
-    
-    LOG_INFO("Beaconism initialized");
+
     return true;
 }
 
@@ -735,8 +718,7 @@ bool InjectBeacons() {
     
     // Inject beacon signatures into memory
     // Implementation depends on beaconism technique
-    
-    LOG_INFO("Beacons injected");
+
     return true;
 }
 
@@ -746,8 +728,7 @@ bool ScanForBeacons() {
     
     // Scan memory for beacon signatures
     // Implementation depends on beaconism technique
-    
-    LOG_INFO("Beacon scan completed");
+
     return true;
 }
 
@@ -763,7 +744,7 @@ void* ManualMapDLL(HANDLE hProcess, void* dllData, size_t dllSize) {
     void* pMapped = VirtualAllocEx(hProcess, NULL, ntHeaders->OptionalHeader.SizeOfImage,
                                    MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!pMapped) {
-        LOG_ERROR("Failed to allocate memory in target process");
+
         return nullptr;
     }
     
@@ -790,8 +771,7 @@ void* ManualMapDLL(HANDLE hProcess, void* dllData, size_t dllSize) {
     DWORD oldProtect;
     VirtualProtectEx(hProcess, pMapped, ntHeaders->OptionalHeader.SizeOfImage,
                      PAGE_EXECUTE_READ, &oldProtect);
-    
-    LOG_INFO("DLL manually mapped at 0x" + std::to_string((ULONGLONG)pMapped));
+
     return pMapped;
 }
 
@@ -831,8 +811,7 @@ bool FixRelocations(HANDLE hProcess, void* mappedBase, void* dllData) {
         relocation = (IMAGE_BASE_RELOCATION*)((BYTE*)relocation + relocation->SizeOfBlock);
         relocationSize -= relocation->SizeOfBlock;
     }
-    
-    LOG_INFO("Relocations fixed");
+
     return true;
 }
 
@@ -883,8 +862,7 @@ bool ResolveImports(HANDLE hProcess, void* mappedBase, void* dllData) {
         
         importDesc++;
     }
-    
-    LOG_INFO("Imports resolved");
+
     return true;
 }
 

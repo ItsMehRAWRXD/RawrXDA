@@ -1,15 +1,7 @@
 #ifndef MODEL_ROUTER_CONSOLE_H
 #define MODEL_ROUTER_CONSOLE_H
 
-#include <QWidget>
-#include <QPlainTextEdit>
-#include <QTableWidget>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QComboBox>
-#include <QCheckBox>
-#include <QDateTime>
-#include <QVector>
+
 #include <memory>
 
 class ModelRouterAdapter;
@@ -26,21 +18,20 @@ class ModelRouterAdapter;
  * - Search and filter capabilities
  * - Export logs to file
  */
-class ModelRouterConsole : public QWidget {
-    Q_OBJECT
+class ModelRouterConsole : public void {
 
 public:
     struct LogEntry {
-        QDateTime timestamp;
-        QString level;        // INFO, WARNING, ERROR
-        QString model;
-        QString message;
-        QString details;
+        std::chrono::system_clock::time_point timestamp;
+        std::string level;        // INFO, WARNING, ERROR
+        std::string model;
+        std::string message;
+        std::string details;
         int latency_ms;
         bool success;
     };
 
-    explicit ModelRouterConsole(ModelRouterAdapter *adapter, QWidget *parent = nullptr);
+    explicit ModelRouterConsole(ModelRouterAdapter *adapter, void *parent = nullptr);
     ~ModelRouterConsole();
 
     /**
@@ -56,7 +47,7 @@ public:
     /**
      * Export logs to file
      */
-    void exportLogs(const QString& filename);
+    void exportLogs(const std::string& filename);
 
     /**
      * Set maximum log entries (default 1000)
@@ -68,15 +59,15 @@ public:
      */
     int getLogCount() const { return m_log_entries.size(); }
 
-public slots:
-    void onGenerationStarted(const QString& model);
-    void onGenerationComplete(const QString& result, int tokens, double latency);
-    void onGenerationError(const QString& error);
-    void onModelChanged(const QString& model);
-    void onStatusChanged(const QString& status);
+public:
+    void onGenerationStarted(const std::string& model);
+    void onGenerationComplete(const std::string& result, int tokens, double latency);
+    void onGenerationError(const std::string& error);
+    void onModelChanged(const std::string& model);
+    void onStatusChanged(const std::string& status);
 
-private slots:
-    void onSearchTextChanged(const QString& text);
+private:
+    void onSearchTextChanged(const std::string& text);
     void onFilterLevelChanged(int index);
     void onClearButtonClicked();
     void onExportButtonClicked();
@@ -87,7 +78,7 @@ private:
     void updateLogDisplay();
     void addLogToDisplay(const LogEntry& entry);
     void applyFilters();
-    QString formatLogEntry(const LogEntry& entry) const;
+    std::string formatLogEntry(const LogEntry& entry) const;
 
     ModelRouterAdapter *m_adapter;
 
@@ -101,13 +92,14 @@ private:
     QPushButton *m_export_button;
 
     // Log storage
-    QVector<LogEntry> m_log_entries;
+    std::vector<LogEntry> m_log_entries;
     int m_max_log_entries = 1000;
 
     // Filter state
-    QString m_search_filter;
-    QString m_level_filter;
+    std::string m_search_filter;
+    std::string m_level_filter;
     bool m_auto_scroll = true;
 };
 
 #endif // MODEL_ROUTER_CONSOLE_H
+

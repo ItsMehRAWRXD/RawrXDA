@@ -1,21 +1,14 @@
 #include "autonomous_model_manager.h"
-#include <QNetworkRequest>
-#include <QJsonDocument>
-#include <QFile>
-#include <QDir>
-#include <QStandardPaths>
-#include <QStorageInfo>
-#include <QThread>
-#include <QDateTime>
-#include <QFileInfo>
+
+
 #include <iostream>
 
-#ifdef Q_OS_WIN
+#ifdef 
 #include <windows.h>
 #endif
 
-AutonomousModelManager::AutonomousModelManager(QObject* parent)
-    : QObject(parent) {
+AutonomousModelManager::AutonomousModelManager(void* parent)
+    : void(parent) {
     setupNetworkManager();
     setupTimers();
     loadAvailableModels();
@@ -28,23 +21,21 @@ AutonomousModelManager::~AutonomousModelManager() {
 }
 
 void AutonomousModelManager::setupNetworkManager() {
-    networkManager = new QNetworkAccessManager(this);
+    networkManager = new void*(this);
     networkManager->setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
 }
 
 void AutonomousModelManager::setupTimers() {
     // Auto-update timer
-    autoUpdateTimer = new QTimer(this);
+    autoUpdateTimer = new void*(this);
     autoUpdateTimer->setInterval(autoUpdateInterval);
-    connect(autoUpdateTimer, &QTimer::timeout, this, &AutonomousModelManager::autoUpdateModels);
+// Qt connect removed
     autoUpdateTimer->start();
     
     // Optimization timer
-    optimizationTimer = new QTimer(this);
+    optimizationTimer = new void*(this);
     optimizationTimer->setInterval(optimizationInterval);
-    connect(optimizationTimer, &QTimer::timeout, [this]() {
-        for (const QJsonValue& value : installedModels) {
-            autoOptimizeModel(value.toObject()["id"].toString());
+// Qt connect removed
         }
     });
     optimizationTimer->start();
@@ -52,8 +43,8 @@ void AutonomousModelManager::setupTimers() {
 
 void AutonomousModelManager::loadAvailableModels() {
     // Load default model catalog
-    availableModels = QJsonArray{
-        QJsonObject{
+    availableModels = void*{
+        void*{
             {"id", "microsoft/phi-3-mini"},
             {"name", "Phi-3 Mini"},
             {"size", 3800000000LL},
@@ -61,7 +52,7 @@ void AutonomousModelManager::loadAvailableModels() {
             {"gpu_optimized", true},
             {"complexity_level", "medium"}
         },
-        QJsonObject{
+        void*{
             {"id", "codellama/CodeLlama-7b"},
             {"name", "CodeLlama 7B"},
             {"size", 7000000000LL},
@@ -69,7 +60,7 @@ void AutonomousModelManager::loadAvailableModels() {
             {"gpu_optimized", true},
             {"complexity_level", "complex"}
         },
-        QJsonObject{
+        void*{
             {"id", "mistralai/Mistral-7B"},
             {"name", "Mistral 7B"},
             {"size", 7200000000LL},
@@ -81,29 +72,29 @@ void AutonomousModelManager::loadAvailableModels() {
 }
 
 void AutonomousModelManager::loadInstalledModels() {
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/models/installed.json";
-    QFile file(configPath);
+    std::string configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/models/installed.json";
+    std::fstream file(configPath);
     
     if (file.open(QIODevice::ReadOnly)) {
-        QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        void* doc = void*::fromJson(file.readAll());
         installedModels = doc.array();
         file.close();
     }
 }
 
 void AutonomousModelManager::saveInstalledModels() {
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/models/installed.json";
-    QDir().mkpath(QFileInfo(configPath).path());
+    std::string configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/models/installed.json";
+    std::filesystem::path().mkpath(std::filesystem::path(configPath).path());
     
-    QFile file(configPath);
+    std::fstream file(configPath);
     if (file.open(QIODevice::WriteOnly)) {
-        QJsonDocument doc(installedModels);
+        void* doc(installedModels);
         file.write(doc.toJson());
         file.close();
     }
 }
 
-ModelRecommendation AutonomousModelManager::autoDetectBestModel(const QString& taskType, const QString& language) {
+ModelRecommendation AutonomousModelManager::autoDetectBestModel(const std::string& taskType, const std::string& language) {
     std::cout << "[AutonomousModelManager] Auto-detecting best model for task: " << taskType.toStdString() 
               << ", language: " << language.toStdString() << std::endl;
     
@@ -111,14 +102,14 @@ ModelRecommendation AutonomousModelManager::autoDetectBestModel(const QString& t
     SystemAnalysis system = analyzeSystemCapabilities();
     
     // Get recommendations based on task and system
-    QJsonArray recommendations = getRecommendedModels(taskType);
+    void* recommendations = getRecommendedModels(taskType);
     
     // Score each recommendation
     ModelRecommendation bestRecommendation;
     double bestScore = 0.0;
     
-    for (const QJsonValue& value : recommendations) {
-        QJsonObject model = value.toObject();
+    for (const void*& value : recommendations) {
+        void* model = value.toObject();
         double score = calculateModelSuitability(model, taskType);
         
         if (score > bestScore && score >= minimumSuitabilityScore) {
@@ -138,49 +129,49 @@ ModelRecommendation AutonomousModelManager::autoDetectBestModel(const QString& t
     std::cout << "[AutonomousModelManager] Recommended model: " << bestRecommendation.modelId.toStdString()
               << " (score: " << bestRecommendation.suitabilityScore << ")" << std::endl;
     
-    emit modelRecommended(bestRecommendation);
+    modelRecommended(bestRecommendation);
     return bestRecommendation;
 }
 
-bool AutonomousModelManager::autoDownloadAndSetup(const QString& modelId) {
+bool AutonomousModelManager::autoDownloadAndSetup(const std::string& modelId) {
     std::cout << "[AutonomousModelManager] Auto-downloading and setting up: " << modelId.toStdString() << std::endl;
     
     // Get model information
-    QJsonObject modelInfo = fetchModelInfo(modelId);
+    void* modelInfo = fetchModelInfo(modelId);
     if (modelInfo.isEmpty()) {
-        emit errorOccurred("Failed to fetch model information");
+        errorOccurred("Failed to fetch model information");
         return false;
     }
     
     // Determine installation path
-    QString sanitizedId = modelId;
+    std::string sanitizedId = modelId;
     sanitizedId.replace('/', '_');
-    QString installPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + 
+    std::string installPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + 
                          "/models/" + sanitizedId;
     
-    QDir().mkpath(installPath);
+    std::filesystem::path().mkpath(installPath);
     
     // Download model (simplified - would implement actual download)
-    QString localPath = installPath + "/model.gguf";
+    std::string localPath = installPath + "/model.gguf";
     
     // Validate downloaded model
-    if (!QFile::exists(localPath)) {
+    if (!std::fstream::exists(localPath)) {
         std::cout << "[AutonomousModelManager] Model file would be downloaded to: " << localPath.toStdString() << std::endl;
         // In production, would download from HuggingFace
     }
     
     // Add to installed models
-    QJsonObject installedModel;
+    void* installedModel;
     installedModel["id"] = modelId;
     installedModel["path"] = localPath;
-    installedModel["installed_date"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    installedModel["installed_date"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     installedModel["size"] = modelInfo["size"];
     installedModel["optimized"] = true;
     
     installedModels.append(installedModel);
     saveInstalledModels();
     
-    emit modelInstalled(modelId);
+    modelInstalled(modelId);
     std::cout << "[AutonomousModelManager] Model setup completed: " << modelId.toStdString() << std::endl;
     
     return true;
@@ -190,9 +181,9 @@ bool AutonomousModelManager::autoUpdateModels() {
     std::cout << "[AutonomousModelManager] Checking for model updates..." << std::endl;
     
     int updatedCount = 0;
-    for (const QJsonValue& value : installedModels) {
-        QJsonObject model = value.toObject();
-        QString modelId = model["id"].toString();
+    for (const void*& value : installedModels) {
+        void* model = value.toObject();
+        std::string modelId = model["id"].toString();
         
         // Check if update is available (simplified)
         if (updateModel(modelId)) {
@@ -201,12 +192,12 @@ bool AutonomousModelManager::autoUpdateModels() {
     }
     
     std::cout << "[AutonomousModelManager] Updated " << updatedCount << " models" << std::endl;
-    emit autoUpdateCompleted();
+    autoUpdateCompleted();
     
     return true;
 }
 
-bool AutonomousModelManager::autoOptimizeModel(const QString& modelId) {
+bool AutonomousModelManager::autoOptimizeModel(const std::string& modelId) {
     std::cout << "[AutonomousModelManager] Optimizing model: " << modelId.toStdString() << std::endl;
     return optimizeModelForSystem(modelId);
 }
@@ -221,7 +212,7 @@ SystemAnalysis AutonomousModelManager::analyzeSystemCapabilities() {
     analysis.availableDiskSpace = getAvailableDiskSpace();
     
     // Analyze CPU cores
-    analysis.cpuCores = QThread::idealThreadCount();
+    analysis.cpuCores = std::thread::idealThreadCount();
     
     // Analyze GPU capabilities
     analysis.hasGPU = detectGPU();
@@ -237,15 +228,15 @@ SystemAnalysis AutonomousModelManager::analyzeSystemCapabilities() {
     std::cout << "  GPU: " << (analysis.hasGPU ? analysis.gpuType.toStdString() : "None") << std::endl;
     
     currentSystem = analysis;
-    emit systemAnalysisComplete(analysis);
+    systemAnalysisComplete(analysis);
     return analysis;
 }
 
-double AutonomousModelManager::calculateModelSuitability(const QJsonObject& model, const QString& taskType) {
+double AutonomousModelManager::calculateModelSuitability(const void*& model, const std::string& taskType) {
     double score = 0.0;
     
     // Task type compatibility (40% weight)
-    QString modelTaskType = model["task_type"].toString();
+    std::string modelTaskType = model["task_type"].toString();
     if (modelTaskType == taskType) {
         score += 0.4;
     } else if (modelTaskType == "general") {
@@ -282,18 +273,18 @@ double AutonomousModelManager::calculateModelSuitability(const QJsonObject& mode
     return qMin(1.0, score);
 }
 
-QJsonArray AutonomousModelManager::analyzeCodebaseRequirements(const QString& projectPath) {
-    QJsonArray requirements;
+void* AutonomousModelManager::analyzeCodebaseRequirements(const std::string& projectPath) {
+    void* requirements;
     
     // Analyze project size and complexity (simplified)
-    QDir projectDir(projectPath);
+    std::filesystem::path projectDir(projectPath);
     if (projectDir.exists()) {
-        QStringList filters;
+        std::vector<std::string> filters;
         filters << "*.cpp" << "*.h" << "*.py" << "*.js" << "*.ts";
         
-        QFileInfoList files = projectDir.entryInfoList(filters, QDir::Files);
+        QFileInfoList files = projectDir.entryInfoList(filters, std::filesystem::path::Files);
         
-        requirements.append(QJsonObject{
+        requirements.append(void*{
             {"type", "project_size"},
             {"file_count", files.size()},
             {"recommended_model_size", files.size() > 100 ? "large" : "medium"}
@@ -303,25 +294,25 @@ QJsonArray AutonomousModelManager::analyzeCodebaseRequirements(const QString& pr
     return requirements;
 }
 
-QJsonArray AutonomousModelManager::getAvailableModels() {
+void* AutonomousModelManager::getAvailableModels() {
     return availableModels;
 }
 
-QJsonArray AutonomousModelManager::getInstalledModels() {
+void* AutonomousModelManager::getInstalledModels() {
     return installedModels;
 }
 
-QJsonArray AutonomousModelManager::getRecommendedModels(const QString& taskType) {
-    QJsonArray recommendations;
+void* AutonomousModelManager::getRecommendedModels(const std::string& taskType) {
+    void* recommendations;
     
-    for (const QJsonValue& value : availableModels) {
-        QJsonObject model = value.toObject();
-        QString modelTaskType = model["task_type"].toString();
+    for (const void*& value : availableModels) {
+        void* model = value.toObject();
+        std::string modelTaskType = model["task_type"].toString();
         
         if (taskType.isEmpty() || modelTaskType == taskType || modelTaskType == "general") {
             double score = calculateModelSuitability(model, taskType);
             if (score >= minimumSuitabilityScore) {
-                QJsonObject modelWithScore = model;
+                void* modelWithScore = model;
                 modelWithScore["suitability_score"] = score;
                 recommendations.append(modelWithScore);
             }
@@ -331,17 +322,17 @@ QJsonArray AutonomousModelManager::getRecommendedModels(const QString& taskType)
     return recommendations;
 }
 
-bool AutonomousModelManager::installModel(const QString& modelId) {
+bool AutonomousModelManager::installModel(const std::string& modelId) {
     return autoDownloadAndSetup(modelId);
 }
 
-bool AutonomousModelManager::uninstallModel(const QString& modelId) {
+bool AutonomousModelManager::uninstallModel(const std::string& modelId) {
     std::cout << "[AutonomousModelManager] Uninstalling model: " << modelId.toStdString() << std::endl;
     
     for (int i = 0; i < installedModels.size(); ++i) {
         if (installedModels[i].toObject()["id"].toString() == modelId) {
-            QString path = installedModels[i].toObject()["path"].toString();
-            QFile::remove(path);
+            std::string path = installedModels[i].toObject()["path"].toString();
+            std::fstream::remove(path);
             installedModels.removeAt(i);
             saveInstalledModels();
             return true;
@@ -351,20 +342,20 @@ bool AutonomousModelManager::uninstallModel(const QString& modelId) {
     return false;
 }
 
-bool AutonomousModelManager::updateModel(const QString& modelId) {
+bool AutonomousModelManager::updateModel(const std::string& modelId) {
     std::cout << "[AutonomousModelManager] Updating model: " << modelId.toStdString() << std::endl;
     
     // Check for updates (simplified)
-    emit modelUpdated(modelId);
+    modelUpdated(modelId);
     return true;
 }
 
-ModelRecommendation AutonomousModelManager::recommendModelForTask(const QString& task, const QString& language) {
+ModelRecommendation AutonomousModelManager::recommendModelForTask(const std::string& task, const std::string& language) {
     return autoDetectBestModel(task, language);
 }
 
-ModelRecommendation AutonomousModelManager::recommendModelForCodebase(const QString& projectPath) {
-    QJsonArray requirements = analyzeCodebaseRequirements(projectPath);
+ModelRecommendation AutonomousModelManager::recommendModelForCodebase(const std::string& projectPath) {
+    void* requirements = analyzeCodebaseRequirements(projectPath);
     return autoDetectBestModel("completion", "cpp");
 }
 
@@ -372,8 +363,8 @@ ModelRecommendation AutonomousModelManager::recommendModelForPerformance(qint64 
     ModelRecommendation best;
     best.suitabilityScore = 0.0;
     
-    for (const QJsonValue& value : availableModels) {
-        QJsonObject model = value.toObject();
+    for (const void*& value : availableModels) {
+        void* model = value.toObject();
         double latency = estimateLatency(model);
         
         if (latency <= targetLatency) {
@@ -382,27 +373,24 @@ ModelRecommendation AutonomousModelManager::recommendModelForPerformance(qint64 
                 best.modelId = model["id"].toString();
                 best.name = model["name"].toString();
                 best.suitabilityScore = score;
-                best.reasoning = QString("Estimated latency: %1ms (target: %2ms)").arg(latency).arg(targetLatency);
+                best.reasoning = std::string("Estimated latency: %1ms (target: %2ms)");
             }
         }
     }
     
-    emit recommendationReady(best);
+    recommendationReady(best);
     return best;
 }
 
 bool AutonomousModelManager::integrateWithHuggingFace() {
     std::cout << "[AutonomousModelManager] Integrating with HuggingFace API..." << std::endl;
     
-    QNetworkRequest request(QUrl(huggingFaceApiEndpoint + "/models"));
+    QNetworkRequest request(std::string(huggingFaceApiEndpoint + "/models"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QNetworkReply* reply = networkManager->get(request);
-    
-    connect(reply, &QNetworkReply::finished, [this, reply]() {
-        if (reply->error() == QNetworkReply::NoError) {
-            QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-            QJsonArray models = doc.array();
+    void** reply = networkManager->get(request);
+// Qt connect removed
+            void* models = doc.array();
             
             std::cout << "[AutonomousModelManager] Fetched " << models.size() 
                       << " models from HuggingFace" << std::endl;
@@ -423,41 +411,41 @@ bool AutonomousModelManager::syncWithModelRegistry() {
     return true;
 }
 
-bool AutonomousModelManager::validateModelIntegrity(const QString& modelId) {
+bool AutonomousModelManager::validateModelIntegrity(const std::string& modelId) {
     std::cout << "[AutonomousModelManager] Validating model integrity: " << modelId.toStdString() << std::endl;
     
-    for (const QJsonValue& value : installedModels) {
+    for (const void*& value : installedModels) {
         if (value.toObject()["id"].toString() == modelId) {
-            QString path = value.toObject()["path"].toString();
-            return QFile::exists(path);
+            std::string path = value.toObject()["path"].toString();
+            return std::fstream::exists(path);
         }
     }
     
     return false;
 }
 
-QJsonObject AutonomousModelManager::fetchModelInfo(const QString& modelId) {
-    for (const QJsonValue& value : availableModels) {
-        QJsonObject model = value.toObject();
+void* AutonomousModelManager::fetchModelInfo(const std::string& modelId) {
+    for (const void*& value : availableModels) {
+        void* model = value.toObject();
         if (model["id"].toString() == modelId) {
             return model;
         }
     }
     
-    return QJsonObject();
+    return void*();
 }
 
-bool AutonomousModelManager::downloadModelFile(const QString& url, const QString& destination) {
+bool AutonomousModelManager::downloadModelFile(const std::string& url, const std::string& destination) {
     std::cout << "[AutonomousModelManager] Would download from: " << url.toStdString() 
               << " to: " << destination.toStdString() << std::endl;
     return true;
 }
 
-bool AutonomousModelManager::validateDownloadedModel(const QString& modelPath) {
-    return QFile::exists(modelPath);
+bool AutonomousModelManager::validateDownloadedModel(const std::string& modelPath) {
+    return std::fstream::exists(modelPath);
 }
 
-bool AutonomousModelManager::optimizeModelForSystem(const QString& modelId) {
+bool AutonomousModelManager::optimizeModelForSystem(const std::string& modelId) {
     std::cout << "[AutonomousModelManager] Optimizing model for system: " << modelId.toStdString() << std::endl;
     return true;
 }
@@ -467,7 +455,7 @@ SystemAnalysis AutonomousModelManager::getCurrentSystemAnalysis() {
 }
 
 qint64 AutonomousModelManager::getAvailableRAM() {
-#ifdef Q_OS_WIN
+#ifdef 
     MEMORYSTATUSEX memStatus;
     memStatus.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memStatus);
@@ -478,7 +466,7 @@ qint64 AutonomousModelManager::getAvailableRAM() {
 }
 
 qint64 AutonomousModelManager::getAvailableDiskSpace() {
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    std::string path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QStorageInfo storage(path);
     return storage.bytesAvailable();
 }
@@ -488,13 +476,13 @@ bool AutonomousModelManager::detectGPU() {
     return true;
 }
 
-QString AutonomousModelManager::generateRecommendationReasoning(const QJsonObject& model, const SystemAnalysis& system, const QString& taskType) {
-    QStringList reasons;
+std::string AutonomousModelManager::generateRecommendationReasoning(const void*& model, const SystemAnalysis& system, const std::string& taskType) {
+    std::vector<std::string> reasons;
     
-    reasons << QString("Model %1 is optimized for %2 tasks").arg(model["name"].toString(), taskType);
-    reasons << QString("Estimated memory usage: %1 MB (available: %2 MB)")
-        .arg(model["size"].toDouble() / 1024 / 1024, 0, 'f', 0)
-        .arg(system.availableRAM / 1024 / 1024, 0, 'f', 0);
+    reasons << std::string("Model %1 is optimized for %2 tasks"), taskType);
+    reasons << std::string("Estimated memory usage: %1 MB (available: %2 MB)")
+         / 1024 / 1024, 0, 'f', 0)
+        ;
     
     if (system.hasGPU && model["gpu_optimized"].toBool()) {
         reasons << "GPU acceleration available";
@@ -503,16 +491,17 @@ QString AutonomousModelManager::generateRecommendationReasoning(const QJsonObjec
     return reasons.join(". ");
 }
 
-qint64 AutonomousModelManager::estimateMemoryUsage(const QJsonObject& model) {
+qint64 AutonomousModelManager::estimateMemoryUsage(const void*& model) {
     return static_cast<qint64>(model["size"].toDouble() * 1.2); // 20% overhead
 }
 
-QString AutonomousModelManager::determineComplexityLevel(const QJsonObject& model) {
+std::string AutonomousModelManager::determineComplexityLevel(const void*& model) {
     return model["complexity_level"].toString();
 }
 
-double AutonomousModelManager::estimateLatency(const QJsonObject& model) {
+double AutonomousModelManager::estimateLatency(const void*& model) {
     qint64 size = static_cast<qint64>(model["size"].toDouble());
     // Simplified latency estimation based on model size
     return (size / 1000000.0); // Rough estimate in ms
 }
+

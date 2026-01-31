@@ -6,26 +6,20 @@
 #include "plan_mode_handler.hpp"
 #include "unified_backend.hpp"
 #include "../agent/meta_planner.hpp"
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QRegularExpression>
-#include <QFile>
-#include <QDir>
+
+
 #include <algorithm>
 
-PlanModeHandler::PlanModeHandler(UnifiedBackend* backend, MetaPlanner* planner, QObject* parent)
-    : QObject(parent)
+PlanModeHandler::PlanModeHandler(UnifiedBackend* backend, MetaPlanner* planner, void* parent)
+    : void(parent)
     , m_backend(backend)
     , m_planner(planner)
     , m_planReady(false)
     , m_currentRequestId(-1)
 {
     if (m_backend) {
-        connect(m_backend, &UnifiedBackend::streamToken,
-                this, &PlanModeHandler::onStreamToken);
-        connect(m_backend, &UnifiedBackend::error,
-                this, &PlanModeHandler::onError);
+// Qt connect removed
+// Qt connect removed
     }
 
     if (m_planner) {
@@ -35,10 +29,10 @@ PlanModeHandler::PlanModeHandler(UnifiedBackend* backend, MetaPlanner* planner, 
 
 PlanModeHandler::~PlanModeHandler() = default;
 
-void PlanModeHandler::startPlanning(const QString& wish, const QString& context)
+void PlanModeHandler::startPlanning(const std::string& wish, const std::string& context)
 {
     if (wish.isEmpty()) {
-        emit planningError("Please provide a task description");
+        planningError("Please provide a task description");
         return;
     }
 
@@ -47,10 +41,10 @@ void PlanModeHandler::startPlanning(const QString& wish, const QString& context)
     m_planReady = false;
     m_streamedPlanText.clear();
 
-    emit researchStarted();
+    researchStarted();
 
     // Step 1: Gather workspace context via research
-    QString researchPrompt = QString(
+    std::string researchPrompt = std::string(
         "You are a code analysis assistant. Analyze the following task and gather relevant context:\n"
         "Task: %1\n"
         "Additional Context: %2\n\n"
@@ -59,22 +53,22 @@ void PlanModeHandler::startPlanning(const QString& wish, const QString& context)
         "2. Required tools or libraries\n"
         "3. Potential risks or blockers\n"
         "4. Initial approach outline"
-    ).arg(wish, context);
+    );
 
     // If we have a planner, use it for research
     if (m_planner) {
-        emit researchProgress("Analyzing task requirements...");
+        researchProgress("Analyzing task requirements...");
         // The planner would do deep research here
         // For now, we'll move to planning
-        emit researchCompleted();
+        researchCompleted();
     } else {
-        emit researchCompleted();
+        researchCompleted();
     }
 
     // Step 2: Generate plan via AI
-    emit planGenerationStarted();
+    planGenerationStarted();
 
-    QString planPrompt = QString(
+    std::string planPrompt = std::string(
         "Generate a detailed, structured plan for the following task.\n"
         "Format each step as JSON with: id, title, description, requiredFiles[], tools[], estimatedTime\n\n"
         "Task: %1\n"
@@ -88,7 +82,7 @@ void PlanModeHandler::startPlanning(const QString& wish, const QString& context)
         "  \"tools\": [\"<tool1>\", \"<tool2>\"],"
         "  \"estimatedTime\": \"<time estimate>\""
         "}"
-    ).arg(wish, researchPrompt);
+    );
 
     // Request AI to generate plan
     if (m_backend) {
@@ -100,22 +94,22 @@ void PlanModeHandler::startPlanning(const QString& wish, const QString& context)
     }
 }
 
-QString PlanModeHandler::getPlanAsText() const
+std::string PlanModeHandler::getPlanAsText() const
 {
-    QString planText = QString("📋 **%1**\n\n").arg(m_currentPlan.title);
-    planText += QString("Description: %1\n\n").arg(m_currentPlan.description);
+    std::string planText = std::string("📋 **%1**\n\n");
+    planText += std::string("Description: %1\n\n");
 
-    planText += QString("⏱️  Estimated Time: %1\n").arg(m_currentPlan.estimatedTotalTime);
-    planText += QString("📊 Confidence: %.0f%%\n\n").arg(m_currentPlan.confidence);
+    planText += std::string("⏱️  Estimated Time: %1\n");
+    planText += std::string("📊 Confidence: %.0f%%\n\n");
 
     if (!m_currentPlan.assumptions.isEmpty()) {
-        planText += QString("📌 Assumptions:\n%1\n\n").arg(m_currentPlan.assumptions);
+        planText += std::string("📌 Assumptions:\n%1\n\n");
     }
 
     if (!m_currentPlan.risks.isEmpty()) {
         planText += "⚠️  Risks Identified:\n";
         for (const auto& risk : m_currentPlan.risks) {
-            planText += QString("• %1\n").arg(risk);
+            planText += std::string("• %1\n");
         }
         planText += "\n";
     }
@@ -123,10 +117,10 @@ QString PlanModeHandler::getPlanAsText() const
     planText += "📝 Steps:\n";
     for (int i = 0; i < m_currentPlan.steps.size(); ++i) {
         const auto& step = m_currentPlan.steps[i];
-        QString checkmark = step.completed ? "✓" : "☐";
-        planText += QString("%1 **Step %2: %3** (%4)\n")
-            .arg(checkmark, QString::number(step.id), step.title, step.estimatedTime);
-        planText += QString("   %1\n").arg(step.description);
+        std::string checkmark = step.completed ? "✓" : "☐";
+        planText += std::string("%1 **Step %2: %3** (%4)\n")
+            , step.title, step.estimatedTime);
+        planText += std::string("   %1\n");
 
         if (!step.requiredFiles.isEmpty()) {
             planText += "   Files: " + step.requiredFiles.join(", ") + "\n";
@@ -143,21 +137,21 @@ QString PlanModeHandler::getPlanAsText() const
 void PlanModeHandler::approvePlan()
 {
     if (m_currentPlan.steps.isEmpty()) {
-        emit planningError("Plan is empty, cannot approve");
+        planningError("Plan is empty, cannot approve");
         return;
     }
 
     m_planReady = true;
-    emit planApproved();
+    planApproved();
 }
 
-void PlanModeHandler::rejectPlan(const QString& feedback)
+void PlanModeHandler::rejectPlan(const std::string& feedback)
 {
     m_planReady = false;
     m_streamedPlanText.clear();
     m_currentPlan = Plan();
 
-    emit planRejected(feedback);
+    planRejected(feedback);
 
     // Could regenerate with feedback here
 }
@@ -170,13 +164,13 @@ void PlanModeHandler::cancelPlanning()
     m_userWish.clear();
     m_researchContext.clear();
 
-    emit planningCancelled();
+    planningCancelled();
 }
 
-void PlanModeHandler::onResearchCompleted(const QString& researchResults)
+void PlanModeHandler::onResearchCompleted(const std::string& researchResults)
 {
     m_researchContext = researchResults;
-    emit researchProgress("Research complete, generating plan...");
+    researchProgress("Research complete, generating plan...");
 }
 
 void PlanModeHandler::onPlanStepGenerated(const PlanStep& step)
@@ -185,21 +179,21 @@ void PlanModeHandler::onPlanStepGenerated(const PlanStep& step)
         m_currentPlan.steps.resize(step.id + 1);
     }
     m_currentPlan.steps[step.id] = step;
-    emit planStepGenerated(step);
+    planStepGenerated(step);
 }
 
 void PlanModeHandler::onPlanCompleted(const Plan& plan)
 {
     m_currentPlan = plan;
     if (validatePlan(m_currentPlan)) {
-        emit planGenerationCompleted(m_currentPlan);
-        emit planWaitingForApproval();
+        planGenerationCompleted(m_currentPlan);
+        planWaitingForApproval();
     } else {
-        emit planningError("Generated plan failed validation");
+        planningError("Generated plan failed validation");
     }
 }
 
-void PlanModeHandler::onStreamToken(qint64 reqId, const QString& token)
+void PlanModeHandler::onStreamToken(qint64 reqId, const std::string& token)
 {
     if (reqId != m_currentRequestId) {
         return;
@@ -209,29 +203,29 @@ void PlanModeHandler::onStreamToken(qint64 reqId, const QString& token)
     parseStreamedPlanToken(token);
 }
 
-void PlanModeHandler::onError(qint64 reqId, const QString& error)
+void PlanModeHandler::onError(qint64 reqId, const std::string& error)
 {
     if (reqId != m_currentRequestId) {
         return;
     }
 
-    emit planningError(QString("AI Backend Error: %1").arg(error));
+    planningError(std::string("AI Backend Error: %1"));
     m_currentRequestId = -1;
 }
 
-void PlanModeHandler::parseStreamedPlanToken(const QString& token)
+void PlanModeHandler::parseStreamedPlanToken(const std::string& token)
 {
     // Try to parse complete JSON objects from the streamed text
-    static QRegularExpression jsonObjectRegex(R"(\{[^{}]*\})");
+    static std::regex jsonObjectRegex(R"(\{[^{}]*\})");
 
-    auto matches = jsonObjectRegex.globalMatch(m_streamedPlanText);
-    while (matches.hasNext()) {
-        auto match = matches.next();
-        QString jsonStr = match.captured(0);
+    auto matches = jsonObjectRegex;
+    while (matchesfalse) {
+        auto match = matches;
+        std::string jsonStr = match"";
 
-        QJsonDocument doc = QJsonDocument::fromJson(jsonStr.toUtf8());
+        void* doc = void*::fromJson(jsonStr.toUtf8());
         if (doc.isObject()) {
-            QJsonObject obj = doc.object();
+            void* obj = doc.object();
 
             PlanStep step;
             step.id = obj.value("id").toInt(m_currentPlan.steps.size());
@@ -256,9 +250,9 @@ void PlanModeHandler::parseStreamedPlanToken(const QString& token)
 
     // Try to extract overall plan metadata
     if (m_streamedPlanText.contains("\"confidence\"")) {
-        QJsonDocument doc = QJsonDocument::fromJson(m_streamedPlanText.toUtf8());
+        void* doc = void*::fromJson(m_streamedPlanText.toUtf8());
         if (doc.isObject()) {
-            QJsonObject planObj = doc.object();
+            void* planObj = doc.object();
             m_currentPlan.title = planObj.value("title").toString("Generated Plan");
             m_currentPlan.description = planObj.value("description").toString();
             m_currentPlan.confidence = planObj.value("confidence").toDouble(75.0);
@@ -271,8 +265,8 @@ void PlanModeHandler::parseStreamedPlanToken(const QString& token)
             }
 
             if (m_currentPlan.steps.size() > 0) {
-                emit planGenerationCompleted(m_currentPlan);
-                emit planWaitingForApproval();
+                planGenerationCompleted(m_currentPlan);
+                planWaitingForApproval();
             }
         }
     }
@@ -298,3 +292,4 @@ bool PlanModeHandler::validatePlan(const Plan& plan)
 
     return false;
 }
+

@@ -79,4 +79,3 @@ private:
 
 #endif // AGENTIC_TOOLS_HPP_INCLUDED
 
-

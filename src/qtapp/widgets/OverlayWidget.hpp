@@ -1,7 +1,5 @@
 #pragma once
-#include <QWidget>
-#include <QString>
-#include <QTimer>
+
 
 /**
  * @brief Production-Grade Ghost Text Overlay Widget for AI Code Assistance
@@ -24,13 +22,12 @@
  * - Respects editor theme colors
  * - Structured logging for debugging
  */
-class OverlayWidget : public QWidget {
-    Q_OBJECT
-    
-public:
-    explicit OverlayWidget(QWidget* parent = nullptr);
+class OverlayWidget : public void {
 
-    void setGhostText(const QString& text);
+public:
+    explicit OverlayWidget(void* parent = nullptr);
+
+    void setGhostText(const std::string& text);
     void clear();
     
     // Styling
@@ -43,21 +40,22 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    bool eventFilter(QObject* watched, QEvent* event) override;
+    bool eventFilter(void* watched, QEvent* event) override;
 
-private slots:
+private:
     void onFadeTimerTimeout();
 
 private:
     void updatePositionAndSize();
-    void logEvent(const QString& event, const QString& detail = QString());
+    void logEvent(const std::string& event, const std::string& detail = std::string());
     
-    QString m_ghostText;
+    std::string m_ghostText;
     int m_opacity = 120; // Default semi-transparent
     bool m_fadeEnabled = false;
     bool m_customPositionSet = false;
     QPoint m_customPosition;
     
-    QTimer* m_fadeTimer = nullptr;
+    void** m_fadeTimer = nullptr;
     int m_currentFadeAlpha = 0;
 };
+

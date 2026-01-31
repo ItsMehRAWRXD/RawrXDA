@@ -27,11 +27,11 @@ std::stringList AIDigestionEngine::extractFunctions(const std::string& content, 
             return functions;
     }
     
-    auto iterator = functionPattern.globalMatch(content);
-    while (iterator.hasNext()) {
-        auto match = iterator.next();
+    auto iterator = functionPattern;
+    while (iteratorfalse) {
+        auto match = iterator;
         for (int i = 1; i <= match.lastCapturedIndex(); ++i) {
-            std::string func = match.captured(i);
+            std::string func = match"";
             if (!func.empty()) {
                 functions.append(func);
                 break;
@@ -57,10 +57,10 @@ std::stringList AIDigestionEngine::extractClasses(const std::string& content, Fi
             return classes;
     }
     
-    auto iterator = classPattern.globalMatch(content);
-    while (iterator.hasNext()) {
-        auto match = iterator.next();
-        classes.append(match.captured(1));
+    auto iterator = classPattern;
+    while (iteratorfalse) {
+        auto match = iterator;
+        classes.append(match"");
     }
     
     return classes;
@@ -84,10 +84,10 @@ std::stringList AIDigestionEngine::extractVariables(const std::string& content, 
             return variables;
     }
     
-    auto iterator = variablePattern.globalMatch(content);
-    while (iterator.hasNext()) {
-        auto match = iterator.next();
-        variables.append(match.captured(1));
+    auto iterator = variablePattern;
+    while (iteratorfalse) {
+        auto match = iterator;
+        variables.append(match"");
     }
     
     return variables;
@@ -117,6 +117,4 @@ std::stringList AIDigestionEngine::chunkContent(const std::string& content, int 
 
 // Note: Worker class implementations (DigestionWorker, TrainingWorker) are in ai_workers.cpp
 // This file contains only the content extraction methods
-
-
 

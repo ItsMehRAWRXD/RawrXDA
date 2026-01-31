@@ -5,18 +5,17 @@
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
-#include <QByteArray>
 
 // Forward declarations for codec functions
 namespace codec {
-    extern QByteArray deflate(const QByteArray& in, bool* ok);
-    extern QByteArray inflate(const QByteArray& in, bool* ok);
+    extern std::vector<uint8_t> deflate(const std::vector<uint8_t>& in, bool* ok);
+    extern std::vector<uint8_t> inflate(const std::vector<uint8_t>& in, bool* ok);
 }
 
 // Forward declaration for brutal compression
 namespace brutal {
-    extern QByteArray compress(const QByteArray& in);
-    extern QByteArray compress(const void* data, std::size_t size);
+    extern std::vector<uint8_t> compress(const std::vector<uint8_t>& in);
+    extern std::vector<uint8_t> compress(const void* data, std::size_t size);
 }
 
 // Forward declaration for unsupported type name lookup (defined later in file)
@@ -626,10 +625,10 @@ bool GGUFLoader::DecompressData(const std::vector<uint8_t>& compressed,
             case CompressionType::DEFLATE: {
                 // Use codec::inflate from inflate_deflate_cpp.cpp
                 // This handles DEFLATE decompression
-                QByteArray input(reinterpret_cast<const char*>(compressed.data()), 
+                std::vector<uint8_t> input(reinterpret_cast<const char*>(compressed.data()), 
                                 static_cast<int>(compressed.size()));
                 bool ok = false;
-                QByteArray output = codec::inflate(input, &ok);
+                std::vector<uint8_t> output = codec::inflate(input, &ok);
                 if (!ok) return false;
                 
                 decompressed.resize(output.size());
@@ -662,9 +661,9 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
             case CompressionType::BRUTAL_GZIP:
             case CompressionType::ZLIB: {
                 // Compress using brutal::compress (MASM-optimized gzip)
-                QByteArray input(reinterpret_cast<const char*>(raw_data.data()), 
+                std::vector<uint8_t> input(reinterpret_cast<const char*>(raw_data.data()), 
                                 static_cast<int>(raw_data.size()));
-                QByteArray output = brutal::compress(input);
+                std::vector<uint8_t> output = brutal::compress(input);
                 if (output.isEmpty()) return false;
                 
                 compressed.resize(output.size());
@@ -674,10 +673,10 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
             
             case CompressionType::DEFLATE: {
                 // Compress using codec::deflate (MASM-optimized deflate)
-                QByteArray input(reinterpret_cast<const char*>(raw_data.data()), 
+                std::vector<uint8_t> input(reinterpret_cast<const char*>(raw_data.data()), 
                                 static_cast<int>(raw_data.size()));
                 bool ok = false;
-                QByteArray output = codec::deflate(input, &ok);
+                std::vector<uint8_t> output = codec::deflate(input, &ok);
                 if (!ok || output.isEmpty()) return false;
                 
                 compressed.resize(output.size());

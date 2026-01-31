@@ -9,56 +9,56 @@
 #define RAWRXD_QT_DIRECTORY_MANAGER_H
 
 #include "../interfaces/idirectory_manager.h"
-#include <QObject>
 
 namespace RawrXD {
 
 /**
  * \brief Qt-based concrete implementation of directory operations
  * 
- * Uses QDir and QFileInfo for cross-platform directory management.
+ * Uses std::filesystem::path and std::filesystem::path for cross-platform directory management.
  * Handles recursive operations with proper error reporting.
  */
-class QtDirectoryManager : public QObject, public IDirectoryManager {
-    Q_OBJECT
+class QtDirectoryManager : public void, public IDirectoryManager {
+
 public:
-    explicit QtDirectoryManager(QObject* parent = nullptr);
+    explicit QtDirectoryManager(void* parent = nullptr);
     ~QtDirectoryManager() override = default;
     
     // IDirectoryManager interface implementation
-    FileOperationResult createDirectory(const QString& path) override;
+    FileOperationResult createDirectory(const std::string& path) override;
     
-    FileOperationResult deleteDirectory(const QString& path,
+    FileOperationResult deleteDirectory(const std::string& path,
                                        bool moveToTrash = true) override;
     
-    FileOperationResult copyDirectory(const QString& sourcePath,
-                                     const QString& destPath) override;
+    FileOperationResult copyDirectory(const std::string& sourcePath,
+                                     const std::string& destPath) override;
     
-    bool exists(const QString& path) const override;
+    bool exists(const std::string& path) const override;
     
-    bool isDirectory(const QString& path) const override;
+    bool isDirectory(const std::string& path) const override;
     
-    QString toAbsolutePath(const QString& relativePath,
-                          const QString& basePath = QString()) const override;
+    std::string toAbsolutePath(const std::string& relativePath,
+                          const std::string& basePath = std::string()) const override;
     
-    QString toRelativePath(const QString& absolutePath,
-                          const QString& basePath) const override;
+    std::string toRelativePath(const std::string& absolutePath,
+                          const std::string& basePath) const override;
     
     // Additional non-interface helpers
-    QStringList listFiles(const QString& path,
+    std::vector<std::string> listFiles(const std::string& path,
                          bool recursive = false) const;
     
-    QStringList listDirectories(const QString& path,
+    std::vector<std::string> listDirectories(const std::string& path,
                                bool recursive = false) const;
 
 private:
-    bool removeDirectoryRecursive(const QString& path) const;
-    bool copyDirectoryRecursive(const QString& sourcePath,
-                               const QString& destPath) const;
-    void listFilesRecursive(const QString& path, QStringList& files) const;
-    void listDirectoriesRecursive(const QString& path, QStringList& dirs) const;
+    bool removeDirectoryRecursive(const std::string& path) const;
+    bool copyDirectoryRecursive(const std::string& sourcePath,
+                               const std::string& destPath) const;
+    void listFilesRecursive(const std::string& path, std::vector<std::string>& files) const;
+    void listDirectoriesRecursive(const std::string& path, std::vector<std::string>& dirs) const;
 };
 
 } // namespace RawrXD
 
 #endif // RAWRXD_QT_DIRECTORY_MANAGER_H
+

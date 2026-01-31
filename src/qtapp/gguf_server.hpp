@@ -1,16 +1,6 @@
 #pragma once
 
-#include <QObject>
-#include <QTcpServer>
-#include <QTcpSocket>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QTimer>
-#include <QMutex>
-#include <QHash>
-#include <QString>
-#include <QByteArray>
+
 #include <memory>
 
 class InferenceEngine;
@@ -26,11 +16,10 @@ class InferenceEngine;
  * - Health monitoring and graceful shutdown
  * - Streaming response support
  */
-class GGUFServer : public QObject {
-    Q_OBJECT
+class GGUFServer : public void {
 
 public:
-    explicit GGUFServer(InferenceEngine* engine, QObject* parent = nullptr);
+    explicit GGUFServer(InferenceEngine* engine, void* parent = nullptr);
     ~GGUFServer();
 
     /**
@@ -71,18 +60,17 @@ public:
         quint64 failedRequests = 0;
         quint64 totalTokensGenerated = 0;
         qint64 uptimeSeconds = 0;
-        QString startTime;
+        std::string startTime;
     };
     ServerStats getStats() const;
 
-signals:
     void serverStarted(quint16 port);
     void serverStopped();
-    void requestReceived(const QString& endpoint, const QString& method);
-    void requestCompleted(const QString& endpoint, bool success, qint64 durationMs);
-    void error(const QString& errorMessage);
+    void requestReceived(const std::string& endpoint, const std::string& method);
+    void requestCompleted(const std::string& endpoint, bool success, qint64 durationMs);
+    void error(const std::string& errorMessage);
 
-private slots:
+private:
     void onNewConnection();
     void onReadyRead();
     void onDisconnected();
@@ -91,25 +79,25 @@ private slots:
 private:
     // HTTP request parsing
     struct HttpRequest {
-        QString method;
-        QString path;
-        QString httpVersion;
-        QHash<QString, QString> headers;
-        QByteArray body;
-        QHash<QString, QString> queryParams;
+        std::string method;
+        std::string path;
+        std::string httpVersion;
+        std::unordered_map<std::string, std::string> headers;
+        std::vector<uint8_t> body;
+        std::unordered_map<std::string, std::string> queryParams;
     };
 
     struct HttpResponse {
         int statusCode = 200;
-        QString statusText = "OK";
-        QHash<QString, QString> headers;
-        QByteArray body;
+        std::string statusText = "OK";
+        std::unordered_map<std::string, std::string> headers;
+        std::vector<uint8_t> body;
     };
 
     // Request handlers
-    HttpRequest parseHttpRequest(const QByteArray& rawData);
-    void handleRequest(QTcpSocket* socket, const HttpRequest& request);
-    void sendResponse(QTcpSocket* socket, const HttpResponse& response);
+    HttpRequest parseHttpRequest(const std::vector<uint8_t>& rawData);
+    void handleRequest(void** socket, const HttpRequest& request);
+    void sendResponse(void** socket, const HttpResponse& response);
 
     // API endpoint handlers
     void handleGenerateRequest(const HttpRequest& request, HttpResponse& response);
@@ -128,33 +116,34 @@ private:
     bool waitForServerShutdown(quint16 port, int maxWaitMs = 5000);
     
     // Utilities
-    QString getCurrentTimestamp() const;
-    QJsonDocument parseJsonBody(const QByteArray& body);
-    void logRequest(const QString& method, const QString& path, int statusCode);
+    std::string getCurrentTimestamp() const;
+    void* parseJsonBody(const std::vector<uint8_t>& body);
+    void logRequest(const std::string& method, const std::string& path, int statusCode);
     
     // BOTTLENECK #3 FIX: Lightweight JSON field extraction (streaming-style, no DOM)
-    QString extractJsonField(const QByteArray& json, const QString& fieldName);
-    QJsonArray extractJsonArray(const QByteArray& json, const QString& fieldName);
+    std::string extractJsonField(const std::vector<uint8_t>& json, const std::string& fieldName);
+    void* extractJsonArray(const std::vector<uint8_t>& json, const std::string& fieldName);
 
 private:
     InferenceEngine* m_engine;          ///< Inference engine for model operations
-    QTcpServer* m_server;               ///< TCP server instance
-    QHash<QTcpSocket*, QByteArray> m_pendingRequests; ///< Buffer for incomplete requests
-    QMutex m_mutex;                     ///< Thread safety
+    void** m_server;               ///< TCP server instance
+    std::unordered_map<void**, std::vector<uint8_t>> m_pendingRequests; ///< Buffer for incomplete requests
+    std::mutex m_mutex;                     ///< Thread safety
     
     // Server state
     bool m_isRunning;
     quint16 m_port;
-    QDateTime m_startTime;
+    std::chrono::system_clock::time_point m_startTime;
     
     // Statistics
     ServerStats m_stats;
     
     // Health monitoring
-    QTimer* m_healthTimer;
+    void** m_healthTimer;
     
     // Configuration
     static constexpr int MAX_REQUEST_SIZE = 100 * 1024 * 1024; // 100MB max request
     static constexpr int HEALTH_CHECK_INTERVAL_MS = 30000;     // 30 seconds
     static constexpr int DEFAULT_TIMEOUT_MS = 120000;          // 2 minutes
 };
+

@@ -1,17 +1,8 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
-#include <QDateTime>
-#include <QSqlDatabase>
-#include <QVector>
 
 // Forward declarations
-class QTableWidget;
-class QPushButton;
-class QLabel;
-class QLineEdit;
-class QComboBox;
+
 
 /**
  * @brief Model version for registry tracking
@@ -19,18 +10,18 @@ class QComboBox;
 struct ModelVersion
 {
     int id;                      // Database ID
-    QString name;                // Model name/identifier
-    QString path;                // File path to .gguf file
-    QString baseModel;           // Base model used for fine-tuning
-    QString dataset;             // Dataset used for training
-    QDateTime createdAt;         // Timestamp
+    std::string name;                // Model name/identifier
+    std::string path;                // File path to .gguf file
+    std::string baseModel;           // Base model used for fine-tuning
+    std::string dataset;             // Dataset used for training
+    std::chrono::system_clock::time_point createdAt;         // Timestamp
     float finalLoss;             // Final training loss
     float perplexity;            // Validation perplexity
     int epochs;                  // Number of training epochs
     float learningRate;          // Learning rate used
     int batchSize;               // Batch size used
-    QString tags;                // User-defined tags (comma-separated)
-    QString notes;               // User notes
+    std::string tags;                // User-defined tags (comma-separated)
+    std::string notes;               // User notes
     qint64 fileSize;             // File size in bytes
     bool isActive;               // Currently selected/active model
 };
@@ -45,12 +36,11 @@ struct ModelVersion
  * - Tagging and annotation
  * - Search and filtering
  */
-class ModelRegistry : public QWidget
+class ModelRegistry : public void
 {
-    Q_OBJECT
 
 public:
-    explicit ModelRegistry(QWidget* parent = nullptr);
+    explicit ModelRegistry(void* parent = nullptr);
     ~ModelRegistry() override;
     
     /**
@@ -70,7 +60,7 @@ public:
      * @brief Get all registered models
      * @return Vector of all model versions
      */
-    QVector<ModelVersion> getAllModels() const;
+    std::vector<ModelVersion> getAllModels() const;
 
     /**
      * @brief Get a specific model by ID
@@ -99,12 +89,12 @@ public:
      */
     ModelVersion getActiveModel() const;
 
-signals:
+
     /**
      * @brief Emitted when a model is selected for use
      * @param modelPath Path to the selected model file
      */
-    void modelSelected(const QString& modelPath);
+    void modelSelected(const std::string& modelPath);
 
     /**
      * @brief Emitted when a model is deleted
@@ -117,13 +107,13 @@ signals:
      */
     void registryUpdated();
 
-private slots:
+private:
     void onRefreshClicked();
     void onDeleteClicked();
     void onActivateClicked();
     void onCompareClicked();
     void onExportClicked();
-    void onSearchTextChanged(const QString& text);
+    void onSearchTextChanged(const std::string& text);
     void onFilterChanged(int index);
     void onRowSelectionChanged();
 
@@ -132,9 +122,9 @@ private:
     void setupDatabase();
     void setupConnections();
     void loadModels();
-    void populateTable(const QVector<ModelVersion>& models);
-    QString formatFileSize(qint64 bytes) const;
-    QString formatTimestamp(const QDateTime& dt) const;
+    void populateTable(const std::vector<ModelVersion>& models);
+    std::string formatFileSize(qint64 bytes) const;
+    std::string formatTimestamp(const std::chrono::system_clock::time_point& dt) const;
 
     // UI Components
     QTableWidget* m_tableWidget;
@@ -149,9 +139,10 @@ private:
 
     // Database
     QSqlDatabase m_db;
-    QString m_dbPath;
+    std::string m_dbPath;
 
     // State
-    QVector<ModelVersion> m_models;
+    std::vector<ModelVersion> m_models;
     int m_selectedModelId;
 };
+

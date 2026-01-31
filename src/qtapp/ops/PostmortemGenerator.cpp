@@ -86,6 +86,3 @@ void PostmortemGenerator::postmortemReady(const PostmortemGenerator::Report& rep
     (void)report;
 }
 
-
-
-

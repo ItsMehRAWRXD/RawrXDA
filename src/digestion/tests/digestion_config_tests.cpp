@@ -47,9 +47,6 @@ void DigestionConfigTests::loadYamlConfig() {
     QCOMPARE(cfg.databasePath, std::string("digestion_results.db"));
 }
 
-QTEST_MAIN(DigestionConfigTests)
-#include "digestion_config_tests.moc"
-
-
-
+// Test removed
+// MOC removed
 

@@ -307,7 +307,6 @@ std::vector<DigestionTask> DigestionReverseEngineeringSystem::scanFileForStubs(c
     std::vector<DigestionTask> tasks;
     // File operation removed;
     if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        // // qWarning:  "Failed to open file for scanning:" << filePath;
         return tasks;
     }
     
@@ -327,14 +326,12 @@ std::vector<DigestionTask> DigestionReverseEngineeringSystem::scanFileForStubs(c
     // Detect language
     ProgrammingLanguage language = detectLanguage(filePath);
     if (language == ProgrammingLanguage::Unknown) {
-        // // qWarning:  "Unknown programming language for file:" << filePath;
         return tasks;
     }
     
     // Get language patterns
     LanguagePatterns patterns = getLanguagePatterns(language);
     if (patterns.stubKeywords.empty()) {
-        // // qWarning:  "No patterns defined for language:" << static_cast<int>(language);
         return tasks;
     }
     
@@ -369,7 +366,7 @@ std::vector<DigestionTask> DigestionReverseEngineeringSystem::scanFileForStubs(c
             auto match = methodPattern.match(line);
             if (match.hasMatch()) {
                 isMethod = true;
-                methodName = match.captured(1);
+                methodName = match"";
                 statistics_["totalMethodsFound"] = statistics_["totalMethodsFound"] + 1;
                 break;
             }
@@ -620,7 +617,7 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeControlFlow(
         }).toVariantMap()
     });
     
-    result.summary = std::string("Built CFG with %1 nodes").arg(cfg.size());
+    result.summary = std::string("Built CFG with %1 nodes"));
     result.completed = true;
     result.metrics["node_count"] = cfg.size();
     result.metrics["edge_count"] = cfg.size() - 1;
@@ -663,12 +660,12 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeDataFlow(con
             varPattern = std::regex("\\b([A-Za-z_][A-ZaZ0-9_]*)\\s*=");
     }
     
-    auto matches = varPattern.globalMatch(content);
+    auto matches = varPattern;
     std::set<std::string> variables;
     
-    while (matches.hasNext()) {
-        auto match = matches.next();
-        std::string varName = match.captured(1);
+    while (matchesfalse) {
+        auto match = matches;
+        std::string varName = match"";
         if (!varName.empty() && !varName.startsWith("__")) {
             variables.insert(varName);
         }
@@ -682,7 +679,7 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeDataFlow(con
         }).toVariantMap()
     });
     
-    result.summary = std::string("Found %1 variables").arg(variables.size());
+    result.summary = std::string("Found %1 variables"));
     result.completed = true;
     result.metrics["variable_count"] = variables.size();
     
@@ -744,11 +741,11 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeDependencies
             importPattern = std::regex("#include\\s*[<\"]([^>\"]+)[>\"]");
     }
     
-    auto matches = importPattern.globalMatch(content);
+    auto matches = importPattern;
     
-    while (matches.hasNext()) {
-        auto match = matches.next();
-        std::string dep = match.captured(1);
+    while (matchesfalse) {
+        auto match = matches;
+        std::string dep = match"";
         if (!dep.empty()) {
             dependencies.append(dep);
         }
@@ -762,7 +759,7 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeDependencies
         }).toVariantMap()
     });
     
-    result.summary = std::string("Found %1 dependencies").arg(dependencies.size());
+    result.summary = std::string("Found %1 dependencies"));
     result.completed = true;
     result.metrics["dependency_count"] = dependencies.size();
     
@@ -802,7 +799,7 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeSecurity(con
         }).toVariantMap()
     });
     
-    result.summary = std::string("Found %1 potential vulnerabilities").arg(vulnerabilities.size());
+    result.summary = std::string("Found %1 potential vulnerabilities"));
     result.completed = true;
     result.metrics["vulnerability_count"] = vulnerabilities.size();
     
@@ -843,7 +840,7 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzePerformance(
         }).toVariantMap()
     });
     
-    result.summary = std::string("Found %1 performance issues").arg(issues.size());
+    result.summary = std::string("Found %1 performance issues"));
     result.completed = true;
     result.metrics["issue_count"] = issues.size();
     
@@ -890,11 +887,11 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeAPISurface(c
             publicPattern = std::regex("\\b(public|export)\\s+([A-Za-z0-9_]+)");
     }
     
-    auto matches = publicPattern.globalMatch(content);
+    auto matches = publicPattern;
     int apiCount = 0;
     
-    while (matches.hasNext()) {
-        auto match = matches.next();
+    while (matchesfalse) {
+        auto match = matches;
         apiCount++;
     }
     
@@ -906,7 +903,7 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeAPISurface(c
         }).toVariantMap()
     });
     
-    result.summary = std::string("Found %1 public APIs").arg(apiCount);
+    result.summary = std::string("Found %1 public APIs");
     result.completed = true;
     result.metrics["api_count"] = apiCount;
     
@@ -953,10 +950,10 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeArchitecture
     
     // God object anti-pattern (too many methods/variables)
     std::regex methodPattern("\\bdef\\s+|\\bfunction\\s+|\\bfunc\\s+|\\bvoid\\s+|\\bint\\s+|\\bstring\\s+");
-    auto methodMatches = methodPattern.globalMatch(content);
+    auto methodMatches = methodPattern;
     int methodCount = 0;
-    while (methodMatches.hasNext()) {
-        methodMatches.next();
+    while (methodMatchesfalse) {
+        methodMatches;
         methodCount++;
     }
     
@@ -966,10 +963,10 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeArchitecture
     
     // Spaghetti code anti-pattern (high cyclomatic complexity)
     std::regex branchPattern("\\bif\\s*\\(|\\belse\\s*\\{|\\bcase\\s+|\\bwhile\\s*\\(|\\bfor\\s*\\(");
-    auto branchMatches = branchPattern.globalMatch(content);
+    auto branchMatches = branchPattern;
     int branchCount = 0;
-    while (branchMatches.hasNext()) {
-        branchMatches.next();
+    while (branchMatchesfalse) {
+        branchMatches;
         branchCount++;
     }
     
@@ -987,7 +984,7 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeArchitecture
         }).toVariantMap()
     });
     
-    result.summary = std::string("Found %1 patterns, %2 anti-patterns").arg(patternsFound.size()).arg(antiPatternsFound.size());
+    result.summary = std::string("Found %1 patterns, %2 anti-patterns")));
     result.completed = true;
     result.metrics["pattern_count"] = patternsFound.size();
     result.metrics["anti_pattern_count"] = antiPatternsFound.size();
@@ -1017,10 +1014,8 @@ bool DigestionReverseEngineeringSystem::applyAgenticPattern(const std::string& f
         patternStats[patternName] = patternStats.value(patternName, 0) + 1;
         statistics_["agenticPatternsApplied"] = patternStats;
         
-        // // qDebug:  "[AGENTIC] Applied pattern" << patternName << "to" << task.methodName;
         return true;
     } else {
-        // // qWarning:  "[AGENTIC] Failed to apply pattern" << patternName << ":" << result.errorMessage;
         return false;
     }
 }
@@ -1080,9 +1075,7 @@ bool DigestionReverseEngineeringSystem::applyFullAgenticSuite(const std::string&
     bool allSucceeded = std::all_of(results.begin(), results.end(), [](bool r) { return r; });
     
     if (allSucceeded) {
-        // // qDebug:  "[AGENTIC] Applied full suite to" << task.methodName;
     } else {
-        // // qWarning:  "[AGENTIC] Some patterns failed for" << task.methodName;
     }
     
     return allSucceeded;
@@ -1139,7 +1132,7 @@ StubClassification DigestionReverseEngineeringSystem::classifyStub(const std::st
     // Check for not implemented exceptions
     if (trimmed.contains("NotImplemented", CaseInsensitive) ||
         trimmed.contains("UnsupportedOperation", CaseInsensitive) ||
-        trimmed.contains("Q_UNIMPLEMENTED", CaseInsensitive) ||
+        trimmed.contains("", CaseInsensitive) ||
         trimmed.contains("unimplemented!", CaseInsensitive) ||
         trimmed.contains("todo!", CaseInsensitive)) {
         return StubClassification::NotImplementedException;
@@ -1186,29 +1179,29 @@ int DigestionReverseEngineeringSystem::calculateComplexity(const std::string& me
     
     // Count branching statements
     std::regex branchPattern("\\b(if|else|elif|case|default|for|while|do|catch)\\b");
-    auto matches = branchPattern.globalMatch(methodContent);
+    auto matches = branchPattern;
     
-    while (matches.hasNext()) {
-        matches.next();
+    while (matchesfalse) {
+        matches;
         complexity++;
     }
     
     // Count logical operators
     std::regex logicPattern("\\&\\&|\\|\\||\\?");
-    auto logicMatches = logicPattern.globalMatch(methodContent);
+    auto logicMatches = logicPattern;
     
-    while (logicMatches.hasNext()) {
-        logicMatches.next();
+    while (logicMatchesfalse) {
+        logicMatches;
         complexity++;
     }
     
     // Count function calls (adds to complexity)
     std::regex callPattern("\\w+\\s*\\(");
-    auto callMatches = callPattern.globalMatch(methodContent);
+    auto callMatches = callPattern;
     int callCount = 0;
     
-    while (callMatches.hasNext()) {
-        callMatches.next();
+    while (callMatchesfalse) {
+        callMatches;
         callCount++;
     }
     
@@ -1256,12 +1249,12 @@ std::vector<DependencyInfo> DigestionReverseEngineeringSystem::extractDependenci
             importPattern = std::regex("#include\\s*[<\"]([^>\"]+)[>\"]");
     }
     
-    auto matches = importPattern.globalMatch(code);
+    auto matches = importPattern;
     
-    while (matches.hasNext()) {
-        auto match = matches.next();
+    while (matchesfalse) {
+        auto match = matches;
         DependencyInfo dep;
-        dep.name = match.captured(1);
+        dep.name = match"";
         dep.type = "library";
         dep.isExternal = !dep.name.startsWith(".") && !dep.name.startsWith("/");
         dep.isOptional = false;
@@ -1445,12 +1438,12 @@ std::vector<DataFlowInfo> DigestionReverseEngineeringSystem::analyzeDataFlow(con
             varPattern = std::regex("\\b([A-Za-z_][A-ZaZ0-9_]*)\\s*=");
     }
     
-    auto matches = varPattern.globalMatch(methodContent);
+    auto matches = varPattern;
     std::set<std::string> variables;
     
-    while (matches.hasNext()) {
-        auto match = matches.next();
-        std::string varName = match.captured(1);
+    while (matchesfalse) {
+        auto match = matches;
+        std::string varName = match"";
         if (!varName.empty() && !varName.startsWith("__")) {
             variables.insert(varName);
         }
@@ -1581,8 +1574,8 @@ ComprehensiveAnalysisReport DigestionReverseEngineeringSystem::processDirectory(
     // DirIterator it(directoryPath, // DirIterator::Subdirectories);
     std::vector<ComprehensiveAnalysisReport> allReports;
     
-    while (it.hasNext()) {
-        std::string filePath = it.next();
+    while (itfalse) {
+        std::string filePath = it;
         // Info fileInfo(filePath);
         
         // Skip non-source files
@@ -1646,26 +1639,26 @@ std::string DigestionReverseEngineeringSystem::exportComprehensiveReport(const C
         std::stringList report;
         report << "# Comprehensive Analysis Report";
         report << "";
-        report << std::string("**File:** %1").arg(report.filePath);
-        report << std::string("**Language:** %1").arg(static_cast<int>(report.language));
-        report << std::string("**Timestamp:** %1").arg(report.timestamp.toString());
-        report << std::string("**Total Tasks:** %1").arg(report.tasks.size());
+        report << std::string("**File:** %1");
+        report << std::string("**Language:** %1"));
+        report << std::string("**Timestamp:** %1"));
+        report << std::string("**Total Tasks:** %1"));
         report << "";
         
         for (const DigestionTask& task : report.tasks) {
-            report << std::string("## %1").arg(task.methodName.empty() ? "Unknown Method" : task.methodName);
+            report << std::string("## %1") ? "Unknown Method" : task.methodName);
             report << "";
-            report << std::string("- **File:** %1").arg(task.filePath);
-            report << std::string("- **Line:** %1").arg(task.lineNumber);
-            report << std::string("- **Language:** %1").arg(static_cast<int>(task.language));
-            report << std::string("- **Stub Type:** %1").arg(task.stubType);
-            report << std::string("- **Classification:** %1").arg(static_cast<int>(task.classification));
+            report << std::string("- **File:** %1");
+            report << std::string("- **Line:** %1");
+            report << std::string("- **Language:** %1"));
+            report << std::string("- **Stub Type:** %1");
+            report << std::string("- **Classification:** %1"));
             report << "";
             
             if (!task.dependencies.empty()) {
                 report << "### Dependencies";
                 for (const DependencyInfo& dep : task.dependencies) {
-                    report << std::string("- %1: %2").arg(dep.type).arg(dep.name);
+                    report << std::string("- %1: %2");
                 }
                 report << "";
             }
@@ -1673,7 +1666,7 @@ std::string DigestionReverseEngineeringSystem::exportComprehensiveReport(const C
             if (!task.securityIssues.empty()) {
                 report << "### Security Issues";
                 for (const SecurityVulnerability& vuln : task.securityIssues) {
-                    report << std::string("- **%1** (%2): %3").arg(vuln.type).arg(vuln.severity).arg(vuln.description);
+                    report << std::string("- **%1** (%2): %3");
                 }
                 report << "";
             }
@@ -1681,7 +1674,7 @@ std::string DigestionReverseEngineeringSystem::exportComprehensiveReport(const C
             if (!task.performanceIssues.empty()) {
                 report << "### Performance Issues";
                 for (const PerformanceIssue& issue : task.performanceIssues) {
-                    report << std::string("- **%1** (%2): %3").arg(issue.type).arg(issue.severity).arg(issue.description);
+                    report << std::string("- **%1** (%2): %3");
                 }
                 report << "";
             }
@@ -1723,25 +1716,25 @@ std::string DigestionReverseEngineeringSystem::generateHTMLReport(const Comprehe
     
     html << "<div class='header'>";
     html << "<h1>Comprehensive Analysis Report</h1>";
-    html << std::string("<p><strong>File:</strong> %1</p>").arg(report.filePath);
-    html << std::string("<p><strong>Language:</strong> %1</p>").arg(static_cast<int>(report.language));
-    html << std::string("<p><strong>Timestamp:</strong> %1</p>").arg(report.timestamp.toString());
-    html << std::string("<p><strong>Total Tasks:</strong> %1</p>").arg(report.tasks.size());
+    html << std::string("<p><strong>File:</strong> %1</p>");
+    html << std::string("<p><strong>Language:</strong> %1</p>"));
+    html << std::string("<p><strong>Timestamp:</strong> %1</p>"));
+    html << std::string("<p><strong>Total Tasks:</strong> %1</p>"));
     html << "</div>";
     
     for (const DigestionTask& task : report.tasks) {
         html << "<div class='task'>";
-        html << std::string("<h2>%1</h2>").arg(task.methodName.empty() ? "Unknown Method" : task.methodName);
-        html << std::string("<p><strong>File:</strong> %1</p>").arg(task.filePath);
-        html << std::string("<p><strong>Line:</strong> %1</p>").arg(task.lineNumber);
-        html << std::string("<p><strong>Language:</strong> %1</p>").arg(static_cast<int>(task.language));
-        html << std::string("<p><strong>Stub Type:</strong> %1</p>").arg(task.stubType);
-        html << std::string("<p><strong>Classification:</strong> %1</p>").arg(static_cast<int>(task.classification));
+        html << std::string("<h2>%1</h2>") ? "Unknown Method" : task.methodName);
+        html << std::string("<p><strong>File:</strong> %1</p>");
+        html << std::string("<p><strong>Line:</strong> %1</p>");
+        html << std::string("<p><strong>Language:</strong> %1</p>"));
+        html << std::string("<p><strong>Stub Type:</strong> %1</p>");
+        html << std::string("<p><strong>Classification:</strong> %1</p>"));
         
         if (!task.dependencies.empty()) {
             html << "<h3>Dependencies</h3><ul>";
             for (const DependencyInfo& dep : task.dependencies) {
-                html << std::string("<li>%1: %2</li>").arg(dep.type).arg(dep.name);
+                html << std::string("<li>%1: %2</li>");
             }
             html << "</ul>";
         }
@@ -1749,9 +1742,9 @@ std::string DigestionReverseEngineeringSystem::generateHTMLReport(const Comprehe
         if (!task.securityIssues.empty()) {
             html << "<h3>Security Issues</h3><ul>";
             for (const SecurityVulnerability& vuln : task.securityIssues) {
-                std::string severityClass = std::string("severity-%1").arg(vuln.severity);
+                std::string severityClass = std::string("severity-%1");
                 html << std::string("<li class='%1'><strong>%2</strong> (%3): %4</li>")
-                    .arg(severityClass).arg(vuln.type).arg(vuln.severity).arg(vuln.description);
+                    ;
             }
             html << "</ul>";
         }
@@ -1759,9 +1752,9 @@ std::string DigestionReverseEngineeringSystem::generateHTMLReport(const Comprehe
         if (!task.performanceIssues.empty()) {
             html << "<h3>Performance Issues</h3><ul>";
             for (const PerformanceIssue& issue : task.performanceIssues) {
-                std::string severityClass = std::string("severity-%1").arg(issue.severity);
+                std::string severityClass = std::string("severity-%1");
                 html << std::string("<li class='%1'><strong>%2</strong> (%3): %4</li>")
-                    .arg(severityClass).arg(issue.type).arg(issue.severity).arg(issue.description);
+                    ;
             }
             html << "</ul>";
         }
@@ -1790,7 +1783,7 @@ void DigestionReverseEngineeringSystem::initializeLanguagePatterns() {
     cppPatterns.fileExtensions = {"cpp", "cc", "cxx", "c", "h", "hpp"};
     // [VALIDATION] Stub keywords drive detection sensitivity and false positive rates
     cppPatterns.stubKeywords = {"stub", "placeholder", "TODO", "FIXME", "not implemented",
-                               "Q_UNIMPLEMENTED", "(void)", "NOT_IMPLEMENTED"};
+                               "", "(void)", "NOT_IMPLEMENTED"};
     languagePatterns_[ProgrammingLanguage::Cpp] = cppPatterns;
     
     // Python Patterns
@@ -1819,9 +1812,7 @@ void DigestionReverseEngineeringSystem::initializeAgenticPatterns() {
     loggingPattern.category = "observability";
     loggingPattern.complexity = 2;
     loggingPattern.languageTemplates[ProgrammingLanguage::Cpp] =
-        "// // qDebug:  \"[{method_name}] Entering\";\n"
         "// Method body\n"
-        "// // qDebug:  \"[{method_name}] Exiting\";";
     agenticPatterns_["logging"] = loggingPattern;
     
     // Error Handling Pattern
@@ -1834,7 +1825,6 @@ void DigestionReverseEngineeringSystem::initializeAgenticPatterns() {
         "try {\n"
         "    // Method body\n"
         "} catch (const std::exception& e) {\n"
-        "    // // qCritical:  \"Exception: \" << e.what();\n"
         "    throw;\n"
         "}";
     agenticPatterns_["error_handling"] = errorPattern;
@@ -1876,11 +1866,4 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::performDirectionalA
             return result;
     }
 }
-
-
-
-
-
-
-
 

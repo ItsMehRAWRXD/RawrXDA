@@ -1,9 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QObject>
+
 #include <cstdint>
 #include <string>
 
@@ -30,8 +27,8 @@ namespace telemetry {
     void Shutdown();
 }
 
-class Telemetry : public QObject {
-    Q_OBJECT
+class Telemetry : public void {
+
 public:
     Telemetry();
     ~Telemetry();
@@ -39,11 +36,12 @@ public:
     // Two-phase initialization: call this after QApplication is running
     void initializeHardware();
     
-    void recordEvent(const QString& event_name, const QJsonObject& metadata = QJsonObject());
-    bool saveTelemetry(const QString& filepath);
+    void recordEvent(const std::string& event_name, const void*& metadata = void*());
+    bool saveTelemetry(const std::string& filepath);
     void enableTelemetry(bool enable);
     
 private:
     bool is_enabled_;
-    QJsonArray events_;
+    void* events_;
 };
+

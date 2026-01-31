@@ -161,6 +161,3 @@ void IncidentResponseCoordinator::incidentUpdated(const Incident& inc) { (void)i
 void IncidentResponseCoordinator::incidentResolved(const Incident& inc) { (void)inc; }
 void IncidentResponseCoordinator::incidentEscalated(const Incident& inc) { (void)inc; }
 
-
-
-

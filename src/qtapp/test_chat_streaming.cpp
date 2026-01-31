@@ -1,6 +1,6 @@
 #include "inference_engine.hpp"
-#include <QCoreApplication>
-#include <QThread>
+
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -38,7 +38,7 @@ public:
             std::string fullResponse;
 
             engine->generateStreaming(
-                QString::fromStdString(prompt),
+                std::string::fromStdString(prompt),
                 128,
                 [&fullResponse](const std::string& token) {
                     std::cout << token << std::flush;
@@ -52,7 +52,7 @@ public:
 
             // Wait for completion
             while (!generationComplete) {
-                QThread::msleep(10);
+                std::thread::msleep(10);
             }
 
             // Update history
@@ -107,9 +107,9 @@ int main(int argc, char *argv[]) {
         std::cout << "[TEST] Engine configured: threading=off, tensors=on" << std::endl;
         
         // Check if model path is provided as command line argument
-        QString modelPath = "D:/temp/RawrXD-agentic-ide-production/RawrXD-ModelLoader/tinyllama-test.gguf";
+        std::string modelPath = "D:/temp/RawrXD-agentic-ide-production/RawrXD-ModelLoader/tinyllama-test.gguf";
         if (argc > 1) {
-            modelPath = QString::fromLocal8Bit(argv[1]);
+            modelPath = std::string::fromLocal8Bit(argv[1]);
         }
 
         std::cout << "[TEST] About to call engine.loadModel()" << std::endl;
@@ -134,3 +134,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+

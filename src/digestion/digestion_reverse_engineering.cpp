@@ -14,7 +14,7 @@
             std::regex(R"(NOT_IMPLEMENTED)", std::regex::CaseInsensitiveOption),
             std::regex(R"(throw\s+std::(?:runtime_error|exception|logic_error)\s*\(\s*[\"']Not implemented)", std::regex::CaseInsensitiveOption),
             std::regex(R"(return\s+(?:false|0|nullptr|NULL)\s*;\s*//\s*stub)", std::regex::CaseInsensitiveOption),
-            std::regex(R"(Q_UNIMPLEMENTED\(\))"),
+            std::regex(R"(\(\))"),
             std::regex(R"(\{\s*//\s*TODO\s*\n\s*\})"),
             std::regex(R"(assert\(false\s*&&\s*[\"']Not implemented[\"']\))")
         }, "//", "/*", "*/", true},
@@ -34,7 +34,7 @@ extern "C" {
 
 namespace {
 
-const QSet<std::string> kDigestionExtensions = {
+const std::unordered_set<std::string> kDigestionExtensions = {
     std::stringLiteral("c"), std::stringLiteral("cpp"), std::stringLiteral("cxx"), std::stringLiteral("cc"), std::stringLiteral("c++"),
     std::stringLiteral("h"), std::stringLiteral("hpp"), std::stringLiteral("hh"), std::stringLiteral("hxx"),
     std::stringLiteral("rs"), std::stringLiteral("go"),
@@ -187,7 +187,7 @@ void DigestionReverseEngineeringSystem::initializeLanguageProfiles() {
             std::regex(R"(NOT_IMPLEMENTED)", std::regex::CaseInsensitiveOption),
             std::regex(R"(throw\s+std::(?:runtime_error|exception|logic_error)\s*\(\s*[\"']Not implemented)", std::regex::CaseInsensitiveOption),
             std::regex(R"(return\s+(?:false|0|nullptr|NULL)\s*;\s*//\s*stub)", std::regex::CaseInsensitiveOption),
-            std::regex(R"(Q_UNIMPLEMENTED\(\))"),
+            std::regex(R"(\(\))"),
             std::regex(R"(\{\s*//\s*TODO\s*\n\s*\})"),
             std::regex(R"(assert\(false\s*&&\s*[\"']Not implemented[\"']\))")
         }, "//", "/*", "*/", true},
@@ -317,7 +317,7 @@ void DigestionReverseEngineeringSystem::runFullDigestionPipeline(const std::stri
             std::regex(R"(NOT_IMPLEMENTED)", std::regex::CaseInsensitiveOption),
             std::regex(R"(throw\s+std::(?:runtime_error|exception|logic_error)\s*\(\s*[\"']Not implemented)", std::regex::CaseInsensitiveOption),
             std::regex(R"(return\s+(?:false|0|nullptr|NULL)\s*;\s*//\s*stub)", std::regex::CaseInsensitiveOption),
-            std::regex(R"(Q_UNIMPLEMENTED\(\))"),
+            std::regex(R"(\(\))"),
             std::regex(R"(\{\s*//\s*TODO\s*\n\s*\})"),
             std::regex(R"(assert\(false\s*&&\s*[\"']Not implemented[\"']\))")
         }, "//", "/*", "*/", true},
@@ -547,7 +547,7 @@ std::vector<AgenticTask> DigestionReverseEngineeringSystem::findStubs(
                 task.lineNumber = i + 1;
                 task.stubType = pattern.pattern();
                 task.timestamp = // DateTime::currentDateTime().toMSecsSinceEpoch();
-                task.backupId = std::string("%1_%2").arg(task.timestamp).arg(task.lineNumber);
+                task.backupId = std::string("%1_%2");
                 
                 // Extract context (5 lines before/after for better AI context)
                 int start = qMax(0, i - 5);
@@ -663,7 +663,7 @@ void DigestionReverseEngineeringSystem::createBackup(const std::string &filePath
     // backupDir(effectiveDir);
     if (!backupDir.exists()) backupDir.mkpath(".");
     std::string backupPath = backupDir.filePath(
-        std::string("%1_%2.bak").arg(// FileInfo: filePath).fileName(), resolvedBackupId)
+        std::string("%1_%2.bak").fileName(), resolvedBackupId)
     );
     
     if (std::filesystem::copy(filePath, backupPath)) {
@@ -897,7 +897,7 @@ bool DigestionReverseEngineeringSystem::rollbackFile(const std::string &backupId
     
     std::string original = m_backupRegistry[backupId];
     std::string backupPath = // (m_backupDir.empty() ? DigestionConfig().backupDir : m_backupDir)
-        .filePath(std::string("%1_%2.bak").arg(// FileInfo: original).fileName(), backupId));
+        .filePath(std::string("%1_%2.bak").fileName(), backupId));
     lock.unlock();
     
     return std::filesystem::copy(backupPath, original);
@@ -923,7 +923,7 @@ bool DigestionReverseEngineeringSystem::rollbackAll(const // DateTime &timestamp
         
         const std::string original = it.value();
         const std::string backupPath = // (effectiveDir)
-            .filePath(std::string("%1_%2.bak").arg(// FileInfo: original).fileName(), backupId));
+            .filePath(std::string("%1_%2.bak").fileName(), backupId));
         if (!std::filesystem::exists(backupPath)) {
             success = false;
             continue;
@@ -962,11 +962,4 @@ bool DigestionReverseEngineeringSystem::asmOptimizedScan(const std::vector<uint8
 #endif
     return data.contains(pattern);
 }
-
-
-
-
-
-
-
 

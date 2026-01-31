@@ -1,18 +1,11 @@
 // Model Download Dialog - Implementation
 #include "model_download_dialog_new.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPushButton>
-#include <QListWidget>
-#include <QProgressBar>
-#include <QMessageBox>
-#include <QDebug>
+
 
 namespace RawrXD {
 
-ModelDownloadDialog::ModelDownloadDialog(QWidget* parent)
-    : QDialog(parent)
+ModelDownloadDialog::ModelDownloadDialog(void* parent)
+    : void(parent)
     , m_downloader(new AutoModelDownloader(this))
 {
     setWindowTitle("No Models Detected - Download Recommended Model");
@@ -23,12 +16,10 @@ ModelDownloadDialog::ModelDownloadDialog(QWidget* parent)
     loadRecommendedModels();
     setupConnections();
     
-    qDebug() << "[ModelDownloadDialog] Dialog initialized";
 }
 
 ModelDownloadDialog::~ModelDownloadDialog()
 {
-    qDebug() << "[ModelDownloadDialog] Dialog destroyed";
 }
 
 void ModelDownloadDialog::onDownloadClicked()
@@ -46,7 +37,6 @@ void ModelDownloadDialog::onDownloadClicked()
     
     const auto& model = m_models[modelIndex];
     
-    qDebug() << "[ModelDownloadDialog] Starting download of" << model.displayName;
     
     // Disable UI during download
     m_downloadButton->setEnabled(false);
@@ -58,34 +48,32 @@ void ModelDownloadDialog::onDownloadClicked()
     m_progressBar->setMaximum(static_cast<int>(model.sizeBytes / 1024));  // KB
     m_progressBar->setValue(0);
     
-    QString destination = "D:/OllamaModels/" + model.name + ".gguf";
+    std::string destination = "D:/OllamaModels/" + model.name + ".gguf";
     m_downloader->downloadModel(model, destination);
 }
 
 void ModelDownloadDialog::onSkipClicked()
 {
-    qDebug() << "[ModelDownloadDialog] User skipped model download";
     reject();  // User chose to skip download
 }
 
-void ModelDownloadDialog::onDownloadProgress(const QString& modelName, qint64 bytesReceived, qint64 bytesTotal)
+void ModelDownloadDialog::onDownloadProgress(const std::string& modelName, qint64 bytesReceived, qint64 bytesTotal)
 {
-    Q_UNUSED(modelName);
+    (modelName);
     if (bytesTotal <= 0) return;
     
     m_progressBar->setMaximum(static_cast<int>(bytesTotal / 1024));
     m_progressBar->setValue(static_cast<int>(bytesReceived / 1024));
     
     double progressPercent = (bytesReceived * 100.0 / bytesTotal);
-    m_statusLabel->setText(QString("⬇ Downloading... %1 MB / %2 MB (%3%)")
-        .arg(bytesReceived / 1024 / 1024)
-        .arg(bytesTotal / 1024 / 1024)
-        .arg(QString::number(progressPercent, 'f', 1)));
+    m_statusLabel->setText(std::string("⬇ Downloading... %1 MB / %2 MB (%3%)")
+
+
+        ));
 }
 
-void ModelDownloadDialog::onDownloadCompleted(const QString& modelName, const QString& filePath)
+void ModelDownloadDialog::onDownloadCompleted(const std::string& modelName, const std::string& filePath)
 {
-    qDebug() << "[ModelDownloadDialog] Download completed:" << modelName << "→" << filePath;
     
     m_statusLabel->setText("✓ Download completed! Saved to: " + filePath);
     m_progressBar->setValue(m_progressBar->maximum());
@@ -97,9 +85,8 @@ void ModelDownloadDialog::onDownloadCompleted(const QString& modelName, const QS
     accept();  // Close dialog with success
 }
 
-void ModelDownloadDialog::onDownloadFailed(const QString& modelName, const QString& error)
+void ModelDownloadDialog::onDownloadFailed(const std::string& modelName, const std::string& error)
 {
-    qWarning() << "[ModelDownloadDialog] Download failed for" << modelName << ":" << error;
     
     m_statusLabel->setText("✗ Download failed: " + error);
     m_progressBar->setVisible(false);
@@ -199,38 +186,32 @@ void ModelDownloadDialog::setupUI()
     
     mainLayout->addLayout(buttonLayout);
     
-    setStyleSheet("QDialog { background-color: #252526; }");
+    setStyleSheet("void { background-color: #252526; }");
 }
 
 void ModelDownloadDialog::setupConnections()
 {
-    connect(m_downloadButton, &QPushButton::clicked, this, &ModelDownloadDialog::onDownloadClicked);
-    connect(m_skipButton, &QPushButton::clicked, this, &ModelDownloadDialog::onSkipClicked);
-    
-    connect(m_downloader, &AutoModelDownloader::downloadProgress,
-            this, &ModelDownloadDialog::onDownloadProgress);
-    connect(m_downloader, &AutoModelDownloader::downloadCompleted,
-            this, &ModelDownloadDialog::onDownloadCompleted);
-    connect(m_downloader, &AutoModelDownloader::downloadFailed,
-            this, &ModelDownloadDialog::onDownloadFailed);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 void ModelDownloadDialog::loadRecommendedModels()
 {
     m_models = m_downloader->getRecommendedModels();
     
-    qDebug() << "[ModelDownloadDialog] Loaded" << m_models.size() << "recommended models";
     
     for (const auto& model : m_models) {
-        QString itemText = QString("%1\n   %2\n   Size: %3 MB")
-            .arg(model.displayName)
-            .arg(model.description)
-            .arg(model.sizeBytes / 1024 / 1024);
+        std::string itemText = std::string("%1\n   %2\n   Size: %3 MB")
+
+
+            ;
         
         QListWidgetItem* item = new QListWidgetItem(itemText);
         if (model.isDefault) {
             item->setBackground(QColor(30, 100, 60, 50));  // Slight green tint
-            qDebug() << "[ModelDownloadDialog] Default model:" << model.displayName;
         }
         m_modelList->addItem(item);
     }
@@ -245,3 +226,4 @@ void ModelDownloadDialog::loadRecommendedModels()
 }
 
 } // namespace RawrXD
+

@@ -1,55 +1,49 @@
 #pragma once
 
-#include <QObject>
-#include <QSettings>
-#include <QJsonObject>
-#include <QString>
-#include <QVariant>
-#include <QMap>
 
-class SettingsManager : public QObject {
-    Q_OBJECT
+class SettingsManager : public void {
 
 public:
-    explicit SettingsManager(QObject* parent = nullptr);
+    explicit SettingsManager(void* parent = nullptr);
     ~SettingsManager();
 
     // Core settings management
-    void setValue(const QString& key, const QVariant& value);
-    QVariant getValue(const QString& key, const QVariant& defaultValue = QVariant()) const;
-    bool contains(const QString& key) const;
-    void remove(const QString& key);
+    void setValue(const std::string& key, const std::any& value);
+    std::any getValue(const std::string& key, const std::any& defaultValue = std::any()) const;
+    bool contains(const std::string& key) const;
+    void remove(const std::string& key);
     void sync();
 
     // Agent-specific settings
-    void setAgentSettings(const QString& agentId, const QJsonObject& settings);
-    QJsonObject getAgentSettings(const QString& agentId) const;
+    void setAgentSettings(const std::string& agentId, const void*& settings);
+    void* getAgentSettings(const std::string& agentId) const;
 
     // Model settings
-    void setModelSettings(const QString& modelPath, const QJsonObject& settings);
-    QJsonObject getModelSettings(const QString& modelPath) const;
+    void setModelSettings(const std::string& modelPath, const void*& settings);
+    void* getModelSettings(const std::string& modelPath) const;
 
     // GPU backend settings
-    void setGPUBackend(const QString& backend, const QJsonObject& config);
-    QJsonObject getGPUBackend(const QString& backend) const;
+    void setGPUBackend(const std::string& backend, const void*& config);
+    void* getGPUBackend(const std::string& backend) const;
 
     // Security settings
-    void setSecuritySettings(const QJsonObject& settings);
-    QJsonObject getSecuritySettings() const;
+    void setSecuritySettings(const void*& settings);
+    void* getSecuritySettings() const;
 
     // Export/Import
-    QJsonObject exportAllSettings() const;
-    bool importSettings(const QJsonObject& settings);
+    void* exportAllSettings() const;
+    bool importSettings(const void*& settings);
 
-signals:
-    void settingChanged(const QString& key, const QVariant& value);
-    void agentSettingsChanged(const QString& agentId);
-    void modelSettingsChanged(const QString& modelPath);
+
+    void settingChanged(const std::string& key, const std::any& value);
+    void agentSettingsChanged(const std::string& agentId);
+    void modelSettingsChanged(const std::string& modelPath);
     void securitySettingsChanged();
 
 private:
     QSettings* m_settings;
-    QMap<QString, QJsonObject> m_agentSettings;
-    QMap<QString, QJsonObject> m_modelSettings;
-    QMap<QString, QJsonObject> m_gpuBackends;
+    std::map<std::string, void*> m_agentSettings;
+    std::map<std::string, void*> m_modelSettings;
+    std::map<std::string, void*> m_gpuBackends;
 };
+

@@ -13,7 +13,6 @@ AIDebugger::~AIDebugger()
 bool AIDebugger::startDebugging(const std::string &executablePath, const std::stringList &arguments)
 {
     if (m_isRunning) {
-        // // qWarning:  "Debugger is already running";
         return false;
     }
 
@@ -24,12 +23,10 @@ bool AIDebugger::startDebugging(const std::string &executablePath, const std::st
     gdbArgs << "--interpreter=mi" << executablePath;
     m_gdbProcess->start("gdb", gdbArgs);
     if (!m_gdbProcess->waitForStarted()) {
-        // // qWarning:  "Failed to start GDB:" << m_gdbProcess->errorString();
         return false;
     }
 
     m_isRunning = true;
-    // // qDebug:  "GDB started successfully";
 
     // Set arguments if provided
     if (!arguments.empty()) {
@@ -43,11 +40,10 @@ bool AIDebugger::startDebugging(const std::string &executablePath, const std::st
 void AIDebugger::setBreakpoint(const std::string &filePath, int lineNumber)
 {
     if (!m_isRunning) {
-        // // qWarning:  "Debugger is not running";
         return;
     }
 
-    std::string command = std::string("-break-insert %1:%2").arg(filePath).arg(lineNumber);
+    std::string command = std::string("-break-insert %1:%2");
     sendGdbCommand(command);
     m_breakpoints[filePath] = lineNumber;
 }
@@ -55,7 +51,6 @@ void AIDebugger::setBreakpoint(const std::string &filePath, int lineNumber)
 void AIDebugger::continueExecution()
 {
     if (!m_isRunning) {
-        // // qWarning:  "Debugger is not running";
         return;
     }
 
@@ -80,7 +75,6 @@ void AIDebugger::stopDebugging()
         m_gdbProcess->waitForFinished(1000);
     }
 
-    // // qDebug:  "GDB stopped";
     debuggingFinished();
 }
 
@@ -98,7 +92,6 @@ void AIDebugger::onGdbFinished(int exitCode, void*::ExitStatus exitStatus)
 
     m_isRunning = false;
     m_breakpoints.clear();
-    // // qDebug:  "GDB process finished";
     debuggingFinished();
 }
 
@@ -108,7 +101,6 @@ void AIDebugger::parseGdbOutput(const std::string &output)
     // the GDB/MI (Machine Interface) protocol properly.
     // For now, we'll just look for breakpoint hit notifications.
     if (output.contains("*stopped,reason=\"breakpoint-hit\"")) {
-        // // qDebug:  "Breakpoint hit detected";
         // In a real implementation, we would parse the full output to extract
         // the file path, line number, and other debug information.
         // For this example, we'll just a signal with dummy data.
@@ -124,7 +116,6 @@ void AIDebugger::sendGdbCommand(const std::string &command)
         return;
     }
 
-    // // qDebug:  "Sending GDB command:" << command;
     m_gdbProcess->write((command + "\n").toUtf8());
 }
 
@@ -149,10 +140,4 @@ void AIDebugger::requestFixFromModel(const void* &debugInfo)
     std::string dummyDiff = "--- a/dummy_file.cpp\n+++ b/dummy_file.cpp\n@@ -39,7 +39,7 @@\n int main() {\n     int a = 5;\n     int b = 10;\n-    int c = a - b;\n+    int c = a + b;\n     return 0;\n }\n";
     fixSuggested(dummyDiff);
 }
-
-
-
-
-
-
 

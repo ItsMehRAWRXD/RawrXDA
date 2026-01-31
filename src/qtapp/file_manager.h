@@ -17,11 +17,6 @@
  */
 #pragma once
 
-#include <QString>
-#include <QFile>
-#include <QTextStream>
-#include <QFileInfo>
-#include <QDir>
 
 /**
  * @struct MultiFileSearchResult
@@ -33,15 +28,15 @@
  * @par Usage Example:
  * @code
  * MultiFileSearchResult result("main.cpp", 42, 15, "int main(int argc, char** argv)", "main");
- * emit resultFound(result);
+ * resultFound(result);
  * @endcode
  */
 struct MultiFileSearchResult {
-    QString file;        ///< Absolute or relative path to the file containing the match
+    std::string file;        ///< Absolute or relative path to the file containing the match
     int line;            ///< 1-based line number where the match was found
     int column;          ///< 0-based column offset within the line
-    QString lineText;    ///< Full text of the line containing the match (for preview)
-    QString matchedText; ///< The actual text that matched the search query
+    std::string lineText;    ///< Full text of the line containing the match (for preview)
+    std::string matchedText; ///< The actual text that matched the search query
 
     /**
      * @brief Default constructor - creates an empty/invalid result.
@@ -56,8 +51,8 @@ struct MultiFileSearchResult {
      * @param lineText_   Full line text for context display
      * @param matchedText_ The matched substring
      */
-    MultiFileSearchResult(const QString& file_, int line_, int column_,
-                          const QString& lineText_, const QString& matchedText_)
+    MultiFileSearchResult(const std::string& file_, int line_, int column_,
+                          const std::string& lineText_, const std::string& matchedText_)
         : file(file_)
         , line(line_)
         , column(column_)
@@ -84,8 +79,8 @@ struct MultiFileSearchResult {
  *
  * @par Usage Example:
  * @code
- * QString content = FileManager::readFile("/path/to/file.cpp");
- * QString relative = FileManager::toRelativePath("/project/src/main.cpp", "/project");
+ * std::string content = FileManager::readFile("/path/to/file.cpp");
+ * std::string relative = FileManager::toRelativePath("/project/src/main.cpp", "/project");
  * @endcode
  */
 class FileManager {
@@ -93,16 +88,16 @@ public:
     /**
      * @brief Reads the entire contents of a text file.
      * @param filePath Absolute or relative path to the file
-     * @return File contents as QString, or empty string on error
+     * @return File contents as std::string, or empty string on error
      *
-     * @note Uses QFile with ReadOnly | Text mode for proper line ending handling.
+     * @note Uses std::fstream with ReadOnly | Text mode for proper line ending handling.
      * @warning Returns empty string for both empty files and read errors.
-     *          Check QFile::exists() first if distinction is needed.
+     *          Check std::fstream::exists() first if distinction is needed.
      */
-    static QString readFile(const QString& filePath) {
-        QFile file(filePath);
+    static std::string readFile(const std::string& filePath) {
+        std::fstream file(filePath);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            return QString();
+            return std::string();
         }
         QTextStream stream(&file);
         return stream.readAll();
@@ -116,12 +111,12 @@ public:
      *
      * @par Example:
      * @code
-     * QString rel = FileManager::toRelativePath("/home/user/project/src/main.cpp", "/home/user/project");
+     * std::string rel = FileManager::toRelativePath("/home/user/project/src/main.cpp", "/home/user/project");
      * // Returns: "src/main.cpp"
      * @endcode
      */
-    static QString toRelativePath(const QString& absolutePath, const QString& basePath) {
-        QDir baseDir(basePath);
+    static std::string toRelativePath(const std::string& absolutePath, const std::string& basePath) {
+        std::filesystem::path baseDir(basePath);
         return baseDir.relativeFilePath(absolutePath);
     }
 
@@ -130,8 +125,8 @@ public:
      * @param filePath Full path to extract filename from
      * @return Filename with extension, without directory components
      */
-    static QString getFileName(const QString& filePath) {
-        return QFileInfo(filePath).fileName();
+    static std::string getFileName(const std::string& filePath) {
+        return std::filesystem::path(filePath).fileName();
     }
 
     /**
@@ -139,8 +134,8 @@ public:
      * @param filePath Full path to extract directory from
      * @return Directory path without the filename component
      */
-    static QString getDirectory(const QString& filePath) {
-        return QFileInfo(filePath).absolutePath();
+    static std::string getDirectory(const std::string& filePath) {
+        return std::filesystem::path(filePath).absolutePath();
     }
 
     /**
@@ -148,8 +143,9 @@ public:
      * @param filePath Path to check
      * @return true if the file exists and can be read
      */
-    static bool fileExists(const QString& filePath) {
-        QFileInfo info(filePath);
+    static bool fileExists(const std::string& filePath) {
+        std::filesystem::path info(filePath);
         return info.exists() && info.isReadable();
     }
 };
+

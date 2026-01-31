@@ -1,9 +1,5 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QHash>
 
 /**
  * @brief Privacy-respecting telemetry for feature usage and crash analysis
@@ -17,9 +13,8 @@
  * - User can view/delete all collected data
  * - Configurable via environment: TELEMETRY_ENABLED=1
  */
-class TelemetryCollector : public QObject
+class TelemetryCollector : public void
 {
-    Q_OBJECT
 
 public:
     static TelemetryCollector* instance();
@@ -51,13 +46,13 @@ public:
      * @param featureName Feature identifier (e.g., "model.load", "inference.generate")
      * @param metadata Additional context (no PII allowed)
      */
-    void trackFeatureUsage(const QString& featureName, const QJsonObject& metadata = QJsonObject());
+    void trackFeatureUsage(const std::string& featureName, const void*& metadata = void*());
     
     /**
      * @brief Track application crash (minimal data)
      * @param crashReason Crash reason (sanitized, no PII)
      */
-    void trackCrash(const QString& crashReason);
+    void trackCrash(const std::string& crashReason);
     
     /**
      * @brief Track performance metric
@@ -65,13 +60,13 @@ public:
      * @param value Numeric value
      * @param unit Unit of measurement (ms, MB, etc.)
      */
-    void trackPerformance(const QString& metricName, double value, const QString& unit = QString());
+    void trackPerformance(const std::string& metricName, double value, const std::string& unit = std::string());
     
     /**
      * @brief Get all collected telemetry data (for user transparency)
      * @return JSON object with all telemetry
      */
-    QJsonObject getAllTelemetryData() const;
+    void* getAllTelemetryData() const;
     
     /**
      * @brief Clear all telemetry data (user-initiated)
@@ -83,28 +78,27 @@ public:
      */
     void flushData();
 
-signals:
     void telemetryEnabled();
     void telemetryDisabled();
     void dataFlushed(int eventCount);
 
 private:
-    explicit TelemetryCollector(QObject* parent = nullptr);
+    explicit TelemetryCollector(void* parent = nullptr);
     ~TelemetryCollector();
     
     static TelemetryCollector* s_instance;
     
     bool m_enabled;
-    QString m_sessionId;  ///< Anonymous session identifier (not persistent)
-    QHash<QString, int> m_featureUsage;  ///< Feature name -> usage count
-    QList<QJsonObject> m_events;  ///< Buffered events for batch sending
+    std::string m_sessionId;  ///< Anonymous session identifier (not persistent)
+    std::unordered_map<std::string, int> m_featureUsage;  ///< Feature name -> usage count
+    std::vector<void*> m_events;  ///< Buffered events for batch sending
     qint64 m_sessionStartTime;  ///< Session start timestamp
     
     // PRODUCTION-READY: Sanitize data to remove any PII
-    QString sanitize(const QString& input) const;
+    std::string sanitize(const std::string& input) const;
     
     // PRODUCTION-READY: Send telemetry to server (non-blocking)
-    void sendTelemetry(const QJsonObject& payload);
+    void sendTelemetry(const void*& payload);
     
     // PRODUCTION-READY: Load user consent from settings
     bool loadUserConsent() const;
@@ -112,3 +106,4 @@ private:
     // PRODUCTION-READY: Save user consent to settings
     void saveUserConsent(bool enabled);
 };
+

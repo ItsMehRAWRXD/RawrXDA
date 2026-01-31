@@ -1,44 +1,40 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QList>
-#include <QTimer>
 
 struct Task {
-    QString id;
-    QString description;
-    QString status; // "pending", "in-progress", "completed", "failed"
+    std::string id;
+    std::string description;
+    std::string status; // "pending", "in-progress", "completed", "failed"
     int priority;
-    QString assignedAgent;
+    std::string assignedAgent;
 };
 
-class PlanningAgent : public QObject {
-    Q_OBJECT
+class PlanningAgent : public void {
+
 public:
-    explicit PlanningAgent(QObject* parent = nullptr);
+    explicit PlanningAgent(void* parent = nullptr);
     virtual ~PlanningAgent() = default;
     
     void initialize();
-    void createPlan(const QString& goal);
+    void createPlan(const std::string& goal);
     void executePlan();
     void addTask(const Task& task);
-    QList<Task> getTasks() const;
+    std::vector<Task> getTasks() const;
     
-signals:
-    void planCreated(const QString& plan);
-    void taskStatusChanged(const QString& taskId, const QString& status);
+
+    void planCreated(const std::string& plan);
+    void taskStatusChanged(const std::string& taskId, const std::string& status);
     void planCompleted();
-    void planFailed(const QString& error);
+    void planFailed(const std::string& error);
     
-private slots:
+private:
     void processNextTask();
     
 private:
-    QList<Task> tasks_;
-    QTimer* taskProcessor_;
+    std::vector<Task> tasks_;
+    void** taskProcessor_;
     int currentTaskIndex_;
     
-    QString generatePlan(const QString& goal);
-    void updateTaskStatus(const QString& taskId, const QString& status);
+    std::string generatePlan(const std::string& goal);
+    void updateTaskStatus(const std::string& taskId, const std::string& status);
 };

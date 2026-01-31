@@ -2,32 +2,24 @@
 #include "model_interface.h"
 #include "universal_model_router.h"
 #include "cloud_api_client.h"
-#include <QCoreApplication>
-#include <QTimer>
-#include <QDebug>
-#include <QJsonDocument>
-#include <QJsonObject>
+
+
 #include <iostream>
 #include <memory>
 
-class ModelRouterTester : public QObject {
-    Q_OBJECT
+class ModelRouterTester : public void {
 
 public:
-    ModelRouterTester(QObject* parent = nullptr)
-        : QObject(parent),
+    ModelRouterTester(void* parent = nullptr)
+        : void(parent),
           test_count(0),
           success_count(0),
           failure_count(0)
     {
         model_interface = std::make_unique<ModelInterface>(this);
-        
-        connect(model_interface.get(), &ModelInterface::initialized,
-                this, &ModelRouterTester::onInitialized);
-        connect(model_interface.get(), &ModelInterface::generationComplete,
-                this, &ModelRouterTester::onGenerationComplete);
-        connect(model_interface.get(), &ModelInterface::generationError,
-                this, &ModelRouterTester::onGenerationError);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     }
 
     void runTests() {
@@ -35,12 +27,12 @@ public:
         std::cout << "Testing both local and cloud models..." << std::endl;
         
         // Initialize with config
-        QString config_path = "./model_config.json";
+        std::string config_path = "./model_config.json";
         std::cout << "\n[TEST 1] Initializing Model Router..." << std::endl;
         model_interface->initialize(config_path);
     }
 
-private slots:
+private:
     void onInitialized() {
         std::cout << "[PASS] Model Router initialized successfully" << std::endl;
         success_count++;
@@ -49,22 +41,22 @@ private slots:
         testListModels();
         
         // Test 3: Test local model
-        QTimer::singleShot(1000, this, &ModelRouterTester::testLocalModel);
+        void*::singleShot(1000, this, &ModelRouterTester::testLocalModel);
         
         // Test 4: Test cloud model (if API keys available)
-        QTimer::singleShot(3000, this, &ModelRouterTester::testCloudModel);
+        void*::singleShot(3000, this, &ModelRouterTester::testCloudModel);
         
         // Test 5: Test statistics
-        QTimer::singleShot(5000, this, &ModelRouterTester::testStatistics);
+        void*::singleShot(5000, this, &ModelRouterTester::testStatistics);
         
         // Test 6: Test model selection
-        QTimer::singleShot(6000, this, &ModelRouterTester::testModelSelection);
+        void*::singleShot(6000, this, &ModelRouterTester::testModelSelection);
         
         // Final report
-        QTimer::singleShot(8000, this, &ModelRouterTester::printReport);
+        void*::singleShot(8000, this, &ModelRouterTester::printReport);
     }
 
-    void onGenerationComplete(const QString& result, int tokens, double latency) {
+    void onGenerationComplete(const std::string& result, int tokens, double latency) {
         std::cout << "[PASS] Generation completed:" << std::endl;
         std::cout << "  Tokens: " << tokens << std::endl;
         std::cout << "  Latency: " << latency << " ms" << std::endl;
@@ -73,7 +65,7 @@ private slots:
         success_count++;
     }
 
-    void onGenerationError(const QString& error) {
+    void onGenerationError(const std::string& error) {
         std::cout << "[FAIL] Generation error: " << error.toStdString() << std::endl;
         failure_count++;
     }
@@ -82,7 +74,7 @@ private slots:
         test_count++;
         std::cout << "\n[TEST 2] Listing available models..." << std::endl;
         
-        QStringList models = model_interface->getAvailableModels();
+        std::vector<std::string> models = model_interface->getAvailableModels();
         if (models.isEmpty()) {
             std::cout << "[FAIL] No models found" << std::endl;
             failure_count++;
@@ -90,7 +82,7 @@ private slots:
         }
         
         std::cout << "[PASS] Found " << models.size() << " models:" << std::endl;
-        for (const QString& model : models) {
+        for (const std::string& model : models) {
             std::cout << "  - " << model.toStdString() << std::endl;
         }
         success_count++;
@@ -100,7 +92,7 @@ private slots:
         test_count++;
         std::cout << "\n[TEST 3] Testing local model (quantumide-q4km)..." << std::endl;
         
-        QString prompt = "What is the capital of France? Answer in one sentence.";
+        std::string prompt = "What is the capital of France? Answer in one sentence.";
         std::cout << "Prompt: " << prompt.toStdString() << std::endl;
         
         try {
@@ -128,14 +120,14 @@ private slots:
         std::cout << "\n[TEST 4] Testing cloud model (gpt-3.5-turbo)..." << std::endl;
         
         // Check if OpenAI API key is set
-        QString api_key = qEnvironmentVariable("OPENAI_API_KEY");
+        std::string api_key = qEnvironmentVariable("OPENAI_API_KEY");
         if (api_key.isEmpty()) {
             std::cout << "[SKIP] OPENAI_API_KEY not set, skipping cloud test" << std::endl;
             std::cout << "  Set environment variable: OPENAI_API_KEY=sk-..." << std::endl;
             return;
         }
         
-        QString prompt = "Say 'Hello from cloud model' in exactly 5 words.";
+        std::string prompt = "Say 'Hello from cloud model' in exactly 5 words.";
         std::cout << "Prompt: " << prompt.toStdString() << std::endl;
         
         try {
@@ -180,7 +172,7 @@ private slots:
         test_count++;
         std::cout << "\n[TEST 6] Testing smart model selection..." << std::endl;
         
-        QString selected = model_interface->selectBestModel("general", "en", true);
+        std::string selected = model_interface->selectBestModel("general", "en", true);
         std::cout << "[PASS] Selected model: " << selected.toStdString() << std::endl;
         
         if (!selected.isEmpty()) {
@@ -225,9 +217,10 @@ int main(int argc, char* argv[])
     ModelRouterTester tester;
     
     // Start tests after event loop starts
-    QTimer::singleShot(100, &tester, &ModelRouterTester::runTests);
+    void*::singleShot(100, &tester, &ModelRouterTester::runTests);
     
     return app.exec();
 }
 
-#include "model_router_cli_test.moc"
+// MOC removed
+

@@ -123,5 +123,3 @@ void LatencyMonitor::updateStats()
 
 } // namespace RawrXD
 
-
-

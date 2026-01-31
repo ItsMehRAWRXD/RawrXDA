@@ -1,5 +1,4 @@
 #pragma once
-#include <QString>
 
 class Rollback {
 public:
@@ -8,5 +7,6 @@ public:
     // git revert HEAD + rebuild
     bool revertLastCommit();
     // open GitHub issue
-    bool openIssue(const QString& title, const QString& body);
+    bool openIssue(const std::string& title, const std::string& body);
 };
+

@@ -1,28 +1,25 @@
 #include "codec.h"
-#include <QDebug>
-#include <QByteArray>
+
 
 // Simple compression implementation without zlib dependency
 
-QByteArray deflate_brutal_masm(const QByteArray& data)
+std::vector<uint8_t> deflate_brutal_masm(const std::vector<uint8_t>& data)
 {
     if (data.isEmpty()) {
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     // Simple implementation - return original data for now
-    qInfo() << "[Codec] Compression requested for" << data.size() << "bytes";
     return data;
 }
 
-QByteArray inflate_brutal_masm(const QByteArray& data)
+std::vector<uint8_t> inflate_brutal_masm(const std::vector<uint8_t>& data)
 {
     if (data.isEmpty()) {
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     // Simple implementation - return original data for now
-    qInfo() << "[Codec] Decompression requested for" << data.size() << "bytes";
     return data;
 }
 

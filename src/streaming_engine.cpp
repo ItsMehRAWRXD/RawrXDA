@@ -10,7 +10,7 @@ StreamingEngine::StreamingEngine(
     std::shared_ptr<ResponseParser> parser
 ) : m_logger(logger), m_metrics(metrics), m_parser(parser) {
     if (m_logger) {
-        m_logger->info("StreamingEngine", "Initialized");
+
     }
 }
 
@@ -34,7 +34,7 @@ void StreamingEngine::startStream(
     m_totalTokensReceived = 0;
     
     if (m_logger) {
-        m_logger->info("StreamingEngine", "Stream started");
+
     }
 }
 
@@ -57,7 +57,7 @@ void StreamingEngine::feedChunk(const std::string& chunk) {
     while (getBufferDepth() >= m_maxBufferSize) {
         if (!waitForBufferSpace(100)) {
             if (m_logger) {
-                m_logger->warn("StreamingEngine", "Buffer backpressure timeout");
+
             }
             break;
         }
@@ -119,7 +119,7 @@ void StreamingEngine::endStream() {
     }
 
     if (m_logger) {
-        m_logger->info("StreamingEngine", 
+
             "Stream ended: " + std::to_string(totalStreamMs) + "ms, " +
             std::to_string(m_totalTokensReceived) + " tokens, " +
             std::to_string(m_sequenceCounter) + " chunks");
@@ -194,7 +194,7 @@ void StreamingEngine::processChunk(const StreamChunk& chunk) {
 
 void StreamingEngine::handleStreamError(const std::string& error) {
     if (m_logger) {
-        m_logger->error("StreamingEngine", "Stream error: " + error);
+
     }
 
     if (m_onError) {
@@ -213,7 +213,7 @@ HTTPStreamingClient::HTTPStreamingClient(
     std::shared_ptr<StreamingEngine> streamingEngine
 ) : m_logger(logger), m_metrics(metrics), m_streamingEngine(streamingEngine) {
     if (m_logger) {
-        m_logger->info("HTTPStreamingClient", "Initialized");
+
     }
 }
 
@@ -223,7 +223,7 @@ bool HTTPStreamingClient::openStream(
     const std::string& body
 ) {
     if (m_logger) {
-        m_logger->info("HTTPStreamingClient", "Opening stream to: " + url);
+
     }
 
     if (!setupConnection(url)) {
@@ -251,20 +251,20 @@ bool HTTPStreamingClient::openStream(
 
 void HTTPStreamingClient::closeStream() {
     if (m_logger) {
-        m_logger->info("HTTPStreamingClient", "Closing stream");
+
     }
     m_isConnected = false;
 }
 
 void HTTPStreamingClient::setConnectionTimeout(int timeoutMs) {
     if (m_logger) {
-        m_logger->debug("HTTPStreamingClient", "Set timeout to " + std::to_string(timeoutMs) + "ms");
+
     }
 }
 
 bool HTTPStreamingClient::setupConnection(const std::string& url) {
     if (m_logger) {
-        m_logger->debug("HTTPStreamingClient", "Setting up connection");
+
     }
     // Real implementation would use socket/libcurl here
     return true;
@@ -272,7 +272,7 @@ bool HTTPStreamingClient::setupConnection(const std::string& url) {
 
 bool HTTPStreamingClient::readChunkedResponse() {
     if (m_logger) {
-        m_logger->debug("HTTPStreamingClient", "Reading chunked response");
+
     }
     
     // Simulate receiving chunks

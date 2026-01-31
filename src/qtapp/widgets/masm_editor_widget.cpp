@@ -2,23 +2,8 @@
 // Complete implementation with no placeholders
 
 #include "masm_editor_widget.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QPushButton>
-#include <QToolButton>
-#include <QLabel>
-#include <QAction>
-#include <QMenu>
-#include <QContextMenuEvent>
-#include <QTextCursor>
-#include <QRegularExpression>
-#include <QFontMetrics>
-#include <QMessageBox>
-#include <QInputDialog>
-#include <QFileDialog>
-#include <QClipboard>
-#include <QApplication>
-#include <QScrollBar>
+
+
 #include <algorithm>
 
 // ============================================================
@@ -54,7 +39,7 @@ AssemblyHighlighter::AssemblyHighlighter(QTextDocument* parent)
     directiveFormat.setForeground(QColor(197, 134, 192));
     
     // x64 assembly instructions
-    QStringList instructions;
+    std::vector<std::string> instructions;
     instructions << "mov" << "movzx" << "movsx" << "lea" << "xchg"
                  << "add" << "sub" << "mul" << "imul" << "div" << "idiv"
                  << "inc" << "dec" << "neg" << "not"
@@ -78,16 +63,16 @@ AssemblyHighlighter::AssemblyHighlighter(QTextDocument* parent)
                  << "setc" << "setnc" << "setz" << "setnz" << "sets" << "setns"
                  << "cmovz" << "cmovnz" << "cmove" << "cmovne";
     
-    for (const QString& instr : instructions) {
+    for (const std::string& instr : instructions) {
         HighlightingRule rule;
-        rule.pattern = QRegularExpression(QString("\\b%1\\b").arg(instr),
-                                          QRegularExpression::CaseInsensitiveOption);
+        rule.pattern = std::regex(std::string("\\b%1\\b"),
+                                          std::regex::CaseInsensitiveOption);
         rule.format = keywordFormat;
         highlightingRules.push_back(rule);
     }
     
     // x64 registers
-    QStringList registers;
+    std::vector<std::string> registers;
     registers << "rax" << "rbx" << "rcx" << "rdx" << "rsi" << "rdi" << "rsp" << "rbp"
               << "r8" << "r9" << "r10" << "r11" << "r12" << "r13" << "r14" << "r15"
               << "eax" << "ebx" << "ecx" << "edx" << "esi" << "edi" << "esp" << "ebp"
@@ -100,16 +85,16 @@ AssemblyHighlighter::AssemblyHighlighter(QTextDocument* parent)
               << "cs" << "ds" << "es" << "fs" << "gs" << "ss"
               << "rip" << "eip" << "ip" << "rflags" << "eflags" << "flags";
     
-    for (const QString& reg : registers) {
+    for (const std::string& reg : registers) {
         HighlightingRule rule;
-        rule.pattern = QRegularExpression(QString("\\b%1\\b").arg(reg),
-                                          QRegularExpression::CaseInsensitiveOption);
+        rule.pattern = std::regex(std::string("\\b%1\\b"),
+                                          std::regex::CaseInsensitiveOption);
         rule.format = registerFormat;
         highlightingRules.push_back(rule);
     }
     
     // Assembler directives
-    QStringList directives;
+    std::vector<std::string> directives;
     directives << "\\.data" << "\\.code" << "\\.text" << "\\.bss" << "\\.section"
                << "db" << "dw" << "dd" << "dq" << "dt"
                << "resb" << "resw" << "resd" << "resq" << "rest"
@@ -119,58 +104,58 @@ AssemblyHighlighter::AssemblyHighlighter(QTextDocument* parent)
                << "byte" << "word" << "dword" << "qword" << "ptr"
                << "offset" << "sizeof" << "lengthof";
     
-    for (const QString& dir : directives) {
+    for (const std::string& dir : directives) {
         HighlightingRule rule;
-        rule.pattern = QRegularExpression(QString("\\b%1\\b").arg(QRegularExpression::escape(dir)),
-                                          QRegularExpression::CaseInsensitiveOption);
+        rule.pattern = std::regex(std::string("\\b%1\\b")),
+                                          std::regex::CaseInsensitiveOption);
         rule.format = directiveFormat;
         highlightingRules.push_back(rule);
     }
     
     // Numbers (hex, decimal, binary)
     HighlightingRule numberRule;
-    numberRule.pattern = QRegularExpression("\\b(0x[0-9a-fA-F]+|[0-9]+h|[0-9]+|[01]+b)\\b");
+    numberRule.pattern = std::regex("\\b(0x[0-9a-fA-F]+|[0-9]+h|[0-9]+|[01]+b)\\b");
     numberRule.format = numberFormat;
     highlightingRules.push_back(numberRule);
     
     // Strings
     HighlightingRule stringRule;
-    stringRule.pattern = QRegularExpression("\"[^\"]*\"|'[^']*'");
+    stringRule.pattern = std::regex("\"[^\"]*\"|'[^']*'");
     stringRule.format = stringFormat;
     highlightingRules.push_back(stringRule);
 }
 
-void AssemblyHighlighter::highlightBlock(const QString& text) {
+void AssemblyHighlighter::highlightBlock(const std::string& text) {
     // Apply all highlighting rules
     for (const HighlightingRule& rule : highlightingRules) {
-        QRegularExpressionMatchIterator it = rule.pattern.globalMatch(text);
-        while (it.hasNext()) {
-            QRegularExpressionMatch match = it.next();
+        std::sregex_iterator it = rule.pattern;
+        while (itfalse) {
+            std::smatch match = it;
             setFormat(match.capturedStart(), match.capturedLength(), rule.format);
         }
     }
     
     // Comments (override everything else)
-    QRegularExpression commentExpr(";.*$");
-    QRegularExpressionMatchIterator commentIt = commentExpr.globalMatch(text);
-    while (commentIt.hasNext()) {
-        QRegularExpressionMatch match = commentIt.next();
+    std::regex commentExpr(";.*$");
+    std::sregex_iterator commentIt = commentExpr;
+    while (commentItfalse) {
+        std::smatch match = commentIt;
         setFormat(match.capturedStart(), match.capturedLength(), commentFormat);
     }
     
     // Labels
-    QRegularExpression labelExpr("^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:");
-    QRegularExpressionMatchIterator labelIt = labelExpr.globalMatch(text);
-    while (labelIt.hasNext()) {
-        QRegularExpressionMatch match = labelIt.next();
+    std::regex labelExpr("^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:");
+    std::sregex_iterator labelIt = labelExpr;
+    while (labelItfalse) {
+        std::smatch match = labelIt;
         setFormat(match.capturedStart(1), match.capturedLength(1), labelFormat);
     }
     
     // Local labels (.label)
-    QRegularExpression localLabelExpr("\\.[a-zA-Z_][a-zA-Z0-9_]*");
-    QRegularExpressionMatchIterator localIt = localLabelExpr.globalMatch(text);
-    while (localIt.hasNext()) {
-        QRegularExpressionMatch match = localIt.next();
+    std::regex localLabelExpr("\\.[a-zA-Z_][a-zA-Z0-9_]*");
+    std::sregex_iterator localIt = localLabelExpr;
+    while (localItfalse) {
+        std::smatch match = localIt;
         setFormat(match.capturedStart(), match.capturedLength(), labelFormat);
     }
 }
@@ -179,10 +164,10 @@ void AssemblyHighlighter::highlightBlock(const QString& text) {
 // EditorTabBar Implementation
 // ============================================================
 
-EditorTabBar::EditorTabBar(QWidget* parent) : QTabBar(parent) {
+EditorTabBar::EditorTabBar(void* parent) : QTabBar(parent) {
     setMovable(true);
     setTabsClosable(true);
-    setElideMode(Qt::ElideRight);
+    setElideMode(//ElideRight);
     setDocumentMode(true);
 }
 
@@ -193,25 +178,21 @@ void EditorTabBar::contextMenuEvent(QContextMenuEvent* event) {
     QMenu menu(this);
     
     QAction* closeAction = menu.addAction("Close Tab");
-    connect(closeAction, &QAction::triggered, this, [this, index]() {
-        emit tabCloseRequested(index);
+// Qt connect removed
     });
     
     QAction* closeOthersAction = menu.addAction("Close Other Tabs");
-    connect(closeOthersAction, &QAction::triggered, this, [this, index]() {
-        emit closeOthersRequested(index);
+// Qt connect removed
     });
     
     QAction* closeAllAction = menu.addAction("Close All Tabs");
-    connect(closeAllAction, &QAction::triggered, this, [this]() {
-        emit closeAllRequested();
+// Qt connect removed
     });
     
     menu.addSeparator();
     
     QAction* renameAction = menu.addAction("Rename Tab");
-    connect(renameAction, &QAction::triggered, this, [this, index]() {
-        emit tabRenameRequested(index);
+// Qt connect removed
     });
     
     menu.exec(event->globalPos());
@@ -220,7 +201,7 @@ void EditorTabBar::contextMenuEvent(QContextMenuEvent* event) {
 void EditorTabBar::mouseDoubleClickEvent(QMouseEvent* event) {
     int index = tabAt(event->pos());
     if (index >= 0) {
-        emit tabRenameRequested(index);
+        tabRenameRequested(index);
     } else {
         QTabBar::mouseDoubleClickEvent(event);
     }
@@ -230,8 +211,8 @@ void EditorTabBar::mouseDoubleClickEvent(QMouseEvent* event) {
 // MASMEditorWidget Implementation
 // ============================================================
 
-MASMEditorWidget::MASMEditorWidget(QWidget* parent)
-    : QWidget(parent),
+MASMEditorWidget::MASMEditorWidget(void* parent)
+    : void(parent),
       nextTabNumber(1),
       caretVisible(true) {
     
@@ -243,8 +224,8 @@ MASMEditorWidget::MASMEditorWidget(QWidget* parent)
     newTab("Main.asm");
     
     // Setup caret blink timer
-    caretTimer = new QTimer(this);
-    connect(caretTimer, &QTimer::timeout, this, &MASMEditorWidget::onCaretBlink);
+    caretTimer = new void*(this);
+// Qt connect removed
     caretTimer->start(500);
 }
 
@@ -283,49 +264,41 @@ void MASMEditorWidget::setupToolbar() {
     
     // Open file
     QAction* openAction = toolBar->addAction("Open");
-    connect(openAction, &QAction::triggered, this, [this]() {
-        QString filePath = QFileDialog::getOpenFileName(this, "Open File",
-            QString(), "Assembly Files (*.asm *.s *.inc);;All Files (*)");
+// Qt connect removed
+            std::string(), "Assembly Files (*.asm *.s *.inc);;All Files (*)");
         if (!filePath.isEmpty()) {
-            int idx = newTab(QFileInfo(filePath).fileName());
+            int idx = newTab(std::filesystem::path(filePath).fileName());
             loadFile(filePath, idx);
         }
     });
     
     // Save
     QAction* saveAction = toolBar->addAction("Save");
-    connect(saveAction, &QAction::triggered, this, [this]() {
-        saveFile();
+// Qt connect removed
     });
     
     toolBar->addSeparator();
     
     // Undo/Redo
     QAction* undoAction = toolBar->addAction("Undo");
-    connect(undoAction, &QAction::triggered, this, &MASMEditorWidget::undo);
-    
+// Qt connect removed
     QAction* redoAction = toolBar->addAction("Redo");
-    connect(redoAction, &QAction::triggered, this, &MASMEditorWidget::redo);
-    
+// Qt connect removed
     toolBar->addSeparator();
     
     // Cut/Copy/Paste
     QAction* cutAction = toolBar->addAction("Cut");
-    connect(cutAction, &QAction::triggered, this, &MASMEditorWidget::cut);
-    
+// Qt connect removed
     QAction* copyAction = toolBar->addAction("Copy");
-    connect(copyAction, &QAction::triggered, this, &MASMEditorWidget::copy);
-    
+// Qt connect removed
     QAction* pasteAction = toolBar->addAction("Paste");
-    connect(pasteAction, &QAction::triggered, this, &MASMEditorWidget::paste);
-    
+// Qt connect removed
     toolBar->addSeparator();
     
     // Find
     QAction* findAction = toolBar->addAction("Find");
-    connect(findAction, &QAction::triggered, this, [this]() {
-        bool ok;
-        QString text = QInputDialog::getText(this, "Find", "Search for:",
+// Qt connect removed
+        std::string text = QInputDialog::getText(this, "Find", "Search for:",
             QLineEdit::Normal, lastSearchText, &ok);
         if (ok && !text.isEmpty()) {
             find(text);
@@ -334,16 +307,11 @@ void MASMEditorWidget::setupToolbar() {
 }
 
 void MASMEditorWidget::setupConnections() {
-    connect(tabBar, QOverload<int>::of(&QTabBar::currentChanged),
-            this, &MASMEditorWidget::onTabChanged);
-    connect(tabBar, &QTabBar::tabCloseRequested,
-            this, &MASMEditorWidget::onTabCloseRequested);
-    connect(tabBar, &EditorTabBar::tabRenameRequested,
-            this, &MASMEditorWidget::onTabRenameRequested);
-    connect(tabBar, &EditorTabBar::closeAllRequested,
-            this, &MASMEditorWidget::closeAllTabs);
-    connect(tabBar, &EditorTabBar::closeOthersRequested,
-            this, &MASMEditorWidget::closeOtherTabs);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 QTextEdit* MASMEditorWidget::createEditor() {
@@ -366,15 +334,14 @@ QTextEdit* MASMEditorWidget::createEditor() {
     editor->setPalette(p);
     
     // Connect signals
-    connect(editor, &QTextEdit::textChanged, this, &MASMEditorWidget::onTextChanged);
-    connect(editor, &QTextEdit::cursorPositionChanged, this, &MASMEditorWidget::onCursorMoved);
-    
+// Qt connect removed
+// Qt connect removed
     return editor;
 }
 
-int MASMEditorWidget::newTab(const QString& name) {
-    QString tabName = name.isEmpty() ?
-        QString("Untitled%1.asm").arg(nextTabNumber++) : name;
+int MASMEditorWidget::newTab(const std::string& name) {
+    std::string tabName = name.isEmpty() ?
+        std::string("Untitled%1.asm") : name;
     
     // Create editor
     QTextEdit* editor = createEditor();
@@ -394,7 +361,7 @@ int MASMEditorWidget::newTab(const QString& name) {
     int index = tabBar->addTab(tabName);
     tabBar->setCurrentIndex(index);
     
-    emit tabCountChanged(getTabCount());
+    tabCountChanged(getTabCount());
     return index;
 }
 
@@ -413,12 +380,12 @@ void MASMEditorWidget::closeTab(int index) {
     if (tabData[index].modified) {
         QMessageBox::StandardButton reply = QMessageBox::question(this,
             "Unsaved Changes",
-            QString("Save changes to %1?").arg(tabData[index].name),
+            std::string("Save changes to %1?"),
             QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         
         if (reply == QMessageBox::Cancel) return;
         if (reply == QMessageBox::Yes) {
-            if (!saveFile(QString(), index)) return;
+            if (!saveFile(std::string(), index)) return;
         }
     }
     
@@ -436,7 +403,7 @@ void MASMEditorWidget::closeTab(int index) {
     // Remove tab
     tabBar->removeTab(index);
     
-    emit tabCountChanged(getTabCount());
+    tabCountChanged(getTabCount());
 }
 
 void MASMEditorWidget::closeAllTabs() {
@@ -463,7 +430,7 @@ bool MASMEditorWidget::switchTab(int index) {
     editors[index]->setFocus();
     
     updateStatusBar();
-    emit tabChanged(index);
+    tabChanged(index);
     return true;
 }
 
@@ -475,13 +442,13 @@ int MASMEditorWidget::getCurrentTabIndex() const {
     return tabBar->currentIndex();
 }
 
-QString MASMEditorWidget::getTabName(int index) const {
+std::string MASMEditorWidget::getTabName(int index) const {
     int idx = resolveIndex(index);
-    if (idx < 0 || idx >= static_cast<int>(tabData.size())) return QString();
+    if (idx < 0 || idx >= static_cast<int>(tabData.size())) return std::string();
     return tabData[idx].name;
 }
 
-void MASMEditorWidget::setTabName(int index, const QString& name) {
+void MASMEditorWidget::setTabName(int index, const std::string& name) {
     int idx = resolveIndex(index);
     if (idx < 0 || idx >= static_cast<int>(tabData.size())) return;
     
@@ -489,13 +456,13 @@ void MASMEditorWidget::setTabName(int index, const QString& name) {
     updateTabTitle(idx);
 }
 
-QString MASMEditorWidget::getContent(int index) const {
+std::string MASMEditorWidget::getContent(int index) const {
     int idx = resolveIndex(index);
-    if (idx < 0 || idx >= static_cast<int>(editors.size())) return QString();
+    if (idx < 0 || idx >= static_cast<int>(editors.size())) return std::string();
     return editors[idx]->toPlainText();
 }
 
-void MASMEditorWidget::setContent(const QString& content, int index) {
+void MASMEditorWidget::setContent(const std::string& content, int index) {
     int idx = resolveIndex(index);
     if (idx < 0 || idx >= static_cast<int>(editors.size())) return;
     
@@ -518,14 +485,14 @@ void MASMEditorWidget::setModified(bool modified, int index) {
     updateTabTitle(idx);
 }
 
-bool MASMEditorWidget::loadFile(const QString& filePath, int index) {
+bool MASMEditorWidget::loadFile(const std::string& filePath, int index) {
     int idx = resolveIndex(index);
     if (idx < 0 || idx >= static_cast<int>(editors.size())) return false;
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QMessageBox::critical(this, "Error",
-            QString("Could not open file: %1").arg(file.errorString()));
+            std::string("Could not open file: %1")));
         return false;
     }
     
@@ -534,18 +501,18 @@ bool MASMEditorWidget::loadFile(const QString& filePath, int index) {
     file.close();
     
     tabData[idx].filePath = filePath;
-    tabData[idx].name = QFileInfo(filePath).fileName();
+    tabData[idx].name = std::filesystem::path(filePath).fileName();
     tabData[idx].modified = false;
     updateTabTitle(idx);
     
     return true;
 }
 
-bool MASMEditorWidget::saveFile(const QString& filePath, int index) {
+bool MASMEditorWidget::saveFile(const std::string& filePath, int index) {
     int idx = resolveIndex(index);
     if (idx < 0 || idx >= static_cast<int>(editors.size())) return false;
     
-    QString path = filePath;
+    std::string path = filePath;
     if (path.isEmpty()) {
         path = tabData[idx].filePath;
     }
@@ -555,10 +522,10 @@ bool MASMEditorWidget::saveFile(const QString& filePath, int index) {
         if (path.isEmpty()) return false;
     }
     
-    QFile file(path);
+    std::fstream file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::critical(this, "Error",
-            QString("Could not save file: %1").arg(file.errorString()));
+            std::string("Could not save file: %1")));
         return false;
     }
     
@@ -567,16 +534,16 @@ bool MASMEditorWidget::saveFile(const QString& filePath, int index) {
     file.close();
     
     tabData[idx].filePath = path;
-    tabData[idx].name = QFileInfo(path).fileName();
+    tabData[idx].name = std::filesystem::path(path).fileName();
     tabData[idx].modified = false;
     updateTabTitle(idx);
     
     return true;
 }
 
-QString MASMEditorWidget::getFilePath(int index) const {
+std::string MASMEditorWidget::getFilePath(int index) const {
     int idx = resolveIndex(index);
-    if (idx < 0 || idx >= static_cast<int>(tabData.size())) return QString();
+    if (idx < 0 || idx >= static_cast<int>(tabData.size())) return std::string();
     return tabData[idx].filePath;
 }
 
@@ -622,7 +589,7 @@ void MASMEditorWidget::selectAll() {
     }
 }
 
-void MASMEditorWidget::find(const QString& text) {
+void MASMEditorWidget::find(const std::string& text) {
     int idx = getCurrentTabIndex();
     if (idx < 0 || idx >= static_cast<int>(editors.size())) return;
     
@@ -642,7 +609,7 @@ void MASMEditorWidget::findNext() {
     }
 }
 
-void MASMEditorWidget::replace(const QString& findText, const QString& replaceWith) {
+void MASMEditorWidget::replace(const std::string& findText, const std::string& replaceWith) {
     int idx = getCurrentTabIndex();
     if (idx < 0 || idx >= static_cast<int>(editors.size())) return;
     
@@ -674,7 +641,7 @@ int MASMEditorWidget::getCharCount(int index) const {
     return editors[idx]->document()->characterCount();
 }
 
-QPair<int, int> MASMEditorWidget::getCursorPosition(int index) const {
+std::pair<int, int> MASMEditorWidget::getCursorPosition(int index) const {
     int idx = resolveIndex(index);
     if (idx < 0 || idx >= static_cast<int>(editors.size())) return {0, 0};
     
@@ -687,7 +654,7 @@ void MASMEditorWidget::onTabChanged(int index) {
         editorStack->setCurrentIndex(index);
         editors[index]->setFocus();
         updateStatusBar();
-        emit tabChanged(index);
+        tabChanged(index);
     }
 }
 
@@ -698,14 +665,14 @@ void MASMEditorWidget::onTextChanged() {
             tabData[idx].modified = true;
             updateTabTitle(idx);
         }
-        emit contentModified(idx);
+        contentModified(idx);
     }
 }
 
 void MASMEditorWidget::onCursorMoved() {
     updateStatusBar();
     auto pos = getCursorPosition();
-    emit cursorPositionChanged(pos.first, pos.second);
+    cursorPositionChanged(pos.first, pos.second);
 }
 
 void MASMEditorWidget::onTabCloseRequested(int index) {
@@ -716,7 +683,7 @@ void MASMEditorWidget::onTabRenameRequested(int index) {
     if (index < 0 || index >= static_cast<int>(tabData.size())) return;
     
     bool ok;
-    QString newName = QInputDialog::getText(this, "Rename Tab",
+    std::string newName = QInputDialog::getText(this, "Rename Tab",
         "New name:", QLineEdit::Normal, tabData[index].name, &ok);
     
     if (ok && !newName.isEmpty()) {
@@ -729,8 +696,8 @@ void MASMEditorWidget::updateStatusBar() {
     int lines = getLineCount();
     int chars = getCharCount();
     
-    statusBar->showMessage(QString("Line %1, Column %2 | %3 lines | %4 characters")
-        .arg(pos.first).arg(pos.second).arg(lines).arg(chars));
+    statusBar->showMessage(std::string("Line %1, Column %2 | %3 lines | %4 characters")
+        );
 }
 
 void MASMEditorWidget::onCaretBlink() {
@@ -744,7 +711,7 @@ void MASMEditorWidget::onCaretBlink() {
 void MASMEditorWidget::updateTabTitle(int index) {
     if (index < 0 || index >= static_cast<int>(tabData.size())) return;
     
-    QString title = tabData[index].name;
+    std::string title = tabData[index].name;
     if (tabData[index].modified) {
         title += " *";
     }
@@ -757,3 +724,4 @@ int MASMEditorWidget::resolveIndex(int index) const {
     }
     return index;
 }
+

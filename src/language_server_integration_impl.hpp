@@ -99,6 +99,3 @@ private:
 
 } // namespace rxd::lsp
 
-
-
-

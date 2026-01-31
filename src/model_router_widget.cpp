@@ -1,21 +1,11 @@
 #include "model_router_widget.h"
 #include "model_router_adapter.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGridLayout>
-#include <QLabel>
-#include <QDebug>
-#include <QTimer>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QFont>
-#include <QStyleFactory>
 
-ModelRouterWidget::ModelRouterWidget(ModelRouterAdapter *adapter, QWidget *parent)
-    : QWidget(parent), m_adapter(adapter)
+
+ModelRouterWidget::ModelRouterWidget(ModelRouterAdapter *adapter, void *parent)
+    : void(parent), m_adapter(adapter)
 {
     if (!m_adapter) {
-        qWarning() << "[ModelRouterWidget] Constructed with null adapter";
         return;
     }
 
@@ -23,12 +13,10 @@ ModelRouterWidget::ModelRouterWidget(ModelRouterAdapter *adapter, QWidget *paren
     connectSignals();
     refreshModelList();
     
-    qDebug() << "[ModelRouterWidget] Constructed successfully";
 }
 
 ModelRouterWidget::~ModelRouterWidget()
 {
-    qDebug() << "[ModelRouterWidget] Destroyed";
 }
 
 void ModelRouterWidget::createUI()
@@ -229,44 +217,25 @@ void ModelRouterWidget::connectSignals()
     if (!m_adapter) return;
 
     // Connect adapter signals to our slots
-    connect(m_adapter, &ModelRouterAdapter::generationStarted,
-            this, &ModelRouterWidget::onGenerationStarted);
-    connect(m_adapter, &ModelRouterAdapter::generationProgress,
-            this, &ModelRouterWidget::onGenerationProgress);
-    connect(m_adapter, &ModelRouterAdapter::generationChunk,
-            this, &ModelRouterWidget::onGenerationChunk);
-    connect(m_adapter, &ModelRouterAdapter::generationComplete,
-            this, &ModelRouterWidget::onGenerationComplete);
-    connect(m_adapter, &ModelRouterAdapter::generationError,
-            this, &ModelRouterWidget::onGenerationError);
-    connect(m_adapter, &ModelRouterAdapter::modelListUpdated,
-            this, &ModelRouterWidget::onModelListUpdated);
-    connect(m_adapter, &ModelRouterAdapter::modelChanged,
-            this, &ModelRouterWidget::onModelChanged);
-    connect(m_adapter, &ModelRouterAdapter::statusChanged,
-            this, &ModelRouterWidget::onStatusChanged);
-    connect(m_adapter, &ModelRouterAdapter::costUpdated,
-            this, &ModelRouterWidget::onCostUpdated);
-    connect(m_adapter, &ModelRouterAdapter::statisticsUpdated,
-            this, &ModelRouterWidget::onStatisticsUpdated);
-
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     // Connect button signals
-    connect(m_generate_button, &QPushButton::clicked,
-            this, &ModelRouterWidget::onGenerateButtonClicked);
-    connect(m_stop_button, &QPushButton::clicked,
-            this, &ModelRouterWidget::onStopButtonClicked);
-    connect(m_model_combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &ModelRouterWidget::onModelComboChanged);
-    connect(m_settings_button, &QPushButton::clicked,
-            this, &ModelRouterWidget::onSettingsButtonClicked);
-    connect(m_api_key_button, &QPushButton::clicked,
-            this, &ModelRouterWidget::onApiKeyButtonClicked);
-    connect(m_dashboard_button, &QPushButton::clicked,
-            this, &ModelRouterWidget::onDashboardButtonClicked);
-    connect(m_console_button, &QPushButton::clicked,
-            this, &ModelRouterWidget::onConsoleButtonClicked);
-    connect(m_clear_output_button, &QPushButton::clicked,
-            this, &ModelRouterWidget::onClearButtonClicked);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 void ModelRouterWidget::refreshModelList()
@@ -276,12 +245,12 @@ void ModelRouterWidget::refreshModelList()
     m_model_combo->blockSignals(true);
     m_model_combo->clear();
 
-    QStringList models = m_adapter->getAvailableModels();
+    std::vector<std::string> models = m_adapter->getAvailableModels();
     for (const auto& model : models) {
         m_model_combo->addItem(model);
     }
 
-    QString active = m_adapter->getActiveModel();
+    std::string active = m_adapter->getActiveModel();
     int index = m_model_combo->findText(active);
     if (index >= 0) {
         m_model_combo->setCurrentIndex(index);
@@ -289,7 +258,6 @@ void ModelRouterWidget::refreshModelList()
 
     m_model_combo->blockSignals(false);
 
-    qDebug() << "[ModelRouterWidget::refreshModelList] Updated with" << models.size() << "models";
 }
 
 void ModelRouterWidget::setWidgetEnabled(bool enabled)
@@ -302,7 +270,7 @@ void ModelRouterWidget::setWidgetEnabled(bool enabled)
     m_api_key_button->setEnabled(enabled);
 }
 
-QString ModelRouterWidget::getSelectedModel() const
+std::string ModelRouterWidget::getSelectedModel() const
 {
     return m_model_combo->currentText();
 }
@@ -326,13 +294,13 @@ void ModelRouterWidget::updateProgress(int percent)
     m_progress_bar->setValue(std::min(percent, 100));
 }
 
-void ModelRouterWidget::setStatusMessage(const QString& message)
+void ModelRouterWidget::setStatusMessage(const std::string& message)
 {
     m_status_label->setText(message);
     m_status_label->setStyleSheet("color: #0066cc; font-weight: bold;");
 }
 
-void ModelRouterWidget::setErrorMessage(const QString& error)
+void ModelRouterWidget::setErrorMessage(const std::string& error)
 {
     m_error_label->setText("⚠ " + error);
     m_error_label->setVisible(!error.isEmpty());
@@ -352,7 +320,7 @@ void ModelRouterWidget::setErrorMessage(const QString& error)
 void ModelRouterWidget::setLatencyDisplay(double latency_ms)
 {
     if (latency_ms > 0) {
-        m_latency_label->setText(QString("Latency: %1 ms").arg((int)latency_ms));
+        m_latency_label->setText(std::string("Latency: %1 ms")latency_ms));
     } else {
         m_latency_label->setText("Latency: — ms");
     }
@@ -360,20 +328,20 @@ void ModelRouterWidget::setLatencyDisplay(double latency_ms)
 
 void ModelRouterWidget::setCostDisplay(double total_cost)
 {
-    m_cost_label->setText(QString("Cost: $%1").arg(total_cost, 0, 'f', 4));
+    m_cost_label->setText(std::string("Cost: $%1"));
     m_total_cost = total_cost;
 }
 
 void ModelRouterWidget::setSuccessRateDisplay(int percentage)
 {
     if (percentage >= 0) {
-        m_success_label->setText(QString("Success: %1%").arg(percentage));
+        m_success_label->setText(std::string("Success: %1%"));
     } else {
         m_success_label->setText("Success: —%");
     }
 }
 
-QString ModelRouterWidget::getPromptInput() const
+std::string ModelRouterWidget::getPromptInput() const
 {
     return m_prompt_input->toPlainText().trimmed();
 }
@@ -383,17 +351,17 @@ void ModelRouterWidget::clearPromptInput()
     m_prompt_input->clear();
 }
 
-QString ModelRouterWidget::getGenerationOutput() const
+std::string ModelRouterWidget::getGenerationOutput() const
 {
     return m_output_display->toPlainText();
 }
 
-void ModelRouterWidget::setGenerationOutput(const QString& output)
+void ModelRouterWidget::setGenerationOutput(const std::string& output)
 {
     m_output_display->setPlainText(output);
 }
 
-void ModelRouterWidget::appendGenerationChunk(const QString& chunk)
+void ModelRouterWidget::appendGenerationChunk(const std::string& chunk)
 {
     m_output_display->appendPlainText(chunk);
 }
@@ -405,11 +373,10 @@ void ModelRouterWidget::clearOutput()
 
 // === Slot Implementations ===
 
-void ModelRouterWidget::onGenerationStarted(const QString& model_name)
+void ModelRouterWidget::onGenerationStarted(const std::string& model_name)
 {
-    qDebug() << "[ModelRouterWidget::onGenerationStarted]" << model_name;
     setGenerationActive(true);
-    setStatusMessage(QString("Generating with %1...").arg(model_name));
+    setStatusMessage(std::string("Generating with %1..."));
     clearOutput();
     m_error_label->setVisible(false);
 }
@@ -419,43 +386,39 @@ void ModelRouterWidget::onGenerationProgress(int percent)
     updateProgress(percent);
 }
 
-void ModelRouterWidget::onGenerationChunk(const QString& chunk)
+void ModelRouterWidget::onGenerationChunk(const std::string& chunk)
 {
     appendGenerationChunk(chunk);
 }
 
-void ModelRouterWidget::onGenerationComplete(const QString& result, int tokens_used, double latency_ms)
+void ModelRouterWidget::onGenerationComplete(const std::string& result, int tokens_used, double latency_ms)
 {
-    qDebug() << "[ModelRouterWidget::onGenerationComplete]"
              << "tokens:" << tokens_used << "latency:" << latency_ms << "ms";
     
     setGenerationActive(false);
     setGenerationOutput(result);
-    setStatusMessage(QString("Generated %1 tokens in %2ms").arg(tokens_used).arg((int)latency_ms));
+    setStatusMessage(std::string("Generated %1 tokens in %2ms")latency_ms));
     setLatencyDisplay(latency_ms);
     m_progress_bar->setValue(100);
     
     showTemporaryStatus("Generation complete!", 2000);
 }
 
-void ModelRouterWidget::onGenerationError(const QString& error)
+void ModelRouterWidget::onGenerationError(const std::string& error)
 {
-    qWarning() << "[ModelRouterWidget::onGenerationError]" << error;
     setGenerationActive(false);
     setErrorMessage(error);
     setStatusMessage("Generation failed");
-    emit errorOccurred(error);
+    errorOccurred(error);
 }
 
-void ModelRouterWidget::onModelListUpdated(const QStringList& models)
+void ModelRouterWidget::onModelListUpdated(const std::vector<std::string>& models)
 {
-    qDebug() << "[ModelRouterWidget::onModelListUpdated]" << models.size() << "models";
     refreshModelList();
 }
 
-void ModelRouterWidget::onModelChanged(const QString& model)
+void ModelRouterWidget::onModelChanged(const std::string& model)
 {
-    qDebug() << "[ModelRouterWidget::onModelChanged]" << model;
     
     int index = m_model_combo->findText(model);
     if (index >= 0) {
@@ -465,7 +428,7 @@ void ModelRouterWidget::onModelChanged(const QString& model)
     }
 }
 
-void ModelRouterWidget::onStatusChanged(const QString& status)
+void ModelRouterWidget::onStatusChanged(const std::string& status)
 {
     setStatusMessage(status);
 }
@@ -475,7 +438,7 @@ void ModelRouterWidget::onCostUpdated(double total_cost)
     setCostDisplay(total_cost);
 }
 
-void ModelRouterWidget::onStatisticsUpdated(const QJsonObject& stats)
+void ModelRouterWidget::onStatisticsUpdated(const void*& stats)
 {
     setLatencyDisplay(stats.value("avg_latency_ms").toDouble());
     setSuccessRateDisplay(stats.value("success_rate").toInt());
@@ -485,22 +448,21 @@ void ModelRouterWidget::onStatisticsUpdated(const QJsonObject& stats)
 
 void ModelRouterWidget::onGenerateButtonClicked()
 {
-    QString prompt = getPromptInput();
+    std::string prompt = getPromptInput();
     if (prompt.isEmpty()) {
         setErrorMessage("Please enter a prompt");
         return;
     }
 
-    QString model = getSelectedModel();
+    std::string model = getSelectedModel();
     if (model.isEmpty()) {
         setErrorMessage("Please select a model");
         return;
     }
 
-    qDebug() << "[ModelRouterWidget::onGenerateButtonClicked]"
              << "model:" << model << "prompt_length:" << prompt.length();
     
-    emit generateRequested(prompt, model);
+    generateRequested(prompt, model);
     
     if (m_adapter) {
         m_adapter->generateAsync(prompt, model);
@@ -509,8 +471,7 @@ void ModelRouterWidget::onGenerateButtonClicked()
 
 void ModelRouterWidget::onStopButtonClicked()
 {
-    qDebug() << "[ModelRouterWidget::onStopButtonClicked]";
-    emit stopRequested();
+    stopRequested();
     setGenerationActive(false);
     setStatusMessage("Generation stopped by user");
 }
@@ -519,45 +480,39 @@ void ModelRouterWidget::onModelComboChanged(int index)
 {
     if (index < 0) return;
     
-    QString model = m_model_combo->itemText(index);
-    qDebug() << "[ModelRouterWidget::onModelComboChanged]" << model;
+    std::string model = m_model_combo->itemText(index);
     
     if (m_adapter) {
         m_adapter->setDefaultModel(model);
     }
     
-    emit modelChanged(model);
+    modelChanged(model);
 }
 
 void ModelRouterWidget::onSettingsButtonClicked()
 {
-    qDebug() << "[ModelRouterWidget::onSettingsButtonClicked]";
-    emit settingsRequested();
+    settingsRequested();
 }
 
 void ModelRouterWidget::onApiKeyButtonClicked()
 {
-    qDebug() << "[ModelRouterWidget::onApiKeyButtonClicked]";
-    emit apiKeyEditRequested();
+    apiKeyEditRequested();
 }
 
 void ModelRouterWidget::onDashboardButtonClicked()
 {
-    qDebug() << "[ModelRouterWidget::onDashboardButtonClicked]";
-    emit dashboardRequested();
+    dashboardRequested();
 }
 
 void ModelRouterWidget::onConsoleButtonClicked()
 {
-    qDebug() << "[ModelRouterWidget::onConsoleButtonClicked]";
-    emit consoleRequested();
+    consoleRequested();
 }
 
 void ModelRouterWidget::onClearButtonClicked()
 {
-    qDebug() << "[ModelRouterWidget::onClearButtonClicked]";
     clearOutput();
-    emit clearOutputRequested();
+    clearOutputRequested();
 }
 
 void ModelRouterWidget::updateMetricsDisplay()
@@ -578,14 +533,15 @@ void ModelRouterWidget::resetUI()
     setGenerationActive(false);
 }
 
-void ModelRouterWidget::showTemporaryStatus(const QString& message, int duration_ms)
+void ModelRouterWidget::showTemporaryStatus(const std::string& message, int duration_ms)
 {
-    QString original_status = m_status_label->text();
+    std::string original_status = m_status_label->text();
     setStatusMessage(message);
     
-    QTimer::singleShot(duration_ms, this, [this, original_status]() {
+    void*::singleShot(duration_ms, this, [this, original_status]() {
         setStatusMessage(original_status);
     });
 }
 
-#include "model_router_widget.moc"
+// MOC removed
+

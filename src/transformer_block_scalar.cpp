@@ -5,10 +5,9 @@
 #include <cstring>
 #include <cmath>
 #include <immintrin.h>
-#include <QDebug>
 
-TransformerBlockScalar::TransformerBlockScalar(QObject *parent)
-    : QObject(parent)
+TransformerBlockScalar::TransformerBlockScalar(void *parent)
+    : void(parent)
     , m_initialized(false)
     , m_layerCount(0)
     , m_headCount(0)
@@ -57,12 +56,10 @@ bool TransformerBlockScalar::initialize(uint32_t layerCount, uint32_t headCount,
         m_ffnOutput.resize(m_hiddenDim);
         
     } catch (const std::bad_alloc&) {
-        qCritical() << "Failed to allocate memory for transformer block";
         return false;
     }
     
     m_initialized = true;
-    qDebug() << "TransformerBlockScalar initialized with" << layerCount << "layers";
     return true;
 }
 
@@ -302,7 +299,7 @@ bool TransformerBlockScalar::loadWeights(const float *weights, uint32_t layerIdx
     size_t offset = layerIdx * m_hiddenDim * m_hiddenDim;
     
     switch (type) {
-        case WeightType::Q_WEIGHTS:
+        case WeightType:::
             std::memcpy(m_qWeights.data() + offset, weights, 
                        m_hiddenDim * m_hiddenDim * sizeof(float));
             break;

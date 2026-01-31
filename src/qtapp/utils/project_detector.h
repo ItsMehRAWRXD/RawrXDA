@@ -18,10 +18,6 @@
  * - MASM/assembly projects
  */
 
-#include <QString>
-#include <QStringList>
-#include <QJsonObject>
-#include <QDateTime>
 
 namespace RawrXD {
 
@@ -49,16 +45,16 @@ enum class ProjectType {
  * \brief Project configuration and state
  */
 struct ProjectMetadata {
-    QString name;               ///< Project name (from config or directory name)
-    QString rootPath;           ///< Absolute path to project root
+    std::string name;               ///< Project name (from config or directory name)
+    std::string rootPath;           ///< Absolute path to project root
     ProjectType type;           ///< Detected project type
-    QString buildDirectory;     ///< Relative path to build directory
-    QStringList recentFiles;    ///< Recently opened files (up to 20)
-    QString gitBranch;          ///< Current git branch (if applicable)
-    QStringList includePaths;   ///< Include directories for C/C++ projects
-    QStringList sourcePaths;    ///< Source directories
-    QDateTime lastOpened;       ///< Last time project was opened
-    QJsonObject customData;     ///< Custom key-value data
+    std::string buildDirectory;     ///< Relative path to build directory
+    std::vector<std::string> recentFiles;    ///< Recently opened files (up to 20)
+    std::string gitBranch;          ///< Current git branch (if applicable)
+    std::vector<std::string> includePaths;   ///< Include directories for C/C++ projects
+    std::vector<std::string> sourcePaths;    ///< Source directories
+    std::chrono::system_clock::time_point lastOpened;       ///< Last time project was opened
+    void* customData;     ///< Custom key-value data
     
     ProjectMetadata();
     
@@ -66,14 +62,14 @@ struct ProjectMetadata {
      * \brief Serialize to JSON
      * \return JSON object representation
      */
-    QJsonObject toJson() const;
+    void* toJson() const;
     
     /**
      * \brief Deserialize from JSON
      * \param json JSON object to parse
      * \return true if successful
      */
-    bool fromJson(const QJsonObject& json);
+    bool fromJson(const void*& json);
 };
 
 /**
@@ -88,7 +84,6 @@ struct ProjectMetadata {
  * ProjectDetector detector;
  * ProjectMetadata meta = detector.detectProject("/path/to/project");
  * if (meta.type == ProjectType::CMake) {
- *     qDebug() << "Detected CMake project:" << meta.name;
  * }
  * detector.saveProjectMetadata(meta);
  * \endcode
@@ -105,7 +100,7 @@ public:
      * 
      * This will scan up the directory tree to find the project root.
      */
-    ProjectMetadata detectProject(const QString& path);
+    ProjectMetadata detectProject(const std::string& path);
     
     /**
      * \brief Find project root directory from any subdirectory
@@ -114,35 +109,35 @@ public:
      * 
      * Searches up the tree for marker files (.git, CMakeLists.txt, etc.)
      */
-    QString findProjectRoot(const QString& anyPath);
+    std::string findProjectRoot(const std::string& anyPath);
     
     /**
      * \brief Detect project type from root directory
      * \param rootPath Absolute path to project root
      * \return Detected project type
      */
-    ProjectType detectProjectType(const QString& rootPath);
+    ProjectType detectProjectType(const std::string& rootPath);
     
     /**
      * \brief Get human-readable project type name
      * \param type Project type enum value
      * \return Localized type name (e.g., "CMake Project", "Node.js Project")
      */
-    static QString projectTypeName(ProjectType type);
+    static std::string projectTypeName(ProjectType type);
     
     /**
      * \brief Get typical build directory for project type
      * \param type Project type
      * \return Relative path to build directory (e.g., "build", "bin", "target")
      */
-    static QString defaultBuildDirectory(ProjectType type);
+    static std::string defaultBuildDirectory(ProjectType type);
     
     /**
      * \brief Get typical source directories for project type
      * \param type Project type
      * \return List of common source directory names
      */
-    static QStringList defaultSourceDirectories(ProjectType type);
+    static std::vector<std::string> defaultSourceDirectories(ProjectType type);
     
     /**
      * \brief Save project metadata to .rawrxd/project.json
@@ -156,35 +151,35 @@ public:
      * \param projectRoot Absolute path to project root
      * \return Loaded metadata, or default metadata if not found
      */
-    ProjectMetadata loadProjectMetadata(const QString& projectRoot);
+    ProjectMetadata loadProjectMetadata(const std::string& projectRoot);
     
     /**
      * \brief Check if project has saved metadata
      * \param projectRoot Absolute path to project root
      * \return true if .rawrxd/project.json exists
      */
-    bool hasProjectMetadata(const QString& projectRoot);
+    bool hasProjectMetadata(const std::string& projectRoot);
     
     /**
      * \brief Get path to .rawrxd directory for project
      * \param projectRoot Absolute path to project root
      * \return Absolute path to .rawrxd directory
      */
-    static QString projectConfigDirectory(const QString& projectRoot);
+    static std::string projectConfigDirectory(const std::string& projectRoot);
     
     /**
      * \brief Get path to project metadata file
      * \param projectRoot Absolute path to project root
      * \return Absolute path to .rawrxd/project.json
      */
-    static QString projectConfigFile(const QString& projectRoot);
+    static std::string projectConfigFile(const std::string& projectRoot);
     
     /**
      * \brief Detect git branch for project
      * \param projectRoot Absolute path to project root
      * \return Current branch name, or empty string if not a git repo
      */
-    static QString detectGitBranch(const QString& projectRoot);
+    static std::string detectGitBranch(const std::string& projectRoot);
     
     /**
      * \brief Add file to recent files list
@@ -192,7 +187,7 @@ public:
      * \param filePath Absolute path to file
      * \param maxRecent Maximum number of recent files to keep (default 20)
      */
-    static void addRecentFile(ProjectMetadata& metadata, const QString& filePath, int maxRecent = 20);
+    static void addRecentFile(ProjectMetadata& metadata, const std::string& filePath, int maxRecent = 20);
     
 private:
     /**
@@ -201,7 +196,7 @@ private:
      * \param markerFile Marker file name (e.g., ".git", "CMakeLists.txt")
      * \return true if marker exists
      */
-    static bool hasMarkerFile(const QString& dirPath, const QString& markerFile);
+    static bool hasMarkerFile(const std::string& dirPath, const std::string& markerFile);
     
     /**
      * \brief Check if directory contains any file matching pattern
@@ -209,7 +204,7 @@ private:
      * \param pattern Wildcard pattern (e.g., "*.pro", "*.sln")
      * \return true if matching file found
      */
-    static bool hasFilePattern(const QString& dirPath, const QString& pattern);
+    static bool hasFilePattern(const std::string& dirPath, const std::string& pattern);
     
     /**
      * \brief Scan directory for specific project type markers
@@ -217,7 +212,8 @@ private:
      * \param type Project type to check for
      * \return true if markers for this type found
      */
-    static bool checkProjectType(const QString& rootPath, ProjectType type);
+    static bool checkProjectType(const std::string& rootPath, ProjectType type);
 };
 
 } // namespace RawrXD
+

@@ -20,8 +20,3 @@ private:
     void *m_barThermal;
 };
 
-
-
-
-
-

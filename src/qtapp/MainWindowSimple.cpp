@@ -2063,7 +2063,7 @@ void MainWindow::loadGGUFModel() {
         sendToTerminal("[Model Loader] Loading GGUF model: " + std::string(filename) + "\n");
         
         // Create and initialize GGUF loader
-        m_ggufLoader = std::make_unique<GGUFLoaderQt>(QString::fromStdString(filename));
+        m_ggufLoader = std::make_unique<GGUFLoaderQt>(std::string::fromStdString(filename));
         
         if (!m_ggufLoader || !m_ggufLoader->isOpen()) {
             m_ggufLoader.reset();
@@ -2185,7 +2185,7 @@ void MainWindow::showModelInfo() {
         // Add any extra metadata keys
         auto metaKeys = {"general.architecture", "general.name", "general.quantization_version"};
         for (const auto& key : metaKeys) {
-            QVariant value = m_ggufLoader->getParam(QString::fromStdString(key), QVariant());
+            std::any value = m_ggufLoader->getParam(std::string::fromStdString(key), std::any());
             if (value.isValid() && !value.toString().isEmpty()) {
                 info << "  " << key << ": " << value.toString().toStdString() << "\n";
             }
@@ -2215,7 +2215,7 @@ void MainWindow::reloadCurrentModel() {
     
     // Recreate loader
     try {
-        m_ggufLoader = std::make_unique<GGUFLoaderQt>(QString::fromStdString(modelPath));
+        m_ggufLoader = std::make_unique<GGUFLoaderQt>(std::string::fromStdString(modelPath));
         
         if (m_ggufLoader && m_ggufLoader->isOpen()) {
             m_currentModelPath = modelPath;

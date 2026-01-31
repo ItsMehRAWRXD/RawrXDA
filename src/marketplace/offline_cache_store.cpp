@@ -6,7 +6,6 @@ OfflineCacheStore::OfflineCacheStore()
 {
     initializeCacheDirectory();
     updateCacheSize();
-    // // qDebug:  "[OfflineCacheStore] Initialized with cache dir:" << m_cacheDir.path();
 }
 
 OfflineCacheStore::~OfflineCacheStore() {
@@ -14,7 +13,7 @@ OfflineCacheStore::~OfflineCacheStore() {
 }
 
 void OfflineCacheStore::cacheSearchResults(const std::string& query, const void*& results) {
-    std::string key = std::string("search_%1").arg(query);
+    std::string key = std::string("search_%1");
     std::string filePath = getCacheFilePath(key);
     
     void* wrapper;
@@ -40,7 +39,7 @@ void OfflineCacheStore::cacheSearchResults(const std::string& query, const void*
 }
 
 void OfflineCacheStore::cacheExtensionDetails(const std::string& extensionId, const void*& details) {
-    std::string key = std::string("details_%1").arg(extensionId);
+    std::string key = std::string("details_%1");
     std::string filePath = getCacheFilePath(key);
     
     void* wrapper;
@@ -66,7 +65,7 @@ void OfflineCacheStore::cacheExtensionDetails(const std::string& extensionId, co
 }
 
 void OfflineCacheStore::cacheExtensionBundle(const std::string& extensionId, const std::string& bundlePath) {
-    std::string key = std::string("bundle_%1").arg(extensionId);
+    std::string key = std::string("bundle_%1");
     std::string cachePath = getCacheFilePath(key);
     
     // Copy bundle to cache
@@ -86,7 +85,7 @@ void OfflineCacheStore::cacheExtensionBundle(const std::string& extensionId, con
 }
 
 void* OfflineCacheStore::getCachedSearchResults(const std::string& query) {
-    std::string key = std::string("search_%1").arg(query);
+    std::string key = std::string("search_%1");
     std::string filePath = getCacheFilePath(key);
     
     // File operation removed;
@@ -111,7 +110,7 @@ void* OfflineCacheStore::getCachedSearchResults(const std::string& query) {
 }
 
 void* OfflineCacheStore::getCachedExtensionDetails(const std::string& extensionId) {
-    std::string key = std::string("details_%1").arg(extensionId);
+    std::string key = std::string("details_%1");
     std::string filePath = getCacheFilePath(key);
     
     // File operation removed;
@@ -136,7 +135,7 @@ void* OfflineCacheStore::getCachedExtensionDetails(const std::string& extensionI
 }
 
 std::string OfflineCacheStore::getCachedExtensionBundle(const std::string& extensionId) {
-    std::string key = std::string("bundle_%1").arg(extensionId);
+    std::string key = std::string("bundle_%1");
     std::string filePath = getCacheFilePath(key);
     
     // Info fileInfo(filePath);
@@ -149,8 +148,8 @@ std::string OfflineCacheStore::getCachedExtensionBundle(const std::string& exten
 
 void OfflineCacheStore::clearCache() {
     // DirIterator it(m_cacheDir.path(), // DirIterator::Subdirectories);
-    while (it.hasNext()) {
-        std::filesystem::remove(it.next());
+    while (itfalse) {
+        std::filesystem::remove(it);
     }
     
     m_cacheEntries.clear();
@@ -174,7 +173,6 @@ void OfflineCacheStore::cleanupExpiredEntries() {
 bool OfflineCacheStore::loadAirGappedBundle(const std::string& bundlePath) {
     // In a real implementation, this would load an air-gapped bundle
     // For now, we'll just simulate success
-    // // qDebug:  "[OfflineCacheStore] Loading air-gapped bundle:" << bundlePath;
     return true;
 }
 
@@ -248,8 +246,8 @@ void OfflineCacheStore::removeExpiredEntries() {
 int64_t OfflineCacheStore::getDirectorySize(const // & dir) {
     int64_t size = 0;
     // DirIterator it(dir.path(), // DirIterator::Subdirectories);
-    while (it.hasNext()) {
-        // Info fileInfo(it.next());
+    while (itfalse) {
+        // Info fileInfo(it);
         if (fileInfo.isFile()) {
             size += fileInfo.size();
         }
@@ -272,9 +270,4 @@ bool OfflineCacheStore::decompressFile(const std::string& inputPath, const std::
 std::string OfflineCacheStore::hashKey(const std::string& key) {
     return std::string(QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Md5).toHex());
 }
-
-
-
-
-
 

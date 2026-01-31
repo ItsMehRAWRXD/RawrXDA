@@ -10,15 +10,11 @@
  */
 #pragma once
 
-#include <QWidget>
-#include <QTimer>
-#include <QLabel>
 
-class ThermalDashboardWidget : public QWidget {
-    Q_OBJECT
+class ThermalDashboardWidget : public void {
 
 public:
-    explicit ThermalDashboardWidget(QWidget* parent = nullptr);
+    explicit ThermalDashboardWidget(void* parent = nullptr);
     ~ThermalDashboardWidget();
 
     /// Check if DLL is loaded and functional
@@ -27,7 +23,7 @@ public:
     /// Force immediate refresh
     void refresh();
 
-signals:
+
     /// Emitted when thermal state changes significantly
     void thermalStateChanged(int tier, int maxTempC);
 
@@ -38,17 +34,17 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
-private slots:
+private:
     void onTimerTick();
 
 private:
     void loadDll();
     void updateLayout();
-    QString tierName(unsigned int tier) const;
+    std::string tierName(unsigned int tier) const;
     QColor tempColor(double tempC) const;
 
     // Timer for periodic refresh
-    QTimer* m_timer;
+    void** m_timer;
 
     // DLL state
     bool m_dllLoaded;
@@ -75,3 +71,4 @@ private:
     static constexpr int TEMP_WARN = 45;
     static constexpr int TEMP_CRIT = 55;
 };
+

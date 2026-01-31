@@ -3,8 +3,7 @@
 namespace RawrXD::Agentic::Vulkan {
 
 bool VulkanManager::initialize(VulkanContext& context, bool enableValidation) {
-    LOG_INFO("Vulkan", "Initializing Vulkan context");
-    
+
     // TODO: Implement Vulkan initialization
     // This requires linking against vulkan-1.dll and using Vulkan API
     
@@ -12,14 +11,12 @@ bool VulkanManager::initialize(VulkanContext& context, bool enableValidation) {
 }
 
 void VulkanManager::shutdown(VulkanContext& context) {
-    LOG_INFO("Vulkan", "Shutting down Vulkan context");
-    
+
     // TODO: Cleanup Vulkan resources
 }
 
 bool VulkanManager::createFSMResources(VulkanContext& context, const void* fsmTable, size_t tableSize) {
-    LOG_INFO("Vulkan", "Creating FSM resources");
-    
+
     // TODO: Create GPU buffers for FSM table
     
     return false;
@@ -37,8 +34,7 @@ bool VulkanManager::updateBitmask(VulkanContext& context, const void* bitmask, s
 }
 
 bool VulkanManager::dispatchCompute(VulkanContext& context, uint32_t vocabSize, uint32_t currentState) {
-    LOG_DEBUG("Vulkan", "Dispatching compute shader");
-    
+
     // TODO: Record and submit compute shader dispatch
     
     return false;

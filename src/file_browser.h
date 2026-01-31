@@ -1,42 +1,37 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
-#include <QFileInfo>
 
-class QTreeWidget;
-class QTreeWidgetItem;
+class FileBrowser : public void {
 
-class FileBrowser : public QWidget {
-    Q_OBJECT
 public:
-    explicit FileBrowser(QWidget* parent = nullptr);
+    explicit FileBrowser(void* parent = nullptr);
     void initialize();
     
-    void loadDirectory(const QString& dirpath);
+    void loadDirectory(const std::string& dirpath);
     void loadDrives();
     
-signals:
-    void fileSelected(const QString& filepath);
+
+    void fileSelected(const std::string& filepath);
     
-private slots:
+private:
     void handleItemClicked(QTreeWidgetItem* item, int column);
     void handleItemExpanded(QTreeWidgetItem* item);
     
 private:
     // Production-ready utility methods
     void ClearLazyLoadingIndicators(QTreeWidgetItem* item);
-    void StartAsyncDirectoryLoad(QTreeWidgetItem* item, const QString& dirPath);
-    QTreeWidgetItem* CreateFileTreeItem(const QFileInfo& info);
-    void AddSmartLazyLoader(QTreeWidgetItem* parentItem, const QString& dirPath);
+    void StartAsyncDirectoryLoad(QTreeWidgetItem* item, const std::string& dirPath);
+    QTreeWidgetItem* CreateFileTreeItem(const std::filesystem::path& info);
+    void AddSmartLazyLoader(QTreeWidgetItem* parentItem, const std::string& dirPath);
     
     // Error handling utilities
-    void HandleDirectoryLoadError(QTreeWidgetItem* item, const QString& error);
-    void LogDirectoryAccess(const QString& path, bool success);
+    void HandleDirectoryLoadError(QTreeWidgetItem* item, const std::string& error);
+    void LogDirectoryAccess(const std::string& path, bool success);
     
     // Performance monitoring
-    void TrackLoadingMetrics(const QString& path, int itemCount, qint64 loadTimeMs);
+    void TrackLoadingMetrics(const std::string& path, int itemCount, qint64 loadTimeMs);
     
 private:
     QTreeWidget* tree_widget_;
 };
+

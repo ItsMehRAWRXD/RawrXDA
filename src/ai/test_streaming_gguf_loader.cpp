@@ -8,7 +8,7 @@
 #include <string>
 #include <chrono>
 
-void printMemoryStats(const StreamingGGUFLoaderQt::MemoryStats& stats) {
+void printMemoryStats(const StreamingGGUFLoader//MemoryStats& stats) {
     std::cout << "\n📊 Memory Statistics:" << std::endl;
     std::cout << "  Total file size: " << (stats.totalFileSize / 1024 / 1024) << " MB" << std::endl;
     std::cout << "  Total tensors: " << stats.totalTensorsCount << std::endl;

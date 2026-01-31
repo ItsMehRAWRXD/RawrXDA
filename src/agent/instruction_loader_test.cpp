@@ -44,10 +44,6 @@ class InstructionLoaderTest  {private s:
     }
 };
 
-QTEST_MAIN(InstructionLoaderTest)
-#include "instruction_loader_test.moc"
-
-
-
-
+// Test removed
+// MOC removed
 

@@ -1,10 +1,7 @@
 #ifndef MODEL_ROUTER_ADAPTER_H
 #define MODEL_ROUTER_ADAPTER_H
 
-#include <QObject>
-#include <QString>
-#include <QMap>
-#include <QJsonObject>
+
 #include <memory>
 #include "model_interface.h"
 
@@ -20,11 +17,10 @@
  * - Error recovery with fallback chains
  * - Signal/slot integration with Qt event system
  */
-class ModelRouterAdapter : public QObject {
-    Q_OBJECT
+class ModelRouterAdapter : public void {
 
 public:
-    explicit ModelRouterAdapter(QObject *parent = nullptr);
+    explicit ModelRouterAdapter(void *parent = nullptr);
     ~ModelRouterAdapter();
 
     // === Initialization & Configuration ===
@@ -34,7 +30,7 @@ public:
      * @param config_file_path Path to model_config.json
      * @return true if initialized successfully
      */
-    bool initialize(const QString& config_file_path);
+    bool initialize(const std::string& config_file_path);
 
     /**
      * Load API keys from environment variables
@@ -52,7 +48,7 @@ public:
     /**
      * Get list of available models
      */
-    QStringList getAvailableModels() const;
+    std::vector<std::string> getAvailableModels() const;
 
     /**
      * Select model for specific task
@@ -60,29 +56,29 @@ public:
      * @param language "python", "cpp", "javascript", etc.
      * @param prefer_local true to prefer fast local models
      */
-    QString selectBestModel(const QString& task_type, const QString& language, bool prefer_local = false);
+    std::string selectBestModel(const std::string& task_type, const std::string& language, bool prefer_local = false);
 
     /**
      * Select cheapest model under budget
      * @param prompt The prompt to estimate cost for
      * @param max_cost_usd Maximum cost in USD
      */
-    QString selectCostOptimalModel(const QString& prompt, double max_cost_usd);
+    std::string selectCostOptimalModel(const std::string& prompt, double max_cost_usd);
 
     /**
      * Select fastest available model
      */
-    QString selectFastestModel();
+    std::string selectFastestModel();
 
     /**
      * Set default model for all operations
      */
-    void setDefaultModel(const QString& model_name);
+    void setDefaultModel(const std::string& model_name);
 
     /**
      * Get currently active model
      */
-    QString getActiveModel() const { return m_active_model; }
+    std::string getActiveModel() const { return m_active_model; }
 
     // === Generation & Inference ===
 
@@ -93,31 +89,31 @@ public:
      * @param max_tokens Maximum tokens in response
      * @return Generated text or empty string on error
      */
-    QString generate(const QString& prompt, const QString& model_name = "", int max_tokens = 4096);
+    std::string generate(const std::string& prompt, const std::string& model_name = "", int max_tokens = 4096);
 
     /**
      * Asynchronous generation (non-blocking)
      * Emits generationComplete signal when done
      */
-    void generateAsync(const QString& prompt, const QString& model_name = "", int max_tokens = 4096);
+    void generateAsync(const std::string& prompt, const std::string& model_name = "", int max_tokens = 4096);
 
     /**
      * Streaming generation with chunks
      * Emits generationChunk signal for each chunk received
      */
-    void generateStream(const QString& prompt, const QString& model_name = "", int max_tokens = 4096);
+    void generateStream(const std::string& prompt, const std::string& model_name = "", int max_tokens = 4096);
 
     // === Statistics & Monitoring ===
 
     /**
      * Get average latency for a model (in milliseconds)
      */
-    double getAverageLatency(const QString& model_name = "") const;
+    double getAverageLatency(const std::string& model_name = "") const;
 
     /**
      * Get success rate percentage (0-100)
      */
-    int getSuccessRate(const QString& model_name = "") const;
+    int getSuccessRate(const std::string& model_name = "") const;
 
     /**
      * Get total cost across all requests (in USD)
@@ -127,34 +123,34 @@ public:
     /**
      * Get cost breakdown by model
      */
-    QMap<QString, double> getCostBreakdown() const;
+    std::map<std::string, double> getCostBreakdown() const;
 
     /**
      * Get usage statistics as JSON
      */
-    QJsonObject getStatistics() const;
+    void* getStatistics() const;
 
     /**
      * Export statistics to CSV file
      */
-    bool exportStatisticsToCsv(const QString& file_path) const;
+    bool exportStatisticsToCsv(const std::string& file_path) const;
 
     // === Configuration Management ===
 
     /**
      * Register a new model at runtime
      */
-    bool registerModel(const QString& name, const QJsonObject& config);
+    bool registerModel(const std::string& name, const void*& config);
 
     /**
      * Get current configuration as JSON
      */
-    QJsonObject getConfiguration() const;
+    void* getConfiguration() const;
 
     /**
      * Save configuration to file
      */
-    bool saveConfiguration(const QString& file_path);
+    bool saveConfiguration(const std::string& file_path);
 
     /**
      * Set retry policy for failed requests
@@ -178,7 +174,7 @@ public:
     /**
      * Get last error message
      */
-    QString getLastError() const { return m_last_error; }
+    std::string getLastError() const { return m_last_error; }
 
     /**
      * Clear error state
@@ -190,31 +186,31 @@ public:
      */
     void setAutoFallback(bool enabled) { m_auto_fallback = enabled; }
 
-signals:
+
     // Generation signals
-    void generationStarted(const QString& model_name);
+    void generationStarted(const std::string& model_name);
     void generationProgress(int percent);
-    void generationChunk(const QString& chunk);
-    void generationComplete(const QString& result, int tokens_used, double latency_ms);
-    void generationError(const QString& error);
+    void generationChunk(const std::string& chunk);
+    void generationComplete(const std::string& result, int tokens_used, double latency_ms);
+    void generationError(const std::string& error);
 
     // Model signals
-    void modelChanged(const QString& new_model);
-    void modelListUpdated(const QStringList& models);
+    void modelChanged(const std::string& new_model);
+    void modelListUpdated(const std::vector<std::string>& models);
 
     // Statistics signals
     void costUpdated(double total_cost);
     void latencyUpdated(double avg_latency_ms);
-    void statisticsUpdated(const QJsonObject& stats);
+    void statisticsUpdated(const void*& stats);
 
     // Status signals
-    void statusChanged(const QString& status);
+    void statusChanged(const std::string& status);
     void initialized();
     void shutting_down();
 
-private slots:
+private:
     void onGenerationThreadFinished();
-    void onStreamChunkReceived(const QString& chunk);
+    void onStreamChunkReceived(const std::string& chunk);
 
 private:
     // Model router instance
@@ -222,12 +218,12 @@ private:
     
     // State
     bool m_initialized = false;
-    QString m_active_model;
-    QString m_last_error;
+    std::string m_active_model;
+    std::string m_last_error;
     bool m_auto_fallback = true;
     
     // Configuration
-    QJsonObject m_config;
+    void* m_config;
     double m_cost_alert_threshold = 50.0;  // Default $50 alert
     int m_latency_threshold_ms = 2000;     // Default 2 second threshold
     
@@ -236,9 +232,10 @@ private:
     GenerationThread* m_generation_thread = nullptr;
     
     // Helper methods
-    bool validateConfiguration(const QJsonObject& config);
-    void logStatistic(const QString& model, const QString& metric, double value);
-    QString determineFallbackModel(const QString& primary_model);
+    bool validateConfiguration(const void*& config);
+    void logStatistic(const std::string& model, const std::string& metric, double value);
+    std::string determineFallbackModel(const std::string& primary_model);
 };
 
 #endif // MODEL_ROUTER_ADAPTER_H
+

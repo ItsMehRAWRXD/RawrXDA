@@ -6,7 +6,6 @@ PluginLoader::PluginLoader()
     m_context.requestFileOperation = [](const char* operation, const char* filePath, const char* content) {
         // This would call into your AgenticFileOperations system
         // For now, we'll just print a message
-        // // qDebug:  "Plugin requested file operation:" << operation << filePath;
     };
 }
 
@@ -19,7 +18,6 @@ bool PluginLoader::loadPlugin(const std::string &pluginPath)
 {
     QLibrary *library = new QLibrary(pluginPath, this);
     if (!library->load()) {
-        // // qWarning:  "Failed to load plugin:" << pluginPath << library->errorString();
         delete library;
         return false;
     }
@@ -27,7 +25,6 @@ bool PluginLoader::loadPlugin(const std::string &pluginPath)
     // Resolve symbols
     PluginInfo* (*plugin_init)(PluginContext*) = (PluginInfo* (*)(PluginContext*))library->resolve("plugin_init");
     if (!plugin_init) {
-        // // qWarning:  "Failed to resolve plugin_init in:" << pluginPath;
         library->unload();
         delete library;
         return false;
@@ -47,7 +44,6 @@ bool PluginLoader::loadPlugin(const std::string &pluginPath)
     std::string pluginName = // FileInfo: pluginPath).baseName();
     m_plugins[pluginName] = instance;
 
-    // // qDebug:  "Loaded plugin:" << pluginName;
     return true;
 }
 
@@ -61,7 +57,6 @@ void PluginLoader::unloadPlugin(const std::string &pluginName)
         instance.library->unload();
         delete instance.library;
         m_plugins.remove(pluginName);
-        // // qDebug:  "Unloaded plugin:" << pluginName;
     }
 }
 
@@ -108,8 +103,4 @@ void PluginLoader::onModelLoad(const std::string &modelPath)
         }
     }
 }
-
-
-
-
 

@@ -9,7 +9,6 @@ void CRDTBuffer::applyRemoteOperation(const std::string &operation)
 {
     // In a real implementation, this would parse the operation and apply it to the text
     // For now, we'll just print a message
-    // // qDebug:  "Applying remote operation:" << operation;
     // textChanged signal if the text was actually changed
     // textChanged(m_text);
 }
@@ -22,7 +21,6 @@ std::string CRDTBuffer::getText() const
 void CRDTBuffer::insertText(int position, const std::string &text)
 {
     if (position < 0 || position > m_text.length()) {
-        // // qWarning:  "Invalid position for insertText:" << position;
         return;
     }
     m_text.insert(position, text);
@@ -34,7 +32,6 @@ void CRDTBuffer::insertText(int position, const std::string &text)
 void CRDTBuffer::deleteText(int position, int length)
 {
     if (position < 0 || position >= m_text.length() || length <= 0) {
-        // // qWarning:  "Invalid parameters for deleteText:" << position << length;
         return;
     }
     m_text.remove(position, length);
@@ -42,8 +39,4 @@ void CRDTBuffer::deleteText(int position, int length)
     // In a real implementation, this would generate an operation and operationGenerated
     // operationGenerated(operation);
 }
-
-
-
-
 

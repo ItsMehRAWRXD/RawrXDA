@@ -5,8 +5,6 @@
 
 #include "RAWRXD_ThermalDashboard.hpp"
 #include "thermal_dashboard_plugin.hpp"
-#include <QStyle>
-#include <QApplication>
 
 namespace rawrxd::thermal {
 
@@ -14,8 +12,8 @@ namespace rawrxd::thermal {
 // ThermalDashboard Implementation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-ThermalDashboard::ThermalDashboard(QWidget* parent)
-    : QWidget(parent)
+ThermalDashboard::ThermalDashboard(void* parent)
+    : void(parent)
 {
     setupUI();
 }
@@ -88,7 +86,7 @@ void ThermalDashboard::setupUI()
         
         m_nvmeWidgets[i].tempLabel = new QLabel("--°C", this);
         m_nvmeWidgets[i].tempLabel->setMinimumWidth(60);
-        m_nvmeWidgets[i].tempLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        m_nvmeWidgets[i].tempLabel->setAlignment(//AlignRight | //AlignVCenter);
         m_nvmeWidgets[i].tempLabel->setStyleSheet("color: #0f0; font-weight: bold;");
         
         row->addWidget(m_nvmeWidgets[i].nameLabel);
@@ -123,7 +121,7 @@ void ThermalDashboard::setupUI()
     
     m_gpuTempLabel = new QLabel("--°C", this);
     m_gpuTempLabel->setMinimumWidth(60);
-    m_gpuTempLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_gpuTempLabel->setAlignment(//AlignRight | //AlignVCenter);
     m_gpuTempLabel->setStyleSheet("color: #ff6666; font-weight: bold;");
     
     gpuRow->addWidget(gpuLabel);
@@ -146,7 +144,7 @@ void ThermalDashboard::setupUI()
     
     m_cpuTempLabel = new QLabel("--°C", this);
     m_cpuTempLabel->setMinimumWidth(60);
-    m_cpuTempLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_cpuTempLabel->setAlignment(//AlignRight | //AlignVCenter);
     m_cpuTempLabel->setStyleSheet("color: #6699ff; font-weight: bold;");
     
     cpuRow->addWidget(cpuLabel);
@@ -190,7 +188,7 @@ void ThermalDashboard::setupUI()
     
     m_throttleLabel = new QLabel("0%", this);
     m_throttleLabel->setMinimumWidth(60);
-    m_throttleLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_throttleLabel->setAlignment(//AlignRight | //AlignVCenter);
     m_throttleLabel->setStyleSheet("color: #0f0; font-weight: bold;");
     
     throttleRow->addWidget(throttleLbl);
@@ -243,10 +241,8 @@ void ThermalDashboard::setupUI()
             background: #008844;
         }
     )");
-    
-    connect(m_applyButton, &QPushButton::clicked, this, [this]() {
-        int mode = m_burstModeCombo->currentData().toInt();
-        emit burstModeChanged(mode);
+// Qt connect removed
+        burstModeChanged(mode);
     });
     
     modeRow->addWidget(modeLbl);
@@ -291,9 +287,9 @@ void ThermalDashboard::onThermalUpdate(const ThermalSnapshot& snapshot)
     updateThrottleDisplay(snapshot.currentThrottle);
     
     // Status
-    m_statusLabel->setText(QString("✓ Last update: %1 | %2 drives active")
-        .arg(QDateTime::fromMSecsSinceEpoch(snapshot.timestamp).toString("hh:mm:ss"))
-        .arg(snapshot.activeDriveCount));
+    m_statusLabel->setText(std::string("✓ Last update: %1 | %2 drives active")
+        .toString("hh:mm:ss"))
+        );
 }
 
 void ThermalDashboard::updateNVMeDisplay(int index, float temp)
@@ -301,33 +297,33 @@ void ThermalDashboard::updateNVMeDisplay(int index, float temp)
     if (index < 0 || index >= 5) return;
     
     m_nvmeWidgets[index].tempBar->setValue(static_cast<int>(temp));
-    m_nvmeWidgets[index].tempLabel->setText(QString("%1°C").arg(temp, 0, 'f', 1));
+    m_nvmeWidgets[index].tempLabel->setText(std::string("%1°C"));
     m_nvmeWidgets[index].tempLabel->setStyleSheet(
-        QString("color: %1; font-weight: bold;").arg(getTempColor(temp)));
+        std::string("color: %1; font-weight: bold;")));
 }
 
 void ThermalDashboard::updateGPUDisplay(float temp)
 {
     m_gpuTempBar->setValue(static_cast<int>(temp));
-    m_gpuTempLabel->setText(QString("%1°C").arg(temp, 0, 'f', 1));
+    m_gpuTempLabel->setText(std::string("%1°C"));
     m_gpuTempLabel->setStyleSheet(
-        QString("color: %1; font-weight: bold;").arg(getTempColor(temp)));
+        std::string("color: %1; font-weight: bold;")));
 }
 
 void ThermalDashboard::updateCPUDisplay(float temp)
 {
     m_cpuTempBar->setValue(static_cast<int>(temp));
-    m_cpuTempLabel->setText(QString("%1°C").arg(temp, 0, 'f', 1));
+    m_cpuTempLabel->setText(std::string("%1°C"));
     m_cpuTempLabel->setStyleSheet(
-        QString("color: %1; font-weight: bold;").arg(getTempColor(temp)));
+        std::string("color: %1; font-weight: bold;")));
 }
 
 void ThermalDashboard::updateThrottleDisplay(int throttle)
 {
     m_throttleBar->setValue(throttle);
-    m_throttleLabel->setText(QString("%1%").arg(throttle));
+    m_throttleLabel->setText(std::string("%1%"));
     
-    QString color;
+    std::string color;
     if (throttle == 0) {
         color = "#00ff00";  // Green: full speed
     } else if (throttle < 20) {
@@ -337,10 +333,10 @@ void ThermalDashboard::updateThrottleDisplay(int throttle)
     } else {
         color = "#ff3333";  // Red: heavy throttle
     }
-    m_throttleLabel->setStyleSheet(QString("color: %1; font-weight: bold;").arg(color));
+    m_throttleLabel->setStyleSheet(std::string("color: %1; font-weight: bold;"));
 }
 
-QString ThermalDashboard::getTempColor(float temp)
+std::string ThermalDashboard::getTempColor(float temp)
 {
     if (temp < 55) return "#00ff00";       // Green
     if (temp < 65) return "#88ff00";       // Light green
@@ -353,7 +349,7 @@ QString ThermalDashboard::getTempColor(float temp)
 // ThermalCompactWidget Implementation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-ThermalCompactWidget::ThermalCompactWidget(QWidget* parent)
+ThermalCompactWidget::ThermalCompactWidget(void* parent)
     : QFrame(parent)
 {
     setupUI();
@@ -403,9 +399,9 @@ void ThermalCompactWidget::onThermalUpdate(const ThermalSnapshot& snapshot)
     maxTemp = qMax(maxTemp, snapshot.cpuTemp);
     
     // Update display
-    QString color = (maxTemp < 65) ? "#00ff00" : (maxTemp < 75) ? "#ffcc00" : "#ff3333";
-    m_maxTempLabel->setText(QString("🌡️ %1°C").arg(maxTemp, 0, 'f', 0));
-    m_maxTempLabel->setStyleSheet(QString("color: %1; font-weight: bold;").arg(color));
+    std::string color = (maxTemp < 65) ? "#00ff00" : (maxTemp < 75) ? "#ffcc00" : "#ff3333";
+    m_maxTempLabel->setText(std::string("🌡️ %1°C"));
+    m_maxTempLabel->setStyleSheet(std::string("color: %1; font-weight: bold;"));
     
     // Throttle icon
     if (snapshot.currentThrottle == 0) {
@@ -413,11 +409,12 @@ void ThermalCompactWidget::onThermalUpdate(const ThermalSnapshot& snapshot)
         m_throttleIcon->setToolTip("Full speed");
     } else if (snapshot.currentThrottle < 30) {
         m_throttleIcon->setText("🔋");
-        m_throttleIcon->setToolTip(QString("Light throttle: %1%").arg(snapshot.currentThrottle));
+        m_throttleIcon->setToolTip(std::string("Light throttle: %1%"));
     } else {
         m_throttleIcon->setText("🐢");
-        m_throttleIcon->setToolTip(QString("Heavy throttle: %1%").arg(snapshot.currentThrottle));
+        m_throttleIcon->setToolTip(std::string("Heavy throttle: %1%"));
     }
 }
 
 } // namespace rawrxd::thermal
+

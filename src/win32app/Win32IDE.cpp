@@ -265,8 +265,8 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     // Initialize logger ABSOLUTELY FIRST - with fallback error handling
     try {
         IDELogger::getInstance().initialize("C:\\RawrXD_IDE.log");
-        LOG_INFO("=== Win32IDE constructor started ===");
-        LOG_INFO("Logger initialized successfully");
+
+
     } catch (const std::exception& e) {
         OutputDebugStringA("FATAL: Logger initialization failed: ");
         OutputDebugStringA(e.what());
@@ -284,9 +284,9 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     
     // Prepare DirectX renderer with safety wrapper
     try {
-        LOG_DEBUG("Creating TransparentRenderer...");
+
         m_renderer = std::make_unique<TransparentRenderer>();
-        LOG_INFO("TransparentRenderer created successfully");
+
     } catch (const std::exception& e) {
         LOG_CRITICAL(std::string("TransparentRenderer creation failed: ") + e.what());
         OutputDebugStringA("ERROR: TransparentRenderer failed: ");
@@ -307,14 +307,14 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     
     // Initialize PowerShell state with safety
     try {
-        LOG_DEBUG("Initializing PowerShell state...");
+
         initializePowerShellState();
-        LOG_INFO("PowerShell state initialized");
+
     } catch (const std::exception& e) {
-        LOG_ERROR(std::string("PowerShell state init failed: ") + e.what());
+
         OutputDebugStringA("ERROR: PowerShell init failed\n");
     } catch (...) {
-        LOG_ERROR("PowerShell state init failed with unknown exception");
+
         OutputDebugStringA("ERROR: PowerShell init failed\n");
     }
     
@@ -326,11 +326,11 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     
     // Initialize default theme
     try {
-        LOG_DEBUG("Resetting to default theme...");
+
         resetToDefaultTheme();
-        LOG_DEBUG("Theme reset complete");
+
     } catch (...) {
-        LOG_ERROR("Theme reset failed");
+
         OutputDebugStringA("ERROR: Theme reset failed\n");
     }
     
@@ -342,11 +342,11 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     
     // Load code snippets
     try {
-        LOG_DEBUG("Loading code snippets...");
+
         loadCodeSnippets();
-        LOG_DEBUG("Code snippets loaded");
+
     } catch (...) {
-        LOG_ERROR("Code snippets loading failed");
+
         OutputDebugStringA("ERROR: Code snippets loading failed\n");
     }
     
@@ -358,8 +358,7 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     
     // Initialize profiling frequency
     QueryPerformanceFrequency(&m_profilingFreq);
-    LOG_DEBUG("Profiling frequency initialized");
-    
+
     // Initialize clipboard history
     m_clipboardHistory.reserve(MAX_CLIPBOARD_HISTORY);
     
@@ -580,8 +579,7 @@ bool Win32IDE::createWindow()
         diag << "createWindow() entered" << std::endl;
         diag.close();
     }
-    
-    LOG_INFO("createWindow() called");
+
     WNDCLASSA wc = {};
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = m_hInstance;
@@ -596,10 +594,9 @@ bool Win32IDE::createWindow()
         std::ofstream diagErr("C:\\Users\\HiH8e\\Desktop\\RegisterClass_FAILED.txt");
         diagErr << "RegisterClassA failed with error: " << err << std::endl;
         diagErr.close();
-        LOG_ERROR("Failed to register window class");
+
         return false;
     }
-    LOG_DEBUG("Window class registered successfully");
 
     // NO WS_EX_LAYERED - prevents transparency issues
     m_hwndMain = CreateWindowA("RawrXD_IDE_Class", "RawrXD IDE",
@@ -612,7 +609,7 @@ bool Win32IDE::createWindow()
         std::ofstream diagErr("C:\\Users\\HiH8e\\Desktop\\CreateWindow_FAILED.txt");
         diagErr << "CreateWindowA failed with error: " << err << std::endl;
         diagErr.close();
-        LOG_ERROR("Failed to create main window");
+
         return false;
     }
     
@@ -621,8 +618,6 @@ bool Win32IDE::createWindow()
         diag << "Window created: HWND = " << (void*)m_hwndMain << std::endl;
         diag.close();
     }
-    
-    LOG_INFO("Main window created successfully");
 
     // Center the window on the primary monitor and bring to front
     RECT rc{};
@@ -641,14 +636,14 @@ bool Win32IDE::createWindow()
 
 void Win32IDE::showWindow()
 {
-    LOG_INFO("showWindow() called");
+
     if (m_hwndMain) {
         ShowWindow(m_hwndMain, SW_SHOW);
         UpdateWindow(m_hwndMain);
         SetForegroundWindow(m_hwndMain);
-        LOG_DEBUG("Window shown and updated");
+
     } else {
-        LOG_ERROR("Cannot show window - m_hwndMain is null");
+
     }
 }
 
@@ -904,7 +899,7 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             if (m_rendererReady && m_renderer) {
                 m_renderer->render();
             }
-            LOG_DEBUG("WM_PAINT processed");
+
             return 0;
         }
         
@@ -917,7 +912,7 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             HBRUSH bgBrush = CreateSolidBrush(RGB(30, 30, 30));
             FillRect(hdc, &rect, bgBrush);
             DeleteObject(bgBrush);
-            LOG_DEBUG("WM_ERASEBKGND processed");
+
             return 1;  // Tell Windows we handled it
         }
 
@@ -1194,81 +1189,77 @@ bool Win32IDE::trySendToOllama(const std::string& prompt, std::string& outRespon
 
 void Win32IDE::onCreate(HWND hwnd)
 {
-    LOG_INFO("onCreate() started - initializing IDE components");
-    
+
     // Load common controls
     INITCOMMONCONTROLSEX icex;
     icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
     icex.dwICC = ICC_BAR_CLASSES | ICC_WIN95_CLASSES | ICC_TREEVIEW_CLASSES;
     InitCommonControlsEx(&icex);
-    LOG_DEBUG("Common controls initialized");
 
     // Load Rich Edit
     LoadLibraryA("riched20.dll");
-    LOG_DEBUG("RichEdit library loaded");
 
-    LOG_DEBUG("Creating menu bar...");
+
     createMenuBar(hwnd);
-    LOG_DEBUG("Creating toolbar...");
+
     createToolbar(hwnd);
-    LOG_DEBUG("Creating sidebar...");
+
     createSidebar(hwnd);
-    LOG_DEBUG("Creating editor...");
+
     createEditor(hwnd);
-    LOG_DEBUG("Creating terminal...");
+
     createTerminal(hwnd);
     
     // Create splitter bar between terminal and output
     m_hwndSplitter = CreateWindowExA(0, "STATIC", "",
         WS_CHILD | WS_VISIBLE | SS_NOTIFY,
         0, 0, 100, 4, hwnd, (HMENU)IDC_SPLITTER, m_hInstance, nullptr);
-    LOG_DEBUG("Splitter created");
-    
-    LOG_DEBUG("Creating output tabs...");
+
+
     createOutputTabs();
-    LOG_DEBUG("Creating minimap...");
+
     createMinimap();
-    LOG_DEBUG("Creating status bar...");
+
     createStatusBar(hwnd);
-    LOG_DEBUG("Creating file explorer...");
+
     createFileExplorer();
     
     // Create dedicated PowerShell panel (always available)
-    LOG_DEBUG("Creating PowerShell panel...");
+
     createPowerShellPanel();
     
     // Create debugger panel
-    LOG_DEBUG("Creating debugger UI...");
+
     createDebuggerUI();
     
     // Create AI Chat panel (right sidebar)
-    LOG_DEBUG("Creating AI Chat panel...");
+
     createChatPanel();
     
     // Apply theme
-    LOG_DEBUG("Applying theme...");
+
     applyTheme();
 
     // Set initial layout
     RECT rect;
     GetClientRect(hwnd, &rect);
-    LOG_DEBUG("Setting initial layout");
+
     onSize(rect.right - rect.left, rect.bottom - rect.top);
     updateMenuEnableStates();
 
     if (m_renderer) {
-        LOG_DEBUG("Initializing renderer...");
+
         m_rendererReady = m_renderer->initialize(hwnd);
         if (m_rendererReady) {
             m_renderer->setClearColor(0.01f, 0.02f, 0.05f, 0.25f);
             m_renderer->render();
             syncEditorToGpuSurface();
-            LOG_INFO("Renderer initialized successfully");
+
         } else {
-            LOG_ERROR("Renderer initialization failed");
+
         }
     } else {
-        LOG_ERROR("Renderer is null - cannot initialize");
+
     }
 
     // Initialize Agentic Bridge if not already
@@ -1278,10 +1269,9 @@ void Win32IDE::onCreate(HWND hwnd)
     // Initialize Autonomy Manager
     if (!m_autonomyManager) {
         m_autonomyManager = std::make_unique<AutonomyManager>(m_agenticBridge.get());
-        LOG_INFO("AutonomyManager instantiated (idle)");
+
     }
-    
-    LOG_INFO("onCreate() completed");
+
 }
 
 // duplicate removed
@@ -1752,13 +1742,12 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 
 void Win32IDE::createMenuBar(HWND hwnd)
 {
-    LOG_INFO("createMenuBar() called");
+
     m_hMenu = CreateMenu();
     if (!m_hMenu) {
-        LOG_ERROR("Failed to create menu bar");
+
         return;
     }
-    LOG_DEBUG("Menu bar created, populating menu items...");
 
     // File menu
     HMENU hFileMenu = CreatePopupMenu();
@@ -1868,26 +1857,26 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hAutonomyMenu, "&Autonomy");
 
     SetMenu(hwnd, m_hMenu);
-    LOG_INFO("createMenuBar() completed - all menus attached");
+
 }
 
 void Win32IDE::createToolbar(HWND hwnd)
 {
-    LOG_INFO("createToolbar() called");
+
     m_hwndToolbar = CreateWindowExA(0, TOOLBARCLASSNAMEA, nullptr,
                                    WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT,
                                    0, 0, 0, 0, hwnd, nullptr, m_hInstance, nullptr);
 
     if (m_hwndToolbar) {
-        LOG_DEBUG("Toolbar created successfully");
+
         SendMessage(m_hwndToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
         SendMessage(m_hwndToolbar, TB_AUTOSIZE, 0, 0);
-        LOG_DEBUG("Creating title bar controls");
+
         createTitleBarControls();
         updateTitleBarText();
-        LOG_INFO("createToolbar() completed");
+
     } else {
-        LOG_ERROR("Failed to create toolbar");
+
     }
 }
 
@@ -2012,15 +2001,14 @@ void Win32IDE::updateTitleBarText()
 
 void Win32IDE::createEditor(HWND hwnd)
 {
-    LOG_INFO("createEditor() called");
+
     m_hwndEditor = CreateWindowExA(WS_EX_CLIENTEDGE, RICHEDIT_CLASSA, "",
                                   WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN,
                                   0, 0, 0, 0, hwnd, (HMENU)IDC_EDITOR, m_hInstance, nullptr);
     if (!m_hwndEditor) {
-        LOG_ERROR("Failed to create editor window");
+
         return;
     }
-    LOG_DEBUG("Editor window created successfully");
 
     // Set default font and colors
     CHARFORMAT2A cf;
@@ -2034,38 +2022,36 @@ void Win32IDE::createEditor(HWND hwnd)
     
     // Set background color to dark
     SendMessage(m_hwndEditor, EM_SETBKGNDCOLOR, 0, RGB(30, 30, 30));
-    LOG_DEBUG("Editor background set to RGB(30,30,30)");
-    
+
     // Enable editing
     SendMessage(m_hwndEditor, EM_SETREADONLY, FALSE, 0);
 
-    LOG_DEBUG("Initializing editor surface");
     initializeEditorSurface();
-    LOG_INFO("createEditor() completed");
+
 }
 
 void Win32IDE::createTerminal(HWND hwnd)
 {
-    LOG_INFO("createTerminal() called");
+
     if (m_terminalPanes.empty()) {
-        LOG_DEBUG("Creating initial PowerShell terminal pane");
+
         createTerminalPane(Win32TerminalManager::PowerShell, "PowerShell");
     } else {
-        LOG_DEBUG("Terminal panes already exist, activating front pane");
+
         setActiveTerminalPane(m_terminalPanes.front().id);
     }
 
     // Create command input
-    LOG_DEBUG("Creating command input window");
+
     m_hwndCommandInput = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
                                         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
                                         0, 0, 0, 0, hwnd, (HMENU)IDC_COMMAND_INPUT, m_hInstance, nullptr);
     if (!m_hwndCommandInput) {
-        LOG_ERROR("Failed to create command input window");
+
     } else {
-        LOG_DEBUG("Command input window created successfully");
+
     }
-    LOG_INFO("createTerminal() completed");
+
 }
 
 int Win32IDE::createTerminalPane(Win32TerminalManager::ShellType shellType, const std::string& name)
@@ -2225,21 +2211,19 @@ void Win32IDE::clearAllTerminals()
 
 void Win32IDE::createStatusBar(HWND hwnd)
 {
-    LOG_INFO("createStatusBar() called");
+
     m_hwndStatusBar = CreateWindowExA(0, STATUSCLASSNAMEA, "",
                                      WS_CHILD | WS_VISIBLE,
                                      0, 0, 0, 0, hwnd, (HMENU)IDC_STATUS_BAR, m_hInstance, nullptr);
     if (!m_hwndStatusBar) {
-        LOG_ERROR("Failed to create status bar");
+
         return;
     }
-    LOG_DEBUG("Status bar created successfully");
 
     int parts[] = {200, 400, -1};
     SendMessage(m_hwndStatusBar, SB_SETPARTS, 3, (LPARAM)parts);
     SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
-    LOG_DEBUG("Status bar initialized with 'Ready' text");
-    LOG_INFO("createStatusBar() completed");
+
 }
 
 void Win32IDE::createSidebar(HWND hwnd)
@@ -5418,10 +5402,9 @@ void Win32IDE::onAutonomyViewMemory() {
 // ======================================================================
 
 void Win32IDE::createChatPanel() {
-    LOG_DEBUG("Creating AI Chat panel...");
-    
+
     if (!m_hwndMain) {
-        LOG_ERROR("Cannot create chat panel - main window is null");
+
         return;
     }
 
@@ -5433,7 +5416,7 @@ void Win32IDE::createChatPanel() {
         m_hwndMain, (HMENU)IDC_SECONDARY_SIDEBAR, m_hInstance, nullptr);
     
     if (!m_hwndSecondarySidebar) {
-        LOG_ERROR("Failed to create secondary sidebar");
+
         return;
     }
     
@@ -5541,14 +5524,12 @@ void Win32IDE::createChatPanel() {
     
     m_secondarySidebarVisible = true;
     m_secondarySidebarWidth = 300;
-    LOG_INFO("AI Chat panel created successfully");
+
 }
 
 void Win32IDE::populateModelSelector() {
     if (!m_hwndModelSelector) return;
-    
-    LOG_DEBUG("Populating model selector...");
-    
+
     // Clear existing items
     SendMessage(m_hwndModelSelector, CB_RESETCONTENT, 0, 0);
     
@@ -5585,15 +5566,12 @@ void Win32IDE::populateModelSelector() {
     if (!m_availableModels.empty()) {
         SendMessage(m_hwndModelSelector, CB_SETCURSEL, 0, 0);
     }
-    
-    LOG_DEBUG("Model selector populated with " + std::to_string(m_availableModels.size()) + " models");
+
 }
 
 void Win32IDE::HandleCopilotSend() {
     if (!m_hwndCopilotChatInput || !m_hwndCopilotChatOutput) return;
-    
-    LOG_DEBUG("Handling Copilot Send button...");
-    
+
     // Get input text
     char inputBuffer[2048] = {0};
     GetWindowTextA(m_hwndCopilotChatInput, inputBuffer, sizeof(inputBuffer) - 1);
@@ -5609,9 +5587,7 @@ void Win32IDE::HandleCopilotSend() {
     std::string selectedModel = (modelIdx >= 0 && modelIdx < (int)m_availableModels.size()) 
         ? m_availableModels[modelIdx] 
         : "llama2";
-    
-    LOG_INFO("Sending message to model: " + selectedModel);
-    
+
     // Display user message
     std::string displayText = "\n> User: " + userMessage + "\n";
     
@@ -5642,20 +5618,16 @@ void Win32IDE::HandleCopilotSend() {
     
     // Generate response
     generateResponseAsync(userMessage, onResponse);
-    
-    LOG_DEBUG("Message sent and awaiting response");
+
 }
 
 void Win32IDE::HandleCopilotClear() {
     if (!m_hwndCopilotChatOutput || !m_hwndCopilotChatInput) return;
-    
-    LOG_DEBUG("Clearing chat panel...");
-    
+
     SetWindowTextA(m_hwndCopilotChatOutput, "Welcome to RawrXD AI Chat!\n\nSelect a model and type your message to begin.");
     SetWindowTextA(m_hwndCopilotChatInput, "");
     m_chatHistory.clear();
-    
-    LOG_INFO("Chat panel cleared");
+
 }
 
 void Win32IDE::HandleCopilotStreamUpdate(const char* token, size_t length) {
@@ -5680,7 +5652,7 @@ void Win32IDE::onModelSelectionChanged() {
     int idx = (int)SendMessage(m_hwndModelSelector, CB_GETCURSEL, 0, 0);
     if (idx >= 0 && idx < (int)m_availableModels.size()) {
         m_ollamaModelOverride = m_availableModels[idx];
-        LOG_INFO("Model changed to: " + m_ollamaModelOverride);
+
     }
 }
 
@@ -5692,8 +5664,6 @@ void Win32IDE::onMaxTokensChanged(int newValue) {
     if (m_hwndMaxTokensLabel) {
         SetWindowTextA(m_hwndMaxTokensLabel, std::to_string(newValue).c_str());
     }
-    
-    LOG_DEBUG("Max tokens changed to: " + std::to_string(newValue));
-}
 
+}
 

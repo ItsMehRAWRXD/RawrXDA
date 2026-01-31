@@ -51,10 +51,6 @@ void RateLimiter::refillTokens(const std::string &identifier, RateLimitInfo &inf
             info.tokens = info.requestsPerSecond;
         }
         info.lastRequestTime = now;
-        // // qDebug:  "Refilled tokens for" << identifier << "to" << info.tokens;
     }
 }
-
-
-
 

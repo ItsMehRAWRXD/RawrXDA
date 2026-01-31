@@ -1,89 +1,77 @@
 #include "health_check_server.hpp"
 #include "inference_engine.hpp"
-#include <QTcpServer>
-#include <QTcpSocket>
-#include <QDebug>
-#include <QDateTime>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QUuid>
+
+
 #include <algorithm>
 #include <cmath>
 
-HealthCheckServer::HealthCheckServer(InferenceEngine* engine, QObject* parent)
-    : QObject(parent), m_engine(engine) {
-    Q_ASSERT(m_engine);
+HealthCheckServer::HealthCheckServer(InferenceEngine* engine, void* parent)
+    : void(parent), m_engine(engine) {
+    (m_engine);
     
     // Structured logging with timestamp
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "INFO";
     logEntry["component"] = "HealthCheckServer";
     logEntry["event"] = "initialized";
-    logEntry["engine_ptr"] = QString::number(reinterpret_cast<quintptr>(m_engine), 16);
+    logEntry["engine_ptr"] = std::string::number(reinterpret_cast<quintptr>(m_engine), 16);
     
-    qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
 }
 
 HealthCheckServer::~HealthCheckServer() {
     stopServer();
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "INFO";
     logEntry["component"] = "HealthCheckServer";
     logEntry["event"] = "destroyed";
     logEntry["total_requests_served"] = (qint64)m_metrics.total_requests;
     
-    qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
 }
 
 bool HealthCheckServer::startServer(quint16 port) {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    m_server = std::make_unique<QTcpServer>(this);
+    m_server = std::make_unique<void*>(this);
     
     if (!m_server->listen(QHostAddress::Any, port)) {
-        QJsonObject logEntry;
-        logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* logEntry;
+        logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "ERROR";
         logEntry["component"] = "HealthCheckServer";
         logEntry["event"] = "server_start_failed";
         logEntry["port"] = port;
         logEntry["error"] = m_server->errorString();
         
-        qCritical().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
         
         m_server.reset();
         return false;
     }
-    
-    connect(m_server.get(), &QTcpServer::newConnection, this, &HealthCheckServer::onNewConnection);
-    
+// Qt connect removed
     qint64 startup_time_ms = timer.elapsed();
     
     // Production startup log
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "INFO";
     logEntry["component"] = "HealthCheckServer";
     logEntry["event"] = "server_started";
     logEntry["port"] = port;
     logEntry["startup_time_ms"] = startup_time_ms;
     
-    QJsonArray endpoints;
-    endpoints.append(QJsonObject{{"method", "GET"}, {"path", "/health"}, {"description", "Server health status"}});
-    endpoints.append(QJsonObject{{"method", "GET"}, {"path", "/ready"}, {"description", "Readiness probe"}});
-    endpoints.append(QJsonObject{{"method", "GET"}, {"path", "/metrics"}, {"description", "JSON performance metrics"}});
-    endpoints.append(QJsonObject{{"method", "GET"}, {"path", "/metrics/prometheus"}, {"description", "Prometheus format metrics"}});
-    endpoints.append(QJsonObject{{"method", "GET"}, {"path", "/model"}, {"description", "Model information"}});
-    endpoints.append(QJsonObject{{"method", "GET"}, {"path", "/gpu"}, {"description", "GPU status"}});
+    void* endpoints;
+    endpoints.append(void*{{"method", "GET"}, {"path", "/health"}, {"description", "Server health status"}});
+    endpoints.append(void*{{"method", "GET"}, {"path", "/ready"}, {"description", "Readiness probe"}});
+    endpoints.append(void*{{"method", "GET"}, {"path", "/metrics"}, {"description", "JSON performance metrics"}});
+    endpoints.append(void*{{"method", "GET"}, {"path", "/metrics/prometheus"}, {"description", "Prometheus format metrics"}});
+    endpoints.append(void*{{"method", "GET"}, {"path", "/model"}, {"description", "Model information"}});
+    endpoints.append(void*{{"method", "GET"}, {"path", "/gpu"}, {"description", "GPU status"}});
     
     logEntry["endpoints"] = endpoints;
     
-    qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     
     return true;
 }
@@ -93,8 +81,8 @@ void HealthCheckServer::stopServer() {
         m_server->close();
         m_server.reset();
         
-        QJsonObject logEntry;
-        logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* logEntry;
+        logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "INFO";
         logEntry["component"] = "HealthCheckServer";
         logEntry["event"] = "server_stopped";
@@ -102,35 +90,34 @@ void HealthCheckServer::stopServer() {
         logEntry["success_rate"] = m_metrics.total_requests > 0 ? 
             (100.0 * m_metrics.successful_requests / m_metrics.total_requests) : 0.0;
         
-        qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     }
 }
 
 void HealthCheckServer::onNewConnection() {
-    while (QTcpSocket* socket = m_server->nextPendingConnection()) {
-        connect(socket, &QTcpSocket::readyRead, this, &HealthCheckServer::onReadyRead);
-        connect(socket, &QTcpSocket::disconnected, this, &HealthCheckServer::onDisconnected);
+    while (void** socket = m_server->nextPendingConnection()) {
+// Qt connect removed
+// Qt connect removed
     }
 }
 
 void HealthCheckServer::onReadyRead() {
-    QElapsedTimer requestTimer;
+    std::chrono::steady_clock requestTimer;
     requestTimer.start();
     
-    QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
+    void** socket = qobject_cast<void**>(sender());
     if (!socket) return;
     
-    QString request = QString::fromUtf8(socket->readAll());
-    QString method = extractMethod(request);
-    QString path = extractPath(request);
-    QString requestId = generateRequestId();
+    std::string request = std::string::fromUtf8(socket->readAll());
+    std::string method = extractMethod(request);
+    std::string path = extractPath(request);
+    std::string requestId = generateRequestId();
     
     logRequest(requestId, method, path);
-    emit requestReceived(method, path);
+    requestReceived(method, path);
     
-    QString responseBody;
+    std::string responseBody;
     int statusCode = 200;
-    QString contentType = "application/json";
+    std::string contentType = "application/json";
     
     // Route requests
     try {
@@ -149,24 +136,23 @@ void HealthCheckServer::onReadyRead() {
             responseBody = createGPUJson();
         } else {
             statusCode = 404;
-            responseBody = QString("{\"error\": \"Not found\", \"path\": \"%1\"}").arg(path);
+            responseBody = std::string("{\"error\": \"Not found\", \"path\": \"%1\"}");
         }
     } catch (const std::exception& ex) {
         statusCode = 500;
-        responseBody = QString("{\"error\": \"Internal server error\", \"message\": \"%1\"}").arg(ex.what());
+        responseBody = std::string("{\"error\": \"Internal server error\", \"message\": \"%1\"}"));
         
-        QJsonObject errorLog;
-        errorLog["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* errorLog;
+        errorLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         errorLog["level"] = "ERROR";
         errorLog["component"] = "HealthCheckServer";
         errorLog["event"] = "request_exception";
         errorLog["request_id"] = requestId;
         errorLog["exception"] = ex.what();
         
-        qCritical().noquote() << QJsonDocument(errorLog).toJson(QJsonDocument::Compact);
     }
     
-    QString response = buildHttpResponse(statusCode, contentType, responseBody);
+    std::string response = buildHttpResponse(statusCode, contentType, responseBody);
     socket->write(response.toUtf8());
     socket->disconnectFromHost();
     
@@ -174,30 +160,30 @@ void HealthCheckServer::onReadyRead() {
     logResponse(requestId, statusCode, latency_ms);
     updateMetrics(statusCode >= 200 && statusCode < 300, latency_ms);
     
-    emit requestCompleted(method, path, statusCode, latency_ms);
+    requestCompleted(method, path, statusCode, latency_ms);
 }
 
 void HealthCheckServer::onDisconnected() {
-    QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
+    void** socket = qobject_cast<void**>(sender());
     if (socket) {
         socket->deleteLater();
     }
 }
 
-QString HealthCheckServer::createHealthJson() {
+std::string HealthCheckServer::createHealthJson() {
     auto health = m_engine->getHealthStatus();
     
-    QJsonObject json;
+    void* json;
     json["status"] = health.inference_ready ? "healthy" : "degraded";
-    json["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    json["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     
-    QJsonObject system;
+    void* system;
     system["model_loaded"] = health.model_loaded;
     system["gpu_available"] = health.gpu_available;
     system["inference_ready"] = health.inference_ready;
     json["system"] = system;
     
-    QJsonObject memory;
+    void* memory;
     memory["total_vram_mb"] = (int)health.total_vram_mb;
     memory["used_vram_mb"] = (int)health.used_vram_mb;
     memory["available_vram_mb"] = (int)(health.total_vram_mb - health.used_vram_mb);
@@ -205,14 +191,14 @@ QString HealthCheckServer::createHealthJson() {
         (100.0 * health.used_vram_mb / health.total_vram_mb) : 0.0;
     json["memory"] = memory;
     
-    QJsonObject latency;
+    void* latency;
     latency["avg_ms"] = health.avg_latency_ms;
     latency["p50_ms"] = health.avg_latency_ms; // Approximation
     latency["p95_ms"] = health.p95_latency_ms;
     latency["p99_ms"] = health.p99_latency_ms;
     json["latency"] = latency;
     
-    QJsonObject queue;
+    void* queue;
     queue["pending_requests"] = health.pending_requests;
     queue["total_processed"] = (qint64)health.total_requests_processed;
     json["queue"] = queue;
@@ -222,7 +208,7 @@ QString HealthCheckServer::createHealthJson() {
     }
     
     // SLA compliance (from PRODUCTION_CONFIGURATION_GUIDE.md)
-    QJsonObject sla;
+    void* sla;
     sla["p50_target_ms"] = 50;
     sla["p95_target_ms"] = 100;
     sla["p99_target_ms"] = 200;
@@ -231,34 +217,34 @@ QString HealthCheckServer::createHealthJson() {
     sla["p99_met"] = health.p99_latency_ms < 200;
     json["sla"] = sla;
     
-    return QJsonDocument(json).toJson(QJsonDocument::Compact);
+    return void*(json).toJson(void*::Compact);
 }
 
-QString HealthCheckServer::createReadyJson() {
+std::string HealthCheckServer::createReadyJson() {
     auto health = m_engine->getHealthStatus();
     
-    QJsonObject json;
+    void* json;
     json["ready"] = health.model_loaded && health.inference_ready;
-    json["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    json["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     
-    QJsonArray checks;
-    checks.append(QJsonObject{{"name", "model_loaded"}, {"passed", health.model_loaded}});
-    checks.append(QJsonObject{{"name", "inference_ready"}, {"passed", health.inference_ready}});
-    checks.append(QJsonObject{{"name", "gpu_available"}, {"passed", health.gpu_available}});
+    void* checks;
+    checks.append(void*{{"name", "model_loaded"}, {"passed", health.model_loaded}});
+    checks.append(void*{{"name", "inference_ready"}, {"passed", health.inference_ready}});
+    checks.append(void*{{"name", "gpu_available"}, {"passed", health.gpu_available}});
     
     json["checks"] = checks;
     
-    return QJsonDocument(json).toJson(QJsonDocument::Compact);
+    return void*(json).toJson(void*::Compact);
 }
 
-QString HealthCheckServer::createMetricsJson() {
+std::string HealthCheckServer::createMetricsJson() {
     auto health = m_engine->getHealthStatus();
     double tps = m_engine->getTokensPerSecond();
     
-    QJsonObject json;
-    json["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* json;
+    json["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     
-    QJsonObject performance;
+    void* performance;
     performance["avg_latency_ms"] = health.avg_latency_ms;
     performance["p50_latency_ms"] = m_metrics.avg_response_time_ms;
     performance["p95_latency_ms"] = m_metrics.p95_response_time_ms;
@@ -268,7 +254,7 @@ QString HealthCheckServer::createMetricsJson() {
         (m_metrics.total_requests / 60.0) : 0.0; // Rough estimate
     json["performance"] = performance;
     
-    QJsonObject requests;
+    void* requests;
     requests["total_processed"] = (qint64)m_metrics.total_requests;
     requests["successful"] = (qint64)m_metrics.successful_requests;
     requests["failed"] = (qint64)m_metrics.failed_requests;
@@ -277,62 +263,62 @@ QString HealthCheckServer::createMetricsJson() {
     requests["pending"] = health.pending_requests;
     json["requests"] = requests;
     
-    QJsonObject gpu;
+    void* gpu;
     gpu["total_vram_mb"] = (int)health.total_vram_mb;
     gpu["used_vram_mb"] = (int)health.used_vram_mb;
     gpu["utilization_percent"] = health.total_vram_mb > 0 ? 
         (100.0 * health.used_vram_mb / health.total_vram_mb) : 0.0;
     json["gpu"] = gpu;
     
-    return QJsonDocument(json).toJson(QJsonDocument::Compact);
+    return void*(json).toJson(void*::Compact);
 }
 
-QString HealthCheckServer::createPrometheusMetrics() {
+std::string HealthCheckServer::createPrometheusMetrics() {
     auto health = m_engine->getHealthStatus();
     double tps = m_engine->getTokensPerSecond();
     
-    QString metrics;
+    std::string metrics;
     metrics += "# HELP rawrxd_requests_total Total number of requests\n";
     metrics += "# TYPE rawrxd_requests_total counter\n";
-    metrics += QString("rawrxd_requests_total %1\n").arg(m_metrics.total_requests);
+    metrics += std::string("rawrxd_requests_total %1\n");
     
     metrics += "# HELP rawrxd_requests_successful Successful requests\n";
     metrics += "# TYPE rawrxd_requests_successful counter\n";
-    metrics += QString("rawrxd_requests_successful %1\n").arg(m_metrics.successful_requests);
+    metrics += std::string("rawrxd_requests_successful %1\n");
     
     metrics += "# HELP rawrxd_requests_failed Failed requests\n";
     metrics += "# TYPE rawrxd_requests_failed counter\n";
-    metrics += QString("rawrxd_requests_failed %1\n").arg(m_metrics.failed_requests);
+    metrics += std::string("rawrxd_requests_failed %1\n");
     
     metrics += "# HELP rawrxd_latency_ms Request latency in milliseconds\n";
     metrics += "# TYPE rawrxd_latency_ms summary\n";
-    metrics += QString("rawrxd_latency_ms{quantile=\"0.5\"} %1\n").arg(m_metrics.avg_response_time_ms);
-    metrics += QString("rawrxd_latency_ms{quantile=\"0.95\"} %1\n").arg(m_metrics.p95_response_time_ms);
-    metrics += QString("rawrxd_latency_ms{quantile=\"0.99\"} %1\n").arg(m_metrics.p99_response_time_ms);
+    metrics += std::string("rawrxd_latency_ms{quantile=\"0.5\"} %1\n");
+    metrics += std::string("rawrxd_latency_ms{quantile=\"0.95\"} %1\n");
+    metrics += std::string("rawrxd_latency_ms{quantile=\"0.99\"} %1\n");
     
     metrics += "# HELP rawrxd_gpu_memory_used_bytes GPU memory used in bytes\n";
     metrics += "# TYPE rawrxd_gpu_memory_used_bytes gauge\n";
-    metrics += QString("rawrxd_gpu_memory_used_bytes %1\n").arg(health.used_vram_mb * 1024 * 1024);
+    metrics += std::string("rawrxd_gpu_memory_used_bytes %1\n");
     
     metrics += "# HELP rawrxd_gpu_memory_total_bytes Total GPU memory in bytes\n";
     metrics += "# TYPE rawrxd_gpu_memory_total_bytes gauge\n";
-    metrics += QString("rawrxd_gpu_memory_total_bytes %1\n").arg(health.total_vram_mb * 1024 * 1024);
+    metrics += std::string("rawrxd_gpu_memory_total_bytes %1\n");
     
     metrics += "# HELP rawrxd_tokens_per_second Token generation rate\n";
     metrics += "# TYPE rawrxd_tokens_per_second gauge\n";
-    metrics += QString("rawrxd_tokens_per_second %1\n").arg(tps);
+    metrics += std::string("rawrxd_tokens_per_second %1\n");
     
     metrics += "# HELP rawrxd_pending_requests Number of pending requests\n";
     metrics += "# TYPE rawrxd_pending_requests gauge\n";
-    metrics += QString("rawrxd_pending_requests %1\n").arg(health.pending_requests);
+    metrics += std::string("rawrxd_pending_requests %1\n");
     
     return metrics;
 }
 
-QString HealthCheckServer::createModelJson() {
+std::string HealthCheckServer::createModelJson() {
     auto health = m_engine->getHealthStatus();
     
-    QJsonObject json;
+    void* json;
     json["loaded"] = health.model_loaded;
     json["inference_ready"] = health.inference_ready;
     
@@ -346,13 +332,13 @@ QString HealthCheckServer::createModelJson() {
     json["context_length"] = 2048;
     json["quantization"] = "int8";
     
-    return QJsonDocument(json).toJson(QJsonDocument::Compact);
+    return void*(json).toJson(void*::Compact);
 }
 
-QString HealthCheckServer::createGPUJson() {
+std::string HealthCheckServer::createGPUJson() {
     auto health = m_engine->getHealthStatus();
     
-    QJsonObject json;
+    void* json;
     json["available"] = health.gpu_available;
     json["total_vram_mb"] = (int)health.total_vram_mb;
     json["used_vram_mb"] = (int)health.used_vram_mb;
@@ -373,12 +359,12 @@ QString HealthCheckServer::createGPUJson() {
     json["compute_capability"] = "8.0";
     json["driver_version"] = "unknown";
     
-    return QJsonDocument(json).toJson(QJsonDocument::Compact);
+    return void*(json).toJson(void*::Compact);
 }
 
-QString HealthCheckServer::buildHttpResponse(int statusCode, const QString& contentType,
-                                             const QString& body) {
-    QString statusText;
+std::string HealthCheckServer::buildHttpResponse(int statusCode, const std::string& contentType,
+                                             const std::string& body) {
+    std::string statusText;
     switch (statusCode) {
         case 200: statusText = "OK"; break;
         case 404: statusText = "Not Found"; break;
@@ -386,12 +372,12 @@ QString HealthCheckServer::buildHttpResponse(int statusCode, const QString& cont
         default: statusText = "Unknown"; break;
     }
     
-    QString response = QString("HTTP/1.1 %1 %2\r\n")
-        .arg(statusCode)
-        .arg(statusText);
+    std::string response = std::string("HTTP/1.1 %1 %2\r\n")
+        
+        ;
     
-    response += QString("Content-Type: %1\r\n").arg(contentType);
-    response += QString("Content-Length: %1\r\n").arg(body.length());
+    response += std::string("Content-Type: %1\r\n");
+    response += std::string("Content-Length: %1\r\n"));
     response += "Access-Control-Allow-Origin: *\r\n";
     response += "X-RawrXD-Version: 2.0\r\n";
     response += "\r\n";
@@ -400,33 +386,33 @@ QString HealthCheckServer::buildHttpResponse(int statusCode, const QString& cont
     return response;
 }
 
-QString HealthCheckServer::extractPath(const QString& request) {
-    QStringList lines = request.split("\r\n");
+std::string HealthCheckServer::extractPath(const std::string& request) {
+    std::vector<std::string> lines = request.split("\r\n");
     if (lines.isEmpty()) return "/";
     
-    QStringList parts = lines[0].split(" ");
+    std::vector<std::string> parts = lines[0].split(" ");
     if (parts.size() < 2) return "/";
     
     return parts[1];
 }
 
-QString HealthCheckServer::extractMethod(const QString& request) {
-    QStringList lines = request.split("\r\n");
+std::string HealthCheckServer::extractMethod(const std::string& request) {
+    std::vector<std::string> lines = request.split("\r\n");
     if (lines.isEmpty()) return "GET";
     
-    QStringList parts = lines[0].split(" ");
+    std::vector<std::string> parts = lines[0].split(" ");
     if (parts.isEmpty()) return "GET";
     
     return parts[0];
 }
 
-QString HealthCheckServer::generateRequestId() {
+std::string HealthCheckServer::generateRequestId() {
     return QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
 }
 
-void HealthCheckServer::logRequest(const QString& requestId, const QString& method, const QString& path) {
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+void HealthCheckServer::logRequest(const std::string& requestId, const std::string& method, const std::string& path) {
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "DEBUG";
     logEntry["component"] = "HealthCheckServer";
     logEntry["event"] = "request_received";
@@ -434,12 +420,11 @@ void HealthCheckServer::logRequest(const QString& requestId, const QString& meth
     logEntry["method"] = method;
     logEntry["path"] = path;
     
-    qDebug().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
 }
 
-void HealthCheckServer::logResponse(const QString& requestId, int statusCode, double latency_ms) {
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+void HealthCheckServer::logResponse(const std::string& requestId, int statusCode, double latency_ms) {
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = (statusCode >= 400) ? "ERROR" : "DEBUG";
     logEntry["component"] = "HealthCheckServer";
     logEntry["event"] = "request_completed";
@@ -448,9 +433,7 @@ void HealthCheckServer::logResponse(const QString& requestId, int statusCode, do
     logEntry["latency_ms"] = latency_ms;
     
     if (statusCode >= 400) {
-        qWarning().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     } else {
-        qDebug().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     }
 }
 
@@ -501,3 +484,4 @@ void HealthCheckServer::calculatePercentiles() {
         m_metrics.p99_response_time_ms = sorted[p99_idx];
     }
 }
+

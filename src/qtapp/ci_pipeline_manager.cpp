@@ -1,13 +1,9 @@
 #include "ci_pipeline_manager.h"
-#include <QDebug>
-#include <QDateTime>
-#include <QJsonDocument>
-#include <QJsonArray>
 
-CIPipelineManager::CIPipelineManager(QObject *parent) 
-    : QObject(parent), m_vcsConfig(QJsonObject()), m_notificationSettings(QJsonObject())
+
+CIPipelineManager::CIPipelineManager(void *parent) 
+    : void(parent), m_vcsConfig(void*()), m_notificationSettings(void*())
 {
-    qDebug() << "[CIPipelineManager] Initialized";
 }
 
 CIPipelineManager::~CIPipelineManager()
@@ -21,12 +17,11 @@ CIPipelineManager::~CIPipelineManager()
         }
     }
     m_pipelines.clear();
-    qDebug() << "[CIPipelineManager] Destroyed";
 }
 
-QString CIPipelineManager::createPipeline(const QString& name, const QJsonObject& config)
+std::string CIPipelineManager::createPipeline(const std::string& name, const void*& config)
 {
-    QString pipelineId = QString("pipeline_%1_%2").arg(name).arg(QDateTime::currentMSecsSinceEpoch());
+    std::string pipelineId = std::string("pipeline_%1_%2"));
     
     Pipeline newPipeline;
     newPipeline.id = pipelineId;
@@ -34,38 +29,33 @@ QString CIPipelineManager::createPipeline(const QString& name, const QJsonObject
     newPipeline.config = config;
     newPipeline.status = PipelineStatus::Idle;
     newPipeline.process = nullptr;
-    newPipeline.startTime = QDateTime();
-    newPipeline.endTime = QDateTime();
+    newPipeline.startTime = std::chrono::system_clock::time_point();
+    newPipeline.endTime = std::chrono::system_clock::time_point();
     
     m_pipelines[pipelineId] = newPipeline;
-    qDebug() << "[CIPipelineManager] Created pipeline:" << pipelineId;
     
     return pipelineId;
 }
 
-bool CIPipelineManager::updatePipeline(const QString& pipelineId, const QJsonObject& config)
+bool CIPipelineManager::updatePipeline(const std::string& pipelineId, const void*& config)
 {
     auto it = m_pipelines.find(pipelineId);
     if (it == m_pipelines.end()) {
-        qWarning() << "[CIPipelineManager] Pipeline not found:" << pipelineId;
         return false;
     }
     
     if (it->second.status == PipelineStatus::Running) {
-        qWarning() << "[CIPipelineManager] Cannot update running pipeline:" << pipelineId;
         return false;
     }
     
     it->second.config = config;
-    qDebug() << "[CIPipelineManager] Updated pipeline:" << pipelineId;
     return true;
 }
 
-bool CIPipelineManager::deletePipeline(const QString& pipelineId)
+bool CIPipelineManager::deletePipeline(const std::string& pipelineId)
 {
     auto it = m_pipelines.find(pipelineId);
     if (it == m_pipelines.end()) {
-        qWarning() << "[CIPipelineManager] Pipeline not found:" << pipelineId;
         return false;
     }
     
@@ -78,58 +68,52 @@ bool CIPipelineManager::deletePipeline(const QString& pipelineId)
     }
     
     m_pipelines.erase(it);
-    qDebug() << "[CIPipelineManager] Deleted pipeline:" << pipelineId;
     return true;
 }
 
-bool CIPipelineManager::startPipeline(const QString& pipelineId)
+bool CIPipelineManager::startPipeline(const std::string& pipelineId)
 {
     auto it = m_pipelines.find(pipelineId);
     if (it == m_pipelines.end()) {
-        qWarning() << "[CIPipelineManager] Pipeline not found:" << pipelineId;
         return false;
     }
     
     Pipeline& pipeline = it->second;
     
     if (pipeline.status == PipelineStatus::Running) {
-        qWarning() << "[CIPipelineManager] Pipeline already running:" << pipelineId;
         return false;
     }
     
     pipeline.status = PipelineStatus::Running;
-    pipeline.startTime = QDateTime::currentDateTime();
+    pipeline.startTime = std::chrono::system_clock::time_point::currentDateTime();
     pipeline.process = new QProcess(this);
     
     // Extract build command from config
-    QString buildCommand = pipeline.config.contains("buildCommand") 
+    std::string buildCommand = pipeline.config.contains("buildCommand") 
         ? pipeline.config["buildCommand"].toString() 
         : "echo Running pipeline";
-    QString workDir = pipeline.config.contains("workDir") 
+    std::string workDir = pipeline.config.contains("workDir") 
         ? pipeline.config["workDir"].toString() 
         : ".";
     
     pipeline.process->setWorkingDirectory(workDir);
     pipeline.process->start(buildCommand);
     
-    emit pipelineStarted(pipelineId);
-    qDebug() << "[CIPipelineManager] Started pipeline:" << pipelineId << "Command:" << buildCommand;
+    pipelineStarted(pipelineId);
     
     return true;
 }
 
-bool CIPipelineManager::stopPipeline(const QString& pipelineId)
+bool CIPipelineManager::stopPipeline(const std::string& pipelineId)
 {
     auto it = m_pipelines.find(pipelineId);
     if (it == m_pipelines.end()) {
-        qWarning() << "[CIPipelineManager] Pipeline not found:" << pipelineId;
         return false;
     }
     
     Pipeline& pipeline = it->second;
     
     if (pipeline.status != PipelineStatus::Running || !pipeline.process) {
-        qWarning() << "[CIPipelineManager] Pipeline not running:" << pipelineId;
         return false;
     }
     
@@ -142,65 +126,59 @@ bool CIPipelineManager::stopPipeline(const QString& pipelineId)
     }
     
     pipeline.status = PipelineStatus::Cancelled;
-    pipeline.endTime = QDateTime::currentDateTime();
+    pipeline.endTime = std::chrono::system_clock::time_point::currentDateTime();
     
-    emit pipelineCompleted(pipelineId, false);
-    emit pipelineStatusChanged(pipelineId, pipeline.status);
-    qDebug() << "[CIPipelineManager] Stopped pipeline:" << pipelineId;
+    pipelineCompleted(pipelineId, false);
+    pipelineStatusChanged(pipelineId, pipeline.status);
     
     return true;
 }
 
-CIPipelineManager::PipelineStatus CIPipelineManager::getPipelineStatus(const QString& pipelineId) const
+CIPipelineManager::PipelineStatus CIPipelineManager::getPipelineStatus(const std::string& pipelineId) const
 {
     auto it = m_pipelines.find(pipelineId);
     if (it == m_pipelines.end()) {
-        qWarning() << "[CIPipelineManager] Pipeline not found:" << pipelineId;
         return PipelineStatus::Idle;
     }
     
     return it->second.status;
 }
 
-void CIPipelineManager::setVCSIntegration(const QString& vcsType, const QJsonObject& config)
+void CIPipelineManager::setVCSIntegration(const std::string& vcsType, const void*& config)
 {
     m_vcsConfig = config;
     m_vcsConfig["type"] = vcsType;
-    qDebug() << "[CIPipelineManager] VCS integration configured:" << vcsType;
 }
 
-bool CIPipelineManager::triggerOnCommit(const QString& pipelineId, const QString& commitHash)
+bool CIPipelineManager::triggerOnCommit(const std::string& pipelineId, const std::string& commitHash)
 {
     auto it = m_pipelines.find(pipelineId);
     if (it == m_pipelines.end()) {
-        qWarning() << "[CIPipelineManager] Pipeline not found:" << pipelineId;
         return false;
     }
     
-    qDebug() << "[CIPipelineManager] Triggered pipeline on commit:" << pipelineId << "Commit:" << commitHash;
     return startPipeline(pipelineId);
 }
 
-void CIPipelineManager::setNotificationSettings(const QJsonObject& settings)
+void CIPipelineManager::setNotificationSettings(const void*& settings)
 {
     m_notificationSettings = settings;
-    qDebug() << "[CIPipelineManager] Notification settings updated";
 }
 
-QJsonObject CIPipelineManager::getPipelineReport(const QString& pipelineId) const
+void* CIPipelineManager::getPipelineReport(const std::string& pipelineId) const
 {
     auto it = m_pipelines.find(pipelineId);
     if (it == m_pipelines.end()) {
-        return QJsonObject();
+        return void*();
     }
     
     const Pipeline& pipeline = it->second;
-    QJsonObject report;
+    void* report;
     report["id"] = pipelineId;
     report["name"] = pipeline.name;
     report["status"] = static_cast<int>(pipeline.status);
-    report["startTime"] = pipeline.startTime.toString(Qt::ISODate);
-    report["endTime"] = pipeline.endTime.toString(Qt::ISODate);
+    report["startTime"] = pipeline.startTime.toString(//ISODate);
+    report["endTime"] = pipeline.endTime.toString(//ISODate);
     
     if (pipeline.process) {
         report["exitCode"] = pipeline.process->exitCode();
@@ -208,3 +186,4 @@ QJsonObject CIPipelineManager::getPipelineReport(const QString& pipelineId) cons
     
     return report;
 }
+

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
+#include <string>
 
 /**
  * @brief Code signing utility for Windows/macOS executables
@@ -11,10 +10,8 @@
  * - macOS: codesign with Developer ID certificate
  * - Timestamping for long-term validity
  */
-class CodeSigner : public QObject
+class CodeSigner
 {
-    Q_OBJECT
-
 public:
     static CodeSigner* instance();
     
@@ -25,9 +22,9 @@ public:
      * @param certPassword Certificate password (from env: CODE_SIGN_PASSWORD)
      * @return true if signing successful
      */
-    bool signWindowsExecutable(const QString& exePath, 
-                              const QString& certPath = QString(),
-                              const QString& certPassword = QString());
+    bool signWindowsExecutable(const std::string& exePath, 
+                              const std::string& certPath = "",
+                              const std::string& certPassword = "");
     
     /**
      * @brief Sign macOS application bundle
@@ -35,35 +32,16 @@ public:
      * @param identity Developer ID identity (from keychain)
      * @return true if signing successful
      */
-    bool signMacOSBundle(const QString& bundlePath, const QString& identity = QString());
+    bool signMacOSBundle(const std::string& bundlePath, const std::string& identity = "");
     
     /**
      * @brief Verify executable signature
      * @param exePath Path to executable
      * @return true if signature is valid
      */
-    bool verifySignature(const QString& exePath);
+    bool verifySignature(const std::string& exePath);
     
-    /**
-     * @brief Notarize macOS application (required for distribution)
-     * @param bundlePath Path to .app bundle
-     * @param appleId Apple ID email
-     * @param password App-specific password (from env: NOTARIZE_PASSWORD)
-     * @return true if notarization successful
-     */
-    bool notarizeMacOSApp(const QString& bundlePath, 
-                         const QString& appleId,
-                         const QString& password = QString());
-
-signals:
-    void signatureCompleted(const QString& filePath, bool success);
-    void notarizationCompleted(const QString& bundlePath, bool success);
-
 private:
-    explicit CodeSigner(QObject* parent = nullptr);
-    ~CodeSigner();
-    
+    CodeSigner();
     static CodeSigner* s_instance;
-    
-    bool executeCommand(const QString& command, const QStringList& args);
 };

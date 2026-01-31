@@ -1,32 +1,14 @@
 #include "interpretability_panel_enhanced.hpp"
 
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QTabWidget>
-#include <QComboBox>
-#include <QSlider>
-#include <QLabel>
-#include <QPainter>
-#include <QChart>
-#include <QChartView>
-#include <QLineSeries>
-#include <QBarSeries>
-#include <QBarSet>
-#include <QValueAxis>
-#include <QCategoryAxis>
-#include <QDebug>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QFile>
-#include <QTextStream>
+
 #include <algorithm>
 #include <numeric>
 #include <cmath>
 
 // ========== CONSTRUCTOR & DESTRUCTOR ==========
 
-InterpretabilityPanelEnhanced::InterpretabilityPanelEnhanced(QWidget* parent)
-    : QWidget(parent),
+InterpretabilityPanelEnhanced::InterpretabilityPanelEnhanced(void* parent)
+    : void(parent),
       m_current_visualization(VisualizationType::AttentionHeatmap),
       m_selected_layer(0),
       m_selected_attention_head(0),
@@ -38,20 +20,18 @@ InterpretabilityPanelEnhanced::InterpretabilityPanelEnhanced(QWidget* parent)
       m_exploding_threshold(10.0f),
       m_sparsity_threshold(0.5f)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Constructing panel (lazy-init)";
     
     // Log initialization
-    QJsonObject init_event;
+    void* init_event;
     init_event["event"] = "panel_constructed";
-    init_event["timestamp"] = QString::number(std::chrono::system_clock::now().time_since_epoch().count());
+    init_event["timestamp"] = std::string::number(std::chrono::system_clock::now().time_since_epoch().count());
     logEvent("initialization", init_event);
 }
 
 InterpretabilityPanelEnhanced::~InterpretabilityPanelEnhanced()
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Destroying panel";
     
-    QJsonObject cleanup_event;
+    void* cleanup_event;
     cleanup_event["event"] = "panel_destroyed";
     cleanup_event["total_updates"] = m_perf_metrics.total_updates;
     cleanup_event["total_exports"] = m_perf_metrics.total_exports;
@@ -64,7 +44,6 @@ void InterpretabilityPanelEnhanced::updateAttentionHeads(const std::vector<Atten
 {
     auto start_time = std::chrono::high_resolution_clock::now();
     
-    qDebug() << "[InterpretabilityPanelEnhanced] Updating" << attention_heads.size() << "attention heads";
     
     for (const auto& head : attention_heads) {
         m_attention_heads[head.layer_idx][head.head_idx] = head;
@@ -76,9 +55,9 @@ void InterpretabilityPanelEnhanced::updateAttentionHeads(const std::vector<Atten
     m_perf_metrics.last_update_duration = end_time - start_time;
     m_perf_metrics.total_updates++;
     
-    emit visualizationUpdated(static_cast<int>(VisualizationType::AttentionHeatmap));
+    visualizationUpdated(static_cast<int>(VisualizationType::AttentionHeatmap));
     
-    QJsonObject event;
+    void* event;
     event["event"] = "attention_updated";
     event["head_count"] = static_cast<int>(attention_heads.size());
     event["duration_ms"] = std::chrono::duration<double>(end_time - start_time).count() * 1000;
@@ -89,11 +68,9 @@ void InterpretabilityPanelEnhanced::updateGradientFlow(const std::vector<Gradien
 {
     auto start_time = std::chrono::high_resolution_clock::now();
     
-    qDebug() << "[InterpretabilityPanelEnhanced] Updating gradient flow for"
              << gradient_data.size() << "layers";
     
     if (!m_gradient_tracking_enabled) {
-        qWarning() << "[InterpretabilityPanelEnhanced] Gradient tracking disabled";
         return;
     }
     
@@ -107,9 +84,9 @@ void InterpretabilityPanelEnhanced::updateGradientFlow(const std::vector<Gradien
     m_perf_metrics.last_update_duration = end_time - start_time;
     m_perf_metrics.total_updates++;
     
-    emit visualizationUpdated(static_cast<int>(VisualizationType::GradientFlow));
+    visualizationUpdated(static_cast<int>(VisualizationType::GradientFlow));
     
-    QJsonObject event;
+    void* event;
     event["event"] = "gradient_flow_updated";
     event["layer_count"] = static_cast<int>(gradient_data.size());
     event["duration_ms"] = std::chrono::duration<double>(end_time - start_time).count() * 1000;
@@ -120,7 +97,6 @@ void InterpretabilityPanelEnhanced::updateActivationStats(const std::vector<Acti
 {
     auto start_time = std::chrono::high_resolution_clock::now();
     
-    qDebug() << "[InterpretabilityPanelEnhanced] Updating activation stats for"
              << activation_stats.size() << "layers";
     
     for (const auto& stats : activation_stats) {
@@ -133,9 +109,9 @@ void InterpretabilityPanelEnhanced::updateActivationStats(const std::vector<Acti
     m_perf_metrics.last_update_duration = end_time - start_time;
     m_perf_metrics.total_updates++;
     
-    emit visualizationUpdated(static_cast<int>(VisualizationType::ActivationDistribution));
+    visualizationUpdated(static_cast<int>(VisualizationType::ActivationDistribution));
     
-    QJsonObject event;
+    void* event;
     event["event"] = "activation_stats_updated";
     event["layer_count"] = static_cast<int>(activation_stats.size());
     event["duration_ms"] = std::chrono::duration<double>(end_time - start_time).count() * 1000;
@@ -146,7 +122,6 @@ void InterpretabilityPanelEnhanced::updateFeatureImportance(const std::vector<Fe
 {
     auto start_time = std::chrono::high_resolution_clock::now();
     
-    qDebug() << "[InterpretabilityPanelEnhanced] Updating feature importance with"
              << attributions.size() << "features";
     
     m_feature_attributions = attributions;
@@ -166,9 +141,9 @@ void InterpretabilityPanelEnhanced::updateFeatureImportance(const std::vector<Fe
     m_perf_metrics.last_update_duration = end_time - start_time;
     m_perf_metrics.total_updates++;
     
-    emit visualizationUpdated(static_cast<int>(VisualizationType::FeatureImportance));
+    visualizationUpdated(static_cast<int>(VisualizationType::FeatureImportance));
     
-    QJsonObject event;
+    void* event;
     event["event"] = "feature_importance_updated";
     event["feature_count"] = static_cast<int>(attributions.size());
     event["top_feature"] = m_feature_attributions.empty() ? "none" : m_feature_attributions[0].feature_name;
@@ -180,7 +155,6 @@ void InterpretabilityPanelEnhanced::updateLayerAttribution(const std::vector<Lay
 {
     auto start_time = std::chrono::high_resolution_clock::now();
     
-    qDebug() << "[InterpretabilityPanelEnhanced] Updating layer attribution for"
              << layer_attributions.size() << "layers";
     
     m_layer_attributions = layer_attributions;
@@ -195,9 +169,9 @@ void InterpretabilityPanelEnhanced::updateLayerAttribution(const std::vector<Lay
     m_perf_metrics.last_update_duration = end_time - start_time;
     m_perf_metrics.total_updates++;
     
-    emit visualizationUpdated(static_cast<int>(VisualizationType::LayerContribution));
+    visualizationUpdated(static_cast<int>(VisualizationType::LayerContribution));
     
-    QJsonObject event;
+    void* event;
     event["event"] = "layer_attribution_updated";
     event["layer_count"] = static_cast<int>(layer_attributions.size());
     event["top_layer"] = m_layer_attributions.empty() ? -1 : m_layer_attributions[0].layer_idx;
@@ -207,39 +181,35 @@ void InterpretabilityPanelEnhanced::updateLayerAttribution(const std::vector<Lay
 
 void InterpretabilityPanelEnhanced::updateGradCAM(const GradCAMMap& gradcam_map)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Updating GradCAM for layer"
              << gradcam_map.layer_idx << "class" << gradcam_map.target_class;
     
     m_gradcam_data[gradcam_map.layer_idx] = gradcam_map;
-    emit visualizationUpdated(static_cast<int>(VisualizationType::GradCAM));
+    visualizationUpdated(static_cast<int>(VisualizationType::GradCAM));
 }
 
-void InterpretabilityPanelEnhanced::updateIntegratedGradients(const QString& input_name, 
+void InterpretabilityPanelEnhanced::updateIntegratedGradients(const std::string& input_name, 
                                                              const std::vector<float>& attributions)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Updating integrated gradients for"
              << input_name << "with" << attributions.size() << "values";
     
     m_integrated_gradients[input_name] = attributions;
-    emit visualizationUpdated(static_cast<int>(VisualizationType::IntegratedGradients));
+    visualizationUpdated(static_cast<int>(VisualizationType::IntegratedGradients));
 }
 
 void InterpretabilityPanelEnhanced::updateSaliencyMap(const std::vector<float>& saliency_data)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Updating saliency map with"
              << saliency_data.size() << "values";
     
     m_saliency_map = saliency_data;
-    emit visualizationUpdated(static_cast<int>(VisualizationType::SaliencyMap));
+    visualizationUpdated(static_cast<int>(VisualizationType::SaliencyMap));
 }
 
 void InterpretabilityPanelEnhanced::updateTokenLogits(int token_idx, const std::vector<float>& logits)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Updating token" << token_idx
              << "logits with" << logits.size() << "classes";
     
     m_token_logits[token_idx] = logits;
-    emit visualizationUpdated(static_cast<int>(VisualizationType::TokenLogits));
+    visualizationUpdated(static_cast<int>(VisualizationType::TokenLogits));
 }
 
 // ========== ANALYSIS & DIAGNOSTICS ==========
@@ -248,7 +218,6 @@ InterpretabilityPanelEnhanced::ModelDiagnostics InterpretabilityPanelEnhanced::r
 {
     auto start_time = std::chrono::high_resolution_clock::now();
     
-    qDebug() << "[InterpretabilityPanelEnhanced] Running comprehensive diagnostics";
     
     ModelDiagnostics diagnostics;
     diagnostics.timestamp = std::chrono::system_clock::now();
@@ -316,8 +285,8 @@ InterpretabilityPanelEnhanced::ModelDiagnostics InterpretabilityPanelEnhanced::r
     m_last_diagnostics_time = std::chrono::system_clock::now();
     m_cached_diagnostics = diagnostics;
     
-    // Emit diagnostics signal
-    QJsonObject diag_json;
+    // diagnostics signal
+    void* diag_json;
     diag_json["has_vanishing_gradients"] = diagnostics.has_vanishing_gradients;
     diag_json["has_exploding_gradients"] = diagnostics.has_exploding_gradients;
     diag_json["has_dead_neurons"] = diagnostics.has_dead_neurons;
@@ -326,15 +295,15 @@ InterpretabilityPanelEnhanced::ModelDiagnostics InterpretabilityPanelEnhanced::r
     diag_json["problematic_layers"] = diagnostics.problematic_layers;
     diag_json["duration_ms"] = std::chrono::duration<double>(end_time - start_time).count() * 1000;
     
-    QJsonArray critical_layers;
+    void* critical_layers;
     for (int idx : diagnostics.critical_layer_indices) {
         critical_layers.append(idx);
     }
     diag_json["critical_layers"] = critical_layers;
     
-    emit diagnosticsCompleted(diag_json);
+    diagnosticsCompleted(diag_json);
     
-    QJsonObject event;
+    void* event;
     event["event"] = "diagnostics_completed";
     event["duration_ms"] = std::chrono::duration<double>(end_time - start_time).count() * 1000;
     event["has_issues"] = diagnostics.has_vanishing_gradients || diagnostics.has_exploding_gradients || 
@@ -412,13 +381,12 @@ InterpretabilityPanelEnhanced::getTopFeatures(int k) const
 
 void InterpretabilityPanelEnhanced::setVisualizationType(VisualizationType viz_type)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Setting visualization type to"
              << static_cast<int>(viz_type);
     
     m_current_visualization = viz_type;
     updateDisplay();
     
-    QJsonObject event;
+    void* event;
     event["event"] = "visualization_type_changed";
     event["new_type"] = static_cast<int>(viz_type);
     logEvent("configuration", event);
@@ -432,39 +400,34 @@ InterpretabilityPanelEnhanced::getCurrentVisualizationType() const
 
 void InterpretabilityPanelEnhanced::setSelectedLayer(int layer_index)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Selected layer" << layer_index;
     
     m_selected_layer = layer_index;
-    emit layerSelectionChanged(layer_index);
+    layerSelectionChanged(layer_index);
     updateDisplay();
 }
 
 void InterpretabilityPanelEnhanced::setSelectedAttentionHead(int head_index)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Selected attention head" << head_index;
     
     m_selected_attention_head = head_index;
-    emit attentionHeadSelectionChanged(head_index);
+    attentionHeadSelectionChanged(head_index);
     updateDisplay();
 }
 
 void InterpretabilityPanelEnhanced::setAttentionFocusPosition(int position)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Set attention focus position" << position;
     m_attention_focus_position = position;
     updateDisplay();
 }
 
 void InterpretabilityPanelEnhanced::setLayerRange(int min_layer, int max_layer)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Setting layer range" << min_layer << "-" << max_layer;
     m_min_layer = min_layer;
     m_max_layer = max_layer;
 }
 
 void InterpretabilityPanelEnhanced::setGradientTrackingEnabled(bool enabled)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Gradient tracking"
              << (enabled ? "enabled" : "disabled");
     m_gradient_tracking_enabled = enabled;
 }
@@ -473,7 +436,6 @@ void InterpretabilityPanelEnhanced::setAnomalyThresholds(float vanishing_thresho
                                                         float exploding_threshold,
                                                         float sparsity_threshold)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Setting anomaly thresholds:"
              << "vanishing=" << vanishing_threshold
              << "exploding=" << exploding_threshold
              << "sparsity=" << sparsity_threshold;
@@ -485,34 +447,34 @@ void InterpretabilityPanelEnhanced::setAnomalyThresholds(float vanishing_thresho
 
 // ========== DATA EXPORT ==========
 
-QJsonObject InterpretabilityPanelEnhanced::exportAsJSON() const
+void* InterpretabilityPanelEnhanced::exportAsJSON() const
 {
     auto start_time = std::chrono::high_resolution_clock::now();
     
-    QJsonObject root;
-    root["export_timestamp"] = QString::number(std::chrono::system_clock::now().time_since_epoch().count());
+    void* root;
+    root["export_timestamp"] = std::string::number(std::chrono::system_clock::now().time_since_epoch().count());
     root["visualization_type"] = static_cast<int>(m_current_visualization);
     
     // Export attention heads
-    QJsonObject attention_obj;
+    void* attention_obj;
     for (const auto& [layer_idx, heads] : m_attention_heads) {
-        QJsonArray heads_array;
+        void* heads_array;
         for (const auto& [head_idx, head] : heads) {
-            QJsonObject head_obj;
+            void* head_obj;
             head_obj["head_idx"] = head_idx;
             head_obj["mean_weight"] = head.mean_attn_weight;
             head_obj["max_weight"] = head.max_attn_weight;
             head_obj["entropy"] = head.entropy;
             heads_array.append(head_obj);
         }
-        attention_obj[QString::number(layer_idx)] = heads_array;
+        attention_obj[std::string::number(layer_idx)] = heads_array;
     }
     root["attention_heads"] = attention_obj;
     
     // Export gradient flow
-    QJsonArray gradient_array;
+    void* gradient_array;
     for (const auto& [layer_idx, metrics] : m_gradient_flow_data) {
-        QJsonObject grad_obj;
+        void* grad_obj;
         grad_obj["layer"] = layer_idx;
         grad_obj["norm"] = metrics.norm;
         grad_obj["variance"] = metrics.variance;
@@ -524,9 +486,9 @@ QJsonObject InterpretabilityPanelEnhanced::exportAsJSON() const
     root["gradient_flow"] = gradient_array;
     
     // Export activation stats
-    QJsonArray activation_array;
+    void* activation_array;
     for (const auto& [layer_idx, stats] : m_activation_stats) {
-        QJsonObject stats_obj;
+        void* stats_obj;
         stats_obj["layer"] = layer_idx;
         stats_obj["mean"] = stats.mean;
         stats_obj["variance"] = stats.variance;
@@ -537,9 +499,9 @@ QJsonObject InterpretabilityPanelEnhanced::exportAsJSON() const
     root["activation_stats"] = activation_array;
     
     // Export feature importance
-    QJsonArray features_array;
+    void* features_array;
     for (const auto& feat : m_feature_attributions) {
-        QJsonObject feat_obj;
+        void* feat_obj;
         feat_obj["name"] = feat.feature_name;
         feat_obj["attribution"] = feat.attribution_score;
         feat_obj["rank"] = feat.rank;
@@ -555,13 +517,11 @@ QJsonObject InterpretabilityPanelEnhanced::exportAsJSON() const
     return root;
 }
 
-bool InterpretabilityPanelEnhanced::exportAsCSV(const QString& file_path, VisualizationType viz_type) const
+bool InterpretabilityPanelEnhanced::exportAsCSV(const std::string& file_path, VisualizationType viz_type) const
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Exporting to CSV:" << file_path;
     
-    QFile file(file_path);
+    std::fstream file(file_path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "[InterpretabilityPanelEnhanced] Failed to open file for writing:" << file_path;
         return false;
     }
     
@@ -611,7 +571,6 @@ bool InterpretabilityPanelEnhanced::exportAsCSV(const QString& file_path, Visual
             }
             
             default: {
-                qWarning() << "[InterpretabilityPanelEnhanced] Unsupported export type";
                 file.close();
                 return false;
             }
@@ -619,7 +578,7 @@ bool InterpretabilityPanelEnhanced::exportAsCSV(const QString& file_path, Visual
         
         file.close();
         
-        QJsonObject event;
+        void* event;
         event["event"] = "csv_export_completed";
         event["file_path"] = file_path;
         event["viz_type"] = static_cast<int>(viz_type);
@@ -627,18 +586,15 @@ bool InterpretabilityPanelEnhanced::exportAsCSV(const QString& file_path, Visual
         
         return true;
     } catch (const std::exception& e) {
-        qWarning() << "[InterpretabilityPanelEnhanced] CSV export failed:" << QString::fromStdString(e.what());
         file.close();
         return false;
     }
 }
 
-bool InterpretabilityPanelEnhanced::exportAsPNG(const QString& file_path) const
+bool InterpretabilityPanelEnhanced::exportAsPNG(const std::string& file_path) const
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Exporting visualization to PNG:" << file_path;
     
     if (!m_chart_view) {
-        qWarning() << "[InterpretabilityPanelEnhanced] Chart view not available";
         return false;
     }
     
@@ -648,36 +604,33 @@ bool InterpretabilityPanelEnhanced::exportAsPNG(const QString& file_path) const
         bool success = pixmap.save(file_path, "PNG");
         
         if (success) {
-            QJsonObject event;
+            void* event;
             event["event"] = "png_export_completed";
             event["file_path"] = file_path;
             logEvent("export", event);
         } else {
-            qWarning() << "[InterpretabilityPanelEnhanced] Failed to save PNG";
         }
         
         return success;
     } catch (const std::exception& e) {
-        qWarning() << "[InterpretabilityPanelEnhanced] PNG export failed:"
-                   << QString::fromStdString(e.what());
+                   << std::string::fromStdString(e.what());
         return false;
     }
 }
 
-bool InterpretabilityPanelEnhanced::loadFromJSON(const QJsonObject& data)
+bool InterpretabilityPanelEnhanced::loadFromJSON(const void*& data)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Loading from JSON";
     
     try {
         m_current_visualization = static_cast<VisualizationType>(data["visualization_type"].toInt());
         
         // Load attention heads
-        QJsonObject attention_obj = data["attention_heads"].toObject();
+        void* attention_obj = data["attention_heads"].toObject();
         for (auto it = attention_obj.begin(); it != attention_obj.end(); ++it) {
             int layer_idx = it.key().toInt();
-            QJsonArray heads_array = it.value().toArray();
+            void* heads_array = it.value().toArray();
             for (const auto& head_val : heads_array) {
-                QJsonObject head_obj = head_val.toObject();
+                void* head_obj = head_val.toObject();
                 AttentionHead head;
                 head.layer_idx = layer_idx;
                 head.head_idx = head_obj["head_idx"].toInt();
@@ -687,22 +640,20 @@ bool InterpretabilityPanelEnhanced::loadFromJSON(const QJsonObject& data)
             }
         }
         
-        QJsonObject event;
+        void* event;
         event["event"] = "loaded_from_json";
-        event["data_size_bytes"] = static_cast<int>(QJsonDocument(data).toJson().size());
+        event["data_size_bytes"] = static_cast<int>(void*(data).toJson().size());
         logEvent("io", event);
         
         return true;
     } catch (const std::exception& e) {
-        qWarning() << "[InterpretabilityPanelEnhanced] JSON load failed:"
-                   << QString::fromStdString(e.what());
+                   << std::string::fromStdString(e.what());
         return false;
     }
 }
 
 void InterpretabilityPanelEnhanced::clearVisualizations()
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Clearing all visualizations";
     
     m_attention_heads.clear();
     m_gradient_flow_data.clear();
@@ -714,25 +665,25 @@ void InterpretabilityPanelEnhanced::clearVisualizations()
     m_saliency_map.clear();
     m_token_logits.clear();
     
-    QJsonObject event;
+    void* event;
     event["event"] = "visualizations_cleared";
     logEvent("lifecycle", event);
 }
 
 // ========== OBSERVABILITY & MONITORING ==========
 
-QJsonObject InterpretabilityPanelEnhanced::getHealthStatus() const
+void* InterpretabilityPanelEnhanced::getHealthStatus() const
 {
-    QJsonObject health;
+    void* health;
     health["status"] = "healthy";
-    health["timestamp"] = QString::number(std::chrono::system_clock::now().time_since_epoch().count());
+    health["timestamp"] = std::string::number(std::chrono::system_clock::now().time_since_epoch().count());
     health["total_updates"] = m_perf_metrics.total_updates;
     health["total_exports"] = m_perf_metrics.total_exports;
     health["has_data"] = !m_attention_heads.empty() || !m_gradient_flow_data.empty();
     
     if (!m_cached_diagnostics.critical_layer_indices.empty()) {
         health["status"] = "degraded";
-        QJsonArray critical_layers;
+        void* critical_layers;
         for (int idx : m_cached_diagnostics.critical_layer_indices) {
             critical_layers.append(idx);
         }
@@ -742,17 +693,17 @@ QJsonObject InterpretabilityPanelEnhanced::getHealthStatus() const
     return health;
 }
 
-QString InterpretabilityPanelEnhanced::getPrometheusMetrics() const
+std::string InterpretabilityPanelEnhanced::getPrometheusMetrics() const
 {
-    QString metrics;
+    std::string metrics;
     
     metrics += "# HELP interpretability_total_updates Total visualization updates\n";
     metrics += "# TYPE interpretability_total_updates counter\n";
-    metrics += QString("interpretability_total_updates %1\n").arg(m_perf_metrics.total_updates);
+    metrics += std::string("interpretability_total_updates %1\n");
     
     metrics += "\n# HELP interpretability_total_exports Total data exports\n";
     metrics += "# TYPE interpretability_total_exports counter\n";
-    metrics += QString("interpretability_total_exports %1\n").arg(m_perf_metrics.total_exports);
+    metrics += std::string("interpretability_total_exports %1\n");
     
     metrics += "\n# HELP interpretability_attention_heads_count Number of attention heads\n";
     metrics += "# TYPE interpretability_attention_heads_count gauge\n";
@@ -760,29 +711,29 @@ QString InterpretabilityPanelEnhanced::getPrometheusMetrics() const
     for (const auto& [_, heads] : m_attention_heads) {
         total_heads += static_cast<int>(heads.size());
     }
-    metrics += QString("interpretability_attention_heads_count %1\n").arg(total_heads);
+    metrics += std::string("interpretability_attention_heads_count %1\n");
     
     metrics += "\n# HELP interpretability_gradient_flow_layers Number of layers with gradient data\n";
     metrics += "# TYPE interpretability_gradient_flow_layers gauge\n";
-    metrics += QString("interpretability_gradient_flow_layers %1\n").arg(m_gradient_flow_data.size());
+    metrics += std::string("interpretability_gradient_flow_layers %1\n"));
     
     metrics += "\n# HELP interpretability_activation_layers Number of layers with activation data\n";
     metrics += "# TYPE interpretability_activation_layers gauge\n";
-    metrics += QString("interpretability_activation_layers %1\n").arg(m_activation_stats.size());
+    metrics += std::string("interpretability_activation_layers %1\n"));
     
     if (!m_cached_diagnostics.critical_layer_indices.empty()) {
         metrics += "\n# HELP interpretability_critical_layers Number of critical layers detected\n";
         metrics += "# TYPE interpretability_critical_layers gauge\n";
-        metrics += QString("interpretability_critical_layers %1\n")
-                       .arg(m_cached_diagnostics.critical_layer_indices.size());
+        metrics += std::string("interpretability_critical_layers %1\n")
+                       );
     }
     
     return metrics;
 }
 
-QJsonObject InterpretabilityPanelEnhanced::getPerformanceStats() const
+void* InterpretabilityPanelEnhanced::getPerformanceStats() const
 {
-    QJsonObject stats;
+    void* stats;
     stats["last_update_duration_ms"] = m_perf_metrics.last_update_duration.count() * 1000;
     stats["last_diagnostics_duration_ms"] = m_perf_metrics.last_diagnostics_duration.count() * 1000;
     stats["total_updates"] = m_perf_metrics.total_updates;
@@ -796,7 +747,6 @@ QJsonObject InterpretabilityPanelEnhanced::getPerformanceStats() const
 
 void InterpretabilityPanelEnhanced::setupUI()
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Setting up UI";
     
     QVBoxLayout* main_layout = new QVBoxLayout(this);
     
@@ -821,7 +771,7 @@ void InterpretabilityPanelEnhanced::setupUI()
     // Layer selector
     QHBoxLayout* layer_layout = new QHBoxLayout();
     QLabel* layer_label = new QLabel("Layer:");
-    m_layer_slider = new QSlider(Qt::Horizontal);
+    m_layer_slider = new QSlider(//Horizontal);
     m_layer_slider->setRange(0, 100);
     m_layer_slider->setValue(0);
     
@@ -834,7 +784,7 @@ void InterpretabilityPanelEnhanced::setupUI()
     QLabel* attention_label = new QLabel("Attention Head:");
     m_attention_head_combo = new QComboBox();
     for (int i = 0; i < 12; ++i) {
-        m_attention_head_combo->addItem(QString("Head %1").arg(i), i);
+        m_attention_head_combo->addItem(std::string("Head %1"), i);
     }
     
     attention_layout->addWidget(attention_label);
@@ -868,10 +818,10 @@ void InterpretabilityPanelEnhanced::updateDisplay()
     createCharts();
     
     if (m_stats_label) {
-        m_stats_label->setText(QString("Layer: %1 | Head: %2 | Type: %3")
-                                   .arg(m_selected_layer)
-                                   .arg(m_selected_attention_head)
-                                   .arg(static_cast<int>(m_current_visualization)));
+        m_stats_label->setText(std::string("Layer: %1 | Head: %2 | Type: %3")
+
+
+                                   ));
     }
 }
 
@@ -904,12 +854,12 @@ void InterpretabilityPanelEnhanced::createCharts()
             auto x_axis = new QValueAxis();
             x_axis->setTitleText("Layer");
             x_axis->setRange(m_min_layer, m_max_layer);
-            m_chart->addAxis(x_axis, Qt::AlignBottom);
+            m_chart->addAxis(x_axis, //AlignBottom);
             series->attachAxis(x_axis);
             
             auto y_axis = new QValueAxis();
             y_axis->setTitleText("Gradient Norm");
-            m_chart->addAxis(y_axis, Qt::AlignLeft);
+            m_chart->addAxis(y_axis, //AlignLeft);
             series->attachAxis(y_axis);
             
             break;
@@ -932,13 +882,13 @@ void InterpretabilityPanelEnhanced::createCharts()
             // Create axes
             auto x_axis = new QCategoryAxis();
             x_axis->setTitleText("Layer");
-            m_chart->addAxis(x_axis, Qt::AlignBottom);
+            m_chart->addAxis(x_axis, //AlignBottom);
             bar_series->attachAxis(x_axis);
             
             auto y_axis = new QValueAxis();
             y_axis->setTitleText("Sparsity (%)");
             y_axis->setRange(0, 100);
-            m_chart->addAxis(y_axis, Qt::AlignLeft);
+            m_chart->addAxis(y_axis, //AlignLeft);
             bar_series->attachAxis(y_axis);
             
             break;
@@ -996,20 +946,19 @@ float InterpretabilityPanelEnhanced::calculateEntropy(const std::vector<float>& 
     return entropy;
 }
 
-QJsonObject InterpretabilityPanelEnhanced::visualizationToJSON() const
+void* InterpretabilityPanelEnhanced::visualizationToJSON() const
 {
     return exportAsJSON();
 }
 
-void InterpretabilityPanelEnhanced::logEvent(const QString& event_type, const QJsonObject& event_data) const
+void InterpretabilityPanelEnhanced::logEvent(const std::string& event_type, const void*& event_data) const
 {
-    QJsonObject log_entry;
-    log_entry["timestamp"] = QString::number(std::chrono::system_clock::now().time_since_epoch().count());
+    void* log_entry;
+    log_entry["timestamp"] = std::string::number(std::chrono::system_clock::now().time_since_epoch().count());
     log_entry["event_type"] = event_type;
     log_entry["data"] = event_data;
     
-    qDebug() << "[InterpretabilityPanelEnhanced]"
-             << QJsonDocument(log_entry).toJson(QJsonDocument::Compact);
+             << void*(log_entry).toJson(void*::Compact);
 }
 
 void InterpretabilityPanelEnhanced::onRefreshDisplay()
@@ -1024,32 +973,29 @@ void InterpretabilityPanelEnhanced::onRefreshDisplay()
  * @param file_path Path to save JSON file
  * @return Success status
  */
-bool InterpretabilityPanelEnhanced::exportAsJSON(const QString& file_path)
+bool InterpretabilityPanelEnhanced::exportAsJSON(const std::string& file_path)
 {
-    qDebug() << "[InterpretabilityPanelEnhanced] Exporting JSON to file:" << file_path;
     
     try {
-        QJsonObject json_data = exportAsJSON();
-        QJsonDocument doc(json_data);
+        void* json_data = exportAsJSON();
+        void* doc(json_data);
         
-        QFile file(file_path);
+        std::fstream file(file_path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            qWarning() << "[InterpretabilityPanelEnhanced] Cannot open file for writing:" << file_path;
             return false;
         }
         
-        file.write(doc.toJson(QJsonDocument::Indented));
+        file.write(doc.toJson(void*::Indented));
         file.close();
         
-        QJsonObject event;
+        void* event;
         event["event"] = "json_file_export_completed";
         event["file_path"] = file_path;
         logEvent("export", event);
         
         return true;
     } catch (const std::exception& e) {
-        qWarning() << "[InterpretabilityPanelEnhanced] JSON file export failed:"
-                   << QString::fromStdString(e.what());
+                   << std::string::fromStdString(e.what());
         return false;
     }
 }
@@ -1059,7 +1005,8 @@ bool InterpretabilityPanelEnhanced::exportAsJSON(const QString& file_path)
  * @param file_path Path to save CSV
  * @return Success status
  */
-bool InterpretabilityPanelEnhanced::exportAsCSV(const QString& file_path)
+bool InterpretabilityPanelEnhanced::exportAsCSV(const std::string& file_path)
 {
     return exportAsCSV(file_path, m_current_visualization);
 }
+

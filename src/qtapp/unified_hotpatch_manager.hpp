@@ -6,15 +6,10 @@
 #include "model_memory_hotpatch.hpp"
 #include "byte_level_hotpatcher.hpp"
 #include "gguf_server_hotpatch.hpp"
-#include <QObject>
-#include <QString>
-#include <QHash>
+
+
 #include <memory>
-#include <QVariant>
-#include <QMutex>
-#include <QMutexLocker>
-#include <QJsonObject>
-#include <QDateTime>
+
 
 enum class PatchLayer {
     System,
@@ -26,24 +21,23 @@ enum class PatchLayer {
 struct UnifiedResult {
     bool success = false;
     PatchLayer layer = PatchLayer::System;
-    QString operationName;
-    QString errorDetail;
-    QDateTime timestamp = QDateTime::currentDateTime();
+    std::string operationName;
+    std::string errorDetail;
+    std::chrono::system_clock::time_point timestamp = std::chrono::system_clock::time_point::currentDateTime();
     int errorCode = 0;
 
-    static UnifiedResult successResult(const QString& op, PatchLayer layer = PatchLayer::System, const QString& detail = "OK") {
+    static UnifiedResult successResult(const std::string& op, PatchLayer layer = PatchLayer::System, const std::string& detail = "OK") {
         UnifiedResult r; r.success = true; r.operationName = op; r.layer = layer; r.errorDetail = detail; return r;
     }
-    static UnifiedResult failureResult(const QString& op, const QString& detail, PatchLayer layer = PatchLayer::System, int code = -1) {
+    static UnifiedResult failureResult(const std::string& op, const std::string& detail, PatchLayer layer = PatchLayer::System, int code = -1) {
         UnifiedResult r; r.success = false; r.operationName = op; r.layer = layer; r.errorDetail = detail; r.errorCode = code; return r;
     }
 };
 
-class UnifiedHotpatchManager : public QObject {
-    Q_OBJECT
+class UnifiedHotpatchManager : public void {
 
 public:
-    explicit UnifiedHotpatchManager(QObject* parent = nullptr);
+    explicit UnifiedHotpatchManager(void* parent = nullptr);
     ~UnifiedHotpatchManager();
 
     UnifiedResult initialize();
@@ -53,59 +47,58 @@ public:
     ByteLevelHotpatcher* byteHotpatcher() const;
     GGUFServerHotpatch* serverHotpatcher() const;
     
-    UnifiedResult attachToModel(void* modelPtr, size_t modelSize, const QString& modelPath);
+    UnifiedResult attachToModel(void* modelPtr, size_t modelSize, const std::string& modelPath);
     UnifiedResult detachAll();
     
     // Memory-level operations
-    PatchResult applyMemoryPatch(const QString& name, const MemoryPatch& patch);
-    PatchResult scaleWeights(const QString& tensorName, double factor);
+    PatchResult applyMemoryPatch(const std::string& name, const MemoryPatch& patch);
+    PatchResult scaleWeights(const std::string& tensorName, double factor);
     PatchResult bypassLayer(int layerIndex);
     
     // Byte-level operations
-    UnifiedResult applyBytePatch(const QString& name, const BytePatch& patch);
-    UnifiedResult savePatchedModel(const QString& outputPath);
-    UnifiedResult patchGGUFMetadata(const QString& key, const QVariant& value);
+    UnifiedResult applyBytePatch(const std::string& name, const BytePatch& patch);
+    UnifiedResult savePatchedModel(const std::string& outputPath);
+    UnifiedResult patchGGUFMetadata(const std::string& key, const std::any& value);
     
     // Server-level operations
-    UnifiedResult addServerHotpatch(const QString& name, const ServerHotpatch& patch);
-    UnifiedResult enableSystemPromptInjection(const QString& prompt);
+    UnifiedResult addServerHotpatch(const std::string& name, const ServerHotpatch& patch);
+    UnifiedResult enableSystemPromptInjection(const std::string& prompt);
     UnifiedResult setTemperatureOverride(double temperature);
     UnifiedResult enableResponseCaching(bool enable);
     
     // Coordinated operations
-    QList<UnifiedResult> optimizeModel();
-    QList<UnifiedResult> applySafetyFilters();
-    QList<UnifiedResult> boostInferenceSpeed();
+    std::vector<UnifiedResult> optimizeModel();
+    std::vector<UnifiedResult> applySafetyFilters();
+    std::vector<UnifiedResult> boostInferenceSpeed();
     
     struct UnifiedStats {
         ModelMemoryHotpatch::MemoryPatchStats memoryStats;
         quint64 totalPatchesApplied = 0;
         quint64 totalBytesModified = 0;
-        QDateTime sessionStarted;
-        QDateTime lastCoordinatedAction;
+        std::chrono::system_clock::time_point sessionStarted;
+        std::chrono::system_clock::time_point lastCoordinatedAction;
         quint64 coordinatedActionsCompleted = 0;
     };
     
     UnifiedStats getStatistics() const;
     void resetStatistics();
     
-    UnifiedResult savePreset(const QString& name);
-    UnifiedResult loadPreset(const QString& name);
-    UnifiedResult deletePreset(const QString& name);
-    QStringList listPresets() const;
+    UnifiedResult savePreset(const std::string& name);
+    UnifiedResult loadPreset(const std::string& name);
+    UnifiedResult deletePreset(const std::string& name);
+    std::vector<std::string> listPresets() const;
     
-    UnifiedResult exportConfiguration(const QString& filePath);
-    UnifiedResult importConfiguration(const QString& filePath);
+    UnifiedResult exportConfiguration(const std::string& filePath);
+    UnifiedResult importConfiguration(const std::string& filePath);
 
-signals:
     void initialized();
-    void modelAttached(const QString& modelPath, size_t modelSize);
+    void modelAttached(const std::string& modelPath, size_t modelSize);
     void modelDetached();
-    void patchApplied(const QString& name, PatchLayer layer);
-    void optimizationComplete(const QString& type, int improvementPercent);
+    void patchApplied(const std::string& name, PatchLayer layer);
+    void optimizationComplete(const std::string& type, int improvementPercent);
     void errorOccurred(const UnifiedResult& error);
 
-public slots:
+public:
     void setMemoryHotpatchEnabled(bool enabled);
     void setByteHotpatchEnabled(bool enabled);
     void setServerHotpatchEnabled(bool enabled);
@@ -119,7 +112,7 @@ private:
     std::unique_ptr<GGUFServerHotpatch> m_serverHotpatch;
     
     bool m_initialized = false;
-    QString m_currentModelPath;
+    std::string m_currentModelPath;
     void* m_currentModelPtr = nullptr;
     size_t m_currentModelSize = 0;
     
@@ -128,11 +121,12 @@ private:
     bool m_serverEnabled = true;
     
     UnifiedStats m_stats;
-    QDateTime m_sessionStart;
-    QHash<QString, QJsonObject> m_presets;
-    mutable QMutex m_mutex;
+    std::chrono::system_clock::time_point m_sessionStart;
+    std::unordered_map<std::string, void*> m_presets;
+    mutable std::mutex m_mutex;
     
     void connectSignals();
     void updateStatistics(const UnifiedResult& result);
-    QList<UnifiedResult> logCoordinatedResults(const QString& operation, const QList<UnifiedResult>& results);
+    std::vector<UnifiedResult> logCoordinatedResults(const std::string& operation, const std::vector<UnifiedResult>& results);
 };
+

@@ -2,20 +2,18 @@
 #include "agentic_agent_coordinator.h"
 #include "agentic_iterative_reasoning.h"
 #include "agentic_loop_state.h"
-#include <QDebug>
-#include <QUuid>
+
+
 #include <algorithm>
 
-AgenticAgentCoordinator::AgenticAgentCoordinator(QObject* parent)
-    : QObject(parent),
-      m_coordinationStartTime(QDateTime::currentDateTime())
+AgenticAgentCoordinator::AgenticAgentCoordinator(void* parent)
+    : void(parent),
+      m_coordinationStartTime(std::chrono::system_clock::time_point::currentDateTime())
 {
-    qDebug() << "[AgenticAgentCoordinator] Initialized - Ready for multi-agent coordination";
 }
 
 AgenticAgentCoordinator::~AgenticAgentCoordinator()
 {
-    qDebug() << "[AgenticAgentCoordinator] Destroyed - Managed"
              << m_agents.size() << "agents and"
              << m_assignments.size() << "task assignments";
 }
@@ -25,14 +23,13 @@ void AgenticAgentCoordinator::initialize(AgenticEngine* engine, InferenceEngine*
     m_engine = engine;
     m_inferenceEngine = inference;
 
-    qInfo() << "[AgenticAgentCoordinator] Initialized with AgenticEngine and InferenceEngine";
 }
 
 // ===== AGENT MANAGEMENT =====
 
-QString AgenticAgentCoordinator::createAgent(AgentRole role)
+std::string AgenticAgentCoordinator::createAgent(AgentRole role)
 {
-    QString agentId = QUuid::createUuid().toString();
+    std::string agentId = QUuid::createUuid().toString();
 
     auto agent = std::make_unique<AgentInstance>();
     agent->agentId = agentId;
@@ -42,26 +39,24 @@ QString AgenticAgentCoordinator::createAgent(AgentRole role)
     agent->isAvailable = true;
     agent->utilization = 0.0f;
     agent->tasksCompleted = 0;
-    agent->lastActive = QDateTime::currentDateTime();
+    agent->lastActive = std::chrono::system_clock::time_point::currentDateTime();
 
     m_agents[agentId.toStdString()] = std::move(agent);
 
-    emit agentCreated(agentId, QString::number(static_cast<int>(role)));
+    agentCreated(agentId, std::string::number(static_cast<int>(role)));
 
-    qInfo() << "[AgenticAgentCoordinator] Created agent:" << agentId << "with role:" << static_cast<int>(role);
 
     return agentId;
 }
 
-void AgenticAgentCoordinator::removeAgent(const QString& agentId)
+void AgenticAgentCoordinator::removeAgent(const std::string& agentId)
 {
     m_agents.erase(agentId.toStdString());
-    emit agentRemoved(agentId);
+    agentRemoved(agentId);
 
-    qInfo() << "[AgenticAgentCoordinator] Removed agent:" << agentId;
 }
 
-AgenticAgentCoordinator::AgentInstance* AgenticAgentCoordinator::getAgent(const QString& agentId)
+AgenticAgentCoordinator::AgentInstance* AgenticAgentCoordinator::getAgent(const std::string& agentId)
 {
     auto it = m_agents.find(agentId.toStdString());
     if (it != m_agents.end()) {
@@ -84,18 +79,18 @@ std::vector<AgenticAgentCoordinator::AgentInstance*> AgenticAgentCoordinator::ge
     return available;
 }
 
-QStringList AgenticAgentCoordinator::getAllAgentIds() const
+std::vector<std::string> AgenticAgentCoordinator::getAllAgentIds() const
 {
-    QStringList ids;
+    std::vector<std::string> ids;
     for (const auto& pair : m_agents) {
-        ids.append(QString::fromStdString(pair.first));
+        ids.append(std::string::fromStdString(pair.first));
     }
     return ids;
 }
 
-QJsonObject AgenticAgentCoordinator::getAgentStatus(const QString& agentId)
+void* AgenticAgentCoordinator::getAgentStatus(const std::string& agentId)
 {
-    QJsonObject status;
+    void* status;
 
     auto agent = getAgent(agentId);
     if (!agent) return status;
@@ -105,14 +100,14 @@ QJsonObject AgenticAgentCoordinator::getAgentStatus(const QString& agentId)
     status["available"] = agent->isAvailable;
     status["utilization"] = agent->utilization;
     status["tasks_completed"] = agent->tasksCompleted;
-    status["last_active"] = agent->lastActive.toString(Qt::ISODate);
+    status["last_active"] = agent->lastActive.toString(//ISODate);
 
     return status;
 }
 
-QJsonArray AgenticAgentCoordinator::getAllAgentStatuses()
+void* AgenticAgentCoordinator::getAllAgentStatuses()
 {
-    QJsonArray statuses;
+    void* statuses;
 
     for (const auto& pair : m_agents) {
         statuses.append(getAgentStatus(pair.second->agentId));
@@ -123,18 +118,17 @@ QJsonArray AgenticAgentCoordinator::getAllAgentStatuses()
 
 // ===== TASK ASSIGNMENT =====
 
-QString AgenticAgentCoordinator::assignTask(
-    const QString& taskDescription,
-    const QJsonObject& parameters,
+std::string AgenticAgentCoordinator::assignTask(
+    const std::string& taskDescription,
+    const void*& parameters,
     AgentRole requiredRole)
 {
-    QString taskId = QUuid::createUuid().toString();
+    std::string taskId = QUuid::createUuid().toString();
 
     // Find best agent for task
-    QString agentId = selectBestAgentForTask(taskDescription);
+    std::string agentId = selectBestAgentForTask(taskDescription);
 
     if (agentId.isEmpty()) {
-        qWarning() << "[AgenticAgentCoordinator] No available agent for task";
         return "";
     }
 
@@ -144,7 +138,7 @@ QString AgenticAgentCoordinator::assignTask(
     assignment->requiredRole = requiredRole;
     assignment->description = taskDescription;
     assignment->parameters = parameters;
-    assignment->assignedTime = QDateTime::currentDateTime();
+    assignment->assignedTime = std::chrono::system_clock::time_point::currentDateTime();
     assignment->status = "assigned";
 
     m_assignments[taskId.toStdString()] = std::move(assignment);
@@ -157,14 +151,13 @@ QString AgenticAgentCoordinator::assignTask(
         agent->utilization = 1.0f;
     }
 
-    emit taskAssigned(taskId, agentId);
+    taskAssigned(taskId, agentId);
 
-    qInfo() << "[AgenticAgentCoordinator] Assigned task:" << taskId << "to agent:" << agentId;
 
     return taskId;
 }
 
-bool AgenticAgentCoordinator::executeAssignedTask(const QString& taskId)
+bool AgenticAgentCoordinator::executeAssignedTask(const std::string& taskId)
 {
     auto it = m_assignments.find(taskId.toStdString());
     if (it == m_assignments.end()) {
@@ -186,11 +179,11 @@ bool AgenticAgentCoordinator::executeAssignedTask(const QString& taskId)
 
         assignment->result["success"] = result.success;
         assignment->result["output"] = result.result;
-        assignment->completionTime = QDateTime::currentDateTime();
+        assignment->completionTime = std::chrono::system_clock::time_point::currentDateTime();
         assignment->status = result.success ? "completed" : "failed";
 
         agent->lastResult = result.result;
-        agent->lastActive = QDateTime::currentDateTime();
+        agent->lastActive = std::chrono::system_clock::time_point::currentDateTime();
         agent->isAvailable = true;
         agent->utilization = 0.0f;
         agent->tasksCompleted++;
@@ -202,9 +195,9 @@ bool AgenticAgentCoordinator::executeAssignedTask(const QString& taskId)
         m_taskDurations.push_back({assignment->description, duration});
 
         if (result.success) {
-            emit taskCompleted(taskId);
+            taskCompleted(taskId);
         } else {
-            emit taskFailed(taskId, "Execution failed");
+            taskFailed(taskId, "Execution failed");
         }
 
         return result.success;
@@ -213,7 +206,7 @@ bool AgenticAgentCoordinator::executeAssignedTask(const QString& taskId)
     return false;
 }
 
-QString AgenticAgentCoordinator::getTaskStatus(const QString& taskId)
+std::string AgenticAgentCoordinator::getTaskStatus(const std::string& taskId)
 {
     auto it = m_assignments.find(taskId.toStdString());
     if (it != m_assignments.end()) {
@@ -222,26 +215,26 @@ QString AgenticAgentCoordinator::getTaskStatus(const QString& taskId)
     return "unknown";
 }
 
-QJsonObject AgenticAgentCoordinator::getTaskResult(const QString& taskId)
+void* AgenticAgentCoordinator::getTaskResult(const std::string& taskId)
 {
     auto it = m_assignments.find(taskId.toStdString());
     if (it != m_assignments.end()) {
         return it->second->result;
     }
-    return QJsonObject();
+    return void*();
 }
 
-QJsonArray AgenticAgentCoordinator::getAllTaskStatuses()
+void* AgenticAgentCoordinator::getAllTaskStatuses()
 {
-    QJsonArray statuses;
+    void* statuses;
 
     for (const auto& pair : m_assignments) {
-        QJsonObject status;
+        void* status;
         status["task_id"] = pair.second->taskId;
         status["agent_id"] = pair.second->assignedAgentId;
         status["description"] = pair.second->description;
         status["status"] = pair.second->status;
-        status["assigned_time"] = pair.second->assignedTime.toString(Qt::ISODate);
+        status["assigned_time"] = pair.second->assignedTime.toString(//ISODate);
 
         statuses.append(status);
     }
@@ -251,14 +244,13 @@ QJsonArray AgenticAgentCoordinator::getAllTaskStatuses()
 
 // ===== COORDINATION MECHANISMS =====
 
-QJsonArray AgenticAgentCoordinator::decomposeLargeTask(const QString& goal)
+void* AgenticAgentCoordinator::decomposeLargeTask(const std::string& goal)
 {
-    QJsonArray subtasks;
+    void* subtasks;
 
     // Use analyzer agent to decompose
     auto analyzers = getAvailableAgents(AgentRole::Analyzer);
     if (analyzers.empty()) {
-        qWarning() << "[AgenticAgentCoordinator] No analyzer agent available";
         return subtasks;
     }
 
@@ -272,10 +264,9 @@ void AgenticAgentCoordinator::synchronizeAgentStates()
         syncStateWithAgent(pair.second->agentId);
     }
 
-    qInfo() << "[AgenticAgentCoordinator] Synchronized all agent states";
 }
 
-bool AgenticAgentCoordinator::detectStateConflict(const QString& agentId1, const QString& agentId2)
+bool AgenticAgentCoordinator::detectStateConflict(const std::string& agentId1, const std::string& agentId2)
 {
     auto agent1 = getAgent(agentId1);
     auto agent2 = getAgent(agentId2);
@@ -285,13 +276,13 @@ bool AgenticAgentCoordinator::detectStateConflict(const QString& agentId1, const
     }
 
     // Compare states
-    QJsonObject state1 = agent1->state->getAllMemory();
-    QJsonObject state2 = agent2->state->getAllMemory();
+    void* state1 = agent1->state->getAllMemory();
+    void* state2 = agent2->state->getAllMemory();
 
     return state1 != state2;
 }
 
-QString AgenticAgentCoordinator::resolveStateConflict(const QString& agentId1, const QString& agentId2)
+std::string AgenticAgentCoordinator::resolveStateConflict(const std::string& agentId1, const std::string& agentId2)
 {
     auto agent1 = getAgent(agentId1);
     auto agent2 = getAgent(agentId2);
@@ -300,22 +291,22 @@ QString AgenticAgentCoordinator::resolveStateConflict(const QString& agentId1, c
         return "Agent not found";
     }
 
-    QJsonObject state1 = agent1->state->getAllMemory();
-    QJsonObject state2 = agent2->state->getAllMemory();
+    void* state1 = agent1->state->getAllMemory();
+    void* state2 = agent2->state->getAllMemory();
 
-    QString resolution = reconcileConflictingStates(state1, state2);
+    std::string resolution = reconcileConflictingStates(state1, state2);
 
     recordConflict(agentId1, agentId2, "State conflict", resolution);
 
-    emit stateConflictDetected(agentId1, agentId2);
-    emit stateConflictResolved(resolution);
+    stateConflictDetected(agentId1, agentId2);
+    stateConflictResolved(resolution);
 
     return resolution;
 }
 
-bool AgenticAgentCoordinator::buildConsensus(const QStringList& agentIds, const QString& question)
+bool AgenticAgentCoordinator::buildConsensus(const std::vector<std::string>& agentIds, const std::string& question)
 {
-    QStringList opinions;
+    std::vector<std::string> opinions;
 
     for (const auto& agentId : agentIds) {
         auto agent = getAgent(agentId);
@@ -328,40 +319,38 @@ bool AgenticAgentCoordinator::buildConsensus(const QStringList& agentIds, const 
     return opinions.size() > 0;
 }
 
-QString AgenticAgentCoordinator::getAgentOpinion(const QString& agentId, const QString& question)
+std::string AgenticAgentCoordinator::getAgentOpinion(const std::string& agentId, const std::string& question)
 {
     // Would query agent for its opinion on the question
     return "Agent opinion";
 }
 
-QString AgenticAgentCoordinator::resolveDisagreement(const QStringList& agentIds)
+std::string AgenticAgentCoordinator::resolveDisagreement(const std::vector<std::string>& agentIds)
 {
     // Use consensus algorithm or voting to resolve
     return "Resolved through voting";
 }
 
 void AgenticAgentCoordinator::allocateResources(
-    const QString& agentId,
+    const std::string& agentId,
     float cpuShare,
     float memoryShare)
 {
     auto agent = getAgent(agentId);
     if (agent) {
-        qInfo() << "[AgenticAgentCoordinator] Allocated resources to agent:" << agentId;
     }
 }
 
 void AgenticAgentCoordinator::rebalanceResources()
 {
     // Reallocate resources based on utilization
-    qInfo() << "[AgenticAgentCoordinator] Rebalanced resources across agents";
 }
 
 // ===== MONITORING =====
 
-QJsonObject AgenticAgentCoordinator::getCoordinationMetrics() const
+void* AgenticAgentCoordinator::getCoordinationMetrics() const
 {
-    QJsonObject metrics;
+    void* metrics;
 
     metrics["total_agents"] = static_cast<int>(m_agents.size());
     metrics["total_tasks_assigned"] = m_totalTasksAssigned;
@@ -402,18 +391,18 @@ float AgenticAgentCoordinator::getAverageTaskDuration() const
     return totalDuration / static_cast<float>(m_taskDurations.size());
 }
 
-QJsonArray AgenticAgentCoordinator::getConflictHistory()
+void* AgenticAgentCoordinator::getConflictHistory()
 {
-    QJsonArray history;
+    void* history;
 
     for (const auto& conflict : m_conflicts) {
-        QJsonObject obj;
+        void* obj;
         obj["conflict_id"] = conflict.conflictId;
         obj["agent1"] = conflict.agent1Id;
         obj["agent2"] = conflict.agent2Id;
         obj["reason"] = conflict.conflictReason;
         obj["resolution"] = conflict.resolution;
-        obj["timestamp"] = conflict.timestamp.toString(Qt::ISODate);
+        obj["timestamp"] = conflict.timestamp.toString(//ISODate);
 
         history.append(obj);
     }
@@ -423,7 +412,7 @@ QJsonArray AgenticAgentCoordinator::getConflictHistory()
 
 // ===== LOAD BALANCING =====
 
-QString AgenticAgentCoordinator::selectBestAgentForTask(const QString& taskDescription)
+std::string AgenticAgentCoordinator::selectBestAgentForTask(const std::string& taskDescription)
 {
     // Find least utilized agent
     AgentInstance* bestAgent = nullptr;
@@ -436,20 +425,19 @@ QString AgenticAgentCoordinator::selectBestAgentForTask(const QString& taskDescr
         }
     }
 
-    return bestAgent ? bestAgent->agentId : QString();
+    return bestAgent ? bestAgent->agentId : std::string();
 }
 
 void AgenticAgentCoordinator::rebalanceWorkload()
 {
     // Redistribute tasks from over-utilized to under-utilized agents
-    qInfo() << "[AgenticAgentCoordinator] Rebalanced workload across agents";
 }
 
 // ===== STATE MANAGEMENT =====
 
-QJsonObject AgenticAgentCoordinator::getGlobalState()
+void* AgenticAgentCoordinator::getGlobalState()
 {
-    QJsonObject globalState;
+    void* globalState;
     globalState["agents"] = getAllAgentStatuses();
     globalState["tasks"] = getAllTaskStatuses();
     globalState["metrics"] = getCoordinationMetrics();
@@ -457,7 +445,7 @@ QJsonObject AgenticAgentCoordinator::getGlobalState()
     return globalState;
 }
 
-bool AgenticAgentCoordinator::restoreGlobalState(const QJsonObject& state)
+bool AgenticAgentCoordinator::restoreGlobalState(const void*& state)
 {
     // Restore agent and task states
     return true;
@@ -466,9 +454,8 @@ bool AgenticAgentCoordinator::restoreGlobalState(const QJsonObject& state)
 void AgenticAgentCoordinator::saveCheckpoint()
 {
     m_lastCheckpoint = getGlobalState();
-    m_lastCheckpointTime = QDateTime::currentDateTime();
+    m_lastCheckpointTime = std::chrono::system_clock::time_point::currentDateTime();
 
-    qInfo() << "[AgenticAgentCoordinator] Saved checkpoint";
 }
 
 bool AgenticAgentCoordinator::restoreFromCheckpoint()
@@ -482,7 +469,7 @@ bool AgenticAgentCoordinator::restoreFromCheckpoint()
 
 // ===== PRIVATE HELPERS =====
 
-void AgenticAgentCoordinator::syncStateWithAgent(const QString& agentId)
+void AgenticAgentCoordinator::syncStateWithAgent(const std::string& agentId)
 {
     auto agent = getAgent(agentId);
     if (!agent || !agent->state) return;
@@ -490,15 +477,15 @@ void AgenticAgentCoordinator::syncStateWithAgent(const QString& agentId)
     // Synchronize agent state with global coordinator state
 }
 
-QString AgenticAgentCoordinator::reconcileConflictingStates(
-    const QJsonObject& state1,
-    const QJsonObject& state2)
+std::string AgenticAgentCoordinator::reconcileConflictingStates(
+    const void*& state1,
+    const void*& state2)
 {
     // Merge conflicting states intelligently
     return "States reconciled using merge strategy";
 }
 
-QString AgenticAgentCoordinator::selectResolutionStrategy(const QString& conflictReason)
+std::string AgenticAgentCoordinator::selectResolutionStrategy(const std::string& conflictReason)
 {
     if (conflictReason.contains("state")) {
         return "merge";
@@ -509,10 +496,10 @@ QString AgenticAgentCoordinator::selectResolutionStrategy(const QString& conflic
 }
 
 void AgenticAgentCoordinator::recordConflict(
-    const QString& agent1,
-    const QString& agent2,
-    const QString& reason,
-    const QString& resolution)
+    const std::string& agent1,
+    const std::string& agent2,
+    const std::string& reason,
+    const std::string& resolution)
 {
     AgentConflict conflict;
     conflict.conflictId = QUuid::createUuid().toString();
@@ -520,17 +507,18 @@ void AgenticAgentCoordinator::recordConflict(
     conflict.agent2Id = agent2;
     conflict.conflictReason = reason;
     conflict.resolution = resolution;
-    conflict.timestamp = QDateTime::currentDateTime();
+    conflict.timestamp = std::chrono::system_clock::time_point::currentDateTime();
 
     m_conflicts.push_back(conflict);
     m_totalConflicts++;
 }
 
-void AgenticAgentCoordinator::updateAgentMetrics(const QString& agentId)
+void AgenticAgentCoordinator::updateAgentMetrics(const std::string& agentId)
 {
     auto agent = getAgent(agentId);
     if (!agent) return;
 
     // Calculate and update metrics
-    emit coordinationMetricsUpdated();
+    coordinationMetricsUpdated();
 }
+

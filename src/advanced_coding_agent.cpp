@@ -4,13 +4,12 @@ AdvancedCodingAgentIntegration::AdvancedCodingAgentIntegration(
     std::shared_ptr<Logger> logger,
     std::shared_ptr<Metrics> metrics)
     : m_logger(logger), m_metrics(metrics) {
-    m_logger->info("AdvancedCodingAgent initialized");
+
 }
 
 GeneratedFeature AdvancedCodingAgentIntegration::implementFeature(
     const FeatureRequest& request) {
 
-    m_logger->info("Implementing feature: {}", request.description);
 
     GeneratedFeature feature;
     feature.code = "// Generated implementation\n";
@@ -25,7 +24,6 @@ std::vector<GeneratedFeature> AdvancedCodingAgentIntegration::generateImplementa
     const std::string& description,
     const std::string& context) {
 
-    m_logger->info("Generating implementation options");
 
     std::vector<GeneratedFeature> options;
     
@@ -47,7 +45,6 @@ std::vector<GeneratedFeature> AdvancedCodingAgentIntegration::generateImplementa
 std::string AdvancedCodingAgentIntegration::generateDocumentation(
     const std::string& code) {
 
-    m_logger->info("Generating documentation for {} chars", code.length());
 
     std::string doc = "/**\n";
     doc += " * Auto-generated documentation\n";
@@ -62,14 +59,12 @@ std::string AdvancedCodingAgentIntegration::generateFunctionDocumentation(
     const std::string& functionCode,
     const std::string& style) {
 
-    m_logger->info("Generating {} documentation", style);
     return "/// Auto-generated documentation";
 }
 
 std::vector<std::string> AdvancedCodingAgentIntegration::generateTests(
     const std::string& functionCode) {
 
-    m_logger->info("Generating tests for function");
 
     std::vector<std::string> tests;
     
@@ -84,7 +79,6 @@ std::vector<std::string> AdvancedCodingAgentIntegration::generateTests(
 std::vector<std::string> AdvancedCodingAgentIntegration::findBugs(
     const std::string& code) {
 
-    m_logger->info("Analyzing code for bugs");
 
     std::vector<std::string> bugs;
     
@@ -98,7 +92,6 @@ std::vector<std::string> AdvancedCodingAgentIntegration::findBugs(
 std::vector<std::string> AdvancedCodingAgentIntegration::optimizeCode(
     const std::string& code) {
 
-    m_logger->info("Optimizing code");
 
     std::vector<std::string> optimizations;
     
@@ -114,7 +107,6 @@ std::vector<SecurityIssue> AdvancedCodingAgentIntegration::scanSecurity(
     const std::string& code,
     const std::string& language) {
 
-    m_logger->info("Scanning security for {}", language);
 
     std::vector<SecurityIssue> issues;
     

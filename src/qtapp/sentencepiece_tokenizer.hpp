@@ -1,7 +1,6 @@
 #pragma once
-#include <QString>
-#include <QHash>
-#include <QVector>
+
+
 #include <vector>
 #include <cstdint>
 
@@ -23,14 +22,14 @@ public:
      * @param modelPath Path to .model file (protobuf format)
      * @return true if loaded successfully
      */
-    bool loadFromFile(const QString& modelPath);
+    bool loadFromFile(const std::string& modelPath);
     
     /**
      * @brief Load from GGUF metadata
      * @param metadata GGUF key-value metadata
      * @return true if loaded successfully
      */
-    bool loadFromGGUFMetadata(const QHash<QString, QByteArray>& metadata);
+    bool loadFromGGUFMetadata(const std::unordered_map<std::string, std::vector<uint8_t>>& metadata);
     
     /**
      * @brief Encode text to token IDs
@@ -39,7 +38,7 @@ public:
      * @param addEos Append EOS token
      * @return Token IDs
      */
-    std::vector<int32_t> encode(const QString& text, bool addBos = false, bool addEos = false);
+    std::vector<int32_t> encode(const std::string& text, bool addBos = false, bool addEos = false);
     
     /**
      * @brief Decode token IDs to text
@@ -47,7 +46,7 @@ public:
      * @param skipSpecial Skip special tokens (BOS/EOS/PAD)
      * @return Decoded text
      */
-    QString decode(const std::vector<int32_t>& tokens, bool skipSpecial = true);
+    std::string decode(const std::vector<int32_t>& tokens, bool skipSpecial = true);
     
     /**
      * @brief Get vocabulary size
@@ -69,7 +68,7 @@ public:
 
 private:
     struct SentencePiece {
-        QString piece;          // Token string (may include ▁ for space)
+        std::string piece;          // Token string (may include ▁ for space)
         float score;            // Log probability score
         int32_t id;             // Token ID
         enum Type {
@@ -84,29 +83,29 @@ private:
     
     // Core tokenization algorithm
     struct Lattice;
-    std::vector<int32_t> encodeUnigram(const QString& text);
-    Lattice* buildLattice(const QString& text);
+    std::vector<int32_t> encodeUnigram(const std::string& text);
+    Lattice* buildLattice(const std::string& text);
     std::vector<int32_t> viterbi(Lattice* lattice);
     
     // Normalization
-    QString normalize(const QString& text);
-    QString replaceSP(const QString& text);  // Replace spaces with ▁
-    QString unreplaceSP(const QString& text); // Replace ▁ with spaces
+    std::string normalize(const std::string& text);
+    std::string replaceSP(const std::string& text);  // Replace spaces with ▁
+    std::string unreplaceSP(const std::string& text); // Replace ▁ with spaces
     
     // Vocabulary
-    QVector<SentencePiece> m_pieces;
-    QHash<QString, int32_t> m_pieceToId;
+    std::vector<SentencePiece> m_pieces;
+    std::unordered_map<std::string, int32_t> m_pieceToId;
     
     // Trie for efficient prefix matching
     struct TrieNode {
-        QHash<QChar, TrieNode*> children;
+        std::unordered_map<QChar, TrieNode*> children;
         int32_t tokenId{-1};
         ~TrieNode() { qDeleteAll(children); }
     };
     TrieNode* m_trie{nullptr};
     void buildTrie();
-    void insertTrie(const QString& piece, int32_t id);
-    QVector<int32_t> findMatchingPieces(const QString& text, int pos);
+    void insertTrie(const std::string& piece, int32_t id);
+    std::vector<int32_t> findMatchingPieces(const std::string& text, int pos);
     
     // Special tokens
     int32_t m_bosId{1};
@@ -116,5 +115,6 @@ private:
     
     // Byte fallback for unknown characters
     bool m_byteFallback{true};
-    QHash<uint8_t, int32_t> m_byteTokens;
+    std::unordered_map<uint8_t, int32_t> m_byteTokens;
 };
+

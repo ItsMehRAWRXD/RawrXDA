@@ -2,15 +2,8 @@
 #pragma once
 
 #include "model_memory_hotpatch.hpp"
-#include <QObject>
-#include <QString>
-#include <QByteArray>
-#include <QVector>
-#include <QHash>
-#include <QDateTime>
-#include <QMutex>
-#include <QJsonObject>
-#include <QVariant>
+
+
 #include <cstdint>
 
 enum class ByteOperation {
@@ -36,79 +29,78 @@ enum class HashAlgorithm {
 // PatchResult is defined in model_memory_hotpatch.hpp
 
 struct BytePatch {
-    QString name;
-    QString description;
+    std::string name;
+    std::string description;
     bool enabled = true;
     
     size_t offset = 0;
     size_t length = 1;
     
     ByteOperation operation;
-    QByteArray operand;
+    std::vector<uint8_t> operand;
     uint8_t bitMask = 0xFF;
     int bitShift = 0;
     
-    QByteArray expectedBefore;
-    QByteArray expectedAfter;
+    std::vector<uint8_t> expectedBefore;
+    std::vector<uint8_t> expectedAfter;
     HashAlgorithm hashAlgo = HashAlgorithm::CRC32;
     uint32_t targetIntegrityHash = 0;
     
-    QByteArray originalBytes;
-    QString category;
+    std::vector<uint8_t> originalBytes;
+    std::string category;
     int priority = 0;
-    QDateTime created;
+    std::chrono::system_clock::time_point created;
     int timesApplied = 0;
     
-    QStringList requiresPatches;
-    QStringList conflictsWith;
+    std::vector<std::string> requiresPatches;
+    std::vector<std::string> conflictsWith;
     
-    QJsonObject toJson() const;
-    static BytePatch fromJson(const QJsonObject& json, PatchResult& result);
+    void* toJson() const;
+    static BytePatch fromJson(const void*& json, PatchResult& result);
 };
 
-class ByteLevelHotpatcher : public QObject {
-    Q_OBJECT
+class ByteLevelHotpatcher : public void {
 
 public:
-    explicit ByteLevelHotpatcher(QObject* parent = nullptr);
+    explicit ByteLevelHotpatcher(void* parent = nullptr);
     ~ByteLevelHotpatcher();
 
-    bool loadModel(const QString& filePath);
-    bool saveModel(const QString& filePath);
-    const QByteArray& getModelData() const { return m_modelData; }
+    bool loadModel(const std::string& filePath);
+    bool saveModel(const std::string& filePath);
+    const std::vector<uint8_t>& getModelData() const { return m_modelData; }
     bool isModelLoaded() const { return !m_modelData.isEmpty(); }
 
     bool addPatch(const BytePatch& patch);
-    bool removePatch(const QString& name);
-    bool applyPatch(const QString& name);
-    bool revertPatch(const QString& name);
+    bool removePatch(const std::string& name);
+    bool applyPatch(const std::string& name);
+    bool revertPatch(const std::string& name);
     void revertAllPatches();
     
     bool replaceByte(size_t offset, uint8_t oldValue, uint8_t newValue);
-    bool replaceBytes(size_t offset, const QByteArray& oldBytes, const QByteArray& newBytes);
+    bool replaceBytes(size_t offset, const std::vector<uint8_t>& oldBytes, const std::vector<uint8_t>& newBytes);
     bool flipBits(size_t offset, uint8_t bitMask);
     
-    QVector<size_t> findPattern(const QByteArray& pattern) const;
-    bool replacePattern(const QByteArray& pattern, const QByteArray& replacement, int maxOccurrences = -1);
+    std::vector<size_t> findPattern(const std::vector<uint8_t>& pattern) const;
+    bool replacePattern(const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement, int maxOccurrences = -1);
     
     uint32_t calculateCRC32(size_t offset, size_t length) const;
     uint64_t calculateFNV1a_64(size_t offset, size_t length) const;
     
-    QByteArray hexDump(size_t offset, size_t length, int bytesPerLine = 16) const;
+    std::vector<uint8_t> hexDump(size_t offset, size_t length, int bytesPerLine = 16) const;
 
     // Direct Memory Manipulation API
     void* getDirectPointer(size_t offset = 0) const;
-    QByteArray directRead(size_t offset, size_t size) const;
-    PatchResult directWrite(size_t offset, const QByteArray& data);
-    PatchResult directWriteBatch(const QHash<size_t, QByteArray>& writes);
+    std::vector<uint8_t> directRead(size_t offset, size_t size) const;
+    PatchResult directWrite(size_t offset, const std::vector<uint8_t>& data);
+    PatchResult directWriteBatch(const std::unordered_map<size_t, std::vector<uint8_t>>& writes);
     PatchResult directFill(size_t offset, size_t size, quint8 value);
     PatchResult directCopy(size_t srcOffset, size_t dstOffset, size_t size);
-    bool directCompare(size_t offset, const QByteArray& data) const;
-    QByteArray directXOR(size_t offset, size_t size, const QByteArray& key);
+    bool directCompare(size_t offset, const std::vector<uint8_t>& data) const;
+    std::vector<uint8_t> directXOR(size_t offset, size_t size, const std::vector<uint8_t>& key);
     PatchResult directBitOperation(size_t offset, size_t size, ByteOperation op, uint8_t operand);
     PatchResult directRotate(size_t offset, size_t size, int bitShift, bool leftShift = true);
     PatchResult directReverse(size_t offset, size_t size);
-    qint64 directSearch(size_t startOffset, const QByteArray& pattern) const;
+    qint64 directSearch(size_t startOffset, const std::vector<uint8_t>& pattern) const;
     PatchResult atomicByteSwap(size_t offset1, size_t offset2, size_t size);
 
     struct BytePatchStats {
@@ -117,23 +109,23 @@ public:
         quint64 patchesApplied = 0;
         quint64 patchesReverted = 0;
         size_t modelSize = 0;
-        QHash<ByteOperation, int> operationCounts;
+        std::unordered_map<ByteOperation, int> operationCounts;
     };
     BytePatchStats getStatistics() const;
 
-signals:
-    void patchApplied(const QString& name, size_t offset, size_t length);
-    void patchReverted(const QString& name);
-    void modelLoaded(const QString& filePath, size_t size);
-    void modelSaved(const QString& filePath);
-    void errorOccurred(const QString& error);
+    void patchApplied(const std::string& name, size_t offset, size_t length);
+    void patchReverted(const std::string& name);
+    void modelLoaded(const std::string& filePath, size_t size);
+    void modelSaved(const std::string& filePath);
+    void errorOccurred(const std::string& error);
 
 private:
-    QByteArray m_modelData;
-    QString m_modelPath;
-    QHash<QString, BytePatch> m_patches;
+    std::vector<uint8_t> m_modelData;
+    std::string m_modelPath;
+    std::unordered_map<std::string, BytePatch> m_patches;
     BytePatchStats m_stats;
-    mutable QMutex m_mutex;
+    mutable std::mutex m_mutex;
     
     static constexpr size_t MAX_MODEL_SIZE = 100ULL * 1024 * 1024 * 1024;
 };
+

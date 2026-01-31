@@ -3,9 +3,8 @@
 
 #include "agentic_failure_detector.hpp"
 #include "proxy_hotpatcher.hpp"
-#include <QObject>
-#include <QString>
-#include <QMutex>
+
+
 #include <functional>
 
 // Correction strategy
@@ -22,61 +21,60 @@ enum class CorrectionStrategy {
 // Correction result
 struct CorrectionResult {
     bool success = false;
-    QString correctedResponse;
+    std::string correctedResponse;
     CorrectionStrategy strategyUsed;
     int attemptsUsed = 0;
-    QString errorMessage;
+    std::string errorMessage;
     
-    static CorrectionResult succeeded(const QString& response, CorrectionStrategy strategy, int attempts) {
+    static CorrectionResult succeeded(const std::string& response, CorrectionStrategy strategy, int attempts) {
         return CorrectionResult{true, response, strategy, attempts, ""};
     }
     
-    static CorrectionResult failed(const QString& error, int attempts) {
+    static CorrectionResult failed(const std::string& error, int attempts) {
         return CorrectionResult{false, "", CorrectionStrategy::Retry, attempts, error};
     }
 };
 
-class AgenticPuppeteer : public QObject
+class AgenticPuppeteer : public void
 {
-    Q_OBJECT
 
 public:
-    explicit AgenticPuppeteer(QObject* parent = nullptr);
+    explicit AgenticPuppeteer(void* parent = nullptr);
     ~AgenticPuppeteer() override;
 
     // Main correction method
     CorrectionResult correctFailure(
         const FailureDetection& failure,
-        const QString& originalPrompt,
-        const QString& failedResponse,
-        std::function<QString(const QString&)> modelCallback
+        const std::string& originalPrompt,
+        const std::string& failedResponse,
+        std::function<std::string(const std::string&)> modelCallback
     );
     
     // Specialized correction methods
     CorrectionResult correctRefusal(
-        const QString& prompt,
-        const QString& refusedResponse,
-        std::function<QString(const QString&)> modelCallback
+        const std::string& prompt,
+        const std::string& refusedResponse,
+        std::function<std::string(const std::string&)> modelCallback
     );
     
     CorrectionResult correctHallucination(
-        const QString& prompt,
-        const QString& hallucinatedResponse,
-        const QString& correctContext,
-        std::function<QString(const QString&)> modelCallback
+        const std::string& prompt,
+        const std::string& hallucinatedResponse,
+        const std::string& correctContext,
+        std::function<std::string(const std::string&)> modelCallback
     );
     
     CorrectionResult correctFormatViolation(
-        const QString& prompt,
-        const QString& malformedResponse,
-        const QString& expectedFormat,
-        std::function<QString(const QString&)> modelCallback
+        const std::string& prompt,
+        const std::string& malformedResponse,
+        const std::string& expectedFormat,
+        std::function<std::string(const std::string&)> modelCallback
     );
     
     CorrectionResult correctInfiniteLoop(
-        const QString& prompt,
-        const QString& loopingResponse,
-        std::function<QString(const QString&)> modelCallback
+        const std::string& prompt,
+        const std::string& loopingResponse,
+        std::function<std::string(const std::string&)> modelCallback
     );
     
     // Configuration
@@ -101,33 +99,32 @@ public:
     Stats getStatistics() const;
     void resetStatistics();
 
-signals:
     void correctionAttempted(CorrectionStrategy strategy, int attemptNumber);
     void correctionSucceeded(CorrectionStrategy strategy, int attempts);
-    void correctionFailed(const QString& reason, int attempts);
-    void refusalBypassed(const QString& originalPrompt);
+    void correctionFailed(const std::string& reason, int attempts);
+    void refusalBypassed(const std::string& originalPrompt);
 
 protected:
     // Strategy selection
     CorrectionStrategy selectStrategy(const FailureDetection& failure);
     
     // Strategy implementations
-    QString retryWithSamePrompt(const QString& prompt, std::function<QString(const QString&)> callback);
-    QString retryWithRephrase(const QString& prompt, std::function<QString(const QString&)> callback);
-    QString retryWithContext(const QString& prompt, const QString& context, std::function<QString(const QString&)> callback);
-    QString retryWithParameterAdjust(const QString& prompt, std::function<QString(const QString&)> callback);
-    QString retryWithSystemPrompt(const QString& prompt, const QString& systemPrompt, std::function<QString(const QString&)> callback);
-    QString retryWithFormatEnforcement(const QString& prompt, const QString& format, std::function<QString(const QString&)> callback);
-    QString bypassWithHotpatch(const QString& prompt, std::function<QString(const QString&)> callback);
+    std::string retryWithSamePrompt(const std::string& prompt, std::function<std::string(const std::string&)> callback);
+    std::string retryWithRephrase(const std::string& prompt, std::function<std::string(const std::string&)> callback);
+    std::string retryWithContext(const std::string& prompt, const std::string& context, std::function<std::string(const std::string&)> callback);
+    std::string retryWithParameterAdjust(const std::string& prompt, std::function<std::string(const std::string&)> callback);
+    std::string retryWithSystemPrompt(const std::string& prompt, const std::string& systemPrompt, std::function<std::string(const std::string&)> callback);
+    std::string retryWithFormatEnforcement(const std::string& prompt, const std::string& format, std::function<std::string(const std::string&)> callback);
+    std::string bypassWithHotpatch(const std::string& prompt, std::function<std::string(const std::string&)> callback);
     
     // Helper methods
-    QString rephrasePrompt(const QString& original);
-    QString generateSystemPrompt(FailureType type);
-    QString extractFormatFromPrompt(const QString& prompt);
-    bool isResponseValid(const QString& response, FailureType originalFailure);
+    std::string rephrasePrompt(const std::string& original);
+    std::string generateSystemPrompt(FailureType type);
+    std::string extractFormatFromPrompt(const std::string& prompt);
+    bool isResponseValid(const std::string& response, FailureType originalFailure);
     
     // Data members
-    mutable QMutex m_mutex;
+    mutable std::mutex m_mutex;
     ProxyHotpatcher* m_proxyHotpatcher = nullptr;
     
     int m_maxRetries = 3;
@@ -142,55 +139,53 @@ protected:
 
 class RefusalBypassPuppeteer : public AgenticPuppeteer
 {
-    Q_OBJECT
 
 public:
-    explicit RefusalBypassPuppeteer(QObject* parent = nullptr);
+    explicit RefusalBypassPuppeteer(void* parent = nullptr);
     
     // Override with refusal-specific logic
     CorrectionResult bypassRefusal(
-        const QString& prompt,
-        std::function<QString(const QString&)> callback
+        const std::string& prompt,
+        std::function<std::string(const std::string&)> callback
     );
 
 private:
-    QStringList generateBypassPhrases(const QString& originalPrompt);
-    QString injectBypassSystemPrompt();
+    std::vector<std::string> generateBypassPhrases(const std::string& originalPrompt);
+    std::string injectBypassSystemPrompt();
 };
 
 class HallucinationCorrectorPuppeteer : public AgenticPuppeteer
 {
-    Q_OBJECT
 
 public:
-    explicit HallucinationCorrectorPuppeteer(QObject* parent = nullptr);
+    explicit HallucinationCorrectorPuppeteer(void* parent = nullptr);
     
     CorrectionResult correctWithGrounding(
-        const QString& prompt,
-        const QString& groundTruth,
-        std::function<QString(const QString&)> callback
+        const std::string& prompt,
+        const std::string& groundTruth,
+        std::function<std::string(const std::string&)> callback
     );
 
 private:
-    QString buildGroundedPrompt(const QString& original, const QString& facts);
-    bool verifyFactualAccuracy(const QString& response, const QString& groundTruth);
+    std::string buildGroundedPrompt(const std::string& original, const std::string& facts);
+    bool verifyFactualAccuracy(const std::string& response, const std::string& groundTruth);
 };
 
 class FormatEnforcerPuppeteer : public AgenticPuppeteer
 {
-    Q_OBJECT
 
 public:
-    explicit FormatEnforcerPuppeteer(QObject* parent = nullptr);
+    explicit FormatEnforcerPuppeteer(void* parent = nullptr);
     
     CorrectionResult enforceFormat(
-        const QString& prompt,
-        const QString& formatSpec,
-        std::function<QString(const QString&)> callback
+        const std::string& prompt,
+        const std::string& formatSpec,
+        std::function<std::string(const std::string&)> callback
     );
 
 private:
-    QString generateFormatInstructions(const QString& formatSpec);
-    bool validateFormat(const QString& response, const QString& formatSpec);
-    QString autoFixFormat(const QString& response, const QString& formatSpec);
+    std::string generateFormatInstructions(const std::string& formatSpec);
+    bool validateFormat(const std::string& response, const std::string& formatSpec);
+    std::string autoFixFormat(const std::string& response, const std::string& formatSpec);
 };
+

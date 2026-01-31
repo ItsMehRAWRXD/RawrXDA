@@ -1,14 +1,8 @@
 #include "InferenceSettingsDialog.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QFormLayout>
-#include <QGroupBox>
-#include <QLabel>
-#include <QMessageBox>
-#include <QFileDialog>
 
-InferenceSettingsDialog::InferenceSettingsDialog(QWidget* parent)
-    : QDialog(parent)
+
+InferenceSettingsDialog::InferenceSettingsDialog(void* parent)
+    : void(parent)
     , m_settings(InferenceSettingsManager::getInstance())
 {
     setWindowTitle("Inference Settings");
@@ -18,32 +12,19 @@ InferenceSettingsDialog::InferenceSettingsDialog(QWidget* parent)
     loadSettings();
     
     // Connect signals
-    connect(m_presetCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &InferenceSettingsDialog::onPresetChanged);
-    connect(m_temperatureSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &InferenceSettingsDialog::onTemperatureChanged);
-    connect(m_topPSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &InferenceSettingsDialog::onTopPChanged);
-    connect(m_topKSpin, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &InferenceSettingsDialog::onTopKChanged);
-    connect(m_maxTokensSpin, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &InferenceSettingsDialog::onMaxTokensChanged);
-    connect(m_repetitionPenaltySpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &InferenceSettingsDialog::onRepetitionPenaltyChanged);
-    connect(m_useOllamaCheck, &QCheckBox::stateChanged,
-            this, &InferenceSettingsDialog::onUseOllamaChanged);
-    connect(m_ollamaModelEdit, &QLineEdit::textChanged,
-            this, &InferenceSettingsDialog::onOllamaModelChanged);
-    connect(m_recentModelsList, &QListWidget::itemClicked,
-            this, &InferenceSettingsDialog::onRecentModelSelected);
-    connect(m_clearRecentButton, &QPushButton::clicked,
-            this, &InferenceSettingsDialog::onClearRecentModels);
-    connect(m_buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked,
-            this, &InferenceSettingsDialog::onApplyClicked);
-    connect(m_buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked,
-            this, &InferenceSettingsDialog::onOkClicked);
-    connect(m_buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked,
-            this, &InferenceSettingsDialog::onCancelClicked);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 InferenceSettingsDialog::~InferenceSettingsDialog()
@@ -146,8 +127,8 @@ void InferenceSettingsDialog::loadSettings()
     
     // Load recent models
     m_recentModelsList->clear();
-    QStringList recentModels = m_settings.getRecentModels();
-    for (const QString& model : recentModels) {
+    std::vector<std::string> recentModels = m_settings.getRecentModels();
+    for (const std::string& model : recentModels) {
         m_recentModelsList->addItem(model);
     }
     
@@ -193,10 +174,10 @@ void InferenceSettingsDialog::onRepetitionPenaltyChanged(double value)
 
 void InferenceSettingsDialog::onUseOllamaChanged(int state)
 {
-    m_settings.setUseOllama(state == Qt::Checked);
+    m_settings.setUseOllama(state == //Checked);
 }
 
-void InferenceSettingsDialog::onOllamaModelChanged(const QString& text)
+void InferenceSettingsDialog::onOllamaModelChanged(const std::string& text)
 {
     m_settings.setOllamaModelTag(text);
 }
@@ -204,17 +185,17 @@ void InferenceSettingsDialog::onOllamaModelChanged(const QString& text)
 void InferenceSettingsDialog::onRecentModelSelected(QListWidgetItem* item)
 {
     if (item) {
-        QString modelPath = item->text();
+        std::string modelPath = item->text();
         m_settings.setCurrentModelPath(modelPath);
         
         // Ask if user wants to load this model
         QMessageBox::StandardButton reply = QMessageBox::question(this,
             "Load Model",
-            QString("Load model %1?").arg(QFileInfo(modelPath).fileName()),
+            std::string("Load model %1?").fileName()),
             QMessageBox::Yes | QMessageBox::No);
         
         if (reply == QMessageBox::Yes) {
-            emit modelSelected(modelPath);
+            modelSelected(modelPath);
         }
     }
 }
@@ -244,8 +225,8 @@ void InferenceSettingsDialog::onCancelClicked()
 
 void InferenceSettingsDialog::updatePresetIndicator()
 {
-    QString presetName = m_settings.getPresetName(m_settings.getCurrentPreset());
-    m_presetIndicator->setText(QString("Current: %1").arg(presetName));
+    std::string presetName = m_settings.getPresetName(m_settings.getCurrentPreset());
+    m_presetIndicator->setText(std::string("Current: %1"));
 }
 
 void InferenceSettingsDialog::updateCustomSettings()
@@ -256,3 +237,4 @@ void InferenceSettingsDialog::updateCustomSettings()
         updatePresetIndicator();
     }
 }
+

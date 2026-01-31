@@ -92,7 +92,6 @@ std::vector<DigestionTask> DigestionReverseEngineeringSystem::scanFileForStubs(c
     // File operation removed;
     
     if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        // // qWarning:  "[DIGESTION] Failed to open file:" << filePath;
         return tasks;
     }
     
@@ -389,10 +388,10 @@ DirectionalAnalysisResult DigestionReverseEngineeringSystem::analyzeArchitecture
 
 std::string DigestionReverseEngineeringSystem::generateAgenticPlan(const DigestionTask& task) {
     std::stringList planParts;
-    planParts << std::string("Agentic Extension Plan for %1").arg(task.methodName.empty() ? "Unknown" : task.methodName);
-    planParts << std::string("File: %1").arg(task.filePath);
-    planParts << std::string("Line: %1").arg(task.lineNumber);
-    planParts << std::string("Stub Type: %1").arg(task.stubType);
+    planParts << std::string("Agentic Extension Plan for %1") ? "Unknown" : task.methodName);
+    planParts << std::string("File: %1");
+    planParts << std::string("Line: %1");
+    planParts << std::string("Stub Type: %1");
     planParts << "";
     planParts << "Recommended Agentic Patterns:";
     planParts << "- logging: Add comprehensive logging";
@@ -422,14 +421,14 @@ CodeGenerationResult DigestionReverseEngineeringSystem::generateAgenticCode(
     result.success = false;
     
     if (!agenticPatterns_.contains(patternName)) {
-        result.errorMessage = std::string("Unknown agentic pattern: %1").arg(patternName);
+        result.errorMessage = std::string("Unknown agentic pattern: %1");
         return result;
     }
     
     AgenticPattern pattern = agenticPatterns_[patternName];
     if (!pattern.languageTemplates.contains(language)) {
         result.errorMessage = std::string("Pattern '%1' not available for language %2")
-            .arg(patternName).arg(static_cast<int>(language));
+            );
         return result;
     }
     
@@ -513,8 +512,8 @@ std::map<std::string, std::string> DigestionReverseEngineeringSystem::parseMetho
     
     auto match = methodPattern.match(context);
     if (match.hasMatch()) {
-        signature["methodName"] = match.captured(1);
-        signature["parameters"] = match.captured(2);
+        signature["methodName"] = match"";
+        signature["parameters"] = match"";
     }
     
     return signature;
@@ -614,12 +613,12 @@ std::vector<DependencyInfo> DigestionReverseEngineeringSystem::extractDependenci
             return dependencies;
     }
     
-    std::regexMatchIterator it = depPattern.globalMatch(code);
+    std::regexMatchIterator it = depPattern;
     int lineNum = 0;
-    while (it.hasNext()) {
-        auto match = it.next();
+    while (itfalse) {
+        auto match = it;
         DependencyInfo dep;
-        dep.name = match.captured(match.lastCapturedIndex());
+        dep.name = match"");
         dep.type = "library";
         dep.isExternal = true;
         dependencies.append(dep);
@@ -797,12 +796,10 @@ std::string DigestionReverseEngineeringSystem::exportComprehensiveReport(
 
 void DigestionReverseEngineeringSystem::registerLanguagePatterns(const LanguagePatterns& patterns) {
     languagePatterns_[patterns.language] = patterns;
-    // // qDebug:  "[DIGESTION] Registered patterns for language:" << static_cast<int>(patterns.language);
 }
 
 void DigestionReverseEngineeringSystem::registerAgenticPattern(const AgenticPattern& pattern) {
     agenticPatterns_[pattern.name] = pattern;
-    // // qDebug:  "[DIGESTION] Registered agentic pattern:" << pattern.name;
 }
 
 std::map<std::string, AgenticPattern> DigestionReverseEngineeringSystem::getAgenticPatterns() const {
@@ -817,7 +814,7 @@ void DigestionReverseEngineeringSystem::initializeLanguagePatterns() {
     cppPatterns.language = ProgrammingLanguage::Cpp;
     cppPatterns.fileExtensions = {"cpp", "cc", "cxx", "c", "h", "hpp"};
     cppPatterns.stubKeywords = {"stub", "placeholder", "TODO", "FIXME", "not implemented",
-                               "Q_UNIMPLEMENTED", "(void)", "NOT_IMPLEMENTED"};
+                               "", "(void)", "NOT_IMPLEMENTED"};
     languagePatterns_[ProgrammingLanguage::Cpp] = cppPatterns;
     
     // Python Patterns
@@ -843,9 +840,7 @@ void DigestionReverseEngineeringSystem::initializeAgenticPatterns() {
     loggingPattern.category = "observability";
     loggingPattern.complexity = 2;
     loggingPattern.languageTemplates[ProgrammingLanguage::Cpp] =
-        "// // qDebug:  \"[{method_name}] Entering\";\n"
         "// Method body\n"
-        "// // qDebug:  \"[{method_name}] Exiting\";";
     agenticPatterns_["logging"] = loggingPattern;
     
     // Error Handling Pattern
@@ -858,7 +853,6 @@ void DigestionReverseEngineeringSystem::initializeAgenticPatterns() {
         "try {\n"
         "    // Method body\n"
         "} catch (const std::exception& e) {\n"
-        "    // // qCritical:  \"Exception: \" << e.what();\n"
         "    throw;\n"
         "}";
     agenticPatterns_["error_handling"] = errorPattern;
@@ -915,10 +909,8 @@ std::vector<DigestionTask> DigestionReverseEngineeringSystem::scanMultipleFiles(
 }
 
 void DigestionReverseEngineeringSystem::chainToNextFile(const std::string& nextFilePath) {
-    // // qDebug:  "[AGENTIC] Chaining digestion to:" << nextFilePath;
     std::vector<DigestionTask> tasks = scanFileForStubs(nextFilePath);
     if (!tasks.empty()) {
-        // // qDebug:  "[AGENTIC] Found" << tasks.size() << "stubs";
     }
 }
 
@@ -931,11 +923,4 @@ void DigestionReverseEngineeringSystem::chainToMultipleFiles(const std::stringLi
 std::map<std::string, std::any> DigestionReverseEngineeringSystem::getStatistics() const {
     return statistics_;
 }
-
-
-
-
-
-
-
 

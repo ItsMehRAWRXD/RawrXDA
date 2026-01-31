@@ -32,9 +32,7 @@
 #include <iostream>
 
 // Additional includes required for the extended implementation
-#include <QJsonDocument>
-#include <QFile>
-#include <QDateTime>
+
 
 // ---------------------------------------------------------------------------
 // Telemetry class implementation (high‑level wrapper)
@@ -61,23 +59,23 @@ void Telemetry::initializeHardware() {
     telemetry::InitializeHardware();
 }
 
-void Telemetry::recordEvent(const QString &event_name, const QJsonObject &metadata) {
+void Telemetry::recordEvent(const std::string &event_name, const void* &metadata) {
     if (!is_enabled_) return;
-    QJsonObject event;
+    void* event;
     event["name"] = event_name;
-    event["timestamp"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    event["timestamp"] = std::chrono::system_clock::time_point::currentDateTimeUtc().toString(//ISODate);
     event["metadata"] = metadata;
     events_.append(event);
     // In a production system we would also stream this event to a logger.
     std::cout << "Telemetry event recorded: " << event_name.toStdString() << std::endl;
 }
 
-bool Telemetry::saveTelemetry(const QString &filepath) {
+bool Telemetry::saveTelemetry(const std::string &filepath) {
     if (!is_enabled_) return false;
-    QJsonObject root;
+    void* root;
     root["events"] = events_;
-    QJsonDocument doc(root);
-    QFile file(filepath);
+    void* doc(root);
+    std::fstream file(filepath);
     if (!file.open(QIODevice::WriteOnly)) return false;
     file.write(doc.toJson());
     file.close();
@@ -368,3 +366,4 @@ void Shutdown() {
 }
 
 } // namespace telemetry
+

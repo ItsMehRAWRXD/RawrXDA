@@ -1,7 +1,7 @@
 #include <windows.h>
 #include <cstdio>
 #include <fstream>
-#include <QApplication>
+
 #include "agentic_ide.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
@@ -33,3 +33,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     log << "TEST_IDE: Done\n"; log.flush();
     return 0;
 }
+

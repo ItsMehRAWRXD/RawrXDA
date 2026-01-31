@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <functional>
-#include <queue>
+
 #include <vulkan/vulkan.h>
 
 // GPU compute optional - CPU inference always works

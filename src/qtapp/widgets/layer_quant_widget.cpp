@@ -1,14 +1,8 @@
 #include "layer_quant_widget.hpp"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QPushButton>
-#include <QDebug>
 
-LayerQuantWidget::LayerQuantWidget(QWidget* parent)
-    : QWidget(parent)
+
+LayerQuantWidget::LayerQuantWidget(void* parent)
+    : void(parent)
 {
     setupUI();
 }
@@ -28,8 +22,7 @@ void LayerQuantWidget::setupUI()
     m_quantModeCombo = new QComboBox(this);
     m_quantModeCombo->addItems({"Q4_0", "Q4_1", "Q5_0", "Q5_1", "Q6_K", "Q8_0", "F16", "F32"});
     m_quantModeCombo->setCurrentText("Q4_0");
-    connect(m_quantModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &LayerQuantWidget::onModeChanged);
+// Qt connect removed
     modeLayout->addWidget(m_quantModeCombo);
     layout->addLayout(modeLayout);
 
@@ -54,7 +47,7 @@ void LayerQuantWidget::setupUI()
 
     // Apply button
     m_applyButton = new QPushButton("Apply Quantization", this);
-    connect(m_applyButton, &QPushButton::clicked, this, &LayerQuantWidget::onApplySettings);
+// Qt connect removed
     layout->addWidget(m_applyButton);
 
     // Status label
@@ -64,12 +57,12 @@ void LayerQuantWidget::setupUI()
     layout->addStretch();
 }
 
-QString LayerQuantWidget::getCurrentQuantMode() const
+std::string LayerQuantWidget::getCurrentQuantMode() const
 {
     return m_currentMode;
 }
 
-void LayerQuantWidget::setQuantMode(const QString& mode)
+void LayerQuantWidget::setQuantMode(const std::string& mode)
 {
     m_currentMode = mode;
     if (m_quantModeCombo) {
@@ -84,17 +77,16 @@ void LayerQuantWidget::onModeChanged(int index)
 {
     if (m_quantModeCombo) {
         m_currentMode = m_quantModeCombo->currentText();
-        emit quantModeChanged(m_currentMode);
-        qDebug() << "Quantization mode changed to:" << m_currentMode;
+        quantModeChanged(m_currentMode);
     }
 }
 
 void LayerQuantWidget::onApplySettings()
 {
-    qDebug() << "Applying quantization:" << m_currentMode
              << "layers" << m_layerStartSpin->value() << "-" << m_layerEndSpin->value();
     if (m_statusLabel) {
         m_statusLabel->setText("Quantization applied");
     }
-    emit settingsUpdated();
+    settingsUpdated();
 }
+

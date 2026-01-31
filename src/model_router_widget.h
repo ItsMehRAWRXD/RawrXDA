@@ -1,13 +1,7 @@
 #ifndef MODEL_ROUTER_WIDGET_H
 #define MODEL_ROUTER_WIDGET_H
 
-#include <QWidget>
-#include <QComboBox>
-#include <QPushButton>
-#include <QLabel>
-#include <QProgressBar>
-#include <QPlainTextEdit>
-#include <QHBoxLayout>
+
 #include <memory>
 
 class ModelRouterAdapter;
@@ -26,11 +20,10 @@ class ModelRouterAdapter;
  * Connects to ModelRouterAdapter for all operations.
  * Emits user intent signals for IDE integration.
  */
-class ModelRouterWidget : public QWidget {
-    Q_OBJECT
+class ModelRouterWidget : public void {
 
 public:
-    explicit ModelRouterWidget(ModelRouterAdapter *adapter, QWidget *parent = nullptr);
+    explicit ModelRouterWidget(ModelRouterAdapter *adapter, void *parent = nullptr);
     ~ModelRouterWidget();
 
     // === Control Methods ===
@@ -48,7 +41,7 @@ public:
     /**
      * Get currently selected model name
      */
-    QString getSelectedModel() const;
+    std::string getSelectedModel() const;
 
     /**
      * Set UI to show generation in progress
@@ -63,12 +56,12 @@ public:
     /**
      * Display operation status message
      */
-    void setStatusMessage(const QString& message);
+    void setStatusMessage(const std::string& message);
 
     /**
      * Display error message (red background)
      */
-    void setErrorMessage(const QString& error);
+    void setErrorMessage(const std::string& error);
 
     /**
      * Update latency display (ms)
@@ -88,7 +81,7 @@ public:
     /**
      * Get prompt from user input (if embedded)
      */
-    QString getPromptInput() const;
+    std::string getPromptInput() const;
 
     /**
      * Clear prompt input
@@ -98,28 +91,28 @@ public:
     /**
      * Get generated output
      */
-    QString getGenerationOutput() const;
+    std::string getGenerationOutput() const;
 
     /**
      * Set generated output display
      */
-    void setGenerationOutput(const QString& output);
+    void setGenerationOutput(const std::string& output);
 
     /**
      * Append chunk to output (for streaming)
      */
-    void appendGenerationChunk(const QString& chunk);
+    void appendGenerationChunk(const std::string& chunk);
 
     /**
      * Clear output display
      */
     void clearOutput();
 
-signals:
+
     // User action signals (emitted when user interacts with widget)
-    void generateRequested(const QString& prompt, const QString& model);
+    void generateRequested(const std::string& prompt, const std::string& model);
     void stopRequested();
-    void modelChanged(const QString& new_model);
+    void modelChanged(const std::string& new_model);
     void settingsRequested();
     void dashboardRequested();
     void consoleRequested();
@@ -127,21 +120,21 @@ signals:
     void clearOutputRequested();
 
     // Status update signals (reported to IDE)
-    void statusUpdated(const QString& status);
-    void errorOccurred(const QString& error);
+    void statusUpdated(const std::string& status);
+    void errorOccurred(const std::string& error);
 
-private slots:
+private:
     // Model router adapter signals
-    void onGenerationStarted(const QString& model_name);
+    void onGenerationStarted(const std::string& model_name);
     void onGenerationProgress(int percent);
-    void onGenerationChunk(const QString& chunk);
-    void onGenerationComplete(const QString& result, int tokens_used, double latency_ms);
-    void onGenerationError(const QString& error);
-    void onModelListUpdated(const QStringList& models);
-    void onModelChanged(const QString& model);
-    void onStatusChanged(const QString& status);
+    void onGenerationChunk(const std::string& chunk);
+    void onGenerationComplete(const std::string& result, int tokens_used, double latency_ms);
+    void onGenerationError(const std::string& error);
+    void onModelListUpdated(const std::vector<std::string>& models);
+    void onModelChanged(const std::string& model);
+    void onStatusChanged(const std::string& status);
     void onCostUpdated(double total_cost);
-    void onStatisticsUpdated(const QJsonObject& stats);
+    void onStatisticsUpdated(const void*& stats);
 
     // Button clicks
     void onGenerateButtonClicked();
@@ -159,7 +152,7 @@ private:
     void connectSignals();
     void updateMetricsDisplay();
     void resetUI();
-    void showTemporaryStatus(const QString& message, int duration_ms = 3000);
+    void showTemporaryStatus(const std::string& message, int duration_ms = 3000);
 
     // Members
     ModelRouterAdapter *m_adapter;
@@ -200,3 +193,4 @@ private:
 };
 
 #endif // MODEL_ROUTER_WIDGET_H
+

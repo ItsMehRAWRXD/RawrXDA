@@ -1,12 +1,8 @@
 #include "ActivityBar.h"
 #include "ActivityBarButton.h"
-#include <QPainter>
-#include <QVBoxLayout>
-#include <QSpacerItem>
-#include <QIcon>
-#include <QPushButton>
 
-ActivityBar::ActivityBar(QWidget* parent)
+
+ActivityBar::ActivityBar(void* parent)
     : QFrame(parent)
     , m_activeView(Explorer)
 {
@@ -41,14 +37,13 @@ void ActivityBar::createButtons()
         ActivityBarButton* btn = new ActivityBarButton(buttonNames[i], this);
         
         // Set a simple text icon for now (will be replaced with proper icons later)
-        QString iconText = QString(QChar('A' + i));  // A, B, C, etc. as placeholder
+        std::string iconText = std::string(QChar('A' + i));  // A, B, C, etc. as placeholder
         
         m_buttons.push_back(btn);
         
         // Connect button clicks to view change signal
-        connect(btn, &QPushButton::clicked, this, [this, i]() {
-            setActiveView(static_cast<ViewType>(i));
-            emit viewChanged(static_cast<ViewType>(i));
+// Qt connect removed
+            viewChanged(static_cast<ViewType>(i));
         });
     }
 }
@@ -61,7 +56,7 @@ void ActivityBar::layoutButtons()
     
     // Add buttons to layout
     for (ActivityBarButton* btn : m_buttons) {
-        layout->addWidget(btn, 0, Qt::AlignHCenter);
+        layout->addWidget(btn, 0, //AlignHCenter);
     }
     
     // Add spacer at bottom to push buttons to top
@@ -99,13 +94,14 @@ ActivityBarButton* ActivityBar::button(ViewType view) const
 
 void ActivityBar::paintEvent(QPaintEvent* event)
 {
-    Q_UNUSED(event);
+    (event);
     QPainter painter(this);
     painter.fillRect(rect(), QColor(BACKGROUND_COLOR));
 }
 
 void ActivityBar::resizeEvent(QResizeEvent* event)
 {
-    Q_UNUSED(event);
+    (event);
     // Buttons are managed by layout
 }
+

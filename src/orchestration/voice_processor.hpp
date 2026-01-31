@@ -1,16 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QJsonObject>
-#include <QObject>
-#include <QBuffer>
-#include <QTimer>
-#include <QMutex>
-#include <QVector>
-#include <QAudioFormat>
-#include <QAudioSource>
-#include <QMediaDevices>
-#include <QAudioDevice>
+
 #include <chrono>
 #include <memory>
 #include "qt6_audio_helper.hpp"
@@ -29,17 +19,16 @@
  * - Error handling and recovery
  * - GDPR-compliant audio data handling
  */
-class VoiceProcessor : public QObject {
-    Q_OBJECT
+class VoiceProcessor : public void {
 
 public:
-    explicit VoiceProcessor(QObject* parent = nullptr);
+    explicit VoiceProcessor(void* parent = nullptr);
     ~VoiceProcessor() override;
 
     // Configuration
     struct Config {
-        QString apiEndpoint;
-        QString apiKey;
+        std::string apiEndpoint;
+        std::string apiKey;
         int sampleRate = 16000;
         int channelCount = 1;
         // Note: Qt 6 uses setSampleFormat() instead of sampleSize/byteOrder/sampleType
@@ -58,9 +47,9 @@ public:
     bool stopRecording();
     bool isRecording() const;
     
-    QString transcribeAudio(const QByteArray& audioData);
-    QJsonObject detectIntent(const QString& transcription);
-    QString generateSpeech(const QString& text);
+    std::string transcribeAudio(const std::vector<uint8_t>& audioData);
+    void* detectIntent(const std::string& transcription);
+    std::string generateSpeech(const std::string& text);
     
     // Metrics
     struct Metrics {
@@ -78,19 +67,18 @@ public:
     Metrics getMetrics() const;
     void resetMetrics();
 
-signals:
     void recordingStarted();
-    void recordingStopped(const QByteArray& audioData);
-    void transcriptionReady(const QString& text);
-    void intentDetected(const QJsonObject& intent);
-    void speechGenerated(const QByteArray& audioData);
-    void errorOccurred(const QString& error);
+    void recordingStopped(const std::vector<uint8_t>& audioData);
+    void transcriptionReady(const std::string& text);
+    void intentDetected(const void*& intent);
+    void speechGenerated(const std::vector<uint8_t>& audioData);
+    void errorOccurred(const std::string& error);
     void metricsUpdated(const Metrics& metrics);
 
-private slots:
+private:
     void handleAudioStateChanged(QAudio::State state);
     void processRecordedAudio();
-    void scheduleAudioDeletion(const QByteArray& audioData);
+    void scheduleAudioDeletion(const std::vector<uint8_t>& audioData);
 
 private:
     // Audio capture
@@ -98,25 +86,26 @@ private:
     QAudioDevice m_audioDevice;
     QBuffer* m_audioBuffer;
     QAudioFormat m_audioFormat;
-    QTimer* m_recordingTimer;
+    void** m_recordingTimer;
     
     // Configuration
     Config m_config;
-    mutable QMutex m_configMutex;
+    mutable std::mutex m_configMutex;
     
     // State
     bool m_isRecording;
-    mutable QMutex m_stateMutex;
+    mutable std::mutex m_stateMutex;
     
     // Metrics
     Metrics m_metrics;
-    mutable QMutex m_metricsMutex;
+    mutable std::mutex m_metricsMutex;
     
     // Helper methods
     void setupAudioFormat();
-    void logStructured(const QString& level, const QString& message, const QJsonObject& context = QJsonObject());
-    void updateMetric(const QString& metricName, qint64 value);
-    void recordLatency(const QString& operation, const std::chrono::milliseconds& duration);
-    QJsonObject makeApiRequest(const QString& endpoint, const QJsonObject& payload);
-    bool validateAudioData(const QByteArray& audioData);
+    void logStructured(const std::string& level, const std::string& message, const void*& context = void*());
+    void updateMetric(const std::string& metricName, qint64 value);
+    void recordLatency(const std::string& operation, const std::chrono::milliseconds& duration);
+    void* makeApiRequest(const std::string& endpoint, const void*& payload);
+    bool validateAudioData(const std::vector<uint8_t>& audioData);
 };
+

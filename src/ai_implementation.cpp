@@ -12,14 +12,14 @@ AIImplementation::AIImplementation(
 ) : m_logger(logger), m_metrics(metrics), m_httpClient(httpClient),
     m_responseParser(responseParser), m_modelTester(modelTester) {
     if (m_logger) {
-        m_logger->info("AIImplementation", "Initialized");
+
     }
 }
 
 bool AIImplementation::initialize(const LLMConfig& config) {
     m_config = config;
     if (m_logger) {
-        m_logger->info("AIImplementation", "Initializing with backend: " + config.backend);
+
     }
     return testConnectivity();
 }
@@ -70,7 +70,7 @@ CompletionResponse AIImplementation::complete(const CompletionRequest& request) 
         }
 
         if (m_logger && response.success) {
-            m_logger->info("AIImplementation", 
+
                 "Completion successful: " + std::to_string(response.latencyMs) + "ms, " +
                 std::to_string(response.totalTokens) + " tokens");
         }
@@ -79,7 +79,7 @@ CompletionResponse AIImplementation::complete(const CompletionRequest& request) 
         response.success = false;
         response.errorMessage = std::string("Exception: ") + e.what();
         if (m_logger) {
-            m_logger->error("AIImplementation", "Complete failed: " + response.errorMessage);
+
         }
     }
 
@@ -99,7 +99,7 @@ CompletionResponse AIImplementation::streamComplete(
 void AIImplementation::registerTool(const ToolDefinition& tool) {
     m_registeredTools[tool.name] = tool;
     if (m_logger) {
-        m_logger->info("AIImplementation", "Registered tool: " + tool.name);
+
     }
 }
 
@@ -107,7 +107,7 @@ json AIImplementation::executeTool(const std::string& toolName, const json& para
     auto it = m_registeredTools.find(toolName);
     if (it == m_registeredTools.end()) {
         if (m_logger) {
-            m_logger->error("AIImplementation", "Tool not found: " + toolName);
+
         }
         json result;
         return result;
@@ -121,7 +121,7 @@ json AIImplementation::executeTool(const std::string& toolName, const json& para
         return result;
     } catch (const std::exception& e) {
         if (m_logger) {
-            m_logger->error("AIImplementation", "Tool execution failed: " + std::string(e.what()));
+
         }
         json result;
         return result;
@@ -140,7 +140,7 @@ CompletionResponse AIImplementation::agenticLoop(
 
     while (iteration < maxIterations) {
         if (m_logger) {
-            m_logger->info("AIImplementation", "Agentic loop iteration " + std::to_string(iteration + 1));
+
         }
 
         auto response = complete(currentRequest);
@@ -155,7 +155,7 @@ CompletionResponse AIImplementation::agenticLoop(
     }
 
     if (iteration >= maxIterations && m_logger) {
-        m_logger->warn("AIImplementation", "Agentic loop hit max iterations");
+
     }
 
     return finalResponse;

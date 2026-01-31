@@ -1,12 +1,10 @@
 #include "gpu_backend.hpp"
-#include <QDebug>
-#include <QMutex>
-#include <QVector>
+
 
 #include <vector>
 #include <cstring>
 
-#ifdef Q_OS_WIN
+#ifdef 
 #include <windows.h>
 #endif
 
@@ -31,7 +29,7 @@ GPUBackend& GPUBackend::instance() {
 }
 
 GPUBackend::GPUBackend()
-    : QObject(nullptr)
+    : void(nullptr)
 {
 }
 
@@ -41,34 +39,29 @@ GPUBackend::~GPUBackend() {
 
 bool GPUBackend::initialize() {
     if (m_initialized) {
-        qInfo() << "[GPUBackend] Already initialized as" << backendName();
         return true;
     }
 
-    qInfo() << "[GPUBackend] Initializing GPU backend...";
 
     // Try backends in order of preference: CUDA > HIP > Vulkan > CPU
     if (initializeCUDA()) {
         m_backendType = CUDA;
         m_initialized = true;
-        emit backendInitialized(CUDA);
-        qInfo() << "[GPUBackend] Initialized CUDA backend";
+        backendInitialized(CUDA);
         return true;
     }
 
     if (initializeHIP()) {
         m_backendType = HIP;
         m_initialized = true;
-        emit backendInitialized(HIP);
-        qInfo() << "[GPUBackend] Initialized HIP backend";
+        backendInitialized(HIP);
         return true;
     }
 
     if (initializeVulkan()) {
         m_backendType = Vulkan;
         m_initialized = true;
-        emit backendInitialized(Vulkan);
-        qInfo() << "[GPUBackend] Initialized Vulkan backend";
+        backendInitialized(Vulkan);
         return true;
     }
 
@@ -107,7 +100,6 @@ void GPUBackend::shutdown() {
     m_initialized = false;
     m_backendType = None;
     
-    qInfo() << "[GPUBackend] Shutdown complete";
 }
 
 bool GPUBackend::isAvailable() const {
@@ -118,7 +110,7 @@ GPUBackend::BackendType GPUBackend::backendType() const {
     return m_backendType;
 }
 
-QString GPUBackend::backendName() const {
+std::string GPUBackend::backendName() const {
     switch (m_backendType) {
         case CUDA: return "CUDA";
         case HIP: return "HIP (ROCm)";
@@ -128,13 +120,12 @@ QString GPUBackend::backendName() const {
     }
 }
 
-QStringList GPUBackend::availableDevices() const {
+std::vector<std::string> GPUBackend::availableDevices() const {
     return m_deviceList;
 }
 
 bool GPUBackend::selectDevice(int deviceIndex) {
     if (deviceIndex < 0 || deviceIndex >= m_deviceList.size()) {
-        qWarning() << "[GPUBackend] Invalid device index:" << deviceIndex;
         return false;
     }
 
@@ -142,7 +133,6 @@ bool GPUBackend::selectDevice(int deviceIndex) {
     if (m_backendType == CUDA) {
         cudaError_t err = cudaSetDevice(deviceIndex);
         if (err != cudaSuccess) {
-            qWarning() << "[GPUBackend] CUDA setDevice failed:" << cudaGetErrorString(err);
             return false;
         }
     }
@@ -152,15 +142,13 @@ bool GPUBackend::selectDevice(int deviceIndex) {
     if (m_backendType == HIP) {
         hipError_t err = hipSetDevice(deviceIndex);
         if (err != hipSuccess) {
-            qWarning() << "[GPUBackend] HIP setDevice failed";
             return false;
         }
     }
 #endif
 
     m_deviceIndex = deviceIndex;
-    emit deviceChanged(deviceIndex);
-    qInfo() << "[GPUBackend] Selected device" << deviceIndex;
+    deviceChanged(deviceIndex);
     return true;
 }
 
@@ -168,7 +156,7 @@ int GPUBackend::currentDevice() const {
     return m_deviceIndex;
 }
 
-QString GPUBackend::deviceName(int deviceIndex) const {
+std::string GPUBackend::deviceName(int deviceIndex) const {
     int idx = (deviceIndex < 0) ? m_deviceIndex : deviceIndex;
     if (idx >= 0 && idx < m_deviceList.size()) {
         return m_deviceList[idx];
@@ -260,7 +248,6 @@ void* GPUBackend::allocate(size_t size, MemoryType type) {
         if (err == cudaSuccess) {
             m_allocatedMemory += size;
         } else {
-            qWarning() << "[GPUBackend] CUDA allocation failed:" << cudaGetErrorString(err);
             return nullptr;
         }
     }
@@ -280,7 +267,6 @@ void* GPUBackend::allocate(size_t size, MemoryType type) {
         if (err == hipSuccess) {
             m_allocatedMemory += size;
         } else {
-            qWarning() << "[GPUBackend] HIP allocation failed";
             return nullptr;
         }
     }
@@ -288,7 +274,7 @@ void* GPUBackend::allocate(size_t size, MemoryType type) {
 
     // Check memory warning threshold (80%)
     if (m_allocatedMemory > m_totalMemory * 0.8) {
-        emit memoryWarning(availableMemory(), m_totalMemory);
+        memoryWarning(availableMemory(), m_totalMemory);
     }
 
     return ptr;
@@ -360,12 +346,12 @@ void GPUBackend::synchronize() {
 #endif
 }
 
-QString GPUBackend::computeCapability() const {
+std::string GPUBackend::computeCapability() const {
 #ifdef HAVE_CUDA
     if (m_backendType == CUDA) {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, m_deviceIndex);
-        return QString("%1.%2").arg(prop.major).arg(prop.minor);
+        return std::string("%1.%2");
     }
 #endif
 
@@ -388,7 +374,6 @@ bool GPUBackend::initializeCUDA() {
     cudaError_t err = cudaGetDeviceCount(&deviceCount);
     
     if (err != cudaSuccess || deviceCount == 0) {
-        qInfo() << "[GPUBackend] CUDA not available";
         return false;
     }
 
@@ -396,10 +381,10 @@ bool GPUBackend::initializeCUDA() {
     for (int i = 0; i < deviceCount; ++i) {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, i);
-        m_deviceList << QString("%1 (Compute %2.%3)")
-            .arg(prop.name)
-            .arg(prop.major)
-            .arg(prop.minor);
+        m_deviceList << std::string("%1 (Compute %2.%3)")
+
+
+            ;
     }
 
     // Get memory info for device 0
@@ -408,9 +393,6 @@ bool GPUBackend::initializeCUDA() {
     cudaMemGetInfo(&free, &total);
     m_totalMemory = total;
 
-    qInfo() << "[GPUBackend] Found" << deviceCount << "CUDA device(s)";
-    qInfo() << "[GPUBackend] Device 0:" << m_deviceList[0];
-    qInfo() << "[GPUBackend] Total memory:" << (m_totalMemory / (1024*1024)) << "MB";
     
     return true;
 #else
@@ -424,7 +406,6 @@ bool GPUBackend::initializeHIP() {
     hipError_t err = hipGetDeviceCount(&deviceCount);
     
     if (err != hipSuccess || deviceCount == 0) {
-        qInfo() << "[GPUBackend] HIP/ROCm not available";
         return false;
     }
 
@@ -432,7 +413,7 @@ bool GPUBackend::initializeHIP() {
     for (int i = 0; i < deviceCount; ++i) {
         hipDeviceProp_t prop;
         hipGetDeviceProperties(&prop, i);
-        m_deviceList << QString(prop.name);
+        m_deviceList << std::string(prop.name);
     }
 
     // Get memory info for device 0
@@ -441,9 +422,6 @@ bool GPUBackend::initializeHIP() {
     hipMemGetInfo(&free, &total);
     m_totalMemory = total;
 
-    qInfo() << "[GPUBackend] Found" << deviceCount << "HIP device(s)";
-    qInfo() << "[GPUBackend] Device 0:" << m_deviceList[0];
-    qInfo() << "[GPUBackend] Total memory:" << (m_totalMemory / (1024*1024)) << "MB";
     
     return true;
 #else
@@ -468,7 +446,6 @@ bool GPUBackend::initializeVulkan() {
     VkInstance instance;
     VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
     if (result != VK_SUCCESS) {
-        qInfo() << "[GPUBackend] Vulkan instance creation failed";
         return false;
     }
 
@@ -477,12 +454,11 @@ bool GPUBackend::initializeVulkan() {
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
     
     if (deviceCount == 0) {
-        qInfo() << "[GPUBackend] No Vulkan-compatible devices found";
         vkDestroyInstance(instance, nullptr);
         return false;
     }
 
-    QVector<VkPhysicalDevice> devices(deviceCount);
+    std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
     // Get properties of first device (AMD RX 7800 XT)
@@ -510,10 +486,10 @@ bool GPUBackend::initializeVulkan() {
     }
 
     m_deviceList.clear();
-    m_deviceList << QString("%1 (Vulkan %2.%3)")
-        .arg(deviceProperties.deviceName)
-        .arg(VK_VERSION_MAJOR(deviceProperties.apiVersion))
-        .arg(VK_VERSION_MINOR(deviceProperties.apiVersion));
+    m_deviceList << std::string("%1 (Vulkan %2.%3)")
+        
+        )
+        );
 
     // Calculate total device memory (VRAM)
     m_totalMemory = 0;
@@ -524,11 +500,6 @@ bool GPUBackend::initializeVulkan() {
         }
     }
 
-    qInfo() << "[GPUBackend] Found" << deviceCount << "Vulkan device(s)";
-    qInfo() << "[GPUBackend] Device 0:" << m_deviceList[0];
-    qInfo() << "[GPUBackend] Total VRAM:" << (m_totalMemory / (1024*1024)) << "MB";
-    qInfo() << "[GPUBackend] Driver Version:" << deviceProperties.driverVersion;
-    qInfo() << "[GPUBackend] VK_EXT_memory_budget:" << (m_vulkanBudgetSupported ? "YES" : "NO");
     
     // Store instance for later cleanup
     m_vulkanContext = (void*)instance;
@@ -544,6 +515,6 @@ void GPUBackend::fallbackToCPU() {
     m_initialized = true;
     m_deviceList << "CPU (No GPU available)";
     
-    qWarning() << "[GPUBackend] No GPU found, falling back to CPU";
-    emit backendInitialized(CPU);
+    backendInitialized(CPU);
 }
+

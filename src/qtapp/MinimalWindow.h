@@ -1,11 +1,9 @@
 #pragma once
-#include <QMainWindow>
 
-class MinimalWindow : public QMainWindow
+class MinimalWindow : public void
 {
-    Q_OBJECT
 
 public:
-    explicit MinimalWindow(QWidget *parent = nullptr);
+    explicit MinimalWindow(void *parent = nullptr);
     ~MinimalWindow();
 };

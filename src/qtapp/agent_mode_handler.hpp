@@ -12,10 +12,7 @@
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QStringList>
-#include <QMap>
+
 #include <memory>
 
 class UnifiedBackend;
@@ -30,7 +27,7 @@ struct PlanStep;
  */
 struct ExecutionStep {
     int stepId;
-    QString title;
+    std::string title;
     enum Status {
         Pending,
         InProgress,
@@ -39,21 +36,20 @@ struct ExecutionStep {
         Skipped
     } status = Pending;
 
-    QString output;                 ///< Step output/results
-    QString errorMessage;           ///< Error if failed
+    std::string output;                 ///< Step output/results
+    std::string errorMessage;           ///< Error if failed
     int executionTimeMs = 0;        ///< Execution duration
-    QStringList filesModified;      ///< Files this step changed
+    std::vector<std::string> filesModified;      ///< Files this step changed
 };
 
 /**
  * @class AgentModeHandler
  * @brief Handles autonomous execution of approved plans
  */
-class AgentModeHandler : public QObject {
-    Q_OBJECT
+class AgentModeHandler : public void {
 
 public:
-    explicit AgentModeHandler(UnifiedBackend* backend, MetaPlanner* planner, QObject* parent = nullptr);
+    explicit AgentModeHandler(UnifiedBackend* backend, MetaPlanner* planner, void* parent = nullptr);
     ~AgentModeHandler();
 
     /**
@@ -85,7 +81,7 @@ public:
     /**
      * @brief Get all execution steps with current status
      */
-    const QVector<ExecutionStep>& getExecutionSteps() const { return m_executionSteps; }
+    const std::vector<ExecutionStep>& getExecutionSteps() const { return m_executionSteps; }
 
     /**
      * @brief Get current step being executed
@@ -102,7 +98,6 @@ public:
      */
     bool isExecutionComplete() const { return m_executionComplete; }
 
-signals:
     /// Execution started
     void executionStarted();
 
@@ -110,19 +105,19 @@ signals:
     void stepStarting(int stepIndex, const ExecutionStep& step);
 
     /// Step is executing (tool invocation started)
-    void stepExecuting(int stepIndex, const QString& toolName);
+    void stepExecuting(int stepIndex, const std::string& toolName);
 
     /// Step progress update
-    void stepProgress(int stepIndex, const QString& message);
+    void stepProgress(int stepIndex, const std::string& message);
 
     /// Step completed successfully
     void stepCompleted(int stepIndex, const ExecutionStep& step);
 
     /// Step failed
-    void stepFailed(int stepIndex, const QString& errorMessage);
+    void stepFailed(int stepIndex, const std::string& errorMessage);
 
     /// Step output received
-    void stepOutput(int stepIndex, const QString& output);
+    void stepOutput(int stepIndex, const std::string& output);
 
     /// Execution paused
     void executionPaused();
@@ -131,26 +126,26 @@ signals:
     void executionResumed();
 
     /// Execution completed successfully
-    void executionCompleted(const QVector<ExecutionStep>& steps);
+    void executionCompleted(const std::vector<ExecutionStep>& steps);
 
     /// Execution failed
-    void executionFailed(int stepIndex, const QString& errorMessage);
+    void executionFailed(int stepIndex, const std::string& errorMessage);
 
     /// Execution cancelled
     void executionCancelled();
 
     /// Overall progress update
-    void progressUpdated(float percentage, const QString& message);
+    void progressUpdated(float percentage, const std::string& message);
 
     /// Error occurred (non-fatal, recovery possible)
-    void errorOccurred(const QString& error);
+    void errorOccurred(const std::string& error);
 
-private slots:
+private:
     /// Handle tool execution completion
-    void onToolExecutionCompleted(const QString& toolName, const QString& output);
+    void onToolExecutionCompleted(const std::string& toolName, const std::string& output);
 
     /// Handle tool execution error
-    void onToolExecutionError(const QString& toolName, const QString& error);
+    void onToolExecutionError(const std::string& toolName, const std::string& error);
 
     /// Handle timeout during step execution
     void onStepTimeout(int stepIndex);
@@ -190,9 +185,10 @@ private:
     std::unique_ptr<AgenticToolExecutor> m_toolExecutor;
 
     Plan m_executionPlan;
-    QVector<ExecutionStep> m_executionSteps;
+    std::vector<ExecutionStep> m_executionSteps;
     int m_currentStepIndex = -1;
     bool m_executionComplete = false;
     bool m_executionPaused = false;
-    QStringList m_modifiedFiles;  ///< Track all files modified for rollback
+    std::vector<std::string> m_modifiedFiles;  ///< Track all files modified for rollback
 };
+

@@ -6,14 +6,11 @@
  */
 
 #include "agentic_text_edit.h"
-#include <QKeyEvent>
-#include <QTextCursor>
-#include <QTextBlock>
-#include <QDebug>
+
 
 namespace RawrXD {
 
-AgenticTextEdit::AgenticTextEdit(QWidget* parent)
+AgenticTextEdit::AgenticTextEdit(void* parent)
     : QPlainTextEdit(parent)
 {
     // Lightweight constructor - defer widget creation to initialize()
@@ -25,28 +22,22 @@ void AgenticTextEdit::initialize() {
     m_ghostRenderer->initialize();
     
     // Create completion timer
-    m_completionTimer = new QTimer(this);
+    m_completionTimer = new void*(this);
     m_completionTimer->setSingleShot(true);
     m_completionTimer->setInterval(m_completionDelay);
     
     // Connect signals
-    connect(this, &QPlainTextEdit::textChanged, this, &AgenticTextEdit::onTextChanged);
-    connect(this, &QPlainTextEdit::cursorPositionChanged, this, &AgenticTextEdit::onCursorPositionChanged);
-    connect(m_completionTimer, &QTimer::timeout, this, &AgenticTextEdit::onCompletionTimeout);
-    
-    connect(m_ghostRenderer, &GhostTextRenderer::ghostTextAccepted,
-            this, &AgenticTextEdit::onGhostTextAccepted);
-    connect(m_ghostRenderer, &GhostTextRenderer::ghostTextDismissed,
-            this, &AgenticTextEdit::onGhostTextDismissed);
-    
-    qDebug() << "[AgenticTextEdit] Initialized with ghost text renderer";
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 void AgenticTextEdit::setLSPClient(LSPClient* client) {
     if (m_lspClient) {
         // Disconnect old client
-        disconnect(m_lspClient, nullptr, this, nullptr);
-        
+// Qt disconnect removed
         // Close document if opened
         if (m_documentOpened && !m_documentUri.isEmpty()) {
             m_lspClient->closeDocument(m_documentUri);
@@ -58,10 +49,8 @@ void AgenticTextEdit::setLSPClient(LSPClient* client) {
     
     if (m_lspClient) {
         // Connect to LSP client signals
-        connect(m_lspClient, &LSPClient::completionsReceived,
-                this, &AgenticTextEdit::onCompletionsReceived);
-        connect(m_lspClient, &LSPClient::serverReady, this, [this]() {
-            qDebug() << "[AgenticTextEdit] LSP server ready, opening document";
+// Qt connect removed
+// Qt connect removed
             syncDocumentToLSP();
         });
         
@@ -72,7 +61,7 @@ void AgenticTextEdit::setLSPClient(LSPClient* client) {
     }
 }
 
-void AgenticTextEdit::setDocumentUri(const QString& uri) {
+void AgenticTextEdit::setDocumentUri(const std::string& uri) {
     m_documentUri = uri;
     
     // Infer language ID from file extension
@@ -88,7 +77,6 @@ void AgenticTextEdit::setDocumentUri(const QString& uri) {
         m_languageId = "plaintext";
     }
     
-    qDebug() << "[AgenticTextEdit] Document URI set:" << uri << "Language:" << m_languageId;
 }
 
 void AgenticTextEdit::setAutoCompletionsEnabled(bool enabled) {
@@ -107,13 +95,13 @@ void AgenticTextEdit::setCompletionDelay(int ms) {
 void AgenticTextEdit::keyPressEvent(QKeyEvent* event) {
     // Let ghost renderer handle Tab/Esc first
     if (m_ghostRenderer && m_ghostRenderer->hasGhostText()) {
-        if (event->key() == Qt::Key_Tab && event->modifiers() == Qt::NoModifier) {
+        if (event->key() == //Key_Tab && event->modifiers() == //NoModifier) {
             m_ghostRenderer->acceptGhostText();
             return;
         }
-        if (event->key() == Qt::Key_Escape) {
+        if (event->key() == //Key_Escape) {
             m_ghostRenderer->clearGhostText();
-            emit completionDismissed();
+            completionDismissed();
             return;
         }
     }
@@ -123,7 +111,7 @@ void AgenticTextEdit::keyPressEvent(QKeyEvent* event) {
     
     // Trigger completion on typing
     if (m_autoCompletionsEnabled && event->text().length() > 0) {
-        QString lineText = getCurrentLineText();
+        std::string lineText = getCurrentLineText();
         if (shouldTriggerCompletion(lineText)) {
             m_completionTimer->start();
         }
@@ -157,31 +145,28 @@ void AgenticTextEdit::onCursorPositionChanged() {
 void AgenticTextEdit::onCompletionTimeout() {
     if (!m_autoCompletionsEnabled) return;
     
-    QString lineText = getCurrentLineText();
+    std::string lineText = getCurrentLineText();
     if (shouldTriggerCompletion(lineText)) {
         triggerCompletion();
     }
 }
 
-void AgenticTextEdit::onCompletionsReceived(const QString& uri, int line, int character, 
-                                             const QVector<CompletionItem>& items) {
+void AgenticTextEdit::onCompletionsReceived(const std::string& uri, int line, int character, 
+                                             const std::vector<CompletionItem>& items) {
     if (uri != m_documentUri || items.isEmpty()) return;
     
     // Use first completion item
     const CompletionItem& item = items.first();
     
-    qDebug() << "[AgenticTextEdit] Showing ghost text:" << item.insertText;
     m_ghostRenderer->showGhostText(item.insertText, "completion");
 }
 
-void AgenticTextEdit::onGhostTextAccepted(const QString& text) {
-    qDebug() << "[AgenticTextEdit] Ghost text accepted:" << text;
-    emit completionAccepted(text);
+void AgenticTextEdit::onGhostTextAccepted(const std::string& text) {
+    completionAccepted(text);
 }
 
 void AgenticTextEdit::onGhostTextDismissed() {
-    qDebug() << "[AgenticTextEdit] Ghost text dismissed";
-    emit completionDismissed();
+    completionDismissed();
 }
 
 void AgenticTextEdit::triggerCompletion() {
@@ -190,26 +175,25 @@ void AgenticTextEdit::triggerCompletion() {
     
     if (m_aiCompletionsEnabled && m_aiProvider) {
         QTextCursor cursor = textCursor();
-        QString currentLine = getCurrentLineText();
+        std::string currentLine = getCurrentLineText();
         int cursorColumn = cursor.columnNumber();
         
         // Get some context lines (5 before current line)
         QTextBlock block = cursor.block();
-        QStringList contextLines;
+        std::vector<std::string> contextLines;
         QTextBlock contextBlock = block.previous();
         for (int i = 0; i < 5 && contextBlock.isValid(); ++i) {
             contextLines.prepend(contextBlock.text());
             contextBlock = contextBlock.previous();
         }
         
-        qDebug() << "[AgenticTextEdit] Requesting AI completions at column" << cursorColumn;
         
         // Extract prefix/suffix
-        QString prefix = currentLine.left(cursorColumn);
-        QString suffix = currentLine.mid(cursorColumn);
+        std::string prefix = currentLine.left(cursorColumn);
+        std::string suffix = currentLine.mid(cursorColumn);
         
         // Determine file type from language ID
-        QString fileType = m_languageId;
+        std::string fileType = m_languageId;
         
         // Request completions
         m_aiProvider->requestCompletions(
@@ -229,7 +213,6 @@ void AgenticTextEdit::triggerCompletion() {
         int line = cursor.blockNumber();
         int character = cursor.columnNumber();
         
-        qDebug() << "[AgenticTextEdit] Requesting LSP completions at" << line << ":" << character;
         m_lspClient->requestCompletions(m_documentUri, line, character);
     }
 }
@@ -237,25 +220,24 @@ void AgenticTextEdit::triggerCompletion() {
 void AgenticTextEdit::syncDocumentToLSP() {
     if (!m_lspClient || m_documentUri.isEmpty()) return;
     
-    QString text = toPlainText();
+    std::string text = toPlainText();
     m_documentVersion++;
     
     if (!m_documentOpened) {
         m_lspClient->openDocument(m_documentUri, m_languageId, text);
         m_documentOpened = true;
-        qDebug() << "[AgenticTextEdit] Document opened in LSP";
     } else {
         m_lspClient->updateDocument(m_documentUri, text, m_documentVersion);
     }
 }
 
-QString AgenticTextEdit::getCurrentLineText() const {
+std::string AgenticTextEdit::getCurrentLineText() const {
     QTextCursor cursor = textCursor();
     QTextBlock block = cursor.block();
     return block.text();
 }
 
-bool AgenticTextEdit::shouldTriggerCompletion(const QString& lineText) const {
+bool AgenticTextEdit::shouldTriggerCompletion(const std::string& lineText) const {
     if (lineText.isEmpty()) return false;
     
     // Trigger on dot/arrow operators (C++)
@@ -269,7 +251,7 @@ bool AgenticTextEdit::shouldTriggerCompletion(const QString& lineText) const {
     }
     
     // Trigger after typing 2+ characters
-    QString trimmed = lineText.trimmed();
+    std::string trimmed = lineText.trimmed();
     if (trimmed.length() >= 2) {
         return true;
     }
@@ -280,41 +262,33 @@ bool AgenticTextEdit::shouldTriggerCompletion(const QString& lineText) const {
 void AgenticTextEdit::setAICompletionProvider(AICompletionProvider* provider) {
     if (m_aiProvider) {
         // Disconnect old provider
-        disconnect(m_aiProvider, nullptr, this, nullptr);
+// Qt disconnect removed
     }
     
     m_aiProvider = provider;
     
     if (m_aiProvider) {
         // Connect to AI provider signals
-        connect(m_aiProvider, &AICompletionProvider::completionsReady,
-                this, &AgenticTextEdit::onAICompletionsReceived);
-        connect(m_aiProvider, &AICompletionProvider::error,
-                this, &AgenticTextEdit::onAICompletionError);
-        connect(m_aiProvider, &AICompletionProvider::latencyReported,
-                this, [](double ms) {
-                    qDebug() << "[AgenticTextEdit] AI completion latency:" << ms << "ms";
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
                 });
         
-        qDebug() << "[AgenticTextEdit] AI completion provider connected";
     }
 }
 
 void AgenticTextEdit::setAICompletionsEnabled(bool enabled) {
     m_aiCompletionsEnabled = enabled;
-    qDebug() << "[AgenticTextEdit] AI completions" << (enabled ? "enabled" : "disabled");
 }
 
-void AgenticTextEdit::onAICompletionsReceived(const QVector<AICompletion>& completions) {
+void AgenticTextEdit::onAICompletionsReceived(const std::vector<AICompletion>& completions) {
     if (completions.isEmpty()) {
-        qDebug() << "[AgenticTextEdit] No AI completions received";
         return;
     }
     
     // Use the best completion (first one, already sorted by confidence)
     const AICompletion& best = completions.first();
     
-    qDebug() << "[AgenticTextEdit] Showing AI completion (confidence:" 
              << (best.confidence * 100) << "%)" 
              << "Text:" << best.text.left(50);
     
@@ -322,15 +296,14 @@ void AgenticTextEdit::onAICompletionsReceived(const QVector<AICompletion>& compl
     m_ghostRenderer->showGhostText(best.text, "ai-completion");
 }
 
-void AgenticTextEdit::onAICompletionError(const QString& error) {
-    qWarning() << "[AgenticTextEdit] AI completion error:" << error;
+void AgenticTextEdit::onAICompletionError(const std::string& error) {
     
     // Fallback to LSP if AI fails
     if (m_lspClient && m_lspClient->isRunning()) {
-        qDebug() << "[AgenticTextEdit] Falling back to LSP completions";
         QTextCursor cursor = textCursor();
         m_lspClient->requestCompletions(m_documentUri, cursor.blockNumber(), cursor.columnNumber());
     }
 }
 
 } // namespace RawrXD
+

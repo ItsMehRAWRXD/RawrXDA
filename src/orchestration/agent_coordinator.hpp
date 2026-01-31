@@ -1,17 +1,5 @@
 #pragma once
 
-#include <QDateTime>
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QMap>
-#include <QMutex>
-#include <QObject>
-#include <QQueue>
-#include <QReadWriteLock>
-#include <QSet>
-#include <QString>
-#include <QStringList>
-#include <QUuid>
 
 #include <functional>
 
@@ -26,19 +14,18 @@
  * - Resource conflict resolution
  * - Real-time progress tracking
  */
-class AgentCoordinator : public QObject {
-    Q_OBJECT
+class AgentCoordinator : public void {
 
 public:
-    explicit AgentCoordinator(QObject* parent = nullptr);
+    explicit AgentCoordinator(void* parent = nullptr);
     ~AgentCoordinator() override;
 
     struct AgentTask {
-        QString id;                      //!< Unique task identifier
-        QString name;                    //!< Human-readable label
-        QString agentId;                 //!< Agent responsible for execution
-        QStringList dependencies;        //!< Upstream task identifiers
-        QJsonObject payload;             //!< Task-specific metadata/prompt
+        std::string id;                      //!< Unique task identifier
+        std::string name;                    //!< Human-readable label
+        std::string agentId;                 //!< Agent responsible for execution
+        std::vector<std::string> dependencies;        //!< Upstream task identifiers
+        void* payload;             //!< Task-specific metadata/prompt
         int priority = 0;                //!< Larger value = higher priority
         int maxRetries = 0;              //!< Allowed automatic retries
     };
@@ -54,92 +41,92 @@ public:
     };
 
     struct AgentMetadata {
-        QString agentId;
-        QStringList capabilities;
+        std::string agentId;
+        std::vector<std::string> capabilities;
         int maxConcurrency = 1;
         int activeAssignments = 0;
         bool available = true;
-        QDateTime registeredAt;
+        std::chrono::system_clock::time_point registeredAt;
     };
 
     // ===== Agent Management =====
-    bool registerAgent(const QString& agentId,
-                       const QStringList& capabilities,
+    bool registerAgent(const std::string& agentId,
+                       const std::vector<std::string>& capabilities,
                        int maxConcurrency = 1);
-    bool unregisterAgent(const QString& agentId);
-    bool setAgentAvailability(const QString& agentId, bool available);
-    bool isAgentAvailable(const QString& agentId) const;
+    bool unregisterAgent(const std::string& agentId);
+    bool setAgentAvailability(const std::string& agentId, bool available);
+    bool isAgentAvailable(const std::string& agentId) const;
 
     // ===== Plan Submission =====
-    QString submitPlan(const QList<AgentTask>& tasks,
-                       const QJsonObject& initialContext = {});
-    bool cancelPlan(const QString& planId, const QString& reason = {});
+    std::string submitPlan(const std::vector<AgentTask>& tasks,
+                       const void*& initialContext = {});
+    bool cancelPlan(const std::string& planId, const std::string& reason = {});
 
     // ===== Task Lifecycle =====
-    bool startTask(const QString& planId, const QString& taskId);
-    bool completeTask(const QString& planId,
-                      const QString& taskId,
-                      const QJsonObject& outputContext = {},
+    bool startTask(const std::string& planId, const std::string& taskId);
+    bool completeTask(const std::string& planId,
+                      const std::string& taskId,
+                      const void*& outputContext = {},
                       bool success = true,
-                      const QString& message = {});
-    QList<QString> getReadyTasks(const QString& planId) const;
+                      const std::string& message = {});
+    std::vector<std::string> getReadyTasks(const std::string& planId) const;
 
     // ===== Introspection =====
-    QJsonObject getPlanStatus(const QString& planId) const;
-    QJsonObject getCoordinatorStats() const;
+    void* getPlanStatus(const std::string& planId) const;
+    void* getCoordinatorStats() const;
 
-signals:
-    void planSubmitted(const QString& planId);
-    void planCancelled(const QString& planId, const QString& reason);
-    void planFailed(const QString& planId, const QString& reason);
-    void planCompleted(const QString& planId, const QJsonObject& finalContext);
-    void taskReady(const QString& planId, const AgentTask& task);
-    void taskStarted(const QString& planId, const AgentTask& task);
-    void taskCompleted(const QString& planId,
+    void planSubmitted(const std::string& planId);
+    void planCancelled(const std::string& planId, const std::string& reason);
+    void planFailed(const std::string& planId, const std::string& reason);
+    void planCompleted(const std::string& planId, const void*& finalContext);
+    void taskReady(const std::string& planId, const AgentTask& task);
+    void taskStarted(const std::string& planId, const AgentTask& task);
+    void taskCompleted(const std::string& planId,
                        const AgentTask& task,
                        bool success,
-                       const QString& message);
+                       const std::string& message);
 
 private:
     struct PlanState {
-        QString id;
-        QMap<QString, AgentTask> tasks;
-        QMap<QString, AgentTaskState> state;
-        QMap<QString, int> remainingDependencies;
-        QMap<QString, QSet<QString>> dependents;
-        QJsonObject sharedContext;
-        QDateTime createdAt;
+        std::string id;
+        std::map<std::string, AgentTask> tasks;
+        std::map<std::string, AgentTaskState> state;
+        std::map<std::string, int> remainingDependencies;
+        std::map<std::string, std::unordered_set<std::string>> dependents;
+        void* sharedContext;
+        std::chrono::system_clock::time_point createdAt;
         bool cancelled = false;
-        QString cancelReason;
+        std::string cancelReason;
     };
 
     struct PlanFinalization {
         bool finished = false;
         bool success = false;
         bool cancelled = false;
-        QString reason;
-        QJsonObject context;
+        std::string reason;
+        void* context;
     };
 
     mutable QReadWriteLock m_lock;
-    QMap<QString, AgentMetadata> m_agents;
-    QMap<QString, PlanState> m_plans;
+    std::map<std::string, AgentMetadata> m_agents;
+    std::map<std::string, PlanState> m_plans;
     
     // Status cache for high-poll clients (Bottleneck #9 fix - avoid rebuilding JSON on every query)
-    mutable QHash<QString, QJsonObject> m_statusCache;
+    mutable std::unordered_map<std::string, void*> m_statusCache;
 
     // ===== Helpers =====
-    bool validateTasks(const QList<AgentTask>& tasks, QString& error) const;
-    bool detectCycle(const QList<AgentTask>& tasks) const;
+    bool validateTasks(const std::vector<AgentTask>& tasks, std::string& error) const;
+    bool detectCycle(const std::vector<AgentTask>& tasks) const;
     void initialisePlanGraphs(PlanState& plan);
-    QList<AgentTask> scheduleReadyTasks(PlanState& plan);
-    QList<AgentTask> propagateCompletion(PlanState& plan, const QString& taskId);
-    void markDownstreamAsSkipped(PlanState& plan, const QString& blockingTaskId);
-    bool allPrerequisitesComplete(const PlanState& plan, const QString& taskId) const;
-    void mergeContext(QJsonObject& target, const QJsonObject& delta) const;
-    PlanFinalization maybeFinalizePlan(const QString& planId, PlanState& plan);
-    void invalidateStatusCache(const QString& planId);
-    QJsonObject buildPlanStatus(const PlanState& plan) const;
+    std::vector<AgentTask> scheduleReadyTasks(PlanState& plan);
+    std::vector<AgentTask> propagateCompletion(PlanState& plan, const std::string& taskId);
+    void markDownstreamAsSkipped(PlanState& plan, const std::string& blockingTaskId);
+    bool allPrerequisitesComplete(const PlanState& plan, const std::string& taskId) const;
+    void mergeContext(void*& target, const void*& delta) const;
+    PlanFinalization maybeFinalizePlan(const std::string& planId, PlanState& plan);
+    void invalidateStatusCache(const std::string& planId);
+    void* buildPlanStatus(const PlanState& plan) const;
 };
 
 Q_DECLARE_METATYPE(AgentCoordinator::AgentTask)
+

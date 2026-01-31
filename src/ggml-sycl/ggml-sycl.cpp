@@ -1397,7 +1397,6 @@ typedef void (*ggml_sycl_op_mul_mat_t)(
     const queue_ptr &stream);
 
 
-
 static void mul_mat_p021_f16_f32(
     const void * __restrict__ vx, const float * __restrict__ y, float * __restrict__ dst,
     const int ncols_x, const int nrows_x, const int nchannels_x, const int nchannels_y,
@@ -1734,7 +1733,6 @@ static void ggml_mul_mat_vec_nc_f16_f32_sycl(
             });
     }
 }
-
 
 
 static void scale_f32_sycl(const float *x, float *dst, const float scale, const float bias,

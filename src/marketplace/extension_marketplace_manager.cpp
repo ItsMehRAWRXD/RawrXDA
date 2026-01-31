@@ -17,7 +17,6 @@ ExtensionMarketplaceManager::ExtensionMarketplaceManager()
     // Set up update checking (every 6 hours)
     m_updateCheckTimer->setInterval(6 * 60 * 60 * 1000); // 6 hours  // Signal connection removed\nm_updateCheckTimer->start();
     
-    // Connect network manager signals  // Signal connection removed\n// Connect VSIX installer signals  // Signal connection removed\n  // Signal connection removed\n// // qDebug() << "[ExtensionMarketplaceManager] Initialized";
 }
 
 ExtensionMarketplaceManager::~ExtensionMarketplaceManager() {
@@ -83,8 +82,8 @@ void ExtensionMarketplaceManager::getExtensionDetails(const std::string& extensi
     }
     
     std::string url(std::string("https://marketplace.visualstudio.com/_apis/public/gallery/publishers/%1/extensions/%2")
-             .arg(extensionId.section('.', 0, 0))  // Publisher
-             .arg(extensionId.section('.', 1)));   // Extension name
+             )  // Publisher
+             ));   // Extension name
     void* request(url);
     request.setHeader(void*::ContentTypeHeader, "application/json");
     
@@ -169,7 +168,6 @@ void ExtensionMarketplaceManager::enableOfflineMode(bool enabled) {
 void ExtensionMarketplaceManager::syncWithPrivateMarketplace(const std::string& url) {
     m_privateMarketplaceUrl = url;
     // In a real implementation, this would sync with the private marketplace
-    // // qDebug:  "[ExtensionMarketplaceManager] Sync with private marketplace:" << url;
 }
 
 void ExtensionMarketplaceManager::clearCache() {
@@ -267,9 +265,9 @@ std::string ExtensionMarketplaceManager::getExtensionDownloadUrl(const std::stri
     // In a real implementation, this would fetch the actual download URL
     // For now, we'll return a placeholder
     return std::string("https://marketplace.visualstudio.com/_apis/public/gallery/publishers/%1/extensions/%2/%3/vspackage")
-            .arg(extensionId.section('.', 0, 0))
-            .arg(extensionId.section('.', 1))
-            .arg(version.empty() ? "latest" : version);
+            )
+            )
+             ? "latest" : version);
 }
 
 bool ExtensionMarketplaceManager::isExtensionAllowed(const std::string& extensionId) {
@@ -281,28 +279,23 @@ bool ExtensionMarketplaceManager::isExtensionAllowed(const std::string& extensio
 
 void ExtensionMarketplaceManager::saveInstalledExtensions() {
     // In a real implementation, this would save to a file or database
-    // // qDebug:  "[ExtensionMarketplaceManager] Saved" << m_installedExtensions.size() << "installed extensions";
 }
 
 void ExtensionMarketplaceManager::loadInstalledExtensions() {
     // In a real implementation, this would load from a file or database
-    // // qDebug:  "[ExtensionMarketplaceManager] Loaded installed extensions";
 }
 
 void ExtensionMarketplaceManager::checkForUpdates() {
     // In a real implementation, this would check all installed extensions for updates
-    // // qDebug:  "[ExtensionMarketplaceManager] Checking for updates";
 }
 
 void ExtensionMarketplaceManager::onInstallReplyFinished() {
     auto* reply = qobject_cast<void**>(sender());
     if (!reply) {
-        // // qWarning:  "[ExtensionMarketplaceManager] onInstallReplyFinished called without valid reply";
         return;
     }
     
     if (reply->error() != void*::NoError) {
-        // // qWarning:  "[ExtensionMarketplaceManager] Install download failed:" << reply->errorString();
         installationError(std::string(), reply->errorString());
         reply->deleteLater();
         return;
@@ -311,7 +304,6 @@ void ExtensionMarketplaceManager::onInstallReplyFinished() {
     std::vector<uint8_t> data = reply->readAll();
     std::string extensionId = reply->property("extensionId").toString();
     
-    // // qDebug:  "[ExtensionMarketplaceManager] Downloaded extension:" << extensionId << "size:" << data.size();
     
     // Save to temp file and install
     std::string tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + extensionId + ".vsix";
@@ -324,7 +316,6 @@ void ExtensionMarketplaceManager::onInstallReplyFinished() {
             m_vsixInstaller->installFromFile(tempPath);
         }
     } else {
-        // // qWarning:  "[ExtensionMarketplaceManager] Failed to write temp file:" << tempPath;
         installationError(extensionId, "Failed to write temporary file");
     }
     
@@ -334,12 +325,10 @@ void ExtensionMarketplaceManager::onInstallReplyFinished() {
 void ExtensionMarketplaceManager::onUpdateCheckReplyFinished() {
     auto* reply = qobject_cast<void**>(sender());
     if (!reply) {
-        // // qWarning:  "[ExtensionMarketplaceManager] onUpdateCheckReplyFinished called without valid reply";
         return;
     }
     
     if (reply->error() != void*::NoError) {
-        // // qWarning:  "[ExtensionMarketplaceManager] Update check failed:" << reply->errorString();
         reply->deleteLater();
         return;
     }
@@ -356,7 +345,6 @@ void ExtensionMarketplaceManager::onUpdateCheckReplyFinished() {
         if (!extensionId.empty()) {
             for (const auto& installed : m_installedExtensions) {
                 if (installed.id == extensionId && latestVersion != installed.version) {
-                    // // qDebug:  "[ExtensionMarketplaceManager] Update available for" << extensionId 
                              << ":" << installed.version << "->" << latestVersion;
                     updateAvailable(extensionId, latestVersion);
                     break;
@@ -367,8 +355,4 @@ void ExtensionMarketplaceManager::onUpdateCheckReplyFinished() {
     
     reply->deleteLater();
 }
-
-
-
-
 

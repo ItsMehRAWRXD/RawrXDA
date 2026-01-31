@@ -1,11 +1,6 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QProcess>
-#include <QDir>
+
 #include <memory>
 #include <vector>
 
@@ -26,85 +21,85 @@ class ModelTrainer;
  * - Self-corrects on failures
  * - Can fine-tune models with on-device training
  */
-class AgenticExecutor : public QObject {
-    Q_OBJECT
+class AgenticExecutor : public void {
 
 public:
-    explicit AgenticExecutor(QObject* parent = nullptr);
+    explicit AgenticExecutor(void* parent = nullptr);
     ~AgenticExecutor();
 
     void initialize(AgenticEngine* engine, InferenceEngine* inference);
 
     // Main agentic execution entry point
-    QJsonObject executeUserRequest(const QString& request);
+    void* executeUserRequest(const std::string& request);
 
     // Core agentic capabilities
-    QJsonArray decomposeTask(const QString& goal);
-    bool executeStep(const QJsonObject& step);
-    bool verifyStepCompletion(const QJsonObject& step, const QString& result);
+    void* decomposeTask(const std::string& goal);
+    bool executeStep(const void*& step);
+    bool verifyStepCompletion(const void*& step, const std::string& result);
 
     // File system operations (real, not simulated)
-    bool createDirectory(const QString& path);
-    bool createFile(const QString& path, const QString& content);
-    bool writeFile(const QString& path, const QString& content);
-    QString readFile(const QString& path);
-    bool deleteFile(const QString& path);
-    bool deleteDirectory(const QString& path);
-    QStringList listDirectory(const QString& path);
+    bool createDirectory(const std::string& path);
+    bool createFile(const std::string& path, const std::string& content);
+    bool writeFile(const std::string& path, const std::string& content);
+    std::string readFile(const std::string& path);
+    bool deleteFile(const std::string& path);
+    bool deleteDirectory(const std::string& path);
+    std::vector<std::string> listDirectory(const std::string& path);
 
     // Compiler integration (real compilation)
-    QJsonObject compileProject(const QString& projectPath, const QString& compiler = "g++");
-    QJsonObject runExecutable(const QString& executablePath, const QStringList& args = QStringList());
+    void* compileProject(const std::string& projectPath, const std::string& compiler = "g++");
+    void* runExecutable(const std::string& executablePath, const std::vector<std::string>& args = std::vector<std::string>());
 
     // Function calling system (tool use)
-    QJsonArray getAvailableTools();
-    QJsonObject callTool(const QString& toolName, const QJsonObject& params);
+    void* getAvailableTools();
+    void* callTool(const std::string& toolName, const void*& params);
 
     // Model training capabilities
-    QJsonObject trainModel(const QString& datasetPath, const QString& modelPath, const QJsonObject& config);
+    void* trainModel(const std::string& datasetPath, const std::string& modelPath, const void*& config);
     bool isTrainingModel() const;
 
     // Memory and context
-    void addToMemory(const QString& key, const QVariant& value);
-    QVariant getFromMemory(const QString& key);
+    void addToMemory(const std::string& key, const std::any& value);
+    std::any getFromMemory(const std::string& key);
     void clearMemory();
-    QString getFullContext();
+    std::string getFullContext();
 
     // Self-correction
-    bool detectFailure(const QString& output);
-    QString generateCorrectionPlan(const QString& failureReason);
-    QJsonObject retryWithCorrection(const QJsonObject& failedStep);
+    bool detectFailure(const std::string& output);
+    std::string generateCorrectionPlan(const std::string& failureReason);
+    void* retryWithCorrection(const void*& failedStep);
 
-signals:
-    void stepStarted(const QString& description);
-    void stepCompleted(const QString& description, bool success);
+
+    void stepStarted(const std::string& description);
+    void stepCompleted(const std::string& description, bool success);
     void taskProgress(int current, int total);
-    void executionComplete(const QJsonObject& result);
-    void errorOccurred(const QString& error);
-    void logMessage(const QString& message);
+    void executionComplete(const void*& result);
+    void errorOccurred(const std::string& error);
+    void logMessage(const std::string& message);
     void trainingProgress(int epoch, int totalEpochs, float loss, float perplexity);
-    void trainingCompleted(const QString& modelPath, float finalPerplexity);
+    void trainingCompleted(const std::string& modelPath, float finalPerplexity);
 
 private:
     // Agent reasoning using model
-    QString planNextAction(const QString& currentState, const QString& goal);
-    QJsonObject generateCode(const QString& specification);
-    QString analyzeError(const QString& errorOutput);
-    QString improveCode(const QString& code, const QString& issue);
+    std::string planNextAction(const std::string& currentState, const std::string& goal);
+    void* generateCode(const std::string& specification);
+    std::string analyzeError(const std::string& errorOutput);
+    std::string improveCode(const std::string& code, const std::string& issue);
 
     // Internal helpers
-    QJsonObject buildToolCallPrompt(const QString& goal, const QJsonArray& tools);
-    QString extractCodeFromResponse(const QString& response);
-    bool validateGeneratedCode(const QString& code);
+    void* buildToolCallPrompt(const std::string& goal, const void*& tools);
+    std::string extractCodeFromResponse(const std::string& response);
+    bool validateGeneratedCode(const std::string& code);
 
     AgenticEngine* m_agenticEngine = nullptr;
     InferenceEngine* m_inferenceEngine = nullptr;
     std::unique_ptr<ModelTrainer> m_modelTrainer;
     
-    QMap<QString, QVariant> m_memory;
-    QJsonArray m_executionHistory;
-    QString m_currentWorkingDirectory;
+    std::map<std::string, std::any> m_memory;
+    void* m_executionHistory;
+    std::string m_currentWorkingDirectory;
     
     int m_maxRetries = 3;
     int m_currentRetryCount = 0;
 };
+

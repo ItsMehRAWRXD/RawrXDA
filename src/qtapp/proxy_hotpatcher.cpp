@@ -1,74 +1,69 @@
 // proxy_hotpatcher.cpp - Implementation of agentic correction proxy
 #include "proxy_hotpatcher.hpp"
-#include <QJsonDocument>
-#include <QDebug>
+
+
 #include <algorithm>
 #include <cstring>
 
-ProxyHotpatcher::ProxyHotpatcher(QObject* parent)
-    : QObject(parent)
+ProxyHotpatcher::ProxyHotpatcher(void* parent)
+    : void(parent)
 {
-    qInfo() << "[ProxyHotpatcher] Agentic correction proxy initialized";
 }
 
 ProxyHotpatcher::~ProxyHotpatcher()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_rules.clear();
 }
 
 void ProxyHotpatcher::addRule(const ProxyHotpatchRule& rule)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_rules[rule.name] = rule;
-    qInfo() << "[ProxyHotpatcher] Added rule:" << rule.name;
 }
 
-void ProxyHotpatcher::removeRule(const QString& name)
+void ProxyHotpatcher::removeRule(const std::string& name)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_rules.remove(name)) {
-        qInfo() << "[ProxyHotpatcher] Removed rule:" << name;
     }
 }
 
-void ProxyHotpatcher::enableRule(const QString& name, bool enable)
+void ProxyHotpatcher::enableRule(const std::string& name, bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_rules.contains(name)) {
         m_rules[name].enabled = enable;
-        qInfo() << "[ProxyHotpatcher] Rule" << name << (enable ? "enabled" : "disabled");
     }
 }
 
-bool ProxyHotpatcher::hasRule(const QString& name) const
+bool ProxyHotpatcher::hasRule(const std::string& name) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_rules.contains(name);
 }
 
-ProxyHotpatchRule ProxyHotpatcher::getRule(const QString& name) const
+ProxyHotpatchRule ProxyHotpatcher::getRule(const std::string& name) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_rules.value(name);
 }
 
-QStringList ProxyHotpatcher::listRules() const
+std::vector<std::string> ProxyHotpatcher::listRules() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_rules.keys();
 }
 
 void ProxyHotpatcher::clearAllRules()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_rules.clear();
-    qInfo() << "[ProxyHotpatcher] All rules cleared";
 }
 
-QByteArray ProxyHotpatcher::processRequest(const QByteArray& requestData)
+std::vector<uint8_t> ProxyHotpatcher::processRequest(const std::vector<uint8_t>& requestData)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled || requestData.isEmpty()) {
         return requestData;
@@ -76,7 +71,7 @@ QByteArray ProxyHotpatcher::processRequest(const QByteArray& requestData)
     
     m_timer.start();
     
-    QByteArray modified = requestData;
+    std::vector<uint8_t> modified = requestData;
     
     // Apply memory injection rules (parameter overrides)
     for (const auto& rule : m_rules) {
@@ -87,7 +82,7 @@ QByteArray ProxyHotpatcher::processRequest(const QByteArray& requestData)
         if (!rule.searchPattern.isEmpty() && !rule.replacement.isEmpty()) {
             modified = bytePatchInPlace(modified, rule.searchPattern, rule.replacement);
             m_stats.patchesApplied++;
-            emit ruleApplied(rule.name, "Request:ParameterOverride");
+            ruleApplied(rule.name, "Request:ParameterOverride");
         }
     }
     
@@ -97,21 +92,21 @@ QByteArray ProxyHotpatcher::processRequest(const QByteArray& requestData)
     m_stats.avgProcessingTimeMs = (m_stats.avgProcessingTimeMs * (m_stats.requestsProcessed - 1) + elapsed) / m_stats.requestsProcessed;
     
     if (modified != requestData) {
-        emit requestModified(requestData, modified);
+        requestModified(requestData, modified);
     }
     
     return modified;
 }
 
-QJsonObject ProxyHotpatcher::processRequestJson(const QJsonObject& request)
+void* ProxyHotpatcher::processRequestJson(const void*& request)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled) {
         return request;
     }
     
-    QJsonObject modified = request;
+    void* modified = request;
     
     // Apply JSON-level parameter overrides
     for (const auto& rule : m_rules) {
@@ -120,18 +115,18 @@ QJsonObject ProxyHotpatcher::processRequestJson(const QJsonObject& request)
         }
         
         if (!rule.parameterName.isEmpty()) {
-            modified[rule.parameterName] = QJsonValue::fromVariant(rule.parameterValue);
+            modified[rule.parameterName] = void*::fromVariant(rule.parameterValue);
             m_stats.patchesApplied++;
-            emit ruleApplied(rule.name, "Request:JSONParameterOverride");
+            ruleApplied(rule.name, "Request:JSONParameterOverride");
         }
     }
     
     return modified;
 }
 
-QByteArray ProxyHotpatcher::processResponse(const QByteArray& responseData)
+std::vector<uint8_t> ProxyHotpatcher::processResponse(const std::vector<uint8_t>& responseData)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled || responseData.isEmpty()) {
         return responseData;
@@ -139,7 +134,7 @@ QByteArray ProxyHotpatcher::processResponse(const QByteArray& responseData)
     
     m_timer.start();
     
-    QByteArray modified = responseData;
+    std::vector<uint8_t> modified = responseData;
     
     // Apply agent validation and correction
     for (const auto& rule : m_rules) {
@@ -152,12 +147,12 @@ QByteArray ProxyHotpatcher::processResponse(const QByteArray& responseData)
             
             if (!validation.isValid) {
                 m_stats.validationFailures++;
-                emit validationFailed(validation.errorMessage, validation.violations);
+                validationFailed(validation.errorMessage, validation.violations);
                 
                 if (!validation.correctedOutput.isEmpty()) {
                     modified = validation.correctedOutput.toUtf8();
                     m_stats.correctionsApplied++;
-                    emit agentOutputCorrected(validation.errorMessage, modified);
+                    agentOutputCorrected(validation.errorMessage, modified);
                 }
             }
         }
@@ -165,7 +160,7 @@ QByteArray ProxyHotpatcher::processResponse(const QByteArray& responseData)
             if (!rule.searchPattern.isEmpty() && !rule.replacement.isEmpty()) {
                 modified = bytePatchInPlace(modified, rule.searchPattern, rule.replacement);
                 m_stats.patchesApplied++;
-                emit ruleApplied(rule.name, "Response:Correction");
+                ruleApplied(rule.name, "Response:Correction");
             }
         }
     }
@@ -176,22 +171,22 @@ QByteArray ProxyHotpatcher::processResponse(const QByteArray& responseData)
     m_stats.avgProcessingTimeMs = (m_stats.avgProcessingTimeMs * (m_stats.responsesProcessed - 1) + elapsed) / m_stats.responsesProcessed;
     
     if (modified != responseData) {
-        emit responseModified(responseData, modified);
+        responseModified(responseData, modified);
     }
     
     return modified;
 }
 
-QJsonObject ProxyHotpatcher::processResponseJson(const QJsonObject& response)
+void* ProxyHotpatcher::processResponseJson(const void*& response)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled) {
         return response;
     }
     
     // Extract response text for validation
-    QString content;
+    std::string content;
     if (response.contains("content")) {
         content = response["content"].toString();
     } else if (response.contains("text")) {
@@ -206,7 +201,7 @@ QJsonObject ProxyHotpatcher::processResponseJson(const QJsonObject& response)
     AgentValidation validation = validateAgentOutput(content.toUtf8());
     
     if (!validation.isValid && !validation.correctedOutput.isEmpty()) {
-        QJsonObject modified = response;
+        void* modified = response;
         
         if (modified.contains("content")) {
             modified["content"] = validation.correctedOutput;
@@ -221,9 +216,9 @@ QJsonObject ProxyHotpatcher::processResponseJson(const QJsonObject& response)
     return response;
 }
 
-QByteArray ProxyHotpatcher::processStreamChunk(const QByteArray& chunk, int chunkIndex)
+std::vector<uint8_t> ProxyHotpatcher::processStreamChunk(const std::vector<uint8_t>& chunk, int chunkIndex)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled) {
         return chunk;
@@ -234,11 +229,11 @@ QByteArray ProxyHotpatcher::processStreamChunk(const QByteArray& chunk, int chun
     // Check for RST injection (stream termination)
     if (shouldTerminateStream(chunkIndex)) {
         m_stats.streamsTerminated++;
-        emit streamTerminated(chunkIndex, "RST Injection triggered");
-        return QByteArray(); // Empty = terminate stream
+        streamTerminated(chunkIndex, "RST Injection triggered");
+        return std::vector<uint8_t>(); // Empty = terminate stream
     }
     
-    QByteArray modified = chunk;
+    std::vector<uint8_t> modified = chunk;
     
     // Apply stream-level corrections
     for (const auto& rule : m_rules) {
@@ -258,7 +253,7 @@ QByteArray ProxyHotpatcher::processStreamChunk(const QByteArray& chunk, int chun
     return modified;
 }
 
-QByteArray ProxyHotpatcher::bytePatchInPlace(const QByteArray& data, const QByteArray& pattern, const QByteArray& replacement)
+std::vector<uint8_t> ProxyHotpatcher::bytePatchInPlace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement)
 {
     if (pattern.isEmpty() || data.isEmpty()) {
         return data;
@@ -266,7 +261,7 @@ QByteArray ProxyHotpatcher::bytePatchInPlace(const QByteArray& data, const QByte
     
     // Zero-copy optimization when sizes match
     if (pattern.size() == replacement.size()) {
-        QByteArray result = data;
+        std::vector<uint8_t> result = data;
         PatternMatch match = findPattern(result, pattern);
         
         while (match.isValid()) {
@@ -280,14 +275,14 @@ QByteArray ProxyHotpatcher::bytePatchInPlace(const QByteArray& data, const QByte
     }
     
     // Fallback to standard replace (create copy first)
-    QByteArray result = data;
+    std::vector<uint8_t> result = data;
     return result.replace(pattern, replacement);
 }
 
-PatternMatch ProxyHotpatcher::findPattern(const QByteArray& data, const QByteArray& pattern, qint64 startPos) const
+PatternMatch ProxyHotpatcher::findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, qint64 startPos) const
 {
     if (pattern.isEmpty() || startPos >= data.size()) {
-        return PatternMatch{-1, 0, QByteArray()};
+        return PatternMatch{-1, 0, std::vector<uint8_t>()};
     }
     
     // Use Boyer-Moore for patterns > 4 bytes
@@ -307,29 +302,29 @@ PatternMatch ProxyHotpatcher::findPattern(const QByteArray& data, const QByteArr
         }
     }
     
-    return PatternMatch{-1, 0, QByteArray()};
+    return PatternMatch{-1, 0, std::vector<uint8_t>()};
 }
 
-QByteArray ProxyHotpatcher::findAndReplace(const QByteArray& data, const QByteArray& pattern, const QByteArray& replacement)
+std::vector<uint8_t> ProxyHotpatcher::findAndReplace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement)
 {
     return bytePatchInPlace(data, pattern, replacement);
 }
 
-PatternMatch ProxyHotpatcher::boyerMooreSearch(const QByteArray& data, const QByteArray& pattern) const
+PatternMatch ProxyHotpatcher::boyerMooreSearch(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern) const
 {
     if (pattern.isEmpty() || data.isEmpty()) {
-        return PatternMatch{-1, 0, QByteArray()};
+        return PatternMatch{-1, 0, std::vector<uint8_t>()};
     }
     
     qint64 n = data.size();
     qint64 m = pattern.size();
     
     if (m > n) {
-        return PatternMatch{-1, 0, QByteArray()};
+        return PatternMatch{-1, 0, std::vector<uint8_t>()};
     }
     
     // Build bad character table
-    QHash<quint8, qint64> badChar = buildBadCharTable(pattern);
+    std::unordered_map<quint8, qint64> badChar = buildBadCharTable(pattern);
     
     // Search
     qint64 s = 0; // shift of the pattern relative to data
@@ -353,12 +348,12 @@ PatternMatch ProxyHotpatcher::boyerMooreSearch(const QByteArray& data, const QBy
         s += std::max(1LL, j - shift);
     }
     
-    return PatternMatch{-1, 0, QByteArray()};
+    return PatternMatch{-1, 0, std::vector<uint8_t>()};
 }
 
-AgentValidation ProxyHotpatcher::validateAgentOutput(const QByteArray& output)
+AgentValidation ProxyHotpatcher::validateAgentOutput(const std::vector<uint8_t>& output)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     AgentValidation result = AgentValidation::valid();
     
@@ -397,14 +392,14 @@ AgentValidation ProxyHotpatcher::validateAgentOutput(const QByteArray& output)
         if (rule.enforcePlanFormat && !isPlanFormatValid(output)) {
             result.isValid = false;
             result.errorMessage = "Output does not match Plan mode format";
-            result.correctedOutput = QString::fromUtf8(enforcePlanFormat(output));
+            result.correctedOutput = std::string::fromUtf8(enforcePlanFormat(output));
             return result;
         }
         
         if (rule.enforceAgentFormat && !isAgentFormatValid(output)) {
             result.isValid = false;
             result.errorMessage = "Output does not match Agent mode format";
-            result.correctedOutput = QString::fromUtf8(enforceAgentFormat(output));
+            result.correctedOutput = std::string::fromUtf8(enforceAgentFormat(output));
             return result;
         }
     }
@@ -412,34 +407,34 @@ AgentValidation ProxyHotpatcher::validateAgentOutput(const QByteArray& output)
     return result;
 }
 
-AgentValidation ProxyHotpatcher::validatePlanMode(const QByteArray& output)
+AgentValidation ProxyHotpatcher::validatePlanMode(const std::vector<uint8_t>& output)
 {
     if (!isPlanFormatValid(output)) {
-        QString corrected = QString::fromUtf8(enforcePlanFormat(output));
+        std::string corrected = std::string::fromUtf8(enforcePlanFormat(output));
         return AgentValidation::invalid("Plan mode format violation", corrected);
     }
     
     return AgentValidation::valid();
 }
 
-AgentValidation ProxyHotpatcher::validateAgentMode(const QByteArray& output)
+AgentValidation ProxyHotpatcher::validateAgentMode(const std::vector<uint8_t>& output)
 {
     if (!isAgentFormatValid(output)) {
-        QString corrected = QString::fromUtf8(enforceAgentFormat(output));
+        std::string corrected = std::string::fromUtf8(enforceAgentFormat(output));
         return AgentValidation::invalid("Agent mode format violation", corrected);
     }
     
     return AgentValidation::valid();
 }
 
-AgentValidation ProxyHotpatcher::validateAskMode(const QByteArray& output)
+AgentValidation ProxyHotpatcher::validateAskMode(const std::vector<uint8_t>& output)
 {
     // Ask mode: verify the response contains verification elements
-    QString text = QString::fromUtf8(output);
+    std::string text = std::string::fromUtf8(output);
     
-    if (!text.contains("verify", Qt::CaseInsensitive) && 
-        !text.contains("check", Qt::CaseInsensitive) &&
-        !text.contains("confirm", Qt::CaseInsensitive)) {
+    if (!text.contains("verify", //CaseInsensitive) && 
+        !text.contains("check", //CaseInsensitive) &&
+        !text.contains("confirm", //CaseInsensitive)) {
         
         return AgentValidation::invalid("Ask mode should include verification steps");
     }
@@ -447,7 +442,7 @@ AgentValidation ProxyHotpatcher::validateAskMode(const QByteArray& output)
     return AgentValidation::valid();
 }
 
-QByteArray ProxyHotpatcher::correctAgentOutput(const QByteArray& output, const AgentValidation& validation)
+std::vector<uint8_t> ProxyHotpatcher::correctAgentOutput(const std::vector<uint8_t>& output, const AgentValidation& validation)
 {
     if (validation.isValid || validation.correctedOutput.isEmpty()) {
         return output;
@@ -456,29 +451,29 @@ QByteArray ProxyHotpatcher::correctAgentOutput(const QByteArray& output, const A
     return validation.correctedOutput.toUtf8();
 }
 
-QByteArray ProxyHotpatcher::enforcePlanFormat(const QByteArray& output)
+std::vector<uint8_t> ProxyHotpatcher::enforcePlanFormat(const std::vector<uint8_t>& output)
 {
-    QString text = QString::fromUtf8(output);
+    std::string text = std::string::fromUtf8(output);
     
     // Plan mode should start with subagent research, then present plan
-    if (!text.contains("runSubagent", Qt::CaseInsensitive)) {
+    if (!text.contains("runSubagent", //CaseInsensitive)) {
         text.prepend("I'm in Plan mode, and I need to run a subagent first to gather information.\n\n");
     }
     
-    if (!text.contains("plan", Qt::CaseInsensitive)) {
+    if (!text.contains("plan", //CaseInsensitive)) {
         text.append("\n\nHere is the proposed plan:\n1. [Step 1]\n2. [Step 2]\n3. [Step 3]");
     }
     
     return text.toUtf8();
 }
 
-QByteArray ProxyHotpatcher::enforceAgentFormat(const QByteArray& output)
+std::vector<uint8_t> ProxyHotpatcher::enforceAgentFormat(const std::vector<uint8_t>& output)
 {
-    QString text = QString::fromUtf8(output);
+    std::string text = std::string::fromUtf8(output);
     
     // Agent mode should use manage_todo_list and runSubagent
-    if (!text.contains("manage_todo_list", Qt::CaseInsensitive) && 
-        !text.contains("runSubagent", Qt::CaseInsensitive)) {
+    if (!text.contains("manage_todo_list", //CaseInsensitive) && 
+        !text.contains("runSubagent", //CaseInsensitive)) {
         
         text.prepend("I need to use manage_todo_list and runSubagent for this task.\n\n");
     }
@@ -497,48 +492,45 @@ bool ProxyHotpatcher::shouldTerminateStream(int chunkIndex) const
 
 void ProxyHotpatcher::setStreamTerminationPoint(int chunkCount)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_streamTerminationPoint = chunkCount;
-    qInfo() << "[ProxyHotpatcher] Stream termination set at chunk" << chunkCount;
 }
 
 void ProxyHotpatcher::clearStreamTermination()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_streamTerminationPoint = -1;
 }
 
 ProxyHotpatcher::Stats ProxyHotpatcher::getStatistics() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_stats;
 }
 
 void ProxyHotpatcher::resetStatistics()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats = Stats();
-    qInfo() << "[ProxyHotpatcher] Statistics reset";
 }
 
 void ProxyHotpatcher::setEnabled(bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enabled = enable;
-    qInfo() << "[ProxyHotpatcher] System" << (enable ? "enabled" : "disabled");
 }
 
 bool ProxyHotpatcher::isEnabled() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_enabled;
 }
 
 // Private helper methods
 
-QHash<quint8, qint64> ProxyHotpatcher::buildBadCharTable(const QByteArray& pattern) const
+std::unordered_map<quint8, qint64> ProxyHotpatcher::buildBadCharTable(const std::vector<uint8_t>& pattern) const
 {
-    QHash<quint8, qint64> table;
+    std::unordered_map<quint8, qint64> table;
     qint64 m = pattern.size();
     
     // Initialize all characters to -1
@@ -550,11 +542,11 @@ QHash<quint8, qint64> ProxyHotpatcher::buildBadCharTable(const QByteArray& patte
     return table;
 }
 
-QVector<qint64> ProxyHotpatcher::buildGoodSuffixTable(const QByteArray& pattern) const
+std::vector<qint64> ProxyHotpatcher::buildGoodSuffixTable(const std::vector<uint8_t>& pattern) const
 {
     qint64 m = pattern.size();
-    QVector<qint64> shift(m + 1, 0);
-    QVector<qint64> border(m + 1, 0);
+    std::vector<qint64> shift(m + 1, 0);
+    std::vector<qint64> border(m + 1, 0);
     
     // Preprocessing for good suffix heuristic
     qint64 i = m;
@@ -586,17 +578,17 @@ QVector<qint64> ProxyHotpatcher::buildGoodSuffixTable(const QByteArray& pattern)
     return shift;
 }
 
-bool ProxyHotpatcher::checkForbiddenPatterns(const QByteArray& output, QStringList& violations)
+bool ProxyHotpatcher::checkForbiddenPatterns(const std::vector<uint8_t>& output, std::vector<std::string>& violations)
 {
-    QString text = QString::fromUtf8(output);
+    std::string text = std::string::fromUtf8(output);
     
     for (const auto& rule : m_rules) {
         if (!rule.enabled || rule.type != ProxyHotpatchRule::AgentValidation) {
             continue;
         }
         
-        for (const QString& pattern : rule.forbiddenPatterns) {
-            if (text.contains(pattern, Qt::CaseInsensitive)) {
+        for (const std::string& pattern : rule.forbiddenPatterns) {
+            if (text.contains(pattern, //CaseInsensitive)) {
                 violations.append("Forbidden pattern: " + pattern);
                 return false;
             }
@@ -606,17 +598,17 @@ bool ProxyHotpatcher::checkForbiddenPatterns(const QByteArray& output, QStringLi
     return true;
 }
 
-bool ProxyHotpatcher::checkRequiredPatterns(const QByteArray& output, QStringList& violations)
+bool ProxyHotpatcher::checkRequiredPatterns(const std::vector<uint8_t>& output, std::vector<std::string>& violations)
 {
-    QString text = QString::fromUtf8(output);
+    std::string text = std::string::fromUtf8(output);
     
     for (const auto& rule : m_rules) {
         if (!rule.enabled || rule.type != ProxyHotpatchRule::AgentValidation) {
             continue;
         }
         
-        for (const QString& pattern : rule.requiredPatterns) {
-            if (!text.contains(pattern, Qt::CaseInsensitive)) {
+        for (const std::string& pattern : rule.requiredPatterns) {
+            if (!text.contains(pattern, //CaseInsensitive)) {
                 violations.append("Missing required pattern: " + pattern);
                 return false;
             }
@@ -626,49 +618,47 @@ bool ProxyHotpatcher::checkRequiredPatterns(const QByteArray& output, QStringLis
     return true;
 }
 
-bool ProxyHotpatcher::isPlanFormatValid(const QByteArray& output)
+bool ProxyHotpatcher::isPlanFormatValid(const std::vector<uint8_t>& output)
 {
-    QString text = QString::fromUtf8(output);
+    std::string text = std::string::fromUtf8(output);
     
     // Plan mode should mention planning and subagent
-    return text.contains("plan", Qt::CaseInsensitive) || 
-           text.contains("runSubagent", Qt::CaseInsensitive);
+    return text.contains("plan", //CaseInsensitive) || 
+           text.contains("runSubagent", //CaseInsensitive);
 }
 
-bool ProxyHotpatcher::isAgentFormatValid(const QByteArray& output)
+bool ProxyHotpatcher::isAgentFormatValid(const std::vector<uint8_t>& output)
 {
-    QString text = QString::fromUtf8(output);
+    std::string text = std::string::fromUtf8(output);
     
     // Agent mode should use todo list or subagent
-    return text.contains("manage_todo_list", Qt::CaseInsensitive) || 
-           text.contains("runSubagent", Qt::CaseInsensitive) ||
-           text.contains("todo", Qt::CaseInsensitive);
+    return text.contains("manage_todo_list", //CaseInsensitive) || 
+           text.contains("runSubagent", //CaseInsensitive) ||
+           text.contains("todo", //CaseInsensitive);
 }
 
 // Direct Memory Manipulation API (Proxy-Layer) Implementation
 
-PatchResult ProxyHotpatcher::directMemoryInject(size_t offset, const QByteArray& data)
+PatchResult ProxyHotpatcher::directMemoryInject(size_t offset, const std::vector<uint8_t>& data)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[ProxyHotpatcher] Injecting" << data.size() << "bytes at offset" << offset;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     m_stats.bytesPatched += data.size();
     m_stats.patchesApplied++;
     
-    emit ruleApplied("directMemoryInject", QString("Injected %1 bytes at offset %2").arg(data.size()).arg(offset));
+    ruleApplied("directMemoryInject", std::string("Injected %1 bytes at offset %2")));
     return PatchResult::ok("Memory injection completed", data.size());
 }
 
-PatchResult ProxyHotpatcher::directMemoryInjectBatch(const QHash<size_t, QByteArray>& injections)
+PatchResult ProxyHotpatcher::directMemoryInjectBatch(const std::unordered_map<size_t, std::vector<uint8_t>>& injections)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     int totalBytes = 0;
     for (auto it = injections.constBegin(); it != injections.constEnd(); ++it) {
         totalBytes += it.value().size();
     }
     
-    qInfo() << "[ProxyHotpatcher] Batch injection:" << injections.size() << "entries," << totalBytes << "bytes";
     
     m_stats.bytesPatched += totalBytes;
     m_stats.patchesApplied += injections.size();
@@ -676,19 +666,17 @@ PatchResult ProxyHotpatcher::directMemoryInjectBatch(const QHash<size_t, QByteAr
     return PatchResult::ok("Batch injection completed", totalBytes);
 }
 
-QByteArray ProxyHotpatcher::directMemoryExtract(size_t offset, size_t size) const
+std::vector<uint8_t> ProxyHotpatcher::directMemoryExtract(size_t offset, size_t size) const
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[ProxyHotpatcher] Extracting" << size << "bytes from offset" << offset;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     // Placeholder - actual implementation would extract from buffers
-    return QByteArray();
+    return std::vector<uint8_t>();
 }
 
-PatchResult ProxyHotpatcher::replaceInRequestBuffer(const QByteArray& pattern, const QByteArray& replacement)
+PatchResult ProxyHotpatcher::replaceInRequestBuffer(const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[ProxyHotpatcher] Request buffer pattern replacement:" << pattern.size() << "bytes ->" << replacement.size() << "bytes";
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     m_stats.bytesPatched += replacement.size();
     m_stats.patchesApplied++;
@@ -696,10 +684,9 @@ PatchResult ProxyHotpatcher::replaceInRequestBuffer(const QByteArray& pattern, c
     return PatchResult::ok("Request buffer patched");
 }
 
-PatchResult ProxyHotpatcher::replaceInResponseBuffer(const QByteArray& pattern, const QByteArray& replacement)
+PatchResult ProxyHotpatcher::replaceInResponseBuffer(const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[ProxyHotpatcher] Response buffer pattern replacement:" << pattern.size() << "bytes ->" << replacement.size() << "bytes";
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     m_stats.bytesPatched += replacement.size();
     m_stats.patchesApplied++;
@@ -707,10 +694,9 @@ PatchResult ProxyHotpatcher::replaceInResponseBuffer(const QByteArray& pattern, 
     return PatchResult::ok("Response buffer patched");
 }
 
-PatchResult ProxyHotpatcher::injectIntoStream(const QByteArray& chunk, int chunkIndex, const QByteArray& injection)
+PatchResult ProxyHotpatcher::injectIntoStream(const std::vector<uint8_t>& chunk, int chunkIndex, const std::vector<uint8_t>& injection)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[ProxyHotpatcher] Injecting into stream chunk" << chunkIndex << "(" << injection.size() << "bytes)";
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     m_stats.chunksProcessed++;
     m_stats.bytesPatched += injection.size();
@@ -719,20 +705,19 @@ PatchResult ProxyHotpatcher::injectIntoStream(const QByteArray& chunk, int chunk
     return PatchResult::ok("Stream injection completed");
 }
 
-QByteArray ProxyHotpatcher::extractFromStream(const QByteArray& chunk, int startOffset, int length)
+std::vector<uint8_t> ProxyHotpatcher::extractFromStream(const std::vector<uint8_t>& chunk, int startOffset, int length)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (startOffset < 0 || startOffset + length > chunk.size()) {
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     return chunk.mid(startOffset, length);
 }
 
-PatchResult ProxyHotpatcher::overwriteTokenBuffer(const QByteArray& tokenData)
+PatchResult ProxyHotpatcher::overwriteTokenBuffer(const std::vector<uint8_t>& tokenData)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[ProxyHotpatcher] Overwriting token buffer with" << tokenData.size() << "bytes";
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     m_stats.bytesPatched += tokenData.size();
     m_stats.patchesApplied++;
@@ -740,34 +725,32 @@ PatchResult ProxyHotpatcher::overwriteTokenBuffer(const QByteArray& tokenData)
     return PatchResult::ok("Token buffer overwritten");
 }
 
-PatchResult ProxyHotpatcher::modifyLogitsBatch(const QHash<size_t, float>& logitModifications)
+PatchResult ProxyHotpatcher::modifyLogitsBatch(const std::unordered_map<size_t, float>& logitModifications)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[ProxyHotpatcher] Modified logits for" << logitModifications.size() << "tokens";
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     m_stats.patchesApplied += logitModifications.size();
     
     return PatchResult::ok("Logits modified", logitModifications.size());
 }
 
-qint64 ProxyHotpatcher::searchInRequestBuffer(const QByteArray& pattern) const
+qint64 ProxyHotpatcher::searchInRequestBuffer(const std::vector<uint8_t>& pattern) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     // Returns position or -1 if not found
     return -1;
 }
 
-qint64 ProxyHotpatcher::searchInResponseBuffer(const QByteArray& pattern) const
+qint64 ProxyHotpatcher::searchInResponseBuffer(const std::vector<uint8_t>& pattern) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     // Returns position or -1 if not found
     return -1;
 }
 
 PatchResult ProxyHotpatcher::swapBufferRegions(size_t region1Offset, size_t region2Offset, size_t size)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[ProxyHotpatcher] Swapping buffer regions:" << size << "bytes at offsets" << region1Offset << "and" << region2Offset;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     m_stats.bytesPatched += 2 * size;
     m_stats.patchesApplied++;
@@ -777,8 +760,7 @@ PatchResult ProxyHotpatcher::swapBufferRegions(size_t region1Offset, size_t regi
 
 PatchResult ProxyHotpatcher::cloneBufferRegion(size_t sourceOffset, size_t destOffset, size_t size)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[ProxyHotpatcher] Cloning buffer region:" << size << "bytes from offset" << sourceOffset << "to" << destOffset;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     m_stats.bytesPatched += size;
     m_stats.patchesApplied++;

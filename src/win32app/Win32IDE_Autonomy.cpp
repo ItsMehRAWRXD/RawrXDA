@@ -5,18 +5,18 @@ AutonomyManager::AutonomyManager(AgenticBridge* bridge)
     : m_bridge(bridge), m_running(false), m_autoLoop(false),
       m_maxActionsPerMinute(30), m_actionsThisWindow(0) {
     m_windowStart = std::chrono::steady_clock::now();
-    LOG_INFO("AutonomyManager constructed");
+
 }
 
 AutonomyManager::~AutonomyManager() {
     stop();
-    LOG_INFO("AutonomyManager destroyed");
+
 }
 
 void AutonomyManager::start() {
     if (m_running.load()) return;
     m_running.store(true);
-    LOG_INFO("Autonomy started");
+
 }
 
 void AutonomyManager::stop() {
@@ -27,7 +27,7 @@ void AutonomyManager::stop() {
     if (m_loopThread.joinable()) {
         m_loopThread.join();
     }
-    LOG_INFO("Autonomy stopped");
+
 }
 
 void AutonomyManager::enableAutoLoop(bool enable) {
@@ -35,17 +35,17 @@ void AutonomyManager::enableAutoLoop(bool enable) {
         if (!m_running.load()) start();
         m_autoLoop.store(true);
         m_loopThread = std::thread([this]{ loop(); });
-        LOG_INFO("Autonomy auto loop enabled");
+
     } else if (!enable && m_autoLoop.load()) {
         m_autoLoop.store(false);
-        LOG_INFO("Autonomy auto loop disabled");
+
     }
 }
 
 void AutonomyManager::setGoal(const std::string& goal) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_goal = goal;
-    LOG_INFO("Goal set: " + goal);
+
 }
 
 std::string AutonomyManager::getGoal() const {
@@ -59,7 +59,7 @@ void AutonomyManager::addObservation(const std::string& obs) {
     if (m_memory.size() > 2048) {
         m_memory.erase(m_memory.begin()); // simple cap
     }
-    LOG_DEBUG("Observation added");
+
 }
 
 std::vector<std::string> AutonomyManager::getMemorySnapshot() {
@@ -88,12 +88,12 @@ std::string AutonomyManager::getStatus() const {
 }
 
 void AutonomyManager::loop() {
-    LOG_INFO("Autonomy loop thread started");
+
     while (m_autoLoop.load()) {
         tick();
         std::this_thread::sleep_for(std::chrono::milliseconds(800));
     }
-    LOG_INFO("Autonomy loop thread exiting");
+
 }
 
 std::string AutonomyManager::planNextAction() {
@@ -115,7 +115,7 @@ std::string AutonomyManager::planNextAction() {
 
 void AutonomyManager::executeAction(const std::string& action) {
     if (action == "NOOP") {
-        LOG_DEBUG("Planner produced NOOP");
+
         return;
     }
     if (!m_bridge || !m_bridge->IsInitialized()) {
@@ -135,7 +135,7 @@ void AutonomyManager::executeAction(const std::string& action) {
         auto resp = m_bridge->ExecuteAgentCommand(action);
         addObservation("RAW:" + resp.content);
     }
-    LOG_INFO("Executed autonomy action: " + action);
+
 }
 
 bool AutonomyManager::rateLimitAllow() {

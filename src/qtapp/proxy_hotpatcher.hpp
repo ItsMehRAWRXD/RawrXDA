@@ -1,31 +1,23 @@
 // proxy_hotpatcher.hpp - Agentic correction proxy with token reverse proxy byte hacking
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QByteArray>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QMutex>
-#include <QHash>
-#include <QRegularExpression>
-#include <QElapsedTimer>
+
 #include <functional>
 #include "model_memory_hotpatch.hpp"
 
 // Agent output validation result
 struct AgentValidation {
     bool isValid = true;
-    QString errorMessage;
-    QString correctedOutput;
-    QStringList violations;
+    std::string errorMessage;
+    std::string correctedOutput;
+    std::vector<std::string> violations;
     
     static AgentValidation valid() {
-        return AgentValidation{true, QString(), QString(), QStringList()};
+        return AgentValidation{true, std::string(), std::string(), std::vector<std::string>()};
     }
     
-    static AgentValidation invalid(const QString& error, const QString& corrected = QString()) {
-        return AgentValidation{false, error, corrected, QStringList()};
+    static AgentValidation invalid(const std::string& error, const std::string& corrected = std::string()) {
+        return AgentValidation{false, error, corrected, std::vector<std::string>()};
     }
 };
 
@@ -33,14 +25,14 @@ struct AgentValidation {
 struct PatternMatch {
     qint64 position = -1;
     qint64 length = 0;
-    QByteArray matchedData;
+    std::vector<uint8_t> matchedData;
     
     bool isValid() const { return position >= 0; }
 };
 
 // Proxy hotpatch rule
 struct ProxyHotpatchRule {
-    QString name;
+    std::string name;
     bool enabled = true;
     
     enum RuleType {
@@ -54,15 +46,15 @@ struct ProxyHotpatchRule {
     RuleType type;
     
     // Rule-specific data
-    QByteArray searchPattern;
-    QByteArray replacement;
-    QString parameterName;
-    QVariant parameterValue;
+    std::vector<uint8_t> searchPattern;
+    std::vector<uint8_t> replacement;
+    std::string parameterName;
+    std::any parameterValue;
     int abortAfterChunks = -1;
     
     // Agent validation rules
-    QStringList forbiddenPatterns;
-    QStringList requiredPatterns;
+    std::vector<std::string> forbiddenPatterns;
+    std::vector<std::string> requiredPatterns;
     bool enforcePlanFormat = false;
     bool enforceAgentFormat = false;
     
@@ -70,50 +62,49 @@ struct ProxyHotpatchRule {
     void* customValidator = nullptr;
 };
 
-class ProxyHotpatcher : public QObject
+class ProxyHotpatcher : public void
 {
-    Q_OBJECT
 
 public:
-    explicit ProxyHotpatcher(QObject* parent = nullptr);
+    explicit ProxyHotpatcher(void* parent = nullptr);
     ~ProxyHotpatcher() override;
 
     // Rule management
     void addRule(const ProxyHotpatchRule& rule);
-    void removeRule(const QString& name);
-    void enableRule(const QString& name, bool enable);
-    bool hasRule(const QString& name) const;
-    ProxyHotpatchRule getRule(const QString& name) const;
-    QStringList listRules() const;
+    void removeRule(const std::string& name);
+    void enableRule(const std::string& name, bool enable);
+    bool hasRule(const std::string& name) const;
+    ProxyHotpatchRule getRule(const std::string& name) const;
+    std::vector<std::string> listRules() const;
     void clearAllRules();
 
     // Request processing (Memory Injection via Proxy)
-    QByteArray processRequest(const QByteArray& requestData);
-    QJsonObject processRequestJson(const QJsonObject& request);
+    std::vector<uint8_t> processRequest(const std::vector<uint8_t>& requestData);
+    void* processRequestJson(const void*& request);
     
     // Response processing (Agent Correction)
-    QByteArray processResponse(const QByteArray& responseData);
-    QJsonObject processResponseJson(const QJsonObject& response);
-    QByteArray processStreamChunk(const QByteArray& chunk, int chunkIndex);
+    std::vector<uint8_t> processResponse(const std::vector<uint8_t>& responseData);
+    void* processResponseJson(const void*& response);
+    std::vector<uint8_t> processStreamChunk(const std::vector<uint8_t>& chunk, int chunkIndex);
     
     // Zero-copy byte patching (production-ready)
-    QByteArray bytePatchInPlace(const QByteArray& data, const QByteArray& pattern, const QByteArray& replacement);
-    PatternMatch findPattern(const QByteArray& data, const QByteArray& pattern, qint64 startPos = 0) const;
-    QByteArray findAndReplace(const QByteArray& data, const QByteArray& pattern, const QByteArray& replacement);
+    std::vector<uint8_t> bytePatchInPlace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement);
+    PatternMatch findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, qint64 startPos = 0) const;
+    std::vector<uint8_t> findAndReplace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement);
     
     // Boyer-Moore pattern matching (high-performance)
-    PatternMatch boyerMooreSearch(const QByteArray& data, const QByteArray& pattern) const;
+    PatternMatch boyerMooreSearch(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern) const;
     
     // Agent output validation
-    AgentValidation validateAgentOutput(const QByteArray& output);
-    AgentValidation validatePlanMode(const QByteArray& output);
-    AgentValidation validateAgentMode(const QByteArray& output);
-    AgentValidation validateAskMode(const QByteArray& output);
+    AgentValidation validateAgentOutput(const std::vector<uint8_t>& output);
+    AgentValidation validatePlanMode(const std::vector<uint8_t>& output);
+    AgentValidation validateAgentMode(const std::vector<uint8_t>& output);
+    AgentValidation validateAskMode(const std::vector<uint8_t>& output);
     
     // Agent correction logic
-    QByteArray correctAgentOutput(const QByteArray& output, const AgentValidation& validation);
-    QByteArray enforcePlanFormat(const QByteArray& output);
-    QByteArray enforceAgentFormat(const QByteArray& output);
+    std::vector<uint8_t> correctAgentOutput(const std::vector<uint8_t>& output, const AgentValidation& validation);
+    std::vector<uint8_t> enforcePlanFormat(const std::vector<uint8_t>& output);
+    std::vector<uint8_t> enforceAgentFormat(const std::vector<uint8_t>& output);
     
     // RST Injection (Response Stream Termination)
     bool shouldTerminateStream(int chunkIndex) const;
@@ -141,48 +132,47 @@ public:
     bool isEnabled() const;
     
     // Direct Memory Manipulation API (Proxy-Layer)
-    PatchResult directMemoryInject(size_t offset, const QByteArray& data);
-    PatchResult directMemoryInjectBatch(const QHash<size_t, QByteArray>& injections);
-    QByteArray directMemoryExtract(size_t offset, size_t size) const;
+    PatchResult directMemoryInject(size_t offset, const std::vector<uint8_t>& data);
+    PatchResult directMemoryInjectBatch(const std::unordered_map<size_t, std::vector<uint8_t>>& injections);
+    std::vector<uint8_t> directMemoryExtract(size_t offset, size_t size) const;
     
-    PatchResult replaceInRequestBuffer(const QByteArray& pattern, const QByteArray& replacement);
-    PatchResult replaceInResponseBuffer(const QByteArray& pattern, const QByteArray& replacement);
+    PatchResult replaceInRequestBuffer(const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement);
+    PatchResult replaceInResponseBuffer(const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement);
     
-    PatchResult injectIntoStream(const QByteArray& chunk, int chunkIndex, const QByteArray& injection);
-    QByteArray extractFromStream(const QByteArray& chunk, int startOffset, int length);
+    PatchResult injectIntoStream(const std::vector<uint8_t>& chunk, int chunkIndex, const std::vector<uint8_t>& injection);
+    std::vector<uint8_t> extractFromStream(const std::vector<uint8_t>& chunk, int startOffset, int length);
     
-    PatchResult overwriteTokenBuffer(const QByteArray& tokenData);
-    PatchResult modifyLogitsBatch(const QHash<size_t, float>& logitModifications);
+    PatchResult overwriteTokenBuffer(const std::vector<uint8_t>& tokenData);
+    PatchResult modifyLogitsBatch(const std::unordered_map<size_t, float>& logitModifications);
     
-    qint64 searchInRequestBuffer(const QByteArray& pattern) const;
-    qint64 searchInResponseBuffer(const QByteArray& pattern) const;
+    qint64 searchInRequestBuffer(const std::vector<uint8_t>& pattern) const;
+    qint64 searchInResponseBuffer(const std::vector<uint8_t>& pattern) const;
     
     PatchResult swapBufferRegions(size_t region1Offset, size_t region2Offset, size_t size);
     PatchResult cloneBufferRegion(size_t sourceOffset, size_t destOffset, size_t size);
 
-signals:
-    void ruleApplied(const QString& name, const QString& context);
-    void requestModified(const QByteArray& original, const QByteArray& modified);
-    void responseModified(const QByteArray& original, const QByteArray& modified);
-    void agentOutputCorrected(const QString& error, const QByteArray& corrected);
-    void validationFailed(const QString& error, const QStringList& violations);
-    void streamTerminated(int chunkIndex, const QString& reason);
-    void errorOccurred(const QString& error);
+    void ruleApplied(const std::string& name, const std::string& context);
+    void requestModified(const std::vector<uint8_t>& original, const std::vector<uint8_t>& modified);
+    void responseModified(const std::vector<uint8_t>& original, const std::vector<uint8_t>& modified);
+    void agentOutputCorrected(const std::string& error, const std::vector<uint8_t>& corrected);
+    void validationFailed(const std::string& error, const std::vector<std::string>& violations);
+    void streamTerminated(int chunkIndex, const std::string& reason);
+    void errorOccurred(const std::string& error);
 
 private:
     // Boyer-Moore preprocessing
-    QHash<quint8, qint64> buildBadCharTable(const QByteArray& pattern) const;
-    QVector<qint64> buildGoodSuffixTable(const QByteArray& pattern) const;
+    std::unordered_map<quint8, qint64> buildBadCharTable(const std::vector<uint8_t>& pattern) const;
+    std::vector<qint64> buildGoodSuffixTable(const std::vector<uint8_t>& pattern) const;
     
     // Agent validation helpers
-    bool checkForbiddenPatterns(const QByteArray& output, QStringList& violations);
-    bool checkRequiredPatterns(const QByteArray& output, QStringList& violations);
-    bool isPlanFormatValid(const QByteArray& output);
-    bool isAgentFormatValid(const QByteArray& output);
+    bool checkForbiddenPatterns(const std::vector<uint8_t>& output, std::vector<std::string>& violations);
+    bool checkRequiredPatterns(const std::vector<uint8_t>& output, std::vector<std::string>& violations);
+    bool isPlanFormatValid(const std::vector<uint8_t>& output);
+    bool isAgentFormatValid(const std::vector<uint8_t>& output);
     
     // Data members
-    mutable QMutex m_mutex;
-    QHash<QString, ProxyHotpatchRule> m_rules;
+    mutable std::mutex m_mutex;
+    std::unordered_map<std::string, ProxyHotpatchRule> m_rules;
     
     Stats m_stats;
     bool m_enabled = true;
@@ -191,3 +181,4 @@ private:
     
     QElapsedTimer m_timer;
 };
+

@@ -1,24 +1,21 @@
 // hybrid_cloud_manager.cpp - Multi-Cloud + Ollama AI Execution Manager
 #include "hybrid_cloud_manager.h"
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QNetworkRequest>
-#include <QUrlQuery>
+
+
 #include <iostream>
 
-HybridCloudManager::HybridCloudManager(QObject* parent)
-    : QObject(parent),
-      networkManager(new QNetworkAccessManager(this)),
+HybridCloudManager::HybridCloudManager(void* parent)
+    : void(parent),
+      networkManager(new void*(this)),
       healthCheckIntervalMs(30000),
       costThresholdUSD(0.01),
       maxRetries(3),
       localExecutionEnabled(true),
       totalCostUSD(0.0) {
     
-    healthCheckTimer = new QTimer(this);
+    healthCheckTimer = new void*(this);
     healthCheckTimer->setInterval(healthCheckIntervalMs);
-    connect(healthCheckTimer, &QTimer::timeout, this, &HybridCloudManager::checkAllProvidersHealth);
-    
+// Qt connect removed
     setupDefaultProviders();
     healthCheckTimer->start();
     
@@ -42,7 +39,7 @@ void HybridCloudManager::setupDefaultProviders() {
     ollama.costPerRequest = 0.0; // Free for local
     ollama.averageLatency = 500.0;
     
-    QJsonObject ollamaCapabilities;
+    void* ollamaCapabilities;
     ollamaCapabilities["streaming"] = true;
     ollamaCapabilities["embeddings"] = true;
     ollamaCapabilities["chat"] = true;
@@ -63,7 +60,7 @@ void HybridCloudManager::setupDefaultProviders() {
     huggingface.costPerRequest = 0.001;
     huggingface.averageLatency = 2000.0;
     
-    QJsonObject hfCapabilities;
+    void* hfCapabilities;
     hfCapabilities["text_generation"] = true;
     hfCapabilities["translation"] = true;
     hfCapabilities["summarization"] = true;
@@ -124,7 +121,7 @@ bool HybridCloudManager::addProvider(const CloudProvider& provider) {
     return true;
 }
 
-bool HybridCloudManager::removeProvider(const QString& providerId) {
+bool HybridCloudManager::removeProvider(const std::string& providerId) {
     if (!providers.contains(providerId)) {
         return false;
     }
@@ -134,8 +131,8 @@ bool HybridCloudManager::removeProvider(const QString& providerId) {
     return true;
 }
 
-bool HybridCloudManager::configureProvider(const QString& providerId, const QString& apiKey, 
-                                          const QString& endpoint, const QString& region) {
+bool HybridCloudManager::configureProvider(const std::string& providerId, const std::string& apiKey, 
+                                          const std::string& endpoint, const std::string& region) {
     if (!providers.contains(providerId)) {
         std::cout << "[HybridCloudManager] Provider not found: " << providerId.toStdString() << std::endl;
         return false;
@@ -155,16 +152,16 @@ bool HybridCloudManager::configureProvider(const QString& providerId, const QStr
     return true;
 }
 
-CloudProvider HybridCloudManager::getProvider(const QString& providerId) const {
+CloudProvider HybridCloudManager::getProvider(const std::string& providerId) const {
     return providers.value(providerId);
 }
 
-QVector<CloudProvider> HybridCloudManager::getAllProviders() const {
+std::vector<CloudProvider> HybridCloudManager::getAllProviders() const {
     return providers.values().toVector();
 }
 
-QVector<CloudProvider> HybridCloudManager::getHealthyProviders() const {
-    QVector<CloudProvider> healthy;
+std::vector<CloudProvider> HybridCloudManager::getHealthyProviders() const {
+    std::vector<CloudProvider> healthy;
     for (const CloudProvider& provider : providers.values()) {
         if (provider.isHealthy && provider.isEnabled) {
             healthy.append(provider);
@@ -174,7 +171,7 @@ QVector<CloudProvider> HybridCloudManager::getHealthyProviders() const {
 }
 
 HybridExecution HybridCloudManager::planExecution(const ExecutionRequest& request, 
-                                                  const QString& executionType) {
+                                                  const std::string& executionType) {
     HybridExecution plan;
     plan.requestId = request.requestId;
     plan.useCloud = false;
@@ -196,7 +193,7 @@ HybridExecution HybridCloudManager::planExecution(const ExecutionRequest& reques
     }
     
     // Find best cloud provider based on cost, latency, and health
-    QVector<CloudProvider> healthyProviders = getHealthyProviders();
+    std::vector<CloudProvider> healthyProviders = getHealthyProviders();
     
     if (healthyProviders.isEmpty()) {
         plan.reasoning = "No healthy providers available";
@@ -235,8 +232,8 @@ HybridExecution HybridCloudManager::planExecution(const ExecutionRequest& reques
         plan.useCloud = true;
         plan.selectedProvider = bestProvider.providerId;
         plan.selectedModel = request.taskType;
-        plan.reasoning = QString("Selected %1: best cost/latency/health score (%.2f)")
-                        .arg(bestProvider.name).arg(bestScore);
+        plan.reasoning = std::string("Selected %1: best cost/latency/health score (%.2f)")
+                        ;
         plan.estimatedCost = bestProvider.costPerRequest;
         plan.estimatedLatency = bestProvider.averageLatency;
         plan.confidenceScore = bestScore;
@@ -257,13 +254,13 @@ ExecutionResult HybridCloudManager::executeWithFailover(const ExecutionRequest& 
     ExecutionResult result;
     result.requestId = request.requestId;
     result.success = false;
-    result.completedAt = QDateTime::currentDateTime();
+    result.completedAt = std::chrono::system_clock::time_point::currentDateTime();
     
     // Plan execution
     HybridExecution plan = planExecution(request, "balanced");
     
     int attempt = 0;
-    QVector<CloudProvider> healthyProviders = getHealthyProviders();
+    std::vector<CloudProvider> healthyProviders = getHealthyProviders();
     
     // Try primary provider first
     if (plan.useCloud && !plan.selectedProvider.isEmpty()) {
@@ -309,8 +306,8 @@ ExecutionResult HybridCloudManager::executeWithFailover(const ExecutionRequest& 
 }
 
 ExecutionResult HybridCloudManager::executeOnCloud(const ExecutionRequest& request, 
-                                                   const QString& providerId, 
-                                                   const QString& modelId) {
+                                                   const std::string& providerId, 
+                                                   const std::string& modelId) {
     ExecutionResult result;
     result.requestId = request.requestId;
     result.executionLocation = providerId;
@@ -350,37 +347,37 @@ ExecutionResult HybridCloudManager::executeOnOllama(const ExecutionRequest& requ
     CloudProvider ollama = providers["ollama"];
     
     // Build Ollama API request
-    QJsonObject requestBody;
+    void* requestBody;
     requestBody["model"] = "codellama"; // Default model, should be configurable
     requestBody["prompt"] = request.prompt;
     requestBody["stream"] = false;
     
-    QJsonObject options;
+    void* options;
     options["temperature"] = request.temperature;
     options["num_predict"] = request.maxTokens;
     requestBody["options"] = options;
     
-    QNetworkRequest netRequest(QUrl(ollama.endpoint + "/api/generate"));
+    QNetworkRequest netRequest(std::string(ollama.endpoint + "/api/generate"));
     netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QByteArray requestData = QJsonDocument(requestBody).toJson();
+    std::vector<uint8_t> requestData = void*(requestBody).toJson();
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QNetworkReply* reply = networkManager->post(netRequest, requestData);
+    void** reply = networkManager->post(netRequest, requestData);
     
     // Synchronous wait (for simplicity - should be async in production)
-    QEventLoop loop;
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    void* loop;
+// Qt connect removed
     loop.exec();
     
     result.latencyMs = timer.elapsed();
     
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray responseData = reply->readAll();
-        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
-        QJsonObject responseObj = responseDoc.object();
+    if (reply->error() == void*::NoError) {
+        std::vector<uint8_t> responseData = reply->readAll();
+        void* responseDoc = void*::fromJson(responseData);
+        void* responseObj = responseDoc.object();
         
         result.response = responseObj["response"].toString();
         result.modelUsed = responseObj["model"].toString();
@@ -400,13 +397,13 @@ ExecutionResult HybridCloudManager::executeOnOllama(const ExecutionRequest& requ
     }
     
     reply->deleteLater();
-    result.completedAt = QDateTime::currentDateTime();
+    result.completedAt = std::chrono::system_clock::time_point::currentDateTime();
     
     return result;
 }
 
 ExecutionResult HybridCloudManager::executeOnHuggingFace(const ExecutionRequest& request, 
-                                                         const QString& modelId) {
+                                                         const std::string& modelId) {
     ExecutionResult result;
     result.requestId = request.requestId;
     result.executionLocation = "huggingface";
@@ -421,43 +418,43 @@ ExecutionResult HybridCloudManager::executeOnHuggingFace(const ExecutionRequest&
     }
     
     // Build HuggingFace API request
-    QString apiUrl = hf.endpoint + "/models/" + result.modelUsed;
+    std::string apiUrl = hf.endpoint + "/models/" + result.modelUsed;
     
-    QJsonObject requestBody;
+    void* requestBody;
     requestBody["inputs"] = request.prompt;
     
-    QJsonObject parameters;
+    void* parameters;
     parameters["max_new_tokens"] = request.maxTokens;
     parameters["temperature"] = request.temperature;
     parameters["return_full_text"] = false;
     requestBody["parameters"] = parameters;
     
-    QUrl requestUrl(apiUrl);
+    std::string requestUrl(apiUrl);
     QNetworkRequest netRequest(requestUrl);
     netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     netRequest.setRawHeader("Authorization", ("Bearer " + hf.apiKey).toUtf8());
     
-    QByteArray requestData = QJsonDocument(requestBody).toJson();
+    std::vector<uint8_t> requestData = void*(requestBody).toJson();
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QNetworkReply* reply = networkManager->post(netRequest, requestData);
+    void** reply = networkManager->post(netRequest, requestData);
     
-    QEventLoop loop;
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    void* loop;
+// Qt connect removed
     loop.exec();
     
     result.latencyMs = timer.elapsed();
     
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray responseData = reply->readAll();
-        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+    if (reply->error() == void*::NoError) {
+        std::vector<uint8_t> responseData = reply->readAll();
+        void* responseDoc = void*::fromJson(responseData);
         
         if (responseDoc.isArray()) {
-            QJsonArray responseArray = responseDoc.array();
+            void* responseArray = responseDoc.array();
             if (!responseArray.isEmpty()) {
-                QJsonObject firstResult = responseArray[0].toObject();
+                void* firstResult = responseArray[0].toObject();
                 result.response = firstResult["generated_text"].toString();
                 result.success = true;
             }
@@ -475,20 +472,20 @@ ExecutionResult HybridCloudManager::executeOnHuggingFace(const ExecutionRequest&
     }
     
     reply->deleteLater();
-    result.completedAt = QDateTime::currentDateTime();
+    result.completedAt = std::chrono::system_clock::time_point::currentDateTime();
     
     return result;
 }
 
 ExecutionResult HybridCloudManager::executeOnAWS(const ExecutionRequest& request, 
-                                                 const QString& modelId) {
+                                                 const std::string& modelId) {
     ExecutionResult result;
     result.requestId = request.requestId;
     result.executionLocation = "aws";
     result.modelUsed = modelId;
     result.success = false;
     result.errorMessage = "AWS SageMaker integration not yet implemented";
-    result.completedAt = QDateTime::currentDateTime();
+    result.completedAt = std::chrono::system_clock::time_point::currentDateTime();
     
     // TODO: Implement AWS SageMaker Runtime API integration
     // Requires AWS SDK or manual signing of requests
@@ -497,14 +494,14 @@ ExecutionResult HybridCloudManager::executeOnAWS(const ExecutionRequest& request
 }
 
 ExecutionResult HybridCloudManager::executeOnAzure(const ExecutionRequest& request, 
-                                                   const QString& modelId) {
+                                                   const std::string& modelId) {
     ExecutionResult result;
     result.requestId = request.requestId;
     result.executionLocation = "azure";
     result.modelUsed = modelId;
     result.success = false;
     result.errorMessage = "Azure ML integration not yet implemented";
-    result.completedAt = QDateTime::currentDateTime();
+    result.completedAt = std::chrono::system_clock::time_point::currentDateTime();
     
     // TODO: Implement Azure ML REST API integration
     
@@ -512,14 +509,14 @@ ExecutionResult HybridCloudManager::executeOnAzure(const ExecutionRequest& reque
 }
 
 ExecutionResult HybridCloudManager::executeOnGCP(const ExecutionRequest& request, 
-                                                 const QString& modelId) {
+                                                 const std::string& modelId) {
     ExecutionResult result;
     result.requestId = request.requestId;
     result.executionLocation = "gcp";
     result.modelUsed = modelId;
     result.success = false;
     result.errorMessage = "GCP Vertex AI integration not yet implemented";
-    result.completedAt = QDateTime::currentDateTime();
+    result.completedAt = std::chrono::system_clock::time_point::currentDateTime();
     
     // TODO: Implement GCP Vertex AI REST API integration
     
@@ -573,7 +570,7 @@ void HybridCloudManager::recordExecution(const ExecutionResult& result) {
     }
 }
 
-void HybridCloudManager::checkProviderHealth(const QString& providerId) {
+void HybridCloudManager::checkProviderHealth(const std::string& providerId) {
     if (!providers.contains(providerId)) {
         return;
     }
@@ -582,21 +579,19 @@ void HybridCloudManager::checkProviderHealth(const QString& providerId) {
     
     // Special handling for Ollama - check /api/tags endpoint
     if (providerId == "ollama") {
-        QNetworkRequest request(QUrl(provider.endpoint + "/api/tags"));
-        QNetworkReply* reply = networkManager->get(request);
+        QNetworkRequest request(std::string(provider.endpoint + "/api/tags"));
+        void** reply = networkManager->get(request);
         
-        QEventLoop loop;
-        QTimer timeout;
+        void* loop;
+        void* timeout;
         timeout.setSingleShot(true);
         timeout.setInterval(5000); // 5 second timeout
-        
-        connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-        connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-        
+// Qt connect removed
+// Qt connect removed
         timeout.start();
         loop.exec();
         
-        if (reply->error() == QNetworkReply::NoError) {
+        if (reply->error() == void*::NoError) {
             provider.isHealthy = true;
             std::cout << "[HybridCloudManager] Ollama health check: HEALTHY" << std::endl;
         } else {
@@ -606,32 +601,30 @@ void HybridCloudManager::checkProviderHealth(const QString& providerId) {
         }
         
         reply->deleteLater();
-        provider.lastHealthCheck = QDateTime::currentDateTime();
+        provider.lastHealthCheck = std::chrono::system_clock::time_point::currentDateTime();
         return;
     }
     
     // For other providers, do a simple ping
-    QNetworkRequest request(QUrl(provider.endpoint));
+    QNetworkRequest request(std::string(provider.endpoint));
     if (!provider.apiKey.isEmpty()) {
         request.setRawHeader("Authorization", ("Bearer " + provider.apiKey).toUtf8());
     }
     
-    QNetworkReply* reply = networkManager->get(request);
+    void** reply = networkManager->get(request);
     
-    QEventLoop loop;
-    QTimer timeout;
+    void* loop;
+    void* timeout;
     timeout.setSingleShot(true);
     timeout.setInterval(5000);
-    
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-    
+// Qt connect removed
+// Qt connect removed
     timeout.start();
     loop.exec();
     
-    provider.isHealthy = (reply->error() == QNetworkReply::NoError || 
-                         reply->error() == QNetworkReply::AuthenticationRequiredError);
-    provider.lastHealthCheck = QDateTime::currentDateTime();
+    provider.isHealthy = (reply->error() == void*::NoError || 
+                         reply->error() == void*::AuthenticationRequiredError);
+    provider.lastHealthCheck = std::chrono::system_clock::time_point::currentDateTime();
     
     reply->deleteLater();
     
@@ -642,22 +635,22 @@ void HybridCloudManager::checkProviderHealth(const QString& providerId) {
 void HybridCloudManager::checkAllProvidersHealth() {
     std::cout << "[HybridCloudManager] Running health checks for all providers..." << std::endl;
     
-    for (const QString& providerId : providers.keys()) {
+    for (const std::string& providerId : providers.keys()) {
         if (providers[providerId].isEnabled) {
             checkProviderHealth(providerId);
         }
     }
     
-    emit healthCheckCompleted();
+    healthCheckCompleted();
 }
 
 CostMetrics HybridCloudManager::getCostMetrics() const {
     CostMetrics metrics;
     metrics.totalCostUSD = totalCostUSD;
     
-    QDateTime now = QDateTime::currentDateTime();
-    QDateTime todayStart = QDateTime(now.date(), QTime(0, 0));
-    QDateTime monthStart = QDateTime(QDate(now.date().year(), now.date().month(), 1), QTime(0, 0));
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::time_point::currentDateTime();
+    std::chrono::system_clock::time_point todayStart = std::chrono::system_clock::time_point(now.date(), std::chrono::system_clock::time_point(0, 0));
+    std::chrono::system_clock::time_point monthStart = std::chrono::system_clock::time_point(std::chrono::system_clock::time_point(now.date().year(), now.date().month(), 1), std::chrono::system_clock::time_point(0, 0));
     
     metrics.todayCostUSD = 0.0;
     metrics.monthCostUSD = 0.0;
@@ -677,7 +670,7 @@ CostMetrics HybridCloudManager::getCostMetrics() const {
     return metrics;
 }
 
-QVector<ExecutionResult> HybridCloudManager::getExecutionHistory(int limit) const {
+std::vector<ExecutionResult> HybridCloudManager::getExecutionHistory(int limit) const {
     if (limit <= 0 || limit > executionHistory.size()) {
         return executionHistory;
     }
@@ -716,10 +709,10 @@ double HybridCloudManager::getTotalCost() const {
     return totalCostUSD;
 }
 
-void HybridCloudManager::onNetworkReplyFinished(QNetworkReply* reply) {
+void HybridCloudManager::onNetworkReplyFinished(void** reply) {
     // Handle async network replies if needed
     if (reply) {
-        QString requestId = reply->property("requestId").toString();
+        std::string requestId = reply->property("requestId").toString();
         if (!requestId.isEmpty()) {
             activeRequests.remove(requestId);
         }
@@ -730,3 +723,4 @@ void HybridCloudManager::onNetworkReplyFinished(QNetworkReply* reply) {
 void HybridCloudManager::onHealthCheckTimerTimeout() {
     checkAllProvidersHealth();
 }
+

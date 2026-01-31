@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include <QPlainTextEdit>
-#include <QTimer>
+
 #include "lsp_client.h"
 #include "ghost_text_renderer.h"
 #include "ai_completion_provider.h"
@@ -28,10 +27,9 @@ namespace RawrXD {
  */
 class AgenticTextEdit : public QPlainTextEdit
 {
-    Q_OBJECT
 
 public:
-    explicit AgenticTextEdit(QWidget* parent = nullptr);
+    explicit AgenticTextEdit(void* parent = nullptr);
     ~AgenticTextEdit() override = default;
 
     /**
@@ -79,12 +77,12 @@ public:
     /**
      * Set document URI (for LSP communication)
      */
-    void setDocumentUri(const QString& uri);
+    void setDocumentUri(const std::string& uri);
 
     /**
      * Get document URI
      */
-    QString documentUri() const { return m_documentUri; }
+    std::string documentUri() const { return m_documentUri; }
 
     /**
      * Enable/disable auto-completions
@@ -101,11 +99,11 @@ public:
      */
     void setCompletionDelay(int ms);
 
-signals:
+
     /**
      * Emitted when ghost text is accepted
      */
-    void completionAccepted(const QString& text);
+    void completionAccepted(const std::string& text);
 
     /**
      * Emitted when ghost text is dismissed
@@ -115,31 +113,31 @@ signals:
 protected:
     void keyPressEvent(QKeyEvent* event) override;
 
-private slots:
+private:
     void onTextChanged();
     void onCursorPositionChanged();
     void onCompletionTimeout();
-    void onCompletionsReceived(const QString& uri, int line, int character, const QVector<CompletionItem>& items);
-    void onAICompletionsReceived(const QVector<AICompletion>& completions);
-    void onAICompletionError(const QString& error);
-    void onGhostTextAccepted(const QString& text);
+    void onCompletionsReceived(const std::string& uri, int line, int character, const std::vector<CompletionItem>& items);
+    void onAICompletionsReceived(const std::vector<AICompletion>& completions);
+    void onAICompletionError(const std::string& error);
+    void onGhostTextAccepted(const std::string& text);
     void onGhostTextDismissed();
 
 private:
     void triggerCompletion();
     void syncDocumentToLSP();
-    QString getCurrentLineText() const;
-    bool shouldTriggerCompletion(const QString& lineText) const;
+    std::string getCurrentLineText() const;
+    bool shouldTriggerCompletion(const std::string& lineText) const;
 
     LSPClient* m_lspClient{};
     AICompletionProvider* m_aiProvider{};
     GhostTextRenderer* m_ghostRenderer{};
     
-    QString m_documentUri;
-    QString m_languageId = "cpp";
+    std::string m_documentUri;
+    std::string m_languageId = "cpp";
     int m_documentVersion = 0;
     
-    QTimer* m_completionTimer{};
+    void** m_completionTimer{};
     int m_completionDelay = 300;  // 300ms debounce
     bool m_autoCompletionsEnabled = true;
     bool m_aiCompletionsEnabled = true;  // AI completions enabled by default
@@ -148,3 +146,4 @@ private:
 };
 
 } // namespace RawrXD
+

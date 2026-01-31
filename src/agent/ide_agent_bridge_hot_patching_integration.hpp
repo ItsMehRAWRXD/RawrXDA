@@ -14,8 +14,7 @@
 #include "gguf_proxy_server.hpp"
 
 #include <memory>
-#include <QObject>
-#include <QJsonObject>
+
 
 /**
  * @class IDEAgentBridgeWithHotPatching
@@ -39,10 +38,9 @@
  * \endcode
  */
 class IDEAgentBridgeWithHotPatching : public IDEAgentBridge {
-    Q_OBJECT
 
 public:
-    explicit IDEAgentBridgeWithHotPatching(QObject* parent = nullptr);
+    explicit IDEAgentBridgeWithHotPatching(void* parent = nullptr);
     ~IDEAgentBridgeWithHotPatching() override;
 
     /**
@@ -80,7 +78,7 @@ public:
     /**
      * Get hot patching statistics
      */
-    QJsonObject getHotPatchingStatistics() const;
+    void* getHotPatchingStatistics() const;
 
     /**
      * Enable/disable hot patching at runtime
@@ -90,22 +88,22 @@ public:
     /**
      * Load correction patterns from database
      */
-    void loadCorrectionPatterns(const QString& databasePath);
+    void loadCorrectionPatterns(const std::string& databasePath);
 
     /**
      * Load behavior patches from database
      */
-    void loadBehaviorPatches(const QString& databasePath);
+    void loadBehaviorPatches(const std::string& databasePath);
 
     /**
      * Runtime configuration: proxy port
      * @note Changing this requires stopping and restarting the proxy
      */
-    QString proxyPort() const { return m_proxyPort; }
-    void setProxyPort(const QString& port) {
+    std::string proxyPort() const { return m_proxyPort; }
+    void setProxyPort(const std::string& port) {
         if (port != m_proxyPort) {
             m_proxyPort = port;
-            emit proxyPortChanged();
+            proxyPortChanged();
         }
     }
 
@@ -113,11 +111,11 @@ public:
      * Runtime configuration: GGUF backend endpoint
      * @note Changing this requires stopping and restarting the proxy
      */
-    QString ggufEndpoint() const { return m_ggufEndpoint; }
-    void setGgufEndpoint(const QString& endpoint) {
+    std::string ggufEndpoint() const { return m_ggufEndpoint; }
+    void setGgufEndpoint(const std::string& endpoint) {
         if (endpoint != m_ggufEndpoint) {
             m_ggufEndpoint = endpoint;
-            emit ggufEndpointChanged();
+            ggufEndpointChanged();
         }
     }
 
@@ -127,7 +125,7 @@ public:
      */
     void onModelInvokerReplaced();
 
-public slots:
+public:
     /**
      * Handle hallucination detected signal
      */
@@ -148,7 +146,6 @@ public slots:
      */
     void onBehaviorPatchApplied(const BehaviorPatch& patch);
 
-signals:
     /**
      * Emitted when proxy port configuration changes
      */
@@ -166,8 +163,8 @@ private:
 
     // Configuration
     bool m_hotPatchingEnabled = false;
-    QString m_proxyPort = "11435";
-    QString m_ggufEndpoint = "localhost:11434";
+    std::string m_proxyPort = "11435";
+    std::string m_ggufEndpoint = "localhost:11434";
 
     // Logging
     void logCorrection(const HallucinationDetection& correction);
@@ -175,3 +172,4 @@ private:
 };
 
 #endif // IDE_AGENT_BRIDGE_HOT_PATCHING_INTEGRATION_HPP
+

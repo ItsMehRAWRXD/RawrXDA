@@ -1,27 +1,17 @@
 #include "ai_code_assistant.h"
-#include <QDir>
-#include <QFileInfo>
-#include <QThread>
-#include <QTimer>
-#include <QDebug>
-#include <QNetworkReply>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QElapsedTimer>
 
-AICodeAssistant::AICodeAssistant(QObject *parent) 
-    : QObject(parent)
-    , m_networkManager(new QNetworkAccessManager(this))
+
+AICodeAssistant::AICodeAssistant(void *parent) 
+    : void(parent)
+    , m_networkManager(new void*(this))
     , m_ollamaUrl("http://localhost:11434")
     , m_model("codellama:latest")
     , m_temperature(0.7f)
     , m_maxTokens(512)
-    , m_workspaceRoot(QDir::currentPath())
+    , m_workspaceRoot(std::filesystem::path::currentPath())
 {
     // Initialize network manager
-    connect(m_networkManager, &QNetworkAccessManager::finished,
-            this, &AICodeAssistant::onNetworkReply);
+// Qt connect removed
 }
 
 AICodeAssistant::~AICodeAssistant()
@@ -33,12 +23,12 @@ AICodeAssistant::~AICodeAssistant()
     }
 }
 
-void AICodeAssistant::setOllamaUrl(const QString &url)
+void AICodeAssistant::setOllamaUrl(const std::string &url)
 {
     m_ollamaUrl = url;
 }
 
-void AICodeAssistant::setModel(const QString &model)
+void AICodeAssistant::setModel(const std::string &model)
 {
     m_model = model;
 }
@@ -53,107 +43,104 @@ void AICodeAssistant::setMaxTokens(int tokens)
     m_maxTokens = qMax(1, tokens);
 }
 
-void AICodeAssistant::setWorkspaceRoot(const QString &root)
+void AICodeAssistant::setWorkspaceRoot(const std::string &root)
 {
     m_workspaceRoot = root;
 }
 
-void AICodeAssistant::getCodeCompletion(const QString &code)
+void AICodeAssistant::getCodeCompletion(const std::string &code)
 {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QJsonObject request;
+    void* request;
     request["model"] = m_model;
-    request["prompt"] = QString("Complete the following code:\n%1\n\nCompletion:").arg(code);
+    request["prompt"] = std::string("Complete the following code:\n%1\n\nCompletion:");
     request["temperature"] = m_temperature;
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(QUrl(m_ollamaUrl + "/api/generate"));
+    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
     networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QJsonDocument doc(request);
+    void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
     
-    emit latencyMeasured(timer.elapsed());
+    latencyMeasured(timer.elapsed());
 }
 
-void AICodeAssistant::getRefactoringSuggestions(const QString &code)
+void AICodeAssistant::getRefactoringSuggestions(const std::string &code)
 {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QJsonObject request;
+    void* request;
     request["model"] = m_model;
-    request["prompt"] = QString("Refactor the following code for better readability and performance:\n%1\n\nRefactored code:").arg(code);
+    request["prompt"] = std::string("Refactor the following code for better readability and performance:\n%1\n\nRefactored code:");
     request["temperature"] = m_temperature;
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(QUrl(m_ollamaUrl + "/api/generate"));
+    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
     networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QJsonDocument doc(request);
+    void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
     
-    emit latencyMeasured(timer.elapsed());
+    latencyMeasured(timer.elapsed());
 }
 
-void AICodeAssistant::getCodeExplanation(const QString &code)
+void AICodeAssistant::getCodeExplanation(const std::string &code)
 {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QJsonObject request;
+    void* request;
     request["model"] = m_model;
-    request["prompt"] = QString("Explain the following code:\n%1\n\nExplanation:").arg(code);
+    request["prompt"] = std::string("Explain the following code:\n%1\n\nExplanation:");
     request["temperature"] = m_temperature;
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(QUrl(m_ollamaUrl + "/api/generate"));
+    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
     networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QJsonDocument doc(request);
+    void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
     
-    emit latencyMeasured(timer.elapsed());
+    latencyMeasured(timer.elapsed());
 }
 
-void AICodeAssistant::searchFiles(const QString &pattern, const QString &directory)
+void AICodeAssistant::searchFiles(const std::string &pattern, const std::string &directory)
 {
-    QString searchDir = directory.isEmpty() ? m_workspaceRoot : directory;
-    QDir dir(searchDir);
+    std::string searchDir = directory.isEmpty() ? m_workspaceRoot : directory;
+    std::filesystem::path dir(searchDir);
     
-    QStringList results;
-    QFileInfoList files = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+    std::vector<std::string> results;
+    QFileInfoList files = dir.entryInfoList(std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
     
-    for (const QFileInfo &file : files) {
-        if (file.fileName().contains(pattern, Qt::CaseInsensitive)) {
+    for (const std::filesystem::path &file : files) {
+        if (file.fileName().contains(pattern, //CaseInsensitive)) {
             results.append(file.absoluteFilePath());
         }
     }
     
-    emit searchResultsReady(results);
+    searchResultsReady(results);
 }
 
-void AICodeAssistant::grepFiles(const QString &pattern, const QString &directory, bool caseSensitive)
+void AICodeAssistant::grepFiles(const std::string &pattern, const std::string &directory, bool caseSensitive)
 {
-    QString searchDir = directory.isEmpty() ? m_workspaceRoot : directory;
+    std::string searchDir = directory.isEmpty() ? m_workspaceRoot : directory;
     
     // Use QProcess to execute grep command
     if (!m_process) {
         m_process = new QProcess(this);
-        connect(m_process, &QProcess::finished,
-                this, &AICodeAssistant::onProcessFinished);
-        connect(m_process, &QProcess::errorOccurred,
-                this, &AICodeAssistant::onProcessError);
-        connect(m_process, &QProcess::readyReadStandardOutput,
-                this, &AICodeAssistant::onProcessOutput);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     }
     
-    QStringList args;
+    std::vector<std::string> args;
     if (caseSensitive) {
         args << "-n" << "-H" << pattern << searchDir + "/*";
     } else {
@@ -163,89 +150,86 @@ void AICodeAssistant::grepFiles(const QString &pattern, const QString &directory
     m_process->start("grep", args);
 }
 
-void AICodeAssistant::executePowerShellCommand(const QString &command)
+void AICodeAssistant::executePowerShellCommand(const std::string &command)
 {
     if (!m_process) {
         m_process = new QProcess(this);
-        connect(m_process, &QProcess::finished,
-                this, &AICodeAssistant::onProcessFinished);
-        connect(m_process, &QProcess::errorOccurred,
-                this, &AICodeAssistant::onProcessError);
-        connect(m_process, &QProcess::readyReadStandardOutput,
-                this, &AICodeAssistant::onProcessOutput);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     }
     
-    QStringList args;
+    std::vector<std::string> args;
     args << "-Command" << command;
     
     m_process->start("powershell", args);
-    emit commandProgress("Executing PowerShell command...");
+    commandProgress("Executing PowerShell command...");
 }
 
-void AICodeAssistant::analyzeAndRecommend(const QString &context)
+void AICodeAssistant::analyzeAndRecommend(const std::string &context)
 {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QJsonObject request;
+    void* request;
     request["model"] = m_model;
-    request["prompt"] = QString("Analyze the following code context and provide recommendations:\n%1\n\nRecommendations:").arg(context);
+    request["prompt"] = std::string("Analyze the following code context and provide recommendations:\n%1\n\nRecommendations:");
     request["temperature"] = m_temperature;
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(QUrl(m_ollamaUrl + "/api/generate"));
+    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
     networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QJsonDocument doc(request);
+    void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
     
-    emit latencyMeasured(timer.elapsed());
+    latencyMeasured(timer.elapsed());
 }
 
-void AICodeAssistant::autoFixIssue(const QString &issueDescription, const QString &codeContext)
+void AICodeAssistant::autoFixIssue(const std::string &issueDescription, const std::string &codeContext)
 {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QJsonObject request;
+    void* request;
     request["model"] = m_model;
-    request["prompt"] = QString("Issue: %1\nCode Context: %2\n\nFix:").arg(issueDescription).arg(codeContext);
+    request["prompt"] = std::string("Issue: %1\nCode Context: %2\n\nFix:");
     request["temperature"] = m_temperature;
     request["max_tokens"] = m_maxTokens;
     request["stream"] = false;
     
-    QNetworkRequest networkRequest(QUrl(m_ollamaUrl + "/api/generate"));
+    QNetworkRequest networkRequest(std::string(m_ollamaUrl + "/api/generate"));
     networkRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
-    QJsonDocument doc(request);
+    void* doc(request);
     m_networkManager->post(networkRequest, doc.toJson());
     
-    emit latencyMeasured(timer.elapsed());
+    latencyMeasured(timer.elapsed());
 }
 
 void AICodeAssistant::onNetworkReply()
 {
-    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    void* *reply = qobject_cast<void**>(sender());
     if (!reply) {
         return;
     }
     
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray response = reply->readAll();
-        QJsonDocument doc = QJsonDocument::fromJson(response);
+    if (reply->error() == void*::NoError) {
+        std::vector<uint8_t> response = reply->readAll();
+        void* doc = void*::fromJson(response);
         
         if (doc.isObject()) {
-            QJsonObject obj = doc.object();
+            void* obj = doc.object();
             if (obj.contains("response")) {
-                QString responseText = obj["response"].toString();
-                emit suggestionReceived(responseText, "completion");
-                emit suggestionComplete(true, "Success");
+                std::string responseText = obj["response"].toString();
+                suggestionReceived(responseText, "completion");
+                suggestionComplete(true, "Success");
             }
         }
     } else {
-        emit errorOccurred(reply->errorString());
-        emit suggestionComplete(false, reply->errorString());
+        errorOccurred(reply->errorString());
+        suggestionComplete(false, reply->errorString());
     }
     
     reply->deleteLater();
@@ -253,25 +237,25 @@ void AICodeAssistant::onNetworkReply()
 
 void AICodeAssistant::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    Q_UNUSED(exitStatus)
+    (exitStatus)
     
-    QString output = m_process->readAllStandardOutput();
-    QString error = m_process->readAllStandardError();
+    std::string output = m_process->readAllStandardOutput();
+    std::string error = m_process->readAllStandardError();
     
     if (!output.isEmpty()) {
-        emit commandOutputReceived(output);
+        commandOutputReceived(output);
     }
     if (!error.isEmpty()) {
-        emit commandErrorReceived(error);
+        commandErrorReceived(error);
     }
     
-    emit commandCompleted(exitCode);
-    emit commandProgress("Command execution completed");
+    commandCompleted(exitCode);
+    commandProgress("Command execution completed");
 }
 
 void AICodeAssistant::onProcessError(QProcess::ProcessError error)
 {
-    QString errorMsg;
+    std::string errorMsg;
     switch (error) {
         case QProcess::FailedToStart:
             errorMsg = "Process failed to start";
@@ -293,14 +277,15 @@ void AICodeAssistant::onProcessError(QProcess::ProcessError error)
             break;
     }
     
-    emit errorOccurred(errorMsg);
-    emit commandCompleted(-1);
+    errorOccurred(errorMsg);
+    commandCompleted(-1);
 }
 
 void AICodeAssistant::onProcessOutput()
 {
-    QString output = m_process->readAllStandardOutput();
+    std::string output = m_process->readAllStandardOutput();
     if (!output.isEmpty()) {
-        emit commandOutputReceived(output);
+        commandOutputReceived(output);
     }
 }
+

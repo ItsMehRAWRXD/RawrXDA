@@ -1,17 +1,8 @@
 #include "ai_code_assistant_panel.h"
 #include "ai_code_assistant.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
-#include <QClipboard>
-#include <QApplication>
-#include <QFileDialog>
-#include <QFile>
-#include <QTextStream>
-#include <QDebug>
-#include <QDateTime>
 
-AICodeAssistantPanel::AICodeAssistantPanel(QWidget *parent)
+
+AICodeAssistantPanel::AICodeAssistantPanel(void *parent)
     : QDockWidget("AI Code Assistant", parent),
       assistant_(nullptr),
       status_indicator_(nullptr),
@@ -39,13 +30,11 @@ AICodeAssistantPanel::AICodeAssistantPanel(QWidget *parent)
 void AICodeAssistantPanel::initialize() {
     if (status_indicator_) return;  // Already initialized
     
-    qDebug() << "[AICodeAssistantPanel] Initializing AI Code Assistant Panel";
     setupUI();
 }
 
 AICodeAssistantPanel::~AICodeAssistantPanel()
 {
-    qDebug() << "[AICodeAssistantPanel] Destroying AI Code Assistant Panel";
 }
 
 void AICodeAssistantPanel::setAssistant(AICodeAssistant *assistant)
@@ -54,31 +43,19 @@ void AICodeAssistantPanel::setAssistant(AICodeAssistant *assistant)
     
     if (assistant_) {
         // Connect signals from assistant to panel using lambdas for signal signature compatibility
-        connect(assistant_, &AICodeAssistant::suggestionReceived,
-                this, [this](const QString &text, const QString &type) {
-            // Store the suggestion
-            suggestion_display_->setPlainText(text);
+// Qt connect removed
             apply_button_->setEnabled(true);
             progress_bar_->setVisible(false);
             streaming_in_progress_ = false;
-            status_indicator_->setText(QString("Status: Suggestion received ✅"));
-            qDebug() << "[AICodeAssistantPanel] Suggestion received, type:" << type << "length:" << text.length();
+            status_indicator_->setText(std::string("Status: Suggestion received ✅"));
+        });
+// Qt connect removed
+// Qt connect removed
+        });
+// Qt connect removed
+// Qt connect removed
         });
         
-        connect(assistant_, &AICodeAssistant::suggestionStreamChunk,
-                this, &AICodeAssistantPanel::onSuggestionStreaming);
-        connect(assistant_, &AICodeAssistant::suggestionComplete,
-                this, [this](bool success, const QString &msg) {
-            onSuggestionStreamComplete();
-        });
-        connect(assistant_, &AICodeAssistant::errorOccurred,
-                this, &AICodeAssistantPanel::onError);
-        connect(assistant_, &AICodeAssistant::latencyMeasured,
-                this, [this](qint64 ms) {
-            onLatencyMeasured(static_cast<int>(ms));
-        });
-        
-        qDebug() << "[AICodeAssistantPanel] AI Assistant connected";
         status_indicator_->setText("Status: Connected ✅");
         updateStatusIndicator(true);
     }
@@ -86,7 +63,7 @@ void AICodeAssistantPanel::setAssistant(AICodeAssistant *assistant)
 
 void AICodeAssistantPanel::setupUI()
 {
-    QWidget *mainWidget = new QWidget(this);
+    void *mainWidget = new void(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(mainWidget);
     
     // Status and controls group
@@ -109,12 +86,11 @@ void AICodeAssistantPanel::setupUI()
     // Temperature slider
     QHBoxLayout *tempLayout = new QHBoxLayout();
     QLabel *tempLabel = new QLabel("Temperature:");
-    temperature_slider_ = new QSlider(Qt::Horizontal);
+    temperature_slider_ = new QSlider(//Horizontal);
     temperature_slider_->setRange(0, 100);
     temperature_slider_->setValue(70);
     temperature_value_label_ = new QLabel("0.7");
-    connect(temperature_slider_, &QSlider::valueChanged, [this](int value) {
-        temperature_value_label_->setText(QString::number(value / 100.0, 'f', 2));
+// Qt connect removed
         onTemperatureChanged(value);
     });
     tempLayout->addWidget(tempLabel);
@@ -154,17 +130,13 @@ void AICodeAssistantPanel::setupUI()
     
     apply_button_ = new QPushButton("Apply Suggestion");
     apply_button_->setEnabled(false);
-    connect(apply_button_, &QPushButton::clicked, this, &AICodeAssistantPanel::onApplySuggestion);
-    
+// Qt connect removed
     clear_button_ = new QPushButton("Clear");
-    connect(clear_button_, &QPushButton::clicked, this, &AICodeAssistantPanel::onClearPanel);
-    
+// Qt connect removed
     copy_button_ = new QPushButton("Copy to Clipboard");
-    connect(copy_button_, &QPushButton::clicked, this, &AICodeAssistantPanel::onCopyToClipboard);
-    
+// Qt connect removed
     export_button_ = new QPushButton("Export");
-    connect(export_button_, &QPushButton::clicked, this, &AICodeAssistantPanel::onExportSuggestion);
-    
+// Qt connect removed
     buttonLayout->addWidget(apply_button_);
     buttonLayout->addWidget(clear_button_);
     buttonLayout->addWidget(copy_button_);
@@ -182,10 +154,10 @@ void AICodeAssistantPanel::onSuggestionReady(const int dummy)
 {
     // This slot matches the header signature but is not actually used.
     // Signal connections are handled in setAssistant() using lambdas.
-    Q_UNUSED(dummy);
+    (dummy);
 }
 
-void AICodeAssistantPanel::onSuggestionStreaming(const QString &partial)
+void AICodeAssistantPanel::onSuggestionStreaming(const std::string &partial)
 {
     suggestion_display_->insertPlainText(partial);
     progress_bar_->setVisible(true);
@@ -200,15 +172,14 @@ void AICodeAssistantPanel::onSuggestionStreamComplete()
     streaming_in_progress_ = false;
 }
 
-void AICodeAssistantPanel::onError(const QString &error)
+void AICodeAssistantPanel::onError(const std::string &error)
 {
-    suggestion_display_->setPlainText(QString("❌ Error: %1").arg(error));
+    suggestion_display_->setPlainText(std::string("❌ Error: %1"));
     status_indicator_->setText("Status: Error ❌");
     progress_bar_->setVisible(false);
     apply_button_->setEnabled(false);
     streaming_in_progress_ = false;
     
-    qWarning() << "[AICodeAssistantPanel] Error:" << error;
 }
 
 void AICodeAssistantPanel::onConnectionStatusChanged(bool connected)
@@ -234,11 +205,10 @@ void AICodeAssistantPanel::onLatencyMeasured(int latency_ms)
 
 void AICodeAssistantPanel::onApplySuggestion()
 {
-    QString suggestion = suggestion_display_->toPlainText();
+    std::string suggestion = suggestion_display_->toPlainText();
     if (!suggestion.isEmpty()) {
         // In production, this would apply the suggestion to the editor
         // For now, just log it
-        qDebug() << "[AICodeAssistantPanel] Suggestion applied (would modify editor)";
     }
 }
 
@@ -247,33 +217,30 @@ void AICodeAssistantPanel::onClearPanel()
     suggestion_display_->clear();
     apply_button_->setEnabled(false);
     latency_label_->setText("Latency: -- ms");
-    qDebug() << "[AICodeAssistantPanel] Panel cleared";
 }
 
 void AICodeAssistantPanel::onCopyToClipboard()
 {
-    QString suggestion = suggestion_display_->toPlainText();
+    std::string suggestion = suggestion_display_->toPlainText();
     if (!suggestion.isEmpty()) {
-        QClipboard *clipboard = QApplication::clipboard();
+        QClipboard *clipboard = nullptr;
         clipboard->setText(suggestion);
         status_indicator_->setText("Status: Copied to clipboard ✅");
-        qDebug() << "[AICodeAssistantPanel] Copied to clipboard";
     }
 }
 
 void AICodeAssistantPanel::onExportSuggestion()
 {
-    QString filePath = QFileDialog::getSaveFileName(this, "Export Suggestion", "", "Text Files (*.txt);;All Files (*)");
+    std::string filePath = QFileDialog::getSaveFileName(this, "Export Suggestion", "", "Text Files (*.txt);;All Files (*)");
     
     if (!filePath.isEmpty()) {
-        QFile file(filePath);
+        std::fstream file(filePath);
         if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QTextStream stream(&file);
             stream << suggestion_display_->toPlainText();
             file.close();
             
             status_indicator_->setText("Status: Exported successfully ✅");
-            qDebug() << "[AICodeAssistantPanel] Suggestion exported to:" << filePath;
         } else {
             onError("Failed to export suggestion");
         }
@@ -284,7 +251,6 @@ void AICodeAssistantPanel::onTemperatureChanged(int value)
 {
     if (assistant_) {
         assistant_->setTemperature(value / 100.0f);
-        qDebug() << "[AICodeAssistantPanel] Temperature changed to:" << (value / 100.0f);
     }
 }
 
@@ -292,7 +258,6 @@ void AICodeAssistantPanel::onMaxTokensChanged(int value)
 {
     if (assistant_) {
         assistant_->setMaxTokens(value);
-        qDebug() << "[AICodeAssistantPanel] Max tokens changed to:" << value;
     }
 }
 
@@ -309,11 +274,12 @@ void AICodeAssistantPanel::updateStatusIndicator(bool connected)
     }
 }
 
-QString AICodeAssistantPanel::formatLatency(int ms)
+std::string AICodeAssistantPanel::formatLatency(int ms)
 {
     if (ms < 1000) {
-        return QString("Latency: %1 ms").arg(ms);
+        return std::string("Latency: %1 ms");
     } else {
-        return QString("Latency: %1.%2 s").arg(ms / 1000).arg((ms % 1000) / 100);
+        return std::string("Latency: %1.%2 s") / 100);
     }
 }
+

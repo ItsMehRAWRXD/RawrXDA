@@ -276,7 +276,3 @@ private:
     ProjectTreeFilter* m_treeFilter;
 };
 
-
-
-
-

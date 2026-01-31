@@ -140,4 +140,3 @@ private:
 
 #endif // GITIGNORE_PARSER_HPP
 
-

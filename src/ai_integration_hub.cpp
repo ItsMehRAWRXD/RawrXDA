@@ -8,21 +8,20 @@ AIIntegrationHub::AIIntegrationHub() {
     m_metrics = std::make_shared<Metrics>();
     m_tracer = std::make_shared<Tracer>();
 
-    m_logger->info("AI Integration Hub created");
 }
 
 AIIntegrationHub::~AIIntegrationHub() {
     if (m_backgroundThread && m_backgroundThread->joinable()) {
         m_backgroundThread->join();
     }
-    m_logger->info("AI Integration Hub destroyed");
+
 }
 
 bool AIIntegrationHub::initialize(const std::string& defaultModel) {
     auto span = m_tracer->startSpan("ai_hub.initialize");
 
     try {
-        m_logger->info("Initializing AI Integration Hub with default model: {}", defaultModel);
+
 
         // Initialize core infrastructure
         m_formatRouter = std::make_unique<FormatRouter>(m_logger, m_metrics, m_tracer);
@@ -43,7 +42,7 @@ bool AIIntegrationHub::initialize(const std::string& defaultModel) {
         return true;
 
     } catch (const std::exception& e) {
-        m_logger->error("Failed to initialize AI Integration Hub: {}", e.what());
+
         span->setStatus("error", e.what());
         return false;
     }
@@ -56,7 +55,7 @@ bool AIIntegrationHub::loadModel(const std::string& modelPath) {
     std::lock_guard<std::mutex> lock(m_modelMutex);
 
     try {
-        m_logger->info("Loading model: {}", modelPath);
+
         m_loading = true;
 
         auto startTime = std::chrono::high_resolution_clock::now();
@@ -89,7 +88,6 @@ bool AIIntegrationHub::loadModel(const std::string& modelPath) {
         auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
 
-        m_logger->info("Model loaded successfully in {} ms", duration.count());
         m_metrics->recordHistogram("model_load_duration_ms", duration.count());
 
         m_loading = false;
@@ -100,7 +98,7 @@ bool AIIntegrationHub::loadModel(const std::string& modelPath) {
         return true;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error loading model {}: {}", modelPath, e.what());
+
         m_loading = false;
         m_metrics->incrementCounter("model_load_failures");
         span->setStatus("error", e.what());
@@ -114,7 +112,7 @@ bool AIIntegrationHub::unloadModel() {
     std::lock_guard<std::mutex> lock(m_modelMutex);
 
     try {
-        m_logger->info("Unloading model: {}", m_currentModel);
+
 
         if (m_modelLoader) {
             m_modelLoader->unloadModel();
@@ -127,12 +125,11 @@ bool AIIntegrationHub::unloadModel() {
         m_currentModel.clear();
         m_initialized = false;
 
-        m_logger->info("Model unloaded successfully");
         span->setStatus("ok");
         return true;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error unloading model: {}", e.what());
+
         span->setStatus("error", e.what());
         return false;
     }
@@ -148,7 +145,7 @@ std::vector<CodeCompletion> AIIntegrationHub::getCompletions(
     span->setAttribute("file_path", filePath);
 
     if (!isReady()) {
-        m_logger->warn("AI Hub not ready, returning empty completions");
+
         return {};
     }
 
@@ -182,7 +179,7 @@ std::vector<CodeCompletion> AIIntegrationHub::getCompletions(
         return completions;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error getting completions: {}", e.what());
+
         m_metrics->incrementCounter("completion_errors");
         span->setStatus("error", e.what());
         return {};
@@ -196,7 +193,7 @@ std::vector<CodeSuggestion> AIIntegrationHub::getSuggestions(
     auto span = m_tracer->startSpan("ai_hub.get_suggestions");
 
     if (!isReady()) {
-        m_logger->warn("AI Hub not ready");
+
         return {};
     }
 
@@ -216,7 +213,7 @@ std::vector<CodeSuggestion> AIIntegrationHub::getSuggestions(
         return suggestions;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error getting suggestions: {}", e.what());
+
         span->setStatus("error", e.what());
         return {};
     }
@@ -226,7 +223,7 @@ std::string AIIntegrationHub::generateDocumentation(const std::string& code) {
     auto span = m_tracer->startSpan("ai_hub.generate_documentation");
 
     if (!isReady()) {
-        m_logger->warn("AI Hub not ready");
+
         return "";
     }
 
@@ -241,7 +238,7 @@ std::string AIIntegrationHub::generateDocumentation(const std::string& code) {
         return doc;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error generating documentation: {}", e.what());
+
         span->setStatus("error", e.what());
         return "";
     }
@@ -251,7 +248,7 @@ std::vector<TestCase> AIIntegrationHub::generateTests(const std::string& functio
     auto span = m_tracer->startSpan("ai_hub.generate_tests");
 
     if (!isReady()) {
-        m_logger->warn("AI Hub not ready");
+
         return {};
     }
 
@@ -269,7 +266,7 @@ std::vector<TestCase> AIIntegrationHub::generateTests(const std::string& functio
         return tests;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error generating tests: {}", e.what());
+
         span->setStatus("error", e.what());
         return {};
     }
@@ -279,7 +276,7 @@ std::vector<BugReport> AIIntegrationHub::findBugs(const std::string& code) {
     auto span = m_tracer->startSpan("ai_hub.find_bugs");
 
     if (!isReady()) {
-        m_logger->warn("AI Hub not ready");
+
         return {};
     }
 
@@ -291,7 +288,7 @@ std::vector<BugReport> AIIntegrationHub::findBugs(const std::string& code) {
         return bugs;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error finding bugs: {}", e.what());
+
         span->setStatus("error", e.what());
         return {};
     }
@@ -301,7 +298,7 @@ std::vector<Optimization> AIIntegrationHub::optimizeCode(const std::string& code
     auto span = m_tracer->startSpan("ai_hub.optimize_code");
 
     if (!isReady()) {
-        m_logger->warn("AI Hub not ready");
+
         return {};
     }
 
@@ -319,7 +316,7 @@ std::vector<Optimization> AIIntegrationHub::optimizeCode(const std::string& code
         return optimizations;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error optimizing code: {}", e.what());
+
         span->setStatus("error", e.what());
         return {};
     }
@@ -329,19 +326,19 @@ void AIIntegrationHub::indexCodebase(const std::string& rootPath) {
     auto span = m_tracer->startSpan("ai_hub.index_codebase");
 
     try {
-        m_logger->info("Indexing codebase at: {}", rootPath);
+
         // Placeholder for codebase indexing
-        m_logger->info("Indexing complete");
+
         span->setStatus("ok");
 
     } catch (const std::exception& e) {
-        m_logger->error("Error indexing codebase: {}", e.what());
+
         span->setStatus("error", e.what());
     }
 }
 
 void AIIntegrationHub::setLatencyTarget(int milliseconds) {
-    m_logger->info("Setting latency target to {} ms", milliseconds);
+
     // Placeholder for performance configuration
 }
 
@@ -351,24 +348,24 @@ std::vector<std::string> AIIntegrationHub::getAvailableModels() const {
 
 void AIIntegrationHub::backgroundInitialization() {
     try {
-        m_logger->info("Starting background initialization");
+
 
         // Placeholder for background tasks
-        m_logger->info("Background initialization completed");
+
 
     } catch (const std::exception& e) {
-        m_logger->error("Background initialization failed: {}", e.what());
+
     }
 }
 
 bool AIIntegrationHub::validateModelCompatibility(const std::string& modelPath) {
-    m_logger->debug("Validating model compatibility: {}", modelPath);
+
     // Placeholder for compatibility validation
     return true;
 }
 
 void AIIntegrationHub::setupModelRouting() {
-    m_logger->debug("Setting up model routing");
+
     // Placeholder for routing setup
 }
 
@@ -376,17 +373,17 @@ void AIIntegrationHub::initializeAIComponents() {
     auto span = m_tracer->startSpan("ai_hub.initialize_components");
 
     try {
-        m_logger->info("Initializing AI components");
+
         // Placeholder for component initialization
         span->setStatus("ok");
 
     } catch (const std::exception& e) {
-        m_logger->error("Failed to initialize AI components: {}", e.what());
+
         span->setStatus("error", e.what());
     }
 }
 
 void AIIntegrationHub::startBackgroundServices() {
-    m_logger->debug("Starting background services");
+
     // Placeholder for background service startup
 }

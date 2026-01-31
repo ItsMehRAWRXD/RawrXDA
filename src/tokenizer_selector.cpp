@@ -1,21 +1,10 @@
 #include "tokenizer_selector.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QCheckBox>
-#include <QLabel>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QGroupBox>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QFile>
-#include <QDebug>
+
+
 #include <algorithm>
 
-TokenizerSelector::TokenizerSelector(QWidget* parent)
-    : QDialog(parent)
+TokenizerSelector::TokenizerSelector(void* parent)
+    : void(parent)
 {
     setWindowTitle("Tokenizer Selector and Configuration");
     setMinimumSize(700, 600);
@@ -148,19 +137,17 @@ void TokenizerSelector::setupUI()
     buttonLayout->addStretch();
 
     QPushButton* okButton = new QPushButton("OK", this);
-    connect(okButton, &QPushButton::clicked, this, &QDialog::accept);
+// Qt connect removed
     buttonLayout->addWidget(okButton);
 
     QPushButton* cancelButton = new QPushButton("Cancel", this);
-    connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
+// Qt connect removed
     buttonLayout->addWidget(cancelButton);
 
     mainLayout->addLayout(buttonLayout);
-
-    connect(previewButton, &QPushButton::clicked, this, [this]() {
-        QString text = m_previewEdit->toPlainText();
+// Qt connect removed
         auto tokens = previewTokenization(text);
-        QString tokensStr;
+        std::string tokensStr;
         for (const auto& token : tokens) {
             tokensStr += token + " ";
         }
@@ -170,13 +157,9 @@ void TokenizerSelector::setupUI()
 
 void TokenizerSelector::setupConnections()
 {
-    connect(m_languageCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &TokenizerSelector::onLanguageChanged);
-
-    connect(m_tokenizerTypeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &TokenizerSelector::onTokenizerTypeChanged);
-
-    connect(m_vocabSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
             this, [this](int) { updateMetricsDisplay(); });
 }
 
@@ -219,7 +202,7 @@ void TokenizerSelector::updateAvailableTokenizers()
     auto it = m_availableTokenizers.find(lang);
     if (it != m_availableTokenizers.end()) {
         for (TokenizerType type : it->second) {
-            QString typeName;
+            std::string typeName;
             switch (type) {
                 case TokenizerType::WordPiece: typeName = "WordPiece"; break;
                 case TokenizerType::BPE: typeName = "Byte Pair Encoding"; break;
@@ -237,11 +220,11 @@ void TokenizerSelector::updateAvailableTokenizers()
 void TokenizerSelector::updateMetricsDisplay()
 {
     int vocabSize = m_vocabSizeSpinBox->value();
-    QString metricsText = QString("Vocabulary Size: %1 | Encoding: utf-8 | "
+    std::string metricsText = std::string("Vocabulary Size: %1 | Encoding: utf-8 | "
                                   "Max Token Length: %2 | Lowercase: %3")
-                             .arg(vocabSize)
-                             .arg(m_maxTokenLengthSpinBox->value())
-                             .arg(m_lowercaseCheckBox->isChecked() ? "Yes" : "No");
+                             
+                             )
+                              ? "Yes" : "No");
     m_metricsLabel->setText(metricsText);
 }
 
@@ -249,13 +232,13 @@ void TokenizerSelector::onLanguageChanged(int index)
 {
     updateAvailableTokenizers();
     m_config.language = static_cast<Language>(m_languageCombo->currentData().toInt());
-    emit configurationChanged(m_config);
+    configurationChanged(m_config);
 }
 
 void TokenizerSelector::onTokenizerTypeChanged(int index)
 {
     m_config.tokenizerType = static_cast<TokenizerType>(m_tokenizerTypeCombo->currentData().toInt());
-    emit configurationChanged(m_config);
+    configurationChanged(m_config);
 }
 
 void TokenizerSelector::setConfiguration(const TokenizerConfig& config)
@@ -289,34 +272,34 @@ TokenizerSelector::TokenizerConfig TokenizerSelector::getConfiguration() const
     return config;
 }
 
-bool TokenizerSelector::loadTokenizer(const QString& filePath)
+bool TokenizerSelector::loadTokenizer(const std::string& filePath)
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        emit tokenizeError("Failed to open file: " + filePath);
+        tokenizeError("Failed to open file: " + filePath);
         return false;
     }
 
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    void* doc = void*::fromJson(file.readAll());
     file.close();
 
     if (!doc.isObject()) {
-        emit tokenizeError("Invalid tokenizer file format");
+        tokenizeError("Invalid tokenizer file format");
         return false;
     }
 
     return fromJson(doc.object());
 }
 
-bool TokenizerSelector::saveTokenizer(const QString& filePath) const
+bool TokenizerSelector::saveTokenizer(const std::string& filePath) const
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
         return false;
     }
 
-    QJsonDocument doc(toJson());
-    file.write(doc.toJson(QJsonDocument::Indented));
+    void* doc(toJson());
+    file.write(doc.toJson(void*::Indented));
     file.close();
     return true;
 }
@@ -332,19 +315,19 @@ TokenizerSelector::TokenizerMetrics TokenizerSelector::getTokenizerMetrics() con
     return metrics;
 }
 
-std::vector<QString> TokenizerSelector::previewTokenization(const QString& text) const
+std::vector<std::string> TokenizerSelector::previewTokenization(const std::string& text) const
 {
     // Simplified tokenization for preview
-    std::vector<QString> tokens;
+    std::vector<std::string> tokens;
 
     // Very basic word tokenization (space-separated)
-    QString processed = text.toLower();
-    QStringList words = processed.split(QRegularExpression(R"(\s+)"), Qt::SkipEmptyParts);
+    std::string processed = text.toLower();
+    std::vector<std::string> words = processed.split(std::regex(R"(\s+)"), //SkipEmptyParts);
 
     for (const auto& word : words) {
         // Remove punctuation (simplified)
-        QString cleanWord = word;
-        cleanWord.remove(QRegularExpression(R"([.,!?;:\-\(\)])"));
+        std::string cleanWord = word;
+        cleanWord.remove(std::regex(R"([.,!?;:\-\(\)])"));
 
         if (!cleanWord.isEmpty()) {
             tokens.push_back(cleanWord);
@@ -354,9 +337,9 @@ std::vector<QString> TokenizerSelector::previewTokenization(const QString& text)
     return tokens;
 }
 
-QJsonObject TokenizerSelector::toJson() const
+void* TokenizerSelector::toJson() const
 {
-    QJsonObject obj;
+    void* obj;
     obj["language"] = static_cast<int>(m_config.language);
     obj["tokenizerType"] = static_cast<int>(m_config.tokenizerType);
     obj["vocabSize"] = m_vocabSizeSpinBox->value();
@@ -369,7 +352,7 @@ QJsonObject TokenizerSelector::toJson() const
     return obj;
 }
 
-bool TokenizerSelector::fromJson(const QJsonObject& config)
+bool TokenizerSelector::fromJson(const void*& config)
 {
     setConfiguration(m_config);
     return true;
@@ -378,6 +361,7 @@ bool TokenizerSelector::fromJson(const QJsonObject& config)
 void TokenizerSelector::accept()
 {
     m_config = getConfiguration();
-    emit tokenizerSelected(m_config);
-    QDialog::accept();
+    tokenizerSelected(m_config);
+    void::accept();
 }
+

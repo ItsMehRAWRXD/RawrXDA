@@ -83,7 +83,7 @@ void DigestionGuiWidget::stopDigestion() {
 void DigestionGuiWidget::onProgress(int done, int total, int stubs, int percent) {
     m_progressBar->setMaximum(total);
     m_progressBar->setValue(done);
-    m_progressBar->setFormat(std::string("Scanned: %1/%2 | Stubs: %3 (%p%)").arg(done).arg(total).arg(stubs));
+    m_progressBar->setFormat(std::string("Scanned: %1/%2 | Stubs: %3 (%p%)"));
 }
 
 void DigestionGuiWidget::onFileScanned(const std::string &path, const std::string &lang, int stubs) {
@@ -106,13 +106,8 @@ void DigestionGuiWidget::onFinished(const void* &report, int64_t elapsed) {
     int stubs = report["statistics"].toObject()["stubs_found"];
     void::information(this, "Digestion Complete", 
         std::string("Scanned %1 files in %2 seconds\nFound %3 stubs")
-        .arg(report["statistics"].toObject()["scanned_files"])
-        .arg(elapsed / 1000.0, 0, 'f', 2)
-        .arg(stubs));
+        ["scanned_files"])
+        
+        );
 }
-
-
-
-
-
 

@@ -2,22 +2,17 @@
 // Shows side-by-side diff with Accept/Reject buttons
 #pragma once
 
-#include <QDockWidget>
-#include <QString>
-
-class QTextEdit;
-class QPushButton;
 
 class DiffDock : public QDockWidget
 {
-    Q_OBJECT
+
 public:
-    explicit DiffDock(QWidget *parent = nullptr);
+    explicit DiffDock(void *parent = nullptr);
 
-    void setDiff(const QString &original, const QString &suggested);
+    void setDiff(const std::string &original, const std::string &suggested);
 
-signals:
-    void accepted(const QString &suggested);
+
+    void accepted(const std::string &suggested);
     void rejected();
 
 private:
@@ -26,3 +21,4 @@ private:
     QPushButton *m_acceptBtn;
     QPushButton *m_rejectBtn;
 };
+

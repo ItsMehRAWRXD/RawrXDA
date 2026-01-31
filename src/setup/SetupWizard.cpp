@@ -221,7 +221,7 @@ void HardwarePage::onDetectionError(const std::string& error)
     m_detectButton->setEnabled(true);
     m_refreshButton->setEnabled(true);
     m_progressBar->setVisible(false);
-    m_statusLabel->setText(tr("❌ Detection failed: %1").arg(error));
+    m_statusLabel->setText(tr("❌ Detection failed: %1"));
     
     void::warning(this, tr("Detection Error"), error);
 }
@@ -241,12 +241,10 @@ void HardwarePage::populateHardwareInfo()
         "Cores: %2 | Threads: %3<br>"
         "L3 Cache: %4 KB<br>"
         "RDRAND: %5 | AVX-512: %6"
-    ).arg(m_hardware.cpu.name)
-     .arg(m_hardware.cpu.coreCount)
-     .arg(m_hardware.cpu.threadCount)
-     .arg(m_hardware.cpu.l3CacheKB)
-     .arg(m_hardware.cpu.supportsRDRAND ? "✅" : "❌")
-     .arg(m_hardware.cpu.supportsAVX512 ? "✅" : "❌"));
+    )
+
+
+     );
     cpuLabel->setTextFormat(RichText);
     m_cpuGroup->layout()->addWidget(cpuLabel);
     
@@ -256,14 +254,13 @@ void HardwarePage::populateHardwareInfo()
         delete item;
     }
     
-    std::string storageText = std::string("<b>%1 drive(s) detected:</b><br>").arg(m_hardware.drives.size());
+    std::string storageText = std::string("<b>%1 drive(s) detected:</b><br>"));
     for (const auto& drive : m_hardware.drives) {
         double sizeGB = drive.sizeBytes / (1024.0 * 1024.0 * 1024.0);
         storageText += std::string("%1: %2 (%.1f GB) %3<br>")
-            .arg(drive.isNVMe ? "NVMe" : "SSD")
-            .arg(drive.model)
-            .arg(sizeGB)
-            .arg(drive.healthStatus == "Healthy" ? "✅" : "⚠️");
+
+
+            ;
     }
     
     auto* storageLabel = new void(m_storageGroup);
@@ -281,9 +278,9 @@ void HardwarePage::populateHardwareInfo()
     for (const auto& gpu : m_hardware.gpus) {
         double vramGB = gpu.vramBytes / (1024.0 * 1024.0 * 1024.0);
         gpuText += std::string("<b>%1</b><br>VRAM: %.1f GB<br>Driver: %2<br>")
-            .arg(gpu.name)
-            .arg(vramGB)
-            .arg(gpu.driverVersion);
+
+
+            ;
     }
     
     auto* gpuLabel = new void(m_gpuGroup);
@@ -303,20 +300,20 @@ void HardwarePage::populateHardwareInfo()
         "<b>%.1f GB Total</b><br>"
         "Modules: %1<br>"
         "Speed: %2 MHz"
-    ).arg(memGB)
-     .arg(m_hardware.memory.moduleCount)
-     .arg(m_hardware.memory.speedMHz));
+    )
+     
+     );
     memLabel->setTextFormat(RichText);
     m_memoryGroup->layout()->addWidget(memLabel);
     
     // Update detailed list
     m_hardwareList->clear();
-    m_hardwareList->addItem(std::string("Fingerprint: %1").arg(m_hardware.fingerprint));
+    m_hardwareList->addItem(std::string("Fingerprint: %1"));
     for (const auto& drive : m_hardware.drives) {
         m_hardwareList->addItem(std::string("  Drive %1: %2 [%3]")
-            .arg(drive.index)
-            .arg(drive.model)
-            .arg(drive.deviceId));
+
+
+            );
     }
 }
 
@@ -513,12 +510,12 @@ void ThermalPage::updatePreview()
         "  Prediction Horizon: %2 ms\n"
         "  Predictive Throttling: %3\n"
         "  Load Balancing: %4"
-    ).arg(m_modeCombo->currentText())
-     .arg(m_ceilingSpin->value())
-     .arg(m_alphaSpin->value())
-     .arg(m_horizonSpin->value())
-     .arg(m_predictiveCheck->isChecked() ? "Enabled" : "Disabled")
-     .arg(m_loadBalanceCheck->isChecked() ? "Enabled" : "Disabled");
+    ))
+     )
+     )
+     )
+      ? "Enabled" : "Disabled")
+      ? "Enabled" : "Disabled");
     
     m_previewText->setPlainText(preview);
 }
@@ -639,7 +636,7 @@ void SecurityPage::importKey()
         completeChanged();
     } else {
         void::warning(this, tr("Import Failed"),
-            tr("Could not read key file: %1").arg(file.errorString()));
+            tr("Could not read key file: %1")));
     }
 }
 
@@ -654,10 +651,10 @@ void SecurityPage::exportKey()
     if (file.open(std::iostream::WriteOnly | std::iostream::Text)) {
         file.write(m_entropyKey.toUtf8());
         void::information(this, tr("Export Successful"),
-            tr("Entropy key exported to: %1").arg(fileName));
+            tr("Entropy key exported to: %1"));
     } else {
         void::warning(this, tr("Export Failed"),
-            tr("Could not write key file: %1").arg(file.errorString()));
+            tr("Could not write key file: %1")));
     }
 }
 
@@ -721,7 +718,7 @@ void SecurityPage::updateSecurityLevel()
             break;
     }
     
-    m_securityLevel->setText(std::string("<span style='color: %1'>%2</span>").arg(color, levelText));
+    m_securityLevel->setText(std::string("<span style='color: %1'>%2</span>"));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -781,14 +778,14 @@ void SummaryPage::generateSummary()
     summary += "═══════════════════════════════════════════════════════════\n\n";
     
     summary += "📦 HARDWARE\n";
-    summary += std::string("   CPU: %1\n").arg(hw.cpu.name);
-    summary += std::string("   Drives: %1 detected\n").arg(hw.drives.size());
+    summary += std::string("   CPU: %1\n");
+    summary += std::string("   Drives: %1 detected\n"));
     for (const auto& drive : hw.drives) {
         double gb = drive.sizeBytes / (1024.0 * 1024.0 * 1024.0);
-        summary += std::string("     - %1: %2 (%.0f GB)\n").arg(drive.isNVMe ? "NVMe" : "SSD").arg(drive.model).arg(gb);
+        summary += std::string("     - %1: %2 (%.0f GB)\n");
     }
-    summary += std::string("   GPU: %1\n").arg(hw.gpus.empty() ? "None" : hw.gpus[0].name);
-    summary += std::string("   Memory: %.0f GB\n\n").arg(hw.memory.totalBytes / (1024.0 * 1024.0 * 1024.0));
+    summary += std::string("   GPU: %1\n") ? "None" : hw.gpus[0].name);
+    summary += std::string("   Memory: %.0f GB\n\n"));
     
     summary += "🌡️ THERMAL\n";
     std::string modeName;
@@ -797,15 +794,15 @@ void SummaryPage::generateSummary()
         case ThermalMode::Hybrid: modeName = "Hybrid"; break;
         case ThermalMode::Burst: modeName = "Burst"; break;
     }
-    summary += std::string("   Mode: %1\n").arg(modeName);
-    summary += std::string("   Ceiling: %.1f°C\n").arg(thermal.sustainableCeiling);
-    summary += std::string("   EWMA Alpha: %.2f\n").arg(thermal.ewmaAlpha);
-    summary += std::string("   Prediction: %1\n").arg(thermal.enablePredictive ? "Enabled" : "Disabled");
-    summary += std::string("   Load Balancing: %1\n\n").arg(thermal.enableLoadBalancing ? "Enabled" : "Disabled");
+    summary += std::string("   Mode: %1\n");
+    summary += std::string("   Ceiling: %.1f°C\n");
+    summary += std::string("   EWMA Alpha: %.2f\n");
+    summary += std::string("   Prediction: %1\n");
+    summary += std::string("   Load Balancing: %1\n\n");
     
     summary += "🔐 SECURITY\n";
-    summary += std::string("   Entropy Key: %1...\n").arg(entropyKey.left(16));
-    summary += std::string("   Fingerprint: %1...\n\n").arg(hw.fingerprint.left(16));
+    summary += std::string("   Entropy Key: %1...\n"));
+    summary += std::string("   Fingerprint: %1...\n\n"));
     
     summary += "═══════════════════════════════════════════════════════════\n";
     summary += "Press 'Finish' to save configuration and complete setup.\n";
@@ -1021,7 +1018,7 @@ std::string SetupWizard::getEntropyKey() const
 void SetupWizard::onPageChanged(int id)
 {
     // Update subtitle based on progress
-    std::string progress = std::string(" (%1/6)").arg(id + 1);
+    std::string progress = std::string(" (%1/6)");
     // Could update window title here
 }
 
@@ -1346,11 +1343,5 @@ std::string HardwareDetector::generateFingerprint(const DetectedHardware& hw)
 
 } // namespace rawrxd::setup
 
-#include "SetupWizard.moc"
-
-
-
-
-
-
+// MOC removed
 

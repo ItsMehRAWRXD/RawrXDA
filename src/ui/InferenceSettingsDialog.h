@@ -1,30 +1,16 @@
 #pragma once
 
-#include <QDialog>
-#include <QWidget>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QComboBox>
-#include <QDoubleSpinBox>
-#include <QSpinBox>
-#include <QCheckBox>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QGroupBox>
-#include <QListWidget>
-#include <QDialogButtonBox>
+
 #include "../utils/InferenceSettingsManager.h"
 
-class InferenceSettingsDialog : public QDialog
+class InferenceSettingsDialog : public void
 {
-    Q_OBJECT
 
 public:
-    explicit InferenceSettingsDialog(QWidget* parent = nullptr);
+    explicit InferenceSettingsDialog(void* parent = nullptr);
     ~InferenceSettingsDialog();
 
-private slots:
+private:
     void onPresetChanged(int index);
     void onTemperatureChanged(double value);
     void onTopPChanged(double value);
@@ -32,15 +18,15 @@ private slots:
     void onMaxTokensChanged(int value);
     void onRepetitionPenaltyChanged(double value);
     void onUseOllamaChanged(int state);
-    void onOllamaModelChanged(const QString& text);
+    void onOllamaModelChanged(const std::string& text);
     void onRecentModelSelected(QListWidgetItem* item);
     void onClearRecentModels();
     void onApplyClicked();
     void onOkClicked();
     void onCancelClicked();
 
-signals:
-    void modelSelected(const QString& modelPath);
+
+    void modelSelected(const std::string& modelPath);
 
 private:
     void setupUI();
@@ -64,3 +50,4 @@ private:
     QLabel* m_presetIndicator;
     QDialogButtonBox* m_buttonBox;
 };
+

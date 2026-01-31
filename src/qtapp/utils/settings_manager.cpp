@@ -6,12 +6,7 @@
  */
 
 #include "settings_manager.h"
-#include <QFile>
-#include <QDir>
-#include <QStandardPaths>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QDebug>
+
 
 namespace RawrXD {
 
@@ -21,7 +16,7 @@ SettingsManager& SettingsManager::instance() {
 }
 
 SettingsManager::SettingsManager()
-    : QObject(nullptr)
+    : void(nullptr)
 {
     initializeDefaults();
     load();
@@ -33,7 +28,7 @@ SettingsManager::~SettingsManager() {
 
 void SettingsManager::initializeDefaults() {
     // General settings
-    m_settings["general"] = QJsonObject{
+    m_settings["general"] = void*{
         {"autoSave", true},
         {"autoSaveInterval", 30},  // seconds
         {"restoreLastSession", true},
@@ -41,7 +36,7 @@ void SettingsManager::initializeDefaults() {
     };
     
     // Appearance settings
-    m_settings["appearance"] = QJsonObject{
+    m_settings["appearance"] = void*{
         {"theme", "dark"},
         {"fontFamily", "Consolas"},
         {"fontSize", 12},
@@ -52,7 +47,7 @@ void SettingsManager::initializeDefaults() {
     };
     
     // Editor settings
-    m_settings["editor"] = QJsonObject{
+    m_settings["editor"] = void*{
         {"tabSize", 4},
         {"insertSpaces", true},
         {"trimTrailingWhitespace", true},
@@ -67,7 +62,7 @@ void SettingsManager::initializeDefaults() {
     };
     
     // Search settings
-    m_settings["search"] = QJsonObject{
+    m_settings["search"] = void*{
         {"caseSensitive", false},
         {"wholeWord", false},
         {"useRegex", false},
@@ -76,7 +71,7 @@ void SettingsManager::initializeDefaults() {
     };
     
     // Terminal settings
-    m_settings["terminal"] = QJsonObject{
+    m_settings["terminal"] = void*{
         {"shell", "pwsh.exe"},
         {"fontSize", 12},
         {"cursorBlinking", true},
@@ -84,7 +79,7 @@ void SettingsManager::initializeDefaults() {
     };
     
     // AI settings
-    m_settings["ai"] = QJsonObject{
+    m_settings["ai"] = void*{
         {"enableSuggestions", true},
         {"suggestionDelay", 500},  // ms
         {"streamingEnabled", true},
@@ -92,39 +87,39 @@ void SettingsManager::initializeDefaults() {
     };
     
     // Build settings
-    m_settings["build"] = QJsonObject{
+    m_settings["build"] = void*{
         {"autoSaveBeforeBuild", true},
         {"showOutputOnBuild", true},
         {"parallelJobs", 4}
     };
     
     // Git settings
-    m_settings["git"] = QJsonObject{
+    m_settings["git"] = void*{
         {"autoFetch", true},
         {"fetchInterval", 300},  // seconds
         {"showStatusInExplorer", true}
     };
 }
 
-QVariant SettingsManager::value(const QString& key, const QVariant& defaultValue) const {
-    QStringList parts = key.split('/');
+std::any SettingsManager::value(const std::string& key, const std::any& defaultValue) const {
+    std::vector<std::string> parts = key.split('/');
     if (parts.isEmpty()) {
         return defaultValue;
     }
     
-    QJsonObject obj = m_settings;
+    void* obj = m_settings;
     for (int i = 0; i < parts.size() - 1; ++i) {
         if (!obj.contains(parts[i])) {
             return defaultValue;
         }
-        QJsonValue val = obj[parts[i]];
+        void* val = obj[parts[i]];
         if (!val.isObject()) {
             return defaultValue;
         }
         obj = val.toObject();
     }
     
-    QString lastKey = parts.last();
+    std::string lastKey = parts.last();
     if (!obj.contains(lastKey)) {
         return defaultValue;
     }
@@ -132,46 +127,46 @@ QVariant SettingsManager::value(const QString& key, const QVariant& defaultValue
     return obj[lastKey].toVariant();
 }
 
-void SettingsManager::setValue(const QString& key, const QVariant& value, bool saveImmediately) {
-    QStringList parts = key.split('/');
+void SettingsManager::setValue(const std::string& key, const std::any& value, bool saveImmediately) {
+    std::vector<std::string> parts = key.split('/');
     if (parts.isEmpty()) {
         return;
     }
     
-    QJsonObject* obj = &m_settings;
+    void** obj = &m_settings;
     for (int i = 0; i < parts.size() - 1; ++i) {
         if (!obj->contains(parts[i])) {
-            obj->insert(parts[i], QJsonObject());
+            obj->insert(parts[i], void*());
         }
         QJsonValueRef ref = (*obj)[parts[i]];
         if (!ref.isObject()) {
-            ref = QJsonObject();
+            ref = void*();
         }
         obj = &ref.toObject();
     }
     
-    QString lastKey = parts.last();
-    (*obj)[lastKey] = QJsonValue::fromVariant(value);
+    std::string lastKey = parts.last();
+    (*obj)[lastKey] = void*::fromVariant(value);
     
-    emit settingChanged(key, value);
+    settingChanged(key, value);
     
     if (saveImmediately) {
         save();
     }
 }
 
-bool SettingsManager::contains(const QString& key) const {
-    QStringList parts = key.split('/');
+bool SettingsManager::contains(const std::string& key) const {
+    std::vector<std::string> parts = key.split('/');
     if (parts.isEmpty()) {
         return false;
     }
     
-    QJsonObject obj = m_settings;
+    void* obj = m_settings;
     for (int i = 0; i < parts.size() - 1; ++i) {
         if (!obj.contains(parts[i])) {
             return false;
         }
-        QJsonValue val = obj[parts[i]];
+        void* val = obj[parts[i]];
         if (!val.isObject()) {
             return false;
         }
@@ -181,13 +176,13 @@ bool SettingsManager::contains(const QString& key) const {
     return obj.contains(parts.last());
 }
 
-void SettingsManager::remove(const QString& key) {
-    QStringList parts = key.split('/');
+void SettingsManager::remove(const std::string& key) {
+    std::vector<std::string> parts = key.split('/');
     if (parts.isEmpty()) {
         return;
     }
     
-    QJsonObject* obj = &m_settings;
+    void** obj = &m_settings;
     for (int i = 0; i < parts.size() - 1; ++i) {
         if (!obj->contains(parts[i])) {
             return;
@@ -203,84 +198,76 @@ void SettingsManager::remove(const QString& key) {
     save();
 }
 
-QJsonObject SettingsManager::toJson() const {
+void* SettingsManager::toJson() const {
     return m_settings;
 }
 
-void SettingsManager::fromJson(const QJsonObject& json) {
+void SettingsManager::fromJson(const void*& json) {
     m_settings = json;
-    emit settingsLoaded();
+    settingsLoaded();
 }
 
 bool SettingsManager::save() {
-    QString dirPath = getSettingsDirectory();
-    QDir dir;
+    std::string dirPath = getSettingsDirectory();
+    std::filesystem::path dir;
     if (!dir.mkpath(dirPath)) {
-        qWarning() << "Failed to create settings directory:" << dirPath;
         return false;
     }
     
-    QString filePath = settingsFilePath();
-    QFile file(filePath);
+    std::string filePath = settingsFilePath();
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
-        qWarning() << "Failed to open settings file for writing:" << filePath;
         return false;
     }
     
-    QJsonDocument doc(m_settings);
-    file.write(doc.toJson(QJsonDocument::Indented));
+    void* doc(m_settings);
+    file.write(doc.toJson(void*::Indented));
     file.close();
     
-    emit settingsSaved();
-    qDebug() << "Settings saved to:" << filePath;
+    settingsSaved();
     return true;
 }
 
 bool SettingsManager::load() {
-    QString filePath = settingsFilePath();
-    QFile file(filePath);
+    std::string filePath = settingsFilePath();
+    std::fstream file(filePath);
     
     if (!file.exists()) {
-        qDebug() << "Settings file does not exist, using defaults:" << filePath;
         return true;  // Use defaults
     }
     
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open settings file for reading:" << filePath;
         return false;
     }
     
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    void* doc = void*::fromJson(file.readAll());
     file.close();
     
     if (!doc.isObject()) {
-        qWarning() << "Invalid settings JSON";
         return false;
     }
     
     // Merge with defaults (preserve any new default keys)
-    QJsonObject loaded = doc.object();
+    void* loaded = doc.object();
     for (auto it = loaded.constBegin(); it != loaded.constEnd(); ++it) {
         m_settings[it.key()] = it.value();
     }
     
-    emit settingsLoaded();
-    qDebug() << "Settings loaded from:" << filePath;
+    settingsLoaded();
     return true;
 }
 
 void SettingsManager::resetToDefaults() {
     initializeDefaults();
     save();
-    emit settingsReset();
-    qDebug() << "Settings reset to defaults";
+    settingsReset();
 }
 
-QString SettingsManager::settingsFilePath() const {
-    return QDir(getSettingsDirectory()).filePath("settings.json");
+std::string SettingsManager::settingsFilePath() const {
+    return std::filesystem::path(getSettingsDirectory()).filePath("settings.json");
 }
 
-void SettingsManager::setWorkspacePath(const QString& path) {
+void SettingsManager::setWorkspacePath(const std::string& path) {
     if (m_workspacePath != path) {
         // Save current workspace settings
         if (!m_workspacePath.isEmpty()) {
@@ -288,7 +275,7 @@ void SettingsManager::setWorkspacePath(const QString& path) {
         }
         
         m_workspacePath = path;
-        m_workspaceSettings = QJsonObject();
+        m_workspaceSettings = void*();
         
         // Load new workspace settings
         if (!m_workspacePath.isEmpty()) {
@@ -297,28 +284,28 @@ void SettingsManager::setWorkspacePath(const QString& path) {
     }
 }
 
-QString SettingsManager::workspacePath() const {
+std::string SettingsManager::workspacePath() const {
     return m_workspacePath;
 }
 
-QVariant SettingsManager::workspaceValue(const QString& key, const QVariant& defaultValue) const {
+std::any SettingsManager::workspaceValue(const std::string& key, const std::any& defaultValue) const {
     // Check workspace settings first
     if (!m_workspaceSettings.isEmpty()) {
-        QStringList parts = key.split('/');
+        std::vector<std::string> parts = key.split('/');
         if (!parts.isEmpty()) {
-            QJsonObject obj = m_workspaceSettings;
+            void* obj = m_workspaceSettings;
             for (int i = 0; i < parts.size() - 1; ++i) {
                 if (!obj.contains(parts[i])) {
                     break;
                 }
-                QJsonValue val = obj[parts[i]];
+                void* val = obj[parts[i]];
                 if (!val.isObject()) {
                     break;
                 }
                 obj = val.toObject();
             }
             
-            QString lastKey = parts.last();
+            std::string lastKey = parts.last();
             if (obj.contains(lastKey)) {
                 return obj[lastKey].toVariant();
             }
@@ -329,26 +316,26 @@ QVariant SettingsManager::workspaceValue(const QString& key, const QVariant& def
     return value(key, defaultValue);
 }
 
-void SettingsManager::setWorkspaceValue(const QString& key, const QVariant& value) {
-    QStringList parts = key.split('/');
+void SettingsManager::setWorkspaceValue(const std::string& key, const std::any& value) {
+    std::vector<std::string> parts = key.split('/');
     if (parts.isEmpty()) {
         return;
     }
     
-    QJsonObject* obj = &m_workspaceSettings;
+    void** obj = &m_workspaceSettings;
     for (int i = 0; i < parts.size() - 1; ++i) {
         if (!obj->contains(parts[i])) {
-            obj->insert(parts[i], QJsonObject());
+            obj->insert(parts[i], void*());
         }
         QJsonValueRef ref = (*obj)[parts[i]];
         if (!ref.isObject()) {
-            ref = QJsonObject();
+            ref = void*();
         }
         obj = &ref.toObject();
     }
     
-    QString lastKey = parts.last();
-    (*obj)[lastKey] = QJsonValue::fromVariant(value);
+    std::string lastKey = parts.last();
+    (*obj)[lastKey] = void*::fromVariant(value);
     
     saveWorkspace();
 }
@@ -358,25 +345,22 @@ bool SettingsManager::saveWorkspace() {
         return false;
     }
     
-    QString configPath = getWorkspaceSettingsPath();
-    QFileInfo info(configPath);
-    QDir dir;
+    std::string configPath = getWorkspaceSettingsPath();
+    std::filesystem::path info(configPath);
+    std::filesystem::path dir;
     if (!dir.mkpath(info.absolutePath())) {
-        qWarning() << "Failed to create workspace config directory:" << info.absolutePath();
         return false;
     }
     
-    QFile file(configPath);
+    std::fstream file(configPath);
     if (!file.open(QIODevice::WriteOnly)) {
-        qWarning() << "Failed to open workspace settings for writing:" << configPath;
         return false;
     }
     
-    QJsonDocument doc(m_workspaceSettings);
-    file.write(doc.toJson(QJsonDocument::Indented));
+    void* doc(m_workspaceSettings);
+    file.write(doc.toJson(void*::Indented));
     file.close();
     
-    qDebug() << "Workspace settings saved to:" << configPath;
     return true;
 }
 
@@ -385,29 +369,25 @@ bool SettingsManager::loadWorkspace() {
         return false;
     }
     
-    QString configPath = getWorkspaceSettingsPath();
-    QFile file(configPath);
+    std::string configPath = getWorkspaceSettingsPath();
+    std::fstream file(configPath);
     
     if (!file.exists()) {
-        qDebug() << "Workspace settings file does not exist:" << configPath;
         return true;  // Not an error
     }
     
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open workspace settings for reading:" << configPath;
         return false;
     }
     
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    void* doc = void*::fromJson(file.readAll());
     file.close();
     
     if (!doc.isObject()) {
-        qWarning() << "Invalid workspace settings JSON";
         return false;
     }
     
     m_workspaceSettings = doc.object();
-    qDebug() << "Workspace settings loaded from:" << configPath;
     return true;
 }
 
@@ -425,11 +405,11 @@ bool SettingsManager::restoreLastSession() const {
     return value("general/restoreLastSession", true).toBool();
 }
 
-QString SettingsManager::theme() const {
+std::string SettingsManager::theme() const {
     return value("appearance/theme", "dark").toString();
 }
 
-QString SettingsManager::fontFamily() const {
+std::string SettingsManager::fontFamily() const {
     return value("appearance/fontFamily", "Consolas").toString();
 }
 
@@ -437,7 +417,7 @@ int SettingsManager::fontSize() const {
     return value("appearance/fontSize", 12).toInt();
 }
 
-QString SettingsManager::colorScheme() const {
+std::string SettingsManager::colorScheme() const {
     return value("appearance/colorScheme", "dark-modern").toString();
 }
 
@@ -461,7 +441,7 @@ bool SettingsManager::formatOnSave() const {
     return value("editor/formatOnSave", false).toBool();
 }
 
-QString SettingsManager::lineEndings() const {
+std::string SettingsManager::lineEndings() const {
     return value("editor/lineEndings", "Auto").toString();
 }
 
@@ -479,22 +459,23 @@ bool SettingsManager::searchUseRegex() const {
 
 // ========== Private Methods ==========
 
-QString SettingsManager::getSettingsDirectory() const {
-#ifdef Q_OS_WIN
-    QString appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    return QDir(appData).filePath(".rawrxd");
+std::string SettingsManager::getSettingsDirectory() const {
+#ifdef 
+    std::string appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    return std::filesystem::path(appData).filePath(".rawrxd");
 #else
-    QString home = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
-    return QDir(home).filePath(".rawrxd");
+    std::string home = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    return std::filesystem::path(home).filePath(".rawrxd");
 #endif
 }
 
-QString SettingsManager::getWorkspaceSettingsPath() const {
+std::string SettingsManager::getWorkspaceSettingsPath() const {
     if (m_workspacePath.isEmpty()) {
-        return QString();
+        return std::string();
     }
     
-    return QDir(m_workspacePath).filePath(".rawrxd/workspace.json");
+    return std::filesystem::path(m_workspacePath).filePath(".rawrxd/workspace.json");
 }
 
 } // namespace RawrXD
+

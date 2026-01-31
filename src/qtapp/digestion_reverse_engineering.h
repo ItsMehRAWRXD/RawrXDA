@@ -240,7 +240,7 @@ public:
     
     // Scan with specific analysis directions
     std::vector<DigestionTask> scanFileWithDirections(const std::string& filePath, 
-                                                 const QSet<AnalysisDirection>& directions);
+                                                 const std::unordered_set<AnalysisDirection>& directions);
     
     // Perform comprehensive multi-directional analysis
     ComprehensiveAnalysisReport performComprehensiveAnalysis(const std::string& filePath);
@@ -308,7 +308,7 @@ public:
     void performRecursiveAnalysis(const std::string& entryPointFile);
     
     // Chain with specific directions
-    void chainWithDirections(const std::string& nextFilePath, const QSet<AnalysisDirection>& directions);
+    void chainWithDirections(const std::string& nextFilePath, const std::unordered_set<AnalysisDirection>& directions);
 
     // ==================== Reporting & Export ====================
     
@@ -452,6 +452,4 @@ private:
     // Generate test code for agentic patterns
     std::string generateTestCode(const DigestionTask& task, const std::string& patternName);
 };
-
-
 

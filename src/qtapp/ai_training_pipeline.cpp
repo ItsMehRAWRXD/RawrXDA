@@ -44,7 +44,6 @@ AITrainingPipeline::AITrainingPipeline()
             });  // Signal connection removed\nm_isTraining = false;
             });
     
-    // // qDebug:  "AITrainingPipeline initialized";
 }
 
 AITrainingPipeline::~AITrainingPipeline() {
@@ -78,7 +77,6 @@ TrainingHyperparameters AITrainingPipeline::getHyperparameters() const {
 
 bool AITrainingPipeline::prepareTraining(const AIDigestionDataset& dataset, const DigestionConfig& config) {
     if (m_isTraining) {
-        // // qWarning:  "Training already in progress";
         return false;
     }
     
@@ -89,31 +87,26 @@ bool AITrainingPipeline::prepareTraining(const AIDigestionDataset& dataset, cons
     // Create working directory
     m_workingDir = std::make_unique<QTemporaryDir>();
     if (!m_workingDir->isValid()) {
-        // // qWarning:  "Failed to create working directory";
         return false;
     }
     
     // Setup training environment
     if (!setupTrainingEnvironment()) {
-        // // qWarning:  "Failed to setup training environment";
         return false;
     }
     
     // Prepare training data
     if (!prepareTrainingData(dataset)) {
-        // // qWarning:  "Failed to prepare training data";
         return false;
     }
     
     // Generate training configuration
     if (!createConfigFiles()) {
-        // // qWarning:  "Failed to create config files";
         return false;
     }
     
     // Generate training script
     if (!generateTrainingScript()) {
-        // // qWarning:  "Failed to generate training script";
         return false;
     }
     
@@ -123,7 +116,6 @@ bool AITrainingPipeline::prepareTraining(const AIDigestionDataset& dataset, cons
 
 void AITrainingPipeline::startTraining() {
     if (m_isTraining) {
-        // // qWarning:  "Training already in progress";
         return;
     }
     
@@ -234,7 +226,6 @@ std::string AITrainingPipeline::getModelOutputPath() const {
 
 bool AITrainingPipeline::quantizeModel(const std::string& inputPath, const std::string& outputPath, const std::string& quantization) {
     if (!m_quantizer) {
-        // // qWarning:  "Quantizer not initialized";
         return false;
     }
     
@@ -243,7 +234,6 @@ bool AITrainingPipeline::quantizeModel(const std::string& inputPath, const std::
 
 bool AITrainingPipeline::validateModel(const std::string& modelPath) {
     if (!m_validator) {
-        // // qWarning:  "Validator not initialized";
         return false;
     }
     
@@ -252,7 +242,6 @@ bool AITrainingPipeline::validateModel(const std::string& modelPath) {
 
 bool AITrainingPipeline::testModel(const std::string& modelPath, const std::stringList& testPrompts) {
     if (!m_validator) {
-        // // qWarning:  "Validator not initialized";
         return false;
     }
     
@@ -304,7 +293,6 @@ bool AITrainingPipeline::setupTrainingEnvironment() {
     
     // Install dependencies if needed
     if (!installDependencies()) {
-        // // qWarning:  "Failed to install dependencies";
         return false;
     }
     
@@ -314,7 +302,6 @@ bool AITrainingPipeline::setupTrainingEnvironment() {
 bool AITrainingPipeline::prepareTrainingData(const AIDigestionDataset& dataset) {
     // File operation removed;
     if (!dataFile.open(std::iostream::WriteOnly | std::iostream::Text)) {
-        // // qWarning:  "Cannot create training data file:" << m_datasetPath;
         return false;
     }
     
@@ -328,23 +315,23 @@ bool AITrainingPipeline::prepareTrainingData(const AIDigestionDataset& dataset) 
         // Generate instruction-response pairs
         if (!knowledge.functions.empty()) {
             trainingExample["instruction"] = std::string("Explain the function %1 from %2")
-                                             .arg(knowledge.functions.first())
-                                             .arg(// FileInfo: knowledge.originalFile).baseName());
+                                             )
+                                             .baseName());
             trainingExample["input"] = "";
             trainingExample["output"] = std::string("Function %1: %2")
-                                        .arg(knowledge.functions.first())
-                                        .arg(knowledge.content.left(500));
+                                        )
+                                        );
         } else if (!knowledge.classes.empty()) {
             trainingExample["instruction"] = std::string("Describe the class %1 from %2")
-                                             .arg(knowledge.classes.first())
-                                             .arg(// FileInfo: knowledge.originalFile).baseName());
+                                             )
+                                             .baseName());
             trainingExample["input"] = "";
             trainingExample["output"] = std::string("Class %1: %2")
-                                        .arg(knowledge.classes.first())
-                                        .arg(knowledge.content.left(500));
+                                        )
+                                        );
         } else {
             trainingExample["instruction"] = std::string("What can you tell me about %1?")
-                                             .arg(// FileInfo: knowledge.originalFile).baseName());
+                                             .baseName());
             trainingExample["input"] = "";
             trainingExample["output"] = knowledge.content.left(1000);
         }
@@ -365,7 +352,6 @@ bool AITrainingPipeline::prepareTrainingData(const AIDigestionDataset& dataset) 
     int batchSize = m_hyperparameters.batchSize * m_hyperparameters.gradientAccumulationSteps;
     m_totalSteps = (dataset.totalSamples / batchSize) * m_config.epochs;
     
-    // // qDebug:  "Prepared training data with" << dataset.totalSamples << "samples," << m_totalSteps << "total steps";
     
     return true;
 }
@@ -416,7 +402,6 @@ bool AITrainingPipeline::createConfigFiles() {
     // Save config file
     // File operation removed;
     if (!configFile.open(std::iostream::WriteOnly)) {
-        // // qWarning:  "Cannot create config file:" << m_configPath;
         return false;
     }
     
@@ -586,14 +571,12 @@ if __name__ == "__main__":
             break;
             
         default:
-            // // qWarning:  "Unsupported training backend";
             return false;
     }
     
     // Save script to file
     // File operation removed;
     if (!scriptFile.open(std::iostream::WriteOnly | std::iostream::Text)) {
-        // // qWarning:  "Cannot create training script:" << m_scriptPath;
         return false;
     }
     
@@ -627,13 +610,11 @@ bool AITrainingPipeline::setupTransformersTraining() {
 
 bool AITrainingPipeline::setupCustomTraining() {
     // Custom training implementation
-    // // qWarning:  "Custom training backend not yet implemented";
     return false;
 }
 
 bool AITrainingPipeline::setupOllamaTraining() {
     // Ollama training implementation
-    // // qWarning:  "Ollama training backend not yet implemented";
     return false;
 }
 
@@ -643,7 +624,6 @@ void AITrainingPipeline::handleTrainingOutput() {
     std::vector<uint8_t> data = m_trainingProcess->readAllStandardOutput();
     std::string output = std::string::fromUtf8(data);
     
-    // // qDebug:  "Training output:" << output;
     
     // Parse training progress from output
     parseTrainingLogs();
@@ -655,7 +635,6 @@ void AITrainingPipeline::handleTrainingError() {
     std::vector<uint8_t> data = m_trainingProcess->readAllStandardError();
     std::string error = std::string::fromUtf8(data);
     
-    // // qWarning:  "Training error:" << error;
 }
 
 void AITrainingPipeline::handleTrainingFinished() {
@@ -666,7 +645,7 @@ void AITrainingPipeline::handleTrainingFinished() {
         if (exitCode == 0) {
             trainingCompleted(m_modelOutputPath);
         } else {
-            trainingFailed(std::string("Training process exited with code %1").arg(exitCode));
+            trainingFailed(std::string("Training process exited with code %1"));
         }
     }
 }
@@ -721,10 +700,9 @@ bool AITrainingPipeline::saveModelCheckpoints() {
     std::string checkpointDir = // (m_workingDir->path()).filePath("checkpoints");
     std::filesystem::create_directories(checkpointDir);
     
-    std::string checkpointPath = // (checkpointDir).filePath(std::string("checkpoint-%1").arg(m_currentStep));
+    std::string checkpointPath = // (checkpointDir).filePath(std::string("checkpoint-%1"));
     
     // This would save actual model checkpoints in a real implementation
-    // // qDebug:  "Saving checkpoint to:" << checkpointPath;
     
     modelSaved(checkpointPath);
     return true;
@@ -749,7 +727,6 @@ bool AITrainingPipeline::installDependencies() {
         // Process removed
         process.start("pip", std::stringList() << "install" << package);
         if (!process.waitForFinished(60000) || process.exitCode() != 0) {
-            // // qWarning:  "Failed to install package:" << package;
             // Continue anyway - might already be installed
         }
     }
@@ -847,10 +824,4 @@ bool TrainingValidator::testModel(const std::string& modelPath, const std::strin
 nlohmann::json TrainingValidator::getValidationResults() const {
     return m_validationResults;
 }
-
-
-
-
-
-
 

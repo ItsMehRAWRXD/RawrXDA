@@ -6,35 +6,30 @@
  */
 
 #include "qt_file_writer.h"
-#include <QFile>
-#include <QFileInfo>
-#include <QDir>
-#include <QDateTime>
-#include <QSaveFile>
-#include <QDebug>
+
 
 namespace RawrXD {
 
-QtFileWriter::QtFileWriter(QObject* parent) 
-    : QObject(parent)
+QtFileWriter::QtFileWriter(void* parent) 
+    : void(parent)
     , m_autoBackup(true) 
 {}
 
-FileOperationResult QtFileWriter::writeFile(const QString& path,
-                                           const QString& content,
+FileOperationResult QtFileWriter::writeFile(const std::string& path,
+                                           const std::string& content,
                                            bool createBackup) 
 {
     return writeFileRaw(path, content.toUtf8(), createBackup);
 }
 
-FileOperationResult QtFileWriter::writeFileRaw(const QString& path,
-                                              const QByteArray& data,
+FileOperationResult QtFileWriter::writeFileRaw(const std::string& path,
+                                              const std::vector<uint8_t>& data,
                                               bool createBackup) 
 {
-    QString absolutePath = toAbsolutePath(path);
+    std::string absolutePath = toAbsolutePath(path);
     
     // Create backup if file exists and backup requested
-    QString backupPath;
+    std::string backupPath;
     if (createBackup && exists(absolutePath)) {
         backupPath = this->createBackup(absolutePath);
         if (backupPath.isEmpty()) {
@@ -43,12 +38,12 @@ FileOperationResult QtFileWriter::writeFileRaw(const QString& path,
     }
     
     // Ensure directory exists
-    QFileInfo fileInfo(absolutePath);
-    QDir dir = fileInfo.dir();
+    std::filesystem::path fileInfo(absolutePath);
+    std::filesystem::path dir = fileInfo.dir();
     if (!dir.exists() && !dir.mkpath(".")) {
         return FileOperationResult(
             false, 
-            QString("Failed to create directory: %1").arg(dir.absolutePath())
+            std::string("Failed to create directory: %1"))
         );
     }
     
@@ -57,7 +52,7 @@ FileOperationResult QtFileWriter::writeFileRaw(const QString& path,
     if (!file.open(QIODevice::WriteOnly)) {
         return FileOperationResult(
             false, 
-            QString("Failed to open file for writing: %1").arg(file.errorString())
+            std::string("Failed to open file for writing: %1"))
         );
     }
     
@@ -70,7 +65,7 @@ FileOperationResult QtFileWriter::writeFileRaw(const QString& path,
     if (!file.commit()) {
         return FileOperationResult(
             false, 
-            QString("Failed to commit file: %1").arg(file.errorString())
+            std::string("Failed to commit file: %1"))
         );
     }
     
@@ -79,18 +74,18 @@ FileOperationResult QtFileWriter::writeFileRaw(const QString& path,
     return result;
 }
 
-FileOperationResult QtFileWriter::createFile(const QString& path) {
-    QString absolutePath = toAbsolutePath(path);
+FileOperationResult QtFileWriter::createFile(const std::string& path) {
+    std::string absolutePath = toAbsolutePath(path);
     
     if (exists(absolutePath)) {
         return FileOperationResult(false, "File already exists");
     }
     
-    QFile file(absolutePath);
+    std::fstream file(absolutePath);
     if (!file.open(QIODevice::WriteOnly)) {
         return FileOperationResult(
             false, 
-            QString("Failed to create file: %1").arg(file.errorString())
+            std::string("Failed to create file: %1"))
         );
     }
     
@@ -98,8 +93,8 @@ FileOperationResult QtFileWriter::createFile(const QString& path) {
     return FileOperationResult(true);
 }
 
-FileOperationResult QtFileWriter::deleteFile(const QString& path, bool moveToTrash) {
-    QString absolutePath = toAbsolutePath(path);
+FileOperationResult QtFileWriter::deleteFile(const std::string& path, bool moveToTrash) {
+    std::string absolutePath = toAbsolutePath(path);
     
     if (!exists(absolutePath)) {
         return FileOperationResult(false, "File does not exist");
@@ -107,28 +102,27 @@ FileOperationResult QtFileWriter::deleteFile(const QString& path, bool moveToTra
     
     if (moveToTrash) {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-        if (QFile::moveToTrash(absolutePath)) {
+        if (std::fstream::moveToTrash(absolutePath)) {
             return FileOperationResult(true);
         }
 #endif
-        qWarning() << "Failed to move to trash, deleting permanently:" << absolutePath;
     }
     
     // Permanent delete
-    QFile file(absolutePath);
+    std::fstream file(absolutePath);
     if (!file.remove()) {
         return FileOperationResult(
             false, 
-            QString("Failed to delete file: %1").arg(file.errorString())
+            std::string("Failed to delete file: %1"))
         );
     }
     
     return FileOperationResult(true);
 }
 
-FileOperationResult QtFileWriter::renameFile(const QString& oldPath, const QString& newPath) {
-    QString absoluteOldPath = toAbsolutePath(oldPath);
-    QString absoluteNewPath = toAbsolutePath(newPath);
+FileOperationResult QtFileWriter::renameFile(const std::string& oldPath, const std::string& newPath) {
+    std::string absoluteOldPath = toAbsolutePath(oldPath);
+    std::string absoluteNewPath = toAbsolutePath(newPath);
     
     if (!exists(absoluteOldPath)) {
         return FileOperationResult(false, "Source file does not exist");
@@ -138,23 +132,23 @@ FileOperationResult QtFileWriter::renameFile(const QString& oldPath, const QStri
         return FileOperationResult(false, "Destination file already exists");
     }
     
-    QFile file(absoluteOldPath);
+    std::fstream file(absoluteOldPath);
     if (!file.rename(absoluteNewPath)) {
         return FileOperationResult(
             false, 
-            QString("Failed to rename file: %1").arg(file.errorString())
+            std::string("Failed to rename file: %1"))
         );
     }
     
     return FileOperationResult(true);
 }
 
-FileOperationResult QtFileWriter::copyFile(const QString& sourcePath,
-                                          const QString& destPath,
+FileOperationResult QtFileWriter::copyFile(const std::string& sourcePath,
+                                          const std::string& destPath,
                                           bool overwrite) 
 {
-    QString absoluteSource = toAbsolutePath(sourcePath);
-    QString absoluteDest = toAbsolutePath(destPath);
+    std::string absoluteSource = toAbsolutePath(sourcePath);
+    std::string absoluteDest = toAbsolutePath(destPath);
     
     if (!exists(absoluteSource)) {
         return FileOperationResult(false, "Source file does not exist");
@@ -166,36 +160,35 @@ FileOperationResult QtFileWriter::copyFile(const QString& sourcePath,
     
     // Remove existing file if overwriting
     if (exists(absoluteDest)) {
-        QFile::remove(absoluteDest);
+        std::fstream::remove(absoluteDest);
     }
     
-    QFile file(absoluteSource);
+    std::fstream file(absoluteSource);
     if (!file.copy(absoluteDest)) {
         return FileOperationResult(
             false, 
-            QString("Failed to copy file: %1").arg(file.errorString())
+            std::string("Failed to copy file: %1"))
         );
     }
     
     return FileOperationResult(true);
 }
 
-QString QtFileWriter::createBackup(const QString& path) {
+std::string QtFileWriter::createBackup(const std::string& path) {
     if (!exists(path)) {
-        return QString();
+        return std::string();
     }
     
-    QFileInfo info(path);
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-    QString backupPath = QString("%1/%2.%3.bak")
-        .arg(info.absolutePath())
-        .arg(info.fileName())
-        .arg(timestamp);
+    std::filesystem::path info(path);
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("yyyyMMdd_HHmmss");
+    std::string backupPath = std::string("%1/%2.%3.bak")
+        )
+        )
+        ;
     
-    QFile file(path);
+    std::fstream file(path);
     if (!file.copy(backupPath)) {
-        qWarning() << "Failed to create backup:" << file.errorString();
-        return QString();
+        return std::string();
     }
     
     return backupPath;
@@ -211,15 +204,16 @@ bool QtFileWriter::isAutoBackupEnabled() const {
 
 // Private helper methods
 
-QString QtFileWriter::toAbsolutePath(const QString& path) const {
-    if (QFileInfo(path).isAbsolute()) {
-        return QDir::cleanPath(path);
+std::string QtFileWriter::toAbsolutePath(const std::string& path) const {
+    if (std::filesystem::path(path).isAbsolute()) {
+        return std::filesystem::path::cleanPath(path);
     }
-    return QDir::current().absoluteFilePath(path);
+    return std::filesystem::path::current().absoluteFilePath(path);
 }
 
-bool QtFileWriter::exists(const QString& path) const {
-    return QFileInfo::exists(path);
+bool QtFileWriter::exists(const std::string& path) const {
+    return std::filesystem::path::exists(path);
 }
 
 } // namespace RawrXD
+

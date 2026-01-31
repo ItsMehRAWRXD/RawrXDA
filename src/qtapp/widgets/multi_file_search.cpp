@@ -6,21 +6,12 @@
  */
 
 #include "multi_file_search.h"
-#include <QDir>
-#include <QFileInfo>
-#include <QFile>
-#include <QTextStream>
-#include <QRegularExpression>
-#include <QHeaderView>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QDebug>
-#include <QtConcurrent>
+
 
 namespace RawrXD {
 
-MultiFileSearchWidget::MultiFileSearchWidget(QWidget* parent)
-    : QWidget(parent)
+MultiFileSearchWidget::MultiFileSearchWidget(void* parent)
+    : void(parent)
     , m_mainLayout(nullptr)
     , m_searchWatcher(nullptr)
     , m_searchCancelled(false)
@@ -32,8 +23,7 @@ MultiFileSearchWidget::MultiFileSearchWidget(QWidget* parent)
     setupUI();
     
     m_searchWatcher = new QFutureWatcher<void>(this);
-    connect(m_searchWatcher, &QFutureWatcher<void>::finished,
-            this, &MultiFileSearchWidget::onSearchCompleted);
+// Qt connect removed
 }
 
 MultiFileSearchWidget::~MultiFileSearchWidget() {
@@ -58,12 +48,12 @@ void MultiFileSearchWidget::setupUI() {
     m_searchLayout->addWidget(m_searchEdit);
     
     m_searchButton = new QPushButton("Search", this);
-    connect(m_searchButton, &QPushButton::clicked, this, &MultiFileSearchWidget::startSearch);
+// Qt connect removed
     m_searchLayout->addWidget(m_searchButton);
     
     m_cancelButton = new QPushButton("Cancel", this);
     m_cancelButton->setEnabled(false);
-    connect(m_cancelButton, &QPushButton::clicked, this, &MultiFileSearchWidget::cancelSearch);
+// Qt connect removed
     m_searchLayout->addWidget(m_cancelButton);
     
     m_mainLayout->addLayout(m_searchLayout);
@@ -85,23 +75,23 @@ void MultiFileSearchWidget::setupUI() {
     m_optionsLayout = new QHBoxLayout();
     
     m_caseSensitiveCheck = new QCheckBox("Match case (Aa)", this);
-    connect(m_caseSensitiveCheck, &QCheckBox::toggled,
+// Qt connect removed
             [this](bool checked) { m_caseSensitive = checked; });
     m_optionsLayout->addWidget(m_caseSensitiveCheck);
     
     m_wholeWordCheck = new QCheckBox("Match whole word (ab|)", this);
-    connect(m_wholeWordCheck, &QCheckBox::toggled,
+// Qt connect removed
             [this](bool checked) { m_wholeWord = checked; });
     m_optionsLayout->addWidget(m_wholeWordCheck);
     
     m_regexCheck = new QCheckBox("Use regex (.*)", this);
-    connect(m_regexCheck, &QCheckBox::toggled,
+// Qt connect removed
             [this](bool checked) { m_useRegex = checked; });
     m_optionsLayout->addWidget(m_regexCheck);
     
     m_gitignoreCheck = new QCheckBox("Respect .gitignore", this);
     m_gitignoreCheck->setChecked(true);
-    connect(m_gitignoreCheck, &QCheckBox::toggled,
+// Qt connect removed
             [this](bool checked) { m_respectGitignore = checked; });
     m_optionsLayout->addWidget(m_gitignoreCheck);
     
@@ -123,10 +113,7 @@ void MultiFileSearchWidget::setupUI() {
     m_resultsTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
     m_resultsTree->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     m_resultsTree->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-    
-    connect(m_resultsTree, &QTreeWidget::itemClicked,
-            this, &MultiFileSearchWidget::onResultItemClicked);
-    
+// Qt connect removed
     m_mainLayout->addWidget(m_resultsTree);
     
     // Bottom toolbar
@@ -138,17 +125,16 @@ void MultiFileSearchWidget::setupUI() {
     bottomLayout->addStretch();
     
     m_expandAllButton = new QPushButton("Expand All", this);
-    connect(m_expandAllButton, &QPushButton::clicked, this, &MultiFileSearchWidget::expandAll);
+// Qt connect removed
     bottomLayout->addWidget(m_expandAllButton);
     
     m_collapseAllButton = new QPushButton("Collapse All", this);
-    connect(m_collapseAllButton, &QPushButton::clicked, this, &MultiFileSearchWidget::collapseAll);
+// Qt connect removed
     bottomLayout->addWidget(m_collapseAllButton);
     
     m_exportButton = new QPushButton("Export Results...", this);
-    connect(m_exportButton, &QPushButton::clicked, [this]() {
-        QString filePath = QFileDialog::getSaveFileName(this, "Export Results",
-                                                        QString(), "Text Files (*.txt);;CSV Files (*.csv)");
+// Qt connect removed
+                                                        std::string(), "Text Files (*.txt);;CSV Files (*.csv)");
         if (!filePath.isEmpty()) {
             if (exportResults(filePath)) {
                 QMessageBox::information(this, "Export", "Results exported successfully");
@@ -203,27 +189,27 @@ void MultiFileSearchWidget::setupUI() {
     )");
 }
 
-void MultiFileSearchWidget::setProjectPath(const QString& path) {
+void MultiFileSearchWidget::setProjectPath(const std::string& path) {
     m_projectPath = path;
 }
 
-QString MultiFileSearchWidget::projectPath() const {
+std::string MultiFileSearchWidget::projectPath() const {
     return m_projectPath;
 }
 
-void MultiFileSearchWidget::setSearchQuery(const QString& query) {
+void MultiFileSearchWidget::setSearchQuery(const std::string& query) {
     m_searchEdit->setText(query);
 }
 
-QString MultiFileSearchWidget::searchQuery() const {
+std::string MultiFileSearchWidget::searchQuery() const {
     return m_searchEdit->text();
 }
 
-void MultiFileSearchWidget::setFileFilter(const QString& pattern) {
+void MultiFileSearchWidget::setFileFilter(const std::string& pattern) {
     m_filterEdit->setText(pattern);
 }
 
-QString MultiFileSearchWidget::fileFilter() const {
+std::string MultiFileSearchWidget::fileFilter() const {
     return m_filterEdit->text();
 }
 
@@ -263,19 +249,19 @@ bool MultiFileSearchWidget::isUseRegex() const {
     return m_useRegex;
 }
 
-QList<MultiFileSearchResult> MultiFileSearchWidget::results() const {
+std::vector<MultiFileSearchResult> MultiFileSearchWidget::results() const {
     return m_results;
 }
 
-bool MultiFileSearchWidget::exportResults(const QString& filePath) {
-    QFile file(filePath);
+bool MultiFileSearchWidget::exportResults(const std::string& filePath) {
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         return false;
     }
     
     QTextStream out(&file);
     
-    bool isCsv = filePath.endsWith(".csv", Qt::CaseInsensitive);
+    bool isCsv = filePath.endsWith(".csv", //CaseInsensitive);
     
     if (isCsv) {
         out << "File,Line,Column,Match\n";
@@ -283,10 +269,10 @@ bool MultiFileSearchWidget::exportResults(const QString& filePath) {
         out << "Search Results for: " << searchQuery() << "\n";
         out << "Project: " << m_projectPath << "\n";
         out << "Total matches: " << m_results.size() << "\n";
-        out << QString(80, '-') << "\n\n";
+        out << std::string(80, '-') << "\n\n";
     }
     
-    QString currentFile;
+    std::string currentFile;
     for (const MultiFileSearchResult& result : m_results) {
         if (isCsv) {
             out << result.file << ","
@@ -327,35 +313,34 @@ void MultiFileSearchWidget::startSearch() {
     m_progressBar->setVisible(true);
     m_statusLabel->setText("Searching...");
     
-    emit searchStarted();
+    searchStarted();
     
     // Collect files to search
-    QStringList filesToSearch = collectFilesToSearch();
+    std::vector<std::string> filesToSearch = collectFilesToSearch();
     m_progressBar->setMaximum(filesToSearch.size());
     
-    qDebug() << "Searching in" << filesToSearch.size() << "files";
     
     // Run search in background
     QFuture<void> future = QtConcurrent::run([this, filesToSearch]() {
         int current = 0;
-        for (const QString& filePath : filesToSearch) {
+        for (const std::string& filePath : filesToSearch) {
             if (m_searchCancelled) {
                 break;
             }
             
-            QList<MultiFileSearchResult> fileResults;
+            std::vector<MultiFileSearchResult> fileResults;
             searchInFile(filePath, fileResults);
             
             if (!fileResults.isEmpty()) {
-                QMutexLocker locker(&m_resultsMutex);
+                std::lock_guard<std::mutex> locker(&m_resultsMutex);
                 m_results.append(fileResults);
             }
             
             current++;
             QMetaObject::invokeMethod(this, "onSearchProgressUpdate",
-                                    Qt::QueuedConnection,
-                                    Q_ARG(int, current),
-                                    Q_ARG(int, filesToSearch.size()));
+                                    //QueuedConnection,
+                                    (int, current),
+                                    (int, filesToSearch.size()));
         }
     });
     
@@ -387,12 +372,12 @@ void MultiFileSearchWidget::onResultItemClicked(QTreeWidgetItem* item, int /*col
     
     // Check if this is a match item (has parent)
     if (item->parent()) {
-        QString filePath = item->data(0, Qt::UserRole).toString();
-        int line = item->data(1, Qt::UserRole).toInt();
-        int column = item->data(2, Qt::UserRole).toInt();
+        std::string filePath = item->data(0, //UserRole).toString();
+        int line = item->data(1, //UserRole).toInt();
+        int column = item->data(2, //UserRole).toInt();
         
         if (!filePath.isEmpty() && line >= 0) {
-            emit resultClicked(filePath, line, column);
+            resultClicked(filePath, line, column);
         }
     }
 }
@@ -404,62 +389,61 @@ void MultiFileSearchWidget::onSearchCompleted() {
     
     if (m_searchCancelled) {
         m_statusLabel->setText("Search cancelled");
-        emit searchCancelled();
+        searchCancelled();
     } else {
         // Count unique files
-        QSet<QString> uniqueFiles;
+        std::unordered_set<std::string> uniqueFiles;
         for (const MultiFileSearchResult& result : m_results) {
             uniqueFiles.insert(result.file);
         }
         
-        QString status = QString("%1 matches in %2 files")
-            .arg(m_results.size())
-            .arg(uniqueFiles.size());
+        std::string status = std::string("%1 matches in %2 files")
+            )
+            );
         m_statusLabel->setText(status);
         
         updateResultsTree();
-        emit searchFinished(m_results.size(), uniqueFiles.size());
+        searchFinished(m_results.size(), uniqueFiles.size());
         
-        qDebug() << "Search completed:" << status;
     }
 }
 
 void MultiFileSearchWidget::onSearchProgressUpdate(int current, int total) {
     m_progressBar->setValue(current);
-    m_statusLabel->setText(QString("Searching... %1 of %2 files").arg(current).arg(total));
+    m_statusLabel->setText(std::string("Searching... %1 of %2 files"));
 }
 
 void MultiFileSearchWidget::updateResultsTree() {
     m_resultsTree->clear();
     
     // Group by file
-    QMap<QString, QList<MultiFileSearchResult>> resultsByFile;
+    std::map<std::string, std::vector<MultiFileSearchResult>> resultsByFile;
     for (const MultiFileSearchResult& result : m_results) {
         resultsByFile[result.file].append(result);
     }
     
     // Create tree items
     for (auto it = resultsByFile.constBegin(); it != resultsByFile.constEnd(); ++it) {
-        const QString& filePath = it.key();
-        const QList<MultiFileSearchResult>& fileResults = it.value();
+        const std::string& filePath = it.key();
+        const std::vector<MultiFileSearchResult>& fileResults = it.value();
         
         // File node
         QTreeWidgetItem* fileItem = new QTreeWidgetItem(m_resultsTree);
-        QString relPath = FileManager::toRelativePath(filePath, m_projectPath);
-        fileItem->setText(0, QString("%1 (%2 matches)").arg(relPath).arg(fileResults.size()));
+        std::string relPath = FileManager::toRelativePath(filePath, m_projectPath);
+        fileItem->setText(0, std::string("%1 (%2 matches)")));
         fileItem->setExpanded(true);
         
         // Match nodes
         for (const MultiFileSearchResult& result : fileResults) {
             QTreeWidgetItem* matchItem = new QTreeWidgetItem(fileItem);
             matchItem->setText(0, result.lineText.trimmed());
-            matchItem->setText(1, QString::number(result.line + 1));  // 1-based for display
-            matchItem->setText(2, QString::number(result.column + 1));
+            matchItem->setText(1, std::string::number(result.line + 1));  // 1-based for display
+            matchItem->setText(2, std::string::number(result.column + 1));
             
             // Store data for click handler
-            matchItem->setData(0, Qt::UserRole, result.file);
-            matchItem->setData(1, Qt::UserRole, result.line);
-            matchItem->setData(2, Qt::UserRole, result.column);
+            matchItem->setData(0, //UserRole, result.file);
+            matchItem->setData(1, //UserRole, result.line);
+            matchItem->setData(2, //UserRole, result.column);
             
             // Highlight matched text
             matchItem->setForeground(0, QColor(220, 220, 170));
@@ -467,80 +451,79 @@ void MultiFileSearchWidget::updateResultsTree() {
     }
 }
 
-void MultiFileSearchWidget::searchInFile(const QString& filePath, QList<MultiFileSearchResult>& results) {
+void MultiFileSearchWidget::searchInFile(const std::string& filePath, std::vector<MultiFileSearchResult>& results) {
     FileManager fm;
-    QString content;
+    std::string content;
     
     if (!fm.readFile(filePath, content)) {
         return;
     }
     
     // Build search pattern
-    QString pattern = searchQuery();
+    std::string pattern = searchQuery();
     if (!m_useRegex) {
-        pattern = QRegularExpression::escape(pattern);
+        pattern = std::regex::escape(pattern);
     }
     if (m_wholeWord) {
-        pattern = QString("\\b%1\\b").arg(pattern);
+        pattern = std::string("\\b%1\\b");
     }
     
-    QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+    std::regex::PatternOptions options = std::regex::NoPatternOption;
     if (!m_caseSensitive) {
-        options |= QRegularExpression::CaseInsensitiveOption;
+        options |= std::regex::CaseInsensitiveOption;
     }
     
-    QRegularExpression regex(pattern, options);
+    std::regex regex(pattern, options);
     if (!regex.isValid()) {
-        qWarning() << "Invalid regex:" << pattern;
         return;
     }
     
     // Search line by line
-    QStringList lines = content.split('\n');
+    std::vector<std::string> lines = content.split('\n');
     for (int lineNum = 0; lineNum < lines.size(); ++lineNum) {
-        const QString& line = lines[lineNum];
+        const std::string& line = lines[lineNum];
         
-        QRegularExpressionMatchIterator it = regex.globalMatch(line);
-        while (it.hasNext()) {
-            QRegularExpressionMatch match = it.next();
+        std::sregex_iterator it = regex;
+        while (itfalse) {
+            std::smatch match = it;
             
             MultiFileSearchResult result;
             result.file = filePath;
             result.line = lineNum;
             result.column = match.capturedStart();
             result.lineText = line;
-            result.matchedText = match.captured(0);
+            result.matchedText = match"";
             
             results.append(result);
         }
     }
 }
 
-QStringList MultiFileSearchWidget::collectFilesToSearch() {
-    QStringList files;
+std::vector<std::string> MultiFileSearchWidget::collectFilesToSearch() {
+    std::vector<std::string> files;
     
     if (m_projectPath.isEmpty()) {
         return files;
     }
     
     // Parse file filter
-    QStringList nameFilters;
-    QString filter = fileFilter().trimmed();
+    std::vector<std::string> nameFilters;
+    std::string filter = fileFilter().trimmed();
     if (filter.isEmpty()) {
         nameFilters << "*";  // All files
     } else {
-        nameFilters = filter.split(' ', Qt::SkipEmptyParts);
+        nameFilters = filter.split(' ', //SkipEmptyParts);
     }
     
     // Recursively collect files
-    QDir dir(m_projectPath);
+    std::filesystem::path dir(m_projectPath);
     QDirIterator it(dir.absolutePath(),
                     nameFilters,
-                    QDir::Files | QDir::Readable,
+                    std::filesystem::path::Files | std::filesystem::path::Readable,
                     QDirIterator::Subdirectories | QDirIterator::FollowSymlinks);
     
-    while (it.hasNext()) {
-        QString filePath = it.next();
+    while (itfalse) {
+        std::string filePath = it;
         
         if (!shouldSkipFile(filePath)) {
             files.append(filePath);
@@ -550,12 +533,12 @@ QStringList MultiFileSearchWidget::collectFilesToSearch() {
     return files;
 }
 
-bool MultiFileSearchWidget::shouldSkipFile(const QString& filePath) const {
+bool MultiFileSearchWidget::shouldSkipFile(const std::string& filePath) const {
     // Skip binary files (basic check)
-    QFileInfo info(filePath);
-    QString extension = info.suffix().toLower();
+    std::filesystem::path info(filePath);
+    std::string extension = info.suffix().toLower();
     
-    QStringList binaryExtensions = {
+    std::vector<std::string> binaryExtensions = {
         "exe", "dll", "so", "dylib", "a", "lib", "o", "obj",
         "png", "jpg", "jpeg", "gif", "bmp", "ico",
         "mp3", "wav", "mp4", "avi",
@@ -569,7 +552,7 @@ bool MultiFileSearchWidget::shouldSkipFile(const QString& filePath) const {
     
     // Check .gitignore if enabled
     if (m_respectGitignore) {
-        QString relativePath = FileManager::toRelativePath(filePath, m_projectPath);
+        std::string relativePath = FileManager::toRelativePath(filePath, m_projectPath);
         
         // Common patterns to always skip
         if (relativePath.contains("/.git/") ||
@@ -593,3 +576,4 @@ bool MultiFileSearchWidget::shouldSkipFile(const QString& filePath) const {
 }
 
 } // namespace RawrXD
+

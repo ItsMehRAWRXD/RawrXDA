@@ -15,24 +15,16 @@
 
 #include "ide_agent_bridge.hpp"
 
-#include <QObject>
-#include <QString>
-#include <QTextEdit>
-#include <QFont>
-#include <QColor>
-
-class QTextEdit;
-class QPlainTextEdit;
 
 /**
  * @struct GhostTextContext
  * @brief Context for ghost text generation
  */
 struct GhostTextContext {
-    QString currentLine;                    ///< Current line being edited
-    QString previousLines;                  ///< Context from previous lines
+    std::string currentLine;                    ///< Current line being edited
+    std::string previousLines;                  ///< Context from previous lines
     int cursorColumn = 0;                   ///< Cursor column in line
-    QString fileType;                       ///< File type (cpp, python, etc)
+    std::string fileType;                       ///< File type (cpp, python, etc)
     int maxSuggestionLength = 200;          ///< Max chars for ghost text
 };
 
@@ -41,8 +33,8 @@ struct GhostTextContext {
  * @brief Suggested completion text
  */
 struct GhostTextSuggestion {
-    QString text;                           ///< Suggested code
-    QString explanation;                    ///< Why this suggestion
+    std::string text;                           ///< Suggested code
+    std::string explanation;                    ///< Why this suggestion
     int confidence = 100;                   ///< Confidence 0-100
     bool isComplete = false;                ///< Is this a complete statement?
 };
@@ -68,8 +60,7 @@ struct GhostTextSuggestion {
  * // TAB and ENTER now trigger agent suggestions
  * @endcode
  */
-class EditorAgentIntegration : public QObject {
-    Q_OBJECT
+class EditorAgentIntegration : public void {
 
 public:
     /**
@@ -77,7 +68,7 @@ public:
      * @param editor Target code editor widget
      * @param parent Qt parent
      */
-    explicit EditorAgentIntegration(QPlainTextEdit* editor, QObject* parent = nullptr);
+    explicit EditorAgentIntegration(QPlainTextEdit* editor, void* parent = nullptr);
 
     /**
      * @brief Destructor
@@ -106,7 +97,7 @@ public:
      * @brief Set file type for context (cpp, python, java, etc)
      * @param fileType Language/file type
      */
-    void setFileType(const QString& fileType);
+    void setFileType(const std::string& fileType);
 
     /**
      * @brief Enable/disable automatic suggestions (periodic)
@@ -149,7 +140,6 @@ public:
      */
     void setGhostTextStyle(const QFont& font, const QColor& color);
 
-signals:
     /**
      * @brief Emitted when suggestion generation starts
      */
@@ -165,7 +155,7 @@ signals:
      * @brief Emitted when user accepts suggestion
      * @param text Accepted text
      */
-    void suggestionAccepted(const QString& text);
+    void suggestionAccepted(const std::string& text);
 
     /**
      * @brief Emitted when suggestion is dismissed
@@ -176,9 +166,9 @@ signals:
      * @brief Emitted if suggestion generation fails
      * @param error Error message
      */
-    void suggestionError(const QString& error);
+    void suggestionError(const std::string& error);
 
-private slots:
+private:
     /**
      * @brief Handle editor key press events
      * @param event Key event
@@ -190,7 +180,7 @@ private slots:
      * @param result Agent's suggested action plan
      * @param elapsedMs Time taken
      */
-    void onSuggestionGenerated(const QJsonObject& result, int elapsedMs);
+    void onSuggestionGenerated(const void*& result, int elapsedMs);
 
     /**
      * @brief Periodic timer for automatic suggestions
@@ -201,7 +191,7 @@ private slots:
      * @brief Handle text edit completion
      * @param text Completed text
      */
-    void onTextCompleted(const QString& text);
+    void onTextCompleted(const std::string& text);
 
 private:
     /**
@@ -221,7 +211,7 @@ private:
      * @param response LLM response
      * @return Parsed suggestion
      */
-    GhostTextSuggestion parseSuggestion(const QJsonObject& response) const;
+    GhostTextSuggestion parseSuggestion(const void*& response) const;
 
     /**
      * @brief Render ghost text overlay in editor
@@ -229,7 +219,7 @@ private:
      * @param row Line to display at
      * @param column Column to display at
      */
-    void renderGhostText(const QString& text, int row, int column);
+    void renderGhostText(const std::string& text, int row, int column);
 
     /**
      * @brief Install event filter on editor
@@ -240,18 +230,18 @@ private:
      * @brief Get cursor position in editor
      * @return (row, column) pair
      */
-    QPair<int, int> getCursorPosition() const;
+    std::pair<int, int> getCursorPosition() const;
 
     /**
      * @brief Get text under cursor
      * @return Current word/token
      */
-    QString getWordUnderCursor() const;
+    std::string getWordUnderCursor() const;
 
     /**
      * @brief Qt event filter override
      */
-    bool eventFilter(QObject* obj, QEvent* event) override;
+    bool eventFilter(void* obj, QEvent* event) override;
 
     // ─────────────────────────────────────────────────────────────────────
     // Member Variables
@@ -262,7 +252,7 @@ private:
 
     bool m_ghostTextEnabled = true;         ///< Ghost text feature enabled
     bool m_autoSuggestions = false;         ///< Auto-generate suggestions
-    QString m_fileType = "cpp";             ///< Current file type
+    std::string m_fileType = "cpp";             ///< Current file type
 
     GhostTextSuggestion m_currentSuggestion; ///< Current ghost text
     int m_ghostTextRow = -1;                ///< Where ghost text is displayed
@@ -271,5 +261,6 @@ private:
     QFont m_ghostTextFont;                  ///< Font for ghost text display
     QColor m_ghostTextColor;                ///< Color for ghost text (usually dim)
 
-    QTimer* m_autoSuggestionTimer = nullptr; ///< Timer for periodic suggestions
+    void** m_autoSuggestionTimer = nullptr; ///< Timer for periodic suggestions
 };
+

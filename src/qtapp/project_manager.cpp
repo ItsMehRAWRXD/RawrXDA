@@ -72,7 +72,6 @@ void GitignoreFilter::setRootDirectory(const std::string& dir) {
 void GitignoreFilter::loadGitignore(const std::string& gitignorePath) {
     // File operation removed;
     if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        // // qWarning:  "[GitignoreFilter] Cannot open .gitignore:" << gitignorePath;
         return;
     }
     
@@ -96,7 +95,6 @@ void GitignoreFilter::loadGitignore(const std::string& gitignorePath) {
         m_watchedGitignores.insert(gitignorePath);
     }
     
-    // // qDebug:  "[GitignoreFilter] Loaded .gitignore:" << gitignorePath 
              << "with" << m_patterns.size() << "patterns";
 }
 
@@ -251,7 +249,6 @@ void GitignoreFilter::enableFileWatching(bool enable) {
 }
 
 void GitignoreFilter::onGitignoreFileChanged(const std::string& path) {
-    // // qDebug:  "[GitignoreFilter] .gitignore modified:" << path;
     
     // Reload patterns
     clearPatterns();
@@ -351,7 +348,6 @@ RecentProjectsManager::~RecentProjectsManager() {
 void RecentProjectsManager::addRecentProject(const std::string& projectPath) {
     // Info info(projectPath);
     if (!info.exists() || !info.isDir()) {
-        // // qWarning:  "[RecentProjects] Invalid project path:" << projectPath;
         return;
     }
     
@@ -564,7 +560,6 @@ void RecentProjectsManager::saveProjects() {
     nlohmann::json doc(projectsArray);
     settings.setValue("recentProjects", doc.toJson());
     
-    // // qDebug:  "[RecentProjects] Saved" << m_projects.size() << "projects";
 }
 
 void RecentProjectsManager::loadProjects() {
@@ -591,7 +586,6 @@ void RecentProjectsManager::loadProjects() {
         }
     }
     
-    // // qDebug:  "[RecentProjects] Loaded" << m_projects.size() << "projects";
 }
 
 bool RecentProjectsManager::exportProjects(const std::string& filePath) {
@@ -602,7 +596,6 @@ bool RecentProjectsManager::exportProjects(const std::string& filePath) {
     
     // File operation removed;
     if (!file.open(std::iostream::WriteOnly)) {
-        // // qWarning:  "[RecentProjects] Cannot write to" << filePath;
         return false;
     }
     
@@ -615,7 +608,6 @@ bool RecentProjectsManager::exportProjects(const std::string& filePath) {
 bool RecentProjectsManager::importProjects(const std::string& filePath) {
     // File operation removed;
     if (!file.open(std::iostream::ReadOnly)) {
-        // // qWarning:  "[RecentProjects] Cannot read from" << filePath;
         return false;
     }
     
@@ -850,7 +842,6 @@ ProjectManager::~ProjectManager() {
 bool ProjectManager::openProject(const std::string& projectPath) {
     // Info info(projectPath);
     if (!info.exists() || !info.isDir()) {
-        // // qWarning:  "[ProjectManager] Invalid project path:" << projectPath;
         return false;
     }
     
@@ -873,7 +864,6 @@ bool ProjectManager::openProject(const std::string& projectPath) {
     projectOpened(absolutePath);
     currentProjectChanged(absolutePath);
     
-    // // qInfo:  "[ProjectManager] Opened project:" << absolutePath;
     return true;
 }
 
@@ -888,7 +878,6 @@ bool ProjectManager::closeProject() {
     projectClosed(closedPath);
     currentProjectChanged(std::string());
     
-    // // qInfo:  "[ProjectManager] Closed project:" << closedPath;
     return true;
 }
 
@@ -911,7 +900,6 @@ std::string ProjectManager::detectProjectType(const std::string& projectPath) {
 bool ProjectManager::createNewProject(const std::string& path, const std::string& type) {
     // dir;
     if (!dir.mkpath(path)) {
-        // // qWarning:  "[ProjectManager] Failed to create directory:" << path;
         return false;
     }
     
@@ -964,10 +952,4 @@ void ProjectManager::loadWorkspace() {
         openProject(lastProject);
     }
 }
-
-
-
-
-
-
 

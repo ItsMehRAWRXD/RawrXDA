@@ -122,7 +122,7 @@ class MASMCodeEditor {public:
     // Breakpoints
     void toggleBreakpoint(int line);
     void clearBreakpoints();
-    const QSet<int>& getBreakpoints() const { return m_breakpoints; }
+    const std::unordered_set<int>& getBreakpoints() const { return m_breakpoints; }
     
     // Code folding
     void foldBlock(int line);
@@ -147,8 +147,8 @@ private:
     std::unique_ptr<MASMSyntaxHighlighter> m_highlighter;
     
     std::vector<MASMError> m_errors;
-    QSet<int> m_breakpoints;
-    QSet<int> m_foldedBlocks;
+    std::unordered_set<int> m_breakpoints;
+    std::unordered_set<int> m_foldedBlocks;
     
     void paintLineNumberArea(void* event);
     void paintErrorMarkers(void* event);
@@ -265,7 +265,7 @@ class MASMDebugger {public:
     void continueExecution();
     void pause();
     
-    void setBreakpoints(const QSet<int>& breakpoints);
+    void setBreakpoints(const std::unordered_set<int>& breakpoints);
     \npublic:\n    void debuggerStarted();
     void debuggerStopped();
     void breakpointHit(int line);
@@ -280,7 +280,7 @@ private:
     std::unique_ptr<QTreeWidget> m_stackWidget;
     std::unique_ptr<void> m_disassemblyWidget;
     
-    QSet<int> m_breakpoints;
+    std::unordered_set<int> m_breakpoints;
     bool m_isDebugging;
     
     void updateRegisters();
@@ -481,8 +481,4 @@ public:
     static std::stringList getTemplateList();
     static std::string getTemplateDescription(TemplateType type);
 };
-
-
-
-
 

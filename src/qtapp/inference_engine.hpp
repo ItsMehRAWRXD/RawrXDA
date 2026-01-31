@@ -1,11 +1,6 @@
 #pragma once
-#include <QObject>
-#include <QByteArray>
-#include <QString>
-#include <QMutex>
-#include <QHash>
-#include <QElapsedTimer>
-#include <QQueue>
+
+
 #include <atomic>
 #include <vector>
 #include <cstdint>
@@ -16,21 +11,18 @@
 #include "sentencepiece_tokenizer.hpp"
 #include "vocabulary_loader.hpp"
 
-class InferenceEngine : public QObject {
-    Q_OBJECT
-    Q_PROPERTY(QString modelPath READ modelPath CONSTANT)
-    Q_PROPERTY(bool modelLoaded READ isModelLoaded NOTIFY modelLoadedChanged)
-    Q_PROPERTY(QString quantMode READ quantMode WRITE setQuantMode NOTIFY quantChanged)
+class InferenceEngine : public void {
+
 
 public:
     /**
      * @brief Construct an inference engine
      * @param ggufPath Path to the GGUF model file (can be empty, loaded later)
-     * @param parent QObject parent
+     * @param parent void parent
      */
-    explicit InferenceEngine(const QString& ggufPath = QString(), QObject* parent = nullptr);
-    // Overload used by server components expecting QObject* only
-    explicit InferenceEngine(QObject* parent);
+    explicit InferenceEngine(const std::string& ggufPath = std::string(), void* parent = nullptr);
+    // Overload used by server components expecting void* only
+    explicit InferenceEngine(void* parent);
     
     /**
      * @brief Destructor - cleans up GGUFLoader resources
@@ -43,15 +35,15 @@ public:
      * @return true if loaded successfully
      *
      * This is declared Q_INVOKABLE so it can be called via
-     * QMetaObject::invokeMethod(..., Qt::QueuedConnection)
+     * QMetaObject::invokeMethod(..., //QueuedConnection)
      */
-    Q_INVOKABLE bool loadModel(const QString& path);
+    Q_INVOKABLE bool loadModel(const std::string& path);
     
     /**
      * @brief Set a progress callback for model loading
      * @param callback Function to call with progress updates
      */
-    void setLoadProgressCallback(std::function<void(const QString&)> callback) {
+    void setLoadProgressCallback(std::function<void(const std::string&)> callback) {
         m_loadProgressCallback = callback;
     }
     
@@ -63,12 +55,12 @@ public:
     /**
      * @brief Get the current model path
      */
-    QString modelPath() const;
+    std::string modelPath() const;
     
     /**
      * @brief Get list of tensor names from the loaded model
      */
-    QStringList tensorNames() const;
+    std::vector<std::string> tensorNames() const;
     
     /**
      * @brief Get memory usage in MB
@@ -88,7 +80,7 @@ public:
     /**
      * @brief Get current quantization mode
      */
-    QString quantMode() const;
+    std::string quantMode() const;
 
     void setThreadingEnabled(bool on) { m_threadingEnabled.store(on); }
     bool threadingEnabled() const { return m_threadingEnabled.load(); }
@@ -111,7 +103,7 @@ public:
                            std::function<void()> completeCallback);
     
     // Convenience method for string input
-    void generateStreaming(const QString& prompt,
+    void generateStreaming(const std::string& prompt,
                            int maxTokens,
                            std::function<void(const std::string&)> tokenCallback,
                            std::function<void()> completeCallback);
@@ -119,19 +111,19 @@ public:
     /**
      * @brief Tokenize text (public for server API)
      */
-    std::vector<int32_t> tokenize(const QString& text);
+    std::vector<int32_t> tokenize(const std::string& text);
     
     /**
      * @brief Detokenize tokens to text (public for server API)
      */
-    QString detokenize(const std::vector<int32_t>& tokens);
+    std::string detokenize(const std::vector<int32_t>& tokens);
 
     // Server-oriented helper APIs
-    QString processChat(const QString& prompt);
-    QString analyzeCode(const QString& code);
+    std::string processChat(const std::string& prompt);
+    std::string analyzeCode(const std::string& code);
 
     // Streaming generation APIs
-    using TokenCallback = std::function<void(const QString&)>;
+    using TokenCallback = std::function<void(const std::string&)>;
     using CompleteCallback = std::function<void()>;
 
     /**
@@ -149,7 +141,7 @@ public:
     /**
      * @brief Stream tokens for a text prompt (convenience)
      */
-    void generateStreaming(const QString& prompt,
+    void generateStreaming(const std::string& prompt,
                            int maxTokens,
                            TokenCallback onToken,
                            CompleteCallback onComplete);
@@ -160,15 +152,15 @@ public:
      * @param prompt Input prompt
      * @param maxTokens Maximum tokens to generate
      */
-    void generateStreaming(qint64 reqId, const QString& prompt, int maxTokens = 128);
+    void generateStreaming(qint64 reqId, const std::string& prompt, int maxTokens = 128);
 
-public slots:
+public:
     /**
      * @brief Process an inference request
      * @param prompt User input text
      * @param reqId Request ID for correlation
      */
-    void request(const QString& prompt, qint64 reqId);
+    void request(const std::string& prompt, qint64 reqId);
     
     /**
      * @brief Process a streaming inference request
@@ -176,7 +168,7 @@ public slots:
      * @param reqId Request ID for correlation
      * @param streaming Whether to use streaming mode
      */
-    void request(const QString& prompt, qint64 reqId, bool streaming);
+    void request(const std::string& prompt, qint64 reqId, bool streaming);
     
     /**
      * @brief Unload the current model
@@ -187,14 +179,14 @@ public slots:
      * @brief Change quantization mode at runtime
      * @param mode Quantization type: Q4_0, Q4_1, Q5_0, Q5_1, Q6_K, Q8_K, F16, F32
      */
-    void setQuantMode(const QString& mode);
+    void setQuantMode(const std::string& mode);
     
     /**
      * @brief Set quantization for a specific tensor layer
      * @param tensorName Name of the tensor
      * @param quant Quantization type for this layer
      */
-    void setLayerQuant(const QString& tensorName, const QString& quant);
+    void setLayerQuant(const std::string& tensorName, const std::string& quant);
 
 private:
     // Background worker for streaming
@@ -203,34 +195,33 @@ private:
                                  TokenCallback onToken,
                                  CompleteCallback onComplete);
 
-signals:
     /**
      * @brief Emitted when inference completes successfully
      * @param reqId Request ID
      * @param answer Generated response
      */
-    void resultReady(qint64 reqId, const QString& answer);
+    void resultReady(qint64 reqId, const std::string& answer);
     
     /**
      * @brief Emitted when an error occurs
      * @param reqId Request ID
      * @param errorMsg Error description
      */
-    void error(qint64 reqId, const QString& errorMsg);
+    void error(qint64 reqId, const std::string& errorMsg);
     
     /**
      * @brief Emitted when model loading status changes
      * @param loaded true if model is loaded
      * @param modelName Name of the loaded model
      */
-    void modelLoadedChanged(bool loaded, const QString& modelName);
+    void modelLoadedChanged(bool loaded, const std::string& modelName);
     
     /**
      * @brief Emitted for each token during streaming inference
      * @param reqId Request ID
      * @param token Single token string
      */
-    void streamToken(qint64 reqId, const QString& token);
+    void streamToken(qint64 reqId, const std::string& token);
     
     /**
      * @brief Emitted when streaming inference completes
@@ -242,14 +233,14 @@ signals:
      * @brief Emitted when quantization mode changes
      * @param mode New quantization mode
      */
-    void quantChanged(const QString& mode);
+    void quantChanged(const std::string& mode);
     
     /**
      * @brief Emitted when inference completes (alias for resultReady)
      * @param requestId Request ID
      * @param result Generated text
      */
-    void inferenceComplete(const QString& requestId, const QString& result);
+    void inferenceComplete(const std::string& requestId, const std::string& result);
     
     /**
      * @brief Emitted when model uses unsupported quantization types
@@ -263,16 +254,16 @@ signals:
      * @param recommendedConversion Type to convert to (e.g., "Q5_K")
      * @param modelPath Path to the model that needs conversion
      */
-    void unsupportedQuantizationTypeDetected(const QStringList& unsupportedTypes, 
-                                             const QString& recommendedConversion,
-                                             const QString& modelPath);
+    void unsupportedQuantizationTypeDetected(const std::vector<std::string>& unsupportedTypes, 
+                                             const std::string& recommendedConversion,
+                                             const std::string& modelPath);
     
     /**
      * @brief Emitted when inference error occurs (alias for error)
      * @param requestId Request ID  
      * @param errorMessage Error description
      */
-    void inferenceError(const QString& requestId, const QString& errorMessage);
+    void inferenceError(const std::string& requestId, const std::string& errorMessage);
     
     /**
      * @brief Emitted when the transformer is fully ready for inference
@@ -288,26 +279,26 @@ private:
 
     // Define structure to store quantized tensor data and its type
     struct CachedTensorData {
-        QByteArray data;
+        std::vector<uint8_t> data;
         int ggml_type_id;  // Stores the enum ggml_type as an integer
     };
     
     // Define structure for inference requests
     struct InferenceRequest {
-        QString prompt;
+        std::string prompt;
         qint64 requestId;
         bool streaming{false};
     };
     
-    mutable QMutex m_mutex;
-    QString m_modelPath;
+    mutable std::mutex m_mutex;
+    std::string m_modelPath;
     qint64 m_memoryUsageMB{0};
     double m_tokensPerSecond{0.0};
     double m_temperature{0.0};   // Enterprise deterministic default
     double m_topP{1.0};          // Enterprise deterministic default (full nucleus)
-    QString m_quantMode{"Q4_0"};  // Default quantization
-    QHash<QString, CachedTensorData> m_tensorCache;  // Cached quantized tensors with type info
-    QHash<QString, QString> m_perLayerQuant;  // Tensor-specific quants
+    std::string m_quantMode{"Q4_0"};  // Default quantization
+    std::unordered_map<std::string, CachedTensorData> m_tensorCache;  // Cached quantized tensors with type info
+    std::unordered_map<std::string, std::string> m_perLayerQuant;  // Tensor-specific quants
     QElapsedTimer m_inferenceTimer;
     std::atomic<bool> m_threadingEnabled{true};  // default threaded
     std::atomic<bool> m_loadTensors{true};       // default load tensors (can be disabled for headless mode)
@@ -317,7 +308,7 @@ private:
     bool m_isProcessingInference{false};
     
     // Progress callback for model loading (used by background threads)
-    std::function<void(const QString&)> m_loadProgressCallback;
+    std::function<void(const std::string&)> m_loadProgressCallback;
     
     enum TokenizerMode {
         TOKENIZER_FALLBACK,  // Simple word-based fallback
@@ -326,12 +317,12 @@ private:
     } m_tokenizerMode{TOKENIZER_FALLBACK};
     
     // Helper methods
-    QString extractModelName(const QString& path) const;
+    std::string extractModelName(const std::string& path) const;
     void rebuildTensorCache();
     void initializeTokenizer();
     bool initializeTokenizerWithTimeout(int timeoutMs = 5000);
     bool loadFallbackTokenizer();
-    std::vector<int32_t> tokenizeInternal(const QString& text, bool includeSystemPrompt = true, bool includeSpecialTokens = true);
+    std::vector<int32_t> tokenizeInternal(const std::string& text, bool includeSystemPrompt = true, bool includeSpecialTokens = true);
     void buildSystemPromptTokens();
     
     // FIX 6: Request queue processing
@@ -357,5 +348,6 @@ private:
                                  std::function<void()> completeCallback);
     
     // Thread-safe streaming generation worker that emits signals
-    void streamingGenerateWorkerSignals(qint64 reqId, const QString& prompt, int maxTokens);
+    void streamingGenerateWorkerSignals(qint64 reqId, const std::string& prompt, int maxTokens);
 };
+

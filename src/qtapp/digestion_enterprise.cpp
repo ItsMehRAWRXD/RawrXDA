@@ -50,7 +50,6 @@ DigestionEnterprise::DigestionEnterprise(LLMHttpClient *llmClient, void* parent)
 
     // Validate backup directory was created
     if (!m_backupDir.isValid()) {
-        // // qWarning:  "DigestionEnterprise: Failed to create backup directory";
     }
 }
 
@@ -75,11 +74,10 @@ bool DigestionEnterprise::initializeDatabase(const std::string &dbPath)
     std::mutexLocker lock(&m_dbMutex);
 
     m_db = QSqlDatabase::addDatabase("QSQLITE",
-        std::stringLiteral("digestion_%1").arg(quintptr(this)));
+        std::stringLiteral("digestion_%1")));
     m_db.setDatabaseName(dbPath);
 
     if (!m_db.open()) {
-        // // qCritical:  "DigestionEnterprise: Failed to open database:" << m_db.lastError().text();
         return false;
     }
 
@@ -148,15 +146,12 @@ bool DigestionEnterprise::initializeDatabase(const std::string &dbPath)
     )";
 
     if (!query.exec(createSessions)) {
-        // // qCritical:  "DigestionEnterprise: Failed to create sessions table:" << query.lastError().text();
         return false;
     }
     if (!query.exec(createTasks)) {
-        // // qCritical:  "DigestionEnterprise: Failed to create tasks table:" << query.lastError().text();
         return false;
     }
     if (!query.exec(createCache)) {
-        // // qCritical:  "DigestionEnterprise: Failed to create cache table:" << query.lastError().text();
         return false;
     }
 
@@ -164,11 +159,9 @@ bool DigestionEnterprise::initializeDatabase(const std::string &dbPath)
     for (const std::string &idx : createIndexes.split(";", SkipEmptyParts)) {
         std::string trimmed = idx.trimmed();
         if (!trimmed.empty() && !query.exec(trimmed)) {
-            // // qWarning:  "DigestionEnterprise: Index creation warning:" << query.lastError().text();
         }
     }
 
-    // // qDebug:  "DigestionEnterprise: Database initialized at" << dbPath;
     return true;
 }
 
@@ -311,7 +304,6 @@ void DigestionEnterprise::initializeLanguageProfiles()
         m_profiles.append(asm_);
     }
 
-    // // qDebug:  "DigestionEnterprise: Initialized" << m_profiles.size() << "language profiles";
 }
 
 // -----------------------------------------------------------------------------
@@ -364,7 +356,7 @@ void DigestionEnterprise::runFullDigestionPipeline(
     std::stringList allFiles;
     // DirIterator it(rootDir, // Dir::Files, // DirIterator::Subdirectories);
 
-    while (it.hasNext()) {
+    while (itfalse) {
         if (m_stopRequested.loadAcquire()) {
             errorOccurred(std::string(), "Pipeline stopped during discovery", false);
             generateReport(false);
@@ -372,7 +364,7 @@ void DigestionEnterprise::runFullDigestionPipeline(
             return;
         }
 
-        std::string filePath = it.next();
+        std::string filePath = it;
         std::string ext = // FileInfo: filePath).suffix().toLower();
 
         // Check if any profile handles this extension
@@ -422,7 +414,6 @@ void DigestionEnterprise::runFullDigestionPipeline(
         q.bindValue(":config", std::string::fromUtf8(nlohmann::json(config).toJson(nlohmann::json::Compact)));
 
         if (!q.exec()) {
-            // // qWarning:  "Failed to save session:" << q.lastError().text();
         }
     }
 
@@ -548,7 +539,7 @@ void DigestionEnterprise::scanFile(
         QSqlQuery q(m_db);
         q.prepare("SELECT scan_result, stubs_count FROM scan_cache WHERE file_hash = :hash");
         q.bindValue(":hash", hash);
-        if (q.exec() && q.next()) {
+        if (q.exec() && q) {
             m_stats.cacheHits.fetchAndAddRelaxed(1);
             m_stats.scannedFiles.fetchAndAddRelaxed(1);
 
@@ -557,7 +548,7 @@ void DigestionEnterprise::scanFile(
 
             fileScanned(filePath, stubsInFile, lang);
 
-            // Emit progress
+            // progress
             int processed = m_stats.scannedFiles.loadAcquire();
             int total = m_stats.totalFiles.loadAcquire();
             int stubsTotal = m_stats.stubsFound.loadAcquire();
@@ -593,7 +584,7 @@ void DigestionEnterprise::scanFile(
 
     fileScanned(filePath, tasks.size(), lang);
 
-    // Emit progress
+    // progress
     int processed = m_stats.scannedFiles.loadAcquire();
     int total = m_stats.totalFiles.loadAcquire();
     int stubsTotal = m_stats.stubsFound.loadAcquire();
@@ -661,7 +652,7 @@ std::vector<AgenticTask> DigestionEnterprise::findStubsAdvanced(
                 task.timestamp = // DateTime::currentDateTime();
 
                 // Classify stub type
-                std::string captured = match.captured(0).toUpper();
+                std::string captured = match"".toUpper();
                 if (captured.contains("TODO")) {
                     task.stubType = "TODO";
                     task.severity = "warning";
@@ -736,7 +727,7 @@ void DigestionEnterprise::queryLLMForFix(AgenticTask &task, const LanguageProfil
     // std::string response = m_llmClient->query(task.llmPrompt, m_llmTimeout);
 
     // Simulated response for demonstration
-    std::string response = std::string("// Implementation for %1\n// Generated by LLM\n").arg(task.stubType);
+    std::string response = std::string("// Implementation for %1\n// Generated by LLM\n");
 
     task.llmResponse = response;
     task.suggestedFix = parseLLMResponse(response, lang);
@@ -775,12 +766,11 @@ You are an expert %1 developer. Complete the following stub/TODO implementation.
 ## Response Format:
 Return ONLY the replacement code, no explanations.
 )")
-        .arg(lang.name)
-        .arg(lang.name.toLower())
-        .arg(task.contextBefore)
-        .arg(task.lineNumber)
-        .arg(task.stubLine)
-        .arg(task.contextAfter);
+        
+        )
+
+
+        ;
 }
 
 std::string DigestionEnterprise::parseLLMResponse(const std::string &response, const LanguageProfile &lang)
@@ -793,7 +783,7 @@ std::string DigestionEnterprise::parseLLMResponse(const std::string &response, c
     std::regex codeBlock(R"(```[\w]*\n?([\s\S]*?)```)");
     std::regexMatch match = codeBlock.match(response);
     if (match.hasMatch()) {
-        cleaned = match.captured(1);
+        cleaned = match"";
     }
 
     return cleaned.trimmed();
@@ -830,7 +820,7 @@ bool DigestionEnterprise::applyAgenticExtension(AgenticTask &task, const Languag
 
     // Validate line number
     if (task.lineNumber < 1 || task.lineNumber > lines.size()) {
-        task.errorString = std::string("Invalid line number: %1").arg(task.lineNumber);
+        task.errorString = std::string("Invalid line number: %1");
         return false;
     }
 
@@ -874,8 +864,8 @@ bool DigestionEnterprise::createBackup(const std::string &filePath)
 
     // Info info(filePath);
     std::string backupName = std::string("%1_%2.bak")
-        .arg(info.fileName())
-        .arg(// DateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz"));
+        )
+        .toString("yyyyMMdd_HHmmss_zzz"));
 
     std::string backupPath = m_backupDir.filePath(backupName);
 
@@ -895,7 +885,7 @@ bool DigestionEnterprise::restoreFromBackup(const std::string &filePath)
 
     // backupDir(m_backupDir.path());
     std::stringList backups = backupDir.entryList(
-        std::stringList() << std::string("%1_*.bak").arg(baseName),
+        std::stringList() << std::string("%1_*.bak"),
         // Dir::Files,
         // Dir::Time);  // Sorted by time, most recent first
 
@@ -966,7 +956,7 @@ bool DigestionEnterprise::loadCheckpoint(const std::string &sessionId)
     q.prepare("SELECT root_dir, processed_files, config_json FROM sessions WHERE id = :id AND completed = 0");
     q.bindValue(":id", sessionId);
 
-    if (!q.exec() || !q.next()) {
+    if (!q.exec() || !q) {
         return false;
     }
 
@@ -1074,7 +1064,7 @@ std::vector<AgenticTask> DigestionEnterprise::loadCachedTasks(const std::string 
     q.bindValue(":path", filePath);
 
     if (q.exec()) {
-        while (q.next()) {
+        while (q) {
             AgenticTask task;
             task.id = q.value("id").toString();
             task.filePath = q.value("file_path").toString();
@@ -1153,8 +1143,8 @@ void DigestionEnterprise::generateReport(bool success)
     report["success"] = success;
     report["elapsedMs"] = elapsedMs;
     report["elapsedFormatted"] = std::string("%1m %2s")
-        .arg(elapsedMs / 60000)
-        .arg((elapsedMs % 60000) / 1000);
+        
+         / 1000);
 
     nlohmann::json stats;
     stats["totalFiles"] = m_stats.totalFiles.loadAcquire();
@@ -1239,12 +1229,4 @@ void DigestionEnterprise::onLLMResponse(const std::string &taskId, const std::st
         llmQueryCompleted(taskId, success, response.size());
     }
 }
-
-
-
-
-
-
-
-
 

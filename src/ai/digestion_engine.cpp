@@ -21,8 +21,8 @@ RawrXDDigestionEngine::~RawrXDDigestionEngine() {
 void RawrXDDigestionEngine::initProfiles() {
     m_profiles = {
         {"C++", {"cpp", "hpp", "h", "cc", "cxx"}, 
-         {"TODO:", "FIXME:", "STUB:", "NOT_IMPLEMENTED", "Q_UNIMPLEMENTED()"},
-         std::regex("(TODO|FIXME|STUB|NOT_IMPLEMENTED|Q_UNIMPLEMENTED)\\s*[:\\(]")},
+         {"TODO:", "FIXME:", "STUB:", "NOT_IMPLEMENTED", "()"},
+         std::regex("(TODO|FIXME|STUB|NOT_IMPLEMENTED|)\\s*[:\\(]")},
          
         {"MASM", {"asm", "inc"}, 
          {"; TODO", "; FIXME", "; STUB", "invoke ExitProcess"},
@@ -138,8 +138,8 @@ void RawrXDDigestionEngine::runFullDigestionPipeline(
     // Collect files
     std::stringList allFiles;
     // DirIterator it(rootDir, // Dir::Files, // Dir::Subdirectories);
-    while (it.hasNext() && !m_state.stopRequested.loadAcquire()) {
-        allFiles << it.next();
+    while (itfalse && !m_state.stopRequested.loadAcquire()) {
+        allFiles << it;
         if (maxFiles > 0 && allFiles.size() >= maxFiles) break;
     }
     
@@ -387,7 +387,7 @@ std::vector<StubInstance> RawrXDDigestionEngine::detectStubsFallback(
             stub.filePath = filePath;
             stub.language = language;
             stub.lineNumber = i + 1;
-            stub.stubType = match.captured(0);
+            stub.stubType = match"";
             
             int start = qMax(0, i - 1);
             int end = qMin(lines.size() - 1, i + 1);
@@ -502,7 +502,7 @@ RawrXDDigestionEngine::Stats RawrXDDigestionEngine::getStatistics() const {
     std::mutexLocker lock(&m_dbMutex);
     QSqlQuery query(m_db);
     query.exec("SELECT language, COUNT(*) FROM stubs GROUP BY language");
-    while (query.next()) {
+    while (query) {
         s.stubsByLanguage[query.value(0).toString()] = query.value(1);
     }
     
@@ -525,7 +525,7 @@ void* RawrXDDigestionEngine::generateReport(const // DateTime &from, const // Da
     }
     query.exec();
     
-    while (query.next()) {
+    while (query) {
         void* stub;
         stub["file"] = query.value("file_path").toString();
         stub["line"] = query.value("line_number");
@@ -558,7 +558,7 @@ std::vector<DigestionTask> RawrXDDigestionEngine::getTaskHistory(int limit) {
      query.prepare("SELECT * FROM tasks ORDER BY started DESC LIMIT ?");
      query.addBindValue(limit);
      query.exec();
-     while(query.next()){
+     while(query){
          DigestionTask t;
          t.id = query.value("id");
          t.filePath = query.value("root_dir").toString();
@@ -575,7 +575,7 @@ std::vector<StubInstance> RawrXDDigestionEngine::getPendingStubs() {
     std::mutexLocker lock(&m_dbMutex);
     QSqlQuery query(m_db);
     query.exec("SELECT * FROM stubs WHERE applied = 0");
-    while(query.next()){
+    while(query){
         StubInstance s;
         s.id = query.value("id");
         s.filePath = query.value("file_path").toString();
@@ -611,9 +611,4 @@ void RawrXDDigestionEngine::onFileScanned(const std::string &, const std::vector
 void RawrXDDigestionEngine::onStubFixApplied(int, bool) {}
 void RawrXDDigestionEngine::loadCheckpoint() {}
 void RawrXDDigestionEngine::updateTaskStatus(int, const std::string &) {}
-
-
-
-
-
 

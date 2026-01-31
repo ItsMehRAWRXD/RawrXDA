@@ -20,17 +20,16 @@ AgenticBridge::AgenticBridge(Win32IDE* ide)
     , m_hStdinRead(nullptr)
     , m_hStdinWrite(nullptr)
 {
-    LOG_INFO("AgenticBridge constructed");
+
 }
 
 AgenticBridge::~AgenticBridge() {
     KillPowerShellProcess();
-    LOG_INFO("AgenticBridge destroyed");
+
 }
 
 bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::string& modelName) {
-    LOG_INFO("AgenticBridge::Initialize called");
-    
+
     if (m_initialized) {
         LOG_WARNING("AgenticBridge already initialized");
         return true;
@@ -46,7 +45,7 @@ bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::stri
     // Check if framework script exists
     DWORD fileAttr = GetFileAttributesA(m_frameworkPath.c_str());
     if (fileAttr == INVALID_FILE_ATTRIBUTES) {
-        LOG_ERROR("Agentic-Framework.ps1 not found at: " + m_frameworkPath);
+
         return false;
     }
     
@@ -59,20 +58,18 @@ bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::stri
     }
     
     m_initialized = true;
-    LOG_INFO("AgenticBridge initialized successfully with model: " + m_modelName);
-    
+
     return true;
 }
 
 AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt) {
-    LOG_INFO("ExecuteAgentCommand: " + prompt);
-    
+
     AgentResponse response;
     response.type = AgentResponseType::AGENT_ERROR;
     
     if (!m_initialized) {
         response.content = "Agentic framework not initialized";
-        LOG_ERROR(response.content);
+
         return response;
     }
     
@@ -82,12 +79,11 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt) {
         << m_modelName << "\" -OllamaServer \"" << m_ollamaServer << "\" -MaxIterations 10";
     
     std::string psCommand = cmd.str();
-    LOG_DEBUG("PowerShell command: " + psCommand);
-    
+
     // Execute via PowerShell
     if (!SpawnPowerShellProcess("powershell.exe", "-NoProfile -ExecutionPolicy Bypass -Command \"" + psCommand + "\"")) {
         response.content = "Failed to spawn PowerShell process";
-        LOG_ERROR(response.content);
+
         return response;
     }
     
@@ -96,10 +92,10 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt) {
     if (ReadProcessOutput(output, 30000)) {
         response = ParseAgentResponse(output);
         response.rawOutput = output;
-        LOG_DEBUG("Agent response received: " + std::to_string(output.length()) + " bytes");
+
     } else {
         response.content = "Failed to read agent output";
-        LOG_ERROR(response.content);
+
     }
     
     KillPowerShellProcess();
@@ -107,10 +103,9 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt) {
 }
 
 bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIterations) {
-    LOG_INFO("StartAgentLoop: " + initialPrompt);
-    
+
     if (!m_initialized) {
-        LOG_ERROR("Cannot start agent loop - not initialized");
+
         return false;
     }
     
@@ -137,7 +132,7 @@ bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIter
 }
 
 void AgenticBridge::StopAgentLoop() {
-    LOG_INFO("StopAgentLoop called");
+
     m_agentLoopRunning = false;
     KillPowerShellProcess();
 }
@@ -163,12 +158,12 @@ std::string AgenticBridge::GetAgentStatus() {
 
 void AgenticBridge::SetModel(const std::string& modelName) {
     m_modelName = modelName;
-    LOG_INFO("Model set to: " + modelName);
+
 }
 
 void AgenticBridge::SetOllamaServer(const std::string& serverUrl) {
     m_ollamaServer = serverUrl;
-    LOG_INFO("Ollama server set to: " + serverUrl);
+
 }
 
 void AgenticBridge::SetOutputCallback(OutputCallback callback) {
@@ -176,8 +171,7 @@ void AgenticBridge::SetOutputCallback(OutputCallback callback) {
 }
 
 bool AgenticBridge::SpawnPowerShellProcess(const std::string& scriptPath, const std::string& arguments) {
-    LOG_DEBUG("Spawning PowerShell: " + scriptPath + " " + arguments);
-    
+
     SECURITY_ATTRIBUTES sa = {};
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
     sa.bInheritHandle = TRUE;
@@ -185,14 +179,14 @@ bool AgenticBridge::SpawnPowerShellProcess(const std::string& scriptPath, const 
     
     // Create stdout pipe
     if (!CreatePipe(&m_hStdoutRead, &m_hStdoutWrite, &sa, 0)) {
-        LOG_ERROR("Failed to create stdout pipe");
+
         return false;
     }
     SetHandleInformation(m_hStdoutRead, HANDLE_FLAG_INHERIT, 0);
     
     // Create stdin pipe
     if (!CreatePipe(&m_hStdinRead, &m_hStdinWrite, &sa, 0)) {
-        LOG_ERROR("Failed to create stdin pipe");
+
         CloseHandle(m_hStdoutRead);
         CloseHandle(m_hStdoutWrite);
         return false;
@@ -226,7 +220,7 @@ bool AgenticBridge::SpawnPowerShellProcess(const std::string& scriptPath, const 
     );
     
     if (!success) {
-        LOG_ERROR("Failed to create PowerShell process");
+
         CloseHandle(m_hStdoutRead);
         CloseHandle(m_hStdoutWrite);
         CloseHandle(m_hStdinRead);
@@ -236,18 +230,16 @@ bool AgenticBridge::SpawnPowerShellProcess(const std::string& scriptPath, const 
     
     m_hProcess = pi.hProcess;
     CloseHandle(pi.hThread);
-    
-    LOG_DEBUG("PowerShell process spawned successfully");
+
     return true;
 }
 
 bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs) {
-    LOG_DEBUG("Reading process output");
-    
+
     output.clear();
     
     if (!m_hStdoutRead) {
-        LOG_ERROR("No stdout handle");
+
         return false;
     }
     
@@ -295,8 +287,7 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs) {
         
         Sleep(100);
     }
-    
-    LOG_DEBUG("Read " + std::to_string(output.length()) + " bytes from process");
+
     return !output.empty();
 }
 
@@ -305,7 +296,7 @@ void AgenticBridge::KillPowerShellProcess() {
         TerminateProcess(m_hProcess, 0);
         CloseHandle(m_hProcess);
         m_hProcess = nullptr;
-        LOG_DEBUG("PowerShell process terminated");
+
     }
     
     if (m_hStdoutRead) { CloseHandle(m_hStdoutRead); m_hStdoutRead = nullptr; }
@@ -370,7 +361,7 @@ std::string AgenticBridge::ResolveFrameworkPath() {
     for (const auto& path : searchPaths) {
         DWORD attr = GetFileAttributesA(path.c_str());
         if (attr != INVALID_FILE_ATTRIBUTES) {
-            LOG_INFO("Found Agentic-Framework.ps1 at: " + path);
+
             return path;
         }
     }

@@ -1,14 +1,8 @@
 #include "checkpoint_manager.h"
-#include <QDebug>
-#include <QFile>
-#include <QDir>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QDateTime>
-#include <QStandardPaths>
 
-CheckpointManager::CheckpointManager(QObject* parent)
-    : QObject(parent),
+
+CheckpointManager::CheckpointManager(void* parent)
+    : void(parent),
       m_maxCheckpoints(10),
       m_checkpointCounter(0),
       m_autoCheckpointEnabled(false),
@@ -19,22 +13,18 @@ CheckpointManager::CheckpointManager(QObject* parent)
       m_rank(0),
       m_worldSize(1)
 {
-    qDebug() << "[CheckpointManager] Initializing checkpoint manager";
 }
 
 CheckpointManager::~CheckpointManager()
 {
-    qDebug() << "[CheckpointManager] Destroying checkpoint manager";
 }
 
-bool CheckpointManager::initialize(const QString& checkpointDir, int maxCheckpoints)
+bool CheckpointManager::initialize(const std::string& checkpointDir, int maxCheckpoints)
 {
-    qDebug() << "[CheckpointManager] Initializing with directory:" << checkpointDir;
     
-    QDir dir(checkpointDir);
+    std::filesystem::path dir(checkpointDir);
     if (!dir.exists()) {
         if (!dir.mkpath(".")) {
-            qCritical() << "[CheckpointManager] Failed to create checkpoint directory";
             return false;
         }
     }
@@ -48,20 +38,18 @@ bool CheckpointManager::initialize(const QString& checkpointDir, int maxCheckpoi
 
 bool CheckpointManager::isInitialized() const
 {
-    return !m_checkpointDir.isEmpty() && QDir(m_checkpointDir).exists();
+    return !m_checkpointDir.isEmpty() && std::filesystem::path(m_checkpointDir).exists();
 }
 
-QString CheckpointManager::saveCheckpoint(const CheckpointMetadata& metadata,
+std::string CheckpointManager::saveCheckpoint(const CheckpointMetadata& metadata,
                                          const CheckpointState& state,
                                          CompressionLevel compress)
 {
     if (!isInitialized()) {
-        qCritical() << "[CheckpointManager] Not initialized";
-        return QString();
+        return std::string();
     }
     
-    QString checkpointId = generateCheckpointId();
-    qDebug() << "[CheckpointManager] Saving checkpoint:" << checkpointId;
+    std::string checkpointId = generateCheckpointId();
     
     if (writeCheckpointToDisk(checkpointId, state, compress)) {
         CheckpointIndex index;
@@ -74,25 +62,25 @@ QString CheckpointManager::saveCheckpoint(const CheckpointMetadata& metadata,
         
         if (metadata.isBestModel) {
             m_bestCheckpointId = checkpointId;
-            emit bestCheckpointUpdated(checkpointId, metadata.validationLoss);
+            bestCheckpointUpdated(checkpointId, metadata.validationLoss);
         }
         
-        emit checkpointSaved(checkpointId, metadata.epoch, metadata.step);
+        checkpointSaved(checkpointId, metadata.epoch, metadata.step);
         return checkpointId;
     }
     
-    emit checkpointError("Failed to save checkpoint");
-    return QString();
+    checkpointError("Failed to save checkpoint");
+    return std::string();
 }
 
-QString CheckpointManager::quickSaveCheckpoint(const CheckpointMetadata& metadata,
+std::string CheckpointManager::quickSaveCheckpoint(const CheckpointMetadata& metadata,
                                               const CheckpointState& state)
 {
     return saveCheckpoint(metadata, state, CompressionLevel::Low);
 }
 
-QString CheckpointManager::saveModelWeights(const CheckpointMetadata& metadata,
-                                           const QByteArray& modelWeights,
+std::string CheckpointManager::saveModelWeights(const CheckpointMetadata& metadata,
+                                           const std::vector<uint8_t>& modelWeights,
                                            CompressionLevel compress)
 {
     CheckpointState state;
@@ -100,45 +88,44 @@ QString CheckpointManager::saveModelWeights(const CheckpointMetadata& metadata,
     return saveCheckpoint(metadata, state, compress);
 }
 
-bool CheckpointManager::loadCheckpoint(const QString& checkpointId, CheckpointState& state)
+bool CheckpointManager::loadCheckpoint(const std::string& checkpointId, CheckpointState& state)
 {
-    qDebug() << "[CheckpointManager] Loading checkpoint:" << checkpointId;
     
     if (!readCheckpointFromDisk(checkpointId, state)) {
-        emit checkpointError("Failed to load checkpoint: " + checkpointId);
+        checkpointError("Failed to load checkpoint: " + checkpointId);
         return false;
     }
     
-    emit checkpointLoaded(checkpointId);
+    checkpointLoaded(checkpointId);
     return true;
 }
 
-QString CheckpointManager::loadLatestCheckpoint(CheckpointState& state)
+std::string CheckpointManager::loadLatestCheckpoint(CheckpointState& state)
 {
     if (m_checkpointIndex.empty()) {
-        return QString();
+        return std::string();
     }
     
     const auto& latest = m_checkpointIndex.back();
     if (loadCheckpoint(latest.checkpointId, state)) {
         return latest.checkpointId;
     }
-    return QString();
+    return std::string();
 }
 
-QString CheckpointManager::loadBestCheckpoint(CheckpointState& state)
+std::string CheckpointManager::loadBestCheckpoint(CheckpointState& state)
 {
     if (m_bestCheckpointId.isEmpty()) {
-        return QString();
+        return std::string();
     }
     
     if (loadCheckpoint(m_bestCheckpointId, state)) {
         return m_bestCheckpointId;
     }
-    return QString();
+    return std::string();
 }
 
-QString CheckpointManager::loadCheckpointFromEpoch(int epoch, CheckpointState& state)
+std::string CheckpointManager::loadCheckpointFromEpoch(int epoch, CheckpointState& state)
 {
     for (const auto& index : m_checkpointIndex) {
         if (index.metadata.epoch == epoch) {
@@ -147,10 +134,10 @@ QString CheckpointManager::loadCheckpointFromEpoch(int epoch, CheckpointState& s
             }
         }
     }
-    return QString();
+    return std::string();
 }
 
-CheckpointManager::CheckpointMetadata CheckpointManager::getCheckpointMetadata(const QString& checkpointId) const
+CheckpointManager::CheckpointMetadata CheckpointManager::getCheckpointMetadata(const std::string& checkpointId) const
 {
     for (const auto& index : m_checkpointIndex) {
         if (index.checkpointId == checkpointId) {
@@ -179,15 +166,13 @@ std::vector<CheckpointManager::CheckpointIndex> CheckpointManager::getCheckpoint
     return history;
 }
 
-bool CheckpointManager::deleteCheckpoint(const QString& checkpointId)
+bool CheckpointManager::deleteCheckpoint(const std::string& checkpointId)
 {
-    qDebug() << "[CheckpointManager] Deleting checkpoint:" << checkpointId;
     
-    QString filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
-    QFile file(filePath);
+    std::string filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
+    std::fstream file(filePath);
     
     if (!file.remove()) {
-        qCritical() << "[CheckpointManager] Failed to delete checkpoint file";
         return false;
     }
     
@@ -198,13 +183,12 @@ bool CheckpointManager::deleteCheckpoint(const QString& checkpointId)
                              });
     m_checkpointIndex.erase(it, m_checkpointIndex.end());
     
-    emit checkpointDeleted(checkpointId);
+    checkpointDeleted(checkpointId);
     return true;
 }
 
 int CheckpointManager::pruneOldCheckpoints(int keepCount)
 {
-    qDebug() << "[CheckpointManager] Pruning old checkpoints, keeping" << keepCount;
     
     int deleted = 0;
     while (static_cast<int>(m_checkpointIndex.size()) > keepCount) {
@@ -225,7 +209,7 @@ CheckpointManager::CheckpointMetadata CheckpointManager::getBestCheckpointInfo()
     return getCheckpointMetadata(m_bestCheckpointId);
 }
 
-bool CheckpointManager::updateCheckpointMetadata(const QString& checkpointId,
+bool CheckpointManager::updateCheckpointMetadata(const std::string& checkpointId,
                                                 const CheckpointMetadata& metadata)
 {
     for (auto& index : m_checkpointIndex) {
@@ -240,7 +224,7 @@ bool CheckpointManager::updateCheckpointMetadata(const QString& checkpointId,
     return false;
 }
 
-bool CheckpointManager::setCheckpointNote(const QString& checkpointId, const QString& note)
+bool CheckpointManager::setCheckpointNote(const std::string& checkpointId, const std::string& note)
 {
     for (auto& index : m_checkpointIndex) {
         if (index.checkpointId == checkpointId) {
@@ -256,14 +240,12 @@ bool CheckpointManager::enableAutoCheckpointing(int intervalSteps, int saveEvery
     m_autoCheckpointEnabled = true;
     m_autoCheckpointInterval = intervalSteps;
     m_autoCheckpointEpochInterval = saveEveryNEpochs;
-    qDebug() << "[CheckpointManager] Auto-checkpointing enabled:" << intervalSteps << "steps";
     return true;
 }
 
 void CheckpointManager::disableAutoCheckpointing()
 {
     m_autoCheckpointEnabled = false;
-    qDebug() << "[CheckpointManager] Auto-checkpointing disabled";
 }
 
 bool CheckpointManager::shouldCheckpoint(int step, int epoch) const
@@ -276,10 +258,10 @@ bool CheckpointManager::shouldCheckpoint(int step, int epoch) const
     return stepBased || epochBased;
 }
 
-bool CheckpointManager::validateCheckpoint(const QString& checkpointId) const
+bool CheckpointManager::validateCheckpoint(const std::string& checkpointId) const
 {
-    QString filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
-    QFile file(filePath);
+    std::string filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
+    std::fstream file(filePath);
     
     if (!file.exists()) {
         return false;
@@ -289,16 +271,16 @@ bool CheckpointManager::validateCheckpoint(const QString& checkpointId) const
         return false;
     }
     
-    QByteArray data = file.readAll();
+    std::vector<uint8_t> data = file.readAll();
     file.close();
     
     // Basic validation: check if not empty
     return !data.isEmpty();
 }
 
-std::map<QString, bool> CheckpointManager::validateAllCheckpoints() const
+std::map<std::string, bool> CheckpointManager::validateAllCheckpoints() const
 {
-    std::map<QString, bool> results;
+    std::map<std::string, bool> results;
     
     for (const auto& index : m_checkpointIndex) {
         results[index.checkpointId] = validateCheckpoint(index.checkpointId);
@@ -307,9 +289,8 @@ std::map<QString, bool> CheckpointManager::validateAllCheckpoints() const
     return results;
 }
 
-bool CheckpointManager::repairCheckpoint(const QString& checkpointId)
+bool CheckpointManager::repairCheckpoint(const std::string& checkpointId)
 {
-    qDebug() << "[CheckpointManager] Repairing checkpoint:" << checkpointId;
     // Placeholder for repair logic
     return validateCheckpoint(checkpointId);
 }
@@ -325,10 +306,10 @@ uint64_t CheckpointManager::getTotalCheckpointSize() const
     return totalSize;
 }
 
-uint64_t CheckpointManager::getCheckpointSize(const QString& checkpointId) const
+uint64_t CheckpointManager::getCheckpointSize(const std::string& checkpointId) const
 {
-    QString filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
-    QFile file(filePath);
+    std::string filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
+    std::fstream file(filePath);
     
     if (file.exists()) {
         return file.size();
@@ -337,16 +318,16 @@ uint64_t CheckpointManager::getCheckpointSize(const QString& checkpointId) const
     return 0;
 }
 
-QJsonObject CheckpointManager::generateCheckpointReport() const
+void* CheckpointManager::generateCheckpointReport() const
 {
-    QJsonObject report;
+    void* report;
     report["totalCheckpoints"] = static_cast<int>(m_checkpointIndex.size());
     report["totalSize"] = static_cast<qint64>(getTotalCheckpointSize());
     report["bestCheckpointId"] = m_bestCheckpointId;
     
-    QJsonArray checkpoints;
+    void* checkpoints;
     for (const auto& index : m_checkpointIndex) {
-        QJsonObject cp;
+        void* cp;
         cp["id"] = index.checkpointId;
         cp["epoch"] = index.metadata.epoch;
         cp["step"] = index.metadata.step;
@@ -359,19 +340,19 @@ QJsonObject CheckpointManager::generateCheckpointReport() const
     return report;
 }
 
-QJsonObject CheckpointManager::compareCheckpoints(const QString& checkpointId1,
-                                                 const QString& checkpointId2) const
+void* CheckpointManager::compareCheckpoints(const std::string& checkpointId1,
+                                                 const std::string& checkpointId2) const
 {
-    QJsonObject comparison;
+    void* comparison;
     
     auto meta1 = getCheckpointMetadata(checkpointId1);
     auto meta2 = getCheckpointMetadata(checkpointId2);
     
-    QJsonObject cp1;
+    void* cp1;
     cp1["validationLoss"] = meta1.validationLoss;
     cp1["accuracy"] = meta1.accuracy;
     
-    QJsonObject cp2;
+    void* cp2;
     cp2["validationLoss"] = meta2.validationLoss;
     cp2["accuracy"] = meta2.accuracy;
     
@@ -387,19 +368,17 @@ void CheckpointManager::setDistributedInfo(int rank, int worldSize)
 {
     m_rank = rank;
     m_worldSize = worldSize;
-    qDebug() << "[CheckpointManager] Set distributed info: rank" << rank << "of" << worldSize;
 }
 
 bool CheckpointManager::synchronizeDistributedCheckpoints()
 {
-    qDebug() << "[CheckpointManager] Synchronizing distributed checkpoints";
     // Placeholder for distributed sync logic
     return true;
 }
 
-QJsonObject CheckpointManager::exportConfiguration() const
+void* CheckpointManager::exportConfiguration() const
 {
-    QJsonObject config;
+    void* config;
     config["checkpointDir"] = m_checkpointDir;
     config["maxCheckpoints"] = m_maxCheckpoints;
     config["autoCheckpointEnabled"] = m_autoCheckpointEnabled;
@@ -408,7 +387,7 @@ QJsonObject CheckpointManager::exportConfiguration() const
     return config;
 }
 
-bool CheckpointManager::importConfiguration(const QJsonObject& config)
+bool CheckpointManager::importConfiguration(const void*& config)
 {
     m_checkpointDir = config["checkpointDir"].toString();
     m_maxCheckpoints = config["maxCheckpoints"].toInt(10);
@@ -418,10 +397,10 @@ bool CheckpointManager::importConfiguration(const QJsonObject& config)
     return true;
 }
 
-bool CheckpointManager::saveConfigurationToFile(const QString& filePath) const
+bool CheckpointManager::saveConfigurationToFile(const std::string& filePath) const
 {
-    QJsonDocument doc(exportConfiguration());
-    QFile file(filePath);
+    void* doc(exportConfiguration());
+    std::fstream file(filePath);
     
     if (!file.open(QIODevice::WriteOnly)) {
         return false;
@@ -432,28 +411,28 @@ bool CheckpointManager::saveConfigurationToFile(const QString& filePath) const
     return true;
 }
 
-bool CheckpointManager::loadConfigurationFromFile(const QString& filePath)
+bool CheckpointManager::loadConfigurationFromFile(const std::string& filePath)
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
     
-    QByteArray data = file.readAll();
+    std::vector<uint8_t> data = file.readAll();
     file.close();
     
-    QJsonDocument doc = QJsonDocument::fromJson(data);
+    void* doc = void*::fromJson(data);
     return importConfiguration(doc.object());
 }
 
-QString CheckpointManager::generateCheckpointId()
+std::string CheckpointManager::generateCheckpointId()
 {
-    return QString("checkpoint_%1_%2")
-        .arg(QDateTime::currentDateTime().toMSecsSinceEpoch())
-        .arg(m_checkpointCounter);
+    return std::string("checkpoint_%1_%2")
+        .toMSecsSinceEpoch())
+        ;
 }
 
-QByteArray CheckpointManager::compressState(const QByteArray& data, CompressionLevel level)
+std::vector<uint8_t> CheckpointManager::compressState(const std::vector<uint8_t>& data, CompressionLevel level)
 {
     if (level == CompressionLevel::None || data.isEmpty()) {
         return data;
@@ -464,26 +443,26 @@ QByteArray CheckpointManager::compressState(const QByteArray& data, CompressionL
     return data;
 }
 
-QByteArray CheckpointManager::decompressState(const QByteArray& data)
+std::vector<uint8_t> CheckpointManager::decompressState(const std::vector<uint8_t>& data)
 {
     // Placeholder for decompression
     return data;
 }
 
-bool CheckpointManager::writeCheckpointToDisk(const QString& checkpointId,
+bool CheckpointManager::writeCheckpointToDisk(const std::string& checkpointId,
                                              const CheckpointState& state,
                                              CompressionLevel compress)
 {
-    QString filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
-    QFile file(filePath);
+    std::string filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
+    std::fstream file(filePath);
     
     if (!file.open(QIODevice::WriteOnly)) {
         return false;
     }
     
     // Write state - serialize config to JSON first
-    QJsonDocument configDoc(state.config);
-    QByteArray configData = configDoc.toJson(QJsonDocument::Compact);
+    void* configDoc(state.config);
+    std::vector<uint8_t> configData = configDoc.toJson(void*::Compact);
     
     file.write(state.modelWeights);
     file.write(state.optimizerState);
@@ -495,17 +474,17 @@ bool CheckpointManager::writeCheckpointToDisk(const QString& checkpointId,
     return true;
 }
 
-bool CheckpointManager::readCheckpointFromDisk(const QString& checkpointId,
+bool CheckpointManager::readCheckpointFromDisk(const std::string& checkpointId,
                                               CheckpointState& state)
 {
-    QString filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
-    QFile file(filePath);
+    std::string filePath = m_checkpointDir + "/" + checkpointId + ".ckpt";
+    std::fstream file(filePath);
     
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
     
-    QByteArray data = file.readAll();
+    std::vector<uint8_t> data = file.readAll();
     file.close();
     
     // Placeholder: in production, properly deserialize

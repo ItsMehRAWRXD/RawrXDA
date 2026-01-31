@@ -1,19 +1,9 @@
 #include "training_progress_dock.h"
 #include "model_trainer.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGridLayout>
-#include <QGroupBox>
-#include <QLabel>
-#include <QProgressBar>
-#include <QTextEdit>
-#include <QPushButton>
-#include <QTabWidget>
-#include <QDateTime>
-#include <QScrollBar>
 
-TrainingProgressDock::TrainingProgressDock(ModelTrainer* trainer, QWidget* parent)
-    : QWidget(parent)
+
+TrainingProgressDock::TrainingProgressDock(ModelTrainer* trainer, void* parent)
+    : void(parent)
     , m_trainer(trainer)
     , m_currentEpoch(0)
     , m_totalEpochs(0)
@@ -147,31 +137,20 @@ void TrainingProgressDock::setupConnections()
 {
     if (m_trainer) {
         // Connect to ModelTrainer signals
-        connect(m_trainer, &ModelTrainer::trainingStarted,
-                this, &TrainingProgressDock::onTrainingStarted);
-        connect(m_trainer, &ModelTrainer::epochStarted,
-                this, &TrainingProgressDock::onEpochStarted);
-        connect(m_trainer, &ModelTrainer::batchProcessed,
-                this, &TrainingProgressDock::onBatchProcessed);
-        connect(m_trainer, &ModelTrainer::epochCompleted,
-                this, &TrainingProgressDock::onEpochCompleted);
-        connect(m_trainer, &ModelTrainer::trainingCompleted,
-                this, &TrainingProgressDock::onTrainingCompleted);
-        connect(m_trainer, &ModelTrainer::trainingStopped,
-                this, &TrainingProgressDock::onTrainingStopped);
-        connect(m_trainer, &ModelTrainer::trainingError,
-                this, &TrainingProgressDock::onTrainingError);
-        connect(m_trainer, &ModelTrainer::logMessage,
-                this, &TrainingProgressDock::onLogMessage);
-        connect(m_trainer, &ModelTrainer::validationResults,
-                this, &TrainingProgressDock::onValidationResults);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     }
 
     // Connect UI buttons
-    connect(m_stopButton, &QPushButton::clicked,
-            this, &TrainingProgressDock::onStopButtonClicked);
-    connect(m_clearLogsButton, &QPushButton::clicked,
-            this, &TrainingProgressDock::onClearLogsClicked);
+// Qt connect removed
+// Qt connect removed
 }
 
 void TrainingProgressDock::resetMetrics()
@@ -207,15 +186,15 @@ void TrainingProgressDock::resetMetrics()
 void TrainingProgressDock::onTrainingStarted()
 {
     resetMetrics();
-    m_trainingStartTime = QDateTime::currentSecsSinceEpoch();
+    m_trainingStartTime = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     m_lastBatchTime = m_trainingStartTime;
 
     m_statusLabel->setText("Training...");
     m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #4CAF50; }");
     m_stopButton->setEnabled(true);
 
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    m_trainingLogEdit->append(QString("[%1] Training started").arg(timestamp));
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    m_trainingLogEdit->append(std::string("[%1] Training started"));
 }
 
 void TrainingProgressDock::onEpochStarted(int currentEpoch, int totalEpochs)
@@ -223,7 +202,7 @@ void TrainingProgressDock::onEpochStarted(int currentEpoch, int totalEpochs)
     m_currentEpoch = currentEpoch;
     m_totalEpochs = totalEpochs;
 
-    m_epochLabel->setText(QString("Epoch: %1 / %2").arg(currentEpoch).arg(totalEpochs));
+    m_epochLabel->setText(std::string("Epoch: %1 / %2"));
 
     // Update epoch progress bar
     if (totalEpochs > 0) {
@@ -231,8 +210,8 @@ void TrainingProgressDock::onEpochStarted(int currentEpoch, int totalEpochs)
         m_epochProgressBar->setValue(progress);
     }
 
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    m_trainingLogEdit->append(QString("[%1] Starting epoch %2/%3").arg(timestamp).arg(currentEpoch).arg(totalEpochs));
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    m_trainingLogEdit->append(std::string("[%1] Starting epoch %2/%3"));
 }
 
 void TrainingProgressDock::onBatchProcessed(int currentBatch, int totalBatches, float loss)
@@ -243,7 +222,7 @@ void TrainingProgressDock::onBatchProcessed(int currentBatch, int totalBatches, 
     m_totalBatchesProcessed++;
 
     // Update batch label and progress
-    m_batchLabel->setText(QString("Batch: %1 / %2").arg(currentBatch).arg(totalBatches));
+    m_batchLabel->setText(std::string("Batch: %1 / %2"));
 
     if (totalBatches > 0) {
         int progress = static_cast<int>((static_cast<float>(currentBatch) / totalBatches) * 100);
@@ -251,7 +230,7 @@ void TrainingProgressDock::onBatchProcessed(int currentBatch, int totalBatches, 
     }
 
     // Update current loss
-    m_currentLossLabel->setText(QString::number(loss, 'f', 6));
+    m_currentLossLabel->setText(std::string::number(loss, 'f', 6));
 
     // Track best loss
     if (loss < m_bestLoss) {
@@ -266,12 +245,11 @@ void TrainingProgressDock::onBatchProcessed(int currentBatch, int totalBatches, 
 
     // Log every 10 batches to avoid spam
     if (currentBatch % 10 == 0 || currentBatch == totalBatches) {
-        QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-        m_trainingLogEdit->append(QString("[%1] Batch %2/%3 - Loss: %4")
-            .arg(timestamp)
-            .arg(currentBatch)
-            .arg(totalBatches)
-            .arg(loss, 0, 'f', 6));
+        std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+        m_trainingLogEdit->append(std::string("[%1] Batch %2/%3 - Loss: %4")
+
+
+            );
         
         // Auto-scroll to bottom
         m_trainingLogEdit->verticalScrollBar()->setValue(
@@ -281,8 +259,8 @@ void TrainingProgressDock::onBatchProcessed(int currentBatch, int totalBatches, 
 
 void TrainingProgressDock::onEpochCompleted(int epoch, float avgLoss, float perplexity)
 {
-    m_avgLossLabel->setText(QString::number(avgLoss, 'f', 6));
-    m_perplexityLabel->setText(QString::number(perplexity, 'f', 2));
+    m_avgLossLabel->setText(std::string::number(avgLoss, 'f', 6));
+    m_perplexityLabel->setText(std::string::number(perplexity, 'f', 2));
 
     m_perplexityHistory.append(perplexity);
 
@@ -295,19 +273,18 @@ void TrainingProgressDock::onEpochCompleted(int epoch, float avgLoss, float perp
     // Reset batch progress for next epoch
     m_batchProgressBar->setValue(0);
 
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    m_trainingLogEdit->append(QString("[%1] ✓ Epoch %2 completed - Avg Loss: %3, Perplexity: %4")
-        .arg(timestamp)
-        .arg(epoch)
-        .arg(avgLoss, 0, 'f', 6)
-        .arg(perplexity, 0, 'f', 2));
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    m_trainingLogEdit->append(std::string("[%1] ✓ Epoch %2 completed - Avg Loss: %3, Perplexity: %4")
+
+
+        );
 
     // Auto-scroll
     m_trainingLogEdit->verticalScrollBar()->setValue(
         m_trainingLogEdit->verticalScrollBar()->maximum());
 }
 
-void TrainingProgressDock::onTrainingCompleted(const QString& modelPath, float finalLoss)
+void TrainingProgressDock::onTrainingCompleted(const std::string& modelPath, float finalLoss)
 {
     m_statusLabel->setText("Completed");
     m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #4CAF50; }");
@@ -316,10 +293,10 @@ void TrainingProgressDock::onTrainingCompleted(const QString& modelPath, float f
     m_epochProgressBar->setValue(100);
     m_batchProgressBar->setValue(100);
 
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    m_trainingLogEdit->append(QString("[%1] ✓✓✓ Training completed successfully!").arg(timestamp));
-    m_trainingLogEdit->append(QString("[%1] Model saved to: %2").arg(timestamp).arg(modelPath));
-    m_trainingLogEdit->append(QString("[%1] Final Loss: %2").arg(timestamp).arg(finalLoss, 0, 'f', 6));
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    m_trainingLogEdit->append(std::string("[%1] ✓✓✓ Training completed successfully!"));
+    m_trainingLogEdit->append(std::string("[%1] Model saved to: %2"));
+    m_trainingLogEdit->append(std::string("[%1] Final Loss: %2"));
 
     // Auto-scroll
     m_trainingLogEdit->verticalScrollBar()->setValue(
@@ -332,49 +309,49 @@ void TrainingProgressDock::onTrainingStopped()
     m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #FF9800; }");
     m_stopButton->setEnabled(false);
 
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    m_trainingLogEdit->append(QString("[%1] Training stopped by user").arg(timestamp));
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    m_trainingLogEdit->append(std::string("[%1] Training stopped by user"));
 
     // Auto-scroll
     m_trainingLogEdit->verticalScrollBar()->setValue(
         m_trainingLogEdit->verticalScrollBar()->maximum());
 }
 
-void TrainingProgressDock::onTrainingError(const QString& error)
+void TrainingProgressDock::onTrainingError(const std::string& error)
 {
     m_statusLabel->setText("Error");
     m_statusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #f44336; }");
     m_stopButton->setEnabled(false);
 
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    m_trainingLogEdit->append(QString("[%1] ✗ ERROR: %2").arg(timestamp).arg(error));
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    m_trainingLogEdit->append(std::string("[%1] ✗ ERROR: %2"));
 
     // Auto-scroll
     m_trainingLogEdit->verticalScrollBar()->setValue(
         m_trainingLogEdit->verticalScrollBar()->maximum());
 }
 
-void TrainingProgressDock::onLogMessage(const QString& message)
+void TrainingProgressDock::onLogMessage(const std::string& message)
 {
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    m_trainingLogEdit->append(QString("[%1] %2").arg(timestamp).arg(message));
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    m_trainingLogEdit->append(std::string("[%1] %2"));
 
     // Auto-scroll
     m_trainingLogEdit->verticalScrollBar()->setValue(
         m_trainingLogEdit->verticalScrollBar()->maximum());
 }
 
-void TrainingProgressDock::onValidationResults(float perplexity, const QString& details)
+void TrainingProgressDock::onValidationResults(float perplexity, const std::string& details)
 {
-    m_perplexityLabel->setText(QString::number(perplexity, 'f', 2));
+    m_perplexityLabel->setText(std::string::number(perplexity, 'f', 2));
 
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    m_validationLogEdit->append(QString("[%1] Validation Perplexity: %2")
-        .arg(timestamp)
-        .arg(perplexity, 0, 'f', 2));
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    m_validationLogEdit->append(std::string("[%1] Validation Perplexity: %2")
+        
+        );
 
     if (!details.isEmpty()) {
-        m_validationLogEdit->append(QString("[%1] Details: %2").arg(timestamp).arg(details));
+        m_validationLogEdit->append(std::string("[%1] Details: %2"));
     }
 
     // Auto-scroll
@@ -384,12 +361,12 @@ void TrainingProgressDock::onValidationResults(float perplexity, const QString& 
 
 void TrainingProgressDock::onStopButtonClicked()
 {
-    emit stopRequested();
+    stopRequested();
     m_stopButton->setEnabled(false);
     m_stopButton->setText("Stopping...");
 
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    m_trainingLogEdit->append(QString("[%1] Stop requested...").arg(timestamp));
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    m_trainingLogEdit->append(std::string("[%1] Stop requested..."));
 }
 
 void TrainingProgressDock::onClearLogsClicked()
@@ -400,16 +377,16 @@ void TrainingProgressDock::onClearLogsClicked()
 
 void TrainingProgressDock::updateTimeEstimate()
 {
-    qint64 currentTime = QDateTime::currentSecsSinceEpoch();
+    qint64 currentTime = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     qint64 elapsed = currentTime - m_trainingStartTime;
 
     // Update elapsed time
-    m_timeElapsedLabel->setText(QString("Elapsed: %1").arg(formatDuration(elapsed)));
+    m_timeElapsedLabel->setText(std::string("Elapsed: %1")));
 
     // Calculate throughput
     if (elapsed > 0 && m_totalBatchesProcessed > 0) {
         float batchesPerSec = static_cast<float>(m_totalBatchesProcessed) / elapsed;
-        m_throughputLabel->setText(QString("%1 batches/sec").arg(batchesPerSec, 0, 'f', 2));
+        m_throughputLabel->setText(std::string("%1 batches/sec"));
 
         // Estimate remaining time
         if (m_totalEpochs > 0 && m_totalBatches > 0) {
@@ -418,20 +395,21 @@ void TrainingProgressDock::updateTimeEstimate()
             
             if (batchesPerSec > 0) {
                 qint64 remainingSeconds = static_cast<qint64>(totalBatchesRemaining / batchesPerSec);
-                m_timeRemainingLabel->setText(QString("Remaining: %1").arg(formatDuration(remainingSeconds)));
+                m_timeRemainingLabel->setText(std::string("Remaining: %1")));
             }
         }
     }
 }
 
-QString TrainingProgressDock::formatDuration(qint64 seconds) const
+std::string TrainingProgressDock::formatDuration(qint64 seconds) const
 {
     int hours = seconds / 3600;
     int minutes = (seconds % 3600) / 60;
     int secs = seconds % 60;
 
-    return QString("%1:%2:%3")
-        .arg(hours, 2, 10, QChar('0'))
-        .arg(minutes, 2, 10, QChar('0'))
-        .arg(secs, 2, 10, QChar('0'));
+    return std::string("%1:%2:%3")
+        )
+        )
+        );
 }
+

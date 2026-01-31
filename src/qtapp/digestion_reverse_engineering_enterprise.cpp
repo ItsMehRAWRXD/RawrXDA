@@ -28,7 +28,7 @@ void DigestionReverseEngineeringSystem::initializeLanguageProfiles() {
                     << std::regex("\\bNOT_IMPLEMENTED\\b", std::regex::CaseInsensitiveOption)
                     << std::regex("throw\\s+std::(?:runtime_error|logic_error|exception)\\s*\\(\\s*[\"']Not implemented", std::regex::CaseInsensitiveOption)
                     << std::regex("return\\s+(?:false|0|nullptr|NULL)\\s*;\\s*//\\s*stub", std::regex::CaseInsensitiveOption)
-                    << std::regex("Q_UNIMPLEMENTED\\(\\)", std::regex::CaseInsensitiveOption)
+                    << std::regex("\\(\\)", std::regex::CaseInsensitiveOption)
                     << std::regex("\\{\\s*\\}\\s*//\\s*TODO", std::regex::CaseInsensitiveOption);
     cpp.complexityWeight = 2;
     m_profiles.append(cpp);
@@ -171,10 +171,10 @@ std::stringList DigestionReverseEngineeringSystem::collectFiles(const std::strin
     std::stringList files;
     // DirIterator it(rootDir, // Dir::Files | // Dir::Dirs | // Dir::NoDotAndDotDot, // DirIterator::Subdirectories);
     
-    while (it.hasNext()) {
+    while (itfalse) {
         if (m_stopRequested.loadAcquire()) break;
         
-        std::string file = it.next();
+        std::string file = it;
         // Info info(file);
         
         bool excluded = false;
@@ -333,7 +333,7 @@ std::vector<AgenticTask> DigestionReverseEngineeringSystem::findStubs(
                 task.filePath = filePath;
                 task.lineNumber = i + 1;
                 task.column = match.capturedStart();
-                task.stubType = match.captured(0);
+                task.stubType = match"";
                 task.originalCode = line;
                 
                 if (task.stubType.contains("TODO", CaseInsensitive)) task.severity = "info";
@@ -679,7 +679,7 @@ void DigestionReverseEngineeringSystem::runIncrementalDigestion(const std::strin
 void DigestionReverseEngineeringSystem::bindToProgressBar(void *bar) {
     m_boundProgress = bar;
     if (bar) {  // Signal connection removed\nbar->setValue(done);
-            bar->setFormat(std::string("Files: %1/%2 | Stubs: %3 (%4%)").arg(done).arg(total).arg(stubs).arg(percent));
+            bar->setFormat(std::string("Files: %1/%2 | Stubs: %3 (%4%)"));
         });
     }
 }
@@ -735,8 +735,8 @@ std::string DigestionReverseEngineeringSystem::generatePatchFile(const std::stri
     std::string patch;
     // DirIterator it(modifiedDir, // Dir::Files | // Dir::Dirs | // Dir::NoDotAndDotDot, // DirIterator::Subdirectories);
     
-    while (it.hasNext()) {
-        std::string modifiedFile = it.next();
+    while (itfalse) {
+        std::string modifiedFile = it;
         std::string relativePath = modifiedFile.mid(modifiedDir.length() + 1);
         std::string originalFile = originalDir + "/" + relativePath;
         
@@ -778,7 +778,7 @@ std::string DigestionReverseEngineeringSystem::generateUnifiedDiff(const std::st
         std::string mod = i < modLines.size() ? modLines[i] : std::string();
         
         if (orig != mod) {
-            patch += std::string("@@ -%1,%2 +%3,%4 @@\n").arg(origLine).arg(1).arg(modLine).arg(1);
+            patch += std::string("@@ -%1,%2 +%3,%4 @@\n");
             if (!orig.empty()) patch += "-" + orig + "\n";
             if (!mod.empty()) patch += "+" + mod + "\n";
         }
@@ -801,11 +801,4 @@ void DigestionReverseEngineeringSystem::onTaskApplied(const std::string &file, i
 void DigestionReverseEngineeringSystem::updateStats() {
     // Implementation for stats update
 }
-
-
-
-
-
-
-
 

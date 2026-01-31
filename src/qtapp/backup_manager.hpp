@@ -1,10 +1,5 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QDateTime>
-#include <QTimer>
-#include <QHash>
 
 /**
  * @brief Backup and disaster recovery manager
@@ -17,8 +12,7 @@
  * - RTO (Recovery Time Objective): < 5 minutes
  * - RPO (Recovery Point Objective): < 15 minutes
  */
-class BackupManager : public QObject {
-    Q_OBJECT
+class BackupManager : public void {
 
 public:
     enum BackupType {
@@ -28,13 +22,13 @@ public:
     };
 
     struct BackupInfo {
-        QString id;
+        std::string id;
         BackupType type;
-        QDateTime timestamp;
-        QString path;
+        std::chrono::system_clock::time_point timestamp;
+        std::string path;
         size_t sizeBytes;
         bool verified;
-        QString checksum;
+        std::string checksum;
     };
 
     static BackupManager& instance();
@@ -54,23 +48,23 @@ public:
     /**
      * @brief Create manual backup
      */
-    QString createBackup(BackupType type = Full);
+    std::string createBackup(BackupType type = Full);
 
     /**
      * @brief Restore from backup
      * @param backupId Backup ID to restore
      */
-    bool restoreBackup(const QString& backupId);
+    bool restoreBackup(const std::string& backupId);
 
     /**
      * @brief List available backups
      */
-    QList<BackupInfo> listBackups() const;
+    std::vector<BackupInfo> listBackups() const;
 
     /**
      * @brief Verify backup integrity
      */
-    bool verifyBackup(const QString& backupId);
+    bool verifyBackup(const std::string& backupId);
 
     /**
      * @brief Delete old backups (retention policy)
@@ -81,22 +75,21 @@ public:
     /**
      * @brief Set backup directory
      */
-    void setBackupDirectory(const QString& path);
+    void setBackupDirectory(const std::string& path);
 
     /**
      * @brief Get backup directory
      */
-    QString backupDirectory() const;
+    std::string backupDirectory() const;
 
-signals:
-    void backupStarted(const QString& backupId);
-    void backupCompleted(const QString& backupId, size_t sizeBytes);
-    void backupFailed(const QString& error);
-    void restoreStarted(const QString& backupId);
-    void restoreCompleted(const QString& backupId);
-    void restoreFailed(const QString& error);
+    void backupStarted(const std::string& backupId);
+    void backupCompleted(const std::string& backupId, size_t sizeBytes);
+    void backupFailed(const std::string& error);
+    void restoreStarted(const std::string& backupId);
+    void restoreCompleted(const std::string& backupId);
+    void restoreFailed(const std::string& error);
 
-private slots:
+private:
     void performAutomaticBackup();
 
 private:
@@ -104,12 +97,13 @@ private:
     BackupManager(const BackupManager&) = delete;
     BackupManager& operator=(const BackupManager&) = delete;
 
-    QString calculateChecksum(const QString& filePath);
-    bool compressBackup(const QString& srcPath, const QString& dstPath);
-    bool decompressBackup(const QString& srcPath, const QString& dstPath);
+    std::string calculateChecksum(const std::string& filePath);
+    bool compressBackup(const std::string& srcPath, const std::string& dstPath);
+    bool decompressBackup(const std::string& srcPath, const std::string& dstPath);
 
-    QString m_backupDirectory;
-    QTimer* m_backupTimer = nullptr;
-    QHash<QString, BackupInfo> m_backups;
+    std::string m_backupDirectory;
+    void** m_backupTimer = nullptr;
+    std::unordered_map<std::string, BackupInfo> m_backups;
     bool m_running = false;
 };
+

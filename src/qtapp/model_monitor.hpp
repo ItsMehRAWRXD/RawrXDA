@@ -1,7 +1,5 @@
 #pragma once
-#include <QWidget>
-#include <QLabel>
-#include <QTimer>
+
 
 class InferenceEngine;
 
@@ -15,10 +13,10 @@ class InferenceEngine;
  * 
  * Updates every second via timer.
  */
-class ModelMonitor : public QWidget {
-    Q_OBJECT
+class ModelMonitor : public void {
+
 public:
-    explicit ModelMonitor(InferenceEngine* engine, QWidget* parent = nullptr);
+    explicit ModelMonitor(InferenceEngine* engine, void* parent = nullptr);
     
     /**
      * Two-phase initialization - call after QApplication is ready
@@ -26,14 +24,15 @@ public:
      */
     void initialize();
 
-private slots:
+private:
     void refresh();
 
 private:
     InferenceEngine* m_engine;
-    QTimer*          m_timer;
+    void**          m_timer;
     QLabel*          m_memLabel;
     QLabel*          m_tokensLabel;
     QLabel*          m_tempLabel;
     QLabel*          m_modelLabel;
 };
+

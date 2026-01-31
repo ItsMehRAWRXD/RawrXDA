@@ -581,4 +581,3 @@ bool Settings::SaveMonaco(const MonacoSettings& settings, const std::string& pat
     return true;
 }
 
-

@@ -1,34 +1,25 @@
 #include "zero_retention_manager.hpp"
-#include <QDebug>
-#include <QFile>
-#include <QDir>
-#include <QTextStream>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QUuid>
-#include <QCryptographicHash>
 
-ZeroRetentionManager::ZeroRetentionManager(QObject* parent)
-    : QObject(parent),
-      m_cleanupTimer(new QTimer(this))
+
+ZeroRetentionManager::ZeroRetentionManager(void* parent)
+    : void(parent),
+      m_cleanupTimer(new void*(this))
 {
-    logStructured("INFO", "ZeroRetentionManager initializing", QJsonObject{{"component", "ZeroRetentionManager"}});
-    
-    connect(m_cleanupTimer, &QTimer::timeout, this, &ZeroRetentionManager::performAutoCleanup);
-    
-    logStructured("INFO", "ZeroRetentionManager initialized successfully", QJsonObject{{"component", "ZeroRetentionManager"}});
+    logStructured("INFO", "ZeroRetentionManager initializing", void*{{"component", "ZeroRetentionManager"}});
+// Qt connect removed
+    logStructured("INFO", "ZeroRetentionManager initialized successfully", void*{{"component", "ZeroRetentionManager"}});
 }
 
 ZeroRetentionManager::~ZeroRetentionManager()
 {
-    logStructured("INFO", "ZeroRetentionManager shutting down", QJsonObject{{"component", "ZeroRetentionManager"}});
+    logStructured("INFO", "ZeroRetentionManager shutting down", void*{{"component", "ZeroRetentionManager"}});
     
     m_cleanupTimer->stop();
     
     // Perform final cleanup
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
@@ -36,12 +27,12 @@ ZeroRetentionManager::~ZeroRetentionManager()
         purgeAllData(Session);
     }
     
-    logStructured("INFO", "ZeroRetentionManager shutdown complete", QJsonObject{{"component", "ZeroRetentionManager"}});
+    logStructured("INFO", "ZeroRetentionManager shutdown complete", void*{{"component", "ZeroRetentionManager"}});
 }
 
 void ZeroRetentionManager::setConfig(const Config& config)
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     m_config = config;
     
     // Restart cleanup timer with new interval
@@ -51,7 +42,7 @@ void ZeroRetentionManager::setConfig(const Config& config)
         m_cleanupTimer->stop();
     }
     
-    logStructured("INFO", "Configuration updated", QJsonObject{
+    logStructured("INFO", "Configuration updated", void*{
         {"sessionTtlMinutes", config.sessionTtlMinutes},
         {"dataRetentionDays", config.dataRetentionDays},
         {"enableAutoCleanup", config.enableAutoCleanup},
@@ -61,27 +52,27 @@ void ZeroRetentionManager::setConfig(const Config& config)
 
 ZeroRetentionManager::Config ZeroRetentionManager::getConfig() const
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     return m_config;
 }
 
-QString ZeroRetentionManager::registerData(const QString& path, DataClass classification, int customTtlMinutes)
+std::string ZeroRetentionManager::registerData(const std::string& path, DataClass classification, int customTtlMinutes)
 {
     auto startTime = std::chrono::steady_clock::now();
     
     try {
-        QString id = generateDataId();
+        std::string id = generateDataId();
         
         DataEntry entry;
         entry.id = id;
         entry.path = path;
         entry.classification = classification;
-        entry.createdAt = QDateTime::currentDateTime();
+        entry.createdAt = std::chrono::system_clock::time_point::currentDateTime();
         entry.expiresAt = calculateExpiry(classification, customTtlMinutes);
         entry.isAnonymized = false;
         
         // Get file size if path exists
-        QFileInfo fileInfo(path);
+        std::filesystem::path fileInfo(path);
         if (fileInfo.exists()) {
             entry.sizeBytes = fileInfo.size();
         } else {
@@ -89,98 +80,98 @@ QString ZeroRetentionManager::registerData(const QString& path, DataClass classi
         }
         
         {
-            QMutexLocker dataMutex(&m_dataMutex);
+            std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
             m_trackedData[id] = entry;
         }
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.dataEntriesTracked++;
         }
         
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         
-        logStructured("INFO", "Data registered for tracking", QJsonObject{
+        logStructured("INFO", "Data registered for tracking", void*{
             {"id", id},
             {"path", path},
             {"classification", static_cast<int>(classification)},
-            {"expiresAt", entry.expiresAt.toString(Qt::ISODate)},
+            {"expiresAt", entry.expiresAt.toString(//ISODate)},
             {"sizeBytes", entry.sizeBytes}
         });
         
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         if (config.enableAuditLog) {
-            logAudit("data_registered", QJsonObject{
+            logAudit("data_registered", void*{
                 {"id", id},
                 {"path", path},
                 {"classification", static_cast<int>(classification)},
-                {"createdAt", entry.createdAt.toString(Qt::ISODate)},
-                {"expiresAt", entry.expiresAt.toString(Qt::ISODate)}
+                {"createdAt", entry.createdAt.toString(//ISODate)},
+                {"expiresAt", entry.expiresAt.toString(//ISODate)}
             });
         }
         
         return id;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Failed to register data", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Registration failed: %1").arg(e.what()));
-        return QString();
+        logStructured("ERROR", "Failed to register data", void*{{"error", e.what()}});
+        errorOccurred(std::string("Registration failed: %1")));
+        return std::string();
     }
 }
 
-bool ZeroRetentionManager::unregisterData(const QString& id)
+bool ZeroRetentionManager::unregisterData(const std::string& id)
 {
     try {
-        QMutexLocker dataMutex(&m_dataMutex);
+        std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
         
         if (!m_trackedData.contains(id)) {
-            logStructured("WARN", "Data ID not found for unregistration", QJsonObject{{"id", id}});
+            logStructured("WARN", "Data ID not found for unregistration", void*{{"id", id}});
             return false;
         }
         
         m_trackedData.remove(id);
         
-        logStructured("INFO", "Data unregistered", QJsonObject{{"id", id}});
+        logStructured("INFO", "Data unregistered", void*{{"id", id}});
         
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         if (config.enableAuditLog) {
-            logAudit("data_unregistered", QJsonObject{{"id", id}});
+            logAudit("data_unregistered", void*{{"id", id}});
         }
         
         return true;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Failed to unregister data", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Unregistration failed: %1").arg(e.what()));
+        logStructured("ERROR", "Failed to unregister data", void*{{"error", e.what()}});
+        errorOccurred(std::string("Unregistration failed: %1")));
         return false;
     }
 }
 
-bool ZeroRetentionManager::deleteData(const QString& id, bool immediate)
+bool ZeroRetentionManager::deleteData(const std::string& id, bool immediate)
 {
     auto startTime = std::chrono::steady_clock::now();
     
     try {
         DataEntry entry;
         {
-            QMutexLocker dataMutex(&m_dataMutex);
+            std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
             if (!m_trackedData.contains(id)) {
-                logStructured("WARN", "Data ID not found for deletion", QJsonObject{{"id", id}});
+                logStructured("WARN", "Data ID not found for deletion", void*{{"id", id}});
                 return false;
             }
             entry = m_trackedData[id];
@@ -188,9 +179,9 @@ bool ZeroRetentionManager::deleteData(const QString& id, bool immediate)
         
         // Check if should delete based on retention policy
         if (!immediate && !isExpired(entry)) {
-            logStructured("DEBUG", "Data not yet expired, skipping deletion", QJsonObject{
+            logStructured("DEBUG", "Data not yet expired, skipping deletion", void*{
                 {"id", id},
-                {"expiresAt", entry.expiresAt.toString(Qt::ISODate)}
+                {"expiresAt", entry.expiresAt.toString(//ISODate)}
             });
             return false;
         }
@@ -199,12 +190,12 @@ bool ZeroRetentionManager::deleteData(const QString& id, bool immediate)
         
         if (deleteSuccess || immediate) {
             {
-                QMutexLocker dataMutex(&m_dataMutex);
+                std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
                 m_trackedData.remove(id);
             }
             
             {
-                QMutexLocker metricsLocker(&m_metricsMutex);
+                std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
                 m_metrics.dataEntriesDeleted++;
                 m_metrics.bytesDeleted += entry.sizeBytes;
             }
@@ -212,7 +203,7 @@ bool ZeroRetentionManager::deleteData(const QString& id, bool immediate)
             auto endTime = std::chrono::steady_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
             
-            logStructured("INFO", "Data deleted", QJsonObject{
+            logStructured("INFO", "Data deleted", void*{
                 {"id", id},
                 {"path", entry.path},
                 {"sizeBytes", entry.sizeBytes},
@@ -221,12 +212,12 @@ bool ZeroRetentionManager::deleteData(const QString& id, bool immediate)
             
             Config config;
             {
-                QMutexLocker configLocker(&m_configMutex);
+                std::lock_guard<std::mutex> configLocker(&m_configMutex);
                 config = m_config;
             }
             
             if (config.enableAuditLog) {
-                logAudit("data_deleted", QJsonObject{
+                logAudit("data_deleted", void*{
                     {"id", id},
                     {"path", entry.path},
                     {"sizeBytes", entry.sizeBytes},
@@ -235,49 +226,49 @@ bool ZeroRetentionManager::deleteData(const QString& id, bool immediate)
                 });
             }
             
-            emit dataDeleted(id, entry.sizeBytes);
+            dataDeleted(id, entry.sizeBytes);
         }
         
         return deleteSuccess;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Failed to delete data", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Deletion failed: %1").arg(e.what()));
+        logStructured("ERROR", "Failed to delete data", void*{{"error", e.what()}});
+        errorOccurred(std::string("Deletion failed: %1")));
         return false;
     }
 }
 
-bool ZeroRetentionManager::anonymizeData(const QString& id)
+bool ZeroRetentionManager::anonymizeData(const std::string& id)
 {
     try {
-        QMutexLocker dataMutex(&m_dataMutex);
+        std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
         
         if (!m_trackedData.contains(id)) {
-            logStructured("WARN", "Data ID not found for anonymization", QJsonObject{{"id", id}});
+            logStructured("WARN", "Data ID not found for anonymization", void*{{"id", id}});
             return false;
         }
         
         DataEntry& entry = m_trackedData[id];
         
         // Read file
-        QFile file(entry.path);
+        std::fstream file(entry.path);
         if (!file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-            logStructured("ERROR", "Failed to open file for anonymization", QJsonObject{
+            logStructured("ERROR", "Failed to open file for anonymization", void*{
                 {"path", entry.path},
                 {"error", file.errorString()}
             });
             return false;
         }
         
-        QString content = file.readAll();
+        std::string content = file.readAll();
         file.seek(0);
         
         // Simple anonymization: hash PII patterns
         // In production, use more sophisticated anonymization
-        QRegularExpression emailPattern(R"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})");
-        QRegularExpression ipPattern(R"(\b(?:\d{1,3}\.){3}\d{1,3}\b)");
+        std::regex emailPattern(R"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})");
+        std::regex ipPattern(R"(\b(?:\d{1,3}\.){3}\d{1,3}\b)");
         
         content.replace(emailPattern, "[EMAIL_REDACTED]");
         content.replace(ipPattern, "[IP_REDACTED]");
@@ -290,23 +281,23 @@ bool ZeroRetentionManager::anonymizeData(const QString& id)
         entry.classification = Anonymous;
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.anonymizationCount++;
         }
         
-        logStructured("INFO", "Data anonymized", QJsonObject{
+        logStructured("INFO", "Data anonymized", void*{
             {"id", id},
             {"path", entry.path}
         });
         
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         if (config.enableAuditLog) {
-            logAudit("data_anonymized", QJsonObject{
+            logAudit("data_anonymized", void*{
                 {"id", id},
                 {"path", entry.path}
             });
@@ -315,10 +306,10 @@ bool ZeroRetentionManager::anonymizeData(const QString& id)
         return true;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Failed to anonymize data", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Anonymization failed: %1").arg(e.what()));
+        logStructured("ERROR", "Failed to anonymize data", void*{{"error", e.what()}});
+        errorOccurred(std::string("Anonymization failed: %1")));
         return false;
     }
 }
@@ -330,10 +321,10 @@ void ZeroRetentionManager::cleanupExpiredData()
     qint64 bytesDeleted = 0;
     
     try {
-        QVector<QString> expiredIds;
+        std::vector<std::string> expiredIds;
         
         {
-            QMutexLocker dataMutex(&m_dataMutex);
+            std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
             for (auto it = m_trackedData.begin(); it != m_trackedData.end(); ++it) {
                 if (isExpired(it.value())) {
                     expiredIds.append(it.key());
@@ -341,12 +332,12 @@ void ZeroRetentionManager::cleanupExpiredData()
             }
         }
         
-        for (const QString& id : expiredIds) {
+        for (const std::string& id : expiredIds) {
             DataEntry entry = getDataEntry(id);
             if (deleteData(id, false)) {
                 deletedCount++;
                 bytesDeleted += entry.sizeBytes;
-                emit dataExpired(id);
+                dataExpired(id);
             }
         }
         
@@ -354,29 +345,29 @@ void ZeroRetentionManager::cleanupExpiredData()
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         recordLatency("cleanup", duration);
         
-        logStructured("INFO", "Expired data cleanup completed", QJsonObject{
+        logStructured("INFO", "Expired data cleanup completed", void*{
             {"deletedCount", deletedCount},
             {"bytesDeleted", bytesDeleted},
             {"latencyMs", duration.count()}
         });
         
-        emit cleanupCompleted(deletedCount, bytesDeleted);
+        cleanupCompleted(deletedCount, bytesDeleted);
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Cleanup failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Cleanup failed: %1").arg(e.what()));
+        logStructured("ERROR", "Cleanup failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Cleanup failed: %1")));
     }
 }
 
-void ZeroRetentionManager::cleanupSession(const QString& sessionId)
+void ZeroRetentionManager::cleanupSession(const std::string& sessionId)
 {
     try {
-        QVector<QString> sessionDataIds;
+        std::vector<std::string> sessionDataIds;
         
         {
-            QMutexLocker dataMutex(&m_dataMutex);
+            std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
             for (auto it = m_trackedData.begin(); it != m_trackedData.end(); ++it) {
                 if (it.value().path.contains(sessionId)) {
                     sessionDataIds.append(it.key());
@@ -384,50 +375,50 @@ void ZeroRetentionManager::cleanupSession(const QString& sessionId)
             }
         }
         
-        for (const QString& id : sessionDataIds) {
+        for (const std::string& id : sessionDataIds) {
             deleteData(id, true);
         }
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.sessionsCleanedUp++;
         }
         
-        logStructured("INFO", "Session cleaned up", QJsonObject{
+        logStructured("INFO", "Session cleaned up", void*{
             {"sessionId", sessionId},
             {"itemsDeleted", sessionDataIds.size()}
         });
         
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         if (config.enableAuditLog) {
-            logAudit("session_cleaned", QJsonObject{
+            logAudit("session_cleaned", void*{
                 {"sessionId", sessionId},
                 {"itemsDeleted", sessionDataIds.size()}
             });
         }
         
-        emit sessionCleaned(sessionId);
+        sessionCleaned(sessionId);
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Session cleanup failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Session cleanup failed: %1").arg(e.what()));
+        logStructured("ERROR", "Session cleanup failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Session cleanup failed: %1")));
     }
 }
 
 void ZeroRetentionManager::purgeAllData(DataClass classification)
 {
     try {
-        QVector<QString> idsToDelete;
+        std::vector<std::string> idsToDelete;
         
         {
-            QMutexLocker dataMutex(&m_dataMutex);
+            std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
             for (auto it = m_trackedData.begin(); it != m_trackedData.end(); ++it) {
                 if (it.value().classification == classification) {
                     idsToDelete.append(it.key());
@@ -435,40 +426,40 @@ void ZeroRetentionManager::purgeAllData(DataClass classification)
             }
         }
         
-        for (const QString& id : idsToDelete) {
+        for (const std::string& id : idsToDelete) {
             deleteData(id, true);
         }
         
-        logStructured("INFO", "Data purged", QJsonObject{
+        logStructured("INFO", "Data purged", void*{
             {"classification", static_cast<int>(classification)},
             {"itemsDeleted", idsToDelete.size()}
         });
         
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         if (config.enableAuditLog) {
-            logAudit("data_purged", QJsonObject{
+            logAudit("data_purged", void*{
                 {"classification", static_cast<int>(classification)},
                 {"itemsDeleted", idsToDelete.size()}
             });
         }
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Data purge failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Purge failed: %1").arg(e.what()));
+        logStructured("ERROR", "Data purge failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Purge failed: %1")));
     }
 }
 
-QVector<ZeroRetentionManager::DataEntry> ZeroRetentionManager::getTrackedData(DataClass classification) const
+std::vector<ZeroRetentionManager::DataEntry> ZeroRetentionManager::getTrackedData(DataClass classification) const
 {
-    QMutexLocker dataMutex(&m_dataMutex);
-    QVector<DataEntry> result;
+    std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
+    std::vector<DataEntry> result;
     
     for (auto it = m_trackedData.begin(); it != m_trackedData.end(); ++it) {
         if (it.value().classification == classification) {
@@ -479,47 +470,46 @@ QVector<ZeroRetentionManager::DataEntry> ZeroRetentionManager::getTrackedData(Da
     return result;
 }
 
-ZeroRetentionManager::DataEntry ZeroRetentionManager::getDataEntry(const QString& id) const
+ZeroRetentionManager::DataEntry ZeroRetentionManager::getDataEntry(const std::string& id) const
 {
-    QMutexLocker dataMutex(&m_dataMutex);
+    std::lock_guard<std::mutex> dataMutex(&m_dataMutex);
     return m_trackedData.value(id, DataEntry());
 }
 
 ZeroRetentionManager::Metrics ZeroRetentionManager::getMetrics() const
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     return m_metrics;
 }
 
 void ZeroRetentionManager::resetMetrics()
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     m_metrics = Metrics();
-    logStructured("INFO", "Metrics reset", QJsonObject{});
+    logStructured("INFO", "Metrics reset", void*{});
 }
 
 void ZeroRetentionManager::performAutoCleanup()
 {
-    logStructured("DEBUG", "Auto cleanup triggered", QJsonObject{});
+    logStructured("DEBUG", "Auto cleanup triggered", void*{});
     cleanupExpiredData();
 }
 
-void ZeroRetentionManager::logStructured(const QString& level, const QString& message, const QJsonObject& context)
+void ZeroRetentionManager::logStructured(const std::string& level, const std::string& message, const void*& context)
 {
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = level;
     logEntry["component"] = "ZeroRetentionManager";
     logEntry["message"] = message;
     logEntry["context"] = context;
     
-    QJsonDocument doc(logEntry);
-    qDebug().noquote() << doc.toJson(QJsonDocument::Compact);
+    void* doc(logEntry);
 }
 
-void ZeroRetentionManager::recordLatency(const QString& operation, const std::chrono::milliseconds& duration)
+void ZeroRetentionManager::recordLatency(const std::string& operation, const std::chrono::milliseconds& duration)
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     
     if (operation == "cleanup") {
         int cleanupCount = m_metrics.dataEntriesDeleted;
@@ -529,20 +519,20 @@ void ZeroRetentionManager::recordLatency(const QString& operation, const std::ch
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     if (config.enableMetrics) {
-        emit metricsUpdated(m_metrics);
+        metricsUpdated(m_metrics);
     }
 }
 
-void ZeroRetentionManager::logAudit(const QString& action, const QJsonObject& details)
+void ZeroRetentionManager::logAudit(const std::string& action, const void*& details)
 {
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
@@ -550,86 +540,86 @@ void ZeroRetentionManager::logAudit(const QString& action, const QJsonObject& de
         return;
     }
     
-    QJsonObject auditEntry;
-    auditEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* auditEntry;
+    auditEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     auditEntry["action"] = action;
     auditEntry["details"] = details;
     
-    QFile auditFile(config.auditLogPath);
+    std::fstream auditFile(config.auditLogPath);
     if (auditFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         QTextStream out(&auditFile);
-        QJsonDocument doc(auditEntry);
-        out << doc.toJson(QJsonDocument::Compact) << "\n";
+        void* doc(auditEntry);
+        out << doc.toJson(void*::Compact) << "\n";
         auditFile.close();
         
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.auditEntriesCreated++;
     } else {
-        logStructured("ERROR", "Failed to write audit log", QJsonObject{
+        logStructured("ERROR", "Failed to write audit log", void*{
             {"path", config.auditLogPath},
             {"error", auditFile.errorString()}
         });
     }
 }
 
-bool ZeroRetentionManager::secureDelete(const QString& path)
+bool ZeroRetentionManager::secureDelete(const std::string& path)
 {
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
-    if (!QFile::exists(path)) {
-        logStructured("WARN", "File does not exist for deletion", QJsonObject{{"path", path}});
+    if (!std::fstream::exists(path)) {
+        logStructured("WARN", "File does not exist for deletion", void*{{"path", path}});
         return false;
     }
     
     if (config.enableSecureWipe) {
         // Secure wipe: overwrite file with random data before deletion
-        QFile file(path);
+        std::fstream file(path);
         if (file.open(QIODevice::ReadWrite)) {
             qint64 size = file.size();
-            QByteArray zeroData(size, '\0');
+            std::vector<uint8_t> zeroData(size, '\0');
             file.write(zeroData);
             file.flush();
             file.close();
             
-            logStructured("DEBUG", "Secure wipe completed", QJsonObject{
+            logStructured("DEBUG", "Secure wipe completed", void*{
                 {"path", path},
                 {"size", size}
             });
         }
     }
     
-    bool removed = QFile::remove(path);
+    bool removed = std::fstream::remove(path);
     
     if (!removed) {
-        logStructured("ERROR", "Failed to delete file", QJsonObject{{"path", path}});
+        logStructured("ERROR", "Failed to delete file", void*{{"path", path}});
     }
     
     return removed;
 }
 
-QString ZeroRetentionManager::generateDataId()
+std::string ZeroRetentionManager::generateDataId()
 {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
 bool ZeroRetentionManager::isExpired(const DataEntry& entry) const
 {
-    return QDateTime::currentDateTime() >= entry.expiresAt;
+    return std::chrono::system_clock::time_point::currentDateTime() >= entry.expiresAt;
 }
 
-QDateTime ZeroRetentionManager::calculateExpiry(DataClass classification, int customTtlMinutes) const
+std::chrono::system_clock::time_point ZeroRetentionManager::calculateExpiry(DataClass classification, int customTtlMinutes) const
 {
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
-    QDateTime now = QDateTime::currentDateTime();
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::time_point::currentDateTime();
     
     if (customTtlMinutes >= 0) {
         return now.addSecs(customTtlMinutes * 60);
@@ -650,3 +640,4 @@ QDateTime ZeroRetentionManager::calculateExpiry(DataClass classification, int cu
             return now.addSecs(config.sessionTtlMinutes * 60);
     }
 }
+

@@ -1,22 +1,15 @@
 // AgenticConfiguration Implementation (Core Functions)
 #include "agentic_configuration.h"
-#include <QDebug>
-#include <QFile>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QDir>
-#include <QStandardPaths>
 
-AgenticConfiguration::AgenticConfiguration(QObject* parent)
-    : QObject(parent)
+
+AgenticConfiguration::AgenticConfiguration(void* parent)
+    : void(parent)
 {
-    qDebug() << "[AgenticConfiguration] Initialized - Ready for configuration management";
     loadDefaults();
 }
 
 AgenticConfiguration::~AgenticConfiguration()
 {
-    qDebug() << "[AgenticConfiguration] Destroyed";
 }
 
 // ===== INITIALIZATION =====
@@ -25,77 +18,71 @@ void AgenticConfiguration::initializeFromEnvironment(Environment env)
 {
     m_currentEnvironment = env;
 
-    QString envName;
+    std::string envName;
     switch (env) {
         case Environment::Development: envName = "Development"; break;
         case Environment::Staging: envName = "Staging"; break;
         case Environment::Production: envName = "Production"; break;
     }
 
-    qInfo() << "[AgenticConfiguration] Initialized for environment:" << envName;
     applyEnvironmentOverrides();
 }
 
-bool AgenticConfiguration::loadFromJson(const QString& filePath)
+bool AgenticConfiguration::loadFromJson(const std::string& filePath)
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "[AgenticConfiguration] Cannot open JSON file:" << filePath;
         return false;
     }
 
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    void* doc = void*::fromJson(file.readAll());
     file.close();
 
     if (!doc.isObject()) {
-        qWarning() << "[AgenticConfiguration] Invalid JSON format";
         return false;
     }
 
-    QJsonObject obj = doc.object();
+    void* obj = doc.object();
     for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
         set(it.key(), it.value().toVariant());
     }
 
-    qInfo() << "[AgenticConfiguration] Loaded configuration from JSON:" << filePath;
-    emit configurationLoaded();
+    configurationLoaded();
 
     return true;
 }
 
-bool AgenticConfiguration::loadFromEnv(const QString& filePath)
+bool AgenticConfiguration::loadFromEnv(const std::string& filePath)
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
 
     while (!file.atEnd()) {
-        QString line = file.readLine().trimmed();
+        std::string line = file.readLine().trimmed();
 
         if (line.isEmpty() || line.startsWith("#")) continue;
 
         int eqIdx = line.indexOf('=');
         if (eqIdx < 0) continue;
 
-        QString key = line.left(eqIdx).trimmed();
-        QString value = line.mid(eqIdx + 1).trimmed();
+        std::string key = line.left(eqIdx).trimmed();
+        std::string value = line.mid(eqIdx + 1).trimmed();
 
         set(key, value);
     }
 
     file.close();
 
-    qInfo() << "[AgenticConfiguration] Loaded from .env file:" << filePath;
-    emit configurationLoaded();
+    configurationLoaded();
 
     return true;
 }
 
-bool AgenticConfiguration::loadFromYaml(const QString& filePath)
+bool AgenticConfiguration::loadFromYaml(const std::string& filePath)
 {
     // YAML parsing would be implemented here
-    qWarning() << "[AgenticConfiguration] YAML loading not yet implemented";
     return false;
 }
 
@@ -166,12 +153,11 @@ void AgenticConfiguration::loadDefaults()
     defaultConfig.description = "Maximum tokens to generate";
     setConfigDefault("model.max_tokens", defaultConfig);
 
-    qDebug() << "[AgenticConfiguration] Loaded defaults";
 }
 
 // ===== CONFIGURATION ACCESS =====
 
-QVariant AgenticConfiguration::get(const QString& key, const QVariant& defaultValue)
+std::any AgenticConfiguration::get(const std::string& key, const std::any& defaultValue)
 {
     auto it = m_config.find(key.toStdString());
     if (it != m_config.end()) {
@@ -182,49 +168,49 @@ QVariant AgenticConfiguration::get(const QString& key, const QVariant& defaultVa
     return defaultValue;
 }
 
-QString AgenticConfiguration::getString(const QString& key, const QString& defaultValue)
+std::string AgenticConfiguration::getString(const std::string& key, const std::string& defaultValue)
 {
-    QVariant val = get(key, defaultValue);
+    std::any val = get(key, defaultValue);
     return val.toString();
 }
 
-int AgenticConfiguration::getInt(const QString& key, int defaultValue)
+int AgenticConfiguration::getInt(const std::string& key, int defaultValue)
 {
-    QVariant val = get(key, defaultValue);
+    std::any val = get(key, defaultValue);
     return val.toInt();
 }
 
-float AgenticConfiguration::getFloat(const QString& key, float defaultValue)
+float AgenticConfiguration::getFloat(const std::string& key, float defaultValue)
 {
-    QVariant val = get(key, defaultValue);
+    std::any val = get(key, defaultValue);
     return static_cast<float>(val.toDouble());
 }
 
-bool AgenticConfiguration::getBool(const QString& key, bool defaultValue)
+bool AgenticConfiguration::getBool(const std::string& key, bool defaultValue)
 {
-    QVariant val = get(key, defaultValue);
+    std::any val = get(key, defaultValue);
     return val.toBool();
 }
 
-QJsonObject AgenticConfiguration::getObject(const QString& key, const QJsonObject& defaultValue)
+void* AgenticConfiguration::getObject(const std::string& key, const void*& defaultValue)
 {
-    QVariant val = get(key);
-    if (val.canConvert<QJsonObject>()) {
-        return val.value<QJsonObject>();
+    std::any val = get(key);
+    if (val.canConvert<void*>()) {
+        return val.value<void*>();
     }
     return defaultValue;
 }
 
-QJsonArray AgenticConfiguration::getArray(const QString& key, const QJsonArray& defaultValue)
+void* AgenticConfiguration::getArray(const std::string& key, const void*& defaultValue)
 {
-    QVariant val = get(key);
-    if (val.canConvert<QJsonArray>()) {
-        return val.value<QJsonArray>();
+    std::any val = get(key);
+    if (val.canConvert<void*>()) {
+        return val.value<void*>();
     }
     return defaultValue;
 }
 
-void AgenticConfiguration::set(const QString& key, const QVariant& value)
+void AgenticConfiguration::set(const std::string& key, const std::any& value)
 {
     auto it = m_config.find(key.toStdString());
     
@@ -237,10 +223,10 @@ void AgenticConfiguration::set(const QString& key, const QVariant& value)
         m_config[key.toStdString()] = config;
     }
 
-    emit configurationChanged(key);
+    configurationChanged(key);
 }
 
-void AgenticConfiguration::setSecret(const QString& key, const QString& value)
+void AgenticConfiguration::setSecret(const std::string& key, const std::string& value)
 {
     auto it = m_config.find(key.toStdString());
     
@@ -256,7 +242,7 @@ void AgenticConfiguration::setSecret(const QString& key, const QString& value)
     }
 
     m_secretKeys.push_back(key);
-    emit secretAccessed(key);
+    secretAccessed(key);
 }
 
 // ===== ENVIRONMENT-SPECIFIC CONFIG =====
@@ -266,10 +252,10 @@ void AgenticConfiguration::setEnvironment(Environment env)
     m_currentEnvironment = env;
     applyEnvironmentOverrides();
 
-    emit configurationLoaded();
+    configurationLoaded();
 }
 
-QString AgenticConfiguration::getEnvironmentName() const
+std::string AgenticConfiguration::getEnvironmentName() const
 {
     switch (m_currentEnvironment) {
         case Environment::Development: return "Development";
@@ -279,8 +265,8 @@ QString AgenticConfiguration::getEnvironmentName() const
     }
 }
 
-QVariant AgenticConfiguration::getEnvironmentSpecific(
-    const QString& key,
+std::any AgenticConfiguration::getEnvironmentSpecific(
+    const std::string& key,
     Environment env)
 {
     // Would load environment-specific config
@@ -289,7 +275,7 @@ QVariant AgenticConfiguration::getEnvironmentSpecific(
 
 // ===== FEATURE TOGGLES =====
 
-bool AgenticConfiguration::isFeatureEnabled(const QString& featureName)
+bool AgenticConfiguration::isFeatureEnabled(const std::string& featureName)
 {
     auto it = m_featureToggles.find(featureName.toStdString());
     if (it != m_featureToggles.end()) {
@@ -298,7 +284,7 @@ bool AgenticConfiguration::isFeatureEnabled(const QString& featureName)
     return false;
 }
 
-void AgenticConfiguration::enableFeature(const QString& featureName)
+void AgenticConfiguration::enableFeature(const std::string& featureName)
 {
     auto it = m_featureToggles.find(featureName.toStdString());
     
@@ -308,14 +294,14 @@ void AgenticConfiguration::enableFeature(const QString& featureName)
         FeatureToggle toggle;
         toggle.featureName = featureName;
         toggle.enabled = true;
-        toggle.enabledDate = QDateTime::currentDateTime();
+        toggle.enabledDate = std::chrono::system_clock::time_point::currentDateTime();
         m_featureToggles[featureName.toStdString()] = toggle;
     }
 
-    emit featureToggled(featureName, true);
+    featureToggled(featureName, true);
 }
 
-void AgenticConfiguration::disableFeature(const QString& featureName)
+void AgenticConfiguration::disableFeature(const std::string& featureName)
 {
     auto it = m_featureToggles.find(featureName.toStdString());
     
@@ -323,17 +309,17 @@ void AgenticConfiguration::disableFeature(const QString& featureName)
         it->second.enabled = false;
     }
 
-    emit featureToggled(featureName, false);
+    featureToggled(featureName, false);
 }
 
 void AgenticConfiguration::setFeatureToggle(const FeatureToggle& toggle)
 {
     m_featureToggles[toggle.featureName.toStdString()] = toggle;
-    emit featureToggled(toggle.featureName, toggle.enabled);
+    featureToggled(toggle.featureName, toggle.enabled);
 }
 
 AgenticConfiguration::FeatureToggle AgenticConfiguration::getFeatureToggle(
-    const QString& featureName)
+    const std::string& featureName)
 {
     auto it = m_featureToggles.find(featureName.toStdString());
     if (it != m_featureToggles.end()) {
@@ -346,12 +332,12 @@ AgenticConfiguration::FeatureToggle AgenticConfiguration::getFeatureToggle(
     return empty;
 }
 
-QJsonArray AgenticConfiguration::getAllFeatureToggles()
+void* AgenticConfiguration::getAllFeatureToggles()
 {
-    QJsonArray toggles;
+    void* toggles;
 
     for (const auto& pair : m_featureToggles) {
-        QJsonObject toggle;
+        void* toggle;
         toggle["feature"] = pair.second.featureName;
         toggle["enabled"] = pair.second.enabled;
         toggle["description"] = pair.second.description;
@@ -363,15 +349,15 @@ QJsonArray AgenticConfiguration::getAllFeatureToggles()
 }
 
 bool AgenticConfiguration::isFeatureEnabledForUser(
-    const QString& featureName,
-    const QString& userId)
+    const std::string& featureName,
+    const std::string& userId)
 {
     // Check gradual rollout
     auto toggle = getFeatureToggle(featureName);
     if (!toggle.enabled) return false;
 
     // Simple hash-based rollout
-    uint hash = qHash(userId) % 100;
+    uint hash = std::unordered_map(userId) % 100;
     int rolloutPercentage = toggle.rolloutPercentage.split('-').first().toInt();
 
     return hash < rolloutPercentage;
@@ -379,7 +365,7 @@ bool AgenticConfiguration::isFeatureEnabledForUser(
 
 // ===== VALIDATION =====
 
-bool AgenticConfiguration::validateConfig(const QString& key)
+bool AgenticConfiguration::validateConfig(const std::string& key)
 {
     auto it = m_config.find(key.toStdString());
     if (it == m_config.end()) {
@@ -392,28 +378,28 @@ bool AgenticConfiguration::validateConfig(const QString& key)
 bool AgenticConfiguration::validateAllConfig()
 {
     for (const auto& pair : m_config) {
-        if (!validateValue(QString::fromStdString(pair.first), pair.second.value)) {
+        if (!validateValue(std::string::fromStdString(pair.first), pair.second.value)) {
             return false;
         }
     }
     return true;
 }
 
-QString AgenticConfiguration::getValidationError(const QString& key)
+std::string AgenticConfiguration::getValidationError(const std::string& key)
 {
     // Would return validation error for key
     return "";
 }
 
-QJsonObject AgenticConfiguration::getValidationReport()
+void* AgenticConfiguration::getValidationReport()
 {
-    QJsonObject report;
+    void* report;
 
     for (const auto& pair : m_config) {
-        QString key = QString::fromStdString(pair.first);
+        std::string key = std::string::fromStdString(pair.first);
         bool valid = validateValue(key, pair.second.value);
         
-        QJsonObject entry;
+        void* entry;
         entry["valid"] = valid;
         entry["error"] = getValidationError(key);
 
@@ -430,87 +416,83 @@ void AgenticConfiguration::enableHotReloading(bool enabled)
     m_hotReloadingEnabled = enabled;
 }
 
-void AgenticConfiguration::watchConfigFile(const QString& filePath)
+void AgenticConfiguration::watchConfigFile(const std::string& filePath)
 {
     m_watchedFiles.push_back(filePath);
-    qInfo() << "[AgenticConfiguration] Watching config file:" << filePath;
 }
 
 void AgenticConfiguration::reloadConfiguration()
 {
-    qInfo() << "[AgenticConfiguration] Reloading configuration";
-    emit configurationReloaded();
+    configurationReloaded();
 }
 
 // ===== PROFILE MANAGEMENT =====
 
-bool AgenticConfiguration::saveProfile(const QString& profileName)
+bool AgenticConfiguration::saveProfile(const std::string& profileName)
 {
     m_profiles[profileName.toStdString()] = getAllConfiguration(false);
 
-    qInfo() << "[AgenticConfiguration] Saved profile:" << profileName;
     return true;
 }
 
-bool AgenticConfiguration::loadProfile(const QString& profileName)
+bool AgenticConfiguration::loadProfile(const std::string& profileName)
 {
     auto it = m_profiles.find(profileName.toStdString());
     if (it == m_profiles.end()) {
         return false;
     }
 
-    QJsonObject profile = it->second;
+    void* profile = it->second;
     for (auto iter = profile.constBegin(); iter != profile.constEnd(); ++iter) {
         set(iter.key(), iter.value().toVariant());
     }
 
-    qInfo() << "[AgenticConfiguration] Loaded profile:" << profileName;
-    emit configurationLoaded();
+    configurationLoaded();
 
     return true;
 }
 
-QStringList AgenticConfiguration::getAvailableProfiles()
+std::vector<std::string> AgenticConfiguration::getAvailableProfiles()
 {
-    QStringList profiles;
+    std::vector<std::string> profiles;
 
     for (const auto& pair : m_profiles) {
-        profiles.append(QString::fromStdString(pair.first));
+        profiles.append(std::string::fromStdString(pair.first));
     }
 
     return profiles;
 }
 
-bool AgenticConfiguration::deleteProfile(const QString& profileName)
+bool AgenticConfiguration::deleteProfile(const std::string& profileName)
 {
     return m_profiles.erase(profileName.toStdString()) > 0;
 }
 
 // ===== EXPORT/IMPORT =====
 
-QString AgenticConfiguration::exportConfiguration(bool includeSecrets) const
+std::string AgenticConfiguration::exportConfiguration(bool includeSecrets) const
 {
-    QJsonObject config;
+    void* config;
 
     for (const auto& pair : m_config) {
-        QString key = QString::fromStdString(pair.first);
+        std::string key = std::string::fromStdString(pair.first);
         
         if (!includeSecrets && pair.second.isSecret) {
             config[key] = "***REDACTED***";
         } else {
-            config[key] = QJsonValue::fromVariant(pair.second.value);
+            config[key] = void*::fromVariant(pair.second.value);
         }
     }
 
-    return QString::fromUtf8(QJsonDocument(config).toJson());
+    return std::string::fromUtf8(void*(config).toJson());
 }
 
-bool AgenticConfiguration::importConfiguration(const QString& jsonData)
+bool AgenticConfiguration::importConfiguration(const std::string& jsonData)
 {
-    QJsonDocument doc = QJsonDocument::fromJson(jsonData.toUtf8());
+    void* doc = void*::fromJson(jsonData.toUtf8());
     if (!doc.isObject()) return false;
 
-    QJsonObject obj = doc.object();
+    void* obj = doc.object();
     for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
         set(it.key(), it.value().toVariant());
     }
@@ -518,20 +500,20 @@ bool AgenticConfiguration::importConfiguration(const QString& jsonData)
     return true;
 }
 
-QString AgenticConfiguration::generateConfigurationDocumentation() const
+std::string AgenticConfiguration::generateConfigurationDocumentation() const
 {
-    QString doc;
+    std::string doc;
     doc += "# Agentic System Configuration\n\n";
 
     for (const auto& pair : m_config) {
-        QString key = QString::fromStdString(pair.first);
+        std::string key = std::string::fromStdString(pair.first);
         const ConfigValue& config = pair.second;
 
-        doc += QString("## %1\n").arg(key);
-        doc += QString("Description: %1\n").arg(config.description);
-        doc += QString("Type: %1\n").arg(static_cast<int>(config.type));
-        doc += QString("Default: %1\n").arg(config.defaultValue.toString());
-        doc += QString("Required: %1\n\n").arg(config.isRequired ? "Yes" : "No");
+        doc += std::string("## %1\n");
+        doc += std::string("Description: %1\n");
+        doc += std::string("Type: %1\n"));
+        doc += std::string("Default: %1\n"));
+        doc += std::string("Required: %1\n\n");
     }
 
     return doc;
@@ -539,14 +521,14 @@ QString AgenticConfiguration::generateConfigurationDocumentation() const
 
 // ===== SENSITIVE DATA HANDLING =====
 
-QString AgenticConfiguration::maskSecrets(const QString& text) const
+std::string AgenticConfiguration::maskSecrets(const std::string& text) const
 {
-    QString masked = text;
+    std::string masked = text;
 
     for (const auto& secretKey : m_secretKeys) {
         auto it = m_config.find(secretKey.toStdString());
         if (it != m_config.end()) {
-            QString secretValue = it->second.value.toString();
+            std::string secretValue = it->second.value.toString();
             masked.replace(secretValue, "***REDACTED***");
         }
     }
@@ -562,22 +544,22 @@ bool AgenticConfiguration::validateNoSecretsInLogs() const
 
 // ===== CONFIGURATION QUERIES =====
 
-QJsonObject AgenticConfiguration::getAllConfiguration(bool includeSecrets) const
+void* AgenticConfiguration::getAllConfiguration(bool includeSecrets) const
 {
-    return QJsonDocument::fromJson(
+    return void*::fromJson(
         exportConfiguration(includeSecrets).toUtf8()
     ).object();
 }
 
-QJsonObject AgenticConfiguration::getConfigurationSchema() const
+void* AgenticConfiguration::getConfigurationSchema() const
 {
-    QJsonObject schema;
+    void* schema;
 
     for (const auto& pair : m_config) {
-        QString key = QString::fromStdString(pair.first);
+        std::string key = std::string::fromStdString(pair.first);
         const ConfigValue& config = pair.second;
 
-        QJsonObject fieldSchema;
+        void* fieldSchema;
         fieldSchema["type"] = static_cast<int>(config.type);
         fieldSchema["description"] = config.description;
         fieldSchema["required"] = config.isRequired;
@@ -588,7 +570,7 @@ QJsonObject AgenticConfiguration::getConfigurationSchema() const
     return schema;
 }
 
-QString AgenticConfiguration::getConfigurationHelp(const QString& key)
+std::string AgenticConfiguration::getConfigurationHelp(const std::string& key)
 {
     auto it = m_config.find(key.toStdString());
     if (it != m_config.end()) {
@@ -599,13 +581,13 @@ QString AgenticConfiguration::getConfigurationHelp(const QString& key)
 
 // ===== METRICS =====
 
-QJsonObject AgenticConfiguration::getConfigurationUsageStats()
+void* AgenticConfiguration::getConfigurationUsageStats()
 {
-    QJsonObject stats;
+    void* stats;
 
-    QJsonObject accessCounts;
+    void* accessCounts;
     for (const auto& pair : m_accessCounts) {
-        accessCounts[QString::fromStdString(pair.first)] = pair.second;
+        accessCounts[std::string::fromStdString(pair.first)] = pair.second;
     }
 
     stats["access_counts"] = accessCounts;
@@ -616,12 +598,12 @@ QJsonObject AgenticConfiguration::getConfigurationUsageStats()
 
 // ===== PRIVATE HELPERS =====
 
-void AgenticConfiguration::setConfigDefault(const QString& key, const ConfigValue& config)
+void AgenticConfiguration::setConfigDefault(const std::string& key, const ConfigValue& config)
 {
     m_config[key.toStdString()] = config;
 }
 
-QVariant AgenticConfiguration::parseValue(const QString& valueStr, ConfigType type)
+std::any AgenticConfiguration::parseValue(const std::string& valueStr, ConfigType type)
 {
     switch (type) {
         case ConfigType::String: return valueStr;
@@ -633,7 +615,7 @@ QVariant AgenticConfiguration::parseValue(const QString& valueStr, ConfigType ty
     }
 }
 
-bool AgenticConfiguration::validateValue(const QString& key, const QVariant& value)
+bool AgenticConfiguration::validateValue(const std::string& key, const std::any& value)
 {
     // Basic validation - can be extended
     auto it = m_config.find(key.toStdString());
@@ -648,5 +630,5 @@ void AgenticConfiguration::applyEnvironmentOverrides()
 {
     // Apply environment-specific configuration overrides
     // For example, different models or log levels for different environments
-    qInfo() << "[AgenticConfiguration] Applied overrides for environment:" << getEnvironmentName();
 }
+

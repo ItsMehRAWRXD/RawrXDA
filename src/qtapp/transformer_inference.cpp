@@ -3,7 +3,7 @@
 #include <ggml.h>
 #include <ggml-backend.h>
 #include <ggml-cpu.h>
-#include <QDebug>
+
 #include <cstring>
 #include <cmath>
 #include <random>
@@ -28,9 +28,8 @@ void TransformerInference::freeContext() {
     m_ready = false;
 }
 
-bool TransformerInference::loadWeights(const QHash<QString, QByteArray>& tensorCache,
+bool TransformerInference::loadWeights(const std::unordered_map<std::string, std::vector<uint8_t>>& tensorCache,
                                        int nLayers, int nEmbd, int nHead, int nVocab) {
-    qInfo() << "Loading transformer weights: layers=" << nLayers 
             << "embd=" << nEmbd << "heads=" << nHead << "vocab=" << nVocab;
     
     m_nLayers = nLayers;
@@ -48,32 +47,31 @@ bool TransformerInference::loadWeights(const QHash<QString, QByteArray>& tensorC
     
     m_ctx = ggml_init(params);
     if (!m_ctx) {
-        qCritical() << "Failed to initialize ggml context";
         return false;
     }
     
         // Load token embedding: [vocab_size, n_embd]
-        const QByteArray& embdData = tensorCache.value("token_embd.weight");
+        const std::vector<uint8_t>& embdData = tensorCache.value("token_embd.weight");
         m_tokenEmbed = createTensorFromCache(embdData, GGML_TYPE_F32, {m_nVocab, m_nEmbd});
         if (!m_tokenEmbed) {
             // Try alternative name
-            const QByteArray& altData = tensorCache.value("model.embed_tokens.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value("model.embed_tokens.weight");
             m_tokenEmbed = createTensorFromCache(altData, GGML_TYPE_F32, {m_nVocab, m_nEmbd});
         }
         
         // Load output projection: [n_embd, vocab_size]
-        const QByteArray& outData = tensorCache.value("output.weight");
+        const std::vector<uint8_t>& outData = tensorCache.value("output.weight");
         m_outputWeight = createTensorFromCache(outData, GGML_TYPE_F32, {m_nEmbd, m_nVocab});
         if (!m_outputWeight) {
-            const QByteArray& altData = tensorCache.value("lm_head.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value("lm_head.weight");
             m_outputWeight = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nVocab});
         }
         
         // Load per-layer weights
     m_layers.resize(m_nLayers);
     for (int i = 0; i < m_nLayers; ++i) {
-        QString prefix = QString("blk.%1.").arg(i);
-        QString altPrefix = QString("model.layers.%1.").arg(i);
+        std::string prefix = std::string("blk.%1.");
+        std::string altPrefix = std::string("model.layers.%1.");
         
         LayerWeights& layer = m_layers[i];
         int64_t qkvShape[] = {m_nEmbd, m_nEmbd};
@@ -82,105 +80,105 @@ bool TransformerInference::loadWeights(const QHash<QString, QByteArray>& tensorC
         int64_t lnShape[] = {m_nEmbd};
         
         // Attention weights
-        const QByteArray& qData = tensorCache.value(prefix + "attn_q.weight");
+        const std::vector<uint8_t>& qData = tensorCache.value(prefix + "attn_q.weight");
         layer.attn_q = createTensorFromCache(qData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
         if (!layer.attn_q) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.q_proj.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "self_attn..weight");
             layer.attn_q = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
         }
         
-        const QByteArray& kData = tensorCache.value(prefix + "attn_k.weight");
+        const std::vector<uint8_t>& kData = tensorCache.value(prefix + "attn_k.weight");
         layer.attn_k = createTensorFromCache(kData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
         if (!layer.attn_k) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.k_proj.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "self_attn.k_proj.weight");
             layer.attn_k = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
         }
         
-        const QByteArray& vData = tensorCache.value(prefix + "attn_v.weight");
+        const std::vector<uint8_t>& vData = tensorCache.value(prefix + "attn_v.weight");
         layer.attn_v = createTensorFromCache(vData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
         if (!layer.attn_v) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.v_proj.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "self_attn.v_proj.weight");
             layer.attn_v = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
         }
         
-        const QByteArray& projData = tensorCache.value(prefix + "attn_output.weight");
+        const std::vector<uint8_t>& projData = tensorCache.value(prefix + "attn_output.weight");
         layer.attn_proj = createTensorFromCache(projData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
         if (!layer.attn_proj) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.o_proj.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "self_attn.o_proj.weight");
             layer.attn_proj = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd});
         }
         
         // FIX 4: Attention Biases
-        const QByteArray& qBiasData = tensorCache.value(prefix + "attn_q.bias");
+        const std::vector<uint8_t>& qBiasData = tensorCache.value(prefix + "attn_q.bias");
         layer.attn_q_bias = createTensorFromCache(qBiasData, GGML_TYPE_F32, {m_nEmbd});
         if (!layer.attn_q_bias) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.q_proj.bias");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "self_attn..bias");
             layer.attn_q_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
         
-        const QByteArray& kBiasData = tensorCache.value(prefix + "attn_k.bias");
+        const std::vector<uint8_t>& kBiasData = tensorCache.value(prefix + "attn_k.bias");
         layer.attn_k_bias = createTensorFromCache(kBiasData, GGML_TYPE_F32, {m_nEmbd});
         if (!layer.attn_k_bias) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.k_proj.bias");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "self_attn.k_proj.bias");
             layer.attn_k_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
         
-        const QByteArray& vBiasData = tensorCache.value(prefix + "attn_v.bias");
+        const std::vector<uint8_t>& vBiasData = tensorCache.value(prefix + "attn_v.bias");
         layer.attn_v_bias = createTensorFromCache(vBiasData, GGML_TYPE_F32, {m_nEmbd});
         if (!layer.attn_v_bias) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.v_proj.bias");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "self_attn.v_proj.bias");
             layer.attn_v_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
         
-        const QByteArray& projBiasData = tensorCache.value(prefix + "attn_output.bias");
+        const std::vector<uint8_t>& projBiasData = tensorCache.value(prefix + "attn_output.bias");
         layer.attn_output_bias = createTensorFromCache(projBiasData, GGML_TYPE_F32, {m_nEmbd});
         if (!layer.attn_output_bias) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "self_attn.o_proj.bias");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "self_attn.o_proj.bias");
             layer.attn_output_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
         
         // Layer norm
-        const QByteArray& ln1Data = tensorCache.value(prefix + "attn_norm.weight");
+        const std::vector<uint8_t>& ln1Data = tensorCache.value(prefix + "attn_norm.weight");
         layer.ln1_weight = createTensorFromCache(ln1Data, GGML_TYPE_F32, {m_nEmbd});
         if (!layer.ln1_weight) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "input_layernorm.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "input_layernorm.weight");
             layer.ln1_weight = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
         
         // MLP
-        const QByteArray& mlp1Data = tensorCache.value(prefix + "ffn_up.weight");
+        const std::vector<uint8_t>& mlp1Data = tensorCache.value(prefix + "ffn_up.weight");
         layer.mlp_fc1 = createTensorFromCache(mlp1Data, GGML_TYPE_F32, {m_nEmbd, m_nEmbd * 4});
         if (!layer.mlp_fc1) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "mlp.up_proj.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "mlp.up_proj.weight");
             layer.mlp_fc1 = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd, m_nEmbd * 4});
         }
         
-        const QByteArray& mlp2Data = tensorCache.value(prefix + "ffn_down.weight");
+        const std::vector<uint8_t>& mlp2Data = tensorCache.value(prefix + "ffn_down.weight");
         layer.mlp_fc2 = createTensorFromCache(mlp2Data, GGML_TYPE_F32, {m_nEmbd * 4, m_nEmbd});
         if (!layer.mlp_fc2) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "mlp.down_proj.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "mlp.down_proj.weight");
             layer.mlp_fc2 = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd * 4, m_nEmbd});
         }
         
         // FIX 4: MLP Biases
-        const QByteArray& mlp1BiasData = tensorCache.value(prefix + "ffn_up.bias");
+        const std::vector<uint8_t>& mlp1BiasData = tensorCache.value(prefix + "ffn_up.bias");
         layer.mlp_fc1_bias = createTensorFromCache(mlp1BiasData, GGML_TYPE_F32, {m_nEmbd * 4});
         if (!layer.mlp_fc1_bias) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "mlp.up_proj.bias");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "mlp.up_proj.bias");
             layer.mlp_fc1_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd * 4});
         }
         
-        const QByteArray& mlp2BiasData = tensorCache.value(prefix + "ffn_down.bias");
+        const std::vector<uint8_t>& mlp2BiasData = tensorCache.value(prefix + "ffn_down.bias");
         layer.mlp_fc2_bias = createTensorFromCache(mlp2BiasData, GGML_TYPE_F32, {m_nEmbd});
         if (!layer.mlp_fc2_bias) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "mlp.down_proj.bias");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "mlp.down_proj.bias");
             layer.mlp_fc2_bias = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
         
-        const QByteArray& ln2Data = tensorCache.value(prefix + "ffn_norm.weight");
+        const std::vector<uint8_t>& ln2Data = tensorCache.value(prefix + "ffn_norm.weight");
         layer.ln2_weight = createTensorFromCache(ln2Data, GGML_TYPE_F32, {m_nEmbd});
         if (!layer.ln2_weight) {
-            const QByteArray& altData = tensorCache.value(altPrefix + "post_attention_layernorm.weight");
+            const std::vector<uint8_t>& altData = tensorCache.value(altPrefix + "post_attention_layernorm.weight");
             layer.ln2_weight = createTensorFromCache(altData, GGML_TYPE_F32, {m_nEmbd});
         }
     }
@@ -189,7 +187,6 @@ bool TransformerInference::loadWeights(const QHash<QString, QByteArray>& tensorC
     initKVCache();
     
     m_ready = true;
-    qInfo() << "Transformer weights loaded successfully";
     return true;
 }
 
@@ -204,7 +201,6 @@ void TransformerInference::initKVCache() {
     
     m_kvCtx = ggml_init(params);
     if (!m_kvCtx) {
-        qWarning() << "Failed to init KV cache context";
         return;
     }
     
@@ -225,10 +221,9 @@ void TransformerInference::initKVCache() {
 // New implementation that loads weights with explicit type information
 // This avoids the "GGUF metadata lies" problem where claimed types don't match actual quantization
 bool TransformerInference::loadWeightsWithTypes(
-    const QHash<QString, QPair<QByteArray, int>>& tensorCacheWithTypes,
+    const std::unordered_map<std::string, std::pair<std::vector<uint8_t>, int>>& tensorCacheWithTypes,
     int nLayers, int nEmbd, int nHead, int nVocab)
 {
-    qInfo() << "Loading transformer weights with type information: layers=" << nLayers 
             << "embd=" << nEmbd << "heads=" << nHead << "vocab=" << nVocab;
     
     m_nLayers = nLayers;
@@ -240,8 +235,6 @@ bool TransformerInference::loadWeightsWithTypes(
     // The transformer initialization here is OPTIONAL - if it fails, GGUF direct inference still works
     // For now, we accept the tensors are loaded with correct quantization types
     // Returning false tells InferenceEngine to use GGUF direct inference which handles all quantizations
-    qInfo() << "[LoadWeightsWithTypes] Registered" << m_nLayers << "layers with proper quantization types";
-    qInfo() << "[LoadWeightsWithTypes] Using GGUF direct inference for compatibility with all quantization formats";
     
     // Return false to indicate transformer-specific optimization didn't load,
     // but the model is still available via GGUF loader
@@ -249,16 +242,15 @@ bool TransformerInference::loadWeightsWithTypes(
 }
 
 ggml_tensor* TransformerInference::createTensorFromCache(
-    const QString& name,
-    const QHash<QString, QByteArray>& cache,
+    const std::string& name,
+    const std::unordered_map<std::string, std::vector<uint8_t>>& cache,
     const int64_t* shape, int nDims) {
     
     if (!cache.contains(name)) {
-        qWarning() << "Tensor not found in cache:" << name;
         return nullptr;
     }
     
-    const QByteArray& data = cache[name];
+    const std::vector<uint8_t>& data = cache[name];
     
     // Create tensor with specified shape
     ggml_tensor* tensor = nullptr;
@@ -267,20 +259,17 @@ ggml_tensor* TransformerInference::createTensorFromCache(
     } else if (nDims == 2) {
         tensor = ggml_new_tensor_2d(m_ctx, GGML_TYPE_F32, shape[0], shape[1]);
     } else {
-        qWarning() << "Unsupported tensor dims:" << nDims;
         return nullptr;
     }
     
     if (!tensor) {
-        qWarning() << "Failed to create tensor:" << name;
         return nullptr;
     }
     
     // Copy quantized data - now with proper type handling
     size_t expectedSize = ggml_nbytes(tensor);
     if (expectedSize != (size_t)data.size()) {
-        qWarning() << QString("Size mismatch for tensor %1: Expected %2, Got %3 - skipping (quantized model)")
-                        .arg(name).arg(expectedSize).arg(data.size());
+                        );
         // Don't crash - just return nullptr and let the caller handle missing tensors
         // Note: tensor memory is managed by ggml context, don't free individually
         return nullptr;
@@ -293,7 +282,7 @@ ggml_tensor* TransformerInference::createTensorFromCache(
 
 // New implementation that uses the correct GGML type
 struct ggml_tensor* TransformerInference::createTensorFromCache(
-    const QByteArray& data,
+    const std::vector<uint8_t>& data,
     int typeId,
     const std::vector<qint64>& dimensions)
 {
@@ -310,7 +299,6 @@ struct ggml_tensor* TransformerInference::createTensorFromCache(
     } else if (dimensions.size() == 3) {
         tensor = ggml_new_tensor_3d(m_ctx, type, dimensions[2], dimensions[1], dimensions[0]);
     } else {
-        qWarning() << "Unsupported tensor dimension count:" << dimensions.size();
         return nullptr;
     }
 
@@ -331,34 +319,27 @@ struct ggml_tensor* TransformerInference::createTensorFromCache(
     }
     
     // Detailed quantization logging
-    qDebug() << QString("[Universal Loader] Tensor type: %1 (%2), Elements: %3, Expected: %4 bytes, Actual: %5 bytes")
-        .arg(type_name)
-        .arg(typeId)
-        .arg(element_count)
-        .arg(expected_size)
-        .arg(actual_size);
+
+
+        ;
     
     // Handle ALL quantization formats
     if (is_quantized) {
         // Calculate compression ratio for quantized types
         double compression_ratio = static_cast<double>(element_count * 4) / actual_size;
         
-        qInfo() << QString("[Quantized] %1 tensor: %2 elements, %3 bytes (compression: %4:1)")
-            .arg(type_name)
-            .arg(element_count)
-            .arg(actual_size)
-            .arg(QString::number(compression_ratio, 'f', 2));
+
+
+            );
         
         // For quantized tensors, TRUST the actual cached data size
         // GGML's ggml_nbytes() might calculate differently for some quant types
         if (actual_size != expected_size) {
-            qInfo() << QString("[Quantized] Size adjustment: using actual %1 bytes instead of calculated %2 bytes")
-                .arg(actual_size)
-                .arg(expected_size);
+                
+                ;
             
             // Recreate tensor with correct size if needed
             if (actual_size < expected_size) {
-                qDebug() << "[Quantized] Using actual quantized data size (smaller than F32 equivalent)";
                 expected_size = actual_size;
             }
         }
@@ -369,16 +350,12 @@ struct ggml_tensor* TransformerInference::createTensorFromCache(
             
             if (diff_pct > 1.0) {
                 // More than 1% difference for non-quantized is an error
-                qWarning() << QString("[Non-Quantized] Size mismatch for %1: Expected %2, Got %3 (diff: %4%)")
-                    .arg(type_name)
-                    .arg(expected_size)
-                    .arg(actual_size)
-                    .arg(QString::number(diff_pct, 'f', 2));
-                qWarning() << "[Non-Quantized] Skipping tensor - size mismatch too large for non-quantized type";
+
+
+                    );
                 return nullptr;
             } else {
-                qDebug() << QString("[Non-Quantized] Minor size difference: %1% - proceeding")
-                    .arg(QString::number(diff_pct, 'f', 2));
+                    );
             }
         }
     }
@@ -392,17 +369,14 @@ struct ggml_tensor* TransformerInference::createTensorFromCache(
     if (copy_size > 0 && tensor->data != nullptr) {
         std::memcpy(tensor->data, data.constData(), copy_size);
         
-        qDebug() << QString("[Universal Loader] Copied %1 bytes to tensor (type: %2)")
-            .arg(copy_size)
-            .arg(type_name);
+            
+            ;
         
         if (copy_size < actual_size) {
-            qWarning() << QString("[Universal Loader] Truncated copy: %1/%2 bytes (tensor buffer too small)")
-                .arg(copy_size)
-                .arg(actual_size);
+                
+                ;
         }
     } else {
-        qCritical() << "[Universal Loader] Failed to copy tensor data - invalid buffer";
         return nullptr;
     }
     
@@ -412,7 +386,6 @@ struct ggml_tensor* TransformerInference::createTensorFromCache(
 std::vector<int32_t> TransformerInference::generate(const std::vector<int32_t>& prompt,
                                                      int maxTokens, float temperature) {
     if (!m_ready) {
-        qWarning() << "Model not ready for generation";
         return {};
     }
     
@@ -464,7 +437,6 @@ std::vector<float> TransformerInference::forward(const std::vector<int32_t>& tok
     
     ggml_context* gfCtx = ggml_init(params);
     if (!gfCtx) {
-        qWarning() << "Failed to init graph context";
         return {};
     }
     
@@ -483,7 +455,6 @@ std::vector<float> TransformerInference::forward(const std::vector<int32_t>& tok
     // Create CPU backend for graph execution
     ggml_backend_t backend = ggml_backend_cpu_init();
     if (!backend) {
-        qCritical() << "Failed to initialize GGML CPU backend";
         ggml_free(gfCtx);
         return {};
     }
@@ -491,7 +462,6 @@ std::vector<float> TransformerInference::forward(const std::vector<int32_t>& tok
     // Execute the computation graph
     enum ggml_status status = ggml_backend_graph_compute(backend, gf);
     if (status != GGML_STATUS_SUCCESS) {
-        qWarning() << "Graph computation failed with status" << status;
     }
     
     // Extract logits from computed tensor
@@ -628,3 +598,4 @@ int TransformerInference::sampleToken(const std::vector<float>& logits, float te
     
     return probs.size() - 1;
 }
+
