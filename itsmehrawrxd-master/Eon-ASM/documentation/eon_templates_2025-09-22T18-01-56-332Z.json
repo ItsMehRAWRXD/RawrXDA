@@ -1,0 +1,8 @@
+{
+  "basic_function": "def func main() -> void {\n    // Your code here\n    ret 0;\n}",
+  "function_with_params": "def func example(a: int, b: int) -> int {\n    let result: int = a + b;\n    ret result;\n}",
+  "variable_declarations": "let x: int = 42;\nlet y: string = \"hello\";\nlet flag: bool = true;",
+  "arithmetic_operations": "def func calculate(a: int, b: int) -> int {\n    let sum: int = a + b;\n    let product: int = a * b;\n    let result: int = sum + product;\n    ret result;\n}",
+  "conditional_logic": "def func check_value(x: int) -> bool {\n    if (x > 0) {\n        ret true;\n    } else {\n        ret false;\n    }\n}",
+  "error_corrections": {}
+}

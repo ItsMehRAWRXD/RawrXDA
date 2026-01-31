@@ -1,29 +1,31 @@
 #pragma once
-#include <QString>
-#include <QObject>
-#include <QHash>
-#include <QList>
-#include <QJsonArray>
+#include <string>
+#include <vector>
+#include <map>
+#include <functional>
+#include <cstdint>
+#include <nlohmann/json.hpp>
 
 struct PerfRecord {
-    QString quant;
-    QString kernel;
-    QString gpu;
-    QString hardware;
+    std::string quant;
+    std::string kernel;
+    std::string gpu;
+    std::string hardware;
     double tps;      // tokens per second
     double ppl;      // perplexity
-    qint64 timestamp;
+    int64_t timestamp;
 };
 
-class MetaLearn : public QObject {
-    Q_OBJECT
+class MetaLearn {
 public:
-    explicit MetaLearn(QObject* parent = nullptr);
+    explicit MetaLearn();
     
+    virtual ~MetaLearn() = default;
+
     // Record performance metrics to database
-    bool record(const QString& quant,
-                const QString& kernel,
-                const QString& gpu,
+    bool record(const std::string& quant,
+                const std::string& kernel,
+                const std::string& gpu,
                 double tps,
                 double ppl);
     
@@ -32,11 +34,11 @@ public:
     bool autoTuneKernel();
     
     // Suggestions without side effects
-    QString suggestQuant() const;
-    QString suggestKernel() const;
+    std::string suggestQuant() const;
+    std::string suggestKernel() const;
     
     // Get performance history
-    QList<PerfRecord> getHistory(const QString& quant = QString()) const;
+    std::vector<PerfRecord> getHistory(const std::string& quant = "") const;
     
     // Load database from disk
     bool loadDatabase();
@@ -45,26 +47,26 @@ public:
     bool saveDatabase() const;
 
     // Hardware fingerprint helper
-    QString gpuHash() const;
+    std::string gpuHash() const;
 
     // Lightweight static helper for callers needing raw records
-    static QJsonArray loadDB(bool* ok = nullptr);
+    static nlohmann::json loadDB(bool* ok = nullptr);
     
-signals:
-    void recordAdded(const PerfRecord& record);
-    void suggestionReady(const QString& quant);
-    void kernelSuggestionReady(const QString& kernel);
+    // Callbacks (replacing signals)
+    std::function<void(const PerfRecord&)> onRecordAdded;
+    std::function<void(const std::string&)> onSuggestionReady;
+    std::function<void(const std::string&)> onKernelSuggestionReady;
     
 private:
-    QString resolveGpuLabel(const QString& explicitGpu) const;
-    bool computeQuantSuggestion(QString* bestQuant,
+    std::string resolveGpuLabel(const std::string& explicitGpu) const;
+    bool computeQuantSuggestion(std::string* bestQuant,
                                 double* avgTps,
                                 double* avgPpl) const;
-    bool computeKernelSuggestion(QString* bestKernel,
+    bool computeKernelSuggestion(std::string* bestKernel,
                                  double* avgTps) const;
-    QString hardwareKey() const;
-    QList<PerfRecord> m_records;
-    QString m_dbPath;
-    QString m_lastQuantSuggestion;
-    QString m_lastKernelSuggestion;
+    std::string hardwareKey() const;
+    std::vector<PerfRecord> m_records;
+    std::string m_dbPath;
+    std::string m_lastQuantSuggestion;
+    std::string m_lastKernelSuggestion;
 };

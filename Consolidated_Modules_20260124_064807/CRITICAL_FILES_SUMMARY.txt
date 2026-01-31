@@ -1,0 +1,14 @@
+=== CRITICAL SOURCE FILES SUMMARY ===
+
+Successfully copied:
+- RawrXD.ps1
+- RawrXD.exe
+- RawrXD.exe.config
+- RawrXD.ico
+- RawrXD_Manifest.json
+- config.example.json
+- model_config.json
+
+Failed or skipped:
+
+

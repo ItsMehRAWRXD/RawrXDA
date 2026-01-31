@@ -1,0 +1,215 @@
+# RawrXD IDE - BUILD QUICK REFERENCE
+## One-Page Cheat Sheet
+
+### ⚡ SUPER QUICK START
+```powershell
+cd 'd:\lazy init ide'
+.\BUILD_ORCHESTRATOR.ps1 -Mode quick
+```
+✓ 2-5 minutes
+✓ Real IDE executable
+✓ 60+ compilers
+✓ Ready to use
+
+---
+
+## 🎯 BUILD MODES AT A GLANCE
+
+```powershell
+# QUICK - Best for iteration
+.\BUILD_ORCHESTRATOR.ps1 -Mode quick
+# 2-5 min | Skip validation | Just build
+
+# DEV - Best for testing
+.\BUILD_ORCHESTRATOR.ps1 -Mode dev
+# 5-15 min | Full build + test
+
+# PRODUCTION - Best for release
+.\BUILD_ORCHESTRATOR.ps1 -Mode production
+# 15-30 min | Full validation | Generate report
+
+# DEBUG - Best for troubleshooting
+.\BUILD_ORCHESTRATOR.ps1 -Mode debug
+# 15-25 min | Verbose output | Stop on error
+
+# TEST - Best for validation
+.\BUILD_ORCHESTRATOR.ps1 -Mode test
+# 1 min | Just verify existing build
+
+# COMPILERS - Rebuild language compilers
+.\BUILD_ORCHESTRATOR.ps1 -Mode compilers
+# 5-10 min | Skip IDE
+
+# IDE - Rebuild IDE only
+.\BUILD_ORCHESTRATOR.ps1 -Mode ide
+# 10-15 min | Skip compilers
+```
+
+---
+
+## 📂 OUTPUT LOCATIONS
+
+| What | Where | File Count |
+|-----|-------|-----------|
+| Compilers | `./compilers/` | 60+ .exe |
+| IDE | `./build/bin/` | RawrXD.exe |
+| Distribution | `./dist/` | All files ready to ship |
+
+---
+
+## ✓ VERIFICATION
+
+```powershell
+# Check compilers built
+ls compilers/*.exe | Measure-Object
+# Should show 60+
+
+# Find IDE
+Get-ChildItem build -Filter RawrXD.exe -Recurse
+
+# See what was built
+cat dist/BUILD_REPORT.txt
+```
+
+---
+
+## 🚀 LAUNCH IDE
+
+```powershell
+# Find it
+$ide = Get-ChildItem .\build -Filter RawrXD.exe -Recurse | Select-Object -First 1
+
+# Launch it
+& $ide.FullName
+```
+
+---
+
+## 🐛 TROUBLESHOOTING
+
+| Problem | Fix |
+|---------|-----|
+| Build fails | `.\BUILD_ORCHESTRATOR.ps1 -Mode debug` |
+| Slow | Use `quick` mode, skip `-Clean` |
+| Missing tools | `.\VALIDATE_BUILD_SYSTEM.ps1` |
+| IDE won't open | Check `build\bin\` folder |
+| Out of space | Use `quick` mode (smaller) |
+
+---
+
+## 📖 DOCUMENTATION
+
+- **Quick Start**: `START_HERE_BUILD.md`
+- **Complete Guide**: `BUILD_GUIDE_NO_SCAFFOLDING.md`
+- **System Status**: `BUILD_SYSTEM_COMPLETE.md`
+
+---
+
+## 🎓 WORKFLOW EXAMPLES
+
+### Daily Development
+```powershell
+# Morning: quick build
+.\BUILD_ORCHESTRATOR.ps1 -Mode quick
+
+# Afternoon: after coding
+.\BUILD_ORCHESTRATOR.ps1 -Mode quick
+
+# Before commit: full test
+.\BUILD_ORCHESTRATOR.ps1 -Mode dev
+```
+
+### Release Build
+```powershell
+.\BUILD_ORCHESTRATOR.ps1 -Mode production
+cat dist/BUILD_REPORT.txt  # Verify everything
+Compress-Archive dist/* -DestinationPath Release.zip
+```
+
+### Debugging Issue
+```powershell
+.\BUILD_ORCHESTRATOR.ps1 -Mode debug 2>&1 | Tee-Object debug.log
+# Examine debug.log for real errors
+```
+
+---
+
+## ⏱️ TIME ESTIMATES
+
+```
+quick      : 2-5 min   ✓
+dev        : 5-15 min  ✓
+production : 15-30 min ✓
+debug      : 15-25 min ✓
+compilers  : 5-10 min  ✓
+ide        : 10-15 min ✓
+```
+
+---
+
+## 📊 KEY COMMANDS
+
+```powershell
+# Start here
+.\BUILD_ORCHESTRATOR.ps1 -Mode quick
+
+# Validate everything
+.\VALIDATE_BUILD_SYSTEM.ps1
+
+# See detailed guide
+Get-Content START_HERE_BUILD.md | more
+
+# Check existing build
+ls dist/
+
+# Launch IDE
+$ide = Get-ChildItem .\build -Filter RawrXD.exe -Recurse | Select-Object -First 1
+& $ide.FullName
+```
+
+---
+
+## ✨ KEY FEATURES
+
+✓ Zero scaffolding
+✓ Real compilation
+✓ 2-30 minute builds
+✓ 60+ languages
+✓ Full IDE
+✓ Comprehensive docs
+✓ Multiple build modes
+✓ Easy troubleshooting
+
+---
+
+## 📞 QUICK HELP
+
+```powershell
+# What happened?
+cat dist/BUILD_REPORT.txt
+
+# What failed?
+.\BUILD_ORCHESTRATOR.ps1 -Mode debug
+
+# Do I have tools?
+.\VALIDATE_BUILD_SYSTEM.ps1
+
+# How do I use this?
+Get-Content START_HERE_BUILD.md
+```
+
+---
+
+**Remember**: 
+```powershell
+cd 'd:\lazy init ide'
+.\BUILD_ORCHESTRATOR.ps1 -Mode quick
+```
+
+That's all you need. Everything else is automatic.
+
+---
+
+Generated: January 25, 2026
+Status: ✅ Production Ready
+Edition: Zero Scaffolding Build System

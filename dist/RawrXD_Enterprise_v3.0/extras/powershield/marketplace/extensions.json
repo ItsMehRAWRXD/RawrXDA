@@ -1,0 +1,1042 @@
+{
+  "marketplace": {
+    "name": "RawrXD Extensions Marketplace",
+    "version": "1.2.0",
+    "lastUpdated": "2025-11-27T10:30:00Z",
+    "totalExtensions": 18,
+    "categories": [
+      "Languages",
+      "Themes",
+      "Debuggers",
+      "Formatters",
+      "Linters",
+      "Snippets",
+      "AI",
+      "Git",
+      "Productivity",
+      "Testing",
+      "Web"
+    ]
+  },
+  "extensions": [
+    {
+      "id": "rawrxd-powershell-pro",
+      "name": "PowerShell Pro",
+      "displayName": "PowerShell Pro Extension",
+      "description": "Advanced PowerShell development with IntelliSense, debugging, and integrated terminal",
+      "longDescription": "The ultimate PowerShell development experience for RawrXD IDE. Features include advanced syntax highlighting, real-time error detection, integrated PowerShell ISE functionality, module management, and comprehensive debugging capabilities. Perfect for DevOps engineers and system administrators.",
+      "author": {
+        "name": "RawrXD Team",
+        "email": "team@rawrxd.dev",
+        "url": "https://rawrxd.dev",
+        "verified": true
+      },
+      "version": "2.1.4",
+      "category": "Languages",
+      "tags": [
+        "powershell",
+        "scripting",
+        "automation",
+        "windows",
+        "devops"
+      ],
+      "keywords": [
+        "powershell",
+        "ps1",
+        "scripting",
+        "cmdlet",
+        "module"
+      ],
+      "license": "MIT",
+      "homepage": "https://marketplace.rawrxd.dev/powershell-pro",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/rawrxd/powershell-pro"
+      },
+      "icon": "icons/powershell-icon.png",
+      "galleryBanner": {
+        "color": "#012456",
+        "theme": "dark"
+      },
+      "engines": {
+        "rawrxd": ">=1.0.0",
+        "powershell": ">=5.1"
+      },
+      "activationEvents": [
+        "onLanguage:powershell"
+      ],
+      "main": "./out/extension.js",
+      "contributes": {
+        "commands": [
+          {
+            "command": "powershell.runSelection",
+            "title": "Run Selection",
+            "category": "PowerShell"
+          },
+          {
+            "command": "powershell.showHelp",
+            "title": "Show Cmdlet Help",
+            "category": "PowerShell"
+          }
+        ],
+        "languages": [
+          {
+            "id": "powershell",
+            "aliases": [
+              "PowerShell",
+              "ps1"
+            ],
+            "extensions": [
+              ".ps1",
+              ".psm1",
+              ".psd1"
+            ]
+          }
+        ]
+      },
+      "pricing": {
+        "type": "free",
+        "price": 0
+      },
+      "stats": {
+        "downloads": 45892,
+        "rating": 4.7,
+        "ratingCount": 1284,
+        "reviews": 156,
+        "weeklyDownloads": 2341
+      },
+      "publishedDate": "2024-08-15T09:20:00Z",
+      "lastUpdated": "2025-11-20T14:15:00Z",
+      "files": [
+        {
+          "assetType": "Microsoft.VisualStudio.Services.VSIXPackage",
+          "source": "https://marketplace.rawrxd.dev/packages/powershell-pro-2.1.4.vsix"
+        }
+      ]
+    },
+    {
+      "id": "rawrxd-dark-theme-pro",
+      "name": "Dark Theme Pro",
+      "displayName": "RawrXD Dark Theme Pro",
+      "description": "Professional dark theme with enhanced syntax highlighting and reduced eye strain",
+      "longDescription": "A carefully crafted dark theme designed for extended coding sessions. Features include optimized color contrast, semantic syntax highlighting, and support for 50+ programming languages. Reduces eye strain while maintaining excellent code readability.",
+      "author": {
+        "name": "ThemeStudio",
+        "email": "contact@themestudio.dev",
+        "verified": true
+      },
+      "version": "3.2.1",
+      "category": "Themes",
+      "tags": [
+        "theme",
+        "dark",
+        "professional",
+        "syntax",
+        "highlighting"
+      ],
+      "keywords": [
+        "dark",
+        "theme",
+        "professional",
+        "syntax"
+      ],
+      "license": "Creative Commons",
+      "homepage": "https://themestudio.dev/dark-pro",
+      "icon": "icons/dark-theme-icon.png",
+      "galleryBanner": {
+        "color": "#1a1a1a",
+        "theme": "dark"
+      },
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "activationEvents": [
+        "*"
+      ],
+      "contributes": {
+        "themes": [
+          {
+            "label": "Dark Pro",
+            "uiTheme": "vs-dark",
+            "path": "./themes/dark-pro.json"
+          }
+        ]
+      },
+      "pricing": {
+        "type": "paid",
+        "price": 4.99,
+        "currency": "USD",
+        "trial": true,
+        "trialDays": 7
+      },
+      "stats": {
+        "downloads": 78234,
+        "rating": 4.9,
+        "ratingCount": 2156,
+        "reviews": 334,
+        "weeklyDownloads": 1876
+      },
+      "publishedDate": "2024-06-10T16:45:00Z",
+      "lastUpdated": "2025-11-25T11:30:00Z"
+    },
+    {
+      "id": "rawrxd-ai-assistant",
+      "name": "AI Code Assistant",
+      "displayName": "RawrXD AI Code Assistant",
+      "description": "Intelligent code completion, generation, and refactoring powered by advanced AI",
+      "longDescription": "Revolutionary AI-powered coding assistant that provides intelligent code suggestions, automatic refactoring, bug detection, and natural language to code conversion. Supports 40+ programming languages and integrates seamlessly with your workflow.",
+      "author": {
+        "name": "AI Innovations Lab",
+        "email": "lab@aiinnovations.dev",
+        "verified": true
+      },
+      "version": "1.8.3",
+      "category": "AI",
+      "tags": [
+        "ai",
+        "assistant",
+        "autocomplete",
+        "refactoring",
+        "generation"
+      ],
+      "keywords": [
+        "ai",
+        "assistant",
+        "copilot",
+        "intellisense"
+      ],
+      "license": "Commercial",
+      "homepage": "https://aiinnovations.dev/code-assistant",
+      "engines": {
+        "rawrxd": ">=1.1.0"
+      },
+      "activationEvents": [
+        "*"
+      ],
+      "contributes": {
+        "commands": [
+          {
+            "command": "ai.generateCode",
+            "title": "Generate Code from Comment",
+            "category": "AI Assistant"
+          },
+          {
+            "command": "ai.refactorSelection",
+            "title": "AI Refactor",
+            "category": "AI Assistant"
+          },
+          {
+            "command": "ai.explainCode",
+            "title": "Explain Code",
+            "category": "AI Assistant"
+          }
+        ]
+      },
+      "pricing": {
+        "type": "freemium",
+        "price": 9.99,
+        "currency": "USD",
+        "trial": true,
+        "trialDays": 14
+      },
+      "stats": {
+        "downloads": 123456,
+        "rating": 4.6,
+        "ratingCount": 3421,
+        "reviews": 578,
+        "weeklyDownloads": 5234
+      },
+      "publishedDate": "2024-09-03T12:00:00Z",
+      "lastUpdated": "2025-11-26T09:45:00Z"
+    },
+    {
+      "id": "rawrxd-git-enhanced",
+      "name": "Git Enhanced",
+      "displayName": "Git Enhanced - Advanced Git Integration",
+      "description": "Comprehensive Git integration with visual diff, branch management, and merge conflict resolution",
+      "longDescription": "Take your Git workflow to the next level with advanced features including interactive rebase, visual merge tools, branch visualization, commit message templates, and automated conflict resolution. Perfect for teams and individual developers.",
+      "author": {
+        "name": "DevTools Corp",
+        "email": "support@devtools.corp",
+        "verified": true
+      },
+      "version": "4.1.2",
+      "category": "Git",
+      "tags": [
+        "git",
+        "version-control",
+        "diff",
+        "merge",
+        "branch"
+      ],
+      "keywords": [
+        "git",
+        "vcs",
+        "commit",
+        "branch",
+        "merge"
+      ],
+      "license": "Apache-2.0",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "pricing": {
+        "type": "free"
+      },
+      "stats": {
+        "downloads": 67891,
+        "rating": 4.5,
+        "ratingCount": 1876,
+        "reviews": 234,
+        "weeklyDownloads": 3456
+      },
+      "publishedDate": "2024-07-22T08:30:00Z",
+      "lastUpdated": "2025-11-18T15:20:00Z"
+    },
+    {
+      "id": "rawrxd-python-ultimate",
+      "name": "Python Ultimate",
+      "displayName": "Python Ultimate Development Suite",
+      "description": "Complete Python development environment with debugging, linting, testing, and virtual environment management",
+      "longDescription": "The most comprehensive Python extension for RawrXD IDE. Includes advanced debugging, intelligent code completion, automatic import sorting, pytest integration, virtual environment detection, and support for popular frameworks like Django, Flask, and FastAPI.",
+      "author": {
+        "name": "Python Developers Guild",
+        "email": "guild@pythondev.org",
+        "verified": true
+      },
+      "version": "5.3.1",
+      "category": "Languages",
+      "tags": [
+        "python",
+        "debugging",
+        "testing",
+        "django",
+        "flask"
+      ],
+      "keywords": [
+        "python",
+        "py",
+        "django",
+        "flask",
+        "pytest"
+      ],
+      "license": "MIT",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "contributes": {
+        "languages": [
+          {
+            "id": "python",
+            "aliases": [
+              "Python",
+              "py"
+            ],
+            "extensions": [
+              ".py",
+              ".pyi",
+              ".pyw"
+            ]
+          }
+        ],
+        "commands": [
+          {
+            "command": "python.runFile",
+            "title": "Run Python File",
+            "category": "Python"
+          },
+          {
+            "command": "python.runTests",
+            "title": "Run Tests",
+            "category": "Python"
+          }
+        ]
+      },
+      "pricing": {
+        "type": "free"
+      },
+      "stats": {
+        "downloads": 234567,
+        "rating": 4.8,
+        "ratingCount": 5432,
+        "reviews": 892,
+        "weeklyDownloads": 8765
+      },
+      "publishedDate": "2024-05-14T10:15:00Z",
+      "lastUpdated": "2025-11-24T13:40:00Z"
+    },
+    {
+      "id": "rawrxd-javascript-pro",
+      "name": "JavaScript Pro",
+      "displayName": "JavaScript Pro - Modern JS/TS Development",
+      "description": "Advanced JavaScript and TypeScript support with ES6+ features, Node.js debugging, and React integration",
+      "longDescription": "Professional JavaScript and TypeScript development environment featuring intelligent IntelliSense, advanced debugging for Node.js and browsers, React/Vue/Angular support, automatic import suggestions, and comprehensive error checking.",
+      "author": {
+        "name": "JS Experts",
+        "email": "experts@jsdev.io",
+        "verified": true
+      },
+      "version": "3.7.2",
+      "category": "Languages",
+      "tags": [
+        "javascript",
+        "typescript",
+        "react",
+        "nodejs",
+        "es6"
+      ],
+      "keywords": [
+        "javascript",
+        "typescript",
+        "react",
+        "node",
+        "es6"
+      ],
+      "license": "MIT",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "contributes": {
+        "languages": [
+          {
+            "id": "javascript",
+            "aliases": [
+              "JavaScript",
+              "js"
+            ],
+            "extensions": [
+              ".js",
+              ".jsx",
+              ".mjs"
+            ]
+          },
+          {
+            "id": "typescript",
+            "aliases": [
+              "TypeScript",
+              "ts"
+            ],
+            "extensions": [
+              ".ts",
+              ".tsx"
+            ]
+          }
+        ]
+      },
+      "pricing": {
+        "type": "freemium",
+        "price": 12.99,
+        "currency": "USD"
+      },
+      "stats": {
+        "downloads": 189432,
+        "rating": 4.7,
+        "ratingCount": 4123,
+        "reviews": 651,
+        "weeklyDownloads": 7234
+      },
+      "publishedDate": "2024-04-28T14:22:00Z",
+      "lastUpdated": "2025-11-23T16:55:00Z"
+    },
+    {
+      "id": "rawrxd-web-dev-suite",
+      "name": "Web Development Suite",
+      "displayName": "Complete Web Development Suite",
+      "description": "All-in-one web development toolkit with HTML5, CSS3, SASS, live preview, and responsive design tools",
+      "longDescription": "Comprehensive web development environment including HTML5 IntelliSense, CSS3 with Grid and Flexbox support, SASS/LESS compilation, live browser preview, responsive design testing, and integration with popular frameworks like Bootstrap and Tailwind CSS.",
+      "author": {
+        "name": "Web Masters Inc",
+        "email": "team@webmasters.inc",
+        "verified": true
+      },
+      "version": "2.9.4",
+      "category": "Web",
+      "tags": [
+        "html",
+        "css",
+        "sass",
+        "responsive",
+        "preview"
+      ],
+      "keywords": [
+        "html",
+        "css",
+        "sass",
+        "web",
+        "responsive"
+      ],
+      "license": "MIT",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "pricing": {
+        "type": "paid",
+        "price": 19.99,
+        "currency": "USD",
+        "trial": true,
+        "trialDays": 10
+      },
+      "stats": {
+        "downloads": 156789,
+        "rating": 4.6,
+        "ratingCount": 3456,
+        "reviews": 567,
+        "weeklyDownloads": 6543
+      },
+      "publishedDate": "2024-06-05T11:30:00Z",
+      "lastUpdated": "2025-11-22T10:15:00Z"
+    },
+    {
+      "id": "rawrxd-database-tools",
+      "name": "Database Tools",
+      "displayName": "Universal Database Tools",
+      "description": "Connect, query, and manage multiple database systems directly from RawrXD IDE",
+      "longDescription": "Universal database management extension supporting MySQL, PostgreSQL, SQL Server, SQLite, and MongoDB. Features include visual query builder, schema explorer, data visualization, query optimization suggestions, and export capabilities.",
+      "author": {
+        "name": "DataBase Solutions",
+        "email": "support@dbsolutions.dev",
+        "verified": true
+      },
+      "version": "1.6.8",
+      "category": "Other",
+      "tags": [
+        "database",
+        "sql",
+        "mysql",
+        "postgresql",
+        "mongodb"
+      ],
+      "keywords": [
+        "database",
+        "sql",
+        "query",
+        "mysql",
+        "postgres"
+      ],
+      "license": "Commercial",
+      "engines": {
+        "rawrxd": ">=1.1.0"
+      },
+      "pricing": {
+        "type": "paid",
+        "price": 29.99,
+        "currency": "USD",
+        "trial": true,
+        "trialDays": 15
+      },
+      "stats": {
+        "downloads": 45623,
+        "rating": 4.4,
+        "ratingCount": 987,
+        "reviews": 145,
+        "weeklyDownloads": 1876
+      },
+      "publishedDate": "2024-08-30T09:45:00Z",
+      "lastUpdated": "2025-11-21T12:30:00Z"
+    },
+    {
+      "id": "rawrxd-code-snippets-pro",
+      "name": "Code Snippets Pro",
+      "displayName": "Professional Code Snippets Library",
+      "description": "Extensive collection of code snippets for 30+ programming languages with smart insertion and customization",
+      "longDescription": "Professional snippet library with over 5000 pre-built code snippets for popular programming languages and frameworks. Features smart placeholder replacement, snippet sharing, custom snippet creation, and integration with popular snippet repositories.",
+      "author": {
+        "name": "Snippet Masters",
+        "email": "masters@snippets.dev",
+        "verified": true
+      },
+      "version": "2.4.6",
+      "category": "Snippets",
+      "tags": [
+        "snippets",
+        "templates",
+        "boilerplate",
+        "productivity"
+      ],
+      "keywords": [
+        "snippets",
+        "templates",
+        "code",
+        "productivity"
+      ],
+      "license": "MIT",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "contributes": {
+        "snippets": [
+          {
+            "language": "javascript",
+            "path": "./snippets/javascript.json"
+          },
+          {
+            "language": "python",
+            "path": "./snippets/python.json"
+          },
+          {
+            "language": "powershell",
+            "path": "./snippets/powershell.json"
+          }
+        ]
+      },
+      "pricing": {
+        "type": "freemium",
+        "price": 7.99,
+        "currency": "USD"
+      },
+      "stats": {
+        "downloads": 98765,
+        "rating": 4.5,
+        "ratingCount": 2345,
+        "reviews": 389,
+        "weeklyDownloads": 4567
+      },
+      "publishedDate": "2024-07-10T15:20:00Z",
+      "lastUpdated": "2025-11-19T14:10:00Z"
+    },
+    {
+      "id": "rawrxd-markdown-enhanced",
+      "name": "Markdown Enhanced",
+      "displayName": "Enhanced Markdown Support",
+      "description": "Advanced Markdown editing with live preview, math support, and diagram rendering",
+      "longDescription": "Professional Markdown editor with live preview, math equation support via KaTeX, Mermaid diagram rendering, table editing assistance, and export to PDF/HTML. Perfect for documentation, README files, and technical writing.",
+      "author": {
+        "name": "Doc Writers Guild",
+        "email": "guild@docwriters.org",
+        "verified": true
+      },
+      "version": "1.9.3",
+      "category": "Languages",
+      "tags": [
+        "markdown",
+        "preview",
+        "documentation",
+        "math",
+        "diagrams"
+      ],
+      "keywords": [
+        "markdown",
+        "md",
+        "preview",
+        "documentation"
+      ],
+      "license": "MIT",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "contributes": {
+        "languages": [
+          {
+            "id": "markdown",
+            "aliases": [
+              "Markdown",
+              "md"
+            ],
+            "extensions": [
+              ".md",
+              ".markdown"
+            ]
+          }
+        ],
+        "commands": [
+          {
+            "command": "markdown.showPreview",
+            "title": "Open Preview",
+            "category": "Markdown"
+          }
+        ]
+      },
+      "pricing": {
+        "type": "free"
+      },
+      "stats": {
+        "downloads": 87654,
+        "rating": 4.7,
+        "ratingCount": 1987,
+        "reviews": 298,
+        "weeklyDownloads": 3421
+      },
+      "publishedDate": "2024-09-15T13:45:00Z",
+      "lastUpdated": "2025-11-20T16:25:00Z"
+    },
+    {
+      "id": "rawrxd-test-runner-pro",
+      "name": "Test Runner Pro",
+      "displayName": "Universal Test Runner Pro",
+      "description": "Comprehensive testing framework supporting Jest, Mocha, pytest, NUnit, and more with coverage reports",
+      "longDescription": "Universal testing solution supporting multiple testing frameworks across different languages. Features include test discovery, parallel execution, coverage reporting, test debugging, and CI/CD integration. Supports Jest, Mocha, pytest, NUnit, JUnit, and more.",
+      "author": {
+        "name": "Test Automation Labs",
+        "email": "labs@testautomation.dev",
+        "verified": true
+      },
+      "version": "3.1.7",
+      "category": "Testing",
+      "tags": [
+        "testing",
+        "jest",
+        "pytest",
+        "coverage",
+        "debugging"
+      ],
+      "keywords": [
+        "testing",
+        "test",
+        "jest",
+        "pytest",
+        "coverage"
+      ],
+      "license": "Apache-2.0",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "contributes": {
+        "commands": [
+          {
+            "command": "test.runAll",
+            "title": "Run All Tests",
+            "category": "Test Runner"
+          },
+          {
+            "command": "test.runCoverage",
+            "title": "Run with Coverage",
+            "category": "Test Runner"
+          }
+        ]
+      },
+      "pricing": {
+        "type": "paid",
+        "price": 15.99,
+        "currency": "USD",
+        "trial": true,
+        "trialDays": 14
+      },
+      "stats": {
+        "downloads": 65432,
+        "rating": 4.6,
+        "ratingCount": 1543,
+        "reviews": 234,
+        "weeklyDownloads": 2987
+      },
+      "publishedDate": "2024-10-08T11:15:00Z",
+      "lastUpdated": "2025-11-17T09:30:00Z"
+    },
+    {
+      "id": "rawrxd-docker-integration",
+      "name": "Docker Integration",
+      "displayName": "Docker & Container Management",
+      "description": "Complete Docker integration with container management, image building, and Kubernetes support",
+      "longDescription": "Comprehensive Docker and container management solution. Build and manage Docker images, run containers, view logs, manage volumes and networks, and deploy to Kubernetes clusters. Perfect for modern DevOps workflows.",
+      "author": {
+        "name": "Container Solutions",
+        "email": "team@containersolutions.dev",
+        "verified": true
+      },
+      "version": "2.3.4",
+      "category": "Other",
+      "tags": [
+        "docker",
+        "containers",
+        "kubernetes",
+        "devops"
+      ],
+      "keywords": [
+        "docker",
+        "container",
+        "kubernetes",
+        "devops"
+      ],
+      "license": "MIT",
+      "engines": {
+        "rawrxd": ">=1.1.0"
+      },
+      "pricing": {
+        "type": "free"
+      },
+      "stats": {
+        "downloads": 54321,
+        "rating": 4.5,
+        "ratingCount": 1234,
+        "reviews": 187,
+        "weeklyDownloads": 2456
+      },
+      "publishedDate": "2024-11-01T10:00:00Z",
+      "lastUpdated": "2025-11-16T14:45:00Z"
+    },
+    {
+      "id": "rawrxd-rest-client",
+      "name": "REST Client Pro",
+      "displayName": "Advanced REST API Client",
+      "description": "Professional REST API testing and development tool with environment management and automated testing",
+      "longDescription": "Professional REST API client with advanced features including environment variables, automated testing, response validation, GraphQL support, WebSocket testing, and team collaboration features. Perfect for API development and testing.",
+      "author": {
+        "name": "API Tools Inc",
+        "email": "tools@apitools.inc",
+        "verified": true
+      },
+      "version": "1.7.9",
+      "category": "Other",
+      "tags": [
+        "rest",
+        "api",
+        "testing",
+        "graphql",
+        "http"
+      ],
+      "keywords": [
+        "rest",
+        "api",
+        "http",
+        "testing",
+        "graphql"
+      ],
+      "license": "Commercial",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "pricing": {
+        "type": "paid",
+        "price": 24.99,
+        "currency": "USD",
+        "trial": true,
+        "trialDays": 7
+      },
+      "stats": {
+        "downloads": 43210,
+        "rating": 4.4,
+        "ratingCount": 876,
+        "reviews": 132,
+        "weeklyDownloads": 1987
+      },
+      "publishedDate": "2024-09-28T16:30:00Z",
+      "lastUpdated": "2025-11-15T11:20:00Z"
+    },
+    {
+      "id": "rawrxd-code-formatter-ultimate",
+      "name": "Code Formatter Ultimate",
+      "displayName": "Universal Code Formatter",
+      "description": "Advanced code formatting and beautification for 50+ programming languages with custom style configurations",
+      "longDescription": "Universal code formatter supporting over 50 programming languages with customizable formatting rules, team style configurations, format-on-save functionality, and integration with popular style guides like Prettier, Black, and gofmt.",
+      "author": {
+        "name": "Format Masters",
+        "email": "masters@formatcode.dev",
+        "verified": true
+      },
+      "version": "4.2.1",
+      "category": "Formatters",
+      "tags": [
+        "formatter",
+        "beautify",
+        "style",
+        "prettier",
+        "eslint"
+      ],
+      "keywords": [
+        "formatter",
+        "format",
+        "beautify",
+        "style"
+      ],
+      "license": "MIT",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "pricing": {
+        "type": "freemium",
+        "price": 8.99,
+        "currency": "USD"
+      },
+      "stats": {
+        "downloads": 76543,
+        "rating": 4.6,
+        "ratingCount": 1876,
+        "reviews": 287,
+        "weeklyDownloads": 3654
+      },
+      "publishedDate": "2024-06-20T12:45:00Z",
+      "lastUpdated": "2025-11-14T15:10:00Z"
+    },
+    {
+      "id": "rawrxd-live-share",
+      "name": "Live Share Collaboration",
+      "displayName": "Real-time Collaborative Coding",
+      "description": "Real-time collaborative editing and debugging with voice chat and screen sharing capabilities",
+      "longDescription": "Revolutionary collaboration tool enabling real-time pair programming, shared debugging sessions, voice/video chat integration, and synchronized coding sessions. Perfect for remote teams, code reviews, and educational environments.",
+      "author": {
+        "name": "Collaboration Tech",
+        "email": "team@collabtech.dev",
+        "verified": true
+      },
+      "version": "1.5.2",
+      "category": "Productivity",
+      "tags": [
+        "collaboration",
+        "pair-programming",
+        "sharing",
+        "team"
+      ],
+      "keywords": [
+        "collaboration",
+        "share",
+        "team",
+        "pair-programming"
+      ],
+      "license": "Commercial",
+      "engines": {
+        "rawrxd": ">=1.1.0"
+      },
+      "pricing": {
+        "type": "paid",
+        "price": 19.99,
+        "currency": "USD",
+        "trial": true,
+        "trialDays": 14
+      },
+      "stats": {
+        "downloads": 32109,
+        "rating": 4.3,
+        "ratingCount": 654,
+        "reviews": 98,
+        "weeklyDownloads": 1543
+      },
+      "publishedDate": "2024-10-22T14:20:00Z",
+      "lastUpdated": "2025-11-13T13:55:00Z"
+    },
+    {
+      "id": "rawrxd-productivity-booster",
+      "name": "Productivity Booster",
+      "displayName": "Developer Productivity Suite",
+      "description": "Comprehensive productivity enhancement with time tracking, focus modes, and workflow automation",
+      "longDescription": "Complete productivity suite featuring intelligent time tracking, distraction-free focus modes, automated workflow optimization, project templates, and productivity analytics. Boost your coding efficiency and maintain better work-life balance.",
+      "author": {
+        "name": "Productivity Experts",
+        "email": "experts@productivity.dev",
+        "verified": true
+      },
+      "version": "2.8.3",
+      "category": "Productivity",
+      "tags": [
+        "productivity",
+        "focus",
+        "time-tracking",
+        "automation"
+      ],
+      "keywords": [
+        "productivity",
+        "focus",
+        "time",
+        "automation"
+      ],
+      "license": "MIT",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "pricing": {
+        "type": "freemium",
+        "price": 14.99,
+        "currency": "USD"
+      },
+      "stats": {
+        "downloads": 21098,
+        "rating": 4.5,
+        "ratingCount": 432,
+        "reviews": 67,
+        "weeklyDownloads": 987
+      },
+      "publishedDate": "2024-11-10T09:30:00Z",
+      "lastUpdated": "2025-11-12T10:40:00Z"
+    },
+    {
+      "id": "rawrxd-security-scanner",
+      "name": "Security Scanner Pro",
+      "displayName": "Advanced Security & Vulnerability Scanner",
+      "description": "Comprehensive security analysis with vulnerability detection, dependency scanning, and security best practices",
+      "longDescription": "Enterprise-grade security scanner providing real-time vulnerability detection, dependency analysis, secret detection, security best practices enforcement, and compliance reporting. Keep your code secure and compliant.",
+      "author": {
+        "name": "SecureDev Solutions",
+        "email": "security@securedev.solutions",
+        "verified": true
+      },
+      "version": "1.4.7",
+      "category": "Other",
+      "tags": [
+        "security",
+        "vulnerability",
+        "scanner",
+        "compliance"
+      ],
+      "keywords": [
+        "security",
+        "vulnerability",
+        "scan",
+        "compliance"
+      ],
+      "license": "Commercial",
+      "engines": {
+        "rawrxd": ">=1.1.0"
+      },
+      "pricing": {
+        "type": "paid",
+        "price": 39.99,
+        "currency": "USD",
+        "trial": true,
+        "trialDays": 21
+      },
+      "stats": {
+        "downloads": 18765,
+        "rating": 4.7,
+        "ratingCount": 321,
+        "reviews": 54,
+        "weeklyDownloads": 765
+      },
+      "publishedDate": "2024-11-05T15:45:00Z",
+      "lastUpdated": "2025-11-11T12:15:00Z"
+    },
+    {
+      "id": "rawrxd-performance-profiler",
+      "name": "Performance Profiler",
+      "displayName": "Code Performance Analysis & Optimization",
+      "description": "Advanced performance profiling and optimization tools with memory analysis and bottleneck detection",
+      "longDescription": "Professional performance analysis suite providing CPU profiling, memory analysis, performance bottleneck detection, optimization suggestions, and benchmark comparisons. Optimize your code for maximum performance.",
+      "author": {
+        "name": "Performance Labs",
+        "email": "labs@performance.dev",
+        "verified": true
+      },
+      "version": "3.6.4",
+      "category": "Other",
+      "tags": [
+        "performance",
+        "profiling",
+        "optimization",
+        "memory"
+      ],
+      "keywords": [
+        "performance",
+        "profiler",
+        "optimization",
+        "memory"
+      ],
+      "license": "Apache-2.0",
+      "engines": {
+        "rawrxd": ">=1.0.0"
+      },
+      "pricing": {
+        "type": "paid",
+        "price": 34.99,
+        "currency": "USD",
+        "trial": true,
+        "trialDays": 10
+      },
+      "stats": {
+        "downloads": 15432,
+        "rating": 4.4,
+        "ratingCount": 287,
+        "reviews": 43,
+        "weeklyDownloads": 654
+      },
+      "publishedDate": "2024-08-18T11:00:00Z",
+      "lastUpdated": "2025-11-10T16:30:00Z"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "services": {
+    "judge0": {
+      "name": "Judge0",
+      "api_url": "http://localhost:8080",
+      "docker_command": "docker run -d -p 8080:8080 judge0/judge0",
+      "supported_languages": {
+        "python": 71,
+        "javascript": 63,
+        "java": 62,
+        "cpp": 54,
+        "c": 50,
+        "rust": 73,
+        "go": 60,
+        "php": 68,
+        "ruby": 72,
+        "swift": 83,
+        "kotlin": 78
+      }
+    },
+    "piston": {
+      "name": "Piston",
+      "api_url": "http://localhost:2000",
+      "docker_command": "docker run -d -p 2000:2000 ghcr.io/engineer-man/piston",
+      "supported_languages": {
+        "python": "python",
+        "javascript": "javascript",
+        "java": "java",
+        "cpp": "cpp",
+        "c": "c",
+        "rust": "rust",
+        "go": "go",
+        "php": "php",
+        "ruby": "ruby",
+        "swift": "swift",
+        "kotlin": "kotlin"
+      }
+    }
+  },
+  "workspace_created": "2025-09-25T21:53:36.768540",
+  "settings": {
+    "timeout": 30,
+    "retry_attempts": 3,
+    "auto_setup_docker": true
+  }
+}

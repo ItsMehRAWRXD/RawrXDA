@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>rawrz.ico</ApplicationIcon>
+    <AssemblyTitle>RawrZ Security Platform Desktop</AssemblyTitle>
+    <AssemblyDescription>Offline Desktop Interface for RawrZ Security Platform</AssemblyDescription>
+    <AssemblyCompany>RawrZ Security</AssemblyCompany>
+    <AssemblyProduct>RawrZ Desktop</AssemblyProduct>
+    <AssemblyCopyright>Copyright © RawrZ Security 2025</AssemblyCopyright>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="rawrz.ico" />
+  </ItemGroup>
+
+</Project>

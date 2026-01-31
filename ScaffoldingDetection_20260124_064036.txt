@@ -1,0 +1,127 @@
+=== SCAFFOLDING DETECTION FOR: d:\lazy init ide ===
+
+Total modules found: 44
+
+=== SCAFFOLDING DETECTION RESULTS ===
+
+=== REAL FUNCTIONALITY MODULES (42) ===
+✓ ArchitectureEnhancementEngine.psm1
+ (122 KB, 3643 lines, 75 functions)
+  Issues: Placeholder text: 1 occurrences; Template pattern repetition
+✓ RawrXD.ProductionDeployer.psm1
+ (67.2 KB, 1854 lines, 42 functions)
+  Issues: Template pattern repetition
+✓ RawrXD.ProductionOrchestrator.psm1
+ (66 KB, 1487 lines, 22 functions)
+  Issues: Template pattern repetition
+✓ RawrXD.DeploymentOrchestrator.psm1
+ (65.8 KB, 1579 lines, 33 functions)
+  Issues: Template pattern repetition
+✓ RawrXD.TestFramework.psm1
+ (52.2 KB, 1366 lines, 14 functions)
+  Issues: Template pattern repetition
+✓ RawrXD.ReverseEngineering.psm1
+ (43.9 KB, 1347 lines, 39 functions)
+✓ ManifestTracer.psm1
+ (39.8 KB, 1242 lines, 28 functions)
+  Issues: Placeholder text: 1 occurrences
+✓ RawrXD.UltimateProduction.psm1
+ (38.4 KB, 1041 lines, 33 functions)
+✓ RawrXD.AutonomousEnhancement.psm1
+ (35.9 KB, 1110 lines, 18 functions)
+✓ RawrXD.SourceCodeSummarizer.psm1
+ (32.1 KB, 813 lines, 17 functions)
+✓ RawrXD.SwarmOrchestrator.psm1
+ (30.7 KB, 878 lines, 10 functions)
+✓ RawrXD.CustomModelPerformance.psm1
+ (30.5 KB, 724 lines, 12 functions)
+  Issues: Template pattern repetition
+✓ RawrXD.CustomModelLoaders.psm1
+ (29.7 KB, 883 lines, 12 functions)
+✓ RawrXD.AutonomousAgent.psm1
+ (29.7 KB, 788 lines, 20 functions)
+  Issues: TODO comments: 3
+✓ RawrXD.AgenticCommands.psm1
+ (29.5 KB, 902 lines, 23 functions)
+✓ RawrXD.LiveMetricsDashboard.psm1
+ (28.8 KB, 693 lines, 12 functions)
+✓ RawrXD.AutoRefactorSuggestor.psm1
+ (26.4 KB, 630 lines, 16 functions)
+✓ RawrXD.DynamicTestHarness.psm1
+ (24.9 KB, 679 lines, 14 functions)
+  Issues: Placeholder text: 1 occurrences
+✓ RawrXD.Win32Deployment.psm1
+ (24.2 KB, 708 lines, 16 functions)
+✓ RawrXD.SwarmMaster.psm1
+ (22.2 KB, 681 lines, 11 functions)
+  Issues: Template pattern repetition
+✓ RawrXD.ContinuousIntegrationTrigger.psm1
+ (22 KB, 648 lines, 15 functions)
+  Issues: Placeholder text: 9 occurrences
+✓ RawrXD.SwarmAgent.psm1
+ (20.7 KB, 650 lines, 9 functions)
+✓ RawrXD.Master.psm1
+ (20.4 KB, 635 lines, 10 functions)
+  Issues: Template pattern repetition
+✓ RawrXD.Production.psm1
+ (20.2 KB, 614 lines, 9 functions)
+✓ RawrXD.SecurityScanner.psm1
+ (16.9 KB, 422 lines, 8 functions)
+✓ PoshLLM.psm1
+ (16.6 KB, 445 lines, 12 functions)
+✓ RawrXD.SelfHealingModule.psm1
+ (16.4 KB, 441 lines, 12 functions)
+✓ RawrXD.Core.psm1
+ (14.5 KB, 454 lines, 15 functions)
+✓ RawrXD.ModelLoader.psm1
+ (14.3 KB, 291 lines, 6 functions)
+✓ RawrXD.Logging.psm1
+ (12.8 KB, 526 lines, 17 functions)
+✓ RawrXD.AutoDependencyGraph.psm1
+ (10.3 KB, 270 lines, 8 functions)
+✓ RawrXD.FullBraceError.psm1
+ (9.3 KB, 269 lines, 6 functions)
+✓ RawrXD.UI.psm1
+ (8.1 KB, 252 lines, 10 functions)
+✓ RawrXD_UniversalIntegrator.psm1
+ (7.3 KB, 191 lines, 6 functions)
+  Issues: Placeholder text: 2 occurrences
+✓ RawrXD.Metrics.psm1
+ (6.7 KB, 174 lines, 10 functions)
+✓ RawrXD.Agentic.Autonomy.psm1
+ (6.6 KB, 191 lines, 6 functions)
+✓ RawrXD.Win32Deployment.psm1
+ (4.3 KB, 119 lines, 4 functions)
+✓ RawrXD_AIIntervention.psm1
+ (3.1 KB, 78 lines, 5 functions)
+  Issues: Placeholder text: 7 occurrences
+✓ RawrXD.Logging.psm1
+ (2.6 KB, 79 lines, 5 functions)
+✓ RawrXD.Tracing.psm1
+ (1.8 KB, 58 lines, 5 functions)
+✓ RawrXD.Config.psm1
+ (1.7 KB, 64 lines, 4 functions)
+✓ RawrXD.ErrorHandling.psm1
+ (1 KB, 28 lines, 2 functions)
+  Issues: Very small file: 28 lines
+
+=== MIXED MODULES (2) ===
+~ RawrXD.ManifestChangeNotifier.psm1 (Score: 18)
+ (22.1 KB, 577 lines, 11 functions)
+  Issues: TODO comments: 1; Placeholder text: 1 occurrences
+~ RawrXD..psm1 (Score: 17)
+ (4.6 KB, 195 lines, 0 functions)
+  Issues: TODO comments: 1; High comment ratio: 191:1
+
+=== SCAFFOLDING/STUB MODULES (0) ===
+
+=== SUMMARY ===
+Total modules analyzed: 44
+Real functionality: 42
+Mixed (some scaffolding): 2
+Scaffolding/stubs: 0
+
+=== RECOMMENDATIONS ===
+• Complete mixed modules by removing TODOs and placeholders
+• Consider moving auto-generated modules to separate archive
+

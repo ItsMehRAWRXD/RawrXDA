@@ -1,0 +1,61 @@
+CMakeLists.txt Integration Instructions
+========================================
+Generated: 2026-01-27 05:00:34
+
+Add these source files to the appropriate target in CMakeLists.txt:
+
+src/qtapp/ai_digestion_engine.cpp
+src/qtapp/ai_digestion_engine_extractors.cpp
+src/qtapp/ai_digestion_panel.cpp
+src/qtapp/ai_digestion_panel_impl.cpp
+src/qtapp/ai_digestion_widgets.cpp
+src/qtapp/ai_metrics_collector.cpp
+src/qtapp/ai_training_pipeline.cpp
+src/qtapp/ai_workers.cpp
+src/qtapp/ai_chat_panel_manager.cpp
+src/qtapp/bounded_autonomous_executor.cpp
+src/qtapp/metrics_dashboard.cpp
+src/qtapp/latency_monitor.cpp
+src/qtapp/code_completion_provider.cpp
+src/qtapp/real_time_refactoring.cpp
+src/qtapp/intelligent_error_analysis.cpp
+src/qtapp/syntax_highlighter.cpp
+src/qtapp/code_minimap.cpp
+src/qtapp/enterprise_tools_panel.cpp
+src/qtapp/interpretability_panel_production.cpp
+src/qtapp/problems_panel.cpp
+src/qtapp/TestExplorerPanel.cpp
+src/qtapp/DebuggerPanel.cpp
+src/qtapp/discovery_dashboard.cpp
+src/qtapp/blob_converter_panel.cpp
+src/qtapp/project_manager.cpp
+src/qtapp/recent_projects_manager.cpp
+src/qtapp/task_runner.cpp
+src/qtapp/ThemeManager.cpp
+src/qtapp/build_output_connector.cpp
+src/qtapp/compiler_interface.cpp
+src/qtapp/dap_handler.cpp
+src/qtapp/gui_command_menu.cpp
+src/qtapp/alert_system.cpp
+src/qtapp/language_support_system.cpp
+src/qtapp/gitignore_parser.cpp
+src/qtapp/blob_to_gguf_converter.cpp
+src/qtapp/memory_persistence_system.cpp
+
+Suggested location:
+-------------------
+Find the section that looks like:
+
+    set(AGENTIC_IDE_SOURCES
+        src/qtapp/main_v5.cpp
+        src/qtapp/MainWindow_v5.cpp
+        ...
+    )
+
+And add the new files to this list.
+
+Then rebuild:
+-------------
+cd D:\rawrxd\build
+cmake --build . --config Release
+

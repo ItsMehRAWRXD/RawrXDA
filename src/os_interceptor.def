@@ -1,0 +1,20 @@
+;============================================================================
+; OS Explorer Interceptor Module Definition
+; Exports for the interceptor DLL
+;============================================================================
+
+LIBRARY OS_EXPLORER_INTERCEPTOR
+
+EXPORTS
+    InstallOSHooks
+    StartInterceptor
+    StopInterceptor
+    ShowStatus
+    ShowStats
+    ClearLog
+    ShowHelp
+    StreamToPowerShell
+    StreamSuccessMessage
+    StreamErrorMessage
+    InitOSInterceptor
+    DllMain

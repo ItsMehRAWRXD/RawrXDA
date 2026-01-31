@@ -1,0 +1,201 @@
+﻿ 13750:             $gatheredContext -join "`n"
+ 13751:         }
+ 13752:         else {
+ 13753:             ""
+ 13754:         }
+ 13755:     }
+ 13756:     
+ 13757:     # Build enhanced prompt with all context
+ 13758:     $enhancedPrompt = if ($enhancedContextData) {
+ 13759:         @"
+ 13760: $enhancedContextData
+ 13761: 
+ 13762: USER REQUEST: $msg
+ 13763: 
+ 13764: Based on the context above (files, folders, docs, browser research), respond to the user's request. Use ONLY the actual data provided - do not invent statistics or file names.
+ 13765: "@
+ 13766:     }
+ 13767:     else {
+ 13768:         $msg
+ 13769:     }
+ 13770:     
+ 13771:     # Update context usage
+ 13772:     $promptSize = $enhancedPrompt.Length
+ 13773:     $global:ContextUsage.UsedContext += $promptSize
+ 13774:     if ($global:ContextUsage.TotalContext -eq 0) {
+ 13775:         $global:ContextUsage.TotalContext = 1000000  # Default 1MB context window
+ 13776:     }
+ 13777:     Update-ContextUsageDisplay
+ 13778: 
+ 13779:     try {
+ 13780:         $response = Send-OllamaRequest $enhancedPrompt $model
+ 13781:         $chatBox.AppendText("AI > $response`r`n`r`n")
+ 13782:         
+ 13783:         # Update context usage after response
+ 13784:         $responseSize = $response.Length
+ 13785:         $global:ContextUsage.UsedContext += $responseSize
+ 13786:         Update-ContextUsageDisplay
+ 13787:         
+ 13788:         # Save chat history after AI response
+ 13789:         Save-ChatHistory
+ 13790:     }
+ 13791:     catch {
+ 13792:         $chatBox.AppendText("Error: $_`r`n`r`n")
+ 13793:         Save-ChatHistory
+ 13794:     }
+ 13795: }
+ 13796: 
+ 13797: # Browser Navigation Function
+ 13798: function Open-Browser {
+ 13799:     <#
+ 13800:     .SYNOPSIS
+ 13801:         Opens a URL in the embedded browser (FULLY FIXED)
+ 13802:     .PARAMETER Url
+ 13803:         The URL to navigate to
+ 13804:     .DESCRIPTION
+ 13805:         Comprehensive browser navigation with proper error handling,
+ 13806:         WebView2/IE fallback support, and URL validation
+ 13807:     #>
+ 13808:     [CmdletBinding()]
+ 13809:     param(
+ 13810:         [Parameter(Mandatory = $true)]
+ 13811:         [ValidateNotNullOrEmpty()]
+ 13812:         [string]$url
+ 13813:     )
+ 13814:     
+ 13815:     if ([string]::IsNullOrWhiteSpace($url)) {
+ 13816:         Write-DevConsole "❌ Cannot navigate to empty URL" "WARNING"
+ 13817:         return
+ 13818:     }
+ 13819:     
+ 13820:     try {
+ 13821:         # Clean and validate URL
+ 13822:         $url = $url.Trim()
+ 13823:         
+ 13824:         # Add protocol if missing
+ 13825:         if (-not $url.StartsWith("http://") -and -not $url.StartsWith("https://") -and -not $url.StartsWith("about:")) {
+ 13826:             $url = "https://" + $url
+ 13827:         }
+ 13828:         
+ 13829:         Write-DevConsole "🌐 Opening browser: $url" "INFO"
+ 13830:         
+ 13831:         # Update URL box safely
+ 13832:         if ($browserUrlBox) {
+ 13833:             try {
+ 13834:                 $browserUrlBox.Text = $url
+ 13835:             }
+ 13836:             catch {
+ 13837:                 Write-DevConsole "Could not update URL box: $_" "DEBUG"
+ 13838:             }
+ 13839:         }
+ 13840:         
+ 13841:         # Navigate based on browser type
+ 13842:         if ($script:browserType -eq "WebView2") {
+ 13843:             # WebView2 browser (modern Chromium engine)
+ 13844:             if ($script:webBrowser) {
+ 13845:                 try {
+ 13846:                     # Check if CoreWebView2 is initialized
+ 13847:                     if ($script:webBrowser.CoreWebView2) {
+ 13848:                         $script:webBrowser.CoreWebView2.Navigate($url)
+ 13849:                         Write-DevConsole "✅ WebView2 navigation started" "SUCCESS"
+ 13850:                     }
+ 13851:                     else {
+ 13852:                         # CoreWebView2 not initialized yet - use Source property for lazy init
+ 13853:                         Write-DevConsole "WebView2 not fully initialized, using Source property" "INFO"
+ 13854:                         $script:webBrowser.Source = New-Object System.Uri($url)
+ 13855:                     }
+ 13856:                 }
+ 13857:                 catch {
+ 13858:                     Write-DevConsole "WebView2 navigation error: $($_.Exception.Message)" "ERROR"
+ 13859:                     Write-DevConsole "Attempting fallback navigation via Source property" "INFO"
+ 13860:                     try {
+ 13861:                         $script:webBrowser.Source = New-Object System.Uri($url)
+ 13862:                     }
+ 13863:                     catch {
+ 13864:                         Write-DevConsole "WebView2 Source navigation failed: $_" "ERROR"
+ 13865:                     }
+ 13866:                 }
+ 13867:             }
+ 13868:             else {
+ 13869:                 Write-DevConsole "❌ WebView2 control not available" "ERROR"
+ 13870:             }
+ 13871:         }
+ 13872:         else {
+ 13873:             # Legacy WebBrowser control (IE engine)
+ 13874:             if ($script:webBrowser) {
+ 13875:                 try {
+ 13876:                     # Use UI thread-safe navigation
+ 13877:                     if ($script:webBrowser.InvokeRequired) {
+ 13878:                         $script:webBrowser.Invoke([System.Action] {
+ 13879:                                 $script:webBrowser.Navigate($url)
+ 13880:                             }) | Out-Null
+ 13881:                     }
+ 13882:                     else {
+ 13883:                         $script:webBrowser.Navigate($url)
+ 13884:                     }
+ 13885:                     Write-DevConsole "✅ Legacy browser navigation started: $url" "SUCCESS"
+ 13886:                 }
+ 13887:                 catch {
+ 13888:                     Write-DevConsole "Legacy browser navigation error: $($_.Exception.Message)" "ERROR"
+ 13889:                 }
+ 13890:             }
+ 13891:             else {
+ 13892:                 Write-DevConsole "❌ Legacy browser control not available" "ERROR"
+ 13893:             }
+ 13894:         }
+ 13895:     }
+ 13896:     catch {
+ 13897:         $errorMsg = "Critical browser error: $($_.Exception.Message)"
+ 13898:         Write-DevConsole $errorMsg "ERROR"
+ 13899:         Write-ErrorLog -ErrorMessage $errorMsg -ErrorCategory "BROWSER" -Severity "MEDIUM" -SourceFunction "Open-Browser"
+ 13900:     }
+ 13901: }
+ 13902: 
+ 13903: # Browser Event Handlers (FULLY FIXED)
+ 13904: $browserGoBtn.Add_Click({
+ 13905:         try {
+ 13906:             $url = $browserUrlBox.Text.Trim()
+ 13907:             if (-not [string]::IsNullOrWhiteSpace($url)) {
+ 13908:                 Open-Browser $url
+ 13909:             }
+ 13910:             else {
+ 13911:                 Write-DevConsole "⚠️ Please enter a URL" "WARNING"
+ 13912:             }
+ 13913:         }
+ 13914:         catch {
+ 13915:             Write-DevConsole "Go button error: $_" "ERROR"
+ 13916:         }
+ 13917:     })
+ 13918: 
+ 13919: $browserUrlBox.Add_KeyDown({
+ 13920:         try {
+ 13921:             if ($_.KeyCode -eq "Enter") {
+ 13922:                 $url = $browserUrlBox.Text.Trim()
+ 13923:                 if (-not [string]::IsNullOrWhiteSpace($url)) {
+ 13924:                     Open-Browser $url
+ 13925:                 }
+ 13926:             }
+ 13927:         }
+ 13928:         catch {
+ 13929:             Write-DevConsole "URL box KeyDown error: $_" "ERROR"
+ 13930:         }
+ 13931:     })
+ 13932: 
+ 13933: $browserBackBtn.Add_Click({
+ 13934:         try {
+ 13935:             if ($script:browserType -eq "WebView2") {
+ 13936:                 if ($script:webBrowser -and $script:webBrowser.CoreWebView2) {
+ 13937:                     if ($script:webBrowser.CoreWebView2.CanGoBack) {
+ 13938:                         $script:webBrowser.CoreWebView2.GoBack()
+ 13939:                         Write-DevConsole "⬅️ WebView2 navigated back" "INFO"
+ 13940:                     }
+ 13941:                     else {
+ 13942:                         Write-DevConsole "Cannot go back (no history)" "INFO"
+ 13943:                     }
+ 13944:                 }
+ 13945:                 else {
+ 13946:                     Write-DevConsole "WebView2 not initialized" "WARNING"
+ 13947:                 }
+ 13948:             }
+ 13949:             else {
+ 13950:                 # Legacy WebBrowser

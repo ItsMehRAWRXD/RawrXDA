@@ -1,0 +1,1 @@
+cp /path/to/your/native-host-manifest.json ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/com.my_company.my_application.json

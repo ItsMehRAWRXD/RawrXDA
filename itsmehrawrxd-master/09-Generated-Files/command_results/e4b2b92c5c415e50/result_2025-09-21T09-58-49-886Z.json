@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "1f665203995c1de5",
+  "result": "error",
+  "details": "Unknown command: get_system_insights",
+  "timestamp": "2025-09-21T09:58:49.885Z"
+}

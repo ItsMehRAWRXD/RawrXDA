@@ -1,0 +1,18 @@
+jad tp ma,e ot ":
+
+2nm_host.py
+
+
+pip install pyinstaller
+pyinstaller --onefile nm_host.py
+Your command is incomplete. When using pyinstaller, you need to specify the filename of the Python script to be compiled. 
+The correct command should be: pyinstaller --onefile nm_host.py 
+Here is the step-by-step process for compiling your Python host into a single executable file:
+Prerequisites
+Install Python: Make sure you have Python installed.
+Install PyInstaller: Run the command pip install pyinstaller in your command prompt or terminal. 
+Compiling your native host
+Navigate to your script's directory. Open your command prompt or terminal and use the cd command to go to the folder where your nm_host.py file is saved.
+Run PyInstaller. Execute the command: pyinstaller --onefile nm_host.py
+Locate the executable. After PyInstaller finishes, it will create two new folders in the same directory: build and dist. Your executable file, nm_host.exe, will be located inside the dist folder. 
+This nm_host.exe is the file you will refer to in the path field of your native messaging host manifest.

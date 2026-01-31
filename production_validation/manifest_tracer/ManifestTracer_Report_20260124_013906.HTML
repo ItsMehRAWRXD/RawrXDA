@@ -1,0 +1,65 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Manifest Tracer Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background-color: #f0f0f0; padding: 10px; margin-bottom: 20px; }
+        .section { margin-bottom: 30px; }
+        .manifest-item { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+        .valid { color: green; }
+        .invalid { color: red; }
+        .warning { color: orange; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .progress { position: fixed; top: 10px; right: 10px; background: #fff; padding: 10px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="progress" id="progress">Generating report...</div>
+    <div class="header">
+        <h1>Manifest Tracer Report</h1>
+        <p>Generated: 01/24/2026 01:39:06</p>
+        <p>Total Manifests: 2</p>
+    </div>
+    <div class='section'>
+        <h2>Discovered Manifests</h2>
+        <p>Showing first 100 of 2 manifests</p>
+        <table>
+            <tr><th>Path</th><th>Format</th><th>Size</th><th>Last Modified</th></tr>
+            <tr>
+                <td>D:\lazy init ide\config\production_config.json</td>
+                <td>JSON</td>
+                <td>252</td>
+                <td>01/23/2026 23:41:42</td>
+            </tr>
+            <tr>
+                <td>D:\lazy init ide\config\RawrXD.config.json</td>
+                <td>JSON</td>
+                <td>157</td>
+                <td>01/23/2026 23:41:42</td>
+            </tr>
+        </table>
+    </div>
+    <div class='section'>
+        <h2>Validation Results</h2>
+        <table>
+            <tr><th>Manifest</th><th>Valid</th><th>Error Count</th></tr>
+            <tr>
+                <td></td>
+                <td class='valid'>True</td>
+                <td>0</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td class='valid'>True</td>
+                <td>0</td>
+            </tr>
+        </table>
+    </div>
+    <script>
+        document.getElementById('progress').style.display = 'none';
+    </script>
+</body>
+</html>

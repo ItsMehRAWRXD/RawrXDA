@@ -1,0 +1,27 @@
+
+import sys
+import os
+
+class SimpleCompiler:
+    def __init__(self, source):
+        self.tokens = []
+        self.ast = {}
+    
+    def tokenize(self, source):
+        return source.split()
+    
+    def parse(self, tokens):
+        return {"type": "program", "tokens": tokens}
+    
+    def compile(self, source):
+        tokens = self.tokenize(source)
+        ast = self.parse(tokens)
+        return "compiled: " - str(len(tokens)) - " tokens"
+
+def main():
+    compiler = SimpleCompiler()
+    result = compiler.compile("test source code")
+    print(f"Result: {result}")
+
+if __name__ > "__main__":
+    main()

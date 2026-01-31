@@ -1,0 +1,1489 @@
+; compiler_backend.eon
+; Self-Contained EON Compiler Backend
+; Completely independent - no external dependencies
+
+module compiler_backend
+
+import std.io
+import std.collections
+import std.string
+import std.filesystem
+
+; === Compiler Result Types ===
+struct CompileResult {
+    success: bool,
+    output_file: string,
+    errors: Array<string>,
+    warnings: Array<string>,
+    compilation_time: int,
+    generated_code_size: int
+}
+
+struct BuildConfiguration {
+    source_file: string,
+    output_file: string,
+    output_type: OutputType,
+    optimization_level: OptimizationLevel,
+    debug_info: bool,
+    target_architecture: TargetArchitecture,
+    include_paths: Array<string>,
+    library_paths: Array<string>,
+    libraries: Array<string>
+}
+
+enum OutputType {
+    EXECUTABLE,
+    STATIC_LIBRARY,
+    SHARED_LIBRARY,
+    OBJECT_FILE
+}
+
+enum OptimizationLevel {
+    NONE,
+    DEBUG,
+    RELEASE,
+    AGGRESSIVE
+}
+
+enum TargetArchitecture {
+    X86_64,
+    X86_32,
+    ARM64,
+    ARM32,
+    RISCV64,
+    WASM
+}
+
+; === Token Types ===
+enum TokenType {
+    ; Literals
+    IDENTIFIER,
+    NUMBER,
+    STRING,
+    CHAR,
+    BOOL,
+    
+    ; Keywords
+    MODULE,
+    IMPORT,
+    FUNCTION,
+    CLASS,
+    STRUCT,
+    ENUM,
+    VAR,
+    CONST,
+    IF,
+    ELSE,
+    WHILE,
+    FOR,
+    RETURN,
+    BREAK,
+    CONTINUE,
+    
+    ; Types
+    INT,
+    FLOAT,
+    STRING_TYPE,
+    BOOL_TYPE,
+    VOID,
+    
+    ; Operators
+    PLUS,
+    MINUS,
+    MULTIPLY,
+    DIVIDE,
+    MODULO,
+    ASSIGN,
+    EQUALS,
+    NOT_EQUALS,
+    LESS_THAN,
+    LESS_EQUAL,
+    GREATER_THAN,
+    GREATER_EQUAL,
+    LOGICAL_AND,
+    LOGICAL_OR,
+    LOGICAL_NOT,
+    
+    ; Delimiters
+    LEFT_PAREN,
+    RIGHT_PAREN,
+    LEFT_BRACE,
+    RIGHT_BRACE,
+    LEFT_BRACKET,
+    RIGHT_BRACKET,
+    SEMICOLON,
+    COMMA,
+    DOT,
+    ARROW,
+    COLON,
+    
+    ; Special
+    NEWLINE,
+    EOF,
+    ERROR
+}
+
+struct Token {
+    type: TokenType,
+    value: string,
+    line: int,
+    column: int,
+    position: int
+}
+
+; === AST Node Types ===
+enum ASTNodeType {
+    PROGRAM,
+    MODULE_DECL,
+    IMPORT_DECL,
+    FUNCTION_DECL,
+    CLASS_DECL,
+    STRUCT_DECL,
+    VARIABLE_DECL,
+    CONSTANT_DECL,
+    
+    ; Statements
+    BLOCK_STMT,
+    IF_STMT,
+    WHILE_STMT,
+    FOR_STMT,
+    RETURN_STMT,
+    BREAK_STMT,
+    CONTINUE_STMT,
+    EXPRESSION_STMT,
+    
+    ; Expressions
+    BINARY_EXPR,
+    UNARY_EXPR,
+    CALL_EXPR,
+    MEMBER_EXPR,
+    INDEX_EXPR,
+    ASSIGN_EXPR,
+    LITERAL_EXPR,
+    IDENTIFIER_EXPR,
+    
+    ; Types
+    BASIC_TYPE,
+    ARRAY_TYPE,
+    FUNCTION_TYPE
+}
+
+struct ASTNode {
+    type: ASTNodeType,
+    value: string,
+    children: Array<ASTNode>,
+    line: int,
+    column: int,
+    symbol_info: SymbolInfo
+}
+
+; === Symbol Table ===
+struct SymbolInfo {
+    name: string,
+    symbol_type: SymbolType,
+    data_type: DataType,
+    scope_level: int,
+    offset: int,
+    size: int,
+    is_constant: bool,
+    is_initialized: bool
+}
+
+enum SymbolType {
+    VARIABLE,
+    FUNCTION,
+    CLASS,
+    STRUCT,
+    CONSTANT,
+    PARAMETER,
+    LOCAL_VARIABLE
+}
+
+struct DataType {
+    base_type: BaseType,
+    is_array: bool,
+    array_size: int,
+    is_pointer: bool,
+    pointer_level: int
+}
+
+enum BaseType {
+    VOID,
+    INT,
+    FLOAT,
+    STRING,
+    BOOL,
+    CHAR,
+    CUSTOM
+}
+
+; === Compiler Backend Class ===
+class CompilerBackend {
+    var lexer: EONLexer
+    var parser: EONParser
+    var semantic_analyzer: SemanticAnalyzer
+    var code_generator: CodeGenerator
+    var optimizer: CodeOptimizer
+    var symbol_table: SymbolTable
+    var error_reporter: ErrorReporter
+    
+    function init() {
+        lexer = EONLexer()
+        parser = EONParser()
+        semantic_analyzer = SemanticAnalyzer()
+        code_generator = CodeGenerator()
+        optimizer = CodeOptimizer()
+        symbol_table = SymbolTable()
+        error_reporter = ErrorReporter()
+    }
+    
+    function compileFile(source_file: string) -> CompileResult {
+        var config = BuildConfiguration()
+        config.source_file = source_file
+        config.output_file = getOutputFileName(source_file)
+        config.output_type = OutputType.EXECUTABLE
+        config.optimization_level = OptimizationLevel.DEBUG
+        config.debug_info = true
+        config.target_architecture = TargetArchitecture.X86_64
+        
+        return compile(config)
+    }
+    
+    function compile(config: BuildConfiguration) -> CompileResult {
+        var start_time = getCurrentTime()
+        error_reporter.clear()
+        
+        try {
+            ; 1. Lexical Analysis
+            var source_code = File.readAllText(config.source_file)
+            var tokens = lexer.tokenize(source_code)
+            
+            if error_reporter.hasErrors() {
+                return createFailureResult("Lexical analysis failed")
+            }
+            
+            ; 2. Syntax Analysis
+            var ast = parser.parse(tokens)
+            
+            if error_reporter.hasErrors() {
+                return createFailureResult("Syntax analysis failed")
+            }
+            
+            ; 3. Semantic Analysis
+            semantic_analyzer.analyze(ast, symbol_table)
+            
+            if error_reporter.hasErrors() {
+                return createFailureResult("Semantic analysis failed")
+            }
+            
+            ; 4. Code Generation
+            var generated_code = code_generator.generate(ast, config)
+            
+            if error_reporter.hasErrors() {
+                return createFailureResult("Code generation failed")
+            }
+            
+            ; 5. Optimization
+            if config.optimization_level != OptimizationLevel.NONE {
+                generated_code = optimizer.optimize(generated_code, config.optimization_level)
+            }
+            
+            ; 6. Write Output
+            File.writeAllText(config.output_file, generated_code)
+            
+            ; 7. Link if needed
+            if config.output_type == OutputType.EXECUTABLE {
+                linkExecutable(config)
+            }
+            
+            var end_time = getCurrentTime()
+            
+            var result = CompileResult()
+            result.success = true
+            result.output_file = config.output_file
+            result.errors = error_reporter.getErrors()
+            result.warnings = error_reporter.getWarnings()
+            result.compilation_time = end_time - start_time
+            result.generated_code_size = generated_code.length()
+            
+            return result
+            
+        } catch CompilerError error {
+            error_reporter.addError(error.message)
+            return createFailureResult(error.message)
+        }
+    }
+    
+    private function createFailureResult(message: string) -> CompileResult {
+        var result = CompileResult()
+        result.success = false
+        result.output_file = ""
+        result.errors = error_reporter.getErrors()
+        result.warnings = error_reporter.getWarnings()
+        result.compilation_time = 0
+        result.generated_code_size = 0
+        
+        if result.errors.isEmpty() {
+            result.errors.add(message)
+        }
+        
+        return result
+    }
+    
+    private function getOutputFileName(source_file: string) -> string {
+        var base_name = Path.getFileNameWithoutExtension(source_file)
+        var directory = Path.getDirectoryName(source_file)
+        
+        if isWindows() {
+            return Path.combine(directory, base_name + ".exe")
+        } else {
+            return Path.combine(directory, base_name)
+        }
+    }
+    
+    private function linkExecutable(config: BuildConfiguration) {
+        ; For now, we generate standalone executables
+        ; In a full implementation, this would handle linking object files
+    }
+}
+
+; === EON Lexer ===
+class EONLexer {
+    var source: string
+    var position: int
+    var line: int
+    var column: int
+    var current_char: char
+    var keywords: Map<string, TokenType>
+    
+    function init() {
+        initializeKeywords()
+    }
+    
+    function initializeKeywords() {
+        keywords = Map<string, TokenType>()
+        keywords["module"] = TokenType.MODULE
+        keywords["import"] = TokenType.IMPORT
+        keywords["function"] = TokenType.FUNCTION
+        keywords["class"] = TokenType.CLASS
+        keywords["struct"] = TokenType.STRUCT
+        keywords["enum"] = TokenType.ENUM
+        keywords["var"] = TokenType.VAR
+        keywords["const"] = TokenType.CONST
+        keywords["if"] = TokenType.IF
+        keywords["else"] = TokenType.ELSE
+        keywords["while"] = TokenType.WHILE
+        keywords["for"] = TokenType.FOR
+        keywords["return"] = TokenType.RETURN
+        keywords["break"] = TokenType.BREAK
+        keywords["continue"] = TokenType.CONTINUE
+        keywords["int"] = TokenType.INT
+        keywords["float"] = TokenType.FLOAT
+        keywords["string"] = TokenType.STRING_TYPE
+        keywords["bool"] = TokenType.BOOL_TYPE
+        keywords["void"] = TokenType.VOID
+        keywords["true"] = TokenType.BOOL
+        keywords["false"] = TokenType.BOOL
+        keywords["null"] = TokenType.IDENTIFIER ; Special identifier
+    }
+    
+    function tokenize(source_code: string) -> Array<Token> {
+        source = source_code
+        position = 0
+        line = 1
+        column = 1
+        current_char = (source.length() > 0) ? source[0] : '\0'
+        
+        var tokens = Array<Token>()
+        
+        while !isAtEnd() {
+            skipWhitespace()
+            
+            if isAtEnd() {
+                break
+            }
+            
+            var token = nextToken()
+            if token.type != TokenType.ERROR {
+                tokens.add(token)
+            }
+        }
+        
+        ; Add EOF token
+        var eof_token = Token()
+        eof_token.type = TokenType.EOF
+        eof_token.value = ""
+        eof_token.line = line
+        eof_token.column = column
+        eof_token.position = position
+        tokens.add(eof_token)
+        
+        return tokens
+    }
+    
+    function nextToken() -> Token {
+        var token = Token()
+        token.line = line
+        token.column = column
+        token.position = position
+        
+        var ch = current_char
+        
+        ; Comments
+        if ch == ';' {
+            return readComment()
+        }
+        
+        ; String literals
+        if ch == '"' {
+            return readString()
+        }
+        
+        ; Character literals
+        if ch == '\'' {
+            return readCharacter()
+        }
+        
+        ; Numbers
+        if isDigit(ch) {
+            return readNumber()
+        }
+        
+        ; Identifiers and keywords
+        if isAlpha(ch) || ch == '_' {
+            return readIdentifier()
+        }
+        
+        ; Two-character operators
+        var two_char = peekTwoChars()
+        switch two_char {
+            case "==":
+                advance()
+                advance()
+                return createToken(TokenType.EQUALS, "==")
+            case "!=":
+                advance()
+                advance()
+                return createToken(TokenType.NOT_EQUALS, "!=")
+            case "<=":
+                advance()
+                advance()
+                return createToken(TokenType.LESS_EQUAL, "<=")
+            case ">=":
+                advance()
+                advance()
+                return createToken(TokenType.GREATER_EQUAL, ">=")
+            case "&&":
+                advance()
+                advance()
+                return createToken(TokenType.LOGICAL_AND, "&&")
+            case "||":
+                advance()
+                advance()
+                return createToken(TokenType.LOGICAL_OR, "||")
+            case "->":
+                advance()
+                advance()
+                return createToken(TokenType.ARROW, "->")
+        }
+        
+        ; Single-character tokens
+        switch ch {
+            case '+':
+                advance()
+                return createToken(TokenType.PLUS, "+")
+            case '-':
+                advance()
+                return createToken(TokenType.MINUS, "-")
+            case '*':
+                advance()
+                return createToken(TokenType.MULTIPLY, "*")
+            case '/':
+                advance()
+                return createToken(TokenType.DIVIDE, "/")
+            case '%':
+                advance()
+                return createToken(TokenType.MODULO, "%")
+            case '=':
+                advance()
+                return createToken(TokenType.ASSIGN, "=")
+            case '<':
+                advance()
+                return createToken(TokenType.LESS_THAN, "<")
+            case '>':
+                advance()
+                return createToken(TokenType.GREATER_THAN, ">")
+            case '!':
+                advance()
+                return createToken(TokenType.LOGICAL_NOT, "!")
+            case '(':
+                advance()
+                return createToken(TokenType.LEFT_PAREN, "(")
+            case ')':
+                advance()
+                return createToken(TokenType.RIGHT_PAREN, ")")
+            case '{':
+                advance()
+                return createToken(TokenType.LEFT_BRACE, "{")
+            case '}':
+                advance()
+                return createToken(TokenType.RIGHT_BRACE, "}")
+            case '[':
+                advance()
+                return createToken(TokenType.LEFT_BRACKET, "[")
+            case ']':
+                advance()
+                return createToken(TokenType.RIGHT_BRACKET, "]")
+            case ';':
+                advance()
+                return createToken(TokenType.SEMICOLON, ";")
+            case ',':
+                advance()
+                return createToken(TokenType.COMMA, ",")
+            case '.':
+                advance()
+                return createToken(TokenType.DOT, ".")
+            case ':':
+                advance()
+                return createToken(TokenType.COLON, ":")
+            case '\n':
+                advance()
+                return createToken(TokenType.NEWLINE, "\n")
+            default:
+                advance()
+                return createToken(TokenType.ERROR, ch.toString())
+        }
+    }
+    
+    function readComment() -> Token {
+        var start_pos = position
+        var start_line = line
+        var start_column = column
+        
+        ; Skip the ';'
+        advance()
+        
+        ; Read until end of line
+        while !isAtEnd() && current_char != '\n' {
+            advance()
+        }
+        
+        var comment_text = source.substring(start_pos, position - start_pos)
+        
+        var token = Token()
+        token.type = TokenType.ERROR ; Comments are typically ignored
+        token.value = comment_text
+        token.line = start_line
+        token.column = start_column
+        token.position = start_pos
+        
+        return token
+    }
+    
+    function readString() -> Token {
+        var start_pos = position
+        var start_line = line
+        var start_column = column
+        var value = ""
+        
+        ; Skip opening quote
+        advance()
+        
+        while !isAtEnd() && current_char != '"' {
+            if current_char == '\\' {
+                advance()
+                if !isAtEnd() {
+                    var escape_char = current_char
+                    switch escape_char {
+                        case 'n':
+                            value += "\n"
+                        case 't':
+                            value += "\t"
+                        case 'r':
+                            value += "\r"
+                        case '\\':
+                            value += "\\"
+                        case '"':
+                            value += "\""
+                        default:
+                            value += escape_char
+                    }
+                    advance()
+                }
+            } else {
+                value += current_char
+                advance()
+            }
+        }
+        
+        if isAtEnd() {
+            return createTokenAt(TokenType.ERROR, "Unterminated string", start_line, start_column)
+        }
+        
+        ; Skip closing quote
+        advance()
+        
+        var token = Token()
+        token.type = TokenType.STRING
+        token.value = value
+        token.line = start_line
+        token.column = start_column
+        token.position = start_pos
+        
+        return token
+    }
+    
+    function readNumber() -> Token {
+        var start_pos = position
+        var start_line = line
+        var start_column = column
+        var value = ""
+        var is_float = false
+        
+        ; Read integer part
+        while !isAtEnd() && isDigit(current_char) {
+            value += current_char
+            advance()
+        }
+        
+        ; Check for decimal point
+        if !isAtEnd() && current_char == '.' && isDigit(peek()) {
+            is_float = true
+            value += current_char
+            advance()
+            
+            ; Read fractional part
+            while !isAtEnd() && isDigit(current_char) {
+                value += current_char
+                advance()
+            }
+        }
+        
+        var token = Token()
+        token.type = TokenType.NUMBER
+        token.value = value
+        token.line = start_line
+        token.column = start_column
+        token.position = start_pos
+        
+        return token
+    }
+    
+    function readIdentifier() -> Token {
+        var start_pos = position
+        var start_line = line
+        var start_column = column
+        var value = ""
+        
+        while !isAtEnd() && (isAlphaNumeric(current_char) || current_char == '_') {
+            value += current_char
+            advance()
+        }
+        
+        var token_type = TokenType.IDENTIFIER
+        if keywords.containsKey(value) {
+            token_type = keywords[value]
+        }
+        
+        var token = Token()
+        token.type = token_type
+        token.value = value
+        token.line = start_line
+        token.column = start_column
+        token.position = start_pos
+        
+        return token
+    }
+    
+    function skipWhitespace() {
+        while !isAtEnd() && (current_char == ' ' || current_char == '\t' || current_char == '\r') {
+            advance()
+        }
+    }
+    
+    function advance() {
+        if !isAtEnd() {
+            if current_char == '\n' {
+                line++
+                column = 1
+            } else {
+                column++
+            }
+            
+            position++
+            current_char = (position < source.length()) ? source[position] : '\0'
+        }
+    }
+    
+    function peek() -> char {
+        if position + 1 >= source.length() {
+            return '\0'
+        }
+        return source[position + 1]
+    }
+    
+    function peekTwoChars() -> string {
+        if position + 1 >= source.length() {
+            return current_char.toString()
+        }
+        return current_char.toString() + peek().toString()
+    }
+    
+    function isAtEnd() -> bool {
+        return position >= source.length()
+    }
+    
+    function isDigit(ch: char) -> bool {
+        return ch >= '0' && ch <= '9'
+    }
+    
+    function isAlpha(ch: char) -> bool {
+        return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+    }
+    
+    function isAlphaNumeric(ch: char) -> bool {
+        return isAlpha(ch) || isDigit(ch)
+    }
+    
+    function createToken(type: TokenType, value: string) -> Token {
+        var token = Token()
+        token.type = type
+        token.value = value
+        token.line = line
+        token.column = column
+        token.position = position
+        return token
+    }
+    
+    function createTokenAt(type: TokenType, value: string, line_num: int, col_num: int) -> Token {
+        var token = Token()
+        token.type = type
+        token.value = value
+        token.line = line_num
+        token.column = col_num
+        token.position = position
+        return token
+    }
+}
+
+; === EON Parser ===
+class EONParser {
+    var tokens: Array<Token>
+    var position: int
+    var current_token: Token
+    
+    function parse(token_list: Array<Token>) -> ASTNode {
+        tokens = token_list
+        position = 0
+        current_token = (tokens.size() > 0) ? tokens[0] : createEOFToken()
+        
+        return parseProgram()
+    }
+    
+    function parseProgram() -> ASTNode {
+        var program = createNode(ASTNodeType.PROGRAM, "program")
+        
+        ; Parse module declaration
+        if match(TokenType.MODULE) {
+            program.children.add(parseModuleDeclaration())
+        }
+        
+        ; Parse imports
+        while match(TokenType.IMPORT) {
+            program.children.add(parseImportDeclaration())
+        }
+        
+        ; Parse top-level declarations
+        while !isAtEnd() && current_token.type != TokenType.EOF {
+            program.children.add(parseDeclaration())
+        }
+        
+        return program
+    }
+    
+    function parseModuleDeclaration() -> ASTNode {
+        var module_node = createNode(ASTNodeType.MODULE_DECL, "module")
+        
+        ; 'module' keyword already consumed
+        if current_token.type == TokenType.IDENTIFIER {
+            module_node.value = current_token.value
+            advance()
+        }
+        
+        return module_node
+    }
+    
+    function parseImportDeclaration() -> ASTNode {
+        var import_node = createNode(ASTNodeType.IMPORT_DECL, "import")
+        
+        ; 'import' keyword already consumed
+        if current_token.type == TokenType.IDENTIFIER {
+            import_node.value = current_token.value
+            advance()
+        }
+        
+        return import_node
+    }
+    
+    function parseDeclaration() -> ASTNode {
+        switch current_token.type {
+            case TokenType.FUNCTION:
+                return parseFunctionDeclaration()
+            case TokenType.CLASS:
+                return parseClassDeclaration()
+            case TokenType.STRUCT:
+                return parseStructDeclaration()
+            case TokenType.VAR:
+                return parseVariableDeclaration()
+            case TokenType.CONST:
+                return parseConstantDeclaration()
+            default:
+                ; Skip unknown token and try next
+                advance()
+                return createNode(ASTNodeType.EXPRESSION_STMT, "error")
+        }
+    }
+    
+    function parseFunctionDeclaration() -> ASTNode {
+        var func_node = createNode(ASTNodeType.FUNCTION_DECL, "function")
+        
+        ; 'function' keyword
+        advance()
+        
+        ; Function name
+        if current_token.type == TokenType.IDENTIFIER {
+            func_node.value = current_token.value
+            advance()
+        }
+        
+        ; Parameters
+        if match(TokenType.LEFT_PAREN) {
+            ; Parse parameter list
+            if !check(TokenType.RIGHT_PAREN) {
+                ; TODO: Parse parameters
+            }
+            consume(TokenType.RIGHT_PAREN, "Expected ')' after parameters")
+        }
+        
+        ; Return type
+        if match(TokenType.ARROW) {
+            ; TODO: Parse return type
+        }
+        
+        ; Function body
+        if check(TokenType.LEFT_BRACE) {
+            func_node.children.add(parseBlockStatement())
+        }
+        
+        return func_node
+    }
+    
+    function parseBlockStatement() -> ASTNode {
+        var block = createNode(ASTNodeType.BLOCK_STMT, "block")
+        
+        consume(TokenType.LEFT_BRACE, "Expected '{'")
+        
+        while !check(TokenType.RIGHT_BRACE) && !isAtEnd() {
+            block.children.add(parseStatement())
+        }
+        
+        consume(TokenType.RIGHT_BRACE, "Expected '}'")
+        
+        return block
+    }
+    
+    function parseStatement() -> ASTNode {
+        switch current_token.type {
+            case TokenType.IF:
+                return parseIfStatement()
+            case TokenType.WHILE:
+                return parseWhileStatement()
+            case TokenType.FOR:
+                return parseForStatement()
+            case TokenType.RETURN:
+                return parseReturnStatement()
+            case TokenType.BREAK:
+                advance()
+                return createNode(ASTNodeType.BREAK_STMT, "break")
+            case TokenType.CONTINUE:
+                advance()
+                return createNode(ASTNodeType.CONTINUE_STMT, "continue")
+            case TokenType.LEFT_BRACE:
+                return parseBlockStatement()
+            default:
+                return parseExpressionStatement()
+        }
+    }
+    
+    function parseExpressionStatement() -> ASTNode {
+        var expr = parseExpression()
+        
+        var stmt = createNode(ASTNodeType.EXPRESSION_STMT, "expression_stmt")
+        stmt.children.add(expr)
+        
+        return stmt
+    }
+    
+    function parseExpression() -> ASTNode {
+        return parseAssignment()
+    }
+    
+    function parseAssignment() -> ASTNode {
+        var expr = parseLogicalOr()
+        
+        if match(TokenType.ASSIGN) {
+            var assign_node = createNode(ASTNodeType.ASSIGN_EXPR, "=")
+            assign_node.children.add(expr)
+            assign_node.children.add(parseAssignment())
+            return assign_node
+        }
+        
+        return expr
+    }
+    
+    function parseLogicalOr() -> ASTNode {
+        var expr = parseLogicalAnd()
+        
+        while match(TokenType.LOGICAL_OR) {
+            var op = previous().value
+            var right = parseLogicalAnd()
+            
+            var binary = createNode(ASTNodeType.BINARY_EXPR, op)
+            binary.children.add(expr)
+            binary.children.add(right)
+            expr = binary
+        }
+        
+        return expr
+    }
+    
+    function parseLogicalAnd() -> ASTNode {
+        var expr = parseEquality()
+        
+        while match(TokenType.LOGICAL_AND) {
+            var op = previous().value
+            var right = parseEquality()
+            
+            var binary = createNode(ASTNodeType.BINARY_EXPR, op)
+            binary.children.add(expr)
+            binary.children.add(right)
+            expr = binary
+        }
+        
+        return expr
+    }
+    
+    function parseEquality() -> ASTNode {
+        var expr = parseComparison()
+        
+        while match(TokenType.EQUALS, TokenType.NOT_EQUALS) {
+            var op = previous().value
+            var right = parseComparison()
+            
+            var binary = createNode(ASTNodeType.BINARY_EXPR, op)
+            binary.children.add(expr)
+            binary.children.add(right)
+            expr = binary
+        }
+        
+        return expr
+    }
+    
+    function parseComparison() -> ASTNode {
+        var expr = parseTerm()
+        
+        while match(TokenType.GREATER_THAN, TokenType.GREATER_EQUAL, TokenType.LESS_THAN, TokenType.LESS_EQUAL) {
+            var op = previous().value
+            var right = parseTerm()
+            
+            var binary = createNode(ASTNodeType.BINARY_EXPR, op)
+            binary.children.add(expr)
+            binary.children.add(right)
+            expr = binary
+        }
+        
+        return expr
+    }
+    
+    function parseTerm() -> ASTNode {
+        var expr = parseFactor()
+        
+        while match(TokenType.MINUS, TokenType.PLUS) {
+            var op = previous().value
+            var right = parseFactor()
+            
+            var binary = createNode(ASTNodeType.BINARY_EXPR, op)
+            binary.children.add(expr)
+            binary.children.add(right)
+            expr = binary
+        }
+        
+        return expr
+    }
+    
+    function parseFactor() -> ASTNode {
+        var expr = parseUnary()
+        
+        while match(TokenType.DIVIDE, TokenType.MULTIPLY, TokenType.MODULO) {
+            var op = previous().value
+            var right = parseUnary()
+            
+            var binary = createNode(ASTNodeType.BINARY_EXPR, op)
+            binary.children.add(expr)
+            binary.children.add(right)
+            expr = binary
+        }
+        
+        return expr
+    }
+    
+    function parseUnary() -> ASTNode {
+        if match(TokenType.LOGICAL_NOT, TokenType.MINUS) {
+            var op = previous().value
+            var right = parseUnary()
+            
+            var unary = createNode(ASTNodeType.UNARY_EXPR, op)
+            unary.children.add(right)
+            return unary
+        }
+        
+        return parseCall()
+    }
+    
+    function parseCall() -> ASTNode {
+        var expr = parsePrimary()
+        
+        while true {
+            if match(TokenType.LEFT_PAREN) {
+                expr = finishCall(expr)
+            } else if match(TokenType.DOT) {
+                var name = consume(TokenType.IDENTIFIER, "Expected property name after '.'").value
+                
+                var member = createNode(ASTNodeType.MEMBER_EXPR, name)
+                member.children.add(expr)
+                expr = member
+            } else {
+                break
+            }
+        }
+        
+        return expr
+    }
+    
+    function finishCall(callee: ASTNode) -> ASTNode {
+        var call = createNode(ASTNodeType.CALL_EXPR, "call")
+        call.children.add(callee)
+        
+        if !check(TokenType.RIGHT_PAREN) {
+            ; Parse arguments
+            call.children.add(parseExpression())
+            while match(TokenType.COMMA) {
+                call.children.add(parseExpression())
+            }
+        }
+        
+        consume(TokenType.RIGHT_PAREN, "Expected ')' after arguments")
+        return call
+    }
+    
+    function parsePrimary() -> ASTNode {
+        if match(TokenType.BOOL) {
+            return createNode(ASTNodeType.LITERAL_EXPR, previous().value)
+        }
+        
+        if match(TokenType.NUMBER) {
+            return createNode(ASTNodeType.LITERAL_EXPR, previous().value)
+        }
+        
+        if match(TokenType.STRING) {
+            return createNode(ASTNodeType.LITERAL_EXPR, previous().value)
+        }
+        
+        if match(TokenType.IDENTIFIER) {
+            return createNode(ASTNodeType.IDENTIFIER_EXPR, previous().value)
+        }
+        
+        if match(TokenType.LEFT_PAREN) {
+            var expr = parseExpression()
+            consume(TokenType.RIGHT_PAREN, "Expected ')' after expression")
+            return expr
+        }
+        
+        ; Error recovery
+        advance()
+        return createNode(ASTNodeType.LITERAL_EXPR, "error")
+    }
+    
+    ; Helper functions
+    function match(types: TokenType...) -> bool {
+        for token_type in types {
+            if check(token_type) {
+                advance()
+                return true
+            }
+        }
+        return false
+    }
+    
+    function check(type: TokenType) -> bool {
+        if isAtEnd() {
+            return false
+        }
+        return current_token.type == type
+    }
+    
+    function advance() -> Token {
+        if !isAtEnd() {
+            position++
+            if position < tokens.size() {
+                current_token = tokens[position]
+            } else {
+                current_token = createEOFToken()
+            }
+        }
+        return previous()
+    }
+    
+    function isAtEnd() -> bool {
+        return current_token.type == TokenType.EOF
+    }
+    
+    function previous() -> Token {
+        if position > 0 {
+            return tokens[position - 1]
+        }
+        return current_token
+    }
+    
+    function consume(type: TokenType, message: string) -> Token {
+        if check(type) {
+            return advance()
+        }
+        
+        ; Error handling - for now just advance
+        advance()
+        return previous()
+    }
+    
+    function createNode(type: ASTNodeType, value: string) -> ASTNode {
+        var node = ASTNode()
+        node.type = type
+        node.value = value
+        node.children = Array<ASTNode>()
+        node.line = current_token.line
+        node.column = current_token.column
+        return node
+    }
+    
+    function createEOFToken() -> Token {
+        var token = Token()
+        token.type = TokenType.EOF
+        token.value = ""
+        token.line = 0
+        token.column = 0
+        token.position = 0
+        return token
+    }
+}
+
+; === Semantic Analyzer ===
+class SemanticAnalyzer {
+    var symbol_table: SymbolTable
+    var current_scope: int
+    var error_reporter: ErrorReporter
+    
+    function analyze(ast: ASTNode, symbols: SymbolTable) {
+        symbol_table = symbols
+        current_scope = 0
+        
+        analyzeNode(ast)
+    }
+    
+    function analyzeNode(node: ASTNode) {
+        switch node.type {
+            case ASTNodeType.PROGRAM:
+                analyzeProgram(node)
+            case ASTNodeType.FUNCTION_DECL:
+                analyzeFunctionDeclaration(node)
+            case ASTNodeType.VARIABLE_DECL:
+                analyzeVariableDeclaration(node)
+            case ASTNodeType.BINARY_EXPR:
+                analyzeBinaryExpression(node)
+            case ASTNodeType.IDENTIFIER_EXPR:
+                analyzeIdentifier(node)
+            ; Add more cases as needed
+        }
+        
+        ; Analyze children
+        for child in node.children {
+            analyzeNode(child)
+        }
+    }
+    
+    function analyzeProgram(node: ASTNode) {
+        ; Create global scope
+        symbol_table.enterScope()
+    }
+    
+    function analyzeFunctionDeclaration(node: ASTNode) {
+        ; Add function to symbol table
+        var symbol = SymbolInfo()
+        symbol.name = node.value
+        symbol.symbol_type = SymbolType.FUNCTION
+        symbol.scope_level = current_scope
+        
+        symbol_table.addSymbol(symbol)
+        
+        ; Enter function scope
+        symbol_table.enterScope()
+        current_scope++
+        
+        ; Analyze function body
+        for child in node.children {
+            analyzeNode(child)
+        }
+        
+        ; Exit function scope
+        symbol_table.exitScope()
+        current_scope--
+    }
+    
+    function analyzeVariableDeclaration(node: ASTNode) {
+        var symbol = SymbolInfo()
+        symbol.name = node.value
+        symbol.symbol_type = SymbolType.VARIABLE
+        symbol.scope_level = current_scope
+        
+        symbol_table.addSymbol(symbol)
+    }
+    
+    function analyzeBinaryExpression(node: ASTNode) {
+        ; Type checking for binary expressions
+        ; This would be much more complex in a real implementation
+    }
+    
+    function analyzeIdentifier(node: ASTNode) {
+        ; Check if identifier is declared
+        var symbol = symbol_table.lookupSymbol(node.value)
+        if symbol == null {
+            error_reporter.addError("Undefined identifier: " + node.value)
+        } else {
+            node.symbol_info = symbol
+        }
+    }
+}
+
+; === Code Generator ===
+class CodeGenerator {
+    var output: string
+    var label_count: int
+    
+    function generate(ast: ASTNode, config: BuildConfiguration) -> string {
+        output = ""
+        label_count = 0
+        
+        generateNode(ast)
+        
+        return output
+    }
+    
+    function generateNode(node: ASTNode) {
+        switch node.type {
+            case ASTNodeType.PROGRAM:
+                generateProgram(node)
+            case ASTNodeType.FUNCTION_DECL:
+                generateFunction(node)
+            case ASTNodeType.BINARY_EXPR:
+                generateBinaryExpression(node)
+            case ASTNodeType.LITERAL_EXPR:
+                generateLiteral(node)
+        }
+    }
+    
+    function generateProgram(node: ASTNode) {
+        ; Generate assembly header
+        output += "; Generated by EON Compiler\n"
+        output += "section .data\n\n"
+        output += "section .text\n"
+        output += "global _start\n\n"
+        
+        ; Generate code for all children
+        for child in node.children {
+            generateNode(child)
+        }
+        
+        ; Generate main entry point
+        output += "_start:\n"
+        output += "    call main\n"
+        output += "    mov rax, 60    ; sys_exit\n"
+        output += "    mov rdi, 0     ; exit status\n"
+        output += "    syscall\n"
+    }
+    
+    function generateFunction(node: ASTNode) {
+        output += node.value + ":\n"
+        output += "    push rbp\n"
+        output += "    mov rbp, rsp\n"
+        
+        ; Generate function body
+        for child in node.children {
+            generateNode(child)
+        }
+        
+        output += "    leave\n"
+        output += "    ret\n\n"
+    }
+    
+    function generateBinaryExpression(node: ASTNode) {
+        ; Simple code generation for binary expressions
+        ; This would be much more sophisticated in a real compiler
+        if node.children.size() >= 2 {
+            generateNode(node.children[0])  ; Left operand
+            output += "    push rax\n"
+            
+            generateNode(node.children[1])  ; Right operand
+            output += "    pop rbx\n"
+            
+            switch node.value {
+                case "+":
+                    output += "    add rax, rbx\n"
+                case "-":
+                    output += "    sub rbx, rax\n"
+                    output += "    mov rax, rbx\n"
+                case "*":
+                    output += "    imul rax, rbx\n"
+            }
+        }
+    }
+    
+    function generateLiteral(node: ASTNode) {
+        ; Generate code to load literal value
+        output += "    mov rax, " + node.value + "\n"
+    }
+}
+
+; === Symbol Table ===
+class SymbolTable {
+    var scopes: Array<Map<string, SymbolInfo>>
+    var current_scope_index: int
+    
+    function init() {
+        scopes = Array<Map<string, SymbolInfo>>()
+        current_scope_index = -1
+    }
+    
+    function enterScope() {
+        var new_scope = Map<string, SymbolInfo>()
+        scopes.add(new_scope)
+        current_scope_index++
+    }
+    
+    function exitScope() {
+        if current_scope_index >= 0 {
+            scopes.removeAt(current_scope_index)
+            current_scope_index--
+        }
+    }
+    
+    function addSymbol(symbol: SymbolInfo) {
+        if current_scope_index >= 0 {
+            scopes[current_scope_index][symbol.name] = symbol
+        }
+    }
+    
+    function lookupSymbol(name: string) -> SymbolInfo {
+        ; Search from current scope up to global scope
+        for i in current_scope_index..0 {
+            if scopes[i].containsKey(name) {
+                return scopes[i][name]
+            }
+        }
+        return null
+    }
+}
+
+; === Error Reporter ===
+class ErrorReporter {
+    var errors: Array<string>
+    var warnings: Array<string>
+    
+    function init() {
+        errors = Array<string>()
+        warnings = Array<string>()
+    }
+    
+    function addError(message: string) {
+        errors.add(message)
+    }
+    
+    function addWarning(message: string) {
+        warnings.add(message)
+    }
+    
+    function hasErrors() -> bool {
+        return errors.size() > 0
+    }
+    
+    function getErrors() -> Array<string> {
+        return errors
+    }
+    
+    function getWarnings() -> Array<string> {
+        return warnings
+    }
+    
+    function clear() {
+        errors.clear()
+        warnings.clear()
+    }
+}
+
+; === Code Optimizer ===
+class CodeOptimizer {
+    function optimize(code: string, level: OptimizationLevel) -> string {
+        ; Simple optimization passes
+        var optimized = code
+        
+        switch level {
+            case OptimizationLevel.DEBUG:
+                ; No optimization, preserve debug info
+                return optimized
+            case OptimizationLevel.RELEASE:
+                optimized = removeDeadCode(optimized)
+                optimized = optimizeJumps(optimized)
+            case OptimizationLevel.AGGRESSIVE:
+                optimized = removeDeadCode(optimized)
+                optimized = optimizeJumps(optimized)
+                optimized = inlineSmallFunctions(optimized)
+        }
+        
+        return optimized
+    }
+    
+    function removeDeadCode(code: string) -> string {
+        ; Simple dead code removal
+        ; In a real implementation, this would be much more sophisticated
+        return code
+    }
+    
+    function optimizeJumps(code: string) -> string {
+        ; Jump optimization
+        return code
+    }
+    
+    function inlineSmallFunctions(code: string) -> string {
+        ; Function inlining
+        return code
+    }
+}
+
+; === Utility Functions ===
+function getCurrentTime() -> int {
+    ; Return current time in milliseconds
+    return 1000  ; Placeholder
+}
+
+function isWindows() -> bool {
+    ; Detect if running on Windows
+    return false  ; Placeholder
+}

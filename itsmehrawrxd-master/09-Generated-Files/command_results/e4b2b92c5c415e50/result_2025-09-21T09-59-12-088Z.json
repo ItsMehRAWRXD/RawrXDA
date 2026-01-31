@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "d607296450acfdd0",
+  "result": "error",
+  "details": "Unknown command: stop_proxy",
+  "timestamp": "2025-09-21T09:59:12.088Z"
+}

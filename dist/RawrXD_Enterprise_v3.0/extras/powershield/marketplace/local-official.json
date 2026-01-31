@@ -1,0 +1,34 @@
+{
+  "Extensions": [
+    {
+      "Id": "official-debugger-suite",
+      "MarketplaceId": "official-debugger-suite",
+      "Name": "Debugger Suite",
+      "Description": "A collection of inspector, breakpoint, and log analysis helpers powered by RawrXD instrumentation.",
+      "Author": "RawrXD",
+      "Language": 6,
+      "Capabilities": 6,
+      "Version": "1.2.0",
+      "Category": "Debugger",
+      "Downloads": 15432,
+      "Rating": 4.7,
+      "Tags": ["debug", "breakpoints", "analysis"],
+      "Source": "RawrXD Official"
+    },
+    {
+      "Id": "official-python-autopilot",
+      "MarketplaceId": "official-python-autopilot",
+      "Name": "Python Autopilot",
+      "Description": "AI-guided assistants for linting, formatting, and refactoring Python projects.",
+      "Author": "RawrXD",
+      "Language": 1,
+      "Capabilities": 523,
+      "Version": "2.0.1",
+      "Category": "Productivity",
+      "Downloads": 40211,
+      "Rating": 4.9,
+      "Tags": ["python", "ai", "refactor"],
+      "Source": "RawrXD Official"
+    }
+  ]
+}

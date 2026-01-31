@@ -1,0 +1,1186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>RawrZ Control Panel</title>
+<style>
+  :root { 
+    --b:#111827; 
+    --fg:#111827; 
+    --mut:#6b7280; 
+    --bd:#e5e7eb; 
+    --bg:#ffffff; 
+    --chip:#f3f4f6;
+    --success:#10b981;
+    --error:#ef4444;
+    --warning:#f59e0b;
+    --info:#3b82f6;
+  }
+  
+  * { box-sizing: border-box; }
+  
+  body { 
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu; 
+    margin: 0; 
+    padding: 24px; 
+    color: var(--fg); 
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  
+  h1, h2 { margin: 0 0 8px; }
+  .mut { color: var(--mut); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .eng { border: 1px solid var(--bd); border-radius: 12px; padding: 16px; margin: 16px 0; }
+  .card { border: 1px solid var(--bd); border-radius: 12px; padding: 16px; margin: 12px 0; }
+  .inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  
+  label { 
+    display: block; 
+    font-size: 12px; 
+    color: var(--mut); 
+    margin-bottom: 6px; 
+    font-weight: 500;
+  }
+  
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%; 
+    padding: 8px 10px; 
+    border: 1px solid var(--bd); 
+    border-radius: 10px; 
+    font-family: inherit;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  
+  input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--info);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  textarea { min-height: 84px; resize: vertical; }
+  
+  button { 
+    padding: 8px 12px; 
+    border-radius: 10px; 
+    border: 1px solid var(--bd); 
+    background: var(--b); 
+    color: white; 
+    cursor: pointer; 
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  button:hover { background: #1f2937; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+  .chip { 
+    display: inline-block; 
+    background: var(--chip); 
+    border-radius: 999px; 
+    padding: 4px 10px; 
+    font-size: 12px; 
+    font-weight: 500;
+  }
+  
+  pre { 
+    background: #0b1020; 
+    color: #d4d4d4; 
+    padding: 12px; 
+    border-radius: 10px; 
+    overflow: auto; 
+    font-size: 13px;
+    line-height: 1.4;
+    max-height: 400px;
+  }
+  
+  .rowsp { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .err { color: var(--error); font-weight: 600; }
+  .success { color: var(--success); font-weight: 600; }
+  .warning { color: var(--warning); font-weight: 600; }
+  
+  .status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  
+  .status-success { background: var(--success); }
+  .status-error { background: var(--error); }
+  .status-warning { background: var(--warning); }
+  .status-info { background: var(--info); }
+  
+  .loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--bd);
+    border-radius: 50%;
+    border-top-color: var(--info);
+    animation: spin 1s ease-in-out infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .file-input-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+  }
+  
+  .file-input-wrapper input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+  
+  .file-input-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  
+  .file-input-display:hover {
+    border-color: var(--info);
+  }
+  
+  .file-input-display.has-file {
+    border-color: var(--success);
+    background: rgba(16, 185, 129, 0.05);
+  }
+  
+  .header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+  
+  .header h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 700;
+  }
+  
+  .header .mut {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .auth-section {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+  }
+  
+  .auth-section input {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--fg);
+  }
+  
+  .engine-header {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .action-card {
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px 0;
+    transition: all 0.2s;
+  }
+  
+  .action-card:hover {
+    border-color: var(--info);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .action-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  
+  .action-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  
+  .action-meta {
+    font-size: 12px;
+    color: var(--mut);
+    margin-top: 4px;
+  }
+  
+  .method-badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  
+  .method-get { background: var(--success); color: white; }
+  .method-post { background: var(--info); color: white; }
+  .method-put { background: var(--warning); color: white; }
+  .method-delete { background: var(--error); color: white; }
+  
+  .required-asterisk {
+    color: var(--error);
+  }
+  
+  .help-text {
+    font-size: 11px;
+    color: var(--mut);
+    margin-top: 4px;
+    font-style: italic;
+  }
+  
+  .result-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--bd);
+  }
+  
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  
+  .copy-btn {
+    background: var(--chip);
+    color: var(--mut);
+    border: 1px solid var(--bd);
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 6px;
+  }
+  
+  .copy-btn:hover {
+    background: var(--bd);
+  }
+  
+  .error-message {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: var(--error);
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+  }
+  
+  .success-message {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: var(--success);
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+  }
+  
+  @media (max-width: 768px) {
+    body { padding: 16px; }
+    .rowsp { flex-direction: column; align-items: flex-start; }
+    .inputs { grid-template-columns: 1fr; }
+    .header h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>RawrZ Control Panel</h1>
+      <div class="mut">Dynamic GUI • Auto-generated from engine manifests</div>
+    </div>
+    <div class="auth-section">
+      <div class="row">
+        <label class="mut">Authentication Token</label>
+        <input id="auth" type="text" placeholder="Bearer token" style="min-width: 320px; flex: 1;"/>
+        <button onclick="storeAuth()">Save</button>
+        <button onclick="clearAuth()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="gap: 12px">
+      <span class="chip"><a href="/health" target="_blank" style="color: inherit; text-decoration: none">GET /health</a></span>
+      <span class="chip"><a href="/static/panel.html" target="_blank" style="color: inherit; text-decoration: none">/panel</a></span>
+      <span class="chip" id="engine-count">Loading engines...</span>
+    </div>
+  </div>
+
+  <!-- WMIC Interface -->
+  <div class="card">
+    <h2>🔧 Universal WMIC Interface</h2>
+    <div class="mut">Cross-platform system management for Windows, Linux, and macOS</div>
+    
+    <div class="inputs">
+      <div>
+        <label>WMIC Class</label>
+        <select id="wmic-class" onchange="loadWmicProperties()">
+          <option value="">Select a class...</option>
+        </select>
+      </div>
+      <div>
+        <label>Properties (comma-separated)</label>
+        <input id="wmic-properties" type="text" placeholder="e.g., name,size,status">
+      </div>
+      <div>
+        <label>Where Clause</label>
+        <input id="wmic-where" type="text" placeholder="e.g., name='Windows'">
+      </div>
+      <div>
+        <label>Format</label>
+        <select id="wmic-format">
+          <option value="csv">CSV</option>
+          <option value="table">Table</option>
+          <option value="list">List</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="row" style="margin-top: 16px; gap: 12px">
+      <button onclick="executeWmicQuery()" class="method-get">Execute Query</button>
+      <button onclick="getSystemSummary()" class="method-get">System Summary</button>
+      <button onclick="getProcesses()" class="method-get">Processes</button>
+      <button onclick="getServices()" class="method-get">Services</button>
+      <button onclick="clearWmicCache()" class="method-post">Clear Cache</button>
+    </div>
+    
+    <div id="wmic-result" style="margin-top: 16px;"></div>
+  </div>
+
+  <div id="container"></div>
+
+  <script>
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => document.querySelectorAll(sel);
+  const container = $("#container");
+  const engineCount = $("#engine-count");
+
+  // Persist auth token locally
+  const LS_KEY = 'rawrz_auth';
+  function storeAuth() {
+    const token = $("#auth").value.trim();
+    if (token) {
+      localStorage.setItem(LS_KEY, token);
+      showMessage('Authentication token saved', 'success');
+    } else {
+      showMessage('Please enter a valid token', 'error');
+    }
+  }
+  
+  function clearAuth() {
+    localStorage.removeItem(LS_KEY);
+    $("#auth").value = '';
+    showMessage('Authentication token cleared', 'warning');
+  }
+  
+  (function restoreAuth() {
+    const t = localStorage.getItem(LS_KEY);
+    if (t) $("#auth").value = t;
+  })();
+
+  function showMessage(text, type = 'info') {
+    const message = document.createElement('div');
+    message.className = `${type}-message`;
+    message.textContent = text;
+    message.style.position = 'fixed';
+    message.style.top = '20px';
+    message.style.right = '20px';
+    message.style.zIndex = '1000';
+    message.style.maxWidth = '300px';
+    document.body.appendChild(message);
+    
+    setTimeout(() => {
+      message.remove();
+    }, 3000);
+  }
+
+  function fieldToInput(f) {
+    const id = `f_${Math.random().toString(36).slice(2)}`;
+    let el;
+    const base = document.createElement('div');
+    const label = document.createElement('label');
+    label.textContent = `${f.name}${f.required ? ' *' : ''}`;
+    if (f.help) { 
+      label.title = f.help; 
+    }
+    base.appendChild(label);
+
+    const common = (node) => {
+      node.name = f.name;
+      node.id = id;
+      if (f.placeholder) node.placeholder = f.placeholder;
+      if (f.maxLength) node.maxLength = f.maxLength;
+      return node;
+    };
+
+    if (f.type === 'file') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'file-input-wrapper';
+      
+      const display = document.createElement('div');
+      display.className = 'file-input-display';
+      display.innerHTML = '<span>Choose file...</span><span>📁</span>';
+      
+      el = common(document.createElement('input'));
+      el.type = 'file';
+      el.style.display = 'none';
+      
+      el.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          display.innerHTML = `<span>${file.name} (${formatFileSize(file.size)})</span><span>✅</span>`;
+          display.classList.add('has-file');
+        } else {
+          display.innerHTML = '<span>Choose file...</span><span>📁</span>';
+          display.classList.remove('has-file');
+        }
+      });
+      
+      display.addEventListener('click', () => el.click());
+      wrapper.appendChild(display);
+      wrapper.appendChild(el);
+      base.appendChild(wrapper);
+      return base;
+    } else if (f.type === 'textarea' || (f.type === 'text' && (f.multiline || f.maxLength > 2000))) {
+      el = common(document.createElement('textarea'));
+    } else if (f.type === 'select' && Array.isArray(f.options)) {
+      el = common(document.createElement('select'));
+      for (const opt of f.options) {
+        const o = document.createElement('option');
+        if (typeof opt === 'string') { 
+          o.value = opt; 
+          o.textContent = opt; 
+        } else { 
+          o.value = opt.value; 
+          o.textContent = opt.label || opt.value; 
+        }
+        el.appendChild(o);
+      }
+    } else if (f.type === 'checkbox') {
+      el = common(document.createElement('input'));
+      el.type = 'checkbox';
+    } else {
+      el = common(document.createElement('input'));
+      el.type = f.type || 'text';
+    }
+    
+    if (f.help && f.type !== 'file') {
+      const help = document.createElement('div');
+      help.className = 'help-text';
+      help.textContent = f.help;
+      base.appendChild(help);
+    }
+    
+    base.appendChild(el);
+    return base;
+  }
+
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  async function callEndpoint(action, payload, token) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    
+    // Handle file uploads
+    if (payload.file && payload.file instanceof File) {
+      const formData = new FormData();
+      for (const [key, value] of Object.entries(payload)) {
+        if (key === 'file') {
+          formData.append('file', value);
+        } else {
+          formData.append(key, value);
+        }
+      }
+      
+      const r = await fetch(action.path, {
+        method: action.method || 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: formData
+      });
+      const text = await r.text();
+      let json;
+      try { json = JSON.parse(text); } catch { /* not json */ }
+      return { ok: r.ok, status: r.status, body: json || text };
+    }
+    
+    const r = await fetch(action.path, {
+      method: action.method || 'POST',
+      headers,
+      body: action.method === 'GET' ? undefined : JSON.stringify(payload)
+    });
+    const text = await r.text();
+    let json;
+    try { json = JSON.parse(text); } catch { /* not json */ }
+    return { ok: r.ok, status: r.status, body: json || text };
+  }
+
+  function renderAction(engine, action) {
+    const wrap = document.createElement('div');
+    wrap.className = 'action-card';
+
+    const title = document.createElement('div');
+    title.className = 'action-header';
+    title.innerHTML = `
+      <div>
+        <div class="action-title">${action.summary || action.path}</div>
+        <div class="action-meta">${action.method || 'POST'} <code>${action.path}</code></div>
+      </div>
+      <div class="row">
+        <span class="method-badge method-${(action.method || 'post').toLowerCase()}">${action.method || 'POST'}</span>
+        <span class="chip">${engine.name}</span>
+      </div>`;
+    wrap.appendChild(title);
+
+    const form = document.createElement('form');
+    form.className = 'inputs';
+    for (const f of (action.inputs || [])) {
+      form.appendChild(fieldToInput(f));
+    }
+
+    const runRow = document.createElement('div');
+    runRow.className = 'row';
+    runRow.style.marginTop = '16px';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Execute';
+    btn.className = 'execute-btn';
+    runRow.appendChild(btn);
+    
+    const status = document.createElement('span');
+    status.className = 'mut';
+    runRow.appendChild(status);
+    wrap.appendChild(form);
+    wrap.appendChild(runRow);
+
+    const resultSection = document.createElement('div');
+    resultSection.className = 'result-section';
+    resultSection.style.display = 'none';
+    
+    const resultHeader = document.createElement('div');
+    resultHeader.className = 'result-header';
+    resultHeader.innerHTML = `
+      <span><strong>Result</strong></span>
+      <button class="copy-btn" onclick="copyResult(this)">Copy</button>
+    `;
+    
+    const out = document.createElement('pre');
+    out.textContent = '';
+    out.className = 'result-output';
+    
+    resultSection.appendChild(resultHeader);
+    resultSection.appendChild(out);
+    wrap.appendChild(resultSection);
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span> Executing...';
+      status.innerHTML = '<span class="status-indicator status-info"></span>Processing...';
+      resultSection.style.display = 'none';
+      
+      const token = $("#auth").value.trim();
+      const payload = {};
+      
+      for (const el of form.querySelectorAll('input, textarea, select')) {
+        if (el.type === 'checkbox') {
+          payload[el.name] = el.checked;
+        } else if (el.type === 'file') {
+          if (el.files && el.files[0]) {
+            payload[el.name] = el.files[0];
+          }
+        } else {
+          payload[el.name] = el.value;
+        }
+      }
+      
+      // Basic required check
+      const missing = (action.inputs || []).filter(f => f.required && !(payload[f.name] ?? '').toString().trim());
+      if (missing.length) {
+        status.innerHTML = '<span class="status-indicator status-error"></span>Missing required fields';
+        showMessage('Missing required fields: ' + missing.map(m => m.name).join(', '), 'error');
+        btn.disabled = false;
+        btn.textContent = 'Execute';
+        return;
+      }
+      
+      try {
+        const res = await callEndpoint(action, payload, token);
+        
+        if (res.ok) {
+          status.innerHTML = '<span class="status-indicator status-success"></span>Success';
+          showMessage(`Request completed successfully (${res.status})`, 'success');
+        } else {
+          status.innerHTML = '<span class="status-indicator status-error"></span>Error';
+          showMessage(`Request failed (${res.status})`, 'error');
+        }
+        
+        out.textContent = typeof res.body === 'string' ? res.body : JSON.stringify(res.body, null, 2);
+        resultSection.style.display = 'block';
+        
+      } catch (e) {
+        status.innerHTML = '<span class="status-indicator status-error"></span>Failed';
+        showMessage('Request failed: ' + e.message, 'error');
+        out.textContent = String(e);
+        resultSection.style.display = 'block';
+      }
+      
+      btn.disabled = false;
+      btn.textContent = 'Execute';
+    });
+
+    return wrap;
+  }
+
+  function copyResult(btn) {
+    const resultOutput = btn.parentElement.parentElement.querySelector('.result-output');
+    const text = resultOutput.textContent;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        showMessage('Result copied to clipboard', 'success');
+      }).catch(() => {
+        fallbackCopyTextToClipboard(text);
+      });
+    } else {
+      fallbackCopyTextToClipboard(text);
+    }
+  }
+
+  function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      document.execCommand('copy');
+      showMessage('Result copied to clipboard', 'success');
+    } catch (err) {
+      showMessage('Failed to copy result', 'error');
+    }
+    
+    document.body.removeChild(textArea);
+  }
+
+  async function bootstrap() {
+    const token = $("#auth").value.trim();
+    const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    
+    try {
+      const r = await fetch('/api/manifest', { headers });
+      if (!r.ok) {
+        container.innerHTML = `
+          <div class="card">
+            <div class="error-message">
+              Failed to fetch manifest (${r.status}). 
+              ${r.status === 401 ? 'Please enter a valid authentication token.' : 'Please check your connection and try again.'}
+            </div>
+          </div>`;
+        return;
+      }
+      
+      const manifest = await r.json();
+      engineCount.textContent = `${manifest.engines?.length || 0} engines loaded`;
+
+      const head = document.createElement('div');
+      head.className = 'card';
+      head.innerHTML = `
+        <div class="row">
+          <div>
+            <strong>${manifest.name || 'RawrZ HTTP Platform'}</strong>
+            <div class="mut">${manifest.version || ''}</div>
+          </div>
+          <span class="chip">${manifest.engines?.length || 0} engines</span>
+        </div>`;
+      container.appendChild(head);
+
+      if (!manifest.engines || manifest.engines.length === 0) {
+        const noEngines = document.createElement('div');
+        noEngines.className = 'card';
+        noEngines.innerHTML = `
+          <div class="warning-message">
+            No engines found. Please ensure engine files are properly configured in the <code>src/engines/</code> directory.
+          </div>`;
+        container.appendChild(noEngines);
+        return;
+      }
+
+      // Group engines by category
+      const groupedEngines = {};
+      (manifest.engines || []).forEach(engine => {
+        const group = engine.group || 'General';
+        if (!groupedEngines[group]) {
+          groupedEngines[group] = [];
+        }
+        groupedEngines[group].push(engine);
+      });
+
+      // Render grouped engines
+      Object.entries(groupedEngines).forEach(([groupName, engines]) => {
+        const groupHeader = document.createElement('div');
+        groupHeader.className = 'card';
+        groupHeader.innerHTML = `
+          <h2 style="margin: 0; color: var(--info); border-bottom: 2px solid var(--info); padding-bottom: 8px;">
+            ${groupName} (${engines.length} engine${engines.length !== 1 ? 's' : ''})
+          </h2>
+        `;
+        container.appendChild(groupHeader);
+
+        engines.forEach(engine => {
+          const ewrap = document.createElement('div');
+          ewrap.className = 'eng';
+          
+          const h = document.createElement('div');
+          h.className = 'engine-header';
+          h.innerHTML = `
+            <div class="rowsp">
+              <div>
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                  <span>${engine.icon || '🔧'}</span>
+                  ${engine.name || engine.id}
+                </h3>
+                <div class="mut">${engine.id}${engine.version ? ' • v' + engine.version : ''}</div>
+              </div>
+              <span class="chip">${engine.actions?.length || 0} actions</span>
+            </div>`;
+          ewrap.appendChild(h);
+
+          if (!engine.actions || engine.actions.length === 0) {
+            const noActions = document.createElement('div');
+            noActions.className = 'card';
+            noActions.innerHTML = `
+              <div class="warning-message">
+                No actions defined for this engine.
+              </div>`;
+            ewrap.appendChild(noActions);
+          } else {
+            (engine.actions || []).forEach(a => ewrap.appendChild(renderAction(engine, a)));
+          }
+          
+          container.appendChild(ewrap);
+        });
+      });
+      
+    } catch (e) {
+      container.innerHTML = `
+        <div class="card">
+          <div class="error-message">
+            Failed to load manifest: ${e.message}
+          </div>
+        </div>`;
+    }
+  }
+
+  // Auto-load when token changes
+  $("#auth").addEventListener('input', () => {
+    if ($("#auth").value.trim()) {
+      setTimeout(bootstrap, 500); // Debounce
+    }
+  });
+
+  // Initial load
+  bootstrap();
+
+  // WMIC Interface Functions
+  async function loadWmicClasses() {
+    try {
+      const response = await fetch('/api/wmic/classes', {
+        headers: { 'Authorization': `Bearer ${$("#auth").value}` }
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      const select = $("#wmic-class");
+      select.innerHTML = '<option value="">Select a class...</option>';
+      
+      data.classes.forEach(className => {
+        const option = document.createElement('option');
+        option.value = className;
+        option.textContent = className;
+        select.appendChild(option);
+      });
+      
+      console.log(`Loaded ${data.classes.length} WMIC classes for ${data.platform}`);
+    } catch (error) {
+      console.error('Failed to load WMIC classes:', error);
+      showWmicResult(`<div class="error-message">Failed to load WMIC classes: ${error.message}</div>`);
+    }
+  }
+
+  function loadWmicProperties() {
+    const className = $("#wmic-class").value;
+    const propertiesInput = $("#wmic-properties");
+    
+    // Common properties for different classes
+    const commonProperties = {
+      'computersystem': 'manufacturer,model,version,platform',
+      'cpu': 'name,cores,architecture,vendor',
+      'memorychip': 'total,free,used',
+      'logicaldisk': 'device,size,used,available,usage,mountpoint',
+      'networkadapter': 'name,type,status',
+      'process': 'pid,name,cpu,memory,user',
+      'service': 'name,status,description',
+      'product': 'name,version,publisher',
+      'useraccount': 'name,uid,gid,description,home,shell',
+      'bios': 'manufacturer,version,releaseDate',
+      'startup': 'name,command,location',
+      'environment': 'name,value'
+    };
+    
+    if (commonProperties[className]) {
+      propertiesInput.value = commonProperties[className];
+    } else {
+      propertiesInput.value = '';
+    }
+  }
+
+  async function executeWmicQuery() {
+    const className = $("#wmic-class").value;
+    const properties = $("#wmic-properties").value.split(',').map(p => p.trim()).filter(p => p);
+    const whereClause = $("#wmic-where").value;
+    const format = $("#wmic-format").value;
+    
+    if (!className) {
+      showWmicResult('<div class="warning-message">Please select a WMIC class</div>');
+      return;
+    }
+    
+    try {
+      showWmicResult('<div class="loading-message">Executing WMIC query...</div>');
+      
+      const response = await fetch('/api/wmic/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${$("#auth").value}`
+        },
+        body: JSON.stringify({
+          className,
+          properties,
+          whereClause,
+          format
+        })
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      displayWmicResult(data);
+    } catch (error) {
+      console.error('WMIC query failed:', error);
+      showWmicResult(`<div class="error-message">Query failed: ${error.message}</div>`);
+    }
+  }
+
+  async function getSystemSummary() {
+    try {
+      showWmicResult('<div class="loading-message">Loading system summary...</div>');
+      
+      const response = await fetch('/api/wmic/system-summary', {
+        headers: { 'Authorization': `Bearer ${$("#auth").value}` }
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      displaySystemSummary(data);
+    } catch (error) {
+      console.error('System summary failed:', error);
+      showWmicResult(`<div class="error-message">Failed to get system summary: ${error.message}</div>`);
+    }
+  }
+
+  async function getProcesses() {
+    try {
+      showWmicResult('<div class="loading-message">Loading processes...</div>');
+      
+      const response = await fetch('/api/wmic/processes', {
+        headers: { 'Authorization': `Bearer ${$("#auth").value}` }
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      displayProcesses(data);
+    } catch (error) {
+      console.error('Processes query failed:', error);
+      showWmicResult(`<div class="error-message">Failed to get processes: ${error.message}</div>`);
+    }
+  }
+
+  async function getServices() {
+    try {
+      showWmicResult('<div class="loading-message">Loading services...</div>');
+      
+      const response = await fetch('/api/wmic/services', {
+        headers: { 'Authorization': `Bearer ${$("#auth").value}` }
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      displayServices(data);
+    } catch (error) {
+      console.error('Services query failed:', error);
+      showWmicResult(`<div class="error-message">Failed to get services: ${error.message}</div>`);
+    }
+  }
+
+  async function clearWmicCache() {
+    try {
+      showWmicResult('<div class="loading-message">Clearing WMIC cache...</div>');
+      
+      const response = await fetch('/api/wmic/cache/clear', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${$("#auth").value}` }
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      showWmicResult(`<div class="success-message">✅ ${data.message}</div>`);
+    } catch (error) {
+      console.error('Cache clear failed:', error);
+      showWmicResult(`<div class="error-message">Failed to clear cache: ${error.message}</div>`);
+    }
+  }
+
+  function showWmicResult(html) {
+    $("#wmic-result").innerHTML = html;
+  }
+
+  function displayWmicResult(data) {
+    let html = `
+      <div class="card">
+        <div class="rowsp">
+          <h3>Query Result</h3>
+          <span class="chip">${data.platform} • ${new Date(data.timestamp).toLocaleString()}</span>
+        </div>
+        <div class="mut">Class: ${data.className} | Properties: ${data.properties.join(', ') || 'All'} | Format: ${data.format}</div>
+    `;
+    
+    if (Array.isArray(data.result)) {
+      if (data.result.length === 0) {
+        html += '<div class="warning-message">No results found</div>';
+      } else {
+        html += `<div class="mut">Found ${data.result.length} result(s)</div>`;
+        html += '<div style="margin-top: 12px; overflow-x: auto;">';
+        html += '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+        
+        // Create table header from first result
+        const firstResult = data.result[0];
+        if (firstResult && typeof firstResult === 'object') {
+          const headers = Object.keys(firstResult);
+          html += '<tr style="background: var(--chip);">';
+          headers.forEach(header => {
+            html += `<th style="padding: 8px; border: 1px solid var(--bd); text-align: left;">${header}</th>`;
+          });
+          html += '</tr>';
+          
+          // Add data rows
+          data.result.forEach((row, index) => {
+            html += `<tr style="background: ${index % 2 === 0 ? 'white' : 'var(--chip)'};">`;
+            headers.forEach(header => {
+              const value = row[header] || '';
+              html += `<td style="padding: 8px; border: 1px solid var(--bd);">${value}</td>`;
+            });
+            html += '</tr>';
+          });
+        }
+        
+        html += '</table></div>';
+      }
+    } else {
+      html += `<pre style="background: var(--chip); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 12px;">${JSON.stringify(data.result, null, 2)}</pre>`;
+    }
+    
+    html += '</div>';
+    showWmicResult(html);
+  }
+
+  function displaySystemSummary(data) {
+    let html = `
+      <div class="card">
+        <h3>System Summary</h3>
+        <div class="mut">Platform: ${data.platform} • ${new Date(data.timestamp).toLocaleString()}</div>
+    `;
+    
+    const summary = data.summary;
+    
+    // Computer System
+    if (summary.computerSystem && summary.computerSystem.length > 0) {
+      const system = summary.computerSystem[0];
+      html += `
+        <div style="margin: 12px 0;">
+          <h4>Computer System</h4>
+          <div class="row" style="gap: 16px; flex-wrap: wrap;">
+            <span class="chip">${system.manufacturer || system.Manufacturer || 'Unknown'}</span>
+            <span class="chip">${system.model || system.Model || 'Unknown'}</span>
+            <span class="chip">${system.version || system.Version || 'Unknown'}</span>
+          </div>
+        </div>
+      `;
+    }
+    
+    // CPU
+    if (summary.cpu && summary.cpu.length > 0) {
+      const cpu = summary.cpu[0];
+      html += `
+        <div style="margin: 12px 0;">
+          <h4>Processor</h4>
+          <div class="row" style="gap: 16px; flex-wrap: wrap;">
+            <span class="chip">${cpu.name || cpu.Name || 'Unknown'}</span>
+            <span class="chip">${cpu.cores || cpu.Cores || 'Unknown'} cores</span>
+            <span class="chip">${cpu.architecture || cpu.Architecture || 'Unknown'}</span>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Memory
+    if (summary.memory && summary.memory.length > 0) {
+      const memory = summary.memory[0];
+      html += `
+        <div style="margin: 12px 0;">
+          <h4>Memory</h4>
+          <div class="row" style="gap: 16px; flex-wrap: wrap;">
+            <span class="chip">Total: ${memory.total || memory.Total || 'Unknown'}</span>
+            <span class="chip">Free: ${memory.free || memory.Free || 'Unknown'}</span>
+            <span class="chip">Used: ${memory.used || memory.Used || 'Unknown'}</span>
+          </div>
+        </div>
+      `;
+    }
+    
+    html += '</div>';
+    showWmicResult(html);
+  }
+
+  function displayProcesses(data) {
+    let html = `
+      <div class="card">
+        <h3>Running Processes</h3>
+        <div class="mut">Platform: ${data.platform} • ${data.count} processes • ${new Date(data.timestamp).toLocaleString()}</div>
+    `;
+    
+    if (data.processes && data.processes.length > 0) {
+      html += '<div style="margin-top: 12px; overflow-x: auto;">';
+      html += '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+      html += '<tr style="background: var(--chip);">';
+      html += '<th style="padding: 8px; border: 1px solid var(--bd); text-align: left;">PID</th>';
+      html += '<th style="padding: 8px; border: 1px solid var(--bd); text-align: left;">Name</th>';
+      html += '<th style="padding: 8px; border: 1px solid var(--bd); text-align: left;">CPU</th>';
+      html += '<th style="padding: 8px; border: 1px solid var(--bd); text-align: left;">Memory</th>';
+      html += '<th style="padding: 8px; border: 1px solid var(--bd); text-align: left;">User</th>';
+      html += '</tr>';
+      
+      data.processes.forEach((process, index) => {
+        html += `<tr style="background: ${index % 2 === 0 ? 'white' : 'var(--chip)'};">`;
+        html += `<td style="padding: 8px; border: 1px solid var(--bd);">${process.pid || process.PID || ''}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid var(--bd);">${process.name || process.Name || ''}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid var(--bd);">${process.cpu || process.CPU || ''}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid var(--bd);">${process.memory || process.Memory || ''}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid var(--bd);">${process.user || process.User || ''}</td>`;
+        html += '</tr>';
+      });
+      
+      html += '</table></div>';
+    } else {
+      html += '<div class="warning-message">No processes found</div>';
+    }
+    
+    html += '</div>';
+    showWmicResult(html);
+  }
+
+  function displayServices(data) {
+    let html = `
+      <div class="card">
+        <h3>System Services</h3>
+        <div class="mut">Platform: ${data.platform} • ${data.count} services • ${new Date(data.timestamp).toLocaleString()}</div>
+    `;
+    
+    if (data.services && data.services.length > 0) {
+      html += '<div style="margin-top: 12px; overflow-x: auto;">';
+      html += '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+      html += '<tr style="background: var(--chip);">';
+      html += '<th style="padding: 8px; border: 1px solid var(--bd); text-align: left;">Name</th>';
+      html += '<th style="padding: 8px; border: 1px solid var(--bd); text-align: left;">Status</th>';
+      html += '<th style="padding: 8px; border: 1px solid var(--bd); text-align: left;">Description</th>';
+      html += '</tr>';
+      
+      data.services.forEach((service, index) => {
+        const status = service.status || service.Status || 'Unknown';
+        const statusColor = status.toLowerCase().includes('running') ? 'var(--success)' : 
+                           status.toLowerCase().includes('stopped') ? 'var(--error)' : 
+                           status.toLowerCase().includes('error') ? 'var(--error)' : 'var(--mut)';
+        
+        html += `<tr style="background: ${index % 2 === 0 ? 'white' : 'var(--chip)'};">`;
+        html += `<td style="padding: 8px; border: 1px solid var(--bd);">${service.name || service.Name || ''}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid var(--bd); color: ${statusColor};">${status}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid var(--bd);">${service.description || service.Description || ''}</td>`;
+        html += '</tr>';
+      });
+      
+      html += '</table></div>';
+    } else {
+      html += '<div class="warning-message">No services found</div>';
+    }
+    
+    html += '</div>';
+    showWmicResult(html);
+  }
+
+  // Load WMIC classes when page loads
+  document.addEventListener('DOMContentLoaded', () => {
+    if ($("#auth").value.trim()) {
+      loadWmicClasses();
+    }
+  });
+
+  // Load WMIC classes when auth token changes
+  $("#auth").addEventListener('input', () => {
+    if ($("#auth").value.trim()) {
+      setTimeout(loadWmicClasses, 500);
+    }
+  });
+  </script>
+</body>
+</html>

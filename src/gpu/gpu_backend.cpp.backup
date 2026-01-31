@@ -1,0 +1,200 @@
+#include "gpu_backend.h"
+#include "../gpu_masm/gpu_masm_bridge.h"
+#include <QDebug>
+
+// Static member initialization
+GpuBackend::Backend GpuBackend::s_currentBackend = GpuBackend::CPU;
+bool GpuBackend::s_initialized = false;
+
+bool GpuBackend::initialize(Backend backend)
+{
+    if (s_initialized && s_currentBackend == backend) {
+        qDebug() << "GPU backend already initialized:" << backendName(backend);
+        return true;
+    }
+
+    // Initialize GPU detection system first
+    if (GPU_Initialize() != 0) {
+        qWarning() << "Failed to initialize GPU detection system";
+        return initializeCpu();
+    }
+
+    // Detect available GPUs
+    int32_t gpuCount = GPU_Detect();
+    qInfo() << "Detected" << gpuCount << "GPU(s)";
+
+    // Map our backend enum to MASM backend codes (0=CPU, 1=Vulkan, 2=CUDA, 3=ROCm)
+    int64_t masmBackend = 0;
+    switch (backend) {
+    case Vulkan:
+        masmBackend = 1;
+        break;
+    case CUDA:
+        masmBackend = 2;
+        break;
+    case CPU:
+        masmBackend = 0;
+        break;
+    }
+
+    // Call MASM backend initialization
+    int64_t result = InitializeGPUBackend(masmBackend);
+    
+    if (result == 0) {
+        // Success - update state
+        s_currentBackend = backend;
+        s_initialized = true;
+bool GpuBackend::isBackendAvailable(Backend backend)
+{
+    // Initialize GPU detection if not already done
+    static bool detectionInitialized = false;
+    if (!detectionInitialized) {
+        GPU_Initialize();
+        GPU_Detect();
+        detectionInitialized = true;
+    }
+
+    int32_t gpuCount = GPU_GetDeviceCount();
+    
+    switch (backend) {
+    case Vulkan:
+        // Check if any GPU is available (Vulkan supports NVIDIA, AMD, Intel)
+        qDebug() << "Checking Vulkan availability...";
+        return gpuCount > 0;
+        
+    case CUDA:
+        // Check for NVIDIA GPU specifically
+        qDebug() << "Checking CUDA availability...";
+        for (int32_t i = 0; i < gpuCount; i++) {
+            GpuDeviceInfo devInfo;
+            if (GPU_GetDevice(i, &devInfo) == 0) {
+                // NVIDIA vendor ID is 0x10DE
+                if (devInfo.vendorId == 0x10DE) {
+                    return true;
+                }
+            }
+        }
+bool GpuBackend::initializeWithFallback()
+{
+    // Try Vulkan first (most compatible)
+    if (isBackendAvailable(Vulkan)) {
+        qInfo() << "Attempting Vulkan initialization...";
+        if (initialize(Vulkan)) {
+            return true;
+        }
+    }
+
+    // Fall back to CUDA (NVIDIA only)
+    if (isBackendAvailable(CUDA)) {
+        qInfo() << "Attempting CUDA initialization...";
+        if (initialize(CUDA)) {
+            return true;
+        }
+    }
+
+    // Final fallback to CPU
+    qWarning() << "No GPU backends available, falling back to CPU (slower performance)";
+    return initialize(CPU);
+}       return false;  // Assume not available for this example
+    case CPU:
+bool GpuBackend::initializeVulkan()
+{
+    qDebug() << "Attempting to initialize Vulkan...";
+    
+    // Create Vulkan instance through MASM
+    int64_t result = VK_CreateInstance();
+    if (result != 0) {
+        qWarning() << "Failed to create Vulkan instance";
+        return false;
+    }
+
+    // Enumerate physical devices
+    int32_t deviceCount = VK_EnumeratePhysicalDevices();
+    if (deviceCount == 0) {
+        qWarning() << "No Vulkan-compatible devices found";
+        VK_DestroyInstance();
+        return false;
+    }
+
+    qInfo() << "✓ Vulkan initialized successfully with" << deviceCount << "device(s)";
+    return true;
+}
+
+bool GpuBackend::initializeCuda()
+{
+    qDebug() << "Attempting to initialize CUDA...";
+    
+    // Initialize CUDA runtime through MASM
+    int64_t result = CUDA_Initialize();
+    if (result != 0) {
+        qWarning() << "Failed to initialize CUDA runtime";
+        return false;
+    }
+
+    // Get CUDA device count
+    int32_t deviceCount = CUDA_GetDeviceCount();
+    if (deviceCount == 0) {
+        qWarning() << "No CUDA-compatible devices found";
+        return false;
+    }
+
+    // Set device 0 as active
+    result = CUDA_SetDevice(0);
+    if (result != 0) {
+        qWarning() << "Failed to set CUDA device";
+        return false;
+    }
+
+    qInfo() << "✓ CUDA initialized successfully with" << deviceCount << "device(s)";
+    return true;
+}       s_currentBackend = Vulkan;
+        s_initialized = true;
+        qInfo() << "✓ GPU Backend initialized with Vulkan";
+        return true;
+    }
+
+    // Fall back to CUDA
+    if (isBackendAvailable(CUDA) && initializeCuda()) {
+        s_currentBackend = CUDA;
+        s_initialized = true;
+        qInfo() << "✓ GPU Backend initialized with CUDA";
+        return true;
+    }
+
+    // Final fallback to CPU
+    qWarning() << "No GPU backends available, falling back to CPU (slower performance)";
+    return initializeCpu();
+}
+
+bool GpuBackend::initializeVulkan()
+{
+    qDebug() << "Attempting to initialize Vulkan...";
+    
+    // In a real implementation, this would:
+    // 1. Call ggml_vk_init()
+    // 2. Return true on success
+    // 3. Return false on failure (no Vulkan support, etc.)
+    
+    // For this example, we'll simulate success
+    qInfo() << "✓ Vulkan initialized successfully";
+    return true;
+}
+
+bool GpuBackend::initializeCuda()
+{
+    qDebug() << "Attempting to initialize CUDA...";
+    
+    // In a real implementation, this would check for CUDA support
+    // For this example, we'll simulate failure
+    qWarning() << "CUDA not available";
+    return false;
+}
+
+bool GpuBackend::initializeCpu()
+{
+    qDebug() << "Initializing CPU backend...";
+    s_currentBackend = CPU;
+    s_initialized = true;
+    qInfo() << "✓ CPU backend ready (models will run on CPU - slower performance)";
+    return true;
+}

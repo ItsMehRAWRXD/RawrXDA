@@ -1,0 +1,500 @@
+﻿                    Write-Host "  Contrast Ratio: $($result1.ColorAnalysis.ContrastRatio):1" -ForegroundColor Cyan
+                    Write-Host "  WCAG AA Large: $(if ($result1.ColorAnalysis.MeetsWCAG_AA_Large) { '✓' } else { '✗' })" -ForegroundColor $(if ($result1.ColorAnalysis.MeetsWCAG_AA_Large) { 'Green' } else { 'Yellow' })
+                }
+                Write-Host ""
+                
+                # Test 2: Invisible control (hidden)
+                Write-Host "Test 2: Hidden control (Visible = false)" -ForegroundColor White
+                $testBox2 = New-Object System.Windows.Forms.RichTextBox
+                $testBox2.Text = "Hidden text"
+                $testBox2.Visible = $false
+                
+                $result2 = Test-TextVisibility -Control $testBox2
+                Write-Host "  Status: $(if ($result2.IsVisible) { '✓ VISIBLE' } else { '✗ NOT VISIBLE' })" -ForegroundColor $(if ($result2.IsVisible) { 'Green' } else { 'Yellow' })
+                Write-Host "  Reasons: $($result2.Reason -join ', ')" -ForegroundColor Gray
+                Write-Host ""
+                
+                # Test 3: Poor contrast
+                Write-Host "Test 3: Poor contrast (black on black)" -ForegroundColor White
+                $testBox3 = New-Object System.Windows.Forms.RichTextBox
+                $testBox3.Text = "Low contrast text"
+                $testBox3.BackColor = [System.Drawing.Color]::Black
+                $testBox3.ForeColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+                $testBox3.Visible = $true
+                $testBox3.Width = 300
+                $testBox3.Height = 100
+                
+                $result3 = Test-TextVisibility -Control $testBox3 -CheckContrast -MinimumContrast 3.0
+                Write-Host "  Status: $(if ($result3.IsVisible) { '✓ VISIBLE' } else { '✗ NOT VISIBLE' })" -ForegroundColor $(if ($result3.IsVisible) { 'Green' } else { 'Red' })
+                if ($result3.ColorAnalysis) {
+                    Write-Host "  Contrast Ratio: $($result3.ColorAnalysis.ContrastRatio):1 (needs 3.0:1)" -ForegroundColor Red
+                    Write-Host "  Recommendations:" -ForegroundColor Yellow
+                    foreach ($rec in $result3.Recommendations) {
+                        Write-Host "    - $rec" -ForegroundColor Yellow
+                    }
+                }
+                Write-Host ""
+                
+                # Test 4: Fix visibility automatically
+                Write-Host "Test 4: Auto-fix visibility with Ensure-TextVisibility" -ForegroundColor White
+                $testBox4 = New-Object System.Windows.Forms.RichTextBox
+                $testBox4.Text = "Text to be fixed"
+                $testBox4.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
+                $testBox4.ForeColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
+                $testBox4.Visible = $false
+                $testBox4.Width = 0
+                
+                Write-Host "  Before fix:" -ForegroundColor Gray
+                $beforeFix = Test-TextVisibility -Control $testBox4 -CheckContrast
+                Write-Host "    Visible: $($testBox4.Visible), Width: $($testBox4.Width), Contrast: $($beforeFix.ColorAnalysis.ContrastRatio):1" -ForegroundColor DarkGray
+                
+                $fixed = Ensure-TextVisibility -Control $testBox4 -ForceHighContrast
+                
+                Write-Host "  After fix:" -ForegroundColor Gray
+                $afterFix = Test-TextVisibility -Control $testBox4 -CheckContrast
+                Write-Host "    Visible: $($testBox4.Visible), Width: $($testBox4.Width), Contrast: $($afterFix.ColorAnalysis.ContrastRatio):1" -ForegroundColor Green
+                Write-Host "  Auto-fix: $(if ($fixed) { '✓ SUCCESS' } else { '✗ FAILED' })" -ForegroundColor $(if ($fixed) { 'Green' } else { 'Red' })
+                Write-Host ""
+                
+                # Cleanup
+                $testBox1.Dispose()
+                $testBox2.Dispose()
+                $testBox3.Dispose()
+                $testBox4.Dispose()
+                
+                Write-Host "✅ Text visibility detection test completed" -ForegroundColor Green
+                Write-Host "   4/4 test cases executed successfully" -ForegroundColor Gray
+                
+            }
+            catch {
+                Write-Host "✗ Error during visibility test: $_" -ForegroundColor Red
+                Write-Host $_.ScriptStackTrace -ForegroundColor DarkGray
+                $exitCode = 1
+            }
+        }
+        "check-editor-visibility" {
+            Write-Host "`n=== Editor Visibility Check ===" -ForegroundColor Cyan
+            Write-Host "Note: This command requires GUI mode to check actual editor control" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "To check editor visibility:" -ForegroundColor White
+            Write-Host "  1. Launch RawrXD in GUI mode" -ForegroundColor Gray
+            Write-Host "  2. Open Dev Console (F12)" -ForegroundColor Gray
+            Write-Host "  3. Run: Test-TextVisibility -Control `$script:editor -CheckContrast -Detailed" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "Example expected output:" -ForegroundColor White
+            Write-Host "  IsVisible: True" -ForegroundColor Green
+            Write-Host "  ContrastRatio: 11.54:1" -ForegroundColor Green
+            Write-Host "  MeetsWCAG_AA: True" -ForegroundColor Green
+        }
+        "list-editors" {
+            Write-Host "`n=== Available Editor Types ===" -ForegroundColor Cyan
+            try {
+                $availableEditors = Get-AvailableEditorTypes
+                if ($availableEditors.Count -gt 0) {
+                    foreach ($editor in $availableEditors) {
+                        $isActive = if ($editor.EditorType -eq $script:activeEditorType) { " (ACTIVE)" } else { "" }
+                        Write-Host ""
+                        Write-Host "🎯 $($editor.Name)$isActive" -ForegroundColor White
+                        Write-Host "   Type: $($editor.EditorType)" -ForegroundColor Gray
+                        Write-Host "   Description: $($editor.Description)" -ForegroundColor Gray
+                        
+                        # Show capabilities
+                        $caps = @()
+                        if ($editor.Capabilities -band $script:CAP_SYNTAX_HIGHLIGHT) { $caps += "Syntax Highlighting" }
+                        if ($editor.Capabilities -band $script:CAP_CODE_COMPLETION) { $caps += "Code Completion" }
+                        if ($editor.Capabilities -band $script:CAP_FORMATTING) { $caps += "Formatting" }
+                        if ($editor.Capabilities -band $script:CAP_FILE_OPERATIONS) { $caps += "File Operations" }
+                        if ($caps.Count -gt 0) {
+                            Write-Host "   Features: $($caps -join ', ')" -ForegroundColor DarkGreen
+                        }
+                    }
+                    
+                    Write-Host ""
+                    Write-Host "Use 'switch-editor <type>' to change editor type" -ForegroundColor Yellow
+                }
+                else {
+                    Write-Host "❌ No editor extensions loaded" -ForegroundColor Red
+                    $exitCode = 1
+                }
+            }
+            catch {
+                Write-Host "❌ Error listing editors: $_" -ForegroundColor Red
+                $exitCode = 1
+            }
+        }
+        "switch-editor" {
+            if (-not $SettingName) {
+                Write-Host "❌ Usage: switch-editor <EditorType>" -ForegroundColor Red
+                Write-Host "Available types: RichText, Basic, Advanced" -ForegroundColor Yellow
+                $exitCode = 1
+            }
+            else {
+                Write-Host "`n=== Switching Editor Type ===" -ForegroundColor Cyan
+                try {
+                    $editorType = $SettingName
+                    
+                    # Validate editor type
+                    $validTypes = @("RichText", "Basic", "Advanced")
+                    if ($editorType -notin $validTypes) {
+                        Write-Host "❌ Invalid editor type: $editorType" -ForegroundColor Red
+                        Write-Host "Available types: $($validTypes -join ', ')" -ForegroundColor Yellow
+                        $exitCode = 1
+                        break
+                    }
+                    
+                    Write-Host "Current editor type: $script:activeEditorType" -ForegroundColor Gray
+                    Write-Host "Switching to: $editorType" -ForegroundColor White
+                    
+                    # Note: This only changes the setting, actual switch happens on next GUI launch
+                    $script:activeEditorType = $editorType
+                    
+                    # Try to save setting if settings system is available
+                    try {
+                        if (Get-Command "Save-Settings" -ErrorAction SilentlyContinue) {
+                            # Update settings
+                            $script:settings.EditorType = $editorType
+                            Save-Settings
+                            Write-Host "✅ Editor preference saved to settings" -ForegroundColor Green
+                        }
+                    }
+                    catch {
+                        Write-Host "⚠️ Could not save editor preference: $_" -ForegroundColor Yellow
+                    }
+                    
+                    Write-Host "✅ Editor type will be $editorType on next GUI launch" -ForegroundColor Green
+                    Write-Host "Note: To switch in running GUI, use Dev Console (F12) and call Set-ActiveEditorType '$editorType'" -ForegroundColor Cyan
+                }
+                catch {
+                    Write-Host "❌ Error switching editor: $_" -ForegroundColor Red
+                    $exitCode = 1
+                }
+            }
+        }
+        "test-all-features" {
+            if (-not (Invoke-CliTestAllFeatures)) { $exitCode = 1 }
+        }
+        "get-settings" {
+            if ($SettingName) {
+                if (-not (Invoke-CliGetSettings -SettingName $SettingName)) { $exitCode = 1 }
+            }
+            else {
+                if (-not (Invoke-CliGetSettings)) { $exitCode = 1 }
+            }
+        }
+        "set-setting" {
+            if (-not $SettingName -or -not $SettingValue) {
+                Write-Host "Error: -SettingName and -SettingValue are required for set-setting command" -ForegroundColor Red
+                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command set-setting -SettingName <name> -SettingValue <value>" -ForegroundColor Yellow
+                $exitCode = 1
+            }
+            else {
+                if (-not (Invoke-CliSetSetting -SettingName $SettingName -SettingValue $SettingValue)) { $exitCode = 1 }
+            }
+        }
+        "test-gui" {
+            Write-Host "`n=== GUI Feature Tester ===" -ForegroundColor Cyan
+            Write-Host "Running comprehensive GUI tests..." -ForegroundColor Yellow
+            Write-Host ""
+            if (Test-Path "Test-All-GUI-Features.ps1") {
+                & ".\Test-All-GUI-Features.ps1" -RunTests
+            }
+            else {
+                Write-Host "Error: Test-All-GUI-Features.ps1 not found" -ForegroundColor Red
+                Write-Host "Please ensure the test script is in the same directory" -ForegroundColor Yellow
+                $exitCode = 1
+            }
+        }
+        "test-gui-interactive" {
+            Write-Host "`n=== Interactive GUI Tester ===" -ForegroundColor Cyan
+            Write-Host "This will test GUI features while the IDE is running" -ForegroundColor Yellow
+            Write-Host ""
+            if (Test-Path "Test-GUI-Interactive.ps1") {
+                & ".\Test-GUI-Interactive.ps1" -AutoTest
+            }
+            else {
+                Write-Host "Error: Test-GUI-Interactive.ps1 not found" -ForegroundColor Red
+                Write-Host "Please ensure the test script is in the same directory" -ForegroundColor Yellow
+                $exitCode = 1
+            }
+        }
+        "test-dropdowns" {
+            Write-Host "`n=== Dropdown Feature Tester ===" -ForegroundColor Cyan
+            Write-Host "Testing all dropdown menus and combo boxes..." -ForegroundColor Yellow
+            Write-Host ""
+            if (Test-Path "Test-Dropdown-Features.ps1") {
+                & ".\Test-Dropdown-Features.ps1" -RunAll
+            }
+            else {
+                Write-Host "Error: Test-Dropdown-Features.ps1 not found" -ForegroundColor Red
+                Write-Host "Please ensure the test script is in the same directory" -ForegroundColor Yellow
+                $exitCode = 1
+            }
+        }
+        # ============================================
+        # AGENTIC VIDEO ENGINE CLI COMMANDS
+        # ============================================
+        "video-search" {
+            Write-Host "`n=== 🎬 Agentic Video Search ===" -ForegroundColor Cyan
+            if (-not $Prompt) {
+                Write-Host "Error: -Prompt parameter required for search query" -ForegroundColor Red
+                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command video-search -Prompt 'python tutorial'" -ForegroundColor Yellow
+                Write-Host ""
+                Write-Host "Examples:" -ForegroundColor Gray
+                Write-Host "  .\RawrXD.ps1 -CliMode -Command video-search -Prompt 'machine learning'" -ForegroundColor Gray
+                Write-Host "  curl equivalent:" -ForegroundColor Gray
+                Write-Host "  curl -X POST http://localhost:11434/api/generate -d '{\"model\":\"llama2\",\"prompt\":\"search youtube for python\"}'" -ForegroundColor DarkGray
+                $exitCode = 1
+            }
+            else {
+                try {
+                    Write-Host "Searching YouTube for: '$Prompt'" -ForegroundColor Yellow
+                    Write-Host ""
+                    
+                    # Check if agentic modules are loaded
+                    if (Get-Command Search-YouTubeFromBrowser -ErrorAction SilentlyContinue) {
+                        $results = Search-YouTubeFromBrowser -Query $Prompt -MaxResults 10
+                        
+                        if ($results.Count -eq 0) {
+                            Write-Host "❌ No results found for '$Prompt'" -ForegroundColor Red
+                        }
+                        else {
+                            Write-Host "✅ Found $($results.Count) video(s):`n" -ForegroundColor Green
+                            
+                            $counter = 1
+                            foreach ($video in $results) {
+                                Write-Host "  $counter. 🎬 $($video.Title)" -ForegroundColor White
+                                Write-Host "     Channel: $($video.Channel) | Duration: $($video.Duration)" -ForegroundColor Gray
+                                Write-Host "     Views: $($video.Views) | URL: $($video.URL)" -ForegroundColor DarkGray
+                                Write-Host ""
+                                $counter++
+                            }
+                            
+                            Write-Host "💡 Use video-play or video-download with -URL parameter" -ForegroundColor Yellow
+                            
+                            # Output JSON for curl/API integration
+                            Write-Host "`n--- JSON Output (for curl/API) ---" -ForegroundColor Cyan
+                            $jsonOutput = @{
+                                status  = "success"
+                                query   = $Prompt
+                                count   = $results.Count
+                                results = $results
+                            } | ConvertTo-Json -Depth 5
+                            Write-Host $jsonOutput -ForegroundColor Gray
+                        }
+                    }
+                    else {
+                        Write-Host "❌ Video engine not loaded. Ensure BrowserAutomation.ps1 exists." -ForegroundColor Red
+                        $exitCode = 1
+                    }
+                }
+                catch {
+                    Write-Host "❌ Error searching: $($_.Exception.Message)" -ForegroundColor Red
+                    $exitCode = 1
+                }
+            }
+        }
+        "video-download" {
+            Write-Host "`n=== 📥 Agentic Video Download ===" -ForegroundColor Cyan
+            if (-not $URL) {
+                Write-Host "Error: -URL parameter required for download" -ForegroundColor Red
+                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command video-download -URL 'https://...' [-OutputPath 'C:\Videos']" -ForegroundColor Yellow
+                Write-Host ""
+                Write-Host "Examples:" -ForegroundColor Gray
+                Write-Host "  .\RawrXD.ps1 -CliMode -Command video-download -URL 'https://youtube.com/watch?v=...' -OutputPath '~/Videos'" -ForegroundColor Gray
+                $exitCode = 1
+            }
+            else {
+                try {
+                    $destination = if ($OutputPath) { $OutputPath } else { "$env:USERPROFILE\Videos" }
+                    Write-Host "Downloading: $URL" -ForegroundColor Yellow
+                    Write-Host "Destination: $destination" -ForegroundColor Gray
+                    Write-Host ""
+                    
+                    if (Get-Command Invoke-MultiThreadedDownload -ErrorAction SilentlyContinue) {
+                        # Extract filename from URL
+                        $filename = if ($URL -match 'v=([a-zA-Z0-9_-]+)') {
+                            "video_$($matches[1]).mp4"
+                        }
+                        else {
+                            "download_$(Get-Date -Format 'yyyyMMdd_HHmmss').mp4"
+                        }
+                        
+                        $outputFile = Join-Path $destination $filename
+                        
+                        Write-Host "⏳ Starting multi-threaded download (4 threads)..." -ForegroundColor Yellow
+                        
+                        $result = Invoke-MultiThreadedDownload -URL $URL -OutputPath $outputFile -ThreadCount 4 -MaxRetries 3
+                        
+                        if ($result.Success) {
+                            Write-Host ""
+                            Write-Host "✅ Download Complete!" -ForegroundColor Green
+                            Write-Host "   File: $($result.FilePath)" -ForegroundColor White
+                            Write-Host "   Size: $(Format-Bytes $result.FileSize)" -ForegroundColor Gray
+                            Write-Host "   Speed: $($result.Speed)" -ForegroundColor Gray
+                            Write-Host "   Duration: $($result.Duration)" -ForegroundColor Gray
+                            
+                            # JSON output for curl
+                            Write-Host "`n--- JSON Output ---" -ForegroundColor Cyan
+                            $result | ConvertTo-Json | Write-Host -ForegroundColor Gray
+                        }
+                        else {
+                            Write-Host "❌ Download failed: $($result.Error)" -ForegroundColor Red
+                            $exitCode = 1
+                        }
+                    }
+                    else {
+                        Write-Host "❌ Download manager not loaded. Ensure DownloadManager.ps1 exists." -ForegroundColor Red
+                        $exitCode = 1
+                    }
+                }
+                catch {
+                    Write-Host "❌ Error downloading: $($_.Exception.Message)" -ForegroundColor Red
+                    $exitCode = 1
+                }
+            }
+        }
+        "video-play" {
+            Write-Host "`n=== ▶️ Agentic Video Play ===" -ForegroundColor Cyan
+            if (-not $URL) {
+                Write-Host "Error: -URL parameter required for playback" -ForegroundColor Red
+                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command video-play -URL 'https://...'" -ForegroundColor Yellow
+                $exitCode = 1
+            }
+            else {
+                try {
+                    Write-Host "Opening video: $URL" -ForegroundColor Yellow
+                    
+                    # Open in default browser (CLI mode can't use embedded WebView2)
+                    Start-Process $URL
+                    
+                    Write-Host "✅ Video opened in default browser" -ForegroundColor Green
+                    Write-Host ""
+                    Write-Host "--- JSON Output ---" -ForegroundColor Cyan
+                    @{
+                        status = "success"
+                        action = "play"
+                        url    = $URL
+                        method = "default_browser"
+                    } | ConvertTo-Json | Write-Host -ForegroundColor Gray
+                }
+                catch {
+                    Write-Host "❌ Error playing: $($_.Exception.Message)" -ForegroundColor Red
+                    $exitCode = 1
+                }
+            }
+        }
+        "video-help" {
+            Write-Host "`n=== 🎬 Agentic Video Engine Help ===" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "COMMANDS:" -ForegroundColor Yellow
+            Write-Host "  video-search    Search YouTube for videos" -ForegroundColor White
+            Write-Host "  video-download  Download video from URL" -ForegroundColor White
+            Write-Host "  video-play      Play video in browser" -ForegroundColor White
+            Write-Host "  browser-navigate Open URL in browser" -ForegroundColor White
+            Write-Host "  browser-click   Click element by selector" -ForegroundColor White
+            Write-Host "  browser-screenshot Capture browser screenshot" -ForegroundColor White
+            Write-Host ""
+            Write-Host "PARAMETERS:" -ForegroundColor Yellow
+            Write-Host "  -Prompt     Search query (for video-search)" -ForegroundColor Gray
+            Write-Host "  -URL        Video/page URL (for download/play/navigate)" -ForegroundColor Gray
+            Write-Host "  -OutputPath Destination folder (for downloads)" -ForegroundColor Gray
+            Write-Host "  -Selector   CSS selector (for browser-click)" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "EXAMPLES:" -ForegroundColor Yellow
+            Write-Host "  # Search for videos" -ForegroundColor Gray
+            Write-Host "  .\RawrXD.ps1 -CliMode -Command video-search -Prompt 'powershell tutorial'" -ForegroundColor DarkGray
+            Write-Host ""
+            Write-Host "  # Download a video" -ForegroundColor Gray
+            Write-Host "  .\RawrXD.ps1 -CliMode -Command video-download -URL 'https://...' -OutputPath '~/Videos'" -ForegroundColor DarkGray
+            Write-Host ""
+            Write-Host "  # Play a video" -ForegroundColor Gray
+            Write-Host "  .\RawrXD.ps1 -CliMode -Command video-play -URL 'https://youtube.com/watch?v=...'" -ForegroundColor DarkGray
+            Write-Host ""
+            Write-Host "CURL INTEGRATION:" -ForegroundColor Yellow
+            Write-Host "  All commands output JSON for easy scripting/curl integration." -ForegroundColor Gray
+            Write-Host "  Pipe output through 'ConvertFrom-Json' for structured data." -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "GUI COMMANDS (in chat):" -ForegroundColor Yellow
+            Write-Host "  /search youtube <query>  - Search YouTube" -ForegroundColor Gray
+            Write-Host "  /download <url|number>   - Download video" -ForegroundColor Gray  
+            Write-Host "  /play <url|number>       - Play video" -ForegroundColor Gray
+            Write-Host "  /playlist create <topic> - Create playlist" -ForegroundColor Gray
+            Write-Host "  /video-help              - Show this help" -ForegroundColor Gray
+        }
+        "browser-navigate" {
+            Write-Host "`n=== 🌐 Browser Navigate ===" -ForegroundColor Cyan
+            if (-not $URL) {
+                Write-Host "Error: -URL parameter required" -ForegroundColor Red
+                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command browser-navigate -URL 'https://...'" -ForegroundColor Yellow
+                $exitCode = 1
+            }
+            else {
+                try {
+                    Write-Host "Opening: $URL" -ForegroundColor Yellow
+                    Start-Process $URL
+                    Write-Host "✅ URL opened in default browser" -ForegroundColor Green
+                    @{ status = "success"; action = "navigate"; url = $URL } | ConvertTo-Json | Write-Host -ForegroundColor Gray
+                }
+                catch {
+                    Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
+                    $exitCode = 1
+                }
+            }
+        }
+        "browser-screenshot" {
+            Write-Host "`n=== 📸 Browser Screenshot ===" -ForegroundColor Cyan
+            Write-Host "Note: Screenshots require GUI mode with WebView2" -ForegroundColor Yellow
+            Write-Host ""
+            if (Get-Command Get-BrowserScreenshot -ErrorAction SilentlyContinue) {
+                $outputFile = if ($OutputPath) { $OutputPath } else { "$env:TEMP\browser_screenshot_$(Get-Date -Format 'yyyyMMdd_HHmmss').png" }
+                try {
+                    $result = Get-BrowserScreenshot -OutputPath $outputFile
+                    if ($result) {
+                        Write-Host "✅ Screenshot saved: $outputFile" -ForegroundColor Green
+                        @{ status = "success"; path = $outputFile } | ConvertTo-Json | Write-Host -ForegroundColor Gray
+                    }
+                    else {
+                        Write-Host "❌ Screenshot failed (WebView2 not available in CLI mode)" -ForegroundColor Red
+                        $exitCode = 1
+                    }
+                }
+                catch {
+                    Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
+                    $exitCode = 1
+                }
+            }
+            else {
+                Write-Host "❌ BrowserAutomation module not loaded" -ForegroundColor Red
+                $exitCode = 1
+            }
+        }
+        "browser-click" {
+            Write-Host "`n=== 🖱️ Browser Click ===" -ForegroundColor Cyan
+            Write-Host "Note: Click requires GUI mode with WebView2" -ForegroundColor Yellow
+            if (-not $Selector) {
+                Write-Host "Error: -Selector parameter required (CSS selector)" -ForegroundColor Red
+                Write-Host "Usage: .\RawrXD.ps1 -CliMode -Command browser-click -Selector '#button-id'" -ForegroundColor Yellow
+                $exitCode = 1
+            }
+            else {
+                Write-Host "Selector: $Selector" -ForegroundColor Gray
+                Write-Host "⚠️ Browser click only works in GUI mode with active WebView2" -ForegroundColor Yellow
+                @{ status = "info"; message = "Click requires GUI mode"; selector = $Selector } | ConvertTo-Json | Write-Host -ForegroundColor Gray
+            }
+        }
+        "help" {
+            Show-CliHelp
+        }
+        default {
+            Write-Host "Error: Unknown command '$Command'" -ForegroundColor Red
+            Write-Host "Run with -Command help to see available commands" -ForegroundColor Yellow
+            $exitCode = 1
+        }
+    }
+    
+    Write-Host ""
+    exit $exitCode
+}
+
+
+

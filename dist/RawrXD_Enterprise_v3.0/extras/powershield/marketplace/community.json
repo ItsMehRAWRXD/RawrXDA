@@ -1,0 +1,210 @@
+{
+    "marketplace": {
+        "name": "RawrXD Community Marketplace",
+        "type": "community",
+        "version": "2.1.0",
+        "lastUpdated": "2025-11-27T10:30:00Z",
+        "totalItems": 24,
+        "categories": [
+            "Themes",
+            "Color Schemes",
+            "Snippets",
+            "Templates",
+            "Workflows",
+            "Keybindings",
+            "Settings",
+            "Macros",
+            "Productivity",
+            "Fun"
+        ],
+        "moderationLevel": "basic"
+    },
+    "content": [
+        {
+            "id": "neon-cyberpunk-theme",
+            "name": "Neon Cyberpunk",
+            "displayName": "Neon Cyberpunk Dark Theme",
+            "description": "Futuristic cyberpunk theme with neon highlights and dark backgrounds",
+            "contentType": "theme",
+            "category": "Themes",
+            "subcategory": "Dark Themes",
+            "author": {
+                "name": "CyberThemes",
+                "username": "cyberthemes_dev",
+                "avatar": "https://avatars.community.rawrxd.dev/cyberthemes.png",
+                "verified": true,
+                "badges": [
+                    "top-creator",
+                    "verified"
+                ]
+            },
+            "version": "1.3.2",
+            "tags": [
+                "cyberpunk",
+                "neon",
+                "dark",
+                "futuristic",
+                "glow"
+            ],
+            "languages": [
+                "all"
+            ],
+            "content": {
+                "body": "A stunning cyberpunk-inspired theme featuring electric blue and neon green syntax highlighting against a deep dark background. Perfect for night coding sessions.",
+                "files": [
+                    {
+                        "name": "neon-cyberpunk.json",
+                        "path": "themes/neon-cyberpunk.json",
+                        "language": "json",
+                        "content": "{\n  \"name\": \"Neon Cyberpunk\",\n  \"type\": \"dark\",\n  \"colors\": {\n    \"editor.background\": \"#0a0a0f\",\n    \"editor.foreground\": \"#00ff9f\",\n    \"editorCursor.foreground\": \"#ff0080\",\n    \"editor.selectionBackground\": \"#ff008040\"\n  },\n  \"tokenColors\": [\n    {\n      \"scope\": \"keyword\",\n      \"settings\": {\n        \"foreground\": \"#00d4ff\",\n        \"fontStyle\": \"bold\"\n      }\n    },\n    {\n      \"scope\": \"string\",\n      \"settings\": {\n        \"foreground\": \"#ff6b00\"\n      }\n    },\n    {\n      \"scope\": \"comment\",\n      \"settings\": {\n        \"foreground\": \"#4a9eff\",\n        \"fontStyle\": \"italic\"\n      }\n    }\n  ]\n}",
+                        "size": 512
+                    }
+                ],
+                "preview": {
+                    "images": [
+                        "https://preview.community.rawrxd.dev/neon-cyberpunk-1.png",
+                        "https://preview.community.rawrxd.dev/neon-cyberpunk-2.png"
+                    ]
+                }
+            },
+            "stats": {
+                "downloads": 15234,
+                "likes": 2156,
+                "shares": 234,
+                "rating": 4.8,
+                "ratingCount": 876
+            },
+            "social": {
+                "featured": true,
+                "trending": true
+            },
+            "moderation": {
+                "status": "approved",
+                "reviewedBy": "moderator_alex",
+                "reviewDate": "2025-11-15T14:30:00Z"
+            },
+            "license": "MIT",
+            "publishedDate": "2025-11-10T09:45:00Z",
+            "lastUpdated": "2025-11-25T16:20:00Z"
+        },
+        {
+            "id": "ocean-breeze-light",
+            "name": "Ocean Breeze",
+            "displayName": "Ocean Breeze Light Theme",
+            "description": "Calming light theme with ocean-inspired blues and soft whites",
+            "contentType": "theme",
+            "category": "Themes",
+            "subcategory": "Light Themes",
+            "author": {
+                "name": "SerenityThemes",
+                "username": "serenity_dev",
+                "verified": true,
+                "badges": [
+                    "contributor"
+                ]
+            },
+            "version": "2.1.0",
+            "tags": [
+                "light",
+                "ocean",
+                "calm",
+                "blue",
+                "peaceful"
+            ],
+            "languages": [
+                "all"
+            ],
+            "content": {
+                "body": "A soothing light theme inspired by ocean waves and sea breeze. Features soft blues, gentle whites, and calming contrast for comfortable daytime coding.",
+                "files": [
+                    {
+                        "name": "ocean-breeze.json",
+                        "path": "themes/ocean-breeze.json",
+                        "language": "json",
+                        "content": "{\n  \"name\": \"Ocean Breeze\",\n  \"type\": \"light\",\n  \"colors\": {\n    \"editor.background\": \"#f8fbff\",\n    \"editor.foreground\": \"#2c3e50\",\n    \"editorCursor.foreground\": \"#3498db\",\n    \"editor.selectionBackground\": \"#74b9ff40\"\n  }\n}",
+                        "size": 256
+                    }
+                ],
+                "preview": {
+                    "images": [
+                        "https://preview.community.rawrxd.dev/ocean-breeze-1.png"
+                    ]
+                }
+            },
+            "stats": {
+                "downloads": 8967,
+                "likes": 1234,
+                "shares": 145,
+                "rating": 4.6,
+                "ratingCount": 567
+            },
+            "social": {
+                "staffPick": true
+            },
+            "moderation": {
+                "status": "approved"
+            },
+            "license": "MIT",
+            "publishedDate": "2025-11-08T11:30:00Z",
+            "lastUpdated": "2025-11-20T14:45:00Z"
+        },
+        {
+            "id": "powershell-advanced-snippets",
+            "name": "PowerShell Advanced Snippets",
+            "displayName": "Advanced PowerShell Code Snippets",
+            "description": "Comprehensive collection of PowerShell snippets for automation and scripting",
+            "contentType": "snippet",
+            "category": "Snippets",
+            "subcategory": "PowerShell",
+            "author": {
+                "name": "PowerShellMaster",
+                "username": "ps_master_2025",
+                "verified": true,
+                "badges": [
+                    "top-creator",
+                    "contributor"
+                ]
+            },
+            "version": "3.4.1",
+            "tags": [
+                "powershell",
+                "automation",
+                "scripting",
+                "cmdlets",
+                "functions"
+            ],
+            "languages": [
+                "powershell"
+            ],
+            "content": {
+                "body": "Over 150 carefully crafted PowerShell snippets covering common automation tasks, error handling, module creation, and advanced scripting patterns.",
+                "files": [
+                    {
+                        "name": "powershell-snippets.json",
+                        "path": "snippets/powershell.json",
+                        "language": "json",
+                        "content": "{\n  \"Function with Error Handling\": {\n    \"prefix\": \"ps-func-error\",\n    \"body\": [\n      \"function ${1:FunctionName} {\",\n      \"    [CmdletBinding()]\",\n      \"    param(\",\n      \"        [Parameter(Mandatory = \\$true)]\",\n      \"        [string]\\$${2:ParameterName}\",\n      \"    )\",\n      \"    \",\n      \"    try {\",\n      \"        ${3:# Function logic here}\",\n      \"        Write-Verbose \\\"Executing ${1:FunctionName}...\\\"\",\n      \"        ${0}\",\n      \"    }\",\n      \"    catch {\",\n      \"        Write-Error \\\"Error in ${1:FunctionName}: \\$($_.Exception.Message)\\\"\",\n      \"        throw\",\n      \"    }\",\n      \"}\"\n    ],\n    \"description\": \"Creates a PowerShell function with proper error handling\"\n  },\n  \"Advanced Module Manifest\": {\n    \"prefix\": \"ps-module-manifest\",\n    \"body\": [\n      \"@{\",\n      \"    RootModule = '${1:ModuleName}.psm1'\",\n      \"    ModuleVersion = '${2:1.0.0}'\",\n      \"    GUID = '${3:$(New-Guid)}'\",\n      \"    Author = '${4:Your Name}'\",\n      \"    CompanyName = '${5:Your Company}'\",\n      \"    Copyright = '(c) $(Get-Date -Format yyyy) ${4:Your Name}. All rights reserved.'\",\n      \"    Description = '${6:Module Description}'\",\n      \"    PowerShellVersion = '5.1'\",\n      \"    FunctionsToExport = @('${7:Function1}', '${8:Function2}')\",\n      \"    CmdletsToExport = @()\",\n      \"    VariablesToExport = '*'\",\n      \"    AliasesToExport = @()\",\n      \"    Tags = @('${9:Tag1}', '${10:Tag2}')\",\n      \"    LicenseUri = '${11:https://github.com/user/repo/blob/main/LICENSE}'\",\n      \"    ProjectUri = '${12:https://github.com/user/repo}'\",\n      \"    RequiredModules = @()\",\n      \"}\"\n    ],\n    \"description\": \"Creates a comprehensive PowerShell module manifest\"\n  }\n}",
+                        "size": 1024
+                    }
+                ]
+            },
+            "stats": {
+                "downloads": 23456,
+                "likes": 3421,
+                "shares": 456,
+                "rating": 4.9,
+                "ratingCount": 1234
+            },
+            "social": {
+                "featured": true,
+                "communityChoice": true
+            },
+            "moderation": {
+                "status": "approved"
+            },
+            "license": "MIT",
+            "publishedDate": "2025-10-15T08:20:00Z",
+            "lastUpdated": "2025-11-22T10:15:00Z"
+        }
+    ]
+}

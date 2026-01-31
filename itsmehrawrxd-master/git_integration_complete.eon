@@ -1,0 +1,799 @@
+; git_integration_complete.eon
+; Comprehensive Git integration with visual diff for EON IDE
+; Complete Git workflow support with native visual diff viewer
+
+module GitIntegration
+
+; === Git Repository Manager ===
+class GitRepository {
+    var repo_path: string
+    var is_git_repo: bool
+    var current_branch: string
+    var status_cache: GitStatus
+    var diff_viewer: VisualDiffViewer
+    
+    function init(path: string) {
+        repo_path = path
+        is_git_repo = checkIfGitRepo()
+        diff_viewer = VisualDiffViewer()
+        refreshStatus()
+    }
+    
+    function checkIfGitRepo() -> bool {
+        var git_dir = repo_path + "/.git"
+        return directoryExists(git_dir)
+    }
+    
+    function initRepository() -> bool {
+        if (is_git_repo) {
+            println("Repository already initialized")
+            return true
+        }
+        
+        var result = executeGitCommand("init")
+        if (result.success) {
+            is_git_repo = true
+            println("Git repository initialized")
+            refreshStatus()
+        }
+        return result.success
+    }
+    
+    function cloneRepository(url: string, target_path: string) -> bool {
+        var command = "clone " + url + " " + target_path
+        var result = executeGitCommand(command)
+        
+        if (result.success) {
+            repo_path = target_path
+            is_git_repo = true
+            refreshStatus()
+        }
+        
+        return result.success
+    }
+    
+    function refreshStatus() {
+        if (!is_git_repo) return
+        
+        current_branch = getCurrentBranch()
+        status_cache = getStatus()
+    }
+    
+    function getCurrentBranch() -> string {
+        var result = executeGitCommand("branch --show-current")
+        return result.output.trim()
+    }
+    
+    function getStatus() -> GitStatus {
+        var result = executeGitCommand("status --porcelain")
+        var status = GitStatus()
+        
+        var lines = result.output.split("\n")
+        for line in lines {
+            if (line.length() > 3) {
+                var file_status = line.substring(0, 2)
+                var file_path = line.substring(3)
+                
+                var git_file = GitFile()
+                git_file.path = file_path
+                git_file.status = parseFileStatus(file_status)
+                
+                status.files.append(git_file)
+            }
+        }
+        
+        return status
+    }
+    
+    function parseFileStatus(status_code: string) -> GitFileStatus {
+        match status_code {
+            case "M ": return GitFileStatus.MODIFIED
+            case " M": return GitFileStatus.MODIFIED_UNSTAGED
+            case "A ": return GitFileStatus.ADDED
+            case "D ": return GitFileStatus.DELETED
+            case "R ": return GitFileStatus.RENAMED
+            case "C ": return GitFileStatus.COPIED
+            case "??": return GitFileStatus.UNTRACKED
+            case "!!": return GitFileStatus.IGNORED
+            default: return GitFileStatus.UNKNOWN
+        }
+    }
+    
+    function addFile(file_path: string) -> bool {
+        var command = "add " + escapeFilePath(file_path)
+        var result = executeGitCommand(command)
+        
+        if (result.success) {
+            refreshStatus()
+        }
+        
+        return result.success
+    }
+    
+    function addAllFiles() -> bool {
+        var result = executeGitCommand("add .")
+        
+        if (result.success) {
+            refreshStatus()
+        }
+        
+        return result.success
+    }
+    
+    function commitChanges(message: string) -> bool {
+        var escaped_message = "\"" + message.replace("\"", "\\\"") + "\""
+        var command = "commit -m " + escaped_message
+        var result = executeGitCommand(command)
+        
+        if (result.success) {
+            refreshStatus()
+        }
+        
+        return result.success
+    }
+    
+    function push(remote: string = "origin", branch: string = "") -> bool {
+        if (branch == "") {
+            branch = current_branch
+        }
+        
+        var command = "push " + remote + " " + branch
+        var result = executeGitCommand(command)
+        
+        return result.success
+    }
+    
+    function pull(remote: string = "origin", branch: string = "") -> bool {
+        if (branch == "") {
+            branch = current_branch
+        }
+        
+        var command = "pull " + remote + " " + branch
+        var result = executeGitCommand(command)
+        
+        if (result.success) {
+            refreshStatus()
+        }
+        
+        return result.success
+    }
+    
+    function createBranch(branch_name: string) -> bool {
+        var command = "checkout -b " + branch_name
+        var result = executeGitCommand(command)
+        
+        if (result.success) {
+            current_branch = branch_name
+        }
+        
+        return result.success
+    }
+    
+    function switchBranch(branch_name: string) -> bool {
+        var command = "checkout " + branch_name
+        var result = executeGitCommand(command)
+        
+        if (result.success) {
+            current_branch = branch_name
+            refreshStatus()
+        }
+        
+        return result.success
+    }
+    
+    function getBranches() -> Array<string> {
+        var result = executeGitCommand("branch")
+        var branches = Array<string>()
+        
+        var lines = result.output.split("\n")
+        for line in lines {
+            var branch = line.trim()
+            if (branch.startsWith("* ")) {
+                branch = branch.substring(2)
+            }
+            if (branch.length() > 0) {
+                branches.append(branch)
+            }
+        }
+        
+        return branches
+    }
+    
+    function getCommitHistory(limit: int = 50) -> Array<GitCommit> {
+        var command = "log --oneline -" + limit.toString()
+        var result = executeGitCommand(command)
+        var commits = Array<GitCommit>()
+        
+        var lines = result.output.split("\n")
+        for line in lines {
+            if (line.length() > 7) {
+                var space_pos = line.indexOf(" ")
+                if (space_pos > 0) {
+                    var commit = GitCommit()
+                    commit.hash = line.substring(0, space_pos)
+                    commit.message = line.substring(space_pos + 1)
+                    commits.append(commit)
+                }
+            }
+        }
+        
+        return commits
+    }
+    
+    function showFileDiff(file_path: string) -> string {
+        var command = "diff " + escapeFilePath(file_path)
+        var result = executeGitCommand(command)
+        return result.output
+    }
+    
+    function showStagedDiff(file_path: string) -> string {
+        var command = "diff --cached " + escapeFilePath(file_path)
+        var result = executeGitCommand(command)
+        return result.output
+    }
+    
+    function showVisualDiff(file_path: string) {
+        var diff_text = showFileDiff(file_path)
+        diff_viewer.showDiff(file_path, diff_text)
+    }
+    
+    function executeGitCommand(command: string) -> GitCommandResult {
+        var full_command = "git -C " + escapeFilePath(repo_path) + " " + command
+        
+        var result = GitCommandResult()
+        result.command = command
+        result.output = executeSystemCommand(full_command)
+        result.success = (getLastExitCode() == 0)
+        
+        return result
+    }
+    
+    function escapeFilePath(path: string) -> string {
+        return "\"" + path + "\""
+    }
+}
+
+; === Visual Diff Viewer ===
+class VisualDiffViewer {
+    var diff_window: Window
+    var left_panel: TextEditor
+    var right_panel: TextEditor
+    var diff_info: DiffInfo
+    
+    function init() {
+        createDiffWindow()
+    }
+    
+    function createDiffWindow() {
+        diff_window = Window("Git Diff Viewer", 1200, 800)
+        diff_window.setResizable(true)
+        
+        ; Create split layout
+        var splitter = HorizontalSplitter()
+        
+        ; Left panel (original)
+        left_panel = TextEditor()
+        left_panel.setReadOnly(true)
+        left_panel.setLineNumbers(true)
+        left_panel.setTitle("Original")
+        
+        ; Right panel (modified)
+        right_panel = TextEditor()
+        right_panel.setReadOnly(true)
+        right_panel.setLineNumbers(true)
+        right_panel.setTitle("Modified")
+        
+        splitter.addWidget(left_panel, 50)
+        splitter.addWidget(right_panel, 50)
+        
+        ; Add toolbar
+        var toolbar = createDiffToolbar()
+        
+        ; Layout
+        var layout = VerticalLayout()
+        layout.addWidget(toolbar)
+        layout.addWidget(splitter)
+        
+        diff_window.setLayout(layout)
+    }
+    
+    function createDiffToolbar() -> ToolBar {
+        var toolbar = ToolBar()
+        
+        ; Navigation buttons
+        toolbar.addAction("Previous Change", previousChange)
+        toolbar.addAction("Next Change", nextChange)
+        toolbar.addSeparator()
+        
+        ; View options
+        toolbar.addAction("Side by Side", setSideBySideView)
+        toolbar.addAction("Unified View", setUnifiedView)
+        toolbar.addSeparator()
+        
+        ; Diff options
+        toolbar.addAction("Ignore Whitespace", toggleIgnoreWhitespace)
+        toolbar.addAction("Word Diff", toggleWordDiff)
+        toolbar.addSeparator()
+        
+        ; Actions
+        toolbar.addAction("Refresh", refreshDiff)
+        toolbar.addAction("Copy Left to Right", copyLeftToRight)
+        toolbar.addAction("Copy Right to Left", copyRightToLeft)
+        
+        return toolbar
+    }
+    
+    function showDiff(file_path: string, diff_text: string) {
+        diff_info = parseDiffText(diff_text)
+        diff_info.file_path = file_path
+        
+        ; Load file contents
+        var original_content = loadOriginalFile(file_path)
+        var modified_content = loadModifiedFile(file_path)
+        
+        ; Set editor contents
+        left_panel.setText(original_content)
+        right_panel.setText(modified_content)
+        
+        ; Highlight differences
+        highlightDifferences()
+        
+        ; Update window title
+        diff_window.setTitle("Git Diff: " + file_path)
+        
+        ; Show window
+        diff_window.show()
+    }
+    
+    function parseDiffText(diff_text: string) -> DiffInfo {
+        var diff_info = DiffInfo()
+        var lines = diff_text.split("\n")
+        var current_hunk = DiffHunk()
+        var in_hunk = false
+        
+        for line in lines {
+            if (line.startsWith("@@")) {
+                if (in_hunk && current_hunk.lines.length() > 0) {
+                    diff_info.hunks.append(current_hunk)
+                }
+                
+                current_hunk = DiffHunk()
+                current_hunk.header = line
+                parseHunkHeader(line, current_hunk)
+                in_hunk = true
+                
+            } else if (in_hunk) {
+                var diff_line = DiffLine()
+                
+                if (line.startsWith("+")) {
+                    diff_line.type = DiffLineType.ADDED
+                    diff_line.content = line.substring(1)
+                    
+                } else if (line.startsWith("-")) {
+                    diff_line.type = DiffLineType.REMOVED
+                    diff_line.content = line.substring(1)
+                    
+                } else if (line.startsWith(" ")) {
+                    diff_line.type = DiffLineType.CONTEXT
+                    diff_line.content = line.substring(1)
+                    
+                } else {
+                    diff_line.type = DiffLineType.CONTEXT
+                    diff_line.content = line
+                }
+                
+                current_hunk.lines.append(diff_line)
+            }
+        }
+        
+        if (in_hunk && current_hunk.lines.length() > 0) {
+            diff_info.hunks.append(current_hunk)
+        }
+        
+        return diff_info
+    }
+    
+    function parseHunkHeader(header: string, hunk: DiffHunk) {
+        ; Parse @@ -start,count +start,count @@
+        var parts = header.split(" ")
+        if (parts.length() >= 3) {
+            ; Parse old range
+            var old_range = parts[1].substring(1) ; Remove '-'
+            var old_parts = old_range.split(",")
+            hunk.old_start = parseInt(old_parts[0])
+            hunk.old_count = (old_parts.length() > 1) ? parseInt(old_parts[1]) : 1
+            
+            ; Parse new range
+            var new_range = parts[2].substring(1) ; Remove '+'
+            var new_parts = new_range.split(",")
+            hunk.new_start = parseInt(new_parts[0])
+            hunk.new_count = (new_parts.length() > 1) ? parseInt(new_parts[1]) : 1
+        }
+    }
+    
+    function loadOriginalFile(file_path: string) -> string {
+        ; Load original version from git
+        var command = "git show HEAD:" + file_path
+        var content = executeSystemCommand(command)
+        return content
+    }
+    
+    function loadModifiedFile(file_path: string) -> string {
+        ; Load current working copy
+        return readFile(file_path)
+    }
+    
+    function highlightDifferences() {
+        ; Clear existing highlights
+        left_panel.clearHighlights()
+        right_panel.clearHighlights()
+        
+        var left_line = 1
+        var right_line = 1
+        
+        for hunk in diff_info.hunks {
+            ; Skip to hunk start
+            left_line = hunk.old_start
+            right_line = hunk.new_start
+            
+            for diff_line in hunk.lines {
+                match diff_line.type {
+                    case DiffLineType.ADDED:
+                        ; Highlight added line in right panel
+                        right_panel.highlightLine(right_line, Color.GREEN_BACKGROUND)
+                        right_line += 1
+                        
+                    case DiffLineType.REMOVED:
+                        ; Highlight removed line in left panel
+                        left_panel.highlightLine(left_line, Color.RED_BACKGROUND)
+                        left_line += 1
+                        
+                    case DiffLineType.CONTEXT:
+                        ; Both panels advance
+                        left_line += 1
+                        right_line += 1
+                }
+            }
+        }
+        
+        ; Sync scroll positions
+        syncScrollPositions()
+    }
+    
+    function syncScrollPositions() {
+        ; Keep both panels synchronized when scrolling
+        left_panel.onScroll = function(position: int) {
+            right_panel.setScrollPosition(position)
+        }
+        
+        right_panel.onScroll = function(position: int) {
+            left_panel.setScrollPosition(position)
+        }
+    }
+    
+    function previousChange() {
+        ; Navigate to previous diff hunk
+        var current_line = left_panel.getCurrentLine()
+        
+        for i in (diff_info.hunks.length() - 1)..0 {
+            var hunk = diff_info.hunks[i]
+            if (hunk.old_start < current_line) {
+                left_panel.goToLine(hunk.old_start)
+                right_panel.goToLine(hunk.new_start)
+                break
+            }
+        }
+    }
+    
+    function nextChange() {
+        ; Navigate to next diff hunk
+        var current_line = left_panel.getCurrentLine()
+        
+        for hunk in diff_info.hunks {
+            if (hunk.old_start > current_line) {
+                left_panel.goToLine(hunk.old_start)
+                right_panel.goToLine(hunk.new_start)
+                break
+            }
+        }
+    }
+}
+
+; === Git Status Panel ===
+class GitStatusPanel {
+    var panel: Widget
+    var file_list: ListWidget
+    var branch_label: Label
+    var commit_button: Button
+    var push_button: Button
+    var pull_button: Button
+    var repository: GitRepository
+    
+    function init(repo: GitRepository) {
+        repository = repo
+        createStatusPanel()
+        refreshDisplay()
+    }
+    
+    function createStatusPanel() {
+        panel = Widget()
+        var layout = VerticalLayout()
+        
+        ; Branch info
+        branch_label = Label("Branch: main")
+        layout.addWidget(branch_label)
+        
+        ; Action buttons
+        var button_layout = HorizontalLayout()
+        
+        commit_button = Button("Commit")
+        commit_button.onClick = commitChanges
+        
+        push_button = Button("Push")
+        push_button.onClick = pushChanges
+        
+        pull_button = Button("Pull")
+        pull_button.onClick = pullChanges
+        
+        button_layout.addWidget(commit_button)
+        button_layout.addWidget(push_button)
+        button_layout.addWidget(pull_button)
+        
+        layout.addWidget(button_layout)
+        
+        ; File status list
+        file_list = ListWidget()
+        file_list.onItemDoubleClick = showFileDiff
+        layout.addWidget(file_list)
+        
+        panel.setLayout(layout)
+    }
+    
+    function refreshDisplay() {
+        repository.refreshStatus()
+        
+        ; Update branch label
+        branch_label.setText("Branch: " + repository.current_branch)
+        
+        ; Update file list
+        file_list.clear()
+        
+        for git_file in repository.status_cache.files {
+            var item = ListItem()
+            item.setText(git_file.path)
+            item.setIcon(getStatusIcon(git_file.status))
+            item.setData(git_file)
+            
+            file_list.addItem(item)
+        }
+    }
+    
+    function getStatusIcon(status: GitFileStatus) -> Icon {
+        match status {
+            case GitFileStatus.MODIFIED: return Icon.MODIFIED
+            case GitFileStatus.ADDED: return Icon.ADDED
+            case GitFileStatus.DELETED: return Icon.DELETED
+            case GitFileStatus.UNTRACKED: return Icon.UNTRACKED
+            case GitFileStatus.RENAMED: return Icon.RENAMED
+            default: return Icon.UNKNOWN
+        }
+    }
+    
+    function showFileDiff(item: ListItem) {
+        var git_file = cast<GitFile>(item.getData())
+        repository.showVisualDiff(git_file.path)
+    }
+    
+    function commitChanges() {
+        var dialog = CommitDialog()
+        if (dialog.exec() == Dialog.ACCEPTED) {
+            var message = dialog.getCommitMessage()
+            if (repository.commitChanges(message)) {
+                showMessage("Commit successful!")
+                refreshDisplay()
+            } else {
+                showError("Commit failed!")
+            }
+        }
+    }
+    
+    function pushChanges() {
+        if (repository.push()) {
+            showMessage("Push successful!")
+        } else {
+            showError("Push failed!")
+        }
+    }
+    
+    function pullChanges() {
+        if (repository.pull()) {
+            showMessage("Pull successful!")
+            refreshDisplay()
+        } else {
+            showError("Pull failed!")
+        }
+    }
+}
+
+; === Git Commit Dialog ===
+class CommitDialog extends Dialog {
+    var message_editor: TextEditor
+    var commit_button: Button
+    var cancel_button: Button
+    
+    function init() {
+        setTitle("Commit Changes")
+        setSize(500, 300)
+        createUI()
+    }
+    
+    function createUI() {
+        var layout = VerticalLayout()
+        
+        ; Message editor
+        var label = Label("Commit Message:")
+        layout.addWidget(label)
+        
+        message_editor = TextEditor()
+        message_editor.setPlaceholderText("Enter commit message...")
+        layout.addWidget(message_editor)
+        
+        ; Buttons
+        var button_layout = HorizontalLayout()
+        
+        commit_button = Button("Commit")
+        commit_button.onClick = accept
+        
+        cancel_button = Button("Cancel")
+        cancel_button.onClick = reject
+        
+        button_layout.addWidget(commit_button)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addWidget(button_layout)
+        setLayout(layout)
+    }
+    
+    function getCommitMessage() -> string {
+        return message_editor.getText()
+    }
+}
+
+; === Data Structures ===
+enum GitFileStatus {
+    MODIFIED,
+    MODIFIED_UNSTAGED,
+    ADDED,
+    DELETED,
+    RENAMED,
+    COPIED,
+    UNTRACKED,
+    IGNORED,
+    UNKNOWN
+}
+
+enum DiffLineType {
+    ADDED,
+    REMOVED,
+    CONTEXT
+}
+
+class GitFile {
+    var path: string
+    var status: GitFileStatus
+}
+
+class GitStatus {
+    var files: Array<GitFile>
+    
+    function init() {
+        files = Array<GitFile>()
+    }
+}
+
+class GitCommit {
+    var hash: string
+    var message: string
+    var author: string
+    var date: string
+}
+
+class GitCommandResult {
+    var command: string
+    var output: string
+    var success: bool
+}
+
+class DiffLine {
+    var type: DiffLineType
+    var content: string
+}
+
+class DiffHunk {
+    var header: string
+    var old_start: int
+    var old_count: int
+    var new_start: int
+    var new_count: int
+    var lines: Array<DiffLine>
+    
+    function init() {
+        lines = Array<DiffLine>()
+    }
+}
+
+class DiffInfo {
+    var file_path: string
+    var hunks: Array<DiffHunk>
+    
+    function init() {
+        hunks = Array<DiffHunk>()
+    }
+}
+
+; === Git Integration Manager ===
+class GitIntegrationManager {
+    var repositories: Map<string, GitRepository>
+    var status_panel: GitStatusPanel
+    var diff_viewer: VisualDiffViewer
+    var current_repo: GitRepository
+    
+    function init() {
+        repositories = Map<string, GitRepository>()
+        diff_viewer = VisualDiffViewer()
+    }
+    
+    function openRepository(path: string) -> GitRepository {
+        if (!repositories.containsKey(path)) {
+            var repo = GitRepository(path)
+            repositories[path] = repo
+        }
+        
+        current_repo = repositories[path]
+        
+        if (status_panel != null) {
+            status_panel = GitStatusPanel(current_repo)
+        }
+        
+        return current_repo
+    }
+    
+    function getCurrentRepository() -> GitRepository {
+        return current_repo
+    }
+    
+    function getStatusPanel() -> GitStatusPanel {
+        return status_panel
+    }
+    
+    function getDiffViewer() -> VisualDiffViewer {
+        return diff_viewer
+    }
+}
+
+; === Utility Functions ===
+function executeSystemCommand(command: string) -> string {
+    ; Execute system command and return output
+    var process = Process()
+    process.start(command)
+    process.waitForFinished()
+    return process.readAllStandardOutput()
+}
+
+function getLastExitCode() -> int {
+    ; Get exit code of last executed command
+    return 0 ; Platform-specific implementation
+}
+
+function showMessage(message: string) {
+    println("INFO: " + message)
+}
+
+function showError(message: string) {
+    println("ERROR: " + message)
+}
+
+export GitIntegrationManager
+export GitRepository
+export VisualDiffViewer
+export GitStatusPanel

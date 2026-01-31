@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AI Chatbox</title>
+    <style>
+      body { margin: 0; padding: 10px; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; }
+      #chatlog { flex-grow: 1; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+      #chatInput { width: calc(100% - 70px); }
+      #sendBtn { width: 60px; }
+    </style>
+  </head>
+  <body>
+    <div id="chatlog"></div>
+    <input type="text" id="chatInput" placeholder="Type your message..." />
+    <button id="sendBtn">Send</button>
+    <script src="chatbox.js"></script>
+  </body>
+</html>

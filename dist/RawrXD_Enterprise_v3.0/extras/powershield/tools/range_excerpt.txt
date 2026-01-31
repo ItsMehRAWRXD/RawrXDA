@@ -1,0 +1,31 @@
+﻿    }
+    Update-ContextUsageDisplay
+
+    try {
+        $response = Send-OllamaRequest $enhancedPrompt $model
+        Add-ChatMessage -ChatBox $chatBox -Sender "AI" -Message $response
+        
+        # Update context usage after response
+        $responseSize = $response.Length
+        $global:ContextUsage.UsedContext += $responseSize
+        Update-ContextUsageDisplay
+        
+        # Save chat history after AI response
+        Save-ChatHistory
+    }
+    catch {
+        Add-ChatMessage -ChatBox $chatBox -Sender "Error" -Message "Error: $_"
+        Save-ChatHistory
+    }
+}
+
+# Browser Navigation Function
+function Open-Browser {
+    <#
+    .SYNOPSIS
+        Opens a URL in the embedded browser (FULLY FIXED)
+    .PARAMETER Url
+        The URL to navigate to
+    .DESCRIPTION
+        Comprehensive browser navigation with proper error handling,
+        WebView2/IE fallback support, and URL validation

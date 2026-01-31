@@ -1,0 +1,48 @@
+name: star5ide-platform
+region: nyc
+services:
+  - name: star5ide-backend
+    run_command: npm start
+    dockerfile_path: Dockerfile
+    http_port: 3001
+    source_dir: /
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    github:
+      repo: ItsMehRAWRXD/Star5IDE
+      branch: security/cleanup
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_AND_BUILD_TIME
+      - key: PORT
+        value: '3001'
+        scope: RUN_AND_BUILD_TIME
+      - key: MONGODB_URI
+        value: >-
+          mongodb+srv://garrettaosborne_db_user:bibbles11@cluster0.sjccoyd.mongodb.net/saas-app
+        scope: RUN_AND_BUILD_TIME
+      - key: JWT_SECRET
+        value: your-super-secret-jwt-key-change-in-production
+        scope: RUN_AND_BUILD_TIME
+      - key: FRONTEND_URL
+        value: https://screenpilot.dev
+        scope: RUN_AND_BUILD_TIME
+      - key: STRIPE_SECRET_KEY
+        value: sk_test_your_stripe_secret_key
+        scope: RUN_AND_BUILD_TIME
+      - key: SENDGRID_API_KEY
+        value: your_sendgrid_key
+        scope: RUN_AND_BUILD_TIME
+ingress:
+  rules:
+    - match:
+        path:
+          prefix: /
+      component:
+        name: star5ide-backend
+domains:
+  - domain: screenpilot.dev
+    type: PRIMARY
+  - domain: www.screenpilot.dev
+    type: ALIAS

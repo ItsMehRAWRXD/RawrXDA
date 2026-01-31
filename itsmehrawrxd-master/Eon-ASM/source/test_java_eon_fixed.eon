@@ -1,0 +1,4 @@
+def func main(a: int, b: int) -> int {
+    let x: int = a + ;b;
+    ret x;
+}

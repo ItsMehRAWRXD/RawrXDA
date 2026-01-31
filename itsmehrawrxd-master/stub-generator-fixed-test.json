@@ -1,0 +1,1 @@
+{"success":true,"data":{"id":"69617c9b-1866-4937-b1f5-63895ba6a259","target":"test-executable.exe","stubType":"cpp","encryptionMethod":"aes-256-gcm","outputPath":"test-executable_aes-256-gcm_stub.cpp","payloadSize":19,"encryptedSize":47,"features":{"antiDebug":true,"antiVM":true,"antiSandbox":true},"timestamp":"2025-09-20T00:48:38.684Z","duration":2}}

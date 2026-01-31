@@ -1,0 +1,1252 @@
+; custom_linker.eon
+; Custom linker for our toolchain - replaces external linkers
+; Handles object files, libraries, and creates final executables
+; Zero external dependencies - pure EON implementation
+
+module CustomLinker
+
+; === Custom Linker ===
+class CustomLinker {
+    var target_arch: string
+    var output_format: string
+    var object_files: Array<ObjectFile>
+    var libraries: Array<Library>
+    var symbol_table: Map<string, Symbol>
+    var relocation_table: Array<Relocation>
+    var output_sections: Array<Section>
+    var entry_point: string
+    var base_address: qword
+    
+    function init(architecture: string = "x86_64") {
+        target_arch = architecture
+        output_format = getOutputFormat(architecture)
+        object_files = Array<ObjectFile>()
+        libraries = Array<Library>()
+        symbol_table = Map<string, Symbol>()
+        relocation_table = Array<Relocation>()
+        output_sections = Array<Section>()
+        entry_point = "main"
+        base_address = getBaseAddress(architecture)
+        
+        println("Custom Linker initialized for " + architecture)
+    }
+    
+    function link(object_files: Array<string>, output_file: string, libraries: Array<string> = []) -> bool {
+        println("Starting custom linking process...")
+        
+        try {
+            ; Load object files
+            loadObjectFiles(object_files)
+            
+            ; Load libraries
+            loadLibraries(libraries)
+            
+            ; Resolve symbols
+            resolveSymbols()
+            
+            ; Apply relocations
+            applyRelocations()
+            
+            ; Create output sections
+            createOutputSections()
+            
+            ; Generate executable
+            generateExecutable(output_file)
+            
+            println(" Linking completed successfully!")
+            return true
+            
+        } catch (Exception e) {
+            println(" Linking failed: " + e.message)
+            return false
+        }
+    }
+    
+    function loadObjectFiles(file_paths: Array<string>) {
+        println("Loading object files...")
+        
+        for file_path in file_paths {
+            var object_file = ObjectFile()
+            object_file.loadFromFile(file_path)
+            object_files.append(object_file)
+            
+            println("  Loaded: " + file_path)
+        }
+    }
+    
+    function loadLibraries(lib_paths: Array<string>) {
+        println("Loading libraries...")
+        
+        for lib_path in lib_paths {
+            var library = Library()
+            library.loadFromFile(lib_path)
+            libraries.append(library)
+            
+            println("  Loaded: " + lib_path)
+        }
+    }
+    
+    function resolveSymbols() {
+        println("Resolving symbols...")
+        
+        ; First pass: collect all symbols
+        for object_file in object_files {
+            for symbol in object_file.symbols {
+                if (symbol_table.containsKey(symbol.name)) {
+                    ; Symbol already defined
+                    if (symbol.is_defined && symbol_table[symbol.name].is_defined) {
+                        throw Exception("Multiple definition of symbol: " + symbol.name)
+                    }
+                } else {
+                    symbol_table[symbol.name] = symbol
+                }
+            }
+        }
+        
+        ; Second pass: resolve undefined symbols from libraries
+        for library in libraries {
+            for symbol in library.symbols {
+                if (symbol_table.containsKey(symbol.name) && !symbol_table[symbol.name].is_defined) {
+                    symbol_table[symbol.name] = symbol
+                }
+            }
+        }
+        
+        ; Check for undefined symbols
+        for symbol_name in symbol_table.keys() {
+            var symbol = symbol_table[symbol_name]
+            if (!symbol.is_defined) {
+                throw Exception("Undefined symbol: " + symbol_name)
+            }
+        }
+        
+        println("All symbols resolved")
+    }
+    
+    function applyRelocations() {
+        println("Applying relocations...")
+        
+        for object_file in object_files {
+            for relocation in object_file.relocations {
+                var symbol = symbol_table[relocation.symbol_name]
+                var target_address = symbol.address
+                
+                ; Calculate relocation value
+                var relocation_value = calculateRelocationValue(relocation, target_address)
+                
+                ; Apply relocation to the data
+                applyRelocationToData(relocation, relocation_value)
+                
+                relocation_table.append(relocation)
+            }
+        }
+        
+        println("Relocations applied")
+    }
+    
+    function calculateRelocationValue(relocation: Relocation, target_address: qword) -> qword {
+        match relocation.type {
+            case RelocationType.ABSOLUTE:
+                return target_address
+                
+            case RelocationType.RELATIVE:
+                return target_address - (relocation.address + relocation.size)
+                
+            case RelocationType.PC_RELATIVE:
+                return target_address - relocation.address
+                
+            case RelocationType.GOT_ENTRY:
+                return getGOTEntry(target_address)
+                
+            case RelocationType.PLT_ENTRY:
+                return getPLTEntry(target_address)
+        }
+        
+        return 0
+    }
+    
+    function applyRelocationToData(relocation: Relocation, value: qword) {
+        ; Apply relocation value to the data at the specified address
+        var data = relocation.section.data
+        
+        for i in 0..relocation.size {
+            data[relocation.offset + i] = cast<byte>((value >> (i * 8)) & 0xFF)
+        }
+    }
+    
+    function createOutputSections() {
+        println("Creating output sections...")
+        
+        ; Create standard sections
+        createTextSection()
+        createDataSection()
+        createBssSection()
+        createRdataSection()
+        
+        ; Create architecture-specific sections
+        match target_arch {
+            case "x86_64":
+                createX64SpecificSections()
+            case "x86_32":
+                createX32SpecificSections()
+            case "arm64":
+                createARM64SpecificSections()
+        }
+    }
+    
+    function createTextSection() {
+        var text_section = Section()
+        text_section.name = ".text"
+        text_section.type = SectionType.CODE
+        text_section.address = base_address + 0x1000
+        text_section.flags = SectionFlags.EXECUTABLE | SectionFlags.READABLE
+        
+        ; Merge code from all object files
+        for object_file in object_files {
+            for section in object_file.sections {
+                if (section.type == SectionType.CODE) {
+                    text_section.data.extend(section.data)
+                }
+            }
+        }
+        
+        output_sections.append(text_section)
+    }
+    
+    function createDataSection() {
+        var data_section = Section()
+        data_section.name = ".data"
+        data_section.type = SectionType.DATA
+        data_section.address = base_address + 0x2000
+        data_section.flags = SectionFlags.READABLE | SectionFlags.WRITABLE
+        
+        ; Merge data from all object files
+        for object_file in object_files {
+            for section in object_file.sections {
+                if (section.type == SectionType.DATA) {
+                    data_section.data.extend(section.data)
+                }
+            }
+        }
+        
+        output_sections.append(data_section)
+    }
+    
+    function createBssSection() {
+        var bss_section = Section()
+        bss_section.name = ".bss"
+        bss_section.type = SectionType.BSS
+        bss_section.address = base_address + 0x3000
+        bss_section.flags = SectionFlags.READABLE | SectionFlags.WRITABLE
+        
+        ; Calculate BSS size
+        var bss_size = 0
+        for object_file in object_files {
+            for section in object_file.sections {
+                if (section.type == SectionType.BSS) {
+                    bss_size += section.size
+                }
+            }
+        }
+        
+        bss_section.size = bss_size
+        output_sections.append(bss_section)
+    }
+    
+    function createRdataSection() {
+        var rdata_section = Section()
+        rdata_section.name = ".rdata"
+        rdata_section.type = SectionType.READONLY_DATA
+        rdata_section.address = base_address + 0x4000
+        rdata_section.flags = SectionFlags.READABLE
+        
+        ; Merge read-only data from all object files
+        for object_file in object_files {
+            for section in object_file.sections {
+                if (section.type == SectionType.READONLY_DATA) {
+                    rdata_section.data.extend(section.data)
+                }
+            }
+        }
+        
+        output_sections.append(rdata_section)
+    }
+    
+    function createX64SpecificSections() {
+        ; Create x86-64 specific sections
+        createImportTable()
+        createExportTable()
+        createResourceTable()
+    }
+    
+    function createX32SpecificSections() {
+        ; Create x86-32 specific sections
+        createImportTable()
+        createExportTable()
+        createResourceTable()
+    }
+    
+    function createARM64SpecificSections() {
+        ; Create ARM64 specific sections
+        createGOTSection()
+        createPLTSection()
+        createDynamicSection()
+    }
+    
+    function createImportTable() {
+        var import_section = Section()
+        import_section.name = ".idata"
+        import_section.type = SectionType.IMPORT_TABLE
+        import_section.address = base_address + 0x5000
+        import_section.flags = SectionFlags.READABLE
+        
+        ; Generate import table
+        var import_data = generateImportTable()
+        import_section.data = import_data
+        
+        output_sections.append(import_section)
+    }
+    
+    function createExportTable() {
+        var export_section = Section()
+        export_section.name = ".edata"
+        export_section.type = SectionType.EXPORT_TABLE
+        export_section.address = base_address + 0x6000
+        export_section.flags = SectionFlags.READABLE
+        
+        ; Generate export table
+        var export_data = generateExportTable()
+        export_section.data = export_data
+        
+        output_sections.append(export_section)
+    }
+    
+    function createResourceTable() {
+        var resource_section = Section()
+        resource_section.name = ".rsrc"
+        resource_section.type = SectionType.RESOURCE_TABLE
+        resource_section.address = base_address + 0x7000
+        resource_section.flags = SectionFlags.READABLE
+        
+        ; Generate resource table
+        var resource_data = generateResourceTable()
+        resource_section.data = resource_data
+        
+        output_sections.append(resource_section)
+    }
+    
+    function createGOTSection() {
+        var got_section = Section()
+        got_section.name = ".got"
+        got_section.type = SectionType.GOT
+        got_section.address = base_address + 0x8000
+        got_section.flags = SectionFlags.READABLE | SectionFlags.WRITABLE
+        
+        ; Generate GOT
+        var got_data = generateGOT()
+        got_section.data = got_data
+        
+        output_sections.append(got_section)
+    }
+    
+    function createPLTSection() {
+        var plt_section = Section()
+        plt_section.name = ".plt"
+        plt_section.type = SectionType.PLT
+        plt_section.address = base_address + 0x9000
+        plt_section.flags = SectionFlags.EXECUTABLE | SectionFlags.READABLE
+        
+        ; Generate PLT
+        var plt_data = generatePLT()
+        plt_section.data = plt_data
+        
+        output_sections.append(plt_section)
+    }
+    
+    function createDynamicSection() {
+        var dynamic_section = Section()
+        dynamic_section.name = ".dynamic"
+        dynamic_section.type = SectionType.DYNAMIC
+        dynamic_section.address = base_address + 0xA000
+        dynamic_section.flags = SectionFlags.READABLE
+        
+        ; Generate dynamic section
+        var dynamic_data = generateDynamicSection()
+        dynamic_section.data = dynamic_data
+        
+        output_sections.append(dynamic_section)
+    }
+    
+    function generateImportTable() -> Array<byte> {
+        var import_data = Array<byte>()
+        
+        ; Generate import directory table
+        var import_dirs = getImportDirectories()
+        
+        for import_dir in import_dirs {
+            ; Import lookup table RVA
+            import_data.extend(struct.pack('<L', 0))
+            ; Time/date stamp
+            import_data.extend(struct.pack('<L', 0))
+            ; Forwarder chain
+            import_data.extend(struct.pack('<L', 0))
+            ; Name RVA
+            import_data.extend(struct.pack('<L', 0))
+            ; Import address table RVA
+            import_data.extend(struct.pack('<L', 0))
+        }
+        
+        ; Null terminator
+        import_data.extend(struct.pack('<L', 0))
+        import_data.extend(struct.pack('<L', 0))
+        import_data.extend(struct.pack('<L', 0))
+        import_data.extend(struct.pack('<L', 0))
+        import_data.extend(struct.pack('<L', 0))
+        
+        return import_data
+    }
+    
+    function generateExportTable() -> Array<byte> {
+        var export_data = Array<byte>()
+        
+        ; Export directory table
+        export_data.extend(struct.pack('<L', 0))  ; Export flags
+        export_data.extend(struct.pack('<L', 0))  ; Time/date stamp
+        export_data.extend(struct.pack('<H', 0))  ; Major version
+        export_data.extend(struct.pack('<H', 0))  ; Minor version
+        export_data.extend(struct.pack('<L', 0))  ; Name RVA
+        export_data.extend(struct.pack('<L', 0))  ; Ordinal base
+        export_data.extend(struct.pack('<L', 0))  ; Address table entries
+        export_data.extend(struct.pack('<L', 0))  ; Number of name pointers
+        export_data.extend(struct.pack('<L', 0))  ; Export address table RVA
+        export_data.extend(struct.pack('<L', 0))  ; Name pointer table RVA
+        export_data.extend(struct.pack('<L', 0))  ; Ordinal table RVA
+        
+        return export_data
+    }
+    
+    function generateResourceTable() -> Array<byte> {
+        var resource_data = Array<byte>()
+        
+        ; Resource directory table
+        resource_data.extend(struct.pack('<L', 0))  ; Characteristics
+        resource_data.extend(struct.pack('<L', 0))  ; Time/date stamp
+        resource_data.extend(struct.pack('<H', 0))  ; Major version
+        resource_data.extend(struct.pack('<H', 0))  ; Minor version
+        resource_data.extend(struct.pack('<H', 0))  ; Number of name entries
+        resource_data.extend(struct.pack('<H', 0))  ; Number of ID entries
+        
+        return resource_data
+    }
+    
+    function generateGOT() -> Array<byte> {
+        var got_data = Array<byte>()
+        
+        ; Generate GOT entries for global symbols
+        for symbol_name in symbol_table.keys() {
+            var symbol = symbol_table[symbol_name]
+            if (symbol.is_global) {
+                got_data.extend(struct.pack('<Q', symbol.address))
+            }
+        }
+        
+        return got_data
+    }
+    
+    function generatePLT() -> Array<byte> {
+        var plt_data = Array<byte>()
+        
+        ; Generate PLT entries for imported functions
+        for symbol_name in symbol_table.keys() {
+            var symbol = symbol_table[symbol_name]
+            if (symbol.is_imported) {
+                ; PLT entry
+                plt_data.extend([0xFF, 0x25])  ; jmp [rip+offset]
+                plt_data.extend(struct.pack('<L', 0))  ; Offset to GOT entry
+                plt_data.extend([0x68])  ; push immediate
+                plt_data.extend(struct.pack('<L', 0))  ; Relocation index
+                plt_data.extend([0xE9])  ; jmp
+                plt_data.extend(struct.pack('<L', 0))  ; Offset to resolver
+            }
+        }
+        
+        return plt_data
+    }
+    
+    function generateDynamicSection() -> Array<byte> {
+        var dynamic_data = Array<byte>()
+        
+        ; Dynamic section entries
+        dynamic_data.extend(struct.pack('<Q', 1))  ; DT_NEEDED
+        dynamic_data.extend(struct.pack('<Q', 0))  ; String table offset
+        
+        dynamic_data.extend(struct.pack('<Q', 2))  ; DT_PLTRELSZ
+        dynamic_data.extend(struct.pack('<Q', 0))  ; Size of PLT relocations
+        
+        dynamic_data.extend(struct.pack('<Q', 3))  ; DT_PLTGOT
+        dynamic_data.extend(struct.pack('<Q', 0))  ; Address of PLT/GOT
+        
+        ; Null terminator
+        dynamic_data.extend(struct.pack('<Q', 0))
+        dynamic_data.extend(struct.pack('<Q', 0))
+        
+        return dynamic_data
+    }
+    
+    function generateExecutable(output_file: string) {
+        println("Generating executable: " + output_file)
+        
+        match output_format {
+            case "pe64":
+                generatePE64Executable(output_file)
+            case "pe32":
+                generatePE32Executable(output_file)
+            case "elf64":
+                generateELF64Executable(output_file)
+            case "elf32":
+                generateELF32Executable(output_file)
+        }
+    }
+    
+    function generatePE64Executable(output_file: string) {
+        var pe_data = Array<byte>()
+        
+        ; DOS header
+        pe_data.extend(createDOSHeader())
+        
+        ; DOS stub
+        pe_data.extend(createDOSStub())
+        
+        ; Pad to PE header
+        while (pe_data.length() < 0x80) {
+            pe_data.append(0)
+        }
+        
+        ; PE signature
+        pe_data.extend(b'PE\x00\x00')
+        
+        ; COFF header
+        pe_data.extend(createCOFFHeader())
+        
+        ; Optional header
+        pe_data.extend(createPE64OptionalHeader())
+        
+        ; Section headers
+        pe_data.extend(createSectionHeaders())
+        
+        ; Pad to first section
+        while (pe_data.length() < 0x400) {
+            pe_data.append(0)
+        }
+        
+        ; Section data
+        for section in output_sections {
+            pe_data.extend(section.data)
+            
+            ; Pad to file alignment
+            while (pe_data.length() % 0x200 != 0) {
+                pe_data.append(0)
+            }
+        }
+        
+        ; Write file
+        writeBinaryFile(output_file, pe_data)
+    }
+    
+    function generatePE32Executable(output_file: string) {
+        ; Similar to PE64 but with 32-bit headers
+        var pe_data = Array<byte>()
+        
+        ; DOS header
+        pe_data.extend(createDOSHeader())
+        
+        ; DOS stub
+        pe_data.extend(createDOSStub())
+        
+        ; Pad to PE header
+        while (pe_data.length() < 0x80) {
+            pe_data.append(0)
+        }
+        
+        ; PE signature
+        pe_data.extend(b'PE\x00\x00')
+        
+        ; COFF header
+        pe_data.extend(createCOFFHeader())
+        
+        ; Optional header (32-bit)
+        pe_data.extend(createPE32OptionalHeader())
+        
+        ; Section headers
+        pe_data.extend(createSectionHeaders())
+        
+        ; Pad to first section
+        while (pe_data.length() < 0x400) {
+            pe_data.append(0)
+        }
+        
+        ; Section data
+        for section in output_sections {
+            pe_data.extend(section.data)
+            
+            ; Pad to file alignment
+            while (pe_data.length() % 0x200 != 0) {
+                pe_data.append(0)
+            }
+        }
+        
+        ; Write file
+        writeBinaryFile(output_file, pe_data)
+    }
+    
+    function generateELF64Executable(output_file: string) {
+        var elf_data = Array<byte>()
+        
+        ; ELF header
+        elf_data.extend(createELF64Header())
+        
+        ; Program headers
+        elf_data.extend(createELF64ProgramHeaders())
+        
+        ; Section data
+        for section in output_sections {
+            elf_data.extend(section.data)
+        }
+        
+        ; Section headers
+        elf_data.extend(createELF64SectionHeaders())
+        
+        ; Write file
+        writeBinaryFile(output_file, elf_data)
+    }
+    
+    function createDOSHeader() -> Array<byte> {
+        var dos_header = Array<byte>(64)
+        dos_header[0] = 0x4D  ; 'M'
+        dos_header[1] = 0x5A  ; 'Z'
+        dos_header[60] = 0x80  ; PE header offset
+        return dos_header
+    }
+    
+    function createDOSStub() -> Array<byte> {
+        return Array<byte>([
+            0x0e, 0x1f, 0xba, 0x0e, 0x00, 0xb4, 0x09, 0xcd,
+            0x21, 0xb8, 0x01, 0x4c, 0xcd, 0x21, 0x54, 0x68,
+            0x69, 0x73, 0x20, 0x70, 0x72, 0x6f, 0x67, 0x72,
+            0x61, 0x6d, 0x20, 0x63, 0x61, 0x6e, 0x6e, 0x6f,
+            0x74, 0x20, 0x62, 0x65, 0x20, 0x72, 0x75, 0x6e,
+            0x20, 0x69, 0x6e, 0x20, 0x44, 0x4f, 0x53, 0x20,
+            0x6d, 0x6f, 0x64, 0x65, 0x2e, 0x0d, 0x0d, 0x0a,
+            0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        ])
+    }
+    
+    function createCOFFHeader() -> Array<byte> {
+        var coff_header = Array<byte>()
+        
+        ; Machine type
+        match target_arch {
+            case "x86_64":
+                coff_header.extend(struct.pack('<H', 0x8664))
+            case "x86_32":
+                coff_header.extend(struct.pack('<H', 0x014C))
+            case "arm64":
+                coff_header.extend(struct.pack('<H', 0xAA64))
+        }
+        
+        ; Number of sections
+        coff_header.extend(struct.pack('<H', output_sections.length()))
+        
+        ; Timestamp
+        coff_header.extend(struct.pack('<L', int(time.time())))
+        
+        ; Symbol table
+        coff_header.extend(struct.pack('<L', 0))
+        coff_header.extend(struct.pack('<L', 0))
+        
+        ; Optional header size
+        match target_arch {
+            case "x86_64":
+                coff_header.extend(struct.pack('<H', 240))
+            case "x86_32":
+                coff_header.extend(struct.pack('<H', 224))
+        }
+        
+        ; Characteristics
+        var characteristics = 0x0102  ; EXECUTABLE_IMAGE
+        if (target_arch == "x86_64") {
+            characteristics |= 0x0020  ; LARGE_ADDRESS_AWARE
+        }
+        coff_header.extend(struct.pack('<H', characteristics))
+        
+        return coff_header
+    }
+    
+    function createPE64OptionalHeader() -> Array<byte> {
+        var optional_header = Array<byte>()
+        
+        ; Magic
+        optional_header.extend(struct.pack('<H', 0x020b))  ; PE32+
+        
+        ; Linker version
+        optional_header.extend(struct.pack('<BB', 14, 0))
+        
+        ; Code size
+        var code_size = 0
+        for section in output_sections {
+            if (section.type == SectionType.CODE) {
+                code_size += section.data.length()
+            }
+        }
+        optional_header.extend(struct.pack('<L', code_size))
+        
+        ; Data size
+        var data_size = 0
+        for section in output_sections {
+            if (section.type == SectionType.DATA) {
+                data_size += section.data.length()
+            }
+        }
+        optional_header.extend(struct.pack('<L', data_size))
+        
+        ; Uninitialized data size
+        optional_header.extend(struct.pack('<L', 0))
+        
+        ; Entry point
+        var entry_point_address = symbol_table[entry_point].address
+        optional_header.extend(struct.pack('<L', entry_point_address))
+        
+        ; Base of code
+        optional_header.extend(struct.pack('<L', base_address + 0x1000))
+        
+        ; Image base
+        optional_header.extend(struct.pack('<Q', base_address))
+        
+        ; Section alignment
+        optional_header.extend(struct.pack('<L', 0x1000))
+        
+        ; File alignment
+        optional_header.extend(struct.pack('<L', 0x200))
+        
+        ; OS version
+        optional_header.extend(struct.pack('<H', 10))
+        optional_header.extend(struct.pack('<H', 0))
+        
+        ; Image version
+        optional_header.extend(struct.pack('<H', 0))
+        optional_header.extend(struct.pack('<H', 0))
+        
+        ; Subsystem version
+        optional_header.extend(struct.pack('<H', 10))
+        optional_header.extend(struct.pack('<H', 0))
+        
+        ; Win32 version
+        optional_header.extend(struct.pack('<L', 0))
+        
+        ; Size of image
+        var image_size = base_address + 0x10000  ; Approximate
+        optional_header.extend(struct.pack('<L', image_size))
+        
+        ; Size of headers
+        optional_header.extend(struct.pack('<L', 0x400))
+        
+        ; Checksum
+        optional_header.extend(struct.pack('<L', 0))
+        
+        ; Subsystem
+        optional_header.extend(struct.pack('<H', 3))  ; Console
+        
+        ; DLL characteristics
+        optional_header.extend(struct.pack('<H', 0x0160))
+        
+        ; Stack and heap sizes
+        optional_header.extend(struct.pack('<Q', 0x100000))  ; Stack reserve
+        optional_header.extend(struct.pack('<Q', 0x1000))    ; Stack commit
+        optional_header.extend(struct.pack('<Q', 0x100000))  ; Heap reserve
+        optional_header.extend(struct.pack('<Q', 0x1000))    ; Heap commit
+        
+        ; Loader flags
+        optional_header.extend(struct.pack('<L', 0))
+        
+        ; Number of RVA and sizes
+        optional_header.extend(struct.pack('<L', 16))
+        
+        ; Data directories
+        for i in 0..16 {
+            optional_header.extend(struct.pack('<LL', 0, 0))
+        }
+        
+        return optional_header
+    }
+    
+    function createPE32OptionalHeader() -> Array<byte> {
+        var optional_header = Array<byte>()
+        
+        ; Magic
+        optional_header.extend(struct.pack('<H', 0x010b))  ; PE32
+        
+        ; Linker version
+        optional_header.extend(struct.pack('<BB', 14, 0))
+        
+        ; Code size
+        var code_size = 0
+        for section in output_sections {
+            if (section.type == SectionType.CODE) {
+                code_size += section.data.length()
+            }
+        }
+        optional_header.extend(struct.pack('<L', code_size))
+        
+        ; Data size
+        var data_size = 0
+        for section in output_sections {
+            if (section.type == SectionType.DATA) {
+                data_size += section.data.length()
+            }
+        }
+        optional_header.extend(struct.pack('<L', data_size))
+        
+        ; Uninitialized data size
+        optional_header.extend(struct.pack('<L', 0))
+        
+        ; Entry point
+        var entry_point_address = symbol_table[entry_point].address
+        optional_header.extend(struct.pack('<L', entry_point_address))
+        
+        ; Base of code
+        optional_header.extend(struct.pack('<L', base_address + 0x1000))
+        
+        ; Image base
+        optional_header.extend(struct.pack('<L', base_address))
+        
+        ; Section alignment
+        optional_header.extend(struct.pack('<L', 0x1000))
+        
+        ; File alignment
+        optional_header.extend(struct.pack('<L', 0x200))
+        
+        ; OS version
+        optional_header.extend(struct.pack('<H', 10))
+        optional_header.extend(struct.pack('<H', 0))
+        
+        ; Image version
+        optional_header.extend(struct.pack('<H', 0))
+        optional_header.extend(struct.pack('<H', 0))
+        
+        ; Subsystem version
+        optional_header.extend(struct.pack('<H', 10))
+        optional_header.extend(struct.pack('<H', 0))
+        
+        ; Win32 version
+        optional_header.extend(struct.pack('<L', 0))
+        
+        ; Size of image
+        var image_size = base_address + 0x10000  ; Approximate
+        optional_header.extend(struct.pack('<L', image_size))
+        
+        ; Size of headers
+        optional_header.extend(struct.pack('<L', 0x400))
+        
+        ; Checksum
+        optional_header.extend(struct.pack('<L', 0))
+        
+        ; Subsystem
+        optional_header.extend(struct.pack('<H', 3))  ; Console
+        
+        ; DLL characteristics
+        optional_header.extend(struct.pack('<H', 0x0160))
+        
+        ; Stack and heap sizes
+        optional_header.extend(struct.pack('<L', 0x100000))  ; Stack reserve
+        optional_header.extend(struct.pack('<L', 0x1000))    ; Stack commit
+        optional_header.extend(struct.pack('<L', 0x100000))  ; Heap reserve
+        optional_header.extend(struct.pack('<L', 0x1000))    ; Heap commit
+        
+        ; Loader flags
+        optional_header.extend(struct.pack('<L', 0))
+        
+        ; Number of RVA and sizes
+        optional_header.extend(struct.pack('<L', 16))
+        
+        ; Data directories
+        for i in 0..16 {
+            optional_header.extend(struct.pack('<LL', 0, 0))
+        }
+        
+        return optional_header
+    }
+    
+    function createSectionHeaders() -> Array<byte> {
+        var section_headers = Array<byte>()
+        
+        for section in output_sections {
+            ; Section name
+            var name_bytes = section.name.encode('ascii')
+            for i in 0..8 {
+                if (i < name_bytes.length()) {
+                    section_headers.append(name_bytes[i])
+                } else {
+                    section_headers.append(0)
+                }
+            }
+            
+            ; Virtual size
+            section_headers.extend(struct.pack('<L', section.data.length()))
+            
+            ; Virtual address
+            section_headers.extend(struct.pack('<L', section.address))
+            
+            ; Size of raw data
+            section_headers.extend(struct.pack('<L', section.data.length()))
+            
+            ; Pointer to raw data
+            section_headers.extend(struct.pack('<L', 0x400 + getSectionOffset(section)))
+            
+            ; Pointer to relocations
+            section_headers.extend(struct.pack('<L', 0))
+            
+            ; Pointer to line numbers
+            section_headers.extend(struct.pack('<L', 0))
+            
+            ; Number of relocations
+            section_headers.extend(struct.pack('<H', 0))
+            
+            ; Number of line numbers
+            section_headers.extend(struct.pack('<H', 0))
+            
+            ; Characteristics
+            var characteristics = 0
+            if (section.flags & SectionFlags.EXECUTABLE) {
+                characteristics |= 0x20000000
+            }
+            if (section.flags & SectionFlags.READABLE) {
+                characteristics |= 0x40000000
+            }
+            if (section.flags & SectionFlags.WRITABLE) {
+                characteristics |= 0x80000000
+            }
+            section_headers.extend(struct.pack('<L', characteristics))
+        }
+        
+        return section_headers
+    }
+    
+    function createELF64Header() -> Array<byte> {
+        var elf_header = Array<byte>()
+        
+        ; ELF magic
+        elf_header.extend([0x7F, 0x45, 0x4C, 0x46])  ; ELF
+        
+        ; Class (64-bit)
+        elf_header.append(2)
+        
+        ; Data (little-endian)
+        elf_header.append(1)
+        
+        ; Version
+        elf_header.append(1)
+        
+        ; OS/ABI
+        elf_header.append(0)
+        
+        ; ABI version
+        elf_header.append(0)
+        
+        ; Padding
+        for i in 0..7 {
+            elf_header.append(0)
+        }
+        
+        ; Type (executable)
+        elf_header.extend(struct.pack('<H', 2))
+        
+        ; Machine
+        match target_arch {
+            case "x86_64":
+                elf_header.extend(struct.pack('<H', 0x3E))
+            case "arm64":
+                elf_header.extend(struct.pack('<H', 0xB7))
+        }
+        
+        ; Version
+        elf_header.extend(struct.pack('<L', 1))
+        
+        ; Entry point
+        var entry_point_address = symbol_table[entry_point].address
+        elf_header.extend(struct.pack('<Q', entry_point_address))
+        
+        ; Program header offset
+        elf_header.extend(struct.pack('<Q', 0x40))
+        
+        ; Section header offset
+        elf_header.extend(struct.pack('<Q', 0x1000))
+        
+        ; Flags
+        elf_header.extend(struct.pack('<L', 0))
+        
+        ; ELF header size
+        elf_header.extend(struct.pack('<H', 64))
+        
+        ; Program header entry size
+        elf_header.extend(struct.pack('<H', 56))
+        
+        ; Program header entries
+        elf_header.extend(struct.pack('<H', 1))
+        
+        ; Section header entry size
+        elf_header.extend(struct.pack('<H', 64))
+        
+        ; Section header entries
+        elf_header.extend(struct.pack('<H', output_sections.length()))
+        
+        ; Section header string table index
+        elf_header.extend(struct.pack('<H', 0))
+        
+        return elf_header
+    }
+    
+    function createELF64ProgramHeaders() -> Array<byte> {
+        var program_headers = Array<byte>()
+        
+        ; Program header entry
+        program_headers.extend(struct.pack('<L', 1))  ; PT_LOAD
+        program_headers.extend(struct.pack('<L', 7))  ; PF_X | PF_W | PF_R
+        program_headers.extend(struct.pack('<Q', 0x400))  ; Offset
+        program_headers.extend(struct.pack('<Q', base_address))  ; Virtual address
+        program_headers.extend(struct.pack('<Q', base_address))  ; Physical address
+        program_headers.extend(struct.pack('<Q', 0x1000))  ; File size
+        program_headers.extend(struct.pack('<Q', 0x1000))  ; Memory size
+        program_headers.extend(struct.pack('<Q', 0x1000))  ; Alignment
+        
+        return program_headers
+    }
+    
+    function createELF64SectionHeaders() -> Array<byte> {
+        var section_headers = Array<byte>()
+        
+        ; Null section header
+        for i in 0..64 {
+            section_headers.append(0)
+        }
+        
+        ; Section headers for each section
+        for section in output_sections {
+            ; Section name offset
+            section_headers.extend(struct.pack('<L', 0))
+            
+            ; Section type
+            var section_type = 0
+            match section.type {
+                case SectionType.CODE:
+                    section_type = 1  ; SHT_PROGBITS
+                case SectionType.DATA:
+                    section_type = 1  ; SHT_PROGBITS
+                case SectionType.BSS:
+                    section_type = 8  ; SHT_NOBITS
+                case SectionType.READONLY_DATA:
+                    section_type = 1  ; SHT_PROGBITS
+            }
+            section_headers.extend(struct.pack('<L', section_type))
+            
+            ; Section flags
+            var flags = 0
+            if (section.flags & SectionFlags.EXECUTABLE) {
+                flags |= 0x4  ; SHF_EXECINSTR
+            }
+            if (section.flags & SectionFlags.READABLE) {
+                flags |= 0x2  ; SHF_ALLOC
+            }
+            if (section.flags & SectionFlags.WRITABLE) {
+                flags |= 0x1  ; SHF_WRITE
+            }
+            section_headers.extend(struct.pack('<Q', flags))
+            
+            ; Virtual address
+            section_headers.extend(struct.pack('<Q', section.address))
+            
+            ; File offset
+            section_headers.extend(struct.pack('<Q', 0x1000))
+            
+            ; Section size
+            section_headers.extend(struct.pack('<Q', section.data.length()))
+            
+            ; Section link
+            section_headers.extend(struct.pack('<L', 0))
+            
+            ; Section info
+            section_headers.extend(struct.pack('<L', 0))
+            
+            ; Section alignment
+            section_headers.extend(struct.pack('<Q', 0x1000))
+            
+            ; Section entry size
+            section_headers.extend(struct.pack('<Q', 0))
+        }
+        
+        return section_headers
+    }
+    
+    function getBaseAddress(architecture: string) -> qword {
+        match architecture {
+            case "x86_64":
+                return 0x140000000
+            case "x86_32":
+                return 0x400000
+            case "arm64":
+                return 0x400000
+            default:
+                return 0x400000
+        }
+    }
+    
+    function getOutputFormat(architecture: string) -> string {
+        match architecture {
+            case "x86_64":
+                return "pe64"
+            case "x86_32":
+                return "pe32"
+            case "arm64":
+                return "elf64"
+            default:
+                return "pe64"
+        }
+    }
+    
+    function getImportDirectories() -> Array<string> {
+        var import_dirs = Array<string>()
+        import_dirs.append("kernel32.dll")
+        import_dirs.append("user32.dll")
+        return import_dirs
+    }
+    
+    function getGOTEntry(address: qword) -> qword {
+        ; Return GOT entry address
+        return base_address + 0x8000
+    }
+    
+    function getPLTEntry(address: qword) -> qword {
+        ; Return PLT entry address
+        return base_address + 0x9000
+    }
+    
+    function getSectionOffset(section: Section) -> int {
+        var offset = 0
+        for s in output_sections {
+            if (s == section) {
+                break
+            }
+            offset += s.data.length()
+        }
+        return offset
+    }
+    
+    function writeBinaryFile(filename: string, data: Array<byte>) {
+        var file = File()
+        file.open(filename, "wb")
+        file.write(data)
+        file.close()
+    }
+}
+
+; === Data Structures ===
+enum SectionType {
+    CODE,
+    DATA,
+    BSS,
+    READONLY_DATA,
+    IMPORT_TABLE,
+    EXPORT_TABLE,
+    RESOURCE_TABLE,
+    GOT,
+    PLT,
+    DYNAMIC
+}
+
+enum SectionFlags {
+    EXECUTABLE = 1,
+    READABLE = 2,
+    WRITABLE = 4
+}
+
+enum RelocationType {
+    ABSOLUTE,
+    RELATIVE,
+    PC_RELATIVE,
+    GOT_ENTRY,
+    PLT_ENTRY
+}
+
+class ObjectFile {
+    var filename: string
+    var sections: Array<Section>
+    var symbols: Array<Symbol>
+    var relocations: Array<Relocation>
+    
+    function init() {
+        sections = Array<Section>()
+        symbols = Array<Symbol>()
+        relocations = Array<Relocation>()
+    }
+    
+    function loadFromFile(filename: string) {
+        this.filename = filename
+        ; Load object file format (simplified)
+        ; In real implementation, would parse COFF, ELF, etc.
+    }
+}
+
+class Library {
+    var filename: string
+    var symbols: Array<Symbol>
+    
+    function init() {
+        symbols = Array<Symbol>()
+    }
+    
+    function loadFromFile(filename: string) {
+        this.filename = filename
+        ; Load library format (simplified)
+        ; In real implementation, would parse .lib, .a, etc.
+    }
+}
+
+class Section {
+    var name: string
+    var type: SectionType
+    var address: qword
+    var size: int
+    var flags: int
+    var data: Array<byte>
+    
+    function init() {
+        data = Array<byte>()
+    }
+}
+
+class Symbol {
+    var name: string
+    var address: qword
+    var size: int
+    var is_defined: bool
+    var is_global: bool
+    var is_imported: bool
+    var section: string
+}
+
+class Relocation {
+    var address: qword
+    var offset: int
+    var symbol_name: string
+    var type: RelocationType
+    var size: int
+    var section: Section
+}
+
+; === Main Linker Function ===
+function linkObjects(object_files: Array<string>, output_file: string, target_arch: string = "x86_64", libraries: Array<string> = []) -> bool {
+    var linker = CustomLinker(target_arch)
+    return linker.link(object_files, output_file, libraries)
+}
+
+export CustomLinker
+export linkObjects

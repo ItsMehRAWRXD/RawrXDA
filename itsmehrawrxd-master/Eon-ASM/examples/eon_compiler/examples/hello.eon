@@ -1,0 +1,8 @@
+// Hello World example in EON
+def func main() -> int {
+    let x: int = 5
+    let y: int = 10
+    let result = x + y
+    ret result
+};
+;

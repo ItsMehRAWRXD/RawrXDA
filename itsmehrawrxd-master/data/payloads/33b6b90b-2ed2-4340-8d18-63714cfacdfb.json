@@ -1,0 +1,16 @@
+{
+  "id": "33b6b90b-2ed2-4340-8d18-63714cfacdfb",
+  "name": "Test Payload",
+  "description": "",
+  "category": "data",
+  "type": "file",
+  "size": 0,
+  "hash": "",
+  "path": "",
+  "metadata": {},
+  "tags": [],
+  "created": "2025-09-19T16:42:10.279Z",
+  "modified": "2025-09-19T16:42:10.279Z",
+  "version": "1.0.0",
+  "status": "active"
+}

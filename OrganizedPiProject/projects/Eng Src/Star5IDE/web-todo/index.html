@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Todo — Local</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="container" aria-labelledby="app-title">
+    <h1 id="app-title">To‑Do List</h1>
+
+    <form id="todo-form" autocomplete="off" aria-label="Add a task">
+      <input id="todo-input" name="text" type="text" placeholder="Add a task…" aria-label="Task" />
+      <button id="add-btn" type="submit" aria-label="Add task">Add</button>
+    </form>
+
+    <section class="toolbar">
+      <label><input type="checkbox" id="toggle-completed" /> Hide completed</label>
+      <button id="clear-completed" type="button">Clear completed</button>
+    </section>
+
+    <ul id="todo-list" role="list" aria-live="polite"></ul>
+
+    <footer class="footer" aria-live="polite">
+      <span id="count"></span>
+    </footer>
+  </main>
+
+  <script src="./app.js"></script>
+  <noscript>JavaScript is required.</noscript>
+  
+</body>
+</html>
+

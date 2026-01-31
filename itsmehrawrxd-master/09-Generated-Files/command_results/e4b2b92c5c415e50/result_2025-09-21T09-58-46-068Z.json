@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "b6df69a92e9cfa27",
+  "result": "error",
+  "details": "Unknown command: stop_keylogger",
+  "timestamp": "2025-09-21T09:58:46.068Z"
+}

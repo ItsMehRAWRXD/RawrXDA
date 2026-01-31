@@ -1,0 +1,50 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'rawrz-app'
+    static_configs:
+      - targets: ['rawrz-app:3000']
+    metrics_path: '/api/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'rawrz-processor'
+    static_configs:
+      - targets: ['rawrz-processor:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'rawrz-bots'
+    static_configs:
+      - targets: ['rawrz-bots:3002']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['rawrz-nginx:80']
+    metrics_path: '/nginx_status'
+    scrape_interval: 15s
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['rawrz-db:5432']
+    scrape_interval: 30s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['rawrz-redis:6379']
+    scrape_interval: 30s

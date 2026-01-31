@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EON IDE - Professional Development Environment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: #1E1E1E;
+            color: #D4D4D4;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .ide-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #252526;
+            border-right: 1px solid #3E3E42;
+            padding: 10px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            height: 40px;
+            background: #2D2D30;
+            border-bottom: 1px solid #3E3E42;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #0E639C;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn:hover {
+            background: #1177BB;
+        }
+
+        .btn-success {
+            background: #0E7A0E;
+        }
+
+        .btn-success:hover {
+            background: #0F8A0F;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+        }
+
+        .editor {
+            flex: 1;
+            background: #1E1E1E;
+            border: none;
+            color: #D4D4D4;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            padding: 15px;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .output-panel {
+            width: 300px;
+            background: #252526;
+            border-left: 1px solid #3E3E42;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .output-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #569CD6;
+        }
+
+        .output-content {
+            background: #1E1E1E;
+            padding: 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-tree {
+            margin-bottom: 20px;
+        }
+
+        .file-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+
+        .file-item:hover {
+            background: #2A2D2E;
+        }
+
+        .file-item.active {
+            background: #0E639C;
+        }
+
+        .status-bar {
+            height: 25px;
+            background: #007ACC;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 12px;
+        }
+
+        .status-item {
+            margin-right: 20px;
+        }
+
+        .error {
+            color: #F44747;
+        }
+
+        .success {
+            color: #4EC9B0;
+        }
+
+        .warning {
+            color: #DCDCAA;
+        }
+    </style>
+</head>
+<body>
+    <div class="ide-container">
+        <div class="sidebar">
+            <div class="file-tree">
+                <div class="file-item active" onclick="loadFile('eon_working_final.eon')">
+                    ✅ eon_working_final.eon
+                </div>
+                <div class="file-item" onclick="loadFile('basic_test.eon')">
+                    📄 basic_test.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test_simple.eon')">
+                    📄 test_simple.eon
+                </div>
+                <div class="file-item" onclick="loadFile('demo_java_eon.eon')">
+                    📄 demo_java_eon.eon
+                </div>
+                <div class="file-item" onclick="loadFile('demo_eon_program.eon')">
+                    📄 demo_eon_program.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test_java_eon.eon')">
+                    📄 test_java_eon.eon
+                </div>
+                <div class="file-item" onclick="loadFile('working_syntax.eon')">
+                    🔧 working_syntax.eon
+                </div>
+                <div class="file-item" onclick="loadFile('simple_working.eon')">
+                    📄 simple_working.eon
+                </div>
+                <div class="file-item" onclick="loadFile('working_eon_test.eon')">
+                    📄 working_eon_test.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test_enhanced.eon')">
+                    📄 test_enhanced.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test_program.eon')">
+                    📄 test_program.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test_semantic.eon')">
+                    📄 test_semantic.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test_suite_enhanced.eon')">
+                    📄 test_suite_enhanced.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test_eon_working.eon')">
+                    📄 test_eon_working.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test_debug.eon')">
+                    📄 test_debug.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test_minimal.eon')">
+                    📄 test_minimal.eon
+                </div>
+                <div class="file-item" onclick="loadFile('minimal_test.eon')">
+                    📄 minimal_test.eon
+                </div>
+                <div class="file-item" onclick="loadFile('formatted.eon')">
+                    📄 formatted.eon
+                </div>
+                <div class="file-item" onclick="loadFile('meta-gen.eon')">
+                    📄 meta-gen.eon
+                </div>
+                <div class="file-item" onclick="loadFile('test-backwards-code.eon')">
+                    📄 test-backwards-code.eon
+                </div>
+                <div class="file-item" onclick="loadFile('eon_full_compiler.eon')">
+                    🚀 eon_full_compiler.eon
+                </div>
+                <div class="file-item" onclick="loadFile('eon_v1_compiler.eon')">
+                    🚀 eon_v1_compiler.eon
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="toolbar">
+                <button class="btn" onclick="newFile()">New</button>
+                <button class="btn" onclick="saveFile()">Save</button>
+                <button class="btn btn-success" onclick="compileEon()">Compile</button>
+                <button class="btn" onclick="runEon()">Run</button>
+                <button class="btn" onclick="clearOutput()">Clear</button>
+                <span style="margin-left: auto; color: #888;">EON IDE v2.0</span>
+            </div>
+
+            <div class="editor-container">
+                <textarea id="editor" class="editor" placeholder="Enter your EON code here...">// EON IDE - Professional Development Environment
+// Your working EON files are loaded in the sidebar
+
+func main() {
+    let x = 42;
+    let y = 10;
+    let result = x + y;
+    ret result;
+}</textarea>
+
+                <div class="output-panel">
+                    <div class="output-title">Output</div>
+                    <div id="output" class="output-content">Ready to compile EON code...</div>
+                    
+                    <div class="output-title" style="margin-top: 20px;">Assembly</div>
+                    <div id="assembly" class="output-content">Assembly output will appear here...</div>
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <span class="status-item">EON Compiler Ready</span>
+                <span class="status-item">Server: localhost:3001</span>
+                <span class="status-item" id="status">Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFile = 'eon_working_final.eon';
+        let serverUrl = 'http://localhost:3001';
+
+        // Load file content
+        async function loadFile(filename) {
+            try {
+                const response = await fetch(`${serverUrl}/api/files/${filename}`);
+                if (response.ok) {
+                    const content = await response.text();
+                    document.getElementById('editor').value = content;
+                    currentFile = filename;
+                    updateFileTree();
+                    updateStatus(`Loaded: ${filename}`);
+                } else {
+                    updateStatus(`File not found: ${filename}`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`Error loading file: ${error.message}`, 'error');
+            }
+        }
+
+        // Save file
+        async function saveFile() {
+            const content = document.getElementById('editor').value;
+            try {
+                const response = await fetch(`${serverUrl}/api/files/${currentFile}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                
+                if (response.ok) {
+                    updateStatus(`Saved: ${currentFile}`, 'success');
+                } else {
+                    updateStatus(`Error saving file`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`Error saving: ${error.message}`, 'error');
+            }
+        }
+
+        // Compile EON code
+        async function compileEon() {
+            const code = document.getElementById('editor').value;
+            updateStatus('Compiling...', 'warning');
+            
+            try {
+                const response = await fetch(`${serverUrl}/api/eon/compile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        code: code,
+                        filename: currentFile 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('output').textContent = result.output;
+                    document.getElementById('assembly').textContent = result.assembly || 'No assembly generated';
+                    updateStatus('Compilation successful', 'success');
+                } else {
+                    document.getElementById('output').textContent = result.error;
+                    updateStatus('Compilation failed', 'error');
+                }
+            } catch (error) {
+                document.getElementById('output').textContent = `Error: ${error.message}`;
+                updateStatus(`Compilation error: ${error.message}`, 'error');
+            }
+        }
+
+        // Run EON code
+        async function runEon() {
+            updateStatus('Running...', 'warning');
+            
+            try {
+                const response = await fetch(`${serverUrl}/api/eon/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        filename: currentFile 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('output').textContent = result.output;
+                    updateStatus('Execution successful', 'success');
+                } else {
+                    document.getElementById('output').textContent = result.error;
+                    updateStatus('Execution failed', 'error');
+                }
+            } catch (error) {
+                document.getElementById('output').textContent = `Error: ${error.message}`;
+                updateStatus(`Execution error: ${error.message}`, 'error');
+            }
+        }
+
+        // New file
+        function newFile() {
+            document.getElementById('editor').value = 'func main() {\n    // Your EON code here\n    ret 0;\n}';
+            currentFile = 'new_file.eon';
+            updateFileTree();
+            updateStatus('New file created');
+        }
+
+        // Clear output
+        function clearOutput() {
+            document.getElementById('output').textContent = '';
+            document.getElementById('assembly').textContent = '';
+            updateStatus('Output cleared');
+        }
+
+        // Update file tree
+        function updateFileTree() {
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.textContent.includes(currentFile)) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Update status
+        function updateStatus(message, type = '') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status-item ${type}`;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('EON IDE Ready - Connected to server');
+        });
+    </script>
+</body>
+</html>

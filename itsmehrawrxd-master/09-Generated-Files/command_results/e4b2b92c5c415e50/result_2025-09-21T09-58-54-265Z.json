@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "ffcf51db1da4f100",
+  "result": "error",
+  "details": "Unknown command: stop_dns_spoofing",
+  "timestamp": "2025-09-21T09:58:54.264Z"
+}

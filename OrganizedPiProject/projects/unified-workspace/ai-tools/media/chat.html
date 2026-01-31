@@ -1,0 +1,24 @@
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font-family: var(--vscode-font-family); }
+  .wrap { display: flex; flex-direction: column; height: 100vh; }
+  .msgs { flex: 1; padding: 10px; overflow: auto; }
+  .msg { margin: 6px 0; white-space: pre-wrap; }
+  .msg.user { color: var(--vscode-editor-foreground); }
+  .msg.assistant { color: var(--vscode-descriptionForeground); }
+  .input { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--vscode-panel-border); }
+  textarea { flex: 1; resize: vertical; min-height: 40px; max-height: 160px; }
+  button { padding: 6px 10px; }
+  .toolbar { display: flex; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--vscode-panel-border); }
+</style>
+<div class="wrap">
+  <div class="toolbar">
+    <button id="btnIndex">Index Summary</button>
+    <span id="idxInfo" style="opacity:.8"></span>
+  </div>
+  <div id="msgs" class="msgs"></div>
+  <div class="input">
+    <textarea id="txt" placeholder="Ask the AI..."></textarea>
+    <button id="send">Send</button>
+  </div>
+</div>

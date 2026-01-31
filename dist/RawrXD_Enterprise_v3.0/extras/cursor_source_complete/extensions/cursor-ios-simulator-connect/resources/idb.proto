@@ -1,0 +1,135 @@
+syntax = "proto3";
+
+package idb;
+
+service CompanionService {
+  rpc hid(stream HIDEvent) returns (HIDResponse) {}
+  rpc accessibility_info(AccessibilityInfoRequest) returns (AccessibilityInfoResponse) {}
+  rpc screenshot(ScreenshotRequest) returns (ScreenshotResponse) {}
+  rpc video_stream(stream VideoStreamRequest) returns (stream VideoStreamResponse) {}
+}
+
+// Video stream messages
+message VideoStreamRequest {
+  enum Format {
+    H264 = 0;
+    RBGA = 1;
+    MJPEG = 2;
+    MINICAP = 3;
+    I420 = 4;
+  }
+  message Start {
+    string file_path = 1;
+    uint64 fps = 2;
+    Format format = 3;
+    double compression_quality = 4;
+    double scale_factor = 5;
+    double avg_bitrate = 6;
+    double key_frame_rate = 7;
+  }
+  message Stop {}
+  oneof control {
+    Start start = 1;
+    Stop stop = 2;
+  }
+}
+
+// Payload type used in responses
+message Payload {
+  oneof source {
+    string file_path = 1;
+    bytes data = 2;
+    string url = 3;
+  }
+}
+
+message VideoStreamResponse {
+  oneof output {
+    bytes log_output = 1;
+    Payload payload = 2;
+  }
+}
+
+message Point {
+  double x = 1;
+  double y = 2;
+}
+
+message ScreenshotRequest {}
+
+message ScreenshotResponse {
+  bytes image_data = 1;
+  string image_format = 2;
+}
+
+message AccessibilityInfoRequest {
+  enum Format {
+    LEGACY = 0;
+    NESTED = 1;
+  }
+  Point point = 2;
+  Format format = 3;
+}
+
+message AccessibilityInfoResponse {
+  string json = 1;
+}
+
+message HIDEvent {
+  enum HIDDirection {
+    DOWN = 0;
+    UP = 1;
+  }
+
+  message HIDTouch {
+    Point point = 1;
+  }
+
+  enum HIDButtonType {
+    APPLE_PAY = 0;
+    HOME = 1;
+    LOCK = 2;
+    SIDE_BUTTON = 3;
+    SIRI = 4;
+  }
+
+  message HIDButton {
+    HIDButtonType button = 1;
+  }
+
+  message HIDKey {
+    uint64 keycode = 1;
+  }
+
+  message HIDPressAction {
+    oneof action {
+      HIDTouch touch = 1;
+      HIDButton button = 2;
+      HIDKey key = 3;
+    }
+  }
+
+  message HIDPress {
+    HIDPressAction action = 1;
+    HIDDirection direction = 2;
+  }
+
+  message HIDSwipe {
+    Point start = 1;
+    Point end = 2;
+    double delta = 5;
+    double duration = 6;
+  }
+
+  message HIDDelay {
+    double duration = 1;
+  }
+
+  oneof event {
+    HIDPress press = 1;
+    HIDSwipe swipe = 2;
+    HIDDelay delay = 3;
+  }
+}
+
+message HIDResponse {}

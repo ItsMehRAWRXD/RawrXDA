@@ -1,0 +1,88 @@
+{
+  "local_ai_copilot": {
+    "created": "2025-09-25T22:03:30.608310",
+    "version": "1.0.0",
+    "services": {
+      "tabby": {
+        "name": "Tabby Code Completion",
+        "description": "Real-time code completion and suggestions",
+        "docker_image": "tabbyml/tabby",
+        "port": 8080,
+        "api_endpoint": "/v1/completion",
+        "capabilities": [
+          "code_completion",
+          "inline_suggestions",
+          "real_time"
+        ],
+        "status": "available"
+      },
+      "continue": {
+        "name": "Continue Context-Aware Chat",
+        "description": "Project-aware chat and code analysis",
+        "docker_image": "continueai/continue",
+        "port": 3000,
+        "api_endpoint": "/api/chat",
+        "capabilities": [
+          "context_aware",
+          "file_analysis",
+          "project_chat"
+        ],
+        "status": "available"
+      },
+      "localai": {
+        "name": "LocalAI All-in-One Suite",
+        "description": "OpenAI-compatible local AI platform",
+        "docker_image": "localai/localai",
+        "port": 8080,
+        "api_endpoint": "/v1/chat/completions",
+        "capabilities": [
+          "openai_compatible",
+          "multi_model",
+          "agents"
+        ],
+        "status": "available"
+      },
+      "codet5": {
+        "name": "CodeT5 Code Analysis",
+        "description": "Code generation, summarization, and comprehension",
+        "docker_image": "huggingface/codet5",
+        "port": 8000,
+        "api_endpoint": "/api/analyze",
+        "capabilities": [
+          "code_analysis",
+          "documentation",
+          "explanation"
+        ],
+        "status": "available"
+      },
+      "ollama": {
+        "name": "Ollama Local Models",
+        "description": "Local LLM models for chat and generation",
+        "docker_image": "ollama/ollama",
+        "port": 11434,
+        "api_endpoint": "/api/generate",
+        "capabilities": [
+          "chat",
+          "code_generation",
+          "local_models"
+        ],
+        "status": "available"
+      }
+    },
+    "features": {
+      "real_time_completion": true,
+      "context_aware_chat": true,
+      "code_analysis": true,
+      "documentation_generation": true,
+      "offline_capable": true,
+      "docker_integrated": true
+    },
+    "settings": {
+      "auto_start_services": true,
+      "enable_completion": true,
+      "enable_chat": true,
+      "enable_analysis": true,
+      "cache_responses": true
+    }
+  }
+}

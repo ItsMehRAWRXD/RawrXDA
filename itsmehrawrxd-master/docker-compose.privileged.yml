@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  rawrz-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile.privileged
+    container_name: rawrz-platform-privileged
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./logs:/app/logs
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./temp:/app/temp
+      - ./uploads:/app/uploads
+      - ./scans:/app/scans
+      - ./scan-results:/app/scan-results
+      - ./loot:/app/loot
+      - ./backups:/app/backups
+      - ./plugins:/app/plugins
+    environment:
+      - NODE_ENV=production
+      - PRIVILEGED_MODE=true
+    # Enable privileged mode for full system access
+    privileged: true
+    # Add capabilities for system operations
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+    # Allow access to host network (use with caution)
+    network_mode: host
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

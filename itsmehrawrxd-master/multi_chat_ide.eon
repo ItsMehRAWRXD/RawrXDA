@@ -1,0 +1,630 @@
+; multi_chat_ide.eon
+; Multi-Chat IDE with Toggleable AI Panels
+; Written in EON ASM - no Python dependencies
+; Like Cursor but better - multiple AI chats, moveable panels
+
+module MultiChatIDE
+
+import std.gui.window
+import std.gui.panels  
+import std.gui.notebook
+import std.gui.textbox
+import std.gui.button
+import std.network.http
+import std.json
+import std.threading
+import std.collections
+import std.string
+
+; === Multi-Chat IDE Main Class ===
+class MultiChatIDE {
+    var main_window: Window
+    var code_area: CodeArea
+    var chat_area: ChatArea
+    var chat_panels: Map<string, ChatPanel>
+    var ai_providers: Map<string, AIProvider>
+    var next_chat_id: int
+    
+    function init() {
+        next_chat_id = 1
+        chat_panels = Map<string, ChatPanel>()
+        
+        ; Initialize AI providers
+        setupAIProviders()
+        
+        ; Create main window
+        main_window = Window("n0mn0m Multi-Chat IDE", 1400, 900)
+        
+        ; Setup layout
+        setupMainLayout()
+        
+        ; Create initial chat
+        createNewChat("ChatGPT")
+        
+        println("Multi-Chat IDE initialized")
+    }
+    
+    function setupMainLayout() {
+        ; Main horizontal split
+        var main_paned = HorizontalPanedWindow()
+        main_window.setContent(main_paned)
+        
+        ; Left side: Code editor (70% width)
+        code_area = CodeArea()
+        main_paned.addPanel(code_area, weight: 3)
+        
+        ; Right side: Chat panels (30% width)  
+        chat_area = ChatArea()
+        main_paned.addPanel(chat_area, weight: 2)
+        
+        ; Setup menu bar
+        setupMenuBar()
+        
+        ; Setup status bar
+        setupStatusBar()
+    }
+    
+    function setupMenuBar() {
+        var menu_bar = MenuBar()
+        
+        ; File menu
+        var file_menu = Menu("File")
+        file_menu.addItem("New File", newFile)
+        file_menu.addItem("Open File", openFile)
+        file_menu.addItem("Save File", saveFile)
+        menu_bar.addMenu(file_menu)
+        
+        ; Chat menu
+        var chat_menu = Menu("Chat")
+        chat_menu.addItem("New ChatGPT Chat", lambda: createNewChat("ChatGPT"))
+        chat_menu.addItem("New Claude Chat", lambda: createNewChat("Claude"))
+        chat_menu.addItem("New Copilot Chat", lambda: createNewChat("Copilot"))
+        chat_menu.addSeparator()
+        chat_menu.addItem("Toggle Chat Panel", toggleChatPanel)
+        chat_menu.addItem("Float All Chats", floatAllChats)
+        chat_menu.addItem("Dock All Chats", dockAllChats)
+        menu_bar.addMenu(chat_menu)
+        
+        ; View menu
+        var view_menu = Menu("View")
+        view_menu.addItem("Fullscreen Code", fullscreenCode)
+        view_menu.addItem("Show File Explorer", toggleFileExplorer)
+        view_menu.addItem("Show Terminal", toggleTerminal)
+        menu_bar.addMenu(view_menu)
+        
+        main_window.setMenuBar(menu_bar)
+    }
+    
+    function setupAIProviders() {
+        ai_providers = Map<string, AIProvider>()
+        
+        ; ChatGPT
+        ai_providers.set("ChatGPT", AIProvider {
+            name: "ChatGPT",
+            api_url: "https://api.openai.com/v1/chat/completions",
+            model: "gpt-4",
+            api_key_var: "OPENAI_API_KEY",
+            color: "#10a37f"
+        })
+        
+        ; Claude
+        ai_providers.set("Claude", AIProvider {
+            name: "Claude",
+            api_url: "https://api.anthropic.com/v1/messages", 
+            model: "claude-3-5-sonnet-20241022",
+            api_key_var: "ANTHROPIC_API_KEY",
+            color: "#cc785c"
+        })
+        
+        ; GitHub Copilot
+        ai_providers.set("Copilot", AIProvider {
+            name: "GitHub Copilot",
+            api_url: "https://api.github.com/copilot/completions",
+            model: "gpt-4",
+            api_key_var: "GITHUB_TOKEN", 
+            color: "#0969da"
+        })
+    }
+    
+    function createNewChat(provider_name: string) -> string {
+        var chat_id = "chat_" + next_chat_id
+        next_chat_id++
+        
+        var provider = ai_providers.get(provider_name)
+        if (!provider) {
+            println("Unknown AI provider: " + provider_name)
+            return ""
+        }
+        
+        ; Create new chat panel
+        var chat_panel = ChatPanel(chat_id, provider)
+        chat_panels.set(chat_id, chat_panel)
+        
+        ; Add to chat area
+        chat_area.addChatPanel(chat_panel)
+        
+        ; Send welcome message
+        chat_panel.addMessage("System", "Connected to " + provider_name + ". How can I help you?", MessageType.SYSTEM)
+        
+        updateStatusBar()
+        
+        return chat_id
+    }
+    
+    function toggleChatPanel() {
+        chat_area.toggleVisibility()
+    }
+    
+    function floatAllChats() {
+        for (chat_id, chat_panel) in chat_panels {
+            chat_panel.makeFloating()
+        }
+    }
+    
+    function dockAllChats() {
+        for (chat_id, chat_panel) in chat_panels {
+            chat_panel.dockToParent(chat_area)
+        }
+    }
+    
+    function fullscreenCode() {
+        if (chat_area.isVisible()) {
+            chat_area.hide()
+        } else {
+            chat_area.show()
+        }
+    }
+    
+    function updateStatusBar() {
+        var chat_count = chat_panels.size()
+        var file_count = code_area.getOpenFileCount()
+        
+        main_window.setStatusText("Ready | Chats: " + chat_count + " | Files: " + file_count)
+    }
+    
+    function newFile() {
+        code_area.createNewFile()
+        updateStatusBar()
+    }
+    
+    function openFile() {
+        var file_path = showFileDialog("Open File")
+        if (file_path != "") {
+            code_area.openFile(file_path)
+            updateStatusBar()
+        }
+    }
+    
+    function saveFile() {
+        code_area.saveCurrentFile()
+    }
+    
+    function run() {
+        main_window.show()
+        main_window.startEventLoop()
+    }
+}
+
+; === Chat Panel Class ===
+class ChatPanel {
+    var chat_id: string
+    var provider: AIProvider
+    var panel: Panel
+    var chat_display: TextArea
+    var input_area: TextArea
+    var messages: Array<Message>
+    var floating_window: Window
+    var is_floating: bool
+    
+    function init(id: string, ai_provider: AIProvider) {
+        chat_id = id
+        provider = ai_provider
+        messages = Array<Message>()
+        is_floating = false
+        
+        createUI()
+    }
+    
+    function createUI() {
+        panel = Panel()
+        
+        ; Header with title and controls
+        var header = HorizontalPanel()
+        
+        var title_label = Label(provider.name + " Chat")
+        title_label.setFont("Arial", 12, BOLD)
+        title_label.setColor(provider.color)
+        header.addWidget(title_label)
+        
+        ; Control buttons
+        var float_btn = Button("Float", makeFloating)
+        var close_btn = Button("X", closeChat)
+        
+        header.addWidget(float_btn)
+        header.addWidget(close_btn)
+        
+        panel.addWidget(header)
+        
+        ; Chat display area
+        chat_display = TextArea()
+        chat_display.setReadOnly(true)
+        chat_display.setFont("Segoe UI", 11)
+        chat_display.setBackgroundColor("#f8f9fa")
+        panel.addWidget(chat_display, weight: 1)
+        
+        ; Input area
+        var input_panel = VerticalPanel()
+        
+        input_area = TextArea()
+        input_area.setHeight(80)
+        input_area.setPlaceholder("Type your message here... (Ctrl+Enter to send)")
+        input_area.onKeyPress(handleKeyPress)
+        
+        var send_btn = Button("Send", sendMessage)
+        send_btn.setStyle("primary")
+        
+        var input_controls = HorizontalPanel()
+        input_controls.addWidget(input_area, weight: 1)
+        input_controls.addWidget(send_btn)
+        
+        input_panel.addWidget(input_controls)
+        panel.addWidget(input_panel)
+    }
+    
+    function addMessage(sender: string, content: string, type: MessageType) {
+        var timestamp = getCurrentTimestamp()
+        var message = Message(sender, content, timestamp, type)
+        messages.append(message)
+        
+        ; Format and display message
+        var formatted_msg = formatMessage(message)
+        chat_display.appendText(formatted_msg)
+        chat_display.scrollToBottom()
+    }
+    
+    function formatMessage(msg: Message) -> string {
+        var color = ""
+        var prefix = ""
+        
+        match msg.type {
+            case MessageType.USER:
+                color = "#0066cc"
+                prefix = "You"
+            case MessageType.AI:
+                color = provider.color
+                prefix = provider.name
+            case MessageType.SYSTEM:
+                color = "#666666"
+                prefix = "System"
+        }
+        
+        return "[" + msg.timestamp + "] " + prefix + ": " + msg.content + "\n\n"
+    }
+    
+    function handleKeyPress(event: KeyEvent) {
+        if (event.key == "Return" && event.modifiers.contains("Control")) {
+            sendMessage()
+        }
+    }
+    
+    function sendMessage() {
+        var user_input = input_area.getText().trim()
+        if (user_input == "") {
+            return
+        }
+        
+        ; Clear input
+        input_area.setText("")
+        
+        ; Add user message
+        addMessage("You", user_input, MessageType.USER)
+        
+        ; Send to AI in background thread
+        var thread = Thread(lambda: processAIResponse(user_input))
+        thread.start()
+    }
+    
+    function processAIResponse(user_message: string) {
+        try {
+            ; Show typing indicator
+            addMessage(provider.name, "Typing...", MessageType.AI)
+            
+            ; Call AI API
+            var response = callAIAPI(user_message)
+            
+            ; Remove typing indicator and add real response
+            removeLastMessage()
+            addMessage(provider.name, response, MessageType.AI)
+            
+        } catch (error: Exception) {
+            removeLastMessage()
+            addMessage("System", "Error: " + error.message, MessageType.SYSTEM)
+        }
+    }
+    
+    function callAIAPI(message: string) -> string {
+        var http_client = HTTPClient()
+        
+        ; Build request based on provider
+        var request_body = buildAPIRequest(message)
+        
+        ; Set headers
+        var headers = Map<string, string>()
+        headers.set("Content-Type", "application/json")
+        
+        if (provider.name == "ChatGPT") {
+            var api_key = getEnvironmentVariable(provider.api_key_var)
+            headers.set("Authorization", "Bearer " + api_key)
+        } else if (provider.name == "Claude") {
+            var api_key = getEnvironmentVariable(provider.api_key_var)
+            headers.set("x-api-key", api_key)
+            headers.set("anthropic-version", "2023-06-01")
+        }
+        
+        ; Make API call
+        var response = http_client.post(provider.api_url, request_body, headers)
+        
+        ; Parse response
+        return parseAPIResponse(response)
+    }
+    
+    function buildAPIRequest(message: string) -> string {
+        var request = Map<string, any>()
+        
+        if (provider.name == "ChatGPT") {
+            request.set("model", provider.model)
+            request.set("messages", [
+                Map("role", "user").set("content", message)
+            ])
+            request.set("max_tokens", 1500)
+        } else if (provider.name == "Claude") {
+            request.set("model", provider.model)
+            request.set("max_tokens", 1500)
+            request.set("messages", [
+                Map("role", "user").set("content", message)
+            ])
+        }
+        
+        return JSON.stringify(request)
+    }
+    
+    function parseAPIResponse(response: HTTPResponse) -> string {
+        var json_data = JSON.parse(response.body)
+        
+        if (provider.name == "ChatGPT") {
+            return json_data.get("choices")[0].get("message").get("content")
+        } else if (provider.name == "Claude") {
+            return json_data.get("content")[0].get("text")
+        }
+        
+        return "Unable to parse response"
+    }
+    
+    function makeFloating() {
+        if (is_floating) {
+            return
+        }
+        
+        ; Create floating window
+        floating_window = Window(provider.name + " Chat", 450, 600)
+        
+        ; Move panel to floating window
+        panel.getParent().removeWidget(panel)
+        floating_window.setContent(panel)
+        
+        floating_window.show()
+        is_floating = true
+    }
+    
+    function dockToParent(parent: ChatArea) {
+        if (!is_floating) {
+            return
+        }
+        
+        ; Move panel back to parent
+        floating_window.close()
+        parent.addChatPanel(this)
+        is_floating = false
+    }
+    
+    function closeChat() {
+        if (showConfirmDialog("Close Chat", "Close this chat with " + provider.name + "?")) {
+            if (floating_window) {
+                floating_window.close()
+            }
+            panel.destroy()
+        }
+    }
+    
+    function removeLastMessage() {
+        if (messages.length > 0) {
+            messages.removeLast()
+            refreshChatDisplay()
+        }
+    }
+    
+    function refreshChatDisplay() {
+        chat_display.setText("")
+        for message in messages {
+            var formatted = formatMessage(message)
+            chat_display.appendText(formatted)
+        }
+        chat_display.scrollToBottom()
+    }
+}
+
+; === Data Classes ===
+enum MessageType {
+    USER = 1,
+    AI = 2,
+    SYSTEM = 3
+}
+
+struct AIProvider {
+    var name: string
+    var api_url: string
+    var model: string
+    var api_key_var: string
+    var color: string
+}
+
+struct Message {
+    var sender: string
+    var content: string
+    var timestamp: string
+    var type: MessageType
+    
+    function init(s: string, c: string, t: string, mt: MessageType) {
+        sender = s
+        content = c
+        timestamp = t
+        type = mt
+    }
+}
+
+; === Code Area Class ===
+class CodeArea {
+    var panel: Panel
+    var editor_notebook: Notebook
+    var terminal: TextArea
+    var file_explorer: TreeView
+    
+    function init() {
+        createUI()
+    }
+    
+    function createUI() {
+        panel = Panel()
+        
+        ; Vertical split: editor top, terminal bottom
+        var vertical_paned = VerticalPanedWindow()
+        panel.addWidget(vertical_paned)
+        
+        ; Top: Editor with tabs
+        editor_notebook = Notebook()
+        createNewFile()  ; Create initial file
+        vertical_paned.addPanel(editor_notebook, weight: 3)
+        
+        ; Bottom: Terminal
+        terminal = TextArea()
+        terminal.setFont("Consolas", 11)
+        terminal.setBackgroundColor("#000000")
+        terminal.setTextColor("#00ff00")
+        terminal.setText("n0mn0m IDE Terminal Ready\n$ ")
+        vertical_paned.addPanel(terminal, weight: 1)
+    }
+    
+    function createNewFile() {
+        var editor = TextArea()
+        editor.setFont("Consolas", 12)
+        editor.setSyntaxHighlighting(true)
+        
+        var tab_name = "untitled" + (editor_notebook.getTabCount() + 1) + ".py"
+        editor_notebook.addTab(tab_name, editor)
+        editor_notebook.selectTab(editor_notebook.getTabCount() - 1)
+    }
+    
+    function openFile(file_path: string) {
+        var content = readFile(file_path)
+        var editor = TextArea()
+        editor.setFont("Consolas", 12)
+        editor.setSyntaxHighlighting(true)
+        editor.setText(content)
+        
+        var filename = getFilename(file_path)
+        editor_notebook.addTab(filename, editor)
+        editor_notebook.selectTab(editor_notebook.getTabCount() - 1)
+    }
+    
+    function saveCurrentFile() {
+        var current_tab = editor_notebook.getCurrentTab()
+        if (current_tab) {
+            var editor = current_tab.getWidget()
+            var content = editor.getText()
+            var filename = current_tab.getTitle()
+            
+            ; Save file logic here
+            writeFile(filename, content)
+        }
+    }
+    
+    function getOpenFileCount() -> int {
+        return editor_notebook.getTabCount()
+    }
+}
+
+; === Chat Area Class ===
+class ChatArea {
+    var panel: Panel
+    var chat_notebook: Notebook
+    var control_panel: Panel
+    
+    function init() {
+        createUI()
+    }
+    
+    function createUI() {
+        panel = Panel()
+        
+        ; Control buttons at top
+        control_panel = HorizontalPanel()
+        
+        var chatgpt_btn = Button("+ ChatGPT", lambda: main_ide.createNewChat("ChatGPT"))
+        var claude_btn = Button("+ Claude", lambda: main_ide.createNewChat("Claude"))
+        var copilot_btn = Button("+ Copilot", lambda: main_ide.createNewChat("Copilot"))
+        
+        control_panel.addWidget(chatgpt_btn)
+        control_panel.addWidget(claude_btn)
+        control_panel.addWidget(copilot_btn)
+        
+        panel.addWidget(control_panel)
+        
+        ; Chat tabs
+        chat_notebook = Notebook()
+        panel.addWidget(chat_notebook, weight: 1)
+    }
+    
+    function addChatPanel(chat_panel: ChatPanel) {
+        chat_notebook.addTab(chat_panel.provider.name, chat_panel.panel)
+        chat_notebook.selectTab(chat_notebook.getTabCount() - 1)
+    }
+    
+    function toggleVisibility() {
+        panel.toggleVisibility()
+    }
+    
+    function isVisible() -> bool {
+        return panel.isVisible()
+    }
+    
+    function show() {
+        panel.show()
+    }
+    
+    function hide() {
+        panel.hide()
+    }
+}
+
+; === Utility Functions ===
+function getCurrentTimestamp() -> string {
+    var now = DateTime.now()
+    return now.format("HH:mm:ss")
+}
+
+; === Entry Point ===
+var main_ide: MultiChatIDE
+
+function main() -> int {
+    println("Starting n0mn0m Multi-Chat IDE...")
+    
+    main_ide = MultiChatIDE()
+    main_ide.init()
+    main_ide.run()
+    
+    return 0
+}
+
+export MultiChatIDE
+export ChatPanel
+export AIProvider

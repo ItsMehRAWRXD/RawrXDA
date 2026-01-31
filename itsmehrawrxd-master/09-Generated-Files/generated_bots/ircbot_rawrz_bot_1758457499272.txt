@@ -1,0 +1,13 @@
+// Test IRC Bot - powershell
+// Generated: 2025-09-21T12:24:59.272Z
+// Bot ID: rawrz_bot_1758457499272
+// Features: stealth, encryption, persistence
+// Server: undefined:undefined
+// Channel: undefined
+// Nick: undefined
+
+console.log("RawrZ IRC Bot rawrz_bot_1758457499272 - powershell version");
+console.log("Features: stealth, encryption, persistence");
+console.log("Server: undefined:undefined");
+console.log("Channel: undefined");
+console.log("Nick: undefined");

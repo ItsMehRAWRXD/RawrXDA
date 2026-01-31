@@ -1,0 +1,50 @@
+{
+  "name": "rawr-assist",
+  "displayName": "Rawr Assist – Local GGUF Copilot + Agent",
+  "description": "Inline completions and browser agents from any local GGUF (Q2_K optimized)",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "rawr-assist.inlineComplete",
+        "title": "Rawr: Inline Complete"
+      },
+      {
+        "command": "rawr-assist.runAgent",
+        "title": "Rawr: Run Agent on Selection"
+      }
+    ],
+    "configuration": {
+      "properties": {
+        "rawr-assist.ggufPath": {
+          "type": "string",
+          "default": "C:\\Franken\\BigDaddyG-NO-REFUSE-Q2_K.gguf"
+        },
+        "rawr-assist.contextLen": {
+          "type": "number",
+          "default": 4096
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.75.0",
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "puppeteer-core": "^21.0.0"
+  }
+}

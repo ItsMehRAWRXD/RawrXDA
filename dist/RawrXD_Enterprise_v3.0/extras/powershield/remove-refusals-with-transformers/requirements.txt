@@ -1,0 +1,7 @@
+jaxtyping
+transformers
+tqdm
+einops
+torch
+bitsandbytes
+accelerate

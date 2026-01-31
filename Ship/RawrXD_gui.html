@@ -1,0 +1,113 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>RawrXD IDE</title>
+<style>
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    font: 14px/1.4 JetBrains Mono, Consolas, monospace;
+    background: #0a0a0f;
+    color: #f0f0f5
+  }
+
+  #top {
+    height: 48px;
+    background: #12121a;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    box-shadow: 0 1px 0 #1e1e2a
+  }
+
+  #brand {
+    color: #ff6b35;
+    font-weight: 800
+  }
+
+  #main {
+    display: flex;
+    height: calc(100% - 48px)
+  }
+
+  #left {
+    width: 280px;
+    border-right: 1px solid #2a2a35;
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px
+  }
+
+  #right {
+    flex: 1;
+    display: flex;
+    flex-direction: column
+  }
+
+  #out {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    white-space: pre;
+    background: #0f0f16;
+    border-bottom: 1px solid #2a2a35;
+    font-family: Consolas, monospace
+  }
+
+  #inp {
+    padding: 12px
+  }
+
+  textarea {
+    width: 100%;
+    background: #151520;
+    border: 1px solid #2a2a35;
+    color: #f0f0f5;
+    padding: 8px;
+    border-radius: 4px;
+    min-height: 160px;
+    box-sizing: border-box
+  }
+
+  button {
+    background: #ff6b35;
+    color: #0a0a0f;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-weight: 700;
+    cursor: pointer
+  }
+
+  button:hover {
+    background: #ff814f
+  }
+</style>
+<div id="top"><span id="brand">🦖 RawrXD IDE</span></div>
+<div id="main">
+  <div id="left">
+    <button onclick="document.getElementById('file').click()">Audit File</button>
+    <input type="file" id="file" style="display:none">
+    <label><input type="checkbox" id="raw"> Raw text mode (use textarea)</label>
+    <small>Drop a file anywhere or paste code below, then click Audit.</small>
+    <button onclick="send()">Audit</button>
+  </div>
+  <div id="right">
+    <div id="out">Ready. Drag a file or paste code.</div>
+    <div id="inp"><textarea id="txt" placeholder="Paste code or drop file"></textarea></div>
+  </div>
+</div>
+<script>
+  const out = document.getElementById('out');
+  const txt = document.getElementById('txt');
+  const fileInput = document.getElementById('file');
+  fileInput.onchange = () => { const f = fileInput.files[0]; if (f) auditFile(f); }
+  function auditFile(file) { const reader = new FileReader(); reader.onload = () => post(reader.result); reader.readAsText(file); }
+  function send() { const useRaw = document.getElementById('raw').checked; if (!useRaw && fileInput.files[0]) { auditFile(fileInput.files[0]); return; } post(txt.value); }
+  function post(content) { out.textContent = 'Running audit...'; const payload = 'RAW|' + content; if (window.chrome && window.chrome.webview) { window.chrome.webview.postMessage(payload); } else { out.textContent = 'Host bridge unavailable.'; } }
+  window.addEventListener('dragover', e => { e.preventDefault(); });
+  window.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files.length > 0) { auditFile(e.dataTransfer.files[0]); } });
+  if (window.chrome && window.chrome.webview) { window.chrome.webview.addEventListener('message', e => { out.textContent = e.data; }); }
+</script>

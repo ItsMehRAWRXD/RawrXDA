@@ -1,0 +1,49 @@
+0:00:00 Startup
+0:00:00 Microsoft.DeleteProfileHelper.CleanUpEphemeralProfiles
+0:00:00 Microsoft.DeleteProfileHelper.CleanUpDeletedProfiles
+0:00:00 Microsoft.NewBrowser_Popup
+0:00:00 Microsoft.BrowserList.AddBrowser
+0:00:00 Browser1 Insert active Tab1 at 0
+0:00:00 Tab1 StartNav1 #auto_toplevel
+0:00:00 Tab1 FinishNav1
+0:00:00 Tab1 PageLoad
+0:00:01 Memory Pressure: Critical
+0:00:24 Tab1 StartNav2 #typed
+0:00:25 Tab1 FinishNav2
+0:00:25 Tab1 StartNav3 #renderer-script #auto_subframe
+0:00:25 Tab1 FinishNav3
+0:00:25 Tab1 PageLoad
+0:00:25 Tab1 StartNav4 #renderer-script #auto_subframe
+0:00:25 Tab1 FinishNav4
+0:00:25 Tab1 PageLoad
+0:00:25 Tab1 StartNav5 #renderer-script #auto_subframe
+0:00:25 Tab1 FinishNav5
+0:00:25 Tab1 PageLoad
+0:00:25 Tab1 PageLoad
+0:01:13 Media.Shown
+0:01:16 Tab1 StartNav6 #typed
+0:01:16 Tab1 FinishNav6
+0:01:16 Tab1 StartNav7 #renderer-script #auto_subframe
+0:01:16 Tab1 FinishNav7
+0:01:16 Tab1 PageLoad
+0:01:16 Tab1 StartNav8 #renderer-script #auto_subframe
+0:01:16 Tab1 FinishNav8
+0:01:16 Tab1 PageLoad
+0:01:16 Tab1 PageLoad
+0:01:17 Tab1 StartNav9 #typed
+0:01:17 Tab1 FinishNav9
+0:01:18 Tab1 StartNav10 #renderer-script #auto_subframe
+0:01:18 Tab1 FinishNav10
+0:01:18 Tab1 PageLoad
+0:01:18 Tab1 StartNav11 #renderer-script #auto_subframe
+0:01:18 Tab1 FinishNav11
+0:01:18 Tab1 PageLoad
+0:01:18 Tab1 PageLoad
+0:01:24 Tab1 StartNav12 #google #typed
+0:01:24 Tab1 FinishNav12
+0:01:24 Tab1 StartNav13 #google #renderer-script #link
+0:01:24 Tab1 FinishNav13
+0:01:24 Tab1 PageLoad #google
+0:01:27 Widget Closed: TooltipAura
+0:01:34 Widget Closed: StatusBubble
+0:04:44 Microsoft.UnloadController.IsUnclosableApp_IsNotWebApp

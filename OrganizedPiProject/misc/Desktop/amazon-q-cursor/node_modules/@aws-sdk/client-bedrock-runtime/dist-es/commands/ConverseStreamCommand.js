@@ -1,0 +1,27 @@
+import { getEndpointPlugin } from "@smithy/middleware-endpoint";
+import { getSerdePlugin } from "@smithy/middleware-serde";
+import { Command as $Command } from "@smithy/smithy-client";
+import { commonParams } from "../endpoint/EndpointParameters";
+import { ConverseStreamRequestFilterSensitiveLog, ConverseStreamResponseFilterSensitiveLog, } from "../models/models_0";
+import { de_ConverseStreamCommand, se_ConverseStreamCommand } from "../protocols/Aws_restJson1";
+export { $Command };
+export class ConverseStreamCommand extends $Command
+    .classBuilder()
+    .ep(commonParams)
+    .m(function (Command, cs, config, o) {
+    return [
+        getSerdePlugin(config, this.serialize, this.deserialize),
+        getEndpointPlugin(config, Command.getEndpointParameterInstructions()),
+    ];
+})
+    .s("AmazonBedrockFrontendService", "ConverseStream", {
+    eventStream: {
+        output: true,
+    },
+})
+    .n("BedrockRuntimeClient", "ConverseStreamCommand")
+    .f(ConverseStreamRequestFilterSensitiveLog, ConverseStreamResponseFilterSensitiveLog)
+    .ser(se_ConverseStreamCommand)
+    .de(de_ConverseStreamCommand)
+    .build() {
+}

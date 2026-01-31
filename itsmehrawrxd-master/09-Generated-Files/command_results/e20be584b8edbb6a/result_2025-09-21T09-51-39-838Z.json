@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "cf066f94707d8832",
+  "result": "error",
+  "details": "Unknown command: extract_password_data",
+  "timestamp": "2025-09-21T09:51:39.837Z"
+}

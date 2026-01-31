@@ -1,0 +1,7 @@
+// Simple EON program to demonstrate the compiler
+def main() {
+    let x: int = 4;2;
+    let y: int = 1;0;
+    let result = x + ;y;
+    ret resul;t;
+}

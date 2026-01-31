@@ -1,0 +1,273 @@
+Microsoft (R) Macro Assembler Version 6.14.8444		    01/24/26 12:52:07
+omega_final_working.asm					     Page 1 - 1
+
+
+				; OMEGA-POLYGLOT MAXIMUM v3.0 PRO - FINAL WORKING EDITION
+				; Professional Reverse Engineering Suite for AI Integration
+				; Full PE32/PE32+ Analysis, Import Reconstruction, Shannon Entropy, String Extraction
+
+				.386
+				.model flat, stdcall
+				option casemap:none
+
+				; Windows API Constants
+ =-0000000A			STD_INPUT_HANDLE        equ -10
+ =-0000000B			STD_OUTPUT_HANDLE       equ -11
+ = 80000000			GENERIC_READ            equ 80000000h
+ = 00000001			FILE_SHARE_READ         equ 1h
+ = 00000003			OPEN_EXISTING           equ 3h
+ =-00000001			INVALID_HANDLE_VALUE    equ -1
+ = 00000080			FILE_ATTRIBUTE_NORMAL   equ 80h
+
+				; PE Constants  
+ = 0000010B			PE32_MAGIC              equ 010Bh
+ = 0000020B			PE32P_MAGIC             equ 020Bh
+ = 06400000			MAX_FILE_SIZE           equ 104857600  ; 100MB
+
+				; Windows API Prototypes
+				ExitProcess             PROTO :DWORD
+				GetStdHandle            PROTO :DWORD
+				WriteConsole            PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD
+				ReadConsole             PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD
+				CreateFile              PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD,:DWORD,:DWORD
+				ReadFile                PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD
+				CloseHandle             PROTO :DWORD
+				GetFileSize             PROTO :DWORD,:DWORD
+				wsprintf                PROTO C :DWORD,:DWORD,:VARARG
+				lstrlen                 PROTO :DWORD
+
+ 00000000			.data
+				; Professional UI Headers
+ 00000000 3D 3D 3D 3D 3D	banner      db "========================================================", 13, 10
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 0D 0A
+ 0000003A  20 20 20 20 20	            db "     OMEGA-POLYGLOT MAXIMUM v3.0 PRO", 13, 10
+	   4F 4D 45 47 41
+	   2D 50 4F 4C 59
+	   47 4C 4F 54 20
+	   4D 41 58 49 4D
+	   55 4D 20 76 33
+	   2E 30 20 50 52
+	   4F 0D 0A
+ 00000060  20 20 20 20 50	            db "    Professional Reverse Engineering Suite", 13, 10  
+	   72 6F 66 65 73
+	   73 69 6F 6E 61
+	   6C 20 52 65 76
+	   65 72 73 65 20
+	   45 6E 67 69 6E
+	   65 65 72 69 6E
+	   67 20 53 75 69
+	   74 65 0D 0A
+ 0000008C  20 20 43 6C 61	            db "  Claude | Moonshot | DeepSeek | Codex Ready", 13, 10
+	   75 64 65 20 7C
+	   20 4D 6F 6F 6E
+	   73 68 6F 74 20
+	   7C 20 44 65 65
+	   70 53 65 65 6B
+	   20 7C 20 43 6F
+	   64 65 78 20 52
+	   65 61 64 79 0D
+	   0A
+ 000000BA  3D 3D 3D 3D 3D	            db "========================================================", 13, 10, 0
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 3D 3D 3D 3D
+	   3D 0D 0A 00
+
+ 000000F5 0D 0A 5B 31 5D	menu_text   db 13, 10, "[1] PE Deep Analysis      [2] Import/Export Recon", 13, 10
+	   20 50 45 20 44
+	   65 65 70 20 41
+	   6E 61 6C 79 73
+	   69 73 20 20 20
+	   20 20 20 5B 32
+	   5D 20 49 6D 70
+	   6F 72 74 2F 45
+	   78 70 6F 72 74
+	   20 52 65 63 6F
+	   6E 0D 0A
+ 0000012A  5B 33 5D 20 53	            db "[3] Section Entropy       [4] String Extraction", 13, 10
+	   65 63 74 69 6F
+	   6E 20 45 6E 74
+	   72 6F 70 79 20
+	   20 20 20 20 20
+	   20 5B 34 5D 20
+	   53 74 72 69 6E
+	   67 20 45 78 74
+	   72 61 63 74 69
+	   6F 6E 0D 0A
+ 0000015B  5B 35 5D 20 54	            db "[5] TLS Callbacks         [6] Debug Information", 13, 10
+	   4C 53 20 43 61
+	   6C 6C 62 61 63
+	   6B 73 20 20 20
+	   20 20 20 20 20
+	   20 5B 36 5D 20
+	   44 65 62 75 67
+	   20 49 6E 66 6F
+	   72 6D 61 74 69
+	   6F 6E 0D 0A
+ 0000018C  5B 37 5D 20 46	            db "[7] Full Reconstruction   [0] Exit", 13, 10
+	   75 6C 6C 20 52
+	   65 63 6F 6E 73
+	   74 72 75 63 74
+	   69 6F 6E 20 20
+	   20 5B 30 5D 20
+	   45 78 69 74 0D
+	   0A
+ 000001B0  3E 20 00		            db "> ", 0
+
+ 000001B3 54 61 72 67 65	prompt_file db "Target File: ", 0
+	   74 20 46 69 6C
+	   65 3A 20 00
+ 000001C1 5B 2D 5D 20 41	error_msg   db "[-] Analysis Failed", 13, 10, 0
+	   6E 61 6C 79 73
+	   69 73 20 46 61
+	   69 6C 65 64 0D
+	   0A 00
+ 000001D7 5B 2B 5D 20 41	success_msg db "[+] Analysis Complete", 13, 10, 0
+	   6E 61 6C 79 73
+	   69 73 20 43 6F
+	   6D 70 6C 65 74
+	   65 0D 0A 00
+ 000001EF 0D 0A 00		newline_str db 13, 10, 0
+
+				; Analysis Section Headers
+ 000001F2 0D 0A 3D 3D 3D	header_pe   db 13, 10, "=== PE DEEP ANALYSIS ===", 13, 10, 0
+	   20 50 45 20 44
+	   45 45 50 20 41
+	   4E 41 4C 59 53
+	   49 53 20 3D 3D
+	   3D 0D 0A 00
+ 0000020F 0D 0A 3D 3D 3D	header_imp  db 13, 10, "=== IMPORT RECONSTRUCTION ===", 13, 10, 0
+	   20 49 4D 50 4F
+	   52 54 20 52 45
+	   43 4F 4E 53 54
+	   52 55 43 54 49
+	   4F 4E 20 3D 3D
+	   3D 0D 0A 00
+ 00000231 0D 0A 3D 3D 3D	header_exp  db 13, 10, "=== EXPORT RECONSTRUCTION ===", 13, 10, 0
+	   20 45 58 50 4F
+	   52 54 20 52 45
+	   43 4F 4E 53 54
+	   52 55 43 54 49
+	   4F 4E 20 3D 3D
+	   3D 0D 0A 00
+ 00000253 0D 0A 3D 3D 3D	header_sec  db 13, 10, "=== SECTION ENTROPY ANALYSIS ===", 13, 10, 0
+	   20 53 45 43 54
+	   49 4F 4E 20 45
+	   4E 54 52 4F 50
+	   59 20 41 4E 41
+	   4C 59 53 49 53
+	   20 3D 3D 3D 0D
+	   0A 00
+ 00000278 0D 0A 3D 3D 3D	header_str  db 13, 10, "=== STRING EXTRACTION ===", 13, 10, 0
+	   20 53 54 52 49
+	   4E 47 20 45 58
+	   54 52 41 43 54
+	   49 4F 4E 20 3D
+	   3D 3D 0D 0A 00
+ 00000296 0D 0A 3D 3D 3D	header_tls  db 13, 10, "=== TLS CALLBACK ANALYSIS ===", 13, 10, 0
+	   20 54 4C 53 20
+	   43 41 4C 4C 42
+	   41 43 4B 20 41
+	   4E 41 4C 59 53
+	   49 53 20 3D 3D
+	   3D 0D 0A 00
+
+				; Format strings for output
+ 000002B8 4D 61 63 68 69	fmt_machine     db "Machine Type:     %04Xh", 13, 10, 0
+	   6E 65 20 54 79
+	   70 65 3A 20 20
+	   20 20 20 25 30
+	   34 58 68 0D 0A
+	   00
+ 000002D2 53 65 63 74 69	fmt_sections    db "Section Count:    %d", 13, 10, 0
+	   6F 6E 20 43 6F
+	   75 6E 74 3A 20
+	   20 20 20 25 64
+	   0D 0A 00
+ 000002E9 54 69 6D 65 73	fmt_timestamp   db "Timestamp:        %08Xh", 13, 10, 0
+	   74 61 6D 70 3A
+	   20 20 20 20 20
+	   20 20 20 25 30
+	   38 58 68 0D 0A
+	   00
+ 00000303 45 6E 74 72 79	fmt_entry       db "Entry Point:      %08Xh", 13, 10, 0
+	   20 50 6F 69 6E
+	   74 3A 20 20 20
+	   20 20 20 25 30
+	   38 58 68 0D 0A
+	   00
+ 0000031D 49 6D 61 67 65	fmt_imagebase   db "Image Base:       %08Xh", 13, 10, 0
+	   20 42 61 73 65
+	   3A 20 20 20 20
+	   20 20 20 25 30
+	   38 58 68 0D 0A
+	   00
+ 00000337 53 75 62 73 79	fmt_subsystem   db "Subsystem:        %04Xh", 13, 10, 0
+	   73 74 65 6D 3A
+	   20 20 20 20 20
+	   20 20 20 25 30
+	   34 58 68 0D 0A
+	   00
+
+ 00000351 53 65 63 74 69	fmt_section     db "Section: %-.8s", 13, 10
+	   6F 6E 3A 20 25
+	   2D 2E 38 73 0D
+	   0A
+ 00000361  20 20 56 69 72	                db "  Virtual Addr:   %08Xh", 13, 10
+	   74 75 61 6C 20
+	   41 64 64 72 3A
+	   20 20 20 25 30
+	   38 58 68 0D 0A
+ 0000037A  20 20 56 69 72	                db "  Virtual Size:   %08Xh", 13, 10
+	   74 75 61 6C 20
+	   53 69 7A 65 3A
+	   20 20 20 25 30
+	   38 58 68 0D 0A
+ 00000393  20 20 52 61 77	                db "  Raw Address:    %08Xh", 13, 10
+	   20 41 64 64 72
+	   65 73 73 3A 20
+	   20 20 20 25 30
+	   38 58 68 0D 0A
+ 000003AC  20 20 52 61 77	                db "  Raw Size:       %08Xh", 13, 10
+	   20 53 69 7A 65
+	   3A 20 20 20 20
+	   20 20 20 25 30
+	   38 58 68 0D 0A
+ 000003C5  20 20 43 68 61	                db "  Characteristics: %08Xh", 13, 10, 0
+	   72 61 63 74 65
+	   72 69 73 74 69
+	   63 73 3A 20 25
+	   30 38 58 68 0D
+	   0A 00
+
+ 000003E0 20 20 53 68 61	fmt_entropy     db "  Shannon Entropy: %.2f", 13, 10, 0
+	   6E 6E 6F 6E 20
+	   45 6E 74 72 6F
+	   70 79 3A 20 25
+	   2E 32 66 0D 0A
+	   00
+ 000003FA 20 20 2A 2A 20	fmt_packed      db "  ** PACKED/ENCRYPTED **", 13, 10, 0
+	   50 41 43 4B 45
+	   44 2F 45 4E 43
+	   52 59 50 54 45
+	   44 20 2A 2A 0D
+	   0A 00
+
+ 00000415 49 6D 70 6F 72	fmt_import_dll  db "Import D

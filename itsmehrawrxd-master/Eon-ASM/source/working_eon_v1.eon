@@ -1,0 +1,4 @@
+def func main() -> void {
+    let x: int = 42;
+    ret 0;
+}

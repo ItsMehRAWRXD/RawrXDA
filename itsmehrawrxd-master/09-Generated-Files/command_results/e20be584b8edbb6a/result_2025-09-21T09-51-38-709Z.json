@@ -1,0 +1,7 @@
+{
+  "type": "command_result",
+  "commandId": "9a953514a1cfe136",
+  "result": "error",
+  "details": "Unknown command: extract_messaging_data",
+  "timestamp": "2025-09-21T09:51:38.708Z"
+}

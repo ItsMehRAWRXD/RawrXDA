@@ -1,0 +1,186 @@
+# n0mn0m Enterprise Rolling Deployment Configuration
+# Safe, modern, no-root deployment with kernel-level monitoring
+
+replicaCount: 3
+
+image:
+  repository: ghcr.io/n0mn0m/quad-engine
+  tag: "__TAG__"
+  pullPolicy: IfNotPresent
+
+# Rolling update strategy - zero downtime
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+# Resource limits with safe kernel access
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Security context - no root required
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  capabilities:
+    drop:
+      - ALL
+    add:
+      - NET_BIND_SERVICE  # For gRPC communication
+
+# Pod security context
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+  sysctls:
+    - name: net.core.somaxconn
+      value: "1024"
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 50051
+  targetPort: 50051
+
+# Ingress for web UI
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+  hosts:
+    - host: n0mn0m.company.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: n0mn0m-tls
+      hosts:
+        - n0mn0m.company.com
+
+# Health checks using safe kernel APIs
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Environment variables for safe kernel access
+env:
+  - name: N0MN0M_KERNEL_MODE
+    value: "userspace"  # Use userspace APIs only
+  - name: N0MN0M_FILE_WATCHER
+    value: "inotify"    # Linux: inotify, macOS: FSEvents, Windows: ReadDirectoryChangesW
+  - name: N0MN0M_PROCESS_MONITOR
+    value: "procfs"     # Linux: /proc, Windows: WMI
+  - name: N0MN0M_GPU_ACCESS
+    value: "webgpu"     # WebGPU for safe GPU access
+  - name: N0MN0M_NETWORK_MONITOR
+    value: "cgroup"     # cgroup v2 for network I/O
+
+# Volume mounts for safe kernel access
+volumes:
+  - name: proc-fs
+    hostPath:
+      path: /proc
+      type: Directory
+  - name: sys-fs
+    hostPath:
+      path: /sys/fs/cgroup
+      type: Directory
+  - name: dev-bus
+    hostPath:
+      path: /dev/bus/usb
+      type: Directory
+
+volumeMounts:
+  - name: proc-fs
+    mountPath: /host/proc
+    readOnly: true
+  - name: sys-fs
+    mountPath: /host/sys/fs/cgroup
+    readOnly: true
+  - name: dev-bus
+    mountPath: /host/dev/bus/usb
+    readOnly: true
+
+# Node selector for optimal performance
+nodeSelector:
+  kubernetes.io/arch: amd64
+
+# Tolerations for dedicated nodes
+tolerations:
+  - key: "n0mn0m-dedicated"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+
+# Affinity for high availability
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - n0mn0m-quad-engine
+        topologyKey: kubernetes.io/hostname
+
+# Autoscaling configuration
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Monitoring and observability
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+    labels:
+      app: n0mn0m-quad-engine
+
+# Backup and disaster recovery
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: "7d"
+  storageClass: "fast-ssd"
+
+# Feature flags for quad-engine components
+features:
+  quantumAsm: true
+  eonJit: true
+  universalTranspiler: true
+  selfHostingDaemon: true
+  kernelMonitoring: true
+  gpuAcceleration: true
+  networkCapture: true

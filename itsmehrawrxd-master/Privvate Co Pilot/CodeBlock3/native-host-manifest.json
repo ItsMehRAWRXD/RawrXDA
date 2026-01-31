@@ -1,0 +1,9 @@
+{
+  "name": "com.private_copilot.ai_host",
+  "description": "Private AI Co Pilot Native Host",
+  "path": "nm_host.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://YOUR_EXTENSION_ID_HERE/"
+  ]
+}

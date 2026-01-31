@@ -1,0 +1,22 @@
+{
+  "dotnet": {
+    "version": "9.0",
+    "sdkPath": "%USERPROFILE%\\.dotnet",
+    "runtimes": ["Microsoft.NETCore.App", "Microsoft.WindowsDesktop.App"],
+    "targetFrameworks": ["net9.0", "net9.0-windows"],
+    "buildConfiguration": "Debug",
+    "optional": true
+  },
+  "native": {
+    "cpp": true,
+    "rust": true,
+    "assembly": true,
+    "standalone": true
+  },
+  "ide": {
+    "intellisense": true,
+    "debugging": true,
+    "hotReload": true,
+    "hybridMode": true
+  }
+}

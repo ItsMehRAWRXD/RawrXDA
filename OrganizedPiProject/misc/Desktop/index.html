@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Development Environment</title>
+    <meta name="description" content="Production-grade AI development environment with IDE integration" />
+    <meta name="keywords" content="AI, development, environment, IDE, VSCode, Cursor, Copilot, LSP, code completion, refactoring, debugging, testing, documentation, performance" />
+    <meta name="author" content="AI Development Environment Team" />
+    
+    <!-- Preload critical fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#3b82f6" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ai-dev-env.github.io/" />
+    <meta property="og:title" content="AI Development Environment" />
+    <meta property="og:description" content="Production-grade AI development environment with IDE integration" />
+    <meta property="og:image" content="/og-image.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://ai-dev-env.github.io/" />
+    <meta property="twitter:title" content="AI Development Environment" />
+    <meta property="twitter:description" content="Production-grade AI development environment with IDE integration" />
+    <meta property="twitter:image" content="/twitter-image.png" />
+    
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    
+    <!-- Critical CSS for initial render -->
+    <style>
+      /* Critical CSS for initial loading */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', system-ui, sans-serif;
+        background-color: #f8fafc;
+        color: #1e293b;
+        line-height: 1.6;
+      }
+      
+      #root {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      /* Loading spinner */
+      .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* Initial loading state */
+      .app-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      
+      .app-loading h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        color: #3b82f6;
+        margin: 0;
+      }
+      
+      .app-loading p {
+        color: #64748b;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <!-- Initial loading state -->
+      <div class="app-loading">
+        <h1>AI Development Environment</h1>
+        <div class="loading-spinner"></div>
+        <p>Loading intelligent development tools...</p>
+      </div>
+    </div>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+    
+    <!-- Main application script -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

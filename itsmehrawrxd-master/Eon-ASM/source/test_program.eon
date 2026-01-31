@@ -1,0 +1,39 @@
+def func main() -> int {
+    let x: int = 42
+    let y: int = 10
+    let result = x + y
+    
+    if result > 50 {
+        ret result
+    } else {
+        ret 0
+    }
+}
+
+def func factorial(n: int) -> int {
+    if n > 1 {
+        ret n * factorial(n - 1)
+    } else {
+        ret 1
+    }
+}
+
+def func alloc_test() -> int {
+    let ptr = alloc(8)
+    let value: int = 100
+    *ptr = value
+    ret *ptr
+}
+
+def model Point {
+    x: int
+    y: int
+}
+
+def func create_point(x: int, y: int) -> Point {
+    let p = alloc(sizeof(Point))
+    p.x = x
+    p.y = y
+    ret p
+};
+;

@@ -1,0 +1,151 @@
+# User Template for Eon Generator
+# This template defines the structure and behavior for code generation
+
+PROMPT: "Create a database schema for a social media platform. Include tables for users, posts, and comments. The users table should have 'username', 'email', and 'password_hash'. Posts should have 'content' and a foreign key to users. Comments should have 'content' and foreign keys to both posts and users."
+
+LANGUAGE: Eon
+TARGET_PLATFORM: General
+
+# Entity Configuration
+ENTITIES:
+  - name: User
+    fields:
+      - name: id
+        type: int32
+        primary_key: true
+        auto_increment: true
+      - name: username
+        type: String
+        unique: true
+        required: true
+      - name: email
+        type: String
+        unique: true
+        required: true
+      - name: password_hash
+        type: String
+        required: true
+        sensitive: true
+
+  - name: Post
+    fields:
+      - name: id
+        type: int32
+        primary_key: true
+        auto_increment: true
+      - name: content
+        type: String
+        required: true
+      - name: user_id
+        type: int32
+        foreign_key: User.id
+        required: true
+      - name: created_at
+        type: DateTime
+        default: now()
+
+  - name: Comment
+    fields:
+      - name: id
+        type: int32
+        primary_key: true
+        auto_increment: true
+      - name: content
+        type: String
+        required: true
+      - name: user_id
+        type: int32
+        foreign_key: User.id
+        required: true
+      - name: post_id
+        type: int32
+        foreign_key: Post.id
+        required: true
+      - name: created_at
+        type: DateTime
+        default: now()
+
+# Function Generation
+FUNCTIONS:
+  - name: get_user
+    type: query
+    parameters:
+      - name: id
+        type: int32
+    return_type: User
+    description: "Retrieve a user by ID"
+
+  - name: create_user
+    type: mutation
+    parameters:
+      - name: username
+        type: String
+      - name: email
+        type: String
+      - name: password_hash
+        type: String
+    return_type: User
+    description: "Create a new user"
+
+  - name: get_posts_by_user
+    type: query
+    parameters:
+      - name: user_id
+        type: int32
+    return_type: "List<Post>"
+    description: "Get all posts by a specific user"
+
+  - name: create_post
+    type: mutation
+    parameters:
+      - name: user_id
+        type: int32
+      - name: content
+        type: String
+    return_type: Post
+    description: "Create a new post"
+
+  - name: get_comments_by_post
+    type: query
+    parameters:
+      - name: post_id
+        type: int32
+    return_type: "List<Comment>"
+    description: "Get all comments for a specific post"
+
+  - name: create_comment
+    type: mutation
+    parameters:
+      - name: user_id
+        type: int32
+      - name: post_id
+        type: int32
+      - name: content
+        type: String
+    return_type: Comment
+    description: "Create a new comment"
+
+# Code Generation Options
+GENERATION_OPTIONS:
+  include_imports: true
+  include_documentation: true
+  include_validation: true
+  include_error_handling: true
+  use_modern_syntax: true
+  include_type_annotations: true
+
+# Output Formatting
+FORMATTING:
+  indent_size: 4
+  use_tabs: false
+  line_length: 100
+  trailing_comma: true
+  semicolon_style: optional
+
+# Validation Rules
+VALIDATION:
+  required_fields: true
+  unique_constraints: true
+  foreign_key_constraints: true
+  type_validation: true
+  length_validation: true

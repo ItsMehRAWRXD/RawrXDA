@@ -1,0 +1,218 @@
+version: '3.8'
+
+services:
+  # Main RawrZ Security Platform
+  rawrz-app:
+    build: .
+    container_name: rawrz-security-platform
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "3002:3002"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./downloads:/app/downloads
+      - ./temp:/app/temp
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./keys:/app/keys
+      - ./stubs:/app/stubs
+      - ./payloads:/app/payloads
+      - ./bots:/app/bots
+      - ./cve:/app/cve
+      - ./engines:/app/engines
+      - ./backups:/app/backups
+      - ./public:/app/public
+      - ./api-server-no-cli.js:/app/api-server-no-cli.js
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_PORT=3000
+      - LOG_LEVEL=info
+      - MAX_FILE_SIZE=100MB
+      - UPLOAD_DIR=/app/uploads
+      - DOWNLOAD_DIR=/app/downloads
+      - TEMP_DIR=/app/temp
+      - LOGS_DIR=/app/logs
+      - DATA_DIR=/app/data
+      - KEYS_DIR=/app/keys
+      - STUBS_DIR=/app/stubs
+      - PAYLOADS_DIR=/app/payloads
+      - BOTS_DIR=/app/bots
+      - CVE_DIR=/app/cve
+      - ENGINES_DIR=/app/engines
+      - BACKUPS_DIR=/app/backups
+    restart: unless-stopped
+    networks:
+      - rawrz-network
+    depends_on:
+      - rawrz-db
+      - rawrz-redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Database for storing bot data, CVE info, etc.
+  rawrz-db:
+    image: postgres:15-alpine
+    container_name: rawrz-database
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=rawrz_security
+      - POSTGRES_USER=rawrz_user
+      - POSTGRES_PASSWORD=rawrz_secure_password_2024
+    volumes:
+      - rawrz_db_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - rawrz-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rawrz_user -d rawrz_security"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and session management
+  rawrz-redis:
+    image: redis:7-alpine
+    container_name: rawrz-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - rawrz_redis_data:/data
+    restart: unless-stopped
+    networks:
+      - rawrz-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx reverse proxy for load balancing and SSL termination
+  rawrz-nginx:
+    image: nginx:alpine
+    container_name: rawrz-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./public:/usr/share/nginx/html
+    restart: unless-stopped
+    networks:
+      - rawrz-network
+    depends_on:
+      - rawrz-app
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoring and logging
+  rawrz-monitoring:
+    image: prom/prometheus:latest
+    container_name: rawrz-monitoring
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - rawrz_prometheus_data:/prometheus
+    restart: unless-stopped
+    networks:
+      - rawrz-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  # Log aggregation
+  rawrz-logs:
+    image: grafana/loki:latest
+    container_name: rawrz-logs
+    ports:
+      - "3100:3100"
+    volumes:
+      - rawrz_loki_data:/loki
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - rawrz-network
+    command: -config.file=/etc/loki/local-config.yaml
+
+  # File processing service for advanced encryption
+  rawrz-processor:
+    build: .
+    container_name: rawrz-processor
+    command: ["node", "file-processor.js"]
+    volumes:
+      - ./uploads:/app/uploads
+      - ./downloads:/app/downloads
+      - ./temp:/app/temp
+      - ./engines:/app/engines
+    environment:
+      - NODE_ENV=production
+      - PROCESSOR_PORT=3001
+      - MAX_WORKERS=4
+    restart: unless-stopped
+    networks:
+      - rawrz-network
+    depends_on:
+      - rawrz-app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Bot management service
+  rawrz-bots:
+    build: .
+    container_name: rawrz-bots
+    command: ["node", "bot-manager.js"]
+    volumes:
+      - ./bots:/app/bots
+      - ./payloads:/app/payloads
+      - ./stubs:/app/stubs
+    environment:
+      - NODE_ENV=production
+      - BOT_PORT=3002
+      - MAX_BOTS=100
+    restart: unless-stopped
+    networks:
+      - rawrz-network
+    depends_on:
+      - rawrz-app
+      - rawrz-db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  rawrz-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  rawrz_db_data:
+    driver: local
+  rawrz_redis_data:
+    driver: local
+  rawrz_prometheus_data:
+    driver: local
+  rawrz_loki_data:
+    driver: local

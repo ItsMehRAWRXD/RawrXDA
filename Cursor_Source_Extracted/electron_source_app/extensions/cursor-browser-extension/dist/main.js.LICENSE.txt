@@ -1,0 +1,52 @@
+/*! node-domexception. MIT License. Jimmy Wärting <https://jimmy.warting.se/opensource> */
+
+/**
+ * @license
+ * Copyright 2023 Google Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * @license
+ * Copyright 2024 Google Inc.
+ * Modifications copyright (c) Microsoft Corporation.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * @license
+ * web-streams-polyfill v3.3.3
+ * Copyright 2024 Mattias Buelens, Diwank Singh Tomer and other contributors.
+ * This code is released under the MIT license.
+ * SPDX-License-Identifier: MIT
+ */
+
+/**
+ * @license React
+ * react-dom.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react-jsx-runtime.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * scheduler.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */

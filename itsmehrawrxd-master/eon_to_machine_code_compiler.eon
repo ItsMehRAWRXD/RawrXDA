@@ -1,0 +1,812 @@
+; eon_to_machine_code_compiler.eon
+; Complete EON ASM to native machine code compiler
+; Direct compilation to x86-64, x86-32, ARM64 machine code
+; Zero external dependencies - pure EON implementation
+
+module EonToMachineCodeCompiler
+
+; === Machine Code Generator ===
+class MachineCodeGenerator {
+    var target_arch: string
+    var output_format: string
+    var machine_code: Array<byte>
+    var symbol_table: Map<string, qword>
+    var relocation_table: Array<RelocationEntry>
+    var current_address: qword
+    
+    function init(architecture: string = "x86_64") {
+        target_arch = architecture
+        output_format = getOutputFormat(architecture)
+        machine_code = Array<byte>()
+        symbol_table = Map<string, qword>()
+        relocation_table = Array<RelocationEntry>()
+        current_address = 0x1000  ; Start at typical entry point
+        
+        println("Machine Code Generator initialized for " + architecture)
+    }
+    
+    function compileEonToMachineCode(eon_source: string) -> Array<byte> {
+        println("Compiling EON source to native machine code...")
+        
+        ; Parse EON source
+        var ast = parseEonSource(eon_source)
+        
+        ; Generate machine code
+        generateMachineCode(ast)
+        
+        ; Apply relocations
+        applyRelocations()
+        
+        ; Optimize code
+        optimizeMachineCode()
+        
+        println("Machine code generation complete!")
+        println("Generated " + machine_code.length().toString() + " bytes")
+        
+        return machine_code
+    }
+    
+    function parseEonSource(source: string) -> ASTNode {
+        var lexer = EonLexer(source)
+        var tokens = lexer.tokenize()
+        
+        var parser = EonParser(tokens)
+        var ast = parser.parse()
+        
+        return ast
+    }
+    
+    function generateMachineCode(ast: ASTNode) {
+        ; Generate entry point
+        generateEntryPoint()
+        
+        ; Generate code for each AST node
+        generateNodeCode(ast)
+        
+        ; Generate exit sequence
+        generateExitSequence()
+    }
+    
+    function generateEntryPoint() {
+        match target_arch {
+            case "x86_64":
+                generateX64EntryPoint()
+            case "x86_32":
+                generateX32EntryPoint()
+            case "arm64":
+                generateARM64EntryPoint()
+        }
+    }
+    
+    function generateX64EntryPoint() {
+        ; x86-64 function prologue
+        emitBytes([0x48, 0x83, 0xEC, 0x28])  ; sub rsp, 40
+        emitBytes([0x48, 0x89, 0x5C, 0x24, 0x20])  ; mov [rsp+32], rbx
+        emitBytes([0x48, 0x89, 0x6C, 0x24, 0x18])  ; mov [rsp+24], rbp
+        emitBytes([0x48, 0x89, 0x74, 0x24, 0x10])  ; mov [rsp+16], rsi
+        emitBytes([0x48, 0x89, 0x7C, 0x24, 0x08])  ; mov [rsp+8], rdi
+    }
+    
+    function generateX32EntryPoint() {
+        ; x86-32 function prologue
+        emitBytes([0x55])  ; push ebp
+        emitBytes([0x89, 0xE5])  ; mov ebp, esp
+        emitBytes([0x83, 0xEC, 0x10])  ; sub esp, 16
+    }
+    
+    function generateARM64EntryPoint() {
+        ; ARM64 function prologue
+        emitBytes([0xFD, 0x7B, 0xBF, 0xA9])  ; stp x29, x30, [sp, #-16]!
+        emitBytes([0xFD, 0x03, 0x00, 0x91])  ; mov x29, sp
+        emitBytes([0xFF, 0x83, 0x00, 0xD1])  ; sub sp, sp, #32
+    }
+    
+    function generateNodeCode(node: ASTNode) {
+        match node.type {
+            case NodeType.PROGRAM:
+                for child in node.children {
+                    generateNodeCode(child)
+                }
+                
+            case NodeType.FUNCTION_DEFINITION:
+                generateFunctionCode(node)
+                
+            case NodeType.FUNCTION_CALL:
+                generateFunctionCallCode(node)
+                
+            case NodeType.VARIABLE_DECLARATION:
+                generateVariableDeclarationCode(node)
+                
+            case NodeType.ASSIGNMENT:
+                generateAssignmentCode(node)
+                
+            case NodeType.IF_STATEMENT:
+                generateIfStatementCode(node)
+                
+            case NodeType.WHILE_LOOP:
+                generateWhileLoopCode(node)
+                
+            case NodeType.RETURN_STATEMENT:
+                generateReturnCode(node)
+                
+            case NodeType.LITERAL:
+                generateLiteralCode(node)
+                
+            case NodeType.BINARY_OPERATION:
+                generateBinaryOperationCode(node)
+        }
+    }
+    
+    function generateFunctionCode(func_node: ASTNode) {
+        var func_name = func_node.name
+        var func_start = current_address
+        
+        ; Add function to symbol table
+        symbol_table[func_name] = func_start
+        
+        ; Generate function prologue
+        generateFunctionPrologue()
+        
+        ; Generate function body
+        for statement in func_node.body {
+            generateNodeCode(statement)
+        }
+        
+        ; Generate function epilogue
+        generateFunctionEpilogue()
+    }
+    
+    function generateFunctionCallCode(call_node: ASTNode) {
+        var func_name = call_node.name
+        
+        ; Prepare arguments
+        for i in 0..call_node.arguments.length() {
+            generateArgumentCode(call_node.arguments[i], i)
+        }
+        
+        ; Call function
+        match target_arch {
+            case "x86_64":
+                generateX64FunctionCall(func_name)
+            case "x86_32":
+                generateX32FunctionCall(func_name)
+            case "arm64":
+                generateARM64FunctionCall(func_name)
+        }
+    }
+    
+    function generateX64FunctionCall(func_name: string) {
+        ; x86-64 function call
+        emitBytes([0xE8])  ; call instruction
+        emitRelocation(func_name, 4)  ; 4-byte relative address
+    }
+    
+    function generateX32FunctionCall(func_name: string) {
+        ; x86-32 function call
+        emitBytes([0xE8])  ; call instruction
+        emitRelocation(func_name, 4)  ; 4-byte relative address
+    }
+    
+    function generateARM64FunctionCall(func_name: string) {
+        ; ARM64 function call
+        emitBytes([0x94])  ; bl instruction
+        emitRelocation(func_name, 4)  ; 4-byte relative address
+    }
+    
+    function generateArgumentCode(arg_node: ASTNode, arg_index: int) {
+        match target_arch {
+            case "x86_64":
+                generateX64ArgumentCode(arg_node, arg_index)
+            case "x86_32":
+                generateX32ArgumentCode(arg_node, arg_index)
+            case "arm64":
+                generateARM64ArgumentCode(arg_node, arg_index)
+        }
+    }
+    
+    function generateX64ArgumentCode(arg_node: ASTNode, arg_index: int) {
+        ; x86-64 calling convention: rcx, rdx, r8, r9, then stack
+        var reg_map = ["rcx", "rdx", "r8", "r9"]
+        
+        if (arg_index < 4) {
+            ; Use register
+            var reg = reg_map[arg_index]
+            generateLoadToRegister(arg_node, reg)
+        } else {
+            ; Use stack
+            generateLoadToStack(arg_node, (arg_index - 4) * 8)
+        }
+    }
+    
+    function generateX32ArgumentCode(arg_node: ASTNode, arg_index: int) {
+        ; x86-32 calling convention: stack only
+        generateLoadToStack(arg_node, arg_index * 4)
+    }
+    
+    function generateARM64ArgumentCode(arg_node: ASTNode, arg_index: int) {
+        ; ARM64 calling convention: x0-x7, then stack
+        if (arg_index < 8) {
+            var reg = "x" + arg_index.toString()
+            generateLoadToRegister(arg_node, reg)
+        } else {
+            generateLoadToStack(arg_node, (arg_index - 8) * 8)
+        }
+    }
+    
+    function generateLoadToRegister(node: ASTNode, register: string) {
+        match node.type {
+            case NodeType.LITERAL:
+                if (node.value_type == "integer") {
+                    generateLoadImmediate(node.value, register)
+                } else if (node.value_type == "string") {
+                    generateLoadStringAddress(node.value, register)
+                }
+                
+            case NodeType.VARIABLE_REFERENCE:
+                generateLoadVariable(node.name, register)
+        }
+    }
+    
+    function generateLoadImmediate(value: int, register: string) {
+        match target_arch {
+            case "x86_64":
+                generateX64LoadImmediate(value, register)
+            case "x86_32":
+                generateX32LoadImmediate(value, register)
+            case "arm64":
+                generateARM64LoadImmediate(value, register)
+        }
+    }
+    
+    function generateX64LoadImmediate(value: int, register: string) {
+        var reg_code = getX64RegisterCode(register)
+        
+        if (value >= -128 && value <= 127) {
+            ; Use mov with 8-bit immediate
+            emitBytes([0x48, 0xC7, 0xC0 | reg_code, value & 0xFF])
+        } else if (value >= -2147483648 && value <= 2147483647) {
+            ; Use mov with 32-bit immediate
+            emitBytes([0x48, 0xC7, 0xC0 | reg_code])
+            emitDword(value)
+        } else {
+            ; Use mov with 64-bit immediate
+            emitBytes([0x48, 0xB8 | reg_code])
+            emitQword(value)
+        }
+    }
+    
+    function generateX32LoadImmediate(value: int, register: string) {
+        var reg_code = getX32RegisterCode(register)
+        
+        if (value >= -128 && value <= 127) {
+            ; Use mov with 8-bit immediate
+            emitBytes([0xB0 | reg_code, value & 0xFF])
+        } else {
+            ; Use mov with 32-bit immediate
+            emitBytes([0xB8 | reg_code])
+            emitDword(value)
+        }
+    }
+    
+    function generateARM64LoadImmediate(value: int, register: string) {
+        var reg_code = getARM64RegisterCode(register)
+        
+        ; ARM64 mov immediate (simplified)
+        emitBytes([0x80, 0x00, 0x80, 0xD2 | reg_code])
+        emitDword(value)
+    }
+    
+    function generateBinaryOperationCode(op_node: ASTNode) {
+        var left = op_node.left
+        var right = op_node.right
+        var operator = op_node.operator
+        
+        ; Generate left operand
+        generateNodeCode(left)
+        
+        ; Generate right operand
+        generateNodeCode(right)
+        
+        ; Generate operation
+        match operator {
+            case "+":
+                generateAddOperation()
+            case "-":
+                generateSubtractOperation()
+            case "*":
+                generateMultiplyOperation()
+            case "/":
+                generateDivideOperation()
+            case "==":
+                generateEqualOperation()
+            case "!=":
+                generateNotEqualOperation()
+            case "<":
+                generateLessThanOperation()
+            case ">":
+                generateGreaterThanOperation()
+        }
+    }
+    
+    function generateAddOperation() {
+        match target_arch {
+            case "x86_64":
+                emitBytes([0x48, 0x01, 0xC8])  ; add rax, rcx
+            case "x86_32":
+                emitBytes([0x01, 0xC8])  ; add eax, ecx
+            case "arm64":
+                emitBytes([0x00, 0x00, 0x00, 0x8B])  ; add x0, x0, x1
+        }
+    }
+    
+    function generateSubtractOperation() {
+        match target_arch {
+            case "x86_64":
+                emitBytes([0x48, 0x29, 0xC8])  ; sub rax, rcx
+            case "x86_32":
+                emitBytes([0x29, 0xC8])  ; sub eax, ecx
+            case "arm64":
+                emitBytes([0x00, 0x00, 0x00, 0xCB])  ; sub x0, x0, x1
+        }
+    }
+    
+    function generateMultiplyOperation() {
+        match target_arch {
+            case "x86_64":
+                emitBytes([0x48, 0x0F, 0xAF, 0xC1])  ; imul rax, rcx
+            case "x86_32":
+                emitBytes([0x0F, 0xAF, 0xC1])  ; imul eax, ecx
+            case "arm64":
+                emitBytes([0x00, 0x00, 0x00, 0x9B])  ; mul x0, x0, x1
+        }
+    }
+    
+    function generateDivideOperation() {
+        match target_arch {
+            case "x86_64":
+                emitBytes([0x48, 0x99])  ; cqo
+                emitBytes([0x48, 0xF7, 0xF9])  ; idiv rcx
+            case "x86_32":
+                emitBytes([0x99])  ; cdq
+                emitBytes([0xF7, 0xF9])  ; idiv ecx
+            case "arm64":
+                emitBytes([0x00, 0x00, 0x00, 0x9A])  ; sdiv x0, x0, x1
+        }
+    }
+    
+    function generateIfStatementCode(if_node: ASTNode) {
+        ; Generate condition
+        generateNodeCode(if_node.condition)
+        
+        ; Generate conditional jump
+        var jump_offset = emitConditionalJump("je")  ; Jump if equal (false)
+        
+        ; Generate then block
+        for statement in if_node.then_block {
+            generateNodeCode(statement)
+        }
+        
+        ; Generate else block if present
+        if (if_node.else_block.length() > 0) {
+            var else_jump_offset = emitUnconditionalJump()
+            
+            ; Fix the conditional jump
+            fixJump(jump_offset, current_address)
+            
+            for statement in if_node.else_block {
+                generateNodeCode(statement)
+            }
+            
+            ; Fix the unconditional jump
+            fixJump(else_jump_offset, current_address)
+        } else {
+            ; Fix the conditional jump
+            fixJump(jump_offset, current_address)
+        }
+    }
+    
+    function generateWhileLoopCode(while_node: ASTNode) {
+        var loop_start = current_address
+        
+        ; Generate condition
+        generateNodeCode(while_node.condition)
+        
+        ; Generate conditional jump to exit
+        var exit_jump_offset = emitConditionalJump("je")
+        
+        ; Generate loop body
+        for statement in while_node.body {
+            generateNodeCode(statement)
+        }
+        
+        ; Generate unconditional jump back to start
+        emitUnconditionalJumpTo(loop_start)
+        
+        ; Fix the exit jump
+        fixJump(exit_jump_offset, current_address)
+    }
+    
+    function generateReturnCode(return_node: ASTNode) {
+        if (return_node.value != null) {
+            ; Generate return value
+            generateNodeCode(return_node.value)
+        }
+        
+        ; Generate return instruction
+        match target_arch {
+            case "x86_64":
+                generateX64Return()
+            case "x86_32":
+                generateX32Return()
+            case "arm64":
+                generateARM64Return()
+        }
+    }
+    
+    function generateX64Return() {
+        ; x86-64 function epilogue
+        emitBytes([0x48, 0x8B, 0x5C, 0x24, 0x20])  ; mov rbx, [rsp+32]
+        emitBytes([0x48, 0x8B, 0x6C, 0x24, 0x18])  ; mov rbp, [rsp+24]
+        emitBytes([0x48, 0x8B, 0x74, 0x24, 0x10])  ; mov rsi, [rsp+16]
+        emitBytes([0x48, 0x8B, 0x7C, 0x24, 0x08])  ; mov rdi, [rsp+8]
+        emitBytes([0x48, 0x83, 0xC4, 0x28])  ; add rsp, 40
+        emitBytes([0xC3])  ; ret
+    }
+    
+    function generateX32Return() {
+        ; x86-32 function epilogue
+        emitBytes([0x89, 0xEC])  ; mov esp, ebp
+        emitBytes([0x5D])  ; pop ebp
+        emitBytes([0xC3])  ; ret
+    }
+    
+    function generateARM64Return() {
+        ; ARM64 function epilogue
+        emitBytes([0xBF, 0x03, 0x00, 0x91])  ; mov sp, x29
+        emitBytes([0xFD, 0x7B, 0xC1, 0xA8])  ; ldp x29, x30, [sp], #16
+        emitBytes([0xC0, 0x03, 0x5F, 0xD6])  ; ret
+    }
+    
+    function generateExitSequence() {
+        match target_arch {
+            case "x86_64":
+                generateX64Exit()
+            case "x86_32":
+                generateX32Exit()
+            case "arm64":
+                generateARM64Exit()
+        }
+    }
+    
+    function generateX64Exit() {
+        ; x86-64 exit system call
+        emitBytes([0x48, 0x31, 0xC9])  ; xor rcx, rcx (exit code 0)
+        emitBytes([0xFF, 0x15])  ; call ExitProcess
+        emitRelocation("ExitProcess", 8)  ; 8-byte address
+    }
+    
+    function generateX32Exit() {
+        ; x86-32 exit system call
+        emitBytes([0x31, 0xC9])  ; xor ecx, ecx (exit code 0)
+        emitBytes([0xFF, 0x15])  ; call ExitProcess
+        emitRelocation("ExitProcess", 4)  ; 4-byte address
+    }
+    
+    function generateARM64Exit() {
+        ; ARM64 exit system call
+        emitBytes([0x00, 0x00, 0x80, 0xD2])  ; mov x0, #0 (exit code 0)
+        emitBytes([0x01, 0x00, 0x00, 0xD4])  ; svc #0 (system call)
+    }
+    
+    function emitBytes(bytes: Array<byte>) {
+        for b in bytes {
+            machine_code.append(b)
+            current_address += 1
+        }
+    }
+    
+    function emitDword(value: dword) {
+        for i in 0..4 {
+            machine_code.append(cast<byte>((value >> (i * 8)) & 0xFF))
+            current_address += 1
+        }
+    }
+    
+    function emitQword(value: qword) {
+        for i in 0..8 {
+            machine_code.append(cast<byte>((value >> (i * 8)) & 0xFF))
+            current_address += 1
+        }
+    }
+    
+    function emitRelocation(symbol: string, size: int) {
+        var relocation = RelocationEntry()
+        relocation.address = current_address
+        relocation.symbol = symbol
+        relocation.size = size
+        relocation.type = RelocationType.ABSOLUTE
+        
+        relocation_table.append(relocation)
+        
+        ; Emit placeholder bytes
+        for i in 0..size {
+            machine_code.append(0)
+            current_address += 1
+        }
+    }
+    
+    function emitConditionalJump(condition: string) -> int {
+        match target_arch {
+            case "x86_64":
+                return emitX64ConditionalJump(condition)
+            case "x86_32":
+                return emitX32ConditionalJump(condition)
+            case "arm64":
+                return emitARM64ConditionalJump(condition)
+        }
+        return 0
+    }
+    
+    function emitX64ConditionalJump(condition: string) -> int {
+        var jump_offset = current_address
+        
+        match condition {
+            case "je":
+                emitBytes([0x0F, 0x84])  ; je rel32
+            case "jne":
+                emitBytes([0x0F, 0x85])  ; jne rel32
+            case "jl":
+                emitBytes([0x0F, 0x8C])  ; jl rel32
+            case "jg":
+                emitBytes([0x0F, 0x8F])  ; jg rel32
+        }
+        
+        ; Emit placeholder for jump target
+        emitDword(0)
+        
+        return jump_offset
+    }
+    
+    function emitUnconditionalJump() -> int {
+        var jump_offset = current_address
+        
+        match target_arch {
+            case "x86_64":
+                emitBytes([0xE9])  ; jmp rel32
+            case "x86_32":
+                emitBytes([0xE9])  ; jmp rel32
+            case "arm64":
+                emitBytes([0x00, 0x00, 0x00, 0x14])  ; b label
+        }
+        
+        ; Emit placeholder for jump target
+        emitDword(0)
+        
+        return jump_offset
+    }
+    
+    function emitUnconditionalJumpTo(target_address: qword) {
+        var offset = target_address - current_address - 5  ; 5 bytes for jmp instruction
+        
+        match target_arch {
+            case "x86_64":
+                emitBytes([0xE9])  ; jmp rel32
+                emitDword(cast<dword>(offset))
+            case "x86_32":
+                emitBytes([0xE9])  ; jmp rel32
+                emitDword(cast<dword>(offset))
+            case "arm64":
+                emitBytes([0x00, 0x00, 0x00, 0x14])  ; b label
+                emitDword(cast<dword>(offset))
+        }
+    }
+    
+    function fixJump(jump_offset: int, target_address: qword) {
+        var offset = target_address - (jump_offset + 5)  ; 5 bytes for jmp instruction
+        
+        ; Write the offset at the jump location
+        for i in 0..4 {
+            machine_code[jump_offset + 1 + i] = cast<byte>((offset >> (i * 8)) & 0xFF)
+        }
+    }
+    
+    function applyRelocations() {
+        for relocation in relocation_table {
+            var symbol_address = symbol_table[relocation.symbol]
+            
+            if (relocation.type == RelocationType.ABSOLUTE) {
+                ; Write absolute address
+                for i in 0..relocation.size {
+                    machine_code[relocation.address + i] = cast<byte>((symbol_address >> (i * 8)) & 0xFF)
+                }
+            } else if (relocation.type == RelocationType.RELATIVE) {
+                ; Write relative offset
+                var offset = symbol_address - (relocation.address + relocation.size)
+                for i in 0..relocation.size {
+                    machine_code[relocation.address + i] = cast<byte>((offset >> (i * 8)) & 0xFF)
+                }
+            }
+        }
+    }
+    
+    function optimizeMachineCode() {
+        ; Basic optimizations
+        optimizeRedundantInstructions()
+        optimizeJumpInstructions()
+        optimizeRegisterUsage()
+    }
+    
+    function optimizeRedundantInstructions() {
+        ; Remove redundant mov instructions
+        ; This is a simplified optimization
+        var i = 0
+        while (i < machine_code.length() - 1) {
+            if (isRedundantMove(i)) {
+                ; Remove redundant instruction
+                removeInstruction(i, getInstructionSize(i))
+            } else {
+                i += getInstructionSize(i)
+            }
+        }
+    }
+    
+    function optimizeJumpInstructions() {
+        ; Optimize jump chains
+        ; This is a simplified optimization
+    }
+    
+    function optimizeRegisterUsage() {
+        ; Optimize register allocation
+        ; This is a simplified optimization
+    }
+    
+    function getOutputFormat(architecture: string) -> string {
+        match architecture {
+            case "x86_64":
+                return "pe64"
+            case "x86_32":
+                return "pe32"
+            case "arm64":
+                return "elf64"
+            default:
+                return "pe64"
+        }
+    }
+    
+    function getX64RegisterCode(register: string) -> byte {
+        match register {
+            case "rax": return 0
+            case "rcx": return 1
+            case "rdx": return 2
+            case "rbx": return 3
+            case "rsp": return 4
+            case "rbp": return 5
+            case "rsi": return 6
+            case "rdi": return 7
+            case "r8": return 0
+            case "r9": return 1
+            case "r10": return 2
+            case "r11": return 3
+            case "r12": return 4
+            case "r13": return 5
+            case "r14": return 6
+            case "r15": return 7
+            default: return 0
+        }
+    }
+    
+    function getX32RegisterCode(register: string) -> byte {
+        match register {
+            case "eax": return 0
+            case "ecx": return 1
+            case "edx": return 2
+            case "ebx": return 3
+            case "esp": return 4
+            case "ebp": return 5
+            case "esi": return 6
+            case "edi": return 7
+            default: return 0
+        }
+    }
+    
+    function getARM64RegisterCode(register: string) -> byte {
+        match register {
+            case "x0": return 0
+            case "x1": return 1
+            case "x2": return 2
+            case "x3": return 3
+            case "x4": return 4
+            case "x5": return 5
+            case "x6": return 6
+            case "x7": return 7
+            case "x8": return 8
+            case "x9": return 9
+            case "x10": return 10
+            case "x11": return 11
+            case "x12": return 12
+            case "x13": return 13
+            case "x14": return 14
+            case "x15": return 15
+            default: return 0
+        }
+    }
+    
+    function isRedundantMove(offset: int) -> bool {
+        ; Check if instruction at offset is a redundant move
+        ; This is a simplified check
+        return false
+    }
+    
+    function getInstructionSize(offset: int) -> int {
+        ; Get size of instruction at offset
+        ; This is a simplified implementation
+        return 1
+    }
+    
+    function removeInstruction(offset: int, size: int) {
+        ; Remove instruction of given size at offset
+        for i in 0..size {
+            machine_code.removeAt(offset)
+        }
+    }
+}
+
+; === Data Structures ===
+enum NodeType {
+    PROGRAM,
+    FUNCTION_DEFINITION,
+    FUNCTION_CALL,
+    VARIABLE_DECLARATION,
+    ASSIGNMENT,
+    IF_STATEMENT,
+    WHILE_LOOP,
+    RETURN_STATEMENT,
+    LITERAL,
+    BINARY_OPERATION,
+    VARIABLE_REFERENCE
+}
+
+enum RelocationType {
+    ABSOLUTE,
+    RELATIVE
+}
+
+class ASTNode {
+    var type: NodeType
+    var name: string
+    var value: string
+    var value_type: string
+    var children: Array<ASTNode>
+    var arguments: Array<ASTNode>
+    var condition: ASTNode
+    var then_block: Array<ASTNode>
+    var else_block: Array<ASTNode>
+    var body: Array<ASTNode>
+    var left: ASTNode
+    var right: ASTNode
+    var operator: string
+    
+    function init() {
+        children = Array<ASTNode>()
+        arguments = Array<ASTNode>()
+        then_block = Array<ASTNode>()
+        else_block = Array<ASTNode>()
+        body = Array<ASTNode>()
+    }
+}
+
+class RelocationEntry {
+    var address: qword
+    var symbol: string
+    var size: int
+    var type: RelocationType
+}
+
+; === Main Compiler Function ===
+function compileEonToMachineCode(eon_source: string, target_arch: string = "x86_64") -> Array<byte> {
+    var generator = MachineCodeGenerator(target_arch)
+    return generator.compileEonToMachineCode(eon_source)
+}
+
+export MachineCodeGenerator
+export compileEonToMachineCode

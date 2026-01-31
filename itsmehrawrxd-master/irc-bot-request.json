@@ -1,0 +1,1 @@
+{"engineId":"irc-bot-generator","action":"generateIRCBot","params":{"botConfig":{"server":"irc.example.com","port":6667,"channel":"#test","nickname":"RawrZBot"},"options":{"stealth":true,"encryption":true,"persistence":true}}}

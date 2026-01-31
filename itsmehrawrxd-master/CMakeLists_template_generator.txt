@@ -1,0 +1,249 @@
+# CMakeLists_template_generator.txt
+# CMake configuration for the universal template generator
+# Integrates with the existing RawrZApp build system
+
+cmake_minimum_required(VERSION 3.16)
+project(TemplateGenerator)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Platform detection
+if(WIN32)
+    set(PLATFORM_WINDOWS TRUE)
+elseif(APPLE)
+    set(PLATFORM_MACOS TRUE)
+elseif(UNIX)
+    set(PLATFORM_LINUX TRUE)
+endif()
+
+# Architecture detection
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(ARCH_64BIT TRUE)
+else()
+    set(ARCH_32BIT TRUE)
+endif()
+
+# Compiler detection
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(COMPILER_GCC TRUE)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(COMPILER_CLANG TRUE)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(COMPILER_MSVC TRUE)
+endif()
+
+# Assembly source files for template generator
+set(TEMPLATE_GENERATOR_ASM_SOURCES
+    data_source_adapters.asm
+    eon_template_lexer.asm
+    eon_template_parser.asm
+    eon_template_engine.asm
+    uim_model.asm
+    language_generators.asm
+    template_generator_main.asm
+)
+
+# C++ wrapper sources (if needed)
+set(TEMPLATE_GENERATOR_CPP_SOURCES
+    template_generator_wrapper.cpp
+)
+
+# Include directories
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../)
+
+# Compiler flags
+if(COMPILER_GCC OR COMPILER_CLANG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -O2")
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -felf64")
+elseif(COMPILER_MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /O2")
+endif()
+
+# Platform-specific settings
+if(PLATFORM_WINDOWS)
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -f win64")
+    set(EXECUTABLE_EXTENSION ".exe")
+elseif(PLATFORM_MACOS)
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -f macho64")
+    set(EXECUTABLE_EXTENSION "")
+elseif(PLATFORM_LINUX)
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -f elf64")
+    set(EXECUTABLE_EXTENSION "")
+endif()
+
+# Create template generator executable
+add_executable(template_generator
+    ${TEMPLATE_GENERATOR_ASM_SOURCES}
+    ${TEMPLATE_GENERATOR_CPP_SOURCES}
+)
+
+# Set output name
+set_target_properties(template_generator PROPERTIES
+    OUTPUT_NAME "template_generator${EXECUTABLE_EXTENSION}"
+)
+
+# Link libraries
+if(PLATFORM_LINUX)
+    target_link_libraries(template_generator m)
+endif()
+
+# Custom command to generate code from templates
+function(add_template_generation target_name)
+    set(options)
+    set(oneValueArgs SOURCE TEMPLATE OUTPUT LANGUAGE)
+    set(multiValueArgs DEPENDS)
+    cmake_parse_arguments(TEMPLATE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    
+    # Validate arguments
+    if(NOT TEMPLATE_SOURCE)
+        message(FATAL_ERROR "SOURCE is required for template generation")
+    endif()
+    if(NOT TEMPLATE_TEMPLATE)
+        message(FATAL_ERROR "TEMPLATE is required for template generation")
+    endif()
+    if(NOT TEMPLATE_OUTPUT)
+        message(FATAL_ERROR "OUTPUT is required for template generation")
+    endif()
+    if(NOT TEMPLATE_LANGUAGE)
+        set(TEMPLATE_LANGUAGE "eon")
+    endif()
+    
+    # Create custom command
+    add_custom_command(
+        OUTPUT ${TEMPLATE_OUTPUT}
+        COMMAND template_generator
+        ARGS
+            --source ${TEMPLATE_SOURCE}
+            --template ${TEMPLATE_TEMPLATE}
+            --output ${TEMPLATE_OUTPUT}
+            --language ${TEMPLATE_LANGUAGE}
+        DEPENDS
+            template_generator
+            ${TEMPLATE_SOURCE}
+            ${TEMPLATE_TEMPLATE}
+            ${TEMPLATE_DEPENDS}
+        COMMENT "Generating ${TEMPLATE_OUTPUT} from ${TEMPLATE_SOURCE} using ${TEMPLATE_TEMPLATE}"
+        VERBATIM
+    )
+    
+    # Add generated file to target sources
+    target_sources(${target_name} PRIVATE ${TEMPLATE_OUTPUT})
+endfunction()
+
+# Example usage of template generation
+add_template_generation(
+    TARGET example_generated
+    SOURCE example_header.h
+    TEMPLATE example_template.eont
+    OUTPUT generated_example.eon
+    LANGUAGE eon
+    DEPENDS
+)
+
+# Create example target
+add_executable(example_generated
+    generated_example.eon
+)
+
+# Test targets
+enable_testing()
+
+# Test template generator
+add_test(NAME template_generator_test
+    COMMAND template_generator
+    --source example_header.h
+    --template example_template.eont
+    --output test_output.eon
+    --language eon
+)
+
+# Test with different languages
+add_test(NAME template_generator_cpp_test
+    COMMAND template_generator
+    --source example_header.h
+    --template example_template.eont
+    --output test_output.cpp
+    --language cpp
+)
+
+add_test(NAME template_generator_python_test
+    COMMAND template_generator
+    --source example_header.h
+    --template example_template.eont
+    --output test_output.py
+    --language python
+)
+
+# Install targets
+install(TARGETS template_generator
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+# Install example files
+install(FILES
+    example_header.h
+    example_template.eont
+    DESTINATION share/template_generator/examples
+)
+
+# Package configuration
+set(CPACK_PACKAGE_NAME "TemplateGenerator")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Universal Template Generator for RawrZApp")
+set(CPACK_PACKAGE_VENDOR "RawrZApp Team")
+
+# Platform-specific packaging
+if(PLATFORM_WINDOWS)
+    set(CPACK_GENERATOR "ZIP;NSIS")
+elseif(PLATFORM_MACOS)
+    set(CPACK_GENERATOR "ZIP;DragNDrop")
+elseif(PLATFORM_LINUX)
+    set(CPACK_GENERATOR "ZIP;DEB;RPM")
+endif()
+
+include(CPack)
+
+# Documentation
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+                   ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    
+    add_custom_target(docs
+        COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM
+    )
+endif()
+
+# Print configuration summary
+message(STATUS "Template Generator Configuration:")
+message(STATUS "  Platform: ${CMAKE_SYSTEM_NAME}")
+message(STATUS "  Architecture: ${CMAKE_SIZEOF_VOID_P * 8}-bit")
+message(STATUS "  Compiler: ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Install Prefix: ${CMAKE_INSTALL_PREFIX}")
+
+# Development targets
+add_custom_target(format
+    COMMAND find ${CMAKE_CURRENT_SOURCE_DIR} -name "*.asm" -exec clang-format -i {} \;
+    COMMENT "Formatting assembly source files"
+)
+
+add_custom_target(clean-generated
+    COMMAND ${CMAKE_COMMAND} -E remove -f generated_*.eon generated_*.cpp generated_*.py
+    COMMENT "Cleaning generated files"
+)
+
+# Add clean-generated to clean target
+add_custom_target(clean-all
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Cleaning all build files"
+)

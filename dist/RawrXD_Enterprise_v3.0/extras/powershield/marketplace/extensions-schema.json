@@ -1,0 +1,385 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RawrXD Extensions Marketplace Schema",
+  "description": "JSON schema for RawrXD IDE extension marketplace",
+  "type": "object",
+  "properties": {
+    "marketplace": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "totalExtensions": {
+          "type": "integer"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "lastUpdated"
+      ]
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "longDescription": {
+            "type": "string"
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "verified": {
+                "type": "boolean",
+                "default": false
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-z0-9]+)?$"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "Languages",
+              "Themes",
+              "Debuggers",
+              "Formatters",
+              "Linters",
+              "Snippets",
+              "Keymaps",
+              "Other",
+              "AI",
+              "Git",
+              "Productivity",
+              "Testing",
+              "Web"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "license": {
+            "type": "string"
+          },
+          "homepage": {
+            "type": "string",
+            "format": "uri"
+          },
+          "repository": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "git"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          },
+          "bugs": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          },
+          "icon": {
+            "type": "string"
+          },
+          "galleryBanner": {
+            "type": "object",
+            "properties": {
+              "color": {
+                "type": "string"
+              },
+              "theme": {
+                "type": "string",
+                "enum": [
+                  "dark",
+                  "light"
+                ]
+              }
+            }
+          },
+          "engines": {
+            "type": "object",
+            "properties": {
+              "rawrxd": {
+                "type": "string"
+              },
+              "powershell": {
+                "type": "string"
+              }
+            }
+          },
+          "activationEvents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "main": {
+            "type": "string"
+          },
+          "contributes": {
+            "type": "object",
+            "properties": {
+              "commands": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "languages": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "extensions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "themes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "uiTheme": {
+                      "type": "string",
+                      "enum": [
+                        "vs",
+                        "vs-dark",
+                        "hc-black"
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "snippets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "language": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "dependencies": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "extensionDependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scripts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "pricing": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "free",
+                  "paid",
+                  "freemium"
+                ]
+              },
+              "price": {
+                "type": "number",
+                "minimum": 0
+              },
+              "currency": {
+                "type": "string",
+                "default": "USD"
+              },
+              "trial": {
+                "type": "boolean",
+                "default": false
+              },
+              "trialDays": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "downloads": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rating": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 5
+              },
+              "ratingCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reviews": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "weeklyDownloads": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "publishedDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "assetType": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          },
+          "preview": {
+            "type": "boolean",
+            "default": false
+          },
+          "prerelease": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "author",
+          "version",
+          "category"
+        ]
+      }
+    }
+  },
+  "required": [
+    "marketplace",
+    "extensions"
+  ]
+}

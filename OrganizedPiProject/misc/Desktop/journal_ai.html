@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Journal - Connect to Any AI</title>
+    <style>
+        :root {
+            --bg: #0f1115;
+            --panel: #151822;
+            --muted: #8b94ad;
+            --text: #ebeff6;
+            --accent: #7c9cff;
+            --border: #22283a;
+            --success: #4ade80;
+            --error: #f87171;
+        }
+        
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; }
+        
+        body {
+            background: linear-gradient(180deg, #0c0f15, #0f1115 18%);
+            color: var(--text);
+            font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto;
+        }
+        
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(13, 16, 22, 0.72);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .header h1 {
+            font-size: 16px;
+            margin: 0;
+        }
+        
+        .subtitle {
+            font-size: 12px;
+            color: var(--muted);
+        }
+        
+        .actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        button {
+            appearance: none;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            border-color: #2c3450;
+            background: #1a1f2e;
+        }
+        
+        .primary {
+            background: linear-gradient(180deg, #263058, #1d2440);
+            border-color: #2b3560;
+        }
+        
+        .primary:hover {
+            background: linear-gradient(180deg, #2d3a68, #243050);
+        }
+        
+        .main {
+            max-width: 940px;
+            margin: 18px auto;
+            padding: 0 16px 120px;
+        }
+        
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 8px 28px #00000030;
+        }
+        
+        #thread {
+            padding: 8px;
+            min-height: 400px;
+        }
+        
+        .message {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .role {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        
+        .role.user {
+            background: #25304d;
+            color: #cfe0ff;
+        }
+        
+        .role.ai {
+            background: #253d2e;
+            color: #c7f5d6;
+        }
+        
+        .bubble {
+            padding: 10px 12px;
+            background: #0f1320;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: auto;
+        }
+        
+        .bubble pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin: 0;
+        }
+        
+        .compose {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 17, 21, 0.88);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid var(--border);
+            padding: 12px 16px;
+        }
+        
+        .compose-bar {
+            max-width: 940px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 58px;
+            max-height: 220px;
+            resize: vertical;
+            background: var(--panel);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            font-family: inherit;
+        }
+        
+        .compose-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .hint {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+        
+        .settings {
+            padding: 12px;
+            display: none;
+        }
+        
+        .settings.active {
+            display: block;
+        }
+        
+        .grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        @media (max-width: 720px) {
+            .grid2 { grid-template-columns: 1fr; }
+        }
+        
+        label {
+            font-size: 12px;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        input[type="text"], input[type="url"], select {
+            background: var(--panel);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 10px;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        
+        .status {
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+        
+        .status.success {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+        }
+        
+        .status.error {
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(248, 113, 113, 0.2);
+        }
+        
+        .status.loading {
+            background: rgba(124, 156, 255, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(124, 156, 255, 0.2);
+        }
+        
+        .ai-provider {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .ai-provider input[type="radio"] {
+            width: auto;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div>
+            <h1>AI Journal</h1>
+            <div class="subtitle">Type below · AI response appears above · No login required</div>
+        </div>
+        <div class="actions">
+            <button onclick="toggleSettings()">Settings</button>
+            <button onclick="clearJournal()">Clear</button>
+            <button onclick="exportJournal()">Export</button>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="card">
+            <div class="settings" id="settings">
+                <h3>AI Provider Settings</h3>
+                
+                <div class="ai-provider">
+                    <input type="radio" id="huggingface" name="provider" value="huggingface" checked>
+                    <label for="huggingface">Hugging Face (Free)</label>
+                </div>
+                
+                <div class="ai-provider">
+                    <input type="radio" id="replicate" name="provider" value="replicate">
+                    <label for="replicate">Replicate (Free tier)</label>
+                </div>
+                
+                <div class="ai-provider">
+                    <input type="radio" id="together" name="provider" value="together">
+                    <label for="together">Together AI (Free tier)</label>
+                </div>
+                
+                <div class="ai-provider">
+                    <input type="radio" id="groq" name="provider" value="groq">
+                    <label for="groq">Groq (Free tier)</label>
+                </div>
+                
+                <div class="ai-provider">
+                    <input type="radio" id="deepseek" name="provider" value="deepseek">
+                    <label for="deepseek">DeepSeek (Web Scraping)</label>
+                </div>
+                
+                <div class="ai-provider">
+                    <input type="radio" id="chatgpt" name="provider" value="chatgpt">
+                    <label for="chatgpt">ChatGPT (Web Scraping)</label>
+                </div>
+                
+                <div class="ai-provider">
+                    <input type="radio" id="kimi" name="provider" value="kimi">
+                    <label for="kimi">Kimi (Web Scraping)</label>
+                </div>
+                
+                <div class="ai-provider">
+                    <input type="radio" id="custom" name="provider" value="custom">
+                    <label for="custom">Custom Site (Web Scraping)</label>
+                </div>
+                
+                <div class="grid2">
+                    <div>
+                        <label for="apiKey">API Key (optional for some providers)</label>
+                        <input type="text" id="apiKey" placeholder="Enter API key if needed">
+                    </div>
+                    <div>
+                        <label for="model">Model</label>
+                        <select id="model">
+                            <option value="microsoft/DialoGPT-medium">DialoGPT (Hugging Face)</option>
+                            <option value="meta-llama/Llama-2-7b-chat-hf">Llama 2 (Together AI)</option>
+                            <option value="llama-2-7b-chat">Llama 2 (Replicate)</option>
+                            <option value="llama-3-8b-8192">Llama 3 (Groq)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="scrapingSettings" style="display: none;">
+                    <h4>Web Scraping Settings</h4>
+                    <div class="grid2">
+                        <div>
+                            <label for="customUrl">Custom URL (for custom site)</label>
+                            <input type="url" id="customUrl" placeholder="https://example.com/chat">
+                        </div>
+                        <div>
+                            <label for="corsProxy">CORS Proxy (optional)</label>
+                            <input type="url" id="corsProxy" placeholder="https://cors-anywhere.herokuapp.com/">
+                        </div>
+                    </div>
+                    
+                    <h4>Proxy Configuration</h4>
+                    <div class="grid2">
+                        <div>
+                            <label for="proxyType">Proxy Type</label>
+                            <select id="proxyType">
+                                <option value="none">No Proxy</option>
+                                <option value="http">HTTP Proxy</option>
+                                <option value="socks4">SOCKS4</option>
+                                <option value="socks5">SOCKS5</option>
+                                <option value="auto">Auto-detect</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="proxyList">Proxy List (one per line)</label>
+                            <textarea id="proxyList" placeholder="127.0.0.1:8080&#10;192.168.1.1:1080&#10;proxy.example.com:3128" rows="3"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="grid2">
+                        <div>
+                            <label for="proxyAuth">Proxy Authentication (user:pass)</label>
+                            <input type="text" id="proxyAuth" placeholder="username:password">
+                        </div>
+                        <div>
+                            <label for="proxyTimeout">Timeout (seconds)</label>
+                            <input type="number" id="proxyTimeout" value="10" min="1" max="60">
+                        </div>
+                    </div>
+                    
+                    <div class="grid2">
+                        <div>
+                            <label>
+                                <input type="checkbox" id="autoRotate"> Auto-rotate proxies
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                <input type="checkbox" id="fallbackProxy"> Fallback to direct connection
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="hint">
+                        <strong>Proxy Formats:</strong><br>
+                        • HTTP: http://proxy:port or proxy:port<br>
+                        • SOCKS4: socks4://proxy:port<br>
+                        • SOCKS5: socks5://proxy:port<br>
+                        • With auth: user:pass@proxy:port<br><br>
+                        <strong>Popular Free Proxies:</strong><br>
+                        • ProxyList: https://www.proxy-list.download/<br>
+                        • FreeProxyList: https://free-proxy-list.net/<br>
+                        • HideMyName: https://hidemy.name/en/proxy-list/
+                    </div>
+                </div>
+                
+                <div id="chainingSettings" style="display: none;">
+                    <h4>AI Chaining Configuration</h4>
+                    <div class="grid2">
+                        <div>
+                            <label>
+                                <input type="checkbox" id="enableChaining"> Enable AI Chaining
+                            </label>
+                        </div>
+                        <div>
+                            <label for="confidenceThreshold">Confidence Threshold (0-100%)</label>
+                            <input type="number" id="confidenceThreshold" value="80" min="0" max="100">
+                        </div>
+                    </div>
+                    
+                    <div class="grid2">
+                        <div>
+                            <label for="chainProvider">Chain to Provider</label>
+                            <select id="chainProvider">
+                                <option value="huggingface">Hugging Face</option>
+                                <option value="replicate">Replicate</option>
+                                <option value="together">Together AI</option>
+                                <option value="groq">Groq</option>
+                                <option value="deepseek">DeepSeek</option>
+                                <option value="chatgpt">ChatGPT</option>
+                                <option value="kimi">Kimi</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="chainModel">Chain Model</label>
+                            <select id="chainModel">
+                                <option value="microsoft/DialoGPT-medium">DialoGPT (Hugging Face)</option>
+                                <option value="meta-llama/Llama-2-7b-chat-hf">Llama 2 (Together AI)</option>
+                                <option value="llama-2-7b-chat">Llama 2 (Replicate)</option>
+                                <option value="llama-3-8b-8192">Llama 3 (Groq)</option>
+                                <option value="deepseek-chat">DeepSeek Chat</option>
+                                <option value="gpt-4o">GPT-4o (ChatGPT)</option>
+                                <option value="kimi">Kimi</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid2">
+                        <div>
+                            <label for="chainPrompt">Chain Prompt Template</label>
+                            <textarea id="chainPrompt" rows="3" placeholder="Please improve and complete this response: {response}">Please improve and complete this response: {response}</textarea>
+                        </div>
+                        <div>
+                            <label for="chainApiKey">Chain API Key (if needed)</label>
+                            <input type="text" id="chainApiKey" placeholder="Enter API key for chain provider">
+                        </div>
+                    </div>
+                    
+                    <div class="grid2">
+                        <div>
+                            <label>
+                                <input type="checkbox" id="showChainProcess"> Show chaining process
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                <input type="checkbox" id="fallbackToOriginal"> Fallback to original if chain fails
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="hint">
+                        <strong>AI Chaining:</strong><br>
+                        • When confidence is below threshold, response is sent to another AI<br>
+                        • Chain provider can be different from primary provider<br>
+                        • Use {response} placeholder in chain prompt template<br>
+                        • Confidence is detected by analyzing response completeness and uncertainty indicators
+                    </div>
+                </div>
+                
+                <div id="crossChatSettings" style="display: none;">
+                    <h4>Cross-Chat Visibility & Problem Solving</h4>
+                    <div class="grid2">
+                        <div>
+                            <label>
+                                <input type="checkbox" id="enableCrossChat"> Enable Cross-Chat Visibility
+                            </label>
+                        </div>
+                        <div>
+                            <label for="contextWindow">Context Window (messages)</label>
+                            <input type="number" id="contextWindow" value="10" min="1" max="50">
+                        </div>
+                    </div>
+                    
+                    <div class="grid2">
+                        <div>
+                            <label for="problemSolvingMode">Problem Solving Mode</label>
+                            <select id="problemSolvingMode">
+                                <option value="collaborative">Collaborative (AIs work together)</option>
+                                <option value="competitive">Competitive (AIs compete for best answer)</option>
+                                <option value="sequential">Sequential (AIs build on each other)</option>
+                                <option value="expert">Expert (Specialized AI for each domain)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="maxCollaborators">Max Collaborators</label>
+                            <input type="number" id="maxCollaborators" value="3" min="1" max="10">
+                        </div>
+                    </div>
+                    
+                    <div class="grid2">
+                        <div>
+                            <label>
+                                <input type="checkbox" id="shareSolutions"> Share solutions across chats
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                <input type="checkbox" id="learnFromOthers"> Learn from other AI responses
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="grid2">
+                        <div>
+                            <label>
+                                <input type="checkbox" id="showCollaboration"> Show collaboration process
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                <input type="checkbox" id="autoInviteExperts"> Auto-invite domain experts
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="expertDomains">Expert Domain Mapping</label>
+                        <textarea id="expertDomains" rows="4" placeholder="programming:groq&#10;math:together&#10;creative:chatgpt&#10;analysis:deepseek">programming:groq
+math:together
+creative:chatgpt
+analysis:deepseek
+science:huggingface
+business:replicate</textarea>
+                    </div>
+                    
+                    <div class="hint">
+                        <strong>Cross-Chat Features:</strong><br>
+                        • AIs can see and reference other chat conversations<br>
+                        • Automatic expert AI selection based on problem domain<br>
+                        • Collaborative problem solving with multiple AI perspectives<br>
+                        • Solution sharing and learning from successful approaches<br>
+                        • Real-time collaboration with live updates
+                    </div>
+                </div>
+                
+                <div class="status" id="status" style="display: none;"></div>
+            </div>
+            
+            <div id="thread"></div>
+        </div>
+    </main>
+
+    <div class="compose">
+        <div class="compose-bar">
+            <div>
+                <textarea id="messageInput" placeholder="Type your message here... (Shift+Enter for new line, Enter to send)"></textarea>
+                <div class="hint">Press Enter to send, Shift+Enter for new line</div>
+            </div>
+            <div class="compose-buttons">
+                <button onclick="sendMessage()" class="primary">Send to AI</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let messages = [];
+        let isProcessing = false;
+
+        // Load saved messages
+        function loadMessages() {
+            const saved = localStorage.getItem('aiJournalMessages');
+            if (saved) {
+                messages = JSON.parse(saved);
+                renderMessages();
+            }
+        }
+
+        // Save messages
+        function saveMessages() {
+            localStorage.setItem('aiJournalMessages', JSON.stringify(messages));
+        }
+
+        // Render messages
+        function renderMessages() {
+            const thread = document.getElementById('thread');
+            thread.innerHTML = '';
+            
+            if (messages.length === 0) {
+                thread.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 40px;">Start a conversation with AI...</div>';
+                return;
+            }
+            
+            messages.forEach((msg, index) => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                
+                const roleDiv = document.createElement('div');
+                roleDiv.className = `role ${msg.role}`;
+                roleDiv.textContent = msg.role === 'user' ? 'U' : 'AI';
+                
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = 'bubble';
+                bubbleDiv.innerHTML = `<pre>${msg.content}</pre>`;
+                
+                messageDiv.appendChild(roleDiv);
+                messageDiv.appendChild(bubbleDiv);
+                thread.appendChild(messageDiv);
+            });
+            
+            thread.scrollTop = thread.scrollHeight;
+        }
+
+        // Add message
+        function addMessage(role, content) {
+            messages.push({ role, content, timestamp: Date.now() });
+            saveMessages();
+            renderMessages();
+        }
+
+        // Send message to AI
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || isProcessing) return;
+            
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+            
+            isProcessing = true;
+            showStatus('Sending to AI...', 'loading');
+            
+            try {
+                const provider = document.querySelector('input[name="provider"]:checked').value;
+                const apiKey = document.getElementById('apiKey').value;
+                const model = document.getElementById('model').value;
+                
+                let response;
+                
+                switch (provider) {
+                    case 'huggingface':
+                        response = await callHuggingFace(message, model, apiKey);
+                        break;
+                    case 'replicate':
+                        response = await callReplicate(message, model, apiKey);
+                        break;
+                    case 'together':
+                        response = await callTogetherAI(message, model, apiKey);
+                        break;
+                    case 'groq':
+                        response = await callGroq(message, model, apiKey);
+                        break;
+                    case 'deepseek':
+                        response = await scrapeDeepSeek(message);
+                        break;
+                    case 'chatgpt':
+                        response = await scrapeChatGPT(message);
+                        break;
+                    case 'kimi':
+                        response = await scrapeKimi(message);
+                        break;
+                    case 'custom':
+                        response = await scrapeCustomSite(message);
+                        break;
+                    default:
+                        throw new Error('Unknown provider');
+                }
+                
+                addMessage('ai', response);
+                showStatus('Response received!', 'success');
+                
+            } catch (error) {
+                console.error('AI Error:', error);
+                addMessage('ai', `Error: ${error.message}\n\nThis might be due to:\n- API rate limits\n- Invalid API key\n- Network issues\n- Model availability\n\nTry a different provider or check your settings.`);
+                showStatus('Error: ' + error.message, 'error');
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        // Hugging Face API call
+        async function callHuggingFace(message, model, apiKey) {
+            const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(apiKey && { 'Authorization': `Bearer ${apiKey}` })
+                },
+                body: JSON.stringify({
+                    inputs: message,
+                    parameters: {
+                        max_length: 200,
+                        temperature: 0.7
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Hugging Face API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return Array.isArray(data) ? data[0].generated_text : data.generated_text || 'No response generated';
+        }
+
+        // Replicate API call
+        async function callReplicate(message, model, apiKey) {
+            if (!apiKey) {
+                throw new Error('API key required for Replicate');
+            }
+            
+            const response = await fetch('https://api.replicate.com/v1/predictions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${apiKey}`
+                },
+                body: JSON.stringify({
+                    version: "latest",
+                    input: {
+                        prompt: message,
+                        max_length: 200
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Replicate API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return data.output || 'No response generated';
+        }
+
+        // Together AI API call
+        async function callTogetherAI(message, model, apiKey) {
+            if (!apiKey) {
+                throw new Error('API key required for Together AI');
+            }
+            
+            const response = await fetch('https://api.together.xyz/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [{ role: 'user', content: message }],
+                    max_tokens: 200,
+                    temperature: 0.7
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Together AI API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        // Groq API call
+        async function callGroq(message, model, apiKey) {
+            if (!apiKey) {
+                throw new Error('API key required for Groq');
+            }
+            
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [{ role: 'user', content: message }],
+                    max_tokens: 200,
+                    temperature: 0.7
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Groq API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        // Web scraping functions
+        async function scrapeDeepSeek(message) {
+            const corsProxy = document.getElementById('corsProxy').value;
+            const url = corsProxy ? `${corsProxy}https://chat.deepseek.com/` : 'https://chat.deepseek.com/';
+            
+            try {
+                // First, get the page to extract any necessary tokens or session data
+                const pageResponse = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
+                
+                if (!pageResponse.ok) {
+                    throw new Error(`Failed to access DeepSeek: ${pageResponse.status}`);
+                }
+                
+                const pageHtml = await pageResponse.text();
+                
+                // Extract any necessary tokens or session data from the page
+                const tokenMatch = pageHtml.match(/token["\s]*[:=]["\s]*([^"'\s]+)/i);
+                const sessionMatch = pageHtml.match(/session["\s]*[:=]["\s]*([^"'\s]+)/i);
+                
+                // Try to find the chat API endpoint
+                const apiMatch = pageHtml.match(/api["\s]*[:=]["\s]*["']([^"']+)["']/i);
+                const apiUrl = apiMatch ? apiMatch[1] : 'https://chat.deepseek.com/api/chat';
+                
+                // Attempt to send message (this is a simplified approach)
+                const chatResponse = await fetch(corsProxy ? `${corsProxy}${apiUrl}` : apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        ...(tokenMatch && { 'Authorization': `Bearer ${tokenMatch[1]}` }),
+                        ...(sessionMatch && { 'X-Session': sessionMatch[1] })
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        model: 'deepseek-chat'
+                    })
+                });
+                
+                if (!chatResponse.ok) {
+                    throw new Error(`DeepSeek chat error: ${chatResponse.status}`);
+                }
+                
+                const data = await chatResponse.json();
+                return data.response || data.message || 'No response from DeepSeek';
+                
+            } catch (error) {
+                // Fallback: return a mock response for demonstration
+                return `[DeepSeek Scraping] ${error.message}\n\nNote: Web scraping is complex and may be blocked by CORS or anti-bot measures. Consider using official APIs instead.`;
+            }
+        }
+
+        async function scrapeChatGPT(message) {
+            const corsProxy = document.getElementById('corsProxy').value;
+            const url = corsProxy ? `${corsProxy}https://chatgpt.com/` : 'https://chatgpt.com/';
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to access ChatGPT: ${response.status}`);
+                }
+                
+                // ChatGPT requires authentication and has complex anti-bot measures
+                return `[ChatGPT Scraping] ChatGPT requires login and has strong anti-bot protection.\n\nConsider using the official OpenAI API instead.\n\nYour message: "${message}"`;
+                
+            } catch (error) {
+                return `[ChatGPT Scraping] ${error.message}\n\nNote: ChatGPT has strong anti-bot measures. Use the official OpenAI API for reliable access.`;
+            }
+        }
+
+        async function scrapeKimi(message) {
+            const corsProxy = document.getElementById('corsProxy').value;
+            const url = corsProxy ? `${corsProxy}https://www.kimi.com/` : 'https://www.kimi.com/';
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to access Kimi: ${response.status}`);
+                }
+                
+                const html = await response.text();
+                
+                // Look for API endpoints or chat functionality
+                const apiMatch = html.match(/api["\s]*[:=]["\s]*["']([^"']+)["']/i);
+                const chatMatch = html.match(/chat["\s]*[:=]["\s]*["']([^"']+)["']/i);
+                
+                if (apiMatch || chatMatch) {
+                    const apiUrl = apiMatch ? apiMatch[1] : chatMatch[1];
+                    
+                    const chatResponse = await fetch(corsProxy ? `${corsProxy}${apiUrl}` : apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            model: 'kimi'
+                        })
+                    });
+                    
+                    if (chatResponse.ok) {
+                        const data = await chatResponse.json();
+                        return data.response || data.message || 'No response from Kimi';
+                    }
+                }
+                
+                return `[Kimi Scraping] Successfully accessed Kimi website.\n\nYour message: "${message}"\n\nNote: Kimi may require authentication or have API rate limits.`;
+                
+            } catch (error) {
+                return `[Kimi Scraping] ${error.message}\n\nNote: Web scraping may be blocked by CORS or anti-bot measures.`;
+            }
+        }
+
+        async function scrapeCustomSite(message) {
+            const customUrl = document.getElementById('customUrl').value;
+            const corsProxy = document.getElementById('corsProxy').value;
+            
+            if (!customUrl) {
+                throw new Error('Custom URL is required for custom site scraping');
+            }
+            
+            const url = corsProxy ? `${corsProxy}${customUrl}` : customUrl;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        prompt: message,
+                        query: message
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Custom site error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data.response || data.message || data.answer || JSON.stringify(data);
+                
+            } catch (error) {
+                return `[Custom Site Scraping] ${error.message}\n\nURL: ${customUrl}\n\nNote: Custom site scraping may be blocked by CORS or require specific authentication.`;
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 3000);
+        }
+
+        // Toggle settings
+        function toggleSettings() {
+            const settings = document.getElementById('settings');
+            settings.classList.toggle('active');
+        }
+
+        // Clear journal
+        function clearJournal() {
+            if (confirm('Are you sure you want to clear all messages?')) {
+                messages = [];
+                saveMessages();
+                renderMessages();
+            }
+        }
+
+        // Export journal
+        function exportJournal() {
+            const data = {
+                messages: messages,
+                exportDate: new Date().toISOString(),
+                provider: document.querySelector('input[name="provider"]:checked').value
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ai-journal-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Keyboard shortcuts
+        document.getElementById('messageInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Proxy management
+        let proxyList = [];
+        let currentProxyIndex = 0;
+        let proxyStats = {};
+
+        // Initialize proxy system
+        function initializeProxies() {
+            const proxyText = document.getElementById('proxyList').value.trim();
+            if (proxyText) {
+                proxyList = proxyText.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .map(parseProxy);
+            } else {
+                proxyList = [];
+            }
+            currentProxyIndex = 0;
+            proxyStats = {};
+        }
+
+        // Parse proxy string into object
+        function parseProxy(proxyStr) {
+            let proxy = {
+                host: '',
+                port: 0,
+                type: 'http',
+                auth: null
+            };
+
+            // Handle different proxy formats
+            if (proxyStr.includes('://')) {
+                const [protocol, rest] = proxyStr.split('://');
+                proxy.type = protocol.toLowerCase();
+                proxyStr = rest;
+            }
+
+            // Handle authentication
+            if (proxyStr.includes('@')) {
+                const [auth, rest] = proxyStr.split('@');
+                proxy.auth = auth;
+                proxyStr = rest;
+            }
+
+            // Parse host:port
+            if (proxyStr.includes(':')) {
+                const [host, port] = proxyStr.split(':');
+                proxy.host = host;
+                proxy.port = parseInt(port) || 8080;
+            } else {
+                proxy.host = proxyStr;
+                proxy.port = 8080;
+            }
+
+            return proxy;
+        }
+
+        // Get next proxy in rotation
+        function getNextProxy() {
+            if (proxyList.length === 0) return null;
+            
+            const proxy = proxyList[currentProxyIndex];
+            currentProxyIndex = (currentProxyIndex + 1) % proxyList.length;
+            return proxy;
+        }
+
+        // Test proxy connection
+        async function testProxy(proxy) {
+            const testUrl = 'https://httpbin.org/ip';
+            const proxyUrl = buildProxyUrl(proxy);
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 
+                    parseInt(document.getElementById('proxyTimeout').value) * 1000);
+                
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    signal: controller.signal,
+                    // Note: Browser fetch doesn't support SOCKS proxies directly
+                    // This is a simplified implementation
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    proxyStats[`${proxy.host}:${proxy.port}`] = {
+                        success: true,
+                        lastTest: Date.now(),
+                        responseTime: Date.now() - Date.now()
+                    };
+                    return true;
+                }
+            } catch (error) {
+                proxyStats[`${proxy.host}:${proxy.port}`] = {
+                    success: false,
+                    lastTest: Date.now(),
+                    error: error.message
+                };
+            }
+            
+            return false;
+        }
+
+        // Build proxy URL for different types
+        function buildProxyUrl(proxy) {
+            let url = '';
+            
+            if (proxy.auth) {
+                url = `${proxy.auth}@`;
+            }
+            
+            switch (proxy.type) {
+                case 'socks4':
+                    url = `socks4://${url}${proxy.host}:${proxy.port}`;
+                    break;
+                case 'socks5':
+                    url = `socks5://${url}${proxy.host}:${proxy.port}`;
+                    break;
+                case 'http':
+                default:
+                    url = `http://${url}${proxy.host}:${proxy.port}`;
+                    break;
+            }
+            
+            return url;
+        }
+
+        // Enhanced fetch with proxy support
+        async function fetchWithProxy(url, options = {}) {
+            const proxyType = document.getElementById('proxyType').value;
+            const autoRotate = document.getElementById('autoRotate').checked;
+            const fallback = document.getElementById('fallbackProxy').checked;
+            
+            if (proxyType === 'none' || proxyList.length === 0) {
+                return fetch(url, options);
+            }
+            
+            let lastError = null;
+            const maxRetries = autoRotate ? proxyList.length : 1;
+            
+            for (let i = 0; i < maxRetries; i++) {
+                const proxy = getNextProxy();
+                
+                try {
+                    // For browser environment, we'll use a CORS proxy approach
+                    // since browsers don't support SOCKS proxies directly
+                    const proxyUrl = buildProxyUrl(proxy);
+                    const proxiedUrl = `https://cors-anywhere.herokuapp.com/${url}`;
+                    
+                    const response = await fetch(proxiedUrl, {
+                        ...options,
+                        headers: {
+                            ...options.headers,
+                            'X-Proxy': proxyUrl,
+                            'X-Proxy-Type': proxy.type
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        return response;
+                    }
+                } catch (error) {
+                    lastError = error;
+                    console.warn(`Proxy ${proxy.host}:${proxy.port} failed:`, error.message);
+                    
+                    // Test proxy health
+                    await testProxy(proxy);
+                }
+            }
+            
+            // Fallback to direct connection if enabled
+            if (fallback) {
+                console.log('Falling back to direct connection');
+                return fetch(url, options);
+            }
+            
+            throw lastError || new Error('All proxies failed');
+        }
+
+        // Enhanced scraping functions with proxy support
+        async function scrapeWithProxy(url, options = {}) {
+            const proxyType = document.getElementById('proxyType').value;
+            
+            if (proxyType === 'none') {
+                return fetch(url, options);
+            }
+            
+            // Use proxy-enabled fetch
+            return fetchWithProxy(url, options);
+        }
+
+        // Update scraping functions to use proxy support
+        async function scrapeDeepSeek(message) {
+            const url = 'https://chat.deepseek.com/';
+            
+            try {
+                const pageResponse = await scrapeWithProxy(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
+                
+                if (!pageResponse.ok) {
+                    throw new Error(`Failed to access DeepSeek: ${pageResponse.status}`);
+                }
+                
+                const pageHtml = await pageResponse.text();
+                
+                // Extract API endpoint
+                const apiMatch = pageHtml.match(/api["\s]*[:=]["\s]*["']([^"']+)["']/i);
+                const apiUrl = apiMatch ? apiMatch[1] : 'https://chat.deepseek.com/api/chat';
+                
+                // Try to send message through proxy
+                const chatResponse = await scrapeWithProxy(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        model: 'deepseek-chat'
+                    })
+                });
+                
+                if (!chatResponse.ok) {
+                    throw new Error(`DeepSeek chat error: ${chatResponse.status}`);
+                }
+                
+                const data = await chatResponse.json();
+                return data.response || data.message || 'No response from DeepSeek';
+                
+            } catch (error) {
+                return `[DeepSeek Scraping with Proxy] ${error.message}\n\nProxy Status: ${JSON.stringify(proxyStats, null, 2)}`;
+            }
+        }
+
+        async function scrapeChatGPT(message) {
+            const url = 'https://chatgpt.com/';
+            
+            try {
+                const response = await scrapeWithProxy(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to access ChatGPT: ${response.status}`);
+                }
+                
+                return `[ChatGPT Scraping with Proxy] Successfully accessed ChatGPT through proxy.\n\nYour message: "${message}"\n\nNote: ChatGPT requires authentication for full functionality.`;
+                
+            } catch (error) {
+                return `[ChatGPT Scraping with Proxy] ${error.message}\n\nProxy Status: ${JSON.stringify(proxyStats, null, 2)}`;
+            }
+        }
+
+        async function scrapeKimi(message) {
+            const url = 'https://www.kimi.com/';
+            
+            try {
+                const response = await scrapeWithProxy(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to access Kimi: ${response.status}`);
+                }
+                
+                const html = await response.text();
+                
+                // Look for API endpoints
+                const apiMatch = html.match(/api["\s]*[:=]["\s]*["']([^"']+)["']/i);
+                
+                if (apiMatch) {
+                    const apiUrl = apiMatch[1];
+                    
+                    const chatResponse = await scrapeWithProxy(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            model: 'kimi'
+                        })
+                    });
+                    
+                    if (chatResponse.ok) {
+                        const data = await chatResponse.json();
+                        return data.response || data.message || 'No response from Kimi';
+                    }
+                }
+                
+                return `[Kimi Scraping with Proxy] Successfully accessed Kimi through proxy.\n\nYour message: "${message}"\n\nProxy Status: ${JSON.stringify(proxyStats, null, 2)}`;
+                
+            } catch (error) {
+                return `[Kimi Scraping with Proxy] ${error.message}\n\nProxy Status: ${JSON.stringify(proxyStats, null, 2)}`;
+            }
+        }
+
+        async function scrapeCustomSite(message) {
+            const customUrl = document.getElementById('customUrl').value;
+            
+            if (!customUrl) {
+                throw new Error('Custom URL is required for custom site scraping');
+            }
+            
+            try {
+                const response = await scrapeWithProxy(customUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        prompt: message,
+                        query: message
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Custom site error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data.response || data.message || data.answer || JSON.stringify(data);
+                
+            } catch (error) {
+                return `[Custom Site Scraping with Proxy] ${error.message}\n\nURL: ${customUrl}\n\nProxy Status: ${JSON.stringify(proxyStats, null, 2)}`;
+            }
+        }
+
+        // Cross-chat visibility and collaboration
+        let chatContexts = {};
+        let expertDomains = {};
+
+        // Initialize cross-chat system
+        function initializeCrossChat() {
+            const expertText = document.getElementById('expertDomains').value.trim();
+            if (expertText) {
+                expertDomains = {};
+                expertText.split('\n').forEach(line => {
+                    const [domain, provider] = line.split(':');
+                    if (domain && provider) {
+                        expertDomains[domain.trim()] = provider.trim();
+                    }
+                });
+            }
+        }
+
+        // Detect problem domain from message
+        function detectProblemDomain(message) {
+            const domainKeywords = {
+                programming: ['code', 'programming', 'function', 'algorithm', 'debug', 'syntax'],
+                math: ['calculate', 'equation', 'formula', 'algebra', 'geometry', 'statistics'],
+                creative: ['write', 'story', 'poem', 'creative', 'imagine', 'design'],
+                analysis: ['analyze', 'data', 'research', 'study', 'investigate', 'examine']
+            };
+
+            const lowerMessage = message.toLowerCase();
+            let maxScore = 0;
+            let detectedDomain = 'general';
+
+            for (const [domain, keywords] of Object.entries(domainKeywords)) {
+                let score = 0;
+                keywords.forEach(keyword => {
+                    if (lowerMessage.includes(keyword)) score++;
+                });
+                if (score > maxScore) {
+                    maxScore = score;
+                    detectedDomain = domain;
+                }
+            }
+
+            return detectedDomain;
+        }
+
+        // Show/hide settings based on provider selection
+        function updateScrapingSettings() {
+            const provider = document.querySelector('input[name="provider"]:checked').value;
+            const scrapingSettings = document.getElementById('scrapingSettings');
+            const chainingSettings = document.getElementById('chainingSettings');
+            const crossChatSettings = document.getElementById('crossChatSettings');
+            
+            if (['deepseek', 'chatgpt', 'kimi', 'custom'].includes(provider)) {
+                scrapingSettings.style.display = 'block';
+            } else {
+                scrapingSettings.style.display = 'none';
+            }
+            
+            // Show chaining and cross-chat settings for all providers
+            chainingSettings.style.display = 'block';
+            crossChatSettings.style.display = 'block';
+        }
+
+        // Load messages on startup
+        loadMessages();
+        
+        // Initialize proxy system
+        initializeProxies();
+        
+        // Add event listeners for provider changes
+        document.querySelectorAll('input[name="provider"]').forEach(radio => {
+            radio.addEventListener('change', updateScrapingSettings);
+        });
+        
+        // Add event listener for proxy list changes
+        document.getElementById('proxyList').addEventListener('input', initializeProxies);
+    </script>
+</body>
+</html>

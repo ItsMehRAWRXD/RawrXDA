@@ -1,0 +1,8 @@
+// This script watches for file changes and triggers a build.
+
+api.on_file_changed("src/", function(filename) {
+    if (filename.ends_with(".cpp")) {
+        api.build_project()
+        api.show_status("Building " + filename)
+    }
+})

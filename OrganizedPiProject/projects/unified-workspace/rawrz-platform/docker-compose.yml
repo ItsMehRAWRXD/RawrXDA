@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  true:
+    build: .
+    image: true:latest
+    container_name: true
+    restart: always
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads

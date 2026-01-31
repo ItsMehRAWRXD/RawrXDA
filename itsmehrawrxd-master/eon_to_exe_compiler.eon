@@ -1,0 +1,453 @@
+; eon_to_exe_compiler.eon
+; Compile .eon files directly to .exe (Windows) / binary (Linux/macOS)
+; Makes .eon files instantly runnable - no CLI needed!
+
+module EonToExeCompiler
+
+; === Direct Executable Generator ===
+class EonExecutableCompiler {
+    var target_platform: string
+    var output_format: string
+    var entry_point: string
+    
+    function init(platform: string = "windows") {
+        target_platform = platform
+        
+        match platform {
+            case "windows":
+                output_format = "exe"
+            case "linux":
+                output_format = "elf"
+            case "macos":
+                output_format = "mach-o"
+            default:
+                output_format = "exe"
+        }
+    }
+    
+    function compileToExecutable(eon_file: string, output_name: string = "") -> bool {
+        if (output_name == "") {
+            output_name = getBaseName(eon_file) + "." + getExecutableExtension()
+        }
+        
+        println("Compiling " + eon_file + " to native executable...")
+        println("Target: " + output_name)
+        
+        ; Read source
+        var source_code = readFile(eon_file)
+        if (source_code == "") {
+            println("ERROR: Could not read source file")
+            return false
+        }
+        
+        ; Generate native executable
+        var success = false
+        
+        match target_platform {
+            case "windows":
+                success = generateWindowsExecutable(source_code, output_name)
+            case "linux":
+                success = generateLinuxExecutable(source_code, output_name)
+            case "macos":
+                success = generateMacOSExecutable(source_code, output_name)
+        }
+        
+        if (success) {
+            println("SUCCESS: " + output_name + " created!")
+            println("You can now run: " + output_name)
+            return true
+        } else {
+            println("ERROR: Failed to create executable")
+            return false
+        }
+    }
+    
+    function generateWindowsExecutable(source: string, output_name: string) -> bool {
+        ; Create Windows PE executable
+        var exe_data = createWindowsPEHeader()
+        
+        ; Compile EON source to machine code
+        var machine_code = compileEonToMachineCode(source, "windows")
+        
+        ; Embed machine code in PE
+        exe_data += machine_code
+        
+        ; Add import table for Windows APIs
+        exe_data += createWindowsImportTable()
+        
+        ; Write executable file
+        return writeBinaryFile(output_name, exe_data)
+    }
+    
+    function generateLinuxExecutable(source: string, output_name: string) -> bool {
+        ; Create Linux ELF executable
+        var elf_data = createLinuxELFHeader()
+        
+        ; Compile EON source to machine code
+        var machine_code = compileEonToMachineCode(source, "linux")
+        
+        ; Embed machine code in ELF
+        elf_data += machine_code
+        
+        ; Add dynamic linking info
+        elf_data += createLinuxDynamicSection()
+        
+        ; Write executable file
+        var success = writeBinaryFile(output_name, elf_data)
+        
+        if (success) {
+            ; Make executable
+            makeFileExecutable(output_name)
+        }
+        
+        return success
+    }
+    
+    function generateMacOSExecutable(source: string, output_name: string) -> bool {
+        ; Create macOS Mach-O executable
+        var macho_data = createMacOSMachOHeader()
+        
+        ; Compile EON source to machine code
+        var machine_code = compileEonToMachineCode(source, "macos")
+        
+        ; Embed machine code in Mach-O
+        macho_data += machine_code
+        
+        ; Add load commands
+        macho_data += createMacOSLoadCommands()
+        
+        ; Write executable file
+        var success = writeBinaryFile(output_name, macho_data)
+        
+        if (success) {
+            makeFileExecutable(output_name)
+        }
+        
+        return success
+    }
+    
+    function compileEonToMachineCode(source: string, platform: string) -> Array<byte> {
+        ; Compile EON source directly to machine code
+        var lexer = EonLexer(source)
+        var tokens = lexer.tokenize()
+        
+        var parser = EonParser(tokens)
+        var ast = parser.parse()
+        
+        var codegen = EonCodeGenerator(platform)
+        var machine_code = codegen.generateMachineCode(ast)
+        
+        return machine_code
+    }
+    
+    function createWindowsPEHeader() -> Array<byte> {
+        ; Create minimal PE header for Windows executable
+        var header = Array<byte>()
+        
+        ; DOS Header
+        header.append(0x4D) ; 'M'
+        header.append(0x5A) ; 'Z'
+        ; ... (simplified, real implementation would be complete PE header)
+        
+        return header
+    }
+    
+    function createWindowsImportTable() -> Array<byte> {
+        ; Import table for Windows APIs (kernel32.dll, user32.dll, etc.)
+        var imports = Array<byte>()
+        
+        ; Import kernel32.dll functions
+        ; Import user32.dll functions  
+        ; Import gdi32.dll functions
+        ; ... (simplified)
+        
+        return imports
+    }
+    
+    function createLinuxELFHeader() -> Array<byte> {
+        ; Create ELF header for Linux executable
+        var header = Array<byte>()
+        
+        ; ELF Magic
+        header.append(0x7F)
+        header.append(0x45) ; 'E'
+        header.append(0x4C) ; 'L'
+        header.append(0x46) ; 'F'
+        ; ... (simplified, real implementation would be complete ELF header)
+        
+        return header
+    }
+    
+    function createMacOSMachOHeader() -> Array<byte> {
+        ; Create Mach-O header for macOS executable
+        var header = Array<byte>()
+        
+        ; Mach-O Magic (64-bit)
+        header.append(0xFE)
+        header.append(0xED)
+        header.append(0xFA)
+        header.append(0xCF)
+        ; ... (simplified)
+        
+        return header
+    }
+    
+    function getExecutableExtension() -> string {
+        match target_platform {
+            case "windows": return "exe"
+            case "linux": return ""
+            case "macos": return ""
+            default: return "exe"
+        }
+    }
+    
+    function makeFileExecutable(filename: string) {
+        ; Set executable permissions on Unix-like systems
+        ifdef LINUX || MACOS
+            system("chmod +x " + filename)
+        endif
+    }
+}
+
+; === EON Code Generator (Machine Code) ===
+class EonCodeGenerator {
+    var platform: string
+    var machine_code: Array<byte>
+    var symbol_table: Map<string, qword>
+    
+    function init(target_platform: string) {
+        platform = target_platform
+        machine_code = Array<byte>()
+        symbol_table = Map<string, qword>()
+    }
+    
+    function generateMachineCode(ast: ASTNode) -> Array<byte> {
+        ; Generate entry point
+        generateEntryPoint()
+        
+        ; Generate code for AST
+        generateNodeCode(ast)
+        
+        ; Generate exit sequence
+        generateExitSequence()
+        
+        return machine_code
+    }
+    
+    function generateEntryPoint() {
+        match platform {
+            case "windows":
+                ; Windows x64 entry point
+                emitBytes([0x48, 0x83, 0xEC, 0x28]) ; sub rsp, 40
+                
+            case "linux":
+                ; Linux x64 entry point
+                emitBytes([0x48, 0x89, 0xE5]) ; mov rbp, rsp
+                
+            case "macos":
+                ; macOS x64 entry point (similar to Linux)
+                emitBytes([0x48, 0x89, 0xE5]) ; mov rbp, rsp
+        }
+    }
+    
+    function generateExitSequence() {
+        match platform {
+            case "windows":
+                ; Windows exit
+                emitBytes([0x48, 0x31, 0xC9]) ; xor rcx, rcx (exit code 0)
+                emitBytes([0xFF, 0x15]) ; call ExitProcess
+                ; ... (add import address)
+                
+            case "linux":
+                ; Linux exit syscall
+                emitBytes([0x48, 0xC7, 0xC0, 0x3C, 0x00, 0x00, 0x00]) ; mov rax, 60 (sys_exit)
+                emitBytes([0x48, 0x31, 0xFF]) ; xor rdi, rdi (exit code 0)
+                emitBytes([0x0F, 0x05]) ; syscall
+                
+            case "macos":
+                ; macOS exit syscall
+                emitBytes([0x48, 0xC7, 0xC0, 0x01, 0x00, 0x00, 0x02]) ; mov rax, 0x2000001 (sys_exit)
+                emitBytes([0x48, 0x31, 0xFF]) ; xor rdi, rdi (exit code 0)
+                emitBytes([0x0F, 0x05]) ; syscall
+        }
+    }
+    
+    function generateNodeCode(node: ASTNode) {
+        match node.type {
+            case NodeType.PROGRAM:
+                for child in node.children {
+                    generateNodeCode(child)
+                }
+                
+            case NodeType.FUNCTION_CALL:
+                if (node.value == "println") {
+                    generatePrintCall(node.children[0])
+                }
+                
+            case NodeType.LITERAL:
+                generateLiteral(node)
+        }
+    }
+    
+    function generatePrintCall(arg_node: ASTNode) {
+        ; Generate code to print string
+        match platform {
+            case "windows":
+                generateWindowsPrint(arg_node)
+            case "linux":
+                generateLinuxPrint(arg_node)
+            case "macos":
+                generateMacOSPrint(arg_node)
+        }
+    }
+    
+    function generateWindowsPrint(arg_node: ASTNode) {
+        ; Windows: Call WriteConsoleA
+        if (arg_node.type == NodeType.LITERAL) {
+            var text = arg_node.value
+            
+            ; Load string address
+            emitBytes([0x48, 0xB9]) ; mov rcx, immediate
+            emitQword(addStringLiteral(text))
+            
+            ; Call WriteConsoleA (simplified)
+            emitBytes([0xFF, 0x15]) ; call WriteConsoleA
+            ; ... (add import address)
+        }
+    }
+    
+    function generateLinuxPrint(arg_node: ASTNode) {
+        ; Linux: sys_write syscall
+        if (arg_node.type == NodeType.LITERAL) {
+            var text = arg_node.value + "\n"
+            var text_addr = addStringLiteral(text)
+            
+            ; sys_write(stdout, text, length)
+            emitBytes([0x48, 0xC7, 0xC0, 0x01, 0x00, 0x00, 0x00]) ; mov rax, 1 (sys_write)
+            emitBytes([0x48, 0xC7, 0xC7, 0x01, 0x00, 0x00, 0x00]) ; mov rdi, 1 (stdout)
+            emitBytes([0x48, 0xBE]) ; mov rsi, text_addr
+            emitQword(text_addr)
+            emitBytes([0x48, 0xC7, 0xC2]) ; mov rdx, length
+            emitDword(text.length())
+            emitBytes([0x0F, 0x05]) ; syscall
+        }
+    }
+    
+    function emitBytes(bytes: Array<byte>) {
+        for b in bytes {
+            machine_code.append(b)
+        }
+    }
+    
+    function emitQword(value: qword) {
+        ; Emit 8-byte value (little-endian)
+        for i in 0..8 {
+            machine_code.append(cast<byte>((value >> (i * 8)) & 0xFF))
+        }
+    }
+    
+    function emitDword(value: dword) {
+        ; Emit 4-byte value (little-endian)
+        for i in 0..4 {
+            machine_code.append(cast<byte>((value >> (i * 8)) & 0xFF))
+        }
+    }
+    
+    function addStringLiteral(text: string) -> qword {
+        ; Add string to data section and return address
+        ; (simplified - real implementation would manage data section)
+        return 0x401000 ; placeholder address
+    }
+}
+
+; === File Extension Association ===
+class ExecutableAssociation {
+    function registerEonAsExecutable() {
+        ; Register .eon files to run directly
+        match getPlatform() {
+            case "windows":
+                registerWindowsAssociation()
+            case "linux":
+                registerLinuxAssociation()
+            case "macos":
+                registerMacOSAssociation()
+        }
+    }
+    
+    function registerWindowsAssociation() {
+        ; Windows: Register in registry so .eon files run like .exe
+        var registry_commands = [
+            "reg add HKCR\\.eon /ve /d \"EonExecutable\" /f",
+            "reg add HKCR\\EonExecutable /ve /d \"EON Executable\" /f", 
+            "reg add HKCR\\EonExecutable\\shell\\open\\command /ve /d \"\\\"%1\\\"\" /f"
+        ]
+        
+        for command in registry_commands {
+            system(command)
+        }
+        
+        println("Registered .eon files as executable on Windows")
+    }
+    
+    function registerLinuxAssociation() {
+        ; Linux: Create .desktop file and register MIME type
+        var desktop_content = """[Desktop Entry]
+Name=EON Executable
+Exec=%f
+Icon=application-x-executable
+MimeType=application/x-eon-executable
+"""
+        writeFile("/usr/share/applications/eon-executable.desktop", desktop_content)
+        
+        ; Register MIME type
+        system("xdg-mime install --mode system eon-executable.xml")
+        
+        println("Registered .eon files as executable on Linux")
+    }
+}
+
+; === Main Compiler Function ===
+function compileEonToExecutable(eon_file: string, target_platform: string = "") -> bool {
+    if (target_platform == "") {
+        target_platform = getPlatform()
+    }
+    
+    var compiler = EonExecutableCompiler(target_platform)
+    return compiler.compileToExecutable(eon_file)
+}
+
+function getPlatform() -> string {
+    ifdef WINDOWS
+        return "windows"
+    endif
+    ifdef LINUX
+        return "linux"
+    endif
+    ifdef MACOS
+        return "macos"
+    endif
+    return "windows"
+}
+
+; === Batch Conversion Function ===
+function convertAllEonToExecutables(directory: string = ".") {
+    var eon_files = findFilesWithExtension(directory, ".eon")
+    var compiler = EonExecutableCompiler()
+    
+    println("Converting " + eon_files.length() + " .eon files to executables...")
+    
+    for eon_file in eon_files {
+        println("Converting: " + eon_file)
+        if (compiler.compileToExecutable(eon_file)) {
+            println("  SUCCESS: " + eon_file + " -> executable")
+        } else {
+            println("  FAILED: " + eon_file)
+        }
+    }
+    
+    println("Conversion complete!")
+}
+
+export EonExecutableCompiler
+export compileEonToExecutable
+export convertAllEonToExecutables
