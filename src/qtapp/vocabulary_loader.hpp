@@ -1,8 +1,6 @@
 #pragma once
-#include <QString>
-#include <QHash>
-#include <QVector>
-#include <QFile>
+
+
 #include <vector>
 #include <cstdint>
 
@@ -29,7 +27,7 @@ public:
     };
     
     struct Token {
-        QString text;
+        std::string text;
         int32_t id;
         float score{0.0f};
         bool isSpecial{false};
@@ -43,21 +41,21 @@ public:
      * @param ggufPath Path to GGUF model file
      * @return true if loaded successfully
      */
-    bool loadFromGGUF(const QString& ggufPath);
+    bool loadFromGGUF(const std::string& ggufPath);
     
     /**
      * @brief Load vocabulary from JSON file (HuggingFace format)
      * @param jsonPath Path to vocab.json or tokenizer.json
      * @return true if loaded successfully
      */
-    bool loadFromJSON(const QString& jsonPath);
+    bool loadFromJSON(const std::string& jsonPath);
     
     /**
      * @brief Load vocabulary from text file (one token per line)
      * @param txtPath Path to vocab.txt
      * @return true if loaded successfully
      */
-    bool loadFromText(const QString& txtPath);
+    bool loadFromText(const std::string& txtPath);
     
     /**
      * @brief Get token by ID
@@ -67,12 +65,12 @@ public:
     /**
      * @brief Get token ID by text
      */
-    int32_t getTokenId(const QString& text) const;
+    int32_t getTokenId(const std::string& text) const;
     
     /**
      * @brief Get all tokens
      */
-    const QVector<Token>& getAllTokens() const { return m_tokens; }
+    const std::vector<Token>& getAllTokens() const { return m_tokens; }
     
     /**
      * @brief Get vocabulary size
@@ -108,27 +106,28 @@ public:
      * @param outputDir Directory to save vocab files
      * @return true if exported successfully
      */
-    bool exportToFiles(const QString& outputDir);
+    bool exportToFiles(const std::string& outputDir);
 
 private:
     // Internal loaders
-    bool loadGGUFMetadata(QFile& file);
-    bool parseTokenizerJSON(const QByteArray& jsonData);
-    bool parseVocabJSON(const QByteArray& jsonData);
+    bool loadGGUFMetadata(std::fstream& file);
+    bool parseTokenizerJSON(const std::vector<uint8_t>& jsonData);
+    bool parseVocabJSON(const std::vector<uint8_t>& jsonData);
     
     // Type detection
     TokenizerType detectType();
     void detectSpecialTokens();
     
     // Vocabulary storage
-    QVector<Token> m_tokens;
-    QHash<QString, int32_t> m_textToId;
-    QHash<int32_t, int> m_idToIndex;  // id -> index in m_tokens
+    std::vector<Token> m_tokens;
+    std::unordered_map<std::string, int32_t> m_textToId;
+    std::unordered_map<int32_t, int> m_idToIndex;  // id -> index in m_tokens
     
     SpecialTokens m_special;
     TokenizerType m_type{UNKNOWN};
     
     // Metadata
-    QString m_modelName;
+    std::string m_modelName;
     int m_vocabSize{0};
 };
+

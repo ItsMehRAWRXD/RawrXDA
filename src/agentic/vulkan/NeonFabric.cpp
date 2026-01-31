@@ -13,9 +13,7 @@ bool NeonFabric::initialize(const FabricConfig& config) {
     if (s_initialized) {
         return true;
     }
-    
-    LOG_INFO("NeonFabric", "Initializing fabric for 800B model sharding");
-    
+
     s_config = config;
     
     // TODO: Create shared memory for control block
@@ -30,9 +28,7 @@ void NeonFabric::shutdown() {
     if (!s_initialized) {
         return;
     }
-    
-    LOG_INFO("NeonFabric", "Shutting down fabric");
-    
+
     // Unmap all shards
     for (uint32_t i = 0; i < s_mappedShards.size(); ++i) {
         unmapShard(i);
@@ -48,9 +44,7 @@ void* NeonFabric::mapShard(uint32_t shardId) {
     if (shardId >= s_config.maxShards) {
         return nullptr;
     }
-    
-    LOG_DEBUG("NeonFabric", "Mapping shard " + std::to_string(shardId));
-    
+
     // TODO: Map shard memory region
     // TODO: Register with Vulkan for GPU access
     
@@ -85,9 +79,7 @@ bool NeonFabric::broadcastBitmask(const void* bitmask, size_t size) {
     if (!s_initialized || !s_config.enableVulkan) {
         return false;
     }
-    
-    LOG_DEBUG("NeonFabric", "Broadcasting bitmask to all shards via Vulkan");
-    
+
     // Update bitmask in all Vulkan contexts
     for (auto& vkContext : s_vulkanContexts) {
         if (!VulkanManager::updateBitmask(vkContext, bitmask, size)) {

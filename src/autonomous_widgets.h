@@ -2,30 +2,22 @@
 #ifndef AUTONOMOUS_WIDGETS_H
 #define AUTONOMOUS_WIDGETS_H
 
-#include <QWidget>
-#include <QListWidget>
-#include <QLabel>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QProgressBar>
+
 #include "autonomous_feature_engine.h"
 
 // AI Suggestions Widget
-class AutonomousSuggestionWidget : public QWidget {
-    Q_OBJECT
+class AutonomousSuggestionWidget : public void {
 
 public:
-    explicit AutonomousSuggestionWidget(QWidget *parent = nullptr);
+    explicit AutonomousSuggestionWidget(void *parent = nullptr);
     void addSuggestion(const AutonomousSuggestion& suggestion);
     void clearSuggestions();
 
-signals:
-    void suggestionAccepted(const QString& suggestionId);
-    void suggestionRejected(const QString& suggestionId);
 
-private slots:
+    void suggestionAccepted(const std::string& suggestionId);
+    void suggestionRejected(const std::string& suggestionId);
+
+private:
     void onSuggestionClicked(QListWidgetItem* item);
     void onAcceptClicked();
     void onRejectClicked();
@@ -37,24 +29,23 @@ private:
     QPushButton* rejectButton;
     QLabel* confidenceLabel;
     
-    QMap<QString, AutonomousSuggestion> suggestions;
-    QString currentSuggestionId;
+    std::map<std::string, AutonomousSuggestion> suggestions;
+    std::string currentSuggestionId;
 };
 
 // Security Alerts Widget
-class SecurityAlertWidget : public QWidget {
-    Q_OBJECT
+class SecurityAlertWidget : public void {
 
 public:
-    explicit SecurityAlertWidget(QWidget *parent = nullptr);
+    explicit SecurityAlertWidget(void *parent = nullptr);
     void addIssue(const SecurityIssue& issue);
     void clearIssues();
 
-signals:
-    void issueFixed(const QString& issueId);
-    void issueIgnored(const QString& issueId);
 
-private slots:
+    void issueFixed(const std::string& issueId);
+    void issueIgnored(const std::string& issueId);
+
+private:
     void onIssueClicked(QListWidgetItem* item);
     void onFixClicked();
     void onIgnoreClicked();
@@ -66,26 +57,25 @@ private:
     QPushButton* ignoreButton;
     QLabel* riskScoreLabel;
     
-    QMap<QString, SecurityIssue> issues;
-    QString currentIssueId;
+    std::map<std::string, SecurityIssue> issues;
+    std::string currentIssueId;
     
-    QString getSeverityColor(const QString& severity) const;
+    std::string getSeverityColor(const std::string& severity) const;
 };
 
 // Performance Optimization Widget
-class OptimizationPanelWidget : public QWidget {
-    Q_OBJECT
+class OptimizationPanelWidget : public void {
 
 public:
-    explicit OptimizationPanelWidget(QWidget *parent = nullptr);
+    explicit OptimizationPanelWidget(void *parent = nullptr);
     void addOptimization(const PerformanceOptimization& optimization);
     void clearOptimizations();
 
-signals:
-    void optimizationApplied(const QString& optimizationId);
-    void optimizationDismissed(const QString& optimizationId);
 
-private slots:
+    void optimizationApplied(const std::string& optimizationId);
+    void optimizationDismissed(const std::string& optimizationId);
+
+private:
     void onOptimizationClicked(QListWidgetItem* item);
     void onApplyClicked();
     void onDismissClicked();
@@ -98,8 +88,9 @@ private:
     QLabel* speedupLabel;
     QProgressBar* confidenceBar;
     
-    QMap<QString, PerformanceOptimization> optimizations;
-    QString currentOptimizationId;
+    std::map<std::string, PerformanceOptimization> optimizations;
+    std::string currentOptimizationId;
 };
 
 #endif // AUTONOMOUS_WIDGETS_H
+

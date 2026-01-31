@@ -1,90 +1,82 @@
 // gguf_server_hotpatch.cpp - Implementation of server-side hotpatcher
 #include "gguf_server_hotpatch.hpp"
-#include <QJsonDocument>
-#include <QCryptographicHash>
-#include <QElapsedTimer>
-#include <QDebug>
-#include <QFile>
+
+
 #include <algorithm>
 
-GGUFServerHotpatch::GGUFServerHotpatch(QObject* parent)
-    : QObject(parent)
+GGUFServerHotpatch::GGUFServerHotpatch(void* parent)
+    : void(parent)
 {
-    qInfo() << "[GGUFServerHotpatch] Initialized";
 }
 
 GGUFServerHotpatch::~GGUFServerHotpatch()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_hotpatches.clear();
     m_responseCache.clear();
 }
 
 void GGUFServerHotpatch::addHotpatch(const ServerHotpatch& patch)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_hotpatches[patch.name] = patch;
-    qInfo() << "[GGUFServerHotpatch] Added hotpatch:" << patch.name;
 }
 
-void GGUFServerHotpatch::removeHotpatch(const QString& name)
+void GGUFServerHotpatch::removeHotpatch(const std::string& name)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_hotpatches.remove(name)) {
-        qInfo() << "[GGUFServerHotpatch] Removed hotpatch:" << name;
     }
 }
 
-void GGUFServerHotpatch::enableHotpatch(const QString& name, bool enable)
+void GGUFServerHotpatch::enableHotpatch(const std::string& name, bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_hotpatches.contains(name)) {
         m_hotpatches[name].enabled = enable;
-        qInfo() << "[GGUFServerHotpatch] Hotpatch" << name << (enable ? "enabled" : "disabled");
     }
 }
 
-bool GGUFServerHotpatch::hasHotpatch(const QString& name) const
+bool GGUFServerHotpatch::hasHotpatch(const std::string& name) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_hotpatches.contains(name);
 }
 
-ServerHotpatch GGUFServerHotpatch::getHotpatch(const QString& name) const
+ServerHotpatch GGUFServerHotpatch::getHotpatch(const std::string& name) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_hotpatches.value(name);
 }
 
-QStringList GGUFServerHotpatch::listHotpatches() const
+std::vector<std::string> GGUFServerHotpatch::listHotpatches() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_hotpatches.keys();
 }
 
 void GGUFServerHotpatch::clearAllHotpatches()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_hotpatches.clear();
-    qInfo() << "[GGUFServerHotpatch] All hotpatches cleared";
 }
 
-QJsonObject GGUFServerHotpatch::processRequest(const QJsonObject& request)
+void* GGUFServerHotpatch::processRequest(const void*& request)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled) {
         return request;
     }
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QJsonObject modified = request;
+    void* modified = request;
     
     // Apply default parameter overrides first
     for (auto it = m_defaultParams.constBegin(); it != m_defaultParams.constEnd(); ++it) {
-        modified[it.key()] = QJsonValue::fromVariant(it.value());
+        modified[it.key()] = void*::fromVariant(it.value());
     }
     
     // Apply hotpatches at PreRequest point
@@ -107,7 +99,7 @@ QJsonObject GGUFServerHotpatch::processRequest(const QJsonObject& request)
         }
         
         m_stats.patchesApplied++;
-        emit hotpatchApplied(patch.name, HotpatchPoint::PreRequest);
+        hotpatchApplied(patch.name, HotpatchPoint::PreRequest);
     }
     
     m_stats.requestsProcessed++;
@@ -116,24 +108,24 @@ QJsonObject GGUFServerHotpatch::processRequest(const QJsonObject& request)
     m_stats.avgProcessingTimeMs = (m_stats.avgProcessingTimeMs * (m_stats.requestsProcessed - 1) + elapsed) / m_stats.requestsProcessed;
     
     if (modified != request) {
-        emit requestModified(request, modified);
+        requestModified(request, modified);
     }
     
     return modified;
 }
 
-QJsonObject GGUFServerHotpatch::processResponse(const QJsonObject& response)
+void* GGUFServerHotpatch::processResponse(const void*& response)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled) {
         return response;
     }
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QJsonObject modified = response;
+    void* modified = response;
     
     // Apply hotpatches at PreResponse point
     for (const auto& patch : m_hotpatches) {
@@ -151,7 +143,7 @@ QJsonObject GGUFServerHotpatch::processResponse(const QJsonObject& response)
         }
         
         m_stats.patchesApplied++;
-        emit hotpatchApplied(patch.name, HotpatchPoint::PreResponse);
+        hotpatchApplied(patch.name, HotpatchPoint::PreResponse);
     }
     
     m_stats.responsesProcessed++;
@@ -160,22 +152,22 @@ QJsonObject GGUFServerHotpatch::processResponse(const QJsonObject& response)
     m_stats.avgProcessingTimeMs = (m_stats.avgProcessingTimeMs * (m_stats.responsesProcessed - 1) + elapsed) / m_stats.responsesProcessed;
     
     if (modified != response) {
-        emit responseModified(response, modified);
+        responseModified(response, modified);
     }
     
     return modified;
 }
 
-QByteArray GGUFServerHotpatch::processStreamChunk(const QByteArray& chunk, int chunkIndex)
+std::vector<uint8_t> GGUFServerHotpatch::processStreamChunk(const std::vector<uint8_t>& chunk, int chunkIndex)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled) {
         return chunk;
     }
     
     m_currentChunkIndex = chunkIndex;
-    QByteArray modified = chunk;
+    std::vector<uint8_t> modified = chunk;
     
     // Check for stream termination patches (RST injection)
     for (const auto& patch : m_hotpatches) {
@@ -185,8 +177,8 @@ QByteArray GGUFServerHotpatch::processStreamChunk(const QByteArray& chunk, int c
         
         if (patch.transformType == ServerHotpatch::TerminateStream) {
             if (patch.abortAfterChunks > 0 && chunkIndex >= patch.abortAfterChunks) {
-                emit streamTerminated(chunkIndex, "RST Injection: " + patch.name);
-                return QByteArray(); // Empty = terminate stream
+                streamTerminated(chunkIndex, "RST Injection: " + patch.name);
+                return std::vector<uint8_t>(); // Empty = terminate stream
             }
         }
         
@@ -196,7 +188,7 @@ QByteArray GGUFServerHotpatch::processStreamChunk(const QByteArray& chunk, int c
         }
         
         m_stats.patchesApplied++;
-        emit hotpatchApplied(patch.name, HotpatchPoint::StreamChunk);
+        hotpatchApplied(patch.name, HotpatchPoint::StreamChunk);
     }
     
     m_stats.chunksProcessed++;
@@ -205,22 +197,22 @@ QByteArray GGUFServerHotpatch::processStreamChunk(const QByteArray& chunk, int c
     return modified;
 }
 
-QByteArray GGUFServerHotpatch::patchRequestBytes(const QByteArray& requestData)
+std::vector<uint8_t> GGUFServerHotpatch::patchRequestBytes(const std::vector<uint8_t>& requestData)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled || m_defaultParams.isEmpty()) {
         return requestData;
     }
     
-    QByteArray modified = requestData;
+    std::vector<uint8_t> modified = requestData;
     
     // Byte-level parameter patching (zero-copy when sizes match)
     for (auto it = m_defaultParams.constBegin(); it != m_defaultParams.constEnd(); ++it) {
         if (it.key() == "temperature") {
             // Example: patch "0.9" -> "0.5" for temperature override
-            QByteArray pattern = "\"temperature\":0.9";
-            QByteArray replacement = QString("\"temperature\":%1").arg(it.value().toDouble()).toUtf8();
+            std::vector<uint8_t> pattern = "\"temperature\":0.9";
+            std::vector<uint8_t> replacement = std::string("\"temperature\":%1").toDouble()).toUtf8();
             
             if (pattern.size() == replacement.size()) {
                 modified = bytePatchInPlace(modified, pattern, replacement);
@@ -233,15 +225,15 @@ QByteArray GGUFServerHotpatch::patchRequestBytes(const QByteArray& requestData)
     return modified;
 }
 
-QByteArray GGUFServerHotpatch::patchResponseBytes(const QByteArray& responseData)
+std::vector<uint8_t> GGUFServerHotpatch::patchResponseBytes(const std::vector<uint8_t>& responseData)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled) {
         return responseData;
     }
     
-    QByteArray modified = responseData;
+    std::vector<uint8_t> modified = responseData;
     
     // Apply response filtering at byte level
     for (const auto& patch : m_hotpatches) {
@@ -249,9 +241,9 @@ QByteArray GGUFServerHotpatch::patchResponseBytes(const QByteArray& responseData
             continue;
         }
         
-        for (const QString& pattern : patch.filterPatterns) {
-            QByteArray patternBytes = pattern.toUtf8();
-            QByteArray replacement(patternBytes.size(), '*');
+        for (const std::string& pattern : patch.filterPatterns) {
+            std::vector<uint8_t> patternBytes = pattern.toUtf8();
+            std::vector<uint8_t> replacement(patternBytes.size(), '*');
             modified = bytePatchInPlace(modified, patternBytes, replacement);
         }
     }
@@ -261,75 +253,72 @@ QByteArray GGUFServerHotpatch::patchResponseBytes(const QByteArray& responseData
     return modified;
 }
 
-void GGUFServerHotpatch::setDefaultParameter(const QString& name, const QVariant& value)
+void GGUFServerHotpatch::setDefaultParameter(const std::string& name, const std::any& value)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_defaultParams[name] = value;
-    qInfo() << "[GGUFServerHotpatch] Default parameter set:" << name << "=" << value;
 }
 
-void GGUFServerHotpatch::clearDefaultParameter(const QString& name)
+void GGUFServerHotpatch::clearDefaultParameter(const std::string& name)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_defaultParams.remove(name);
 }
 
-QHash<QString, QVariant> GGUFServerHotpatch::getDefaultParameters() const
+std::unordered_map<std::string, std::any> GGUFServerHotpatch::getDefaultParameters() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_defaultParams;
 }
 
 void GGUFServerHotpatch::setCachingEnabled(bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_cachingEnabled = enable;
-    qInfo() << "[GGUFServerHotpatch] Caching" << (enable ? "enabled" : "disabled");
 }
 
 bool GGUFServerHotpatch::isCachingEnabled() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_cachingEnabled;
 }
 
 void GGUFServerHotpatch::clearCache()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_responseCache.clear();
-    qInfo() << "[GGUFServerHotpatch] Cache cleared";
 }
 
-QString GGUFServerHotpatch::getCacheKey(const QJsonObject& request) const
+std::string GGUFServerHotpatch::getCacheKey(const void*& request) const
 {
-    QJsonDocument doc(request);
-    QByteArray json = doc.toJson(QJsonDocument::Compact);
-    return QString(QCryptographicHash::hash(json, QCryptographicHash::Sha256).toHex());
+    void* doc(request);
+    std::vector<uint8_t> json = doc.toJson(void*::Compact);
+    return std::string(QCryptographicHash::hash(json, QCryptographicHash::Sha256).toHex());
 }
 
-bool GGUFServerHotpatch::hasCachedResponse(const QString& key) const
+bool GGUFServerHotpatch::hasCachedResponse(const std::string& key) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_responseCache.contains(key);
 }
 
-QJsonObject GGUFServerHotpatch::getCachedResponse(const QString& key)
+void* GGUFServerHotpatch::getCachedResponse(const std::string& key)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (m_responseCache.contains(key)) {
         m_stats.cacheHits++;
-        emit cacheHit(key);
+        cacheHit(key);
         return m_responseCache[key];
     }
     
     m_stats.cacheMisses++;
-    return QJsonObject();
+    return void*();
 }
 
-void GGUFServerHotpatch::cacheResponse(const QString& key, const QJsonObject& response)
+void GGUFServerHotpatch::cacheResponse(const std::string& key, const void*& response)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (m_cachingEnabled) {
         m_responseCache[key] = response;
@@ -338,40 +327,38 @@ void GGUFServerHotpatch::cacheResponse(const QString& key, const QJsonObject& re
 
 GGUFServerHotpatch::Stats GGUFServerHotpatch::getStatistics() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_stats;
 }
 
 void GGUFServerHotpatch::resetStatistics()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats = Stats();
-    qInfo() << "[GGUFServerHotpatch] Statistics reset";
 }
 
 void GGUFServerHotpatch::setEnabled(bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enabled = enable;
-    qInfo() << "[GGUFServerHotpatch] System" << (enable ? "enabled" : "disabled");
 }
 
 bool GGUFServerHotpatch::isEnabled() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_enabled;
 }
 
 // Private helper methods
 
-QByteArray GGUFServerHotpatch::bytePatchInPlace(const QByteArray& data, const QByteArray& pattern, const QByteArray& replacement)
+std::vector<uint8_t> GGUFServerHotpatch::bytePatchInPlace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement)
 {
     if (pattern.isEmpty() || pattern.size() != replacement.size()) {
-        QByteArray result = data;
+        std::vector<uint8_t> result = data;
         return result.replace(pattern, replacement);
     }
     
-    QByteArray result = data;
+    std::vector<uint8_t> result = data;
     qint64 pos = 0;
     
     while ((pos = findPattern(result, pattern, pos)) != -1) {
@@ -383,7 +370,7 @@ QByteArray GGUFServerHotpatch::bytePatchInPlace(const QByteArray& data, const QB
     return result;
 }
 
-qint64 GGUFServerHotpatch::findPattern(const QByteArray& data, const QByteArray& pattern, qint64 startPos) const
+qint64 GGUFServerHotpatch::findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, qint64 startPos) const
 {
     if (pattern.isEmpty() || startPos >= data.size()) {
         return -1;
@@ -403,9 +390,9 @@ qint64 GGUFServerHotpatch::findPattern(const QByteArray& data, const QByteArray&
     return -1;
 }
 
-QJsonObject GGUFServerHotpatch::injectSystemPrompt(const QJsonObject& request, const QString& prompt)
+void* GGUFServerHotpatch::injectSystemPrompt(const void*& request, const std::string& prompt)
 {
-    QJsonObject modified = request;
+    void* modified = request;
     
     if (prompt.isEmpty()) {
         return modified;
@@ -413,9 +400,9 @@ QJsonObject GGUFServerHotpatch::injectSystemPrompt(const QJsonObject& request, c
     
     // Inject system prompt into messages array
     if (modified.contains("messages")) {
-        QJsonArray messages = modified["messages"].toArray();
+        void* messages = modified["messages"].toArray();
         
-        QJsonObject systemMsg;
+        void* systemMsg;
         systemMsg["role"] = "system";
         systemMsg["content"] = prompt;
         
@@ -423,23 +410,23 @@ QJsonObject GGUFServerHotpatch::injectSystemPrompt(const QJsonObject& request, c
         modified["messages"] = messages;
     } else {
         // Fallback: inject as prefix to prompt
-        QString existingPrompt = modified["prompt"].toString();
+        std::string existingPrompt = modified["prompt"].toString();
         modified["prompt"] = prompt + "\n\n" + existingPrompt;
     }
     
     return modified;
 }
 
-QJsonObject GGUFServerHotpatch::modifyParameter(const QJsonObject& request, const QString& param, const QVariant& value)
+void* GGUFServerHotpatch::modifyParameter(const void*& request, const std::string& param, const std::any& value)
 {
-    QJsonObject modified = request;
-    modified[param] = QJsonValue::fromVariant(value);
+    void* modified = request;
+    modified[param] = void*::fromVariant(value);
     return modified;
 }
 
-QJsonObject GGUFServerHotpatch::filterResponse(const QJsonObject& response, const QStringList& patterns)
+void* GGUFServerHotpatch::filterResponse(const void*& response, const std::vector<std::string>& patterns)
 {
-    QJsonObject modified = response;
+    void* modified = response;
     
     if (patterns.isEmpty()) {
         return modified;
@@ -447,11 +434,11 @@ QJsonObject GGUFServerHotpatch::filterResponse(const QJsonObject& response, cons
     
     // Filter content field
     if (modified.contains("content")) {
-        QString content = modified["content"].toString();
+        std::string content = modified["content"].toString();
         
-        for (const QString& pattern : patterns) {
-            QString replacement(pattern.length(), '*');
-            content.replace(pattern, replacement, Qt::CaseInsensitive);
+        for (const std::string& pattern : patterns) {
+            std::string replacement(pattern.length(), '*');
+            content.replace(pattern, replacement, //CaseInsensitive);
         }
         
         modified["content"] = content;
@@ -459,18 +446,18 @@ QJsonObject GGUFServerHotpatch::filterResponse(const QJsonObject& response, cons
     
     // Filter choices array (OpenAI format)
     if (modified.contains("choices")) {
-        QJsonArray choices = modified["choices"].toArray();
+        void* choices = modified["choices"].toArray();
         
         for (int i = 0; i < choices.size(); ++i) {
-            QJsonObject choice = choices[i].toObject();
+            void* choice = choices[i].toObject();
             
             if (choice.contains("message")) {
-                QJsonObject message = choice["message"].toObject();
-                QString content = message["content"].toString();
+                void* message = choice["message"].toObject();
+                std::string content = message["content"].toString();
                 
-                for (const QString& pattern : patterns) {
-                    QString replacement(pattern.length(), '*');
-                    content.replace(pattern, replacement, Qt::CaseInsensitive);
+                for (const std::string& pattern : patterns) {
+                    std::string replacement(pattern.length(), '*');
+                    content.replace(pattern, replacement, //CaseInsensitive);
                 }
                 
                 message["content"] = content;
@@ -487,14 +474,13 @@ QJsonObject GGUFServerHotpatch::filterResponse(const QJsonObject& response, cons
 
 // Direct Memory Manipulation API Implementation
 
-void* GGUFServerHotpatch::attachToModelMemory(const QString& modelPath)
+void* GGUFServerHotpatch::attachToModelMemory(const std::string& modelPath)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
-    QFile modelFile(modelPath);
+    std::fstream modelFile(modelPath);
     if (!modelFile.open(QIODevice::ReadWrite)) {
-        qWarning() << "[GGUFServerHotpatch] Failed to attach to model:" << modelPath;
-        emit errorOccurred("Cannot attach to model memory: " + modelPath);
+        errorOccurred("Cannot attach to model memory: " + modelPath);
         return nullptr;
     }
     
@@ -503,32 +489,29 @@ void* GGUFServerHotpatch::attachToModelMemory(const QString& modelPath)
     modelFile.read((char*)ptr, modelFile.size());
     modelFile.close();
     
-    qInfo() << "[GGUFServerHotpatch] Attached to model memory:" << modelPath << "(" << modelFile.size() << "bytes)";
     return ptr;
 }
 
 PatchResult GGUFServerHotpatch::detachFromModelMemory()
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[GGUFServerHotpatch] Detached from model memory";
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return PatchResult::ok("Detached successfully");
 }
 
-QByteArray GGUFServerHotpatch::readModelMemory(size_t offset, size_t size) const
+std::vector<uint8_t> GGUFServerHotpatch::readModelMemory(size_t offset, size_t size) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_modelData.isEmpty() || offset >= (size_t)m_modelData.size()) {
-        qWarning() << "[GGUFServerHotpatch] readModelMemory out of bounds";
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     size_t readSize = std::min(size, (size_t)m_modelData.size() - offset);
     return m_modelData.mid(offset, readSize);
 }
 
-PatchResult GGUFServerHotpatch::writeModelMemory(size_t offset, const QByteArray& data)
+PatchResult GGUFServerHotpatch::writeModelMemory(size_t offset, const std::vector<uint8_t>& data)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_modelData.isEmpty() || offset + data.size() > (size_t)m_modelData.size()) {
         return PatchResult::error(8001, "Write out of bounds");
     }
@@ -538,71 +521,64 @@ PatchResult GGUFServerHotpatch::writeModelMemory(size_t offset, const QByteArray
     return PatchResult::ok("Model memory write completed", data.size());
 }
 
-PatchResult GGUFServerHotpatch::modifyWeight(const QString& tensorName, size_t indexOffset, const QByteArray& newValue)
+PatchResult GGUFServerHotpatch::modifyWeight(const std::string& tensorName, size_t indexOffset, const std::vector<uint8_t>& newValue)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[GGUFServerHotpatch] Modified weight for tensor:" << tensorName << "at offset:" << indexOffset;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats.patchesApplied++;
     return PatchResult::ok("Weight modification completed");
 }
 
-PatchResult GGUFServerHotpatch::modifyWeightsBatch(const QHash<QString, QHash<size_t, QByteArray>>& modifications)
+PatchResult GGUFServerHotpatch::modifyWeightsBatch(const std::unordered_map<std::string, std::unordered_map<size_t, std::vector<uint8_t>>>& modifications)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     int totalModifications = 0;
     for (auto it = modifications.constBegin(); it != modifications.constEnd(); ++it) {
         totalModifications += it.value().size();
     }
     
-    qInfo() << "[GGUFServerHotpatch] Applied batch modifications:" << totalModifications;
     m_stats.patchesApplied += totalModifications;
     return PatchResult::ok("Batch weight modifications completed", totalModifications);
 }
 
-PatchResult GGUFServerHotpatch::injectTemporaryData(size_t offset, const QByteArray& data, int durationMs)
+PatchResult GGUFServerHotpatch::injectTemporaryData(size_t offset, const std::vector<uint8_t>& data, int durationMs)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[GGUFServerHotpatch] Injected temporary data at offset:" << offset << "duration:" << durationMs << "ms";
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats.bytesPatched += data.size();
     return PatchResult::ok("Temporary data injection completed");
 }
 
-QByteArray GGUFServerHotpatch::extractTensorWeights(const QString& tensorName, size_t offset, size_t size) const
+std::vector<uint8_t> GGUFServerHotpatch::extractTensorWeights(const std::string& tensorName, size_t offset, size_t size) const
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[GGUFServerHotpatch] Extracted weights from tensor:" << tensorName;
-    return QByteArray();
+    std::lock_guard<std::mutex> locker(&m_mutex);
+    return std::vector<uint8_t>();
 }
 
-PatchResult GGUFServerHotpatch::transformTensorWeights(const QString& tensorName, 
-                                                       std::function<QByteArray(const QByteArray&)> transform)
+PatchResult GGUFServerHotpatch::transformTensorWeights(const std::string& tensorName, 
+                                                       std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)> transform)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[GGUFServerHotpatch] Transformed tensor weights:" << tensorName;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats.patchesApplied++;
     return PatchResult::ok("Tensor transformation completed");
 }
 
-PatchResult GGUFServerHotpatch::cloneTensor(const QString& sourceTensor, const QString& destTensor)
+PatchResult GGUFServerHotpatch::cloneTensor(const std::string& sourceTensor, const std::string& destTensor)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[GGUFServerHotpatch] Cloned tensor from" << sourceTensor << "to" << destTensor;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats.patchesApplied++;
     return PatchResult::ok("Tensor cloned successfully");
 }
 
-PatchResult GGUFServerHotpatch::swapTensors(const QString& tensor1, const QString& tensor2)
+PatchResult GGUFServerHotpatch::swapTensors(const std::string& tensor1, const std::string& tensor2)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[GGUFServerHotpatch] Swapped tensors:" << tensor1 << "and" << tensor2;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats.patchesApplied++;
     return PatchResult::ok("Tensors swapped successfully");
 }
 
-PatchResult GGUFServerHotpatch::applyMemoryPatch(const QHash<size_t, QByteArray>& patches)
+PatchResult GGUFServerHotpatch::applyMemoryPatch(const std::unordered_map<size_t, std::vector<uint8_t>>& patches)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     int totalBytes = 0;
     for (auto it = patches.constBegin(); it != patches.constEnd(); ++it) {
@@ -612,13 +588,12 @@ PatchResult GGUFServerHotpatch::applyMemoryPatch(const QHash<size_t, QByteArray>
     m_stats.bytesPatched += totalBytes;
     m_stats.patchesApplied += patches.size();
     
-    qInfo() << "[GGUFServerHotpatch] Applied memory patches:" << patches.size() << "(" << totalBytes << "bytes)";
     return PatchResult::ok("Memory patches applied successfully", totalBytes);
 }
 
-qint64 GGUFServerHotpatch::searchModelMemory(size_t startOffset, const QByteArray& pattern) const
+qint64 GGUFServerHotpatch::searchModelMemory(size_t startOffset, const std::vector<uint8_t>& pattern) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_modelData.isEmpty() || pattern.isEmpty() || startOffset >= (size_t)m_modelData.size()) {
         return -1;
     }
@@ -635,7 +610,7 @@ qint64 GGUFServerHotpatch::searchModelMemory(size_t startOffset, const QByteArra
 
 void* GGUFServerHotpatch::getModelMemoryPointer(size_t offset)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (m_modelData.isEmpty() || offset >= (size_t)m_modelData.size()) {
         return nullptr;
     }
@@ -644,21 +619,19 @@ void* GGUFServerHotpatch::getModelMemoryPointer(size_t offset)
 
 PatchResult GGUFServerHotpatch::lockMemoryRegion(size_t offset, size_t size)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[GGUFServerHotpatch] Locked memory region at offset:" << offset << "size:" << size;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return PatchResult::ok("Memory region locked");
 }
 
 PatchResult GGUFServerHotpatch::unlockMemoryRegion(size_t offset, size_t size)
 {
-    QMutexLocker locker(&m_mutex);
-    qInfo() << "[GGUFServerHotpatch] Unlocked memory region at offset:" << offset << "size:" << size;
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return PatchResult::ok("Memory region unlocked");
 }
 
-bool GGUFServerHotpatch::hasTensorDependency(const QString& tensorName, const QString& dependencyName) const
+bool GGUFServerHotpatch::hasTensorDependency(const std::string& tensorName, const std::string& dependencyName) const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_tensorDependencies.contains(tensorName)) {
         return false;
@@ -668,15 +641,15 @@ bool GGUFServerHotpatch::hasTensorDependency(const QString& tensorName, const QS
     return dependencies.contains(dependencyName);
 }
 
-QStringList GGUFServerHotpatch::getTensorDependencies(const QString& tensorName) const
+std::vector<std::string> GGUFServerHotpatch::getTensorDependencies(const std::string& tensorName) const
 {
-    QMutexLocker locker(&m_mutex);
-    return m_tensorDependencies.value(tensorName, QStringList());
+    std::lock_guard<std::mutex> locker(&m_mutex);
+    return m_tensorDependencies.value(tensorName, std::vector<std::string>());
 }
 
-PatchResult GGUFServerHotpatch::patchVocabularyEntry(int tokenId, const QString& newToken)
+PatchResult GGUFServerHotpatch::patchVocabularyEntry(int tokenId, const std::string& newToken)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (tokenId < 0 || newToken.isEmpty()) {
         return PatchResult::error(8010, "Invalid token ID or empty token string");
@@ -687,9 +660,8 @@ PatchResult GGUFServerHotpatch::patchVocabularyEntry(int tokenId, const QString&
     // 2. Locate the token entry at tokenId
     // 3. Patch the token string data
     
-    qInfo() << "[GGUFServerHotpatch] Patched vocabulary entry:" << tokenId << "->" << newToken;
     m_stats.patchesApplied++;
     
-    return PatchResult::ok(QString("Vocabulary entry %1 patched to '%2'").arg(tokenId).arg(newToken));
+    return PatchResult::ok(std::string("Vocabulary entry %1 patched to '%2'"));
 }
 

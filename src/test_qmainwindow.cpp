@@ -1,8 +1,7 @@
 #include <windows.h>
 #include <cstdio>
 #include <fstream>
-#include <QApplication>
-#include <QMainWindow>
+
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     std::ofstream log("D:\\temp\\test_qmainwindow.log");
@@ -18,13 +17,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     
     log << "TEST: QApplication created\n"; log.flush();
     
-    log << "TEST: Creating QMainWindow\n"; log.flush();
+    log << "TEST: Creating void\n"; log.flush();
     
-    QMainWindow window;
+    void window;
     window.setWindowTitle("Test Window");
     window.setMinimumSize(400, 300);
     
-    log << "TEST: QMainWindow created\n"; log.flush();
+    log << "TEST: void created\n"; log.flush();
     
     window.show();
     
@@ -36,3 +35,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     
     return result;
 }
+

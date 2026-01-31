@@ -1,11 +1,5 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QJsonDocument>
-#include <QJsonObject>
 
 /**
  * @class OllamaProxy
@@ -18,47 +12,48 @@
  * Preserves all custom optimizations 95% of the time by using direct GGUF loading.
  * Falls back to Ollama only for edge cases (new quants, unsupported architectures).
  */
-class OllamaProxy : public QObject {
-    Q_OBJECT
+class OllamaProxy : public void {
+
 public:
-    explicit OllamaProxy(QObject* parent = nullptr);
+    explicit OllamaProxy(void* parent = nullptr);
     ~OllamaProxy();
     
     // Set which Ollama model to use (e.g., "llama3.2:3b", "unlocked-350M:latest")
-    void setModel(const QString& modelName);
-    QString currentModel() const { return m_modelName; }
+    void setModel(const std::string& modelName);
+    std::string currentModel() const { return m_modelName; }
     
     // Check if Ollama is running and model is available
     bool isOllamaAvailable();
-    bool isModelAvailable(const QString& modelName);
+    bool isModelAvailable(const std::string& modelName);
     
     // Generate response using Ollama API with streaming
-    void generateResponse(const QString& prompt, 
+    void generateResponse(const std::string& prompt, 
                          float temperature = 0.8f,
                          int maxTokens = 512);
     
     // Stop current generation
     void stopGeneration();
     
-signals:
+
     // Emitted for each token during streaming (compatible with AgenticEngine)
-    void tokenArrived(const QString& token);
+    void tokenArrived(const std::string& token);
     
     // Emitted when generation completes
     void generationComplete();
     
     // Emitted on errors
-    void error(const QString& message);
-    
-private slots:
-    void onNetworkReply();
-    void onNetworkError(QNetworkReply::NetworkError code);
+    void error(const std::string& message);
     
 private:
-    QString m_modelName;
-    QString m_ollamaUrl;  // Default: http://localhost:11434
-    QNetworkAccessManager* m_networkManager;
-    QNetworkReply* m_currentReply;
+    void onNetworkReply();
+    void onNetworkError(void*::NetworkError code);
     
-    QByteArray m_buffer;  // Buffer for partial SSE events
+private:
+    std::string m_modelName;
+    std::string m_ollamaUrl;  // Default: http://localhost:11434
+    void** m_networkManager;
+    void** m_currentReply;
+    
+    std::vector<uint8_t> m_buffer;  // Buffer for partial SSE events
 };
+

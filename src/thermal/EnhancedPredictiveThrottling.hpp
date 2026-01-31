@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <numeric>
 
-#include <QString>
 
 namespace rawrxd::thermal {
 
@@ -93,7 +92,7 @@ struct ThrottleRecommendation {
     bool shouldThrottle;            // Whether throttling is needed
     bool isPredictive;              // Based on prediction vs current temp
     double timeToThreshold;         // Seconds until threshold reached
-    QString reason;                 // Human-readable explanation
+    std::string reason;                 // Human-readable explanation
     
     ThrottleRecommendation()
         : throttlePercent(0), shouldThrottle(false), isPredictive(false)
@@ -133,7 +132,7 @@ struct EnhancedPredictiveConfig {
     bool enableOutlierFiltering = true;
     
     // Neural network settings (if enabled)
-    QString modelPath;                      // Path to ONNX model
+    std::string modelPath;                      // Path to ONNX model
     bool enableGPUInference = false;
 };
 
@@ -417,7 +416,7 @@ public:
     /**
      * @brief Load model from file
      */
-    virtual bool loadModel(const QString& modelPath) = 0;
+    virtual bool loadModel(const std::string& modelPath) = 0;
     
     /**
      * @brief Check if model is loaded
@@ -443,7 +442,7 @@ public:
     /**
      * @brief Create appropriate predictor for model file
      */
-    static std::unique_ptr<MLPredictor> create(const QString& modelPath);
+    static std::unique_ptr<MLPredictor> create(const std::string& modelPath);
     
     /**
      * @brief Check if ML support is available
@@ -452,3 +451,4 @@ public:
 };
 
 } // namespace rawrxd::thermal
+

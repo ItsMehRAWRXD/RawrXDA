@@ -258,7 +258,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Emit JSON line to stdout (single object)
+    // JSON line to stdout (single object)
     std::cout << "{"
               << "\"timestamp_utc\":\"" << result.timestamp_utc << "\"," 
               << "\"model_path\":\"" << result.model_path << "\"," 

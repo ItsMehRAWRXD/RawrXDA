@@ -1,14 +1,6 @@
 #include "security_manager.h"
-#include <QCryptographicHash>
-#include <QRandomGenerator>
-#include <QFile>
-#include <QDir>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QDebug>
-#include <QMessageAuthenticationCode>
-#include <QDateTime>
-#include <QSslCertificate>
+
+
 #include <stdexcept>
 #include <windows.h>
 #include <wincrypt.h>
@@ -34,49 +26,39 @@ SecurityManager* SecurityManager::getInstance()
 
 // ==================== CONSTRUCTOR / INITIALIZATION ====================
 
-SecurityManager::SecurityManager(QObject* parent)
-    : QObject(parent)
+SecurityManager::SecurityManager(void* parent)
+    : void(parent)
     , m_initialized(false)
     , m_debugMode(false)
     , m_keyRotationInterval(90 * 24 * 3600)  // 90 days in seconds
     , m_lastKeyRotation(0)
 {
-    qInfo() << "[SecurityManager] Constructed (production-grade security module)";
 }
 
-bool SecurityManager::initialize(const QString& masterPassword)
+bool SecurityManager::initialize(const std::string& masterPassword)
 {
     if (m_initialized) {
-        qWarning() << "[SecurityManager] Already initialized";
         return true;
     }
 
-    qInfo() << "[SecurityManager] Initializing security subsystem...";
-
     // Generate or load master key
-    QByteArray salt;
+    std::vector<uint8_t> salt;
     if (masterPassword.isEmpty()) {
         // Generate random key (for testing/development)
-        salt = QByteArray(32, 0);
-        QRandomGenerator::global()->fillRange(reinterpret_cast<quint32*>(salt.data()), 8);
+        salt = std::vector<uint8_t>(32, 0);
         m_masterKey = deriveKeyPBKDF2("defaultMasterPassword", salt, 100000);
-        qWarning() << "[SecurityManager] Using default master key (NOT SECURE - provide password for production)";
     } else {
         // Derive key from user password
-        salt = QByteArray(32, 0);
-        QRandomGenerator::global()->fillRange(reinterpret_cast<quint32*>(salt.data()), 8);
+        salt = std::vector<uint8_t>(32, 0);
         m_masterKey = deriveKeyPBKDF2(masterPassword, salt, 100000);
-        qInfo() << "[SecurityManager] Master key derived from password (PBKDF2 100k iterations)";
     }
 
     if (m_masterKey.isEmpty() || m_masterKey.size() != 32) {
-        qCritical() << "[SecurityManager] Failed to derive valid master key";
-        logSecurityEvent("initialization", "system", "master_key", false, "Key derivation failed");
         return false;
     }
 
-    m_currentKeyId = QString("key_%1").arg(QDateTime::currentSecsSinceEpoch());
-    m_lastKeyRotation = QDateTime::currentSecsSinceEpoch();
+    m_currentKeyId = std::string("key_%1"));
+    m_lastKeyRotation = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
 
     // Load stored credentials (from secure storage)
     loadStoredCredentials();
@@ -85,60 +67,45 @@ bool SecurityManager::initialize(const QString& masterPassword)
     loadACLConfiguration();
 
     m_initialized = true;
-    
-    qInfo() << "[SecurityManager] Initialization complete";
-    qInfo() << "[SecurityManager] Key ID:" << m_currentKeyId;
-    qInfo() << "[SecurityManager] Next key rotation in" << (m_keyRotationInterval / 86400) << "days";
-    
-    logSecurityEvent("initialization", "system", "security_manager", true, "Security subsystem initialized");
-    
     return true;
 }
 
 bool SecurityManager::validateSetup() const
 {
     if (!m_initialized) {
-        qWarning() << "[SecurityManager] Not initialized";
         return false;
     }
 
     if (m_masterKey.isEmpty() || m_masterKey.size() != 32) {
-        qCritical() << "[SecurityManager] Invalid master key";
         return false;
     }
 
     if (m_currentKeyId.isEmpty()) {
-        qCritical() << "[SecurityManager] No active key ID";
         return false;
     }
 
     // Check if key rotation is needed
-    qint64 now = QDateTime::currentSecsSinceEpoch();
+    qint64 now = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     if (now - m_lastKeyRotation > m_keyRotationInterval) {
-        qWarning() << "[SecurityManager] Key rotation overdue!";
         // Don't fail validation, but log warning
     }
 
-    qInfo() << "[SecurityManager] Security setup validated successfully";
     return true;
 }
 
 // ==================== ENCRYPTION / DECRYPTION ====================
 
-QString SecurityManager::encryptData(const QByteArray& plaintext, EncryptionAlgorithm algorithm)
+std::string SecurityManager::encryptData(const std::vector<uint8_t>& plaintext, EncryptionAlgorithm algorithm)
 {
     if (!m_initialized) {
-        qCritical() << "[SecurityManager] Not initialized - cannot encrypt";
-        logSecurityEvent("encryption", "system", "data", false, "Not initialized");
-        return QString();
+        return std::string();
     }
 
     if (plaintext.isEmpty()) {
-        qWarning() << "[SecurityManager] Empty plaintext - nothing to encrypt";
-        return QString();
+        return std::string();
     }
 
-    QByteArray ciphertext;
+    std::vector<uint8_t> ciphertext;
     
     try {
         switch (algorithm) {
@@ -149,58 +116,44 @@ QString SecurityManager::encryptData(const QByteArray& plaintext, EncryptionAlgo
             ciphertext = encryptAES256CBC(plaintext, m_masterKey);
             break;
         case EncryptionAlgorithm::ChaCha20Poly1305:
-            qWarning() << "[SecurityManager] ChaCha20-Poly1305 not yet implemented, falling back to AES-256-GCM";
             ciphertext = encryptAES256GCM(plaintext, m_masterKey);
             break;
         default:
-            qCritical() << "[SecurityManager] Unknown encryption algorithm";
-            logSecurityEvent("encryption", "system", "data", false, "Unknown algorithm");
-            return QString();
+            return std::string();
         }
 
         if (ciphertext.isEmpty()) {
-            qCritical() << "[SecurityManager] Encryption failed";
-            logSecurityEvent("encryption", "system", "data", false, "Encryption returned empty result");
-            return QString();
+            return std::string();
         }
 
-        QString encoded = ciphertext.toBase64();
-        qDebug() << "[SecurityManager] Encrypted" << plaintext.size() << "bytes ->" << ciphertext.size() << "bytes (base64:" << encoded.size() << "chars)";
-        logSecurityEvent("encryption", "system", "data", true, QString("Encrypted %1 bytes").arg(plaintext.size()));
+        std::string encoded = ciphertext.toBase64();
         
         return encoded;
 
     } catch (const std::exception& e) {
-        qCritical() << "[SecurityManager] Encryption exception:" << e.what();
-        logSecurityEvent("encryption", "system", "data", false, QString("Exception: %1").arg(e.what()));
-        return QString();
+        return std::string();
     }
 }
 
-QByteArray SecurityManager::decryptData(const QString& ciphertext)
+std::vector<uint8_t> SecurityManager::decryptData(const std::string& ciphertext)
 {
     if (!m_initialized) {
-        qCritical() << "[SecurityManager] Not initialized - cannot decrypt";
-        logSecurityEvent("decryption", "system", "data", false, "Not initialized");
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
 
     if (ciphertext.isEmpty()) {
-        qWarning() << "[SecurityManager] Empty ciphertext - nothing to decrypt";
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
 
     try {
-        QByteArray encryptedData = QByteArray::fromBase64(ciphertext.toUtf8());
+        std::vector<uint8_t> encryptedData = std::vector<uint8_t>::fromBase64(ciphertext.toUtf8());
         
         if (encryptedData.isEmpty()) {
-            qCritical() << "[SecurityManager] Invalid base64 ciphertext";
-            logSecurityEvent("decryption", "system", "data", false, "Invalid base64");
-            return QByteArray();
+            return std::vector<uint8_t>();
         }
 
         // Try AES-256-GCM first (default)
-        QByteArray plaintext = decryptAES256GCM(encryptedData, m_masterKey);
+        std::vector<uint8_t> plaintext = decryptAES256GCM(encryptedData, m_masterKey);
         
         if (plaintext.isEmpty()) {
             // Try AES-256-CBC as fallback
@@ -208,26 +161,20 @@ QByteArray SecurityManager::decryptData(const QString& ciphertext)
         }
 
         if (plaintext.isEmpty()) {
-            qCritical() << "[SecurityManager] Decryption failed";
-            logSecurityEvent("decryption", "system", "data", false, "Decryption failed");
-            return QByteArray();
+            return std::vector<uint8_t>();
         }
 
-        qDebug() << "[SecurityManager] Decrypted" << encryptedData.size() << "bytes ->" << plaintext.size() << "bytes";
-        logSecurityEvent("decryption", "system", "data", true, QString("Decrypted %1 bytes").arg(plaintext.size()));
         
         return plaintext;
 
     } catch (const std::exception& e) {
-        qCritical() << "[SecurityManager] Decryption exception:" << e.what();
-        logSecurityEvent("decryption", "system", "data", false, QString("Exception: %1").arg(e.what()));
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
 }
 
 // ==================== AES-256-GCM IMPLEMENTATION ====================
 
-QByteArray SecurityManager::encryptAES256GCM(const QByteArray& plaintext, const QByteArray& key)
+std::vector<uint8_t> SecurityManager::encryptAES256GCM(const std::vector<uint8_t>& plaintext, const std::vector<uint8_t>& key)
 {
     // Production-ready AES-256-GCM using Windows CNG API
     BCRYPT_ALG_HANDLE hAlg = nullptr;
@@ -259,7 +206,7 @@ QByteArray SecurityManager::encryptAES256GCM(const QByteArray& plaintext, const 
         }
         
         // Generate random 12-byte IV (nonce) for GCM
-        QByteArray iv(12, 0);
+        std::vector<uint8_t> iv(12, 0);
         status = BCryptGenRandom(nullptr, (PUCHAR)iv.data(), iv.size(), 
                                 BCRYPT_USE_SYSTEM_PREFERRED_RNG);
         if (!BCRYPT_SUCCESS(status)) {
@@ -272,7 +219,7 @@ QByteArray SecurityManager::encryptAES256GCM(const QByteArray& plaintext, const 
         BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO authInfo;
         BCRYPT_INIT_AUTH_MODE_INFO(authInfo);
         
-        QByteArray tag(16, 0); // 16-byte authentication tag for GCM
+        std::vector<uint8_t> tag(16, 0); // 16-byte authentication tag for GCM
         authInfo.pbNonce = (PUCHAR)iv.data();
         authInfo.cbNonce = iv.size();
         authInfo.pbTag = (PUCHAR)tag.data();
@@ -291,7 +238,7 @@ QByteArray SecurityManager::encryptAES256GCM(const QByteArray& plaintext, const 
         }
         
         // Allocate ciphertext buffer
-        QByteArray ciphertext(cbCiphertext, 0);
+        std::vector<uint8_t> ciphertext(cbCiphertext, 0);
         
         // Perform encryption
         ULONG cbResult = 0;
@@ -311,25 +258,22 @@ QByteArray SecurityManager::encryptAES256GCM(const QByteArray& plaintext, const 
         BCryptCloseAlgorithmProvider(hAlg, 0);
         
         // Return format: IV (12 bytes) + Ciphertext + Tag (16 bytes)
-        QByteArray result = iv + ciphertext + tag;
+        std::vector<uint8_t> result = iv + ciphertext + tag;
         
-        logSecurityEvent("encryption", "system", "aes-256-gcm", true, 
-                        QString("Encrypted %1 bytes").arg(plaintext.size()));
+                        std::string("Encrypted %1 bytes")));
         return result;
         
     } catch (const std::exception& e) {
-        logSecurityEvent("encryption", "system", "aes-256-gcm", false, 
-                        QString("Exception: %1").arg(e.what()));
-        return QByteArray();
+                        std::string("Exception: %1")));
+        return std::vector<uint8_t>();
     }
 }
 
-QByteArray SecurityManager::decryptAES256GCM(const QByteArray& encrypted, const QByteArray& key)
+std::vector<uint8_t> SecurityManager::decryptAES256GCM(const std::vector<uint8_t>& encrypted, const std::vector<uint8_t>& key)
 {
     if (encrypted.size() < 12 + 16) {  // IV (12) + tag (16)
-        logSecurityEvent("decryption", "system", "aes-256-gcm", false, 
                         "Invalid ciphertext size");
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     // Production-ready AES-256-GCM decryption using Windows CNG API
@@ -339,9 +283,9 @@ QByteArray SecurityManager::decryptAES256GCM(const QByteArray& encrypted, const 
     
     try {
         // Extract components from encrypted data
-        QByteArray iv = encrypted.left(12);
-        QByteArray tag = encrypted.right(16);
-        QByteArray ciphertext = encrypted.mid(12, encrypted.size() - 12 - 16);
+        std::vector<uint8_t> iv = encrypted.left(12);
+        std::vector<uint8_t> tag = encrypted.right(16);
+        std::vector<uint8_t> ciphertext = encrypted.mid(12, encrypted.size() - 12 - 16);
         
         // Open algorithm provider for AES-GCM
         status = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_AES_ALGORITHM, nullptr, 0);
@@ -388,7 +332,7 @@ QByteArray SecurityManager::decryptAES256GCM(const QByteArray& encrypted, const 
         }
         
         // Allocate plaintext buffer
-        QByteArray plaintext(cbPlaintext, 0);
+        std::vector<uint8_t> plaintext(cbPlaintext, 0);
         
         // Perform decryption (this also verifies the authentication tag)
         ULONG cbResult = 0;
@@ -408,28 +352,26 @@ QByteArray SecurityManager::decryptAES256GCM(const QByteArray& encrypted, const 
         BCryptDestroyKey(hKey);
         BCryptCloseAlgorithmProvider(hAlg, 0);
         
-        logSecurityEvent("decryption", "system", "aes-256-gcm", true, 
-                        QString("Decrypted %1 bytes").arg(plaintext.size()));
+                        std::string("Decrypted %1 bytes")));
         return plaintext;
         
     } catch (const std::exception& e) {
-        logSecurityEvent("decryption", "system", "aes-256-gcm", false, 
-                        QString("Exception: %1").arg(e.what()));
-        return QByteArray();
+                        std::string("Exception: %1")));
+        return std::vector<uint8_t>();
     }
 }
 
 // ==================== AES-256-CBC IMPLEMENTATION ====================
 
-QByteArray SecurityManager::encryptAES256CBC(const QByteArray& plaintext, const QByteArray& key)
+std::vector<uint8_t> SecurityManager::encryptAES256CBC(const std::vector<uint8_t>& plaintext, const std::vector<uint8_t>& key)
 {
     // Similar to GCM but using CBC mode
     // Generate random IV (16 bytes for CBC)
-    QByteArray iv(16, 0);
+    std::vector<uint8_t> iv(16, 0);
     QRandomGenerator::global()->fillRange(reinterpret_cast<quint32*>(iv.data()), 4);
     
     // Simple XOR cipher (replace with real AES-CBC)
-    QByteArray ciphertext = plaintext;
+    std::vector<uint8_t> ciphertext = plaintext;
     for (int i = 0; i < ciphertext.size(); ++i) {
         ciphertext[i] = ciphertext[i] ^ key[i % key.size()] ^ iv[i % iv.size()];
     }
@@ -438,20 +380,20 @@ QByteArray SecurityManager::encryptAES256CBC(const QByteArray& plaintext, const 
     return iv + ciphertext;
 }
 
-QByteArray SecurityManager::decryptAES256CBC(const QByteArray& ciphertext, const QByteArray& key)
+std::vector<uint8_t> SecurityManager::decryptAES256CBC(const std::vector<uint8_t>& ciphertext, const std::vector<uint8_t>& key)
 {
     if (ciphertext.size() < 16) {  // IV size
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     // Extract IV (first 16 bytes)
-    QByteArray iv = ciphertext.left(16);
+    std::vector<uint8_t> iv = ciphertext.left(16);
     
     // Extract ciphertext
-    QByteArray encrypted = ciphertext.mid(16);
+    std::vector<uint8_t> encrypted = ciphertext.mid(16);
     
     // Decrypt (reverse XOR)
-    QByteArray plaintext = encrypted;
+    std::vector<uint8_t> plaintext = encrypted;
     for (int i = 0; i < plaintext.size(); ++i) {
         plaintext[i] = plaintext[i] ^ key[i % key.size()] ^ iv[i % iv.size()];
     }
@@ -461,38 +403,32 @@ QByteArray SecurityManager::decryptAES256CBC(const QByteArray& ciphertext, const
 
 // ==================== HMAC & INTEGRITY ====================
 
-QString SecurityManager::generateHMAC(const QByteArray& data)
+std::string SecurityManager::generateHMAC(const std::vector<uint8_t>& data)
 {
     if (!m_initialized) {
-        qCritical() << "[SecurityManager] Not initialized";
-        return QString();
+        return std::string();
     }
 
     QMessageAuthenticationCode hmac(QCryptographicHash::Sha256, m_masterKey);
     hmac.addData(data);
-    QByteArray result = hmac.result();
+    std::vector<uint8_t> result = hmac.result();
     
-    QString hexHmac = result.toHex();
-    qDebug() << "[SecurityManager] Generated HMAC-SHA256 for" << data.size() << "bytes";
+    std::string hexHmac = result.toHex();
     
     return hexHmac;
 }
 
-bool SecurityManager::verifyHMAC(const QByteArray& data, const QString& hmac)
+bool SecurityManager::verifyHMAC(const std::vector<uint8_t>& data, const std::string& hmac)
 {
     if (!m_initialized) {
-        qCritical() << "[SecurityManager] Not initialized";
         return false;
     }
 
-    QString computedHmac = generateHMAC(data);
+    std::string computedHmac = generateHMAC(data);
     bool valid = (computedHmac == hmac);
     
     if (!valid) {
-        qWarning() << "[SecurityManager] HMAC verification failed";
-        logSecurityEvent("hmac_verification", "system", "data", false, "HMAC mismatch");
     } else {
-        qDebug() << "[SecurityManager] HMAC verification succeeded";
     }
     
     return valid;
@@ -500,14 +436,14 @@ bool SecurityManager::verifyHMAC(const QByteArray& data, const QString& hmac)
 
 // ==================== KEY MANAGEMENT ====================
 
-QByteArray SecurityManager::deriveKeyPBKDF2(const QString& password, const QByteArray& salt, int iterations)
+std::vector<uint8_t> SecurityManager::deriveKeyPBKDF2(const std::string& password, const std::vector<uint8_t>& salt, int iterations)
 {
     // PBKDF2 key derivation using HMAC-SHA256
-    QByteArray passwordBytes = password.toUtf8();
-    QByteArray derivedKey(32, 0);  // 256 bits
+    std::vector<uint8_t> passwordBytes = password.toUtf8();
+    std::vector<uint8_t> derivedKey(32, 0);  // 256 bits
     
     // Simple PBKDF2 implementation (in production, use QPasswordDigestor or OpenSSL)
-    QByteArray block = salt + QByteArray::fromHex("00000001");
+    std::vector<uint8_t> block = salt + std::vector<uint8_t>::fromHex("00000001");
     QMessageAuthenticationCode hmac(QCryptographicHash::Sha256, passwordBytes);
     
     for (int i = 0; i < iterations; ++i) {
@@ -525,49 +461,44 @@ QByteArray SecurityManager::deriveKeyPBKDF2(const QString& password, const QByte
         }
     }
     
-    qInfo() << "[SecurityManager] Derived 256-bit key using PBKDF2 (" << iterations << "iterations)";
     
     return derivedKey;
 }
 
-bool SecurityManager::generateNewKey(const QString& keyId, EncryptionAlgorithm algorithm)
+bool SecurityManager::generateNewKey(const std::string& keyId, EncryptionAlgorithm algorithm)
 {
-    qInfo() << "[SecurityManager] Generating new key:" << keyId;
     
     // Generate random key material
-    QByteArray newKey(32, 0);
+    std::vector<uint8_t> newKey(32, 0);
     QRandomGenerator::global()->fillRange(reinterpret_cast<quint32*>(newKey.data()), 8);
     
     // In production, store key securely (Windows DPAPI, hardware security module, etc.)
     
-    qInfo() << "[SecurityManager] New key generated successfully";
-    logSecurityEvent("key_generation", "system", keyId, true, "New encryption key generated");
     
     return true;
 }
 
 bool SecurityManager::rotateEncryptionKey()
 {
-    qInfo() << "[SecurityManager] Rotating encryption key...";
     
-    QString oldKeyId = m_currentKeyId;
-    QString newKeyId = QString("key_%1").arg(QDateTime::currentSecsSinceEpoch());
+    std::string oldKeyId = m_currentKeyId;
+    std::string newKeyId = std::string("key_%1"));
     
     // Generate new key
-    QByteArray oldKey = m_masterKey;
-    QByteArray newKey(32, 0);
+    std::vector<uint8_t> oldKey = m_masterKey;
+    std::vector<uint8_t> newKey(32, 0);
     QRandomGenerator::global()->fillRange(reinterpret_cast<quint32*>(newKey.data()), 8);
     
     // Re-encrypt all stored credentials with new key
-    std::map<QString, CredentialInfo> reencryptedCredentials;
+    std::map<std::string, CredentialInfo> reencryptedCredentials;
     for (const auto& [username, cred] : m_credentials) {
         // Decrypt with old key
         m_masterKey = oldKey;
-        QByteArray decryptedToken = decryptData(cred.token);
+        std::vector<uint8_t> decryptedToken = decryptData(cred.token);
         
         // Encrypt with new key
         m_masterKey = newKey;
-        QString reencryptedToken = encryptData(decryptedToken);
+        std::string reencryptedToken = encryptData(decryptedToken);
         
         CredentialInfo newCred = cred;
         newCred.token = reencryptedToken;
@@ -576,11 +507,9 @@ bool SecurityManager::rotateEncryptionKey()
     
     m_credentials = reencryptedCredentials;
     m_currentKeyId = newKeyId;
-    m_lastKeyRotation = QDateTime::currentSecsSinceEpoch();
+    m_lastKeyRotation = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     
-    qInfo() << "[SecurityManager] Key rotation complete:" << oldKeyId << "->" << newKeyId;
-    logSecurityEvent("key_rotation", "system", newKeyId, true, QString("Rotated from %1").arg(oldKeyId));
-    emit keyRotationCompleted(newKeyId);
+    keyRotationCompleted(newKeyId);
     
     return true;
 }
@@ -592,25 +521,22 @@ qint64 SecurityManager::getKeyExpirationTime() const
 
 // ==================== CREDENTIAL MANAGEMENT ====================
 
-bool SecurityManager::storeCredential(const QString& username, const QString& token,
-                                     const QString& tokenType, qint64 expiresAt,
-                                     const QString& refreshToken)
+bool SecurityManager::storeCredential(const std::string& username, const std::string& token,
+                                     const std::string& tokenType, qint64 expiresAt,
+                                     const std::string& refreshToken)
 {
     if (!m_initialized) {
-        qCritical() << "[SecurityManager] Not initialized";
         return false;
     }
 
-    qInfo() << "[SecurityManager] Storing credential for:" << username;
     
     // Encrypt the token
-    QString encryptedToken = encryptData(token.toUtf8());
+    std::string encryptedToken = encryptData(token.toUtf8());
     if (encryptedToken.isEmpty()) {
-        qCritical() << "[SecurityManager] Failed to encrypt token";
         return false;
     }
     
-    QString encryptedRefreshToken;
+    std::string encryptedRefreshToken;
     if (!refreshToken.isEmpty()) {
         encryptedRefreshToken = encryptData(refreshToken.toUtf8());
     }
@@ -619,58 +545,50 @@ bool SecurityManager::storeCredential(const QString& username, const QString& to
     info.username = username;
     info.tokenType = tokenType;
     info.token = encryptedToken;
-    info.issuedAt = QDateTime::currentSecsSinceEpoch();
+    info.issuedAt = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     info.expiresAt = expiresAt;
     info.isRefreshable = !refreshToken.isEmpty();
     info.refreshToken = encryptedRefreshToken;
     
     m_credentials[username] = info;
     
-    qInfo() << "[SecurityManager] Credential stored successfully for:" << username;
-    logSecurityEvent("credential_stored", username, tokenType, true, "Credential stored");
-    emit credentialStored(username);
+    credentialStored(username);
     
     return true;
 }
 
-CredentialInfo SecurityManager::getCredential(const QString& username) const
+CredentialInfo SecurityManager::getCredential(const std::string& username) const
 {
     auto it = m_credentials.find(username);
     if (it == m_credentials.end()) {
-        qWarning() << "[SecurityManager] Credential not found for:" << username;
         return CredentialInfo();
     }
     
     const CredentialInfo& info = it->second;
     
     // Check expiration
-    if (info.expiresAt > 0 && QDateTime::currentSecsSinceEpoch() > info.expiresAt) {
-        qWarning() << "[SecurityManager] Credential expired for:" << username;
-        emit const_cast<SecurityManager*>(this)->credentialExpired(username);
+    if (info.expiresAt > 0 && std::chrono::system_clock::time_point::currentSecsSinceEpoch() > info.expiresAt) {
+        const_cast<SecurityManager*>(this)->credentialExpired(username);
         return CredentialInfo();
     }
     
-    qDebug() << "[SecurityManager] Retrieved credential for:" << username;
     return info;
 }
 
-bool SecurityManager::removeCredential(const QString& username)
+bool SecurityManager::removeCredential(const std::string& username)
 {
     auto it = m_credentials.find(username);
     if (it == m_credentials.end()) {
-        qWarning() << "[SecurityManager] Credential not found (cannot remove):" << username;
         return false;
     }
     
     m_credentials.erase(it);
     
-    qInfo() << "[SecurityManager] Removed credential for:" << username;
-    logSecurityEvent("credential_removed", username, "credential", true, "Credential removed");
     
     return true;
 }
 
-bool SecurityManager::isTokenExpired(const QString& username) const
+bool SecurityManager::isTokenExpired(const std::string& username) const
 {
     auto it = m_credentials.find(username);
     if (it == m_credentials.end()) {
@@ -682,71 +600,62 @@ bool SecurityManager::isTokenExpired(const QString& username) const
         return false;  // No expiration
     }
     
-    return QDateTime::currentSecsSinceEpoch() > info.expiresAt;
+    return std::chrono::system_clock::time_point::currentSecsSinceEpoch() > info.expiresAt;
 }
 
-QString SecurityManager::refreshToken(const QString& username, const QString& refreshToken)
+std::string SecurityManager::refreshToken(const std::string& username, const std::string& refreshToken)
 {
-    qInfo() << "[SecurityManager] Refreshing token for:" << username;
     
     // In production, this would make an OAuth2 refresh request
     // For now, we simulate token refresh
     
     auto it = m_credentials.find(username);
     if (it == m_credentials.end()) {
-        qCritical() << "[SecurityManager] Credential not found for:" << username;
-        emit tokenRefreshFailed(username);
-        return QString();
+        tokenRefreshFailed(username);
+        return std::string();
     }
     
     CredentialInfo& info = it->second;
     
     if (!info.isRefreshable) {
-        qCritical() << "[SecurityManager] Token is not refreshable for:" << username;
-        emit tokenRefreshFailed(username);
-        return QString();
+        tokenRefreshFailed(username);
+        return std::string();
     }
     
     // Simulate successful refresh (in production, call OAuth2 endpoint)
-    QString newToken = QString("refreshed_token_%1").arg(QDateTime::currentSecsSinceEpoch());
-    QString encryptedNewToken = encryptData(newToken.toUtf8());
+    std::string newToken = std::string("refreshed_token_%1"));
+    std::string encryptedNewToken = encryptData(newToken.toUtf8());
     
     info.token = encryptedNewToken;
-    info.issuedAt = QDateTime::currentSecsSinceEpoch();
+    info.issuedAt = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     info.expiresAt = info.issuedAt + 3600;  // 1 hour from now
     
-    qInfo() << "[SecurityManager] Token refreshed successfully for:" << username;
-    logSecurityEvent("token_refreshed", username, "oauth2", true, "Token refreshed");
     
     return newToken;
 }
 
 // ==================== ACCESS CONTROL ====================
 
-bool SecurityManager::setAccessControl(const QString& username, const QString& resource, AccessLevel level)
+bool SecurityManager::setAccessControl(const std::string& username, const std::string& resource, AccessLevel level)
 {
-    qInfo() << "[SecurityManager] Setting ACL:" << username << "->" << resource << "=" << static_cast<int>(level);
     
     m_acl[username][resource] = level;
     
-    logSecurityEvent("acl_set", username, resource, true, QString("Access level: %1").arg(static_cast<int>(level)));
     
     return true;
 }
 
-bool SecurityManager::checkAccess(const QString& username, const QString& resource, AccessLevel requiredLevel) const
+bool SecurityManager::checkAccess(const std::string& username, const std::string& resource, AccessLevel requiredLevel) const
 {
     auto userIt = m_acl.find(username);
     if (userIt == m_acl.end()) {
-        qDebug() << "[SecurityManager] No ACL entry for user:" << username;
-        emit const_cast<SecurityManager*>(this)->accessDenied(username, resource);
+        const_cast<SecurityManager*>(this)->accessDenied(username, resource);
         return false;
     }
     
     auto resourceIt = userIt->second.find(resource);
     if (resourceIt == userIt->second.end()) {
-        qDebug() << "[SecurityManager] No ACL entry for resource:" << resource;
-        emit const_cast<SecurityManager*>(this)->accessDenied(username, resource);
+        const_cast<SecurityManager*>(this)->accessDenied(username, resource);
         return false;
     }
     
@@ -754,19 +663,17 @@ bool SecurityManager::checkAccess(const QString& username, const QString& resour
     bool hasAccess = (static_cast<int>(userLevel) & static_cast<int>(requiredLevel)) == static_cast<int>(requiredLevel);
     
     if (!hasAccess) {
-        qWarning() << "[SecurityManager] Access denied:" << username << "to" << resource 
                    << "(has" << static_cast<int>(userLevel) << ", needs" << static_cast<int>(requiredLevel) << ")";
-        emit const_cast<SecurityManager*>(this)->accessDenied(username, resource);
+        const_cast<SecurityManager*>(this)->accessDenied(username, resource);
     } else {
-        qDebug() << "[SecurityManager] Access granted:" << username << "to" << resource;
     }
     
     return hasAccess;
 }
 
-std::vector<std::pair<QString, SecurityManager::AccessLevel>> SecurityManager::getResourceACL(const QString& resource) const
+std::vector<std::pair<std::string, SecurityManager::AccessLevel>> SecurityManager::getResourceACL(const std::string& resource) const
 {
-    std::vector<std::pair<QString, AccessLevel>> result;
+    std::vector<std::pair<std::string, AccessLevel>> result;
     
     for (const auto& [username, resources] : m_acl) {
         auto it = resources.find(resource);
@@ -780,47 +687,38 @@ std::vector<std::pair<QString, SecurityManager::AccessLevel>> SecurityManager::g
 
 // ==================== CERTIFICATE PINNING ====================
 
-bool SecurityManager::pinCertificate(const QString& domain, const QString& certificatePEM)
+bool SecurityManager::pinCertificate(const std::string& domain, const std::string& certificatePEM)
 {
-    qInfo() << "[SecurityManager] Pinning certificate for domain:" << domain;
     
     // Compute SHA-256 hash of certificate
-    QByteArray certBytes = certificatePEM.toUtf8();
-    QByteArray hash = QCryptographicHash::hash(certBytes, QCryptographicHash::Sha256);
-    QString hashHex = hash.toHex();
+    std::vector<uint8_t> certBytes = certificatePEM.toUtf8();
+    std::vector<uint8_t> hash = QCryptographicHash::hash(certBytes, QCryptographicHash::Sha256);
+    std::string hashHex = hash.toHex();
     
     m_pinnedCertificates[domain] = hashHex;
     
-    qInfo() << "[SecurityManager] Certificate pinned:" << domain << "hash:" << hashHex;
-    logSecurityEvent("certificate_pinned", "system", domain, true, QString("Hash: %1").arg(hashHex));
     
     return true;
 }
 
-bool SecurityManager::verifyCertificatePin(const QString& domain, const QString& certificatePEM) const
+bool SecurityManager::verifyCertificatePin(const std::string& domain, const std::string& certificatePEM) const
 {
     auto it = m_pinnedCertificates.find(domain);
     if (it == m_pinnedCertificates.end()) {
-        qWarning() << "[SecurityManager] No pinned certificate for domain:" << domain;
         return false;
     }
     
-    QString pinnedHash = it->second;
+    std::string pinnedHash = it->second;
     
     // Compute hash of provided certificate
-    QByteArray certBytes = certificatePEM.toUtf8();
-    QByteArray hash = QCryptographicHash::hash(certBytes, QCryptographicHash::Sha256);
-    QString hashHex = hash.toHex();
+    std::vector<uint8_t> certBytes = certificatePEM.toUtf8();
+    std::vector<uint8_t> hash = QCryptographicHash::hash(certBytes, QCryptographicHash::Sha256);
+    std::string hashHex = hash.toHex();
     
     bool matches = (hashHex == pinnedHash);
     
     if (!matches) {
-        qCritical() << "[SecurityManager] Certificate pin mismatch for domain:" << domain;
-        qCritical() << "  Expected:" << pinnedHash;
-        qCritical() << "  Got:" << hashHex;
-        logSecurityEvent("certificate_pin_failed", "system", domain, false, "Hash mismatch");
     } else {
-        qDebug() << "[SecurityManager] Certificate pin verified for:" << domain;
     }
     
     return matches;
@@ -828,11 +726,10 @@ bool SecurityManager::verifyCertificatePin(const QString& domain, const QString&
 
 // ==================== AUDIT LOGGING ====================
 
-void SecurityManager::logSecurityEvent(const QString& eventType, const QString& actor,
-                                      const QString& resource, bool success, const QString& details)
+                                      const std::string& resource, bool success, const std::string& details)
 {
     SecurityAuditEntry entry;
-    entry.timestamp = QDateTime::currentMSecsSinceEpoch();
+    entry.timestamp = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     entry.eventType = eventType;
     entry.actor = actor;
     entry.resource = resource;
@@ -847,17 +744,14 @@ void SecurityManager::logSecurityEvent(const QString& eventType, const QString& 
     }
     
     if (m_debugMode) {
-        QString successStr = success ? "SUCCESS" : "FAILURE";
-        qInfo() << QString("[SecurityAudit] %1 | %2 | %3 | %4 | %5 | %6")
-                      .arg(QDateTime::fromMSecsSinceEpoch(entry.timestamp).toString("yyyy-MM-dd hh:mm:ss"))
-                      .arg(eventType)
-                      .arg(actor)
-                      .arg(resource)
-                      .arg(successStr)
-                      .arg(details);
+        std::string successStr = success ? "SUCCESS" : "FAILURE";
+                      .toString("yyyy-MM-dd hh:mm:ss"))
+
+
+                      ;
     }
     
-    emit securityEventLogged(entry);
+    securityEventLogged(entry);
 }
 
 std::vector<SecurityManager::SecurityAuditEntry> SecurityManager::getAuditLog(int limit) const
@@ -876,13 +770,11 @@ std::vector<SecurityManager::SecurityAuditEntry> SecurityManager::getAuditLog(in
     return result;
 }
 
-bool SecurityManager::exportAuditLog(const QString& filePath) const
+bool SecurityManager::exportAuditLog(const std::string& filePath) const
 {
-    qInfo() << "[SecurityManager] Exporting audit log to:" << filePath;
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qCritical() << "[SecurityManager] Failed to open file for writing:" << filePath;
         return false;
     }
     
@@ -890,53 +782,44 @@ bool SecurityManager::exportAuditLog(const QString& filePath) const
     out << "Timestamp,Event Type,Actor,Resource,Success,Details\n";
     
     for (const auto& entry : m_auditLog) {
-        QString timestamp = QDateTime::fromMSecsSinceEpoch(entry.timestamp).toString("yyyy-MM-dd hh:mm:ss.zzz");
-        QString successStr = entry.success ? "SUCCESS" : "FAILURE";
-        out << QString("%1,%2,%3,%4,%5,%6\n")
-                  .arg(timestamp)
-                  .arg(entry.eventType)
-                  .arg(entry.actor)
-                  .arg(entry.resource)
-                  .arg(successStr)
-                  .arg(entry.details);
+        std::string timestamp = std::chrono::system_clock::time_point::fromMSecsSinceEpoch(entry.timestamp).toString("yyyy-MM-dd hh:mm:ss.zzz");
+        std::string successStr = entry.success ? "SUCCESS" : "FAILURE";
+        out << std::string("%1,%2,%3,%4,%5,%6\n")
+
+
+                  ;
     }
     
     file.close();
     
-    qInfo() << "[SecurityManager] Audit log exported successfully (" << m_auditLog.size() << "entries)";
-    logSecurityEvent("audit_export", "system", filePath, true, QString("%1 entries exported").arg(m_auditLog.size()));
     
     return true;
 }
 
 // ==================== CONFIGURATION ====================
 
-bool SecurityManager::loadConfiguration(const QJsonObject& config)
+bool SecurityManager::loadConfiguration(const void*& config)
 {
-    qInfo() << "[SecurityManager] Loading configuration...";
     
     if (config.contains("key_rotation_interval_days")) {
         int days = config["key_rotation_interval_days"].toInt(90);
         m_keyRotationInterval = days * 24 * 3600;
-        qInfo() << "  Key rotation interval:" << days << "days";
     }
     
     if (config.contains("debug_mode")) {
         m_debugMode = config["debug_mode"].toBool(false);
-        qInfo() << "  Debug mode:" << m_debugMode;
     }
     
-    qInfo() << "[SecurityManager] Configuration loaded successfully";
     return true;
 }
 
-QJsonObject SecurityManager::getConfiguration() const
+void* SecurityManager::getConfiguration() const
 {
-    QJsonObject config;
+    void* config;
     config["key_rotation_interval_days"] = static_cast<int>(m_keyRotationInterval / 86400);
     config["current_key_id"] = m_currentKeyId;
-    config["last_key_rotation"] = QDateTime::fromSecsSinceEpoch(m_lastKeyRotation).toString(Qt::ISODate);
-    config["next_key_rotation"] = QDateTime::fromSecsSinceEpoch(getKeyExpirationTime()).toString(Qt::ISODate);
+    config["last_key_rotation"] = std::chrono::system_clock::time_point::fromSecsSinceEpoch(m_lastKeyRotation).toString(//ISODate);
+    config["next_key_rotation"] = std::chrono::system_clock::time_point::fromSecsSinceEpoch(getKeyExpirationTime()).toString(//ISODate);
     config["debug_mode"] = m_debugMode;
     config["credential_count"] = static_cast<int>(m_credentials.size());
     config["audit_log_size"] = static_cast<int>(m_auditLog.size());
@@ -951,11 +834,11 @@ QJsonObject SecurityManager::getConfiguration() const
 void SecurityManager::loadStoredCredentials()
 {
     // In production, load from secure storage (Windows Credential Manager, macOS Keychain, etc.)
-    qInfo() << "[SecurityManager] Loading stored credentials (stub)";
 }
 
 void SecurityManager::loadACLConfiguration()
 {
     // In production, load from configuration file or database
-    qInfo() << "[SecurityManager] Loading ACL configuration (stub)";
 }
+
+

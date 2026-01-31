@@ -1,11 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QJsonObject>
-#include <QObject>
-#include <QMutex>
-#include <QVector>
-#include <QPair>
+
 #include <chrono>
 #include <memory>
 
@@ -22,23 +17,22 @@
  * - Configuration-driven resolution strategies
  * - GDPR-compliant data handling
  */
-class AIMergeResolver : public QObject {
-    Q_OBJECT
+class AIMergeResolver : public void {
 
 public:
-    explicit AIMergeResolver(QObject* parent = nullptr);
+    explicit AIMergeResolver(void* parent = nullptr);
     ~AIMergeResolver() override;
 
     // Configuration
     struct Config {
-        QString aiEndpoint;
-        QString apiKey;
+        std::string aiEndpoint;
+        std::string apiKey;
         bool enableAutoResolve = false;
         int maxConflictSize = 10000;
         double minConfidenceThreshold = 0.75;
         bool enableMetrics = true;
         bool enableAuditLog = true;
-        QString auditLogPath;
+        std::string auditLogPath;
     };
 
     void setConfig(const Config& config);
@@ -46,30 +40,30 @@ public:
 
     // Conflict representation
     struct ConflictBlock {
-        QString file;
+        std::string file;
         int startLine;
         int endLine;
-        QString baseVersion;
-        QString currentVersion;
-        QString incomingVersion;
-        QString context;
+        std::string baseVersion;
+        std::string currentVersion;
+        std::string incomingVersion;
+        std::string context;
     };
 
     struct Resolution {
-        QString resolvedContent;
+        std::string resolvedContent;
         double confidence;
-        QString strategy;
-        QString explanation;
+        std::string strategy;
+        std::string explanation;
         bool requiresManualReview;
     };
 
     // Core functionality
-    QVector<ConflictBlock> detectConflicts(const QString& filePath);
+    std::vector<ConflictBlock> detectConflicts(const std::string& filePath);
     Resolution resolveConflict(const ConflictBlock& conflict);
-    bool applyResolution(const QString& filePath, const Resolution& resolution, int lineStart, int lineEnd);
+    bool applyResolution(const std::string& filePath, const Resolution& resolution, int lineStart, int lineEnd);
     
-    QJsonObject analyzeSemanticMerge(const QString& base, const QString& current, const QString& incoming);
-    QVector<QString> detectBreakingChanges(const QString& diff);
+    void* analyzeSemanticMerge(const std::string& base, const std::string& current, const std::string& incoming);
+    std::vector<std::string> detectBreakingChanges(const std::string& diff);
 
     // Metrics
     struct Metrics {
@@ -86,27 +80,27 @@ public:
     Metrics getMetrics() const;
     void resetMetrics();
 
-signals:
     void conflictsDetected(int count);
     void conflictResolved(const Resolution& resolution);
-    void breakingChangeDetected(const QString& change);
-    void errorOccurred(const QString& error);
+    void breakingChangeDetected(const std::string& change);
+    void errorOccurred(const std::string& error);
     void metricsUpdated(const Metrics& metrics);
 
 private:
     // Configuration
     Config m_config;
-    mutable QMutex m_configMutex;
+    mutable std::mutex m_configMutex;
 
     // Metrics
     Metrics m_metrics;
-    mutable QMutex m_metricsMutex;
+    mutable std::mutex m_metricsMutex;
 
     // Helper methods
-    void logStructured(const QString& level, const QString& message, const QJsonObject& context = QJsonObject());
-    void recordLatency(const QString& operation, const std::chrono::milliseconds& duration);
-    void logAudit(const QString& action, const QJsonObject& details);
-    QJsonObject makeAiRequest(const QString& endpoint, const QJsonObject& payload);
-    QString extractConflictMarkers(const QString& content, ConflictBlock& conflict);
+    void logStructured(const std::string& level, const std::string& message, const void*& context = void*());
+    void recordLatency(const std::string& operation, const std::chrono::milliseconds& duration);
+    void logAudit(const std::string& action, const void*& details);
+    void* makeAiRequest(const std::string& endpoint, const void*& payload);
+    std::string extractConflictMarkers(const std::string& content, ConflictBlock& conflict);
     bool validateResolution(const Resolution& resolution, const ConflictBlock& conflict);
 };
+

@@ -1,41 +1,37 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QList>
-#include <QDateTime>
 
 struct TodoItem {
-    QString id;
-    QString description;
-    QString filePath;
+    std::string id;
+    std::string description;
+    std::string filePath;
     int lineNumber;
-    QDateTime created;
-    QDateTime completed;
+    std::chrono::system_clock::time_point created;
+    std::chrono::system_clock::time_point completed;
     bool isCompleted;
 };
 
-class TodoManager : public QObject {
-    Q_OBJECT
+class TodoManager : public void {
+
 public:
-    explicit TodoManager(QObject* parent = nullptr);
+    explicit TodoManager(void* parent = nullptr);
     virtual ~TodoManager() = default;
     
-    void addTodo(const QString& description, const QString& filePath = "", int lineNumber = -1);
-    void completeTodo(const QString& id);
-    void removeTodo(const QString& id);
-    QList<TodoItem> getTodos() const;
-    QList<TodoItem> getPendingTodos() const;
-    QList<TodoItem> getCompletedTodos() const;
+    void addTodo(const std::string& description, const std::string& filePath = "", int lineNumber = -1);
+    void completeTodo(const std::string& id);
+    void removeTodo(const std::string& id);
+    std::vector<TodoItem> getTodos() const;
+    std::vector<TodoItem> getPendingTodos() const;
+    std::vector<TodoItem> getCompletedTodos() const;
     
-signals:
+
     void todoAdded(const TodoItem& todo);
-    void todoCompleted(const QString& id);
-    void todoRemoved(const QString& id);
+    void todoCompleted(const std::string& id);
+    void todoRemoved(const std::string& id);
     
 private:
     void saveTodos();
     void loadTodos();
     
-    QList<TodoItem> todos_;
+    std::vector<TodoItem> todos_;
 };

@@ -16,19 +16,7 @@
  * - Replace in multiple files
  */
 
-#include <QWidget>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QCheckBox>
-#include <QTreeWidget>
-#include <QProgressBar>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QThread>
-#include <QMutex>
-#include <QFuture>
-#include <QFutureWatcher>
+
 #include "../utils/file_operations.h"
 
 namespace RawrXD {
@@ -38,14 +26,14 @@ namespace RawrXD {
  * \brief Single match in multi-file search
  */
 struct MultiFileSearchResult {
-    QString file;           ///< Absolute path to file
+    std::string file;           ///< Absolute path to file
     int line;               ///< Line number (0-based)
     int column;             ///< Column number (0-based)
-    QString lineText;       ///< Full line text with match
-    QString matchedText;    ///< The matched portion
+    std::string lineText;       ///< Full line text with match
+    std::string matchedText;    ///< The matched portion
     
     MultiFileSearchResult() : line(-1), column(-1) {}
-    MultiFileSearchResult(const QString& f, int l, int c, const QString& lt, const QString& mt)
+    MultiFileSearchResult(const std::string& f, int l, int c, const std::string& lt, const std::string& mt)
         : file(f), line(l), column(c), lineText(lt), matchedText(mt) {}
 };
 
@@ -65,48 +53,47 @@ struct MultiFileSearchResult {
  *         this, &MainWindow::openFileAtLine);
  * \endcode
  */
-class MultiFileSearchWidget : public QWidget {
-    Q_OBJECT
-    
+class MultiFileSearchWidget : public void {
+
 public:
-    explicit MultiFileSearchWidget(QWidget* parent = nullptr);
+    explicit MultiFileSearchWidget(void* parent = nullptr);
     ~MultiFileSearchWidget() override;
     
     /**
      * \brief Set project root path to search in
      * \param path Absolute path to project root
      */
-    void setProjectPath(const QString& path);
+    void setProjectPath(const std::string& path);
     
     /**
      * \brief Get current project path
      * \return Project root path
      */
-    QString projectPath() const;
+    std::string projectPath() const;
     
     /**
      * \brief Set search query
      * \param query Search pattern
      */
-    void setSearchQuery(const QString& query);
+    void setSearchQuery(const std::string& query);
     
     /**
      * \brief Get search query
      * \return Search pattern
      */
-    QString searchQuery() const;
+    std::string searchQuery() const;
     
     /**
      * \brief Set file filter pattern
      * \param pattern Wildcard pattern (e.g., "*.cpp *.h")
      */
-    void setFileFilter(const QString& pattern);
+    void setFileFilter(const std::string& pattern);
     
     /**
      * \brief Get file filter pattern
      * \return Current file filter
      */
-    QString fileFilter() const;
+    std::string fileFilter() const;
     
     /**
      * \brief Set whether to respect .gitignore
@@ -160,23 +147,23 @@ public:
      * \brief Get all search results
      * \return List of all matches
      */
-    QList<MultiFileSearchResult> results() const;
+    std::vector<MultiFileSearchResult> results() const;
     
     /**
      * \brief Export results to text file
      * \param filePath Path to save results
      * \return true if successful
      */
-    bool exportResults(const QString& filePath);
+    bool exportResults(const std::string& filePath);
     
-signals:
+
     /**
      * \brief Emitted when user clicks a search result
      * \param filePath Absolute path to file
      * \param line Line number (0-based)
      * \param column Column number (0-based)
      */
-    void resultClicked(const QString& filePath, int line, int column);
+    void resultClicked(const std::string& filePath, int line, int column);
     
     /**
      * \brief Emitted when search starts
@@ -202,7 +189,7 @@ signals:
      */
     void searchProgress(int current, int total);
     
-public slots:
+public:
     /**
      * \brief Start search with current settings
      */
@@ -228,7 +215,7 @@ public slots:
      */
     void collapseAll();
     
-private slots:
+private:
     void onResultItemClicked(QTreeWidgetItem* item, int column);
     void onSearchCompleted();
     void onSearchProgressUpdate(int current, int total);
@@ -236,9 +223,9 @@ private slots:
 private:
     void setupUI();
     void updateResultsTree();
-    void searchInFile(const QString& filePath, QList<MultiFileSearchResult>& results);
-    QStringList collectFilesToSearch();
-    bool shouldSkipFile(const QString& filePath) const;
+    void searchInFile(const std::string& filePath, std::vector<MultiFileSearchResult>& results);
+    std::vector<std::string> collectFilesToSearch();
+    bool shouldSkipFile(const std::string& filePath) const;
     
     // UI Components
     QVBoxLayout* m_mainLayout;
@@ -262,10 +249,10 @@ private:
     QPushButton* m_collapseAllButton;
     
     // State
-    QString m_projectPath;
-    QList<MultiFileSearchResult> m_results;
+    std::string m_projectPath;
+    std::vector<MultiFileSearchResult> m_results;
     QFutureWatcher<void>* m_searchWatcher;
-    QMutex m_resultsMutex;
+    std::mutex m_resultsMutex;
     bool m_searchCancelled;
     
     // Settings
@@ -276,3 +263,4 @@ private:
 };
 
 } // namespace RawrXD
+

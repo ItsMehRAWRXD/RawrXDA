@@ -10,13 +10,6 @@
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QVariantMap>
-#include <QTimer>
-#include <QMutex>
-#include <QFuture>
-#include <QtConcurrent>
 
 #include <vector>
 #include <optional>
@@ -61,7 +54,7 @@ struct SMARTData {
     bool isHealthy = true;
     bool isCritical = false;
     
-    QString lastUpdated;
+    std::string lastUpdated;
     
     /**
      * @brief Calculate overall health score from SMART attributes
@@ -150,10 +143,10 @@ struct BadSectorData {
  * @brief Complete drive health profile
  */
 struct DriveHealthProfile {
-    QString drivePath;
-    QString driveModel;
-    QString serialNumber;
-    QString firmwareVersion;
+    std::string drivePath;
+    std::string driveModel;
+    std::string serialNumber;
+    std::string firmwareVersion;
     
     // Health data
     SMARTData smart;
@@ -177,7 +170,7 @@ struct DriveHealthProfile {
     // Status
     bool isOnline = true;
     bool isThrottled = false;
-    QString statusMessage;
+    std::string statusMessage;
     
     int64_t lastUpdateMs = 0;
     
@@ -220,7 +213,7 @@ struct DriveHealthProfile {
             compositeScore = 0.0;
             statusMessage = "❌ OFFLINE: Drive not responding";
         } else {
-            statusMessage = QString("Score: %1%").arg(static_cast<int>(compositeScore * 100));
+            statusMessage = std::string("Score: %1%"));
         }
     }
 };
@@ -257,16 +250,16 @@ struct EnhancedLoadBalancerConfig {
     
     // Hysteresis to prevent oscillation
     double hysteresisThreshold = 0.05;  // 5% difference required to switch
-    QString lastSelectedDrive;
+    std::string lastSelectedDrive;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Callbacks
 // ═══════════════════════════════════════════════════════════════════════════════
 
-using DriveSelectedCallback = std::function<void(const QString& drivePath, const DriveHealthProfile& profile)>;
-using HealthAlertCallback = std::function<void(const QString& drivePath, const QString& alert, bool isCritical)>;
-using BalancingEventCallback = std::function<void(const QString& fromDrive, const QString& toDrive, const QString& reason)>;
+using DriveSelectedCallback = std::function<void(const std::string& drivePath, const DriveHealthProfile& profile)>;
+using HealthAlertCallback = std::function<void(const std::string& drivePath, const std::string& alert, bool isCritical)>;
+using BalancingEventCallback = std::function<void(const std::string& fromDrive, const std::string& toDrive, const std::string& reason)>;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Enhanced Dynamic Load Balancer
@@ -296,11 +289,9 @@ using BalancingEventCallback = std::function<void(const QString& fromDrive, cons
  * auto selected = balancer.selectOptimalDrive(OperationType::Write);
  * @endcode
  */
-class EnhancedDynamicLoadBalancer : public QObject
+class EnhancedDynamicLoadBalancer : public void
 {
-    Q_OBJECT
-    Q_PROPERTY(int driveCount READ getDriveCount NOTIFY drivesChanged)
-    Q_PROPERTY(QString lastSelectedDrive READ getLastSelectedDrive NOTIFY driveSelected)
+
 
 public:
     enum class OperationType {
@@ -311,9 +302,8 @@ public:
         LargeFile,
         SmallFiles
     };
-    Q_ENUM(OperationType)
 
-    explicit EnhancedDynamicLoadBalancer(QObject* parent = nullptr);
+    explicit EnhancedDynamicLoadBalancer(void* parent = nullptr);
     ~EnhancedDynamicLoadBalancer() override;
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -330,25 +320,25 @@ public:
     // Drive Management
     // ═══════════════════════════════════════════════════════════════════════════
     
-    void addDrive(const QString& drivePath, double ratedTBW = 0.0);
-    void removeDrive(const QString& drivePath);
+    void addDrive(const std::string& drivePath, double ratedTBW = 0.0);
+    void removeDrive(const std::string& drivePath);
     void clearDrives();
     
     int getDriveCount() const;
-    QStringList getDrivePaths() const;
-    bool hasDrive(const QString& drivePath) const;
+    std::vector<std::string> getDrivePaths() const;
+    bool hasDrive(const std::string& drivePath) const;
     
     // ═══════════════════════════════════════════════════════════════════════════
     // Health Updates
     // ═══════════════════════════════════════════════════════════════════════════
     
-    void updateHealth(const QString& drivePath, const DriveHealthProfile& profile);
-    void updateTemperature(const QString& drivePath, double temperature);
-    void updateLoad(const QString& drivePath, double loadPercent);
-    void updateSMART(const QString& drivePath, const SMARTData& smart);
-    void updateTBW(const QString& drivePath, double totalTBW);
+    void updateHealth(const std::string& drivePath, const DriveHealthProfile& profile);
+    void updateTemperature(const std::string& drivePath, double temperature);
+    void updateLoad(const std::string& drivePath, double loadPercent);
+    void updateSMART(const std::string& drivePath, const SMARTData& smart);
+    void updateTBW(const std::string& drivePath, double totalTBW);
     
-    DriveHealthProfile getHealthProfile(const QString& drivePath) const;
+    DriveHealthProfile getHealthProfile(const std::string& drivePath) const;
     std::vector<DriveHealthProfile> getAllProfiles() const;
     
     // ═══════════════════════════════════════════════════════════════════════════
@@ -360,19 +350,19 @@ public:
      * @param opType Type of operation (read, write, etc.)
      * @return Drive path or empty string if no suitable drive
      */
-    QString selectOptimalDrive(OperationType opType = OperationType::Write);
+    std::string selectOptimalDrive(OperationType opType = OperationType::Write);
     
     /**
      * @brief Get ranked list of drives for operation
      * @param opType Type of operation
      * @return Vector of drive paths sorted by composite score (best first)
      */
-    std::vector<QString> getRankedDrives(OperationType opType = OperationType::Write);
+    std::vector<std::string> getRankedDrives(OperationType opType = OperationType::Write);
     
     /**
      * @brief Get last selected drive path
      */
-    QString getLastSelectedDrive() const;
+    std::string getLastSelectedDrive() const;
     
     // ═══════════════════════════════════════════════════════════════════════════
     // Monitoring
@@ -404,36 +394,35 @@ public:
     int getCriticalDriveCount() const;
     
     QVariantMap getStatistics() const;
-    QVariantMap getDriveStatistics(const QString& drivePath) const;
+    QVariantMap getDriveStatistics(const std::string& drivePath) const;
 
-signals:
-    void driveSelected(const QString& drivePath);
+    void driveSelected(const std::string& drivePath);
     void drivesChanged();
-    void healthUpdated(const QString& drivePath, double healthScore);
-    void healthAlert(const QString& drivePath, const QString& message, bool isCritical);
-    void balancingEvent(const QString& fromDrive, const QString& toDrive, const QString& reason);
+    void healthUpdated(const std::string& drivePath, double healthScore);
+    void healthAlert(const std::string& drivePath, const std::string& message, bool isCritical);
+    void balancingEvent(const std::string& fromDrive, const std::string& toDrive, const std::string& reason);
 
-private slots:
+private:
     void onHealthPollTimer();
     void onThermalPollTimer();
 
 private:
     // Internal helpers
     void recalculateScores();
-    void checkHealthAlerts(const QString& drivePath, const DriveHealthProfile& profile);
+    void checkHealthAlerts(const std::string& drivePath, const DriveHealthProfile& profile);
     double adjustScoreForOperation(double baseScore, const DriveHealthProfile& profile, OperationType opType);
-    void queryWMIHealth(const QString& drivePath);
-    void queryNVMeHealth(const QString& drivePath);
+    void queryWMIHealth(const std::string& drivePath);
+    void queryNVMeHealth(const std::string& drivePath);
     int64_t getCurrentTimestampMs() const;
     
     // Data
-    mutable QMutex m_mutex;
-    std::map<QString, DriveHealthProfile> m_drives;
+    mutable std::mutex m_mutex;
+    std::map<std::string, DriveHealthProfile> m_drives;
     EnhancedLoadBalancerConfig m_config;
     
     // Monitoring
-    std::unique_ptr<QTimer> m_healthTimer;
-    std::unique_ptr<QTimer> m_thermalTimer;
+    std::unique_ptr<void*> m_healthTimer;
+    std::unique_ptr<void*> m_thermalTimer;
     std::atomic<bool> m_monitoring{false};
     
     // Callbacks
@@ -442,8 +431,9 @@ private:
     BalancingEventCallback m_balancingEventCallback;
     
     // State
-    QString m_lastSelectedDrive;
-    std::map<QString, double> m_previousScores;  // For hysteresis
+    std::string m_lastSelectedDrive;
+    std::map<std::string, double> m_previousScores;  // For hysteresis
 };
 
 } // namespace rawrxd::thermal
+

@@ -102,6 +102,3 @@ void SLOTracker::sloBreached(const std::string& service, double availability, do
     (void)target;
 }
 
-
-
-

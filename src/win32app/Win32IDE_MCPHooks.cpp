@@ -46,7 +46,7 @@ bool MCPHookManager::Initialize(HMODULE targetModule) {
     }
     
     if (!m_targetModule) {
-        LOG_ERROR("MCPHookManager: Failed to get target module handle");
+
         return false;
     }
     
@@ -70,7 +70,7 @@ void MCPHookManager::Shutdown() {
     LeaveCriticalSection(&m_cs);
     
     m_initialized = false;
-    LOG_INFO("MCPHookManager shutdown complete");
+
 }
 
 bool MCPHookManager::WriteJumpHook(uintptr_t targetAddr, uintptr_t hookAddr, 
@@ -83,7 +83,7 @@ bool MCPHookManager::WriteJumpHook(uintptr_t targetAddr, uintptr_t hookAddr,
     DWORD oldProtect;
     if (!VirtualProtect(reinterpret_cast<void*>(targetAddr), JUMP_SIZE, 
                         PAGE_EXECUTE_READWRITE, &oldProtect)) {
-        LOG_ERROR("VirtualProtect failed for target address");
+
         return false;
     }
     
@@ -158,7 +158,7 @@ HookInstallResult MCPHookManager::InstallReadMessageHook() {
                  std::to_string(MCPHookRVA::READ_MESSAGE));
     } else {
         result.errorCode = GetLastError();
-        LOG_ERROR("Failed to install readMessage hook");
+
     }
     
     return result;
@@ -192,7 +192,7 @@ HookInstallResult MCPHookManager::InstallWriteMessageHook() {
                  std::to_string(MCPHookRVA::WRITE_MESSAGE));
     } else {
         result.errorCode = GetLastError();
-        LOG_ERROR("Failed to install writeMessage hook");
+
     }
     
     return result;
@@ -226,7 +226,7 @@ HookInstallResult MCPHookManager::InstallOnSocketDataHook() {
                  std::to_string(MCPHookRVA::ON_SOCKET_DATA));
     } else {
         result.errorCode = GetLastError();
-        LOG_ERROR("Failed to install onSocketData hook");
+
     }
     
     return result;
@@ -260,7 +260,7 @@ HookInstallResult MCPHookManager::InstallWebSocketHook() {
                  std::to_string(MCPHookRVA::ESTABLISH_WS));
     } else {
         result.errorCode = GetLastError();
-        LOG_ERROR("Failed to install WebSocket hook");
+
     }
     
     return result;
@@ -285,8 +285,7 @@ HookInstallResult MCPHookManager::InstallAllTransportHooks() {
     if (r4.success) successCount++;
     
     result.success = (successCount > 0);
-    LOG_INFO("Installed " + std::to_string(successCount) + "/4 transport hooks");
-    
+
     return result;
 }
 
@@ -297,7 +296,7 @@ void MCPHookManager::UninstallAllHooks() {
         if (hook.installed) {
             RestoreOriginalBytes(hook.absoluteAddr, hook.originalBytes, hook.patchedLen);
             hook.installed = false;
-            LOG_DEBUG("Uninstalled hook at RVA 0x" + std::to_string(hook.rva));
+
         }
     }
     
@@ -312,7 +311,7 @@ void MCPHookManager::UninstallHook(uintptr_t rva) {
         if (hook.rva == rva && hook.installed) {
             RestoreOriginalBytes(hook.absoluteAddr, hook.originalBytes, hook.patchedLen);
             hook.installed = false;
-            LOG_DEBUG("Uninstalled hook at RVA 0x" + std::to_string(rva));
+
             break;
         }
     }
@@ -404,8 +403,7 @@ void MCPHookManager::OnReadMessage(const uint8_t* buffer, size_t length) {
     if (m_readCallback) {
         m_readCallback(buffer, length, "readMessage");
     }
-    
-    LOG_DEBUG("MCP readMessage intercepted: " + std::to_string(length) + " bytes, method=" + msg.method);
+
 }
 
 void MCPHookManager::OnWriteMessage(const uint8_t* buffer, size_t length) {
@@ -428,8 +426,7 @@ void MCPHookManager::OnWriteMessage(const uint8_t* buffer, size_t length) {
     if (m_writeCallback) {
         m_writeCallback(buffer, length, "writeMessage");
     }
-    
-    LOG_DEBUG("MCP writeMessage intercepted: " + std::to_string(length) + " bytes, method=" + msg.method);
+
 }
 
 void MCPHookManager::OnSocketData(const uint8_t* data, size_t length, SOCKET sock) {
@@ -452,8 +449,7 @@ void MCPHookManager::OnSocketData(const uint8_t* data, size_t length, SOCKET soc
     if (m_socketCallback) {
         m_socketCallback(data, length, sock);
     }
-    
-    LOG_DEBUG("MCP onSocketData intercepted: " + std::to_string(length) + " bytes on socket " + std::to_string(sock));
+
 }
 
 void MCPHookManager::OnWebSocketFrame(const uint8_t* frame, size_t length, uint8_t opcode) {
@@ -530,7 +526,7 @@ bool InstallMCPHooks() {
     auto& mgr = MCPHookManager::GetInstance();
     
     if (!mgr.Initialize()) {
-        LOG_ERROR("Failed to initialize MCPHookManager");
+
         return false;
     }
     
@@ -538,8 +534,7 @@ bool InstallMCPHooks() {
     auto result = mgr.InstallAllTransportHooks();
     
     if (result.success) {
-        LOG_INFO("MCP transport hooks installed successfully");
-        
+
         // Set default logging callbacks
         mgr.SetReadMessageCallback([](const uint8_t* buf, size_t len, const char* src) {
             std::stringstream ss;
@@ -548,7 +543,7 @@ bool InstallMCPHooks() {
                 ss << ": " << std::string(reinterpret_cast<const char*>(buf), 
                                           std::min(len, size_t(64)));
             }
-            LOG_DEBUG(ss.str());
+
         });
         
         mgr.SetWriteMessageCallback([](const uint8_t* buf, size_t len, const char* dst) {
@@ -558,7 +553,7 @@ bool InstallMCPHooks() {
                 ss << ": " << std::string(reinterpret_cast<const char*>(buf), 
                                           std::min(len, size_t(64)));
             }
-            LOG_DEBUG(ss.str());
+
         });
     }
     
@@ -567,7 +562,7 @@ bool InstallMCPHooks() {
 
 void UninstallMCPHooks() {
     MCPHookManager::GetInstance().UninstallAllHooks();
-    LOG_INFO("MCP transport hooks uninstalled");
+
 }
 
 // C-linkage hook entry points (called from MASM trampolines)

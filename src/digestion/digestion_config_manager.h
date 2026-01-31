@@ -26,4 +26,3 @@ private:
     static std::stringList parseInlineList(const std::string &value);
 };
 
-

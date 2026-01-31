@@ -1,9 +1,7 @@
 // RawrXD Agentic IDE
 // Advanced AI-powered IDE with terminal integration and agentic capabilities
 
-#include <QApplication>
-#include <QDebug>
-#include <QMessageBox>
+
 #include <iostream>
 #include <fstream>
 #include <cstdio>
@@ -39,23 +37,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     
     // NOW initialize the logger - after QApplication exists
     DebugLogger::getInstance().init("D:\\temp\\ide_startup.log");
-    DEBUG_LOG("=== WinMain: QApplication created ===\n");
-    
+
     try {
-        DEBUG_LOG("=== WinMain: Creating AgenticIDE ===\n");
-        
+
         AgenticIDE *ide = new AgenticIDE();
-        
-        DEBUG_LOG("=== WinMain: AgenticIDE created, calling show() ===\n");
-        
+
         ide->show();
-        
-        DEBUG_LOG("=== WinMain: Entering event loop ===\n");
-        
+
         int result = app.exec();
-        
-        DEBUG_LOG("=== WinMain: Event loop finished ===\n");
-        
+
         delete ide;
         
         // Cleanup argv
@@ -67,7 +57,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return result;
     }
     catch (const std::exception& e) {
-        DEBUG_LOG("=== EXCEPTION ===\n");
+
         // Cleanup argv on exception
         for (int i = 0; i < argc; ++i) {
             delete[] argv[i];
@@ -76,7 +66,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
     catch (...) {
-        DEBUG_LOG("=== UNKNOWN EXCEPTION ===\n");
+
         // Cleanup argv on exception
         for (int i = 0; i < argc; ++i) {
             delete[] argv[i];
@@ -85,3 +75,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 }
+

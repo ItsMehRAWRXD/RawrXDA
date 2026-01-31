@@ -1,8 +1,6 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QStringList>
+
 #include <cstddef>
 #include <cstdint>
 
@@ -24,8 +22,7 @@
  * - Performance monitoring
  * - Fallback to CPU if no GPU available
  */
-class GPUBackend : public QObject {
-    Q_OBJECT
+class GPUBackend : public void {
 
 public:
     enum BackendType {
@@ -70,12 +67,12 @@ public:
     /**
      * @brief Get backend name string
      */
-    QString backendName() const;
+    std::string backendName() const;
 
     /**
      * @brief List available GPU devices
      */
-    QStringList availableDevices() const;
+    std::vector<std::string> availableDevices() const;
 
     /**
      * @brief Select device by index
@@ -90,7 +87,7 @@ public:
     /**
      * @brief Get device name
      */
-    QString deviceName(int deviceIndex = -1) const;
+    std::string deviceName(int deviceIndex = -1) const;
 
     /**
      * @brief Get total GPU memory in bytes
@@ -138,18 +135,17 @@ public:
     /**
      * @brief Get compute capability (CUDA) or feature level
      */
-    QString computeCapability() const;
+    std::string computeCapability() const;
 
     /**
      * @brief Get expected speedup vs CPU (estimated)
      */
     float expectedSpeedup() const;
 
-signals:
     void backendInitialized(BackendType type);
     void deviceChanged(int deviceIndex);
     void memoryWarning(size_t available, size_t total);
-    void error(const QString& message);
+    void error(const std::string& message);
 
 private:
     GPUBackend();  // Singleton
@@ -174,5 +170,6 @@ private:
     
     size_t m_totalMemory = 0;
     size_t m_allocatedMemory = 0;
-    QStringList m_deviceList;
+    std::vector<std::string> m_deviceList;
 };
+

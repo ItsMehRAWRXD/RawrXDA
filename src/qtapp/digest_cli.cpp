@@ -121,9 +121,5 @@ int main(int argc, char *argv[]) {
     return app.exec();
 }
 
-#include "digest_cli.moc"
-
-
-
-
+// MOC removed
 

@@ -3,13 +3,6 @@
 #ifndef ERROR_RECOVERY_SYSTEM_H
 #define ERROR_RECOVERY_SYSTEM_H
 
-#include <QObject>
-#include <QString>
-#include <QVector>
-#include <QHash>
-#include <QJsonObject>
-#include <QDateTime>
-#include <QTimer>
 
 // Error severity levels
 enum class ErrorSeverity {
@@ -36,27 +29,27 @@ enum class ErrorCategory {
 
 // Error record - matches cpp usage
 struct ErrorRecord {
-    QString errorId;
-    QString component;
+    std::string errorId;
+    std::string component;
     ErrorSeverity severity;
     ErrorCategory category;
-    QString message;
-    QString stackTrace;
-    QJsonObject context;
-    QDateTime timestamp;
-    QDateTime recoveredAt;
+    std::string message;
+    std::string stackTrace;
+    void* context;
+    std::chrono::system_clock::time_point timestamp;
+    std::chrono::system_clock::time_point recoveredAt;
     int retryCount = 0;
     bool wasRecovered = false;
-    QString recoveryAction;
+    std::string recoveryAction;
 };
 
-// Recovery strategy - uses QVector<ErrorCategory> for applicableCategories
+// Recovery strategy - uses std::vector<ErrorCategory> for applicableCategories
 struct RecoveryStrategy {
-    QString strategyId;
-    QString name;
-    QString description;
-    QVector<ErrorCategory> applicableCategories;
-    QVector<QString> recoverySteps;
+    std::string strategyId;
+    std::string name;
+    std::string description;
+    std::vector<ErrorCategory> applicableCategories;
+    std::vector<std::string> recoverySteps;
     int maxRetries = 3;
     int retryDelayMs = 1000;
     double successRate = 0.5;
@@ -65,13 +58,13 @@ struct RecoveryStrategy {
 
 // Recovery execution result
 struct RecoveryResult {
-    QString errorId;
-    QString strategyId;
+    std::string errorId;
+    std::string strategyId;
     bool success;
-    QString resultMessage;
-    QDateTime executedAt;
+    std::string resultMessage;
+    std::chrono::system_clock::time_point executedAt;
     int attemptsUsed;
-    QJsonObject details;
+    void* details;
 };
 
 // System health status - matches cpp member name currentSystemHealth
@@ -82,34 +75,33 @@ struct SystemHealth {
     int criticalErrors = 0;
     int errorsRecovered = 0;
     int errorsPending = 0;
-    QHash<QString, int> errorsByComponent;
-    QHash<QString, int> errorsByCategory;
-    QDateTime lastCheckTime;
+    std::unordered_map<std::string, int> errorsByComponent;
+    std::unordered_map<std::string, int> errorsByCategory;
+    std::chrono::system_clock::time_point lastCheckTime;
 };
 
-class ErrorRecoverySystem : public QObject {
-    Q_OBJECT
+class ErrorRecoverySystem : public void {
 
 public:
-    explicit ErrorRecoverySystem(QObject* parent = nullptr);
+    explicit ErrorRecoverySystem(void* parent = nullptr);
     ~ErrorRecoverySystem();
 
-    // Error recording - returns errorId as QString
-    QString recordError(const QString& component,
+    // Error recording - returns errorId as std::string
+    std::string recordError(const std::string& component,
                        ErrorSeverity severity,
                        ErrorCategory category,
-                       const QString& message,
-                       const QString& stackTrace = QString(),
-                       const QJsonObject& context = QJsonObject());
+                       const std::string& message,
+                       const std::string& stackTrace = std::string(),
+                       const void*& context = void*());
     
     // Error retrieval
-    QVector<ErrorRecord> getActiveErrors() const;
-    QVector<ErrorRecord> getErrorsByComponent(const QString& component) const;
-    QVector<ErrorRecord> getErrorsBySeverity(ErrorSeverity severity) const;
-    ErrorRecord getError(const QString& errorId) const;
+    std::vector<ErrorRecord> getActiveErrors() const;
+    std::vector<ErrorRecord> getErrorsByComponent(const std::string& component) const;
+    std::vector<ErrorRecord> getErrorsBySeverity(ErrorSeverity severity) const;
+    ErrorRecord getError(const std::string& errorId) const;
     
     // Recovery operations
-    bool attemptRecovery(const QString& errorId);
+    bool attemptRecovery(const std::string& errorId);
     RecoveryStrategy selectBestStrategy(const ErrorRecord& error);
     
     // Auto-recovery configuration
@@ -124,35 +116,35 @@ public:
     // Error management
     void clearErrorHistory();
     void clearRecoveredErrors();
-    void resolveError(const QString& errorId);
+    void resolveError(const std::string& errorId);
     
     // Statistics
-    QJsonObject getErrorStatistics() const;
+    void* getErrorStatistics() const;
     
     // Utility - member functions (const)
-    QString errorSeverityToString(ErrorSeverity severity) const;
-    QString errorCategoryToString(ErrorCategory category) const;
+    std::string errorSeverityToString(ErrorSeverity severity) const;
+    std::string errorCategoryToString(ErrorCategory category) const;
 
-signals:
+
     void errorRecorded(const ErrorRecord& error);
-    void errorRecovered(const QString& errorId, bool success);
+    void errorRecovered(const std::string& errorId, bool success);
     void errorRecoveredRecord(const ErrorRecord& error);
     void recoveryFailed(const ErrorRecord& error);
     void systemHealthUpdated(const SystemHealth& health);
     
     // Recovery action signals
-    void fallbackToLocalRequested(const QString& component);
-    void cacheClearRequested(const QString& component);
-    void componentRestartRequested(const QString& component);
+    void fallbackToLocalRequested(const std::string& component);
+    void cacheClearRequested(const std::string& component);
+    void componentRestartRequested(const std::string& component);
     void networkReconnectRequested();
-    void dataReloadRequested(const QString& component);
+    void dataReloadRequested(const std::string& component);
     void resourceReductionRequested();
-    void endpointSwitchRequested(const QString& component);
+    void endpointSwitchRequested(const std::string& component);
     void gracefulDegradationEnabled();
-    void reauthenticationRequested(const QString& component);
+    void reauthenticationRequested(const std::string& component);
     void adminEscalationRequired(const ErrorRecord& error);
 
-private slots:
+private:
     void processAutoRecovery();
     void updateSystemHealth();
 
@@ -177,18 +169,18 @@ private:
     bool recoverEscalateAdmin(ErrorRecord& error);
     
     // ID generation
-    QString generateErrorId();
+    std::string generateErrorId();
     
     // Data members - exact names from cpp
-    QHash<QString, ErrorRecord> activeErrors;
-    QVector<ErrorRecord> recoveredErrors;
-    QVector<ErrorRecord> errorHistory;
-    QHash<QString, RecoveryStrategy> strategies;
+    std::unordered_map<std::string, ErrorRecord> activeErrors;
+    std::vector<ErrorRecord> recoveredErrors;
+    std::vector<ErrorRecord> errorHistory;
+    std::unordered_map<std::string, RecoveryStrategy> strategies;
     
     SystemHealth currentSystemHealth;
     
-    QTimer* autoRecoveryTimer;
-    QTimer* healthCheckTimer;
+    void** autoRecoveryTimer;
+    void** healthCheckTimer;
     
     bool autoRecoveryEnabled;
     int maxRetries;
@@ -197,3 +189,4 @@ private:
 };
 
 #endif // ERROR_RECOVERY_SYSTEM_H
+

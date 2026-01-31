@@ -8,8 +8,6 @@
 #ifndef RAWRXD_IFILE_READER_H
 #define RAWRXD_IFILE_READER_H
 
-#include <QString>
-#include <QByteArray>
 
 namespace RawrXD {
 
@@ -47,8 +45,8 @@ public:
      * \param detectedEncoding Optional output parameter for detected encoding
      * \return true if successful, false on error
      */
-    virtual bool readFile(const QString& path, 
-                         QString& content, 
+    virtual bool readFile(const std::string& path, 
+                         std::string& content, 
                          Encoding* detectedEncoding = nullptr) const = 0;
     
     /**
@@ -57,44 +55,45 @@ public:
      * \param data Output parameter for raw bytes
      * \return true if successful, false on error
      */
-    virtual bool readFileRaw(const QString& path, QByteArray& data) const = 0;
+    virtual bool readFileRaw(const std::string& path, std::vector<uint8_t>& data) const = 0;
     
     /**
      * \brief Detect encoding of raw data
      * \param data Raw byte array
      * \return Detected encoding type
      */
-    virtual Encoding detectEncoding(const QByteArray& data) const = 0;
+    virtual Encoding detectEncoding(const std::vector<uint8_t>& data) const = 0;
     
     /**
      * \brief Check if file exists
      * \param path File path
      * \return true if file exists
      */
-    virtual bool exists(const QString& path) const = 0;
+    virtual bool exists(const std::string& path) const = 0;
     
     /**
      * \brief Check if path is a regular file
      * \param path File path
      * \return true if path points to a regular file
      */
-    virtual bool isFile(const QString& path) const = 0;
+    virtual bool isFile(const std::string& path) const = 0;
     
     /**
      * \brief Check if file is readable
      * \param path File path
      * \return true if file can be read
      */
-    virtual bool isReadable(const QString& path) const = 0;
+    virtual bool isReadable(const std::string& path) const = 0;
     
     /**
      * \brief Get file size in bytes
      * \param path File path
      * \return File size, or -1 on error
      */
-    virtual qint64 fileSize(const QString& path) const = 0;
+    virtual qint64 fileSize(const std::string& path) const = 0;
 };
 
 } // namespace RawrXD
 
 #endif // RAWRXD_IFILE_READER_H
+

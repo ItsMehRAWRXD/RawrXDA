@@ -1,28 +1,17 @@
 #include "gguf_server.hpp"
 #include "inference_engine.hpp"
-#include <QNetworkInterface>
-#include <QHostAddress>
-#include <QDateTime>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QUrlQuery>
-#include <QCoreApplication>
-#include <QThread>
-#include <QDebug>
 
-GGUFServer::GGUFServer(InferenceEngine* engine, QObject* parent)
-    : QObject(parent)
+
+GGUFServer::GGUFServer(InferenceEngine* engine, void* parent)
+    : void(parent)
     , m_engine(engine)
-    , m_server(new QTcpServer(this))
+    , m_server(new void*(this))
     , m_isRunning(false)
     , m_port(0)
-    , m_healthTimer(new QTimer(this))
+    , m_healthTimer(new void*(this))
 {
-    connect(m_server, &QTcpServer::newConnection, this, &GGUFServer::onNewConnection);
-    connect(m_healthTimer, &QTimer::timeout, this, &GGUFServer::onHealthCheck);
-    
-    qInfo() << "GGUFServer initialized";
+// Qt connect removed
+// Qt connect removed
 }
 
 GGUFServer::~GGUFServer() {
@@ -30,16 +19,14 @@ GGUFServer::~GGUFServer() {
 }
 
 bool GGUFServer::start(quint16 port) {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (m_isRunning) {
-        qInfo() << "Server already running on port" << m_port;
         return true;
     }
     
     // Check if another server is running on this port
     if (isServerRunningOnPort(port)) {
-        qInfo() << "Server already running on port" << port << "- using existing instance";
         m_isRunning = true;  // Mark as running (external instance)
         m_port = port;
         return true;
@@ -47,43 +34,31 @@ bool GGUFServer::start(quint16 port) {
     
     // Try to bind to the port
     if (!tryBindPort(port)) {
-        qWarning() << "Failed to bind to port" << port;
         
         // Try alternative ports
         for (quint16 altPort = port + 1; altPort < port + 10; ++altPort) {
             if (tryBindPort(altPort)) {
-                qInfo() << "Bound to alternative port" << altPort;
                 port = altPort;
                 break;
             }
         }
         
         if (!m_server->isListening()) {
-            emit error("Failed to start server on any port");
+            error("Failed to start server on any port");
             return false;
         }
     }
     
     m_isRunning = true;
     m_port = port;
-    m_startTime = QDateTime::currentDateTime();
+    m_startTime = std::chrono::system_clock::time_point::currentDateTime();
     m_stats = ServerStats(); // Reset stats
     
     // Start health monitoring
     m_healthTimer->start(HEALTH_CHECK_INTERVAL_MS);
     
-    qInfo() << "GGUF Server started on port" << m_port;
-    qInfo() << "Endpoints available:";
-    qInfo() << "  POST http://localhost:" << m_port << "/api/generate";
-    qInfo() << "  POST http://localhost:" << m_port << "/v1/chat/completions";
-    qInfo() << "  GET  http://localhost:" << m_port << "/api/tags";
-    qInfo() << "  POST http://localhost:" << m_port << "/api/pull";
-    qInfo() << "  POST http://localhost:" << m_port << "/api/push";
-    qInfo() << "  POST http://localhost:" << m_port << "/api/show";
-    qInfo() << "  DELETE http://localhost:" << m_port << "/api/delete";
-    qInfo() << "  GET  http://localhost:" << m_port << "/health";
     
-    emit serverStarted(m_port);
+    serverStarted(m_port);
     return true;
 }
 
@@ -92,7 +67,7 @@ void GGUFServer::stop() {
         return;
     }
     
-    // Don't use QMutexLocker here - it can deadlock during shutdown
+    // Don't use std::lock_guard<std::mutex> here - it can deadlock during shutdown
     m_mutex.lock();
     bool wasRunning = m_isRunning;
     m_isRunning = false;
@@ -103,7 +78,7 @@ void GGUFServer::stop() {
     }
     
     // Stop timer safely - only if it belongs to this thread
-    if (m_healthTimer && m_healthTimer->thread() == QThread::currentThread()) {
+    if (m_healthTimer && m_healthTimer->thread() == std::thread::currentThread()) {
         m_healthTimer->stop();
     }
     
@@ -115,7 +90,7 @@ void GGUFServer::stop() {
     
     // Force close all pending connections
     m_mutex.lock();
-    QList<QTcpSocket*> socketsToClose = m_pendingRequests.keys();
+    std::vector<void**> socketsToClose = m_pendingRequests.keys();
     m_mutex.unlock();
     
     for (auto socket : socketsToClose) {
@@ -137,8 +112,7 @@ void GGUFServer::stop() {
     m_pendingRequests.clear();
     m_mutex.unlock();
     
-    qInfo() << "GGUF Server stopped";
-    emit serverStopped();
+    serverStopped();
 }
 
 bool GGUFServer::isRunning() const {
@@ -150,7 +124,7 @@ quint16 GGUFServer::port() const {
 }
 
 bool GGUFServer::isServerRunningOnPort(quint16 port) {
-    QTcpSocket testSocket;
+    void* testSocket;
     testSocket.connectToHost(QHostAddress::LocalHost, port);
     
     if (testSocket.waitForConnected(500)) {
@@ -159,7 +133,7 @@ bool GGUFServer::isServerRunningOnPort(quint16 port) {
         testSocket.flush();
         
         if (testSocket.waitForReadyRead(1000)) {
-            QByteArray response = testSocket.readAll();
+            std::vector<uint8_t> response = testSocket.readAll();
             testSocket.close();
             
             // Check if response looks like our server
@@ -177,8 +151,8 @@ GGUFServer::ServerStats GGUFServer::getStats() const {
     ServerStats stats = m_stats;
     
     if (m_isRunning) {
-        stats.uptimeSeconds = m_startTime.secsTo(QDateTime::currentDateTime());
-        stats.startTime = m_startTime.toString(Qt::ISODate);
+        stats.uptimeSeconds = m_startTime.secsTo(std::chrono::system_clock::time_point::currentDateTime());
+        stats.startTime = m_startTime.toString(//ISODate);
     }
     
     return stats;
@@ -186,24 +160,22 @@ GGUFServer::ServerStats GGUFServer::getStats() const {
 
 void GGUFServer::onNewConnection() {
     while (m_server->hasPendingConnections()) {
-        QTcpSocket* socket = m_server->nextPendingConnection();
-        
-        connect(socket, &QTcpSocket::readyRead, this, &GGUFServer::onReadyRead);
-        connect(socket, &QTcpSocket::disconnected, this, &GGUFServer::onDisconnected);
-        
-        m_pendingRequests[socket] = QByteArray();
+        void** socket = m_server->nextPendingConnection();
+// Qt connect removed
+// Qt connect removed
+        m_pendingRequests[socket] = std::vector<uint8_t>();
     }
 }
 
 void GGUFServer::onReadyRead() {
-    QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
+    void** socket = qobject_cast<void**>(sender());
     if (!socket) return;
     
     // Append incoming data
     m_pendingRequests[socket].append(socket->readAll());
     
     // Check if we have a complete HTTP request
-    QByteArray& buffer = m_pendingRequests[socket];
+    std::vector<uint8_t>& buffer = m_pendingRequests[socket];
     
     // Check for request size limit
     if (buffer.size() > MAX_REQUEST_SIZE) {
@@ -223,11 +195,11 @@ void GGUFServer::onReadyRead() {
     }
     
     // Parse headers to check Content-Length
-    QString headerStr = QString::fromUtf8(buffer.left(headerEnd));
+    std::string headerStr = std::string::fromUtf8(buffer.left(headerEnd));
     int contentLength = 0;
     
-    for (const QString& line : headerStr.split("\r\n")) {
-        if (line.startsWith("Content-Length:", Qt::CaseInsensitive)) {
+    for (const std::string& line : headerStr.split("\r\n")) {
+        if (line.startsWith("Content-Length:", //CaseInsensitive)) {
             contentLength = line.mid(15).trimmed().toInt();
             break;
         }
@@ -240,7 +212,7 @@ void GGUFServer::onReadyRead() {
     }
     
     // Extract complete request
-    QByteArray requestData = buffer.left(totalExpected);
+    std::vector<uint8_t> requestData = buffer.left(totalExpected);
     buffer.remove(0, totalExpected);
     
     // Parse and handle request
@@ -249,7 +221,7 @@ void GGUFServer::onReadyRead() {
 }
 
 void GGUFServer::onDisconnected() {
-    QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
+    void** socket = qobject_cast<void**>(sender());
     if (!socket) return;
     
     m_pendingRequests.remove(socket);
@@ -259,7 +231,6 @@ void GGUFServer::onDisconnected() {
 void GGUFServer::onHealthCheck() {
     // Periodic health check - could log stats, clean up stale connections, etc.
     if (m_isRunning && m_engine) {
-        qDebug() << "Health check - Server running, total requests:" << m_stats.totalRequests;
     }
 }
 
@@ -271,39 +242,39 @@ bool GGUFServer::tryBindPort(quint16 port) {
 }
 
 bool GGUFServer::waitForServerShutdown(quint16 port, int maxWaitMs) {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
     while (timer.elapsed() < maxWaitMs) {
         if (!isServerRunningOnPort(port)) {
             return true;
         }
-        QThread::msleep(100);
+        std::thread::msleep(100);
     }
     
     return false;
 }
 
-QString GGUFServer::getCurrentTimestamp() const {
-    return QDateTime::currentDateTime().toString(Qt::ISODate);
+std::string GGUFServer::getCurrentTimestamp() const {
+    return std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
 }
 
 // BOTTLENECK #3 FIX: Lightweight JSON field extraction (no DOM tree building)
 // Extracts a single field value from JSON without parsing entire structure
-QString GGUFServer::extractJsonField(const QByteArray& json, const QString& fieldName) {
+std::string GGUFServer::extractJsonField(const std::vector<uint8_t>& json, const std::string& fieldName) {
     // Fast path: search for field pattern in raw JSON
     // Pattern: "fieldName":"value" or "fieldName":value
-    QString searchPattern = QString("\"%1\"").arg(fieldName);
+    std::string searchPattern = std::string("\"%1\"");
     int fieldPos = json.indexOf(searchPattern.toUtf8());
     
     if (fieldPos == -1) {
-        return QString();  // Field not found
+        return std::string();  // Field not found
     }
     
     // Find the colon after field name
     int colonPos = json.indexOf(':', fieldPos);
     if (colonPos == -1) {
-        return QString();
+        return std::string();
     }
     
     // Skip whitespace after colon
@@ -313,7 +284,7 @@ QString GGUFServer::extractJsonField(const QByteArray& json, const QString& fiel
     }
     
     if (valueStart >= json.size()) {
-        return QString();
+        return std::string();
     }
     
     // Check if value is a string (starts with quote)
@@ -321,9 +292,9 @@ QString GGUFServer::extractJsonField(const QByteArray& json, const QString& fiel
         valueStart++;  // Skip opening quote
         int valueEnd = json.indexOf('"', valueStart);
         if (valueEnd == -1) {
-            return QString();
+            return std::string();
         }
-        return QString::fromUtf8(json.mid(valueStart, valueEnd - valueStart));
+        return std::string::fromUtf8(json.mid(valueStart, valueEnd - valueStart));
     }
     
     // Non-string value (number, bool, null)
@@ -337,29 +308,29 @@ QString GGUFServer::extractJsonField(const QByteArray& json, const QString& fiel
         valueEnd++;
     }
     
-    return QString::fromUtf8(json.mid(valueStart, valueEnd - valueStart).trimmed());
+    return std::string::fromUtf8(json.mid(valueStart, valueEnd - valueStart).trimmed());
 }
 
 // BOTTLENECK #3 FIX: Extract JSON array field (for messages in chat completions)
-QJsonArray GGUFServer::extractJsonArray(const QByteArray& json, const QString& fieldName) {
-    // For arrays, we still need QJsonDocument but only for that specific field
+void* GGUFServer::extractJsonArray(const std::vector<uint8_t>& json, const std::string& fieldName) {
+    // For arrays, we still need void* but only for that specific field
     // This is better than parsing the whole document
-    QString searchPattern = QString("\"%1\"").arg(fieldName);
+    std::string searchPattern = std::string("\"%1\"");
     int fieldPos = json.indexOf(searchPattern.toUtf8());
     
     if (fieldPos == -1) {
-        return QJsonArray();
+        return void*();
     }
     
     int colonPos = json.indexOf(':', fieldPos);
     if (colonPos == -1) {
-        return QJsonArray();
+        return void*();
     }
     
     // Find the array start '['
     int arrayStart = json.indexOf('[', colonPos);
     if (arrayStart == -1) {
-        return QJsonArray();
+        return void*();
     }
     
     // Find matching ']' (simple bracket counting)
@@ -372,43 +343,41 @@ QJsonArray GGUFServer::extractJsonArray(const QByteArray& json, const QString& f
     }
     
     if (bracketCount != 0) {
-        return QJsonArray();  // Malformed
+        return void*();  // Malformed
     }
     
     // Parse just this array portion
-    QByteArray arrayJson = json.mid(arrayStart, arrayEnd - arrayStart);
-    QJsonDocument doc = QJsonDocument::fromJson(arrayJson);
+    std::vector<uint8_t> arrayJson = json.mid(arrayStart, arrayEnd - arrayStart);
+    void* doc = void*::fromJson(arrayJson);
     return doc.array();
 }
 
-QJsonDocument GGUFServer::parseJsonBody(const QByteArray& body) {
+void* GGUFServer::parseJsonBody(const std::vector<uint8_t>& body) {
     // Legacy fallback for complex JSON (only used when streaming parser can't handle it)
     QJsonParseError error;
-    QJsonDocument doc = QJsonDocument::fromJson(body, &error);
+    void* doc = void*::fromJson(body, &error);
     
     if (error.error != QJsonParseError::NoError) {
-        qWarning() << "JSON parse error:" << error.errorString();
     }
     
     return doc;
 }
 
-void GGUFServer::logRequest(const QString& method, const QString& path, int statusCode) {
-    qInfo() << getCurrentTimestamp() << method << path << "->" << statusCode;
+void GGUFServer::logRequest(const std::string& method, const std::string& path, int statusCode) {
 }
 
-GGUFServer::HttpRequest GGUFServer::parseHttpRequest(const QByteArray& rawData) {
+GGUFServer::HttpRequest GGUFServer::parseHttpRequest(const std::vector<uint8_t>& rawData) {
     HttpRequest request;
     
-    QString data = QString::fromUtf8(rawData);
-    QStringList lines = data.split("\r\n");
+    std::string data = std::string::fromUtf8(rawData);
+    std::vector<std::string> lines = data.split("\r\n");
     
     if (lines.isEmpty()) {
         return request;
     }
     
     // Parse request line: "GET /path HTTP/1.1"
-    QStringList requestLine = lines[0].split(' ');
+    std::vector<std::string> requestLine = lines[0].split(' ');
     if (requestLine.size() >= 3) {
         request.method = requestLine[0].toUpper();
         request.path = requestLine[1];
@@ -416,7 +385,7 @@ GGUFServer::HttpRequest GGUFServer::parseHttpRequest(const QByteArray& rawData) 
         
         // Parse query parameters
         if (request.path.contains('?')) {
-            QStringList parts = request.path.split('?');
+            std::vector<std::string> parts = request.path.split('?');
             request.path = parts[0];
             if (parts.size() > 1) {
                 QUrlQuery query(parts[1]);
@@ -437,27 +406,27 @@ GGUFServer::HttpRequest GGUFServer::parseHttpRequest(const QByteArray& rawData) 
         
         int colonPos = lines[i].indexOf(':');
         if (colonPos > 0) {
-            QString key = lines[i].left(colonPos).trimmed();
-            QString value = lines[i].mid(colonPos + 1).trimmed();
+            std::string key = lines[i].left(colonPos).trimmed();
+            std::string value = lines[i].mid(colonPos + 1).trimmed();
             request.headers[key] = value;
         }
     }
     
     // Extract body
     if (i < lines.size()) {
-        QStringList bodyLines = lines.mid(i);
+        std::vector<std::string> bodyLines = lines.mid(i);
         request.body = bodyLines.join("\r\n").toUtf8();
     }
     
     return request;
 }
 
-void GGUFServer::handleRequest(QTcpSocket* socket, const HttpRequest& request) {
-    QElapsedTimer timer;
+void GGUFServer::handleRequest(void** socket, const HttpRequest& request) {
+    std::chrono::steady_clock timer;
     timer.start();
     
     m_stats.totalRequests++;
-    emit requestReceived(request.path, request.method);
+    requestReceived(request.path, request.method);
     
     HttpResponse response;
     response.headers["Content-Type"] = "application/json";
@@ -517,15 +486,15 @@ void GGUFServer::handleRequest(QTcpSocket* socket, const HttpRequest& request) {
     }
     
     logRequest(request.method, request.path, response.statusCode);
-    emit requestCompleted(request.path, success, duration);
+    requestCompleted(request.path, success, duration);
 }
 
-void GGUFServer::sendResponse(QTcpSocket* socket, const HttpResponse& response) {
-    QByteArray responseData;
+void GGUFServer::sendResponse(void** socket, const HttpResponse& response) {
+    std::vector<uint8_t> responseData;
     
     // Status line
     responseData.append("HTTP/1.1 ");
-    responseData.append(QByteArray::number(response.statusCode));
+    responseData.append(std::vector<uint8_t>::number(response.statusCode));
     responseData.append(" ");
     responseData.append(response.statusText.toUtf8());
     responseData.append("\r\n");
@@ -540,7 +509,7 @@ void GGUFServer::sendResponse(QTcpSocket* socket, const HttpResponse& response) 
     
     // Content-Length
     responseData.append("Content-Length: ");
-    responseData.append(QByteArray::number(response.body.size()));
+    responseData.append(std::vector<uint8_t>::number(response.body.size()));
     responseData.append("\r\n");
     
     // End of headers
@@ -555,11 +524,11 @@ void GGUFServer::sendResponse(QTcpSocket* socket, const HttpResponse& response) 
 
 void GGUFServer::handleGenerateRequest(const HttpRequest& request, HttpResponse& response) {
     // BOTTLENECK #3 FIX: Use lightweight field extraction instead of full DOM parsing
-    // Before: QJsonDocument::fromJson() took 5-15ms to build entire tree
+    // Before: void*::fromJson() took 5-15ms to build entire tree
     // After: Direct field extraction takes ~0.5ms
     
-    QString prompt = extractJsonField(request.body, "prompt");
-    QString model = extractJsonField(request.body, "model");
+    std::string prompt = extractJsonField(request.body, "prompt");
+    std::string model = extractJsonField(request.body, "model");
     
     if (prompt.isEmpty()) {
         response.statusCode = 400;
@@ -569,7 +538,7 @@ void GGUFServer::handleGenerateRequest(const HttpRequest& request, HttpResponse&
     }
     
     // Generate response using inference engine
-    QString generated;
+    std::string generated;
     if (m_engine && m_engine->isModelLoaded()) {
         // Simple synchronous inference (TODO: support streaming)
         std::vector<int32_t> tokens = m_engine->tokenize(prompt);
@@ -582,20 +551,20 @@ void GGUFServer::handleGenerateRequest(const HttpRequest& request, HttpResponse&
     }
     
     // Ollama-compatible response
-    QJsonObject responseObj;
+    void* responseObj;
     responseObj["model"] = model.isEmpty() ? "gguf-model" : model;
     responseObj["created_at"] = getCurrentTimestamp();
     responseObj["response"] = generated;
     responseObj["done"] = true;
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
+    void* responseDoc(responseObj);
+    response.body = responseDoc.toJson(void*::Compact);
 }
 
 void GGUFServer::handleChatCompletionsRequest(const HttpRequest& request, HttpResponse& response) {
     // BOTTLENECK #3 FIX: Use lightweight extraction for simple fields, array extraction for messages
-    QString model = extractJsonField(request.body, "model");
-    QJsonArray messages = extractJsonArray(request.body, "messages");
+    std::string model = extractJsonField(request.body, "model");
+    void* messages = extractJsonArray(request.body, "messages");
     
     if (messages.isEmpty()) {
         response.statusCode = 400;
@@ -605,11 +574,11 @@ void GGUFServer::handleChatCompletionsRequest(const HttpRequest& request, HttpRe
     }
     
     // Build prompt from messages
-    QString prompt;
-    for (const QJsonValue& msgVal : messages) {
-        QJsonObject msg = msgVal.toObject();
-        QString role = msg["role"].toString();
-        QString content = msg["content"].toString();
+    std::string prompt;
+    for (const void*& msgVal : messages) {
+        void* msg = msgVal.toObject();
+        std::string role = msg["role"].toString();
+        std::string content = msg["content"].toString();
         
         if (role == "system") {
             prompt += "System: " + content + "\n";
@@ -622,7 +591,7 @@ void GGUFServer::handleChatCompletionsRequest(const HttpRequest& request, HttpRe
     prompt += "Assistant: ";
     
     // Generate response
-    QString generated;
+    std::string generated;
     if (m_engine && m_engine->isModelLoaded()) {
         std::vector<int32_t> tokens = m_engine->tokenize(prompt);
         std::vector<int32_t> output = m_engine->generate(tokens, 100);
@@ -634,75 +603,75 @@ void GGUFServer::handleChatCompletionsRequest(const HttpRequest& request, HttpRe
     }
     
     // OpenAI-compatible response
-    QJsonObject responseObj;
-    responseObj["id"] = "chatcmpl-" + QString::number(m_stats.totalRequests);
+    void* responseObj;
+    responseObj["id"] = "chatcmpl-" + std::string::number(m_stats.totalRequests);
     responseObj["object"] = "chat.completion";
-    responseObj["created"] = QDateTime::currentSecsSinceEpoch();
+    responseObj["created"] = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     responseObj["model"] = model;
     
-    QJsonObject message;
+    void* message;
     message["role"] = "assistant";
     message["content"] = generated;
     
-    QJsonObject choice;
+    void* choice;
     choice["index"] = 0;
     choice["message"] = message;
     choice["finish_reason"] = "stop";
     
-    QJsonArray choices;
+    void* choices;
     choices.append(choice);
     responseObj["choices"] = choices;
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
+    void* responseDoc(responseObj);
+    response.body = responseDoc.toJson(void*::Compact);
 }
 
 void GGUFServer::handleTagsRequest(HttpResponse& response) {
-    QJsonArray models;
+    void* models;
     
     if (m_engine && m_engine->isModelLoaded()) {
-        QJsonObject model;
+        void* model;
         model["name"] = m_engine->modelPath();
         model["modified_at"] = getCurrentTimestamp();
         model["size"] = 0; // TODO: Get actual model size
         models.append(model);
     }
     
-    QJsonObject responseObj;
+    void* responseObj;
     responseObj["models"] = models;
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
+    void* responseDoc(responseObj);
+    response.body = responseDoc.toJson(void*::Compact);
 }
 
 void GGUFServer::handlePullRequest(const HttpRequest& request, HttpResponse& response) {
-    QJsonDocument doc = parseJsonBody(request.body);
+    void* doc = parseJsonBody(request.body);
     
-    QJsonObject responseObj;
+    void* responseObj;
     responseObj["status"] = "not_implemented";
     responseObj["error"] = "Model pulling not yet implemented";
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
+    void* responseDoc(responseObj);
+    response.body = responseDoc.toJson(void*::Compact);
     response.statusCode = 501;
     response.statusText = "Not Implemented";
 }
 
 void GGUFServer::handlePushRequest(const HttpRequest& request, HttpResponse& response) {
-    QJsonObject responseObj;
+    void* responseObj;
     responseObj["status"] = "not_implemented";
     responseObj["error"] = "Model pushing not yet implemented";
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
+    void* responseDoc(responseObj);
+    response.body = responseDoc.toJson(void*::Compact);
     response.statusCode = 501;
     response.statusText = "Not Implemented";
 }
 
 void GGUFServer::handleShowRequest(const HttpRequest& request, HttpResponse& response) {
-    QJsonDocument doc = parseJsonBody(request.body);
+    void* doc = parseJsonBody(request.body);
     
-    QJsonObject responseObj;
+    void* responseObj;
     if (m_engine && m_engine->isModelLoaded()) {
         responseObj["modelfile"] = "# GGUF Model";
         responseObj["parameters"] = "";
@@ -713,17 +682,17 @@ void GGUFServer::handleShowRequest(const HttpRequest& request, HttpResponse& res
         response.statusText = "Not Found";
     }
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
+    void* responseDoc(responseObj);
+    response.body = responseDoc.toJson(void*::Compact);
 }
 
 void GGUFServer::handleDeleteRequest(const HttpRequest& request, HttpResponse& response) {
-    QJsonObject responseObj;
+    void* responseObj;
     responseObj["status"] = "not_implemented";
     responseObj["error"] = "Model deletion not yet implemented";
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
+    void* responseDoc(responseObj);
+    response.body = responseDoc.toJson(void*::Compact);
     response.statusCode = 501;
     response.statusText = "Not Implemented";
 }
@@ -731,7 +700,7 @@ void GGUFServer::handleDeleteRequest(const HttpRequest& request, HttpResponse& r
 void GGUFServer::handleHealthRequest(HttpResponse& response) {
     ServerStats stats = getStats();
     
-    QJsonObject responseObj;
+    void* responseObj;
     responseObj["status"] = m_isRunning ? "ok" : "stopped";
     responseObj["uptime_seconds"] = static_cast<qint64>(stats.uptimeSeconds);
     responseObj["total_requests"] = static_cast<qint64>(stats.totalRequests);
@@ -744,19 +713,19 @@ void GGUFServer::handleHealthRequest(HttpResponse& response) {
         responseObj["model_path"] = m_engine->modelPath();
     }
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
+    void* responseDoc(responseObj);
+    response.body = responseDoc.toJson(void*::Compact);
 }
 
 void GGUFServer::handleNotFound(HttpResponse& response) {
     response.statusCode = 404;
     response.statusText = "Not Found";
     
-    QJsonObject responseObj;
+    void* responseObj;
     responseObj["error"] = "Endpoint not found";
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
+    void* responseDoc(responseObj);
+    response.body = responseDoc.toJson(void*::Compact);
 }
 
 void GGUFServer::handleCorsPreflightRequest(HttpResponse& response) {
@@ -764,3 +733,4 @@ void GGUFServer::handleCorsPreflightRequest(HttpResponse& response) {
     response.statusText = "No Content";
     // CORS headers already added in handleRequest
 }
+

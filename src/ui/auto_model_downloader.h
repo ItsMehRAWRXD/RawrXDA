@@ -2,75 +2,71 @@
 // Production-ready with progress tracking and error handling
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QStringList>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
+
 #include <functional>
 
 namespace RawrXD {
 
 struct ModelDownloadInfo {
-    QString name;
-    QString displayName;
-    QString url;
+    std::string name;
+    std::string displayName;
+    std::string url;
     qint64 sizeBytes{0};
-    QString description;
+    std::string description;
     bool isDefault{false};
 };
 
-class AutoModelDownloader : public QObject {
-    Q_OBJECT
+class AutoModelDownloader : public void {
 
 public:
-    explicit AutoModelDownloader(QObject* parent = nullptr);
+    explicit AutoModelDownloader(void* parent = nullptr);
     ~AutoModelDownloader() override;
 
     // Check if any models are available locally
     bool hasLocalModels() const;
     
     // Get list of recommended tiny models
-    QVector<ModelDownloadInfo> getRecommendedModels() const;
+    std::vector<ModelDownloadInfo> getRecommendedModels() const;
     
     // Download a specific model
-    void downloadModel(const ModelDownloadInfo& model, const QString& destinationPath);
+    void downloadModel(const ModelDownloadInfo& model, const std::string& destinationPath);
     
     // Download default tiny model
-    void downloadDefaultModel(const QString& destinationPath);
+    void downloadDefaultModel(const std::string& destinationPath);
     
     // Cancel active download
     void cancelDownload();
     
     // Set Ollama models directory to check
-    void setModelsDirectory(const QString& path);
+    void setModelsDirectory(const std::string& path);
 
-signals:
-    void downloadStarted(const QString& modelName);
-    void downloadProgress(const QString& modelName, qint64 bytesReceived, qint64 bytesTotal);
-    void downloadCompleted(const QString& modelName, const QString& filePath);
-    void downloadFailed(const QString& modelName, const QString& error);
+
+    void downloadStarted(const std::string& modelName);
+    void downloadProgress(const std::string& modelName, qint64 bytesReceived, qint64 bytesTotal);
+    void downloadCompleted(const std::string& modelName, const std::string& filePath);
+    void downloadFailed(const std::string& modelName, const std::string& error);
     
     void noModelsDetected();
     void modelsAvailable(int count);
 
-private slots:
+private:
     void onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void onDownloadFinished();
-    void onDownloadError(QNetworkReply::NetworkError error);
+    void onDownloadError(void*::NetworkError error);
 
 private:
     void checkLocalModels();
-    QString findOllamaDirectory() const;
+    std::string findOllamaDirectory() const;
     
-    QNetworkAccessManager* m_networkManager{nullptr};
-    QNetworkReply* m_currentReply{nullptr};
+    void** m_networkManager{nullptr};
+    void** m_currentReply{nullptr};
     
-    QString m_modelsDirectory;
-    QString m_currentModelName;
-    QString m_currentDestination;
+    std::string m_modelsDirectory;
+    std::string m_currentModelName;
+    std::string m_currentDestination;
     
     bool m_downloadInProgress{false};
 };
 
 } // namespace RawrXD
+

@@ -8,12 +8,6 @@
 #ifndef RAWRXD_SHORTCUT_MANAGER_H
 #define RAWRXD_SHORTCUT_MANAGER_H
 
-#include <QObject>
-#include <QKeySequence>
-#include <QAction>
-#include <QHash>
-#include <QString>
-#include <QJsonObject>
 
 namespace RawrXD {
 
@@ -27,9 +21,8 @@ namespace RawrXD {
  * - Keymap import/export
  * - Context-aware shortcuts
  */
-class ShortcutManager : public QObject {
-    Q_OBJECT
-    
+class ShortcutManager : public void {
+
 public:
     /**
      * \brief Shortcut context (where it applies)
@@ -46,12 +39,12 @@ public:
      * \brief Shortcut information
      */
     struct ShortcutInfo {
-        QString id;              ///< Unique identifier
-        QString displayName;     ///< Human-readable name
+        std::string id;              ///< Unique identifier
+        std::string displayName;     ///< Human-readable name
         QKeySequence defaultKey; ///< Default key binding
         QKeySequence currentKey; ///< Current key binding
         Context context;         ///< Where shortcut applies
-        QString description;     ///< What the shortcut does
+        std::string description;     ///< What the shortcut does
         QAction* action;         ///< Associated QAction (if any)
         
         ShortcutInfo() : context(Global), action(nullptr) {}
@@ -68,28 +61,28 @@ public:
      * \param description What the shortcut does
      * \param action Associated QAction (optional)
      */
-    void registerShortcut(const QString& id,
-                         const QString& displayName,
+    void registerShortcut(const std::string& id,
+                         const std::string& displayName,
                          const QKeySequence& defaultKey,
                          Context context = Global,
-                         const QString& description = QString(),
+                         const std::string& description = std::string(),
                          QAction* action = nullptr);
     
     /**
      * \brief Get current key sequence for a shortcut
      */
-    QKeySequence keySequence(const QString& id) const;
+    QKeySequence keySequence(const std::string& id) const;
     
     /**
      * \brief Set custom key sequence
      * \return true if successful, false if conflict exists
      */
-    bool setKeySequence(const QString& id, const QKeySequence& key);
+    bool setKeySequence(const std::string& id, const QKeySequence& key);
     
     /**
      * \brief Reset shortcut to default
      */
-    void resetToDefault(const QString& id);
+    void resetToDefault(const std::string& id);
     
     /**
      * \brief Reset all shortcuts to defaults
@@ -103,28 +96,28 @@ public:
      * \param excludeId Exclude this shortcut from conflict check
      * \return ID of conflicting shortcut, or empty if no conflict
      */
-    QString findConflict(const QKeySequence& key, Context context, const QString& excludeId = QString()) const;
+    std::string findConflict(const QKeySequence& key, Context context, const std::string& excludeId = std::string()) const;
     
     /**
      * \brief Get all registered shortcuts
      */
-    QList<ShortcutInfo> allShortcuts() const;
+    std::vector<ShortcutInfo> allShortcuts() const;
     
     /**
      * \brief Get shortcuts for specific context
      */
-    QList<ShortcutInfo> shortcutsForContext(Context context) const;
+    std::vector<ShortcutInfo> shortcutsForContext(Context context) const;
     
     /**
      * \brief Export shortcuts to JSON
      */
-    QJsonObject exportKeybindings() const;
+    void* exportKeybindings() const;
     
     /**
      * \brief Import shortcuts from JSON
      * \return Number of shortcuts imported
      */
-    int importKeybindings(const QJsonObject& json);
+    int importKeybindings(const void*& json);
     
     /**
      * \brief Save custom shortcuts to file
@@ -136,8 +129,8 @@ public:
      */
     bool loadKeybindings();
     
-signals:
-    void shortcutChanged(const QString& id, const QKeySequence& newKey);
+
+    void shortcutChanged(const std::string& id, const QKeySequence& newKey);
     void shortcutsReset();
     
 private:
@@ -147,11 +140,12 @@ private:
     ShortcutManager& operator=(const ShortcutManager&) = delete;
     
     void registerDefaultShortcuts();
-    QString getKeybindingsPath() const;
+    std::string getKeybindingsPath() const;
     
-    QHash<QString, ShortcutInfo> m_shortcuts;
+    std::unordered_map<std::string, ShortcutInfo> m_shortcuts;
 };
 
 } // namespace RawrXD
 
 #endif // RAWRXD_SHORTCUT_MANAGER_H
+

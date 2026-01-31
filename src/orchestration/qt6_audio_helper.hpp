@@ -1,9 +1,5 @@
 #pragma once
 
-#include <QAudioFormat>
-#include <QAudioSource>
-#include <QMediaDevices>
-#include <QAudioDevice>
 
 /**
  * @class Qt6AudioHelper
@@ -97,3 +93,4 @@ public:
             && format.channelCount() > 0;
     }
 };
+

@@ -33,7 +33,6 @@ inline void logWithLevel(const std::string &level, const std::string &component,
     if (!data.empty()) {
         logEntry.insert("data", data);
     }
-    // // qInfo().noquote() << void*(logEntry).toJson(void*::Compact);
 }
 
 inline void logInfo(const std::string &component, const std::string &event, const std::string &message, const void* &data = void*()) {
@@ -75,7 +74,6 @@ struct ScopedTimer {
                 {"name", name},
                 {"latency_ms", timer.elapsed()}
             };
-            // // qInfo().noquote() << void*(logEntry).toJson(void*::Compact);
         }
     }
 };
@@ -88,7 +86,6 @@ inline void recordMetric(const char *metricName, int64_t value = 1) {
         {"name", std::string::fromUtf8(metricName)},
         {"value", value}
     };
-    // // qInfo().noquote() << void*(metricEntry).toJson(void*::Compact);
 }
 
 inline void traceEvent(const char *spanName, const char *eventName) {
@@ -99,7 +96,6 @@ inline void traceEvent(const char *spanName, const char *eventName) {
         {"span", std::string::fromUtf8(spanName)},
         {"event", std::string::fromUtf8(eventName)}
     };
-    // // qInfo().noquote() << void*(traceEntry).toJson(void*::Compact);
 }
 
 template <typename Fn>
@@ -112,11 +108,11 @@ auto retryWithBackoff(Fn fn, int maxRetries = 3, int64_t delayMs = 100) {
             ++attempt;
             if (attempt >= maxRetries) {
                 logError(std::stringLiteral("Retry"), std::stringLiteral("exhausted"),
-                         std::stringLiteral("Max retries reached: %1").arg(std::string::fromUtf8(ex.what())));
+                         std::stringLiteral("Max retries reached: %1"))));
                 throw;
             }
             logWarn(std::stringLiteral("Retry"), std::stringLiteral("attempt"),
-                    std::stringLiteral("Attempt %1 failed, retrying in %2ms").arg(attempt).arg(delayMs));
+                    std::stringLiteral("Attempt %1 failed, retrying in %2ms"));
             std::thread::msleep(static_cast<unsigned long>(delayMs));
             delayMs *= 2;
         }
@@ -157,7 +153,7 @@ public:
             m_state = State::Open;
             m_timer.start();
             logWarn(std::stringLiteral("CircuitBreaker"), std::stringLiteral("open"),
-                    std::stringLiteral("Circuit opened after %1 failures").arg(m_failures));
+                    std::stringLiteral("Circuit opened after %1 failures"));
         }
     }
 
@@ -173,8 +169,4 @@ private:
 
 } // namespace Integration
 } // namespace RawrXD
-
-
-
-
 

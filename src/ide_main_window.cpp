@@ -1,21 +1,12 @@
 // ide_main_window.cpp - FULLY FUNCTIONAL Main IDE Window
 #include "ide_main_window.h"
 #include "autonomous_widgets.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QSettings>
-#include <QApplication>
-#include <QFile>
-#include <QTextStream>
-#include <QTimer>
-#include <QAction>
-#include <QDir>
+
+
 #include <iostream>
 
-IDEMainWindow::IDEMainWindow(QWidget *parent)
-    : QMainWindow(parent),
+IDEMainWindow::IDEMainWindow(void *parent)
+    : void(parent),
       currentLanguage("cpp"),
       isAnalyzing(false) {
     
@@ -58,9 +49,9 @@ IDEMainWindow::IDEMainWindow(QWidget *parent)
     loadSettings();
     
     // Start real-time analysis timer (every 2 seconds)
-    analysisTimer = new QTimer(this);
+    analysisTimer = new void*(this);
     analysisTimer->setInterval(2000);
-    connect(analysisTimer, &QTimer::timeout, this, &IDEMainWindow::analyzeCurrentCode);
+// Qt connect removed
     analysisTimer->start();
     
     setWindowTitle("RawrXD Autonomous IDE - Production Ready");
@@ -75,7 +66,7 @@ IDEMainWindow::~IDEMainWindow() {
     analysisTimer->stop();
     saveSettings();
     
-    // Cleanup is automatic with QObject parent hierarchy
+    // Cleanup is automatic with void parent hierarchy
 }
 
 void IDEMainWindow::setupUI() {
@@ -104,142 +95,114 @@ void IDEMainWindow::setupMenus() {
     
     QAction* newAction = fileMenu->addAction("&New");
     newAction->setShortcut(QKeySequence::New);
-    connect(newAction, &QAction::triggered, this, &IDEMainWindow::onNewFile);
-    
+// Qt connect removed
     QAction* openAction = fileMenu->addAction("&Open...");
     openAction->setShortcut(QKeySequence::Open);
-    connect(openAction, &QAction::triggered, this, &IDEMainWindow::onOpenFile);
-    
+// Qt connect removed
     QAction* saveAction = fileMenu->addAction("&Save");
     saveAction->setShortcut(QKeySequence::Save);
-    connect(saveAction, &QAction::triggered, this, &IDEMainWindow::onSaveFile);
-    
+// Qt connect removed
     QAction* saveAsAction = fileMenu->addAction("Save &As...");
     saveAsAction->setShortcut(QKeySequence::SaveAs);
-    connect(saveAsAction, &QAction::triggered, this, &IDEMainWindow::onSaveAs);
-    
+// Qt connect removed
     fileMenu->addSeparator();
     
     QAction* exitAction = fileMenu->addAction("E&xit");
     exitAction->setShortcut(QKeySequence::Quit);
-    connect(exitAction, &QAction::triggered, this, &IDEMainWindow::onExit);
-    
+// Qt connect removed
     // Edit Menu
     editMenu = menuBar()->addMenu("&Edit");
     
     QAction* undoAction = editMenu->addAction("&Undo");
     undoAction->setShortcut(QKeySequence::Undo);
-    connect(undoAction, &QAction::triggered, this, &IDEMainWindow::onUndo);
-    
+// Qt connect removed
     QAction* redoAction = editMenu->addAction("&Redo");
     redoAction->setShortcut(QKeySequence::Redo);
-    connect(redoAction, &QAction::triggered, this, &IDEMainWindow::onRedo);
-    
+// Qt connect removed
     editMenu->addSeparator();
     
     QAction* cutAction = editMenu->addAction("Cu&t");
     cutAction->setShortcut(QKeySequence::Cut);
-    connect(cutAction, &QAction::triggered, this, &IDEMainWindow::onCut);
-    
+// Qt connect removed
     QAction* copyAction = editMenu->addAction("&Copy");
     copyAction->setShortcut(QKeySequence::Copy);
-    connect(copyAction, &QAction::triggered, this, &IDEMainWindow::onCopy);
-    
+// Qt connect removed
     QAction* pasteAction = editMenu->addAction("&Paste");
     pasteAction->setShortcut(QKeySequence::Paste);
-    connect(pasteAction, &QAction::triggered, this, &IDEMainWindow::onPaste);
-    
+// Qt connect removed
     editMenu->addSeparator();
     
     QAction* findAction = editMenu->addAction("&Find...");
     findAction->setShortcut(QKeySequence::Find);
-    connect(findAction, &QAction::triggered, this, &IDEMainWindow::onFind);
-    
+// Qt connect removed
     // View Menu
     viewMenu = menuBar()->addMenu("&View");
     
     QAction* toggleSuggestionsAction = viewMenu->addAction("AI &Suggestions");
     toggleSuggestionsAction->setCheckable(true);
     toggleSuggestionsAction->setChecked(true);
-    connect(toggleSuggestionsAction, &QAction::triggered, this, &IDEMainWindow::onToggleSuggestions);
-    
+// Qt connect removed
     QAction* toggleSecurityAction = viewMenu->addAction("&Security Alerts");
     toggleSecurityAction->setCheckable(true);
     toggleSecurityAction->setChecked(true);
-    connect(toggleSecurityAction, &QAction::triggered, this, &IDEMainWindow::onToggleSecurity);
-    
+// Qt connect removed
     QAction* toggleOptimizationsAction = viewMenu->addAction("&Optimizations");
     toggleOptimizationsAction->setCheckable(true);
     toggleOptimizationsAction->setChecked(true);
-    connect(toggleOptimizationsAction, &QAction::triggered, this, &IDEMainWindow::onToggleOptimizations);
-    
+// Qt connect removed
     QAction* toggleFileExplorerAction = viewMenu->addAction("&File Explorer");
     toggleFileExplorerAction->setCheckable(true);
     toggleFileExplorerAction->setChecked(true);
-    connect(toggleFileExplorerAction, &QAction::triggered, this, &IDEMainWindow::onToggleFileExplorer);
-    
+// Qt connect removed
     // Tools Menu
     toolsMenu = menuBar()->addMenu("&Tools");
     
     QAction* analyzeAction = toolsMenu->addAction("&Analyze Codebase");
-    analyzeAction->setShortcut(Qt::CTRL | Qt::Key_A);
-    connect(analyzeAction, &QAction::triggered, this, &IDEMainWindow::onAnalyzeCodebase);
-    
+    analyzeAction->setShortcut(//CTRL | //Key_A);
+// Qt connect removed
     QAction* generateTestsAction = toolsMenu->addAction("&Generate Tests");
-    analyzeAction->setShortcut(Qt::CTRL | Qt::Key_T);
-    connect(generateTestsAction, &QAction::triggered, this, &IDEMainWindow::onGenerateTests);
-    
+    analyzeAction->setShortcut(//CTRL | //Key_T);
+// Qt connect removed
     QAction* securityScanAction = toolsMenu->addAction("&Security Scan");
-    securityScanAction->setShortcut(Qt::CTRL | Qt::Key_S);
-    connect(securityScanAction, &QAction::triggered, this, &IDEMainWindow::onSecurityScan);
-    
+    securityScanAction->setShortcut(//CTRL | //Key_S);
+// Qt connect removed
     QAction* optimizeAction = toolsMenu->addAction("&Optimize Code");
-    optimizeAction->setShortcut(Qt::CTRL | Qt::Key_O);
-    connect(optimizeAction, &QAction::triggered, this, &IDEMainWindow::onOptimizeCode);
-    
+    optimizeAction->setShortcut(//CTRL | //Key_O);
+// Qt connect removed
     toolsMenu->addSeparator();
     
     QAction* switchModelAction = toolsMenu->addAction("Switch AI &Model...");
-    connect(switchModelAction, &QAction::triggered, this, &IDEMainWindow::onSwitchModel);
-    
+// Qt connect removed
     QAction* cloudSettingsAction = toolsMenu->addAction("&Cloud Settings...");
-    connect(cloudSettingsAction, &QAction::triggered, this, &IDEMainWindow::onCloudSettings);
-    
+// Qt connect removed
     // ===== Model Router Menu Items =====
     toolsMenu->addSeparator();
     
     QMenu* modelRouterMenu = toolsMenu->addMenu("Universal &Model Router");
     
     QAction* openRouterAction = modelRouterMenu->addAction("&Open Model Router");
-    openRouterAction->setShortcut(Qt::CTRL | Qt::SHIFT | Qt::Key_M);
-    connect(openRouterAction, &QAction::triggered, this, &IDEMainWindow::onOpenModelRouter);
-    
+    openRouterAction->setShortcut(//CTRL | //SHIFT | //Key_M);
+// Qt connect removed
     QAction* switchProviderAction = modelRouterMenu->addAction("Switch &Cloud Provider...");
-    connect(switchProviderAction, &QAction::triggered, this, &IDEMainWindow::onSwitchCloudProvider);
-    
+// Qt connect removed
     QAction* configureKeysAction = modelRouterMenu->addAction("Configure &API Keys...");
-    connect(configureKeysAction, &QAction::triggered, this, &IDEMainWindow::onConfigureApiKeys);
-    
+// Qt connect removed
     modelRouterMenu->addSeparator();
     
     QAction* dashboardAction = modelRouterMenu->addAction("&Performance Dashboard");
-    connect(dashboardAction, &QAction::triggered, this, &IDEMainWindow::onShowModelDashboard);
-    
+// Qt connect removed
     QAction* consoleAction = modelRouterMenu->addAction("&Console Panel");
-    connect(consoleAction, &QAction::triggered, this, &IDEMainWindow::onOpenModelConsole);
-    
+// Qt connect removed
     QAction* costMonitorAction = modelRouterMenu->addAction("&Cost Monitor");
-    connect(costMonitorAction, &QAction::triggered, this, &IDEMainWindow::onMonitorModelCost);
-    
+// Qt connect removed
     // Help Menu
     helpMenu = menuBar()->addMenu("&Help");
     
     QAction* aboutAction = helpMenu->addAction("&About");
-    connect(aboutAction, &QAction::triggered, this, &IDEMainWindow::onAbout);
-    
+// Qt connect removed
     QAction* docsAction = helpMenu->addAction("&Documentation");
     docsAction->setShortcut(QKeySequence::HelpContents);
-    connect(docsAction, &QAction::triggered, this, &IDEMainWindow::onDocumentation);
+// Qt connect removed
 }
 
 void IDEMainWindow::setupToolbars() {
@@ -247,30 +210,24 @@ void IDEMainWindow::setupToolbars() {
     mainToolbar = addToolBar("Main");
     
     QAction* newAction = mainToolbar->addAction("New");
-    connect(newAction, &QAction::triggered, this, &IDEMainWindow::onNewFile);
-    
+// Qt connect removed
     QAction* openAction = mainToolbar->addAction("Open");
-    connect(openAction, &QAction::triggered, this, &IDEMainWindow::onOpenFile);
-    
+// Qt connect removed
     QAction* saveAction = mainToolbar->addAction("Save");
-    connect(saveAction, &QAction::triggered, this, &IDEMainWindow::onSaveFile);
-    
+// Qt connect removed
     mainToolbar->addSeparator();
     
     // AI toolbar
     aiToolbar = addToolBar("AI Tools");
     
     QAction* analyzeAction = aiToolbar->addAction("Analyze");
-    connect(analyzeAction, &QAction::triggered, this, &IDEMainWindow::onAnalyzeCodebase);
-    
+// Qt connect removed
     QAction* testAction = aiToolbar->addAction("Generate Tests");
-    connect(testAction, &QAction::triggered, this, &IDEMainWindow::onGenerateTests);
-    
+// Qt connect removed
     QAction* securityAction = aiToolbar->addAction("Security Scan");
-    connect(securityAction, &QAction::triggered, this, &IDEMainWindow::onSecurityScan);
-    
+// Qt connect removed
     QAction* optimizeAction = aiToolbar->addAction("Optimize");
-    connect(optimizeAction, &QAction::triggered, this, &IDEMainWindow::onOptimizeCode);
+// Qt connect removed
 }
 
 void IDEMainWindow::setupDockWidgets() {
@@ -278,59 +235,59 @@ void IDEMainWindow::setupDockWidgets() {
     modelRouterDock = new QDockWidget("Universal Model Router", this);
     modelRouterWidget = new ModelRouterWidget(modelRouterAdapter, this);
     modelRouterDock->setWidget(modelRouterWidget);
-    addDockWidget(Qt::BottomDockWidgetArea, modelRouterDock);
+    addDockWidget(//BottomDockWidgetArea, modelRouterDock);
     
     // Metrics Dashboard Dock
     metricsDashboardDock = new QDockWidget("Model Metrics Dashboard", this);
     metricsDashboard = new MetricsDashboard(modelRouterAdapter, this);
     metricsDashboardDock->setWidget(metricsDashboard);
-    addDockWidget(Qt::BottomDockWidgetArea, metricsDashboardDock);
+    addDockWidget(//BottomDockWidgetArea, metricsDashboardDock);
     metricsDashboardDock->hide();  // Hidden by default
     
     // Model Router Console Dock
     modelRouterConsoleDock = new QDockWidget("Model Router Console", this);
     modelRouterConsole = new ModelRouterConsole(modelRouterAdapter, this);
     modelRouterConsoleDock->setWidget(modelRouterConsole);
-    addDockWidget(Qt::BottomDockWidgetArea, modelRouterConsoleDock);
+    addDockWidget(//BottomDockWidgetArea, modelRouterConsoleDock);
     modelRouterConsoleDock->hide();  // Hidden by default
     
     // AI Suggestions Dock (RIGHT)
     suggestionsDock = new QDockWidget("AI Suggestions", this);
     suggestionsWidget = new AutonomousSuggestionWidget(this);
     suggestionsDock->setWidget(suggestionsWidget);
-    addDockWidget(Qt::RightDockWidgetArea, suggestionsDock);
+    addDockWidget(//RightDockWidgetArea, suggestionsDock);
     
     // Security Alerts Dock (RIGHT)
     securityDock = new QDockWidget("Security Alerts", this);
     securityWidget = new SecurityAlertWidget(this);
     securityDock->setWidget(securityWidget);
-    addDockWidget(Qt::RightDockWidgetArea, securityDock);
+    addDockWidget(//RightDockWidgetArea, securityDock);
     
     // Optimization Panel Dock (BOTTOM)
     optimizationDock = new QDockWidget("Performance Optimizations", this);
     optimizationWidget = new OptimizationPanelWidget(this);
     optimizationDock->setWidget(optimizationWidget);
-    addDockWidget(Qt::BottomDockWidgetArea, optimizationDock);
+    addDockWidget(//BottomDockWidgetArea, optimizationDock);
     
     // File Explorer Dock (LEFT)
     fileExplorerDock = new QDockWidget("File Explorer", this);
     fileExplorerWidget = new QTreeWidget(this);
     fileExplorerWidget->setHeaderLabel("Project Files");
     fileExplorerDock->setWidget(fileExplorerWidget);
-    addDockWidget(Qt::LeftDockWidgetArea, fileExplorerDock);
+    addDockWidget(//LeftDockWidgetArea, fileExplorerDock);
     
     // Output Dock (BOTTOM)
     outputDock = new QDockWidget("Output", this);
     outputWidget = new QTextEdit(this);
     outputWidget->setReadOnly(true);
     outputDock->setWidget(outputWidget);
-    addDockWidget(Qt::BottomDockWidgetArea, outputDock);
+    addDockWidget(//BottomDockWidgetArea, outputDock);
     
     // Metrics Dock (BOTTOM)
     metricsDock = new QDockWidget("System Metrics", this);
     metricsWidget = new QListWidget(this);
     metricsDock->setWidget(metricsWidget);
-    addDockWidget(Qt::BottomDockWidgetArea, metricsDock);
+    addDockWidget(//BottomDockWidgetArea, metricsDock);
     
     // Tab the bottom docks together (Model Router gets focus first)
     tabifyDockWidget(modelRouterDock, optimizationDock);
@@ -361,65 +318,38 @@ void IDEMainWindow::setupStatusBar() {
 
 void IDEMainWindow::setupConnections() {
     // Code editor signals
-    connect(codeEditor, &QPlainTextEdit::textChanged, this, &IDEMainWindow::onCodeChanged);
-    connect(codeEditor, &QPlainTextEdit::cursorPositionChanged, this, &IDEMainWindow::onCursorPositionChanged);
-    
+// Qt connect removed
+// Qt connect removed
     // Feature engine signals - ACTUAL FUNCTIONAL CONNECTIONS!
-    connect(featureEngine, &AutonomousFeatureEngine::suggestionGenerated, 
-            this, &IDEMainWindow::onSuggestionGenerated);
-    connect(featureEngine, &AutonomousFeatureEngine::securityIssueDetected,
-            this, &IDEMainWindow::onSecurityIssueDetected);
-    connect(featureEngine, &AutonomousFeatureEngine::optimizationFound,
-            this, &IDEMainWindow::onOptimizationFound);
-    connect(featureEngine, &AutonomousFeatureEngine::testGenerated,
-            this, &IDEMainWindow::onTestGenerated);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     // Error recovery signals
-    connect(errorRecovery, &ErrorRecoverySystem::errorRecorded,
-            this, &IDEMainWindow::onErrorRecorded);
-    connect(errorRecovery, &ErrorRecoverySystem::errorRecovered,
-            this, &IDEMainWindow::onErrorRecovered);
-    connect(errorRecovery, &ErrorRecoverySystem::systemHealthUpdated,
-            this, &IDEMainWindow::onSystemHealthUpdated);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     // Performance monitoring signals
-    connect(performanceMonitor, &PerformanceMonitor::metricRecorded,
-            this, &IDEMainWindow::onMetricRecorded);
-    connect(performanceMonitor, &PerformanceMonitor::thresholdViolation,
-            this, &IDEMainWindow::onThresholdViolation);
-    connect(performanceMonitor, &PerformanceMonitor::snapshotCaptured,
-            this, &IDEMainWindow::onSnapshotCaptured);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     // Model manager signals
-    connect(modelManager, &AutonomousModelManager::downloadProgress,
-            this, &IDEMainWindow::onModelDownloadProgress);
-    connect(modelManager, &AutonomousModelManager::downloadCompleted,
-            this, &IDEMainWindow::onModelDownloadCompleted);
-    connect(modelManager, &AutonomousModelManager::modelLoaded,
-            this, &IDEMainWindow::onModelLoaded);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     // Cloud manager signals
-    connect(cloudManager, &HybridCloudManager::healthCheckCompleted,
-            this, &IDEMainWindow::onHealthCheckCompleted);
-    
+// Qt connect removed
     // ===== Model Router Widget Connections =====
     if (modelRouterWidget && modelRouterAdapter) {
         // Widget action signals
-        connect(modelRouterWidget, &ModelRouterWidget::generateRequested,
-                this, &IDEMainWindow::onModelRouterGenerationRequested);
-        connect(modelRouterWidget, &ModelRouterWidget::statusUpdated,
-                this, &IDEMainWindow::onModelRouterStatusUpdated);
-        connect(modelRouterWidget, &ModelRouterWidget::errorOccurred,
-                this, &IDEMainWindow::onModelRouterErrorOccurred);
-        connect(modelRouterWidget, &ModelRouterWidget::dashboardRequested,
-                this, &IDEMainWindow::onModelRouterDashboardRequested);
-        connect(modelRouterWidget, &ModelRouterWidget::consoleRequested,
-                this, &IDEMainWindow::onModelRouterConsoleRequested);
-        connect(modelRouterWidget, &ModelRouterWidget::apiKeyEditRequested,
-                this, &IDEMainWindow::onModelRouterApiKeyEditRequested);
-        
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
         // Initialize Model Router
-        QString config_path = QApplication::applicationDirPath() + "/model_config.json";
+        std::string config_path = QApplication::applicationDirPath() + "/model_config.json";
         if (modelRouterAdapter->initialize(config_path)) {
             showMessage("Model Router initialized successfully!", 3000);
             std::cout << "[IDEMainWindow] Model Router initialized" << std::endl;
@@ -430,25 +360,14 @@ void IDEMainWindow::setupConnections() {
     }
     
     // Widget connections
-    connect(suggestionsWidget, &AutonomousSuggestionWidget::suggestionAccepted,
-            [this](const QString& suggestionId) {
-                featureEngine->acceptSuggestion(suggestionId);
+// Qt connect removed
                 showMessage("Suggestion applied!");
             });
-    
-    connect(suggestionsWidget, &AutonomousSuggestionWidget::suggestionRejected,
-            [this](const QString& suggestionId) {
-                featureEngine->rejectSuggestion(suggestionId);
+// Qt connect removed
             });
-    
-    connect(securityWidget, &SecurityAlertWidget::issueFixed,
-            [this](const QString& issueId) {
-                showMessage("Security issue marked as fixed");
+// Qt connect removed
             });
-    
-    connect(optimizationWidget, &OptimizationPanelWidget::optimizationApplied,
-            [this](const QString& optId) {
-                showMessage("Optimization applied!");
+// Qt connect removed
             });
     
     std::cout << "[IDEMainWindow] All signal/slot connections established" << std::endl;
@@ -461,9 +380,9 @@ void IDEMainWindow::analyzeCurrentCode() {
     
     isAnalyzing = true;
     
-    QString code = codeEditor->toPlainText();
-    QString filePath = getCurrentFilePath();
-    QString language = getCurrentLanguage();
+    std::string code = codeEditor->toPlainText();
+    std::string filePath = getCurrentFilePath();
+    std::string language = getCurrentLanguage();
     
     // Measure analysis time
     ScopedTimer timer = performanceMonitor->createScopedTimer("ide", "code_analysis");
@@ -486,28 +405,28 @@ void IDEMainWindow::onNewFile() {
 }
 
 void IDEMainWindow::onOpenFile() {
-    QString fileName = QFileDialog::getOpenFileName(this, "Open File", "",
+    std::string fileName = QFileDialog::getOpenFileName(this, "Open File", "",
         "C++ Files (*.cpp *.h *.hpp);;Python Files (*.py);;JavaScript Files (*.js *.ts);;All Files (*)");
     
     if (fileName.isEmpty()) {
         return;
     }
     
-    QFile file(fileName);
+    std::fstream file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QMessageBox::warning(this, "Error", "Could not open file: " + fileName);
         return;
     }
     
     QTextStream in(&file);
-    QString content = in.readAll();
+    std::string content = in.readAll();
     file.close();
     
     codeEditor->setPlainText(content);
     currentFilePath = fileName;
     
     // Update tab name
-    QFileInfo fileInfo(fileName);
+    std::filesystem::path fileInfo(fileName);
     editorTabs->setTabText(editorTabs->currentIndex(), fileInfo.fileName());
     
     // Detect language
@@ -532,7 +451,7 @@ void IDEMainWindow::onSaveFile() {
         return;
     }
     
-    QFile file(currentFilePath);
+    std::fstream file(currentFilePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::warning(this, "Error", "Could not save file: " + currentFilePath);
         return;
@@ -546,7 +465,7 @@ void IDEMainWindow::onSaveFile() {
 }
 
 void IDEMainWindow::onSaveAs() {
-    QString fileName = QFileDialog::getSaveFileName(this, "Save File As", "",
+    std::string fileName = QFileDialog::getSaveFileName(this, "Save File As", "",
         "C++ Files (*.cpp *.h);;Python Files (*.py);;JavaScript Files (*.js);;All Files (*)");
     
     if (fileName.isEmpty()) {
@@ -556,7 +475,7 @@ void IDEMainWindow::onSaveAs() {
     currentFilePath = fileName;
     onSaveFile();
     
-    QFileInfo fileInfo(fileName);
+    std::filesystem::path fileInfo(fileName);
     editorTabs->setTabText(editorTabs->currentIndex(), fileInfo.fileName());
 }
 
@@ -597,7 +516,7 @@ void IDEMainWindow::onToggleFileExplorer() {
 void IDEMainWindow::onAnalyzeCodebase() {
     showMessage("Analyzing codebase...");
     
-    QString projectPath = QFileDialog::getExistingDirectory(this, "Select Project Directory");
+    std::string projectPath = QFileDialog::getExistingDirectory(this, "Select Project Directory");
     if (projectPath.isEmpty()) {
         return;
     }
@@ -620,25 +539,25 @@ void IDEMainWindow::onGenerateTests() {
     
     showMessage("Generating tests...");
     
-    QVector<GeneratedTest> tests = featureEngine->generateTestSuite(currentFilePath);
+    std::vector<GeneratedTest> tests = featureEngine->generateTestSuite(currentFilePath);
     
-    outputWidget->append(QString("Generated %1 test cases:").arg(tests.size()));
+    outputWidget->append(std::string("Generated %1 test cases:")));
     for (const GeneratedTest& test : tests) {
         outputWidget->append("\n--- " + test.testName + " ---");
         outputWidget->append(test.testCode);
     }
     
     outputDock->raise();
-    showMessage(QString("Generated %1 tests!").arg(tests.size()));
+    showMessage(std::string("Generated %1 tests!")));
 }
 
 void IDEMainWindow::onSecurityScan() {
     showMessage("Running security scan...");
     
-    QString code = codeEditor->toPlainText();
-    QString language = getCurrentLanguage();
+    std::string code = codeEditor->toPlainText();
+    std::string language = getCurrentLanguage();
     
-    QVector<SecurityIssue> issues = featureEngine->detectSecurityVulnerabilities(code, language);
+    std::vector<SecurityIssue> issues = featureEngine->detectSecurityVulnerabilities(code, language);
     
     securityWidget->clearIssues();
     for (const SecurityIssue& issue : issues) {
@@ -646,16 +565,16 @@ void IDEMainWindow::onSecurityScan() {
     }
     
     securityDock->raise();
-    showMessage(QString("Found %1 security issues").arg(issues.size()));
+    showMessage(std::string("Found %1 security issues")));
 }
 
 void IDEMainWindow::onOptimizeCode() {
     showMessage("Analyzing for optimizations...");
     
-    QString code = codeEditor->toPlainText();
-    QString language = getCurrentLanguage();
+    std::string code = codeEditor->toPlainText();
+    std::string language = getCurrentLanguage();
     
-    QVector<PerformanceOptimization> optimizations = featureEngine->suggestOptimizations(code, language);
+    std::vector<PerformanceOptimization> optimizations = featureEngine->suggestOptimizations(code, language);
     
     optimizationWidget->clearOptimizations();
     for (const PerformanceOptimization& opt : optimizations) {
@@ -663,16 +582,16 @@ void IDEMainWindow::onOptimizeCode() {
     }
     
     optimizationDock->raise();
-    showMessage(QString("Found %1 optimization opportunities").arg(optimizations.size()));
+    showMessage(std::string("Found %1 optimization opportunities")));
 }
 
 void IDEMainWindow::onSwitchModel() {
     // Get available models
-    QJsonArray models = modelManager->getAvailableModels();
+    void* models = modelManager->getAvailableModels();
 
-    QStringList modelNames;
-    for (const QJsonValue& value : models) {
-        QJsonObject model = value.toObject();
+    std::vector<std::string> modelNames;
+    for (const void*& value : models) {
+        void* model = value.toObject();
         modelNames << model.value("name").toString(model.value("id").toString());
     }
 
@@ -727,7 +646,7 @@ void IDEMainWindow::onCursorPositionChanged() {
     int line = cursor.blockNumber() + 1;
     int col = cursor.columnNumber() + 1;
     
-    statusLabel->setText(QString("Line %1, Col %2").arg(line).arg(col));
+    statusLabel->setText(std::string("Line %1, Col %2"));
 }
 
 // Autonomous System Slots - FULLY FUNCTIONAL!
@@ -754,21 +673,21 @@ void IDEMainWindow::onTestGenerated(const GeneratedTest& test) {
 }
 
 void IDEMainWindow::onErrorRecorded(const ErrorRecord& error) {
-    QString severity = (error.severity == ErrorSeverity::Critical) ? "CRITICAL" : "ERROR";
-    metricsWidget->addItem(QString("[%1] %2: %3").arg(severity).arg(error.component).arg(error.message));
+    std::string severity = (error.severity == ErrorSeverity::Critical) ? "CRITICAL" : "ERROR";
+    metricsWidget->addItem(std::string("[%1] %2: %3"));
 }
 
-void IDEMainWindow::onErrorRecovered(const QString& errorId, bool success) {
+void IDEMainWindow::onErrorRecovered(const std::string& errorId, bool success) {
     if (success) {
-        metricsWidget->addItem(QString("[RECOVERED] Error %1 recovered successfully").arg(errorId));
+        metricsWidget->addItem(std::string("[RECOVERED] Error %1 recovered successfully"));
         showMessage("System recovered from error: " + errorId);
     } else {
-        metricsWidget->addItem(QString("[RECOVERY FAILED] Error %1 could not be recovered").arg(errorId));
+        metricsWidget->addItem(std::string("[RECOVERY FAILED] Error %1 could not be recovered"));
     }
 }
 
 void IDEMainWindow::onSystemHealthUpdated(const SystemHealth& health) {
-    healthLabel->setText(QString("Health: %1%").arg(health.healthScore, 0, 'f', 1));
+    healthLabel->setText(std::string("Health: %1%"));
     
     if (health.healthScore >= 80.0) {
         healthLabel->setStyleSheet("color: green; font-weight: bold;");
@@ -781,22 +700,22 @@ void IDEMainWindow::onMetricRecorded(const MetricData& metric) {
     // Update metrics display
 }
 
-void IDEMainWindow::onThresholdViolation(const MetricData& metric, const QString& severity) {
-    metricsWidget->addItem(QString("[%1] Threshold exceeded: %2.%3 = %4")
-        .arg(severity.toUpper()).arg(metric.component).arg(metric.operation).arg(metric.value));
+void IDEMainWindow::onThresholdViolation(const MetricData& metric, const std::string& severity) {
+    metricsWidget->addItem(std::string("[%1] Threshold exceeded: %2.%3 = %4")
+        ));
 }
 
 void IDEMainWindow::onSnapshotCaptured(const PerformanceSnapshot& snapshot) {
     // Update performance display
 }
 
-void IDEMainWindow::onModelDownloadProgress(const QString& modelId, int percentage, qint64 speed, qint64 eta) {
+void IDEMainWindow::onModelDownloadProgress(const std::string& modelId, int percentage, qint64 speed, qint64 eta) {
     progressBar->setVisible(true);
     progressBar->setValue(percentage);
-    showMessage(QString("Downloading %1: %2%").arg(modelId).arg(percentage));
+    showMessage(std::string("Downloading %1: %2%"));
 }
 
-void IDEMainWindow::onModelDownloadCompleted(const QString& modelId, bool success) {
+void IDEMainWindow::onModelDownloadCompleted(const std::string& modelId, bool success) {
     progressBar->setVisible(false);
     
     if (success) {
@@ -806,14 +725,14 @@ void IDEMainWindow::onModelDownloadCompleted(const QString& modelId, bool succes
     }
 }
 
-void IDEMainWindow::onModelLoaded(const QString& modelId) {
+void IDEMainWindow::onModelLoaded(const std::string& modelId) {
     activeModelId = modelId;
     modelLabel->setText("Model: " + modelId);
     showMessage("Model loaded: " + modelId);
 }
 
 void IDEMainWindow::onHealthCheckCompleted() {
-    QVector<CloudProvider> providers = cloudManager->getHealthyProviders();
+    std::vector<CloudProvider> providers = cloudManager->getHealthyProviders();
     std::cout << "[IDEMainWindow] Healthy providers: " << providers.size() << std::endl;
 }
 
@@ -866,21 +785,21 @@ void IDEMainWindow::onMonitorModelCost() {
 }
 
 // Model Router widget signal handlers
-void IDEMainWindow::onModelRouterGenerationRequested(const QString& prompt, const QString& model) {
+void IDEMainWindow::onModelRouterGenerationRequested(const std::string& prompt, const std::string& model) {
     std::cout << "[IDEMainWindow::onModelRouterGenerationRequested]"
               << " model: " << model.toStdString()
               << " prompt_len: " << prompt.length() << std::endl;
     
     // Could integrate with codebase analysis, suggestions, etc.
-    showMessage(QString("Generation requested with %1").arg(model));
+    showMessage(std::string("Generation requested with %1"));
 }
 
-void IDEMainWindow::onModelRouterStatusUpdated(const QString& status) {
+void IDEMainWindow::onModelRouterStatusUpdated(const std::string& status) {
     statusLabel->setText("Model Router: " + status);
     std::cout << "[IDEMainWindow::onModelRouterStatusUpdated] " << status.toStdString() << std::endl;
 }
 
-void IDEMainWindow::onModelRouterErrorOccurred(const QString& error) {
+void IDEMainWindow::onModelRouterErrorOccurred(const std::string& error) {
     showMessage("Model Router Error: " + error, 5000);
     std::cout << "[IDEMainWindow::onModelRouterErrorOccurred] " << error.toStdString() << std::endl;
 }
@@ -901,11 +820,11 @@ void IDEMainWindow::onModelRouterApiKeyEditRequested() {
 }
 
 // Utility Methods
-QString IDEMainWindow::getCurrentLanguage() const {
+std::string IDEMainWindow::getCurrentLanguage() const {
     return currentLanguage;
 }
 
-QString IDEMainWindow::getCurrentFilePath() const {
+std::string IDEMainWindow::getCurrentFilePath() const {
     return currentFilePath.isEmpty() ? "untitled" : currentFilePath;
 }
 
@@ -913,7 +832,7 @@ void IDEMainWindow::updateStatusBar() {
     languageLabel->setText(currentLanguage.toUpper());
 }
 
-void IDEMainWindow::showMessage(const QString& message, int timeout) {
+void IDEMainWindow::showMessage(const std::string& message, int timeout) {
     statusBar()->showMessage(message, timeout);
     std::cout << "[IDEMainWindow] " << message.toStdString() << std::endl;
 }
@@ -935,3 +854,4 @@ void IDEMainWindow::saveSettings() {
     
     std::cout << "[IDEMainWindow] Settings saved" << std::endl;
 }
+

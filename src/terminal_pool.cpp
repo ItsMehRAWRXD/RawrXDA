@@ -1,17 +1,9 @@
 // Terminal Pool - Multiple terminal management
 #include "terminal_pool.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QPushButton>
-#include <QTabWidget>
-#include <QTextEdit>
-#include <QLineEdit>
-#include <QProcess>
-#include <QScrollBar>
-#include <QDir>
 
-TerminalPool::TerminalPool(uint32_t pool_size, QWidget* parent) 
-    : QWidget(parent), pool_size_(pool_size), tab_widget_(nullptr) {
+
+TerminalPool::TerminalPool(uint32_t pool_size, void* parent) 
+    : void(parent), pool_size_(pool_size), tab_widget_(nullptr) {
     // Lightweight constructor - defer Qt widget and process creation
 }
 
@@ -22,7 +14,7 @@ void TerminalPool::initialize() {
     
     QHBoxLayout* control_layout = new QHBoxLayout();
     QPushButton* new_terminal_btn = new QPushButton("+ Terminal", this);
-    connect(new_terminal_btn, &QPushButton::clicked, this, &TerminalPool::createNewTerminal);
+// Qt connect removed
     control_layout->addWidget(new_terminal_btn);
     control_layout->addStretch();
     layout->addLayout(control_layout);
@@ -36,7 +28,7 @@ void TerminalPool::initialize() {
 }
 
 void TerminalPool::createNewTerminal() {
-    QWidget* terminal_container = new QWidget(this);
+    void* terminal_container = new void(this);
     QVBoxLayout* terminal_layout = new QVBoxLayout(terminal_container);
     
     QTextEdit* terminal_output = new QTextEdit(this);
@@ -65,22 +57,20 @@ void TerminalPool::createNewTerminal() {
     info.process = process;
     terminals_.push_back(info);
     
-    QString label = "Terminal " + QString::number(terminals_.size());
+    std::string label = "Terminal " + std::string::number(terminals_.size());
     int index = tab_widget_->addTab(terminal_container, label);
     tab_widget_->setTabsClosable(true); // Enable tab closing
     
     // Connect tab close signal
-    connect(tab_widget_, QOverload<int>::of(&QTabWidget::tabCloseRequested),
-            this, &TerminalPool::closeTerminal);
-    
+// Qt connect removed
     // Connect input to command execution
-    connect(terminal_input, &QLineEdit::returnPressed, 
+// Qt connect removed
             this, [this, index]() { executeCommand(index); });
     
     // Connect process output
-    connect(process, &QProcess::readyReadStandardOutput, 
+// Qt connect removed
             this, [this, index]() { readProcessOutput(index); });
-    connect(process, &QProcess::readyReadStandardError, 
+// Qt connect removed
             this, [this, index]() { readProcessError(index); });
 }
 
@@ -90,15 +80,15 @@ void TerminalPool::executeCommand(int terminal_index) {
     }
     
     TerminalInfo& info = terminals_[terminal_index];
-    QString command = info.input_widget->text();
+    std::string command = info.input_widget->text();
     info.input_widget->clear();
     
     if (!command.isEmpty()) {
         // Send command to process (don't echo locally - cmd.exe will display it)
         info.process->write((command + "\n").toLocal8Bit());
         
-        // Emit signal for other components
-        emit commandExecuted(command);
+        // signal for other components
+        commandExecuted(command);
     }
 }
 
@@ -108,8 +98,8 @@ void TerminalPool::readProcessOutput(int terminal_index) {
     }
     
     TerminalInfo& info = terminals_[terminal_index];
-    QByteArray output = info.process->readAllStandardOutput();
-    QString output_str = QString::fromLocal8Bit(output);
+    std::vector<uint8_t> output = info.process->readAllStandardOutput();
+    std::string output_str = std::string::fromLocal8Bit(output);
     info.output_widget->insertPlainText(output_str);
     
     // Scroll to bottom
@@ -123,8 +113,8 @@ void TerminalPool::readProcessError(int terminal_index) {
     }
     
     TerminalInfo& info = terminals_[terminal_index];
-    QByteArray error = info.process->readAllStandardError();
-    QString error_str = QString::fromLocal8Bit(error);
+    std::vector<uint8_t> error = info.process->readAllStandardError();
+    std::string error_str = std::string::fromLocal8Bit(error);
     info.output_widget->insertPlainText(error_str);
     
     // Scroll to bottom
@@ -164,3 +154,4 @@ void TerminalPool::closeTerminal(int tab_index) {
     // Remove from terminals list and reindex
     terminals_.erase(terminals_.begin() + tab_index);
 }
+

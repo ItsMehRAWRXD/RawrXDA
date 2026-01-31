@@ -24,8 +24,3 @@ private:
     void *m_incrementalCheck;
 };
 
-
-
-
-
-

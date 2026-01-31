@@ -21,7 +21,3 @@ private:
     QSqlDatabase m_db;
 };
 
-
-
-
-

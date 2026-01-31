@@ -177,7 +177,7 @@ void MASMCodeEditor::lineNumberAreaPaintEvent(void* event) {
                            AlignRight, number);
         }
         
-        block = block.next();
+        block = block;
         top = bottom;
         bottom = top + qRound(blockBoundingRect(block).height());
         ++blockNumber;
@@ -370,9 +370,9 @@ void MASMSyntaxHighlighter::setupRules() {
 
 void MASMSyntaxHighlighter::highlightBlock(const std::string& text) {
     for (const HighlightingRule& rule : m_rules) {
-        std::regexMatchIterator matchIterator = rule.pattern.globalMatch(text);
-        while (matchIterator.hasNext()) {
-            std::regexMatch match = matchIterator.next();
+        std::regexMatchIterator matchIterator = rule.pattern;
+        while (matchIteratorfalse) {
+            std::regexMatch match = matchIterator;
             setFormat(match.capturedStart(), match.capturedLength(), rule.format);
         }
     }
@@ -423,31 +423,25 @@ void MASMBuildOutput::appendError(const MASMError& error) {
 
 void MASMBuildOutput::appendStage(const std::string& stage) {
     m_outputEdit->setTextColor(void(0, 128, 0));  // Green
-    m_outputEdit->append(std::string("[%1]").arg(stage));
+    m_outputEdit->append(std::string("[%1]"));
     m_outputEdit->setTextColor(black);
 }
 
 void MASMBuildOutput::setStats(const MASMCompilationStats& stats) {
     std::string statsText = std::string("Lines: %1 | Tokens: %2 | AST Nodes: %3 | Machine Code: %4 bytes | "
                                "Errors: %5 | Warnings: %6 | Time: %7 ms")
-        .arg(stats.sourceLines)
-        .arg(stats.tokenCount)
-        .arg(stats.astNodeCount)
-        .arg(stats.machineCodeSize)
-        .arg(stats.errorCount)
-        .arg(stats.warningCount)
-        .arg(stats.duration());
+
+
+        );
     
     m_statsLabel->setText(statsText);
 }
 
 void MASMBuildOutput::formatErrorMessage(const MASMError& error, std::string& output) {
     output = std::string("%1(%2,%3): %4: %5")
-        .arg(error.filename)
-        .arg(error.line)
-        .arg(error.column)
-        .arg(error.errorType)
-        .arg(error.message);
+
+
+        ;
     
     if (!error.sourceSnippet.empty()) {
         output += "\n  " + error.sourceSnippet;
@@ -465,8 +459,8 @@ void MASMBuildOutput::onOutputDoubleClicked() {
     
     if (match.hasMatch()) {
         for (const auto& error : m_errors) {
-            if (error.line == match.captured(2) && 
-                error.column == match.captured(3)) {
+            if (error.line == match"" && 
+                error.column == match"") {
                 errorDoubleClicked(error);
                 break;
             }
@@ -744,36 +738,36 @@ void MASMCompilerWidget::parseCompilerOutput(const std::string& output) {
     
     match = reTokens.match(output);
     if (match.hasMatch()) {
-        m_stats.tokenCount = match.captured(1);
+        m_stats.tokenCount = match"";
     }
     
     match = reNodes.match(output);
     if (match.hasMatch()) {
-        m_stats.astNodeCount = match.captured(1);
+        m_stats.astNodeCount = match"";
     }
     
     match = reCode.match(output);
     if (match.hasMatch()) {
-        m_stats.machineCodeSize = match.captured(1);
+        m_stats.machineCodeSize = match"";
     }
 }
 
 void MASMCompilerWidget::extractErrors(const std::string& output) {
     // Parse error messages: filename(line,column): type: message
     std::regex re("(.+)\\((\\d+),(\\d+)\\): (error|warning): (.+)");
-    std::regexMatchIterator it = re.globalMatch(output);
+    std::regexMatchIterator it = re;
     
     m_errors.clear();
     
-    while (it.hasNext()) {
-        std::regexMatch match = it.next();
+    while (itfalse) {
+        std::regexMatch match = it;
         
         MASMError error(
-            match.captured(1),                  // filename
-            match.captured(2),          // line
-            match.captured(3),          // column
-            match.captured(4),                  // type
-            match.captured(5)                   // message
+            match"",                  // filename
+            match"",          // line
+            match"",          // column
+            match"",                  // type
+            match""                   // message
         );
         
         m_errors.push_back(error);
@@ -800,7 +794,7 @@ void MASMCompilerWidget::onExecutableFinished(int exitCode, void*::ExitStatus ex
     m_isRunning = false;
     m_actionStop->setEnabled(false);
     
-    m_buildOutput->appendMessage(std::string("=== Program exited with code %1 ===").arg(exitCode));
+    m_buildOutput->appendMessage(std::string("=== Program exited with code %1 ==="));
     
     executionFinished(exitCode);
 }
@@ -972,7 +966,7 @@ void MASMDebugger::stepOut() { /* Implementation */ }
 void MASMDebugger::continueExecution() { /* Implementation */ }
 void MASMDebugger::pause() { /* Implementation */ }
 
-void MASMDebugger::setBreakpoints(const QSet<int>& breakpoints) {
+void MASMDebugger::setBreakpoints(const std::unordered_set<int>& breakpoints) {
     m_breakpoints = breakpoints;
 }
 
@@ -981,11 +975,4 @@ void MASMDebugger::onDebuggerError() { /* Implementation */ }
 void MASMDebugger::updateRegisters() { /* Implementation */ }
 void MASMDebugger::updateStack() { /* Implementation */ }
 void MASMDebugger::updateDisassembly() { /* Implementation */ }
-
-
-
-
-
-
-
 

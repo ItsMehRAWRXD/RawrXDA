@@ -1,18 +1,17 @@
 #include "codec.h"
-#include <QByteArray>
+
 #include <zlib.h>
-#include <QDebug>
 
 namespace codec {
-    QByteArray deflate(const QByteArray& input, bool* success) {
+    std::vector<uint8_t> deflate(const std::vector<uint8_t>& input, bool* success) {
         if (input.isEmpty()) {
             if (success) *success = true;
-            return QByteArray();
+            return std::vector<uint8_t>();
         }
         
         // Use zlib for compression
         uLongf compressedSize = compressBound(input.size());
-        QByteArray compressed(compressedSize, 0);
+        std::vector<uint8_t> compressed(compressedSize, 0);
         
         int result = compress2(reinterpret_cast<Bytef*>(compressed.data()), &compressedSize,
                               reinterpret_cast<const Bytef*>(input.constData()), input.size(),
@@ -23,21 +22,20 @@ namespace codec {
             if (success) *success = true;
             return compressed;
         } else {
-            qWarning() << "Deflate compression failed with error:" << result;
             if (success) *success = false;
             return input; // Return original on failure
         }
     }
     
-    QByteArray inflate(const QByteArray& input, bool* success) {
+    std::vector<uint8_t> inflate(const std::vector<uint8_t>& input, bool* success) {
         if (input.isEmpty()) {
             if (success) *success = true;
-            return QByteArray();
+            return std::vector<uint8_t>();
         }
         
         // Estimate decompressed size (4x compression ratio)
         uLongf decompressedSize = input.size() * 4;
-        QByteArray decompressed(decompressedSize, 0);
+        std::vector<uint8_t> decompressed(decompressedSize, 0);
         
         int result = uncompress(reinterpret_cast<Bytef*>(decompressed.data()), &decompressedSize,
                                reinterpret_cast<const Bytef*>(input.constData()), input.size());
@@ -61,7 +59,6 @@ namespace codec {
             }
         }
         
-        qWarning() << "Inflate decompression failed with error:" << result;
         if (success) *success = false;
         return input; // Return original on failure
     }

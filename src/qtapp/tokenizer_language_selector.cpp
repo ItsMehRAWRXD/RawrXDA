@@ -1,31 +1,28 @@
 #include "tokenizer_language_selector.h"
-#include <QDebug>
-#include <QFile>
-#include <QJsonDocument>
-#include <QJsonArray>
 
-TokenizerLanguageSelector::TokenizerLanguageSelector(QObject *parent) 
-    : QObject(parent), 
+
+TokenizerLanguageSelector::TokenizerLanguageSelector(void *parent) 
+    : void(parent), 
       m_currentLanguage(Language::English), 
       m_currentTokenizer(TokenizerType::BPE),
       m_vocabularySize(0)
 {
     // Initialize language configurations
-    m_languageConfigs[Language::English] = QJsonObject{
+    m_languageConfigs[Language::English] = void*{
         {"name", "English"},
         {"code", "en"},
         {"charset", "ascii"},
         {"direction", "ltr"}
     };
     
-    m_languageConfigs[Language::Chinese] = QJsonObject{
+    m_languageConfigs[Language::Chinese] = void*{
         {"name", "Chinese"},
         {"code", "zh"},
         {"charset", "cjk"},
         {"direction", "ltr"}
     };
     
-    m_languageConfigs[Language::Japanese] = QJsonObject{
+    m_languageConfigs[Language::Japanese] = void*{
         {"name", "Japanese"},
         {"code", "ja"},
         {"charset", "cjk"},
@@ -33,19 +30,19 @@ TokenizerLanguageSelector::TokenizerLanguageSelector(QObject *parent)
     };
     
     // Initialize tokenizer parameters
-    m_tokenizerParams[TokenizerType::BPE] = QJsonObject{
+    m_tokenizerParams[TokenizerType::BPE] = void*{
         {"name", "Byte Pair Encoding"},
         {"merges", 32000},
         {"minFrequency", 2}
     };
     
-    m_tokenizerParams[TokenizerType::WordPiece] = QJsonObject{
+    m_tokenizerParams[TokenizerType::WordPiece] = void*{
         {"name", "WordPiece"},
         {"unknown_token", "[UNK]"},
         {"split_unknown_chars", true}
     };
     
-    m_tokenizerParams[TokenizerType::SentencePiece] = QJsonObject{
+    m_tokenizerParams[TokenizerType::SentencePiece] = void*{
         {"name", "SentencePiece"},
         {"model_type", "unigram"},
         {"vocab_size", 32000}
@@ -58,22 +55,19 @@ TokenizerLanguageSelector::TokenizerLanguageSelector(QObject *parent)
     m_specialTokens["End"] = "[SEP]";
     m_specialTokens["Mask"] = "[MASK]";
     
-    qDebug() << "[TokenizerLanguageSelector] Initialized";
 }
 
 TokenizerLanguageSelector::~TokenizerLanguageSelector()
 {
-    qDebug() << "[TokenizerLanguageSelector] Destroyed";
 }
 
-void TokenizerLanguageSelector::setLanguage(Language language, const QJsonObject& config)
+void TokenizerLanguageSelector::setLanguage(Language language, const void*& config)
 {
     m_currentLanguage = language;
     if (!config.isEmpty()) {
         m_languageConfigs[language] = config;
     }
-    qDebug() << "[TokenizerLanguageSelector] Language set to:" << static_cast<int>(language);
-    emit languageChanged(language);
+    languageChanged(language);
 }
 
 TokenizerLanguageSelector::Language TokenizerLanguageSelector::getCurrentLanguage() const
@@ -81,23 +75,22 @@ TokenizerLanguageSelector::Language TokenizerLanguageSelector::getCurrentLanguag
     return m_currentLanguage;
 }
 
-QJsonObject TokenizerLanguageSelector::getLanguageConfig(Language language) const
+void* TokenizerLanguageSelector::getLanguageConfig(Language language) const
 {
     auto it = m_languageConfigs.find(language);
     if (it != m_languageConfigs.end()) {
         return it->second;
     }
-    return QJsonObject();
+    return void*();
 }
 
-void TokenizerLanguageSelector::setTokenizer(TokenizerType type, const QJsonObject& params)
+void TokenizerLanguageSelector::setTokenizer(TokenizerType type, const void*& params)
 {
     m_currentTokenizer = type;
     if (!params.isEmpty()) {
         m_tokenizerParams[type] = params;
     }
-    qDebug() << "[TokenizerLanguageSelector] Tokenizer set to:" << static_cast<int>(type);
-    emit tokenizerChanged(type);
+    tokenizerChanged(type);
 }
 
 TokenizerLanguageSelector::TokenizerType TokenizerLanguageSelector::getCurrentTokenizer() const
@@ -105,27 +98,26 @@ TokenizerLanguageSelector::TokenizerType TokenizerLanguageSelector::getCurrentTo
     return m_currentTokenizer;
 }
 
-QJsonObject TokenizerLanguageSelector::getTokenizerParams(TokenizerType type) const
+void* TokenizerLanguageSelector::getTokenizerParams(TokenizerType type) const
 {
     auto it = m_tokenizerParams.find(type);
     if (it != m_tokenizerParams.end()) {
         return it->second;
     }
-    return QJsonObject();
+    return void*();
 }
 
-bool TokenizerLanguageSelector::loadVocabulary(const QString& filePath)
+bool TokenizerLanguageSelector::loadVocabulary(const std::string& filePath)
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "[TokenizerLanguageSelector] Cannot open vocabulary file:" << filePath;
         return false;
     }
     
     m_vocabulary.clear();
     int lineCount = 0;
     while (!file.atEnd()) {
-        QString line = file.readLine().trimmed();
+        std::string line = file.readLine().trimmed();
         if (!line.isEmpty()) {
             m_vocabulary.push_back(line);
             lineCount++;
@@ -134,15 +126,13 @@ bool TokenizerLanguageSelector::loadVocabulary(const QString& filePath)
     
     file.close();
     m_vocabularySize = lineCount;
-    qDebug() << "[TokenizerLanguageSelector] Loaded vocabulary:" << m_vocabularySize << "tokens";
     return true;
 }
 
-bool TokenizerLanguageSelector::saveVocabulary(const QString& filePath)
+bool TokenizerLanguageSelector::saveVocabulary(const std::string& filePath)
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "[TokenizerLanguageSelector] Cannot write vocabulary file:" << filePath;
         return false;
     }
     
@@ -151,7 +141,6 @@ bool TokenizerLanguageSelector::saveVocabulary(const QString& filePath)
     }
     
     file.close();
-    qDebug() << "[TokenizerLanguageSelector] Saved vocabulary:" << m_vocabulary.size() << "tokens";
     return true;
 }
 
@@ -160,20 +149,19 @@ int TokenizerLanguageSelector::getVocabularySize() const
     return m_vocabularySize;
 }
 
-void TokenizerLanguageSelector::setSpecialTokens(const QMap<QString, QString>& tokens)
+void TokenizerLanguageSelector::setSpecialTokens(const std::map<std::string, std::string>& tokens)
 {
     m_specialTokens = tokens;
-    qDebug() << "[TokenizerLanguageSelector] Special tokens set:" << tokens.size();
 }
 
-QMap<QString, QString> TokenizerLanguageSelector::getSpecialTokens() const
+std::map<std::string, std::string> TokenizerLanguageSelector::getSpecialTokens() const
 {
     return m_specialTokens;
 }
 
-QJsonObject TokenizerLanguageSelector::getStatistics() const
+void* TokenizerLanguageSelector::getStatistics() const
 {
-    QJsonObject stats;
+    void* stats;
     stats["currentLanguage"] = static_cast<int>(m_currentLanguage);
     stats["currentTokenizer"] = static_cast<int>(m_currentTokenizer);
     stats["vocabularySize"] = m_vocabularySize;
@@ -184,10 +172,10 @@ QJsonObject TokenizerLanguageSelector::getStatistics() const
 void TokenizerLanguageSelector::setOptimizationLevel(int level)
 {
     m_optimizationLevel = qBound(0, level, 3);
-    qDebug() << "[TokenizerLanguageSelector] Optimization level set to:" << m_optimizationLevel;
 }
 
 int TokenizerLanguageSelector::getOptimizationLevel() const
 {
     return m_optimizationLevel;
 }
+

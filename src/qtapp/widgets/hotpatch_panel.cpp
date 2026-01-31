@@ -1,12 +1,9 @@
 #include "hotpatch_panel.h"
-#include <QHBoxLayout>
-#include <QScrollArea>
-#include <QFont>
-#include <QDebug>
 
-HotpatchPanel::HotpatchPanel(QWidget* parent)
-    : QWidget(parent)
-    , m_sessionStart(QDateTime::currentDateTime())
+
+HotpatchPanel::HotpatchPanel(void* parent)
+    : void(parent)
+    , m_sessionStart(std::chrono::system_clock::time_point::currentDateTime())
 {
     // Lightweight constructor - defers Qt widget creation to initialize()
 }
@@ -43,14 +40,14 @@ void HotpatchPanel::setupUI() {
     
     m_manualReloadButton = new QPushButton("Manual Reload", this);
     m_manualReloadButton->setMaximumWidth(120);
-    connect(m_manualReloadButton, &QPushButton::clicked, this, [this]() {
-        emit manualReloadRequested("Q4_K"); // Default quant mode
+// Qt connect removed
+        manualReloadRequested("Q4_K"); // Default quant mode
     });
     headerLayout->addWidget(m_manualReloadButton);
     
     m_clearButton = new QPushButton("Clear", this);
     m_clearButton->setMaximumWidth(80);
-    connect(m_clearButton, &QPushButton::clicked, this, &HotpatchPanel::clearLog);
+// Qt connect removed
     headerLayout->addWidget(m_clearButton);
     
     mainLayout->addLayout(headerLayout);
@@ -63,7 +60,7 @@ void HotpatchPanel::setupUI() {
     setLayout(mainLayout);
 }
 
-void HotpatchPanel::logEvent(const QString& eventType, const QString& details, bool success) {
+void HotpatchPanel::logEvent(const std::string& eventType, const std::string& details, bool success) {
     if (success) {
         m_successCount++;
     } else {
@@ -76,24 +73,21 @@ void HotpatchPanel::logEvent(const QString& eventType, const QString& details, b
     int total = m_successCount + m_failureCount;
     m_statsLabel->setText(
         tr("Events: %1 | Success: %2 | Failed: %3")
-            .arg(total)
-            .arg(m_successCount)
-            .arg(m_failureCount)
+
+
     );
     
-    qDebug() << "[HotpatchPanel]" << eventType << details << (success ? "✓" : "✗");
 }
 
-void HotpatchPanel::createListItem(const QString& eventType, const QString& details, bool success) {
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    QString status = success ? "✓" : "✗";
-    QString statusColor = success ? "#4ec9b0" : "#f48771"; // Green / Red
+void HotpatchPanel::createListItem(const std::string& eventType, const std::string& details, bool success) {
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    std::string status = success ? "✓" : "✗";
+    std::string statusColor = success ? "#4ec9b0" : "#f48771"; // Green / Red
     
-    QString itemText = tr("[%1] %2 %3 | %4")
-        .arg(timestamp)
-        .arg(status)
-        .arg(eventType)
-        .arg(details);
+    std::string itemText = tr("[%1] %2 %3 | %4")
+
+
+        ;
     
     QListWidgetItem* item = new QListWidgetItem(itemText);
     
@@ -104,7 +98,7 @@ void HotpatchPanel::createListItem(const QString& eventType, const QString& deta
         item->setForeground(QColor("#f48771")); // Red text for failure
     }
     
-    item->setData(Qt::UserRole, timestamp);
+    item->setData(//UserRole, timestamp);
     m_eventList->insertItem(0, item); // Add to top
     
     // Keep only last 100 events to avoid memory issues
@@ -117,12 +111,12 @@ void HotpatchPanel::clearLog() {
     m_eventList->clear();
     m_successCount = 0;
     m_failureCount = 0;
-    m_sessionStart = QDateTime::currentDateTime();
+    m_sessionStart = std::chrono::system_clock::time_point::currentDateTime();
     
     m_statsLabel->setText("Events: 0 | Success: 0 | Failed: 0");
-    qDebug() << "[HotpatchPanel] Log cleared";
 }
 
 int HotpatchPanel::eventCount() const {
     return m_successCount + m_failureCount;
 }
+

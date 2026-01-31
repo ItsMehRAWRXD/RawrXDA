@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <chrono>
-#include <QString>
 
 /**
  * @brief Represents a single message in a chat session
@@ -87,3 +86,4 @@ public:
      */
     void finalizePartial();
 };
+

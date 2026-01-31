@@ -1,17 +1,10 @@
 // RawrXD Agentic IDE - v5.0 Clean Header
 #pragma once
 
-#include <QMainWindow>
-#include <QString>
-#include <QFutureWatcher>
-#include <QProgressDialog>
-
-class QAction;
 
 // Forward declarations
-class QDockWidget;
-class QLabel;
-class QProgressBar;
+
+
 class MultiTabEditor;
 class ChatInterface;
 class TerminalPool;
@@ -41,15 +34,14 @@ namespace RawrXD {
 
 namespace RawrXD {
 
-class MainWindow : public QMainWindow
+class MainWindow : public void
 {
-    Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(void *parent = nullptr);
     ~MainWindow();
 
-private slots:
+private:
     // File operations
     void newFile();
     void openFile();
@@ -72,15 +64,15 @@ private slots:
     void generateCode();
     void refactorCode();
     void loadModel();
-    void onModelSelected(const QString &ggufPath);
-    void onChatMessageSent(const QString &message);
+    void onModelSelected(const std::string &ggufPath);
+    void onChatMessageSent(const std::string &message);
     void applyInferenceSettings();
     void showInferenceSettings();
     void showAbout();
     void showAIHelp();
     
     // Phase 2: Diff preview and refactoring
-    void onRefactorSuggested(const QString &original, const QString &suggested);
+    void onRefactorSuggested(const std::string &original, const std::string &suggested);
     void showModelDownloadDialog();
     
     // LSP operations
@@ -106,8 +98,8 @@ private:
     // Async model loading with std::thread (no Qt threading)
     ModelLoaderThread* m_modelLoaderThread;
     QProgressDialog* m_loadingProgressDialog;
-    QTimer* m_loadProgressTimer;
-    QString m_pendingModelPath;
+    void** m_loadProgressTimer;
+    std::string m_pendingModelPath;
     
     void onModelLoadFinished(bool success, const std::string& errorMsg);
     void onModelLoadCanceled();
@@ -119,7 +111,7 @@ private:
     void initializePhase3();
     void initializePhase4();
     void initializePhase2Polish();  // NEW: Phase 2 polish features
-    void updateSplashProgress(const QString& message, int percent);
+    void updateSplashProgress(const std::string& message, int percent);
     
     // Setup methods
     void setupMenuBar();
@@ -154,9 +146,10 @@ private:
     RawrXD::GPUBackendSelector *m_backendSelector{nullptr};
     
     // Splash screen for initialization
-    QWidget *m_splashWidget;
+    void *m_splashWidget;
     QLabel *m_splashLabel;
     QProgressBar *m_splashProgress;
 };
 
 } // namespace RawrXD
+

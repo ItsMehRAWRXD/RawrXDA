@@ -14,10 +14,6 @@
  * - Permission checking
  */
 
-#include <QString>
-#include <QByteArray>
-#include <QFileInfo>
-#include <QDir>
 
 namespace RawrXD {
 
@@ -39,12 +35,12 @@ enum class Encoding {
  */
 struct FileOperationResult {
     bool success;           ///< Whether the operation succeeded
-    QString errorMessage;   ///< Human-readable error message (empty if success)
-    QString backupPath;     ///< Path to backup file (if created)
+    std::string errorMessage;   ///< Human-readable error message (empty if success)
+    std::string backupPath;     ///< Path to backup file (if created)
     
     FileOperationResult() : success(false) {}
     explicit FileOperationResult(bool ok) : success(ok) {}
-    FileOperationResult(bool ok, const QString& msg) : success(ok), errorMessage(msg) {}
+    FileOperationResult(bool ok, const std::string& msg) : success(ok), errorMessage(msg) {}
 };
 
 /**
@@ -57,7 +53,7 @@ struct FileOperationResult {
  * Example usage:
  * \code
  * FileManager fm;
- * QString content;
+ * std::string content;
  * if (fm.readFile("/path/to/file.cpp", content)) {
  *     content += "\n// Modified";
  *     fm.writeFile("/path/to/file.cpp", content);
@@ -78,7 +74,7 @@ public:
      * \param detectedEncoding Optional output parameter for detected encoding
      * \return true if successful, false otherwise
      */
-    bool readFile(const QString& path, QString& content, Encoding* detectedEncoding = nullptr);
+    bool readFile(const std::string& path, std::string& content, Encoding* detectedEncoding = nullptr);
     
     /**
      * \brief Read file as raw bytes (no encoding conversion)
@@ -86,14 +82,14 @@ public:
      * \param data Output parameter for raw bytes
      * \return true if successful, false otherwise
      */
-    bool readFileRaw(const QString& path, QByteArray& data);
+    bool readFileRaw(const std::string& path, std::vector<uint8_t>& data);
     
     /**
      * \brief Detect file encoding from byte order mark (BOM) and content analysis
      * \param data First few bytes of file
      * \return Detected encoding
      */
-    static Encoding detectEncoding(const QByteArray& data);
+    static Encoding detectEncoding(const std::vector<uint8_t>& data);
     
     // ========== Writing Operations ==========
     
@@ -104,7 +100,7 @@ public:
      * \param createBackup If true, create backup before overwriting existing file
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult writeFile(const QString& path, const QString& content, bool createBackup = true);
+    FileOperationResult writeFile(const std::string& path, const std::string& content, bool createBackup = true);
     
     /**
      * \brief Write raw bytes to file atomically
@@ -113,7 +109,7 @@ public:
      * \param createBackup If true, create backup before overwriting existing file
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult writeFileRaw(const QString& path, const QByteArray& data, bool createBackup = true);
+    FileOperationResult writeFileRaw(const std::string& path, const std::vector<uint8_t>& data, bool createBackup = true);
     
     // ========== File CRUD Operations ==========
     
@@ -122,7 +118,7 @@ public:
      * \param path Absolute or relative path to file
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult createFile(const QString& path);
+    FileOperationResult createFile(const std::string& path);
     
     /**
      * \brief Delete a file safely (with optional confirmation)
@@ -130,7 +126,7 @@ public:
      * \param moveToTrash If true, move to system trash instead of permanent delete
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult deleteFile(const QString& path, bool moveToTrash = true);
+    FileOperationResult deleteFile(const std::string& path, bool moveToTrash = true);
     
     /**
      * \brief Rename a file or directory
@@ -138,7 +134,7 @@ public:
      * \param newPath New path (can be just new name, or full path for move)
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult renameFile(const QString& oldPath, const QString& newPath);
+    FileOperationResult renameFile(const std::string& oldPath, const std::string& newPath);
     
     /**
      * \brief Move file to different directory
@@ -146,7 +142,7 @@ public:
      * \param destPath Destination directory or full path
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult moveFile(const QString& sourcePath, const QString& destPath);
+    FileOperationResult moveFile(const std::string& sourcePath, const std::string& destPath);
     
     /**
      * \brief Copy file to destination
@@ -155,7 +151,7 @@ public:
      * \param overwrite If false, fail if destination exists
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult copyFile(const QString& sourcePath, const QString& destPath, bool overwrite = false);
+    FileOperationResult copyFile(const std::string& sourcePath, const std::string& destPath, bool overwrite = false);
     
     // ========== Directory Operations ==========
     
@@ -164,7 +160,7 @@ public:
      * \param path Absolute or relative path to directory
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult createDirectory(const QString& path);
+    FileOperationResult createDirectory(const std::string& path);
     
     /**
      * \brief Delete directory and all contents
@@ -172,7 +168,7 @@ public:
      * \param moveToTrash If true, move to system trash instead of permanent delete
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult deleteDirectory(const QString& path, bool moveToTrash = true);
+    FileOperationResult deleteDirectory(const std::string& path, bool moveToTrash = true);
     
     /**
      * \brief Copy entire directory tree
@@ -180,7 +176,7 @@ public:
      * \param destPath Destination directory
      * \return FileOperationResult with success status and details
      */
-    FileOperationResult copyDirectory(const QString& sourcePath, const QString& destPath);
+    FileOperationResult copyDirectory(const std::string& sourcePath, const std::string& destPath);
     
     // ========== Path Operations ==========
     
@@ -190,7 +186,7 @@ public:
      * \param basePath Base directory for relative paths (defaults to current dir)
      * \return Absolute canonical path
      */
-    static QString toAbsolutePath(const QString& relativePath, const QString& basePath = QString());
+    static std::string toAbsolutePath(const std::string& relativePath, const std::string& basePath = std::string());
     
     /**
      * \brief Convert absolute path to relative path from base
@@ -198,63 +194,63 @@ public:
      * \param basePath Base directory to make path relative to
      * \return Relative path, or original path if not under base
      */
-    static QString toRelativePath(const QString& absolutePath, const QString& basePath);
+    static std::string toRelativePath(const std::string& absolutePath, const std::string& basePath);
     
     /**
      * \brief Check if path exists (file or directory)
      * \param path Path to check
      * \return true if exists, false otherwise
      */
-    static bool exists(const QString& path);
+    static bool exists(const std::string& path);
     
     /**
      * \brief Check if path is a file
      * \param path Path to check
      * \return true if exists and is a file, false otherwise
      */
-    static bool isFile(const QString& path);
+    static bool isFile(const std::string& path);
     
     /**
      * \brief Check if path is a directory
      * \param path Path to check
      * \return true if exists and is a directory, false otherwise
      */
-    static bool isDirectory(const QString& path);
+    static bool isDirectory(const std::string& path);
     
     /**
      * \brief Check if path is a symbolic link
      * \param path Path to check
      * \return true if exists and is a symlink, false otherwise
      */
-    static bool isSymlink(const QString& path);
+    static bool isSymlink(const std::string& path);
     
     /**
      * \brief Check if file is readable
      * \param path Path to file
      * \return true if readable, false otherwise
      */
-    static bool isReadable(const QString& path);
+    static bool isReadable(const std::string& path);
     
     /**
      * \brief Check if file is writable
      * \param path Path to file
      * \return true if writable, false otherwise
      */
-    static bool isWritable(const QString& path);
+    static bool isWritable(const std::string& path);
     
     /**
      * \brief Get file size in bytes
      * \param path Path to file
      * \return File size, or -1 if file doesn't exist
      */
-    static qint64 fileSize(const QString& path);
+    static qint64 fileSize(const std::string& path);
     
     /**
      * \brief Get file modification time
      * \param path Path to file
      * \return Last modified timestamp
      */
-    static QDateTime lastModified(const QString& path);
+    static std::chrono::system_clock::time_point lastModified(const std::string& path);
     
     // ========== Backup Operations ==========
     
@@ -263,7 +259,7 @@ public:
      * \param path Path to file to backup
      * \return Path to backup file, or empty string if failed
      */
-    QString createBackup(const QString& path);
+    std::string createBackup(const std::string& path);
     
     /**
      * \brief Set whether to create backups by default for write operations
@@ -285,7 +281,8 @@ private:
      * \param originalPath Original file path
      * \return Path to temporary file
      */
-    static QString createTempPath(const QString& originalPath);
+    static std::string createTempPath(const std::string& originalPath);
 };
 
 } // namespace RawrXD
+

@@ -19,10 +19,8 @@ private:
 
     void* config_;
     std::string environment_;
-    QSet<std::string> enabledFeatures_;
+    std::unordered_set<std::string> enabledFeatures_;
 };
 
 } // namespace RawrXD
-
-
 

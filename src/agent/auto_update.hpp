@@ -1,10 +1,8 @@
 #pragma once
+#include <string>
 
-#include <QObject>
-
-class AutoUpdate : public QObject {
-    Q_OBJECT
+class AutoUpdate {
 public:
-    explicit AutoUpdate(QObject* parent = nullptr) : QObject(parent) {}
+    explicit AutoUpdate() {}
     bool checkAndInstall();
 };

@@ -3,22 +3,17 @@
 #include "agentic_loop_state.h"
 #include "agentic_engine.h"
 #include "../src/qtapp/inference_engine.hpp"
-#include <QDebug>
-#include <QDateTime>
-#include <QElapsedTimer>
-#include <QJsonDocument>
-#include <QJsonArray>
+
+
 #include <algorithm>
 
-AgenticIterativeReasoning::AgenticIterativeReasoning(QObject* parent)
-    : QObject(parent)
+AgenticIterativeReasoning::AgenticIterativeReasoning(void* parent)
+    : void(parent)
 {
-    qDebug() << "[AgenticIterativeReasoning] Initialized - Ready for iterative reasoning";
 }
 
 AgenticIterativeReasoning::~AgenticIterativeReasoning()
 {
-    qDebug() << "[AgenticIterativeReasoning] Destroyed";
 }
 
 void AgenticIterativeReasoning::initialize(
@@ -30,20 +25,18 @@ void AgenticIterativeReasoning::initialize(
     m_state = state;
     m_inferenceEngine = inference;
 
-    qInfo() << "[AgenticIterativeReasoning] Initialized with AgenticEngine, state, and inference engine";
 }
 
 // ===== MAIN REASONING LOOP =====
 
 AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
-    const QString& goal,
+    const std::string& goal,
     int maxIterations,
     int timeoutSeconds)
 {
-    qInfo() << "[AgenticIterativeReasoning] Starting reasoning loop for goal:" << goal;
 
     m_currentGoal = goal;
-    m_loopStartTime = QDateTime::currentDateTime();
+    m_loopStartTime = std::chrono::system_clock::time_point::currentDateTime();
     m_currentIteration = 0;
     m_recentResults.clear();
     m_failedStrategies.clear();
@@ -59,7 +52,7 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
     finalResult.confidence = 0.0f;
     finalResult.iterationCount = 0;
 
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
 
     // Main reasoning loop
@@ -67,21 +60,20 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
         m_currentIteration++;
         
         if (timer.elapsed() / 1000 > timeoutSeconds) {
-            qWarning() << "[AgenticIterativeReasoning] Timeout exceeded";
             break;
         }
 
-        emit iterationStarted(m_currentIteration);
+        iterationStarted(m_currentIteration);
 
         try {
             // PHASE 1: ANALYSIS
             if (m_state) m_state->setCurrentPhase(AgenticLoopState::ReasoningPhase::Analysis);
             
-            QString analysis = executeAnalysisPhase(goal);
-            emit phaseCompleted("Analysis", analysis);
+            std::string analysis = executeAnalysisPhase(goal);
+            phaseCompleted("Analysis", analysis);
             
             if (m_verboseLogging) {
-                log(QString("Analysis phase completed - %1").arg(analysis));
+                log(std::string("Analysis phase completed - %1"));
             }
 
             // PHASE 2: PLANNING
@@ -93,17 +85,17 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
             }
 
             Strategy selectedStrategy = pickBestStrategy(strategies);
-            emit strategySelected(selectedStrategy.name);
+            strategySelected(selectedStrategy.name);
 
             if (m_verboseLogging) {
-                log(QString("Selected strategy: %1").arg(selectedStrategy.name));
+                log(std::string("Selected strategy: %1"));
             }
 
             // PHASE 3: EXECUTION
             if (m_state) m_state->setCurrentPhase(AgenticLoopState::ReasoningPhase::Execution);
             
-            QJsonObject executionPlan = executeExecutionPhase(selectedStrategy, goal);
-            emit executionStarted(selectedStrategy.name);
+            void* executionPlan = executeExecutionPhase(selectedStrategy, goal);
+            executionStarted(selectedStrategy.name);
 
             if (!executionPlan.value("success").toBool()) {
                 if (shouldRetry(executionPlan.value("error").toString())) {
@@ -117,7 +109,7 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
             if (m_state) m_state->setCurrentPhase(AgenticLoopState::ReasoningPhase::Verification);
             
             bool verified = executeVerificationPhase(goal, executionPlan);
-            emit verificationResult(verified, executionPlan.value("result").toString());
+            verificationResult(verified, executionPlan.value("result").toString());
 
             if (!verified && m_currentIteration < maxIterations - 1) {
                 if (m_verboseLogging) {
@@ -130,31 +122,31 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
             if (m_enableReflection && m_state) {
                 m_state->setCurrentPhase(AgenticLoopState::ReasoningPhase::Reflection);
                 
-                QJsonObject iterationData;
+                void* iterationData;
                 iterationData["strategy"] = selectedStrategy.name;
                 iterationData["verified"] = verified;
                 iterationData["analysis"] = analysis;
                 
-                QString reflection = executeReflectionPhase(m_currentIteration, goal, iterationData);
-                emit reflectionGenerated(reflection);
+                std::string reflection = executeReflectionPhase(m_currentIteration, goal, iterationData);
+                reflectionGenerated(reflection);
 
                 if (m_verboseLogging) {
-                    log(QString("Reflection: %1").arg(reflection));
+                    log(std::string("Reflection: %1"));
                 }
 
                 // PHASE 6: ADJUSTMENT
                 m_state->setCurrentPhase(AgenticLoopState::ReasoningPhase::Adjustment);
                 
-                QJsonObject adjustment = adjustStrategy(reflection);
-                emit adjustmentApplied(adjustment.value("newStrategy").toString());
+                void* adjustment = adjustStrategy(reflection);
+                adjustmentApplied(adjustment.value("newStrategy").toString());
 
                 if (m_verboseLogging) {
-                    log(QString("Adjusted strategy: %1").arg(adjustment.value("newStrategy").toString()));
+                    log(std::string("Adjusted strategy: %1").toString()));
                 }
             }
 
             // Check for convergence
-            QString resultSummary = executionPlan.value("result").toString();
+            std::string resultSummary = executionPlan.value("result").toString();
             m_recentResults.append(resultSummary);
             if (m_recentResults.size() > 3) m_recentResults.pop_front();
 
@@ -171,22 +163,20 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
                     m_state->endIteration(AgenticLoopState::IterationStatus::Completed, resultSummary);
                 }
 
-                emit iterationCompleted(m_currentIteration, true);
-                emit reasoningCompleted(resultSummary);
+                iterationCompleted(m_currentIteration, true);
+                reasoningCompleted(resultSummary);
 
-                qInfo() << "[AgenticIterativeReasoning] Reasoning completed successfully in"
                         << m_currentIteration << "iterations";
 
                 break;
             }
 
-            emit iterationCompleted(m_currentIteration, false);
+            iterationCompleted(m_currentIteration, false);
 
         } catch (const std::exception& e) {
-            QString error = QString::fromStdString(e.what());
-            qWarning() << "[AgenticIterativeReasoning] Error in iteration" << m_currentIteration
+            std::string error = std::string::fromStdString(e.what());
                        << ":" << error;
-            emit errorOccurred(error, m_currentIteration);
+            errorOccurred(error, m_currentIteration);
 
             if (m_state) {
                 m_state->recordError("IterationError", error);
@@ -204,11 +194,11 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
 
 // ===== PHASE IMPLEMENTATIONS =====
 
-QString AgenticIterativeReasoning::executeAnalysisPhase(const QString& goal)
+std::string AgenticIterativeReasoning::executeAnalysisPhase(const std::string& goal)
 {
     if (!m_engine) return "No engine available";
 
-    QString prompt = QString(
+    std::string prompt = std::string(
         "Analyze this goal and provide a comprehensive understanding:\n"
         "Goal: %1\n\n"
         "Provide:\n"
@@ -217,20 +207,20 @@ QString AgenticIterativeReasoning::executeAnalysisPhase(const QString& goal)
         "3. Potential challenges\n"
         "4. Success criteria\n"
         "5. Risk assessment"
-    ).arg(goal);
+    );
 
     return callModelForReasoning(prompt, m_state ? m_state->formatContextForModel() : "");
 }
 
 std::vector<AgenticIterativeReasoning::Strategy> AgenticIterativeReasoning::executePlanningPhase(
-    const QString& goal,
-    const QString& analysis)
+    const std::string& goal,
+    const std::string& analysis)
 {
     std::vector<Strategy> strategies;
 
     if (!m_engine) return strategies;
 
-    QString prompt = QString(
+    std::string prompt = std::string(
         "Based on the analysis, generate multiple strategies:\n"
         "Goal: %1\n"
         "Analysis: %2\n\n"
@@ -243,13 +233,13 @@ std::vector<AgenticIterativeReasoning::Strategy> AgenticIterativeReasoning::exec
         "  \"required_tools\": [list]\n"
         "}\n\n"
         "Generate at least 3 diverse strategies."
-    ).arg(goal, analysis);
+    );
 
-    QString response = callModelForReasoning(prompt);
+    std::string response = callModelForReasoning(prompt);
     auto structuredResponse = extractStructuredResponse(response);
 
     for (const auto& item : structuredResponse) {
-        QJsonObject strategyObj = item.toObject();
+        void* strategyObj = item.toObject();
         Strategy strategy;
         strategy.name = strategyObj.value("name").toString("Unknown");
         strategy.description = strategyObj.value("description").toString();
@@ -306,11 +296,11 @@ AgenticIterativeReasoning::Strategy AgenticIterativeReasoning::pickBestStrategy(
     return best;
 }
 
-QJsonObject AgenticIterativeReasoning::executeExecutionPhase(
+void* AgenticIterativeReasoning::executeExecutionPhase(
     const Strategy& strategy,
-    const QString& goal)
+    const std::string& goal)
 {
-    QJsonObject result;
+    void* result;
     result["strategy"] = strategy.name;
 
     if (!m_engine) {
@@ -320,15 +310,15 @@ QJsonObject AgenticIterativeReasoning::executeExecutionPhase(
     }
 
     // Generate execution plan from strategy
-    QString prompt = QString(
+    std::string prompt = std::string(
         "Create a detailed execution plan for this strategy:\n"
         "Strategy: %1\n"
         "Description: %2\n"
         "Goal: %3\n\n"
         "Provide step-by-step actions with parameters."
-    ).arg(strategy.name, strategy.description, goal);
+    );
 
-    QString plan = callModelForReasoning(prompt);
+    std::string plan = callModelForReasoning(prompt);
 
     // Simulate execution (in production, would actually execute actions)
     result["success"] = true;
@@ -343,30 +333,30 @@ QJsonObject AgenticIterativeReasoning::executeExecutionPhase(
 }
 
 bool AgenticIterativeReasoning::executeVerificationPhase(
-    const QString& expectedOutcome,
-    const QJsonObject& actualResult)
+    const std::string& expectedOutcome,
+    const void*& actualResult)
 {
     if (!m_engine) return false;
 
-    QString prompt = QString(
+    std::string prompt = std::string(
         "Verify if the result meets the goal:\n"
         "Goal: %1\n"
         "Result: %2\n\n"
         "Answer with ONLY 'success' or 'failure'."
-    ).arg(expectedOutcome, actualResult.value("result").toString());
+    ).toString());
 
-    QString verification = callModelForReasoning(prompt);
+    std::string verification = callModelForReasoning(prompt);
     return verification.toLower().contains("success");
 }
 
-QString AgenticIterativeReasoning::executeReflectionPhase(
+std::string AgenticIterativeReasoning::executeReflectionPhase(
     int iterationNumber,
-    const QString& goal,
-    const QJsonObject& iterationData)
+    const std::string& goal,
+    const void*& iterationData)
 {
     if (!m_engine) return "No reflection available";
 
-    QString prompt = QString(
+    std::string prompt = std::string(
         "Reflect on this iteration:\n"
         "Iteration: %1\n"
         "Goal: %2\n"
@@ -376,16 +366,16 @@ QString AgenticIterativeReasoning::executeReflectionPhase(
         "2. What could improve\n"
         "3. Patterns observed\n"
         "4. Suggested adjustments"
-    ).arg(QString::number(iterationNumber), goal, QString::fromUtf8(QJsonDocument(iterationData).toJson()));
+    ), goal, std::string::fromUtf8(void*(iterationData).toJson()));
 
     return callModelForReasoning(prompt);
 }
 
 // ===== HELPER METHODS =====
 
-QString AgenticIterativeReasoning::callModelForReasoning(
-    const QString& prompt,
-    const QString& context)
+std::string AgenticIterativeReasoning::callModelForReasoning(
+    const std::string& prompt,
+    const std::string& context)
 {
     if (!m_inferenceEngine) {
         return "Model unavailable";
@@ -393,25 +383,25 @@ QString AgenticIterativeReasoning::callModelForReasoning(
 
     // Call inference engine for reasoning
     // This would use the actual model loaded in inference engine
-    QString fullPrompt = context.isEmpty() ? prompt : context + "\n\n" + prompt;
+    std::string fullPrompt = context.isEmpty() ? prompt : context + "\n\n" + prompt;
 
     // In production, this would call m_inferenceEngine->infer(fullPrompt)
     // For now, return a placeholder
     return "Reasoning output from model";
 }
 
-QJsonArray AgenticIterativeReasoning::extractStructuredResponse(const QString& modelResponse)
+void* AgenticIterativeReasoning::extractStructuredResponse(const std::string& modelResponse)
 {
-    QJsonArray result;
+    void* result;
 
     // Parse JSON array from model response
-    QRegularExpression jsonRegex("\\[\\s*\\{.*\\}\\s*\\]", 
-                                 QRegularExpression::DotMatchesEverythingOption);
-    QRegularExpressionMatch match = jsonRegex.match(modelResponse);
+    std::regex jsonRegex("\\[\\s*\\{.*\\}\\s*\\]", 
+                                 std::regex::DotMatchesEverythingOption);
+    std::smatch match = jsonRegex.match(modelResponse);
 
     if (match.hasMatch()) {
-        QString jsonStr = match.captured(0);
-        QJsonDocument doc = QJsonDocument::fromJson(jsonStr.toUtf8());
+        std::string jsonStr = match"";
+        void* doc = void*::fromJson(jsonStr.toUtf8());
         if (doc.isArray()) {
             result = doc.array();
         }
@@ -420,7 +410,7 @@ QJsonArray AgenticIterativeReasoning::extractStructuredResponse(const QString& m
     return result;
 }
 
-bool AgenticIterativeReasoning::hasConverged(const std::vector<QString>& recentResults)
+bool AgenticIterativeReasoning::hasConverged(const std::vector<std::string>& recentResults)
 {
     if (recentResults.size() < 3) return false;
 
@@ -428,33 +418,32 @@ bool AgenticIterativeReasoning::hasConverged(const std::vector<QString>& recentR
     return recentResults[0] == recentResults[1] && recentResults[1] == recentResults[2];
 }
 
-bool AgenticIterativeReasoning::shouldRetry(const QString& error) const
+bool AgenticIterativeReasoning::shouldRetry(const std::string& error) const
 {
     // Determine if error is retryable
-    return error.contains("timeout", Qt::CaseInsensitive) ||
-           error.contains("temporary", Qt::CaseInsensitive) ||
-           error.contains("resource", Qt::CaseInsensitive);
+    return error.contains("timeout", //CaseInsensitive) ||
+           error.contains("temporary", //CaseInsensitive) ||
+           error.contains("resource", //CaseInsensitive);
 }
 
-bool AgenticIterativeReasoning::handleReasoningError(const QString& error, int& retryCount)
+bool AgenticIterativeReasoning::handleReasoningError(const std::string& error, int& retryCount)
 {
     if (retryCount >= m_maxIterations) {
-        qCritical() << "[AgenticIterativeReasoning] Max iterations reached";
         return false;
     }
 
     if (shouldRetry(error)) {
-        log(QString("Recoverable error, will retry: %1").arg(error), "WARN");
+        log(std::string("Recoverable error, will retry: %1"), "WARN");
         return true;
     }
 
-    log(QString("Fatal error: %1").arg(error), "ERROR");
+    log(std::string("Fatal error: %1"), "ERROR");
     return false;
 }
 
-QJsonObject AgenticIterativeReasoning::adjustStrategy(const QString& reflection)
+void* AgenticIterativeReasoning::adjustStrategy(const std::string& reflection)
 {
-    QJsonObject adjustment;
+    void* adjustment;
     adjustment["reflection"] = reflection;
     adjustment["newStrategy"] = "Adjusted based on reflection";
     
@@ -465,16 +454,15 @@ QJsonObject AgenticIterativeReasoning::adjustStrategy(const QString& reflection)
     return adjustment;
 }
 
-void AgenticIterativeReasoning::log(const QString& message, const QString& level)
+void AgenticIterativeReasoning::log(const std::string& message, const std::string& level)
 {
     if (!m_verboseLogging && level != "ERROR") return;
 
-    qDebug() << QString("[AgenticIterativeReasoning %1] %2").arg(level, message);
 }
 
-QString AgenticIterativeReasoning::getReasoningExplanation() const
+std::string AgenticIterativeReasoning::getReasoningExplanation() const
 {
-    QString explanation;
+    std::string explanation;
     explanation += "REASONING TRACE:\n";
     
     for (const auto& trace : m_reasoningTrace) {
@@ -484,14 +472,15 @@ QString AgenticIterativeReasoning::getReasoningExplanation() const
     return explanation;
 }
 
-QJsonObject AgenticIterativeReasoning::getMetrics() const
+void* AgenticIterativeReasoning::getMetrics() const
 {
-    QJsonObject metrics;
+    void* metrics;
     metrics["iterations"] = m_currentIteration;
     metrics["duration_ms"] = static_cast<int>(
-        m_loopStartTime.msecsTo(QDateTime::currentDateTime())
+        m_loopStartTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime())
     );
     metrics["strategy_count"] = m_failedStrategies.size();
 
     return metrics;
 }
+

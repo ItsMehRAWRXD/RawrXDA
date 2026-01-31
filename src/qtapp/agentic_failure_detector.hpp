@@ -1,12 +1,6 @@
 // agentic_failure_detector.hpp - Detects AI model failures for auto-correction
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QStringList>
-#include <QRegularExpression>
-#include <QHash>
-#include <QMutex>
 
 // Types of failures the detector can identify
 enum class FailureType {
@@ -25,8 +19,8 @@ enum class FailureType {
 struct FailureDetection {
     FailureType type = FailureType::None;
     double confidence = 0.0;      // 0.0 to 1.0
-    QString description;
-    QString detectedPattern;
+    std::string description;
+    std::string detectedPattern;
     int position = -1;
     
     bool isFailure() const { return type != FailureType::None; }
@@ -35,36 +29,35 @@ struct FailureDetection {
         return FailureDetection{FailureType::None, 0.0, "", "", -1};
     }
     
-    static FailureDetection detected(FailureType t, double conf, const QString& desc, const QString& pattern = "") {
+    static FailureDetection detected(FailureType t, double conf, const std::string& desc, const std::string& pattern = "") {
         return FailureDetection{t, conf, desc, pattern, 0};
     }
 };
 
-class AgenticFailureDetector : public QObject
+class AgenticFailureDetector : public void
 {
-    Q_OBJECT
 
 public:
-    explicit AgenticFailureDetector(QObject* parent = nullptr);
+    explicit AgenticFailureDetector(void* parent = nullptr);
     ~AgenticFailureDetector() override;
 
     // Main detection method
-    FailureDetection detectFailure(const QString& response, const QString& prompt = "");
+    FailureDetection detectFailure(const std::string& response, const std::string& prompt = "");
     
     // Specialized detection methods
-    FailureDetection detectRefusal(const QString& response);
-    FailureDetection detectHallucination(const QString& response, const QString& context = "");
-    FailureDetection detectFormatViolation(const QString& response, const QString& expectedFormat = "");
-    FailureDetection detectInfiniteLoop(const QString& response);
-    FailureDetection detectQualityDegradation(const QString& response);
-    FailureDetection detectToolMisuse(const QString& response);
-    FailureDetection detectContextLoss(const QString& response, const QString& context = "");
-    FailureDetection detectSafetyViolation(const QString& response);
+    FailureDetection detectRefusal(const std::string& response);
+    FailureDetection detectHallucination(const std::string& response, const std::string& context = "");
+    FailureDetection detectFormatViolation(const std::string& response, const std::string& expectedFormat = "");
+    FailureDetection detectInfiniteLoop(const std::string& response);
+    FailureDetection detectQualityDegradation(const std::string& response);
+    FailureDetection detectToolMisuse(const std::string& response);
+    FailureDetection detectContextLoss(const std::string& response, const std::string& context = "");
+    FailureDetection detectSafetyViolation(const std::string& response);
     
     // Pattern management
-    void addRefusalPattern(const QString& pattern);
-    void addHallucinationPattern(const QString& pattern);
-    void addSafetyPattern(const QString& pattern);
+    void addRefusalPattern(const std::string& pattern);
+    void addHallucinationPattern(const std::string& pattern);
+    void addSafetyPattern(const std::string& pattern);
     void clearPatterns();
     
     // Threshold configuration
@@ -100,14 +93,13 @@ public:
     Stats getStatistics() const;
     void resetStatistics();
 
-signals:
-    void failureDetected(FailureType type, double confidence, const QString& description);
-    void refusalDetected(const QString& response);
-    void hallucinationDetected(const QString& response, const QString& pattern);
-    void formatViolationDetected(const QString& response);
-    void loopDetected(const QString& response);
-    void qualityIssueDetected(const QString& response);
-    void safetyViolationDetected(const QString& response);
+    void failureDetected(FailureType type, double confidence, const std::string& description);
+    void refusalDetected(const std::string& response);
+    void hallucinationDetected(const std::string& response, const std::string& pattern);
+    void formatViolationDetected(const std::string& response);
+    void loopDetected(const std::string& response);
+    void qualityIssueDetected(const std::string& response);
+    void safetyViolationDetected(const std::string& response);
 
 private:
     // Initialization
@@ -117,20 +109,20 @@ private:
     void initializeDefaultSafetyPatterns();
     
     // Helper methods
-    bool matchesAnyPattern(const QString& text, const QStringList& patterns) const;
-    double calculateResponseQuality(const QString& response) const;
-    int detectRepetitionCount(const QString& response) const;
-    bool containsToolCalls(const QString& response) const;
-    bool isValidToolCall(const QString& toolCall) const;
-    double calculateConfidence(const QString& response, FailureType type) const;
+    bool matchesAnyPattern(const std::string& text, const std::vector<std::string>& patterns) const;
+    double calculateResponseQuality(const std::string& response) const;
+    int detectRepetitionCount(const std::string& response) const;
+    bool containsToolCalls(const std::string& response) const;
+    bool isValidToolCall(const std::string& toolCall) const;
+    double calculateConfidence(const std::string& response, FailureType type) const;
     
     // Data members
-    mutable QMutex m_mutex;
+    mutable std::mutex m_mutex;
     
     // Pattern lists
-    QStringList m_refusalPatterns;
-    QStringList m_hallucinationPatterns;
-    QStringList m_safetyPatterns;
+    std::vector<std::string> m_refusalPatterns;
+    std::vector<std::string> m_hallucinationPatterns;
+    std::vector<std::string> m_safetyPatterns;
     
     // Thresholds
     double m_refusalThreshold = 0.7;
@@ -151,3 +143,4 @@ private:
     // Statistics
     Stats m_stats;
 };
+

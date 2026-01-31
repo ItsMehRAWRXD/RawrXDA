@@ -7,23 +7,8 @@
 
 #include "benchmark_menu_widget.hpp"
 #include "benchmark_runner.hpp"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
-#include <QLabel>
-#include <QDialog>
-#include <QDialogButtonBox>
-#include <QTableWidget>
-#include <QTableWidgetItem>
-#include <QDateTime>
-#include <QScrollArea>
-#include <QSplitter>
-#include <QSpinBox>
-#include <QFontMetrics>
-#include <QColor>
-#include <QTextCharFormat>
-#include <QMenuBar>
-#include <QMenu>
+
+
 #include <iostream>
 #include <algorithm>
 
@@ -31,8 +16,8 @@
 // BENCHMARK SELECTOR IMPLEMENTATION
 // ============================================================================
 
-BenchmarkSelector::BenchmarkSelector(QWidget* parent)
-    : QWidget(parent) {
+BenchmarkSelector::BenchmarkSelector(void* parent)
+    : void(parent) {
     setupUI();
 }
 
@@ -58,9 +43,9 @@ void BenchmarkSelector::setupUI() {
     };
 
     for (const auto& [testId, testDesc] : tests) {
-        auto checkbox = new QCheckBox(QString::fromStdString(testDesc), this);
+        auto checkbox = new QCheckBox(std::string::fromStdString(testDesc), this);
         checkbox->setChecked(true);  // All selected by default
-        checkbox->setObjectName(QString::fromStdString(testId));
+        checkbox->setObjectName(std::string::fromStdString(testId));
         testLayout->addWidget(checkbox);
         testCheckboxes_.push_back(checkbox);
     }
@@ -71,10 +56,8 @@ void BenchmarkSelector::setupUI() {
     auto buttonLayout = new QHBoxLayout();
     auto selectAllBtn = new QPushButton("Select All", this);
     auto deselectAllBtn = new QPushButton("Deselect All", this);
-    
-    connect(selectAllBtn, &QPushButton::clicked, this, &BenchmarkSelector::selectAll);
-    connect(deselectAllBtn, &QPushButton::clicked, this, &BenchmarkSelector::deselectAll);
-    
+// Qt connect removed
+// Qt connect removed
     buttonLayout->addWidget(selectAllBtn);
     buttonLayout->addWidget(deselectAllBtn);
     buttonLayout->addStretch();
@@ -126,7 +109,7 @@ std::vector<std::string> BenchmarkSelector::getSelectedTests() const {
     return selected;
 }
 
-QString BenchmarkSelector::getModelPath() const {
+std::string BenchmarkSelector::getModelPath() const {
     return modelCombo_->currentData().toString();
 }
 
@@ -154,31 +137,31 @@ void BenchmarkSelector::deselectAll() {
 // BENCHMARK LOG OUTPUT IMPLEMENTATION
 // ============================================================================
 
-BenchmarkLogOutput::BenchmarkLogOutput(QWidget* parent)
+BenchmarkLogOutput::BenchmarkLogOutput(void* parent)
     : QTextEdit(parent) {
     setReadOnly(true);
     setFont(QFont("Courier", 9));
     setStyleSheet("background-color: #1e1e1e; color: #d4d4d4;");
 }
 
-void BenchmarkLogOutput::logMessage(const QString& message, LogLevel level) {
+void BenchmarkLogOutput::logMessage(const std::string& message, LogLevel level) {
     formatLog(message, level);
 }
 
 void BenchmarkLogOutput::logProgress(int current, int total) {
-    QString msg = QString("Progress: %1/%2 (%3%)")
-        .arg(current)
-        .arg(total)
-        .arg(static_cast<int>(100.0 * current / total));
+    std::string msg = std::string("Progress: %1/%2 (%3%)")
+
+
+        );
     formatLog(msg, INFO);
 }
 
-void BenchmarkLogOutput::logTestResult(const QString& testName, bool passed, double latencyMs) {
-    QString status = passed ? "✅ PASS" : "❌ FAIL";
-    QString msg = QString("  %1 %2 - %3 ms")
-        .arg(status)
-        .arg(testName)
-        .arg(latencyMs, 0, 'f', 2);
+void BenchmarkLogOutput::logTestResult(const std::string& testName, bool passed, double latencyMs) {
+    std::string status = passed ? "✅ PASS" : "❌ FAIL";
+    std::string msg = std::string("  %1 %2 - %3 ms")
+
+
+        ;
     formatLog(msg, passed ? SUCCESS : WARNING);
 }
 
@@ -186,9 +169,9 @@ void BenchmarkLogOutput::clear() {
     QTextEdit::clear();
 }
 
-void BenchmarkLogOutput::formatLog(const QString& message, LogLevel level) {
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    QString levelStr = levelToString(level);
+void BenchmarkLogOutput::formatLog(const std::string& message, LogLevel level) {
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss");
+    std::string levelStr = levelToString(level);
     
     QTextCharFormat format;
     format.setForeground(QColor(levelToColor(level)));
@@ -199,17 +182,17 @@ void BenchmarkLogOutput::formatLog(const QString& message, LogLevel level) {
     
     // Insert formatted text
     setCurrentCharFormat(format);
-    insertPlainText(QString("[%1] %2 %3\n")
-        .arg(timestamp)
-        .arg(levelStr)
-        .arg(message));
+    insertPlainText(std::string("[%1] %2 %3\n")
+
+
+        );
     
     // Scroll to bottom
     moveCursor(QTextCursor::End);
     ensureCursorVisible();
 }
 
-QString BenchmarkLogOutput::levelToString(LogLevel level) {
+std::string BenchmarkLogOutput::levelToString(LogLevel level) {
     switch (level) {
         case DEBUG:   return "DEBUG";
         case INFO:    return "INFO ";
@@ -220,7 +203,7 @@ QString BenchmarkLogOutput::levelToString(LogLevel level) {
     }
 }
 
-QString BenchmarkLogOutput::levelToColor(LogLevel level) {
+std::string BenchmarkLogOutput::levelToColor(LogLevel level) {
     switch (level) {
         case DEBUG:   return "#808080";  // Gray
         case INFO:    return "#569cd6";  // Blue
@@ -237,8 +220,8 @@ QString BenchmarkLogOutput::levelToColor(LogLevel level) {
 
 // TestResult struct is now defined in benchmark_menu_widget.hpp
 
-BenchmarkResultsDisplay::BenchmarkResultsDisplay(QWidget* parent)
-    : QWidget(parent), totalTests_(0) {
+BenchmarkResultsDisplay::BenchmarkResultsDisplay(void* parent)
+    : void(parent), totalTests_(0) {
     setupUI();
 }
 
@@ -272,34 +255,30 @@ void BenchmarkResultsDisplay::updateProgress(int current) {
     progressBar_->setValue(current);
 }
 
-void BenchmarkResultsDisplay::addResult(const QString& testName, bool passed,
+void BenchmarkResultsDisplay::addResult(const std::string& testName, bool passed,
                                         double avgLatencyMs, double p95LatencyMs,
                                         double successRate) {
     TestResult result{testName, passed, avgLatencyMs, p95LatencyMs, successRate};
     results_.push_back(result);
 
     // Update display
-    QString status = passed ? "✅" : "⚠";
-    QString line = QString("%1 %2 - Avg: %3ms, P95: %4ms, Success: %5%\n")
-        .arg(status)
-        .arg(testName)
-        .arg(avgLatencyMs, 0, 'f', 2)
-        .arg(p95LatencyMs, 0, 'f', 2)
-        .arg(static_cast<int>(successRate));
+    std::string status = passed ? "✅" : "⚠";
+    std::string line = std::string("%1 %2 - Avg: %3ms, P95: %4ms, Success: %5%\n")
+
+
+        );
 
     resultsDisplay_->append(line);
 }
 
 void BenchmarkResultsDisplay::showSummary(int passed, int total, double executionTimeSec) {
-    QString divider = QString("=").repeated(60);
-    QString summary = QString("\n%1\nBENCHMARK SUMMARY\n%2\n\n"
+    std::string divider = std::string("=").repeated(60);
+    std::string summary = std::string("\n%1\nBENCHMARK SUMMARY\n%2\n\n"
         "Tests Passed:  %3/%4\n"
         "Execution Time: %5 seconds\n\n")
-        .arg(divider)
-        .arg(divider)
-        .arg(passed)
-        .arg(total)
-        .arg(executionTimeSec, 0, 'f', 2);
+
+
+        ;
 
     if (passed == total) {
         summary += "ALL TESTS PASSED!\n";
@@ -322,7 +301,7 @@ void BenchmarkResultsDisplay::reset() {
 // BENCHMARK MENU IMPLEMENTATION
 // ============================================================================
 
-BenchmarkMenu::BenchmarkMenu(QMainWindow* mainWindow)
+BenchmarkMenu::BenchmarkMenu(void* mainWindow)
     : mainWindow_(mainWindow), runnerThread_(nullptr) {
     initialize();
 }
@@ -360,24 +339,23 @@ void BenchmarkMenu::createMenu() {
     auto benchmarkSubmenu = benchmarkMenu_->addMenu("Benchmarks");
     
     auto openAction = benchmarkSubmenu->addAction("Run Benchmarks...");
-    connect(openAction, &QAction::triggered, this, &BenchmarkMenu::openBenchmarkDialog);
-
+// Qt connect removed
     benchmarkSubmenu->addSeparator();
 
     auto viewAction = benchmarkSubmenu->addAction("View Results");
-    connect(viewAction, &QAction::triggered, this, &BenchmarkMenu::viewBenchmarkResults);
+// Qt connect removed
 }
 
 void BenchmarkMenu::createDialog() {
     // Create main dialog
-    auto dialog = new QDialog(mainWindow_);
+    auto dialog = new void(mainWindow_);
     dialog->setWindowTitle("RawrXD Benchmark Suite");
     dialog->resize(1000, 700);
 
     auto mainLayout = new QHBoxLayout(dialog);
 
     // Left side: selector
-    auto leftWidget = new QWidget();
+    auto leftWidget = new void();
     auto leftLayout = new QVBoxLayout(leftWidget);
     selector_ = new BenchmarkSelector();
     leftLayout->addWidget(selector_);
@@ -397,7 +375,7 @@ void BenchmarkMenu::createDialog() {
     mainLayout->addWidget(leftScroll, 1);
 
     // Right side: output and results
-    auto rightWidget = new QWidget();
+    auto rightWidget = new void();
     auto rightLayout = new QVBoxLayout(rightWidget);
 
     rightLayout->addWidget(new QLabel("Benchmark Output:"));
@@ -411,9 +389,8 @@ void BenchmarkMenu::createDialog() {
     mainLayout->addWidget(rightWidget, 2);
 
     // Connect buttons
-    connect(runButton, &QPushButton::clicked, this, &BenchmarkMenu::runSelectedBenchmarks);
-    connect(stopButton, &QPushButton::clicked, this, &BenchmarkMenu::stopBenchmarks);
-
+// Qt connect removed
+// Qt connect removed
     dialog->setLayout(mainLayout);
 
     // Show dialog
@@ -430,7 +407,7 @@ void BenchmarkMenu::openBenchmarkDialog() {
 
 void BenchmarkMenu::runSelectedBenchmarks() {
     auto selectedTests = selector_->getSelectedTests();
-    QString modelPath = selector_->getModelPath();
+    std::string modelPath = selector_->getModelPath();
     bool gpuEnabled = selector_->isGPUEnabled();
     bool verbose = selector_->isVerbose();
 
@@ -445,15 +422,15 @@ void BenchmarkMenu::runSelectedBenchmarks() {
                           BenchmarkLogOutput::INFO);
     logOutput_->logMessage("", BenchmarkLogOutput::INFO);
 
-    logOutput_->logMessage(QString("Model: %1").arg(modelPath), 
+    logOutput_->logMessage(std::string("Model: %1"), 
                           BenchmarkLogOutput::INFO);
-    logOutput_->logMessage(QString("GPU: %1").arg(gpuEnabled ? "Enabled" : "Disabled"), 
+    logOutput_->logMessage(std::string("GPU: %1"), 
                           BenchmarkLogOutput::INFO);
-    logOutput_->logMessage(QString("Verbose: %1").arg(verbose ? "Yes" : "No"), 
+    logOutput_->logMessage(std::string("Verbose: %1"), 
                           BenchmarkLogOutput::INFO);
     logOutput_->logMessage("", BenchmarkLogOutput::INFO);
 
-    logOutput_->logMessage(QString("Running %1 tests...").arg(selectedTests.size()), 
+    logOutput_->logMessage(std::string("Running %1 tests...")), 
                           BenchmarkLogOutput::INFO);
     logOutput_->logMessage("", BenchmarkLogOutput::INFO);
 
@@ -465,7 +442,7 @@ void BenchmarkMenu::runSelectedBenchmarks() {
         const auto& testName = selectedTests[i];
         resultsDisplay_->updateProgress(i + 1);
 
-        logOutput_->logMessage(QString("Running: %1").arg(QString::fromStdString(testName)), 
+        logOutput_->logMessage(std::string("Running: %1")), 
                               BenchmarkLogOutput::INFO);
 
         // Simulate test execution (in real implementation, run actual tests)
@@ -474,8 +451,8 @@ void BenchmarkMenu::runSelectedBenchmarks() {
         double successRate = 98.5;
         bool passed = latencyMs < 100.0;
 
-        logOutput_->logTestResult(QString::fromStdString(testName), passed, latencyMs);
-        resultsDisplay_->addResult(QString::fromStdString(testName), passed, 
+        logOutput_->logTestResult(std::string::fromStdString(testName), passed, latencyMs);
+        resultsDisplay_->addResult(std::string::fromStdString(testName), passed, 
                                   latencyMs, p95LatencyMs, successRate);
     }
 
@@ -497,3 +474,4 @@ void BenchmarkMenu::stopBenchmarks() {
 void BenchmarkMenu::viewBenchmarkResults() {
     logOutput_->logMessage("Opening benchmark results...", BenchmarkLogOutput::INFO);
 }
+

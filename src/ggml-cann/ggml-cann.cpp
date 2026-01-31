@@ -38,7 +38,7 @@
 #include <cstring>
 #include <mutex>
 #include <optional>
-#include <queue>
+
 #include <unordered_set>
 
 #define GGML_COMMON_DECL_C

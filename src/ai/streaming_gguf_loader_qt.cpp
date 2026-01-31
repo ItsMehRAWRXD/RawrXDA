@@ -58,19 +58,19 @@ bool GGUFMetadataValue::AsBool() const {
 }
 
 // StreamingGGUFLoaderQt implementation
-StreamingGGUFLoaderQt::StreamingGGUFLoaderQt() {
+StreamingGGUFLoader//StreamingGGUFLoaderQt() {
 }
 
-StreamingGGUFLoaderQt::~StreamingGGUFLoaderQt() {
+StreamingGGUFLoader//~StreamingGGUFLoaderQt() {
     close();
 }
 
-void StreamingGGUFLoaderQt::setError(const std::string& error) {
+void StreamingGGUFLoader//setError(const std::string& error) {
     lastError = error;
     std::cerr << "[StreamingGGUFLoaderQt] " << error << std::endl;
 }
 
-bool StreamingGGUFLoaderQt::loadModel(const std::string& filePath) {
+bool StreamingGGUFLoader//loadModel(const std::string& filePath) {
     std::cout << "[StreamingGGUFLoaderQt] Loading model: " << filePath << std::endl;
     
     // Memory map the file
@@ -109,7 +109,7 @@ bool StreamingGGUFLoaderQt::loadModel(const std::string& filePath) {
     return true;
 }
 
-void StreamingGGUFLoaderQt::close() {
+void StreamingGGUFLoader//close() {
     mappedFile.Close();
     metadata.clear();
     tensors.clear();
@@ -118,7 +118,7 @@ void StreamingGGUFLoaderQt::close() {
     currentFileOffset = 0;
 }
 
-bool StreamingGGUFLoaderQt::parseHeader() {
+bool StreamingGGUFLoader//parseHeader() {
     // Read GGUF header (20 bytes total for v3)
     if (!readValue(header.magic, currentFileOffset)) {
         setError("Failed to read magic");
@@ -166,7 +166,7 @@ bool StreamingGGUFLoaderQt::parseHeader() {
     return true;
 }
 
-bool StreamingGGUFLoaderQt::readString(std::string& str, size_t offset, size_t& newOffset) {
+bool StreamingGGUFLoader//readString(std::string& str, size_t offset, size_t& newOffset) {
     // Read string length (uint64_t in GGUF v3)
     uint64_t length;
     if (!readValue(length, offset)) {
@@ -199,7 +199,7 @@ bool StreamingGGUFLoaderQt::readString(std::string& str, size_t offset, size_t& 
     return true;
 }
 
-bool StreamingGGUFLoaderQt::parseMetadata() {
+bool StreamingGGUFLoader//parseMetadata() {
     std::cout << "[StreamingGGUFLoaderQt] Parsing " << header.metadata_count << " metadata entries..." << std::endl;
     
     for (uint64_t i = 0; i < header.metadata_count; ++i) {
@@ -415,7 +415,7 @@ bool StreamingGGUFLoaderQt::parseMetadata() {
     return true;
 }
 
-bool StreamingGGUFLoaderQt::parseTensorInfo() {
+bool StreamingGGUFLoader//parseTensorInfo() {
     std::cout << "[StreamingGGUFLoaderQt] Parsing " << header.tensor_count << " tensor definitions..." << std::endl;
     
     tensors.reserve(header.tensor_count);
@@ -485,14 +485,14 @@ bool StreamingGGUFLoaderQt::parseTensorInfo() {
     return true;
 }
 
-void StreamingGGUFLoaderQt::buildTensorIndex() {
+void StreamingGGUFLoader//buildTensorIndex() {
     tensorNameMap.clear();
     for (size_t i = 0; i < tensors.size(); ++i) {
         tensorNameMap[tensors[i].name] = i;
     }
 }
 
-size_t StreamingGGUFLoaderQt::getTensorDataSize(GGMLType type, const std::vector<uint64_t>& shape) const {
+size_t StreamingGGUFLoader//getTensorDataSize(GGMLType type, const std::vector<uint64_t>& shape) const {
     // Calculate total elements
     size_t elements = 1;
     for (uint64_t dim : shape) {
@@ -505,7 +505,7 @@ size_t StreamingGGUFLoaderQt::getTensorDataSize(GGMLType type, const std::vector
     return elements * typeSize;
 }
 
-size_t StreamingGGUFLoaderQt::getTypeSize(GGMLType type) const {
+size_t StreamingGGUFLoader//getTypeSize(GGMLType type) const {
     switch (type) {
         case GGMLType::F32: return 4;
         case GGMLType::F16: return 2;
@@ -524,7 +524,7 @@ size_t StreamingGGUFLoaderQt::getTypeSize(GGMLType type) const {
     }
 }
 
-std::vector<uint8_t> StreamingGGUFLoaderQt::getTensorData(const std::string& tensorName) {
+std::vector<uint8_t> StreamingGGUFLoader//getTensorData(const std::string& tensorName) {
     auto it = tensorNameMap.find(tensorName);
     if (it == tensorNameMap.end()) {
         setError("Tensor not found: " + tensorName);
@@ -533,7 +533,7 @@ std::vector<uint8_t> StreamingGGUFLoaderQt::getTensorData(const std::string& ten
     return getTensorData(it->second);
 }
 
-std::vector<uint8_t> StreamingGGUFLoaderQt::getTensorData(size_t tensorIndex) {
+std::vector<uint8_t> StreamingGGUFLoader//getTensorData(size_t tensorIndex) {
     if (tensorIndex >= tensors.size()) {
         setError("Tensor index out of range: " + std::to_string(tensorIndex));
         return {};
@@ -555,7 +555,7 @@ std::vector<uint8_t> StreamingGGUFLoaderQt::getTensorData(size_t tensorIndex) {
     return data;
 }
 
-std::vector<std::vector<uint8_t>> StreamingGGUFLoaderQt::getMultipleTensors(
+std::vector<std::vector<uint8_t>> StreamingGGUFLoader//getMultipleTensors(
     const std::vector<std::string>& tensorNames) {
     std::vector<std::vector<uint8_t>> results;
     results.reserve(tensorNames.size());
@@ -567,11 +567,11 @@ std::vector<std::vector<uint8_t>> StreamingGGUFLoaderQt::getMultipleTensors(
     return results;
 }
 
-bool StreamingGGUFLoaderQt::hasMetadata(const std::string& key) const {
+bool StreamingGGUFLoader//hasMetadata(const std::string& key) const {
     return metadata.find(key) != metadata.end();
 }
 
-GGUFMetadataValue StreamingGGUFLoaderQt::getMetadata(const std::string& key) const {
+GGUFMetadataValue StreamingGGUFLoader//getMetadata(const std::string& key) const {
     auto it = metadata.find(key);
     if (it != metadata.end()) {
         return it->second;
@@ -579,7 +579,7 @@ GGUFMetadataValue StreamingGGUFLoaderQt::getMetadata(const std::string& key) con
     return GGUFMetadataValue();
 }
 
-std::vector<std::string> StreamingGGUFLoaderQt::getAllMetadataKeys() const {
+std::vector<std::string> StreamingGGUFLoader//getAllMetadataKeys() const {
     std::vector<std::string> keys;
     keys.reserve(metadata.size());
     for (const auto& pair : metadata) {
@@ -588,21 +588,21 @@ std::vector<std::string> StreamingGGUFLoaderQt::getAllMetadataKeys() const {
     return keys;
 }
 
-std::string StreamingGGUFLoaderQt::getModelName() const {
+std::string StreamingGGUFLoader//getModelName() const {
     if (hasMetadata("general.name")) {
         return getMetadata("general.name").AsString();
     }
     return "Unknown";
 }
 
-std::string StreamingGGUFLoaderQt::getModelArchitecture() const {
+std::string StreamingGGUFLoader//getModelArchitecture() const {
     if (hasMetadata("general.architecture")) {
         return getMetadata("general.architecture").AsString();
     }
     return "Unknown";
 }
 
-uint64_t StreamingGGUFLoaderQt::getModelContextLength() const {
+uint64_t StreamingGGUFLoader//getModelContextLength() const {
     if (hasMetadata("llama.context_length")) {
         return getMetadata("llama.context_length").AsUInt64();
     }
@@ -612,7 +612,7 @@ uint64_t StreamingGGUFLoaderQt::getModelContextLength() const {
     return 0;
 }
 
-StreamingGGUFLoaderQt::MemoryStats StreamingGGUFLoaderQt::getMemoryStats() const {
+StreamingGGUFLoader//MemoryStats StreamingGGUFLoader//getMemoryStats() const {
     MemoryStats stats;
     stats.totalFileSize = mappedFile.GetFileSize();
     stats.loadedTensorsCount = 0;

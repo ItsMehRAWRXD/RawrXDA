@@ -274,8 +274,8 @@ void FeedbackDialog::collectSystemInfo()
     // Screen info
     if (auto* screen = QApplication::primaryScreen()) {
         m_systemInfo["screenSize"] = std::string("%1x%2")
-            .arg(screen->size().width())
-            .arg(screen->size().height());
+            .width())
+            .height());
         m_systemInfo["screenDpi"] = screen->logicalDotsPerInch();
     }
     
@@ -312,7 +312,7 @@ void FeedbackDialog::updatePreview()
     if (m_includeSystemInfo->isChecked()) {
         preview += tr("=== System Information ===\n");
         for (auto it = m_systemInfo.begin(); it != m_systemInfo.end(); ++it) {
-            preview += std::string("%1: %2\n").arg(it.key(), it.value().toString());
+            preview += std::string("%1: %2\n"), it.value().toString());
         }
         preview += "\n";
     }
@@ -320,17 +320,17 @@ void FeedbackDialog::updatePreview()
     if (m_includeThermalData->isChecked() && !m_thermalSnapshot.empty()) {
         preview += tr("=== Thermal Data ===\n");
         for (auto it = m_thermalSnapshot.begin(); it != m_thermalSnapshot.end(); ++it) {
-            preview += std::string("%1: %2\n").arg(it.key(), it.value().toString());
+            preview += std::string("%1: %2\n"), it.value().toString());
         }
         
         if (m_entry.currentTemperature) {
-            preview += std::string("Current Temperature: %1°C\n").arg(*m_entry.currentTemperature);
+            preview += std::string("Current Temperature: %1°C\n");
         }
         if (m_entry.averageTemperature) {
-            preview += std::string("Average Temperature: %1°C\n").arg(*m_entry.averageTemperature);
+            preview += std::string("Average Temperature: %1°C\n");
         }
         if (m_entry.throttleCount) {
-            preview += std::string("Throttle Events: %1\n").arg(*m_entry.throttleCount);
+            preview += std::string("Throttle Events: %1\n");
         }
     }
     
@@ -413,8 +413,8 @@ void FeedbackDialog::onAttachFile()
         
         m_entry.attachmentPaths.append(filePath);
         m_attachmentsList->addItem(std::string("📄 %1 (%2 KB)")
-            .arg(info.fileName())
-            .arg(info.size() / 1024));
+            )
+             / 1024));
     }
 }
 
@@ -428,7 +428,7 @@ void FeedbackDialog::onAttachScreenshot()
     
     // Hide dialog temporarily for screenshot
     hide();
-    QApplication::processEvents();
+    // processEvents();
     
     // Wait for dialog to fully hide
     std::thread::msleep(500);
@@ -439,12 +439,12 @@ void FeedbackDialog::onAttachScreenshot()
         
         std::string tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
         std::string fileName = std::string("rawrxd_screenshot_%1.png")
-            .arg(// DateTime::currentDateTime().toString("yyyyMMdd_hhmmss"));
+            .toString("yyyyMMdd_hhmmss"));
         std::string fullPath = // (tempPath).filePath(fileName);
         
         if (screenshot.save(fullPath, "PNG")) {
             m_entry.screenshotPaths.append(fullPath);
-            m_attachmentsList->addItem(std::string("📷 %1").arg(fileName));
+            m_attachmentsList->addItem(std::string("📷 %1"));
         }
     }
     
@@ -457,15 +457,15 @@ void FeedbackDialog::onPreviewSubmission()
     
     std::string preview;
     preview += tr("=== Feedback Preview ===\n\n");
-    preview += std::string("ID: %1\n").arg(entry.id);
-    preview += std::string("Title: %1\n").arg(entry.title);
-    preview += std::string("Category: %1\n").arg(m_categoryCombo->currentText());
-    preview += std::string("Priority: %1\n").arg(m_priorityCombo->currentText());
-    preview += std::string("\n--- Description ---\n%1\n").arg(entry.description);
+    preview += std::string("ID: %1\n");
+    preview += std::string("Title: %1\n");
+    preview += std::string("Category: %1\n"));
+    preview += std::string("Priority: %1\n"));
+    preview += std::string("\n--- Description ---\n%1\n");
     
     if (!entry.userName.empty()) {
         preview += std::string("\n--- Contact ---\nName: %1\nEmail: %2\n")
-            .arg(entry.userName, entry.userEmail);
+            ;
     }
     
     if (entry.includedSystemInfo) {
@@ -478,7 +478,7 @@ void FeedbackDialog::onPreviewSubmission()
     
     if (!entry.attachmentPaths.empty() || !entry.screenshotPaths.empty()) {
         preview += std::string("\n--- Attachments: %1 files ---\n")
-            .arg(entry.attachmentPaths.size() + entry.screenshotPaths.size());
+             + entry.screenshotPaths.size());
     }
     
     m_previewText->setPlainText(preview);
@@ -731,9 +731,9 @@ void TelemetryConsentDialog::updateSummary()
     if (count == 0) {
         summary = tr("📵 No telemetry will be collected. RawrXD IDE works fully offline.");
     } else if (count <= 2) {
-        summary = tr("🔒 Minimal telemetry: %1 category(ies) selected.").arg(count);
+        summary = tr("🔒 Minimal telemetry: %1 category(ies) selected.");
     } else if (count <= 4) {
-        summary = tr("📊 Moderate telemetry: %1 categories selected. Thank you for helping improve RawrXD IDE!").arg(count);
+        summary = tr("📊 Moderate telemetry: %1 categories selected. Thank you for helping improve RawrXD IDE!");
     } else {
         summary = tr("🌟 Full telemetry: All categories selected. You're awesome! This really helps us improve.");
     }
@@ -918,8 +918,8 @@ void ContributionDialog::onSelectFile()
             m_entry.fileChecksum = calculateChecksum(m_entry.fileContent);
             
             m_filePathEdit->setText(filePath);
-            m_fileSizeLabel->setText(tr("Size: %1 KB").arg(m_entry.fileContent.size() / 1024));
-            m_checksumLabel->setText(tr("SHA-256: %1...").arg(m_entry.fileChecksum.left(16)));
+            m_fileSizeLabel->setText(tr("Size: %1 KB") / 1024));
+            m_checksumLabel->setText(tr("SHA-256: %1...")));
         }
     }
 }
@@ -961,7 +961,7 @@ void ContributionDialog::onPreview()
         "File: %5 (%6 KB)\n"
         "Checksum: %7\n\n"
         "Description:\n%8"
-    ).arg(m_typeCombo->currentText(),
+    ),
           m_titleEdit->text(),
           m_nameEdit->text(),
           m_licenseCombo->currentText(),
@@ -1157,7 +1157,6 @@ void FeedbackManager::sendTelemetry(const std::string& eventName, const std::any
     payload["timestamp"] = // DateTime::currentDateTime().toString(ISODate);
     
     // In production, send to telemetry endpoint
-    // // qDebug:  "Telemetry:" << eventName;
 }
 
 void FeedbackManager::sendPerformanceMetrics(const std::anyMap& metrics)
@@ -1310,12 +1309,4 @@ std::anyMap FeedbackManager::collectSystemInfo()
 }
 
 } // namespace rawrxd::feedback
-
-
-
-
-
-
-
-
 

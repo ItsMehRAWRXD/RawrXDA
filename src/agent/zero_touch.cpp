@@ -1,151 +1,168 @@
 #include "zero_touch.hpp"
 #include "auto_bootstrap.hpp"
+#include <windows.h>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <vector>
+#include <thread>
+#include <chrono>
+#include <algorithm>
+#include <map>
 
-#include <QApplication>
-#include <QByteArray>
-#include <QClipboard>
-#include <QDir>
-#include <QDirIterator>
-#include <QFile>
-#include <QFileInfo>
-#include <QFileSystemWatcher>
-#include <QStringList>
-#include <QTimer>
-#include <QDebug>
+namespace fs = std::filesystem;
 
-ZeroTouch::ZeroTouch(QObject* parent)
-    : QObject(parent) {}
+ZeroTouch::ZeroTouch() : m_running(false) {}
 
 void ZeroTouch::installAll() {
-    installFileWatcher();
     installGitHook();
-    installVoiceTrigger();
-    qDebug() << "Zero-touch triggers installed";
+    
+    // File watcher and voice trigger need a running loop or thread. 
+    // Since this is called from installAll which seemed synchronous, 
+    // but the original used QFileSystemWatcher (async) and QTimer (async event loop).
+    // We should probably spawn threads for these.
+    
+    std::thread([this]() { installFileWatcher(); }).detach();
+    std::thread([this]() { installVoiceTrigger(); }).detach();
+    
+    std::cout << "[ZeroTouch] Triggers installed" << std::endl;
 }
 
 void ZeroTouch::installFileWatcher() {
-    QString srcRoot = QDir::current().absoluteFilePath("src");
-    QDir srcDir(srcRoot);
-    if (!srcDir.exists()) {
-        qDebug() << "ZeroTouch: src directory missing, skipping file watcher";
+    fs::path srcRoot = fs::current_path() / "src";
+    if (!fs::exists(srcRoot)) {
+        std::cout << "[ZeroTouch] src directory missing, skipping file watcher" << std::endl;
         return;
     }
 
-    auto* watcher = new QFileSystemWatcher(this);
-    QStringList files;
-    QDirIterator it(srcRoot, QStringList() << "*.cpp" << "*.hpp", QDir::Files, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        files << it.next();
+    // Simple polling watcher since we can't use QFileSystemWatcher and don't want complex ReadDirectoryChangesW loop here immediately
+    std::map<std::string, fs::file_time_type> lastWriteTimes;
+    
+    for (const auto& entry : fs::recursive_directory_iterator(srcRoot)) {
+        if (entry.is_regular_file()) {
+            std::string ext = entry.path().extension().string();
+            if (ext == ".cpp" || ext == ".hpp") {
+                lastWriteTimes[entry.path().string()] = fs::last_write_time(entry);
+            }
+        }
     }
-    if (files.isEmpty()) {
-        qDebug() << "ZeroTouch: no source files found for watcher";
-        return;
+    
+    m_running = true;
+    while (m_running) {
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        
+        for (const auto& entry : fs::recursive_directory_iterator(srcRoot)) {
+            if (entry.is_regular_file()) {
+                std::string path = entry.path().string();
+                std::string ext = entry.path().extension().string();
+                if (ext != ".cpp" && ext != ".hpp") continue;
+
+                auto currentStr = fs::last_write_time(entry);
+                if (lastWriteTimes.find(path) == lastWriteTimes.end()) {
+                    lastWriteTimes[path] = currentStr;
+                    // New file
+                } else {
+                    if (lastWriteTimes[path] != currentStr) {
+                        lastWriteTimes[path] = currentStr;
+                        // Changed
+                        std::cout << "[ZeroTouch] File changed: " << path << std::endl;
+                        
+                        // Debounce/wait a bit? 
+                        // Original had 5s delay.
+                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                        
+                        std::string wish = "Auto-fix and ship after source change in " + entry.path().filename().string();
+                        _putenv_s("RAWRXD_AUTO_APPROVE", "1");
+                        AutoBootstrap::startWithWish(wish);
+                    }
+                }
+            }
+        }
     }
-
-    watcher->addPaths(files);
-
-    connect(watcher, &QFileSystemWatcher::fileChanged,
-            this, [watcher](const QString& path) {
-                if (!QFileInfo::exists(path)) {
-                    // Editors rewrite files; re-add watcher silently
-                    watcher->addPath(path);
-                }
-
-                if (!path.endsWith(".cpp") && !path.endsWith(".hpp")) {
-                    return;
-                }
-
-                QTimer::singleShot(5000, watcher, [path]() {
-                    QString wish = QStringLiteral("Auto-fix and ship after source change in %1")
-                                        .arg(QFileInfo(path).fileName());
-                    qputenv("RAWRXD_AUTO_APPROVE", "1");
-                    AutoBootstrap::startWithWish(wish);
-                });
-            });
 }
 
 void ZeroTouch::installGitHook() {
-    QDir hooksDir(QDir::current().absoluteFilePath(".git/hooks"));
-    if (!hooksDir.exists()) {
-        qDebug() << "ZeroTouch: git hooks directory missing - skip";
+    fs::path hooksDir = fs::current_path() / ".git" / "hooks";
+    if (!fs::exists(hooksDir)) {
+        std::cout << "[ZeroTouch] git hooks directory missing - skip" << std::endl;
         return;
     }
 
-    QString hookPath = hooksDir.filePath("post-commit");
-    QString agentExe = QDir::current().absoluteFilePath("build/bin/Release/RawrXD-Agent.exe");
-    agentExe.replace('\\', '/');
+    fs::path hookPath = hooksDir / "post-commit";
+    fs::path agentExe = fs::current_path() / "build" / "bin" / "Release" / "RawrXD-Agent.exe";
+    std::string agentExeStr = agentExe.string();
+    std::replace(agentExeStr.begin(), agentExeStr.end(), '\\', '/');
 
-    QString hookScript = QString(
+    std::string hookScript = 
         "#!/bin/sh\n"
         "# RawrXD zero-touch trigger\n"
         "WISH=$(git log -1 --pretty=%B | head -1)\n"
         "if echo \"$WISH\" | grep -qE \"(ship|release|fix|add)\"; then\n"
         "  export RAWRXD_WISH=\"$WISH\"\n"
-        "  %1\n"
-        "fi\n"
-    ).arg(agentExe);
+        "  " + agentExeStr + "\n"
+        "fi\n";
 
-    QFile hookFile(hookPath);
-    if (!hookFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        qWarning() << "ZeroTouch: failed to write git hook" << hookPath;
+    std::ofstream hookFile(hookPath);
+    if (!hookFile) {
+        std::cerr << "[ZeroTouch] Failed to write git hook " << hookPath << std::endl;
         return;
     }
 
-    hookFile.write(hookScript.toUtf8());
-    hookFile.setPermissions(QFile::Permissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner));
+    hookFile << hookScript;
     hookFile.close();
+    
+    // Set executable permissions? On Windows fs::permissions might work or is ignored.
+    // fs::permissions(hookPath, fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec, fs::perm_options::add);
 
-    qDebug() << "ZeroTouch: post-commit hook installed";
+    std::cout << "[ZeroTouch] post-commit hook installed" << std::endl;
 }
 
 void ZeroTouch::installVoiceTrigger() {
-    QTimer* poller = new QTimer(this);
-    poller->setInterval(2000);
-
-    connect(poller, &QTimer::timeout, this, [this]() {
-        QClipboard* clipboard = QApplication::clipboard();
-        QString spoken = clipboard->text(QClipboard::Selection);
-        if (spoken.isEmpty()) {
-            spoken = clipboard->text(QClipboard::Clipboard);
+    // Polling clipboard 
+    m_running = true;
+    while (m_running) {
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        
+        if (OpenClipboard(NULL)) {
+            HANDLE hData = GetClipboardData(CF_TEXT);
+            if (hData != NULL) {
+                char* pszText = static_cast<char*>(GlobalLock(hData));
+                if (pszText != NULL) {
+                    std::string spoken(pszText);
+                    GlobalUnlock(hData);
+                    CloseClipboard();
+                    
+                    if (!spoken.empty() && spoken != m_lastVoiceWish) {
+                         if (spoken.length() > 10 && spoken.length() < 200 &&
+                            (spoken.find("ship") != std::string::npos ||
+                             spoken.find("release") != std::string::npos ||
+                             spoken.find("fix") != std::string::npos)) { // Case sensitive now, fixing to ignore case?
+                            
+                             std::string lowerSpoken = spoken;
+                             std::transform(lowerSpoken.begin(), lowerSpoken.end(), lowerSpoken.begin(), ::tolower);
+                             
+                             if (lowerSpoken.find("ship") != std::string::npos || 
+                                 lowerSpoken.find("release") != std::string::npos || 
+                                 lowerSpoken.find("fix") != std::string::npos) {
+                                     
+                                m_lastVoiceWish = spoken;
+                                // Clear clipboard? 
+                                if (OpenClipboard(NULL)) {
+                                    EmptyClipboard();
+                                    CloseClipboard();
+                                }
+                                
+                                _putenv_s("RAWRXD_AUTO_APPROVE", "1");
+                                AutoBootstrap::startWithWish(spoken);
+                             }
+                         }
+                    }
+                } else {
+                    CloseClipboard();
+                }
+            } else {
+                CloseClipboard();
+            }
         }
-
-        if (spoken.isEmpty() || spoken == m_lastVoiceWish) {
-            return;
-        }
-
-        if (spoken.length() > 10 && spoken.length() < 200 &&
-            (spoken.contains("ship", Qt::CaseInsensitive) ||
-             spoken.contains("release", Qt::CaseInsensitive) ||
-             spoken.contains("fix", Qt::CaseInsensitive))) {
-            m_lastVoiceWish = spoken;
-            clipboard->clear(QClipboard::Selection);
-            qputenv("RAWRXD_AUTO_APPROVE", "1");
-            AutoBootstrap::startWithWish(spoken);
-        }
-    });
-
-    poller->start();
+    }
 }
-
-/*
- ---------- 4. CI cron (GitHub Actions) ----------
- File: .github/workflows/zero_human.yml (job excerpt)
- on:
-   schedule:
-     - cron: '0 2 * * *'   # 02:00 UTC nightly
-   workflow_dispatch:
- jobs:
-   self_improve:
-     runs-on: windows-latest
-     steps:
-       - uses: actions/checkout@v4
-       - name: Let IDE improve itself
-         run: |
-           set RAWRXD_WISH="Improve inference speed by 10 % without quality loss"
-           build\bin\Release\RawrXD-Agent.exe
-         env:
-           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-           CERT_PASS: ${{ secrets.CERT_PASS }}
-           AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
-           TWITTER_BEARER: ${{ secrets.TWITTER_BEARER }}
-*/

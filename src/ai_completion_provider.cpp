@@ -400,8 +400,3 @@ std::string AICompletionProvider::generateFallbackCompletion(const std::string& 
 
 } // namespace RawrXD
 
-
-
-
-
-

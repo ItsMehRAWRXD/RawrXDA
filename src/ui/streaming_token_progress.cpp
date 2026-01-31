@@ -1,22 +1,17 @@
 // Streaming Token Progress Bar - Implementation
 #include "streaming_token_progress.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QDebug>
-#include <QDateTime>
+
 
 namespace RawrXD {
 
-StreamingTokenProgressBar::StreamingTokenProgressBar(QWidget* parent)
-    : QWidget(parent)
+StreamingTokenProgressBar::StreamingTokenProgressBar(void* parent)
+    : void(parent)
 {
     setupUI();
     
     // Metrics update timer (every 100ms for smooth UI)
-    m_metricsTimer = new QTimer(this);
-    connect(m_metricsTimer, &QTimer::timeout, this, &StreamingTokenProgressBar::updateMetrics);
-    
-    qDebug() << "[StreamingTokenProgressBar] Initialized";
+    m_metricsTimer = new void*(this);
+// Qt connect removed
 }
 
 void StreamingTokenProgressBar::setupUI() {
@@ -58,11 +53,10 @@ void StreamingTokenProgressBar::setupUI() {
     m_metricsLabel->setVisible(false);
     mainLayout->addWidget(m_metricsLabel);
     
-    setStyleSheet("QWidget { background-color: transparent; }");
+    setStyleSheet("void { background-color: transparent; }");
 }
 
 void StreamingTokenProgressBar::startGeneration(int estimatedTokens) {
-    qDebug() << "[StreamingTokenProgressBar] Starting generation, estimated:" << estimatedTokens << "tokens";
     
     m_isGenerating = true;
     m_totalTokens = 0;
@@ -86,12 +80,11 @@ void StreamingTokenProgressBar::startGeneration(int estimatedTokens) {
     // Start metrics timer
     m_metricsTimer->start(100);
     
-    emit generationStarted();
+    generationStarted();
 }
 
-void StreamingTokenProgressBar::onTokenGenerated(const QString& token) {
+void StreamingTokenProgressBar::onTokenGenerated(const std::string& token) {
     if (!m_isGenerating) {
-        qWarning() << "[StreamingTokenProgressBar] Token received but not generating:" << token;
         return;
     }
     
@@ -102,7 +95,7 @@ void StreamingTokenProgressBar::onTokenGenerated(const QString& token) {
         m_progressBar->setValue(m_totalTokens);
     } else {
         m_progressBar->setValue(m_totalTokens);
-        m_progressBar->setFormat(QString("%1 tokens").arg(m_totalTokens));
+        m_progressBar->setFormat(std::string("%1 tokens"));
     }
     
     // Calculate tokens per second
@@ -112,12 +105,11 @@ void StreamingTokenProgressBar::onTokenGenerated(const QString& token) {
         m_tokensPerSecond = (m_totalTokens * 1000.0) / elapsed.count();
     }
     
-    emit tokenReceived(token, m_totalTokens);
+    tokenReceived(token, m_totalTokens);
     
     // Log every 10 tokens for performance monitoring
     if (m_totalTokens % 10 == 0) {
-        qDebug() << "[StreamingTokenProgressBar] Tokens:" << m_totalTokens 
-                 << "Rate:" << QString::number(m_tokensPerSecond, 'f', 2) << "tok/s";
+                 << "Rate:" << std::string::number(m_tokensPerSecond, 'f', 2) << "tok/s";
     }
 }
 
@@ -142,19 +134,18 @@ void StreamingTokenProgressBar::completeGeneration() {
         m_progressBar->setValue(m_totalTokens);
     }
     
-    QString completionMsg = QString("✓ Generated %1 tokens in %2 (%3 tok/s)")
-                            .arg(m_totalTokens)
-                            .arg(formatElapsedTime(elapsed))
-                            .arg(QString::number(m_tokensPerSecond, 'f', 2));
+    std::string completionMsg = std::string("✓ Generated %1 tokens in %2 (%3 tok/s)")
+                            
+                            )
+                            );
     
     m_statusLabel->setText(completionMsg);
     
-    qDebug() << "[StreamingTokenProgressBar]" << completionMsg;
     
-    emit generationCompleted(m_totalTokens, m_tokensPerSecond);
+    generationCompleted(m_totalTokens, m_tokensPerSecond);
     
     // Auto-hide metrics after 3 seconds
-    QTimer::singleShot(3000, this, [this]() {
+    void*::singleShot(3000, this, [this]() {
         if (!m_isGenerating) {
             m_metricsLabel->setVisible(false);
         }
@@ -174,7 +165,6 @@ void StreamingTokenProgressBar::reset() {
     m_statusLabel->setText("Ready");
     m_metricsLabel->setVisible(false);
     
-    qDebug() << "[StreamingTokenProgressBar] Reset to idle state";
 }
 
 void StreamingTokenProgressBar::updateMetrics() {
@@ -183,39 +173,39 @@ void StreamingTokenProgressBar::updateMetrics() {
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_startTime);
     
-    QString metricsText;
+    std::string metricsText;
     
     if (m_showTokenRate) {
-        metricsText += QString("⚡ %1 tok/s  ").arg(QString::number(m_tokensPerSecond, 'f', 2));
+        metricsText += std::string("⚡ %1 tok/s  "));
     }
     
     if (m_showElapsedTime) {
-        metricsText += QString("⏱ %1").arg(formatElapsedTime(elapsed));
+        metricsText += std::string("⏱ %1"));
     }
     
     if (m_estimatedTokens > 0 && m_tokensPerSecond > 0) {
         int remainingTokens = m_estimatedTokens - m_totalTokens;
         if (remainingTokens > 0) {
             double remainingSeconds = remainingTokens / m_tokensPerSecond;
-            metricsText += QString("  📊 ETA: %1s").arg(QString::number(remainingSeconds, 'f', 1));
+            metricsText += std::string("  📊 ETA: %1s"));
         }
     }
     
     m_metricsLabel->setText(metricsText);
 }
 
-QString StreamingTokenProgressBar::formatElapsedTime(std::chrono::milliseconds elapsed) const {
+std::string StreamingTokenProgressBar::formatElapsedTime(std::chrono::milliseconds elapsed) const {
     auto seconds = std::chrono::duration_cast<std::chrono::seconds>(elapsed);
     auto millis = elapsed - std::chrono::duration_cast<std::chrono::milliseconds>(seconds);
     
     if (seconds.count() >= 60) {
         auto minutes = std::chrono::duration_cast<std::chrono::minutes>(seconds);
         auto secs = seconds - std::chrono::duration_cast<std::chrono::seconds>(minutes);
-        return QString("%1m %2s").arg(minutes.count()).arg(secs.count());
+        return std::string("%1m %2s")));
     } else if (seconds.count() > 0) {
-        return QString("%1.%2s").arg(seconds.count()).arg(millis.count() / 100);
+        return std::string("%1.%2s")) / 100);
     } else {
-        return QString("%1ms").arg(elapsed.count());
+        return std::string("%1ms"));
     }
 }
 
@@ -228,3 +218,4 @@ void StreamingTokenProgressBar::setShowElapsedTime(bool show) {
 }
 
 } // namespace RawrXD
+

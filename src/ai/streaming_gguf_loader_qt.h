@@ -168,7 +168,7 @@ private:
 
 // Template implementation
 template<typename T>
-inline bool StreamingGGUFLoaderQt::readValue(T& value, size_t offset) {
+inline bool StreamingGGUFLoader//readValue(T& value, size_t offset) {
     const T* ptr = mappedFile.GetStruct<T>(offset);
     if (!ptr) {
         setError("Failed to read value at offset " + std::to_string(offset));

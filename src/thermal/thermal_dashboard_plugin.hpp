@@ -8,9 +8,7 @@
 
 #pragma once
 
-#include <QtPlugin>
-#include <QWidget>
-#include <QObject>
+
 #include <memory>
 #include <cstdint>
 
@@ -38,12 +36,12 @@ public:
     // Plugin lifecycle
     virtual bool initialize() = 0;
     virtual void shutdown() = 0;
-    virtual QString pluginName() const = 0;
-    virtual QString pluginVersion() const = 0;
+    virtual std::string pluginName() const = 0;
+    virtual std::string pluginVersion() const = 0;
     
     // Widget creation
-    virtual QWidget* createDashboardWidget(QWidget* parent = nullptr) = 0;
-    virtual QWidget* createCompactWidget(QWidget* parent = nullptr) = 0;  // Toolbar widget
+    virtual void* createDashboardWidget(void* parent = nullptr) = 0;
+    virtual void* createCompactWidget(void* parent = nullptr) = 0;  // Toolbar widget
     
     // Runtime control
     virtual void startMonitoring() = 0;
@@ -62,3 +60,4 @@ public:
 
 #define IThermalDashboardPlugin_iid "com.rawrxd.thermal.IThermalDashboardPlugin/1.0"
 Q_DECLARE_INTERFACE(rawrxd::thermal::IThermalDashboardPlugin, IThermalDashboardPlugin_iid)
+

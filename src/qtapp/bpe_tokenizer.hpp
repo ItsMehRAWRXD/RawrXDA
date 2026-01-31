@@ -1,13 +1,10 @@
 #pragma once
-#include <QString>
-#include <QHash>
-#include <QVector>
-#include <QPair>
+
+
 #include <vector>
 #include <cstdint>
 #include <unordered_map>
 #include <string>
-#include <QElapsedTimer>
 
 struct MetricsTimer {
     QElapsedTimer timer;
@@ -32,14 +29,14 @@ public:
      * @param mergesPath Path to merges file (BPE merge rules)
      * @return true if loaded successfully
      */
-    bool loadFromFiles(const QString& vocabPath, const QString& mergesPath);
+    bool loadFromFiles(const std::string& vocabPath, const std::string& mergesPath);
     
     /**
      * @brief Load BPE vocabulary from GGUF metadata
      * @param metadata Key-value pairs from GGUF file
      * @return true if loaded successfully
      */
-    bool loadFromGGUFMetadata(const QHash<QString, QByteArray>& metadata);
+    bool loadFromGGUFMetadata(const std::unordered_map<std::string, std::vector<uint8_t>>& metadata);
 
     bool isReverseVocabReady() const noexcept { return !reverseVocab_.empty(); }
     
@@ -48,14 +45,14 @@ public:
      * @param text Input text string
      * @return Vector of token IDs
      */
-    std::vector<int32_t> encode(const QString& text);
+    std::vector<int32_t> encode(const std::string& text);
     
     /**
      * @brief Decode token IDs back to text
      * @param tokens Vector of token IDs
      * @return Decoded text string
      */
-    QString decode(const std::vector<int32_t>& tokens);
+    std::string decode(const std::vector<int32_t>& tokens);
     
     /**
      * @brief Get vocabulary size
@@ -77,25 +74,25 @@ public:
 
 private:
     // Core BPE algorithm
-    QVector<QString> byteEncode(const QString& text);
-    QVector<QString> applyBPE(const QVector<QString>& tokens);
-    QPair<int, int> findBestMergePair(const QVector<QString>& tokens);
+    std::vector<std::string> byteEncode(const std::string& text);
+    std::vector<std::string> applyBPE(const std::vector<std::string>& tokens);
+    std::pair<int, int> findBestMergePair(const std::vector<std::string>& tokens);
     
     // Byte-level encoding helpers
-    QString byteToUnicode(uint8_t byte);
+    std::string byteToUnicode(uint8_t byte);
     uint8_t unicodeToByte(QChar ch);
     
     // Vocabulary: token string -> token ID
-    QHash<QString, int32_t> m_vocab;
+    std::unordered_map<std::string, int32_t> m_vocab;
     
     // Reverse vocabulary: token ID -> token string
-    QHash<int32_t, QString> m_reverseVocab;
+    std::unordered_map<int32_t, std::string> m_reverseVocab;
 
     // Enterprise-grade greedy longest-match vocab (piece -> id)
     std::unordered_map<std::string, uint32_t> reverseVocab_;
     
     // BPE merge rules: (token1, token2) -> priority
-    QHash<QPair<QString, QString>, int> m_merges;
+    std::unordered_map<std::pair<std::string, std::string>, int> m_merges;
     
     // Special tokens
     int32_t m_bosToken{1};      // Beginning of sequence
@@ -104,11 +101,11 @@ private:
     int32_t m_unkToken{3};      // Unknown token
     
     // Byte-level encoding map (256 bytes -> 256 unique unicode chars)
-    QHash<uint8_t, QChar> m_byteEncoder;
-    QHash<QChar, uint8_t> m_byteDecoder;
+    std::unordered_map<uint8_t, QChar> m_byteEncoder;
+    std::unordered_map<QChar, uint8_t> m_byteDecoder;
 
     // Byte-level cache for direct id → piece lookup during decode
-    QVector<QString> m_bytePieces;
+    std::vector<std::string> m_bytePieces;
 
     bool m_ready{false};
 
@@ -116,12 +113,13 @@ private:
     // Greedy longest-match tokenizer (SentencePiece-compatible)
     // Returns true on success, fills ids vector with token IDs
     bool greedyLongestMatch(const std::string& text, std::vector<uint32_t>& ids, MetricsTimer& mt) const;
-    bool greedyLongestMatch(const QString& text, std::vector<int32_t>& ids) const;
+    bool greedyLongestMatch(const std::string& text, std::vector<int32_t>& ids) const;
     
     // Precompiled regex pattern cache for text splitting
     struct TextSplit {
-        QString text;
+        std::string text;
         bool isSpecial;
     };
-    QVector<TextSplit> splitText(const QString& text);
+    std::vector<TextSplit> splitText(const std::string& text);
 };
+

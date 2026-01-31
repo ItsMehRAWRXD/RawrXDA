@@ -42,4 +42,3 @@ private:
     mutable std::mutex m_mutex;
 };
 
-

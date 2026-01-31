@@ -115,7 +115,7 @@ bool InitKVCache(int n_ctx, int n_embd, int n_head) {
 // ============================================================
 // ROPE (ROTARY POSITION EMBEDDING) IMPLEMENTATION
 // ============================================================
-static void ApplyRoPE(float* q_or_k, int head_dim, int pos, float theta_base = 10000.0f) {
+static void ApplyRoPE(float* , int head_dim, int pos, float theta_base = 10000.0f) {
     // Apply rotary position embeddings to query or key vector
     // Freq_i = theta_base^(-2i/d) for i in [0, d/2)
     
@@ -127,12 +127,12 @@ static void ApplyRoPE(float* q_or_k, int head_dim, int pos, float theta_base = 1
         float cos_angle = cosf(angle);
         float sin_angle = sinf(angle);
         
-        float x = q_or_k[i];
-        float y = q_or_k[i + 1];
+        float x = [i];
+        float y = [i + 1];
         
         // Apply rotation matrix
-        q_or_k[i] = x * cos_angle - y * sin_angle;
-        q_or_k[i + 1] = x * sin_angle + y * cos_angle;
+        [i] = x * cos_angle - y * sin_angle;
+        [i + 1] = x * sin_angle + y * cos_angle;
     }
 }
 

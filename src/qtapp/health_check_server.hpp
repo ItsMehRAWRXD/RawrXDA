@@ -1,10 +1,6 @@
 #pragma once
 
-#include <QObject>
-#include <QTcpServer>
-#include <QTcpSocket>
-#include <QString>
-#include <QElapsedTimer>
+
 #include <memory>
 #include <chrono>
 
@@ -29,11 +25,10 @@ class InferenceEngine;
  * - Resource utilization metrics
  * - Configurable via PRODUCTION_CONFIGURATION_GUIDE.md
  */
-class HealthCheckServer : public QObject {
-    Q_OBJECT
+class HealthCheckServer : public void {
 
 public:
-    explicit HealthCheckServer(InferenceEngine* engine, QObject* parent = nullptr);
+    explicit HealthCheckServer(InferenceEngine* engine, void* parent = nullptr);
     ~HealthCheckServer();
 
     bool startServer(quint16 port = 8888);  // Default from production config
@@ -53,40 +48,40 @@ public:
     
     Metrics getMetrics() const { return m_metrics; }
 
-signals:
-    void requestReceived(const QString& method, const QString& path);
-    void requestCompleted(const QString& method, const QString& path, int statusCode, double latency_ms);
-    void errorOccurred(const QString& error);
+    void requestReceived(const std::string& method, const std::string& path);
+    void requestCompleted(const std::string& method, const std::string& path, int statusCode, double latency_ms);
+    void errorOccurred(const std::string& error);
 
-private slots:
+private:
     void onNewConnection();
     void onReadyRead();
     void onDisconnected();
 
 private:
     InferenceEngine* m_engine = nullptr;
-    std::unique_ptr<QTcpServer> m_server;
+    std::unique_ptr<void*> m_server;
     Metrics m_metrics;
     std::vector<double> m_latency_samples; // For percentile calculation
     
     // HTTP response helpers
-    QString createHealthJson();
-    QString createReadyJson();
-    QString createMetricsJson();
-    QString createPrometheusMetrics();
-    QString createModelJson();
-    QString createGPUJson();
+    std::string createHealthJson();
+    std::string createReadyJson();
+    std::string createMetricsJson();
+    std::string createPrometheusMetrics();
+    std::string createModelJson();
+    std::string createGPUJson();
     
-    QString buildHttpResponse(int statusCode, const QString& contentType, 
-                            const QString& body);
+    std::string buildHttpResponse(int statusCode, const std::string& contentType, 
+                            const std::string& body);
     
-    QString extractPath(const QString& request);
-    QString extractMethod(const QString& request);
-    QString generateRequestId();
+    std::string extractPath(const std::string& request);
+    std::string extractMethod(const std::string& request);
+    std::string generateRequestId();
     
     // Production observability
-    void logRequest(const QString& requestId, const QString& method, const QString& path);
-    void logResponse(const QString& requestId, int statusCode, double latency_ms);
+    void logRequest(const std::string& requestId, const std::string& method, const std::string& path);
+    void logResponse(const std::string& requestId, int statusCode, double latency_ms);
     void updateMetrics(bool success, double latency_ms);
     void calculatePercentiles();
 };
+

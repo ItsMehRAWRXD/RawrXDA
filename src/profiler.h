@@ -1,11 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QMap>
-#include <QTimer>
+
 #include <chrono>
 #include <vector>
 #include <memory>
@@ -24,9 +19,8 @@
  *
  * Emits signals for real-time dashboard visualization.
  */
-class Profiler : public QObject
+class Profiler : public void
 {
-    Q_OBJECT
 
 public:
     /**
@@ -54,7 +48,7 @@ public:
      * @brief Constructor
      * @param parent Qt parent object
      */
-    explicit Profiler(QObject* parent = nullptr);
+    explicit Profiler(void* parent = nullptr);
     ~Profiler() override = default;
 
     /**
@@ -77,13 +71,13 @@ public:
      * @brief Mark the start of a training phase
      * @param phaseName Name of the phase (e.g., "forwardPass", "backwardPass")
      */
-    void markPhaseStart(const QString& phaseName);
+    void markPhaseStart(const std::string& phaseName);
 
     /**
      * @brief Mark the end of a training phase and record duration
      * @param phaseName Name of the phase
      */
-    void markPhaseEnd(const QString& phaseName);
+    void markPhaseEnd(const std::string& phaseName);
 
     /**
      * @brief Record batch processing with sample/token counts
@@ -121,16 +115,16 @@ public:
      * @brief Get full profiling report
      * @return JSON object with detailed metrics and statistics
      */
-    QJsonObject getProfilingReport() const;
+    void* getProfilingReport() const;
 
     /**
      * @brief Export profiling data to file
      * @param filePath Path to export to (JSON format)
      * @return true if export successful
      */
-    bool exportReport(const QString& filePath) const;
+    bool exportReport(const std::string& filePath) const;
 
-signals:
+
     /**
      * @brief Emitted when new metrics snapshot available
      * @param snapshot Current metrics snapshot
@@ -141,15 +135,15 @@ signals:
      * @brief Emitted when profiling session completes
      * @param report Full profiling report as JSON
      */
-    void profilingCompleted(const QJsonObject& report);
+    void profilingCompleted(const void*& report);
 
     /**
      * @brief Emitted for performance warnings
      * @param warning Warning message
      */
-    void performanceWarning(const QString& warning);
+    void performanceWarning(const std::string& warning);
 
-private slots:
+private:
     /**
      * @brief Periodic collection of system metrics
      */
@@ -184,7 +178,7 @@ private:
         std::vector<qint64> durations; // milliseconds
         qint64 totalMs = 0;
     };
-    QMap<QString, PhaseData> m_phases;
+    std::map<std::string, PhaseData> m_phases;
 
     // ===== Memory Tracking =====
     size_t m_totalAllocated = 0;
@@ -202,7 +196,7 @@ private:
     float m_lastGpuMemoryMB = 0.0f;
 
     // ===== Periodic Update =====
-    QTimer* m_metricsTimer = nullptr;
+    void** m_metricsTimer = nullptr;
     std::vector<ProfileSnapshot> m_snapshots; // Historical data
 
     // ===== Thresholds for Warnings =====

@@ -27,14 +27,12 @@ void CodeCompletionProvider::requestCompletions(const std::string& filePath,
                                                CompletionCallback callback)
 {
     if (!m_lspClient || !m_lspClient->isRunning()) {
-        // // qWarning:  "[Completion] LSP client not running";
         callback({});
         return;
     }
 
     const std::string uri = "file://" + filePath;
     QMetaObject::Connection conn;
-    conn =  // Signal connection removed\n// // qDebug() << "[Completion] Received" << items.size() << "completion items";
                 callback(items);
             }
         });
@@ -48,7 +46,6 @@ void CodeCompletionProvider::requestSignatureHelp(const std::string& filePath,
                                                  SignatureCallback callback)
 {
     if (!m_lspClient || !m_lspClient->isRunning()) {
-        // // qWarning:  "[Completion] LSP client not running for signature help";
         callback({});
         return;
     }
@@ -73,7 +70,6 @@ void CodeCompletionProvider::requestSignatureHelp(const std::string& filePath,
                 signatures.append(sigInfo);
             }
 
-            // // qDebug:  "[Completion] Received" << signatures.size() << "signatures";
             callback(signatures);
         });
 
@@ -177,7 +173,4 @@ std::string CodeCompletionProvider::getCompletionKindIcon(CompletionKind kind)
 }
 
 }}  // namespace RawrXD::Language
-
-
-
 

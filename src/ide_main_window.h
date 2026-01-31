@@ -2,23 +2,7 @@
 #ifndef IDE_MAIN_WINDOW_H
 #define IDE_MAIN_WINDOW_H
 
-#include <QMainWindow>
-#include <QTextEdit>
-#include <QPlainTextEdit>
-#include <QDockWidget>
-#include <QListWidget>
-#include <QTreeWidget>
-#include <QStatusBar>
-#include <QMenuBar>
-#include <QToolBar>
-#include <QLabel>
-#include <QProgressBar>
-#include <QPushButton>
-#include <QComboBox>
-#include <QSplitter>
-#include <QTabWidget>
-#include <QJsonArray>
-#include <QJsonObject>
+
 #include "autonomous_model_manager.h"
 #include "intelligent_codebase_engine.h"
 #include "autonomous_feature_engine.h"
@@ -35,14 +19,13 @@ class AutonomousSuggestionWidget;
 class SecurityAlertWidget;
 class OptimizationPanelWidget;
 
-class IDEMainWindow : public QMainWindow {
-    Q_OBJECT
+class IDEMainWindow : public void {
 
 public:
-    explicit IDEMainWindow(QWidget *parent = nullptr);
+    explicit IDEMainWindow(void *parent = nullptr);
     ~IDEMainWindow();
 
-private slots:
+private:
     // File menu actions
     void onNewFile();
     void onOpenFile();
@@ -96,26 +79,26 @@ private slots:
 
     // Error recovery slots
     void onErrorRecorded(const ErrorRecord& error);
-    void onErrorRecovered(const QString& errorId, bool success);
+    void onErrorRecovered(const std::string& errorId, bool success);
     void onSystemHealthUpdated(const SystemHealth& health);
 
     // Performance monitoring slots
     void onMetricRecorded(const MetricData& metric);
-    void onThresholdViolation(const MetricData& metric, const QString& severity);
+    void onThresholdViolation(const MetricData& metric, const std::string& severity);
     void onSnapshotCaptured(const PerformanceSnapshot& snapshot);
 
     // Model management slots
-    void onModelDownloadProgress(const QString& modelId, int percentage, qint64 speed, qint64 eta);
-    void onModelDownloadCompleted(const QString& modelId, bool success);
-    void onModelLoaded(const QString& modelId);
+    void onModelDownloadProgress(const std::string& modelId, int percentage, qint64 speed, qint64 eta);
+    void onModelDownloadCompleted(const std::string& modelId, bool success);
+    void onModelLoaded(const std::string& modelId);
 
     // Cloud execution slots
     void onHealthCheckCompleted();
 
     // Model Router widget signals
-    void onModelRouterGenerationRequested(const QString& prompt, const QString& model);
-    void onModelRouterStatusUpdated(const QString& status);
-    void onModelRouterErrorOccurred(const QString& error);
+    void onModelRouterGenerationRequested(const std::string& prompt, const std::string& model);
+    void onModelRouterStatusUpdated(const std::string& status);
+    void onModelRouterErrorOccurred(const std::string& error);
     void onModelRouterDashboardRequested();
     void onModelRouterConsoleRequested();
     void onModelRouterApiKeyEditRequested();
@@ -133,10 +116,10 @@ private:
     void loadSettings();
     void saveSettings();
 
-    QString getCurrentLanguage() const;
-    QString getCurrentFilePath() const;
+    std::string getCurrentLanguage() const;
+    std::string getCurrentFilePath() const;
     void updateStatusBar();
-    void showMessage(const QString& message, int timeout = 3000);
+    void showMessage(const std::string& message, int timeout = 3000);
 
     // Core systems
     AutonomousModelManager* modelManager;
@@ -195,11 +178,12 @@ private:
     QToolBar* aiToolbar;
 
     // State
-    QString currentFilePath;
-    QString currentLanguage;
-    QString activeModelId;
+    std::string currentFilePath;
+    std::string currentLanguage;
+    std::string activeModelId;
     bool isAnalyzing;
-    QTimer* analysisTimer;
+    void** analysisTimer;
 };
 
 #endif // IDE_MAIN_WINDOW_H
+

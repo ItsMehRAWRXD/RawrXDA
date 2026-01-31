@@ -1,25 +1,18 @@
 #pragma once
 
-#include <QObject>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QTimer>
-#include <QString>
-#include <QVector>
+
 #include <memory>
 
 // Enterprise-grade model recommendation structure
 struct ModelRecommendation {
-    QString modelId;
-    QString name;
+    std::string modelId;
+    std::string name;
     double suitabilityScore;
-    QString reasoning;
+    std::string reasoning;
     qint64 estimatedDownloadSize;
     qint64 estimatedMemoryUsage;
-    QString taskType; // "completion", "chat", "analysis"
-    QString complexityLevel; // "simple", "medium", "complex"
+    std::string taskType; // "completion", "chat", "analysis"
+    std::string complexityLevel; // "simple", "medium", "complex"
 };
 
 // System capability analysis structure
@@ -28,7 +21,7 @@ struct SystemAnalysis {
     qint64 availableDiskSpace;
     int cpuCores;
     bool hasGPU;
-    QString gpuType;
+    std::string gpuType;
     qint64 gpuMemory;
 };
 
@@ -38,73 +31,72 @@ struct SystemAnalysis {
  * Provides intelligent, autonomous model selection, download, optimization, and management.
  * Integrates with HuggingFace for model discovery and implements enterprise-grade features.
  */
-class AutonomousModelManager : public QObject {
-    Q_OBJECT
-    
+class AutonomousModelManager : public void {
+
 private:
-    QNetworkAccessManager* networkManager;
-    QTimer* autoUpdateTimer;
-    QTimer* optimizationTimer;
+    void** networkManager;
+    void** autoUpdateTimer;
+    void** optimizationTimer;
     
-    QJsonArray availableModels;
-    QJsonArray installedModels;
-    QJsonArray recommendedModels;
+    void* availableModels;
+    void* installedModels;
+    void* recommendedModels;
     
     SystemAnalysis currentSystem;
-    QString lastRecommendedModel;
+    std::string lastRecommendedModel;
     
     // Configuration
-    QString huggingFaceApiEndpoint = "https://huggingface.co/api";
-    QString modelsRepository = "models";
+    std::string huggingFaceApiEndpoint = "https://huggingface.co/api";
+    std::string modelsRepository = "models";
     int autoUpdateInterval = 3600000; // 1 hour
     int optimizationInterval = 1800000; // 30 minutes
     double minimumSuitabilityScore = 0.75;
     qint64 maxModelSize = 10LL * 1024 * 1024 * 1024; // 10GB default
     
 public:
-    explicit AutonomousModelManager(QObject* parent = nullptr);
+    explicit AutonomousModelManager(void* parent = nullptr);
     ~AutonomousModelManager();
     
     // Autonomous operations
-    ModelRecommendation autoDetectBestModel(const QString& taskType, const QString& language);
-    bool autoDownloadAndSetup(const QString& modelId);
+    ModelRecommendation autoDetectBestModel(const std::string& taskType, const std::string& language);
+    bool autoDownloadAndSetup(const std::string& modelId);
     bool autoUpdateModels();
-    bool autoOptimizeModel(const QString& modelId);
+    bool autoOptimizeModel(const std::string& modelId);
     
     // Intelligent analysis
     SystemAnalysis analyzeSystemCapabilities();
-    double calculateModelSuitability(const QJsonObject& model, const QString& taskType);
-    QJsonArray analyzeCodebaseRequirements(const QString& projectPath);
+    double calculateModelSuitability(const void*& model, const std::string& taskType);
+    void* analyzeCodebaseRequirements(const std::string& projectPath);
     
     // Model management
-    QJsonArray getAvailableModels();
-    QJsonArray getInstalledModels();
-    QJsonArray getRecommendedModels(const QString& taskType = "");
-    bool installModel(const QString& modelId);
-    bool uninstallModel(const QString& modelId);
-    bool updateModel(const QString& modelId);
+    void* getAvailableModels();
+    void* getInstalledModels();
+    void* getRecommendedModels(const std::string& taskType = "");
+    bool installModel(const std::string& modelId);
+    bool uninstallModel(const std::string& modelId);
+    bool updateModel(const std::string& modelId);
     
     // Intelligent recommendations
-    ModelRecommendation recommendModelForTask(const QString& task, const QString& language);
-    ModelRecommendation recommendModelForCodebase(const QString& projectPath);
+    ModelRecommendation recommendModelForTask(const std::string& task, const std::string& language);
+    ModelRecommendation recommendModelForCodebase(const std::string& projectPath);
     ModelRecommendation recommendModelForPerformance(qint64 targetLatency);
     
     // System integration
     bool integrateWithHuggingFace();
     bool syncWithModelRegistry();
-    bool validateModelIntegrity(const QString& modelId);
+    bool validateModelIntegrity(const std::string& modelId);
     
-signals:
+
     void modelRecommended(const ModelRecommendation& recommendation);
-    void modelInstalled(const QString& modelId);
-    void modelUpdated(const QString& modelId);
+    void modelInstalled(const std::string& modelId);
+    void modelUpdated(const std::string& modelId);
     void systemAnalysisComplete(const SystemAnalysis& analysis);
     void recommendationReady(const ModelRecommendation& recommendation);
     void autoUpdateCompleted();
-    void errorOccurred(const QString& error);
-    void downloadProgress(const QString& modelId, int percentage, qint64 speedBytesPerSec, qint64 etaSeconds);
-    void downloadCompleted(const QString& modelId, bool success);
-    void modelLoaded(const QString& modelId);
+    void errorOccurred(const std::string& error);
+    void downloadProgress(const std::string& modelId, int percentage, qint64 speedBytesPerSec, qint64 etaSeconds);
+    void downloadCompleted(const std::string& modelId, bool success);
+    void modelLoaded(const std::string& modelId);
 
 private:
     void setupNetworkManager();
@@ -112,16 +104,17 @@ private:
     void loadAvailableModels();
     void loadInstalledModels();
     void saveInstalledModels();
-    QJsonObject fetchModelInfo(const QString& modelId);
-    bool downloadModelFile(const QString& url, const QString& destination);
-    bool validateDownloadedModel(const QString& modelPath);
-    bool optimizeModelForSystem(const QString& modelId);
+    void* fetchModelInfo(const std::string& modelId);
+    bool downloadModelFile(const std::string& url, const std::string& destination);
+    bool validateDownloadedModel(const std::string& modelPath);
+    bool optimizeModelForSystem(const std::string& modelId);
     SystemAnalysis getCurrentSystemAnalysis();
     qint64 getAvailableRAM();
     qint64 getAvailableDiskSpace();
     bool detectGPU();
-    QString generateRecommendationReasoning(const QJsonObject& model, const SystemAnalysis& system, const QString& taskType);
-    qint64 estimateMemoryUsage(const QJsonObject& model);
-    QString determineComplexityLevel(const QJsonObject& model);
-    double estimateLatency(const QJsonObject& model);
+    std::string generateRecommendationReasoning(const void*& model, const SystemAnalysis& system, const std::string& taskType);
+    qint64 estimateMemoryUsage(const void*& model);
+    std::string determineComplexityLevel(const void*& model);
+    double estimateLatency(const void*& model);
 };
+

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
+
 #include <memory>
 
 class GGUFServer;
@@ -15,36 +14,35 @@ class EnhancedModelLoader;
  * Provides simplified interface to GGUFServer for test integration.
  * Handles model discovery, server startup, and HTTP inference.
  */
-class ModelLoader : public QObject {
-    Q_OBJECT
+class ModelLoader : public void {
 
 public:
-    explicit ModelLoader(QObject* parent = nullptr);
+    explicit ModelLoader(void* parent = nullptr);
     ~ModelLoader() override;
 
     // Model loading
-    bool loadModel(const QString& modelPath);
+    bool loadModel(const std::string& modelPath);
     bool initializeInference();
     bool startServer(quint16 port = 11434);
     void stopServer();
     bool isServerRunning() const;
     
     // Server info
-    QString getModelInfo() const;
+    std::string getModelInfo() const;
     quint16 getServerPort() const;
-    QString getServerUrl() const;
+    std::string getServerUrl() const;
 
-signals:
-    void modelLoaded(const QString& path);
+    void modelLoaded(const std::string& path);
     void loadingProgress(int percent);
     void serverStarted(quint16 port);
     void serverStopped();
-    void error(const QString& message);
+    void error(const std::string& message);
 
 private:
     std::unique_ptr<InferenceEngine> m_engine;
     std::unique_ptr<GGUFServer> m_server;
     std::unique_ptr<EnhancedModelLoader> m_enhancedLoader;
-    QString m_modelPath;
+    std::string m_modelPath;
     quint16 m_port = 11434;
 };
+

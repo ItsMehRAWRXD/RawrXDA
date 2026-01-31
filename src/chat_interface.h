@@ -1,15 +1,6 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
 
-class QTextEdit;
-class QLineEdit;
-class QComboBox;
-class QCheckBox;
-class QLabel;
-class QProgressBar;
-class QTimer;
 class AgenticEngine;
 class ZeroDayAgenticEngine;
 
@@ -17,10 +8,10 @@ namespace RawrXD {
     class PlanOrchestrator;
 }
 
-class ChatInterface : public QWidget {
-    Q_OBJECT
+class ChatInterface : public void {
+
 public:
-    explicit ChatInterface(QWidget* parent = nullptr);
+    explicit ChatInterface(void* parent = nullptr);
     
     // Two-phase initialization: call after QApplication exists
     void initialize();
@@ -29,18 +20,18 @@ public:
     void setPlanOrchestrator(RawrXD::PlanOrchestrator* orchestrator) { m_planOrchestrator = orchestrator; }
     void setZeroDayAgent(ZeroDayAgenticEngine* agent) { m_zeroDayAgent = agent; }
     
-    void addMessage(const QString& sender, const QString& message);
-    QString selectedModel() const;
+    void addMessage(const std::string& sender, const std::string& message);
+    std::string selectedModel() const;
     bool isMaxMode() const;
-    void sendMessageProgrammatically(const QString& message);
+    void sendMessageProgrammatically(const std::string& message);
     
     // Agent tool commands
     // Updated to accept optional arguments string for future extensions
-    void executeAgentCommand(const QString& command, const QString& args = "");
-    bool isAgentCommand(const QString& message) const;
+    void executeAgentCommand(const std::string& command, const std::string& args = "");
+    bool isAgentCommand(const std::string& message) const;
     
-public slots:
-    void displayResponse(const QString& response);
+public:
+    void displayResponse(const std::string& response);
     void focusInput();
     void sendMessage();
     void refreshModels();
@@ -53,17 +44,17 @@ public slots:
     void onTokenGenerated(int delta);
     void hideProgress();
     
-signals:
-    void messageSent(const QString& message);
-    void modelSelected(const QString& modelPath);
-    void model2Selected(const QString& modelPath);
+
+    void messageSent(const std::string& message);
+    void modelSelected(const std::string& modelPath);
+    void model2Selected(const std::string& modelPath);
     void maxModeChanged(bool enabled);
-    void messageReceived(const QString& reply);
+    void messageReceived(const std::string& reply);
     
 private:
     void loadAvailableModels();
     void loadAvailableModelsForSecond();
-    QString resolveGgufPath(const QString& modelName);  // Resolve Ollama model name to GGUF file
+    std::string resolveGgufPath(const std::string& modelName);  // Resolve Ollama model name to GGUF file
     
     QTextEdit* message_history_;
     QLineEdit* message_input_;
@@ -73,12 +64,13 @@ private:
     QLabel* statusLabel_;
     bool maxMode_;
     bool m_busy = false;  // Prevent re-entrancy during inference
-    QString m_lastPrompt;  // Store last user message
+    std::string m_lastPrompt;  // Store last user message
     AgenticEngine* m_agenticEngine = nullptr;
     RawrXD::PlanOrchestrator* m_planOrchestrator = nullptr;
     ZeroDayAgenticEngine* m_zeroDayAgent = nullptr;
     
     // Phase 2: Streaming token progress bar
     QProgressBar* m_tokenProgress{nullptr};
-    QTimer* m_hideTimer{nullptr};
+    void** m_hideTimer{nullptr};
 };
+

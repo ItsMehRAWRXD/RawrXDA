@@ -1,14 +1,10 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QProcess>
+
 #include <vector>
 #include <map>
 
-class DistributedTrainer : public QObject {
-    Q_OBJECT
+class DistributedTrainer : public void {
 
 public:
     enum class Backend {
@@ -24,37 +20,37 @@ public:
         PipelineParallel
     };
 
-    explicit DistributedTrainer(QObject* parent = nullptr);
+    explicit DistributedTrainer(void* parent = nullptr);
     ~DistributedTrainer();
 
     // Initialization
-    bool initialize(Backend backend, ParallelismType parallelism, const QJsonObject& config);
+    bool initialize(Backend backend, ParallelismType parallelism, const void*& config);
 
     // Training control
-    bool startTraining(const QJsonObject& trainingConfig);
+    bool startTraining(const void*& trainingConfig);
     bool stopTraining();
     bool pauseTraining();
     bool resumeTraining();
 
     // Node management
-    bool addNode(const QJsonObject& nodeConfig);
-    bool removeNode(const QString& nodeId);
-    QJsonObject getNodeStatus(const QString& nodeId) const;
+    bool addNode(const void*& nodeConfig);
+    bool removeNode(const std::string& nodeId);
+    void* getNodeStatus(const std::string& nodeId) const;
 
     // Monitoring and metrics
-    QJsonObject getTrainingStatus() const;
-    QJsonObject getPerformanceMetrics() const;
+    void* getTrainingStatus() const;
+    void* getPerformanceMetrics() const;
 
     // Fault tolerance
     bool enableCheckpointing(int interval);
     bool recoverFromFailure();
 
-signals:
+
     void trainingStarted();
     void trainingStopped();
     void trainingProgress(int epoch, float loss, float accuracy);
-    void nodeAdded(const QString& nodeId);
-    void nodeRemoved(const QString& nodeId);
+    void nodeAdded(const std::string& nodeId);
+    void nodeRemoved(const std::string& nodeId);
     void allReduceCompleted(int size);  // Add this signal
 
 private:
@@ -65,8 +61,9 @@ private:
     
     Backend m_backend;
     ParallelismType m_parallelism;
-    QJsonObject m_config;
-    std::map<QString, QJsonObject> m_nodes;
+    void* m_config;
+    std::map<std::string, void*> m_nodes;
     bool m_trainingActive;
     bool m_initialized;  // Add this member variable
 };
+

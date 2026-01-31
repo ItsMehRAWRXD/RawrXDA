@@ -101,5 +101,3 @@ void MetricAnomalyDetector::anomalyDetected(const std::string& metric, double va
     (void)zScore;
 }
 
-
-

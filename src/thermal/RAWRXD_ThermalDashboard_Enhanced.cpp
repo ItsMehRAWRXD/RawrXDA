@@ -9,12 +9,7 @@
  */
 
 #include "RAWRXD_ThermalDashboard_Enhanced.hpp"
-#include <QApplication>
-#include <QStyle>
-#include <QPen>
-#include <QBrush>
-#include <QDebug>
-#include <QHeaderView>
+
 
 namespace rawrxd::thermal {
 
@@ -22,8 +17,8 @@ namespace rawrxd::thermal {
 // ThermalDashboardEnhanced Implementation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-ThermalDashboardEnhanced::ThermalDashboardEnhanced(QWidget* parent)
-    : QWidget(parent)
+ThermalDashboardEnhanced::ThermalDashboardEnhanced(void* parent)
+    : void(parent)
     , m_tabWidget(nullptr)
     , m_tempChartView(nullptr)
     , m_tempChart(nullptr)
@@ -31,7 +26,7 @@ ThermalDashboardEnhanced::ThermalDashboardEnhanced(QWidget* parent)
     , m_loadChart(nullptr)
     , m_predChartView(nullptr)
     , m_predChart(nullptr)
-    , m_startTime(QDateTime::currentMSecsSinceEpoch())
+    , m_startTime(std::chrono::system_clock::time_point::currentMSecsSinceEpoch())
     , m_manualThrottleActive(false)
     , m_driveOverrideActive(false)
     , m_selectedDriveOverride(-1)
@@ -126,7 +121,7 @@ void ThermalDashboardEnhanced::setupUI()
 
 void ThermalDashboardEnhanced::setupMainTab()
 {
-    auto* mainWidget = new QWidget();
+    auto* mainWidget = new void();
     auto* layout = new QVBoxLayout(mainWidget);
     
     // ═══════════════════════════════════════════════════════════════════════════
@@ -186,7 +181,7 @@ void ThermalDashboardEnhanced::setupMainTab()
         
         m_nvmeWidgets[i].tempLabel = new QLabel("--°C", nvmeGroup);
         m_nvmeWidgets[i].tempLabel->setMinimumWidth(60);
-        m_nvmeWidgets[i].tempLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        m_nvmeWidgets[i].tempLabel->setAlignment(//AlignRight | //AlignVCenter);
         m_nvmeWidgets[i].tempLabel->setStyleSheet("color: #0f0; font-weight: bold;");
         
         m_nvmeWidgets[i].headroomLabel = new QLabel("(--°C)", nvmeGroup);
@@ -226,7 +221,7 @@ void ThermalDashboardEnhanced::setupMainTab()
     
     m_gpuTempLabel = new QLabel("--°C", systemGroup);
     m_gpuTempLabel->setMinimumWidth(60);
-    m_gpuTempLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_gpuTempLabel->setAlignment(//AlignRight | //AlignVCenter);
     m_gpuTempLabel->setStyleSheet("color: #ff6666; font-weight: bold;");
     
     gpuRow->addWidget(gpuLabel);
@@ -249,7 +244,7 @@ void ThermalDashboardEnhanced::setupMainTab()
     
     m_cpuTempLabel = new QLabel("--°C", systemGroup);
     m_cpuTempLabel->setMinimumWidth(60);
-    m_cpuTempLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_cpuTempLabel->setAlignment(//AlignRight | //AlignVCenter);
     m_cpuTempLabel->setStyleSheet("color: #6699ff; font-weight: bold;");
     
     cpuRow->addWidget(cpuLabel);
@@ -303,7 +298,7 @@ void ThermalDashboardEnhanced::setupMainTab()
     
     m_throttleLabel = new QLabel("0%", predGroup);
     m_throttleLabel->setMinimumWidth(50);
-    m_throttleLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_throttleLabel->setAlignment(//AlignRight | //AlignVCenter);
     m_throttleLabel->setStyleSheet("color: #0f0; font-weight: bold;");
     
     throttleRow->addWidget(throttleLbl);
@@ -349,8 +344,7 @@ void ThermalDashboardEnhanced::setupMainTab()
             background: #00cc66;
         }
     )");
-    connect(m_applyButton, &QPushButton::clicked, this, &ThermalDashboardEnhanced::onBurstModeApply);
-    
+// Qt connect removed
     modeRow->addWidget(modeLbl);
     modeRow->addWidget(m_burstModeCombo, 1);
     modeRow->addWidget(m_applyButton);
@@ -364,7 +358,7 @@ void ThermalDashboardEnhanced::setupMainTab()
 
 void ThermalDashboardEnhanced::setupChartsTab()
 {
-    auto* chartsWidget = new QWidget();
+    auto* chartsWidget = new void();
     auto* layout = new QVBoxLayout(chartsWidget);
     
     createTemperatureChart();
@@ -399,7 +393,7 @@ void ThermalDashboardEnhanced::createTemperatureChart()
     
     for (int i = 0; i < 5; ++i) {
         m_nvmeTempSeries[i] = new QLineSeries();
-        m_nvmeTempSeries[i]->setName(QString("NVMe%1").arg(i));
+        m_nvmeTempSeries[i]->setName(std::string("NVMe%1"));
         m_nvmeTempSeries[i]->setColor(nvmeColors[i]);
         m_tempChart->addSeries(m_nvmeTempSeries[i]);
     }
@@ -418,7 +412,7 @@ void ThermalDashboardEnhanced::createTemperatureChart()
     m_predictedTempSeries = new QLineSeries();
     m_predictedTempSeries->setName("Predicted");
     QPen predPen(QColor(255, 255, 0));
-    predPen.setStyle(Qt::DashLine);
+    predPen.setStyle(//DashLine);
     predPen.setWidth(2);
     m_predictedTempSeries->setPen(predPen);
     m_tempChart->addSeries(m_predictedTempSeries);
@@ -436,13 +430,13 @@ void ThermalDashboardEnhanced::createTemperatureChart()
     m_tempXAxis->setTitleText("Time (seconds)");
     m_tempXAxis->setRange(0, 300);
     m_tempXAxis->setLabelFormat("%d");
-    m_tempChart->addAxis(m_tempXAxis, Qt::AlignBottom);
+    m_tempChart->addAxis(m_tempXAxis, //AlignBottom);
     
     m_tempYAxis = new QValueAxis();
     m_tempYAxis->setTitleText("Temperature (°C)");
     m_tempYAxis->setRange(30, 90);
     m_tempYAxis->setLabelFormat("%d");
-    m_tempChart->addAxis(m_tempYAxis, Qt::AlignLeft);
+    m_tempChart->addAxis(m_tempYAxis, //AlignLeft);
     
     // Attach series to axes
     for (int i = 0; i < 5; ++i) {
@@ -494,7 +488,7 @@ void ThermalDashboardEnhanced::createPredictionChart()
 
 void ThermalDashboardEnhanced::setupConfigTab()
 {
-    auto* configWidget = new QWidget();
+    auto* configWidget = new void();
     auto* layout = new QVBoxLayout(configWidget);
     
     auto* group = new QGroupBox("Predictive Throttling Configuration", configWidget);
@@ -546,8 +540,7 @@ void ThermalDashboardEnhanced::setupConfigTab()
     m_predictionHorizonSpinBox->setRange(1000, 30000);
     m_predictionHorizonSpinBox->setSingleStep(500);
     m_predictionHorizonSpinBox->setValue(5000);
-    connect(m_predictionHorizonSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &ThermalDashboardEnhanced::onPredictionHorizonChanged);
+// Qt connect removed
     horizonRow->addWidget(m_predictionHorizonSpinBox);
     formLayout->addLayout(horizonRow);
     
@@ -564,7 +557,7 @@ void ThermalDashboardEnhanced::setupConfigTab()
 
 void ThermalDashboardEnhanced::setupControlsTab()
 {
-    auto* controlsWidget = new QWidget();
+    auto* controlsWidget = new void();
     auto* layout = new QVBoxLayout(controlsWidget);
     
     // Manual throttle control
@@ -572,20 +565,17 @@ void ThermalDashboardEnhanced::setupControlsTab()
     auto* throttleLayout = new QVBoxLayout(throttleGroup);
     
     m_manualThrottleEnabled = new QCheckBox("Enable Manual Throttle");
-    connect(m_manualThrottleEnabled, &QCheckBox::toggled, [this](bool checked) {
-        m_manualThrottleActive = checked;
+// Qt connect removed
         m_manualThrottleSlider->setEnabled(checked);
     });
     throttleLayout->addWidget(m_manualThrottleEnabled);
     
     auto* sliderRow = new QHBoxLayout();
-    m_manualThrottleSlider = new QSlider(Qt::Horizontal);
+    m_manualThrottleSlider = new QSlider(//Horizontal);
     m_manualThrottleSlider->setRange(0, 100);
     m_manualThrottleSlider->setValue(0);
     m_manualThrottleSlider->setEnabled(false);
-    connect(m_manualThrottleSlider, &QSlider::valueChanged,
-            this, &ThermalDashboardEnhanced::onThrottleSliderChanged);
-    
+// Qt connect removed
     m_manualThrottleLabel = new QLabel("0%");
     m_manualThrottleLabel->setMinimumWidth(50);
     
@@ -600,8 +590,7 @@ void ThermalDashboardEnhanced::setupControlsTab()
     auto* driveLayout = new QVBoxLayout(driveGroup);
     
     m_driveOverrideCheck = new QCheckBox("Override Automatic Drive Selection");
-    connect(m_driveOverrideCheck, &QCheckBox::toggled,
-            this, &ThermalDashboardEnhanced::onDriveOverrideToggled);
+// Qt connect removed
     driveLayout->addWidget(m_driveOverrideCheck);
     
     m_driveOverrideCombo = new QComboBox();
@@ -611,8 +600,7 @@ void ThermalDashboardEnhanced::setupControlsTab()
     m_driveOverrideCombo->addItem("NVMe3 (Samsung 990 PRO 4TB)", 3);
     m_driveOverrideCombo->addItem("NVMe4 (Crucial T705 4TB)", 4);
     m_driveOverrideCombo->setEnabled(false);
-    connect(m_driveOverrideCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &ThermalDashboardEnhanced::onManualDriveSelected);
+// Qt connect removed
     driveLayout->addWidget(m_driveOverrideCombo);
     
     // Drive selection table
@@ -716,9 +704,9 @@ void ThermalDashboardEnhanced::onThermalUpdate(const ThermalSnapshot& snapshot)
     updateLoadBalancerDisplay();
     
     // Status
-    m_statusLabel->setText(QString("✓ Last update: %1 | %2 drives active")
-        .arg(QDateTime::fromMSecsSinceEpoch(snapshot.timestamp).toString("hh:mm:ss"))
-        .arg(snapshot.activeDriveCount));
+    m_statusLabel->setText(std::string("✓ Last update: %1 | %2 drives active")
+        .toString("hh:mm:ss"))
+        );
 }
 
 void ThermalDashboardEnhanced::refreshCharts()
@@ -751,7 +739,7 @@ void ThermalDashboardEnhanced::clearHistory()
     if (m_slopeSeries) m_slopeSeries->clear();
     if (m_confidenceSeries) m_confidenceSeries->clear();
     
-    m_startTime = QDateTime::currentMSecsSinceEpoch();
+    m_startTime = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -766,18 +754,18 @@ void ThermalDashboardEnhanced::onBurstModeApply()
         m_sharedMemory->setBurstMode(static_cast<BurstMode>(mode));
     }
     
-    emit burstModeChanged(mode);
+    burstModeChanged(mode);
 }
 
 void ThermalDashboardEnhanced::onThrottleSliderChanged(int value)
 {
-    m_manualThrottleLabel->setText(QString("%1%").arg(value));
+    m_manualThrottleLabel->setText(std::string("%1%"));
     
     if (m_manualThrottleActive) {
         if (m_sharedMemory && m_sharedMemory->isOpen()) {
             m_sharedMemory->setThrottlePercent(value);
         }
-        emit throttleAdjusted(value);
+        throttleAdjusted(value);
     }
 }
 
@@ -795,7 +783,7 @@ void ThermalDashboardEnhanced::onManualDriveSelected(int index)
 {
     if (m_driveOverrideActive) {
         m_selectedDriveOverride = index;
-        emit driveSelected(index);
+        driveSelected(index);
     }
 }
 
@@ -816,7 +804,7 @@ void ThermalDashboardEnhanced::updatePredictedPath()
     if (!prediction.isValid) return;
     
     // Get current time relative to start
-    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    qint64 now = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     double currentTimeSec = (now - m_startTime) / 1000.0;
     double currentTemp = m_predictor->getLastReading();
     
@@ -837,40 +825,40 @@ void ThermalDashboardEnhanced::updateNVMeDisplay(int index, float temp)
     if (index < 0 || index >= 5) return;
     
     m_nvmeWidgets[index].tempBar->setValue(static_cast<int>(temp));
-    m_nvmeWidgets[index].tempLabel->setText(QString("%1°C").arg(temp, 0, 'f', 1));
+    m_nvmeWidgets[index].tempLabel->setText(std::string("%1°C"));
     m_nvmeWidgets[index].tempLabel->setStyleSheet(
-        QString("color: %1; font-weight: bold;").arg(getTempColor(temp)));
+        std::string("color: %1; font-weight: bold;")));
     
     // Calculate headroom
     double headroom = 70.0 - temp;  // Assuming 70°C max
-    m_nvmeWidgets[index].headroomLabel->setText(QString("(%1°C)").arg(headroom, 0, 'f', 1));
+    m_nvmeWidgets[index].headroomLabel->setText(std::string("(%1°C)"));
     
-    QString headroomColor = (headroom > 15) ? "#00ff00" : (headroom > 5) ? "#ffcc00" : "#ff3333";
-    m_nvmeWidgets[index].headroomLabel->setStyleSheet(QString("color: %1;").arg(headroomColor));
+    std::string headroomColor = (headroom > 15) ? "#00ff00" : (headroom > 5) ? "#ffcc00" : "#ff3333";
+    m_nvmeWidgets[index].headroomLabel->setStyleSheet(std::string("color: %1;"));
 }
 
 void ThermalDashboardEnhanced::updateGPUDisplay(float temp)
 {
     m_gpuTempBar->setValue(static_cast<int>(temp));
-    m_gpuTempLabel->setText(QString("%1°C").arg(temp, 0, 'f', 1));
+    m_gpuTempLabel->setText(std::string("%1°C"));
     m_gpuTempLabel->setStyleSheet(
-        QString("color: %1; font-weight: bold;").arg(getTempColor(temp)));
+        std::string("color: %1; font-weight: bold;")));
 }
 
 void ThermalDashboardEnhanced::updateCPUDisplay(float temp)
 {
     m_cpuTempBar->setValue(static_cast<int>(temp));
-    m_cpuTempLabel->setText(QString("%1°C").arg(temp, 0, 'f', 1));
+    m_cpuTempLabel->setText(std::string("%1°C"));
     m_cpuTempLabel->setStyleSheet(
-        QString("color: %1; font-weight: bold;").arg(getTempColor(temp)));
+        std::string("color: %1; font-weight: bold;")));
 }
 
 void ThermalDashboardEnhanced::updateThrottleDisplay(int throttle)
 {
     m_throttleBar->setValue(throttle);
-    m_throttleLabel->setText(QString("%1%").arg(throttle));
+    m_throttleLabel->setText(std::string("%1%"));
     
-    QString color;
+    std::string color;
     if (throttle == 0) {
         color = "#00ff00";
     } else if (throttle < 20) {
@@ -880,26 +868,26 @@ void ThermalDashboardEnhanced::updateThrottleDisplay(int throttle)
     } else {
         color = "#ff3333";
     }
-    m_throttleLabel->setStyleSheet(QString("color: %1; font-weight: bold;").arg(color));
+    m_throttleLabel->setStyleSheet(std::string("color: %1; font-weight: bold;"));
 }
 
 void ThermalDashboardEnhanced::updatePredictionDisplay()
 {
     PredictionResult prediction = m_predictor->getPrediction();
     
-    QString statusText = QString("📊 Prediction: %1°C (±%2°C) | Confidence: %3% | Slope: %4°C/s")
-        .arg(prediction.predictedTemp, 0, 'f', 1)
-        .arg((1.0 - prediction.confidence) * 5.0, 0, 'f', 1)  // Uncertainty estimate
-        .arg(prediction.confidence * 100.0, 0, 'f', 0)
-        .arg(prediction.slope, 0, 'f', 2);
+    std::string statusText = std::string("📊 Prediction: %1°C (±%2°C) | Confidence: %3% | Slope: %4°C/s")
+        
+         * 5.0, 0, 'f', 1)  // Uncertainty estimate
+        
+        ;
     
     m_predictionStatusLabel->setText(statusText);
     
     // Update action label
     ThrottleAction action = m_predictor->getRecommendedAction(prediction.predictedTemp);
-    m_throttleActionLabel->setText(QString("⚡ Action: %1").arg(getThrottleActionString(action)));
+    m_throttleActionLabel->setText(std::string("⚡ Action: %1")));
     m_throttleActionLabel->setStyleSheet(
-        QString("color: %1; font-weight: bold;").arg(getThrottleActionColor(action).name()));
+        std::string("color: %1; font-weight: bold;").name()));
 }
 
 void ThermalDashboardEnhanced::updateLoadBalancerDisplay()
@@ -911,10 +899,10 @@ void ThermalDashboardEnhanced::updateLoadBalancerDisplay()
         auto info = m_loadBalancer->getDriveInfo(i);
         if (!info.has_value()) continue;
         
-        m_driveSelectionTable->setItem(i, 0, new QTableWidgetItem(QString("NVMe%1").arg(i)));
-        m_driveSelectionTable->setItem(i, 1, new QTableWidgetItem(QString("%1°C").arg(info->currentTemp, 0, 'f', 1)));
-        m_driveSelectionTable->setItem(i, 2, new QTableWidgetItem(QString("%1°C").arg(info->thermalHeadroom, 0, 'f', 1)));
-        m_driveSelectionTable->setItem(i, 3, new QTableWidgetItem(QString("%1").arg(result.allScores[i], 0, 'f', 3)));
+        m_driveSelectionTable->setItem(i, 0, new QTableWidgetItem(std::string("NVMe%1")));
+        m_driveSelectionTable->setItem(i, 1, new QTableWidgetItem(std::string("%1°C")));
+        m_driveSelectionTable->setItem(i, 2, new QTableWidgetItem(std::string("%1°C")));
+        m_driveSelectionTable->setItem(i, 3, new QTableWidgetItem(std::string("%1")));
         
         // Highlight selected drive
         if (i == result.selectedDrive) {
@@ -927,7 +915,7 @@ void ThermalDashboardEnhanced::updateLoadBalancerDisplay()
 
 void ThermalDashboardEnhanced::updateTemperatureChart(const ThermalSnapshot& snapshot)
 {
-    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    qint64 now = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     double timeSec = (now - m_startTime) / 1000.0;
     
     // Update NVMe series
@@ -978,7 +966,7 @@ void ThermalDashboardEnhanced::updateTemperatureChart(const ThermalSnapshot& sna
     }
 }
 
-QString ThermalDashboardEnhanced::getTempColor(float temp)
+std::string ThermalDashboardEnhanced::getTempColor(float temp)
 {
     if (temp < 55) return "#00ff00";
     if (temp < 65) return "#88ff00";
@@ -987,7 +975,7 @@ QString ThermalDashboardEnhanced::getTempColor(float temp)
     return "#ff3333";
 }
 
-QString ThermalDashboardEnhanced::getThrottleActionString(ThrottleAction action)
+std::string ThermalDashboardEnhanced::getThrottleActionString(ThrottleAction action)
 {
     switch (action) {
         case ThrottleAction::NONE:      return "NONE";
@@ -1015,7 +1003,7 @@ QColor ThermalDashboardEnhanced::getThrottleActionColor(ThrottleAction action)
 // ThermalCompactWidgetEnhanced Implementation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-ThermalCompactWidgetEnhanced::ThermalCompactWidgetEnhanced(QWidget* parent)
+ThermalCompactWidgetEnhanced::ThermalCompactWidgetEnhanced(void* parent)
     : QFrame(parent)
 {
     setupUI();
@@ -1077,7 +1065,7 @@ void ThermalCompactWidgetEnhanced::setupUI()
             background: #555;
         }
     )");
-    connect(m_expandButton, &QPushButton::clicked, this, &ThermalCompactWidgetEnhanced::expandRequested);
+// Qt connect removed
     layout->addWidget(m_expandButton);
     
     setFixedHeight(36);
@@ -1092,9 +1080,9 @@ void ThermalCompactWidgetEnhanced::onThermalUpdate(const ThermalSnapshot& snapsh
     }
     maxTemp = qMax(maxTemp, snapshot.cpuTemp);
     
-    QString color = (maxTemp < 65) ? "#00ff00" : (maxTemp < 75) ? "#ffcc00" : "#ff3333";
-    m_maxTempLabel->setText(QString("🌡️ %1°C").arg(maxTemp, 0, 'f', 0));
-    m_maxTempLabel->setStyleSheet(QString("color: %1; font-weight: bold;").arg(color));
+    std::string color = (maxTemp < 65) ? "#00ff00" : (maxTemp < 75) ? "#ffcc00" : "#ff3333";
+    m_maxTempLabel->setText(std::string("🌡️ %1°C"));
+    m_maxTempLabel->setStyleSheet(std::string("color: %1; font-weight: bold;"));
     
     // Throttle icon
     if (snapshot.currentThrottle == 0) {
@@ -1102,23 +1090,24 @@ void ThermalCompactWidgetEnhanced::onThermalUpdate(const ThermalSnapshot& snapsh
         m_throttleIcon->setToolTip("Full speed");
     } else if (snapshot.currentThrottle < 30) {
         m_throttleIcon->setText("🔋");
-        m_throttleIcon->setToolTip(QString("Light throttle: %1%").arg(snapshot.currentThrottle));
+        m_throttleIcon->setToolTip(std::string("Light throttle: %1%"));
     } else {
         m_throttleIcon->setText("🐢");
-        m_throttleIcon->setToolTip(QString("Heavy throttle: %1%").arg(snapshot.currentThrottle));
+        m_throttleIcon->setToolTip(std::string("Heavy throttle: %1%"));
     }
 }
 
 void ThermalCompactWidgetEnhanced::onPredictionUpdate(const PredictionResult& prediction)
 {
-    QString color = (prediction.predictedTemp < 65) ? "#ffff00" : 
+    std::string color = (prediction.predictedTemp < 65) ? "#ffff00" : 
                     (prediction.predictedTemp < 75) ? "#ff8800" : "#ff3333";
     
-    m_predictedTempLabel->setText(QString("→ %1°C").arg(prediction.predictedTemp, 0, 'f', 0));
-    m_predictedTempLabel->setStyleSheet(QString("color: %1; font-weight: bold;").arg(color));
-    m_predictedTempLabel->setToolTip(QString("Predicted in %1ms (confidence: %2%)")
-        .arg(prediction.predictionHorizonMs)
-        .arg(prediction.confidence * 100, 0, 'f', 0));
+    m_predictedTempLabel->setText(std::string("→ %1°C"));
+    m_predictedTempLabel->setStyleSheet(std::string("color: %1; font-weight: bold;"));
+    m_predictedTempLabel->setToolTip(std::string("Predicted in %1ms (confidence: %2%)")
+        
+        );
 }
 
 } // namespace rawrxd::thermal
+

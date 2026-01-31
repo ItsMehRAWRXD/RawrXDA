@@ -1,14 +1,8 @@
 #include "ai_chat_panel.hpp"
-#include <QDateTime>
-#include <QScrollBar>
-#include <QSyntaxHighlighter>
-#include <QTextDocument>
-#include <QHBoxLayout>
-#include <QFont>
-#include <QFontMetrics>
 
-AIChatPanel::AIChatPanel(QWidget* parent)
-    : QWidget(parent)
+
+AIChatPanel::AIChatPanel(void* parent)
+    : void(parent)
 {
     // Lightweight constructor - defers Qt widget creation to initialize()
 }
@@ -39,10 +33,10 @@ void AIChatPanel::setupUI()
     // Messages scroll area
     m_scrollArea = new QScrollArea(this);
     m_scrollArea->setWidgetResizable(true);
-    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_scrollArea->setHorizontalScrollBarPolicy(//ScrollBarAlwaysOff);
     m_scrollArea->setFrameStyle(QFrame::NoFrame);
     
-    m_messagesContainer = new QWidget();
+    m_messagesContainer = new void();
     m_messagesLayout = new QVBoxLayout(m_messagesContainer);
     m_messagesLayout->setContentsMargins(10, 10, 10, 10);
     m_messagesLayout->setSpacing(10);
@@ -51,7 +45,7 @@ void AIChatPanel::setupUI()
     m_scrollArea->setWidget(m_messagesContainer);
     
     // Input area
-    QWidget* inputContainer = new QWidget(this);
+    void* inputContainer = new void(this);
     QHBoxLayout* inputLayout = new QHBoxLayout(inputContainer);
     inputLayout->setContentsMargins(10, 8, 10, 8);
     inputLayout->setSpacing(8);
@@ -59,17 +53,11 @@ void AIChatPanel::setupUI()
     m_inputField = new QLineEdit(inputContainer);
     m_inputField->setPlaceholderText("Ask AI anything...");
     m_inputField->setMinimumHeight(32);
-    
-    connect(m_inputField, &QLineEdit::returnPressed,
-            this, &AIChatPanel::onSendClicked);
-    
+// Qt connect removed
     m_sendButton = new QPushButton("Send", inputContainer);
     m_sendButton->setMinimumWidth(70);
     m_sendButton->setMaximumHeight(32);
-    
-    connect(m_sendButton, &QPushButton::clicked,
-            this, &AIChatPanel::onSendClicked);
-    
+// Qt connect removed
     inputLayout->addWidget(m_inputField);
     inputLayout->addWidget(m_sendButton);
     
@@ -82,23 +70,21 @@ void AIChatPanel::setupUI()
     setLayout(mainLayout);
 }
 
-QWidget* AIChatPanel::createQuickActions()
+void* AIChatPanel::createQuickActions()
 {
-    QWidget* container = new QWidget(this);
+    void* container = new void(this);
     QHBoxLayout* layout = new QHBoxLayout(container);
     layout->setContentsMargins(10, 5, 10, 5);
     layout->setSpacing(5);
     
-    QStringList actions = {"Explain", "Fix", "Refactor", "Document", "Test"};
+    std::vector<std::string> actions = {"Explain", "Fix", "Refactor", "Document", "Test"};
     
-    for (const QString& action : actions) {
+    for (const std::string& action : actions) {
         QPushButton* btn = new QPushButton(action, container);
         btn->setMaximumHeight(26);
         btn->setFlat(true);
-        btn->setCursor(Qt::PointingHandCursor);
-        
-        connect(btn, &QPushButton::clicked, this, [this, action]() {
-            onQuickActionClicked(action);
+        btn->setCursor(//PointingHandCursor);
+// Qt connect removed
         });
         
         layout->addWidget(btn);
@@ -111,7 +97,7 @@ QWidget* AIChatPanel::createQuickActions()
 
 void AIChatPanel::applyDarkTheme()
 {
-    QString styleSheet = R"(
+    std::string styleSheet = R"(
         AIChatPanel {
             background-color: #1e1e1e;
         }
@@ -168,32 +154,32 @@ void AIChatPanel::applyDarkTheme()
     setStyleSheet(styleSheet);
 }
 
-void AIChatPanel::addUserMessage(const QString& message)
+void AIChatPanel::addUserMessage(const std::string& message)
 {
     Message msg;
     msg.role = Message::User;
     msg.content = message;
-    msg.timestamp = QDateTime::currentDateTime().toString("hh:mm");
+    msg.timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm");
     
     m_messages.append(msg);
     
-    QWidget* bubble = createMessageBubble(msg);
+    void* bubble = createMessageBubble(msg);
     m_messagesLayout->insertWidget(m_messagesLayout->count() - 1, bubble);
     
     scrollToBottom();
 }
 
-void AIChatPanel::addAssistantMessage(const QString& message, bool streaming)
+void AIChatPanel::addAssistantMessage(const std::string& message, bool streaming)
 {
     Message msg;
     msg.role = Message::Assistant;
     msg.content = message;
-    msg.timestamp = QDateTime::currentDateTime().toString("hh:mm");
+    msg.timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm");
     msg.isStreaming = streaming;
     
     m_messages.append(msg);
     
-    QWidget* bubble = createMessageBubble(msg);
+    void* bubble = createMessageBubble(msg);
     m_messagesLayout->insertWidget(m_messagesLayout->count() - 1, bubble);
     
     if (streaming) {
@@ -204,7 +190,7 @@ void AIChatPanel::addAssistantMessage(const QString& message, bool streaming)
     scrollToBottom();
 }
 
-void AIChatPanel::updateStreamingMessage(const QString& content)
+void AIChatPanel::updateStreamingMessage(const std::string& content)
 {
     if (m_streamingText) {
         m_streamingText->setPlainText(content);
@@ -218,9 +204,9 @@ void AIChatPanel::finishStreaming()
     m_streamingText = nullptr;
 }
 
-QWidget* AIChatPanel::createMessageBubble(const Message& msg)
+void* AIChatPanel::createMessageBubble(const Message& msg)
 {
-    QWidget* container = new QWidget();
+    void* container = new void();
     QVBoxLayout* layout = new QVBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(4);
@@ -234,9 +220,9 @@ QWidget* AIChatPanel::createMessageBubble(const Message& msg)
     roleFont.setBold(true);
     roleLabel->setFont(roleFont);
     
-    QString roleLabelStyle = QString(
+    std::string roleLabelStyle = std::string(
         "QLabel { background-color: transparent; color: %1; border: none; }"
-    ).arg(msg.role == Message::User ? "#569cd6" : "#4ec9b0");
+    );
     roleLabel->setStyleSheet(roleLabelStyle);
     
     // Message content
@@ -244,8 +230,8 @@ QWidget* AIChatPanel::createMessageBubble(const Message& msg)
     contentEdit->setPlainText(msg.content);
     contentEdit->setReadOnly(true);
     contentEdit->setFrameStyle(QFrame::NoFrame);
-    contentEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    contentEdit->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    contentEdit->setVerticalScrollBarPolicy(//ScrollBarAlwaysOff);
+    contentEdit->setHorizontalScrollBarPolicy(//ScrollBarAlwaysOff);
     
     // Calculate height based on content
     QFontMetrics fm(contentEdit->font());
@@ -254,9 +240,9 @@ QWidget* AIChatPanel::createMessageBubble(const Message& msg)
     int estimatedHeight = numLines * lineHeight + 20;
     contentEdit->setMaximumHeight(std::min(estimatedHeight, 300));
     
-    QString bubbleStyle = QString(
+    std::string bubbleStyle = std::string(
         "QTextEdit { background-color: %1; border-radius: 8px; padding: 8px; }"
-    ).arg(msg.role == Message::User ? "#2d2d30" : "#1a1a1a");
+    );
     contentEdit->setStyleSheet(bubbleStyle);
     
     // Timestamp
@@ -268,28 +254,28 @@ QWidget* AIChatPanel::createMessageBubble(const Message& msg)
     
     layout->addWidget(roleLabel);
     layout->addWidget(contentEdit);
-    layout->addWidget(timeLabel, 0, msg.role == Message::User ? Qt::AlignRight : Qt::AlignLeft);
+    layout->addWidget(timeLabel, 0, msg.role == Message::User ? //AlignRight : //AlignLeft);
     
     return container;
 }
 
 void AIChatPanel::onSendClicked()
 {
-    QString message = m_inputField->text().trimmed();
+    std::string message = m_inputField->text().trimmed();
     if (message.isEmpty()) return;
     
     addUserMessage(message);
     m_inputField->clear();
     
-    emit messageSubmitted(message);
+    messageSubmitted(message);
 }
 
-void AIChatPanel::onQuickActionClicked(const QString& action)
+void AIChatPanel::onQuickActionClicked(const std::string& action)
 {
-    emit quickActionTriggered(action, m_contextCode);
+    quickActionTriggered(action, m_contextCode);
 }
 
-void AIChatPanel::setContext(const QString& code, const QString& filePath)
+void AIChatPanel::setContext(const std::string& code, const std::string& filePath)
 {
     m_contextCode = code;
     m_contextFilePath = filePath;
@@ -316,3 +302,4 @@ void AIChatPanel::scrollToBottom()
     QScrollBar* scrollBar = m_scrollArea->verticalScrollBar();
     scrollBar->setValue(scrollBar->maximum());
 }
+

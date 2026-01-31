@@ -1,13 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QJsonObject>
-#include <QObject>
-#include <QMutex>
-#include <QTimer>
-#include <QVector>
-#include <QPair>
-#include <QDateTime>
+
 #include <chrono>
 #include <memory>
 
@@ -24,11 +17,10 @@
  * - Configuration-driven retention policies
  * - Support for data anonymization
  */
-class ZeroRetentionManager : public QObject {
-    Q_OBJECT
+class ZeroRetentionManager : public void {
 
 public:
-    explicit ZeroRetentionManager(QObject* parent = nullptr);
+    explicit ZeroRetentionManager(void* parent = nullptr);
     ~ZeroRetentionManager() override;
 
     // Configuration
@@ -40,8 +32,8 @@ public:
         int cleanupIntervalMinutes = 15;
         bool enableSecureWipe = true;      // Overwrite data before deletion
         bool enableAuditLog = true;
-        QString auditLogPath;
-        QString dataDirectory;
+        std::string auditLogPath;
+        std::string dataDirectory;
         bool enableMetrics = true;
     };
 
@@ -59,27 +51,27 @@ public:
 
     // Data entry tracking
     struct DataEntry {
-        QString id;
-        QString path;
+        std::string id;
+        std::string path;
         DataClass classification;
-        QDateTime createdAt;
-        QDateTime expiresAt;
+        std::chrono::system_clock::time_point createdAt;
+        std::chrono::system_clock::time_point expiresAt;
         qint64 sizeBytes;
         bool isAnonymized;
     };
 
     // Core functionality
-    QString registerData(const QString& path, DataClass classification, int customTtlMinutes = -1);
-    bool unregisterData(const QString& id);
-    bool deleteData(const QString& id, bool immediate = false);
-    bool anonymizeData(const QString& id);
+    std::string registerData(const std::string& path, DataClass classification, int customTtlMinutes = -1);
+    bool unregisterData(const std::string& id);
+    bool deleteData(const std::string& id, bool immediate = false);
+    bool anonymizeData(const std::string& id);
     
     void cleanupExpiredData();
-    void cleanupSession(const QString& sessionId);
+    void cleanupSession(const std::string& sessionId);
     void purgeAllData(DataClass classification = Session);
     
-    QVector<DataEntry> getTrackedData(DataClass classification = Session) const;
-    DataEntry getDataEntry(const QString& id) const;
+    std::vector<DataEntry> getTrackedData(DataClass classification = Session) const;
+    DataEntry getDataEntry(const std::string& id) const;
 
     // Metrics
     struct Metrics {
@@ -96,39 +88,39 @@ public:
     Metrics getMetrics() const;
     void resetMetrics();
 
-signals:
-    void dataDeleted(const QString& id, qint64 sizeBytes);
-    void dataExpired(const QString& id);
-    void sessionCleaned(const QString& sessionId);
+    void dataDeleted(const std::string& id, qint64 sizeBytes);
+    void dataExpired(const std::string& id);
+    void sessionCleaned(const std::string& sessionId);
     void cleanupCompleted(int itemsDeleted, qint64 bytesDeleted);
-    void errorOccurred(const QString& error);
+    void errorOccurred(const std::string& error);
     void metricsUpdated(const Metrics& metrics);
 
-private slots:
+private:
     void performAutoCleanup();
 
 private:
     // Configuration
     Config m_config;
-    mutable QMutex m_configMutex;
+    mutable std::mutex m_configMutex;
 
     // Data tracking
-    QMap<QString, DataEntry> m_trackedData;
-    mutable QMutex m_dataMutex;
+    std::map<std::string, DataEntry> m_trackedData;
+    mutable std::mutex m_dataMutex;
 
     // Metrics
     Metrics m_metrics;
-    mutable QMutex m_metricsMutex;
+    mutable std::mutex m_metricsMutex;
 
     // Auto cleanup timer
-    QTimer* m_cleanupTimer;
+    void** m_cleanupTimer;
 
     // Helper methods
-    void logStructured(const QString& level, const QString& message, const QJsonObject& context = QJsonObject());
-    void recordLatency(const QString& operation, const std::chrono::milliseconds& duration);
-    void logAudit(const QString& action, const QJsonObject& details);
-    bool secureDelete(const QString& path);
-    QString generateDataId();
+    void logStructured(const std::string& level, const std::string& message, const void*& context = void*());
+    void recordLatency(const std::string& operation, const std::chrono::milliseconds& duration);
+    void logAudit(const std::string& action, const void*& details);
+    bool secureDelete(const std::string& path);
+    std::string generateDataId();
     bool isExpired(const DataEntry& entry) const;
-    QDateTime calculateExpiry(DataClass classification, int customTtlMinutes) const;
+    std::chrono::system_clock::time_point calculateExpiry(DataClass classification, int customTtlMinutes) const;
 };
+

@@ -3,19 +3,12 @@
 #include "agentic_engine.h"
 #include "qtapp/inference_engine.hpp"
 #include "model_trainer.h"
-#include <QFile>
-#include <QTextStream>
-#include <QFileInfo>
-#include <QDateTime>
-#include <QRegularExpression>
-#include <QJsonDocument>
-#include <QDebug>
 
-AgenticExecutor::AgenticExecutor(QObject* parent)
-    : QObject(parent)
-    , m_currentWorkingDirectory(QDir::currentPath())
+
+AgenticExecutor::AgenticExecutor(void* parent)
+    : void(parent)
+    , m_currentWorkingDirectory(std::filesystem::path::currentPath())
 {
-    qInfo() << "[AgenticExecutor] Initialized - Real execution engine ready";
 }
 
 AgenticExecutor::~AgenticExecutor()
@@ -30,71 +23,61 @@ void AgenticExecutor::initialize(AgenticEngine* engine, InferenceEngine* inferen
     m_modelTrainer = std::make_unique<ModelTrainer>(this);
     
     // Connect training signals
-    connect(m_modelTrainer.get(), &ModelTrainer::epochStarted, 
-            this, [this](int epoch, int totalEpochs) {
-                // Emit progress with estimated values
-                emit trainingProgress(epoch, totalEpochs, 0.0f, 0.0f);
+// Qt connect removed
             });
-    connect(m_modelTrainer.get(), &ModelTrainer::trainingCompleted, 
-            this, &AgenticExecutor::trainingCompleted);
-    connect(m_modelTrainer.get(), &ModelTrainer::trainingError, 
-            this, &AgenticExecutor::errorOccurred);
-    connect(m_modelTrainer.get(), &ModelTrainer::logMessage, 
-            this, &AgenticExecutor::logMessage);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     if (m_inferenceEngine) {
         m_modelTrainer->initialize(m_inferenceEngine, m_inferenceEngine->modelPath());
     }
     
-    qInfo() << "[AgenticExecutor] Connected to AgenticEngine, InferenceEngine, and ModelTrainer";
 }
 
 // ========== MAIN AGENTIC EXECUTION ==========
 
-QJsonObject AgenticExecutor::executeUserRequest(const QString& request)
+void* AgenticExecutor::executeUserRequest(const std::string& request)
 {
-    qInfo() << "[AgenticExecutor] Executing user request:" << request;
-    emit logMessage("Starting execution: " + request);
+    logMessage("Starting execution: " + request);
 
-    QJsonObject result;
+    void* result;
     result["request"] = request;
-    result["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    result["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
 
     try {
         // Step 1: Decompose the task using the model
-        QJsonArray steps = decomposeTask(request);
+        void* steps = decomposeTask(request);
         result["steps"] = steps;
         result["total_steps"] = steps.size();
 
         // Step 2: Execute each step
-        QJsonArray executionResults;
+        void* executionResults;
         int successCount = 0;
 
         for (int i = 0; i < steps.size(); ++i) {
-            QJsonObject step = steps[i].toObject();
-            emit stepStarted(step["description"].toString());
-            emit taskProgress(i + 1, steps.size());
+            void* step = steps[i].toObject();
+            stepStarted(step["description"].toString());
+            taskProgress(i + 1, steps.size());
 
             bool success = executeStep(step);
             
-            QJsonObject stepResult;
+            void* stepResult;
             stepResult["step_number"] = i + 1;
             stepResult["description"] = step["description"];
             stepResult["success"] = success;
-            stepResult["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+            stepResult["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
 
             executionResults.append(stepResult);
 
             if (success) {
                 successCount++;
-                emit stepCompleted(step["description"].toString(), true);
+                stepCompleted(step["description"].toString(), true);
             } else {
-                emit stepCompleted(step["description"].toString(), false);
+                stepCompleted(step["description"].toString(), false);
                 
                 // Try to recover from failure
                 if (m_currentRetryCount < m_maxRetries) {
-                    qWarning() << "[AgenticExecutor] Step failed, attempting retry...";
-                    QJsonObject retryResult = retryWithCorrection(step);
+                    void* retryResult = retryWithCorrection(step);
                     if (retryResult["success"].toBool()) {
                         successCount++;
                         stepResult["recovered"] = true;
@@ -108,30 +91,28 @@ QJsonObject AgenticExecutor::executeUserRequest(const QString& request)
         result["success_rate"] = (successCount * 100.0) / steps.size();
         result["overall_success"] = (successCount == steps.size());
 
-        emit executionComplete(result);
+        executionComplete(result);
         return result;
 
     } catch (const std::exception& e) {
-        result["error"] = QString("Execution failed: %1").arg(e.what());
+        result["error"] = std::string("Execution failed: %1"));
         result["overall_success"] = false;
-        emit errorOccurred(result["error"].toString());
+        errorOccurred(result["error"].toString());
         return result;
     }
 }
 
 // ========== TASK DECOMPOSITION ==========
 
-QJsonArray AgenticExecutor::decomposeTask(const QString& goal)
+void* AgenticExecutor::decomposeTask(const std::string& goal)
 {
     if (!m_agenticEngine) {
-        qWarning() << "[AgenticExecutor] Cannot decompose - no engine";
-        return QJsonArray();
+        return void*();
     }
 
-    qInfo() << "[AgenticExecutor] Decomposing task:" << goal;
 
     // Build decomposition prompt for the model
-    QString prompt = QString(
+    std::string prompt = std::string(
         "You are an expert software architect and project planner.\n\n"
         "User Request: %1\n\n"
         "Break this down into detailed, actionable steps. For each step, provide:\n"
@@ -156,149 +137,141 @@ QJsonArray AgenticExecutor::decomposeTask(const QString& goal)
         "]\n\n"
         "Be specific and include all necessary files, compilation commands, and verification steps.\n"
         "For model training tasks, include dataset path, model path, and training configuration."
-    ).arg(goal);
+    );
 
     // Get plan from model
-    QString response = m_agenticEngine->generateResponse(prompt);
+    std::string response = m_agenticEngine->generateResponse(prompt);
     
     // Extract JSON from response
-    QRegularExpression jsonRegex("\\[\\s*\\{.*\\}\\s*\\]", QRegularExpression::DotMatchesEverythingOption);
-    QRegularExpressionMatch match = jsonRegex.match(response);
+    std::regex jsonRegex("\\[\\s*\\{.*\\}\\s*\\]", std::regex::DotMatchesEverythingOption);
+    std::smatch match = jsonRegex.match(response);
     
     if (match.hasMatch()) {
-        QString jsonStr = match.captured(0);
-        QJsonDocument doc = QJsonDocument::fromJson(jsonStr.toUtf8());
+        std::string jsonStr = match"";
+        void* doc = void*::fromJson(jsonStr.toUtf8());
         if (doc.isArray()) {
-            qInfo() << "[AgenticExecutor] Task decomposed into" << doc.array().size() << "steps";
             return doc.array();
         }
     }
 
     // Fallback: create basic plan
-    qWarning() << "[AgenticExecutor] Could not parse model response, creating fallback plan";
-    QJsonArray fallback;
-    QJsonObject step;
+    void* fallback;
+    void* step;
     step["step"] = 1;
     step["action"] = "analyze";
     step["description"] = "Analyze user request: " + goal;
-    step["params"] = QJsonObject();
+    step["params"] = void*();
     fallback.append(step);
     return fallback;
 }
 
 // ========== STEP EXECUTION ==========
 
-bool AgenticExecutor::executeStep(const QJsonObject& step)
+bool AgenticExecutor::executeStep(const void*& step)
 {
-    QString action = step["action"].toString();
-    QJsonObject params = step["params"].toObject();
-    QString description = step["description"].toString();
+    std::string action = step["action"].toString();
+    void* params = step["params"].toObject();
+    std::string description = step["description"].toString();
 
-    qInfo() << "[AgenticExecutor] Executing step:" << description;
-    emit logMessage("Step: " + description);
+    logMessage("Step: " + description);
 
     try {
         if (action == "create_directory") {
-            QString path = params["path"].toString();
+            std::string path = params["path"].toString();
             return createDirectory(path);
         }
         else if (action == "create_file") {
-            QString path = params["path"].toString();
-            QString content = params["content"].toString();
+            std::string path = params["path"].toString();
+            std::string content = params["content"].toString();
             
             // If content not in params, generate it
             if (content.isEmpty() && params.contains("specification")) {
-                QJsonObject codeGen = generateCode(params["specification"].toString());
+                void* codeGen = generateCode(params["specification"].toString());
                 content = codeGen["code"].toString();
             }
             
             return createFile(path, content);
         }
         else if (action == "compile") {
-            QString projectPath = params["project_path"].toString();
-            QString compiler = params.contains("compiler") ? params["compiler"].toString() : "g++";
-            QJsonObject compileResult = compileProject(projectPath, compiler);
+            std::string projectPath = params["project_path"].toString();
+            std::string compiler = params.contains("compiler") ? params["compiler"].toString() : "g++";
+            void* compileResult = compileProject(projectPath, compiler);
             return compileResult["success"].toBool();
         }
         else if (action == "run") {
-            QString executable = params["executable"].toString();
-            QStringList args = params["args"].toVariant().toStringList();
-            QJsonObject runResult = runExecutable(executable, args);
+            std::string executable = params["executable"].toString();
+            std::vector<std::string> args = params["args"].toVariant().toStringList();
+            void* runResult = runExecutable(executable, args);
             return runResult["success"].toBool();
         }
         else if (action == "generate_code") {
-            QString spec = params["specification"].toString();
-            QString outputPath = params["output_path"].toString();
-            QJsonObject codeGen = generateCode(spec);
+            std::string spec = params["specification"].toString();
+            std::string outputPath = params["output_path"].toString();
+            void* codeGen = generateCode(spec);
             if (codeGen.contains("code")) {
                 return writeFile(outputPath, codeGen["code"].toString());
             }
             return false;
         }
         else if (action == "tool_call") {
-            QString toolName = params["tool_name"].toString();
-            QJsonObject toolParams = params["tool_params"].toObject();
-            QJsonObject toolResult = callTool(toolName, toolParams);
+            std::string toolName = params["tool_name"].toString();
+            void* toolParams = params["tool_params"].toObject();
+            void* toolResult = callTool(toolName, toolParams);
             return toolResult["success"].toBool();
         }
         else {
-            qWarning() << "[AgenticExecutor] Unknown action:" << action;
             return false;
         }
 
     } catch (const std::exception& e) {
-        qCritical() << "[AgenticExecutor] Step execution failed:" << e.what();
-        emit errorOccurred(QString("Step failed: %1").arg(e.what()));
+        errorOccurred(std::string("Step failed: %1")));
         return false;
     }
 }
 
-bool AgenticExecutor::verifyStepCompletion(const QJsonObject& step, const QString& result)
+bool AgenticExecutor::verifyStepCompletion(const void*& step, const std::string& result)
 {
-    QString criteria = step["criteria"].toString();
+    std::string criteria = step["criteria"].toString();
     if (criteria.isEmpty()) return true;
 
     // Use model to verify completion
-    QString prompt = QString(
+    std::string prompt = std::string(
         "Verification Task:\n"
         "Expected: %1\n"
         "Actual Result: %2\n\n"
         "Does the actual result meet the success criteria? Answer with ONLY 'yes' or 'no'."
-    ).arg(criteria, result);
+    );
 
-    QString verification = m_agenticEngine->generateResponse(prompt);
+    std::string verification = m_agenticEngine->generateResponse(prompt);
     return verification.toLower().contains("yes");
 }
 
 // ========== FILE SYSTEM OPERATIONS (REAL) ==========
 
-bool AgenticExecutor::createDirectory(const QString& path)
+bool AgenticExecutor::createDirectory(const std::string& path)
 {
-    QDir dir;
+    std::filesystem::path dir;
     bool success = dir.mkpath(path);
     
     if (success) {
-        qInfo() << "[AgenticExecutor] Created directory:" << path;
-        emit logMessage("Created directory: " + path);
+        logMessage("Created directory: " + path);
         addToMemory("last_created_dir", path);
     } else {
-        qWarning() << "[AgenticExecutor] Failed to create directory:" << path;
     }
     
     return success;
 }
 
-bool AgenticExecutor::createFile(const QString& path, const QString& content)
+bool AgenticExecutor::createFile(const std::string& path, const std::string& content)
 {
     // Ensure parent directory exists
-    QFileInfo fileInfo(path);
+    std::filesystem::path fileInfo(path);
     if (!fileInfo.dir().exists()) {
         createDirectory(fileInfo.dir().absolutePath());
     }
 
-    QFile file(path);
+    std::fstream file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "[AgenticExecutor] Cannot open file for writing:" << path;
         return false;
     }
 
@@ -306,110 +279,102 @@ bool AgenticExecutor::createFile(const QString& path, const QString& content)
     out << content;
     file.close();
 
-    qInfo() << "[AgenticExecutor] Created file:" << path << "(" << content.length() << "bytes)";
-    emit logMessage("Created file: " + path);
+    logMessage("Created file: " + path);
     addToMemory("last_created_file", path);
     
     return true;
 }
 
-bool AgenticExecutor::writeFile(const QString& path, const QString& content)
+bool AgenticExecutor::writeFile(const std::string& path, const std::string& content)
 {
     return createFile(path, content); // Same implementation
 }
 
-QString AgenticExecutor::readFile(const QString& path)
+std::string AgenticExecutor::readFile(const std::string& path)
 {
-    QFile file(path);
+    std::fstream file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "[AgenticExecutor] Cannot read file:" << path;
-        return QString();
+        return std::string();
     }
 
     QTextStream in(&file);
-    QString content = in.readAll();
+    std::string content = in.readAll();
     file.close();
 
-    qInfo() << "[AgenticExecutor] Read file:" << path << "(" << content.length() << "bytes)";
     return content;
 }
 
-bool AgenticExecutor::deleteFile(const QString& path)
+bool AgenticExecutor::deleteFile(const std::string& path)
 {
-    QFile file(path);
+    std::fstream file(path);
     bool success = file.remove();
     
     if (success) {
-        qInfo() << "[AgenticExecutor] Deleted file:" << path;
     }
     
     return success;
 }
 
-bool AgenticExecutor::deleteDirectory(const QString& path)
+bool AgenticExecutor::deleteDirectory(const std::string& path)
 {
-    QDir dir(path);
+    std::filesystem::path dir(path);
     bool success = dir.removeRecursively();
     
     if (success) {
-        qInfo() << "[AgenticExecutor] Deleted directory:" << path;
     }
     
     return success;
 }
 
-QStringList AgenticExecutor::listDirectory(const QString& path)
+std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path)
 {
-    QDir dir(path);
-    QStringList entries = dir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
+    std::filesystem::path dir(path);
+    std::vector<std::string> entries = dir.entryList(std::filesystem::path::AllEntries | std::filesystem::path::NoDotAndDotDot);
     
-    qInfo() << "[AgenticExecutor] Listed directory:" << path << "(" << entries.size() << "items)";
     return entries;
 }
 
 // ========== COMPILER INTEGRATION (REAL) ==========
 
-QJsonObject AgenticExecutor::compileProject(const QString& projectPath, const QString& compiler)
+void* AgenticExecutor::compileProject(const std::string& projectPath, const std::string& compiler)
 {
-    QJsonObject result;
+    void* result;
     result["compiler"] = compiler;
     result["project_path"] = projectPath;
 
-    qInfo() << "[AgenticExecutor] Compiling project:" << projectPath << "with" << compiler;
-    emit logMessage("Compiling with " + compiler + "...");
+    logMessage("Compiling with " + compiler + "...");
 
     QProcess process;
     process.setWorkingDirectory(projectPath);
 
     // Detect build system and compile
-    if (QFile::exists(projectPath + "/CMakeLists.txt")) {
+    if (std::fstream::exists(projectPath + "/CMakeLists.txt")) {
         // CMake project
-        emit logMessage("Detected CMake project");
+        logMessage("Detected CMake project");
         
         // Create build directory
         createDirectory(projectPath + "/build");
         process.setWorkingDirectory(projectPath + "/build");
         
         // Run cmake
-        process.start("cmake", QStringList() << "..");
+        process.start("cmake", std::vector<std::string>() << "..");
         process.waitForFinished(-1);
         
-        QString cmakeOutput = process.readAllStandardOutput();
-        QString cmakeError = process.readAllStandardError();
+        std::string cmakeOutput = process.readAllStandardOutput();
+        std::string cmakeError = process.readAllStandardError();
         
         if (process.exitCode() != 0) {
             result["success"] = false;
             result["error"] = "CMake configuration failed: " + cmakeError;
-            qWarning() << "[AgenticExecutor]" << result["error"].toString();
             return result;
         }
         
         // Run make
-        process.start("cmake", QStringList() << "--build" << ".");
+        process.start("cmake", std::vector<std::string>() << "--build" << ".");
         process.waitForFinished(-1);
         
-        QString buildOutput = process.readAllStandardOutput();
-        QString buildError = process.readAllStandardError();
+        std::string buildOutput = process.readAllStandardOutput();
+        std::string buildError = process.readAllStandardError();
         
         result["cmake_output"] = cmakeOutput;
         result["build_output"] = buildOutput;
@@ -419,9 +384,9 @@ QJsonObject AgenticExecutor::compileProject(const QString& projectPath, const QS
         
     } else {
         // Direct compilation
-        QStringList files;
-        QDir dir(projectPath);
-        files = dir.entryList(QStringList() << "*.cpp" << "*.c", QDir::Files);
+        std::vector<std::string> files;
+        std::filesystem::path dir(projectPath);
+        files = dir.entryList(std::vector<std::string>() << "*.cpp" << "*.c", std::filesystem::path::Files);
         
         if (files.isEmpty()) {
             result["success"] = false;
@@ -429,42 +394,39 @@ QJsonObject AgenticExecutor::compileProject(const QString& projectPath, const QS
             return result;
         }
         
-        QStringList args;
+        std::vector<std::string> args;
         args << "-o" << "output";
-        for (const QString& file : files) {
+        for (const std::string& file : files) {
             args << file;
         }
         
         process.start(compiler, args);
         process.waitForFinished(-1);
         
-        result["compiler_output"] = QString::fromUtf8(process.readAllStandardOutput());
-        result["compiler_error"] = QString::fromUtf8(process.readAllStandardError());
+        result["compiler_output"] = std::string::fromUtf8(process.readAllStandardOutput());
+        result["compiler_error"] = std::string::fromUtf8(process.readAllStandardError());
         result["exit_code"] = process.exitCode();
         result["success"] = (process.exitCode() == 0);
     }
 
     if (result["success"].toBool()) {
-        qInfo() << "[AgenticExecutor] Compilation successful";
-        emit logMessage("Compilation successful!");
+        logMessage("Compilation successful!");
     } else {
-        qWarning() << "[AgenticExecutor] Compilation failed";
-        emit logMessage("Compilation failed: " + result["compiler_error"].toString());
-        emit errorOccurred("Compilation failed");
+        logMessage("Compilation failed: " + result["compiler_error"].toString());
+        errorOccurred("Compilation failed");
     }
 
     addToMemory("last_compilation", result);
     return result;
 }
 
-QJsonObject AgenticExecutor::runExecutable(const QString& executablePath, const QStringList& args)
+void* AgenticExecutor::runExecutable(const std::string& executablePath, const std::vector<std::string>& args)
 {
-    QJsonObject result;
+    void* result;
     result["executable"] = executablePath;
-    result["arguments"] = QJsonArray::fromStringList(args);
+    result["arguments"] = void*::fromStringList(args);
 
-    qInfo() << "[AgenticExecutor] Running executable:" << executablePath;
-    emit logMessage("Running: " + executablePath);
+    logMessage("Running: " + executablePath);
 
     QProcess process;
     process.start(executablePath, args);
@@ -477,16 +439,14 @@ QJsonObject AgenticExecutor::runExecutable(const QString& executablePath, const 
 
     process.waitForFinished(-1);
 
-    result["stdout"] = QString::fromUtf8(process.readAllStandardOutput());
-    result["stderr"] = QString::fromUtf8(process.readAllStandardError());
+    result["stdout"] = std::string::fromUtf8(process.readAllStandardOutput());
+    result["stderr"] = std::string::fromUtf8(process.readAllStandardError());
     result["exit_code"] = process.exitCode();
     result["success"] = (process.exitCode() == 0);
 
     if (result["success"].toBool()) {
-        qInfo() << "[AgenticExecutor] Execution completed successfully";
-        emit logMessage("Execution completed");
+        logMessage("Execution completed");
     } else {
-        qWarning() << "[AgenticExecutor] Execution failed with code" << process.exitCode();
     }
 
     addToMemory("last_execution", result);
@@ -495,18 +455,17 @@ QJsonObject AgenticExecutor::runExecutable(const QString& executablePath, const 
 
 // ========== CODE GENERATION ==========
 
-QJsonObject AgenticExecutor::generateCode(const QString& specification)
+void* AgenticExecutor::generateCode(const std::string& specification)
 {
-    QJsonObject result;
+    void* result;
     
     if (!m_agenticEngine) {
         result["error"] = "No engine available";
         return result;
     }
 
-    qInfo() << "[AgenticExecutor] Generating code for:" << specification;
     
-    QString prompt = QString(
+    std::string prompt = std::string(
         "Generate production-ready C++ code for the following specification:\n\n"
         "%1\n\n"
         "Requirements:\n"
@@ -516,10 +475,10 @@ QJsonObject AgenticExecutor::generateCode(const QString& specification)
         "- Add helpful comments\n"
         "- Follow C++17 best practices\n\n"
         "Return ONLY the code, no explanations."
-    ).arg(specification);
+    );
 
-    QString response = m_agenticEngine->generateCode(prompt);
-    QString code = extractCodeFromResponse(response);
+    std::string response = m_agenticEngine->generateCode(prompt);
+    std::string code = extractCodeFromResponse(response);
 
     result["specification"] = specification;
     result["code"] = code;
@@ -528,14 +487,14 @@ QJsonObject AgenticExecutor::generateCode(const QString& specification)
     return result;
 }
 
-QString AgenticExecutor::extractCodeFromResponse(const QString& response)
+std::string AgenticExecutor::extractCodeFromResponse(const std::string& response)
 {
     // Extract code from markdown code blocks
-    QRegularExpression codeBlockRegex("```(?:cpp|c\\+\\+)?\\s*\\n([\\s\\S]*?)```");
-    QRegularExpressionMatch match = codeBlockRegex.match(response);
+    std::regex codeBlockRegex("```(?:cpp|c\\+\\+)?\\s*\\n([\\s\\S]*?)```");
+    std::smatch match = codeBlockRegex.match(response);
     
     if (match.hasMatch()) {
-        return match.captured(1).trimmed();
+        return match"".trimmed();
     }
     
     // If no code block, return the whole response
@@ -544,35 +503,34 @@ QString AgenticExecutor::extractCodeFromResponse(const QString& response)
 
 // ========== FUNCTION CALLING / TOOL USE ==========
 
-QJsonArray AgenticExecutor::getAvailableTools()
+void* AgenticExecutor::getAvailableTools()
 {
-    QJsonArray tools;
+    void* tools;
     
     // File system tools
-    tools.append(QJsonObject{{"name", "create_directory"}, {"description", "Create a new directory"}});
-    tools.append(QJsonObject{{"name", "create_file"}, {"description", "Create a file with content"}});
-    tools.append(QJsonObject{{"name", "read_file"}, {"description", "Read file contents"}});
-    tools.append(QJsonObject{{"name", "delete_file"}, {"description", "Delete a file"}});
-    tools.append(QJsonObject{{"name", "list_directory"}, {"description", "List directory contents"}});
+    tools.append(void*{{"name", "create_directory"}, {"description", "Create a new directory"}});
+    tools.append(void*{{"name", "create_file"}, {"description", "Create a file with content"}});
+    tools.append(void*{{"name", "read_file"}, {"description", "Read file contents"}});
+    tools.append(void*{{"name", "delete_file"}, {"description", "Delete a file"}});
+    tools.append(void*{{"name", "list_directory"}, {"description", "List directory contents"}});
     
     // Compilation tools
-    tools.append(QJsonObject{{"name", "compile_project"}, {"description", "Compile C++ project"}});
-    tools.append(QJsonObject{{"name", "run_executable"}, {"description", "Run compiled executable"}});
+    tools.append(void*{{"name", "compile_project"}, {"description", "Compile C++ project"}});
+    tools.append(void*{{"name", "run_executable"}, {"description", "Run compiled executable"}});
     
     // Model tools
-    tools.append(QJsonObject{{"name", "train_model"}, {"description", "Fine-tune a GGUF model with dataset"}});
-    tools.append(QJsonObject{{"name", "is_training"}, {"description", "Check if model training is in progress"}});
+    tools.append(void*{{"name", "train_model"}, {"description", "Fine-tune a GGUF model with dataset"}});
+    tools.append(void*{{"name", "is_training"}, {"description", "Check if model training is in progress"}});
     
     return tools;
 }
 
-QJsonObject AgenticExecutor::callTool(const QString& toolName, const QJsonObject& params)
+void* AgenticExecutor::callTool(const std::string& toolName, const void*& params)
 {
-    QJsonObject result;
+    void* result;
     result["tool"] = toolName;
     result["params"] = params;
 
-    qInfo() << "[AgenticExecutor] Calling tool:" << toolName;
 
     if (toolName == "create_directory") {
         bool success = createDirectory(params["path"].toString());
@@ -583,7 +541,7 @@ QJsonObject AgenticExecutor::callTool(const QString& toolName, const QJsonObject
         result["success"] = success;
     }
     else if (toolName == "read_file") {
-        QString content = readFile(params["path"].toString());
+        std::string content = readFile(params["path"].toString());
         result["success"] = !content.isEmpty();
         result["content"] = content;
     }
@@ -592,23 +550,23 @@ QJsonObject AgenticExecutor::callTool(const QString& toolName, const QJsonObject
         result["success"] = success;
     }
     else if (toolName == "compile_project") {
-        QJsonObject compileResult = compileProject(params["project_path"].toString());
+        void* compileResult = compileProject(params["project_path"].toString());
         result = compileResult;
     }
     else if (toolName == "run_executable") {
-        QJsonObject runResult = runExecutable(params["executable"].toString());
+        void* runResult = runExecutable(params["executable"].toString());
         result = runResult;
     }
     else if (toolName == "list_directory") {
-        QStringList entries = listDirectory(params["path"].toString());
+        std::vector<std::string> entries = listDirectory(params["path"].toString());
         result["success"] = true;
-        result["entries"] = QJsonArray::fromStringList(entries);
+        result["entries"] = void*::fromStringList(entries);
     }
     else if (toolName == "train_model") {
-        QString datasetPath = params["dataset_path"].toString();
-        QString modelPath = params["model_path"].toString();
-        QJsonObject config = params["config"].toObject();
-        QJsonObject trainResult = trainModel(datasetPath, modelPath, config);
+        std::string datasetPath = params["dataset_path"].toString();
+        std::string modelPath = params["model_path"].toString();
+        void* config = params["config"].toObject();
+        void* trainResult = trainModel(datasetPath, modelPath, config);
         result = trainResult;
     }
     else if (toolName == "is_training") {
@@ -626,13 +584,12 @@ QJsonObject AgenticExecutor::callTool(const QString& toolName, const QJsonObject
 
 // ========== MEMORY & CONTEXT ==========
 
-void AgenticExecutor::addToMemory(const QString& key, const QVariant& value)
+void AgenticExecutor::addToMemory(const std::string& key, const std::any& value)
 {
     m_memory[key] = value;
-    qDebug() << "[AgenticExecutor] Memory updated:" << key;
 }
 
-QVariant AgenticExecutor::getFromMemory(const QString& key)
+std::any AgenticExecutor::getFromMemory(const std::string& key)
 {
     return m_memory.value(key);
 }
@@ -640,16 +597,16 @@ QVariant AgenticExecutor::getFromMemory(const QString& key)
 void AgenticExecutor::clearMemory()
 {
     m_memory.clear();
-    m_executionHistory = QJsonArray();
+    m_executionHistory = void*();
 }
 
-QString AgenticExecutor::getFullContext()
+std::string AgenticExecutor::getFullContext()
 {
-    QString context;
+    std::string context;
     context += "=== EXECUTION CONTEXT ===\n";
     context += "Working Directory: " + m_currentWorkingDirectory + "\n";
-    context += "Memory Items: " + QString::number(m_memory.size()) + "\n";
-    context += "Execution History: " + QString::number(m_executionHistory.size()) + " steps\n";
+    context += "Memory Items: " + std::string::number(m_memory.size()) + "\n";
+    context += "Execution History: " + std::string::number(m_executionHistory.size()) + " steps\n";
     context += "\n=== MEMORY ===\n";
     
     for (auto it = m_memory.begin(); it != m_memory.end(); ++it) {
@@ -661,15 +618,15 @@ QString AgenticExecutor::getFullContext()
 
 // ========== SELF-CORRECTION ==========
 
-bool AgenticExecutor::detectFailure(const QString& output)
+bool AgenticExecutor::detectFailure(const std::string& output)
 {
-    QStringList failureIndicators = {
+    std::vector<std::string> failureIndicators = {
         "error", "failed", "exception", "cannot", "unable",
         "undefined reference", "segmentation fault", "compilation terminated"
     };
     
-    QString lowerOutput = output.toLower();
-    for (const QString& indicator : failureIndicators) {
+    std::string lowerOutput = output.toLower();
+    for (const std::string& indicator : failureIndicators) {
         if (lowerOutput.contains(indicator)) {
             return true;
         }
@@ -678,11 +635,11 @@ bool AgenticExecutor::detectFailure(const QString& output)
     return false;
 }
 
-QString AgenticExecutor::generateCorrectionPlan(const QString& failureReason)
+std::string AgenticExecutor::generateCorrectionPlan(const std::string& failureReason)
 {
     if (!m_agenticEngine) return "No correction available";
 
-    QString prompt = QString(
+    std::string prompt = std::string(
         "An automated task failed with this error:\n%1\n\n"
         "Analyze the error and provide a correction plan. Include:\n"
         "1. Root cause of the failure\n"
@@ -690,24 +647,23 @@ QString AgenticExecutor::generateCorrectionPlan(const QString& failureReason)
         "3. Code changes if needed\n"
         "4. Verification steps\n\n"
         "Be concise and actionable."
-    ).arg(failureReason);
+    );
 
     return m_agenticEngine->generateResponse(prompt);
 }
 
-QJsonObject AgenticExecutor::retryWithCorrection(const QJsonObject& failedStep)
+void* AgenticExecutor::retryWithCorrection(const void*& failedStep)
 {
     m_currentRetryCount++;
     
-    QJsonObject result;
+    void* result;
     result["original_step"] = failedStep;
     result["retry_attempt"] = m_currentRetryCount;
 
-    QString failureContext = getFromMemory("last_error").toString();
-    QString correctionPlan = generateCorrectionPlan(failureContext);
+    std::string failureContext = getFromMemory("last_error").toString();
+    std::string correctionPlan = generateCorrectionPlan(failureContext);
     
-    qInfo() << "[AgenticExecutor] Retry attempt" << m_currentRetryCount << "with correction plan";
-    emit logMessage("Attempting correction: " + correctionPlan);
+    logMessage("Attempting correction: " + correctionPlan);
 
     // Apply correction and retry
     bool success = executeStep(failedStep);
@@ -726,9 +682,9 @@ QJsonObject AgenticExecutor::retryWithCorrection(const QJsonObject& failedStep)
 
 // ========== MODEL TRAINING ==========
 
-QJsonObject AgenticExecutor::trainModel(const QString& datasetPath, const QString& modelPath, const QJsonObject& config)
+void* AgenticExecutor::trainModel(const std::string& datasetPath, const std::string& modelPath, const void*& config)
 {
-    QJsonObject result;
+    void* result;
     
     if (!m_modelTrainer) {
         result["success"] = false;
@@ -742,8 +698,7 @@ QJsonObject AgenticExecutor::trainModel(const QString& datasetPath, const QStrin
         return result;
     }
     
-    qInfo() << "[AgenticExecutor] Starting model training:" << datasetPath;
-    emit logMessage("Starting model training with dataset: " + datasetPath);
+    logMessage("Starting model training with dataset: " + datasetPath);
     
     // Configure training
     ModelTrainer::TrainingConfig trainConfig;
@@ -775,3 +730,4 @@ bool AgenticExecutor::isTrainingModel() const
 {
     return m_modelTrainer && m_modelTrainer->isTraining();
 }
+

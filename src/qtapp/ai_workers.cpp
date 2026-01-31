@@ -42,7 +42,6 @@ void DigestionWorker::processFiles(const std::stringList& files, const Digestion
         return;
     }
     
-    // // qInfo:  "[DigestionWorker] Processing" << files.size() << "files";
     
     // Process each file through the engine
     for (const std::string& file : files) {
@@ -79,9 +78,8 @@ void TrainingWorker::startTraining(const AIDigestionDataset& dataset, const Dige
         return;
     }
     
-    // // qInfo:  "[TrainingWorker] Starting training with" << dataset.totalSamples << "samples";
     
-    // Emit progress updates
+    // progress updates
     for (int i = 0; i < 10; ++i) {
         trainingProgress(static_cast<double>(i + 1) / 10.0);
         std::thread::msleep(100);
@@ -134,14 +132,12 @@ AIDigestionWorker::~AIDigestionWorker() {
     // Centralized error capture and resource cleanup
     try {
         // Structured logging: Worker destruction
-        // // qInfo:  "[DIGESTION] Worker destroying:"
                 << "processed_files=" << m_processedFiles.size()
                 << "failed_files=" << m_failedFiles.size()
                 << "state=" << static_cast<int>(m_state);
         
         // Resource guard: Ensure worker is stopped properly
         if (m_state != State::Idle) {
-            // // qWarning:  "[DIGESTION] Worker destroyed while active, forcing stop";
             stopDigestion();
         }
         
@@ -161,11 +157,9 @@ AIDigestionWorker::~AIDigestionWorker() {
         
     } catch (const std::exception& e) {
         // Centralized error capture: Log exceptions during cleanup
-        // // qCritical:  "[DIGESTION] Exception during worker destruction:"
                     << "error=" << e.what();
     } catch (...) {
         // Centralized error capture: Catch all unknown exceptions
-        // // qCritical:  "[DIGESTION] Unknown exception during worker destruction";
     }
 }
 
@@ -173,7 +167,6 @@ void AIDigestionWorker::startDigestion(const std::stringList& filePaths) {
     std::mutexLocker locker(&m_mutex);
     
     // Structured logging: Digestion session start
-    // // qInfo:  "[DIGESTION] Starting digestion session:"
             << "total_files=" << filePaths.size()
             << "timestamp=" << // DateTime::currentDateTime().toString(ISODate);
     
@@ -234,13 +227,11 @@ void AIDigestionWorker::stopDigestion() {
         locker.unlock();
         
         // Structured logging: Digestion stop
-        // // qInfo:  "[DIGESTION] Stopping digestion:"
                 << "processed=" << m_processedFiles.size()
                 << "remaining=" << m_remainingFiles.size();
                 
     } catch (const std::exception& e) {
         // Centralized error capture
-        // // qCritical:  "[DIGESTION] Error during stop:"
                     << "error=" << e.what();
     }
 }
@@ -285,7 +276,6 @@ void AIDigestionWorker::processFiles() {
             
             // Structured logging: Session completion
             int64_t totalElapsed = m_elapsedTimer.elapsed();
-            // // qInfo:  "[DIGESTION] Session completed:"
                     << "total_files=" << m_progress.totalFiles
                     << "processed=" << m_processedFiles.size()
                     << "failed=" << m_failedFiles.size()
@@ -295,7 +285,7 @@ void AIDigestionWorker::processFiles() {
                         (m_processedFiles.size() * 100.0 / m_progress.totalFiles) : 0.0);
             
             locker.unlock();
-            digestionCompleted(true, std::string("Successfully processed %1 files").arg(m_processedFiles.size()));
+            digestionCompleted(true, std::string("Successfully processed %1 files")));
             std::mutexLocker finalLocker(&m_mutex);
             setState(State::Idle);
             return;
@@ -327,7 +317,6 @@ void AIDigestionWorker::processFiles() {
     int64_t fileStartTime = m_elapsedTimer.elapsed();
     
     // Structured logging: File processing start
-    // // qInfo:  "[DIGESTION] Starting file processing:"
             << "file=" << currentFile
             << "index=" << m_progress.currentFile
             << "total=" << m_progress.totalFiles;
@@ -341,18 +330,16 @@ void AIDigestionWorker::processFiles() {
             
             // Structured logging: Successful processing
             int64_t processingTime = m_elapsedTimer.elapsed() - fileStartTime;
-            // // qInfo:  "[DIGESTION] File processed successfully:"
                     << "file=" << currentFile
                     << "latency_ms=" << processingTime
                     << "processed=" << (m_progress.currentFile)
                     << "remaining=" << m_remainingFiles.size();
                     
         } catch (const std::exception& e) {
-            errorMessage = std::string("Exception: %1").arg(e.what());
+            errorMessage = std::string("Exception: %1"));
             success = false;
             
             // Structured logging: Error encountered
-            // // qWarning:  "[DIGESTION] Error processing file:"
                        << "file=" << currentFile
                        << "error=" << errorMessage
                        << "exception_type=std::exception";
@@ -361,7 +348,6 @@ void AIDigestionWorker::processFiles() {
             success = false;
             
             // Structured logging: Unknown error
-            // // qCritical:  "[DIGESTION] Unknown error processing file:"
                         << "file=" << currentFile
                         << "error=unknown_exception";
         }
@@ -371,7 +357,6 @@ void AIDigestionWorker::processFiles() {
         success = false;
         
         // Structured logging: Configuration error
-        // // qCritical:  "[DIGESTION] Engine unavailable:"
                     << "file=" << currentFile
                     << "error=null_engine";
     }
@@ -390,7 +375,6 @@ void AIDigestionWorker::processFiles() {
         calculateTimeEstimates();
         
         // Structured logging: Performance metric
-        // // qDebug:  "[DIGESTION] Performance metric:"
                  << "file=" << // FileInfo: currentFile).fileName()
                  << "latency_ms=" << totalProcessingTime
                  << "avg_latency_ms=" << (m_fileProcessingTimes.empty() ? 0 : 
@@ -400,7 +384,7 @@ void AIDigestionWorker::processFiles() {
     
     fileCompleted(currentFile, success);
     if (!success) {
-        errorOccurred(std::string("Failed to process %1: %2").arg(currentFile, errorMessage));
+        errorOccurred(std::string("Failed to process %1: %2"));
     }
     
     // Continue processing
@@ -503,14 +487,12 @@ AITrainingWorker::~AITrainingWorker() {
     // Centralized error capture and resource cleanup
     try {
         // Structured logging: Worker destruction
-        // // qInfo:  "[TRAINING] Worker destroying:"
                 << "model_name=" << m_modelName
                 << "epochs_completed=" << m_progress.currentEpoch
                 << "state=" << static_cast<int>(m_state);
         
         // Resource guard: Ensure worker is stopped properly
         if (m_state != State::Idle) {
-            // // qWarning:  "[TRAINING] Worker destroyed while active, forcing stop";
             stopTraining();
         }
         
@@ -530,11 +512,9 @@ AITrainingWorker::~AITrainingWorker() {
         
     } catch (const std::exception& e) {
         // Centralized error capture: Log exceptions during cleanup
-        // // qCritical:  "[TRAINING] Exception during worker destruction:"
                     << "error=" << e.what();
     } catch (...) {
         // Centralized error capture: Catch all unknown exceptions
-        // // qCritical:  "[TRAINING] Unknown exception during worker destruction";
     }
 }
 
@@ -624,13 +604,11 @@ void AITrainingWorker::stopTraining() {
         m_progressTimer->stop();
         
         // Structured logging: Training stop
-        // // qInfo:  "[TRAINING] Stopping training:"
                 << "epoch=" << m_progress.currentEpoch
                 << "total_epochs=" << m_progress.totalEpochs;
                 
     } catch (const std::exception& e) {
         // Centralized error capture
-        // // qCritical:  "[TRAINING] Error during stop:"
                     << "error=" << e.what();
     }
 }
@@ -712,7 +690,6 @@ void AITrainingWorker::updateProgress() {
 
 void AITrainingWorker::handleEpochComplete() {
     // This  can be used for additional epoch-level processing
-    // // qDebug:  "Epoch" << m_progress.currentEpoch << "completed";
 }
 
 void AITrainingWorker::handleBatchComplete() {
@@ -761,9 +738,9 @@ void AITrainingWorker::saveCheckpoint() {
     // Create checkpoint filename with timestamp and epoch
     std::string timestamp = // DateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
     std::string checkpointFileName = std::string("%1_checkpoint_epoch_%2_%3.bin")
-                                .arg(m_outputPath)
-                                .arg(m_progress.currentEpoch)
-                                .arg(timestamp);
+
+
+                                ;
     
     // Validate checkpoint directory exists
     // Info checkpointInfo(checkpointFileName);
@@ -773,13 +750,11 @@ void AITrainingWorker::saveCheckpoint() {
         // Resource guard: Create directory if it doesn't exist
         if (!checkpointDir.mkpath(checkpointDir.string())) {
             // Centralized error capture
-            // // qCritical:  "[TRAINING] Failed to create checkpoint directory:"
                        << "path=" << checkpointDir.string()
                        << "epoch=" << m_progress.currentEpoch;
             return;
         }
         
-        // // qInfo:  "[TRAINING] Created checkpoint directory:"
                 << "path=" << checkpointDir.string();
     }
     
@@ -813,7 +788,6 @@ void AITrainingWorker::saveCheckpoint() {
     // File operation removed;
     if (!checkpointFile.open(std::iostream::WriteOnly)) {
         // Centralized error capture
-        // // qCritical:  "[TRAINING] Failed to open checkpoint file for writing:"
                    << "file=" << checkpointFileName
                    << "error=" << checkpointFile.errorString();
         return;
@@ -825,7 +799,6 @@ void AITrainingWorker::saveCheckpoint() {
     
     if (bytesWritten <= 0) {
         // Centralized error capture
-        // // qCritical:  "[TRAINING] Failed to write checkpoint data:"
                    << "file=" << checkpointFileName;
         return;
     }
@@ -833,7 +806,6 @@ void AITrainingWorker::saveCheckpoint() {
     // Validate checkpoint file was created
     if (!checkpointInfo.exists() || checkpointInfo.size() == 0) {
         // Centralized error capture
-        // // qCritical:  "[TRAINING] Checkpoint validation failed:"
                    << "file=" << checkpointFileName
                    << "exists=" << checkpointInfo.exists()
                    << "size=" << checkpointInfo.size();
@@ -841,7 +813,6 @@ void AITrainingWorker::saveCheckpoint() {
     }
     
     // Structured logging: Checkpoint saved successfully
-    // // qInfo:  "[TRAINING] Checkpoint saved successfully:"
             << "file=" << checkpointFileName
             << "epoch=" << m_progress.currentEpoch
             << "loss=" << m_progress.loss
@@ -871,19 +842,16 @@ void AITrainingWorker::cleanupOldCheckpoints(const // & directory, int keepCount
                 
                 if (std::filesystem::remove(filePath)) {
                     // Structured logging: Checkpoint removed
-                    // // qInfo:  "[TRAINING] Old checkpoint removed:"
                             << "file=" << filePath
                             << "age=" << checkpointFiles[i].lastModified().secsTo(// DateTime::currentDateTime()) << "s";
                 } else {
                     // Centralized error capture
-                    // // qWarning:  "[TRAINING] Failed to remove old checkpoint:"
                               << "file=" << filePath;
                 }
             }
         }
     } catch (const std::exception& e) {
         // Centralized error capture
-        // // qWarning:  "[TRAINING] Exception during checkpoint cleanup:"
                    << "error=" << e.what();
     }
 }
@@ -944,7 +912,7 @@ void AITrainingWorker::performEpoch() {
     // Traditional model-based training
     std::mutexLocker locker(&m_mutex);
     m_progress.phase = "Training";
-    m_progress.status = std::string("Training epoch %1/%2").arg(m_progress.currentEpoch).arg(m_progress.totalEpochs);
+    m_progress.status = std::string("Training epoch %1/%2");
     
     setState(State::Training);
     locker.unlock();
@@ -979,7 +947,7 @@ void AITrainingWorker::performEpoch() {
     // Perform validation
     performValidation(epochLoss, epochAccuracy);
     
-    // Emit epoch completion
+    // epoch completion
     epochCompleted(m_progress.currentEpoch, epochLoss, epochAccuracy);
     
     // Save checkpoint if needed
@@ -992,7 +960,7 @@ void AITrainingWorker::performEpoch() {
         setState(State::Finished);
         locker.unlock();
         
-        trainingCompleted(true, std::string("Training completed with early stopping at epoch %1").arg(m_progress.currentEpoch));
+        trainingCompleted(true, std::string("Training completed with early stopping at epoch %1"));
         std::mutexLocker finalLocker(&m_mutex);
         setState(State::Idle);
         return;
@@ -1019,7 +987,6 @@ void AITrainingWorker::performValidation(double trainingLoss, double trainingAcc
     int64_t validationStartTime = // DateTime::currentMSecsSinceEpoch();
     
     // Structured logging: Validation start
-    // // qDebug:  "[TRAINING] Validation started:"
              << "epoch=" << m_progress.currentEpoch
              << "training_loss=" << trainingLoss
              << "training_accuracy=" << trainingAccuracy;
@@ -1046,7 +1013,6 @@ void AITrainingWorker::performValidation(double trainingLoss, double trainingAcc
     int64_t validationLatency = // DateTime::currentMSecsSinceEpoch() - validationStartTime;
     
     // Structured logging: Validation complete
-    // // qInfo:  "[TRAINING] Validation completed:"
             << "epoch=" << m_progress.currentEpoch
             << "val_loss=" << valLoss
             << "val_accuracy=" << valAccuracy
@@ -1071,11 +1037,10 @@ void AITrainingWorker::finishTraining() {
         m_progress.phase = "Completed";
         m_progress.percentage = 100.0;
         m_trainingSuccessful = true;
-        m_finalModelPath = std::string("%1_final_model.bin").arg(m_outputPath);
+        m_finalModelPath = std::string("%1_final_model.bin");
         
         // Structured logging: Training completion
         int64_t totalElapsed = m_elapsedTimer.elapsed();
-        // // qInfo:  "[TRAINING] Training session completed:"
                 << "model_name=" << m_modelName
                 << "model_path=" << m_finalModelPath
                 << "total_epochs=" << m_progress.totalEpochs
@@ -1098,7 +1063,7 @@ void AITrainingWorker::finishTraining() {
 void AITrainingWorker::performAgentEpoch() {
     std::mutexLocker locker(&m_mutex);
     m_progress.phase = "Agent Training";
-    m_progress.status = std::string("Agent iteration %1/%2").arg(m_progress.currentEpoch).arg(m_progress.totalEpochs);
+    m_progress.status = std::string("Agent iteration %1/%2");
     m_agentState = "Active";
     
     setState(State::Training);
@@ -1158,7 +1123,7 @@ void AITrainingWorker::performAgentEpoch() {
     // Perform validation
     performValidation(epochLoss, epochAccuracy);
     
-    // Emit epoch completion
+    // epoch completion
     epochCompleted(m_progress.currentEpoch, epochLoss, epochAccuracy);
     
     // Save checkpoint if needed
@@ -1172,7 +1137,7 @@ void AITrainingWorker::performAgentEpoch() {
         setState(State::Finished);
         locker.unlock();
         
-        trainingCompleted(true, std::string("Agent training completed at epoch %1").arg(m_progress.currentEpoch));
+        trainingCompleted(true, std::string("Agent training completed at epoch %1"));
         std::mutexLocker finalLocker(&m_mutex);
         setState(State::Idle);
         return;
@@ -1191,7 +1156,7 @@ void AITrainingWorker::performAgentEpoch() {
 void AITrainingWorker::performHybridEpoch() {
     std::mutexLocker locker(&m_mutex);
     m_progress.phase = "Hybrid Training";
-    m_progress.status = std::string("Hybrid epoch %1/%2").arg(m_progress.currentEpoch).arg(m_progress.totalEpochs);
+    m_progress.status = std::string("Hybrid epoch %1/%2");
     m_agentState = "Hybrid";
     
     setState(State::Training);
@@ -1253,7 +1218,7 @@ void AITrainingWorker::performHybridEpoch() {
     // Perform validation
     performValidation(epochLoss, epochAccuracy);
     
-    // Emit epoch completion
+    // epoch completion
     epochCompleted(m_progress.currentEpoch, epochLoss, epochAccuracy);
     
     // Save checkpoint if needed
@@ -1267,7 +1232,7 @@ void AITrainingWorker::performHybridEpoch() {
         setState(State::Finished);
         locker.unlock();
         
-        trainingCompleted(true, std::string("Hybrid training completed at epoch %1").arg(m_progress.currentEpoch));
+        trainingCompleted(true, std::string("Hybrid training completed at epoch %1"));
         std::mutexLocker finalLocker(&m_mutex);
         setState(State::Idle);
         return;
@@ -1293,17 +1258,17 @@ bool AITrainingWorker::isHybridMode() const {
 
 std::string AITrainingWorker::agentStatusMessage() const {
     std::mutexLocker locker(&m_mutex);
-    std::string msg = std::string("Agent State: %1").arg(m_agentState);
+    std::string msg = std::string("Agent State: %1");
     if (!m_agentRewards.empty()) {
         double avgReward = 0.0;
         for (double reward : m_agentRewards) {
             avgReward += reward;
         }
         avgReward /= m_agentRewards.size();
-        msg += std::string(", Avg Reward: %1").arg(avgReward, 0, 'f', 4);
+        msg += std::string(", Avg Reward: %1");
     }
     if (m_agentIterationCount > 0) {
-        msg += std::string(", Iterations: %1").arg(m_agentIterationCount);
+        msg += std::string(", Iterations: %1");
     }
     return msg;
 }
@@ -1355,7 +1320,6 @@ AITrainingWorker* AIWorkerManager::createHybridWorker(AITrainingPipeline* pipeli
 
 void AIWorkerManager::startDigestionWorker(AIDigestionWorker* worker, const std::stringList& files) {
     if (!worker) {
-        // // qWarning:  "Attempted to start null digestion worker";
         return;
     }
     
@@ -1364,7 +1328,6 @@ void AIWorkerManager::startDigestionWorker(AIDigestionWorker* worker, const std:
     // Check if we can start another worker
     int activeWorkers = m_digestionWorkers.size() + m_trainingWorkers.size();
     if (activeWorkers >= m_maxConcurrentWorkers) {
-        // // qWarning:  "Maximum number of workers reached";
         return;
     }
     
@@ -1374,7 +1337,7 @@ void AIWorkerManager::startDigestionWorker(AIDigestionWorker* worker, const std:
     std::thread* thread = new std::thread(this);
     m_threads.append(thread);
     
-    worker->moveToThread(thread);  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\nthread->start();
+    worker->;  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\nthread->start();
     workerStarted(worker);
     
     // Start the actual work
@@ -1387,7 +1350,6 @@ void AIWorkerManager::startTrainingWorker(AITrainingWorker* worker,
                                         const std::string& outputPath,
                                         const AITrainingWorker::TrainingConfig& config) {
     if (!worker) {
-        // // qWarning:  "Attempted to start null training worker";
         return;
     }
     
@@ -1396,7 +1358,6 @@ void AIWorkerManager::startTrainingWorker(AITrainingWorker* worker,
     // Check if we can start another worker
     int activeWorkers = m_digestionWorkers.size() + m_trainingWorkers.size();
     if (activeWorkers >= m_maxConcurrentWorkers) {
-        // // qWarning:  "Maximum number of workers reached";
         return;
     }
     
@@ -1406,7 +1367,7 @@ void AIWorkerManager::startTrainingWorker(AITrainingWorker* worker,
     std::thread* thread = new std::thread(this);
     m_threads.append(thread);
     
-    worker->moveToThread(thread);  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\nthread->start();
+    worker->;  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\nthread->start();
     workerStarted(worker);
     
     // Start the actual work
@@ -1487,7 +1448,6 @@ void AIWorkerManager::onWorkerFinished() {
 }
 
 void AIWorkerManager::onWorkerError(const std::string& error) {
-    // // qWarning:  "Worker error:" << error;
     onWorkerFinished();
 }
 
@@ -1514,14 +1474,7 @@ void AIWorkerManager::cleanupFinishedWorkers() {
 
 void AIWorkerManager::moveWorkerToThread(void* worker, std::thread* thread) {
     if (worker && thread) {
-        worker->moveToThread(thread);
+        worker->;
     }
 }
-
-
-
-
-
-
-
 

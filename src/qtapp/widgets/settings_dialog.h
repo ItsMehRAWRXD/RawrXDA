@@ -8,30 +8,16 @@
 #ifndef RAWRXD_SETTINGS_DIALOG_H
 #define RAWRXD_SETTINGS_DIALOG_H
 
-#include <QDialog>
-#include <QTabWidget>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QPushButton>
-#include <QLineEdit>
-#include <QSpinBox>
-#include <QCheckBox>
-#include <QComboBox>
-#include <QLabel>
-#include <QGroupBox>
-#include <QTableWidget>
-#include <QKeySequenceEdit>
 
 namespace RawrXD {
 
 /**
  * \brief General settings tab
  */
-class GeneralSettingsWidget : public QWidget {
-    Q_OBJECT
-    
+class GeneralSettingsWidget : public void {
+
 public:
-    explicit GeneralSettingsWidget(QWidget* parent = nullptr);
+    explicit GeneralSettingsWidget(void* parent = nullptr);
     
     void initialize();  // Two-phase init
     
@@ -49,11 +35,10 @@ private:
 /**
  * \brief Appearance settings tab
  */
-class AppearanceSettingsWidget : public QWidget {
-    Q_OBJECT
-    
+class AppearanceSettingsWidget : public void {
+
 public:
-    explicit AppearanceSettingsWidget(QWidget* parent = nullptr);
+    explicit AppearanceSettingsWidget(void* parent = nullptr);
     
     void initialize();  // Two-phase init
     
@@ -61,13 +46,13 @@ public:
     void saveSettings();
     void resetToDefaults();
     
-signals:
-    void themeChanged(const QString& theme);
-    void fontChanged(const QString& family, int size);
+
+    void themeChanged(const std::string& theme);
+    void fontChanged(const std::string& family, int size);
     
-private slots:
+private:
     void onThemeChanged(int index);
-    void onFontFamilyChanged(const QString& family);
+    void onFontFamilyChanged(const std::string& family);
     void onFontSizeChanged(int size);
     
 private:
@@ -85,11 +70,10 @@ private:
 /**
  * \brief Editor settings tab
  */
-class EditorSettingsWidget : public QWidget {
-    Q_OBJECT
-    
+class EditorSettingsWidget : public void {
+
 public:
-    explicit EditorSettingsWidget(QWidget* parent = nullptr);
+    explicit EditorSettingsWidget(void* parent = nullptr);
     
     void initialize();  // Two-phase init
     
@@ -114,11 +98,10 @@ private:
 /**
  * \brief Keyboard shortcuts settings tab
  */
-class KeyboardSettingsWidget : public QWidget {
-    Q_OBJECT
-    
+class KeyboardSettingsWidget : public void {
+
 public:
-    explicit KeyboardSettingsWidget(QWidget* parent = nullptr);
+    explicit KeyboardSettingsWidget(void* parent = nullptr);
     
     void initialize();  // Two-phase init
     
@@ -126,8 +109,8 @@ public:
     void saveSettings();
     void resetToDefaults();
     
-private slots:
-    void onSearchTextChanged(const QString& text);
+private:
+    void onSearchTextChanged(const std::string& text);
     void onShortcutEdited(int row, int column);
     void onResetAllClicked();
     void onImportClicked();
@@ -147,11 +130,10 @@ private:
 /**
  * \brief Terminal settings tab
  */
-class TerminalSettingsWidget : public QWidget {
-    Q_OBJECT
-    
+class TerminalSettingsWidget : public void {
+
 public:
-    explicit TerminalSettingsWidget(QWidget* parent = nullptr);
+    explicit TerminalSettingsWidget(void* parent = nullptr);
     
     void initialize();  // Two-phase init
     
@@ -169,11 +151,10 @@ private:
 /**
  * \brief AI settings tab
  */
-class AISettingsWidget : public QWidget {
-    Q_OBJECT
-    
+class AISettingsWidget : public void {
+
 public:
-    explicit AISettingsWidget(QWidget* parent = nullptr);
+    explicit AISettingsWidget(void* parent = nullptr);
     
     void initialize();  // Two-phase init
     
@@ -198,11 +179,10 @@ private:
  * - Keyboard shortcut customization
  * - Import/Export settings
  */
-class SettingsDialog : public QDialog {
-    Q_OBJECT
-    
+class SettingsDialog : public void {
+
 public:
-    explicit SettingsDialog(QWidget* parent = nullptr);
+    explicit SettingsDialog(void* parent = nullptr);
     
     void initialize();  // Two-phase init
     
@@ -211,10 +191,10 @@ public:
      */
     void openToTab(int index);
     
-signals:
+
     void settingsApplied();
     
-private slots:
+private:
     void onApplyClicked();
     void onOkClicked();
     void onCancelClicked();
@@ -244,3 +224,4 @@ private:
 } // namespace RawrXD
 
 #endif // RAWRXD_SETTINGS_DIALOG_H
+

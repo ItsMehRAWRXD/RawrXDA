@@ -2,29 +2,24 @@
 // Production-ready implementation following AI Toolkit guidelines
 #pragma once
 
-#include <QWidget>
-#include <QString>
-#include <QTextEdit>
-#include <QPushButton>
-#include <QLabel>
+
 #include <functional>
 
 namespace RawrXD {
 
 struct DiffChange {
-    QString filePath;
-    QString originalContent;
-    QString proposedContent;
+    std::string filePath;
+    std::string originalContent;
+    std::string proposedContent;
     int startLine{0};
     int endLine{0};
-    QString changeDescription;
+    std::string changeDescription;
 };
 
-class DiffPreviewWidget : public QWidget {
-    Q_OBJECT
+class DiffPreviewWidget : public void {
 
 public:
-    explicit DiffPreviewWidget(QWidget* parent = nullptr);
+    explicit DiffPreviewWidget(void* parent = nullptr);
     ~DiffPreviewWidget() override = default;
 
     // Show a diff for review
@@ -37,12 +32,12 @@ public:
     void setAcceptCallback(std::function<void(const DiffChange&)> callback);
     void setRejectCallback(std::function<void(const DiffChange&)> callback);
 
-signals:
+
     void diffAccepted(const DiffChange& change);
     void diffRejected(const DiffChange& change);
     void closed();
 
-private slots:
+private:
     void onAcceptClicked();
     void onRejectClicked();
     void onAcceptAllClicked();
@@ -51,7 +46,7 @@ private slots:
 private:
     void setupUI();
     void renderDiff();
-    QString generateUnifiedDiff(const QString& original, const QString& proposed);
+    std::string generateUnifiedDiff(const std::string& original, const std::string& proposed);
     
     // UI Components
     QLabel* m_fileLabel{nullptr};
@@ -72,3 +67,4 @@ private:
 };
 
 } // namespace RawrXD
+

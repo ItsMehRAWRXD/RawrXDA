@@ -7,14 +7,6 @@
 
 #pragma once
 
-#include <QWidget>
-#include <QTextEdit>
-#include <QPlainTextEdit>
-#include <QPainter>
-#include <QTextCursor>
-#include <QString>
-#include <QTimer>
-#include <QMap>
 
 namespace RawrXD {
 
@@ -24,11 +16,11 @@ namespace RawrXD {
 struct GhostTextDecoration {
     int line;                   // Line number (0-indexed)
     int column;                 // Column position
-    QString text;               // Ghost text to display
-    QString type;               // "completion", "diff", "suggestion"
+    std::string text;               // Ghost text to display
+    std::string type;               // "completion", "diff", "suggestion"
     QColor color;              // Ghost text color
     bool multiline = false;    // Multi-line ghost text
-    QStringList lines;         // For multi-line ghost text
+    std::vector<std::string> lines;         // For multi-line ghost text
 };
 
 /**
@@ -37,9 +29,9 @@ struct GhostTextDecoration {
 struct DiffDecoration {
     int startLine;             // Start line (0-indexed)
     int endLine;               // End line (0-indexed)
-    QString oldText;           // Original text
-    QString newText;           // Suggested text
-    QString type;              // "add", "remove", "modify"
+    std::string oldText;           // Original text
+    std::string newText;           // Suggested text
+    std::string type;              // "add", "remove", "modify"
 };
 
 /**
@@ -53,12 +45,11 @@ struct DiffDecoration {
  * - Fade-in/fade-out animations
  * - Tab to accept, Esc to dismiss
  */
-class GhostTextRenderer : public QWidget
+class GhostTextRenderer : public void
 {
-    Q_OBJECT
 
 public:
-    explicit GhostTextRenderer(QPlainTextEdit* editor, QWidget* parent = nullptr);
+    explicit GhostTextRenderer(QPlainTextEdit* editor, void* parent = nullptr);
     ~GhostTextRenderer() override = default;
 
     /**
@@ -69,22 +60,22 @@ public:
     /**
      * Show ghost text at cursor position
      */
-    void showGhostText(const QString& text, const QString& type = "completion");
+    void showGhostText(const std::string& text, const std::string& type = "completion");
 
     /**
      * Show multi-line ghost text
      */
-    void showMultilineGhost(const QStringList& lines);
+    void showMultilineGhost(const std::vector<std::string>& lines);
 
     /**
      * Update ghost text (for streaming)
      */
-    void updateGhostText(const QString& additionalText);
+    void updateGhostText(const std::string& additionalText);
 
     /**
      * Show diff preview
      */
-    void showDiffPreview(int startLine, int endLine, const QString& oldText, const QString& newText);
+    void showDiffPreview(int startLine, int endLine, const std::string& oldText, const std::string& newText);
 
     /**
      * Clear all ghost text
@@ -104,18 +95,18 @@ public:
     /**
      * Get current ghost text
      */
-    QString getCurrentGhostText() const { return m_currentGhostText; }
+    std::string getCurrentGhostText() const { return m_currentGhostText; }
 
     /**
      * Check if ghost text is visible
      */
     bool hasGhostText() const { return !m_currentGhostText.isEmpty(); }
 
-signals:
+
     /**
      * Ghost text accepted by user
      */
-    void ghostTextAccepted(const QString& text);
+    void ghostTextAccepted(const std::string& text);
 
     /**
      * Ghost text dismissed
@@ -125,11 +116,11 @@ signals:
     /**
      * Diff accepted
      */
-    void diffAccepted(const QString& newText);
+    void diffAccepted(const std::string& newText);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    bool eventFilter(QObject* obj, QEvent* event) override;
+    bool eventFilter(void* obj, QEvent* event) override;
 
 private:
     void renderGhostText(QPainter& painter);
@@ -143,12 +134,12 @@ private:
 
     QPlainTextEdit* m_editor{};
     
-    QString m_currentGhostText;
+    std::string m_currentGhostText;
     GhostTextDecoration m_ghostDecoration;
-    QVector<DiffDecoration> m_diffDecorations;
+    std::vector<DiffDecoration> m_diffDecorations;
     
     qreal m_opacity = 1.0;
-    QTimer* m_fadeTimer{};
+    void** m_fadeTimer{};
     bool m_fading = false;
     
     QColor m_ghostColor{128, 128, 128, 180};  // Gray with transparency
@@ -157,3 +148,4 @@ private:
 };
 
 } // namespace RawrXD
+

@@ -1,11 +1,10 @@
 #include "layer_quant_widget.hpp"
-#include <QHeaderView>
 
-LayerQuantWidget::LayerQuantWidget(QWidget* parent) 
+LayerQuantWidget::LayerQuantWidget(void* parent) 
     : QTreeWidget(parent)
 {
     setHeaderLabels({"Tensor", "Current Quant"});
-    setContextMenuPolicy(Qt::CustomContextMenu);
+    setContextMenuPolicy(//CustomContextMenu);
     setAlternatingRowColors(true);
     setSortingEnabled(true);
     
@@ -13,12 +12,10 @@ LayerQuantWidget::LayerQuantWidget(QWidget* parent)
     header()->setStretchLastSection(false);
     header()->setSectionResizeMode(0, QHeaderView::Stretch);
     header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    
-    connect(this, &QTreeWidget::customContextMenuRequested,
-            this, &LayerQuantWidget::onCustomContextMenu);
+// Qt connect removed
 }
 
-void LayerQuantWidget::addTensor(const QString& tensorName, const QString& defaultQuant)
+void LayerQuantWidget::addTensor(const std::string& tensorName, const std::string& defaultQuant)
 {
     QTreeWidgetItem* item = new QTreeWidgetItem(this);
     item->setText(0, tensorName);
@@ -27,15 +24,15 @@ void LayerQuantWidget::addTensor(const QString& tensorName, const QString& defau
     
     // Color-code by quant type
     if (defaultQuant.contains("F16") || defaultQuant.contains("F32")) {
-        item->setForeground(1, Qt::darkGreen);  // High precision
+        item->setForeground(1, //darkGreen);  // High precision
     } else if (defaultQuant.contains("Q8")) {
-        item->setForeground(1, Qt::blue);  // Medium-high precision
+        item->setForeground(1, //blue);  // Medium-high precision
     } else if (defaultQuant.contains("Q6")) {
-        item->setForeground(1, Qt::darkCyan);  // Medium precision
+        item->setForeground(1, //darkCyan);  // Medium precision
     } else if (defaultQuant.contains("Q5")) {
         item->setForeground(1, QColor(255, 140, 0));  // Medium-low precision
     } else {
-        item->setForeground(1, Qt::darkRed);  // Low precision (Q4)
+        item->setForeground(1, //darkRed);  // Low precision (Q4)
     }
     
     m_tensorItems[tensorName] = item;
@@ -52,8 +49,8 @@ void LayerQuantWidget::onCustomContextMenu(const QPoint& pos)
     QTreeWidgetItem* item = itemAt(pos);
     if (!item) return;
     
-    QString tensorName = item->text(0);
-    QString currentQuant = item->text(1);
+    std::string tensorName = item->text(0);
+    std::string currentQuant = item->text(1);
     
     QMenu menu;
     menu.setTitle("Select Quantization");
@@ -64,8 +61,8 @@ void LayerQuantWidget::onCustomContextMenu(const QPoint& pos)
     QMenu* lowPrecMenu = menu.addMenu("Low Precision (Q4)");
     
     // High precision options
-    QStringList highPrec = {"F32", "F16"};
-    for (const QString& q : highPrec) {
+    std::vector<std::string> highPrec = {"F32", "F16"};
+    for (const std::string& q : highPrec) {
         QAction* action = highPrecMenu->addAction(q);
         action->setCheckable(true);
         action->setChecked(currentQuant == q);
@@ -73,8 +70,8 @@ void LayerQuantWidget::onCustomContextMenu(const QPoint& pos)
     }
     
     // Medium precision options
-    QStringList mediumPrec = {"Q8_K", "Q6_K", "Q5_1", "Q5_0"};
-    for (const QString& q : mediumPrec) {
+    std::vector<std::string> mediumPrec = {"Q8_K", "Q6_K", "Q5_1", "Q5_0"};
+    for (const std::string& q : mediumPrec) {
         QAction* action = mediumPrecMenu->addAction(q);
         action->setCheckable(true);
         action->setChecked(currentQuant == q);
@@ -82,8 +79,8 @@ void LayerQuantWidget::onCustomContextMenu(const QPoint& pos)
     }
     
     // Low precision options
-    QStringList lowPrec = {"Q4_1", "Q4_0"};
-    for (const QString& q : lowPrec) {
+    std::vector<std::string> lowPrec = {"Q4_1", "Q4_0"};
+    for (const std::string& q : lowPrec) {
         QAction* action = lowPrecMenu->addAction(q);
         action->setCheckable(true);
         action->setChecked(currentQuant == q);
@@ -93,22 +90,23 @@ void LayerQuantWidget::onCustomContextMenu(const QPoint& pos)
     // Execute menu
     QAction* chosen = menu.exec(mapToGlobal(pos));
     if (chosen && chosen->data().toString() != currentQuant) {
-        QString newQuant = chosen->data().toString();
+        std::string newQuant = chosen->data().toString();
         item->setText(1, newQuant);
         
         // Update color
         if (newQuant.contains("F16") || newQuant.contains("F32")) {
-            item->setForeground(1, Qt::darkGreen);
+            item->setForeground(1, //darkGreen);
         } else if (newQuant.contains("Q8")) {
-            item->setForeground(1, Qt::blue);
+            item->setForeground(1, //blue);
         } else if (newQuant.contains("Q6")) {
-            item->setForeground(1, Qt::darkCyan);
+            item->setForeground(1, //darkCyan);
         } else if (newQuant.contains("Q5")) {
             item->setForeground(1, QColor(255, 140, 0));
         } else {
-            item->setForeground(1, Qt::darkRed);
+            item->setForeground(1, //darkRed);
         }
         
-        emit quantChanged(tensorName, newQuant);
+        quantChanged(tensorName, newQuant);
     }
 }
+

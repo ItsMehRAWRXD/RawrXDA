@@ -1,17 +1,13 @@
 // OllamaProxy - Fallback to Ollama REST API for unsupported models
 #include "ollama_proxy.h"
-#include <QNetworkRequest>
-#include <QJsonArray>
-#include <QDebug>
-#include <QUrlQuery>
 
-OllamaProxy::OllamaProxy(QObject* parent)
-    : QObject(parent)
+
+OllamaProxy::OllamaProxy(void* parent)
+    : void(parent)
     , m_ollamaUrl("http://localhost:11434")
-    , m_networkManager(new QNetworkAccessManager(this))
+    , m_networkManager(new void*(this))
     , m_currentReply(nullptr)
 {
-    qDebug() << "[OllamaProxy] Initialized with endpoint:" << m_ollamaUrl;
 }
 
 OllamaProxy::~OllamaProxy()
@@ -19,115 +15,108 @@ OllamaProxy::~OllamaProxy()
     stopGeneration();
 }
 
-void OllamaProxy::setModel(const QString& modelName)
+void OllamaProxy::setModel(const std::string& modelName)
 {
     m_modelName = modelName;
-    qInfo() << "[OllamaProxy] Model set to:" << modelName;
 }
 
 bool OllamaProxy::isOllamaAvailable()
 {
     // Quick sync check if Ollama is running
-    QNetworkRequest request(QUrl(m_ollamaUrl + "/api/tags"));
-    QNetworkReply* reply = m_networkManager->get(request);
+    QNetworkRequest request(std::string(m_ollamaUrl + "/api/tags"));
+    void** reply = m_networkManager->get(request);
     
     // Wait up to 1 second for response
-    QEventLoop loop;
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    QTimer::singleShot(1000, &loop, &QEventLoop::quit);
+    void* loop;
+// Qt connect removed
+    void*::singleShot(1000, &loop, &void*::quit);
     loop.exec();
     
-    bool available = (reply->error() == QNetworkReply::NoError);
+    bool available = (reply->error() == void*::NoError);
     reply->deleteLater();
     
-    qDebug() << "[OllamaProxy] Ollama available:" << available;
     return available;
 }
 
-bool OllamaProxy::isModelAvailable(const QString& modelName)
+bool OllamaProxy::isModelAvailable(const std::string& modelName)
 {
     // Check if model exists in Ollama registry
-    QNetworkRequest request(QUrl(m_ollamaUrl + "/api/tags"));
-    QNetworkReply* reply = m_networkManager->get(request);
+    QNetworkRequest request(std::string(m_ollamaUrl + "/api/tags"));
+    void** reply = m_networkManager->get(request);
     
-    QEventLoop loop;
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+    void* loop;
+// Qt connect removed
+    void*::singleShot(2000, &loop, &void*::quit);
     loop.exec();
     
-    if (reply->error() != QNetworkReply::NoError) {
+    if (reply->error() != void*::NoError) {
         reply->deleteLater();
         return false;
     }
     
-    QByteArray data = reply->readAll();
+    std::vector<uint8_t> data = reply->readAll();
     reply->deleteLater();
     
-    QJsonDocument doc = QJsonDocument::fromJson(data);
-    QJsonArray models = doc.object()["models"].toArray();
+    void* doc = void*::fromJson(data);
+    void* models = doc.object()["models"].toArray();
     
-    for (const QJsonValue& val : models) {
-        QString name = val.toObject()["name"].toString();
+    for (const void*& val : models) {
+        std::string name = val.toObject()["name"].toString();
         if (name == modelName || name.startsWith(modelName + ":")) {
-            qDebug() << "[OllamaProxy] Model found:" << name;
             return true;
         }
     }
     
-    qWarning() << "[OllamaProxy] Model not found in Ollama:" << modelName;
     return false;
 }
 
-void OllamaProxy::generateResponse(const QString& prompt, float temperature, int maxTokens)
+void OllamaProxy::generateResponse(const std::string& prompt, float temperature, int maxTokens)
 {
     if (m_modelName.isEmpty()) {
-        emit error("No model selected");
+        error("No model selected");
         return;
     }
     
     // Stop any ongoing generation
     stopGeneration();
     
-    qInfo() << "[OllamaProxy] Generating response for prompt:" << prompt.left(50) << "...";
     
     // Build JSON request for Ollama API
-    QJsonObject request;
+    void* request;
     request["model"] = m_modelName;
     request["prompt"] = prompt;
     request["stream"] = true;  // Enable streaming
     
-    QJsonObject options;
+    void* options;
     options["temperature"] = temperature;
     options["num_predict"] = maxTokens;
     request["options"] = options;
     
-    QJsonDocument doc(request);
-    QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
+    void* doc(request);
+    std::vector<uint8_t> jsonData = doc.toJson(void*::Compact);
     
     // Send POST request to /api/generate
-    QNetworkRequest netRequest(QUrl(m_ollamaUrl + "/api/generate"));
+    QNetworkRequest netRequest(std::string(m_ollamaUrl + "/api/generate"));
     netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
     m_currentReply = m_networkManager->post(netRequest, jsonData);
     m_buffer.clear();
     
     // Connect signals for streaming response
-    connect(m_currentReply, &QNetworkReply::readyRead, this, &OllamaProxy::onNetworkReply);
-    connect(m_currentReply, &QNetworkReply::finished, this, [this]() {
-        qDebug() << "[OllamaProxy] Generation finished";
-        emit generationComplete();
+// Qt connect removed
+// Qt connect removed
+        generationComplete();
         if (m_currentReply) {
             m_currentReply->deleteLater();
             m_currentReply = nullptr;
         }
     });
-    connect(m_currentReply, &QNetworkReply::errorOccurred, this, &OllamaProxy::onNetworkError);
+// Qt connect removed
 }
 
 void OllamaProxy::stopGeneration()
 {
     if (m_currentReply) {
-        qDebug() << "[OllamaProxy] Stopping generation";
         m_currentReply->abort();
         m_currentReply->deleteLater();
         m_currentReply = nullptr;
@@ -139,57 +128,54 @@ void OllamaProxy::onNetworkReply()
     if (!m_currentReply) return;
     
     // Read available data
-    QByteArray newData = m_currentReply->readAll();
+    std::vector<uint8_t> newData = m_currentReply->readAll();
     m_buffer.append(newData);
     
     // Process complete JSON lines (Ollama sends newline-delimited JSON)
     while (m_buffer.contains('\n')) {
         int newlinePos = m_buffer.indexOf('\n');
-        QByteArray line = m_buffer.left(newlinePos);
+        std::vector<uint8_t> line = m_buffer.left(newlinePos);
         m_buffer.remove(0, newlinePos + 1);
         
         if (line.trimmed().isEmpty()) continue;
         
         // Parse JSON response
-        QJsonDocument doc = QJsonDocument::fromJson(line);
+        void* doc = void*::fromJson(line);
         if (doc.isNull()) {
-            qWarning() << "[OllamaProxy] Failed to parse JSON:" << line;
             continue;
         }
         
-        QJsonObject obj = doc.object();
+        void* obj = doc.object();
         
         // Check for errors
         if (obj.contains("error")) {
-            QString errMsg = obj["error"].toString();
-            qWarning() << "[OllamaProxy] Server error:" << errMsg;
-            emit error(errMsg);
+            std::string errMsg = obj["error"].toString();
+            error(errMsg);
             continue;
         }
         
         // Extract token from response
         if (obj.contains("response")) {
-            QString token = obj["response"].toString();
+            std::string token = obj["response"].toString();
             if (!token.isEmpty()) {
-                emit tokenArrived(token);
+                tokenArrived(token);
             }
         }
         
         // Check if done
         if (obj["done"].toBool()) {
-            qDebug() << "[OllamaProxy] Stream complete";
             break;
         }
     }
 }
 
-void OllamaProxy::onNetworkError(QNetworkReply::NetworkError code)
+void OllamaProxy::onNetworkError(void*::NetworkError code)
 {
-    QString errorMsg = QString("Network error: %1").arg(code);
+    std::string errorMsg = std::string("Network error: %1");
     if (m_currentReply) {
         errorMsg += " - " + m_currentReply->errorString();
     }
     
-    qWarning() << "[OllamaProxy]" << errorMsg;
-    emit error(errorMsg);
+    error(errorMsg);
 }
+

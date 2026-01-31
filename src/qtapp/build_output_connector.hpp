@@ -216,7 +216,3 @@ private:
     std::map<std::string, BuildConfiguration> m_savedConfigurations;
 };
 
-
-
-
-

@@ -6,7 +6,7 @@
  */
 
 #include "ai_completion_provider.h"
-#include <QDebug>
+
 #include <chrono>
 
 namespace RawrXD {
@@ -14,34 +14,33 @@ namespace RawrXD {
 AICompletionProvider::AICompletionProvider(
     RealTimeCompletionEngine* engine,
     std::shared_ptr<Logger> logger,
-    QObject* parent)
-    : QObject(parent)
+    void* parent)
+    : void(parent)
     , m_engine(engine)
     , m_logger(logger)
 {
     if (!m_engine) {
-        qWarning() << "AICompletionProvider: No completion engine provided!";
     }
     if (m_logger) {
-        m_logger->info("AICompletionProvider initialized");
+
     }
 }
 
 void AICompletionProvider::requestCompletions(
-    const QString& prefix,
-    const QString& suffix,
-    const QString& filePath,
-    const QString& fileType,
-    const QStringList& contextLines)
+    const std::string& prefix,
+    const std::string& suffix,
+    const std::string& filePath,
+    const std::string& fileType,
+    const std::vector<std::string>& contextLines)
 {
     if (!m_engine) {
-        emit error("Completion engine not available");
+        error("Completion engine not available");
         return;
     }
 
     if (m_requestPending) {
         if (m_logger) {
-            m_logger->debug("Skipping completion request - previous request still pending");
+
         }
         return;
     }
@@ -52,10 +51,10 @@ void AICompletionProvider::requestCompletions(
 
     try {
         // Build context from surrounding lines
-        QString context = buildContext(contextLines);
+        std::string context = buildContext(contextLines);
 
         if (m_logger) {
-            m_logger->debug("Requesting completions - prefix_len={}, suffix_len={}, context_len={}",
+
                           prefix.length(), suffix.length(), context.length());
         }
 
@@ -71,32 +70,31 @@ void AICompletionProvider::requestCompletions(
         auto latencyMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
 
         if (m_logger) {
-            m_logger->info("Got {} completions in {:.2f}ms", completions.size(), latencyMs);
+
         }
 
-        emit latencyReported(latencyMs);
+        latencyReported(latencyMs);
 
-        // Convert and emit
-        auto aiCompletions = convertCompletions(completions);
-        emit completionsReady(aiCompletions);
+        // Convert and auto aiCompletions = convertCompletions(completions);
+        completionsReady(aiCompletions);
 
     } catch (const std::exception& e) {
         if (m_logger) {
-            m_logger->error("Completion request failed: {}", e.what());
+
         }
-        emit error(QString("Completion failed: %1").arg(e.what()));
+        error(std::string("Completion failed: %1")));
     }
 
     m_requestPending = false;
 }
 
 void AICompletionProvider::requestInlineCompletion(
-    const QString& currentLine,
+    const std::string& currentLine,
     int cursorColumn,
-    const QString& filePath)
+    const std::string& filePath)
 {
     if (!m_engine) {
-        emit error("Completion engine not available");
+        error("Completion engine not available");
         return;
     }
 
@@ -110,7 +108,7 @@ void AICompletionProvider::requestInlineCompletion(
 
     try {
         if (m_logger) {
-            m_logger->debug("Requesting inline completion at column {}", cursorColumn);
+
         }
 
         auto completions = m_engine->getInlineCompletions(
@@ -123,31 +121,31 @@ void AICompletionProvider::requestInlineCompletion(
         auto latencyMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
 
         if (m_logger) {
-            m_logger->info("Got {} inline completions in {:.2f}ms", completions.size(), latencyMs);
+
         }
 
-        emit latencyReported(latencyMs);
+        latencyReported(latencyMs);
 
         auto aiCompletions = convertCompletions(completions);
-        emit completionsReady(aiCompletions);
+        completionsReady(aiCompletions);
 
     } catch (const std::exception& e) {
         if (m_logger) {
-            m_logger->error("Inline completion failed: {}", e.what());
+
         }
-        emit error(QString("Inline completion failed: %1").arg(e.what()));
+        error(std::string("Inline completion failed: %1")));
     }
 
     m_requestPending = false;
 }
 
 void AICompletionProvider::requestMultiLineCompletion(
-    const QString& prefix,
-    const QString& filePath,
+    const std::string& prefix,
+    const std::string& filePath,
     int maxLines)
 {
     if (!m_engine) {
-        emit error("Completion engine not available");
+        error("Completion engine not available");
         return;
     }
 
@@ -161,7 +159,7 @@ void AICompletionProvider::requestMultiLineCompletion(
 
     try {
         if (m_logger) {
-            m_logger->debug("Requesting multi-line completion (maxLines={})", maxLines);
+
         }
 
         auto completions = m_engine->getMultiLineCompletions(
@@ -173,19 +171,19 @@ void AICompletionProvider::requestMultiLineCompletion(
         auto latencyMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
 
         if (m_logger) {
-            m_logger->info("Got {} multi-line completions in {:.2f}ms", completions.size(), latencyMs);
+
         }
 
-        emit latencyReported(latencyMs);
+        latencyReported(latencyMs);
 
         auto aiCompletions = convertCompletions(completions);
-        emit completionsReady(aiCompletions);
+        completionsReady(aiCompletions);
 
     } catch (const std::exception& e) {
         if (m_logger) {
-            m_logger->error("Multi-line completion failed: {}", e.what());
+
         }
-        emit error(QString("Multi-line completion failed: %1").arg(e.what()));
+        error(std::string("Multi-line completion failed: %1")));
     }
 
     m_requestPending = false;
@@ -195,7 +193,7 @@ void AICompletionProvider::cancelRequest()
 {
     m_requestPending = false;
     if (m_logger) {
-        m_logger->debug("Completion request cancelled");
+
     }
 }
 
@@ -212,23 +210,23 @@ void AICompletionProvider::clearCache()
     if (m_engine) {
         m_engine->clearCache();
         if (m_logger) {
-            m_logger->info("Completion cache cleared");
+
         }
     }
 }
 
-QVector<AICompletion> AICompletionProvider::convertCompletions(
+std::vector<AICompletion> AICompletionProvider::convertCompletions(
     const std::vector<CodeCompletion>& completions)
 {
-    QVector<AICompletion> result;
+    std::vector<AICompletion> result;
     result.reserve(completions.size());
 
     for (const auto& comp : completions) {
         AICompletion ai;
-        ai.text = QString::fromStdString(comp.text);
-        ai.detail = QString::fromStdString(comp.detail);
+        ai.text = std::string::fromStdString(comp.text);
+        ai.detail = std::string::fromStdString(comp.detail);
         ai.confidence = comp.confidence;
-        ai.kind = QString::fromStdString(comp.kind);
+        ai.kind = std::string::fromStdString(comp.kind);
         ai.cursorOffset = comp.cursorOffset;
         ai.isMultiLine = (ai.text.count('\n') > 0);
         
@@ -238,13 +236,13 @@ QVector<AICompletion> AICompletionProvider::convertCompletions(
     return result;
 }
 
-QString AICompletionProvider::buildContext(const QStringList& lines) const
+std::string AICompletionProvider::buildContext(const std::vector<std::string>& lines) const
 {
     // Join context lines with newlines
     // Limit to reasonable size (e.g., 10 lines = ~500 chars)
     const int MAX_CONTEXT_LINES = 10;
     
-    QStringList limitedLines = lines;
+    std::vector<std::string> limitedLines = lines;
     if (limitedLines.size() > MAX_CONTEXT_LINES) {
         limitedLines = limitedLines.mid(limitedLines.size() - MAX_CONTEXT_LINES);
     }
@@ -253,3 +251,4 @@ QString AICompletionProvider::buildContext(const QStringList& lines) const
 }
 
 } // namespace RawrXD
+

@@ -1,24 +1,9 @@
 #include "training_dialog.h"
 #include "model_trainer.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGridLayout>
-#include <QGroupBox>
-#include <QLabel>
-#include <QLineEdit>
-#include <QSpinBox>
-#include <QDoubleSpinBox>
-#include <QComboBox>
-#include <QCheckBox>
-#include <QPushButton>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QSettings>
-#include <QFileInfo>
-#include <QDebug>
 
-TrainingDialog::TrainingDialog(ModelTrainer* trainer, QWidget* parent)
-    : QDialog(parent)
+
+TrainingDialog::TrainingDialog(ModelTrainer* trainer, void* parent)
+    : void(parent)
     , m_trainer(trainer)
 {
     // Lightweight constructor - defer Qt widget creation
@@ -232,22 +217,18 @@ void TrainingDialog::setupUI()
 void TrainingDialog::setupConnections()
 {
     // Browse buttons
-    connect(m_browseDatasetBtn, &QPushButton::clicked, this, &TrainingDialog::onBrowseDataset);
-    connect(m_browseModelBtn, &QPushButton::clicked, this, &TrainingDialog::onBrowseModel);
-    connect(m_browseOutputBtn, &QPushButton::clicked, this, &TrainingDialog::onBrowseOutputPath);
-
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     // Dataset format combo
-    connect(m_datasetFormatCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &TrainingDialog::onDatasetFormatChanged);
-
+// Qt connect removed
     // Action buttons
-    connect(m_startTrainingBtn, &QPushButton::clicked, this, &TrainingDialog::onStartTraining);
-    connect(m_cancelBtn, &QPushButton::clicked, this, &TrainingDialog::onCancel);
-
+// Qt connect removed
+// Qt connect removed
     // Validation triggers
-    connect(m_datasetPathEdit, &QLineEdit::textChanged, this, &TrainingDialog::validateInputs);
-    connect(m_modelPathEdit, &QLineEdit::textChanged, this, &TrainingDialog::validateInputs);
-    connect(m_outputPathEdit, &QLineEdit::textChanged, this, &TrainingDialog::validateInputs);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 void TrainingDialog::loadDefaultSettings()
@@ -296,7 +277,7 @@ void TrainingDialog::saveSettings()
 
 void TrainingDialog::onBrowseDataset()
 {
-    QString path = QFileDialog::getOpenFileName(
+    std::string path = QFileDialog::getOpenFileName(
         this,
         "Select Training Dataset",
         "",
@@ -307,7 +288,7 @@ void TrainingDialog::onBrowseDataset()
         m_datasetPathEdit->setText(path);
 
         // Auto-detect format
-        QString format = detectDatasetFormat(path);
+        std::string format = detectDatasetFormat(path);
         m_datasetInfoLabel->setText("Detected format: " + format);
 
         // Update combo box
@@ -320,16 +301,16 @@ void TrainingDialog::onBrowseDataset()
         }
 
         // Show file info
-        QFileInfo info(path);
-        m_datasetInfoLabel->setText(QString("Format: %1 | Size: %2 MB")
-            .arg(format)
-            .arg(info.size() / (1024.0 * 1024.0), 0, 'f', 2));
+        std::filesystem::path info(path);
+        m_datasetInfoLabel->setText(std::string("Format: %1 | Size: %2 MB")
+            
+             / (1024.0 * 1024.0), 0, 'f', 2));
     }
 }
 
 void TrainingDialog::onBrowseModel()
 {
-    QString path = QFileDialog::getOpenFileName(
+    std::string path = QFileDialog::getOpenFileName(
         this,
         "Select Base Model",
         "",
@@ -340,16 +321,16 @@ void TrainingDialog::onBrowseModel()
         m_modelPathEdit->setText(path);
 
         // Show file info
-        QFileInfo info(path);
-        m_modelInfoLabel->setText(QString("Size: %1 MB | %2")
-            .arg(info.size() / (1024.0 * 1024.0), 0, 'f', 2)
-            .arg(info.fileName()));
+        std::filesystem::path info(path);
+        m_modelInfoLabel->setText(std::string("Size: %1 MB | %2")
+             / (1024.0 * 1024.0), 0, 'f', 2)
+            ));
     }
 }
 
 void TrainingDialog::onBrowseOutputPath()
 {
-    QString path = QFileDialog::getSaveFileName(
+    std::string path = QFileDialog::getSaveFileName(
         this,
         "Save Fine-Tuned Model",
         "",
@@ -358,7 +339,7 @@ void TrainingDialog::onBrowseOutputPath()
 
     if (!path.isEmpty()) {
         // Ensure .gguf extension
-        if (!path.endsWith(".gguf", Qt::CaseInsensitive)) {
+        if (!path.endsWith(".gguf", //CaseInsensitive)) {
             path += ".gguf";
         }
         m_outputPathEdit->setText(path);
@@ -373,21 +354,21 @@ void TrainingDialog::onStartTraining()
 
     saveSettings();
 
-    QJsonObject config = getTrainingConfig();
-    emit trainingStartRequested(config);
+    void* config = getTrainingConfig();
+    trainingStartRequested(config);
 
     accept(); // Close dialog
 }
 
 void TrainingDialog::onCancel()
 {
-    emit trainingCancelled();
+    trainingCancelled();
     reject();
 }
 
 void TrainingDialog::onDatasetFormatChanged(int index)
 {
-    Q_UNUSED(index);
+    (index);
     validateInputs();
 }
 
@@ -396,8 +377,8 @@ void TrainingDialog::validateInputs()
     bool isValid = !m_datasetPathEdit->text().isEmpty() &&
                    !m_modelPathEdit->text().isEmpty() &&
                    !m_outputPathEdit->text().isEmpty() &&
-                   QFileInfo::exists(m_datasetPathEdit->text()) &&
-                   QFileInfo::exists(m_modelPathEdit->text());
+                   std::filesystem::path::exists(m_datasetPathEdit->text()) &&
+                   std::filesystem::path::exists(m_modelPathEdit->text());
 
     m_startTrainingBtn->setEnabled(isValid);
 
@@ -411,9 +392,9 @@ void TrainingDialog::validateInputs()
             m_startTrainingBtn->setToolTip("Please select a base model file");
         } else if (m_outputPathEdit->text().isEmpty()) {
             m_startTrainingBtn->setToolTip("Please specify output path");
-        } else if (!QFileInfo::exists(m_datasetPathEdit->text())) {
+        } else if (!std::filesystem::path::exists(m_datasetPathEdit->text())) {
             m_startTrainingBtn->setToolTip("Dataset file does not exist");
-        } else if (!QFileInfo::exists(m_modelPathEdit->text())) {
+        } else if (!std::filesystem::path::exists(m_modelPathEdit->text())) {
             m_startTrainingBtn->setToolTip("Model file does not exist");
         }
     }
@@ -441,15 +422,15 @@ bool TrainingDialog::validateConfiguration() const
     }
 
     // Check file existence
-    if (!QFileInfo::exists(m_datasetPathEdit->text())) {
+    if (!std::filesystem::path::exists(m_datasetPathEdit->text())) {
         QMessageBox::warning(const_cast<TrainingDialog*>(this), "Dataset Not Found",
-            QString("Dataset file does not exist:\n%1").arg(m_datasetPathEdit->text()));
+            std::string("Dataset file does not exist:\n%1")));
         return false;
     }
 
-    if (!QFileInfo::exists(m_modelPathEdit->text())) {
+    if (!std::filesystem::path::exists(m_modelPathEdit->text())) {
         QMessageBox::warning(const_cast<TrainingDialog*>(this), "Model Not Found",
-            QString("Model file does not exist:\n%1").arg(m_modelPathEdit->text()));
+            std::string("Model file does not exist:\n%1")));
         return false;
     }
 
@@ -475,21 +456,21 @@ bool TrainingDialog::validateConfiguration() const
     return true;
 }
 
-QString TrainingDialog::detectDatasetFormat(const QString& path) const
+std::string TrainingDialog::detectDatasetFormat(const std::string& path) const
 {
-    if (path.endsWith(".csv", Qt::CaseInsensitive)) {
+    if (path.endsWith(".csv", //CaseInsensitive)) {
         return "CSV";
-    } else if (path.endsWith(".jsonl", Qt::CaseInsensitive) || path.endsWith(".json", Qt::CaseInsensitive)) {
+    } else if (path.endsWith(".jsonl", //CaseInsensitive) || path.endsWith(".json", //CaseInsensitive)) {
         return "JSON Lines";
-    } else if (path.endsWith(".txt", Qt::CaseInsensitive)) {
+    } else if (path.endsWith(".txt", //CaseInsensitive)) {
         return "Plain Text";
     }
     return "Unknown";
 }
 
-QJsonObject TrainingDialog::getTrainingConfig() const
+void* TrainingDialog::getTrainingConfig() const
 {
-    QJsonObject config;
+    void* config;
 
     // Paths
     config["datasetPath"] = m_datasetPathEdit->text();
@@ -502,7 +483,7 @@ QJsonObject TrainingDialog::getTrainingConfig() const
         config["datasetFormat"] = formatIndex;
     } else {
         // Auto-detect
-        QString format = detectDatasetFormat(m_datasetPathEdit->text());
+        std::string format = detectDatasetFormat(m_datasetPathEdit->text());
         if (format == "Plain Text") config["datasetFormat"] = 0;
         else if (format == "JSON Lines") config["datasetFormat"] = 1;
         else if (format == "CSV") config["datasetFormat"] = 2;
@@ -524,3 +505,4 @@ QJsonObject TrainingDialog::getTrainingConfig() const
 
     return config;
 }
+

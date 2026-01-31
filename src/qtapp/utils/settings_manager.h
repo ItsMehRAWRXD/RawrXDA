@@ -15,10 +15,6 @@
  * - Settings change notifications
  */
 
-#include <QString>
-#include <QVariant>
-#include <QJsonObject>
-#include <QObject>
 
 namespace RawrXD {
 
@@ -36,9 +32,8 @@ namespace RawrXD {
  * int fontSize = settings.value("editor/fontSize", 12).toInt();
  * \endcode
  */
-class SettingsManager : public QObject {
-    Q_OBJECT
-    
+class SettingsManager : public void {
+
 public:
     /**
      * \brief Get singleton instance
@@ -56,7 +51,7 @@ public:
      * \param defaultValue Value to return if key doesn't exist
      * \return Setting value or default
      */
-    QVariant value(const QString& key, const QVariant& defaultValue = QVariant()) const;
+    std::any value(const std::string& key, const std::any& defaultValue = std::any()) const;
     
     /**
      * \brief Set setting value
@@ -64,32 +59,32 @@ public:
      * \param value New value
      * \param saveImmediately If true, save to disk immediately
      */
-    void setValue(const QString& key, const QVariant& value, bool saveImmediately = true);
+    void setValue(const std::string& key, const std::any& value, bool saveImmediately = true);
     
     /**
      * \brief Check if setting exists
      * \param key Setting key
      * \return true if setting exists
      */
-    bool contains(const QString& key) const;
+    bool contains(const std::string& key) const;
     
     /**
      * \brief Remove setting
      * \param key Setting key
      */
-    void remove(const QString& key);
+    void remove(const std::string& key);
     
     /**
      * \brief Get all settings as JSON
      * \return JSON object with all settings
      */
-    QJsonObject toJson() const;
+    void* toJson() const;
     
     /**
      * \brief Set all settings from JSON
      * \param json JSON object with settings
      */
-    void fromJson(const QJsonObject& json);
+    void fromJson(const void*& json);
     
     /**
      * \brief Save settings to disk
@@ -112,7 +107,7 @@ public:
      * \brief Get settings file path
      * \return Absolute path to settings.json
      */
-    QString settingsFilePath() const;
+    std::string settingsFilePath() const;
     
     // ========== Workspace Settings ==========
     
@@ -120,13 +115,13 @@ public:
      * \brief Set current workspace path
      * \param path Absolute path to workspace root
      */
-    void setWorkspacePath(const QString& path);
+    void setWorkspacePath(const std::string& path);
     
     /**
      * \brief Get current workspace path
      * \return Workspace root path
      */
-    QString workspacePath() const;
+    std::string workspacePath() const;
     
     /**
      * \brief Get workspace-specific setting (overrides global)
@@ -134,14 +129,14 @@ public:
      * \param defaultValue Default value
      * \return Workspace setting value, or global value if not set
      */
-    QVariant workspaceValue(const QString& key, const QVariant& defaultValue = QVariant()) const;
+    std::any workspaceValue(const std::string& key, const std::any& defaultValue = std::any()) const;
     
     /**
      * \brief Set workspace-specific setting
      * \param key Setting key
      * \param value New value
      */
-    void setWorkspaceValue(const QString& key, const QVariant& value);
+    void setWorkspaceValue(const std::string& key, const std::any& value);
     
     /**
      * \brief Save workspace settings to .rawrxd/workspace.json
@@ -163,10 +158,10 @@ public:
     bool restoreLastSession() const;
     
     // Appearance settings
-    QString theme() const;
-    QString fontFamily() const;
+    std::string theme() const;
+    std::string fontFamily() const;
     int fontSize() const;
-    QString colorScheme() const;
+    std::string colorScheme() const;
     
     // Editor settings
     int tabSize() const;
@@ -174,20 +169,20 @@ public:
     bool trimTrailingWhitespace() const;
     bool insertFinalNewline() const;
     bool formatOnSave() const;
-    QString lineEndings() const;  // "LF", "CRLF", "Auto"
+    std::string lineEndings() const;  // "LF", "CRLF", "Auto"
     
     // Search settings
     bool searchCaseSensitive() const;
     bool searchWholeWord() const;
     bool searchUseRegex() const;
     
-signals:
+
     /**
      * \brief Emitted when any setting changes
      * \param key Setting key that changed
      * \param value New value
      */
-    void settingChanged(const QString& key, const QVariant& value);
+    void settingChanged(const std::string& key, const std::any& value);
     
     /**
      * \brief Emitted when settings are reset to defaults
@@ -209,12 +204,13 @@ private:
     ~SettingsManager() override;
     
     void initializeDefaults();
-    QString getSettingsDirectory() const;
-    QString getWorkspaceSettingsPath() const;
+    std::string getSettingsDirectory() const;
+    std::string getWorkspaceSettingsPath() const;
     
-    QJsonObject m_settings;           ///< Global settings
-    QJsonObject m_workspaceSettings;  ///< Workspace-specific settings
-    QString m_workspacePath;          ///< Current workspace path
+    void* m_settings;           ///< Global settings
+    void* m_workspaceSettings;  ///< Workspace-specific settings
+    std::string m_workspacePath;          ///< Current workspace path
 };
 
 } // namespace RawrXD
+

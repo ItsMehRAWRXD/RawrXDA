@@ -1,20 +1,13 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
-#include <QJsonObject>
+
 #include <memory>
 
 // Forward declarations
-class QTabWidget;
-class QLabel;
-class QGridLayout;
+
+
 class Profiler;
-class QChart;
-class QChartView;
-class QLineSeries;
-class QValueAxis;
-class QDateTimeAxis;
+
 
 /**
  * @class ObservabilityDashboard
@@ -29,9 +22,8 @@ class QDateTimeAxis;
  *
  * Uses Qt Charts for visualization.
  */
-class ObservabilityDashboard : public QWidget
+class ObservabilityDashboard : public void
 {
-    Q_OBJECT
 
 public:
     /**
@@ -39,13 +31,13 @@ public:
      * @param profiler Pointer to Profiler instance (non-owning)
      * @param parent Parent widget for Qt ownership
      */
-    explicit ObservabilityDashboard(Profiler* profiler, QWidget* parent = nullptr);
+    explicit ObservabilityDashboard(Profiler* profiler, void* parent = nullptr);
     ~ObservabilityDashboard() override;
 
     // Two-phase initialization: call after QApplication exists
     void initialize();
 
-public slots:
+public:
     /**
      * @brief Called when new profiling metrics available
      * @param cpuPercent CPU usage 0-100%
@@ -66,7 +58,7 @@ public slots:
      * @brief Called when performance warning detected
      * @param warning Warning message
      */
-    void onPerformanceWarning(const QString& warning);
+    void onPerformanceWarning(const std::string& warning);
 
     /**
      * @brief Clear all charts and reset data
@@ -78,9 +70,9 @@ public slots:
      * @param filePath Path to export to (CSV or JSON)
      * @return true if export successful
      */
-    bool exportData(const QString& filePath);
+    bool exportData(const std::string& filePath);
 
-signals:
+
     /**
      * @brief Dashboard is requesting profiler data update
      */
@@ -124,7 +116,7 @@ private:
     QValueAxis* m_latencyAxisY;
 
     // Metrics panel tab
-    QWidget* m_metricsPanel;
+    void* m_metricsPanel;
     QLabel* m_currentCpuLabel;
     QLabel* m_currentMemoryLabel;
     QLabel* m_currentGpuLabel;
@@ -136,6 +128,6 @@ private:
     Profiler* m_profiler;
     int m_dataPointCount = 0;
     int m_maxDataPoints = 300; // Keep last 300 data points
-    std::vector<QString> m_warnings;
+    std::vector<std::string> m_warnings;
 };
 

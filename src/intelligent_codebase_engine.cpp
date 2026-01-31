@@ -1,16 +1,12 @@
 #include "intelligent_codebase_engine.h"
-#include <QDir>
-#include <QFile>
-#include <QTextStream>
-#include <QRegularExpression>
-#include <QFileInfo>
-#include <QDebug>
+
+
 #include <iostream>
 #include <algorithm>
 #include <cmath>
 
-IntelligentCodebaseEngine::IntelligentCodebaseEngine(QObject* parent)
-    : QObject(parent), fileWatcher(nullptr) {
+IntelligentCodebaseEngine::IntelligentCodebaseEngine(void* parent)
+    : void(parent), fileWatcher(nullptr) {
     
     enableRealTimeIndexing = true;
     enableDeepAnalysis = true;
@@ -29,18 +25,18 @@ IntelligentCodebaseEngine::~IntelligentCodebaseEngine() {
     optimizations.clear();
 }
 
-bool IntelligentCodebaseEngine::analyzeEntireCodebase(const QString& projectPath) {
+bool IntelligentCodebaseEngine::analyzeEntireCodebase(const std::string& projectPath) {
     std::cout << "[IntelligentCodebaseEngine] Analyzing entire codebase: " << projectPath.toStdString() << std::endl;
     
-    emit analysisStarted(projectPath);
+    analysisStarted(projectPath);
     
-    QDir projectDir(projectPath);
+    std::filesystem::path projectDir(projectPath);
     if (!projectDir.exists()) {
-        emit analysisCompleted(QJsonObject{{"error", "Project path does not exist"}});
+        analysisCompleted(void*{{"error", "Project path does not exist"}});
         return false;
     }
     
-    QStringList sourceFiles = getAllSourceFiles(projectPath);
+    std::vector<std::string> sourceFiles = getAllSourceFiles(projectPath);
     int totalFiles = sourceFiles.size();
     int processedFiles = 0;
     
@@ -50,9 +46,9 @@ bool IntelligentCodebaseEngine::analyzeEntireCodebase(const QString& projectPath
         int endIndex = qMin(i + batchSize, totalFiles);
         
         for (int j = i; j < endIndex; ++j) {
-            const QString& filePath = sourceFiles[j];
+            const std::string& filePath = sourceFiles[j];
             
-            emit analysisProgress((processedFiles * 100) / totalFiles, filePath);
+            analysisProgress((processedFiles * 100) / totalFiles, filePath);
             
             if (!analyzeFile(filePath)) {
                 std::cerr << "[IntelligentCodebaseEngine] Failed to analyze: " << filePath.toStdString() << std::endl;
@@ -66,27 +62,27 @@ bool IntelligentCodebaseEngine::analyzeEntireCodebase(const QString& projectPath
     
     performGlobalAnalysis();
     
-    QJsonObject results = generateAnalysisResults();
-    emit analysisCompleted(results);
+    void* results = generateAnalysisResults();
+    analysisCompleted(results);
     
     std::cout << "[IntelligentCodebaseEngine] Analysis completed" << std::endl;
     
     return true;
 }
 
-bool IntelligentCodebaseEngine::analyzeFile(const QString& filePath) {
+bool IntelligentCodebaseEngine::analyzeFile(const std::string& filePath) {
     std::cout << "[IntelligentCodebaseEngine] Analyzing file: " << filePath.toStdString() << std::endl;
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return false;
     }
     
     QTextStream stream(&file);
-    QString content = stream.readAll();
+    std::string content = stream.readAll();
     file.close();
     
-    QString language = detectLanguage(filePath);
+    std::string language = detectLanguage(filePath);
     
     if (language == "cpp" || language == "c") {
         return analyzeCppFile(filePath, content);
@@ -97,24 +93,24 @@ bool IntelligentCodebaseEngine::analyzeFile(const QString& filePath) {
     return analyzeGenericFile(filePath, content);
 }
 
-bool IntelligentCodebaseEngine::analyzeCppFile(const QString& filePath, const QString& content) {
+bool IntelligentCodebaseEngine::analyzeCppFile(const std::string& filePath, const std::string& content) {
     // Function detection
-    QRegularExpression functionRegex(R"((\w+(?:\s*\*)?\s+)(\w+)\s*\(([^)]*)\)\s*(const)?\s*\{)");
-    QRegularExpressionMatchIterator functionMatches = functionRegex.globalMatch(content);
+    std::regex functionRegex(R"((\w+(?:\s*\*)?\s+)(\w+)\s*\(([^)]*)\)\s*(const)?\s*\{)");
+    std::sregex_iterator functionMatches = functionRegex;
     
     int lineNumber = 1;
-    while (functionMatches.hasNext()) {
-        QRegularExpressionMatch match = functionMatches.next();
+    while (functionMatchesfalse) {
+        std::smatch match = functionMatches;
         
         SymbolInfo function;
-        function.name = match.captured(2);
+        function.name = match"";
         function.type = "function";
         function.filePath = filePath;
         function.lineNumber = lineNumber;
-        function.signature = match.captured(0);
-        function.returnType = match.captured(1).trimmed();
-        function.parameters = parseParameters(match.captured(3));
-        function.isConst = !match.captured(4).isEmpty();
+        function.signature = match"";
+        function.returnType = match"".trimmed();
+        function.parameters = parseParameters(match"");
+        function.isConst = !match"".isEmpty();
         
         function.metadata["language"] = "cpp";
         
@@ -125,21 +121,21 @@ bool IntelligentCodebaseEngine::analyzeCppFile(const QString& filePath, const QS
     }
     
     // Class detection
-    QRegularExpression classRegex(R"(class\s+(\w+)\s*(?::\s*(?:public|private|protected)\s+(\w+))?\s*\{)");
-    QRegularExpressionMatchIterator classMatches = classRegex.globalMatch(content);
+    std::regex classRegex(R"(class\s+(\w+)\s*(?::\s*(?:public|private|protected)\s+(\w+))?\s*\{)");
+    std::sregex_iterator classMatches = classRegex;
     
-    while (classMatches.hasNext()) {
-        QRegularExpressionMatch match = classMatches.next();
+    while (classMatchesfalse) {
+        std::smatch match = classMatches;
         
         SymbolInfo classSymbol;
-        classSymbol.name = match.captured(1);
+        classSymbol.name = match"";
         classSymbol.type = "class";
         classSymbol.filePath = filePath;
         classSymbol.lineNumber = lineNumber;
-        classSymbol.signature = match.captured(0);
+        classSymbol.signature = match"";
         
-        if (!match.captured(2).isEmpty()) {
-            classSymbol.baseClasses.append(match.captured(2));
+        if (!match"".isEmpty()) {
+            classSymbol.baseClasses.append(match"");
         }
         
         symbolIndex[classSymbol.name] = classSymbol;
@@ -147,19 +143,19 @@ bool IntelligentCodebaseEngine::analyzeCppFile(const QString& filePath, const QS
     }
     
     // Variable detection
-    QRegularExpression variableRegex(R"((const\s+)?(\w+(?:\s*\*)?)\s+(\w+)\s*(?:=\s*([^;]+))?;)");
-    QRegularExpressionMatchIterator variableMatches = variableRegex.globalMatch(content);
+    std::regex variableRegex(R"((const\s+)?(\w+(?:\s*\*)?)\s+(\w+)\s*(?:=\s*([^;]+))?;)");
+    std::sregex_iterator variableMatches = variableRegex;
     
-    while (variableMatches.hasNext()) {
-        QRegularExpressionMatch match = variableMatches.next();
+    while (variableMatchesfalse) {
+        std::smatch match = variableMatches;
         
         SymbolInfo variable;
-        variable.name = match.captured(3);
-        variable.type = match.captured(1).isEmpty() ? "variable" : "constant";
+        variable.name = match"";
+        variable.type = match"".isEmpty() ? "variable" : "constant";
         variable.filePath = filePath;
         variable.lineNumber = lineNumber;
-        variable.returnType = match.captured(2).trimmed();
-        variable.isConst = !match.captured(1).isEmpty();
+        variable.returnType = match"".trimmed();
+        variable.isConst = !match"".isEmpty();
         
         symbolIndex[variable.name] = variable;
         fileSymbols[filePath].append(variable);
@@ -171,23 +167,23 @@ bool IntelligentCodebaseEngine::analyzeCppFile(const QString& filePath, const QS
     return true;
 }
 
-bool IntelligentCodebaseEngine::analyzePythonFile(const QString& filePath, const QString& content) {
+bool IntelligentCodebaseEngine::analyzePythonFile(const std::string& filePath, const std::string& content) {
     // Python function detection
-    QRegularExpression functionRegex(R"(def\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*(\w+))?\s*:)");
-    QRegularExpressionMatchIterator functionMatches = functionRegex.globalMatch(content);
+    std::regex functionRegex(R"(def\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*(\w+))?\s*:)");
+    std::sregex_iterator functionMatches = functionRegex;
     
     int lineNumber = 1;
-    while (functionMatches.hasNext()) {
-        QRegularExpressionMatch match = functionMatches.next();
+    while (functionMatchesfalse) {
+        std::smatch match = functionMatches;
         
         SymbolInfo function;
-        function.name = match.captured(1);
+        function.name = match"";
         function.type = "function";
         function.filePath = filePath;
         function.lineNumber = lineNumber;
-        function.signature = match.captured(0);
-        function.parameters = parseParameters(match.captured(2));
-        function.returnType = match.captured(3);
+        function.signature = match"";
+        function.parameters = parseParameters(match"");
+        function.returnType = match"";
         
         function.metadata["language"] = "python";
         
@@ -198,21 +194,21 @@ bool IntelligentCodebaseEngine::analyzePythonFile(const QString& filePath, const
     }
     
     // Python class detection
-    QRegularExpression classRegex(R"(class\s+(\w+)\s*(?:\(([^)]+)\))?\s*:)");
-    QRegularExpressionMatchIterator classMatches = classRegex.globalMatch(content);
+    std::regex classRegex(R"(class\s+(\w+)\s*(?:\(([^)]+)\))?\s*:)");
+    std::sregex_iterator classMatches = classRegex;
     
-    while (classMatches.hasNext()) {
-        QRegularExpressionMatch match = classMatches.next();
+    while (classMatchesfalse) {
+        std::smatch match = classMatches;
         
         SymbolInfo classSymbol;
-        classSymbol.name = match.captured(1);
+        classSymbol.name = match"";
         classSymbol.type = "class";
         classSymbol.filePath = filePath;
         classSymbol.lineNumber = lineNumber;
-        classSymbol.signature = match.captured(0);
+        classSymbol.signature = match"";
         
-        if (!match.captured(2).isEmpty()) {
-            classSymbol.baseClasses = match.captured(2).split(',', Qt::SkipEmptyParts);
+        if (!match"".isEmpty()) {
+            classSymbol.baseClasses = match"".split(',', //SkipEmptyParts);
         }
         
         symbolIndex[classSymbol.name] = classSymbol;
@@ -222,19 +218,19 @@ bool IntelligentCodebaseEngine::analyzePythonFile(const QString& filePath, const
     return true;
 }
 
-bool IntelligentCodebaseEngine::analyzeGenericFile(const QString& filePath, const QString& content) {
+bool IntelligentCodebaseEngine::analyzeGenericFile(const std::string& filePath, const std::string& content) {
     // Generic analysis for unknown file types
     complexityAnalysis.linesOfCode += content.count('\n') + 1;
     return true;
 }
 
-bool IntelligentCodebaseEngine::analyzeCallGraph(const QString& filePath, const QString& content) {
-    QRegularExpression callRegex(R"(\b(\w+)\s*\()");
-    QRegularExpressionMatchIterator callMatches = callRegex.globalMatch(content);
+bool IntelligentCodebaseEngine::analyzeCallGraph(const std::string& filePath, const std::string& content) {
+    std::regex callRegex(R"(\b(\w+)\s*\()");
+    std::sregex_iterator callMatches = callRegex;
     
-    while (callMatches.hasNext()) {
-        QRegularExpressionMatch match = callMatches.next();
-        QString calledFunction = match.captured(1);
+    while (callMatchesfalse) {
+        std::smatch match = callMatches;
+        std::string calledFunction = match"";
         
         if (calledFunction != "if" && calledFunction != "while" && 
             calledFunction != "for" && calledFunction != "switch") {
@@ -245,14 +241,14 @@ bool IntelligentCodebaseEngine::analyzeCallGraph(const QString& filePath, const 
     return true;
 }
 
-bool IntelligentCodebaseEngine::analyzeDependencies(const QString& filePath, const QString& content) {
+bool IntelligentCodebaseEngine::analyzeDependencies(const std::string& filePath, const std::string& content) {
     // C++ includes
-    QRegularExpression includeRegex(R"(#include\s*["<]([^">]+)[">])");
-    QRegularExpressionMatchIterator includeMatches = includeRegex.globalMatch(content);
+    std::regex includeRegex(R"(#include\s*["<]([^">]+)[">])");
+    std::sregex_iterator includeMatches = includeRegex;
     
-    while (includeMatches.hasNext()) {
-        QRegularExpressionMatch match = includeMatches.next();
-        QString includeFile = match.captured(1);
+    while (includeMatchesfalse) {
+        std::smatch match = includeMatches;
+        std::string includeFile = match"";
         
         DependencyInfo dependency;
         dependency.fromSymbol = filePath;
@@ -268,7 +264,7 @@ bool IntelligentCodebaseEngine::analyzeDependencies(const QString& filePath, con
     return true;
 }
 
-QVector<RefactoringOpportunity> IntelligentCodebaseEngine::discoverRefactoringOpportunities() {
+std::vector<RefactoringOpportunity> IntelligentCodebaseEngine::discoverRefactoringOpportunities() {
     std::cout << "[IntelligentCodebaseEngine] Discovering refactoring opportunities..." << std::endl;
     
     refactoringOpportunities.clear();
@@ -281,7 +277,7 @@ QVector<RefactoringOpportunity> IntelligentCodebaseEngine::discoverRefactoringOp
     std::cout << "[IntelligentCodebaseEngine] Found " << refactoringOpportunities.size() 
               << " refactoring opportunities" << std::endl;
     
-    emit refactoringOpportunitiesFound(refactoringOpportunities);
+    refactoringOpportunitiesFound(refactoringOpportunities);
     
     return refactoringOpportunities;
 }
@@ -296,7 +292,7 @@ void IntelligentCodebaseEngine::discoverExtractMethodOpportunities() {
             if (complexity > 15) {
                 RefactoringOpportunity opportunity;
                 opportunity.type = "extract_method";
-                opportunity.description = QString("Extract complex logic from function '%1'").arg(symbol.name);
+                opportunity.description = std::string("Extract complex logic from function '%1'");
                 opportunity.filePath = symbol.filePath;
                 opportunity.startLine = symbol.lineNumber;
                 opportunity.endLine = symbol.lineNumber + 50;
@@ -321,7 +317,7 @@ void IntelligentCodebaseEngine::discoverInlineFunctionOpportunities() {
             if (complexity < 3 && symbol.parameters.isEmpty()) {
                 RefactoringOpportunity opportunity;
                 opportunity.type = "inline_function";
-                opportunity.description = QString("Inline simple function '%1'").arg(symbol.name);
+                opportunity.description = std::string("Inline simple function '%1'");
                 opportunity.filePath = symbol.filePath;
                 opportunity.startLine = symbol.lineNumber;
                 opportunity.endLine = symbol.lineNumber + 10;
@@ -339,13 +335,13 @@ void IntelligentCodebaseEngine::discoverMoveClassOpportunities() {
         const SymbolInfo& symbol = it.value();
         
         if (symbol.type == "class") {
-            QString expectedFileName = symbol.name.toLower() + ".cpp";
-            QString actualFileName = QFileInfo(symbol.filePath).fileName();
+            std::string expectedFileName = symbol.name.toLower() + ".cpp";
+            std::string actualFileName = std::filesystem::path(symbol.filePath).fileName();
             
             if (actualFileName != expectedFileName && actualFileName != symbol.name.toLower() + ".h") {
                 RefactoringOpportunity opportunity;
                 opportunity.type = "move_class";
-                opportunity.description = QString("Move class '%1' to dedicated file").arg(symbol.name);
+                opportunity.description = std::string("Move class '%1' to dedicated file");
                 opportunity.filePath = symbol.filePath;
                 opportunity.startLine = symbol.lineNumber;
                 opportunity.endLine = symbol.lineNumber + 50;
@@ -362,10 +358,10 @@ void IntelligentCodebaseEngine::discoverRenameOpportunities() {
     for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
         const SymbolInfo& symbol = it.value();
         
-        if (symbol.name.length() < 3 || symbol.name.contains(QRegularExpression("[0-9]"))) {
+        if (symbol.name.length() < 3 || symbol.name.contains(std::regex("[0-9]"))) {
             RefactoringOpportunity opportunity;
             opportunity.type = "rename";
-            opportunity.description = QString("Rename symbol '%1' to follow naming conventions").arg(symbol.name);
+            opportunity.description = std::string("Rename symbol '%1' to follow naming conventions");
             opportunity.filePath = symbol.filePath;
             opportunity.startLine = symbol.lineNumber;
             opportunity.endLine = symbol.lineNumber + 1;
@@ -377,7 +373,7 @@ void IntelligentCodebaseEngine::discoverRenameOpportunities() {
     }
 }
 
-QVector<BugReport> IntelligentCodebaseEngine::detectBugs() {
+std::vector<BugReport> IntelligentCodebaseEngine::detectBugs() {
     std::cout << "[IntelligentCodebaseEngine] Detecting bugs..." << std::endl;
     
     bugReports.clear();
@@ -390,7 +386,7 @@ QVector<BugReport> IntelligentCodebaseEngine::detectBugs() {
     std::cout << "[IntelligentCodebaseEngine] Found " << bugReports.size() 
               << " potential bugs" << std::endl;
     
-    emit bugsDetected(bugReports);
+    bugsDetected(bugReports);
     
     return bugReports;
 }
@@ -400,13 +396,13 @@ void IntelligentCodebaseEngine::detectNullPointerBugs() {
         const SymbolInfo& symbol = it.value();
         
         if (symbol.type == "function") {
-            for (const QString& param : symbol.parameters) {
+            for (const std::string& param : symbol.parameters) {
                 if (param.contains('*') || param.contains("pointer")) {
                     if (!checkForNullChecks(symbol)) {
                         BugReport bug;
                         bug.bugType = "null_pointer";
                         bug.severity = "high";
-                        bug.description = QString("Function '%1' has pointer parameter without null check").arg(symbol.name);
+                        bug.description = std::string("Function '%1' has pointer parameter without null check");
                         bug.filePath = symbol.filePath;
                         bug.lineNumber = symbol.lineNumber;
                         bug.confidence = 0.8;
@@ -434,7 +430,7 @@ void IntelligentCodebaseEngine::detectMemoryLeakBugs() {
                 BugReport bug;
                 bug.bugType = "memory_leak";
                 bug.severity = "medium";
-                bug.description = QString("Function '%1' allocates memory without proper cleanup").arg(symbol.name);
+                bug.description = std::string("Function '%1' allocates memory without proper cleanup");
                 bug.filePath = symbol.filePath;
                 bug.lineNumber = symbol.lineNumber;
                 bug.confidence = 0.7;
@@ -458,7 +454,7 @@ void IntelligentCodebaseEngine::detectInfiniteLoopBugs() {
             BugReport bug;
             bug.bugType = "infinite_loop";
             bug.severity = "high";
-            bug.description = QString("Function '%1' has potential infinite loop").arg(symbol.name);
+            bug.description = std::string("Function '%1' has potential infinite loop");
             bug.filePath = symbol.filePath;
             bug.lineNumber = symbol.lineNumber;
             bug.confidence = 0.6;
@@ -483,7 +479,7 @@ void IntelligentCodebaseEngine::detectRaceConditionBugs() {
                 BugReport bug;
                 bug.bugType = "race_condition";
                 bug.severity = "critical";
-                bug.description = QString("Function '%1' accesses shared state without synchronization").arg(symbol.name);
+                bug.description = std::string("Function '%1' accesses shared state without synchronization");
                 bug.filePath = symbol.filePath;
                 bug.lineNumber = symbol.lineNumber;
                 bug.confidence = 0.8;
@@ -497,7 +493,7 @@ void IntelligentCodebaseEngine::detectRaceConditionBugs() {
     }
 }
 
-QVector<Optimization> IntelligentCodebaseEngine::suggestOptimizations() {
+std::vector<Optimization> IntelligentCodebaseEngine::suggestOptimizations() {
     std::cout << "[IntelligentCodebaseEngine] Suggesting optimizations..." << std::endl;
     
     optimizations.clear();
@@ -510,7 +506,7 @@ QVector<Optimization> IntelligentCodebaseEngine::suggestOptimizations() {
     std::cout << "[IntelligentCodebaseEngine] Found " << optimizations.size() 
               << " optimization opportunities" << std::endl;
     
-    emit optimizationsSuggested(optimizations);
+    optimizationsSuggested(optimizations);
     
     return optimizations;
 }
@@ -525,7 +521,7 @@ void IntelligentCodebaseEngine::suggestPerformanceOptimizations() {
             if (complexity > 20) {
                 Optimization optimization;
                 optimization.optimizationType = "performance";
-                optimization.description = QString("Optimize high-complexity function '%1'").arg(symbol.name);
+                optimization.description = std::string("Optimize high-complexity function '%1'");
                 optimization.filePath = symbol.filePath;
                 optimization.lineNumber = symbol.lineNumber;
                 optimization.potentialImprovement = 30.0;
@@ -546,7 +542,7 @@ void IntelligentCodebaseEngine::suggestMemoryOptimizations() {
         if (symbol.type == "function" && checkForLargeObjectCreation(symbol)) {
             Optimization optimization;
             optimization.optimizationType = "memory";
-            optimization.description = QString("Optimize memory usage in function '%1'").arg(symbol.name);
+            optimization.description = std::string("Optimize memory usage in function '%1'");
             optimization.filePath = symbol.filePath;
             optimization.lineNumber = symbol.lineNumber;
             optimization.potentialImprovement = 25.0;
@@ -566,7 +562,7 @@ void IntelligentCodebaseEngine::suggestReadabilityOptimizations() {
         if (symbol.type == "function" && symbol.parameters.size() > 5) {
             Optimization optimization;
             optimization.optimizationType = "readability";
-            optimization.description = QString("Simplify parameter list of function '%1'").arg(symbol.name);
+            optimization.description = std::string("Simplify parameter list of function '%1'");
             optimization.filePath = symbol.filePath;
             optimization.lineNumber = symbol.lineNumber;
             optimization.potentialImprovement = 25.0;
@@ -587,7 +583,7 @@ void IntelligentCodebaseEngine::suggestSecurityOptimizations() {
             if (!checkForInputValidation(symbol) && !symbol.parameters.isEmpty()) {
                 Optimization optimization;
                 optimization.optimizationType = "security";
-                optimization.description = QString("Add input validation to function '%1'").arg(symbol.name);
+                optimization.description = std::string("Add input validation to function '%1'");
                 optimization.filePath = symbol.filePath;
                 optimization.lineNumber = symbol.lineNumber;
                 optimization.potentialImprovement = 50.0;
@@ -615,7 +611,7 @@ ArchitecturePattern IntelligentCodebaseEngine::detectArchitecturePattern() {
         const SymbolInfo& symbol = it.value();
         
         if (symbol.type == "class") {
-            QString className = symbol.name.toLower();
+            std::string className = symbol.name.toLower();
             
             if (className.contains("model")) hasModels = true;
             if (className.contains("view")) hasViews = true;
@@ -637,7 +633,7 @@ ArchitecturePattern IntelligentCodebaseEngine::detectArchitecturePattern() {
         pattern.evidence.append("Monolithic structure detected");
     }
     
-    emit architecturePatternDetected(pattern);
+    architecturePatternDetected(pattern);
     
     return pattern;
 }
@@ -673,8 +669,8 @@ double IntelligentCodebaseEngine::calculateMaintainabilityIndex() {
     return qMax(0.0, qMin(1.0, 1.0 - (avgComplexity / 100.0)));
 }
 
-QJsonObject IntelligentCodebaseEngine::generateQualityReport() {
-    QJsonObject report;
+void* IntelligentCodebaseEngine::generateQualityReport() {
+    void* report;
     
     report["code_quality_score"] = calculateCodeQualityScore();
     report["maintainability_index"] = calculateMaintainabilityIndex();
@@ -687,14 +683,12 @@ QJsonObject IntelligentCodebaseEngine::generateQualityReport() {
     return report;
 }
 
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const QString& projectPath) {
+bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
     std::cout << "[IntelligentCodebaseEngine] Starting real-time analysis" << std::endl;
     
     fileWatcher = new QFileSystemWatcher(this);
     fileWatcher->addPath(projectPath);
-    
-    connect(fileWatcher, &QFileSystemWatcher::fileChanged, this, &IntelligentCodebaseEngine::updateAnalysis);
-    
+// Qt connect removed
     return analyzeEntireCodebase(projectPath);
 }
 
@@ -706,41 +700,41 @@ bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
     return true;
 }
 
-bool IntelligentCodebaseEngine::updateAnalysis(const QString& filePath) {
+bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
     std::cout << "[IntelligentCodebaseEngine] Updating analysis for: " << filePath.toStdString() << std::endl;
     
     removeFileAnalysis(filePath);
     analyzeFile(filePath);
     
-    emit realTimeAnalysisUpdated(filePath);
+    realTimeAnalysisUpdated(filePath);
     
     return true;
 }
 
-QStringList IntelligentCodebaseEngine::getAllSourceFiles(const QString& projectPath) {
-    QStringList files;
-    QDir dir(projectPath);
+std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
+    std::vector<std::string> files;
+    std::filesystem::path dir(projectPath);
     
-    QStringList filters;
+    std::vector<std::string> filters;
     filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
     
-    QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoDotAndDotDot);
+    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
     
-    for (const QFileInfo& fileInfo : fileList) {
+    for (const std::filesystem::path& fileInfo : fileList) {
         files.append(fileInfo.absoluteFilePath());
     }
     
-    QFileInfoList subdirs = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
-    for (const QFileInfo& subdir : subdirs) {
+    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
+    for (const std::filesystem::path& subdir : subdirs) {
         files.append(getAllSourceFiles(subdir.absoluteFilePath()));
     }
     
     return files;
 }
 
-void IntelligentCodebaseEngine::processBatchRelationships(const QStringList& files) {
+void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
     // Process inter-file relationships
-    for (const QString& file : files) {
+    for (const std::string& file : files) {
         analyzeDependencies(file, "");
     }
 }
@@ -759,12 +753,12 @@ void IntelligentCodebaseEngine::performGlobalAnalysis() {
     complexityAnalysis.numberOfDependencies = dependencyGraph.size();
 }
 
-QJsonObject IntelligentCodebaseEngine::generateAnalysisResults() {
+void* IntelligentCodebaseEngine::generateAnalysisResults() {
     return generateQualityReport();
 }
 
-QString IntelligentCodebaseEngine::detectLanguage(const QString& filePath) {
-    QString suffix = QFileInfo(filePath).suffix().toLower();
+std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
+    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
     
     if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
         return "cpp";
@@ -779,19 +773,19 @@ QString IntelligentCodebaseEngine::detectLanguage(const QString& filePath) {
     return "unknown";
 }
 
-QString IntelligentCodebaseEngine::detectFileType(const QString& filePath) {
-    return QFileInfo(filePath).suffix();
+std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
+    return std::filesystem::path(filePath).suffix();
 }
 
-QVector<QString> IntelligentCodebaseEngine::parseParameters(const QString& paramString) {
-    QVector<QString> params;
+std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
+    std::vector<std::string> params;
     
     if (paramString.trimmed().isEmpty()) {
         return params;
     }
     
-    QStringList paramList = paramString.split(',');
-    for (const QString& param : paramList) {
+    std::vector<std::string> paramList = paramString.split(',');
+    for (const std::string& param : paramList) {
         params.append(param.trimmed());
     }
     
@@ -809,16 +803,16 @@ double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& 
     return complexity;
 }
 
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const QString& symbolName) {
+SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
     return symbolIndex.value(symbolName, SymbolInfo());
 }
 
-QVector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const QString& filePath) {
-    return fileSymbols.value(filePath, QVector<SymbolInfo>());
+std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
+    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
 }
 
-QVector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const QString& symbolName) {
-    QVector<DependencyInfo> deps;
+std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
+    std::vector<DependencyInfo> deps;
     
     for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
         for (const DependencyInfo& dep : it.value()) {
@@ -831,11 +825,11 @@ QVector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const Q
     return deps;
 }
 
-QJsonArray IntelligentCodebaseEngine::getFileDependencies(const QString& filePath) {
-    QJsonArray deps;
+void* IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
+    void* deps;
     
     for (const DependencyInfo& dep : dependencyGraph.value(filePath)) {
-        QJsonObject obj;
+        void* obj;
         obj["from"] = dep.fromSymbol;
         obj["to"] = dep.toSymbol;
         obj["type"] = dep.dependencyType;
@@ -845,8 +839,8 @@ QJsonArray IntelligentCodebaseEngine::getFileDependencies(const QString& filePat
     return deps;
 }
 
-QJsonObject IntelligentCodebaseEngine::getDependencyGraph() {
-    QJsonObject graph;
+void* IntelligentCodebaseEngine::getDependencyGraph() {
+    void* graph;
     
     for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
         graph[it.key()] = getFileDependencies(it.key());
@@ -855,13 +849,13 @@ QJsonObject IntelligentCodebaseEngine::getDependencyGraph() {
     return graph;
 }
 
-QVector<QString> IntelligentCodebaseEngine::getCircularDependencies() {
-    QVector<QString> circular;
+std::vector<std::string> IntelligentCodebaseEngine::getCircularDependencies() {
+    std::vector<std::string> circular;
     // Simplified circular dependency detection
     return circular;
 }
 
-void IntelligentCodebaseEngine::removeFileAnalysis(const QString& filePath) {
+void IntelligentCodebaseEngine::removeFileAnalysis(const std::string& filePath) {
     auto it = fileSymbols.find(filePath);
     if (it != fileSymbols.end()) {
         for (const SymbolInfo& symbol : it.value()) {
@@ -873,7 +867,7 @@ void IntelligentCodebaseEngine::removeFileAnalysis(const QString& filePath) {
     dependencyGraph.remove(filePath);
 }
 
-void IntelligentCodebaseEngine::updateDependentAnalyses(const QString& filePath) {
+void IntelligentCodebaseEngine::updateDependentAnalyses(const std::string& filePath) {
     // Update analyses that depend on this file
     for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
         for (const DependencyInfo& dep : it.value()) {
@@ -898,3 +892,4 @@ bool IntelligentCodebaseEngine::checkForBufferOverflowRisk(const SymbolInfo& sym
 
 int IntelligentCodebaseEngine::estimateLinesOfCode(const SymbolInfo& symbol) { return 50; }
 double IntelligentCodebaseEngine::calculateHalsteadVolume() { return 100.0; }
+

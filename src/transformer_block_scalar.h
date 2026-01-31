@@ -1,16 +1,15 @@
 #pragma once
 
-#include <QObject>
+
 #include <vector>
 #include <cstdint>
 
-class TransformerBlockScalar : public QObject
+class TransformerBlockScalar : public void
 {
-    Q_OBJECT
 
 public:
     enum class WeightType {
-        Q_WEIGHTS,
+        ,
         K_WEIGHTS,
         V_WEIGHTS,
         O_WEIGHTS,
@@ -23,7 +22,7 @@ public:
         FFN_NORM
     };
     
-    explicit TransformerBlockScalar(QObject *parent = nullptr);
+    explicit TransformerBlockScalar(void *parent = nullptr);
     ~TransformerBlockScalar();
     
     bool initialize(uint32_t layerCount, uint32_t headCount, 

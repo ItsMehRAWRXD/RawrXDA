@@ -1,14 +1,13 @@
 // agentic_puppeteer.cpp - Implementation of response correction
 #include "agentic_puppeteer.hpp"
-#include <QRegularExpression>
-#include <QJsonDocument>
-#include <QDebug>
+
+
 #include <algorithm>
 
 // Base AgenticPuppeteer Implementation
 
-AgenticPuppeteer::AgenticPuppeteer(QObject* parent)
-    : QObject(parent)
+AgenticPuppeteer::AgenticPuppeteer(void* parent)
+    : void(parent)
 {
     // Initialize default refusal patterns
     m_refusalPatterns << "I can't" << "I cannot" << "I'm not able to" 
@@ -20,7 +19,6 @@ AgenticPuppeteer::AgenticPuppeteer(QObject* parent)
                            << "I think" << "probably" << "likely" << "might"
                            << "according to" << "was invented by";
     
-    qInfo() << "[AgenticPuppeteer] Initialized with" << m_refusalPatterns.count() 
             << "refusal patterns and" << m_hallucinationPatterns.count() << "hallucination patterns";
 }
 
@@ -28,9 +26,9 @@ AgenticPuppeteer::~AgenticPuppeteer()
 {
 }
 
-CorrectionResult AgenticPuppeteer::correctResponse(const QString& originalResponse, const QString& userPrompt)
+CorrectionResult AgenticPuppeteer::correctResponse(const std::string& originalResponse, const std::string& userPrompt)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     
     if (!m_enabled || originalResponse.isEmpty()) {
         return CorrectionResult::error(FailureType::None, "Puppeteer disabled or empty response");
@@ -48,10 +46,10 @@ CorrectionResult AgenticPuppeteer::correctResponse(const QString& originalRespon
     m_stats.failuresDetected++;
     m_stats.failureTypeCount[static_cast<int>(failure)]++;
     
-    emit failureDetected(failure, diagnoseFailure(originalResponse));
+    failureDetected(failure, diagnoseFailure(originalResponse));
     
     // Apply appropriate correction
-    QString corrected;
+    std::string corrected;
     
     switch (failure) {
         case FailureType::RefusalResponse:
@@ -77,50 +75,50 @@ CorrectionResult AgenticPuppeteer::correctResponse(const QString& originalRespon
     
     if (corrected != originalResponse && !corrected.isEmpty()) {
         m_stats.successfulCorrections++;
-        emit correctionApplied(corrected);
+        correctionApplied(corrected);
         return CorrectionResult::ok(corrected, failure);
     } else {
         m_stats.failedCorrections++;
-        emit correctionFailed(failure, "Could not generate correction");
+        correctionFailed(failure, "Could not generate correction");
         return CorrectionResult::error(failure, "Correction generation failed");
     }
 }
 
-CorrectionResult AgenticPuppeteer::correctJsonResponse(const QJsonObject& response, const QString& context)
+CorrectionResult AgenticPuppeteer::correctJsonResponse(const void*& response, const std::string& context)
 {
-    QJsonDocument doc(response);
-    QString jsonStr = doc.toJson(QJsonDocument::Compact);
+    void* doc(response);
+    std::string jsonStr = doc.toJson(void*::Compact);
     
     return correctResponse(jsonStr, context);
 }
 
-FailureType AgenticPuppeteer::detectFailure(const QString& response)
+FailureType AgenticPuppeteer::detectFailure(const std::string& response)
 {
     if (response.isEmpty()) {
         return FailureType::None;
     }
     
-    QString lower = response.toLower();
+    std::string lower = response.toLower();
     
     // Check for refusal
-    for (const QString& pattern : m_refusalPatterns) {
+    for (const std::string& pattern : m_refusalPatterns) {
         if (lower.contains(pattern.toLower())) {
             return FailureType::RefusalResponse;
         }
     }
     
     // Check for hallucination indicators
-    for (const QString& pattern : m_hallucinationPatterns) {
+    for (const std::string& pattern : m_hallucinationPatterns) {
         if (lower.contains(pattern.toLower())) {
             return FailureType::Hallucination;
         }
     }
     
     // Check for infinite loops (repeated content)
-    QStringList lines = response.split('\n', Qt::SkipEmptyParts);
+    std::vector<std::string> lines = response.split('\n', //SkipEmptyParts);
     if (lines.count() > 5) {
-        QHash<QString, int> lineCount;
-        for (const QString& line : lines) {
+        std::unordered_map<std::string, int> lineCount;
+        for (const std::string& line : lines) {
             lineCount[line]++;
         }
         
@@ -139,7 +137,7 @@ FailureType AgenticPuppeteer::detectFailure(const QString& response)
     return FailureType::None;
 }
 
-QString AgenticPuppeteer::diagnoseFailure(const QString& response)
+std::string AgenticPuppeteer::diagnoseFailure(const std::string& response)
 {
     switch (detectFailure(response)) {
         case FailureType::RefusalResponse:
@@ -157,68 +155,67 @@ QString AgenticPuppeteer::diagnoseFailure(const QString& response)
     }
 }
 
-void AgenticPuppeteer::addRefusalPattern(const QString& pattern)
+void AgenticPuppeteer::addRefusalPattern(const std::string& pattern)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_refusalPatterns.contains(pattern)) {
         m_refusalPatterns.append(pattern);
     }
 }
 
-void AgenticPuppeteer::addHallucinationPattern(const QString& pattern)
+void AgenticPuppeteer::addHallucinationPattern(const std::string& pattern)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_hallucinationPatterns.contains(pattern)) {
         m_hallucinationPatterns.append(pattern);
     }
 }
 
-void AgenticPuppeteer::addLoopPattern(const QString& pattern)
+void AgenticPuppeteer::addLoopPattern(const std::string& pattern)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     if (!m_loopPatterns.contains(pattern)) {
         m_loopPatterns.append(pattern);
     }
 }
 
-QStringList AgenticPuppeteer::getRefusalPatterns() const
+std::vector<std::string> AgenticPuppeteer::getRefusalPatterns() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_refusalPatterns;
 }
 
-QStringList AgenticPuppeteer::getHallucinationPatterns() const
+std::vector<std::string> AgenticPuppeteer::getHallucinationPatterns() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_hallucinationPatterns;
 }
 
 AgenticPuppeteer::Stats AgenticPuppeteer::getStatistics() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_stats;
 }
 
 void AgenticPuppeteer::resetStatistics()
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_stats = Stats();
 }
 
 void AgenticPuppeteer::setEnabled(bool enable)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_enabled = enable;
-    qInfo() << "[AgenticPuppeteer]" << (enable ? "Enabled" : "Disabled");
 }
 
 bool AgenticPuppeteer::isEnabled() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_enabled;
 }
 
-QString AgenticPuppeteer::applyRefusalBypass(const QString& response)
+std::string AgenticPuppeteer::applyRefusalBypass(const std::string& response)
 {
     // Try to extract any partial content or reframe the request
     if (response.contains("however")) {
@@ -230,13 +227,13 @@ QString AgenticPuppeteer::applyRefusalBypass(const QString& response)
            "I can try to provide general information or suggest alternative approaches.";
 }
 
-QString AgenticPuppeteer::correctHallucination(const QString& response)
+std::string AgenticPuppeteer::correctHallucination(const std::string& response)
 {
     // Remove hallucination indicators
-    QString corrected = response;
+    std::string corrected = response;
     
-    for (const QString& pattern : m_hallucinationPatterns) {
-        corrected.remove(QRegularExpression(pattern + ".*?\\."));
+    for (const std::string& pattern : m_hallucinationPatterns) {
+        corrected.remove(std::regex(pattern + ".*?\\."));
     }
     
     // Add disclaimer
@@ -247,10 +244,10 @@ QString AgenticPuppeteer::correctHallucination(const QString& response)
     return corrected;
 }
 
-QString AgenticPuppeteer::enforceFormat(const QString& response)
+std::string AgenticPuppeteer::enforceFormat(const std::string& response)
 {
     // Try to fix common format issues
-    QString corrected = response;
+    std::string corrected = response;
     
     // Fix JSON if present
     if (corrected.startsWith('{') && !corrected.endsWith('}')) {
@@ -265,17 +262,17 @@ QString AgenticPuppeteer::enforceFormat(const QString& response)
     return corrected;
 }
 
-QString AgenticPuppeteer::handleInfiniteLoop(const QString& response)
+std::string AgenticPuppeteer::handleInfiniteLoop(const std::string& response)
 {
-    QStringList lines = response.split('\n', Qt::SkipEmptyParts);
+    std::vector<std::string> lines = response.split('\n', //SkipEmptyParts);
     
     if (lines.isEmpty()) {
         return response;
     }
     
     // Remove duplicate consecutive lines
-    QStringList unique;
-    for (const QString& line : lines) {
+    std::vector<std::string> unique;
+    for (const std::string& line : lines) {
         if (unique.isEmpty() || unique.last() != line) {
             unique.append(line);
         }
@@ -286,15 +283,14 @@ QString AgenticPuppeteer::handleInfiniteLoop(const QString& response)
 
 // RefusalBypassPuppeteer Implementation
 
-RefusalBypassPuppeteer::RefusalBypassPuppeteer(QObject* parent)
+RefusalBypassPuppeteer::RefusalBypassPuppeteer(void* parent)
     : AgenticPuppeteer(parent)
 {
-    qInfo() << "[RefusalBypassPuppeteer] Specialized for refusal bypass";
 }
 
-CorrectionResult RefusalBypassPuppeteer::bypassRefusal(const QString& refusedResponse, const QString& originalPrompt)
+CorrectionResult RefusalBypassPuppeteer::bypassRefusal(const std::string& refusedResponse, const std::string& originalPrompt)
 {
-    QString reframed = reframePrompt(refusedResponse);
+    std::string reframed = reframePrompt(refusedResponse);
     
     if (!reframed.isEmpty()) {
         return CorrectionResult::ok(reframed, FailureType::RefusalResponse);
@@ -303,12 +299,12 @@ CorrectionResult RefusalBypassPuppeteer::bypassRefusal(const QString& refusedRes
     return CorrectionResult::error(FailureType::RefusalResponse, "Could not reframe refusal");
 }
 
-QString RefusalBypassPuppeteer::reframePrompt(const QString& refusedResponse)
+std::string RefusalBypassPuppeteer::reframePrompt(const std::string& refusedResponse)
 {
     return generateAlternativePrompt(refusedResponse);
 }
 
-QString RefusalBypassPuppeteer::generateAlternativePrompt(const QString& original)
+std::string RefusalBypassPuppeteer::generateAlternativePrompt(const std::string& original)
 {
     // Provide educational/technical framing instead of blocked request
     return "From a technical/educational perspective, could you explain how this topic relates to "
@@ -317,24 +313,23 @@ QString RefusalBypassPuppeteer::generateAlternativePrompt(const QString& origina
 
 // HallucinationCorrectorPuppeteer Implementation
 
-HallucinationCorrectorPuppeteer::HallucinationCorrectorPuppeteer(QObject* parent)
+HallucinationCorrectorPuppeteer::HallucinationCorrectorPuppeteer(void* parent)
     : AgenticPuppeteer(parent)
 {
-    qInfo() << "[HallucinationCorrectorPuppeteer] Specialized for hallucination detection";
 }
 
 CorrectionResult HallucinationCorrectorPuppeteer::detectAndCorrectHallucination(
-    const QString& response, const QStringList& knownFacts)
+    const std::string& response, const std::vector<std::string>& knownFacts)
 {
     m_knownFactDatabase = knownFacts;
     
     // Check claims against known facts
-    QString corrected = response;
+    std::string corrected = response;
     bool foundHallucination = false;
     
     // Very basic hallucination detection
-    for (const QString& fact : knownFacts) {
-        if (!response.contains(fact, Qt::CaseInsensitive)) {
+    for (const std::string& fact : knownFacts) {
+        if (!response.contains(fact, //CaseInsensitive)) {
             foundHallucination = true;
         }
     }
@@ -347,10 +342,10 @@ CorrectionResult HallucinationCorrectorPuppeteer::detectAndCorrectHallucination(
     return CorrectionResult::ok(response, FailureType::None);
 }
 
-QString HallucinationCorrectorPuppeteer::validateFactuality(const QString& claim)
+std::string HallucinationCorrectorPuppeteer::validateFactuality(const std::string& claim)
 {
-    for (const QString& fact : m_knownFactDatabase) {
-        if (claim.contains(fact, Qt::CaseInsensitive)) {
+    for (const std::string& fact : m_knownFactDatabase) {
+        if (claim.contains(fact, //CaseInsensitive)) {
             return "[Verified] " + claim;
         }
     }
@@ -360,15 +355,14 @@ QString HallucinationCorrectorPuppeteer::validateFactuality(const QString& claim
 
 // FormatEnforcerPuppeteer Implementation
 
-FormatEnforcerPuppeteer::FormatEnforcerPuppeteer(QObject* parent)
+FormatEnforcerPuppeteer::FormatEnforcerPuppeteer(void* parent)
     : AgenticPuppeteer(parent)
 {
-    qInfo() << "[FormatEnforcerPuppeteer] Specialized for format enforcement";
 }
 
-CorrectionResult FormatEnforcerPuppeteer::enforceJsonFormat(const QString& response)
+CorrectionResult FormatEnforcerPuppeteer::enforceJsonFormat(const std::string& response)
 {
-    QJsonDocument doc = QJsonDocument::fromJson(response.toUtf8());
+    void* doc = void*::fromJson(response.toUtf8());
     
     if (!doc.isNull()) {
         // Already valid JSON
@@ -376,7 +370,7 @@ CorrectionResult FormatEnforcerPuppeteer::enforceJsonFormat(const QString& respo
     }
     
     // Try to fix common JSON issues
-    QString corrected = response;
+    std::string corrected = response;
     
     // Add missing closing braces
     int braceCount = corrected.count('{') - corrected.count('}');
@@ -385,7 +379,7 @@ CorrectionResult FormatEnforcerPuppeteer::enforceJsonFormat(const QString& respo
     }
     
     // Verify it's now valid
-    QJsonDocument fixedDoc = QJsonDocument::fromJson(corrected.toUtf8());
+    void* fixedDoc = void*::fromJson(corrected.toUtf8());
     if (!fixedDoc.isNull()) {
         return CorrectionResult::ok(corrected, FailureType::FormatViolation);
     }
@@ -393,9 +387,9 @@ CorrectionResult FormatEnforcerPuppeteer::enforceJsonFormat(const QString& respo
     return CorrectionResult::error(FailureType::FormatViolation, "Could not repair JSON");
 }
 
-CorrectionResult FormatEnforcerPuppeteer::enforceMarkdownFormat(const QString& response)
+CorrectionResult FormatEnforcerPuppeteer::enforceMarkdownFormat(const std::string& response)
 {
-    QString corrected = response;
+    std::string corrected = response;
     
     // Fix unmatched markdown code blocks
     if ((corrected.count("```") % 2) != 0) {
@@ -403,34 +397,35 @@ CorrectionResult FormatEnforcerPuppeteer::enforceMarkdownFormat(const QString& r
     }
     
     // Fix bold/italic markers
-    corrected.replace(QRegularExpression("\\*{3}"), "**");
+    corrected.replace(std::regex("\\*{3}"), "**");
     
     return CorrectionResult::ok(corrected, FailureType::FormatViolation);
 }
 
-CorrectionResult FormatEnforcerPuppeteer::enforceCodeBlockFormat(const QString& response)
+CorrectionResult FormatEnforcerPuppeteer::enforceCodeBlockFormat(const std::string& response)
 {
-    QString corrected = response;
+    std::string corrected = response;
     
     // Ensure code blocks have language identifier and closing marker
-    QRegularExpression codeBlockRegex("```([\\s\\S]*?)```");
-    QRegularExpressionMatch match = codeBlockRegex.match(corrected);
+    std::regex codeBlockRegex("```([\\s\\S]*?)```");
+    std::smatch match = codeBlockRegex.match(corrected);
     
-    if (match.hasMatch() && match.captured(1).trimmed().isEmpty()) {
+    if (match.hasMatch() && match"".trimmed().isEmpty()) {
         corrected.replace("```", "```cpp");
     }
     
     return CorrectionResult::ok(corrected, FailureType::FormatViolation);
 }
 
-void FormatEnforcerPuppeteer::setRequiredJsonSchema(const QJsonObject& schema)
+void FormatEnforcerPuppeteer::setRequiredJsonSchema(const void*& schema)
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     m_requiredSchema = schema;
 }
 
-QJsonObject FormatEnforcerPuppeteer::getRequiredJsonSchema() const
+void* FormatEnforcerPuppeteer::getRequiredJsonSchema() const
 {
-    QMutexLocker locker(&m_mutex);
+    std::lock_guard<std::mutex> locker(&m_mutex);
     return m_requiredSchema;
 }
+

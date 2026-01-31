@@ -1,39 +1,36 @@
 // AgenticMemorySystem Implementation (Core Functions)
 #include "agentic_memory_system.h"
-#include <QDebug>
-#include <QUuid>
-#include <QCryptographicHash>
+
+
 #include <algorithm>
 
-AgenticMemorySystem::AgenticMemorySystem(QObject* parent)
-    : QObject(parent),
-      m_systemStartTime(QDateTime::currentDateTime())
+AgenticMemorySystem::AgenticMemorySystem(void* parent)
+    : void(parent),
+      m_systemStartTime(std::chrono::system_clock::time_point::currentDateTime())
 {
-    qDebug() << "[AgenticMemorySystem] Initialized - Ready for memory management";
 }
 
 AgenticMemorySystem::~AgenticMemorySystem()
 {
-    qDebug() << "[AgenticMemorySystem] Destroyed - Cleaned up"
              << m_memories.size() << "memories and"
              << m_experiences.size() << "experiences";
 }
 
 // ===== MEMORY STORAGE =====
 
-QString AgenticMemorySystem::storeMemory(
+std::string AgenticMemorySystem::storeMemory(
     MemoryType type,
-    const QString& content,
-    const QJsonObject& metadata)
+    const std::string& content,
+    const void*& metadata)
 {
-    QString memoryId = QUuid::createUuid().toString();
+    std::string memoryId = QUuid::createUuid().toString();
 
     auto memory = std::make_unique<MemoryEntry>();
     memory->id = memoryId;
     memory->type = type;
     memory->content = content;
     memory->metadata = metadata;
-    memory->timestamp = QDateTime::currentDateTime();
+    memory->timestamp = std::chrono::system_clock::time_point::currentDateTime();
     memory->relevanceScore = 1.0f;
     memory->accessCount = 0;
     memory->isPinned = false;
@@ -41,12 +38,12 @@ QString AgenticMemorySystem::storeMemory(
     m_memories[memoryId.toStdString()] = std::move(memory);
     m_totalStored++;
 
-    emit memoryStored(memoryId);
+    memoryStored(memoryId);
 
     return memoryId;
 }
 
-void AgenticMemorySystem::updateMemory(const QString& memoryId, const QString& content)
+void AgenticMemorySystem::updateMemory(const std::string& memoryId, const std::string& content)
 {
     auto it = m_memories.find(memoryId.toStdString());
     if (it != m_memories.end()) {
@@ -54,12 +51,12 @@ void AgenticMemorySystem::updateMemory(const QString& memoryId, const QString& c
     }
 }
 
-void AgenticMemorySystem::deleteMemory(const QString& memoryId)
+void AgenticMemorySystem::deleteMemory(const std::string& memoryId)
 {
     m_memories.erase(memoryId.toStdString());
 }
 
-void AgenticMemorySystem::pinMemory(const QString& memoryId, bool pinned)
+void AgenticMemorySystem::pinMemory(const std::string& memoryId, bool pinned)
 {
     auto it = m_memories.find(memoryId.toStdString());
     if (it != m_memories.end()) {
@@ -69,13 +66,13 @@ void AgenticMemorySystem::pinMemory(const QString& memoryId, bool pinned)
 
 // ===== MEMORY RETRIEVAL =====
 
-AgenticMemorySystem::MemoryEntry* AgenticMemorySystem::getMemory(const QString& memoryId)
+AgenticMemorySystem::MemoryEntry* AgenticMemorySystem::getMemory(const std::string& memoryId)
 {
     auto it = m_memories.find(memoryId.toStdString());
     if (it != m_memories.end()) {
         it->second->accessCount++;
         m_totalRetrieved++;
-        emit memoryRetrieved(memoryId);
+        memoryRetrieved(memoryId);
         return it->second.get();
     }
     return nullptr;
@@ -96,7 +93,7 @@ std::vector<AgenticMemorySystem::MemoryEntry*> AgenticMemorySystem::getMemoriesB
 }
 
 std::vector<AgenticMemorySystem::MemoryEntry*> AgenticMemorySystem::getMemoriesByTag(
-    const QString& tag)
+    const std::string& tag)
 {
     std::vector<MemoryEntry*> results;
 
@@ -110,13 +107,13 @@ std::vector<AgenticMemorySystem::MemoryEntry*> AgenticMemorySystem::getMemoriesB
 }
 
 std::vector<AgenticMemorySystem::MemoryEntry*> AgenticMemorySystem::searchMemories(
-    const QString& query,
+    const std::string& query,
     int limit)
 {
     std::vector<MemoryEntry*> results;
 
     for (auto& pair : m_memories) {
-        if (pair.second->content.contains(query, Qt::CaseInsensitive)) {
+        if (pair.second->content.contains(query, //CaseInsensitive)) {
             results.push_back(pair.second.get());
         }
     }
@@ -135,7 +132,7 @@ std::vector<AgenticMemorySystem::MemoryEntry*> AgenticMemorySystem::searchMemori
 }
 
 std::vector<AgenticMemorySystem::MemoryEntry*> AgenticMemorySystem::getRelevantMemories(
-    const QString& context,
+    const std::string& context,
     int limit)
 {
     std::vector<MemoryEntry*> results;
@@ -164,14 +161,14 @@ std::vector<AgenticMemorySystem::MemoryEntry*> AgenticMemorySystem::getRelevantM
 
 // ===== EXPERIENCE MANAGEMENT =====
 
-QString AgenticMemorySystem::recordExperience(
-    const QString& taskDescription,
-    const QJsonObject& goalState,
-    const QJsonObject& resultState,
+std::string AgenticMemorySystem::recordExperience(
+    const std::string& taskDescription,
+    const void*& goalState,
+    const void*& resultState,
     bool successful,
-    const QStringList& strategiesUsed)
+    const std::vector<std::string>& strategiesUsed)
 {
-    QString experienceId = QUuid::createUuid().toString();
+    std::string experienceId = QUuid::createUuid().toString();
 
     auto experience = std::make_unique<Experience>();
     experience->experienceId = experienceId;
@@ -181,18 +178,18 @@ QString AgenticMemorySystem::recordExperience(
     experience->successful = successful;
     experience->successRate = successful ? 1.0f : 0.0f;
     experience->strategiesUsed = strategiesUsed;
-    experience->timestamp = QDateTime::currentDateTime();
+    experience->timestamp = std::chrono::system_clock::time_point::currentDateTime();
     experience->usageCount = 0;
 
     m_experiences[experienceId.toStdString()] = std::move(experience);
 
-    emit experienceRecorded(experienceId);
+    experienceRecorded(experienceId);
 
     return experienceId;
 }
 
 std::vector<AgenticMemorySystem::Experience> AgenticMemorySystem::findSimilarExperiences(
-    const QString& currentTask,
+    const std::string& currentTask,
     float minSimilarity)
 {
     std::vector<Experience> similar;
@@ -215,7 +212,7 @@ std::vector<AgenticMemorySystem::Experience> AgenticMemorySystem::findSimilarExp
     return similar;
 }
 
-AgenticMemorySystem::Experience* AgenticMemorySystem::getExperience(const QString& experienceId)
+AgenticMemorySystem::Experience* AgenticMemorySystem::getExperience(const std::string& experienceId)
 {
     auto it = m_experiences.find(experienceId.toStdString());
     if (it != m_experiences.end()) {
@@ -224,7 +221,7 @@ AgenticMemorySystem::Experience* AgenticMemorySystem::getExperience(const QStrin
     return nullptr;
 }
 
-void AgenticMemorySystem::recordExperienceUsage(const QString& experienceId)
+void AgenticMemorySystem::recordExperienceUsage(const std::string& experienceId)
 {
     auto it = m_experiences.find(experienceId.toStdString());
     if (it != m_experiences.end()) {
@@ -258,12 +255,12 @@ std::vector<AgenticMemorySystem::Experience> AgenticMemorySystem::getMostSuccess
 
 // ===== PATTERN RECOGNITION =====
 
-QString AgenticMemorySystem::recordPattern(
-    const QString& description,
-    const QString& category,
-    const QJsonArray& examples)
+std::string AgenticMemorySystem::recordPattern(
+    const std::string& description,
+    const std::string& category,
+    const void*& examples)
 {
-    QString patternId = QUuid::createUuid().toString();
+    std::string patternId = QUuid::createUuid().toString();
 
     auto pattern = std::make_unique<Pattern>();
     pattern->patternId = patternId;
@@ -272,24 +269,24 @@ QString AgenticMemorySystem::recordPattern(
     pattern->examples = examples;
     pattern->confidence = 0.5f;
     pattern->occurrences = 1;
-    pattern->firstObserved = QDateTime::currentDateTime();
-    pattern->lastObserved = QDateTime::currentDateTime();
+    pattern->firstObserved = std::chrono::system_clock::time_point::currentDateTime();
+    pattern->lastObserved = std::chrono::system_clock::time_point::currentDateTime();
 
     m_patterns[patternId.toStdString()] = std::move(pattern);
 
-    emit patternDetected(patternId);
+    patternDetected(patternId);
 
     return patternId;
 }
 
 std::vector<AgenticMemorySystem::Pattern> AgenticMemorySystem::detectPatterns(
-    const QString& context)
+    const std::string& context)
 {
     std::vector<Pattern> detected;
 
     for (auto& pair : m_patterns) {
         // Simple pattern matching on description
-        if (pair.second->description.contains(context, Qt::CaseInsensitive)) {
+        if (pair.second->description.contains(context, //CaseInsensitive)) {
             detected.push_back(*pair.second);
         }
     }
@@ -298,7 +295,7 @@ std::vector<AgenticMemorySystem::Pattern> AgenticMemorySystem::detectPatterns(
 }
 
 std::vector<AgenticMemorySystem::Pattern> AgenticMemorySystem::getPatternsForCategory(
-    const QString& category)
+    const std::string& category)
 {
     std::vector<Pattern> patterns;
 
@@ -311,7 +308,7 @@ std::vector<AgenticMemorySystem::Pattern> AgenticMemorySystem::getPatternsForCat
     return patterns;
 }
 
-AgenticMemorySystem::Pattern* AgenticMemorySystem::getPattern(const QString& patternId)
+AgenticMemorySystem::Pattern* AgenticMemorySystem::getPattern(const std::string& patternId)
 {
     auto it = m_patterns.find(patternId.toStdString());
     if (it != m_patterns.end()) {
@@ -320,7 +317,7 @@ AgenticMemorySystem::Pattern* AgenticMemorySystem::getPattern(const QString& pat
     return nullptr;
 }
 
-float AgenticMemorySystem::getPatternConfidence(const QString& patternId)
+float AgenticMemorySystem::getPatternConfidence(const std::string& patternId)
 {
     auto it = m_patterns.find(patternId.toStdString());
     if (it != m_patterns.end()) {
@@ -332,12 +329,12 @@ float AgenticMemorySystem::getPatternConfidence(const QString& patternId)
 // ===== LEARNING =====
 
 void AgenticMemorySystem::recordSuccess(
-    const QString& taskDescription,
-    const QString& strategy,
+    const std::string& taskDescription,
+    const std::string& strategy,
     float effectiveness)
 {
     // Record successful experience
-    QJsonObject goal;
+    void* goal;
     goal["task"] = taskDescription;
     goal["strategy"] = strategy;
 
@@ -345,11 +342,11 @@ void AgenticMemorySystem::recordSuccess(
 }
 
 void AgenticMemorySystem::recordFailure(
-    const QString& taskDescription,
-    const QString& strategy,
-    const QString& failureReason)
+    const std::string& taskDescription,
+    const std::string& strategy,
+    const std::string& failureReason)
 {
-    QJsonObject goal;
+    void* goal;
     goal["task"] = taskDescription;
     goal["strategy"] = strategy;
     goal["failure_reason"] = failureReason;
@@ -357,7 +354,7 @@ void AgenticMemorySystem::recordFailure(
     recordExperience(taskDescription, goal, goal, false, {strategy});
 }
 
-float AgenticMemorySystem::getStrategyEffectiveness(const QString& strategy) const
+float AgenticMemorySystem::getStrategyEffectiveness(const std::string& strategy) const
 {
     int successCount = 0;
     int totalCount = 0;
@@ -378,9 +375,9 @@ float AgenticMemorySystem::getStrategyEffectiveness(const QString& strategy) con
     return (successCount * 100.0f) / totalCount;
 }
 
-QStringList AgenticMemorySystem::getRankedStrategies(const QString& taskType)
+std::vector<std::string> AgenticMemorySystem::getRankedStrategies(const std::string& taskType)
 {
-    std::vector<std::pair<QString, float>> strategies;
+    std::vector<std::pair<std::string, float>> strategies;
 
     std::unordered_map<std::string, float> strategyScores;
     std::unordered_map<std::string, int> strategyCounts;
@@ -396,7 +393,7 @@ QStringList AgenticMemorySystem::getRankedStrategies(const QString& taskType)
 
     for (const auto& pair : strategyScores) {
         float effectiveness = pair.second / strategyCounts[pair.first];
-        strategies.push_back({QString::fromStdString(pair.first), effectiveness});
+        strategies.push_back({std::string::fromStdString(pair.first), effectiveness});
     }
 
     std::sort(strategies.begin(), strategies.end(),
@@ -404,7 +401,7 @@ QStringList AgenticMemorySystem::getRankedStrategies(const QString& taskType)
                   return a.second > b.second;
               });
 
-    QStringList ranked;
+    std::vector<std::string> ranked;
     for (const auto& pair : strategies) {
         ranked.append(pair.first);
     }
@@ -418,12 +415,12 @@ void AgenticMemorySystem::consolidateMemories()
 {
     updateMemoryDecay();
 
-    emit memoriesConsolidated();
+    memoriesConsolidated();
 }
 
 void AgenticMemorySystem::pruneOldMemories(int ageInDays)
 {
-    QDateTime cutoff = QDateTime::currentDateTime().addDays(-ageInDays);
+    std::chrono::system_clock::time_point cutoff = std::chrono::system_clock::time_point::currentDateTime().addDays(-ageInDays);
     int prunedCount = 0;
 
     for (auto it = m_memories.begin(); it != m_memories.end(); ) {
@@ -435,25 +432,25 @@ void AgenticMemorySystem::pruneOldMemories(int ageInDays)
         }
     }
 
-    emit memoryPruned(prunedCount);
+    memoryPruned(prunedCount);
 }
 
-void AgenticMemorySystem::forgetMemory(const QString& memoryId)
+void AgenticMemorySystem::forgetMemory(const std::string& memoryId)
 {
     deleteMemory(memoryId);
 }
 
 float AgenticMemorySystem::getMemoryDecayFactor(const MemoryEntry& entry) const
 {
-    int daysSinceAccess = entry.timestamp.daysTo(QDateTime::currentDateTime());
+    int daysSinceAccess = entry.timestamp.daysTo(std::chrono::system_clock::time_point::currentDateTime());
     return std::pow(m_decayRate, daysSinceAccess);
 }
 
 // ===== STATISTICS =====
 
-QJsonObject AgenticMemorySystem::getMemoryStatistics() const
+void* AgenticMemorySystem::getMemoryStatistics() const
 {
-    QJsonObject stats;
+    void* stats;
 
     stats["total_memories"] = static_cast<int>(m_memories.size());
     stats["total_experiences"] = static_cast<int>(m_experiences.size());
@@ -477,7 +474,7 @@ float AgenticMemorySystem::getAverageSuccessRate() const
     return total / m_experiences.size();
 }
 
-QString AgenticMemorySystem::getMostCommonSuccessStrategy() const
+std::string AgenticMemorySystem::getMostCommonSuccessStrategy() const
 {
     std::unordered_map<std::string, int> strategyCount;
 
@@ -496,36 +493,36 @@ QString AgenticMemorySystem::getMostCommonSuccessStrategy() const
                                       return a.second < b.second;
                                   });
 
-    return QString::fromStdString(maxIt->first);
+    return std::string::fromStdString(maxIt->first);
 }
 
 // ===== EXPORT/IMPORT =====
 
-QString AgenticMemorySystem::exportMemories() const
+std::string AgenticMemorySystem::exportMemories() const
 {
-    QJsonArray memories;
+    void* memories;
 
     for (const auto& pair : m_memories) {
-        QJsonObject memObj;
+        void* memObj;
         memObj["id"] = pair.second->id;
         memObj["type"] = static_cast<int>(pair.second->type);
         memObj["content"] = pair.second->content;
         memObj["metadata"] = pair.second->metadata;
-        memObj["timestamp"] = pair.second->timestamp.toString(Qt::ISODate);
+        memObj["timestamp"] = pair.second->timestamp.toString(//ISODate);
 
         memories.append(memObj);
     }
 
-    return QString::fromUtf8(QJsonDocument(memories).toJson());
+    return std::string::fromUtf8(void*(memories).toJson());
 }
 
-bool AgenticMemorySystem::importMemories(const QString& jsonData)
+bool AgenticMemorySystem::importMemories(const std::string& jsonData)
 {
-    QJsonDocument doc = QJsonDocument::fromJson(jsonData.toUtf8());
+    void* doc = void*::fromJson(jsonData.toUtf8());
     if (!doc.isArray()) return false;
 
     for (const auto& item : doc.array()) {
-        QJsonObject obj = item.toObject();
+        void* obj = item.toObject();
         storeMemory(
             static_cast<MemoryType>(obj["type"].toInt()),
             obj["content"].toString(),
@@ -536,26 +533,26 @@ bool AgenticMemorySystem::importMemories(const QString& jsonData)
     return true;
 }
 
-QString AgenticMemorySystem::exportExperiences() const
+std::string AgenticMemorySystem::exportExperiences() const
 {
-    QJsonArray experiences;
+    void* experiences;
 
     for (const auto& pair : m_experiences) {
-        QJsonObject expObj;
+        void* expObj;
         expObj["id"] = pair.second->experienceId;
         expObj["task"] = pair.second->taskDescription;
         expObj["successful"] = pair.second->successful;
-        expObj["timestamp"] = pair.second->timestamp.toString(Qt::ISODate);
+        expObj["timestamp"] = pair.second->timestamp.toString(//ISODate);
 
         experiences.append(expObj);
     }
 
-    return QString::fromUtf8(QJsonDocument(experiences).toJson());
+    return std::string::fromUtf8(void*(experiences).toJson());
 }
 
-bool AgenticMemorySystem::importExperiences(const QString& jsonData)
+bool AgenticMemorySystem::importExperiences(const std::string& jsonData)
 {
-    QJsonDocument doc = QJsonDocument::fromJson(jsonData.toUtf8());
+    void* doc = void*::fromJson(jsonData.toUtf8());
     if (!doc.isArray()) return false;
 
     // Process experiences as needed
@@ -581,11 +578,11 @@ void AgenticMemorySystem::setAccessWeightFactor(float factor)
 
 // ===== PRIVATE HELPERS =====
 
-float AgenticMemorySystem::calculateSimilarity(const QString& str1, const QString& str2)
+float AgenticMemorySystem::calculateSimilarity(const std::string& str1, const std::string& str2)
 {
     // Simple word-based similarity
-    QStringList words1 = str1.split(QRegularExpression("\\s+"));
-    QStringList words2 = str2.split(QRegularExpression("\\s+"));
+    std::vector<std::string> words1 = str1.split(std::regex("\\s+"));
+    std::vector<std::string> words2 = str2.split(std::regex("\\s+"));
 
     int matches = 0;
     for (const auto& w1 : words1) {
@@ -606,7 +603,7 @@ void AgenticMemorySystem::updateMemoryDecay()
 
 float AgenticMemorySystem::calculateRelevanceScore(
     const MemoryEntry& entry,
-    const QString& context)
+    const std::string& context)
 {
     float similarity = calculateSimilarity(entry.content, context);
     float recency = getMemoryDecayFactor(entry);
@@ -615,14 +612,15 @@ float AgenticMemorySystem::calculateRelevanceScore(
     return (similarity * 0.5f + recency * 0.3f + accessBoost * 0.2f);
 }
 
-QString AgenticMemorySystem::hashContent(const QString& content)
+std::string AgenticMemorySystem::hashContent(const std::string& content)
 {
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(content.toUtf8());
-    return QString(hash.result().toHex());
+    return std::string(hash.result().toHex());
 }
 
 void AgenticMemorySystem::extractPatterns()
 {
     // Pattern extraction logic
 }
+

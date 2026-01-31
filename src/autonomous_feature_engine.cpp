@@ -2,15 +2,13 @@
 #include "autonomous_feature_engine.h"
 #include "hybrid_cloud_manager.h"
 #include "intelligent_codebase_engine.h"
-#include <QFile>
-#include <QTextStream>
-#include <QCryptographicHash>
-#include <QRegularExpression>
+
+
 #include <iostream>
 #include <algorithm>
 
-AutonomousFeatureEngine::AutonomousFeatureEngine(QObject* parent)
-    : QObject(parent),
+AutonomousFeatureEngine::AutonomousFeatureEngine(void* parent)
+    : void(parent),
       hybridCloudManager(nullptr),
       codebaseEngine(nullptr),
       realTimeAnalysisEnabled(false),
@@ -19,10 +17,9 @@ AutonomousFeatureEngine::AutonomousFeatureEngine(QObject* parent)
       automaticSuggestionsEnabled(true),
       maxConcurrentAnalyses(4) {
     
-    analysisTimer = new QTimer(this);
+    analysisTimer = new void*(this);
     analysisTimer->setInterval(analysisIntervalMs);
-    connect(analysisTimer, &QTimer::timeout, this, &AutonomousFeatureEngine::onAnalysisTimerTimeout);
-    
+// Qt connect removed
     userProfile.userId = "default";
     userProfile.averageAcceptanceRate = 0.75;
     
@@ -41,32 +38,32 @@ void AutonomousFeatureEngine::setCodebaseEngine(IntelligentCodebaseEngine* engin
     codebaseEngine = engine;
 }
 
-void AutonomousFeatureEngine::analyzeCode(const QString& code, const QString& filePath, const QString& language) {
+void AutonomousFeatureEngine::analyzeCode(const std::string& code, const std::string& filePath, const std::string& language) {
     std::cout << "[AutonomousFeatureEngine] Analyzing code in " << filePath.toStdString() << std::endl;
     
     // Generate suggestions based on code analysis
-    QVector<AutonomousSuggestion> suggestions = getSuggestionsForCode(code, language);
+    std::vector<AutonomousSuggestion> suggestions = getSuggestionsForCode(code, language);
     
     for (const AutonomousSuggestion& suggestion : suggestions) {
         if (suggestion.confidence >= confidenceThreshold) {
             activeSuggestions.append(suggestion);
-            emit suggestionGenerated(suggestion);
+            suggestionGenerated(suggestion);
         }
     }
     
     // Detect security vulnerabilities
-    QVector<SecurityIssue> securityIssues = detectSecurityVulnerabilities(code, language);
+    std::vector<SecurityIssue> securityIssues = detectSecurityVulnerabilities(code, language);
     for (const SecurityIssue& issue : securityIssues) {
         detectedSecurityIssues.append(issue);
-        emit securityIssueDetected(issue);
+        securityIssueDetected(issue);
     }
     
     // Find optimization opportunities
-    QVector<PerformanceOptimization> optimizations = suggestOptimizations(code, language);
+    std::vector<PerformanceOptimization> optimizations = suggestOptimizations(code, language);
     for (const PerformanceOptimization& opt : optimizations) {
         if (opt.confidence >= confidenceThreshold) {
             optimizationSuggestions.append(opt);
-            emit optimizationFound(opt);
+            optimizationFound(opt);
         }
     }
     
@@ -74,19 +71,19 @@ void AutonomousFeatureEngine::analyzeCode(const QString& code, const QString& fi
     analyzeCodePattern(code, language);
 }
 
-void AutonomousFeatureEngine::analyzeCodeChange(const QString& oldCode, const QString& newCode, 
-                                               const QString& filePath, const QString& language) {
+void AutonomousFeatureEngine::analyzeCodeChange(const std::string& oldCode, const std::string& newCode, 
+                                               const std::string& filePath, const std::string& language) {
     // Analyze what changed and provide real-time feedback
     analyzeCode(newCode, filePath, language);
 }
 
-QVector<AutonomousSuggestion> AutonomousFeatureEngine::getSuggestionsForCode(
-    const QString& code, const QString& language) {
+std::vector<AutonomousSuggestion> AutonomousFeatureEngine::getSuggestionsForCode(
+    const std::string& code, const std::string& language) {
     
-    QVector<AutonomousSuggestion> suggestions;
+    std::vector<AutonomousSuggestion> suggestions;
     
     // Detect functions that need tests
-    QRegularExpression funcRegex;
+    std::regex funcRegex;
     if (language == "cpp" || language == "c++") {
         funcRegex.setPattern(R"(\w+\s+(\w+)\s*\([^)]*\)\s*\{)");
     } else if (language == "python") {
@@ -95,15 +92,15 @@ QVector<AutonomousSuggestion> AutonomousFeatureEngine::getSuggestionsForCode(
         funcRegex.setPattern(R"(function\s+(\w+)\s*\([^)]*\)\s*\{)");
     }
     
-    QRegularExpressionMatchIterator it = funcRegex.globalMatch(code);
-    while (it.hasNext()) {
-        QRegularExpressionMatch match = it.next();
+    std::sregex_iterator it = funcRegex;
+    while (itfalse) {
+        std::smatch match = it;
         int lineNum = code.left(match.capturedStart()).count('\n') + 1;
         
         // Extract function code
         int braceCount = 1;
         int pos = match.capturedEnd();
-        QString functionCode = match.captured(0);
+        std::string functionCode = match"";
         
         while (pos < code.length() && braceCount > 0) {
             QChar c = code[pos];
@@ -127,18 +124,18 @@ QVector<AutonomousSuggestion> AutonomousFeatureEngine::getSuggestionsForCode(
 }
 
 AutonomousSuggestion AutonomousFeatureEngine::generateTestSuggestion(
-    const QString& functionCode, const QString& language) {
+    const std::string& functionCode, const std::string& language) {
     
     AutonomousSuggestion suggestion;
     suggestion.suggestionId = QCryptographicHash::hash(
         functionCode.toUtf8(), QCryptographicHash::Md5).toHex();
     suggestion.type = "test_generation";
     suggestion.originalCode = functionCode;
-    suggestion.timestamp = QDateTime::currentDateTime();
+    suggestion.timestamp = std::chrono::system_clock::time_point::currentDateTime();
     suggestion.wasAccepted = false;
     
     // Extract function name
-    QRegularExpression nameRegex;
+    std::regex nameRegex;
     if (language == "cpp" || language == "c++") {
         nameRegex.setPattern(R"(\w+\s+(\w+)\s*\()");
     } else if (language == "python") {
@@ -147,13 +144,13 @@ AutonomousSuggestion AutonomousFeatureEngine::generateTestSuggestion(
         nameRegex.setPattern(R"(function\s+(\w+)\s*\()");
     }
     
-    QRegularExpressionMatch match = nameRegex.match(functionCode);
-    QString funcName = match.captured(1);
+    std::smatch match = nameRegex.match(functionCode);
+    std::string funcName = match"";
     
     // Generate test code based on language
-    QString testCode;
+    std::string testCode;
     if (language == "cpp" || language == "c++") {
-        testCode = QString(
+        testCode = std::string(
             "TEST(FunctionTest, Test_%1) {\n"
             "    // Arrange\n"
             "    // TODO: Setup test data\n"
@@ -163,10 +160,10 @@ AutonomousSuggestion AutonomousFeatureEngine::generateTestSuggestion(
             "    \n"
             "    // Assert\n"
             "    // EXPECT_EQ(expected, actual);\n"
-            "}\n").arg(funcName);
+            "}\n");
         suggestion.explanation = "Generated Google Test unit test template";
     } else if (language == "python") {
-        testCode = QString(
+        testCode = std::string(
             "def test_%1():\n"
             "    # Arrange\n"
             "    # TODO: Setup test data\n"
@@ -175,10 +172,10 @@ AutonomousSuggestion AutonomousFeatureEngine::generateTestSuggestion(
             "    result = %1()\n"
             "    \n"
             "    # Assert\n"
-            "    assert result is not None\n").arg(funcName);
+            "    assert result is not None\n");
         suggestion.explanation = "Generated pytest unit test template";
     } else if (language == "javascript" || language == "typescript") {
-        testCode = QString(
+        testCode = std::string(
             "describe('%1', () => {\n"
             "    it('should work correctly', () => {\n"
             "        // Arrange\n"
@@ -190,7 +187,7 @@ AutonomousSuggestion AutonomousFeatureEngine::generateTestSuggestion(
             "        // Assert\n"
             "        expect(result).toBeDefined();\n"
             "    });\n"
-            "});\n").arg(funcName);
+            "});\n");
         suggestion.explanation = "Generated Jest unit test template";
     }
     
@@ -202,7 +199,7 @@ AutonomousSuggestion AutonomousFeatureEngine::generateTestSuggestion(
 }
 
 GeneratedTest AutonomousFeatureEngine::generateTestsForFunction(
-    const QString& functionCode, const QString& language) {
+    const std::string& functionCode, const std::string& language) {
     
     GeneratedTest test;
     test.testId = QCryptographicHash::hash(
@@ -221,35 +218,35 @@ GeneratedTest AutonomousFeatureEngine::generateTestsForFunction(
     // Generate test code using the suggestion system
     AutonomousSuggestion suggestion = generateTestSuggestion(functionCode, language);
     test.testCode = suggestion.suggestedCode;
-    test.testName = "test_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+    test.testName = "test_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
     test.reasoning = "Automatically generated comprehensive test suite";
     
     test.testCases << "Test with valid input" 
                    << "Test with edge cases" 
                    << "Test with invalid input";
     
-    emit testGenerated(test);
+    testGenerated(test);
     return test;
 }
 
-QVector<GeneratedTest> AutonomousFeatureEngine::generateTestSuite(const QString& filePath) {
-    QVector<GeneratedTest> tests;
+std::vector<GeneratedTest> AutonomousFeatureEngine::generateTestSuite(const std::string& filePath) {
+    std::vector<GeneratedTest> tests;
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         return tests;
     }
     
-    QString code = QTextStream(&file).readAll();
+    std::string code = QTextStream(&file).readAll();
     file.close();
     
     // Detect language from file extension
-    QString language = "cpp";
+    std::string language = "cpp";
     if (filePath.endsWith(".py")) language = "python";
     else if (filePath.endsWith(".js") || filePath.endsWith(".ts")) language = "javascript";
     
     // Find all functions and generate tests
-    QVector<AutonomousSuggestion> suggestions = getSuggestionsForCode(code, language);
+    std::vector<AutonomousSuggestion> suggestions = getSuggestionsForCode(code, language);
     
     for (const AutonomousSuggestion& suggestion : suggestions) {
         if (suggestion.type == "test_generation") {
@@ -261,15 +258,15 @@ QVector<GeneratedTest> AutonomousFeatureEngine::generateTestSuite(const QString&
     return tests;
 }
 
-QVector<SecurityIssue> AutonomousFeatureEngine::detectSecurityVulnerabilities(
-    const QString& code, const QString& language) {
+std::vector<SecurityIssue> AutonomousFeatureEngine::detectSecurityVulnerabilities(
+    const std::string& code, const std::string& language) {
     
-    QVector<SecurityIssue> issues;
+    std::vector<SecurityIssue> issues;
     
     // SQL Injection detection
     if (detectSQLInjection(code)) {
         SecurityIssue issue;
-        issue.issueId = "sql_injection_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.issueId = "sql_injection_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
         issue.severity = "critical";
         issue.type = "sql_injection";
         issue.vulnerableCode = code;
@@ -283,7 +280,7 @@ QVector<SecurityIssue> AutonomousFeatureEngine::detectSecurityVulnerabilities(
     // XSS detection
     if (detectXSS(code)) {
         SecurityIssue issue;
-        issue.issueId = "xss_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.issueId = "xss_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
         issue.severity = "high";
         issue.type = "xss";
         issue.description = "Cross-site scripting vulnerability detected";
@@ -296,7 +293,7 @@ QVector<SecurityIssue> AutonomousFeatureEngine::detectSecurityVulnerabilities(
     // Buffer overflow detection
     if (detectBufferOverflow(code)) {
         SecurityIssue issue;
-        issue.issueId = "buffer_overflow_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.issueId = "buffer_overflow_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
         issue.severity = "critical";
         issue.type = "buffer_overflow";
         issue.description = "Potential buffer overflow vulnerability";
@@ -309,7 +306,7 @@ QVector<SecurityIssue> AutonomousFeatureEngine::detectSecurityVulnerabilities(
     // Command injection detection
     if (detectCommandInjection(code)) {
         SecurityIssue issue;
-        issue.issueId = "cmd_injection_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.issueId = "cmd_injection_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
         issue.severity = "critical";
         issue.type = "command_injection";
         issue.description = "Command injection vulnerability detected";
@@ -322,7 +319,7 @@ QVector<SecurityIssue> AutonomousFeatureEngine::detectSecurityVulnerabilities(
     // Path traversal detection
     if (detectPathTraversal(code)) {
         SecurityIssue issue;
-        issue.issueId = "path_traversal_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        issue.issueId = "path_traversal_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
         issue.severity = "high";
         issue.type = "path_traversal";
         issue.description = "Path traversal vulnerability detected";
@@ -335,51 +332,51 @@ QVector<SecurityIssue> AutonomousFeatureEngine::detectSecurityVulnerabilities(
     return issues;
 }
 
-bool AutonomousFeatureEngine::detectSQLInjection(const QString& code) {
+bool AutonomousFeatureEngine::detectSQLInjection(const std::string& code) {
     // Detect string concatenation with SQL queries
-    QRegularExpression sqlPattern(R"((SELECT|INSERT|UPDATE|DELETE)\s+.*\+\s*\w+)");
+    std::regex sqlPattern(R"((SELECT|INSERT|UPDATE|DELETE)\s+.*\+\s*\w+)");
     return sqlPattern.match(code).hasMatch();
 }
 
-bool AutonomousFeatureEngine::detectXSS(const QString& code) {
+bool AutonomousFeatureEngine::detectXSS(const std::string& code) {
     // Detect unescaped HTML rendering
-    QRegularExpression xssPattern(R"(innerHTML\s*=|\.html\(|document\.write\()");
+    std::regex xssPattern(R"(innerHTML\s*=|\.html\(|document\.write\()");
     return xssPattern.match(code).hasMatch();
 }
 
-bool AutonomousFeatureEngine::detectBufferOverflow(const QString& code) {
+bool AutonomousFeatureEngine::detectBufferOverflow(const std::string& code) {
     // Detect unsafe C functions
-    QRegularExpression bufferPattern(R"(strcpy|strcat|gets|sprintf)");
+    std::regex bufferPattern(R"(strcpy|strcat|gets|sprintf)");
     return bufferPattern.match(code).hasMatch();
 }
 
-bool AutonomousFeatureEngine::detectCommandInjection(const QString& code) {
+bool AutonomousFeatureEngine::detectCommandInjection(const std::string& code) {
     // Detect system command execution with user input
-    QRegularExpression cmdPattern(R"(system\(|exec\(|popen\(|eval\()");
+    std::regex cmdPattern(R"(system\(|exec\(|popen\(|eval\()");
     return cmdPattern.match(code).hasMatch() && code.contains("input");
 }
 
-bool AutonomousFeatureEngine::detectPathTraversal(const QString& code) {
+bool AutonomousFeatureEngine::detectPathTraversal(const std::string& code) {
     // Detect file operations with user-controlled paths
     return (code.contains("../") || code.contains("..\\")) && 
            (code.contains("fopen") || code.contains("open(") || code.contains("readFile"));
 }
 
-bool AutonomousFeatureEngine::detectInsecureCrypto(const QString& code) {
+bool AutonomousFeatureEngine::detectInsecureCrypto(const std::string& code) {
     // Detect weak cryptographic algorithms
-    QRegularExpression cryptoPattern(R"(MD5|SHA1|DES|RC4)");
+    std::regex cryptoPattern(R"(MD5|SHA1|DES|RC4)");
     return cryptoPattern.match(code).hasMatch();
 }
 
-QVector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizations(
-    const QString& code, const QString& language) {
+std::vector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizations(
+    const std::string& code, const std::string& language) {
     
-    QVector<PerformanceOptimization> optimizations;
+    std::vector<PerformanceOptimization> optimizations;
     
     // Detect parallelization opportunities
     if (canParallelize(code)) {
         PerformanceOptimization opt;
-        opt.optimizationId = "parallel_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        opt.optimizationId = "parallel_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
         opt.type = "parallelization";
         opt.currentImplementation = code;
         opt.reasoning = "Loop can be parallelized for better performance";
@@ -398,7 +395,7 @@ QVector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizations(
     // Detect caching opportunities
     if (canCache(code)) {
         PerformanceOptimization opt;
-        opt.optimizationId = "cache_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        opt.optimizationId = "cache_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
         opt.type = "caching";
         opt.reasoning = "Function results can be cached to avoid recomputation";
         opt.expectedSpeedup = 10.0;
@@ -407,12 +404,12 @@ QVector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizations(
     }
     
     // Detect inefficient algorithms
-    QString algorithmName;
+    std::string algorithmName;
     if (hasInefficientAlgorithm(code, algorithmName)) {
         PerformanceOptimization opt;
-        opt.optimizationId = "algorithm_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        opt.optimizationId = "algorithm_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
         opt.type = "algorithm";
-        opt.reasoning = QString("Inefficient algorithm detected: %1").arg(algorithmName);
+        opt.reasoning = std::string("Inefficient algorithm detected: %1");
         opt.expectedSpeedup = 5.0;
         opt.confidence = 0.80;
         optimizations.append(opt);
@@ -421,7 +418,7 @@ QVector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizations(
     // Detect memory waste
     if (hasMemoryWaste(code)) {
         PerformanceOptimization opt;
-        opt.optimizationId = "memory_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+        opt.optimizationId = "memory_" + std::string::number(std::chrono::system_clock::time_point::currentMSecsSinceEpoch());
         opt.type = "memory";
         opt.reasoning = "Unnecessary memory allocations detected";
         opt.expectedMemorySaving = 1024 * 1024 * 10; // 10MB
@@ -432,15 +429,15 @@ QVector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizations(
     return optimizations;
 }
 
-bool AutonomousFeatureEngine::canParallelize(const QString& code) {
+bool AutonomousFeatureEngine::canParallelize(const std::string& code) {
     // Detect simple for loops without dependencies
-    QRegularExpression loopPattern(R"(for\s*\([^)]+\)\s*\{)");
+    std::regex loopPattern(R"(for\s*\([^)]+\)\s*\{)");
     bool hasLoop = loopPattern.match(code).hasMatch();
     bool hasNoDependencies = !code.contains("result +=") && !code.contains("accumulator");
     return hasLoop && hasNoDependencies;
 }
 
-bool AutonomousFeatureEngine::canCache(const QString& code) {
+bool AutonomousFeatureEngine::canCache(const std::string& code) {
     // Detect pure functions (no side effects)
     bool isPureFunction = !code.contains("static") && 
                          !code.contains("global") && 
@@ -449,7 +446,7 @@ bool AutonomousFeatureEngine::canCache(const QString& code) {
     return isPureFunction && code.count("return") == 1;
 }
 
-bool AutonomousFeatureEngine::hasInefficientAlgorithm(const QString& code, QString& algorithmName) {
+bool AutonomousFeatureEngine::hasInefficientAlgorithm(const std::string& code, std::string& algorithmName) {
     // Detect nested loops (O(n²))
     if (code.count("for") >= 2) {
         algorithmName = "Nested loops (O(n²))";
@@ -465,13 +462,13 @@ bool AutonomousFeatureEngine::hasInefficientAlgorithm(const QString& code, QStri
     return false;
 }
 
-bool AutonomousFeatureEngine::hasMemoryWaste(const QString& code) {
+bool AutonomousFeatureEngine::hasMemoryWaste(const std::string& code) {
     // Detect unnecessary copies
     return code.contains("vector<") && !code.contains("const &") && !code.contains("&&");
 }
 
 CodeQualityMetrics AutonomousFeatureEngine::assessCodeQuality(
-    const QString& code, const QString& language) {
+    const std::string& code, const std::string& language) {
     
     CodeQualityMetrics metrics;
     
@@ -488,11 +485,11 @@ CodeQualityMetrics AutonomousFeatureEngine::assessCodeQuality(
     metrics.details["duplication"] = calculateDuplication(code);
     metrics.details["code_smells"] = countCodeSmells(code);
     
-    emit codeQualityAssessed(metrics);
+    codeQualityAssessed(metrics);
     return metrics;
 }
 
-double AutonomousFeatureEngine::calculateMaintainability(const QString& code) {
+double AutonomousFeatureEngine::calculateMaintainability(const std::string& code) {
     int linesOfCode = code.count('\n');
     int complexity = calculateComplexity(code);
     int comments = code.count("//") + code.count("/*");
@@ -505,7 +502,7 @@ double AutonomousFeatureEngine::calculateMaintainability(const QString& code) {
     return std::max(0.0, std::min(100.0, score));
 }
 
-double AutonomousFeatureEngine::calculateReliability(const QString& code) {
+double AutonomousFeatureEngine::calculateReliability(const std::string& code) {
     int errorHandling = code.count("try") + code.count("catch") + code.count("throw");
     int nullChecks = code.count("nullptr") + code.count("null") + code.count("None");
     
@@ -516,8 +513,8 @@ double AutonomousFeatureEngine::calculateReliability(const QString& code) {
     return std::max(0.0, std::min(100.0, score));
 }
 
-double AutonomousFeatureEngine::calculateSecurity(const QString& code) {
-    QVector<SecurityIssue> issues = detectSecurityVulnerabilities(code, "cpp");
+double AutonomousFeatureEngine::calculateSecurity(const std::string& code) {
+    std::vector<SecurityIssue> issues = detectSecurityVulnerabilities(code, "cpp");
     
     double score = 100.0;
     for (const SecurityIssue& issue : issues) {
@@ -530,8 +527,8 @@ double AutonomousFeatureEngine::calculateSecurity(const QString& code) {
     return std::max(0.0, score);
 }
 
-double AutonomousFeatureEngine::calculateEfficiency(const QString& code) {
-    QString algorithmName;
+double AutonomousFeatureEngine::calculateEfficiency(const std::string& code) {
+    std::string algorithmName;
     bool hasInefficient = hasInefficientAlgorithm(code, algorithmName);
     bool hasWaste = hasMemoryWaste(code);
     
@@ -542,7 +539,7 @@ double AutonomousFeatureEngine::calculateEfficiency(const QString& code) {
     return std::max(0.0, score);
 }
 
-int AutonomousFeatureEngine::calculateComplexity(const QString& code) {
+int AutonomousFeatureEngine::calculateComplexity(const std::string& code) {
     int complexity = 1;
     complexity += code.count("if ");
     complexity += code.count("else if");
@@ -554,12 +551,12 @@ int AutonomousFeatureEngine::calculateComplexity(const QString& code) {
     return complexity;
 }
 
-int AutonomousFeatureEngine::calculateDuplication(const QString& code) {
+int AutonomousFeatureEngine::calculateDuplication(const std::string& code) {
     // Simplified duplication detection
     return 0;
 }
 
-int AutonomousFeatureEngine::countCodeSmells(const QString& code) {
+int AutonomousFeatureEngine::countCodeSmells(const std::string& code) {
     int smells = 0;
     
     if (code.count('\n') > 200) smells++; // Long method
@@ -569,7 +566,7 @@ int AutonomousFeatureEngine::countCodeSmells(const QString& code) {
     return smells;
 }
 
-void AutonomousFeatureEngine::analyzeCodePattern(const QString& code, const QString& language) {
+void AutonomousFeatureEngine::analyzeCodePattern(const std::string& code, const std::string& language) {
     // Record pattern for machine learning
     userProfile.languagePreferences[language]++;
     
@@ -582,7 +579,7 @@ void AutonomousFeatureEngine::analyzeCodePattern(const QString& code, const QStr
     }
 }
 
-void AutonomousFeatureEngine::recordUserInteraction(const QString& suggestionId, bool accepted) {
+void AutonomousFeatureEngine::recordUserInteraction(const std::string& suggestionId, bool accepted) {
     for (AutonomousSuggestion& suggestion : activeSuggestions) {
         if (suggestion.suggestionId == suggestionId) {
             suggestion.wasAccepted = accepted;
@@ -630,11 +627,11 @@ UserCodingProfile AutonomousFeatureEngine::getUserProfile() const {
     return userProfile;
 }
 
-QVector<AutonomousSuggestion> AutonomousFeatureEngine::getActiveSuggestions() const {
+std::vector<AutonomousSuggestion> AutonomousFeatureEngine::getActiveSuggestions() const {
     return activeSuggestions;
 }
 
-void AutonomousFeatureEngine::acceptSuggestion(const QString& suggestionId) {
+void AutonomousFeatureEngine::acceptSuggestion(const std::string& suggestionId) {
     recordUserInteraction(suggestionId, true);
     
     // Remove from active suggestions
@@ -646,7 +643,7 @@ void AutonomousFeatureEngine::acceptSuggestion(const QString& suggestionId) {
     }
 }
 
-void AutonomousFeatureEngine::rejectSuggestion(const QString& suggestionId) {
+void AutonomousFeatureEngine::rejectSuggestion(const std::string& suggestionId) {
     recordUserInteraction(suggestionId, false);
     
     for (int i = 0; i < activeSuggestions.size(); ++i) {
@@ -657,7 +654,7 @@ void AutonomousFeatureEngine::rejectSuggestion(const QString& suggestionId) {
     }
 }
 
-void AutonomousFeatureEngine::dismissSuggestion(const QString& suggestionId) {
+void AutonomousFeatureEngine::dismissSuggestion(const std::string& suggestionId) {
     for (int i = 0; i < activeSuggestions.size(); ++i) {
         if (activeSuggestions[i].suggestionId == suggestionId) {
             activeSuggestions.removeAt(i);
@@ -680,7 +677,7 @@ void AutonomousFeatureEngine::setAnalysisInterval(int milliseconds) {
     analysisTimer->setInterval(milliseconds);
 }
 
-void AutonomousFeatureEngine::startBackgroundAnalysis(const QString& projectPath) {
+void AutonomousFeatureEngine::startBackgroundAnalysis(const std::string& projectPath) {
     currentProjectPath = projectPath;
     enableRealTimeAnalysis(true);
     std::cout << "[AutonomousFeatureEngine] Started background analysis for: " 
@@ -715,8 +712,8 @@ double AutonomousFeatureEngine::getConfidenceThreshold() const {
     return confidenceThreshold;
 }
 
-QString AutonomousFeatureEngine::generateDocumentation(const QString& symbolCode, const QString& symbolType) {
-    QString doc = "/**\n";
+std::string AutonomousFeatureEngine::generateDocumentation(const std::string& symbolCode, const std::string& symbolType) {
+    std::string doc = "/**\n";
     doc += " * @brief Automatically generated documentation\n";
     doc += " *\n";
     
@@ -729,41 +726,42 @@ QString AutonomousFeatureEngine::generateDocumentation(const QString& symbolCode
     return doc;
 }
 
-QVector<DocumentationGap> AutonomousFeatureEngine::findDocumentationGaps(const QString& filePath) {
-    QVector<DocumentationGap> gaps;
+std::vector<DocumentationGap> AutonomousFeatureEngine::findDocumentationGaps(const std::string& filePath) {
+    std::vector<DocumentationGap> gaps;
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         return gaps;
     }
     
-    QString content = QTextStream(&file).readAll();
+    std::string content = QTextStream(&file).readAll();
     file.close();
     
     // Find public functions without documentation
-    QRegularExpression publicFuncRegex(R"(public:\s*\n\s*\w+\s+(\w+)\s*\([^)]*\))");
-    QRegularExpressionMatchIterator it = publicFuncRegex.globalMatch(content);
+    std::regex publicFuncRegex(R"(public:\s*\n\s*\w+\s+(\w+)\s*\([^)]*\))");
+    std::sregex_iterator it = publicFuncRegex;
     
-    while (it.hasNext()) {
-        QRegularExpressionMatch match = it.next();
+    while (itfalse) {
+        std::smatch match = it;
         int lineNum = content.left(match.capturedStart()).count('\n') + 1;
         
         // Check if there's documentation before this function
         qsizetype searchStart = std::max(static_cast<qsizetype>(0), match.capturedStart() - 200);
-        QString precedingText = content.mid(searchStart, match.capturedStart() - searchStart);
+        std::string precedingText = content.mid(searchStart, match.capturedStart() - searchStart);
         
         if (!precedingText.contains("/**") && !precedingText.contains("///")) {
             DocumentationGap gap;
-            gap.gapId = "doc_gap_" + QString::number(lineNum);
+            gap.gapId = "doc_gap_" + std::string::number(lineNum);
             gap.filePath = filePath;
             gap.lineNumber = lineNum;
-            gap.symbolName = match.captured(1);
+            gap.symbolName = match"";
             gap.symbolType = "function";
             gap.isCritical = true; // Public API
-            gap.suggestedDocumentation = generateDocumentation(match.captured(0), "function");
+            gap.suggestedDocumentation = generateDocumentation(match"", "function");
             gaps.append(gap);
         }
     }
     
     return gaps;
 }
+

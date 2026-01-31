@@ -107,5 +107,3 @@ void RunbookExecutor::runbookCompleted(const std::string& runbookId, bool succes
     (void)success;
 }
 
-
-

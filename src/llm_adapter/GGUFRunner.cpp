@@ -2,14 +2,6 @@
 #include "QuantBackend.h"
 #include "brutal_gzip.h"
 
-#include <QByteArray>
-#include <QCoreApplication>
-#include <QDebug>
-#include <QRandomGenerator>
-#include <QElapsedTimer>
-#include <QFile>
-#include <QTextStream>
-#include <QHash>
 
 #include <algorithm>
 #include <cmath>
@@ -24,7 +16,7 @@
 #define GGUF_USE_AVX2 1
 #endif
 
-#ifdef Q_OS_UNIX
+#ifdef 
 #include <sys/mman.h>
 #include <unistd.h>
 #define USE_MMAP
@@ -68,11 +60,11 @@ void skipGgufValue(QDataStream& ds, quint32 type) {
     }
 }
 
-QString readGgufStr(QDataStream& ds) {
+std::string readGgufStr(QDataStream& ds) {
     quint64 len; ds >> len;
-    QByteArray ba(static_cast<int>(len), '\0');
+    std::vector<uint8_t> ba(static_cast<int>(len), '\0');
     ds.readRawData(ba.data(), static_cast<int>(len));
-    return QString::fromUtf8(ba);
+    return std::string::fromUtf8(ba);
 }
 
 // F16 to F32 conversion
@@ -128,7 +120,7 @@ void dequantizeRowQ8_0_scalar(const void* src, float* dst, size_t n) {
 
 }  // namespace
 
-bool GGUFRunner::parseGgufTensorTable(QFile& file)
+bool GGUFRunner::parseGgufTensorTable(std::fstream& file)
 {
     file.seek(0);
     QDataStream ds(&file);
@@ -156,8 +148,8 @@ bool GGUFRunner::parseGgufTensorTable(QFile& file)
     for (quint64 i = 0; i < tensorCount; ++i) {
         ModelContext::TensorDesc desc;
         quint64 nameLen; ds >> nameLen;
-        QByteArray nameBa = file.read(static_cast<qint64>(nameLen));
-        desc.name = QString::fromUtf8(nameBa);
+        std::vector<uint8_t> nameBa = file.read(static_cast<qint64>(nameLen));
+        desc.name = std::string::fromUtf8(nameBa);
         quint32 nDims; ds >> nDims;
         desc.dims.resize(nDims);
         for (quint32 d = 0; d < nDims; ++d) {
@@ -171,17 +163,16 @@ bool GGUFRunner::parseGgufTensorTable(QFile& file)
     return ds.status() == QDataStream::Ok;
 }
 
-GGUFRunner::GGUFRunner(QObject* parent)
-    : QObject(parent)
+GGUFRunner::GGUFRunner(void* parent)
+    : void(parent)
 {
     checkCpuFeatures();
-    loadGGUFModel(QString::fromLatin1(kDefaultModelPath));
+    loadGGUFModel(std::string::fromLatin1(kDefaultModelPath));
 
     if (context_.vocabSize > 0) {
         context_.logits.resize(context_.vocabSize);
     }
 
-    qDebug() << "[GGUFRunner] Initialized"
              << "| Dims:" << context_.embedDim << "x" << context_.vocabSize
              << "| CPU: AVX2=" << context_.hasAVX2 << "AVX512=" << context_.hasAVX512 << "FMA=" << context_.hasFMA
              << "| Gen: temp=" << context_.temperature << "top_p=" << context_.topP << "max_tokens=" << context_.maxTokens;
@@ -192,7 +183,6 @@ GGUFRunner::~GGUFRunner()
 #ifdef USE_MMAP
     if (context_.mappedData && context_.usesMmap) {
         if (::munmap(static_cast<void*>(context_.mappedData), static_cast<size_t>(context_.modelFileSize)) != 0) {
-            qWarning() << "munmap failed for" << context_.modelPath;
         }
         context_.mappedData = nullptr;
     }
@@ -207,24 +197,21 @@ GGUFRunner::~GGUFRunner()
     context_.vocabulary.clear();
 }
 
-bool GGUFRunner::runInference(const QString& prompt, float* outputBuffer)
+bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
 {
     if (!context_.mappedData) {
-        qCritical() << "GGUFRunner: Model weights not loaded.";
-        emit inferenceComplete(false);
+        inferenceComplete(false);
         return false;
     }
 
     if (!outputBuffer) {
-        qCritical() << "GGUFRunner: Output buffer is null.";
-        emit inferenceComplete(false);
+        inferenceComplete(false);
         return false;
     }
 
     std::vector<float> embeddings;
     if (!prepareLLMInput(prompt, embeddings)) {
-        qCritical() << "GGUFRunner: Failed to prepare embeddings for prompt.";
-        emit inferenceComplete(false);
+        inferenceComplete(false);
         return false;
     }
 
@@ -234,12 +221,11 @@ bool GGUFRunner::runInference(const QString& prompt, float* outputBuffer)
 
     float* layerWeightMatrix = getLayerWeights();
     if (!layerWeightMatrix) {
-        qCritical() << "GGUFRunner: Layer weights unavailable.";
-        emit inferenceComplete(false);
+        inferenceComplete(false);
         return false;
     }
 
-    QElapsedTimer totalTimer;
+    std::chrono::steady_clock totalTimer;
     totalTimer.start();
 
     const int maxTokens = std::max(1, context_.maxTokens > 0 ? context_.maxTokens : 64);
@@ -300,7 +286,7 @@ bool GGUFRunner::runInference(const QString& prompt, float* outputBuffer)
             tokenId = sampleNextToken(context_.logits.data());  // Standard sampling
         }
         lastTokenId = tokenId;
-        emit tokenChunkGenerated(decodeToken(tokenId));
+        tokenChunkGenerated(decodeToken(tokenId));
 
         if (!embeddings.empty()) {
             embeddings.back() = static_cast<float>(tokenId % 1024) / 1024.0f;
@@ -315,8 +301,7 @@ bool GGUFRunner::runInference(const QString& prompt, float* outputBuffer)
         QCoreApplication::processEvents();
     }
 
-    emit inferenceComplete(true);
-    qDebug() << "[GGUFRunner] Inference finished in" << totalTimer.elapsed() << "ms. Last token" << lastTokenId << "emitted.";
+    inferenceComplete(true);
     return true;
 }
 
@@ -352,12 +337,11 @@ void GGUFRunner::checkCpuFeatures()
     }
 #endif
 
-    qDebug() << "CPU Features: AVX2=" << context_.hasAVX2 
              << "AVX512=" << context_.hasAVX512 
              << "FMA=" << context_.hasFMA;
 }
 
-void GGUFRunner::loadGGUFModel(const QString& filePath)
+void GGUFRunner::loadGGUFModel(const std::string& filePath)
 {
     context_.modelPath = filePath;
     context_.embedDim = 0;
@@ -365,9 +349,8 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
     context_.usesMmap = false;
     context_.mappedData = nullptr;
 
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.exists()) {
-        qWarning() << "GGUF file not found at" << filePath << "- allocating fallback buffer.";
         context_.modelFileSize = static_cast<qint64>(context_.embedDim * context_.vocabSize * sizeof(float));
         context_.mappedData = new float[context_.embedDim * context_.vocabSize]{};
         loadVocabulary(filePath + QStringLiteral(".vocab"));
@@ -375,7 +358,6 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
     }
 
     if (!file.open(QIODevice::ReadOnly)) {
-        qCritical() << "Failed to open GGUF file" << filePath;
         return;
     }
 
@@ -390,18 +372,17 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
         
         if (h.magic == 0x46554747) {  // 'GGUF'
             context_.ggufVersion = h.version;
-            qDebug() << "GGUF v" << h.version << "detected, tensors:" << h.tensorCount << "kvs:" << h.kvCount;
         }
         
         file.seek(0);
-        QByteArray head = file.read(qMin<qint64>(context_.modelFileSize, 8 * 1024 * 1024));  // Read 8MB for metadata
+        std::vector<uint8_t> head = file.read(qMin<qint64>(context_.modelFileSize, 8 * 1024 * 1024));  // Read 8MB for metadata
         
         auto findInt = [&](const char* key, int defVal) {
             int idx = head.indexOf(key);
             if (idx < 0) return defVal;
             int nl = head.indexOf('\n', idx);
-            QByteArray line = head.mid(idx, (nl > idx ? nl - idx : 128));
-            QList<QByteArray> parts = line.split('=');
+            std::vector<uint8_t> line = head.mid(idx, (nl > idx ? nl - idx : 128));
+            std::vector<std::vector<uint8_t>> parts = line.split('=');
             if (parts.size() >= 2) { 
                 bool ok=false; 
                 int v = parts.last().trimmed().toInt(&ok); 
@@ -410,16 +391,16 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
             return defVal;
         };
         
-        auto findString = [&](const char* key) -> QString {
+        auto findString = [&](const char* key) -> std::string {
             int idx = head.indexOf(key);
-            if (idx < 0) return QString();
+            if (idx < 0) return std::string();
             int nl = head.indexOf('\n', idx);
-            QByteArray line = head.mid(idx, (nl > idx ? nl - idx : 128));
-            QList<QByteArray> parts = line.split('=');
+            std::vector<uint8_t> line = head.mid(idx, (nl > idx ? nl - idx : 128));
+            std::vector<std::vector<uint8_t>> parts = line.split('=');
             if (parts.size() >= 2) {
-                return QString::fromUtf8(parts.last().trimmed());
+                return std::string::fromUtf8(parts.last().trimmed());
             }
-            return QString();
+            return std::string();
         };
         
         context_.embedDim = findInt("ggml.embedding_length", 4096);
@@ -430,17 +411,16 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
         
         context_.modelName = findString("general.name");
         context_.architecture = findString("general.architecture");
-        QString quantStr = findString("general.file_type");
+        std::string quantStr = findString("general.file_type");
         
         // Detect quantization type
-        if (quantStr.contains("q4_0", Qt::CaseInsensitive) || filePath.contains("q4_0", Qt::CaseInsensitive)) {
+        if (quantStr.contains("q4_0", //CaseInsensitive) || filePath.contains("q4_0", //CaseInsensitive)) {
             context_.quantType = QuantType::Q4_0;
-            qDebug() << "Detected Q4_0 quantization";
-        } else if (quantStr.contains("q4_1", Qt::CaseInsensitive)) {
+        } else if (quantStr.contains("q4_1", //CaseInsensitive)) {
             context_.quantType = QuantType::Q4_1;
-        } else if (quantStr.contains("q8_0", Qt::CaseInsensitive)) {
+        } else if (quantStr.contains("q8_0", //CaseInsensitive)) {
             context_.quantType = QuantType::Q8_0;
-        } else if (quantStr.contains("f16", Qt::CaseInsensitive)) {
+        } else if (quantStr.contains("f16", //CaseInsensitive)) {
             context_.quantType = QuantType::F16;
         }
         
@@ -459,7 +439,6 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
             }
         }
         
-        qDebug() << "Model:" << context_.modelName << "Arch:" << context_.architecture
                  << "Layers:" << context_.nLayers << "Heads:" << context_.nHeads
                  << "KVHeads:" << context_.nKVHeads << "HeadDim:" << context_.headDim;
         
@@ -474,7 +453,6 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
                           file.handle(),
                           0);
     if (mapped == MAP_FAILED) {
-        qWarning() << "mmap failed for" << filePath << "- falling back to heap allocation.";
     } else {
         context_.mappedData = static_cast<float*>(mapped);
         context_.usesMmap = true;
@@ -486,13 +464,11 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
         context_.mappedData = new float[floatCount];
         const qint64 bytesRead = file.read(reinterpret_cast<char*>(context_.mappedData), context_.modelFileSize);
         if (bytesRead != context_.modelFileSize) {
-            qWarning() << "Incomplete read for" << filePath << "(" << bytesRead << "/" << context_.modelFileSize << " bytes).";
         }
     }
 
     // Build tensor directory and read essential weights
     if (!parseGgufTensorTable(file) || !parseGgufTensors(file)) {
-        qWarning() << "GGUF tensor parsing failed; minimal weights may be missing";
     }
 
     // Allocate KV-cache for multi-head GQA: [nLayers, nKVHeads, maxTokens, headDim]
@@ -504,7 +480,6 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
         context_.keyCache.resize(cacheSize, 0.0f);
         context_.valueCache.resize(cacheSize, 0.0f);
         context_.kvLen = 0;
-        qDebug() << "KV-cache allocated:" << (cacheSize * sizeof(float) * 2 / 1024 / 1024) << "MB"
                  << "(nLayers=" << context_.nLayers << "nKVHeads=" << context_.nKVHeads 
                  << "maxTokens=" << context_.maxTokens << "headDim=" << context_.headDim << ")";
     }
@@ -514,24 +489,21 @@ void GGUFRunner::loadGGUFModel(const QString& filePath)
     if (context_.vocabulary.isEmpty()) {
         context_.vocabulary.reserve(static_cast<int>(context_.vocabSize));
         for (qsizetype i = 0; i < context_.vocabSize; ++i) {
-            context_.vocabulary.append(QStringLiteral("<%1>").arg(i));
+            context_.vocabulary.append(QStringLiteral("<%1>"));
         }
-        qWarning() << "Vocabulary not found; synthesized" << context_.vocabSize << "tokens.";
     }
 }
 
-void GGUFRunner::loadVocabulary(const QString& vocabPath)
+void GGUFRunner::loadVocabulary(const std::string& vocabPath)
 {
     context_.vocabulary.clear();
 
-    QFile vocabFile(vocabPath);
+    std::fstream vocabFile(vocabPath);
     if (!vocabFile.exists()) {
-        qWarning() << "Vocabulary file not found at" << vocabPath << "- continuing without token strings.";
         return;
     }
 
     if (!vocabFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "Unable to open vocabulary file" << vocabPath;
         return;
     }
 
@@ -540,7 +512,6 @@ void GGUFRunner::loadVocabulary(const QString& vocabPath)
         context_.vocabulary.append(stream.readLine());
     }
 
-    qDebug() << "Loaded" << context_.vocabulary.size() << "tokens from vocabulary.";
 }
 
 float* GGUFRunner::getLayerWeights()
@@ -548,16 +519,15 @@ float* GGUFRunner::getLayerWeights()
     return context_.mappedData;
 }
 
-bool GGUFRunner::prepareLLMInput(const QString& prompt, std::vector<float>& embeddings)
+bool GGUFRunner::prepareLLMInput(const std::string& prompt, std::vector<float>& embeddings)
 {
     if (context_.embedDim <= 0) {
-        qWarning() << "GGUFRunner: Invalid embedding dimension.";
         return false;
     }
 
     embeddings.assign(static_cast<size_t>(context_.embedDim), 0.0f);
 
-    const QByteArray utf8 = prompt.toUtf8();
+    const std::vector<uint8_t> utf8 = prompt.toUtf8();
     const int limit = std::min<int>(utf8.size(), static_cast<int>(context_.embedDim));
     for (int i = 0; i < limit; ++i) {
         const float v = static_cast<unsigned char>(utf8.at(i)) / 255.0f;
@@ -612,17 +582,16 @@ size_t GGUFRunner::sampleNextToken(float* buffer)
         }
     }
 
-    qDebug() << "[GGUFRunner] Sampled token" << bestIdx << "with probability" << maxProb;
     return bestIdx;
 }
 
-QString GGUFRunner::decodeToken(size_t tokenId) const
+std::string GGUFRunner::decodeToken(size_t tokenId) const
 {
     if (!context_.vocabulary.isEmpty() && tokenId < static_cast<size_t>(context_.vocabulary.size())) {
         return context_.vocabulary[static_cast<qsizetype>(tokenId)];
     }
 
-    return QStringLiteral("<token_%1>").arg(static_cast<qulonglong>(tokenId));
+    return QStringLiteral("<token_%1>"));
 }
 
 void GGUFRunner::applyTemperature(float* buffer, float temperature)
@@ -879,11 +848,11 @@ void GGUFRunner::fallback_matrix_multiply(float* A, float* B, float* C, int N, i
     }
 }
 
-bool GGUFRunner::loadModel(const QString& filePath)
+bool GGUFRunner::loadModel(const std::string& filePath)
 {
     loadGGUFModel(filePath);
     if (context_.mappedData) {
-        emit modelLoaded(filePath, context_.modelFileSize);
+        modelLoaded(filePath, context_.modelFileSize);
         return true;
     }
     return false;
@@ -900,16 +869,15 @@ size_t GGUFRunner::ggmlTypeSize(GgmlType type)
     }
 }
 
-QByteArray GGUFRunner::readTensorData(QFile& file, quint64 offset, quint64 numBytes)
+std::vector<uint8_t> GGUFRunner::readTensorData(std::fstream& file, quint64 offset, quint64 numBytes)
 {
-    if (!file.seek(static_cast<qint64>(offset))) return QByteArray();
+    if (!file.seek(static_cast<qint64>(offset))) return std::vector<uint8_t>();
     return file.read(static_cast<qint64>(numBytes));
 }
 
-bool GGUFRunner::loadTensor(QFile& file, const QString& name, std::vector<float>& weights)
+bool GGUFRunner::loadTensor(std::fstream& file, const std::string& name, std::vector<float>& weights)
 {
     if (!context_.tensorTable.contains(name)) {
-        qWarning() << "Tensor not found in table:" << name;
         return false;
     }
     const auto& desc = context_.tensorTable[name];
@@ -925,7 +893,7 @@ bool GGUFRunner::loadTensor(QFile& file, const QString& name, std::vector<float>
         numBytes = (totalElements / 32) * 34;
     }
 
-    QByteArray rawData = readTensorData(file, desc.offset, numBytes);
+    std::vector<uint8_t> rawData = readTensorData(file, desc.offset, numBytes);
     if (rawData.isEmpty()) return false;
 
     weights.resize(totalElements);
@@ -945,26 +913,23 @@ bool GGUFRunner::loadTensor(QFile& file, const QString& name, std::vector<float>
     return true;
 }
 
-bool GGUFRunner::parseGgufTensors(QFile& file)
+bool GGUFRunner::parseGgufTensors(std::fstream& file)
 {
     // Load essential tensors using table-driven approach
     if (!loadTensor(file, "token_embd.weight", context_.tok_embeddings)) {
-        qWarning() << "Failed to load token embeddings";
         return false;
     }
     
     // Load output norm and output weights
     if (!loadTensor(file, "output_norm.weight", context_.output_norm_w)) {
-        qWarning() << "Warning: output_norm.weight not found";
     }
     if (!loadTensor(file, "output.weight", context_.output_w)) {
-        qWarning() << "Warning: output.weight not found";
     }
     
     return true;
 }
 
-bool GGUFRunner::readTensorFloat32(QFile& file, qint64 offset, qint64 count, std::vector<float>& out)
+bool GGUFRunner::readTensorFloat32(std::fstream& file, qint64 offset, qint64 count, std::vector<float>& out)
 {
     // 1. Look up the tensor that owns this byte range (exact offset match)
     const ModelContext::TensorDesc* desc = nullptr;
@@ -975,7 +940,6 @@ bool GGUFRunner::readTensorFloat32(QFile& file, qint64 offset, qint64 count, std
         }
     }
     if (!desc) {
-        qWarning() << "GGUF: no tensor owns offset" << offset;
         return false;
     }
 
@@ -983,7 +947,6 @@ bool GGUFRunner::readTensorFloat32(QFile& file, qint64 offset, qint64 count, std
     quint64 expect = 1;
     for (quint64 dim : desc->dims) expect *= dim;
     if (expect != static_cast<quint64>(count)) {
-        qWarning() << "GGUF: element-count mismatch for tensor at offset" << offset
                    << "expected" << expect << "got" << count;
         return false;
     }
@@ -999,9 +962,8 @@ bool GGUFRunner::readTensorFloat32(QFile& file, qint64 offset, qint64 count, std
 
     // 4. Read raw bytes
     if (!file.seek(offset)) return false;
-    QByteArray raw = file.read(static_cast<qint64>(byteSize));
+    std::vector<uint8_t> raw = file.read(static_cast<qint64>(byteSize));
     if (raw.size() != static_cast<qsizetype>(byteSize)) {
-        qWarning() << "GGUF: short read for tensor at offset" << offset;
         return false;
     }
 
@@ -1026,13 +988,12 @@ bool GGUFRunner::readTensorFloat32(QFile& file, qint64 offset, qint64 count, std
         dequantizeRowQ8_0_scalar(src, out.data(), expect);
         break;
     default:
-        qWarning() << "GGUF: unsupported type" << static_cast<int>(desc->type);
         return false;
     }
     return true;
 }
 
-QByteArray GGUFRunner::compressBrutal(const void* data, size_t len)
+std::vector<uint8_t> GGUFRunner::compressBrutal(const void* data, size_t len)
 {
     size_t out_len = 0;
     void* out_ptr = nullptr;
@@ -1045,16 +1006,16 @@ QByteArray GGUFRunner::compressBrutal(const void* data, size_t len)
 #else
     // Fallback or no-op if architecture not supported
     // For now, return empty or implement a slow C++ fallback if needed
-    return QByteArray();
+    return std::vector<uint8_t>();
 #endif
 
-    if (!out_ptr) return QByteArray();
+    if (!out_ptr) return std::vector<uint8_t>();
 
-    // Take ownership of the malloc-ed buffer into QByteArray
-    // QByteArray makes a copy by default, so we copy and free.
-    // To avoid copy, we would need to wrap it, but QByteArray doesn't easily take malloc ownership without custom deleter.
+    // Take ownership of the malloc-ed buffer into std::vector<uint8_t>
+    // std::vector<uint8_t> makes a copy by default, so we copy and free.
+    // To avoid copy, we would need to wrap it, but std::vector<uint8_t> doesn't easily take malloc ownership without custom deleter.
     // Given the speed, a memcpy here is negligible compared to qCompress.
-    QByteArray result(reinterpret_cast<const char*>(out_ptr), static_cast<int>(out_len));
+    std::vector<uint8_t> result(reinterpret_cast<const char*>(out_ptr), static_cast<int>(out_len));
     free(out_ptr);
     return result;
 }
@@ -1066,14 +1027,11 @@ QByteArray GGUFRunner::compressBrutal(const void* data, size_t len)
 bool GGUFRunner::setQuantizationMode(QuantMode mode) {
     bool success = QuantBackend::instance().setMode(mode);
     if (success) {
-        qDebug() << "[GGUFRunner] Quantization mode set to" 
                  << (mode == QuantMode::Q4_0 ? "Q4_0 (4-bit)" :
                      mode == QuantMode::Q8_0 ? "Q8_0 (8-bit)" :
                      mode == QuantMode::F32 ? "F32 (full precision)" : "FALLBACK");
-        qDebug() << "[GGUFRunner] Estimated RAM reduction:"
-                 << QString::number(QuantBackend::instance().getCompressionRatio(), 'f', 1) << "x";
+                 << std::string::number(QuantBackend::instance().getCompressionRatio(), 'f', 1) << "x";
     } else {
-        qWarning() << "[GGUFRunner] Failed to set quantization mode - ggml not available";
     }
     return success;
 }

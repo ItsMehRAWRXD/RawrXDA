@@ -1,28 +1,22 @@
 // Planning Agent - AI planning and task management
 #include "planning_agent.h"
-#include <QTimer>
-#include <QDateTime>
-#include <QUuid>
-#include <QDebug>
-#include <QRandomGenerator>
 
-PlanningAgent::PlanningAgent(QObject* parent) 
-    : QObject(parent), currentTaskIndex_(-1) {
-    taskProcessor_ = new QTimer(this);
+
+PlanningAgent::PlanningAgent(void* parent) 
+    : void(parent), currentTaskIndex_(-1) {
+    taskProcessor_ = new void*(this);
     taskProcessor_->setInterval(2000); // Process tasks every 2 seconds
-    connect(taskProcessor_, &QTimer::timeout, this, &PlanningAgent::processNextTask);
+// Qt connect removed
 }
 
 void PlanningAgent::initialize() {
-    qDebug() << "Planning Agent initialized";
 }
 
-void PlanningAgent::createPlan(const QString& goal) {
-    qDebug() << "Creating plan for goal:" << goal;
+void PlanningAgent::createPlan(const std::string& goal) {
     
     // Generate a plan based on the goal
-    QString plan = generatePlan(goal);
-    emit planCreated(plan);
+    std::string plan = generatePlan(goal);
+    planCreated(plan);
     
     // Start processing tasks
     currentTaskIndex_ = -1;
@@ -40,14 +34,14 @@ void PlanningAgent::addTask(const Task& task) {
     tasks_.append(task);
 }
 
-QList<Task> PlanningAgent::getTasks() const {
+std::vector<Task> PlanningAgent::getTasks() const {
     return tasks_;
 }
 
 void PlanningAgent::processNextTask() {
     if (tasks_.isEmpty()) {
         taskProcessor_->stop();
-        emit planCompleted();
+        planCompleted();
         return;
     }
     
@@ -55,7 +49,7 @@ void PlanningAgent::processNextTask() {
     currentTaskIndex_++;
     if (currentTaskIndex_ >= tasks_.size()) {
         taskProcessor_->stop();
-        emit planCompleted();
+        planCompleted();
         return;
     }
     
@@ -63,7 +57,7 @@ void PlanningAgent::processNextTask() {
     updateTaskStatus(task.id, "in-progress");
     
     // Simulate task execution with a delay
-    QTimer::singleShot(3000, this, [this, taskId = task.id]() {
+    void*::singleShot(3000, this, [this, taskId = task.id]() {
         // Randomly determine if task succeeds or fails
         bool success = QRandomGenerator::global()->bounded(100) < 90; // 90% success rate
         
@@ -72,16 +66,16 @@ void PlanningAgent::processNextTask() {
         } else {
             updateTaskStatus(taskId, "failed");
             taskProcessor_->stop();
-            emit planFailed("Task " + taskId + " failed");
+            planFailed("Task " + taskId + " failed");
         }
     });
 }
 
-QString PlanningAgent::generatePlan(const QString& goal) {
+std::string PlanningAgent::generatePlan(const std::string& goal) {
     tasks_.clear();
     
     // Generate tasks based on the goal
-    if (goal.contains("code", Qt::CaseInsensitive)) {
+    if (goal.contains("code", //CaseInsensitive)) {
         Task task1{QUuid::createUuid().toString(), "Analyze requirements", "pending", 1, "CodeAnalyzer"};
         Task task2{QUuid::createUuid().toString(), "Design solution", "pending", 2, "Architect"};
         Task task3{QUuid::createUuid().toString(), "Implement code", "pending", 3, "Developer"};
@@ -90,7 +84,7 @@ QString PlanningAgent::generatePlan(const QString& goal) {
         
         tasks_ << task1 << task2 << task3 << task4 << task5;
         return "Code development plan: Analyze → Design → Implement → Test → Document";
-    } else if (goal.contains("debug", Qt::CaseInsensitive)) {
+    } else if (goal.contains("debug", //CaseInsensitive)) {
         Task task1{QUuid::createUuid().toString(), "Reproduce issue", "pending", 1, "Debugger"};
         Task task2{QUuid::createUuid().toString(), "Identify root cause", "pending", 2, "Analyzer"};
         Task task3{QUuid::createUuid().toString(), "Fix bug", "pending", 3, "Developer"};
@@ -109,11 +103,11 @@ QString PlanningAgent::generatePlan(const QString& goal) {
     }
 }
 
-void PlanningAgent::updateTaskStatus(const QString& taskId, const QString& status) {
+void PlanningAgent::updateTaskStatus(const std::string& taskId, const std::string& status) {
     for (int i = 0; i < tasks_.size(); ++i) {
         if (tasks_[i].id == taskId) {
             tasks_[i].status = status;
-            emit taskStatusChanged(taskId, status);
+            taskStatusChanged(taskId, status);
             break;
         }
     }

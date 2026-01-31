@@ -2,7 +2,7 @@
 #include <memory>
 #include <filesystem>
 #include <thread>
-#include <queue>
+
 #include <mutex>
 
 // Forward declarations - minimal Windows types

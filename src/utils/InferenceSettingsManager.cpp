@@ -4,7 +4,7 @@
 
 #include "InferenceSettingsManager.h"
 #include "settings_manager.h"
-#include <QJsonArray>
+
 #include <algorithm>
 #include <cmath>
 
@@ -46,7 +46,6 @@ void InferenceSettingsManager::initialize()
     load();
 
     m_initialized = true;
-    qDebug() << "InferenceSettingsManager initialized";
 }
 
 void InferenceSettingsManager::applyPreset(Preset preset)
@@ -82,11 +81,11 @@ void InferenceSettingsManager::applyPreset(Preset preset)
         break;
     }
     
-    emit presetChanged(preset);
-    emit settingsChanged();
+    presetChanged(preset);
+    settingsChanged();
 }
 
-QString InferenceSettingsManager::getPresetName(Preset preset) const
+std::string InferenceSettingsManager::getPresetName(Preset preset) const
 {
     switch (preset) {
     case Balanced: return "Balanced";
@@ -97,7 +96,7 @@ QString InferenceSettingsManager::getPresetName(Preset preset) const
     }
 }
 
-void InferenceSettingsManager::setCurrentModelPath(const QString& modelPath)
+void InferenceSettingsManager::setCurrentModelPath(const std::string& modelPath)
 {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -105,11 +104,11 @@ void InferenceSettingsManager::setCurrentModelPath(const QString& modelPath)
     }
     
     addRecentModel(modelPath);
-    emit modelPathChanged(modelPath);
-    emit settingsChanged();
+    modelPathChanged(modelPath);
+    settingsChanged();
 }
 
-QStringList InferenceSettingsManager::getRecentModels(int maxCount) const
+std::vector<std::string> InferenceSettingsManager::getRecentModels(int maxCount) const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
@@ -119,7 +118,7 @@ QStringList InferenceSettingsManager::getRecentModels(int maxCount) const
     return m_recentModels;
 }
 
-void InferenceSettingsManager::addRecentModel(const QString& modelPath)
+void InferenceSettingsManager::addRecentModel(const std::string& modelPath)
 {
     if (modelPath.isEmpty()) return;
     
@@ -136,14 +135,14 @@ void InferenceSettingsManager::addRecentModel(const QString& modelPath)
         m_recentModels = m_recentModels.mid(0, 20);
     }
     
-    emit recentModelsUpdated();
+    recentModelsUpdated();
 }
 
 void InferenceSettingsManager::clearRecentModels()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_recentModels.clear();
-    emit recentModelsUpdated();
+    recentModelsUpdated();
 }
 
 // Generation parameter setters
@@ -152,7 +151,7 @@ void InferenceSettingsManager::setTemperature(double temp)
     std::lock_guard<std::mutex> lock(m_mutex);
     m_temperature = std::clamp(temp, 0.0, 2.0);
     m_currentPreset = Custom;
-    emit settingsChanged();
+    settingsChanged();
 }
 
 void InferenceSettingsManager::setTopP(double topP)
@@ -160,7 +159,7 @@ void InferenceSettingsManager::setTopP(double topP)
     std::lock_guard<std::mutex> lock(m_mutex);
     m_topP = std::clamp(topP, 0.0, 1.0);
     m_currentPreset = Custom;
-    emit settingsChanged();
+    settingsChanged();
 }
 
 void InferenceSettingsManager::setTopK(int topK)
@@ -168,7 +167,7 @@ void InferenceSettingsManager::setTopK(int topK)
     std::lock_guard<std::mutex> lock(m_mutex);
     m_topK = std::max(1, topK);
     m_currentPreset = Custom;
-    emit settingsChanged();
+    settingsChanged();
 }
 
 void InferenceSettingsManager::setMaxTokens(int maxTokens)
@@ -176,7 +175,7 @@ void InferenceSettingsManager::setMaxTokens(int maxTokens)
     std::lock_guard<std::mutex> lock(m_mutex);
     m_maxTokens = std::max(1, maxTokens);
     m_currentPreset = Custom;
-    emit settingsChanged();
+    settingsChanged();
 }
 
 void InferenceSettingsManager::setRepetitionPenalty(double penalty)
@@ -184,21 +183,21 @@ void InferenceSettingsManager::setRepetitionPenalty(double penalty)
     std::lock_guard<std::mutex> lock(m_mutex);
     m_repetitionPenalty = std::clamp(penalty, 1.0, 2.0);
     m_currentPreset = Custom;
-    emit settingsChanged();
+    settingsChanged();
 }
 
-void InferenceSettingsManager::setOllamaModelTag(const QString& tag)
+void InferenceSettingsManager::setOllamaModelTag(const std::string& tag)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_ollamaModelTag = tag;
-    emit settingsChanged();
+    settingsChanged();
 }
 
 void InferenceSettingsManager::setUseOllama(bool use)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_useOllama = use;
-    emit settingsChanged();
+    settingsChanged();
 }
 
 bool InferenceSettingsManager::validateSettings() const
@@ -276,11 +275,11 @@ void InferenceSettingsManager::saveRecentModels()
     settings.setValue("inference/recentModels", m_recentModels);
 }
 
-QJsonObject InferenceSettingsManager::exportToJSON() const
+void* InferenceSettingsManager::exportToJSON() const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
-    QJsonObject json;
+    void* json;
     json["preset"] = static_cast<int>(m_currentPreset);
     json["temperature"] = m_temperature;
     json["topP"] = m_topP;
@@ -291,8 +290,8 @@ QJsonObject InferenceSettingsManager::exportToJSON() const
     json["useOllama"] = m_useOllama;
     json["currentModelPath"] = m_currentModelPath;
     
-    QJsonArray recentArray;
-    for (const QString& model : m_recentModels) {
+    void* recentArray;
+    for (const std::string& model : m_recentModels) {
         recentArray.append(model);
     }
     json["recentModels"] = recentArray;
@@ -300,7 +299,7 @@ QJsonObject InferenceSettingsManager::exportToJSON() const
     return json;
 }
 
-void InferenceSettingsManager::importFromJSON(const QJsonObject& json)
+void InferenceSettingsManager::importFromJSON(const void*& json)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
@@ -333,11 +332,11 @@ void InferenceSettingsManager::importFromJSON(const QJsonObject& json)
     }
     if (json.contains("recentModels")) {
         m_recentModels.clear();
-        QJsonArray recentArray = json["recentModels"].toArray();
-        for (const QJsonValue& value : recentArray) {
+        void* recentArray = json["recentModels"].toArray();
+        for (const void*& value : recentArray) {
             m_recentModels.append(value.toString());
         }
     }
     
-    emit settingsChanged();
+    settingsChanged();
 }

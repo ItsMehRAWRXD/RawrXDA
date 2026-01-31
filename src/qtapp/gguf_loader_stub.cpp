@@ -1,18 +1,15 @@
 #include "gguf_loader.hpp"
-#include <QFile>
-#include <QDataStream>
-#include <QDebug>
+
+
 #include <cstring>
 
-GGUFLoader::GGUFLoader(const QString& path)
+GGUFLoader::GGUFLoader(const std::string& path)
     : m_path(path), m_initialized(false)
 {
     try {
         initializeNativeLoader();
     } catch (const std::exception& e) {
-        qWarning() << "[GGUFLoader] Failed to initialize:" << e.what();
     } catch (...) {
-        qWarning() << "[GGUFLoader] Unknown error during initialization";
     }
 }
 
@@ -24,7 +21,7 @@ void GGUFLoader::initializeNativeLoader()
         throw std::runtime_error("Model path is empty");
     }
     
-    QFile file(m_path);
+    std::fstream file(m_path);
     if (!file.open(QIODevice::ReadOnly)) {
         throw std::runtime_error("Failed to open GGUF file");
     }
@@ -42,7 +39,6 @@ void GGUFLoader::initializeNativeLoader()
     // Read version
     uint32_t version;
     stream >> version;
-    qInfo() << "[GGUFLoader] GGUF version:" << version;
     
     // Read tensor count
     uint64_t tensorCount;
@@ -52,13 +48,12 @@ void GGUFLoader::initializeNativeLoader()
     uint64_t kvCount;
     stream >> kvCount;
     
-    qInfo() << "[GGUFLoader] Found" << tensorCount << "tensors and" << kvCount << "metadata entries";
     
     // For now, just count the tensors - full parsing would be complex
     // The real loader in src/gguf_loader.cpp handles the full parsing
     m_cachedTensorNames.clear();
     for (uint64_t i = 0; i < tensorCount && i < 1000; i++) {
-        m_cachedTensorNames.append(QString("tensor_%1").arg(i));
+        m_cachedTensorNames.append(std::string("tensor_%1"));
     }
     
     m_initialized = true;
@@ -70,7 +65,7 @@ bool GGUFLoader::isOpen() const
     return m_initialized;
 }
 
-QVariant GGUFLoader::getParam(const QString& key, const QVariant& defaultValue) const
+std::any GGUFLoader::getParam(const std::string& key, const std::any& defaultValue) const
 {
     // Check cache first
     if (m_metadataCache.contains(key)) {
@@ -79,21 +74,22 @@ QVariant GGUFLoader::getParam(const QString& key, const QVariant& defaultValue) 
     return defaultValue;
 }
 
-QByteArray GGUFLoader::inflateWeight(const QString& tensorName)
+std::vector<uint8_t> GGUFLoader::inflateWeight(const std::string& tensorName)
 {
     // Return empty for now - real implementation would load tensor data
     // This is a placeholder that at least allows the app not to crash
-    return QByteArray();
+    return std::vector<uint8_t>();
 }
 
-QHash<QString, QByteArray> GGUFLoader::getTokenizerMetadata() const
+std::unordered_map<std::string, std::vector<uint8_t>> GGUFLoader::getTokenizerMetadata() const
 {
-    QHash<QString, QByteArray> meta;
+    std::unordered_map<std::string, std::vector<uint8_t>> meta;
     // Return empty - tokenizer metadata loading is complex
     return meta;
 }
 
-QStringList GGUFLoader::tensorNames() const
+std::vector<std::string> GGUFLoader::tensorNames() const
 {
     return m_cachedTensorNames;
 }
+

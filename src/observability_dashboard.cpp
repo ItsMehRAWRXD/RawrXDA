@@ -1,24 +1,9 @@
 #include "observability_dashboard.h"
 #include "profiler.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGridLayout>
-#include <QTabWidget>
-#include <QLabel>
-#include <QtCharts/QChart>
-#include <QtCharts/QChartView>
-#include <QtCharts/QLineSeries>
-#include <QtCharts/QValueAxis>
-#include <QtCharts/QDateTimeAxis>
-#include <QDateTime>
-#include <QDebug>
-#include <QFile>
-#include <QTextStream>
-#include <QGroupBox>
-#include <QProgressBar>
 
-ObservabilityDashboard::ObservabilityDashboard(Profiler* profiler, QWidget* parent)
-    : QWidget(parent)
+
+ObservabilityDashboard::ObservabilityDashboard(Profiler* profiler, void* parent)
+    : void(parent)
     , m_tabWidget(nullptr)
     , m_profiler(profiler)
 {
@@ -76,20 +61,20 @@ void ObservabilityDashboard::createResourceChart()
     m_resourceChart = new QChart();
     m_resourceChart->setTitle("System Resource Utilization");
     m_resourceChart->setAnimationOptions(QChart::SeriesAnimations);
-    m_resourceChart->setBackgroundBrush(QBrush(Qt::white));
+    m_resourceChart->setBackgroundBrush(QBrush(//white));
 
     // Create series
     m_cpuSeries = new QLineSeries();
     m_cpuSeries->setName("CPU %");
-    m_cpuSeries->setColor(Qt::blue);
+    m_cpuSeries->setColor(//blue);
 
     m_memorySeries = new QLineSeries();
     m_memorySeries->setName("Memory MB");
-    m_memorySeries->setColor(Qt::red);
+    m_memorySeries->setColor(//red);
 
     m_gpuSeries = new QLineSeries();
     m_gpuSeries->setName("GPU %");
-    m_gpuSeries->setColor(Qt::green);
+    m_gpuSeries->setColor(//green);
 
     m_resourceChart->addSeries(m_cpuSeries);
     m_resourceChart->addSeries(m_memorySeries);
@@ -99,7 +84,7 @@ void ObservabilityDashboard::createResourceChart()
     m_resourceAxisX = new QDateTimeAxis();
     m_resourceAxisX->setFormat("hh:mm:ss");
     m_resourceAxisX->setTickCount(5);
-    m_resourceChart->addAxis(m_resourceAxisX, Qt::AlignBottom);
+    m_resourceChart->addAxis(m_resourceAxisX, //AlignBottom);
     m_cpuSeries->attachAxis(m_resourceAxisX);
     m_memorySeries->attachAxis(m_resourceAxisX);
     m_gpuSeries->attachAxis(m_resourceAxisX);
@@ -107,13 +92,13 @@ void ObservabilityDashboard::createResourceChart()
     m_resourceAxisY = new QValueAxis();
     m_resourceAxisY->setTitleText("Value");
     m_resourceAxisY->setRange(0, 100);
-    m_resourceChart->addAxis(m_resourceAxisY, Qt::AlignLeft);
+    m_resourceChart->addAxis(m_resourceAxisY, //AlignLeft);
     m_cpuSeries->attachAxis(m_resourceAxisY);
     m_memorySeries->attachAxis(m_resourceAxisY);
     m_gpuSeries->attachAxis(m_resourceAxisY);
 
     m_resourceChart->legend()->setVisible(true);
-    m_resourceChart->legend()->setAlignment(Qt::AlignTop);
+    m_resourceChart->legend()->setAlignment(//AlignTop);
 }
 
 void ObservabilityDashboard::createThroughputChart()
@@ -121,16 +106,16 @@ void ObservabilityDashboard::createThroughputChart()
     m_throughputChart = new QChart();
     m_throughputChart->setTitle("Training Throughput");
     m_throughputChart->setAnimationOptions(QChart::SeriesAnimations);
-    m_throughputChart->setBackgroundBrush(QBrush(Qt::white));
+    m_throughputChart->setBackgroundBrush(QBrush(//white));
 
     // Create series
     m_samplesPerSecSeries = new QLineSeries();
     m_samplesPerSecSeries->setName("Samples/sec");
-    m_samplesPerSecSeries->setColor(Qt::darkMagenta);
+    m_samplesPerSecSeries->setColor(//darkMagenta);
 
     m_tokensPerSecSeries = new QLineSeries();
     m_tokensPerSecSeries->setName("Tokens/sec");
-    m_tokensPerSecSeries->setColor(Qt::darkCyan);
+    m_tokensPerSecSeries->setColor(//darkCyan);
 
     m_throughputChart->addSeries(m_samplesPerSecSeries);
     m_throughputChart->addSeries(m_tokensPerSecSeries);
@@ -139,19 +124,19 @@ void ObservabilityDashboard::createThroughputChart()
     m_throughputAxisX = new QDateTimeAxis();
     m_throughputAxisX->setFormat("hh:mm:ss");
     m_throughputAxisX->setTickCount(5);
-    m_throughputChart->addAxis(m_throughputAxisX, Qt::AlignBottom);
+    m_throughputChart->addAxis(m_throughputAxisX, //AlignBottom);
     m_samplesPerSecSeries->attachAxis(m_throughputAxisX);
     m_tokensPerSecSeries->attachAxis(m_throughputAxisX);
 
     m_throughputAxisY = new QValueAxis();
     m_throughputAxisY->setTitleText("Throughput");
     m_throughputAxisY->setRange(0, 1000);
-    m_throughputChart->addAxis(m_throughputAxisY, Qt::AlignLeft);
+    m_throughputChart->addAxis(m_throughputAxisY, //AlignLeft);
     m_samplesPerSecSeries->attachAxis(m_throughputAxisY);
     m_tokensPerSecSeries->attachAxis(m_throughputAxisY);
 
     m_throughputChart->legend()->setVisible(true);
-    m_throughputChart->legend()->setAlignment(Qt::AlignTop);
+    m_throughputChart->legend()->setAlignment(//AlignTop);
 }
 
 void ObservabilityDashboard::createLatencyChart()
@@ -159,20 +144,20 @@ void ObservabilityDashboard::createLatencyChart()
     m_latencyChart = new QChart();
     m_latencyChart->setTitle("Batch Latency Analysis");
     m_latencyChart->setAnimationOptions(QChart::SeriesAnimations);
-    m_latencyChart->setBackgroundBrush(QBrush(Qt::white));
+    m_latencyChart->setBackgroundBrush(QBrush(//white));
 
     // Create series for latency percentiles
     m_batchLatencySeries = new QLineSeries();
     m_batchLatencySeries->setName("Avg Latency");
-    m_batchLatencySeries->setColor(Qt::darkBlue);
+    m_batchLatencySeries->setColor(//darkBlue);
 
     m_p95LatencySeries = new QLineSeries();
     m_p95LatencySeries->setName("P95 Latency");
-    m_p95LatencySeries->setColor(Qt::darkYellow);
+    m_p95LatencySeries->setColor(//darkYellow);
 
     m_p99LatencySeries = new QLineSeries();
     m_p99LatencySeries->setName("P99 Latency");
-    m_p99LatencySeries->setColor(Qt::darkRed);
+    m_p99LatencySeries->setColor(//darkRed);
 
     m_latencyChart->addSeries(m_batchLatencySeries);
     m_latencyChart->addSeries(m_p95LatencySeries);
@@ -182,7 +167,7 @@ void ObservabilityDashboard::createLatencyChart()
     m_latencyAxisX = new QDateTimeAxis();
     m_latencyAxisX->setFormat("hh:mm:ss");
     m_latencyAxisX->setTickCount(5);
-    m_latencyChart->addAxis(m_latencyAxisX, Qt::AlignBottom);
+    m_latencyChart->addAxis(m_latencyAxisX, //AlignBottom);
     m_batchLatencySeries->attachAxis(m_latencyAxisX);
     m_p95LatencySeries->attachAxis(m_latencyAxisX);
     m_p99LatencySeries->attachAxis(m_latencyAxisX);
@@ -190,18 +175,18 @@ void ObservabilityDashboard::createLatencyChart()
     m_latencyAxisY = new QValueAxis();
     m_latencyAxisY->setTitleText("Latency (ms)");
     m_latencyAxisY->setRange(0, 5000);
-    m_latencyChart->addAxis(m_latencyAxisY, Qt::AlignLeft);
+    m_latencyChart->addAxis(m_latencyAxisY, //AlignLeft);
     m_batchLatencySeries->attachAxis(m_latencyAxisY);
     m_p95LatencySeries->attachAxis(m_latencyAxisY);
     m_p99LatencySeries->attachAxis(m_latencyAxisY);
 
     m_latencyChart->legend()->setVisible(true);
-    m_latencyChart->legend()->setAlignment(Qt::AlignTop);
+    m_latencyChart->legend()->setAlignment(//AlignTop);
 }
 
 void ObservabilityDashboard::createMetricsPanel()
 {
-    m_metricsPanel = new QWidget();
+    m_metricsPanel = new void();
     QVBoxLayout* layout = new QVBoxLayout(m_metricsPanel);
 
     // Current metrics group
@@ -263,7 +248,7 @@ void ObservabilityDashboard::setupConnections()
 
 void ObservabilityDashboard::onMetricsUpdated(float cpuPercent, float memoryMB, float gpuPercent, float gpuMemoryMB)
 {
-    QDateTime now = QDateTime::currentDateTime();
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::time_point::currentDateTime();
     qint64 timestamp = now.toMSecsSinceEpoch();
 
     // Add data points to series
@@ -272,9 +257,9 @@ void ObservabilityDashboard::onMetricsUpdated(float cpuPercent, float memoryMB, 
     m_gpuSeries->append(timestamp, gpuPercent);
 
     // Update metrics panel
-    m_currentCpuLabel->setText(QString::number(cpuPercent, 'f', 1) + " %");
-    m_currentMemoryLabel->setText(QString::number(memoryMB, 'f', 1) + " MB");
-    m_currentGpuLabel->setText(QString::number(gpuPercent, 'f', 1) + " %");
+    m_currentCpuLabel->setText(std::string::number(cpuPercent, 'f', 1) + " %");
+    m_currentMemoryLabel->setText(std::string::number(memoryMB, 'f', 1) + " MB");
+    m_currentGpuLabel->setText(std::string::number(gpuPercent, 'f', 1) + " %");
 
     // Limit data points
     m_dataPointCount++;
@@ -289,21 +274,21 @@ void ObservabilityDashboard::onMetricsUpdated(float cpuPercent, float memoryMB, 
     // Update axis ranges
     if (!m_cpuSeries->points().isEmpty()) {
         m_resourceAxisX->setRange(
-            QDateTime::fromMSecsSinceEpoch(static_cast<qint64>(m_cpuSeries->points().first().x())),
-            QDateTime::fromMSecsSinceEpoch(timestamp)
+            std::chrono::system_clock::time_point::fromMSecsSinceEpoch(static_cast<qint64>(m_cpuSeries->points().first().x())),
+            std::chrono::system_clock::time_point::fromMSecsSinceEpoch(timestamp)
         );
     }
 }
 
 void ObservabilityDashboard::onThroughputUpdated(float batchLatencyMs, float throughputSamples)
 {
-    QDateTime now = QDateTime::currentDateTime();
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::time_point::currentDateTime();
     qint64 timestamp = now.toMSecsSinceEpoch();
 
     m_samplesPerSecSeries->append(timestamp, throughputSamples);
     m_batchLatencySeries->append(timestamp, batchLatencyMs);
 
-    m_currentThroughputLabel->setText(QString::number(throughputSamples, 'f', 1) + " samples/sec");
+    m_currentThroughputLabel->setText(std::string::number(throughputSamples, 'f', 1) + " samples/sec");
 
     // Limit data points
     if (m_samplesPerSecSeries->points().size() > m_maxDataPoints) {
@@ -314,7 +299,7 @@ void ObservabilityDashboard::onThroughputUpdated(float batchLatencyMs, float thr
     }
 }
 
-void ObservabilityDashboard::onPerformanceWarning(const QString& warning)
+void ObservabilityDashboard::onPerformanceWarning(const std::string& warning)
 {
     m_warnings.push_back(warning);
     
@@ -324,7 +309,7 @@ void ObservabilityDashboard::onPerformanceWarning(const QString& warning)
     }
 
     // Update label
-    QString warningText = m_warnings.empty() ? "No warnings" : "";
+    std::string warningText = m_warnings.empty() ? "No warnings" : "";
     for (const auto& w : m_warnings) {
         warningText += "⚠ " + w + "\n";
     }
@@ -354,11 +339,10 @@ void ObservabilityDashboard::clearCharts()
     m_warningsLabel->setText("No warnings");
 }
 
-bool ObservabilityDashboard::exportData(const QString& filePath)
+bool ObservabilityDashboard::exportData(const std::string& filePath)
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "Failed to open file for export:" << filePath;
         return false;
     }
 
@@ -368,7 +352,7 @@ bool ObservabilityDashboard::exportData(const QString& filePath)
     stream << "Timestamp,CPU(%),Memory(MB),GPU(%)\n";
     
     for (const auto& point : m_cpuSeries->points()) {
-        QDateTime time = QDateTime::fromMSecsSinceEpoch(static_cast<qint64>(point.x()));
+        std::chrono::system_clock::time_point time = std::chrono::system_clock::time_point::fromMSecsSinceEpoch(static_cast<qint64>(point.x()));
         stream << time.toString("hh:mm:ss") << ","
                << point.y() << ",";
         
@@ -392,7 +376,6 @@ bool ObservabilityDashboard::exportData(const QString& filePath)
     }
 
     file.close();
-    qDebug() << "Dashboard data exported to:" << filePath;
     return true;
 }
 

@@ -181,7 +181,6 @@ static void rope_multi(const T * x, T * dst, const int ne0, const int ne1, const
 }
 
 
-
 template <typename T, bool has_ff>
 static void rope_vision(const T * x, T * dst, const int ne0, const int ne1, const int ne2, const size_t s1,
                         const size_t s2, const int n_dims, const int32_t * pos, const float freq_scale,
@@ -318,8 +317,6 @@ static void rope_multi_sycl(const T * x, T * dst, const int ne0, const int ne1, 
         });
     }
 }
-
-
 
 
 // rope vision

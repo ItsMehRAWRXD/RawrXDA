@@ -883,7 +883,7 @@ public:
     
     std::string exportToMarkdown() const {
         std::string md = "# TODO List\n\n";
-        md += std::string("*Generated: %1*\n\n").arg(// DateTime::currentDateTime().toString(ISODate));
+        md += std::string("*Generated: %1*\n\n").toString(ISODate));
         
         // Group by priority
         std::map<Priority, std::vector<TodoItem>> byPriority;
@@ -901,12 +901,12 @@ public:
         };
         
         for (auto it = byPriority.begin(); it != byPriority.end(); ++it) {
-            md += std::string("## %1\n\n").arg(priorityName(it.key()));
+            md += std::string("## %1\n\n")));
             for (const TodoItem& item : it.value()) {
                 std::string checkbox = item.completed ? "- [x]" : "- [ ]";
-                md += std::string("%1 %2\n").arg(checkbox, item.text);
+                md += std::string("%1 %2\n");
                 if (!item.category.empty()) {
-                    md += std::string("  *Category: %1*\n").arg(item.category);
+                    md += std::string("  *Category: %1*\n");
                 }
             }
             md += "\n";
@@ -1107,12 +1107,12 @@ private:
             }
             
             std::string displayText = std::string("%1 %2%3")
-                .arg(priorityIcon)
-                .arg(item.completed ? "✅ " : "")
-                .arg(item.text);
+
+
+                ;
             
             if (!item.category.empty()) {
-                displayText += std::string(" [%1]").arg(item.category);
+                displayText += std::string(" [%1]");
             }
             
             QListWidgetItem* listItem = new QListWidgetItem(displayText, todoList_);
@@ -1129,7 +1129,7 @@ private:
         }
         
         // Update stats
-        statsLabel_->setText(tr("%1 of %2 completed").arg(completed).arg(total));
+        statsLabel_->setText(tr("%1 of %2 completed"));
     }
     
     // UI elements
@@ -1148,12 +1148,4 @@ private:
     std::string m_currentProject;
     std::string m_filterText;
 };
-
-
-
-
-
-
-
-
 

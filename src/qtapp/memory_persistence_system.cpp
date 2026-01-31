@@ -28,13 +28,11 @@ MemoryPersistenceSystem::MemoryPersistenceSystem()
     m_optimizationTimer->start(300000); // 5 minutes
     m_snapshotTimer->start(m_snapshotIntervalMinutes * 60000); // Convert minutes to ms
     
-    // // qDebug:  "[MemoryPersistenceSystem] Initialized with storage path:" << m_baseStoragePath;
 }
 
 MemoryPersistenceSystem::~MemoryPersistenceSystem() = default;
 
 void MemoryPersistenceSystem::saveContextSnapshot(const std::string& sessionId, const nlohmann::json& context) {
-    // // qDebug:  "[MemoryPersistenceSystem] Saving context snapshot:" << sessionId;
     
     SessionData* session = new SessionData();
     session->sessionId = sessionId;
@@ -63,12 +61,10 @@ void MemoryPersistenceSystem::saveContextSnapshot(const std::string& sessionId, 
         file.close();
         
         snapshotSaved(sessionId);
-        // // qDebug:  "[MemoryPersistenceSystem] Snapshot saved:" << filePath;
     }
 }
 
 nlohmann::json MemoryPersistenceSystem::loadContextSnapshot(const std::string& sessionId) {
-    // // qDebug:  "[MemoryPersistenceSystem] Loading context snapshot:" << sessionId;
     
     // Check active sessions first
     if (m_activeSessions.contains(sessionId)) {
@@ -118,7 +114,6 @@ nlohmann::json MemoryPersistenceSystem::listSnapshots() {
 }
 
 void MemoryPersistenceSystem::deleteSnapshot(const std::string& sessionId) {
-    // // qDebug:  "[MemoryPersistenceSystem] Deleting snapshot:" << sessionId;
     
     // Remove from active sessions
     m_activeSessions.remove(sessionId);
@@ -129,7 +124,6 @@ void MemoryPersistenceSystem::deleteSnapshot(const std::string& sessionId) {
 }
 
 void MemoryPersistenceSystem::saveSessionState(const std::string& sessionName, const nlohmann::json& state) {
-    // // qDebug:  "[MemoryPersistenceSystem] Saving session state:" << sessionName;
     
     SessionData* session = new SessionData();
     session->sessionId = sessionName;
@@ -147,12 +141,10 @@ void MemoryPersistenceSystem::saveSessionState(const std::string& sessionName, c
         doc.setObject(serializeContext(state));
         file.write(doc.toJson());
         file.close();
-        // // qDebug:  "[MemoryPersistenceSystem] Session state saved:" << filePath;
     }
 }
 
 nlohmann::json MemoryPersistenceSystem::loadSessionState(const std::string& sessionName) {
-    // // qDebug:  "[MemoryPersistenceSystem] Loading session state:" << sessionName;
     
     // Check persistent sessions
     if (m_persistentSessions.contains(sessionName)) {
@@ -204,7 +196,6 @@ void MemoryPersistenceSystem::restoreLastSession() {
 }
 
 void MemoryPersistenceSystem::addCodeRelationship(const std::string& filePath, const std::string& symbol, const nlohmann::json& metadata) {
-    // // qDebug:  "[MemoryPersistenceSystem] Adding code relationship:" << filePath << symbol;
     
     // Add node to knowledge graph
     nlohmann::json node;
@@ -234,7 +225,6 @@ void MemoryPersistenceSystem::addCodeRelationship(const std::string& filePath, c
 }
 
 nlohmann::json MemoryPersistenceSystem::findRelatedCode(const std::string& symbol) {
-    // // qDebug:  "[MemoryPersistenceSystem] Finding related code for:" << symbol;
     
     nlohmann::json related;
     nlohmann::json nodes = m_knowledgeGraph["nodes"].toArray();
@@ -257,7 +247,6 @@ nlohmann::json MemoryPersistenceSystem::findRelatedCode(const std::string& symbo
 }
 
 nlohmann::json MemoryPersistenceSystem::buildKnowledgeGraph(const std::string& projectPath) {
-    // // qDebug:  "[MemoryPersistenceSystem] Building knowledge graph for:" << projectPath;
     
     nlohmann::json graph = m_knowledgeGraph;
     graph["project_path"] = projectPath;
@@ -277,7 +266,6 @@ nlohmann::json MemoryPersistenceSystem::buildKnowledgeGraph(const std::string& p
 }
 
 void MemoryPersistenceSystem::optimizeMemoryUsage() {
-    // // qDebug:  "[MemoryPersistenceSystem] Optimizing memory usage";
     
     // Clean up expired snapshots
     cleanupExpiredData();
@@ -300,7 +288,6 @@ void MemoryPersistenceSystem::optimizeMemoryUsage() {
             removed++;
         }
         
-        // // qDebug:  "[MemoryPersistenceSystem] Removed" << removed << "old snapshots during optimization";
     }
     
     memoryOptimized(serializeMemoryStats(stats));
@@ -312,7 +299,6 @@ nlohmann::json MemoryPersistenceSystem::getMemoryUsageStats() {
 }
 
 void MemoryPersistenceSystem::cleanupExpiredData() {
-    // // qDebug:  "[MemoryPersistenceSystem] Cleaning up expired data";
     
     // DateTime cutoff = // DateTime::currentDateTime().addDays(-30); // 30 days
     
@@ -330,11 +316,9 @@ void MemoryPersistenceSystem::cleanupExpiredData() {
         }
     }
     
-    // // qDebug:  "[MemoryPersistenceSystem] Removed" << removed << "expired snapshots";
 }
 
 nlohmann::json MemoryPersistenceSystem::suggestContextBasedOnHistory(const std::string& currentContext) {
-    // // qDebug:  "[MemoryPersistenceSystem] Suggesting context based on history";
     
     nlohmann::json suggestions;
     
@@ -397,7 +381,6 @@ nlohmann::json MemoryPersistenceSystem::suggestContextBasedOnHistory(const std::
 }
 
 nlohmann::json MemoryPersistenceSystem::suggestRelevantFiles(const std::string& currentFile) {
-    // // qDebug:  "[MemoryPersistenceSystem] Suggesting relevant files for:" << currentFile;
     
     nlohmann::json suggestions;
     
@@ -421,7 +404,6 @@ nlohmann::json MemoryPersistenceSystem::suggestRelevantFiles(const std::string& 
 }
 
 std::string MemoryPersistenceSystem::suggestNextAction(const nlohmann::json& currentState) {
-    // // qDebug:  "[MemoryPersistenceSystem] Suggesting next action";
     
     std::string currentActivity = currentState["current_activity"].toString();
     std::string currentFile = currentState["current_file"].toString();
@@ -440,11 +422,9 @@ std::string MemoryPersistenceSystem::suggestNextAction(const nlohmann::json& cur
 
 // Slots implementation
 void MemoryPersistenceSystem::onSessionStarted(const std::string& sessionId) {
-    // // qDebug:  "[MemoryPersistenceSystem] Session started:" << sessionId;
 }
 
 void MemoryPersistenceSystem::onSessionEnded(const std::string& sessionId) {
-    // // qDebug:  "[MemoryPersistenceSystem] Session ended:" << sessionId;
 }
 
 void MemoryPersistenceSystem::onCodeFileOpened(const std::string& filePath) {
@@ -466,13 +446,11 @@ void MemoryPersistenceSystem::onBuildCompleted(const std::string& buildId, bool 
 
 void MemoryPersistenceSystem::enableAutoSnapshot(bool enable) {
     m_autoSnapshot = enable;
-    // // qDebug:  "[MemoryPersistenceSystem] Auto snapshot" << (enable ? "enabled" : "disabled");
 }
 
 void MemoryPersistenceSystem::setSnapshotInterval(int minutes) {
     m_snapshotIntervalMinutes = minutes;
     m_snapshotTimer->setInterval(minutes * 60000);
-    // // qDebug:  "[MemoryPersistenceSystem] Snapshot interval set to" << minutes << "minutes";
 }
 
 // Private helper methods
@@ -511,7 +489,6 @@ nlohmann::json MemoryPersistenceSystem::createCurrentContext() {
 }
 
 void MemoryPersistenceSystem::applyContext(const nlohmann::json& context) {
-    // // qDebug:  "[MemoryPersistenceSystem] Applying context from snapshot";
     // Implementation would restore IDE state from context
 }
 
@@ -559,10 +536,4 @@ nlohmann::json MemoryPersistenceSystem::serializeMemoryStats(const MemoryStats& 
     serialized["compression_ratio"] = stats.compressionRatio;
     return serialized;
 }
-
-
-
-
-
-
 

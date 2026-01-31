@@ -2345,7 +2345,7 @@ static vk_buffer ggml_vk_create_buffer(vk_device& device, size_t size, const std
     }
 
 #ifdef GGML_VULKAN_MEMORY_DEBUG
-    device->memory_logger->log_allocation(buf, size);
+
 #endif
 
     return buf;
@@ -12910,11 +12910,10 @@ static ggml_status ggml_backend_vk_graph_compute(ggml_backend_t backend, ggml_cg
         VK_CHECK(ctx->device->device.getQueryPoolResults(ctx->device->query_pool, 0, cgraph->n_nodes + 1, (cgraph->n_nodes + 1)*sizeof(uint64_t), timestamps.data(), sizeof(uint64_t), vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWait), "get timestamp results");
         for (int i = 0; i < cgraph->n_nodes; i++) {
             if (!ggml_vk_is_empty(cgraph->nodes[i])) {
-                ctx->device->perf_logger->log_timing(cgraph->nodes[i], uint64_t((timestamps[i+1] - timestamps[i]) * ctx->device->properties.limits.timestampPeriod));
+
             }
         }
 
-        ctx->device->perf_logger->print_timings();
     }
 
     return GGML_STATUS_SUCCESS;

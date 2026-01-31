@@ -668,7 +668,7 @@ int registerVersionControlTools(ToolRegistry* registry) {
             if (repoRoot.empty()) {
                 return json::object({{"success", false}, {"error", "Not a git repository"}});            }
             
-            std::stringList args = {"log", "--pretty=format:%H|%an|%ae|%ad|%s", std::string("-n%1").arg(maxCount)};
+            std::stringList args = {"log", "--pretty=format:%H|%an|%ae|%ad|%s", std::string("-n%1")};
             if (!filePath.empty()) args << "--" << filePath;
             
             return executeProcessSafely("git", args, 10000, repoRoot);
@@ -988,13 +988,11 @@ extern int registerThermalTools(ToolRegistry* registry);
 
 bool initializeAllTools(ToolRegistry* registry) {
     if (!registry) {
-        // // qCritical:  "[ToolRegistry] Cannot initialize tools: registry is null";
         return false;
     }
     
     int totalRegistered = 0;
     
-    // // qInfo:  "[ToolRegistry] Initializing all built-in tools...";
     
     totalRegistered += registerFileSystemTools(registry);
     totalRegistered += registerVersionControlTools(registry);
@@ -1005,15 +1003,7 @@ bool initializeAllTools(ToolRegistry* registry) {
     totalRegistered += registerDeploymentTools(registry);
     totalRegistered += registerThermalTools(registry);  // NVMe thermal tools
     
-    // // qInfo:  "[ToolRegistry] Successfully registered" << totalRegistered << "tools";
     
     return totalRegistered > 0;
 }
-
-
-
-
-
-
-
 

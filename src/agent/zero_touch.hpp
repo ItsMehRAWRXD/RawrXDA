@@ -1,12 +1,11 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
+#include <string>
 
-class ZeroTouch : public QObject {
-    Q_OBJECT
+class ZeroTouch {
+
 public:
-    explicit ZeroTouch(QObject* parent = nullptr);
+    explicit ZeroTouch();
 
     void installAll();
     void installFileWatcher();
@@ -14,5 +13,6 @@ public:
     void installVoiceTrigger();
 
 private:
-    QString m_lastVoiceWish;
+    std::string m_lastVoiceWish;
+    bool m_running;
 };

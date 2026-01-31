@@ -8,7 +8,7 @@
  */
 
 #include "EnhancedPredictiveThrottling.hpp"
-#include <QDebug>
+
 #include <cmath>
 
 namespace rawrxd::thermal {
@@ -412,7 +412,6 @@ EnhancedPrediction EnhancedPredictiveThrottling::predictNeuralNetwork(int64_t ho
     
     // Check if ML predictor is available
     if (!m_mlPredictor || !m_mlPredictor->isLoaded()) {
-        qWarning() << "ML predictor not available, falling back to EWMA";
         return predictEWMA(horizonMs);
     }
     
@@ -506,17 +505,17 @@ ThrottleRecommendation EnhancedPredictiveThrottling::getRecommendation(double cu
     
     // Generate reason
     if (currentTemp >= m_config.emergencyThreshold) {
-        rec.reason = QString("🚨 EMERGENCY: Temperature at %.1f°C").arg(currentTemp);
+        rec.reason = std::string("🚨 EMERGENCY: Temperature at %.1f°C");
         rec.throttlePercent = 100;
     } else if (currentTemp >= m_config.criticalThreshold) {
-        rec.reason = QString("⚠️ CRITICAL: Temperature at %.1f°C").arg(currentTemp);
+        rec.reason = std::string("⚠️ CRITICAL: Temperature at %.1f°C");
     } else if (prediction.predictedTemp >= m_config.sustainableThreshold) {
-        rec.reason = QString("📈 PREDICTIVE: Will reach %.1f°C in %.1fs")
-                    .arg(prediction.predictedTemp).arg(rec.timeToThreshold);
+        rec.reason = std::string("📈 PREDICTIVE: Will reach %.1f°C in %.1fs")
+                    ;
     } else if (currentTemp >= m_config.warningThreshold) {
-        rec.reason = QString("🟡 WARNING: Temperature at %.1f°C").arg(currentTemp);
+        rec.reason = std::string("🟡 WARNING: Temperature at %.1f°C");
     } else {
-        rec.reason = QString("✅ NOMINAL: Temperature at %.1f°C").arg(currentTemp);
+        rec.reason = std::string("✅ NOMINAL: Temperature at %.1f°C");
     }
     
     // Invoke callback
@@ -763,11 +762,10 @@ int EnhancedPredictiveThrottling::calculateThrottlePercent(double predictedTemp,
 // ML Predictor Factory
 // ═══════════════════════════════════════════════════════════════════════════════
 
-std::unique_ptr<MLPredictor> MLPredictorFactory::create(const QString& modelPath)
+std::unique_ptr<MLPredictor> MLPredictorFactory::create(const std::string& modelPath)
 {
     // Placeholder - would instantiate ONNX or TensorFlow runtime predictor
-    Q_UNUSED(modelPath);
-    qWarning() << "ML prediction not implemented in this build";
+    (modelPath);
     return nullptr;
 }
 
@@ -778,3 +776,4 @@ bool MLPredictorFactory::isMLAvailable()
 }
 
 } // namespace rawrxd::thermal
+

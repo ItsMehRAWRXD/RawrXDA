@@ -1,8 +1,6 @@
 #pragma once
-#include <QString>
-#include <QByteArray>
-#include <QHash>
-#include <QPair>
+
+
 #include <vector>
 #include <cstdint>
 
@@ -30,7 +28,7 @@ public:
     ~TransformerInference();
     
     /**
-     * @brief Load model weights from QByteArray hash (legacy overload)
+     * @brief Load model weights from std::vector<uint8_t> hash (legacy overload)
      * @param tensorCache Map of tensor names to quantized data
      * @param nLayers Number of transformer layers
      * @param nEmbd Embedding dimension
@@ -38,7 +36,7 @@ public:
      * @param nVocab Vocabulary size
      * @return true if loaded successfully
      */
-    bool loadWeights(const QHash<QString, QByteArray>& tensorCache,
+    bool loadWeights(const std::unordered_map<std::string, std::vector<uint8_t>>& tensorCache,
                      int nLayers, int nEmbd, int nHead, int nVocab);
     
     /**
@@ -55,7 +53,7 @@ public:
      * as it preserves the actual quantization type of each tensor instead of
      * assuming all tensors are F32.
      */
-    bool loadWeightsWithTypes(const QHash<QString, QPair<QByteArray, int>>& tensorCacheWithTypes,
+    bool loadWeightsWithTypes(const std::unordered_map<std::string, std::pair<std::vector<uint8_t>, int>>& tensorCacheWithTypes,
                               int nLayers, int nEmbd, int nHead, int nVocab);
     
     /**
@@ -138,12 +136,12 @@ private:
     bool m_ready{false};
     
     // Helper methods
-    ggml_tensor* createTensorFromCache(const QString& name, 
-                                       const QHash<QString, QByteArray>& cache,
+    ggml_tensor* createTensorFromCache(const std::string& name, 
+                                       const std::unordered_map<std::string, std::vector<uint8_t>>& cache,
                                        const int64_t* shape, int nDims);
     
     // New overload that accepts type ID
-    ggml_tensor* createTensorFromCache(const QByteArray& data,
+    ggml_tensor* createTensorFromCache(const std::vector<uint8_t>& data,
                                        int typeId,
                                        const std::vector<qint64>& dimensions);
     
@@ -152,3 +150,4 @@ private:
     void initKVCache();
     void freeContext();
 };
+

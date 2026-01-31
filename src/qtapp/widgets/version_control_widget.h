@@ -1,16 +1,6 @@
 #pragma once
 
 
-
-
-
-
-
-
-
-
-
-
 /**
  * @brief Production-ready Version Control Widget with comprehensive Git integration
  * 
@@ -223,9 +213,4 @@ private:
     bool m_amendMode{false};
     std::string m_lastCommitMessage;
 };
-
-
-
-
-
 

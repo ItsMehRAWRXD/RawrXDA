@@ -1,33 +1,23 @@
 #include "ai_merge_resolver.hpp"
-#include <QDebug>
-#include <QFile>
-#include <QTextStream>
-#include <QDateTime>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <QEventLoop>
-#include <QRegularExpression>
 
-AIMergeResolver::AIMergeResolver(QObject* parent)
-    : QObject(parent)
+
+AIMergeResolver::AIMergeResolver(void* parent)
+    : void(parent)
 {
-    logStructured("INFO", "AIMergeResolver initializing", QJsonObject{{"component", "AIMergeResolver"}});
-    logStructured("INFO", "AIMergeResolver initialized successfully", QJsonObject{{"component", "AIMergeResolver"}});
+    logStructured("INFO", "AIMergeResolver initializing", void*{{"component", "AIMergeResolver"}});
+    logStructured("INFO", "AIMergeResolver initialized successfully", void*{{"component", "AIMergeResolver"}});
 }
 
 AIMergeResolver::~AIMergeResolver()
 {
-    logStructured("INFO", "AIMergeResolver shutting down", QJsonObject{{"component", "AIMergeResolver"}});
+    logStructured("INFO", "AIMergeResolver shutting down", void*{{"component", "AIMergeResolver"}});
 }
 
 void AIMergeResolver::setConfig(const Config& config)
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     m_config = config;
-    logStructured("INFO", "Configuration updated", QJsonObject{
+    logStructured("INFO", "Configuration updated", void*{
         {"enableAutoResolve", config.enableAutoResolve},
         {"minConfidenceThreshold", config.minConfidenceThreshold},
         {"maxConflictSize", config.maxConflictSize}
@@ -36,49 +26,49 @@ void AIMergeResolver::setConfig(const Config& config)
 
 AIMergeResolver::Config AIMergeResolver::getConfig() const
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     return m_config;
 }
 
-QVector<AIMergeResolver::ConflictBlock> AIMergeResolver::detectConflicts(const QString& filePath)
+std::vector<AIMergeResolver::ConflictBlock> AIMergeResolver::detectConflicts(const std::string& filePath)
 {
     auto startTime = std::chrono::steady_clock::now();
-    QVector<ConflictBlock> conflicts;
+    std::vector<ConflictBlock> conflicts;
     
     try {
-        QFile file(filePath);
+        std::fstream file(filePath);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            logStructured("ERROR", "Failed to open file for conflict detection", QJsonObject{
+            logStructured("ERROR", "Failed to open file for conflict detection", void*{
                 {"filePath", filePath},
                 {"error", file.errorString()}
             });
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.errorCount++;
-            emit errorOccurred(QString("Failed to open file: %1").arg(file.errorString()));
+            errorOccurred(std::string("Failed to open file: %1")));
             return conflicts;
         }
         
         QTextStream in(&file);
-        QString content = in.readAll();
+        std::string content = in.readAll();
         file.close();
         
         // Detect conflict markers
-        QRegularExpression conflictStart("^<<<<<<< (.+)$", QRegularExpression::MultilineOption);
-        QRegularExpression conflictMid("^=======\\s*$", QRegularExpression::MultilineOption);
-        QRegularExpression conflictEnd("^>>>>>>> (.+)$", QRegularExpression::MultilineOption);
+        std::regex conflictStart("^<<<<<<< (.+)$", std::regex::MultilineOption);
+        std::regex conflictMid("^=======\\s*$", std::regex::MultilineOption);
+        std::regex conflictEnd("^>>>>>>> (.+)$", std::regex::MultilineOption);
         
-        QStringList lines = content.split('\n');
+        std::vector<std::string> lines = content.split('\n');
         int i = 0;
         
         while (i < lines.size()) {
-            QRegularExpressionMatch startMatch = conflictStart.match(lines[i]);
+            std::smatch startMatch = conflictStart.match(lines[i]);
             if (startMatch.hasMatch()) {
                 ConflictBlock conflict;
                 conflict.file = filePath;
                 conflict.startLine = i + 1;
                 
-                QString currentBranch = startMatch.captured(1);
-                QStringList currentLines;
+                std::string currentBranch = startMatch"";
+                std::vector<std::string> currentLines;
                 i++;
                 
                 // Collect current version lines
@@ -94,7 +84,7 @@ QVector<AIMergeResolver::ConflictBlock> AIMergeResolver::detectConflicts(const Q
                 }
                 
                 // Collect incoming version lines
-                QStringList incomingLines;
+                std::vector<std::string> incomingLines;
                 while (i < lines.size() && !conflictEnd.match(lines[i]).hasMatch()) {
                     incomingLines.append(lines[i]);
                     i++;
@@ -103,9 +93,9 @@ QVector<AIMergeResolver::ConflictBlock> AIMergeResolver::detectConflicts(const Q
                 conflict.incomingVersion = incomingLines.join("\n");
                 
                 if (i < lines.size()) {
-                    QRegularExpressionMatch endMatch = conflictEnd.match(lines[i]);
+                    std::smatch endMatch = conflictEnd.match(lines[i]);
                     if (endMatch.hasMatch()) {
-                        QString incomingBranch = endMatch.captured(1);
+                        std::string incomingBranch = endMatch"";
                         conflict.endLine = i + 1;
                         
                         // Extract context (5 lines before and after)
@@ -124,23 +114,23 @@ QVector<AIMergeResolver::ConflictBlock> AIMergeResolver::detectConflicts(const Q
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.conflictsDetected += conflicts.size();
         }
         
-        logStructured("INFO", "Conflicts detected", QJsonObject{
+        logStructured("INFO", "Conflicts detected", void*{
             {"filePath", filePath},
             {"conflictCount", conflicts.size()},
             {"latencyMs", duration.count()}
         });
         
-        emit conflictsDetected(conflicts.size());
+        conflictsDetected(conflicts.size());
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Exception during conflict detection", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Conflict detection failed: %1").arg(e.what()));
+        logStructured("ERROR", "Exception during conflict detection", void*{{"error", e.what()}});
+        errorOccurred(std::string("Conflict detection failed: %1")));
     }
     
     return conflicts;
@@ -154,14 +144,14 @@ AIMergeResolver::Resolution AIMergeResolver::resolveConflict(const ConflictBlock
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         // Validate conflict size
         int conflictSize = conflict.currentVersion.length() + conflict.incomingVersion.length();
         if (conflictSize > config.maxConflictSize) {
-            logStructured("WARN", "Conflict exceeds max size, requires manual resolution", QJsonObject{
+            logStructured("WARN", "Conflict exceeds max size, requires manual resolution", void*{
                 {"conflictSize", conflictSize},
                 {"maxSize", config.maxConflictSize}
             });
@@ -171,19 +161,19 @@ AIMergeResolver::Resolution AIMergeResolver::resolveConflict(const ConflictBlock
         }
         
         // Prepare AI request
-        QJsonObject payload;
+        void* payload;
         payload["current_version"] = conflict.currentVersion;
         payload["incoming_version"] = conflict.incomingVersion;
         payload["base_version"] = conflict.baseVersion;
         payload["context"] = conflict.context;
         payload["file"] = conflict.file;
         
-        logStructured("DEBUG", "Sending conflict resolution request to AI", QJsonObject{
+        logStructured("DEBUG", "Sending conflict resolution request to AI", void*{
             {"file", conflict.file},
             {"conflictSize", conflictSize}
         });
         
-        QJsonObject response = makeAiRequest(config.aiEndpoint + "/resolve-conflict", payload);
+        void* response = makeAiRequest(config.aiEndpoint + "/resolve-conflict", payload);
         
         resolution.resolvedContent = response["resolved_content"].toString();
         resolution.confidence = response["confidence"].toDouble();
@@ -196,7 +186,7 @@ AIMergeResolver::Resolution AIMergeResolver::resolveConflict(const ConflictBlock
         recordLatency("conflict_resolution", duration);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.conflictsResolved++;
             if (!resolution.requiresManualReview) {
                 m_metrics.autoResolved++;
@@ -210,7 +200,7 @@ AIMergeResolver::Resolution AIMergeResolver::resolveConflict(const ConflictBlock
                 / m_metrics.conflictsResolved;
         }
         
-        logStructured("INFO", "Conflict resolved", QJsonObject{
+        logStructured("INFO", "Conflict resolved", void*{
             {"file", conflict.file},
             {"confidence", resolution.confidence},
             {"strategy", resolution.strategy},
@@ -220,7 +210,7 @@ AIMergeResolver::Resolution AIMergeResolver::resolveConflict(const ConflictBlock
         
         // Audit log
         if (config.enableAuditLog) {
-            logAudit("conflict_resolved", QJsonObject{
+            logAudit("conflict_resolved", void*{
                 {"file", conflict.file},
                 {"startLine", conflict.startLine},
                 {"endLine", conflict.endLine},
@@ -230,39 +220,39 @@ AIMergeResolver::Resolution AIMergeResolver::resolveConflict(const ConflictBlock
             });
         }
         
-        emit conflictResolved(resolution);
+        conflictResolved(resolution);
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Conflict resolution failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Resolution failed: %1").arg(e.what()));
+        logStructured("ERROR", "Conflict resolution failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Resolution failed: %1")));
         resolution.requiresManualReview = true;
-        resolution.explanation = QString("AI resolution failed: %1").arg(e.what());
+        resolution.explanation = std::string("AI resolution failed: %1"));
     }
     
     return resolution;
 }
 
-bool AIMergeResolver::applyResolution(const QString& filePath, const Resolution& resolution, int lineStart, int lineEnd)
+bool AIMergeResolver::applyResolution(const std::string& filePath, const Resolution& resolution, int lineStart, int lineEnd)
 {
     auto startTime = std::chrono::steady_clock::now();
     
     try {
-        QFile file(filePath);
+        std::fstream file(filePath);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            logStructured("ERROR", "Failed to open file for applying resolution", QJsonObject{
+            logStructured("ERROR", "Failed to open file for applying resolution", void*{
                 {"filePath", filePath},
                 {"error", file.errorString()}
             });
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.errorCount++;
-            emit errorOccurred(QString("Failed to open file: %1").arg(file.errorString()));
+            errorOccurred(std::string("Failed to open file: %1")));
             return false;
         }
         
         QTextStream in(&file);
-        QStringList lines;
+        std::vector<std::string> lines;
         while (!in.atEnd()) {
             lines.append(in.readLine());
         }
@@ -270,12 +260,12 @@ bool AIMergeResolver::applyResolution(const QString& filePath, const Resolution&
         
         // Replace conflict block with resolution
         if (lineStart < 1 || lineEnd > lines.size() || lineStart > lineEnd) {
-            logStructured("ERROR", "Invalid line range for resolution", QJsonObject{
+            logStructured("ERROR", "Invalid line range for resolution", void*{
                 {"lineStart", lineStart},
                 {"lineEnd", lineEnd},
                 {"fileLines", lines.size()}
             });
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.errorCount++;
             return false;
         }
@@ -284,25 +274,25 @@ bool AIMergeResolver::applyResolution(const QString& filePath, const Resolution&
         lines.erase(lines.begin() + lineStart - 1, lines.begin() + lineEnd);
         
         // Insert resolved content
-        QStringList resolvedLines = resolution.resolvedContent.split('\n');
+        std::vector<std::string> resolvedLines = resolution.resolvedContent.split('\n');
         for (int i = resolvedLines.size() - 1; i >= 0; i--) {
             lines.insert(lineStart - 1, resolvedLines[i]);
         }
         
         // Write back to file
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-            logStructured("ERROR", "Failed to open file for writing resolution", QJsonObject{
+            logStructured("ERROR", "Failed to open file for writing resolution", void*{
                 {"filePath", filePath},
                 {"error", file.errorString()}
             });
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.errorCount++;
-            emit errorOccurred(QString("Failed to write file: %1").arg(file.errorString()));
+            errorOccurred(std::string("Failed to write file: %1")));
             return false;
         }
         
         QTextStream out(&file);
-        for (const QString& line : lines) {
+        for (const std::string& line : lines) {
             out << line << "\n";
         }
         file.close();
@@ -310,7 +300,7 @@ bool AIMergeResolver::applyResolution(const QString& filePath, const Resolution&
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         
-        logStructured("INFO", "Resolution applied successfully", QJsonObject{
+        logStructured("INFO", "Resolution applied successfully", void*{
             {"filePath", filePath},
             {"lineStart", lineStart},
             {"lineEnd", lineEnd},
@@ -319,12 +309,12 @@ bool AIMergeResolver::applyResolution(const QString& filePath, const Resolution&
         
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         if (config.enableAuditLog) {
-            logAudit("resolution_applied", QJsonObject{
+            logAudit("resolution_applied", void*{
                 {"file", filePath},
                 {"lineStart", lineStart},
                 {"lineEnd", lineEnd},
@@ -335,33 +325,33 @@ bool AIMergeResolver::applyResolution(const QString& filePath, const Resolution&
         return true;
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Exception applying resolution", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Apply resolution failed: %1").arg(e.what()));
+        logStructured("ERROR", "Exception applying resolution", void*{{"error", e.what()}});
+        errorOccurred(std::string("Apply resolution failed: %1")));
         return false;
     }
 }
 
-QJsonObject AIMergeResolver::analyzeSemanticMerge(const QString& base, const QString& current, const QString& incoming)
+void* AIMergeResolver::analyzeSemanticMerge(const std::string& base, const std::string& current, const std::string& incoming)
 {
     auto startTime = std::chrono::steady_clock::now();
-    QJsonObject analysis;
+    void* analysis;
     
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
-        QJsonObject payload;
+        void* payload;
         payload["base"] = base;
         payload["current"] = current;
         payload["incoming"] = incoming;
         payload["analysis_type"] = "semantic";
         
-        logStructured("DEBUG", "Requesting semantic merge analysis", QJsonObject{
+        logStructured("DEBUG", "Requesting semantic merge analysis", void*{
             {"baseSize", base.length()},
             {"currentSize", current.length()},
             {"incomingSize", incoming.length()}
@@ -372,44 +362,44 @@ QJsonObject AIMergeResolver::analyzeSemanticMerge(const QString& base, const QSt
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         
-        logStructured("INFO", "Semantic analysis completed", QJsonObject{
+        logStructured("INFO", "Semantic analysis completed", void*{
             {"hasConflicts", analysis["has_conflicts"].toBool()},
             {"semanticChanges", analysis["semantic_changes"].toArray().size()},
             {"latencyMs", duration.count()}
         });
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Semantic analysis failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Semantic analysis failed: %1").arg(e.what()));
+        logStructured("ERROR", "Semantic analysis failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Semantic analysis failed: %1")));
     }
     
     return analysis;
 }
 
-QVector<QString> AIMergeResolver::detectBreakingChanges(const QString& diff)
+std::vector<std::string> AIMergeResolver::detectBreakingChanges(const std::string& diff)
 {
     auto startTime = std::chrono::steady_clock::now();
-    QVector<QString> breakingChanges;
+    std::vector<std::string> breakingChanges;
     
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
-        QJsonObject payload;
+        void* payload;
         payload["diff"] = diff;
         payload["detection_mode"] = "breaking_changes";
         
-        logStructured("DEBUG", "Detecting breaking changes", QJsonObject{{"diffSize", diff.length()}});
+        logStructured("DEBUG", "Detecting breaking changes", void*{{"diffSize", diff.length()}});
         
-        QJsonObject response = makeAiRequest(config.aiEndpoint + "/detect-breaking-changes", payload);
+        void* response = makeAiRequest(config.aiEndpoint + "/detect-breaking-changes", payload);
         
-        QJsonArray changesArray = response["breaking_changes"].toArray();
-        for (const QJsonValue& value : changesArray) {
+        void* changesArray = response["breaking_changes"].toArray();
+        for (const void*& value : changesArray) {
             breakingChanges.append(value.toString());
         }
         
@@ -417,24 +407,24 @@ QVector<QString> AIMergeResolver::detectBreakingChanges(const QString& diff)
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.breakingChangesDetected += breakingChanges.size();
         }
         
-        logStructured("INFO", "Breaking changes detected", QJsonObject{
+        logStructured("INFO", "Breaking changes detected", void*{
             {"count", breakingChanges.size()},
             {"latencyMs", duration.count()}
         });
         
-        for (const QString& change : breakingChanges) {
-            emit breakingChangeDetected(change);
+        for (const std::string& change : breakingChanges) {
+            breakingChangeDetected(change);
         }
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Breaking change detection failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Breaking change detection failed: %1").arg(e.what()));
+        logStructured("ERROR", "Breaking change detection failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Breaking change detection failed: %1")));
     }
     
     return breakingChanges;
@@ -442,33 +432,32 @@ QVector<QString> AIMergeResolver::detectBreakingChanges(const QString& diff)
 
 AIMergeResolver::Metrics AIMergeResolver::getMetrics() const
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     return m_metrics;
 }
 
 void AIMergeResolver::resetMetrics()
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     m_metrics = Metrics();
-    logStructured("INFO", "Metrics reset", QJsonObject{});
+    logStructured("INFO", "Metrics reset", void*{});
 }
 
-void AIMergeResolver::logStructured(const QString& level, const QString& message, const QJsonObject& context)
+void AIMergeResolver::logStructured(const std::string& level, const std::string& message, const void*& context)
 {
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = level;
     logEntry["component"] = "AIMergeResolver";
     logEntry["message"] = message;
     logEntry["context"] = context;
     
-    QJsonDocument doc(logEntry);
-    qDebug().noquote() << doc.toJson(QJsonDocument::Compact);
+    void* doc(logEntry);
 }
 
-void AIMergeResolver::recordLatency(const QString& operation, const std::chrono::milliseconds& duration)
+void AIMergeResolver::recordLatency(const std::string& operation, const std::chrono::milliseconds& duration)
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     
     if (operation == "conflict_resolution") {
         m_metrics.avgResolutionLatencyMs = 
@@ -478,20 +467,20 @@ void AIMergeResolver::recordLatency(const QString& operation, const std::chrono:
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     if (config.enableMetrics) {
-        emit metricsUpdated(m_metrics);
+        metricsUpdated(m_metrics);
     }
 }
 
-void AIMergeResolver::logAudit(const QString& action, const QJsonObject& details)
+void AIMergeResolver::logAudit(const std::string& action, const void*& details)
 {
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
@@ -499,56 +488,56 @@ void AIMergeResolver::logAudit(const QString& action, const QJsonObject& details
         return;
     }
     
-    QJsonObject auditEntry;
-    auditEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* auditEntry;
+    auditEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     auditEntry["action"] = action;
     auditEntry["details"] = details;
     
-    QFile auditFile(config.auditLogPath);
+    std::fstream auditFile(config.auditLogPath);
     if (auditFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         QTextStream out(&auditFile);
-        QJsonDocument doc(auditEntry);
-        out << doc.toJson(QJsonDocument::Compact) << "\n";
+        void* doc(auditEntry);
+        out << doc.toJson(void*::Compact) << "\n";
         auditFile.close();
     } else {
-        logStructured("ERROR", "Failed to write audit log", QJsonObject{
+        logStructured("ERROR", "Failed to write audit log", void*{
             {"path", config.auditLogPath},
             {"error", auditFile.errorString()}
         });
     }
 }
 
-QJsonObject AIMergeResolver::makeAiRequest(const QString& endpoint, const QJsonObject& payload)
+void* AIMergeResolver::makeAiRequest(const std::string& endpoint, const void*& payload)
 {
-    QNetworkAccessManager manager;
+    void* manager;
     QNetworkRequest request(endpoint);
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     if (!config.apiKey.isEmpty()) {
-        request.setRawHeader("Authorization", QString("Bearer %1").arg(config.apiKey).toUtf8());
+        request.setRawHeader("Authorization", std::string("Bearer %1").toUtf8());
     }
     
-    QJsonDocument doc(payload);
-    QByteArray data = doc.toJson(QJsonDocument::Compact);
+    void* doc(payload);
+    std::vector<uint8_t> data = doc.toJson(void*::Compact);
     
-    QEventLoop loop;
-    QNetworkReply* reply = manager.post(request, data);
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    void* loop;
+    void** reply = manager.post(request, data);
+// Qt connect removed
     loop.exec();
     
-    QJsonObject response;
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray responseData = reply->readAll();
-        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+    void* response;
+    if (reply->error() == void*::NoError) {
+        std::vector<uint8_t> responseData = reply->readAll();
+        void* responseDoc = void*::fromJson(responseData);
         response = responseDoc.object();
     } else {
-        logStructured("ERROR", "AI API request failed", QJsonObject{
+        logStructured("ERROR", "AI API request failed", void*{
             {"endpoint", endpoint},
             {"error", reply->errorString()}
         });
@@ -562,18 +551,18 @@ QJsonObject AIMergeResolver::makeAiRequest(const QString& endpoint, const QJsonO
 bool AIMergeResolver::validateResolution(const Resolution& resolution, const ConflictBlock& conflict)
 {
     if (resolution.resolvedContent.isEmpty()) {
-        logStructured("WARN", "Empty resolution content", QJsonObject{});
+        logStructured("WARN", "Empty resolution content", void*{});
         return false;
     }
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     if (resolution.confidence < config.minConfidenceThreshold) {
-        logStructured("WARN", "Resolution confidence below threshold", QJsonObject{
+        logStructured("WARN", "Resolution confidence below threshold", void*{
             {"confidence", resolution.confidence},
             {"threshold", config.minConfidenceThreshold}
         });
@@ -582,3 +571,4 @@ bool AIMergeResolver::validateResolution(const Resolution& resolution, const Con
     
     return true;
 }
+

@@ -171,9 +171,9 @@ void EntropyVisualizer::paintEvent(void* event)
     painter.setPen(white);
     painter.setFont(void("Segoe UI", 10, void::Bold));
     std::string progressText = std::string("%1% (%2/%3 samples)")
-        .arg(static_cast<int>(m_entropyLevel * 100))
-        .arg(m_samples.size())
-        .arg(m_targetSamples);
+        )
+        )
+        ;
     painter.drawText(rect().adjusted(0, 0, 0, -progressHeight/2), 
                     AlignCenter, progressText);
     
@@ -609,7 +609,7 @@ void KeyNamingPage::updatePreview()
         "<b>Name:</b> %1<br>"
         "<b>Expires:</b> %2<br>"
         "<b>Hardware Bound:</b> %3"
-    ).arg(name, expiry, hardware));
+    ));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -715,8 +715,8 @@ void EntropyCollectionPage::onEntropyTick()
     m_progressBar->setValue(progress);
     
     m_entropyLabel->setText(tr("Entropy collected: %1 bytes (%2 bits/byte)")
-        .arg(m_entropyPool.size())
-        .arg(calculateEntropy(m_entropyPool), 0, 'f', 2));
+        )
+        , 0, 'f', 2));
 }
 
 void EntropyCollectionPage::collectRdrandEntropy()
@@ -812,8 +812,8 @@ void EntropyCollectionPage::generateKey()
     // Generate hardware fingerprint
     if (m_result.metadata.isBoundToHardware) {
         std::string hwInfo = std::string("%1-%2")
-            .arg(QSysInfo::machineUniqueId().toHex())
-            .arg(QSysInfo::currentCpuArchitecture());
+            .toHex())
+            );
         m_result.metadata.hardwareFingerprint = 
             QCryptographicHash::hash(hwInfo.toUtf8(), QCryptographicHash::Sha256).toHex();
     }
@@ -922,7 +922,7 @@ bool KeyVerificationPage::isComplete() const
 void KeyVerificationPage::onExportKey()
 {
     std::string path = // Dialog::getSaveFileName(this, tr("Export Key"),
-        std::string("rawrxd_key_%1.json").arg(// DateTime::currentDateTime().toString("yyyyMMdd")),
+        std::string("rawrxd_key_%1.json").toString("yyyyMMdd")),
         tr("JSON Files (*.json)"));
     
     if (!path.empty()) {
@@ -939,7 +939,7 @@ void KeyVerificationPage::onExportKey()
             if (file.open(std::iostream::WriteOnly)) {
                 file.write(void*(obj).toJson());
                 void::information(this, tr("Export Successful"),
-                    tr("Key exported to %1").arg(path));
+                    tr("Key exported to %1"));
             }
         }
     }
@@ -955,7 +955,7 @@ void KeyVerificationPage::onVerifyKey()
 
 void KeyVerificationPage::onCopyFingerprint()
 {
-    QApplication::clipboard()->setText(m_fingerprintLabel->text().remove(' '));
+    nullptr->setText(m_fingerprintLabel->text().remove(' '));
     void::information(this, tr("Copied"),
         tr("Fingerprint copied to clipboard."));
 }
@@ -1036,7 +1036,7 @@ void EnrollmentPage::startEnrollment()
     int delay = 0;
     for (int i = 0; i < steps.size(); ++i) {
         // Timer::singleShot(delay, [this, step = steps[i], progress = (i + 1) * 20]() {
-            m_logText->append(std::string("✓ %1").arg(step));
+            m_logText->append(std::string("✓ %1"));
             m_progressBar->setValue(progress);
         });
         delay += 500;
@@ -1101,15 +1101,14 @@ void CompletionPage::initializePage()
         auto result = entropyPage->getResult();
         
         details += tr("<b>Key Details:</b><br>");
-        details += tr("• Key ID: %1<br>").arg(result.metadata.keyId);
-        details += tr("• Algorithm: %1<br>").arg(
-            result.metadata.algorithm == KeyAlgorithm::RDRAND_AES256 ? "RDRAND + AES-256" : "Other");
-        details += tr("• Generation Time: %1ms<br>").arg(result.generationTimeMs);
-        details += tr("• Entropy Quality: %1 bits/byte<br>").arg(result.entropyBitsPerByte, 0, 'f', 2);
-        details += tr("• Hardware Bound: %1<br>").arg(result.metadata.isBoundToHardware ? "Yes" : "No");
+        details += tr("• Key ID: %1<br>");
+        details += tr("• Algorithm: %1<br>");
+        details += tr("• Generation Time: %1ms<br>");
+        details += tr("• Entropy Quality: %1 bits/byte<br>");
+        details += tr("• Hardware Bound: %1<br>");
         
         if (result.metadata.expires.isValid()) {
-            details += tr("• Expires: %1<br>").arg(result.metadata.expires.toString("yyyy-MM-dd"));
+            details += tr("• Expires: %1<br>"));
         }
     }
     
@@ -1279,9 +1278,9 @@ void KeyManagerDialog::refreshKeyList()
     for (const auto& key : m_keys) {
         std::string icon = key.isRevoked ? "🚫" : (key.expires.isValid() && key.expires < // DateTime::currentDateTime() ? "⏰" : "🔑");
         std::string text = std::string("%1 %2\n   ID: %3...")
-            .arg(icon)
-            .arg(key.keyName)
-            .arg(key.keyId.left(8));
+
+
+            );
         
         auto* item = new QListWidgetItem(text);
         item->setData(UserRole, key.keyId);
@@ -1329,7 +1328,7 @@ void KeyManagerDialog::exportSelectedKey()
     if (!meta) return;
     
     std::string path = // Dialog::getSaveFileName(this, tr("Export Key"),
-        std::string("rawrxd_key_%1.json").arg(meta->keyId.left(8)),
+        std::string("rawrxd_key_%1.json")),
         tr("JSON Files (*.json)"));
     
     if (!path.empty()) {
@@ -1364,9 +1363,7 @@ void KeyManagerDialog::viewKeyDetails()
         "Hardware Bound: %5\n"
         "Usage Count: %6\n"
         "Status: %7"
-    ).arg(meta->keyName,
-          meta->keyId,
-          meta->created.toString(),
+    ),
           meta->expires.isValid() ? meta->expires.toString() : "Never",
           meta->isBoundToHardware ? "Yes" : "No",
           std::string::number(meta->usageCount),
@@ -1574,13 +1571,4 @@ std::vector<uint8_t> KeyStorage::decryptMetadata(const std::vector<uint8_t>& dat
 }
 
 } // namespace rawrxd::auth
-
-
-
-
-
-
-
-
-
 

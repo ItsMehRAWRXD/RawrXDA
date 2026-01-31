@@ -1,31 +1,14 @@
 #include "model_registry.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGridLayout>
-#include <QTableWidget>
-#include <QPushButton>
-#include <QLabel>
-#include <QLineEdit>
-#include <QComboBox>
-#include <QHeaderView>
-#include <QMessageBox>
-#include <QFileInfo>
-#include <QStandardPaths>
-#include <QDir>
-#include <QSqlQuery>
-#include <QSqlError>
-#include <QSqlRecord>
-#include <QVariant>
-#include <QDebug>
 
-ModelRegistry::ModelRegistry(QWidget* parent)
-    : QWidget(parent)
+
+ModelRegistry::ModelRegistry(void* parent)
+    : void(parent)
     , m_selectedModelId(-1)
 {
     // Lightweight constructor - defers database/Qt widget creation to initialize()
     // Initialize database path
-    QString dataLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QDir().mkpath(dataLocation);
+    std::string dataLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    std::filesystem::path().mkpath(dataLocation);
     m_dbPath = dataLocation + "/model_registry.db";
 }
 
@@ -51,13 +34,12 @@ void ModelRegistry::setupDatabase()
     m_db.setDatabaseName(m_dbPath);
 
     if (!m_db.open()) {
-        qCritical() << "Failed to open model registry database:" << m_db.lastError().text();
         return;
     }
 
     // Create table if it doesn't exist
     QSqlQuery query(m_db);
-    QString createTableSQL = R"(
+    std::string createTableSQL = R"(
         CREATE TABLE IF NOT EXISTS models (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -78,10 +60,8 @@ void ModelRegistry::setupDatabase()
     )";
 
     if (!query.exec(createTableSQL)) {
-        qCritical() << "Failed to create models table:" << query.lastError().text();
     }
 
-    qDebug() << "Model registry database initialized at:" << m_dbPath;
 }
 
 void ModelRegistry::setupUI()
@@ -168,16 +148,14 @@ void ModelRegistry::setupUI()
 
 void ModelRegistry::setupConnections()
 {
-    connect(m_refreshButton, &QPushButton::clicked, this, &ModelRegistry::onRefreshClicked);
-    connect(m_deleteButton, &QPushButton::clicked, this, &ModelRegistry::onDeleteClicked);
-    connect(m_activateButton, &QPushButton::clicked, this, &ModelRegistry::onActivateClicked);
-    connect(m_compareButton, &QPushButton::clicked, this, &ModelRegistry::onCompareClicked);
-    connect(m_exportButton, &QPushButton::clicked, this, &ModelRegistry::onExportClicked);
-    connect(m_searchEdit, &QLineEdit::textChanged, this, &ModelRegistry::onSearchTextChanged);
-    connect(m_filterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &ModelRegistry::onFilterChanged);
-    connect(m_tableWidget, &QTableWidget::itemSelectionChanged,
-            this, &ModelRegistry::onRowSelectionChanged);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 void ModelRegistry::loadModels()
@@ -186,19 +164,18 @@ void ModelRegistry::loadModels()
 
     QSqlQuery query(m_db);
     if (!query.exec("SELECT * FROM models ORDER BY created_at DESC")) {
-        qWarning() << "Failed to load models:" << query.lastError().text();
         m_statusLabel->setText("Error loading models");
         return;
     }
 
-    while (query.next()) {
+    while (query) {
         ModelVersion model;
         model.id = query.value("id").toInt();
         model.name = query.value("name").toString();
         model.path = query.value("path").toString();
         model.baseModel = query.value("base_model").toString();
         model.dataset = query.value("dataset").toString();
-        model.createdAt = QDateTime::fromString(query.value("created_at").toString(), Qt::ISODate);
+        model.createdAt = std::chrono::system_clock::time_point::fromString(query.value("created_at").toString(), //ISODate);
         model.finalLoss = query.value("final_loss").toFloat();
         model.perplexity = query.value("perplexity").toFloat();
         model.epochs = query.value("epochs").toInt();
@@ -213,10 +190,10 @@ void ModelRegistry::loadModels()
     }
 
     populateTable(m_models);
-    m_statusLabel->setText(QString("Loaded %1 models").arg(m_models.size()));
+    m_statusLabel->setText(std::string("Loaded %1 models")));
 }
 
-void ModelRegistry::populateTable(const QVector<ModelVersion>& models)
+void ModelRegistry::populateTable(const std::vector<ModelVersion>& models)
 {
     m_tableWidget->setRowCount(0);
     m_tableWidget->setSortingEnabled(false);
@@ -226,8 +203,8 @@ void ModelRegistry::populateTable(const QVector<ModelVersion>& models)
         m_tableWidget->insertRow(row);
 
         // ID
-        QTableWidgetItem* idItem = new QTableWidgetItem(QString::number(model.id));
-        idItem->setData(Qt::UserRole, model.id);
+        QTableWidgetItem* idItem = new QTableWidgetItem(std::string::number(model.id));
+        idItem->setData(//UserRole, model.id);
         m_tableWidget->setItem(row, 0, idItem);
 
         // Name
@@ -237,28 +214,28 @@ void ModelRegistry::populateTable(const QVector<ModelVersion>& models)
         m_tableWidget->setItem(row, 2, new QTableWidgetItem(formatTimestamp(model.createdAt)));
 
         // Base Model
-        QString baseModelShort = QFileInfo(model.baseModel).fileName();
+        std::string baseModelShort = std::filesystem::path(model.baseModel).fileName();
         m_tableWidget->setItem(row, 3, new QTableWidgetItem(baseModelShort));
 
         // Dataset
-        QString datasetShort = QFileInfo(model.dataset).fileName();
+        std::string datasetShort = std::filesystem::path(model.dataset).fileName();
         m_tableWidget->setItem(row, 4, new QTableWidgetItem(datasetShort));
 
         // Loss
-        m_tableWidget->setItem(row, 5, new QTableWidgetItem(QString::number(model.finalLoss, 'f', 4)));
+        m_tableWidget->setItem(row, 5, new QTableWidgetItem(std::string::number(model.finalLoss, 'f', 4)));
 
         // Perplexity
-        m_tableWidget->setItem(row, 6, new QTableWidgetItem(QString::number(model.perplexity, 'f', 2)));
+        m_tableWidget->setItem(row, 6, new QTableWidgetItem(std::string::number(model.perplexity, 'f', 2)));
 
         // Epochs
-        m_tableWidget->setItem(row, 7, new QTableWidgetItem(QString::number(model.epochs)));
+        m_tableWidget->setItem(row, 7, new QTableWidgetItem(std::string::number(model.epochs)));
 
         // Size
         m_tableWidget->setItem(row, 8, new QTableWidgetItem(formatFileSize(model.fileSize)));
 
         // Active
         QTableWidgetItem* activeItem = new QTableWidgetItem(model.isActive ? "✓" : "");
-        activeItem->setTextAlignment(Qt::AlignCenter);
+        activeItem->setTextAlignment(//AlignCenter);
         if (model.isActive) {
             activeItem->setBackground(QBrush(QColor(76, 175, 80, 50))); // Light green
         }
@@ -287,7 +264,7 @@ bool ModelRegistry::registerModel(const ModelVersion& version)
     query.bindValue(":path", version.path);
     query.bindValue(":base_model", version.baseModel);
     query.bindValue(":dataset", version.dataset);
-    query.bindValue(":created_at", version.createdAt.toString(Qt::ISODate));
+    query.bindValue(":created_at", version.createdAt.toString(//ISODate));
     query.bindValue(":final_loss", version.finalLoss);
     query.bindValue(":perplexity", version.perplexity);
     query.bindValue(":epochs", version.epochs);
@@ -299,16 +276,15 @@ bool ModelRegistry::registerModel(const ModelVersion& version)
     query.bindValue(":is_active", version.isActive ? 1 : 0);
 
     if (!query.exec()) {
-        qWarning() << "Failed to register model:" << query.lastError().text();
         return false;
     }
 
     loadModels();
-    emit registryUpdated();
+    registryUpdated();
     return true;
 }
 
-QVector<ModelVersion> ModelRegistry::getAllModels() const
+std::vector<ModelVersion> ModelRegistry::getAllModels() const
 {
     return m_models;
 }
@@ -330,13 +306,12 @@ bool ModelRegistry::deleteModel(int id)
     query.bindValue(":id", id);
 
     if (!query.exec()) {
-        qWarning() << "Failed to delete model:" << query.lastError().text();
         return false;
     }
 
     loadModels();
-    emit modelDeleted(id);
-    emit registryUpdated();
+    modelDeleted(id);
+    registryUpdated();
     return true;
 }
 
@@ -345,7 +320,6 @@ bool ModelRegistry::setActiveModel(int id)
     // First, deactivate all models
     QSqlQuery deactivateQuery(m_db);
     if (!deactivateQuery.exec("UPDATE models SET is_active = 0")) {
-        qWarning() << "Failed to deactivate models:" << deactivateQuery.lastError().text();
         return false;
     }
 
@@ -355,12 +329,11 @@ bool ModelRegistry::setActiveModel(int id)
     activateQuery.bindValue(":id", id);
 
     if (!activateQuery.exec()) {
-        qWarning() << "Failed to activate model:" << activateQuery.lastError().text();
         return false;
     }
 
     loadModels();
-    emit registryUpdated();
+    registryUpdated();
     return true;
 }
 
@@ -389,13 +362,13 @@ void ModelRegistry::onDeleteClicked()
     QMessageBox::StandardButton reply = QMessageBox::question(
         this,
         "Delete Model",
-        QString("Are you sure you want to delete model '%1'?\n\nNote: This will only remove the registry entry, not the model file.").arg(model.name),
+        std::string("Are you sure you want to delete model '%1'?\n\nNote: This will only remove the registry entry, not the model file."),
         QMessageBox::Yes | QMessageBox::No
     );
 
     if (reply == QMessageBox::Yes) {
         if (deleteModel(m_selectedModelId)) {
-            m_statusLabel->setText(QString("Deleted model: %1").arg(model.name));
+            m_statusLabel->setText(std::string("Deleted model: %1"));
         } else {
             m_statusLabel->setText("Failed to delete model");
         }
@@ -410,8 +383,8 @@ void ModelRegistry::onActivateClicked()
 
     ModelVersion model = getModel(m_selectedModelId);
     if (setActiveModel(m_selectedModelId)) {
-        m_statusLabel->setText(QString("Activated model: %1").arg(model.name));
-        emit modelSelected(model.path);
+        m_statusLabel->setText(std::string("Activated model: %1"));
+        modelSelected(model.path);
     } else {
         m_statusLabel->setText("Failed to activate model");
     }
@@ -427,15 +400,15 @@ void ModelRegistry::onExportClicked()
     QMessageBox::information(this, "Export Metadata", "Metadata export feature coming soon!");
 }
 
-void ModelRegistry::onSearchTextChanged(const QString& text)
+void ModelRegistry::onSearchTextChanged(const std::string& text)
 {
     if (text.isEmpty()) {
         populateTable(m_models);
         return;
     }
 
-    QVector<ModelVersion> filtered;
-    QString searchLower = text.toLower();
+    std::vector<ModelVersion> filtered;
+    std::string searchLower = text.toLower();
 
     for (const ModelVersion& model : m_models) {
         if (model.name.toLower().contains(searchLower) ||
@@ -447,15 +420,15 @@ void ModelRegistry::onSearchTextChanged(const QString& text)
     }
 
     populateTable(filtered);
-    m_statusLabel->setText(QString("Found %1 matching models").arg(filtered.size()));
+    m_statusLabel->setText(std::string("Found %1 matching models")));
 }
 
 void ModelRegistry::onFilterChanged(int index)
 {
-    Q_UNUSED(index);
-    QString filter = m_filterCombo->currentData().toString();
+    (index);
+    std::string filter = m_filterCombo->currentData().toString();
 
-    QVector<ModelVersion> filtered;
+    std::vector<ModelVersion> filtered;
 
     for (const ModelVersion& model : m_models) {
         bool include = false;
@@ -465,7 +438,7 @@ void ModelRegistry::onFilterChanged(int index)
         } else if (filter == "active") {
             include = model.isActive;
         } else if (filter == "recent") {
-            qint64 daysSinceCreation = model.createdAt.daysTo(QDateTime::currentDateTime());
+            qint64 daysSinceCreation = model.createdAt.daysTo(std::chrono::system_clock::time_point::currentDateTime());
             include = (daysSinceCreation <= 7);
         } else if (filter == "highperf") {
             include = (model.perplexity < 50.0f && model.perplexity > 0.0f);
@@ -477,12 +450,12 @@ void ModelRegistry::onFilterChanged(int index)
     }
 
     populateTable(filtered);
-    m_statusLabel->setText(QString("Showing %1 models").arg(filtered.size()));
+    m_statusLabel->setText(std::string("Showing %1 models")));
 }
 
 void ModelRegistry::onRowSelectionChanged()
 {
-    QList<QTableWidgetItem*> selected = m_tableWidget->selectedItems();
+    std::vector<QTableWidgetItem*> selected = m_tableWidget->selectedItems();
     if (selected.isEmpty()) {
         m_selectedModelId = -1;
         m_activateButton->setEnabled(false);
@@ -494,36 +467,37 @@ void ModelRegistry::onRowSelectionChanged()
     int row = m_tableWidget->currentRow();
     QTableWidgetItem* idItem = m_tableWidget->item(row, 0);
     if (idItem) {
-        m_selectedModelId = idItem->data(Qt::UserRole).toInt();
+        m_selectedModelId = idItem->data(//UserRole).toInt();
         m_activateButton->setEnabled(true);
         m_compareButton->setEnabled(true);
         m_deleteButton->setEnabled(true);
 
         ModelVersion model = getModel(m_selectedModelId);
-        m_statusLabel->setText(QString("Selected: %1 (Loss: %2, Perplexity: %3)")
-            .arg(model.name)
-            .arg(model.finalLoss, 0, 'f', 4)
-            .arg(model.perplexity, 0, 'f', 2));
+        m_statusLabel->setText(std::string("Selected: %1 (Loss: %2, Perplexity: %3)")
+
+
+            );
     }
 }
 
-QString ModelRegistry::formatFileSize(qint64 bytes) const
+std::string ModelRegistry::formatFileSize(qint64 bytes) const
 {
     if (bytes < 1024) {
-        return QString("%1 B").arg(bytes);
+        return std::string("%1 B");
     } else if (bytes < 1024 * 1024) {
-        return QString("%1 KB").arg(bytes / 1024.0, 0, 'f', 1);
+        return std::string("%1 KB");
     } else if (bytes < 1024 * 1024 * 1024) {
-        return QString("%1 MB").arg(bytes / (1024.0 * 1024.0), 0, 'f', 1);
+        return std::string("%1 MB"), 0, 'f', 1);
     } else {
-        return QString("%1 GB").arg(bytes / (1024.0 * 1024.0 * 1024.0), 0, 'f', 2);
+        return std::string("%1 GB"), 0, 'f', 2);
     }
 }
 
-QString ModelRegistry::formatTimestamp(const QDateTime& dt) const
+std::string ModelRegistry::formatTimestamp(const std::chrono::system_clock::time_point& dt) const
 {
     if (!dt.isValid()) {
         return "--";
     }
     return dt.toString("yyyy-MM-dd hh:mm");
 }
+

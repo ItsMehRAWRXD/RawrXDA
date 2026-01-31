@@ -1,15 +1,9 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
-#include <QVector>
 
 // Forward declarations
-class QLabel;
-class QProgressBar;
-class QTextEdit;
-class QPushButton;
-class QTabWidget;
+
+
 class ModelTrainer;
 
 /**
@@ -24,9 +18,8 @@ class ModelTrainer;
  * 
  * Designed to be embedded in a QDockWidget for non-intrusive monitoring.
  */
-class TrainingProgressDock : public QWidget
+class TrainingProgressDock : public void
 {
-    Q_OBJECT
 
 public:
     /**
@@ -34,30 +27,30 @@ public:
      * @param trainer Pointer to ModelTrainer instance (non-owning)
      * @param parent Parent widget for Qt ownership
      */
-    explicit TrainingProgressDock(ModelTrainer* trainer, QWidget* parent = nullptr);
+    explicit TrainingProgressDock(ModelTrainer* trainer, void* parent = nullptr);
     ~TrainingProgressDock() override = default;
     
     void initialize();
 
-public slots:
+public:
     // Connected to ModelTrainer signals
     void onTrainingStarted();
     void onEpochStarted(int currentEpoch, int totalEpochs);
     void onBatchProcessed(int currentBatch, int totalBatches, float loss);
     void onEpochCompleted(int epoch, float avgLoss, float perplexity);
-    void onTrainingCompleted(const QString& modelPath, float finalLoss);
+    void onTrainingCompleted(const std::string& modelPath, float finalLoss);
     void onTrainingStopped();
-    void onTrainingError(const QString& error);
-    void onLogMessage(const QString& message);
-    void onValidationResults(float perplexity, const QString& details);
+    void onTrainingError(const std::string& error);
+    void onLogMessage(const std::string& message);
+    void onValidationResults(float perplexity, const std::string& details);
 
-signals:
+
     /**
      * @brief User requested to stop training
      */
     void stopRequested();
 
-private slots:
+private:
     void onStopButtonClicked();
     void onClearLogsClicked();
 
@@ -66,7 +59,7 @@ private:
     void setupConnections();
     void resetMetrics();
     void updateTimeEstimate();
-    QString formatDuration(qint64 seconds) const;
+    std::string formatDuration(qint64 seconds) const;
 
     // UI Components - Status Section
     QLabel* m_statusLabel;
@@ -107,6 +100,7 @@ private:
     int m_totalBatchesProcessed;
 
     // Metrics History
-    QVector<float> m_lossHistory;
-    QVector<float> m_perplexityHistory;
+    std::vector<float> m_lossHistory;
+    std::vector<float> m_perplexityHistory;
 };
+

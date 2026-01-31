@@ -6,17 +6,15 @@
  */
 
 #include "qt_file_reader.h"
-#include <QFile>
-#include <QFileInfo>
-#include <QDebug>
+
 
 namespace RawrXD {
 
-bool QtFileReader::readFile(const QString& path, 
-                            QString& content, 
+bool QtFileReader::readFile(const std::string& path, 
+                            std::string& content, 
                             Encoding* detectedEncoding) const 
 {
-    QByteArray rawData;
+    std::vector<uint8_t> rawData;
     if (!readFileRaw(path, rawData)) {
         return false;
     }
@@ -29,11 +27,11 @@ bool QtFileReader::readFile(const QString& path,
     // Convert based on detected encoding
     switch (encoding) {
         case Encoding::UTF8:
-            content = QString::fromUtf8(rawData);
+            content = std::string::fromUtf8(rawData);
             break;
             
         case Encoding::UTF16_LE:
-            content = QString::fromUtf16(
+            content = std::string::fromUtf16(
                 reinterpret_cast<const char16_t*>(rawData.constData()), 
                 rawData.size() / 2
             );
@@ -41,13 +39,13 @@ bool QtFileReader::readFile(const QString& path,
             
         case Encoding::UTF16_BE: {
             // Swap bytes for big endian
-            QByteArray swapped;
+            std::vector<uint8_t> swapped;
             swapped.reserve(rawData.size());
             for (int i = 0; i < rawData.size() - 1; i += 2) {
                 swapped.append(rawData[i + 1]);
                 swapped.append(rawData[i]);
             }
-            content = QString::fromUtf16(
+            content = std::string::fromUtf16(
                 reinterpret_cast<const char16_t*>(swapped.constData()), 
                 swapped.size() / 2
             );
@@ -58,9 +56,9 @@ bool QtFileReader::readFile(const QString& path,
         case Encoding::Unknown:
         default:
             // Try UTF-8 first, fall back to Latin-1
-            content = QString::fromUtf8(rawData);
+            content = std::string::fromUtf8(rawData);
             if (content.contains(QChar::ReplacementCharacter)) {
-                content = QString::fromLatin1(rawData);
+                content = std::string::fromLatin1(rawData);
             }
             break;
     }
@@ -68,10 +66,9 @@ bool QtFileReader::readFile(const QString& path,
     return true;
 }
 
-bool QtFileReader::readFileRaw(const QString& path, QByteArray& data) const {
-    QFile file(path);
+bool QtFileReader::readFileRaw(const std::string& path, std::vector<uint8_t>& data) const {
+    std::fstream file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "QtFileReader: Failed to open file for reading:" 
                    << path << "-" << file.errorString();
         return false;
     }
@@ -80,7 +77,7 @@ bool QtFileReader::readFileRaw(const QString& path, QByteArray& data) const {
     return !data.isNull();
 }
 
-Encoding QtFileReader::detectEncoding(const QByteArray& data) const {
+Encoding QtFileReader::detectEncoding(const std::vector<uint8_t>& data) const {
     if (data.isEmpty()) {
         return Encoding::UTF8; // Default to UTF-8
     }
@@ -138,23 +135,24 @@ Encoding QtFileReader::detectEncoding(const QByteArray& data) const {
     return Encoding::Unknown;
 }
 
-bool QtFileReader::exists(const QString& path) const {
-    return QFileInfo::exists(path);
+bool QtFileReader::exists(const std::string& path) const {
+    return std::filesystem::path::exists(path);
 }
 
-bool QtFileReader::isFile(const QString& path) const {
-    QFileInfo info(path);
+bool QtFileReader::isFile(const std::string& path) const {
+    std::filesystem::path info(path);
     return info.exists() && info.isFile();
 }
 
-bool QtFileReader::isReadable(const QString& path) const {
-    QFileInfo info(path);
+bool QtFileReader::isReadable(const std::string& path) const {
+    std::filesystem::path info(path);
     return info.isReadable();
 }
 
-qint64 QtFileReader::fileSize(const QString& path) const {
-    QFileInfo info(path);
+qint64 QtFileReader::fileSize(const std::string& path) const {
+    std::filesystem::path info(path);
     return info.exists() ? info.size() : -1;
 }
 
 } // namespace RawrXD
+

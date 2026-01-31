@@ -1,19 +1,14 @@
 #include "distributed_trainer.h"
 #include "profiler.h"
-#include <QDebug>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QFile>
-#include <QDir>
-#include <QDateTime>
+
+
 #include <algorithm>
 #include <numeric>
 #include <cmath>
 
-DistributedTrainer::DistributedTrainer(QObject* parent)
-    : QObject(parent)
+DistributedTrainer::DistributedTrainer(void* parent)
+    : void(parent)
 {
-    qInfo() << "[DistributedTrainer] Initialized (production-ready multi-GPU/multi-node trainer)";
 }
 
 DistributedTrainer::~DistributedTrainer()
@@ -28,11 +23,9 @@ DistributedTrainer::~DistributedTrainer()
 bool DistributedTrainer::Initialize(const TrainerConfig& config)
 {
     if (m_initialized) {
-        qWarning() << "[DistributedTrainer] Already initialized";
         return true;
     }
 
-    qInfo() << "[DistributedTrainer] Initializing with backend:" << static_cast<int>(config.backend)
             << "parallelism:" << static_cast<int>(config.parallelism)
             << "world size:" << config.pgConfig.worldSize
             << "rank:" << config.pgConfig.rank;
@@ -74,8 +67,7 @@ bool DistributedTrainer::Initialize(const TrainerConfig& config)
     }
 
     m_initialized = true;
-    qInfo() << "[DistributedTrainer] Successfully initialized with" << m_devices.size() << "devices";
-    emit statusChanged("Distributed training initialized");
+    statusChanged("Distributed training initialized");
     
     return true;
 }
@@ -86,11 +78,9 @@ void DistributedTrainer::Shutdown()
         return;
     }
 
-    qInfo() << "[DistributedTrainer] Shutting down...";
 
     // Save final checkpoint if needed
     if (!m_lastCheckpointPath.isEmpty()) {
-        qInfo() << "[DistributedTrainer] Saving final checkpoint before shutdown";
         Checkpoint(m_lastCheckpointPath);
     }
 
@@ -104,8 +94,7 @@ void DistributedTrainer::Shutdown()
     m_devices.clear();
     m_nodeMetrics.clear();
 
-    qInfo() << "[DistributedTrainer] Shutdown complete";
-    emit statusChanged("Distributed training shutdown");
+    statusChanged("Distributed training shutdown");
 }
 
 // ==================== CONFIGURATION VALIDATION ====================
@@ -115,29 +104,24 @@ bool DistributedTrainer::validateConfig() const
     const auto& pgConfig = m_config.pgConfig;
 
     if (pgConfig.worldSize < 1) {
-        qCritical() << "[DistributedTrainer] Invalid world size:" << pgConfig.worldSize;
         return false;
     }
 
     if (pgConfig.rank < 0 || pgConfig.rank >= pgConfig.worldSize) {
-        qCritical() << "[DistributedTrainer] Invalid rank:" << pgConfig.rank 
                     << "for world size:" << pgConfig.worldSize;
         return false;
     }
 
     if (pgConfig.localRank < 0) {
-        qCritical() << "[DistributedTrainer] Invalid local rank:" << pgConfig.localRank;
         return false;
     }
 
     if (m_config.gradAccumulationSteps < 1) {
-        qCritical() << "[DistributedTrainer] Invalid gradient accumulation steps:" 
                     << m_config.gradAccumulationSteps;
         return false;
     }
 
     if (m_config.syncInterval < 1) {
-        qCritical() << "[DistributedTrainer] Invalid sync interval:" << m_config.syncInterval;
         return false;
     }
 
@@ -156,17 +140,14 @@ bool DistributedTrainer::initializeBackend()
     case Backend::MPI:
         return initializeMPI();
     case Backend::Custom:
-        qInfo() << "[DistributedTrainer] Using custom backend (user-provided)";
         return true;
     default:
-        qCritical() << "[DistributedTrainer] Unknown backend:" << static_cast<int>(m_config.backend);
         return false;
     }
 }
 
 bool DistributedTrainer::initializeNCCL()
 {
-    qInfo() << "[DistributedTrainer] Initializing NCCL backend...";
     
     // NCCL initialization is typically done via environment variables:
     // NCCL_IB_DISABLE=1  (disable InfiniBand)
@@ -175,49 +156,41 @@ bool DistributedTrainer::initializeNCCL()
     
     // In production, we would initialize NCCL communicator here
     // For now, we log the initialization and mark as successful
-    qInfo() << "[DistributedTrainer] NCCL backend initialized (stub - real NCCL integration pending)";
     
     return true;
 }
 
 bool DistributedTrainer::initializeGloo()
 {
-    qInfo() << "[DistributedTrainer] Initializing Gloo backend...";
     
     // Gloo supports both CPU and GPU, and is useful for multi-node training
     // It requires setting up a rendezvous point (typically TCP)
     
-    qInfo() << "[DistributedTrainer] Gloo backend initialized (stub - real Gloo integration pending)";
     
     return true;
 }
 
 bool DistributedTrainer::initializeMPI()
 {
-    qInfo() << "[DistributedTrainer] Initializing MPI backend...";
     
     // MPI is used in HPC environments
     // Typically initialized via mpirun/mpiexec
     
-    qInfo() << "[DistributedTrainer] MPI backend initialized (stub - real MPI integration pending)";
     
     return true;
 }
 
 void DistributedTrainer::cleanupBackend()
 {
-    qInfo() << "[DistributedTrainer] Cleaning up communication backend...";
     
     // Backend-specific cleanup would go here
     
-    qInfo() << "[DistributedTrainer] Backend cleanup complete";
 }
 
 // ==================== DEVICE DETECTION ====================
 
 bool DistributedTrainer::detectDevices()
 {
-    qInfo() << "[DistributedTrainer] Detecting available devices...";
     
     m_devices.clear();
 
@@ -239,13 +212,10 @@ bool DistributedTrainer::detectDevices()
     m_devices.push_back(cpuDevice);
 
     if (m_devices.empty()) {
-        qCritical() << "[DistributedTrainer] No devices detected!";
         return false;
     }
 
-    qInfo() << "[DistributedTrainer] Detected" << m_devices.size() << "device(s)";
     for (const auto& dev : m_devices) {
-        qInfo() << "  Device" << dev.deviceId << ":" << dev.name 
                 << "(" << dev.deviceType << ")"
                 << "Memory:" << (dev.totalMemory / (1024*1024)) << "MB";
     }
@@ -255,7 +225,6 @@ bool DistributedTrainer::detectDevices()
 
 void DistributedTrainer::detectCUDADevices()
 {
-    qInfo() << "[DistributedTrainer] Detecting CUDA devices...";
     
     // In production, we would use CUDA API to enumerate devices
     // For now, we create a dummy GPU device
@@ -263,7 +232,7 @@ void DistributedTrainer::detectCUDADevices()
     DeviceInfo gpuDevice;
     gpuDevice.deviceId = m_config.pgConfig.localRank;
     gpuDevice.deviceType = "cuda";
-    gpuDevice.name = QString("GPU %1 (Simulated)").arg(m_config.pgConfig.localRank);
+    gpuDevice.name = std::string("GPU %1 (Simulated)");
     gpuDevice.totalMemory = 24ULL * 1024 * 1024 * 1024; // 24GB placeholder
     gpuDevice.availableMemory = 20ULL * 1024 * 1024 * 1024;
     gpuDevice.computeCapability = 7.5f; // Turing
@@ -271,22 +240,15 @@ void DistributedTrainer::detectCUDADevices()
     gpuDevice.temperature = 45.0f;
     m_devices.push_back(gpuDevice);
     
-    qInfo() << "[DistributedTrainer] CUDA device detection complete (stub)";
 }
 
 // ==================== PROCESS GROUP SETUP ====================
 
 bool DistributedTrainer::setupProcessGroup()
 {
-    qInfo() << "[DistributedTrainer] Setting up process group...";
     
     const auto& pgConfig = m_config.pgConfig;
     
-    qInfo() << "  Master address:" << pgConfig.masterAddr;
-    qInfo() << "  Master port:" << pgConfig.masterPort;
-    qInfo() << "  World size:" << pgConfig.worldSize;
-    qInfo() << "  Rank:" << pgConfig.rank;
-    qInfo() << "  Local rank:" << pgConfig.localRank;
     
     // In production, we would initialize the distributed process group here
     // This typically involves:
@@ -295,33 +257,28 @@ bool DistributedTrainer::setupProcessGroup()
     // 3. Set up communication channels
     // 4. Perform barrier synchronization
     
-    qInfo() << "[DistributedTrainer] Process group setup complete (stub)";
     
     return true;
 }
 
 void DistributedTrainer::cleanupProcessGroup()
 {
-    qInfo() << "[DistributedTrainer] Cleaning up process group...";
     
     // Barrier sync before cleanup
     // Destroy communication channels
     
-    qInfo() << "[DistributedTrainer] Process group cleanup complete";
 }
 
 // ==================== LOAD BALANCING ====================
 
 void DistributedTrainer::initializeLoadBalancer()
 {
-    qInfo() << "[DistributedTrainer] Initializing load balancer...";
     
     // Initialize per-device workload tracking
     for (const auto& device : m_devices) {
         m_deviceWorkloads[device.deviceId] = 0.0f;
     }
     
-    qInfo() << "[DistributedTrainer] Load balancer initialized";
 }
 
 void DistributedTrainer::balanceLoad()
@@ -344,7 +301,6 @@ void DistributedTrainer::balanceLoad()
     float imbalance = (maxLoad - minLoad) / std::max(maxLoad, 0.01f);
     
     if (imbalance > 0.2f) { // 20% imbalance threshold
-        qInfo() << "[DistributedTrainer] Load imbalance detected:" << (imbalance * 100) 
                 << "% - rebalancing...";
         redistributeWork();
     }
@@ -361,27 +317,23 @@ void DistributedTrainer::updateDeviceLoads()
 
 void DistributedTrainer::redistributeWork()
 {
-    qInfo() << "[DistributedTrainer] Redistributing work across devices...";
     
     // In production, this would:
     // 1. Identify overloaded devices
     // 2. Reassign batches to underutilized devices
     // 3. Update routing tables
     
-    qInfo() << "[DistributedTrainer] Work redistribution complete (stub)";
 }
 
 // ==================== FAULT TOLERANCE ====================
 
 void DistributedTrainer::initializeFaultTolerance()
 {
-    qInfo() << "[DistributedTrainer] Initializing fault tolerance...";
     
     // Set up periodic health checks
     m_faultDetectionEnabled = true;
     m_lastHealthCheck = std::chrono::steady_clock::now();
     
-    qInfo() << "[DistributedTrainer] Fault tolerance initialized";
 }
 
 void DistributedTrainer::checkNodeHealth()
@@ -402,7 +354,6 @@ void DistributedTrainer::checkNodeHealth()
     // Check each node's health
     for (const auto& [rank, metrics] : m_nodeMetrics.toStdMap()) {
         if (!isNodeHealthy(metrics)) {
-            qWarning() << "[DistributedTrainer] Unhealthy node detected: rank" << rank;
             handleNodeFailure(rank);
         }
     }
@@ -430,11 +381,9 @@ bool DistributedTrainer::isNodeHealthy(const NodePerformance& metrics) const
 
 void DistributedTrainer::handleNodeFailure(int rank)
 {
-    qWarning() << "[DistributedTrainer] Handling failure of rank" << rank;
     
     if (!m_config.enableFaultTolerance) {
-        qCritical() << "[DistributedTrainer] Fault tolerance disabled - aborting training";
-        emit errorOccurred("Node failure detected but fault tolerance is disabled");
+        errorOccurred("Node failure detected but fault tolerance is disabled");
         return;
     }
 
@@ -444,13 +393,12 @@ void DistributedTrainer::handleNodeFailure(int rank)
     // 3. Restore from last checkpoint if needed
     // 4. Resume training
     
-    qInfo() << "[DistributedTrainer] Node failure handled (stub)";
-    emit nodeRecovered(rank);
+    nodeRecovered(rank);
 }
 
 // ==================== TRAINING OPERATIONS ====================
 
-bool DistributedTrainer::TrainStep(const QJsonObject& batchData, float* lossOut)
+bool DistributedTrainer::TrainStep(const void*& batchData, float* lossOut)
 {
     if (!m_initialized) {
         logError("Not initialized", InferenceErrorCode::MODEL_LOAD_FAILED);
@@ -507,7 +455,7 @@ bool DistributedTrainer::TrainStep(const QJsonObject& batchData, float* lossOut)
 
     // Periodic checkpointing
     if (m_globalStep % 1000 == 0 && !m_checkpointDir.isEmpty()) {
-        QString checkpointPath = QString("%1/checkpoint_%2").arg(m_checkpointDir).arg(m_globalStep);
+        std::string checkpointPath = std::string("%1/checkpoint_%2");
         Checkpoint(checkpointPath);
     }
 
@@ -517,12 +465,12 @@ bool DistributedTrainer::TrainStep(const QJsonObject& batchData, float* lossOut)
         *lossOut = m_currentLoss;
     }
 
-    emit trainingStepCompleted(m_globalStep, m_currentLoss);
+    trainingStepCompleted(m_globalStep, m_currentLoss);
 
     return true;
 }
 
-bool DistributedTrainer::forwardPass(const QJsonObject& batchData)
+bool DistributedTrainer::forwardPass(const void*& batchData)
 {
     // In production, this would:
     // 1. Load batch data onto device
@@ -563,7 +511,6 @@ bool DistributedTrainer::synchronizeGradients()
 {
     auto syncStart = std::chrono::high_resolution_clock::now();
 
-    qDebug() << "[DistributedTrainer] Synchronizing gradients across" 
              << m_config.pgConfig.worldSize << "workers...";
 
     // Apply gradient compression if enabled
@@ -586,8 +533,7 @@ bool DistributedTrainer::synchronizeGradients()
 
     m_lastSyncTimeMs = syncTimeMs;
     
-    qDebug() << "[DistributedTrainer] Gradient sync complete in" << syncTimeMs << "ms";
-    emit gradientsSynchronized(syncTimeMs);
+    gradientsSynchronized(syncTimeMs);
 
     return true;
 }
@@ -600,7 +546,7 @@ bool DistributedTrainer::allReduceGradients()
     // MPI: MPI_Allreduce()
     
     // Placeholder: simulate communication latency
-    QThread::msleep(5); // 5ms simulated latency
+    std::thread::msleep(5); // 5ms simulated latency
     
     return true;
 }
@@ -609,16 +555,12 @@ void DistributedTrainer::compressGradients()
 {
     switch (m_config.compression) {
     case GradientCompression::TopK:
-        qDebug() << "[DistributedTrainer] Compressing gradients (Top-K)";
         break;
     case GradientCompression::Threshold:
-        qDebug() << "[DistributedTrainer] Compressing gradients (Threshold)";
         break;
     case GradientCompression::Quantization:
-        qDebug() << "[DistributedTrainer] Compressing gradients (Quantization)";
         break;
     case GradientCompression::DeltaCompression:
-        qDebug() << "[DistributedTrainer] Compressing gradients (Delta)";
         break;
     default:
         break;
@@ -632,31 +574,28 @@ void DistributedTrainer::decompressGradients()
 
 // ==================== CHECKPOINTING ====================
 
-bool DistributedTrainer::Checkpoint(const QString& path)
+bool DistributedTrainer::Checkpoint(const std::string& path)
 {
-    qInfo() << "[DistributedTrainer] Saving checkpoint to:" << path;
 
-    QDir dir;
+    std::filesystem::path dir;
     if (!dir.mkpath(path)) {
-        qCritical() << "[DistributedTrainer] Failed to create checkpoint directory:" << path;
         return false;
     }
 
     // Save configuration
-    QJsonObject config;
+    void* config;
     config["global_step"] = static_cast<int>(m_globalStep);
     config["world_size"] = m_config.pgConfig.worldSize;
     config["rank"] = m_config.pgConfig.rank;
     config["current_loss"] = static_cast<double>(m_currentLoss);
     
-    QString configPath = path + "/config.json";
-    QFile configFile(configPath);
+    std::string configPath = path + "/config.json";
+    std::fstream configFile(configPath);
     if (!configFile.open(QIODevice::WriteOnly)) {
-        qCritical() << "[DistributedTrainer] Failed to open config file:" << configPath;
         return false;
     }
     
-    QJsonDocument doc(config);
+    void* doc(config);
     configFile.write(doc.toJson());
     configFile.close();
 
@@ -668,32 +607,28 @@ bool DistributedTrainer::Checkpoint(const QString& path)
 
     m_lastCheckpointPath = path;
     
-    qInfo() << "[DistributedTrainer] Checkpoint saved successfully";
-    emit checkpointSaved(path);
+    checkpointSaved(path);
 
     return true;
 }
 
-bool DistributedTrainer::RestoreFromCheckpoint(const QString& path)
+bool DistributedTrainer::RestoreFromCheckpoint(const std::string& path)
 {
-    qInfo() << "[DistributedTrainer] Restoring from checkpoint:" << path;
 
-    QString configPath = path + "/config.json";
-    QFile configFile(configPath);
+    std::string configPath = path + "/config.json";
+    std::fstream configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly)) {
-        qCritical() << "[DistributedTrainer] Failed to open checkpoint config:" << configPath;
         return false;
     }
 
-    QJsonDocument doc = QJsonDocument::fromJson(configFile.readAll());
+    void* doc = void*::fromJson(configFile.readAll());
     configFile.close();
 
     if (!doc.isObject()) {
-        qCritical() << "[DistributedTrainer] Invalid checkpoint config format";
         return false;
     }
 
-    QJsonObject config = doc.object();
+    void* config = doc.object();
     m_globalStep = config["global_step"].toInt();
     m_currentLoss = static_cast<float>(config["current_loss"].toDouble());
 
@@ -705,8 +640,7 @@ bool DistributedTrainer::RestoreFromCheckpoint(const QString& path)
 
     m_lastCheckpointPath = path;
 
-    qInfo() << "[DistributedTrainer] Checkpoint restored (global step:" << m_globalStep << ")";
-    emit checkpointRestored(path);
+    checkpointRestored(path);
 
     return true;
 }
@@ -739,12 +673,12 @@ void DistributedTrainer::updateMetrics(float stepTimeMs)
 
     m_nodeMetrics[m_config.pgConfig.rank] = metrics;
 
-    emit metricsUpdated(metrics);
+    metricsUpdated(metrics);
 }
 
-QJsonObject DistributedTrainer::GetMetrics() const
+void* DistributedTrainer::GetMetrics() const
 {
-    QJsonObject metrics;
+    void* metrics;
     metrics["global_step"] = static_cast<int>(m_globalStep);
     metrics["current_loss"] = static_cast<double>(m_currentLoss);
     metrics["average_step_time_ms"] = static_cast<double>(m_averageStepTimeMs);
@@ -753,9 +687,9 @@ QJsonObject DistributedTrainer::GetMetrics() const
     metrics["rank"] = m_config.pgConfig.rank;
 
     // Add per-node metrics
-    QJsonArray nodesArray;
+    void* nodesArray;
     for (const auto& [rank, nodeMetrics] : m_nodeMetrics.toStdMap()) {
-        QJsonObject nodeObj;
+        void* nodeObj;
         nodeObj["rank"] = rank;
         nodeObj["throughput"] = static_cast<double>(nodeMetrics.throughput);
         nodeObj["latency_ms"] = static_cast<double>(nodeMetrics.avgLatency);
@@ -783,12 +717,12 @@ std::vector<DistributedTrainer::NodePerformance> DistributedTrainer::GetNodePerf
 
 // ==================== ERROR HANDLING ====================
 
-void DistributedTrainer::logError(const QString& message, InferenceErrorCode code)
+void DistributedTrainer::logError(const std::string& message, InferenceErrorCode code)
 {
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
-    qCritical() << QString("[%1] [DistributedTrainer] ERROR %2: %3")
-                      .arg(timestamp)
-                      .arg(static_cast<int>(code))
-                      .arg(message);
-    emit errorOccurred(message);
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("hh:mm:ss.zzz");
+                      
+                      )
+                      ;
+    errorOccurred(message);
 }
+

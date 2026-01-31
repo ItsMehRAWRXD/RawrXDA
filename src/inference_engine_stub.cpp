@@ -1,21 +1,21 @@
 #include "../include/inference_engine_stub.hpp"
 #include "../include/gguf_loader.h"
 #include "../include/transformer_block_scalar.h"
-#include <QString>
+
 #include <random>
 #include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <array>
-#include <QDebug>
-#include "inference_engine_stub.moc"  // Force moc output into translation unit for vtable
+
+// MOC removed  // Force moc output into translation unit for vtable
 
 // Initialize static RNG members once (Bottleneck #13 fix - avoid repeated init overhead)
 std::mt19937 InferenceEngine::m_rng(std::random_device{}());
 std::uniform_real_distribution<float> InferenceEngine::m_embedding_dist(-0.1f, 0.1f);
 
-InferenceEngine::InferenceEngine(QObject* parent)
-    : QObject(parent)
+InferenceEngine::InferenceEngine(void* parent)
+    : void(parent)
     , m_loader()
     , m_transformer(nullptr)
     , m_initialized(false)
@@ -34,22 +34,21 @@ InferenceEngine::~InferenceEngine()
     Cleanup();
 }
 
-void InferenceEngine::processCommand(const QString& command) {
+void InferenceEngine::processCommand(const std::string& command) {
     // Process terminal command
 }
 
-QString InferenceEngine::processChat(const QString& message) {
+std::string InferenceEngine::processChat(const std::string& message) {
     return "Response: " + message;
 }
 
-QString InferenceEngine::analyzeCode(const QString& code) {
+std::string InferenceEngine::analyzeCode(const std::string& code) {
     return "Analysis: " + code;
 }
 
 bool InferenceEngine::Initialize(const std::string& model_path)
 {
     if (m_initialized) {
-        qWarning() << "Engine already initialized";
         return true;
     }
 
@@ -57,7 +56,6 @@ bool InferenceEngine::Initialize(const std::string& model_path)
 
     // Load GGUF file (real model data)
     if (!LoadModelFromGGUF(model_path)) {
-        qCritical() << "Failed to load GGUF model";
         return false;
     }
 
@@ -67,20 +65,17 @@ bool InferenceEngine::Initialize(const std::string& model_path)
     // Initialize production transformer with real architecture
     m_transformer = std::make_unique<TransformerBlockScalar>(this);
     if (!m_transformer->initialize(m_layerCount, m_headCount, m_headDim, m_embeddingDim)) {
-        qCritical() << "Failed to initialize transformer blocks";
         return false;
     }
 
     // Load transformer weights from GGUF model
     if (!LoadTransformerWeights()) {
-        qWarning() << "Using random weights for testing (production should load from GGUF)";
     }
 
     // Upload tensors to GPU - optional, CPU inference if fails
     UploadTensorsToGPU();
 
     m_initialized = true;
-    qInfo() << "InferenceEngine initialized with REAL transformer:"
             << m_layerCount << "layers," << m_headCount << "heads,"
             << m_embeddingDim << "dim";
     return true;
@@ -101,7 +96,6 @@ std::string InferenceEngine::modelPath() const
 bool InferenceEngine::InitializeVulkan()
 {
     // GPU support deferred - CPU inference fully functional for testing
-    qDebug() << "Using CPU inference (GPU support can be added later)";
     return false;  // Not critical - CPU fallback always works
 }
 
@@ -111,7 +105,6 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
     try {
         // If no model path provided, use demo mode with fake embeddings
         if (model_path.empty()) {
-            qInfo() << "No model path provided - using demo mode with random embeddings";
             m_vocabSize = 32000;
             m_embeddingDim = 4096;
             m_layerCount = 32;
@@ -130,7 +123,6 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
 
         // Open + parse metadata/tensors
         if (!m_loader->Open(model_path)) {
-            qWarning() << "Failed to open GGUF file:" << QString::fromStdString(model_path) << "- using demo mode";
             // Fall back to demo mode
             m_vocabSize = 32000;
             m_embeddingDim = 4096;
@@ -150,7 +142,6 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
         try {
             m_loader->ParseMetadata();
         } catch (const std::exception& e) {
-            qCritical() << "GGUF metadata parse failed:" << e.what();
             return false;
         }
 
@@ -169,7 +160,6 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
             try {
                 return m_loader->LoadTensorZone(name, out);
             } catch (const std::exception& e) {
-                qWarning() << "Tensor load failed for" << QString::fromStdString(name) << ":" << e.what();
                 return false;
             }
         };
@@ -192,7 +182,6 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
                     loaded_embeddings = true;
                     break;
                 } else {
-                    qWarning() << "Embedding tensor size mismatch for" << QString::fromStdString(name)
                                << "expected" << (m_embeddingTable.size() * sizeof(float))
                                << "got" << raw.size();
                 }
@@ -216,7 +205,6 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
                     loaded_output = true;
                     break;
                 } else {
-                    qWarning() << "Output tensor size mismatch for" << QString::fromStdString(name)
                                << "expected" << (m_outputWeights.size() * sizeof(float))
                                << "got" << raw.size();
                 }
@@ -229,7 +217,6 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
         const auto load_end = std::chrono::steady_clock::now();
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(load_end - load_start).count();
 
-        qInfo() << "GGUF model loaded"
                 << "| Vocab:" << m_vocabSize
                 << "| Embedding:" << m_embeddingDim
                 << "| Layers:" << m_layerCount
@@ -239,7 +226,6 @@ bool InferenceEngine::LoadModelFromGGUF(const std::string& model_path)
                 << "| Output:" << (loaded_output ? "gguf" : "random");
         return true;
     } catch (const std::exception& e) {
-        qCritical() << "Exception loading GGUF:" << e.what();
         return false;
     }
 }
@@ -274,7 +260,6 @@ std::vector<float> InferenceEngine::EmbedTokens(const std::vector<int32_t>& toke
 std::vector<float> InferenceEngine::RunForwardPass(const std::vector<float>& input_embedding)
 {
     if (!m_initialized || !m_transformer) {
-        qWarning() << "Transformer not initialized";
         std::vector<float> logits(m_vocabSize, 0.0f);
         return logits;
     }
@@ -282,7 +267,6 @@ std::vector<float> InferenceEngine::RunForwardPass(const std::vector<float>& inp
     // Calculate sequence length from embedding size
     uint32_t seqLen = input_embedding.size() / m_embeddingDim;
     if (input_embedding.size() % m_embeddingDim != 0) {
-        qWarning() << "Invalid embedding size";
         std::vector<float> logits(m_vocabSize, 0.0f);
         return logits;
     }
@@ -294,7 +278,6 @@ std::vector<float> InferenceEngine::RunForwardPass(const std::vector<float>& inp
     for (uint32_t layer = 0; layer < m_layerCount; ++layer) {
         // Production transformer: Self-Attention + FFN + LayerNorm + Residuals
         if (!m_transformer->forwardPass(hidden_states.data(), layer_output.data(), layer, seqLen)) {
-            qWarning() << "Transformer layer" << layer << "failed";
             break;
         }
         hidden_states = layer_output;  // Output becomes input for next layer
@@ -308,7 +291,6 @@ std::vector<float> InferenceEngine::RunForwardPass(const std::vector<float>& inp
 
 bool InferenceEngine::HotPatchModel(const std::string& model_path)
 {
-    qInfo() << "Hot-patching model:" << QString::fromStdString(model_path);
     
     // Cleanup existing model
     if (m_transformer) {
@@ -324,26 +306,22 @@ bool InferenceEngine::HotPatchModel(const std::string& model_path)
     // Load new model
     m_modelPath = model_path;
     if (!LoadModelFromGGUF(model_path)) {
-        qCritical() << "Failed to load new GGUF model for hotpatch";
         return false;
     }
     
     // Reinitialize transformer with new model parameters
     m_transformer = std::make_unique<TransformerBlockScalar>(this);
     if (!m_transformer->initialize(m_layerCount, m_headCount, m_headDim, m_embeddingDim)) {
-        qCritical() << "Failed to reinitialize transformer for hotpatch";
         return false;
     }
     
     // Load new transformer weights
     if (!LoadTransformerWeights()) {
-        qWarning() << "Failed to load transformer weights for hotpatch";
     }
     
     // Re-upload tensors to GPU
     UploadTensorsToGPU();
     
-    qInfo() << "Model hot-patched successfully";
     return true;
 }
 
@@ -372,7 +350,7 @@ std::vector<float> InferenceEngine::ApplyOutputProjection(const std::vector<floa
     return logits;
 }
 
-std::vector<int32_t> InferenceEngine::tokenize(const QString& text)
+std::vector<int32_t> InferenceEngine::tokenize(const std::string& text)
 {
     // Real BPE tokenization using model's tokenizer from GGUF
     // For now: simple byte-level approximation
@@ -393,7 +371,6 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& promp
     std::vector<int32_t> result = prompts;
     
     if (!m_initialized) {
-        qWarning() << "Engine not initialized, cannot generate";
         return result;
     }
     
@@ -418,7 +395,7 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& promp
     return result;
 }
 
-QString InferenceEngine::detokenize(const std::vector<int32_t>& tokens)
+std::string InferenceEngine::detokenize(const std::vector<int32_t>& tokens)
 {
     // Real detokenization: reverse BPE merging from model vocabulary
     std::string result;
@@ -429,13 +406,13 @@ QString InferenceEngine::detokenize(const std::vector<int32_t>& tokens)
         }
     }
     
-    return QString::fromStdString(result);
+    return std::string::fromStdString(result);
 }
 
 std::string InferenceEngine::GenerateToken(const std::string& prompt, uint32_t max_tokens)
 {
     // Standard interface
-    QString qprompt = QString::fromStdString(prompt);
+    std::string qprompt = std::string::fromStdString(prompt);
     auto tokens = tokenize(qprompt);
     auto generated = generate(tokens, max_tokens);
     return detokenize(generated).toStdString();
@@ -456,12 +433,10 @@ bool InferenceEngine::LoadTransformerWeights()
                 return false;
             }
         } catch (const std::exception& e) {
-            qWarning() << "Tensor load exception for" << QString::fromStdString(name) << ":" << e.what();
             return false;
         }
 
         if (raw.size() != expected_elems * sizeof(float)) {
-            qWarning() << "Tensor size mismatch for" << QString::fromStdString(name)
                        << "expected" << (expected_elems * sizeof(float))
                        << "got" << raw.size();
             return false;
@@ -481,8 +456,8 @@ bool InferenceEngine::LoadTransformerWeights()
     std::vector<float> norm_weights(m_embeddingDim);
     std::vector<float> norm_biases(m_embeddingDim);
 
-    const std::array<std::string, 4> q_names = {
-        "attn_q.weight", "attn_q_proj.weight", "attention.wq.weight", "q_proj.weight"};
+    const std::array<std::string, 4>  = {
+        "attn_q.weight", "attn_q_proj.weight", "attention.wq.weight", ".weight"};
     const std::array<std::string, 4> k_names = {
         "attn_k.weight", "attn_k_proj.weight", "attention.wk.weight", "k_proj.weight"};
     const std::array<std::string, 4> v_names = {
@@ -517,8 +492,8 @@ bool InferenceEngine::LoadTransformerWeights()
         const std::string prefix = "blk." + std::to_string(layer) + ".";
 
         // Attention weights
-        load_first_match(prefix, q_names, mat_hidden_hidden.size(), mat_hidden_hidden);
-        m_transformer->loadWeights(mat_hidden_hidden.data(), layer, TransformerBlockScalar::WeightType::Q_WEIGHTS);
+        load_first_match(prefix, , mat_hidden_hidden.size(), mat_hidden_hidden);
+        m_transformer->loadWeights(mat_hidden_hidden.data(), layer, TransformerBlockScalar::WeightType::);
 
         load_first_match(prefix, k_names, mat_hidden_hidden.size(), mat_hidden_hidden);
         m_transformer->loadWeights(mat_hidden_hidden.data(), layer, TransformerBlockScalar::WeightType::K_WEIGHTS);
@@ -558,7 +533,6 @@ bool InferenceEngine::LoadTransformerWeights()
         fill_random(m_outputWeights);
     }
 
-    qInfo() << "Transformer weights loaded for" << m_layerCount << "layers";
     return true;
 }
 
@@ -590,5 +564,4 @@ void InferenceEngine::Cleanup()
     m_initialized = false;
     m_modelPath.clear();
     
-    qInfo() << "InferenceEngine cleaned up";
 }

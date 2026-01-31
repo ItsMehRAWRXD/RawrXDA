@@ -1,14 +1,13 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
 
-class ChatWorkspace : public QWidget {
-    Q_OBJECT
+class ChatWorkspace : public void {
+
 public:
-    explicit ChatWorkspace(QWidget* parent = nullptr);
+    explicit ChatWorkspace(void* parent = nullptr);
     void initialize();
     
-signals:
-    void commandIssued(const QString& command);
+
+    void commandIssued(const std::string& command);
 };
+

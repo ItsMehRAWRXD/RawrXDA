@@ -45,7 +45,6 @@ MarketplaceUIView::MarketplaceUIView(void* parent)
     setWindowTitle("Extension Marketplace");
     resize(800, 600);
     
-    // // qDebug:  "[MarketplaceUIView] Initialized";
 }
 
 MarketplaceUIView::~MarketplaceUIView() {
@@ -100,7 +99,7 @@ void MarketplaceUIView::onUninstallClicked() {
     
     void::StandardButton reply = void::question(
         this, "Uninstall Extension", 
-        std::string("Are you sure you want to uninstall '%1'?").arg(m_selectedExtensionId),
+        std::string("Are you sure you want to uninstall '%1'?"),
         void::Yes | void::No);
     
     if (reply == void::Yes) {
@@ -134,7 +133,7 @@ void MarketplaceUIView::onExtensionSelected() {
 
 void MarketplaceUIView::onSearchResultsReceived(const void*& extensions) {
     updateExtensionList(extensions);
-    showStatus(std::string("Found %1 extensions").arg(extensions.size()));
+    showStatus(std::string("Found %1 extensions")));
 }
 
 void MarketplaceUIView::onExtensionDetailsReceived(const void*& extension) {
@@ -153,7 +152,7 @@ void MarketplaceUIView::onExtensionDetailsReceived(const void*& extension) {
 }
 
 void MarketplaceUIView::onInstallationStarted(const std::string& extensionId) {
-    m_installStatus->setText(std::string("Installing %1...").arg(extensionId));
+    m_installStatus->setText(std::string("Installing %1..."));
     m_installProgress->setRange(0, 0); // Indeterminate progress
     m_installButton->setEnabled(false);
 }
@@ -166,7 +165,7 @@ void MarketplaceUIView::onInstallationCompleted(const std::string& extensionId, 
     
     if (success) {
         void::information(this, "Installation Complete", 
-                                std::string("Extension '%1' installed successfully").arg(extensionId));
+                                std::string("Extension '%1' installed successfully"));
         // Refresh installed extensions list
         if (m_marketplaceManager) {
             m_marketplaceManager->listInstalledExtensions();
@@ -177,28 +176,28 @@ void MarketplaceUIView::onInstallationCompleted(const std::string& extensionId, 
 void MarketplaceUIView::onInstallationError(const std::string& extensionId, const std::string& error) {
     m_installProgress->setRange(0, 100);
     m_installProgress->setValue(0);
-    m_installStatus->setText(std::string("Installation failed: %1").arg(error));
+    m_installStatus->setText(std::string("Installation failed: %1"));
     m_installButton->setEnabled(true);
     
     void::warning(this, "Installation Error", 
-                        std::string("Failed to install extension '%1': %2").arg(extensionId).arg(error));
+                        std::string("Failed to install extension '%1': %2"));
 }
 
 void MarketplaceUIView::onUpdateAvailable(const std::string& extensionId, const std::string& version) {
-    showStatus(std::string("Update available for %1 (v%2)").arg(extensionId).arg(version));
+    showStatus(std::string("Update available for %1 (v%2)"));
 }
 
 void MarketplaceUIView::onUninstallCompleted(const std::string& extensionId, bool success) {
     if (success) {
         void::information(this, "Uninstall Complete", 
-                                std::string("Extension '%1' uninstalled successfully").arg(extensionId));
+                                std::string("Extension '%1' uninstalled successfully"));
         // Refresh installed extensions list
         if (m_marketplaceManager) {
             m_marketplaceManager->listInstalledExtensions();
         }
     } else {
         void::warning(this, "Uninstall Error", 
-                            std::string("Failed to uninstall extension '%1'").arg(extensionId));
+                            std::string("Failed to uninstall extension '%1'"));
     }
 }
 
@@ -390,7 +389,7 @@ void MarketplaceUIView::updateExtensionList(const void*& extensions) {
         std::string publisher = extension["publisher"].toObject()["displayName"].toString();
         std::string version = extension["versions"].toArray().first().toObject()["version"].toString();
         
-        std::string itemText = std::string("%1\nby %2 (v%3)").arg(name).arg(publisher).arg(version);
+        std::string itemText = std::string("%1\nby %2 (v%3)");
         
         QListWidgetItem* item = new QListWidgetItem(itemText);
         std::string extensionId = extension["extensionId"].toString();
@@ -412,16 +411,16 @@ void MarketplaceUIView::showExtensionDetails(const void*& extension) {
     m_extensionName->setText(name);
     
     std::string publisher = extension["publisher"].toObject()["displayName"].toString();
-    m_extensionPublisher->setText(std::string("by %1").arg(publisher));
+    m_extensionPublisher->setText(std::string("by %1"));
     
     std::string version = extension["versions"].toArray().first().toObject()["version"].toString();
-    m_extensionVersion->setText(std::string("Version: %1").arg(version));
+    m_extensionVersion->setText(std::string("Version: %1"));
     
     double rating = extension["statistics"].toArray().first().toObject()["value"].toDouble();
-    m_extensionRating->setText(std::string("Rating: %1/5").arg(rating, 0, 'f', 1));
+    m_extensionRating->setText(std::string("Rating: %1/5"));
     
     int64_t downloads = extension["statistics"].toArray().last().toObject()["value"].toVariant().toLongLong();
-    m_extensionDownloads->setText(std::string("Downloads: %1").arg(downloads));
+    m_extensionDownloads->setText(std::string("Downloads: %1"));
     
     std::string description = extension["versions"].toArray().first().toObject()["description"].toString();
     m_extensionDescription->setPlainText(description);
@@ -441,7 +440,7 @@ void MarketplaceUIView::updateInstalledExtensionsList(const void*& extensions) {
         std::string version = extension["version"].toString();
         std::string publisher = extension["publisher"].toString();
         
-        std::string itemText = std::string("%1 (v%2) by %3").arg(name).arg(version).arg(publisher);
+        std::string itemText = std::string("%1 (v%2) by %3");
         
         QListWidgetItem* item = new QListWidgetItem(itemText);
         item->setData(UserRole, extension["id"].toString());
@@ -451,7 +450,7 @@ void MarketplaceUIView::updateInstalledExtensionsList(const void*& extensions) {
 }
 
 void MarketplaceUIView::showError(const std::string& message) {
-    m_searchStatus->setText(std::string("Error: %1").arg(message));
+    m_searchStatus->setText(std::string("Error: %1"));
     m_searchStatus->setStyleSheet("void { color: red; }");
     
     void::warning(this, "Error", message);
@@ -479,7 +478,7 @@ void* MarketplaceUIView::createExtensionItemWidget(const void*& extension) {
     nameLabel->setStyleSheet("void { font-weight: bold; }");
     
     std::string publisher = extension["publisher"].toObject()["displayName"].toString();
-    void* publisherLabel = new void(std::string("by %1").arg(publisher));
+    void* publisherLabel = new void(std::string("by %1"));
     
     textLayout->addWidget(nameLabel);
     textLayout->addWidget(publisherLabel);
@@ -503,8 +502,4 @@ void MarketplaceUIView::clearDetailsView() {
     m_installProgress->setValue(0);
     m_installStatus->clear();
 }
-
-
-
-
 

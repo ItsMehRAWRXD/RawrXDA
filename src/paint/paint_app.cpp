@@ -387,13 +387,13 @@ void PaintApp::update_color_buttons() {
               static_cast<int>(m_canvas->get_foreground_color().g * 255),
               static_cast<int>(m_canvas->get_foreground_color().b * 255));
     m_foreground_button->setStyleSheet(
-        std::string("background-color: rgb(%1, %2, %3);").arg(fg.red()).arg(fg.green()).arg(fg.blue()));
+        std::string("background-color: rgb(%1, %2, %3);")))));
 
     void bg(static_cast<int>(m_canvas->get_background_color().r * 255),
               static_cast<int>(m_canvas->get_background_color().g * 255),
               static_cast<int>(m_canvas->get_background_color().b * 255));
     m_background_button->setStyleSheet(
-        std::string("background-color: rgb(%1, %2, %3);").arg(bg.red()).arg(bg.green()).arg(bg.blue()));
+        std::string("background-color: rgb(%1, %2, %3);")))));
 }
 
 void PaintApp::on_new_file() {
@@ -490,21 +490,16 @@ void PaintApp::on_clear_canvas() {
 
 void PaintApp::on_zoom_in() {
     m_canvas->set_zoom(m_canvas->get_zoom() * 1.2f);
-    m_zoom_label->setText(std::string("Zoom: %1%").arg(static_cast<int>(m_canvas->get_zoom() * 100)));
+    m_zoom_label->setText(std::string("Zoom: %1%") * 100)));
 }
 
 void PaintApp::on_zoom_out() {
     m_canvas->set_zoom(m_canvas->get_zoom() / 1.2f);
-    m_zoom_label->setText(std::string("Zoom: %1%").arg(static_cast<int>(m_canvas->get_zoom() * 100)));
+    m_zoom_label->setText(std::string("Zoom: %1%") * 100)));
 }
 
 void PaintApp::on_zoom_reset() {
     m_canvas->set_zoom(1.0f);
     m_zoom_label->setText("Zoom: 100%");
 }
-
-
-
-
-
 

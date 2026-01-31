@@ -1,10 +1,6 @@
 // GPU Backend Quick Selector - Implementation
 #include "gpu_backend_selector.h"
-#include <QHBoxLayout>
-#include <QDebug>
-#include <QDateTime>
-#include <QProcess>
-#include <QRegularExpression>
+
 
 #ifdef _WIN32
 #include <windows.h>
@@ -14,13 +10,12 @@
 
 namespace RawrXD {
 
-GPUBackendSelector::GPUBackendSelector(QWidget* parent)
-    : QWidget(parent)
+GPUBackendSelector::GPUBackendSelector(void* parent)
+    : void(parent)
 {
     setupUI();
     detectBackends();
     
-    qDebug() << "[GPUBackendSelector] Initialized at" << QDateTime::currentDateTime().toString(Qt::ISODate);
 }
 
 void GPUBackendSelector::setupUI() {
@@ -59,8 +54,7 @@ void GPUBackendSelector::setupUI() {
         "  selection-background-color: #0e639c;"
         "}"
     );
-    connect(m_backendCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &GPUBackendSelector::onBackendChanged);
+// Qt connect removed
     layout->addWidget(m_backendCombo);
     
     // Status label
@@ -71,11 +65,10 @@ void GPUBackendSelector::setupUI() {
     
     layout->addStretch();
     
-    setStyleSheet("QWidget { background-color: transparent; }");
+    setStyleSheet("void { background-color: transparent; }");
 }
 
 void GPUBackendSelector::detectBackends() {
-    qDebug() << "[GPUBackendSelector] Detecting available compute backends...";
     
     m_availableBackends.clear();
     
@@ -91,11 +84,11 @@ void GPUBackendSelector::detectBackends() {
 #ifdef _WIN32
     // Detect CUDA
     QProcess nvidiaSmi;
-    nvidiaSmi.start("nvidia-smi", QStringList() << "--query-gpu=name,memory.total" << "--format=csv,noheader");
+    nvidiaSmi.start("nvidia-smi", std::vector<std::string>() << "--query-gpu=name,memory.total" << "--format=csv,noheader");
     if (nvidiaSmi.waitForFinished(2000)) {
-        QString output = nvidiaSmi.readAllStandardOutput().trimmed();
+        std::string output = nvidiaSmi.readAllStandardOutput().trimmed();
         if (!output.isEmpty()) {
-            QStringList parts = output.split(',');
+            std::vector<std::string> parts = output.split(',');
             
             BackendInfo cudaInfo;
             cudaInfo.backend = ComputeBackend::CUDA;
@@ -105,25 +98,24 @@ void GPUBackendSelector::detectBackends() {
             cudaInfo.deviceName = parts.value(0).trimmed();
             
             if (parts.size() > 1) {
-                QString memStr = parts[1].trimmed();
-                QRegularExpression memRegex(R"((\d+)\s*MiB)");
+                std::string memStr = parts[1].trimmed();
+                std::regex memRegex(R"((\d+)\s*MiB)");
                 auto match = memRegex.match(memStr);
                 if (match.hasMatch()) {
-                    cudaInfo.vramMB = match.captured(1).toInt();
+                    cudaInfo.vramMB = match"".toInt();
                 }
             }
             
             m_availableBackends.append(cudaInfo);
-            qDebug() << "  [GPUBackendSelector] CUDA detected:" << cudaInfo.deviceName 
                      << "VRAM:" << cudaInfo.vramMB << "MB";
         }
     }
     
     // Detect Vulkan
     QProcess vulkanInfo;
-    vulkanInfo.start("vulkaninfo", QStringList() << "--summary");
+    vulkanInfo.start("vulkaninfo", std::vector<std::string>() << "--summary");
     if (vulkanInfo.waitForFinished(2000)) {
-        QString output = vulkanInfo.readAllStandardOutput();
+        std::string output = vulkanInfo.readAllStandardOutput();
         if (output.contains("Vulkan Instance Version")) {
             BackendInfo vulkanInfo;
             vulkanInfo.backend = ComputeBackend::Vulkan;
@@ -138,7 +130,7 @@ void GPUBackendSelector::detectBackends() {
                 if (SUCCEEDED(pFactory->EnumAdapters(0, &pAdapter))) {
                     DXGI_ADAPTER_DESC desc;
                     pAdapter->GetDesc(&desc);
-                    vulkanInfo.deviceName = QString::fromWCharArray(desc.Description);
+                    vulkanInfo.deviceName = std::string::fromWCharArray(desc.Description);
                     vulkanInfo.vramMB = static_cast<int>(desc.DedicatedVideoMemory / (1024 * 1024));
                     pAdapter->Release();
                 }
@@ -146,7 +138,6 @@ void GPUBackendSelector::detectBackends() {
             }
             
             m_availableBackends.append(vulkanInfo);
-            qDebug() << "  [GPUBackendSelector] Vulkan detected:" << vulkanInfo.deviceName;
         }
     }
     
@@ -158,7 +149,6 @@ void GPUBackendSelector::detectBackends() {
     dmlInfo.available = true;  // Available on Windows 10+
     dmlInfo.deviceName = "Windows ML";
     m_availableBackends.append(dmlInfo);
-    qDebug() << "  [GPUBackendSelector] DirectML available (Windows)";
 #endif
     
     // Auto mode
@@ -174,11 +164,11 @@ void GPUBackendSelector::detectBackends() {
     m_backendCombo->clear();
     for (const auto& backend : m_availableBackends) {
         if (backend.available) {
-            QString itemText = QString("%1 %2").arg(backend.icon, backend.displayName);
+            std::string itemText = std::string("%1 %2");
             if (!backend.deviceName.isEmpty() && backend.backend != ComputeBackend::Auto) {
-                itemText += QString(" (%1)").arg(backend.deviceName);
+                itemText += std::string(" (%1)");
             }
-            m_backendCombo->addItem(itemText, QVariant::fromValue(static_cast<int>(backend.backend)));
+            m_backendCombo->addItem(itemText, std::any::fromValue(static_cast<int>(backend.backend)));
         }
     }
     
@@ -190,13 +180,11 @@ void GPUBackendSelector::detectBackends() {
         }
     }
     
-    m_statusLabel->setText(QString("✓ %1 backends").arg(m_availableBackends.size()));
+    m_statusLabel->setText(std::string("✓ %1 backends")));
     
-    qDebug() << "[GPUBackendSelector] Detection complete, found" << m_availableBackends.size() << "backends";
 }
 
 void GPUBackendSelector::refreshBackends() {
-    qDebug() << "[GPUBackendSelector] Refreshing backend list...";
     detectBackends();
 }
 
@@ -212,7 +200,6 @@ void GPUBackendSelector::setBackend(ComputeBackend backend) {
         }
     }
     
-    qWarning() << "[GPUBackendSelector] Backend not found:" << backendToString(backend);
 }
 
 bool GPUBackendSelector::isBackendAvailable(ComputeBackend backend) const {
@@ -230,7 +217,6 @@ void GPUBackendSelector::onBackendChanged(int index) {
     ComputeBackend newBackend = static_cast<ComputeBackend>(m_backendCombo->itemData(index).toInt());
     
     if (newBackend != m_currentBackend) {
-        qDebug() << "[GPUBackendSelector] Backend changed:" 
                  << backendToString(m_currentBackend) << "->" << backendToString(newBackend);
         
         m_currentBackend = newBackend;
@@ -240,20 +226,20 @@ void GPUBackendSelector::onBackendChanged(int index) {
             if (info.backend == newBackend) {
                 m_iconLabel->setText(info.icon);
                 
-                QString statusMsg = QString("Active: %1").arg(info.displayName);
+                std::string statusMsg = std::string("Active: %1");
                 if (info.vramMB > 0) {
-                    statusMsg += QString(" (%1 GB)").arg(info.vramMB / 1024.0, 0, 'f', 1);
+                    statusMsg += std::string(" (%1 GB)");
                 }
                 m_statusLabel->setText(statusMsg);
                 break;
             }
         }
         
-        emit backendChanged(newBackend);
+        backendChanged(newBackend);
     }
 }
 
-QString GPUBackendSelector::backendToString(ComputeBackend backend) const {
+std::string GPUBackendSelector::backendToString(ComputeBackend backend) const {
     switch (backend) {
         case ComputeBackend::CPU: return "CPU";
         case ComputeBackend::CUDA: return "CUDA";
@@ -265,7 +251,7 @@ QString GPUBackendSelector::backendToString(ComputeBackend backend) const {
     }
 }
 
-QString GPUBackendSelector::backendToIcon(ComputeBackend backend) const {
+std::string GPUBackendSelector::backendToIcon(ComputeBackend backend) const {
     switch (backend) {
         case ComputeBackend::CPU: return "💻";
         case ComputeBackend::CUDA: return "🎮";
@@ -278,3 +264,4 @@ QString GPUBackendSelector::backendToIcon(ComputeBackend backend) const {
 }
 
 } // namespace RawrXD
+

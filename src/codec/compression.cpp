@@ -1,18 +1,17 @@
 #include "codec/compression.h"
 #include <zlib.h>
-#include <QDebug>
 
 namespace codec {
 
-QByteArray deflate(const QByteArray& data, bool* success) {
+std::vector<uint8_t> deflate(const std::vector<uint8_t>& data, bool* success) {
     if (data.isEmpty()) {
         if (success) *success = true;
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     // Use zlib for basic deflate compression
     uLongf compressedSize = compressBound(data.size());
-    QByteArray compressed(compressedSize, Qt::Uninitialized);
+    std::vector<uint8_t> compressed(compressedSize, //Uninitialized);
     
     int result = compress2(reinterpret_cast<Bytef*>(compressed.data()), &compressedSize,
                           reinterpret_cast<const Bytef*>(data.constData()), data.size(),
@@ -24,20 +23,19 @@ QByteArray deflate(const QByteArray& data, bool* success) {
         return compressed;
     } else {
         if (success) *success = false;
-        qWarning() << "Deflate compression failed with error:" << result;
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
 }
 
-QByteArray inflate(const QByteArray& data, bool* success) {
+std::vector<uint8_t> inflate(const std::vector<uint8_t>& data, bool* success) {
     if (data.isEmpty()) {
         if (success) *success = true;
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     // Estimate decompressed size (4x compression ratio)
     uLongf decompressedSize = data.size() * 4;
-    QByteArray decompressed(decompressedSize, Qt::Uninitialized);
+    std::vector<uint8_t> decompressed(decompressedSize, //Uninitialized);
     
     int result = uncompress(reinterpret_cast<Bytef*>(decompressed.data()), &decompressedSize,
                            reinterpret_cast<const Bytef*>(data.constData()), data.size());
@@ -60,21 +58,20 @@ QByteArray inflate(const QByteArray& data, bool* success) {
             return decompressed;
         } else {
             if (success) *success = false;
-            qWarning() << "Inflate decompression failed with error:" << result;
-            return QByteArray();
+            return std::vector<uint8_t>();
         }
     }
 }
 
-QByteArray deflate_brutal_masm(const QByteArray& data, bool* success) {
+std::vector<uint8_t> deflate_brutal_masm(const std::vector<uint8_t>& data, bool* success) {
     if (data.isEmpty()) {
         if (success) *success = true;
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
     // Maximum compression with zlib (\"brutal\" mode)
     uLongf compressedSize = compressBound(data.size());
-    QByteArray compressed(compressedSize, Qt::Uninitialized);
+    std::vector<uint8_t> compressed(compressedSize, //Uninitialized);
     
     int result = compress2(reinterpret_cast<Bytef*>(compressed.data()), &compressedSize,
                           reinterpret_cast<const Bytef*>(data.constData()), data.size(),
@@ -83,11 +80,9 @@ QByteArray deflate_brutal_masm(const QByteArray& data, bool* success) {
     if (result == Z_OK) {
         compressed.resize(compressedSize);
         if (success) *success = true;
-        qDebug() << \"[codec] Brutal compression:\" << data.size() << \"→\" << compressedSize << \"bytes\";\n        return compressed;
     } else {
         if (success) *success = false;
-        qWarning() << \"Brutal compression failed with error:\" << result;
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
 }
 

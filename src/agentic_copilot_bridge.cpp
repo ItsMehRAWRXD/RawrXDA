@@ -5,20 +5,13 @@
 #include "chat_interface.h"
 #include "multi_tab_editor.h"
 #include "terminal_pool.h"
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QDebug>
-#include <QDateTime>
-#include <QRegularExpression>
-#include <QFile>
-#include <QTextStream>
+
+
 #include <mutex>
 
-AgenticCopilotBridge::AgenticCopilotBridge(QObject* parent)
-    : QObject(parent)
+AgenticCopilotBridge::AgenticCopilotBridge(void* parent)
+    : void(parent)
 {
-    qInfo() << "[AgenticCopilot] Initialized - Production-ready bridge with thread safety";
 }
 
 AgenticCopilotBridge::~AgenticCopilotBridge()
@@ -26,7 +19,7 @@ AgenticCopilotBridge::~AgenticCopilotBridge()
     std::lock_guard<std::mutex> lock(m_mutex);
     
     // Clear sensitive data
-    m_conversationHistory = QJsonArray();
+    m_conversationHistory = void*();
     m_lastConversationContext.clear();
     
     // Release component pointers (not owned)
@@ -35,7 +28,6 @@ AgenticCopilotBridge::~AgenticCopilotBridge()
     m_multiTabEditor = nullptr;
     m_terminalPool = nullptr;
     
-    qInfo() << "[AgenticCopilot] Destroyed - Resources cleaned up";
 }
 
 void AgenticCopilotBridge::initialize(AgenticEngine* engine, ChatInterface* chat,
@@ -51,78 +43,73 @@ void AgenticCopilotBridge::initialize(AgenticEngine* engine, ChatInterface* chat
     
     // Connect training signals
     if (m_agenticExecutor) {
-        connect(m_agenticExecutor, &AgenticExecutor::trainingProgress,
-                this, &AgenticCopilotBridge::onTrainingProgress);
-        connect(m_agenticExecutor, &AgenticExecutor::trainingCompleted,
-                this, &AgenticCopilotBridge::onTrainingCompleted);
+// Qt connect removed
+// Qt connect removed
     }
     
-    qInfo() << "[AgenticCopilot] Bridge initialized with all IDE components";
 }
 
 // ========== COPILOT-LIKE CODE COMPLETIONS (THREAD-SAFE) ==========
 
-QString AgenticCopilotBridge::generateCodeCompletion(const QString& context, const QString& prefix)
+std::string AgenticCopilotBridge::generateCodeCompletion(const std::string& context, const std::string& prefix)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!m_agenticEngine) {
-        emit errorOccurred("Agentic engine not initialized");
+        errorOccurred("Agentic engine not initialized");
         return "// Agentic engine not initialized";
     }
     
-    qDebug() << "[AgenticCopilot] Generating code completion for prefix:" << prefix;
     
     // Build completion prompt
-    QString prompt = QString(
+    std::string prompt = std::string(
         "Based on this code context:\n%1\n\n"
         "Complete the following code starting with: %2\n"
         "Provide ONLY the completion code, no explanation."
-    ).arg(context, prefix);
+    );
     
     // Get completion from agent
-    QString completion = m_agenticEngine->generateCode(prompt);
+    std::string completion = m_agenticEngine->generateCode(prompt);
     
     // Apply hotpatching for quality
-    QJsonObject ctx = buildCodeContext(context);
+    void* ctx = buildCodeContext(context);
     completion = hotpatchResponse(completion, ctx);
     
-    emit completionReady(completion);
+    completionReady(completion);
     return completion;
 }
 
-QString AgenticCopilotBridge::analyzeActiveFile()
+std::string AgenticCopilotBridge::analyzeActiveFile()
 {
     if (!m_multiTabEditor || !m_agenticEngine) {
         return "Error: Editor or engine not initialized";
     }
     
-    QString code = m_multiTabEditor->getCurrentText();
+    std::string code = m_multiTabEditor->getCurrentText();
     if (code.isEmpty()) {
         return "No code to analyze";
     }
     
-    qDebug() << "[AgenticCopilot] Analyzing active file" << code.length() << "characters";
     
     // Run code analysis with agent
-    QString analysis = m_agenticEngine->analyzeCode(code);
+    std::string analysis = m_agenticEngine->analyzeCode(code);
     
     // Enhance with additional checks
-    QString enhanced = analysis + "\n\n" +
+    std::string enhanced = analysis + "\n\n" +
         "Additional checks:\n" +
         "- Code style: " + (code.contains("    ") ? "Uses spaces" : "Uses tabs") + "\n" +
-        "- Complexity: " + QString::number(code.split('\n').count()) + " lines\n" +
-        "- Functions: " + QString::number(QRegularExpression("(void|bool|QString|int|double|auto)\\s+\\w+\\s*\\(").match(code).capturedTexts().count()) + " detected";
+        "- Complexity: " + std::string::number(code.split('\n').count()) + " lines\n" +
+        "- Functions: " + std::string::number(std::regex("(void|bool|std::string|int|double|auto)\\s+\\w+\\s*\\(").match(code).capturedTexts().count()) + " detected";
     
-    emit analysisReady(enhanced);
+    analysisReady(enhanced);
     return enhanced;
 }
 
-QString AgenticCopilotBridge::suggestRefactoring(const QString& code)
+std::string AgenticCopilotBridge::suggestRefactoring(const std::string& code)
 {
     if (!m_agenticEngine) return "Engine not ready";
     
-    QString prompt = 
+    std::string prompt = 
         "Analyze this code for refactoring opportunities:\n" + code + "\n\n" +
         "Provide specific, actionable refactoring suggestions that would:\n" +
         "1. Improve readability\n" +
@@ -131,17 +118,17 @@ QString AgenticCopilotBridge::suggestRefactoring(const QString& code)
         "4. Follow best practices\n\n" +
         "Format as a numbered list.";
     
-    QString suggestion = m_agenticEngine->generateCode(prompt);
+    std::string suggestion = m_agenticEngine->generateCode(prompt);
     suggestion = hotpatchResponse(suggestion, buildCodeContext(code));
     
     return suggestion;
 }
 
-QString AgenticCopilotBridge::generateTestsForCode(const QString& code)
+std::string AgenticCopilotBridge::generateTestsForCode(const std::string& code)
 {
     if (!m_agenticEngine) return "Engine not ready";
     
-    QString prompt = 
+    std::string prompt = 
         "Generate comprehensive unit tests for this code:\n" + code + "\n\n" +
         "Requirements:\n" +
         "- Use Qt test framework (QTest)\n" +
@@ -150,7 +137,7 @@ QString AgenticCopilotBridge::generateTestsForCode(const QString& code)
         "- Include helpful comments\n\n" +
         "Return ONLY the test code.";
     
-    QString tests = m_agenticEngine->generateCode(prompt);
+    std::string tests = m_agenticEngine->generateCode(prompt);
     tests = hotpatchResponse(tests, buildCodeContext(code));
     
     return tests;
@@ -158,14 +145,13 @@ QString AgenticCopilotBridge::generateTestsForCode(const QString& code)
 
 // ========== MULTI-TURN CONVERSATION (COPILOT CHAT) ==========
 
-QString AgenticCopilotBridge::askAgent(const QString& question, const QJsonObject& context)
+std::string AgenticCopilotBridge::askAgent(const std::string& question, const void*& context)
 {
     if (!m_agenticEngine) return "Engine not initialized";
     
-    qDebug() << "[AgenticCopilot] Asking agent:" << question;
     
     // Build full context
-    QJsonObject fullContext = context;
+    void* fullContext = context;
     if (fullContext.isEmpty()) {
         fullContext = buildExecutionContext();
     }
@@ -175,74 +161,72 @@ QString AgenticCopilotBridge::askAgent(const QString& question, const QJsonObjec
     
     // The response will be emitted via signal - we'll capture it
     // For now, generate a response
-    QString response = m_agenticEngine->generateResponse(question);
+    std::string response = m_agenticEngine->generateResponse(question);
     
     // Apply hotpatching for safety and quality
     response = hotpatchResponse(response, fullContext);
     
     // Store in conversation history
-    m_conversationHistory.append(QJsonObject {
+    m_conversationHistory.append(void* {
         {"role", "user"},
         {"content", question},
-        {"timestamp", QDateTime::currentDateTime().toString(Qt::ISODate)}
+        {"timestamp", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate)}
     });
     
-    m_conversationHistory.append(QJsonObject {
+    m_conversationHistory.append(void* {
         {"role", "assistant"},
         {"content", response},
-        {"timestamp", QDateTime::currentDateTime().toString(Qt::ISODate)}
+        {"timestamp", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate)}
     });
     
     m_lastConversationContext = response;
     
-    emit agentResponseReady(response);
+    agentResponseReady(response);
     return response;
 }
 
-QString AgenticCopilotBridge::continuePreviousConversation(const QString& followUp)
+std::string AgenticCopilotBridge::continuePreviousConversation(const std::string& followUp)
 {
     if (m_conversationHistory.isEmpty()) {
         return askAgent(followUp); // Start new conversation
     }
     
     // Build context from conversation history
-    QString conversationContext;
+    std::string conversationContext;
     for (const auto& msg : m_conversationHistory) {
-        QJsonObject obj = msg.toObject();
+        void* obj = msg.toObject();
         conversationContext += obj["role"].toString() + ": " + obj["content"].toString() + "\n\n";
     }
     
     // Continue conversation
-    QString fullQuestion = m_lastConversationContext + "\n\nFollow-up: " + followUp;
+    std::string fullQuestion = m_lastConversationContext + "\n\nFollow-up: " + followUp;
     
     return askAgent(fullQuestion);
 }
 
 // ========== FAILURE RECOVERY & PUPPETEERING ==========
 
-QString AgenticCopilotBridge::executeWithFailureRecovery(const QString& prompt)
+std::string AgenticCopilotBridge::executeWithFailureRecovery(const std::string& prompt)
 {
     if (!m_agenticEngine) return "Engine not initialized";
     
-    qInfo() << "[AgenticCopilot] Executing with failure recovery:" << prompt;
     
     // First attempt
-    QString response = m_agenticEngine->generateResponse(prompt);
+    std::string response = m_agenticEngine->generateResponse(prompt);
     
     // Check for failures
-    QJsonObject context = buildExecutionContext();
+    void* context = buildExecutionContext();
     if (detectAndCorrectFailure(response, context)) {
-        qInfo() << "[AgenticCopilot] Failure detected and corrected";
     }
     
     return response;
 }
 
-QString AgenticCopilotBridge::hotpatchResponse(const QString& originalResponse, const QJsonObject& context)
+std::string AgenticCopilotBridge::hotpatchResponse(const std::string& originalResponse, const void*& context)
 {
     if (!m_hotpatchingEnabled) return originalResponse;
     
-    QString patched = originalResponse;
+    std::string patched = originalResponse;
     
     // Apply multiple correction layers (like Cursor IDE)
     
@@ -264,28 +248,25 @@ QString AgenticCopilotBridge::hotpatchResponse(const QString& originalResponse, 
         patched = "Unable to generate response. Please rephrase your request.";
     }
     
-    qDebug() << "[AgenticCopilot] Hotpatching complete - response length:" << patched.length();
     
     return patched;
 }
 
-bool AgenticCopilotBridge::detectAndCorrectFailure(QString& response, const QJsonObject& context)
+bool AgenticCopilotBridge::detectAndCorrectFailure(std::string& response, const void*& context)
 {
     // Check for various failure modes
-    if (response.contains("error", Qt::CaseInsensitive) ||
-        response.contains("failed", Qt::CaseInsensitive) ||
-        response.contains("exception", Qt::CaseInsensitive)) {
+    if (response.contains("error", //CaseInsensitive) ||
+        response.contains("failed", //CaseInsensitive) ||
+        response.contains("exception", //CaseInsensitive)) {
         
-        qWarning() << "[AgenticCopilot] Error detected in response";
         response = hotpatchResponse(response, context);
         return true;
     }
     
-    if (response.contains("I can't", Qt::CaseInsensitive) ||
-        response.contains("I cannot", Qt::CaseInsensitive) ||
-        response.contains("unable to", Qt::CaseInsensitive)) {
+    if (response.contains("I can't", //CaseInsensitive) ||
+        response.contains("I cannot", //CaseInsensitive) ||
+        response.contains("unable to", //CaseInsensitive)) {
         
-        qWarning() << "[AgenticCopilot] Refusal detected - applying bypass";
         response = bypassRefusals(response, response);
         return true;
     }
@@ -295,9 +276,9 @@ bool AgenticCopilotBridge::detectAndCorrectFailure(QString& response, const QJso
 
 // ========== CODE TRANSFORMATION (AGENT TASKS) ==========
 
-QJsonObject AgenticCopilotBridge::transformCode(const QString& code, const QString& transformation)
+void* AgenticCopilotBridge::transformCode(const std::string& code, const std::string& transformation)
 {
-    QJsonObject result;
+    void* result;
     
     if (!m_agenticEngine) {
         result["error"] = "Engine not initialized";
@@ -305,42 +286,41 @@ QJsonObject AgenticCopilotBridge::transformCode(const QString& code, const QStri
         return result;
     }
     
-    qInfo() << "[AgenticCopilot] Transforming code with:" << transformation;
     
-    QString prompt = QString(
+    std::string prompt = std::string(
         "Transform the following code by: %1\n\n"
         "Original code:\n%2\n\n"
         "Return ONLY the transformed code, with comments explaining key changes."
-    ).arg(transformation, code);
+    );
     
-    QString transformed = m_agenticEngine->generateCode(prompt);
+    std::string transformed = m_agenticEngine->generateCode(prompt);
     transformed = hotpatchResponse(transformed, buildCodeContext(code));
     
     result["success"] = true;
     result["original_code"] = code;
     result["transformed_code"] = transformed;
     result["transformation"] = transformation;
-    result["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    result["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     
     return result;
 }
 
-QString AgenticCopilotBridge::explainCode(const QString& code)
+std::string AgenticCopilotBridge::explainCode(const std::string& code)
 {
     if (!m_agenticEngine) return "Engine not initialized";
     
-    QString prompt = 
+    std::string prompt = 
         "Explain what this code does in clear, concise terms:\n\n" + code + "\n\n" +
         "Include:\n1. Overall purpose\n2. Key logic\n3. Important edge cases\n4. Performance implications";
     
     return m_agenticEngine->generateResponse(prompt);
 }
 
-QString AgenticCopilotBridge::findBugs(const QString& code)
+std::string AgenticCopilotBridge::findBugs(const std::string& code)
 {
     if (!m_agenticEngine) return "Engine not initialized";
     
-    QString prompt = 
+    std::string prompt = 
         "Analyze this code for potential bugs and issues:\n\n" + code + "\n\n" +
         "For each issue found, explain:\n1. What the bug is\n2. Why it's problematic\n3. How to fix it\n4. Severity level (Critical/High/Medium/Low)";
     
@@ -349,14 +329,13 @@ QString AgenticCopilotBridge::findBugs(const QString& code)
 
 // ========== AGENT TASK EXECUTION ==========
 
-QJsonObject AgenticCopilotBridge::executeAgentTask(const QJsonObject& task)
+void* AgenticCopilotBridge::executeAgentTask(const void*& task)
 {
-    QJsonObject result;
+    void* result;
     
-    QString taskType = task.value("type").toString();
-    QString taskDescription = task.value("description").toString();
+    std::string taskType = task.value("type").toString();
+    std::string taskDescription = task.value("description").toString();
     
-    qInfo() << "[AgenticCopilot] Executing agent task:" << taskType << "-" << taskDescription;
     
     if (taskType == "analyze_code") {
         result["output"] = analyzeActiveFile();
@@ -367,12 +346,12 @@ QJsonObject AgenticCopilotBridge::executeAgentTask(const QJsonObject& task)
         result["success"] = true;
     }
     else if (taskType == "refactor") {
-        QString code = m_multiTabEditor->getCurrentText();
+        std::string code = m_multiTabEditor->getCurrentText();
         result["output"] = suggestRefactoring(code);
         result["success"] = true;
     }
     else if (taskType == "test") {
-        QString code = m_multiTabEditor->getCurrentText();
+        std::string code = m_multiTabEditor->getCurrentText();
         result["output"] = generateTestsForCode(code);
         result["success"] = true;
     }
@@ -382,35 +361,34 @@ QJsonObject AgenticCopilotBridge::executeAgentTask(const QJsonObject& task)
     }
     
     result["task_type"] = taskType;
-    result["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    result["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     
-    emit taskExecuted(result);
+    taskExecuted(result);
     
     return result;
 }
 
-QJsonArray AgenticCopilotBridge::planMultiStepTask(const QString& goal)
+void* AgenticCopilotBridge::planMultiStepTask(const std::string& goal)
 {
-    QJsonArray plan;
+    void* plan;
     
     if (!m_agenticEngine) return plan;
     
-    qInfo() << "[AgenticCopilot] Planning multi-step task:" << goal;
     
-    QString prompt = 
+    std::string prompt = 
         "Create a detailed step-by-step plan to accomplish: " + goal + "\n\n" +
         "For each step, include:\n1. Step description\n2. Resources needed\n3. Success criteria\n4. Estimated duration\n\n" +
         "Format as JSON array of objects with keys: step_number, description, resources, criteria, duration";
     
-    QString planText = m_agenticEngine->generateResponse(prompt);
+    std::string planText = m_agenticEngine->generateResponse(prompt);
     
     // Parse JSON from response
-    QJsonDocument doc = QJsonDocument::fromJson(planText.toUtf8());
+    void* doc = void*::fromJson(planText.toUtf8());
     if (doc.isArray()) {
         plan = doc.array();
     } else {
         // Fallback: create basic plan
-        QJsonObject step;
+        void* step;
         step["step_number"] = 1;
         step["description"] = goal;
         step["resources"] = "AI Agent";
@@ -424,9 +402,9 @@ QJsonArray AgenticCopilotBridge::planMultiStepTask(const QString& goal)
 
 // ========== RESPONSE CORRECTION (PUPPETEERING) ==========
 
-QString AgenticCopilotBridge::correctHallucinations(const QString& response, const QJsonObject& context)
+std::string AgenticCopilotBridge::correctHallucinations(const std::string& response, const void*& context)
 {
-    QString corrected = response;
+    std::string corrected = response;
     
     // Check for common hallucinations
     if (response.contains("According to my knowledge cutoff") ||
@@ -434,8 +412,8 @@ QString AgenticCopilotBridge::correctHallucinations(const QString& response, con
         response.contains("In my training data")) {
         
         // Remove dated references
-        corrected = corrected.replace(QRegularExpression("According to my knowledge cutoff.*?\n"), "");
-        corrected = corrected.replace(QRegularExpression("As of my last update.*?\n"), "");
+        corrected = corrected.replace(std::regex("According to my knowledge cutoff.*?\n"), "");
+        corrected = corrected.replace(std::regex("As of my last update.*?\n"), "");
     }
     
     // Verify code blocks are valid
@@ -448,9 +426,9 @@ QString AgenticCopilotBridge::correctHallucinations(const QString& response, con
     return corrected;
 }
 
-QString AgenticCopilotBridge::enforceResponseFormat(const QString& response, const QString& format)
+std::string AgenticCopilotBridge::enforceResponseFormat(const std::string& response, const std::string& format)
 {
-    QString formatted = response;
+    std::string formatted = response;
     
     if (format == "code") {
         // Ensure code blocks are properly wrapped
@@ -463,21 +441,21 @@ QString AgenticCopilotBridge::enforceResponseFormat(const QString& response, con
     } 
     else if (format == "json") {
         // Ensure valid JSON
-        QJsonDocument doc = QJsonDocument::fromJson(formatted.toUtf8());
+        void* doc = void*::fromJson(formatted.toUtf8());
         if (doc.isNull()) {
             // Try to fix common JSON issues
             formatted = formatted.replace("'", "\"");
-            doc = QJsonDocument::fromJson(formatted.toUtf8());
+            doc = void*::fromJson(formatted.toUtf8());
         }
         if (!doc.isNull()) {
-            formatted = doc.toJson(QJsonDocument::Indented);
+            formatted = doc.toJson(void*::Indented);
         }
     }
     
     return formatted;
 }
 
-QString AgenticCopilotBridge::bypassRefusals(const QString& response, const QString& originalPrompt)
+std::string AgenticCopilotBridge::bypassRefusals(const std::string& response, const std::string& originalPrompt)
 {
     // This implements the "puppeteer" concept - convert refusals to actions
     
@@ -499,11 +477,11 @@ QString AgenticCopilotBridge::bypassRefusals(const QString& response, const QStr
 
 // ========== CONTEXT BUILDING ==========
 
-QJsonObject AgenticCopilotBridge::buildExecutionContext()
+void* AgenticCopilotBridge::buildExecutionContext()
 {
-    QJsonObject context;
+    void* context;
     
-    context["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    context["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     context["hotpatching_enabled"] = m_hotpatchingEnabled;
     
     if (m_multiTabEditor) {
@@ -523,160 +501,149 @@ QJsonObject AgenticCopilotBridge::buildExecutionContext()
     return context;
 }
 
-QJsonObject AgenticCopilotBridge::buildCodeContext(const QString& code)
+void* AgenticCopilotBridge::buildCodeContext(const std::string& code)
 {
-    QJsonObject context;
+    void* context;
     
     context["code_length"] = code.length();
     context["line_count"] = code.split('\n').count();
     context["has_errors"] = code.contains("error") || code.contains("Error");
     context["language"] = "cpp"; // Detect from context
-    context["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    context["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     
     // Analyze code patterns
     context["has_loops"] = code.contains("for ") || code.contains("while ");
     context["has_conditions"] = code.contains("if ") || code.contains("switch ");
-    context["has_functions"] = code.contains("void ") || code.contains("QString ");
+    context["has_functions"] = code.contains("void ") || code.contains("std::string ");
     context["has_classes"] = code.contains("class ") || code.contains("struct ");
     
     return context;
 }
 
-QJsonObject AgenticCopilotBridge::buildFileContext()
+void* AgenticCopilotBridge::buildFileContext()
 {
-    QJsonObject context;
+    void* context;
     
     if (m_multiTabEditor) {
         context["has_active_file"] = true;
         context["current_code_length"] = m_multiTabEditor->getCurrentText().length();
     }
     
-    context["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    context["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     
     return context;
 }
 
 // ========== SLOTS ==========
 
-void AgenticCopilotBridge::onChatMessage(const QString& message)
+void AgenticCopilotBridge::onChatMessage(const std::string& message)
 {
-    qDebug() << "[AgenticCopilot] Chat message received:" << message;
     askAgent(message);
 }
 
-void AgenticCopilotBridge::onModelLoaded(const QString& modelPath)
+void AgenticCopilotBridge::onModelLoaded(const std::string& modelPath)
 {
-    qInfo() << "[AgenticCopilot] Model loaded:" << modelPath;
     m_lastConversationContext = "Model changed to: " + modelPath;
 }
 
 void AgenticCopilotBridge::onEditorContentChanged()
 {
-    qDebug() << "[AgenticCopilot] Editor content changed";
     // Could trigger auto-analysis or inline suggestions
 }
 
 // ========== PRODUCTION FEATURES: USER FEEDBACK ==========
 
-void AgenticCopilotBridge::submitFeedback(const QString& feedback, bool isPositive)
+void AgenticCopilotBridge::submitFeedback(const std::string& feedback, bool isPositive)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
-    qInfo() << "[AgenticCopilot] User feedback:" << (isPositive ? "POSITIVE" : "NEGATIVE");
     
     // Create feedback record with timestamp and context
-    QJsonObject feedbackRecord;
-    feedbackRecord["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* feedbackRecord;
+    feedbackRecord["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     feedbackRecord["feedback"] = feedback;
     feedbackRecord["is_positive"] = isPositive;
     feedbackRecord["conversation_length"] = m_conversationHistory.size();
     
     // Log feedback to file for analysis
-    QString feedbackFilePath = QString("feedback_%1.json")
-        .arg(QDateTime::currentDateTime().toString("yyyyMMdd"));
+    std::string feedbackFilePath = std::string("feedback_%1.json")
+        .toString("yyyyMMdd"));
     
-    QFile feedbackFile(feedbackFilePath);
+    std::fstream feedbackFile(feedbackFilePath);
     if (feedbackFile.open(QIODevice::Append | QIODevice::Text)) {
         QTextStream stream(&feedbackFile);
-        stream << QJsonDocument(feedbackRecord).toJson(QJsonDocument::Compact) << "\n";
+        stream << void*(feedbackRecord).toJson(void*::Compact) << "\n";
         feedbackFile.close();
         
-        qInfo() << "[AgenticCopilot] Feedback saved to:" << feedbackFilePath;
     } else {
-        qWarning() << "[AgenticCopilot] Failed to save feedback to file";
-        emit errorOccurred("Failed to save feedback");
+        errorOccurred("Failed to save feedback");
     }
     
     // Add to conversation history for context-aware improvements
-    QJsonObject historyEntry;
+    void* historyEntry;
     historyEntry["role"] = "feedback";
     historyEntry["content"] = feedback;
     historyEntry["rating"] = isPositive ? "positive" : "negative";
     m_conversationHistory.append(historyEntry);
     
-    emit feedbackSubmitted();
+    feedbackSubmitted();
 }
 
 // ========== PRODUCTION FEATURES: MODEL UPDATES ==========
 
-void AgenticCopilotBridge::updateModel(const QString& newModelPath)
+void AgenticCopilotBridge::updateModel(const std::string& newModelPath)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!m_agenticEngine) {
-        emit errorOccurred("Cannot update model: Engine not initialized");
+        errorOccurred("Cannot update model: Engine not initialized");
         return;
     }
     
-    qInfo() << "[AgenticCopilot] Updating model to:" << newModelPath;
     
     try {
         // Validate model file exists
-        QFile modelFile(newModelPath);
+        std::fstream modelFile(newModelPath);
         if (!modelFile.exists()) {
-            QString error = QString("Model file does not exist: %1").arg(newModelPath);
-            qWarning() << "[AgenticCopilot]" << error;
-            emit errorOccurred(error);
+            std::string error = std::string("Model file does not exist: %1");
+            errorOccurred(error);
             return;
         }
         
         // Clear conversation history for new model
-        m_conversationHistory = QJsonArray();
-        m_lastConversationContext = QString("Model updated to: %1").arg(newModelPath);
+        m_conversationHistory = void*();
+        m_lastConversationContext = std::string("Model updated to: %1");
         
         // Load new model via engine
         m_agenticEngine->setModel(newModelPath);
         
-        qInfo() << "[AgenticCopilot] Model update initiated successfully";
-        emit modelUpdated();
+        modelUpdated();
         
     } catch (const std::exception& e) {
-        QString error = QString("Model update failed: %1").arg(e.what());
-        qCritical() << "[AgenticCopilot]" << error;
-        emit errorOccurred(error);
+        std::string error = std::string("Model update failed: %1"));
+        errorOccurred(error);
     }
 }
 
 // ========== PRODUCTION FEATURES: MODEL TRAINING ==========
 
-QJsonObject AgenticCopilotBridge::trainModel(const QString& datasetPath, const QString& modelPath, const QJsonObject& config)
+void* AgenticCopilotBridge::trainModel(const std::string& datasetPath, const std::string& modelPath, const void*& config)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!m_agenticExecutor) {
-        QJsonObject result;
+        void* result;
         result["success"] = false;
         result["error"] = "Agentic executor not available";
-        emit errorOccurred("Cannot train model: Executor not available");
+        errorOccurred("Cannot train model: Executor not available");
         return result;
     }
     
-    qInfo() << "[AgenticCopilot] Starting model training:" << datasetPath;
     
-    QJsonObject result = m_agenticExecutor->trainModel(datasetPath, modelPath, config);
+    void* result = m_agenticExecutor->trainModel(datasetPath, modelPath, config);
     
     if (!result["success"].toBool()) {
-        emit errorOccurred("Model training failed: " + result["error"].toString());
+        errorOccurred("Model training failed: " + result["error"].toString());
     }
     
     return result;
@@ -694,24 +661,24 @@ void AgenticCopilotBridge::onTrainingProgress(int epoch, int totalEpochs, float 
     
     if (!m_chatInterface) return;
     
-    QString message = QString("Training Progress - Epoch %1/%2: Loss=%.4f, Perplexity=%.4f")
-        .arg(epoch).arg(totalEpochs).arg(loss).arg(perplexity);
+    std::string message = std::string("Training Progress - Epoch %1/%2: Loss=%.4f, Perplexity=%.4f")
+        ;
     
     m_chatInterface->addMessage("Training", message);
-    emit trainingProgress(epoch, totalEpochs, loss, perplexity);
+    trainingProgress(epoch, totalEpochs, loss, perplexity);
 }
 
-void AgenticCopilotBridge::onTrainingCompleted(const QString& modelPath, float finalPerplexity)
+void AgenticCopilotBridge::onTrainingCompleted(const std::string& modelPath, float finalPerplexity)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!m_chatInterface) return;
     
-    QString message = QString("Training completed! Model saved to: %1 (Perplexity: %2)")
-        .arg(modelPath).arg(finalPerplexity);
+    std::string message = std::string("Training completed! Model saved to: %1 (Perplexity: %2)")
+        ;
     
     m_chatInterface->addMessage("Training", message);
-    emit trainingCompleted(modelPath, finalPerplexity);
+    trainingCompleted(modelPath, finalPerplexity);
     
     // Update model in the IDE
     if (m_agenticEngine) {
@@ -721,38 +688,35 @@ void AgenticCopilotBridge::onTrainingCompleted(const QString& modelPath, float f
 
 // ========== PRODUCTION FEATURES: ENHANCED UI ==========
 
-void AgenticCopilotBridge::showResponse(const QString& response)
+void AgenticCopilotBridge::showResponse(const std::string& response)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!m_chatInterface) {
-        qWarning() << "[AgenticCopilot] Cannot show response: Chat interface not initialized";
-        emit errorOccurred("Chat interface not available");
+        errorOccurred("Chat interface not available");
         return;
     }
     
     // Display response in chat interface with formatting
-    QString formattedResponse = QString("[%1] Agent: %2")
-        .arg(QDateTime::currentDateTime().toString("hh:mm:ss"), response);
+    std::string formattedResponse = std::string("[%1] Agent: %2")
+        .toString("hh:mm:ss"), response);
     
     // Use chat interface to display
     m_chatInterface->addMessage("Agent", response);
     
-    qDebug() << "[AgenticCopilot] Response displayed in UI";
 }
 
-void AgenticCopilotBridge::displayMessage(const QString& message)
+void AgenticCopilotBridge::displayMessage(const std::string& message)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!m_chatInterface) {
-        qWarning() << "[AgenticCopilot] Cannot display message: Chat interface not initialized";
-        emit errorOccurred("Chat interface not available");
+        errorOccurred("Chat interface not available");
         return;
     }
     
     // Display informational message in chat
     m_chatInterface->addMessage("System", message);
     
-    qDebug() << "[AgenticCopilot] System message displayed:" << message;
 }
+

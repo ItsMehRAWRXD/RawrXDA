@@ -2,11 +2,6 @@
 // Production-ready with live backend switching
 #pragma once
 
-#include <QWidget>
-#include <QComboBox>
-#include <QLabel>
-#include <QString>
-#include <QIcon>
 
 namespace RawrXD {
 
@@ -21,18 +16,17 @@ enum class ComputeBackend {
 
 struct BackendInfo {
     ComputeBackend backend;
-    QString displayName;
-    QString icon;
+    std::string displayName;
+    std::string icon;
     bool available{false};
-    QString deviceName;
+    std::string deviceName;
     int vramMB{0};
 };
 
-class GPUBackendSelector : public QWidget {
-    Q_OBJECT
+class GPUBackendSelector : public void {
 
 public:
-    explicit GPUBackendSelector(QWidget* parent = nullptr);
+    explicit GPUBackendSelector(void* parent = nullptr);
     ~GPUBackendSelector() override = default;
 
     // Get currently selected backend
@@ -47,18 +41,18 @@ public:
     // Refresh available backends
     void refreshBackends();
 
-signals:
-    void backendChanged(ComputeBackend backend);
-    void backendSwitchFailed(const QString& error);
 
-private slots:
+    void backendChanged(ComputeBackend backend);
+    void backendSwitchFailed(const std::string& error);
+
+private:
     void onBackendChanged(int index);
 
 private:
     void setupUI();
     void detectBackends();
-    QString backendToString(ComputeBackend backend) const;
-    QString backendToIcon(ComputeBackend backend) const;
+    std::string backendToString(ComputeBackend backend) const;
+    std::string backendToIcon(ComputeBackend backend) const;
     
     // UI Components
     QLabel* m_iconLabel{nullptr};
@@ -66,8 +60,9 @@ private:
     QLabel* m_statusLabel{nullptr};
     
     // State
-    QVector<BackendInfo> m_availableBackends;
+    std::vector<BackendInfo> m_availableBackends;
     ComputeBackend m_currentBackend{ComputeBackend::Auto};
 };
 
 } // namespace RawrXD
+

@@ -1559,7 +1559,7 @@ private:
                               << ", AST Nodes: " << result.astNodeCount << "\n";
                 }
                 
-                // Emit IR/ASM if requested
+                // IR/ASM if requested
                 if (options.emitIR && !result.irDump.empty()) {
                     std::string irFile = fs::path(file).stem().string() + ".ir";
                     Utils::writeFile(irFile, result.irDump);

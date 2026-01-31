@@ -8,29 +8,21 @@
 
 #include "editor_agent_integration.hpp"
 
-#include <QPlainTextEdit>
-#include <QKeyEvent>
-#include <QTextCursor>
-#include <QTextBlock>
-#include <QTimer>
-#include <QDebug>
 
 /**
  * @brief Constructor - attach to editor
  */
-EditorAgentIntegration::EditorAgentIntegration(QPlainTextEdit* editor, QObject* parent)
-    : QObject(parent)
+EditorAgentIntegration::EditorAgentIntegration(QPlainTextEdit* editor, void* parent)
+    : void(parent)
     , m_editor(editor)
 {
     m_ghostTextColor = QColor(102, 102, 102);  // Gray
     m_ghostTextFont = m_editor->font();
     m_ghostTextFont.setItalic(true);
 
-    m_autoSuggestionTimer = new QTimer(this);
-    connect(m_autoSuggestionTimer, &QTimer::timeout, this, &EditorAgentIntegration::onAutoSuggestionTimer);
-
+    m_autoSuggestionTimer = new void*(this);
+// Qt connect removed
     installEventFilter();
-    qDebug() << "[EditorAgentIntegration] Initialized with editor";
 }
 
 /**
@@ -46,11 +38,9 @@ void EditorAgentIntegration::setAgentBridge(IDEAgentBridge* bridge)
     m_agentBridge = bridge;
 
     if (m_agentBridge) {
-        connect(m_agentBridge, &IDEAgentBridge::agentCompleted,
-                this, &EditorAgentIntegration::onSuggestionGenerated);
+// Qt connect removed
     }
 
-    qDebug() << "[EditorAgentIntegration] Agent bridge connected";
 }
 
 /**
@@ -62,16 +52,14 @@ void EditorAgentIntegration::setGhostTextEnabled(bool enabled)
     if (!enabled) {
         clearGhostText();
     }
-    qDebug() << "[EditorAgentIntegration] Ghost text:" << (enabled ? "ENABLED" : "DISABLED");
 }
 
 /**
  * @brief Set file type
  */
-void EditorAgentIntegration::setFileType(const QString& fileType)
+void EditorAgentIntegration::setFileType(const std::string& fileType)
 {
     m_fileType = fileType;
-    qDebug() << "[EditorAgentIntegration] File type set to:" << fileType;
 }
 
 /**
@@ -83,10 +71,8 @@ void EditorAgentIntegration::setAutoSuggestions(bool enabled)
 
     if (enabled) {
         m_autoSuggestionTimer->start(1000);  // Generate suggestion every 1 second
-        qDebug() << "[EditorAgentIntegration] Auto-suggestions ENABLED";
     } else {
         m_autoSuggestionTimer->stop();
-        qDebug() << "[EditorAgentIntegration] Auto-suggestions DISABLED";
     }
 }
 
@@ -101,7 +87,7 @@ void EditorAgentIntegration::triggerSuggestion(const GhostTextContext& context)
 
     GhostTextContext ctx = context.currentLine.isEmpty() ? extractContext() : context;
 
-    emit suggestionGenerating();
+    suggestionGenerating();
     generateSuggestion(ctx);
 }
 
@@ -111,7 +97,6 @@ void EditorAgentIntegration::triggerSuggestion(const GhostTextContext& context)
 bool EditorAgentIntegration::acceptSuggestion()
 {
     if (m_currentSuggestion.text.isEmpty()) {
-        qWarning() << "[EditorAgentIntegration] No suggestion to accept";
         return false;
     }
 
@@ -119,11 +104,10 @@ bool EditorAgentIntegration::acceptSuggestion()
     cursor.insertText(m_currentSuggestion.text);
     m_editor->setTextCursor(cursor);
 
-    QString acceptedText = m_currentSuggestion.text;
+    std::string acceptedText = m_currentSuggestion.text;
     clearGhostText();
 
-    emit suggestionAccepted(acceptedText);
-    qDebug() << "[EditorAgentIntegration] Suggestion accepted:" << acceptedText.left(50);
+    suggestionAccepted(acceptedText);
 
     return true;
 }
@@ -134,7 +118,7 @@ bool EditorAgentIntegration::acceptSuggestion()
 void EditorAgentIntegration::dismissSuggestion()
 {
     clearGhostText();
-    emit suggestionDismissed();
+    suggestionDismissed();
 }
 
 /**
@@ -173,15 +157,15 @@ void EditorAgentIntegration::onEditorKeyPressed(QKeyEvent* event)
     }
 
     // TAB: Trigger suggestion
-    if (event->key() == Qt::Key_Tab) {
+    if (event->key() == //Key_Tab) {
         event->accept();
         triggerSuggestion();
         return;
     }
 
     // ENTER: Accept suggestion
-    if (event->key() == Qt::Key_Return && !m_currentSuggestion.text.isEmpty()) {
-        if (event->modifiers() & Qt::ControlModifier) {
+    if (event->key() == //Key_Return && !m_currentSuggestion.text.isEmpty()) {
+        if (event->modifiers() & //ControlModifier) {
             event->accept();
             acceptSuggestion();
             return;
@@ -189,7 +173,7 @@ void EditorAgentIntegration::onEditorKeyPressed(QKeyEvent* event)
     }
 
     // ESC: Dismiss suggestion
-    if (event->key() == Qt::Key_Escape && !m_currentSuggestion.text.isEmpty()) {
+    if (event->key() == //Key_Escape && !m_currentSuggestion.text.isEmpty()) {
         event->accept();
         dismissSuggestion();
         return;
@@ -204,7 +188,7 @@ void EditorAgentIntegration::onEditorKeyPressed(QKeyEvent* event)
 /**
  * @brief Handle agent suggestion completion
  */
-void EditorAgentIntegration::onSuggestionGenerated(const QJsonObject& result, int elapsedMs)
+void EditorAgentIntegration::onSuggestionGenerated(const void*& result, int elapsedMs)
 {
     if (result.value("success").toBool()) {
         GhostTextSuggestion suggestion = parseSuggestion(result);
@@ -215,13 +199,11 @@ void EditorAgentIntegration::onSuggestionGenerated(const QJsonObject& result, in
         m_ghostTextColumn = col;
 
         renderGhostText(suggestion.text, row, col);
-        emit suggestionAvailable(suggestion);
+        suggestionAvailable(suggestion);
 
-        qDebug() << "[EditorAgentIntegration] Suggestion generated in" << elapsedMs << "ms";
     } else {
-        QString error = result.value("error").toString("Unknown error");
-        emit suggestionError(error);
-        qWarning() << "[EditorAgentIntegration] Error generating suggestion:" << error;
+        std::string error = result.value("error").toString("Unknown error");
+        suggestionError(error);
     }
 }
 
@@ -238,10 +220,9 @@ void EditorAgentIntegration::onAutoSuggestionTimer()
 /**
  * @brief Text completed
  */
-void EditorAgentIntegration::onTextCompleted(const QString& text)
+void EditorAgentIntegration::onTextCompleted(const std::string& text)
 {
     // Called when text is auto-completed
-    qDebug() << "[EditorAgentIntegration] Text completed:" << text;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -281,15 +262,15 @@ GhostTextContext EditorAgentIntegration::extractContext() const
 void EditorAgentIntegration::generateSuggestion(const GhostTextContext& context)
 {
     if (!m_agentBridge) {
-        emit suggestionError("Agent bridge not set");
+        suggestionError("Agent bridge not set");
         return;
     }
 
-    QString wish = QString("Suggest the next line of code for:\n"
+    std::string wish = std::string("Suggest the next line of code for:\n"
                           "File: %1\n"
                           "Current line: %2\n"
                           "Context: %3")
-                      .arg(m_fileType, context.currentLine, context.previousLines.left(200));
+                      );
 
     // Use plan mode (preview, not execute)
     m_agentBridge->planWish(wish);
@@ -298,7 +279,7 @@ void EditorAgentIntegration::generateSuggestion(const GhostTextContext& context)
 /**
  * @brief Parse LLM response into suggestion
  */
-GhostTextSuggestion EditorAgentIntegration::parseSuggestion(const QJsonObject& response) const
+GhostTextSuggestion EditorAgentIntegration::parseSuggestion(const void*& response) const
 {
     GhostTextSuggestion suggestion;
 
@@ -322,7 +303,7 @@ GhostTextSuggestion EditorAgentIntegration::parseSuggestion(const QJsonObject& r
 /**
  * @brief Render ghost text
  */
-void EditorAgentIntegration::renderGhostText(const QString& text, int row, int column)
+void EditorAgentIntegration::renderGhostText(const std::string& text, int row, int column)
 {
     // In a real implementation, would:
     // 1. Create overlay widget or use QPainter to draw ghost text
@@ -335,7 +316,6 @@ void EditorAgentIntegration::renderGhostText(const QString& text, int row, int c
     m_ghostTextRow = row;
     m_ghostTextColumn = column;
 
-    qDebug() << "[EditorAgentIntegration] Rendering ghost text at" << row << ":" << column;
 }
 
 /**
@@ -354,7 +334,7 @@ void EditorAgentIntegration::installEventFilter()
 /**
  * @brief Get cursor position
  */
-QPair<int, int> EditorAgentIntegration::getCursorPosition() const
+std::pair<int, int> EditorAgentIntegration::getCursorPosition() const
 {
     QTextCursor cursor = m_editor->textCursor();
     int row = cursor.blockNumber();
@@ -366,7 +346,7 @@ QPair<int, int> EditorAgentIntegration::getCursorPosition() const
 /**
  * @brief Get word under cursor
  */
-QString EditorAgentIntegration::getWordUnderCursor() const
+std::string EditorAgentIntegration::getWordUnderCursor() const
 {
     QTextCursor cursor = m_editor->textCursor();
     cursor.select(QTextCursor::WordUnderCursor);
@@ -376,7 +356,7 @@ QString EditorAgentIntegration::getWordUnderCursor() const
 /**
  * @brief Qt event filter override
  */
-bool EditorAgentIntegration::eventFilter(QObject* obj, QEvent* event)
+bool EditorAgentIntegration::eventFilter(void* obj, QEvent* event)
 {
     if (obj == m_editor && event->type() == QEvent::KeyPress) {
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
@@ -387,5 +367,6 @@ bool EditorAgentIntegration::eventFilter(QObject* obj, QEvent* event)
         }
     }
 
-    return QObject::eventFilter(obj, event);
+    return void::eventFilter(obj, event);
 }
+

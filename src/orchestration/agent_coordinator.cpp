@@ -1,11 +1,5 @@
 #include "agent_coordinator.hpp"
 
-#include <QDebug>
-#include <QJsonValue>
-#include <QQueue>
-#include <QReadLocker>
-#include <QSet>
-#include <QWriteLocker>
 
 #include <algorithm>
 #include <functional>
@@ -18,9 +12,9 @@ namespace {
  * @brief Converts TaskState enum value to human-readable string representation.
  * Used extensively for logging, debugging, and status reporting.
  * @param state The task state enum value
- * @return QString containing the state name (e.g., "pending", "running", "completed")
+ * @return std::string containing the state name (e.g., "pending", "running", "completed")
  */
-QString taskStateToString(TaskState state)
+std::string taskStateToString(TaskState state)
 {
     switch (state) {
     case TaskState::Pending: return "pending";
@@ -42,26 +36,24 @@ QString taskStateToString(TaskState state)
  * @param details Optional additional context (e.g., agent ID, error message)
  * @param isError If true, logs at warning level; otherwise logs at debug level
  */
-void logCoordinatorEvent(const QString& event, const QString& details = QString(), bool isError = false)
+void logCoordinatorEvent(const std::string& event, const std::string& details = std::string(), bool isError = false)
 {
-    QString timestamp = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
-    QString message = QString("[AgentCoordinator] %1 %2").arg(timestamp, event);
+    std::string timestamp = std::chrono::system_clock::time_point::currentDateTimeUtc().toString(//ISODateWithMs);
+    std::string message = std::string("[AgentCoordinator] %1 %2");
     
     if (!details.isEmpty()) {
         message += " | " + details;
     }
     
     if (isError) {
-        qWarning() << message;
     } else {
-        qDebug() << message;
     }
 }
 
 } // namespace
 
-AgentCoordinator::AgentCoordinator(QObject* parent)
-    : QObject(parent)
+AgentCoordinator::AgentCoordinator(void* parent)
+    : void(parent)
 {
     qRegisterMetaType<AgentCoordinator::AgentTask>("AgentCoordinator::AgentTask");
 }
@@ -93,8 +85,8 @@ AgentCoordinator::~AgentCoordinator()
  * @note Thread-safe. Uses QWriteLocker to synchronize agent registry modifications.
  * @see unregisterAgent(), setAgentAvailability()
  */
-bool AgentCoordinator::registerAgent(const QString& agentId,
-                                     const QStringList& capabilities,
+bool AgentCoordinator::registerAgent(const std::string& agentId,
+                                     const std::vector<std::string>& capabilities,
                                      int maxConcurrency)
 {
     // Validate input parameters before proceeding
@@ -105,9 +97,9 @@ bool AgentCoordinator::registerAgent(const QString& agentId,
     
     if (maxConcurrency <= 0) {
         logCoordinatorEvent("registerAgent() failed", 
-                          QString("Invalid maxConcurrency=%1 for agent %2 (must be ≥ 1)")
-                              .arg(maxConcurrency)
-                              .arg(agentId), 
+                          std::string("Invalid maxConcurrency=%1 for agent %2 (must be ≥ 1)")
+                              
+                              , 
                           true);
         return false;
     }
@@ -117,7 +109,7 @@ bool AgentCoordinator::registerAgent(const QString& agentId,
     // Prevent duplicate agent registration
     if (m_agents.contains(agentId)) {
         logCoordinatorEvent("registerAgent() failed",
-                          QString("Agent already registered: %1").arg(agentId),
+                          std::string("Agent already registered: %1"),
                           true);
         return false;
     }
@@ -129,21 +121,21 @@ bool AgentCoordinator::registerAgent(const QString& agentId,
     meta.maxConcurrency = std::max(1, maxConcurrency);  // Enforce minimum concurrency of 1
     meta.activeAssignments = 0;
     meta.available = true;
-    meta.registeredAt = QDateTime::currentDateTimeUtc();
+    meta.registeredAt = std::chrono::system_clock::time_point::currentDateTimeUtc();
     
     m_agents.insert(agentId, meta);
     
     // Detailed logging for successful registration
     logCoordinatorEvent("registerAgent() success",
-                       QString("agent=%1 | capabilities=[%2] | maxConcurrency=%3")
-                           .arg(agentId)
-                           .arg(capabilities.join(", "))
-                           .arg(meta.maxConcurrency));
+                       std::string("agent=%1 | capabilities=[%2] | maxConcurrency=%3")
+                           
+                           )
+                           );
     
     return true;
 }
 
-bool AgentCoordinator::unregisterAgent(const QString& agentId)
+bool AgentCoordinator::unregisterAgent(const std::string& agentId)
 {
     QWriteLocker locker(&m_lock);
     if (!m_agents.contains(agentId)) {
@@ -156,7 +148,7 @@ bool AgentCoordinator::unregisterAgent(const QString& agentId)
     return true;
 }
 
-bool AgentCoordinator::setAgentAvailability(const QString& agentId, bool available)
+bool AgentCoordinator::setAgentAvailability(const std::string& agentId, bool available)
 {
     QWriteLocker locker(&m_lock);
     if (!m_agents.contains(agentId)) {
@@ -166,7 +158,7 @@ bool AgentCoordinator::setAgentAvailability(const QString& agentId, bool availab
     return true;
 }
 
-bool AgentCoordinator::isAgentAvailable(const QString& agentId) const
+bool AgentCoordinator::isAgentAvailable(const std::string& agentId) const
 {
     QReadLocker locker(&m_lock);
     const auto it = m_agents.find(agentId);
@@ -195,9 +187,9 @@ bool AgentCoordinator::isAgentAvailable(const QString& agentId) const
  * @param tasks List of AgentTask objects defining the execution plan
  * @param initialContext Initial JSON context merged into all task outputs
  * 
- * @return UUID string identifying the submitted plan, or empty QString on failure
+ * @return UUID string identifying the submitted plan, or empty std::string on failure
  * 
- * @retval empty QString if:
+ * @retval empty std::string if:
  *   - Any task validation fails (see validateTasks error codes)
  *   - Memory allocation fails (unlikely in modern Qt)
  * 
@@ -206,15 +198,15 @@ bool AgentCoordinator::isAgentAvailable(const QString& agentId) const
  * @note Signals emitted OUTSIDE lock to prevent event loop deadlocks.
  * @see completeTask(), cancelPlan(), validateTasks()
  */
-QString AgentCoordinator::submitPlan(const QList<AgentTask>& tasks,
-                                     const QJsonObject& initialContext)
+std::string AgentCoordinator::submitPlan(const std::vector<AgentTask>& tasks,
+                                     const void*& initialContext)
 {
     // Phase 1: Validate all tasks before proceeding (catch errors early)
-    QString validationError;
+    std::string validationError;
     if (!validateTasks(tasks, validationError)) {
         logCoordinatorEvent("submitPlan() failed",
-                          QString("Validation error: %1").arg(validationError), true);
-        return QString();  // Return empty string to indicate failure
+                          std::string("Validation error: %1"), true);
+        return std::string();  // Return empty string to indicate failure
     }
 
     // Phase 2: Build plan state OUTSIDE lock (expensive computation)
@@ -222,7 +214,7 @@ QString AgentCoordinator::submitPlan(const QList<AgentTask>& tasks,
     PlanState plan;
     plan.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     plan.sharedContext = initialContext;
-    plan.createdAt = QDateTime::currentDateTimeUtc();
+    plan.createdAt = std::chrono::system_clock::time_point::currentDateTimeUtc();
 
     // Initialize task state entries (Pending → Ready or Pending → Running)
     for (const auto& task : tasks) {
@@ -234,7 +226,7 @@ QString AgentCoordinator::submitPlan(const QList<AgentTask>& tasks,
     // Build dependency graph and identify initially-ready tasks
     // (Tasks with 0 remaining dependencies)
     initialisePlanGraphs(plan);
-    QList<AgentTask> readyToEmit = scheduleReadyTasks(plan);
+    std::vector<AgentTask> readyToEmit = scheduleReadyTasks(plan);
 
     // Phase 3: MINIMAL CRITICAL SECTION - Only atomic registry insertion
     // Duration: < 100µs (vs 2-5ms for graph building)
@@ -242,27 +234,27 @@ QString AgentCoordinator::submitPlan(const QList<AgentTask>& tasks,
         QWriteLocker locker(&m_lock);
         m_plans.insert(plan.id, plan);
         logCoordinatorEvent("submitPlan() success",
-                          QString("plan=%1 | tasks=%2 | initialReady=%3")
-                              .arg(plan.id)
-                              .arg(tasks.size())
-                              .arg(readyToEmit.size()));
+                          std::string("plan=%1 | tasks=%2 | initialReady=%3")
+                              
+                              )
+                              ));
     }  // Release lock before signals
 
-    // Phase 4: Emit signals OUTSIDE lock (Qt event loop interaction)
+    // Phase 4: signals OUTSIDE lock (Qt event loop interaction)
     // This prevents potential deadlocks from event handler re-entrancy
-    emit planSubmitted(plan.id);
+    planSubmitted(plan.id);
     
     // Notify agents about immediately-ready tasks
     for (const auto& task : readyToEmit) {
-        emit taskReady(plan.id, task);
+        taskReady(plan.id, task);
     }
     
     return plan.id;
 }
 
-bool AgentCoordinator::cancelPlan(const QString& planId, const QString& reason)
+bool AgentCoordinator::cancelPlan(const std::string& planId, const std::string& reason)
 {
-    QList<AgentTask> cancelledTasks;
+    std::vector<AgentTask> cancelledTasks;
     {
         QWriteLocker locker(&m_lock);
         auto it = m_plans.find(planId);
@@ -295,14 +287,14 @@ bool AgentCoordinator::cancelPlan(const QString& planId, const QString& reason)
         invalidateStatusCache(planId);
     }
 
-    emit planCancelled(planId, reason);
+    planCancelled(planId, reason);
     for (const auto& task : cancelledTasks) {
-        emit taskCompleted(planId, task, false, QStringLiteral("plan-cancelled"));
+        taskCompleted(planId, task, false, QStringLiteral("plan-cancelled"));
     }
     return true;
 }
 
-bool AgentCoordinator::startTask(const QString& planId, const QString& taskId)
+bool AgentCoordinator::startTask(const std::string& planId, const std::string& taskId)
 {
     AgentTask task;
     {
@@ -336,7 +328,7 @@ bool AgentCoordinator::startTask(const QString& planId, const QString& taskId)
         invalidateStatusCache(planId);
     }
 
-    emit taskStarted(planId, task);
+    taskStarted(planId, task);
     return true;
 }
 
@@ -368,16 +360,16 @@ bool AgentCoordinator::startTask(const QString& planId, const QString& taskId)
  * @note Signal emission (taskCompleted, taskReady, planCompleted) happens outside lock.
  * @see startTask(), submitPlan(), cancelPlan()
  */
-bool AgentCoordinator::completeTask(const QString& planId,
-                                    const QString& taskId,
-                                    const QJsonObject& outputContext,
+bool AgentCoordinator::completeTask(const std::string& planId,
+                                    const std::string& taskId,
+                                    const void*& outputContext,
                                     bool success,
-                                    const QString& message)
+                                    const std::string& message)
 {
     // Collect data before acquiring lock (avoid holding lock during signal emission)
-    QList<AgentTask> newlyReadyTasks;
+    std::vector<AgentTask> newlyReadyTasks;
     AgentTask completedTask;
-    QString failureReason = message;
+    std::string failureReason = message;
     PlanFinalization planFinalization;
 
     {
@@ -388,7 +380,7 @@ bool AgentCoordinator::completeTask(const QString& planId,
         auto planIt = m_plans.find(planId);
         if (planIt == m_plans.end()) {
             logCoordinatorEvent("completeTask() failed",
-                              QString("Plan not found: %1").arg(planId), true);
+                              std::string("Plan not found: %1"), true);
             return false;
         }
         auto& plan = planIt.value();
@@ -396,7 +388,7 @@ bool AgentCoordinator::completeTask(const QString& planId,
         // Validate task exists in plan
         if (!plan.tasks.contains(taskId)) {
             logCoordinatorEvent("completeTask() failed",
-                              QString("Task %1 not found in plan %2").arg(taskId, planId), true);
+                              std::string("Task %1 not found in plan %2"), true);
             return false;
         }
         
@@ -406,8 +398,8 @@ bool AgentCoordinator::completeTask(const QString& planId,
         // Verify task is in valid state for completion
         if (currentState != TaskState::Running && currentState != TaskState::Ready) {
             logCoordinatorEvent("completeTask() failed",
-                              QString("Task %1 in invalid state: %2 (expected Running or Ready)")
-                                  .arg(taskId, taskStateToString(currentState)), true);
+                              std::string("Task %1 in invalid state: %2 (expected Running or Ready)")
+                                  ), true);
             return false;
         }
 
@@ -422,7 +414,7 @@ bool AgentCoordinator::completeTask(const QString& planId,
             plan.state[taskId] = TaskState::Failed;
             
             if (failureReason.isEmpty()) {
-                failureReason = QString("Task %1 failed").arg(taskId);
+                failureReason = std::string("Task %1 failed");
             }
             
             // Skip all downstream tasks that depend on failed task
@@ -430,8 +422,8 @@ bool AgentCoordinator::completeTask(const QString& planId,
             plan.cancelReason = failureReason;
             
             logCoordinatorEvent("Task completed (FAILED)",
-                              QString("task=%1 | reason=%2 | plan=%3")
-                                  .arg(taskId, failureReason, planId));
+                              std::string("task=%1 | reason=%2 | plan=%3")
+                                  );
         } else {
             // Task succeeded: update state and check for newly ready tasks
             plan.state[taskId] = TaskState::Completed;
@@ -443,10 +435,10 @@ bool AgentCoordinator::completeTask(const QString& planId,
             newlyReadyTasks = propagateCompletion(plan, taskId);
             
             logCoordinatorEvent("Task completed (SUCCESS)",
-                              QString("task=%1 | newReady=%2 | plan=%3")
-                                  .arg(taskId)
-                                  .arg(newlyReadyTasks.size())
-                                  .arg(planId));
+                              std::string("task=%1 | newReady=%2 | plan=%3")
+                                  
+                                  )
+                                  );
         }
         
         // Check if entire plan should be finalized (all tasks done)
@@ -457,14 +449,14 @@ bool AgentCoordinator::completeTask(const QString& planId,
         
     }  // Release lock before signal emission
 
-    // Emit completion signal with task details and status
-    emit taskCompleted(planId, completedTask, success, message);
+    // completion signal with task details and status
+    taskCompleted(planId, completedTask, success, message);
 
     // Notify about newly ready tasks (will be picked up by waiting agents)
     for (const auto& readyTask : newlyReadyTasks) {
-        emit taskReady(planId, readyTask);
+        taskReady(planId, readyTask);
         logCoordinatorEvent("Task became ready",
-                          QString("task=%1 | plan=%2").arg(readyTask.id, planId));
+                          std::string("task=%1 | plan=%2"));
     }
 
     // Handle plan-level finalization
@@ -472,32 +464,32 @@ bool AgentCoordinator::completeTask(const QString& planId,
         if (planFinalization.cancelled) {
             // Plan was explicitly cancelled (signal already emitted during cancel)
             logCoordinatorEvent("Plan finalized",
-                              QString("Status=cancelled | reason=%1 | plan=%2")
-                                  .arg(planFinalization.reason, planId));
+                              std::string("Status=cancelled | reason=%1 | plan=%2")
+                                  );
         } else if (planFinalization.success) {
-            emit planCompleted(planId, planFinalization.context);
+            planCompleted(planId, planFinalization.context);
             logCoordinatorEvent("Plan finalized",
-                              QString("Status=completed | plan=%1").arg(planId));
+                              std::string("Status=completed | plan=%1"));
         } else {
             // Plan failed due to task failure(s)
-            QString failReason = planFinalization.reason;
+            std::string failReason = planFinalization.reason;
             if (failReason.isEmpty()) {
                 failReason = failureReason.isEmpty() ? QStringLiteral("plan-failed") : failureReason;
             }
-            emit planFailed(planId, failReason);
+            planFailed(planId, failReason);
             logCoordinatorEvent("Plan finalized",
-                              QString("Status=failed | reason=%1 | plan=%2")
-                                  .arg(failReason, planId));
+                              std::string("Status=failed | reason=%1 | plan=%2")
+                                  );
         }
     }
 
     return true;
 }
 
-QList<QString> AgentCoordinator::getReadyTasks(const QString& planId) const
+std::vector<std::string> AgentCoordinator::getReadyTasks(const std::string& planId) const
 {
     QReadLocker locker(&m_lock);
-    QList<QString> ready;
+    std::vector<std::string> ready;
     const auto planIt = m_plans.find(planId);
     if (planIt == m_plans.end()) {
         return ready;
@@ -511,7 +503,7 @@ QList<QString> AgentCoordinator::getReadyTasks(const QString& planId) const
     return ready;
 }
 
-QJsonObject AgentCoordinator::getPlanStatus(const QString& planId) const
+void* AgentCoordinator::getPlanStatus(const std::string& planId) const
 {
     QReadLocker locker(&m_lock);
     
@@ -524,23 +516,23 @@ QJsonObject AgentCoordinator::getPlanStatus(const QString& planId) const
     // Plan not in cache or cache invalidated - build status
     const auto planIt = m_plans.find(planId);
     if (planIt == m_plans.end()) {
-        QJsonObject status;
+        void* status;
         status["error"] = QStringLiteral("plan-not-found");
         return status;
     }
     
     const auto& plan = planIt.value();
-    QJsonObject status = buildPlanStatus(plan);
+    void* status = buildPlanStatus(plan);
     
     // Cache the result for future queries
     m_statusCache[planId] = status;
     return status;
 }
 
-QJsonObject AgentCoordinator::getCoordinatorStats() const
+void* AgentCoordinator::getCoordinatorStats() const
 {
     QReadLocker locker(&m_lock);
-    QJsonObject stats;
+    void* stats;
     stats["registeredAgents"] = m_agents.size();
     stats["activePlans"] = m_plans.size();
 
@@ -584,7 +576,7 @@ QJsonObject AgentCoordinator::getCoordinatorStats() const
  * @note Thread-safe. Acquires read lock during validation.
  * @note Cycle detection uses O(V+E) color-based DFS algorithm
  */
-bool AgentCoordinator::validateTasks(const QList<AgentTask>& tasks, QString& error) const
+bool AgentCoordinator::validateTasks(const std::vector<AgentTask>& tasks, std::string& error) const
 {
     // Pre-condition: Task list must not be empty
     if (tasks.isEmpty()) {
@@ -596,7 +588,7 @@ bool AgentCoordinator::validateTasks(const QList<AgentTask>& tasks, QString& err
     QReadLocker locker(&m_lock);
 
     // Phase 1: Validate individual tasks and build task ID set
-    QSet<QString> taskIds;
+    std::unordered_set<std::string> taskIds;
     for (const auto& task : tasks) {
         
         // Validate task ID is not empty (required field)
@@ -610,25 +602,25 @@ bool AgentCoordinator::validateTasks(const QList<AgentTask>& tasks, QString& err
         if (taskIds.contains(task.id)) {
             error = QStringLiteral("duplicate-task-id");
             logCoordinatorEvent("validateTasks() failed", 
-                              QString("Task ID %1 %2").arg(task.id, error), true);
+                              std::string("Task ID %1 %2"), true);
             return false;
         }
         taskIds.insert(task.id);
 
         // Verify that the assigned agent exists (agent must be pre-registered)
         if (!m_agents.contains(task.agentId)) {
-            error = QStringLiteral("unknown-agent:%1").arg(task.agentId);
+            error = QStringLiteral("unknown-agent:%1");
             logCoordinatorEvent("validateTasks() failed",
-                              QString("Task %1 references %2").arg(task.id, error), true);
+                              std::string("Task %1 references %2"), true);
             return false;
         }
 
         // Prevent self-dependencies (task cannot depend on itself)
         for (const auto& dep : task.dependencies) {
             if (dep == task.id) {
-                error = QStringLiteral("self-dependency:%1").arg(task.id);
+                error = QStringLiteral("self-dependency:%1");
                 logCoordinatorEvent("validateTasks() failed",
-                                  QString("Task %1 cannot depend on itself").arg(task.id), true);
+                                  std::string("Task %1 cannot depend on itself"), true);
                 return false;
             }
         }
@@ -647,9 +639,9 @@ bool AgentCoordinator::validateTasks(const QList<AgentTask>& tasks, QString& err
     for (const auto& task : tasks) {
         for (const auto& dep : task.dependencies) {
             if (!taskIds.contains(dep)) {
-                error = QStringLiteral("missing-dependency:%1->%2").arg(task.id, dep);
+                error = QStringLiteral("missing-dependency:%1->%2");
                 logCoordinatorEvent("validateTasks() failed",
-                                  QString("Task %1 depends on undefined task %2").arg(task.id, dep), true);
+                                  std::string("Task %1 depends on undefined task %2"), true);
                 return false;
             }
         }
@@ -657,7 +649,7 @@ bool AgentCoordinator::validateTasks(const QList<AgentTask>& tasks, QString& err
 
     // All validation checks passed
     logCoordinatorEvent("validateTasks() success",
-                       QString("Validated %1 tasks, no issues detected").arg(tasks.size()));
+                       std::string("Validated %1 tasks, no issues detected")));
     return true;
 }
 
@@ -679,10 +671,10 @@ bool AgentCoordinator::validateTasks(const QList<AgentTask>& tasks, QString& err
  * @note Space complexity: O(V) for color map storage
  * @see validateTasks() - Calls detectCycle during task validation
  */
-bool AgentCoordinator::detectCycle(const QList<AgentTask>& tasks) const
+bool AgentCoordinator::detectCycle(const std::vector<AgentTask>& tasks) const
 {
     // Build adjacency list (task ID → list of dependency IDs) for efficient traversal
-    QMap<QString, QStringList> graph;
+    std::map<std::string, std::vector<std::string>> graph;
     for (const auto& task : tasks) {
         graph.insert(task.id, task.dependencies);
     }
@@ -691,17 +683,17 @@ bool AgentCoordinator::detectCycle(const QList<AgentTask>& tasks) const
     // Color 0 (White):  Node not yet visited
     // Color 1 (Gray):   Node is in current DFS path (back edge = cycle)
     // Color 2 (Black):  Node fully processed with no cycles in subtree
-    QHash<QString, int> color;
+    std::unordered_map<std::string, int> color;
     
     // Lambda DFS function for recursive graph traversal
-    std::function<bool(const QString&)> dfs = [&](const QString& node) -> bool {
+    std::function<bool(const std::string&)> dfs = [&](const std::string& node) -> bool {
         // Retrieve current color (default 0 if not found)
         int nodeColor = color.value(node, 0);
         
         // Back edge detected: node is in current path = cycle found
         if (nodeColor == 1) {
             logCoordinatorEvent("detectCycle() found cycle",
-                              QString("Back edge at node %1").arg(node), true);
+                              std::string("Back edge at node %1"), true);
             return true;
         }
         
@@ -714,7 +706,7 @@ bool AgentCoordinator::detectCycle(const QList<AgentTask>& tasks) const
         color[node] = 1;
         
         // Traverse all direct dependencies
-        const QStringList deps = graph.value(node);
+        const std::vector<std::string> deps = graph.value(node);
         for (const auto& dep : deps) {
             // Skip dependencies not in our task graph (orphaned references already caught)
             if (!graph.contains(dep)) {
@@ -755,9 +747,9 @@ void AgentCoordinator::initialisePlanGraphs(PlanState& plan)
     }
 }
 
-QList<AgentCoordinator::AgentTask> AgentCoordinator::scheduleReadyTasks(PlanState& plan)
+std::vector<AgentCoordinator::AgentTask> AgentCoordinator::scheduleReadyTasks(PlanState& plan)
 {
-    QList<AgentTask> ready;
+    std::vector<AgentTask> ready;
     for (auto it = plan.tasks.begin(); it != plan.tasks.end(); ++it) {
         const auto& taskId = it.key();
         if (plan.state.value(taskId) == TaskState::Pending &&
@@ -769,10 +761,10 @@ QList<AgentCoordinator::AgentTask> AgentCoordinator::scheduleReadyTasks(PlanStat
     return ready;
 }
 
-QList<AgentCoordinator::AgentTask> AgentCoordinator::propagateCompletion(PlanState& plan,
-                                                                        const QString& taskId)
+std::vector<AgentCoordinator::AgentTask> AgentCoordinator::propagateCompletion(PlanState& plan,
+                                                                        const std::string& taskId)
 {
-    QList<AgentTask> ready;
+    std::vector<AgentTask> ready;
     const auto dependents = plan.dependents.value(taskId);
     for (const auto& dependentId : dependents) {
         auto remaining = plan.remainingDependencies.value(dependentId, 0);
@@ -789,9 +781,9 @@ QList<AgentCoordinator::AgentTask> AgentCoordinator::propagateCompletion(PlanSta
     return ready;
 }
 
-void AgentCoordinator::markDownstreamAsSkipped(PlanState& plan, const QString& blockingTaskId)
+void AgentCoordinator::markDownstreamAsSkipped(PlanState& plan, const std::string& blockingTaskId)
 {
-    QQueue<QString> queue;
+    QQueue<std::string> queue;
     queue.enqueue(blockingTaskId);
 
     while (!queue.isEmpty()) {
@@ -807,7 +799,7 @@ void AgentCoordinator::markDownstreamAsSkipped(PlanState& plan, const QString& b
     }
 }
 
-bool AgentCoordinator::allPrerequisitesComplete(const PlanState& plan, const QString& taskId) const
+bool AgentCoordinator::allPrerequisitesComplete(const PlanState& plan, const std::string& taskId) const
 {
     const auto taskIt = plan.tasks.find(taskId);
     if (taskIt == plan.tasks.end()) {
@@ -822,17 +814,17 @@ bool AgentCoordinator::allPrerequisitesComplete(const PlanState& plan, const QSt
     return true;
 }
 
-void AgentCoordinator::mergeContext(QJsonObject& target, const QJsonObject& delta) const
+void AgentCoordinator::mergeContext(void*& target, const void*& delta) const
 {
     for (auto it = delta.begin(); it != delta.end(); ++it) {
         target.insert(it.key(), it.value());
     }
 }
 
-AgentCoordinator::PlanFinalization AgentCoordinator::maybeFinalizePlan(const QString& planId,
+AgentCoordinator::PlanFinalization AgentCoordinator::maybeFinalizePlan(const std::string& planId,
                                                                        PlanState& plan)
 {
-    Q_UNUSED(planId);
+    (planId);
 
     PlanFinalization result;
 
@@ -874,31 +866,31 @@ AgentCoordinator::PlanFinalization AgentCoordinator::maybeFinalizePlan(const QSt
     return result;
 }
 
-void AgentCoordinator::invalidateStatusCache(const QString& planId)
+void AgentCoordinator::invalidateStatusCache(const std::string& planId)
 {
     // Called when plan state changes (task completion, cancellation, etc.)
     m_statusCache.remove(planId);
 }
 
-QJsonObject AgentCoordinator::buildPlanStatus(const PlanState& plan) const
+void* AgentCoordinator::buildPlanStatus(const PlanState& plan) const
 {
     // Build the JSON status representation (expensive operation for large plans)
-    QJsonObject status;
+    void* status;
     status["planId"] = plan.id;
-    status["createdAt"] = plan.createdAt.toString(Qt::ISODate);
+    status["createdAt"] = plan.createdAt.toString(//ISODate);
     status["cancelled"] = plan.cancelled;
     status["cancelReason"] = plan.cancelReason;
 
-    QJsonArray taskArray;
+    void* taskArray;
     for (auto it = plan.tasks.cbegin(); it != plan.tasks.cend(); ++it) {
         const auto& task = it.value();
-        QJsonObject taskObj;
+        void* taskObj;
         taskObj["id"] = task.id;
         taskObj["name"] = task.name;
         taskObj["agentId"] = task.agentId;
         taskObj["state"] = taskStateToString(plan.state.value(task.id));
         taskObj["priority"] = task.priority;
-        taskObj["dependencies"] = QJsonArray::fromStringList(task.dependencies);
+        taskObj["dependencies"] = void*::fromStringList(task.dependencies);
         taskObj["remainingDependencies"] = plan.remainingDependencies.value(task.id);
         taskArray.append(taskObj);
     }
@@ -906,3 +898,4 @@ QJsonObject AgentCoordinator::buildPlanStatus(const PlanState& plan) const
     status["context"] = plan.sharedContext;
     return status;
 }
+

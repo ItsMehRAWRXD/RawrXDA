@@ -323,6 +323,3 @@ private:
     std::string m_executable;
 };
 
-
-
-

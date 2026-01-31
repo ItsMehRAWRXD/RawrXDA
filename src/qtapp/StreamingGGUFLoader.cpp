@@ -1,63 +1,57 @@
 #include "StreamingGGUFLoader.hpp"
-#include <QDebug>
-#include <QDateTime>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QFileInfo>
+
+
 #include <algorithm>
 
-StreamingGGUFLoader::StreamingGGUFLoader(QObject* parent)
-    : QObject(parent) {
+StreamingGGUFLoader::StreamingGGUFLoader(void* parent)
+    : void(parent) {
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "INFO";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "initialized";
     
-    qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
 }
 
 StreamingGGUFLoader::~StreamingGGUFLoader() {
     Close();
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "INFO";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "destroyed";
     logEntry["total_zones_loaded"] = (qint64)m_metrics.total_zones_loaded;
     logEntry["total_tensors_accessed"] = (qint64)m_metrics.total_tensors_accessed;
     
-    qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
 }
 
-bool StreamingGGUFLoader::Open(const QString& filePath) {
-    QElapsedTimer timer;
+bool StreamingGGUFLoader::Open(const std::string& filePath) {
+    std::chrono::steady_clock timer;
     timer.start();
     
     m_file.setFileName(filePath);
     if (!m_file.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
-        QJsonObject logEntry;
-        logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* logEntry;
+        logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "ERROR";
         logEntry["component"] = "StreamingGGUFLoader";
         logEntry["event"] = "open_failed";
         logEntry["file_path"] = filePath;
         logEntry["error"] = m_file.errorString();
         
-        qCritical().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
-        emit ErrorOccurred(QString("Failed to open: %1").arg(m_file.errorString()));
+        ErrorOccurred(std::string("Failed to open: %1")));
         return false;
     }
     
     m_totalSize = m_file.size();
-    m_modelName = QFileInfo(filePath).baseName();
+    m_modelName = std::filesystem::path(filePath).baseName();
     
     qint64 open_time_ms = timer.elapsed();
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "INFO";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "file_opened";
@@ -67,22 +61,20 @@ bool StreamingGGUFLoader::Open(const QString& filePath) {
     logEntry["file_size_mb"] = m_totalSize / (1024.0 * 1024.0);
     logEntry["open_time_ms"] = open_time_ms;
     
-    qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     
     return true;
 }
 
 bool StreamingGGUFLoader::BuildTensorIndex() {
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "INFO";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "building_tensor_index";
     
-    qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     
     // TODO: Parse GGUF header and populate m_tensorIndex
     // For now, this is a stub implementation
@@ -97,15 +89,14 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
     
     qint64 index_time_ms = timer.elapsed();
     
-    QJsonObject resultLog;
-    resultLog["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* resultLog;
+    resultLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     resultLog["level"] = "INFO";
     resultLog["component"] = "StreamingGGUFLoader";
     resultLog["event"] = "tensor_index_built";
     resultLog["tensor_count"] = m_tensorIndex.size();
     resultLog["index_time_ms"] = index_time_ms;
     
-    qInfo().noquote() << QJsonDocument(resultLog).toJson(QJsonDocument::Compact);
     
     return true;
 }
@@ -116,19 +107,18 @@ void StreamingGGUFLoader::Close() {
     if (m_file.isOpen()) {
         m_file.close();
         
-        QJsonObject logEntry;
-        logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* logEntry;
+        logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "INFO";
         logEntry["component"] = "StreamingGGUFLoader";
         logEntry["event"] = "file_closed";
         logEntry["model_name"] = m_modelName;
         
-        qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     }
 }
 
-bool StreamingGGUFLoader::LoadZone(const QString& zoneName) {
-    QElapsedTimer timer;
+bool StreamingGGUFLoader::LoadZone(const std::string& zoneName) {
+    std::chrono::steady_clock timer;
     timer.start();
     
     if (m_loadedZones.contains(zoneName)) {
@@ -142,14 +132,13 @@ bool StreamingGGUFLoader::LoadZone(const QString& zoneName) {
         evictLeastRecentlyUsed();
     }
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "DEBUG";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "loading_zone";
     logEntry["zone_name"] = zoneName;
     
-    qDebug().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     
     // TODO: Compute zone boundaries from tensor index
     // For now, use stub implementation
@@ -164,16 +153,15 @@ bool StreamingGGUFLoader::LoadZone(const QString& zoneName) {
     zone.mapped_data = m_file.map(zone.start_offset_in_file, zone.size_bytes);
     
     if (!zone.mapped_data) {
-        QJsonObject errorLog;
-        errorLog["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* errorLog;
+        errorLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         errorLog["level"] = "ERROR";
         errorLog["component"] = "StreamingGGUFLoader";
         errorLog["event"] = "zone_map_failed";
         errorLog["zone_name"] = zoneName;
         errorLog["error"] = m_file.errorString();
         
-        qCritical().noquote() << QJsonDocument(errorLog).toJson(QJsonDocument::Compact);
-        emit ErrorOccurred(QString("Failed to map zone %1: %2").arg(zoneName, m_file.errorString()));
+        ErrorOccurred(std::string("Failed to map zone %1: %2")));
         return false;
     }
     
@@ -190,8 +178,8 @@ bool StreamingGGUFLoader::LoadZone(const QString& zoneName) {
             m_metrics.total_zones_loaded;
     }
     
-    QJsonObject resultLog;
-    resultLog["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* resultLog;
+    resultLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     resultLog["level"] = "INFO";
     resultLog["component"] = "StreamingGGUFLoader";
     resultLog["event"] = "zone_loaded";
@@ -201,18 +189,17 @@ bool StreamingGGUFLoader::LoadZone(const QString& zoneName) {
     resultLog["total_loaded_zones"] = m_loadedZones.size();
     resultLog["total_mapped_mb"] = m_metrics.total_bytes_mapped / (1024.0 * 1024.0);
     
-    qInfo().noquote() << QJsonDocument(resultLog).toJson(QJsonDocument::Compact);
     
-    emit ZoneLoaded(zoneName, load_time_ms);
+    ZoneLoaded(zoneName, load_time_ms);
     return true;
 }
 
-void StreamingGGUFLoader::UnloadZone(const QString& zoneName) {
+void StreamingGGUFLoader::UnloadZone(const std::string& zoneName) {
     if (!m_loadedZones.contains(zoneName)) {
         return;
     }
     
-    QElapsedTimer timer;
+    std::chrono::steady_clock timer;
     timer.start();
     
     ZoneMemory zone = m_loadedZones.take(zoneName);
@@ -221,14 +208,13 @@ void StreamingGGUFLoader::UnloadZone(const QString& zoneName) {
         const bool unmapped = m_file.unmap(zone.mapped_data);
         
         if (!unmapped) {
-            QJsonObject errorLog;
-            errorLog["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+            void* errorLog;
+            errorLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
             errorLog["level"] = "WARNING";
             errorLog["component"] = "StreamingGGUFLoader";
             errorLog["event"] = "zone_unmap_failed";
             errorLog["zone_name"] = zoneName;
             
-            qWarning().noquote() << QJsonDocument(errorLog).toJson(QJsonDocument::Compact);
         }
         
         m_metrics.total_bytes_mapped -= zone.size_bytes;
@@ -236,8 +222,8 @@ void StreamingGGUFLoader::UnloadZone(const QString& zoneName) {
     
     m_metrics.total_zones_evicted++;
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "DEBUG";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "zone_evicted";
@@ -246,22 +232,20 @@ void StreamingGGUFLoader::UnloadZone(const QString& zoneName) {
     logEntry["access_count"] = (qint64)zone.access_count;
     logEntry["evict_time_ms"] = timer.elapsed();
     
-    qDebug().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     
-    emit ZoneEvicted(zoneName);
+    ZoneEvicted(zoneName);
 }
 
 void StreamingGGUFLoader::UnloadAll() {
     const auto keys = m_loadedZones.keys();
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "INFO";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "unloading_all_zones";
     logEntry["zone_count"] = keys.size();
     
-    qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     
     for (const auto& k : keys) {
         UnloadZone(k);
@@ -274,7 +258,7 @@ void StreamingGGUFLoader::evictLeastRecentlyUsed() {
     }
     
     // Find zone with oldest access time
-    QString lruZone;
+    std::string lruZone;
     auto oldestTime = std::chrono::system_clock::now();
     
     for (auto it = m_loadedZones.begin(); it != m_loadedZones.end(); ++it) {
@@ -285,32 +269,30 @@ void StreamingGGUFLoader::evictLeastRecentlyUsed() {
     }
     
     if (!lruZone.isEmpty()) {
-        QJsonObject logEntry;
-        logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* logEntry;
+        logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "DEBUG";
         logEntry["component"] = "StreamingGGUFLoader";
         logEntry["event"] = "evicting_lru_zone";
         logEntry["zone_name"] = lruZone;
         
-        qDebug().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
         
         UnloadZone(lruZone);
     }
 }
 
-bool StreamingGGUFLoader::GetTensorData(const QString& tensorName, std::vector<uint8_t>& outData) {
-    QElapsedTimer timer;
+bool StreamingGGUFLoader::GetTensorData(const std::string& tensorName, std::vector<uint8_t>& outData) {
+    std::chrono::steady_clock timer;
     timer.start();
     
     if (!m_tensorIndex.contains(tensorName)) {
-        QJsonObject logEntry;
-        logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* logEntry;
+        logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "WARNING";
         logEntry["component"] = "StreamingGGUFLoader";
         logEntry["event"] = "tensor_not_found";
         logEntry["tensor_name"] = tensorName;
         
-        qWarning().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
         
         outData.clear();
         return false;
@@ -335,8 +317,8 @@ bool StreamingGGUFLoader::GetTensorData(const QString& tensorName, std::vector<u
     
     m_metrics.total_tensors_accessed++;
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "DEBUG";
     logEntry["component"] = "StreamingGGUFLoader";
     logEntry["event"] = "tensor_accessed";
@@ -345,18 +327,17 @@ bool StreamingGGUFLoader::GetTensorData(const QString& tensorName, std::vector<u
     logEntry["zone_id"] = meta.zone_id;
     logEntry["access_time_ms"] = timer.elapsed();
     
-    qDebug().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     
-    emit TensorAccessed(tensorName);
+    TensorAccessed(tensorName);
     
     return true;
 }
 
-bool StreamingGGUFLoader::HasTensor(const QString& tensorName) const {
+bool StreamingGGUFLoader::HasTensor(const std::string& tensorName) const {
     return m_tensorIndex.contains(tensorName);
 }
 
-QString StreamingGGUFLoader::getModelName() const { 
+std::string StreamingGGUFLoader::getModelName() const { 
     return m_modelName; 
 }
 
@@ -364,29 +345,29 @@ qint64 StreamingGGUFLoader::getTotalSize() const {
     return m_totalSize; 
 }
 
-QByteArray StreamingGGUFLoader::readDataFromFile(qint64 offset, qint64 size) {
+std::vector<uint8_t> StreamingGGUFLoader::readDataFromFile(qint64 offset, qint64 size) {
     if (!m_file.isOpen()) {
         return {};
     }
     
     if (!m_file.seek(offset)) {
-        QJsonObject logEntry;
-        logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* logEntry;
+        logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "ERROR";
         logEntry["component"] = "StreamingGGUFLoader";
         logEntry["event"] = "seek_failed";
         logEntry["offset"] = offset;
         
-        qCritical().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
         return {};
     }
     
     return m_file.read(size);
 }
 
-void StreamingGGUFLoader::updateZoneAccessTime(const QString& zoneName) {
+void StreamingGGUFLoader::updateZoneAccessTime(const std::string& zoneName) {
     if (m_loadedZones.contains(zoneName)) {
         m_loadedZones[zoneName].last_access_time = std::chrono::system_clock::now();
         m_loadedZones[zoneName].access_count++;
     }
 }
+

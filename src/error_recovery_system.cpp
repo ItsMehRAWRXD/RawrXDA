@@ -1,29 +1,23 @@
 // error_recovery_system.cpp - Enterprise Error Recovery & Auto-Healing System
 #include "error_recovery_system.h"
-#include <QFile>
-#include <QTextStream>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QProcess>
-#include <QRandomGenerator>
+
+
 #include <iostream>
 #include <algorithm>
 
-ErrorRecoverySystem::ErrorRecoverySystem(QObject* parent)
-    : QObject(parent),
+ErrorRecoverySystem::ErrorRecoverySystem(void* parent)
+    : void(parent),
       autoRecoveryEnabled(true),
       maxRetries(3),
       retryDelayMs(5000),
       healthCheckIntervalMs(30000) {
     
-    autoRecoveryTimer = new QTimer(this);
+    autoRecoveryTimer = new void*(this);
     autoRecoveryTimer->setInterval(retryDelayMs);
-    connect(autoRecoveryTimer, &QTimer::timeout, this, &ErrorRecoverySystem::processAutoRecovery);
-    
-    healthCheckTimer = new QTimer(this);
+// Qt connect removed
+    healthCheckTimer = new void*(this);
     healthCheckTimer->setInterval(healthCheckIntervalMs);
-    connect(healthCheckTimer, &QTimer::timeout, this, &ErrorRecoverySystem::updateSystemHealth);
-    
+// Qt connect removed
     setupDefaultStrategies();
     
     autoRecoveryTimer->start();
@@ -221,9 +215,9 @@ void ErrorRecoverySystem::setupDefaultStrategies() {
     std::cout << "[ErrorRecoverySystem] Loaded " << strategies.size() << " recovery strategies" << std::endl;
 }
 
-QString ErrorRecoverySystem::recordError(const QString& component, ErrorSeverity severity,
-                                         ErrorCategory category, const QString& message,
-                                         const QString& stackTrace, const QJsonObject& context) {
+std::string ErrorRecoverySystem::recordError(const std::string& component, ErrorSeverity severity,
+                                         ErrorCategory category, const std::string& message,
+                                         const std::string& stackTrace, const void*& context) {
     ErrorRecord error;
     error.errorId = generateErrorId();
     error.component = component;
@@ -232,7 +226,7 @@ QString ErrorRecoverySystem::recordError(const QString& component, ErrorSeverity
     error.message = message;
     error.stackTrace = stackTrace;
     error.context = context;
-    error.timestamp = QDateTime::currentDateTime();
+    error.timestamp = std::chrono::system_clock::time_point::currentDateTime();
     error.retryCount = 0;
     error.wasRecovered = false;
     
@@ -240,17 +234,17 @@ QString ErrorRecoverySystem::recordError(const QString& component, ErrorSeverity
     errorHistory.append(error);
     
     // Log based on severity
-    QString severityStr = errorSeverityToString(severity);
+    std::string severityStr = errorSeverityToString(severity);
     std::cout << "[ErrorRecoverySystem] " << severityStr.toStdString() 
               << " in " << component.toStdString() 
               << ": " << message.toStdString() << std::endl;
     
-    emit errorRecorded(error);
+    errorRecorded(error);
     
     // Auto-recovery for critical errors
     if (autoRecoveryEnabled && (severity == ErrorSeverity::Critical || severity == ErrorSeverity::Error)) {
         std::cout << "[ErrorRecoverySystem] Attempting auto-recovery for " << error.errorId.toStdString() << std::endl;
-        QTimer::singleShot(100, this, [this, errorId = error.errorId]() {
+        void*::singleShot(100, this, [this, errorId = error.errorId]() {
             attemptRecovery(errorId);
         });
     }
@@ -258,7 +252,7 @@ QString ErrorRecoverySystem::recordError(const QString& component, ErrorSeverity
     return error.errorId;
 }
 
-bool ErrorRecoverySystem::attemptRecovery(const QString& errorId) {
+bool ErrorRecoverySystem::attemptRecovery(const std::string& errorId) {
     if (!activeErrors.contains(errorId)) {
         std::cout << "[ErrorRecoverySystem] Error not found: " << errorId.toStdString() << std::endl;
         return false;
@@ -270,7 +264,7 @@ bool ErrorRecoverySystem::attemptRecovery(const QString& errorId) {
     if (error.retryCount >= maxRetries) {
         std::cout << "[ErrorRecoverySystem] Max retries exceeded for " << errorId.toStdString() << std::endl;
         error.wasRecovered = false;
-        emit recoveryFailed(error);
+        recoveryFailed(error);
         return false;
     }
     
@@ -291,14 +285,14 @@ bool ErrorRecoverySystem::attemptRecovery(const QString& errorId) {
     
     if (success) {
         error.wasRecovered = true;
-        error.recoveredAt = QDateTime::currentDateTime();
+        error.recoveredAt = std::chrono::system_clock::time_point::currentDateTime();
         
         // Move to recovered errors
         recoveredErrors.append(error);
         activeErrors.remove(errorId);
         
         std::cout << "[ErrorRecoverySystem] Recovery successful for " << errorId.toStdString() << std::endl;
-        emit errorRecoveredRecord(error);
+        errorRecoveredRecord(error);
         
         return true;
     } else {
@@ -310,7 +304,7 @@ bool ErrorRecoverySystem::attemptRecovery(const QString& errorId) {
             int delay = retryDelayMs * (1 << error.retryCount); // Exponential backoff
             std::cout << "[ErrorRecoverySystem] Scheduling retry in " << delay << "ms" << std::endl;
             
-            QTimer::singleShot(delay, this, [this, errorId]() {
+            void*::singleShot(delay, this, [this, errorId]() {
                 attemptRecovery(errorId);
             });
         }
@@ -394,7 +388,7 @@ bool ErrorRecoverySystem::recoverFallbackLocal(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Falling back to local model for " << error.component.toStdString() << std::endl;
     
     // Signal to switch to local execution
-    emit fallbackToLocalRequested(error.component);
+    fallbackToLocalRequested(error.component);
     
     return true;
 }
@@ -403,7 +397,7 @@ bool ErrorRecoverySystem::recoverClearCache(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Clearing cache for " << error.component.toStdString() << std::endl;
     
     // Signal cache clear
-    emit cacheClearRequested(error.component);
+    cacheClearRequested(error.component);
     
     // Simulate cache clear success
     return true;
@@ -412,7 +406,7 @@ bool ErrorRecoverySystem::recoverClearCache(ErrorRecord& error) {
 bool ErrorRecoverySystem::recoverRestartComponent(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Restarting component: " << error.component.toStdString() << std::endl;
     
-    emit componentRestartRequested(error.component);
+    componentRestartRequested(error.component);
     
     return true;
 }
@@ -420,7 +414,7 @@ bool ErrorRecoverySystem::recoverRestartComponent(ErrorRecord& error) {
 bool ErrorRecoverySystem::recoverReconnectNetwork(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Reconnecting network for " << error.component.toStdString() << std::endl;
     
-    emit networkReconnectRequested();
+    networkReconnectRequested();
     
     return true;
 }
@@ -428,7 +422,7 @@ bool ErrorRecoverySystem::recoverReconnectNetwork(ErrorRecord& error) {
 bool ErrorRecoverySystem::recoverReloadData(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Reloading data for " << error.component.toStdString() << std::endl;
     
-    emit dataReloadRequested(error.component);
+    dataReloadRequested(error.component);
     
     return true;
 }
@@ -436,7 +430,7 @@ bool ErrorRecoverySystem::recoverReloadData(ErrorRecord& error) {
 bool ErrorRecoverySystem::recoverReduceResources(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Reducing resource usage for " << error.component.toStdString() << std::endl;
     
-    emit resourceReductionRequested();
+    resourceReductionRequested();
     
     return true;
 }
@@ -444,7 +438,7 @@ bool ErrorRecoverySystem::recoverReduceResources(ErrorRecord& error) {
 bool ErrorRecoverySystem::recoverSwitchEndpoint(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Switching to backup endpoint" << std::endl;
     
-    emit endpointSwitchRequested(error.component);
+    endpointSwitchRequested(error.component);
     
     return true;
 }
@@ -452,7 +446,7 @@ bool ErrorRecoverySystem::recoverSwitchEndpoint(ErrorRecord& error) {
 bool ErrorRecoverySystem::recoverGracefulDegradation(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Enabling graceful degradation" << std::endl;
     
-    emit gracefulDegradationEnabled();
+    gracefulDegradationEnabled();
     
     return true;
 }
@@ -460,7 +454,7 @@ bool ErrorRecoverySystem::recoverGracefulDegradation(ErrorRecord& error) {
 bool ErrorRecoverySystem::recoverReauthenticate(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Re-authenticating for " << error.component.toStdString() << std::endl;
     
-    emit reauthenticationRequested(error.component);
+    reauthenticationRequested(error.component);
     
     return true;
 }
@@ -468,28 +462,28 @@ bool ErrorRecoverySystem::recoverReauthenticate(ErrorRecord& error) {
 bool ErrorRecoverySystem::recoverEscalateAdmin(ErrorRecord& error) {
     std::cout << "[ErrorRecoverySystem] Escalating to administrator: " << error.message.toStdString() << std::endl;
     
-    emit adminEscalationRequired(error);
+    adminEscalationRequired(error);
     
     return true; // Notification always succeeds
 }
 
-void ErrorRecoverySystem::resolveError(const QString& errorId) {
+void ErrorRecoverySystem::resolveError(const std::string& errorId) {
     if (!activeErrors.contains(errorId)) {
         return;
     }
     
     ErrorRecord error = activeErrors[errorId];
     error.wasRecovered = true;
-    error.recoveredAt = QDateTime::currentDateTime();
+    error.recoveredAt = std::chrono::system_clock::time_point::currentDateTime();
     
     recoveredErrors.append(error);
     activeErrors.remove(errorId);
     
     std::cout << "[ErrorRecoverySystem] Manually resolved error: " << errorId.toStdString() << std::endl;
-    emit errorRecoveredRecord(error);
+    errorRecoveredRecord(error);
 }
 
-ErrorRecord ErrorRecoverySystem::getError(const QString& errorId) const {
+ErrorRecord ErrorRecoverySystem::getError(const std::string& errorId) const {
     if (activeErrors.contains(errorId)) {
         return activeErrors[errorId];
     }
@@ -503,12 +497,12 @@ ErrorRecord ErrorRecoverySystem::getError(const QString& errorId) const {
     return ErrorRecord();
 }
 
-QVector<ErrorRecord> ErrorRecoverySystem::getActiveErrors() const {
+std::vector<ErrorRecord> ErrorRecoverySystem::getActiveErrors() const {
     return activeErrors.values().toVector();
 }
 
-QVector<ErrorRecord> ErrorRecoverySystem::getErrorsByComponent(const QString& component) const {
-    QVector<ErrorRecord> componentErrors;
+std::vector<ErrorRecord> ErrorRecoverySystem::getErrorsByComponent(const std::string& component) const {
+    std::vector<ErrorRecord> componentErrors;
     
     for (const ErrorRecord& error : activeErrors.values()) {
         if (error.component == component) {
@@ -519,8 +513,8 @@ QVector<ErrorRecord> ErrorRecoverySystem::getErrorsByComponent(const QString& co
     return componentErrors;
 }
 
-QVector<ErrorRecord> ErrorRecoverySystem::getErrorsBySeverity(ErrorSeverity severity) const {
-    QVector<ErrorRecord> severityErrors;
+std::vector<ErrorRecord> ErrorRecoverySystem::getErrorsBySeverity(ErrorSeverity severity) const {
+    std::vector<ErrorRecord> severityErrors;
     
     for (const ErrorRecord& error : activeErrors.values()) {
         if (error.severity == severity) {
@@ -563,7 +557,7 @@ void ErrorRecoverySystem::updateSystemHealth() {
         currentSystemHealth.isHealthy = (currentSystemHealth.healthScore >= 80.0);
     }
     
-    emit systemHealthUpdated(currentSystemHealth);
+    systemHealthUpdated(currentSystemHealth);
 }
 
 void ErrorRecoverySystem::processAutoRecovery() {
@@ -572,12 +566,12 @@ void ErrorRecoverySystem::processAutoRecovery() {
     }
     
     // Process pending recoveries
-    for (const QString& errorId : activeErrors.keys()) {
+    for (const std::string& errorId : activeErrors.keys()) {
         ErrorRecord& error = activeErrors[errorId];
         
         // Only auto-recover errors that haven't exceeded retry limit
         if (error.retryCount < maxRetries) {
-            QDateTime now = QDateTime::currentDateTime();
+            std::chrono::system_clock::time_point now = std::chrono::system_clock::time_point::currentDateTime();
             qint64 msSinceError = error.timestamp.msecsTo(now);
             
             // Wait before first retry
@@ -613,11 +607,11 @@ void ErrorRecoverySystem::clearRecoveredErrors() {
     std::cout << "[ErrorRecoverySystem] Recovered errors cleared" << std::endl;
 }
 
-QString ErrorRecoverySystem::generateErrorId() {
-    return QString("error_%1_%2").arg(QDateTime::currentMSecsSinceEpoch()).arg(QRandomGenerator::global()->bounded(10000));
+std::string ErrorRecoverySystem::generateErrorId() {
+    return std::string("error_%1_%2"))->bounded(10000));
 }
 
-QString ErrorRecoverySystem::errorSeverityToString(ErrorSeverity severity) const {
+std::string ErrorRecoverySystem::errorSeverityToString(ErrorSeverity severity) const {
     switch (severity) {
         case ErrorSeverity::Info: return "INFO";
         case ErrorSeverity::Warning: return "WARNING";
@@ -628,7 +622,7 @@ QString ErrorRecoverySystem::errorSeverityToString(ErrorSeverity severity) const
     }
 }
 
-QString ErrorRecoverySystem::errorCategoryToString(ErrorCategory category) const {
+std::string ErrorRecoverySystem::errorCategoryToString(ErrorCategory category) const {
     switch (category) {
         case ErrorCategory::System: return "System";
         case ErrorCategory::Network: return "Network";
@@ -644,8 +638,8 @@ QString ErrorRecoverySystem::errorCategoryToString(ErrorCategory category) const
     }
 }
 
-QJsonObject ErrorRecoverySystem::getErrorStatistics() const {
-    QJsonObject stats;
+void* ErrorRecoverySystem::getErrorStatistics() const {
+    void* stats;
     
     stats["active_errors"] = activeErrors.size();
     stats["recovered_errors"] = recoveredErrors.size();
@@ -661,12 +655,13 @@ QJsonObject ErrorRecoverySystem::getErrorStatistics() const {
     }
     
     // Errors by category
-    QJsonObject byCategory;
+    void* byCategory;
     for (const ErrorRecord& error : activeErrors.values()) {
-        QString categoryStr = errorCategoryToString(error.category);
+        std::string categoryStr = errorCategoryToString(error.category);
         byCategory[categoryStr] = byCategory[categoryStr].toInt() + 1;
     }
     stats["errors_by_category"] = byCategory;
     
     return stats;
 }
+

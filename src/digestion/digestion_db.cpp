@@ -11,8 +11,8 @@ bool DigestionDatabase::open(const std::string &path, std::string *error) {
     }
 
     const std::string connectionName = std::stringLiteral("digestion_%1_%2")
-        .arg(reinterpret_cast<quintptr>(this))
-        .arg(// DateTime::currentMSecsSinceEpoch());
+        )
+        );
 
     m_db = QSqlDatabase::addDatabase("QSQLITE", connectionName);
     m_db.setDatabaseName(path);
@@ -106,7 +106,7 @@ std::vector<void*> DigestionDatabase::fetchRecentRuns(int limit, std::string *er
         return runs;
     }
 
-    while (query.next()) {
+    while (query) {
         void* row;
         row.insert("id", query.value(0));
         row.insert("root_dir", query.value(1).toString());
@@ -245,9 +245,4 @@ bool DigestionDatabase::executeBatch(const std::stringList &statements, std::str
     }
     return true;
 }
-
-
-
-
-
 

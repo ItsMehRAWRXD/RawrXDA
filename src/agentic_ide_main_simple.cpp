@@ -1,11 +1,7 @@
 // RawrXD Agentic IDE - Minimal Main
 // Entry point for GUI application
 
-#include <QApplication>
-#include <QMainWindow>
-#include <QWidget>
-#include <QVBoxLayout>
-#include <QLabel>
+
 #include <windows.h>
 #include <shellapi.h>
 #include <cstdio>
@@ -32,29 +28,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     
     // NOW initialize the logger - after QApplication exists
     DebugLogger::getInstance().init("D:\\temp\\ide_startup.log");
-    DEBUG_LOG("=== WinMain: QApplication created ===\n");
-    
+
     // Create minimal main window
-    QMainWindow window;
+    void window;
     window.setWindowTitle("RawrXD Agentic IDE");
     window.setMinimumSize(1200, 800);
     
-    QWidget *central = new QWidget();
+    void *central = new void();
     QVBoxLayout *layout = new QVBoxLayout(central);
     QLabel *label = new QLabel("RawrXD Agentic IDE - Starting up...");
     layout->addWidget(label);
     window.setCentralWidget(central);
-    
-    DEBUG_LOG("=== WinMain: Window created and shown ===\n");
-    
+
     window.show();
-    
-    DEBUG_LOG("=== WinMain: Entering event loop ===\n");
-    
+
     int result = app.exec();
-    
-    DEBUG_LOG("=== WinMain: Event loop finished ===\n");
-    
+
     // Cleanup argv
     for (int i = 0; i < argc; ++i) {
         delete[] argv[i];
@@ -63,3 +52,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     
     return result;
 }
+

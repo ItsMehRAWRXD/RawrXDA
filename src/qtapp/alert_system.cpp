@@ -23,10 +23,9 @@
 
 // ==================== Structured Logging ====================
 #define LOG_ALERT(level, msg) \
-    // // qDebug:  std::string("[%1] [AlertSystem] [%2] %3") \
-        .arg(// DateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")) \
-        .arg(level) \
-        .arg(msg)
+        .toString("yyyy-MM-dd hh:mm:ss.zzz")) \
+         \
+
 
 #define LOG_DEBUG(msg) LOG_ALERT("DEBUG", msg)
 #define LOG_INFO(msg)  LOG_ALERT("INFO", msg)
@@ -42,8 +41,7 @@ AlertSystem::AlertSystem()
     , m_nextAlertId(1)
     , m_trayIcon(nullptr)
 {
-    LOG_INFO("Initializing AlertSystem...");
-    
+
     // Initialize default configuration
     initializeDefaultConfig();
     
@@ -57,14 +55,12 @@ AlertSystem::AlertSystem()
     
     // Load persistent configuration if exists
     loadConfiguration();
-    
-    LOG_INFO("AlertSystem initialized successfully");
+
 }
 
 AlertSystem::~AlertSystem()
 {
-    LOG_INFO("Shutting down AlertSystem...");
-    
+
     // Stop all timers
     m_healthCheckTimer->stop();
     m_performanceTimer->stop();
@@ -72,8 +68,7 @@ AlertSystem::~AlertSystem()
     
     // Save configuration and state
     saveConfiguration();
-    
-    LOG_INFO("AlertSystem shutdown complete");
+
 }
 
 // ==================== Alert Creation ====================
@@ -83,16 +78,15 @@ std::string AlertSystem::createAlert(AlertType type, AlertCategory category,
 {
     std::mutexLocker locker(&m_alertMutex);
     
-    std::string alertId = std::string("ALERT_%1_%2").arg(m_nextAlertId++).arg(// DateTime::currentMSecsSinceEpoch());
-    LOG_INFO(std::string("Creating alert: id=%1, type=%2, category=%3, priority=%4")
-        .arg(alertId)
-        .arg(static_cast<int>(type))
-        .arg(static_cast<int>(category))
-        .arg(static_cast<int>(priority)));
+    std::string alertId = std::string("ALERT_%1_%2"));
+
+        )
+        )
+        ));
     
     // Check if category is enabled
     if (!m_config.enabledCategories.contains(category)) {
-        LOG_DEBUG(std::string("Alert category %1 is disabled, skipping").arg(static_cast<int>(category)));
+
         return std::string();
     }
     
@@ -119,7 +113,7 @@ std::string AlertSystem::createAlert(AlertType type, AlertCategory category,
     // Deliver notification based on settings
     deliverNotification(alert);
     
-    // Emit signal
+    // signal
     alertCreated(alertId, message);
     
     return alertId;
@@ -136,13 +130,12 @@ void AlertSystem::acknowledgeAlert(const std::string& alertId)
             m_alertHistory[alertId] = m_activeAlerts[i];
             
             m_stats.alertsAcknowledged++;
-            LOG_INFO(std::string("Alert acknowledged: %1").arg(alertId));
+
             alertAcknowledged(alertId);
             return;
         }
     }
-    
-    LOG_WARN(std::string("Cannot acknowledge - alert not found: %1").arg(alertId));
+
 }
 
 void AlertSystem::dismissAlert(const std::string& alertId)
@@ -157,14 +150,12 @@ void AlertSystem::dismissAlert(const std::string& alertId)
             
             m_activeAlerts.removeAt(i);
             m_stats.alertsDismissed++;
-            
-            LOG_INFO(std::string("Alert dismissed: %1").arg(alertId));
+
             alertDismissed(alertId);
             return;
         }
     }
-    
-    LOG_WARN(std::string("Cannot dismiss - alert not found: %1").arg(alertId));
+
 }
 
 void AlertSystem::resolveAlert(const std::string& alertId, const std::string& resolution)
@@ -180,14 +171,12 @@ void AlertSystem::resolveAlert(const std::string& alertId, const std::string& re
             
             m_activeAlerts.removeAt(i);
             m_stats.alertsResolved++;
-            
-            LOG_INFO(std::string("Alert resolved: %1 - %2").arg(alertId, resolution));
+
             alertResolved(alertId);
             return;
         }
     }
-    
-    LOG_WARN(std::string("Cannot resolve - alert not found: %1").arg(alertId));
+
 }
 
 // ==================== Alert Retrieval ====================
@@ -242,7 +231,7 @@ std::vector<Alert> AlertSystem::getAlertHistory(const // DateTime& since) const
 
 void AlertSystem::checkSystemHealth()
 {
-    LOG_DEBUG("Running system health check...");
+
     std::chrono::steady_clock timer;
     timer.start();
     
@@ -250,7 +239,7 @@ void AlertSystem::checkSystemHealth()
     double memoryUsage = getMemoryUsagePercent();
     if (memoryUsage > m_config.memoryThreshold) {
         createAlert(AlertType::Warning, AlertCategory::Performance,
-            std::string("High memory usage: %1%").arg(memoryUsage, 0, 'f', 1),
+            std::string("High memory usage: %1%"),
             AlertPriority::High);
     }
     
@@ -258,7 +247,7 @@ void AlertSystem::checkSystemHealth()
     double cpuUsage = getCpuUsagePercent();
     if (cpuUsage > m_config.cpuThreshold) {
         createAlert(AlertType::Warning, AlertCategory::Performance,
-            std::string("High CPU usage: %1%").arg(cpuUsage, 0, 'f', 1),
+            std::string("High CPU usage: %1%"),
             AlertPriority::High);
     }
     
@@ -266,7 +255,7 @@ void AlertSystem::checkSystemHealth()
     double diskUsage = getDiskUsagePercent();
     if (diskUsage > m_config.diskThreshold) {
         createAlert(AlertType::Warning, AlertCategory::Performance,
-            std::string("Low disk space: %1% used").arg(diskUsage, 0, 'f', 1),
+            std::string("Low disk space: %1% used"),
             AlertPriority::Medium);
     }
     
@@ -275,15 +264,13 @@ void AlertSystem::checkSystemHealth()
     
     // Check for unresponsive threads
     checkThreadHealth();
-    
-    LOG_DEBUG(std::string("Health check completed in %1ms").arg(timer.elapsed()));
+
     healthCheckCompleted(getSystemHealthStatus());
 }
 
 void AlertSystem::monitorPerformance()
 {
-    LOG_DEBUG("Monitoring performance metrics...");
-    
+
     PerformanceMetrics metrics;
     metrics.timestamp = // DateTime::currentDateTimeUtc();
     metrics.memoryUsageMB = getMemoryUsageMB();
@@ -333,7 +320,7 @@ nlohmann::json AlertSystem::getSystemHealthStatus() const
 
 void AlertSystem::setAlertConfig(const AlertConfig& config)
 {
-    LOG_INFO("Updating alert configuration...");
+
     m_config = config;
     
     // Restart timers with new intervals
@@ -357,18 +344,17 @@ void AlertSystem::enableCategory(AlertCategory category, bool enabled)
     if (enabled) {
         if (!m_config.enabledCategories.contains(category)) {
             m_config.enabledCategories.insert(category);
-            LOG_INFO(std::string("Enabled alert category: %1").arg(static_cast<int>(category)));
+
         }
     } else {
         m_config.enabledCategories.remove(category);
-        LOG_INFO(std::string("Disabled alert category: %1").arg(static_cast<int>(category)));
+
     }
 }
 
 void AlertSystem::setThreshold(const std::string& thresholdName, double value)
 {
-    LOG_INFO(std::string("Setting threshold %1 = %2").arg(thresholdName).arg(value));
-    
+
     if (thresholdName == "memory") {
         m_config.memoryThreshold = value;
     } else if (thresholdName == "cpu") {
@@ -387,14 +373,13 @@ void AlertSystem::setThreshold(const std::string& thresholdName, double value)
 void AlertSystem::setNotificationSettings(const nlohmann::json& settings)
 {
     m_config.notificationSettings = settings;
-    LOG_INFO(std::string("Notification settings updated: %1")
-        .arg(std::string::fromUtf8(nlohmann::json(settings).toJson(nlohmann::json::Compact))));
+
+        .toJson(nlohmann::json::Compact))));
 }
 
 void AlertSystem::deliverNotification(const Alert& alert)
 {
-    LOG_DEBUG(std::string("Delivering notification for alert: %1").arg(alert.id));
-    
+
     // Desktop notification
     if (m_config.notificationSettings.value("desktop", true).toBool() && m_trayIcon) {
         QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information;
@@ -445,7 +430,7 @@ void AlertSystem::playAlertSound(AlertPriority priority)
     if (std::filesystem::exists(soundFile)) {
         // QSound is deprecated but still works for simple cases
         // For production, use QMediaPlayer
-        LOG_DEBUG(std::string("Playing alert sound: %1").arg(soundFile));
+
     }
 }
 
@@ -485,9 +470,9 @@ void AlertSystem::updateAlertStats()
 
 nlohmann::json AlertSystem::exportAlertReport(const // DateTime& from, const // DateTime& to) const
 {
-    LOG_INFO(std::string("Exporting alert report from %1 to %2")
-        .arg(from.toString(ISODate))
-        .arg(to.toString(ISODate)));
+
+        )
+        ));
     
     nlohmann::json report;
     report["generatedAt"] = // DateTime::currentDateTimeUtc().toString(ISODate);
@@ -535,8 +520,7 @@ nlohmann::json AlertSystem::exportAlertReport(const // DateTime& from, const // 
 
 void AlertSystem::startMonitoring()
 {
-    LOG_INFO("Starting system monitoring...");
-    
+
     m_healthCheckTimer->start(m_config.healthCheckInterval);
     m_performanceTimer->start(m_config.performanceCheckInterval);
     m_alertCleanupTimer->start(3600000);  // Cleanup every hour
@@ -550,8 +534,7 @@ void AlertSystem::startMonitoring()
 
 void AlertSystem::stopMonitoring()
 {
-    LOG_INFO("Stopping system monitoring...");
-    
+
     m_healthCheckTimer->stop();
     m_performanceTimer->stop();
     m_alertCleanupTimer->stop();
@@ -566,15 +549,13 @@ void AlertSystem::clearAllAlerts()
     int count = m_activeAlerts.size();
     m_activeAlerts.clear();
     m_stats.alertsDismissed += count;
-    
-    LOG_INFO(std::string("Cleared %1 active alerts").arg(count));
+
     alertsCleared();
 }
 
 void AlertSystem::processAlertAction(const std::string& alertId, const std::string& action)
 {
-    LOG_INFO(std::string("Processing alert action: %1 - %2").arg(alertId, action));
-    
+
     if (action == "acknowledge") {
         acknowledgeAlert(alertId);
     } else if (action == "dismiss") {
@@ -601,8 +582,7 @@ void AlertSystem::snoozeAlert(const std::string& alertId, int durationSeconds)
             // Timer::singleShot(durationSeconds * 1000, this, [this, alertId]() {
                 unsnoozeAlert(alertId);
             });
-            
-            LOG_INFO(std::string("Alert snoozed for %1 seconds: %2").arg(durationSeconds).arg(alertId));
+
             alertSnoozed(alertId, durationSeconds);
             return;
         }
@@ -619,8 +599,7 @@ void AlertSystem::unsnoozeAlert(const std::string& alertId)
             m_activeAlerts[i].status = AlertStatus::Active;
             m_activeAlerts[i].updatedAt = // DateTime::currentDateTimeUtc();
             m_activeAlerts[i].context.remove("snoozedUntil");
-            
-            LOG_INFO(std::string("Alert un-snoozed: %1").arg(alertId));
+
             alertCreated(alertId, m_activeAlerts[i].message);  // Re-notify
             return;
         }
@@ -674,8 +653,7 @@ void AlertSystem::loadConfiguration()
             m_config.healthCheckInterval = config["healthCheckInterval"].toInt(30000);
             m_config.performanceCheckInterval = config["performanceCheckInterval"].toInt(10000);
             m_config.notificationSettings = config["notificationSettings"].toObject();
-            
-            LOG_INFO("Configuration loaded from file");
+
         }
     }
 }
@@ -699,7 +677,7 @@ void AlertSystem::saveConfiguration()
     if (configFile.open(std::iostream::WriteOnly)) {
         configFile.write(nlohmann::json(config).toJson());
         configFile.close();
-        LOG_DEBUG("Configuration saved to file");
+
     }
 }
 
@@ -803,15 +781,14 @@ void AlertSystem::analyzePerformanceTrends()
     if (recentAvg > olderAvg * 1.2) {  // 20% increase
         createAlert(AlertType::Warning, AlertCategory::Performance,
             std::string("Memory usage trending upward: %1MB -> %2MB")
-                .arg(olderAvg, 0, 'f', 1).arg(recentAvg, 0, 'f', 1),
+                ,
             AlertPriority::Medium);
     }
 }
 
 void AlertSystem::cleanupOldAlerts()
 {
-    LOG_DEBUG("Cleaning up old alerts...");
-    
+
     // DateTime cutoff = // DateTime::currentDateTimeUtc().addDays(-7);  // Keep 7 days
     int removed = 0;
     
@@ -827,14 +804,7 @@ void AlertSystem::cleanupOldAlerts()
     }
     
     if (removed > 0) {
-        LOG_INFO(std::string("Cleaned up %1 old alerts").arg(removed));
+
     }
 }
-
-
-
-
-
-
-
 

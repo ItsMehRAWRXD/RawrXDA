@@ -295,5 +295,3 @@ private:
 
 #endif // AI_DIGESTION_ENGINE_HPP
 
-
-

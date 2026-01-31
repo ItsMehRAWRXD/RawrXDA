@@ -1,42 +1,40 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
 
 // Forward declarations
-class QTcpServer;
-class QTcpSocket;
+
+
 class TransformerBlockScalar;
 class InferenceEngine;
 
-class ScalarServer : public QObject
+class ScalarServer : public void
 {
-    Q_OBJECT
 
 public:
-    explicit ScalarServer(QObject *parent = nullptr);
+    explicit ScalarServer(void *parent = nullptr);
     ~ScalarServer();
     
     bool startServer(quint16 port = 8080);
     void stopServer();
-    bool loadModel(const QString &modelPath);
+    bool loadModel(const std::string &modelPath);
     
     quint16 getPort() const;
     bool isRunning() const;
 
-private slots:
+private:
     void handleNewConnection();
-    void handleClientData(QTcpSocket *clientSocket);
+    void handleClientData(void* *clientSocket);
 
 private:
-    void handleInferenceRequest(QTcpSocket *clientSocket, const QJsonObject &request);
-    void handleChatRequest(QTcpSocket *clientSocket, const QJsonObject &request);
-    void handleAnalyzeRequest(QTcpSocket *clientSocket, const QJsonObject &request);
+    void handleInferenceRequest(void* *clientSocket, const void* &request);
+    void handleChatRequest(void* *clientSocket, const void* &request);
+    void handleAnalyzeRequest(void* *clientSocket, const void* &request);
     
-    void sendJsonResponse(QTcpSocket *clientSocket, const QJsonObject &response);
-    void sendErrorResponse(QTcpSocket *clientSocket, const QString &error);
+    void sendJsonResponse(void* *clientSocket, const void* &response);
+    void sendErrorResponse(void* *clientSocket, const std::string &error);
     
-    QTcpServer *m_server;
+    void* *m_server;
     TransformerBlockScalar *m_transformerBlock;
     InferenceEngine *m_inferenceEngine;
 };
+

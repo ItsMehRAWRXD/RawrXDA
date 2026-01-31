@@ -41,13 +41,13 @@ bool BlobToGGUFConverter::loadBlobFile(const std::string& blobPath)
 {
     // Info fileInfo(blobPath);
     if (!fileInfo.exists()) {
-        conversionError(std::string("Blob file not found: %1").arg(blobPath));
+        conversionError(std::string("Blob file not found: %1"));
         return false;
     }
 
     // File operation removed;
     if (!file.open(std::iostream::ReadOnly)) {
-        conversionError(std::string("Failed to open blob file: %1").arg(file.errorString()));
+        conversionError(std::string("Failed to open blob file: %1")));
         return false;
     }
 
@@ -57,7 +57,6 @@ bool BlobToGGUFConverter::loadBlobFile(const std::string& blobPath)
     m_blobPath = blobPath;
     m_totalBlobSize = m_blobData.size();
 
-    // // qInfo:  "[BlobConverter] Loaded blob file:" << blobPath
             << "Size:" << m_totalBlobSize << "bytes";
 
     return true;
@@ -69,7 +68,6 @@ void BlobToGGUFConverter::setMetadata(const BlobGGUFMetadata& metadata)
     if (m_metadata.modelName.empty()) {
         m_metadata.modelName = "converted-model";
     }
-    // // qDebug:  "[BlobConverter] Metadata set:" << m_metadata.modelName;
 }
 
 bool BlobToGGUFConverter::parseBlob(int estTensorCount)
@@ -84,14 +82,13 @@ bool BlobToGGUFConverter::parseBlob(int estTensorCount)
         m_progress.totalTensors = m_tensors.size();
         m_progress.totalBytes = m_totalBlobSize;
 
-        // // qInfo:  "[BlobConverter] Detected" << m_tensors.size() << "tensors (" << m_tensors.size() << " chunks)";
 
-        // Emit a metadata preview signal for UI
+        // a metadata preview signal for UI
         conversionMetadataPreview(generateMetadataPreview());
 
         return !m_tensors.empty();
     } catch (const std::exception& e) {
-        conversionError(std::string("Parse error: %1").arg(e.what()));
+        conversionError(std::string("Parse error: %1")));
         return false;
     }
 }
@@ -130,7 +127,7 @@ std::vector<ConversionTensor> BlobToGGUFConverter::detectTensors()
         int64_t size = std::min(chunkSize, remaining);
 
         ConversionTensor tensor;
-        tensor.name = std::string("tensor_%1").arg(tensorIdx++);
+        tensor.name = std::string("tensor_%1");
         tensor.data = m_blobData.mid(offset, size);
         tensor.ggmlType = estimateQuantizationType(tensor.data);
         tensor.dataOffset = offset;
@@ -180,7 +177,7 @@ bool BlobToGGUFConverter::convertToGGUF(const std::string& outputPath)
     try {
         // File operation removed;
         if (!outputFile.open(std::iostream::WriteOnly)) {
-            conversionError(std::string("Failed to open output file: %1").arg(outputFile.errorString()));
+            conversionError(std::string("Failed to open output file: %1")));
             m_isConverting = false;
             return false;
         }
@@ -204,13 +201,12 @@ bool BlobToGGUFConverter::convertToGGUF(const std::string& outputPath)
         outputFile.close();
         m_isConverting = false;
 
-        // // qInfo:  "[BlobConverter] Conversion complete:" << outputPath;
         conversionComplete(outputPath);
         return true;
 
     } catch (const std::exception& e) {
         m_isConverting = false;
-        conversionError(std::string("Conversion error: %1").arg(e.what()));
+        conversionError(std::string("Conversion error: %1")));
         std::filesystem::remove(outputPath);
         return false;
     }
@@ -286,11 +282,10 @@ bool BlobToGGUFConverter::writeGGUFHeader(std::iostream* file)
             writeString(it.value());
         }
 
-        // // qInfo:  "[BlobConverter] GGUF header written successfully";
         return true;
 
     } catch (const std::exception& e) {
-        conversionError(std::string("Header write error: %1").arg(e.what()));
+        conversionError(std::string("Header write error: %1")));
         return false;
     }
 }
@@ -330,7 +325,6 @@ bool BlobToGGUFConverter::writeTensorData(std::iostream* file)
             // Compress using brutal MASM for maximum efficiency
             std::vector<uint8_t> compressed = brutal::compress(tensor.data);
             if (!compressed.empty()) {
-                // // qDebug:  "[BlobConverter] Compressed" << tensor.name 
                          << "from" << tensor.data.size() << "to" << compressed.size() << "bytes";
                 file->write(compressed);
                 // Track compression ratio
@@ -338,7 +332,6 @@ bool BlobToGGUFConverter::writeTensorData(std::iostream* file)
                 m_progress.lastCompressionRatio = ratio;
             } else {
                 // Fallback to uncompressed if compression fails
-                // // qWarning:  "[BlobConverter] Compression failed for" << tensor.name << ", writing uncompressed";
                 file->write(tensor.data);
             }
 
@@ -346,11 +339,10 @@ bool BlobToGGUFConverter::writeTensorData(std::iostream* file)
             updateProgress(i + 1, file->pos(), tensor.name, "Writing tensors...");
         }
 
-        // // qInfo:  "[BlobConverter] All tensor data written";
         return true;
 
     } catch (const std::exception& e) {
-        conversionError(std::string("Tensor write error: %1").arg(e.what()));
+        conversionError(std::string("Tensor write error: %1")));
         return false;
     }
 }
@@ -405,9 +397,4 @@ void BlobToGGUFConverter::updateProgress(int processedTensors, int64_t bytesProc
 
     progressUpdated(m_progress);
 }
-
-
-
-
-
 

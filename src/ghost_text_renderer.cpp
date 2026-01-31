@@ -6,22 +6,18 @@
  */
 
 #include "ghost_text_renderer.h"
-#include <QKeyEvent>
-#include <QAbstractTextDocumentLayout>
-#include <QTextBlock>
-#include <QScrollBar>
-#include <QThread>
+
 
 namespace RawrXD {
 
-GhostTextRenderer::GhostTextRenderer(QPlainTextEdit* editor, QWidget* parent)
-    : QWidget(parent)
+GhostTextRenderer::GhostTextRenderer(QPlainTextEdit* editor, void* parent)
+    : void(parent)
     , m_editor(editor)
 {
     // Lightweight constructor
-    setWindowFlags(Qt::Widget);
-    setAttribute(Qt::WA_TransparentForMouseEvents);
-    setAttribute(Qt::WA_TranslucentBackground);
+    setWindowFlags(//Widget);
+    setAttribute(//WA_TransparentForMouseEvents);
+    setAttribute(//WA_TranslucentBackground);
 }
 
 void GhostTextRenderer::initialize() {
@@ -35,11 +31,9 @@ void GhostTextRenderer::initialize() {
     m_editor->viewport()->installEventFilter(this);
     
     // Fade timer for animations
-    m_fadeTimer = new QTimer(this);
+    m_fadeTimer = new void*(this);
     m_fadeTimer->setInterval(30);
-    connect(m_fadeTimer, &QTimer::timeout, this, [this]() {
-        if (m_fading) {
-            m_opacity -= 0.1;
+// Qt connect removed
             if (m_opacity <= 0.0) {
                 m_opacity = 0.0;
                 m_fading = false;
@@ -51,12 +45,12 @@ void GhostTextRenderer::initialize() {
     });
     
     // Track editor changes
-    connect(m_editor, &QPlainTextEdit::textChanged, this, &GhostTextRenderer::updateOverlayGeometry);
-    connect(m_editor->verticalScrollBar(), &QScrollBar::valueChanged, this, &GhostTextRenderer::updateOverlayGeometry);
-    connect(m_editor->horizontalScrollBar(), &QScrollBar::valueChanged, this, &GhostTextRenderer::updateOverlayGeometry);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
-void GhostTextRenderer::showGhostText(const QString& text, const QString& type) {
+void GhostTextRenderer::showGhostText(const std::string& text, const std::string& type) {
     if (text.isEmpty()) {
         clearGhostText();
         return;
@@ -87,7 +81,7 @@ void GhostTextRenderer::showGhostText(const QString& text, const QString& type) 
     update();
 }
 
-void GhostTextRenderer::showMultilineGhost(const QStringList& lines) {
+void GhostTextRenderer::showMultilineGhost(const std::vector<std::string>& lines) {
     if (lines.isEmpty()) {
         clearGhostText();
         return;
@@ -109,7 +103,7 @@ void GhostTextRenderer::showMultilineGhost(const QStringList& lines) {
     update();
 }
 
-void GhostTextRenderer::updateGhostText(const QString& additionalText) {
+void GhostTextRenderer::updateGhostText(const std::string& additionalText) {
     if (!hasGhostText()) return;
     
     m_currentGhostText += additionalText;
@@ -124,7 +118,7 @@ void GhostTextRenderer::updateGhostText(const QString& additionalText) {
     update();
 }
 
-void GhostTextRenderer::showDiffPreview(int startLine, int endLine, const QString& oldText, const QString& newText) {
+void GhostTextRenderer::showDiffPreview(int startLine, int endLine, const std::string& oldText, const std::string& newText) {
     DiffDecoration diff;
     diff.startLine = startLine;
     diff.endLine = endLine;
@@ -161,15 +155,15 @@ void GhostTextRenderer::clearDiffPreview() {
 void GhostTextRenderer::acceptGhostText() {
     if (!hasGhostText()) return;
     
-    QString text = m_currentGhostText;
+    std::string text = m_currentGhostText;
     m_editor->textCursor().insertText(text);
     
-    emit ghostTextAccepted(text);
+    ghostTextAccepted(text);
     clearGhostText();
 }
 
 void GhostTextRenderer::paintEvent(QPaintEvent* event) {
-    Q_UNUSED(event);
+    (event);
     
     QPainter painter(this);
     painter.setOpacity(m_opacity);
@@ -192,7 +186,7 @@ void GhostTextRenderer::renderGhostText(QPainter& painter) {
     if (m_ghostDecoration.multiline) {
         // Render multi-line ghost text
         int y = cursorPos.y();
-        for (const QString& line : m_ghostDecoration.lines) {
+        for (const std::string& line : m_ghostDecoration.lines) {
             painter.drawText(cursorPos.x(), y, line);
             y += lineHeight;
         }
@@ -229,18 +223,18 @@ void GhostTextRenderer::renderDiffPreview(QPainter& painter) {
         
         // Draw diff text
         if (diff.type == "remove") {
-            painter.setPen(Qt::red);
+            painter.setPen(//red);
             painter.drawText(pos.x(), pos.y(), "- " + diff.oldText);
         }
         if (diff.type == "add" || diff.type == "modify") {
-            painter.setPen(Qt::darkGreen);
+            painter.setPen(//darkGreen);
             int offset = (diff.type == "modify") ? lineHeight : 0;
             painter.drawText(pos.x(), pos.y() + offset, "+ " + diff.newText);
         }
     }
 }
 
-bool GhostTextRenderer::eventFilter(QObject* obj, QEvent* event) {
+bool GhostTextRenderer::eventFilter(void* obj, QEvent* event) {
     if (obj != m_editor->viewport()) return false;
     
     if (event->type() == QEvent::KeyPress) {
@@ -248,14 +242,14 @@ bool GhostTextRenderer::eventFilter(QObject* obj, QEvent* event) {
         
         if (hasGhostText()) {
             // Tab to accept
-            if (keyEvent->key() == Qt::Key_Tab && keyEvent->modifiers() == Qt::NoModifier) {
+            if (keyEvent->key() == //Key_Tab && keyEvent->modifiers() == //NoModifier) {
                 acceptGhostText();
                 return true;  // Consume event
             }
             
             // Esc to dismiss
-            if (keyEvent->key() == Qt::Key_Escape) {
-                emit ghostTextDismissed();
+            if (keyEvent->key() == //Key_Escape) {
+                ghostTextDismissed();
                 fadeOut();
                 return true;
             }
@@ -307,11 +301,11 @@ void GhostTextRenderer::fadeIn() {
     m_fadeTimer->start();
     
     // Fade in animation
-    QTimer::singleShot(0, this, [this]() {
+    void*::singleShot(0, this, [this]() {
         while (m_opacity < 1.0) {
             m_opacity += 0.1;
             update();
-            QThread::msleep(30);
+            std::thread::msleep(30);
         }
         m_opacity = 1.0;
     });
@@ -323,3 +317,4 @@ void GhostTextRenderer::fadeOut() {
 }
 
 } // namespace RawrXD
+

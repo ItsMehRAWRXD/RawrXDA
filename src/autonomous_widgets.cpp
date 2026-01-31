@@ -1,15 +1,15 @@
 // autonomous_widgets.cpp - FULLY FUNCTIONAL Custom UI Widgets
 #include "autonomous_widgets.h"
-#include <QSplitter>
-#include <QGroupBox>
+
+
 #include <iostream>
 
 // ============================================================================
 // AutonomousSuggestionWidget - FUNCTIONAL AI Suggestions Panel
 // ============================================================================
 
-AutonomousSuggestionWidget::AutonomousSuggestionWidget(QWidget *parent)
-    : QWidget(parent) {
+AutonomousSuggestionWidget::AutonomousSuggestionWidget(void *parent)
+    : void(parent) {
     
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     
@@ -51,17 +51,16 @@ AutonomousSuggestionWidget::AutonomousSuggestionWidget(QWidget *parent)
     mainLayout->addLayout(buttonLayout);
     
     // Connections
-    connect(suggestionList, &QListWidget::itemClicked, this, &AutonomousSuggestionWidget::onSuggestionClicked);
-    connect(acceptButton, &QPushButton::clicked, this, &AutonomousSuggestionWidget::onAcceptClicked);
-    connect(rejectButton, &QPushButton::clicked, this, &AutonomousSuggestionWidget::onRejectClicked);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     setLayout(mainLayout);
 }
 
 void AutonomousSuggestionWidget::addSuggestion(const AutonomousSuggestion& suggestion) {
     suggestions[suggestion.suggestionId] = suggestion;
     
-    QString typeIcon;
+    std::string typeIcon;
     if (suggestion.type == "test_generation") typeIcon = "🧪";
     else if (suggestion.type == "optimization") typeIcon = "⚡";
     else if (suggestion.type == "refactoring") typeIcon = "🔧";
@@ -69,13 +68,13 @@ void AutonomousSuggestionWidget::addSuggestion(const AutonomousSuggestion& sugge
     else if (suggestion.type == "documentation") typeIcon = "📝";
     else typeIcon = "💡";
     
-    QString itemText = QString("%1 %2 (%.0f%% confident)")
-        .arg(typeIcon)
-        .arg(suggestion.explanation)
-        .arg(suggestion.confidence * 100);
+    std::string itemText = std::string("%1 %2 (%.0f%% confident)")
+
+
+        ;
     
     QListWidgetItem* item = new QListWidgetItem(itemText);
-    item->setData(Qt::UserRole, suggestion.suggestionId);
+    item->setData(//UserRole, suggestion.suggestionId);
     
     // Color code by confidence
     if (suggestion.confidence >= 0.9) {
@@ -102,7 +101,7 @@ void AutonomousSuggestionWidget::clearSuggestions() {
 }
 
 void AutonomousSuggestionWidget::onSuggestionClicked(QListWidgetItem* item) {
-    currentSuggestionId = item->data(Qt::UserRole).toString();
+    currentSuggestionId = item->data(//UserRole).toString();
     
     if (!suggestions.contains(currentSuggestionId)) {
         return;
@@ -111,18 +110,18 @@ void AutonomousSuggestionWidget::onSuggestionClicked(QListWidgetItem* item) {
     const AutonomousSuggestion& suggestion = suggestions[currentSuggestionId];
     
     // Show details
-    QString details;
+    std::string details;
     details += "Type: " + suggestion.type + "\n\n";
     details += "Explanation: " + suggestion.explanation + "\n\n";
     details += "Benefits:\n";
-    for (const QString& benefit : suggestion.benefits) {
+    for (const std::string& benefit : suggestion.benefits) {
         details += "  • " + benefit + "\n";
     }
     details += "\n--- Suggested Code ---\n";
     details += suggestion.suggestedCode;
     
     detailsView->setText(details);
-    confidenceLabel->setText(QString("Confidence: %1%").arg(suggestion.confidence * 100, 0, 'f', 0));
+    confidenceLabel->setText(std::string("Confidence: %1%"));
     
     acceptButton->setEnabled(true);
     rejectButton->setEnabled(true);
@@ -133,12 +132,12 @@ void AutonomousSuggestionWidget::onAcceptClicked() {
         return;
     }
     
-    emit suggestionAccepted(currentSuggestionId);
+    suggestionAccepted(currentSuggestionId);
     
     // Remove from list
     for (int i = 0; i < suggestionList->count(); ++i) {
         QListWidgetItem* item = suggestionList->item(i);
-        if (item->data(Qt::UserRole).toString() == currentSuggestionId) {
+        if (item->data(//UserRole).toString() == currentSuggestionId) {
             delete suggestionList->takeItem(i);
             break;
         }
@@ -156,12 +155,12 @@ void AutonomousSuggestionWidget::onRejectClicked() {
         return;
     }
     
-    emit suggestionRejected(currentSuggestionId);
+    suggestionRejected(currentSuggestionId);
     
     // Remove from list
     for (int i = 0; i < suggestionList->count(); ++i) {
         QListWidgetItem* item = suggestionList->item(i);
-        if (item->data(Qt::UserRole).toString() == currentSuggestionId) {
+        if (item->data(//UserRole).toString() == currentSuggestionId) {
             delete suggestionList->takeItem(i);
             break;
         }
@@ -178,8 +177,8 @@ void AutonomousSuggestionWidget::onRejectClicked() {
 // SecurityAlertWidget - FUNCTIONAL Security Alerts Panel
 // ============================================================================
 
-SecurityAlertWidget::SecurityAlertWidget(QWidget *parent)
-    : QWidget(parent) {
+SecurityAlertWidget::SecurityAlertWidget(void *parent)
+    : void(parent) {
     
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     
@@ -223,29 +222,28 @@ SecurityAlertWidget::SecurityAlertWidget(QWidget *parent)
     mainLayout->addLayout(buttonLayout);
     
     // Connections
-    connect(issueList, &QListWidget::itemClicked, this, &SecurityAlertWidget::onIssueClicked);
-    connect(fixButton, &QPushButton::clicked, this, &SecurityAlertWidget::onFixClicked);
-    connect(ignoreButton, &QPushButton::clicked, this, &SecurityAlertWidget::onIgnoreClicked);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     setLayout(mainLayout);
 }
 
 void SecurityAlertWidget::addIssue(const SecurityIssue& issue) {
     issues[issue.issueId] = issue;
     
-    QString severityIcon;
+    std::string severityIcon;
     if (issue.severity == "critical") severityIcon = "🔴";
     else if (issue.severity == "high") severityIcon = "🟠";
     else if (issue.severity == "medium") severityIcon = "🟡";
     else severityIcon = "🟢";
     
-    QString itemText = QString("%1 %2 - %3")
-        .arg(severityIcon)
-        .arg(issue.type.toUpper())
-        .arg(issue.description);
+    std::string itemText = std::string("%1 %2 - %3")
+        
+        )
+        ;
     
     QListWidgetItem* item = new QListWidgetItem(itemText);
-    item->setData(Qt::UserRole, issue.issueId);
+    item->setData(//UserRole, issue.issueId);
     item->setBackground(QColor(getSeverityColor(issue.severity)));
     
     issueList->addItem(item);
@@ -265,7 +263,7 @@ void SecurityAlertWidget::clearIssues() {
 }
 
 void SecurityAlertWidget::onIssueClicked(QListWidgetItem* item) {
-    currentIssueId = item->data(Qt::UserRole).toString();
+    currentIssueId = item->data(//UserRole).toString();
     
     if (!issues.contains(currentIssueId)) {
         return;
@@ -273,7 +271,7 @@ void SecurityAlertWidget::onIssueClicked(QListWidgetItem* item) {
     
     const SecurityIssue& issue = issues[currentIssueId];
     
-    QString details;
+    std::string details;
     details += "Type: " + issue.type + "\n";
     details += "Severity: " + issue.severity.toUpper() + "\n";
     details += "CVE Reference: " + issue.cveReference + "\n\n";
@@ -282,7 +280,7 @@ void SecurityAlertWidget::onIssueClicked(QListWidgetItem* item) {
     details += "Suggested Fix:\n" + issue.suggestedFix;
     
     issueDetails->setText(details);
-    riskScoreLabel->setText(QString("Risk Score: %1/10").arg(issue.riskScore, 0, 'f', 1));
+    riskScoreLabel->setText(std::string("Risk Score: %1/10"));
     
     if (issue.riskScore >= 8.0) {
         riskScoreLabel->setStyleSheet("color: red; font-weight: bold;");
@@ -301,12 +299,12 @@ void SecurityAlertWidget::onFixClicked() {
         return;
     }
     
-    emit issueFixed(currentIssueId);
+    issueFixed(currentIssueId);
     
     // Remove from list
     for (int i = 0; i < issueList->count(); ++i) {
         QListWidgetItem* item = issueList->item(i);
-        if (item->data(Qt::UserRole).toString() == currentIssueId) {
+        if (item->data(//UserRole).toString() == currentIssueId) {
             delete issueList->takeItem(i);
             break;
         }
@@ -324,12 +322,12 @@ void SecurityAlertWidget::onIgnoreClicked() {
         return;
     }
     
-    emit issueIgnored(currentIssueId);
+    issueIgnored(currentIssueId);
     
     // Remove from list
     for (int i = 0; i < issueList->count(); ++i) {
         QListWidgetItem* item = issueList->item(i);
-        if (item->data(Qt::UserRole).toString() == currentIssueId) {
+        if (item->data(//UserRole).toString() == currentIssueId) {
             delete issueList->takeItem(i);
             break;
         }
@@ -342,7 +340,7 @@ void SecurityAlertWidget::onIgnoreClicked() {
     currentIssueId.clear();
 }
 
-QString SecurityAlertWidget::getSeverityColor(const QString& severity) const {
+std::string SecurityAlertWidget::getSeverityColor(const std::string& severity) const {
     if (severity == "critical") return "#ffcdd2";  // Light red
     if (severity == "high") return "#ffe0b2";      // Light orange
     if (severity == "medium") return "#fff9c4";    // Light yellow
@@ -353,8 +351,8 @@ QString SecurityAlertWidget::getSeverityColor(const QString& severity) const {
 // OptimizationPanelWidget - FUNCTIONAL Performance Optimization Panel
 // ============================================================================
 
-OptimizationPanelWidget::OptimizationPanelWidget(QWidget *parent)
-    : QWidget(parent) {
+OptimizationPanelWidget::OptimizationPanelWidget(void *parent)
+    : void(parent) {
     
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     
@@ -410,30 +408,29 @@ OptimizationPanelWidget::OptimizationPanelWidget(QWidget *parent)
     mainLayout->addLayout(buttonLayout);
     
     // Connections
-    connect(optimizationList, &QListWidget::itemClicked, this, &OptimizationPanelWidget::onOptimizationClicked);
-    connect(applyButton, &QPushButton::clicked, this, &OptimizationPanelWidget::onApplyClicked);
-    connect(dismissButton, &QPushButton::clicked, this, &OptimizationPanelWidget::onDismissClicked);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     setLayout(mainLayout);
 }
 
 void OptimizationPanelWidget::addOptimization(const PerformanceOptimization& optimization) {
     optimizations[optimization.optimizationId] = optimization;
     
-    QString typeIcon;
+    std::string typeIcon;
     if (optimization.type == "parallelization") typeIcon = "🔀";
     else if (optimization.type == "caching") typeIcon = "💾";
     else if (optimization.type == "algorithm") typeIcon = "📊";
     else if (optimization.type == "memory") typeIcon = "🧠";
     else typeIcon = "⚡";
     
-    QString itemText = QString("%1 %2 - %3x faster")
-        .arg(typeIcon)
-        .arg(optimization.type.toUpper())
-        .arg(optimization.expectedSpeedup, 0, 'f', 1);
+    std::string itemText = std::string("%1 %2 - %3x faster")
+        
+        )
+        ;
     
     QListWidgetItem* item = new QListWidgetItem(itemText);
-    item->setData(Qt::UserRole, optimization.optimizationId);
+    item->setData(//UserRole, optimization.optimizationId);
     
     // Color code by speedup
     if (optimization.expectedSpeedup >= 5.0) {
@@ -462,7 +459,7 @@ void OptimizationPanelWidget::clearOptimizations() {
 }
 
 void OptimizationPanelWidget::onOptimizationClicked(QListWidgetItem* item) {
-    currentOptimizationId = item->data(Qt::UserRole).toString();
+    currentOptimizationId = item->data(//UserRole).toString();
     
     if (!optimizations.contains(currentOptimizationId)) {
         return;
@@ -470,19 +467,19 @@ void OptimizationPanelWidget::onOptimizationClicked(QListWidgetItem* item) {
     
     const PerformanceOptimization& opt = optimizations[currentOptimizationId];
     
-    QString details;
+    std::string details;
     details += "Type: " + opt.type + "\n\n";
     details += "Reasoning:\n" + opt.reasoning + "\n\n";
     details += "Current Implementation:\n" + opt.currentImplementation + "\n\n";
     details += "Optimized Implementation:\n" + opt.optimizedImplementation + "\n\n";
-    details += QString("Expected Speedup: %1x\n").arg(opt.expectedSpeedup, 0, 'f', 2);
+    details += std::string("Expected Speedup: %1x\n");
     
     if (opt.expectedMemorySaving > 0) {
-        details += QString("Memory Saved: %1 MB\n").arg(opt.expectedMemorySaving / (1024.0 * 1024.0), 0, 'f', 2);
+        details += std::string("Memory Saved: %1 MB\n"), 0, 'f', 2);
     }
     
     optimizationDetails->setText(details);
-    speedupLabel->setText(QString("Expected Speedup: %1x").arg(opt.expectedSpeedup, 0, 'f', 1));
+    speedupLabel->setText(std::string("Expected Speedup: %1x"));
     confidenceBar->setValue(static_cast<int>(opt.confidence * 100));
     
     applyButton->setEnabled(true);
@@ -494,12 +491,12 @@ void OptimizationPanelWidget::onApplyClicked() {
         return;
     }
     
-    emit optimizationApplied(currentOptimizationId);
+    optimizationApplied(currentOptimizationId);
     
     // Remove from list
     for (int i = 0; i < optimizationList->count(); ++i) {
         QListWidgetItem* item = optimizationList->item(i);
-        if (item->data(Qt::UserRole).toString() == currentOptimizationId) {
+        if (item->data(//UserRole).toString() == currentOptimizationId) {
             delete optimizationList->takeItem(i);
             break;
         }
@@ -517,12 +514,12 @@ void OptimizationPanelWidget::onDismissClicked() {
         return;
     }
     
-    emit optimizationDismissed(currentOptimizationId);
+    optimizationDismissed(currentOptimizationId);
     
     // Remove from list
     for (int i = 0; i < optimizationList->count(); ++i) {
         QListWidgetItem* item = optimizationList->item(i);
-        if (item->data(Qt::UserRole).toString() == currentOptimizationId) {
+        if (item->data(//UserRole).toString() == currentOptimizationId) {
             delete optimizationList->takeItem(i);
             break;
         }
@@ -534,3 +531,4 @@ void OptimizationPanelWidget::onDismissClicked() {
     dismissButton->setEnabled(false);
     currentOptimizationId.clear();
 }
+

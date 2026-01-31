@@ -56,91 +56,20 @@
 // ----------------  brutal-gzip glue  ----------------
 #include "deflate_brutal_qt.hpp"     // compress / decompress
 
-#include <QApplication>
-#include <QAction>
-#include <QActionGroup>
-#include <QFileSystemModel>
-#include <QLabel>
-#include <QLineEdit>
-#include <QMenuBar>
-#include <QPlainTextEdit>
-#include <QPushButton>
-#include <QShortcut>
-#include <QSplitter>
-#include <QStatusBar>
-#include <QTabWidget>
-#include <QTextEdit>
-#include <QToolBar>
-#include <QTreeView>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QFile>
-#include <QTextStream>
-#include <QMimeData>
-#include <QDragEnterEvent>
-#include <QDropEvent>
-#include <QProgressBar>
-#include <QProgressDialog>
-#include <QSystemTrayIcon>
-#include <QCloseEvent>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QDir>
-#include <QDirIterator>
-#include <QFileInfo>
-#include <QComboBox>
-#include <QProcess>
-#include <QRegularExpression>
-#include <QTimer>
-#include <QDockWidget>
-#include <QColor>
-#include <QUrl>
-#include <QStackedWidget>
-#include <QFrame>
-#include <QTreeWidget>
-#include <QTreeWidgetItem>
-#include <QPalette>
-#include <QFont>
-#include <QThread>
-#include <QDateTime>
-#include <QInputDialog>
-#include <QMetaObject>
-#include <QVariant>
-#include <QSettings>
-#include <QDesktopServices>
-#include <QPrinter>
-#include <QPrintDialog>
-#include <QElapsedTimer>
-#include <QStringConverter>
-#include <QScrollBar>
-#include <QTextCursor>
-#include <QJsonObject>
-#include <QListWidget>
-#include <QListWidgetItem>
-#include <QGroupBox>
-#include <QCheckBox>
-#include <QClipboard>
-#include <QDialogButtonBox>
-#include <QCache>
-#include <QReadWriteLock>
-#include <QWriteLocker>
-#include <QKeySequence>
-#include <QRadioButton>
+
 #ifdef HAVE_QT_WEBSOCKETS
-#include <QWebSocket>
-#include <QWebSocketProtocol>
+
+
 #endif
 #include <functional>
 
 namespace {
 
 // Creates the Sovereign telemetry dock that consumes the MASM/MMF stats.
-QDockWidget* createSovereignTelemetryDock(QMainWindow* host) {
-    auto* dock = new QDockWidget(QObject::tr("Sovereign Telemetry"), host);
+QDockWidget* createSovereignTelemetryDock(void* host) {
+    auto* dock = new QDockWidget(void::tr("Sovereign Telemetry"), host);
     dock->setObjectName(QStringLiteral("SovereignTelemetryDock"));
-    dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    dock->setAllowedAreas(//LeftDockWidgetArea | //RightDockWidgetArea);
     dock->setMinimumWidth(260);
 
     auto* dashboard = new SovereignDashboardWidget(dock);
@@ -164,26 +93,26 @@ static RawrXD::Integration::CircuitBreaker g_aiBreaker(5, std::chrono::seconds(3
 // ============================================================
 // Global Caches for Performance Optimization
 // ============================================================
-static QCache<QString, QVariant> g_settingsCache(100);  // Cache frequently accessed settings
-static QCache<QString, QFileInfo> g_fileInfoCache(500); // Cache file info lookups
-static QMutex g_cacheMutex;                              // Thread-safe cache access
-static QReadWriteLock g_fileInfoLock;                    // RW lock for file info operations
+static QCache<std::string, std::any> g_settingsCache(100);  // Cache frequently accessed settings
+static QCache<std::string, std::filesystem::path> g_fileInfoCache(500); // Cache file info lookups
+static std::mutex g_cacheMutex;                              // Thread-safe cache access
+static std::shared_mutex g_fileInfoLock;                    // RW lock for file info operations
 
 // ============================================================
 // Helper Utilities - cached settings/file info
 // ============================================================
-inline QVariant getCachedSetting(const QString& key, const QVariant& defaultValue = QVariant()) {
-    QMutexLocker locker(&g_cacheMutex);
+inline std::any getCachedSetting(const std::string& key, const std::any& defaultValue = std::any()) {
+    std::lock_guard<std::mutex> locker(&g_cacheMutex);
     if (auto* cached = g_settingsCache.object(key)) {
         return *cached;
     }
     QSettings settings("RawrXD", "IDE");
-    QVariant value = settings.value(key, defaultValue);
-    g_settingsCache.insert(key, new QVariant(value));
+    std::any value = settings.value(key, defaultValue);
+    g_settingsCache.insert(key, new std::any(value));
     return value;
 }
 
-inline QFileInfo getCachedFileInfo(const QString& path) {
+inline std::filesystem::path getCachedFileInfo(const std::string& path) {
     QReadLocker locker(&g_fileInfoLock);
     if (auto* cached = g_fileInfoCache.object(path)) {
         if (cached->exists()) return *cached;
@@ -194,15 +123,15 @@ inline QFileInfo getCachedFileInfo(const QString& path) {
     if (auto* cached = g_fileInfoCache.object(path)) {
         if (cached->exists()) return *cached;
     }
-    QFileInfo info(path);
+    std::filesystem::path info(path);
     if (info.exists()) {
-        g_fileInfoCache.insert(path, new QFileInfo(info));
+        g_fileInfoCache.insert(path, new std::filesystem::path(info));
     }
     return info;
 }
 
-MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent),
+MainWindow::MainWindow(void* parent)
+    : void(parent),
       m_engineThread(nullptr),
       m_inferenceEngine(nullptr),
       m_ggufServer(nullptr),
@@ -221,36 +150,32 @@ MainWindow::MainWindow(QWidget* parent)
     // Attach Sovereign telemetry dock (MMF-backed MASM stats)
     m_sovereignTelemetryDock = createSovereignTelemetryDock(this);
     if (m_sovereignTelemetryDock) {
-        addDockWidget(Qt::RightDockWidgetArea, m_sovereignTelemetryDock);
+        addDockWidget(//RightDockWidgetArea, m_sovereignTelemetryDock);
     }
 
     // Initialize inference engine in worker thread
-    m_engineThread = new QThread(this);
+    m_engineThread = new std::thread(this);
     m_inferenceEngine = new InferenceEngine();
-    m_inferenceEngine->moveToThread(m_engineThread);
-
-    connect(m_engineThread, &QThread::finished, m_inferenceEngine, &QObject::deleteLater);
-    connect(m_inferenceEngine, &InferenceEngine::resultReady, this, &MainWindow::showInferenceResult);
-    connect(m_inferenceEngine, &InferenceEngine::error, this, &MainWindow::showInferenceError);
-    connect(m_inferenceEngine, &InferenceEngine::modelLoadedChanged, this, &MainWindow::onModelLoadedChanged);
+    m_inferenceEngine->;
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     m_engineThread->start();
 
     // Initialize GGUF server (auto-starts if port 11434 is available)
     m_ggufServer = new GGUFServer(m_inferenceEngine, this);
-    connect(m_ggufServer, &GGUFServer::serverStarted, this, [this](quint16 port) {
-        statusBar()->showMessage(tr("GGUF Server running on port %1").arg(port), 5000);
-        qDebug() << "GGUF Server started on port" << port;
+// Qt connect removed
     });
-    connect(m_ggufServer, &GGUFServer::error, this, [](const QString& err) {
-        qWarning() << "GGUF Server error:" << err;
+// Qt connect removed
     });
-    QTimer::singleShot(500, this, [this]() { m_ggufServer->start(11434); });
+    void*::singleShot(500, this, [this]() { m_ggufServer->start(11434); });
 
     // Initialize streaming inference
     m_streamer = new StreamingInference(m_hexMagConsole, this);
-    connect(m_inferenceEngine, &InferenceEngine::streamToken, this,
-            [this](qint64 /*reqId*/, const QString& token) { m_streamer->pushToken(token); });
-    connect(m_inferenceEngine, &InferenceEngine::streamFinished, this,
+// Qt connect removed
+            [this](qint64 /*reqId*/, const std::string& token) { m_streamer->pushToken(token); });
+// Qt connect removed
             [this](qint64 /*reqId*/) { m_streamer->finishStream(); });
 
     // Setup AI/agent components
@@ -265,16 +190,15 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Shortcut for command palette
     QShortcut* commandPaletteShortcut = new QShortcut(QKeySequence("Ctrl+Shift+P"), this);
-    connect(commandPaletteShortcut, &QShortcut::activated, this, [this]() {
-        if (m_commandPalette) m_commandPalette->show();
+// Qt connect removed
     });
 
     // Auto-load GGUF from env var if provided
-    QString ggufEnv = qEnvironmentVariable("RAWRXD_GGUF");
+    std::string ggufEnv = qEnvironmentVariable("RAWRXD_GGUF");
     if (!ggufEnv.isEmpty()) {
-        statusBar()->showMessage(tr("Auto-loading GGUF: %1").arg(ggufEnv), 3000);
-        QMetaObject::invokeMethod(m_inferenceEngine, "loadModel", Qt::QueuedConnection,
-                                  Q_ARG(QString, ggufEnv));
+        statusBar()->showMessage(tr("Auto-loading GGUF: %1"), 3000);
+        QMetaObject::invokeMethod(m_inferenceEngine, "loadModel", //QueuedConnection,
+                                  (std::string, ggufEnv));
     }
 
     // Restore saved UI state (window geometry, dock positions, panel visibility)
@@ -302,7 +226,7 @@ void MainWindow::createVSCodeLayout()
     // Create main container widget
     // AGENTIC PATCH: Ensure all pointers are initialized to nullptr before use (C++11+ best practice)
     // Declare missing local variables and member pointers before use
-    QWidget* mainContainer = new QWidget(this);
+    void* mainContainer = new void(this);
     QHBoxLayout* mainLayout = new QHBoxLayout(mainContainer);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
@@ -317,7 +241,7 @@ void MainWindow::createVSCodeLayout()
     if (!m_hexMagConsole) m_hexMagConsole = new QPlainTextEdit(m_bottomPanel);
 
     // AGENTIC PATCH: Declare missing local variable for centerSplitter
-    QSplitter* centerSplitter = new QSplitter(Qt::Horizontal, mainContainer);
+    QSplitter* centerSplitter = new QSplitter(//Horizontal, mainContainer);
 
     m_primarySidebar->setFixedWidth(260);
     m_primarySidebar->setStyleSheet("QFrame { background-color: #252526; border: none; }");
@@ -343,7 +267,7 @@ void MainWindow::createVSCodeLayout()
     m_sidebarStack->addWidget(explorerView);
 
     // Create Search view (placeholder)
-    QWidget* searchView = new QWidget(m_primarySidebar);
+    void* searchView = new void(m_primarySidebar);
     QVBoxLayout* searchLayout = new QVBoxLayout(searchView);
     QLineEdit* searchInput = new QLineEdit(m_primarySidebar);
     searchInput->setPlaceholderText("Search files...");
@@ -352,25 +276,25 @@ void MainWindow::createVSCodeLayout()
     m_sidebarStack->addWidget(searchView);
 
     // Create Source Control view (placeholder)
-    QWidget* scmView = new QWidget(m_primarySidebar);
+    void* scmView = new void(m_primarySidebar);
     QVBoxLayout* scmLayout = new QVBoxLayout(scmView);
     QLabel* scmLabel = new QLabel("Source Control\n\nNo folder open", m_primarySidebar);
     scmLabel->setStyleSheet("QLabel { color: #e0e0e0; }");
-    scmLabel->setAlignment(Qt::AlignCenter);
+    scmLabel->setAlignment(//AlignCenter);
     scmLayout->addWidget(scmLabel);
     m_sidebarStack->addWidget(scmView);
 
     // Create Debug view (placeholder)
-    QWidget* debugView = new QWidget(m_primarySidebar);
+    void* debugView = new void(m_primarySidebar);
     QVBoxLayout* debugLayout = new QVBoxLayout(debugView);
     QLabel* debugLabel = new QLabel("Run and Debug\n\nNo launch configuration", m_primarySidebar);
     debugLabel->setStyleSheet("QLabel { color: #e0e0e0; }");
-    debugLabel->setAlignment(Qt::AlignCenter);
+    debugLabel->setAlignment(//AlignCenter);
     debugLayout->addWidget(debugLabel);
     m_sidebarStack->addWidget(debugView);
 
     // Create Extensions view (placeholder)
-    QWidget* extView = new QWidget(m_primarySidebar);
+    void* extView = new void(m_primarySidebar);
     QVBoxLayout* extLayout = new QVBoxLayout(extView);
     QLineEdit* extSearch = new QLineEdit(m_primarySidebar);
     extSearch->setPlaceholderText("Search extensions...");
@@ -474,7 +398,7 @@ void MainWindow::createVSCodeLayout()
     m_panelStack->addWidget(outputView);
 
     // Problems tab
-    QWidget* problemsView = new QWidget(m_bottomPanel);
+    void* problemsView = new void(m_bottomPanel);
     QVBoxLayout* problemsLayout = new QVBoxLayout(problemsView);
     problemsLayout->setContentsMargins(10, 10, 10, 10);
     QLabel* problemsLabel = new QLabel("No problems detected", problemsView);
@@ -500,8 +424,7 @@ void MainWindow::createVSCodeLayout()
 
     // ============= Connect Activity Bar to Sidebar Views =============
     if (m_activityBar) {
-        connect(m_activityBar, &ActivityBar::viewChanged, this, [this](ActivityBar::ViewType view) {
-            m_sidebarStack->setCurrentIndex(static_cast<int>(view));
+// Qt connect removed
             // Update sidebar header label
             const char* titles[] = {"Explorer", "Search", "Source Control", "Run and Debug", "Extensions"};
             // Update the header label (would need to store it as member)
@@ -509,23 +432,23 @@ void MainWindow::createVSCodeLayout()
     }
 
     // ============= Create Vertical Splitter (Editor + Panel) =============
-    QSplitter* verticalSplitter = new QSplitter(Qt::Vertical, mainContainer);
+    QSplitter* verticalSplitter = new QSplitter(//Vertical, mainContainer);
     verticalSplitter->setOpaqueResize(true);
     verticalSplitter->addWidget(mainLayout->takeAt(0)->widget());  // Adjust layout if needed
 
     // Better approach: Create a proper vertical splitter at the root
-    QWidget* centerWidget = new QWidget(this);
+    void* centerWidget = new void(this);
     QVBoxLayout* centerLayout = new QVBoxLayout(centerWidget);
     centerLayout->setContentsMargins(0, 0, 0, 0);
     centerLayout->setSpacing(0);
 
-    QSplitter* vertSplitter = new QSplitter(Qt::Vertical, centerWidget);
+    QSplitter* vertSplitter = new QSplitter(//Vertical, centerWidget);
     vertSplitter->setOpaqueResize(true);
     vertSplitter->setStyleSheet("QSplitter::handle { background-color: #2d2d2d; height: 4px; }");
     // AGENTIC PATCH END: All missing variables declared, pointer initializations fixed, and automation comments added.
     
     // Create horizontal splitter for activity bar + sidebar + editor
-    QWidget* topWidget = new QWidget(centerWidget);
+    void* topWidget = new void(centerWidget);
     topWidget->setLayout(mainLayout);
     
     vertSplitter->addWidget(topWidget);
@@ -537,20 +460,16 @@ void MainWindow::createVSCodeLayout()
     setCentralWidget(centerWidget);
     
     // Connect panel buttons
-    connect(panelCloseBtn, &QPushButton::clicked, this, [this]() {
-        m_bottomPanel->hide();
+// Qt connect removed
     });
-    
-    connect(panelMinBtn, &QPushButton::clicked, this, [this]() {
-        m_bottomPanel->setFixedHeight(m_bottomPanel->height() > 50 ? 35 : 200);
+// Qt connect removed
     });
     
     // Connect terminal tab buttons
     connect(terminalTabBtn, &QPushButton::clicked, this, [this]() { m_panelStack->setCurrentIndex(0); });
     connect(outputTabBtn, &QPushButton::clicked, this, [this]() { m_panelStack->setCurrentIndex(1); });
     connect(problemsTabBtn, &QPushButton::clicked, this, [this]() { m_panelStack->setCurrentIndex(2); });
-    connect(debugTabBtn, &QPushButton::clicked, this, [this]() { 
-        if (m_hexMagConsole) m_panelStack->setCurrentWidget(m_hexMagConsole); 
+// Qt connect removed
         else m_panelStack->setCurrentIndex(3); 
     });
 }
@@ -587,10 +506,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::setAppState(std::shared_ptr<void> state)
 {
-    qInfo() << "[STATE] setAppState called at" << QDateTime::currentDateTime();
     
     if (!state) {
-        qWarning() << "[STATE] Null state pointer received - ignoring";
         statusBar()->showMessage(tr("Warning: Null application state"), 3000);
         return;
     }
@@ -598,31 +515,28 @@ void MainWindow::setAppState(std::shared_ptr<void> state)
     // Store state reference (in production, this would be type-safe)
     // Cast to appropriate type and apply state to subsystems
     
-    qInfo() << "[STATE] Application state updated successfully";
     statusBar()->showMessage(tr("Application state synchronized"), 2000);
     
     // Log to hex console for observability
     if (m_hexMagConsole) {
         m_hexMagConsole->appendPlainText(
-            QString("[STATE] Application state updated at %1")
-            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"))
+            std::string("[STATE] Application state updated at %1")
+            .toString("yyyy-MM-dd HH:mm:ss"))
         );
     }
     
     // Trigger state-dependent UI updates
     if (projectExplorer_) {
         // Refresh project explorer with new state
-        qDebug() << "[STATE] Refreshing project explorer with new state";
     }
     
     if (m_aiChatPanel) {
         // Update AI chat panel with new context
-        qDebug() << "[STATE] Updating AI chat panel context";
     }
     
     // Persist state to settings
     QSettings settings("RawrXD", "QtShell");
-    settings.setValue("AppState/lastUpdate", QDateTime::currentDateTime());
+    settings.setValue("AppState/lastUpdate", std::chrono::system_clock::time_point::currentDateTime());
     settings.sync();
 }
 
@@ -636,7 +550,7 @@ void MainWindow::setupMenuBar()
     // New submenu
     QMenu* newMenu = fileMenu->addMenu(tr("&New"));
     newMenu->addAction(tr("New &File"), this, &MainWindow::handleNewEditor, QKeySequence::New);
-    newMenu->addAction(tr("New &Window"), this, &MainWindow::handleNewWindow, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
+    newMenu->addAction(tr("New &Window"), this, &MainWindow::handleNewWindow, QKeySequence(//CTRL | //SHIFT | //Key_N));
     newMenu->addAction(tr("New &Chat"), this, &MainWindow::handleNewChat);
     
     fileMenu->addSeparator();
@@ -662,8 +576,7 @@ void MainWindow::setupMenuBar()
     QAction* autoSaveAct = fileMenu->addAction(tr("Auto Sa&ve"));
     autoSaveAct->setCheckable(true);
     autoSaveAct->setChecked(QSettings("RawrXD", "IDE").value("editor/autoSave", false).toBool());
-    connect(autoSaveAct, &QAction::toggled, this, &MainWindow::toggleAutoSave);
-    
+// Qt connect removed
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Close Editor"), this, &MainWindow::handleCloseEditor, QKeySequence::Close);
     fileMenu->addAction(tr("Close &All Editors"), this, &MainWindow::handleCloseAllEditors, QKeySequence(QStringLiteral("Ctrl+K Ctrl+W")));
@@ -674,7 +587,7 @@ void MainWindow::setupMenuBar()
     fileMenu->addAction(tr("E&xport..."), this, &MainWindow::handleExport);
     
     fileMenu->addSeparator();
-    fileMenu->addAction(tr("Pre&ferences..."), this, [this]() { toggleSettings(true); }, QKeySequence(Qt::CTRL | Qt::Key_Comma));
+    fileMenu->addAction(tr("Pre&ferences..."), this, [this]() { toggleSettings(true); }, QKeySequence(//CTRL | //Key_Comma));
     
     fileMenu->addSeparator();
     fileMenu->addAction(tr("E&xit"), qApp, &QApplication::quit, QKeySequence::Quit);
@@ -704,21 +617,21 @@ void MainWindow::setupMenuBar()
     // Find/Replace
     editMenu->addAction(tr("&Find..."), this, &MainWindow::handleFind, QKeySequence::Find);
     editMenu->addAction(tr("Find and &Replace..."), this, &MainWindow::handleFindReplace, QKeySequence::Replace);
-    editMenu->addAction(tr("Find in Fi&les..."), this, &MainWindow::handleFindInFiles, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_F));
+    editMenu->addAction(tr("Find in Fi&les..."), this, &MainWindow::handleFindInFiles, QKeySequence(//CTRL | //SHIFT | //Key_F));
     
     editMenu->addSeparator();
     
     // Navigation
-    editMenu->addAction(tr("&Go to Line..."), this, &MainWindow::handleGoToLine, QKeySequence(Qt::CTRL | Qt::Key_G));
-    editMenu->addAction(tr("Go to S&ymbol..."), this, &MainWindow::handleGoToSymbol, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
-    editMenu->addAction(tr("Go to &Definition"), this, &MainWindow::handleGoToDefinition, QKeySequence(Qt::Key_F12));
-    editMenu->addAction(tr("Go to &References"), this, &MainWindow::handleGoToReferences, QKeySequence(Qt::SHIFT | Qt::Key_F12));
+    editMenu->addAction(tr("&Go to Line..."), this, &MainWindow::handleGoToLine, QKeySequence(//CTRL | //Key_G));
+    editMenu->addAction(tr("Go to S&ymbol..."), this, &MainWindow::handleGoToSymbol, QKeySequence(//CTRL | //SHIFT | //Key_O));
+    editMenu->addAction(tr("Go to &Definition"), this, &MainWindow::handleGoToDefinition, QKeySequence(//Key_F12));
+    editMenu->addAction(tr("Go to &References"), this, &MainWindow::handleGoToReferences, QKeySequence(//SHIFT | //Key_F12));
     
     editMenu->addSeparator();
     
     // Code editing
-    editMenu->addAction(tr("Toggle &Comment"), this, &MainWindow::handleToggleComment, QKeySequence(Qt::CTRL | Qt::Key_Slash));
-    editMenu->addAction(tr("Format &Document"), this, &MainWindow::handleFormatDocument, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_I));
+    editMenu->addAction(tr("Toggle &Comment"), this, &MainWindow::handleToggleComment, QKeySequence(//CTRL | //Key_Slash));
+    editMenu->addAction(tr("Format &Document"), this, &MainWindow::handleFormatDocument, QKeySequence(//CTRL | //SHIFT | //Key_I));
     editMenu->addAction(tr("Format Se&lection"), this, &MainWindow::handleFormatSelection);
     
     editMenu->addSeparator();
@@ -731,12 +644,12 @@ void MainWindow::setupMenuBar()
     QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
     
     // ----- Command Palette (Quick Access) -----
-    viewMenu->addAction(tr("Command Palette..."), this, &MainWindow::toggleCommandPalette, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P))->setCheckable(false);
+    viewMenu->addAction(tr("Command Palette..."), this, &MainWindow::toggleCommandPalette, QKeySequence(//CTRL | //SHIFT | //Key_P))->setCheckable(false);
     viewMenu->addSeparator();
     
     // ----- Explorer Section -----
     QMenu* explorerMenu = viewMenu->addMenu(tr("&Explorer"));
-    QAction* projExplAct = explorerMenu->addAction(tr("Project Explorer"), this, &MainWindow::toggleProjectExplorer, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E));
+    QAction* projExplAct = explorerMenu->addAction(tr("Project Explorer"), this, &MainWindow::toggleProjectExplorer, QKeySequence(//CTRL | //SHIFT | //Key_E));
     projExplAct->setCheckable(true);
     explorerMenu->addAction(tr("Search Results"), this, &MainWindow::toggleSearchResult)->setCheckable(true);
     explorerMenu->addAction(tr("Bookmarks"), this, &MainWindow::toggleBookmark)->setCheckable(true);
@@ -744,13 +657,13 @@ void MainWindow::setupMenuBar()
     
     // ----- Source Control Section -----
     QMenu* scmMenu = viewMenu->addMenu(tr("&Source Control"));
-    scmMenu->addAction(tr("Version Control"), this, &MainWindow::toggleVersionControl, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_G))->setCheckable(true);
+    scmMenu->addAction(tr("Version Control"), this, &MainWindow::toggleVersionControl, QKeySequence(//CTRL | //SHIFT | //Key_G))->setCheckable(true);
     scmMenu->addAction(tr("Diff Viewer"), this, &MainWindow::toggleDiffViewer)->setCheckable(true);
     
     // ----- Build & Debug Section -----
     QMenu* buildDebugMenu = viewMenu->addMenu(tr("&Build && Debug"));
     buildDebugMenu->addAction(tr("Build System"), this, &MainWindow::toggleBuildSystem)->setCheckable(true);
-    buildDebugMenu->addAction(tr("Run && Debug"), this, &MainWindow::toggleRunDebug, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D))->setCheckable(true);
+    buildDebugMenu->addAction(tr("Run && Debug"), this, &MainWindow::toggleRunDebug, QKeySequence(//CTRL | //SHIFT | //Key_D))->setCheckable(true);
     buildDebugMenu->addAction(tr("Profiler"), this, &MainWindow::toggleProfiler)->setCheckable(true);
     buildDebugMenu->addAction(tr("Test Explorer"), this, &MainWindow::toggleTestExplorer)->setCheckable(true);
     buildDebugMenu->addSeparator();
@@ -759,10 +672,10 @@ void MainWindow::setupMenuBar()
     QMenu* compilerMenu = buildDebugMenu->addMenu(tr("&Eon/ASM Compiler"));
     compilerMenu->addAction(tr("Compile Current File"), this, [this]() {
         toggleCompileCurrentFile();
-    }, QKeySequence(Qt::CTRL | Qt::Key_F7));
+    }, QKeySequence(//CTRL | //Key_F7));
     compilerMenu->addAction(tr("Build Project"), this, [this]() {
         toggleBuildProject();
-    }, QKeySequence(Qt::Key_F7));
+    }, QKeySequence(//Key_F7));
     compilerMenu->addAction(tr("Clean Build"), this, [this]() {
         toggleCleanBuild();
     });
@@ -778,11 +691,11 @@ void MainWindow::setupMenuBar()
     QMenu* aiViewMenu = viewMenu->addMenu(tr("&AI && Agent"));
     QAction* aiChatAct = aiViewMenu->addAction(tr("AI Chat Panel"), this, [this](bool checked) {
         if (m_aiChatPanelDock) m_aiChatPanelDock->setVisible(checked);
-    }, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
+    }, QKeySequence(//CTRL | //SHIFT | //Key_A));
     aiChatAct->setCheckable(true);
     if (m_aiChatPanelDock) {
         aiChatAct->setChecked(m_aiChatPanelDock->isVisible());
-        connect(m_aiChatPanelDock, &QDockWidget::visibilityChanged, aiChatAct, &QAction::setChecked);
+// Qt connect removed
     }
     aiViewMenu->addAction(tr("AI Quick Fix"), this, &MainWindow::toggleAIQuickFix)->setCheckable(true);
     aiViewMenu->addAction(tr("AI Completion Cache"), this, &MainWindow::toggleAICompletionCache)->setCheckable(true);
@@ -794,7 +707,7 @@ void MainWindow::setupMenuBar()
     orchestrationAct->setCheckable(true);
     if (m_orchestrationDock) {
         orchestrationAct->setChecked(m_orchestrationDock->isVisible());
-        connect(m_orchestrationDock, &QDockWidget::visibilityChanged, orchestrationAct, &QAction::setChecked);
+// Qt connect removed
     }
     
     // ----- Model Management Section -----
@@ -803,15 +716,13 @@ void MainWindow::setupMenuBar()
     monAct->setCheckable(true);
     if (m_modelMonitorDock) {
         monAct->setChecked(m_modelMonitorDock->isVisible());
-        connect(m_modelMonitorDock, &QDockWidget::visibilityChanged, monAct, &QAction::setChecked);
+// Qt connect removed
     }
-    connect(monAct, &QAction::toggled, this, [this](bool on){
-        if (on && !m_modelMonitorDock) {
-            m_modelMonitorDock = new QDockWidget(tr("Model Monitor"), this);
+// Qt connect removed
             ModelMonitor* monitor = new ModelMonitor(m_inferenceEngine, m_modelMonitorDock);
             monitor->initialize();
             m_modelMonitorDock->setWidget(monitor);
-            addDockWidget(Qt::RightDockWidgetArea, m_modelMonitorDock);
+            addDockWidget(//RightDockWidgetArea, m_modelMonitorDock);
         } else if (m_modelMonitorDock) m_modelMonitorDock->setVisible(on);
     });
     QAction* layerQuantAct = modelViewMenu->addAction(tr("Layer Quantization"), this, [this](bool checked) {
@@ -820,7 +731,7 @@ void MainWindow::setupMenuBar()
     layerQuantAct->setCheckable(true);
     if (m_layerQuantDock) {
         layerQuantAct->setChecked(m_layerQuantDock->isVisible());
-        connect(m_layerQuantDock, &QDockWidget::visibilityChanged, layerQuantAct, &QAction::setChecked);
+// Qt connect removed
     }
     QAction* interpretabilityAct = modelViewMenu->addAction(tr("Model Interpretability"), this, [this](bool checked) {
         if (m_interpretabilityPanelDock) m_interpretabilityPanelDock->setVisible(checked);
@@ -829,12 +740,12 @@ void MainWindow::setupMenuBar()
     interpretabilityAct->setCheckable(true);
     if (m_interpretabilityPanelDock) {
         interpretabilityAct->setChecked(m_interpretabilityPanelDock->isVisible());
-        connect(m_interpretabilityPanelDock, &QDockWidget::visibilityChanged, interpretabilityAct, &QAction::setChecked);
+// Qt connect removed
     }
     
     // ----- Terminal Section -----
     QMenu* terminalMenu = viewMenu->addMenu(tr("&Terminal"));
-    terminalMenu->addAction(tr("Terminal Cluster"), this, &MainWindow::toggleTerminalCluster, QKeySequence(Qt::CTRL | Qt::Key_QuoteLeft))->setCheckable(true);
+    terminalMenu->addAction(tr("Terminal Cluster"), this, &MainWindow::toggleTerminalCluster, QKeySequence(//CTRL | //Key_QuoteLeft))->setCheckable(true);
     terminalMenu->addAction(tr("Terminal Emulator"), this, &MainWindow::toggleTerminalEmulator)->setCheckable(true);
     
     // ----- Sovereign Telemetry Section -----
@@ -842,7 +753,7 @@ void MainWindow::setupMenuBar()
         if (!m_sovereignTelemetryDock && checked) {
             m_sovereignTelemetryDock = createSovereignTelemetryDock(this);
             if (m_sovereignTelemetryDock) {
-                addDockWidget(Qt::RightDockWidgetArea, m_sovereignTelemetryDock);
+                addDockWidget(//RightDockWidgetArea, m_sovereignTelemetryDock);
             }
         }
         if (m_sovereignTelemetryDock) {
@@ -852,7 +763,7 @@ void MainWindow::setupMenuBar()
     sovereignTelemetryAct->setCheckable(true);
     if (m_sovereignTelemetryDock) {
         sovereignTelemetryAct->setChecked(m_sovereignTelemetryDock->isVisible());
-        connect(m_sovereignTelemetryDock, &QDockWidget::visibilityChanged, sovereignTelemetryAct, &QAction::setChecked);
+// Qt connect removed
     }
 
     // ----- Thermal Dashboard Section -----
@@ -860,7 +771,7 @@ void MainWindow::setupMenuBar()
         if (!m_thermalDashboardDock && checked) {
             m_thermalDashboardDock = new QDockWidget(tr("NVMe Thermal"), this);
             m_thermalDashboardDock->setWidget(new ThermalDashboardWidget(this));
-            addDockWidget(Qt::RightDockWidgetArea, m_thermalDashboardDock);
+            addDockWidget(//RightDockWidgetArea, m_thermalDashboardDock);
         } else if (m_thermalDashboardDock) {
             m_thermalDashboardDock->setVisible(checked);
         }
@@ -876,7 +787,7 @@ void MainWindow::setupMenuBar()
     masmAct->setCheckable(true);
     if (m_masmEditorDock) {
         masmAct->setChecked(m_masmEditorDock->isVisible());
-        connect(m_masmEditorDock, &QDockWidget::visibilityChanged, masmAct, &QAction::setChecked);
+// Qt connect removed
     }
     editorFeaturesMenu->addAction(tr("Code Minimap"), this, &MainWindow::toggleCodeMinimap)->setCheckable(true);
     editorFeaturesMenu->addAction(tr("Breadcrumb Bar"), this, &MainWindow::toggleBreadcrumbBar)->setCheckable(true);
@@ -888,7 +799,7 @@ void MainWindow::setupMenuBar()
     hotpatchAct->setCheckable(true);
     if (m_hotpatchPanelDock) {
         hotpatchAct->setChecked(m_hotpatchPanelDock->isVisible());
-        connect(m_hotpatchPanelDock, &QDockWidget::visibilityChanged, hotpatchAct, &QAction::setChecked);
+// Qt connect removed
     }
     
     // ----- DevOps & Cloud Section -----
@@ -927,7 +838,7 @@ void MainWindow::setupMenuBar()
     appearanceMenu->addAction(tr("Toggle Full Screen"), this, &MainWindow::handleFullScreen, QKeySequence::FullScreen)->setCheckable(true);
     appearanceMenu->addAction(tr("Toggle Zen Mode"), this, &MainWindow::handleZenMode)->setCheckable(true);
     appearanceMenu->addSeparator();
-    appearanceMenu->addAction(tr("Toggle Side Bar"), this, &MainWindow::handleToggleSidebar, QKeySequence(Qt::CTRL | Qt::Key_B))->setCheckable(true);
+    appearanceMenu->addAction(tr("Toggle Side Bar"), this, &MainWindow::handleToggleSidebar, QKeySequence(//CTRL | //Key_B))->setCheckable(true);
     appearanceMenu->addAction(tr("Toggle Status Bar"), this, &MainWindow::toggleStatusBarManager)->setCheckable(true);
     appearanceMenu->addSeparator();
     appearanceMenu->addAction(tr("Reset Layout"), this, &MainWindow::handleResetLayout);
@@ -949,7 +860,7 @@ void MainWindow::setupMenuBar()
     // TOOLS MENU - Developer utilities
     // ============================================================
     QMenu* toolsMenu = menuBar()->addMenu(tr("&Tools"));
-    toolsMenu->addAction(tr("Command Palette..."), this, &MainWindow::toggleCommandPalette, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P));
+    toolsMenu->addAction(tr("Command Palette..."), this, &MainWindow::toggleCommandPalette, QKeySequence(//CTRL | //SHIFT | //Key_P));
     toolsMenu->addSeparator();
     toolsMenu->addAction(tr("Snippet Manager"), this, &MainWindow::toggleSnippetManager);
     toolsMenu->addAction(tr("Regex Tester"), this, &MainWindow::toggleRegexTester);
@@ -966,16 +877,16 @@ void MainWindow::setupMenuBar()
     // RUN MENU - Execution and debugging
     // ============================================================
     QMenu* runMenu = menuBar()->addMenu(tr("&Run"));
-    runMenu->addAction(tr("&Start Debugging"), this, &MainWindow::handleStartDebug, QKeySequence(Qt::Key_F5));
-    runMenu->addAction(tr("Run &Without Debugging"), this, &MainWindow::handleRunNoDebug, QKeySequence(Qt::CTRL | Qt::Key_F5));
-    runMenu->addAction(tr("S&top Debugging"), this, &MainWindow::handleStopDebug, QKeySequence(Qt::SHIFT | Qt::Key_F5));
-    runMenu->addAction(tr("&Restart Debugging"), this, &MainWindow::handleRestartDebug, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_F5));
+    runMenu->addAction(tr("&Start Debugging"), this, &MainWindow::handleStartDebug, QKeySequence(//Key_F5));
+    runMenu->addAction(tr("Run &Without Debugging"), this, &MainWindow::handleRunNoDebug, QKeySequence(//CTRL | //Key_F5));
+    runMenu->addAction(tr("S&top Debugging"), this, &MainWindow::handleStopDebug, QKeySequence(//SHIFT | //Key_F5));
+    runMenu->addAction(tr("&Restart Debugging"), this, &MainWindow::handleRestartDebug, QKeySequence(//CTRL | //SHIFT | //Key_F5));
     runMenu->addSeparator();
-    runMenu->addAction(tr("Step &Over"), this, &MainWindow::handleStepOver, QKeySequence(Qt::Key_F10));
-    runMenu->addAction(tr("Step &Into"), this, &MainWindow::handleStepInto, QKeySequence(Qt::Key_F11));
-    runMenu->addAction(tr("Step O&ut"), this, &MainWindow::handleStepOut, QKeySequence(Qt::SHIFT | Qt::Key_F11));
+    runMenu->addAction(tr("Step &Over"), this, &MainWindow::handleStepOver, QKeySequence(//Key_F10));
+    runMenu->addAction(tr("Step &Into"), this, &MainWindow::handleStepInto, QKeySequence(//Key_F11));
+    runMenu->addAction(tr("Step O&ut"), this, &MainWindow::handleStepOut, QKeySequence(//SHIFT | //Key_F11));
     runMenu->addSeparator();
-    runMenu->addAction(tr("Toggle &Breakpoint"), this, &MainWindow::handleToggleBreakpoint, QKeySequence(Qt::Key_F9));
+    runMenu->addAction(tr("Toggle &Breakpoint"), this, &MainWindow::handleToggleBreakpoint, QKeySequence(//Key_F9));
     runMenu->addAction(tr("&Add Configuration..."), this, &MainWindow::handleAddRunConfig);
     runMenu->addSeparator();
     runMenu->addAction(tr("Run Script"), this, &MainWindow::onRunScript);
@@ -984,7 +895,7 @@ void MainWindow::setupMenuBar()
     // TERMINAL MENU
     // ============================================================
     QMenu* termMenu = menuBar()->addMenu(tr("Ter&minal"));
-    termMenu->addAction(tr("&New Terminal"), this, &MainWindow::handleNewTerminal, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_QuoteLeft));
+    termMenu->addAction(tr("&New Terminal"), this, &MainWindow::handleNewTerminal, QKeySequence(//CTRL | //SHIFT | //Key_QuoteLeft));
     termMenu->addAction(tr("&Split Terminal"), this, &MainWindow::handleSplitTerminal);
     termMenu->addAction(tr("&Kill Terminal"), this, &MainWindow::handleKillTerminal);
     termMenu->addAction(tr("&Clear Terminal"), this, &MainWindow::handleClearTerminal);
@@ -1019,8 +930,7 @@ void MainWindow::setupMenuBar()
     // Streaming mode toggle
     QAction* streamAct = aiMenu->addAction(tr("Streaming Mode"));
     streamAct->setCheckable(true);
-    connect(streamAct, &QAction::toggled, this, [this](bool on){
-        m_streamingMode = on;
+// Qt connect removed
         statusBar()->showMessage(on ? tr("Streaming inference ON")
                                     : tr("Streaming inference OFF"), 2000);
     });
@@ -1028,7 +938,7 @@ void MainWindow::setupMenuBar()
     // Batch compress folder
     aiMenu->addSeparator();
     QAction* batchAct = aiMenu->addAction(tr("Batch Compress Folder..."));
-    connect(batchAct, &QAction::triggered, this, &MainWindow::batchCompressFolder);
+// Qt connect removed
     setupQuantizationMenu(aiMenu);
 
     QMenu* agentMenu = menuBar()->addMenu(tr("&Agent"));
@@ -1041,16 +951,15 @@ void MainWindow::setupMenuBar()
         {"Ask Mode", "Ask"},
     };
     for (const auto& mode : agentModes) {
-        QAction* action = agentMenu->addAction(QString::fromUtf8(mode.label));
+        QAction* action = agentMenu->addAction(std::string::fromUtf8(mode.label));
         action->setCheckable(true);
-        action->setData(QString::fromUtf8(mode.id));
+        action->setData(std::string::fromUtf8(mode.id));
         agentModeGroup->addAction(action);
-        if (QString::fromUtf8(mode.id) == m_agentMode) {
+        if (std::string::fromUtf8(mode.id) == m_agentMode) {
             action->setChecked(true);
         }
     }
-    connect(agentModeGroup, &QActionGroup::triggered, this, [this](QAction* action) {
-        changeAgentMode(action->data().toString());
+// Qt connect removed
     });
 
     QMenu* modelMenu = menuBar()->addMenu(tr("&Model"));
@@ -1066,8 +975,8 @@ void MainWindow::setupMenuBar()
         {"custom", "Custom Backend"}
     };
     for (const auto& backend : backendOptions) {
-        QString backendId = QString::fromUtf8(backend.id);
-        QAction* backendAction = modelMenu->addAction(QString::fromUtf8(backend.label));
+        std::string backendId = std::string::fromUtf8(backend.id);
+        QAction* backendAction = modelMenu->addAction(std::string::fromUtf8(backend.label));
         backendAction->setCheckable(true);
         backendAction->setData(backendId);
         m_backendGroup->addAction(backendAction);
@@ -1075,8 +984,7 @@ void MainWindow::setupMenuBar()
             backendAction->setChecked(true);
         }
     }
-    connect(m_backendGroup, &QActionGroup::triggered, this, &MainWindow::handleBackendSelection);
-
+// Qt connect removed
     modelMenu->addSeparator();
     modelMenu->addAction(tr("Manage Backends..."), this, &MainWindow::setupAIBackendSwitcher);
     modelMenu->addAction(tr("Refresh Models"), this, &MainWindow::refreshModelSelector);
@@ -1087,9 +995,9 @@ void MainWindow::setupMenuBar()
     QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(tr("&Welcome"), this, &MainWindow::toggleWelcomeScreen);
     helpMenu->addSeparator();
-    helpMenu->addAction(tr("&Documentation"), this, &MainWindow::handleOpenDocs, QKeySequence(Qt::Key_F1));
+    helpMenu->addAction(tr("&Documentation"), this, &MainWindow::handleOpenDocs, QKeySequence(//Key_F1));
     helpMenu->addAction(tr("&Interactive Playground"), this, &MainWindow::handlePlayground);
-    helpMenu->addAction(tr("Show All &Commands"), this, &MainWindow::toggleCommandPalette, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P));
+    helpMenu->addAction(tr("Show All &Commands"), this, &MainWindow::toggleCommandPalette, QKeySequence(//CTRL | //SHIFT | //Key_P));
     helpMenu->addSeparator();
     helpMenu->addAction(tr("&Keyboard Shortcuts"), this, &MainWindow::handleShowShortcuts, QKeySequence(QStringLiteral("Ctrl+K Ctrl+S")));
     helpMenu->addAction(tr("Keyboard Shortcuts &Reference..."), this, &MainWindow::toggleShortcutsConfigurator);
@@ -1101,7 +1009,7 @@ void MainWindow::setupMenuBar()
     helpMenu->addAction(tr("&Join Community..."), this, &MainWindow::handleJoinCommunity);
     helpMenu->addSeparator();
     helpMenu->addAction(tr("&View License"), this, &MainWindow::handleViewLicense);
-    helpMenu->addAction(tr("Toggle &Developer Tools"), this, &MainWindow::handleDevTools, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_I));
+    helpMenu->addAction(tr("Toggle &Developer Tools"), this, &MainWindow::handleDevTools, QKeySequence(//CTRL | //SHIFT | //Key_I));
     helpMenu->addSeparator();
     helpMenu->addAction(tr("&About RawrXD"), this, &MainWindow::onAbout);
 }
@@ -1127,30 +1035,29 @@ void MainWindow::setupToolBars()
     // Add recent models (populated from settings/cache)
     m_modelSelector->addItem(tr("Load model from file..."));
     toolbar->addWidget(m_modelSelector);
-    
-    connect(m_modelSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int idx) {
+// Qt connect removed
         if (idx <= 0) return;  // Skip "No model loaded" and separators
-        QString modelData = m_modelSelector->itemData(idx).toString();
+        std::string modelData = m_modelSelector->itemData(idx).toString();
         if (modelData.startsWith("ollama:")) {
-            QString modelName = modelData.mid(QString("ollama:").length());
+            std::string modelName = modelData.mid(std::string("ollama:").length());
             // Resolve to local GGUF if available
-            QString gguf;
-            QStringList searchDirs = {QString("D:/OllamaModels"), QDir::homePath() + "/models", QDir::currentPath() + "/models"};
-            for (const QString& dirPath : searchDirs) {
-                QDir d(dirPath);
+            std::string gguf;
+            std::vector<std::string> searchDirs = {std::string("D:/OllamaModels"), std::filesystem::path::homePath() + "/models", std::filesystem::path::currentPath() + "/models"};
+            for (const std::string& dirPath : searchDirs) {
+                std::filesystem::path d(dirPath);
                 if (!d.exists()) continue;
-                QStringList matches = d.entryList(QStringList() << QString("*%1*.gguf").arg(modelName), QDir::Files, QDir::Name);
+                std::vector<std::string> matches = d.entryList(std::vector<std::string>() << std::string("*%1*.gguf"), std::filesystem::path::Files, std::filesystem::path::Name);
                 if (!matches.isEmpty()) { gguf = d.filePath(matches.first()); break; }
             }
             if (!gguf.isEmpty()) {
                 // Auto-load the resolved GGUF directly
                 loadGGUFModel(gguf);
             } else {
-                statusBar()->showMessage(tr("No GGUF found for Ollama model %1").arg(modelName), 5000);
+                statusBar()->showMessage(tr("No GGUF found for Ollama model %1"), 5000);
             }
         } else if (!modelData.isEmpty() && modelData != "LOAD") {
             // Direct model selection - if it appears to be a path to a GGUF file, load it
-            if (QFile::exists(modelData) && modelData.endsWith(".gguf", Qt::CaseInsensitive)) {
+            if (std::fstream::exists(modelData) && modelData.endsWith(".gguf", //CaseInsensitive)) {
                 loadGGUFModel(modelData);
             } else {
                 // Fallback: open file dialog
@@ -1162,7 +1069,7 @@ void MainWindow::setupToolBars()
     });
 
     // Populate the dropdown to match the Agent model selector (includes Ollama, cloud and local GGUF models)
-    QTimer::singleShot(0, this, &MainWindow::refreshModelSelector);
+    void*::singleShot(0, this, &MainWindow::refreshModelSelector);
     
     toolbar->addSeparator();
     
@@ -1173,15 +1080,14 @@ void MainWindow::setupToolBars()
     m_agentModeSwitcher->addItem(tr("Agent Mode"), QStringLiteral("Agent"));
     m_agentModeSwitcher->addItem(tr("Ask Mode"), QStringLiteral("Ask"));
     toolbar->addWidget(m_agentModeSwitcher);
-    connect(m_agentModeSwitcher, &QComboBox::currentTextChanged, this, [this](const QString&) {
-        if (!m_agentModeSwitcher) return;
-        QVariant data = m_agentModeSwitcher->currentData();
+// Qt connect removed
+        std::any data = m_agentModeSwitcher->currentData();
         if (data.isValid()) changeAgentMode(data.toString());
     });
     changeAgentMode(m_agentMode); // sync UI state
 }
 
-void MainWindow::changeAgentMode(const QString& mode)
+void MainWindow::changeAgentMode(const std::string& mode)
 {
     if (mode.isEmpty()) return;
     if (mode == m_agentMode) return;
@@ -1204,69 +1110,68 @@ void MainWindow::changeAgentMode(const QString& mode)
             }
         }
     }
-    statusBar()->showMessage(tr("Agent mode set to %1").arg(mode), 2000);
+    statusBar()->showMessage(tr("Agent mode set to %1"), 2000);
 }
 
 void MainWindow::refreshModelSelector()
 {
     if (!m_modelSelector) return;
 
-    QString current = m_modelSelector->currentData().toString();
+    std::string current = m_modelSelector->currentData().toString();
     m_modelSelector->clear();
     m_modelSelector->addItem(tr("No model loaded"), "");
     m_modelSelector->addItem(tr("Load model from file..."), "LOAD");
 
-    QSet<QString> seen;
+    std::unordered_set<std::string> seen;
 
     // Search local GGUF directories
-    QStringList searchDirs = {
-        QDir::currentPath() + "/models",
-        QDir::homePath() + "/models",
-        QString("D:/OllamaModels")
+    std::vector<std::string> searchDirs = {
+        std::filesystem::path::currentPath() + "/models",
+        std::filesystem::path::homePath() + "/models",
+        std::string("D:/OllamaModels")
     };
 
-    for (const QString& dirPath : searchDirs) {
-        QDir d(dirPath);
+    for (const std::string& dirPath : searchDirs) {
+        std::filesystem::path d(dirPath);
         if (!d.exists()) continue;
-        QDirIterator it(dirPath, QStringList() << "*.gguf", QDir::Files, QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            QString file = it.next();
+        QDirIterator it(dirPath, std::vector<std::string>() << "*.gguf", std::filesystem::path::Files, QDirIterator::Subdirectories);
+        while (itfalse) {
+            std::string file = it;
             if (seen.contains(file)) continue;
-            QString display = QFileInfo(file).fileName();
-            QString tooltip = buildGgufTooltip(file);
+            std::string display = std::filesystem::path(file).fileName();
+            std::string tooltip = buildGgufTooltip(file);
             m_modelSelector->addItem(display, file);
-            m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, Qt::ToolTipRole);
+            m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, //ToolTipRole);
             seen.insert(file);
         }
     }
 
     // Add Ollama models via `ollama list` (non-blocking but short timeout)
     QProcess ollamaProcess;
-    ollamaProcess.start("ollama", QStringList() << "list");
+    ollamaProcess.start("ollama", std::vector<std::string>() << "list");
     if (ollamaProcess.waitForStarted(2000) && ollamaProcess.waitForFinished(4000)) {
-        QString output = QString::fromUtf8(ollamaProcess.readAllStandardOutput());
-        QStringList lines = output.split('\n', Qt::SkipEmptyParts);
+        std::string output = std::string::fromUtf8(ollamaProcess.readAllStandardOutput());
+        std::vector<std::string> lines = output.split('\n', //SkipEmptyParts);
         for (int i = 1; i < lines.size(); ++i) {
-            QString line = lines[i].trimmed();
+            std::string line = lines[i].trimmed();
             if (line.isEmpty()) continue;
-            QStringList parts = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+            std::vector<std::string> parts = line.split(std::regex("\\s+"), //SkipEmptyParts);
             if (parts.isEmpty()) continue;
-            QString modelName = parts[0];
-            QString key = QString("ollama:%1").arg(modelName);
+            std::string modelName = parts[0];
+            std::string key = std::string("ollama:%1");
             if (seen.contains(key)) continue;
-            QString tooltip = modelName;
+            std::string tooltip = modelName;
             // Prefer agent breadcrumb metadata if available
             if (m_aiChatPanel && m_aiChatPanel->getBreadcrumb()) {
                 tooltip = m_aiChatPanel->getBreadcrumb()->tooltipForModel(modelName);
             } else {
-                tooltip = QString("<b>%1</b><br/>Source: Ollama").arg(modelName);
+                tooltip = std::string("<b>%1</b><br/>Source: Ollama");
             }
-            m_modelSelector->addItem(QString("[Ollama] %1").arg(modelName), key);
-            m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, Qt::ToolTipRole);
+            m_modelSelector->addItem(std::string("[Ollama] %1"), key);
+            m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, //ToolTipRole);
             seen.insert(key);
         }
     } else {
-        qDebug() << "[MainWindow] Ollama list not available or timed out";
     }
 
     // Load cloud models from QSettings (claude, gpt, copilot, huggingface)
@@ -1275,13 +1180,13 @@ void MainWindow::refreshModelSelector()
 
     settings.beginGroup("claude");
     for (const auto& key : settings.allKeys()) {
-        QString modelId = settings.value(key, "").toString();
+        std::string modelId = settings.value(key, "").toString();
         if (!modelId.isEmpty()) {
-            QString data = QString("cloud:claude:%1").arg(modelId);
+            std::string data = std::string("cloud:claude:%1");
             if (!seen.contains(data)) {
-                QString tooltip = QString("<b>%1</b><br/>Provider: Claude<br/>Model: %2").arg(modelId, QString("Claude"));
-                m_modelSelector->addItem(QString("[Claude] %1").arg(modelId), data);
-                m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, Qt::ToolTipRole);
+                std::string tooltip = std::string("<b>%1</b><br/>Provider: Claude<br/>Model: %2"));
+                m_modelSelector->addItem(std::string("[Claude] %1"), data);
+                m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, //ToolTipRole);
                 seen.insert(data);
             }
         }
@@ -1290,13 +1195,13 @@ void MainWindow::refreshModelSelector()
 
     settings.beginGroup("gpt");
     for (const auto& key : settings.allKeys()) {
-        QString modelId = settings.value(key, "").toString();
+        std::string modelId = settings.value(key, "").toString();
         if (!modelId.isEmpty()) {
-            QString data = QString("cloud:openai:%1").arg(modelId);
+            std::string data = std::string("cloud:openai:%1");
             if (!seen.contains(data)) {
-                QString tooltip = QString("<b>%1</b><br/>Provider: OpenAI<br/>Model: %2").arg(modelId, QString("OpenAI"));
-                m_modelSelector->addItem(QString("[OpenAI] %1").arg(modelId), data);
-                m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, Qt::ToolTipRole);
+                std::string tooltip = std::string("<b>%1</b><br/>Provider: OpenAI<br/>Model: %2"));
+                m_modelSelector->addItem(std::string("[OpenAI] %1"), data);
+                m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, //ToolTipRole);
                 seen.insert(data);
             }
         }
@@ -1305,13 +1210,13 @@ void MainWindow::refreshModelSelector()
 
     settings.beginGroup("copilot");
     for (const auto& key : settings.allKeys()) {
-        QString modelId = settings.value(key, "").toString();
+        std::string modelId = settings.value(key, "").toString();
         if (!modelId.isEmpty()) {
-            QString data = QString("cloud:copilot:%1").arg(modelId);
+            std::string data = std::string("cloud:copilot:%1");
             if (!seen.contains(data)) {
-                QString tooltip = QString("<b>%1</b><br/>Provider: GitHub Copilot").arg(modelId);
-                m_modelSelector->addItem(QString("[Copilot] %1").arg(modelId), data);
-                m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, Qt::ToolTipRole);
+                std::string tooltip = std::string("<b>%1</b><br/>Provider: GitHub Copilot");
+                m_modelSelector->addItem(std::string("[Copilot] %1"), data);
+                m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, //ToolTipRole);
                 seen.insert(data);
             }
         }
@@ -1320,13 +1225,13 @@ void MainWindow::refreshModelSelector()
 
     settings.beginGroup("huggingface");
     for (const auto& key : settings.allKeys()) {
-        QString modelId = settings.value(key, "").toString();
+        std::string modelId = settings.value(key, "").toString();
         if (!modelId.isEmpty()) {
-            QString data = QString("cloud:hf:%1").arg(modelId);
+            std::string data = std::string("cloud:hf:%1");
             if (!seen.contains(data)) {
-                QString tooltip = QString("<b>%1</b><br/>Provider: HuggingFace").arg(modelId);
-                m_modelSelector->addItem(QString("[HuggingFace] %1").arg(modelId), data);
-                m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, Qt::ToolTipRole);
+                std::string tooltip = std::string("<b>%1</b><br/>Provider: HuggingFace");
+                m_modelSelector->addItem(std::string("[HuggingFace] %1"), data);
+                m_modelSelector->setItemData(m_modelSelector->count() - 1, tooltip, //ToolTipRole);
                 seen.insert(data);
             }
         }
@@ -1340,31 +1245,31 @@ void MainWindow::refreshModelSelector()
     if (idx >= 0) m_modelSelector->setCurrentIndex(idx);
 }
 
-QString MainWindow::buildGgufTooltip(const QString& filePath)
+std::string MainWindow::buildGgufTooltip(const std::string& filePath)
 {
     if (m_modelTooltipCache.contains(filePath)) return m_modelTooltipCache[filePath];
 
-    QString display = QFileInfo(filePath).fileName();
-    QString tooltip = QString("<b>%1</b><br/>Path: %2").arg(display).arg(filePath);
+    std::string display = std::filesystem::path(filePath).fileName();
+    std::string tooltip = std::string("<b>%1</b><br/>Path: %2");
 
     // Try to open GGUF and extract metadata (fast, streaming reader)
     try {
         // Async operation helper (disabled until call sites are finalized)
         // template<typename Func>
-        // inline QFuture<void> runAsync(Func&& func, const QString& operation) {
+        // inline QFuture<void> runAsync(Func&& func, const std::string& operation) {
         //     return QtConcurrent::run([func = std::forward<Func>(func), operation]() {
         //         RawrXD::Integration::ScopedTimer timer("Async", operation.toUtf8().constData(), "operation");
         //         try {
         //             func();
         //         } catch (const std::exception& e) {
         //             RawrXD::Integration::logError("Async", operation.toUtf8().constData(),
-        //                 QString("Async operation failed: %1").arg(QString::fromUtf8(e.what())));
+        //                 std::string("Async operation failed: %1"))));
         //         }
         //     });
         // }
     } catch (const std::exception& e) {
         RawrXD::Integration::logWarn("MainWindow", "gguf_tooltip_failed",
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     } catch (...) {
         RawrXD::Integration::logWarn("MainWindow", "gguf_tooltip_failed",
             QStringLiteral("Unknown exception"));
@@ -1374,38 +1279,36 @@ QString MainWindow::buildGgufTooltip(const QString& filePath)
     return tooltip;
 }
 
-void MainWindow::loadGGUFModel(const QString& ggufPath)
+void MainWindow::loadGGUFModel(const std::string& ggufPath)
 {
-    if (ggufPath.isEmpty() || !QFile::exists(ggufPath)) {
-        QMessageBox::critical(this, tr("Invalid Model"), tr("Model file not found: %1").arg(ggufPath));
+    if (ggufPath.isEmpty() || !std::fstream::exists(ggufPath)) {
+        QMessageBox::critical(this, tr("Invalid Model"), tr("Model file not found: %1"));
         statusBar()->showMessage(tr("❌ Model file not found"), 3000);
         return;
     }
 
-    qDebug() << "[MainWindow::loadGGUFModel] Loading model:" << ggufPath;
     m_pendingModelPath = ggufPath;
 
     if (!m_loadingProgressDialog) {
         m_loadingProgressDialog = new QProgressDialog(this);
         m_loadingProgressDialog->setWindowTitle(tr("Loading Model"));
-        m_loadingProgressDialog->setWindowModality(Qt::WindowModal);
+        m_loadingProgressDialog->setWindowModality(//WindowModal);
         m_loadingProgressDialog->setMinimumDuration(0);
         m_loadingProgressDialog->setAutoClose(false);
         m_loadingProgressDialog->setAutoReset(false);
-        connect(m_loadingProgressDialog, &QProgressDialog::canceled, this, [this]() {
-            if (m_modelLoaderThread) m_modelLoaderThread->cancel();
+// Qt connect removed
         });
     }
 
-    QString modelName = QFileInfo(ggufPath).fileName();
-    m_loadingProgressDialog->setLabelText(tr("Loading %1...\nInitializing...").arg(modelName));
+    std::string modelName = std::filesystem::path(ggufPath).fileName();
+    m_loadingProgressDialog->setLabelText(tr("Loading %1...\nInitializing..."));
     m_loadingProgressDialog->setRange(0, 0);
     m_loadingProgressDialog->setValue(0);
     m_loadingProgressDialog->show();
 
     // Ensure inference engine exists
     if (!m_inferenceEngine) {
-        m_inferenceEngine = new InferenceEngine(QString(), this);
+        m_inferenceEngine = new InferenceEngine(std::string(), this);
     }
 
     // Clean up any previous loader
@@ -1420,22 +1323,20 @@ void MainWindow::loadGGUFModel(const QString& ggufPath)
     m_modelLoaderThread->setProgressCallback([this](const std::string& msg) {
         QMetaObject::invokeMethod(this, [this, msg]() {
             if (m_loadingProgressDialog && m_loadingProgressDialog->isVisible()) {
-                m_loadingProgressDialog->setLabelText(QString::fromStdString(msg));
+                m_loadingProgressDialog->setLabelText(std::string::fromStdString(msg));
             }
-        }, Qt::QueuedConnection);
+        }, //QueuedConnection);
     });
     m_modelLoaderThread->setCompleteCallback([this](bool success, const std::string& err) {
         QMetaObject::invokeMethod(this, [this, success, err]() {
             onModelLoadFinished(success, err);
-        }, Qt::QueuedConnection);
+        }, //QueuedConnection);
     });
     m_modelLoaderThread->start();
 
     if (!m_loadProgressTimer) {
-        m_loadProgressTimer = new QTimer(this);
-        connect(m_loadProgressTimer, &QTimer::timeout, this, [this]() {
-            if (m_modelLoaderThread && !m_modelLoaderThread->isRunning()) {
-                if (m_loadProgressTimer) m_loadProgressTimer->stop();
+        m_loadProgressTimer = new void*(this);
+// Qt connect removed
             }
         });
     }
@@ -1447,17 +1348,16 @@ void MainWindow::onModelLoadFinished(bool success, const std::string& errorMsg)
     if (m_loadProgressTimer) m_loadProgressTimer->stop();
     if (m_loadingProgressDialog) m_loadingProgressDialog->hide();
 
-    qInfo() << "[MainWindow::onModelLoadFinished] success=" << success;
 
-    QString ggufPath = m_pendingModelPath;
+    std::string ggufPath = m_pendingModelPath;
     if (m_modelLoaderThread) {
         delete m_modelLoaderThread;
         m_modelLoaderThread = nullptr;
     }
 
     if (!success) {
-        QMessageBox::critical(this, tr("Load Failed"), tr("Failed to load GGUF model: %1\n%2").arg(ggufPath, QString::fromStdString(errorMsg)));
-        statusBar()->showMessage(tr("❌ Model load failed: %1").arg(QFileInfo(ggufPath).fileName()), 5000);
+        QMessageBox::critical(this, tr("Load Failed"), tr("Failed to load GGUF model: %1\n%2")));
+        statusBar()->showMessage(tr("❌ Model load failed: %1").fileName()), 5000);
         return;
     }
 
@@ -1471,29 +1371,29 @@ void MainWindow::onModelLoadFinished(bool success, const std::string& errorMsg)
     if (m_chatTabs) {
         for (int i = 0; i < m_chatTabs->count(); ++i) {
             if (auto* panel = qobject_cast<AIChatPanel*>(m_chatTabs->widget(i))) {
-                panel->setLocalModel(QFileInfo(ggufPath).baseName());
-                panel->setSelectedModel(QFileInfo(ggufPath).baseName());
+                panel->setLocalModel(std::filesystem::path(ggufPath).baseName());
+                panel->setSelectedModel(std::filesystem::path(ggufPath).baseName());
                 panel->setInputEnabled(true);
             }
         }
     }
 
-    statusBar()->showMessage(tr("✔ Model loaded: %1").arg(QFileInfo(ggufPath).fileName()), 4000);
+    statusBar()->showMessage(tr("✔ Model loaded: %1").fileName()), 4000);
 }
 
 void MainWindow::handleBackendSelection(QAction* action)
 {
     if (!action) return;
-    QString backendId = action->data().toString();
+    std::string backendId = action->data().toString();
     if (backendId.isEmpty() || backendId == m_currentBackend) return;
     m_currentBackend = backendId;
-    statusBar()->showMessage(tr("Backend switched to %1").arg(action->text()), 2000);
+    statusBar()->showMessage(tr("Backend switched to %1")), 2000);
     onAIBackendChanged(backendId, {});
 }
 
 void MainWindow::createCentralEditor()
 {
-    QWidget* central = new QWidget(this);
+    void* central = new void(this);
     QVBoxLayout* layout = new QVBoxLayout(central);
     
     editorTabs_ = new QTabWidget(central);
@@ -1506,7 +1406,6 @@ void MainWindow::createCentralEditor()
 
 void MainWindow::setupStatusBar()
 {
-    qInfo() << "[INIT] Setting up status bar with comprehensive indicators";
     
     // Main status message
     statusBar()->showMessage(tr("Ready | ggml Q4_0/Q8_0 quantization available | RawrXD IDE v3.0"));
@@ -1520,11 +1419,10 @@ void MainWindow::setupStatusBar()
     
     // Connect to editor cursor changes
     if (codeView_) {
-        connect(codeView_, &QTextEdit::cursorPositionChanged, this, [this, lineColLabel]() {
-            QTextCursor cursor = codeView_->textCursor();
+// Qt connect removed
             int line = cursor.blockNumber() + 1;
             int col = cursor.columnNumber() + 1;
-            lineColLabel->setText(QString(" Ln %1, Col %2 ").arg(line).arg(col));
+            lineColLabel->setText(std::string(" Ln %1, Col %2 "));
         });
     }
     
@@ -1542,15 +1440,13 @@ void MainWindow::setupStatusBar()
     
     // Update model label when model changes
     if (m_modelSelector) {
-        connect(m_modelSelector, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                this, [this, modelLabel]() {
-            QString modelName = m_modelSelector->currentText();
+// Qt connect removed
             if (!modelName.isEmpty()) {
                 // Truncate long model names
                 if (modelName.length() > 30) {
                     modelName = modelName.left(27) + "...";
                 }
-                modelLabel->setText(QString(" Model: %1 ").arg(modelName));
+                modelLabel->setText(std::string(" Model: %1 "));
             } else {
                 modelLabel->setText(" Model: None ");
             }
@@ -1564,18 +1460,16 @@ void MainWindow::setupStatusBar()
     statusBar()->addPermanentWidget(memoryLabel);
     
     // Update memory periodically
-    QTimer* memoryTimer = new QTimer(this);
-    connect(memoryTimer, &QTimer::timeout, this, [memoryLabel]() {
-        // Simple memory indicator (in production, use actual process memory)
-        QProcess proc;
-        proc.start("powershell", QStringList() << "-Command" 
+    void** memoryTimer = new void*(this);
+// Qt connect removed
+        proc.start("powershell", std::vector<std::string>() << "-Command" 
                   << "(Get-Process -Id $PID).WorkingSet64 / 1MB");
         if (proc.waitForFinished(500)) {
-            QString output = proc.readAllStandardOutput().trimmed();
+            std::string output = proc.readAllStandardOutput().trimmed();
             bool ok;
             double memMB = output.toDouble(&ok);
             if (ok) {
-                memoryLabel->setText(QString(" RAM: %1 MB ").arg(memMB, 0, 'f', 0));
+                memoryLabel->setText(std::string(" RAM: %1 MB "));
             }
         }
     });
@@ -1587,34 +1481,28 @@ void MainWindow::setupStatusBar()
     connectionLabel->setToolTip(tr("Connection status"));
     statusBar()->addPermanentWidget(connectionLabel);
     
-    qInfo() << "[INIT] Status bar setup complete with 5 permanent widgets";
 }
 
 void MainWindow::initSubsystems()
 {
-    qInfo() << "[INIT] Starting subsystem initialization at" << QDateTime::currentDateTime();
     
     int successCount = 0;
     int totalSubsystems = 0;
-    QStringList failedSubsystems;
+    std::vector<std::string> failedSubsystems;
     
-    auto initSubsystem = [&](const QString& name, std::function<bool()> initFunc) {
+    auto initSubsystem = [&](const std::string& name, std::function<bool()> initFunc) {
         totalSubsystems++;
-        qDebug() << "[INIT][" << name << "] Initializing...";
         
         try {
             if (initFunc()) {
                 successCount++;
-                qInfo() << "[INIT][" << name << "] ✓ Initialized successfully";
                 return true;
             } else {
                 failedSubsystems << name;
-                qWarning() << "[INIT][" << name << "] ✗ Initialization failed";
                 return false;
             }
         } catch (const std::exception& e) {
             failedSubsystems << name;
-            qCritical() << "[INIT][" << name << "] ✗ Exception:" << e.what();
             return false;
         }
     };
@@ -1623,7 +1511,6 @@ void MainWindow::initSubsystems()
     initSubsystem("InferenceEngine", [this]() {
         if (!m_inferenceEngine) {
             // Inference engine creation would happen here
-            qDebug() << "[INIT] InferenceEngine placeholder - would initialize here";
         }
         return true;
     });
@@ -1631,92 +1518,79 @@ void MainWindow::initSubsystems()
     initSubsystem("GGUFServer", [this]() {
         if (!m_ggufServer) {
             // GGUF server initialization
-            qDebug() << "[INIT] GGUFServer placeholder - would initialize here";
         }
         return true;
     });
     
     initSubsystem("ProjectExplorer", [this]() {
         if (!projectExplorer_) {
-            qDebug() << "[INIT] ProjectExplorer not yet created";
         }
         return true;
     });
     
     initSubsystem("AIChatPanel", [this]() {
         if (!m_aiChatPanel) {
-            qDebug() << "[INIT] AIChatPanel not yet created";
         }
         return true;
     });
     
     initSubsystem("CommandPalette", [this]() {
         if (!m_commandPalette) {
-            qDebug() << "[INIT] CommandPalette not yet created";
         }
         return true;
     });
     
     initSubsystem("TerminalCluster", [this]() {
         if (pwshProcess_) {
-            qDebug() << "[INIT] PowerShell process active";
         }
         if (cmdProcess_) {
-            qDebug() << "[INIT] CMD process active";
         }
         return true;
     });
     
     initSubsystem("LSPClient", [this]() {
         if (!lspHost_) {
-            qDebug() << "[INIT] LSP Host not yet created";
         }
         return true;
     });
     
     initSubsystem("ModelMonitor", [this]() {
         if (m_modelMonitorDock) {
-            qDebug() << "[INIT] Model monitor dock available";
         }
         return true;
     });
     
     initSubsystem("InterpretabilityPanel", [this]() {
         if (m_interpretabilityPanel) {
-            qDebug() << "[INIT] Interpretability panel active";
         }
         return true;
     });
     
     initSubsystem("HotpatchSystem", [this]() {
         if (m_hotpatchPanel) {
-            qDebug() << "[INIT] Hotpatch panel active";
         }
         return true;
     });
     
     // Log results
-    QString status = tr("Subsystems: %1/%2 initialized").arg(successCount).arg(totalSubsystems);
+    std::string status = tr("Subsystems: %1/%2 initialized");
     statusBar()->showMessage(status, 5000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("\n=== SUBSYSTEM INITIALIZATION ==="));
-        m_hexMagConsole->appendPlainText(QString("Time: %1").arg(QDateTime::currentDateTime().toString()));
-        m_hexMagConsole->appendPlainText(QString("Success: %1/%2").arg(successCount).arg(totalSubsystems));
+        m_hexMagConsole->appendPlainText(std::string("\n=== SUBSYSTEM INITIALIZATION ==="));
+        m_hexMagConsole->appendPlainText(std::string("Time: %1").toString()));
+        m_hexMagConsole->appendPlainText(std::string("Success: %1/%2"));
         
         if (!failedSubsystems.isEmpty()) {
-            m_hexMagConsole->appendPlainText(QString("Failed: %1").arg(failedSubsystems.join(", ")));
+            m_hexMagConsole->appendPlainText(std::string("Failed: %1")));
         }
         
-        m_hexMagConsole->appendPlainText(QString("==============================\n"));
+        m_hexMagConsole->appendPlainText(std::string("==============================\n"));
     }
     
-    qInfo() << "[INIT] Subsystem initialization complete:" << successCount << "/" << totalSubsystems;
     
     if (successCount == totalSubsystems) {
-        qInfo() << "[INIT] ✓ All subsystems initialized successfully";
     } else {
-        qWarning() << "[INIT] ⚠️" << (totalSubsystems - successCount) << "subsystem(s) failed to initialize";
     }
 }
 
@@ -1727,7 +1601,7 @@ void MainWindow::initSubsystems()
 void MainWindow::handleGoalSubmit() {
     if (!goalInput_) return;
     
-    QString wish = goalInput_->text().trimmed();
+    std::string wish = goalInput_->text().trimmed();
     if (wish.isEmpty()) {
         statusBar()->showMessage(tr("Please enter a goal/wish"), 2000);
         return;
@@ -1735,7 +1609,7 @@ void MainWindow::handleGoalSubmit() {
     
     // Use MetaPlanner to convert wish to action plan
     MetaPlanner planner;
-    QJsonArray plan = planner.plan(wish);
+    void* plan = planner.plan(wish);
     
     if (plan.isEmpty()) {
         statusBar()->showMessage(tr("Failed to generate plan"), 3000);
@@ -1744,29 +1618,26 @@ void MainWindow::handleGoalSubmit() {
     
     // Display plan summary
     if (chatHistory_) {
-        chatHistory_->addItem(tr("Goal: %1").arg(wish));
-        chatHistory_->addItem(tr("Plan: %1 actions generated").arg(plan.size()));
+        chatHistory_->addItem(tr("Goal: %1"));
+        chatHistory_->addItem(tr("Plan: %1 actions generated")));
     }
     
-    statusBar()->showMessage(tr("Executing plan with %1 actions...").arg(plan.size()), 3000);
+    statusBar()->showMessage(tr("Executing plan with %1 actions...")), 3000);
     
     // Execute plan via ActionExecutor
     if (!m_actionExecutor) {
         m_actionExecutor = new ActionExecutor(this);
-        connect(m_actionExecutor, &ActionExecutor::actionStarted,
-                this, &MainWindow::onActionStarted);
-        connect(m_actionExecutor, &ActionExecutor::actionCompleted,
-                this, &MainWindow::onActionCompleted);
-        connect(m_actionExecutor, &ActionExecutor::planCompleted,
-                this, &MainWindow::onPlanCompleted);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     }
     
     ExecutionContext ctx;
-    ctx.projectRoot = QDir::currentPath();
+    ctx.projectRoot = std::filesystem::path::currentPath();
     m_actionExecutor->setContext(ctx);
     m_actionExecutor->executePlan(plan);
     
-    emit onGoalSubmitted(wish);
+    onGoalSubmitted(wish);
 }
 
 void MainWindow::handleAgentMockProgress() {
@@ -1776,13 +1647,11 @@ void MainWindow::handleAgentMockProgress() {
             mockStatusBadge_->setText(tr("Agent Running..."));
         }
         statusBar()->showMessage(tr("Agent making progress..."), 1000);
-        qInfo() << "[AGENTIC] Agent mock progress updated at" << QDateTime::currentDateTime();
     } catch (const std::exception& e) {
-        qCritical() << "[AGENTIC] handleAgentMockProgress exception:" << e.what();
     }
     // AGENTIC: Future extension - async notification to agentic subsystem
 }
-void MainWindow::updateSuggestion(const QString& chunk) {
+void MainWindow::updateSuggestion(const std::string& chunk) {
     // AGENTIC: Update suggestion buffer, overlay, and AI chat panel with logging
     try {
         suggestionBuffer_ += chunk;
@@ -1792,14 +1661,12 @@ void MainWindow::updateSuggestion(const QString& chunk) {
         if (m_aiChatPanel) {
             m_aiChatPanel->updateStreamingMessage(chunk);
         }
-        qDebug() << "[AGENTIC] Suggestion updated with chunk of size" << chunk.size();
     } catch (const std::exception& e) {
-        qCritical() << "[AGENTIC] updateSuggestion exception:" << e.what();
     }
     // AGENTIC: Future - async streaming to agentic suggestion subsystem
 }
 
-void MainWindow::appendModelChunk(const QString& chunk) {
+void MainWindow::appendModelChunk(const std::string& chunk) {
     // AGENTIC: Append model chunk with logging and error handling
     try {
         architectBuffer_ += chunk;
@@ -1807,9 +1674,7 @@ void MainWindow::appendModelChunk(const QString& chunk) {
             m_hexMagConsole->insertPlainText(chunk);
             m_hexMagConsole->ensureCursorVisible();
         }
-        qDebug() << "[AGENTIC] Model chunk appended, size:" << chunk.size();
     } catch (const std::exception& e) {
-        qCritical() << "[AGENTIC] appendModelChunk exception:" << e.what();
     }
     // AGENTIC: Future - async streaming to model output subsystem
 }
@@ -1825,9 +1690,7 @@ void MainWindow::handleGenerationFinished() {
             m_hexMagConsole->appendPlainText("\n--- Generation Complete ---\n");
         }
         statusBar()->showMessage(tr("AI generation complete"), 3000);
-        qInfo() << "[AGENTIC] Generation finished at" << QDateTime::currentDateTime();
     } catch (const std::exception& e) {
-        qCritical() << "[AGENTIC] handleGenerationFinished exception:" << e.what();
     }
     // AGENTIC: Future - async notification to agentic completion subsystem
 }
@@ -1835,28 +1698,25 @@ void MainWindow::handleQShellReturn() {
     // AGENTIC: QShell return handler with logging, error handling, and agentic plan execution
     try {
         if (!qshellInput_ || !qshellOutput_) return;
-        QString command = qshellInput_->text().trimmed();
+        std::string command = qshellInput_->text().trimmed();
         if (command.isEmpty()) return;
         qshellOutput_->append(">> " + command);
         qshellInput_->clear();
         MetaPlanner planner;
-        QJsonArray plan = planner.plan(command);
+        void* plan = planner.plan(command);
         if (!plan.isEmpty() && m_actionExecutor) {
             ExecutionContext ctx;
-            ctx.projectRoot = QDir::currentPath();
+            ctx.projectRoot = std::filesystem::path::currentPath();
             m_actionExecutor->setContext(ctx);
             m_actionExecutor->executePlan(plan);
-            qInfo() << "[AGENTIC] QShell executed agentic plan for command:" << command;
         } else {
             qshellOutput_->append("Error: Failed to parse command as agent wish");
-            qWarning() << "[AGENTIC] QShell failed to parse command as agent wish:" << command;
         }
     } catch (const std::exception& e) {
-        qCritical() << "[AGENTIC] handleQShellReturn exception:" << e.what();
     }
     // AGENTIC: Future - async QShell agentic execution
 }
-void MainWindow::handleArchitectChunk(const QString& chunk) {
+void MainWindow::handleArchitectChunk(const std::string& chunk) {
     architectBuffer_ += chunk;
     architectRunning_ = true;
     
@@ -1869,7 +1729,7 @@ void MainWindow::handleArchitectChunk(const QString& chunk) {
         }
         QListWidgetItem* item = chatHistory_->item(chatHistory_->count() - 1);
         if (item) {
-            item->setText(tr("Architect: %1").arg(architectBuffer_));
+            item->setText(tr("Architect: %1"));
         }
     }
     
@@ -1884,17 +1744,17 @@ void MainWindow::handleArchitectFinished() {
     architectRunning_ = false;
     
     // Try to parse architect response as JSON plan
-    QJsonDocument doc = QJsonDocument::fromJson(architectBuffer_.toUtf8());
+    void* doc = void*::fromJson(architectBuffer_.toUtf8());
     if (doc.isArray()) {
-        QJsonArray plan = doc.array();
+        void* plan = doc.array();
         if (chatHistory_) {
-            chatHistory_->addItem(tr("✓ Architect plan ready: %1 actions").arg(plan.size()));
+            chatHistory_->addItem(tr("✓ Architect plan ready: %1 actions")));
         }
         
         // Auto-execute the plan
         if (m_actionExecutor) {
             ExecutionContext ctx;
-            ctx.projectRoot = QDir::currentPath();
+            ctx.projectRoot = std::filesystem::path::currentPath();
             m_actionExecutor->setContext(ctx);
             m_actionExecutor->executePlan(plan);
         }
@@ -1903,24 +1763,24 @@ void MainWindow::handleArchitectFinished() {
     architectBuffer_.clear();
     statusBar()->showMessage(tr("Architect planning complete"), 3000);
 }
-void MainWindow::onActionStarted(int index, const QString& description) {
-    handleTaskStatusUpdate(QString::number(index), description, QStringLiteral("Agent"));
+void MainWindow::onActionStarted(int index, const std::string& description) {
+    handleTaskStatusUpdate(std::string::number(index), description, QStringLiteral("Agent"));
 }
 
-void MainWindow::onActionCompleted(int index, bool success, const QJsonObject& result) {
-    QString summary = QJsonDocument(result).toJson(QJsonDocument::Compact);
-    QString status = success ? QStringLiteral("Completed") : QStringLiteral("Failed");
-    handleTaskStatusUpdate(QString::number(index), status, QStringLiteral("Agent"));
+void MainWindow::onActionCompleted(int index, bool success, const void*& result) {
+    std::string summary = void*(result).toJson(void*::Compact);
+    std::string status = success ? QStringLiteral("Completed") : QStringLiteral("Failed");
+    handleTaskStatusUpdate(std::string::number(index), status, QStringLiteral("Agent"));
     handleTaskCompleted(QStringLiteral("Agent"), summary);
 }
 
-void MainWindow::onPlanCompleted(bool success, const QJsonObject& result) {
-    Q_UNUSED(result);
+void MainWindow::onPlanCompleted(bool success, const void*& result) {
+    (result);
     handleWorkflowFinished(success);
 }
 
-void MainWindow::handleTaskStatusUpdate(const QString& taskId, const QString& status, const QString& agentType) {
-    QString msg = tr("[%1] %2: %3").arg(agentType, taskId, status);
+void MainWindow::handleTaskStatusUpdate(const std::string& taskId, const std::string& status, const std::string& agentType) {
+    std::string msg = tr("[%1] %2: %3");
     
     if (chatHistory_) {
         chatHistory_->addItem(msg);
@@ -1934,8 +1794,8 @@ void MainWindow::handleTaskStatusUpdate(const QString& taskId, const QString& st
     statusBar()->showMessage(msg, 2000);
 }
 
-void MainWindow::handleTaskCompleted(const QString& agentType, const QString& summary) {
-    QString msg = tr("✓ %1 completed: %2").arg(agentType, summary);
+void MainWindow::handleTaskCompleted(const std::string& agentType, const std::string& summary) {
+    std::string msg = tr("✓ %1 completed: %2");
     
     if (chatHistory_) {
         chatHistory_->addItem(msg);
@@ -1957,7 +1817,7 @@ void MainWindow::handleTaskCompleted(const QString& agentType, const QString& su
 }
 
 void MainWindow::handleWorkflowFinished(bool success) {
-    QString msg = success ? tr("✓✓✓ Workflow completed successfully!")
+    std::string msg = success ? tr("✓✓✓ Workflow completed successfully!")
                           : tr("✗ Workflow failed - check logs");
     
     if (chatHistory_) {
@@ -1984,7 +1844,7 @@ void MainWindow::handleWorkflowFinished(bool success) {
     statusBar()->showMessage(msg, 10000);
 }
 
-void MainWindow::handleTaskStreaming(const QString& taskId, const QString& chunk, const QString& agentType) {
+void MainWindow::handleTaskStreaming(const std::string& taskId, const std::string& chunk, const std::string& agentType) {
     // Real-time streaming of task execution output
     if (m_hexMagConsole) {
         m_hexMagConsole->insertPlainText(chunk);
@@ -1992,11 +1852,11 @@ void MainWindow::handleTaskStreaming(const QString& taskId, const QString& chunk
     }
     
     // Update task-specific widget if exists
-    QString key = agentType + ":" + taskId;
+    std::string key = agentType + ":" + taskId;
     if (proposalItemMap_.contains(key)) {
         QListWidgetItem* item = proposalItemMap_[key];
         if (item) {
-            QString currentText = item->text();
+            std::string currentText = item->text();
             if (!currentText.contains("[Streaming]")) {
                 item->setText(currentText + " [Streaming...]");
             }
@@ -2051,7 +1911,6 @@ void MainWindow::handleSaveState() {
         settings.setValue("Sidebar/width", m_primarySidebar->width());
     }
     
-    qDebug() << "UI state saved successfully";
 }
 
 void MainWindow::handleLoadState() {
@@ -2089,7 +1948,7 @@ void MainWindow::handleLoadState() {
     
     // Restore model selector state
     if (m_modelSelector && settings.contains("ModelSelector/currentText")) {
-        QString savedModel = settings.value("ModelSelector/currentText").toString();
+        std::string savedModel = settings.value("ModelSelector/currentText").toString();
         int index = m_modelSelector->findText(savedModel);
         if (index >= 0) {
             m_modelSelector->setCurrentIndex(index);
@@ -2101,7 +1960,7 @@ void MainWindow::handleLoadState() {
         m_agentMode = settings.value("AgentMode/mode").toString();
     }
     if (m_agentModeSwitcher && settings.contains("AgentMode/current")) {
-        QString savedMode = settings.value("AgentMode/current").toString();
+        std::string savedMode = settings.value("AgentMode/current").toString();
         int index = m_agentModeSwitcher->findText(savedMode);
         if (index >= 0) {
             m_agentModeSwitcher->setCurrentIndex(index);
@@ -2129,7 +1988,6 @@ void MainWindow::handleLoadState() {
         }
     }
     
-    qDebug() << "UI state restored successfully";
     
     // Phase C: Restore editor state and history
     restoreTabState();
@@ -2156,12 +2014,12 @@ void MainWindow::saveEditorState() {
         int tabCount = editorTabs_->count();
         settings.setValue("Editor/tabCount", tabCount);
         
-        QJsonArray tabsArray;
+        void* tabsArray;
         for (int i = 0; i < tabCount; ++i) {
-            QWidget* widget = editorTabs_->widget(i);
+            void* widget = editorTabs_->widget(i);
             if (!widget) continue;
             
-            QJsonObject tabObj;
+            void* tabObj;
             tabObj["index"] = i;
             tabObj["title"] = editorTabs_->tabText(i);
             
@@ -2186,24 +2044,24 @@ void MainWindow::saveEditorState() {
         }
         
         // Serialize tabs array to JSON and store
-        QJsonDocument doc(tabsArray);
-        QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
-        settings.setValue("Editor/tabsMetadata", QString::fromUtf8(jsonData));
+        void* doc(tabsArray);
+        std::vector<uint8_t> jsonData = doc.toJson(void*::Compact);
+        settings.setValue("Editor/tabsMetadata", std::string::fromUtf8(jsonData));
         
         // Track metrics
         m_persistenceDataSize = jsonData.size();
-        m_lastSaveTime = QDateTime::currentMSecsSinceEpoch();
+        m_lastSaveTime = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
         
         // Log persistence event
         RawrXD::Integration::logInfo("MainWindow", "editor_state_saved", 
-            QString("Saved %1 tabs, data size: %2 bytes").arg(tabCount).arg(m_persistenceDataSize));
+            std::string("Saved %1 tabs, data size: %2 bytes"));
         
-        // Emit trace event
+        // trace event
         RawrXD::Integration::traceEvent("Persistence", "editorStateSaved");
         
     } catch (const std::exception& e) {
         RawrXD::Integration::logError("MainWindow", "editor_state_save_failed", 
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     }
 }
 
@@ -2224,18 +2082,18 @@ void MainWindow::restoreEditorState() {
         
         // Restore cursor positions and scroll states for each tab
         if (settings.contains("Editor/tabsMetadata")) {
-            QString jsonStr = settings.value("Editor/tabsMetadata").toString();
-            QJsonDocument doc = QJsonDocument::fromJson(jsonStr.toUtf8());
+            std::string jsonStr = settings.value("Editor/tabsMetadata").toString();
+            void* doc = void*::fromJson(jsonStr.toUtf8());
             if (doc.isArray()) {
-                QJsonArray tabsArray = doc.array();
+                void* tabsArray = doc.array();
                 int restoredCount = 0;
                 
                 for (int i = 0; i < tabsArray.size(); ++i) {
-                    QJsonObject tabObj = tabsArray[i].toObject();
+                    void* tabObj = tabsArray[i].toObject();
                     int index = tabObj["index"].toInt();
                     
                     if (index >= 0 && index < editorTabs_->count()) {
-                        QWidget* widget = editorTabs_->widget(index);
+                        void* widget = editorTabs_->widget(index);
                         if (auto textEdit = qobject_cast<QTextEdit*>(widget)) {
                             // Restore scroll position
                             int scrollPos = tabObj["scrollPosition"].toInt();
@@ -2256,18 +2114,18 @@ void MainWindow::restoreEditorState() {
                 }
                 
                 RawrXD::Integration::logInfo("MainWindow", "editor_state_restored", 
-                    QString("Restored %1 editor states").arg(restoredCount));
+                    std::string("Restored %1 editor states"));
             }
         }
         
-        m_lastRestoreTime = QDateTime::currentMSecsSinceEpoch();
+        m_lastRestoreTime = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
         
-        // Emit trace event
+        // trace event
         RawrXD::Integration::traceEvent("Persistence", "editorStateRestored");
         
     } catch (const std::exception& e) {
         RawrXD::Integration::logError("MainWindow", "editor_state_restore_failed", 
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     }
 }
 
@@ -2281,7 +2139,7 @@ void MainWindow::saveTabState() {
         int tabCount = editorTabs_->count();
         settings.setValue("Tabs/count", tabCount);
         
-        QStringList tabTitles;
+        std::vector<std::string> tabTitles;
         for (int i = 0; i < tabCount; ++i) {
             tabTitles << editorTabs_->tabText(i);
         }
@@ -2289,10 +2147,10 @@ void MainWindow::saveTabState() {
         settings.setValue("Tabs/activeIndex", editorTabs_->currentIndex());
         
         RawrXD::Integration::logInfo("MainWindow", "tab_state_saved", 
-            QString("Saved %1 tabs").arg(tabCount));
+            std::string("Saved %1 tabs"));
     } catch (const std::exception& e) {
         RawrXD::Integration::logError("MainWindow", "tab_state_save_failed", 
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     }
 }
 
@@ -2311,10 +2169,10 @@ void MainWindow::restoreTabState() {
         }
         
         RawrXD::Integration::logInfo("MainWindow", "tab_state_restored", 
-            QString("Restored tab state"));
+            std::string("Restored tab state"));
     } catch (const std::exception& e) {
         RawrXD::Integration::logError("MainWindow", "tab_state_restore_failed", 
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     }
 }
 
@@ -2326,7 +2184,7 @@ void MainWindow::trackEditorCursorPosition() {
         int currentTab = editorTabs_->currentIndex();
         if (currentTab < 0) return;
         
-        QWidget* widget = editorTabs_->widget(currentTab);
+        void* widget = editorTabs_->widget(currentTab);
         if (auto textEdit = qobject_cast<QTextEdit*>(widget)) {
             QTextCursor cursor = textEdit->textCursor();
             EditorState& state = m_editorStates[currentTab];
@@ -2335,7 +2193,7 @@ void MainWindow::trackEditorCursorPosition() {
         }
     } catch (const std::exception& e) {
         RawrXD::Integration::logWarn("MainWindow", "cursor_tracking_failed", 
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     }
 }
 
@@ -2347,14 +2205,14 @@ void MainWindow::trackEditorScrollPosition() {
         int currentTab = editorTabs_->currentIndex();
         if (currentTab < 0) return;
         
-        QWidget* widget = editorTabs_->widget(currentTab);
+        void* widget = editorTabs_->widget(currentTab);
         if (auto textEdit = qobject_cast<QTextEdit*>(widget)) {
             EditorState& state = m_editorStates[currentTab];
             state.scrollPosition = textEdit->verticalScrollBar()->value();
         }
     } catch (const std::exception& e) {
         RawrXD::Integration::logWarn("MainWindow", "scroll_tracking_failed",
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     }
 }
 
@@ -2386,13 +2244,13 @@ void MainWindow::restoreEditorMetadata() {
 // Recent Files Management
 // ============================================================
 
-void MainWindow::addRecentFile(const QString& filePath) {
+void MainWindow::addRecentFile(const std::string& filePath) {
     if (filePath.isEmpty()) return;
     
     QSettings settings("RawrXD", "QtShell");
     
     // Load existing recent files
-    QStringList recentFiles = settings.value("Files/recentFiles", QStringList()).toStringList();
+    std::vector<std::string> recentFiles = settings.value("Files/recentFiles", std::vector<std::string>()).toStringList();
     
     // Remove if already exists (to move it to the front)
     recentFiles.removeAll(filePath);
@@ -2412,13 +2270,13 @@ void MainWindow::addRecentFile(const QString& filePath) {
     
     // Log and trace
     RawrXD::Integration::logInfo("MainWindow", "recent_file_added", 
-        QString("Added: %1 (total: %2)").arg(QFileInfo(filePath).fileName()).arg(recentFiles.size()));
+        std::string("Added: %1 (total: %2)").fileName())));
     RawrXD::Integration::traceEvent("Persistence", "recentFileAdded");
 }
 
-QStringList MainWindow::getRecentFiles() const {
+std::vector<std::string> MainWindow::getRecentFiles() const {
     QSettings settings("RawrXD", "QtShell");
-    return settings.value("Files/recentFiles", QStringList()).toStringList();
+    return settings.value("Files/recentFiles", std::vector<std::string>()).toStringList();
 }
 
 void MainWindow::clearRecentFiles() {
@@ -2427,7 +2285,7 @@ void MainWindow::clearRecentFiles() {
     m_recentFiles.clear();
     
     RawrXD::Integration::logInfo("MainWindow", "recent_files_cleared", 
-        QString("Cleared all recent files"));
+        std::string("Cleared all recent files"));
 }
 
 void MainWindow::populateRecentFilesMenu(QMenu* recentMenu) {
@@ -2435,23 +2293,21 @@ void MainWindow::populateRecentFilesMenu(QMenu* recentMenu) {
     
     try {
         recentMenu->clear();
-        QStringList recentFiles = getRecentFiles();
+        std::vector<std::string> recentFiles = getRecentFiles();
         
         if (recentFiles.isEmpty()) {
             recentMenu->addAction("(No recent files)")->setEnabled(false);
         } else {
-            for (const QString& filePath : recentFiles) {
-                QAction* action = recentMenu->addAction(QFileInfo(filePath).fileName());
+            for (const std::string& filePath : recentFiles) {
+                QAction* action = recentMenu->addAction(std::filesystem::path(filePath).fileName());
                 action->setData(filePath);
-                connect(action, &QAction::triggered, this, [this, filePath]() {
-                    // Open the file
-                    QFile file(filePath);
+// Qt connect removed
                     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                         QTextStream in(&file);
                         if (editorTabs_) {
                             QTextEdit* editor = new QTextEdit(this);
                             editor->setPlainText(in.readAll());
-                            int index = editorTabs_->addTab(editor, QFileInfo(filePath).fileName());
+                            int index = editorTabs_->addTab(editor, std::filesystem::path(filePath).fileName());
                             editorTabs_->setCurrentIndex(index);
                         }
                         file.close();
@@ -2462,10 +2318,10 @@ void MainWindow::populateRecentFilesMenu(QMenu* recentMenu) {
         }
         
         RawrXD::Integration::logInfo("MainWindow", "recent_files_menu_populated", 
-            QString("Populated with %1 files").arg(recentFiles.size()));
+            std::string("Populated with %1 files")));
     } catch (const std::exception& e) {
         RawrXD::Integration::logError("MainWindow", "recent_files_menu_failed", 
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     }
     
     recentMenu->addSeparator();
@@ -2476,19 +2332,19 @@ void MainWindow::populateRecentFilesMenu(QMenu* recentMenu) {
 // Command History Tracking
 // ============================================================
 
-void MainWindow::addCommandToHistory(const QString& command) {
+void MainWindow::addCommandToHistory(const std::string& command) {
     if (command.isEmpty()) return;
     
     try {
         QSettings settings("RawrXD", "QtShell");
         
         // Load existing command history
-        QStringList history = settings.value("Commands/history", QStringList()).toStringList();
+        std::vector<std::string> history = settings.value("Commands/history", std::vector<std::string>()).toStringList();
         
         // Add command with timestamp
-        QString timestampedCmd = QString("[%1] %2")
-            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"))
-            .arg(command);
+        std::string timestampedCmd = std::string("[%1] %2")
+            .toString("yyyy-MM-dd HH:mm:ss"))
+            ;
         
         history.append(timestampedCmd);
         
@@ -2502,18 +2358,18 @@ void MainWindow::addCommandToHistory(const QString& command) {
         m_commandHistory = history;
         
         RawrXD::Integration::logInfo("MainWindow", "command_added_to_history", 
-            QString("Command: %1 (total: %2)").arg(command.left(50)).arg(history.size()));
+            std::string("Command: %1 (total: %2)"))));
         RawrXD::Integration::traceEvent("Persistence", "commandAddedToHistory");
         
     } catch (const std::exception& e) {
         RawrXD::Integration::logError("MainWindow", "command_history_add_failed", 
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     }
 }
 
-QStringList MainWindow::getCommandHistory() const {
+std::vector<std::string> MainWindow::getCommandHistory() const {
     QSettings settings("RawrXD", "QtShell");
-    return settings.value("Commands/history", QStringList()).toStringList();
+    return settings.value("Commands/history", std::vector<std::string>()).toStringList();
 }
 
 void MainWindow::clearCommandHistory() {
@@ -2523,10 +2379,10 @@ void MainWindow::clearCommandHistory() {
         m_commandHistory.clear();
         
         RawrXD::Integration::logInfo("MainWindow", "command_history_cleared", 
-            QString("Cleared all command history"));
+            std::string("Cleared all command history"));
     } catch (const std::exception& e) {
         RawrXD::Integration::logError("MainWindow", "command_history_clear_failed", 
-            QString("Exception: %1").arg(QString::fromStdString(std::string(e.what()))));
+            std::string("Exception: %1")))));
     }
 }
 
@@ -2546,7 +2402,7 @@ void MainWindow::handleNewEditor() {
     if (editorTabs_) {
         QTextEdit* newEditor = new QTextEdit(this);
         newEditor->setStyleSheet(codeView_->styleSheet());
-        int index = editorTabs_->addTab(newEditor, tr("Untitled %1").arg(editorTabs_->count()));
+        int index = editorTabs_->addTab(newEditor, tr("Untitled %1")));
         editorTabs_->setCurrentIndex(index);
         statusBar()->showMessage(tr("New editor tab created"), 2000);
     }
@@ -2559,57 +2415,57 @@ void MainWindow::handleNewWindow() {
 }
 
 void MainWindow::handleAddFile() {
-    QString filePath = QFileDialog::getOpenFileName(
+    std::string filePath = QFileDialog::getOpenFileName(
         this,
         tr("Add File to Project"),
-        QString(),
+        std::string(),
         tr("All Files (*.*)"));
     
     if (!filePath.isEmpty()) {
-        QFile file(filePath);
+        std::fstream file(filePath);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream in(&file);
-            QString content = in.readAll();
+            std::string content = in.readAll();
             file.close();
             
             if (editorTabs_) {
                 QTextEdit* editor = new QTextEdit(this);
                 editor->setStyleSheet(codeView_->styleSheet());
                 editor->setText(content);
-                int index = editorTabs_->addTab(editor, QFileInfo(filePath).fileName());
+                int index = editorTabs_->addTab(editor, std::filesystem::path(filePath).fileName());
                 editorTabs_->setCurrentIndex(index);
             }
             
-            statusBar()->showMessage(tr("File added: %1").arg(QFileInfo(filePath).fileName()), 3000);
+            statusBar()->showMessage(tr("File added: %1").fileName()), 3000);
         }
     }
 }
 
 void MainWindow::handleAddFolder() {
-    QString folderPath = QFileDialog::getExistingDirectory(
+    std::string folderPath = QFileDialog::getExistingDirectory(
         this,
         tr("Add Folder to Project"),
-        QString(),
+        std::string(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     
     if (!folderPath.isEmpty()) {
         if (projectExplorer_) {
             projectExplorer_->openProject(folderPath);
         }
-        statusBar()->showMessage(tr("Folder added: %1").arg(folderPath), 3000);
+        statusBar()->showMessage(tr("Folder added: %1"), 3000);
     }
 }
 
 void MainWindow::handleAddSymbol() {
     bool ok;
-    QString symbol = QInputDialog::getText(this, tr("Add Symbol"),
+    std::string symbol = QInputDialog::getText(this, tr("Add Symbol"),
                                           tr("Symbol name:"), QLineEdit::Normal,
-                                          QString(), &ok);
+                                          std::string(), &ok);
     if (ok && !symbol.isEmpty()) {
         if (contextList_) {
             contextList_->addItem(symbol);
         }
-        statusBar()->showMessage(tr("Symbol added: %1").arg(symbol), 2000);
+        statusBar()->showMessage(tr("Symbol added: %1"), 2000);
     }
 }
 void MainWindow::showContextMenu(const QPoint& pos) {
@@ -2628,29 +2484,29 @@ void MainWindow::showContextMenu(const QPoint& pos) {
 void MainWindow::loadContextItemIntoEditor(QListWidgetItem* item) {
     if (!item) return;
     
-    QString itemText = item->text();
+    std::string itemText = item->text();
     
     // Check if it's a file path
-    if (QFile::exists(itemText)) {
-        QFile file(itemText);
+    if (std::fstream::exists(itemText)) {
+        std::fstream file(itemText);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream in(&file);
             if (codeView_) {
                 codeView_->setText(in.readAll());
-                statusBar()->showMessage(tr("Loaded: %1").arg(itemText), 3000);
+                statusBar()->showMessage(tr("Loaded: %1"), 3000);
             }
             file.close();
         }
     } else {
         // Use as search/symbol query
-        statusBar()->showMessage(tr("Context item: %1").arg(itemText), 2000);
+        statusBar()->showMessage(tr("Context item: %1"), 2000);
     }
 }
 
 void MainWindow::handleTabClose(int index) {
     if (!editorTabs_ || index < 0 || index >= editorTabs_->count()) return;
     
-    QWidget* widget = editorTabs_->widget(index);
+    void* widget = editorTabs_->widget(index);
     
     // Ask for confirmation if content exists
     QTextEdit* editor = qobject_cast<QTextEdit*>(widget);
@@ -2658,7 +2514,7 @@ void MainWindow::handleTabClose(int index) {
         QMessageBox::StandardButton reply = QMessageBox::question(
             this,
             tr("Close Tab"),
-            tr("Close '%1'? Unsaved changes will be lost.").arg(editorTabs_->tabText(index)),
+            tr("Close '%1'? Unsaved changes will be lost.")),
             QMessageBox::Yes | QMessageBox::No
         );
         
@@ -2672,11 +2528,9 @@ void MainWindow::handleTabClose(int index) {
 }
 void MainWindow::handlePwshCommand() 
 {
-    qDebug() << "[TERMINAL][PWSH] Command execution requested at" << QDateTime::currentDateTime();
     
     if (!pwshProcess_) {
         statusBar()->showMessage(tr("PowerShell process not initialized"), 3000);
-        qWarning() << "[TERMINAL][PWSH] Process not initialized";
         return;
     }
     
@@ -2685,24 +2539,23 @@ void MainWindow::handlePwshCommand()
         return;
     }
     
-    QString command = pwshInput_->text().trimmed();
+    std::string command = pwshInput_->text().trimmed();
     if (command.isEmpty()) {
         statusBar()->showMessage(tr("Enter a PowerShell command first"), 2000);
         return;
     }
     
     // Log command execution
-    qInfo() << "[TERMINAL][PWSH] Executing:" << command;
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[PWSH] > %1").arg(command));
+        m_hexMagConsole->appendPlainText(std::string("[PWSH] > %1"));
     }
     
     if (pwshOutput_) {
-        pwshOutput_->appendPlainText(QString("PS> %1").arg(command));
+        pwshOutput_->appendPlainText(std::string("PS> %1"));
     }
     
-    statusBar()->showMessage(tr("PowerShell executing: %1").arg(command.left(50)), 3000);
+    statusBar()->showMessage(tr("PowerShell executing: %1")), 3000);
     
     // Send command to process
     pwshProcess_->write((command + "\n").toUtf8());
@@ -2711,11 +2564,9 @@ void MainWindow::handlePwshCommand()
 
 void MainWindow::handleCmdCommand() 
 {
-    qDebug() << "[TERMINAL][CMD] Command execution requested at" << QDateTime::currentDateTime();
     
     if (!cmdProcess_) {
         statusBar()->showMessage(tr("CMD process not initialized"), 3000);
-        qWarning() << "[TERMINAL][CMD] Process not initialized";
         return;
     }
     
@@ -2724,24 +2575,23 @@ void MainWindow::handleCmdCommand()
         return;
     }
     
-    QString command = cmdInput_->text().trimmed();
+    std::string command = cmdInput_->text().trimmed();
     if (command.isEmpty()) {
         statusBar()->showMessage(tr("Enter a CMD command first"), 2000);
         return;
     }
     
     // Log command execution
-    qInfo() << "[TERMINAL][CMD] Executing:" << command;
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[CMD] > %1").arg(command));
+        m_hexMagConsole->appendPlainText(std::string("[CMD] > %1"));
     }
     
     if (cmdOutput_) {
-        cmdOutput_->appendPlainText(QString("CMD> %1").arg(command));
+        cmdOutput_->appendPlainText(std::string("CMD> %1"));
     }
     
-    statusBar()->showMessage(tr("CMD executing: %1").arg(command.left(50)), 3000);
+    statusBar()->showMessage(tr("CMD executing: %1")), 3000);
     
     // Send command to process
     cmdProcess_->write((command + "\r\n").toUtf8());
@@ -2751,18 +2601,16 @@ void MainWindow::handleCmdCommand()
 void MainWindow::readPwshOutput() 
 {
     if (!pwshProcess_) {
-        qWarning() << "[TERMINAL][PWSH] readPwshOutput called but process is null";
         return;
     }
     
-    QByteArray data = pwshProcess_->readAllStandardOutput();
-    QString output = QString::fromUtf8(data);
+    std::vector<uint8_t> data = pwshProcess_->readAllStandardOutput();
+    std::string output = std::string::fromUtf8(data);
     
     if (output.isEmpty()) {
         return;
     }
     
-    qDebug() << "[TERMINAL][PWSH] Output received:" << output.length() << "bytes";
     
     if (pwshOutput_) {
         pwshOutput_->appendPlainText(output);
@@ -2773,10 +2621,9 @@ void MainWindow::readPwshOutput()
     }
     
     // Check for errors
-    QByteArray errorData = pwshProcess_->readAllStandardError();
+    std::vector<uint8_t> errorData = pwshProcess_->readAllStandardError();
     if (!errorData.isEmpty()) {
-        QString errorOutput = QString::fromUtf8(errorData);
-        qWarning() << "[TERMINAL][PWSH] Error output:" << errorOutput;
+        std::string errorOutput = std::string::fromUtf8(errorData);
         
         if (pwshOutput_) {
             pwshOutput_->appendPlainText("[ERROR] " + errorOutput);
@@ -2787,18 +2634,16 @@ void MainWindow::readPwshOutput()
 void MainWindow::readCmdOutput() 
 {
     if (!cmdProcess_) {
-        qWarning() << "[TERMINAL][CMD] readCmdOutput called but process is null";
         return;
     }
     
-    QByteArray data = cmdProcess_->readAllStandardOutput();
-    QString output = QString::fromUtf8(data);
+    std::vector<uint8_t> data = cmdProcess_->readAllStandardOutput();
+    std::string output = std::string::fromUtf8(data);
     
     if (output.isEmpty()) {
         return;
     }
     
-    qDebug() << "[TERMINAL][CMD] Output received:" << output.length() << "bytes";
     
     if (cmdOutput_) {
         cmdOutput_->appendPlainText(output);
@@ -2809,10 +2654,9 @@ void MainWindow::readCmdOutput()
     }
     
     // Check for errors
-    QByteArray errorData = cmdProcess_->readAllStandardError();
+    std::vector<uint8_t> errorData = cmdProcess_->readAllStandardError();
     if (!errorData.isEmpty()) {
-        QString errorOutput = QString::fromUtf8(errorData);
-        qWarning() << "[TERMINAL][CMD] Error output:" << errorOutput;
+        std::string errorOutput = std::string::fromUtf8(errorData);
         
         if (cmdOutput_) {
             cmdOutput_->appendPlainText("[ERROR] " + errorOutput);
@@ -2821,7 +2665,6 @@ void MainWindow::readCmdOutput()
 }
 void MainWindow::clearDebugLog() 
 {
-    qInfo() << "[DEBUG_LOG] Clear requested at" << QDateTime::currentDateTime();
     
     if (!m_hexMagConsole) {
         statusBar()->showMessage(tr("Debug console not available"), 2000);
@@ -2834,7 +2677,7 @@ void MainWindow::clearDebugLog()
         QMessageBox::StandardButton reply = QMessageBox::question(
             this,
             tr("Clear Debug Log"),
-            tr("Are you sure you want to clear %1 lines of log data?").arg(lineCount),
+            tr("Are you sure you want to clear %1 lines of log data?"),
             QMessageBox::Yes | QMessageBox::No
         );
         
@@ -2845,22 +2688,20 @@ void MainWindow::clearDebugLog()
     }
     
     m_hexMagConsole->clear();
-    m_hexMagConsole->appendPlainText(QString("=== Log cleared at %1 ===")
-                                    .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")));
+    m_hexMagConsole->appendPlainText(std::string("=== Log cleared at %1 ===")
+                                    .toString("yyyy-MM-dd HH:mm:ss")));
     
-    statusBar()->showMessage(tr("Debug log cleared (%1 lines)").arg(lineCount), 3000);
-    qInfo() << "[DEBUG_LOG] Cleared" << lineCount << "lines";
+    statusBar()->showMessage(tr("Debug log cleared (%1 lines)"), 3000);
 }
 void MainWindow::saveDebugLog() 
 {
-    qInfo() << "[DEBUG_LOG] Save requested at" << QDateTime::currentDateTime();
     
     if (!m_hexMagConsole) {
         statusBar()->showMessage(tr("Debug console not available"), 2000);
         return;
     }
     
-    QString logContent = m_hexMagConsole->toPlainText();
+    std::string logContent = m_hexMagConsole->toPlainText();
     
     if (logContent.isEmpty()) {
         QMessageBox::information(this, tr("Save Debug Log"), 
@@ -2869,13 +2710,13 @@ void MainWindow::saveDebugLog()
     }
     
     // Generate default filename with timestamp
-    QString defaultName = QString("rawrxd_debug_%1.log")
-                         .arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"));
+    std::string defaultName = std::string("rawrxd_debug_%1.log")
+                         .toString("yyyyMMdd_HHmmss"));
     
-    QString filePath = QFileDialog::getSaveFileName(
+    std::string filePath = QFileDialog::getSaveFileName(
         this,
         tr("Save Debug Log"),
-        QDir::homePath() + "/" + defaultName,
+        std::filesystem::path::homePath() + "/" + defaultName,
         tr("Log Files (*.log);;Text Files (*.txt);;All Files (*.*)")  
     );
     
@@ -2884,14 +2725,13 @@ void MainWindow::saveDebugLog()
         return;
     }
     
-    statusBar()->showMessage(tr("Saving debug log to %1...").arg(QFileInfo(filePath).fileName()), 3000);
+    statusBar()->showMessage(tr("Saving debug log to %1...").fileName()), 3000);
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::critical(this, tr("Save Failed"),
                             tr("Could not open file for writing:\n%1\n\nError: %2")
-                            .arg(filePath).arg(file.errorString()));
-        qWarning() << "[DEBUG_LOG] Failed to open file:" << filePath << "-" << file.errorString();
+                            ));
         return;
     }
     
@@ -2900,7 +2740,7 @@ void MainWindow::saveDebugLog()
     
     // Write header
     out << "=== RawrXD IDE Debug Log ===" << "\n";
-    out << "Generated: " << QDateTime::currentDateTime().toString(Qt::ISODate) << "\n";
+    out << "Generated: " << std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate) << "\n";
     out << "Lines: " << m_hexMagConsole->document()->blockCount() << "\n";
     out << "Size: " << logContent.length() << " characters\n";
     out << "================================\n\n";
@@ -2910,45 +2750,43 @@ void MainWindow::saveDebugLog()
     
     file.close();
     
-    QFileInfo fileInfo(filePath);
+    std::filesystem::path fileInfo(filePath);
     qint64 fileSize = fileInfo.size();
     
     statusBar()->showMessage(
-        tr("Debug log saved: %1 (%2 KB)").arg(fileInfo.fileName()).arg(fileSize / 1024.0, 0, 'f', 2),
+        tr("Debug log saved: %1 (%2 KB)")),
         5000
     );
     
-    qInfo() << "[DEBUG_LOG] Saved to:" << filePath << "Size:" << fileSize << "bytes";
     
     // Offer to open the file
     QMessageBox::StandardButton openReply = QMessageBox::question(
         this,
         tr("Log Saved"),
-        tr("Debug log saved successfully to:\n%1\n\nOpen in external editor?").arg(filePath),
+        tr("Debug log saved successfully to:\n%1\n\nOpen in external editor?"),
         QMessageBox::Yes | QMessageBox::No
     );
     
     if (openReply == QMessageBox::Yes) {
-        QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
+        QDesktopServices::openUrl(std::string::fromLocalFile(filePath));
     }
 }
-void MainWindow::filterLogLevel(const QString& level) 
+void MainWindow::filterLogLevel(const std::string& level) 
 {
-    qInfo() << "[DEBUG_LOG] Filter level changed to:" << level;
     
     if (!m_hexMagConsole) {
         statusBar()->showMessage(tr("Debug console not available"), 2000);
         return;
     }
     
-    statusBar()->showMessage(tr("Filtering by log level: %1").arg(level), 3000);
+    statusBar()->showMessage(tr("Filtering by log level: %1"), 3000);
     
     // Get full log content
-    QString fullLog = m_hexMagConsole->toPlainText();
-    QStringList lines = fullLog.split('\n');
+    std::string fullLog = m_hexMagConsole->toPlainText();
+    std::vector<std::string> lines = fullLog.split('\n');
     
     // Define log level priorities
-    QMap<QString, int> levelPriority;
+    std::map<std::string, int> levelPriority;
     levelPriority["DEBUG"] = 0;
     levelPriority["INFO"] = 1;
     levelPriority["WARNING"] = 2;
@@ -2958,10 +2796,10 @@ void MainWindow::filterLogLevel(const QString& level)
     int filterPriority = levelPriority.value(level.toUpper(), 0);
     
     // Filter lines based on log level
-    QStringList filteredLines;
+    std::vector<std::string> filteredLines;
     int filteredCount = 0;
     
-    for (const QString& line : lines) {
+    for (const std::string& line : lines) {
         if (line.isEmpty()) {
             filteredLines.append(line);
             continue;
@@ -2972,7 +2810,7 @@ void MainWindow::filterLogLevel(const QString& level)
         bool hasLevel = false;
         
         for (auto it = levelPriority.begin(); it != levelPriority.end(); ++it) {
-            if (line.contains("[" + it.key() + "]", Qt::CaseInsensitive)) {
+            if (line.contains("[" + it.key() + "]", //CaseInsensitive)) {
                 hasLevel = true;
                 if (it.value() < filterPriority) {
                     shouldInclude = false;
@@ -2995,19 +2833,16 @@ void MainWindow::filterLogLevel(const QString& level)
     // Add filter header
     m_hexMagConsole->moveCursor(QTextCursor::Start);
     m_hexMagConsole->insertPlainText(
-        QString("=== Filtered by %1+ | Hidden: %2 lines ===\n\n")
-        .arg(level.toUpper()).arg(filteredCount)
+        std::string("=== Filtered by %1+ | Hidden: %2 lines ===\n\n")
+        )
     );
     
-    qInfo() << "[DEBUG_LOG] Applied filter. Showing" << filteredLines.size() 
             << "lines, hidden" << filteredCount << "lines";
 }
 void MainWindow::showEditorContextMenu(const QPoint& pos) 
 {
-    qDebug() << "[EDITOR] Context menu requested at" << pos;
     
     if (!codeView_) {
-        qWarning() << "[EDITOR] codeView_ is null";
         return;
     }
     
@@ -3016,7 +2851,7 @@ void MainWindow::showEditorContextMenu(const QPoint& pos)
     // Get selected text info
     QTextCursor cursor = codeView_->textCursor();
     bool hasSelection = cursor.hasSelection();
-    QString selectedText = cursor.selectedText();
+    std::string selectedText = cursor.selectedText();
     
     // Basic editing operations
     QAction* undoAction = contextMenu.addAction(QIcon(), tr("Undo"), codeView_, &QTextEdit::undo);
@@ -3069,7 +2904,7 @@ void MainWindow::showEditorContextMenu(const QPoint& pos)
     
     // Search operations
     if (hasSelection) {
-        contextMenu.addAction(tr("🔍 Find '%1'").arg(selectedText.left(20)), [this, selectedText]() {
+        contextMenu.addAction(tr("🔍 Find '%1'")), [this, selectedText]() {
             // Simple find-next implementation
             if (codeView_) {
                 codeView_->find(selectedText);
@@ -3081,18 +2916,17 @@ void MainWindow::showEditorContextMenu(const QPoint& pos)
     QPoint globalPos = codeView_->mapToGlobal(pos);
     contextMenu.exec(globalPos);
     
-    qDebug() << "[EDITOR] Context menu closed";
 }
 void MainWindow::explainCode() 
 { 
-    QString sel = codeView_->textCursor().selectedText(); 
+    std::string sel = codeView_->textCursor().selectedText(); 
     if (sel.isEmpty()) {
         statusBar()->showMessage(tr("Select code first"), 2000);
         return;
     }
     
     if (m_aiChatPanel) {
-        QString prompt = tr("Explain this code in detail:\n\n```\n%1\n```").arg(sel);
+        std::string prompt = tr("Explain this code in detail:\n\n```\n%1\n```");
         m_aiChatPanel->addUserMessage(prompt);
         onAIChatMessageSubmitted(prompt);
         
@@ -3108,14 +2942,14 @@ void MainWindow::explainCode()
 
 void MainWindow::fixCode() 
 { 
-    QString sel = codeView_->textCursor().selectedText(); 
+    std::string sel = codeView_->textCursor().selectedText(); 
     if (sel.isEmpty()) {
         statusBar()->showMessage(tr("Select code first"), 2000);
         return;
     }
     
     if (m_aiChatPanel) {
-        QString prompt = tr("Find and fix any bugs or issues in this code:\n\n```\n%1\n```\n\nProvide the corrected code.").arg(sel);
+        std::string prompt = tr("Find and fix any bugs or issues in this code:\n\n```\n%1\n```\n\nProvide the corrected code.");
         m_aiChatPanel->addUserMessage(prompt);
         onAIChatMessageSubmitted(prompt);
         
@@ -3130,14 +2964,14 @@ void MainWindow::fixCode()
 
 void MainWindow::refactorCode() 
 { 
-    QString sel = codeView_->textCursor().selectedText(); 
+    std::string sel = codeView_->textCursor().selectedText(); 
     if (sel.isEmpty()) {
         statusBar()->showMessage(tr("Select code first"), 2000);
         return;
     }
     
     if (m_aiChatPanel) {
-        QString prompt = tr("Refactor this code to be more efficient, readable, and follow best practices:\n\n```\n%1\n```").arg(sel);
+        std::string prompt = tr("Refactor this code to be more efficient, readable, and follow best practices:\n\n```\n%1\n```");
         m_aiChatPanel->addUserMessage(prompt);
         onAIChatMessageSubmitted(prompt);
         
@@ -3152,14 +2986,14 @@ void MainWindow::refactorCode()
 
 void MainWindow::generateTests() 
 { 
-    QString sel = codeView_->textCursor().selectedText(); 
+    std::string sel = codeView_->textCursor().selectedText(); 
     if (sel.isEmpty()) {
         statusBar()->showMessage(tr("Select code first"), 2000);
         return;
     }
     
     if (m_aiChatPanel) {
-        QString prompt = tr("Generate comprehensive unit tests for this code:\n\n```\n%1\n```\n\nInclude edge cases and error handling tests.").arg(sel);
+        std::string prompt = tr("Generate comprehensive unit tests for this code:\n\n```\n%1\n```\n\nInclude edge cases and error handling tests.");
         m_aiChatPanel->addUserMessage(prompt);
         onAIChatMessageSubmitted(prompt);
         
@@ -3174,13 +3008,13 @@ void MainWindow::generateTests()
 
 void MainWindow::generateDocs() 
 { 
-    QString sel = codeView_->textCursor().selectedText();
+    std::string sel = codeView_->textCursor().selectedText();
     if (sel.isEmpty()) {
         sel = codeView_->toPlainText(); // Use entire file if nothing selected
     }
     
     if (m_aiChatPanel) {
-        QString prompt = tr("Generate comprehensive documentation for this code:\n\n```\n%1\n```\n\nInclude function descriptions, parameter docs, and usage examples.").arg(sel);
+        std::string prompt = tr("Generate comprehensive documentation for this code:\n\n```\n%1\n```\n\nInclude function descriptions, parameter docs, and usage examples.");
         m_aiChatPanel->addUserMessage(prompt);
         onAIChatMessageSubmitted(prompt);
         
@@ -3194,7 +3028,7 @@ void MainWindow::generateDocs()
 }
 
 // Production-ready implementations with observability and UI integration
-void MainWindow::onProjectOpened(const QString& path) {
+void MainWindow::onProjectOpened(const std::string& path) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onProjectOpened", "project");
     RawrXD::Integration::traceEvent("Project", "opened");
     
@@ -3210,11 +3044,11 @@ void MainWindow::onProjectOpened(const QString& path) {
     }
     
     // Validate path
-    QFileInfo info(path);
+    std::filesystem::path info(path);
     if (!info.exists()) {
-        RawrXD::Integration::logError("MainWindow", "project_open", QString("Path does not exist: %1").arg(path));
+        RawrXD::Integration::logError("MainWindow", "project_open", std::string("Path does not exist: %1"));
         QMessageBox::warning(this, tr("Invalid Path"), 
-                           tr("The specified path does not exist:\n%1").arg(path));
+                           tr("The specified path does not exist:\n%1"));
         return;
     }
     
@@ -3226,10 +3060,10 @@ void MainWindow::onProjectOpened(const QString& path) {
     int openCount = settings.value("projects/openCount", 0).toInt() + 1;
     settings.setValue("projects/openCount", openCount);
     settings.setValue("projects/lastOpenedPath", m_currentProjectPath);
-    settings.setValue("projects/lastOpenedTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("projects/lastOpenedTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     // Add to recent projects
-    QStringList recentProjects = settings.value("projects/recent").toStringList();
+    std::vector<std::string> recentProjects = settings.value("projects/recent").toStringList();
     recentProjects.removeAll(m_currentProjectPath);
     recentProjects.prepend(m_currentProjectPath);
     while (recentProjects.size() > 20) recentProjects.removeLast();
@@ -3244,44 +3078,44 @@ void MainWindow::onProjectOpened(const QString& path) {
             // Also open the file in editor
             openFileInEditor(path);
         }
-        statusBar()->showMessage(tr("Project opened: %1").arg(m_currentProjectPath), 5000);
+        statusBar()->showMessage(tr("Project opened: %1"), 5000);
     } else {
         // Fallback: just update window title
-        setWindowTitle(tr("RawrXD IDE - %1").arg(QFileInfo(m_currentProjectPath).fileName()));
-        statusBar()->showMessage(tr("Project: %1").arg(m_currentProjectPath), 5000);
+        setWindowTitle(tr("RawrXD IDE - %1").fileName()));
+        statusBar()->showMessage(tr("Project: %1"), 5000);
     }
     
     MetricsCollector::instance().incrementCounter("projects_opened");
     
-    // Emit signal for other components
-    emit onGoalSubmitted(tr("project_opened:%1").arg(path));
+    // signal for other components
+    onGoalSubmitted(tr("project_opened:%1"));
     
     RawrXD::Integration::logInfo("MainWindow", "project_opened",
-        QString("Project opened: %1 (total: %2)").arg(m_currentProjectPath).arg(openCount),
-        QJsonObject{{"path", m_currentProjectPath}, {"open_count", openCount}});
+        std::string("Project opened: %1 (total: %2)"),
+        void*{{"path", m_currentProjectPath}, {"open_count", openCount}});
 }
 
-void MainWindow::openFileInEditor(const QString& path) {
-    if (path.isEmpty() || !QFile::exists(path)) {
-        statusBar()->showMessage(tr("File not found: %1").arg(path), 4000);
+void MainWindow::openFileInEditor(const std::string& path) {
+    if (path.isEmpty() || !std::fstream::exists(path)) {
+        statusBar()->showMessage(tr("File not found: %1"), 4000);
         return;
     }
 
-    QFile file(path);
+    std::fstream file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        statusBar()->showMessage(tr("Unable to open file: %1").arg(path), 4000);
+        statusBar()->showMessage(tr("Unable to open file: %1"), 4000);
         return;
     }
 
     QTextStream stream(&file);
     stream.setEncoding(QStringConverter::Utf8);
-    const QString content = stream.readAll();
+    const std::string content = stream.readAll();
     file.close();
 
     if (editorTabs_) {
         QTextEdit* editor = new QTextEdit(this);
         editor->setPlainText(content);
-        const QString title = QFileInfo(path).fileName();
+        const std::string title = std::filesystem::path(path).fileName();
         editorTabs_->addTab(editor, title);
         editorTabs_->setCurrentWidget(editor);
     } else if (codeView_) {
@@ -3308,7 +3142,7 @@ void MainWindow::onBuildStarted() {
     
     // Track build sessions
     QSettings settings("RawrXD", "IDE");
-    settings.setValue("build/lastStartTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("build/lastStartTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     settings.setValue("build/inProgress", true);
     int buildCount = settings.value("build/totalBuilds", 0).toInt() + 1;
     settings.setValue("build/totalBuilds", buildCount);
@@ -3322,7 +3156,7 @@ void MainWindow::onBuildStarted() {
     statusBar()->showMessage(tr("Building..."), 0);
     
     // Update window title if needed
-    QString title = windowTitle();
+    std::string title = windowTitle();
     if (!title.contains(" [Building]")) {
         setWindowTitle(title + " [Building]");
     }
@@ -3330,16 +3164,16 @@ void MainWindow::onBuildStarted() {
     // If we have a build output panel, clear it
     if (m_outputPanelWidget) {
         if (auto output = qobject_cast<QPlainTextEdit*>(m_outputPanelWidget)) {
-            output->appendPlainText(QString("[%1] Build started...\n")
-                                   .arg(QDateTime::currentDateTime().toString("hh:mm:ss")));
+            output->appendPlainText(std::string("[%1] Build started...\n")
+                                   .toString("hh:mm:ss")));
         }
     }
     
     MetricsCollector::instance().incrementCounter("builds_started");
     
     RawrXD::Integration::logInfo("MainWindow", "build_started",
-        QString("Build started (total: %1)").arg(buildCount),
-        QJsonObject{{"build_count", buildCount}});
+        std::string("Build started (total: %1)"),
+        void*{{"build_count", buildCount}});
 }
 
 void MainWindow::onBuildFinished(bool success) {
@@ -3352,18 +3186,18 @@ void MainWindow::onBuildFinished(bool success) {
     
     // Calculate build duration
     QSettings settings("RawrXD", "IDE");
-    QString startTimeStr = settings.value("build/lastStartTime").toString();
+    std::string startTimeStr = settings.value("build/lastStartTime").toString();
     qint64 buildDuration = 0;
     if (!startTimeStr.isEmpty()) {
-        QDateTime startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
+        std::chrono::system_clock::time_point startTime = std::chrono::system_clock::time_point::fromString(startTimeStr, //ISODate);
         if (startTime.isValid()) {
-            buildDuration = startTime.msecsTo(QDateTime::currentDateTime());
+            buildDuration = startTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
             MetricsCollector::instance().recordLatency("build_duration_ms", buildDuration);
             settings.setValue("build/lastDuration", buildDuration);
         }
     }
     settings.setValue("build/inProgress", false);
-    settings.setValue("build/lastFinishTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("build/lastFinishTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     // Update UI
     if (buildWidget_) {
@@ -3375,7 +3209,7 @@ void MainWindow::onBuildFinished(bool success) {
         statusBar()->showMessage(tr("Build OK"), 3000);
         
         // Remove [Building] from window title
-        QString title = windowTitle();
+        std::string title = windowTitle();
         if (title.contains(" [Building]")) {
             setWindowTitle(title.replace(" [Building]", ""));
         }
@@ -3390,9 +3224,9 @@ void MainWindow::onBuildFinished(bool success) {
     // Log to hex console
     if (m_hexMagConsole) {
         m_hexMagConsole->appendPlainText(success ? "=== BUILD SUCCESS ===" : "=== BUILD FAILED ===");
-        m_hexMagConsole->appendPlainText(QDateTime::currentDateTime().toString(Qt::ISODate));
+        m_hexMagConsole->appendPlainText(std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
         if (buildDuration > 0) {
-            m_hexMagConsole->appendPlainText(QString("Duration: %1 ms").arg(buildDuration));
+            m_hexMagConsole->appendPlainText(std::string("Duration: %1 ms"));
         }
     }
     
@@ -3404,8 +3238,8 @@ void MainWindow::onBuildFinished(bool success) {
     MetricsCollector::instance().incrementCounter(success ? "builds_successful" : "builds_failed");
     
     RawrXD::Integration::logInfo("MainWindow", "build_finished",
-        QString("Build %1 (duration: %2ms)").arg(success ? "succeeded" : "failed").arg(buildDuration),
-        QJsonObject{{"success", success}, {"duration_ms", buildDuration}});
+        std::string("Build %1 (duration: %2ms)"),
+        void*{{"success", success}, {"duration_ms", buildDuration}});
 }
 
 void MainWindow::onVcsStatusChanged() {
@@ -3429,7 +3263,7 @@ void MainWindow::onVcsStatusChanged() {
     QSettings settings("RawrXD", "IDE");
     int refreshCount = settings.value("vcs/refreshCount", 0).toInt() + 1;
     settings.setValue("vcs/refreshCount", refreshCount);
-    settings.setValue("vcs/lastRefreshTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("vcs/lastRefreshTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     // Refresh VCS widget if available
     if (vcsWidget_) {
@@ -3443,8 +3277,8 @@ void MainWindow::onVcsStatusChanged() {
     // (This would show Git branch, modified file count, etc.)
     
     RawrXD::Integration::logInfo("MainWindow", "vcs_status_changed",
-        QString("VCS status refreshed (total: %1)").arg(refreshCount),
-        QJsonObject{{"refresh_count", refreshCount}});
+        std::string("VCS status refreshed (total: %1)"),
+        void*{{"refresh_count", refreshCount}});
 }
 
 void MainWindow::onDebuggerStateChanged(bool running) {
@@ -3457,15 +3291,15 @@ void MainWindow::onDebuggerStateChanged(bool running) {
     }
     
     // Track debugger session metrics
-    static QDateTime sessionStartTime;
+    static std::chrono::system_clock::time_point sessionStartTime;
     if (running) {
-        sessionStartTime = QDateTime::currentDateTime();
+        sessionStartTime = std::chrono::system_clock::time_point::currentDateTime();
         MetricsCollector::instance().incrementCounter("debugger_sessions_started");
     } else {
         if (sessionStartTime.isValid()) {
-            qint64 sessionDuration = sessionStartTime.msecsTo(QDateTime::currentDateTime());
+            qint64 sessionDuration = sessionStartTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
             MetricsCollector::instance().recordLatency("debugger_session_duration_ms", sessionDuration);
-            sessionStartTime = QDateTime();
+            sessionStartTime = std::chrono::system_clock::time_point();
         }
         MetricsCollector::instance().incrementCounter("debugger_sessions_ended");
     }
@@ -3478,7 +3312,7 @@ void MainWindow::onDebuggerStateChanged(bool running) {
     // Persist debugger state
     QSettings settings("RawrXD", "IDE");
     settings.setValue("debugger/lastState", running ? "running" : "stopped");
-    settings.setValue("debugger/lastStateChange", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("debugger/lastStateChange", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     // Update status bar
     if (running) {
@@ -3498,8 +3332,8 @@ void MainWindow::onDebuggerStateChanged(bool running) {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "debugger_state_changed",
-        QString("Debugger %1").arg(running ? "started" : "stopped"),
-        QJsonObject{{"running", running}});
+        std::string("Debugger %1"),
+        void*{{"running", running}});
 }
 
 void MainWindow::onTestRunStarted() {
@@ -3513,7 +3347,7 @@ void MainWindow::onTestRunStarted() {
     
     // Record test run start time for duration tracking
     QSettings settings("RawrXD", "IDE");
-    settings.setValue("testing/lastRunStartTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("testing/lastRunStartTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     settings.setValue("testing/runInProgress", true);
     
     // Update test explorer widget if available
@@ -3535,8 +3369,8 @@ void MainWindow::onTestRunStarted() {
     if (m_outputPanelWidget) {
         if (auto output = qobject_cast<QPlainTextEdit*>(m_outputPanelWidget)) {
             output->clear();
-            output->appendPlainText(QString("[%1] Test run started...\n")
-                                   .arg(QDateTime::currentDateTime().toString("hh:mm:ss")));
+            output->appendPlainText(std::string("[%1] Test run started...\n")
+                                   .toString("hh:mm:ss")));
         }
     }
     
@@ -3561,17 +3395,17 @@ void MainWindow::onTestRunFinished() {
     
     // Calculate test run duration
     QSettings settings("RawrXD", "IDE");
-    QString startTimeStr = settings.value("testing/lastRunStartTime").toString();
+    std::string startTimeStr = settings.value("testing/lastRunStartTime").toString();
     if (!startTimeStr.isEmpty()) {
-        QDateTime startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
+        std::chrono::system_clock::time_point startTime = std::chrono::system_clock::time_point::fromString(startTimeStr, //ISODate);
         if (startTime.isValid()) {
-            qint64 duration = startTime.msecsTo(QDateTime::currentDateTime());
+            qint64 duration = startTime.msecsTo(std::chrono::system_clock::time_point::currentDateTime());
             MetricsCollector::instance().recordLatency("test_run_duration_ms", duration);
             settings.setValue("testing/lastRunDuration", duration);
         }
     }
     settings.setValue("testing/runInProgress", false);
-    settings.setValue("testing/lastRunEndTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("testing/lastRunEndTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     // Increment total test runs counter
     int totalRuns = settings.value("testing/totalRuns", 0).toInt() + 1;
@@ -3595,8 +3429,8 @@ void MainWindow::onTestRunFinished() {
     // Append result to output panel
     if (m_outputPanelWidget) {
         if (auto output = qobject_cast<QPlainTextEdit*>(m_outputPanelWidget)) {
-            output->appendPlainText(QString("[%1] Test run completed.\n")
-                                   .arg(QDateTime::currentDateTime().toString("hh:mm:ss")));
+            output->appendPlainText(std::string("[%1] Test run completed.\n")
+                                   .toString("hh:mm:ss")));
         }
     }
     
@@ -3609,7 +3443,7 @@ void MainWindow::onTestRunFinished() {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "test_run_finished", "Test run completed",
-        QJsonObject{{"total_runs", totalRuns}});
+        void*{{"total_runs", totalRuns}});
 }
 void MainWindow::onDatabaseConnected() {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onDatabaseConnected", "database");
@@ -3624,7 +3458,7 @@ void MainWindow::onDatabaseConnected() {
     QSettings settings("RawrXD", "IDE");
     int connectionCount = settings.value("database/connections", 0).toInt() + 1;
     settings.setValue("database/connections", connectionCount);
-    settings.setValue("database/lastConnectionTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("database/lastConnectionTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     // Update database tool widget if available
     if (database_) {
@@ -3645,8 +3479,8 @@ void MainWindow::onDatabaseConnected() {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "database_connected",
-        QString("Database connected (total: %1)").arg(connectionCount),
-        QJsonObject{{"connection_count", connectionCount}});
+        std::string("Database connected (total: %1)"),
+        void*{{"connection_count", connectionCount}});
 }
 
 void MainWindow::onDockerContainerListed() {
@@ -3725,7 +3559,7 @@ void MainWindow::onCloudResourceListed() {
     RawrXD::Integration::logInfo("MainWindow", "cloud_resources", "Cloud resources listed");
 }
 
-void MainWindow::onPackageInstalled(const QString& pkg) {
+void MainWindow::onPackageInstalled(const std::string& pkg) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onPackageInstalled", "package");
     RawrXD::Integration::traceEvent("PackageManager", "package_installed");
     
@@ -3739,33 +3573,33 @@ void MainWindow::onPackageInstalled(const QString& pkg) {
     int installCount = settings.value("packages/installCount", 0).toInt() + 1;
     settings.setValue("packages/installCount", installCount);
     settings.setValue("packages/lastInstalled", pkg);
-    settings.setValue("packages/lastInstallTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("packages/lastInstallTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     // Add to recent packages
-    QStringList recentPackages = settings.value("packages/recent").toStringList();
+    std::vector<std::string> recentPackages = settings.value("packages/recent").toStringList();
     recentPackages.removeAll(pkg);
     recentPackages.prepend(pkg);
     while (recentPackages.size() > 10) recentPackages.removeLast();
     settings.setValue("packages/recent", recentPackages);
     
     MetricsCollector::instance().incrementCounter("packages_installed");
-    statusBar()->showMessage(tr("Package: %1").arg(pkg), 2000);
+    statusBar()->showMessage(tr("Package: %1"), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[PACKAGE] Installed: %1").arg(pkg));
+        m_hexMagConsole->appendPlainText(std::string("[PACKAGE] Installed: %1"));
     }
     
     // Update chat history
     if (chatHistory_) {
-        chatHistory_->addItem(tr("📦 Package installed: %1").arg(pkg));
+        chatHistory_->addItem(tr("📦 Package installed: %1"));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "package_installed",
-        QString("Package installed: %1 (total: %2)").arg(pkg).arg(installCount),
-        QJsonObject{{"package", pkg}, {"total_installs", installCount}});
+        std::string("Package installed: %1 (total: %2)"),
+        void*{{"package", pkg}, {"total_installs", installCount}});
 }
-void MainWindow::onDocumentationQueried(const QString& keyword) {
+void MainWindow::onDocumentationQueried(const std::string& keyword) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onDocumentationQueried", "docs");
     RawrXD::Integration::traceEvent("Documentation", "queried");
     
@@ -3779,29 +3613,29 @@ void MainWindow::onDocumentationQueried(const QString& keyword) {
     int queryCount = settings.value("docs/queryCount", 0).toInt() + 1;
     settings.setValue("docs/queryCount", queryCount);
     settings.setValue("docs/lastQuery", keyword);
-    settings.setValue("docs/lastQueryTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("docs/lastQueryTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("docs_queries");
     MetricsCollector::instance().recordLatency("docs_query_length", keyword.length());
-    statusBar()->showMessage(tr("Searching: %1").arg(keyword), 2000);
+    statusBar()->showMessage(tr("Searching: %1"), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[DOCS] Searching for: %1").arg(keyword));
+        m_hexMagConsole->appendPlainText(std::string("[DOCS] Searching for: %1"));
     }
     
     // Could integrate with AI chat to search documentation
     if (m_aiChatPanel && !keyword.isEmpty()) {
-        QString prompt = tr("Show documentation for: %1").arg(keyword);
+        std::string prompt = tr("Show documentation for: %1");
         m_aiChatPanel->addUserMessage(prompt);
     }
     
     RawrXD::Integration::logInfo("MainWindow", "docs_queried",
-        QString("Documentation query: %1 (total: %2)").arg(keyword).arg(queryCount),
-        QJsonObject{{"keyword", keyword}, {"query_count", queryCount}});
+        std::string("Documentation query: %1 (total: %2)"),
+        void*{{"keyword", keyword}, {"query_count", queryCount}});
 }
 
-void MainWindow::onUMLGenerated(const QString& plantUml) {
+void MainWindow::onUMLGenerated(const std::string& plantUml) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onUMLGenerated", "uml");
     RawrXD::Integration::traceEvent("UML", "generated");
     
@@ -3815,7 +3649,7 @@ void MainWindow::onUMLGenerated(const QString& plantUml) {
     int generationCount = settings.value("uml/generationCount", 0).toInt() + 1;
     settings.setValue("uml/generationCount", generationCount);
     settings.setValue("uml/lastGenerationLength", plantUml.length());
-    settings.setValue("uml/lastGenerationTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("uml/lastGenerationTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("uml_generated");
     MetricsCollector::instance().recordLatency("uml_content_length", plantUml.length());
@@ -3833,11 +3667,11 @@ void MainWindow::onUMLGenerated(const QString& plantUml) {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "uml_generated",
-        QString("UML generated (length: %1, total: %2)").arg(plantUml.length()).arg(generationCount),
-        QJsonObject{{"content_length", plantUml.length()}, {"generation_count", generationCount}});
+        std::string("UML generated (length: %1, total: %2)")),
+        void*{{"content_length", plantUml.length()}, {"generation_count", generationCount}});
 }
 
-void MainWindow::onImageEdited(const QString& path) {
+void MainWindow::onImageEdited(const std::string& path) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onImageEdited", "image");
     RawrXD::Integration::traceEvent("Image", "edited");
     
@@ -3847,9 +3681,9 @@ void MainWindow::onImageEdited(const QString& path) {
     }
     
     // Validate path
-    QFileInfo info(path);
+    std::filesystem::path info(path);
     if (!info.exists()) {
-        RawrXD::Integration::logError("MainWindow", "image_edit", QString("Image file does not exist: %1").arg(path));
+        RawrXD::Integration::logError("MainWindow", "image_edit", std::string("Image file does not exist: %1"));
         return;
     }
     
@@ -3858,27 +3692,27 @@ void MainWindow::onImageEdited(const QString& path) {
     int editCount = settings.value("image/editCount", 0).toInt() + 1;
     settings.setValue("image/editCount", editCount);
     settings.setValue("image/lastEdited", path);
-    settings.setValue("image/lastEditTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("image/lastEditTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("images_edited");
-    statusBar()->showMessage(tr("Image: %1").arg(QFileInfo(path).fileName()), 2000);
+    statusBar()->showMessage(tr("Image: %1").fileName()), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[IMAGE] Edited: %1").arg(path));
+        m_hexMagConsole->appendPlainText(std::string("[IMAGE] Edited: %1"));
     }
     
     // Update chat history
     if (chatHistory_) {
-        chatHistory_->addItem(tr("🖼️ Image edited: %1").arg(QFileInfo(path).fileName()));
+        chatHistory_->addItem(tr("🖼️ Image edited: %1").fileName()));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "image_edited",
-        QString("Image edited: %1 (total: %2)").arg(QFileInfo(path).fileName()).arg(editCount),
-        QJsonObject{{"path", path}, {"edit_count", editCount}});
+        std::string("Image edited: %1 (total: %2)").fileName()),
+        void*{{"path", path}, {"edit_count", editCount}});
 }
 
-void MainWindow::onTranslationChanged(const QString& lang) {
+void MainWindow::onTranslationChanged(const std::string& lang) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onTranslationChanged", "translation");
     RawrXD::Integration::traceEvent("Translation", "changed");
     
@@ -3892,27 +3726,27 @@ void MainWindow::onTranslationChanged(const QString& lang) {
     int changeCount = settings.value("translation/changeCount", 0).toInt() + 1;
     settings.setValue("translation/changeCount", changeCount);
     settings.setValue("translation/lastLanguage", lang);
-    settings.setValue("translation/lastChangeTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("translation/lastChangeTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("translations_changed");
-    statusBar()->showMessage(tr("Language: %1").arg(lang), 2000);
+    statusBar()->showMessage(tr("Language: %1"), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[TRANSLATION] Language: %1").arg(lang));
+        m_hexMagConsole->appendPlainText(std::string("[TRANSLATION] Language: %1"));
     }
     
     // Could trigger QApplication locale change here
     if (chatHistory_) {
-        chatHistory_->addItem(tr("🌐 Language changed: %1").arg(lang));
+        chatHistory_->addItem(tr("🌐 Language changed: %1"));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "translation_changed",
-        QString("Language changed to: %1 (total: %2)").arg(lang).arg(changeCount),
-        QJsonObject{{"language", lang}, {"change_count", changeCount}});
+        std::string("Language changed to: %1 (total: %2)"),
+        void*{{"language", lang}, {"change_count", changeCount}});
 }
 
-void MainWindow::onDesignImported(const QString& file) {
+void MainWindow::onDesignImported(const std::string& file) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onDesignImported", "design");
     RawrXD::Integration::traceEvent("Design", "imported");
     
@@ -3922,9 +3756,9 @@ void MainWindow::onDesignImported(const QString& file) {
     }
     
     // Validate file
-    QFileInfo info(file);
+    std::filesystem::path info(file);
     if (!info.exists()) {
-        RawrXD::Integration::logError("MainWindow", "design_import", QString("Design file does not exist: %1").arg(file));
+        RawrXD::Integration::logError("MainWindow", "design_import", std::string("Design file does not exist: %1"));
         return;
     }
     
@@ -3933,26 +3767,26 @@ void MainWindow::onDesignImported(const QString& file) {
     int importCount = settings.value("design/importCount", 0).toInt() + 1;
     settings.setValue("design/importCount", importCount);
     settings.setValue("design/lastImported", file);
-    settings.setValue("design/lastImportTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("design/lastImportTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("designs_imported");
-    statusBar()->showMessage(tr("Design from %1").arg(QFileInfo(file).fileName()), 2000);
+    statusBar()->showMessage(tr("Design from %1").fileName()), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[DESIGN] Imported: %1").arg(file));
+        m_hexMagConsole->appendPlainText(std::string("[DESIGN] Imported: %1"));
     }
     
     // Update chat history
     if (chatHistory_) {
-        chatHistory_->addItem(tr("🎨 Design imported: %1").arg(QFileInfo(file).fileName()));
+        chatHistory_->addItem(tr("🎨 Design imported: %1").fileName()));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "design_imported",
-        QString("Design imported: %1 (total: %2)").arg(QFileInfo(file).fileName()).arg(importCount),
-        QJsonObject{{"file", file}, {"import_count", importCount}});
+        std::string("Design imported: %1 (total: %2)").fileName()),
+        void*{{"file", file}, {"import_count", importCount}});
 }
-void MainWindow::onAIChatMessage(const QString& msg) {
+void MainWindow::onAIChatMessage(const std::string& msg) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onAIChatMessage", "ai_chat");
     RawrXD::Integration::traceEvent("AI_Chat", "message_received");
     
@@ -3966,7 +3800,7 @@ void MainWindow::onAIChatMessage(const QString& msg) {
     int messageCount = settings.value("ai_chat/messageCount", 0).toInt() + 1;
     settings.setValue("ai_chat/messageCount", messageCount);
     settings.setValue("ai_chat/lastMessageLength", msg.length());
-    settings.setValue("ai_chat/lastMessageTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("ai_chat/lastMessageTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("ai_chat_messages");
     MetricsCollector::instance().recordLatency("ai_chat_message_length", msg.length());
@@ -3983,12 +3817,12 @@ void MainWindow::onAIChatMessage(const QString& msg) {
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[AI_CHAT] %1").arg(msg.left(100)));
+        m_hexMagConsole->appendPlainText(std::string("[AI_CHAT] %1")));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "ai_chat_message",
-        QString("AI Chat message received (length: %1, total: %2)").arg(msg.length()).arg(messageCount),
-        QJsonObject{{"message_length", msg.length()}, {"message_count", messageCount}});
+        std::string("AI Chat message received (length: %1, total: %2)")),
+        void*{{"message_length", msg.length()}, {"message_count", messageCount}});
 }
 
 void MainWindow::onNotebookExecuted() {
@@ -3999,7 +3833,7 @@ void MainWindow::onNotebookExecuted() {
     QSettings settings("RawrXD", "IDE");
     int executionCount = settings.value("notebook/executionCount", 0).toInt() + 1;
     settings.setValue("notebook/executionCount", executionCount);
-    settings.setValue("notebook/lastExecutionTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("notebook/lastExecutionTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("notebook_executions");
     statusBar()->showMessage(tr("Notebook executed"), 2000);
@@ -4015,8 +3849,8 @@ void MainWindow::onNotebookExecuted() {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "notebook_executed",
-        QString("Notebook executed (total: %1)").arg(executionCount),
-        QJsonObject{{"execution_count", executionCount}});
+        std::string("Notebook executed (total: %1)"),
+        void*{{"execution_count", executionCount}});
 }
 
 void MainWindow::onMarkdownRendered() {
@@ -4027,7 +3861,7 @@ void MainWindow::onMarkdownRendered() {
     QSettings settings("RawrXD", "IDE");
     int renderCount = settings.value("markdown/renderCount", 0).toInt() + 1;
     settings.setValue("markdown/renderCount", renderCount);
-    settings.setValue("markdown/lastRenderTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("markdown/lastRenderTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("markdown_renders");
     statusBar()->showMessage(tr("Markdown rendered"), 2000);
@@ -4038,8 +3872,8 @@ void MainWindow::onMarkdownRendered() {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "markdown_rendered",
-        QString("Markdown rendered (total: %1)").arg(renderCount),
-        QJsonObject{{"render_count", renderCount}});
+        std::string("Markdown rendered (total: %1)"),
+        void*{{"render_count", renderCount}});
 }
 
 void MainWindow::onSheetCalculated() {
@@ -4050,7 +3884,7 @@ void MainWindow::onSheetCalculated() {
     QSettings settings("RawrXD", "IDE");
     int calculationCount = settings.value("spreadsheet/calculationCount", 0).toInt() + 1;
     settings.setValue("spreadsheet/calculationCount", calculationCount);
-    settings.setValue("spreadsheet/lastCalculationTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("spreadsheet/lastCalculationTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("spreadsheet_calculations");
     statusBar()->showMessage(tr("Spreadsheet calculated"), 2000);
@@ -4061,11 +3895,11 @@ void MainWindow::onSheetCalculated() {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "spreadsheet_calculated",
-        QString("Spreadsheet calculated (total: %1)").arg(calculationCount),
-        QJsonObject{{"calculation_count", calculationCount}});
+        std::string("Spreadsheet calculated (total: %1)"),
+        void*{{"calculation_count", calculationCount}});
 }
 
-void MainWindow::onTerminalCommand(const QString& cmd) {
+void MainWindow::onTerminalCommand(const std::string& cmd) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onTerminalCommand", "terminal");
     RawrXD::Integration::traceEvent("Terminal", "command_executed");
     
@@ -4079,27 +3913,27 @@ void MainWindow::onTerminalCommand(const QString& cmd) {
     int commandCount = settings.value("terminal/commandCount", 0).toInt() + 1;
     settings.setValue("terminal/commandCount", commandCount);
     settings.setValue("terminal/lastCommand", cmd.left(100)); // Store first 100 chars
-    settings.setValue("terminal/lastCommandTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("terminal/lastCommandTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("terminal_commands");
     MetricsCollector::instance().recordLatency("terminal_command_length", cmd.length());
-    statusBar()->showMessage(tr("Terminal: %1").arg(cmd.left(50)), 2000);
+    statusBar()->showMessage(tr("Terminal: %1")), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[TERMINAL] $ %1").arg(cmd));
+        m_hexMagConsole->appendPlainText(std::string("[TERMINAL] $ %1"));
     }
     
     // Could execute command via QProcess here
     if (chatHistory_) {
-        chatHistory_->addItem(tr("💻 Terminal: %1").arg(cmd.left(50)));
+        chatHistory_->addItem(tr("💻 Terminal: %1")));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "terminal_command",
-        QString("Terminal command executed (length: %1, total: %2)").arg(cmd.length()).arg(commandCount),
-        QJsonObject{{"command_length", cmd.length()}, {"command_count", commandCount}});
+        std::string("Terminal command executed (length: %1, total: %2)")),
+        void*{{"command_length", cmd.length()}, {"command_count", commandCount}});
 }
-void MainWindow::onSnippetInserted(const QString& id) {
+void MainWindow::onSnippetInserted(const std::string& id) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onSnippetInserted", "snippet");
     RawrXD::Integration::traceEvent("Snippet", "inserted");
     
@@ -4113,22 +3947,22 @@ void MainWindow::onSnippetInserted(const QString& id) {
     int snippetCount = settings.value("snippets/insertCount", 0).toInt() + 1;
     settings.setValue("snippets/insertCount", snippetCount);
     settings.setValue("snippets/lastInserted", id);
-    settings.setValue("snippets/lastInsertTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("snippets/lastInsertTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("snippets_inserted");
-    statusBar()->showMessage(tr("Snippet: %1").arg(id), 2000);
+    statusBar()->showMessage(tr("Snippet: %1"), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[SNIPPET] Inserted: %1").arg(id));
+        m_hexMagConsole->appendPlainText(std::string("[SNIPPET] Inserted: %1"));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "snippet_inserted",
-        QString("Snippet inserted: %1 (total: %2)").arg(id).arg(snippetCount),
-        QJsonObject{{"snippet_id", id}, {"insert_count", snippetCount}});
+        std::string("Snippet inserted: %1 (total: %2)"),
+        void*{{"snippet_id", id}, {"insert_count", snippetCount}});
 }
 
-void MainWindow::onRegexTested(const QString& pattern) {
+void MainWindow::onRegexTested(const std::string& pattern) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onRegexTested", "regex");
     RawrXD::Integration::traceEvent("Regex", "tested");
     
@@ -4142,20 +3976,20 @@ void MainWindow::onRegexTested(const QString& pattern) {
     int testCount = settings.value("regex/testCount", 0).toInt() + 1;
     settings.setValue("regex/testCount", testCount);
     settings.setValue("regex/lastPattern", pattern);
-    settings.setValue("regex/lastTestTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("regex/lastTestTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("regex_tests");
     MetricsCollector::instance().recordLatency("regex_pattern_length", pattern.length());
-    statusBar()->showMessage(tr("Regex: %1").arg(pattern.left(30)), 2000);
+    statusBar()->showMessage(tr("Regex: %1")), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[REGEX] Pattern: %1").arg(pattern));
+        m_hexMagConsole->appendPlainText(std::string("[REGEX] Pattern: %1"));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "regex_tested",
-        QString("Regex tested: %1 (total: %2)").arg(pattern.left(50)).arg(testCount),
-        QJsonObject{{"pattern_length", pattern.length()}, {"test_count", testCount}});
+        std::string("Regex tested: %1 (total: %2)")),
+        void*{{"pattern_length", pattern.length()}, {"test_count", testCount}});
 }
 
 void MainWindow::onDiffMerged() {
@@ -4166,7 +4000,7 @@ void MainWindow::onDiffMerged() {
     QSettings settings("RawrXD", "IDE");
     int mergeCount = settings.value("diff/mergeCount", 0).toInt() + 1;
     settings.setValue("diff/mergeCount", mergeCount);
-    settings.setValue("diff/lastMergeTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("diff/lastMergeTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("diff_merges");
     statusBar()->showMessage(tr("Diff merged"), 2000);
@@ -4182,8 +4016,8 @@ void MainWindow::onDiffMerged() {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "diff_merged",
-        QString("Diff merged (total: %1)").arg(mergeCount),
-        QJsonObject{{"merge_count", mergeCount}});
+        std::string("Diff merged (total: %1)"),
+        void*{{"merge_count", mergeCount}});
 }
 
 void MainWindow::onColorPicked(const QColor& c) {
@@ -4200,15 +4034,15 @@ void MainWindow::onColorPicked(const QColor& c) {
     int pickCount = settings.value("color/pickCount", 0).toInt() + 1;
     settings.setValue("color/pickCount", pickCount);
     settings.setValue("color/lastColor", c.name());
-    settings.setValue("color/lastPickTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("color/lastPickTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("colors_picked");
-    statusBar()->showMessage(tr("Color: %1").arg(c.name()), 2000);
+    statusBar()->showMessage(tr("Color: %1")), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[COLOR] %1 (R:%2 G:%3 B:%4)")
-            .arg(c.name()).arg(c.red()).arg(c.green()).arg(c.blue()));
+        m_hexMagConsole->appendPlainText(std::string("[COLOR] %1 (R:%2 G:%3 B:%4)")
+            )))));
     }
     
     // Could insert color into current editor
@@ -4217,11 +4051,11 @@ void MainWindow::onColorPicked(const QColor& c) {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "color_picked",
-        QString("Color picked: %1 (total: %2)").arg(c.name()).arg(pickCount),
-        QJsonObject{{"color", c.name()}, {"pick_count", pickCount}});
+        std::string("Color picked: %1 (total: %2)")),
+        void*{{"color", c.name()}, {"pick_count", pickCount}});
 }
 
-void MainWindow::onIconSelected(const QString& name) {
+void MainWindow::onIconSelected(const std::string& name) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onIconSelected", "icon");
     RawrXD::Integration::traceEvent("Icon", "selected");
     
@@ -4235,22 +4069,22 @@ void MainWindow::onIconSelected(const QString& name) {
     int selectionCount = settings.value("icon/selectionCount", 0).toInt() + 1;
     settings.setValue("icon/selectionCount", selectionCount);
     settings.setValue("icon/lastSelected", name);
-    settings.setValue("icon/lastSelectionTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("icon/lastSelectionTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("icons_selected");
-    statusBar()->showMessage(tr("Icon: %1").arg(name), 2000);
+    statusBar()->showMessage(tr("Icon: %1"), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[ICON] Selected: %1").arg(name));
+        m_hexMagConsole->appendPlainText(std::string("[ICON] Selected: %1"));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "icon_selected",
-        QString("Icon selected: %1 (total: %2)").arg(name).arg(selectionCount),
-        QJsonObject{{"icon_name", name}, {"selection_count", selectionCount}});
+        std::string("Icon selected: %1 (total: %2)"),
+        void*{{"icon_name", name}, {"selection_count", selectionCount}});
 }
 
-void MainWindow::onPluginLoaded(const QString& name) {
+void MainWindow::onPluginLoaded(const std::string& name) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onPluginLoaded", "plugin");
     RawrXD::Integration::traceEvent("Plugin", "loaded");
     
@@ -4264,24 +4098,24 @@ void MainWindow::onPluginLoaded(const QString& name) {
     int loadCount = settings.value("plugin/loadCount", 0).toInt() + 1;
     settings.setValue("plugin/loadCount", loadCount);
     settings.setValue("plugin/lastLoaded", name);
-    settings.setValue("plugin/lastLoadTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("plugin/lastLoadTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("plugins_loaded");
-    statusBar()->showMessage(tr("Plugin loaded: %1").arg(name), 2000);
+    statusBar()->showMessage(tr("Plugin loaded: %1"), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[PLUGIN] Loaded: %1").arg(name));
+        m_hexMagConsole->appendPlainText(std::string("[PLUGIN] Loaded: %1"));
     }
     
     // Update chat history
     if (chatHistory_) {
-        chatHistory_->addItem(tr("🔌 Plugin loaded: %1").arg(name));
+        chatHistory_->addItem(tr("🔌 Plugin loaded: %1"));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "plugin_loaded",
-        QString("Plugin loaded: %1 (total: %2)").arg(name).arg(loadCount),
-        QJsonObject{{"plugin_name", name}, {"load_count", loadCount}});
+        std::string("Plugin loaded: %1 (total: %2)"),
+        void*{{"plugin_name", name}, {"load_count", loadCount}});
 }
 
 void MainWindow::onSettingsSaved() {
@@ -4292,7 +4126,7 @@ void MainWindow::onSettingsSaved() {
     QSettings settings("RawrXD", "IDE");
     int saveCount = settings.value("settings/saveCount", 0).toInt() + 1;
     settings.setValue("settings/saveCount", saveCount);
-    settings.setValue("settings/lastSaveTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("settings/lastSaveTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("settings_saves");
     statusBar()->showMessage(tr("Settings saved"), 2000);
@@ -4311,10 +4145,10 @@ void MainWindow::onSettingsSaved() {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "settings_saved",
-        QString("Settings saved (total: %1)").arg(saveCount),
-        QJsonObject{{"save_count", saveCount}});
+        std::string("Settings saved (total: %1)"),
+        void*{{"save_count", saveCount}});
 }
-void MainWindow::onNotificationClicked(const QString& id) {
+void MainWindow::onNotificationClicked(const std::string& id) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onNotificationClicked", "notification");
     RawrXD::Integration::traceEvent("Notification", "clicked");
     
@@ -4328,22 +4162,22 @@ void MainWindow::onNotificationClicked(const QString& id) {
     int clickCount = settings.value("notification/clickCount", 0).toInt() + 1;
     settings.setValue("notification/clickCount", clickCount);
     settings.setValue("notification/lastClicked", id);
-    settings.setValue("notification/lastClickTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("notification/lastClickTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("notifications_clicked");
-    statusBar()->showMessage(tr("Notification: %1").arg(id), 2000);
+    statusBar()->showMessage(tr("Notification: %1"), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[NOTIFICATION] User clicked: %1").arg(id));
+        m_hexMagConsole->appendPlainText(std::string("[NOTIFICATION] User clicked: %1"));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "notification_clicked",
-        QString("Notification clicked: %1 (total: %2)").arg(id).arg(clickCount),
-        QJsonObject{{"notification_id", id}, {"click_count", clickCount}});
+        std::string("Notification clicked: %1 (total: %2)"),
+        void*{{"notification_id", id}, {"click_count", clickCount}});
 }
 
-void MainWindow::onShortcutChanged(const QString& id, const QKeySequence& key) {
+void MainWindow::onShortcutChanged(const std::string& id, const QKeySequence& key) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onShortcutChanged", "shortcut");
     RawrXD::Integration::traceEvent("Shortcut", "changed");
     
@@ -4357,23 +4191,23 @@ void MainWindow::onShortcutChanged(const QString& id, const QKeySequence& key) {
     int changeCount = settings.value("shortcut/changeCount", 0).toInt() + 1;
     settings.setValue("shortcut/changeCount", changeCount);
     settings.setValue("shortcut/lastChanged", id);
-    settings.setValue("shortcut/lastChangeTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("shortcut/lastChangeTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("shortcuts_changed");
-    statusBar()->showMessage(tr("Shortcut %1: %2").arg(id, key.toString()), 2000);
+    statusBar()->showMessage(tr("Shortcut %1: %2")), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[SHORTCUT] %1 = %2").arg(id, key.toString()));
+        m_hexMagConsole->appendPlainText(std::string("[SHORTCUT] %1 = %2")));
     }
     
     // Save shortcuts to settings (use different settings object for QtShell)
     QSettings qtShellSettings("RawrXD", "QtShell");
-    qtShellSettings.setValue(QString("Shortcuts/%1").arg(id), key.toString());
+    qtShellSettings.setValue(std::string("Shortcuts/%1"), key.toString());
     
     RawrXD::Integration::logInfo("MainWindow", "shortcut_changed",
-        QString("Shortcut changed: %1 = %2 (total: %3)").arg(id).arg(key.toString()).arg(changeCount),
-        QJsonObject{{"shortcut_id", id}, {"key_sequence", key.toString()}, {"change_count", changeCount}});
+        std::string("Shortcut changed: %1 = %2 (total: %3)")),
+        void*{{"shortcut_id", id}, {"key_sequence", key.toString()}, {"change_count", changeCount}});
 }
 
 void MainWindow::onTelemetryReady() {
@@ -4383,7 +4217,7 @@ void MainWindow::onTelemetryReady() {
     // Track telemetry initialization
     QSettings settings("RawrXD", "IDE");
     settings.setValue("telemetry/initialized", true);
-    settings.setValue("telemetry/initTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("telemetry/initTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("telemetry_ready");
     
@@ -4395,7 +4229,7 @@ void MainWindow::onTelemetryReady() {
     RawrXD::Integration::logInfo("MainWindow", "telemetry_ready", "Telemetry system initialized");
 }
 
-void MainWindow::onUpdateAvailable(const QString& version) {
+void MainWindow::onUpdateAvailable(const std::string& version) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onUpdateAvailable", "update");
     RawrXD::Integration::traceEvent("Update", "available");
     
@@ -4409,20 +4243,20 @@ void MainWindow::onUpdateAvailable(const QString& version) {
     int notificationCount = settings.value("update/notificationCount", 0).toInt() + 1;
     settings.setValue("update/notificationCount", notificationCount);
     settings.setValue("update/lastVersion", version);
-    settings.setValue("update/lastNotificationTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("update/lastNotificationTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("update_notifications");
-    statusBar()->showMessage(tr("Update available: %1").arg(version), 5000);
+    statusBar()->showMessage(tr("Update available: %1"), 5000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[UPDATE] Version %1 available").arg(version));
+        m_hexMagConsole->appendPlainText(std::string("[UPDATE] Version %1 available"));
     }
     
     // Show update dialog
     QMessageBox msgBox(this);
     msgBox.setWindowTitle(tr("Update Available"));
-    msgBox.setText(tr("Version %1 is available for download.").arg(version));
+    msgBox.setText(tr("Version %1 is available for download."));
     msgBox.setInformativeText(tr("Would you like to download it now?"));
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::Yes);
@@ -4431,16 +4265,16 @@ void MainWindow::onUpdateAvailable(const QString& version) {
     if (ret == QMessageBox::Yes) {
         // Could open browser to download page
         if (chatHistory_) {
-            chatHistory_->addItem(tr("📥 Downloading update %1...").arg(version));
+            chatHistory_->addItem(tr("📥 Downloading update %1..."));
         }
     }
     
     RawrXD::Integration::logInfo("MainWindow", "update_available",
-        QString("Update available: %1 (total: %2)").arg(version).arg(notificationCount),
-        QJsonObject{{"version", version}, {"notification_count", notificationCount}});
+        std::string("Update available: %1 (total: %2)"),
+        void*{{"version", version}, {"notification_count", notificationCount}});
 }
 
-void MainWindow::onWelcomeProjectChosen(const QString& path) {
+void MainWindow::onWelcomeProjectChosen(const std::string& path) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onWelcomeProjectChosen", "welcome");
     RawrXD::Integration::traceEvent("Welcome", "project_chosen");
     
@@ -4454,7 +4288,7 @@ void MainWindow::onWelcomeProjectChosen(const QString& path) {
     int selectionCount = settings.value("welcome/projectSelections", 0).toInt() + 1;
     settings.setValue("welcome/projectSelections", selectionCount);
     settings.setValue("welcome/lastSelectedPath", path);
-    settings.setValue("welcome/lastSelectionTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("welcome/lastSelectionTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("welcome_project_selections");
     
@@ -4462,11 +4296,11 @@ void MainWindow::onWelcomeProjectChosen(const QString& path) {
     onProjectOpened(path);
     
     RawrXD::Integration::logInfo("MainWindow", "welcome_project_chosen",
-        QString("Welcome project chosen: %1 (total: %2)").arg(path).arg(selectionCount),
-        QJsonObject{{"path", path}, {"selection_count", selectionCount}});
+        std::string("Welcome project chosen: %1 (total: %2)"),
+        void*{{"path", path}, {"selection_count", selectionCount}});
 }
 
-void MainWindow::onCommandPaletteTriggered(const QString& cmd) {
+void MainWindow::onCommandPaletteTriggered(const std::string& cmd) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onCommandPaletteTriggered", "command_palette");
     RawrXD::Integration::traceEvent("CommandPalette", "triggered");
     
@@ -4480,28 +4314,28 @@ void MainWindow::onCommandPaletteTriggered(const QString& cmd) {
     int triggerCount = settings.value("command_palette/triggerCount", 0).toInt() + 1;
     settings.setValue("command_palette/triggerCount", triggerCount);
     settings.setValue("command_palette/lastCommand", cmd);
-    settings.setValue("command_palette/lastTriggerTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("command_palette/lastTriggerTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("command_palette_triggers");
     MetricsCollector::instance().recordLatency("command_length", cmd.length());
-    statusBar()->showMessage(tr("Command: %1").arg(cmd), 2000);
+    statusBar()->showMessage(tr("Command: %1"), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[CMD] %1").arg(cmd));
+        m_hexMagConsole->appendPlainText(std::string("[CMD] %1"));
     }
     
     // Update chat history
     if (chatHistory_) {
-        chatHistory_->addItem(tr("⌨️ Command: %1").arg(cmd));
+        chatHistory_->addItem(tr("⌨️ Command: %1"));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "command_palette_triggered",
-        QString("Command palette triggered: %1 (total: %2)").arg(cmd).arg(triggerCount),
-        QJsonObject{{"command", cmd}, {"trigger_count", triggerCount}});
+        std::string("Command palette triggered: %1 (total: %2)"),
+        void*{{"command", cmd}, {"trigger_count", triggerCount}});
 }
 
-void MainWindow::onProgressCancelled(const QString& taskId) {
+void MainWindow::onProgressCancelled(const std::string& taskId) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onProgressCancelled", "progress");
     RawrXD::Integration::traceEvent("Progress", "cancelled");
     
@@ -4515,43 +4349,41 @@ void MainWindow::onProgressCancelled(const QString& taskId) {
     int cancelCount = settings.value("progress/cancelCount", 0).toInt() + 1;
     settings.setValue("progress/cancelCount", cancelCount);
     settings.setValue("progress/lastCancelled", taskId);
-    settings.setValue("progress/lastCancelTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("progress/lastCancelTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     MetricsCollector::instance().incrementCounter("progress_cancellations");
-    statusBar()->showMessage(tr("Cancelled: %1").arg(taskId), 2000);
+    statusBar()->showMessage(tr("Cancelled: %1"), 2000);
     
     // Log to hex console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[PROGRESS] Cancelled: %1").arg(taskId));
+        m_hexMagConsole->appendPlainText(std::string("[PROGRESS] Cancelled: %1"));
     }
     
     // Update chat history
     if (chatHistory_) {
-        chatHistory_->addItem(tr("⏹️ Task cancelled: %1").arg(taskId));
+        chatHistory_->addItem(tr("⏹️ Task cancelled: %1"));
     }
     
     RawrXD::Integration::logInfo("MainWindow", "progress_cancelled",
-        QString("Progress cancelled: %1 (total: %2)").arg(taskId).arg(cancelCount),
-        QJsonObject{{"task_id", taskId}, {"cancel_count", cancelCount}});
+        std::string("Progress cancelled: %1 (total: %2)"),
+        void*{{"task_id", taskId}, {"cancel_count", cancelCount}});
 }
-void MainWindow::onQuickFixApplied(const QString& fix) {
-    qDebug() << "[QUICK_FIX] Applied:" << fix;
+void MainWindow::onQuickFixApplied(const std::string& fix) {
     
-    statusBar()->showMessage(tr("Quick fix applied: %1").arg(fix.left(30)), 2000);
+    statusBar()->showMessage(tr("Quick fix applied: %1")), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[QUICK_FIX] %1").arg(fix));
+        m_hexMagConsole->appendPlainText(std::string("[QUICK_FIX] %1"));
     }
     
     if (chatHistory_) {
-        chatHistory_->addItem(tr("🔧 Quick fix: %1").arg(fix.left(50)));
+        chatHistory_->addItem(tr("🔧 Quick fix: %1")));
     }
 }
 
 void MainWindow::onMinimapClicked(qreal ratio) {
-    qDebug() << "[MINIMAP] Clicked at ratio:" << ratio;
     
-    statusBar()->showMessage(tr("Minimap: %1%").arg(int(ratio*100)), 1000);
+    statusBar()->showMessage(tr("Minimap: %1%")), 1000);
     
     // Scroll editor to position
     if (codeView_) {
@@ -4565,13 +4397,12 @@ void MainWindow::onMinimapClicked(qreal ratio) {
     }
 }
 
-void MainWindow::onBreadcrumbClicked(const QString& symbol) {
-    qDebug() << "[BREADCRUMB] Navigate to:" << symbol;
+void MainWindow::onBreadcrumbClicked(const std::string& symbol) {
     
-    statusBar()->showMessage(tr("Navigate: %1").arg(symbol), 2000);
+    statusBar()->showMessage(tr("Navigate: %1"), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[NAV] %1").arg(symbol));
+        m_hexMagConsole->appendPlainText(std::string("[NAV] %1"));
     }
     
     // Could search for symbol in current file
@@ -4584,33 +4415,30 @@ void MainWindow::onBreadcrumbClicked(const QString& symbol) {
     }
 }
 
-void MainWindow::onStatusFieldClicked(const QString& field) {
-    qDebug() << "[STATUS_BAR] Field clicked:" << field;
+void MainWindow::onStatusFieldClicked(const std::string& field) {
     
-    statusBar()->showMessage(tr("Status: %1").arg(field), 2000);
+    statusBar()->showMessage(tr("Status: %1"), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[STATUS] Clicked: %1").arg(field));
+        m_hexMagConsole->appendPlainText(std::string("[STATUS] Clicked: %1"));
     }
 }
 
-void MainWindow::onTerminalEmulatorCommand(const QString& cmd) {
-    qDebug() << "[TERMINAL_EMU] Command:" << cmd;
+void MainWindow::onTerminalEmulatorCommand(const std::string& cmd) {
     
-    statusBar()->showMessage(tr("Emulator: %1").arg(cmd.left(50)), 2000);
+    statusBar()->showMessage(tr("Emulator: %1")), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[EMU] $ %1").arg(cmd));
+        m_hexMagConsole->appendPlainText(std::string("[EMU] $ %1"));
     }
 }
 
-void MainWindow::onSearchResultActivated(const QString& file, int line) {
-    qDebug() << "[SEARCH] Opening:" << file << "at line" << line;
+void MainWindow::onSearchResultActivated(const std::string& file, int line) {
     
-    statusBar()->showMessage(tr("Goto %1:%2").arg(QFileInfo(file).fileName()).arg(line), 2000);
+    statusBar()->showMessage(tr("Goto %1:%2").fileName()), 2000);
     
     // Open file in editor
-    QFile f(file);
+    std::fstream f(file);
     if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
         if (editorTabs_ && codeView_) {
             QTextStream in(&f);
@@ -4627,44 +4455,42 @@ void MainWindow::onSearchResultActivated(const QString& file, int line) {
     }
     
     if (chatHistory_) {
-        chatHistory_->addItem(tr("🔍 Opened: %1:%2").arg(QFileInfo(file).fileName()).arg(line));
+        chatHistory_->addItem(tr("🔍 Opened: %1:%2").fileName()));
     }
 }
 
-void MainWindow::onBookmarkToggled(const QString& file, int line) {
-    qDebug() << "[BOOKMARK] Toggled:" << file << ":" << line;
+void MainWindow::onBookmarkToggled(const std::string& file, int line) {
     
-    statusBar()->showMessage(tr("Bookmark: %1:%2").arg(QFileInfo(file).fileName()).arg(line), 2000);
+    statusBar()->showMessage(tr("Bookmark: %1:%2").fileName()), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[BOOKMARK] %1:%2").arg(file).arg(line));
+        m_hexMagConsole->appendPlainText(std::string("[BOOKMARK] %1:%2"));
     }
     
     // Save bookmark to settings
     QSettings settings("RawrXD", "QtShell");
-    QString bookmarkKey = QString("Bookmarks/%1_%2").arg(file).arg(line);
+    std::string bookmarkKey = std::string("Bookmarks/%1_%2");
     bool exists = settings.value(bookmarkKey, false).toBool();
     settings.setValue(bookmarkKey, !exists); // Toggle
 }
 
-void MainWindow::onTodoClicked(const QString& file, int line) {
+void MainWindow::onTodoClicked(const std::string& file, int line) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onTodoClicked", "todo");
-    qDebug() << "[TODO] Clicked:" << file << ":" << line;
     
-    statusBar()->showMessage(tr("TODO: %1:%2").arg(QFileInfo(file).fileName()).arg(line), 2000);
+    statusBar()->showMessage(tr("TODO: %1:%2").fileName()), 2000);
     
     // Open file at line (same as search result)
     onSearchResultActivated(file, line);
     
     if (chatHistory_) {
-        chatHistory_->addItem(tr("📝 TODO: %1:%2").arg(QFileInfo(file).fileName()).arg(line));
+        chatHistory_->addItem(tr("📝 TODO: %1:%2").fileName()));
     }
     
     // Track TODO interaction
     QSettings settings("RawrXD", "IDE");
     int todoClicks = settings.value("todos/clickCount", 0).toInt() + 1;
     settings.setValue("todos/clickCount", todoClicks);
-    settings.setValue("todos/lastClicked", QString("%1:%2").arg(file).arg(line));
+    settings.setValue("todos/lastClicked", std::string("%1:%2"));
 }
 
 void MainWindow::scanProjectForTodos()
@@ -4673,17 +4499,16 @@ void MainWindow::scanProjectForTodos()
     RawrXD::Integration::ScopedTimer timer("MainWindow", "scanProjectForTodos", "todo");
     
     if (!todos_) {
-        qWarning() << "[TODO] Todo widget not initialized";
         return;
     }
     
     // Clear existing items
     todos_->clear();
     
-    QString projectPath = QSettings("RawrXD", "IDE").value("project/currentPath", "").toString();
+    std::string projectPath = QSettings("RawrXD", "IDE").value("project/currentPath", "").toString();
     if (projectPath.isEmpty() && projectExplorer_) {
         // Try to get from project explorer
-        projectPath = QDir::currentPath();
+        projectPath = std::filesystem::path::currentPath();
     }
     
     if (projectPath.isEmpty()) {
@@ -4691,40 +4516,40 @@ void MainWindow::scanProjectForTodos()
         return;
     }
     
-    QStringList todoPatterns = {"TODO", "FIXME", "HACK", "XXX", "BUG", "NOTE"};
-    QStringList extensions = {"*.cpp", "*.h", "*.hpp", "*.c", "*.py", "*.js", "*.ts", "*.rs", "*.go", "*.java", "*.asm"};
+    std::vector<std::string> todoPatterns = {"TODO", "FIXME", "HACK", "XXX", "BUG", "NOTE"};
+    std::vector<std::string> extensions = {"*.cpp", "*.h", "*.hpp", "*.c", "*.py", "*.js", "*.ts", "*.rs", "*.go", "*.java", "*.asm"};
     
     int totalTodos = 0;
-    QDirIterator it(projectPath, extensions, QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator it(projectPath, extensions, std::filesystem::path::Files, QDirIterator::Subdirectories);
     
-    while (it.hasNext()) {
-        QString filePath = it.next();
-        QFile file(filePath);
+    while (itfalse) {
+        std::string filePath = it;
+        std::fstream file(filePath);
         
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream stream(&file);
             int lineNum = 0;
             
             while (!stream.atEnd()) {
-                QString line = stream.readLine();
+                std::string line = stream.readLine();
                 lineNum++;
                 
-                for (const QString& pattern : todoPatterns) {
-                    int idx = line.indexOf(pattern, 0, Qt::CaseInsensitive);
+                for (const std::string& pattern : todoPatterns) {
+                    int idx = line.indexOf(pattern, 0, //CaseInsensitive);
                     if (idx != -1) {
                         // Extract comment text after the marker
-                        QString comment = line.mid(idx).trimmed();
+                        std::string comment = line.mid(idx).trimmed();
                         if (comment.length() > 100) comment = comment.left(100) + "...";
                         
                         // Create list item with file:line info
-                        QString itemText = QString("%1:%2 - %3")
-                            .arg(QFileInfo(filePath).fileName())
-                            .arg(lineNum)
-                            .arg(comment);
+                        std::string itemText = std::string("%1:%2 - %3")
+                            .fileName())
+                            
+                            ;
                         
                         QListWidgetItem* item = new QListWidgetItem(itemText);
-                        item->setData(Qt::UserRole, filePath);
-                        item->setData(Qt::UserRole + 1, lineNum);
+                        item->setData(//UserRole, filePath);
+                        item->setData(//UserRole + 1, lineNum);
                         
                         // Color code by type
                         if (pattern == "FIXME" || pattern == "BUG") {
@@ -4744,17 +4569,15 @@ void MainWindow::scanProjectForTodos()
         }
     }
     
-    statusBar()->showMessage(tr("Found %1 TODOs in project").arg(totalTodos), 5000);
-    qInfo() << "[TODO] Scan complete:" << totalTodos << "items found";
+    statusBar()->showMessage(tr("Found %1 TODOs in project"), 5000);
     
     // Persist TODO count
     QSettings settings("RawrXD", "IDE");
     settings.setValue("todos/totalCount", totalTodos);
-    settings.setValue("todos/lastScan", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("todos/lastScan", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
 }
 
 void MainWindow::onMacroReplayed() {
-    qDebug() << "[MACRO] Replayed at" << QDateTime::currentDateTime().toString(Qt::ISODate);
     
     statusBar()->showMessage(tr("Macro executed"), 2000);
     
@@ -4766,63 +4589,58 @@ void MainWindow::onMacroReplayed() {
         chatHistory_->addItem(tr("🎬 Macro replayed"));
     }
 }
-void MainWindow::onCompletionCacheHit(const QString& key) {
-    qDebug() << "[COMPLETION_CACHE] Hit:" << key << "at" << QDateTime::currentDateTime().toString(Qt::ISODate);
+void MainWindow::onCompletionCacheHit(const std::string& key) {
     
     // Performance metric - cache is working
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[CACHE] Hit: %1").arg(key));
+        m_hexMagConsole->appendPlainText(std::string("[CACHE] Hit: %1"));
     }
 }
 
-void MainWindow::onLSPDiagnostic(const QString& file, const QJsonArray& diags) {
+void MainWindow::onLSPDiagnostic(const std::string& file, const void*& diags) {
     int diagCount = diags.size();
-    qDebug() << "[LSP] Diagnostics for" << file << ":" << diagCount << "issues";
     
-    statusBar()->showMessage(tr("Diagnostics: %1 (%2 issues)").arg(QFileInfo(file).fileName()).arg(diagCount), 2000);
+    statusBar()->showMessage(tr("Diagnostics: %1 (%2 issues)").fileName()), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[LSP] %1: %2 diagnostics").arg(file).arg(diagCount));
+        m_hexMagConsole->appendPlainText(std::string("[LSP] %1: %2 diagnostics"));
         
         // Log first 3 diagnostics
         for (int i = 0; i < qMin(3, diagCount); ++i) {
-            QJsonObject diag = diags[i].toObject();
-            QString message = diag["message"].toString();
+            void* diag = diags[i].toObject();
+            std::string message = diag["message"].toString();
             int line = diag["line"].toInt();
-            m_hexMagConsole->appendPlainText(QString("  Line %1: %2").arg(line).arg(message));
+            m_hexMagConsole->appendPlainText(std::string("  Line %1: %2"));
         }
     }
     
     if (chatHistory_ && diagCount > 0) {
-        chatHistory_->addItem(tr("⚠️ %1 diagnostic issues in %2").arg(diagCount).arg(QFileInfo(file).fileName()));
+        chatHistory_->addItem(tr("⚠️ %1 diagnostic issues in %2").fileName()));
     }
 }
 
-void MainWindow::onCodeLensClicked(const QString& command) {
-    qDebug() << "[CODE_LENS] Clicked:" << command;
+void MainWindow::onCodeLensClicked(const std::string& command) {
     
-    statusBar()->showMessage(tr("CodeLens: %1").arg(command.left(50)), 2000);
+    statusBar()->showMessage(tr("CodeLens: %1")), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[CODE_LENS] %1").arg(command));
+        m_hexMagConsole->appendPlainText(std::string("[CODE_LENS] %1"));
     }
     
     // Could trigger command palette execution here
     if (chatHistory_) {
-        chatHistory_->addItem(tr("🔬 CodeLens: %1").arg(command.left(50)));
+        chatHistory_->addItem(tr("🔬 CodeLens: %1")));
     }
 }
 
-void MainWindow::onInlayHintShown(const QString& file) {
-    qDebug() << "[INLAY_HINT] Shown for:" << file;
+void MainWindow::onInlayHintShown(const std::string& file) {
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[INLAY] Hints active: %1").arg(file));
+        m_hexMagConsole->appendPlainText(std::string("[INLAY] Hints active: %1"));
     }
 }
 
-void MainWindow::onInlineChatRequested(const QString& text) {
-    qDebug() << "[INLINE_CHAT] Requested with text:" << text.left(100);
+void MainWindow::onInlineChatRequested(const std::string& text) {
     
     if (m_aiChatPanel) {
         statusBar()->showMessage(tr("Inline chat active"), 2000);
@@ -4839,31 +4657,29 @@ void MainWindow::onInlineChatRequested(const QString& text) {
     }
     
     if (chatHistory_) {
-        chatHistory_->addItem(tr("💬 Inline chat: %1").arg(text.left(50)));
+        chatHistory_->addItem(tr("💬 Inline chat: %1")));
     }
 }
 
-void MainWindow::onAIReviewComment(const QString& comment) {
-    qDebug() << "[AI_REVIEW] Comment:" << comment.left(100);
+void MainWindow::onAIReviewComment(const std::string& comment) {
     
     statusBar()->showMessage(tr("AI review comment added"), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[AI_REVIEW] %1").arg(comment));
+        m_hexMagConsole->appendPlainText(std::string("[AI_REVIEW] %1"));
     }
     
     if (chatHistory_) {
-        chatHistory_->addItem(tr("🤖 AI Review: %1").arg(comment.left(70)));
+        chatHistory_->addItem(tr("🤖 AI Review: %1")));
     }
 }
 
-void MainWindow::onCodeStreamEdit(const QString& patch) {
-    qDebug() << "[CODE_STREAM] Edit received, patch size:" << patch.length();
+void MainWindow::onCodeStreamEdit(const std::string& patch) {
     
-    statusBar()->showMessage(tr("CodeStream sync: %1 bytes").arg(patch.length()), 2000);
+    statusBar()->showMessage(tr("CodeStream sync: %1 bytes")), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[CODE_STREAM] Patch: %1 bytes").arg(patch.length()));
+        m_hexMagConsole->appendPlainText(std::string("[CODE_STREAM] Patch: %1 bytes")));
     }
     
     // Could apply patch to current editor here
@@ -4872,7 +4688,6 @@ void MainWindow::onCodeStreamEdit(const QString& patch) {
     }
 }
 void MainWindow::onAudioCallStarted() {
-    qDebug() << "[AUDIO] Call started at" << QDateTime::currentDateTime().toString(Qt::ISODate);
     
     statusBar()->showMessage(tr("Audio call active"), 5000);
     
@@ -4886,7 +4701,6 @@ void MainWindow::onAudioCallStarted() {
 }
 
 void MainWindow::onScreenShareStarted() {
-    qDebug() << "[SCREEN_SHARE] Started at" << QDateTime::currentDateTime().toString(Qt::ISODate);
     
     statusBar()->showMessage(tr("Screen sharing active"), 5000);
     
@@ -4899,71 +4713,66 @@ void MainWindow::onScreenShareStarted() {
     }
 }
 
-void MainWindow::onWhiteboardDraw(const QByteArray& svg) {
-    qDebug() << "[WHITEBOARD] Drawing received, size:" << svg.size() << "bytes";
+void MainWindow::onWhiteboardDraw(const std::vector<uint8_t>& svg) {
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[WHITEBOARD] SVG: %1 bytes").arg(svg.size()));
+        m_hexMagConsole->appendPlainText(std::string("[WHITEBOARD] SVG: %1 bytes")));
     }
     
     // Could render SVG in a dedicated widget
 }
 
-void MainWindow::onTimeEntryAdded(const QString& task) {
-    qDebug() << "[TIME_TRACKING] Entry:" << task;
+void MainWindow::onTimeEntryAdded(const std::string& task) {
     
-    statusBar()->showMessage(tr("Time logged: %1").arg(task), 2000);
+    statusBar()->showMessage(tr("Time logged: %1"), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[TIME] %1 @ %2")
-            .arg(task)
-            .arg(QDateTime::currentDateTime().toString("hh:mm:ss")));
+        m_hexMagConsole->appendPlainText(std::string("[TIME] %1 @ %2")
+            
+            .toString("hh:mm:ss")));
     }
     
     // Save to settings for time tracking history
     QSettings settings("RawrXD", "QtShell");
-    settings.setValue(QString("TimeTracking/%1").arg(QDateTime::currentMSecsSinceEpoch()), task);
+    settings.setValue(std::string("TimeTracking/%1")), task);
 }
 
-void MainWindow::onKanbanMoved(const QString& taskId) {
-    qDebug() << "[KANBAN] Task moved:" << taskId;
+void MainWindow::onKanbanMoved(const std::string& taskId) {
     
-    statusBar()->showMessage(tr("Task: %1").arg(taskId), 2000);
+    statusBar()->showMessage(tr("Task: %1"), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[KANBAN] Moved: %1").arg(taskId));
+        m_hexMagConsole->appendPlainText(std::string("[KANBAN] Moved: %1"));
     }
     
     if (chatHistory_) {
-        chatHistory_->addItem(tr("📋 Task moved: %1").arg(taskId));
+        chatHistory_->addItem(tr("📋 Task moved: %1"));
     }
 }
 
 void MainWindow::onPomodoroTick(int remaining) {
     // Only log every 5 seconds to avoid spam
     if (remaining % 5 == 0) {
-        qDebug() << "[POMODORO] Remaining:" << remaining << "seconds";
     }
     
     statusBar()->showMessage(tr("Pomodoro: %1m %2s")
-        .arg(remaining / 60)
-        .arg(remaining % 60, 2, 10, QLatin1Char('0')), 1000);
+        
+        ), 1000);
     
     // Visual indicator when time is running out
     if (remaining <= 60 && remaining % 10 == 0) {
         if (m_hexMagConsole) {
-            m_hexMagConsole->appendPlainText(QString("[POMODORO] ⏰ %1 seconds remaining").arg(remaining));
+            m_hexMagConsole->appendPlainText(std::string("[POMODORO] ⏰ %1 seconds remaining"));
         }
     }
 }
 
-void MainWindow::onWallpaperChanged(const QString& path) {
-    qDebug() << "[THEME] Wallpaper changed:" << path;
+void MainWindow::onWallpaperChanged(const std::string& path) {
     
-    statusBar()->showMessage(tr("Theme updated: %1").arg(QFileInfo(path).fileName()), 2000);
+    statusBar()->showMessage(tr("Theme updated: %1").fileName()), 2000);
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[THEME] Wallpaper: %1").arg(path));
+        m_hexMagConsole->appendPlainText(std::string("[THEME] Wallpaper: %1"));
     }
     
     // Could apply wallpaper to central widget background
@@ -4973,7 +4782,6 @@ void MainWindow::onWallpaperChanged(const QString& path) {
 }
 
 void MainWindow::onAccessibilityToggled(bool on) {
-    qDebug() << "[ACCESSIBILITY]" << (on ? "ENABLED" : "DISABLED");
     
     statusBar()->showMessage(on ? tr("Accessibility ON") : tr("Accessibility OFF"), 2000);
     
@@ -4998,7 +4806,7 @@ void MainWindow::Func(bool visible) { \
             Member = new Type(this); \
             QDockWidget* dock = new QDockWidget(tr(#Type), this); \
             dock->setWidget(Member); \
-            addDockWidget(Qt::RightDockWidgetArea, dock); \
+            addDockWidget(//RightDockWidgetArea, dock); \
         } \
         Member->show(); \
     } else if (Member) { \
@@ -5011,24 +4819,22 @@ void MainWindow::toggleProjectExplorer(bool visible) {
     if (visible) {
         if (!projectExplorer_) {
             projectExplorer_ = new RawrXD::ProjectExplorerWidget(this);
-            connect(projectExplorer_, &RawrXD::ProjectExplorerWidget::fileDoubleClicked,
-                    this, [this](const QString& path) {
-                QFile file(path);
+// Qt connect removed
                 if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                     QTextStream in(&file);
                     if (codeView_) codeView_->setText(in.readAll());
                     file.close();
-                    statusBar()->showMessage(tr("Opened: %1").arg(path), 3000);
+                    statusBar()->showMessage(tr("Opened: %1"), 3000);
                 }
             });
             // Auto-open current directory or last project
-            QString defaultPath = QDir::currentPath();
-            if (QFile::exists("E:\\")) defaultPath = "E:\\";
+            std::string defaultPath = std::filesystem::path::currentPath();
+            if (std::fstream::exists("E:\\")) defaultPath = "E:\\";
             projectExplorer_->openProject(defaultPath);
         }
         QDockWidget* dock = new QDockWidget(tr("Project Explorer"), this);
         dock->setWidget(projectExplorer_);
-        addDockWidget(Qt::LeftDockWidgetArea, dock);
+        addDockWidget(//LeftDockWidgetArea, dock);
         dock->show();
     } else if (projectExplorer_) {
         if (QDockWidget* dock = qobject_cast<QDockWidget*>(projectExplorer_->parentWidget())) {
@@ -5086,10 +4892,10 @@ IMPLEMENT_TOGGLE(toggleLanguageClientHost, lspHost_, LanguageClientHost)
 void MainWindow::toggleAIChat(bool visible) { (void)visible; }
 
 // Other required methods
-bool MainWindow::eventFilter(QObject* watched, QEvent* event) 
+bool MainWindow::eventFilter(void* watched, QEvent* event) 
 {
     // Custom event filtering logic can be added here
-    return QMainWindow::eventFilter(watched, event);
+    return void::eventFilter(watched, event);
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) 
@@ -5110,11 +4916,11 @@ void MainWindow::dropEvent(QDropEvent* event)
     const QMimeData* mime = event->mimeData();
     if (!mime->hasUrls()) return;
 
-    for (const QUrl& u : mime->urls()) {
-        QString path = u.toLocalFile();
-        if (!path.endsWith(".gguf", Qt::CaseInsensitive)) {
+    for (const std::string& u : mime->urls()) {
+        std::string path = u.toLocalFile();
+        if (!path.endsWith(".gguf", //CaseInsensitive)) {
             // Non-GGUF file - open in editor
-            QFile file(path);
+            std::fstream file(path);
             if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                 QTextStream in(&file);
                 codeView_->setText(in.readAll());
@@ -5124,30 +4930,30 @@ void MainWindow::dropEvent(QDropEvent* event)
         }
 
         // GGUF file - compress with brutal_gzip
-        QFile f(path);
+        std::fstream f(path);
         if (!f.open(QIODevice::ReadOnly)) {
-            QMessageBox::warning(this, tr("GGUF open"), tr("Cannot read %1").arg(path));
+            QMessageBox::warning(this, tr("GGUF open"), tr("Cannot read %1"));
             continue;
         }
-        QByteArray raw = f.readAll();          // whole file for demo
+        std::vector<uint8_t> raw = f.readAll();          // whole file for demo
         f.close();
         
-        QByteArray gz  = brutal::compress(raw);
+        std::vector<uint8_t> gz  = brutal::compress(raw);
         if (gz.isEmpty()) {
             QMessageBox::critical(this, tr("GGUF compress"), tr("Brutal deflate failed"));
             continue;
         }
         
-        QString outName = path + ".gz";
-        QFile og(outName);
+        std::string outName = path + ".gz";
+        std::fstream og(outName);
         if (og.open(QIODevice::WriteOnly)) {
             og.write(gz);
             og.close();
             statusBar()->showMessage(
                 tr("Compressed %1 → %2  (ratio %3%)")
-                    .arg(QLocale().formattedDataSize(raw.size()))
-                    .arg(QLocale().formattedDataSize(gz.size()))
-                    .arg(QString::number(100.0 * gz.size() / raw.size(), 'f', 1)),
+                    .formattedDataSize(raw.size()))
+                    .formattedDataSize(gz.size()))
+                     / raw.size(), 'f', 1)),
                 5000);
         }
     }
@@ -5158,13 +4964,12 @@ void MainWindow::dropEvent(QDropEvent* event)
 // UI Creator Implementations
 // ============================================================
 
-QWidget* MainWindow::createGoalBar() {
-    qDebug() << "[createGoalBar] Creating goal bar widget";
+void* MainWindow::createGoalBar() {
     
     try {
-        QWidget* goalBar = new QWidget(this);
+        void* goalBar = new void(this);
         goalBar->setObjectName("GoalBarWidget");
-        goalBar->setStyleSheet("QWidget#GoalBarWidget { background-color: #252526; border-bottom: 1px solid #3e3e42; }");
+        goalBar->setStyleSheet("void#GoalBarWidget { background-color: #252526; border-bottom: 1px solid #3e3e42; }");
         
         QHBoxLayout* layout = new QHBoxLayout(goalBar);
         layout->setContentsMargins(10, 5, 10, 5);
@@ -5209,25 +5014,21 @@ QWidget* MainWindow::createGoalBar() {
         layout->addWidget(submitBtn);
         
         // Connect submit action
-        connect(submitBtn, &QPushButton::clicked, this, &MainWindow::handleGoalSubmit);
-        connect(goalInput_, &QLineEdit::returnPressed, this, &MainWindow::handleGoalSubmit);
-        
-        qDebug() << "[createGoalBar] Goal bar created successfully";
+// Qt connect removed
+// Qt connect removed
         return goalBar;
         
     } catch (const std::exception& e) {
-        qCritical() << "[createGoalBar] ERROR:" << e.what();
-        return new QWidget(this);
+        return new void(this);
     }
 }
 
-QWidget* MainWindow::createAgentPanel() {
-    qDebug() << "[createAgentPanel] Creating agent control panel";
+void* MainWindow::createAgentPanel() {
     
     try {
-        QWidget* panel = new QWidget(this);
+        void* panel = new void(this);
         panel->setObjectName("AgentPanel");
-        panel->setStyleSheet("QWidget#AgentPanel { background-color: #252526; }");
+        panel->setStyleSheet("void#AgentPanel { background-color: #252526; }");
         
         QVBoxLayout* layout = new QVBoxLayout(panel);
         layout->setContentsMargins(10, 10, 10, 10);
@@ -5247,11 +5048,7 @@ QWidget* MainWindow::createAgentPanel() {
             "QComboBox QAbstractItemView { background-color: #252526; color: #e0e0e0; selection-background-color: #007acc; }"
         );
         layout->addWidget(agentSelector_);
-        
-        connect(agentSelector_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                this, [this](int index) {
-            QString mode = agentSelector_->itemText(index);
-            qDebug() << "[AgentPanel] Mode changed to:" << mode;
+// Qt connect removed
             changeAgentMode(mode);
         });
         
@@ -5262,7 +5059,7 @@ QWidget* MainWindow::createAgentPanel() {
         
         mockStatusBadge_ = new QLabel("Idle", panel);
         mockStatusBadge_->setObjectName("StatusBadge");
-        mockStatusBadge_->setAlignment(Qt::AlignCenter);
+        mockStatusBadge_->setAlignment(//AlignCenter);
         mockStatusBadge_->setStyleSheet(
             "QLabel#StatusBadge { "
             "background-color: #3c3c3c; "
@@ -5294,22 +5091,19 @@ QWidget* MainWindow::createAgentPanel() {
         
         layout->addStretch();
         
-        qDebug() << "[createAgentPanel] Agent panel created successfully";
         return panel;
         
     } catch (const std::exception& e) {
-        qCritical() << "[createAgentPanel] ERROR:" << e.what();
-        return new QWidget(this);
+        return new void(this);
     }
 }
 
-QWidget* MainWindow::createProposalReview() {
-    qDebug() << "[createProposalReview] Creating proposal review panel";
+void* MainWindow::createProposalReview() {
     
     try {
-        QWidget* panel = new QWidget(this);
+        void* panel = new void(this);
         panel->setObjectName("ProposalReviewPanel");
-        panel->setStyleSheet("QWidget#ProposalReviewPanel { background-color: #1e1e1e; }");
+        panel->setStyleSheet("void#ProposalReviewPanel { background-color: #1e1e1e; }");
         
         QVBoxLayout* layout = new QVBoxLayout(panel);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -5373,22 +5167,19 @@ QWidget* MainWindow::createProposalReview() {
         btnLayout->addStretch();
         layout->addLayout(btnLayout);
         
-        qDebug() << "[createProposalReview] Proposal review panel created successfully";
         return panel;
         
     } catch (const std::exception& e) {
-        qCritical() << "[createProposalReview] ERROR:" << e.what();
-        return new QWidget(this);
+        return new void(this);
     }
 }
 
-QWidget* MainWindow::createEditorArea() {
-    qDebug() << "[createEditorArea] Creating central editor area";
+void* MainWindow::createEditorArea() {
     
     try {
-        QWidget* editorWidget = new QWidget(this);
+        void* editorWidget = new void(this);
         editorWidget->setObjectName("EditorArea");
-        editorWidget->setStyleSheet("QWidget#EditorArea { background-color: #1e1e1e; }");
+        editorWidget->setStyleSheet("void#EditorArea { background-color: #1e1e1e; }");
         
         QVBoxLayout* layout = new QVBoxLayout(editorWidget);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -5438,26 +5229,22 @@ QWidget* MainWindow::createEditorArea() {
         editorTabs_->addTab(codeView_, "Untitled-1");
         
         // Connect tab close
-        connect(editorTabs_, &QTabWidget::tabCloseRequested, this, &MainWindow::handleTabClose);
-        
+// Qt connect removed
         layout->addWidget(editorTabs_);
         
-        qDebug() << "[createEditorArea] Editor area created successfully";
         return editorWidget;
         
     } catch (const std::exception& e) {
-        qCritical() << "[createEditorArea] ERROR:" << e.what();
-        return new QWidget(this);
+        return new void(this);
     }
 }
 
-QWidget* MainWindow::createQShellTab() {
-    qDebug() << "[createQShellTab] Creating QShell interactive tab";
+void* MainWindow::createQShellTab() {
     
     try {
-        QWidget* shellWidget = new QWidget(this);
+        void* shellWidget = new void(this);
         shellWidget->setObjectName("QShellTab");
-        shellWidget->setStyleSheet("QWidget#QShellTab { background-color: #1e1e1e; }");
+        shellWidget->setStyleSheet("void#QShellTab { background-color: #1e1e1e; }");
         
         QVBoxLayout* layout = new QVBoxLayout(shellWidget);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -5483,8 +5270,8 @@ QWidget* MainWindow::createQShellTab() {
         layout->addWidget(qshellOutput_, 1);
         
         // Input area
-        QWidget* inputWidget = new QWidget(shellWidget);
-        inputWidget->setStyleSheet("QWidget { background-color: #252526; border-top: 1px solid #3e3e42; }");
+        void* inputWidget = new void(shellWidget);
+        inputWidget->setStyleSheet("void { background-color: #252526; border-top: 1px solid #3e3e42; }");
         QHBoxLayout* inputLayout = new QHBoxLayout(inputWidget);
         inputLayout->setContentsMargins(10, 5, 10, 5);
         inputLayout->setSpacing(5);
@@ -5518,26 +5305,22 @@ QWidget* MainWindow::createQShellTab() {
         layout->addWidget(inputWidget);
         
         // Connect signals
-        connect(qshellInput_, &QLineEdit::returnPressed, this, &MainWindow::handleQShellReturn);
-        connect(executeBtn, &QPushButton::clicked, this, &MainWindow::handleQShellReturn);
-        
-        qDebug() << "[createQShellTab] QShell tab created successfully";
+// Qt connect removed
+// Qt connect removed
         return shellWidget;
         
     } catch (const std::exception& e) {
-        qCritical() << "[createQShellTab] ERROR:" << e.what();
-        return new QWidget(this);
+        return new void(this);
     }
 }
 
-QJsonDocument MainWindow::getMockArchitectJson() const {
-    qDebug() << "[getMockArchitectJson] Generating mock architect plan";
+void* MainWindow::getMockArchitectJson() const {
     
     try {
-        QJsonArray plan;
+        void* plan;
         
         // Task 1: Analyze requirements
-        QJsonObject task1;
+        void* task1;
         task1["id"] = "task_001";
         task1["type"] = "analyze";
         task1["description"] = "Analyze project requirements and dependencies";
@@ -5547,83 +5330,78 @@ QJsonDocument MainWindow::getMockArchitectJson() const {
         plan.append(task1);
         
         // Task 2: Design architecture
-        QJsonObject task2;
+        void* task2;
         task2["id"] = "task_002";
         task2["type"] = "design";
         task2["description"] = "Design system architecture and component interfaces";
         task2["agent"] = "Architect";
         task2["status"] = "pending";
         task2["priority"] = "high";
-        task2["depends_on"] = QJsonArray{"task_001"};
+        task2["depends_on"] = void*{"task_001"};
         plan.append(task2);
         
         // Task 3: Implement core features
-        QJsonObject task3;
+        void* task3;
         task3["id"] = "task_003";
         task3["type"] = "implement";
         task3["description"] = "Implement core functionality according to design";
         task3["agent"] = "Coder";
         task3["status"] = "pending";
         task3["priority"] = "medium";
-        task3["depends_on"] = QJsonArray{"task_002"};
+        task3["depends_on"] = void*{"task_002"};
         plan.append(task3);
         
         // Task 4: Write tests
-        QJsonObject task4;
+        void* task4;
         task4["id"] = "task_004";
         task4["type"] = "test";
         task4["description"] = "Write comprehensive unit and integration tests";
         task4["agent"] = "Tester";
         task4["status"] = "pending";
         task4["priority"] = "medium";
-        task4["depends_on"] = QJsonArray{"task_003"};
+        task4["depends_on"] = void*{"task_003"};
         plan.append(task4);
         
         // Task 5: Review and optimize
-        QJsonObject task5;
+        void* task5;
         task5["id"] = "task_005";
         task5["type"] = "review";
         task5["description"] = "Code review, optimization, and documentation";
         task5["agent"] = "Reviewer";
         task5["status"] = "pending";
         task5["priority"] = "low";
-        task5["depends_on"] = QJsonArray{"task_004"};
+        task5["depends_on"] = void*{"task_004"};
         plan.append(task5);
         
-        QJsonDocument doc(plan);
-        qDebug() << "[getMockArchitectJson] Generated plan with" << plan.size() << "tasks";
+        void* doc(plan);
         
         return doc;
         
     } catch (const std::exception& e) {
-        qCritical() << "[getMockArchitectJson] ERROR:" << e.what();
-        return QJsonDocument();
+        return void*();
     }
 }
 
-void MainWindow::populateFolderTree(QTreeWidgetItem* parent, const QString& path) {
-    qDebug() << "[populateFolderTree] Populating tree for path:" << path;
+void MainWindow::populateFolderTree(QTreeWidgetItem* parent, const std::string& path) {
     
     if (!parent || path.isEmpty()) {
-        qWarning() << "[populateFolderTree] Invalid parent or path";
         return;
     }
     
     try {
-        QDir dir(path);
+        std::filesystem::path dir(path);
         if (!dir.exists()) {
-            qWarning() << "[populateFolderTree] Directory does not exist:" << path;
             return;
         }
         
         // Get directories first (sorted)
         QFileInfoList entries = dir.entryInfoList(
-            QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot,
-            QDir::DirsFirst | QDir::Name | QDir::IgnoreCase
+            std::filesystem::path::Dirs | std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot,
+            std::filesystem::path::DirsFirst | std::filesystem::path::Name | std::filesystem::path::IgnoreCase
         );
         
         int itemCount = 0;
-        for (const QFileInfo& entry : entries) {
+        for (const std::filesystem::path& entry : entries) {
             // Skip hidden files unless explicitly needed
             if (entry.fileName().startsWith(".")) {
                 continue;
@@ -5631,7 +5409,7 @@ void MainWindow::populateFolderTree(QTreeWidgetItem* parent, const QString& path
             
             QTreeWidgetItem* item = new QTreeWidgetItem(parent);
             item->setText(0, entry.fileName());
-            item->setData(0, Qt::UserRole, entry.absoluteFilePath());
+            item->setData(0, //UserRole, entry.absoluteFilePath());
             
             if (entry.isDir()) {
                 // Folder icon and style
@@ -5656,27 +5434,24 @@ void MainWindow::populateFolderTree(QTreeWidgetItem* parent, const QString& path
                 item->setForeground(0, QColor("#e0e0e0"));
                 
                 // Add file size info
-                QString sizeStr = QLocale().formattedDataSize(entry.size());
-                item->setToolTip(0, QString("%1 (%2)").arg(entry.absoluteFilePath()).arg(sizeStr));
+                std::string sizeStr = QLocale().formattedDataSize(entry.size());
+                item->setToolTip(0, std::string("%1 (%2)")));
             }
             
             itemCount++;
         }
         
-        qDebug() << "[populateFolderTree] Added" << itemCount << "items to" << path;
         
     } catch (const std::exception& e) {
-        qCritical() << "[populateFolderTree] ERROR:" << e.what();
     }
 }
 
-QWidget* MainWindow::createTerminalPanel() {
-    qDebug() << "[createTerminalPanel] Creating terminal panel with shell integration";
+void* MainWindow::createTerminalPanel() {
     
     try {
-        QWidget* terminalWidget = new QWidget(this);
+        void* terminalWidget = new void(this);
         terminalWidget->setObjectName("TerminalPanel");
-        terminalWidget->setStyleSheet("QWidget#TerminalPanel { background-color: #1e1e1e; }");
+        terminalWidget->setStyleSheet("void#TerminalPanel { background-color: #1e1e1e; }");
         
         QVBoxLayout* layout = new QVBoxLayout(terminalWidget);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -5693,7 +5468,7 @@ QWidget* MainWindow::createTerminalPanel() {
         );
         
         // PowerShell tab
-        QWidget* pwshTab = new QWidget(terminalWidget);
+        void* pwshTab = new void(terminalWidget);
         QVBoxLayout* pwshLayout = new QVBoxLayout(pwshTab);
         pwshLayout->setContentsMargins(5, 5, 5, 5);
         
@@ -5728,7 +5503,7 @@ QWidget* MainWindow::createTerminalPanel() {
         terminalTabs_->addTab(pwshTab, "PowerShell");
         
         // CMD tab
-        QWidget* cmdTab = new QWidget(terminalWidget);
+        void* cmdTab = new void(terminalWidget);
         QVBoxLayout* cmdLayout = new QVBoxLayout(cmdTab);
         cmdLayout->setContentsMargins(5, 5, 5, 5);
         
@@ -5767,31 +5542,26 @@ QWidget* MainWindow::createTerminalPanel() {
         // Initialize processes
         pwshProcess_ = new QProcess(this);
         cmdProcess_ = new QProcess(this);
-        
-        connect(pwshInput_, &QLineEdit::returnPressed, this, &MainWindow::handlePwshCommand);
-        connect(cmdInput_, &QLineEdit::returnPressed, this, &MainWindow::handleCmdCommand);
-        connect(pwshProcess_, &QProcess::readyReadStandardOutput, this, &MainWindow::readPwshOutput);
-        connect(cmdProcess_, &QProcess::readyReadStandardOutput, this, &MainWindow::readCmdOutput);
-        
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
         pwshOutput_->appendPlainText("PowerShell 7.x\nCopyright (c) Microsoft Corporation. All rights reserved.\n");
         cmdOutput_->appendPlainText("Microsoft Windows [Version 10.0.xxxxx]\n(c) Microsoft Corporation. All rights reserved.\n");
         
-        qDebug() << "[createTerminalPanel] Terminal panel created successfully";
         return terminalWidget;
         
     } catch (const std::exception& e) {
-        qCritical() << "[createTerminalPanel] ERROR:" << e.what();
-        return new QWidget(this);
+        return new void(this);
     }
 }
 
-QWidget* MainWindow::createDebugPanel() {
-    qDebug() << "[createDebugPanel] Creating debug panel with log management";
+void* MainWindow::createDebugPanel() {
     
     try {
-        QWidget* debugWidget = new QWidget(this);
+        void* debugWidget = new void(this);
         debugWidget->setObjectName("DebugPanel");
-        debugWidget->setStyleSheet("QWidget#DebugPanel { background-color: #1e1e1e; }");
+        debugWidget->setStyleSheet("void#DebugPanel { background-color: #1e1e1e; }");
         
         QVBoxLayout* layout = new QVBoxLayout(debugWidget);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -5852,29 +5622,25 @@ QWidget* MainWindow::createDebugPanel() {
         debugOutput->setLineWrapMode(QPlainTextEdit::NoWrap);
         
         // Add initial log entries
-        QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
-        debugOutput->appendPlainText(QString("[%1] [INFO] Debug panel initialized").arg(timestamp));
-        debugOutput->appendPlainText(QString("[%1] [INFO] Logging system ready").arg(timestamp));
-        debugOutput->appendPlainText(QString("[%1] [DEBUG] Production-ready observability enabled").arg(timestamp));
+        std::string timestamp = std::chrono::system_clock::time_point::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
+        debugOutput->appendPlainText(std::string("[%1] [INFO] Debug panel initialized"));
+        debugOutput->appendPlainText(std::string("[%1] [INFO] Logging system ready"));
+        debugOutput->appendPlainText(std::string("[%1] [DEBUG] Production-ready observability enabled"));
         
         layout->addWidget(debugOutput, 1);
         
         // Connect signals
-        connect(logLevelFilter, &QComboBox::currentTextChanged, this, &MainWindow::filterLogLevel);
-        connect(clearBtn, &QPushButton::clicked, this, &MainWindow::clearDebugLog);
-        connect(saveBtn, &QPushButton::clicked, this, &MainWindow::saveDebugLog);
-        
-        qDebug() << "[createDebugPanel] Debug panel created successfully with" << debugOutput->blockCount() << "initial log entries";
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
         return debugWidget;
         
     } catch (const std::exception& e) {
-        qCritical() << "[createDebugPanel] ERROR:" << e.what();
-        return new QWidget(this);
+        return new void(this);
     }
 }
 
 void MainWindow::setupDockWidgets() {
-    qDebug() << "[setupDockWidgets] Initializing all dock widgets for IDE subsystems";
     
     try {
         // Create and configure dock widgets for each major subsystem
@@ -5885,11 +5651,10 @@ void MainWindow::setupDockWidgets() {
             QDockWidget* projDock = new QDockWidget("Project Explorer", this);
             projDock->setObjectName("ProjectExplorerDock");
             projDock->setWidget(projectExplorer_);
-            projDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+            projDock->setAllowedAreas(//LeftDockWidgetArea | //RightDockWidgetArea);
             projDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
-            addDockWidget(Qt::LeftDockWidgetArea, projDock);
+            addDockWidget(//LeftDockWidgetArea, projDock);
             projDock->hide();  // Hidden by default
-            qDebug() << "[setupDockWidgets] Created Project Explorer dock";
         }
         
         // 2. Build System Dock
@@ -5898,11 +5663,10 @@ void MainWindow::setupDockWidgets() {
             QDockWidget* buildDock = new QDockWidget("Build System", this);
             buildDock->setObjectName("BuildSystemDock");
             buildDock->setWidget(buildWidget_);
-            buildDock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::RightDockWidgetArea);
+            buildDock->setAllowedAreas(//BottomDockWidgetArea | //RightDockWidgetArea);
             buildDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
-            addDockWidget(Qt::BottomDockWidgetArea, buildDock);
+            addDockWidget(//BottomDockWidgetArea, buildDock);
             buildDock->hide();
-            qDebug() << "[setupDockWidgets] Created Build System dock";
         }
         
         // 3. Version Control Dock
@@ -5911,11 +5675,10 @@ void MainWindow::setupDockWidgets() {
             QDockWidget* vcsDock = new QDockWidget("Version Control", this);
             vcsDock->setObjectName("VersionControlDock");
             vcsDock->setWidget(vcsWidget_);
-            vcsDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea);
+            vcsDock->setAllowedAreas(//LeftDockWidgetArea | //RightDockWidgetArea | //BottomDockWidgetArea);
             vcsDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
-            addDockWidget(Qt::LeftDockWidgetArea, vcsDock);
+            addDockWidget(//LeftDockWidgetArea, vcsDock);
             vcsDock->hide();
-            qDebug() << "[setupDockWidgets] Created Version Control dock";
         }
         
         // 4. Debug/Run Dock
@@ -5924,11 +5687,10 @@ void MainWindow::setupDockWidgets() {
             QDockWidget* debugDock = new QDockWidget("Run & Debug", this);
             debugDock->setObjectName("RunDebugDock");
             debugDock->setWidget(debugWidget_);
-            debugDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+            debugDock->setAllowedAreas(//AllDockWidgetAreas);
             debugDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
-            addDockWidget(Qt::BottomDockWidgetArea, debugDock);
+            addDockWidget(//BottomDockWidgetArea, debugDock);
             debugDock->hide();
-            qDebug() << "[setupDockWidgets] Created Run & Debug dock";
         }
         
         // 5. Test Explorer Dock
@@ -5937,11 +5699,10 @@ void MainWindow::setupDockWidgets() {
             QDockWidget* testDock = new QDockWidget("Test Explorer", this);
             testDock->setObjectName("TestExplorerDock");
             testDock->setWidget(testWidget_);
-            testDock->setAllowedAreas(Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea);
+            testDock->setAllowedAreas(//RightDockWidgetArea | //BottomDockWidgetArea);
             testDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
-            addDockWidget(Qt::RightDockWidgetArea, testDock);
+            addDockWidget(//RightDockWidgetArea, testDock);
             testDock->hide();
-            qDebug() << "[setupDockWidgets] Created Test Explorer dock";
         }
         
         // 6. Profiler Dock
@@ -5950,11 +5711,10 @@ void MainWindow::setupDockWidgets() {
             QDockWidget* profilerDock = new QDockWidget("Profiler", this);
             profilerDock->setObjectName("ProfilerDock");
             profilerDock->setWidget(profilerWidget_);
-            profilerDock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::RightDockWidgetArea);
+            profilerDock->setAllowedAreas(//BottomDockWidgetArea | //RightDockWidgetArea);
             profilerDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
-            addDockWidget(Qt::BottomDockWidgetArea, profilerDock);
+            addDockWidget(//BottomDockWidgetArea, profilerDock);
             profilerDock->hide();
-            qDebug() << "[setupDockWidgets] Created Profiler dock";
         }
         
         // 7. Database Tool Dock
@@ -5963,11 +5723,10 @@ void MainWindow::setupDockWidgets() {
             QDockWidget* dbDock = new QDockWidget("Database Tools", this);
             dbDock->setObjectName("DatabaseToolDock");
             dbDock->setWidget(database_);
-            dbDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+            dbDock->setAllowedAreas(//AllDockWidgetAreas);
             dbDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
-            addDockWidget(Qt::RightDockWidgetArea, dbDock);
+            addDockWidget(//RightDockWidgetArea, dbDock);
             dbDock->hide();
-            qDebug() << "[setupDockWidgets] Created Database Tools dock";
         }
         
         // 8. Docker Tools Dock
@@ -5976,15 +5735,14 @@ void MainWindow::setupDockWidgets() {
             QDockWidget* dockerDock = new QDockWidget("Docker", this);
             dockerDock->setObjectName("DockerToolDock");
             dockerDock->setWidget(docker_);
-            dockerDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+            dockerDock->setAllowedAreas(//AllDockWidgetAreas);
             dockerDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
-            addDockWidget(Qt::RightDockWidgetArea, dockerDock);
+            addDockWidget(//RightDockWidgetArea, dockerDock);
             dockerDock->hide();
-            qDebug() << "[setupDockWidgets] Created Docker dock";
         }
         
         // Apply consistent styling to all docks
-        QList<QDockWidget*> allDocks = findChildren<QDockWidget*>();
+        std::vector<QDockWidget*> allDocks = findChildren<QDockWidget*>();
         for (QDockWidget* dock : allDocks) {
             dock->setStyleSheet(
                 "QDockWidget { "
@@ -6001,19 +5759,15 @@ void MainWindow::setupDockWidgets() {
             );
         }
         
-        qDebug() << "[setupDockWidgets] Successfully initialized" << allDocks.size() << "dock widgets";
         
     } catch (const std::exception& e) {
-        qCritical() << "[setupDockWidgets] ERROR:" << e.what();
     }
 }
 
 void MainWindow::setupSystemTray() {
-    qDebug() << "[setupSystemTray] Setting up system tray icon and menu";
     
     try {
         if (!QSystemTrayIcon::isSystemTrayAvailable()) {
-            qWarning() << "[setupSystemTray] System tray not available on this platform";
             return;
         }
         
@@ -6043,8 +5797,7 @@ void MainWindow::setupSystemTray() {
         // Restore action
         QAction* restoreAction = trayMenu->addAction("Restore Window");
         restoreAction->setIcon(style()->standardIcon(QStyle::SP_TitleBarMaxButton));
-        connect(restoreAction, &QAction::triggered, this, [this]() {
-            qDebug() << "[SystemTray] Restore window triggered";
+// Qt connect removed
             showNormal();
             activateWindow();
             raise();
@@ -6055,18 +5808,15 @@ void MainWindow::setupSystemTray() {
         // Quick actions
         QAction* newFileAction = trayMenu->addAction("New File");
         newFileAction->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
-        connect(newFileAction, &QAction::triggered, this, &MainWindow::handleNewEditor);
-        
+// Qt connect removed
         QAction* newChatAction = trayMenu->addAction("New AI Chat");
-        connect(newChatAction, &QAction::triggered, this, &MainWindow::handleNewChat);
-        
+// Qt connect removed
         trayMenu->addSeparator();
         
         // Settings action
         QAction* settingsAction = trayMenu->addAction("Settings");
         settingsAction->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
-        connect(settingsAction, &QAction::triggered, this, [this]() {
-            qDebug() << "[SystemTray] Settings triggered";
+// Qt connect removed
             toggleSettings(true);
         });
         
@@ -6075,17 +5825,14 @@ void MainWindow::setupSystemTray() {
         // Quit action
         QAction* quitAction = trayMenu->addAction("Quit RawrXD IDE");
         quitAction->setIcon(style()->standardIcon(QStyle::SP_TitleBarCloseButton));
-        connect(quitAction, &QAction::triggered, this, [this]() {
-            qDebug() << "[SystemTray] Quit triggered";
+// Qt connect removed
             QApplication::quit();
         });
         
         trayIcon_->setContextMenu(trayMenu);
         
         // Connect double-click to restore
-        connect(trayIcon_, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
-            if (reason == QSystemTrayIcon::DoubleClick) {
-                qDebug() << "[SystemTray] Double-click detected, restoring window";
+// Qt connect removed
                 showNormal();
                 activateWindow();
                 raise();
@@ -6103,14 +5850,11 @@ void MainWindow::setupSystemTray() {
             3000
         );
         
-        qDebug() << "[setupSystemTray] System tray initialized successfully";
         
     } catch (const std::exception& e) {
-        qCritical() << "[setupSystemTray] ERROR:" << e.what();
     }
 }
 
- 
 
 void MainWindow::restoreSession() {
     // Use existing handleLoadState() which already implements full state restoration
@@ -6121,10 +5865,10 @@ void MainWindow::restoreSession() {
     // Restore open file tabs
     int tabCount = settings.value("Session/tabCount", 0).toInt();
     for (int i = 0; i < tabCount; ++i) {
-        QString tabKey = QString("Session/tab%1").arg(i);
-        QString filePath = settings.value(tabKey + "/path").toString();
-        QString content = settings.value(tabKey + "/content").toString();
-        QString tabName = settings.value(tabKey + "/name").toString();
+        std::string tabKey = std::string("Session/tab%1");
+        std::string filePath = settings.value(tabKey + "/path").toString();
+        std::string content = settings.value(tabKey + "/content").toString();
+        std::string tabName = settings.value(tabKey + "/name").toString();
         
         if (!content.isEmpty() && editorTabs_) {
             QTextEdit* editor = new QTextEdit(this);
@@ -6148,7 +5892,7 @@ void MainWindow::saveSession() {
         settings.setValue("Session/tabCount", editorTabs_->count());
         
         for (int i = 0; i < editorTabs_->count(); ++i) {
-            QString tabKey = QString("Session/tab%1").arg(i);
+            std::string tabKey = std::string("Session/tab%1");
             QTextEdit* editor = qobject_cast<QTextEdit*>(editorTabs_->widget(i));
             
             if (editor) {
@@ -6163,13 +5907,12 @@ void MainWindow::saveSession() {
 
 void MainWindow::onRunScript()
 {
-    qInfo() << "[SCRIPT] Run script requested at" << QDateTime::currentDateTime();
     
     // Get script path from user
-    QString scriptPath = QFileDialog::getOpenFileName(
+    std::string scriptPath = QFileDialog::getOpenFileName(
         this,
         tr("Select Script to Run"),
-        QDir::homePath(),
+        std::filesystem::path::homePath(),
         tr("Script Files (*.py *.js *.sh *.bat *.ps1 *.rb *.pl);;Python (*.py);;JavaScript (*.js);;Shell (*.sh);;Batch (*.bat);;PowerShell (*.ps1);;Ruby (*.rb);;Perl (*.pl);;All Files (*.*)")
     );
     
@@ -6178,29 +5921,28 @@ void MainWindow::onRunScript()
         return;
     }
     
-    QFileInfo scriptInfo(scriptPath);
+    std::filesystem::path scriptInfo(scriptPath);
     
     if (!scriptInfo.exists()) {
         QMessageBox::critical(this, tr("Script Not Found"),
-                            tr("Script file does not exist:\n%1").arg(scriptPath));
+                            tr("Script file does not exist:\n%1"));
         return;
     }
     
-    qInfo() << "[SCRIPT] Executing:" << scriptPath;
-    statusBar()->showMessage(tr("Running script: %1").arg(scriptInfo.fileName()), 3000);
+    statusBar()->showMessage(tr("Running script: %1")), 3000);
     
     // Log to console
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("\n=== SCRIPT EXECUTION ==="));
-        m_hexMagConsole->appendPlainText(QString("Script: %1").arg(scriptPath));
-        m_hexMagConsole->appendPlainText(QString("Started: %1").arg(QDateTime::currentDateTime().toString()));
-        m_hexMagConsole->appendPlainText(QString("=====================\n"));
+        m_hexMagConsole->appendPlainText(std::string("\n=== SCRIPT EXECUTION ==="));
+        m_hexMagConsole->appendPlainText(std::string("Script: %1"));
+        m_hexMagConsole->appendPlainText(std::string("Started: %1").toString()));
+        m_hexMagConsole->appendPlainText(std::string("=====================\n"));
     }
     
     // Determine interpreter based on file extension
-    QString program;
-    QStringList arguments;
-    QString extension = scriptInfo.suffix().toLower();
+    std::string program;
+    std::vector<std::string> arguments;
+    std::string extension = scriptInfo.suffix().toLower();
     
     if (extension == "py") {
         program = "python";
@@ -6225,7 +5967,7 @@ void MainWindow::onRunScript()
         arguments << scriptPath;
     } else {
         QMessageBox::warning(this, tr("Unknown Script Type"),
-                           tr("Cannot determine interpreter for: %1\n\nPlease run manually.").arg(extension));
+                           tr("Cannot determine interpreter for: %1\n\nPlease run manually."));
         return;
     }
     
@@ -6234,41 +5976,31 @@ void MainWindow::onRunScript()
     scriptProcess->setWorkingDirectory(scriptInfo.absolutePath());
     
     // Connect output handlers
-    connect(scriptProcess, &QProcess::readyReadStandardOutput, this, [this, scriptProcess]() {
-        QString output = QString::fromUtf8(scriptProcess->readAllStandardOutput());
+// Qt connect removed
         if (m_hexMagConsole && !output.isEmpty()) {
             m_hexMagConsole->appendPlainText(output);
         }
     });
-    
-    connect(scriptProcess, &QProcess::readyReadStandardError, this, [this, scriptProcess]() {
-        QString error = QString::fromUtf8(scriptProcess->readAllStandardError());
+// Qt connect removed
         if (m_hexMagConsole && !error.isEmpty()) {
             m_hexMagConsole->appendPlainText("[ERROR] " + error);
         }
     });
-    
-    connect(scriptProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, [this, scriptProcess, scriptPath](int exitCode, QProcess::ExitStatus exitStatus) {
-        QString status = (exitStatus == QProcess::NormalExit && exitCode == 0) 
-                        ? tr("Script completed successfully")
-                        : tr("Script failed (exit code: %1)").arg(exitCode);
-        
+// Qt connect removed
         statusBar()->showMessage(status, 5000);
         
         if (m_hexMagConsole) {
-            m_hexMagConsole->appendPlainText(QString("\n=== SCRIPT FINISHED ==="));
-            m_hexMagConsole->appendPlainText(QString("Exit Code: %1").arg(exitCode));
-            m_hexMagConsole->appendPlainText(QString("Status: %1").arg(exitStatus == QProcess::NormalExit ? "Normal" : "Crashed"));
-            m_hexMagConsole->appendPlainText(QString("Time: %1").arg(QDateTime::currentDateTime().toString()));
-            m_hexMagConsole->appendPlainText(QString("=====================\n"));
+            m_hexMagConsole->appendPlainText(std::string("\n=== SCRIPT FINISHED ==="));
+            m_hexMagConsole->appendPlainText(std::string("Exit Code: %1"));
+            m_hexMagConsole->appendPlainText(std::string("Status: %1"));
+            m_hexMagConsole->appendPlainText(std::string("Time: %1").toString()));
+            m_hexMagConsole->appendPlainText(std::string("=====================\n"));
         }
         
         if (chatHistory_) {
-            chatHistory_->addItem(status + ": " + QFileInfo(scriptPath).fileName());
+            chatHistory_->addItem(status + ": " + std::filesystem::path(scriptPath).fileName());
         }
         
-        qInfo() << "[SCRIPT] Finished:" << scriptPath << "Exit code:" << exitCode;
         
         scriptProcess->deleteLater();
     });
@@ -6279,14 +6011,13 @@ void MainWindow::onRunScript()
     if (!scriptProcess->waitForStarted(3000)) {
         QMessageBox::critical(this, tr("Script Execution Failed"),
                             tr("Failed to start script:\n%1\n\nInterpreter: %2\nError: %3")
-                            .arg(scriptPath).arg(program).arg(scriptProcess->errorString()));
-        qWarning() << "[SCRIPT] Failed to start:" << scriptPath << "-" << scriptProcess->errorString();
+                            ));
         scriptProcess->deleteLater();
         return;
     }
     
     if (chatHistory_) {
-        chatHistory_->addItem(tr("Running script: %1").arg(scriptInfo.fileName()));
+        chatHistory_->addItem(tr("Running script: %1")));
     }
 }
 
@@ -6312,11 +6043,11 @@ void MainWindow::runInference()
     }
     
     bool ok;
-    QString prompt = QInputDialog::getMultiLineText(
+    std::string prompt = QInputDialog::getMultiLineText(
         this,
         tr("Run Inference"),
         tr("Enter your prompt:"),
-        QString(),
+        std::string(),
         &ok
     );
     
@@ -6326,25 +6057,25 @@ void MainWindow::runInference()
     
     statusBar()->showMessage(tr("Running inference..."));
     
-    qint64 reqId = QDateTime::currentMSecsSinceEpoch();
+    qint64 reqId = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     m_currentStreamId = reqId;
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(tr("\n[User] %1\n").arg(prompt));
+        m_hexMagConsole->appendPlainText(tr("\n[User] %1\n"));
     }
     
     // Call inference engine
-    QMetaObject::invokeMethod(m_inferenceEngine, "request", Qt::QueuedConnection,
-                              Q_ARG(QString, prompt),
-                              Q_ARG(qint64, reqId));
+    QMetaObject::invokeMethod(m_inferenceEngine, "request", //QueuedConnection,
+                              (std::string, prompt),
+                              (qint64, reqId));
 }
 
 void MainWindow::loadGGUFModel()
 {
-    QString filePath = QFileDialog::getOpenFileName(
+    std::string filePath = QFileDialog::getOpenFileName(
         this,
         tr("Select GGUF Model"),
-        QString(),
+        std::string(),
         tr("GGUF Files (*.gguf);;All Files (*.*)")
     );
     
@@ -6355,19 +6086,18 @@ void MainWindow::loadGGUFModel()
     statusBar()->showMessage(tr("Loading GGUF model..."));
     
     // Call loadModel in the worker thread
-    QMetaObject::invokeMethod(m_inferenceEngine, "loadModel", Qt::QueuedConnection,
-                              Q_ARG(QString, filePath));
+    QMetaObject::invokeMethod(m_inferenceEngine, "loadModel", //QueuedConnection,
+                              (std::string, filePath));
 }
 
- 
 
 void MainWindow::unloadGGUFModel()
 {
-    QMetaObject::invokeMethod(m_inferenceEngine, "unloadModel", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(m_inferenceEngine, "unloadModel", //QueuedConnection);
     statusBar()->showMessage(tr("Unloading model..."));
 }
 
-void MainWindow::showInferenceResult(qint64 reqId, const QString& result)
+void MainWindow::showInferenceResult(qint64 reqId, const std::string& result)
 {
     // If streaming mode is active, skip full result (tokens already streamed)
     if (m_streamingMode && reqId == m_currentStreamId) {
@@ -6375,22 +6105,22 @@ void MainWindow::showInferenceResult(qint64 reqId, const QString& result)
     }
     
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[%1] %2").arg(reqId).arg(result));
+        m_hexMagConsole->appendPlainText(std::string("[%1] %2"));
     }
     statusBar()->showMessage(tr("Inference complete"), 3000);
 }
 
-void MainWindow::showInferenceError(qint64 reqId, const QString& errorMsg)
+void MainWindow::showInferenceError(qint64 reqId, const std::string& errorMsg)
 {
     if (m_hexMagConsole) {
-        m_hexMagConsole->appendPlainText(QString("[%1] ERROR: %2").arg(reqId).arg(errorMsg));
+        m_hexMagConsole->appendPlainText(std::string("[%1] ERROR: %2"));
     }
     statusBar()->showMessage(tr("Inference failed"), 3000);
 }
 
-void MainWindow::onModelLoadedChanged(bool loaded, const QString& modelName)
+void MainWindow::onModelLoadedChanged(bool loaded, const std::string& modelName)
 {
-    QString msg = loaded ? tr("GGUF loaded: %1").arg(modelName) : tr("GGUF unloaded");
+    std::string msg = loaded ? tr("GGUF loaded: %1") : tr("GGUF unloaded");
     statusBar()->showMessage(msg, 3000);
     if (m_hexMagConsole) {
         m_hexMagConsole->appendPlainText(msg);
@@ -6398,31 +6128,29 @@ void MainWindow::onModelLoadedChanged(bool loaded, const QString& modelName)
     
     if (loaded) {
         // Log how many tensors we saw in the loader
-        QStringList names = m_inferenceEngine ? m_inferenceEngine->tensorNames() : QStringList();
-        qInfo() << "Model loaded with" << names.size() << "tensors";
+        std::vector<std::string> names = m_inferenceEngine ? m_inferenceEngine->tensorNames() : std::vector<std::string>();
         if (m_hexMagConsole) {
-            m_hexMagConsole->appendPlainText(QString("Detected %1 tensors").arg(names.size()));
+            m_hexMagConsole->appendPlainText(std::string("Detected %1 tensors")));
         }
 
         // If developer wants auto per-layer set, use environment variable RAWRXD_AUTO_SET_LAYER
-        QString devCmd = qEnvironmentVariable("RAWRXD_AUTO_SET_LAYER");
+        std::string devCmd = qEnvironmentVariable("RAWRXD_AUTO_SET_LAYER");
         if (!devCmd.isEmpty() && !names.isEmpty()) {
-            QString target = names.first();
-            QString quant = devCmd.isEmpty() ? "Q6_K" : devCmd; // default to Q6_K
-            qInfo() << "Auto-setting layer quant for" << target << "->" << quant;
-            if (m_hexMagConsole) m_hexMagConsole->appendPlainText(QString("Auto-set %1 -> %2").arg(target, quant));
-            QMetaObject::invokeMethod(m_inferenceEngine, "setLayerQuant", Qt::QueuedConnection,
-                                      Q_ARG(QString, target), Q_ARG(QString, quant));
+            std::string target = names.first();
+            std::string quant = devCmd.isEmpty() ? "Q6_K" : devCmd; // default to Q6_K
+            if (m_hexMagConsole) m_hexMagConsole->appendPlainText(std::string("Auto-set %1 -> %2"));
+            QMetaObject::invokeMethod(m_inferenceEngine, "setLayerQuant", //QueuedConnection,
+                                      (std::string, target), (std::string, quant));
         }
     }
 }
 
 void MainWindow::batchCompressFolder()
 {
-    QString dir = QFileDialog::getExistingDirectory(
+    std::string dir = QFileDialog::getExistingDirectory(
         this,
         tr("Select GGUF Folder"),
-        QString(),
+        std::string(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
     
@@ -6430,29 +6158,29 @@ void MainWindow::batchCompressFolder()
         return;
     }
     
-    QDirIterator it(dir, QStringList() << "*.gguf", QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator it(dir, std::vector<std::string>() << "*.gguf", std::filesystem::path::Files, QDirIterator::Subdirectories);
     int total = 0, ok = 0;
     
-    while (it.hasNext()) {
-        QString inPath = it.next();
-        QString outPath = inPath + ".gz";
+    while (itfalse) {
+        std::string inPath = it;
+        std::string outPath = inPath + ".gz";
         
-        QFile inFile(inPath);
+        std::fstream inFile(inPath);
         if (!inFile.open(QIODevice::ReadOnly)) {
             ++total;
             continue;
         }
         
-        QByteArray raw = inFile.readAll();
+        std::vector<uint8_t> raw = inFile.readAll();
         inFile.close();
         
-        QByteArray gz = brutal::compress(raw);
+        std::vector<uint8_t> gz = brutal::compress(raw);
         if (gz.isEmpty()) {
             ++total;
             continue;
         }
         
-        QFile outFile(outPath);
+        std::fstream outFile(outPath);
         if (outFile.open(QIODevice::WriteOnly)) {
             outFile.write(gz);
             outFile.close();
@@ -6460,18 +6188,18 @@ void MainWindow::batchCompressFolder()
         }
         
         ++total;
-        statusBar()->showMessage(tr("Batch: %1/%2 compressed").arg(ok).arg(total), 500);
+        statusBar()->showMessage(tr("Batch: %1/%2 compressed"), 500);
         QCoreApplication::processEvents();  // Keep UI responsive
     }
     
-    QString finalMsg = tr("Batch compression complete: %1/%2 files").arg(ok).arg(total);
+    std::string finalMsg = tr("Batch compression complete: %1/%2 files");
     statusBar()->showMessage(finalMsg, 5000);
     QMessageBox::information(this, tr("Batch Compress"), finalMsg);
 }
 
 // ---------- Ctrl+Shift+A inside the editor ----------
 void MainWindow::onCtrlShiftA() {
-    QString wish = codeView_->textCursor().selectedText().trimmed();
+    std::string wish = codeView_->textCursor().selectedText().trimmed();
     if (wish.isEmpty()) return;
     AutoBootstrap::startWithWish(wish);
 }
@@ -6501,16 +6229,11 @@ void MainWindow::setupAgentSystem() {
     m_hotReload = new HotReload(this);
     
     // Connect HotReload signals to status bar for feedback
-    connect(m_hotReload, &HotReload::quantReloaded, this, [this](const QString& quantType) {
-        statusBar()->showMessage(tr("✓ Quantization reloaded: %1").arg(quantType), 3000);
+// Qt connect removed
     });
-    
-    connect(m_hotReload, &HotReload::moduleReloaded, this, [this](const QString& moduleName) {
-        statusBar()->showMessage(tr("✓ Module reloaded: %1").arg(moduleName), 3000);
+// Qt connect removed
     });
-    
-    connect(m_hotReload, &HotReload::reloadFailed, this, [this](const QString& error) {
-        statusBar()->showMessage(tr("✗ Reload failed: %1").arg(error), 5000);
+// Qt connect removed
     });
     
     // Add Tools menu for agent/hotpatch operations
@@ -6523,8 +6246,7 @@ void MainWindow::setupAgentSystem() {
     // Add Hot Reload action with Ctrl+Shift+R shortcut
     QAction* hotReloadAction = toolsMenu->addAction("Hot Reload Quantization");
     hotReloadAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
-    connect(hotReloadAction, &QAction::triggered, this, &MainWindow::onHotReload);
-    
+// Qt connect removed
     // Add separator
     toolsMenu->addSeparator();
     
@@ -6550,8 +6272,7 @@ void MainWindow::setupAgentSystem() {
     m_agentModeGroup->addAction(askModeAction);
     
     // Connect mode selection to changeAgentMode
-    connect(m_agentModeGroup, &QActionGroup::triggered, this, [this](QAction* action) {
-        QString mode = action->data().toString();
+// Qt connect removed
         changeAgentMode(mode);
     });
     
@@ -6561,9 +6282,7 @@ void MainWindow::setupAgentSystem() {
     // Add Self-Test Gate action
     QAction* selfTestAction = toolsMenu->addAction("Run Self-Test Gate");
     selfTestAction->setShortcut(QKeySequence("Ctrl+Shift+T"));
-    connect(selfTestAction, &QAction::triggered, this, [this]() {
-        if (canRelease()) {
-            statusBar()->showMessage("✓ Self-test gate passed - ready to release", 3000);
+// Qt connect removed
         } else {
             statusBar()->showMessage("✗ Self-test gate failed - fix issues before release", 5000);
         }
@@ -6586,30 +6305,24 @@ void MainWindow::setupHotpatchPanel() {
     m_hotpatchPanelDock = new QDockWidget("Hotpatch Events", this);
     m_hotpatchPanelDock->setWidget(m_hotpatchPanel);
     m_hotpatchPanelDock->setObjectName("HotpatchPanelDock");
-    m_hotpatchPanelDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    m_hotpatchPanelDock->setAllowedAreas(//AllDockWidgetAreas);
     m_hotpatchPanelDock->setFeatures(QDockWidget::DockWidgetMovable |
                                       QDockWidget::DockWidgetFloatable |
                                       QDockWidget::DockWidgetClosable);
     
     // Add to bottom dock area by default
-    addDockWidget(Qt::BottomDockWidgetArea, m_hotpatchPanelDock);
+    addDockWidget(//BottomDockWidgetArea, m_hotpatchPanelDock);
     
     // Wire HotReload signals to hotpatch panel for event logging
-    connect(m_hotReload, &HotReload::quantReloaded, this, [this](const QString& quantType) {
-        m_hotpatchPanel->logEvent("Quantization Reloaded", quantType, true);
+// Qt connect removed
     });
-    
-    connect(m_hotReload, &HotReload::moduleReloaded, this, [this](const QString& moduleName) {
-        m_hotpatchPanel->logEvent("Module Reloaded", moduleName, true);
+// Qt connect removed
     });
-    
-    connect(m_hotReload, &HotReload::reloadFailed, this, [this](const QString& error) {
-        m_hotpatchPanel->logEvent("Reload Failed", error, false);
+// Qt connect removed
     });
     
     // Connect manual reload button in hotpatch panel to onHotReload
-    connect(m_hotpatchPanel, &HotpatchPanel::manualReloadRequested, this, [this](const QString& quantType) {
-        m_currentQuantMode = quantType;
+// Qt connect removed
         onHotReload();
     });
     
@@ -6622,8 +6335,7 @@ void MainWindow::setupHotpatchPanel() {
     QAction* toggleHotpatchAction = viewMenu->addAction("Hotpatch Events");
     toggleHotpatchAction->setCheckable(true);
     toggleHotpatchAction->setChecked(true);
-    connect(toggleHotpatchAction, &QAction::triggered, this, [this](bool visible) {
-        toggleHotpatchPanel(visible);
+// Qt connect removed
     });
 }
 
@@ -6649,26 +6361,21 @@ void MainWindow::setupMASMEditor() {
     m_masmEditorDock = new QDockWidget("MASM Assembly Editor", this);
     m_masmEditorDock->setWidget(m_masmEditor);
     m_masmEditorDock->setObjectName("MASMEditorDock");
-    m_masmEditorDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    m_masmEditorDock->setAllowedAreas(//AllDockWidgetAreas);
     m_masmEditorDock->setFeatures(QDockWidget::DockWidgetMovable |
                                    QDockWidget::DockWidgetFloatable |
                                    QDockWidget::DockWidgetClosable);
     
     // Add to right dock area by default
-    addDockWidget(Qt::RightDockWidgetArea, m_masmEditorDock);
+    addDockWidget(//RightDockWidgetArea, m_masmEditorDock);
     
     // Connect editor signals to main window
-    connect(m_masmEditor, &MASMEditorWidget::tabChanged, this, [this](int index) {
-        statusBar()->showMessage(tr("Switched to: %1").arg(m_masmEditor->getTabName(index)), 2000);
+// Qt connect removed
     });
-    
-    connect(m_masmEditor, &MASMEditorWidget::contentModified, this, [this](int index) {
-        QString modified = m_masmEditor->isModified(index) ? " *" : "";
-        statusBar()->showMessage(tr("Modified: %1%2").arg(m_masmEditor->getTabName(index)).arg(modified), 1000);
+// Qt connect removed
+        statusBar()->showMessage(tr("Modified: %1%2")), 1000);
     });
-    
-    connect(m_masmEditor, &MASMEditorWidget::cursorPositionChanged, this, [this](int line, int col) {
-        statusBar()->showMessage(tr("Line %1, Column %2").arg(line).arg(col), 1000);
+// Qt connect removed
     });
     
     // Add View menu toggle for MASM Editor
@@ -6680,8 +6387,7 @@ void MainWindow::setupMASMEditor() {
     QAction* toggleMASMAction = viewMenu->addAction("MASM Assembly Editor");
     toggleMASMAction->setCheckable(true);
     toggleMASMAction->setChecked(true);
-    connect(toggleMASMAction, &QAction::triggered, this, [this](bool visible) {
-        toggleMASMEditor(visible);
+// Qt connect removed
     });
 }
 
@@ -6704,13 +6410,13 @@ void MainWindow::setupAIChatPanel() {
     m_aiChatPanelDock = new QDockWidget("AI Chat Panel", this);
     m_aiChatPanelDock->setWidget(m_aiChatPanel);
     m_aiChatPanelDock->setObjectName("AIChatPanelDock");
-    m_aiChatPanelDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    m_aiChatPanelDock->setAllowedAreas(//AllDockWidgetAreas);
     m_aiChatPanelDock->setFeatures(QDockWidget::DockWidgetMovable |
                                     QDockWidget::DockWidgetFloatable |
                                     QDockWidget::DockWidgetClosable);
     
     // Add to right dock area by default
-    addDockWidget(Qt::RightDockWidgetArea, m_aiChatPanelDock);
+    addDockWidget(//RightDockWidgetArea, m_aiChatPanelDock);
     
     // Tabify with MASM editor if present
     if (m_masmEditorDock) {
@@ -6719,25 +6425,17 @@ void MainWindow::setupAIChatPanel() {
     }
     
     // Connect chat panel signals to inference engine
-    connect(m_aiChatPanel, &AIChatPanel::messageSubmitted,
-            this, &MainWindow::onAIChatMessageSubmitted);
-    connect(m_aiChatPanel, &AIChatPanel::quickActionTriggered,
-            this, &MainWindow::onAIChatQuickActionTriggered);
-
+// Qt connect removed
+// Qt connect removed
         // Keep the main model selector in sync with agent breadcrumb updates (Ollama async fetch)
         if (m_aiChatPanel && m_aiChatPanel->getBreadcrumb()) {
-        connect(m_aiChatPanel->getBreadcrumb(), &AgentChatBreadcrumb::ollamaModelsUpdated,
-            this, &MainWindow::refreshModelSelector);
+// Qt connect removed
         }
     
     // Connect inference engine responses to chat panel
-    connect(m_inferenceEngine, &InferenceEngine::streamToken,
-            this, [this](qint64, const QString& token) {
-                if (m_aiChatPanel) m_aiChatPanel->updateStreamingMessage(token);
+// Qt connect removed
             });
-    connect(m_inferenceEngine, &InferenceEngine::streamFinished,
-            this, [this](qint64) {
-                if (m_aiChatPanel) m_aiChatPanel->finishStreaming();
+// Qt connect removed
             });
     
     // Add View menu toggle for AI Chat Panel
@@ -6756,10 +6454,7 @@ void MainWindow::setupAIChatPanel() {
     QAction* toggleChatAction = viewMenu->addAction("AI Chat Panel");
     toggleChatAction->setCheckable(true);
     toggleChatAction->setChecked(true);
-    connect(toggleChatAction, &QAction::triggered, this, [this](bool visible) {
-        if (m_aiChatPanelDock) {
-            if (visible) {
-                m_aiChatPanelDock->show();
+// Qt connect removed
                 m_aiChatPanelDock->raise();
             } else {
                 m_aiChatPanelDock->hide();
@@ -6767,10 +6462,9 @@ void MainWindow::setupAIChatPanel() {
         }
     });
     
-    qDebug() << "AI Chat Panel dockable widget created on right side";
 }
 
-void MainWindow::onAIChatMessageSubmitted(const QString& message) {
+void MainWindow::onAIChatMessageSubmitted(const std::string& message) {
     if (!m_aiChatPanel) return;
     
     try {
@@ -6779,47 +6473,45 @@ void MainWindow::onAIChatMessageSubmitted(const QString& message) {
         
         // Send to inference engine
         if (m_inferenceEngine && m_inferenceEngine->isModelLoaded()) {
-            qint64 reqId = QDateTime::currentMSecsSinceEpoch();
+            qint64 reqId = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
             m_currentStreamId = reqId;
             m_streamingMode = true;
             
             m_aiChatPanel->addAssistantMessage("", true);  // Start streaming
             
             // Call the streaming 'request' slot
-            QMetaObject::invokeMethod(m_inferenceEngine, "request", Qt::QueuedConnection,
-                                      Q_ARG(QString, message),
-                                      Q_ARG(qint64, reqId),
-                                      Q_ARG(bool, true));
+            QMetaObject::invokeMethod(m_inferenceEngine, "request", //QueuedConnection,
+                                      (std::string, message),
+                                      (qint64, reqId),
+                                      (bool, true));
         } else {
             m_aiChatPanel->addAssistantMessage("No model loaded. Please load a GGUF model first.", false);
         }
     } catch (const std::exception& e) {
-        qCritical() << "Chat message submission error:" << e.what();
         if (m_aiChatPanel) {
-            m_aiChatPanel->addAssistantMessage(QString("Error: %1").arg(e.what()), false);
+            m_aiChatPanel->addAssistantMessage(std::string("Error: %1")), false);
         }
     }
 }
 
-void MainWindow::onAIChatQuickActionTriggered(const QString& action, const QString& context) {
+void MainWindow::onAIChatQuickActionTriggered(const std::string& action, const std::string& context) {
     if (!m_aiChatPanel) return;
     
     try {
-        QString prompt;
+        std::string prompt;
         
         if (action == "explain") {
-            prompt = QString("Explain this code:\n%1").arg(context);
+            prompt = std::string("Explain this code:\n%1");
         } else if (action == "fix") {
-            prompt = QString("Fix any issues in this code:\n%1").arg(context);
+            prompt = std::string("Fix any issues in this code:\n%1");
         } else if (action == "refactor") {
-            prompt = QString("Refactor this code to be more efficient:\n%1").arg(context);
+            prompt = std::string("Refactor this code to be more efficient:\n%1");
         } else {
             prompt = action;
         }
         
         onAIChatMessageSubmitted(prompt);
     } catch (const std::exception& e) {
-        qCritical() << "Quick action error:" << e.what();
     }
 }
 
@@ -6835,19 +6527,16 @@ void MainWindow::setupLayerQuantWidget() {
     m_layerQuantDock = new QDockWidget("Layer Quantization", this);
     m_layerQuantDock->setWidget(m_layerQuantWidget);
     m_layerQuantDock->setObjectName("LayerQuantDock");
-    m_layerQuantDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    m_layerQuantDock->setAllowedAreas(//AllDockWidgetAreas);
     m_layerQuantDock->setFeatures(QDockWidget::DockWidgetMovable |
                                    QDockWidget::DockWidgetFloatable |
                                    QDockWidget::DockWidgetClosable);
     
     // Add to right dock area by default
-    addDockWidget(Qt::RightDockWidgetArea, m_layerQuantDock);
+    addDockWidget(//RightDockWidgetArea, m_layerQuantDock);
     
     // Connect layer quant widget to inference engine
-    connect(m_layerQuantWidget, &LayerQuantWidget::quantModeChanged,
-            this, &MainWindow::onQuantModeChanged);
-    
-    qDebug() << "Layer Quantization widget created";
+// Qt connect removed
 }
 
 // ============================================================
@@ -6881,12 +6570,7 @@ void MainWindow::setupAIBackendSwitcher() {
     anthropicAct->setCheckable(true);
     anthropicAct->setData("anthropic");
     m_backendGroup->addAction(anthropicAct);
-    
-    
-    connect(m_backendGroup, &QActionGroup::triggered,
-            this, &MainWindow::handleBackendSelection);
-    
-    qDebug() << "AI Backend switcher configured";
+// Qt connect removed
 }
 
 // ============================================================
@@ -6904,23 +6588,21 @@ void MainWindow::setupQuantizationMenu(QMenu* aiMenu) {
         act->setCheckable(true);
         act->setData(mode);
         quantGroup->addAction(act);
-        if (QString(mode) == "Q4_0") {
+        if (std::string(mode) == "Q4_0") {
             act->setChecked(true);  // Default
         }
     }
-    
-    connect(quantGroup, &QActionGroup::triggered, this, [this](QAction* action) {
-        m_currentQuantMode = action->data().toString();
-        statusBar()->showMessage(tr("Quantization Mode: %1").arg(m_currentQuantMode), 3000);
+// Qt connect removed
+        statusBar()->showMessage(tr("Quantization Mode: %1"), 3000);
         if (m_layerQuantWidget) {
             // m_layerQuantWidget->setQuantMode(m_currentQuantMode);
         }
     });
 }
 
-void MainWindow::onQuantModeChanged(const QString& mode) {
+void MainWindow::onQuantModeChanged(const std::string& mode) {
     m_currentQuantMode = mode;
-    statusBar()->showMessage(tr("Quantization changed to: %1").arg(mode), 3000);
+    statusBar()->showMessage(tr("Quantization changed to: %1"), 3000);
 }
 
 // ============================================================
@@ -6933,42 +6615,36 @@ void MainWindow::setupSwarmEditing() {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "setupSwarmEditing", "swarm");
     
     if (!m_swarmSocket) {
-        m_swarmSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+        m_swarmSocket = new QWebSocket(std::string(), QWebSocketProtocol::VersionLatest, this);
         
         // Connection established
-        connect(m_swarmSocket, &QWebSocket::connected, this, [this]() {
-            qInfo() << "[Swarm] Connected to collaborative session";
+// Qt connect removed
             statusBar()->showMessage(tr("Connected to swarm session"), 3000);
             
             // Send join message
-            QJsonObject joinMsg;
+            void* joinMsg;
             joinMsg["type"] = "join";
             joinMsg["session"] = m_swarmSessionId;
             joinMsg["user"] = QSysInfo::machineHostName();
-            joinMsg["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
-            m_swarmSocket->sendTextMessage(QJsonDocument(joinMsg).toJson(QJsonDocument::Compact));
+            joinMsg["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
+            m_swarmSocket->sendTextMessage(void*(joinMsg).toJson(void*::Compact));
         });
         
         // Connection closed
-        connect(m_swarmSocket, &QWebSocket::disconnected, this, [this]() {
-            qInfo() << "[Swarm] Disconnected from session";
+// Qt connect removed
             statusBar()->showMessage(tr("Disconnected from swarm session"), 3000);
             m_swarmSessionId.clear();
         });
         
         // Message received
-        connect(m_swarmSocket, &QWebSocket::textMessageReceived, this, &MainWindow::onSwarmMessage);
-        
+// Qt connect removed
         // Error handling
-        connect(m_swarmSocket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error),
-                this, [this](QAbstractSocket::SocketError error) {
-            qWarning() << "[Swarm] Socket error:" << error << m_swarmSocket->errorString();
-            statusBar()->showMessage(tr("Swarm connection error: %1").arg(m_swarmSocket->errorString()), 5000);
+// Qt connect removed
+            statusBar()->showMessage(tr("Swarm connection error: %1")), 5000);
         });
     }
     
     m_swarmSessionId.clear();
-    qInfo() << "[Swarm] Swarm editing system initialized";
 }
 
 void MainWindow::joinSwarmSession() {
@@ -6984,7 +6660,7 @@ void MainWindow::joinSwarmSession() {
     
     // Show dialog to enter session ID or create new
     bool ok;
-    QString sessionId = QInputDialog::getText(this, tr("Join Swarm Session"),
+    std::string sessionId = QInputDialog::getText(this, tr("Join Swarm Session"),
         tr("Enter session ID (or leave empty to create new):"),
         QLineEdit::Normal, m_swarmSessionId, &ok);
     
@@ -6992,36 +6668,33 @@ void MainWindow::joinSwarmSession() {
         m_swarmSessionId = sessionId.isEmpty() ? m_swarmSessionId : sessionId;
         
         // Connect to swarm server (configurable endpoint)
-        QString serverUrl = QSettings().value("swarm/serverUrl", "wss://swarm.rawrxd.dev").toString();
-        QUrl url(QString("%1/session/%2").arg(serverUrl).arg(m_swarmSessionId));
+        std::string serverUrl = QSettings().value("swarm/serverUrl", "wss://swarm.rawrxd.dev").toString();
+        std::string url(std::string("%1/session/%2"));
         
-        qInfo() << "[Swarm] Connecting to:" << url.toString();
-        statusBar()->showMessage(tr("Connecting to swarm session %1...").arg(m_swarmSessionId), 5000);
+        statusBar()->showMessage(tr("Connecting to swarm session %1..."), 5000);
         m_swarmSocket->open(url);
     }
 }
 
-void MainWindow::onSwarmMessage(const QString& message) {
+void MainWindow::onSwarmMessage(const std::string& message) {
     // Handle incoming collaborative edits from swarm peers
-    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+    void* doc = void*::fromJson(message.toUtf8());
     if (!doc.isObject()) {
-        qWarning() << "[Swarm] Invalid message format";
         return;
     }
     
-    QJsonObject msg = doc.object();
-    QString type = msg["type"].toString();
-    QString user = msg["user"].toString();
+    void* msg = doc.object();
+    std::string type = msg["type"].toString();
+    std::string user = msg["user"].toString();
     
     if (type == "edit") {
         // Apply remote edit to document
-        QString file = msg["file"].toString();
+        std::string file = msg["file"].toString();
         int line = msg["line"].toInt();
         int col = msg["col"].toInt();
-        QString text = msg["text"].toString();
-        QString operation = msg["operation"].toString(); // insert, delete, replace
+        std::string text = msg["text"].toString();
+        std::string operation = msg["operation"].toString(); // insert, delete, replace
         
-        qDebug() << "[Swarm] Edit from" << user << ":" << operation << "at" << file << line << col;
         
         // Apply to editor if same file is open
         if (editor_ && !file.isEmpty()) {
@@ -7032,24 +6705,21 @@ void MainWindow::onSwarmMessage(const QString& message) {
             editor_->setProperty("swarm_remote_edit", false);
         }
         
-        statusBar()->showMessage(tr("Edit from %1").arg(user), 1000);
+        statusBar()->showMessage(tr("Edit from %1"), 1000);
         
     } else if (type == "cursor") {
         // Show remote cursor position
         int line = msg["line"].toInt();
         int col = msg["col"].toInt();
-        qDebug() << "[Swarm] Cursor from" << user << "at" << line << col;
         
     } else if (type == "join") {
-        qInfo() << "[Swarm] User joined:" << user;
-        statusBar()->showMessage(tr("%1 joined the session").arg(user), 3000);
+        statusBar()->showMessage(tr("%1 joined the session"), 3000);
         if (chatHistory_) {
-            chatHistory_->addItem(tr("👥 %1 joined swarm session").arg(user));
+            chatHistory_->addItem(tr("👥 %1 joined swarm session"));
         }
         
     } else if (type == "leave") {
-        qInfo() << "[Swarm] User left:" << user;
-        statusBar()->showMessage(tr("%1 left the session").arg(user), 3000);
+        statusBar()->showMessage(tr("%1 left the session"), 3000);
     }
 }
 
@@ -7065,9 +6735,9 @@ void MainWindow::broadcastEdit() {
     }
     
     // Get current edit info from editor
-    QString currentFile;
+    std::string currentFile;
     int line = 0, col = 0;
-    QString editText;
+    std::string editText;
     
     if (editor_) {
         QTextCursor cursor = editor_->textCursor();
@@ -7082,7 +6752,7 @@ void MainWindow::broadcastEdit() {
     }
     
     // Build edit message
-    QJsonObject editMsg;
+    void* editMsg;
     editMsg["type"] = "edit";
     editMsg["session"] = m_swarmSessionId;
     editMsg["user"] = QSysInfo::machineHostName();
@@ -7091,16 +6761,14 @@ void MainWindow::broadcastEdit() {
     editMsg["col"] = col;
     editMsg["text"] = editText;
     editMsg["operation"] = "insert"; // or "delete", "replace"
-    editMsg["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    editMsg["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     
-    m_swarmSocket->sendTextMessage(QJsonDocument(editMsg).toJson(QJsonDocument::Compact));
-    qDebug() << "[Swarm] Broadcast edit at" << line << col;
+    m_swarmSocket->sendTextMessage(void*(editMsg).toJson(void*::Compact));
 }
 
 #else // HAVE_QT_WEBSOCKETS not defined - provide stub implementations
 
 void MainWindow::setupSwarmEditing() {
-    qInfo() << "[Swarm] WebSocket support not available - swarm editing disabled";
 }
 
 void MainWindow::joinSwarmSession() {
@@ -7108,7 +6776,7 @@ void MainWindow::joinSwarmSession() {
         tr("Swarm editing requires Qt WebSockets module, which is not available in this build."));
 }
 
-void MainWindow::onSwarmMessage(const QString& /* message */) {
+void MainWindow::onSwarmMessage(const std::string& /* message */) {
     // Stub - WebSocket support not available
 }
 
@@ -7118,10 +6786,10 @@ void MainWindow::broadcastEdit() {
 
 #endif // HAVE_QT_WEBSOCKETS
 
-void MainWindow::onAIBackendChanged(const QString& id, const QString& apiKey) {
+void MainWindow::onAIBackendChanged(const std::string& id, const std::string& apiKey) {
     m_currentBackend = id;
     m_currentAPIKey = apiKey;
-    statusBar()->showMessage(tr("Switched to AI backend: %1").arg(id), 3000);
+    statusBar()->showMessage(tr("Switched to AI backend: %1"), 3000);
 }
 
 // ============================================================
@@ -7141,13 +6809,13 @@ void MainWindow::setupInterpretabilityPanel()
     m_interpretabilityPanelDock = new QDockWidget("Model Interpretability & Diagnostics", this);
     m_interpretabilityPanelDock->setWidget(m_interpretabilityPanel);
     m_interpretabilityPanelDock->setObjectName("InterpretabilityPanelDock");
-    m_interpretabilityPanelDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    m_interpretabilityPanelDock->setAllowedAreas(//AllDockWidgetAreas);
     m_interpretabilityPanelDock->setFeatures(QDockWidget::DockWidgetMovable |
                                              QDockWidget::DockWidgetFloatable |
                                              QDockWidget::DockWidgetClosable);
     
     // Add to right dock area by default
-    addDockWidget(Qt::RightDockWidgetArea, m_interpretabilityPanelDock);
+    addDockWidget(//RightDockWidgetArea, m_interpretabilityPanelDock);
     m_interpretabilityPanelDock->hide();  // Hidden by default
     
     // Configure anomaly detection thresholds
@@ -7155,29 +6823,18 @@ void MainWindow::setupInterpretabilityPanel()
     m_interpretabilityPanel->setGradientTrackingEnabled(true);
     
     // Connect signals for real-time diagnostics
-    connect(m_interpretabilityPanel, &InterpretabilityPanelEnhanced::anomalyDetected,
-            this, [this](const QString& description) {
-                // Show warning in status bar
-                statusBar()->showMessage(
-                    QString("⚠️ Model Anomaly: %1").arg(description), 10000
-                );
-                
+// Qt connect removed
                 // Log to console
                 if (m_hexMagConsole) {
                     m_hexMagConsole->appendPlainText(
-                        QString("[INTERPRETABILITY] %1: %2")
-                            .arg(QDateTime::currentDateTime().toString("HH:mm:ss"))
-                            .arg(description)
+                        std::string("[INTERPRETABILITY] %1: %2")
+                            .toString("HH:mm:ss"))
+                            
                     );
                 }
                 
-                qWarning() << "Model Anomaly Detected:" << description;
             });
-    
-    connect(m_interpretabilityPanel, &InterpretabilityPanelEnhanced::diagnosticsCompleted,
-            this, [this](const QJsonObject& diagnostics_json) {
-                // Update status with diagnostics summary from JSON
-                QStringList issues;
+// Qt connect removed
                 if (diagnostics_json["has_vanishing_gradients"].toBool()) issues << "Vanishing Gradients";
                 if (diagnostics_json["has_exploding_gradients"].toBool()) issues << "Exploding Gradients";
                 if (diagnostics_json["has_dead_neurons"].toBool()) issues << "Dead Neurons";
@@ -7186,22 +6843,18 @@ void MainWindow::setupInterpretabilityPanel()
                 
                 if (!issues.isEmpty()) {
                     statusBar()->showMessage(
-                        QString("🔍 Diagnostics: %1 issue(s) - %2")
-                            .arg(issues.size())
-                            .arg(issues.join(", ")),
+                        std::string("🔍 Diagnostics: %1 issue(s) - %2")
+                            )
+                            ),
                         8000
                     );
                 } else {
                     statusBar()->showMessage("✅ Model Diagnostics: All checks passed", 5000);
                 }
                 
-                qInfo() << "Diagnostics completed with issues:" << issues.count() << "total";
             });
-    
-    connect(m_interpretabilityPanel, &InterpretabilityPanelEnhanced::exportRequested,
-            this, [this](const QString& format) {
-                QString filter;
-                QString defaultSuffix;
+// Qt connect removed
+                std::string defaultSuffix;
                 if (format == "JSON") {
                     filter = "JSON Files (*.json)";
                     defaultSuffix = ".json";
@@ -7213,10 +6866,10 @@ void MainWindow::setupInterpretabilityPanel()
                     defaultSuffix = ".png";
                 }
                 
-                QString filePath = QFileDialog::getSaveFileName(
+                std::string filePath = QFileDialog::getSaveFileName(
                     this,
                     tr("Export Interpretability Data"),
-                    QDir::homePath() + "/interpretability_export" + defaultSuffix,
+                    std::filesystem::path::homePath() + "/interpretability_export" + defaultSuffix,
                     filter
                 );
                 
@@ -7232,12 +6885,10 @@ void MainWindow::setupInterpretabilityPanel()
                     
                     if (success) {
                         QMessageBox::information(this, tr("Export Successful"),
-                            tr("Interpretability data exported to:\n%1").arg(filePath));
-                        qInfo() << "Exported interpretability data to:" << filePath;
+                            tr("Interpretability data exported to:\n%1"));
                     } else {
                         QMessageBox::warning(this, tr("Export Failed"),
-                            tr("Failed to export data to:\n%1").arg(filePath));
-                        qWarning() << "Failed to export to:" << filePath;
+                            tr("Failed to export data to:\n%1"));
                     }
                 }
             });
@@ -7245,24 +6896,18 @@ void MainWindow::setupInterpretabilityPanel()
     // Connect to inference engine for automatic data feed (if inference engine exists)
     if (m_inferenceEngine) {
         // When model is loaded, enable the panel
-        connect(m_inferenceEngine, &InferenceEngine::modelLoadedChanged,
-                this, [this](bool success) {
-                    if (success) {
-                        m_interpretabilityPanelDock->show();
+// Qt connect removed
                         statusBar()->showMessage(
-                            QString("📊 Interpretability Panel enabled"), 3000
+                            std::string("📊 Interpretability Panel enabled"), 3000
                         );
                     }
                 });
         
         // Connect attention data stream to interpretability panel
-        connect(m_inferenceEngine, &InferenceEngine::attentionDataAvailable,
-                this, [this](const QJsonArray& attentionData) {
-                    if (!m_interpretabilityPanel) return;
-                    
+// Qt connect removed
                     std::vector<InterpretabilityPanelEnhanced::AttentionHead> heads;
-                    for (const QJsonValue& val : attentionData) {
-                        QJsonObject obj = val.toObject();
+                    for (const void*& val : attentionData) {
+                        void* obj = val.toObject();
                         InterpretabilityPanelEnhanced::AttentionHead head;
                         head.layer_idx = obj["layer"].toInt();
                         head.head_idx = obj["head"].toInt();
@@ -7271,11 +6916,11 @@ void MainWindow::setupInterpretabilityPanel()
                         head.entropy = static_cast<float>(obj["entropy"].toDouble());
                         
                         // Parse weights matrix
-                        QJsonArray weightsArr = obj["weights"].toArray();
-                        for (const QJsonValue& rowVal : weightsArr) {
-                            QJsonArray rowArr = rowVal.toArray();
+                        void* weightsArr = obj["weights"].toArray();
+                        for (const void*& rowVal : weightsArr) {
+                            void* rowArr = rowVal.toArray();
                             std::vector<float> row;
-                            for (const QJsonValue& w : rowArr) {
+                            for (const void*& w : rowArr) {
                                 row.push_back(static_cast<float>(w.toDouble()));
                             }
                             head.weights.push_back(row);
@@ -7284,17 +6929,13 @@ void MainWindow::setupInterpretabilityPanel()
                         heads.push_back(head);
                     }
                     m_interpretabilityPanel->updateAttentionHeads(heads);
-                    qDebug() << "[Interpretability] Received attention data for" << heads.size() << "heads";
                 });
         
         // Connect gradient data stream to interpretability panel
-        connect(m_inferenceEngine, &InferenceEngine::gradientDataAvailable,
-                this, [this](const QJsonArray& gradientData) {
-                    if (!m_interpretabilityPanel) return;
-                    
+// Qt connect removed
                     std::vector<InterpretabilityPanelEnhanced::GradientFlowMetrics> metrics;
-                    for (const QJsonValue& val : gradientData) {
-                        QJsonObject obj = val.toObject();
+                    for (const void*& val : gradientData) {
+                        void* obj = val.toObject();
                         InterpretabilityPanelEnhanced::GradientFlowMetrics m;
                         m.layer_idx = obj["layer"].toInt();
                         m.norm = static_cast<float>(obj["norm"].toDouble());
@@ -7308,17 +6949,13 @@ void MainWindow::setupInterpretabilityPanel()
                         metrics.push_back(m);
                     }
                     m_interpretabilityPanel->updateGradientFlow(metrics);
-                    qDebug() << "[Interpretability] Received gradient data for" << metrics.size() << "layers";
                 });
         
         // Connect activation data stream to interpretability panel
-        connect(m_inferenceEngine, &InferenceEngine::activationDataAvailable,
-                this, [this](const QJsonArray& activationData) {
-                    if (!m_interpretabilityPanel) return;
-                    
+// Qt connect removed
                     std::vector<InterpretabilityPanelEnhanced::ActivationStats> stats;
-                    for (const QJsonValue& val : activationData) {
-                        QJsonObject obj = val.toObject();
+                    for (const void*& val : activationData) {
+                        void* obj = val.toObject();
                         InterpretabilityPanelEnhanced::ActivationStats s;
                         s.layer_idx = obj["layer"].toInt();
                         s.mean = static_cast<float>(obj["mean"].toDouble());
@@ -7329,32 +6966,28 @@ void MainWindow::setupInterpretabilityPanel()
                         s.dead_neuron_count = static_cast<float>(obj["dead_neurons"].toInt());
                         
                         // Parse distribution histogram
-                        QJsonArray distArr = obj["distribution"].toArray();
-                        for (const QJsonValue& d : distArr) {
+                        void* distArr = obj["distribution"].toArray();
+                        for (const void*& d : distArr) {
                             s.distribution.push_back(static_cast<float>(d.toDouble()));
                         }
                         s.timestamp = std::chrono::system_clock::now();
                         stats.push_back(s);
                     }
                     m_interpretabilityPanel->updateActivationStats(stats);
-                    qDebug() << "[Interpretability] Received activation data for" << stats.size() << "layers";
                 });
         
         // Connect layer contribution data
-        connect(m_inferenceEngine, &InferenceEngine::layerContributionAvailable,
-                this, [this](const QJsonArray& layerData) {
-                    if (!m_interpretabilityPanel) return;
-                    
+// Qt connect removed
                     std::vector<InterpretabilityPanelEnhanced::LayerAttribution> attribs;
-                    for (const QJsonValue& val : layerData) {
-                        QJsonObject obj = val.toObject();
+                    for (const void*& val : layerData) {
+                        void* obj = val.toObject();
                         InterpretabilityPanelEnhanced::LayerAttribution a;
                         a.layer_idx = obj["layer"].toInt();
                         a.contribution = static_cast<float>(obj["contribution"].toDouble());
                         a.cumulative_importance = static_cast<float>(obj["cumulative"].toDouble());
                         
-                        QJsonArray neuronsArr = obj["neurons"].toArray();
-                        for (const QJsonValue& n : neuronsArr) {
+                        void* neuronsArr = obj["neurons"].toArray();
+                        for (const void*& n : neuronsArr) {
                             a.neuron_importances.push_back(static_cast<float>(n.toDouble()));
                         }
                         a.timestamp = std::chrono::system_clock::now();
@@ -7364,19 +6997,15 @@ void MainWindow::setupInterpretabilityPanel()
                 });
         
         // Connect token logits for real-time generation analysis
-        connect(m_inferenceEngine, &InferenceEngine::tokenLogitsAvailable,
-                this, [this](int tokenIdx, const QJsonArray& logits) {
-                    if (!m_interpretabilityPanel) return;
-                    
+// Qt connect removed
                     std::vector<float> logitVec;
-                    for (const QJsonValue& l : logits) {
+                    for (const void*& l : logits) {
                         logitVec.push_back(static_cast<float>(l.toDouble()));
                     }
                     m_interpretabilityPanel->updateTokenLogits(tokenIdx, logitVec);
                 });
     }
     
-    qDebug() << "Interpretability Panel initialized successfully with inference engine connections";
 }
 
 /**
@@ -7398,7 +7027,6 @@ void MainWindow::toggleInterpretabilityPanel(bool visible)
         // Run initial diagnostics when panel is shown
         if (m_interpretabilityPanel) {
             auto diagnostics = m_interpretabilityPanel->runDiagnostics();
-            qInfo() << "Interpretability panel shown, diagnostics updated";
         }
     }
 }
@@ -7426,17 +7054,17 @@ void MainWindow::toggleSettings(bool visible)
 
 // Language-to-compiler mapping structure
 struct LanguageCompilerInfo {
-    QString language;           // Display name
-    QStringList extensions;     // File extensions
-    QString nativeCompiler;     // System compiler (fallback)
-    QString rawrxdCompiler;     // RawrXD ASM compiler
-    QString defaultArgs;        // Default compiler arguments
+    std::string language;           // Display name
+    std::vector<std::string> extensions;     // File extensions
+    std::string nativeCompiler;     // System compiler (fallback)
+    std::string rawrxdCompiler;     // RawrXD ASM compiler
+    std::string defaultArgs;        // Default compiler arguments
     bool supportsDebug;         // Debug symbol support
     bool supportsOptimize;      // Optimization support
 };
 
 // Static language registry - ALL supported languages
-static const QVector<LanguageCompilerInfo> g_languageRegistry = {
+static const std::vector<LanguageCompilerInfo> g_languageRegistry = {
     // Assembly Languages
     {"Assembly (x64)", {"asm", "s", "nasm", "masm", "yasm", "fasm", "gas"}, "ml64", "asm_compiler_from_scratch", "-f win64", true, true},
     {"EON Language", {"eon"}, "", "eon_compiler_from_scratch", "", true, true},
@@ -7575,7 +7203,7 @@ enum class TargetArch {
     STM32       // ARM Cortex-M
 };
 
-static QString targetPlatformToString(TargetPlatform p) {
+static std::string targetPlatformToString(TargetPlatform p) {
     switch(p) {
         case TargetPlatform::Native: return "native";
         case TargetPlatform::Windows: return "windows";
@@ -7596,7 +7224,7 @@ static QString targetPlatformToString(TargetPlatform p) {
     }
 }
 
-static QString targetArchToString(TargetArch a) {
+static std::string targetArchToString(TargetArch a) {
     switch(a) {
         case TargetArch::Native: return "native";
         case TargetArch::x86_64: return "x86_64";
@@ -7620,7 +7248,7 @@ static QString targetArchToString(TargetArch a) {
 }
 
 // Find compiler info for file extension
-static const LanguageCompilerInfo* findCompilerForExtension(const QString& ext) {
+static const LanguageCompilerInfo* findCompilerForExtension(const std::string& ext) {
     for (const auto& info : g_languageRegistry) {
         if (info.extensions.contains(ext.toLower())) {
             return &info;
@@ -7630,7 +7258,7 @@ static const LanguageCompilerInfo* findCompilerForExtension(const QString& ext) 
 }
 
 // Get output file extension based on target platform
-static QString getOutputExtension(TargetPlatform platform) {
+static std::string getOutputExtension(TargetPlatform platform) {
     switch(platform) {
         case TargetPlatform::Windows: return ".exe";
         case TargetPlatform::Linux:
@@ -7650,7 +7278,7 @@ static QString getOutputExtension(TargetPlatform platform) {
         case TargetPlatform::EmbeddedBare:
             return ".elf";  // Embedded firmware
         default:
-#ifdef Q_OS_WIN
+#ifdef 
             return ".exe";
 #else
             return "";
@@ -7661,7 +7289,7 @@ static QString getOutputExtension(TargetPlatform platform) {
 void MainWindow::toggleCompileCurrentFile()
 {
     // Get current open file
-    QString currentFile;
+    std::string currentFile;
     if (m_multiTabEditor && m_multiTabEditor->currentIndex() >= 0) {
         currentFile = m_multiTabEditor->getTabFilePath(m_multiTabEditor->currentIndex());
     }
@@ -7672,22 +7300,22 @@ void MainWindow::toggleCompileCurrentFile()
         return;
     }
     
-    QFileInfo fi(currentFile);
-    QString ext = fi.suffix().toLower();
+    std::filesystem::path fi(currentFile);
+    std::string ext = fi.suffix().toLower();
     
     // Find compiler for this file type
     const LanguageCompilerInfo* compilerInfo = findCompilerForExtension(ext);
     
     if (!compilerInfo) {
         // Build list of all supported extensions for help message
-        QStringList allExts;
+        std::vector<std::string> allExts;
         for (const auto& info : g_languageRegistry) {
             allExts.append(info.extensions);
         }
         allExts.removeDuplicates();
         allExts.sort();
         
-        statusBar()->showMessage(tr("Unsupported file type: %1").arg(ext), 3000);
+        statusBar()->showMessage(tr("Unsupported file type: %1"), 3000);
         QMessageBox::information(this, tr("Universal Compiler"),
             tr("File type '%1' is not currently supported.\n\n"
                "RawrXD Universal Compiler supports %2 languages including:\n"
@@ -7700,7 +7328,7 @@ void MainWindow::toggleCompileCurrentFile()
                "• GPU: cu, cl, hlsl, glsl, metal\n"
                "• Shell: sh, bash, ps1, bat\n"
                "• Hardware: vhd, sv, v (Verilog)\n"
-               "• And many more!").arg(ext).arg(g_languageRegistry.size()));
+               "• And many more!")));
         return;
     }
     
@@ -7712,15 +7340,15 @@ void MainWindow::toggleCompileCurrentFile()
     bool optimizeBuild = true;
     
     // Create advanced compile options dialog
-    QDialog optionsDialog(this);
-    optionsDialog.setWindowTitle(tr("Universal Compiler - %1").arg(compilerInfo->language));
+    void optionsDialog(this);
+    optionsDialog.setWindowTitle(tr("Universal Compiler - %1"));
     optionsDialog.setMinimumWidth(500);
     
     QVBoxLayout* mainLayout = new QVBoxLayout(&optionsDialog);
     
     // Header with language info
     QLabel* headerLabel = new QLabel(tr("🔧 Compiling <b>%1</b> file: <code>%2</code>")
-        .arg(compilerInfo->language).arg(fi.fileName()));
+        ));
     headerLabel->setWordWrap(true);
     mainLayout->addWidget(headerLabel);
     
@@ -7735,7 +7363,7 @@ void MainWindow::toggleCompileCurrentFile()
     rawrxdRadio->setChecked(true);
     
     QRadioButton* systemRadio = new QRadioButton(tr("🔧 System Compiler (%1)")
-        .arg(compilerInfo->nativeCompiler.isEmpty() ? tr("Not available") : compilerInfo->nativeCompiler));
+         ? tr("Not available") : compilerInfo->nativeCompiler));
     systemRadio->setToolTip(tr("Use system-installed compiler as fallback"));
     systemRadio->setEnabled(!compilerInfo->nativeCompiler.isEmpty());
     
@@ -7829,7 +7457,7 @@ void MainWindow::toggleCompileCurrentFile()
     QLabel* extLabel = new QLabel(getOutputExtension(TargetPlatform::Native));
     
     // Update extension when platform changes
-    QObject::connect(platformCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), [&](int idx) {
+    void, [&](int idx) {
         TargetPlatform p = static_cast<TargetPlatform>(platformCombo->itemData(idx).toInt());
         extLabel->setText(getOutputExtension(p));
     });
@@ -7844,13 +7472,12 @@ void MainWindow::toggleCompileCurrentFile()
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     buttonBox->button(QDialogButtonBox::Ok)->setText(tr("🔨 Compile"));
     buttonBox->button(QDialogButtonBox::Ok)->setDefault(true);
-    
-    connect(buttonBox, &QDialogButtonBox::accepted, &optionsDialog, &QDialog::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected, &optionsDialog, &QDialog::reject);
+// Qt connect removed
+// Qt connect removed
     mainLayout->addWidget(buttonBox);
     
     // Show dialog
-    if (optionsDialog.exec() != QDialog::Accepted) {
+    if (optionsDialog.exec() != void::Accepted) {
         return;
     }
     
@@ -7862,22 +7489,22 @@ void MainWindow::toggleCompileCurrentFile()
     optimizeBuild = optimizeCheck->isChecked();
     bool staticLink = staticCheck->isChecked();
     bool stripSymbols = stripCheck->isChecked();
-    QString outputName = outputEdit->text().isEmpty() ? fi.baseName() : outputEdit->text();
-    QString outputExt = getOutputExtension(targetPlatform);
-    QString outputPath = fi.absolutePath() + "/" + outputName + outputExt;
+    std::string outputName = outputEdit->text().isEmpty() ? fi.baseName() : outputEdit->text();
+    std::string outputExt = getOutputExtension(targetPlatform);
+    std::string outputPath = fi.absolutePath() + "/" + outputName + outputExt;
     
     // === START COMPILATION ===
     statusBar()->showMessage(tr("🔨 Compiling %1 (%2) → %3/%4...")
-        .arg(fi.fileName())
-        .arg(compilerInfo->language)
-        .arg(targetPlatformToString(targetPlatform))
-        .arg(targetArchToString(targetArch)), 5000);
+        )
+        
+        )
+        ), 5000);
     
     // Build compiler arguments
-    QStringList compilerArgs;
+    std::vector<std::string> compilerArgs;
     
     // Universal compiler path
-    QString compilerPath;
+    std::string compilerPath;
     if (useRawrXDCompiler) {
         compilerPath = QCoreApplication::applicationDirPath() + "/rawrxd.exe";
         
@@ -7912,63 +7539,60 @@ void MainWindow::toggleCompileCurrentFile()
     compiler->setWorkingDirectory(fi.absolutePath());
     
     // Capture output
-    QString compilerName = compilerInfo->language;
-    
-    connect(compiler, &QProcess::finished, this, [this, compiler, fi, outputPath, compilerName, targetPlatform, targetArch](int exitCode) {
-        QString output = compiler->readAllStandardOutput();
-        QString errors = compiler->readAllStandardError();
+    std::string compilerName = compilerInfo->language;
+// Qt connect removed
+        std::string errors = compiler->readAllStandardError();
         
         if (exitCode == 0) {
-            QFileInfo outFi(outputPath);
-            QString sizeStr;
+            std::filesystem::path outFi(outputPath);
+            std::string sizeStr;
             if (outFi.exists()) {
                 qint64 size = outFi.size();
-                if (size < 1024) sizeStr = QString("%1 bytes").arg(size);
-                else if (size < 1024*1024) sizeStr = QString("%1 KB").arg(size/1024.0, 0, 'f', 1);
-                else sizeStr = QString("%1 MB").arg(size/(1024.0*1024.0), 0, 'f', 2);
+                if (size < 1024) sizeStr = std::string("%1 bytes");
+                else if (size < 1024*1024) sizeStr = std::string("%1 KB");
+                else sizeStr = std::string("%1 MB"), 0, 'f', 2);
             }
             
             statusBar()->showMessage(tr("✅ %1 compiled successfully → %2 (%3) [%4/%5]")
-                .arg(fi.fileName())
-                .arg(outFi.fileName())
-                .arg(sizeStr)
-                .arg(targetPlatformToString(targetPlatform))
-                .arg(targetArchToString(targetArch)), 8000);
+                )
+                )
+                
+                )
+                ), 8000);
             
             if (notificationCenter_) {
                 notificationCenter_->notify(tr("Compilation Successful"),
                     tr("%1 (%2) compiled to %3\nTarget: %4/%5\nSize: %6")
-                        .arg(fi.fileName())
-                        .arg(compilerName)
-                        .arg(outFi.fileName())
-                        .arg(targetPlatformToString(targetPlatform))
-                        .arg(targetArchToString(targetArch))
-                        .arg(sizeStr),
+                        )
+                        
+                        )
+                        )
+                        )
+                        ,
                     NotificationCenter::NotificationLevel::Success);
             }
             
             // Log to output panel if available
             if (!output.isEmpty()) {
-                qDebug() << "Compiler output:" << output;
             }
         } else {
-            statusBar()->showMessage(tr("❌ Compilation failed: %1").arg(fi.fileName()), 5000);
+            statusBar()->showMessage(tr("❌ Compilation failed: %1")), 5000);
             
-            QString errorMsg = errors.isEmpty() ? output : errors;
+            std::string errorMsg = errors.isEmpty() ? output : errors;
             QMessageBox::critical(this, tr("Compilation Failed"),
                 tr("<b>%1 Compiler Error</b><br><br>"
                    "<b>File:</b> %2<br>"
                    "<b>Target:</b> %3 / %4<br><br>"
                    "<b>Errors:</b><pre>%5</pre>")
-                    .arg(compilerName)
-                    .arg(fi.fileName())
-                    .arg(targetPlatformToString(targetPlatform))
-                    .arg(targetArchToString(targetArch))
-                    .arg(errorMsg.left(2000)));  // Limit error message length
+                    
+                    )
+                    )
+                    )
+                    ));  // Limit error message length
             
             if (notificationCenter_) {
                 notificationCenter_->notify(tr("Compilation Failed"),
-                    tr("%1 compilation failed").arg(fi.fileName()),
+                    tr("%1 compilation failed")),
                     NotificationCenter::NotificationLevel::Error);
             }
         }
@@ -7980,15 +7604,15 @@ void MainWindow::toggleCompileCurrentFile()
     compiler->start(compilerPath, compilerArgs);
     
     if (!compiler->waitForStarted(5000)) {
-        statusBar()->showMessage(tr("❌ Failed to start %1 compiler").arg(compilerName), 3000);
+        statusBar()->showMessage(tr("❌ Failed to start %1 compiler"), 3000);
         
         QMessageBox::warning(this, tr("Compiler Error"),
             tr("Failed to start compiler: %1\n\n"
                "Make sure the RawrXD compiler is installed at:\n%2\n\n"
                "Or install the system compiler: %3")
-                .arg(compilerPath)
-                .arg(QCoreApplication::applicationDirPath())
-                .arg(compilerInfo->nativeCompiler));
+                
+                )
+                );
         
         compiler->deleteLater();
     }
@@ -7997,11 +7621,11 @@ void MainWindow::toggleCompileCurrentFile()
 void MainWindow::toggleBuildProject()
 {
     // Find all compilable files in current workspace
-    QString projectDir;
+    std::string projectDir;
     if (!m_currentWorkspacePath.isEmpty()) {
         projectDir = m_currentWorkspacePath;
     } else if (m_multiTabEditor && m_multiTabEditor->currentIndex() >= 0) {
-        QFileInfo fi(m_multiTabEditor->getTabFilePath(m_multiTabEditor->currentIndex()));
+        std::filesystem::path fi(m_multiTabEditor->getTabFilePath(m_multiTabEditor->currentIndex()));
         projectDir = fi.absolutePath();
     }
     
@@ -8013,14 +7637,14 @@ void MainWindow::toggleBuildProject()
     
     // Recursively find all compilable files
     QDirIterator it(projectDir, {"*.eon", "*.asm", "*.s", "*.c", "*.cpp", "*.rs", "*.py", "*.js", "*.go"},
-                    QDir::Files, QDirIterator::Subdirectories);
-    QStringList sourceFiles;
-    QMap<QString, int> fileTypes;
+                    std::filesystem::path::Files, QDirIterator::Subdirectories);
+    std::vector<std::string> sourceFiles;
+    std::map<std::string, int> fileTypes;
     
-    while (it.hasNext()) {
-        QString filePath = it.next();
+    while (itfalse) {
+        std::string filePath = it;
         sourceFiles << filePath;
-        QString ext = QFileInfo(filePath).suffix().toLower();
+        std::string ext = std::filesystem::path(filePath).suffix().toLower();
         fileTypes[ext]++;
     }
     
@@ -8028,96 +7652,86 @@ void MainWindow::toggleBuildProject()
         statusBar()->showMessage(tr("No compilable files found"), 3000);
         QMessageBox::information(this, tr("Build Project"),
             tr("No compilable source files found in:\n%1\n\n"
-               "Supported: .eon, .asm, .s, .c, .cpp, .rs, .py, .js, .go, etc.").arg(projectDir));
+               "Supported: .eon, .asm, .s, .c, .cpp, .rs, .py, .js, .go, etc."));
         return;
     }
     
-    statusBar()->showMessage(tr("🔨 Building %1 files...").arg(sourceFiles.size()), 2000);
-    qInfo() << "[Build] Starting build of" << sourceFiles.size() << "files";
+    statusBar()->showMessage(tr("🔨 Building %1 files...")), 2000);
     
     // Log to console
     if (m_hexMagConsole) {
         m_hexMagConsole->appendPlainText("\n========== BUILD START ==========");
-        m_hexMagConsole->appendPlainText(QString("Directory: %1").arg(projectDir));
-        m_hexMagConsole->appendPlainText(QString("Files: %1").arg(sourceFiles.size()));
+        m_hexMagConsole->appendPlainText(std::string("Directory: %1"));
+        m_hexMagConsole->appendPlainText(std::string("Files: %1")));
         for (auto it = fileTypes.begin(); it != fileTypes.end(); ++it) {
-            m_hexMagConsole->appendPlainText(QString("  • .%1: %2 files").arg(it.key()).arg(it.value()));
+            m_hexMagConsole->appendPlainText(std::string("  • .%1: %2 files"))));
         }
         m_hexMagConsole->appendPlainText("================================\n");
     }
     
     // Launch compiler for all files with parallelization
     QProcess* compiler = new QProcess(this);
-    QString compilerPath = QCoreApplication::applicationDirPath() + "/rawrxd.exe";
+    std::string compilerPath = QCoreApplication::applicationDirPath() + "/rawrxd.exe";
     
     // Check if compiler exists
-    if (!QFileInfo::exists(compilerPath)) {
+    if (!std::filesystem::path::exists(compilerPath)) {
         compilerPath = QCoreApplication::applicationDirPath() + "/../build/bin/Release/rawrxd.exe";
-        if (!QFileInfo::exists(compilerPath)) {
+        if (!std::filesystem::path::exists(compilerPath)) {
             statusBar()->showMessage(tr("RawrXD compiler not found"), 3000);
             QMessageBox::critical(this, tr("Compiler Error"), tr("Could not find rawrxd.exe compiler."));
             return;
         }
     }
     
-    QStringList args = {"-j4"};  // 4 parallel threads
-    for (const QString& f : sourceFiles) {
+    std::vector<std::string> args = {"-j4"};  // 4 parallel threads
+    for (const std::string& f : sourceFiles) {
         args << f;
     }
     
     // Monitor output
-    connect(compiler, &QProcess::readyReadStandardOutput, this, [this, compiler]() {
-        QString output = QString::fromUtf8(compiler->readAllStandardOutput());
+// Qt connect removed
         if (!output.isEmpty() && m_hexMagConsole) {
             m_hexMagConsole->appendPlainText(output);
         }
     });
-    
-    connect(compiler, &QProcess::readyReadStandardError, this, [this, compiler]() {
-        QString error = QString::fromUtf8(compiler->readAllStandardError());
+// Qt connect removed
         if (!error.isEmpty() && m_hexMagConsole) {
             m_hexMagConsole->appendPlainText("[ERROR] " + error);
         }
     });
-    
-    connect(compiler, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, [this, compiler, sourceFiles, projectDir](int exitCode, QProcess::ExitStatus exitStatus) {
-        if (exitCode == 0 && exitStatus == QProcess::NormalExit) {
-            // Count successful outputs
-            int successCount = 0;
-            for (const QString& src : sourceFiles) {
-                QFileInfo srcInfo(src);
-                QString outFile = srcInfo.absolutePath() + "/" + srcInfo.baseName() + ".exe";
-                if (QFileInfo::exists(outFile)) successCount++;
+// Qt connect removed
+            for (const std::string& src : sourceFiles) {
+                std::filesystem::path srcInfo(src);
+                std::string outFile = srcInfo.absolutePath() + "/" + srcInfo.baseName() + ".exe";
+                if (std::filesystem::path::exists(outFile)) successCount++;
             }
             
-            statusBar()->showMessage(tr("✅ Build successful: %1/%2 files compiled").arg(successCount).arg(sourceFiles.size()), 5000);
+            statusBar()->showMessage(tr("✅ Build successful: %1/%2 files compiled")), 5000);
             
             if (m_hexMagConsole) {
                 m_hexMagConsole->appendPlainText("\n========== BUILD SUCCESS ==========");
-                m_hexMagConsole->appendPlainText(QString("Compiled: %1 of %2 files").arg(successCount).arg(sourceFiles.size()));
+                m_hexMagConsole->appendPlainText(std::string("Compiled: %1 of %2 files")));
                 m_hexMagConsole->appendPlainText("===================================\n");
             }
             
-            qInfo() << "[Build] Build successful -" << successCount << "of" << sourceFiles.size() << "files";
             
             if (notificationCenter_) {
                 notificationCenter_->notify(tr("Build Complete"),
-                    tr("Successfully built %1 of %2 files").arg(successCount).arg(sourceFiles.size()),
+                    tr("Successfully built %1 of %2 files")),
                     NotificationCenter::NotificationLevel::Success);
             }
         } else {
-            statusBar()->showMessage(tr("❌ Build failed (exit code: %1)").arg(exitCode), 5000);
+            statusBar()->showMessage(tr("❌ Build failed (exit code: %1)"), 5000);
             
             if (m_hexMagConsole) {
                 m_hexMagConsole->appendPlainText("\n========== BUILD FAILED ==========");
-                m_hexMagConsole->appendPlainText(QString("Exit Code: %1").arg(exitCode));
+                m_hexMagConsole->appendPlainText(std::string("Exit Code: %1"));
                 m_hexMagConsole->appendPlainText("===================================\n");
             }
             
-            QString errors = compiler->readAllStandardError();
+            std::string errors = compiler->readAllStandardError();
             QMessageBox::warning(this, tr("Build Failed"),
-                tr("Build failed with exit code %1\n\nErrors:\n%2").arg(exitCode).arg(errors.left(1000)));
+                tr("Build failed with exit code %1\n\nErrors:\n%2")));
         }
         compiler->deleteLater();
     });
@@ -8133,11 +7747,11 @@ void MainWindow::toggleBuildProject()
 
 void MainWindow::toggleCleanBuild()
 {
-    QString projectDir;
+    std::string projectDir;
     if (!m_currentWorkspacePath.isEmpty()) {
         projectDir = m_currentWorkspacePath;
     } else if (m_multiTabEditor && m_multiTabEditor->currentIndex() >= 0) {
-        QFileInfo fi(m_multiTabEditor->getTabFilePath(m_multiTabEditor->currentIndex()));
+        std::filesystem::path fi(m_multiTabEditor->getTabFilePath(m_multiTabEditor->currentIndex()));
         projectDir = fi.absolutePath();
     }
     
@@ -8154,7 +7768,7 @@ void MainWindow::toggleCleanBuild()
            "  • Object files: *.obj, *.o\n"
            "  • Libraries: *.lib, *.a, *.dll, *.so\n"
            "  • Intermediate: *.ir, *.s, *.ll\n\n"
-           "Continue?").arg(projectDir),
+           "Continue?"),
         QMessageBox::Yes | QMessageBox::No);
     
     if (ret != QMessageBox::Yes) {
@@ -8163,30 +7777,29 @@ void MainWindow::toggleCleanBuild()
     }
     
     statusBar()->showMessage(tr("🧹 Cleaning build artifacts.."), 2000);
-    qInfo() << "[Clean] Starting artifact cleanup in" << projectDir;
     
     if (m_hexMagConsole) {
         m_hexMagConsole->appendPlainText("\n========== CLEAN START ==========");
-        m_hexMagConsole->appendPlainText(QString("Directory: %1").arg(projectDir));
+        m_hexMagConsole->appendPlainText(std::string("Directory: %1"));
     }
     
-    QDir dir(projectDir);
-    QStringList cleanPatterns = {"*.exe", "*.obj", "*.o", "*.lib", "*.dll", "*.ir", "*.s", "*.out", 
+    std::filesystem::path dir(projectDir);
+    std::vector<std::string> cleanPatterns = {"*.exe", "*.obj", "*.o", "*.lib", "*.dll", "*.ir", "*.s", "*.out", 
                                  "*.a", "*.so", "*.dll", "*.dylib", "*.ll"};
     int cleaned = 0, failed = 0;
     
     // Recursively find and delete
-    QDirIterator it(projectDir, QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-    QStringList filesToDelete;
+    QDirIterator it(projectDir, std::filesystem::path::Files | std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot, QDirIterator::Subdirectories);
+    std::vector<std::string> filesToDelete;
     
-    while (it.hasNext()) {
-        QString path = it.next();
-        QFileInfo info(path);
+    while (itfalse) {
+        std::string path = it;
+        std::filesystem::path info(path);
         
         if (info.isFile()) {
-            for (const QString& pattern : cleanPatterns) {
-                QRegularExpression rx(QRegularExpression::wildcardToRegularExpression(pattern),
-                                       QRegularExpression::CaseInsensitiveOption);
+            for (const std::string& pattern : cleanPatterns) {
+                std::regex rx(std::regex::wildcardToRegularExpression(pattern),
+                                       std::regex::CaseInsensitiveOption);
                 if (rx.match(info.fileName()).hasMatch()) {
                     filesToDelete << path;
                     break;
@@ -8196,51 +7809,48 @@ void MainWindow::toggleCleanBuild()
     }
     
     // Delete files
-    for (const QString& file : filesToDelete) {
-        QFileInfo fInfo(file);
-        if (QFile::remove(file)) {
+    for (const std::string& file : filesToDelete) {
+        std::filesystem::path fInfo(file);
+        if (std::fstream::remove(file)) {
             cleaned++;
-            qInfo() << "[Clean] Deleted" << fInfo.fileName();
             if (m_hexMagConsole) {
-                m_hexMagConsole->appendPlainText(QString("  ✓ Deleted: %1").arg(fInfo.fileName()));
+                m_hexMagConsole->appendPlainText(std::string("  ✓ Deleted: %1")));
             }
         } else {
             failed++;
-            qWarning() << "[Clean] Failed to delete" << file;
             if (m_hexMagConsole) {
-                m_hexMagConsole->appendPlainText(QString("  ✗ Failed: %1").arg(fInfo.fileName()));
+                m_hexMagConsole->appendPlainText(std::string("  ✗ Failed: %1")));
             }
         }
     }
     
-    QString summary = tr("✅ Cleaned %1 files").arg(cleaned);
+    std::string summary = tr("✅ Cleaned %1 files");
     if (failed > 0) {
-        summary += tr(" (%1 failed)").arg(failed);
+        summary += tr(" (%1 failed)");
     }
     
     statusBar()->showMessage(summary, 3000);
     
     if (m_hexMagConsole) {
         m_hexMagConsole->appendPlainText("\n========== CLEAN COMPLETE ==========");
-        m_hexMagConsole->appendPlainText(QString("Deleted: %1 files").arg(cleaned));
+        m_hexMagConsole->appendPlainText(std::string("Deleted: %1 files"));
         if (failed > 0) {
-            m_hexMagConsole->appendPlainText(QString("Failed: %1 files").arg(failed));
+            m_hexMagConsole->appendPlainText(std::string("Failed: %1 files"));
         }
         m_hexMagConsole->appendPlainText("====================================\n");
     }
     
-    qInfo() << "[Clean] Cleaned" << cleaned << "files, failed" << failed;
     
     if (notificationCenter_) {
         notificationCenter_->notify(tr("Clean Complete"),
-            tr("Cleaned %1 build artifacts").arg(cleaned),
+            tr("Cleaned %1 build artifacts"),
             NotificationCenter::NotificationLevel::Info);
     }
     
     // Ask if user wants to rebuild
     int rebuildRet = QMessageBox::question(this, tr("Rebuild"),
         tr("Build artifacts cleaned (%1 files).\n\n"
-           "Rebuild project now?").arg(cleaned),
+           "Rebuild project now?"),
         QMessageBox::Yes | QMessageBox::No);
     
     if (rebuildRet == QMessageBox::Yes) {
@@ -8252,19 +7862,19 @@ void MainWindow::toggleCompilerSettings()
 {
     // Load current settings
     QSettings settings("RawrXD", "Compiler");
-    QString savedTarget = settings.value("target_arch", "x86-64").toString();
-    QString savedOpt = settings.value("opt_level", "O2").toString();
+    std::string savedTarget = settings.value("target_arch", "x86-64").toString();
+    std::string savedOpt = settings.value("opt_level", "O2").toString();
     bool savedDebug = settings.value("debug_info", false).toBool();
     bool savedWarnings = settings.value("warnings_as_errors", false).toBool();
     bool savedVerbose = settings.value("verbose", false).toBool();
     int savedThreads = settings.value("parallel_threads", 4).toInt();
-    QString savedOutput = settings.value("output_format", "Executable (.exe)").toString();
+    std::string savedOutput = settings.value("output_format", "Executable (.exe)").toString();
     
     // Create settings dialog
-    QDialog* dialog = new QDialog(this);
+    void* dialog = new void(this);
     dialog->setWindowTitle(tr("🔧 Eon/ASM Compiler Settings"));
     dialog->setMinimumSize(600, 650);
-    dialog->setWindowModality(Qt::WindowModal);
+    dialog->setWindowModality(//WindowModal);
     
     QVBoxLayout* layout = new QVBoxLayout(dialog);
     
@@ -8279,7 +7889,7 @@ void MainWindow::toggleCompilerSettings()
     QComboBox* targetCombo = new QComboBox(targetGroup);
     targetCombo->addItems({"x86-64 (Default, Native 64-bit)", "x86 (32-bit)", "ARM64 (Apple Silicon)", 
                            "ARM32 (ARMv7)", "RISC-V 64-bit", "WebAssembly"});
-    int targetIndex = targetCombo->findText(savedTarget, Qt::MatchStartsWith);
+    int targetIndex = targetCombo->findText(savedTarget, //MatchStartsWith);
     if (targetIndex >= 0) targetCombo->setCurrentIndex(targetIndex);
     targetLayout->addWidget(new QLabel(tr("Select target CPU architecture for compilation")));
     targetLayout->addWidget(targetCombo);
@@ -8306,7 +7916,7 @@ void MainWindow::toggleCompilerSettings()
                         "O2 - Standard optimization (Default, balanced)", 
                         "O3 - Aggressive optimization (Slower compile, faster code)",
                         "Os - Optimize for size (Smallest binary)"});
-    int optIndex = optCombo->findText(savedOpt, Qt::MatchStartsWith);
+    int optIndex = optCombo->findText(savedOpt, //MatchStartsWith);
     if (optIndex >= 0) optCombo->setCurrentIndex(optIndex);
     else optCombo->setCurrentIndex(2);
     optLayout->addWidget(new QLabel(tr("Higher levels produce faster code but take longer to compile")));
@@ -8318,11 +7928,11 @@ void MainWindow::toggleCompilerSettings()
     QVBoxLayout* parallelLayout = new QVBoxLayout(parallelGroup);
     QSpinBox* threadsSpinner = new QSpinBox(parallelGroup);
     threadsSpinner->setMinimum(1);
-    int maxThreads = QThread::idealThreadCount();
+    int maxThreads = std::thread::idealThreadCount();
     threadsSpinner->setMaximum(maxThreads);
     threadsSpinner->setValue(savedThreads);
     parallelLayout->addWidget(new QLabel(tr("Number of parallel compilation threads (System: %1 cores):")
-        .arg(maxThreads)));
+        ));
     parallelLayout->addWidget(threadsSpinner);
     layout->addWidget(parallelGroup);
     
@@ -8364,11 +7974,7 @@ void MainWindow::toggleCompilerSettings()
     // === Buttons ===
     QDialogButtonBox* buttons = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::RestoreDefaults, dialog);
-    
-    connect(buttons->button(QDialogButtonBox::Ok), &QPushButton::clicked, dialog, [this, dialog, targetCombo, outputCombo, optCombo,
-                                                             debugCheck, warningsCheck, verboseCheck, threadsSpinner]() {
-        // Save settings
-        QSettings settings("RawrXD", "Compiler");
+// Qt connect removed
         settings.setValue("target_arch", targetCombo->currentText().split(" ").first());
         settings.setValue("output_format", outputCombo->currentText());
         settings.setValue("opt_level", optCombo->currentText().split(" ").first());
@@ -8378,14 +7984,11 @@ void MainWindow::toggleCompilerSettings()
         settings.setValue("parallel_threads", threadsSpinner->value());
         settings.sync();
         
-        qInfo() << "[Settings] Compiler settings saved";
         statusBar()->showMessage(tr("✅ Compiler settings saved"), 3000);
         dialog->accept();
     });
-    
-    connect(buttons->button(QDialogButtonBox::Cancel), &QPushButton::clicked, dialog, &QDialog::reject);
-    
-    connect(buttons->button(QDialogButtonBox::RestoreDefaults), &QPushButton::clicked, dialog, [this, targetCombo, outputCombo, optCombo, debugCheck, warningsCheck, verboseCheck, threadsSpinner]() {
+// Qt connect removed
+// Qt connect removed
         targetCombo->setCurrentIndex(0);  // x86-64
         outputCombo->setCurrentIndex(0);  // Executable
         optCombo->setCurrentIndex(2);     // O2
@@ -8410,13 +8013,13 @@ void MainWindow::toggleCompilerOutput()
     if (!m_compilerOutputDock) {
         m_compilerOutputDock = new QDockWidget(tr("🔨 Compiler Output"), this);
         m_compilerOutputDock->setObjectName("CompilerOutputDock");
-        m_compilerOutputDock->setAllowedAreas(Qt::AllDockWidgetAreas);
+        m_compilerOutputDock->setAllowedAreas(//AllDockWidgetAreas);
         m_compilerOutputDock->setFeatures(QDockWidget::DockWidgetMovable |
                                           QDockWidget::DockWidgetFloatable |
                                           QDockWidget::DockWidgetClosable);
         
         // Create output widget container
-        QWidget* outputContainer = new QWidget(m_compilerOutputDock);
+        void* outputContainer = new void(m_compilerOutputDock);
         QVBoxLayout* containerLayout = new QVBoxLayout(outputContainer);
         containerLayout->setContentsMargins(0, 0, 0, 0);
         containerLayout->setSpacing(0);
@@ -8429,11 +8032,8 @@ void MainWindow::toggleCompilerOutput()
         
         QAction* clearAction = toolbar->addAction(tr("Clear"));
         clearAction->setToolTip(tr("Clear output (Ctrl+L)"));
-        connect(clearAction, &QAction::triggered, this, [this]() {
-            if (m_compilerOutput) {
-                m_compilerOutput->clear();
+// Qt connect removed
                 statusBar()->showMessage(tr("✅ Compiler output cleared"), 2000);
-                qInfo() << "[Output] Cleared compiler output";
             }
         });
         
@@ -8441,18 +8041,14 @@ void MainWindow::toggleCompilerOutput()
         
         QAction* copyAction = toolbar->addAction(tr("Copy All"));
         copyAction->setToolTip(tr("Copy all output to clipboard"));
-        connect(copyAction, &QAction::triggered, this, [this]() {
-            if (m_compilerOutput) {
-                QApplication::clipboard()->setText(m_compilerOutput->toPlainText());
+// Qt connect removed
                 statusBar()->showMessage(tr("✅ Output copied to clipboard"), 2000);
             }
         });
         
         QAction* selectAllAction = toolbar->addAction(tr("Select All"));
         selectAllAction->setToolTip(tr("Select all output (Ctrl+A)"));
-        connect(selectAllAction, &QAction::triggered, this, [this]() {
-            if (m_compilerOutput) {
-                m_compilerOutput->selectAll();
+// Qt connect removed
             }
         });
         
@@ -8460,28 +8056,25 @@ void MainWindow::toggleCompilerOutput()
         
         QAction* saveAction = toolbar->addAction(tr("Save"));
         saveAction->setToolTip(tr("Save output to file"));
-        connect(saveAction, &QAction::triggered, this, [this]() {
-            if (!m_compilerOutput) return;
+// Qt connect removed
+            std::string defaultPath = std::filesystem::path::homePath() + "/compiler_output_" + 
+                std::chrono::system_clock::time_point::currentDateTime().toString("yyyy-MM-dd_hh-mm-ss") + ".txt";
             
-            QString defaultPath = QDir::homePath() + "/compiler_output_" + 
-                QDateTime::currentDateTime().toString("yyyy-MM-dd_hh-mm-ss") + ".txt";
-            
-            QString fileName = QFileDialog::getSaveFileName(this,
+            std::string fileName = QFileDialog::getSaveFileName(this,
                 tr("Save Compiler Output"), defaultPath,
                 tr("Text Files (*.txt);;Log Files (*.log);;All Files (*.*)"));
             
             if (!fileName.isEmpty()) {
-                QFile file(fileName);
+                std::fstream file(fileName);
                 if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
                     QTextStream stream(&file);
                     stream << m_compilerOutput->toPlainText();
                     file.close();
-                    statusBar()->showMessage(tr("✅ Output saved: %1").arg(QFileInfo(fileName).fileName()), 3000);
-                    qInfo() << "[Output] Saved to" << fileName;
+                    statusBar()->showMessage(tr("✅ Output saved: %1").fileName()), 3000);
                     
                     if (notificationCenter_) {
                         notificationCenter_->notify(tr("Output Saved"),
-                            tr("Compiler output saved to:\n%1").arg(fileName),
+                            tr("Compiler output saved to:\n%1"),
                             NotificationCenter::NotificationLevel::Info);
                     }
                 } else {
@@ -8516,10 +8109,7 @@ void MainWindow::toggleCompilerOutput()
             "}");
         
         // Connect word wrap checkbox
-        connect(wrapCheck, &QCheckBox::toggled, this, [this](bool checked) {
-            if (m_compilerOutput) {
-                m_compilerOutput->setWordWrapMode(checked ? QTextOption::WrapAtWordBoundaryOrAnywhere 
-                                                         : QTextOption::NoWrap);
+// Qt connect removed
             }
         });
         
@@ -8530,18 +8120,16 @@ void MainWindow::toggleCompilerOutput()
         statusLabel->setStyleSheet("QLabel { background-color: #2d2d2d; color: #cccccc; padding: 4px; }");
         
         // Update status when text changes
-        connect(m_compilerOutput, &QPlainTextEdit::textChanged, this, [statusLabel, this]() {
-            int lines = m_compilerOutput->document()->lineCount();
+// Qt connect removed
             int chars = m_compilerOutput->toPlainText().length();
-            statusLabel->setText(tr("Lines: %1  |  Characters: %2").arg(lines).arg(chars));
+            statusLabel->setText(tr("Lines: %1  |  Characters: %2"));
         });
         
         containerLayout->addWidget(statusLabel);
         
         m_compilerOutputDock->setWidget(outputContainer);
-        addDockWidget(Qt::BottomDockWidgetArea, m_compilerOutputDock);
+        addDockWidget(//BottomDockWidgetArea, m_compilerOutputDock);
         
-        qInfo() << "[UI] Compiler Output dock created with toolbar";
     }
     
     // Toggle visibility
@@ -8574,23 +8162,18 @@ void MainWindow::setupOrchestrationSystem()
     if (!m_orchestrationDock) {
         m_orchestrationDock = new QDockWidget(tr("Task Orchestration"), this);
         m_orchestrationDock->setWidget(m_orchestrationUI);
-        addDockWidget(Qt::RightDockWidgetArea, m_orchestrationDock);
+        addDockWidget(//RightDockWidgetArea, m_orchestrationDock);
         
         // Connect orchestrator signals to main window for integration
-        connect(m_taskOrchestrator, &RawrXD::TaskOrchestrator::taskSplitCompleted,
-                this, [this](const QList<RawrXD::TaskDefinition>& tasks) {
-                    statusBar()->showMessage(tr("Task split into %1 subtasks").arg(tasks.size()), 3000);
+// Qt connect removed
                 });
-        
-        connect(m_taskOrchestrator, &RawrXD::TaskOrchestrator::orchestrationCompleted,
-                this, [this](const QList<RawrXD::OrchestrationResult>& results) {
-                    int successCount = 0;
+// Qt connect removed
                     for (const RawrXD::OrchestrationResult& result : results) {
                         if (result.success) successCount++;
                     }
                     statusBar()->showMessage(
                         tr("Orchestration completed: %1/%2 tasks successful")
-                            .arg(successCount).arg(results.size()), 5000);
+                            ), 5000);
                 });
     }
     
@@ -8604,16 +8187,15 @@ void MainWindow::setupCommandPalette()
     RawrXD::Integration::ScopedTimer timer("MainWindow", "setupCommandPalette", "ui");
     
     if (m_commandPalette) {
-        qDebug() << "[MainWindow] Command palette already initialized";
         return;
     }
     
     // Create command palette widget
-    m_commandPalette = new QWidget(this, Qt::Popup | Qt::FramelessWindowHint);
+    m_commandPalette = new void(this, //Popup | //FramelessWindowHint);
     m_commandPalette->setObjectName("CommandPalette");
     m_commandPalette->setMinimumSize(500, 400);
     m_commandPalette->setStyleSheet(
-        "QWidget#CommandPalette { background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 8px; }"
+        "void#CommandPalette { background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 8px; }"
         "QLineEdit { background: #252526; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 4px; padding: 8px; font-size: 14px; }"
         "QListWidget { background: #1e1e1e; color: #cccccc; border: none; }"
         "QListWidget::item { padding: 8px; }"
@@ -8637,12 +8219,12 @@ void MainWindow::setupCommandPalette()
     layout->addWidget(commandList);
     
     // Populate commands from menu actions
-    QStringList commands;
-    auto addMenuCommands = [&commands](QMenu* menu, const QString& prefix = "") {
+    std::vector<std::string> commands;
+    auto addMenuCommands = [&commands](QMenu* menu, const std::string& prefix = "") {
         if (!menu) return;
         for (QAction* action : menu->actions()) {
             if (!action->text().isEmpty() && !action->isSeparator()) {
-                QString cmd = prefix.isEmpty() ? action->text() : prefix + " > " + action->text();
+                std::string cmd = prefix.isEmpty() ? action->text() : prefix + " > " + action->text();
                 cmd.remove('&'); // Remove mnemonics
                 commands << cmd;
             }
@@ -8664,10 +8246,9 @@ void MainWindow::setupCommandPalette()
     commandList->addItems(commands);
     
     // Filter on search
-    connect(searchInput, &QLineEdit::textChanged, this, [commandList, commands](const QString& text) {
-        commandList->clear();
-        for (const QString& cmd : commands) {
-            if (text.isEmpty() || cmd.contains(text, Qt::CaseInsensitive)) {
+// Qt connect removed
+        for (const std::string& cmd : commands) {
+            if (text.isEmpty() || cmd.contains(text, //CaseInsensitive)) {
                 commandList->addItem(cmd);
             }
         }
@@ -8677,8 +8258,7 @@ void MainWindow::setupCommandPalette()
     });
     
     // Execute command on selection
-    connect(commandList, &QListWidget::itemActivated, this, [this](QListWidgetItem* item) {
-        QString cmd = item->text();
+// Qt connect removed
         m_commandPalette->hide();
         executeCommand(cmd);
     });
@@ -8686,83 +8266,80 @@ void MainWindow::setupCommandPalette()
     // Escape to close
     searchInput->installEventFilter(this);
     
-    qInfo() << "[MainWindow] Command palette initialized with" << commands.size() << "commands";
 }
 
-void MainWindow::executeCommand(const QString& command)
+void MainWindow::executeCommand(const std::string& command)
 {
     // Execute command from command palette
     RawrXD::Integration::ScopedTimer timer("MainWindow", "executeCommand", "command");
-    qInfo() << "[CommandPalette] Executing:" << command;
     
     // Map command strings to actions using existing methods
-    if (command.contains("New File", Qt::CaseInsensitive)) {
+    if (command.contains("New File", //CaseInsensitive)) {
         handleNewEditor();  // Use existing slot
-    } else if (command.contains("Open File", Qt::CaseInsensitive)) {
+    } else if (command.contains("Open File", //CaseInsensitive)) {
         handleAddFile();    // Use existing slot  
-    } else if (command.contains("Save As", Qt::CaseInsensitive)) {
+    } else if (command.contains("Save As", //CaseInsensitive)) {
         handleSaveAs();     // Use existing slot
-    } else if (command.contains("Save", Qt::CaseInsensitive)) {
+    } else if (command.contains("Save", //CaseInsensitive)) {
         handleSaveState();  // Use existing slot
-    } else if (command.contains("Undo", Qt::CaseInsensitive)) {
+    } else if (command.contains("Undo", //CaseInsensitive)) {
         handleUndo();       // Use existing slot
-    } else if (command.contains("Redo", Qt::CaseInsensitive)) {
+    } else if (command.contains("Redo", //CaseInsensitive)) {
         handleRedo();       // Use existing slot
-    } else if (command.contains("Cut", Qt::CaseInsensitive)) {
+    } else if (command.contains("Cut", //CaseInsensitive)) {
         handleCut();        // Use existing slot
-    } else if (command.contains("Copy", Qt::CaseInsensitive)) {
+    } else if (command.contains("Copy", //CaseInsensitive)) {
         handleCopy();       // Use existing slot
-    } else if (command.contains("Paste", Qt::CaseInsensitive)) {
+    } else if (command.contains("Paste", //CaseInsensitive)) {
         handlePaste();      // Use existing slot
-    } else if (command.contains("Toggle Terminal", Qt::CaseInsensitive)) {
+    } else if (command.contains("Toggle Terminal", //CaseInsensitive)) {
         toggleTerminalEmulator(terminalEmulator_ ? !terminalEmulator_->isVisible() : true);
-    } else if (command.contains("Toggle Explorer", Qt::CaseInsensitive)) {
+    } else if (command.contains("Toggle Explorer", //CaseInsensitive)) {
         toggleProjectExplorer(projectExplorer_ ? !projectExplorer_->isVisible() : true);
-    } else if (command.contains("Toggle Output", Qt::CaseInsensitive)) {
+    } else if (command.contains("Toggle Output", //CaseInsensitive)) {
         toggleBuildSystem(buildWidget_ ? !buildWidget_->isVisible() : true);
-    } else if (command.contains("Build Project", Qt::CaseInsensitive)) {
+    } else if (command.contains("Build Project", //CaseInsensitive)) {
         toggleBuildProject();  // Use existing slot
-    } else if (command.contains("Run", Qt::CaseInsensitive) && !command.contains("Debug")) {
+    } else if (command.contains("Run", //CaseInsensitive) && !command.contains("Debug")) {
         handleRunNoDebug();    // Use existing slot
-    } else if (command.contains("Debug", Qt::CaseInsensitive)) {
+    } else if (command.contains("Debug", //CaseInsensitive)) {
         handleStartDebug();    // Use existing slot
-    } else if (command.contains("Commit", Qt::CaseInsensitive)) {
+    } else if (command.contains("Commit", //CaseInsensitive)) {
         onVcsStatusChanged();  // Use existing slot for VCS
-    } else if (command.contains("Push", Qt::CaseInsensitive)) {
+    } else if (command.contains("Push", //CaseInsensitive)) {
         onVcsStatusChanged();  // Use existing slot for VCS
-    } else if (command.contains("Pull", Qt::CaseInsensitive)) {
+    } else if (command.contains("Pull", //CaseInsensitive)) {
         onVcsStatusChanged();  // Use existing slot for VCS
-    } else if (command.contains("Branch", Qt::CaseInsensitive)) {
+    } else if (command.contains("Branch", //CaseInsensitive)) {
         onVcsStatusChanged();  // Use existing slot for VCS
-    } else if (command.contains("Send to Chat", Qt::CaseInsensitive)) {
+    } else if (command.contains("Send to Chat", //CaseInsensitive)) {
         // Use codeView_ or editor tabs
         if (codeView_) {
-            QString selected = codeView_->textCursor().selectedText();
+            std::string selected = codeView_->textCursor().selectedText();
             if (!selected.isEmpty() && m_aiChatPanel) {
                 // Send to AI chat
                 onAIChatMessageSubmitted(selected);
             }
         }
-    } else if (command.contains("Explain Code", Qt::CaseInsensitive)) {
+    } else if (command.contains("Explain Code", //CaseInsensitive)) {
         explainCode();  // Use existing slot
-    } else if (command.contains("Generate Tests", Qt::CaseInsensitive)) {
+    } else if (command.contains("Generate Tests", //CaseInsensitive)) {
         generateTests();  // Use existing slot
-    } else if (command.contains("Settings", Qt::CaseInsensitive)) {
+    } else if (command.contains("Settings", //CaseInsensitive)) {
         toggleSettings(true);
-    } else if (command.contains("Theme", Qt::CaseInsensitive)) {
+    } else if (command.contains("Theme", //CaseInsensitive)) {
         // Open theme selector
-        QStringList themes = {"Dark", "Light", "Monokai", "Solarized Dark", "Solarized Light"};
+        std::vector<std::string> themes = {"Dark", "Light", "Monokai", "Solarized Dark", "Solarized Light"};
         bool ok;
-        QString theme = QInputDialog::getItem(this, tr("Select Theme"), tr("Theme:"), themes, 0, false, &ok);
+        std::string theme = QInputDialog::getItem(this, tr("Select Theme"), tr("Theme:"), themes, 0, false, &ok);
         if (ok && !theme.isEmpty()) {
             applyDarkTheme();  // Use existing method (always dark for now)
         }
     } else {
-        qWarning() << "[CommandPalette] Unknown command:" << command;
-        statusBar()->showMessage(tr("Unknown command: %1").arg(command), 3000);
+        statusBar()->showMessage(tr("Unknown command: %1"), 3000);
     }
     
-    statusBar()->showMessage(tr("Executed: %1").arg(command), 2000);
+    statusBar()->showMessage(tr("Executed: %1"), 2000);
 }
 
 void MainWindow::showCommandPalette()
@@ -8791,7 +8368,7 @@ void MainWindow::showCommandPalette()
 // Agent System Integration - Production Ready Implementations
 // ============================================================
 
-void MainWindow::onAgentWishReceived(const QString& wish) {
+void MainWindow::onAgentWishReceived(const std::string& wish) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onAgentWishReceived", "agent");
     RawrXD::Integration::traceEvent("Agent", "wish_received");
     
@@ -8809,7 +8386,7 @@ void MainWindow::onAgentWishReceived(const QString& wish) {
     QSettings settings("RawrXD", "IDE");
     int wishCount = settings.value("agent/wishesReceived", 0).toInt() + 1;
     settings.setValue("agent/wishesReceived", wishCount);
-    settings.setValue("agent/lastWishTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("agent/lastWishTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     settings.setValue("agent/lastWish", wish.left(500));
     
     // Process agent wish through agentic engine
@@ -8819,7 +8396,7 @@ void MainWindow::onAgentWishReceived(const QString& wish) {
     
     // Show in agent chat pane if available
     if (m_aiChatPanel) {
-        m_aiChatPanel->addUserMessage(tr("🎯 Wish: %1").arg(wish));
+        m_aiChatPanel->addUserMessage(tr("🎯 Wish: %1"));
     }
     
     MetricsCollector::instance().incrementCounter("agent_wishes_received");
@@ -8827,11 +8404,11 @@ void MainWindow::onAgentWishReceived(const QString& wish) {
     statusBar()->showMessage(tr("Agent wish received"), 2000);
     
     RawrXD::Integration::logInfo("MainWindow", "agent_wish_received",
-        QString("Agent wish received (length: %1, total: %2)").arg(wish.length()).arg(wishCount),
-        QJsonObject{{"wish_length", wish.length()}, {"total_wishes", wishCount}});
+        std::string("Agent wish received (length: %1, total: %2)")),
+        void*{{"wish_length", wish.length()}, {"total_wishes", wishCount}});
 }
 
-void MainWindow::onAgentPlanGenerated(const QString& planSummary) {
+void MainWindow::onAgentPlanGenerated(const std::string& planSummary) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onAgentPlanGenerated", "agent");
     RawrXD::Integration::traceEvent("Agent", "plan_generated");
     
@@ -8849,29 +8426,29 @@ void MainWindow::onAgentPlanGenerated(const QString& planSummary) {
     QSettings settings("RawrXD", "IDE");
     int planCount = settings.value("agent/plansGenerated", 0).toInt() + 1;
     settings.setValue("agent/plansGenerated", planCount);
-    settings.setValue("agent/lastPlanTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("agent/lastPlanTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     settings.setValue("agent/lastPlanLength", planSummary.length());
     
     // Show plan in agent chat pane if available
     if (m_aiChatPanel) {
-        m_aiChatPanel->addAssistantMessage(tr("📋 Plan:\n%1").arg(planSummary));
+        m_aiChatPanel->addAssistantMessage(tr("📋 Plan:\n%1"));
     }
     
     MetricsCollector::instance().incrementCounter("agent_plans_generated");
     MetricsCollector::instance().recordLatency("agent_plan_length", planSummary.length());
-    statusBar()->showMessage(tr("Agent plan generated (%1 steps)").arg(planSummary.count('\n') + 1), 3000);
+    statusBar()->showMessage(tr("Agent plan generated (%1 steps)") + 1), 3000);
     
     // Show notification
     if (notificationCenter_) {
         notificationCenter_->notify(
             tr("Agent Plan Ready"),
-            tr("The agent has generated a plan with %1 steps.").arg(planSummary.count('\n') + 1),
+            tr("The agent has generated a plan with %1 steps.") + 1),
             NotificationCenter::NotificationLevel::Info);
     }
     
     RawrXD::Integration::logInfo("MainWindow", "agent_plan_generated",
-        QString("Agent plan generated (length: %1, total: %2)").arg(planSummary.length()).arg(planCount),
-        QJsonObject{{"plan_length", planSummary.length()}, {"total_plans", planCount}});
+        std::string("Agent plan generated (length: %1, total: %2)")),
+        void*{{"plan_length", planSummary.length()}, {"total_plans", planCount}});
 }
 
 void MainWindow::onAgentExecutionCompleted(bool success) {
@@ -8886,7 +8463,7 @@ void MainWindow::onAgentExecutionCompleted(bool success) {
     QSettings settings("RawrXD", "IDE");
     int execCount = settings.value("agent/executionsCompleted", 0).toInt() + 1;
     settings.setValue("agent/executionsCompleted", execCount);
-    settings.setValue("agent/lastExecutionTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("agent/lastExecutionTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     settings.setValue("agent/lastExecutionSuccess", success);
     
     if (success) {
@@ -8899,7 +8476,7 @@ void MainWindow::onAgentExecutionCompleted(bool success) {
     
     // Show result in agent chat pane if available
     if (m_aiChatPanel) {
-        QString result = success ? tr("✅ Execution completed successfully") 
+        std::string result = success ? tr("✅ Execution completed successfully") 
                                  : tr("❌ Execution failed");
         m_aiChatPanel->addAssistantMessage(result);
     }
@@ -8923,8 +8500,8 @@ void MainWindow::onAgentExecutionCompleted(bool success) {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "agent_execution_completed",
-        QString("Agent execution %1 (total: %2)").arg(success ? "succeeded" : "failed").arg(execCount),
-        QJsonObject{{"success", success}, {"total_executions", execCount}});
+        std::string("Agent execution %1 (total: %2)"),
+        void*{{"success", success}, {"total_executions", execCount}});
 }
 
 // ============================================================
@@ -8933,19 +8510,19 @@ void MainWindow::onAgentExecutionCompleted(bool success) {
 
 void MainWindow::handleSaveAs()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
+    std::string fileName = QFileDialog::getSaveFileName(this, tr("Save As"), std::string(),
         tr("All Files (*);;C++ Files (*.cpp *.h *.hpp);;Python Files (*.py);;JavaScript Files (*.js)"));
     if (!fileName.isEmpty()) {
         // Get current editor content and save
         if (codeView_) {
-            QFile file(fileName);
+            std::fstream file(fileName);
             if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
                 QTextStream out(&file);
                 out << codeView_->toPlainText();
                 file.close();
-                statusBar()->showMessage(tr("File saved as: %1").arg(fileName), 3000);
+                statusBar()->showMessage(tr("File saved as: %1"), 3000);
             } else {
-                QMessageBox::warning(this, tr("Save Error"), tr("Could not save file: %1").arg(fileName));
+                QMessageBox::warning(this, tr("Save Error"), tr("Could not save file: %1"));
             }
         }
     }
@@ -9000,7 +8577,7 @@ void MainWindow::handlePrint()
 {
     QPrinter printer(QPrinter::HighResolution);
     QPrintDialog dialog(&printer, this);
-    if (dialog.exec() == QDialog::Accepted && codeView_) {
+    if (dialog.exec() == void::Accepted && codeView_) {
         codeView_->print(&printer);
         statusBar()->showMessage(tr("Document printed"), 2000);
     }
@@ -9008,7 +8585,7 @@ void MainWindow::handlePrint()
 
 void MainWindow::handleExport()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Export"), QString(),
+    std::string fileName = QFileDialog::getSaveFileName(this, tr("Export"), std::string(),
         tr("PDF Files (*.pdf);;HTML Files (*.html)"));
     if (!fileName.isEmpty()) {
         if (fileName.endsWith(".pdf")) {
@@ -9019,14 +8596,14 @@ void MainWindow::handleExport()
                 codeView_->print(&printer);
             }
         } else if (fileName.endsWith(".html") && codeView_) {
-            QFile file(fileName);
+            std::fstream file(fileName);
             if (file.open(QIODevice::WriteOnly)) {
                 QTextStream out(&file);
                 out << codeView_->toHtml();
                 file.close();
             }
         }
-        statusBar()->showMessage(tr("Exported to: %1").arg(fileName), 3000);
+        statusBar()->showMessage(tr("Exported to: %1"), 3000);
     }
 }
 
@@ -9092,8 +8669,8 @@ void MainWindow::handleFind()
 {
     // Show find dialog/panel
     bool ok;
-    QString searchText = QInputDialog::getText(this, tr("Find"), tr("Search for:"),
-        QLineEdit::Normal, QString(), &ok);
+    std::string searchText = QInputDialog::getText(this, tr("Find"), tr("Search for:"),
+        QLineEdit::Normal, std::string(), &ok);
     if (ok && !searchText.isEmpty() && codeView_) {
         codeView_->find(searchText);
     }
@@ -9102,7 +8679,7 @@ void MainWindow::handleFind()
 void MainWindow::handleFindReplace()
 {
     // Show find/replace dialog
-    QDialog dialog(this);
+    void dialog(this);
     dialog.setWindowTitle(tr("Find and Replace"));
     QVBoxLayout* layout = new QVBoxLayout(&dialog);
     
@@ -9116,10 +8693,7 @@ void MainWindow::handleFindReplace()
     layout->addWidget(findEdit);
     layout->addWidget(replaceEdit);
     layout->addWidget(replaceBtn);
-    
-    connect(replaceBtn, &QPushButton::clicked, &dialog, [&]() {
-        if (codeView_) {
-            QString content = codeView_->toPlainText();
+// Qt connect removed
             content.replace(findEdit->text(), replaceEdit->text());
             codeView_->setPlainText(content);
         }
@@ -9252,7 +8826,7 @@ void MainWindow::handleToggleBreakpoint()
 {
     if (codeView_) {
         int line = codeView_->textCursor().blockNumber() + 1;
-        statusBar()->showMessage(tr("Breakpoint toggled at line %1").arg(line), 2000);
+        statusBar()->showMessage(tr("Breakpoint toggled at line %1"), 2000);
     }
 }
 
@@ -9302,7 +8876,7 @@ void MainWindow::handleRunActiveFile()
 void MainWindow::handleRunSelection()
 {
     if (codeView_) {
-        QString selection = codeView_->textCursor().selectedText();
+        std::string selection = codeView_->textCursor().selectedText();
         if (!selection.isEmpty() && pwshProcess_) {
             pwshProcess_->write(selection.toUtf8() + "\n");
             statusBar()->showMessage(tr("Running selection..."), 2000);
@@ -9376,12 +8950,12 @@ void MainWindow::handleResetLayout()
 
 void MainWindow::handleSaveLayout()
 {
-    QString name = QInputDialog::getText(this, tr("Save Layout"), tr("Layout name:"));
+    std::string name = QInputDialog::getText(this, tr("Save Layout"), tr("Layout name:"));
     if (!name.isEmpty()) {
         QSettings settings("RawrXD", "IDE");
-        settings.setValue(QString("layouts/%1/geometry").arg(name), saveGeometry());
-        settings.setValue(QString("layouts/%1/state").arg(name), saveState());
-        statusBar()->showMessage(tr("Layout '%1' saved").arg(name), 2000);
+        settings.setValue(std::string("layouts/%1/geometry"), saveGeometry());
+        settings.setValue(std::string("layouts/%1/state"), saveState());
+        statusBar()->showMessage(tr("Layout '%1' saved"), 2000);
     }
 }
 
@@ -9401,7 +8975,7 @@ void MainWindow::handleExternalTools()
 
 void MainWindow::handleOpenDocs()
 {
-    QDesktopServices::openUrl(QUrl("https://rawrxd.io/docs"));
+    QDesktopServices::openUrl(std::string("https://rawrxd.io/docs"));
 }
 
 void MainWindow::handlePlayground()
@@ -9422,17 +8996,17 @@ void MainWindow::handleCheckUpdates()
 
 void MainWindow::handleReleaseNotes()
 {
-    QDesktopServices::openUrl(QUrl("https://rawrxd.io/releases"));
+    QDesktopServices::openUrl(std::string("https://rawrxd.io/releases"));
 }
 
 void MainWindow::handleReportIssue()
 {
-    QDesktopServices::openUrl(QUrl("https://github.com/rawrxd/ide/issues/new"));
+    QDesktopServices::openUrl(std::string("https://github.com/rawrxd/ide/issues/new"));
 }
 
 void MainWindow::handleJoinCommunity()
 {
-    QDesktopServices::openUrl(QUrl("https://discord.gg/rawrxd"));
+    QDesktopServices::openUrl(std::string("https://discord.gg/rawrxd"));
 }
 
 void MainWindow::handleViewLicense()
@@ -9460,20 +9034,20 @@ void MainWindow::onExplorerItemExpanded(QTreeWidgetItem* item) {
     }
     
     // Get file path from item data or text
-    QString itemPath;
-    QVariant pathData = item->data(0, Qt::UserRole);
+    std::string itemPath;
+    std::any pathData = item->data(0, //UserRole);
     if (pathData.isValid()) {
         itemPath = pathData.toString();
     } else {
         // Fallback: construct path from item hierarchy
-        QStringList pathParts;
+        std::vector<std::string> pathParts;
         QTreeWidgetItem* current = item;
         while (current && current != m_explorerView->invisibleRootItem()) {
             pathParts.prepend(current->text(0));
             current = current->parent();
         }
         if (!m_currentProjectPath.isEmpty()) {
-            itemPath = QDir(m_currentProjectPath).filePath(pathParts.join(QDir::separator()));
+            itemPath = std::filesystem::path(m_currentProjectPath).filePath(pathParts.join(std::filesystem::path::separator()));
         }
     }
     
@@ -9482,7 +9056,7 @@ void MainWindow::onExplorerItemExpanded(QTreeWidgetItem* item) {
         return;
     }
     
-    QFileInfo info = getCachedFileInfo(itemPath);
+    std::filesystem::path info = getCachedFileInfo(itemPath);
     
     // If it's a directory, lazy-load its children
     if (info.isDir() && item->childCount() == 0) {
@@ -9492,16 +9066,16 @@ void MainWindow::onExplorerItemExpanded(QTreeWidgetItem* item) {
             projectExplorer_->expandDirectory(itemPath);
         } else if (m_explorerView) {
             // Manual lazy loading: populate directory contents
-            QDir dir(itemPath);
+            std::filesystem::path dir(itemPath);
             if (dir.exists()) {
                 QFileInfoList entries = dir.entryInfoList(
-                    QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot,
-                    QDir::DirsFirst | QDir::Name);
+                    std::filesystem::path::Dirs | std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot,
+                    std::filesystem::path::DirsFirst | std::filesystem::path::Name);
                 
-                for (const QFileInfo& entry : entries) {
+                for (const std::filesystem::path& entry : entries) {
                     QTreeWidgetItem* child = new QTreeWidgetItem(item);
                     child->setText(0, entry.fileName());
-                    child->setData(0, Qt::UserRole, entry.absoluteFilePath());
+                    child->setData(0, //UserRole, entry.absoluteFilePath());
                     
                     // Set icon based on type
                     if (entry.isDir()) {
@@ -9517,8 +9091,8 @@ void MainWindow::onExplorerItemExpanded(QTreeWidgetItem* item) {
         
         MetricsCollector::instance().incrementCounter("explorer_items_expanded");
         RawrXD::Integration::logInfo("MainWindow", "explorer_item_expanded",
-            QString("Directory expanded: %1").arg(itemPath),
-            QJsonObject{{"path", itemPath}, {"child_count", item->childCount()}});
+            std::string("Directory expanded: %1"),
+            void*{{"path", itemPath}, {"child_count", item->childCount()}});
     }
 }
 
@@ -9532,20 +9106,20 @@ void MainWindow::onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column) 
     }
     
     // Get file path from item
-    QString itemPath;
-    QVariant pathData = item->data(0, Qt::UserRole);
+    std::string itemPath;
+    std::any pathData = item->data(0, //UserRole);
     if (pathData.isValid()) {
         itemPath = pathData.toString();
     } else {
         // Fallback: construct path from item hierarchy
-        QStringList pathParts;
+        std::vector<std::string> pathParts;
         QTreeWidgetItem* current = item;
         while (current && current != m_explorerView->invisibleRootItem()) {
             pathParts.prepend(current->text(0));
             current = current->parent();
         }
         if (!m_currentProjectPath.isEmpty()) {
-            itemPath = QDir(m_currentProjectPath).filePath(pathParts.join(QDir::separator()));
+            itemPath = std::filesystem::path(m_currentProjectPath).filePath(pathParts.join(std::filesystem::path::separator()));
         }
     }
     
@@ -9554,13 +9128,13 @@ void MainWindow::onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column) 
         return;
     }
     
-    QFileInfo info = getCachedFileInfo(itemPath);
+    std::filesystem::path info = getCachedFileInfo(itemPath);
     
     if (!info.exists()) {
         RawrXD::Integration::logError("MainWindow", "explorer_double_click",
-            QString("Path does not exist: %1").arg(itemPath));
+            std::string("Path does not exist: %1"));
         QMessageBox::warning(this, tr("File Not Found"),
-                           tr("The file or directory does not exist:\n%1").arg(itemPath));
+                           tr("The file or directory does not exist:\n%1"));
         return;
     }
     
@@ -9569,17 +9143,17 @@ void MainWindow::onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column) 
     int doubleClickCount = settings.value("explorer/doubleClicks", 0).toInt() + 1;
     settings.setValue("explorer/doubleClicks", doubleClickCount);
     settings.setValue("explorer/lastDoubleClick", itemPath);
-    settings.setValue("explorer/lastDoubleClickTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("explorer/lastDoubleClickTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     if (info.isDir()) {
         // Toggle expand/collapse for directories
         if (item->isExpanded()) {
             item->setExpanded(false);
-            statusBar()->showMessage(tr("Collapsed: %1").arg(info.fileName()), 1500);
+            statusBar()->showMessage(tr("Collapsed: %1")), 1500);
         } else {
             item->setExpanded(true);
             onExplorerItemExpanded(item);  // Trigger lazy loading
-            statusBar()->showMessage(tr("Expanded: %1").arg(info.fileName()), 1500);
+            statusBar()->showMessage(tr("Expanded: %1")), 1500);
         }
         MetricsCollector::instance().incrementCounter("explorer_directory_navigations");
     } else if (info.isFile()) {
@@ -9587,9 +9161,9 @@ void MainWindow::onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column) 
         // Validate file is readable and not too large
         if (!info.isReadable()) {
             RawrXD::Integration::logError("MainWindow", "explorer_double_click",
-                QString("File is not readable: %1").arg(itemPath));
+                std::string("File is not readable: %1"));
             QMessageBox::warning(this, tr("File Not Readable"),
-                               tr("The file exists but is not readable:\n%1").arg(itemPath));
+                               tr("The file exists but is not readable:\n%1"));
             return;
         }
         
@@ -9598,7 +9172,7 @@ void MainWindow::onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column) 
         if (fileSize > 100 * 1024 * 1024) {
             int ret = QMessageBox::question(this, tr("Large File"),
                                            tr("This file is %1 MB. Opening it may slow down the editor.\n\n"
-                                              "Continue?").arg(fileSize / (1024 * 1024)),
+                                              "Continue?")),
                                            QMessageBox::Yes | QMessageBox::No);
             if (ret != QMessageBox::Yes) {
                 return;
@@ -9609,16 +9183,16 @@ void MainWindow::onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column) 
         openFileInEditor(itemPath);
         
         MetricsCollector::instance().incrementCounter("explorer_file_opens");
-        statusBar()->showMessage(tr("✓ Opened: %1").arg(info.fileName()), 2000);
+        statusBar()->showMessage(tr("✓ Opened: %1")), 2000);
     }
     
     RawrXD::Integration::logInfo("MainWindow", "explorer_item_double_clicked",
-        QString("Explorer item double-clicked: %1 (type: %2, total: %3)")
-            .arg(info.fileName(), info.isDir() ? "dir" : "file").arg(doubleClickCount),
-        QJsonObject{{"path", itemPath}, {"is_dir", info.isDir()}, {"click_count", doubleClickCount}});
+        std::string("Explorer item double-clicked: %1 (type: %2, total: %3)")
+            , info.isDir() ? "dir" : "file"),
+        void*{{"path", itemPath}, {"is_dir", info.isDir()}, {"click_count", doubleClickCount}});
 }
 
-void MainWindow::onAIChatCodeInsertRequested(const QString& code) {
+void MainWindow::onAIChatCodeInsertRequested(const std::string& code) {
     RawrXD::Integration::ScopedTimer timer("MainWindow", "onAIChatCodeInsertRequested", "ai_chat");
     RawrXD::Integration::traceEvent("AIChat", "code_insert_requested");
     
@@ -9637,14 +9211,14 @@ void MainWindow::onAIChatCodeInsertRequested(const QString& code) {
     int insertCount = settings.value("ai_chat/codeInserts", 0).toInt() + 1;
     settings.setValue("ai_chat/codeInserts", insertCount);
     settings.setValue("ai_chat/lastInsertLength", code.length());
-    settings.setValue("ai_chat/lastInsertTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+    settings.setValue("ai_chat/lastInsertTime", std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate));
     
     // Get current editor (use codeView_ or multiTabEditor)
-    QWidget* editorObj = codeView_;
+    void* editorObj = codeView_;
     RawrXD::AgenticTextEdit* agenticEditor = nullptr;
     if (!editorObj && m_multiTabEditor) {
         agenticEditor = m_multiTabEditor->getCurrentEditor();
-        editorObj = agenticEditor;  // AgenticTextEdit inherits QWidget
+        editorObj = agenticEditor;  // AgenticTextEdit inherits void
     }
     if (!editorObj) {
         RawrXD::Integration::logWarn("MainWindow", "ai_chat_code_insert", "No active editor");
@@ -9678,7 +9252,7 @@ void MainWindow::onAIChatCodeInsertRequested(const QString& code) {
     MetricsCollector::instance().incrementCounter("ai_code_insertions");
     MetricsCollector::instance().recordLatency("ai_code_insert_length", code.length());
     
-    statusBar()->showMessage(tr("✓ Code inserted from AI (%1 characters)").arg(code.length()), 3000);
+    statusBar()->showMessage(tr("✓ Code inserted from AI (%1 characters)")), 3000);
     
     // Show notification
     if (notificationCenter_) {
@@ -9689,7 +9263,7 @@ void MainWindow::onAIChatCodeInsertRequested(const QString& code) {
     }
     
     RawrXD::Integration::logInfo("MainWindow", "ai_chat_code_inserted",
-        QString("Code inserted from AI (length: %1, total: %2)").arg(code.length()).arg(insertCount),
-        QJsonObject{{"code_length", code.length()}, {"total_inserts", insertCount}});
+        std::string("Code inserted from AI (length: %1, total: %2)")),
+        void*{{"code_length", code.length()}, {"total_inserts", insertCount}});
 }
 

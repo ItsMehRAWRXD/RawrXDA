@@ -1,15 +1,6 @@
 #include "semantic_diff_analyzer.hpp"
-#include <QDebug>
-#include <QCryptographicHash>
-#include <QFile>
-#include <QDir>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <QEventLoop>
-#include <QDateTime>
+
+
 #include <algorithm>
 #include <vector>
 
@@ -21,11 +12,11 @@ struct DiffEdit {
     Type type;
     int oldIndex;
     int newIndex;
-    QString line;
+    std::string line;
 };
 
 // Myers diff algorithm for computing minimal edit script
-std::vector<DiffEdit> computeMyersDiff(const QStringList& oldLines, const QStringList& newLines) {
+std::vector<DiffEdit> computeMyersDiff(const std::vector<std::string>& oldLines, const std::vector<std::string>& newLines) {
     const int N = oldLines.size();
     const int M = newLines.size();
     const int MAX = N + M;
@@ -103,11 +94,11 @@ std::vector<DiffEdit> computeMyersDiff(const QStringList& oldLines, const QStrin
     return {};
 }
 
-QString generateUnifiedDiff(const QString& filePath, const QStringList& oldLines, 
-                           const QStringList& newLines, int contextLines = 3) {
+std::string generateUnifiedDiff(const std::string& filePath, const std::vector<std::string>& oldLines, 
+                           const std::vector<std::string>& newLines, int contextLines = 3) {
     auto edits = computeMyersDiff(oldLines, newLines);
     
-    QString result = QString("--- a/%1\n+++ b/%1\n").arg(filePath);
+    std::string result = std::string("--- a/%1\n+++ b/%1\n");
     
     // Group edits into hunks
     std::vector<std::pair<int, int>> hunks; // (start, end) indices in edits
@@ -147,9 +138,9 @@ QString generateUnifiedDiff(const QString& filePath, const QStringList& oldLines
             }
         }
         
-        result += QString("@@ -%1,%2 +%3,%4 @@\n")
-                    .arg(oldStart + 1).arg(oldCount)
-                    .arg(newStart + 1).arg(newCount);
+        result += std::string("@@ -%1,%2 +%3,%4 @@\n")
+                    
+                    ;
         
         for (int i = hunk.first; i <= hunk.second; ++i) {
             switch (edits[i].type) {
@@ -171,23 +162,23 @@ QString generateUnifiedDiff(const QString& filePath, const QStringList& oldLines
 
 } // namespace DiffAlgorithm
 
-SemanticDiffAnalyzer::SemanticDiffAnalyzer(QObject* parent)
-    : QObject(parent)
+SemanticDiffAnalyzer::SemanticDiffAnalyzer(void* parent)
+    : void(parent)
 {
-    logStructured("INFO", "SemanticDiffAnalyzer initializing", QJsonObject{{"component", "SemanticDiffAnalyzer"}});
-    logStructured("INFO", "SemanticDiffAnalyzer initialized successfully", QJsonObject{{"component", "SemanticDiffAnalyzer"}});
+    logStructured("INFO", "SemanticDiffAnalyzer initializing", void*{{"component", "SemanticDiffAnalyzer"}});
+    logStructured("INFO", "SemanticDiffAnalyzer initialized successfully", void*{{"component", "SemanticDiffAnalyzer"}});
 }
 
 SemanticDiffAnalyzer::~SemanticDiffAnalyzer()
 {
-    logStructured("INFO", "SemanticDiffAnalyzer shutting down", QJsonObject{{"component", "SemanticDiffAnalyzer"}});
+    logStructured("INFO", "SemanticDiffAnalyzer shutting down", void*{{"component", "SemanticDiffAnalyzer"}});
 }
 
 void SemanticDiffAnalyzer::setConfig(const Config& config)
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     m_config = config;
-    logStructured("INFO", "Configuration updated", QJsonObject{
+    logStructured("INFO", "Configuration updated", void*{
         {"enableBreakingChangeDetection", config.enableBreakingChangeDetection},
         {"enableImpactAnalysis", config.enableImpactAnalysis},
         {"maxDiffSize", config.maxDiffSize},
@@ -197,56 +188,56 @@ void SemanticDiffAnalyzer::setConfig(const Config& config)
 
 SemanticDiffAnalyzer::Config SemanticDiffAnalyzer::getConfig() const
 {
-    QMutexLocker locker(&m_configMutex);
+    std::lock_guard<std::mutex> locker(&m_configMutex);
     return m_config;
 }
 
-SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::analyzeDiff(const QString& diff)
+SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::analyzeDiff(const std::string& diff)
 {
     auto startTime = std::chrono::steady_clock::now();
     DiffAnalysis analysis;
     
     try {
         if (!validateDiff(diff)) {
-            logStructured("ERROR", "Invalid diff provided", QJsonObject{{"diffLength", diff.length()}});
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            logStructured("ERROR", "Invalid diff provided", void*{{"diffLength", diff.length()}});
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.errorCount++;
-            emit errorOccurred("Invalid diff data");
+            errorOccurred("Invalid diff data");
             return analysis;
         }
         
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         // Check cache
-        QString diffHash = calculateDiffHash(diff);
+        std::string diffHash = calculateDiffHash(diff);
         if (config.enableCaching) {
             DiffAnalysis cached = getCachedAnalysis(diffHash);
             if (!cached.summary.isEmpty()) {
-                QMutexLocker metricsLocker(&m_metricsMutex);
+                std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
                 m_metrics.cacheHits++;
-                logStructured("INFO", "Cache hit for diff analysis", QJsonObject{{"diffHash", diffHash}});
+                logStructured("INFO", "Cache hit for diff analysis", void*{{"diffHash", diffHash}});
                 return cached;
             }
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.cacheMisses++;
         }
         
         // Prepare AI request
-        QJsonObject payload;
+        void* payload;
         payload["diff"] = diff;
         payload["enable_breaking_change_detection"] = config.enableBreakingChangeDetection;
         payload["enable_impact_analysis"] = config.enableImpactAnalysis;
         
-        logStructured("DEBUG", "Sending diff analysis request to AI", QJsonObject{
+        logStructured("DEBUG", "Sending diff analysis request to AI", void*{
             {"diffSize", diff.length()},
             {"diffHash", diffHash}
         });
         
-        QJsonObject response = makeAiRequest(config.aiEndpoint + "/analyze-diff", payload);
+        void* response = makeAiRequest(config.aiEndpoint + "/analyze-diff", payload);
         
         // Parse response
         analysis.summary = response["summary"].toString();
@@ -254,9 +245,9 @@ SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::analyzeDiff(const QStri
         analysis.overallImpactScore = response["overall_impact_score"].toDouble();
         analysis.metadata = response["metadata"].toObject();
         
-        QJsonArray changesArray = response["changes"].toArray();
-        for (const QJsonValue& value : changesArray) {
-            QJsonObject changeObj = value.toObject();
+        void* changesArray = response["changes"].toArray();
+        for (const void*& value : changesArray) {
+            void* changeObj = value.toObject();
             SemanticChange change;
             change.type = changeObj["type"].toString();
             change.name = changeObj["name"].toString();
@@ -267,19 +258,19 @@ SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::analyzeDiff(const QStri
             change.isBreaking = changeObj["is_breaking"].toBool();
             change.impactScore = changeObj["impact_score"].toDouble();
             
-            QJsonArray affectedArray = changeObj["affected_files"].toArray();
-            for (const QJsonValue& af : affectedArray) {
+            void* affectedArray = changeObj["affected_files"].toArray();
+            for (const void*& af : affectedArray) {
                 change.affectedFiles.append(af.toString());
             }
             
             analysis.changes.append(change);
             
-            // Emit signals for breaking/high-impact changes
+            // signals for breaking/high-impact changes
             if (change.isBreaking) {
-                emit breakingChangeDetected(change);
+                breakingChangeDetected(change);
             }
             if (change.impactScore >= 0.7) {
-                emit highImpactChangeDetected(change);
+                highImpactChangeDetected(change);
             }
         }
         
@@ -288,7 +279,7 @@ SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::analyzeDiff(const QStri
         recordLatency("diff_analysis", duration);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.diffsAnalyzed++;
             m_metrics.semanticChangesDetected += analysis.changes.size();
             m_metrics.breakingChangesDetected += analysis.breakingChangeCount;
@@ -301,7 +292,7 @@ SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::analyzeDiff(const QStri
             }
         }
         
-        logStructured("INFO", "Diff analysis completed", QJsonObject{
+        logStructured("INFO", "Diff analysis completed", void*{
             {"changesDetected", analysis.changes.size()},
             {"breakingChanges", analysis.breakingChangeCount},
             {"overallImpactScore", analysis.overallImpactScore},
@@ -313,36 +304,36 @@ SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::analyzeDiff(const QStri
             cacheAnalysis(diffHash, analysis);
         }
         
-        emit analysisCompleted(analysis);
+        analysisCompleted(analysis);
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Diff analysis failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Analysis failed: %1").arg(e.what()));
+        logStructured("ERROR", "Diff analysis failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Analysis failed: %1")));
     }
     
     return analysis;
 }
 
-SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::compareFiles(const QString& oldContent, const QString& newContent, const QString& filePath)
+SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::compareFiles(const std::string& oldContent, const std::string& newContent, const std::string& filePath)
 {
     auto startTime = std::chrono::steady_clock::now();
     
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         // Generate unified diff using production-ready Myers diff algorithm
-        QStringList oldLines = oldContent.split('\n');
-        QStringList newLines = newContent.split('\n');
+        std::vector<std::string> oldLines = oldContent.split('\n');
+        std::vector<std::string> newLines = newContent.split('\n');
         
-        QString diffContent = DiffAlgorithm::generateUnifiedDiff(filePath, oldLines, newLines, 3);
+        std::string diffContent = DiffAlgorithm::generateUnifiedDiff(filePath, oldLines, newLines, 3);
         
-        logStructured("DEBUG", "Generated diff for file comparison", QJsonObject{
+        logStructured("DEBUG", "Generated diff for file comparison", void*{
             {"filePath", filePath},
             {"oldContentSize", oldContent.length()},
             {"newContentSize", newContent.length()}
@@ -351,60 +342,60 @@ SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::compareFiles(const QStr
         return analyzeDiff(diffContent);
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "File comparison failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("File comparison failed: %1").arg(e.what()));
+        logStructured("ERROR", "File comparison failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("File comparison failed: %1")));
         return DiffAnalysis();
     }
 }
 
-QVector<QString> SemanticDiffAnalyzer::detectBreakingChanges(const DiffAnalysis& analysis)
+std::vector<std::string> SemanticDiffAnalyzer::detectBreakingChanges(const DiffAnalysis& analysis)
 {
-    QVector<QString> breakingChanges;
+    std::vector<std::string> breakingChanges;
     
     for (const SemanticChange& change : analysis.changes) {
         if (change.isBreaking) {
-            QString description = QString("%1: %2 in %3")
-                .arg(change.type)
-                .arg(change.name)
-                .arg(change.file);
+            std::string description = std::string("%1: %2 in %3")
+
+
+                ;
             breakingChanges.append(description);
         }
     }
     
-    logStructured("INFO", "Breaking changes extracted", QJsonObject{
+    logStructured("INFO", "Breaking changes extracted", void*{
         {"count", breakingChanges.size()}
     });
     
     return breakingChanges;
 }
 
-QJsonObject SemanticDiffAnalyzer::analyzeImpact(const SemanticChange& change)
+void* SemanticDiffAnalyzer::analyzeImpact(const SemanticChange& change)
 {
     auto startTime = std::chrono::steady_clock::now();
-    QJsonObject impactAnalysis;
+    void* impactAnalysis;
     
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
         if (!config.enableImpactAnalysis) {
-            logStructured("DEBUG", "Impact analysis disabled", QJsonObject{});
+            logStructured("DEBUG", "Impact analysis disabled", void*{});
             return impactAnalysis;
         }
         
-        QJsonObject payload;
+        void* payload;
         payload["change_type"] = change.type;
         payload["change_name"] = change.name;
         payload["change_description"] = change.description;
         payload["file"] = change.file;
         payload["is_breaking"] = change.isBreaking;
         
-        logStructured("DEBUG", "Requesting impact analysis", QJsonObject{
+        logStructured("DEBUG", "Requesting impact analysis", void*{
             {"changeType", change.type},
             {"changeName", change.name}
         });
@@ -415,64 +406,64 @@ QJsonObject SemanticDiffAnalyzer::analyzeImpact(const SemanticChange& change)
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         
         {
-            QMutexLocker metricsLocker(&m_metricsMutex);
+            std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
             m_metrics.impactAnalysesPerformed++;
         }
         
-        logStructured("INFO", "Impact analysis completed", QJsonObject{
+        logStructured("INFO", "Impact analysis completed", void*{
             {"impactScore", impactAnalysis["impact_score"].toDouble()},
             {"affectedComponents", impactAnalysis["affected_components"].toArray().size()},
             {"latencyMs", duration.count()}
         });
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Impact analysis failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Impact analysis failed: %1").arg(e.what()));
+        logStructured("ERROR", "Impact analysis failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Impact analysis failed: %1")));
     }
     
     return impactAnalysis;
 }
 
-QString SemanticDiffAnalyzer::enrichDiffContext(const QString& diff)
+std::string SemanticDiffAnalyzer::enrichDiffContext(const std::string& diff)
 {
     auto startTime = std::chrono::steady_clock::now();
-    QString enriched;
+    std::string enriched;
     
     try {
         Config config;
         {
-            QMutexLocker configLocker(&m_configMutex);
+            std::lock_guard<std::mutex> configLocker(&m_configMutex);
             config = m_config;
         }
         
-        QJsonObject payload;
+        void* payload;
         payload["diff"] = diff;
         payload["enrichment_type"] = "context";
         
-        logStructured("DEBUG", "Requesting diff context enrichment", QJsonObject{
+        logStructured("DEBUG", "Requesting diff context enrichment", void*{
             {"diffSize", diff.length()}
         });
         
-        QJsonObject response = makeAiRequest(config.aiEndpoint + "/enrich-diff", payload);
+        void* response = makeAiRequest(config.aiEndpoint + "/enrich-diff", payload);
         
         enriched = response["enriched_diff"].toString();
         
         auto endTime = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
         
-        logStructured("INFO", "Diff enrichment completed", QJsonObject{
+        logStructured("INFO", "Diff enrichment completed", void*{
             {"originalSize", diff.length()},
             {"enrichedSize", enriched.length()},
             {"latencyMs", duration.count()}
         });
         
     } catch (const std::exception& e) {
-        QMutexLocker metricsLocker(&m_metricsMutex);
+        std::lock_guard<std::mutex> metricsLocker(&m_metricsMutex);
         m_metrics.errorCount++;
-        logStructured("ERROR", "Diff enrichment failed", QJsonObject{{"error", e.what()}});
-        emit errorOccurred(QString("Enrichment failed: %1").arg(e.what()));
+        logStructured("ERROR", "Diff enrichment failed", void*{{"error", e.what()}});
+        errorOccurred(std::string("Enrichment failed: %1")));
         enriched = diff; // Return original on error
     }
     
@@ -481,40 +472,39 @@ QString SemanticDiffAnalyzer::enrichDiffContext(const QString& diff)
 
 SemanticDiffAnalyzer::Metrics SemanticDiffAnalyzer::getMetrics() const
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     return m_metrics;
 }
 
 void SemanticDiffAnalyzer::resetMetrics()
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     m_metrics = Metrics();
-    logStructured("INFO", "Metrics reset", QJsonObject{});
+    logStructured("INFO", "Metrics reset", void*{});
 }
 
 void SemanticDiffAnalyzer::clearCache()
 {
-    QMutexLocker locker(&m_cacheMutex);
+    std::lock_guard<std::mutex> locker(&m_cacheMutex);
     m_analysisCache.clear();
-    logStructured("INFO", "Analysis cache cleared", QJsonObject{});
+    logStructured("INFO", "Analysis cache cleared", void*{});
 }
 
-void SemanticDiffAnalyzer::logStructured(const QString& level, const QString& message, const QJsonObject& context)
+void SemanticDiffAnalyzer::logStructured(const std::string& level, const std::string& message, const void*& context)
 {
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = level;
     logEntry["component"] = "SemanticDiffAnalyzer";
     logEntry["message"] = message;
     logEntry["context"] = context;
     
-    QJsonDocument doc(logEntry);
-    qDebug().noquote() << doc.toJson(QJsonDocument::Compact);
+    void* doc(logEntry);
 }
 
-void SemanticDiffAnalyzer::recordLatency(const QString& operation, const std::chrono::milliseconds& duration)
+void SemanticDiffAnalyzer::recordLatency(const std::string& operation, const std::chrono::milliseconds& duration)
 {
-    QMutexLocker locker(&m_metricsMutex);
+    std::lock_guard<std::mutex> locker(&m_metricsMutex);
     
     if (operation == "diff_analysis") {
         m_metrics.avgAnalysisLatencyMs = 
@@ -524,46 +514,46 @@ void SemanticDiffAnalyzer::recordLatency(const QString& operation, const std::ch
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     if (config.enableMetrics) {
-        emit metricsUpdated(m_metrics);
+        metricsUpdated(m_metrics);
     }
 }
 
-QJsonObject SemanticDiffAnalyzer::makeAiRequest(const QString& endpoint, const QJsonObject& payload)
+void* SemanticDiffAnalyzer::makeAiRequest(const std::string& endpoint, const void*& payload)
 {
-    QNetworkAccessManager manager;
+    void* manager;
     QNetworkRequest request(endpoint);
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     if (!config.apiKey.isEmpty()) {
-        request.setRawHeader("Authorization", QString("Bearer %1").arg(config.apiKey).toUtf8());
+        request.setRawHeader("Authorization", std::string("Bearer %1").toUtf8());
     }
     
-    QJsonDocument doc(payload);
-    QByteArray data = doc.toJson(QJsonDocument::Compact);
+    void* doc(payload);
+    std::vector<uint8_t> data = doc.toJson(void*::Compact);
     
-    QEventLoop loop;
-    QNetworkReply* reply = manager.post(request, data);
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    void* loop;
+    void** reply = manager.post(request, data);
+// Qt connect removed
     loop.exec();
     
-    QJsonObject response;
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray responseData = reply->readAll();
-        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+    void* response;
+    if (reply->error() == void*::NoError) {
+        std::vector<uint8_t> responseData = reply->readAll();
+        void* responseDoc = void*::fromJson(responseData);
         response = responseDoc.object();
     } else {
-        logStructured("ERROR", "AI API request failed", QJsonObject{
+        logStructured("ERROR", "AI API request failed", void*{
             {"endpoint", endpoint},
             {"error", reply->errorString()}
         });
@@ -574,48 +564,48 @@ QJsonObject SemanticDiffAnalyzer::makeAiRequest(const QString& endpoint, const Q
     return response;
 }
 
-QString SemanticDiffAnalyzer::calculateDiffHash(const QString& diff)
+std::string SemanticDiffAnalyzer::calculateDiffHash(const std::string& diff)
 {
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(diff.toUtf8());
-    return QString(hash.result().toHex());
+    return std::string(hash.result().toHex());
 }
 
-SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::getCachedAnalysis(const QString& diffHash)
+SemanticDiffAnalyzer::DiffAnalysis SemanticDiffAnalyzer::getCachedAnalysis(const std::string& diffHash)
 {
-    QMutexLocker locker(&m_cacheMutex);
+    std::lock_guard<std::mutex> locker(&m_cacheMutex);
     return m_analysisCache.value(diffHash, DiffAnalysis());
 }
 
-void SemanticDiffAnalyzer::cacheAnalysis(const QString& diffHash, const DiffAnalysis& analysis)
+void SemanticDiffAnalyzer::cacheAnalysis(const std::string& diffHash, const DiffAnalysis& analysis)
 {
-    QMutexLocker locker(&m_cacheMutex);
+    std::lock_guard<std::mutex> locker(&m_cacheMutex);
     m_analysisCache[diffHash] = analysis;
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     // Persist to disk if cache directory configured
     if (!config.cacheDirectory.isEmpty()) {
-        QDir cacheDir(config.cacheDirectory);
+        std::filesystem::path cacheDir(config.cacheDirectory);
         if (!cacheDir.exists()) {
             cacheDir.mkpath(".");
         }
         
-        QFile cacheFile(cacheDir.filePath(diffHash + ".json"));
+        std::fstream cacheFile(cacheDir.filePath(diffHash + ".json"));
         if (cacheFile.open(QIODevice::WriteOnly)) {
-            QJsonObject cacheObj;
+            void* cacheObj;
             cacheObj["summary"] = analysis.summary;
             cacheObj["breaking_change_count"] = analysis.breakingChangeCount;
             cacheObj["overall_impact_score"] = analysis.overallImpactScore;
             cacheObj["metadata"] = analysis.metadata;
             
-            QJsonArray changesArray;
+            void* changesArray;
             for (const SemanticChange& change : analysis.changes) {
-                QJsonObject changeObj;
+                void* changeObj;
                 changeObj["type"] = change.type;
                 changeObj["name"] = change.name;
                 changeObj["description"] = change.description;
@@ -628,14 +618,14 @@ void SemanticDiffAnalyzer::cacheAnalysis(const QString& diffHash, const DiffAnal
             }
             cacheObj["changes"] = changesArray;
             
-            QJsonDocument doc(cacheObj);
+            void* doc(cacheObj);
             cacheFile.write(doc.toJson());
             cacheFile.close();
         }
     }
 }
 
-bool SemanticDiffAnalyzer::validateDiff(const QString& diff)
+bool SemanticDiffAnalyzer::validateDiff(const std::string& diff)
 {
     if (diff.isEmpty()) {
         return false;
@@ -643,12 +633,12 @@ bool SemanticDiffAnalyzer::validateDiff(const QString& diff)
     
     Config config;
     {
-        QMutexLocker configLocker(&m_configMutex);
+        std::lock_guard<std::mutex> configLocker(&m_configMutex);
         config = m_config;
     }
     
     if (diff.length() > config.maxDiffSize) {
-        logStructured("WARN", "Diff exceeds maximum size", QJsonObject{
+        logStructured("WARN", "Diff exceeds maximum size", void*{
             {"diffSize", diff.length()},
             {"maxSize", config.maxDiffSize}
         });
@@ -657,3 +647,4 @@ bool SemanticDiffAnalyzer::validateDiff(const QString& diff)
     
     return true;
 }
+

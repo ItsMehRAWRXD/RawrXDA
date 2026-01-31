@@ -6,17 +6,12 @@
  */
 
 #include "find_widget.h"
-#include <QTextDocument>
-#include <QTextCursor>
-#include <QTextBlock>
-#include <QDebug>
-#include <QKeyEvent>
-#include <QShortcut>
+
 
 namespace RawrXD {
 
-FindWidget::FindWidget(QWidget* parent)
-    : QWidget(parent)
+FindWidget::FindWidget(void* parent)
+    : void(parent)
     , m_mainLayout(nullptr)
     , m_searchLayout(nullptr)
     , m_replaceLayout(nullptr)
@@ -29,14 +24,12 @@ FindWidget::FindWidget(QWidget* parent)
     setupUI();
     
     // Keyboard shortcuts
-    QShortcut* escShortcut = new QShortcut(QKeySequence(Qt::Key_Escape), this);
-    connect(escShortcut, &QShortcut::activated, this, &FindWidget::close);
-    
-    QShortcut* enterShortcut = new QShortcut(QKeySequence(Qt::Key_Return), m_searchEdit);
-    connect(enterShortcut, &QShortcut::activated, this, &FindWidget::findNext);
-    
-    QShortcut* shiftEnterShortcut = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_Return), m_searchEdit);
-    connect(shiftEnterShortcut, &QShortcut::activated, this, &FindWidget::findPrevious);
+    QShortcut* escShortcut = new QShortcut(QKeySequence(//Key_Escape), this);
+// Qt connect removed
+    QShortcut* enterShortcut = new QShortcut(QKeySequence(//Key_Return), m_searchEdit);
+// Qt connect removed
+    QShortcut* shiftEnterShortcut = new QShortcut(QKeySequence(//SHIFT | //Key_Return), m_searchEdit);
+// Qt connect removed
 }
 
 FindWidget::~FindWidget() {
@@ -54,19 +47,19 @@ void FindWidget::setupUI() {
     m_searchEdit = new QLineEdit(this);
     m_searchEdit->setPlaceholderText("Find");
     m_searchEdit->setClearButtonEnabled(true);
-    connect(m_searchEdit, &QLineEdit::textChanged, this, &FindWidget::onSearchTextChanged);
+// Qt connect removed
     m_searchLayout->addWidget(m_searchEdit);
     
     m_findPreviousButton = new QPushButton("↑", this);
     m_findPreviousButton->setToolTip("Previous match (Shift+Enter)");
     m_findPreviousButton->setMaximumWidth(30);
-    connect(m_findPreviousButton, &QPushButton::clicked, this, &FindWidget::findPrevious);
+// Qt connect removed
     m_searchLayout->addWidget(m_findPreviousButton);
     
     m_findNextButton = new QPushButton("↓", this);
     m_findNextButton->setToolTip("Next match (Enter)");
     m_findNextButton->setMaximumWidth(30);
-    connect(m_findNextButton, &QPushButton::clicked, this, &FindWidget::findNext);
+// Qt connect removed
     m_searchLayout->addWidget(m_findNextButton);
     
     m_matchCountLabel = new QLabel("No matches", this);
@@ -75,29 +68,29 @@ void FindWidget::setupUI() {
     
     m_caseSensitiveCheck = new QCheckBox("Aa", this);
     m_caseSensitiveCheck->setToolTip("Match case");
-    connect(m_caseSensitiveCheck, &QCheckBox::toggled, this, &FindWidget::onCaseSensitiveToggled);
+// Qt connect removed
     m_searchLayout->addWidget(m_caseSensitiveCheck);
     
     m_wholeWordCheck = new QCheckBox("ab|", this);
     m_wholeWordCheck->setToolTip("Match whole word");
-    connect(m_wholeWordCheck, &QCheckBox::toggled, this, &FindWidget::onWholeWordToggled);
+// Qt connect removed
     m_searchLayout->addWidget(m_wholeWordCheck);
     
     m_regexCheck = new QCheckBox(".*", this);
     m_regexCheck->setToolTip("Use regular expression");
-    connect(m_regexCheck, &QCheckBox::toggled, this, &FindWidget::onRegexToggled);
+// Qt connect removed
     m_searchLayout->addWidget(m_regexCheck);
     
     m_toggleReplaceButton = new QPushButton("▼", this);
     m_toggleReplaceButton->setToolTip("Toggle replace mode");
     m_toggleReplaceButton->setMaximumWidth(30);
-    connect(m_toggleReplaceButton, &QPushButton::clicked, this, &FindWidget::toggleReplaceMode);
+// Qt connect removed
     m_searchLayout->addWidget(m_toggleReplaceButton);
     
     m_closeButton = new QPushButton("×", this);
     m_closeButton->setToolTip("Close (Esc)");
     m_closeButton->setMaximumWidth(30);
-    connect(m_closeButton, &QPushButton::clicked, this, &FindWidget::close);
+// Qt connect removed
     m_searchLayout->addWidget(m_closeButton);
     
     m_mainLayout->addLayout(m_searchLayout);
@@ -108,21 +101,21 @@ void FindWidget::setupUI() {
     m_replaceEdit = new QLineEdit(this);
     m_replaceEdit->setPlaceholderText("Replace");
     m_replaceEdit->setClearButtonEnabled(true);
-    connect(m_replaceEdit, &QLineEdit::textChanged, this, &FindWidget::onReplaceTextChanged);
+// Qt connect removed
     m_replaceLayout->addWidget(m_replaceEdit);
     
     m_replaceButton = new QPushButton("Replace", this);
     m_replaceButton->setToolTip("Replace current match");
-    connect(m_replaceButton, &QPushButton::clicked, this, &FindWidget::replaceCurrent);
+// Qt connect removed
     m_replaceLayout->addWidget(m_replaceButton);
     
     m_replaceAllButton = new QPushButton("Replace All", this);
     m_replaceAllButton->setToolTip("Replace all matches");
-    connect(m_replaceAllButton, &QPushButton::clicked, this, &FindWidget::replaceAll);
+// Qt connect removed
     m_replaceLayout->addWidget(m_replaceAllButton);
     
     // Create replace widget container
-    QWidget* replaceWidget = new QWidget(this);
+    void* replaceWidget = new void(this);
     replaceWidget->setLayout(m_replaceLayout);
     replaceWidget->setVisible(false);
     replaceWidget->setObjectName("replaceWidget");
@@ -160,15 +153,14 @@ void FindWidget::setupUI() {
 
 void FindWidget::setEditor(QPlainTextEdit* editor) {
     if (m_editor) {
-        disconnect(m_editor, nullptr, this, nullptr);
+// Qt disconnect removed
         clearHighlights();
     }
     
     m_editor = editor;
     
     if (m_editor) {
-        connect(m_editor, &QPlainTextEdit::cursorPositionChanged,
-                this, &FindWidget::onEditorCursorPositionChanged);
+// Qt connect removed
     }
 }
 
@@ -183,7 +175,7 @@ void FindWidget::focusSearchBox() {
 
 void FindWidget::showAndFocusWithSelection() {
     if (m_editor && m_editor->textCursor().hasSelection()) {
-        QString selectedText = m_editor->textCursor().selectedText();
+        std::string selectedText = m_editor->textCursor().selectedText();
         if (!selectedText.isEmpty() && !selectedText.contains('\n')) {
             setSearchText(selectedText);
         }
@@ -193,19 +185,19 @@ void FindWidget::showAndFocusWithSelection() {
     focusSearchBox();
 }
 
-void FindWidget::setSearchText(const QString& text) {
+void FindWidget::setSearchText(const std::string& text) {
     m_searchEdit->setText(text);
 }
 
-QString FindWidget::searchText() const {
+std::string FindWidget::searchText() const {
     return m_searchEdit->text();
 }
 
-void FindWidget::setReplaceText(const QString& text) {
+void FindWidget::setReplaceText(const std::string& text) {
     m_replaceEdit->setText(text);
 }
 
-QString FindWidget::replaceText() const {
+std::string FindWidget::replaceText() const {
     return m_replaceEdit->text();
 }
 
@@ -233,25 +225,24 @@ bool FindWidget::isUseRegex() const {
     return m_regexCheck->isChecked();
 }
 
-QList<SearchResult> FindWidget::findAll() {
+std::vector<SearchResult> FindWidget::findAll() {
     m_matches.clear();
     
     if (!m_editor || searchText().isEmpty()) {
         return m_matches;
     }
     
-    QString pattern = buildRegexPattern();
-    QRegularExpression regex(pattern);
+    std::string pattern = buildRegexPattern();
+    std::regex regex(pattern);
     if (!regex.isValid()) {
-        qWarning() << "Invalid regex pattern:" << pattern;
         return m_matches;
     }
     
-    QString documentText = m_editor->toPlainText();
-    QRegularExpressionMatchIterator it = regex.globalMatch(documentText);
+    std::string documentText = m_editor->toPlainText();
+    std::sregex_iterator it = regex;
     
-    while (it.hasNext()) {
-        QRegularExpressionMatch match = it.next();
+    while (itfalse) {
+        std::smatch match = it;
         int pos = match.capturedStart();
         int length = match.capturedLength();
         
@@ -261,7 +252,7 @@ QList<SearchResult> FindWidget::findAll() {
         int line = cursor.blockNumber();
         int column = cursor.columnNumber();
         
-        m_matches.append(SearchResult(line, column, length, match.captured(0)));
+        m_matches.append(SearchResult(line, column, length, match""));
     }
     
     return m_matches;
@@ -301,25 +292,25 @@ void FindWidget::replaceCurrent() {
     }
     
     QTextCursor cursor = m_editor->textCursor();
-    QString selectedText = cursor.selectedText();
+    std::string selectedText = cursor.selectedText();
     
     // Verify selection matches search pattern
-    QString pattern = buildRegexPattern();
-    QRegularExpression regex(pattern);
-    QRegularExpressionMatch match = regex.match(selectedText);
+    std::string pattern = buildRegexPattern();
+    std::regex regex(pattern);
+    std::smatch match = regex.match(selectedText);
     
-    if (match.hasMatch() && match.captured(0) == selectedText) {
-        QString replacement = replaceText();
+    if (match.hasMatch() && match"" == selectedText) {
+        std::string replacement = replaceText();
         
         // Handle regex capture groups
         if (isUseRegex()) {
             for (int i = 0; i < match.capturedTexts().size(); ++i) {
-                replacement.replace(QString("\\%1").arg(i), match.captured(i));
+                replacement.replace(std::string("\\%1"), match"");
             }
         }
         
         cursor.insertText(replacement);
-        emit replaced(1);
+        replaced(1);
         
         // Find next
         findNext();
@@ -329,12 +320,12 @@ void FindWidget::replaceCurrent() {
 void FindWidget::replaceAll() {
     if (!m_editor) return;
     
-    QList<SearchResult> matches = findAll();
+    std::vector<SearchResult> matches = findAll();
     if (matches.isEmpty()) {
         return;
     }
     
-    QString replacement = replaceText();
+    std::string replacement = replaceText();
     int count = 0;
     
     // Start undo group for single undo
@@ -353,15 +344,15 @@ void FindWidget::replaceAll() {
         replaceCursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, result.length);
         
         // Replace text
-        QString replaceWith = replacement;
+        std::string replaceWith = replacement;
         if (isUseRegex()) {
             // Re-match to get capture groups
-            QString pattern = buildRegexPattern();
-            QRegularExpression regex(pattern);
-            QRegularExpressionMatch match = regex.match(result.text);
+            std::string pattern = buildRegexPattern();
+            std::regex regex(pattern);
+            std::smatch match = regex.match(result.text);
             
             for (int j = 0; j < match.capturedTexts().size(); ++j) {
-                replaceWith.replace(QString("\\%1").arg(j), match.captured(j));
+                replaceWith.replace(std::string("\\%1"), match"");
             }
         }
         
@@ -371,18 +362,17 @@ void FindWidget::replaceAll() {
     
     cursor.endEditBlock();
     
-    emit replaced(count);
+    replaced(count);
     
     // Refresh search
     onSearchTextChanged();
     
-    qDebug() << "Replaced" << count << "occurrences";
 }
 
 void FindWidget::toggleReplaceMode() {
     m_isReplaceMode = !m_isReplaceMode;
     
-    QWidget* replaceWidget = findChild<QWidget*>("replaceWidget");
+    void* replaceWidget = findChild<void*>("replaceWidget");
     if (replaceWidget) {
         replaceWidget->setVisible(m_isReplaceMode);
     }
@@ -397,7 +387,7 @@ void FindWidget::toggleReplaceMode() {
 void FindWidget::close() {
     clearHighlights();
     hide();
-    emit closed();
+    closed();
 }
 
 void FindWidget::onSearchTextChanged() {
@@ -446,7 +436,7 @@ void FindWidget::updateMatchCount() {
     if (m_matches.isEmpty()) {
         m_matchCountLabel->setText("No matches");
         m_currentMatchIndex = -1;
-        emit matchCountChanged(0, 0);
+        matchCountChanged(0, 0);
         return;
     }
     
@@ -467,15 +457,15 @@ void FindWidget::updateMatchCount() {
         }
     }
     
-    QString text;
+    std::string text;
     if (m_currentMatchIndex >= 0) {
-        text = QString("%1 of %2").arg(m_currentMatchIndex + 1).arg(m_matches.size());
+        text = std::string("%1 of %2"));
     } else {
-        text = QString("%1 matches").arg(m_matches.size());
+        text = std::string("%1 matches"));
     }
     
     m_matchCountLabel->setText(text);
-    emit matchCountChanged(m_currentMatchIndex + 1, m_matches.size());
+    matchCountChanged(m_currentMatchIndex + 1, m_matches.size());
 }
 
 void FindWidget::highlightAllMatches() {
@@ -502,7 +492,7 @@ void FindWidget::highlightAllMatches() {
 
 void FindWidget::clearHighlights() {
     if (m_editor) {
-        m_editor->setExtraSelections(QList<QTextEdit::ExtraSelection>());
+        m_editor->setExtraSelections(std::vector<QTextEdit::ExtraSelection>());
     }
     m_highlightSelections.clear();
 }
@@ -566,27 +556,27 @@ QTextCursor FindWidget::findNextMatch(const QTextCursor& from, bool forward) {
     return cursor;
 }
 
-QString FindWidget::buildRegexPattern() const {
-    QString pattern = searchText();
+std::string FindWidget::buildRegexPattern() const {
+    std::string pattern = searchText();
     
     if (!isUseRegex()) {
         // Escape regex special characters
-        pattern = QRegularExpression::escape(pattern);
+        pattern = std::regex::escape(pattern);
     }
     
     if (isWholeWord()) {
-        pattern = QString("\\b%1\\b").arg(pattern);
+        pattern = std::string("\\b%1\\b");
     }
     
-    QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+    std::regex::PatternOptions options = std::regex::NoPatternOption;
     if (!isCaseSensitive()) {
-        options |= QRegularExpression::CaseInsensitiveOption;
+        options |= std::regex::CaseInsensitiveOption;
     }
     
     return pattern;
 }
 
-void FindWidget::addToSearchHistory(const QString& text) {
+void FindWidget::addToSearchHistory(const std::string& text) {
     if (text.isEmpty()) return;
     
     m_searchHistory.removeAll(text);
@@ -599,3 +589,4 @@ void FindWidget::addToSearchHistory(const QString& text) {
 }
 
 } // namespace RawrXD
+

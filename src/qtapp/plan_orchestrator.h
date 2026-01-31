@@ -7,11 +7,6 @@
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QVector>
-#include <QMap>
-#include <QJsonDocument>
 
 namespace RawrXD {
 
@@ -22,15 +17,15 @@ class InferenceEngine;
  * \brief Represents a single edit task in a multi-file refactoring plan
  */
 struct EditTask {
-    QString filePath;           // Absolute path to file
+    std::string filePath;           // Absolute path to file
     int startLine;              // Start line (0-indexed)
     int endLine;                // End line (0-indexed)
-    QString operation;          // "replace", "insert", "delete", "rename"
-    QString oldText;            // Text to replace (for "replace")
-    QString newText;            // Replacement text (for "replace", "insert")
-    QString symbolName;         // Symbol name (for "rename")
-    QString newSymbolName;      // New symbol name (for "rename")
-    QString description;        // Human-readable description
+    std::string operation;          // "replace", "insert", "delete", "rename"
+    std::string oldText;            // Text to replace (for "replace")
+    std::string newText;            // Replacement text (for "replace", "insert")
+    std::string symbolName;         // Symbol name (for "rename")
+    std::string newSymbolName;      // New symbol name (for "rename")
+    std::string description;        // Human-readable description
     int priority = 0;           // Execution priority (higher first)
 };
 
@@ -38,12 +33,12 @@ struct EditTask {
  * \brief Planning result with tasks and metadata
  */
 struct PlanningResult {
-    QVector<EditTask> tasks;    // List of edit tasks
-    QString planDescription;    // Overall plan description
-    QStringList affectedFiles;  // List of files to be modified
+    std::vector<EditTask> tasks;    // List of edit tasks
+    std::string planDescription;    // Overall plan description
+    std::vector<std::string> affectedFiles;  // List of files to be modified
     int estimatedChanges = 0;   // Estimated number of changes
     bool success = false;       // Planning success flag
-    QString errorMessage;       // Error message if planning failed
+    std::string errorMessage;       // Error message if planning failed
 };
 
 /**
@@ -52,9 +47,9 @@ struct PlanningResult {
 struct ExecutionResult {
     int successCount = 0;       // Number of successful edits
     int failureCount = 0;       // Number of failed edits
-    QStringList successfulFiles; // Files successfully edited
-    QStringList failedFiles;    // Files that failed to edit
-    QString errorMessage;       // Error message if execution failed
+    std::vector<std::string> successfulFiles; // Files successfully edited
+    std::vector<std::string> failedFiles;    // Files that failed to edit
+    std::string errorMessage;       // Error message if execution failed
     bool success = false;       // Overall execution success
 };
 
@@ -69,12 +64,11 @@ struct ExecutionResult {
  * - Supports atomic multi-file refactoring
  * - Two-phase initialization pattern
  */
-class PlanOrchestrator : public QObject
+class PlanOrchestrator : public void
 {
-    Q_OBJECT
 
 public:
-    explicit PlanOrchestrator(QObject* parent = nullptr);
+    explicit PlanOrchestrator(void* parent = nullptr);
     ~PlanOrchestrator() override = default;
 
     /**
@@ -101,9 +95,9 @@ public:
      * @param contextFiles Optional list of files to analyze for context
      * @return Planning result with task list
      */
-    PlanningResult generatePlan(const QString& prompt, 
-                                 const QString& workspaceRoot,
-                                 const QStringList& contextFiles = QStringList());
+    PlanningResult generatePlan(const std::string& prompt, 
+                                 const std::string& workspaceRoot,
+                                 const std::vector<std::string>& contextFiles = std::vector<std::string>());
 
     /**
      * Execute edit plan
@@ -122,25 +116,25 @@ public:
      * @param dryRun If true, simulate execution without making changes
      * @return Execution result
      */
-    ExecutionResult planAndExecute(const QString& prompt,
-                                    const QString& workspaceRoot,
+    ExecutionResult planAndExecute(const std::string& prompt,
+                                    const std::string& workspaceRoot,
                                     bool dryRun = false);
 
     /**
      * Get current workspace root
      */
-    QString workspaceRoot() const { return m_workspaceRoot; }
+    std::string workspaceRoot() const { return m_workspaceRoot; }
 
     /**
      * Set workspace root directory
      */
-    void setWorkspaceRoot(const QString& root);
+    void setWorkspaceRoot(const std::string& root);
 
-signals:
+
     /**
      * Emitted when planning starts
      */
-    void planningStarted(const QString& prompt);
+    void planningStarted(const std::string& prompt);
 
     /**
      * Emitted when planning completes
@@ -155,7 +149,7 @@ signals:
     /**
      * Emitted for each task execution
      */
-    void taskExecuted(int taskIndex, bool success, const QString& description);
+    void taskExecuted(int taskIndex, bool success, const std::string& description);
 
     /**
      * Emitted when execution completes
@@ -165,26 +159,27 @@ signals:
     /**
      * Emitted on error
      */
-    void errorOccurred(const QString& error);
+    void errorOccurred(const std::string& error);
 
 private:
-    QString buildPlanningPrompt(const QString& userPrompt, const QStringList& contextFiles);
-    PlanningResult parsePlanningResponse(const QString& response);
+    std::string buildPlanningPrompt(const std::string& userPrompt, const std::vector<std::string>& contextFiles);
+    PlanningResult parsePlanningResponse(const std::string& response);
     bool executeTask(const EditTask& task, bool dryRun);
     bool applyReplace(const EditTask& task, bool dryRun);
     bool applyInsert(const EditTask& task, bool dryRun);
     bool applyDelete(const EditTask& task, bool dryRun);
     bool applyRename(const EditTask& task, bool dryRun);
-    QStringList gatherContextFiles(const QString& workspaceRoot, int maxFiles = 50);
-    QString readFileContent(const QString& filePath);
-    bool writeFileContent(const QString& filePath, const QString& content);
+    std::vector<std::string> gatherContextFiles(const std::string& workspaceRoot, int maxFiles = 50);
+    std::string readFileContent(const std::string& filePath);
+    bool writeFileContent(const std::string& filePath, const std::string& content);
 
     LSPClient* m_lspClient{};
     InferenceEngine* m_inferenceEngine{};
-    QString m_workspaceRoot;
+    std::string m_workspaceRoot;
     
-    QMap<QString, QString> m_originalFileContents;  // Backup for rollback
+    std::map<std::string, std::string> m_originalFileContents;  // Backup for rollback
     bool m_initialized = false;
 };
 
 } // namespace RawrXD
+

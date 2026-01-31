@@ -1,6 +1,6 @@
 #include "compression_interface.h"
 #include "deflate_brutal_qt.hpp"
-#include <QByteArray>
+
 #include <iostream>
 #include <algorithm>
 #include <cstring>
@@ -9,8 +9,8 @@
 
 // Forward declarations for codec functions (from inflate_deflate_cpp.cpp)
 namespace codec {
-    extern QByteArray deflate(const QByteArray& in, bool* ok);
-    extern QByteArray inflate(const QByteArray& in, bool* ok);
+    extern std::vector<uint8_t> deflate(const std::vector<uint8_t>& in, bool* ok);
+    extern std::vector<uint8_t> inflate(const std::vector<uint8_t>& in, bool* ok);
 }
 
 // =====================================================================
@@ -36,8 +36,8 @@ bool BrutalGzipWrapper::Compress(const std::vector<uint8_t>& raw,
     try {
         // Use REAL brutal::compress() from deflate_brutal_qt.hpp
         // This calls deflate_brutal_masm() which is the ACTUAL MASM assembly implementation
-        QByteArray input(reinterpret_cast<const char*>(raw.data()), static_cast<int>(raw.size()));
-        QByteArray output = brutal::compress(input);
+        std::vector<uint8_t> input(reinterpret_cast<const char*>(raw.data()), static_cast<int>(raw.size()));
+        std::vector<uint8_t> output = brutal::compress(input);
         
         if (output.isEmpty() && !input.isEmpty()) {
             std::cerr << "BrutalGzip compression failed - output is empty" << std::endl;
@@ -70,10 +70,10 @@ bool BrutalGzipWrapper::Decompress(const std::vector<uint8_t>& compressed,
         // For decompression, we'd need a separate inflate implementation
         // For now, use codec::inflate() from inflate_deflate_cpp.cpp
         
-        QByteArray input(reinterpret_cast<const char*>(compressed.data()), 
+        std::vector<uint8_t> input(reinterpret_cast<const char*>(compressed.data()), 
                         static_cast<int>(compressed.size()));
         bool ok = false;
-        QByteArray output = codec::inflate(input, &ok);
+        std::vector<uint8_t> output = codec::inflate(input, &ok);
         
         if (!ok) {
             std::cerr << "BrutalGzip decompression failed" << std::endl;
@@ -145,9 +145,9 @@ bool DeflateWrapper::Compress(const std::vector<uint8_t>& raw,
     try {
         // Use REAL codec::deflate() from inflate_deflate_cpp.cpp
         // This calls deflate_brutal_masm() - the ACTUAL MASM assembly kernel
-        QByteArray input(reinterpret_cast<const char*>(raw.data()), static_cast<int>(raw.size()));
+        std::vector<uint8_t> input(reinterpret_cast<const char*>(raw.data()), static_cast<int>(raw.size()));
         bool ok = false;
-        QByteArray output = codec::deflate(input, &ok);
+        std::vector<uint8_t> output = codec::deflate(input, &ok);
         
         if (!ok || output.isEmpty()) {
             std::cerr << "Deflate compression failed" << std::endl;
@@ -180,10 +180,10 @@ bool DeflateWrapper::Decompress(const std::vector<uint8_t>& compressed,
     
     try {
         // Use REAL codec::inflate() from inflate_deflate_cpp.cpp
-        QByteArray input(reinterpret_cast<const char*>(compressed.data()), 
+        std::vector<uint8_t> input(reinterpret_cast<const char*>(compressed.data()), 
                         static_cast<int>(compressed.size()));
         bool ok = false;
-        QByteArray output = codec::inflate(input, &ok);
+        std::vector<uint8_t> output = codec::inflate(input, &ok);
         
         if (!ok) {
             std::cerr << "Deflate decompression failed" << std::endl;
@@ -273,3 +273,4 @@ std::string CompressionStats::ToString() const {
         << "}";
     return oss.str();
 }
+

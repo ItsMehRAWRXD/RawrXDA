@@ -3,21 +3,15 @@
 #include "scalar_server.h"
 #include "qtapp/inference_engine.hpp"
 #include "transformer_block_scalar.h"
-#include <QTcpServer>
-#include <QTcpSocket>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QThread>
-#include <QDebug>
 
-ScalarServer::ScalarServer(QObject *parent)
-    : QObject(parent)
-    , m_server(new QTcpServer(this))
+
+ScalarServer::ScalarServer(void *parent)
+    : void(parent)
+    , m_server(new void*(this))
     , m_transformerBlock(new TransformerBlockScalar(this))
     , m_inferenceEngine(new InferenceEngine(this))
 {
-    connect(m_server, &QTcpServer::newConnection, this, &ScalarServer::handleNewConnection);
+// Qt connect removed
 }
 
 ScalarServer::~ScalarServer()
@@ -28,16 +22,13 @@ ScalarServer::~ScalarServer()
 bool ScalarServer::startServer(quint16 port)
 {
     if (m_server->isListening()) {
-        qWarning() << "Server already running on port" << m_server->serverPort();
         return true;
     }
     
     if (!m_server->listen(QHostAddress::Any, port)) {
-        qCritical() << "Failed to start server on port" << port << ":" << m_server->errorString();
         return false;
     }
     
-    qInfo() << "Scalar server started on port" << port;
     return true;
 }
 
@@ -45,36 +36,30 @@ void ScalarServer::stopServer()
 {
     if (m_server->isListening()) {
         m_server->close();
-        qInfo() << "Scalar server stopped";
     }
 }
 
 void ScalarServer::handleNewConnection()
 {
-    QTcpSocket *clientSocket = m_server->nextPendingConnection();
-    
-    connect(clientSocket, &QTcpSocket::readyRead, this, [this, clientSocket]() {
-        handleClientData(clientSocket);
+    void* *clientSocket = m_server->nextPendingConnection();
+// Qt connect removed
     });
-    
-    connect(clientSocket, &QTcpSocket::disconnected, clientSocket, &QTcpSocket::deleteLater);
-    
-    qDebug() << "New client connected:" << clientSocket->peerAddress().toString();
+// Qt connect removed
 }
 
-void ScalarServer::handleClientData(QTcpSocket *clientSocket)
+void ScalarServer::handleClientData(void* *clientSocket)
 {
-    QByteArray data = clientSocket->readAll();
+    std::vector<uint8_t> data = clientSocket->readAll();
     
     // Parse JSON request
-    QJsonDocument doc = QJsonDocument::fromJson(data);
+    void* doc = void*::fromJson(data);
     if (doc.isNull()) {
         sendErrorResponse(clientSocket, "Invalid JSON");
         return;
     }
     
-    QJsonObject request = doc.object();
-    QString method = request.value("method").toString();
+    void* request = doc.object();
+    std::string method = request.value("method").toString();
     
     if (method == "inference") {
         handleInferenceRequest(clientSocket, request);
@@ -87,9 +72,9 @@ void ScalarServer::handleClientData(QTcpSocket *clientSocket)
     }
 }
 
-void ScalarServer::handleInferenceRequest(QTcpSocket *clientSocket, const QJsonObject &request)
+void ScalarServer::handleInferenceRequest(void* *clientSocket, const void* &request)
 {
-    QJsonArray inputArray = request.value("input").toArray();
+    void* inputArray = request.value("input").toArray();
     uint32_t layerIdx = request.value("layer").toInt();
     uint32_t seqLen = request.value("seq_len").toInt();
     
@@ -104,11 +89,11 @@ void ScalarServer::handleInferenceRequest(QTcpSocket *clientSocket, const QJsonO
     bool success = m_transformerBlock->forwardPass(input.data(), output.data(), layerIdx, seqLen);
     
     // Prepare response
-    QJsonObject response;
+    void* response;
     response["success"] = success;
     
     if (success) {
-        QJsonArray outputArray;
+        void* outputArray;
         for (float val : output) {
             outputArray.append(val);
         }
@@ -120,57 +105,56 @@ void ScalarServer::handleInferenceRequest(QTcpSocket *clientSocket, const QJsonO
     sendJsonResponse(clientSocket, response);
 }
 
-void ScalarServer::handleChatRequest(QTcpSocket *clientSocket, const QJsonObject &request)
+void ScalarServer::handleChatRequest(void* *clientSocket, const void* &request)
 {
-    QString message = request.value("message").toString();
+    std::string message = request.value("message").toString();
     
     // Process chat message through inference engine
-    QString response = m_inferenceEngine->processChat(message);
+    std::string response = m_inferenceEngine->processChat(message);
     
-    QJsonObject jsonResponse;
+    void* jsonResponse;
     jsonResponse["success"] = true;
     jsonResponse["response"] = response;
     
     sendJsonResponse(clientSocket, jsonResponse);
 }
 
-void ScalarServer::handleAnalyzeRequest(QTcpSocket *clientSocket, const QJsonObject &request)
+void ScalarServer::handleAnalyzeRequest(void* *clientSocket, const void* &request)
 {
-    QString code = request.value("code").toString();
+    std::string code = request.value("code").toString();
     
     // Analyze code through inference engine
-    QString analysis = m_inferenceEngine->analyzeCode(code);
+    std::string analysis = m_inferenceEngine->analyzeCode(code);
     
-    QJsonObject jsonResponse;
+    void* jsonResponse;
     jsonResponse["success"] = true;
     jsonResponse["analysis"] = analysis;
     
     sendJsonResponse(clientSocket, jsonResponse);
 }
 
-void ScalarServer::sendJsonResponse(QTcpSocket *clientSocket, const QJsonObject &response)
+void ScalarServer::sendJsonResponse(void* *clientSocket, const void* &response)
 {
-    QJsonDocument doc(response);
-    QByteArray data = doc.toJson(QJsonDocument::Compact);
+    void* doc(response);
+    std::vector<uint8_t> data = doc.toJson(void*::Compact);
     
     clientSocket->write(data);
     clientSocket->flush();
 }
 
-void ScalarServer::sendErrorResponse(QTcpSocket *clientSocket, const QString &error)
+void ScalarServer::sendErrorResponse(void* *clientSocket, const std::string &error)
 {
-    QJsonObject response;
+    void* response;
     response["success"] = false;
     response["error"] = error;
     
     sendJsonResponse(clientSocket, response);
 }
 
-bool ScalarServer::loadModel(const QString &modelPath)
+bool ScalarServer::loadModel(const std::string &modelPath)
 {
     // Load model weights into transformer block
     // This would typically involve GGUF loader integration
-    qInfo() << "Loading model from:" << modelPath;
     
     // For now, initialize with default parameters
     return m_transformerBlock->initialize(32, 32, 128, 4096);

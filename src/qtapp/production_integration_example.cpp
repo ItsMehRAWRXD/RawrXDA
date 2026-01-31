@@ -9,11 +9,7 @@
 #include "health_check_server.hpp"
 #include "inference_engine.hpp"
 #include "StreamingGGUFLoader.hpp"
-#include <QCoreApplication>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QDateTime>
-#include <QDebug>
+
 
 /**
  * Example: Starting Health Check Server in Production Mode
@@ -34,56 +30,39 @@ void startProductionHealthCheck(InferenceEngine* engine) {
     
     // Start server
     if (healthServer->startServer(port)) {
-        QJsonObject logEntry;
-        logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* logEntry;
+        logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "INFO";
         logEntry["component"] = "ProductionInit";
         logEntry["event"] = "health_check_started";
         logEntry["port"] = port;
-        logEntry["endpoints"] = QJsonArray{"/health", "/ready", "/metrics", "/metrics/prometheus", "/model", "/gpu"};
+        logEntry["endpoints"] = void*{"/health", "/ready", "/metrics", "/metrics/prometheus", "/model", "/gpu"};
         
-        qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
         
         // Log access information for operations team
-        qInfo() << "==============================================";
-        qInfo() << "Health Check Server Started on port:" << port;
-        qInfo() << "Access endpoints:";
-        qInfo() << "  Kubernetes Health: http://localhost:" << port << "/health";
-        qInfo() << "  Kubernetes Ready:  http://localhost:" << port << "/ready";
-        qInfo() << "  JSON Metrics:      http://localhost:" << port << "/metrics";
-        qInfo() << "  Prometheus:        http://localhost:" << port << "/metrics/prometheus";
-        qInfo() << "  Model Info:        http://localhost:" << port << "/model";
-        qInfo() << "  GPU Status:        http://localhost:" << port << "/gpu";
-        qInfo() << "==============================================";
         
     } else {
-        QJsonObject logEntry;
-        logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        void* logEntry;
+        logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
         logEntry["level"] = "CRITICAL";
         logEntry["component"] = "ProductionInit";
         logEntry["event"] = "health_check_failed";
         logEntry["port"] = port;
         
-        qCritical().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
         
-        qCritical() << "CRITICAL: Health Check Server failed to start!";
-        qCritical() << "Production monitoring will be unavailable.";
-        qCritical() << "Check if port" << port << "is already in use.";
     }
     
     // Connect signals for real-time monitoring
-    QObject::connect(healthServer, &HealthCheckServer::requestReceived,
-        [](const QString& method, const QString& path) {
+    void {
             // Optional: Log all requests in production
             // Can be disabled via RAWRXD_LOG_LEVEL=INFO
         });
     
-    QObject::connect(healthServer, &HealthCheckServer::requestCompleted,
-        [](const QString& method, const QString& path, int statusCode, double latency_ms) {
+    void {
             // Log slow requests (P95 target: 100ms from config)
             if (latency_ms > 100.0) {
-                QJsonObject warnLog;
-                warnLog["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+                void* warnLog;
+                warnLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
                 warnLog["level"] = "WARNING";
                 warnLog["component"] = "HealthCheckServer";
                 warnLog["event"] = "slow_request";
@@ -92,20 +71,17 @@ void startProductionHealthCheck(InferenceEngine* engine) {
                 warnLog["latency_ms"] = latency_ms;
                 warnLog["sla_target_ms"] = 100;
                 
-                qWarning().noquote() << QJsonDocument(warnLog).toJson(QJsonDocument::Compact);
             }
         });
     
-    QObject::connect(healthServer, &HealthCheckServer::errorOccurred,
-        [](const QString& error) {
-            QJsonObject errorLog;
-            errorLog["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void {
+            void* errorLog;
+            errorLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
             errorLog["level"] = "ERROR";
             errorLog["component"] = "HealthCheckServer";
             errorLog["event"] = "server_error";
             errorLog["error"] = error;
             
-            qCritical().noquote() << QJsonDocument(errorLog).toJson(QJsonDocument::Compact);
         });
 }
 
@@ -180,7 +156,7 @@ void startProductionHealthCheck(InferenceEngine* engine) {
  * Shows how to use zone-based loading for production deployments
  * with large models (e.g., 70B parameter models on limited VRAM).
  */
-void loadModelWithStreaming(const QString& modelPath) {
+void loadModelWithStreaming(const std::string& modelPath) {
     StreamingGGUFLoader* loader = new StreamingGGUFLoader();
     
     // Set maximum loaded zones (adjust based on available RAM)
@@ -189,19 +165,17 @@ void loadModelWithStreaming(const QString& modelPath) {
     
     // Open model file
     if (!loader->Open(modelPath)) {
-        qCritical() << "Failed to open model:" << modelPath;
         return;
     }
     
     // Build tensor index (fast, doesn't load data)
     if (!loader->BuildTensorIndex()) {
-        qCritical() << "Failed to build tensor index";
         loader->Close();
         return;
     }
     
-    QJsonObject logEntry;
-    logEntry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* logEntry;
+    logEntry["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     logEntry["level"] = "INFO";
     logEntry["component"] = "ProductionInit";
     logEntry["event"] = "streaming_loader_ready";
@@ -210,22 +184,19 @@ void loadModelWithStreaming(const QString& modelPath) {
     logEntry["tensor_count"] = loader->getTensorCount();
     logEntry["max_loaded_zones"] = 8;
     
-    qInfo().noquote() << QJsonDocument(logEntry).toJson(QJsonDocument::Compact);
     
     // Connect signals for monitoring
-    QObject::connect(loader, &StreamingGGUFLoader::ZoneLoaded,
-        [](const QString& zoneName, double load_time_ms) {
+    void {
             // Monitor zone loading performance
             if (load_time_ms > 1000.0) { // Warn if > 1 second
-                QJsonObject warnLog;
-                warnLog["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+                void* warnLog;
+                warnLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
                 warnLog["level"] = "WARNING";
                 warnLog["component"] = "StreamingGGUFLoader";
                 warnLog["event"] = "slow_zone_load";
                 warnLog["zone_name"] = zoneName;
                 warnLog["load_time_ms"] = load_time_ms;
                 
-                qWarning().noquote() << QJsonDocument(warnLog).toJson(QJsonDocument::Compact);
             }
         });
     
@@ -254,14 +225,14 @@ int main(int argc, char* argv[]) {
     startProductionHealthCheck(engine);
     
     // 4. Log production startup complete
-    QJsonObject startupLog;
-    startupLog["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    void* startupLog;
+    startupLog["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     startupLog["level"] = "INFO";
     startupLog["component"] = "ProductionInit";
     startupLog["event"] = "startup_complete";
     startupLog["version"] = "2.0-hardened";
     
-    qInfo().noquote() << QJsonDocument(startupLog).toJson(QJsonDocument::Compact);
     
     return app.exec();
 }
+

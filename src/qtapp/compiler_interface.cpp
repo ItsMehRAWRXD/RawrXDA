@@ -16,7 +16,7 @@ CompilerInterface::CompilerInterface()
     
     options_ = Compiler::CompilerFactory::createDefaultOptions();
     
-    worker_->moveToThread(worker_thread_.get());  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\nworker_thread_->start();
+    worker_->);  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\nworker_thread_->start();
 }
 
 CompilerInterface::~CompilerInterface() {
@@ -117,15 +117,15 @@ void CompilerInterface::onWorkerFinished(bool success) {
             output_panel_->displayCompilationReport(
                 "Compilation Successful",
                 std::string("Compiled in %1 ms with %2 warnings")
-                    .arg(latest_metrics_.total_time.count())
-                    .arg(warning_count_)
+                    )
+                    
             );
         } else {
             output_panel_->displayCompilationReport(
                 "Compilation Failed",
                 std::string("Compilation failed with %1 errors and %2 warnings")
-                    .arg(error_count_)
-                    .arg(warning_count_)
+
+
             );
         }
     }
@@ -206,10 +206,10 @@ void CompilerOutputPanel::addError(int line, int column, const std::string& file
     errors_.push_back(item);
     
     std::string prefix = is_warning ? "[WARN]" : "[ERROR]";
-    std::string location = file.empty() ? std::string("Line %1:%2").arg(line).arg(column)
-                                        : std::string("%1:%2:%3").arg(file).arg(line).arg(column);
+    std::string location = file.empty() ? std::string("Line %1:%2")
+                                        : std::string("%1:%2:%3");
     
-    output_text_->appendPlainText(std::string("%1 %2 - %3").arg(prefix, location, message));
+    output_text_->appendPlainText(std::string("%1 %2 - %3"));
 }
 
 void CompilerOutputPanel::addMetrics(const Compiler::CompilationMetrics& metrics) {
@@ -392,7 +392,7 @@ void CompileToolbar::setupUI() {
 
 void CompileToolbar::updateMetrics(const Compiler::CompilationMetrics& metrics) {
     status_label_->setText(
-        std::string("Compiled in %1ms").arg(metrics.total_time.count())
+        std::string("Compiled in %1ms"))
     );
 }
 
@@ -452,10 +452,8 @@ void ErrorNavigator::updateDisplay() {
         const auto& err = errors_[current_error_];
         status_label_->setText(
             std::string("Error %1/%2: Line %3, Col %4")
-                .arg(current_error_ + 1)
-                .arg(total_errors_)
-                .arg(err.line)
-                .arg(err.column)
+
+
         );
         
         errorSelected(err.line, err.column);
@@ -464,11 +462,4 @@ void ErrorNavigator::updateDisplay() {
 
 } // namespace IDE
 } // namespace RawrXD
-
-
-
-
-
-
-
 

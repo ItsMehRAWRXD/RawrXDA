@@ -10,8 +10,8 @@
 #include "real_time_completion_engine.h"
 #include "logging/logger.h"
 #include "metrics/metrics.h"
-#include <QThread>
-#include <QMetaObject>
+
+
 #include <chrono>
 #include <algorithm>
 #include <numeric>
@@ -23,8 +23,8 @@
 // BENCHMARK RUNNER IMPLEMENTATION
 // ============================================================================
 
-BenchmarkRunner::BenchmarkRunner(QObject* parent)
-    : QObject(parent), gpuEnabled_(true), verbose_(false), shouldStop_(false) {
+BenchmarkRunner::BenchmarkRunner(void* parent)
+    : void(parent), gpuEnabled_(true), verbose_(false), shouldStop_(false) {
 }
 
 BenchmarkRunner::~BenchmarkRunner() {
@@ -33,7 +33,7 @@ BenchmarkRunner::~BenchmarkRunner() {
 }
 
 void BenchmarkRunner::runBenchmarks(const std::vector<std::string>& selectedTests,
-                                    const QString& modelPath,
+                                    const std::string& modelPath,
                                     bool gpuEnabled,
                                     bool verbose) {
     selectedTests_ = selectedTests;
@@ -44,7 +44,7 @@ void BenchmarkRunner::runBenchmarks(const std::vector<std::string>& selectedTest
     results_.clear();
 
     // Run in background
-    QMetaObject::invokeMethod(this, "executeRun", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(this, "executeRun", //QueuedConnection);
 }
 
 void BenchmarkRunner::stop() {
@@ -59,7 +59,7 @@ const std::vector<BenchmarkTestResult>& BenchmarkRunner::getResults() const {
 void BenchmarkRunner::executeRun() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    emit started();
+    started();
     log("Initializing benchmark suite...", 1);  // INFO
 
     // Initialize inference engine
@@ -69,11 +69,11 @@ void BenchmarkRunner::executeRun() {
         );
 
         if (!engine_->loadModel(modelPath_)) {
-            emit error("Failed to load model: " + modelPath_);
+            error("Failed to load model: " + modelPath_);
             return;
         }
 
-        log(QString("Model loaded: %1").arg(modelPath_), 2);  // SUCCESS
+        log(std::string("Model loaded: %1"), 2);  // SUCCESS
 
         // Initialize completion engine
         auto logger = std::make_shared<Logger>("benchmark-runner");
@@ -84,7 +84,7 @@ void BenchmarkRunner::executeRun() {
         log("Completion engine initialized", 2);  // SUCCESS
 
     } catch (const std::exception& e) {
-        emit error(QString("Initialization failed: %1").arg(e.what()));
+        error(std::string("Initialization failed: %1")));
         return;
     }
 
@@ -104,10 +104,10 @@ void BenchmarkRunner::executeRun() {
         }
 
         current++;
-        emit testStarted(QString::fromStdString(testName));
-        emit progress(current, total);
+        testStarted(std::string::fromStdString(testName));
+        progress(current, total);
 
-        log(QString("[%1/%2] Running: %3").arg(current).arg(total).arg(QString::fromStdString(testName)), 1);
+        log(std::string("[%1/%2] Running: %3")), 1);
 
         BenchmarkTestResult result;
 
@@ -131,7 +131,7 @@ void BenchmarkRunner::executeRun() {
             } else if (testName == "memory") {
                 success = testMemory(result);
             } else {
-                log(QString("Unknown test: %1").arg(QString::fromStdString(testName)), 4);  // ERROR
+                log(std::string("Unknown test: %1")), 4);  // ERROR
                 continue;
             }
 
@@ -141,18 +141,17 @@ void BenchmarkRunner::executeRun() {
 
             if (success) passed++;
 
-            emit testCompleted(QString::fromStdString(testName), success, result.avgLatencyMs);
+            testCompleted(std::string::fromStdString(testName), success, result.avgLatencyMs);
 
             // Log result
-            QString status = success ? "✅ PASS" : "⚠ WARNING";
-            log(QString("  %1 | Avg: %2ms | P95: %3ms | Success: %4%")
-                .arg(status)
-                .arg(result.avgLatencyMs, 0, 'f', 2)
-                .arg(result.p95LatencyMs, 0, 'f', 2)
-                .arg(static_cast<int>(result.successRate)), success ? 2 : 3);
+            std::string status = success ? "✅ PASS" : "⚠ WARNING";
+            log(std::string("  %1 | Avg: %2ms | P95: %3ms | Success: %4%")
+
+
+                ), success ? 2 : 3);
 
         } catch (const std::exception& e) {
-            log(QString("Test failed with exception: %1").arg(e.what()), 4);  // ERROR
+            log(std::string("Test failed with exception: %1")), 4);  // ERROR
         }
 
         log("", 1);
@@ -163,11 +162,11 @@ void BenchmarkRunner::executeRun() {
 
     // Final summary
     log("═══════════════════════════════════════════════════════", 1);
-    log(QString("SUMMARY: %1/%2 tests passed").arg(passed).arg(total), 2);
-    log(QString("Execution time: %1 seconds").arg(executionTime, 0, 'f', 2), 1);
+    log(std::string("SUMMARY: %1/%2 tests passed"), 2);
+    log(std::string("Execution time: %1 seconds"), 1);
     log("═══════════════════════════════════════════════════════", 1);
 
-    emit finished(passed, total, executionTime);
+    finished(passed, total, executionTime);
 }
 
 // ============================================================================
@@ -205,17 +204,17 @@ bool BenchmarkRunner::testColdStart(BenchmarkTestResult& result) {
             if (!completions.empty()) {
                 successful++;
                 if (verbose_) {
-                    log(QString("  Test case %1: %2ms, %3 completions")
-                        .arg(i + 1).arg(latencyMs, 0, 'f', 2).arg(completions.size()), 1);
+                    log(std::string("  Test case %1: %2ms, %3 completions")
+                        ), 1);
                 }
             } else {
-                log(QString("  Test case %1: No completions generated").arg(i + 1), 3);
+                log(std::string("  Test case %1: No completions generated"), 3);
             }
         } catch (const std::exception& e) {
-            log(QString("  Test case %1 failed: %2").arg(i + 1).arg(e.what()), 4);
+            log(std::string("  Test case %1 failed: %2")), 4);
             latencies.push_back(0.0);
         } catch (...) {
-            log(QString("  Test case %1 failed: Unknown exception").arg(i + 1), 4);
+            log(std::string("  Test case %1 failed: Unknown exception"), 4);
             latencies.push_back(0.0);
         }
     }
@@ -237,9 +236,9 @@ bool BenchmarkRunner::testWarmCache(BenchmarkTestResult& result) {
         try {
             completionEngine_->getCompletions(testPrefix, "", "cpp", "");
         } catch (const std::exception& e) {
-            log(QString("  Warmup %1 failed: %2").arg(warmup + 1).arg(e.what()), 3);
+            log(std::string("  Warmup %1 failed: %2")), 3);
         } catch (...) {
-            log(QString("  Warmup %1 failed: Unknown exception").arg(warmup + 1), 3);
+            log(std::string("  Warmup %1 failed: Unknown exception"), 3);
         }
     }
 
@@ -259,13 +258,13 @@ bool BenchmarkRunner::testWarmCache(BenchmarkTestResult& result) {
             latencies.push_back(latencyMs);
             
             if (verbose_ && i % 20 == 0) {
-                log(QString("    Iteration %1/%2: %3ms").arg(i + 1).arg(NUM_ITERATIONS).arg(latencyMs, 0, 'f', 2), 1);
+                log(std::string("    Iteration %1/%2: %3ms"), 1);
             }
         } catch (const std::exception& e) {
-            log(QString("  Iteration %1 failed: %2").arg(i + 1).arg(e.what()), 4);
+            log(std::string("  Iteration %1 failed: %2")), 4);
             latencies.push_back(0.0);
         } catch (...) {
-            log(QString("  Iteration %1 failed: Unknown exception").arg(i + 1), 4);
+            log(std::string("  Iteration %1 failed: Unknown exception"), 4);
             latencies.push_back(0.0);
         }
     }
@@ -300,10 +299,10 @@ bool BenchmarkRunner::testRapidFire(BenchmarkTestResult& result) {
 
             if (!completions.empty()) successful++;
         } catch (const std::exception& e) {
-            log(QString("Request %1 failed: %2").arg(i).arg(e.what()), 4);  // ERROR with details
+            log(std::string("Request %1 failed: %2")), 4);  // ERROR with details
             latencies.push_back(0.0);
         } catch (...) {
-            log(QString("Request %1 failed: Unknown exception").arg(i), 4);  // ERROR
+            log(std::string("Request %1 failed: Unknown exception"), 4);  // ERROR
             latencies.push_back(0.0);
         }
     }
@@ -343,7 +342,7 @@ bool BenchmarkRunner::testMultiLanguage(BenchmarkTestResult& result) {
     for (const auto& test : tests) {
         if (shouldStop_) return false;
 
-        log(QString("  Testing %1...").arg(QString::fromStdString(test.language)), 1);
+        log(std::string("  Testing %1...")), 1);
         auto start = std::chrono::high_resolution_clock::now();
         
         try {
@@ -356,23 +355,23 @@ bool BenchmarkRunner::testMultiLanguage(BenchmarkTestResult& result) {
             if (!completions.empty()) {
                 successful++;
                 if (verbose_) {
-                    log(QString("    %1: %2ms, %3 completions")
-                        .arg(QString::fromStdString(test.language))
-                        .arg(latencyMs, 0, 'f', 2)
-                        .arg(completions.size()), 2);
+                    log(std::string("    %1: %2ms, %3 completions")
+                        )
+                        
+                        ), 2);
                 }
             } else {
-                log(QString("    %1: No completions generated")
-                    .arg(QString::fromStdString(test.language)), 3);
+                log(std::string("    %1: No completions generated")
+                    ), 3);
             }
         } catch (const std::exception& e) {
-            log(QString("    %1 failed: %2")
-                .arg(QString::fromStdString(test.language))
-                .arg(e.what()), 4);
+            log(std::string("    %1 failed: %2")
+                )
+                ), 4);
             latencies.push_back(0.0);
         } catch (...) {
-            log(QString("    %1 failed: Unknown exception")
-                .arg(QString::fromStdString(test.language)), 4);
+            log(std::string("    %1 failed: Unknown exception")
+                ), 4);
             latencies.push_back(0.0);
         }
     }
@@ -425,7 +424,7 @@ bool BenchmarkRunner::testContextAware(BenchmarkTestResult& result) {
     for (const auto& test : tests) {
         if (shouldStop_) return false;
 
-        log(QString("  Testing: %1").arg(QString::fromStdString(test.description)), 1);
+        log(std::string("  Testing: %1")), 1);
         auto start = std::chrono::high_resolution_clock::now();
         
         try {
@@ -438,26 +437,26 @@ bool BenchmarkRunner::testContextAware(BenchmarkTestResult& result) {
             if (!completions.empty()) {
                 successful++;
                 if (verbose_) {
-                    log(QString("    Success: %1ms, %2 completions")
-                        .arg(latencyMs, 0, 'f', 2)
-                        .arg(completions.size()), 2);
+                    log(std::string("    Success: %1ms, %2 completions")
+                        
+                        ), 2);
                 }
             } else {
-                log(QString("    No completions generated"), 3);
+                log(std::string("    No completions generated"), 3);
             }
         } catch (const std::exception& e) {
-            log(QString("    Failed: %1").arg(e.what()), 4);
+            log(std::string("    Failed: %1")), 4);
             latencies.push_back(0.0);
         } catch (...) {
-            log(QString("    Failed: Unknown exception"), 4);
+            log(std::string("    Failed: Unknown exception"), 4);
             latencies.push_back(0.0);
         }
     }
 
     result = calculateStats("Context-Aware", latencies, successful, tests.size());
     result.passed = successful >= tests.size() * 0.6 && result.avgLatencyMs < 500.0;
-    result.notes = QString("Tests completion quality with full context (%1/%2 successful)")
-        .arg(successful).arg(tests.size()).toStdString();
+    result.notes = std::string("Tests completion quality with full context (%1/%2 successful)")
+        ).toStdString();
     
     return result.passed;
 }
@@ -513,7 +512,7 @@ bool BenchmarkRunner::testMultiLine(BenchmarkTestResult& result) {
     for (const auto& test : tests) {
         if (shouldStop_) return false;
 
-        log(QString("  Testing: %1").arg(QString::fromStdString(test.description)), 1);
+        log(std::string("  Testing: %1")), 1);
         auto start = std::chrono::high_resolution_clock::now();
         
         try {
@@ -526,26 +525,26 @@ bool BenchmarkRunner::testMultiLine(BenchmarkTestResult& result) {
             if (!completions.empty()) {
                 successful++;
                 if (verbose_) {
-                    log(QString("    Generated %1 lines in %2ms")
-                        .arg(completions.size())
-                        .arg(latencyMs, 0, 'f', 2), 2);
+                    log(std::string("    Generated %1 lines in %2ms")
+                        )
+                        , 2);
                 }
             } else {
-                log(QString("    No multi-line completion generated"), 3);
+                log(std::string("    No multi-line completion generated"), 3);
             }
         } catch (const std::exception& e) {
-            log(QString("    Failed: %1").arg(e.what()), 4);
+            log(std::string("    Failed: %1")), 4);
             latencies.push_back(0.0);
         } catch (...) {
-            log(QString("    Failed: Unknown exception"), 4);
+            log(std::string("    Failed: Unknown exception"), 4);
             latencies.push_back(0.0);
         }
     }
 
     result = calculateStats("Multi-Line", latencies, successful, tests.size());
     result.passed = successful >= tests.size() * 0.5;
-    result.notes = QString("Tests structural code completion (%1/%2 successful)")
-        .arg(successful).arg(tests.size()).toStdString();
+    result.notes = std::string("Tests structural code completion (%1/%2 successful)")
+        ).toStdString();
     
     return result.passed;
 }
@@ -555,7 +554,7 @@ bool BenchmarkRunner::testGPUAcceleration(BenchmarkTestResult& result) {
     size_t successful = 0;
     const int NUM_GPU_TESTS = 50;  // Full GPU benchmark
 
-    log(QString("  GPU Mode: %1").arg(gpuEnabled_ ? "Enabled" : "CPU Fallback"), 1);
+    log(std::string("  GPU Mode: %1"), 1);
 
     std::vector<std::string> testPrompts = {
         "float calc() {\n    ",
@@ -581,15 +580,15 @@ bool BenchmarkRunner::testGPUAcceleration(BenchmarkTestResult& result) {
             if (!completions.empty()) {
                 successful++;
                 if (verbose_ && i % 10 == 0) {
-                    log(QString("    Iteration %1/%2: %3ms")
-                        .arg(i + 1).arg(NUM_GPU_TESTS).arg(latencyMs, 0, 'f', 2), 1);
+                    log(std::string("    Iteration %1/%2: %3ms")
+                        , 1);
                 }
             }
         } catch (const std::exception& e) {
-            log(QString("  GPU test %1 failed: %2").arg(i + 1).arg(e.what()), 4);
+            log(std::string("  GPU test %1 failed: %2")), 4);
             latencies.push_back(0.0);
         } catch (...) {
-            log(QString("  GPU test %1 failed: Unknown exception").arg(i + 1), 4);
+            log(std::string("  GPU test %1 failed: Unknown exception"), 4);
             latencies.push_back(0.0);
         }
     }
@@ -597,15 +596,15 @@ bool BenchmarkRunner::testGPUAcceleration(BenchmarkTestResult& result) {
     result = calculateStats("GPU Acceleration", latencies, successful, NUM_GPU_TESTS);
     result.passed = successful >= NUM_GPU_TESTS * 0.8;
     
-    QString performanceNote = gpuEnabled_ ? 
-        QString("GPU accelerated - Avg: %1ms, P95: %2ms")
-            .arg(result.avgLatencyMs, 0, 'f', 2)
-            .arg(result.p95LatencyMs, 0, 'f', 2) :
-        QString("CPU fallback - Avg: %1ms (GPU unavailable)")
-            .arg(result.avgLatencyMs, 0, 'f', 2);
+    std::string performanceNote = gpuEnabled_ ? 
+        std::string("GPU accelerated - Avg: %1ms, P95: %2ms")
+            
+             :
+        std::string("CPU fallback - Avg: %1ms (GPU unavailable)")
+            ;
     
     result.notes = performanceNote.toStdString();
-    log(QString("  %1").arg(performanceNote), result.passed ? 2 : 3);
+    log(std::string("  %1"), result.passed ? 2 : 3);
     
     return result.passed;
 }
@@ -616,7 +615,7 @@ bool BenchmarkRunner::testMemory(BenchmarkTestResult& result) {
     try {
         // Get initial memory usage
         qint64 baseMemMB = engine_->memoryUsageMB();
-        log(QString("    Base memory: %1 MB").arg(baseMemMB), 1);
+        log(std::string("    Base memory: %1 MB"), 1);
         
         // Perform inference operations to measure peak memory
         std::vector<qint64> memorySnapshots;
@@ -637,10 +636,10 @@ bool BenchmarkRunner::testMemory(BenchmarkTestResult& result) {
                 memorySnapshots.push_back(currentMemMB);
                 
                 if (verbose_) {
-                    log(QString("    After inference: %1 MB").arg(currentMemMB), 1);
+                    log(std::string("    After inference: %1 MB"), 1);
                 }
             } catch (const std::exception& e) {
-                log(QString("    Memory snapshot failed: %1").arg(e.what()), 3);
+                log(std::string("    Memory snapshot failed: %1")), 3);
             }
         }
         
@@ -656,12 +655,12 @@ bool BenchmarkRunner::testMemory(BenchmarkTestResult& result) {
         result.maxLatencyMs = static_cast<double>(maxMemMB);
         result.passed = true;
         
-        QString memoryReport = QString(
+        std::string memoryReport = std::string(
             "Base: %1 MB | Avg: %2 MB | Peak: %3 MB | Delta: %4 MB | Samples: %5"
-        ).arg(baseMemMB).arg(avgMemMB).arg(maxMemMB).arg(peakDeltaMB).arg(memorySnapshots.size());
+        ));
         
         result.notes = memoryReport.toStdString();
-        log(QString("  %1").arg(memoryReport), 2);
+        log(std::string("  %1"), 2);
         
         // Warn if memory usage is concerning
         if (maxMemMB > 8192) {
@@ -670,9 +669,9 @@ bool BenchmarkRunner::testMemory(BenchmarkTestResult& result) {
         
         return true;
     } catch (const std::exception& e) {
-        log(QString("  Memory profiling failed: %1").arg(e.what()), 4);
+        log(std::string("  Memory profiling failed: %1")), 4);
         result.passed = false;
-        result.notes = QString("Error: %1").arg(e.what()).toStdString();
+        result.notes = std::string("Error: %1")).toStdString();
         return false;
     } catch (...) {
         log("  Memory profiling failed: Unknown exception", 4);
@@ -727,6 +726,7 @@ BenchmarkTestResult BenchmarkRunner::calculateStats(
     return result;
 }
 
-void BenchmarkRunner::log(const QString& message, int level) {
-    emit logMessage(message, level);
+void BenchmarkRunner::log(const std::string& message, int level) {
+    logMessage(message, level);
 }
+

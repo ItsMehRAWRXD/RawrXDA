@@ -112,11 +112,11 @@ void ExtensionPanel::updateExtensionDetails() {
 
     auto ext = extManager_.getExtension(name);
     
-    std::string details = std::string("<b>Name:</b> %1<br>").arg(name);
-    details += std::string("<b>Type:</b> %1<br>").arg(std::string::fromStdString(ext.type));
+    std::string details = std::string("<b>Name:</b> %1<br>");
+    details += std::string("<b>Type:</b> %1<br>"));
     details += std::string("<b>Status:</b> %1<br>")
-        .arg(ext.enabled ? "Enabled" : (ext.installed ? "Installed" : "Created"));
-    details += std::string("<b>Path:</b> %1<br>").arg(std::string::fromStdString(ext.path));
+        );
+    details += std::string("<b>Path:</b> %1<br>"));
     
     detailsLabel_->setText(details);
 
@@ -231,7 +231,7 @@ void ExtensionPanel::onRemoveClicked() {
     if (name.empty()) return;
 
     auto reply = void::question(this, "Remove Extension",
-                                      std::string("Are you sure you want to remove '%1'?").arg(name),
+                                      std::string("Are you sure you want to remove '%1'?"),
                                       void::Yes | void::No);
     
     if (reply != void::Yes) return;
@@ -253,10 +253,4 @@ void ExtensionPanel::onRefreshClicked() {
 }
 
 } // namespace IDE
-
-
-
-
-
-
 

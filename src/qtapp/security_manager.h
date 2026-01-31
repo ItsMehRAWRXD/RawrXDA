@@ -1,11 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
-#include <QByteArray>
-#include <QHash>
-#include <QDateTime>
+
 #include <vector>
 #include <memory>
 #include <map>
@@ -27,9 +22,8 @@
  *
  * Thread-safe singleton pattern (use getInstance())
  */
-class SecurityManager : public QObject
+class SecurityManager : public void
 {
-    Q_OBJECT
 
 public:
     enum class EncryptionAlgorithm {
@@ -45,33 +39,32 @@ public:
         Execute = 4,
         Admin = 7  // Full access
     };
-    Q_ENUM(AccessLevel)
 
     struct CredentialInfo {
-        QString username;
-        QString email;
-        QString tokenType;      // "bearer", "basic", "api_key"
-        QString token;          // Encrypted
+        std::string username;
+        std::string email;
+        std::string tokenType;      // "bearer", "basic", "api_key"
+        std::string token;          // Encrypted
         qint64 issuedAt;        // Unix timestamp
         qint64 expiresAt;       // Unix timestamp
         bool isRefreshable;
-        QString refreshToken;   // For OAuth2
+        std::string refreshToken;   // For OAuth2
     };
 
     struct SecurityAuditEntry {
         qint64 timestamp;
-        QString eventType;      // "login", "key_rotation", "decryption", "auth_failed"
-        QString actor;          // User or service
-        QString resource;
+        std::string eventType;      // "login", "key_rotation", "decryption", "auth_failed"
+        std::string actor;          // User or service
+        std::string resource;
         bool success;
-        QString details;
+        std::string details;
     };
 
     // Singleton access
     static SecurityManager* getInstance();
 
     // Initialize security (load keys, initialize crypto)
-    bool initialize(const QString& masterPassword = "");
+    bool initialize(const std::string& masterPassword = "");
 
     // ===== Encryption/Decryption =====
     /**
@@ -80,7 +73,7 @@ public:
      * @param algorithm Algorithm to use (default: AES256_GCM)
      * @return Encrypted data (base64 encoded with IV + tag)
      */
-    QString encryptData(const QByteArray& plaintext, 
+    std::string encryptData(const std::vector<uint8_t>& plaintext, 
                        EncryptionAlgorithm algorithm = EncryptionAlgorithm::AES256_GCM);
 
     /**
@@ -88,7 +81,7 @@ public:
      * @param ciphertext Encrypted data (base64 encoded)
      * @return Decrypted plaintext or empty if failed
      */
-    QByteArray decryptData(const QString& ciphertext);
+    std::vector<uint8_t> decryptData(const std::string& ciphertext);
 
     // ===== HMAC & Integrity =====
     /**
@@ -96,7 +89,7 @@ public:
      * @param data Data to hash
      * @return HMAC-SHA256 (hex encoded)
      */
-    QString generateHMAC(const QByteArray& data);
+    std::string generateHMAC(const std::vector<uint8_t>& data);
 
     /**
      * @brief Verify HMAC
@@ -104,7 +97,7 @@ public:
      * @param hmac HMAC to verify (hex encoded)
      * @return true if HMAC is valid
      */
-    bool verifyHMAC(const QByteArray& data, const QString& hmac);
+    bool verifyHMAC(const std::vector<uint8_t>& data, const std::string& hmac);
 
     // ===== Key Management =====
     /**
@@ -113,7 +106,7 @@ public:
      * @param algorithm Algorithm for key derivation
      * @return true if successful
      */
-    bool generateNewKey(const QString& keyId, EncryptionAlgorithm algorithm);
+    bool generateNewKey(const std::string& keyId, EncryptionAlgorithm algorithm);
 
     /**
      * @brief Rotate current encryption key
@@ -137,30 +130,30 @@ public:
      * @param refreshToken For OAuth2 refresh flow
      * @return true if successful
      */
-    bool storeCredential(const QString& username, const QString& token,
-                        const QString& tokenType = "bearer", qint64 expiresAt = 0,
-                        const QString& refreshToken = "");
+    bool storeCredential(const std::string& username, const std::string& token,
+                        const std::string& tokenType = "bearer", qint64 expiresAt = 0,
+                        const std::string& refreshToken = "");
 
     /**
      * @brief Retrieve credential
      * @param username User identifier
      * @return Credential info or empty if not found/expired
      */
-    CredentialInfo getCredential(const QString& username) const;
+    CredentialInfo getCredential(const std::string& username) const;
 
     /**
      * @brief Remove credential
      * @param username User identifier
      * @return true if successful
      */
-    bool removeCredential(const QString& username);
+    bool removeCredential(const std::string& username);
 
     /**
      * @brief Check if token is expired
      * @param username User identifier
      * @return true if token has expired
      */
-    bool isTokenExpired(const QString& username) const;
+    bool isTokenExpired(const std::string& username) const;
 
     /**
      * @brief Refresh OAuth2 token
@@ -168,7 +161,7 @@ public:
      * @param refreshToken Refresh token from original auth
      * @return New token or empty if refresh failed
      */
-    QString refreshToken(const QString& username, const QString& refreshToken = "");
+    std::string refreshToken(const std::string& username, const std::string& refreshToken = "");
 
     // ===== Access Control =====
     /**
@@ -178,7 +171,7 @@ public:
      * @param level Access level (Read, Write, Execute, Admin)
      * @return true if successful
      */
-    bool setAccessControl(const QString& username, const QString& resource,
+    bool setAccessControl(const std::string& username, const std::string& resource,
                          AccessLevel level);
 
     /**
@@ -188,7 +181,7 @@ public:
      * @param requiredLevel Required access level
      * @return true if user has sufficient access
      */
-    bool checkAccess(const QString& username, const QString& resource,
+    bool checkAccess(const std::string& username, const std::string& resource,
                     AccessLevel requiredLevel) const;
 
     /**
@@ -196,7 +189,7 @@ public:
      * @param resource Resource path
      * @return List of (username, accessLevel) pairs
      */
-    std::vector<std::pair<QString, AccessLevel>> getResourceACL(const QString& resource) const;
+    std::vector<std::pair<std::string, AccessLevel>> getResourceACL(const std::string& resource) const;
 
     // ===== Certificate Pinning =====
     /**
@@ -205,7 +198,7 @@ public:
      * @param certificatePEM Certificate in PEM format
      * @return true if successful
      */
-    bool pinCertificate(const QString& domain, const QString& certificatePEM);
+    bool pinCertificate(const std::string& domain, const std::string& certificatePEM);
 
     /**
      * @brief Verify certificate against pinned certificate
@@ -213,7 +206,7 @@ public:
      * @param certificatePEM Certificate to verify
      * @return true if matches pinned certificate
      */
-    bool verifyCertificatePin(const QString& domain, const QString& certificatePEM) const;
+    bool verifyCertificatePin(const std::string& domain, const std::string& certificatePEM) const;
 
     // ===== Audit Logging =====
     /**
@@ -224,8 +217,8 @@ public:
      * @param success Whether action succeeded
      * @param details Additional details
      */
-    void logSecurityEvent(const QString& eventType, const QString& actor,
-                         const QString& resource, bool success, const QString& details = "");
+    void logSecurityEvent(const std::string& eventType, const std::string& actor,
+                         const std::string& resource, bool success, const std::string& details = "");
 
     /**
      * @brief Get audit log entries
@@ -239,7 +232,7 @@ public:
      * @param filePath Path to export to
      * @return true if successful
      */
-    bool exportAuditLog(const QString& filePath) const;
+    bool exportAuditLog(const std::string& filePath) const;
 
     // ===== Configuration =====
     /**
@@ -247,13 +240,13 @@ public:
      * @param config Configuration object
      * @return true if successful
      */
-    bool loadConfiguration(const QJsonObject& config);
+    bool loadConfiguration(const void*& config);
 
     /**
      * @brief Get current security configuration
      * @return Configuration as JSON
      */
-    QJsonObject getConfiguration() const;
+    void* getConfiguration() const;
 
     /**
      * @brief Validate security setup
@@ -261,42 +254,42 @@ public:
      */
     bool validateSetup() const;
 
-signals:
-    void keyRotationCompleted(const QString& newKeyId);
-    void credentialStored(const QString& username);
-    void credentialExpired(const QString& username);
-    void tokenRefreshFailed(const QString& username);
-    void accessDenied(const QString& username, const QString& resource);
+
+    void keyRotationCompleted(const std::string& newKeyId);
+    void credentialStored(const std::string& username);
+    void credentialExpired(const std::string& username);
+    void tokenRefreshFailed(const std::string& username);
+    void accessDenied(const std::string& username, const std::string& resource);
     void securityEventLogged(const SecurityAuditEntry& entry);
 
 private:
     // Private constructor for singleton
-    explicit SecurityManager(QObject* parent = nullptr);
+    explicit SecurityManager(void* parent = nullptr);
     
     // ===== Encryption Implementation =====
-    QByteArray deriveKeyPBKDF2(const QString& password, const QByteArray& salt, int iterations);
-    QByteArray encryptAES256GCM(const QByteArray& plaintext, const QByteArray& key);
-    QByteArray decryptAES256GCM(const QByteArray& ciphertext, const QByteArray& key);
-    QByteArray encryptAES256CBC(const QByteArray& plaintext, const QByteArray& key);
-    QByteArray decryptAES256CBC(const QByteArray& ciphertext, const QByteArray& key);
+    std::vector<uint8_t> deriveKeyPBKDF2(const std::string& password, const std::vector<uint8_t>& salt, int iterations);
+    std::vector<uint8_t> encryptAES256GCM(const std::vector<uint8_t>& plaintext, const std::vector<uint8_t>& key);
+    std::vector<uint8_t> decryptAES256GCM(const std::vector<uint8_t>& ciphertext, const std::vector<uint8_t>& key);
+    std::vector<uint8_t> encryptAES256CBC(const std::vector<uint8_t>& plaintext, const std::vector<uint8_t>& key);
+    std::vector<uint8_t> decryptAES256CBC(const std::vector<uint8_t>& ciphertext, const std::vector<uint8_t>& key);
 
     // Static singleton instance
     static std::unique_ptr<SecurityManager> s_instance;
 
     // ===== Internal State =====
-    QByteArray m_masterKey;                           // Primary encryption key
-    QString m_currentKeyId;                           // ID of active key
+    std::vector<uint8_t> m_masterKey;                           // Primary encryption key
+    std::string m_currentKeyId;                           // ID of active key
     qint64 m_keyRotationInterval;                     // Seconds between key rotations
     qint64 m_lastKeyRotation;                         // Last rotation timestamp
     
     // Credentials storage (encrypted)
-    std::map<QString, CredentialInfo> m_credentials;  // username -> CredentialInfo
+    std::map<std::string, CredentialInfo> m_credentials;  // username -> CredentialInfo
     
     // Access control (ACL)
-    std::map<QString, std::map<QString, AccessLevel>> m_acl; // username -> (resource -> level)
+    std::map<std::string, std::map<std::string, AccessLevel>> m_acl; // username -> (resource -> level)
     
     // Certificate pinning
-    std::map<QString, QString> m_pinnedCertificates;  // domain -> certificate hash
+    std::map<std::string, std::string> m_pinnedCertificates;  // domain -> certificate hash
     
     // Audit trail
     std::vector<SecurityAuditEntry> m_auditLog;       // Security events (max 10000 entries)
@@ -304,3 +297,4 @@ private:
     bool m_initialized;
     bool m_debugMode;                                 // Log detailed security events
 };
+

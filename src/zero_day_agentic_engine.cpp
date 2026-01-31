@@ -6,11 +6,6 @@
 #include "logging/logger.h"
 #include "metrics/metrics.h"
 
-#include <QtConcurrent/QtConcurrent>
-#include <QMetaObject>
-#include <QDateTime>
-#include <QDir>
-#include <QElapsedTimer>
 
 namespace {
     std::shared_ptr<Logger> makeLogger() {
@@ -38,15 +33,15 @@ struct ZeroDayAgenticEngine::Impl {
     std::shared_ptr<Logger> logger{makeLogger()};
     std::shared_ptr<Metrics> metrics{makeMetrics()};
 
-    QString missionId;
+    std::string missionId;
     std::atomic<bool> running{false};
 };
 
 ZeroDayAgenticEngine::ZeroDayAgenticEngine(UniversalModelRouter* r,
                                            ToolRegistry* t,
                                            RawrXD::PlanOrchestrator* p,
-                                           QObject* parent)
-    : QObject(parent), d(std::make_unique<Impl>()) {
+                                           void* parent)
+    : void(parent), d(std::make_unique<Impl>()) {
     d->router = r;
     d->tools = t;
     d->planner = p;
@@ -54,23 +49,23 @@ ZeroDayAgenticEngine::ZeroDayAgenticEngine(UniversalModelRouter* r,
 
 ZeroDayAgenticEngine::~ZeroDayAgenticEngine() = default;
 
-void ZeroDayAgenticEngine::startMission(const QString& userGoal) {
+void ZeroDayAgenticEngine::startMission(const std::string& userGoal) {
     if (d->running.load()) {
         if (d->logger) d->logger->warn("Mission already running");
         return;
     }
 
-    d->missionId = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
+    d->missionId = std::chrono::system_clock::time_point::currentDateTime().toString("yyyyMMddhhmmss");
     d->running.store(true);
 
-    emit agentStream("\n🚀 Mission " + d->missionId + " started.\n");
+    agentStream("\n🚀 Mission " + d->missionId + " started.\n");
 
     // Execute mission asynchronously to keep UI responsive
     auto future = QtConcurrent::run([this, userGoal]() {
-        QElapsedTimer timer; timer.start();
+        std::chrono::steady_clock timer; timer.start();
 
-        const QString workspace = d->planner ? d->planner->workspaceRoot()
-                                              : QDir::currentPath();
+        const std::string workspace = d->planner ? d->planner->workspaceRoot()
+                                              : std::filesystem::path::currentPath();
 
         if (d->logger) d->logger->info("Planning mission: {}", userGoal.toStdString());
 
@@ -97,16 +92,17 @@ void ZeroDayAgenticEngine::startMission(const QString& userGoal) {
             if (!d->running.load()) return;
 
             if (ok) {
-                emit agentComplete("Mission " + d->missionId + " finished.");
+                agentComplete("Mission " + d->missionId + " finished.");
             } else {
-                emit agentError(exec.errorMessage.isEmpty() ? QStringLiteral("Mission failed") : exec.errorMessage);
+                agentError(exec.errorMessage.isEmpty() ? QStringLiteral("Mission failed") : exec.errorMessage);
             }
             d->running.store(false);
-        }, Qt::QueuedConnection);
+        }, //QueuedConnection);
     });
 }
 
 void ZeroDayAgenticEngine::abortMission() {
     d->running.store(false);
-    emit agentStream("\n🛑 Mission aborted.\n");
+    agentStream("\n🛑 Mission aborted.\n");
 }
+

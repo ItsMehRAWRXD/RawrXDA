@@ -1,16 +1,9 @@
 #pragma once
 
-#include <QDialog>
-#include <QString>
-#include <QStringList>
-#include <QLabel>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QProgressBar>
+
 #include <memory>
 
 class TerminalManager;
-class QTimer;
 
 /**
  * @brief Dialog for prompting model quantization conversion
@@ -22,9 +15,8 @@ class QTimer;
  * 3. Run the conversion script via IDE terminal
  * 4. Monitor progress and auto-reload the model after success
  */
-class ModelConversionDialog : public QDialog {
-    Q_OBJECT
-    
+class ModelConversionDialog : public void {
+
 public:
     enum ConversionResult {
         Cancelled = 0,
@@ -39,10 +31,10 @@ public:
      * @param modelPath Path to the model file
      * @param parent Parent widget
      */
-    explicit ModelConversionDialog(const QStringList& unsupportedTypes,
-                                  const QString& recommendedType,
-                                  const QString& modelPath,
-                                  QWidget* parent = nullptr);
+    explicit ModelConversionDialog(const std::vector<std::string>& unsupportedTypes,
+                                  const std::string& recommendedType,
+                                  const std::string& modelPath,
+                                  void* parent = nullptr);
     
     ~ModelConversionDialog() override;
     
@@ -54,12 +46,12 @@ public:
     /**
      * @brief Get the path to the converted model (if successful)
      */
-    QString convertedModelPath() const { return m_convertedPath; }
+    std::string convertedModelPath() const { return m_convertedPath; }
 
 protected:
     void closeEvent(QCloseEvent* event) override;
 
-private slots:
+private:
     /**
      * @brief User clicked "Cancel" button
      */
@@ -83,12 +75,12 @@ private slots:
     /**
      * @brief Terminal output from quantization process (stdout)
      */
-    void onTerminalOutput(const QByteArray& output);
+    void onTerminalOutput(const std::vector<uint8_t>& output);
     
     /**
      * @brief Terminal error output from quantization process (stderr)
      */
-    void onTerminalError(const QByteArray& output);
+    void onTerminalError(const std::vector<uint8_t>& output);
     
     /**
      * @brief Quantization process finished
@@ -103,11 +95,11 @@ private slots:
 private:
     void setupUI();
     void startConversion();
-    void updateProgress(const QString& message);
+    void updateProgress(const std::string& message);
     void updateProgressPercentage(int current, int total);
     void showInfoPanel();
     void hideInfoPanel();
-    void parseProgressFromOutput(const QString& output);
+    void parseProgressFromOutput(const std::string& output);
     bool verifyConvertedModelExists();
     void logConversionHistory(bool success, qint64 durationMs);
     
@@ -121,19 +113,19 @@ private:
     QPushButton* m_cancelButton;
     QPushButton* m_cancelConversionButton;
     QPushButton* m_moreInfoButton;
-    QWidget* m_infoPanel;
+    void* m_infoPanel;
     
     // State
-    QStringList m_unsupportedTypes;
-    QString m_recommendedType;
-    QString m_modelPath;
+    std::vector<std::string> m_unsupportedTypes;
+    std::string m_recommendedType;
+    std::string m_modelPath;
     ConversionResult m_result = Cancelled;
-    QString m_convertedPath;
+    std::string m_convertedPath;
     bool m_conversionInProgress = false;
     
     // Terminal management
     std::unique_ptr<TerminalManager> m_terminalManager;
-    QTimer* m_verifyTimer;
+    void** m_verifyTimer;
     int m_conversionStage = 0;  // Track which stage: 0=setup, 1=clone, 2=build, 3=convert
     
     // Progress tracking
@@ -141,3 +133,4 @@ private:
     int m_chunksProcessed = 0;  // Current chunk count from quantization output
     int m_totalChunks = 0;      // Total chunks to process
 };
+

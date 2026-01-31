@@ -1,15 +1,7 @@
 // gguf_server_hotpatch.hpp - Server-side GGUF request/response hotpatcher
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QByteArray>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QVariant>
-#include <QMutex>
-#include <QHash>
-#include <QDateTime>
+
 #include <functional>
 #include "model_memory_hotpatch.hpp"
 
@@ -24,7 +16,7 @@ enum class HotpatchPoint {
 
 // Server-side hotpatch structure
 struct ServerHotpatch {
-    QString name;
+    std::string name;
     HotpatchPoint applicationPoint;
     bool enabled = true;
     
@@ -40,55 +32,54 @@ struct ServerHotpatch {
     TransformType transformType;
     
     // Configuration data
-    QString systemPromptInjection;
-    QString parameterName;
-    QVariant parameterValue;
-    QStringList filterPatterns;      // For response filtering
+    std::string systemPromptInjection;
+    std::string parameterName;
+    std::any parameterValue;
+    std::vector<std::string> filterPatterns;      // For response filtering
     int abortAfterChunks = -1;       // For stream termination (-1 = disabled)
     
     // Transform function (for custom logic)
-    std::function<QByteArray(const QByteArray&)> customTransform;
+    std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)> customTransform;
 };
 
-class GGUFServerHotpatch : public QObject
+class GGUFServerHotpatch : public void
 {
-    Q_OBJECT
 
 public:
-    explicit GGUFServerHotpatch(QObject* parent = nullptr);
+    explicit GGUFServerHotpatch(void* parent = nullptr);
     ~GGUFServerHotpatch() override;
 
     // Hotpatch management
     void addHotpatch(const ServerHotpatch& patch);
-    void removeHotpatch(const QString& name);
-    void enableHotpatch(const QString& name, bool enable);
-    bool hasHotpatch(const QString& name) const;
-    ServerHotpatch getHotpatch(const QString& name) const;
-    QStringList listHotpatches() const;
+    void removeHotpatch(const std::string& name);
+    void enableHotpatch(const std::string& name, bool enable);
+    bool hasHotpatch(const std::string& name) const;
+    ServerHotpatch getHotpatch(const std::string& name) const;
+    std::vector<std::string> listHotpatches() const;
     void clearAllHotpatches();
 
     // Request/Response processing
-    QJsonObject processRequest(const QJsonObject& request);
-    QJsonObject processResponse(const QJsonObject& response);
-    QByteArray processStreamChunk(const QByteArray& chunk, int chunkIndex);
+    void* processRequest(const void*& request);
+    void* processResponse(const void*& response);
+    std::vector<uint8_t> processStreamChunk(const std::vector<uint8_t>& chunk, int chunkIndex);
     
     // Parameter manipulation (zero-copy byte patching)
-    QByteArray patchRequestBytes(const QByteArray& requestData);
-    QByteArray patchResponseBytes(const QByteArray& responseData);
+    std::vector<uint8_t> patchRequestBytes(const std::vector<uint8_t>& requestData);
+    std::vector<uint8_t> patchResponseBytes(const std::vector<uint8_t>& responseData);
     
     // Default parameter overrides
-    void setDefaultParameter(const QString& name, const QVariant& value);
-    void clearDefaultParameter(const QString& name);
-    QHash<QString, QVariant> getDefaultParameters() const;
+    void setDefaultParameter(const std::string& name, const std::any& value);
+    void clearDefaultParameter(const std::string& name);
+    std::unordered_map<std::string, std::any> getDefaultParameters() const;
     
     // Response caching
     void setCachingEnabled(bool enable);
     bool isCachingEnabled() const;
     void clearCache();
-    QString getCacheKey(const QJsonObject& request) const;
-    bool hasCachedResponse(const QString& key) const;
-    QJsonObject getCachedResponse(const QString& key);
-    void cacheResponse(const QString& key, const QJsonObject& response);
+    std::string getCacheKey(const void*& request) const;
+    bool hasCachedResponse(const std::string& key) const;
+    void* getCachedResponse(const std::string& key);
+    void cacheResponse(const std::string& key, const void*& response);
     
     // Statistics
     struct Stats {
@@ -110,66 +101,66 @@ public:
     bool isEnabled() const;
     
     // Direct Memory Manipulation API for Model Access
-    void* attachToModelMemory(const QString& modelPath);
+    void* attachToModelMemory(const std::string& modelPath);
     PatchResult detachFromModelMemory();
     
-    QByteArray readModelMemory(size_t offset, size_t size) const;
-    PatchResult writeModelMemory(size_t offset, const QByteArray& data);
+    std::vector<uint8_t> readModelMemory(size_t offset, size_t size) const;
+    PatchResult writeModelMemory(size_t offset, const std::vector<uint8_t>& data);
     
-    PatchResult modifyWeight(const QString& tensorName, size_t indexOffset, const QByteArray& newValue);
-    PatchResult modifyWeightsBatch(const QHash<QString, QHash<size_t, QByteArray>>& modifications);
+    PatchResult modifyWeight(const std::string& tensorName, size_t indexOffset, const std::vector<uint8_t>& newValue);
+    PatchResult modifyWeightsBatch(const std::unordered_map<std::string, std::unordered_map<size_t, std::vector<uint8_t>>>& modifications);
     
-    PatchResult injectTemporaryData(size_t offset, const QByteArray& data, int durationMs);
-    QByteArray extractTensorWeights(const QString& tensorName, size_t offset, size_t size) const;
-    PatchResult transformTensorWeights(const QString& tensorName, std::function<QByteArray(const QByteArray&)> transform);
+    PatchResult injectTemporaryData(size_t offset, const std::vector<uint8_t>& data, int durationMs);
+    std::vector<uint8_t> extractTensorWeights(const std::string& tensorName, size_t offset, size_t size) const;
+    PatchResult transformTensorWeights(const std::string& tensorName, std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)> transform);
     
-    PatchResult cloneTensor(const QString& sourceTensor, const QString& destTensor);
-    PatchResult swapTensors(const QString& tensor1, const QString& tensor2);
-    PatchResult applyMemoryPatch(const QHash<size_t, QByteArray>& patches);
-    qint64 searchModelMemory(size_t startOffset, const QByteArray& pattern) const;
+    PatchResult cloneTensor(const std::string& sourceTensor, const std::string& destTensor);
+    PatchResult swapTensors(const std::string& tensor1, const std::string& tensor2);
+    PatchResult applyMemoryPatch(const std::unordered_map<size_t, std::vector<uint8_t>>& patches);
+    qint64 searchModelMemory(size_t startOffset, const std::vector<uint8_t>& pattern) const;
     
     void* getModelMemoryPointer(size_t offset = 0);
     PatchResult lockMemoryRegion(size_t offset, size_t size);
     PatchResult unlockMemoryRegion(size_t offset, size_t size);
     
     // Tensor dependency tracking
-    bool hasTensorDependency(const QString& tensorName, const QString& dependencyName) const;
-    QStringList getTensorDependencies(const QString& tensorName) const;
+    bool hasTensorDependency(const std::string& tensorName, const std::string& dependencyName) const;
+    std::vector<std::string> getTensorDependencies(const std::string& tensorName) const;
     
     // Vocabulary patching
-    PatchResult patchVocabularyEntry(int tokenId, const QString& newToken);
+    PatchResult patchVocabularyEntry(int tokenId, const std::string& newToken);
 
-signals:
-    void hotpatchApplied(const QString& name, HotpatchPoint point);
-    void requestModified(const QJsonObject& original, const QJsonObject& modified);
-    void responseModified(const QJsonObject& original, QJsonObject& modified);
-    void streamTerminated(int chunkIndex, const QString& reason);
-    void cacheHit(const QString& key);
-    void errorOccurred(const QString& error);
+    void hotpatchApplied(const std::string& name, HotpatchPoint point);
+    void requestModified(const void*& original, const void*& modified);
+    void responseModified(const void*& original, void*& modified);
+    void streamTerminated(int chunkIndex, const std::string& reason);
+    void cacheHit(const std::string& key);
+    void errorOccurred(const std::string& error);
 
 private:
     // Helper methods
-    QByteArray bytePatchInPlace(const QByteArray& data, const QByteArray& pattern, const QByteArray& replacement);
-    qint64 findPattern(const QByteArray& data, const QByteArray& pattern, qint64 startPos = 0) const;
-    QJsonObject injectSystemPrompt(const QJsonObject& request, const QString& prompt);
-    QJsonObject modifyParameter(const QJsonObject& request, const QString& param, const QVariant& value);
-    QJsonObject filterResponse(const QJsonObject& response, const QStringList& patterns);
+    std::vector<uint8_t> bytePatchInPlace(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement);
+    qint64 findPattern(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern, qint64 startPos = 0) const;
+    void* injectSystemPrompt(const void*& request, const std::string& prompt);
+    void* modifyParameter(const void*& request, const std::string& param, const std::any& value);
+    void* filterResponse(const void*& response, const std::vector<std::string>& patterns);
     
     // Data members
-    mutable QMutex m_mutex;
-    QHash<QString, ServerHotpatch> m_hotpatches;
-    QHash<QString, QVariant> m_defaultParams;
-    QHash<QString, QJsonObject> m_responseCache;
+    mutable std::mutex m_mutex;
+    std::unordered_map<std::string, ServerHotpatch> m_hotpatches;
+    std::unordered_map<std::string, std::any> m_defaultParams;
+    std::unordered_map<std::string, void*> m_responseCache;
     
-    QByteArray m_modelData;         // Model data for direct memory operations
-    QString m_modelPath;            // Current model path
-    QHash<QString, size_t> m_tensorOffsets;  // Tensor name -> offset mapping
-    QHash<QString, QStringList> m_tensorDependencies;  // Tensor name -> list of dependencies
+    std::vector<uint8_t> m_modelData;         // Model data for direct memory operations
+    std::string m_modelPath;            // Current model path
+    std::unordered_map<std::string, size_t> m_tensorOffsets;  // Tensor name -> offset mapping
+    std::unordered_map<std::string, std::vector<std::string>> m_tensorDependencies;  // Tensor name -> list of dependencies
     
     Stats m_stats;
     bool m_enabled = true;
     bool m_cachingEnabled = false;
     int m_currentChunkIndex = 0;
     
-    QDateTime m_lastProcessTime;
+    std::chrono::system_clock::time_point m_lastProcessTime;
 };
+

@@ -1,16 +1,14 @@
 #pragma once
-#include <QObject>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
+
 
 /**
  * @brief Request structure for unified inference backend
  */
 struct UnifiedRequest {
-    QString prompt;
+    std::string prompt;
     qint64  reqId;
-    QString backend;   // "local" | "llama" | "openai" | "claude" | "gemini"
-    QString apiKey;
+    std::string backend;   // "local" | "llama" | "openai" | "claude" | "gemini"
+    std::string apiKey;
 };
 
 /**
@@ -23,10 +21,10 @@ struct UnifiedRequest {
  * - Anthropic Claude API (claude-3-sonnet)
  * - Google Gemini API (gemini-pro)
  */
-class UnifiedBackend : public QObject {
-    Q_OBJECT
+class UnifiedBackend : public void {
+
 public:
-    explicit UnifiedBackend(QObject* parent = nullptr);
+    explicit UnifiedBackend(void* parent = nullptr);
     
     /**
      * @brief Submit inference request to configured backend
@@ -37,15 +35,14 @@ public:
     /**
      * @brief Set the local inference engine (for "local" backend)
      */
-    void setLocalEngine(QObject* engine) { m_localEngine = engine; }
+    void setLocalEngine(void* engine) { m_localEngine = engine; }
 
-signals:
     /**
      * @brief Emitted for each token during streaming inference
      * @param reqId Request identifier
      * @param token Single token or character from model
      */
-    void streamToken(qint64 reqId, const QString& token);
+    void streamToken(qint64 reqId, const std::string& token);
     
     /**
      * @brief Emitted when streaming inference completes
@@ -58,10 +55,10 @@ signals:
      * @param reqId Request identifier
      * @param error Error message
      */
-    void error(qint64 reqId, const QString& error);
+    void error(qint64 reqId, const std::string& error);
 
-private slots:
-    void onLocalDone(qint64 id, const QString& answer);
+private:
+    void onLocalDone(qint64 id, const std::string& answer);
 
 private:
     void submitLlamaCpp(const UnifiedRequest& req);
@@ -69,6 +66,7 @@ private:
     void submitClaude(const UnifiedRequest& req);
     void submitGemini(const UnifiedRequest& req);
     
-    QNetworkAccessManager* m_nam{nullptr};
-    QObject* m_localEngine{nullptr};
+    void** m_nam{nullptr};
+    void* m_localEngine{nullptr};
 };
+

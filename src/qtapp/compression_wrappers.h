@@ -1,7 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QByteArray>
+
 #include <memory>
 #include <vector>
 #include <cstdint>
@@ -17,7 +16,7 @@ public:
     ~BrutalGzipWrapper() = default;
     
     // Compress data using brutal gzip (optimized)
-    bool compress(const QByteArray& input, QByteArray& output)
+    bool compress(const std::vector<uint8_t>& input, std::vector<uint8_t>& output)
     {
         // For now, return input unchanged (placeholder)
         // Real implementation would use gzip compression
@@ -26,7 +25,7 @@ public:
     }
     
     // Decompress gzip data
-    bool decompress(const QByteArray& input, QByteArray& output)
+    bool decompress(const std::vector<uint8_t>& input, std::vector<uint8_t>& output)
     {
         // For now, return input unchanged (placeholder)
         // Real implementation would use gzip decompression
@@ -49,7 +48,7 @@ public:
     ~DeflateWrapper() = default;
     
     // Compress data using deflate (optimized)
-    bool compress(const QByteArray& input, QByteArray& output)
+    bool compress(const std::vector<uint8_t>& input, std::vector<uint8_t>& output)
     {
         // For now, return input unchanged (placeholder)
         // Real implementation would use deflate compression
@@ -58,7 +57,7 @@ public:
     }
     
     // Decompress deflate data
-    bool decompress(const QByteArray& input, QByteArray& output)
+    bool decompress(const std::vector<uint8_t>& input, std::vector<uint8_t>& output)
     {
         // For now, return input unchanged (placeholder)
         // Real implementation would use deflate decompression
@@ -79,3 +78,4 @@ public:
 private:
     int m_level = 6;
 };
+

@@ -481,7 +481,7 @@ void MonacoSettingsDialog::updateSettingsFromUI() {
 
 void MonacoSettingsDialog::updateColorButton(void* button, uint32_t color) {
     void void((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
-    std::string style = std::string("background-color: %1; border: 1px solid #555;").arg(void.name());
+    std::string style = std::string("background-color: %1; border: 1px solid #555;"));
     button->setStyleSheet(style);
     button->setProperty("colorValue", std::any::fromValue(color));
 }
@@ -643,10 +643,10 @@ void MonacoSettingsDialog::onExportThemeClicked() {
     updateSettingsFromUI();
     if (Settings::SaveMonaco(settings_, path)) {
         void::information(this, tr("Export Successful"),
-            tr("Theme exported successfully to:\n%1").arg(path));
+            tr("Theme exported successfully to:\n%1"));
     } else {
         void::warning(this, tr("Export Failed"),
-            tr("Failed to export theme to:\n%1").arg(path));
+            tr("Failed to export theme to:\n%1"));
     }
 }
 
@@ -664,10 +664,10 @@ void MonacoSettingsDialog::onImportThemeClicked() {
         updateUIFromSettings();
         settingsChanged(settings_);
         void::information(this, tr("Import Successful"),
-            tr("Theme imported successfully from:\n%1").arg(path));
+            tr("Theme imported successfully from:\n%1"));
     } else {
         void::warning(this, tr("Import Failed"),
-            tr("Failed to import theme from:\n%1").arg(path));
+            tr("Failed to import theme from:\n%1"));
     }
 }
 
@@ -686,9 +686,4 @@ bool MonacoSettingsDialog::saveToFile(const std::string& path) {
 }
 
 } // namespace RawrXD::UI
-
-
-
-
-
 

@@ -1,17 +1,9 @@
 #include "TerminalWidget.h"
 #include "TerminalManager.h"
 
-#include <QPlainTextEdit>
-#include <QLineEdit>
-#include <QComboBox>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QProcess>
 
-TerminalWidget::TerminalWidget(QWidget* parent)
-    : QWidget(parent)
+TerminalWidget::TerminalWidget(void* parent)
+    : void(parent)
     , m_manager(new TerminalManager(this))
     , m_output(nullptr)
     , m_input(nullptr)
@@ -31,8 +23,8 @@ void TerminalWidget::initialize() {
     m_output->setReadOnly(true);
     m_output->setFont(QFont("Consolas", 10));
 
-    m_shellSelect->addItem("PowerShell", QVariant::fromValue((int)TerminalManager::PowerShell));
-    m_shellSelect->addItem("Command Prompt", QVariant::fromValue((int)TerminalManager::CommandPrompt));
+    m_shellSelect->addItem("PowerShell", std::any::fromValue((int)TerminalManager::PowerShell));
+    m_shellSelect->addItem("Command Prompt", std::any::fromValue((int)TerminalManager::CommandPrompt));
 
     QHBoxLayout* inputLayout = new QHBoxLayout();
     inputLayout->addWidget(m_shellSelect);
@@ -43,21 +35,16 @@ void TerminalWidget::initialize() {
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(m_output);
     layout->addLayout(inputLayout);
-
-    connect(m_startStopBtn, &QPushButton::clicked, [this]() {
-        if (m_manager->isRunning()) {
-            stopShell();
+// Qt connect removed
         } else {
             startShell((TerminalManager::ShellType)m_shellSelect->currentData().toInt());
         }
     });
-
-    connect(m_input, &QLineEdit::returnPressed, this, &TerminalWidget::onUserCommand);
-
-    connect(m_manager, &TerminalManager::outputReady, this, &TerminalWidget::onOutputReady);
-    connect(m_manager, &TerminalManager::errorReady, this, &TerminalWidget::onErrorReady);
-    connect(m_manager, &TerminalManager::started, this, &TerminalWidget::onStarted);
-    connect(m_manager, &TerminalManager::finished, this, &TerminalWidget::onFinished);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
 }
 
 TerminalWidget::~TerminalWidget() = default;
@@ -65,7 +52,7 @@ TerminalWidget::~TerminalWidget() = default;
 void TerminalWidget::startShell(TerminalManager::ShellType type)
 {
     if (m_manager->start(type)) {
-        m_output->appendPlainText(QStringLiteral("Shell started: PID=%1").arg(m_manager->pid()));
+        m_output->appendPlainText(QStringLiteral("Shell started: PID=%1")));
         m_startStopBtn->setText("Stop");
     } else {
         m_output->appendPlainText("Failed to start shell");
@@ -90,21 +77,21 @@ qint64 TerminalWidget::pid() const
 
 void TerminalWidget::onUserCommand()
 {
-    QString cmd = m_input->text();
+    std::string cmd = m_input->text();
     if (cmd.isEmpty()) return;
     appendOutput(cmd);
     m_manager->writeInput(cmd.toUtf8());
     m_input->clear();
 }
 
-void TerminalWidget::onOutputReady(const QByteArray& data)
+void TerminalWidget::onOutputReady(const std::vector<uint8_t>& data)
 {
-    appendOutput(QString::fromUtf8(data));
+    appendOutput(std::string::fromUtf8(data));
 }
 
-void TerminalWidget::onErrorReady(const QByteArray& data)
+void TerminalWidget::onErrorReady(const std::vector<uint8_t>& data)
 {
-    appendOutput(QString::fromUtf8(data));
+    appendOutput(std::string::fromUtf8(data));
 }
 
 void TerminalWidget::onStarted()
@@ -115,11 +102,12 @@ void TerminalWidget::onStarted()
 
 void TerminalWidget::onFinished(int exitCode, QProcess::ExitStatus)
 {
-    appendOutput(QString("Shell exited: %1").arg(exitCode));
+    appendOutput(std::string("Shell exited: %1"));
     m_startStopBtn->setText("Start");
 }
 
-void TerminalWidget::appendOutput(const QString& text)
+void TerminalWidget::appendOutput(const std::string& text)
 {
     m_output->appendPlainText(text);
 }
+

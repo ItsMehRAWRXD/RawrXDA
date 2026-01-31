@@ -3,22 +3,10 @@
 #include "checkpoint_manager.h"
 #include "tokenizer_selector.h"
 #include "ci_cd_settings.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QTabWidget>
-#include <QGroupBox>
-#include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QCheckBox>
-#include <QSpinBox>
-#include <QComboBox>
-#include <QTextEdit>
-#include <QFileDialog>
-#include <QMessageBox>
 
-SettingsDialog::SettingsDialog(QWidget *parent)
-    : QDialog(parent)
+
+SettingsDialog::SettingsDialog(void *parent)
+    : void(parent)
     , m_settings(new SettingsManager(this))
 {
     // Lightweight constructor - defer Qt widget creation
@@ -62,11 +50,9 @@ void SettingsDialog::setupUI()
     QPushButton *saveButton = new QPushButton("Save", this);
     QPushButton *cancelButton = new QPushButton("Cancel", this);
     QPushButton *applyButton = new QPushButton("Apply", this);
-    
-    connect(saveButton, &QPushButton::clicked, this, &SettingsDialog::saveSettings);
-    connect(cancelButton, &QPushButton::clicked, this, &SettingsDialog::reject);
-    connect(applyButton, &QPushButton::clicked, this, &SettingsDialog::applySettings);
-    
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     buttonLayout->addStretch();
     buttonLayout->addWidget(saveButton);
     buttonLayout->addWidget(applyButton);
@@ -75,9 +61,9 @@ void SettingsDialog::setupUI()
     mainLayout->addLayout(buttonLayout);
 }
 
-QWidget* SettingsDialog::createGeneralTab()
+void* SettingsDialog::createGeneralTab()
 {
-    QWidget *tab = new QWidget(this);
+    void *tab = new void(this);
     QVBoxLayout *layout = new QVBoxLayout(tab);
     
     // Editor Settings
@@ -104,8 +90,7 @@ QWidget* SettingsDialog::createGeneralTab()
     
     m_defaultModelPath = new QLineEdit(modelGroup);
     QPushButton *browseModelBtn = new QPushButton("Browse...", modelGroup);
-    connect(browseModelBtn, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getExistingDirectory(this, "Select Default Model Directory");
+// Qt connect removed
         if (!path.isEmpty()) m_defaultModelPath->setText(path);
     });
     
@@ -120,9 +105,9 @@ QWidget* SettingsDialog::createGeneralTab()
     return tab;
 }
 
-QWidget* SettingsDialog::createSecurityTab()
+void* SettingsDialog::createSecurityTab()
 {
-    QWidget *tab = new QWidget(this);
+    void *tab = new void(this);
     QVBoxLayout *layout = new QVBoxLayout(tab);
     
     QGroupBox *securityGroup = new QGroupBox("Security Settings", tab);
@@ -135,8 +120,7 @@ QWidget* SettingsDialog::createSecurityTab()
     m_autoLockTimeout->setSuffix(" minutes");
     
     QPushButton *manageKeysBtn = new QPushButton("Manage Encryption Keys", securityGroup);
-    connect(manageKeysBtn, &QPushButton::clicked, this, &SettingsDialog::manageEncryptionKeys);
-    
+// Qt connect removed
     securityLayout->addWidget(m_encryptApiKeys);
     securityLayout->addWidget(m_enableAuditLog);
     securityLayout->addWidget(new QLabel("Auto Lock Timeout:", securityGroup));
@@ -149,9 +133,9 @@ QWidget* SettingsDialog::createSecurityTab()
     return tab;
 }
 
-QWidget* SettingsDialog::createTrainingTab()
+void* SettingsDialog::createTrainingTab()
 {
-    QWidget *tab = new QWidget(this);
+    void *tab = new void(this);
     QVBoxLayout *layout = new QVBoxLayout(tab);
     
     // Checkpoint Settings
@@ -165,8 +149,7 @@ QWidget* SettingsDialog::createTrainingTab()
     
     m_checkpointPath = new QLineEdit(checkpointGroup);
     QPushButton *browseCheckpointBtn = new QPushButton("Browse...", checkpointGroup);
-    connect(browseCheckpointBtn, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getExistingDirectory(this, "Select Checkpoint Directory");
+// Qt connect removed
         if (!path.isEmpty()) m_checkpointPath->setText(path);
     });
     
@@ -185,8 +168,7 @@ QWidget* SettingsDialog::createTrainingTab()
     m_defaultTokenizer->addItems({"WordPiece", "BPE", "SentencePiece", "CharacterBased"});
     
     QPushButton *configureTokenizerBtn = new QPushButton("Configure Tokenizer", tokenizerGroup);
-    connect(configureTokenizerBtn, &QPushButton::clicked, this, &SettingsDialog::configureTokenizer);
-    
+// Qt connect removed
     tokenizerLayout->addWidget(new QLabel("Default Tokenizer:", tokenizerGroup));
     tokenizerLayout->addWidget(m_defaultTokenizer);
     tokenizerLayout->addWidget(configureTokenizerBtn);
@@ -198,9 +180,9 @@ QWidget* SettingsDialog::createTrainingTab()
     return tab;
 }
 
-QWidget* SettingsDialog::createCICDTab()
+void* SettingsDialog::createCICDTab()
 {
-    QWidget *tab = new QWidget(this);
+    void *tab = new void(this);
     QVBoxLayout *layout = new QVBoxLayout(tab);
     
     QGroupBox *ciGroup = new QGroupBox("CI/CD Pipeline Settings", tab);
@@ -212,8 +194,7 @@ QWidget* SettingsDialog::createCICDTab()
     m_notificationEmail->setPlaceholderText("email@example.com");
     
     QPushButton *configurePipelineBtn = new QPushButton("Configure Pipeline", ciGroup);
-    connect(configurePipelineBtn, &QPushButton::clicked, this, &SettingsDialog::configureCIPipeline);
-    
+// Qt connect removed
     ciLayout->addWidget(m_enableCICD);
     ciLayout->addWidget(m_autoDeploy);
     ciLayout->addWidget(new QLabel("Notification Email:", ciGroup));
@@ -226,9 +207,9 @@ QWidget* SettingsDialog::createCICDTab()
     return tab;
 }
 
-QWidget* SettingsDialog::createModelTab()
+void* SettingsDialog::createModelTab()
 {
-    QWidget *tab = new QWidget(this);
+    void *tab = new void(this);
     QVBoxLayout *layout = new QVBoxLayout(tab);
     
     // GPU Settings
@@ -353,3 +334,4 @@ void SettingsDialog::configureCIPipeline()
 {
     QMessageBox::information(this, "CI/CD", "CI/CD pipeline configuration is available.\n\nFeatures:\n- Training job scheduling\n- Automated deployment\n- Webhook integration\n- Performance benchmarking");
 }
+

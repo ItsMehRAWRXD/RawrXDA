@@ -56,7 +56,7 @@ void AgenticActionDialog::setupUI()
             actionText = "Delete File";
             break;
     }
-    titleLabel->setText(std::string("%1 %2: %3").arg(actionEmoji, actionText, m_filePath));
+    titleLabel->setText(std::string("%1 %2: %3"));
     mainLayout->addWidget(titleLabel);
 
     // File path display
@@ -155,12 +155,10 @@ AgenticFileOperations::AgenticFileOperations(, AgenticErrorHandler* errorHandler
     if (ok && envMaxHistory > 0) {
         m_maxHistory = envMaxHistory;
     }
-    // // qDebug:  "AgenticFileOperations initialized with max history:" << m_maxHistory;
 }
 
 void AgenticFileOperations::createFileWithApproval(const std::string& filePath, const std::string& content)
 {
-    // // qDebug:  "Creating file with approval:" << filePath;
     
     // In test mode, skip the approval dialog and proceed directly
     bool approved = m_testMode;
@@ -175,7 +173,6 @@ void AgenticFileOperations::createFileWithApproval(const std::string& filePath, 
         // dir(fileInfo.string());
         if (!dir.exists()) {
             if (!dir.mkpath(".")) {
-                // // qWarning:  "Failed to create directory:" << fileInfo.string();
                 return;
             }
         }
@@ -200,20 +197,16 @@ void AgenticFileOperations::createFileWithApproval(const std::string& filePath, 
                 m_actionHistory.removeFirst();
             }
             
-            // // qDebug:  "File created successfully:" << filePath;
             fileCreated(filePath);
         } else {
-            // // qWarning:  "Failed to open file for writing:" << filePath;
         }
     } else {
-        // // qDebug:  "File creation cancelled by user:" << filePath;
         operationCancelled(filePath);
     }
 }
 
 void AgenticFileOperations::modifyFileWithApproval(const std::string& filePath, const std::string& newContent)
 {
-    // // qDebug:  "Modifying file with approval:" << filePath;
     
     // Read old content
     std::string oldContent;
@@ -230,7 +223,6 @@ void AgenticFileOperations::modifyFileWithApproval(const std::string& filePath, 
 
 void AgenticFileOperations::modifyFileWithApproval(const std::string& filePath, const std::string& oldContent, const std::string& newContent)
 {
-    // // qDebug:  "Modifying file with approval (explicit old content):" << filePath;
     
     // In test mode, skip the approval dialog and proceed directly
     bool approved = m_testMode;
@@ -259,20 +251,16 @@ void AgenticFileOperations::modifyFileWithApproval(const std::string& filePath, 
                 m_actionHistory.removeFirst();
             }
             
-            // // qDebug:  "File modified successfully:" << filePath;
             fileModified(filePath);
         } else {
-            // // qWarning:  "Failed to open file for writing:" << filePath;
         }
     } else {
-        // // qDebug:  "File modification cancelled by user:" << filePath;
         operationCancelled(filePath);
     }
 }
 
 void AgenticFileOperations::deleteFileWithApproval(const std::string& filePath)
 {
-    // // qDebug:  "Deleting file with approval:" << filePath;
     
     // Read content before deletion
     // File operation removed;
@@ -305,13 +293,10 @@ void AgenticFileOperations::deleteFileWithApproval(const std::string& filePath)
                 m_actionHistory.removeFirst();
             }
             
-            // // qDebug:  "File deleted successfully:" << filePath;
             fileDeleted(filePath);
         } else {
-            // // qWarning:  "Failed to delete file:" << filePath;
         }
     } else {
-        // // qDebug:  "File deletion cancelled by user:" << filePath;
         operationCancelled(filePath);
     }
 }
@@ -319,21 +304,17 @@ void AgenticFileOperations::deleteFileWithApproval(const std::string& filePath)
 void AgenticFileOperations::undoLastAction()
 {
     if (m_actionHistory.empty()) {
-        // // qDebug:  "No actions to undo";
         return;
     }
     
     FileAction action = m_actionHistory.takeLast();
-    // // qDebug:  "Undoing action on file:" << action.filePath;
     
     switch (action.actionType) {
         case AgenticActionDialog::CREATE_FILE:
             // Delete the created file
             if (std::filesystem::remove(action.filePath)) {
-                // // qDebug:  "Undo: deleted created file" << action.filePath;
                 operationUndone(action.filePath);
             } else {
-                // // qWarning:  "Undo failed: could not delete file" << action.filePath;
             }
             break;
             
@@ -345,10 +326,8 @@ void AgenticFileOperations::undoLastAction()
                     std::stringstream stream(&file);
                     stream << action.oldContent;
                     file.close();
-                    // // qDebug:  "Undo: restored file content" << action.filePath;
                     operationUndone(action.filePath);
                 } else {
-                    // // qWarning:  "Undo failed: could not restore file" << action.filePath;
                 }
             }
             break;
@@ -361,10 +340,8 @@ void AgenticFileOperations::undoLastAction()
                     std::stringstream stream(&file);
                     stream << action.oldContent;
                     file.close();
-                    // // qDebug:  "Undo: restored deleted file" << action.filePath;
                     operationUndone(action.filePath);
                 } else {
-                    // // qWarning:  "Undo failed: could not restore file" << action.filePath;
                 }
             }
             break;
@@ -375,11 +352,4 @@ int AgenticFileOperations::getHistorySize() const
 {
     return m_actionHistory.size();
 }
-
-
-
-
-
-
-
 

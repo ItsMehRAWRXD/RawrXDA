@@ -1,10 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QMap>
-#include <QObject>
+
 #include <memory>
 #include <atomic>
 #include <atomic>
@@ -24,7 +20,7 @@ struct ModelCapabilities {
     /**
      * Get capability score for a specific task type
      */
-    int getCapabilityScore(const QString& capability) const {
+    int getCapabilityScore(const std::string& capability) const {
         if (capability == "reasoning") return reasoning;
         if (capability == "coding") return coding;
         if (capability == "planning") return planning;
@@ -41,10 +37,10 @@ struct ModelCapabilities {
  * @brief Complete model metadata and configuration
  */
 struct ModelInfo {
-    QString id;                  // Model identifier ("gpt-4", "claude-3", "llama70b")
-    QString provider;            // Provider ("openai", "anthropic", "ollama", "local")
-    QString endpoint;            // API endpoint or localhost:port
-    QString apiKey;              // Optional API key for authentication
+    std::string id;                  // Model identifier ("gpt-4", "claude-3", "llama70b")
+    std::string provider;            // Provider ("openai", "anthropic", "ollama", "local")
+    std::string endpoint;            // API endpoint or localhost:port
+    std::string apiKey;              // Optional API key for authentication
     
     int contextWindow = 8192;    // Max context window in tokens
     double avgTokenCost = 0.0;   // Cost per 1000 tokens
@@ -59,15 +55,15 @@ struct ModelInfo {
  * @brief Result of model routing decision
  */
 struct RoutingDecision {
-    QString selectedModelId;           // ID of selected model
+    std::string selectedModelId;           // ID of selected model
     int confidenceScore = 0;           // 0-100 confidence in selection
-    QString routingReason;             // Explanation of routing decision
-    QStringList alternativeModels;     // Other good options
+    std::string routingReason;             // Explanation of routing decision
+    std::vector<std::string> alternativeModels;     // Other good options
     ModelInfo selectedInfo;            // Full model info
     
     // Metadata
     qint64 decisionTimeMs = 0;
-    QString routingStrategy;           // Strategy used for routing
+    std::string routingStrategy;           // Strategy used for routing
 };
 
 /**
@@ -75,9 +71,9 @@ struct RoutingDecision {
  * @brief Result of ensemble routing (multiple models)
  */
 struct EnsembleResult {
-    QStringList selectedModels;        // IDs of selected models
-    QJsonArray responses;              // Responses from each model
-    QString consensus;                 // Final agreed-upon response
+    std::vector<std::string> selectedModels;        // IDs of selected models
+    void* responses;              // Responses from each model
+    std::string consensus;                 // Final agreed-upon response
     float agreementLevel = 0.0;        // How much models agreed (0-1)
     float finalConfidence = 0.0;       // Confidence in final result
 };
@@ -93,11 +89,10 @@ struct EnsembleResult {
  * - Automatic fallback on model failure
  * - Cost-aware model selection
  */
-class LLMRouter : public QObject {
-    Q_OBJECT
+class LLMRouter : public void {
 
 public:
-    explicit LLMRouter(QObject* parent = nullptr);
+    explicit LLMRouter(void* parent = nullptr);
         ~LLMRouter() override;
     
     // ===== Model Registration =====
@@ -110,17 +105,17 @@ public:
     /**
      * Unregister a model
      */
-    void unregisterModel(const QString& modelId);
+    void unregisterModel(const std::string& modelId);
     
     /**
      * Get model info
      */
-    ModelInfo getModel(const QString& modelId) const;
+    ModelInfo getModel(const std::string& modelId) const;
     
     /**
      * Get list of available model IDs
      */
-    QStringList getAvailableModels() const;
+    std::vector<std::string> getAvailableModels() const;
     
     // ===== Single Model Routing =====
     
@@ -132,8 +127,8 @@ public:
      * @return Routing decision with selected model
      */
     RoutingDecision route(
-        const QString& taskDescription,
-        const QString& preferredCapability = "balanced",
+        const std::string& taskDescription,
+        const std::string& preferredCapability = "balanced",
         int maxCostTokens = 0
     );
     
@@ -147,9 +142,9 @@ public:
      * @return Ensemble result with multiple model responses
      */
     EnsembleResult routeEnsemble(
-        const QString& taskDescription,
+        const std::string& taskDescription,
         int numModels = 3,
-        const QString& consensusMethod = "voting"
+        const std::string& consensusMethod = "voting"
     );
     
     // ===== Performance Tracking =====
@@ -158,7 +153,7 @@ public:
      * Record performance metrics after a model completes a task
      */
     void recordPerformance(
-        const QString& modelId,
+        const std::string& modelId,
         int taskDurationMs,
         int tokensUsed,
         double qualityScore  // 0.0-1.0
@@ -169,29 +164,29 @@ public:
     /**
      * Get status of a specific model
      */
-    QJsonObject getModelStatus(const QString& modelId) const;
+    void* getModelStatus(const std::string& modelId) const;
     
     /**
      * Get status of all models
      */
-    QJsonArray getAllModelStatus() const;
+    void* getAllModelStatus() const;
     
     /**
      * Mark model as failed and trigger fallback
      */
-    void handleModelFailure(const QString& modelId, const QString& error);
+    void handleModelFailure(const std::string& modelId, const std::string& error);
     
     /**
      * Get fallback model when primary fails
      */
-    RoutingDecision getFallbackModel(const QString& failedModelId);
+    RoutingDecision getFallbackModel(const std::string& failedModelId);
     
     // ===== Configuration =====
     
     /**
      * Set routing strategy
      */
-    void setRoutingStrategy(const QString& strategy);
+    void setRoutingStrategy(const std::string& strategy);
     
     /**
      * Enable/disable load balancing
@@ -203,13 +198,12 @@ public:
      */
     void setCostOptimizationEnabled(bool enabled);
 
-signals:
-    void modelRegistered(const QString& modelId);
-    void modelUnregistered(const QString& modelId);
+    void modelRegistered(const std::string& modelId);
+    void modelUnregistered(const std::string& modelId);
     void routingDecisionMade(const RoutingDecision& decision);
-    void modelHealthChanged(const QString& modelId, bool healthy);
-    void failoverTriggered(const QString& failedModel, const QString& fallbackModel);
-    void routingStatsUpdated(const QJsonObject& stats);
+    void modelHealthChanged(const std::string& modelId, bool healthy);
+    void failoverTriggered(const std::string& failedModel, const std::string& fallbackModel);
+    void routingStatsUpdated(const void*& stats);
 
 private:
     struct PerformanceMetrics {
@@ -219,24 +213,25 @@ private:
         mutable std::atomic<int> totalLatencyMs{0};
         mutable std::atomic<int> totalTokensUsed{0};
         double averageQualityScore = 0.0;
-        QDateTime lastUsed;
+        std::chrono::system_clock::time_point lastUsed;
     };
     
-    QMap<QString, ModelInfo> m_models;
-    QMap<QString, PerformanceMetrics*> m_metrics;  // Raw pointers, cleaned up in destructor
+    std::map<std::string, ModelInfo> m_models;
+    std::map<std::string, PerformanceMetrics*> m_metrics;  // Raw pointers, cleaned up in destructor
     
     // Configuration
     bool m_loadBalancingEnabled = true;
     bool m_costOptimizationEnabled = true;
-    QString m_routingStrategy = "best-capability";
+    std::string m_routingStrategy = "best-capability";
     
     // ===== Internal Scoring Methods =====
     
-    int calculateTaskRelevanceScore(const ModelInfo& model, const QString& capability);
+    int calculateTaskRelevanceScore(const ModelInfo& model, const std::string& capability);
     int calculateCostEfficiencyScore(const ModelInfo& model, int maxTokens);
     int calculateLatencyScore(const ModelInfo& model);
-    int calculateReliabilityScore(const QString& modelId);
+    int calculateReliabilityScore(const std::string& modelId);
     
     // Load balancing
-    QString selectFromCandidates(const QStringList& candidates);
+    std::string selectFromCandidates(const std::vector<std::string>& candidates);
 };
+

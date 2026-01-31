@@ -153,7 +153,7 @@ std::vector<LatencyBenchmark> ModelTester::benchmarkModels(
             results.push_back(bench);
 
             if (m_logger) {
-                m_logger->info("Benchmark results for {}: avg={:.2f}ms, p95={:.2f}ms, p99={:.2f}ms",
+
                                model, bench.avgLatencyMs,
                                bench.p95LatencyMs, bench.p99LatencyMs);
             }
@@ -169,7 +169,7 @@ std::vector<ParsedCompletion> ModelTester::testResponseParsing(const std::string
     auto completions = m_parser->parseResponse(modelOutput);
 
     if (m_logger) {
-        m_logger->info("Parsed {} completions, confidence scores: {}",
+
                        completions.size(),
                        completions.empty() ? "N/A" : std::to_string(completions[0].confidence));
     }

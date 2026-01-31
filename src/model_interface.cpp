@@ -2,16 +2,12 @@
 #include "model_interface.h"
 #include "universal_model_router.h"
 #include "cloud_api_client.h"
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QFile>
-#include <QDebug>
-#include <QTimer>
+
+
 #include <algorithm>
 
-ModelInterface::ModelInterface(QObject* parent)
-    : QObject(parent),
+ModelInterface::ModelInterface(void* parent)
+    : void(parent),
       default_model(""),
       initialized_flag(false)
 {
@@ -20,14 +16,14 @@ ModelInterface::ModelInterface(QObject* parent)
 
 ModelInterface::~ModelInterface() = default;
 
-void ModelInterface::initialize(const QString& config_file_path)
+void ModelInterface::initialize(const std::string& config_file_path)
 {
     router = std::make_shared<UniversalModelRouter>(this);
     cloud_client = std::make_shared<CloudApiClient>(this);
     
     if (router->loadConfigFromFile(config_file_path)) {
         initialized_flag = true;
-        emit initialized();
+        initialized();
     }
 }
 
@@ -38,7 +34,7 @@ void ModelInterface::initializeWithRouter(std::shared_ptr<UniversalModelRouter> 
     initialized_flag = (router != nullptr);
     
     if (initialized_flag) {
-        emit initialized();
+        initialized();
     }
 }
 
@@ -47,8 +43,8 @@ bool ModelInterface::isInitialized() const
     return initialized_flag;
 }
 
-GenerationResult ModelInterface::generate(const QString& prompt,
-                                         const QString& model_name,
+GenerationResult ModelInterface::generate(const std::string& prompt,
+                                         const std::string& model_name,
                                          const GenerationOptions& options)
 {
     if (!initialized_flag || !router) {
@@ -61,8 +57,8 @@ GenerationResult ModelInterface::generate(const QString& prompt,
     return generateInternal(prompt, model_name, options);
 }
 
-void ModelInterface::generateAsync(const QString& prompt,
-                                  const QString& model_name,
+void ModelInterface::generateAsync(const std::string& prompt,
+                                  const std::string& model_name,
                                   std::function<void(const GenerationResult&)> callback,
                                   const GenerationOptions& options)
 {
@@ -70,15 +66,15 @@ void ModelInterface::generateAsync(const QString& prompt,
     // For now, we use a deferred callback
     auto result = generate(prompt, model_name, options);
     
-    QTimer::singleShot(0, this, [this, result, callback]() {
+    void*::singleShot(0, this, [this, result, callback]() {
         callback(result);
     });
 }
 
-void ModelInterface::generateStream(const QString& prompt,
-                                   const QString& model_name,
-                                   std::function<void(const QString&)> on_chunk,
-                                   std::function<void(const QString&)> on_error,
+void ModelInterface::generateStream(const std::string& prompt,
+                                   const std::string& model_name,
+                                   std::function<void(const std::string&)> on_chunk,
+                                   std::function<void(const std::string&)> on_error,
                                    const GenerationOptions& options)
 {
     if (!initialized_flag || !router) {
@@ -91,11 +87,11 @@ void ModelInterface::generateStream(const QString& prompt,
     generateStreamInternal(prompt, model_name, on_chunk, on_error, options);
 }
 
-QVector<GenerationResult> ModelInterface::generateBatch(const QStringList& prompts,
-                                                        const QString& model_name,
+std::vector<GenerationResult> ModelInterface::generateBatch(const std::vector<std::string>& prompts,
+                                                        const std::string& model_name,
                                                         const GenerationOptions& options)
 {
-    QVector<GenerationResult> results;
+    std::vector<GenerationResult> results;
     
     for (const auto& prompt : prompts) {
         results.append(generate(prompt, model_name, options));
@@ -104,36 +100,36 @@ QVector<GenerationResult> ModelInterface::generateBatch(const QStringList& promp
     return results;
 }
 
-void ModelInterface::generateBatchAsync(const QStringList& prompts,
-                                       const QString& model_name,
-                                       std::function<void(const QVector<GenerationResult>&)> callback,
+void ModelInterface::generateBatchAsync(const std::vector<std::string>& prompts,
+                                       const std::string& model_name,
+                                       std::function<void(const std::vector<GenerationResult>&)> callback,
                                        const GenerationOptions& options)
 {
     auto results = generateBatch(prompts, model_name, options);
     
-    QTimer::singleShot(0, this, [this, results, callback]() {
+    void*::singleShot(0, this, [this, results, callback]() {
         callback(results);
     });
 }
 
-QStringList ModelInterface::getAvailableModels() const
+std::vector<std::string> ModelInterface::getAvailableModels() const
 {
-    if (!router) return QStringList();
+    if (!router) return std::vector<std::string>();
     return router->getAvailableModels();
 }
 
-QStringList ModelInterface::getLocalModels() const
+std::vector<std::string> ModelInterface::getLocalModels() const
 {
-    if (!router) return QStringList();
+    if (!router) return std::vector<std::string>();
     return router->getModelsForBackend(ModelBackend::LOCAL_GGUF)
          + router->getModelsForBackend(ModelBackend::OLLAMA_LOCAL);
 }
 
-QStringList ModelInterface::getCloudModels() const
+std::vector<std::string> ModelInterface::getCloudModels() const
 {
-    if (!router) return QStringList();
+    if (!router) return std::vector<std::string>();
     
-    QStringList cloud_models;
+    std::vector<std::string> cloud_models;
     cloud_models += router->getModelsForBackend(ModelBackend::ANTHROPIC);
     cloud_models += router->getModelsForBackend(ModelBackend::OPENAI);
     cloud_models += router->getModelsForBackend(ModelBackend::GOOGLE);
@@ -144,42 +140,42 @@ QStringList ModelInterface::getCloudModels() const
     return cloud_models;
 }
 
-QString ModelInterface::getModelDescription(const QString& model_name) const
+std::string ModelInterface::getModelDescription(const std::string& model_name) const
 {
     if (!router) return "";
     return router->getModelDescription(model_name);
 }
 
-QJsonObject ModelInterface::getModelInfo(const QString& model_name) const
+void* ModelInterface::getModelInfo(const std::string& model_name) const
 {
-    if (!router) return QJsonObject();
+    if (!router) return void*();
     return router->getModelInfo(model_name);
 }
 
-bool ModelInterface::modelExists(const QString& model_name) const
+bool ModelInterface::modelExists(const std::string& model_name) const
 {
     if (!router) return false;
     return router->isModelAvailable(model_name);
 }
 
-void ModelInterface::registerModel(const QString& model_name, const ModelConfig& config)
+void ModelInterface::registerModel(const std::string& model_name, const ModelConfig& config)
 {
     if (router) {
         router->registerModel(model_name, config);
-        emit modelListUpdated(getAvailableModels());
+        modelListUpdated(getAvailableModels());
     }
 }
 
-void ModelInterface::unregisterModel(const QString& model_name)
+void ModelInterface::unregisterModel(const std::string& model_name)
 {
     if (router) {
         router->unregisterModel(model_name);
-        emit modelListUpdated(getAvailableModels());
+        modelListUpdated(getAvailableModels());
     }
 }
 
-QString ModelInterface::selectBestModel(const QString& task_type,
-                                       const QString& language,
+std::string ModelInterface::selectBestModel(const std::string& task_type,
+                                       const std::string& language,
                                        bool prefer_local)
 {
     // Smart model selection logic
@@ -201,7 +197,7 @@ QString ModelInterface::selectBestModel(const QString& task_type,
     return available.first();
 }
 
-QString ModelInterface::selectCostOptimalModel(const QString& prompt,
+std::string ModelInterface::selectCostOptimalModel(const std::string& prompt,
                                               double max_cost_usd)
 {
     // Select model based on estimated cost
@@ -217,7 +213,7 @@ QString ModelInterface::selectCostOptimalModel(const QString& prompt,
     return "";
 }
 
-QString ModelInterface::selectFastestModel(const QString& model_type)
+std::string ModelInterface::selectFastestModel(const std::string& model_type)
 {
     // Select model based on latency metrics
     auto models = getAvailableModels();
@@ -227,7 +223,7 @@ QString ModelInterface::selectFastestModel(const QString& model_type)
     }
     
     // Return model with best latency stats
-    QString fastest = models.first();
+    std::string fastest = models.first();
     double min_latency = getAverageLatency(fastest);
     
     for (const auto& model : models) {
@@ -241,7 +237,7 @@ QString ModelInterface::selectFastestModel(const QString& model_type)
     return fastest;
 }
 
-bool ModelInterface::loadConfig(const QString& config_file_path)
+bool ModelInterface::loadConfig(const std::string& config_file_path)
 {
     if (!router) {
         router = std::make_shared<UniversalModelRouter>(this);
@@ -250,7 +246,7 @@ bool ModelInterface::loadConfig(const QString& config_file_path)
     return router->loadConfigFromFile(config_file_path);
 }
 
-bool ModelInterface::saveConfig(const QString& config_file_path) const
+bool ModelInterface::saveConfig(const std::string& config_file_path) const
 {
     if (!router) {
         return false;
@@ -259,25 +255,25 @@ bool ModelInterface::saveConfig(const QString& config_file_path) const
     return router->saveConfigToFile(config_file_path);
 }
 
-void ModelInterface::setDefaultModel(const QString& model_name)
+void ModelInterface::setDefaultModel(const std::string& model_name)
 {
     if (modelExists(model_name)) {
         default_model = model_name;
     }
 }
 
-QString ModelInterface::getDefaultModel() const
+std::string ModelInterface::getDefaultModel() const
 {
     return default_model;
 }
 
-QJsonObject ModelInterface::getUsageStatistics() const
+void* ModelInterface::getUsageStatistics() const
 {
-    QJsonObject stats;
+    void* stats;
     
     for (const auto& model_name : stats_map.keys()) {
         const auto& model_stats = stats_map[model_name];
-        QJsonObject model_obj;
+        void* model_obj;
         model_obj["calls"] = model_stats.call_count;
         model_obj["successes"] = model_stats.success_count;
         model_obj["failures"] = model_stats.failure_count;
@@ -291,9 +287,9 @@ QJsonObject ModelInterface::getUsageStatistics() const
     return stats;
 }
 
-QJsonObject ModelInterface::getModelStats(const QString& model_name) const
+void* ModelInterface::getModelStats(const std::string& model_name) const
 {
-    QJsonObject stats;
+    void* stats;
     
     if (stats_map.contains(model_name)) {
         const auto& model_stats = stats_map[model_name];
@@ -308,7 +304,7 @@ QJsonObject ModelInterface::getModelStats(const QString& model_name) const
     return stats;
 }
 
-double ModelInterface::getAverageLatency(const QString& model_name) const
+double ModelInterface::getAverageLatency(const std::string& model_name) const
 {
     if (model_name.isEmpty()) {
         // Return average across all models
@@ -332,7 +328,7 @@ double ModelInterface::getAverageLatency(const QString& model_name) const
     return 0.0;
 }
 
-int ModelInterface::getSuccessRate(const QString& model_name) const
+int ModelInterface::getSuccessRate(const std::string& model_name) const
 {
     if (model_name.isEmpty()) {
         // Return success rate across all models
@@ -367,7 +363,7 @@ double ModelInterface::getTotalCost() const
     return total;
 }
 
-double ModelInterface::getCostByModel(const QString& model_name) const
+double ModelInterface::getCostByModel(const std::string& model_name) const
 {
     if (stats_map.contains(model_name)) {
         return stats_map[model_name].total_cost;
@@ -376,9 +372,9 @@ double ModelInterface::getCostByModel(const QString& model_name) const
     return 0.0;
 }
 
-QJsonObject ModelInterface::getCostBreakdown() const
+void* ModelInterface::getCostBreakdown() const
 {
-    QJsonObject breakdown;
+    void* breakdown;
     
     for (const auto& model : stats_map.keys()) {
         breakdown[model] = stats_map[model].total_cost;
@@ -387,7 +383,7 @@ QJsonObject ModelInterface::getCostBreakdown() const
     return breakdown;
 }
 
-void ModelInterface::setErrorCallback(std::function<void(const QString&)> callback)
+void ModelInterface::setErrorCallback(std::function<void(const std::string&)> callback)
 {
     error_callback = callback;
 }
@@ -398,29 +394,29 @@ void ModelInterface::setRetryPolicy(int max_retries, int retry_delay_ms)
     this->retry_delay_ms = retry_delay_ms;
 }
 
-int ModelInterface::estimateTokenCount(const QString& text) const
+int ModelInterface::estimateTokenCount(const std::string& text) const
 {
     // Simple estimation: ~4 characters per token on average
     return text.length() / 4;
 }
 
-QString ModelInterface::formatModelList() const
+std::string ModelInterface::formatModelList() const
 {
-    QString list;
+    std::string list;
     
     auto models = getAvailableModels();
     for (const auto& model : models) {
         auto config = router->getModelConfig(model);
-        QString backend_str = QString::number(static_cast<int>(config.backend));
-        list += QString("%1 (%2)\n").arg(model, backend_str);
+        std::string backend_str = std::string::number(static_cast<int>(config.backend));
+        list += std::string("%1 (%2)\n");
     }
     
     return list;
 }
 
-QJsonArray ModelInterface::getModelListAsJson() const
+void* ModelInterface::getModelListAsJson() const
 {
-    QJsonArray array;
+    void* array;
     
     auto models = getAvailableModels();
     for (const auto& model : models) {
@@ -435,8 +431,8 @@ QJsonArray ModelInterface::getModelListAsJson() const
 
 // ============ PRIVATE METHODS ============
 
-GenerationResult ModelInterface::generateInternal(const QString& prompt,
-                                                 const QString& model_name,
+GenerationResult ModelInterface::generateInternal(const std::string& prompt,
+                                                 const std::string& model_name,
                                                  const GenerationOptions& options)
 {
     GenerationResult result;
@@ -475,10 +471,10 @@ GenerationResult ModelInterface::generateInternal(const QString& prompt,
     return result;
 }
 
-void ModelInterface::generateStreamInternal(const QString& prompt,
-                                           const QString& model_name,
-                                           std::function<void(const QString&)> on_chunk,
-                                           std::function<void(const QString&)> on_error,
+void ModelInterface::generateStreamInternal(const std::string& prompt,
+                                           const std::string& model_name,
+                                           std::function<void(const std::string&)> on_chunk,
+                                           std::function<void(const std::string&)> on_error,
                                            const GenerationOptions& options)
 {
     auto config = getModelConfigOrThrow(model_name);
@@ -492,7 +488,7 @@ void ModelInterface::generateStreamInternal(const QString& prompt,
     }
 }
 
-bool ModelInterface::isLocalModel(const QString& model_name) const
+bool ModelInterface::isLocalModel(const std::string& model_name) const
 {
     if (!router) return false;
     
@@ -500,12 +496,12 @@ bool ModelInterface::isLocalModel(const QString& model_name) const
     return backend == ModelBackend::LOCAL_GGUF || backend == ModelBackend::OLLAMA_LOCAL;
 }
 
-bool ModelInterface::isCloudModel(const QString& model_name) const
+bool ModelInterface::isCloudModel(const std::string& model_name) const
 {
     return !isLocalModel(model_name);
 }
 
-ModelConfig ModelInterface::getModelConfigOrThrow(const QString& model_name) const
+ModelConfig ModelInterface::getModelConfigOrThrow(const std::string& model_name) const
 {
     if (!router) {
         throw std::runtime_error("Router not initialized");
@@ -513,7 +509,7 @@ ModelConfig ModelInterface::getModelConfigOrThrow(const QString& model_name) con
     
     auto config = router->getModelConfig(model_name);
     if (config.model_id.isEmpty()) {
-        throw std::runtime_error(QString("Model not found: %1").arg(model_name).toStdString());
+        throw std::runtime_error(std::string("Model not found: %1").toStdString());
     }
     
     return config;
@@ -522,10 +518,11 @@ ModelConfig ModelInterface::getModelConfigOrThrow(const QString& model_name) con
 void ModelInterface::onRouterInitialized()
 {
     initialized_flag = true;
-    emit initialized();
+    initialized();
 }
 
-void ModelInterface::onModelRegistered(const QString& model_name)
+void ModelInterface::onModelRegistered(const std::string& model_name)
 {
-    emit modelListUpdated(getAvailableModels());
+    modelListUpdated(getAvailableModels());
 }
+

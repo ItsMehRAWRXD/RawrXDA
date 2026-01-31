@@ -194,7 +194,7 @@ void CPUInferenceEngine::MultiHeadAttention(const float* query, const float* key
     int head_dim = embed_dim / num_heads;
     
     for (int h = 0; h < num_heads; ++h) {
-        const float* q_head = query + h * head_dim;
+        const float*  = query + h * head_dim;
         const float* k_head = key + h * head_dim;
         const float* v_head = value + h * head_dim;
         float* out_head = output + h * head_dim;
@@ -205,7 +205,7 @@ void CPUInferenceEngine::MultiHeadAttention(const float* query, const float* key
             for (int j = 0; j < seq_len; ++j) {
                 float score = 0.0f;
                 for (int d = 0; d < head_dim; ++d) {
-                    score += q_head[i * embed_dim + d] * k_head[j * embed_dim + d];
+                    score += [i * embed_dim + d] * k_head[j * embed_dim + d];
                 }
                 scores[i * seq_len + j] = score / std::sqrt(static_cast<float>(head_dim));
             }

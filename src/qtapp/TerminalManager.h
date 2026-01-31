@@ -1,34 +1,31 @@
 #pragma once
 
-#include <QObject>
-#include <QProcess>
-#include <QString>
 
-class TerminalManager : public QObject
+class TerminalManager : public void
 {
-    Q_OBJECT
+
 public:
     enum ShellType {
         PowerShell,
         CommandPrompt
     };
 
-    explicit TerminalManager(QObject* parent = nullptr);
+    explicit TerminalManager(void* parent = nullptr);
     ~TerminalManager() override;
 
     bool start(ShellType shell);
     void stop();
     qint64 pid() const;
     bool isRunning() const;
-    void writeInput(const QByteArray& data);
+    void writeInput(const std::vector<uint8_t>& data);
 
-signals:
-    void outputReady(const QByteArray& data);
-    void errorReady(const QByteArray& data);
+
+    void outputReady(const std::vector<uint8_t>& data);
+    void errorReady(const std::vector<uint8_t>& data);
     void started();
     void finished(int exitCode, QProcess::ExitStatus exitStatus);
 
-private slots:
+private:
     void onStdoutReady();
     void onStderrReady();
     void onProcessStarted();
@@ -38,3 +35,4 @@ private:
     QProcess* m_process;
     ShellType m_shellType;
 };
+

@@ -23,14 +23,8 @@ void MultiModalEngine::processImage(const std::string &filePath)
 {
     void image(filePath);
     if (image.isNull()) {
-        // // qWarning:  "Failed to load image from file path:" << filePath;
         return;
     }
     processImage(image);
 }
-
-
-
-
-
 

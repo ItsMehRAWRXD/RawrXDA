@@ -318,4 +318,3 @@ namespace DiagnosticUtils {
     void LogHealing(const std::string& action, bool success);
 }
 
-

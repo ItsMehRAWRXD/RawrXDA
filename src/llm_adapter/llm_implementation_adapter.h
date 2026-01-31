@@ -10,7 +10,7 @@
 #include "llm_http_client.h"
 #include <memory>
 #include <chrono>
-#include <queue>
+
 #include <atomic>
 
 /**
@@ -86,8 +86,7 @@ public:
 
 private:
     std::shared_ptr<LLMHttpClient> m_httpClient;
-    std::shared_ptr<Logger> m_logger;
-    
+
     // State
     LLMBackend m_currentBackend;
     std::string m_currentModel;

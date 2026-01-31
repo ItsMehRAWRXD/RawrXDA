@@ -5,15 +5,12 @@
  * Custom button with hover/active state rendering to match VS Code style
  */
 
-#include <QToolButton>
-#include <QString>
 
 class ActivityBarButton : public QToolButton
 {
-    Q_OBJECT
 
 public:
-    explicit ActivityBarButton(const QString& tooltip = "", QWidget* parent = nullptr);
+    explicit ActivityBarButton(const std::string& tooltip = "", void* parent = nullptr);
     ~ActivityBarButton();
 
     /**
@@ -51,3 +48,4 @@ private:
     static constexpr int ACTIVE_INDICATOR_WIDTH = 3;
     static constexpr int BUTTON_SIZE = 48;
 };
+

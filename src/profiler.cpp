@@ -1,10 +1,6 @@
 #include "profiler.h"
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QFile>
-#include <QDebug>
-#include <QTimer>
-#include <QProcessEnvironment>
+
+
 #include <windows.h>
 #include <psapi.h>
 #include <thread>
@@ -12,19 +8,18 @@
 #pragma comment(lib, "psapi.lib")
 #pragma comment(lib, "kernel32.lib")
 
-Profiler::Profiler(QObject* parent)
-    : QObject(parent)
-    , m_metricsTimer(new QTimer(this))
+Profiler::Profiler(void* parent)
+    : void(parent)
+    , m_metricsTimer(new void*(this))
 {
     // Set up periodic metrics collection every 500ms
-    connect(m_metricsTimer, &QTimer::timeout, this, &Profiler::collectSystemMetrics);
+// Qt connect removed
     m_metricsTimer->setInterval(500); // 500ms intervals
 }
 
 void Profiler::startProfiling()
 {
     if (m_isProfiling) {
-        qWarning() << "Profiling already started";
         return;
     }
 
@@ -42,13 +37,11 @@ void Profiler::startProfiling()
     m_snapshots.clear();
 
     m_metricsTimer->start();
-    qDebug() << "Profiling started";
 }
 
 void Profiler::stopProfiling()
 {
     if (!m_isProfiling) {
-        qWarning() << "Profiling not active";
         return;
     }
 
@@ -57,26 +50,24 @@ void Profiler::stopProfiling()
 
     analyzeMetrics();
     
-    QJsonObject report = getProfilingReport();
-    emit profilingCompleted(report);
+    void* report = getProfilingReport();
+    profilingCompleted(report);
     
-    qDebug() << "Profiling stopped";
 }
 
-void Profiler::markPhaseStart(const QString& phaseName)
+void Profiler::markPhaseStart(const std::string& phaseName)
 {
     if (!m_isProfiling) return;
     
     m_phases[phaseName].startTime = std::chrono::high_resolution_clock::now();
 }
 
-void Profiler::markPhaseEnd(const QString& phaseName)
+void Profiler::markPhaseEnd(const std::string& phaseName)
 {
     if (!m_isProfiling) return;
     
     auto it = m_phases.find(phaseName);
     if (it == m_phases.end()) {
-        qWarning() << "Phase not found:" << phaseName;
         return;
     }
 
@@ -87,7 +78,6 @@ void Profiler::markPhaseEnd(const QString& phaseName)
     it->durations.push_back(duration);
     it->totalMs += duration;
 
-    qDebug() << "Phase:" << phaseName << "took" << duration << "ms";
 }
 
 void Profiler::recordBatchCompleted(int sampleCount, int tokenCount)
@@ -123,7 +113,6 @@ void Profiler::recordMemoryDeallocation(size_t bytes)
     if (m_currentAllocated >= bytes) {
         m_currentAllocated -= bytes;
     } else {
-        qWarning() << "Memory deallocation exceeded current allocation";
         m_currentAllocated = 0;
     }
 }
@@ -215,7 +204,7 @@ void Profiler::collectSystemMetrics()
     }
 
     // Phase latencies
-    auto getAveragePhaseTime = [this](const QString& phase) {
+    auto getAveragePhaseTime = [this](const std::string& phase) {
         auto it = m_phases.find(phase);
         if (it != m_phases.end() && !it->durations.empty()) {
             return static_cast<float>(it->totalMs) / it->durations.size();
@@ -230,22 +219,22 @@ void Profiler::collectSystemMetrics()
     snapshot.optimizerStepMs = getAveragePhaseTime("optimizerStep");
 
     m_snapshots.push_back(snapshot);
-    emit metricsUpdated(snapshot);
+    metricsUpdated(snapshot);
 
     // Check for performance issues
     if (snapshot.cpuUsagePercent > m_cpuThresholdPercent) {
-        emit performanceWarning(
-            QString("High CPU usage: %1%").arg(snapshot.cpuUsagePercent, 0, 'f', 1));
+        performanceWarning(
+            std::string("High CPU usage: %1%"));
     }
 
     if (snapshot.memoryUsageMB > 4096.0f) { // 4GB threshold
-        emit performanceWarning(
-            QString("High memory usage: %1 MB").arg(snapshot.memoryUsageMB, 0, 'f', 0));
+        performanceWarning(
+            std::string("High memory usage: %1 MB"));
     }
 
     if (snapshot.gpuUsagePercent > m_gpuThresholdPercent && snapshot.gpuUsagePercent > 0) {
-        emit performanceWarning(
-            QString("High GPU usage: %1%").arg(snapshot.gpuUsagePercent, 0, 'f', 1));
+        performanceWarning(
+            std::string("High GPU usage: %1%"));
     }
 }
 
@@ -257,9 +246,9 @@ Profiler::ProfileSnapshot Profiler::getCurrentSnapshot() const
     return m_snapshots.back();
 }
 
-QJsonObject Profiler::getProfilingReport() const
+void* Profiler::getProfilingReport() const
 {
-    QJsonObject report;
+    void* report;
     
     // Overall stats
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -270,9 +259,9 @@ QJsonObject Profiler::getProfilingReport() const
     report["peakMemoryMB"] = static_cast<double>(m_peakAllocated / (1024.0 * 1024.0));
 
     // Phase statistics
-    QJsonObject phaseStats;
+    void* phaseStats;
     for (auto it = m_phases.begin(); it != m_phases.end(); ++it) {
-        QJsonObject phaseData;
+        void* phaseData;
         phaseData["totalMs"] = static_cast<int>(it->totalMs);
         phaseData["callCount"] = static_cast<int>(it->durations.size());
         
@@ -290,7 +279,7 @@ QJsonObject Profiler::getProfilingReport() const
     report["phases"] = phaseStats;
 
     // Throughput statistics
-    QJsonObject throughput;
+    void* throughput;
     if (elapsed > 0) {
         throughput["samplesPerSecond"] = static_cast<double>(m_totalSamplesProcessed) * 1000.0 / elapsed;
         throughput["tokensPerSecond"] = static_cast<double>(m_totalTokensProcessed) * 1000.0 / elapsed;
@@ -302,7 +291,7 @@ QJsonObject Profiler::getProfilingReport() const
         std::vector<qint64> sorted = m_batchLatencies;
         std::sort(sorted.begin(), sorted.end());
         
-        QJsonObject latency;
+        void* latency;
         latency["p50"] = static_cast<int>(sorted[sorted.size() / 2]);
         latency["p95"] = static_cast<int>(sorted[static_cast<size_t>(sorted.size() * 0.95)]);
         latency["p99"] = static_cast<int>(sorted[static_cast<size_t>(sorted.size() * 0.99)]);
@@ -313,10 +302,10 @@ QJsonObject Profiler::getProfilingReport() const
     }
 
     // Metrics snapshots (last 100)
-    QJsonArray snapshots;
+    void* snapshots;
     size_t start = m_snapshots.size() > 100 ? m_snapshots.size() - 100 : 0;
     for (size_t i = start; i < m_snapshots.size(); ++i) {
-        QJsonObject snap;
+        void* snap;
         snap["timestamp"] = static_cast<qint64>(m_snapshots[i].timestamp);
         snap["cpuPercent"] = static_cast<double>(m_snapshots[i].cpuUsagePercent);
         snap["memoryMB"] = static_cast<double>(m_snapshots[i].memoryUsageMB);
@@ -332,27 +321,25 @@ QJsonObject Profiler::getProfilingReport() const
     return report;
 }
 
-bool Profiler::exportReport(const QString& filePath) const
+bool Profiler::exportReport(const std::string& filePath) const
 {
-    QJsonObject report = getProfilingReport();
-    QJsonDocument doc(report);
+    void* report = getProfilingReport();
+    void* doc(report);
 
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "Failed to open file for writing:" << filePath;
         return false;
     }
 
     file.write(doc.toJson());
     file.close();
 
-    qDebug() << "Profiling report exported to:" << filePath;
     return true;
 }
 
 void Profiler::analyzeMetrics()
 {
-    // Check for anomalies and emit warnings
+    // Check for anomalies and warnings
     if (!m_snapshots.empty()) {
         float avgCpu = 0.0f, avgMemory = 0.0f, avgGpu = 0.0f;
         
@@ -366,10 +353,6 @@ void Profiler::analyzeMetrics()
         avgMemory /= m_snapshots.size();
         avgGpu /= m_snapshots.size();
         
-        qDebug() << "Profiling Summary:";
-        qDebug() << "  Avg CPU:" << avgCpu << "%";
-        qDebug() << "  Avg Memory:" << avgMemory << "MB";
-        qDebug() << "  Avg GPU:" << avgGpu << "%";
     }
 }
 

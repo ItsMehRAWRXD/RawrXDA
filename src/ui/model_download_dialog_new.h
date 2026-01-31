@@ -2,30 +2,22 @@
 #pragma once
 
 #include "auto_model_downloader.h"
-#include <QDialog>
-#include <QVector>
 
-class QListWidget;
-class QProgressBar;
-class QLabel;
-class QPushButton;
-class QListWidgetItem;
 
 namespace RawrXD {
 
-class ModelDownloadDialog : public QDialog {
-    Q_OBJECT
+class ModelDownloadDialog : public void {
 
 public:
-    explicit ModelDownloadDialog(QWidget* parent = nullptr);
+    explicit ModelDownloadDialog(void* parent = nullptr);
     virtual ~ModelDownloadDialog();
 
-private slots:
+private:
     void onDownloadClicked();
     void onSkipClicked();
-    void onDownloadProgress(const QString& modelName, qint64 bytesReceived, qint64 bytesTotal);
-    void onDownloadCompleted(const QString& modelName, const QString& filePath);
-    void onDownloadFailed(const QString& modelName, const QString& error);
+    void onDownloadProgress(const std::string& modelName, qint64 bytesReceived, qint64 bytesTotal);
+    void onDownloadCompleted(const std::string& modelName, const std::string& filePath);
+    void onDownloadFailed(const std::string& modelName, const std::string& error);
 
 private:
     void setupUI();
@@ -39,7 +31,8 @@ private:
     QPushButton* m_skipButton{nullptr};
     
     AutoModelDownloader* m_downloader{nullptr};
-    QVector<ModelDownloadInfo> m_models;
+    std::vector<ModelDownloadInfo> m_models;
 };
 
 } // namespace RawrXD
+

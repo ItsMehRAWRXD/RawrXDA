@@ -1,27 +1,19 @@
 // Agentic Engine - Production-Ready AI Core
 #include "agentic_engine.h"
 #include "../src/qtapp/inference_engine.hpp"
-#include <QTimer>
-#include <QtConcurrent>
-#include <QFutureWatcher>
+
+
 #include "../3rdparty/ggml/include/gguf.h"
 #include "../3rdparty/ggml/include/ggml-cpu.h"
-#include <QStringList>
-#include <QRandomGenerator>
-#include <QDebug>
-#include <QThread>
-#include <QDateTime>
-#include <QRegularExpression>
-#include <QCryptographicHash>
+
+
 #include <fstream>
-#include <QDir>
-#include <QFile>
-#include <QTextStream>
-#include <QFileInfo>
+
+
 #include <algorithm>
 
-AgenticEngine::AgenticEngine(QObject* parent) 
-    : QObject(parent), 
+AgenticEngine::AgenticEngine(void* parent) 
+    : void(parent), 
       m_modelLoaded(false), 
       m_inferenceEngine(nullptr),
       m_totalInteractions(0),
@@ -43,7 +35,6 @@ AgenticEngine::~AgenticEngine()
         m_inferenceEngine = nullptr;
     }
     
-    qInfo() << "[AgenticEngine] Destroyed - cleaned up" << m_feedbackHistory.size() << "feedback entries";
 }
 
 void AgenticEngine::initialize() {
@@ -61,107 +52,90 @@ void AgenticEngine::initialize() {
     
     // Create inference engine instance (deferred from constructor)
     m_inferenceEngine = new InferenceEngine(this);
-    qInfo() << "[AgenticEngine] Inference engine created";
     
-    qDebug() << "Agentic Engine initialized - waiting for model selection";
 }
 
 void AgenticEngine::setGenerationConfig(const GenerationConfig& config) {
     m_genConfig = config;
-    qInfo() << "[AgenticEngine] Generation config updated:"
             << "temperature=" << config.temperature
             << "topP=" << config.topP
             << "maxTokens=" << config.maxTokens;
 }
 
-void AgenticEngine::setModel(const QString& modelPath) {
+void AgenticEngine::setModel(const std::string& modelPath) {
     if (modelPath.isEmpty()) {
         m_modelLoaded = false;
-        qDebug() << "Model unloaded";
         return;
     }
     
     // Load model in background thread
-    QThread* thread = new QThread;
-    connect(thread, &QThread::started, this, [this, modelPath, thread]() {
-        qDebug() << "[AgenticEngine] Background thread started for model loading";
+    std::thread* thread = new std::thread;
+// Qt connect removed
         bool success = loadModelAsync(modelPath.toStdString());
-        qDebug() << "[AgenticEngine] Background thread finished. Success:" << success;
-        emit modelLoadingFinished(success, modelPath);
-        // CRITICAL: Emit modelReady on main thread after background work completes
+        modelLoadingFinished(success, modelPath);
+        // CRITICAL: modelReady on main thread after background work completes
         QMetaObject::invokeMethod(this, [this, success]() {
-            qDebug() << "[AgenticEngine] Main thread: Emitting modelReady(" << success << ")";
-            emit modelReady(success);
-        }, Qt::QueuedConnection);
+            modelReady(success);
+        }, //QueuedConnection);
         thread->quit();
     });
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+// Qt connect removed
     thread->start();
 }
 
-void AgenticEngine::setModelName(const QString& modelName) {
-    qDebug() << "[AgenticEngine] ═══ Model Selection Start ═══";
-    qDebug() << "[AgenticEngine] Model selection received:" << modelName;
+void AgenticEngine::setModelName(const std::string& modelName) {
     
     // Resolve Ollama model name to actual GGUF file path
-    QString ggufPath = resolveGgufPath(modelName);
+    std::string ggufPath = resolveGgufPath(modelName);
     
     if (!ggufPath.isEmpty()) {
-        qInfo() << "[AgenticEngine] Resolved" << modelName << "to" << ggufPath;
-        qDebug() << "[AgenticEngine] Calling setModel() to load GGUF...";
         setModel(ggufPath);
     } else {
-        qWarning() << "[AgenticEngine] Could not resolve GGUF path for model:" << modelName;
-        qWarning() << "[AgenticEngine] No matching .gguf file found in D:/OllamaModels";
         m_modelLoaded = false;
-        // Emit signal with special value to indicate path resolution failure
-        emit modelLoadingFinished(false, "NO_GGUF_FILE:" + modelName);
-        emit modelReady(false);
+        // signal with special value to indicate path resolution failure
+        modelLoadingFinished(false, "NO_GGUF_FILE:" + modelName);
+        modelReady(false);
     }
 }
 
-QString AgenticEngine::resolveGgufPath(const QString& modelName) {
+std::string AgenticEngine::resolveGgufPath(const std::string& modelName) {
     // Search for GGUF file in Ollama models directory
-    QStringList searchPaths = {
+    std::vector<std::string> searchPaths = {
         "D:/OllamaModels",
         "C:/Users/" + qEnvironmentVariable("USERNAME") + "/.ollama/models",
-        QDir::homePath() + "/.ollama/models"
+        std::filesystem::path::homePath() + "/.ollama/models"
     };
     
     // Extract base model name (e.g., "llama3.2" from "llama3.2:3b")
-    QString baseName = modelName.split(':').first();
-    QString searchPattern = "*" + baseName + "*.gguf";
+    std::string baseName = modelName.split(':').first();
+    std::string searchPattern = "*" + baseName + "*.gguf";
     
-    for (const QString& searchPath : searchPaths) {
-        QDir dir(searchPath);
+    for (const std::string& searchPath : searchPaths) {
+        std::filesystem::path dir(searchPath);
         if (!dir.exists()) continue;
         
-        QStringList filters;
+        std::vector<std::string> filters;
         filters << searchPattern;
-        QFileInfoList files = dir.entryInfoList(filters, QDir::Files);
+        QFileInfoList files = dir.entryInfoList(filters, std::filesystem::path::Files);
         
         if (!files.isEmpty()) {
             // Return first matching GGUF file
-            QString path = files.first().absoluteFilePath();
-            qDebug() << "[AgenticEngine] Found GGUF:" << path;
+            std::string path = files.first().absoluteFilePath();
             return path;
         }
     }
     
-    qWarning() << "[AgenticEngine] No GGUF file found for" << modelName;
-    return QString();
+    return std::string();
 }
 
 bool AgenticEngine::loadModelAsync(const std::string& modelPath) {
     try {
-        qInfo() << "Loading GGUF model from:" << QString::fromStdString(modelPath);
         
         // Check if file exists
         std::ifstream file(modelPath, std::ios::binary);
         if (!file.is_open()) {
-            qCritical() << "Model file does not exist:" << QString::fromStdString(modelPath);
             m_modelLoaded = false;
-            emit modelLoadingFinished(false, QString::fromStdString(modelPath));
+            modelLoadingFinished(false, std::string::fromStdString(modelPath));
             return false;
         }
         file.close();
@@ -171,9 +145,8 @@ bool AgenticEngine::loadModelAsync(const std::string& modelPath) {
         struct gguf_init_params params = {true, nullptr};
         struct gguf_context *ctx = gguf_init_from_file(modelPath.c_str(), params);
         if (!ctx) {
-            qCritical() << "Not a valid GGUF file:" << QString::fromStdString(modelPath);
             m_modelLoaded = false;
-            emit modelLoadingFinished(false, QString::fromStdString(modelPath));
+            modelLoadingFinished(false, std::string::fromStdString(modelPath));
             return false;
         }
         
@@ -181,19 +154,15 @@ bool AgenticEngine::loadModelAsync(const std::string& modelPath) {
         const int64_t qver = gguf_find_key(ctx, "general.quantization_version");
         if (qver >= 0) {
             const char *qt = gguf_get_val_str(ctx, qver);
-            qInfo() << "Quantization type:" << qt;
             
             // Check if Q2_K requires AVX but CPU doesn't support it
-            if (QString(qt).contains("Q2_K") && !ggml_cpu_has_avx()) {
-                qCritical() << "Q2_K quantization requires AVX but CPU does not support it";
-                qCritical() << "Re-compile ggml with proper CPU flags or use Vulkan/CUDA backend";
+            if (std::string(qt).contains("Q2_K") && !ggml_cpu_has_avx()) {
                 gguf_free(ctx);
                 m_modelLoaded = false;
-                emit modelLoadingFinished(false, QString::fromStdString(modelPath));
+                modelLoadingFinished(false, std::string::fromStdString(modelPath));
                 return false;
             }
         } else {
-            qWarning() << "No quantization info found in GGUF – will try anyway";
         }
         
         gguf_free(ctx);
@@ -201,92 +170,78 @@ bool AgenticEngine::loadModelAsync(const std::string& modelPath) {
         // Delegate to inference engine for actual model loading
         // This is wrapped in additional try/catch to handle ggml crashes
         if (m_inferenceEngine) {
-            qDebug() << "[AgenticEngine] Calling InferenceEngine::loadModel for:" << QString::fromStdString(modelPath);
-            bool success = m_inferenceEngine->loadModel(QString::fromStdString(modelPath));
+            bool success = m_inferenceEngine->loadModel(std::string::fromStdString(modelPath));
             m_modelLoaded = success;
             m_currentModelPath = modelPath;
-            qInfo() << "[AgenticEngine] Model loading" << (success ? "succeeded" : "failed") << ":" << QString::fromStdString(modelPath);
-            qDebug() << "[AgenticEngine] Emitting modelReady(" << success << ")";
-            emit modelLoadingFinished(success, QString::fromStdString(modelPath));
-            emit modelReady(success);
+            modelLoadingFinished(success, std::string::fromStdString(modelPath));
+            modelReady(success);
             return success;
         }
         
-        qWarning() << "Inference engine not available, marking as loaded without verification";
         m_modelLoaded = true;
         m_currentModelPath = modelPath;
-        emit modelLoadingFinished(true, QString::fromStdString(modelPath));
-        emit modelReady(true);
+        modelLoadingFinished(true, std::string::fromStdString(modelPath));
+        modelReady(true);
         return true;
         
     } catch (const std::exception& e) {
-        qCritical() << "[AgenticEngine] Model load crashed:" << e.what();
         m_modelLoaded = false;
-        emit modelLoadingFinished(false, QString::fromStdString(modelPath));
-        emit modelReady(false);
+        modelLoadingFinished(false, std::string::fromStdString(modelPath));
+        modelReady(false);
         return false;
     } catch (...) {
-        qCritical() << "[AgenticEngine] Model load – unknown exception";
         m_modelLoaded = false;
-        emit modelLoadingFinished(false, QString::fromStdString(modelPath));
-        emit modelReady(false);
+        modelLoadingFinished(false, std::string::fromStdString(modelPath));
+        modelReady(false);
         return false;
     }
 }
 
-void AgenticEngine::processMessage(const QString& message, const QString& editorContext) {
-    qDebug() << "[AgenticEngine] Processing message:" << message;
+void AgenticEngine::processMessage(const std::string& message, const std::string& editorContext) {
     if (!editorContext.isEmpty()) {
-        qDebug() << "[AgenticEngine] With editor context:" << editorContext.length() << "chars";
     }
-    qDebug() << "[AgenticEngine] m_modelLoaded:" << m_modelLoaded;
-    qDebug() << "[AgenticEngine] m_inferenceEngine:" << (m_inferenceEngine ? "exists" : "null");
-    qDebug() << "[AgenticEngine] isModelLoaded:" << (m_inferenceEngine ? m_inferenceEngine->isModelLoaded() : false);
     
     // Enhance message with editor context if provided
-    QString enhancedMessage = message;
+    std::string enhancedMessage = message;
     if (!editorContext.isEmpty()) {
         enhancedMessage = message + "\n\n[Context from editor]\n```\n" + editorContext + "\n```";
     }
     
     if (m_modelLoaded && m_inferenceEngine && m_inferenceEngine->isModelLoaded()) {
         // Use real inference engine - response will be emitted via signal
-        qInfo() << "[AgenticEngine] ✓ Using loaded model for response generation";
         generateTokenizedResponse(enhancedMessage);
         // Response will be emitted asynchronously via responseReady signal
     } else {
         // Fallback to keyword-based responses if no model loaded
-        qWarning() << "[AgenticEngine] ✗ No model loaded, using fallback response";
-        qWarning() << "[AgenticEngine]   Reason: m_modelLoaded=" << m_modelLoaded 
                    << ", engine=" << (m_inferenceEngine ? "OK" : "NULL")
                    << ", engine.isModelLoaded=" << (m_inferenceEngine ? m_inferenceEngine->isModelLoaded() : false);
-        QString response = generateResponse(enhancedMessage);
-        emit responseReady(response);
+        std::string response = generateResponse(enhancedMessage);
+        responseReady(response);
     }
 }
 
-QString AgenticEngine::analyzeCode(const QString& code) {
+std::string AgenticEngine::analyzeCode(const std::string& code) {
     return "Code analysis: " + code;
 }
 
-QString AgenticEngine::generateCode(const QString& prompt) {
+std::string AgenticEngine::generateCode(const std::string& prompt) {
     return "// Generated code for: " + prompt;
 }
 
-QString AgenticEngine::generateResponse(const QString& message) {
+std::string AgenticEngine::generateResponse(const std::string& message) {
     // Simple response generation based on keywords
-    QStringList responses;
+    std::vector<std::string> responses;
     
-    if (message.contains("hello", Qt::CaseInsensitive) || 
-        message.contains("hi", Qt::CaseInsensitive)) {
+    if (message.contains("hello", //CaseInsensitive) || 
+        message.contains("hi", //CaseInsensitive)) {
         responses << "Hello there! How can I help you today?"
                   << "Hi! What would you like me to do?"
                   << "Greetings! Ready to assist you.";
-    } else if (message.contains("code", Qt::CaseInsensitive)) {
+    } else if (message.contains("code", //CaseInsensitive)) {
         responses << "I can help you with coding tasks. What do you need?"
                   << "Let me analyze your code. What specifically are you looking for?"
                   << "I can generate, refactor, or debug code for you.";
-    } else if (message.contains("help", Qt::CaseInsensitive)) {
+    } else if (message.contains("help", //CaseInsensitive)) {
         responses << "I can help with code analysis, generation, and debugging."
                   << "Try asking me to generate code or analyze your existing code."
                   << "I can also help with general programming questions.";
@@ -301,79 +256,66 @@ QString AgenticEngine::generateResponse(const QString& message) {
     return responses[index];
 }
 
-QString AgenticEngine::generateTokenizedResponse(const QString& message) {
+std::string AgenticEngine::generateTokenizedResponse(const std::string& message) {
     // Real tokenization responses using loaded GGUF model
-    qDebug() << "Generating tokenized response from model:" << QString::fromStdString(m_currentModelPath);
-    qDebug() << "engine ptr:" << m_inferenceEngine
              << "model loaded:" << (m_inferenceEngine ? m_inferenceEngine->isModelLoaded() : false);
     
     // Check if inference engine is available and initialized
     if (m_inferenceEngine && m_inferenceEngine->isModelLoaded()) {
-        qDebug() << "Using real inference engine for response generation";
         
         // === ROBUST ASYNC INFERENCE WITH EXCEPTION HANDLING ===
-        // Run inference in worker thread and ALWAYS emit responseReady, even on failure
+        // Run inference in worker thread and ALWAYS responseReady, even on failure
         // This prevents UI deadlock when ggml aborts inside the worker thread
         
-        auto future = QtConcurrent::run([this, message]() -> QString {
+        auto future = QtConcurrent::run([this, message]() -> std::string {
             try {
                 // Tokenize the input message
                 auto tokens = m_inferenceEngine->tokenize(message);
-                qDebug() << "Tokenized input into" << tokens.size() << "tokens";
                 
                 // Generate response tokens (limit to reasonable length)
                 int maxTokens = 256; // Configurable response length
                 auto generatedTokens = m_inferenceEngine->generate(tokens, maxTokens);
-                qDebug() << "Generated" << generatedTokens.size() << "tokens";
                 
                 // Detokenize back to text
-                QString response = m_inferenceEngine->detokenize(generatedTokens);
+                std::string response = m_inferenceEngine->detokenize(generatedTokens);
                 
                 // If response is empty or too short, fall back to context-aware response
                 if (response.trimmed().length() < 10) {
-                    qWarning() << "Generated response too short, using fallback";
                     return generateFallbackResponse(message);
                 } else {
-                    qDebug() << "Generated real model response:" << response.left(100) << "...";
                     return response;
                 }
             } catch (const std::exception& e) {
-                qCritical() << "Model inference aborted:" << e.what();
-                return QString("❌ Model error: %1").arg(e.what());
+                return std::string("❌ Model error: %1"));
             } catch (...) {
-                qCritical() << "Unknown fatal error in inference";
                 return "❌ Inference engine crashed – model file may be incompatible.";
             }
         });
         
-        // When the worker finishes, emit the result
-        QFutureWatcher<QString> *watcher = new QFutureWatcher<QString>(this);
-        connect(watcher, &QFutureWatcher<QString>::finished,
-                this, [watcher, this]() {
-                    emit responseReady(watcher->result());
+        // When the worker finishes, the result
+        QFutureWatcher<std::string> *watcher = new QFutureWatcher<std::string>(this);
+// Qt connect removed
                     watcher->deleteLater();
                 });
         watcher->setFuture(future);
         
         // Return immediately - response will arrive via responseReady signal
-        return QString(); // Empty return, actual response comes via signal
+        return std::string(); // Empty return, actual response comes via signal
     } else {
-        qWarning() << "Inference engine not available, using fallback responses";
         return generateFallbackResponse(message);
     }
 }
 
-QString AgenticEngine::generateFallbackResponse(const QString& message) {
+std::string AgenticEngine::generateFallbackResponse(const std::string& message) {
     // Fallback responses when model inference is not available
-    qDebug() << "Using fallback response generation";
     
-    QString response;
+    std::string response;
     
     if (message.length() < 10) {
         response = "Could you please provide more details?";
-    } else if (message.contains("code", Qt::CaseInsensitive) || 
-               message.contains("debug", Qt::CaseInsensitive) ||
-               message.contains("error", Qt::CaseInsensitive)) {
+    } else if (message.contains("code", //CaseInsensitive) || 
+               message.contains("debug", //CaseInsensitive) ||
+               message.contains("error", //CaseInsensitive)) {
         response = "I'm analyzing the code context. To help debug this, I would need:\n"
                    "1. The complete error message and stack trace\n"
                    "2. The relevant code section where the error occurs\n"
@@ -384,16 +326,16 @@ QString AgenticEngine::generateFallbackResponse(const QString& message) {
                    "- Array bounds violations\n"
                    "- Type mismatches\n"
                    "- Resource leaks";
-    } else if (message.contains("explain", Qt::CaseInsensitive) ||
-               message.contains("how does", Qt::CaseInsensitive)) {
+    } else if (message.contains("explain", //CaseInsensitive) ||
+               message.contains("how does", //CaseInsensitive)) {
         response = "I can explain this concept. The process typically involves:\n"
                    "1. Initialization - Setting up required resources\n"
                    "2. Execution - Running the main logic\n"
                    "3. State Management - Tracking changes\n"
                    "4. Cleanup - Releasing resources\n\n"
                    "Each step includes validation and error handling.";
-    } else if (message.contains("optimize", Qt::CaseInsensitive) ||
-               message.contains("performance", Qt::CaseInsensitive)) {
+    } else if (message.contains("optimize", //CaseInsensitive) ||
+               message.contains("performance", //CaseInsensitive)) {
         response = "For performance optimization, consider:\n"
                    "1. Profiling to identify bottlenecks\n"
                    "2. Memory pooling to reduce allocations\n"
@@ -404,7 +346,7 @@ QString AgenticEngine::generateFallbackResponse(const QString& message) {
     } else {
         response = "I understand you're asking about: \"" + message.left(50) + "...\"\n\n"
                    "To provide a better response, I would need the model to be properly loaded. "
-                   "Current model: " + QString::fromStdString(m_currentModelPath) + "\n\n"
+                   "Current model: " + std::string::fromStdString(m_currentModelPath) + "\n\n"
                    "Please ensure a GGUF model is selected and loaded.";
     }
     
@@ -412,29 +354,28 @@ QString AgenticEngine::generateFallbackResponse(const QString& message) {
 }
 
 // Agent tool capability: Grep files for pattern matching
-QString AgenticEngine::grepFiles(const QString& pattern, const QString& path) {
-    qDebug() << "Agent executing grep for pattern:" << pattern << "in path:" << path;
+std::string AgenticEngine::grepFiles(const std::string& pattern, const std::string& path) {
     
-    QStringList results;
-    QDir searchDir(path.isEmpty() ? "." : path);
+    std::vector<std::string> results;
+    std::filesystem::path searchDir(path.isEmpty() ? "." : path);
     
     // Get all C++ source/header files
-    QStringList filters = {"*.cpp", "*.h", "*.hpp", "*.cc", "*.cxx"};
-    QFileInfoList files = searchDir.entryInfoList(filters, QDir::Files | QDir::AllDirs, QDir::Name);
+    std::vector<std::string> filters = {"*.cpp", "*.h", "*.hpp", "*.cc", "*.cxx"};
+    QFileInfoList files = searchDir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::AllDirs, std::filesystem::path::Name);
     
     int matchCount = 0;
-    for (const QFileInfo& fileInfo : files) {
-        QFile file(fileInfo.filePath());
+    for (const std::filesystem::path& fileInfo : files) {
+        std::fstream file(fileInfo.filePath());
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream stream(&file);
             int lineNum = 0;
             while (!stream.atEnd()) {
-                QString line = stream.readLine();
+                std::string line = stream.readLine();
                 lineNum++;
-                if (line.contains(pattern, Qt::CaseInsensitive)) {
-                    results << QString("%1:%2: %3").arg(fileInfo.fileName())
-                                                    .arg(lineNum)
-                                                    .arg(line.trimmed());
+                if (line.contains(pattern, //CaseInsensitive)) {
+                    results << std::string("%1:%2: %3"))
+                                                    
+                                                    );
                     matchCount++;
                     if (matchCount >= 50) break; // Limit results
                 }
@@ -444,28 +385,27 @@ QString AgenticEngine::grepFiles(const QString& pattern, const QString& path) {
     }
     
     if (results.isEmpty()) {
-        return QString("No matches found for pattern: %1").arg(pattern);
+        return std::string("No matches found for pattern: %1");
     }
     
-    return "Grep Results (" + QString::number(matchCount) + " matches):\n" + results.join("\n");
+    return "Grep Results (" + std::string::number(matchCount) + " matches):\n" + results.join("\n");
 }
 
 // Agent tool capability: Read file contents
-QString AgenticEngine::readFile(const QString& filepath, int startLine, int endLine) {
-    qDebug() << "Agent reading file:" << filepath << "lines:" << startLine << "-" << endLine;
+std::string AgenticEngine::readFile(const std::string& filepath, int startLine, int endLine) {
     
-    QFile file(filepath);
+    std::fstream file(filepath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return QString("ERROR: Cannot open file %1").arg(filepath);
+        return std::string("ERROR: Cannot open file %1");
     }
     
     QTextStream stream(&file);
-    QStringList lines;
+    std::vector<std::string> lines;
     int currentLine = 1;
     
     // Read file content
     while (!stream.atEnd()) {
-        QString line = stream.readLine();
+        std::string line = stream.readLine();
         
         // Apply line range filtering
         if (startLine > 0 && currentLine < startLine) {
@@ -476,34 +416,33 @@ QString AgenticEngine::readFile(const QString& filepath, int startLine, int endL
             break;
         }
         
-        lines << QString("%1: %2").arg(currentLine, 4, 10, QChar(' ')).arg(line);
+        lines << std::string("%1: %2"));
         currentLine++;
     }
     
     file.close();
     
     if (lines.isEmpty()) {
-        return QString("File %1 is empty or line range invalid").arg(filepath);
+        return std::string("File %1 is empty or line range invalid");
     }
     
-    return QString("File: %1\n===\n%2").arg(filepath).arg(lines.join("\n"));
+    return std::string("File: %1\n===\n%2"));
 }
 
 // Agent tool capability: Search files by content/query
-QString AgenticEngine::searchFiles(const QString& query, const QString& path) {
-    qDebug() << "Agent searching files for query:" << query << "in path:" << path;
+std::string AgenticEngine::searchFiles(const std::string& query, const std::string& path) {
     
-    QStringList results;
-    QDir searchDir(path.isEmpty() ? "." : path);
+    std::vector<std::string> results;
+    std::filesystem::path searchDir(path.isEmpty() ? "." : path);
     
     // Search all files recursively
-    QFileInfoList files = searchDir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    QFileInfoList files = searchDir.entryInfoList(std::filesystem::path::Files | std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot, std::filesystem::path::Name);
     
     int fileCount = 0;
-    for (const QFileInfo& fileInfo : files) {
+    for (const std::filesystem::path& fileInfo : files) {
         if (fileInfo.isDir()) {
             // Recursive search in subdirectories (limit depth)
-            QString subResults = searchFiles(query, fileInfo.filePath());
+            std::string subResults = searchFiles(query, fileInfo.filePath());
             if (!subResults.contains("No files found")) {
                 results << subResults;
             }
@@ -511,16 +450,16 @@ QString AgenticEngine::searchFiles(const QString& query, const QString& path) {
         }
         
         // Check if file matches query (filename or content)
-        if (fileInfo.fileName().contains(query, Qt::CaseInsensitive)) {
-            results << QString("MATCH (filename): %1").arg(fileInfo.filePath());
+        if (fileInfo.fileName().contains(query, //CaseInsensitive)) {
+            results << std::string("MATCH (filename): %1"));
             fileCount++;
         } else {
             // Search content
-            QFile file(fileInfo.filePath());
+            std::fstream file(fileInfo.filePath());
             if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                QString content = file.readAll();
-                if (content.contains(query, Qt::CaseInsensitive)) {
-                    results << QString("MATCH (content): %1").arg(fileInfo.filePath());
+                std::string content = file.readAll();
+                if (content.contains(query, //CaseInsensitive)) {
+                    results << std::string("MATCH (content): %1"));
                     fileCount++;
                 }
                 file.close();
@@ -531,49 +470,48 @@ QString AgenticEngine::searchFiles(const QString& query, const QString& path) {
     }
     
     if (results.isEmpty()) {
-        return QString("No files found matching query: %1").arg(query);
+        return std::string("No files found matching query: %1");
     }
     
-    return "Search Results (" + QString::number(fileCount) + " files):\n" + results.join("\n");
+    return "Search Results (" + std::string::number(fileCount) + " files):\n" + results.join("\n");
 }
 
 // Agent tool capability: Reference symbol (find usages and definition)
-QString AgenticEngine::referenceSymbol(const QString& symbol) {
-    qDebug() << "Agent referencing symbol:" << symbol;
+std::string AgenticEngine::referenceSymbol(const std::string& symbol) {
     
-    QStringList references;
-    QDir searchDir(".");
+    std::vector<std::string> references;
+    std::filesystem::path searchDir(".");
     
     // Search for symbol definition and usages
-    QStringList filters = {"*.cpp", "*.h", "*.hpp"};
-    QFileInfoList files = searchDir.entryInfoList(filters, QDir::Files | QDir::AllDirs);
+    std::vector<std::string> filters = {"*.cpp", "*.h", "*.hpp"};
+    QFileInfoList files = searchDir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::AllDirs);
     
     int usageCount = 0;
     int definitionCount = 0;
     
-    for (const QFileInfo& fileInfo : files) {
-        QFile file(fileInfo.filePath());
+    for (const std::filesystem::path& fileInfo : files) {
+        std::fstream file(fileInfo.filePath());
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream stream(&file);
             int lineNum = 0;
             
             while (!stream.atEnd()) {
-                QString line = stream.readLine();
+                std::string line = stream.readLine();
                 lineNum++;
                 
                 // Look for symbol usage or definition
                 if (line.contains(symbol)) {
                     // Check if it's likely a definition
-                    if (line.contains(QString("%1::|%1(|%1 |type %1|class %1|struct %1")
-                                             .arg(symbol), Qt::CaseInsensitive)) {
-                        references << QString("[DEF] %1:%2: %3").arg(fileInfo.fileName())
-                                                                 .arg(lineNum)
-                                                                 .arg(line.trimmed());
+                    if (line.contains(std::string("%1::|%1(|%1 |type %1|class %1|struct %1")
+                                             , //CaseInsensitive)) {
+                        references << std::string("[DEF] %1:%2: %3"))
+                                                                 
+                                                                 );
                         definitionCount++;
                     } else {
-                        references << QString("[USE] %1:%2: %3").arg(fileInfo.fileName())
-                                                                 .arg(lineNum)
-                                                                 .arg(line.trimmed());
+                        references << std::string("[USE] %1:%2: %3"))
+                                                                 
+                                                                 );
                         usageCount++;
                     }
                     
@@ -587,21 +525,20 @@ QString AgenticEngine::referenceSymbol(const QString& symbol) {
     }
     
     if (references.isEmpty()) {
-        return QString("Symbol '%1' not found in codebase").arg(symbol);
+        return std::string("Symbol '%1' not found in codebase");
     }
     
-    return QString("Symbol Reference for '%1' (%2 definitions, %3 usages):\n%4")
-            .arg(symbol)
-            .arg(definitionCount)
-            .arg(usageCount)
-            .arg(references.join("\n"));
+    return std::string("Symbol Reference for '%1' (%2 definitions, %3 usages):\n%4")
+
+
+            );
 }
 
 // ========== AI CORE COMPONENT 1: CODE ANALYSIS ==========
 
-QJsonObject AgenticEngine::analyzeCodeQuality(const QString& code)
+void* AgenticEngine::analyzeCodeQuality(const std::string& code)
 {
-    QJsonObject quality;
+    void* quality;
     
     // Calculate comprehensive metrics
     int lines = code.split('\n').count();
@@ -609,9 +546,9 @@ QJsonObject AgenticEngine::analyzeCodeQuality(const QString& code)
     int commentLines = 0;
     int codeLines = 0;
     
-    QStringList codeLines_list = code.split('\n');
-    for (const QString& line : codeLines_list) {
-        QString trimmed = line.trimmed();
+    std::vector<std::string> codeLines_list = code.split('\n');
+    for (const std::string& line : codeLines_list) {
+        std::string trimmed = line.trimmed();
         if (!trimmed.isEmpty()) {
             nonEmptyLines++;
             if (trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*")) {
@@ -644,7 +581,7 @@ QJsonObject AgenticEngine::analyzeCodeQuality(const QString& code)
                                    cyclomaticComplexity < 20 ? "medium" : "high";
     
     // Code smell detection
-    QJsonArray smells;
+    void* smells;
     if (code.contains("goto ")) smells.append("goto_statement");
     if (code.count("if ") > 5) smells.append("excessive_conditionals");
     if (lines > 300) smells.append("long_file");
@@ -656,34 +593,34 @@ QJsonObject AgenticEngine::analyzeCodeQuality(const QString& code)
     return quality;
 }
 
-QJsonArray AgenticEngine::detectPatterns(const QString& code)
+void* AgenticEngine::detectPatterns(const std::string& code)
 {
-    QJsonArray patterns;
+    void* patterns;
     
     // Design pattern detection
     if (code.contains("virtual") && code.contains("override")) {
-        QJsonObject pattern;
+        void* pattern;
         pattern["name"] = "polymorphism";
         pattern["description"] = "Virtual functions detected - using polymorphic design";
         patterns.append(pattern);
     }
     
     if (code.contains("static") && code.contains("getInstance")) {
-        QJsonObject pattern;
+        void* pattern;
         pattern["name"] = "singleton";
         pattern["description"] = "Singleton pattern detected";
         patterns.append(pattern);
     }
     
-    if (code.contains("Q_OBJECT") || code.contains("signals:") || code.contains("slots:")) {
-        QJsonObject pattern;
+    if (code.contains("") || code.contains("signals:") || code.contains("slots:")) {
+        void* pattern;
         pattern["name"] = "observer";
         pattern["description"] = "Qt signal/slot pattern (Observer pattern)";
         patterns.append(pattern);
     }
     
     if (code.contains("std::make_shared") || code.contains("std::make_unique")) {
-        QJsonObject pattern;
+        void* pattern;
         pattern["name"] = "smart_pointers";
         pattern["description"] = "RAII pattern with smart pointers";
         patterns.append(pattern);
@@ -692,16 +629,16 @@ QJsonArray AgenticEngine::detectPatterns(const QString& code)
     return patterns;
 }
 
-QJsonObject AgenticEngine::calculateMetrics(const QString& code)
+void* AgenticEngine::calculateMetrics(const std::string& code)
 {
-    QJsonObject metrics;
+    void* metrics;
     
     // LOC metrics
     metrics["lines_of_code"] = code.split('\n').count();
     metrics["characters"] = code.length();
     
     // Function metrics
-    int functionCount = code.count(QRegularExpression(R"(\w+\s*\([^)]*\)\s*\{)"));
+    int functionCount = code.count(std::regex(R"(\w+\s*\([^)]*\)\s*\{)"));
     metrics["function_count"] = functionCount;
     
     // Class metrics
@@ -721,11 +658,11 @@ QJsonObject AgenticEngine::calculateMetrics(const QString& code)
     return metrics;
 }
 
-QString AgenticEngine::suggestImprovements(const QString& code)
+std::string AgenticEngine::suggestImprovements(const std::string& code)
 {
-    QStringList suggestions;
+    std::vector<std::string> suggestions;
     
-    QJsonObject quality = analyzeCodeQuality(code);
+    void* quality = analyzeCodeQuality(code);
     int complexity = quality["cyclomatic_complexity"].toInt();
     float commentRatio = quality["comment_ratio"].toDouble();
     
@@ -762,10 +699,10 @@ QString AgenticEngine::suggestImprovements(const QString& code)
 
 // ========== AI CORE COMPONENT 2: CODE GENERATION (ENHANCED) ==========
 
-QString AgenticEngine::generateFunction(const QString& signature, const QString& description)
+std::string AgenticEngine::generateFunction(const std::string& signature, const std::string& description)
 {
     // Parse function signature
-    QString functionCode = QString("/**\n * @brief %1\n */\n").arg(description);
+    std::string functionCode = std::string("/**\n * @brief %1\n */\n");
     functionCode += signature;
     
     if (!signature.contains("{")) {
@@ -777,25 +714,25 @@ QString AgenticEngine::generateFunction(const QString& signature, const QString&
     return functionCode;
 }
 
-QString AgenticEngine::generateClass(const QString& className, const QJsonObject& spec)
+std::string AgenticEngine::generateClass(const std::string& className, const void*& spec)
 {
-    QString classCode = QString("/**\n * @class %1\n").arg(className);
+    std::string classCode = std::string("/**\n * @class %1\n");
     
     if (spec.contains("description")) {
-        classCode += QString(" * @brief %1\n").arg(spec["description"].toString());
+        classCode += std::string(" * @brief %1\n"));
     }
     
     classCode += " */\n";
-    classCode += QString("class %1 {\n").arg(className);
+    classCode += std::string("class %1 {\n");
     classCode += "public:\n";
-    classCode += QString("    %1();\n").arg(className);
-    classCode += QString("    ~%1();\n\n").arg(className);
+    classCode += std::string("    %1();\n");
+    classCode += std::string("    ~%1();\n\n");
     
     // Add methods from spec
     if (spec.contains("methods")) {
-        QJsonArray methods = spec["methods"].toArray();
-        for (const QJsonValue& method : methods) {
-            classCode += QString("    %1;\n").arg(method.toString());
+        void* methods = spec["methods"].toArray();
+        for (const void*& method : methods) {
+            classCode += std::string("    %1;\n"));
         }
     }
     
@@ -803,9 +740,9 @@ QString AgenticEngine::generateClass(const QString& className, const QJsonObject
     
     // Add members from spec
     if (spec.contains("members")) {
-        QJsonArray members = spec["members"].toArray();
-        for (const QJsonValue& member : members) {
-            classCode += QString("    %1;\n").arg(member.toString());
+        void* members = spec["members"].toArray();
+        for (const void*& member : members) {
+            classCode += std::string("    %1;\n"));
         }
     }
     
@@ -814,40 +751,40 @@ QString AgenticEngine::generateClass(const QString& className, const QJsonObject
     return classCode;
 }
 
-QString AgenticEngine::generateTests(const QString& code)
+std::string AgenticEngine::generateTests(const std::string& code)
 {
-    QString testCode = "#include <QTest>\n\n";
-    testCode += "class GeneratedTest : public QObject {\n";
-    testCode += "    Q_OBJECT\n\n";
-    testCode += "private slots:\n";
+
+    testCode += "class GeneratedTest : public void {\n";
+    testCode += "    \n\n";
+    testCode += "private:\n";
     testCode += "    void initTestCase() {\n";
     testCode += "        // Setup test environment\n";
     testCode += "    }\n\n";
     
     // Generate test cases based on functions found
-    QRegularExpression funcRegex(R"((\w+)\s+(\w+)\s*\([^)]*\))");
-    QRegularExpressionMatchIterator matches = funcRegex.globalMatch(code);
+    std::regex funcRegex(R"((\w+)\s+(\w+)\s*\([^)]*\))");
+    std::sregex_iterator matches = funcRegex;
     
     int testCount = 0;
-    while (matches.hasNext() && testCount < 5) {
-        QRegularExpressionMatch match = matches.next();
-        QString functionName = match.captured(2);
+    while (matchesfalse && testCount < 5) {
+        std::smatch match = matches;
+        std::string functionName = match"";
         
-        testCode += QString("    void test_%1() {\n").arg(functionName);
+        testCode += std::string("    void test_%1() {\n");
         testCode += "        // TODO: Add test assertions\n";
-        testCode += QString("        // Test %1 functionality\n").arg(functionName);
+        testCode += std::string("        // Test %1 functionality\n");
         testCode += "    }\n\n";
         testCount++;
     }
     
     testCode += "};\n\n";
-    testCode += "QTEST_MAIN(GeneratedTest)\n";
+    testCode += "// Test removed\n";
     testCode += "#include \"generated_test.moc\"\n";
     
     return testCode;
 }
 
-QString AgenticEngine::refactorCode(const QString& code, const QString& refactoringType)
+std::string AgenticEngine::refactorCode(const std::string& code, const std::string& refactoringType)
 {
     if (refactoringType == "extract_function") {
         return "// Refactored: Extract complex logic into separate functions\n" + code;
@@ -862,30 +799,30 @@ QString AgenticEngine::refactorCode(const QString& code, const QString& refactor
 
 // ========== AI CORE COMPONENT 3: TASK PLANNING ==========
 
-QJsonArray AgenticEngine::planTask(const QString& goal)
+void* AgenticEngine::planTask(const std::string& goal)
 {
-    QJsonArray plan;
+    void* plan;
     
     // Decompose goal into steps
-    QJsonObject step1;
+    void* step1;
     step1["step"] = 1;
     step1["action"] = "Analyze requirements";
-    step1["description"] = QString("Understand the goal: %1").arg(goal);
+    step1["description"] = std::string("Understand the goal: %1");
     plan.append(step1);
     
-    QJsonObject step2;
+    void* step2;
     step2["step"] = 2;
     step2["action"] = "Design solution";
     step2["description"] = "Create high-level design and architecture";
     plan.append(step2);
     
-    QJsonObject step3;
+    void* step3;
     step3["step"] = 3;
     step3["action"] = "Implement code";
     step3["description"] = "Write the actual implementation";
     plan.append(step3);
     
-    QJsonObject step4;
+    void* step4;
     step4["step"] = 4;
     step4["action"] = "Test and validate";
     step4["description"] = "Create and run tests to ensure correctness";
@@ -894,9 +831,9 @@ QJsonArray AgenticEngine::planTask(const QString& goal)
     return plan;
 }
 
-QJsonObject AgenticEngine::decomposeTask(const QString& task)
+void* AgenticEngine::decomposeTask(const std::string& task)
 {
-    QJsonObject decomposition;
+    void* decomposition;
     decomposition["task"] = task;
     decomposition["complexity"] = estimateComplexity(task);
     decomposition["subtasks"] = planTask(task);
@@ -905,22 +842,22 @@ QJsonObject AgenticEngine::decomposeTask(const QString& task)
     return decomposition;
 }
 
-QJsonArray AgenticEngine::generateWorkflow(const QString& project)
+void* AgenticEngine::generateWorkflow(const std::string& project)
 {
-    QJsonArray workflow;
+    void* workflow;
     
-    QStringList phases = {"Planning", "Development", "Testing", "Deployment"};
-    for (const QString& phase : phases) {
-        QJsonObject workflowStep;
+    std::vector<std::string> phases = {"Planning", "Development", "Testing", "Deployment"};
+    for (const std::string& phase : phases) {
+        void* workflowStep;
         workflowStep["phase"] = phase;
-        workflowStep["description"] = QString("Complete %1 phase for %2").arg(phase, project);
+        workflowStep["description"] = std::string("Complete %1 phase for %2");
         workflow.append(workflowStep);
     }
     
     return workflow;
 }
 
-QString AgenticEngine::estimateComplexity(const QString& task)
+std::string AgenticEngine::estimateComplexity(const std::string& task)
 {
     int wordCount = task.split(' ').count();
     
@@ -931,9 +868,9 @@ QString AgenticEngine::estimateComplexity(const QString& task)
 
 // ========== AI CORE COMPONENT 4: NLP ==========
 
-QString AgenticEngine::understandIntent(const QString& userInput)
+std::string AgenticEngine::understandIntent(const std::string& userInput)
 {
-    QString lower = userInput.toLower();
+    std::string lower = userInput.toLower();
     
     if (lower.contains("analyze") || lower.contains("check")) {
         return "code_analysis";
@@ -952,14 +889,14 @@ QString AgenticEngine::understandIntent(const QString& userInput)
     return "general_query";
 }
 
-QJsonObject AgenticEngine::extractEntities(const QString& text)
+void* AgenticEngine::extractEntities(const std::string& text)
 {
-    QJsonObject entities;
+    void* entities;
     
     // Extract language mentions
-    QStringList languages = {"C++", "Python", "JavaScript", "Java", "Rust"};
-    for (const QString& lang : languages) {
-        if (text.contains(lang, Qt::CaseInsensitive)) {
+    std::vector<std::string> languages = {"C++", "Python", "JavaScript", "Java", "Rust"};
+    for (const std::string& lang : languages) {
+        if (text.contains(lang, //CaseInsensitive)) {
             entities["language"] = lang;
             break;
         }
@@ -971,18 +908,18 @@ QJsonObject AgenticEngine::extractEntities(const QString& text)
     }
     
     // Extract numbers (could be line numbers, counts, etc.)
-    QRegularExpression numberRegex(R"(\b\d+\b)");
-    QRegularExpressionMatch match = numberRegex.match(text);
+    std::regex numberRegex(R"(\b\d+\b)");
+    std::smatch match = numberRegex.match(text);
     if (match.hasMatch()) {
-        entities["number"] = match.captured(0).toInt();
+        entities["number"] = match"".toInt();
     }
     
     return entities;
 }
 
-QString AgenticEngine::generateNaturalResponse(const QString& query, const QJsonObject& context)
+std::string AgenticEngine::generateNaturalResponse(const std::string& query, const void*& context)
 {
-    QString intent = understandIntent(query);
+    std::string intent = understandIntent(query);
     
     if (intent == "code_analysis") {
         return "I'll analyze the code for you. Looking for patterns, potential issues, and quality metrics...";
@@ -995,18 +932,18 @@ QString AgenticEngine::generateNaturalResponse(const QString& query, const QJson
     return "I'm ready to help. Could you provide more details about what you'd like to do?";
 }
 
-QString AgenticEngine::summarizeCode(const QString& code)
+std::string AgenticEngine::summarizeCode(const std::string& code)
 {
-    QJsonObject metrics = calculateMetrics(code);
+    void* metrics = calculateMetrics(code);
     int lines = metrics["lines_of_code"].toInt();
     int functions = metrics["function_count"].toInt();
     int classes = metrics["class_count"].toInt();
     
-    return QString("Code Summary: %1 lines, %2 functions, %3 classes")
-            .arg(lines).arg(functions).arg(classes);
+    return std::string("Code Summary: %1 lines, %2 functions, %3 classes")
+            ;
 }
 
-QString AgenticEngine::explainError(const QString& errorMessage)
+std::string AgenticEngine::explainError(const std::string& errorMessage)
 {
     if (errorMessage.contains("undefined reference")) {
         return "This is a linker error. The function or variable is declared but not defined. Check that you've implemented the function or linked the correct library.";
@@ -1021,13 +958,13 @@ QString AgenticEngine::explainError(const QString& errorMessage)
 
 // ========== AI CORE COMPONENT 5: LEARNING ==========
 
-void AgenticEngine::collectFeedback(const QString& responseId, bool positive, const QString& comment)
+void AgenticEngine::collectFeedback(const std::string& responseId, bool positive, const std::string& comment)
 {
     FeedbackEntry entry;
     entry.responseId = responseId;
     entry.positive = positive;
     entry.comment = comment;
-    entry.timestamp = QDateTime::currentMSecsSinceEpoch();
+    entry.timestamp = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     
     m_feedbackHistory.push_back(entry);
     
@@ -1041,15 +978,13 @@ void AgenticEngine::collectFeedback(const QString& responseId, bool positive, co
     m_totalInteractions++;
     if (positive) m_positiveResponses++;
     
-    qInfo() << "[Learning] Feedback collected:" << (positive ? "positive" : "negative") 
             << "- Total:" << m_totalInteractions;
     
-    emit feedbackCollected(responseId);
+    feedbackCollected(responseId);
 }
 
 void AgenticEngine::trainFromFeedback()
 {
-    qInfo() << "[Learning] Training from" << m_feedbackHistory.size() << "feedback entries";
     
     // Analyze feedback patterns
     int recentPositive = 0;
@@ -1064,20 +999,18 @@ void AgenticEngine::trainFromFeedback()
     
     float recentSuccessRate = recentTotal > 0 ? (float)recentPositive / recentTotal : 0.0f;
     
-    qInfo() << "[Learning] Recent success rate:" << (recentSuccessRate * 100) << "%";
     
     // Adjust preferences based on feedback
     if (recentSuccessRate < 0.7) {
-        qInfo() << "[Learning] Success rate low - adjusting response strategy";
         m_userPreferences["verbosity"] = "detailed";
     }
     
-    emit learningCompleted();
+    learningCompleted();
 }
 
-QJsonObject AgenticEngine::getLearningStats() const
+void* AgenticEngine::getLearningStats() const
 {
-    QJsonObject stats;
+    void* stats;
     stats["total_interactions"] = m_totalInteractions;
     stats["positive_responses"] = m_positiveResponses;
     stats["success_rate"] = m_totalInteractions > 0 ? 
@@ -1087,57 +1020,57 @@ QJsonObject AgenticEngine::getLearningStats() const
     return stats;
 }
 
-void AgenticEngine::adaptToUserPreferences(const QJsonObject& preferences)
+void AgenticEngine::adaptToUserPreferences(const void*& preferences)
 {
     // Merge new preferences
-    for (const QString& key : preferences.keys()) {
+    for (const std::string& key : preferences.keys()) {
         m_userPreferences[key] = preferences[key];
     }
     
-    qInfo() << "[Learning] Adapted to user preferences:" << preferences.keys();
 }
 
 // ========== AI CORE COMPONENT 6: SECURITY ==========
 
-bool AgenticEngine::validateInput(const QString& input)
+bool AgenticEngine::validateInput(const std::string& input)
 {
     // Check for dangerous patterns
     if (input.contains("rm -rf") || input.contains("del /f")) {
-        emit securityWarning("Dangerous file deletion command detected");
+        securityWarning("Dangerous file deletion command detected");
         return false;
     }
     
     if (input.contains("system(") && input.contains("exec")) {
-        emit securityWarning("Potentially unsafe system call detected");
+        securityWarning("Potentially unsafe system call detected");
         return false;
     }
     
     // Check length
     if (input.length() > 10000) {
-        emit securityWarning("Input exceeds maximum length");
+        securityWarning("Input exceeds maximum length");
         return false;
     }
     
     return true;
 }
 
-QString AgenticEngine::sanitizeCode(const QString& code)
+std::string AgenticEngine::sanitizeCode(const std::string& code)
 {
-    QString sanitized = code;
+    std::string sanitized = code;
     
     // Remove potentially dangerous patterns
-    sanitized.replace(QRegularExpression(R"(system\s*\([^)]*\))"), "/* system() call removed */");
-    sanitized.replace(QRegularExpression(R"(exec\s*\([^)]*\))"), "/* exec() call removed */");
+    sanitized.replace(std::regex(R"(system\s*\([^)]*\))"), "/* system() call removed */");
+    sanitized.replace(std::regex(R"(exec\s*\([^)]*\))"), "/* exec() call removed */");
     
     return sanitized;
 }
 
-bool AgenticEngine::isCommandSafe(const QString& command)
+bool AgenticEngine::isCommandSafe(const std::string& command)
 {
     // Whitelist of safe commands
-    QStringList safeCommands = {"ls", "dir", "pwd", "echo", "cat", "grep", "find"};
+    std::vector<std::string> safeCommands = {"ls", "dir", "pwd", "echo", "cat", "grep", "find"};
     
-    QString firstWord = command.split(' ').first().toLower();
+    std::string firstWord = command.split(' ').first().toLower();
     
     return safeCommands.contains(firstWord);
 }
+

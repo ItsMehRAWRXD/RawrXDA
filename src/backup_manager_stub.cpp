@@ -42,4 +42,3 @@ std::string BackupManager::backupDirectory() const {
     return m_backupDirectory;
 }
 
-

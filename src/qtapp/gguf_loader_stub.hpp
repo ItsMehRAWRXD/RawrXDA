@@ -1,31 +1,26 @@
 #pragma once
-#include <QString>
-#include <QVariant>
-#include <QByteArray>
-#include <QHash>
-#include <QStringList>
+
+
 #include <memory>
 
 // Qt wrapper for basic GGUF file parsing and tensor discovery
 class GGUFLoader {
 public:
-    explicit GGUFLoader(const QString& path);
+    explicit GGUFLoader(const std::string& path);
     ~GGUFLoader();
 
     bool isOpen() const;
-    QVariant getParam(const QString& key, const QVariant& defaultValue) const;
-    QByteArray inflateWeight(const QString& tensorName);
-    QHash<QString, QByteArray> getTokenizerMetadata() const;
-    QStringList tensorNames() const;
+    std::any getParam(const std::string& key, const std::any& defaultValue) const;
+    std::vector<uint8_t> inflateWeight(const std::string& tensorName);
+    std::unordered_map<std::string, std::vector<uint8_t>> getTokenizerMetadata() const;
+    std::vector<std::string> tensorNames() const;
 
 private:
-    QString m_path;
-    mutable QHash<QString, QVariant> m_metadataCache;
-    mutable QStringList m_cachedTensorNames;
+    std::string m_path;
+    mutable std::unordered_map<std::string, std::any> m_metadataCache;
+    mutable std::vector<std::string> m_cachedTensorNames;
     bool m_initialized{false};
     
     void initializeNativeLoader();
 };
-
-
 

@@ -40,7 +40,7 @@ public:
     // Model state
     bool isModelLoaded() const;
     std::string modelPath() const;
-    std::vector<std::string> tensorNames() const;  // Replaces QStringList
+    std::vector<std::string> tensorNames() const;  // Replaces std::vector<std::string>
     int64_t memoryUsageMB() const;
     double tokensPerSecond() const;
     double temperature() const;
@@ -92,7 +92,7 @@ public:
 
 private:
     struct CachedTensorData {
-        std::vector<uint8_t> data;  // Replaces QByteArray
+        std::vector<uint8_t> data;  // Replaces std::vector<uint8_t>
         int ggml_type_id = 0;
     };
     
@@ -101,7 +101,7 @@ private:
     std::string m_modelPath;
     
     // Cache and state
-    std::map<std::string, CachedTensorData> m_tensorCache;  // Replaces QHash
+    std::map<std::string, CachedTensorData> m_tensorCache;  // Replaces std::unordered_map
     std::atomic<bool> m_threadingEnabled{true};
     std::atomic<bool> m_loadTensors{true};
     std::atomic<double> m_tokensPerSecond{0.0};

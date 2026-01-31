@@ -115,11 +115,11 @@ void OrchestrationUI::onOrchestrateClicked()
 
 void OrchestrationUI::onTaskSplitCompleted(const std::vector<TaskDefinition>& tasks)
 {
-    m_statusLabel->setText(std::string("Task split into %1 subtasks").arg(tasks.size()));
+    m_statusLabel->setText(std::string("Task split into %1 subtasks")));
     
     for (const TaskDefinition& task : tasks) {
         QListWidgetItem* item = new QListWidgetItem(
-            std::string("%1: %2").arg(task.type).arg(task.description.left(50)));
+            std::string("%1: %2")));
         item->setData(UserRole, task.id);
         m_taskList->addItem(item);
     }
@@ -136,7 +136,7 @@ void OrchestrationUI::onModelSelectionCompleted(const std::map<std::string, std:
         
         if (modelAssignments.contains(taskId)) {
             std::string currentText = item->text();
-            item->setText(currentText + std::string(" [%1]").arg(modelAssignments[taskId]));
+            item->setText(currentText + std::string(" [%1]"));
         }
     }
 }
@@ -144,17 +144,17 @@ void OrchestrationUI::onModelSelectionCompleted(const std::map<std::string, std:
 void OrchestrationUI::onTabCreated(const std::string& tabName, const std::string& model)
 {
     m_resultsDisplay->append(std::string("[%1] Created tab '%2' for model %3")
-        .arg(// DateTime::currentDateTime().toString("hh:mm:ss"))
-        .arg(tabName)
-        .arg(model));
+        .toString("hh:mm:ss"))
+        
+        );
 }
 
 void OrchestrationUI::onTaskStarted(const std::string& taskId, const std::string& model)
 {
     m_resultsDisplay->append(std::string("[%1] Started task %2 with model %3")
-        .arg(// DateTime::currentDateTime().toString("hh:mm:ss"))
-        .arg(taskId.left(8))
-        .arg(model));
+        .toString("hh:mm:ss"))
+        )
+        );
     
     // Update progress
     int activeTasks = m_taskList->count();
@@ -172,11 +172,11 @@ void OrchestrationUI::onTaskProgress(const std::string& taskId, int progress)
         if (item->data(UserRole).toString() == taskId) {
             std::string currentText = item->text();
             if (!currentText.contains("Progress:")) {
-                item->setText(currentText + std::string(" Progress: %1%").arg(progress));
+                item->setText(currentText + std::string(" Progress: %1%"));
             } else {
                 // Update progress value
                 std::string newText = currentText.replace(std::regex("Progress: \\d+%"), 
-                                                    std::string("Progress: %1%").arg(progress));
+                                                    std::string("Progress: %1%"));
                 item->setText(newText);
             }
             break;
@@ -188,15 +188,15 @@ void OrchestrationUI::onTaskCompleted(const OrchestrationResult& result)
 {
     std::string status = result.success ? "SUCCESS" : "FAILED";
     m_resultsDisplay->append(std::string("[%1] Task %2 completed: %3 (%4ms)")
-        .arg(// DateTime::currentDateTime().toString("hh:mm:ss"))
-        .arg(result.taskId.left(8))
-        .arg(status)
-        .arg(result.executionTime));
+        .toString("hh:mm:ss"))
+        )
+        
+        );
     
     if (!result.success) {
-        m_resultsDisplay->append(std::string("Error: %1").arg(result.error));
+        m_resultsDisplay->append(std::string("Error: %1"));
     } else if (!result.result.empty()) {
-        m_resultsDisplay->append(std::string("Result: %1").arg(result.result.left(100) + "..."));
+        m_resultsDisplay->append(std::string("Result: %1") + "..."));
     }
     
     // Update memory usage display
@@ -234,7 +234,7 @@ void OrchestrationUI::onOrchestrationCompleted(const std::vector<OrchestrationRe
     }
     
     m_resultsDisplay->append(std::string("\n=== ORCHESTRATION COMPLETED ==="));
-    m_resultsDisplay->append(std::string("Success: %1/%2 tasks").arg(successCount).arg(totalCount));
+    m_resultsDisplay->append(std::string("Success: %1/%2 tasks"));
     m_resultsDisplay->append(std::string("Total execution time: Various (see individual tasks)"));
     
     if (successCount == totalCount) {
@@ -247,7 +247,7 @@ void OrchestrationUI::onOrchestrationCompleted(const std::vector<OrchestrationRe
 void OrchestrationUI::onErrorOccurred(const std::string& errorMessage)
 {
     m_statusLabel->setText("Error occurred");
-    m_resultsDisplay->append(std::string("[ERROR] %1").arg(errorMessage));
+    m_resultsDisplay->append(std::string("[ERROR] %1"));
     
     void::critical(this, "Orchestration Error", errorMessage);
 }
@@ -338,7 +338,7 @@ void OrchestrationUI::updateMemoryUsage()
     std::string usedStr = formatMemorySize(used);
     std::string availableStr = (available == LLONG_MAX) ? "Unlimited" : formatMemorySize(available);
     
-    m_memoryUsageLabel->setText(std::string("Memory Usage: %1 / %2").arg(usedStr).arg(availableStr));
+    m_memoryUsageLabel->setText(std::string("Memory Usage: %1 / %2"));
     
     if (available != LLONG_MAX && available > 0) {
         int percentage = (used * 100) / (used + available);
@@ -361,13 +361,8 @@ std::string OrchestrationUI::formatMemorySize(int64_t bytes) const
         unitIndex++;
     }
     
-    return std::string("%1 %2").arg(size, 0, 'f', 1).arg(units[unitIndex]);
+    return std::string("%1 %2");
 }
 
 } // namespace RawrXD
-
-
-
-
-
 

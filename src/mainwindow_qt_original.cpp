@@ -250,9 +250,3 @@ AgenticResult RawrXD::IDE::MainWindow::hydrateLayout(const std::string& snapshot
 
 } // namespace RawrXD::IDE
 
-
-
-
-
-
-

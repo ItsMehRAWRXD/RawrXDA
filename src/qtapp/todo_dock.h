@@ -1,29 +1,25 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
 
-class QTreeWidget;
-class QTreeWidgetItem;
 class TodoManager;
 struct TodoItem;
 
-class TodoDock : public QWidget {
-    Q_OBJECT
+class TodoDock : public void {
+
 public:
-    explicit TodoDock(TodoManager* todoManager, QWidget* parent = nullptr);
+    explicit TodoDock(TodoManager* todoManager, void* parent = nullptr);
     void initialize();
     
-public slots:
+public:
     void refreshTodos();
     
-signals:
-    void openFileRequested(const QString& filePath, const QString& todoId);
+
+    void openFileRequested(const std::string& filePath, const std::string& todoId);
     
-private slots:
+private:
     void onTodoAdded(const TodoItem& todo);
-    void onTodoCompleted(const QString& id);
-    void onTodoRemoved(const QString& id);
+    void onTodoCompleted(const std::string& id);
+    void onTodoRemoved(const std::string& id);
     void onItemDoubleClicked(QTreeWidgetItem* item, int column);
     void onAddTodo();
     void onCompleteTodo();
@@ -37,3 +33,4 @@ private:
     QTreeWidget* treeWidget_;
     TodoManager* todoManager_;
 };
+

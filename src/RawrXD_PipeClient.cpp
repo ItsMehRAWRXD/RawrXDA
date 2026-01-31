@@ -17,7 +17,7 @@ namespace RawrXD {
     }
 
     PipeClient::~PipeClient() {
-        Disconnect();
+// Qt disconnect removed
     }
 
     bool PipeClient::// Connect removed {
@@ -39,7 +39,7 @@ namespace RawrXD {
         return (pipeHandle != INVALID_HANDLE_VALUE);
     }
 
-    void PipeClient::Disconnect() {
+    void PipeClient {
         if (pipeHandle != INVALID_HANDLE_VALUE) {
             CloseHandle(pipeHandle);
             pipeHandle = INVALID_HANDLE_VALUE;

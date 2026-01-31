@@ -8,19 +8,14 @@
 #include "settings_dialog.h"
 #include "../utils/settings_manager.h"
 #include "../utils/shortcut_manager.h"
-#include <QFontDatabase>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QHeaderView>
-#include <QJsonDocument>
-#include <QFile>
+
 
 namespace RawrXD {
 
 // ========== GeneralSettingsWidget ==========
 
-GeneralSettingsWidget::GeneralSettingsWidget(QWidget* parent)
-    : QWidget(parent)
+GeneralSettingsWidget::GeneralSettingsWidget(void* parent)
+    : void(parent)
 {
     // Lightweight constructor - defers Qt widget creation to initialize()
 }
@@ -96,8 +91,8 @@ void GeneralSettingsWidget::resetToDefaults() {
 
 // ========== AppearanceSettingsWidget ==========
 
-AppearanceSettingsWidget::AppearanceSettingsWidget(QWidget* parent)
-    : QWidget(parent)
+AppearanceSettingsWidget::AppearanceSettingsWidget(void* parent)
+    : void(parent)
 {
     // Lightweight constructor - defers Qt widget creation to initialize()
 }
@@ -115,8 +110,7 @@ void AppearanceSettingsWidget::initialize() {
     themeRow->addWidget(new QLabel("Theme:"));
     m_themeComboBox = new QComboBox();
     m_themeComboBox->addItems({"Dark", "Light", "High Contrast Dark", "High Contrast Light"});
-    connect(m_themeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &AppearanceSettingsWidget::onThemeChanged);
+// Qt connect removed
     themeRow->addWidget(m_themeComboBox);
     themeRow->addStretch();
     themeLayout->addLayout(themeRow);
@@ -140,8 +134,7 @@ void AppearanceSettingsWidget::initialize() {
     m_fontFamilyComboBox = new QComboBox();
     m_fontFamilyComboBox->addItems(QFontDatabase::families(QFontDatabase::Latin));
     m_fontFamilyComboBox->setCurrentText("Consolas");
-    connect(m_fontFamilyComboBox, &QComboBox::currentTextChanged,
-            this, &AppearanceSettingsWidget::onFontFamilyChanged);
+// Qt connect removed
     familyRow->addWidget(m_fontFamilyComboBox);
     familyRow->addStretch();
     fontLayout->addLayout(familyRow);
@@ -151,8 +144,7 @@ void AppearanceSettingsWidget::initialize() {
     m_fontSizeSpinBox = new QSpinBox();
     m_fontSizeSpinBox->setRange(8, 32);
     m_fontSizeSpinBox->setValue(12);
-    connect(m_fontSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &AppearanceSettingsWidget::onFontSizeChanged);
+// Qt connect removed
     sizeRow->addWidget(m_fontSizeSpinBox);
     sizeRow->addStretch();
     fontLayout->addLayout(sizeRow);
@@ -190,7 +182,7 @@ void AppearanceSettingsWidget::initialize() {
 void AppearanceSettingsWidget::loadSettings() {
     auto& settings = SettingsManager::instance();
     
-    QString theme = settings.theme();
+    std::string theme = settings.theme();
     if (theme == "dark") m_themeComboBox->setCurrentIndex(0);
     else if (theme == "light") m_themeComboBox->setCurrentIndex(1);
     else if (theme == "hc-dark") m_themeComboBox->setCurrentIndex(2);
@@ -206,7 +198,7 @@ void AppearanceSettingsWidget::loadSettings() {
 void AppearanceSettingsWidget::saveSettings() {
     auto& settings = SettingsManager::instance();
     
-    QStringList themes = {"dark", "light", "hc-dark", "hc-light"};
+    std::vector<std::string> themes = {"dark", "light", "hc-dark", "hc-light"};
     settings.setValue("appearance/theme", themes[m_themeComboBox->currentIndex()]);
     settings.setValue("appearance/colorScheme", m_colorSchemeComboBox->currentText());
     settings.setValue("appearance/fontFamily", m_fontFamilyComboBox->currentText());
@@ -226,18 +218,18 @@ void AppearanceSettingsWidget::resetToDefaults() {
 
 void AppearanceSettingsWidget::onThemeChanged(int index) {
     updatePreview();
-    QStringList themes = {"dark", "light", "hc-dark", "hc-light"};
-    emit themeChanged(themes[index]);
+    std::vector<std::string> themes = {"dark", "light", "hc-dark", "hc-light"};
+    themeChanged(themes[index]);
 }
 
-void AppearanceSettingsWidget::onFontFamilyChanged(const QString& family) {
+void AppearanceSettingsWidget::onFontFamilyChanged(const std::string& family) {
     updatePreview();
-    emit fontChanged(family, m_fontSizeSpinBox->value());
+    fontChanged(family, m_fontSizeSpinBox->value());
 }
 
 void AppearanceSettingsWidget::onFontSizeChanged(int size) {
     updatePreview();
-    emit fontChanged(m_fontFamilyComboBox->currentText(), size);
+    fontChanged(m_fontFamilyComboBox->currentText(), size);
 }
 
 void AppearanceSettingsWidget::updatePreview() {
@@ -256,8 +248,8 @@ void AppearanceSettingsWidget::updatePreview() {
 
 // ========== EditorSettingsWidget ==========
 
-EditorSettingsWidget::EditorSettingsWidget(QWidget* parent)
-    : QWidget(parent)
+EditorSettingsWidget::EditorSettingsWidget(void* parent)
+    : void(parent)
 {
     // Lightweight constructor - defers Qt widget creation to initialize()
 }
@@ -354,7 +346,7 @@ void EditorSettingsWidget::loadSettings() {
     m_insertNewlineCheckBox->setChecked(settings.insertFinalNewline());
     m_formatOnSaveCheckBox->setChecked(settings.formatOnSave());
     
-    QString lineEndings = settings.lineEndings();
+    std::string lineEndings = settings.lineEndings();
     if (lineEndings == "Auto") m_lineEndingsComboBox->setCurrentIndex(0);
     else if (lineEndings == "LF") m_lineEndingsComboBox->setCurrentIndex(1);
     else if (lineEndings == "CRLF") m_lineEndingsComboBox->setCurrentIndex(2);
@@ -375,7 +367,7 @@ void EditorSettingsWidget::saveSettings() {
     settings.setValue("editor/insertFinalNewline", m_insertNewlineCheckBox->isChecked());
     settings.setValue("editor/formatOnSave", m_formatOnSaveCheckBox->isChecked());
     
-    QStringList endings = {"Auto", "LF", "CRLF"};
+    std::vector<std::string> endings = {"Auto", "LF", "CRLF"};
     settings.setValue("editor/lineEndings", endings[m_lineEndingsComboBox->currentIndex()]);
     
     settings.setValue("editor/wordWrap", m_wordWrapCheckBox->isChecked());
@@ -401,8 +393,8 @@ void EditorSettingsWidget::resetToDefaults() {
 
 // ========== KeyboardSettingsWidget ==========
 
-KeyboardSettingsWidget::KeyboardSettingsWidget(QWidget* parent)
-    : QWidget(parent)
+KeyboardSettingsWidget::KeyboardSettingsWidget(void* parent)
+    : void(parent)
 {
     // Lightweight constructor - defers Qt widget creation to initialize()
 }
@@ -417,8 +409,7 @@ void KeyboardSettingsWidget::initialize() {
     searchLayout->addWidget(new QLabel("Search:"));
     m_searchEdit = new QLineEdit();
     m_searchEdit->setPlaceholderText("Type to filter shortcuts...");
-    connect(m_searchEdit, &QLineEdit::textChanged,
-            this, &KeyboardSettingsWidget::onSearchTextChanged);
+// Qt connect removed
     searchLayout->addWidget(m_searchEdit);
     layout->addLayout(searchLayout);
     
@@ -432,25 +423,21 @@ void KeyboardSettingsWidget::initialize() {
     m_shortcutsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     m_shortcutsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_shortcutsTable->setEditTriggers(QAbstractItemView::DoubleClicked);
-    connect(m_shortcutsTable, &QTableWidget::cellChanged,
-            this, &KeyboardSettingsWidget::onShortcutEdited);
+// Qt connect removed
     layout->addWidget(m_shortcutsTable);
     
     // Buttons
     auto* buttonLayout = new QHBoxLayout();
     m_resetAllButton = new QPushButton("Reset All");
-    connect(m_resetAllButton, &QPushButton::clicked,
-            this, &KeyboardSettingsWidget::onResetAllClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_resetAllButton);
     
     m_importButton = new QPushButton("Import...");
-    connect(m_importButton, &QPushButton::clicked,
-            this, &KeyboardSettingsWidget::onImportClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_importButton);
     
     m_exportButton = new QPushButton("Export...");
-    connect(m_exportButton, &QPushButton::clicked,
-            this, &KeyboardSettingsWidget::onExportClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_exportButton);
     
     buttonLayout->addStretch();
@@ -479,15 +466,15 @@ void KeyboardSettingsWidget::populateTable() {
     auto shortcuts = ShortcutManager::instance().allShortcuts();
     m_shortcutsTable->setRowCount(shortcuts.size());
     
-    QStringList contextNames = {"Global", "Editor", "Project Explorer", "Terminal", "Find Widget"};
+    std::vector<std::string> contextNames = {"Global", "Editor", "Project Explorer", "Terminal", "Find Widget"};
     
     for (int i = 0; i < shortcuts.size(); ++i) {
         const auto& info = shortcuts[i];
         
         // Command name
         auto* nameItem = new QTableWidgetItem(info.displayName);
-        nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
-        nameItem->setData(Qt::UserRole, info.id);
+        nameItem->setFlags(nameItem->flags() & ~//ItemIsEditable);
+        nameItem->setData(//UserRole, info.id);
         m_shortcutsTable->setItem(i, 0, nameItem);
         
         // Key binding
@@ -496,7 +483,7 @@ void KeyboardSettingsWidget::populateTable() {
         
         // Context
         auto* contextItem = new QTableWidgetItem(contextNames[info.context]);
-        contextItem->setFlags(contextItem->flags() & ~Qt::ItemIsEditable);
+        contextItem->setFlags(contextItem->flags() & ~//ItemIsEditable);
         m_shortcutsTable->setItem(i, 2, contextItem);
     }
     
@@ -504,18 +491,18 @@ void KeyboardSettingsWidget::populateTable() {
 }
 
 void KeyboardSettingsWidget::filterTable() {
-    QString filter = m_searchEdit->text().toLower();
+    std::string filter = m_searchEdit->text().toLower();
     
     for (int i = 0; i < m_shortcutsTable->rowCount(); ++i) {
-        QString command = m_shortcutsTable->item(i, 0)->text().toLower();
-        QString key = m_shortcutsTable->item(i, 1)->text().toLower();
+        std::string command = m_shortcutsTable->item(i, 0)->text().toLower();
+        std::string key = m_shortcutsTable->item(i, 1)->text().toLower();
         
         bool match = command.contains(filter) || key.contains(filter);
         m_shortcutsTable->setRowHidden(i, !match);
     }
 }
 
-void KeyboardSettingsWidget::onSearchTextChanged(const QString& text) {
+void KeyboardSettingsWidget::onSearchTextChanged(const std::string& text) {
     filterTable();
 }
 
@@ -524,8 +511,8 @@ void KeyboardSettingsWidget::onShortcutEdited(int row, int column) {
         return;
     }
     
-    QString id = m_shortcutsTable->item(row, 0)->data(Qt::UserRole).toString();
-    QString keyText = m_shortcutsTable->item(row, 1)->text();
+    std::string id = m_shortcutsTable->item(row, 0)->data(//UserRole).toString();
+    std::string keyText = m_shortcutsTable->item(row, 1)->text();
     QKeySequence key(keyText);
     
     if (!ShortcutManager::instance().setKeySequence(id, key)) {
@@ -545,45 +532,45 @@ void KeyboardSettingsWidget::onResetAllClicked() {
 }
 
 void KeyboardSettingsWidget::onImportClicked() {
-    QString filePath = QFileDialog::getOpenFileName(this, "Import Keybindings",
-                                                    QString(), "JSON Files (*.json)");
+    std::string filePath = QFileDialog::getOpenFileName(this, "Import Keybindings",
+                                                    std::string(), "JSON Files (*.json)");
     if (filePath.isEmpty()) {
         return;
     }
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         QMessageBox::warning(this, "Error", "Failed to open file");
         return;
     }
     
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    void* doc = void*::fromJson(file.readAll());
     file.close();
     
     int count = ShortcutManager::instance().importKeybindings(doc.object());
     populateTable();
     
     QMessageBox::information(this, "Import Complete",
-                           QString("Imported %1 keybindings").arg(count));
+                           std::string("Imported %1 keybindings"));
 }
 
 void KeyboardSettingsWidget::onExportClicked() {
-    QString filePath = QFileDialog::getSaveFileName(this, "Export Keybindings",
+    std::string filePath = QFileDialog::getSaveFileName(this, "Export Keybindings",
                                                     "keybindings.json",
                                                     "JSON Files (*.json)");
     if (filePath.isEmpty()) {
         return;
     }
     
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
         QMessageBox::warning(this, "Error", "Failed to create file");
         return;
     }
     
-    QJsonObject json = ShortcutManager::instance().exportKeybindings();
-    QJsonDocument doc(json);
-    file.write(doc.toJson(QJsonDocument::Indented));
+    void* json = ShortcutManager::instance().exportKeybindings();
+    void* doc(json);
+    file.write(doc.toJson(void*::Indented));
     file.close();
     
     QMessageBox::information(this, "Export Complete",
@@ -592,8 +579,8 @@ void KeyboardSettingsWidget::onExportClicked() {
 
 // ========== TerminalSettingsWidget ==========
 
-TerminalSettingsWidget::TerminalSettingsWidget(QWidget* parent)
-    : QWidget(parent)
+TerminalSettingsWidget::TerminalSettingsWidget(void* parent)
+    : void(parent)
 {
     // Lightweight constructor - defers Qt widget creation to initialize()
 }
@@ -679,8 +666,8 @@ void TerminalSettingsWidget::resetToDefaults() {
 
 // ========== AISettingsWidget ==========
 
-AISettingsWidget::AISettingsWidget(QWidget* parent)
-    : QWidget(parent)
+AISettingsWidget::AISettingsWidget(void* parent)
+    : void(parent)
 {
     // Lightweight constructor - defers Qt widget creation to initialize()
 }
@@ -750,8 +737,8 @@ void AISettingsWidget::resetToDefaults() {
 
 // ========== SettingsDialog ==========
 
-SettingsDialog::SettingsDialog(QWidget* parent)
-    : QDialog(parent)
+SettingsDialog::SettingsDialog(void* parent)
+    : void(parent)
 {
     // Lightweight constructor - defers Qt widget creation to initialize()
 }
@@ -795,26 +782,22 @@ void SettingsDialog::setupUI() {
     auto* buttonLayout = new QHBoxLayout();
     
     m_resetButton = new QPushButton("Reset to Defaults");
-    connect(m_resetButton, &QPushButton::clicked,
-            this, &SettingsDialog::onResetClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_resetButton);
     
     buttonLayout->addStretch();
     
     m_applyButton = new QPushButton("Apply");
-    connect(m_applyButton, &QPushButton::clicked,
-            this, &SettingsDialog::onApplyClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_applyButton);
     
     m_okButton = new QPushButton("OK");
     m_okButton->setDefault(true);
-    connect(m_okButton, &QPushButton::clicked,
-            this, &SettingsDialog::onOkClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_okButton);
     
     m_cancelButton = new QPushButton("Cancel");
-    connect(m_cancelButton, &QPushButton::clicked,
-            this, &SettingsDialog::onCancelClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_cancelButton);
     
     layout->addLayout(buttonLayout);
@@ -865,12 +848,12 @@ void SettingsDialog::openToTab(int index) {
 
 void SettingsDialog::onApplyClicked() {
     saveAllSettings();
-    emit settingsApplied();
+    settingsApplied();
 }
 
 void SettingsDialog::onOkClicked() {
     saveAllSettings();
-    emit settingsApplied();
+    settingsApplied();
     accept();
 }
 
@@ -883,8 +866,4 @@ void SettingsDialog::onResetClicked() {
 }
 
 } // namespace RawrXD
-
-
-
-
 

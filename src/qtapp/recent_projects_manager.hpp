@@ -146,4 +146,3 @@ private:
 
 #endif // RECENT_PROJECTS_MANAGER_HPP
 
-

@@ -60,7 +60,6 @@ void RecentProjectsManager::load()
     }
 
     settings.endArray();
-    // // qInfo:  "[RecentProjectsManager] Loaded" << m_projects.size() << "projects";
 }
 
 void RecentProjectsManager::save()
@@ -78,7 +77,6 @@ void RecentProjectsManager::save()
 
     settings.endArray();
     settings.sync();
-    // // qInfo:  "[RecentProjectsManager] Saved" << m_projects.size() << "projects";
 }
 
 void RecentProjectsManager::addProject(const std::string& path, const std::string& name)
@@ -96,7 +94,6 @@ void RecentProjectsManager::addProject(const std::string& path, const std::strin
             proj.lastOpened = // DateTime::currentDateTime();
             proj.openCount++;
             save();
-            // // qInfo:  "[RecentProjectsManager] Updated project:" << normalized;
             return;
         }
     }
@@ -112,7 +109,6 @@ void RecentProjectsManager::addProject(const std::string& path, const std::strin
     enforceMaxSize();
     save();
 
-    // // qInfo:  "[RecentProjectsManager] Added project:" << normalized;
 }
 
 void RecentProjectsManager::removeProject(const std::string& path)
@@ -126,7 +122,6 @@ void RecentProjectsManager::removeProject(const std::string& path)
     );
 
     save();
-    // // qInfo:  "[RecentProjectsManager] Removed project:" << normalized;
 }
 
 std::vector<RecentProject> RecentProjectsManager::getProjects() const
@@ -174,7 +169,6 @@ void RecentProjectsManager::cleanupDeletedProjects()
     int removed = initialCount - m_projects.size();
     if (removed > 0) {
         save();
-        // // qInfo:  "[RecentProjectsManager] Cleaned up" << removed << "deleted projects";
     }
 }
 
@@ -182,7 +176,6 @@ void RecentProjectsManager::clear()
 {
     m_projects.clear();
     save();
-    // // qInfo:  "[RecentProjectsManager] History cleared";
 }
 
 bool RecentProjectsManager::exportToFile(const std::string& filePath) const
@@ -196,14 +189,12 @@ bool RecentProjectsManager::exportToFile(const std::string& filePath) const
     // File operation removed;
 
     if (!file.open(std::iostream::WriteOnly)) {
-        // // qWarning:  "[RecentProjectsManager] Could not export to" << filePath;
         return false;
     }
 
     file.write(doc.toJson());
     file.close();
 
-    // // qInfo:  "[RecentProjectsManager] Exported" << m_projects.size() << "projects to" << filePath;
     return true;
 }
 
@@ -211,7 +202,6 @@ bool RecentProjectsManager::importFromFile(const std::string& filePath)
 {
     // File operation removed;
     if (!file.open(std::iostream::ReadOnly)) {
-        // // qWarning:  "[RecentProjectsManager] Could not import from" << filePath;
         return false;
     }
 
@@ -219,7 +209,6 @@ bool RecentProjectsManager::importFromFile(const std::string& filePath)
     file.close();
 
     if (!doc.isArray()) {
-        // // qWarning:  "[RecentProjectsManager] Invalid JSON format in" << filePath;
         return false;
     }
 
@@ -231,7 +220,6 @@ bool RecentProjectsManager::importFromFile(const std::string& filePath)
     }
 
     save();
-    // // qInfo:  "[RecentProjectsManager] Imported" << m_projects.size() << "projects from" << filePath;
     return true;
 }
 
@@ -264,7 +252,6 @@ void RecentProjectsManager::enforceMaxSize()
 {
     if (m_projects.size() > m_maxProjects) {
         m_projects = m_projects.mid(0, m_maxProjects);
-        // // qDebug:  "[RecentProjectsManager] Trimmed to" << m_maxProjects << "projects";
     }
 }
 
@@ -283,10 +270,4 @@ void RecentProjectsManager::sortByAccessCount()
                  return a.openCount > b.openCount;
              });
 }
-
-
-
-
-
-
 

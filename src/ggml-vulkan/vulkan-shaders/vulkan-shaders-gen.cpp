@@ -9,7 +9,7 @@
 #include <thread>
 #include <mutex>
 #include <future>
-#include <queue>
+
 #include <condition_variable>
 #include <cstdio>
 #include <cstring>

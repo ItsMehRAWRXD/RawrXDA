@@ -12,26 +12,23 @@
 #include "tool_registry.hpp"
 #include "logging/logger.h"
 #include "metrics/metrics.h"
-#include <QTimer>
-#include <QShowEvent>
-#include <QDockWidget>
-#include <QDir>
+
 
 // Lightweight constructor - no heavy initialization
-AgenticIDE::AgenticIDE(QWidget *parent) : QMainWindow(parent) {
+AgenticIDE::AgenticIDE(void *parent) : void(parent) {
     // All initialization deferred to showEvent
 }
 
 AgenticIDE::~AgenticIDE() = default;
 
 void AgenticIDE::showEvent(QShowEvent *ev) {
-    QMainWindow::showEvent(ev);
+    void::showEvent(ev);
     
     // Defer heavy initialization until after Qt event loop is running
     static bool initialized = false;
     if (!initialized) {
         initialized = true;
-        QTimer::singleShot(0, this, [this] {
+        void*::singleShot(0, this, [this] {
             setWindowTitle("RawrXD Agentic IDE - Production Ready");
             resize(1200, 800);
             
@@ -66,8 +63,8 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 RawrXD::LSPServerConfig config;
                 config.language = "cpp";
                 config.command = "clangd";  // Assumes clangd in PATH
-                config.arguments = QStringList{"--background-index", "--clang-tidy"};
-                config.workspaceRoot = QDir::currentPath();  // TODO: Use actual project root
+                config.arguments = std::vector<std::string>{"--background-index", "--clang-tidy"};
+                config.workspaceRoot = std::filesystem::path::currentPath();  // TODO: Use actual project root
                 config.autoStart = false;  // Don't auto-start until explicitly needed
                 
                 m_lspClient = new RawrXD::LSPClient(config, this);
@@ -85,24 +82,15 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                     m_chatInterface->setPlanOrchestrator(m_planOrchestrator);
                     
                     // Connect progress signals for real-time updates
-                    connect(m_planOrchestrator, &RawrXD::PlanOrchestrator::planningStarted,
-                            m_chatInterface, [this](const QString& prompt) {
-                                m_chatInterface->addMessage("System", "📋 Planning: " + prompt);
+// Qt connect removed
                             });
-                    
-                    connect(m_planOrchestrator, &RawrXD::PlanOrchestrator::executionStarted,
-                            m_chatInterface, [this](int taskCount) {
-                                m_chatInterface->addMessage("System", 
-                                    QString("🚀 Executing %1 tasks...").arg(taskCount));
+// Qt connect removed
                             });
-                    
-                    connect(m_planOrchestrator, &RawrXD::PlanOrchestrator::taskExecuted,
-                            m_chatInterface, [this](int index, bool success, const QString& desc) {
-                                QString status = success ? "✓" : "✗";
-                                QString color = success ? "#4ec9b0" : "#f48771";
+// Qt connect removed
+                                std::string color = success ? "#4ec9b0" : "#f48771";
                                 m_chatInterface->addMessage("Task", 
-                                    QString("<span style='color:%1;'>%2 [%3] %4</span>")
-                                        .arg(color).arg(status).arg(index + 1).arg(desc));
+                                    std::string("<span style='color:%1;'>%2 [%3] %4</span>")
+                                        );
                             });
                 }
                 
@@ -125,7 +113,7 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
 
             if (!m_modelRouter) {
                 m_modelRouter = new UniversalModelRouter(this);
-                m_modelRouter->initializeLocalEngine(QString());
+                m_modelRouter->initializeLocalEngine(std::string());
                 m_modelRouter->initializeCloudClient();
             }
 
@@ -133,17 +121,11 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                m_zeroDayAgent = new ZeroDayAgenticEngine(m_modelRouter, m_toolRegistry, m_planOrchestrator, this);
                if (m_chatInterface) {
                    m_chatInterface->setZeroDayAgent(m_zeroDayAgent);
-                   connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentStream,
-                           m_chatInterface, [this](const QString& tok) {
-                               m_chatInterface->addMessage("System", tok);
+// Qt connect removed
                            });
-                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentComplete,
-                            m_chatInterface, [this](const QString& summary) {
-                                m_chatInterface->addMessage("System", summary);
+// Qt connect removed
                             });
-                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentError,
-                            m_chatInterface, [this](const QString& err) {
-                                m_chatInterface->addMessage("System", "⚠ " + err);
+// Qt connect removed
                             });
                 }
             }
@@ -161,17 +143,11 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 }
                 if (m_zeroDayAgent) {
                     m_chatInterface->setZeroDayAgent(m_zeroDayAgent);
-                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentStream,
-                            m_chatInterface, [this](const QString& tok) {
-                                m_chatInterface->addMessage("System", tok);
+// Qt connect removed
                             });
-                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentComplete,
-                            m_chatInterface, [this](const QString& summary) {
-                                m_chatInterface->addMessage("System", summary);
+// Qt connect removed
                             });
-                    connect(m_zeroDayAgent, &ZeroDayAgenticEngine::agentError,
-                            m_chatInterface, [this](const QString& err) {
-                                m_chatInterface->addMessage("System", "⚠ " + err);
+// Qt connect removed
                             });
                 }
                 // Chat will be added as dock widget later
@@ -185,7 +161,7 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 // Add terminal as dock widget
                 m_terminalDock = new QDockWidget("Terminal Pool", this);
                 m_terminalDock->setWidget(m_terminalPool);
-                addDockWidget(Qt::BottomDockWidgetArea, m_terminalDock);
+                addDockWidget(//BottomDockWidgetArea, m_terminalDock);
             }
 
             // Note: Zero-Day agent is now initialized and ready
@@ -194,3 +170,4 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
         });
     }
 }
+

@@ -1,40 +1,33 @@
 #include "advanced_checkpoint_manager.h"
-#include <QDebug>
-#include <QStandardPaths>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QCryptographicHash>
-#include <QFileInfo>
 
-AdvancedCheckpointManager::AdvancedCheckpointManager(QObject *parent)
-    : QObject(parent),
+
+AdvancedCheckpointManager::AdvancedCheckpointManager(void *parent)
+    : void(parent),
       m_compressionEnabled(true),
       m_encryptionEnabled(false)
 {
     // Initialize checkpoint directory
     m_checkpointDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/checkpoints";
-    QDir dir;
+    std::filesystem::path dir;
     if (!dir.exists(m_checkpointDir)) {
         dir.mkpath(m_checkpointDir);
     }
     
-    qDebug() << "[AdvancedCheckpointManager] Initialized with checkpoints dir:" << m_checkpointDir;
 }
 
 AdvancedCheckpointManager::~AdvancedCheckpointManager()
 {
-    qDebug() << "[AdvancedCheckpointManager] Destroyed";
 }
 
-QString AdvancedCheckpointManager::createCheckpoint(const QJsonObject& state, const QString& description)
+std::string AdvancedCheckpointManager::createCheckpoint(const void*& state, const std::string& description)
 {
-    QString checkpointId = QString("ckpt_%1_%2")
-        .arg(QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss"))
-        .arg(QDateTime::currentMSecsSinceEpoch() % 10000);
+    std::string checkpointId = std::string("ckpt_%1_%2")
+        .toString("yyyyMMdd_hhmmss"))
+         % 10000);
     
-    QJsonObject checkpoint;
+    void* checkpoint;
     checkpoint["id"] = checkpointId;
-    checkpoint["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    checkpoint["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
     checkpoint["description"] = description;
     checkpoint["state"] = state;
     checkpoint["compressed"] = m_compressionEnabled;
@@ -43,80 +36,74 @@ QString AdvancedCheckpointManager::createCheckpoint(const QJsonObject& state, co
     m_checkpoints[checkpointId] = checkpoint;
     
     // Save to file
-    QString filePath = m_checkpointDir + "/" + checkpointId + ".json";
-    QFile file(filePath);
+    std::string filePath = m_checkpointDir + "/" + checkpointId + ".json";
+    std::fstream file(filePath);
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QJsonDocument doc(checkpoint);
-        file.write(doc.toJson(QJsonDocument::Compact));
+        void* doc(checkpoint);
+        file.write(doc.toJson(void*::Compact));
         file.close();
     }
     
-    emit checkpointCreated(checkpointId);
-    qDebug() << "[AdvancedCheckpointManager] Created checkpoint:" << checkpointId;
+    checkpointCreated(checkpointId);
     
     return checkpointId;
 }
 
-bool AdvancedCheckpointManager::restoreCheckpoint(const QString& checkpointId)
+bool AdvancedCheckpointManager::restoreCheckpoint(const std::string& checkpointId)
 {
     auto it = m_checkpoints.find(checkpointId);
     if (it == m_checkpoints.end()) {
-        qWarning() << "[AdvancedCheckpointManager] Checkpoint not found:" << checkpointId;
         return false;
     }
     
-    QJsonObject checkpoint = it->second;
+    void* checkpoint = it->second;
     
     // Verify checkpoint integrity
     if (!checkpoint.contains("state")) {
-        qWarning() << "[AdvancedCheckpointManager] Invalid checkpoint state:" << checkpointId;
         return false;
     }
     
-    emit checkpointRestored(checkpointId);
-    qDebug() << "[AdvancedCheckpointManager] Restored checkpoint:" << checkpointId;
+    checkpointRestored(checkpointId);
     
     return true;
 }
 
-bool AdvancedCheckpointManager::deleteCheckpoint(const QString& checkpointId)
+bool AdvancedCheckpointManager::deleteCheckpoint(const std::string& checkpointId)
 {
     auto it = m_checkpoints.find(checkpointId);
     if (it == m_checkpoints.end()) {
-        qWarning() << "[AdvancedCheckpointManager] Checkpoint not found:" << checkpointId;
         return false;
     }
     
     // Delete file
-    QString filePath = m_checkpointDir + "/" + checkpointId + ".json";
-    QFile::remove(filePath);
+    std::string filePath = m_checkpointDir + "/" + checkpointId + ".json";
+    std::fstream::remove(filePath);
     
     m_checkpoints.erase(it);
     
-    emit checkpointDeleted(checkpointId);
-    qDebug() << "[AdvancedCheckpointManager] Deleted checkpoint:" << checkpointId;
+    checkpointDeleted(checkpointId);
     
     return true;
 }
 
-QJsonObject AdvancedCheckpointManager::getCheckpointInfo(const QString& checkpointId) const
+void* AdvancedCheckpointManager::getCheckpointInfo(const std::string& checkpointId) const
 {
     auto it = m_checkpoints.find(checkpointId);
     if (it == m_checkpoints.end()) {
-        return QJsonObject();
+        return void*();
     }
     
-    QJsonObject info = it->second;
+    void* info = it->second;
     // Remove state from info to avoid large payloads
     info.remove("state");
     return info;
 }
 
-QJsonArray AdvancedCheckpointManager::listCheckpoints() const
+void* AdvancedCheckpointManager::listCheckpoints() const
 {
-    QJsonArray list;
+    void* list;
     for (const auto& [id, checkpoint] : m_checkpoints) {
-        QJsonObject item;
+        void* item;
         item["id"] = id;
         item["timestamp"] = checkpoint.value("timestamp");
         item["description"] = checkpoint.value("description");
@@ -132,10 +119,10 @@ bool AdvancedCheckpointManager::pruneOldCheckpoints(int keepCount)
     }
     
     // Sort by timestamp and delete oldest
-    std::vector<std::pair<QString, QDateTime>> sortedCkpts;
+    std::vector<std::pair<std::string, std::chrono::system_clock::time_point>> sortedCkpts;
     for (const auto& [id, checkpoint] : m_checkpoints) {
-        QString timestampStr = checkpoint.value("timestamp").toString();
-        QDateTime timestamp = QDateTime::fromString(timestampStr, Qt::ISODate);
+        std::string timestampStr = checkpoint.value("timestamp").toString();
+        std::chrono::system_clock::time_point timestamp = std::chrono::system_clock::time_point::fromString(timestampStr, //ISODate);
         sortedCkpts.push_back({id, timestamp});
     }
     
@@ -147,13 +134,12 @@ bool AdvancedCheckpointManager::pruneOldCheckpoints(int keepCount)
         deleteCheckpoint(sortedCkpts[i].first);
     }
     
-    qDebug() << "[AdvancedCheckpointManager] Pruned" << toDelete << "old checkpoints";
     return true;
 }
 
-QJsonObject AdvancedCheckpointManager::getCheckpointStats() const
+void* AdvancedCheckpointManager::getCheckpointStats() const
 {
-    QJsonObject stats;
+    void* stats;
     stats["total_checkpoints"] = static_cast<int>(m_checkpoints.size());
     stats["directory"] = m_checkpointDir;
     stats["compression_enabled"] = m_compressionEnabled;
@@ -161,9 +147,9 @@ QJsonObject AdvancedCheckpointManager::getCheckpointStats() const
     
     // Calculate total size
     qint64 totalSize = 0;
-    QDir dir(m_checkpointDir);
-    for (const auto& file : dir.entryList(QDir::Files)) {
-        totalSize += QFileInfo(m_checkpointDir + "/" + file).size();
+    std::filesystem::path dir(m_checkpointDir);
+    for (const auto& file : dir.entryList(std::filesystem::path::Files)) {
+        totalSize += std::filesystem::path(m_checkpointDir + "/" + file).size();
     }
     stats["total_size_bytes"] = static_cast<qint64>(totalSize);
     
@@ -173,29 +159,26 @@ QJsonObject AdvancedCheckpointManager::getCheckpointStats() const
 void AdvancedCheckpointManager::setCompressionEnabled(bool enabled)
 {
     m_compressionEnabled = enabled;
-    qDebug() << "[AdvancedCheckpointManager] Compression" << (enabled ? "enabled" : "disabled");
 }
 
-void AdvancedCheckpointManager::setEncryptionEnabled(bool enabled, const QString& key)
+void AdvancedCheckpointManager::setEncryptionEnabled(bool enabled, const std::string& key)
 {
     m_encryptionEnabled = enabled;
     if (!key.isEmpty()) {
         m_encryptionKey = key;
     }
-    qDebug() << "[AdvancedCheckpointManager] Encryption" << (enabled ? "enabled" : "disabled");
 }
 
-bool AdvancedCheckpointManager::syncWithRemote(const QString& remoteUrl)
+bool AdvancedCheckpointManager::syncWithRemote(const std::string& remoteUrl)
 {
-    qDebug() << "[AdvancedCheckpointManager] Syncing with remote:" << remoteUrl;
     // Implementation would sync checkpoints to remote server
-    emit syncCompleted(true);
+    syncCompleted(true);
     return true;
 }
-bool AdvancedCheckpointManager::backupToCloud(const QString& cloudConfig)
+bool AdvancedCheckpointManager::backupToCloud(const std::string& cloudConfig)
 {
-    qDebug() << "[AdvancedCheckpointManager] Backing up to cloud with config:" << cloudConfig;
     // Implementation would backup to cloud storage
-    emit syncCompleted(true);
+    syncCompleted(true);
     return true;
 }
+

@@ -1,11 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QJsonObject>
-#include <QObject>
-#include <QMutex>
-#include <QVector>
-#include <QPair>
+
 #include <chrono>
 #include <memory>
 
@@ -22,23 +17,22 @@
  * - Configuration-driven analysis strategies
  * - GDPR-compliant data handling
  */
-class SemanticDiffAnalyzer : public QObject {
-    Q_OBJECT
+class SemanticDiffAnalyzer : public void {
 
 public:
-    explicit SemanticDiffAnalyzer(QObject* parent = nullptr);
+    explicit SemanticDiffAnalyzer(void* parent = nullptr);
     ~SemanticDiffAnalyzer() override;
 
     // Configuration
     struct Config {
-        QString aiEndpoint;
-        QString apiKey;
+        std::string aiEndpoint;
+        std::string apiKey;
         bool enableBreakingChangeDetection = true;
         bool enableImpactAnalysis = true;
         int maxDiffSize = 50000;
         bool enableMetrics = true;
         bool enableCaching = true;
-        QString cacheDirectory;
+        std::string cacheDirectory;
     };
 
     void setConfig(const Config& config);
@@ -46,31 +40,31 @@ public:
 
     // Diff analysis structures
     struct SemanticChange {
-        QString type;              // "function_modified", "class_added", "signature_changed", etc.
-        QString name;              // Name of the changed entity
-        QString description;       // AI-generated description
-        QString file;              // File path
+        std::string type;              // "function_modified", "class_added", "signature_changed", etc.
+        std::string name;              // Name of the changed entity
+        std::string description;       // AI-generated description
+        std::string file;              // File path
         int startLine;             // Start line in diff
         int endLine;               // End line in diff
         bool isBreaking;           // Whether this is a breaking change
         double impactScore;        // 0.0-1.0 impact severity
-        QVector<QString> affectedFiles;  // Files potentially affected
+        std::vector<std::string> affectedFiles;  // Files potentially affected
     };
 
     struct DiffAnalysis {
-        QVector<SemanticChange> changes;
-        QString summary;           // AI-generated summary
+        std::vector<SemanticChange> changes;
+        std::string summary;           // AI-generated summary
         int breakingChangeCount;
         double overallImpactScore;
-        QJsonObject metadata;      // Additional analysis data
+        void* metadata;      // Additional analysis data
     };
 
     // Core functionality
-    DiffAnalysis analyzeDiff(const QString& diff);
-    DiffAnalysis compareFiles(const QString& oldContent, const QString& newContent, const QString& filePath);
-    QVector<QString> detectBreakingChanges(const DiffAnalysis& analysis);
-    QJsonObject analyzeImpact(const SemanticChange& change);
-    QString enrichDiffContext(const QString& diff);
+    DiffAnalysis analyzeDiff(const std::string& diff);
+    DiffAnalysis compareFiles(const std::string& oldContent, const std::string& newContent, const std::string& filePath);
+    std::vector<std::string> detectBreakingChanges(const DiffAnalysis& analysis);
+    void* analyzeImpact(const SemanticChange& change);
+    std::string enrichDiffContext(const std::string& diff);
 
     // Metrics
     struct Metrics {
@@ -89,32 +83,32 @@ public:
     void resetMetrics();
     void clearCache();
 
-signals:
     void analysisCompleted(const DiffAnalysis& analysis);
     void breakingChangeDetected(const SemanticChange& change);
     void highImpactChangeDetected(const SemanticChange& change);
-    void errorOccurred(const QString& error);
+    void errorOccurred(const std::string& error);
     void metricsUpdated(const Metrics& metrics);
 
 private:
     // Configuration
     Config m_config;
-    mutable QMutex m_configMutex;
+    mutable std::mutex m_configMutex;
 
     // Metrics
     Metrics m_metrics;
-    mutable QMutex m_metricsMutex;
+    mutable std::mutex m_metricsMutex;
 
     // Cache
-    QMap<QString, DiffAnalysis> m_analysisCache;
-    mutable QMutex m_cacheMutex;
+    std::map<std::string, DiffAnalysis> m_analysisCache;
+    mutable std::mutex m_cacheMutex;
 
     // Helper methods
-    void logStructured(const QString& level, const QString& message, const QJsonObject& context = QJsonObject());
-    void recordLatency(const QString& operation, const std::chrono::milliseconds& duration);
-    QJsonObject makeAiRequest(const QString& endpoint, const QJsonObject& payload);
-    QString calculateDiffHash(const QString& diff);
-    DiffAnalysis getCachedAnalysis(const QString& diffHash);
-    void cacheAnalysis(const QString& diffHash, const DiffAnalysis& analysis);
-    bool validateDiff(const QString& diff);
+    void logStructured(const std::string& level, const std::string& message, const void*& context = void*());
+    void recordLatency(const std::string& operation, const std::chrono::milliseconds& duration);
+    void* makeAiRequest(const std::string& endpoint, const void*& payload);
+    std::string calculateDiffHash(const std::string& diff);
+    DiffAnalysis getCachedAnalysis(const std::string& diffHash);
+    void cacheAnalysis(const std::string& diffHash, const DiffAnalysis& analysis);
+    bool validateDiff(const std::string& diff);
 };
+

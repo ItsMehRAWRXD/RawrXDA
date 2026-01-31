@@ -1,7 +1,5 @@
 #pragma once
-#include <QMenu>
-#include <QActionGroup>
-#include <QInputDialog>
+
 
 /**
  * @brief Cursor-style AI backend switcher menu
@@ -14,21 +12,21 @@
  * - Gemini (Google API key required)
  */
 class AISwitcher : public QMenu {
-    Q_OBJECT
-public:
-    explicit AISwitcher(QWidget* parent = nullptr);
 
-signals:
+public:
+    explicit AISwitcher(void* parent = nullptr);
+
     /**
      * @brief Emitted when user selects a new backend
      * @param id Backend identifier: "local" | "llama" | "openai" | "claude" | "gemini"
      * @param apiKey API key for remote backends (empty for local)
      */
-    void backendChanged(QString id, QString apiKey);
+    void backendChanged(std::string id, std::string apiKey);
 
-private slots:
+private:
     void pickKey();
 
 private:
     QActionGroup* m_backends{nullptr};
 };
+

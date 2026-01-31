@@ -1,10 +1,9 @@
 // byte_level_hotpatcher.cpp - Implementation
 #include "byte_level_hotpatcher.hpp"
-#include <QFile>
-#include <QDebug>
 
-ByteLevelHotpatcher::ByteLevelHotpatcher(QObject* parent)
-    : QObject(parent)
+
+ByteLevelHotpatcher::ByteLevelHotpatcher(void* parent)
+    : void(parent)
 {
 }
 
@@ -12,12 +11,12 @@ ByteLevelHotpatcher::~ByteLevelHotpatcher()
 {
 }
 
-bool ByteLevelHotpatcher::loadModel(const QString& filePath)
+bool ByteLevelHotpatcher::loadModel(const std::string& filePath)
 {
-    QMutexLocker lock(&m_mutex);
-    QFile file(filePath);
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        emit errorOccurred("Failed to open file: " + filePath);
+        errorOccurred("Failed to open file: " + filePath);
         return false;
     }
     
@@ -25,27 +24,27 @@ bool ByteLevelHotpatcher::loadModel(const QString& filePath)
     m_modelPath = filePath;
     m_stats.modelSize = m_modelData.size();
     
-    emit modelLoaded(filePath, m_modelData.size());
+    modelLoaded(filePath, m_modelData.size());
     return true;
 }
 
-bool ByteLevelHotpatcher::saveModel(const QString& filePath)
+bool ByteLevelHotpatcher::saveModel(const std::string& filePath)
 {
-    QMutexLocker lock(&m_mutex);
-    QFile file(filePath);
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
-        emit errorOccurred("Failed to save file: " + filePath);
+        errorOccurred("Failed to save file: " + filePath);
         return false;
     }
     
     file.write(m_modelData);
-    emit modelSaved(filePath);
+    modelSaved(filePath);
     return true;
 }
 
 bool ByteLevelHotpatcher::addPatch(const BytePatch& patch)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_patches.contains(patch.name)) {
         return false;
     }
@@ -54,18 +53,18 @@ bool ByteLevelHotpatcher::addPatch(const BytePatch& patch)
     return true;
 }
 
-bool ByteLevelHotpatcher::removePatch(const QString& name)
+bool ByteLevelHotpatcher::removePatch(const std::string& name)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (!m_patches.contains(name)) return false;
     m_patches.remove(name);
     m_stats.totalPatches--;
     return true;
 }
 
-bool ByteLevelHotpatcher::applyPatch(const QString& name)
+bool ByteLevelHotpatcher::applyPatch(const std::string& name)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (!m_patches.contains(name)) return false;
     
     BytePatch& patch = m_patches[name];
@@ -84,7 +83,6 @@ bool ByteLevelHotpatcher::applyPatch(const QString& name)
             }
             break;
         default:
-            qWarning() << "Unimplemented byte operation for patch:" << name;
             return false;
     }
     
@@ -92,13 +90,13 @@ bool ByteLevelHotpatcher::applyPatch(const QString& name)
     m_stats.patchesApplied++;
     m_stats.bytesPatched += patch.length;
     
-    emit patchApplied(name, patch.offset, patch.length);
+    patchApplied(name, patch.offset, patch.length);
     return true;
 }
 
-bool ByteLevelHotpatcher::revertPatch(const QString& name)
+bool ByteLevelHotpatcher::revertPatch(const std::string& name)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (!m_patches.contains(name)) return false;
     
     BytePatch& patch = m_patches[name];
@@ -107,14 +105,14 @@ bool ByteLevelHotpatcher::revertPatch(const QString& name)
     std::memcpy(m_modelData.data() + patch.offset, patch.originalBytes.constData(), patch.length);
     m_stats.patchesReverted++;
     
-    emit patchReverted(name);
+    patchReverted(name);
     return true;
 }
 
 void ByteLevelHotpatcher::revertAllPatches()
 {
-    QMutexLocker lock(&m_mutex);
-    for (const QString& name : m_patches.keys()) {
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    for (const std::string& name : m_patches.keys()) {
         lock.unlock();
         revertPatch(name);
         lock.relock();
@@ -123,7 +121,7 @@ void ByteLevelHotpatcher::revertAllPatches()
 
 bool ByteLevelHotpatcher::replaceByte(size_t offset, uint8_t oldValue, uint8_t newValue)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (offset >= (size_t)m_modelData.size()) return false;
     if ((uint8_t)m_modelData.at(offset) != oldValue) return false;
     
@@ -131,9 +129,9 @@ bool ByteLevelHotpatcher::replaceByte(size_t offset, uint8_t oldValue, uint8_t n
     return true;
 }
 
-bool ByteLevelHotpatcher::replaceBytes(size_t offset, const QByteArray& oldBytes, const QByteArray& newBytes)
+bool ByteLevelHotpatcher::replaceBytes(size_t offset, const std::vector<uint8_t>& oldBytes, const std::vector<uint8_t>& newBytes)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (offset + oldBytes.size() > (size_t)m_modelData.size()) return false;
     if (newBytes.size() != oldBytes.size()) return false;
     
@@ -145,17 +143,17 @@ bool ByteLevelHotpatcher::replaceBytes(size_t offset, const QByteArray& oldBytes
 
 bool ByteLevelHotpatcher::flipBits(size_t offset, uint8_t bitMask)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (offset >= (size_t)m_modelData.size()) return false;
     
     m_modelData[offset] = m_modelData[offset] ^ bitMask;
     return true;
 }
 
-QVector<size_t> ByteLevelHotpatcher::findPattern(const QByteArray& pattern) const
+std::vector<size_t> ByteLevelHotpatcher::findPattern(const std::vector<uint8_t>& pattern) const
 {
-    QMutexLocker lock(&m_mutex);
-    QVector<size_t> offsets;
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    std::vector<size_t> offsets;
     
     for (size_t i = 0; i <= (size_t)m_modelData.size() - pattern.size(); ++i) {
         if (m_modelData.mid(i, pattern.size()) == pattern) {
@@ -166,12 +164,12 @@ QVector<size_t> ByteLevelHotpatcher::findPattern(const QByteArray& pattern) cons
     return offsets;
 }
 
-bool ByteLevelHotpatcher::replacePattern(const QByteArray& pattern, const QByteArray& replacement, int maxOccurrences)
+bool ByteLevelHotpatcher::replacePattern(const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement, int maxOccurrences)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (pattern.size() != replacement.size()) return false;
     
-    QVector<size_t> offsets = findPattern(pattern);
+    std::vector<size_t> offsets = findPattern(pattern);
     int count = 0;
     
     for (size_t offset : offsets) {
@@ -185,7 +183,7 @@ bool ByteLevelHotpatcher::replacePattern(const QByteArray& pattern, const QByteA
 
 uint32_t ByteLevelHotpatcher::calculateCRC32(size_t offset, size_t length) const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (offset + length > (size_t)m_modelData.size()) return 0;
     
     // Simple CRC32 implementation
@@ -204,7 +202,7 @@ uint32_t ByteLevelHotpatcher::calculateCRC32(size_t offset, size_t length) const
 
 uint64_t ByteLevelHotpatcher::calculateFNV1a_64(size_t offset, size_t length) const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (offset + length > (size_t)m_modelData.size()) return 0;
     
     const uint8_t* data = (const uint8_t*)m_modelData.constData() + offset;
@@ -219,20 +217,20 @@ uint64_t ByteLevelHotpatcher::calculateFNV1a_64(size_t offset, size_t length) co
     return hash;
 }
 
-QByteArray ByteLevelHotpatcher::hexDump(size_t offset, size_t length, int bytesPerLine) const
+std::vector<uint8_t> ByteLevelHotpatcher::hexDump(size_t offset, size_t length, int bytesPerLine) const
 {
-    QMutexLocker lock(&m_mutex);
-    if (offset + length > (size_t)m_modelData.size()) return QByteArray();
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    if (offset + length > (size_t)m_modelData.size()) return std::vector<uint8_t>();
     
-    QString result;
+    std::string result;
     const uint8_t* data = (const uint8_t*)m_modelData.constData() + offset;
     
     for (size_t i = 0; i < length; i += bytesPerLine) {
-        result += QString("%1: ").arg(offset + i, 8, 16, QChar('0'));
+        result += std::string("%1: "));
         
         size_t lineLen = qMin((size_t)bytesPerLine, length - i);
         for (size_t j = 0; j < lineLen; ++j) {
-            result += QString("%1 ").arg(data[i + j], 2, 16, QChar('0'));
+            result += std::string("%1 "));
         }
         
         result += "\n";
@@ -243,13 +241,13 @@ QByteArray ByteLevelHotpatcher::hexDump(size_t offset, size_t length, int bytesP
 
 ByteLevelHotpatcher::BytePatchStats ByteLevelHotpatcher::getStatistics() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     return m_stats;
 }
 
-QJsonObject BytePatch::toJson() const
+void* BytePatch::toJson() const
 {
-    QJsonObject obj;
+    void* obj;
     obj["name"] = name;
     obj["description"] = description;
     obj["enabled"] = enabled;
@@ -258,7 +256,7 @@ QJsonObject BytePatch::toJson() const
     return obj;
 }
 
-BytePatch BytePatch::fromJson(const QJsonObject& json, PatchResult& result)
+BytePatch BytePatch::fromJson(const void*& json, PatchResult& result)
 {
     BytePatch patch;
     patch.name = json["name"].toString();
@@ -266,7 +264,7 @@ BytePatch BytePatch::fromJson(const QJsonObject& json, PatchResult& result)
     patch.enabled = json["enabled"].toBool(true);
     patch.offset = json["offset"].toInteger();
     patch.length = json["length"].toInteger();
-    result = PatchResult::ok(QString("Loaded patch: %1").arg(patch.name));
+    result = PatchResult::ok(std::string("Loaded patch: %1"));
     return patch;
 }
 
@@ -274,25 +272,25 @@ BytePatch BytePatch::fromJson(const QJsonObject& json, PatchResult& result)
 
 void* ByteLevelHotpatcher::getDirectPointer(size_t offset) const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset >= (size_t)m_modelData.size()) {
         return nullptr;
     }
     return (void*)(m_modelData.data() + offset);
 }
 
-QByteArray ByteLevelHotpatcher::directRead(size_t offset, size_t size) const
+std::vector<uint8_t> ByteLevelHotpatcher::directRead(size_t offset, size_t size) const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     return m_modelData.mid(offset, size);
 }
 
-PatchResult ByteLevelHotpatcher::directWrite(size_t offset, const QByteArray& data)
+PatchResult ByteLevelHotpatcher::directWrite(size_t offset, const std::vector<uint8_t>& data)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset + data.size() > (size_t)m_modelData.size()) {
         return PatchResult::error(7001, "Write out of bounds");
     }
@@ -302,14 +300,14 @@ PatchResult ByteLevelHotpatcher::directWrite(size_t offset, const QByteArray& da
     return PatchResult::ok("Direct write completed", data.size());
 }
 
-PatchResult ByteLevelHotpatcher::directWriteBatch(const QHash<size_t, QByteArray>& writes)
+PatchResult ByteLevelHotpatcher::directWriteBatch(const std::unordered_map<size_t, std::vector<uint8_t>>& writes)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     int totalBytes = 0;
     
     for (auto it = writes.constBegin(); it != writes.constEnd(); ++it) {
         size_t offset = it.key();
-        const QByteArray& data = it.value();
+        const std::vector<uint8_t>& data = it.value();
         
         if (offset + data.size() > (size_t)m_modelData.size()) {
             return PatchResult::error(7002, "Batch write out of bounds");
@@ -325,7 +323,7 @@ PatchResult ByteLevelHotpatcher::directWriteBatch(const QHash<size_t, QByteArray
 
 PatchResult ByteLevelHotpatcher::directFill(size_t offset, size_t size, quint8 value)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7003, "Fill out of bounds");
     }
@@ -337,7 +335,7 @@ PatchResult ByteLevelHotpatcher::directFill(size_t offset, size_t size, quint8 v
 
 PatchResult ByteLevelHotpatcher::directCopy(size_t srcOffset, size_t dstOffset, size_t size)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || srcOffset + size > (size_t)m_modelData.size() || 
         dstOffset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7004, "Copy out of bounds");
@@ -348,9 +346,9 @@ PatchResult ByteLevelHotpatcher::directCopy(size_t srcOffset, size_t dstOffset, 
     return PatchResult::ok("Copy completed", size);
 }
 
-bool ByteLevelHotpatcher::directCompare(size_t offset, const QByteArray& data) const
+bool ByteLevelHotpatcher::directCompare(size_t offset, const std::vector<uint8_t>& data) const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset + data.size() > (size_t)m_modelData.size()) {
         return false;
     }
@@ -358,14 +356,14 @@ bool ByteLevelHotpatcher::directCompare(size_t offset, const QByteArray& data) c
     return std::memcmp(m_modelData.data() + offset, data.constData(), data.size()) == 0;
 }
 
-QByteArray ByteLevelHotpatcher::directXOR(size_t offset, size_t size, const QByteArray& key)
+std::vector<uint8_t> ByteLevelHotpatcher::directXOR(size_t offset, size_t size, const std::vector<uint8_t>& key)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size() || key.isEmpty()) {
-        return QByteArray();
+        return std::vector<uint8_t>();
     }
     
-    QByteArray result(size, 0);
+    std::vector<uint8_t> result(size, 0);
     const quint8* keyData = (quint8*)key.constData();
     size_t keyLen = key.size();
     
@@ -378,7 +376,7 @@ QByteArray ByteLevelHotpatcher::directXOR(size_t offset, size_t size, const QByt
 
 PatchResult ByteLevelHotpatcher::directBitOperation(size_t offset, size_t size, ByteOperation op, uint8_t operand)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7005, "Bit operation out of bounds");
     }
@@ -412,7 +410,7 @@ PatchResult ByteLevelHotpatcher::directBitOperation(size_t offset, size_t size, 
 
 PatchResult ByteLevelHotpatcher::directRotate(size_t offset, size_t size, int bitShift, bool leftShift)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7006, "Rotate out of bounds");
     }
@@ -434,7 +432,7 @@ PatchResult ByteLevelHotpatcher::directRotate(size_t offset, size_t size, int bi
 
 PatchResult ByteLevelHotpatcher::directReverse(size_t offset, size_t size)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7007, "Reverse out of bounds");
     }
@@ -447,9 +445,9 @@ PatchResult ByteLevelHotpatcher::directReverse(size_t offset, size_t size)
     return PatchResult::ok("Reverse completed", size);
 }
 
-qint64 ByteLevelHotpatcher::directSearch(size_t startOffset, const QByteArray& pattern) const
+qint64 ByteLevelHotpatcher::directSearch(size_t startOffset, const std::vector<uint8_t>& pattern) const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || pattern.isEmpty() || startOffset >= (size_t)m_modelData.size()) {
         return -1;
     }
@@ -466,13 +464,13 @@ qint64 ByteLevelHotpatcher::directSearch(size_t startOffset, const QByteArray& p
 
 PatchResult ByteLevelHotpatcher::atomicByteSwap(size_t offset1, size_t offset2, size_t size)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_modelData.isEmpty() || offset1 + size > (size_t)m_modelData.size() || 
         offset2 + size > (size_t)m_modelData.size()) {
         return PatchResult::error(7008, "Swap out of bounds");
     }
     
-    QByteArray temp = m_modelData.mid(offset1, size);
+    std::vector<uint8_t> temp = m_modelData.mid(offset1, size);
     std::memcpy(m_modelData.data() + offset1, m_modelData.data() + offset2, size);
     std::memcpy(m_modelData.data() + offset2, temp.constData(), size);
     

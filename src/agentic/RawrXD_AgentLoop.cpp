@@ -9,12 +9,12 @@ AgentLoop::AgentLoop()
     : m_running(false)
     , m_bridge(nullptr)
     , m_toolRegistry(&RawrXD::Agent::ToolRegistry::Instance()) {
-    LOG_INFO("AgentLoop constructed");
+
 }
 
 AgentLoop::~AgentLoop() {
     Stop();
-    LOG_INFO("AgentLoop destroyed");
+
 }
 
 void AgentLoop::SetBridge(AgenticBridge* bridge) {
@@ -24,7 +24,7 @@ void AgentLoop::SetBridge(AgenticBridge* bridge) {
 void AgentLoop::Start() {
     if (m_running.exchange(true)) return;
     m_thread = std::thread([this] { Loop(); });
-    LOG_INFO("AgentLoop started");
+
 }
 
 void AgentLoop::Stop() {
@@ -32,7 +32,7 @@ void AgentLoop::Stop() {
     if (m_thread.joinable()) {
         m_thread.join();
     }
-    LOG_INFO("AgentLoop stopped");
+
 }
 
 void AgentLoop::TriggerPerception(PerceptionType type, const std::string& data) {
@@ -62,7 +62,6 @@ void AgentLoop::Loop() {
 
 void AgentLoop::ProcessEvent(const PerceptionEvent& evt) {
     std::string summary = "Perception received: " + evt.data;
-    LOG_DEBUG(summary);
 
     if (!m_bridge || !m_bridge->IsInitialized()) {
         LOG_WARNING("AgentLoop bridge not initialized, skipping execution");
@@ -74,9 +73,9 @@ void AgentLoop::ProcessEvent(const PerceptionEvent& evt) {
         std::string output;
         std::string argsJson = response.toolArgs.empty() ? "{}" : response.toolArgs;
         auto result = m_toolRegistry->Execute(response.toolName, argsJson, output);
-        LOG_INFO("AgentLoop tool result: " + std::to_string(static_cast<int>(result)));
+
         if (!output.empty()) {
-            LOG_DEBUG(output);
+
         }
     }
 }

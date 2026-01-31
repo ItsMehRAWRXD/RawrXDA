@@ -1,9 +1,6 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QByteArray>
-#include <QHash>
+
 #include <functional>
 
 /**
@@ -16,16 +13,15 @@
  * - Cancellation support
  * - Partial result delivery
  */
-class StreamingInferenceAPI : public QObject {
-    Q_OBJECT
+class StreamingInferenceAPI : public void {
 
 public:
-    using TokenCallback = std::function<void(const QString& token, int position)>;
+    using TokenCallback = std::function<void(const std::string& token, int position)>;
     using ProgressCallback = std::function<void(int tokensGenerated, int totalTokens)>;
-    using CompletionCallback = std::function<void(const QString& fullResult)>;
-    using ErrorCallback = std::function<void(const QString& error)>;
+    using CompletionCallback = std::function<void(const std::string& fullResult)>;
+    using ErrorCallback = std::function<void(const std::string& error)>;
 
-    explicit StreamingInferenceAPI(QObject* parent = nullptr);
+    explicit StreamingInferenceAPI(void* parent = nullptr);
     ~StreamingInferenceAPI();
 
     /**
@@ -36,7 +32,7 @@ public:
      * @param temperature Sampling temperature
      * @return Stream ID for tracking
      */
-    qint64 startStream(const QString& modelPath, const QString& prompt,
+    qint64 startStream(const std::string& modelPath, const std::string& prompt,
                        int maxTokens = 256, float temperature = 0.7f);
 
     /**
@@ -69,31 +65,30 @@ public:
      */
     void setErrorCallback(ErrorCallback callback);
 
-signals:
-    void tokenGenerated(qint64 streamId, const QString& token, int position);
+    void tokenGenerated(qint64 streamId, const std::string& token, int position);
     void progressUpdated(qint64 streamId, int tokensGenerated, int totalTokens);
-    void streamCompleted(qint64 streamId, const QString& fullResult);
-    void streamFailed(qint64 streamId, const QString& error);
+    void streamCompleted(qint64 streamId, const std::string& fullResult);
+    void streamFailed(qint64 streamId, const std::string& error);
     void streamCancelled(qint64 streamId);
 
-public slots:
-    void onTokenReady(qint64 streamId, const QString& token);
+public:
+    void onTokenReady(qint64 streamId, const std::string& token);
     void onStreamProgress(qint64 streamId, int current, int total);
-    void onStreamComplete(qint64 streamId, const QString& result);
-    void onStreamError(qint64 streamId, const QString& error);
+    void onStreamComplete(qint64 streamId, const std::string& result);
+    void onStreamError(qint64 streamId, const std::string& error);
 
 private:
     struct StreamState {
         qint64 id;
-        QString modelPath;
-        QString prompt;
-        QString partialResult;
+        std::string modelPath;
+        std::string prompt;
+        std::string partialResult;
         int tokensGenerated = 0;
         int maxTokens;
         bool active = true;
     };
 
-    QHash<qint64, StreamState> m_activeStreams;
+    std::unordered_map<qint64, StreamState> m_activeStreams;
     qint64 m_nextStreamId = 1;
     
     TokenCallback m_tokenCallback;
@@ -101,3 +96,4 @@ private:
     CompletionCallback m_completionCallback;
     ErrorCallback m_errorCallback;
 };
+

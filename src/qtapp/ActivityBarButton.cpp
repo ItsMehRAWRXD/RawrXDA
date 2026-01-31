@@ -1,11 +1,7 @@
 #include "ActivityBarButton.h"
-#include <QPainter>
-#include <QPainterPath>
-#include <QStyle>
-#include <QStyleOptionButton>
-#include <QMouseEvent>
 
-ActivityBarButton::ActivityBarButton(const QString& tooltip, QWidget* parent)
+
+ActivityBarButton::ActivityBarButton(const std::string& tooltip, void* parent)
     : QToolButton(parent)
     , m_isActive(false)
     , m_isHovered(false)
@@ -39,7 +35,7 @@ void ActivityBarButton::setHovered(bool hovered)
 
 void ActivityBarButton::paintEvent(QPaintEvent* event)
 {
-    Q_UNUSED(event);
+    (event);
     
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -78,28 +74,29 @@ void ActivityBarButton::paintEvent(QPaintEvent* event)
 
 void ActivityBarButton::enterEvent(QEnterEvent* event)
 {
-    Q_UNUSED(event);
+    (event);
     setHovered(true);
 }
 
 void ActivityBarButton::leaveEvent(QEvent* event)
 {
-    Q_UNUSED(event);
+    (event);
     setHovered(false);
 }
 
 void ActivityBarButton::mousePressEvent(QMouseEvent* event)
 {
-    Q_UNUSED(event);
+    (event);
     m_isPressed = true;
     update();
 }
 
 void ActivityBarButton::mouseReleaseEvent(QMouseEvent* event)
 {
-    Q_UNUSED(event);
+    (event);
     m_isPressed = false;
     setActive(true);  // Make this button the active one
     update();
-    clicked();  // Emit clicked signal
+    clicked();  // clicked signal
 }
+

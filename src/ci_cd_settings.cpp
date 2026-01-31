@@ -1,15 +1,10 @@
 #include "ci_cd_settings.h"
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QFile>
-#include <QDebug>
-#include <QDateTime>
-#include <QUuid>
-#include <QNetworkRequest>
+
+
 #include <algorithm>
 
-CICDSettings::CICDSettings(QObject* parent)
-    : QObject(parent)
+CICDSettings::CICDSettings(void* parent)
+    : void(parent)
 {
     // Initialize default notification config
     m_notificationConfig.enableSlack = false;
@@ -25,20 +20,19 @@ CICDSettings::~CICDSettings()
 
 bool CICDSettings::createJob(const TrainingJob& job)
 {
-    QString jobId = job.jobId.isEmpty() ? generateJobId() : job.jobId;
+    std::string jobId = job.jobId.isEmpty() ? generateJobId() : job.jobId;
     TrainingJob newJob = job;
     newJob.jobId = jobId;
-    newJob.createdAt = QDateTime::currentSecsSinceEpoch();
+    newJob.createdAt = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     newJob.lastRunAt = 0;
     newJob.successCount = 0;
     newJob.failureCount = 0;
 
     m_jobs[jobId] = newJob;
-    qDebug() << "Created job:" << jobId;
     return true;
 }
 
-bool CICDSettings::updateJob(const QString& jobId, const TrainingJob& job)
+bool CICDSettings::updateJob(const std::string& jobId, const TrainingJob& job)
 {
     auto it = m_jobs.find(jobId);
     if (it == m_jobs.end()) {
@@ -55,7 +49,7 @@ bool CICDSettings::updateJob(const QString& jobId, const TrainingJob& job)
     return true;
 }
 
-CICDSettings::TrainingJob CICDSettings::getJob(const QString& jobId) const
+CICDSettings::TrainingJob CICDSettings::getJob(const std::string& jobId) const
 {
     auto it = m_jobs.find(jobId);
     if (it == m_jobs.end()) {
@@ -73,12 +67,12 @@ std::vector<CICDSettings::TrainingJob> CICDSettings::listJobs() const
     return result;
 }
 
-bool CICDSettings::deleteJob(const QString& jobId)
+bool CICDSettings::deleteJob(const std::string& jobId)
 {
     return m_jobs.erase(jobId) > 0;
 }
 
-bool CICDSettings::setJobEnabled(const QString& jobId, bool enabled)
+bool CICDSettings::setJobEnabled(const std::string& jobId, bool enabled)
 {
     auto it = m_jobs.find(jobId);
     if (it == m_jobs.end()) {
@@ -89,30 +83,29 @@ bool CICDSettings::setJobEnabled(const QString& jobId, bool enabled)
     return true;
 }
 
-QString CICDSettings::queueJob(const QString& jobId)
+std::string CICDSettings::queueJob(const std::string& jobId)
 {
     auto it = m_jobs.find(jobId);
     if (it == m_jobs.end() || !it->second.enabled) {
         return "";
     }
 
-    QString runId = generateRunId();
+    std::string runId = generateRunId();
     JobRunLog log;
     log.jobId = jobId;
     log.runId = runId;
     log.status = JobStatus::Queued;
-    log.startTime = QDateTime::currentSecsSinceEpoch();
+    log.startTime = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
     log.endTime = 0;
 
     m_runLogs[runId] = log;
     it->second.lastRunAt = log.startTime;
 
-    emit jobQueued(jobId, runId);
-    qDebug() << "Queued job:" << jobId << "Run:" << runId;
+    jobQueued(jobId, runId);
     return runId;
 }
 
-bool CICDSettings::cancelJob(const QString& runId)
+bool CICDSettings::cancelJob(const std::string& runId)
 {
     auto it = m_runLogs.find(runId);
     if (it == m_runLogs.end()) {
@@ -121,14 +114,14 @@ bool CICDSettings::cancelJob(const QString& runId)
 
     if (it->second.status == JobStatus::Running || it->second.status == JobStatus::Queued) {
         it->second.status = JobStatus::Cancelled;
-        it->second.endTime = QDateTime::currentSecsSinceEpoch();
+        it->second.endTime = std::chrono::system_clock::time_point::currentSecsSinceEpoch();
         return true;
     }
 
     return false;
 }
 
-QString CICDSettings::retryJob(const QString& runId)
+std::string CICDSettings::retryJob(const std::string& runId)
 {
     auto it = m_runLogs.find(runId);
     if (it == m_runLogs.end()) {
@@ -138,7 +131,7 @@ QString CICDSettings::retryJob(const QString& runId)
     return queueJob(it->second.jobId);
 }
 
-CICDSettings::JobRunLog CICDSettings::getJobRunLog(const QString& runId) const
+CICDSettings::JobRunLog CICDSettings::getJobRunLog(const std::string& runId) const
 {
     auto it = m_runLogs.find(runId);
     if (it == m_runLogs.end()) {
@@ -147,7 +140,7 @@ CICDSettings::JobRunLog CICDSettings::getJobRunLog(const QString& runId) const
     return it->second;
 }
 
-std::vector<CICDSettings::JobRunLog> CICDSettings::getJobRunHistory(const QString& jobId, int limit) const
+std::vector<CICDSettings::JobRunLog> CICDSettings::getJobRunHistory(const std::string& jobId, int limit) const
 {
     std::vector<JobRunLog> result;
 
@@ -170,7 +163,7 @@ std::vector<CICDSettings::JobRunLog> CICDSettings::getJobRunHistory(const QStrin
     return result;
 }
 
-std::tuple<int, int, int, float> CICDSettings::getJobStatistics(const QString& jobId) const
+std::tuple<int, int, int, float> CICDSettings::getJobStatistics(const std::string& jobId) const
 {
     int totalRuns = 0;
     int successCount = 0;
@@ -195,14 +188,13 @@ std::tuple<int, int, int, float> CICDSettings::getJobStatistics(const QString& j
     return std::make_tuple(totalRuns, successCount, failureCount, avgDuration);
 }
 
-bool CICDSettings::definePipeline(const QString& jobId, const std::vector<PipelineStage>& stages)
+bool CICDSettings::definePipeline(const std::string& jobId, const std::vector<PipelineStage>& stages)
 {
     m_pipelines[jobId] = stages;
-    qDebug() << "Defined pipeline for job:" << jobId << "with" << stages.size() << "stages";
     return true;
 }
 
-std::vector<CICDSettings::PipelineStage> CICDSettings::getPipeline(const QString& jobId) const
+std::vector<CICDSettings::PipelineStage> CICDSettings::getPipeline(const std::string& jobId) const
 {
     auto it = m_pipelines.find(jobId);
     if (it == m_pipelines.end()) {
@@ -211,13 +203,13 @@ std::vector<CICDSettings::PipelineStage> CICDSettings::getPipeline(const QString
     return it->second;
 }
 
-bool CICDSettings::setDeploymentConfig(const QString& jobId, const DeploymentConfig& config)
+bool CICDSettings::setDeploymentConfig(const std::string& jobId, const DeploymentConfig& config)
 {
     m_deploymentConfigs[jobId] = config;
     return true;
 }
 
-CICDSettings::DeploymentConfig CICDSettings::getDeploymentConfig(const QString& jobId) const
+CICDSettings::DeploymentConfig CICDSettings::getDeploymentConfig(const std::string& jobId) const
 {
     auto it = m_deploymentConfigs.find(jobId);
     if (it == m_deploymentConfigs.end()) {
@@ -226,7 +218,7 @@ CICDSettings::DeploymentConfig CICDSettings::getDeploymentConfig(const QString& 
     return it->second;
 }
 
-QString CICDSettings::deployModel(const QString& jobId, const QString& runId)
+std::string CICDSettings::deployModel(const std::string& jobId, const std::string& runId)
 {
     auto runIt = m_runLogs.find(runId);
     if (runIt == m_runLogs.end() || runIt->second.jobId != jobId) {
@@ -237,41 +229,37 @@ QString CICDSettings::deployModel(const QString& jobId, const QString& runId)
         return "";
     }
 
-    QString deploymentId = generateDeploymentId();
-    emit deploymentStarted(deploymentId);
+    std::string deploymentId = generateDeploymentId();
+    deploymentStarted(deploymentId);
 
     // Simulate deployment
-    emit deploymentCompleted(deploymentId, true);
-    qDebug() << "Deployed model from job:" << jobId << "run:" << runId;
+    deploymentCompleted(deploymentId, true);
 
     return deploymentId;
 }
 
-bool CICDSettings::rollbackDeployment(const QString& deploymentId, const QString& targetRunId)
+bool CICDSettings::rollbackDeployment(const std::string& deploymentId, const std::string& targetRunId)
 {
-    emit deploymentRolledBack(deploymentId);
-    qDebug() << "Rolled back deployment:" << deploymentId << "to run:" << targetRunId;
+    deploymentRolledBack(deploymentId);
     return true;
 }
 
-QString CICDSettings::registerWebhook(const QString& jobId, const QString& platform,
-                                      const QString& repository, const QString& branch)
+std::string CICDSettings::registerWebhook(const std::string& jobId, const std::string& platform,
+                                      const std::string& repository, const std::string& branch)
 {
     // Generate webhook URL
-    QString webhookUrl = QString("https://agentic-ide.local/webhooks/%1/%2/%3/%4")
-                            .arg(jobId, platform, repository, branch);
+    std::string webhookUrl = std::string("https://agentic-ide.local/webhooks/%1/%2/%3/%4")
+                            ;
 
-    qDebug() << "Registered webhook for job:" << jobId << "URL:" << webhookUrl;
     return webhookUrl;
 }
 
-QString CICDSettings::handleWebhook(const QJsonObject& webhookData)
+std::string CICDSettings::handleWebhook(const void*& webhookData)
 {
-    QString action = webhookData["action"].toString();
-    QString repository = webhookData["repository"].toString();
+    std::string action = webhookData["action"].toString();
+    std::string repository = webhookData["repository"].toString();
 
-    emit webhookReceived("github", action);
-    qDebug() << "Received webhook from" << repository << "action:" << action;
+    webhookReceived("github", action);
 
     // In production: match webhook to job and queue it
     // For now: return empty
@@ -292,29 +280,26 @@ CICDSettings::NotificationConfig CICDSettings::getNotificationConfig() const
 bool CICDSettings::sendTestNotification() const
 {
     if (m_notificationConfig.enableSlack) {
-        qDebug() << "Sending test Slack notification to:" << m_notificationConfig.slackChannel;
     }
 
     if (m_notificationConfig.enableEmail) {
-        qDebug() << "Sending test email to:" << m_notificationConfig.emailRecipients.size() << "recipients";
     }
 
     return true;
 }
 
-bool CICDSettings::storeArtifact(const QString& artifactId, const QString& artifactPath,
-                               const QJsonObject& metadata)
+bool CICDSettings::storeArtifact(const std::string& artifactId, const std::string& artifactPath,
+                               const void*& metadata)
 {
-    QJsonObject artifact = metadata;
+    void* artifact = metadata;
     artifact["path"] = artifactPath;
-    artifact["storedAt"] = static_cast<qint64>(QDateTime::currentSecsSinceEpoch());
+    artifact["storedAt"] = static_cast<qint64>(std::chrono::system_clock::time_point::currentSecsSinceEpoch());
 
     m_artifacts[artifactId] = artifact;
-    qDebug() << "Stored artifact:" << artifactId << "path:" << artifactPath;
     return true;
 }
 
-QString CICDSettings::getArtifact(const QString& artifactId) const
+std::string CICDSettings::getArtifact(const std::string& artifactId) const
 {
     auto it = m_artifacts.find(artifactId);
     if (it == m_artifacts.end()) {
@@ -323,9 +308,9 @@ QString CICDSettings::getArtifact(const QString& artifactId) const
     return it->second["path"].toString();
 }
 
-std::vector<QString> CICDSettings::listArtifacts(const QString& jobId) const
+std::vector<std::string> CICDSettings::listArtifacts(const std::string& jobId) const
 {
-    std::vector<QString> result;
+    std::vector<std::string> result;
 
     for (const auto& [artifactId, metadata] : m_artifacts) {
         if (metadata["jobId"].toString() == jobId) {
@@ -338,7 +323,7 @@ std::vector<QString> CICDSettings::listArtifacts(const QString& jobId) const
 
 int CICDSettings::cleanupOldArtifacts(int olderThanDays)
 {
-    qint64 threshold = QDateTime::currentSecsSinceEpoch() - (olderThanDays * 86400);
+    qint64 threshold = std::chrono::system_clock::time_point::currentSecsSinceEpoch() - (olderThanDays * 86400);
     int deleted = 0;
 
     for (auto it = m_artifacts.begin(); it != m_artifacts.end(); ) {
@@ -351,18 +336,17 @@ int CICDSettings::cleanupOldArtifacts(int olderThanDays)
         }
     }
 
-    qDebug() << "Cleaned up" << deleted << "old artifacts";
     return deleted;
 }
 
-QJsonObject CICDSettings::exportConfiguration() const
+void* CICDSettings::exportConfiguration() const
 {
-    QJsonObject config;
+    void* config;
 
     // Export jobs
-    QJsonArray jobsArray;
+    void* jobsArray;
     for (const auto& [jobId, job] : m_jobs) {
-        QJsonObject jobObj;
+        void* jobObj;
         jobObj["jobId"] = job.jobId;
         jobObj["jobName"] = job.jobName;
         jobObj["modelName"] = job.modelName;
@@ -375,9 +359,9 @@ QJsonObject CICDSettings::exportConfiguration() const
     config["jobs"] = jobsArray;
 
     // Export deployment configs
-    QJsonArray deploymentArray;
+    void* deploymentArray;
     for (const auto& [jobId, deployConfig] : m_deploymentConfigs) {
-        QJsonObject deployObj;
+        void* deployObj;
         deployObj["jobId"] = jobId;
         deployObj["targetEnvironment"] = deployConfig.targetEnvironment;
         deployObj["strategy"] = static_cast<int>(deployConfig.strategy);
@@ -387,7 +371,7 @@ QJsonObject CICDSettings::exportConfiguration() const
     config["deployments"] = deploymentArray;
 
     // Export notification config
-    QJsonObject notifObj;
+    void* notifObj;
     notifObj["enableSlack"] = m_notificationConfig.enableSlack;
     notifObj["enableEmail"] = m_notificationConfig.enableEmail;
     notifObj["notifyOnSuccess"] = m_notificationConfig.notifyOnSuccess;
@@ -397,12 +381,12 @@ QJsonObject CICDSettings::exportConfiguration() const
     return config;
 }
 
-bool CICDSettings::importConfiguration(const QJsonObject& config)
+bool CICDSettings::importConfiguration(const void*& config)
 {
     // Import jobs
-    QJsonArray jobsArray = config["jobs"].toArray();
-    for (const QJsonValue& val : jobsArray) {
-        QJsonObject jobObj = val.toObject();
+    void* jobsArray = config["jobs"].toArray();
+    for (const void*& val : jobsArray) {
+        void* jobObj = val.toObject();
         TrainingJob job;
         job.jobId = jobObj["jobId"].toString();
         job.jobName = jobObj["jobName"].toString();
@@ -415,9 +399,9 @@ bool CICDSettings::importConfiguration(const QJsonObject& config)
     }
 
     // Import deployment configs
-    QJsonArray deploymentArray = config["deployments"].toArray();
-    for (const QJsonValue& val : deploymentArray) {
-        QJsonObject deployObj = val.toObject();
+    void* deploymentArray = config["deployments"].toArray();
+    for (const void*& val : deploymentArray) {
+        void* deployObj = val.toObject();
         DeploymentConfig deployConfig;
         deployConfig.targetEnvironment = deployObj["targetEnvironment"].toString();
         deployConfig.strategy = static_cast<DeploymentStrategy>(deployObj["strategy"].toInt());
@@ -428,31 +412,28 @@ bool CICDSettings::importConfiguration(const QJsonObject& config)
     return true;
 }
 
-bool CICDSettings::saveToFile(const QString& filePath) const
+bool CICDSettings::saveToFile(const std::string& filePath) const
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
-        qWarning() << "Failed to open file:" << filePath;
         return false;
     }
 
-    QJsonObject config = exportConfiguration();
-    file.write(QJsonDocument(config).toJson(QJsonDocument::Indented));
+    void* config = exportConfiguration();
+    file.write(void*(config).toJson(void*::Indented));
     file.close();
 
-    qDebug() << "Saved CI/CD configuration to:" << filePath;
     return true;
 }
 
-bool CICDSettings::loadFromFile(const QString& filePath)
+bool CICDSettings::loadFromFile(const std::string& filePath)
 {
-    QFile file(filePath);
+    std::fstream file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open file:" << filePath;
         return false;
     }
 
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    void* doc = void*::fromJson(file.readAll());
     file.close();
 
     if (!doc.isObject()) {
@@ -462,16 +443,16 @@ bool CICDSettings::loadFromFile(const QString& filePath)
     return importConfiguration(doc.object());
 }
 
-std::map<QString, QJsonObject> CICDSettings::getPipelineTemplates() const
+std::map<std::string, void*> CICDSettings::getPipelineTemplates() const
 {
-    std::map<QString, QJsonObject> templates;
+    std::map<std::string, void*> templates;
 
     // Basic training template
-    QJsonObject basicTemplate;
+    void* basicTemplate;
     basicTemplate["name"] = "Basic Training";
     basicTemplate["description"] = "Simple training job";
-    QJsonArray stagesArray;
-    QJsonObject stage1;
+    void* stagesArray;
+    void* stage1;
     stage1["name"] = "train";
     stage1["timeout"] = 3600;
     stagesArray.append(stage1);
@@ -479,22 +460,22 @@ std::map<QString, QJsonObject> CICDSettings::getPipelineTemplates() const
     templates["basic"] = basicTemplate;
 
     // Production template
-    QJsonObject prodTemplate;
+    void* prodTemplate;
     prodTemplate["name"] = "Production Training";
     prodTemplate["description"] = "Full production pipeline with validation and deployment";
-    QJsonArray prodStages;
+    void* prodStages;
     
-    QJsonObject trainStage;
+    void* trainStage;
     trainStage["name"] = "train";
     trainStage["timeout"] = 7200;
     prodStages.append(trainStage);
     
-    QJsonObject evalStage;
+    void* evalStage;
     evalStage["name"] = "evaluate";
     evalStage["timeout"] = 1800;
     prodStages.append(evalStage);
     
-    QJsonObject deployStage;
+    void* deployStage;
     deployStage["name"] = "deploy";
     deployStage["timeout"] = 600;
     prodStages.append(deployStage);
@@ -505,17 +486,18 @@ std::map<QString, QJsonObject> CICDSettings::getPipelineTemplates() const
     return templates;
 }
 
-QString CICDSettings::generateJobId()
+std::string CICDSettings::generateJobId()
 {
     return "job_" + QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
 }
 
-QString CICDSettings::generateRunId()
+std::string CICDSettings::generateRunId()
 {
     return "run_" + QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
 }
 
-QString CICDSettings::generateDeploymentId()
+std::string CICDSettings::generateDeploymentId()
 {
     return "deploy_" + QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
 }
+

@@ -128,7 +128,3 @@ Position LSPClient::offsetToPosition(const std::string& text, int offset) {
 
 } // namespace RawrXD
 
-
-
-
-

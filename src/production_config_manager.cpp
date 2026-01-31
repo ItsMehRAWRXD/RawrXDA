@@ -25,12 +25,10 @@ bool ProductionConfigManager::loadConfig(const std::string& path) {
 
     // File operation removed;
     if (!file.exists()) {
-        // // qWarning:  "[ProductionConfigManager] Config not found:" << configPath;
         return false;
     }
 
     if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        // // qWarning:  "[ProductionConfigManager] Failed to open config:" << configPath;
         return false;
     }
 
@@ -38,7 +36,6 @@ bool ProductionConfigManager::loadConfig(const std::string& path) {
     QJsonParseError error{};
     void* doc = void*::fromJson(raw, &error);
     if (error.error != QJsonParseError::NoError || !doc.isObject()) {
-        // // qWarning:  "[ProductionConfigManager] Invalid JSON:" << error.errorString();
         return false;
     }
 
@@ -106,9 +103,4 @@ void ProductionConfigManager::applyFeatureList(const void*& root) {
 }
 
 } // namespace RawrXD
-
-
-
-
-
 

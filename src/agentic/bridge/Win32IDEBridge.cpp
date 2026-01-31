@@ -43,9 +43,8 @@ bool Win32IDEBridge::initialize(HINSTANCE hInst, int nCmdShow) {
     }
     
     initialized_ = true;
-    
-    
-    
+
+
     return true;
 }
 
@@ -53,9 +52,8 @@ void Win32IDEBridge::shutdown() {
     if (!initialized_) {
         return;
     }
-    
-    
-    
+
+
     // Shutdown subsystems in reverse order
     if (router_) {
         router_->shutdownAll();
@@ -65,9 +63,8 @@ void Win32IDEBridge::shutdown() {
         // Remove all hooks
         // hotpatch_->removeModuleHooks(GetModuleHandle(NULL));
     }
-    
-    
-    
+
+
     initialized_ = false;
 }
 

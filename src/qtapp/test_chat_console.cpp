@@ -22,11 +22,7 @@
 #include <functional>
 #include <sstream>
 #include <thread>
-#include <QCoreApplication>
-#include <QDebug>
-#include <QFile>
-#include <QTextStream>
-#include <QDateTime>
+
 
 #include "inference_engine.hpp"
 #include "chat_session.hpp"
@@ -49,7 +45,7 @@ public:
      * @param model_path Path to GGUF model file or ollama model name
      * @return true if initialization succeeded
      */
-    bool initialize(const QString& model_path) {
+    bool initialize(const std::string& model_path) {
         std::cout << "\n=== Initializing Chat Engine ===" << std::endl;
         std::cout << "[Init] Creating InferenceEngine..." << std::endl;
         
@@ -168,9 +164,8 @@ private:
             std::cout << "[Generating tokens..." << std::endl;
             
             // Tokenize the prompt
-            auto prompt_tokens = engine->tokenize(QString::fromStdString(full_prompt));
+            auto prompt_tokens = engine->tokenize(std::string::fromStdString(full_prompt));
             
-            qDebug() << "[ConsoleChat] Prompt tokenized into " << prompt_tokens.size() << " tokens";
             
             if (prompt_tokens.empty()) {
                 std::cout << "Could not tokenize prompt. Check model vocabulary." << std::endl;
@@ -191,7 +186,7 @@ private:
                 );
                 
                 // Detokenize to text
-                QString response_text = engine->detokenize(new_tokens);
+                std::string response_text = engine->detokenize(new_tokens);
                 std::string response = response_text.toStdString();
                 
                 // Clean up response
@@ -294,13 +289,13 @@ int main(int argc, char *argv[])
         // Try 2: Environment variable CHAT_MODEL
         // Try 3: Default ollama model name
         
-        QString model_path;
+        std::string model_path;
         
         if (argc > 1) {
-            model_path = QString::fromLocal8Bit(argv[1]);
+            model_path = std::string::fromLocal8Bit(argv[1]);
             std::cout << "[Main] Using model from command line: " << model_path.toStdString() << std::endl;
         } else if (const char* env_model = std::getenv("CHAT_MODEL")) {
-            model_path = QString::fromLocal8Bit(env_model);
+            model_path = std::string::fromLocal8Bit(env_model);
             std::cout << "[Main] Using model from CHAT_MODEL: " << model_path.toStdString() << std::endl;
         } else {
             // Default to a common model (you can customize this)
@@ -342,3 +337,4 @@ int main(int argc, char *argv[])
         return 1;
     }
 }
+

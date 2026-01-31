@@ -250,5 +250,3 @@ private:
     void structuredLog(const std::string& level, const std::string& category, const std::string& message);
 };
 
-
-

@@ -9,15 +9,12 @@
  */
 
 #include "EnhancedDynamicLoadBalancer.hpp"
-#include <QDebug>
-#include <QProcess>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
+
+
 #include <algorithm>
 #include <chrono>
 
-#ifdef Q_OS_WIN
+#ifdef 
 #include <Windows.h>
 #include <comdef.h>
 #include <Wbemidl.h>
@@ -30,13 +27,13 @@ namespace rawrxd::thermal {
 // Construction
 // ═══════════════════════════════════════════════════════════════════════════════
 
-EnhancedDynamicLoadBalancer::EnhancedDynamicLoadBalancer(QObject* parent)
-    : QObject(parent)
-    , m_healthTimer(std::make_unique<QTimer>(this))
-    , m_thermalTimer(std::make_unique<QTimer>(this))
+EnhancedDynamicLoadBalancer::EnhancedDynamicLoadBalancer(void* parent)
+    : void(parent)
+    , m_healthTimer(std::make_unique<void*>(this))
+    , m_thermalTimer(std::make_unique<void*>(this))
 {
-    connect(m_healthTimer.get(), &QTimer::timeout, this, &EnhancedDynamicLoadBalancer::onHealthPollTimer);
-    connect(m_thermalTimer.get(), &QTimer::timeout, this, &EnhancedDynamicLoadBalancer::onThermalPollTimer);
+// Qt connect removed
+// Qt connect removed
 }
 
 EnhancedDynamicLoadBalancer::~EnhancedDynamicLoadBalancer()
@@ -50,7 +47,7 @@ EnhancedDynamicLoadBalancer::~EnhancedDynamicLoadBalancer()
 
 void EnhancedDynamicLoadBalancer::setConfig(const EnhancedLoadBalancerConfig& config)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_config = config;
     
     // Normalize weights
@@ -72,7 +69,7 @@ void EnhancedDynamicLoadBalancer::setConfig(const EnhancedLoadBalancerConfig& co
 
 EnhancedLoadBalancerConfig EnhancedDynamicLoadBalancer::getConfig() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     return m_config;
 }
 
@@ -87,7 +84,7 @@ void EnhancedDynamicLoadBalancer::setWeights(double thermalWeight, double loadWe
 
 void EnhancedDynamicLoadBalancer::setThresholds(double minHealth, double thermalWarning, double thermalCritical)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_config.minHealthScore = minHealth;
     m_config.thermalWarning = thermalWarning;
     m_config.thermalCritical = thermalCritical;
@@ -98,9 +95,9 @@ void EnhancedDynamicLoadBalancer::setThresholds(double minHealth, double thermal
 // Drive Management
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void EnhancedDynamicLoadBalancer::addDrive(const QString& drivePath, double ratedTBW)
+void EnhancedDynamicLoadBalancer::addDrive(const std::string& drivePath, double ratedTBW)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     DriveHealthProfile profile;
     profile.drivePath = drivePath;
@@ -111,7 +108,7 @@ void EnhancedDynamicLoadBalancer::addDrive(const QString& drivePath, double rate
     
     lock.unlock();
     
-    emit drivesChanged();
+    drivesChanged();
     
     // Immediately query health data
     if (m_config.enableHealthMonitoring) {
@@ -119,46 +116,46 @@ void EnhancedDynamicLoadBalancer::addDrive(const QString& drivePath, double rate
     }
 }
 
-void EnhancedDynamicLoadBalancer::removeDrive(const QString& drivePath)
+void EnhancedDynamicLoadBalancer::removeDrive(const std::string& drivePath)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_drives.erase(drivePath);
     m_previousScores.erase(drivePath);
     
     lock.unlock();
-    emit drivesChanged();
+    drivesChanged();
 }
 
 void EnhancedDynamicLoadBalancer::clearDrives()
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_drives.clear();
     m_previousScores.clear();
     m_lastSelectedDrive.clear();
     
     lock.unlock();
-    emit drivesChanged();
+    drivesChanged();
 }
 
 int EnhancedDynamicLoadBalancer::getDriveCount() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     return static_cast<int>(m_drives.size());
 }
 
-QStringList EnhancedDynamicLoadBalancer::getDrivePaths() const
+std::vector<std::string> EnhancedDynamicLoadBalancer::getDrivePaths() const
 {
-    QMutexLocker lock(&m_mutex);
-    QStringList paths;
+    std::lock_guard<std::mutex> lock(&m_mutex);
+    std::vector<std::string> paths;
     for (const auto& pair : m_drives) {
         paths.append(pair.first);
     }
     return paths;
 }
 
-bool EnhancedDynamicLoadBalancer::hasDrive(const QString& drivePath) const
+bool EnhancedDynamicLoadBalancer::hasDrive(const std::string& drivePath) const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     return m_drives.find(drivePath) != m_drives.end();
 }
 
@@ -166,13 +163,12 @@ bool EnhancedDynamicLoadBalancer::hasDrive(const QString& drivePath) const
 // Health Updates
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void EnhancedDynamicLoadBalancer::updateHealth(const QString& drivePath, const DriveHealthProfile& profile)
+void EnhancedDynamicLoadBalancer::updateHealth(const std::string& drivePath, const DriveHealthProfile& profile)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     auto it = m_drives.find(drivePath);
     if (it == m_drives.end()) {
-        qWarning() << "Drive not found:" << drivePath;
         return;
     }
     
@@ -189,12 +185,12 @@ void EnhancedDynamicLoadBalancer::updateHealth(const QString& drivePath, const D
     lock.unlock();
     
     checkHealthAlerts(drivePath, profile);
-    emit healthUpdated(drivePath, profile.compositeScore);
+    healthUpdated(drivePath, profile.compositeScore);
 }
 
-void EnhancedDynamicLoadBalancer::updateTemperature(const QString& drivePath, double temperature)
+void EnhancedDynamicLoadBalancer::updateTemperature(const std::string& drivePath, double temperature)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     auto it = m_drives.find(drivePath);
     if (it != m_drives.end()) {
@@ -206,19 +202,19 @@ void EnhancedDynamicLoadBalancer::updateTemperature(const QString& drivePath, do
             it->second.isThrottled = true;
             
             lock.unlock();
-            emit healthAlert(drivePath, 
-                QString("Temperature critical: %.1f°C").arg(temperature), true);
+            healthAlert(drivePath, 
+                std::string("Temperature critical: %.1f°C"), true);
         } else if (temperature >= m_config.thermalWarning) {
             lock.unlock();
-            emit healthAlert(drivePath,
-                QString("Temperature warning: %.1f°C").arg(temperature), false);
+            healthAlert(drivePath,
+                std::string("Temperature warning: %.1f°C"), false);
         }
     }
 }
 
-void EnhancedDynamicLoadBalancer::updateLoad(const QString& drivePath, double loadPercent)
+void EnhancedDynamicLoadBalancer::updateLoad(const std::string& drivePath, double loadPercent)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     auto it = m_drives.find(drivePath);
     if (it != m_drives.end()) {
@@ -228,9 +224,9 @@ void EnhancedDynamicLoadBalancer::updateLoad(const QString& drivePath, double lo
     }
 }
 
-void EnhancedDynamicLoadBalancer::updateSMART(const QString& drivePath, const SMARTData& smart)
+void EnhancedDynamicLoadBalancer::updateSMART(const std::string& drivePath, const SMARTData& smart)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     auto it = m_drives.find(drivePath);
     if (it != m_drives.end()) {
@@ -243,13 +239,13 @@ void EnhancedDynamicLoadBalancer::updateSMART(const QString& drivePath, const SM
         lock.unlock();
         
         checkHealthAlerts(drivePath, profile);
-        emit healthUpdated(drivePath, profile.smart.overallHealth / 100.0);
+        healthUpdated(drivePath, profile.smart.overallHealth / 100.0);
     }
 }
 
-void EnhancedDynamicLoadBalancer::updateTBW(const QString& drivePath, double totalTBW)
+void EnhancedDynamicLoadBalancer::updateTBW(const std::string& drivePath, double totalTBW)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     auto it = m_drives.find(drivePath);
     if (it != m_drives.end()) {
@@ -260,21 +256,21 @@ void EnhancedDynamicLoadBalancer::updateTBW(const QString& drivePath, double tot
         // Alert if near end of life
         if (it->second.tbw.wearLevel >= 90.0) {
             lock.unlock();
-            emit healthAlert(drivePath,
-                QString("TBW critical: %.0f%% of rated life used").arg(it->second.tbw.wearLevel),
+            healthAlert(drivePath,
+                std::string("TBW critical: %.0f%% of rated life used"),
                 true);
         } else if (it->second.tbw.wearLevel >= 75.0) {
             lock.unlock();
-            emit healthAlert(drivePath,
-                QString("TBW warning: %.0f%% of rated life used").arg(it->second.tbw.wearLevel),
+            healthAlert(drivePath,
+                std::string("TBW warning: %.0f%% of rated life used"),
                 false);
         }
     }
 }
 
-DriveHealthProfile EnhancedDynamicLoadBalancer::getHealthProfile(const QString& drivePath) const
+DriveHealthProfile EnhancedDynamicLoadBalancer::getHealthProfile(const std::string& drivePath) const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     auto it = m_drives.find(drivePath);
     if (it != m_drives.end()) {
@@ -285,7 +281,7 @@ DriveHealthProfile EnhancedDynamicLoadBalancer::getHealthProfile(const QString& 
 
 std::vector<DriveHealthProfile> EnhancedDynamicLoadBalancer::getAllProfiles() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     std::vector<DriveHealthProfile> profiles;
     profiles.reserve(m_drives.size());
@@ -301,16 +297,15 @@ std::vector<DriveHealthProfile> EnhancedDynamicLoadBalancer::getAllProfiles() co
 // Drive Selection
 // ═══════════════════════════════════════════════════════════════════════════════
 
-QString EnhancedDynamicLoadBalancer::selectOptimalDrive(OperationType opType)
+std::string EnhancedDynamicLoadBalancer::selectOptimalDrive(OperationType opType)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     if (m_drives.empty()) {
-        qWarning() << "No drives available for selection";
-        return QString();
+        return std::string();
     }
     
-    QString bestDrive;
+    std::string bestDrive;
     double bestScore = -1.0;
     
     for (const auto& pair : m_drives) {
@@ -355,13 +350,12 @@ QString EnhancedDynamicLoadBalancer::selectOptimalDrive(OperationType opType)
         }
         
         if (!bestDrive.isEmpty()) {
-            qWarning() << "Operating in degraded mode with drive:" << bestDrive;
         }
     }
     
-    // Update state and emit signal
+    // Update state and signal
     if (!bestDrive.isEmpty() && bestDrive != m_lastSelectedDrive) {
-        QString previousDrive = m_lastSelectedDrive;
+        std::string previousDrive = m_lastSelectedDrive;
         m_lastSelectedDrive = bestDrive;
         m_config.lastSelectedDrive = bestDrive;
         
@@ -369,18 +363,18 @@ QString EnhancedDynamicLoadBalancer::selectOptimalDrive(OperationType opType)
         
         // Notify of balancing event
         if (!previousDrive.isEmpty()) {
-            QString reason = QString("Score: %1% vs %2%")
-                .arg(static_cast<int>(bestScore * 100))
-                .arg(static_cast<int>(m_previousScores[previousDrive] * 100));
+            std::string reason = std::string("Score: %1% vs %2%")
+                )
+                );
             
-            emit balancingEvent(previousDrive, bestDrive, reason);
+            balancingEvent(previousDrive, bestDrive, reason);
             
             if (m_balancingEventCallback) {
                 m_balancingEventCallback(previousDrive, bestDrive, reason);
             }
         }
         
-        emit driveSelected(bestDrive);
+        driveSelected(bestDrive);
         
         if (m_driveSelectedCallback) {
             m_driveSelectedCallback(bestDrive, m_drives[bestDrive]);
@@ -393,11 +387,11 @@ QString EnhancedDynamicLoadBalancer::selectOptimalDrive(OperationType opType)
     return bestDrive;
 }
 
-std::vector<QString> EnhancedDynamicLoadBalancer::getRankedDrives(OperationType opType)
+std::vector<std::string> EnhancedDynamicLoadBalancer::getRankedDrives(OperationType opType)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
-    std::vector<std::pair<QString, double>> scored;
+    std::vector<std::pair<std::string, double>> scored;
     
     for (const auto& pair : m_drives) {
         if (!pair.second.isOnline) continue;
@@ -410,7 +404,7 @@ std::vector<QString> EnhancedDynamicLoadBalancer::getRankedDrives(OperationType 
     std::sort(scored.begin(), scored.end(),
         [](const auto& a, const auto& b) { return a.second > b.second; });
     
-    std::vector<QString> ranked;
+    std::vector<std::string> ranked;
     ranked.reserve(scored.size());
     for (const auto& pair : scored) {
         ranked.push_back(pair.first);
@@ -419,9 +413,9 @@ std::vector<QString> EnhancedDynamicLoadBalancer::getRankedDrives(OperationType 
     return ranked;
 }
 
-QString EnhancedDynamicLoadBalancer::getLastSelectedDrive() const
+std::string EnhancedDynamicLoadBalancer::getLastSelectedDrive() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     return m_lastSelectedDrive;
 }
 
@@ -445,7 +439,6 @@ void EnhancedDynamicLoadBalancer::startMonitoring()
     refreshHealthData();
     refreshThermalData();
     
-    qInfo() << "Load balancer monitoring started";
 }
 
 void EnhancedDynamicLoadBalancer::stopMonitoring()
@@ -456,7 +449,6 @@ void EnhancedDynamicLoadBalancer::stopMonitoring()
     m_healthTimer->stop();
     m_thermalTimer->stop();
     
-    qInfo() << "Load balancer monitoring stopped";
 }
 
 bool EnhancedDynamicLoadBalancer::isMonitoring() const
@@ -466,9 +458,9 @@ bool EnhancedDynamicLoadBalancer::isMonitoring() const
 
 void EnhancedDynamicLoadBalancer::refreshHealthData()
 {
-    QStringList paths = getDrivePaths();
+    std::vector<std::string> paths = getDrivePaths();
     
-    for (const QString& path : paths) {
+    for (const std::string& path : paths) {
         queryWMIHealth(path);
     }
 }
@@ -476,9 +468,9 @@ void EnhancedDynamicLoadBalancer::refreshHealthData()
 void EnhancedDynamicLoadBalancer::refreshThermalData()
 {
     // Query thermal data via WMI or direct sensor access
-    QStringList paths = getDrivePaths();
+    std::vector<std::string> paths = getDrivePaths();
     
-    for (const QString& path : paths) {
+    for (const std::string& path : paths) {
         queryNVMeHealth(path);
     }
 }
@@ -489,19 +481,19 @@ void EnhancedDynamicLoadBalancer::refreshThermalData()
 
 void EnhancedDynamicLoadBalancer::setDriveSelectedCallback(DriveSelectedCallback callback)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_driveSelectedCallback = std::move(callback);
 }
 
 void EnhancedDynamicLoadBalancer::setHealthAlertCallback(HealthAlertCallback callback)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_healthAlertCallback = std::move(callback);
 }
 
 void EnhancedDynamicLoadBalancer::setBalancingEventCallback(BalancingEventCallback callback)
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     m_balancingEventCallback = std::move(callback);
 }
 
@@ -511,7 +503,7 @@ void EnhancedDynamicLoadBalancer::setBalancingEventCallback(BalancingEventCallba
 
 double EnhancedDynamicLoadBalancer::getAverageHealth() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_drives.empty()) return 0.0;
     
     double sum = 0.0;
@@ -523,7 +515,7 @@ double EnhancedDynamicLoadBalancer::getAverageHealth() const
 
 double EnhancedDynamicLoadBalancer::getAverageTemperature() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_drives.empty()) return 0.0;
     
     double sum = 0.0;
@@ -535,7 +527,7 @@ double EnhancedDynamicLoadBalancer::getAverageTemperature() const
 
 double EnhancedDynamicLoadBalancer::getAverageLoad() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     if (m_drives.empty()) return 0.0;
     
     double sum = 0.0;
@@ -547,7 +539,7 @@ double EnhancedDynamicLoadBalancer::getAverageLoad() const
 
 int EnhancedDynamicLoadBalancer::getHealthyDriveCount() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     int count = 0;
     for (const auto& pair : m_drives) {
         if (pair.second.smart.isHealthy && pair.second.isOnline) {
@@ -559,7 +551,7 @@ int EnhancedDynamicLoadBalancer::getHealthyDriveCount() const
 
 int EnhancedDynamicLoadBalancer::getCriticalDriveCount() const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     int count = 0;
     for (const auto& pair : m_drives) {
         if (pair.second.smart.isCritical) {
@@ -585,9 +577,9 @@ QVariantMap EnhancedDynamicLoadBalancer::getStatistics() const
     return stats;
 }
 
-QVariantMap EnhancedDynamicLoadBalancer::getDriveStatistics(const QString& drivePath) const
+QVariantMap EnhancedDynamicLoadBalancer::getDriveStatistics(const std::string& drivePath) const
 {
-    QMutexLocker lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(&m_mutex);
     
     QVariantMap stats;
     auto it = m_drives.find(drivePath);
@@ -652,14 +644,14 @@ void EnhancedDynamicLoadBalancer::recalculateScores()
     }
 }
 
-void EnhancedDynamicLoadBalancer::checkHealthAlerts(const QString& drivePath, const DriveHealthProfile& profile)
+void EnhancedDynamicLoadBalancer::checkHealthAlerts(const std::string& drivePath, const DriveHealthProfile& profile)
 {
     // SMART critical
     if (profile.smart.isCritical) {
-        QString alert = QString("SMART critical failure predicted - Health: %1%")
-            .arg(static_cast<int>(profile.smart.overallHealth));
+        std::string alert = std::string("SMART critical failure predicted - Health: %1%")
+            );
         
-        emit healthAlert(drivePath, alert, true);
+        healthAlert(drivePath, alert, true);
         
         if (m_healthAlertCallback) {
             m_healthAlertCallback(drivePath, alert, true);
@@ -668,10 +660,10 @@ void EnhancedDynamicLoadBalancer::checkHealthAlerts(const QString& drivePath, co
     
     // Bad sectors growing
     if (profile.badSectors.hasGrowingBadSectors) {
-        QString alert = QString("Bad sector count increasing: %1/day")
-            .arg(profile.badSectors.badSectorGrowthRate);
+        std::string alert = std::string("Bad sector count increasing: %1/day")
+            ;
         
-        emit healthAlert(drivePath, alert, true);
+        healthAlert(drivePath, alert, true);
         
         if (m_healthAlertCallback) {
             m_healthAlertCallback(drivePath, alert, true);
@@ -680,10 +672,10 @@ void EnhancedDynamicLoadBalancer::checkHealthAlerts(const QString& drivePath, co
     
     // TBW exhaustion
     if (profile.tbw.wearLevel >= 90.0) {
-        QString alert = QString("SSD wear level critical: %1% of rated TBW used")
-            .arg(static_cast<int>(profile.tbw.wearLevel));
+        std::string alert = std::string("SSD wear level critical: %1% of rated TBW used")
+            );
         
-        emit healthAlert(drivePath, alert, true);
+        healthAlert(drivePath, alert, true);
         
         if (m_healthAlertCallback) {
             m_healthAlertCallback(drivePath, alert, true);
@@ -742,23 +734,18 @@ double EnhancedDynamicLoadBalancer::adjustScoreForOperation(double baseScore,
     return std::max(0.0, std::min(1.0, adjustedScore));
 }
 
-void EnhancedDynamicLoadBalancer::queryWMIHealth(const QString& drivePath)
+void EnhancedDynamicLoadBalancer::queryWMIHealth(const std::string& drivePath)
 {
-#ifdef Q_OS_WIN
+#ifdef 
     // Use PowerShell to query disk health (async)
     QProcess* process = new QProcess(this);
-    
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        [this, drivePath, process](int exitCode, QProcess::ExitStatus) {
-            if (exitCode == 0) {
-                QString output = process->readAllStandardOutput();
-                
+// Qt connect removed
                 // Parse JSON output
-                QJsonDocument doc = QJsonDocument::fromJson(output.toUtf8());
+                void* doc = void*::fromJson(output.toUtf8());
                 if (!doc.isNull() && doc.isObject()) {
-                    QJsonObject obj = doc.object();
+                    void* obj = doc.object();
                     
-                    QMutexLocker lock(&m_mutex);
+                    std::lock_guard<std::mutex> lock(&m_mutex);
                     auto it = m_drives.find(drivePath);
                     if (it != m_drives.end()) {
                         // Update model info
@@ -767,7 +754,7 @@ void EnhancedDynamicLoadBalancer::queryWMIHealth(const QString& drivePath)
                         
                         // Update SMART-equivalent data
                         if (obj.contains("HealthStatus")) {
-                            QString health = obj["HealthStatus"].toString();
+                            std::string health = obj["HealthStatus"].toString();
                             if (health == "Healthy") {
                                 it->second.smart.overallHealth = 95.0;
                                 it->second.smart.isHealthy = true;
@@ -789,34 +776,29 @@ void EnhancedDynamicLoadBalancer::queryWMIHealth(const QString& drivePath)
             process->deleteLater();
         });
     
-    QString script = QString(
+    std::string script = std::string(
         "Get-PhysicalDisk | Where-Object { $_.DeviceId -match '%1' } | "
         "Select-Object Model, SerialNumber, HealthStatus, OperationalStatus | "
         "ConvertTo-Json"
-    ).arg(drivePath.left(1));
+    ));
     
     process->start("powershell", {"-Command", script});
 #else
-    Q_UNUSED(drivePath);
+    (drivePath);
 #endif
 }
 
-void EnhancedDynamicLoadBalancer::queryNVMeHealth(const QString& drivePath)
+void EnhancedDynamicLoadBalancer::queryNVMeHealth(const std::string& drivePath)
 {
-#ifdef Q_OS_WIN
+#ifdef 
     // Query NVMe specific health via StorageReliabilityCounter
     QProcess* process = new QProcess(this);
-    
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        [this, drivePath, process](int exitCode, QProcess::ExitStatus) {
-            if (exitCode == 0) {
-                QString output = process->readAllStandardOutput();
-                
-                QJsonDocument doc = QJsonDocument::fromJson(output.toUtf8());
+// Qt connect removed
+                void* doc = void*::fromJson(output.toUtf8());
                 if (!doc.isNull() && doc.isObject()) {
-                    QJsonObject obj = doc.object();
+                    void* obj = doc.object();
                     
-                    QMutexLocker lock(&m_mutex);
+                    std::lock_guard<std::mutex> lock(&m_mutex);
                     auto it = m_drives.find(drivePath);
                     if (it != m_drives.end()) {
                         // NVMe temperature
@@ -842,16 +824,16 @@ void EnhancedDynamicLoadBalancer::queryNVMeHealth(const QString& drivePath)
             process->deleteLater();
         });
     
-    QString script = QString(
+    std::string script = std::string(
         "Get-PhysicalDisk | Where-Object { $_.DeviceId -match '%1' } | "
         "Get-StorageReliabilityCounter | "
         "Select-Object Temperature, Wear, ReadErrorsTotal, WriteErrorsTotal | "
         "ConvertTo-Json"
-    ).arg(drivePath.left(1));
+    ));
     
     process->start("powershell", {"-Command", script});
 #else
-    Q_UNUSED(drivePath);
+    (drivePath);
 #endif
 }
 
@@ -864,3 +846,4 @@ int64_t EnhancedDynamicLoadBalancer::getCurrentTimestampMs() const
 }
 
 } // namespace rawrxd::thermal
+

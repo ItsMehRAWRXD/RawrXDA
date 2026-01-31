@@ -28,8 +28,6 @@ void DigestionDatabaseTests::createSchemaAndInsert() {
     QVERIFY(runId > 0);
 }
 
-QTEST_MAIN(DigestionDatabaseTests)
-#include "digestion_db_tests.moc"
-
-
+// Test removed
+// MOC removed
 

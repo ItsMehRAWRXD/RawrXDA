@@ -1,23 +1,20 @@
 // performance_monitor.cpp - Real-Time Performance Monitoring & SLA Tracking
 #include "performance_monitor.h"
-#include <QFile>
-#include <QTextStream>
-#include <QJsonDocument>
-#include <QJsonArray>
+
+
 #include <iostream>
 #include <algorithm>
 #include <numeric>
 
-PerformanceMonitor::PerformanceMonitor(QObject* parent)
-    : QObject(parent),
+PerformanceMonitor::PerformanceMonitor(void* parent)
+    : void(parent),
       monitoringEnabled(true),
       snapshotIntervalMs(60000),
       metricsRetentionHours(24) {
     
-    snapshotTimer = new QTimer(this);
+    snapshotTimer = new void*(this);
     snapshotTimer->setInterval(snapshotIntervalMs);
-    connect(snapshotTimer, &QTimer::timeout, this, &PerformanceMonitor::capturePerformanceSnapshot);
-    
+// Qt connect removed
     setupDefaultSLAs();
     setupDefaultThresholds();
     
@@ -113,18 +110,18 @@ void PerformanceMonitor::setupDefaultThresholds() {
     std::cout << "[PerformanceMonitor] Configured " << thresholds.size() << " performance thresholds" << std::endl;
 }
 
-void PerformanceMonitor::recordMetric(const QString& component, const QString& operation, 
-                                     double value, const QString& unit) {
+void PerformanceMonitor::recordMetric(const std::string& component, const std::string& operation, 
+                                     double value, const std::string& unit) {
     MetricData metric;
-    metric.metricId = QString("%1_%2_%3").arg(component).arg(operation).arg(QDateTime::currentMSecsSinceEpoch());
+    metric.metricId = std::string("%1_%2_%3"));
     metric.component = component;
     metric.operation = operation;
     metric.value = value;
     metric.unit = unit;
-    metric.timestamp = QDateTime::currentDateTime();
+    metric.timestamp = std::chrono::system_clock::time_point::currentDateTime();
     
     // Store in time-series
-    QString metricKey = QString("%1_%2").arg(component).arg(operation);
+    std::string metricKey = std::string("%1_%2");
     metricHistory[metricKey].append(metric);
     
     // Prune old metrics (keep only retention period)
@@ -133,49 +130,49 @@ void PerformanceMonitor::recordMetric(const QString& component, const QString& o
     // Check thresholds
     checkThreshold(metric);
     
-    emit metricRecorded(metric);
+    metricRecorded(metric);
 }
 
-void PerformanceMonitor::recordMetricWithTags(const QString& component, const QString& operation,
-                                             double value, const QString& unit, const QJsonObject& tags) {
+void PerformanceMonitor::recordMetricWithTags(const std::string& component, const std::string& operation,
+                                             double value, const std::string& unit, const void*& tags) {
     MetricData metric;
-    metric.metricId = QString("%1_%2_%3").arg(component).arg(operation).arg(QDateTime::currentMSecsSinceEpoch());
+    metric.metricId = std::string("%1_%2_%3"));
     metric.component = component;
     metric.operation = operation;
     metric.value = value;
     metric.unit = unit;
     metric.tags = tags;
-    metric.timestamp = QDateTime::currentDateTime();
+    metric.timestamp = std::chrono::system_clock::time_point::currentDateTime();
     
-    QString metricKey = QString("%1_%2").arg(component).arg(operation);
+    std::string metricKey = std::string("%1_%2");
     metricHistory[metricKey].append(metric);
     
     pruneOldMetrics(metricKey);
     checkThreshold(metric);
     
-    emit metricRecorded(metric);
+    metricRecorded(metric);
 }
 
-void PerformanceMonitor::startTimer(const QString& timerId, const QString& component, 
-                                   const QString& operation) {
-    QElapsedTimer timer;
+void PerformanceMonitor::startTimer(const std::string& timerId, const std::string& component, 
+                                   const std::string& operation) {
+    std::chrono::steady_clock timer;
     timer.start();
     
     activeTimers[timerId] = timer;
     timerContext[timerId] = qMakePair(component, operation);
 }
 
-double PerformanceMonitor::stopTimer(const QString& timerId) {
+double PerformanceMonitor::stopTimer(const std::string& timerId) {
     if (!activeTimers.contains(timerId)) {
         return -1.0;
     }
     
-    QElapsedTimer timer = activeTimers[timerId];
+    std::chrono::steady_clock timer = activeTimers[timerId];
     double elapsedMs = timer.elapsed();
     
     // Record metric automatically
     if (timerContext.contains(timerId)) {
-        QPair<QString, QString> context = timerContext[timerId];
+        std::pair<std::string, std::string> context = timerContext[timerId];
         recordMetric(context.first, context.second, elapsedMs, "ms");
     }
     
@@ -185,12 +182,12 @@ double PerformanceMonitor::stopTimer(const QString& timerId) {
     return elapsedMs;
 }
 
-ScopedTimer PerformanceMonitor::createScopedTimer(const QString& component, const QString& operation) {
+ScopedTimer PerformanceMonitor::createScopedTimer(const std::string& component, const std::string& operation) {
     return ScopedTimer(this, component, operation);
 }
 
 void PerformanceMonitor::checkThreshold(const MetricData& metric) {
-    QString thresholdKey = QString("%1_%2").arg(metric.component).arg(metric.operation);
+    std::string thresholdKey = std::string("%1_%2");
     
     if (!thresholds.contains(thresholdKey)) {
         return;
@@ -207,24 +204,24 @@ void PerformanceMonitor::checkThreshold(const MetricData& metric) {
                   << metric.component.toStdString() << "." << metric.operation.toStdString()
                   << " = " << metric.value << " (threshold: " << threshold.criticalThreshold << ")" << std::endl;
         
-        emit thresholdViolation(metric, "critical");
+        thresholdViolation(metric, "critical");
     } else if (metric.value >= threshold.warningThreshold) {
         std::cout << "[PerformanceMonitor] WARNING threshold exceeded: "
                   << metric.component.toStdString() << "." << metric.operation.toStdString()
                   << " = " << metric.value << " (threshold: " << threshold.warningThreshold << ")" << std::endl;
         
-        emit thresholdViolation(metric, "warning");
+        thresholdViolation(metric, "warning");
     }
 }
 
-void PerformanceMonitor::pruneOldMetrics(const QString& metricKey) {
+void PerformanceMonitor::pruneOldMetrics(const std::string& metricKey) {
     if (!metricHistory.contains(metricKey)) {
         return;
     }
     
-    QDateTime cutoff = QDateTime::currentDateTime().addSecs(-metricsRetentionHours * 3600);
+    std::chrono::system_clock::time_point cutoff = std::chrono::system_clock::time_point::currentDateTime().addSecs(-metricsRetentionHours * 3600);
     
-    QVector<MetricData>& metrics = metricHistory[metricKey];
+    std::vector<MetricData>& metrics = metricHistory[metricKey];
     metrics.erase(
         std::remove_if(metrics.begin(), metrics.end(),
                       [&cutoff](const MetricData& m) { return m.timestamp < cutoff; }),
@@ -232,16 +229,16 @@ void PerformanceMonitor::pruneOldMetrics(const QString& metricKey) {
     );
 }
 
-QVector<MetricData> PerformanceMonitor::getMetrics(const QString& component, const QString& operation,
-                                                   const QDateTime& startTime, const QDateTime& endTime) const {
-    QString metricKey = QString("%1_%2").arg(component).arg(operation);
+std::vector<MetricData> PerformanceMonitor::getMetrics(const std::string& component, const std::string& operation,
+                                                   const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime) const {
+    std::string metricKey = std::string("%1_%2");
     
     if (!metricHistory.contains(metricKey)) {
-        return QVector<MetricData>();
+        return std::vector<MetricData>();
     }
     
-    QVector<MetricData> filtered;
-    const QVector<MetricData>& metrics = metricHistory[metricKey];
+    std::vector<MetricData> filtered;
+    const std::vector<MetricData>& metrics = metricHistory[metricKey];
     
     for (const MetricData& metric : metrics) {
         if (metric.timestamp >= startTime && metric.timestamp <= endTime) {
@@ -252,9 +249,9 @@ QVector<MetricData> PerformanceMonitor::getMetrics(const QString& component, con
     return filtered;
 }
 
-double PerformanceMonitor::getAverageMetric(const QString& component, const QString& operation,
-                                           const QDateTime& startTime, const QDateTime& endTime) const {
-    QVector<MetricData> metrics = getMetrics(component, operation, startTime, endTime);
+double PerformanceMonitor::getAverageMetric(const std::string& component, const std::string& operation,
+                                           const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime) const {
+    std::vector<MetricData> metrics = getMetrics(component, operation, startTime, endTime);
     
     if (metrics.isEmpty()) {
         return 0.0;
@@ -268,30 +265,30 @@ double PerformanceMonitor::getAverageMetric(const QString& component, const QStr
     return sum / metrics.size();
 }
 
-double PerformanceMonitor::getP95Latency(const QString& component, const QString& operation) const {
+double PerformanceMonitor::getP95Latency(const std::string& component, const std::string& operation) const {
     return getPercentile(component, operation, 95.0);
 }
 
-double PerformanceMonitor::getP99Latency(const QString& component, const QString& operation) const {
+double PerformanceMonitor::getP99Latency(const std::string& component, const std::string& operation) const {
     return getPercentile(component, operation, 99.0);
 }
 
-double PerformanceMonitor::getPercentile(const QString& component, const QString& operation, 
+double PerformanceMonitor::getPercentile(const std::string& component, const std::string& operation, 
                                         double percentile) const {
-    QString metricKey = QString("%1_%2").arg(component).arg(operation);
+    std::string metricKey = std::string("%1_%2");
     
     if (!metricHistory.contains(metricKey)) {
         return 0.0;
     }
     
-    const QVector<MetricData>& metrics = metricHistory[metricKey];
+    const std::vector<MetricData>& metrics = metricHistory[metricKey];
     
     if (metrics.isEmpty()) {
         return 0.0;
     }
     
     // Extract values and sort
-    QVector<double> values;
+    std::vector<double> values;
     for (const MetricData& metric : metrics) {
         values.append(metric.value);
     }
@@ -305,7 +302,7 @@ double PerformanceMonitor::getPercentile(const QString& component, const QString
     return values[index];
 }
 
-SLACompliance PerformanceMonitor::evaluateSLA(const QString& slaId) const {
+SLACompliance PerformanceMonitor::evaluateSLA(const std::string& slaId) const {
     SLACompliance compliance;
     compliance.slaId = slaId;
     compliance.isCompliant = false;
@@ -322,11 +319,11 @@ SLACompliance PerformanceMonitor::evaluateSLA(const QString& slaId) const {
     }
     
     // Get time window
-    QDateTime endTime = QDateTime::currentDateTime();
-    QDateTime startTime = calculateTimeWindow(endTime, sla.timeWindow);
+    std::chrono::system_clock::time_point endTime = std::chrono::system_clock::time_point::currentDateTime();
+    std::chrono::system_clock::time_point startTime = calculateTimeWindow(endTime, sla.timeWindow);
     
     // Get metrics for this SLA
-    QVector<MetricData> metrics = getMetrics(sla.component, sla.metric, startTime, endTime);
+    std::vector<MetricData> metrics = getMetrics(sla.component, sla.metric, startTime, endTime);
     
     if (metrics.isEmpty()) {
         compliance.currentValue = 0.0;
@@ -379,10 +376,10 @@ SLACompliance PerformanceMonitor::evaluateSLA(const QString& slaId) const {
     return compliance;
 }
 
-QVector<SLACompliance> PerformanceMonitor::evaluateAllSLAs() const {
-    QVector<SLACompliance> allCompliance;
+std::vector<SLACompliance> PerformanceMonitor::evaluateAllSLAs() const {
+    std::vector<SLACompliance> allCompliance;
     
-    for (const QString& slaId : slaDefinitions.keys()) {
+    for (const std::string& slaId : slaDefinitions.keys()) {
         SLACompliance compliance = evaluateSLA(slaId);
         allCompliance.append(compliance);
     }
@@ -390,8 +387,8 @@ QVector<SLACompliance> PerformanceMonitor::evaluateAllSLAs() const {
     return allCompliance;
 }
 
-double PerformanceMonitor::calculateUptimePercentage(const QDateTime& startTime, 
-                                                     const QDateTime& endTime) const {
+double PerformanceMonitor::calculateUptimePercentage(const std::chrono::system_clock::time_point& startTime, 
+                                                     const std::chrono::system_clock::time_point& endTime) const {
     // Calculate total minutes in window
     qint64 totalMinutes = startTime.secsTo(endTime) / 60;
     
@@ -408,11 +405,11 @@ double PerformanceMonitor::calculateUptimePercentage(const QDateTime& startTime,
     return ((totalMinutes - downtimeMinutes) * 100.0) / totalMinutes;
 }
 
-double PerformanceMonitor::calculateErrorRate(const QDateTime& startTime, 
-                                              const QDateTime& endTime) const {
+double PerformanceMonitor::calculateErrorRate(const std::chrono::system_clock::time_point& startTime, 
+                                              const std::chrono::system_clock::time_point& endTime) const {
     // Get total operations
-    QVector<MetricData> successMetrics = getMetrics("system", "success", startTime, endTime);
-    QVector<MetricData> errorMetrics = getMetrics("system", "error", startTime, endTime);
+    std::vector<MetricData> successMetrics = getMetrics("system", "success", startTime, endTime);
+    std::vector<MetricData> errorMetrics = getMetrics("system", "error", startTime, endTime);
     
     int totalOps = successMetrics.size() + errorMetrics.size();
     
@@ -423,7 +420,7 @@ double PerformanceMonitor::calculateErrorRate(const QDateTime& startTime,
     return (errorMetrics.size() * 100.0) / totalOps;
 }
 
-QDateTime PerformanceMonitor::calculateTimeWindow(const QDateTime& endTime, const QString& window) const {
+std::chrono::system_clock::time_point PerformanceMonitor::calculateTimeWindow(const std::chrono::system_clock::time_point& endTime, const std::string& window) const {
     if (window == "1h") {
         return endTime.addSecs(-3600);
     } else if (window == "24h") {
@@ -439,16 +436,16 @@ QDateTime PerformanceMonitor::calculateTimeWindow(const QDateTime& endTime, cons
 
 PerformanceSnapshot PerformanceMonitor::capturePerformanceSnapshot() {
     PerformanceSnapshot snapshot;
-    snapshot.timestamp = QDateTime::currentDateTime();
+    snapshot.timestamp = std::chrono::system_clock::time_point::currentDateTime();
     
     // Capture system metrics (platform-specific)
-#ifdef Q_OS_WIN
+#ifdef 
     snapshot.cpuUsage = getCPUUsageWindows();
     snapshot.memoryUsage = getMemoryUsageWindows();
-#elif defined(Q_OS_LINUX)
+#elif defined()
     snapshot.cpuUsage = getCPUUsageLinux();
     snapshot.memoryUsage = getMemoryUsageLinux();
-#elif defined(Q_OS_MAC)
+#elif defined()
     snapshot.cpuUsage = getCPUUsageMac();
     snapshot.memoryUsage = getMemoryUsageMac();
 #else
@@ -461,9 +458,9 @@ PerformanceSnapshot PerformanceMonitor::capturePerformanceSnapshot() {
     snapshot.activeConnections = activeTimers.size();
     
     // Calculate request metrics
-    QString metricKey = "ai_execution_latency";
+    std::string metricKey = "ai_execution_latency";
     if (metricHistory.contains(metricKey)) {
-        const QVector<MetricData>& metrics = metricHistory[metricKey];
+        const std::vector<MetricData>& metrics = metricHistory[metricKey];
         if (!metrics.isEmpty()) {
             double sum = 0.0;
             for (const MetricData& m : metrics) {
@@ -474,8 +471,8 @@ PerformanceSnapshot PerformanceMonitor::capturePerformanceSnapshot() {
     }
     
     // Calculate requests per second (last minute)
-    QDateTime oneMinuteAgo = QDateTime::currentDateTime().addSecs(-60);
-    QVector<MetricData> recentMetrics = getMetrics("system", "request", oneMinuteAgo, snapshot.timestamp);
+    std::chrono::system_clock::time_point oneMinuteAgo = std::chrono::system_clock::time_point::currentDateTime().addSecs(-60);
+    std::vector<MetricData> recentMetrics = getMetrics("system", "request", oneMinuteAgo, snapshot.timestamp);
     snapshot.requestsPerSecond = recentMetrics.size() / 60.0;
     
     // Record snapshot
@@ -486,7 +483,7 @@ PerformanceSnapshot PerformanceMonitor::capturePerformanceSnapshot() {
         performanceHistory.removeFirst();
     }
     
-    emit snapshotCaptured(snapshot);
+    snapshotCaptured(snapshot);
     
     return snapshot;
 }
@@ -521,14 +518,14 @@ double PerformanceMonitor::getMemoryUsageMac() const {
     return 0.0;
 }
 
-QVector<PerformanceSnapshot> PerformanceMonitor::getPerformanceHistory(int minutes) const {
+std::vector<PerformanceSnapshot> PerformanceMonitor::getPerformanceHistory(int minutes) const {
     if (minutes <= 0 || performanceHistory.isEmpty()) {
         return performanceHistory;
     }
     
-    QDateTime cutoff = QDateTime::currentDateTime().addSecs(-minutes * 60);
+    std::chrono::system_clock::time_point cutoff = std::chrono::system_clock::time_point::currentDateTime().addSecs(-minutes * 60);
     
-    QVector<PerformanceSnapshot> filtered;
+    std::vector<PerformanceSnapshot> filtered;
     for (const PerformanceSnapshot& snapshot : performanceHistory) {
         if (snapshot.timestamp >= cutoff) {
             filtered.append(snapshot);
@@ -538,8 +535,8 @@ QVector<PerformanceSnapshot> PerformanceMonitor::getPerformanceHistory(int minut
     return filtered;
 }
 
-QVector<Bottleneck> PerformanceMonitor::detectBottlenecks() const {
-    QVector<Bottleneck> bottlenecks;
+std::vector<Bottleneck> PerformanceMonitor::detectBottlenecks() const {
+    std::vector<Bottleneck> bottlenecks;
     
     // Check CPU bottleneck
     if (!performanceHistory.isEmpty()) {
@@ -555,8 +552,8 @@ QVector<Bottleneck> PerformanceMonitor::detectBottlenecks() const {
             cpuBottleneck.component = "system";
             cpuBottleneck.type = "cpu";
             cpuBottleneck.severity = (avgCPU > 95.0) ? 10.0 : (avgCPU / 10.0);
-            cpuBottleneck.description = QString("High CPU usage detected: %1%").arg(avgCPU);
-            cpuBottleneck.detectedAt = QDateTime::currentDateTime();
+            cpuBottleneck.description = std::string("High CPU usage detected: %1%");
+            cpuBottleneck.detectedAt = std::chrono::system_clock::time_point::currentDateTime();
             cpuBottleneck.recommendations << "Optimize compute-intensive operations"
                                          << "Consider parallelization"
                                          << "Upgrade CPU or add more cores";
@@ -576,8 +573,8 @@ QVector<Bottleneck> PerformanceMonitor::detectBottlenecks() const {
             memBottleneck.component = "system";
             memBottleneck.type = "memory";
             memBottleneck.severity = (avgMemory > 95.0) ? 10.0 : (avgMemory / 10.0);
-            memBottleneck.description = QString("High memory usage detected: %1%").arg(avgMemory);
-            memBottleneck.detectedAt = QDateTime::currentDateTime();
+            memBottleneck.description = std::string("High memory usage detected: %1%");
+            memBottleneck.detectedAt = std::chrono::system_clock::time_point::currentDateTime();
             memBottleneck.recommendations << "Implement memory pooling"
                                          << "Reduce cache size"
                                          << "Add more RAM";
@@ -593,8 +590,8 @@ QVector<Bottleneck> PerformanceMonitor::detectBottlenecks() const {
         latencyBottleneck.component = "ai_execution";
         latencyBottleneck.type = "io";
         latencyBottleneck.severity = (p95Latency > 5000.0) ? 10.0 : (p95Latency / 500.0);
-        latencyBottleneck.description = QString("High P95 latency detected: %1ms").arg(p95Latency);
-        latencyBottleneck.detectedAt = QDateTime::currentDateTime();
+        latencyBottleneck.description = std::string("High P95 latency detected: %1ms");
+        latencyBottleneck.detectedAt = std::chrono::system_clock::time_point::currentDateTime();
         latencyBottleneck.recommendations << "Use local models instead of cloud"
                                          << "Implement request caching"
                                          << "Optimize network connectivity";
@@ -604,7 +601,7 @@ QVector<Bottleneck> PerformanceMonitor::detectBottlenecks() const {
     return bottlenecks;
 }
 
-TrendAnalysis PerformanceMonitor::analyzeTrend(const QString& component, const QString& operation,
+TrendAnalysis PerformanceMonitor::analyzeTrend(const std::string& component, const std::string& operation,
                                               int windowMinutes) const {
     TrendAnalysis analysis;
     analysis.component = component;
@@ -612,10 +609,10 @@ TrendAnalysis PerformanceMonitor::analyzeTrend(const QString& component, const Q
     analysis.trend = "stable";
     analysis.changePercentage = 0.0;
     
-    QDateTime endTime = QDateTime::currentDateTime();
-    QDateTime startTime = endTime.addSecs(-windowMinutes * 60);
+    std::chrono::system_clock::time_point endTime = std::chrono::system_clock::time_point::currentDateTime();
+    std::chrono::system_clock::time_point startTime = endTime.addSecs(-windowMinutes * 60);
     
-    QVector<MetricData> metrics = getMetrics(component, operation, startTime, endTime);
+    std::vector<MetricData> metrics = getMetrics(component, operation, startTime, endTime);
     
     if (metrics.size() < 2) {
         return analysis;
@@ -657,8 +654,8 @@ TrendAnalysis PerformanceMonitor::analyzeTrend(const QString& component, const Q
     return analysis;
 }
 
-bool PerformanceMonitor::exportToPrometheus(const QString& outputPath) const {
-    QFile file(outputPath);
+bool PerformanceMonitor::exportToPrometheus(const std::string& outputPath) const {
+    std::fstream file(outputPath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         std::cerr << "[PerformanceMonitor] Failed to open Prometheus export file: " 
                   << outputPath.toStdString() << std::endl;
@@ -669,8 +666,8 @@ bool PerformanceMonitor::exportToPrometheus(const QString& outputPath) const {
     
     // Export all metrics in Prometheus format
     for (auto it = metricHistory.begin(); it != metricHistory.end(); ++it) {
-        QString metricKey = it.key();
-        const QVector<MetricData>& metrics = it.value();
+        std::string metricKey = it.key();
+        const std::vector<MetricData>& metrics = it.value();
         
         if (metrics.isEmpty()) {
             continue;
@@ -680,16 +677,16 @@ bool PerformanceMonitor::exportToPrometheus(const QString& outputPath) const {
         const MetricData& metric = metrics.last();
         
         // Prometheus format: metric_name{labels} value timestamp
-        QString prometheusName = QString("%1_%2").arg(metric.component).arg(metric.operation)
+        std::string prometheusName = std::string("%1_%2")
                                 .replace(" ", "_").replace("-", "_").toLower();
         
         out << prometheusName << "{";
         
         // Add tags as labels
         if (!metric.tags.isEmpty()) {
-            QStringList labels;
+            std::vector<std::string> labels;
             for (auto tagIt = metric.tags.begin(); tagIt != metric.tags.end(); ++tagIt) {
-                labels << QString("%1=\"%2\"").arg(tagIt.key()).arg(tagIt.value().toString());
+                labels << std::string("%1=\"%2\"")).toString());
             }
             out << labels.join(",");
         }
@@ -731,12 +728,13 @@ void PerformanceMonitor::clearMetrics() {
 }
 
 // ScopedTimer implementation
-ScopedTimer::ScopedTimer(PerformanceMonitor* monitor, const QString& component, const QString& operation)
+ScopedTimer::ScopedTimer(PerformanceMonitor* monitor, const std::string& component, const std::string& operation)
     : performanceMonitor(monitor), component(component), operation(operation) {
-    timerId = QString("%1_%2_%3").arg(component).arg(operation).arg(QDateTime::currentMSecsSinceEpoch());
+    timerId = std::string("%1_%2_%3"));
     performanceMonitor->startTimer(timerId, component, operation);
 }
 
 ScopedTimer::~ScopedTimer() {
     performanceMonitor->stopTimer(timerId);
 }
+

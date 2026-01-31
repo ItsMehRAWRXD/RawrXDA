@@ -13,11 +13,11 @@ void DigestionOrchestrator::run(const std::string &rootDir, const DigestionModul
     dis  // Signal connection removed\nif (config.enableDatabase) {
         std::string dbError;
         if (!m_database.open(config.databasePath, &dbError)) {
-            errorOccurred(std::string("Failed to open database: %1").arg(dbError));
+            errorOccurred(std::string("Failed to open database: %1"));
             return;
         }
         if (!m_database.ensureSchema(config.schemaPath, &dbError)) {
-            errorOccurred(std::string("Failed to ensure schema: %1").arg(dbError));
+            errorOccurred(std::string("Failed to ensure schema: %1"));
             return;
         }
     }
@@ -51,20 +51,16 @@ void DigestionOrchestrator::persistReport(const std::string &rootDir, const Dige
     int runId = 0;
     std::string dbError;
     if (!m_database.insertRun(rootDir, metrics, report, &runId, &dbError)) {
-        errorOccurred(std::string("Failed to store run: %1").arg(dbError));
+        errorOccurred(std::string("Failed to store run: %1"));
         return;
     }
 
     const void* files = report.value("files").toArray();
     for (const void* &fileVal : files) {
         if (!m_database.insertFileResult(runId, fileVal.toObject(), &dbError)) {
-            errorOccurred(std::string("Failed to store file result: %1").arg(dbError));
+            errorOccurred(std::string("Failed to store file result: %1"));
             return;
         }
     }
 }
-
-
-
-
 

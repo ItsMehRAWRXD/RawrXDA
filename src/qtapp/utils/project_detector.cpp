@@ -6,13 +6,7 @@
  */
 
 #include "project_detector.h"
-#include <QDir>
-#include <QFileInfo>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QFile>
-#include <QDebug>
-#include <QProcess>
+
 
 namespace RawrXD {
 
@@ -20,32 +14,32 @@ namespace RawrXD {
 
 ProjectMetadata::ProjectMetadata()
     : type(ProjectType::Unknown)
-    , lastOpened(QDateTime::currentDateTime())
+    , lastOpened(std::chrono::system_clock::time_point::currentDateTime())
 {}
 
-QJsonObject ProjectMetadata::toJson() const {
-    QJsonObject obj;
+void* ProjectMetadata::toJson() const {
+    void* obj;
     obj["name"] = name;
     obj["rootPath"] = rootPath;
     obj["type"] = static_cast<int>(type);
     obj["buildDirectory"] = buildDirectory;
     obj["gitBranch"] = gitBranch;
-    obj["lastOpened"] = lastOpened.toString(Qt::ISODate);
+    obj["lastOpened"] = lastOpened.toString(//ISODate);
     
-    QJsonArray recentArray;
-    for (const QString& file : recentFiles) {
+    void* recentArray;
+    for (const std::string& file : recentFiles) {
         recentArray.append(file);
     }
     obj["recentFiles"] = recentArray;
     
-    QJsonArray includeArray;
-    for (const QString& path : includePaths) {
+    void* includeArray;
+    for (const std::string& path : includePaths) {
         includeArray.append(path);
     }
     obj["includePaths"] = includeArray;
     
-    QJsonArray sourceArray;
-    for (const QString& path : sourcePaths) {
+    void* sourceArray;
+    for (const std::string& path : sourcePaths) {
         sourceArray.append(path);
     }
     obj["sourcePaths"] = sourceArray;
@@ -55,29 +49,29 @@ QJsonObject ProjectMetadata::toJson() const {
     return obj;
 }
 
-bool ProjectMetadata::fromJson(const QJsonObject& json) {
+bool ProjectMetadata::fromJson(const void*& json) {
     name = json["name"].toString();
     rootPath = json["rootPath"].toString();
     type = static_cast<ProjectType>(json["type"].toInt());
     buildDirectory = json["buildDirectory"].toString();
     gitBranch = json["gitBranch"].toString();
-    lastOpened = QDateTime::fromString(json["lastOpened"].toString(), Qt::ISODate);
+    lastOpened = std::chrono::system_clock::time_point::fromString(json["lastOpened"].toString(), //ISODate);
     
     recentFiles.clear();
-    QJsonArray recentArray = json["recentFiles"].toArray();
-    for (const QJsonValue& val : recentArray) {
+    void* recentArray = json["recentFiles"].toArray();
+    for (const void*& val : recentArray) {
         recentFiles.append(val.toString());
     }
     
     includePaths.clear();
-    QJsonArray includeArray = json["includePaths"].toArray();
-    for (const QJsonValue& val : includeArray) {
+    void* includeArray = json["includePaths"].toArray();
+    for (const void*& val : includeArray) {
         includePaths.append(val.toString());
     }
     
     sourcePaths.clear();
-    QJsonArray sourceArray = json["sourcePaths"].toArray();
-    for (const QJsonValue& val : sourceArray) {
+    void* sourceArray = json["sourcePaths"].toArray();
+    for (const void*& val : sourceArray) {
         sourcePaths.append(val.toString());
     }
     
@@ -91,22 +85,22 @@ bool ProjectMetadata::fromJson(const QJsonObject& json) {
 ProjectDetector::ProjectDetector() = default;
 ProjectDetector::~ProjectDetector() = default;
 
-ProjectMetadata ProjectDetector::detectProject(const QString& path) {
+ProjectMetadata ProjectDetector::detectProject(const std::string& path) {
     ProjectMetadata meta;
     
     // Find project root
-    QString root = findProjectRoot(path);
+    std::string root = findProjectRoot(path);
     if (root.isEmpty()) {
-        root = QFileInfo(path).isDir() ? path : QFileInfo(path).absolutePath();
+        root = std::filesystem::path(path).isDir() ? path : std::filesystem::path(path).absolutePath();
     }
     
     meta.rootPath = root;
-    meta.name = QFileInfo(root).fileName();
+    meta.name = std::filesystem::path(root).fileName();
     meta.type = detectProjectType(root);
     meta.buildDirectory = defaultBuildDirectory(meta.type);
     meta.sourcePaths = defaultSourceDirectories(meta.type);
     meta.gitBranch = detectGitBranch(root);
-    meta.lastOpened = QDateTime::currentDateTime();
+    meta.lastOpened = std::chrono::system_clock::time_point::currentDateTime();
     
     // Try to load existing metadata and merge
     if (hasProjectMetadata(root)) {
@@ -123,12 +117,12 @@ ProjectMetadata ProjectDetector::detectProject(const QString& path) {
     return meta;
 }
 
-QString ProjectDetector::findProjectRoot(const QString& anyPath) {
-    QFileInfo info(anyPath);
-    QString currentDir = info.isDir() ? info.absoluteFilePath() : info.absolutePath();
+std::string ProjectDetector::findProjectRoot(const std::string& anyPath) {
+    std::filesystem::path info(anyPath);
+    std::string currentDir = info.isDir() ? info.absoluteFilePath() : info.absolutePath();
     
     // Search up the directory tree for project markers
-    QDir dir(currentDir);
+    std::filesystem::path dir(currentDir);
     int maxLevels = 10;  // Don't search too far up
     
     for (int level = 0; level < maxLevels; ++level) {
@@ -152,10 +146,10 @@ QString ProjectDetector::findProjectRoot(const QString& anyPath) {
     }
     
     // No project root found
-    return QString();
+    return std::string();
 }
 
-ProjectType ProjectDetector::detectProjectType(const QString& rootPath) {
+ProjectType ProjectDetector::detectProjectType(const std::string& rootPath) {
     // Check in priority order (most specific first)
     
     // Git repository (can coexist with other types)
@@ -217,7 +211,7 @@ ProjectType ProjectDetector::detectProjectType(const QString& rootPath) {
     return ProjectType::Generic;
 }
 
-QString ProjectDetector::projectTypeName(ProjectType type) {
+std::string ProjectDetector::projectTypeName(ProjectType type) {
     switch (type) {
         case ProjectType::Git: return "Git Repository";
         case ProjectType::CMake: return "CMake Project";
@@ -235,7 +229,7 @@ QString ProjectDetector::projectTypeName(ProjectType type) {
     }
 }
 
-QString ProjectDetector::defaultBuildDirectory(ProjectType type) {
+std::string ProjectDetector::defaultBuildDirectory(ProjectType type) {
     switch (type) {
         case ProjectType::CMake: return "build";
         case ProjectType::Rust: return "target";
@@ -249,7 +243,7 @@ QString ProjectDetector::defaultBuildDirectory(ProjectType type) {
     }
 }
 
-QStringList ProjectDetector::defaultSourceDirectories(ProjectType type) {
+std::vector<std::string> ProjectDetector::defaultSourceDirectories(ProjectType type) {
     switch (type) {
         case ProjectType::CMake:
         case ProjectType::QMake:
@@ -274,43 +268,39 @@ QStringList ProjectDetector::defaultSourceDirectories(ProjectType type) {
 
 bool ProjectDetector::saveProjectMetadata(const ProjectMetadata& metadata) {
     if (metadata.rootPath.isEmpty()) {
-        qWarning() << "Cannot save project metadata: no root path";
         return false;
     }
     
     // Create .rawrxd directory if needed
-    QString configDir = projectConfigDirectory(metadata.rootPath);
-    QDir dir;
+    std::string configDir = projectConfigDirectory(metadata.rootPath);
+    std::filesystem::path dir;
     if (!dir.mkpath(configDir)) {
-        qWarning() << "Failed to create config directory:" << configDir;
         return false;
     }
     
     // Write JSON file
-    QString configFile = projectConfigFile(metadata.rootPath);
-    QFile file(configFile);
+    std::string configFile = projectConfigFile(metadata.rootPath);
+    std::fstream file(configFile);
     if (!file.open(QIODevice::WriteOnly)) {
-        qWarning() << "Failed to open config file for writing:" << configFile;
         return false;
     }
     
-    QJsonDocument doc(metadata.toJson());
-    file.write(doc.toJson(QJsonDocument::Indented));
+    void* doc(metadata.toJson());
+    file.write(doc.toJson(void*::Indented));
     return true;
 }
 
-ProjectMetadata ProjectDetector::loadProjectMetadata(const QString& projectRoot) {
+ProjectMetadata ProjectDetector::loadProjectMetadata(const std::string& projectRoot) {
     ProjectMetadata meta;
     
-    QString configFile = projectConfigFile(projectRoot);
-    QFile file(configFile);
+    std::string configFile = projectConfigFile(projectRoot);
+    std::fstream file(configFile);
     if (!file.open(QIODevice::ReadOnly)) {
         return meta;  // Return empty metadata
     }
     
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    void* doc = void*::fromJson(file.readAll());
     if (!doc.isObject()) {
-        qWarning() << "Invalid project metadata JSON:" << configFile;
         return meta;
     }
     
@@ -318,32 +308,32 @@ ProjectMetadata ProjectDetector::loadProjectMetadata(const QString& projectRoot)
     return meta;
 }
 
-bool ProjectDetector::hasProjectMetadata(const QString& projectRoot) {
-    return QFileInfo::exists(projectConfigFile(projectRoot));
+bool ProjectDetector::hasProjectMetadata(const std::string& projectRoot) {
+    return std::filesystem::path::exists(projectConfigFile(projectRoot));
 }
 
-QString ProjectDetector::projectConfigDirectory(const QString& projectRoot) {
-    return QDir(projectRoot).filePath(".rawrxd");
+std::string ProjectDetector::projectConfigDirectory(const std::string& projectRoot) {
+    return std::filesystem::path(projectRoot).filePath(".rawrxd");
 }
 
-QString ProjectDetector::projectConfigFile(const QString& projectRoot) {
-    return QDir(projectConfigDirectory(projectRoot)).filePath("project.json");
+std::string ProjectDetector::projectConfigFile(const std::string& projectRoot) {
+    return std::filesystem::path(projectConfigDirectory(projectRoot)).filePath("project.json");
 }
 
-QString ProjectDetector::detectGitBranch(const QString& projectRoot) {
-    QDir dir(projectRoot);
+std::string ProjectDetector::detectGitBranch(const std::string& projectRoot) {
+    std::filesystem::path dir(projectRoot);
     if (!dir.exists(".git")) {
-        return QString();
+        return std::string();
     }
     
     // Try to read .git/HEAD
-    QString headFile = dir.filePath(".git/HEAD");
-    QFile file(headFile);
+    std::string headFile = dir.filePath(".git/HEAD");
+    std::fstream file(headFile);
     if (!file.open(QIODevice::ReadOnly)) {
-        return QString();
+        return std::string();
     }
     
-    QString content = QString::fromUtf8(file.readAll()).trimmed();
+    std::string content = std::string::fromUtf8(file.readAll()).trimmed();
     
     // Format: "ref: refs/heads/main" or just a commit hash
     if (content.startsWith("ref: refs/heads/")) {
@@ -355,10 +345,10 @@ QString ProjectDetector::detectGitBranch(const QString& projectRoot) {
         return "detached HEAD";
     }
     
-    return QString();
+    return std::string();
 }
 
-void ProjectDetector::addRecentFile(ProjectMetadata& metadata, const QString& filePath, int maxRecent) {
+void ProjectDetector::addRecentFile(ProjectMetadata& metadata, const std::string& filePath, int maxRecent) {
     // Remove if already in list
     metadata.recentFiles.removeAll(filePath);
     
@@ -371,18 +361,18 @@ void ProjectDetector::addRecentFile(ProjectMetadata& metadata, const QString& fi
     }
 }
 
-bool ProjectDetector::hasMarkerFile(const QString& dirPath, const QString& markerFile) {
-    QDir dir(dirPath);
+bool ProjectDetector::hasMarkerFile(const std::string& dirPath, const std::string& markerFile) {
+    std::filesystem::path dir(dirPath);
     return dir.exists(markerFile);
 }
 
-bool ProjectDetector::hasFilePattern(const QString& dirPath, const QString& pattern) {
-    QDir dir(dirPath);
-    QStringList matches = dir.entryList({pattern}, QDir::Files);
+bool ProjectDetector::hasFilePattern(const std::string& dirPath, const std::string& pattern) {
+    std::filesystem::path dir(dirPath);
+    std::vector<std::string> matches = dir.entryList({pattern}, std::filesystem::path::Files);
     return !matches.isEmpty();
 }
 
-bool ProjectDetector::checkProjectType(const QString& rootPath, ProjectType type) {
+bool ProjectDetector::checkProjectType(const std::string& rootPath, ProjectType type) {
     // Static method implementation - checks if directory contains markers for given type
     switch (type) {
         case ProjectType::CMake:
@@ -413,3 +403,4 @@ bool ProjectDetector::checkProjectType(const QString& rootPath, ProjectType type
 }
 
 } // namespace RawrXD
+

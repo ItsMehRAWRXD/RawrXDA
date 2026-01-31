@@ -75,7 +75,6 @@ TaskOrchestrator::~TaskOrchestrator()
 
 void TaskOrchestrator::orchestrateTask(const std::string& naturalLanguageDescription)
 {
-    // // qDebug:  "Orchestrating task:" << naturalLanguageDescription;
     
     // Step 1: Enhanced task decomposition with memory awareness
     std::vector<TaskDefinition> tasks = decomposeComplexTask(naturalLanguageDescription);
@@ -133,9 +132,9 @@ std::vector<TaskDefinition> TaskOrchestrator::parseNaturalLanguage(const std::st
     
     // Check for multiple task indicators
     std::regex multiTaskRegex("(and|then|next|also|plus|,|;)");
-    std::regexMatchIterator matches = multiTaskRegex.globalMatch(lowerDesc);
+    std::regexMatchIterator matches = multiTaskRegex;
     
-    if (matches.hasNext()) {
+    if (matchesfalse) {
         // Complex task with multiple components
         std::stringList parts = description.split(multiTaskRegex, SkipEmptyParts);
         
@@ -294,9 +293,9 @@ void TaskOrchestrator::executeTask(const TaskDefinition& task)
     
     // Create the prompt for RollarCoaster
     std::string prompt = std::string("Task: %1\nType: %2\nPriority: %3\n\nPlease execute this task:")
-        .arg(task.description)
-        .arg(task.type)
-        .arg(task.priority);
+
+
+        ;
     
     // Send request to RollarCoaster
     void* request = createRollarCoasterRequest(task.model, prompt);
@@ -341,8 +340,8 @@ void TaskOrchestrator::createExecutionTab(const TaskDefinition& task)
     
     // Task header
     void* headerLayout = new void();
-    void* taskLabel = new void(std::string("Task: %1").arg(task.description));
-    void* modelLabel = new void(std::string("Model: %1").arg(task.model));
+    void* taskLabel = new void(std::string("Task: %1"));
+    void* modelLabel = new void(std::string("Model: %1"));
     void* progressBar = new void();
     progressBar->setRange(0, 100);
     progressBar->setValue(0);
@@ -361,7 +360,7 @@ void TaskOrchestrator::createExecutionTab(const TaskDefinition& task)
     layout->addWidget(contentArea);
     
     // Add tab to main window
-    std::string tabName = std::string("Task-%1").arg(task.id.left(8));
+    std::string tabName = std::string("Task-%1"));
     int tabIndex = tabWidget->addTab(taskTab, tabName);
     tabWidget->setCurrentIndex(tabIndex);
     
@@ -459,8 +458,8 @@ void* TaskOrchestrator::createRollarCoasterRequest(const std::string& model, con
 std::string TaskOrchestrator::generateTaskId() const
 {
     return std::string("task_%1_%2")
-        .arg(// DateTime::currentDateTime().toMSecsSinceEpoch())
-    .arg(QRandomGenerator::global()->bounded(10000));
+        .toMSecsSinceEpoch())
+    ->bounded(10000));
 }
 
 std::vector<std::string> TaskOrchestrator::getAvailableModels() const
@@ -519,9 +518,7 @@ void TaskOrchestrator::setMemoryProfile(const std::string& profileName)
     if (m_memoryProfiles.contains(profileName)) {
         m_memoryProfile = profileName;
         m_globalMemoryLimit = m_memoryProfiles[profileName]["global_limit"];
-        // // qDebug:  "Memory profile set to:" << profileName;
     } else {
-        // // qWarning:  "Unknown memory profile:" << profileName;
     }
 }
 
@@ -559,7 +556,6 @@ void TaskOrchestrator::allocateTaskMemory(const std::string& taskId, int64_t byt
     if (bytes > 0 && canAllocateMemory(bytes)) {
         m_taskMemoryUsage[taskId] = bytes;
         m_totalMemoryAllocated += bytes;
-        // // qDebug:  "Allocated" << bytes << "bytes for task" << taskId;
     }
 }
 
@@ -569,7 +565,6 @@ void TaskOrchestrator::releaseTaskMemory(const std::string& taskId)
         int64_t released = m_taskMemoryUsage[taskId];
         m_totalMemoryAllocated = qMax((int64_t)0, m_totalMemoryAllocated - released);
         m_taskMemoryUsage.remove(taskId);
-        // // qDebug:  "Released" << released << "bytes for task" << taskId;
     }
 }
 
@@ -801,10 +796,4 @@ std::stringList TaskOrchestrator::splitDescription(const std::string& descriptio
 }
 
 } // namespace RawrXD
-
-
-
-
-
-
 

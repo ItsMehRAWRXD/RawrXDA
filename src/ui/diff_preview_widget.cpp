@@ -1,20 +1,14 @@
 // Diff Preview Widget - Implementation
 // Production-ready with structured logging and error handling
 #include "diff_preview_widget.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QSplitter>
-#include <QTextBlock>
-#include <QDateTime>
-#include <QDebug>
+
 
 namespace RawrXD {
 
-DiffPreviewWidget::DiffPreviewWidget(QWidget* parent)
-    : QWidget(parent)
+DiffPreviewWidget::DiffPreviewWidget(void* parent)
+    : void(parent)
 {
     setupUI();
-    qDebug() << "[DiffPreviewWidget] Initialized at" << QDateTime::currentDateTime().toString(Qt::ISODate);
 }
 
 void DiffPreviewWidget::setupUI() {
@@ -22,7 +16,7 @@ void DiffPreviewWidget::setupUI() {
     mainLayout->setContentsMargins(10, 10, 10, 10);
     
     // Header section
-    QWidget* headerWidget = new QWidget(this);
+    void* headerWidget = new void(this);
     QVBoxLayout* headerLayout = new QVBoxLayout(headerWidget);
     headerLayout->setContentsMargins(0, 0, 0, 0);
     
@@ -73,7 +67,7 @@ void DiffPreviewWidget::setupUI() {
         "QPushButton:disabled { background-color: #3c3c3c; color: #888888; }"
     );
     m_rejectButton->setEnabled(false);
-    connect(m_rejectButton, &QPushButton::clicked, this, &DiffPreviewWidget::onRejectClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_rejectButton);
     
     m_acceptButton = new QPushButton("✓ Accept Change", this);
@@ -90,7 +84,7 @@ void DiffPreviewWidget::setupUI() {
         "QPushButton:disabled { background-color: #3c3c3c; color: #888888; }"
     );
     m_acceptButton->setEnabled(false);
-    connect(m_acceptButton, &QPushButton::clicked, this, &DiffPreviewWidget::onAcceptClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_acceptButton);
     
     buttonLayout->addStretch();
@@ -108,7 +102,7 @@ void DiffPreviewWidget::setupUI() {
         "QPushButton:disabled { background-color: #3c3c3c; color: #888888; }"
     );
     m_rejectAllButton->setEnabled(false);
-    connect(m_rejectAllButton, &QPushButton::clicked, this, &DiffPreviewWidget::onRejectAllClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_rejectAllButton);
     
     m_acceptAllButton = new QPushButton("✓ Accept All", this);
@@ -124,16 +118,15 @@ void DiffPreviewWidget::setupUI() {
         "QPushButton:disabled { background-color: #3c3c3c; color: #888888; }"
     );
     m_acceptAllButton->setEnabled(false);
-    connect(m_acceptAllButton, &QPushButton::clicked, this, &DiffPreviewWidget::onAcceptAllClicked);
+// Qt connect removed
     buttonLayout->addWidget(m_acceptAllButton);
     
     mainLayout->addLayout(buttonLayout);
     
-    setStyleSheet("QWidget { background-color: #252526; }");
+    setStyleSheet("void { background-color: #252526; }");
 }
 
 void DiffPreviewWidget::showDiff(const DiffChange& change) {
-    qDebug() << "[DiffPreviewWidget] Showing diff for" << change.filePath 
              << "lines" << change.startLine << "-" << change.endLine;
     
     m_currentDiff = change;
@@ -156,14 +149,14 @@ void DiffPreviewWidget::showDiff(const DiffChange& change) {
 }
 
 void DiffPreviewWidget::renderDiff() {
-    QString diffText = generateUnifiedDiff(m_currentDiff.originalContent, 
+    std::string diffText = generateUnifiedDiff(m_currentDiff.originalContent, 
                                            m_currentDiff.proposedContent);
     
     // Apply syntax highlighting to diff
-    QString styledDiff = "<pre style='margin: 0; padding: 10px; font-family: Consolas, monospace;'>";
+    std::string styledDiff = "<pre style='margin: 0; padding: 10px; font-family: Consolas, monospace;'>";
     
-    QStringList lines = diffText.split('\n');
-    for (const QString& line : lines) {
+    std::vector<std::string> lines = diffText.split('\n');
+    for (const std::string& line : lines) {
         if (line.startsWith("+++") || line.startsWith("---")) {
             styledDiff += "<span style='color: #d4d4d4; font-weight: bold;'>" + line.toHtmlEscaped() + "</span>\n";
         } else if (line.startsWith("+")) {
@@ -180,24 +173,23 @@ void DiffPreviewWidget::renderDiff() {
     styledDiff += "</pre>";
     m_diffDisplay->setHtml(styledDiff);
     
-    qDebug() << "[DiffPreviewWidget] Rendered diff with" << lines.size() << "lines";
 }
 
-QString DiffPreviewWidget::generateUnifiedDiff(const QString& original, const QString& proposed) {
+std::string DiffPreviewWidget::generateUnifiedDiff(const std::string& original, const std::string& proposed) {
     // Simple unified diff generator
-    QStringList originalLines = original.split('\n');
-    QStringList proposedLines = proposed.split('\n');
+    std::vector<std::string> originalLines = original.split('\n');
+    std::vector<std::string> proposedLines = proposed.split('\n');
     
-    QString diff;
-    diff += QString("--- %1 (original)\n").arg(m_currentDiff.filePath);
-    diff += QString("+++ %1 (proposed)\n").arg(m_currentDiff.filePath);
+    std::string diff;
+    diff += std::string("--- %1 (original)\n");
+    diff += std::string("+++ %1 (proposed)\n");
     
     if (m_currentDiff.startLine > 0) {
-        diff += QString("@@ -%1,%2 +%3,%4 @@\n")
-                .arg(m_currentDiff.startLine)
-                .arg(originalLines.size())
-                .arg(m_currentDiff.startLine)
-                .arg(proposedLines.size());
+        diff += std::string("@@ -%1,%2 +%3,%4 @@\n")
+                
+                )
+                
+                );
     }
     
     // Simple line-by-line diff (could be enhanced with Myers algorithm)
@@ -230,7 +222,6 @@ void DiffPreviewWidget::clear() {
     m_acceptAllButton->setEnabled(false);
     m_rejectAllButton->setEnabled(false);
     
-    qDebug() << "[DiffPreviewWidget] Cleared diff preview";
 }
 
 void DiffPreviewWidget::setAcceptCallback(std::function<void(const DiffChange&)> callback) {
@@ -244,9 +235,8 @@ void DiffPreviewWidget::setRejectCallback(std::function<void(const DiffChange&)>
 void DiffPreviewWidget::onAcceptClicked() {
     if (!m_hasPendingDiff) return;
     
-    qDebug() << "[DiffPreviewWidget] User accepted change for" << m_currentDiff.filePath;
     
-    emit diffAccepted(m_currentDiff);
+    diffAccepted(m_currentDiff);
     
     if (m_acceptCallback) {
         m_acceptCallback(m_currentDiff);
@@ -258,9 +248,8 @@ void DiffPreviewWidget::onAcceptClicked() {
 void DiffPreviewWidget::onRejectClicked() {
     if (!m_hasPendingDiff) return;
     
-    qDebug() << "[DiffPreviewWidget] User rejected change for" << m_currentDiff.filePath;
     
-    emit diffRejected(m_currentDiff);
+    diffRejected(m_currentDiff);
     
     if (m_rejectCallback) {
         m_rejectCallback(m_currentDiff);
@@ -270,15 +259,14 @@ void DiffPreviewWidget::onRejectClicked() {
 }
 
 void DiffPreviewWidget::onAcceptAllClicked() {
-    qDebug() << "[DiffPreviewWidget] User accepted all changes (batch operation)";
     onAcceptClicked();
     // Future: Queue multiple diffs and accept all
 }
 
 void DiffPreviewWidget::onRejectAllClicked() {
-    qDebug() << "[DiffPreviewWidget] User rejected all changes (batch operation)";
     onRejectClicked();
     // Future: Queue multiple diffs and reject all
 }
 
 } // namespace RawrXD
+

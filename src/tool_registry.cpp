@@ -115,13 +115,13 @@ ToolRegistry::ToolRegistry(
     std::shared_ptr<Metrics> metrics
 ) : m_logger(logger), m_metrics(metrics) {
     if (m_logger) {
-        m_logger->info("ToolRegistry", "Initialized with full utility support (v2.0.0)");
+
     }
 }
 
 ToolRegistry::~ToolRegistry() {
     if (m_logger) {
-        m_logger->info("ToolRegistry", "Shutdown: " + std::to_string(m_tools.size()) + 
+
                       " tools were registered");
     }
     
@@ -149,21 +149,21 @@ bool ToolRegistry::registerTool(const ToolDefinition& toolDef) {
     
     if (toolDef.name.empty()) {
         if (m_logger) {
-            m_logger->error("ToolRegistry", "Cannot register tool with empty name");
+
         }
         return false;
     }
     
     if (m_tools.count(toolDef.name) > 0) {
         if (m_logger) {
-            m_logger->warn("ToolRegistry", "Tool already registered: " + toolDef.name);
+
         }
         return false;
     }
     
     if (!toolDef.handler) {
         if (m_logger) {
-            m_logger->error("ToolRegistry", "Cannot register tool without handler: " + toolDef.name);
+
         }
         return false;
     }
@@ -184,11 +184,10 @@ bool ToolRegistry::registerTool(const ToolDefinition& toolDef) {
     }
     
     if (m_logger) {
-        m_logger->info("ToolRegistry", "Tool registered: " + toolDef.name + 
+
                       " (category: " + std::to_string(static_cast<int>(toolDef.category)) + 
                       ", experimental: " + (toolDef.experimental ? "true" : "false") + ")");
-        
-        m_logger->debug("ToolRegistry", "Tool config - timeout: " + 
+
                        std::to_string(toolDef.config.timeoutMs) + "ms, " +
                        "retry: " + std::to_string(toolDef.config.maxRetries) + " attempts");
     }
@@ -207,7 +206,7 @@ bool ToolRegistry::unregisterTool(const std::string& toolName) {
     auto it = m_tools.find(toolName);
     if (it == m_tools.end()) {
         if (m_logger) {
-            m_logger->warn("ToolRegistry", "Tool not found for unregistration: " + toolName);
+
         }
         return false;
     }
@@ -216,7 +215,7 @@ bool ToolRegistry::unregisterTool(const std::string& toolName) {
     m_toolConfigs.erase(toolName);
     
     if (m_logger) {
-        m_logger->info("ToolRegistry", "Tool unregistered: " + toolName);
+
     }
     
     if (m_metrics) {
@@ -325,7 +324,7 @@ std::vector<ToolResult> ToolRegistry::executeBatch(
     std::vector<ToolResult> results;
     
     if (m_logger) {
-        m_logger->info("ToolRegistry", "Batch execution started: " + 
+
                       std::to_string(toolExecution.size()) + " tools");
     }
     
@@ -334,7 +333,7 @@ std::vector<ToolResult> ToolRegistry::executeBatch(
         const auto& params = toolExecution[i].second;
         
         if (m_logger) {
-            m_logger->debug("ToolRegistry", "Batch tool [" + std::to_string(i + 1) + "/" +
+
                            std::to_string(toolExecution.size()) + "]: " + toolName);
         }
         
@@ -343,7 +342,7 @@ std::vector<ToolResult> ToolRegistry::executeBatch(
         
         if (!result.success && stopOnError) {
             if (m_logger) {
-                m_logger->warn("ToolRegistry", "Batch execution stopped at tool: " + toolName +
+
                               " (error: " + result.error + ")");
             }
             break;
@@ -355,7 +354,7 @@ std::vector<ToolResult> ToolRegistry::executeBatch(
         for (const auto& result : results) {
             if (result.success) successCount++;
         }
-        m_logger->info("ToolRegistry", "Batch execution completed: " +
+
                       std::to_string(successCount) + "/" + std::to_string(results.size()) +
                       " successful");
     }
@@ -371,7 +370,7 @@ void ToolRegistry::setGlobalTimeout(int32_t timeoutMs) {
     m_globalTimeout = timeoutMs;
     
     if (m_logger) {
-        m_logger->info("ToolRegistry", "Global timeout configured: " + 
+
                       std::to_string(timeoutMs) + "ms");
     }
 }
@@ -387,7 +386,7 @@ bool ToolRegistry::setToolTimeout(const std::string& toolName, int32_t timeoutMs
     it->second.timeoutMs = timeoutMs;
     
     if (m_logger) {
-        m_logger->debug("ToolRegistry", "Timeout set for tool: " + toolName + " = " +
+
                        std::to_string(timeoutMs) + "ms");
     }
     
@@ -405,7 +404,7 @@ bool ToolRegistry::setToolEnabled(const std::string& toolName, bool enabled) {
     it->second.enableExecution = enabled;
     
     if (m_logger) {
-        m_logger->info("ToolRegistry", "Tool " + (enabled ? std::string("enabled") : 
+
                       std::string("disabled")) + ": " + toolName);
     }
     
@@ -428,7 +427,7 @@ bool ToolRegistry::loadConfiguration(const std::string& configPath) {
     std::ifstream file(configPath);
     if (!file.is_open()) {
         if (m_logger) {
-            m_logger->error("ToolRegistry", "Failed to open config file: " + configPath);
+
         }
         return false;
     }
@@ -468,13 +467,13 @@ bool ToolRegistry::loadConfiguration(const std::string& configPath) {
         }
         
         if (m_logger) {
-            m_logger->info("ToolRegistry", "Configuration loaded from: " + configPath);
+
         }
         
         return true;
     } catch (const std::exception& e) {
         if (m_logger) {
-            m_logger->error("ToolRegistry", "Failed to parse config: " + std::string(e.what()));
+
         }
         return false;
     }
@@ -504,7 +503,7 @@ bool ToolRegistry::saveConfiguration(const std::string& configPath) const {
         std::ofstream file(configPath);
         if (!file.is_open()) {
             if (m_logger) {
-                m_logger->error("ToolRegistry", "Failed to open config file for writing: " + configPath);
+
             }
             return false;
         }
@@ -513,13 +512,13 @@ bool ToolRegistry::saveConfiguration(const std::string& configPath) const {
         file.close();
         
         if (m_logger) {
-            m_logger->info("ToolRegistry", "Configuration saved to: " + configPath);
+
         }
         
         return true;
     } catch (const std::exception& e) {
         if (m_logger) {
-            m_logger->error("ToolRegistry", "Failed to save config: " + std::string(e.what()));
+
         }
         return false;
     }
@@ -765,7 +764,7 @@ void ToolRegistry::resetMetrics() {
     }
     
     if (m_logger) {
-        m_logger->warn("ToolRegistry", "All metrics and statistics have been reset");
+
     }
 }
 
@@ -789,7 +788,7 @@ bool ToolRegistry::setRetryPolicy(
     it->second.retryDelayMs = delayMs;
     
     if (m_logger) {
-        m_logger->debug("ToolRegistry", "Retry policy set for tool: " + toolName +
+
                        " (max: " + std::to_string(maxRetries) + 
                        ", delay: " + std::to_string(delayMs) + "ms)");
     }
@@ -825,7 +824,7 @@ bool ToolRegistry::enableCaching(const std::string& toolName, int32_t cacheValid
     it->second.cacheValidityMs = cacheValidityMs;
     
     if (m_logger) {
-        m_logger->debug("ToolRegistry", "Caching enabled for tool: " + toolName +
+
                        " (validity: " + std::to_string(cacheValidityMs) + "ms)");
     }
     
@@ -850,12 +849,12 @@ void ToolRegistry::clearCache(const std::string& toolName) {
     if (toolName.empty()) {
         m_cache.clear();
         if (m_logger) {
-            m_logger->debug("ToolRegistry", "All caches cleared");
+
         }
     } else {
         m_cache.erase(toolName);
         if (m_logger) {
-            m_logger->debug("ToolRegistry", "Cache cleared for tool: " + toolName);
+
         }
     }
 }
@@ -911,7 +910,7 @@ json ToolRegistry::runSelfTest() {
     json results = json::parse("{}");
     
     if (m_logger) {
-        m_logger->info("ToolRegistry", "Running self-test on all tools");
+
     }
     
     std::lock_guard<std::mutex> lock(m_toolRegistryMutex);
@@ -923,7 +922,7 @@ json ToolRegistry::runSelfTest() {
     }
     
     if (m_logger) {
-        m_logger->info("ToolRegistry", "Self-test completed");
+
     }
     
     return results;
@@ -994,7 +993,7 @@ ToolResult ToolRegistry::executeToolInternal(
             result.executionContext.status = ToolExecutionStatus::Failed;
             
             if (m_logger) {
-                m_logger->error("ToolRegistry", "Tool execution failed - not found: " + toolName);
+
             }
             
             goto cleanup;
@@ -1006,7 +1005,7 @@ ToolResult ToolRegistry::executeToolInternal(
             result.executionContext.status = ToolExecutionStatus::SkippedByToggle;
             
             if (m_logger) {
-                m_logger->warn("ToolRegistry", "Tool execution skipped - disabled: " + toolName);
+
             }
             
             goto cleanup;
@@ -1020,7 +1019,7 @@ ToolResult ToolRegistry::executeToolInternal(
                 result.executionContext.status = ToolExecutionStatus::Failed;
                 
                 if (m_logger) {
-                    m_logger->warn("ToolRegistry", "Input validation failed for tool: " + 
+
                                   toolName + " (" + validationError + ")");
                 }
                 
@@ -1041,7 +1040,7 @@ ToolResult ToolRegistry::executeToolInternal(
                 }
                 
                 if (m_logger) {
-                    m_logger->debug("ToolRegistry", "Cache hit for tool: " + toolName);
+
                 }
                 
                 recordMetrics(result, toolName);
@@ -1057,7 +1056,7 @@ ToolResult ToolRegistry::executeToolInternal(
                 
                 try {
                     if (m_logger && config.enableDetailedLogging) {
-                        m_logger->debug("ToolRegistry", "Executing tool handler: " + toolName);
+
                     }
                     
                     tmpResult.data = tool->handler(parameters);
@@ -1065,7 +1064,7 @@ ToolResult ToolRegistry::executeToolInternal(
                     tmpResult.executionContext.status = ToolExecutionStatus::Completed;
                     
                     if (m_logger && config.enableDetailedLogging) {
-                        m_logger->debug("ToolRegistry", "Tool execution completed: " + toolName);
+
                     }
                 } catch (const std::exception& e) {
                     tmpResult.success = false;
@@ -1073,7 +1072,7 @@ ToolResult ToolRegistry::executeToolInternal(
                     tmpResult.executionContext.status = ToolExecutionStatus::Failed;
                     
                     if (m_logger) {
-                        m_logger->error("ToolRegistry", "Tool execution exception (" + toolName + 
+
                                       "): " + tmpResult.error);
                     }
                 }
@@ -1092,7 +1091,7 @@ ToolResult ToolRegistry::executeToolInternal(
                 result.error = "Output validation failed: " + validation.error;
                 
                 if (m_logger) {
-                    m_logger->warn("ToolRegistry", "Output validation failed for tool: " + toolName);
+
                 }
             }
         }
@@ -1108,7 +1107,7 @@ ToolResult ToolRegistry::executeToolInternal(
         result.executionContext.status = ToolExecutionStatus::Failed;
         
         if (m_logger) {
-            m_logger->error("ToolRegistry", "Unexpected exception in executeTool (" + toolName + 
+
                           "): " + result.error);
         }
     }
@@ -1216,10 +1215,10 @@ void ToolRegistry::logExecutionStart(
     
     std::string msg = "Tool execution started: " + toolName + " (id: " + 
                      executionId.substr(0, 8) + "...)";
-    m_logger->info("ToolRegistry", msg);
-    
+
+
     if (detailedLogging) {
-        m_logger->debug("ToolRegistry", "Parameters: " + (parameters.dump)());
+
     }
 }
 
@@ -1236,13 +1235,13 @@ void ToolRegistry::logExecutionCompletion(
                      ", time: " + std::to_string(result.executionContext.metrics.executionTimeMs) + "ms)";
     
     if (result.success) {
-        m_logger->info("ToolRegistry", msg);
+
     } else {
-        m_logger->error("ToolRegistry", msg + " (error: " + result.error + ")");
+
     }
     
     if (detailedLogging && result.success && !result.data.is_null()) {
-        m_logger->debug("ToolRegistry", "Result: " + (result.data.dump)());
+
     }
 }
 
@@ -1330,7 +1329,7 @@ ToolResult ToolRegistry::executeWithRetry(
         
         if (retryCount <= config.maxRetries) {
             if (m_logger) {
-                m_logger->warn("ToolRegistry", "Retrying tool execution: " + toolName + 
+
                              " (attempt " + std::to_string(retryCount) + "/" +
                              std::to_string(config.maxRetries) + ")");
             }

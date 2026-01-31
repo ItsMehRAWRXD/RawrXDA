@@ -9,7 +9,7 @@ RealTimeCompletionEngine::RealTimeCompletionEngine(
     std::shared_ptr<Logger> logger,
     std::shared_ptr<Metrics> metrics)
     : m_logger(logger), m_metrics(metrics) {
-    m_logger->info("RealTimeCompletionEngine initialized");
+
 }
 
 std::vector<CodeCompletion> RealTimeCompletionEngine::getCompletions(
@@ -35,12 +35,11 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getCompletions(
                 auto latency = std::chrono::duration_cast<std::chrono::microseconds>(
                     endTime - startTime).count();
                 m_metrics->recordHistogram("completion_latency_us", latency);
-                m_logger->debug("Cache hit for completion");
+
                 return it->second;
             }
         }
 
-        m_logger->debug("Cache miss - generating new completions");
 
         // Build completion prompt with context
         std::string prompt = buildCompletionPrompt(prefix, suffix, context);
@@ -71,7 +70,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getCompletions(
         return completions;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error getting completions: {}", e.what());
+
         m_metrics->incrementCounter("completion_errors");
         return {};
     }
@@ -82,7 +81,6 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getInlineCompletions(
     int cursorColumn,
     const std::string& filePath) {
 
-    m_logger->debug("Getting inline completions for: {}", filePath);
 
     // Extract prefix/suffix from line
     std::string prefix = currentLine.substr(0, cursorColumn);
@@ -95,7 +93,6 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getMultiLineCompletions(
     const std::string& prefix,
     int maxLines) {
 
-    m_logger->debug("Getting multi-line completions");
 
     return getCompletions(prefix, "", "cpp", "");
 }
@@ -106,14 +103,13 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getContextualCompletions(
     int column,
     const std::string& scope) {
 
-    m_logger->debug("Getting contextual completions for: {}:{}", filePath, line);
 
     // In full implementation, would analyze file context
     return getCompletions("", "", "cpp", scope);
 }
 
 void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
-    m_logger->info("Pre-warming cache for: {}", filePath);
+
 
     // Pre-populate cache with likely completions for this file
     // Placeholder implementation
@@ -122,7 +118,7 @@ void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
 void RealTimeCompletionEngine::clearCache() {
     std::lock_guard<std::mutex> lock(m_cacheMutex);
     m_completionCache.clear();
-    m_logger->info("Completion cache cleared");
+
 }
 
 PerformanceMetrics RealTimeCompletionEngine::getMetrics() const {
@@ -164,7 +160,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
     std::vector<CodeCompletion> completions;
 
     try {
-        m_logger->info("Generating completions with model (max_tokens={})", maxTokens);
+
         m_metrics->incrementCounter("model_calls");
 
         // PHASE 1 IMPLEMENTATION: Real model calling
@@ -260,8 +256,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
 
         // TEMPORARY: Until InferenceEngine is wired, return realistic mock data
         // This demonstrates the structure and flow of real completions
-        
-        m_logger->warn("Using mock completions - InferenceEngine not yet integrated");
+
 
         // These would be REAL completions from the model
         CodeCompletion completion1;
@@ -300,7 +295,6 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         completion4.cursorOffset = 5;
         completions.push_back(completion4);
 
-        m_logger->info("Generated {} completions", completions.size());
         m_metrics->recordHistogram("completions_per_call", completions.size());
         m_metrics->recordHistogram("completion_confidence", 
                                   completions[0].confidence * 100);
@@ -308,7 +302,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         return completions;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error generating completions with model: {}", e.what());
+
         m_metrics->incrementCounter("model_call_errors");
         return {};
     }

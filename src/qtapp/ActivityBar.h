@@ -12,15 +12,11 @@
  * - Signal emission on button click for sidebar view switching
  */
 
-#include <QFrame>
-#include <QVector>
-#include <QIcon>
 
 class ActivityBarButton;
 
 class ActivityBar : public QFrame
 {
-    Q_OBJECT
 
 public:
     enum ViewType {
@@ -34,7 +30,7 @@ public:
         ViewCount = 7
     };
 
-    explicit ActivityBar(QWidget* parent = nullptr);
+    explicit ActivityBar(void* parent = nullptr);
     ~ActivityBar();
 
     /**
@@ -60,7 +56,7 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
-signals:
+
     /**
      * \brief Emitted when a button is clicked
      * \param view The ViewType that was clicked
@@ -78,7 +74,7 @@ private:
     void layoutButtons();
 
     ViewType m_activeView;
-    QVector<ActivityBarButton*> m_buttons;
+    std::vector<ActivityBarButton*> m_buttons;
 
     // VS Code color scheme
     static constexpr QRgb BACKGROUND_COLOR = 0x333333;  // RGB(51,51,51)
@@ -88,3 +84,4 @@ private:
     static constexpr int BUTTON_SIZE = 48;
     static constexpr int BUTTON_ICON_SIZE = 24;
 };
+

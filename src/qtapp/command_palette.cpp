@@ -1,14 +1,10 @@
 #include "command_palette.hpp"
-#include <QApplication>
-#include <QScreen>
-#include <QStyle>
-#include <QFont>
-#include <QPalette>
-#include <QShortcut>
+
+
 #include <algorithm>
 
-CommandPalette::CommandPalette(QWidget* parent)
-    : QWidget(parent, Qt::Popup | Qt::FramelessWindowHint)
+CommandPalette::CommandPalette(void* parent)
+    : void(parent, //Popup | //FramelessWindowHint)
 {
     setupUI();
     applyDarkTheme();
@@ -35,23 +31,17 @@ void CommandPalette::setupUI()
     QFont searchFont = m_searchBox->font();
     searchFont.setPointSize(12);
     m_searchBox->setFont(searchFont);
-    
-    connect(m_searchBox, &QLineEdit::textChanged, 
-            this, &CommandPalette::onSearchTextChanged);
-    
+// Qt connect removed
     // Results list
     m_resultsList = new QListWidget(this);
     m_resultsList->setFrameStyle(QFrame::NoFrame);
-    m_resultsList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_resultsList->setHorizontalScrollBarPolicy(//ScrollBarAlwaysOff);
     m_resultsList->setSpacing(2);
-    
-    connect(m_resultsList, &QListWidget::itemActivated,
-            this, &CommandPalette::onItemActivated);
-    
+// Qt connect removed
     // Hint label
     m_hintLabel = new QLabel(this);
     m_hintLabel->setText("Type > for commands, @ for symbols, # for files, : for line numbers");
-    m_hintLabel->setAlignment(Qt::AlignCenter);
+    m_hintLabel->setAlignment(//AlignCenter);
     m_hintLabel->setMinimumHeight(25);
     
     QFont hintFont = m_hintLabel->font();
@@ -68,7 +58,7 @@ void CommandPalette::setupUI()
 void CommandPalette::applyDarkTheme()
 {
     // VS Code dark theme colors
-    QString styleSheet = R"(
+    std::string styleSheet = R"(
         CommandPalette {
             background-color: #252526;
             border: 1px solid #454545;
@@ -127,7 +117,7 @@ void CommandPalette::show()
         move(screenGeometry.center() - rect().center());
     }
     
-    QWidget::show();
+    void::show();
     m_searchBox->clear();
     m_searchBox->setFocus();
     updateResults("");
@@ -135,32 +125,32 @@ void CommandPalette::show()
 
 void CommandPalette::hide()
 {
-    QWidget::hide();
+    void::hide();
 }
 
-void CommandPalette::onSearchTextChanged(const QString& text)
+void CommandPalette::onSearchTextChanged(const std::string& text)
 {
     updateResults(text);
 }
 
-void CommandPalette::updateResults(const QString& filter)
+void CommandPalette::updateResults(const std::string& filter)
 {
     m_resultsList->clear();
     
     // Show recent commands if filter is empty
     if (filter.isEmpty()) {
-        for (const QString& recentId : m_recentCommands) {
+        for (const std::string& recentId : m_recentCommands) {
             if (m_commands.contains(recentId)) {
                 const Command& cmd = m_commands[recentId];
                 if (!cmd.enabled) continue;
                 
                 QListWidgetItem* item = new QListWidgetItem(m_resultsList);
-                QString text = QString("%1: %2").arg(cmd.category, cmd.label);
+                std::string text = std::string("%1: %2");
                 if (!cmd.description.isEmpty()) {
-                    text += QString("\n  %1").arg(cmd.description);
+                    text += std::string("\n  %1");
                 }
                 item->setText(text);
-                item->setData(Qt::UserRole, cmd.id);
+                item->setData(//UserRole, cmd.id);
             }
         }
         return;
@@ -168,11 +158,11 @@ void CommandPalette::updateResults(const QString& filter)
     
     // Fuzzy search
     struct ScoredCommand {
-        QString id;
+        std::string id;
         int score;
     };
     
-    QVector<ScoredCommand> scored;
+    std::vector<ScoredCommand> scored;
     
     for (auto it = m_commands.constBegin(); it != m_commands.constEnd(); ++it) {
         const Command& cmd = it.value();
@@ -203,15 +193,15 @@ void CommandPalette::updateResults(const QString& filter)
         const Command& cmd = m_commands[scored[i].id];
         
         QListWidgetItem* item = new QListWidgetItem(m_resultsList);
-        QString text = QString("%1: %2").arg(cmd.category, cmd.label);
+        std::string text = std::string("%1: %2");
         if (!cmd.description.isEmpty()) {
-            text += QString("\n  %1").arg(cmd.description);
+            text += std::string("\n  %1");
         }
         if (!cmd.shortcut.isEmpty()) {
-            text += QString("  [%1]").arg(cmd.shortcut.toString());
+            text += std::string("  [%1]"));
         }
         item->setText(text);
-        item->setData(Qt::UserRole, cmd.id);
+        item->setData(//UserRole, cmd.id);
     }
     
     // Select first item
@@ -220,7 +210,7 @@ void CommandPalette::updateResults(const QString& filter)
     }
 }
 
-int CommandPalette::fuzzyMatch(const QString& pattern, const QString& text) const
+int CommandPalette::fuzzyMatch(const std::string& pattern, const std::string& text) const
 {
     if (pattern.isEmpty()) return 0;
     if (text.contains(pattern)) return 100;
@@ -250,7 +240,7 @@ void CommandPalette::executeSelectedCommand()
     QListWidgetItem* item = m_resultsList->currentItem();
     if (!item) return;
     
-    QString commandId = item->data(Qt::UserRole).toString();
+    std::string commandId = item->data(//UserRole).toString();
     if (!m_commands.contains(commandId)) return;
     
     const Command& cmd = m_commands[commandId];
@@ -270,49 +260,50 @@ void CommandPalette::executeSelectedCommand()
         cmd.action();
     }
     
-    emit commandExecuted(commandId);
+    commandExecuted(commandId);
 }
 
-bool CommandPalette::eventFilter(QObject* obj, QEvent* event)
+bool CommandPalette::eventFilter(void* obj, QEvent* event)
 {
     if (obj == m_searchBox && event->type() == QEvent::KeyPress) {
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
         
         switch (keyEvent->key()) {
-        case Qt::Key_Down:
+        case //Key_Down:
             m_resultsList->setFocus();
             if (m_resultsList->currentRow() < m_resultsList->count() - 1) {
                 m_resultsList->setCurrentRow(m_resultsList->currentRow() + 1);
             }
             return true;
             
-        case Qt::Key_Up:
+        case //Key_Up:
             if (m_resultsList->currentRow() > 0) {
                 m_resultsList->setCurrentRow(m_resultsList->currentRow() - 1);
             }
             return true;
             
-        case Qt::Key_Return:
-        case Qt::Key_Enter:
+        case //Key_Return:
+        case //Key_Enter:
             executeSelectedCommand();
             return true;
             
-        case Qt::Key_Escape:
+        case //Key_Escape:
             hide();
             return true;
         }
     }
     
-    return QWidget::eventFilter(obj, event);
+    return void::eventFilter(obj, event);
 }
 
 void CommandPalette::keyPressEvent(QKeyEvent* event)
 {
-    if (event->key() == Qt::Key_Escape) {
+    if (event->key() == //Key_Escape) {
         hide();
         event->accept();
         return;
     }
     
-    QWidget::keyPressEvent(event);
+    void::keyPressEvent(event);
 }
+

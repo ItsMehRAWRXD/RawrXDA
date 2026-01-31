@@ -7,12 +7,7 @@
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QThread>
-#include <QFile>
+
 #include <memory>
 #include <vector>
 #include <string>
@@ -35,8 +30,7 @@ class InferenceEngine;
  * - Thread-safe training execution
  * - Checkpoint management and model registration
  */
-class ModelTrainer : public QObject {
-    Q_OBJECT
+class ModelTrainer : public void {
 
 public:
     // ===== Configuration =====
@@ -46,8 +40,8 @@ public:
      * @brief Training hyperparameters and options
      */
     struct TrainingConfig {
-        QString datasetPath;           ///< Path to training dataset
-        QString outputPath;            ///< Path to save trained model
+        std::string datasetPath;           ///< Path to training dataset
+        std::string outputPath;            ///< Path to save trained model
         int epochs = 3;                ///< Number of training epochs
         float learningRate = 1e-4f;    ///< Base learning rate
         int batchSize = 4;             ///< Batch size for training
@@ -75,7 +69,7 @@ public:
      * @brief Constructor
      * @param parent Qt parent object
      */
-    explicit ModelTrainer(QObject* parent = nullptr);
+    explicit ModelTrainer(void* parent = nullptr);
 
     /**
      * @brief Destructor
@@ -88,7 +82,7 @@ public:
      * @param modelPath Path to GGUF model file
      * @return true if initialization successful
      */
-    bool initialize(InferenceEngine* engine, const QString& modelPath);
+    bool initialize(InferenceEngine* engine, const std::string& modelPath);
 
     /**
      * @brief Start training with configuration
@@ -138,7 +132,7 @@ public:
      * @brief Get current training status message
      * @return Status string
      */
-    QString getCurrentStatus() const { return m_currentStatus; }
+    std::string getCurrentStatus() const { return m_currentStatus; }
 
     // ===== Dataset Operations =====
 
@@ -147,7 +141,7 @@ public:
      * @param filePath Path to dataset file
      * @return Detected format
      */
-    DatasetFormat detectDatasetFormat(const QString& filePath);
+    DatasetFormat detectDatasetFormat(const std::string& filePath);
 
     /**
      * @brief Load dataset from file
@@ -155,7 +149,7 @@ public:
      * @param format Dataset format
      * @return true if dataset loaded successfully
      */
-    bool loadDataset(const QString& filePath, DatasetFormat format);
+    bool loadDataset(const std::string& filePath, DatasetFormat format);
 
     /**
      * @brief Tokenize loaded dataset
@@ -165,7 +159,7 @@ public:
 
     // ===== Signals =====
 
-signals:
+
     /**
      * @brief Emitted when training starts
      */
@@ -199,7 +193,7 @@ signals:
      * @param outputPath Path to saved model
      * @param finalPerplexity Final model perplexity
      */
-    void trainingCompleted(const QString& outputPath, float finalPerplexity);
+    void trainingCompleted(const std::string& outputPath, float finalPerplexity);
 
     /**
      * @brief Emitted when training is stopped by user
@@ -210,28 +204,28 @@ signals:
      * @brief Emitted when an error occurs
      * @param error Error message
      */
-    void trainingError(const QString& error);
+    void trainingError(const std::string& error);
 
     /**
      * @brief Emitted for informational log messages
      * @param message Log message
      */
-    void logMessage(const QString& message);
+    void logMessage(const std::string& message);
 
     /**
      * @brief Emitted when validation completes
      * @param perplexity Model perplexity
      * @param details Additional validation details
      */
-    void validationResults(float perplexity, const QString& details);
+    void validationResults(float perplexity, const std::string& details);
 
     /**
      * @brief Emitted when trained model is registered in IDE
      * @param modelPath Path to registered model
      */
-    void modelRegistered(const QString& modelPath);
+    void modelRegistered(const std::string& modelPath);
 
-private slots:
+private:
     /**
      * @brief Main training loop (runs in worker thread)
      */
@@ -239,9 +233,9 @@ private slots:
 
 private:
     // ===== Dataset Loading =====
-    std::vector<std::string> readPlainTextDataset(const QString& filePath);
-    std::vector<QJsonObject> readJsonLinesDataset(const QString& filePath);
-    std::vector<QJsonObject> readCsvDataset(const QString& filePath);
+    std::vector<std::string> readPlainTextDataset(const std::string& filePath);
+    std::vector<void*> readJsonLinesDataset(const std::string& filePath);
+    std::vector<void*> readCsvDataset(const std::string& filePath);
 
     // ===== Tokenization =====
     std::vector<uint32_t> tokenizeText(const std::string& text);
@@ -277,8 +271,8 @@ private:
     // ===== Model Operations =====
     std::vector<float> extractModelWeights();
     bool applyWeightUpdates(const std::vector<float>& newWeights);
-    bool saveModel(const QString& outputPath);
-    bool registerTrainedModel(const QString& modelPath);
+    bool saveModel(const std::string& outputPath);
+    bool registerTrainedModel(const std::string& modelPath);
 
     // ===== Validation =====
     bool validateModel();
@@ -287,12 +281,12 @@ private:
     // ===== State Management =====
     InferenceEngine* m_inferenceEngine = nullptr;
     std::unique_ptr<GGUFLoader> m_modelLoader;
-    QString m_modelPath;
-    QString m_originalModelPath;
+    std::string m_modelPath;
+    std::string m_originalModelPath;
 
     TrainingConfig m_config;
     std::vector<std::string> m_textData;
-    std::vector<QJsonObject> m_jsonData;
+    std::vector<void*> m_jsonData;
     std::vector<std::vector<uint32_t>> m_tokenizedData;
     std::vector<std::vector<uint32_t>> m_trainingBatches;
     std::vector<std::vector<uint32_t>> m_validationBatches;
@@ -304,9 +298,9 @@ private:
     int m_totalEpochs = 0;
     float m_currentLoss = 0.0f;
     float m_validationPerplexity = 0.0f;
-    QString m_currentStatus = "Idle";
+    std::string m_currentStatus = "Idle";
 
-    QThread* m_trainingThread = nullptr;
+    std::thread* m_trainingThread = nullptr;
 
     // Model metadata
     uint32_t m_vocabSize = 32000;
@@ -314,3 +308,4 @@ private:
     uint32_t m_layerCount = 32;
     uint32_t m_sequenceLength = 512;
 };
+

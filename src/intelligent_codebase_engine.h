@@ -1,46 +1,40 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QVector>
-#include <QHash>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QFileSystemWatcher>
+
 #include <memory>
 
 // Enterprise-grade symbol information
 struct SymbolInfo {
-    QString name;
-    QString type; // "function", "class", "variable", "namespace"
-    QString filePath;
+    std::string name;
+    std::string type; // "function", "class", "variable", "namespace"
+    std::string filePath;
     int lineNumber;
-    QString signature;
-    QString returnType;
-    QVector<QString> parameters;
+    std::string signature;
+    std::string returnType;
+    std::vector<std::string> parameters;
     bool isConst = false;
     bool isStatic = false;
-    QVector<QString> baseClasses;
-    QJsonObject metadata;
+    std::vector<std::string> baseClasses;
+    void* metadata;
 };
 
 // Dependency relationship
 struct DependencyInfo {
-    QString fromSymbol;
-    QString toSymbol;
-    QString dependencyType; // "import", "inheritance", "usage"
-    QString filePath;
+    std::string fromSymbol;
+    std::string toSymbol;
+    std::string dependencyType; // "import", "inheritance", "usage"
+    std::string filePath;
     int lineNumber;
     double confidence;
 };
 
 // Architecture pattern detection
 struct ArchitecturePattern {
-    QString patternType; // "MVC", "Microservice", "Layered", "Monolith"
+    std::string patternType; // "MVC", "Microservice", "Layered", "Monolith"
     double confidenceScore;
-    QJsonArray evidence;
-    QVector<QString> affectedFiles;
-    QJsonObject characteristics;
+    void* evidence;
+    std::vector<std::string> affectedFiles;
+    void* characteristics;
 };
 
 // Code complexity metrics
@@ -52,43 +46,43 @@ struct CodeComplexity {
     int numberOfClasses = 0;
     int numberOfDependencies = 0;
     double duplicationPercentage = 0.0;
-    QJsonArray complexityHotspots;
+    void* complexityHotspots;
 };
 
 // Refactoring suggestions
 struct RefactoringOpportunity {
-    QString type; // "extract_method", "inline_function", "move_class", "rename"
-    QString description;
-    QString filePath;
+    std::string type; // "extract_method", "inline_function", "move_class", "rename"
+    std::string description;
+    std::string filePath;
     int startLine;
     int endLine;
     double confidence;
     double estimatedImpact;
-    QJsonObject implementationHints;
+    void* implementationHints;
 };
 
 // Bug detection
 struct BugReport {
-    QString bugType; // "null_pointer", "memory_leak", "infinite_loop", "race_condition"
-    QString severity; // "low", "medium", "high", "critical"
-    QString description;
-    QString filePath;
+    std::string bugType; // "null_pointer", "memory_leak", "infinite_loop", "race_condition"
+    std::string severity; // "low", "medium", "high", "critical"
+    std::string description;
+    std::string filePath;
     int lineNumber;
     double confidence;
-    QVector<QString> evidence;
-    QJsonObject suggestedFix;
+    std::vector<std::string> evidence;
+    void* suggestedFix;
 };
 
 // Optimization suggestions
 struct Optimization {
-    QString optimizationType; // "performance", "memory", "readability", "security"
-    QString description;
-    QString filePath;
+    std::string optimizationType; // "performance", "memory", "readability", "security"
+    std::string description;
+    std::string filePath;
     int lineNumber;
     double potentialImprovement;
     double confidence;
-    QJsonObject currentImplementation;
-    QJsonObject optimizedImplementation;
+    void* currentImplementation;
+    void* optimizedImplementation;
 };
 
 /**
@@ -97,19 +91,18 @@ struct Optimization {
  * Provides deep code understanding, symbol indexing, dependency analysis,
  * architecture pattern detection, and intelligent refactoring suggestions.
  */
-class IntelligentCodebaseEngine : public QObject {
-    Q_OBJECT
-    
+class IntelligentCodebaseEngine : public void {
+
 private:
-    QHash<QString, SymbolInfo> symbolIndex;
-    QHash<QString, QVector<DependencyInfo>> dependencyGraph;
-    QHash<QString, ArchitecturePattern> architecturePatterns;
-    QHash<QString, QVector<SymbolInfo>> fileSymbols;
-    QHash<QString, QVector<QString>> callGraph;
+    std::unordered_map<std::string, SymbolInfo> symbolIndex;
+    std::unordered_map<std::string, std::vector<DependencyInfo>> dependencyGraph;
+    std::unordered_map<std::string, ArchitecturePattern> architecturePatterns;
+    std::unordered_map<std::string, std::vector<SymbolInfo>> fileSymbols;
+    std::unordered_map<std::string, std::vector<std::string>> callGraph;
     
-    QVector<RefactoringOpportunity> refactoringOpportunities;
-    QVector<BugReport> bugReports;
-    QVector<Optimization> optimizations;
+    std::vector<RefactoringOpportunity> refactoringOpportunities;
+    std::vector<BugReport> bugReports;
+    std::vector<Optimization> optimizations;
     CodeComplexity complexityAnalysis;
     
     QFileSystemWatcher* fileWatcher;
@@ -123,70 +116,70 @@ private:
     int batchSize = 100;
     
 public:
-    explicit IntelligentCodebaseEngine(QObject* parent = nullptr);
+    explicit IntelligentCodebaseEngine(void* parent = nullptr);
     ~IntelligentCodebaseEngine();
     
     // Core analysis
-    bool analyzeEntireCodebase(const QString& projectPath);
-    bool analyzeFile(const QString& filePath);
-    bool analyzeFunction(const QString& functionName, const QString& filePath);
-    bool analyzeSymbol(const QString& symbolName);
+    bool analyzeEntireCodebase(const std::string& projectPath);
+    bool analyzeFile(const std::string& filePath);
+    bool analyzeFunction(const std::string& functionName, const std::string& filePath);
+    bool analyzeSymbol(const std::string& symbolName);
     
     // Intelligent recommendations
-    QVector<RefactoringOpportunity> discoverRefactoringOpportunities();
-    QVector<BugReport> detectBugs();
-    QVector<Optimization> suggestOptimizations();
+    std::vector<RefactoringOpportunity> discoverRefactoringOpportunities();
+    std::vector<BugReport> detectBugs();
+    std::vector<Optimization> suggestOptimizations();
     ArchitecturePattern detectArchitecturePattern();
     CodeComplexity analyzeComplexity();
     
     // Symbol intelligence
-    SymbolInfo getSymbolInfo(const QString& symbolName);
-    QVector<SymbolInfo> getSymbolsInFile(const QString& filePath);
-    QVector<DependencyInfo> getSymbolDependencies(const QString& symbolName);
+    SymbolInfo getSymbolInfo(const std::string& symbolName);
+    std::vector<SymbolInfo> getSymbolsInFile(const std::string& filePath);
+    std::vector<DependencyInfo> getSymbolDependencies(const std::string& symbolName);
     
     // Dependency intelligence
-    QJsonArray getFileDependencies(const QString& filePath);
-    QJsonObject getDependencyGraph();
-    QVector<QString> getCircularDependencies();
+    void* getFileDependencies(const std::string& filePath);
+    void* getDependencyGraph();
+    std::vector<std::string> getCircularDependencies();
     
     // Real-time analysis
-    bool startRealTimeAnalysis(const QString& projectPath);
+    bool startRealTimeAnalysis(const std::string& projectPath);
     bool stopRealTimeAnalysis();
-    bool updateAnalysis(const QString& filePath);
+    bool updateAnalysis(const std::string& filePath);
     
     // Quality metrics
     double calculateCodeQualityScore();
     double calculateMaintainabilityIndex();
-    QJsonObject generateQualityReport();
+    void* generateQualityReport();
     
-signals:
-    void analysisStarted(const QString& projectPath);
-    void analysisProgress(int percentage, const QString& currentFile);
-    void analysisCompleted(const QJsonObject& results);
-    void refactoringOpportunitiesFound(const QVector<RefactoringOpportunity>& opportunities);
-    void bugsDetected(const QVector<BugReport>& bugs);
-    void optimizationsSuggested(const QVector<Optimization>& optimizations);
+
+    void analysisStarted(const std::string& projectPath);
+    void analysisProgress(int percentage, const std::string& currentFile);
+    void analysisCompleted(const void*& results);
+    void refactoringOpportunitiesFound(const std::vector<RefactoringOpportunity>& opportunities);
+    void bugsDetected(const std::vector<BugReport>& bugs);
+    void optimizationsSuggested(const std::vector<Optimization>& optimizations);
     void architecturePatternDetected(const ArchitecturePattern& pattern);
-    void realTimeAnalysisUpdated(const QString& filePath);
+    void realTimeAnalysisUpdated(const std::string& filePath);
     void codeQualityScoreUpdated(double score);
     
 private:
-    QStringList getAllSourceFiles(const QString& projectPath);
-    void processBatchRelationships(const QStringList& files);
+    std::vector<std::string> getAllSourceFiles(const std::string& projectPath);
+    void processBatchRelationships(const std::vector<std::string>& files);
     void performGlobalAnalysis();
-    QJsonObject generateAnalysisResults();
+    void* generateAnalysisResults();
     
-    QString detectLanguage(const QString& filePath);
-    QString detectFileType(const QString& filePath);
+    std::string detectLanguage(const std::string& filePath);
+    std::string detectFileType(const std::string& filePath);
     
-    bool analyzeCppFile(const QString& filePath, const QString& content);
-    bool analyzePythonFile(const QString& filePath, const QString& content);
-    bool analyzeGenericFile(const QString& filePath, const QString& content);
+    bool analyzeCppFile(const std::string& filePath, const std::string& content);
+    bool analyzePythonFile(const std::string& filePath, const std::string& content);
+    bool analyzeGenericFile(const std::string& filePath, const std::string& content);
     
-    bool analyzeCallGraph(const QString& filePath, const QString& content);
-    bool analyzeDependencies(const QString& filePath, const QString& content);
+    bool analyzeCallGraph(const std::string& filePath, const std::string& content);
+    bool analyzeDependencies(const std::string& filePath, const std::string& content);
     
-    QVector<QString> parseParameters(const QString& paramString);
+    std::vector<std::string> parseParameters(const std::string& paramString);
     double calculateFunctionComplexity(const SymbolInfo& function);
     
     void discoverExtractMethodOpportunities();
@@ -215,9 +208,10 @@ private:
     bool checkForInputValidation(const SymbolInfo& symbol);
     bool checkForBufferOverflowRisk(const SymbolInfo& symbol);
     
-    void removeFileAnalysis(const QString& filePath);
-    void updateDependentAnalyses(const QString& filePath);
+    void removeFileAnalysis(const std::string& filePath);
+    void updateDependentAnalyses(const std::string& filePath);
     
     int estimateLinesOfCode(const SymbolInfo& symbol);
     double calculateHalsteadVolume();
 };
+

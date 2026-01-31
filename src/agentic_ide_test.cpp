@@ -1,5 +1,5 @@
 // Minimal agentic_ide_test.cpp - just test if including the header causes a crash
-#include <QApplication>
+
 #include "agentic_ide.h"
 
 int main(int argc, char** argv) {
@@ -9,3 +9,4 @@ int main(int argc, char** argv) {
     
     return 0;
 }
+

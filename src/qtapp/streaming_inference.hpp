@@ -1,8 +1,5 @@
 #pragma once
-#include <QObject>
-#include <QTextCursor>
 
-class QPlainTextEdit;
 
 /**
  * @brief Token-by-token streaming output for inference results
@@ -10,18 +7,19 @@ class QPlainTextEdit;
  * Handles real-time streaming of inference tokens to a console widget.
  * All UI updates are queued to the main thread for thread safety.
  */
-class StreamingInference : public QObject {
-    Q_OBJECT
-public:
-    explicit StreamingInference(QPlainTextEdit* target, QObject* parent = nullptr);
+class StreamingInference : public void {
 
-public slots:
-    void startStream(qint64 reqId, const QString& prompt);
-    void pushToken(const QString& token);        // called from worker
+public:
+    explicit StreamingInference(QPlainTextEdit* target, void* parent = nullptr);
+
+public:
+    void startStream(qint64 reqId, const std::string& prompt);
+    void pushToken(const std::string& token);        // called from worker
     void finishStream();
 
 private:
     QPlainTextEdit* m_out;
     qint64          m_reqId{0};
-    QString         m_buffer;
+    std::string         m_buffer;
 };
+

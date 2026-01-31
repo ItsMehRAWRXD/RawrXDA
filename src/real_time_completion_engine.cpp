@@ -1,13 +1,12 @@
 #include "real_time_completion_engine.h"
 #include <algorithm>
 #include <chrono>
-#include <QString>
 
 RealTimeCompletionEngine::RealTimeCompletionEngine(
     std::shared_ptr<Logger> logger,
     std::shared_ptr<Metrics> metrics)
     : m_logger(logger), m_metrics(metrics), m_inferenceEngine(nullptr) {
-    m_logger->info("RealTimeCompletionEngine initialized");
+
 }
 
 std::vector<CodeCompletion> RealTimeCompletionEngine::getCompletions(
@@ -65,7 +64,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getCompletions(
         return completions;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error getting completions: {}", e.what());
+
         m_metrics->incrementCounter("completion_errors");
         return {};
     }
@@ -76,7 +75,6 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getInlineCompletions(
     int cursorColumn,
     const std::string& filePath) {
 
-    m_logger->debug("Getting inline completions for: {}", filePath);
 
     // Extract prefix/suffix from line
     std::string prefix = currentLine.substr(0, cursorColumn);
@@ -89,7 +87,6 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getMultiLineCompletions(
     const std::string& prefix,
     int maxLines) {
 
-    m_logger->debug("Getting multi-line completions");
 
     return getCompletions(prefix, "", "cpp", "");
 }
@@ -100,14 +97,13 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getContextualCompletions(
     int column,
     const std::string& scope) {
 
-    m_logger->debug("Getting contextual completions for: {}:{}", filePath, line);
 
     // In full implementation, would analyze file context
     return getCompletions("", "", "cpp", scope);
 }
 
 void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
-    m_logger->info("Pre-warming cache for: {}", filePath);
+
 
     // Pre-populate cache with likely completions for this file
     // Placeholder implementation
@@ -116,7 +112,7 @@ void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
 void RealTimeCompletionEngine::clearCache() {
     std::lock_guard<std::mutex> lock(m_cacheMutex);
     m_completionCache.clear();
-    m_logger->info("Completion cache cleared");
+
 }
 
 PerformanceMetrics RealTimeCompletionEngine::getMetrics() const {
@@ -158,7 +154,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
     std::vector<CodeCompletion> completions;
 
     try {
-        m_logger->info("Generating completions with model (max_tokens={})", maxTokens);
+
         m_metrics->incrementCounter("model_calls");
 
         // =============================================================================
@@ -168,22 +164,22 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         // STEP 1: Check InferenceEngine is Available and Model Loaded
         // ===========================================================
         if (!m_inferenceEngine) {
-            m_logger->error("InferenceEngine not set for CompletionEngine");
+
             m_metrics->incrementCounter("inference_engine_not_set");
             return {};
         }
 
         if (!m_inferenceEngine->isModelLoaded()) {
-            m_logger->warn("Model not loaded for completions");
+
             m_metrics->incrementCounter("model_not_loaded_errors");
             return {};
         }
-        m_logger->info("Using InferenceEngine with model loaded (prompt size tracking)");
+
 
         // STEP 2: Tokenize Prompt with Context Window Enforcement
         // ========================================================
-        std::vector<int32_t> inputTokens = m_inferenceEngine->tokenize(QString::fromStdString(prompt));
-        m_logger->debug("Tokenized prompt into {} tokens", inputTokens.size());
+        std::vector<int32_t> inputTokens = m_inferenceEngine->tokenize(std::string::fromStdString(prompt));
+
 
         // Enforce context window limit (typical: 512-2048 tokens)
         // Leave some space for generation
@@ -192,7 +188,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         const size_t TOTAL_LIMIT = CONTEXT_WINDOW + GENERATION_BUDGET;
 
         if (inputTokens.size() > CONTEXT_WINDOW) {
-            m_logger->debug("Truncating prompt from {} to {} tokens",
+
                            inputTokens.size(), CONTEXT_WINDOW);
             // Keep the most recent tokens (sliding window)
             if (inputTokens.size() > CONTEXT_WINDOW) {
@@ -203,7 +199,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
 
         // STEP 3: Generate Tokens with Stopping Conditions
         // ================================================
-        m_logger->debug("Starting token generation using InferenceEngine::generate (max_tokens={})", maxTokens);
+
 
         std::vector<int32_t> generatedTokens = m_inferenceEngine->generate(inputTokens, maxTokens);
 
@@ -214,10 +210,9 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
                 generatedTokens.end());
             generatedCompletion = m_inferenceEngine->detokenize(completionSegment).toStdString();
         } else {
-            m_logger->debug("No additional tokens generated beyond prompt");
+
         }
 
-        m_logger->info("Generated completion: {} chars, {} tokens",
                       generatedCompletion.length(),
                       generatedTokens.size() > inputTokens.size()
                           ? static_cast<int>(generatedTokens.size() - inputTokens.size())
@@ -238,8 +233,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
             comp.cursorOffset = generatedCompletion.length() - 1;
             
             completions.push_back(comp);
-            
-            m_logger->debug("Parsed {} completions from generated text", completions.size());
+
         }
 
         // STEP 5: Score and Rank by Confidence
@@ -256,7 +250,6 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
             completions.erase(completions.begin() + 10, completions.end());
         }
 
-        m_logger->info("Returning {} completions from model", completions.size());
         m_metrics->recordHistogram("completions_per_call", completions.size());
 
         if (!completions.empty()) {
@@ -267,7 +260,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         return completions;
 
     } catch (const std::exception& e) {
-        m_logger->error("Error generating completions: {}", e.what());
+
         m_metrics->incrementCounter("completion_generation_errors");
         return {};
     }
@@ -328,3 +321,4 @@ std::string RealTimeCompletionEngine::generateCacheKey(
 
     return prefix + "|" + suffix;
 }
+

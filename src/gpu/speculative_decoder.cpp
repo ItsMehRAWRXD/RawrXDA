@@ -10,9 +10,7 @@ SpeculativeDecoder::SpeculativeDecoder()
     // Check if GPU backend is available for speculative decoding
     if (IsBackendInitialized()) {
         m_gpuAccelerated = true;
-        // // qInfo:  "✓ Speculative decoder using GPU acceleration";
     } else {
-        // // qWarning:  "Speculative decoder using CPU (slower)";
     }
 }
 
@@ -24,11 +22,9 @@ void SpeculativeDecoder::setDraftModel(const std::string &modelPath)
 {
     m_draftModelPath = modelPath;
     m_draftModelLoaded = true;
-    // // qDebug:  "Draft model set to:" << modelPath;
     
     // In real implementation, would load model weights into GPU memory
     if (m_gpuAccelerated) {
-        // // qDebug:  "Draft model weights loaded into GPU memory";
     }
 }
 
@@ -36,11 +32,9 @@ void SpeculativeDecoder::setTargetModel(const std::string &modelPath)
 {
     m_targetModelPath = modelPath;
     m_targetModelLoaded = true;
-    // // qDebug:  "Target model set to:" << modelPath;
     
     // In real implementation, would load model weights into GPU memory
     if (m_gpuAccelerated) {
-        // // qDebug:  "Target model weights loaded into GPU memory";
     }
 }
 
@@ -58,7 +52,6 @@ std::vector<int> SpeculativeDecoder::generateTokens(const std::string &prompt, i
 std::vector<int> SpeculativeDecoder::generateDraftTokens(const std::string &prompt, int maxTokens)
 {
     if (!m_draftModelLoaded) {
-        // // qWarning:  "Draft model not loaded";
         return std::vector<int>();
     }
     
@@ -75,7 +68,6 @@ std::vector<int> SpeculativeDecoder::generateDraftTokens(const std::string &prom
 std::vector<int> SpeculativeDecoder::verifyTokens(const std::string &prompt, const std::vector<int> &draftTokens)
 {
     if (!m_targetModelLoaded) {
-        // // qWarning:  "Target model not loaded";
         return std::vector<int>();
     }
     
@@ -105,21 +97,17 @@ std::vector<int> SpeculativeDecoder::verifyTokens(const std::string &prompt, con
         }
         
         float acceptanceRate = (float)acceptedCount / draftTokens.size() * 100.0f;
-        // // qDebug:  "Verified" << acceptedCount << "/" << draftTokens.size() 
                  << "tokens with target model (GPU-accelerated, acceptance:" 
                  << std::string::number(acceptanceRate, 'f', 1) << "%)";
         
         return verifiedTokens;
     } else {
         // CPU fallback
-        // // qWarning:  "Using CPU for verification (slow)";
         // Simulate basic verification on CPU
         return draftTokens.mid(0, draftTokens.size() * 8 / 10); // Accept 80%
     }
-}       // // qDebug:  "Generated" << tokens.size() << "draft tokens (GPU-accelerated)";
     } else {
         // CPU fallback - very slow
-        // // qWarning:  "Using CPU for draft generation (very slow)";
         for (int i = 0; i < maxTokens; i++) {
             int tokenId = 100 + (i * 7) % 10000;
             tokens.append(tokenId);
@@ -135,12 +123,6 @@ std::vector<int> SpeculativeDecoder::verifyTokens(const std::string &prompt, con
     // In a real implementation, this would use the target model to verify tokens
     // For this example, we'll just return the draft tokens (simulating 100% acceptance)
     
-    // // qDebug:  "Verified" << draftTokens.size() << "tokens with target model";
     return draftTokens;
 }
-
-
-
-
-
 

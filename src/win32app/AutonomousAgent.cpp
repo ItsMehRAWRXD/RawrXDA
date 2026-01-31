@@ -80,7 +80,7 @@ void AutonomousAgent::Initialize(const AgentConfig& config)
     // Ensure log directory exists
     AgentUtils::EnsureDirectoryExists(config.beaconLogPath);
     
-    // Emit startup beacon
+    // startup beacon
     agent->EmitBeacon(BeaconType::STARTUP, S_OK, "Agent initialized");
     
     AgentUtils::OutputAgentLog("AutonomousAgent initialized successfully");
@@ -194,7 +194,7 @@ bool AutonomousAgent::ExitDiagnosticMode()
     return true;
 }
 
-// Emit Beacon
+// Beacon
 void AutonomousAgent::EmitBeacon(BeaconType type, HRESULT hr, const std::string& message, const std::string& context)
 {
     DiagnosticCheckpoint checkpoint(type, hr, message, context);

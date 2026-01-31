@@ -1,12 +1,6 @@
 #pragma once
 
-#include <QObject>
-#include <QQueue>
-#include <QMutex>
-#include <QWaitCondition>
-#include <QThread>
-#include <QString>
-#include <QDateTime>
+
 #include <memory>
 
 class InferenceEngine;
@@ -21,8 +15,7 @@ class InferenceEngine;
  * - Request throttling and backpressure
  * - Hot model swapping without blocking
  */
-class ModelQueue : public QObject {
-    Q_OBJECT
+class ModelQueue : public void {
 
 public:
     enum Priority {
@@ -33,12 +26,12 @@ public:
 
     struct Request {
         qint64 id;
-        QString modelPath;
-        QString prompt;
+        std::string modelPath;
+        std::string prompt;
         int maxTokens;
         float temperature;
         Priority priority;
-        QDateTime enqueueTime;
+        std::chrono::system_clock::time_point enqueueTime;
         
         bool operator<(const Request& other) const {
             if (priority != other.priority) {
@@ -48,7 +41,7 @@ public:
         }
     };
 
-    explicit ModelQueue(QObject* parent = nullptr);
+    explicit ModelQueue(void* parent = nullptr);
     ~ModelQueue();
 
     /**
@@ -60,7 +53,7 @@ public:
      * @param priority Request priority
      * @return Request ID for tracking
      */
-    qint64 enqueue(const QString& modelPath, const QString& prompt, 
+    qint64 enqueue(const std::string& modelPath, const std::string& prompt, 
                    int maxTokens = 256, float temperature = 0.7f,
                    Priority priority = NORMAL);
 
@@ -90,40 +83,40 @@ public:
      */
     void setMaxConcurrentModels(int max);
 
-signals:
     void requestStarted(qint64 requestId);
-    void requestCompleted(qint64 requestId, const QString& result);
-    void requestFailed(qint64 requestId, const QString& error);
+    void requestCompleted(qint64 requestId, const std::string& result);
+    void requestFailed(qint64 requestId, const std::string& error);
     void queueEmpty();
-    void modelLoaded(const QString& modelPath);
-    void modelUnloaded(const QString& modelPath);
+    void modelLoaded(const std::string& modelPath);
+    void modelUnloaded(const std::string& modelPath);
 
-private slots:
+private:
     void processQueue();
-    void onInferenceComplete(qint64 reqId, const QString& result);
-    void onInferenceError(qint64 reqId, const QString& error);
+    void onInferenceComplete(qint64 reqId, const std::string& result);
+    void onInferenceError(qint64 reqId, const std::string& error);
 
 private:
     struct ModelSlot {
-        QString currentModel;
+        std::string currentModel;
         InferenceEngine* engine = nullptr;
         bool busy = false;
-        QThread* thread = nullptr;
+        std::thread* thread = nullptr;
     };
 
-    ModelSlot* allocateSlot(const QString& modelPath);
+    ModelSlot* allocateSlot(const std::string& modelPath);
     void releaseSlot(ModelSlot* slot);
-    InferenceEngine* getOrLoadModel(const QString& modelPath);
+    InferenceEngine* getOrLoadModel(const std::string& modelPath);
 
-    mutable QMutex m_mutex;
+    mutable std::mutex m_mutex;
     QWaitCondition m_condition;
     QQueue<Request> m_queue;
-    QHash<qint64, Request> m_activeRequests;
-    QVector<ModelSlot> m_slots;
+    std::unordered_map<qint64, Request> m_activeRequests;
+    std::vector<ModelSlot> m_slots;
     
     qint64 m_nextRequestId = 1;
     int m_maxConcurrentModels = 2;
     bool m_running = false;
     
-    QThread* m_processingThread = nullptr;
+    std::thread* m_processingThread = nullptr;
 };
+

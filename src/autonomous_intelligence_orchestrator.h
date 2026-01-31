@@ -1,9 +1,6 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
+
 #include <memory>
 #include "autonomous_model_manager.h"
 #include "intelligent_codebase_engine.h"
@@ -16,9 +13,8 @@
  * IDE experience comparable to Cursor. This is the "brain" that makes
  * the IDE truly autonomous.
  */
-class AutonomousIntelligenceOrchestrator : public QObject {
-    Q_OBJECT
-    
+class AutonomousIntelligenceOrchestrator : public void {
+
 private:
     // Core autonomous systems
     std::unique_ptr<AutonomousModelManager> modelManager;
@@ -27,10 +23,10 @@ private:
     std::unique_ptr<HybridCloudManager> cloudManager;
     
     // Current state
-    QString currentProjectPath;
-    QString currentLanguage;
-    QString activeModel;
-    QString operationMode; // "local", "cloud", "hybrid"
+    std::string currentProjectPath;
+    std::string currentLanguage;
+    std::string activeModel;
+    std::string operationMode; // "local", "cloud", "hybrid"
     
     // Intelligence metrics
     double codeQualityScore = 0.0;
@@ -46,72 +42,72 @@ private:
     bool intelligentModelSwitchingEnabled = true;
     
 public:
-    explicit AutonomousIntelligenceOrchestrator(QObject* parent = nullptr);
+    explicit AutonomousIntelligenceOrchestrator(void* parent = nullptr);
     ~AutonomousIntelligenceOrchestrator();
     
     // Initialization
-    bool initialize(const QString& projectPath);
-    bool loadConfiguration(const QJsonObject& config);
+    bool initialize(const std::string& projectPath);
+    bool loadConfiguration(const void*& config);
     bool saveConfiguration();
     
     // Autonomous operations
-    bool startAutonomousMode(const QString& projectPath);
+    bool startAutonomousMode(const std::string& projectPath);
     bool stopAutonomousMode();
     bool pauseAutonomousMode();
     bool resumeAutonomousMode();
     
     // Intelligent analysis
-    QJsonObject analyzeProject(const QString& projectPath);
-    QJsonObject analyzeFile(const QString& filePath);
-    QJsonObject analyzeFunction(const QString& functionName, const QString& filePath);
-    QJsonObject getProjectIntelligence();
+    void* analyzeProject(const std::string& projectPath);
+    void* analyzeFile(const std::string& filePath);
+    void* analyzeFunction(const std::string& functionName, const std::string& filePath);
+    void* getProjectIntelligence();
     
     // Intelligent recommendations
-    QJsonObject getIntelligentRecommendations();
-    QJsonObject getOptimizationSuggestions();
-    QJsonObject getRefactoringSuggestions();
-    QJsonObject getBugReports();
+    void* getIntelligentRecommendations();
+    void* getOptimizationSuggestions();
+    void* getRefactoringSuggestions();
+    void* getBugReports();
     
     // Automatic actions
-    bool autoSelectBestModel(const QString& taskType = "");
+    bool autoSelectBestModel(const std::string& taskType = "");
     bool autoGenerateTests();
     bool autoFixBugs();
     bool autoOptimizeCode();
     bool autoRefactor();
     
     // Model intelligence
-    ModelRecommendation getModelRecommendation(const QString& taskType);
-    bool switchModel(const QString& modelId);
-    QJsonArray getAvailableModels();
+    ModelRecommendation getModelRecommendation(const std::string& taskType);
+    bool switchModel(const std::string& modelId);
+    void* getAvailableModels();
     
     // Cloud integration
     bool enableCloudMode();
     bool enableLocalMode();
     bool enableHybridMode();
-    QString getCurrentMode();
+    std::string getCurrentMode();
     
     // Quality metrics
     double getCodeQualityScore();
     double getTestCoverage();
     double getMaintainabilityIndex();
-    QJsonObject getQualityReport();
+    void* getQualityReport();
     
     // Enterprise features
     bool enableEnterpriseMode();
-    bool setupTeamCollaboration(const QString& teamId);
-    QJsonObject getEnterpriseReport();
+    bool setupTeamCollaboration(const std::string& teamId);
+    void* getEnterpriseReport();
     
-signals:
+
     void autonomousModeStarted();
     void autonomousModeStopped();
-    void analysisCompleted(const QJsonObject& results);
-    void recommendationsReady(const QJsonObject& recommendations);
-    void modelSwitched(const QString& newModel);
+    void analysisCompleted(const void*& results);
+    void recommendationsReady(const void*& recommendations);
+    void modelSwitched(const std::string& newModel);
     void qualityScoreUpdated(double score);
     void optimizationsFound(int count);
     void bugsDetected(int count);
     void testsGenerated(int count);
-    void intelligenceReportReady(const QJsonObject& report);
+    void intelligenceReportReady(const void*& report);
     
 private:
     void setupConnections();
@@ -120,7 +116,8 @@ private:
     void performAutomaticOptimization();
     void updateIntelligenceMetrics();
     
-    QJsonObject generateIntelligenceReport();
+    void* generateIntelligenceReport();
     bool shouldSwitchToCloudModel();
     bool shouldSwitchToLocalModel();
 };
+

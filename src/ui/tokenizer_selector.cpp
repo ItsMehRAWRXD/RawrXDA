@@ -1,8 +1,7 @@
 #include "tokenizer_selector.h"
-#include <QString>
-#include <QJsonObject>
 
-TokenizerSelector::TokenizerSelector(QWidget* parent) : QDialog(parent) {}
+
+TokenizerSelector::TokenizerSelector(void* parent) : void(parent) {}
 TokenizerSelector::~TokenizerSelector() {}
 
 TokenizerConfig TokenizerSelector::getSelectedConfig() const {

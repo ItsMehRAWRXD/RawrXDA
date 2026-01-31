@@ -20,19 +20,16 @@ bool GpuBackend::s_initialized = false;
 bool GpuBackend::initialize(Backend backend)
 {
     if (s_initialized && s_currentBackend == backend) {
-        // // qDebug:  "GPU backend already initialized:" << backendName(backend);
         return true;
     }
 
     // Initialize GPU detection system first
     if (GPU_Initialize() != 0) {
-        // // qWarning:  "Failed to initialize GPU detection system";
         return initializeCpu();
     }
 
     // Detect available GPUs
     int32_t gpuCount = GPU_Detect();
-    // // qInfo:  "Detected" << gpuCount << "GPU(s)";
 
     // Map our backend enum to MASM backend codes (0=CPU, 1=Vulkan, 2=CUDA, 3=ROCm)
     int64_t masmBackend = 0;
@@ -55,11 +52,9 @@ bool GpuBackend::initialize(Backend backend)
         // Success - update state
         s_currentBackend = backend;
         s_initialized = true;
-        // // qInfo:  "✓ GPU Backend initialized with" << backendName(backend);
         return true;
     } else {
         // Failed - try CPU fallback
-        // // qWarning:  "Failed to initialize" << backendName(backend) << "backend, falling back to CPU";
         result = InitializeGPUBackend(0); // Force CPU mode
         if (result == 0) {
             s_currentBackend = CPU;
@@ -90,12 +85,10 @@ bool GpuBackend::isBackendAvailable(Backend backend)
     switch (backend) {
     case Vulkan:
         // Check if any GPU is available (Vulkan supports NVIDIA, AMD, Intel)
-        // // qDebug:  "Checking Vulkan availability...";
         return gpuCount > 0;
         
     case CUDA:
         // Check for NVIDIA GPU specifically
-        // // qDebug:  "Checking CUDA availability...";
         for (int32_t i = 0; i < gpuCount; i++) {
             GpuDeviceInfo devInfo;
             if (GPU_GetDevice(i, &devInfo) == 0) {
@@ -130,7 +123,6 @@ bool GpuBackend::initializeWithFallback()
 {
     // Try Vulkan first (most compatible)
     if (isBackendAvailable(Vulkan)) {
-        // // qInfo:  "Attempting Vulkan initialization...";
         if (initialize(Vulkan)) {
             return true;
         }
@@ -138,79 +130,66 @@ bool GpuBackend::initializeWithFallback()
 
     // Fall back to CUDA (NVIDIA only)
     if (isBackendAvailable(CUDA)) {
-        // // qInfo:  "Attempting CUDA initialization...";
         if (initialize(CUDA)) {
             return true;
         }
     }
 
     // Final fallback to CPU
-    // // qWarning:  "No GPU backends available, falling back to CPU (slower performance)";
     return initialize(CPU);
 }
 
 bool GpuBackend::initializeVulkan()
 {
-    // // qDebug:  "Attempting to initialize Vulkan...";
     
     // Create Vulkan instance through MASM
     int64_t result = VK_CreateInstance();
     if (result != 0) {
-        // // qWarning:  "Failed to create Vulkan instance";
         return false;
     }
 
     // Enumerate physical devices
     int32_t deviceCount = VK_EnumeratePhysicalDevices();
     if (deviceCount == 0) {
-        // // qWarning:  "No Vulkan-compatible devices found";
         VK_DestroyInstance();
         return false;
     }
 
-    // // qInfo:  "✓ Vulkan initialized successfully with" << deviceCount << "device(s)";
     return true;
 }
 
 bool GpuBackend::initializeCuda()
 {
-    // // qDebug:  "Attempting to initialize CUDA...";
     
     // Initialize CUDA runtime through MASM
     int64_t result = CUDA_Initialize();
     if (result != 0) {
-        // // qWarning:  "Failed to initialize CUDA runtime";
         return false;
     }
 
     // Get CUDA device count
     int32_t deviceCount = CUDA_GetDeviceCount();
     if (deviceCount == 0) {
-        // // qWarning:  "No CUDA-compatible devices found";
         return false;
     }
 
     // Set device 0 as active
     result = CUDA_SetDevice(0);
     if (result != 0) {
-        // // qWarning:  "Failed to set CUDA device";
         return false;
     }
 
-    // // qInfo:  "✓ CUDA initialized successfully with" << deviceCount << "device(s)";
     return true;
 }
 
 bool GpuBackend::initializeCpu()
 {
-    // // qDebug:  "Initializing CPU backend";
     
     // Still call MASM backend with CPU mode for consistency
     int64_t result = InitializeGPUBackend(0); // 0 = CPU mode
     
     s_currentBackend = CPU;
     s_initialized = true;
-    // // qInfo:  "✓ CPU backend initialized";
     return true;
 }
 
@@ -267,7 +246,6 @@ extern "C" int64_t HybridGPU_Init()
     std::call_once(g_vulkanInitFlag, [] {
         g_vulkanCompute = std::make_unique<VulkanCompute>();
         if (!g_vulkanCompute->Initialize()) {
-            // // qWarning:  "[GPU-BRIDGE] Vulkan initialization failed; CPU fallback will be used";
             g_vulkanCompute.reset();
             return;
         }
@@ -281,7 +259,6 @@ extern "C" int64_t HybridCPU_MatMul(const float* A, const float* B, float* C,
                                      int64_t M, int64_t N, int64_t K)
 {
     if (!A || !B || !C || M <= 0 || N <= 0 || K <= 0) {
-        // // qWarning:  "[GPU-BRIDGE] Invalid CPU matmul arguments" << M << N << K;
         return -1;
     }
 
@@ -294,7 +271,6 @@ extern "C" int64_t HybridGPU_MatMul(const float* A, const float* B, float* C,
                                      int64_t M, int64_t N, int64_t K)
 {
     if (!A || !B || !C || M <= 0 || N <= 0 || K <= 0) {
-        // // qWarning:  "[GPU-BRIDGE] Invalid GPU matmul arguments" << M << N << K;
         return -1;
     }
 
@@ -318,16 +294,12 @@ extern "C" int64_t HybridGPU_MatMul(const float* A, const float* B, float* C,
             if (dispatched) {
                 usedGpu = true;
                 g_gpuMatmulCount.fetch_add(1, std::memory_order_relaxed);
-                // // qInfo:  "[GPU-BRIDGE] Vulkan matmul offload" << M << "x" << K << "*" << K << "x" << N
                         << "shader:" << std::string::fromStdString(*spvPath);
             } else {
-                // // qWarning:  "[GPU-BRIDGE] Vulkan matmul dispatch failed; using CPU fallback";
             }
         } else {
-            // // qWarning:  "[GPU-BRIDGE] No matmul SPIR-V shader found; using CPU fallback";
         }
     } else if (!dimsFit) {
-        // // qWarning:  "[GPU-BRIDGE] Matmul dimensions exceed uint32_t; forcing CPU path";
     }
 
     if (!usedGpu) {
@@ -347,6 +319,4 @@ extern "C" int64_t HybridGPU_Synchronize()
     }
     return 0;
 }
-
-
 

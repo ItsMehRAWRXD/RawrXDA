@@ -3,81 +3,70 @@
 #ifndef HYBRID_CLOUD_MANAGER_H
 #define HYBRID_CLOUD_MANAGER_H
 
-#include <QObject>
-#include <QString>
-#include <QVector>
-#include <QHash>
-#include <QJsonObject>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QDateTime>
-#include <QTimer>
-#include <QElapsedTimer>
-#include <QEventLoop>
 
 // Cloud provider information
 struct CloudProvider {
-    QString providerId;        // aws, azure, gcp, huggingface, ollama
-    QString name;
-    QString endpoint;
-    QString apiKey;            // Optional for Ollama
-    QString region;
+    std::string providerId;        // aws, azure, gcp, huggingface, ollama
+    std::string name;
+    std::string endpoint;
+    std::string apiKey;            // Optional for Ollama
+    std::string region;
     bool isEnabled = false;
     bool isHealthy = false;
-    QDateTime lastHealthCheck;
+    std::chrono::system_clock::time_point lastHealthCheck;
     double costPerRequest = 0.0;     // USD (0.0 for local Ollama)
     double averageLatency = 1000.0;  // milliseconds
-    QJsonObject capabilities;
+    void* capabilities;
 };
 
 // Cloud model information
 struct CloudModel {
-    QString modelId;
-    QString providerId;
-    QString name;
-    QString endpoint;
-    QStringList supportedTasks;
+    std::string modelId;
+    std::string providerId;
+    std::string name;
+    std::string endpoint;
+    std::vector<std::string> supportedTasks;
     double costPerToken = 0.0;
     int maxTokens = 4096;
     double averageLatency = 1000.0;
     bool isAvailable = true;
-    QJsonObject metadata;
+    void* metadata;
 };
 
 // Execution request
 struct ExecutionRequest {
-    QString requestId;
-    QString taskType;
-    QString prompt;
-    QString language;
+    std::string requestId;
+    std::string taskType;
+    std::string prompt;
+    std::string language;
     int maxTokens = 1024;
     double temperature = 0.7;
-    QJsonObject parameters;
-    QDateTime timestamp;
+    void* parameters;
+    std::chrono::system_clock::time_point timestamp;
 };
 
 // Execution result
 struct ExecutionResult {
-    QString requestId;
-    QString executionLocation; // "local" or provider ID
-    QString modelUsed;
-    QString response;
+    std::string requestId;
+    std::string executionLocation; // "local" or provider ID
+    std::string modelUsed;
+    std::string response;
     int tokensUsed = 0;
     double latencyMs = 0.0;
     double cost = 0.0;
     bool success = false;
-    QString errorMessage;
-    QDateTime completedAt;
-    QJsonObject metadata;
+    std::string errorMessage;
+    std::chrono::system_clock::time_point completedAt;
+    void* metadata;
 };
 
 // Hybrid execution decision
 struct HybridExecution {
-    QString requestId;
+    std::string requestId;
     bool useCloud = false;
-    QString selectedProvider;
-    QString selectedModel;
-    QString reasoning;
+    std::string selectedProvider;
+    std::string selectedModel;
+    std::string reasoning;
     double estimatedCost = 0.0;
     double estimatedLatency = 0.0;
     double confidenceScore = 0.0;
@@ -91,8 +80,8 @@ struct CostMetrics {
     int totalRequests = 0;
     int cloudRequests = 0;
     int localRequests = 0;
-    QHash<QString, double> costByProvider;
-    QHash<QString, int> requestsByProvider;
+    std::unordered_map<std::string, double> costByProvider;
+    std::unordered_map<std::string, int> requestsByProvider;
 };
 
 // Performance metrics
@@ -102,7 +91,7 @@ struct PerformanceMetrics {
     double p99Latency = 0.0;
     int successRate = 100;     // Percentage
     int failoverCount = 0;
-    QHash<QString, double> latencyByProvider;
+    std::unordered_map<std::string, double> latencyByProvider;
 };
 
 // Failover configuration
@@ -110,63 +99,62 @@ struct FailoverConfig {
     bool enabled = true;
     int maxRetries = 3;
     int timeoutMs = 30000;
-    QVector<QString> fallbackProviders;
+    std::vector<std::string> fallbackProviders;
     bool autoSwitchOnFailure = true;
 };
 
-class HybridCloudManager : public QObject {
-    Q_OBJECT
+class HybridCloudManager : public void {
 
 public:
-    explicit HybridCloudManager(QObject* parent = nullptr);
+    explicit HybridCloudManager(void* parent = nullptr);
     ~HybridCloudManager();
 
     // Provider management
     bool addProvider(const CloudProvider& provider);
-    bool removeProvider(const QString& providerId);
-    bool configureProvider(const QString& providerId, const QString& apiKey, 
-                          const QString& endpoint, const QString& region);
+    bool removeProvider(const std::string& providerId);
+    bool configureProvider(const std::string& providerId, const std::string& apiKey, 
+                          const std::string& endpoint, const std::string& region);
     void updateProvider(const CloudProvider& provider);
-    QVector<CloudProvider> getProviders() const;
-    QVector<CloudProvider> getAllProviders() const;
-    CloudProvider getProvider(const QString& providerId) const;
-    QVector<CloudProvider> getHealthyProviders() const;
+    std::vector<CloudProvider> getProviders() const;
+    std::vector<CloudProvider> getAllProviders() const;
+    CloudProvider getProvider(const std::string& providerId) const;
+    std::vector<CloudProvider> getHealthyProviders() const;
     
     // Provider health
-    void checkProviderHealth(const QString& providerId);
+    void checkProviderHealth(const std::string& providerId);
     void checkAllProvidersHealth();
-    bool isProviderHealthy(const QString& providerId) const;
+    bool isProviderHealthy(const std::string& providerId) const;
     
     // Model management
     void registerCloudModel(const CloudModel& model);
-    QVector<CloudModel> getAvailableCloudModels() const;
-    QVector<CloudModel> getModelsForProvider(const QString& providerId) const;
+    std::vector<CloudModel> getAvailableCloudModels() const;
+    std::vector<CloudModel> getModelsForProvider(const std::string& providerId) const;
     CloudModel selectBestCloudModel(const ExecutionRequest& request);
     
     // Hybrid execution
     HybridExecution planExecution(const ExecutionRequest& request,
-                                 const QString& executionType = "auto");
+                                 const std::string& executionType = "auto");
     ExecutionResult execute(const ExecutionRequest& request);
     ExecutionResult executeLocal(const ExecutionRequest& request);
     ExecutionResult executeCloud(const ExecutionRequest& request, 
-                                 const QString& providerId,
-                                 const QString& modelId);
+                                 const std::string& providerId,
+                                 const std::string& modelId);
     
     // Cloud-specific execution (from cpp)
     ExecutionResult executeOnCloud(const ExecutionRequest& request, 
-                                   const QString& providerId,
-                                   const QString& modelId);
+                                   const std::string& providerId,
+                                   const std::string& modelId);
     ExecutionResult executeOnOllama(const ExecutionRequest& request);
-    ExecutionResult executeOnHuggingFace(const ExecutionRequest& request, const QString& modelId);
-    ExecutionResult executeOnAWS(const ExecutionRequest& request, const QString& modelId);
-    ExecutionResult executeOnAzure(const ExecutionRequest& request, const QString& modelId);
-    ExecutionResult executeOnGCP(const ExecutionRequest& request, const QString& modelId);
+    ExecutionResult executeOnHuggingFace(const ExecutionRequest& request, const std::string& modelId);
+    ExecutionResult executeOnAWS(const ExecutionRequest& request, const std::string& modelId);
+    ExecutionResult executeOnAzure(const ExecutionRequest& request, const std::string& modelId);
+    ExecutionResult executeOnGCP(const ExecutionRequest& request, const std::string& modelId);
     
     // Intelligent routing
     bool shouldUseCloudExecution(const ExecutionRequest& request);
-    QString selectOptimalProvider(const ExecutionRequest& request);
-    double calculateExecutionCost(const QString& providerId, 
-                                  const QString& modelId,
+    std::string selectOptimalProvider(const ExecutionRequest& request);
+    double calculateExecutionCost(const std::string& providerId, 
+                                  const std::string& modelId,
                                   int estimatedTokens);
     
     // Execution tracking
@@ -191,11 +179,11 @@ public:
     
     // Performance monitoring
     PerformanceMetrics getPerformanceMetrics() const;
-    double getAverageLatency(const QString& providerId = "") const;
+    double getAverageLatency(const std::string& providerId = "") const;
     int getSuccessRate() const;
     
     // Execution history
-    QVector<ExecutionResult> getExecutionHistory(int limit = 0) const;
+    std::vector<ExecutionResult> getExecutionHistory(int limit = 0) const;
     void clearExecutionHistory();
     
     // Configuration
@@ -209,35 +197,35 @@ public:
     void setMaxRetries(int retries);
     
     // Cloud switching
-    bool switchToCloud(const QString& reason);
-    bool switchToLocal(const QString& reason);
+    bool switchToCloud(const std::string& reason);
+    bool switchToLocal(const std::string& reason);
     bool isUsingCloud() const;
     
     // API key management
-    void setAPIKey(const QString& providerId, const QString& apiKey);
-    void setAWSCredentials(const QString& accessKey, const QString& secretKey,
-                          const QString& region);
-    void setAzureCredentials(const QString& subscriptionId, const QString& apiKey);
-    void setGCPCredentials(const QString& projectId, const QString& apiKey);
-    void setHuggingFaceKey(const QString& apiKey);
+    void setAPIKey(const std::string& providerId, const std::string& apiKey);
+    void setAWSCredentials(const std::string& accessKey, const std::string& secretKey,
+                          const std::string& region);
+    void setAzureCredentials(const std::string& subscriptionId, const std::string& apiKey);
+    void setGCPCredentials(const std::string& projectId, const std::string& apiKey);
+    void setHuggingFaceKey(const std::string& apiKey);
     
     // Request queuing
     void queueRequest(const ExecutionRequest& request);
-    QVector<ExecutionRequest> getPendingRequests() const;
+    std::vector<ExecutionRequest> getPendingRequests() const;
     void processPendingRequests();
 
-signals:
-    void executionStarted(const QString& requestId);
+
+    void executionStarted(const std::string& requestId);
     void executionComplete(const ExecutionResult& result);
-    void providerHealthChanged(const QString& providerId, bool isHealthy);
-    void costLimitReached(const QString& limitType);
-    void failoverTriggered(const QString& fromProvider, const QString& toProvider);
+    void providerHealthChanged(const std::string& providerId, bool isHealthy);
+    void costLimitReached(const std::string& limitType);
+    void failoverTriggered(const std::string& fromProvider, const std::string& toProvider);
     void cloudSwitched(bool usingCloud);
-    void errorOccurred(const QString& error);
+    void errorOccurred(const std::string& error);
     void healthCheckCompleted();
 
-private slots:
-    void onNetworkReplyFinished(QNetworkReply* reply);
+private:
+    void onNetworkReplyFinished(void** reply);
     void onHealthCheckTimerTimeout();
 
 private:
@@ -245,13 +233,13 @@ private:
     void setupDefaultProviders();
     
     // Execution helpers
-    ExecutionResult sendCloudRequest(const QString& providerId,
-                                    const QString& modelId,
+    ExecutionResult sendCloudRequest(const std::string& providerId,
+                                    const std::string& modelId,
                                     const ExecutionRequest& request);
-    QJsonObject createRequestPayload(const ExecutionRequest& request,
-                                    const QString& providerId);
-    ExecutionResult parseCloudResponse(const QByteArray& data,
-                                      const QString& providerId);
+    void* createRequestPayload(const ExecutionRequest& request,
+                                    const std::string& providerId);
+    ExecutionResult parseCloudResponse(const std::vector<uint8_t>& data,
+                                      const std::string& providerId);
     
     // Routing algorithms
     double calculateProviderScore(const CloudProvider& provider,
@@ -262,12 +250,12 @@ private:
     double calculateReliabilityScore(const CloudProvider& provider);
     
     // Health monitoring
-    bool validateCloudHealth(const QString& providerId);
-    void recordProviderLatency(const QString& providerId, double latencyMs);
-    void recordProviderFailure(const QString& providerId);
+    bool validateCloudHealth(const std::string& providerId);
+    void recordProviderLatency(const std::string& providerId, double latencyMs);
+    void recordProviderFailure(const std::string& providerId);
     
     // Cost tracking
-    void recordCost(const QString& providerId, double cost);
+    void recordCost(const std::string& providerId, double cost);
     void updateCostMetrics(const ExecutionResult& result);
     
     // Performance tracking
@@ -276,23 +264,23 @@ private:
     void updatePerformanceMetrics(const ExecutionResult& result);
     
     // Failover logic
-    QString getNextFallbackProvider(const QString& currentProvider);
-    bool shouldRetry(int attemptNumber, const QString& errorType);
+    std::string getNextFallbackProvider(const std::string& currentProvider);
+    bool shouldRetry(int attemptNumber, const std::string& errorType);
     
     // Data members - SYNCHRONIZED with cpp
-    QHash<QString, CloudProvider> providers;
-    QVector<CloudModel> cloudModels;
-    QVector<ExecutionResult> executionHistory;  // Changed to QVector from QHash
-    QVector<ExecutionRequest> requestQueue;
+    std::unordered_map<std::string, CloudProvider> providers;
+    std::vector<CloudModel> cloudModels;
+    std::vector<ExecutionResult> executionHistory;  // Changed to std::vector from std::unordered_map
+    std::vector<ExecutionRequest> requestQueue;
     
     CostMetrics costMetrics;
     PerformanceMetrics performanceMetrics;
     FailoverConfig failoverConfig;
     
-    QNetworkAccessManager* networkManager;
-    QHash<QString, QNetworkReply*> activeRequests;
+    void** networkManager;
+    std::unordered_map<std::string, void**> activeRequests;
     
-    QTimer* healthCheckTimer;
+    void** healthCheckTimer;
     int healthCheckIntervalMs;
     
     bool preferLocal = true;
@@ -317,3 +305,4 @@ private:
 };
 
 #endif // HYBRID_CLOUD_MANAGER_H
+

@@ -13,9 +13,7 @@
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QVector>
+
 #include <memory>
 #include "real_time_completion_engine.h"
 #include "lsp_client.h"
@@ -26,10 +24,10 @@ namespace RawrXD {
  * \brief Completion item for AI suggestions
  */
 struct AICompletion {
-    QString text;           // The completion text
-    QString detail;         // Additional context/description
+    std::string text;           // The completion text
+    std::string detail;         // Additional context/description
     double confidence;      // 0.0 - 1.0
-    QString kind;          // "function", "method", "variable", etc.
+    std::string kind;          // "function", "method", "variable", etc.
     int cursorOffset;      // Where to place cursor after insertion
     bool isMultiLine;      // True if spans multiple lines
 };
@@ -40,15 +38,14 @@ struct AICompletion {
  * Integrates RealTimeCompletionEngine with Qt UI layer
  * Provides ghost text suggestions powered by local GGUF models
  */
-class AICompletionProvider : public QObject
+class AICompletionProvider : public void
 {
-    Q_OBJECT
 
 public:
     explicit AICompletionProvider(
         RealTimeCompletionEngine* engine,
         std::shared_ptr<Logger> logger,
-        QObject* parent = nullptr
+        void* parent = nullptr
     );
 
     /**
@@ -60,28 +57,28 @@ public:
      * @param contextLines Additional context lines around cursor
      */
     void requestCompletions(
-        const QString& prefix,
-        const QString& suffix,
-        const QString& filePath,
-        const QString& fileType,
-        const QStringList& contextLines = {}
+        const std::string& prefix,
+        const std::string& suffix,
+        const std::string& filePath,
+        const std::string& fileType,
+        const std::vector<std::string>& contextLines = {}
     );
 
     /**
      * Request inline completions (single line)
      */
     void requestInlineCompletion(
-        const QString& currentLine,
+        const std::string& currentLine,
         int cursorColumn,
-        const QString& filePath
+        const std::string& filePath
     );
 
     /**
      * Request multi-line completions
      */
     void requestMultiLineCompletion(
-        const QString& prefix,
-        const QString& filePath,
+        const std::string& prefix,
+        const std::string& filePath,
         int maxLines = 5
     );
 
@@ -100,17 +97,17 @@ public:
      */
     void clearCache();
 
-signals:
+
     /**
      * Emitted when completions are ready
      * @param completions List of AI-generated suggestions
      */
-    void completionsReady(const QVector<AICompletion>& completions);
+    void completionsReady(const std::vector<AICompletion>& completions);
 
     /**
      * Emitted on error
      */
-    void error(const QString& message);
+    void error(const std::string& message);
 
     /**
      * Emitted to report latency
@@ -121,16 +118,17 @@ private:
     /**
      * Convert internal CodeCompletion to AICompletion
      */
-    QVector<AICompletion> convertCompletions(const std::vector<CodeCompletion>& completions);
+    std::vector<AICompletion> convertCompletions(const std::vector<CodeCompletion>& completions);
 
     /**
      * Build context string from surrounding lines
      */
-    QString buildContext(const QStringList& lines) const;
+    std::string buildContext(const std::vector<std::string>& lines) const;
 
     RealTimeCompletionEngine* m_engine;
-    std::shared_ptr<Logger> m_logger;
+
     bool m_requestPending{false};
 };
 
 } // namespace RawrXD
+

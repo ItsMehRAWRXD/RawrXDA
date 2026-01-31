@@ -1,14 +1,7 @@
 #ifndef AI_CODE_ASSISTANT_PANEL_H
 #define AI_CODE_ASSISTANT_PANEL_H
 
-#include <QDockWidget>
-#include <QLabel>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QListWidget>
-#include <QProgressBar>
-#include <QComboBox>
-#include <QSlider>
+
 #include <memory>
 
 class AICodeAssistant;
@@ -24,21 +17,20 @@ class AICodeAssistant;
  * - Applying suggestions to editor
  */
 class AICodeAssistantPanel : public QDockWidget {
-    Q_OBJECT
 
 public:
-    explicit AICodeAssistantPanel(QWidget *parent = nullptr);
+    explicit AICodeAssistantPanel(void *parent = nullptr);
     ~AICodeAssistantPanel();
     
     void initialize();
     void setAssistant(AICodeAssistant *assistant);
 
-private slots:
+private:
     // Response from AI
     void onSuggestionReady(const int dummy);  // Placeholder slot, actual connections use lambdas
-    void onSuggestionStreaming(const QString &partial);
+    void onSuggestionStreaming(const std::string &partial);
     void onSuggestionStreamComplete();
-    void onError(const QString &error);
+    void onError(const std::string &error);
     void onConnectionStatusChanged(bool connected);
     void onLatencyMeasured(int latency_ms);
 
@@ -55,7 +47,7 @@ private slots:
 private:
     void setupUI();
     void updateStatusIndicator(bool connected);
-    QString formatLatency(int ms);
+    std::string formatLatency(int ms);
 
     AICodeAssistant *assistant_;
     
@@ -85,9 +77,10 @@ private:
     QListWidget *suggestion_history_;
     
     // State
-    QString current_suggestion_text_;
-    QString current_suggestion_type_;
+    std::string current_suggestion_text_;
+    std::string current_suggestion_type_;
     bool streaming_in_progress_;
 };
 
 #endif // AI_CODE_ASSISTANT_PANEL_H
+

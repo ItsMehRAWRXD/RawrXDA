@@ -2,18 +2,15 @@
 #include "../../include/inference_engine_stub.hpp"
 #include "qtapp/gguf_server.hpp"
 #include "streaming_gguf_loader.h"
-#include <QStandardPaths>
-#include <QDir>
-#include <QDebug>
-#include <QEventLoop>
-#include <QTimer>
+
+
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <cstring>
 
-EnhancedModelLoader::EnhancedModelLoader(QObject* parent)
-    : QObject(parent)
+EnhancedModelLoader::EnhancedModelLoader(void* parent)
+    : void(parent)
     , m_engine(nullptr)
     , m_server(nullptr)
     , m_formatRouter(std::make_unique<FormatRouter>())
@@ -30,10 +27,10 @@ EnhancedModelLoader::~EnhancedModelLoader() {
     cleanupTempFiles();
 }
 
-bool EnhancedModelLoader::loadModel(const QString& modelInput) {
+bool EnhancedModelLoader::loadModel(const std::string& modelInput) {
     if (modelInput.isEmpty()) {
         m_lastError = "Model input is empty";
-        emit error(m_lastError);
+        error(m_lastError);
         return false;
     }
 
@@ -46,45 +43,45 @@ bool EnhancedModelLoader::loadModel(const QString& modelInput) {
         if (!modelSource) {
             m_lastError = "Failed to determine model format";
             logLoadError(modelInput, ModelFormat::UNKNOWN, m_lastError);
-            emit error(m_lastError);
+            error(m_lastError);
             return false;
         }
 
         m_loadedFormat = modelSource->format;
         logLoadStart(modelInput, modelSource->format);
-        emit loadingStage(QString::fromStdString(modelSource->display_name));
+        loadingStage(std::string::fromStdString(modelSource->display_name));
 
         bool success = false;
 
         switch (modelSource->format) {
             case ModelFormat::GGUF_LOCAL:
-                emit loadingStage("Loading local GGUF model...");
+                loadingStage("Loading local GGUF model...");
                 success = loadGGUFLocal(modelInput);
                 break;
 
             case ModelFormat::HF_REPO:
-                emit loadingStage("Downloading from HuggingFace Hub...");
+                loadingStage("Downloading from HuggingFace Hub...");
                 success = loadHFModel(modelInput);
                 break;
 
             case ModelFormat::HF_FILE:
-                emit loadingStage("Downloading HF file...");
+                loadingStage("Downloading HF file...");
                 success = loadHFModel(modelInput);
                 break;
 
             case ModelFormat::OLLAMA_REMOTE:
-                emit loadingStage("Connecting to Ollama endpoint...");
+                loadingStage("Connecting to Ollama endpoint...");
                 success = loadOllamaModel(modelInput);
                 break;
 
             case ModelFormat::MASM_COMPRESSED:
-                emit loadingStage("Decompressing model...");
+                loadingStage("Decompressing model...");
                 success = loadCompressedModel(modelInput);
                 break;
 
             default:
                 m_lastError = "Unsupported model format";
-                emit error(m_lastError);
+                error(m_lastError);
                 return false;
         }
 
@@ -94,35 +91,34 @@ bool EnhancedModelLoader::loadModel(const QString& modelInput) {
         if (success) {
             m_modelPath = modelInput;
             logLoadSuccess(modelInput, modelSource->format, duration_ms);
-            emit modelLoaded(modelInput);
+            modelLoaded(modelInput);
             return true;
         } else {
             m_lastError = "Model loading failed at format stage";
             logLoadError(modelInput, modelSource->format, m_lastError);
-            emit error(m_lastError);
+            error(m_lastError);
             return false;
         }
 
     } catch (const std::exception& e) {
-        m_lastError = QString("Exception: %1").arg(e.what());
+        m_lastError = std::string("Exception: %1"));
         logLoadError(modelInput, ModelFormat::UNKNOWN, m_lastError);
-        emit error(m_lastError);
+        error(m_lastError);
         return false;
     }
 }
 
-bool EnhancedModelLoader::loadGGUFLocal(const QString& modelPath) {
+bool EnhancedModelLoader::loadGGUFLocal(const std::string& modelPath) {
     std::string path = modelPath.toStdString();
 
     if (!std::filesystem::exists(path)) {
         m_lastError = "GGUF file not found: " + modelPath;
-        emit error(m_lastError);
+        error(m_lastError);
         return false;
     }
 
     try {
         auto fileSize = std::filesystem::file_size(path);
-        qInfo() << "Loading GGUF:" << modelPath << "(" << (fileSize / 1024 / 1024) << "MB)";
 
         if (!m_engine) {
             m_engine = std::make_unique<InferenceEngine>();
@@ -131,36 +127,34 @@ bool EnhancedModelLoader::loadGGUFLocal(const QString& modelPath) {
         // Load into inference engine
         if (!m_engine->Initialize(path)) {
             m_lastError = "InferenceEngine failed to initialize";
-            emit error(m_lastError);
+            error(m_lastError);
             return false;
         }
 
-        emit loadingProgress(80);
+        loadingProgress(80);
 
         // Optionally start GGUF server
         if (!m_server) {
             m_server = std::make_unique<GGUFServer>(m_engine.get(), this);
-            connect(m_server.get(), &GGUFServer::serverStarted, this, &EnhancedModelLoader::serverStarted);
-            connect(m_server.get(), &GGUFServer::serverStopped, this, &EnhancedModelLoader::serverStopped);
-            connect(m_server.get(), QOverload<const QString&>::of(&GGUFServer::error),
-                    this, &EnhancedModelLoader::error);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
         }
 
         if (!m_server->start(m_port)) {
-            qWarning() << "Failed to start GGUF server on port" << m_port << "- continuing without server";
         }
 
-        emit loadingProgress(100);
+        loadingProgress(100);
         return true;
 
     } catch (const std::exception& e) {
-        m_lastError = QString("GGUF load exception: %1").arg(e.what());
-        emit error(m_lastError);
+        m_lastError = std::string("GGUF load exception: %1"));
+        error(m_lastError);
         return false;
     }
 }
 
-bool EnhancedModelLoader::loadHFModel(const QString& repoId) {
+bool EnhancedModelLoader::loadHFModel(const std::string& repoId) {
     std::string repo = repoId.toStdString();
 
     // Extract revision if specified (repo:revision format)
@@ -173,93 +167,89 @@ bool EnhancedModelLoader::loadHFModel(const QString& repoId) {
     }
 
     try {
-        qInfo() << "Downloading HF model:" << QString::fromStdString(repo_name) << "revision:" << QString::fromStdString(revision);
-        emit loadingProgress(10);
+        loadingProgress(10);
 
         // TODO: Implement HF download with cache logic
         // For now, return error to prevent silent failure
         m_lastError = "HuggingFace downloads not yet implemented";
-        emit error(m_lastError);
+        error(m_lastError);
         return false;
 
     } catch (const std::exception& e) {
-        m_lastError = QString("HF download exception: %1").arg(e.what());
-        emit error(m_lastError);
+        m_lastError = std::string("HF download exception: %1"));
+        error(m_lastError);
         return false;
     }
 }
 
-bool EnhancedModelLoader::loadOllamaModel(const QString& modelName) {
+bool EnhancedModelLoader::loadOllamaModel(const std::string& modelName) {
     std::string name = modelName.toStdString();
 
     try {
-        qInfo() << "Connecting to Ollama:" << modelName;
-        emit loadingProgress(20);
+        loadingProgress(20);
 
         // Validate Ollama is available
         if (!m_ollamaProxy->isOllamaAvailable()) {
             m_lastError = "Ollama service not available on localhost:11434";
-            emit error(m_lastError);
+            error(m_lastError);
             return false;
         }
 
         // Check if model exists
         if (!m_ollamaProxy->isModelAvailable(modelName)) {
             m_lastError = "Model not found in Ollama: " + modelName;
-            emit error(m_lastError);
+            error(m_lastError);
             return false;
         }
 
         // Set model for Ollama proxy
         m_ollamaProxy->setModel(modelName);
         
-        emit loadingProgress(100);
-        qInfo() << "Ollama model connected:" << modelName;
+        loadingProgress(100);
         return true;
 
     } catch (const std::exception& e) {
-        m_lastError = QString("Ollama connection exception: %1").arg(e.what());
-        emit error(m_lastError);
+        m_lastError = std::string("Ollama connection exception: %1"));
+        error(m_lastError);
         return false;
     }
 }
 
-bool EnhancedModelLoader::loadCompressedModel(const QString& compressedPath) {
+bool EnhancedModelLoader::loadCompressedModel(const std::string& compressedPath) {
     std::string path = compressedPath.toStdString();
 
     if (!std::filesystem::exists(path)) {
         m_lastError = "Compressed file not found: " + compressedPath;
-        emit error(m_lastError);
+        error(m_lastError);
         return false;
     }
 
     try {
         auto fileSize = std::filesystem::file_size(path);
-        qInfo() << "Decompressing:" << compressedPath << "(" << (fileSize / 1024 / 1024) << "MB)";
-        emit loadingProgress(30);
+        loadingProgress(30);
 
         auto source = m_formatRouter->route(path);
         if (!source) {
             m_lastError = "Failed to detect compression type";
-            emit error(m_lastError);
+            error(m_lastError);
             return false;
         }
 
         return decompressAndLoad(compressedPath, source->compression);
 
     } catch (const std::exception& e) {
-        m_lastError = QString("Compressed load exception: %1").arg(e.what());
-        emit error(m_lastError);
+        m_lastError = std::string("Compressed load exception: %1"));
+        error(m_lastError);
         return false;
     }
 }
 
-bool EnhancedModelLoader::decompressAndLoad(const QString& compressedPath, CompressionType compression) {
+bool EnhancedModelLoader::decompressAndLoad(const std::string& compressedPath, CompressionType compression) {
     std::string compressed = compressedPath.toStdString();
     std::string tempFile = m_tempDirectory + "/decompressed_model_" + std::to_string(std::time(nullptr)) + ".gguf";
 
     try {
-        emit loadingProgress(40);
+        loadingProgress(40);
 
         // Decompress based on type
         std::ifstream infile(compressed, std::ios::binary);
@@ -282,13 +272,10 @@ bool EnhancedModelLoader::decompressAndLoad(const QString& compressedPath, Compr
         // For now, just copy the data (real decompression would use zstd/gzip libraries)
         // This is a placeholder that prevents silent failure
         if (compression == CompressionType::GZIP) {
-            qWarning() << "GZIP decompression not yet implemented - using stored data as-is";
             decompressed_data = compressed_data;
         } else if (compression == CompressionType::ZSTD) {
-            qWarning() << "ZSTD decompression not yet implemented - using stored data as-is";
             decompressed_data = compressed_data;
         } else if (compression == CompressionType::LZ4) {
-            qWarning() << "LZ4 decompression not yet implemented - using stored data as-is";
             decompressed_data = compressed_data;
         } else {
             m_lastError = "Unknown compression type";
@@ -306,13 +293,13 @@ bool EnhancedModelLoader::decompressAndLoad(const QString& compressedPath, Compr
         outfile.close();
 
         m_tempFiles.push_back(tempFile);
-        emit loadingProgress(60);
+        loadingProgress(60);
 
         // Now load as GGUF
-        return loadGGUFLocal(QString::fromStdString(tempFile));
+        return loadGGUFLocal(std::string::fromStdString(tempFile));
 
     } catch (const std::exception& e) {
-        m_lastError = QString("Decompression failed: %1").arg(e.what());
+        m_lastError = std::string("Decompression failed: %1"));
         return false;
     }
 }
@@ -322,14 +309,14 @@ bool EnhancedModelLoader::startServer(quint16 port) {
 
     if (!m_engine) {
         m_lastError = "No model loaded";
-        emit error(m_lastError);
+        error(m_lastError);
         return false;
     }
 
     if (!m_server) {
         m_server = std::make_unique<GGUFServer>(m_engine.get(), this);
-        connect(m_server.get(), &GGUFServer::serverStarted, this, &EnhancedModelLoader::serverStarted);
-        connect(m_server.get(), &GGUFServer::serverStopped, this, &EnhancedModelLoader::serverStopped);
+// Qt connect removed
+// Qt connect removed
     }
 
     return m_server->start(port);
@@ -345,9 +332,9 @@ bool EnhancedModelLoader::isServerRunning() const {
     return m_server && m_server->isRunning();
 }
 
-QString EnhancedModelLoader::getModelInfo() const {
+std::string EnhancedModelLoader::getModelInfo() const {
     if (m_engine && m_engine->isModelLoaded()) {
-        return QString("GGUF Model loaded: %1").arg(QString::fromStdString(m_engine->modelPath()));
+        return std::string("GGUF Model loaded: %1")));
     }
     return "No model loaded";
 }
@@ -356,27 +343,24 @@ quint16 EnhancedModelLoader::getServerPort() const {
     return m_port;
 }
 
-QString EnhancedModelLoader::getServerUrl() const {
-    return QString("http://localhost:%1").arg(m_port);
+std::string EnhancedModelLoader::getServerUrl() const {
+    return std::string("http://localhost:%1");
 }
 
-void EnhancedModelLoader::logLoadStart(const QString& input, ModelFormat format) {
-    qInfo() << "📥 Model load started:"
+void EnhancedModelLoader::logLoadStart(const std::string& input, ModelFormat format) {
             << input
-            << "format:" << QString::fromStdString(FormatRouter::formatToString(format));
+            << "format:" << std::string::fromStdString(FormatRouter::formatToString(format));
 }
 
-void EnhancedModelLoader::logLoadSuccess(const QString& input, ModelFormat format, qint64 durationMs) {
-    qInfo() << "✅ Model load completed:"
+void EnhancedModelLoader::logLoadSuccess(const std::string& input, ModelFormat format, qint64 durationMs) {
             << input
-            << "format:" << QString::fromStdString(FormatRouter::formatToString(format))
+            << "format:" << std::string::fromStdString(FormatRouter::formatToString(format))
             << "duration:" << durationMs << "ms";
 }
 
-void EnhancedModelLoader::logLoadError(const QString& input, ModelFormat format, const QString& error) {
-    qWarning() << "❌ Model load failed:"
+void EnhancedModelLoader::logLoadError(const std::string& input, ModelFormat format, const std::string& error) {
                << input
-               << "format:" << QString::fromStdString(FormatRouter::formatToString(format))
+               << "format:" << std::string::fromStdString(FormatRouter::formatToString(format))
                << "error:" << error;
 }
 
@@ -385,10 +369,8 @@ bool EnhancedModelLoader::setupTempDirectory() {
         std::string appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
         m_tempDirectory = appData + "/model_loader_temp";
         std::filesystem::create_directories(m_tempDirectory);
-        qDebug() << "Temp directory:" << QString::fromStdString(m_tempDirectory);
         return true;
     } catch (const std::exception& e) {
-        qWarning() << "Failed to setup temp directory:" << e.what();
         return false;
     }
 }
@@ -400,8 +382,8 @@ void EnhancedModelLoader::cleanupTempFiles() {
                 std::filesystem::remove(file);
             }
         } catch (const std::exception& e) {
-            qWarning() << "Failed to delete temp file:" << QString::fromStdString(file) << e.what();
         }
     }
     m_tempFiles.clear();
 }
+

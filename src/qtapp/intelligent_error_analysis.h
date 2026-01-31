@@ -96,7 +96,3 @@ private:
     double m_minConfidenceThreshold = 0.7;
 };
 
-
-
-
-

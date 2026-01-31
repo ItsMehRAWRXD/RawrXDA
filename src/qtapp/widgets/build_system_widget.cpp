@@ -194,7 +194,7 @@ void BuildSystemWidget::detectBuildSystem()
     if (!detected.empty() && m_buildSystemsList.contains(detected)) {
         m_currentBuildSystem = detected;
         m_buildSystemCombo->setCurrentText(detected);
-        m_statusLabel->setText(std::string("Detected: %1").arg(detected));
+        m_statusLabel->setText(std::string("Detected: %1"));
         logBuildEvent("build_system_detected", nlohmann::json{{"system", detected}});
     }
 }
@@ -254,9 +254,9 @@ void BuildSystemWidget::startBuild()
     m_isBuilding = true;
     
     m_outputText->append(std::string("=== Build started at %1 ===\n")
-                         .arg(m_buildStartTime.toString("yyyy-MM-dd HH:mm:ss")));
+                         ));
     m_outputText->append(std::string("Command: %1 %2\n\n")
-                         .arg(program).arg(buildCmd.join(" ")));
+                         ));
     
     m_buildProcess->start(program, buildCmd);
     
@@ -338,14 +338,14 @@ std::stringList BuildSystemWidget::getBuildCommand()
             cmd << "--target" << m_currentTarget;
         }
     } else if (m_currentBuildSystem == "Make") {
-        cmd << "make" << std::string("-j%1").arg(m_parallelJobs);
+        cmd << "make" << std::string("-j%1");
         if (m_currentTarget != "all") {
             cmd << m_currentTarget;
         }
     } else if (m_currentBuildSystem == "Ninja") {
         cmd << "ninja";
         if (m_parallelJobs > 1) {
-            cmd << std::string("-j%1").arg(m_parallelJobs);
+            cmd << std::string("-j%1");
         }
         if (m_currentTarget != "all") {
             cmd << m_currentTarget;
@@ -358,11 +358,11 @@ std::stringList BuildSystemWidget::getBuildCommand()
         std::stringList slnFiles = dir.entryList(std::stringList() << "*.sln", // Dir::Files);
         if (!slnFiles.empty()) {
             cmd << "msbuild" << slnFiles.first()
-                << std::string("/p:Configuration=%1").arg(m_currentConfig)
-                << std::string("/m:%1").arg(m_parallelJobs);
+                << std::string("/p:Configuration=%1")
+                << std::string("/m:%1");
         }
     } else if (m_currentBuildSystem == "QMake") {
-        cmd << "make" << std::string("-j%1").arg(m_parallelJobs);
+        cmd << "make" << std::string("-j%1");
     }
     
     return cmd;
@@ -396,10 +396,10 @@ std::stringList BuildSystemWidget::getConfigureCommand()
     std::stringList cmd;
     
     if (m_currentBuildSystem == "CMake") {
-        cmd << "cmake" << "." << std::string("-DCMAKE_BUILD_TYPE=%1").arg(m_currentConfig);
+        cmd << "cmake" << "." << std::string("-DCMAKE_BUILD_TYPE=%1");
     } else if (m_currentBuildSystem == "Meson") {
         cmd << "meson" << "setup" << "." << std::string("--buildtype=%1")
-            .arg(m_currentConfig.toLower());
+            );
     } else if (m_currentBuildSystem == "QMake") {
         // dir(m_projectPath);
         std::stringList proFiles = dir.entryList(std::stringList() << "*.pro", // Dir::Files);
@@ -416,7 +416,7 @@ void BuildSystemWidget::configure()
     std::stringList configCmd = getConfigureCommand();
     if (configCmd.empty()) {
         void::information(this, "Configure", 
-            std::string("Configuration not required for %1").arg(m_currentBuildSystem));
+            std::string("Configuration not required for %1"));
         return;
     }
     
@@ -483,13 +483,13 @@ void BuildSystemWidget::onProcessFinished(int exitCode, void*::ExitStatus exitSt
     
     std::string statusMsg = success ? "Build succeeded" : "Build failed";
     m_statusLabel->setText(std::string("%1 in %2s")
-                          .arg(statusMsg)
-                          .arg(duration / 1000.0, 0, 'f', 2));
+                          
+                          );
     
     m_outputText->append(std::string("\n=== %1 (exit code: %2, duration: %3s) ===\n")
-                         .arg(statusMsg)
-                         .arg(exitCode)
-                         .arg(duration / 1000.0, 0, 'f', 2));
+
+
+                         );
     
     updateStatistics(success, duration);
     buildFinished(success, duration);
@@ -518,7 +518,7 @@ void BuildSystemWidget::onProcessError(void*::ProcessError error)
             errorMsg = "Unknown build process error.";
     }
     
-    m_outputText->append(std::string("\n=== ERROR: %1 ===\n").arg(errorMsg));
+    m_outputText->append(std::string("\n=== ERROR: %1 ===\n"));
     m_statusLabel->setText(errorMsg);
     
     logBuildEvent("build_error", nlohmann::json{{"error", errorMsg}});
@@ -561,9 +561,9 @@ void BuildSystemWidget::parseBuildOutput(const std::string& output, bool isError
         if (errorMatch.hasMatch()) {
             std::regexMatch fileMatch = m_fileLineRegex.match(line);
             if (fileMatch.hasMatch()) {
-                std::string file = fileMatch.captured(1);
-                int lineNum = fileMatch.captured(3);
-                std::string message = fileMatch.captured(5);
+                std::string file = fileMatch"";
+                int lineNum = fileMatch"";
+                std::string message = fileMatch"";
                 addBuildMessage("Error", file, lineNum, message);
                 errorDetected(file, lineNum, message);
                 m_stats.totalErrors++;
@@ -575,9 +575,9 @@ void BuildSystemWidget::parseBuildOutput(const std::string& output, bool isError
         if (warningMatch.hasMatch()) {
             std::regexMatch fileMatch = m_fileLineRegex.match(line);
             if (fileMatch.hasMatch()) {
-                std::string file = fileMatch.captured(1);
-                int lineNum = fileMatch.captured(3);
-                std::string message = fileMatch.captured(5);
+                std::string file = fileMatch"";
+                int lineNum = fileMatch"";
+                std::string message = fileMatch"";
                 addBuildMessage("Warning", file, lineNum, message);
                 warningDetected(file, lineNum, message);
                 m_stats.totalWarnings++;
@@ -587,7 +587,7 @@ void BuildSystemWidget::parseBuildOutput(const std::string& output, bool isError
     
     // Update problems tab title
     int problemCount = m_errorTree->topLevelItemCount();
-    m_tabWidget->setTabText(1, std::string("Problems (%1)").arg(problemCount));
+    m_tabWidget->setTabText(1, std::string("Problems (%1)"));
 }
 
 void BuildSystemWidget::addBuildMessage(const std::string& type, const std::string& file,
@@ -624,10 +624,10 @@ void BuildSystemWidget::updateStatistics(bool success, int duration)
     
     // Add to history
     std::string historyEntry = std::string("[%1] %2 %3 - %4")
-        .arg(m_stats.lastBuildTime.toString("yyyy-MM-dd HH:mm:ss"))
-        .arg(m_currentBuildSystem)
-        .arg(m_currentConfig)
-        .arg(success ? "Success" : "Failed");
+        )
+
+
+        ;
     m_buildHistory.append({m_stats.lastBuildTime, historyEntry});
     
     // Keep only last 100 entries
@@ -644,8 +644,7 @@ void BuildSystemWidget::onBuildOutputItemDoubleClicked(QTreeWidgetItem* item, in
     int line = item->data(1, UserRole);
     
     if (!file.empty()) {
-        // Emit signal or open file in editor
-        // // qDebug:  "Open file:" << file << "at line:" << line;
+        // signal or open file in editor
         // This would trigger opening the file in the main editor
     }
 }
@@ -662,7 +661,7 @@ void BuildSystemWidget::onSaveOutputClicked()
     std::string fileName = // Dialog::getSaveFileName(this,
         "Save Build Output",
         "" + std::string("/build_%1.log")
-            .arg(// DateTime::currentDateTime().toString("yyyyMMdd_HHmmss")),
+            .toString("yyyyMMdd_HHmmss")),
         "Log Files (*.log);;Text Files (*.txt);;All Files (*)");
     
     if (!fileName.empty()) {
@@ -672,7 +671,7 @@ void BuildSystemWidget::onSaveOutputClicked()
             out << m_outputText->toPlainText();
             file.close();
             void::information(this, "Saved", 
-                std::string("Build output saved to:\n%1").arg(fileName));
+                std::string("Build output saved to:\n%1"));
         }
     }
 }
@@ -762,7 +761,6 @@ void BuildSystemWidget::logBuildEvent(const std::string& event, const nlohmann::
     logEntry["event"] = event;
     logEntry["data"] = data;
     
-    // // qDebug().noquote() << "BUILD_EVENT:" << nlohmann::json(logEntry).toJson(nlohmann::json::Compact);
 }
 
 std::stringList BuildSystemWidget::buildHistory() const
@@ -818,12 +816,4 @@ void BuildSystemWidget::test()
         startBuild();
     }
 }
-
-
-
-
-
-
-
-
 

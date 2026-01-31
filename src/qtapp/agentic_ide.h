@@ -1,7 +1,5 @@
 #pragma once
-#include <QMainWindow>
 
-class QShowEvent;
 class MultiTabEditor;
 class ChatInterface;
 class TerminalPool;
@@ -12,9 +10,9 @@ namespace RawrXD {
     class PlanOrchestrator;
 }
 
-class AgenticIDE : public QMainWindow {
+class AgenticIDE : public void {
 public:
-    explicit AgenticIDE(QWidget *parent = nullptr);
+    explicit AgenticIDE(void *parent = nullptr);
     ~AgenticIDE();
 
 protected:
@@ -35,3 +33,4 @@ private:
     RawrXD::PlanOrchestrator *m_planOrchestrator = nullptr;
     RawrXD::LSPClient *m_lspClient = nullptr;
 };
+

@@ -7,30 +7,24 @@
 
 #include "thermal_dashboard_plugin.hpp"
 #include "RAWRXD_ThermalDashboard.hpp"
-#include <QProcess>
-#include <QTimer>
-#include <QMutex>
-#include <QMutexLocker>
-#include <QDebug>
-#include <QDateTime>
-#include <QCoreApplication>
+
+
 #include <cstring>
 
 namespace rawrxd::thermal {
 
-class ThermalDashboardPlugin : public QObject, public IThermalDashboardPlugin {
-    Q_OBJECT
-    Q_PLUGIN_METADATA(IID IThermalDashboardPlugin_iid FILE "thermal_dashboard.json")
-    Q_INTERFACES(rawrxd::thermal::IThermalDashboardPlugin)
+class ThermalDashboardPlugin : public void, public IThermalDashboardPlugin {
+
+    (IID IThermalDashboardPlugin_iid FILE "thermal_dashboard.json")
+
 
 public:
-    ThermalDashboardPlugin(QObject* parent = nullptr)
-        : QObject(parent)
+    ThermalDashboardPlugin(void* parent = nullptr)
+        : void(parent)
         , m_isMonitoring(false)
         , m_currentBurstMode(2)  // Default: hybrid
         , m_pollTimer(nullptr)
     {
-        qDebug() << "[ThermalPlugin] Constructor called";
         std::memset(&m_currentSnapshot, 0, sizeof(ThermalSnapshot));
     }
     
@@ -43,12 +37,10 @@ public:
     // ═══════════════════════════════════════════════════════════════════════════
     
     bool initialize() override {
-        qDebug() << "[ThermalPlugin] Initializing...";
         
-        m_pollTimer = new QTimer(this);
+        m_pollTimer = new void*(this);
         m_pollTimer->setInterval(1000);  // 1 second poll
-        connect(m_pollTimer, &QTimer::timeout, this, &ThermalDashboardPlugin::pollThermals);
-        
+// Qt connect removed
         // Initialize thermal snapshot
         memset(&m_currentSnapshot, 0, sizeof(ThermalSnapshot));
         m_currentSnapshot.activeDriveCount = 0;
@@ -56,12 +48,10 @@ public:
         // Detect NVMe drives
         detectNVMeDrives();
         
-        qDebug() << "[ThermalPlugin] Initialized successfully";
         return true;
     }
     
     void shutdown() override {
-        qDebug() << "[ThermalPlugin] Shutting down...";
         stopMonitoring();
         if (m_pollTimer) {
             m_pollTimer->stop();
@@ -70,11 +60,11 @@ public:
         }
     }
     
-    QString pluginName() const override {
+    std::string pluginName() const override {
         return QStringLiteral("RawrXD Thermal Dashboard");
     }
     
-    QString pluginVersion() const override {
+    std::string pluginVersion() const override {
         return QStringLiteral("1.2.0-H");
     }
 
@@ -82,24 +72,18 @@ public:
     // Widget Creation
     // ═══════════════════════════════════════════════════════════════════════════
     
-    QWidget* createDashboardWidget(QWidget* parent = nullptr) override {
+    void* createDashboardWidget(void* parent = nullptr) override {
         auto* dashboard = new ThermalDashboard(parent);
         
         // Connect signals
-        connect(this, &ThermalDashboardPlugin::thermalUpdated,
-                dashboard, &ThermalDashboard::onThermalUpdate);
-        connect(dashboard, &ThermalDashboard::burstModeChanged,
-                this, &ThermalDashboardPlugin::setBurstMode);
-        
+// Qt connect removed
+// Qt connect removed
         return dashboard;
     }
     
-    QWidget* createCompactWidget(QWidget* parent = nullptr) override {
+    void* createCompactWidget(void* parent = nullptr) override {
         auto* compact = new ThermalCompactWidget(parent);
-        
-        connect(this, &ThermalDashboardPlugin::thermalUpdated,
-                compact, &ThermalCompactWidget::onThermalUpdate);
-        
+// Qt connect removed
         return compact;
     }
 
@@ -110,7 +94,6 @@ public:
     void startMonitoring() override {
         if (m_isMonitoring) return;
         
-        qDebug() << "[ThermalPlugin] Starting monitoring...";
         m_isMonitoring = true;
         m_pollTimer->start();
         
@@ -121,7 +104,6 @@ public:
     void stopMonitoring() override {
         if (!m_isMonitoring) return;
         
-        qDebug() << "[ThermalPlugin] Stopping monitoring...";
         m_isMonitoring = false;
         if (m_pollTimer) {
             m_pollTimer->stop();
@@ -139,11 +121,10 @@ public:
     void setBurstMode(int mode) override {
         if (mode < 0 || mode > 2) return;
         
-        qDebug() << "[ThermalPlugin] Setting burst mode:" << mode;
         
         // Call RawrXD-Hybrid.exe to set mode
         QProcess process;
-        QStringList args;
+        std::vector<std::string> args;
         
         switch (mode) {
             case 0: args << "--mode" << "sovereign-max"; break;
@@ -154,9 +135,8 @@ public:
         process.start("RawrXD-Hybrid.exe", args);
         if (process.waitForFinished(5000)) {
             m_currentBurstMode = mode;
-            emit burstModeUpdated(mode);
+            burstModeUpdated(mode);
         } else {
-            qWarning() << "[ThermalPlugin] Failed to set burst mode";
         }
     }
     
@@ -169,18 +149,17 @@ public:
     // ═══════════════════════════════════════════════════════════════════════════
     
     ThermalSnapshot getCurrentSnapshot() const override {
-        QMutexLocker locker(&m_snapshotMutex);
+        std::lock_guard<std::mutex> locker(&m_snapshotMutex);
         return m_currentSnapshot;
     }
 
-signals:
     void thermalUpdated(const ThermalSnapshot& snapshot);
     void burstModeUpdated(int mode);
 
-private slots:
+private:
     void pollThermals() {
         ThermalSnapshot snapshot;
-        snapshot.timestamp = QDateTime::currentMSecsSinceEpoch();
+        snapshot.timestamp = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
         
         // Poll NVMe temperatures via WMI
         pollNVMeTemperatures(snapshot);
@@ -196,33 +175,32 @@ private slots:
         
         // Update cached snapshot
         {
-            QMutexLocker locker(&m_snapshotMutex);
+            std::lock_guard<std::mutex> locker(&m_snapshotMutex);
             m_currentSnapshot = snapshot;
         }
         
-        emit thermalUpdated(snapshot);
+        thermalUpdated(snapshot);
     }
 
 private:
     void detectNVMeDrives() {
         // Use PowerShell to enumerate NVMe drives
         QProcess process;
-        process.start("powershell", QStringList() << "-NoProfile" << "-Command" <<
+        process.start("powershell", std::vector<std::string>() << "-NoProfile" << "-Command" <<
             "Get-WmiObject Win32_DiskDrive | Where-Object { $_.Model -like '*NVMe*' } | "
             "Select-Object -ExpandProperty DeviceID | Measure-Object | "
             "Select-Object -ExpandProperty Count");
         
         if (process.waitForFinished(5000)) {
-            QString output = process.readAllStandardOutput().trimmed();
+            std::string output = process.readAllStandardOutput().trimmed();
             m_currentSnapshot.activeDriveCount = qMin(output.toInt(), 5);
-            qDebug() << "[ThermalPlugin] Detected" << m_currentSnapshot.activeDriveCount << "NVMe drives";
         }
     }
     
     void pollNVMeTemperatures(ThermalSnapshot& snapshot) {
         // WMI query for NVMe SMART data
         QProcess process;
-        process.start("powershell", QStringList() << "-NoProfile" << "-Command" <<
+        process.start("powershell", std::vector<std::string>() << "-NoProfile" << "-Command" <<
             R"(
                 $drives = Get-WmiObject -Namespace 'root\wmi' -Class MSStorageDriver_ATAPISmartData -ErrorAction SilentlyContinue
                 if ($drives) {
@@ -239,8 +217,8 @@ private:
             )");
         
         if (process.waitForFinished(3000)) {
-            QString output = process.readAllStandardOutput().trimmed();
-            QStringList temps = output.split(',');
+            std::string output = process.readAllStandardOutput().trimmed();
+            std::vector<std::string> temps = output.split(',');
             
             for (int i = 0; i < qMin(temps.size(), 5); ++i) {
                 snapshot.nvmeTemps[i] = temps[i].toFloat();
@@ -258,7 +236,7 @@ private:
     void pollGPUTemperature(ThermalSnapshot& snapshot) {
         // AMD GPU via ADL or WMI
         QProcess process;
-        process.start("powershell", QStringList() << "-NoProfile" << "-Command" <<
+        process.start("powershell", std::vector<std::string>() << "-NoProfile" << "-Command" <<
             R"(
                 $gpu = Get-WmiObject -Namespace 'root\OpenHardwareMonitor' -Class Sensor -ErrorAction SilentlyContinue |
                        Where-Object { $_.SensorType -eq 'Temperature' -and $_.Name -like '*GPU*' } |
@@ -276,7 +254,7 @@ private:
     void pollCPUTemperature(ThermalSnapshot& snapshot) {
         // AMD Ryzen via WMI
         QProcess process;
-        process.start("powershell", QStringList() << "-NoProfile" << "-Command" <<
+        process.start("powershell", std::vector<std::string>() << "-NoProfile" << "-Command" <<
             R"(
                 $cpu = Get-WmiObject -Namespace 'root\OpenHardwareMonitor' -Class Sensor -ErrorAction SilentlyContinue |
                        Where-Object { $_.SensorType -eq 'Temperature' -and $_.Name -like '*CPU*Package*' } |
@@ -327,11 +305,12 @@ private:
 private:
     bool m_isMonitoring;
     int m_currentBurstMode;
-    QTimer* m_pollTimer;
+    void** m_pollTimer;
     ThermalSnapshot m_currentSnapshot;
-    mutable QMutex m_snapshotMutex;
+    mutable std::mutex m_snapshotMutex;
 };
 
 } // namespace rawrxd::thermal
 
-#include "thermal_dashboard_plugin.moc"
+// MOC removed
+

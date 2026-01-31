@@ -1,10 +1,6 @@
 #include "distributed_trainer.h"
-#include <QDebug>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QFile>
-#include <QDir>
-#include <QDateTime>
+
+
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -20,15 +16,14 @@
 #include <mpi.h>
 #endif
 
-DistributedTrainer::DistributedTrainer(QObject* parent)
-    : QObject(parent),
+DistributedTrainer::DistributedTrainer(void* parent)
+    : void(parent),
       m_initialized(false),
       m_primaryDevice(0),
       m_accumStepIndex(0),
       m_accumStepTarget(1),
       m_checkpointInterval(100)
 {
-    qDebug() << "[DistributedTrainer] Initializing distributed trainer";
     
     // Initialize default config
     m_config.backend = Backend::NCCL;
@@ -51,7 +46,6 @@ DistributedTrainer::DistributedTrainer(QObject* parent)
 
 DistributedTrainer::~DistributedTrainer()
 {
-    qDebug() << "[DistributedTrainer] Destroying distributed trainer";
 }
 
 // ===== Configuration =====
@@ -64,7 +58,6 @@ bool DistributedTrainer::updateConfiguration(const TrainerConfig& config)
 {
     m_config = config;
     m_accumStepTarget = config.gradAccumulationSteps;
-    qDebug() << "[DistributedTrainer] Configuration updated";
     return true;
 }
 
@@ -101,7 +94,6 @@ std::vector<DistributedTrainer::DeviceInfo> DistributedTrainer::getAvailableDevi
 bool DistributedTrainer::setPrimaryDevice(int deviceId)
 {
     m_primaryDevice = deviceId;
-    qDebug() << "[DistributedTrainer] Primary device set to" << deviceId;
     return true;
 }
 
@@ -119,38 +111,32 @@ float DistributedTrainer::getDeviceTemperature() const
 // ===== Training Operations =====
 bool DistributedTrainer::initProcessGroup()
 {
-    qDebug() << "[DistributedTrainer] Initializing process group";
     m_initialized = true;
-    emit synchronizationCompleted(m_config.pgConfig.worldSize);
+    synchronizationCompleted(m_config.pgConfig.worldSize);
     return true;
 }
 
 void DistributedTrainer::destroyProcessGroup()
 {
-    qDebug() << "[DistributedTrainer] Destroying process group";
     m_initialized = false;
 }
 
 bool DistributedTrainer::synchronizeProcesses()
 {
     if (!m_initialized) {
-        qCritical() << "[DistributedTrainer] Not initialized";
         return false;
     }
     
-    qDebug() << "[DistributedTrainer] Synchronizing processes";
-    emit synchronizationCompleted(m_config.pgConfig.worldSize);
+    synchronizationCompleted(m_config.pgConfig.worldSize);
     return true;
 }
 
 bool DistributedTrainer::allReduceGradients(float* gradientData, int size)
 {
     if (!m_initialized) {
-        qCritical() << "[DistributedTrainer] Not initialized";
         return false;
     }
     
-    qDebug() << "[DistributedTrainer] All-reduce on" << size << "elements";
     
     auto startTime = std::chrono::high_resolution_clock::now();
     bool success = false;
@@ -178,7 +164,6 @@ bool DistributedTrainer::allReduceGradients(float* gradientData, int size)
             }
             success = true;
         } else {
-            qCritical() << "[DistributedTrainer] NCCL allReduce failed:" << ncclGetErrorString(result);
         }
     }
 #elif defined(USE_MPI)
@@ -201,13 +186,11 @@ bool DistributedTrainer::allReduceGradients(float* gradientData, int size)
             }
             success = true;
         } else {
-            qCritical() << "[DistributedTrainer] MPI_Allreduce failed with code:" << mpiResult;
         }
     }
 #else
     // Fallback: single-GPU or CPU mode - no communication needed
     success = true;
-    qWarning() << "[DistributedTrainer] No distributed backend compiled, running in local mode";
 #endif
     
     auto endTime = std::chrono::high_resolution_clock::now();
@@ -216,7 +199,7 @@ bool DistributedTrainer::allReduceGradients(float* gradientData, int size)
     recordCommunicationLatency(latencyMs);
     
     if (success) {
-        emit allReduceCompleted(size);
+        allReduceCompleted(size);
     }
     
     return success;
@@ -225,11 +208,9 @@ bool DistributedTrainer::allReduceGradients(float* gradientData, int size)
 bool DistributedTrainer::allGather(const void* sendBuffer, void* recvBuffer, int size)
 {
     if (!m_initialized) {
-        qCritical() << "[DistributedTrainer] Not initialized";
         return false;
     }
     
-    qDebug() << "[DistributedTrainer] All-gather" << size << "bytes";
     
     auto startTime = std::chrono::high_resolution_clock::now();
     bool success = false;
@@ -250,7 +231,6 @@ bool DistributedTrainer::allGather(const void* sendBuffer, void* recvBuffer, int
             cudaStreamSynchronize(m_cudaStream);
             success = true;
         } else {
-            qCritical() << "[DistributedTrainer] NCCL allGather failed:" << ncclGetErrorString(result);
         }
     }
 #elif defined(USE_MPI)
@@ -269,14 +249,12 @@ bool DistributedTrainer::allGather(const void* sendBuffer, void* recvBuffer, int
         if (mpiResult == MPI_SUCCESS) {
             success = true;
         } else {
-            qCritical() << "[DistributedTrainer] MPI_Allgather failed with code:" << mpiResult;
         }
     }
 #else
     // Fallback: local copy only
     std::memcpy(recvBuffer, sendBuffer, size);
     success = true;
-    qWarning() << "[DistributedTrainer] No distributed backend, using local copy";
 #endif
     
     auto endTime = std::chrono::high_resolution_clock::now();
@@ -289,11 +267,9 @@ bool DistributedTrainer::allGather(const void* sendBuffer, void* recvBuffer, int
 bool DistributedTrainer::broadcast(void* data, int size)
 {
     if (!m_initialized) {
-        qCritical() << "[DistributedTrainer] Not initialized";
         return false;
     }
     
-    qDebug() << "[DistributedTrainer] Broadcasting" << size << "bytes from rank 0";
     recordCommunicationLatency(0.5f);
     return true;
 }
@@ -301,31 +277,26 @@ bool DistributedTrainer::broadcast(void* data, int size)
 void DistributedTrainer::recordCommunicationLatency(float latency)
 {
     // In a real implementation, this would record metrics
-    qDebug() << "[DistributedTrainer] Communication latency:" << latency << "ms";
 }
 
 int DistributedTrainer::sendAsync(int destRank, const void* data, int size)
 {
-    qDebug() << "[DistributedTrainer] Async send to rank" << destRank << size << "bytes";
     return 1; // Simulated handle
 }
 
 int DistributedTrainer::recvAsync(int srcRank, void* data, int size)
 {
-    qDebug() << "[DistributedTrainer] Async recv from rank" << srcRank << size << "bytes";
     return 2; // Simulated handle
 }
 
 bool DistributedTrainer::waitAsync(int handle)
 {
-    qDebug() << "[DistributedTrainer] Waiting for handle" << handle;
     return true;
 }
 
 // ===== Gradient Management =====
 bool DistributedTrainer::startGradientAccumulation(int numSteps)
 {
-    qDebug() << "[DistributedTrainer] Starting gradient accumulation for" << numSteps << "steps";
     m_accumStepTarget = numSteps;
     m_accumStepIndex = 0;
     return true;
@@ -333,14 +304,12 @@ bool DistributedTrainer::startGradientAccumulation(int numSteps)
 
 bool DistributedTrainer::recordGradientStep(int stepIndex)
 {
-    qDebug() << "[DistributedTrainer] Recording gradient step" << stepIndex;
     m_accumStepIndex = stepIndex;
     return true;
 }
 
 bool DistributedTrainer::finalizeGradientAccumulation()
 {
-    qDebug() << "[DistributedTrainer] Finalizing gradient accumulation";
     
     // Average accumulated gradients
     if (!m_accumulatedGradients.empty() && m_accumStepTarget > 0) {
@@ -353,11 +322,10 @@ bool DistributedTrainer::finalizeGradientAccumulation()
     return true;
 }
 
-QByteArray DistributedTrainer::compressGradients(const float* gradients, int numElements)
+std::vector<uint8_t> DistributedTrainer::compressGradients(const float* gradients, int numElements)
 {
-    qDebug() << "[DistributedTrainer] Compressing" << numElements << "gradients";
     
-    QByteArray compressed;
+    std::vector<uint8_t> compressed;
     
     switch (m_config.compression) {
         case GradientCompression::TopK:
@@ -388,15 +356,14 @@ QByteArray DistributedTrainer::compressGradients(const float* gradients, int num
     if (m_config.compression != GradientCompression::None) {
         int originalSize = numElements * sizeof(float);
         float ratio = static_cast<float>(compressed.size()) / originalSize;
-        emit gradientCompressionCompleted(originalSize, compressed.size(), ratio);
+        gradientCompressionCompleted(originalSize, compressed.size(), ratio);
     }
     
     return compressed;
 }
 
-std::vector<float> DistributedTrainer::decompressGradients(const QByteArray& compressedGradients, int numElements)
+std::vector<float> DistributedTrainer::decompressGradients(const std::vector<uint8_t>& compressedGradients, int numElements)
 {
-    qDebug() << "[DistributedTrainer] Decompressing gradients";
     
     std::vector<float> decompressed(numElements, 0.0f);
     
@@ -441,7 +408,6 @@ void DistributedTrainer::updateLoadInfo(float currentLoad, float throughput)
     int rank = m_config.pgConfig.rank;
     m_nodeLoads[rank] = currentLoad;
     m_nodeThroughputs[rank] = throughput;
-    qDebug() << "[DistributedTrainer] Updated load info: rank" << rank << "load" << currentLoad << "throughput" << throughput;
 }
 
 std::map<int, int> DistributedTrainer::getLoadBalancingSuggestions() const
@@ -510,9 +476,9 @@ std::vector<DistributedTrainer::NodePerformance> DistributedTrainer::getPerforma
     return report;
 }
 
-QJsonObject DistributedTrainer::exportPerformanceMetrics() const
+void* DistributedTrainer::exportPerformanceMetrics() const
 {
-    QJsonObject metrics;
+    void* metrics;
     
     metrics["rank"] = m_config.pgConfig.rank;
     metrics["worldSize"] = m_config.pgConfig.worldSize;
@@ -524,19 +490,18 @@ QJsonObject DistributedTrainer::exportPerformanceMetrics() const
         metrics["avgThroughput"] = avgThroughput;
     }
     
-    // Cannot emit from const context - removed signal
+    // Cannot from const context - removed signal
     
     return metrics;
 }
 
 // ===== Fault Tolerance =====
-bool DistributedTrainer::enableCheckpointing(const QString& checkpointDir, int intervalSteps)
+bool DistributedTrainer::enableCheckpointing(const std::string& checkpointDir, int intervalSteps)
 {
-    qDebug() << "[DistributedTrainer] Enabling checkpointing:" << checkpointDir;
     m_checkpointDir = checkpointDir;
     m_checkpointInterval = intervalSteps;
     
-    QDir dir(m_checkpointDir);
+    std::filesystem::path dir(m_checkpointDir);
     if (!dir.exists()) {
         dir.mkpath(".");
     }
@@ -544,61 +509,56 @@ bool DistributedTrainer::enableCheckpointing(const QString& checkpointDir, int i
     return true;
 }
 
-bool DistributedTrainer::saveCheckpoint(int stepNumber, const QJsonObject& modelState)
+bool DistributedTrainer::saveCheckpoint(int stepNumber, const void*& modelState)
 {
-    QString checkpointPath = m_checkpointDir + QString("/checkpoint_step_%1_rank_%2.json")
-                                .arg(stepNumber)
-                                .arg(m_config.pgConfig.rank);
+    std::string checkpointPath = m_checkpointDir + std::string("/checkpoint_step_%1_rank_%2.json")
+                                
+                                ;
     
-    qDebug() << "[DistributedTrainer] Saving checkpoint:" << checkpointPath;
     
-    QFile file(checkpointPath);
+    std::fstream file(checkpointPath);
     if (!file.open(QIODevice::WriteOnly)) {
-        qCritical() << "[DistributedTrainer] Failed to open checkpoint file";
         return false;
     }
     
-    QJsonDocument doc(modelState);
-    file.write(doc.toJson(QJsonDocument::Compact));
+    void* doc(modelState);
+    file.write(doc.toJson(void*::Compact));
     file.close();
     
-    emit checkpointCompleted(stepNumber, checkpointPath);
+    checkpointCompleted(stepNumber, checkpointPath);
     return true;
 }
 
-QJsonObject DistributedTrainer::loadCheckpoint(const QString& checkpointPath)
+void* DistributedTrainer::loadCheckpoint(const std::string& checkpointPath)
 {
-    qDebug() << "[DistributedTrainer] Loading checkpoint:" << checkpointPath;
     
-    QFile file(checkpointPath);
+    std::fstream file(checkpointPath);
     if (!file.open(QIODevice::ReadOnly)) {
-        qCritical() << "[DistributedTrainer] Failed to open checkpoint file";
-        return QJsonObject();
+        return void*();
     }
     
-    QByteArray data = file.readAll();
+    std::vector<uint8_t> data = file.readAll();
     file.close();
     
-    QJsonDocument doc = QJsonDocument::fromJson(data);
+    void* doc = void*::fromJson(data);
     return doc.object();
 }
 
 bool DistributedTrainer::handleProcessFailure(int failedRank)
 {
-    qDebug() << "[DistributedTrainer] Handling failure of rank" << failedRank;
     
-    emit processFailure(failedRank, "Process stopped responding");
+    processFailure(failedRank, "Process stopped responding");
     
     // Simulate recovery
-    emit recoveryCompleted(failedRank);
+    recoveryCompleted(failedRank);
     
     return true;
 }
 
 // ===== Configuration Export/Import =====
-QJsonObject DistributedTrainer::exportConfiguration() const
+void* DistributedTrainer::exportConfiguration() const
 {
-    QJsonObject config;
+    void* config;
     
     config["backend"] = static_cast<int>(m_config.backend);
     config["parallelism"] = static_cast<int>(m_config.parallelism);
@@ -614,9 +574,8 @@ QJsonObject DistributedTrainer::exportConfiguration() const
     return config;
 }
 
-bool DistributedTrainer::loadConfiguration(const QJsonObject& config)
+bool DistributedTrainer::loadConfiguration(const void*& config)
 {
-    qDebug() << "[DistributedTrainer] Loading configuration from JSON";
     
     if (config.contains("backend")) {
         m_config.backend = static_cast<Backend>(config["backend"].toInt());
@@ -651,7 +610,7 @@ bool DistributedTrainer::loadConfiguration(const QJsonObject& config)
 }
 
 // ===== Private Helper Methods =====
-QByteArray DistributedTrainer::compressTopK(const float* gradients, int numElements, float compressionRatio)
+std::vector<uint8_t> DistributedTrainer::compressTopK(const float* gradients, int numElements, float compressionRatio)
 {
     int k = static_cast<int>(numElements * compressionRatio);
     
@@ -666,7 +625,7 @@ QByteArray DistributedTrainer::compressTopK(const float* gradients, int numEleme
                       [](const auto& a, const auto& b) { return a.first > b.first; });
     
     // Serialize
-    QByteArray compressed;
+    std::vector<uint8_t> compressed;
     QDataStream stream(&compressed, QIODevice::WriteOnly);
     stream << k;
     
@@ -678,9 +637,9 @@ QByteArray DistributedTrainer::compressTopK(const float* gradients, int numEleme
     return compressed;
 }
 
-QByteArray DistributedTrainer::compressThreshold(const float* gradients, int numElements, float threshold)
+std::vector<uint8_t> DistributedTrainer::compressThreshold(const float* gradients, int numElements, float threshold)
 {
-    QByteArray compressed;
+    std::vector<uint8_t> compressed;
     QDataStream stream(&compressed, QIODevice::WriteOnly);
     
     int count = 0;
@@ -701,7 +660,7 @@ QByteArray DistributedTrainer::compressThreshold(const float* gradients, int num
     return compressed;
 }
 
-std::vector<float> DistributedTrainer::decompressTopK(const QByteArray& data, int numElements)
+std::vector<float> DistributedTrainer::decompressTopK(const std::vector<uint8_t>& data, int numElements)
 {
     std::vector<float> decompressed(numElements, 0.0f);
     
@@ -721,7 +680,7 @@ std::vector<float> DistributedTrainer::decompressTopK(const QByteArray& data, in
     return decompressed;
 }
 
-std::vector<float> DistributedTrainer::decompressThreshold(const QByteArray& data, int numElements)
+std::vector<float> DistributedTrainer::decompressThreshold(const std::vector<uint8_t>& data, int numElements)
 {
     std::vector<float> decompressed(numElements, 0.0f);
     
@@ -740,3 +699,4 @@ std::vector<float> DistributedTrainer::decompressThreshold(const QByteArray& dat
     
     return decompressed;
 }
+

@@ -1,15 +1,11 @@
 #include "RawrXDMainWindow.h"
-#include <QVBoxLayout>
-#include <QTextEdit>
-#include <QLabel>
-#include <QWidget>
-#include <QFont>
 
-RawrXDMainWindow::RawrXDMainWindow() : QMainWindow() {
+
+RawrXDMainWindow::RawrXDMainWindow() : void() {
     setWindowTitle("RawrXD IDE - C++ Implementation");
     setGeometry(100, 100, 1024, 768);
     
-    QWidget* central = new QWidget(this);
+    void* central = new void(this);
     QVBoxLayout* layout = new QVBoxLayout(central);
     
     // Title
@@ -50,3 +46,4 @@ RawrXDMainWindow::RawrXDMainWindow() : QMainWindow() {
     
     setCentralWidget(central);
 }
+

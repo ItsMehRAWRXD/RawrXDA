@@ -1,15 +1,6 @@
 #pragma once
 
 
-
-
-
-
-
-
-
-
-
 /**
  * @brief Production-ready Build System Widget with comprehensive build support
  * 
@@ -165,10 +156,4 @@ private:
     std::regex m_warningRegex;
     std::regex m_fileLineRegex;
 };
-
-
-
-
-
-
 

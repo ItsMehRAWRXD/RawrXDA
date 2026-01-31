@@ -31,5 +31,3 @@ private:
 
 #endif // SPECULATIVE_DECODER_H
 
-
-

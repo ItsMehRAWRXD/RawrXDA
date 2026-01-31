@@ -10,9 +10,7 @@ KVCacheOptimizer::KVCacheOptimizer()
     // Initialize GPU KV cache if available
     if (KVCacheInit(m_cacheSizeLimit) == 0) {
         m_gpuCacheInitialized = true;
-        // // qInfo:  "✓ GPU-accelerated KV cache initialized";
     } else {
-        // // qWarning:  "GPU KV cache init failed, falling back to CPU";
         m_gpuCacheInitialized = false;
     }
 }
@@ -37,9 +35,7 @@ void KVCacheOptimizer::addTokens(const std::vector<int> &tokens)
         if (result == 0) {
             // Success - update local copy for queries
             m_cachedTokens.append(tokens);
-            // // qDebug:  "Added" << tokens.size() << "tokens to GPU KV cache";
         } else {
-            // // qWarning:  "GPU token addition failed, using CPU fallback";
             // CPU fallback
             m_cachedTokens.append(tokens);
         }
@@ -68,15 +64,12 @@ void KVCacheOptimizer::evictIfNeeded()
                 int result = KVCacheEvict(tokensToEvict);
                 
                 if (result == 0) {
-                    // // qDebug:  "GPU evicted" << tokensToEvict << "tokens from KV cache";
                 } else {
-                    // // qWarning:  "GPU eviction failed, using CPU fallback";
                 }
             }
             
             // Update local cache (both GPU and CPU paths)
             m_cachedTokens.erase(m_cachedTokens.begin(), m_cachedTokens.begin() + tokensToEvict);
-            // // qDebug:  "Evicted" << tokensToEvict << "tokens from KV cache (total:" << m_cachedTokens.size() << ")";
         }
     }
 }
@@ -85,8 +78,4 @@ void KVCacheOptimizer::setSlidingWindowSize(int size)
 {
     m_slidingWindowSize = size;
 }
-
-
-
-
 

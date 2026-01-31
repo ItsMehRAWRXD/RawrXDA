@@ -7,13 +7,12 @@
 #include "unified_backend.hpp"
 #include "../agent/meta_planner.hpp"
 #include "../backend/agentic_tools.hpp"
-#include <QTimer>
-#include <QElapsedTimer>
-#include <QFile>
+
+
 #include <algorithm>
 
-AgentModeHandler::AgentModeHandler(UnifiedBackend* backend, MetaPlanner* planner, QObject* parent)
-    : QObject(parent)
+AgentModeHandler::AgentModeHandler(UnifiedBackend* backend, MetaPlanner* planner, void* parent)
+    : void(parent)
     , m_backend(backend)
     , m_planner(planner)
 {
@@ -21,10 +20,8 @@ AgentModeHandler::AgentModeHandler(UnifiedBackend* backend, MetaPlanner* planner
     m_toolExecutor = std::make_unique<AgenticToolExecutor>();
 
     if (m_toolExecutor) {
-        connect(m_toolExecutor.get(), &AgenticToolExecutor::toolExecutionCompleted,
-                this, &AgentModeHandler::onToolExecutionCompleted);
-        connect(m_toolExecutor.get(), &AgenticToolExecutor::toolExecutionError,
-                this, &AgentModeHandler::onToolExecutionError);
+// Qt connect removed
+// Qt connect removed
     }
 }
 
@@ -33,7 +30,7 @@ AgentModeHandler::~AgentModeHandler() = default;
 void AgentModeHandler::executeplan(const Plan& plan)
 {
     if (plan.steps.isEmpty()) {
-        emit executionFailed(-1, "Plan is empty");
+        executionFailed(-1, "Plan is empty");
         return;
     }
 
@@ -44,8 +41,8 @@ void AgentModeHandler::executeplan(const Plan& plan)
     m_executionPaused = false;
     m_modifiedFiles.clear();
 
-    emit executionStarted();
-    emit progressUpdated(0.0f, "Starting execution...");
+    executionStarted();
+    progressUpdated(0.0f, "Starting execution...");
 
     executeNextStep();
 }
@@ -53,14 +50,14 @@ void AgentModeHandler::executeplan(const Plan& plan)
 void AgentModeHandler::pauseExecution()
 {
     m_executionPaused = true;
-    emit executionPaused();
-    emit progressUpdated(getProgressPercentage(), "Execution paused");
+    executionPaused();
+    progressUpdated(getProgressPercentage(), "Execution paused");
 }
 
 void AgentModeHandler::resumeExecution()
 {
     m_executionPaused = false;
-    emit executionResumed();
+    executionResumed();
     executeNextStep();
 }
 
@@ -68,7 +65,7 @@ void AgentModeHandler::skipCurrentStep()
 {
     if (m_currentStepIndex >= 0 && m_currentStepIndex < m_executionSteps.size()) {
         m_executionSteps[m_currentStepIndex].status = ExecutionStep::Skipped;
-        emit stepProgress(m_currentStepIndex, "Step skipped by user");
+        stepProgress(m_currentStepIndex, "Step skipped by user");
         m_currentStepIndex++;
         executeNextStep();
     }
@@ -79,12 +76,12 @@ void AgentModeHandler::cancelExecution()
     m_executionComplete = true;
     m_executionPaused = true;
 
-    emit progressUpdated(getProgressPercentage(), "Cancelling execution and rolling back...");
+    progressUpdated(getProgressPercentage(), "Cancelling execution and rolling back...");
 
     // Rollback changes
     rollbackChanges();
 
-    emit executionCancelled();
+    executionCancelled();
 }
 
 float AgentModeHandler::getProgressPercentage() const
@@ -103,7 +100,7 @@ float AgentModeHandler::getProgressPercentage() const
     return (completedCount * 100.0f) / m_executionSteps.size();
 }
 
-void AgentModeHandler::onToolExecutionCompleted(const QString& toolName, const QString& output)
+void AgentModeHandler::onToolExecutionCompleted(const std::string& toolName, const std::string& output)
 {
     if (m_currentStepIndex < 0 || m_currentStepIndex >= m_executionSteps.size()) {
         return;
@@ -113,14 +110,14 @@ void AgentModeHandler::onToolExecutionCompleted(const QString& toolName, const Q
     step.output = output;
     step.status = ExecutionStep::Completed;
 
-    emit stepCompleted(m_currentStepIndex, step);
-    emit stepOutput(m_currentStepIndex, output);
+    stepCompleted(m_currentStepIndex, step);
+    stepOutput(m_currentStepIndex, output);
 
     m_currentStepIndex++;
     executeNextStep();
 }
 
-void AgentModeHandler::onToolExecutionError(const QString& toolName, const QString& error)
+void AgentModeHandler::onToolExecutionError(const std::string& toolName, const std::string& error)
 {
     if (m_currentStepIndex < 0 || m_currentStepIndex >= m_executionSteps.size()) {
         return;
@@ -130,12 +127,12 @@ void AgentModeHandler::onToolExecutionError(const QString& toolName, const QStri
     step.status = ExecutionStep::Failed;
     step.errorMessage = error;
 
-    emit stepFailed(m_currentStepIndex, error);
-    emit errorOccurred(QString("Tool %1 failed: %2").arg(toolName, error));
+    stepFailed(m_currentStepIndex, error);
+    errorOccurred(std::string("Tool %1 failed: %2"));
 
     // Attempt recovery
     if (!attemptRecovery(m_currentStepIndex)) {
-        emit executionFailed(m_currentStepIndex, error);
+        executionFailed(m_currentStepIndex, error);
         rollbackChanges();
         m_executionComplete = true;
     }
@@ -144,7 +141,7 @@ void AgentModeHandler::onToolExecutionError(const QString& toolName, const QStri
 void AgentModeHandler::onStepTimeout(int stepIndex)
 {
     if (stepIndex >= 0 && stepIndex < m_executionSteps.size()) {
-        emit errorOccurred(QString("Step %1 timed out").arg(stepIndex));
+        errorOccurred(std::string("Step %1 timed out"));
         
         // Skip to next step or fail
         if (stepIndex == m_currentStepIndex) {
@@ -163,8 +160,8 @@ void AgentModeHandler::executeNextStep()
     // Check if all steps are complete
     if (m_currentStepIndex >= m_executionSteps.size()) {
         m_executionComplete = true;
-        emit progressUpdated(100.0f, "Execution completed successfully");
-        emit executionCompleted(m_executionSteps);
+        progressUpdated(100.0f, "Execution completed successfully");
+        executionCompleted(m_executionSteps);
         return;
     }
 
@@ -177,9 +174,9 @@ void AgentModeHandler::executeNextStep()
     }
 
     step.status = ExecutionStep::InProgress;
-    emit stepStarting(m_currentStepIndex, step);
-    emit progressUpdated(getProgressPercentage(), QString("Executing step %1: %2")
-        .arg(m_currentStepIndex + 1, step.title));
+    stepStarting(m_currentStepIndex, step);
+    progressUpdated(getProgressPercentage(), std::string("Executing step %1: %2")
+        );
 
     executeSingleStep(step);
 }
@@ -193,25 +190,25 @@ void AgentModeHandler::executeSingleStep(const ExecutionStep& step)
 
     // Determine which tool to use based on step
     // This is a simplified approach - in production, AI would determine the tool
-    QString toolName = "file_operations";  // Default tool
+    std::string toolName = "file_operations";  // Default tool
 
-    if (step.title.contains("compile", Qt::CaseInsensitive)) {
+    if (step.title.contains("compile", //CaseInsensitive)) {
         toolName = "compile";
-    } else if (step.title.contains("test", Qt::CaseInsensitive)) {
+    } else if (step.title.contains("test", //CaseInsensitive)) {
         toolName = "run_tests";
-    } else if (step.title.contains("git", Qt::CaseInsensitive)) {
+    } else if (step.title.contains("git", //CaseInsensitive)) {
         toolName = "git";
-    } else if (step.title.contains("install", Qt::CaseInsensitive)) {
+    } else if (step.title.contains("install", //CaseInsensitive)) {
         toolName = "install_packages";
     }
 
-    emit stepExecuting(m_currentStepIndex, toolName);
+    stepExecuting(m_currentStepIndex, toolName);
 
     // Execute the tool
     m_toolExecutor->executeTool(toolName, step.title);
 
     // Set a timeout for the step
-    QTimer::singleShot(30000, this, [this, stepIdx = m_currentStepIndex]() {
+    void*::singleShot(30000, this, [this, stepIdx = m_currentStepIndex]() {
         onStepTimeout(stepIdx);
     });
 }
@@ -221,7 +218,7 @@ bool AgentModeHandler::attemptRecovery(int stepIndex)
     // Simple recovery: skip failed step and continue
     // In production, AI would determine recovery strategy
     if (stepIndex < m_executionSteps.size() - 1) {
-        emit errorOccurred(QString("Skipping failed step %1 and continuing...").arg(stepIndex));
+        errorOccurred(std::string("Skipping failed step %1 and continuing..."));
         m_executionSteps[stepIndex].status = ExecutionStep::Skipped;
         return true;
     }
@@ -234,7 +231,7 @@ void AgentModeHandler::rollbackChanges()
     // Rollback all modified files
     for (const auto& file : m_modifiedFiles) {
         // In production, restore from backup
-        emit progressUpdated(getProgressPercentage(), QString("Rolling back: %1").arg(file));
+        progressUpdated(getProgressPercentage(), std::string("Rolling back: %1"));
     }
     m_modifiedFiles.clear();
 }
@@ -255,3 +252,4 @@ void AgentModeHandler::mapPlanToExecutionSteps(const Plan& plan)
         m_executionSteps.append(execStep);
     }
 }
+

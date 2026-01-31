@@ -1,12 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QJsonObject>
-#include <QObject>
-#include <QProcess>
-#include <QMutex>
-#include <QVector>
-#include <QRegularExpression>
+
 #include <chrono>
 #include <memory>
 
@@ -24,25 +18,24 @@
  * - Timeout management
  * - Environment variable control
  */
-class SandboxedTerminal : public QObject {
-    Q_OBJECT
+class SandboxedTerminal : public void {
 
 public:
-    explicit SandboxedTerminal(QObject* parent = nullptr);
+    explicit SandboxedTerminal(void* parent = nullptr);
     ~SandboxedTerminal() override;
 
     // Configuration
     struct Config {
-        QStringList commandWhitelist;        // Allowed commands
-        QStringList commandBlacklist;        // Explicitly forbidden commands
+        std::vector<std::string> commandWhitelist;        // Allowed commands
+        std::vector<std::string> commandBlacklist;        // Explicitly forbidden commands
         bool useWhitelistMode = true;        // If true, only whitelist allowed; if false, blacklist forbidden
         int maxExecutionTimeMs = 30000;      // Command timeout
         int maxOutputSize = 1048576;         // 1MB max output
         bool enableOutputFiltering = true;   // Filter sensitive data from output
         bool enableAuditLog = true;
-        QString auditLogPath;
-        QString workingDirectory;
-        QStringList allowedEnvironmentVars;  // Environment variables to preserve
+        std::string auditLogPath;
+        std::string workingDirectory;
+        std::vector<std::string> allowedEnvironmentVars;  // Environment variables to preserve
         bool enableResourceLimits = true;
         qint64 maxMemoryBytes = 536870912;   // 512MB
         int maxCpuPercent = 80;
@@ -54,18 +47,18 @@ public:
 
     // Command execution
     struct CommandResult {
-        QString output;
-        QString error;
+        std::string output;
+        std::string error;
         int exitCode;
         bool timedOut;
         bool wasBlocked;
-        QString blockReason;
+        std::string blockReason;
         qint64 executionTimeMs;
     };
 
-    CommandResult executeCommand(const QString& command, const QStringList& args = QStringList());
-    bool isCommandAllowed(const QString& command) const;
-    QString sanitizeOutput(const QString& output) const;
+    CommandResult executeCommand(const std::string& command, const std::vector<std::string>& args = std::vector<std::string>());
+    bool isCommandAllowed(const std::string& command) const;
+    std::string sanitizeOutput(const std::string& output) const;
     
     // Process management
     bool isRunning() const;
@@ -86,34 +79,34 @@ public:
     Metrics getMetrics() const;
     void resetMetrics();
 
-signals:
-    void commandStarted(const QString& command);
+    void commandStarted(const std::string& command);
     void commandFinished(const CommandResult& result);
-    void commandBlocked(const QString& command, const QString& reason);
-    void securityViolation(const QString& violation);
-    void errorOccurred(const QString& error);
+    void commandBlocked(const std::string& command, const std::string& reason);
+    void securityViolation(const std::string& violation);
+    void errorOccurred(const std::string& error);
     void metricsUpdated(const Metrics& metrics);
 
 private:
     // Configuration
     Config m_config;
-    mutable QMutex m_configMutex;
+    mutable std::mutex m_configMutex;
 
     // Process
     QProcess* m_process;
-    mutable QMutex m_processMutex;
+    mutable std::mutex m_processMutex;
 
     // Metrics
     Metrics m_metrics;
-    mutable QMutex m_metricsMutex;
+    mutable std::mutex m_metricsMutex;
 
     // Helper methods
-    void logStructured(const QString& level, const QString& message, const QJsonObject& context = QJsonObject());
-    void recordLatency(const QString& operation, const std::chrono::milliseconds& duration);
-    void logAudit(const QString& action, const QJsonObject& details);
-    bool validateCommand(const QString& command, QString& blockReason);
-    bool validateCommand(const QString& command, QString& blockReason) const;  // const overload
-    QStringList buildSanitizedEnvironment() const;
+    void logStructured(const std::string& level, const std::string& message, const void*& context = void*());
+    void recordLatency(const std::string& operation, const std::chrono::milliseconds& duration);
+    void logAudit(const std::string& action, const void*& details);
+    bool validateCommand(const std::string& command, std::string& blockReason);
+    bool validateCommand(const std::string& command, std::string& blockReason) const;  // const overload
+    std::vector<std::string> buildSanitizedEnvironment() const;
     bool enforceResourceLimits();
-    QString filterSensitiveData(const QString& data) const;
+    std::string filterSensitiveData(const std::string& data) const;
 };
+

@@ -203,7 +203,6 @@ inline bool ThermalPluginLoader::initialize(const std::stringList& pluginSearchP
         setupIpcServer();
     }
     
-    // // qDebug:  "[ThermalPluginLoader] Initialized with search paths:" << m_searchPaths;
     return true;
 }
 
@@ -242,14 +241,12 @@ inline bool ThermalPluginLoader::loadPlugin(const std::string& pluginPath)
         return false;
     }
     
-    // // qDebug:  "[ThermalPluginLoader] Loading plugin from:" << path;
     
     // Create loader and load
     m_loader = std::make_unique<QPluginLoader>(path);
     
     if (!m_loader->load()) {
         m_lastError = m_loader->errorString();
-        // // qWarning:  "[ThermalPluginLoader] Load failed:" << m_lastError;
         setStatus(PluginStatus::Error);
         pluginError(m_lastError);
         return false;
@@ -285,7 +282,6 @@ inline bool ThermalPluginLoader::loadPlugin(const std::string& pluginPath)
     }
     
     setStatus(PluginStatus::Loaded);
-    // // qDebug:  "[ThermalPluginLoader] Plugin loaded successfully:"
              << m_plugin->pluginName() << m_plugin->pluginVersion();
     
     pluginLoaded();
@@ -316,7 +312,6 @@ inline bool ThermalPluginLoader::unloadPlugin()
     // Unload DLL
     if (!m_loader->unload()) {
         m_lastError = m_loader->errorString();
-        // // qWarning:  "[ThermalPluginLoader] Unload failed:" << m_lastError;
         setStatus(PluginStatus::Error);
         return false;
     }
@@ -325,7 +320,6 @@ inline bool ThermalPluginLoader::unloadPlugin()
     m_currentPluginPath.clear();
     
     setStatus(PluginStatus::NotLoaded);
-    // // qDebug:  "[ThermalPluginLoader] Plugin unloaded";
     
     pluginUnloaded();
     return true;
@@ -397,7 +391,7 @@ inline std::string ThermalPluginLoader::findPluginPath() const
 inline void ThermalPluginLoader::setupIpcServer()
 {
     // Create named pipe server for external injection commands
-    std::string pipeName = std::string("RawrXD_PluginLoader_%1").arg(QCoreApplication::applicationPid());
+    std::string pipeName = std::string("RawrXD_PluginLoader_%1"));
     
     m_ipcServer = std::make_unique<void*>(this);
     m_ipcServer->setSocketOptions(void*::WorldAccessOption);
@@ -406,14 +400,11 @@ inline void ThermalPluginLoader::setupIpcServer()
     void*::removeServer(pipeName);
     
     if (!m_ipcServer->listen(pipeName)) {
-        // // qWarning:  "[ThermalPluginLoader] Failed to start IPC server:" << m_ipcServer->errorString();
         return;
-    }  // Signal connection removed\n// // qDebug() << "[ThermalPluginLoader] IPC server listening on:" << pipeName;
 }
 
 inline void ThermalPluginLoader::onFileChanged(const std::string& path)
 {
-    // // qDebug:  "[ThermalPluginLoader] Plugin file changed:" << path;
     pluginFileChanged(path);
     
     if (m_autoReloadEnabled) {
@@ -426,7 +417,6 @@ inline void ThermalPluginLoader::onReloadTimer()
 {
     if (m_pendingReload) {
         m_pendingReload = false;
-        // // qDebug:  "[ThermalPluginLoader] Auto-reloading plugin...";
         reloadPlugin();
     }
 }
@@ -435,7 +425,6 @@ inline void ThermalPluginLoader::onNewIpcConnection()
 {
     while (m_ipcServer->hasPendingConnections()) {
         void** socket = m_ipcServer->nextPendingConnection();
-        m_ipcClients.append(socket);  // Signal connection removed\n  // Signal connection removed\n// // qDebug() << "[ThermalPluginLoader] IPC client connected";
     }
 }
 
@@ -458,7 +447,6 @@ inline void ThermalPluginLoader::onIpcDisconnected()
     if (socket) {
         m_ipcClients.removeAll(socket);
         socket->deleteLater();
-        // // qDebug:  "[ThermalPluginLoader] IPC client disconnected";
     }
 }
 
@@ -506,9 +494,4 @@ inline void ThermalPluginLoader::handleIpcCommand(const void*& cmd, void** socke
 }
 
 } // namespace rawrxd::core
-
-
-
-
-
 

@@ -26,12 +26,7 @@
     All subsystems can be dynamically toggled via dock widgets for maximum flexibility.
 */
 
-#include <QMainWindow>
-#include <QUrl>
-#include <QHash>
-#include <QString>
-#include <QPointer>
-#include <QListWidgetItem>
+
 #include "Subsystems.h" // Include the stubs/definitions
 
 #include "masm/MASMCompilerWidget.h"
@@ -41,43 +36,14 @@
 
 QT_BEGIN_NAMESPACE
 /* ---------------  Qt primitives  --------------- */
-class QLineEdit;
-class QPushButton;
-class QProgressBar;
-class QListWidget;
-class QListWidgetItem;
-class QTabWidget;
-class QTextEdit;
-class QLabel;
-class QComboBox;
-class QTreeWidgetItem;
-class QDockWidget;
-class QPlainTextEdit;
-class QProcess;
-class QSplitter;
-class QToolBar;
-class QMenu;
-class QToolButton;
-class QProgressDialog;
-class QSystemTrayIcon;
-class QThread;
-class QTimer;
-class QFileSystemModel;
-class QTreeView;
-class QStackedWidget;
-class QFrame;
-class QActionGroup;
+
+
 /* ---------------  Qt advanced  --------------- */
-class QJsonDocument;
-class QWebEngineView;
-class QWebChannel;
+
+
 // class QtCharts::QChartView; // Forward declaration for charts if needed
-class QGraphicsView;
-class QUndoGroup;
-class QUndoView;
-class QSyntaxHighlighter;
-class QProgressBar;
-class QSystemTrayIcon;
+
+
 QT_END_NAMESPACE
 
 namespace RawrXD {
@@ -125,15 +91,15 @@ class MultiTabEditor;  // Forward declaration for multi-tab editor
  *       are owned by MainWindow and destroyed when the window closes.
  * \see Subsystems.h for stub implementations of all subsystem widgets
  */
-class MainWindow : public QMainWindow
+class MainWindow : public void
 {
-    Q_OBJECT
+
 public:
     /**
      * \brief Constructs the main window
      * \param parent The parent widget (typically nullptr for the top-level window)
      */
-    explicit MainWindow(QWidget* parent = nullptr);
+    explicit MainWindow(void* parent = nullptr);
     
     /**
      * \brief Destructor - cleans up all subsystems and resources
@@ -147,28 +113,28 @@ public:
      */
     void setAppState(std::shared_ptr<void> state);
 
-signals:
-    void onGoalSubmitted(const QString& goal);
+
+    void onGoalSubmitted(const std::string& goal);
 
 protected:
-    bool eventFilter(QObject* watched, QEvent* event) override;
+    bool eventFilter(void* watched, QEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dropEvent(QDropEvent* event) override;
 
-private slots: /* ----------  original slots  ---------- */
+private: /* ----------  original slots  ---------- */
     void handleGoalSubmit();
     void handleAgentMockProgress();
-    void updateSuggestion(const QString& chunk);
-    void appendModelChunk(const QString& chunk);
+    void updateSuggestion(const std::string& chunk);
+    void appendModelChunk(const std::string& chunk);
     void handleGenerationFinished();
     void handleQShellReturn();
-    void handleArchitectChunk(const QString& chunk);
+    void handleArchitectChunk(const std::string& chunk);
     void handleArchitectFinished();
-    void handleTaskStatusUpdate(const QString& taskId, const QString& status, const QString& agentType);
-    void handleTaskCompleted(const QString& agentType, const QString& summary);
+    void handleTaskStatusUpdate(const std::string& taskId, const std::string& status, const std::string& agentType);
+    void handleTaskCompleted(const std::string& agentType, const std::string& summary);
     void handleWorkflowFinished(bool success);
-    void handleTaskStreaming(const QString& taskId, const QString& chunk, const QString& agentType);
+    void handleTaskStreaming(const std::string& taskId, const std::string& chunk, const std::string& agentType);
     void handleSaveState();
     void handleLoadState();
     
@@ -185,14 +151,14 @@ private slots: /* ----------  original slots  ---------- */
     void trackEditorScrollPosition();
     
     // Recent Files Management
-    void addRecentFile(const QString& filePath);
-    QStringList getRecentFiles() const;
+    void addRecentFile(const std::string& filePath);
+    std::vector<std::string> getRecentFiles() const;
     void clearRecentFiles();
     void populateRecentFilesMenu(QMenu* recentMenu);
     
     // Command History Tracking
-    void addCommandToHistory(const QString& command);
-    QStringList getCommandHistory() const;
+    void addCommandToHistory(const std::string& command);
+    std::vector<std::string> getCommandHistory() const;
     void clearCommandHistory();
     int getCommandHistoryLimit() const { return 1000; }
     
@@ -217,7 +183,7 @@ private slots: /* ----------  original slots  ---------- */
     void readCmdOutput();
     void clearDebugLog();
     void saveDebugLog();
-    void filterLogLevel(const QString& level);
+    void filterLogLevel(const std::string& level);
     void showEditorContextMenu(const QPoint& pos);
     void explainCode();
     void fixCode();
@@ -225,17 +191,17 @@ private slots: /* ----------  original slots  ---------- */
     void generateTests();
     void generateDocs();
     // Adapter slots for ActionExecutor signals
-    void onActionStarted(int index, const QString& description);
-    void onActionCompleted(int index, bool success, const QJsonObject& result);
-    void onPlanCompleted(bool success, const QJsonObject& result);
+    void onActionStarted(int index, const std::string& description);
+    void onActionCompleted(int index, bool success, const void*& result);
+    void onPlanCompleted(bool success, const void*& result);
     
     // Explorer event handlers
     void onExplorerItemExpanded(QTreeWidgetItem* item);
     void onExplorerItemDoubleClicked(QTreeWidgetItem* item, int column);
-    void onAIChatCodeInsertRequested(const QString& code);
+    void onAIChatCodeInsertRequested(const std::string& code);
 
-private slots: /* ----------  new IDE-wide slots  ---------- */
-    void onProjectOpened(const QString& path);
+private: /* ----------  new IDE-wide slots  ---------- */
+    void onProjectOpened(const std::string& path);
     void onBuildStarted();
     void onBuildFinished(bool success);
     void onVcsStatusChanged();
@@ -245,78 +211,78 @@ private slots: /* ----------  new IDE-wide slots  ---------- */
     void onDatabaseConnected();
     void onDockerContainerListed();
     void onCloudResourceListed();
-    void onPackageInstalled(const QString& pkg);
-    void onDocumentationQueried(const QString& keyword);
-    void onUMLGenerated(const QString& plantUml);
-    void onImageEdited(const QString& path);
-    void onTranslationChanged(const QString& lang);
-    void onDesignImported(const QString& file);
-    void onAIChatMessage(const QString& msg);
+    void onPackageInstalled(const std::string& pkg);
+    void onDocumentationQueried(const std::string& keyword);
+    void onUMLGenerated(const std::string& plantUml);
+    void onImageEdited(const std::string& path);
+    void onTranslationChanged(const std::string& lang);
+    void onDesignImported(const std::string& file);
+    void onAIChatMessage(const std::string& msg);
     void onNotebookExecuted();
     void onMarkdownRendered();
     void onSheetCalculated();
-    void onTerminalCommand(const QString& cmd);
-    void onSnippetInserted(const QString& id);
-    void onRegexTested(const QString& pattern);
+    void onTerminalCommand(const std::string& cmd);
+    void onSnippetInserted(const std::string& id);
+    void onRegexTested(const std::string& pattern);
     void onDiffMerged();
     void onColorPicked(const QColor& c);
-    void onIconSelected(const QString& name);
-    void onPluginLoaded(const QString& name);
+    void onIconSelected(const std::string& name);
+    void onPluginLoaded(const std::string& name);
     void onSettingsSaved();
-    void onNotificationClicked(const QString& id);
-    void onShortcutChanged(const QString& id, const QKeySequence& key);
+    void onNotificationClicked(const std::string& id);
+    void onShortcutChanged(const std::string& id, const QKeySequence& key);
     void onTelemetryReady();
-    void onUpdateAvailable(const QString& version);
-    void onWelcomeProjectChosen(const QString& path);
+    void onUpdateAvailable(const std::string& version);
+    void onWelcomeProjectChosen(const std::string& path);
     // Refresh the main model selector to include Ollama, cloud, and local GGUF models
     void refreshModelSelector();
-    void onCommandPaletteTriggered(const QString& cmd);
-    void executeCommand(const QString& command);  // Execute command from palette
+    void onCommandPaletteTriggered(const std::string& cmd);
+    void executeCommand(const std::string& command);  // Execute command from palette
     void showCommandPalette();  // Show command palette
-    void onProgressCancelled(const QString& taskId);
-    void onQuickFixApplied(const QString& fix);
+    void onProgressCancelled(const std::string& taskId);
+    void onQuickFixApplied(const std::string& fix);
     void onMinimapClicked(qreal ratio);
-    void onBreadcrumbClicked(const QString& symbol);
-    void onStatusFieldClicked(const QString& field);
-    void onTerminalEmulatorCommand(const QString& cmd);
-    void onSearchResultActivated(const QString& file, int line);
-    void onBookmarkToggled(const QString& file, int line);
-    void onTodoClicked(const QString& file, int line);
+    void onBreadcrumbClicked(const std::string& symbol);
+    void onStatusFieldClicked(const std::string& field);
+    void onTerminalEmulatorCommand(const std::string& cmd);
+    void onSearchResultActivated(const std::string& file, int line);
+    void onBookmarkToggled(const std::string& file, int line);
+    void onTodoClicked(const std::string& file, int line);
     void onMacroReplayed();
-    void onCompletionCacheHit(const QString& key);
-    void onLSPDiagnostic(const QString& file, const QJsonArray& diags);
-    void onCodeLensClicked(const QString& command);
-    void onInlayHintShown(const QString& file);
-    void onInlineChatRequested(const QString& text);
-    void onAIReviewComment(const QString& comment);
-    void onCodeStreamEdit(const QString& patch);
+    void onCompletionCacheHit(const std::string& key);
+    void onLSPDiagnostic(const std::string& file, const void*& diags);
+    void onCodeLensClicked(const std::string& command);
+    void onInlayHintShown(const std::string& file);
+    void onInlineChatRequested(const std::string& text);
+    void onAIReviewComment(const std::string& comment);
+    void onCodeStreamEdit(const std::string& patch);
     void onAudioCallStarted();
     void onScreenShareStarted();
-    void onWhiteboardDraw(const QByteArray& svg);
-    void onTimeEntryAdded(const QString& task);
-    void onKanbanMoved(const QString& taskId);
+    void onWhiteboardDraw(const std::vector<uint8_t>& svg);
+    void onTimeEntryAdded(const std::string& task);
+    void onKanbanMoved(const std::string& taskId);
     void onPomodoroTick(int remaining);
-    void onWallpaperChanged(const QString& path);
+    void onWallpaperChanged(const std::string& path);
     void onAccessibilityToggled(bool on);
 
     // AI/GGUF/InferenceEngine slots
     void loadGGUFModel();
-    void loadGGUFModel(const QString& ggufPath);
+    void loadGGUFModel(const std::string& ggufPath);
     void runInference();
     void unloadGGUFModel();
-    void showInferenceResult(qint64 reqId, const QString& result);
-    void showInferenceError(qint64 reqId, const QString& errorMsg);
-    void onModelLoadedChanged(bool loaded, const QString& modelName);
+    void showInferenceResult(qint64 reqId, const std::string& result);
+    void showInferenceError(qint64 reqId, const std::string& errorMsg);
+    void onModelLoadedChanged(bool loaded, const std::string& modelName);
     void onModelLoadFinished(bool success, const std::string& errorMsg);
     void batchCompressFolder();
-    void onAIChatMessageSubmitted(const QString& message);
-    void onAIChatQuickActionTriggered(const QString& action, const QString& context);
+    void onAIChatMessageSubmitted(const std::string& message);
+    void onAIChatQuickActionTriggered(const std::string& action, const std::string& context);
 
     // Agent integration
     void onCtrlShiftA();
     bool canRelease();
     void onHotReload();
-    void changeAgentMode(const QString& mode);
+    void changeAgentMode(const std::string& mode);
     void handleBackendSelection(QAction* action);
 
     // Toggle slots
@@ -467,15 +433,15 @@ private slots: /* ----------  new IDE-wide slots  ---------- */
     void handleDevTools();
 
 private: /* ---------------  UI creators  --------------- */
-    QWidget* createGoalBar();
-    QWidget* createAgentPanel();
-    QWidget* createProposalReview();
-    QWidget* createEditorArea();
-    QWidget* createQShellTab();
-    QJsonDocument getMockArchitectJson() const;
-    void populateFolderTree(QTreeWidgetItem* parent, const QString& path);
-    QWidget* createTerminalPanel();
-    QWidget* createDebugPanel();
+    void* createGoalBar();
+    void* createAgentPanel();
+    void* createProposalReview();
+    void* createEditorArea();
+    void* createQShellTab();
+    void* getMockArchitectJson() const;
+    void populateFolderTree(QTreeWidgetItem* parent, const std::string& path);
+    void* createTerminalPanel();
+    void* createDebugPanel();
 
     void setupMenuBar();
     void setupToolBars();
@@ -504,7 +470,6 @@ private: /* ---------------  UI creators  --------------- */
 
     void initSubsystems();
 
-    
 
 private: /* ---------------  original members  --------------- */
     QLineEdit* goalInput_{};
@@ -515,17 +480,17 @@ private: /* ---------------  original members  --------------- */
     QTabWidget* editorTabs_{};
     QTextEdit* codeView_{};
     AISuggestionOverlay* overlay_{};
-    QString suggestionBuffer_{};
-    QString architectBuffer_{};
+    std::string suggestionBuffer_{};
+    std::string architectBuffer_{};
     bool suggestionEnabled_{true};
     bool forceMockArchitect_{false};
     bool architectRunning_{false};
-    QHash<QString, QListWidgetItem*> proposalItemMap_{};
-    QHash<QString, TaskProposalWidget*> proposalWidgetMap_{};
+    std::unordered_map<std::string, QListWidgetItem*> proposalItemMap_{};
+    std::unordered_map<std::string, TaskProposalWidget*> proposalWidgetMap_{};
     QTextEdit* qshellOutput_{};
     QLineEdit* qshellInput_{};
     StreamerClient* streamer_{};
-    QUrl streamerUrl_{QStringLiteral("http://localhost:11434")};
+    std::string streamerUrl_{QStringLiteral("http://localhost:11434")};
     AgentOrchestrator* orchestrator_{};
     QDockWidget* terminalDock_{};
     QTabWidget* terminalTabs_{};
@@ -540,9 +505,9 @@ private: /* ---------------  original members  --------------- */
      * Missing members required by MainWindow.cpp
      * ============================================================ */
     QTextEdit* editor_{};                      // Primary editor for code
-    QString currentFilePath_{};                 // Path of currently open file
+    std::string currentFilePath_{};                 // Path of currently open file
     class MultiTabEditor* m_multiTabEditor{};  // Multi-tab editor manager
-    QString m_currentWorkspacePath{};           // Current workspace/project path
+    std::string m_currentWorkspacePath{};           // Current workspace/project path
     QTreeWidget* m_explorerView{};              // Project explorer tree view
     class AIChatPanel* m_agentChatPane{};      // Agent chat panel (alias)
     QDockWidget* m_compilerOutputDock{};        // Compiler output dock widget
@@ -570,8 +535,8 @@ private: /* ---------------  new IDE members  --------------- */
     QPointer<ProfilerWidget> profilerWidget_{};
     QPointer<TestExplorerWidget> testWidget_{};
     QPointer<TestExplorerWidget> m_testRunnerPanelPhase8{};
-    QWidget* m_outputPanelWidget{};
-    QString m_currentProjectPath{};
+    void* m_outputPanelWidget{};
+    std::string m_currentProjectPath{};
 
     /* Editors & Language */
     QPointer<LanguageClientHost> lspHost_{};
@@ -629,7 +594,7 @@ private: /* ---------------  new IDE members  --------------- */
     /* AI/GGUF/Inference Components */
     class InferenceEngine* m_inferenceEngine{};
     class GGUFServer* m_ggufServer{};
-    class QThread* m_engineThread{};
+    class std::thread* m_engineThread{};
     class StreamingInference* m_streamer{};
     bool m_streamingMode{false};
     qint64 m_currentStreamId{0};
@@ -643,13 +608,13 @@ private: /* ---------------  new IDE members  --------------- */
     /* Unified AI Backend (Cursor-style switcher) */
     class AISwitcher* m_aiSwitcher{};
     class UnifiedBackend* m_unifiedBackend{};
-    QString m_currentBackend{"local"};
-    QString m_currentAPIKey{};
+    std::string m_currentBackend{"local"};
+    std::string m_currentAPIKey{};
     
     /* Quantization & Layer Management */
     class LayerQuantWidget* m_layerQuantWidget{};
     QDockWidget* m_layerQuantDock{};
-    QString m_currentQuantMode{"Q4_0"};
+    std::string m_currentQuantMode{"Q4_0"};
     
     /* Collaborative Editing (requires Qt WebSockets) */
 #ifdef HAVE_QT_WEBSOCKETS
@@ -657,7 +622,7 @@ private: /* ---------------  new IDE members  --------------- */
 #else
     void* m_swarmSocket{};  // Placeholder when WebSockets not available
 #endif
-    QString m_swarmSessionId{};
+    std::string m_swarmSessionId{};
     
     /* Autonomous Agent System */
     class AutoBootstrap* m_agentBootstrap{};
@@ -685,7 +650,7 @@ private: /* ---------------  new IDE members  --------------- */
 
     /* VS Code-like Layout Components */
     class ActivityBar* m_activityBar{};
-    QWidget* m_commandPalette{};  // Generic command palette widget (not the CommandPalette class)
+    void* m_commandPalette{};  // Generic command palette widget (not the CommandPalette class)
     class AIChatPanel* m_aiChatPanel{};
     QDockWidget* m_aiChatDock{};
     QFrame* m_primarySidebar{};
@@ -695,32 +660,32 @@ private: /* ---------------  new IDE members  --------------- */
     QTabWidget* m_chatTabs{};
     QPlainTextEdit* m_hexMagConsole{};
     QComboBox* m_modelSelector{};      // Model selection dropdown
-    QHash<QString, QString> m_modelTooltipCache{};
-    QString m_pendingModelPath{};
+    std::unordered_map<std::string, std::string> m_modelTooltipCache{};
+    std::string m_pendingModelPath{};
     QProgressDialog* m_loadingProgressDialog{};
-    QTimer* m_loadProgressTimer{};
+    void** m_loadProgressTimer{};
     ModelLoaderThread* m_modelLoaderThread{};
     QComboBox* m_agentModeSwitcher{};
-    QString m_agentMode{"Plan"};
+    std::string m_agentMode{"Plan"};
     QActionGroup* m_agentModeGroup{};
     QActionGroup* m_backendGroup{};
     
     /* ============================================================
      * Phase C: Data Persistence Members
      * ============================================================ */
-    QStringList m_recentFiles;          // List of recent file paths (20 max)
-    QStringList m_commandHistory;       // Circular buffer of executed commands (1000 max)
+    std::vector<std::string> m_recentFiles;          // List of recent file paths (20 max)
+    std::vector<std::string> m_commandHistory;       // Circular buffer of executed commands (1000 max)
     
     // Editor state tracking
     struct EditorState {
-        QString filePath;               // Current file path
+        std::string filePath;               // Current file path
         int cursorLine = 0;             // Cursor line number
         int cursorColumn = 0;           // Cursor column number
         int scrollPosition = 0;         // Scroll offset
-        QByteArray selectionStart;      // Selection start position
-        QByteArray selectionEnd;        // Selection end position
+        std::vector<uint8_t> selectionStart;      // Selection start position
+        std::vector<uint8_t> selectionEnd;        // Selection end position
     };
-    QMap<int, EditorState> m_editorStates;  // State per tab (tab index -> state)
+    std::map<int, EditorState> m_editorStates;  // State per tab (tab index -> state)
     int m_activeTabIndex = -1;          // Currently active tab index
     
     // Metrics for observability
@@ -732,21 +697,17 @@ private: /* ---------------  new IDE members  --------------- */
     
     void createVSCodeLayout();
     void applyDarkTheme();
-    void onAIBackendChanged(const QString& id, const QString& apiKey);
-    void onQuantModeChanged(const QString& mode);
+    void onAIBackendChanged(const std::string& id, const std::string& apiKey);
+    void onQuantModeChanged(const std::string& mode);
     void joinSwarmSession();
-    void onSwarmMessage(const QString& message);
+    void onSwarmMessage(const std::string& message);
     void broadcastEdit();
     void triggerAgentMode();
-    void onAgentWishReceived(const QString& wish);
-    void onAgentPlanGenerated(const QString& planSummary);
+    void onAgentWishReceived(const std::string& wish);
+    void onAgentPlanGenerated(const std::string& planSummary);
     void onAgentExecutionCompleted(bool success);
-    QString buildGgufTooltip(const QString& filePath);
+    std::string buildGgufTooltip(const std::string& filePath);
     void scanProjectForTodos();
-    void openFileInEditor(const QString& path);
+    void openFileInEditor(const std::string& path);
 };
-
-
-
-
 

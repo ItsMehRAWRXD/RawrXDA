@@ -69,7 +69,7 @@ void BoundedAutonomousExecutor::startAutonomousLoop(
     m_logs.clear();
     
     structuredLog("INFO", "LOOP_START", std::string("Starting autonomous loop: '%1' (max %2 iterations)")
-        .arg(initialPrompt.left(100)).arg(maxIterations));
+        ));
     
     loopStarted(initialPrompt);
     
@@ -84,7 +84,7 @@ void BoundedAutonomousExecutor::requestShutdown() {
     m_state.humanOverride = true;
     
     structuredLog("WARN", "USER_STOP", std::string("User requested shutdown at iteration %1/%2")
-        .arg(m_state.currentIteration).arg(m_state.maxIterations));
+        );
     
     shutdownRequested();
 }
@@ -117,11 +117,11 @@ void BoundedAutonomousExecutor::runAutonomousLoop() {
             
             if (m_state.humanOverride) {
                 structuredLog("WARN", "LOOP_STOP", std::string("Loop stopped by user after %1 iterations")
-                    .arg(m_state.currentIteration));
+                    );
                 loopStopped();
             } else {
                 structuredLog("INFO", "LOOP_COMPLETE", std::string("Loop completed successfully: %1 iterations")
-                    .arg(m_state.currentIteration));
+                    );
                 loopFinished();
             }
             
@@ -138,7 +138,7 @@ void BoundedAutonomousExecutor::runAutonomousLoop() {
     progressUpdated(m_state.currentIteration, m_state.maxIterations, "Starting iteration...");
     
     structuredLog("INFO", "ITERATION_START", std::string("Beginning iteration %1/%2")
-        .arg(m_state.currentIteration).arg(m_state.maxIterations));
+        );
     
     try {
         // ========== PERCEPTION PHASE ==========
@@ -173,14 +173,14 @@ void BoundedAutonomousExecutor::runAutonomousLoop() {
         int64_t cycleTime = // DateTime::currentMSecsSinceEpoch() - m_cycleStartTime;
         progressUpdated(m_state.currentIteration, m_state.maxIterations,
             std::string("Iteration %1 complete in %2ms")
-            .arg(m_state.currentIteration).arg(cycleTime));
+            );
         
         structuredLog("INFO", "ITERATION_COMPLETE", std::string("Iteration %1 completed in %2ms")
-            .arg(m_state.currentIteration).arg(cycleTime));
+            );
         
     } catch (const std::exception& e) {
         structuredLog("ERROR", "ITERATION_EXCEPTION", 
-            std::string("Exception in iteration %1: %2").arg(m_state.currentIteration).arg(e.what()));
+            std::string("Exception in iteration %1: %2")));
         iterationFailed(m_state.currentIteration, e.what());
     }
 }
@@ -220,14 +220,14 @@ std::string BoundedAutonomousExecutor::perceiveFileContext() {
     
     // Get active file
     std::string activeFile = m_editor->activeFileName();
-    context += std::string("Active file: %1\n").arg(activeFile.empty() ? "(none)" : activeFile);
+    context += std::string("Active file: %1\n") ? "(none)" : activeFile);
     
     // List open tabs
     std::stringList openFiles = m_editor->openFileNames();
-    context += std::string("Open files: %1 files\n").arg(openFiles.size());
+    context += std::string("Open files: %1 files\n"));
     
     for (const auto& file : openFiles.take(5)) {  // First 5 files
-        context += std::string("  - %1\n").arg(file);
+        context += std::string("  - %1\n");
     }
     
     return context;
@@ -267,10 +267,10 @@ void BoundedAutonomousExecutor::executeDecisionPhase() {
         "Based on the current state, what should be the next action? "
         "Format your response as: ACTION_TYPE: [refactor|create|fix|test|analyze] "
         "TARGET: [file or path] DESCRIPTION: [what to do]"
-    ).arg(m_currentTask)
-     .arg(perceptionContext)
-     .arg(m_state.currentIteration)
-     .arg(m_state.maxIterations);
+    )
+
+
+     ;
     
     {
         std::mutexLocker lock(&m_stateMutex);
@@ -294,7 +294,7 @@ void BoundedAutonomousExecutor::executeDecisionPhase() {
     m_decisionPhaseWaiting = true;
     
     structuredLog("DEBUG", "INFERENCE", std::string("Requesting streaming inference (reqId: %1)")
-        .arg(m_decisionRequestId));
+        );
     
     outputLogged(std::string("DECISION: Querying model for next action..."));
     
@@ -398,7 +398,7 @@ void BoundedAutonomousExecutor::executeActionPhase() {
     }
     
     structuredLog("DEBUG", "ACTION", std::string("Executing action: %1 with details: %2")
-        .arg(actionType).arg(actionDetails.join("|")));
+        ));
     
     bool success = false;
     
@@ -416,7 +416,7 @@ void BoundedAutonomousExecutor::executeActionPhase() {
         structuredLog("ERROR", "ACTION", "Cannot execute action - decision phase failed");
         success = false;
     } else {
-        structuredLog("WARN", "ACTION", std::string("Unknown action type: %1").arg(actionType));
+        structuredLog("WARN", "ACTION", std::string("Unknown action type: %1"));
         success = false;
     }
     
@@ -424,11 +424,11 @@ void BoundedAutonomousExecutor::executeActionPhase() {
         std::mutexLocker lock(&m_stateMutex);
         m_state.actionSucceeded = success;
         if (!success && m_state.actionError.empty()) {
-            m_state.actionError = std::string("Action '%1' failed to execute").arg(actionType);
+            m_state.actionError = std::string("Action '%1' failed to execute");
         }
     }
     
-    outputLogged(std::string("ACTION: %1 - %2").arg(actionType).arg(success ? "SUCCESS" : "FAILED"));
+    outputLogged(std::string("ACTION: %1 - %2"));
 }
 
 bool BoundedAutonomousExecutor::executeRefactorAction(const std::string& details) {
@@ -459,7 +459,7 @@ bool BoundedAutonomousExecutor::executeRefactorAction(const std::string& details
 
     structuredLog("DEBUG", "ACTION_REFACTOR", 
         std::string("Tool result: success=%1, output=%2, error=%3")
-        .arg(result.success).arg(result.output.left(50)).arg(result.error.left(50)));
+        )));
     
     return result.success;
 }
@@ -492,7 +492,7 @@ bool BoundedAutonomousExecutor::executeCreateAction(const std::string& details) 
 
     structuredLog("DEBUG", "ACTION_CREATE", 
         std::string("Tool result: success=%1, output=%2, error=%3")
-        .arg(result.success).arg(result.output.left(50)).arg(result.error.left(50)));
+        )));
     
     return result.success;
 }
@@ -525,7 +525,7 @@ bool BoundedAutonomousExecutor::executeFixAction(const std::string& details) {
 
     structuredLog("DEBUG", "ACTION_FIX", 
         std::string("Tool result: success=%1, output=%2, error=%3")
-        .arg(result.success).arg(result.output.left(50)).arg(result.error.left(50)));
+        )));
     
     return result.success;
 }
@@ -558,7 +558,7 @@ bool BoundedAutonomousExecutor::executeTestAction(const std::string& details) {
 
     structuredLog("DEBUG", "ACTION_TEST", 
         std::string("Tool result: success=%1, output=%2, error=%3")
-        .arg(result.success).arg(result.output.left(50)).arg(result.error.left(50)));
+        )));
     
     return result.success;
 }
@@ -591,7 +591,7 @@ bool BoundedAutonomousExecutor::executeAnalysisAction(const std::string& details
 
     structuredLog("DEBUG", "ACTION_ANALYZE", 
         std::string("Tool result: success=%1, output=%2, error=%3")
-        .arg(result.success).arg(result.output.left(50)).arg(result.error.left(50)));
+        )));
     
     return result.success;
 }
@@ -612,7 +612,7 @@ void BoundedAutonomousExecutor::executeFeedbackPhase() {
         m_state.confidenceScore = confidence;
     }
     
-    outputLogged(std::string("FEEDBACK: Confidence: %1%").arg(confidence * 100, 0, 'f', 1));
+    outputLogged(std::string("FEEDBACK: Confidence: %1%"));
 }
 
 std::string BoundedAutonomousExecutor::collectFeedback() {
@@ -623,9 +623,9 @@ std::string BoundedAutonomousExecutor::collectFeedback() {
         std::mutexLocker lock(&m_stateMutex);
         
         if (m_state.actionSucceeded) {
-            feedback += std::string("Modified files: %1. ").arg(m_state.toolsExecuted.size());
+            feedback += std::string("Modified files: %1. "));
         } else {
-            feedback += std::string("Action failed: %1. ").arg(m_state.actionError);
+            feedback += std::string("Action failed: %1. ");
         }
     }
     
@@ -687,9 +687,8 @@ void BoundedAutonomousExecutor::structuredLog(
 ) {
     std::string timestamp = // DateTime::currentDateTime().toString("hh:mm:ss.zzz");
     std::string logEntry = std::string("[%1] %2 | %3 | %4")
-        .arg(timestamp).arg(level).arg(category).arg(message);
+        ;
     
-    // // qDebug:  logEntry;
     outputLogged(logEntry);
 }
 
@@ -704,12 +703,12 @@ std::string BoundedAutonomousExecutor::executionSummary() const {
         "Successful actions: %4\n"
         "Failed actions: %5\n"
         "Total execution time: %6 seconds"
-    ).arg(m_state.currentIteration)
-     .arg(m_state.maxIterations)
-     .arg(m_state.isRunning ? "Running" : "Stopped")
-     .arg(m_logs.count([](const ExecutionLog& l) { return l.success; }))
-     .arg(m_logs.count([](const ExecutionLog& l) { return !l.success; }))
-     .arg(m_logs.empty() ? 0 : (m_logs.last().timestamp - m_logs.first().timestamp) / 1000.0);
+    )
+
+
+      { return l.success; }))
+      { return !l.success; }))
+      ? 0 : (m_logs.last().timestamp - m_logs.first().timestamp) / 1000.0);
 }
 
 ExecutionLog BoundedAutonomousExecutor::iterationLog(int iteration) const {
@@ -734,7 +733,7 @@ void BoundedAutonomousExecutor::onToolExecutionComplete(
 ) {
     std::mutexLocker lock(&m_stateMutex);
     m_state.toolResults[toolName] = result;
-    outputLogged(std::string("Tool '%1' completed: %2").arg(toolName).arg(result.left(100)));
+    outputLogged(std::string("Tool '%1' completed: %2")));
 }
 
 void BoundedAutonomousExecutor::onToolExecutionError(
@@ -742,8 +741,8 @@ void BoundedAutonomousExecutor::onToolExecutionError(
     const std::string& error
 ) {
     std::mutexLocker lock(&m_stateMutex);
-    m_state.toolResults[toolName] = std::string("ERROR: %1").arg(error);
-    outputLogged(std::string("Tool '%1' failed: %2").arg(toolName).arg(error));
+    m_state.toolResults[toolName] = std::string("ERROR: %1");
+    outputLogged(std::string("Tool '%1' failed: %2"));
 }
 
 void BoundedAutonomousExecutor::onInferenceStreamToken(int64_t reqId, const std::string& token) {
@@ -755,10 +754,10 @@ void BoundedAutonomousExecutor::onInferenceStreamToken(int64_t reqId, const std:
     // Accumulate tokens into complete response
     m_accumulatedResponse += token;
     
-    // Emit real-time token output
-    outputLogged(std::string("TOKEN[%1]: %2").arg(reqId).arg(token));
+    // real-time token output
+    outputLogged(std::string("TOKEN[%1]: %2"));
     
-    structuredLog("DEBUG", "STREAM_TOKEN", std::string("Token %1 chars received").arg(token.length()));
+    structuredLog("DEBUG", "STREAM_TOKEN", std::string("Token %1 chars received")));
 }
 
 void BoundedAutonomousExecutor::onInferenceStreamFinished(int64_t reqId) {
@@ -775,7 +774,7 @@ void BoundedAutonomousExecutor::onInferenceStreamFinished(int64_t reqId) {
     
     structuredLog("DEBUG", "STREAM_COMPLETE", 
         std::string("Inference complete (reqId: %1). Response length: %2 chars. Parsed action: %3")
-        .arg(reqId).arg(m_accumulatedResponse.length()).arg(actionType));
+        ));
     
     // Update state with parsed decision
     {
@@ -784,7 +783,7 @@ void BoundedAutonomousExecutor::onInferenceStreamFinished(int64_t reqId) {
         m_state.actionType = actionType;
     }
     
-    outputLogged(std::string("INFERENCE_COMPLETE: Action type = '%1'").arg(actionType));
+    outputLogged(std::string("INFERENCE_COMPLETE: Action type = '%1'"));
 }
 
 void BoundedAutonomousExecutor::onInferenceError(int64_t reqId, const std::string& error) {
@@ -797,22 +796,16 @@ void BoundedAutonomousExecutor::onInferenceError(int64_t reqId, const std::strin
     m_decisionPhaseWaiting = false;
     
     structuredLog("ERROR", "INFERENCE_ERROR", 
-        std::string("Inference failed (reqId: %1): %2").arg(reqId).arg(error));
+        std::string("Inference failed (reqId: %1): %2"));
     
     // Update state with error
     {
         std::mutexLocker lock(&m_stateMutex);
-        m_state.modelDecision = std::string("ERROR: %1").arg(error);
+        m_state.modelDecision = std::string("ERROR: %1");
         m_state.actionType = "error";
         m_state.actionError = error;
     }
     
-    outputLogged(std::string("INFERENCE_ERROR: %1").arg(error));
+    outputLogged(std::string("INFERENCE_ERROR: %1"));
 }
-
-
-
-
-
-
 

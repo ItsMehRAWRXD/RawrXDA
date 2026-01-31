@@ -3,19 +3,18 @@
 #include "format_router.h"
 #include "../qtapp/gguf_server.hpp"
 #include "../../include/inference_engine_stub.hpp"
-#include <QDebug>
+
 #include <chrono>
 
-ModelLoader::ModelLoader(QObject* parent)
-    : QObject(parent)
+ModelLoader::ModelLoader(void* parent)
+    : void(parent)
     , m_engine(nullptr)
     , m_server(nullptr)
     , m_enhancedLoader(std::make_unique<EnhancedModelLoader>(this))
 {
     // Forward signals from enhanced loader
-    connect(m_enhancedLoader.get(), &EnhancedModelLoader::modelLoaded, this, &ModelLoader::modelLoaded);
-    connect(m_enhancedLoader.get(), QOverload<const QString&>::of(&EnhancedModelLoader::error),
-            this, QOverload<const QString&>::of(&ModelLoader::error));
+// Qt connect removed
+// Qt connect removed
 }
 
 ModelLoader::~ModelLoader()
@@ -25,16 +24,15 @@ ModelLoader::~ModelLoader()
     }
 }
 
-bool ModelLoader::loadModel(const QString& modelPath)
+bool ModelLoader::loadModel(const std::string& modelPath)
 {
     const auto start = std::chrono::steady_clock::now();
     
     if (modelPath.isEmpty()) {
-        emit error(QStringLiteral("Model path is empty"));
+        error(QStringLiteral("Model path is empty"));
         return false;
     }
     
-    qInfo() << "[ModelLoader] Loading model:" << modelPath;
     m_modelPath = modelPath;
     
     // Use enhanced loader for multi-format support (GGUF/HF/Ollama/MASM)
@@ -43,9 +41,7 @@ bool ModelLoader::loadModel(const QString& modelPath)
     if (success) {
         const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - start).count();
-        qInfo() << "[ModelLoader] Model loaded successfully in" << duration << "ms";
     } else {
-        qWarning() << "[ModelLoader] Model load failed:" << m_enhancedLoader->getLastError();
     }
     
     return success;
@@ -54,7 +50,7 @@ bool ModelLoader::loadModel(const QString& modelPath)
 bool ModelLoader::initializeInference()
 {
     if (!m_engine) {
-        emit error(QStringLiteral("Inference engine not initialized"));
+        error(QStringLiteral("Inference engine not initialized"));
         return false;
     }
     return true;
@@ -73,15 +69,14 @@ bool ModelLoader::startServer(quint16 port)
         m_server = std::make_unique<GGUFServer>(m_engine.get(), this);
         
         // Forward server signals
-        connect(m_server.get(), &GGUFServer::serverStarted, this, &ModelLoader::serverStarted);
-        connect(m_server.get(), &GGUFServer::serverStopped, this, &ModelLoader::serverStopped);
-        connect(m_server.get(), QOverload<const QString&>::of(&GGUFServer::error),
-                this, &ModelLoader::error);
+// Qt connect removed
+// Qt connect removed
+// Qt connect removed
     }
     
     // Start the server
     if (!m_server->start(port)) {
-        emit error(QStringLiteral("Failed to start GGUF server on port %1").arg(port));
+        error(QStringLiteral("Failed to start GGUF server on port %1"));
         return false;
     }
     
@@ -100,7 +95,7 @@ bool ModelLoader::isServerRunning() const
     return m_server && m_server->isRunning();
 }
 
-QString ModelLoader::getModelInfo() const
+std::string ModelLoader::getModelInfo() const
 {
     if (m_engine && m_engine->isModelLoaded()) {
         return QStringLiteral("GGUF Model loaded");
@@ -113,7 +108,8 @@ quint16 ModelLoader::getServerPort() const
     return m_port;
 }
 
-QString ModelLoader::getServerUrl() const
+std::string ModelLoader::getServerUrl() const
 {
-    return QStringLiteral("http://localhost:%1").arg(m_port);
+    return QStringLiteral("http://localhost:%1");
 }
+

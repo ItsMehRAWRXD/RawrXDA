@@ -20,14 +20,14 @@ static inline quint16 float_to_half_impl(float f) {
     return quint16((sign << 15) | ((exp & 0x1F) << 10) | (mant & 0x3FF));
 }
 
-QByteArray quantize_q8k(const QByteArray& raw) {
+std::vector<uint8_t> quantize_q8k(const std::vector<uint8_t>& raw) {
     if (raw.size() % 4 != 0) return raw;
     const float* f = reinterpret_cast<const float*>(raw.constData());
     int n = raw.size() / 4;
     float amax = 0.f;
     for (int i = 0; i < n; ++i) amax = std::max(amax, std::fabs(f[i]));
     float scale = (amax > 0.f) ? (amax / 127.f) : 1.f;
-    QByteArray out;
+    std::vector<uint8_t> out;
     out.resize(4 + n);
     std::memcpy(out.data(), &scale, 4);
     int8_t* q = reinterpret_cast<int8_t*>(out.data() + 4);
@@ -39,7 +39,7 @@ QByteArray quantize_q8k(const QByteArray& raw) {
     return out;
 }
 
-QByteArray quantize_q4_0(const QByteArray& raw) {
+std::vector<uint8_t> quantize_q4_0(const std::vector<uint8_t>& raw) {
     if (raw.size() % 4 != 0) return raw; 
     const float* f = reinterpret_cast<const float*>(raw.constData());
     int n = raw.size() / 4;
@@ -47,7 +47,7 @@ QByteArray quantize_q4_0(const QByteArray& raw) {
     for (int i = 0; i < n; ++i) amax = std::max(amax, std::fabs(f[i]));
     float scale = (amax > 0.f) ? (amax / 7.f) : 1.f; // 4-bit signed approx (-7..7)
     int packed = (n + 1) / 2; // two 4-bit per byte
-    QByteArray out;
+    std::vector<uint8_t> out;
     out.resize(4 + packed);
     std::memcpy(out.data(), &scale, 4);
     uint8_t* q = reinterpret_cast<uint8_t*>(out.data() + 4);
@@ -65,7 +65,7 @@ QByteArray quantize_q4_0(const QByteArray& raw) {
     return out;
 }
 
-QByteArray quantize_generic_bits(const QByteArray& raw, int bits) {
+std::vector<uint8_t> quantize_generic_bits(const std::vector<uint8_t>& raw, int bits) {
     if (raw.size() % 4 != 0) return raw; 
     const float* f = reinterpret_cast<const float*>(raw.constData());
     int n = raw.size() / 4;
@@ -77,7 +77,7 @@ QByteArray quantize_generic_bits(const QByteArray& raw, int bits) {
     int totalBits = n * bits;
     int totalBytes = (totalBits + 7) / 8;
 
-    QByteArray out;
+    std::vector<uint8_t> out;
     out.resize(4 + totalBytes); // 4 bytes scale + packed data
     std::memcpy(out.data(), &scale, 4);
     uint8_t* dst = reinterpret_cast<uint8_t*>(out.data() + 4);
@@ -102,18 +102,18 @@ QByteArray quantize_generic_bits(const QByteArray& raw, int bits) {
     return out;
 }
 
-QByteArray to_f16(const QByteArray& raw) {
+std::vector<uint8_t> to_f16(const std::vector<uint8_t>& raw) {
     if (raw.size() % 4 != 0) return raw;
     const float* f = reinterpret_cast<const float*>(raw.constData());
     int n = raw.size() / 4;
-    QByteArray out;
+    std::vector<uint8_t> out;
     out.resize(n * 2);
     quint16* h = reinterpret_cast<quint16*>(out.data());
     for (int i = 0; i < n; ++i) h[i] = float_to_half_impl(f[i]);
     return out;
 }
 
-QByteArray apply_quant(const QByteArray& raw, const QString& mode) {
+std::vector<uint8_t> apply_quant(const std::vector<uint8_t>& raw, const std::string& mode) {
     if (mode == "F32") return raw;
     if (mode == "F16") return to_f16(raw);
     if (mode == "Q8_K") return quantize_q8k(raw);
@@ -123,9 +123,9 @@ QByteArray apply_quant(const QByteArray& raw, const QString& mode) {
     return raw;
 }
 
-QPair<QByteArray, int> apply_quant_with_type(const QByteArray& raw, const QString& mode)
+std::pair<std::vector<uint8_t>, int> apply_quant_with_type(const std::vector<uint8_t>& raw, const std::string& mode)
 {
-    QByteArray quantized;
+    std::vector<uint8_t> quantized;
     int ggml_type_id = 0;  // Default to F32 (0)
     
     if (mode == "Q4_0") {
@@ -144,14 +144,13 @@ QPair<QByteArray, int> apply_quant_with_type(const QByteArray& raw, const QStrin
         // Default to F32 for unknown modes
         quantized = raw;
         ggml_type_id = 0;
-        // qWarning() << "Unknown quantization mode:" << mode << ", defaulting to F32";
     }
     
     return qMakePair(quantized, ggml_type_id);
 }
 
-QVector<float> unpack_generic_bits(const QByteArray& packed, int bits) {
-    QVector<float> result;
+std::vector<float> unpack_generic_bits(const std::vector<uint8_t>& packed, int bits) {
+    std::vector<float> result;
     if (packed.size() < 4) return result;
     float scale;
     std::memcpy(&scale, packed.constData(), 4);
@@ -177,8 +176,8 @@ QVector<float> unpack_generic_bits(const QByteArray& packed, int bits) {
     return result;
 }
 
-QVector<float> unpack_f16(const QByteArray& packed) {
-    QVector<float> out;
+std::vector<float> unpack_f16(const std::vector<uint8_t>& packed) {
+    std::vector<float> out;
     if (packed.size() % 2 != 0) return out;
     int n = packed.size() / 2;
     out.resize(n);

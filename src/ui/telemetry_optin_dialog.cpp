@@ -1,18 +1,11 @@
 // Telemetry Opt-In Dialog - Implementation
 #include "telemetry_optin_dialog.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QTextBrowser>
-#include <QSettings>
-#include <QDebug>
-#include <QDateTime>
-#include <QDesktopServices>
-#include <QUrl>
+
 
 namespace RawrXD {
 
-TelemetryOptInDialog::TelemetryOptInDialog(QWidget* parent)
-    : QDialog(parent)
+TelemetryOptInDialog::TelemetryOptInDialog(void* parent)
+    : void(parent)
 {
     setWindowTitle("Help Improve RawrXD IDE");
     setMinimumSize(600, 500);
@@ -20,7 +13,6 @@ TelemetryOptInDialog::TelemetryOptInDialog(QWidget* parent)
     
     setupUI();
     
-    qDebug() << "[TelemetryOptInDialog] Shown at" << QDateTime::currentDateTime().toString(Qt::ISODate);
 }
 
 void TelemetryOptInDialog::setupUI() {
@@ -99,7 +91,7 @@ void TelemetryOptInDialog::setupUI() {
         "}"
         "QPushButton:hover { background-color: #4c4c4c; }"
     );
-    connect(learnMoreButton, &QPushButton::clicked, this, &TelemetryOptInDialog::onLearnMoreClicked);
+// Qt connect removed
     buttonLayout->addWidget(learnMoreButton);
     
     QPushButton* declineButton = new QPushButton("✗ No Thanks", this);
@@ -113,7 +105,7 @@ void TelemetryOptInDialog::setupUI() {
         "}"
         "QPushButton:hover { background-color: #e53e49; }"
     );
-    connect(declineButton, &QPushButton::clicked, this, &TelemetryOptInDialog::onDeclineClicked);
+// Qt connect removed
     buttonLayout->addWidget(declineButton);
     
     QPushButton* acceptButton = new QPushButton("✓ Yes, Help Improve", this);
@@ -128,15 +120,15 @@ void TelemetryOptInDialog::setupUI() {
         "}"
         "QPushButton:hover { background-color: #1a9c6f; }"
     );
-    connect(acceptButton, &QPushButton::clicked, this, &TelemetryOptInDialog::onAcceptClicked);
+// Qt connect removed
     buttonLayout->addWidget(acceptButton);
     
     mainLayout->addLayout(buttonLayout);
     
-    setStyleSheet("QDialog { background-color: #252526; }");
+    setStyleSheet("void { background-color: #252526; }");
 }
 
-QString TelemetryOptInDialog::getTelemetryExplanation() const {
+std::string TelemetryOptInDialog::getTelemetryExplanation() const {
     return R"(
 <div style='font-size: 12px; line-height: 1.6;'>
 <h3 style='color: #4ec9b0;'>What is Telemetry?</h3>
@@ -161,7 +153,7 @@ Telemetry helps us understand how RawrXD IDE is used in the real world. This dat
 )";
 }
 
-QString TelemetryOptInDialog::getCollectedDataDetails() const {
+std::string TelemetryOptInDialog::getCollectedDataDetails() const {
     return R"(
 <div style='font-size: 11px; color: #d4d4d4;'>
 <h4 style='color: #569cd6;'>📋 What We Collect:</h4>
@@ -187,10 +179,9 @@ void TelemetryOptInDialog::onAcceptClicked() {
     m_telemetryEnabled = true;
     m_remindLater = false;
     
-    qDebug() << "[TelemetryOptInDialog] User ACCEPTED telemetry";
     
     saveTelemetryPreference(true);
-    emit telemetryDecisionMade(true);
+    telemetryDecisionMade(true);
     
     accept();
 }
@@ -200,24 +191,21 @@ void TelemetryOptInDialog::onDeclineClicked() {
     m_remindLater = m_remindLaterCheckbox->isChecked();
     
     if (m_remindLater) {
-        qDebug() << "[TelemetryOptInDialog] User DECLINED telemetry (remind later)";
         // Don't save preference, will ask again later
     } else {
-        qDebug() << "[TelemetryOptInDialog] User DECLINED telemetry (permanent)";
         saveTelemetryPreference(false);
     }
     
-    emit telemetryDecisionMade(false);
+    telemetryDecisionMade(false);
     
     reject();
 }
 
 void TelemetryOptInDialog::onLearnMoreClicked() {
-    qDebug() << "[TelemetryOptInDialog] User clicked 'Learn More'";
     
     // Open privacy policy or documentation
     // For now, show a detailed message box
-    QString detailedInfo = 
+    std::string detailedInfo = 
         "<h3>RawrXD IDE Telemetry Details</h3>"
         "<p><b>Data Storage:</b></p>"
         "<ul>"
@@ -237,7 +225,7 @@ void TelemetryOptInDialog::onLearnMoreClicked() {
         "<li>Check <code>src/telemetry/</code> in the repository</li>"
         "</ul>";
     
-    QDialog* detailDialog = new QDialog(this);
+    void* detailDialog = new void(this);
     detailDialog->setWindowTitle("Telemetry Technical Details");
     detailDialog->setMinimumSize(500, 400);
     
@@ -249,10 +237,10 @@ void TelemetryOptInDialog::onLearnMoreClicked() {
     layout->addWidget(browser);
     
     QPushButton* closeBtn = new QPushButton("Close", detailDialog);
-    connect(closeBtn, &QPushButton::clicked, detailDialog, &QDialog::accept);
+// Qt connect removed
     layout->addWidget(closeBtn);
     
-    detailDialog->setStyleSheet("QDialog { background-color: #252526; }");
+    detailDialog->setStyleSheet("void { background-color: #252526; }");
     detailDialog->exec();
 }
 
@@ -267,10 +255,9 @@ void saveTelemetryPreference(bool enabled) {
     QSettings settings("RawrXD", "AgenticIDE");
     settings.setValue("telemetry/enabled", enabled);
     settings.setValue("telemetry/decision_made", true);
-    settings.setValue("telemetry/decision_date", QDateTime::currentDateTime());
+    settings.setValue("telemetry/decision_date", std::chrono::system_clock::time_point::currentDateTime());
     settings.sync();
     
-    qDebug() << "[Telemetry] Preference saved: enabled =" << enabled;
 }
 
 bool getTelemetryPreference() {
@@ -279,3 +266,4 @@ bool getTelemetryPreference() {
 }
 
 } // namespace RawrXD
+

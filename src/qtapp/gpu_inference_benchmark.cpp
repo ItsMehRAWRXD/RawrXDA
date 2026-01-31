@@ -7,7 +7,7 @@
 #include <thread>
 #include <filesystem>
 #include <algorithm>
-#include <QCoreApplication>
+
 #include "gpu_backend.hpp"
 #include "inference_engine.hpp"
 
@@ -67,12 +67,12 @@ BenchmarkResult benchmarkRealModel(const std::string& model_path, int num_tokens
     std::cout << "╚════════════════════════════════════════════════════════╝\n";
     
     try {
-        InferenceEngine engine(QString::fromStdString(model_path));
+        InferenceEngine engine(std::string::fromStdString(model_path));
         
         std::cout << "Loading model..." << std::flush;
         auto load_start = std::chrono::high_resolution_clock::now();
         
-        bool loaded = engine.loadModel(QString::fromStdString(model_path));
+        bool loaded = engine.loadModel(std::string::fromStdString(model_path));
         
         auto load_end = std::chrono::high_resolution_clock::now();
         result.load_time_ms = std::chrono::duration<double, std::milli>(load_end - load_start).count();
@@ -86,7 +86,7 @@ BenchmarkResult benchmarkRealModel(const std::string& model_path, int num_tokens
         std::cout << " OK (" << (result.load_time_ms / 1000.0) << " sec)\n";
         
         // Prepare input
-        QString prompt = "Write a short story about artificial intelligence:";
+        std::string prompt = "Write a short story about artificial intelligence:";
         std::vector<int32_t> tokens = engine.tokenize(prompt);
         
         std::cout << "Generating " << num_tokens << " tokens..." << std::flush;
@@ -224,3 +224,4 @@ int main(int argc, char* argv[]) {
     
     return 0;
 }
+

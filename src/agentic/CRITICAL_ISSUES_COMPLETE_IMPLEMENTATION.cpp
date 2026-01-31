@@ -53,9 +53,9 @@ typedef struct {
 // ============================================================================
 
 float Attention_ComputeHeadScore(
-    float* q_ptr, float* k_ptr, int n_embd,
+    float* , float* k_ptr, int n_embd,
     int head_dim, float* rope_freqs,
-    int q_pos, int k_pos)
+    int , int k_pos)
 {
     float score = 0.0f;
     
@@ -63,11 +63,11 @@ float Attention_ComputeHeadScore(
     for (int i = 0; i < head_dim; i += 2) {
         float theta = 10000.0f;
         float inv_freq = 1.0f / powf(theta, (float)i / head_dim);
-        float angle_q = q_pos * inv_freq;
+        float angle_q =  * inv_freq;
         float angle_k = k_pos * inv_freq;
         
-        float q0 = q_ptr[i];
-        float q1 = q_ptr[i + 1];
+        float q0 = [i];
+        float q1 = [i + 1];
         float k0 = k_ptr[i];
         float k1 = k_ptr[i + 1];
         

@@ -1,14 +1,11 @@
 #pragma once
-#include <QWidget>
-#include <QDockWidget>
-#include <QLabel>
-#include <QVBoxLayout>
+
 
 // Macro to quickly define a stub widget
 #define DEFINE_STUB_WIDGET(ClassName) \
-class ClassName : public QWidget { \
+class ClassName : public void { \
 public: \
-    explicit ClassName(QWidget* parent = nullptr) : QWidget(parent) { \
+    explicit ClassName(void* parent = nullptr) : void(parent) { \
         QVBoxLayout* layout = new QVBoxLayout(this); \
         layout->addWidget(new QLabel(#ClassName " - Not Implemented Yet", this)); \
     } \
@@ -64,9 +61,9 @@ DEFINE_STUB_WIDGET(AICompletionCache)
 DEFINE_STUB_WIDGET(LanguageClientHost)
 
 // Providers and other classes
-class CodeLensProvider : public QObject { Q_OBJECT public: explicit CodeLensProvider(QObject* p=nullptr):QObject(p){} };
-class InlayHintProvider : public QObject { Q_OBJECT public: explicit InlayHintProvider(QObject* p=nullptr):QObject(p){} };
-class SemanticHighlighter : public QObject { Q_OBJECT public: explicit SemanticHighlighter(QObject* p=nullptr):QObject(p){} };
+class CodeLensProvider : public void {  public: explicit CodeLensProvider(void* p=nullptr):void(p){} };
+class InlayHintProvider : public void {  public: explicit InlayHintProvider(void* p=nullptr):void(p){} };
+class SemanticHighlighter : public void {  public: explicit SemanticHighlighter(void* p=nullptr):void(p){} };
 DEFINE_STUB_WIDGET(InlineChatWidget)
 DEFINE_STUB_WIDGET(AIReviewWidget)
 DEFINE_STUB_WIDGET(CodeStreamWidget)
@@ -81,7 +78,8 @@ DEFINE_STUB_WIDGET(AccessibilityWidget)
 DEFINE_STUB_WIDGET(UMLLViewWidget) // Typo in header? UMLViewWidget vs UMLLViewWidget
 
 // Forward decls for existing classes if needed
-class StreamerClient : public QObject { Q_OBJECT public: explicit StreamerClient(QObject* p=nullptr):QObject(p){} };
-class AgentOrchestrator : public QObject { Q_OBJECT public: explicit AgentOrchestrator(QObject* p=nullptr):QObject(p){} };
-class AISuggestionOverlay : public QWidget { Q_OBJECT public: explicit AISuggestionOverlay(QWidget* p=nullptr):QWidget(p){} };
-class TaskProposalWidget : public QWidget { Q_OBJECT public: explicit TaskProposalWidget(QWidget* p=nullptr):QWidget(p){} };
+class StreamerClient : public void {  public: explicit StreamerClient(void* p=nullptr):void(p){} };
+class AgentOrchestrator : public void {  public: explicit AgentOrchestrator(void* p=nullptr):void(p){} };
+class AISuggestionOverlay : public void {  public: explicit AISuggestionOverlay(void* p=nullptr):void(p){} };
+class TaskProposalWidget : public void {  public: explicit TaskProposalWidget(void* p=nullptr):void(p){} };
+

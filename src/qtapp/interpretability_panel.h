@@ -1,21 +1,14 @@
 #pragma once
 
-#include <QWidget>
-#include <QJsonObject>
+
 #include <vector>
 // QtCharts includes - commented out for now to avoid build issues
-//#include <QtCharts/QChartView>
-//#include <QtCharts/QChart>
-//#include <QtCharts/QLineSeries>
-//#include <QtCharts/QBarSeries>
-//#include <QtCharts/QValueAxis>
 
 
-class InterpretabilityPanel : public QWidget {
-    Q_OBJECT
+class InterpretabilityPanel : public void {
 
 public:
-    explicit InterpretabilityPanel(QWidget* parent = nullptr);
+    explicit InterpretabilityPanel(void* parent = nullptr);
     ~InterpretabilityPanel();
 
     // Visualization types
@@ -28,21 +21,21 @@ public:
     };
 
     // Update visualizations
-    void updateVisualization(VisualizationType type, const QJsonObject& data);
+    void updateVisualization(VisualizationType type, const void*& data);
     void clearVisualization();
 
     // Configuration
     void setLayerRange(int minLayer, int maxLayer);
-    void setAttentionHeads(const QStringList& heads);
+    void setAttentionHeads(const std::vector<std::string>& heads);
 
     // Export capabilities
-    QJsonObject getCurrentVisualization() const;
-    bool exportVisualization(const QString& filePath);
+    void* getCurrentVisualization() const;
+    bool exportVisualization(const std::string& filePath);
 
-public slots:
-    void onModelDataUpdated(const QJsonObject& data);
+public:
+    void onModelDataUpdated(const void*& data);
 
-signals:
+
     void visualizationUpdated(VisualizationType type);
 
 private:
@@ -54,14 +47,14 @@ private:
     // QtCharts::QChartView* m_chartView;
     // QtCharts::QChart* m_chart;
     VisualizationType m_currentType;
-    QJsonObject m_currentData;
+    void* m_currentData;
     int m_minLayer;
     int m_maxLayer;
-    QStringList m_attentionHeads;
+    std::vector<std::string> m_attentionHeads;
     
     // Data storage for visualizations
     struct FeatureImportance {
-        QString name;
+        std::string name;
         double importance;
     };
     
@@ -75,3 +68,4 @@ private:
     
     std::vector<GradientFlowData> m_gradientFlowData;
 };
+

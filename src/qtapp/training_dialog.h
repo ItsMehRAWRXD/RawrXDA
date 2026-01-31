@@ -1,17 +1,9 @@
 #pragma once
 
-#include <QDialog>
-#include <QString>
-#include <QJsonObject>
 
 // Forward declarations
-class QLineEdit;
-class QSpinBox;
-class QDoubleSpinBox;
-class QComboBox;
-class QCheckBox;
-class QPushButton;
-class QLabel;
+
+
 class ModelTrainer;
 
 /**
@@ -24,9 +16,8 @@ class ModelTrainer;
  * - Training options (validation split, gradient clipping, etc.)
  * - Output path configuration
  */
-class TrainingDialog : public QDialog
+class TrainingDialog : public void
 {
-    Q_OBJECT
 
 public:
     /**
@@ -34,30 +25,30 @@ public:
      * @param trainer Pointer to ModelTrainer instance (non-owning)
      * @param parent Parent widget for Qt ownership
      */
-    explicit TrainingDialog(ModelTrainer* trainer, QWidget* parent = nullptr);
+    explicit TrainingDialog(ModelTrainer* trainer, void* parent = nullptr);
     ~TrainingDialog() override = default;
     
     void initialize();
 
     /**
      * @brief Get the configured training parameters
-     * @return QJsonObject containing all training configuration
+     * @return void* containing all training configuration
      */
-    QJsonObject getTrainingConfig() const;
+    void* getTrainingConfig() const;
 
-signals:
+
     /**
      * @brief Emitted when user starts training with valid configuration
      * @param config Complete training configuration as JSON
      */
-    void trainingStartRequested(const QJsonObject& config);
+    void trainingStartRequested(const void*& config);
 
     /**
      * @brief Emitted when dialog is cancelled
      */
     void trainingCancelled();
 
-private slots:
+private:
     void onBrowseDataset();
     void onBrowseModel();
     void onBrowseOutputPath();
@@ -72,7 +63,7 @@ private:
     void loadDefaultSettings();
     void saveSettings();
     bool validateConfiguration() const;
-    QString detectDatasetFormat(const QString& path) const;
+    std::string detectDatasetFormat(const std::string& path) const;
 
     // UI Components - Dataset Selection
     QLineEdit* m_datasetPathEdit;
@@ -109,3 +100,4 @@ private:
     // Reference to ModelTrainer (non-owning)
     ModelTrainer* m_trainer;
 };
+

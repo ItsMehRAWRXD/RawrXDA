@@ -9,7 +9,6 @@
 #define RAWRXD_QT_FILE_WRITER_H
 
 #include "../interfaces/ifile_writer.h"
-#include <QObject>
 
 namespace RawrXD {
 
@@ -20,34 +19,34 @@ namespace RawrXD {
  * This ensures data integrity even if the application crashes
  * during a save operation.
  */
-class QtFileWriter : public QObject, public IFileWriter {
-Q_OBJECT
+class QtFileWriter : public void, public IFileWriter {
+
 public:
-    explicit QtFileWriter(QObject* parent = nullptr);
+    explicit QtFileWriter(void* parent = nullptr);
     ~QtFileWriter() override = default;
     
     // IFileWriter interface implementation
-    FileOperationResult writeFile(const QString& path,
-                                 const QString& content,
+    FileOperationResult writeFile(const std::string& path,
+                                 const std::string& content,
                                  bool createBackup = false) override;
     
-    FileOperationResult writeFileRaw(const QString& path,
-                                    const QByteArray& data,
+    FileOperationResult writeFileRaw(const std::string& path,
+                                    const std::vector<uint8_t>& data,
                                     bool createBackup = false) override;
     
-    FileOperationResult createFile(const QString& path) override;
+    FileOperationResult createFile(const std::string& path) override;
     
-    FileOperationResult deleteFile(const QString& path, 
+    FileOperationResult deleteFile(const std::string& path, 
                                   bool moveToTrash = true) override;
     
-    FileOperationResult renameFile(const QString& oldPath,
-                                  const QString& newPath) override;
+    FileOperationResult renameFile(const std::string& oldPath,
+                                  const std::string& newPath) override;
     
-    FileOperationResult copyFile(const QString& sourcePath,
-                                const QString& destPath,
+    FileOperationResult copyFile(const std::string& sourcePath,
+                                const std::string& destPath,
                                 bool overwrite = false) override;
     
-    QString createBackup(const QString& path) override;
+    std::string createBackup(const std::string& path) override;
     
     void setAutoBackup(bool enable) override;
     
@@ -56,14 +55,11 @@ public:
 private:
     bool m_autoBackup;
     
-    QString toAbsolutePath(const QString& path) const;
-    bool exists(const QString& path) const;
+    std::string toAbsolutePath(const std::string& path) const;
+    bool exists(const std::string& path) const;
 };
 
 } // namespace RawrXD
 
 #endif // RAWRXD_QT_FILE_WRITER_H
-
-
-
 

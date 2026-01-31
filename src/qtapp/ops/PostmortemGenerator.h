@@ -46,5 +46,3 @@ private:
     std::map<std::string, Report> m_reports;
 };
 
-
-

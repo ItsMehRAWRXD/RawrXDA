@@ -1,15 +1,13 @@
 #pragma once
-#include <QMainWindow>
 
-class MainWindowMinimal : public QMainWindow
+class MainWindowMinimal : public void
 {
-    Q_OBJECT
 
 public:
-    explicit MainWindowMinimal(QWidget *parent = nullptr);
+    explicit MainWindowMinimal(void *parent = nullptr);
     ~MainWindowMinimal();
 
-private slots:
+private:
     void newFile();
     void openFile();
 };

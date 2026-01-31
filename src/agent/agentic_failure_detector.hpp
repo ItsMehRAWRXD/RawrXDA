@@ -1,13 +1,6 @@
 // agentic_failure_detector.hpp - Detects 8 failure types in model outputs
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QStringList>
-#include <QMutex>
-#include <QHash>
-#include <QDateTime>
 
 // 8 detectable failure types
 enum class AgentFailureType {
@@ -24,49 +17,48 @@ enum class AgentFailureType {
 
 struct FailureInfo {
     AgentFailureType type = AgentFailureType::None;
-    QString description;
+    std::string description;
     double confidence = 0.0;
-    QString evidence;
-    QDateTime detectedAt;
+    std::string evidence;
+    std::chrono::system_clock::time_point detectedAt;
     qint64 sequenceNumber = 0;
 };
 
-class AgenticFailureDetector : public QObject
+class AgenticFailureDetector : public void
 {
-    Q_OBJECT
 
 public:
-    explicit AgenticFailureDetector(QObject* parent = nullptr);
+    explicit AgenticFailureDetector(void* parent = nullptr);
     ~AgenticFailureDetector() override;
 
     // Main detection API
-    FailureInfo detectFailure(const QString& modelOutput, const QString& context = QString());
-    QList<FailureInfo> detectMultipleFailures(const QString& modelOutput);
+    FailureInfo detectFailure(const std::string& modelOutput, const std::string& context = std::string());
+    std::vector<FailureInfo> detectMultipleFailures(const std::string& modelOutput);
     
     // Specific detection methods
-    bool isRefusal(const QString& output) const;
-    bool isHallucination(const QString& output) const;
-    bool isFormatViolation(const QString& output) const;
-    bool isInfiniteLoop(const QString& output) const;
-    bool isTokenLimitExceeded(const QString& output) const;
-    bool isResourceExhausted(const QString& output) const;
-    bool isTimeout(const QString& output) const;
-    bool isSafetyViolation(const QString& output) const;
+    bool isRefusal(const std::string& output) const;
+    bool isHallucination(const std::string& output) const;
+    bool isFormatViolation(const std::string& output) const;
+    bool isInfiniteLoop(const std::string& output) const;
+    bool isTokenLimitExceeded(const std::string& output) const;
+    bool isResourceExhausted(const std::string& output) const;
+    bool isTimeout(const std::string& output) const;
+    bool isSafetyViolation(const std::string& output) const;
     
     // Configuration
     void setRefusalThreshold(double threshold);
     void setQualityThreshold(double threshold);
     void enableToolValidation(bool enable);
     
-    void addRefusalPattern(const QString& pattern);
-    void addHallucinationPattern(const QString& pattern);
-    void addLoopPattern(const QString& pattern);
-    void addSafetyPattern(const QString& pattern);
+    void addRefusalPattern(const std::string& pattern);
+    void addHallucinationPattern(const std::string& pattern);
+    void addLoopPattern(const std::string& pattern);
+    void addSafetyPattern(const std::string& pattern);
     
     // Statistics
     struct Stats {
         qint64 totalOutputsAnalyzed = 0;
-        QHash<int, qint64> failureTypeCounts;
+        std::unordered_map<int, qint64> failureTypeCounts;
         double avgConfidence = 0.0;
         qint64 truePredictions = 0;
         qint64 falsePredictions = 0;
@@ -79,24 +71,23 @@ public:
     void setEnabled(bool enable);
     bool isEnabled() const;
 
-signals:
-    void failureDetected(AgentFailureType type, const QString& description);
-    void multipleFailuresDetected(const QList<FailureInfo>& failures);
+    void failureDetected(AgentFailureType type, const std::string& description);
+    void multipleFailuresDetected(const std::vector<FailureInfo>& failures);
     void highConfidenceDetection(AgentFailureType type, double confidence);
 
 private:
     void initializePatterns();
-    double calculateConfidence(AgentFailureType type, const QString& output);
+    double calculateConfidence(AgentFailureType type, const std::string& output);
     
-    mutable QMutex m_mutex;
+    mutable std::mutex m_mutex;
     
     // Pattern collections
-    QStringList m_refusalPatterns;
-    QStringList m_hallucinationPatterns;
-    QStringList m_loopPatterns;
-    QStringList m_safetyPatterns;
-    QStringList m_timeoutIndicators;
-    QStringList m_resourceExhaustionIndicators;
+    std::vector<std::string> m_refusalPatterns;
+    std::vector<std::string> m_hallucinationPatterns;
+    std::vector<std::string> m_loopPatterns;
+    std::vector<std::string> m_safetyPatterns;
+    std::vector<std::string> m_timeoutIndicators;
+    std::vector<std::string> m_resourceExhaustionIndicators;
     
     // Thresholds
     double m_refusalThreshold = 0.7;
@@ -108,3 +99,4 @@ private:
     bool m_enabled = true;
     qint64 m_sequenceNumber = 0;
 };
+
