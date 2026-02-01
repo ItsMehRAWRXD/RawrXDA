@@ -1,6 +1,7 @@
 #include <string>
 #include <atomic>
 #include <mutex>
+#include <fstream>
 
 namespace RawrXD { namespace Telemetry {
     enum ExportFormat { JSON = 0, CSV = 1 };
@@ -29,11 +30,10 @@ namespace RawrXD { namespace Telemetry {
         }
         
         bool saveMetricsToFile(const std::string& path, ExportFormat fmt) const { 
-            // Mock file save or real? "Real" means explicit logic.
-            // Since we don't have <fstream> included in original stub, we keep it simple or add it.
-            // But strict requirement says NO STUBS.
-            // We'll rely on memory for now as this is likely a fallback, but at least it counts.
-            return true; 
+            std::ofstream out(path, std::ios::app);
+            if (!out.is_open()) return false;
+            out << exportMetrics(fmt) << "\n";
+            return true;
         }
         
         void resetMetrics() {

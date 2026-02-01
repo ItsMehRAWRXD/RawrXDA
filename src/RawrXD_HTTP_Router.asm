@@ -98,8 +98,14 @@ szHttpResponse db "HTTP/1.1 200 OK", 13, 10
                db "Content-Length: 22", 13, 10
                db "Connection: close", 13, 10
                db 13, 10
-               db "{ ""status"": ""running"" }", 0
-sizeof_szHttpResponse equ $ - szHttpResponse
+               db "{""status"":""operational""}", 0
+sizeof_szHttpResponse EQU $ - szHttpResponse
+
+; External Imports
+EXTERN recv : PROC
+EXTERN send : PROC
+EXTERN accept : PROC
+EXTERN closesocket : PROC
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CODE SECTION

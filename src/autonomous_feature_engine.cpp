@@ -658,15 +658,14 @@ void AutonomousFeatureEngine::updateLearningModel(const std::string& c, const st
 
         os << "{\"code\": \"" << escapedCode << "\", \"label\": \"" << f << "\", \"timestamp\": " 
            << std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() 
-           << "}\n";
+           << "}" << std::endl;
     }
 }
-std::vector<std::string> AutonomousFeatureEngine::predictNextAction(const std::string& codeContext) {
-    if (!hybridCloudManager) return {"Analyze Code", "Format Code"}; // Fallback actions
+std::vector<std::string> AutonomousFeatureEngine::getRecommendedActions(const std::string& codeContext) {
+    std::vector<std::string> actions;
     
     // Heuristic: If code has 'TODO', suggest 'Implement TODO'
-    std::vector<std::string> actions;
-    if (codeContext.find("TODO") != std::string::npos) {
+    if (codeContext.find("TODO") != std::string::npos || codeContext.find("FIXME") != std::string::npos) {
         actions.push_back("Implement TODOs");
     }
     
