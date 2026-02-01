@@ -14,6 +14,7 @@
 #include "../../include/editor_buffer.h"
 #include "../../include/syntax_engine.h"
 #include "gguf_loader.hpp" 
+#include "../cpu_inference_engine.h"
 
 // Forward decls
 namespace RawrXD::UI { 
@@ -255,7 +256,7 @@ private:
     void jumpToProblem(int problemIndex);
     void showProblemDetails(int problemIndex);
 
-    void simulateAIRequest(const std::string& model, bool success);
+    void startChatRequest(const std::string& prompt);
     void exportMetrics(const std::string& format);
     void clearMetrics();
     void showMetricsReport();
@@ -296,6 +297,8 @@ public:
     HWND m_userChatSendBtn;
     
     HMENU m_menuBar;
+
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
     
     bool m_terminalRunning;
     bool m_terminalReaderActive;
@@ -371,4 +374,1452 @@ public:
     LanguageDefinition m_psLang;
     
     std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
-};
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 0;
+    long m_lastFindPos = -1;
+    size_t m_lastEditPos = 0;
+    uint64_t m_lastEditTick = 0;
+    
+    std::vector<std::string> m_editorBuffer; 
+    
+    POINT m_panelDragStart = {0,0};
+    std::thread m_terminalReaderThread;
+    
+    struct ChatPanelShim { void* impl = nullptr; } m_chatPanelShim;
+    RawrXD::UI::SplitLayout* m_splitLayout = nullptr;
+    
+    std::mutex m_chatMutex;
+    RawrXD::Backend::OllamaSession m_chatSession;
+    RawrXD::Backend::OllamaBackend m_ollama;
+    std::vector<RawrXD::Backend::OllamaChatMessage> m_chatHistory;
+    
+    UndoStack m_undo;
+    SyntaxEngine m_engine;
+    LanguageDefinition m_cppLang;
+    LanguageDefinition m_psLang;
+    
+    std::unique_ptr<GGUFLoaderQt> m_ggufLoader;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_localInferenceEngine;
+    bool m_modelLoaded;
+    std::string m_currentModelPath;
+    
+    size_t m_currentTheme = 0;
+    size_t m_currentTab = 0;
+    int m_fontSize = 11;
+    int m_tabSize = 4;
+    size_t m_maxFileSizeForLazyLoad = 

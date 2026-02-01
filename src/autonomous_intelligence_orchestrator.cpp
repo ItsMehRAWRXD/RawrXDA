@@ -562,43 +562,47 @@ nlohmann::json AutonomousIntelligenceOrchestrator::getEnterpriseReport() {
 
 // Event Dispatchers (Callbacks or Signals)
 void AutonomousIntelligenceOrchestrator::autonomousModeStarted() {
-    // Log
+    if (onNotification) onNotification("INFO", "Autonomous Mode Started");
 }
 
 void AutonomousIntelligenceOrchestrator::autonomousModeStopped() {
-    // Log
+    if (onNotification) onNotification("INFO", "Autonomous Mode Stopped");
 }
 
 void AutonomousIntelligenceOrchestrator::analysisCompleted(const void*& results) {
+    if (onNotification) onNotification("ANALYSIS", "Deep Analysis Completed");
     // Notify UI or listeners
 }
 
 void AutonomousIntelligenceOrchestrator::recommendationsReady(const void*& recommendations) {
-    // Notify
+    if (onNotification) onNotification("SUGGESTION", "New recommendations available");
 }
 
 void AutonomousIntelligenceOrchestrator::modelSwitched(const std::string& newModel) {
-    // Notify
+    if (onNotification) onNotification("MODEL", "Switched to: " + newModel);
 }
 
 void AutonomousIntelligenceOrchestrator::qualityScoreUpdated(double score) {
     codeQualityScore = score;
+    if (onNotification) onNotification("METRIC", "Quality Score: " + std::to_string(score));
 }
 
 void AutonomousIntelligenceOrchestrator::optimizationsFound(int count) {
     totalOptimizationsFound = count;
+    if (onNotification) onNotification("OPTIMIZATION", "Found " + std::to_string(count) + " optimizations");
 }
 
 void AutonomousIntelligenceOrchestrator::bugsDetected(int count) {
     totalBugsDetected = count;
+    if (onNotification) onNotification("BUG", "Detected " + std::to_string(count) + " bugs");
 }
 
 void AutonomousIntelligenceOrchestrator::testsGenerated(int count) {
-    // Notify
+    if (onNotification) onNotification("TESTS", "Generated " + std::to_string(count) + " tests");
 }
 
 void AutonomousIntelligenceOrchestrator::intelligenceReportReady(const void*& report) {
-    // Notify
+    if (onNotification) onNotification("REPORT", "Intelligence Report Ready");
 }
 
 // Private Implementation Logic

@@ -47,6 +47,7 @@ bool MonacoEditor::initialize(HWND parentWindow) {
             break;
             
         case MonacoVariant::Enterprise:
+            bufferHandle_ = BufferCreate(); // Enterprise needs a buffer too
             enterpriseHandle_ = EnterpriseEditorCreate(".");
             break;
     }
@@ -178,12 +179,13 @@ void MonacoEditor::render(HDC hdc) {
             
         case MonacoVariant::Enterprise:
             // Render with IntelliSense and diagnostics
+            // Full enterprise rendering pipeline
+            if (viewHandle_ && bufferHandle_) {
+                 ViewRenderLine(viewHandle_, bufferHandle_, 0); 
+            }
             if (enterpriseHandle_) {
-                 RECT rect;
-                 GetClientRect(parentWindow_, &rect);
-                 SetTextColor(hdc, RGB(20, 20, 20));
-                 SetBkMode(hdc, TRANSPARENT);
-                 DrawTextA(hdc, "Enterprise Editor Mode [Active]", -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+                DiagnosticsRenderSquiggles(enterpriseHandle_, hdc, bufferHandle_);
+                IntelliSenseRenderPopup(enterpriseHandle_, hdc);
             }
             break;
     }

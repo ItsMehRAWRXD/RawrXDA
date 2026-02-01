@@ -10,14 +10,63 @@ using json = nlohmann::json;
 
 namespace RawrXD::Agentic::Planning {
 
+// Shared engine instance for the planner to avoid reloading models
+static std::unique_ptr<RawrXD::CPUInferenceEngine> g_plannerEngine;
+static std::mutex g_plannerEngineMutex;
+
+// Helper to get or initialize the engine
+static RawrXD::CPUInferenceEngine* GetPlannerEngine() {
+    std::lock_guard<std::mutex> lock(g_plannerEngineMutex);
+    if (!g_plannerEngine) {
+        g_plannerEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+    }
+    
+    // Check if loaded, see note in implementation about optimization
+    auto& settings = RawrXD::InferenceSettingsManager::getInstance();
+    std::string modelPath = settings.getCurrentModelPath();
+    
+    if (modelPath.empty()) return nullptr;
+
+    static std::string loadedPath;
+    if (loadedPath != modelPath) {
+        if (g_plannerEngine->LoadModel(modelPath)) {
+            loadedPath = modelPath;
+        } else {
+            return nullptr;
+        }
+    }
+    
+    return g_plannerEngine.get();
+}
+
 ModelGuidedPlanner& ModelGuidedPlanner::instance() {
     static ModelGuidedPlanner instance;
     return instance;
 }
 
-ModelGuidedPlanner::ModelGuidedPlanner() = default;
+ModelGuidedPlanner::ModelGuidedPlanner() {
+    inferenceEngine_ = std::make_unique<RawrXD::CPUInferenceEngine>();
+}
 
 ModelGuidedPlanner::~ModelGuidedPlanner() = default;
+
+void ModelGuidedPlanner::ensureModelLoaded() {
+    auto& settings = RawrXD::InferenceSettingsManager::getInstance();
+    std::string modelPath = settings.getCurrentModelPath();
+
+    if (modelPath != currentLoadedModelPath_) {
+        if (!modelPath.empty()) {
+            if (inferenceEngine_->LoadModel(modelPath)) {
+                currentLoadedModelPath_ = modelPath;
+            } else {
+                // Failed to load, clear path so we retry or stay in invalid state
+                currentLoadedModelPath_.clear();
+            }
+        } else {
+             currentLoadedModelPath_.clear();
+        }
+    }
+}
 
 uint64_t ModelGuidedPlanner::generatePlan(uint64_t taskId, const std::string& taskDescription,
                                           const std::vector<std::string>& contextFiles,
@@ -68,21 +117,17 @@ StreamingDecoderState ModelGuidedPlanner::initializeStreamingDecoder(
     state.totalTokensGenerated = 0;
     state.isComplete = false;
 
-    // Initialize 800B model streaming context
-    // This establishes a connection to the model loader and begins token-by-token generation
-    auto& settings = RawrXD::InferenceSettingsManager::getInstance();
-    std::string modelPath = settings.getCurrentModelPath();
+    // Ensure model is ready
+    ensureModelLoaded();
     
-    // In a real scenario we'd use a shared engine, but for this implementation
-    // we verify we can load the model configuration
-    if (modelPath.empty()) {
+    if (currentLoadedModelPath_.empty()) {
         state.isComplete = true;
-        state.logits = {0.0f}; // Dummy logits
-        state.partialOutput = "Error: No model loaded";
+        state.partialOutput = "Error: No model loaded or model load failed.";
     } else {
-        // We defer actual generation to getNextToken or assume it's pre-loaded
-        // For the purpose of this interface, we mark it active
+        // Model is ready for streaming
         state.isComplete = false;
+        // Optionally seed the context with the prompt
+        state.partialOutput = prompt; 
     }
 
     activeDecoders_[state.decoderInstanceId] = state;
@@ -99,25 +144,16 @@ bool ModelGuidedPlanner::getNextToken(StreamingDecoderState& state, std::string&
 
     // Fetch next token from model using Real CPU Engine
     try {
-        static RawrXD::CPUInferenceEngine engine;
-        static bool initialized = false;
-        if (!initialized) {
-             auto& settings = RawrXD::InferenceSettingsManager::getInstance();
-             if (!settings.getCurrentModelPath().empty()) {
-                if (engine.LoadModel(settings.getCurrentModelPath())) {
-                    initialized = true;
-                }
-             }
-        }
+        RawrXD::CPUInferenceEngine* engine = GetPlannerEngine();
 
-        if (initialized) {
+        if (engine) {
             // Use the last 500 chars of context to save compute
             std::string context = state.partialOutput;
             if (context.length() > 500) context = context.substr(context.length() - 500);
             if (context.empty()) context = "Plan:";
 
             // Generate a small chunk (approx 1 token)
-            std::string generated = engine.infer(context, 3);
+            std::string generated = engine->infer(context, 3);
             
             if (!generated.empty()) {
                 token = generated;
@@ -344,9 +380,9 @@ void ModelGuidedPlanner::invoke_model_for_planning(uint64_t taskId, const std::s
 
     if (!modelPath.empty()) {
         try {
-            RawrXD::CPUInferenceEngine engine;
-            if (engine.LoadModel(modelPath)) {
-                 response = engine.infer(prompt + "\nResponse format: JSON array of steps.");
+            RawrXD::CPUInferenceEngine* engine = GetPlannerEngine();
+            if (engine) {
+                 response = engine->infer(prompt + "\nResponse format: JSON array of steps.");
             } else {
                  response = "[{\"stepId\":0,\"action\":0,\"actionDescription\":\"Model load failed\",\"confidenceScore\":0.0}]";
             }

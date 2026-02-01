@@ -29,7 +29,7 @@ extern "C" {
             // Bridge pointer passed for UI callbacks if needed
             g_Orchestrator = std::make_unique<AutonomousIntelligenceOrchestrator>(bridge);
             g_Orchestrator->initialize(std::filesystem::current_path().string());
-            g_Orchestrator->startAutonomousMode();
+            g_Orchestrator->startAutonomousMode(std::filesystem::current_path().string());
             OutputDebugStringA("RawrXD_InitializeAll: Agentic Engine Started.\n");
         }
     }

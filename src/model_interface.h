@@ -6,6 +6,7 @@
 #include <memory>
 #include <functional>
 #include <vector>
+#include "cpu_inference_engine.h"
 
 class UniversalModelRouter;
 
@@ -37,7 +38,7 @@ struct GenerationResult {
 };
 
 // Unified Model Interface
-class ModelInterface : public void {
+class ModelInterface {
 
 public:
     explicit ModelInterface(void* parent = nullptr);
@@ -181,7 +182,7 @@ private:
     
     // Member variables
     std::shared_ptr<UniversalModelRouter> router;
-    std::shared_ptr<QuantizationAwareInferenceEngine> local_engine;
+    std::shared_ptr<RawrXD::CPUInferenceEngine> local_engine;
     std::shared_ptr<CloudApiClient> cloud_client;
     std::string default_model;
     bool initialized_flag;

@@ -80,6 +80,8 @@ set(RAWRXD_SOURCES
     src/RawrXD_PipeClient.cpp
     src/intelligent_codebase_engine.cpp
     src/model_trainer.cpp
+    src/distributed_trainer.cpp
+    src/telemetry/ai_metrics.cpp
     
     # Utils
     src/utils/Diagnostics.cpp
@@ -171,8 +173,8 @@ set(AGENTIC_SOURCES
     src/utils/Diagnostics.cpp
 )
 
-add_executable(RawrXD-AgenticIDE WIN32 ${AGENTIC_SOURCES} ${RAWRXD_ASM_SOURCES_REAL})
-target_compile_definitions(RawrXD-AgenticIDE PRIVATE RAWRXD_STATIC_ASM)
+add_executable(RawrXD-AgenticIDE WIN32 ${AGENTIC_SOURCES}) # ${RAWRXD_ASM_SOURCES_REAL} - ASM disabled for MinGW
+# target_compile_definitions(RawrXD-AgenticIDE PRIVATE RAWRXD_STATIC_ASM) # Disabled: ASM not linked with MinGW
 
 target_link_libraries(RawrXD-AgenticIDE PRIVATE
     kernel32 user32 gdi32 comctl32 comdlg32 shell32 

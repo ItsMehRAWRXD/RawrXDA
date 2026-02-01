@@ -1805,23 +1805,43 @@ void MainWindow::startChatRequest(const std::string& prompt) {
     m_chatHistory.push_back(userMsg);
     // Spawn worker thread
     auto* self = this;
-    std::thread([self]() {
+    std::thread([self, prompt]() {
         std::string responseText;
         bool ok = false;
         try {
-            RawrXD::Backend::OllamaChatRequest req;
-            req.model = "llama2"; // adjust as needed
-            req.stream = false;
-            {
-                std::lock_guard<std::mutex> lk2(self->m_chatMutex);
-                req.messages = self->m_chatHistory; // all messages so far
-            }
-            RawrXD::Backend::OllamaResponse resp = self->m_ollama.chatSync(req);
-            if (!resp.message.content.empty()) {
-                responseText = resp.message.content;
-                ok = true;
+            // [Explicit Logic] Use Local Engine if available
+            if (self->m_localInferenceEngine && self->m_localInferenceEngine->isModelLoaded()) {
+                // Construct prompt from history? 
+                // For simplicity, we just feed the last prompt or simple chat format.
+                // In a real chat, we'd format with templates (User: ... Model: ...)
+                std::stringstream fullPrompt;
+                {
+                    std::lock_guard<std::mutex> lk2(self->m_chatMutex);
+                    for(const auto& msg : self->m_chatHistory) {
+                        fullPrompt << (msg.role == "user" ? "User: " : "Assistant: ") << msg.content << "\n";
+                    }
+                    fullPrompt << "Assistant:";
+                }
+                
+                // Inference
+                responseText = self->m_localInferenceEngine->infer(fullPrompt.str(), 200); // 200 tokens max
+                ok = !responseText.empty();
             } else {
-                responseText = "(empty response)";
+                // Fallback to Ollama
+                RawrXD::Backend::OllamaChatRequest req;
+                req.model = "llama2"; // adjust as needed
+                req.stream = false;
+                {
+                    std::lock_guard<std::mutex> lk2(self->m_chatMutex);
+                    req.messages = self->m_chatHistory; // all messages so far
+                }
+                RawrXD::Backend::OllamaResponse resp = self->m_ollama.chatSync(req);
+                if (!resp.message.content.empty()) {
+                    responseText = resp.message.content;
+                    ok = true;
+                } else {
+                    responseText = "(empty response)";
+                }
             }
         } catch (const std::exception& e) {
             responseText = std::string("Error: ") + e.what();
@@ -2128,6 +2148,17 @@ void MainWindow::loadGGUFModel() {
         
         // Create and initialize GGUF loader
         m_ggufLoader = std::make_unique<GGUFLoaderQt>(std::string::fromStdString(filename));
+
+        // [Explicit Logic] Initialize the actual Inference Engine if valid GGUF
+        if (m_ggufLoader && m_ggufLoader->isOpen()) {
+            m_localInferenceEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+            if (!m_localInferenceEngine->LoadModel(filename)) {
+                 sendToTerminal("[Model Loader] Warning: Inference Engine failed to load weights. Chat will not work.\n");
+                 m_localInferenceEngine.reset();
+            } else {
+                 sendToTerminal("[Model Loader] Inference Engine initialized successfully.\n");
+            }
+        }
         
         if (!m_ggufLoader || !m_ggufLoader->isOpen()) {
             m_ggufLoader.reset();

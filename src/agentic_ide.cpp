@@ -100,6 +100,22 @@ void AgenticIDE::stop() {
 
 void AgenticIDE::setEditor(RawrXD::Editor* editor) {
     m_guiEditor = editor;
+    
+    // Wire up notification if orchestrator exists
+    if (m_orchestrator) {
+        m_orchestrator->onNotification = [this](const std::string& type, const std::string& msg) {
+            std::cout << "[Orchestrator][" << type << "] " << msg << std::endl;
+            // Real implementation would PostMessage to GUI thread here
+            // e.g. PostMessage(m_guiEditor->getHwnd(), WM_APP_LOG, ...);
+        };
+    }
+}
+
+void AgenticIDE::startOrchestrator() {
+    if (m_orchestrator) {
+        std::cout << "[AgenticIDE] Starting Autonomous Orchestrator..." << std::endl;
+        m_orchestrator->startAutonomousMode(""); // Scan current dir
+    }
 }
 
 void AgenticIDE::processConsoleInput() {

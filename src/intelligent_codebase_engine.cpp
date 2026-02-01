@@ -242,8 +242,58 @@ std::vector<Optimization> IntelligentCodebaseEngine::suggestOptimizations() {
 
 ArchitecturePattern IntelligentCodebaseEngine::detectArchitecturePattern() {
     ArchitecturePattern pattern;
-    pattern.patternType = "Layered";
-    pattern.confidenceScore = 0.6;
+    pattern.patternType = "Unknown";
+    pattern.confidenceScore = 0.0;
+    
+    // Explicit Logic: Heuristic Directory Scanning
+    std::unordered_map<std::string, int> signals;
+    signals["mvc"] = 0;
+    signals["layered"] = 0;
+    signals["microservice"] = 0;
+    signals["monolith"] = 0;
+
+    // Scan directories in projectRoot for structural clues
+    try {
+        if (!projectRoot.empty() && fs::exists(projectRoot)) {
+            for (const auto& entry : fs::directory_iterator(projectRoot)) {
+                if (entry.is_directory()) {
+                    std::string name = entry.path().filename().string();
+                    std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+                    
+                    if (name == "controllers" || name == "views" || name == "models") signals["mvc"]++;
+                    if (name == "src" || name == "include" || name == "lib" || name == "core" || name == "infra") signals["layered"]++;
+                    if (name == "services" || name == "apps" || name == "packages") signals["microservice"]++;
+                }
+                if (entry.is_regular_file()) {
+                    std::string name = entry.path().filename().string();
+                     if (name == "Dockerfile" || name == "docker-compose.yml") signals["microservice"]++;
+                }
+            }
+        }
+    } catch (...) {}
+
+    // Determine strongest signal
+    if (signals["mvc"] >= 2) {
+        pattern.patternType = "MVC";
+        pattern.confidenceScore = 0.7 + (signals["mvc"] * 0.1);
+        pattern.characteristics["structure"] = "Separation of concerns (Model, View, Controller)";
+    } else if (signals["microservice"] >= 2) {
+        pattern.patternType = "Microservices";
+        pattern.confidenceScore = 0.6 + (signals["microservice"] * 0.1);
+    } else if (signals["layered"] >= 2) {
+        pattern.patternType = "Layered";
+        pattern.confidenceScore = 0.8;
+    } else {
+        pattern.patternType = "Monolithic";
+        pattern.confidenceScore = 0.4;
+    }
+    
+    // Check file contents complexity for Monolith
+    if (complexityAnalysis.linesOfCode > 50000 && pattern.patternType == "Unknown") {
+         pattern.patternType = "Monolithic (Legacy)";
+         pattern.confidenceScore = 0.6;
+    }
+
     return pattern;
 }
 

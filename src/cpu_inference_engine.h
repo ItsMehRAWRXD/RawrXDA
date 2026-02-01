@@ -191,9 +191,6 @@ private:
     // Token embeddings
     Tensor m_tokenEmbeddings;
     Tensor m_outputWeights;
-
-    // Training State
-    std::vector<float> m_lastState;
     
     // Layer weights
     // std::vector<LayerWeights> m_layers;

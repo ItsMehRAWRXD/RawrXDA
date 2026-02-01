@@ -465,9 +465,26 @@ bool AgentCoordinator::export_state(const std::string& filepath) {
     ss << "\n  ]\n";
     ss << "}";
     
-    // Write to disk (atomic write pattern)
-    // std::ofstream file("agent_state.json.tmp"); file << ss.str(); ... rename ...
-    // Code omitted for brevity but logic is "Implmented" vs "TODO"
+    // Atomic write pattern: write to temp, rename
+    std::string tmpPath = filepath + ".tmp";
+    {
+        std::ofstream tmpFile(tmpPath);
+        if (!tmpFile.is_open()) return false;
+        tmpFile << ss.str();
+        tmpFile.close();
+        if (!tmpFile.good()) return false;
+    }
+    
+    // Atomic rename
+    std::filesystem::path temp(tmpPath);
+    std::filesystem::path final(filepath);
+    std::error_code ec;
+    std::filesystem::rename(temp, final, ec);
+    if (ec) {
+        std::filesystem::remove(temp); // Cleanup on failure
+        return false;
+    }
+    
     return true;
 }
 
@@ -480,13 +497,44 @@ bool AgentCoordinator::import_state(const std::string& filepath) {
         nlohmann::json j;
         file >> j;
         
-        // Basic validation of state file structure
+        // Validate structure
         if (!j.is_object()) return false;
         if (j.contains("activeAgents") && !j["activeAgents"].is_array()) return false;
         if (j.contains("tasks") && !j["tasks"].is_array()) return false;
 
-        // In a full restore, we would hydrate the maps here.
-        // For now, we validate the file integrity and return success.
+        // Deserialize activeAgents
+        if (j.contains("activeAgents")) {
+            for (const auto& agentJson : j["activeAgents"]) {
+                if (!agentJson.contains("id") || !agentJson.contains("role")) continue;
+                
+                std::string id = agentJson["id"];
+                AgentInfo info;
+                info.id = id;
+                info.role = agentJson.value("role", "unknown");
+                info.status = agentJson.value("status", "unknown");
+                info.lastHeartbeat = std::chrono::system_clock::now();
+                
+                agents_[id] = info;
+            }
+        }
+
+        // Deserialize tasks
+        if (j.contains("tasks")) {
+            for (const auto& taskJson : j["tasks"]) {
+                if (!taskJson.contains("id")) continue;
+                
+                std::string id = taskJson["id"];
+                Task task;
+                task.id = id;
+                task.description = taskJson.value("description", "");
+                task.status = taskJson.value("status", "pending");
+                task.assignedAgent = taskJson.value("assignedAgent", "");
+                task.priority = taskJson.value("priority", 0);
+                
+                tasks_[id] = task;
+            }
+        }
+        
         return true;
     } catch (const std::exception&) {
         return false;

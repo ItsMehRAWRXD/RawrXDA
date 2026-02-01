@@ -1,3 +1,11 @@
+Win32IDE::~Win32IDE() {
+    if (m_nativeEngine) {
+        delete static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+        m_nativeEngine = nullptr;
+    }
+    // Resource cleanup
+    Win32TerminalManager::cleanup();
+}
 #include "Win32IDE.h"
 #include "IDELogger.h"
 #include "Win32IDE_AgenticBridge.h"
@@ -261,6 +269,16 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     {
         std::ofstream diag("C:\\Users\\HiH8e\\Desktop\\CONSTRUCTOR_START.txt");
         diag << "Win32IDE constructor entered" << std::endl;
+    }
+
+    // Initialize Native Fallback Engine
+    try {
+        m_nativeEngine = new RawrXD::CPUInferenceEngine();
+        m_nativeEngineLoaded = true;
+    } catch (...) {
+        m_nativeEngine = nullptr;
+        m_nativeEngineLoaded = false;
+        OutputDebugStringA("ERROR: Failed to initialize Native CPU Inference Engine\n");
     }
 
     // Initialize logger ABSOLUTELY FIRST - with fallback error handling
@@ -4739,12 +4757,18 @@ std::string Win32IDE::sendMessageToModel(const std::string& message)
         return llmResponse;
     }
 
-    // Fallback: local echo with model metadata
-    std::string response = "I am a GGUF model loaded from: " + m_loadedModelPath + "\n";
-    response += "Your message: \"" + message + "\"\n";
-    response += "(Ollama not reachable; returning placeholder response.)";
-    m_chatHistory.push_back({message, response});
-    return response;
+    // Fallback: Local CPU Inference (Real Logic)
+    if (m_ggufLoader) {
+        // Use the native fallback engine if available
+        if (m_nativeEngine) {
+             auto* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+             std::string response = engine->infer(message);
+             m_chatHistory.push_back({message, response});
+             return response;
+        }
+    }
+
+    std::string response = "Error: Local model loaded but Native Inference Engine not initialized.\n";
 }
 
 void Win32IDE::toggleChatMode()
@@ -5243,8 +5267,24 @@ std::string Win32IDE::generateResponse(const std::string& prompt)
     if (!remote.empty()) return remote;
 
     // Fallback structured guidance if no remote inference available
-    std::string modelName = m_loadedModelPath.empty() ? "(no model)" : m_loadedModelPath.substr(m_loadedModelPath.find_last_of("\\/")+1);
-    return std::string("[Fallback Stub]\nModel: ") + modelName + "\nPrompt: " + prompt + "\n(Ollama unavailable – enable server on " + m_ollamaBaseUrl + ")";
+    std::string modelName = m_loadedModelPath.empty() ? "None" : m_loadedModelPath.substr(m_loadedModelPath.find_last_of("\\/")+1);
+
+    // Fallback: Native CPU Inference Engine
+    if (m_nativeEngine && m_nativeEngineLoaded) {
+        RawrXD::CPUInferenceEngine* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+        // If engine doesn't have a model loaded, try to load current one
+        if (!engine->isModelLoaded() && !m_loadedModelPath.empty()) {
+            engine->loadModel(m_loadedModelPath);
+        }
+        
+        if (engine->isModelLoaded()) {
+            return engine->infer(prompt);
+        } else {
+             return "Error: No model loaded in Native CPU Engine.";
+        }
+    }
+
+    return std::string("[Native Engine Error]\nModel: ") + modelName + "\nPrompt: " + prompt + "\n(Ollama unavailable and Native Engine not ready)";
 }
 
 void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<void(const std::string&, bool)> callback)

@@ -108,6 +108,9 @@ public:
     bool enableEnterpriseMode();
     bool setupTeamCollaboration(const std::string& teamId);
     nlohmann::json getEnterpriseReport();
+    
+    // Callbacks
+    std::function<void(const std::string& type, const std::string& message)> onNotification;
 
 
     void autonomousModeStarted();

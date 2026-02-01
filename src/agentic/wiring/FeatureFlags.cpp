@@ -119,9 +119,45 @@ bool FeatureFlags::saveToFile(const std::string& filePath) const {
 }
 
 std::string FeatureFlags::toJson() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
     std::ostringstream json;
     json << "{\n";
-    // TODO: Serialize all flags
+    json << "  \"boolFlags\": {\n";
+    bool first = true;
+    for (const auto& [key, val] : m_boolFlags) {
+        if (!first) json << ",\n";
+        json << "    \"" << key << "\": " << (val ? "true" : "false");
+        first = false;
+    }
+    json << "\n  },\n";
+    
+    json << "  \"intFlags\": {\n";
+    first = true;
+    for (const auto& [key, val] : m_intFlags) {
+        if (!first) json << ",\n";
+        json << "    \"" << key << "\": " << val;
+        first = false;
+    }
+    json << "\n  },\n";
+    
+    json << "  \"floatFlags\": {\n";
+    first = true;
+    for (const auto& [key, val] : m_floatFlags) {
+        if (!first) json << ",\n";
+        json << "    \"" << key << "\": " << val;
+        first = false;
+    }
+    json << "\n  },\n";
+    
+    json << "  \"stringFlags\": {\n";
+    first = true;
+    for (const auto& [key, val] : m_stringFlags) {
+        if (!first) json << ",\n";
+        json << "    \"" << key << "\": \"" << val << "\"";
+        first = false;
+    }
+    json << "\n  }\n";
+    
     json << "}\n";
     return json.str();
 }
