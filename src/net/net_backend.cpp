@@ -52,7 +52,10 @@ public:
     }
 
     ~WebSocketClient() {
-        // TODO: Close socket
+        if (socket_handle) {
+            TcpClose(socket_handle);
+            socket_handle = nullptr;
+        }
     }
 };
 
@@ -81,6 +84,9 @@ public:
     }
 
     ~TcpClient() {
-        // TODO: Close socket
+        if (socket_handle) {
+            TcpClose(socket_handle);
+            socket_handle = nullptr;
+        }
     }
 };
