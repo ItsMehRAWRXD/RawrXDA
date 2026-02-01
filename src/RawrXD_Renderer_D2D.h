@@ -69,6 +69,9 @@ public:
     void drawText(const Point& p, const String& text, const Font& font, const Color& color);
     void drawStyledText(const Point& p, const String& text, const Font& font, const std::vector<TextRun>& runs, const Color& defaultColor = Color::Black);
     
+    // Measurement
+    SizeF measureText(const String& text, const Font& font);
+
     // Additional shapes
     void drawEllipse(const Point& center, float radiusX, float radiusY, const Color& color, float strokeWidth = 1.0f);
     void fillEllipse(const Point& center, float radiusX, float radiusY, const Color& color);

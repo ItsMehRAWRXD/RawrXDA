@@ -542,13 +542,35 @@ void AutonomousModelManager::loadInstalledModels() {
 
 bool AutonomousModelManager::autoUpdateModels() {
     loadInstalledModels();
-    // Real implementation would check remote manifests.
-    // For local-only environments, we verify file integrity check via size > 0.
+    
+    // De-simulation: Compare local files against the 'availableModels' definitions (Source of Truth)
     bool allValid = true;
     for(const auto& model : installedModels) {
         std::string p = model["path"];
+        
+        // 1. Basic Existence Check
         if (!fs::exists(p) || fs::file_size(p) == 0) {
             allValid = false;
+            // logic to trigger repair could go here
+            continue;
+        }
+
+        // 2. Metadata Consistency Check
+        if (model.contains("id")) {
+             std::string id = model["id"];
+             // Find corresponding definition
+             for (const auto& avail : availableModels) {
+                 if (avail["id"] == id && avail.contains("size_bytes")) {
+                     int64_t expected = avail["size_bytes"];
+                     int64_t actual = fs::file_size(p);
+                     // Allow 1% variance for metadata inaccuracies or block adjustments
+                     if (std::abs(expected - actual) > (expected * 0.01)) {
+                         std::cerr << "[Update] Size mismatch for " << id << ". Local: " << actual << " Remote: " << expected << std::endl;
+                         // In a full system, this would queue a repairJob
+                         allValid = false; 
+                     }
+                 }
+             }
         }
     }
     return allValid; 
@@ -562,18 +584,42 @@ bool AutonomousModelManager::autoOptimizeModel(const std::string& modelId) {
         return false;
     }
 
-    // Locate model file (assuming modelId maps to a filename for this purpose)
-    // Real implementation would look up path from registry.
-    std::string modelPath = "models\\" + modelId + ".gguf";
-    if (!fs::exists(modelPath)) return false;
+    // Locate model file using the in-memory registry
+    std::string modelPath;
+    {
+        std::lock_guard<std::mutex> lock(pImpl->modelMutex);
+        for(const auto& model : installedModels) {
+            if(model.contains("id") && model["id"] == modelId) {
+                modelPath = model["path"];
+                break;
+            }
+        }
+    }
+
+    if (modelPath.empty() || !fs::exists(modelPath)) {
+        std::cerr << "[AutonomousModelManager] Model not found for optimization: " << modelId << std::endl;
+        return false;
+    }
 
     // Construct valid command
     // e.g. quantize-llama.exe input.gguf output_q4.gguf q4_0
-    std::string outPath = "models\\" + modelId + "_opt.gguf";
-    std::string cmd = quantTool + " " + modelPath + " " + outPath + " q4_0";
+    fs::path p(modelPath);
+    std::string outPath = (p.parent_path() / (p.stem().string() + "_opt.gguf")).string();
     
+    // Use ShellExecuteEx or system. System is fine for this CLI tool wrapper.
+    // Wrap paths in quotes to handle spaces
+    std::string cmd = "\"" + quantTool + "\" \"" + modelPath + "\" \"" + outPath + "\" q4_0";
+    
+    std::cout << "[AutonomousModelManager] Executing optimization: " << cmd << std::endl;
     int ret = std::system(cmd.c_str());
-    return (ret == 0);
+    
+    if (ret == 0 && fs::exists(outPath)) {
+        std::cout << "[AutonomousModelManager] Optimization successful: " << outPath << std::endl;
+        loadInstalledModels(); // Refresh
+        return true;
+    }
+    
+    return false;
 }
 
 nlohmann::json AutonomousModelManager::analyzeCodebaseRequirements(const std::string& projectPath) {
@@ -689,26 +735,46 @@ bool AutonomousModelManager::integrateWithHuggingFace() {
 
 bool AutonomousModelManager::syncWithModelRegistry() {
     // Real Remote Sync Implementation using WinInet
-    bool success = false;
+    // Iterates through defined models and verifies their availability/headers
+    bool success = true;
     HINTERNET hInternet = InternetOpenA("RawrXD-Registry", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
-    if(hInternet) {
-        // Attempt to reach a known reliable endpoint (or the registry if it existed)
-        // Using google.com as a connectivity test for now since the registry URL might be hypothetical
-        HINTERNET hFile = InternetOpenUrlA(hInternet, "http://www.google.com", NULL, 0, INTERNET_FLAG_RELOAD, 0);
+    
+    if(!hInternet) return false;
+
+    int validCount = 0;
+    
+    // Check a subset of critical models to verify "Registry" health
+    // In a real scenario, this would fetch a single JSON manifest. 
+    // Since we use a distributed decentral definition (hardcoded list), we verify the edges.
+    
+    for (const auto& model : availableModels) {
+        if (!model.contains("download_url")) continue;
+        std::string url = model["download_url"];
+        
+        // Use a HEAD request (or minimal read) to check availability
+        HINTERNET hFile = InternetOpenUrlA(hInternet, url.c_str(), NULL, 0, INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_UI, 0);
         if(hFile) {
-             char buffer[1024];
-             DWORD bytesRead;
-             if(InternetReadFile(hFile, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
-                 success = true;
-                 std::cout << "Successfully synced up with remote grid." << std::endl;
-             }
+             // We can optionally check HTTP status codes here using HttpQueryInfo
+             // For now, successful open implies reachability
+             validCount++;
              InternetCloseHandle(hFile);
+        } else {
+            std::cerr << "[Registry] Warning: Could not reach " << model["name"] << " endpoint." << std::endl;
+            success = false;
         }
-        InternetCloseHandle(hInternet);
+        
+        // Don't check every single one every time to save bandwidth/latency, just sample or do the first few
+        if (validCount >= 2) break; 
     }
     
-    // Fallback or additional logic if sync verified...
-    return success;
+    InternetCloseHandle(hInternet);
+    
+    if (validCount > 0) {
+        std::cout << "[Registry] Registry sync active. " << validCount << " endpoints verified." << std::endl;
+        return true;
+    }
+    
+    return false;
 }
 
 bool AutonomousModelManager::validateModelIntegrity(const std::string& modelId) {

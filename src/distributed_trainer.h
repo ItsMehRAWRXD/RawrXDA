@@ -6,11 +6,16 @@
 #include <chrono>
 #include <functional>
 #include <iostream>
+#include "cpu_inference_engine.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
+
+namespace RawrXD {
+    class CPUInferenceEngine;
+}
 
 struct TrainerConfig {
     float learningRate = 0.001f;
@@ -51,7 +56,7 @@ public:
     void statusChanged(const std::string& status);
 
 private:
-    // Internal Methods - implemented in cpp
+    // Internal Methods
     bool validateConfig();
     bool initializeBackend();
     bool detectDevices();
@@ -61,7 +66,7 @@ private:
     void initializeFaultTolerance();
     void Checkpoint(const std::string& path);
 
-    bool forwardPass(const void*& batchData);
+    bool forwardPass(const void* batchData);
     bool backwardPass();
     bool optimizerStep();
 
@@ -83,11 +88,12 @@ private:
     bool m_initialized = false;
     int m_globalStep = 0;
     float m_currentLoss = 0.0f;
-    float m_lastSyncTimeMs = 0.0f;
-    std::string m_lastCheckpointPath;
+    
+    // Core Logic Engine
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_engine;
 
-    std::vector<std::vector<float>> m_gradients;
-    std::vector<float> m_lastLogits;
-    int32_t m_lastTargetToken = 0;
+    // Training State (Last Layer)
+    std::vector<float> m_logits;
     std::vector<float> m_outputGradients;
+    std::vector<int32_t> m_currentTokens; // Full sequence (Input + Target)
 };

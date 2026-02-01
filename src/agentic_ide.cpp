@@ -58,6 +58,9 @@ void AgenticIDE::initialize() {
     m_agenticEngine = std::make_unique<AgenticEngine>();
     m_agenticEngine->initialize();
     
+    // Wire Orchestrator to Engine for auto-fixing
+    m_orchestrator->setAgenticEngine(m_agenticEngine.get());
+    
     m_zeroDayAgent = std::make_unique<ZeroDayAgenticEngine>(
         m_modelRouter.get(),
         m_toolRegistry.get(),

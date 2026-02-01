@@ -455,10 +455,17 @@ bool ActionExecutor::handleRecursiveAgent(Action& action) {
     
     // Spawn a new planning session or sub-task
     // For this implementation, we'll ask the engine to decompose and plan, 
-    // simulating a sub-agent execution by returning the plan.
+    // and execute the plan if possible. If execution is blocking, we might just return the plan.
+    // Real implementation:
     
+    // 1. Decompose Goal
     json plan = m_agenticEngine->planTask(goal);
-    action.result = plan.dump();
+    
+    // 2. Execute Plan (Recursive execution)
+    // NOTE: This could be deeply recursive if not careful. Depth limiting is handled by AgenticEngine.
+    std::string executionLog = m_agenticEngine->executePlan(plan);
+    
+    action.result = executionLog.empty() ? plan.dump() : executionLog;
     return true;
 }
 

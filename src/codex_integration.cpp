@@ -266,9 +266,31 @@ public:
             result.confidence = 0.4f;
         }
 
-        result.reconstruction = "// Decompiled stub based on analysis\n";
+        result.reconstruction = "// Decompiled Analysis (Win32 Native)\n";
+        result.reconstruction += "// Function at RVA: " + std::to_string(rva) + "\n";
+        result.reconstruction += "// Detected Structure: " + result.algorithmType + "\n\n";
         result.reconstruction += "void DetectedFunction_" + std::to_string(rva) + "() {\n";
-        if (loopStructures > 0) result.reconstruction += "    // Loop structure detected\n    while(true) { ... }\n";
+        
+        // Dynamic "Disassembly" / Hex Dump representation
+        int opCount = 0;
+        for(size_t i = 0; i < std::min((size_t)64, data.size()); ) {
+             char hexLine[64];
+             sprintf_s(hexLine, "    /* %04zX */  0x%02X ", i, data[i]);
+             result.reconstruction += hexLine;
+             
+             // Simple naive instruction grouping
+             if (data[i] == 0x55) result.reconstruction += " // push rbp";
+             else if (data[i] == 0x48 && i+1 < data.size() && data[i+1] == 0x89) result.reconstruction += " // mov ...";
+             else if (data[i] == 0xC3) result.reconstruction += " // ret";
+             else if (data[i] == 0xE8) result.reconstruction += " // call ...";
+             else if (data[i] == 0x90) result.reconstruction += " // nop";
+             
+             result.reconstruction += "\n";
+             i++;
+             opCount++;
+        }
+        
+        if (loopStructures > 0) result.reconstruction += "\n    // Control Flow: Loop structure detected\n    while(true) { /* ... */ }\n";
         result.reconstruction += "}\n";
 
         return result;

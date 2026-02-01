@@ -488,6 +488,10 @@ if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
 & $CXX $CXXFLAGS $DEFINES $INCLUDES /c 'src/win32app/Win32IDE.cpp' '/Foobj\RawrXD-Win32IDE\Win32IDE.obj'
 if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
 
+# Compile src/win32app/Win32IDE_Window.cpp
+& $CXX $CXXFLAGS $DEFINES $INCLUDES /c 'src/win32app/Win32IDE_Window.cpp' '/Foobj\RawrXD-Win32IDE\Win32IDE_Window.obj'
+if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
+
 # Compile src/win32app/Win32IDE_Sidebar.cpp
 & $CXX $CXXFLAGS $DEFINES $INCLUDES /c 'src/win32app/Win32IDE_Sidebar.cpp' '/Foobj\RawrXD-Win32IDE\Win32IDE_Sidebar.obj'
 if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
@@ -561,7 +565,7 @@ if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
 if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
 
 # Link RawrXD-Win32IDE
-& $LINK $LINKFLAGS obj\RawrXD-Win32IDE\main_win32.obj obj\RawrXD-Win32IDE\Win32IDE.obj obj\RawrXD-Win32IDE\Win32IDE_Sidebar.obj obj\RawrXD-Win32IDE\Win32IDE_VSCodeUI.obj obj\RawrXD-Win32IDE\Win32IDE_PowerShellPanel.obj obj\RawrXD-Win32IDE\Win32IDE_PowerShell.obj obj\RawrXD-Win32IDE\Win32IDE_Logger.obj obj\RawrXD-Win32IDE\TransparentRenderer.obj obj\RawrXD-Win32IDE\Win32TerminalManager.obj obj\RawrXD-Win32IDE\Win32IDE_FileOps.obj obj\RawrXD-Win32IDE\Win32IDE_Commands.obj obj\RawrXD-Win32IDE\Win32IDE_Debugger.obj obj\RawrXD-Win32IDE\Win32IDE_AgenticBridge.obj obj\RawrXD-Win32IDE\Win32IDE_AgentCommands.obj obj\RawrXD-Win32IDE\Win32IDE_Autonomy.obj obj\RawrXD-Win32IDE\gguf_loader.obj obj\RawrXD-Win32IDE\gguf_vocab_resolver.obj obj\RawrXD-Win32IDE\streaming_gguf_loader.obj obj\RawrXD-Win32IDE\ErrorReporter.obj obj\RawrXD-Win32IDE\Diagnostics.obj '/OUT:bin\RawrXD-Win32IDE.exe'
+& $LINK $LINKFLAGS obj\RawrXD-Win32IDE\main_win32.obj obj\RawrXD-Win32IDE\Win32IDE.obj obj\RawrXD-Win32IDE\Win32IDE_Window.obj obj\RawrXD-Win32IDE\Win32IDE_Sidebar.obj obj\RawrXD-Win32IDE\Win32IDE_VSCodeUI.obj obj\RawrXD-Win32IDE\Win32IDE_PowerShellPanel.obj obj\RawrXD-Win32IDE\Win32IDE_PowerShell.obj obj\RawrXD-Win32IDE\Win32IDE_Logger.obj obj\RawrXD-Win32IDE\TransparentRenderer.obj obj\RawrXD-Win32IDE\Win32TerminalManager.obj obj\RawrXD-Win32IDE\Win32IDE_FileOps.obj obj\RawrXD-Win32IDE\Win32IDE_Commands.obj obj\RawrXD-Win32IDE\Win32IDE_Debugger.obj obj\RawrXD-Win32IDE\Win32IDE_AgenticBridge.obj obj\RawrXD-Win32IDE\Win32IDE_AgentCommands.obj obj\RawrXD-Win32IDE\Win32IDE_Autonomy.obj obj\RawrXD-Win32IDE\gguf_loader.obj obj\RawrXD-Win32IDE\gguf_vocab_resolver.obj obj\RawrXD-Win32IDE\streaming_gguf_loader.obj obj\RawrXD-Win32IDE\ErrorReporter.obj obj\RawrXD-Win32IDE\Diagnostics.obj '/OUT:bin\RawrXD-Win32IDE.exe'
 if ($LASTEXITCODE -ne 0) { Write-BuildError 'Linking failed'; exit 1 }
 
 # Building test_terminal
@@ -944,6 +948,10 @@ if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
 & $CXX $CXXFLAGS $DEFINES $INCLUDES /c 'src/win32app/Win32IDE.cpp' '/Foobj\RawrXD-TestRunner\Win32IDE.obj'
 if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
 
+# Compile src/win32app/Win32IDE_Window.cpp
+& $CXX $CXXFLAGS $DEFINES $INCLUDES /c 'src/win32app/Win32IDE_Window.cpp' '/Foobj\RawrXD-TestRunner\Win32IDE_Window.obj'
+if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
+
 # Compile src/win32app/Win32IDE_Commands.cpp
 & $CXX $CXXFLAGS $DEFINES $INCLUDES /c 'src/win32app/Win32IDE_Commands.cpp' '/Foobj\RawrXD-TestRunner\Win32IDE_Commands.obj'
 if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
@@ -1001,7 +1009,7 @@ if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
 if ($LASTEXITCODE -ne 0) { Write-BuildError 'Compilation failed'; exit 1 }
 
 # Link RawrXD-TestRunner
-& $LINK $LINKFLAGS obj\RawrXD-TestRunner\test_runner.obj obj\RawrXD-TestRunner\Win32IDE.obj obj\RawrXD-TestRunner\Win32IDE_Commands.obj obj\RawrXD-TestRunner\Win32IDE_Debugger.obj obj\RawrXD-TestRunner\Win32IDE_FileOps.obj obj\RawrXD-TestRunner\Win32IDE_PowerShell.obj obj\RawrXD-TestRunner\Win32IDE_PowerShellPanel.obj obj\RawrXD-TestRunner\Win32IDE_Sidebar.obj obj\RawrXD-TestRunner\Win32IDE_VSCodeUI.obj obj\RawrXD-TestRunner\Win32IDE_AgenticBridge.obj obj\RawrXD-TestRunner\Win32IDE_AgentCommands.obj obj\RawrXD-TestRunner\Win32TerminalManager.obj obj\RawrXD-TestRunner\TransparentRenderer.obj obj\RawrXD-TestRunner\VulkanRenderer.obj obj\RawrXD-TestRunner\gguf_loader.obj obj\RawrXD-TestRunner\streaming_gguf_loader.obj '/OUT:bin\RawrXD-TestRunner.exe'
+& $LINK $LINKFLAGS obj\RawrXD-TestRunner\test_runner.obj obj\RawrXD-TestRunner\Win32IDE.obj obj\RawrXD-TestRunner\Win32IDE_Window.obj obj\RawrXD-TestRunner\Win32IDE_Commands.obj obj\RawrXD-TestRunner\Win32IDE_Debugger.obj obj\RawrXD-TestRunner\Win32IDE_FileOps.obj obj\RawrXD-TestRunner\Win32IDE_PowerShell.obj obj\RawrXD-TestRunner\Win32IDE_PowerShellPanel.obj obj\RawrXD-TestRunner\Win32IDE_Sidebar.obj obj\RawrXD-TestRunner\Win32IDE_VSCodeUI.obj obj\RawrXD-TestRunner\Win32IDE_AgenticBridge.obj obj\RawrXD-TestRunner\Win32IDE_AgentCommands.obj obj\RawrXD-TestRunner\Win32TerminalManager.obj obj\RawrXD-TestRunner\TransparentRenderer.obj obj\RawrXD-TestRunner\VulkanRenderer.obj obj\RawrXD-TestRunner\gguf_loader.obj obj\RawrXD-TestRunner\streaming_gguf_loader.obj '/OUT:bin\RawrXD-TestRunner.exe'
 if ($LASTEXITCODE -ne 0) { Write-BuildError 'Linking failed'; exit 1 }
 
 # Building bench_q8_0_end2end

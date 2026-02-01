@@ -653,7 +653,8 @@ bool BenchmarkRunner::testMemory(BenchmarkTestResult& result) {
         result.avgLatencyMs = static_cast<double>(avgMemMB);
         result.minLatencyMs = static_cast<double>(minMemMB);
         result.maxLatencyMs = static_cast<double>(maxMemMB);
-        result.passed = true;
+        // Verify we actually captured memory usage and it didn't leak uncontrollably (>32GB)
+        result.passed = (avgMemMB > 0) && (maxMemMB < 32768);
         
         std::string memoryReport = std::string(
             "Base: %1 MB | Avg: %2 MB | Peak: %3 MB | Delta: %4 MB | Samples: %5"

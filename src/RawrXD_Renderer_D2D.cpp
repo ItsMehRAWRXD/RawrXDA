@@ -248,6 +248,38 @@ void Renderer2D::drawStyledText(const Point& p, const String& text, const Font& 
     layout->Release();
 }
 
+SizeF Renderer2D::measureText(const String& text, const Font& font) {
+    if (!writeFactory) return SizeF(0.0f, 0.0f);
+    
+    // Ensure format
+    const_cast<Font&>(font).updateFormat(writeFactory);
+    IDWriteTextFormat* fmt = font.getFormat();
+    if (!fmt) return SizeF(0.0f, 0.0f);
+
+    IDWriteTextLayout* layout = nullptr;
+    HRESULT hr = writeFactory->CreateTextLayout(
+        text.c_str(), 
+        (UINT32)text.length(), 
+        fmt, 
+        10000.0f, 
+        10000.0f, 
+        &layout
+    );
+
+    if (FAILED(hr) || !layout) return SizeF(0.0f, 0.0f);
+
+    DWRITE_TEXT_METRICS metrics;
+    layout->GetMetrics(&metrics);
+    
+    float w = metrics.width;
+    float h = metrics.height;
+    // Including whitespace? width usually excludes trailing whitespace depending on measurement
+    // but for Monospace 'charWidth' calculation we often measure a single character.
+    
+    layout->Release();
+    return SizeF(w, h);
+}
+
 void Renderer2D::drawEllipse(const Point& center, float radiusX, float radiusY, const Color& color, float strokeWidth) {
     if (target && solidBrush) {
         solidBrush->SetColor(ToD2D(color));

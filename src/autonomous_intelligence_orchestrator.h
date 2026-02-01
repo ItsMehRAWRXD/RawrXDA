@@ -10,6 +10,8 @@
 #include "autonomous_feature_engine.h"
 #include "hybrid_cloud_manager.h"
 
+class AgenticEngine; // Forward Declaration
+
 struct OrchestratorConfig {
     bool autoAnalysis = true;
     bool autoTestGen = true;
@@ -28,10 +30,12 @@ class AutonomousIntelligenceOrchestrator {
 
 private:
     // Core autonomous systems
+    void performAutonomousStep();
     std::unique_ptr<AutonomousModelManager> modelManager;
     std::unique_ptr<IntelligentCodebaseEngine> codebaseEngine;
     std::unique_ptr<AutonomousFeatureEngine> featureEngine;
     std::unique_ptr<HybridCloudManager> cloudManager;
+    std::unique_ptr<AgenticEngine> m_agenticEngine;
     
     // Current state
     std::string currentProjectPath;
@@ -64,7 +68,7 @@ public:
     
     // Autonomous operations
     bool startAutonomousMode(const std::string& projectPath);
-    bool stopAutonomousMode();
+    void stopAutonomousMode();
     bool pauseAutonomousMode();
     bool resumeAutonomousMode();
     
@@ -111,7 +115,9 @@ public:
     
     // Callbacks
     std::function<void(const std::string& type, const std::string& message)> onNotification;
-
+    
+    // [AGENTIC] EXPLICIT LOGIC: Connection to AgenticEngine for automated fixes
+    void setAgenticEngine(AgenticEngine* engine) { m_agenticEngine = engine; }
 
     void autonomousModeStarted();
     void autonomousModeStopped();
@@ -134,5 +140,8 @@ private:
     void* generateIntelligenceReport();
     bool shouldSwitchToCloudModel();
     bool shouldSwitchToLocalModel();
+
+private:
+    AgenticEngine* m_agenticEngine = nullptr;
 };
 

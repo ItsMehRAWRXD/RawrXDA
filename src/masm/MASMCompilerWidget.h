@@ -166,28 +166,28 @@ private:
 // MASM Syntax Highlighter
 // ============================================================================
 class MASMSyntaxHighlighter {public:
-    explicit MASMSyntaxHighlighter(QTextDocument* parent = nullptr);
+    explicit MASMSyntaxHighlighter(void* parent = nullptr);
     
 protected:
-    void highlightBlock(const std::string& text) override;
+    void highlightBlock(const std::string& text);
     
 private:
     struct HighlightingRule {
         std::regex pattern;
-        QTextCharFormat format;
+        int format; // No Qt
     };
     
     std::vector<HighlightingRule> m_rules;
     
-    QTextCharFormat m_keywordFormat;
-    QTextCharFormat m_directiveFormat;
-    QTextCharFormat m_instructionFormat;
-    QTextCharFormat m_registerFormat;
-    QTextCharFormat m_numberFormat;
-    QTextCharFormat m_stringFormat;
-    QTextCharFormat m_commentFormat;
-    QTextCharFormat m_labelFormat;
-    QTextCharFormat m_operatorFormat;
+    int m_keywordFormat; // No Qt
+    int m_directiveFormat;
+    int m_instructionFormat;
+    int m_registerFormat;
+    int m_numberFormat;
+    int m_stringFormat;
+    int m_commentFormat;
+    int m_labelFormat;
+    int m_operatorFormat;
     
     void setupRules();
 };
@@ -206,15 +206,15 @@ class MASMProjectExplorer {public:
     void fileDeleted(const std::string& filePath);
     void fileRenamed(const std::string& oldPath, const std::string& newPath);
     
-\nprivate:\n    void onTreeItemDoubleClicked(QTreeWidgetItem* item, int column);
+\nprivate:\n    void onTreeItemDoubleClicked(void* item, int column);
     void onTreeContextMenu(const struct { int x; int y; }& pos);
     
 private:
-    std::unique_ptr<QTreeWidget> m_treeWidget;
+    std::unique_ptr<void> m_treeWidget;
     MASMProjectSettings m_project;
     
     void populateTree();
-    void addContextMenuActions(void* menu, QTreeWidgetItem* item);
+    void addContextMenuActions(void* menu, void* item);
 };
 
 // ============================================================================
@@ -253,12 +253,12 @@ class MASMSymbolBrowser {public:
     
 \npublic:\n    void symbolSelected(const MASMSymbol& symbol);
     
-\nprivate:\n    void onSymbolClicked(QTreeWidgetItem* item, int column);
+\nprivate:\n    void onSymbolClicked(void* item, int column);
     void onFilterChanged(const std::string& text);
     
 private:
-    std::unique_ptr<QTreeWidget> m_treeWidget;
-    std::unique_ptr<voidEdit> m_filterEdit;
+    std::unique_ptr<void> m_treeWidget;
+    std::unique_ptr<void> m_filterEdit; // voidEdit typo fixed to void
     std::vector<MASMSymbol> m_symbols;
     
     void populateTree();
@@ -291,8 +291,8 @@ class MASMDebugger {public:
     
 private:
     std::unique_ptr<void*> m_debugProcess;
-    std::unique_ptr<QTreeWidget> m_registersWidget;
-    std::unique_ptr<QTreeWidget> m_stackWidget;
+    std::unique_ptr<void> m_registersWidget;
+    std::unique_ptr<void> m_stackWidget;
     std::unique_ptr<void> m_disassemblyWidget;
     
     std::unordered_set<int> m_breakpoints;

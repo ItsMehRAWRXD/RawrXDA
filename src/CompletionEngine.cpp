@@ -1,4 +1,6 @@
 #include "CompletionEngine.h"
+#include "cpu_inference_engine.h"
+#include "utils/InferenceSettingsManager.h"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -12,6 +14,24 @@ using json = nlohmann::json;
 
 namespace RawrXD {
 namespace IDE {
+
+// Global static engine for completion to ensure persistent model state
+static std::unique_ptr<RawrXD::CPUInferenceEngine> g_completionEngine = nullptr;
+
+static void EnsureEngineLoaded() {
+    if (!g_completionEngine) {
+        g_completionEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+    }
+    
+    // Check if model is loaded or needs update
+    // For now we assume if it's created, we try to load the default model
+    auto& settings = RawrXD::InferenceSettingsManager::getInstance();
+    std::string modelPath = settings.getCurrentModelPath();
+    
+    if (!g_completionEngine->isModelLoaded() && !modelPath.empty()) {
+        g_completionEngine->LoadModel(modelPath);
+    }
+}
 
 IntelligentCompletionEngine::IntelligentCompletionEngine()
     : m_confidenceThreshold(0.5f), m_maxSuggestions(10),
@@ -65,11 +85,20 @@ std::vector<std::string> IntelligentCompletionEngine::getMultiLineCompletions(
                         "\n// Current line: " + context.currentLine +
                         "\n// Generate " + std::to_string(maxLines) + " lines of code";
     
-    // This would call the model to generate multi-line completions
-    // For now, return single line as placeholder
-    std::vector<CompletionSuggestion> single = getCompletions(context, 1);
-    if (!single.empty()) {
-        results.push_back(single[0].text);
+    EnsureEngineLoaded();
+    
+    if (g_completionEngine && g_completionEngine->isModelLoaded()) {
+        // Real Inference
+        std::string generated = g_completionEngine->infer(prompt, maxLines * 20); // Approx 20 tokens per line
+        if (!generated.empty()) {
+            results.push_back(generated);
+        }
+    } else {
+        // Fallback or empty if no model
+        std::vector<CompletionSuggestion> single = getCompletions(context, 1);
+        if (!single.empty()) {
+            results.push_back(single[0].text);
+        }
     }
     
     return results;
@@ -133,23 +162,43 @@ std::vector<CompletionSuggestion> IntelligentCompletionEngine::inferCompletions(
     // Build prompt
     std::string prompt = enrichContext(context);
     
-    // Call model (simplified - would use actual WinHTTP)
-    // For demo, return some basic completions
-    std::vector<std::string> completions = {
-        context.linePrefix + " = ",
-        context.linePrefix + "()",
-        "if (" + context.linePrefix + ") {\n}",
-        "for (auto " + context.linePrefix + " : ",
-    };
+    EnsureEngineLoaded();
+
+    if (g_completionEngine && g_completionEngine->isModelLoaded()) {
+        // Run inference
+        // Suggest completions for the current line
+        std::string result = g_completionEngine->infer(prompt);
+        
+        // Parse result - assume model returns text that completes the line or multiple lines
+        if (!result.empty()) {
+            CompletionSuggestion s;
+            s.text = result;
+            s.label = result.substr(0, std::min(result.length(), (size_t)30));
+            s.confidence = 0.85f; // From model
+            s.priority = 100;
+            s.kind = "ai-generated";
+            suggestions.push_back(s);
+        }
+    }
     
-    for (const auto& comp : completions) {
-        CompletionSuggestion s;
-        s.text = comp;
-        s.label = comp.substr(0, 30);
-        s.confidence = 0.75f;
-        s.priority = 50;
-        s.kind = "snippet";
-        suggestions.push_back(s);
+    // If we didn't get results (or as fallback/addition), add structural suggestions
+    if (suggestions.empty()) {
+        std::vector<std::string> completions = {
+            context.linePrefix + " = ",
+            context.linePrefix + "()",
+            "if (" + context.linePrefix + ") {\n}",
+            "for (auto " + context.linePrefix + " : ",
+        };
+        
+        for (const auto& comp : completions) {
+            CompletionSuggestion s;
+            s.text = comp;
+            s.label = comp.substr(0, 30);
+            s.confidence = 0.2f; // Low confidence for heuristics
+            s.priority = 10;
+            s.kind = "snippet";
+            suggestions.push_back(s);
+        }
     }
     
     return suggestions;

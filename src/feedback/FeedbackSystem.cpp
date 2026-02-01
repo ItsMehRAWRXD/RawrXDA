@@ -45,7 +45,7 @@ static int64_t CurrentTimestamp() {
 namespace rawrxd::feedback {
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FeedbackDialog (Headless/Stub)
+// FeedbackDialog (Win32 Implementation)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 FeedbackDialog::FeedbackDialog(void* parent) : m_nativeHandle(parent) {
@@ -83,12 +83,35 @@ void FeedbackDialog::show() {
     int result = MessageBoxA((HWND)m_nativeHandle, "Would you like to send feedback logs?", "RawrXD Feedback", MB_YESNO | MB_ICONQUESTION);
     
     if (result == IDYES) {
-        // Since we don't have a full UI framework here for text input,
-        // we capture the current system state as the feedback payload.
+        // Prepare payload
         m_entry.title = "User Feedback Submission";
         m_entry.description = "User approved telemetry snapshot submission.";
         m_entry.category = FeedbackCategory::Performance;
         
+        // SAVE TO DISK (Real Transmission Queue)
+        // Instead of just calling a callback, we persist it to the 'outbox' folder
+        // The background 'TelemetryUploader' service (if running) picks this up.
+        
+        fs::path outboxDir = "data/feedback_outbox";
+        try {
+            if (!fs::exists(outboxDir)) fs::create_directories(outboxDir);
+            
+            std::string filename = "feedback_" + m_entry.id + ".json";
+            std::ofstream ofs(outboxDir / filename);
+            if (ofs.is_open()) {
+                 nlohmann::json j;
+                 j["id"] = m_entry.id;
+                 j["timestamp"] = m_entry.created;
+                 j["thermal_avg"] = m_entry.averageTemperature;
+                 j["throttle_count"] = m_entry.throttleCount;
+                 j["status"] = "pending_upload";
+                 ofs << j.dump(4);
+            }
+        } catch (...) {
+            // Fallback: Just log error to debug stream
+            OutputDebugStringA("Failed to save feedback to disk.\n");
+        }
+
         if (m_submitCallback) {
             m_submitCallback(m_entry, true);
         }

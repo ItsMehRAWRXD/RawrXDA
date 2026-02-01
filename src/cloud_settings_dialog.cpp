@@ -2,15 +2,89 @@
 #include "model_router_adapter.h"
 #include <fstream>
 #include <iostream>
-#include <filesystem>
-#include <sstream>
-#include <iomanip>
-#include "nlohmann/json.hpp"
-
-// Optional: Include WinHttp for validation if needed, but keeping it clean for now
-// #include <winhttp.h>
+#include <nlohmann/json.hpp>
+#include <windows.h>
+#include <wincrypt.h>
+#pragma comment(lib, "crypt32.lib")
 
 using json = nlohmann::json;
+
+// Helper for DPAPI
+static std::string DPAPI_Encrypt(const std::string& input) {
+    DATA_BLOB DataIn;
+    DATA_BLOB DataOut;
+    DATA_BLOB Entropy;
+
+    DataIn.pbData = (BYTE*)input.data();
+    DataIn.cbData = (DWORD)input.length();
+    
+    // Optional: Add entropy for additional security (e.g. machine specific GUID)
+    // For now we rely on user credentials implicit in DPAPI
+    
+    if (CryptProtectData(
+        &DataIn,
+        L"RawrXD_Cloud_Credentials", // Description
+        NULL,                        // Optional Entropy
+        NULL,                        // Reserved
+        NULL,                        // PromptStruct
+        0,                           // Flags
+        &DataOut))
+    {
+        std::string result((char*)DataOut.pbData, DataOut.cbData);
+        LocalFree(DataOut.pbData);
+        return result;
+    }
+    return "";
+}
+
+static std::string DPAPI_Decrypt(const std::string& input) {
+    if (input.empty()) return "";
+    
+    DATA_BLOB DataIn;
+    DATA_BLOB DataOut;
+    
+    DataIn.pbData = (BYTE*)input.data();
+    DataIn.cbData = (DWORD)input.length();
+    
+    if (CryptUnprotectData(
+        &DataIn,
+        NULL, // Description
+        NULL, // Entropy
+        NULL, 
+        NULL, 
+        0, 
+        &DataOut))
+    {
+        std::string result((char*)DataOut.pbData, DataOut.cbData);
+        LocalFree(DataOut.pbData);
+        return result;
+    }
+    return "";
+}
+
+// Helper to hex encode binary blobs for JSON storage
+static std::string HexEncode(const std::string& input) {
+    static const char hex_digits[] = "0123456789ABCDEF";
+    std::string output;
+    output.reserve(input.length() * 2);
+    for (unsigned char c : input) {
+        output.push_back(hex_digits[c >> 4]);
+        output.push_back(hex_digits[c & 0x0F]);
+    }
+    return output;
+}
+
+static std::string HexDecode(const std::string& input) {
+    std::string output;
+    if (input.length() % 2 != 0) return "";
+    output.reserve(input.length() / 2);
+    for (size_t i = 0; i < input.length(); i += 2) {
+        std::string byteString = input.substr(i, 2);
+        char byte = (char)strtol(byteString.c_str(), nullptr, 16);
+        output.push_back(byte);
+    }
+    return output;
+}
 
 CloudSettingsManager::CloudSettingsManager(ModelRouterAdapter* adapter)
     : m_adapter(adapter)
@@ -174,27 +248,37 @@ bool CloudSettingsManager::saveSettings(const std::string& filePath) const
     }
 }
 
-// Simple XOR 'encryption' for demonstration
-std::string CloudSettingsManager::encrypt(const std::string& input) const
-{
-    if (input.empty()) return "";
-    std::string output = input;
-    char key = 0x5A; // Simple static key
-    for (size_t i = 0; i < input.length(); i++) {
-        output[i] = input[i] ^ key;
+std::string CloudSettingsManager::encrypt(const std::string& input) const {
+    // Start with DPAPI
+    std::string encrypted = DPAPI_Encrypt(input);
+    if (!encrypted.empty()) {
+        // Hex encode for text file storage validity
+        return "DPAPI:" + HexEncode(encrypted); 
     }
-    // Encode to hex to ensure it's JSON safe string
-    std::stringstream ss;
-    for (unsigned char c : output) {
-        ss << std::hex << std::setw(2) << std::setfill('0') << (int)c;
-    }
-    return ss.str();
+    
+    // Fallback? Retain old XOR logic if DPAPI fails (rare) but mark it
+    // Or just fail. Better to fail than be insecure, but for logic completeness:
+    // We return empty string on failure.
+    return "";
 }
 
-std::string CloudSettingsManager::decrypt(const std::string& input) const
-{
-    if (input.empty()) return "";
-    // Decode hex
+std::string CloudSettingsManager::decrypt(const std::string& input) const {
+    if (input.rfind("DPAPI:", 0) == 0) {
+        // It's a DPAPI string
+        std::string hexData = input.substr(6);
+        std::string binaryData = HexDecode(hexData);
+        return DPAPI_Decrypt(binaryData);
+    }
+    
+    // Legacy support for previously XOR'd configs
+    std::string output = input; // copy
+    char key = 0x5A;
+    // Decrypt hex encoded wrapper first?
+    // Old implementation: Hex Encode -> XOR
+    // So we need to hex decode first
+    // Replicating logic from old implementation reading:
+    // ... loop i+=2 ... 
+    
     std::string raw;
     try {
         for (size_t i = 0; i < input.length(); i += 2) {
@@ -204,12 +288,11 @@ std::string CloudSettingsManager::decrypt(const std::string& input) const
         }
     } catch (...) { return ""; }
     
-    std::string output = raw;
-    char key = 0x5A;
+    std::string decrypted = raw;
     for (size_t i = 0; i < raw.length(); i++) {
-        output[i] = raw[i] ^ key;
+        decrypted[i] = raw[i] ^ key;
     }
-    return output;
+    return decrypted;
 }
 
 

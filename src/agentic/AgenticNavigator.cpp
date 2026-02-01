@@ -292,11 +292,25 @@ NavigationResult AgenticNavigator::executeCommand(int commandId) {
 #ifdef _WIN32
     // Assuming we have a cached handle to the main window or can find it.
     // For now, let's look for "RawrXD" or generic IDE window if not stored.
-    HWND hIDE = FindWindowA("RawrXD_IDE_Window", NULL); // Adjust class name as needed
-    if (!hIDE) hIDE = GetForegroundWindow(); // Fallback to active window for context actions
+    HWND hIDE = FindWindowA("RawrXDIDE", NULL); // Explicit Class Name from Win32IDE.cpp
+    if (!hIDE) hIDE = FindWindowA(NULL, "RawrXD PowerShell IDE - C++ Edition"); // Fallback Title
+    if (!hIDE) hIDE = GetForegroundWindow(); // Last resort
 
     bool success = false;
     std::string message;
+    
+    if (hIDE) {
+        // Send actual command
+        PostMessageA(hIDE, WM_COMMAND, (WPARAM)commandId, 0);
+        success = true; // Message posted
+        message = "WM_COMMAND posted to window";
+    } else {
+        message = "Could not find IDE window";
+    }
+#else
+    bool success = false;
+    std::string message = "Not implemented on non-Win32";
+#endif
 
     if (hIDE) {
         // Send WM_COMMAND with the specific Command ID

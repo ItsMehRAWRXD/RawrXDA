@@ -598,6 +598,22 @@ struct Size {
     operator SIZE() const { SIZE s = { width, height }; return s; }
 };
 
+struct SizeF {
+    float width, height;
+    SizeF() : width(0.0f), height(0.0f) {}
+    SizeF(float w, float h) : width(w), height(h) {}
+    
+    // Conversion from Size
+    SizeF(const Size& s) : width((float)s.width), height((float)s.height) {}
+
+    bool isNull() const { return width == 0.0f && height == 0.0f; }
+    bool isEmpty() const { return width <= 0.0f || height <= 0.0f; }
+    bool isValid() const { return width >= 0.0f && height >= 0.0f; }
+    
+    bool operator==(const SizeF& s) const { return width == s.width && height == s.height; }
+    bool operator!=(const SizeF& s) const { return !(*this == s); }
+};
+
 struct Rect {
     int x, y, width, height;
     Rect() : x(0), y(0), width(0), height(0) {}

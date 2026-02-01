@@ -294,17 +294,38 @@ Inference_SubmitBatch PROC FRAME
     test ebx, ebx
     jz @batch_done
     
+
 @batch_loop:
     ; Process each job in batch
     ; Assuming simple struct { Slot, Token, ResultPtr }
     
-    mov rcx, [rsi]      ; Slot
-    mov rdx, [rsi+8]    ; Token
-    mov r8,  [rsi+16]   ; ResultPtr
+    ; Load job parameters from [rsi]
+    ; struct BatchJob {
+    ;   QWORD SlotIndex;
+    ;   QWORD TokenID;
+    ;   QWORD ResultPtr;
+    ; }
     
-    call Titan_RunInferenceStep
+    mov cx, [rsi]       ; SlotIndex (using lower 16 bits for index) needs 64-bit alignment in struct
+    mov rdx, [rsi+8]    ; TokenID
+    mov r8, [rsi+16]    ; ResultPtr
     
-    add rsi, 24         ; Next job struct size
+    ; Save loop context
+    push rbx
+    push rsi
+    
+    ; Call single token submit
+    ; Note: Inference_SubmitToken expects RCX=Slot, RDX=Token, R8=Ptr
+    mov rcx, [rsi]      ; Reload full QWORD slot index
+    sub rsp, 32         ; Shadow space
+    call Inference_SubmitToken
+    add rsp, 32
+    
+    ; Restore context
+    pop rsi
+    pop rbx
+    
+    add rsi, 24         ; NEXT JOB (Job size = 24 bytes)
     dec ebx
     jnz @batch_loop
     
@@ -314,73 +335,66 @@ Inference_SubmitBatch PROC FRAME
     pop rsi
     pop rbx
     ret
-Inference_SubmitBatch ENDP
 
-; ═══════════════════════════════════════════════════════════════════════════════
-; Inference_ReleaseSequence
-; Free KV cache slot
-; RCX = slot index
-; ═══════════════════════════════════════════════════════════════════════════════
-Inference_ReleaseSequence PROC FRAME
+; ==============================================================================
+; Inference_FreeSequence
+; Release KV Cache slot
+; RCX = Slot Index
+; ==============================================================================
+Inference_FreeSequence PROC FRAME
+    push rbx
     .endprolog
     
-    ; Calc cache ptr
+    mov rbx, rcx
+    cmp rbx, INFERENCE_MAX_BATCH
+    jae @free_error
+    
+    ; Calculate offset: KvCache + (Index * Size)
     lea rdx, g_InferenceContext.KvCache
     mov eax, SIZEOF KvCacheSlot
-    imul rax, rcx
+    imul rax, rbx
     add rdx, rax
     
     mov (KvCacheSlot PTR [rdx]).Occupied, 0
     mov (KvCacheSlot PTR [rdx]).ContextLength, 0
     
-    bts g_InferenceContext.FreeKvSlots, ecx
+    ; Mark as free
+    bts g_InferenceContext.FreeKvSlots, ebx
     
-    ret
-Inference_ReleaseSequence ENDP
+    mov eax, 1
+    jmp @free_exit
+    
+@free_error:
+    xor eax, eax
 
-; ═══════════════════════════════════════════════════════════════════════════════
-; Inference_SampleGreedy
-; Find index of maximum logit
-; RCX = Logits Ptr (float*), RDX = Vocab Size
-; Returns RAX = Token ID
-; ═══════════════════════════════════════════════════════════════════════════════
-Inference_SampleGreedy PROC FRAME
-    push rbx
-    .endprolog
-    
-    mov r8, rcx         ; Ptr
-    mov ecx, edx        ; Count
-    
-    xor eax, eax        ; Best Index
-    xor ebx, ebx        ; Current Index
-    
-    ; Load first value as max
-    vmovss xmm0, dword ptr [r8] ; Max Val
-    
-    add r8, 4
-    inc ebx
-    dec ecx
-    jz @sample_done
-    
-@sample_loop:
-    vmovss xmm1, dword ptr [r8]
-    comiss xmm1, xmm0
-    jbe @not_better
-    
-    ; Found new max
-    vmovss xmm0, xmm0, xmm1
-    mov eax, ebx
-    
-@not_better:
-    add r8, 4
-    inc ebx
-    dec ecx
-    jnz @sample_loop
-    
-@sample_done:
+@free_exit:
     pop rbx
     ret
-Inference_SampleGreedy ENDP
+Inference_FreeSequence ENDP
+
+; ==============================================================================
+; Inference_GetKVContextSize
+; Returns used context length for a slot
+; RCX = Slot Index
+; ==============================================================================
+Inference_GetKVContextSize PROC FRAME
+    .endprolog
+    
+    cmp rcx, INFERENCE_MAX_BATCH
+    jae @get_size_error
+    
+    lea rdx, g_InferenceContext.KvCache
+    mov eax, SIZEOF KvCacheSlot
+    imul rax, rcx
+    add rdx, rax
+    
+    mov eax, (KvCacheSlot PTR [rdx]).ContextLength
+    ret
+    
+@get_size_error:
+    xor eax, eax
+    ret
+Inference_GetKVContextSize ENDP
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; InferenceEngine_Submit
