@@ -16,13 +16,18 @@
 #include "tracing/tracer.h"
 
 // Forward declarations for AI components
-class CompletionEngine;
-class CodebaseContextAnalyzer;
-class SmartRewriteEngine;
-class MultiModalModelRouter;
-class LanguageServerIntegration;
-class PerformanceOptimizer;
-class AdvancedCodingAgent;
+namespace RawrXD {
+    class InferenceEngine;
+    namespace IDE {
+        class IntelligentCompletionEngine;
+        class CodebaseContextAnalyzer;
+        class SmartRewriteEngine;
+        class MultiModalModelRouter;
+        class LanguageServerIntegration;
+        class PerformanceOptimizer;
+        class AdvancedCodingAgent;
+    }
+}
 
 // Completion structs
 struct CodeCompletion {
@@ -74,16 +79,16 @@ private:
 
     std::unique_ptr<FormatRouter> m_formatRouter;
     std::unique_ptr<EnhancedModelLoader> m_modelLoader;
-    std::unique_ptr<InferenceEngine> m_inferenceEngine;
+    std::unique_ptr<RawrXD::InferenceEngine> m_inferenceEngine;
 
     // AI Components
-    std::unique_ptr<CompletionEngine> m_completionEngine;
-    std::unique_ptr<CodebaseContextAnalyzer> m_contextAnalyzer;
-    std::unique_ptr<SmartRewriteEngine> m_rewriteEngine;
-    std::unique_ptr<MultiModalModelRouter> m_modelRouter;
-    std::unique_ptr<LanguageServerIntegration> m_languageServer;
-    std::unique_ptr<PerformanceOptimizer> m_performanceOptimizer;
-    std::unique_ptr<AdvancedCodingAgent> m_codingAgent;
+    std::unique_ptr<RawrXD::IDE::IntelligentCompletionEngine> m_completionEngine;
+    std::unique_ptr<RawrXD::IDE::CodebaseContextAnalyzer> m_contextAnalyzer;
+    std::unique_ptr<RawrXD::IDE::SmartRewriteEngine> m_rewriteEngine;
+    std::unique_ptr<RawrXD::IDE::MultiModalModelRouter> m_modelRouter;
+    std::unique_ptr<RawrXD::IDE::LanguageServerIntegration> m_languageServer;
+    std::unique_ptr<RawrXD::IDE::PerformanceOptimizer> m_performanceOptimizer;
+    std::unique_ptr<RawrXD::IDE::AdvancedCodingAgent> m_codingAgent;
 
     // State management
     std::atomic<bool> m_initialized{false};
