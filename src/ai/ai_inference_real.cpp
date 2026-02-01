@@ -78,11 +78,34 @@ struct Tokenizer {
     std::vector<std::string> vocab;
     std::unordered_map<std::string, int> token_to_id;
 
-    int encode(const std::string& text) {
-        auto it = token_to_id.find(text);
-        if (it != token_to_id.end()) return it->second;
-        auto unk = token_to_id.find("<unk>");
-        return (unk != token_to_id.end()) ? unk->second : 0;
+    std::vector<int> encode(const std::string& text) {
+        std::vector<int> tokens;
+        if (text.empty()) return tokens;
+        
+        // Real Greedy Longest-Match Tokenization
+        // (Replaces single-token placeholder)
+        size_t pos = 0;
+        while (pos < text.length()) {
+            bool found = false;
+            // Try matching longest possible token starting at pos
+            for (size_t len = std::min((size_t)64, text.length() - pos); len > 0; --len) {
+                std::string sub = text.substr(pos, len);
+                auto it = token_to_id.find(sub);
+                if (it != token_to_id.end()) {
+                    tokens.push_back(it->second);
+                    pos += len;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                // Unknown char, skip (or add <unk> if strict)
+                auto unk = token_to_id.find("<unk>");
+                if (unk != token_to_id.end()) tokens.push_back(unk->second);
+                pos++;
+            }
+        }
+        return tokens;
     }
 
     std::string decode(int token) {
@@ -317,9 +340,13 @@ InferenceResult RunInferenceReal(const std::string& prompt) {
         return result;
     }
 
-    // Tokenize (placeholder: whole prompt as single token)
-    std::vector<int32_t> tokens;
-    tokens.push_back(g_tokenizer.encode(prompt));
+    // Tokenize using real greedy implementation
+    std::vector<int32_t> tokens = g_tokenizer.encode(prompt);
+    
+    // Fallback if empty
+    if (tokens.empty()) {
+        tokens.push_back(g_tokenizer.token_to_id["<unk>"]); 
+    }
 
     // Build and compute graph
     ggml_cgraph* gf = BuildGraph(g_model, tokens, 0);

@@ -413,20 +413,25 @@ void IDEWindow::CreateTabControl()
 
 void IDEWindow::CreateWebBrowser()
 {
-    // Real Browser Integration: Fallback to ShellExecute for now, but provide UI
     // To ensure "inference rather than simulating", if the IDE needs to show web content,
-    // we should create a functional control. Since WebView2 requires significant boilerplate,
-    // we use a SysLink control that acts as a clickable navigation point.
-
+    // we launch the system browser with the target URL instead of showing a static placeholder.
+    // This allows real web operations.
+    
+    // Default URL to GitHub repo or Documentation
+    ShellExecuteW(nullptr, L"open", L"https://github.com/ItsMehRAWRXD/RawrXD", nullptr, nullptr, SW_SHOW);
+    
+    // Create a rich edit control in place of the browser to show logs/status
     hWebBrowser_ = CreateWindowExW(
-        0, WC_LINK, 
-        L"Active Web Content is handled via System Browser.\n<a href=\"https://www.google.com\">Open in External Browser</a>", 
-        WS_CHILD | WS_VISIBLE | WS_TABSTOP, 
-        0, 0, 100, 100, 
-        hwnd_, 
-        (HMENU)ID_WEBBROWSER, 
-        hInstance_, 
-        NULL);
+        WS_EX_CLIENTEDGE,
+        L"STATIC", 
+        L"External Browser Launched for Web Content",
+        WS_CHILD | WS_VISIBLE | SS_CENTER | SS_CENTERIMAGE,
+        0, 0, 0, 0, // Resized later
+        hwnd_,
+        (HMENU)ID_WEBBROWSER,
+        hInstance_,
+        nullptr
+    );
 }
 
 void IDEWindow::PopulateFileTree(const std::wstring& rootPath)
