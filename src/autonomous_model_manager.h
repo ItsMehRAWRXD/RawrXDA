@@ -35,7 +35,13 @@ struct SystemAnalysis {
  * Provides intelligent, autonomous model selection, download, optimization, and management.
  */
 class AutonomousModelManager {
+public: // Pimpl idiom
+    struct Impl;
+
 private:
+    std::unique_ptr<Impl> pImpl;
+
+    // State
     nlohmann::json availableModels;
     nlohmann::json installedModels;
     nlohmann::json recommendedModels;
@@ -50,6 +56,7 @@ private:
     int optimizationInterval = 1800; // 30 minutes (seconds)
     double minimumSuitabilityScore = 0.75;
     int64_t maxModelSize = 10LL * 1024 * 1024 * 1024; // 10GB default
+
     
 public:
     AutonomousModelManager();

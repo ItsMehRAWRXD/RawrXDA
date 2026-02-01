@@ -7,8 +7,15 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+#include <map>
+#include <memory>
+
 
 namespace RawrXD {
+
+class UniversalModelRouter; // Forward declaration
 
 class LSPClient;
 class InferenceEngine;
@@ -64,12 +71,12 @@ struct ExecutionResult {
  * - Supports atomic multi-file refactoring
  * - Two-phase initialization pattern
  */
-class PlanOrchestrator : public void
+class PlanOrchestrator
 {
 
 public:
-    explicit PlanOrchestrator(void* parent = nullptr);
-    ~PlanOrchestrator() override = default;
+    explicit PlanOrchestrator();
+    ~PlanOrchestrator() = default;
 
     /**
      * Two-phase initialization
@@ -86,6 +93,11 @@ public:
      * Set inference engine for AI planning
      */
     void setInferenceEngine(InferenceEngine* engine);
+
+    /**
+     * Set model router for advanced AI planning
+     */
+    void setModelRouter(UniversalModelRouter* router);
 
     /**
      * Generate edit plan from user prompt
@@ -161,24 +173,37 @@ public:
      */
     void errorOccurred(const std::string& error);
 
+    /**
+     * Aborts the current operation, whether planning or execution.
+     * This can be called from another thread to cancel the ongoing process.
+     */
+    void abort();
+    
 private:
+    // Internal helpers
     std::string buildPlanningPrompt(const std::string& userPrompt, const std::vector<std::string>& contextFiles);
+    std::vector<std::string> gatherContextFiles(const std::string& workspaceRoot, int maxFiles);
     PlanningResult parsePlanningResponse(const std::string& response);
+    
     bool executeTask(const EditTask& task, bool dryRun);
     bool applyReplace(const EditTask& task, bool dryRun);
     bool applyInsert(const EditTask& task, bool dryRun);
     bool applyDelete(const EditTask& task, bool dryRun);
     bool applyRename(const EditTask& task, bool dryRun);
-    std::vector<std::string> gatherContextFiles(const std::string& workspaceRoot, int maxFiles = 50);
+
+    void rollback(); // Restore original files
+
     std::string readFileContent(const std::string& filePath);
     bool writeFileContent(const std::string& filePath, const std::string& content);
 
-    LSPClient* m_lspClient{};
-    InferenceEngine* m_inferenceEngine{};
+    // Member variables
+    LSPClient* m_lspClient;
+    InferenceEngine* m_inferenceEngine;
+    UniversalModelRouter* m_modelRouter = nullptr;
     std::string m_workspaceRoot;
-    
-    std::map<std::string, std::string> m_originalFileContents;  // Backup for rollback
     bool m_initialized = false;
+
+    std::map<std::string, std::string> m_originalFileContents;  // Backup for rollback
 };
 
 } // namespace RawrXD

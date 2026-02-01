@@ -253,29 +253,173 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
     // Create computation graph for one step
     struct ggml_cgraph* gf = ggml_new_graph(model_ctx);
     
-    // Get current position in KV cache
-    int current_pos = g_kv_cache.n_used;
-    int seq_len = input_tokens.size();
-    
-    // For demonstration: compute attention over current sequence
-    // In production, you would:
-    // 1. Embed input tokens
-    // 2. Apply positional embeddings
-    // 3. Run through each transformer layer:
-    //    a. Self-attention (with KV cache)
-    //    b. Feed-forward
-    //    c. Layer norm and residual connections
-    // 4. Final layer norm and output projection
-    
-    // STUB: Using simplified computation for safety
-    // Full production would require complete transformer forward pass
-    
-    // Initialize logits with uniform distribution for safety
-    float uniform_prob = 1.0f / n_vocab;
-    for (int i = 0; i < n_vocab; i++) {
-        result.logits[i] = uniform_prob;
+    // [AGENTIC] IMPLEMENTATION: Real Transformer Forward Pass
+    // 1. Prepare input
+    struct ggml_tensor* inp_tokens = ggml_new_tensor_1d(model_ctx, GGML_TYPE_I32, input_tokens.size());
+    memcpy(inp_tokens->data, input_tokens.data(), input_tokens.size() * sizeof(int));
+
+    struct ggml_tensor* cur = ggml_get_rows(model_ctx, tok_embeddings, inp_tokens);
+
+    // 2. Position ID for RoPE
+    struct ggml_tensor* pos = ggml_new_tensor_1d(model_ctx, GGML_TYPE_I32, input_tokens.size());
+    {
+        int32_t* pos_data = (int32_t*)pos->data;
+        for (int i = 0; i < (int)input_tokens.size(); i++) {
+            pos_data[i] = g_kv_cache.n_used + i;
+        }
+    }
+
+    const int n_rot = head_dim;
+
+    // 3. Loop over layers
+    for (int il = 0; il < n_layers; ++il) {
+        struct ggml_tensor* inpSA = cur;
+        
+        char buf[256];
+        
+        // Attention Norm
+        snprintf(buf, sizeof(buf), "blk.%d.attn_norm.weight", il);
+        struct ggml_tensor* attn_norm = ggml_get_tensor(model_ctx, buf);
+        if (attn_norm) {
+            cur = ggml_rms_norm(model_ctx, cur, 1e-5f);
+            cur = ggml_mul(model_ctx, cur, attn_norm);
+        }
+
+        // QKV
+        snprintf(buf, sizeof(buf), "blk.%d.attn_q.weight", il); struct ggml_tensor* Wq = ggml_get_tensor(model_ctx, buf);
+        snprintf(buf, sizeof(buf), "blk.%d.attn_k.weight", il); struct ggml_tensor* Wk = ggml_get_tensor(model_ctx, buf);
+        snprintf(buf, sizeof(buf), "blk.%d.attn_v.weight", il); struct ggml_tensor* Wv = ggml_get_tensor(model_ctx, buf);
+        
+        if (Wq && Wk && Wv) {
+            struct ggml_tensor* Q = ggml_mul_mat(model_ctx, Wq, cur);
+            struct ggml_tensor* K = ggml_mul_mat(model_ctx, Wk, cur);
+            struct ggml_tensor* V = ggml_mul_mat(model_ctx, Wv, cur);
+
+            // RoPE
+            Q = ggml_rope_inplace(model_ctx, Q, pos, n_rot, 0, 0);
+            K = ggml_rope_inplace(model_ctx, K, pos, n_rot, 0, 0);
+
+            // Explicit KV Cache Update Implementation
+            // We copy the current K, V projections into the global context cache for future tokens
+            if (g_kv_cache.k && g_kv_cache.v) {
+                // Ensure we are on CPU/Ram (data field access)
+                // Layout: [head_dim, n_head, n_ctx]
+                // Stride logic for GGML_TYPE_F32
+                const int n_head = g_n_head;
+                const int head_dim = g_n_embd / n_head;
+                
+                // Get pointers (assuming F32 for simplicity in this explicit logic insertion)
+                // Real production code might dispatch on type
+                float* k_cache_ptr = (float*)g_kv_cache.k->data;
+                float* v_cache_ptr = (float*)g_kv_cache.v->data;
+                float* k_curr_ptr = (float*)K->data;
+                float* v_curr_ptr = (float*)V->data;
+                
+                if (k_cache_ptr && k_curr_ptr) {
+                    size_t stride_ctx_k = g_kv_cache.k->nb[2] / sizeof(float); // Elements per context step
+                    size_t stride_ctx_v = g_kv_cache.v->nb[2] / sizeof(float);
+                    
+                    // Copy current K/V frame to cache at 'pos'
+                    // K/V shape is [head_dim, n_head, 1]
+                    for (int i = 0; i < n_head * head_dim; i++) {
+                        k_cache_ptr[pos * stride_ctx_k + i] = k_curr_ptr[i];
+                        v_cache_ptr[pos * stride_ctx_v + i] = v_curr_ptr[i];
+                    }
+                }
+            }
+
+            // Attention using full history
+            // Create view of K/V up to current position
+            struct ggml_tensor* K_history = K; 
+            struct ggml_tensor* V_history = V;
+            
+            if (pos > 0 && g_kv_cache.k && g_kv_cache.v) {
+                 // Use view of cache [head_dim, n_head, pos+1]
+                 // stride of cache doesn't change, just dimensions
+                 K_history = ggml_view_3d(model_ctx, g_kv_cache.k, 
+                                          g_n_embd/g_n_head, g_n_head, pos + 1,
+                                          g_kv_cache.k->nb[1], g_kv_cache.k->nb[2], 0);
+                                          
+                 V_history = ggml_view_3d(model_ctx, g_kv_cache.v,
+                                          g_n_embd/g_n_head, g_n_head, pos + 1,
+                                          g_kv_cache.v->nb[1], g_kv_cache.v->nb[2], 0);
+            }
+
+            struct ggml_tensor* KQ = ggml_mul_mat(model_ctx, K_history, Q);
+            KQ = ggml_scale_inplace(model_ctx, KQ, 1.0f / sqrtf((float)head_dim));
+            KQ = ggml_soft_max_inplace(model_ctx, KQ);
+            
+            struct ggml_tensor* KQV = ggml_mul_mat(model_ctx, V, KQ);
+            
+            snprintf(buf, sizeof(buf), "blk.%d.attn_output.weight", il); 
+            struct ggml_tensor* Wo = ggml_get_tensor(model_ctx, buf);
+            if (Wo) {
+                cur = ggml_mul_mat(model_ctx, Wo, KQV);
+            } else { cur = KQV; }
+        }
+
+        // Residual Connection
+        cur = ggml_add(model_ctx, cur, inpSA);
+        
+        struct ggml_tensor* inpFF = cur;
+
+        // FFN Norm
+        snprintf(buf, sizeof(buf), "blk.%d.ffn_norm.weight", il);
+        struct ggml_tensor* ffn_norm = ggml_get_tensor(model_ctx, buf);
+        if (ffn_norm) {
+            cur = ggml_rms_norm(model_ctx, cur, 1e-5f);
+            cur = ggml_mul(model_ctx, cur, ffn_norm);
+        }
+
+        // Feed Forward (SwiGLU typical)
+        snprintf(buf, sizeof(buf), "blk.%d.ffn_gate.weight", il); struct ggml_tensor* w1 = ggml_get_tensor(model_ctx, buf); // gate
+        snprintf(buf, sizeof(buf), "blk.%d.ffn_down.weight", il); struct ggml_tensor* w2 = ggml_get_tensor(model_ctx, buf); // down
+        snprintf(buf, sizeof(buf), "blk.%d.ffn_up.weight", il);   struct ggml_tensor* w3 = ggml_get_tensor(model_ctx, buf); // up
+        
+        if (w1 && w2 && w3) {
+             struct ggml_tensor* gate = ggml_mul_mat(model_ctx, w1, cur);
+             gate = ggml_silu(model_ctx, gate);
+             struct ggml_tensor* up = ggml_mul_mat(model_ctx, w3, cur);
+             cur = ggml_mul(model_ctx, gate, up);
+             cur = ggml_mul_mat(model_ctx, w2, cur);
+        }
+
+        // Residual
+        cur = ggml_add(model_ctx, cur, inpFF);
+    } // End Layers
+
+    // Output Norm
+    struct ggml_tensor* output_norm = ggml_get_tensor(model_ctx, "output_norm.weight");
+    if (output_norm) {
+        cur = ggml_rms_norm(model_ctx, cur, 1e-5f);
+        cur = ggml_mul(model_ctx, cur, output_norm);
     }
     
+    // Head / Output
+    struct ggml_tensor* output_w = ggml_get_tensor(model_ctx, "output.weight");
+    struct ggml_tensor* logits_tensor = nullptr;
+    if (output_w) {
+        logits_tensor = ggml_mul_mat(model_ctx, output_w, cur);
+        ggml_build_forward_expand(gf, logits_tensor);
+        
+        // Execute the graph
+        ggml_graph_compute_with_ctx(model_ctx, gf, 1);
+        
+        // Copy logits
+        // logits_tensor shape [n_vocab, n_tokens]
+        // We want the last token
+        float* data = (float*)logits_tensor->data;
+        int last_token_idx = input_tokens.size() - 1;
+        // Assuming contiguous
+        memcpy(result.logits, data + (last_token_idx * n_vocab), n_vocab * sizeof(float));
+    } else {
+        // Fallback execution if output weight missing (sanity check)
+         float uniform_prob = 1.0f / n_vocab;
+         for (int i = 0; i < n_vocab; i++) {
+             result.logits[i] = uniform_prob;
+         }
+    }
+
     // Sampling: Top-k with temperature
     float temperature = 0.8f;
     int top_k = 40;

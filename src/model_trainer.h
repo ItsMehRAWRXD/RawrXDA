@@ -8,13 +8,15 @@
 #pragma once
 
 
+#include <functional>
 #include <memory>
-#include <vector>
 #include <string>
-#include <atomic>
+#include <thread>
+#include <vector>
+#include "nlohmann/json.hpp"
 
 class GGUFLoader;
-class InferenceEngine;
+namespace RawrXD { class InferenceEngine; }
 
 /**
  * @class ModelTrainer
@@ -30,9 +32,19 @@ class InferenceEngine;
  * - Thread-safe training execution
  * - Checkpoint management and model registration
  */
-class ModelTrainer : public void {
+class ModelTrainer {
+    friend class AITrainingPipeline; // Allow pipeline to drive training step-by-step
 
 public:
+    // Callbacks
+    std::function<void(const std::string&)> onLogMessage;
+    std::function<void(const std::string&)> onTrainingError;
+    std::function<void(int, int)> onEpochStarted;
+    std::function<void(int, float, float)> onEpochCompleted;
+    std::function<void()> onTrainingStarted;
+    std::function<void(const std::string&, float)> onTrainingCompleted;
+    std::function<void()> onTrainingStopped;
+
     // ===== Configuration =====
 
     /**
@@ -74,7 +86,7 @@ public:
     /**
      * @brief Destructor
      */
-    ~ModelTrainer() override;
+    ~ModelTrainer();
 
     /**
      * @brief Initialize trainer with model and inference engine
@@ -82,7 +94,7 @@ public:
      * @param modelPath Path to GGUF model file
      * @return true if initialization successful
      */
-    bool initialize(InferenceEngine* engine, const std::string& modelPath);
+    bool initialize(RawrXD::InferenceEngine* engine, const std::string& modelPath);
 
     /**
      * @brief Start training with configuration
@@ -95,6 +107,13 @@ public:
      * @brief Stop training gracefully
      */
     void stopTraining();
+
+    /**
+     * @brief Start training synchronously (blocks until completion)
+     * @param config Configuration
+     * @return true if training completed successfully
+     */
+    bool startTrainingSync(const TrainingConfig& config);
 
     // ===== Status & Queries =====
 
@@ -155,7 +174,7 @@ public:
      * @brief Tokenize loaded dataset
      * @return Vector of token sequences
      */
-    std::vector<std::vector<uint32_t>> tokenizeDataset();
+    std::vector<std::vector<int>> tokenizeDataset();
 
     // ===== Signals =====
 
@@ -234,8 +253,10 @@ private:
 private:
     // ===== Dataset Loading =====
     std::vector<std::string> readPlainTextDataset(const std::string& filePath);
-    std::vector<void*> readJsonLinesDataset(const std::string& filePath);
-    std::vector<void*> readCsvDataset(const std::string& filePath);
+    std::vector<nlohmann::json> readJsonLinesDataset(const std::string& filePath);
+    std::vector<nlohmann::json> readCsvDataset(const std::string& filePath);
+    std::vector<std::string> splitString(const std::string& str, char delimiter);
+    std::string trimString(const std::string& str);
 
     // ===== Tokenization =====
     std::vector<uint32_t> tokenizeText(const std::string& text);
@@ -279,17 +300,17 @@ private:
     float calculatePerplexity();
 
     // ===== State Management =====
-    InferenceEngine* m_inferenceEngine = nullptr;
+    RawrXD::InferenceEngine* m_inferenceEngine = nullptr;
     std::unique_ptr<GGUFLoader> m_modelLoader;
     std::string m_modelPath;
     std::string m_originalModelPath;
 
     TrainingConfig m_config;
     std::vector<std::string> m_textData;
-    std::vector<void*> m_jsonData;
-    std::vector<std::vector<uint32_t>> m_tokenizedData;
-    std::vector<std::vector<uint32_t>> m_trainingBatches;
-    std::vector<std::vector<uint32_t>> m_validationBatches;
+    std::vector<nlohmann::json> m_jsonData;
+    std::vector<std::vector<int>> m_tokenizedData;
+    std::vector<std::vector<int>> m_trainingBatches;
+    std::vector<std::vector<int>> m_validationBatches;
 
     AdamOptimizer m_optimizer;
     bool m_isTraining = false;

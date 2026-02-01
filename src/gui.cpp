@@ -1,6 +1,7 @@
 #include "gui.h"
 #include "settings.h"
 #include "overclock_vendor.h"
+#include "cpu_inference_engine.h"
 #include <iostream>
 
 GUI::GUI()
@@ -215,8 +216,26 @@ void GUI::DisplayModelInfo(const std::string& model_path) {
 
 void GUI::SendMessage(AppState& state, const std::string& message) {
     AddChatMessage(state, "user", message);
-    // Generate response (would call model inference here)
-    AddChatMessage(state, "assistant", "Response placeholder...");
+    
+    // Explicit Logic: Real Inference
+    std::string response;
+    
+    if (!state.inference_engine) {
+        state.inference_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
+        // Try to load model if configured
+        if (!state.model_path.empty()) {
+            state.inference_engine->loadModel(state.model_path);
+            state.loaded_model = true;
+        }
+    }
+    
+    if (state.inference_engine) {
+        response = state.inference_engine->infer(message);
+    } else {
+        response = "Error: Failed to initialize inference engine.";
+    }
+    
+    AddChatMessage(state, "assistant", response);
 }
 
 void GUI::AddChatMessage(AppState& state, const std::string& role, const std::string& content) {

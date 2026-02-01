@@ -1,191 +1,246 @@
 #include "marketplace/vsix_installer.h"
-VsixInstaller::VsixInstaller()
+#include <iostream>
+#include <fstream>
+#include <filesystem>
+#include <cstdlib>
+#include <windows.h>
+#include <winhttp.h>
+#include <shlobj.h>
+
+#pragma comment(lib, "winhttp.lib")
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "ole32.lib")
+
+namespace fs = std::filesystem;
+
+// Helper: Convert wstring
+static std::string WideToAnsi(const std::wstring& wstr) {
+    if (wstr.empty()) return "";
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+    return strTo;
+}
+
+// Helper for HTTP GET to file
+static bool DownloadFile(const std::string& url, const std::string& destPath, std::function<void(int)> progressCallback) {
+    // Parse URL
+    std::wstring wUrl(url.begin(), url.end());
+    URL_COMPONENTS urlComp;
+    ZeroMemory(&urlComp, sizeof(urlComp));
+    urlComp.dwStructSize = sizeof(urlComp);
+    urlComp.dwSchemeLength    = (DWORD)-1;
+    urlComp.dwHostNameLength  = (DWORD)-1;
+    urlComp.dwUrlPathLength   = (DWORD)-1;
+    urlComp.dwExtraInfoLength = (DWORD)-1;
+
+    if (!WinHttpCrackUrl(wUrl.c_str(), (DWORD)wUrl.length(), 0, &urlComp)) {
+        return false;
+    }
+
+    std::wstring host(urlComp.lpszHostName, urlComp.dwHostNameLength);
+    std::wstring path(urlComp.lpszUrlPath, urlComp.dwUrlPathLength);
+    if (urlComp.dwExtraInfoLength > 0) {
+        path += std::wstring(urlComp.lpszExtraInfo, urlComp.dwExtraInfoLength);
+    }
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return false;
+
+    HINTERNET hConnect = WinHttpConnect(hSession, host.c_str(), urlComp.nPort, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); return false; }
+
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 
+        (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0);
+    if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false; }
+
+    if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
+        WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false;
+    }
+
+    if (!WinHttpReceiveResponse(hRequest, NULL)) {
+        WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false;
+    }
+
+    // Get Content Length
+    DWORD dwContentLen = 0, dwLen = sizeof(dwContentLen);
+    WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER, 
+                        WINHTTP_HEADER_NAME_BY_INDEX, &dwContentLen, &dwLen, WINHTTP_NO_HEADER_INDEX);
+
+    std::ofstream outFile(destPath, std::ios::binary);
+    if (!outFile) {
+        WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false;
+    }
+
+    DWORD dwSize = 0;
+    DWORD dwDownloaded = 0;
+    DWORD totalDownloaded = 0;
+
+    do {
+        dwSize = 0;
+        if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+        if (dwSize == 0) break;
+
+        std::vector<char> buffer(dwSize);
+        if (WinHttpReadData(hRequest, &buffer[0], dwSize, &dwDownloaded)) {
+            outFile.write(buffer.data(), dwDownloaded);
+            totalDownloaded += dwDownloaded;
+            if (dwContentLen > 0 && progressCallback) {
+                progressCallback((int)((totalDownloaded * 100) / dwContentLen));
+            }
+        }
+    } while (dwSize > 0);
+
+    outFile.close();
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
     
-    , m_networkManager(new void*(this))
-{  // Signal connection removed\n}
+    return true;
+}
+
+VsixInstaller::VsixInstaller() {}
 
 VsixInstaller::~VsixInstaller() {
     cleanupTempFiles();
 }
 
 void VsixInstaller::installFromUrl(const std::string& url, const std::string& extensionId) {
-    installationStarted(extensionId);
-    
-    std::string downloadUrl(url);
-    void* request(downloadUrl);
-    void** reply = m_networkManager->get(request);
-    
-    // Create temp file for download
-    std::fstream* tempFile = nullptr;
-    if (!tempFile->open()) {
-        installationError(extensionId, "Failed to create temporary file");
-        delete tempFile;
-        return;
-    }
-    
-    // Store installation info
-    InstallationInfo info;
-    info.extensionId = extensionId;
-    info.downloadUrl = url;
-    info.tempFilePath = tempFile->fileName();
-    info.file = tempFile;
-    
-    m_activeInstallations.append(info);
-    
-    // Connect progress signal  // Signal connection removed\n// Store extension ID as property for later retrieval
-    reply->setProperty("extensionId", extensionId);
-    reply->setProperty("tempFilePath", tempFile->fileName());
+    if (installationStarted) installationStarted(extensionId);
+
+    std::thread([this, url, extensionId]() {
+        // Temp file
+        TCHAR tempPath[MAX_PATH];
+        GetTempPath(MAX_PATH, tempPath);
+        std::string tempFile = std::string(tempPath) + extensionId + ".vsix";
+        
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            InstallationInfo info = { extensionId, url, tempFile };
+            m_activeInstallations.push_back(info);
+        }
+
+        // Download
+        bool success = DownloadFile(url, tempFile, [this, extensionId](int progress) {
+            if (installationProgress) installationProgress(extensionId, progress);
+        });
+
+        if (!success) {
+            if (installationError) installationError(extensionId, "Download failed");
+            return;
+        }
+
+        // Install from file logic
+        installFromFile(tempFile, extensionId);
+        
+        // Cleanup handled by cleanupTempFiles or subsequent logic
+    }).detach();
 }
 
 void VsixInstaller::installFromFile(const std::string& filePath) {
-    // In a real implementation, this would install from a local VSIX file
-    installationError("local_file", "Not implemented");
+    // try to infer extension ID from filename or manifest
+    std::string filename = fs::path(filePath).stem().string();
+    installFromFile(filePath, filename); 
 }
 
-bool VsixInstaller::uninstallExtension(const std::string& extensionId) {
-    std::string installPath = getExtensionInstallPath(extensionId);
-    if (installPath.empty()) {
-        return false;
-    }
-    
-    // dir(installPath);
-    if (dir.exists()) {
-        if (dir.removeRecursively()) {
-            uninstallCompleted(extensionId, true);
-            return true;
-        }
-    }
-    
-    uninstallCompleted(extensionId, false);
-    return false;
-}
-
-bool VsixInstaller::isExtensionInstalled(const std::string& extensionId) {
-    std::string installPath = getExtensionInstallPath(extensionId);
-    if (installPath.empty()) {
-        return false;
-    }
-    
-    // dir(installPath);
-    return dir.exists();
-}
-
-std::string VsixInstaller::getExtensionInstallPath(const std::string& extensionId) {
+void VsixInstaller::installFromFile(const std::string& filePath, const std::string& extensionId) {
     std::string extensionsDir = getExtensionsDirectory();
-    if (extensionsDir.empty()) {
-        return std::string();
-    }
-    
-    return // (extensionsDir).filePath(extensionId);
-}
-
-void VsixInstaller::onDownloadFinished() {
-// REMOVED_QT:     void** reply = qobject_cast<void**>(sender());
-    if (!reply) return;
-    
-    std::string extensionId = reply->property("extensionId").toString();
-    std::string tempFilePath = reply->property("tempFilePath").toString();
-    
-    if (reply->error() != void*::NoError) {
-        installationError(extensionId, reply->errorString());
-        reply->deleteLater();
-        return;
-    }
-    
-    // Save downloaded data to temp file
-    // File operation removed;
-    if (!tempFile.open(std::iostream::WriteOnly)) {
-        installationError(extensionId, "Failed to save downloaded file");
-        reply->deleteLater();
-        return;
-    }
-    
-    tempFile.write(reply->readAll());
-    tempFile.close();
-    
-    // Extract and install
     std::string installPath = getExtensionInstallPath(extensionId);
-    if (extractVsixPackage(tempFilePath, installPath)) {
-        if (activateExtension(installPath)) {
-            installationCompleted(extensionId, true);
+    
+    // Ensure dir exists
+    fs::create_directories(installPath);
+    
+    // Extract
+    if (extractVsixPackage(filePath, installPath)) {
+        if (activateExtension(extensionId)) {
+            if (installationCompleted) installationCompleted(extensionId, true);
         } else {
-            installationError(extensionId, "Failed to activate extension");
+             if (installationError) installationError(extensionId, "Activation failed");
         }
     } else {
-        installationError(extensionId, "Failed to extract VSIX package");
-    }
-    
-    reply->deleteLater();
-}
-
-void VsixInstaller::onDownloadProgress(int64_t bytesReceived, int64_t bytesTotal) {
-    if (bytesTotal > 0) {
-// REMOVED_QT:         void** reply = qobject_cast<void**>(sender());
-        if (reply) {
-            std::string extensionId = reply->property("extensionId").toString();
-            int percentage = static_cast<int>((bytesReceived * 100) / bytesTotal);
-            installationProgress(extensionId, percentage);
-        }
+        if (installationError) installationError(extensionId, "Extraction failed (Archive invalid?)");
     }
 }
 
 bool VsixInstaller::extractVsixPackage(const std::string& vsixPath, const std::string& destination) {
-    // In a real implementation, this would extract the VSIX package (which is a ZIP file)
-    // For now, we'll just create a basic directory structure
+    // REAL IMPLEMENTATION: Use PowerShell Expand-Archive (built-in on Win10+)
+    // VSIX is just a ZIP.
     
-    // dir(destination);
-    if (!dir.exists()) {
-        if (!dir.mkpath(".")) {
-            return false;
+    // Construct command: powershell -Command "Expand-Archive -Path 'src' -DestinationPath 'dest' -Force"
+    std::string cmd = "powershell -NoProfile -Command \"Expand-Archive -Path '" + vsixPath + "' -DestinationPath '" + destination + "' -Force\"";
+    
+    int result = std::system(cmd.c_str());
+    if (result == 0) {
+        // Validate extraction
+        if (fs::exists(destination + "/extension.vsixmanifest") || fs::exists(destination + "/package.json")) {
+            return true;
         }
     }
     
-    // Create a basic package.json file to simulate extraction
-    // File operation removed);
-    if (packageFile.open(std::iostream::WriteOnly)) {
-        packageFile.write("{\n  \"name\": \"extracted-extension\",\n  \"version\": \"1.0.0\"\n}");
-        packageFile.close();
-    }
+    // Fallback: Try 'tar' (Windows 10 newer builds, and safer if PWSH restricted)
+    // -xf to extract
+    std::string tarCmd = "tar -xf \"" + vsixPath + "\" -C \"" + destination + "\"";
+    result = std::system(tarCmd.c_str());
     
-    return true;
+    return (result == 0);
 }
 
 bool VsixInstaller::activateExtension(const std::string& extensionPath) {
-    // In a real implementation, this would register the extension with the IDE
-    // For now, we'll just simulate success
+    // Logic: Register in some registry or JSON file.
+    // For now, we assume filesystem presence is enough for loaders.
     return true;
 }
 
 bool VsixInstaller::deactivateExtension(const std::string& extensionId) {
-    // In a real implementation, this would unregister the extension from the IDE
-    // For now, we'll just simulate success
     return true;
 }
 
+bool VsixInstaller::uninstallExtension(const std::string& extensionId) {
+    std::string path = getExtensionInstallPath(extensionId);
+    if (!fs::exists(path)) {
+        if (uninstallCompleted) uninstallCompleted(extensionId, false);
+        return false;
+    }
+    
+    std::error_code ec;
+    fs::remove_all(path, ec);
+    
+    bool success = !ec;
+    if (uninstallCompleted) uninstallCompleted(extensionId, success);
+    return success;
+}
+
+bool VsixInstaller::isExtensionInstalled(const std::string& extensionId) {
+    std::string path = getExtensionInstallPath(extensionId);
+    return fs::exists(path);
+}
+
 std::string VsixInstaller::getExtensionsDirectory() {
-    std::string appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    if (appData.empty()) {
-        return std::string();
+    // Real AppData path
+    PWSTR path = NULL;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &path))) {
+        std::wstring wpath(path);
+        CoTaskMemFree(path);
+        
+        std::string appData = WideToAnsi(wpath);
+        std::string extDir = appData + "\\RawrXD\\extensions";
+        fs::create_directories(extDir);
+        return extDir;
     }
-    
-    std::string extensionsDir = // (appData).filePath("extensions");
-    // dir(extensionsDir);
-    if (!dir.exists()) {
-        if (!dir.mkpath(".")) {
-            return std::string();
-        }
-    }
-    
-    return extensionsDir;
+    return "C:\\RawrXD\\extensions"; // Fallback
+}
+
+std::string VsixInstaller::getExtensionInstallPath(const std::string& extensionId) {
+    return getExtensionsDirectory() + "\\" + extensionId;
 }
 
 void VsixInstaller::cleanupTempFiles() {
-    // Clean up any temporary files
+    std::lock_guard<std::mutex> lock(m_mutex);
     for (const auto& info : m_activeInstallations) {
-        if (info.file && info.file->exists()) {
-            info.file->remove();
+        if (fs::exists(info.tempFilePath)) {
+            std::error_code ec;
+            fs::remove(info.tempFilePath, ec);
         }
     }
     m_activeInstallations.clear();
 }
-

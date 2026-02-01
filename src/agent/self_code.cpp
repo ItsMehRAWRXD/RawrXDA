@@ -24,7 +24,7 @@ static bool writeFileContent(const std::string& path, const std::string& content
     return true;
 }
 
-static bool runProcess(const std::string& cmd, const std::vector<std::string>& args) {
+bool SelfCode::runProcess(const std::string& cmd, const std::vector<std::string>& args) {
     std::string commandLine = cmd;
     for (const auto& arg : args) {
         commandLine += " \"" + arg + "\"";
@@ -114,18 +114,71 @@ bool SelfCode::regenerateMOC(const std::string& header) {
     return true;
 }
 
+bool SelfCode::createFile(const std::string& filePath,
+                          const std::string& content) {
+    if (fs::exists(filePath)) {
+        m_lastError = "File already exists: " + filePath;
+        return false;
+    }
+    // Ensure directory exists
+    try {
+        fs::path p(filePath);
+        if (p.has_parent_path()) {
+            fs::create_directories(p.parent_path());
+        }
+    } catch (const fs::filesystem_error& e) {
+        m_lastError = "Could not create directory for " + filePath + ": " + e.what();
+        return false;
+    }
+    
+    return writeFileContent(filePath, content);
+}
+
 bool SelfCode::rebuildTarget(const std::string& target,
                              const std::string& config) {
     // "cmake --build build --config <config> --target <target>"
     std::vector<std::string> args = {"--build", "build", "--config", config, "--target", target};
-    if (!runProcess("cmake", args))
+    if (!runProcess("cmake", args)) {
+        m_lastError = "CMake build failed for target: " + target;
         return false;
+    }
+
+    // Skip verification for meta-targets
+    if (target == "ALL_BUILD" || target == "ZERO_CHECK" || target == "install") {
+        return true;
+    }
 
     // Verify binary exists
-    // Assuming structure: build/bin/<target>.exe or similar
-    // The original code looked for RawrXD-QtShell.exe, but we are renaming/refactoring things.
-    // Let's just check if build folder exists for now or trust cmake exit code.
-    return true;
+    // Common output paths for CMake on Windows
+    std::vector<std::string> potentialPaths = {
+        "build/" + config + "/" + target + ".exe",
+        "build/bin/" + config + "/" + target + ".exe",
+        "build/" + target + ".exe",
+        "build/bin/" + target + ".exe"
+    };
+
+    for (const auto& p : potentialPaths) {
+        if (fs::exists(p)) return true;
+    }
+
+    // Recursive search fallback
+    if (fs::exists("build")) {
+        try {
+            for (const auto& entry : fs::recursive_directory_iterator("build")) {
+                if (entry.is_regular_file() && entry.path().extension() == ".exe") {
+                    // Check if stem matches target (case-insensitive on Windows usually, but let's do sensitive for now or relaxed)
+                    if (entry.path().stem().string() == target) {
+                        return true;
+                    }
+                }
+            }
+        } catch (...) {
+            // Identifier permission errors or other FS issues
+        }
+    }
+
+    m_lastError = "Build successful but binary not found for target: " + target;
+    return false;
 }
 
 bool SelfCode::replaceInFile(const std::string& path,

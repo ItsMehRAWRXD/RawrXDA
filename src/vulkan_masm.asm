@@ -542,12 +542,37 @@ FreeTensorMemory:
 
 ; QuantizeToInt8: Optimized INT8 quantization
 QuantizeToInt8:
-    ; Perform INT8 quantization using SIMD instructions
-    ; Placeholder for optimized INT8 logic
-    mov rax, 0  ; Simulate success
+    ; Real INT8 quantization logic
+    ; Input: rsi = src (float*), rdi = dst (int8_t*), rdx = size (number of floats)
+    ; Output: rax = 0
+    push rbx
+    push rcx
+    xor rcx, rcx        ; i = 0
+    movss xmm1, [zero_point_five]
+INT8_quant_loop:
+    cmp rcx, rdx
+    jge INT8_quant_done
+    movss xmm0, dword [rsi + rcx*4]
+    addss xmm0, xmm1
+    cvttss2si eax, xmm0
+    cmp eax, 127
+    jle INT8_no_clamp_max
+    mov eax, 127
+INT8_no_clamp_max:
+    cmp eax, -128
+    jge INT8_no_clamp_min
+    mov eax, -128
+INT8_no_clamp_min:
+    mov [rdi + rcx], al
+    inc rcx
+    jmp INT8_quant_loop
+INT8_quant_done:
+    xor rax, rax
+    pop rcx
+    pop rbx
     ret
 
-; QuantizeToFloat16: Optimized FP16 quantization
+; QuantizeToBFloat16: Optimized BF16 quantization
 QuantizeToBFloat16:
     ; Real, fast BF16 quantization logic
     ; Input: rsi = src (float*), rdi = dst (uint16_t*), rdx = size (number of floats)
@@ -596,7 +621,7 @@ BF16_done:
     pop rbx
     ret
 
-; QuantizeToBFloat16: Optimized BF16 quantization
+; QuantizeToFloat16: Optimized FP16 quantization
 QuantizeToFloat16:
     ; Real, fast FP16 quantization logic
     ; Input: rsi = src (float*), rdi = dst (uint16_t*), rdx = size (number of floats)
@@ -673,80 +698,23 @@ Float32ToFloat16:
 ; -----------------------
 ; Optimized automatic tensor quantization
 ; Input: rdi = pointer to tensor, rsi = pointer to data, rdx = size in bytes, rcx = quantization type
-; Output: rax = success/failureand buffer (stubbed as 0)
-AcquireCommandBuffer:
-; Use a jump table for quantization typeslogic. Replace for internal backend.
-cmp rcx, 2
-ja QuantizationError  ; If type > 2, unsupported
+; Output: rax = success/failure
 
-lea r8, [QuantizationJumpTable]
-mov rax, [r8 + rcx * 8]  ; Load address of quantization handler
-jmp raxts a command buffer for execution (stub).
-; Input: RDI = pointer to command buffer
-QuantizationJumpTable:b)
+OptimizedQuantizeTensor:
+    cmp rcx, 2
+    ja QuantizationError
+
+    lea r8, [QuantizationJumpTable]
+    mov rax, [r8 + rcx * 8]  ; Load address of quantization handler
+    jmp rax
+
+QuantizationJumpTable:
     dq QuantizeToInt8
-    dq QuantizeToFloat16 No real submit logic. Replace for internal backend.
+    dq QuantizeToFloat16
     dq QuantizeToBFloat16
 
-QuantizationError:ers
-    mov rax, -1  ; Unsupported quantization type
-    ret for all command buffers to complete execution (stub).
-; Output: RAX = 0 (stub)
-QuantizeToInt8:
-    ; Real INT8 quantization logic
-    ; Input: rsi = src (float*), rdi = dst (int8_t*), rdx = size (number of floats)
-    ; Output: rax = 0
-    push rbx
-    push rcx
-    xor rcx, rcx        ; i = 0
-    movss xmm1, [zero_point_five]
-INT8_quant_loop:
-    cmp rcx, rdx
-    jge INT8_quant_done
-    movss xmm0, dword [rsi + rcx*4]
-    addss xmm0, xmm1
-    cvttss2si eax, xmm0
-    cmp eax, 127
-    jle INT8_no_clamp_max
-    mov eax, 127
-INT8_no_clamp_max:
-    cmp eax, -128
-    jge INT8_no_clamp_min
-    mov eax, -128
-INT8_no_clamp_min:
-    mov [rdi + rcx], al
-    inc rcx
-    jmp INT8_quant_loop
-INT8_quant_done:
-    xor rax, rax
-    pop rcx
-    pop rbx
-    ret
-    ; Transfer tensor data from host to GPU memory
-QuantizeToFloat16: pointer to tensor, rsi = pointer to host data, rdx = size in bytes
-    ; Perform FP16 quantizationlure
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    ret    mov rax, -2  ; Quantization failedQuantizationError:    ret    mov rax, -1  ; Allocation failedAllocationError:    ret    js QuantizationError    test rax, rax    call OptimizedQuantizeTensor    mov rcx, rcx  ; Pass quantization type    ; Placeholder for optimized FP16 logicransfer logic
-    mov rax, 0
-    ret
-TransferTensorToHost:
-QuantizeToBFloat16:or data from GPU to host memory
-    ; Perform BF16 quantizationsensor, rsi = pointer to host buffer, rdx = size in bytes
-    ; Placeholder for optimized BF16 logic
-    mov rax, 0  ; Placeholder for tensor transfer logic
+QuantizationError:
+    mov rax, -2  ; Quantization failed
     ret
 
 IntegrateQuantization:
@@ -773,8 +741,4 @@ IntegrateQuantization:
 
 AllocationError:
     mov rax, -1  ; Allocation failed
-    ret
-
-QuantizationError:
-    mov rax, -2  ; Quantization failed
     ret

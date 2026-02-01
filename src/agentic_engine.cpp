@@ -1,180 +1,190 @@
-// Agentic Engine - Production-Ready AI Core
 #include "agentic_engine.h"
-#include "debug_logger.h"
-#include "action_executor.h"
 #include <iostream>
-#include <fstream>
 #include <thread>
-#include <chrono>
-#include <filesystem>
-#include <cstdlib>
-#include <algorithm>
-#include <vector>
-#include <sstream>
+#include <fstream>
+#include "action_executor.h"
 
 AgenticEngine::AgenticEngine() 
-    : m_modelLoaded(false), 
-      m_inferenceEngine(nullptr),
-      m_totalInteractions(0),
-      m_positiveResponses(0)
+    : m_modelLoaded(false), m_inferenceEngine(nullptr)
 {
+    // Lazy init router but explicit
+    m_router = std::make_shared<RawrXD::UniversalModelRouter>();
+    m_currentModelPath = "local-default"; // Default
+    
+    // Explicit Logic: Set up Router for Titan
+    RawrXD::ModelConfig cfg;
+    cfg.backend = RawrXD::ModelBackend::LOCAL_TITAN;
+    cfg.model_id = "titan-embedded";
+    m_router->registerModel("titan-embedded", cfg);
+    m_currentModelPath = "titan-embedded";
 }
 
-AgenticEngine::~AgenticEngine()
-{
-    m_feedbackHistory.clear();
-    m_responseRatings.clear();
+AgenticEngine::~AgenticEngine() = default;
+
+json AgenticEngine::planTask(const std::string& goal) {
+     // Explicit Logic: Ask LLM to generate a plan
+     std::string prompt = "Generate a JSON plan for: " + goal + "\nFormat: [{\"type\": \"file_edit\", \"target\": \"...\", ...}]";
+     std::string response = processQuery(prompt);
+     
+     try {
+         // Attempt to parse AI response as JSON
+         // Simple heuristic: find [ ... ]
+         size_t start = response.find('[');
+         size_t end = response.rfind(']');
+         if (start != std::string::npos && end != std::string::npos) {
+             std::string jsonStr = response.substr(start, end - start + 1);
+             return json::parse(jsonStr);
+         }
+     } catch (...) {}
+     
+     // Fallback: Return a single generic action if parsing fails
+     return json::array({
+         {{"type", "unknown"}, {"description", "Could not parse AI plan"}, {"raw", response}}
+     });
 }
 
 void AgenticEngine::initialize() {
-    m_userPreferences["language"] = "C++";
-    m_userPreferences["style"] = "modern";
-    m_userPreferences["verbosity"] = "detailed";
+    // Initialization logic
+    m_userPreferences["temperature"] = "0.7";
+}
+
+void AgenticEngine::shutdown() {
+    // Shutdown logic
+}
+
+std::string AgenticEngine::processQuery(const std::string& query) {
+    if (m_router && !m_currentModelPath.empty()) {
+        return m_router->routeQuery(m_currentModelPath, buildPrompt(query), m_genConfig.temperature);
+    }
+    return "AgenticEngine: Model not ready.";
+}
+
+void AgenticEngine::processQueryAsync(const std::string& query, std::function<void(std::string)> callback) {
+    std::thread([this, query, callback]() {
+        std::string response = this->processQuery(query);
+        if (callback) callback(response);
+    }).detach();
+}
+
+void AgenticEngine::updateConfig(const GenerationConfig& config) {
+    m_genConfig = config;
+}
+
+void AgenticEngine::clearHistory() {
+    m_history.clear();
+}
+
+void AgenticEngine::appendSystemPrompt(const std::string& prompt) {
+    m_systemPrompt += prompt + "\n";
+}
+
+void AgenticEngine::loadContext(const std::string& filepath) {
+    std::ifstream f(filepath);
+    if (!f.is_open()) return;
     
-    m_genConfig.temperature = 0.8f;
-    m_genConfig.topP = 0.9f;
-    m_genConfig.maxTokens = 512;
+    m_history.clear();
+    std::string line;
+    std::string query, response;
+    bool parsingQuery = true;
+    
+    while (std::getline(f, line)) {
+        if (line == "---") {
+            if (!query.empty()) {
+                m_history.push_back({query, response});
+                query.clear();
+                response.clear();
+            }
+            parsingQuery = true;
+            continue;
+        }
+        
+        if (line.rfind("U: ", 0) == 0) {
+            parsingQuery = true;
+            query += line.substr(3) + "\n";
+        } else if (line.rfind("A: ", 0) == 0) {
+            parsingQuery = false;
+            response += line.substr(3) + "\n";
+        } else {
+            if (parsingQuery) query += line + "\n";
+            else response += line + "\n";
+        }
+    }
+    if (!query.empty()) {
+        m_history.push_back({query, response});
+    }
+}
+
+void AgenticEngine::saveContext(const std::string& filepath) {
+    std::ofstream f(filepath);
+    if (!f.is_open()) return;
+    
+    for (const auto& pair : m_history) {
+        f << "U: " << pair.first << "\n";
+        f << "A: " << pair.second << "\n";
+        f << "---\n";
+    }
+}
+
+std::vector<std::string> AgenticEngine::getAvailableModels() {
+    if (m_router) {
+        return m_router->getAvailableModels();
+    }
+    // Fallback if router not initialized
+    return {};
+}
+
+std::string AgenticEngine::getCurrentModel() {
+    return m_currentModelPath;
 }
 
 void AgenticEngine::setModel(const std::string& modelPath) {
-    if (modelPath.empty()) {
-        m_modelLoaded = false;
-        return;
-    }
+    if (modelPath.empty()) return;
     
-    std::thread([this, modelPath]() {
-        bool success = loadModelAsync(modelPath);
-        m_modelLoaded = success;
-        m_currentModelPath = modelPath;
-        
-        if (onModelLoadingFinished) onModelLoadingFinished(success, modelPath);
-        if (onModelReady) onModelReady(success);
-    }).detach();
+    // Validate with router if possible
+    if (m_router) {
+        if (!m_router->isModelAvailable(modelPath)) {
+             // Attempt auto-registration for local paths
+             if (std::filesystem::exists(modelPath)) {
+                 RawrXD::ModelConfig cfg;
+                 cfg.backend = RawrXD::ModelBackend::LOCAL_GGUF;
+                 cfg.model_id = modelPath;
+                 m_router->registerModel(modelPath, cfg);
+             }
+        }
+    }
+
+    m_currentModelPath = modelPath;
+    m_modelLoaded = true; // Router handles actual loading lazily
+    
+    if (onModelLoadingFinished) onModelLoadingFinished(true, "");
+    if (onModelReady) onModelReady(true);
 }
 
 void AgenticEngine::setModelName(const std::string& modelName) {
-    std::string ggufPath = resolveGgufPath(modelName);
-    
-    if (!ggufPath.empty()) {
-        setModel(ggufPath);
-    } else {
-        m_modelLoaded = false;
-        if (onModelLoadingFinished) onModelLoadingFinished(false, "NO_GGUF_FILE:" + modelName);
-        if (onModelReady) onModelReady(false);
-    }
-}
-
-std::string AgenticEngine::resolveGgufPath(const std::string& modelName) {
-    // Search for GGUF file in Ollama models directory
-    char* userProfile;
-    size_t len;
-    _dupenv_s(&userProfile, &len, "USERPROFILE");
-    std::string homeDir = userProfile ? userProfile : "";
-    free(userProfile);
-
-    std::vector<std::string> searchPaths = {
-        "D:/OllamaModels",
-        homeDir + "/.ollama/models"
-    };
-    
-    // Extract base model name (e.g., "llama3.2" from "llama3.2:3b")
-    std::string baseName = modelName;
-    size_t colonPos = modelName.find(':');
-    if (colonPos != std::string::npos) {
-        baseName = modelName.substr(0, colonPos);
-    }
-
-    for (const std::string& searchPath : searchPaths) {
-        if (!std::filesystem::exists(searchPath)) continue;
-        
-        try {
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(searchPath)) {
-                if (entry.is_regular_file()) {
-                    std::string filename = entry.path().filename().string();
-                    std::string fullPath = entry.path().string();
-                    
-                    // Convert to lower case for case-insensitive search
-                    std::string lowerFilename = filename;
-                    std::transform(lowerFilename.begin(), lowerFilename.end(), lowerFilename.begin(), ::tolower);
-                    std::string lowerBase = baseName;
-                    std::transform(lowerBase.begin(), lowerBase.end(), lowerBase.begin(), ::tolower);
-
-                    if (lowerFilename.find(lowerBase) != std::string::npos && 
-                        lowerFilename.find(".gguf") != std::string::npos) {
-                        return fullPath;
-                    }
-                }
-            }
-        } catch (...) {}
-    }
-    
-    return "";
-}
-
-bool AgenticEngine::loadModelAsync(const std::string& modelPath) {
-    auto self = this;
-    std::thread([self, modelPath]() {
-        // Check if file exists
-        if (!std::filesystem::exists(modelPath)) {
-            self->m_modelLoaded = false;
-            if (self->m_onModelReady) self->m_onModelReady(false, modelPath);
-            return;
-        }
-
-        // Simulate intensive model validation/loading
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        
-        self->m_currentModel = modelPath;
-        self->m_modelLoaded = true;
-        
-        if (self->m_onModelReady) self->m_onModelReady(true, modelPath);
-    }).detach();
-
-    return true;
+    m_currentModelPath = modelName;
+    m_modelLoaded = true;
+    if (onModelLoadingFinished) onModelLoadingFinished(true, "");
+    if (onModelReady) onModelReady(true);
 }
 
 void AgenticEngine::processMessage(const std::string& message, const std::string& editorContext) {
-    std::string response = generateResponse(message);
+    std::string prompt = message;
+    if (!editorContext.empty()) {
+        prompt += "\nContext:\n" + editorContext;
+    }
+    std::string response = processQuery(prompt);
     if (onResponseReady) onResponseReady(response);
 }
 
-std::string AgenticEngine::analyzeCode(const std::string& code) { return "Analysis of " + std::to_string(code.length()) + " bytes"; }
-json AgenticEngine::analyzeCodeQuality(const std::string& code) { return {{"score", 0.85}, {"issues", json::array()}}; }
-json AgenticEngine::detectPatterns(const std::string& code) { return json::array({"factory", "singleton"}); }
-json AgenticEngine::calculateMetrics(const std::string& code) { return {{"complexity", 5}, {"loc", 100}}; }
-std::string AgenticEngine::suggestImprovements(const std::string& code) { return "Consider using std::unique_ptr"; }
-
-std::string AgenticEngine::generateCode(const std::string& prompt) { return "// Generated code for: " + prompt; }
-std::string AgenticEngine::generateFunction(const std::string& sig, const std::string& desc) { return sig + " { /* " + desc + " */ }"; }
-std::string AgenticEngine::generateClass(const std::string& name, const json& spec) { return "class " + name + " {};"; }
-std::string AgenticEngine::generateTests(const std::string& code) { return "// Tests for code"; }
-std::string AgenticEngine::refactorCode(const std::string& code, const std::string& type) { return code; }
-
-json AgenticEngine::planTask(const std::string& goal) { return json::array({ {{"type", "search"}, {"target", goal}} }); }
-json AgenticEngine::decomposeTask(const std::string& task) { return {{"subtasks", json::array({task})}}; }
-json AgenticEngine::generateWorkflow(const std::string& proj) { return json::array(); }
-std::string AgenticEngine::estimateComplexity(const std::string& task) { return "Medium"; }
-
-std::string AgenticEngine::understandIntent(const std::string& input) { return "user_request"; }
-json AgenticEngine::extractEntities(const std::string& text) { return json::object(); }
-std::string AgenticEngine::generateNaturalResponse(const std::string& q, const json& ctx) { return "I understand."; }
-std::string AgenticEngine::summarizeCode(const std::string& code) { return "A code snippet."; }
-std::string AgenticEngine::explainError(const std::string& err) { return "Error: " + err; }
-
-void AgenticEngine::collectFeedback(const std::string& id, bool pos, const std::string& cmd) {
-    m_totalInteractions++;
-    if (pos) m_positiveResponses++;
+std::string AgenticEngine::buildPrompt(const std::string& query) {
+    std::string fullPrompt = m_systemPrompt;
+    for (const auto& pair : m_history) {
+        fullPrompt += "User: " + pair.first + "\nAssistant: " + pair.second + "\n";
+    }
+    fullPrompt += "User: " + query + "\nAssistant:";
+    return fullPrompt;
 }
-void AgenticEngine::trainFromFeedback() {}
-json AgenticEngine::getLearningStats() const { return {{"accuracy", (double)m_positiveResponses/m_totalInteractions}}; }
-void AgenticEngine::adaptToUserPreferences(const json& pref) {}
 
-bool AgenticEngine::validateInput(const std::string& input) { return true; }
-std::string AgenticEngine::sanitizeCode(const std::string& code) { return code; }
-bool AgenticEngine::isCommandSafe(const std::string& cmd) { return true; }
-
-std::string AgenticEngine::grepFiles(const std::string& pat, const std::string& p) { return "Matches for " + pat; }
-std::string AgenticEngine::readFile(const std::string& f, int s, int e) { return "File content"; }
-std::string AgenticEngine::searchFiles(const std::string& q, const std::string& p) { return "Files matching " + q; }
-std::string AgenticEngine::referenceSymbol(const std::string& sym) { return "Symbol " + sym; }
-
+void AgenticEngine::logInteraction(const std::string& query, const std::string& response) {
+    m_history.push_back({query, response});
+}

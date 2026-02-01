@@ -2,6 +2,14 @@
 #ifndef PERFORMANCE_MONITOR_H
 #define PERFORMANCE_MONITOR_H
 
+#include <chrono>
+#include <string>
+#include <vector>
+#include <map>
+#include <unordered_map>
+#include <mutex>
+#include <thread>
+#include <atomic>
 
 struct MetricData {
     std::string metricId;
@@ -9,7 +17,7 @@ struct MetricData {
     std::string operation;
     double value;
     std::string unit;
-    void* tags;
+    std::map<std::string, std::string> tags;
     std::chrono::system_clock::time_point timestamp;
 };
 
@@ -86,14 +94,14 @@ private:
     std::string timerId;
 };
 
-class PerformanceMonitor : public void {
+class PerformanceMonitor {
 
 public:
     explicit PerformanceMonitor(void* parent = nullptr);
     ~PerformanceMonitor();
 
     void recordMetric(const std::string& component, const std::string& operation, double value, const std::string& unit = "ms");
-    void recordMetricWithTags(const std::string& component, const std::string& operation, double value, const std::string& unit, const void*& tags);
+    void recordMetricWithTags(const std::string& component, const std::string& operation, double value, const std::string& unit, const std::map<std::string, std::string>& tags);
     void startTimer(const std::string& timerId, const std::string& component, const std::string& operation);
     double stopTimer(const std::string& timerId);
     ScopedTimer createScopedTimer(const std::string& component, const std::string& operation);
@@ -156,6 +164,14 @@ private:
     int snapshotIntervalMs;
     int metricsRetentionHours;
     void** snapshotTimer;
+
+    // Add thread for snapshot
+    std::thread m_monitorThread;
+    std::atomic<bool> m_running;
+    std::mutex m_mutex;
+    int m_snapshotIntervalMs = 1000;
+
+    void monitoringLoop();
 };
 
 #endif // PERFORMANCE_MONITOR_H

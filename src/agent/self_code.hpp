@@ -13,6 +13,9 @@ public:
 
     bool regenerateMOC(const std::string& header);
 
+    bool createFile(const std::string& filePath,
+                    const std::string& content);
+
     bool rebuildTarget(const std::string& target,
                        const std::string& config = "Release");
 

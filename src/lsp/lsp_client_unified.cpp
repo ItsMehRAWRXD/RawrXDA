@@ -198,6 +198,10 @@ public:
         return true;
     }
     
+#include <nlohmann/json.hpp>
+
+// ...existing code...
+
     // REPLACES STUB: textDocument/completion
     std::vector<CompletionItem> get_completions(const std::string& file_path,
                                                int line, int character,
@@ -208,7 +212,26 @@ public:
         std::string response = send_request("textDocument/completion", params);
         
         std::vector<CompletionItem> items;
-        // Parse response and populate items
+        try {
+             auto j = nlohmann::json::parse(response);
+             if (j.contains("result") && !j["result"].is_null()) {
+                 auto result = j["result"];
+                 // Result can be CompletionList (with "items") or array of items
+                 auto itemList = result.is_array() ? result : (result.contains("items") ? result["items"] : nlohmann::json::array());
+                 
+                 for (const auto& item : itemList) {
+                     CompletionItem ci;
+                     ci.label = item.value("label", "");
+                     ci.detail = item.value("detail", "");
+                     ci.documentation = item.value("documentation", "");
+                     ci.kind = item.value("kind", 0);
+                     ci.insertText = item.value("insertText", ci.label);
+                     items.push_back(ci);
+                 }
+             }
+        } catch (...) {
+             // Handle parsing errors gracefully
+        }
         return items;
     }
     
@@ -220,11 +243,23 @@ public:
         std::string params = build_position_params(file_path, line, character);
         std::string response = send_request("textDocument/hover", params);
         
-        if (response.empty()) return std::nullopt;
-        
-        HoverInfo info;
-        info.contents = response;
-        return info;
+        try {
+            auto j = nlohmann::json::parse(response);
+             if (j.contains("result") && !j["result"].is_null()) {
+                 auto result = j["result"];
+                 HoverInfo info;
+                 if (result.contains("contents")) {
+                     auto contents = result["contents"];
+                     if (contents.is_string()) {
+                         info.contents = contents.get<std::string>();
+                     } else if (contents.is_object() && contents.contains("value")) {
+                         info.contents = contents["value"].get<std::string>();
+                     }
+                     return info;
+                 }
+             }
+        } catch (...) { }
+        return std::nullopt;
     }
     
     // REPLACES STUB: textDocument/definition
@@ -236,9 +271,29 @@ public:
         std::string response = send_request("textDocument/definition", params);
         
         std::vector<Location> locations;
-        // Parse response and populate locations
+        try {
+            auto j = nlohmann::json::parse(response);
+            if (j.contains("result") && !j["result"].is_null()) {
+                auto result = j["result"];
+                auto locs = result.is_array() ? result : nlohmann::json::array({result});
+                for(const auto& l : locs) {
+                    Location loc;
+                    loc.uri = l.value("uri", "");
+                    if(l.contains("range")) {
+                        auto r = l["range"];
+                        loc.range.start.line = r["start"].value("line", 0);
+                        loc.range.start.character = r["start"].value("character", 0);
+                        loc.range.end.line = r["end"].value("line", 0);
+                        loc.range.end.character = r["end"].value("character", 0);
+                    }
+                    locations.push_back(loc);
+                }
+            }
+        } catch (...) {}
         return locations;
     }
+    
+// ...existing code...
     
     // REPLACES STUB: textDocument/references
     std::vector<Location> get_references(const std::string& file_path,

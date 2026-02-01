@@ -1,17 +1,31 @@
 #include "planner.hpp"
 #include "self_patch.hpp"
+#include "self_code.hpp"
 #include "release_agent.hpp"
 #include "meta_learn.hpp"
 #include "self_test_gate.hpp"
+#include "ide_agent_bridge_hot_patching_integration.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <thread>
 
 using json = nlohmann::json;
 
+// Global bridge instance to keep proxy alive
+std::unique_ptr<IDEAgentBridgeWithHotPatching> g_bridge;
+
 int main(int argc, char *argv[]) {
+    // Initialize Hot Patching Bridge
+    g_bridge = std::make_unique<IDEAgentBridgeWithHotPatching>();
+    g_bridge->initializeWithHotPatching();
+    g_bridge->startHotPatchingProxy();
+    
+    // Allow proxy to settle
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     if (argc < 2) {
         
         return 1;
@@ -42,6 +56,7 @@ int main(int argc, char *argv[]) {
     SelfPatch patch;
     ReleaseAgent rel;
     MetaLearn ml;
+    SelfCode sc; // Added SelfCode instance
 
     bool success = true;
     size_t taskCount = 0;
@@ -53,6 +68,9 @@ int main(int argc, char *argv[]) {
         }
         std::string type = task.value("type", "");
         ++taskCount;
+
+        // Log task
+        std::cout << "Executing task: " << type << std::endl;
 
         if (type == "add_kernel") {
             success = patch.addKernel(task.value("target", ""), task.value("template", ""));
@@ -69,6 +87,27 @@ int main(int argc, char *argv[]) {
                 deps = task.value("deps", "");
             }
             success = patch.addCpp(task.value("target", ""), deps);
+        } else if (type == "self_code" || type == "edit_source") {
+             success = sc.editSource(
+                task.value("file", ""),
+                task.value("old_code", ""),
+                task.value("new_code", "")
+            );
+        } else if (type == "create_file") {
+            success = sc.createFile(
+                task.value("target", ""), // Planner puts filename in 'target'
+                task.value("content", "")
+            );
+        } else if (type == "add_include") {
+            success = sc.addInclude(
+                task.value("file", ""),
+                task.value("include", "")
+            );
+        } else if (type == "rebuild_target") {
+            success = sc.rebuildTarget(
+                task.value("target", ""),
+                 task.value("config", "Release")
+            );
         } else if (type == "build") {
             std::string cmd = "cmake --build build --config Release";
             std::string target = task.value("target", "");

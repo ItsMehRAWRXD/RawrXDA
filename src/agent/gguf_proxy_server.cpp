@@ -4,6 +4,11 @@
 #include <sstream>
 #include <algorithm>
 #include <nlohmann/json.hpp>
+#include <regex>
+#include <cctype>
+#include <WS2tcpip.h>
+
+#pragma comment(lib, "ws2_32.lib")
 
 using json = nlohmann::json;
 
@@ -28,6 +33,10 @@ bool GGUFProxyServer::startServer() {
 
     m_listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (m_listenSocket == INVALID_SOCKET) return false;
+
+    // Helper: Allow address reuse (Explicit missing logic)
+    char opt = 1;
+    setsockopt(m_listenSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     sockaddr_in service;
     service.sin_family = AF_INET;
@@ -104,7 +113,13 @@ SOCKET GGUFProxyServer::connectToBackend() {
         return INVALID_SOCKET;
     }
 
-    if (// connect removed
+    // Explicit missing logic: Set timeouts to prevent hanging
+    DWORD timeout = 30000; // 30 seconds
+    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+    setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
+
+    if (connect(s, result->ai_addr, (int)result->ai_addrlen) == SOCKET_ERROR) {
+        closesocket(s);
         s = INVALID_SOCKET;
     }
 
@@ -112,109 +127,144 @@ SOCKET GGUFProxyServer::connectToBackend() {
     return s;
 }
 
-// Simple Helper to read Utils
-static std::string readRequest(SOCKET s) {
+// Helper to read full HTTP message
+static bool readFullMessage(SOCKET s, std::string& headers, std::string& body) {
     char buf[4096];
-    std::string total;
-    while (true) {
-        int bytes = recv(s, buf, sizeof(buf), 0);
-        if (bytes <= 0) break;
-        total.append(buf, bytes);
-        // Simple heuristic: end of headers. 
-        // Real implementation should parse content-length.
-        if (total.find("\r\n\r\n") != std::string::npos) {
-            // If just GET, we might be done. If POST, check Content-Length.
-            // Simplified: just return what we got for forwarding.
-            // Assuming small requests for prompt.
-            break; 
+    std::string raw;
+    int headerEnd = -1;
+    
+    // Read Headers
+    while(true) {
+        int r = recv(s, buf, sizeof(buf), 0);
+        if (r <= 0) return false;
+        raw.append(buf, r);
+        
+        size_t pos = raw.find("\r\n\r\n");
+        if (pos != std::string::npos) {
+            headerEnd = (int)pos;
+            break;
         }
+        if (raw.size() > 16384) return false; 
     }
-    return total;
+    
+    headers = raw.substr(0, headerEnd + 4);
+    body = raw.substr(headerEnd + 4); 
+    
+    // Parse Content-Length
+    int contentLength = 0;
+    std::string lowerHeaders = headers;
+    std::transform(lowerHeaders.begin(), lowerHeaders.end(), lowerHeaders.begin(), 
+        [](unsigned char c){ return std::tolower(c); });
+    
+    size_t clPos = lowerHeaders.find("content-length: ");
+    if (clPos != std::string::npos) {
+        size_t endLine = lowerHeaders.find("\r\n", clPos);
+        std::string val = headers.substr(clPos + 16, endLine - (clPos + 16));
+        try { contentLength = std::stoi(val); } catch (...) { contentLength = 0; }
+    }
+    
+    // Read remaining body
+    while (body.size() < (size_t)contentLength) {
+        int r = recv(s, buf, sizeof(buf), 0);
+        if (r <= 0) break; 
+        body.append(buf, r);
+    }
+    
+    return true;
 }
 
 void GGUFProxyServer::handleClient(SOCKET clientSocket) {
-    SOCKET serverSocket = connectToBackend();
-    if (serverSocket == INVALID_SOCKET) {
-        closesocket(clientSocket);
+    auto closeSockets = [&](SOCKET s1, SOCKET s2) {
+        if (s1 != INVALID_SOCKET) closesocket(s1);
+        if (s2 != INVALID_SOCKET) closesocket(s2);
+    };
+
+    std::string reqHeaders, reqBody;
+    if (!readFullMessage(clientSocket, reqHeaders, reqBody)) {
+        closeSockets(clientSocket, INVALID_SOCKET);
         return;
     }
 
-    // 1. Read Request from Client
-    char buffer[8192];
-    int bytesRecv = recv(clientSocket, buffer, sizeof(buffer), 0);
-    if (bytesRecv > 0) {
-        // Forward to backend
-        send(serverSocket, buffer, bytesRecv, 0);
+    // Explicit missing logic: Track bytes transferred
+    m_bytesTransferred += (reqHeaders.size() + reqBody.size());
+
+    SOCKET serverSocket = connectToBackend();
+    if (serverSocket == INVALID_SOCKET) {
+        std::string err = "HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n";
+        send(clientSocket, err.c_str(), (int)err.size(), 0);
+        
+        // Track error bytes
+        m_bytesTransferred += err.size();
+        
+        closeSockets(clientSocket, INVALID_SOCKET);
+        return;
     }
 
-    // 2. Read Response from Backend
-    // We need to capture the full response to patch, or stream pass-through.
-    // If we patch, we must buffer the whole JSON.
-    
-    std::string responseData;
-    while (true) {
-        int r = recv(serverSocket, buffer, sizeof(buffer), 0);
-        if (r <= 0) break;
-        responseData.append(buffer, r);
-        // Check if complete? (Simplified: wait for close or timeout in real usage, 
-        // but here we just read as much as possible? No, HTTP keeps alive.)
-        // We really need Content-Length parsing.
-        
-        // Simplified Logic: 
-        // If we see "}" at the end of body, we might assume JSON done?
-        // Or we just relay chunks if we can't patch safely.
+    // Extract context from request
+    json context;
+    try {
+        if (!reqBody.empty() && reqBody[0] == '{') {
+             context = json::parse(reqBody);
+        }
+    } catch(const std::exception& e) {
+        // Log JSON parsing error
+        std::cerr << "Error parsing request context: " << e.what() << std::endl;
     }
-    
-    // 3. Patch logic (Mocked for safety if incomplete read)
-    // In a real robust proxy, we parse HTTP. 
-    // Here we will try to find the JSON body.
-    
-    size_t headerEnd = responseData.find("\r\n\r\n");
-    if (headerEnd != std::string::npos && m_hotPatcher) {
-        std::string headers = responseData.substr(0, headerEnd);
-        std::string body = responseData.substr(headerEnd + 4);
-        
-        // Check if JSON
-        // If content-type json...
-        
-        // Call patcher
-        // Note: interceptModelOutput returns a json object now in our new API, or we adapted it.
-        // Let's assume body is the model output string.
-        
-        // This part requires `AgentHotPatcher` to be thread safe (it has mutex).
-        // Adapt input to patcher
-        json context; // empty context
-        json patched = m_hotPatcher->interceptModelOutput(body, context);
-        
-        if (patched["modified"].get<bool>()) {
-             // Reconstruct response
-             std::string newBody;
-             if (patched.contains("final_output")) {
-                 newBody = patched["final_output"].dump();
-             } else {
-                 newBody = body;
+
+    // Forward Request
+    std::string fullReq = reqHeaders + reqBody;
+    if (send(serverSocket, fullReq.data(), (int)fullReq.size(), 0) == SOCKET_ERROR) {
+        closeSockets(clientSocket, serverSocket);
+        return;
+    }
+
+    // Read Response
+    std::string respHeaders, respBody;
+    if (!readFullMessage(serverSocket, respHeaders, respBody)) {
+        closeSockets(clientSocket, serverSocket);
+        return;
+    }
+
+    // Patch Logic
+    std::string finalBody = respBody;
+    bool modified = false;
+
+    if (m_hotPatcher) {
+        if (!respBody.empty() && (respBody[0] == '{' || respBody[0] == '[')) {
+             try {
+                // Pass the extracted context
+                json patched = m_hotPatcher->interceptModelOutput(respBody, context);
+                
+                if (patched.contains("modified") && patched["modified"].get<bool>()) {
+                    if (patched.contains("final_output")) {
+                        finalBody = patched["final_output"].dump();
+                        modified = true;
+                    }
+                }
+             } catch (const std::exception& e) {
+                 std::cerr << "Error during hot patching: " << e.what() << std::endl;
              }
-             
-             // Update Content-Length in headers
-             // (String manipulation omitted for brevity, but critical for HTTP)
-             // For now, construct a new simple OK response
-             std::stringstream ss;
-             ss << "HTTP/1.1 200 OK\r\n";
-             ss << "Content-Type: application/json\r\n";
-             ss << "Content-Length: " << newBody.size() << "\r\n";
-             ss << "Connection: close\r\n\r\n";
-             ss << newBody;
-             responseData = ss.str();
         }
     }
 
-    // 4. Send back to client
-    send(clientSocket, responseData.data(), (int)responseData.size(), 0);
+    std::string responseData;
+    if (modified) {
+        std::string newHeaders = respHeaders;
+        try {
+            std::regex clRegex("Content-Length: [0-9]+\r\n", std::regex_constants::icase);
+            newHeaders = std::regex_replace(newHeaders, clRegex, "Content-Length: " + std::to_string(finalBody.size()) + "\r\n");
+        } catch(...) {}
+        responseData = newHeaders + finalBody;
+    } else {
+        responseData = respHeaders + respBody;
+    }
 
-    // Cleanup
-    closesocket(serverSocket);
-    closesocket(clientSocket);
+    send(clientSocket, responseData.data(), (int)responseData.size(), 0);
     
+    // Explicit missing logic: Track response bytes
+    m_bytesTransferred += responseData.size();
+
+    closeSockets(clientSocket, serverSocket);
     m_requestsProcessed++;
 }
 
@@ -222,5 +272,8 @@ std::string GGUFProxyServer::getServerStatistics() const {
     std::lock_guard<std::mutex> locker(m_mutex);
     json j;
     j["requestsProcessed"] = m_requestsProcessed.load();
+    j["bytesTransferred"] = m_bytesTransferred.load();
+    // Explicit missing logic: Report active accept thread
+    j["isAccepting"] = m_isListening.load();
     return j.dump();
 }

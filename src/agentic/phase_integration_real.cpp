@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <cstring>
 #include <exception>
+#include <stdexcept>
 
 // Forward declaration for shutdown function called during init failure
 void Titan_Master_Shutdown();
@@ -331,7 +332,7 @@ void Titan_Master_Shutdown() {
             LogMessage(LOG_INFO, "[SHUTDOWN] Phase 5 complete");
         }
         catch (...) {
-            LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 5 shutdown exception");
+            LogMessage((LogLevel)LOG_ERROR, "[SHUTDOWN ERROR] Phase 5 shutdown exception");
         }
         g_phase_state.phase5_done = false;
     }
@@ -344,7 +345,7 @@ void Titan_Master_Shutdown() {
             LogMessage(LOG_INFO, "[SHUTDOWN] Phase 4 complete");
         }
         catch (...) {
-            LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 4 shutdown exception");
+            LogMessage((LogLevel)LOG_ERROR, "[SHUTDOWN ERROR] Phase 4 shutdown exception");
         }
         g_phase_state.phase4_done = false;
     }
@@ -357,7 +358,7 @@ void Titan_Master_Shutdown() {
             LogMessage(LOG_INFO, "[SHUTDOWN] Phase 3 complete");
         }
         catch (...) {
-            LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 3 shutdown exception");
+            LogMessage((LogLevel)LOG_ERROR, "[SHUTDOWN ERROR] Phase 3 shutdown exception");
         }
         g_phase_state.phase3_done = false;
     }
@@ -370,7 +371,7 @@ void Titan_Master_Shutdown() {
             LogMessage(LOG_INFO, "[SHUTDOWN] Phase 2 complete");
         }
         catch (...) {
-            LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 2 shutdown exception");
+            LogMessage((LogLevel)LOG_ERROR, "[SHUTDOWN ERROR] Phase 2 shutdown exception");
         }
         g_phase_state.phase2_done = false;
     }
@@ -383,7 +384,7 @@ void Titan_Master_Shutdown() {
             LogMessage(LOG_INFO, "[SHUTDOWN] Phase 1 complete");
         }
         catch (...) {
-            LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 1 shutdown exception");
+            LogMessage((LogLevel)LOG_ERROR, "[SHUTDOWN ERROR] Phase 1 shutdown exception");
         }
         g_phase_state.phase1_done = false;
     }
@@ -396,7 +397,7 @@ void Titan_Master_Shutdown() {
             LogMessage(LOG_INFO, "[SHUTDOWN] Week 2-3 complete");
         }
         catch (...) {
-            LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Week 2-3 shutdown exception");
+            LogMessage((LogLevel)LOG_ERROR, "[SHUTDOWN ERROR] Week 2-3 shutdown exception");
         }
         g_phase_state.week23_done = false;
     }
@@ -409,7 +410,7 @@ void Titan_Master_Shutdown() {
             LogMessage(LOG_INFO, "[SHUTDOWN] Week 1 complete");
         }
         catch (...) {
-            LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Week 1 shutdown exception");
+            LogMessage((LogLevel)LOG_ERROR, "[SHUTDOWN ERROR] Week 1 shutdown exception");
         }
         g_phase_state.week1_done = false;
     }
@@ -422,7 +423,7 @@ void Titan_Master_Shutdown() {
             LogMessage(LOG_INFO, "[SHUTDOWN] HAL complete");
         }
         catch (...) {
-            LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] HAL shutdown exception");
+            LogMessage((LogLevel)LOG_ERROR, "[SHUTDOWN ERROR] HAL shutdown exception");
         }
         g_phase_state.hal_done = false;
     }
@@ -468,14 +469,9 @@ int Titan_Master_Init_Safe() {
     try {
         return Titan_Master_Init();
     }
-    catch (const std::exception& e) {
-        LogMessage(LOG_ERROR, "Exception in master initialization: %s", e.what());
+    catch (...) {
+        LogMessage((LogLevel)LOG_ERROR, "Exception in master initialization (details unavailable)");
         Titan_Master_Shutdown();
         return -999;
-    }
-    catch (...) {
-        LogMessage(LOG_ERROR, "Unknown exception in master initialization");
-        Titan_Master_Shutdown();
-        return -1000;
     }
 }

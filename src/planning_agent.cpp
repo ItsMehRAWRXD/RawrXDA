@@ -1,115 +1,205 @@
-// Planning Agent - AI planning and task management
 #include "planning_agent.h"
+#include "agentic_engine.h"
+#include <nlohmann/json.hpp>
+#include <iostream>
+#include <sstream>
+#include <chrono>
+#include <random>
 
+using json = nlohmann::json;
 
-PlanningAgent::PlanningAgent(void* parent) 
-    : void(parent), currentTaskIndex_(-1) {
-    taskProcessor_ = new void*(this);
-    taskProcessor_->setInterval(2000); // Process tasks every 2 seconds
-// Qt connect removed
+// Windows UUID
+#ifdef _WIN32
+#include <rpc.h>
+#pragma comment(lib, "Rpcrt4.lib")
+#endif
+
+PlanningAgent::PlanningAgent() {
+    m_executor = std::make_unique<ActionExecutor>();
+}
+
+PlanningAgent::~PlanningAgent() {
 }
 
 void PlanningAgent::initialize() {
+    // Setup initial state if needed
+}
+
+void PlanningAgent::setAgenticEngine(AgenticEngine* engine) {
+    m_engine = engine;
+}
+
+std::string PlanningAgent::generateUUID() {
+#ifdef _WIN32
+    UUID uuid;
+    UuidCreate(&uuid);
+    unsigned char* str;
+    UuidToStringA(&uuid, &str);
+    std::string s((char*)str);
+    RpcStringFreeA(&str);
+    return s;
+#else
+    return "uuid-" + std::to_string(std::rand());
+#endif
 }
 
 void PlanningAgent::createPlan(const std::string& goal) {
+    m_tasks.clear();
     
-    // Generate a plan based on the goal
-    std::string plan = generatePlan(goal);
-    planCreated(plan);
+    // Explicit Logic: Real AI Planning
+    if (m_engine) {
+        std::string prompt = "You are an expert planner. Create a step-by-step plan for the following goal: " + goal + 
+                           "\nReturn a JSON array where each object has 'title' (string) and 'action_type' (string: file_edit, search, build, test, command, unknown) and 'params' (object).";
+                           
+        std::string response = m_engine->generateResponse(prompt);
+        
+        try {
+            // Find JSON in response
+            auto start = response.find("[");
+            auto end = response.rfind("]");
+            if (start != std::string::npos && end != std::string::npos) {
+                json plan = json::parse(response.substr(start, end - start + 1));
+                
+                for (const auto& item : plan) {
+                    PlanningTask task;
+                    task.id = generateUUID();
+                    task.title = item.value("title", "Untitled Task");
+                    task.status = "pending";
+                    
+                    std::string type = item.value("action_type", "unknown");
+                    // Map string to ActionType
+                    if (type == "file_edit") task.associatedAction.type = ActionType::FileEdit;
+                    else if (type == "search") task.associatedAction.type = ActionType::SearchFiles;
+                    else if (type == "build") task.associatedAction.type = ActionType::RunBuild;
+                    else if (type == "test") task.associatedAction.type = ActionType::ExecuteTests;
+                    else if (type == "command") task.associatedAction.type = ActionType::InvokeCommand;
+                    else task.associatedAction.type = ActionType::Unknown;
+                    
+                    if (item.contains("params")) {
+                        // Manual conversion from nlohmann::json to std::map<string, any> or similar if Action uses that
+                        // Assuming Action params is nlohmann::json or compatible
+                        task.associatedAction.params = item["params"];
+                    }
+                    
+                    m_tasks.push_back(task);
+                }
+                return; // Success
+            }
+        } catch (...) {
+            std::cerr << "PlanningAgent: Failed to parse AI plan. Falling back to heuristic." << std::endl;
+        }
+    }
+
+    // Heuristic Fallback
+    std::string lowerGoal = goal;
+    std::transform(lowerGoal.begin(), lowerGoal.end(), lowerGoal.begin(), ::tolower);
     
-    // Start processing tasks
-    currentTaskIndex_ = -1;
-    taskProcessor_->start();
+    if (lowerGoal.find("code") != std::string::npos || lowerGoal.find("implement") != std::string::npos) {
+        generateCodePlan(goal);
+    } else if (lowerGoal.find("debug") != std::string::npos || lowerGoal.find("fix") != std::string::npos) {
+        generateDebugPlan(goal);
+    } else {
+        generateGenericPlan(goal);
+    }
+}
+
+void PlanningAgent::addTask(const PlanningTask& task) {
+    m_tasks.push_back(task);
+}
+
+std::vector<PlanningTask> PlanningAgent::getTasks() const {
+    return m_tasks;
 }
 
 void PlanningAgent::executePlan() {
-    if (!tasks_.empty()) {
-        currentTaskIndex_ = -1;
-        taskProcessor_->start();
-    }
-}
-
-void PlanningAgent::addTask(const Task& task) {
-    tasks_.append(task);
-}
-
-std::vector<Task> PlanningAgent::getTasks() const {
-    return tasks_;
-}
-
-void PlanningAgent::processNextTask() {
-    if (tasks_.empty()) {
-        taskProcessor_->stop();
-        planCompleted();
-        return;
-    }
+    ExecutionContext ctx;
+    ctx.projectRoot = "D:\\rawrxd"; // Default
+    m_executor->setContext(ctx);
     
-    // Move to next task
-    currentTaskIndex_++;
-    if (currentTaskIndex_ >= tasks_.size()) {
-        taskProcessor_->stop();
-        planCompleted();
-        return;
-    }
-    
-    Task& task = tasks_[currentTaskIndex_];
-    updateTaskStatus(task.id, "in-progress");
-    
-    // Simulate task execution with a delay
-    void*::singleShot(3000, this, [this, taskId = task.id]() {
-        // Randomly determine if task succeeds or fails
-        bool success = QRandomGenerator::global()->bounded(100) < 90; // 90% success rate
+    for (auto& task : m_tasks) {
+        if (task.status == "completed") continue;
+        
+        task.status = "in-progress";
+        
+        // Execute the action associated with the task
+        bool success = false;
+        if (task.associatedAction.type != ActionType::Unknown) {
+            success = m_executor->executeAction(task.associatedAction);
+        } else {
+            // No action defined. Treat as informational step unless it claims to be actionable.
+            // In a real system, we might ask the LLM to refine this step.
+            // For now, we explicitly fail undefined executable tasks to avoid "simulated success".
+            // Only purely descriptive tasks should pass.
+            success = false; 
+        }
         
         if (success) {
-            updateTaskStatus(taskId, "completed");
+            task.status = "completed";
         } else {
-            updateTaskStatus(taskId, "failed");
-            taskProcessor_->stop();
-            planFailed("Task " + taskId + " failed");
+            task.status = "failed";
+            // Stop on failure?
+            // break;
         }
-    });
+    }
 }
 
-std::string PlanningAgent::generatePlan(const std::string& goal) {
-    tasks_.clear();
+// Plan Generators logic - converting abstract goals into concrete Actions where possible
+
+void PlanningAgent::generateCodePlan(const std::string& goal) {
+    // 1. Analyze
+    PlanningTask t1;
+    t1.id = generateUUID();
+    t1.title = "Analyze Requirements";
+    t1.status = "pending";
+    t1.associatedAction.type = ActionType::SearchFiles; // Search for context
+    t1.associatedAction.params["query"] = goal;
+    m_tasks.push_back(t1);
     
-    // Generate tasks based on the goal
-    if (goal.contains("code", //CaseInsensitive)) {
-        Task task1{QUuid::createUuid().toString(), "Analyze requirements", "pending", 1, "CodeAnalyzer"};
-        Task task2{QUuid::createUuid().toString(), "Design solution", "pending", 2, "Architect"};
-        Task task3{QUuid::createUuid().toString(), "Implement code", "pending", 3, "Developer"};
-        Task task4{QUuid::createUuid().toString(), "Test implementation", "pending", 4, "Tester"};
-        Task task5{QUuid::createUuid().toString(), "Document code", "pending", 5, "Documenter"};
-        
-        tasks_ << task1 << task2 << task3 << task4 << task5;
-        return "Code development plan: Analyze → Design → Implement → Test → Document";
-    } else if (goal.contains("debug", //CaseInsensitive)) {
-        Task task1{QUuid::createUuid().toString(), "Reproduce issue", "pending", 1, "Debugger"};
-        Task task2{QUuid::createUuid().toString(), "Identify root cause", "pending", 2, "Analyzer"};
-        Task task3{QUuid::createUuid().toString(), "Fix bug", "pending", 3, "Developer"};
-        Task task4{QUuid::createUuid().toString(), "Verify fix", "pending", 4, "Tester"};
-        
-        tasks_ << task1 << task2 << task3 << task4;
-        return "Debugging plan: Reproduce → Identify → Fix → Verify";
-    } else {
-        Task task1{QUuid::createUuid().toString(), "Research topic", "pending", 1, "Researcher"};
-        Task task2{QUuid::createUuid().toString(), "Gather information", "pending", 2, "Collector"};
-        Task task3{QUuid::createUuid().toString(), "Analyze findings", "pending", 3, "Analyzer"};
-        Task task4{QUuid::createUuid().toString(), "Create report", "pending", 4, "Writer"};
-        
-        tasks_ << task1 << task2 << task3 << task4;
-        return "General plan: Research → Gather → Analyze → Report";
-    }
+    // 2. Implement
+    PlanningTask t2;
+    t2.id = generateUUID();
+    t2.title = "Implement Code";
+    t2.status = "pending";
+    t2.associatedAction.type = ActionType::FileEdit; // Placeholder for edit
+    t2.associatedAction.description = "Implement: " + goal;
+    m_tasks.push_back(t2);
+    
+    // 3. Build Not included in default plan to avoid errors, 
+    // but user can add it.
 }
 
-void PlanningAgent::updateTaskStatus(const std::string& taskId, const std::string& status) {
-    for (int i = 0; i < tasks_.size(); ++i) {
-        if (tasks_[i].id == taskId) {
-            tasks_[i].status = status;
-            taskStatusChanged(taskId, status);
-            break;
-        }
-    }
+void PlanningAgent::generateDebugPlan(const std::string& goal) {
+     // 1. Reproduce (Search)
+    PlanningTask t1;
+    t1.id = generateUUID();
+    t1.title = "Search for Error Context";
+    t1.status = "pending";
+    t1.associatedAction.type = ActionType::SearchFiles; 
+    t1.associatedAction.params["query"] = goal;
+    m_tasks.push_back(t1);
 }
 
+void PlanningAgent::generateGenericPlan(const std::string& goal) {
+    PlanningTask t1;
+    t1.id = generateUUID();
+    t1.title = "Research Strategy";
+    t1.status = "pending";
+    t1.associatedAction.type = ActionType::Unknown; // Abstract
+    m_tasks.push_back(t1);
+}
+
+bool PlanningAgent::isComplete() const {
+    for (const auto& task : m_tasks) {
+        if (task.status != "completed") return false;
+    }
+    return !m_tasks.empty();
+}
+
+std::string PlanningAgent::generateSummary() const {
+    std::stringstream ss;
+    ss << "Plan Status:\n";
+    for (const auto& task : m_tasks) {
+        ss << " - " << task.title << ": " << task.status << "\n";
+    }
+    return ss.str();
+}

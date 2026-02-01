@@ -288,9 +288,29 @@ NavigationResult AgenticNavigator::executeCommand(int commandId) {
     // This uses IDE command infrastructure directly
     auto start = std::chrono::high_resolution_clock::now();
     
-    // Simulate command execution
-    bool success = true; // This would integrate with actual IDE command system
-    std::string message = success ? "Command executed successfully" : "Command execution failed";
+    // replaced simulation with WM_COMMAND
+#ifdef _WIN32
+    // Assuming we have a cached handle to the main window or can find it.
+    // For now, let's look for "RawrXD" or generic IDE window if not stored.
+    HWND hIDE = FindWindowA("RawrXD_IDE_Window", NULL); // Adjust class name as needed
+    if (!hIDE) hIDE = GetForegroundWindow(); // Fallback to active window for context actions
+
+    bool success = false;
+    std::string message;
+
+    if (hIDE) {
+        // Send WM_COMMAND with the specific Command ID
+        // Note: Command IDs must match the resource.h or internal mapping
+        PostMessage(hIDE, WM_COMMAND, (WPARAM)commandId, 0);
+        success = true;
+        message = "Command dispatched via Win32 API";
+    } else {
+        message = "IDE Window not found for command execution";
+    }
+#else
+    bool success = true; 
+    std::string message = "Platform specific command execution not implemented (Non-Windows)";
+#endif
     
     auto end = std::chrono::high_resolution_clock::now();
     double executionTime = std::chrono::duration<double, std::milli>(end - start).count();
@@ -378,61 +398,137 @@ NavigationStrategy AgenticNavigator::recommendStrategy(const std::string& operat
 
 // Direct Win32 API implementation
 NavigationResult AgenticNavigator::navigateDirectAPI(const std::string& target) {
-    // Simulate direct API navigation
-    bool success = true; // This would implement actual Win32 API calls
-    std::string message = "Direct API navigation to " + target;
+    // Real implementation: Find window by class/title and bring to foreground
+    HWND hwnd = FindWindowA(NULL, target.c_str());
+    if (!hwnd) {
+        // Try loose search if exact match fails
+        hwnd = FindWindowExA(NULL, NULL, NULL, target.c_str());
+    }
+
+    if (hwnd) {
+        if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
+        SetForegroundWindow(hwnd);
+        SetFocus(hwnd);
+        return createResult(true, "Direct API navigation successful", hwnd);
+    }
     
-    return createResult(success, message);
+    return createResult(false, "Window not found: " + target);
+}
+
+// Callback for EnumChildWindows
+static BOOL CALLBACK EnumChildProc(HWND hwnd, LPARAM lParam) {
+    std::vector<UIElement>* elements = (std::vector<UIElement>*)lParam;
+    
+    char className[256];
+    char windowText[256];
+    GetClassNameA(hwnd, className, sizeof(className));
+    GetWindowTextA(hwnd, windowText, sizeof(windowText));
+    
+    if (IsWindowVisible(hwnd)) {
+        UIElement element;
+        element.handle = hwnd;
+        element.name = windowText;
+        element.type = className;
+        
+        RECT rect;
+        GetWindowRect(hwnd, &rect);
+        element.x = rect.left;
+        element.y = rect.top;
+        element.width = rect.right - rect.left;
+        element.height = rect.bottom - rect.top;
+        
+        elements->push_back(element);
+    }
+    return TRUE;
 }
 
 std::vector<UIElement> AgenticNavigator::detectElementsDirectAPI() {
     std::vector<UIElement> elements;
     
-    // This would implement actual Win32 API element detection
-    // For now, return empty vector as placeholder
+    // Scan all top level windows or current process windows
+    // For specific IDE targeting, we might want to restrict to specific HWND
+    EnumChildWindows(GetDesktopWindow(), EnumChildProc, (LPARAM)&elements);
     
     return elements;
 }
 
 NavigationResult AgenticNavigator::clickElementDirectAPI(const UIElement& element) {
-    // Simulate direct API click
-    bool success = true; // This would implement actual Win32 API click
-    std::string message = "Direct API click on " + element.name;
+    if (!IsWindow(element.handle)) {
+        return createResult(false, "Invalid handle for click", element.handle);
+    }
+
+    // Post real click messages
+    RECT rect;
+    GetClientRect(element.handle, &rect);
+    int x = (rect.right - rect.left) / 2;
+    int y = (rect.bottom - rect.top) / 2;
+    LPARAM lParam = MAKELPARAM(x, y);
+
+    SendMessage(element.handle, WM_LBUTTONDOWN, MK_LBUTTON, lParam);
+    SendMessage(element.handle, WM_LBUTTONUP, 0, lParam);
     
-    return createResult(success, message, element.handle);
+    return createResult(true, "Direct API click sent", element.handle);
 }
 
 NavigationResult AgenticNavigator::sendTextDirectAPI(const UIElement& element, const std::string& text) {
-    // Simulate direct API text sending
-    bool success = true; // This would implement actual Win32 API text sending
-    std::string message = "Direct API sent text to " + element.name;
+    if (!IsWindow(element.handle)) {
+        return createResult(false, "Invalid handle for text", element.handle);
+    }
+
+    // Send text via WM_SETTEXT
+    SendMessageA(element.handle, WM_SETTEXT, 0, (LPARAM)text.c_str());
     
-    return createResult(success, message, element.handle);
+    // Explicit Logic: If text ends with newline, send Enter key
+    if (!text.empty() && text.back() == '\n') {
+        SendMessage(element.handle, WM_KEYDOWN, VK_RETURN, 0);
+        SendMessage(element.handle, WM_KEYUP, VK_RETURN, 0);
+    }
+    
+    return createResult(true, "Direct API sent text", element.handle);
 }
 
 // IDE Command implementation
 NavigationResult AgenticNavigator::navigateIDECommands(const std::string& target) {
-    // Simulate IDE command navigation
-    bool success = true; // This would integrate with actual IDE command system
-    std::string message = "IDE command navigation to " + target;
+    // REAL IMPLEMENTATION: Send WM_COPYDATA with command payload
+    HWND mainHwnd = FindWindowA(NULL, "RawrXD"); // Try exact window title first
+    if (!mainHwnd) mainHwnd = GetForegroundWindow(); // Fallback
     
-    return createResult(success, message);
+    if (!mainHwnd) return createResult(false, "No accessible IDE window");
+
+    // Command structure: "COMMAND:<target>"
+    std::string commandPayload = "COMMAND:" + target;
+    
+    COPYDATASTRUCT cds;
+    cds.dwData = 0xAA55; // Magic signature for IDE commands
+    cds.cbData = (DWORD)commandPayload.size() + 1;
+    cds.lpData = (PVOID)commandPayload.c_str();
+    
+    LRESULT res = SendMessageA(mainHwnd, WM_COPYDATA, 0, (LPARAM)&cds);
+    
+    if (res == 1) { // Assuming IDE returns 1 on success
+        return createResult(true, "IDE Command dispatched via WM_COPYDATA");
+    }
+    
+    return createResult(false, "IDE Command dispatch failed or window ignored message");
 }
 
+
 NavigationResult AgenticNavigator::clickElementIDECommands(const UIElement& element) {
-    // Simulate IDE command click
-    bool success = true; // This would integrate with actual IDE command system
-    std::string message = "IDE command click on " + element.name;
-    
-    return createResult(success, message, element.handle);
+    // Explicit Logic: Attempt real interaction via handle if available
+    if (element.handle && IsWindow((HWND)element.handle)) {
+        SendMessage((HWND)element.handle, BM_CLICK, 0, 0);
+        return createResult(true, "Clicked element via handle", element.handle);
+    }
+    return createResult(false, "Cannot click: Invalid Window Handle", element.handle);
 }
 
 NavigationResult AgenticNavigator::sendTextIDECommands(const UIElement& element, const std::string& text) {
-    // Simulate IDE command text sending
-    bool success = true; // This would integrate with actual IDE command system
-    std::string message = "IDE command sent text to " + element.name;
-    
-    return createResult(success, message, element.handle);
+     // Explicit Logic: Attempt real interaction via handle if available
+    if (element.handle && IsWindow((HWND)element.handle)) {
+        SendMessageA((HWND)element.handle, WM_SETTEXT, 0, (LPARAM)text.c_str());
+         return createResult(true, "Sent text via handle", element.handle);
+    }
+    return createResult(false, "Cannot send text: Invalid Window Handle", element.handle);
 }
 
 // Hybrid implementation

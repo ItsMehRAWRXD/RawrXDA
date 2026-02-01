@@ -82,37 +82,101 @@ LSP_Transport_Write proc frame
     ret
 LSP_Transport_Write endp
 
+EXTERN LSP_Handshake_Sequence:PROC
+
 align 16
 LSP_Init_Handshake proc frame
     sub rsp, 20h
     .allocstack 20h
     .endprolog
-    ; LSP_Handshake_Sequence is now provided by RawrXD_LSP_Handshake_Ext.asm
-    ; This is just a placeholder for compatibility
+    ; Forward to the extended implementation
+    call LSP_Handshake_Sequence
     add rsp, 20h
     ret
 LSP_Init_Handshake endp
 
+; ═══════════════════════════════════════════════════════════════════════════════
+; LSP_Engine_Entry
+; RCX = Command Line (Wide String)
+; ═══════════════════════════════════════════════════════════════════════════════
 align 16
 LSP_Engine_Entry proc frame
+    push rbx
+    push rdi
     sub rsp, 128
     .allocstack 128
     .endprolog
+    
+    mov rbx, rcx        ; Save Command Line
+    
+    ; Initialize StartupInfo
     lea rcx, [rsp+64]
     call GetStartupInfoW
-    mov qword ptr [rsp+48], 0
-    mov qword ptr [rsp+40], 0
-    mov dword ptr [rsp+32], 0
-    lea r9, [rsp+64]
-    xor r8, r8
-    xor rdx, rdx
+    
+    ; Prepare CreateProcessW args on stack (Shadow Space + Args 5-10)
+    ; Stack Layout:
+    ; [rsp + 32] = Shadow Store (R9)
+    ; [rsp + 24] = Shadow Store (R8)
+    ; [rsp + 16] = Shadow Store (RDX)
+    ; [rsp + 8]  = Shadow Store (RCX)
+    ; [rsp + 0]  = Return Address (for the call)
+    
+    ; Actually, when we call, we push args onto stack above the shadow space.
+    ; Microsoft x64: First 4 args in regs. Remaining on stack.
+    ; Arg 5 is at [RSP + 32] relative to the CALLEE (so just pushed or moved to [rsp+32] of CALLER?)
+    ; CALLER allocates 32 bytes shadow space.
+    ; Arg 5 is at [RSP + 32]
+    ; Arg 6 at [RSP + 40]
+    ; Arg 7 at [RSP + 48]
+    ; Arg 8 at [RSP + 56]
+    ; Arg 9 at [RSP + 64]
+    ; Arg 10 at [RSP + 72]
+    
+    ; We have rsp (frame)
+    ; We need to setup [rsp + 32]...[rsp + 72]
+    ; StartupInfo is at [rsp+64] in our frame logic, but CreateProcessW expects pointer.
+    
+    ; Let's use clean stack locations.
+    ; rsp+80 = ProcessInfo (16 bytes)
+    
+    ; Arg 10: lpProcessInformation
+    lea rax, [rsp+80]
+    mov [rsp + 32 + 40], rax
+    
+    ; Arg 9: lpStartupInfo
+    lea rax, [rsp+64]
+    mov [rsp + 32 + 32], rax
+    
+    ; Arg 8: lpCurrentDirectory
+    mov qword ptr [rsp + 32 + 24], 0
+    
+    ; Arg 7: lpEnvironment
+    mov qword ptr [rsp + 32 + 16], 0
+    
+    ; Arg 6: dwCreationFlags
+    mov dword ptr [rsp + 32 + 8], 0
+    
+    ; Arg 5: bInheritHandles
+    mov qword ptr [rsp + 32], 1
+    
+    ; Register Args
+    xor r9, r9          ; lpThreadAttributes
+    xor r8, r8          ; lpSecurityAttributes
+    mov rdx, rbx        ; lpCommandLine (From RCX)
+    xor rcx, rcx        ; lpApplicationName (NULL - use cmdline)
+    
     call CreateProcessW
     test rax, rax
     jz _err
-    mov rcx, [rsp+48]
+    
+    ; Process Created. PI at [rsp+80] (hProcess is first QWORD)
+    mov rcx, [rsp+80]
     call LSP_Init_Handshake
+    
 _err:
     add rsp, 128
+    pop rdi
+    pop rbx
     ret
 LSP_Engine_Entry endp
 

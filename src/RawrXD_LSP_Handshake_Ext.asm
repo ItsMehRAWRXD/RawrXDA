@@ -338,7 +338,8 @@ LSP_Handshake_Sequence PROC FRAME
     lea rdi, [rsp+30h]
     
     ; Start with template
-    lea rsi, [szInitializeTemplate]
+    mov rcx, rdi
+    lea rdx, [szInitializeTemplate]
     call StrCopy
     add rdi, rax
     
@@ -350,21 +351,21 @@ LSP_Handshake_Sequence PROC FRAME
     add rdi, rax
     
     ; Continue template
-    lea rsi, [szInitializeParams2]
     mov rcx, rdi
+    lea rdx, [szInitializeParams2]
     call StrCopy
     add rdi, rax
     
     ; Add init options
-    lea rsi, [rbx].LSP_HANDSHAKE_CTX.InitializationOptions
-    mov ecx, [rbx].LSP_HANDSHAKE_CTX.OptionsLength
-    mov rdx, rdi
+    mov rcx, rdi
+    lea rdx, [rbx].LSP_HANDSHAKE_CTX.InitializationOptions
+    mov r8d, [rbx].LSP_HANDSHAKE_CTX.OptionsLength
     call MemCopy
-    add rdi, rcx
+    add rdi, r8
     
     ; Close request
-    lea rsi, [szInitializeParams3]
     mov rcx, rdi
+    lea rdx, [szInitializeParams3]
     call StrCopy
     add rdi, rax
     
@@ -455,13 +456,13 @@ MemZero PROC
     ret
 MemZero ENDP
 
-; Helper: Copy memory
+; Helper: Copy memory (returns dest+len handled by caller, but returns void normally. MemCopy usually returns void or dest)
 MemCopy PROC
     push rsi
     push rdi
-    mov rsi, rcx
-    mov rdi, rdx
-    mov rcx, r8
+    mov rdi, rcx    ; Dest
+    mov rsi, rdx    ; Src
+    mov rcx, r8     ; Count (fixed register usage)
     rep movsb
     pop rdi
     pop rsi
@@ -469,20 +470,29 @@ MemCopy PROC
 MemCopy ENDP
 
 ; Helper: Copy string (returns length)
+; RCX = Dest, RDX = Src
 StrCopy PROC
     push rdi
     push rsi
     mov rdi, rcx
     mov rsi, rdx
     xor rax, rax
+    
+    ; Check null
+    test rsi, rsi
+    jz copy_done
+    
 copy_char:
     lodsb
     stosb
     test al, al
     jnz copy_char
+    
     sub rdi, rcx
-    dec rdi
+    dec rdi         ; exclude null from length
     mov rax, rdi
+    
+copy_done:
     pop rsi
     pop rdi
     ret
@@ -600,79 +610,80 @@ search_done:
 StrStrIA ENDP
 
 ; Helper: Extract filename from path
-ExtractFileName PROC
-    push rbx
-    mov rbx, rcx
-    mov rax, rcx
-scan_path:
-    movzx edx, byte ptr [rcx]
+ExtractFileName PROC FRAME
+    push rsi
+    .endprolog
+    
+    mov rax, rcx    ; Default result = input
+    mov rsi, rcx
+    
+    ; Scan for last slash
+scan_loop:
+    mov dl, [rsi]
     test dl, dl
     jz scan_done
+    
     cmp dl, '\'
-    je found_sep
+    je found_slash
     cmp dl, '/'
-    je found_sep
-    inc rcx
-    jmp scan_path
-found_sep:
-    inc rcx
-    mov rax, rcx
-    jmp scan_path
+    je found_slash
+    
+    inc rsi
+    jmp scan_loop
+    
+found_slash:
+    lea rax, [rsi + 1] ; Result = char after slash
+    inc rsi
+    jmp scan_loop
+    
 scan_done:
-    pop rbx
+    pop rsi
     ret
 ExtractFileName ENDP
 
-; Helper: Integer to string
-IntToStr PROC
+; Helper: Integer to String
+; RCX = Integer, RDX = Buffer
+IntToStr PROC FRAME
     push rbx
     push rsi
     push rdi
+    .endprolog
+    
+    mov rdi, rdx    ; Buffer
     mov rax, rcx
-    mov rdi, rdx
-    mov rsi, rdx
+    mov rbx, 10
+    xor rcx, rcx    ; Digit count
     
-    ; Handle zero
     test rax, rax
-    jnz int_nonzero
-    mov byte ptr [rdi], '0'
-    inc rdi
-    mov byte ptr [rdi], 0
-    mov rax, 1
-    jmp int_done
+    jnz convert_loop
     
-int_nonzero:
-    mov rbx, rdi
-    mov rcx, 10
-int_loop:
+    ; Zero case
+    mov byte ptr [rdi], '0'
+    mov byte ptr [rdi+1], 0
+    mov rax, 1
+    jmp inttostr_exit
+    
+convert_loop:
     xor rdx, rdx
-    div rcx
+    div rbx
+    push rdx        ; Push remainder/digit
+    inc rcx
+    test rax, rax
+    jnz convert_loop
+    
+    mov rax, rcx    ; Return length
+    
+store_loop:
+    pop rdx
     add dl, '0'
     mov [rdi], dl
     inc rdi
-    test rax, rax
-    jnz int_loop
+    dec rcx
+    jnz store_loop
     
-    mov byte ptr [rdi], 0
+    mov byte ptr [rdi], 0   ; Null terminate
     
-    ; Reverse digits
-    dec rdi
-int_reverse:
-    cmp rbx, rdi
-    jge int_rev_done
-    mov al, [rbx]
-    mov cl, [rdi]
-    mov [rbx], cl
-    mov [rdi], al
-    inc rbx
-    dec rdi
-    jmp int_reverse
-    
-int_rev_done:
-    mov rax, rdi
-    sub rax, rsi
-    
-int_done:
+inttostr_exit:
     pop rdi
     pop rsi
     pop rbx

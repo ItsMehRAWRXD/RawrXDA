@@ -13,8 +13,15 @@
 
 #pragma once
 
-#include "ide_agent_bridge.hpp"
+#include "../agent/ide_agent_bridge.hpp"
 
+
+#include "RawrXD_EditorWindow.h"
+#include <atomic>
+#include <thread>
+
+// Forward declaration
+namespace RawrXD { class EditorWindow; }
 
 /**
  * @struct GhostTextContext
@@ -49,31 +56,30 @@ struct GhostTextSuggestion {
  * - Periodic background suggestions
  * - Ghost text rendering overlay
  *
- * @note Works with both void and QPlainTextEdit
+ * @note Works with RawrXD::EditorWindow
  * @note Non-blocking suggestion generation
  *
  * @example
  * @code
- * EditorAgentIntegration agentEditor(m_textEdit);
+ * EditorAgentIntegration agentEditor(m_editorWindow);
  * agentEditor.setAgentBridge(&agentBridge);
  *
  * // TAB and ENTER now trigger agent suggestions
  * @endcode
  */
-class EditorAgentIntegration : public void {
+class EditorAgentIntegration {
 
 public:
     /**
      * @brief Constructor - attach to code editor
      * @param editor Target code editor widget
-     * @param parent Qt parent
      */
-    explicit EditorAgentIntegration(QPlainTextEdit* editor, void* parent = nullptr);
+    explicit EditorAgentIntegration(RawrXD::EditorWindow* editor);
 
     /**
      * @brief Destructor
      */
-    ~EditorAgentIntegration() override;
+    virtual ~EditorAgentIntegration();
 
     /**
      * @brief Set the IDEAgentBridge instance
@@ -262,5 +268,10 @@ private:
     uint32_t m_ghostTextColor;                ///< Color for ghost text (usually dim)
 
     void** m_autoSuggestionTimer = nullptr; ///< Timer for periodic suggestions
+
+    // Threading
+    std::atomic<bool> m_monitoringThreadActive{false};
+    std::atomic<bool> m_contentDirty{false};
+    std::thread m_monitorThread;
 };
 

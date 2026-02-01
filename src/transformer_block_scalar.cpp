@@ -6,9 +6,8 @@
 #include <cmath>
 #include <immintrin.h>
 
-TransformerBlockScalar::TransformerBlockScalar(void *parent)
-    : void(parent)
-    , m_initialized(false)
+TransformerBlockScalar::TransformerBlockScalar()
+    : m_initialized(false)
     , m_layerCount(0)
     , m_headCount(0)
     , m_headDim(0)

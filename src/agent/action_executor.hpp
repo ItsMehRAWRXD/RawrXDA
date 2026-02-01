@@ -19,6 +19,7 @@
 #include <functional>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include "agentic_engine.h"
 
 /**
  * @enum ActionType
@@ -149,8 +150,13 @@ public:
     std::function<void(int, int)> onProgressUpdated;
     std::function<void(bool, const nlohmann::json&)> onPlanCompleted;
     std::function<void(const std::string&, const std::vector<std::string>&)> onUserInputNeeded;
+    std::function<void(const std::string&, const std::string&)> onRecursiveTaskNeeded;
+
+    // Setter for engine
+    void setAgenticEngine(AgenticEngine* engine) { m_agenticEngine = engine; }
 
 private:
+    AgenticEngine* m_agenticEngine = nullptr;
     // ─────────────────────────────────────────────────────────────────────
     // Action Handlers
     // ─────────────────────────────────────────────────────────────────────

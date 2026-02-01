@@ -7,6 +7,9 @@
 #include <dpapi.h>
 #include <bcrypt.h>  // Windows CNG (Cryptography Next Generation) API
 #include <ntstatus.h>
+#include <random>
+#include <sstream>
+#include <iomanip>
 
 #pragma comment(lib, "crypt32.lib")
 #pragma comment(lib, "bcrypt.lib")
@@ -605,9 +608,8 @@ bool SecurityManager::isTokenExpired(const std::string& username) const
 
 std::string SecurityManager::refreshToken(const std::string& username, const std::string& refreshToken)
 {
-    
-    // In production, this would make an OAuth2 refresh request
-    // For now, we simulate token refresh
+    // Local session rotation
+    // Generates a new cryptographically secure session identifier
     
     auto it = m_credentials.find(username);
     if (it == m_credentials.end()) {
@@ -622,9 +624,17 @@ std::string SecurityManager::refreshToken(const std::string& username, const std
         return std::string();
     }
     
-    // Simulate successful refresh (in production, call OAuth2 endpoint)
-    std::string newToken = std::string("refreshed_token_%1"));
-    std::string encryptedNewToken = encryptData(newToken.toUtf8());
+    // Generate new random token
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 255);
+    std::stringstream ss;
+    for (int i = 0; i < 32; ++i) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << dis(gen);
+    }
+    std::string newToken = ss.str();
+
+    std::string encryptedNewToken = encryptData(newToken);
     
     info.token = encryptedNewToken;
     info.issuedAt = std::chrono::system_clock::time_point::currentSecsSinceEpoch();

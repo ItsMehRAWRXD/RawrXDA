@@ -1,40 +1,49 @@
 #pragma once
 
+#include <string>
+#include <vector>
+#include <memory>
+#include <functional>
+#include "action_executor.h"
 
-struct Task {
+struct PlanningTask {
     std::string id;
-    std::string description;
+    std::string title;
     std::string status; // "pending", "in-progress", "completed", "failed"
     int priority;
-    std::string assignedAgent;
+    Action associatedAction;
 };
 
-class PlanningAgent : public void {
+class AgenticEngine; // Forward decl
 
+class PlanningAgent {
 public:
-    explicit PlanningAgent(void* parent = nullptr);
-    virtual ~PlanningAgent() = default;
+    explicit PlanningAgent();
+    ~PlanningAgent();
     
     void initialize();
+    void setAgenticEngine(AgenticEngine* engine);
+    
+    // High level operations
     void createPlan(const std::string& goal);
     void executePlan();
-    void addTask(const Task& task);
-    std::vector<Task> getTasks() const;
+    
+    // Task management
+    void addTask(const PlanningTask& task);
+    std::vector<PlanningTask> getTasks() const;
+    
+    // Status
+    bool isComplete() const;
+    std::string generateSummary() const;
 
-
-    void planCreated(const std::string& plan);
-    void taskStatusChanged(const std::string& taskId, const std::string& status);
-    void planCompleted();
-    void planFailed(const std::string& error);
-    
 private:
-    void processNextTask();
+    std::string generateUUID();
+    std::vector<PlanningTask> m_tasks;
+    std::unique_ptr<ActionExecutor> m_executor;
+    AgenticEngine* m_engine = nullptr;
     
-private:
-    std::vector<Task> tasks_;
-    void** taskProcessor_;
-    int currentTaskIndex_;
-    
-    std::string generatePlan(const std::string& goal);
-    void updateTaskStatus(const std::string& taskId, const std::string& status);
+    // Internal logic for plan generation (template based for now)
+    void generateCodePlan(const std::string& goal);
+    void generateDebugPlan(const std::string& goal);
+    void generateGenericPlan(const std::string& goal);
 };

@@ -17,6 +17,7 @@
 #include <memory>
 #include <functional>
 #include <nlohmann/json.hpp>
+#include <windows.h>
 
 /**
  * @struct InvocationParams
@@ -30,6 +31,7 @@ struct InvocationParams {
     int maxTokens = 2000;                       ///< Output token limit
     double temperature = 0.7;                   ///< Sampling temperature (0-1)
     int timeoutMs = 30000;                      ///< Request timeout
+    bool enforceJsonFormat = true;              ///< Whether to enforce JSON output format
 };
 
 /**
@@ -104,26 +106,19 @@ public:
     void setCodebaseEmbeddings(const std::map<std::string, float>& embeddings);
 
     /**
+     * @brief Raw query without plan parsing (for code completion/chat)
+     */
+    LLMResponse queryRaw(const std::string& systemPrompt, const std::string& userPrompt, int maxTokens = 2000);
+
+    /**
      * @brief Enable/disable request caching
      */
     void setCachingEnabled(bool enabled) { m_cachingEnabled = enabled; }
 
-    // Callbacks (replacing signals)
-    std::function<void(const std::string&)> onPlanGenerationStarted;
-    std::function<void(const LLMResponse&)> onPlanGenerated;
-    std::function<void(const std::string&, bool)> onInvocationError;
-    std::function<void(const std::string&)> onStatusUpdated;
-
-private:
     /**
-     * @brief Build system prompt with tool descriptions
+     * @brief Set endpoint URL directly (for hot patching)
      */
-    std::string buildSystemPrompt(const std::vector<std::string>& tools);
-
-    /**
-     * @brief Build user message with wish and context
-     */
-    std::string buildUserMessage(const InvocationParams& params);
+    void setEndpoint(const std::string& endpoint) { m_endpoint = endpoint; }
 
     nlohmann::json sendOllamaRequest(const std::string& model,
                                    const std::string& prompt,
@@ -138,6 +133,19 @@ private:
                                    int maxTokens,
                                    double temperature);
 
+    nlohmann::json sendRawrXDRequest(const std::string& messageBlock, int maxTokens, float temperature);
+
+private:
+    /**
+     * @brief Build system prompt with tool descriptions
+     */
+    std::string buildSystemPrompt(const std::vector<std::string>& tools);
+
+    /**
+     * @brief Build user message with wish and context
+     */
+    std::string buildUserMessage(const InvocationParams& params);
+
     nlohmann::json parsePlan(const std::string& llmOutput);
 
     bool validatePlanSanity(const nlohmann::json& plan);
@@ -148,25 +156,12 @@ private:
 
     void cacheResponse(const std::string& key, const LLMResponse& response);
 
-    // Network helper (placeholder or stub)
+    // Helper method for HTTP requests
     std::string performHttpRequest(const std::string& url, 
-                                   const std::string& method, 
-                                   const std::string& body, 
-                                   const std::map<std::string, std::string>& headers);
+                                  const std::string& method, 
+                                  const std::string& body, 
+                                  const std::map<std::string, std::string>& headers);
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Member Variables
-    // ─────────────────────────────────────────────────────────────────────
-
-    std::string m_backend;
-    std::string m_endpoint;
-    std::string m_apiKey;
-    std::string m_model = "mistral";
-
-    bool m_isInvoking = false;
+    nlohmann::json m_cache;
     bool m_cachingEnabled = true;
-
-    std::map<std::string, LLMResponse> m_responseCache;
-    std::string m_customSystemPrompt;
-    std::map<std::string, float> m_codebaseEmbeddings;
 };

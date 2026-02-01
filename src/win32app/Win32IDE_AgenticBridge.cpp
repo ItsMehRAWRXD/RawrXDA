@@ -1,5 +1,5 @@
 // Agentic Framework Bridge Implementation
-// Connects Win32IDE to PowerShell-based agentic framework
+// Connects Win32IDE to Native Agentic Engine
 
 #include "Win32IDE_AgenticBridge.h"
 #include "IDELogger.h"
@@ -12,100 +12,74 @@ AgenticBridge::AgenticBridge(Win32IDE* ide)
     : m_ide(ide)
     , m_initialized(false)
     , m_agentLoopRunning(false)
-    , m_modelName("bigdaddyg-personalized-agentic:latest")
+    , m_modelName("titan-embedded")
     , m_ollamaServer("http://localhost:11434")
-    , m_hProcess(nullptr)
-    , m_hStdoutRead(nullptr)
-    , m_hStdoutWrite(nullptr)
-    , m_hStdinRead(nullptr)
-    , m_hStdinWrite(nullptr)
+    , m_nativeEngine(std::make_shared<AgenticEngine>())
 {
-
 }
 
 AgenticBridge::~AgenticBridge() {
-    KillPowerShellProcess();
-
+    StopAgentLoop();
+     if (m_nativeEngine) {
+        m_nativeEngine->shutdown();
+    }
 }
 
 bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::string& modelName) {
-
     if (m_initialized) {
         LOG_WARNING("AgenticBridge already initialized");
         return true;
     }
     
-    // Resolve framework path
-    if (frameworkPath.empty()) {
-        m_frameworkPath = ResolveFrameworkPath();
-    } else {
-        m_frameworkPath = frameworkPath;
+    // Initialize Native Engine
+    if (m_nativeEngine) {
+        m_nativeEngine->initialize();
+        m_nativeEngine->setModelName(modelName.empty() ? m_modelName : modelName);
+        
+        // Register callbacks
+        m_nativeEngine->onResponseReady = [this](const std::string& response) {
+            if (m_outputCallback) {
+                m_outputCallback("Agent Stream", response);
+            }
+        };
     }
-    
-    // Check if framework script exists
-    DWORD fileAttr = GetFileAttributesA(m_frameworkPath.c_str());
-    if (fileAttr == INVALID_FILE_ATTRIBUTES) {
 
-        return false;
-    }
-    
-    // Resolve tools module path
-    m_toolsModulePath = ResolveToolsModulePath();
-    
     // Set model if provided
     if (!modelName.empty()) {
         m_modelName = modelName;
     }
     
     m_initialized = true;
-
+    LOG_INFO("Native Agentic Bridge Initialized");
     return true;
 }
 
 AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt) {
-
     AgentResponse response;
     response.type = AgentResponseType::AGENT_ERROR;
     
     if (!m_initialized) {
         response.content = "Agentic framework not initialized";
+        return response;
+    }
 
+    if (!m_nativeEngine) {
+        response.content = "Native Engine not allocated";
         return response;
     }
     
-    // Build PowerShell command
-    std::stringstream cmd;
-    cmd << "& \"" << m_frameworkPath << "\" -Prompt \"" << prompt << "\" -Model \"" 
-        << m_modelName << "\" -OllamaServer \"" << m_ollamaServer << "\" -MaxIterations 10";
+    // Execute via Native C++ Engine
+    std::string engineOutput = m_nativeEngine->processQuery(prompt);
     
-    std::string psCommand = cmd.str();
-
-    // Execute via PowerShell
-    if (!SpawnPowerShellProcess("powershell.exe", "-NoProfile -ExecutionPolicy Bypass -Command \"" + psCommand + "\"")) {
-        response.content = "Failed to spawn PowerShell process";
-
-        return response;
-    }
+    // Parse the raw LLM output
+    response = ParseAgentResponse(engineOutput);
+    response.rawOutput = engineOutput;
     
-    // Read output
-    std::string output;
-    if (ReadProcessOutput(output, 30000)) {
-        response = ParseAgentResponse(output);
-        response.rawOutput = output;
-
-    } else {
-        response.content = "Failed to read agent output";
-
-    }
-    
-    KillPowerShellProcess();
     return response;
 }
 
 bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIterations) {
-
     if (!m_initialized) {
-
         return false;
     }
     
@@ -116,7 +90,8 @@ bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIter
     
     m_agentLoopRunning = true;
     
-    // Execute agent command
+    // Execute agent command (Blocking for now, can move to thread if needed)
+    // The native engine supports async but for the bridge interface we keep it simple
     AgentResponse response = ExecuteAgentCommand(initialPrompt);
     
     // Send to output callback
@@ -132,72 +107,66 @@ bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIter
 }
 
 void AgenticBridge::StopAgentLoop() {
-
     m_agentLoopRunning = false;
-    KillPowerShellProcess();
+    // Signal engine to stop if running async
 }
 
 std::vector<std::string> AgenticBridge::GetAvailableTools() {
-    // Return default tool list
+    // Return tools available in the native registry
+    // This could also query m_nativeEngine->getAvailableTools() if implemented
     return {
-        "shell", "powershell", "read_file", "write_file", 
-        "web_search", "list_dir", "git_status", "task_orchestrator"
+        "access_fs", "read_file", "write_file", 
+        "web_fetch", "list_directory", "git_ops", "code_analysis"
     };
 }
 
 std::string AgenticBridge::GetAgentStatus() {
     std::stringstream status;
-    status << "Agentic Framework Status:\n";
+    status << "Native Agentic Framework Status:\n";
     status << "  Initialized: " << (m_initialized ? "Yes" : "No") << "\n";
     status << "  Model: " << m_modelName << "\n";
-    status << "  Ollama Server: " << m_ollamaServer << "\n";
-    status << "  Framework Path: " << m_frameworkPath << "\n";
+    status << "  Engine State: " << (m_nativeEngine ? "Active" : "Null") << "\n";
     status << "  Loop Running: " << (m_agentLoopRunning ? "Yes" : "No") << "\n";
     return status.str();
 }
 
 void AgenticBridge::SetModel(const std::string& modelName) {
     m_modelName = modelName;
-
+    if (m_nativeEngine) {
+        m_nativeEngine->setModelName(modelName);
+    }
 }
 
 void AgenticBridge::SetOllamaServer(const std::string& serverUrl) {
     m_ollamaServer = serverUrl;
-
+    // Forward to native engine config if needed
 }
 
 void AgenticBridge::SetOutputCallback(OutputCallback callback) {
     m_outputCallback = callback;
 }
 
-bool AgenticBridge::SpawnPowerShellProcess(const std::string& scriptPath, const std::string& arguments) {
-
-    SECURITY_ATTRIBUTES sa = {};
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.bInheritHandle = TRUE;
-    sa.lpSecurityDescriptor = NULL;
+AgentResponse AgenticBridge::ParseAgentResponse(const std::string& rawOutput) {
+    AgentResponse response;
+    response.rawOutput = rawOutput;
+    response.type = AgentResponseType::ANSWER; // 
     
-    // Create stdout pipe
-    if (!CreatePipe(&m_hStdoutRead, &m_hStdoutWrite, &sa, 0)) {
-
-        return false;
+    // Basic Heuristic Parsing for Native Model Output
+    if (rawOutput.find("Tool Call:") != std::string::npos) {
+        response.type = AgentResponseType::TOOL_CALL;
+        // Simple extraction logic
+        size_t start = rawOutput.find("Tool Call:");
+        response.content = rawOutput.substr(start);
+    } else {
+        response.content = rawOutput;
     }
-    SetHandleInformation(m_hStdoutRead, HANDLE_FLAG_INHERIT, 0);
     
-    // Create stdin pipe
-    if (!CreatePipe(&m_hStdinRead, &m_hStdinWrite, &sa, 0)) {
+    return response;
+}
 
-        CloseHandle(m_hStdoutRead);
-        CloseHandle(m_hStdoutWrite);
-        return false;
-    }
-    SetHandleInformation(m_hStdinWrite, HANDLE_FLAG_INHERIT, 0);
-    
-    // Setup process
-    STARTUPINFOA si = {};
-    si.cb = sizeof(STARTUPINFOA);
-    si.hStdOutput = m_hStdoutWrite;
-    si.hStdError = m_hStdoutWrite;
+// Private helpers for resolving paths are no longer needed for PowerShell
+// but we keep the method stubs empty or removed if they were private.
+// Since we are replacing the file content, we just don't include them.
     si.hStdInput = m_hStdinRead;
     si.dwFlags |= STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;

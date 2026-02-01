@@ -1,22 +1,16 @@
 #pragma once
-
 #include <windows.h>
+#include <string>
 
-
-class SovereignDashboardWidget {public:
-    explicit SovereignDashboardWidget(void* parent = nullptr);
+class SovereignDashboardWidget {
+public:
+    SovereignDashboardWidget();
     ~SovereignDashboardWidget();
 
-    void attachSharedMemory(const std::string &name);
-\nprivate:\n    void updateDashboard();
+    void updateDashboard();
 
 private:
-    // Timer *m_timer;
     HANDLE m_mmfHandle;
     void* m_mmfView;
-    
-    void *m_lblTokens;
-    void *m_lblSkip;
-    void *m_barThermal;
 };
 

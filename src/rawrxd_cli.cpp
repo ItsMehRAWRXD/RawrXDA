@@ -1,4 +1,5 @@
 #include "gui.h"
+#include "cpu_inference_engine.h"
 #include "api_server.h"
 #include "telemetry.h"
 #include "settings.h"
@@ -17,6 +18,16 @@ int main(int argc, char** argv) {
     // Load settings
     Settings::LoadCompute(state);
     Settings::LoadOverclock(state);
+
+    // Initialize Inference Engine
+    state.inference_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
+    if (state.inference_engine->LoadModel(state.model_path)) {
+        state.loaded_model = true;
+        std::cout << "Model loaded: " << state.model_path << std::endl;
+    } else {
+        std::cerr << "Failed to load model: " << state.model_path << std::endl;
+        state.loaded_model = false;
+    }
 
     // Initialize telemetry
     telemetry::Initialize();

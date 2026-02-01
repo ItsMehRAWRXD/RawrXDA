@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <algorithm>
+#include <filesystem>
+#include <iostream>
 
 ErrorRecoverySystem::ErrorRecoverySystem(void* parent)
     : void(parent),
@@ -390,13 +392,29 @@ bool ErrorRecoverySystem::recoverFallbackLocal(ErrorRecord& error) {
 }
 
 bool ErrorRecoverySystem::recoverClearCache(ErrorRecord& error) {
-
-
     // Signal cache clear
     cacheClearRequested(error.component);
     
-    // Simulate cache clear success
-    return true;
+    // Real Logic: Delete temp files/cache directory
+    try {
+        std::filesystem::path cachePath = "temp/cache"; // Standardize on this relative path for portable cache
+        if (std::filesystem::exists(cachePath)) {
+            std::filesystem::remove_all(cachePath);
+            std::filesystem::create_directories(cachePath); // Recreate clean
+        }
+        
+        // Also clear any model specific caches if component is model
+        if (error.component.find("model") != std::string::npos) {
+             std::filesystem::path modelCache = "temp/model_cache";
+             if (std::filesystem::exists(modelCache)) {
+                  std::filesystem::remove_all(modelCache);
+             }
+        }
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Cache clear failed: " << e.what() << std::endl;
+        return false;
+    }
 }
 
 bool ErrorRecoverySystem::recoverRestartComponent(ErrorRecord& error) {

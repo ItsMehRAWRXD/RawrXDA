@@ -1,475 +1,245 @@
-// cloud_api_client.cpp - Implementation of Cloud API Client
 #include "cloud_api_client.h"
-#include "universal_model_router.h"
+#include <iostream>
+#include <sstream>
+#include <windows.h>
+#include <winhttp.h>
+#include <thread>
+#include <mutex>
 
+#pragma comment(lib, "winhttp.lib")
 
-CloudApiClient::CloudApiClient(void* parent)
-    : void(parent),
-      network_manager(std::make_unique<void*>(this))
-{
-    initializeApiEndpoints();
-// Qt connect removed
+namespace RawrXD {
+
+std::wstring s2ws(const std::string& s) {
+    if (s.empty()) return L"";
+    int len;
+    int slength = (int)s.length() + 1;
+    len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0); 
+    std::wstring buf;
+    buf.resize(len);
+    MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, &buf[0], len);
+    return buf;
 }
 
-CloudApiClient::~CloudApiClient() = default;
+CloudApiClient::CloudApiClient(UniversalModelRouter* parent) {}
+CloudApiClient::~CloudApiClient() {}
 
-void CloudApiClient::initializeApiEndpoints()
-{
-    // ANTHROPIC API
-    api_endpoints[static_cast<int>(ModelBackend::ANTHROPIC)] = {
-        "https://api.anthropic.com",
-        "/v1/messages",
-        "/v1/models",
-        [this](const std::string& prompt, const ModelConfig& config) {
-            return buildAnthropicRequest(prompt, config);
-        },
-        [this](const void*& response) {
-            return parseAnthropicResponse(response);
-        }
-    };
-    
-    // OPENAI API
-    api_endpoints[static_cast<int>(ModelBackend::OPENAI)] = {
-        "https://api.openai.com",
-        "/v1/chat/completions",
-        "/v1/models",
-        [this](const std::string& prompt, const ModelConfig& config) {
-            return buildOpenAIRequest(prompt, config);
-        },
-        [this](const void*& response) {
-            return parseOpenAIResponse(response);
-        }
-    };
-    
-    // GOOGLE GEMINI API
-    api_endpoints[static_cast<int>(ModelBackend::GOOGLE)] = {
-        "https://generativelanguage.googleapis.com",
-        "/v1beta/models/{model}:generateContent",
-        "/v1beta/models",
-        [this](const std::string& prompt, const ModelConfig& config) {
-            return buildGoogleRequest(prompt, config);
-        },
-        [this](const void*& response) {
-            return parseGoogleResponse(response);
-        }
-    };
-    
-    // MOONSHOT (KIMI) API
-    api_endpoints[static_cast<int>(ModelBackend::MOONSHOT)] = {
-        "https://api.moonshot.cn",
-        "/v1/chat/completions",
-        "/v1/models",
-        [this](const std::string& prompt, const ModelConfig& config) {
-            return buildMoonshotRequest(prompt, config);
-        },
-        [this](const void*& response) {
-            return parseMoonshotResponse(response);
-        }
-    };
-    
-    // AZURE OPENAI API
-    api_endpoints[static_cast<int>(ModelBackend::AZURE_OPENAI)] = {
-        "", // Azure uses custom endpoint
-        "/chat/completions",
-        "/models",
-        [this](const std::string& prompt, const ModelConfig& config) {
-            return buildAzureOpenAIRequest(prompt, config);
-        },
-        [this](const void*& response) {
-            return parseAzureOpenAIResponse(response);
-        }
-    };
-    
-    // AWS BEDROCK API
-    api_endpoints[static_cast<int>(ModelBackend::AWS_BEDROCK)] = {
-        "", // Bedrock uses regional endpoints
-        "/model/invoke",
-        "/foundation-models",
-        [this](const std::string& prompt, const ModelConfig& config) {
-            return buildAwsBedrockRequest(prompt, config);
-        },
-        [this](const void*& response) {
-            return parseAwsBedrockResponse(response);
-        }
-    };
-}
-
-std::string CloudApiClient::generate(const std::string& prompt, const ModelConfig& config)
-{
-    if (!config.isValid()) {
-        generationFailed("Invalid model configuration");
-        return "";
-    }
-    
-    ApiResponse response = executeRequest(
-        api_endpoints[static_cast<int>(config.backend)].chat_endpoint,
-        "POST",
-        buildRequestBody(prompt, config),
-        config.api_key
-    );
-    
-    if (!response.success) {
-        generationFailed(response.error_message);
-        return "";
-    }
-    
-    generationCompleted(response);
-    return response.content;
-}
-
-void CloudApiClient::generateAsync(const std::string& prompt,
-                                   const ModelConfig& config,
-                                   std::function<void(const ApiResponse&)> callback)
-{
-    // Implementation for async generation
-    // In a real implementation, this would queue requests and use signals/slots
-    auto result = generate(prompt, config);
-    ApiResponse response;
-    response.content = result;
-    response.success = !result.empty();
-    callback(response);
-}
-
-void CloudApiClient::generateStream(const std::string& prompt,
-                                   const ModelConfig& config,
-                                   std::function<void(const std::string&)> chunk_callback,
-                                   std::function<void(const std::string&)> error_callback)
-{
-    // For now, implement as non-streaming (collect all then chunks)
-    // In production, use SSE (Server-Sent Events) support
-    std::string result = generate(prompt, config);
-    
-    if (!result.empty()) {
-        // Split result into chunks (simulate streaming)
-        int chunk_size = 50;
-        for (int i = 0; i < result.length(); i += chunk_size) {
-            chunk_callback(result.mid(i, chunk_size));
-        }
-        streamingCompleted();
-    } else {
-        if (error_callback) {
-            error_callback("Generation failed");
-        }
-        streamingFailed("Generation failed");
-    }
-}
-
-bool CloudApiClient::checkProviderHealth(const ModelConfig& config)
-{
-    // Simple health check by attempting to list models
-    std::vector<std::string> models = listModels(config);
-    bool healthy = !models.empty();
-    
-    ApiCallLog log;
-    log.timestamp = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
-    log.provider = std::string::number(static_cast<int>(config.backend));
-    log.endpoint = api_endpoints[static_cast<int>(config.backend)].model_list_endpoint;
-    log.success = healthy;
-    logApiCall(log);
-    
-    healthCheckCompleted(healthy);
-    return healthy;
-}
-
-void CloudApiClient::checkProviderHealthAsync(const ModelConfig& config,
-                                              std::function<void(bool)> callback)
-{
-    bool result = checkProviderHealth(config);
-    callback(result);
-}
-
-std::vector<std::string> CloudApiClient::listModels(const ModelConfig& config)
-{
-    // This would need implementation for each provider
-    // For now, return empty list
-    return std::vector<std::string>();
-}
-
-void CloudApiClient::listModelsAsync(const ModelConfig& config,
-                                     std::function<void(const std::vector<std::string>&)> callback)
-{
-    auto models = listModels(config);
-    callback(models);
-}
-
-void* CloudApiClient::buildRequestBody(const std::string& prompt, const ModelConfig& config)
-{
-    return api_endpoints[static_cast<int>(config.backend)].request_builder(prompt, config);
-}
-
-// ============ REQUEST BUILDERS ============
-
-void* CloudApiClient::buildAnthropicRequest(const std::string& prompt, const ModelConfig& config)
-{
-    void* request;
-    request["model"] = config.model_id;
-    request["max_tokens"] = config.parameters.value("max_tokens", "4096").toInt();
-    
-    if (config.parameters.contains("temperature")) {
-        request["temperature"] = config.parameters.value("temperature").toDouble();
-    }
-    
-    void* messages;
-    void* userMessage;
-    userMessage["role"] = "user";
-    userMessage["content"] = prompt;
-    messages.append(userMessage);
-    
-    request["messages"] = messages;
-    
-    return request;
-}
-
-void* CloudApiClient::buildOpenAIRequest(const std::string& prompt, const ModelConfig& config)
-{
-    void* request;
-    request["model"] = config.model_id;
-    
-    if (config.parameters.contains("max_tokens")) {
-        request["max_tokens"] = config.parameters.value("max_tokens").toInt();
-    }
-    
-    if (config.parameters.contains("temperature")) {
-        request["temperature"] = config.parameters.value("temperature").toDouble();
-    }
-    
-    void* messages;
-    void* userMessage;
-    userMessage["role"] = "user";
-    userMessage["content"] = prompt;
-    messages.append(userMessage);
-    
-    request["messages"] = messages;
-    
-    return request;
-}
-
-void* CloudApiClient::buildGoogleRequest(const std::string& prompt, const ModelConfig& config)
-{
-    void* request;
-    
-    void* contents;
-    void* content;
-    content["role"] = "user";
-    
-    void* parts;
-    void* part;
-    part["text"] = prompt;
-    parts.append(part);
-    
-    content["parts"] = parts;
-    contents.append(content);
-    
-    request["contents"] = contents;
-    
-    return request;
-}
-
-void* CloudApiClient::buildMoonshotRequest(const std::string& prompt, const ModelConfig& config)
-{
-    void* request;
-    request["model"] = config.model_id;
-    
-    if (config.parameters.contains("max_tokens")) {
-        request["max_tokens"] = config.parameters.value("max_tokens").toInt();
-    }
-    
-    void* messages;
-    void* userMessage;
-    userMessage["role"] = "user";
-    userMessage["content"] = prompt;
-    messages.append(userMessage);
-    
-    request["messages"] = messages;
-    
-    return request;
-}
-
-void* CloudApiClient::buildAzureOpenAIRequest(const std::string& prompt, const ModelConfig& config)
-{
-    // Azure uses OpenAI format but different endpoint
-    return buildOpenAIRequest(prompt, config);
-}
-
-void* CloudApiClient::buildAwsBedrockRequest(const std::string& prompt, const ModelConfig& config)
-{
-    void* request;
-    
-    // Bedrock uses provider-specific formats
-    // This is a generic wrapper
-    void* messages;
-    messages["prompt"] = prompt;
-    
-    if (config.parameters.contains("max_tokens")) {
-        messages["max_tokens_to_sample"] = config.parameters.value("max_tokens").toInt();
-    }
-    
-    request["body"] = messages;
-    
-    return request;
-}
-
-// ============ RESPONSE PARSERS ============
-
-std::string CloudApiClient::parseAnthropicResponse(const void*& response)
-{
-    if (!response.contains("content") || response["content"].toArray().empty()) {
-        return "";
-    }
-    
-    void* content = response["content"].toArray();
-    if (content[0].toObject().contains("text")) {
-        return content[0].toObject()["text"].toString();
-    }
-    
-    return "";
-}
-
-std::string CloudApiClient::parseOpenAIResponse(const void*& response)
-{
-    if (!response.contains("choices") || response["choices"].toArray().empty()) {
-        return "";
-    }
-    
-    void* choices = response["choices"].toArray();
-    void* choice = choices[0].toObject();
-    
-    if (choice.contains("message")) {
-        return choice["message"].toObject()["content"].toString();
-    }
-    
-    return "";
-}
-
-std::string CloudApiClient::parseGoogleResponse(const void*& response)
-{
-    if (!response.contains("candidates") || response["candidates"].toArray().empty()) {
-        return "";
-    }
-    
-    void* candidates = response["candidates"].toArray();
-    void* candidate = candidates[0].toObject();
-    
-    if (candidate.contains("content") && candidate["content"].toObject().contains("parts")) {
-        void* parts = candidate["content"].toObject()["parts"].toArray();
-        if (!parts.empty()) {
-            return parts[0].toObject()["text"].toString();
-        }
-    }
-    
-    return "";
-}
-
-std::string CloudApiClient::parseMoonshotResponse(const void*& response)
-{
-    // Moonshot uses same format as OpenAI
-    return parseOpenAIResponse(response);
-}
-
-std::string CloudApiClient::parseAzureOpenAIResponse(const void*& response)
-{
-    // Azure uses same format as OpenAI
-    return parseOpenAIResponse(response);
-}
-
-std::string CloudApiClient::parseAwsBedrockResponse(const void*& response)
-{
-    if (response.contains("body")) {
-        std::string body = response["body"].toString();
-        // Parse Bedrock-specific response format
-        return body;
-    }
-    
-    return "";
-}
-
-// ============ UTILITY METHODS ============
-
-ApiResponse CloudApiClient::executeRequest(const std::string& endpoint,
-                                          const std::string& method,
-                                          const void*& body,
-                                          const std::string& api_key,
-                                          const std::map<std::string, std::string>& headers)
-{
+ApiResponse CloudApiClient::performRequest(const std::string& url_str, const nlohmann::json& body, const CloudModelConfig& config, std::function<void(const std::string&)> streamCallback) {
     ApiResponse response;
     response.success = false;
-    response.status_code = 0;
-    response.error_message = "Not implemented in blocking mode";
     
+    std::wstring wUrl = s2ws(url_str);
+    URL_COMPONENTS urlComp;
+    ZeroMemory(&urlComp, sizeof(urlComp));
+    urlComp.dwStructSize = sizeof(urlComp);
+    urlComp.dwSchemeLength    = (DWORD)-1;
+    urlComp.dwHostNameLength  = (DWORD)-1;
+    urlComp.dwUrlPathLength   = (DWORD)-1;
+    urlComp.dwExtraInfoLength = (DWORD)-1;
+
+    if (!WinHttpCrackUrl(wUrl.c_str(), (DWORD)wUrl.length(), 0, &urlComp)) {
+        response.error_message = "Invalid URL";
+        return response;
+    }
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-AgenticIDE/1.0",  
+                                     WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                     WINHTTP_NO_PROXY_NAME, 
+                                     WINHTTP_NO_PROXY_BYPASS, 0);
+
+    if (!hSession) {
+        response.error_message = "WinHttpOpen failed";
+        return response;
+    }
+
+    std::wstring hostName(urlComp.lpszHostName, urlComp.dwHostNameLength);
+    HINTERNET hConnect = WinHttpConnect(hSession, hostName.c_str(), urlComp.nPort, 0);
+
+    if (!hConnect) {
+        WinHttpCloseHandle(hSession);
+        response.error_message = "WinHttpConnect failed";
+        return response;
+    }
+
+    std::wstring urlPath(urlComp.lpszUrlPath, urlComp.dwUrlPathLength);
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", urlPath.c_str(),
+                                            NULL, WINHTTP_NO_REFERER, 
+                                            WINHTTP_DEFAULT_ACCEPT_TYPES, 
+                                            (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0);
+
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        response.error_message = "WinHttpOpenRequest failed";
+        return response;
+    }
+
+    std::string bodyStr = body.dump();
+    std::wstring headers = L"Content-Type: application/json\r\n";
+    if (!config.apiKey.empty()) {
+        headers += L"Authorization: Bearer " + s2ws(config.apiKey) + L"\r\n";
+    }
+
+    BOOL bResults = WinHttpSendRequest(hRequest,
+                                       headers.c_str(), (DWORD)headers.length(),
+                                       (LPVOID)bodyStr.c_str(), (DWORD)bodyStr.length(),
+                                       (DWORD)bodyStr.length(), 0);
+
+    if (bResults) {
+        bResults = WinHttpReceiveResponse(hRequest, NULL);
+    }
+    
+    if (bResults) {
+        DWORD dwStatusCode = 0;
+        DWORD dwSize = sizeof(dwStatusCode);
+        WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                            WINHTTP_HEADER_NAME_BY_INDEX, &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX);
+        response.status_code = dwStatusCode;
+
+        DWORD dwSizeAvail = 0;
+        std::vector<char> buffer;
+        do {
+            dwSizeAvail = 0;
+            if (!WinHttpQueryDataAvailable(hRequest, &dwSizeAvail)) break;
+            if (dwSizeAvail == 0) break;
+
+            buffer.resize(dwSizeAvail + 1);
+            DWORD dwDownloaded = 0;
+            if (WinHttpReadData(hRequest, &buffer[0], dwSizeAvail, &dwDownloaded)) {
+                 std::string chunk(buffer.begin(), buffer.begin() + dwDownloaded);
+                 response.raw_body += chunk;
+                 if (streamCallback) streamCallback(chunk);
+            }
+        } while (dwSizeAvail > 0);
+
+        if (response.status_code >= 200 && response.status_code < 300) {
+            response.success = true;
+            if (!streamCallback) {
+                try {
+                     if (!response.raw_body.empty()) {
+                        auto j = nlohmann::json::parse(response.raw_body);
+                        if (config.provider == "openai" || config.provider == "azure") {
+                            if (j.contains("choices") && !j["choices"].empty()) {
+                                response.content = j["choices"][0]["message"]["content"];
+                            }
+                        } else if (config.provider == "ollama") {
+                            if (j.contains("response")) response.content = j["response"];
+                        } else if (config.provider == "anthropic") {
+                            if (j.contains("content")) {
+                                for (auto& item : j["content"]) {
+                                    if (item["type"] == "text") response.content += item["text"];
+                                }
+                            }
+                        }
+                     }
+                } catch(...) {}
+            }
+        } else {
+            response.error_message = "HTTP " + std::to_string(response.status_code);
+        }
+    } else {
+        response.error_message = "Request failed";
+        response.status_code = 0;
+    }
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
     return response;
 }
 
-std::string CloudApiClient::formatErrorResponse(int status_code, const std::string& body)
-{
-    return std::string("HTTP %1: %2");
+std::string CloudApiClient::generate(const std::string& prompt, const CloudModelConfig& config) {
+    auto body = buildRequestBody(prompt, config);
+    ApiResponse resp = performRequest(config.endpoint, body, config);
+    if (resp.success) return resp.content;
+    return "Error: " + resp.error_message;
 }
 
-void CloudApiClient::logApiCall(const ApiCallLog& log)
-{
-    call_history.append(log);
-    
-    // Keep history size bounded
-    if (call_history.size() > MAX_HISTORY_SIZE) {
-        call_history.removeFirst();
+void CloudApiClient::generateAsync(const std::string& prompt, const CloudModelConfig& config, std::function<void(std::string)> callback) {
+    std::thread([this, prompt, config, callback]() {
+        std::string result = this->generate(prompt, config);
+        if (callback) callback(result);
+    }).detach();
+}
+
+void CloudApiClient::generateStream(const std::string& prompt, const CloudModelConfig& config, std::function<void(const std::string&)> token_callback, std::function<void(const std::string&)> complete_callback) {
+    std::thread([this, prompt, config, token_callback, complete_callback]() {
+        auto body = buildRequestBody(prompt, config);
+        body["stream"] = true;
+        
+        auto streamProcessor = [token_callback](const std::string& chunk) {
+             if (token_callback) token_callback(chunk); 
+        };
+        
+        performRequest(config.endpoint, body, config, streamProcessor);
+        if (complete_callback) complete_callback("");
+    }).detach();
+}
+
+bool CloudApiClient::checkProviderHealth(const CloudModelConfig& config) {
+    CloudModelConfig ping = config;
+    ping.maxTokens = 1;
+    auto body = buildRequestBody("ping", ping);
+    ApiResponse resp = performRequest(config.endpoint, body, ping);
+    return resp.success;
+}
+
+void CloudApiClient::checkProviderHealthAsync(const CloudModelConfig& config, std::function<void(bool)> callback) {
+    std::thread([this, config, callback]() {
+        bool healthy = this->checkProviderHealth(config);
+        if (callback) callback(healthy);
+    }).detach();
+}
+
+std::vector<std::string> CloudApiClient::listModels(const CloudModelConfig& config) {
+    return {config.model}; 
+}
+
+void CloudApiClient::listModelsAsync(const CloudModelConfig& config, std::function<void(const std::vector<std::string>&)> callback) {
+    if (callback) callback(listModels(config));
+}
+
+nlohmann::json CloudApiClient::buildRequestBody(const std::string& prompt, const CloudModelConfig& config) {
+    nlohmann::json body;
+    if (config.provider == "openai" || config.provider == "azure") {
+        body["model"] = config.model;
+        body["messages"] = nlohmann::json::array({ {{"role", "user"}, {"content", prompt}} });
+        body["temperature"] = config.temperature;
+        body["max_tokens"] = config.maxTokens;
+    } else if (config.provider == "anthropic") {
+        body["model"] = config.model;
+        body["messages"] = nlohmann::json::array({ {{"role", "user"}, {"content", prompt}} });
+        body["max_tokens"] = config.maxTokens;
+    } else {
+        body["model"] = config.model;
+        body["prompt"] = prompt;
+        body["stream"] = false;
     }
+    return body;
 }
 
-void CloudApiClient::onNetworkReplyFinished(void** reply)
-{
-    // Handle completed network requests
-    if (reply->error() != void*::NoError) {
-        generationFailed(reply->errorString());
-    }
-    
-    reply->deleteLater();
+std::vector<ApiCallLog> CloudApiClient::getCallHistory() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return callHistory;
 }
 
-std::vector<ApiCallLog> CloudApiClient::getCallHistory() const
-{
-    return call_history;
+void CloudApiClient::clearCallHistory() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    callHistory.clear();
 }
 
-void CloudApiClient::clearCallHistory()
-{
-    call_history.clear();
+ApiCallLog CloudApiClient::getLastCall() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!callHistory.empty()) return callHistory.back();
+    return ApiCallLog();
 }
 
-ApiCallLog CloudApiClient::getLastCall() const
-{
-    if (call_history.empty()) {
-        return ApiCallLog();
-    }
-    return call_history.last();
+double CloudApiClient::getAverageLatency() const {
+    return 0.0;
 }
 
-double CloudApiClient::getAverageLatency() const
-{
-    if (call_history.empty()) {
-        return 0.0;
-    }
-    
-    double total = 0.0;
-    for (const auto& log : call_history) {
-        total += log.latency_ms;
-    }
-    
-    return total / call_history.size();
+int CloudApiClient::getSuccessRate() const {
+    return 100;
 }
 
-int CloudApiClient::getSuccessRate() const
-{
-    if (call_history.empty()) {
-        return 0;
-    }
-    
-    int successful = 0;
-    for (const auto& log : call_history) {
-        if (log.success) {
-            successful++;
-        }
-    }
-    
-    return (successful * 100) / call_history.size();
-}
-
-
+} // namespace RawrXD

@@ -1,6 +1,9 @@
 #include "real_time_completion_engine.h"
 #include <algorithm>
 #include <chrono>
+#include <regex>
+#include <fstream>
+#include <sstream>
 
 // Forward declaration - would be replaced with actual InferenceEngine integration
 // extern InferenceEngine* g_inferenceEngine;
@@ -8,7 +11,7 @@
 RealTimeCompletionEngine::RealTimeCompletionEngine(
     std::shared_ptr<Logger> logger,
     std::shared_ptr<Metrics> metrics)
-    : m_logger(logger), m_metrics(metrics) {
+    : m_logger(logger), m_metrics(metrics), m_inferenceEngine(nullptr) {
 
 }
 
@@ -103,16 +106,89 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getContextualCompletions(
     int column,
     const std::string& scope) {
 
+    // Read file context to get surrounding lines
+    std::string context;
+    std::string prefix;
+    std::string suffix;
+    
+    std::ifstream file(filePath);
+    if (file.is_open()) {
+        std::string sLine;
+        int currentLine = 0;
+        int startContextLine = std::max(0, line - 20); // 20 lines before
+        int endContextLine = line + 5; // 5 lines after
+        
+        while (std::getline(file, sLine)) {
+            currentLine++;
+            if (currentLine >= startContextLine && currentLine <= endContextLine) {
+                if (currentLine == line) {
+                    if (column < (int)sLine.length()) {
+                         prefix += sLine.substr(0, column);
+                         suffix += sLine.substr(column);
+                    } else {
+                         prefix += sLine;
+                    }
+                } else {
+                    context += sLine + "\n";
+                }
+            }
+        }
+    }
 
-    // In full implementation, would analyze file context
-    return getCompletions("", "", "cpp", scope);
+    return getCompletions(prefix, suffix, "cpp", context + "\nScope: " + scope);
 }
 
 void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
 
 
-    // Pre-populate cache with likely completions for this file
-    // Placeholder implementation
+    // Real pre-warming logic
+    // Analyze file content and add common tokens to cache
+    std::ifstream file(filePath);
+    if (!file.is_open()) return;
+    
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    
+    // Simple tokenization for cache warming
+    std::vector<std::string> tokens;
+    std::regex tokenRegex("[a-zA-Z_][a-zA-Z0-9_]*");
+    auto begin = std::sregex_iterator(content.begin(), content.end(), tokenRegex);
+    auto end = std::sregex_iterator();
+    
+    for (std::sregex_iterator i = begin; i != end; ++i) {
+        tokens.push_back(i->str());
+    }
+    
+    // Add unique tokens to cache as high-probability completions
+    std::sort(tokens.begin(), tokens.end());
+    tokens.erase(std::unique(tokens.begin(), tokens.end()), tokens.end());
+    
+    std::lock_guard<std::mutex> lock(m_cacheMutex);
+    for (const auto& token : tokens) {
+         if (token.length() > 3) {
+             std::vector<CodeCompletion> completions;
+             completions.push_back({token, "Cached Token", 1.0f, "Prewarm"});
+             // Cache key is just the token prefix (first 3 chars)
+             std::string prefix = token.substr(0, 3);
+             m_completionCache[prefix] = completions;
+         }
+    }
+
+    // tokenize and cache N-grams?
+    // For now, simpler approach: Trigger a background completion request for the end of the file
+    // to load the model's KV cache.
+    
+    // Explicit call to load context without returning result
+    if (m_inferenceEngine) { 
+        // We limit context to last 512 chars to avoid massive delay
+        std::string contextPrompt = content.length() > 512 ? content.substr(content.length() - 512) : content;
+        
+        // Fire and forget - just to heat up the engine/cache
+        std::thread([this, contextPrompt]() {
+             try {
+                if (m_inferenceEngine) m_inferenceEngine->infer(contextPrompt);
+             } catch(...) {}
+        }).detach();
+    }
 }
 
 void RealTimeCompletionEngine::clearCache() {
@@ -160,149 +236,38 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
     std::vector<CodeCompletion> completions;
 
     try {
-
         m_metrics->incrementCounter("model_calls");
 
-        // PHASE 1 IMPLEMENTATION: Real model calling
-        // Integration point with InferenceEngine
-        //
-        // Step 1: Access model from global context or AIIntegrationHub
-        // =========================================================
-        // TODO: Uncomment when InferenceEngine is available:
-        //
-        // InferenceEngine& engine = AIIntegrationHub::getInstance().getInferenceEngine();
-        // if (!engine.IsModelLoaded()) {
-        //     m_
-        //     return {};
-        // }
-        //
-        // Step 2: Tokenize the prompt
-        // ===========================
-        // std::vector<uint32_t> inputTokens = engine.TokenizeText(prompt);
-        //
-        // Trim to context window (typically 512-2048 tokens)
-        // const size_t CONTEXT_WINDOW = 512;
-        // if (inputTokens.size() > CONTEXT_WINDOW) {
-        //     inputTokens.erase(inputTokens.begin(), 
-        //                      inputTokens.end() - CONTEXT_WINDOW);
-        // }
-        //
-        // Step 3: Generate tokens one at a time
-        // =====================================
-        // std::string generatedCompletion;
-        // const int MIN_LENGTH = 5;  // Minimum characters before stopping
-        // const std::vector<std::string> STOP_SEQUENCES = {"\n\n", "EOF", "};", "}\n"};
-        //
-        // for (int i = 0; i < maxTokens; i++) {
-        //     // Get next token from model
-        //     // This would call the transformer to generate logits
-        //     uint32_t nextToken = engine.SampleNextToken(
-        //         inputTokens,
-        //         temperature=0.3f,  // Low temperature for focused suggestions
-        //         top_p=0.9f         // Nucleus sampling for diversity
-        //     );
-        //
-        //     // Check for end-of-sequence
-        //     if (nextToken == engine.GetVocabSize() - 1) {
-        //         m_
-        //         break;
-        //     }
-        //
-        //     // Add to sequence and decode
-        //     inputTokens.push_back(nextToken);
-        //     std::string token = engine.DetokenizeIds({nextToken});
-        //     generatedCompletion += token;
-        //
-        //     // Check for stop sequences
-        //     for (const auto& stopSeq : STOP_SEQUENCES) {
-        //         if (generatedCompletion.find(stopSeq) != std::string::npos) {
-        //             m_
-        //             goto generation_done;
-        //         }
-        //     }
-        //
-        //     // Early exit if we have a good completion
-        //     if (generatedCompletion.length() >= MIN_LENGTH &&
-        //         (token == ";" || token == ")" || token == "}\n")) {
-        //         m_
-        //         break;
-        //     }
-        //
-        //     // Safety: limit length to prevent runaway generation
-        //     if (generatedCompletion.length() > 256) {
-        //         m_
-        //         break;
-        //     }
-        // }
-        //
-        // generation_done:
-        // Step 4: Parse and score completions
-        // ===================================
-        // auto parsedCompletions = parseCompletionsFromText(generatedCompletion);
-        // for (auto& comp : parsedCompletions) {
-        //     comp.confidence = scoreCompletion(comp.text, prompt);
-        //     completions.push_back(comp);
-        // }
-        //
-        // Step 5: Rank by confidence
-        // =========================
-        // std::sort(completions.begin(), completions.end(),
-        //          [](const CodeCompletion& a, const CodeCompletion& b) {
-        //              return a.confidence > b.confidence;
-        //          });
-        //
-        // m_
-        // m_metrics->recordHistogram("completions_per_call", completions.size());
+        if (!m_inferenceEngine) {
+            // No engine available - strict fail, no mocks
+            return {}; 
+        }
 
-        // TEMPORARY: Until InferenceEngine is wired, return realistic mock data
-        // This demonstrates the structure and flow of real completions
+        // Real inference call
+        std::string result = m_inferenceEngine->infer(prompt);
+        
+        if (result.empty()) {
+            return {};
+        }
 
+        // Parse result into completion object
+        CodeCompletion completion;
+        completion.text = result;
+        completion.detail = "AI Generated"; // could be refined
+        completion.confidence = calculateConfidence(result, prompt);
+        completion.kind = "ai_suggestion";
+        completion.insertTextLength = (int)result.length();
+        completion.cursorOffset = 0;
 
-        // These would be REAL completions from the model
-        CodeCompletion completion1;
-        completion1.text = "push_back(item);";
-        completion1.detail = "Add element to vector";
-        completion1.confidence = 0.94;
-        completion1.kind = "method";
-        completion1.insertTextLength = 16;
-        completion1.cursorOffset = 10;
-        completions.push_back(completion1);
-
-        CodeCompletion completion2;
-        completion2.text = "size()";
-        completion2.detail = "Get vector size";
-        completion2.confidence = 0.91;
-        completion2.kind = "method";
-        completion2.insertTextLength = 6;
-        completion2.cursorOffset = 5;
-        completions.push_back(completion2);
-
-        CodeCompletion completion3;
-        completion3.text = "empty()";
-        completion3.detail = "Check if vector is empty";
-        completion3.confidence = 0.88;
-        completion3.kind = "method";
-        completion3.insertTextLength = 7;
-        completion3.cursorOffset = 6;
-        completions.push_back(completion3);
-
-        CodeCompletion completion4;
-        completion4.text = "clear();";
-        completion4.detail = "Remove all elements from vector";
-        completion4.confidence = 0.85;
-        completion4.kind = "method";
-        completion4.insertTextLength = 8;
-        completion4.cursorOffset = 5;
-        completions.push_back(completion4);
+        completions.push_back(completion);
 
         m_metrics->recordHistogram("completions_per_call", completions.size());
         m_metrics->recordHistogram("completion_confidence", 
-                                  completions[0].confidence * 100);
+                                  completion.confidence * 100);
 
         return completions;
 
     } catch (const std::exception& e) {
-
         m_metrics->incrementCounter("model_call_errors");
         return {};
     }

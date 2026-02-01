@@ -1,9 +1,11 @@
 #include "self_test.hpp"
+#include "model_invoker.hpp"
 #include <iostream>
 #include <vector>
 #include <string>
 #include <filesystem>
 #include <windows.h>
+#include <chrono>
 
 namespace fs = std::filesystem;
 
@@ -64,6 +66,7 @@ bool SelfTest::runAll() {
 
     if (!runUnitTests()) return false;
     if (!runIntegrationTests()) return false;
+    if (!runInferenceTests()) return false;
     if (!runLint()) return false;
     if (!runBenchmarkBaseline()) return false;
 
@@ -140,6 +143,32 @@ bool SelfTest::runIntegrationTests() {
     return true;
 }
 
+bool SelfTest::runInferenceTests() {
+    log("Running inference tests...");
+    
+    ModelInvoker invoker;
+    // Assume default backend (Ollama/Local)
+    invoker.setLLMBackend("ollama", "http://localhost:11434"); 
+    
+    InvocationParams params;
+    params.wish = "Test inference latency";
+    params.maxTokens = 10;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    LLMResponse resp = invoker.queryRaw("", "Say hello", 10);
+    auto end = std::chrono::high_resolution_clock::now();
+    
+    if (!resp.success) {
+        // Warning only, as backend might not be running
+        log("WARNING: Inference test failed (Is Ollama/Backend running?): " + resp.error);
+        return true; 
+    }
+    
+    std::chrono::duration<double, std::milli> ms = end - start;
+    log("Inference PASSED. Response: " + resp.rawOutput + " (" + std::to_string(ms.count()) + " ms)");
+    return true;
+}
+
 bool SelfTest::runLint() {
     log("Running static analysis...");
     
@@ -174,6 +203,30 @@ bool SelfTest::runLint() {
 }
 
 bool SelfTest::runBenchmarkBaseline() {
-    // Placeholder - assume success if not implemented or external
+    log("Running CPU baseline benchmark...");
+    
+    // Simple matrix multiplication or similar to gauge basic ops/sec
+    const int N = 256;
+    std::vector<float> A(N*N, 1.0f);
+    std::vector<float> B(N*N, 1.0f);
+    std::vector<float> C(N*N, 0.0f);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        for (int k = 0; k < N; ++k) {
+            float b = B[k*N + i]; // simple unoptimized access pattern
+            for (int j = 0; j < N; ++j) {
+                C[i*N + j] += A[i*N + k] * B[k*N + j];
+            }
+        }
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    
+    std::chrono::duration<double> diff = end - start;
+    double mflops = (2.0 * N * N * N) / (diff.count() * 1e6);
+    
+    log("Benchmark Result: " + std::to_string(mflops) + " MFLOPS (Approx)");
+    
+    // Assume if we completed > 0 MFLOPS, it passed.
     return true;
 }

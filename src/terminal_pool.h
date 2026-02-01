@@ -1,35 +1,36 @@
 #pragma once
-
-
+#include <string>
+#include <map>
 #include <vector>
-#include <cstdint>
+#include <mutex>
+#include <windows.h>
 
-
-struct TerminalInfo {
-    void* output_widget;
-    void* input_widget;
-    void** process;
+struct TerminalInstance {
+    HANDLE hPty;
+    HANDLE hProcess;
+    HANDLE hThread;
+    HANDLE hInRead, hInWrite; // For fallback
+    HANDLE hOutRead, hOutWrite; // For fallback
+    bool useConPty;
 };
 
-class TerminalPool : public void {
-
+class TerminalPool {
 public:
-    explicit TerminalPool(uint32_t pool_size, void* parent = nullptr);
-    void initialize();
+    TerminalPool();
+    ~TerminalPool();
     
-public:
-    void createNewTerminal();
-    void executeCommand(int terminal_index);
-    void readProcessOutput(int terminal_index);
-    void readProcessError(int terminal_index);
-    void closeTerminal(int tab_index);
-
-
-    void commandExecuted(const std::string& command);
+    bool createTerminal(const std::string& name, const std::string& shellCmd = "cmd.exe");
+    bool runCommand(const std::string& name, const std::string& cmd);
+    std::string readOutput(const std::string& name);
+    void closeTerminal(const std::string& name);
     
+    std::vector<std::string> listTerminals() const;
+
 private:
-    uint32_t pool_size_;
-    void* tab_widget_;
-    std::vector<TerminalInfo> terminals_;
+    std::map<std::string, TerminalInstance> m_terminals;
+    mutable std::mutex m_mutex;
+    
+    // ConPTY Helpers
+    HRESULT CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPipeOut);
+    HRESULT InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX* pStartupInfo, HPCON hPC);
 };
-

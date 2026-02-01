@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include "../../qtapp/settings.h"  // For MonacoSettings, MonacoThemeColors, etc.
+#include "../../settings.h"  // For MonacoSettings, MonacoThemeColors, etc.
 
 namespace RawrXD::Agentic::Monaco {
 
@@ -290,6 +290,10 @@ private:
     void unloadVariantModule();
     void* getModuleFunction(const char* name);
     
+    // Cursor tracking
+    uint64_t cursorLine_ = 0;
+    uint64_t cursorColumn_ = 0;
+
     // Window procedure
     static LRESULT CALLBACK EditorWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 };

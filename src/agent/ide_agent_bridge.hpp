@@ -35,6 +35,9 @@ public:
     void cancelExecution();
     void approveExecution();
     void rejectExecution();
+    
+    // Explicit Logic: New Code Completion API
+    std::string generateCodeCompletion(const std::string& context, const std::string& prefix);
 
     void setDryRun(bool dryRun);
 
@@ -45,6 +48,10 @@ public:
     std::function<void(int step, int total, const std::string& desc)> onProgressUpdated;
     std::function<void(const std::string& result)> onExecutionComplete;
     std::function<void(const std::string& planJson)> onApprovalRequested;
+
+    // Accessors for derived classes and integration
+    ModelInvoker* getModelInvoker() const { return m_invoker.get(); }
+    ActionExecutor* getActionExecutor() const { return m_executor.get(); }
 
 private:
     std::unique_ptr<ModelInvoker> m_invoker;

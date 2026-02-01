@@ -1,15 +1,15 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <memory>
+#include <string>
 #include <vector>
+#include <memory>
+#include <chrono>
+#include <functional>
+#include <nlohmann/json.hpp>
+#include "../src/cpu_inference_engine.h"
 
 class AgenticLoopState;
 class AgenticEngine;
-class InferenceEngine;
 
 /**
  * @class AgenticIterativeReasoning
@@ -31,63 +31,69 @@ class InferenceEngine;
  * - Learning from past decisions
  * - Explainable reasoning traces
  */
-class AgenticIterativeReasoning : public QObject
+class AgenticIterativeReasoning
 {
-    Q_OBJECT
-
 public:
     struct IterationResult {
         bool success;
-        QString result;
-        QString reasoning;
-        QJsonArray decisionTrace;
+        std::string result;
+        std::string reasoning;
+        nlohmann::json decisionTrace;
         float confidence;
         int iterationCount;
         int totalTime; // milliseconds
     };
 
     struct Strategy {
-        QString name;
-        QString description;
+        std::string name;
+        std::string description;
         float estimatedSuccessProbability;
-        QStringList requiredTools;
-        QJsonObject parameters;
+        std::vector<std::string> requiredTools;
+        nlohmann::json parameters;
         int complexity; // 1-10
     };
 
+    // Callback types for signals replacement
+    using StringCallback = std::function<void(const std::string&)>;
+    using IterationCallback = std::function<void(int)>;
+    using PhaseCallback = std::function<void(const std::string&, const std::string&)>;
+    using BoolStringCallback = std::function<void(bool, const std::string&)>;
+    using ErrorCallback = std::function<void(const std::string&, int)>;
+    using ResultCallback = std::function<void(int, bool)>;
+
 public:
-    explicit AgenticIterativeReasoning(QObject* parent = nullptr);
+    explicit AgenticIterativeReasoning(void* parent = nullptr);
     ~AgenticIterativeReasoning();
 
-    void initialize(AgenticEngine* engine, AgenticLoopState* state, InferenceEngine* inference);
+    void initialize(AgenticEngine* engine, AgenticLoopState* state, RawrXD::InferenceEngine* inference);
 
     // Main entry point for iterative reasoning
     IterationResult reason(
-        const QString& goal,
+        const std::string& goal,
         int maxIterations = 10,
         int timeoutSeconds = 300
     );
 
     // Phase implementations - callable for testing
-    QString analyzeGoal(const QString& goal);
-    std::vector<Strategy> generateStrategies(const QString& goal, const QString& context);
+    std::string analyzeGoal(const std::string& goal);
+    std::vector<Strategy> generateStrategies(const std::string& goal, const std::string& context);
     Strategy selectStrategy(const std::vector<Strategy>& strategies);
     
-    QJsonObject planExecution(const QString& goal, const Strategy& strategy);
-    QJsonObject executeAction(const QJsonObject& plan);
+    nlohmann::json planExecution(const std::string& goal, const Strategy& strategy);
+    nlohmann::json executeAction(const nlohmann::json& plan);
     
-    bool verifyResult(const QString& expectedOutcome, const QJsonObject& actualResult);
-    QString reflectOnIteration(const QJsonObject& iterationData);
-    QJsonObject adjustStrategy(const QString& reflection);
+    bool verifyResult(const std::string& expectedOutcome, const nlohmann::json& actualResult);
+    std::string reflectOnIteration(const nlohmann::json& iterationData);
+    nlohmann::json adjustStrategy(const std::string& reflection);
 
     // Error handling within reasoning loop
-    bool handleReasoningError(const QString& error, int& retryCount);
-    QString generateBacktrackingStrategy(const QString& lastFailure);
+    bool handleReasoningError(const std::string& error, int& retryCount);
+    std::string generateBacktrackingStrategy(const std::string& lastFailure);
 
     // Get information about reasoning process
-    QJsonArray getReasoningTrace() const { return m_reasoningTrace; }
-    QString getReasoningExplanation() const;
-    QJsonObject getMetrics() const;
+    nlohmann::json getReasoningTrace() const { return m_reasoningTrace; }
+    std::string getReasoningExplanation() const;
+    nlohmann::json getMetrics() const;
 
     // Configuration
     void setMaxIterations(int max) { m_maxIterations = max; }
@@ -95,55 +101,55 @@ public:
     void setReflectionEnabled(bool enabled) { m_enableReflection = enabled; }
     void setVerboseLogging(bool enabled) { m_verboseLogging = enabled; }
 
-signals:
-    void iterationStarted(int iterationNumber);
-    void phaseCompleted(const QString& phaseName, const QString& result);
-    void strategySelected(const QString& strategyName);
-    void executionStarted(const QString& action);
-    void verificationResult(bool passed, const QString& details);
-    void reflectionGenerated(const QString& reflection);
-    void adjustmentApplied(const QString& newStrategy);
-    void iterationCompleted(int iterationNumber, bool success);
-    void reasoningCompleted(const QString& finalResult);
-    void errorOccurred(const QString& error, int iterationNumber);
+    // Callbacks (formerly signals)
+    IterationCallback onIterationStarted;
+    PhaseCallback onPhaseCompleted;
+    StringCallback onStrategySelected;
+    StringCallback onExecutionStarted;
+    BoolStringCallback onVerificationResult;
+    StringCallback onReflectionGenerated;
+    StringCallback onAdjustmentApplied;
+    ResultCallback onIterationCompleted;
+    StringCallback onReasoningCompleted;
+    ErrorCallback onErrorOccurred;
 
 private:
     // Phase handlers
-    QString executeAnalysisPhase(const QString& goal);
-    std::vector<Strategy> executePlanningPhase(const QString& goal, const QString& analysis);
-    QJsonObject executeExecutionPhase(const Strategy& strategy, const QString& goal);
-    bool executeVerificationPhase(const QString& goal, const QJsonObject& result);
-    QString executeReflectionPhase(
+    std::string executeAnalysisPhase(const std::string& goal);
+    std::vector<Strategy> executePlanningPhase(const std::string& goal, const std::string& analysis);
+    nlohmann::json executeExecutionPhase(const Strategy& strategy, const std::string& goal);
+    bool executeVerificationPhase(const std::string& goal, const nlohmann::json& result);
+    std::string executeReflectionPhase(
         int iterationNumber,
-        const QString& goal,
-        const QJsonObject& iterationData
+        const std::string& goal,
+        const nlohmann::json& iterationData
     );
     
     // Helper methods
     Strategy pickBestStrategy(const std::vector<Strategy>& strategies);
-    std::vector<QString> generateAlternativeApproaches(const QString& goal);
-    QJsonObject buildIterationContext(int iteration, const QString& goal);
-    bool hasConverged(const std::vector<QString>& recentResults);
-    bool shouldRetry(const QString& error) const;
+    std::vector<std::string> generateAlternativeApproaches(const std::string& goal);
+    nlohmann::json buildIterationContext(int iteration, const std::string& goal);
+    bool hasConverged(const std::vector<std::string>& recentResults);
+    bool shouldRetry(const std::string& error) const;
 
     // Model-based reasoning
-    QString callModelForReasoning(const QString& prompt, const QString& context = "");
-    QJsonArray extractStructuredResponse(const QString& modelResponse);
+    std::string callModelForReasoning(const std::string& prompt, const std::string& context = "");
+    nlohmann::json extractStructuredResponse(const std::string& modelResponse);
     
     // Metrics collection
     void recordIterationMetrics(
         int iterationNumber,
-        const QString& phase,
+        const std::string& phase,
         int durationMs
     );
 
     // Logging
-    void log(const QString& message, const QString& level = "INFO");
+    void log(const std::string& message, const std::string& level = "INFO");
 
     // Pointers to connected engines
     AgenticEngine* m_engine = nullptr;
     AgenticLoopState* m_state = nullptr;
-    InferenceEngine* m_inferenceEngine = nullptr;
+    RawrXD::InferenceEngine* m_inferenceEngine = nullptr;
 
     // Configuration
     int m_maxIterations = 10;
@@ -152,14 +158,14 @@ private:
     bool m_verboseLogging = false;
 
     // Runtime state
-    QDateTime m_loopStartTime;
+    std::chrono::system_clock::time_point m_loopStartTime;
     int m_currentIteration = 0;
-    QStringList m_recentResults;
+    std::vector<std::string> m_recentResults;
     std::vector<Strategy> m_failedStrategies;
-    QString m_currentGoal;
+    std::string m_currentGoal;
 
     // Trace and metrics
-    QJsonArray m_reasoningTrace;
-    QJsonObject m_metrics;
-    std::vector<std::pair<QString, int>> m_phaseDurations;
+    nlohmann::json m_reasoningTrace;
+    nlohmann::json m_metrics;
+    std::vector<std::pair<std::string, int>> m_phaseDurations;
 };

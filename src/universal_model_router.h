@@ -12,14 +12,16 @@
 
 using json = nlohmann::json;
 
-struct QuantizationEngineNoopDeleter {
-    void operator()(QuantizationAwareInferenceEngine*) const noexcept {}
-};
+namespace RawrXD {
+
+class CPUInferenceEngine;
 class CloudApiClient;
+class PipeClient;
 
 // Model backend enumeration
 enum class ModelBackend {
     LOCAL_GGUF,        // Local GGUF quantized models
+    LOCAL_TITAN,       // Native Assembly Engine (RawrXD_NativeHost)
     OLLAMA_LOCAL,      // Ollama API (local HTTP server)
     ANTHROPIC,         // Claude API (Anthropic)
     OPENAI,            // GPT-4, GPT-3.5 (OpenAI)
@@ -91,13 +93,20 @@ public:
     std::string getModelDescription(const std::string& model_name) const;
     json getModelInfo(const std::string& model_name) const;
 
+    // Inference
+    std::string routeQuery(const std::string& model_name, const std::string& prompt, float temperature = 0.7f);
+    void routeStreamQuery(const std::string& model_name, const std::string& prompt, StreamCallback callback, float temperature = 0.7f);
+
 private:
     std::map<std::string, ModelConfig> model_registry;
-    std::unique_ptr<QuantizationAwareInferenceEngine> local_engine;
-    std::unique_ptr<CloudApiClient> cloud_client;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> local_engine;
+    std::unique_ptr<RawrXD::PipeClient> titan_client;
+    std::unique_ptr<CloudApiClient> cloud_client; // Default deleter ok
     bool local_engine_ready;
     bool cloud_client_ready;
 };
+
+} // namespace RawrXD
 
 #endif // UNIVERSAL_MODEL_ROUTER_H
 

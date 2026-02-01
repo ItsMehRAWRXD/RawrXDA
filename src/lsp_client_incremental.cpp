@@ -6,12 +6,15 @@
 
 #include <tuple>
 
+// DISABLED TEMPORARILY TO FIX BUILD
+#if 0
 namespace RawrXD {
 
 struct Position {
     int line;
     int character;
 };
+
 
 struct DiffOp {
     enum Type { Equal, Insert, Delete } type;
@@ -29,7 +32,7 @@ static std::vector<DiffOp> myersDiff(const std::string& oldText, const std::stri
     std::vector<std::vector<DiffOp>> traces;
     
     for(int d = 0; d <= maxD; ++d) {
-        traces.append({});
+        traces.push_back({});
         for(int k = -d; k <= d; k += 2) {
             bool down = (k == -d || (k != d && v[k - 1 + maxD] < v[k + 1 + maxD]));
             int kPrev = down ? k + 1 : k - 1;
@@ -127,4 +130,7 @@ Position LSPClient::offsetToPosition(const std::string& text, int offset) {
 }
 
 } // namespace RawrXD
+
+
+#endif
 

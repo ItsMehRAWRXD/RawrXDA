@@ -5,6 +5,7 @@
 #include <chrono>
 #include <algorithm>
 #include <ctime>
+#include <vector>
 
 // Forward declarations
 typedef HRESULT(*DigestionEngineFunc)(const wchar_t*, const wchar_t*, void*);
@@ -439,10 +440,10 @@ bool SendHotkey(HWND hwnd, UINT vk, bool ctrl, bool shift, bool alt) {
     
     SetKeyboardState(keyState);
     
-    // Simulate key press
-    PostMessageW(hwnd, WM_KEYDOWN, vk, 0);
+    // Real implementation
+    SendKeyInput(vk, true);
     Sleep(50);
-    PostMessageW(hwnd, WM_KEYUP, vk, 0);
+    SendKeyInput(vk, false);
     
     // Restore original state
     SetKeyboardState(originalState);
@@ -450,22 +451,54 @@ bool SendHotkey(HWND hwnd, UINT vk, bool ctrl, bool shift, bool alt) {
     return true;
 }
 
+void SendKeyInput(WORD vk, bool down) {
+    INPUT input = { 0 };
+    input.type = INPUT_KEYBOARD;
+    input.ki.wVk = vk;
+    input.ki.dwFlags = down ? 0 : KEYEVENTF_KEYUP;
+    SendInput(1, &input, sizeof(INPUT));
+}
+
 bool OpenFileInEditor(HWND hwnd, const std::wstring& filePath) {
-    // Simulate Ctrl+O (Open file dialog)
-    PostMessageW(hwnd, WM_KEYDOWN, 'O', 0);
-    PostMessageW(hwnd, WM_CHAR, 'O', 0);
-    PostMessageW(hwnd, WM_KEYUP, 'O', 0);
+    // Real logic using SendInput for Ctrl+O interaction
+    // Note: PostMessage is often insufficient for hotkeys handled at low level or by specific frameworks
+    // But assuming the app handles WM_KEYDOWN specifically for shortcuts:
     
-    Sleep(500);
+    // Set Foreground to ensure input goes to window
+    SetForegroundWindow(hwnd);
+    Sleep(100);
+
+    // Ctrl Down
+    SendKeyInput(VK_CONTROL, true);
+    // O Down/Up
+    SendKeyInput('O', true);
+    SendKeyInput('O', false);
+    // Ctrl Up
+    SendKeyInput(VK_CONTROL, false);
     
-    // Send file path to dialog (simulated)
+    Sleep(1000); // Wait for dialog
+
+    // We can't easily find the dialog hwnd blindly without EnumWindows, 
+    // but assuming standard dialog, it keeps focus. 
+    // Type path.
     for (wchar_t c : filePath) {
-        PostMessageW(hwnd, WM_CHAR, c, 0);
+        // Simple char entry. For complex paths/non-ascii, clipboard paste is safer,
+        // but this removes the "Simulate" placeholder with real input events.
+        INPUT input = { 0 };
+        input.type = INPUT_KEYBOARD;
+        input.ki.wScan = c;
+        input.ki.dwFlags = KEYEVENTF_UNICODE;
+        SendInput(1, &input, sizeof(INPUT));
+        
+        input.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+        SendInput(1, &input, sizeof(INPUT));
     }
     
-    // Simulate Enter
-    PostMessageW(hwnd, WM_KEYDOWN, VK_RETURN, 0);
-    PostMessageW(hwnd, WM_KEYUP, VK_RETURN, 0);
+    Sleep(100);
+    
+    // Enter
+    SendKeyInput(VK_RETURN, true);
+    SendKeyInput(VK_RETURN, false);
     
     return true;
 }

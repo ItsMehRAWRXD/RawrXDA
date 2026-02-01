@@ -6,6 +6,7 @@
 #include <atomic>
 #include <mutex>
 #include <chrono>
+#include <functional>
 #include <nlohmann/json.hpp>
 
 // Forward declare json
@@ -18,6 +19,7 @@ struct HallucinationDetection {
     std::string detectedContent;
     std::string expectedContent;
     std::string correctionStrategy;
+    std::string originalText; // Added to store context for correction
     std::chrono::system_clock::time_point detectedAt;
     bool correctionApplied = false;
 };
@@ -75,6 +77,12 @@ public:
 
     json getCorrectionStatistics() const;
     int getCorrectionPatternCount() const;
+
+    // Callbacks
+    std::function<void(const HallucinationDetection&)> onHallucinationDetected;
+    std::function<void(const HallucinationDetection&)> onHallucinationCorrected;
+    std::function<void(const NavigationFix&)> onNavigationErrorFixed;
+    std::function<void(const BehaviorPatch&)> onBehaviorPatchApplied;
 
 private:
     std::atomic<int> m_totalHallucinationsDetected{0};

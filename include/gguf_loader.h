@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include "vulkan_compute.h"
 #include "brutal_gzip.h"
-#include "deflate_brutal_qt.hpp"
+// #include "deflate_brutal_qt.hpp"
 
 class VulkanCompute;
 

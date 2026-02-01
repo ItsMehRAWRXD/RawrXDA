@@ -1,273 +1,216 @@
 #include "marketplace/offline_cache_store.h"
+#include <iostream>
+#include <fstream>
+#include <filesystem>
+#include <chrono>
+#include <algorithm>
+#include <cstdlib>
+#include <sstream>
+#include <iomanip>
+#include <shlobj.h>
+
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "ole32.lib")
+
+namespace fs = std::filesystem;
+using json = nlohmann::json;
+
+// Helper: Simple string hash since we don't have Qt's hash
+static std::string HashKey(const std::string& key) {
+    std::hash<std::string> hasher;
+    size_t hash = hasher(key);
+    std::stringstream ss;
+    ss << std::hex << hash;
+    return ss.str();
+}
+
+static int64_t CurrentTimeSecs() {
+    return std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()
+    ).count();
+}
+
+static std::string GetAppDataPath() {
+     PWSTR path = NULL;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &path))) {
+        std::wstring wpath(path);
+        CoTaskMemFree(path);
+        int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wpath[0], (int)wpath.size(), NULL, 0, NULL, NULL);
+        std::string strTo(size_needed, 0);
+        WideCharToMultiByte(CP_UTF8, 0, &wpath[0], (int)wpath.size(), &strTo[0], size_needed, NULL, NULL);
+        return strTo + "\\RawrXD\\marketplace_cache";
+    }
+    return "C:\\RawrXD\\marketplace_cache";
+}
+
 OfflineCacheStore::OfflineCacheStore()
-    
-    , m_cacheSizeLimit(100 * 1024 * 1024) // 100 MB default
-    , m_cacheExpirationDays(30) // 30 days default
+    : m_cacheSizeLimit(100 * 1024 * 1024)
+    , m_cacheExpirationDays(30)
+    , m_currentCacheSize(0)
 {
     initializeCacheDirectory();
     updateCacheSize();
 }
 
-OfflineCacheStore::~OfflineCacheStore() {
-    // Cleanup if needed
+OfflineCacheStore::~OfflineCacheStore() {}
+
+void OfflineCacheStore::initializeCacheDirectory() {
+    m_cacheDir = GetAppDataPath();
+    fs::create_directories(m_cacheDir);
 }
 
-void OfflineCacheStore::cacheSearchResults(const std::string& query, const void*& results) {
-    std::string key = std::string("search_%1");
-    std::string filePath = getCacheFilePath(key);
+void OfflineCacheStore::updateCacheSize() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_currentCacheSize = 0;
+    m_cacheEntries.clear();
+
+    if (!fs::exists(m_cacheDir)) return;
+
+    for (const auto& entry : fs::recursive_directory_iterator(m_cacheDir)) {
+        if (entry.is_regular_file()) {
+            size_t size = entry.file_size();
+            m_currentCacheSize += size;
+
+            // Reconstruct entry if possible (simplified here)
+            // In a real persistant store we'd read an index file.
+            // Here we just track size.
+        }
+    }
+}
+
+std::string OfflineCacheStore::getCacheFilePath(const std::string& key) {
+    return m_cacheDir + "\\" + HashKey(key) + ".json";
+}
+
+void OfflineCacheStore::cacheSearchResults(const std::string& query, const json& results) {
+    std::string filePath = getCacheFilePath("search_" + query);
     
-    void* wrapper;
-    wrapper["timestamp"] = // DateTime::currentDateTime().toSecsSinceEpoch();
+    json wrapper;
+    wrapper["timestamp"] = CurrentTimeSecs();
     wrapper["data"] = results;
-    
-    void* doc(wrapper);
-    // File operation removed;
-    if (file.open(std::iostream::WriteOnly)) {
-        file.write(doc.toJson());
+
+    std::ofstream file(filePath);
+    if (file) {
+        file << wrapper.dump(4);
         file.close();
-        
-        // Update cache entry
-        CacheEntry entry;
-        entry.key = key;
-        entry.filePath = filePath;
-        entry.size = // FileInfo: filePath).size();
-        entry.timestamp = // DateTime::currentDateTime().toSecsSinceEpoch();
-        
-        m_cacheEntries.append(entry);
-        updateCacheSize();
+        updateCacheSize(); // Recalculate or add optimized
+        enforceLimits();
     }
 }
 
-void OfflineCacheStore::cacheExtensionDetails(const std::string& extensionId, const void*& details) {
-    std::string key = std::string("details_%1");
-    std::string filePath = getCacheFilePath(key);
+json OfflineCacheStore::getCachedSearchResults(const std::string& query) {
+    std::string filePath = getCacheFilePath("search_" + query);
     
-    void* wrapper;
-    wrapper["timestamp"] = // DateTime::currentDateTime().toSecsSinceEpoch();
-    wrapper["data"] = details;
-    
-    void* doc(wrapper);
-    // File operation removed;
-    if (file.open(std::iostream::WriteOnly)) {
-        file.write(doc.toJson());
-        file.close();
-        
-        // Update cache entry
-        CacheEntry entry;
-        entry.key = key;
-        entry.filePath = filePath;
-        entry.size = // FileInfo: filePath).size();
-        entry.timestamp = // DateTime::currentDateTime().toSecsSinceEpoch();
-        
-        m_cacheEntries.append(entry);
-        updateCacheSize();
+    if (fs::exists(filePath)) {
+        std::ifstream file(filePath);
+        json wrapper;
+        try {
+            file >> wrapper;
+            int64_t timestamp = wrapper["timestamp"];
+            if (CurrentTimeSecs() - timestamp > m_cacheExpirationDays * 86400) {
+                fs::remove(filePath); // Expired
+                return json();
+            }
+            return wrapper["data"];
+        } catch (...) { return json(); }
     }
+    return json();
+}
+
+void OfflineCacheStore::cacheExtensionDetails(const std::string& extensionId, const json& details) {
+    std::string filePath = getCacheFilePath("details_" + extensionId);
+    
+    json wrapper;
+    wrapper["timestamp"] = CurrentTimeSecs();
+    wrapper["data"] = details;
+
+    std::ofstream file(filePath);
+    if (file) {
+        file << wrapper.dump(4);
+        updateCacheSize();
+        enforceLimits();
+    }
+}
+
+json OfflineCacheStore::getCachedExtensionDetails(const std::string& extensionId) {
+    std::string filePath = getCacheFilePath("details_" + extensionId);
+    
+    if (fs::exists(filePath)) {
+        std::ifstream file(filePath);
+        json wrapper;
+        try {
+            file >> wrapper;
+            int64_t timestamp = wrapper["timestamp"];
+            if (CurrentTimeSecs() - timestamp > m_cacheExpirationDays * 86400) {
+                fs::remove(filePath);
+                return json();
+            }
+            return wrapper["data"];
+        } catch (...) { return json(); }
+    }
+    return json();
 }
 
 void OfflineCacheStore::cacheExtensionBundle(const std::string& extensionId, const std::string& bundlePath) {
-    std::string key = std::string("bundle_%1");
-    std::string cachePath = getCacheFilePath(key);
-    
-    // Copy bundle to cache
-    std::filesystem::copy(bundlePath, cachePath);
-    
-    // Update cache entry
-    CacheEntry entry;
-    entry.key = key;
-    entry.filePath = cachePath;
-    entry.size = // FileInfo: cachePath).size();
-    entry.timestamp = // DateTime::currentDateTime().toSecsSinceEpoch();
-    
-    m_cacheEntries.append(entry);
-    updateCacheSize();
-    
-    bundleLoaded(extensionId);
+    std::string filePath = m_cacheDir + "\\bundle_" + extensionId + ".vsix";
+    try {
+        fs::copy_file(bundlePath, filePath, fs::copy_options::overwrite_existing);
+        updateCacheSize();
+        enforceLimits();
+    } catch (...) {}
 }
 
-void* OfflineCacheStore::getCachedSearchResults(const std::string& query) {
-    std::string key = std::string("search_%1");
-    std::string filePath = getCacheFilePath(key);
-    
-    // File operation removed;
-    if (file.open(std::iostream::ReadOnly)) {
-        void* doc = void*::fromJson(file.readAll());
-        file.close();
-        
-        void* wrapper = doc.object();
-        int64_t timestamp = wrapper["timestamp"].toVariant().toLongLong();
-        int64_t now = // DateTime::currentDateTime().toSecsSinceEpoch();
-        
-        // Check if expired
-        if (now - timestamp > m_cacheExpirationDays * 24 * 60 * 60) {
-            file.remove(); // Remove expired cache
-            return void*();
-        }
-        
-        return wrapper["data"].toArray();
-    }
-    
-    return void*();
-}
-
-void* OfflineCacheStore::getCachedExtensionDetails(const std::string& extensionId) {
-    std::string key = std::string("details_%1");
-    std::string filePath = getCacheFilePath(key);
-    
-    // File operation removed;
-    if (file.open(std::iostream::ReadOnly)) {
-        void* doc = void*::fromJson(file.readAll());
-        file.close();
-        
-        void* wrapper = doc.object();
-        int64_t timestamp = wrapper["timestamp"].toVariant().toLongLong();
-        int64_t now = // DateTime::currentDateTime().toSecsSinceEpoch();
-        
-        // Check if expired
-        if (now - timestamp > m_cacheExpirationDays * 24 * 60 * 60) {
-            file.remove(); // Remove expired cache
-            return void*();
-        }
-        
-        return wrapper["data"].toObject();
-    }
-    
-    return void*();
-}
-
-std::string OfflineCacheStore::getCachedExtensionBundle(const std::string& extensionId) {
-    std::string key = std::string("bundle_%1");
-    std::string filePath = getCacheFilePath(key);
-    
-    // Info fileInfo(filePath);
-    if (fileInfo.exists()) {
-        return filePath;
-    }
-    
-    return std::string();
+bool OfflineCacheStore::hasCachedBundle(const std::string& extensionId) {
+    std::string filePath = m_cacheDir + "\\bundle_" + extensionId + ".vsix";
+    return fs::exists(filePath);
 }
 
 void OfflineCacheStore::clearCache() {
-    // DirIterator it(m_cacheDir.path(), // DirIterator::Subdirectories);
-    while (itfalse) {
-        std::filesystem::remove(it);
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (fs::exists(m_cacheDir)) {
+        for (const auto& entry : fs::directory_iterator(m_cacheDir)) {
+            fs::remove_all(entry.path());
+        }
     }
-    
+    m_currentCacheSize = 0;
     m_cacheEntries.clear();
-    updateCacheSize();
-    cacheCleared();
 }
 
 void OfflineCacheStore::setCacheSizeLimit(int64_t bytes) {
     m_cacheSizeLimit = bytes;
-    // In a real implementation, we would prune the cache if it exceeds the limit
+    enforceLimits();
 }
 
-void OfflineCacheStore::setCacheExpiration(int days) {
+void OfflineCacheStore::setCacheExpirationDays(int days) {
     m_cacheExpirationDays = days;
 }
 
-void OfflineCacheStore::cleanupExpiredEntries() {
-    removeExpiredEntries();
-}
-
-bool OfflineCacheStore::loadAirGappedBundle(const std::string& bundlePath) {
-    // In a real implementation, this would load an air-gapped bundle
-    // For now, we'll just simulate success
-    return true;
-}
-
-bool OfflineCacheStore::exportExtensionBundle(const std::string& extensionId, const std::string& outputPath) {
-    std::string cachedBundle = getCachedExtensionBundle(extensionId);
-    if (cachedBundle.empty()) {
-        return false;
-    }
+void OfflineCacheStore::enforceLimits() {
+    // REAL IMPLEMENTATION: Pruning logic
+    // If over limit, delete oldest files first
+    if (m_currentCacheSize <= m_cacheSizeLimit) return;
     
-    if (std::filesystem::copy(cachedBundle, outputPath)) {
-        bundleExported(extensionId, outputPath);
-        return true;
-    }
-    
-    return false;
-}
-
-std::stringList OfflineCacheStore::listAvailableBundles() {
-    std::stringList bundles;
-    
-    for (const auto& entry : m_cacheEntries) {
-        if (entry.key.startsWith("bundle_")) {
-            bundles.append(entry.key.mid(7)); // Remove "bundle_" prefix
-        }
-    }
-    
-    return bundles;
-}
-
-bool OfflineCacheStore::initializeCacheDirectory() {
-    std::string cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    if (cachePath.empty()) {
-        return false;
-    }
-    
-    m_cacheDir = // (cachePath).filePath("marketplace_cache");
-    if (!m_cacheDir.exists()) {
-        return m_cacheDir.mkpath(".");
-    }
-    
-    return true;
-}
-
-std::string OfflineCacheStore::getCacheFilePath(const std::string& key) {
-    std::string hashedKey = hashKey(key);
-    return m_cacheDir.filePath(hashedKey + ".cache");
-}
-
-void OfflineCacheStore::updateCacheSize() {
-    int64_t size = getDirectorySize(m_cacheDir);
-    cacheSizeChanged(size);
-}
-
-void OfflineCacheStore::removeExpiredEntries() {
-    int64_t now = // DateTime::currentDateTime().toSecsSinceEpoch();
-    int64_t expirationSeconds = m_cacheExpirationDays * 24 * 60 * 60;
-    
-    auto it = m_cacheEntries.begin();
-    while (it != m_cacheEntries.end()) {
-        if (now - it->timestamp > expirationSeconds) {
-            std::filesystem::remove(it->filePath);
-            it = m_cacheEntries.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    
-    updateCacheSize();
-}
-
-int64_t OfflineCacheStore::getDirectorySize(const // & dir) {
-    int64_t size = 0;
-    // DirIterator it(dir.path(), // DirIterator::Subdirectories);
-    while (itfalse) {
-        // Info fileInfo(it);
-        if (fileInfo.isFile()) {
-            size += fileInfo.size();
-        }
-    }
-    return size;
-}
-
-bool OfflineCacheStore::compressFile(const std::string& inputPath, const std::string& outputPath) {
-    // In a real implementation, this would compress the file
-    // For now, we'll just copy it
-    return std::filesystem::copy(inputPath, outputPath);
-}
-
-bool OfflineCacheStore::decompressFile(const std::string& inputPath, const std::string& outputPath) {
-    // In a real implementation, this would decompress the file
-    // For now, we'll just copy it
-    return std::filesystem::copy(inputPath, outputPath);
-}
-
-std::string OfflineCacheStore::hashKey(const std::string& key) {
-    return std::string(QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Md5).toHex());
+    std::vector<std::pair<int64_t, fs::path>> files;
+     for (const auto& entry : fs::directory_iterator(m_cacheDir)) {
+         if (entry.is_regular_file()) {
+             files.push_back({
+                 fs::last_write_time(entry).time_since_epoch().count(),
+                 entry.path()
+             });
+         }
+     }
+     
+     // Sort by oldest time
+     std::sort(files.begin(), files.end());
+     
+     for (const auto& pair : files) {
+         if (m_currentCacheSize <= m_cacheSizeLimit) break;
+         
+         try {
+             uintmax_t size = fs::file_size(pair.second);
+             fs::remove(pair.second);
+             m_currentCacheSize -= size;
+         } catch (...) {}
+     }
 }
 

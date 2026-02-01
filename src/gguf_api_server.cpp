@@ -19,11 +19,15 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <random>
+#include "ai_model_caller.h"
+#include "cpu_inference_engine.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma warning(disable : 4996)
 
 namespace fs = std::filesystem;
+
+static std::unique_ptr<RawrXD::CPUInferenceEngine> g_engine;
 
 // ============================================================
 // Simple In-Memory Metrics Tracking
@@ -204,21 +208,18 @@ private:
         
         auto start_time = std::chrono::high_resolution_clock::now();
         
-        // Estimate tokens generated: roughly 4 chars per token
-        int tokens_generated = std::max(1, (int)(body.length() / 4));
-        
-        // Simulate GPU inference with realistic latency
-        // Real: ~16ms per token with GPU (80 tok/s)
-        // With overhead: ~30ms per token with server (33 tok/s)
-        double latency_per_token = 30.0; // ms with full stack overhead
-        double total_latency = latency_per_token * tokens_generated;
-        
-        std::chrono::milliseconds sleep_duration((int)total_latency);
-        std::this_thread::sleep_for(sleep_duration);
+        // Execute Real Inference using local engine (loaded in main)
+        std::string generated_text;
+        if (g_engine && g_engine->IsModelLoaded()) {
+             generated_text = g_engine->infer(prompt);
+        } else {
+             generated_text = "Error: Model not loaded in server.";
+        }
         
         auto end_time = std::chrono::high_resolution_clock::now();
         double actual_latency = std::chrono::duration<double, std::milli>(end_time - start_time).count();
-        
+        int tokens_generated = (int)generated_text.size() / 4;
+
         // Record metrics
         RequestMetrics metric;
         metric.request_id = std::time(nullptr) * 1000;
@@ -237,12 +238,8 @@ private:
         
         RecordMetric(metric);
         
-        // Generate response
-        std::string generated_text = "This is a simulated response from the GGUF model. ";
-        generated_text += "The model has processed your request with " + std::to_string(tokens_generated);
-        generated_text += " tokens in " + std::to_string(actual_latency) + "ms. ";
-        generated_text += "Real inference throughput is approximately " +
-                         std::to_string((int)(tokens_generated * 1000.0 / actual_latency)) + " tokens/sec.";
+        // Generate response (JSON)
+        // Note: generated_text is now real
         
         std::string json_body = R"({
   "response": ")" + generated_text + R"(",
@@ -341,9 +338,9 @@ int main(int argc, char* argv[]) {
 
 
     try {
-        g_engine = std::make_unique<InferenceEngine>();
-        if (!g_engine->loadModel(model_path)) {
-            
+        g_engine = std::make_unique<RawrXD::CPUInferenceEngine>();
+        if (!g_engine->LoadModel(model_path)) {
+            std::cerr << "Failed to load model: " << model_path << std::endl;
             return 1;
         }
 

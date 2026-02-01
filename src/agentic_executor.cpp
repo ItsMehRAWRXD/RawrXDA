@@ -1,18 +1,21 @@
 // AgenticExecutor - Real agentic task execution (not simulated)
 #include "agentic_executor.h"
 #include "agentic_engine.h"
-#include "qtapp/inference_engine.hpp"
+#include "cpu_inference_engine.h" 
 #include "model_trainer.h"
 #include <fstream>
 #include <filesystem>
 #include <iostream>
 #include <sstream>
+#include <regex>
+#include <chrono>
 
+using json = nlohmann::json;
 
 AgenticExecutor::AgenticExecutor(void* parent)
-    : void(parent)
-    , m_currentWorkingDirectory(std::filesystem::path::currentPath())
+    : m_currentWorkingDirectory(std::filesystem::path::currentPath())
 {
+    m_executionHistory = json::array();
 }
 
 AgenticExecutor::~AgenticExecutor()
@@ -24,65 +27,59 @@ void AgenticExecutor::initialize(AgenticEngine* engine, InferenceEngine* inferen
 {
     m_agenticEngine = engine;
     m_inferenceEngine = inference;
-    m_modelTrainer = std::make_unique<ModelTrainer>(this);
-    
-    // Connect training signals
-// Qt connect removed
-            });
-// Qt connect removed
-// Qt connect removed
-// Qt connect removed
-    if (m_inferenceEngine) {
-        m_modelTrainer->initialize(m_inferenceEngine, m_inferenceEngine->modelPath());
-    }
-    
+    // Real training requires pointer to ModelTrainer
+    m_modelTrainer = std::make_unique<ModelTrainer>(); 
 }
 
 // ========== MAIN AGENTIC EXECUTION ==========
 
-void* AgenticExecutor::executeUserRequest(const std::string& request)
+json AgenticExecutor::executeUserRequest(const std::string& request)
 {
     logMessage("Starting execution: " + request);
 
-    void* result;
+    json result;
     result["request"] = request;
-    result["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
+    
+    auto now = std::chrono::system_clock::now();
+    result["timestamp"] = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 
     try {
         // Step 1: Decompose the task using the model
-        void* steps = decomposeTask(request);
+        json steps = decomposeTask(request);
         result["steps"] = steps;
         result["total_steps"] = steps.size();
 
         // Step 2: Execute each step
-        void* executionResults;
+        json executionResults = json::array();
         int successCount = 0;
 
-        for (int i = 0; i < steps.size(); ++i) {
-            void* step = steps[i].toObject();
-            stepStarted(step["description"].toString());
+        for (size_t i = 0; i < steps.size(); ++i) {
+            json step = steps[i];
+            
+            std::string desc = step.value("description", "Step " + std::to_string(i+1));
+            stepStarted(desc);
             taskProgress(i + 1, steps.size());
 
             bool success = executeStep(step);
             
-            void* stepResult;
+            json stepResult;
             stepResult["step_number"] = i + 1;
-            stepResult["description"] = step["description"];
+            stepResult["description"] = desc;
             stepResult["success"] = success;
-            stepResult["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
+            stepResult["timestamp"] = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-            executionResults.append(stepResult);
+            executionResults.push_back(stepResult);
 
             if (success) {
                 successCount++;
-                stepCompleted(step["description"].toString(), true);
+                stepCompleted(desc, true);
             } else {
-                stepCompleted(step["description"].toString(), false);
+                stepCompleted(desc, false);
                 
                 // Try to recover from failure
                 if (m_currentRetryCount < m_maxRetries) {
-                    void* retryResult = retryWithCorrection(step);
-                    if (retryResult["success"].toBool()) {
+                    json retryResult = retryWithCorrection(step);
+                    if (retryResult.value("success", false)) {
                         successCount++;
                         stepResult["recovered"] = true;
                     }
@@ -92,186 +89,162 @@ void* AgenticExecutor::executeUserRequest(const std::string& request)
 
         result["execution_results"] = executionResults;
         result["success_count"] = successCount;
-        result["success_rate"] = (successCount * 100.0) / steps.size();
-        result["overall_success"] = (successCount == steps.size());
+        result["success_rate"] = steps.empty() ? 0.0 : (successCount * 100.0) / steps.size();
+        result["overall_success"] = steps.empty() ? false : (successCount == steps.size());
 
         executionComplete(result);
         return result;
-
     } catch (const std::exception& e) {
-        result["error"] = std::string("Execution failed: %1"));
-        result["overall_success"] = false;
-        errorOccurred(result["error"].toString());
+        errorOccurred(e.what());
+        result["error"] = e.what();
         return result;
     }
 }
 
-// ========== TASK DECOMPOSITION ==========
-
-void* AgenticExecutor::decomposeTask(const std::string& goal)
+json AgenticExecutor::decomposeTask(const std::string& goal)
 {
     if (!m_agenticEngine) {
-        return void*();
+        return json::array();
     }
-
-
-    // Build decomposition prompt for the model
-    std::string prompt = std::string(
-        "You are an expert software architect and project planner.\n\n"
-        "User Request: %1\n\n"
-        "Break this down into detailed, actionable steps. For each step, provide:\n"
-        "1. A clear description of what to do\n"
-        "2. The type of action (create_directory, create_file, compile, run, train_model, etc.)\n"
-        "3. Required parameters\n"
-        "4. Success criteria\n\n"
-        "Available tools:\n"
-        "- create_directory: Create a new directory\n"
-        "- create_file: Create a file with content\n"
-        "- read_file: Read file contents\n"
-        "- delete_file: Delete a file\n"
-        "- list_directory: List directory contents\n"
-        "- compile_project: Compile C++ project\n"
-        "- run_executable: Run compiled executable\n"
-        "- train_model: Fine-tune a GGUF model with dataset\n"
-        "- is_training: Check if model training is in progress\n\n"
-        "Return as JSON array:\n"
-        "[\n"
-        "  {\"step\": 1, \"action\": \"create_directory\", \"description\": \"...\", \"params\": {...}, \"criteria\": \"...\" },\n"
-        "  {\"step\": 2, \"action\": \"create_file\", \"description\": \"...\", \"params\": {\"path\": \"...\", \"content\": \"...\"}, \"criteria\": \"...\" }\n"
-        "]\n\n"
-        "Be specific and include all necessary files, compilation commands, and verification steps.\n"
-        "For model training tasks, include dataset path, model path, and training configuration."
-    );
-
-    // Get plan from model
-    std::string response = m_agenticEngine->generateResponse(prompt);
     
-    // Extract JSON from response
-    std::regex jsonRegex("\\[\\s*\\{.*\\}\\s*\\]", std::regex::DotMatchesEverythingOption);
-    std::smatch match = jsonRegex.match(response);
+    std::string fullPrompt = "You are an expert planner. Decompose this task into actionable JSON steps: " + goal + 
+                           "\nReturn ONLY a JSON array of objects with keys: action, description, params.";
+                           
+    std::string response = m_agenticEngine ? m_agenticEngine->generateResponse(fullPrompt) : "[]";
     
-    if (match.hasMatch()) {
-        std::string jsonStr = match"";
-        void* doc = void*::fromJson(jsonStr.toUtf8());
-        if (doc.isArray()) {
-            return doc.array();
+    try {
+        // Attempt to find JSON array in response
+        size_t start = response.find('[');
+        size_t end = response.rfind(']');
+        if (start != std::string::npos && end != std::string::npos && end > start) {
+            std::string jsonStr = response.substr(start, end - start + 1);
+            return json::parse(jsonStr);
         }
+        return json::array();
+    } catch (...) {
+        logMessage("Failed to parse decomposition plan: " + response);
+        return json::array();
     }
-
-    // Fallback: create basic plan
-    void* fallback;
-    void* step;
-    step["step"] = 1;
-    step["action"] = "analyze";
-    step["description"] = "Analyze user request: " + goal;
-    step["params"] = void*();
-    fallback.append(step);
-    return fallback;
 }
-
 // ========== STEP EXECUTION ==========
 
-bool AgenticExecutor::executeStep(const void*& step)
+bool AgenticExecutor::executeStep(const json& step)
 {
-    std::string action = step["action"].toString();
-    void* params = step["params"].toObject();
-    std::string description = step["description"].toString();
+    if (!step.contains("action")) return false;
+    
+    std::string action = step["action"];
+    json params = step.contains("params") ? step["params"] : json::object();
+    std::string description = step.contains("description") ? step["description"] : action;
 
     logMessage("Step: " + description);
 
     try {
         if (action == "create_directory") {
-            std::string path = params["path"].toString();
+            std::string path = params["path"];
             return createDirectory(path);
         }
         else if (action == "create_file") {
-            std::string path = params["path"].toString();
-            std::string content = params["content"].toString();
+            std::string path = params["path"];
+            std::string content = "";
+            
+            if (params.contains("content")) {
+                content = params["content"];
+            }
             
             // If content not in params, generate it
             if (content.empty() && params.contains("specification")) {
-                void* codeGen = generateCode(params["specification"].toString());
-                content = codeGen["code"].toString();
+                json codeGen = generateCode(params["specification"]);
+                if (codeGen.contains("code")) {
+                    content = codeGen["code"];
+                }
             }
             
             return createFile(path, content);
         }
         else if (action == "compile") {
-            std::string projectPath = params["project_path"].toString();
-            std::string compiler = params.contains("compiler") ? params["compiler"].toString() : "g++";
-            void* compileResult = compileProject(projectPath, compiler);
-            return compileResult["success"].toBool();
+            std::string projectPath = params["project_path"];
+            std::string compiler = params.contains("compiler") ? params["compiler"].get<std::string>() : "g++";
+            json compileResult = compileProject(projectPath, compiler);
+            return compileResult.contains("success") && compileResult["success"].get<bool>();
         }
         else if (action == "run") {
-            std::string executable = params["executable"].toString();
-            std::vector<std::string> args = params["args"].toVariant().toStringList();
-            void* runResult = runExecutable(executable, args);
-            return runResult["success"].toBool();
+            std::string executable = params["executable"];
+            std::vector<std::string> args;
+            if (params.contains("args") && params["args"].is_array()) {
+                args = params["args"].get<std::vector<std::string>>();
+            }
+            json runResult = runExecutable(executable, args);
+            return runResult.contains("success") && runResult["success"].get<bool>();
         }
         else if (action == "generate_code") {
-            std::string spec = params["specification"].toString();
-            std::string outputPath = params["output_path"].toString();
-            void* codeGen = generateCode(spec);
+            std::string spec = params["specification"];
+            std::string outputPath = params["output_path"];
+            json codeGen = generateCode(spec);
             if (codeGen.contains("code")) {
-                return writeFile(outputPath, codeGen["code"].toString());
+                return writeFile(outputPath, codeGen["code"]);
             }
             return false;
         }
         else if (action == "tool_call") {
-            std::string toolName = params["tool_name"].toString();
-            void* toolParams = params["tool_params"].toObject();
-            void* toolResult = callTool(toolName, toolParams);
-            return toolResult["success"].toBool();
+            std::string toolName = params["tool_name"];
+            json toolParams = params["tool_params"];
+            json toolResult = callTool(toolName, toolParams);
+            return toolResult.contains("success") && toolResult["success"].get<bool>();
         }
         else {
             return false;
         }
 
     } catch (const std::exception& e) {
-        errorOccurred(std::string("Step failed: %1")));
+        errorOccurred("Step failed: " + std::string(e.what()));
         return false;
     }
 }
 
-bool AgenticExecutor::verifyStepCompletion(const void*& step, const std::string& result)
+bool AgenticExecutor::verifyStepCompletion(const json& step, const std::string& result)
 {
-    std::string criteria = step["criteria"].toString();
+    if (!step.contains("criteria")) return true;
+    std::string criteria = step["criteria"];
     if (criteria.empty()) return true;
 
     // Use model to verify completion
-    std::string prompt = std::string(
-        "Verification Task:\n"
-        "Expected: %1\n"
-        "Actual Result: %2\n\n"
-        "Does the actual result meet the success criteria? Answer with ONLY 'yes' or 'no'."
-    );
+    std::ostringstream prompt;
+    prompt << "Verification Task:\n"
+           << "Expected: " << criteria << "\n"
+           << "Actual Result: " << result << "\n\n"
+           << "Does the actual result meet the success criteria? Answer with ONLY 'yes' or 'no'.";
 
-    std::string verification = m_agenticEngine->generateResponse(prompt);
-    return verification.toLower().contains("yes");
+    if (m_agenticEngine) {
+        std::string verification = m_agenticEngine->generateResponse(prompt.str());
+        std::transform(verification.begin(), verification.end(), verification.begin(), ::tolower);
+        return verification.find("yes") != std::string::npos;
+    }
+    return true;
 }
 
 // ========== FILE SYSTEM OPERATIONS (REAL) ==========
 
 bool AgenticExecutor::createDirectory(const std::string& path)
 {
-    std::filesystem::path dir;
-    bool success = dir.mkpath(path);
-    
-    if (success) {
+    try {
+        std::filesystem::create_directories(path);
         logMessage("Created directory: " + path);
         addToMemory("last_created_dir", path);
-    } else {
+        return true;
+    } catch (const std::exception& e) {
+        logMessage("Failed to create directory: " + std::string(e.what()));
+        return false;
     }
-    
-    return success;
 }
 
 bool AgenticExecutor::createFile(const std::string& path, const std::string& content)
 {
     // Ensure parent directory exists
     std::filesystem::path fp(path);
-    if (!std::filesystem::exists(fp.parent_path())) {
-        std::filesystem::create_directories(fp.parent_path());
+    if (fp.has_parent_path() && !std::filesystem::exists(fp.parent_path())) {
+         try {
+            std::filesystem::create_directories(fp.parent_path());
+         } catch(...) { return false; }
     }
 
     std::ofstream file(path);
@@ -282,7 +255,7 @@ bool AgenticExecutor::createFile(const std::string& path, const std::string& con
     file << content;
     file.close();
 
-    logAction("Created file: " + path);
+    logMessage("Created file: " + path);
     return true;
 }
 
@@ -323,65 +296,88 @@ bool AgenticExecutor::deleteDirectory(const std::string& path)
 
 std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path)
 {
-    std::filesystem::path dir(path);
-    std::vector<std::string> entries = dir.entryList(std::filesystem::path::AllEntries | std::filesystem::path::NoDotAndDotDot);
-    
+    std::vector<std::string> entries;
+    try {
+        if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
+            for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                entries.push_back(entry.path().filename().string());
+            }
+        }
+    } catch (...) {
+        return {};
+    }
     return entries;
+}
+
+    return entries;
+}
+
+// Helper function for shell execution
+static std::pair<std::string, int> runShellCommand(const std::string& cmd, const std::string& directory = "") {
+    std::string command = cmd;
+    if (!directory.empty()) {
+        command = "cd /d \"" + directory + "\" && " + cmd;
+    }
+    command += " 2>&1";
+    
+    std::string output;
+    FILE* pipe = _popen(command.c_str(), "r");
+    if (!pipe) return {"Failed to spawn shell", 1};
+    
+    char buffer[128];
+    while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
+        output += buffer;
+    }
+    
+    int result = _pclose(pipe);
+    return {output, result};
 }
 
 // ========== COMPILER INTEGRATION (REAL) ==========
 
-void* AgenticExecutor::compileProject(const std::string& projectPath, const std::string& compiler)
+json AgenticExecutor::compileProject(const std::string& projectPath, const std::string& compiler)
 {
-    void* result;
+    json result;
     result["compiler"] = compiler;
     result["project_path"] = projectPath;
 
     logMessage("Compiling with " + compiler + "...");
 
-    void* process;
-    process.setWorkingDirectory(projectPath);
-
     // Detect build system and compile
-    if (std::fstream::exists(projectPath + "/CMakeLists.txt")) {
-        // CMake project
+    bool isCMake = std::filesystem::exists(projectPath + "/CMakeLists.txt");
+    if (isCMake) {
         logMessage("Detected CMake project");
         
         // Create build directory
-        createDirectory(projectPath + "/build");
-        process.setWorkingDirectory(projectPath + "/build");
+        std::string buildDir = projectPath + "/build";
+        createDirectory(buildDir);
         
         // Run cmake
-        process.start("cmake", std::vector<std::string>() << "..");
-        process.waitForFinished(-1);
-        
-        std::string cmakeOutput = process.readAllStandardOutput();
-        std::string cmakeError = process.readAllStandardError();
-        
-        if (process.exitCode() != 0) {
+        auto cmakeRes = runShellCommand("cmake ..", buildDir);
+        if (cmakeRes.second != 0) {
             result["success"] = false;
-            result["error"] = "CMake configuration failed: " + cmakeError;
+            result["error"] = "CMake configuration failed: " + cmakeRes.first;
             return result;
         }
         
-        // Run make
-        process.start("cmake", std::vector<std::string>() << "--build" << ".");
-        process.waitForFinished(-1);
+        // Run cmake --build
+        auto buildRes = runShellCommand("cmake --build .", buildDir);
         
-        std::string buildOutput = process.readAllStandardOutput();
-        std::string buildError = process.readAllStandardError();
-        
-        result["cmake_output"] = cmakeOutput;
-        result["build_output"] = buildOutput;
-        result["build_error"] = buildError;
-        result["exit_code"] = process.exitCode();
-        result["success"] = (process.exitCode() == 0);
+        result["cmake_output"] = cmakeRes.first;
+        result["build_output"] = buildRes.first;
+        result["exit_code"] = buildRes.second;
+        result["success"] = (buildRes.second == 0);
         
     } else {
         // Direct compilation
         std::vector<std::string> files;
-        std::filesystem::path dir(projectPath);
-        files = dir.entryList(std::vector<std::string>() << "*.cpp" << "*.c", std::filesystem::path::Files);
+        try {
+            for (const auto& entry : std::filesystem::directory_iterator(projectPath)) {
+                if (entry.path().extension() == ".cpp" || entry.path().extension() == ".c") {
+                    files.push_back(entry.path().filename().string());
+                }
+            }
+        } catch(...) {}
         
         if (files.empty()) {
             result["success"] = false;
@@ -389,25 +385,24 @@ void* AgenticExecutor::compileProject(const std::string& projectPath, const std:
             return result;
         }
         
-        std::vector<std::string> args;
-        args << "-o" << "output";
+        std::string cmd = compiler + " -o output";
         for (const std::string& file : files) {
-            args << file;
+            cmd += " " + file;
         }
         
-        process.start(compiler, args);
-        process.waitForFinished(-1);
+        auto compileRes = runShellCommand(cmd, projectPath);
         
-        result["compiler_output"] = std::string::fromUtf8(process.readAllStandardOutput());
-        result["compiler_error"] = std::string::fromUtf8(process.readAllStandardError());
-        result["exit_code"] = process.exitCode();
-        result["success"] = (process.exitCode() == 0);
+        result["compiler_output"] = compileRes.first;
+        result["exit_code"] = compileRes.second;
+        result["success"] = (compileRes.second == 0);
     }
 
-    if (result["success"].toBool()) {
+    if (result["success"].get<bool>()) {
         logMessage("Compilation successful!");
     } else {
-        logMessage("Compilation failed: " + result["compiler_error"].toString());
+        std::string err = result.contains("build_output") ? result["build_output"].get<std::string>() : 
+                         (result.contains("compiler_output") ? result["compiler_output"].get<std::string>() : "Unknown error");
+        logMessage("Compilation failed: " + err);
         errorOccurred("Compilation failed");
     }
 
@@ -415,33 +410,30 @@ void* AgenticExecutor::compileProject(const std::string& projectPath, const std:
     return result;
 }
 
-void* AgenticExecutor::runExecutable(const std::string& executablePath, const std::vector<std::string>& args)
+json AgenticExecutor::runExecutable(const std::string& executablePath, const std::vector<std::string>& args)
 {
-    void* result;
+    json result;
     result["executable"] = executablePath;
-    result["arguments"] = void*::fromStringList(args);
+    result["arguments"] = args;
 
     logMessage("Running: " + executablePath);
 
-    void* process;
-    process.start(executablePath, args);
-    
-    if (!process.waitForStarted()) {
-        result["success"] = false;
-        result["error"] = "Failed to start process";
-        return result;
+    std::string cmd = "\"" + executablePath + "\"";
+    for(const auto& arg : args) {
+        cmd += " \"" + arg + "\"";
     }
 
-    process.waitForFinished(-1);
+    std::filesystem::path exePath(executablePath);
+    std::string cwd = exePath.has_parent_path() ? exePath.parent_path().string() : "";
 
-    result["stdout"] = std::string::fromUtf8(process.readAllStandardOutput());
-    result["stderr"] = std::string::fromUtf8(process.readAllStandardError());
-    result["exit_code"] = process.exitCode();
-    result["success"] = (process.exitCode() == 0);
+    auto runRes = runShellCommand(cmd, cwd);
 
-    if (result["success"].toBool()) {
+    result["stdout"] = runRes.first;
+    result["exit_code"] = runRes.second;
+    result["success"] = (runRes.second == 0);
+
+    if (result["success"].get<bool>()) {
         logMessage("Execution completed");
-    } else {
     }
 
     addToMemory("last_execution", result);
@@ -450,29 +442,28 @@ void* AgenticExecutor::runExecutable(const std::string& executablePath, const st
 
 // ========== CODE GENERATION ==========
 
-void* AgenticExecutor::generateCode(const std::string& specification)
+json AgenticExecutor::generateCode(const std::string& specification)
 {
-    void* result;
+    json result;
     
     if (!m_agenticEngine) {
         result["error"] = "No engine available";
+        result["success"] = false;
         return result;
     }
 
+    std::ostringstream prompt;
+    prompt << "Generate production-ready C++ code for the following specification:\n\n"
+           << specification << "\n\n"
+           << "Requirements:\n"
+           << "- Complete, compilable code\n"
+           << "- Include all necessary headers\n"
+           << "- Add error handling\n"
+           << "- Add helpful comments\n"
+           << "- Follow C++17 best practices\n\n"
+           << "Return ONLY the code, no explanations.";
 
-    std::string prompt = std::string(
-        "Generate production-ready C++ code for the following specification:\n\n"
-        "%1\n\n"
-        "Requirements:\n"
-        "- Complete, compilable code\n"
-        "- Include all necessary headers\n"
-        "- Add error handling\n"
-        "- Add helpful comments\n"
-        "- Follow C++17 best practices\n\n"
-        "Return ONLY the code, no explanations."
-    );
-
-    std::string response = m_agenticEngine->generateCode(prompt);
+    std::string response = m_agenticEngine->generateResponse(prompt.str()); 
     std::string code = extractCodeFromResponse(response);
 
     result["specification"] = specification;
@@ -484,90 +475,80 @@ void* AgenticExecutor::generateCode(const std::string& specification)
 
 std::string AgenticExecutor::extractCodeFromResponse(const std::string& response)
 {
-    // Extract code from markdown code blocks
     std::regex codeBlockRegex("```(?:cpp|c\\+\\+)?\\s*\\n([\\s\\S]*?)```");
-    std::smatch match = codeBlockRegex.match(response);
-    
-    if (match.hasMatch()) {
-        return match"".trimmed();
+    std::smatch match;
+    if (std::regex_search(response, match, codeBlockRegex) && match.size() > 1) {
+        return match.str(1);
     }
-    
-    // If no code block, return the whole response
-    return response.trimmed();
+    return response;
 }
 
 // ========== FUNCTION CALLING / TOOL USE ==========
 
-void* AgenticExecutor::getAvailableTools()
+json AgenticExecutor::getAvailableTools()
 {
-    void* tools;
+    json tools = json::array();
     
-    // File system tools
-    tools.append(void*{{"name", "create_directory"}, {"description", "Create a new directory"}});
-    tools.append(void*{{"name", "create_file"}, {"description", "Create a file with content"}});
-    tools.append(void*{{"name", "read_file"}, {"description", "Read file contents"}});
-    tools.append(void*{{"name", "delete_file"}, {"description", "Delete a file"}});
-    tools.append(void*{{"name", "list_directory"}, {"description", "List directory contents"}});
+    tools.push_back({{"name", "create_directory"}, {"description", "Create a new directory"}});
+    tools.push_back({{"name", "create_file"}, {"description", "Create a file with content"}});
+    tools.push_back({{"name", "read_file"}, {"description", "Read file contents"}});
+    tools.push_back({{"name", "delete_file"}, {"description", "Delete a file"}});
+    tools.push_back({{"name", "list_directory"}, {"description", "List directory contents"}});
     
     // Compilation tools
-    tools.append(void*{{"name", "compile_project"}, {"description", "Compile C++ project"}});
-    tools.append(void*{{"name", "run_executable"}, {"description", "Run compiled executable"}});
+    tools.push_back({{"name", "compile_project"}, {"description", "Compile C++ project"}});
+    tools.push_back({{"name", "run_executable"}, {"description", "Run compiled executable"}});
     
     // Model tools
-    tools.append(void*{{"name", "train_model"}, {"description", "Fine-tune a GGUF model with dataset"}});
-    tools.append(void*{{"name", "is_training"}, {"description", "Check if model training is in progress"}});
+    tools.push_back({{"name", "train_model"}, {"description", "Fine-tune a GGUF model with dataset"}});
+    tools.push_back({{"name", "is_training"}, {"description", "Check if model training is in progress"}});
     
     return tools;
 }
 
-void* AgenticExecutor::callTool(const std::string& toolName, const void*& params)
+json AgenticExecutor::callTool(const std::string& toolName, const json& params)
 {
-    void* result;
+    json result;
     result["tool"] = toolName;
     result["params"] = params;
 
-
     if (toolName == "create_directory") {
-        bool success = createDirectory(params["path"].toString());
+        bool success = createDirectory(params["path"]);
         result["success"] = success;
     }
     else if (toolName == "create_file") {
-        bool success = createFile(params["path"].toString(), params["content"].toString());
+        bool success = createFile(params["path"], params["content"]);
         result["success"] = success;
     }
     else if (toolName == "read_file") {
-        std::string content = readFile(params["path"].toString());
+        std::string content = readFile(params["path"]);
         result["success"] = !content.empty();
         result["content"] = content;
     }
     else if (toolName == "delete_file") {
-        bool success = deleteFile(params["path"].toString());
+        bool success = deleteFile(params["path"]);
         result["success"] = success;
     }
+    else if (toolName == "list_directory") {
+        std::vector<std::string> entries = listDirectory(params["path"]);
+        result["success"] = true;
+        result["entries"] = entries;
+    }
     else if (toolName == "compile_project") {
-        void* compileResult = compileProject(params["project_path"].toString());
-        result = compileResult;
+        return compileProject(params["project_path"]);
     }
     else if (toolName == "run_executable") {
-        void* runResult = runExecutable(params["executable"].toString());
-        result = runResult;
-    }
-    else if (toolName == "list_directory") {
-        std::vector<std::string> entries = listDirectory(params["path"].toString());
-        result["success"] = true;
-        result["entries"] = void*::fromStringList(entries);
+        std::string exe = params["executable"];
+        std::vector<std::string> args; 
+        if(params.contains("args")) args = params["args"].get<std::vector<std::string>>();
+        return runExecutable(exe, args);
     }
     else if (toolName == "train_model") {
-        std::string datasetPath = params["dataset_path"].toString();
-        std::string modelPath = params["model_path"].toString();
-        void* config = params["config"].toObject();
-        void* trainResult = trainModel(datasetPath, modelPath, config);
-        result = trainResult;
+        return trainModel(params["dataset_path"], params["model_path"], params["config"]);
     }
     else if (toolName == "is_training") {
-        bool training = isTrainingModel();
         result["success"] = true;
-        result["is_training"] = training;
+        result["is_training"] = isTrainingModel();
     }
     else {
         result["success"] = false;
@@ -586,29 +567,31 @@ void AgenticExecutor::addToMemory(const std::string& key, const std::any& value)
 
 std::any AgenticExecutor::getFromMemory(const std::string& key)
 {
-    return m_memory.value(key);
+    auto it = m_memory.find(key);
+    if (it != m_memory.end()) return it->second;
+    return std::any();
 }
 
 void AgenticExecutor::clearMemory()
 {
     m_memory.clear();
-    m_executionHistory = void*();
+    m_executionHistory = json::array();
 }
 
 std::string AgenticExecutor::getFullContext()
 {
-    std::string context;
-    context += "=== EXECUTION CONTEXT ===\n";
-    context += "Working Directory: " + m_currentWorkingDirectory + "\n";
-    context += "Memory Items: " + std::string::number(m_memory.size()) + "\n";
-    context += "Execution History: " + std::string::number(m_executionHistory.size()) + " steps\n";
-    context += "\n=== MEMORY ===\n";
+    std::ostringstream context;
+    context << "=== EXECUTION CONTEXT ===\n";
+    context << "Working Directory: " << m_currentWorkingDirectory << "\n";
+    context << "Memory Items: " << m_memory.size() << "\n";
+    context << "Execution History: " << m_executionHistory.size() << " steps\n";
+    context << "\n=== MEMORY ===\n";
     
-    for (auto it = m_memory.begin(); it != m_memory.end(); ++it) {
-        context += it.key() + ": " + it.value().toString() + "\n";
+    for (const auto& kv : m_memory) {
+        context << kv.first << ": [Stored Value]\n";
     }
     
-    return context;
+    return context.str();
 }
 
 // ========== SELF-CORRECTION ==========
@@ -620,9 +603,11 @@ bool AgenticExecutor::detectFailure(const std::string& output)
         "undefined reference", "segmentation fault", "compilation terminated"
     };
     
-    std::string lowerOutput = output.toLower();
+    std::string lowerOutput = output;
+    std::transform(lowerOutput.begin(), lowerOutput.end(), lowerOutput.begin(), ::tolower);
+    
     for (const std::string& indicator : failureIndicators) {
-        if (lowerOutput.contains(indicator)) {
+        if (lowerOutput.find(indicator) != std::string::npos) {
             return true;
         }
     }
@@ -634,62 +619,73 @@ std::string AgenticExecutor::generateCorrectionPlan(const std::string& failureRe
 {
     if (!m_agenticEngine) return "No correction available";
 
-    std::string prompt = std::string(
-        "An automated task failed with this error:\n%1\n\n"
-        "Analyze the error and provide a correction plan. Include:\n"
-        "1. Root cause of the failure\n"
-        "2. Specific steps to fix it\n"
-        "3. Code changes if needed\n"
-        "4. Verification steps\n\n"
-        "Be concise and actionable."
-    );
+    std::ostringstream prompt;
+    prompt << "An automated task failed with this error:\n" << failureReason << "\n\n"
+           << "Analyze the error and provide a correction plan. Include:\n"
+           << "1. Root cause of the failure\n"
+           << "2. Specific steps to fix it\n"
+           << "3. Code changes if needed\n"
+           << "4. Verification steps\n\n"
+           << "Be concise and actionable.";
 
-    return m_agenticEngine->generateResponse(prompt);
+    return m_agenticEngine->generateResponse(prompt.str());
 }
 
-void* AgenticExecutor::retryWithCorrection(const void*& failedStep)
+json AgenticExecutor::retryWithCorrection(const json& failedStep)
 {
     m_currentRetryCount++;
     
-    void* result;
+    json result;
     result["original_step"] = failedStep;
     result["retry_attempt"] = m_currentRetryCount;
 
-    std::string failureContext = getFromMemory("last_error").toString();
+    std::string failureContext = "Unknown Error";
+    try {
+        auto anyVal = getFromMemory("last_error");
+        if(anyVal.has_value()) {
+             try { failureContext = std::any_cast<std::string>(anyVal); } catch(...) {}
+        }
+    } catch(...) {}
+
     std::string correctionPlan = generateCorrectionPlan(failureContext);
     
     logMessage("Attempting correction: " + correctionPlan);
 
-    // Apply correction and retry
+    // Naive retry
     bool success = executeStep(failedStep);
     
     result["success"] = success;
     result["correction_plan"] = correctionPlan;
     
     if (!success && m_currentRetryCount < m_maxRetries) {
-        // Recursive retry
         return retryWithCorrection(failedStep);
     }
     
-    m_currentRetryCount = 0; // Reset for next task
+    m_currentRetryCount = 0;
     return result;
 }
 
 // ========== MODEL TRAINING ==========
 
-void* AgenticExecutor::trainModel(const std::string& datasetPath, const std::string& modelPath, const void*& config)
+json AgenticExecutor::trainModel(const std::string& datasetPath, const std::string& modelPath, const json& config)
 {
-    void* result;
+    json result;
     
     if (!m_modelTrainer) {
         result["success"] = false;
         result["error"] = "Model trainer not initialized";
         return result;
     }
-    
-    if (!m_inferenceEngine || !m_inferenceEngine->isModelLoaded()) {
+
+    if (m_inferenceEngine == nullptr) {
         result["success"] = false;
-        result["error"] = "No model loaded for training";
+        result["error"] = "Inference engine not available";
+        return result;
+    }
+    
+    if (!m_modelTrainer->initialize(m_inferenceEngine, modelPath)) {
+        result["success"] = false;
+        result["error"] = "Failed to initialize model trainer";
         return result;
     }
     
@@ -699,15 +695,16 @@ void* AgenticExecutor::trainModel(const std::string& datasetPath, const std::str
     ModelTrainer::TrainingConfig trainConfig;
     trainConfig.datasetPath = datasetPath;
     trainConfig.outputPath = modelPath + ".trained";
-    trainConfig.epochs = config.value("epochs").toInt(10);
-    trainConfig.learningRate = static_cast<float>(config.value("learning_rate").toDouble(1e-4));
-    trainConfig.batchSize = config.value("batch_size").toInt(32);
-    trainConfig.sequenceLength = config.value("sequence_length").toInt(512);
-    trainConfig.gradientClip = static_cast<float>(config.value("gradient_clip").toDouble(1.0));
-    trainConfig.validateEveryEpoch = config.value("validate_every_epoch").toBool(true);
-    trainConfig.validationSplit = static_cast<float>(config.value("validation_split").toDouble(0.1));
-    trainConfig.weightDecay = static_cast<float>(config.value("weight_decay").toDouble(0.01));
-    trainConfig.warmupSteps = static_cast<float>(config.value("warmup_steps").toDouble(0.1));
+    
+    trainConfig.epochs = config.value("epochs", 10);
+    trainConfig.learningRate = config.value("learning_rate", 1e-4);
+    trainConfig.batchSize = config.value("batch_size", 32);
+    trainConfig.sequenceLength = config.value("sequence_length", 512);
+    trainConfig.gradientClip = config.value("gradient_clip", 1.0);
+    trainConfig.validateEveryEpoch = config.value("validate_every_epoch", true);
+    trainConfig.validationSplit = config.value("validation_split", 0.1);
+    trainConfig.weightDecay = config.value("weight_decay", 0.01);
+    trainConfig.warmupSteps = config.value("warmup_steps", 0.1);
     
     // Start training
     bool success = m_modelTrainer->startTraining(trainConfig);
@@ -720,6 +717,7 @@ void* AgenticExecutor::trainModel(const std::string& datasetPath, const std::str
     
     return result;
 }
+
 
 bool AgenticExecutor::isTrainingModel() const
 {

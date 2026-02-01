@@ -60,14 +60,62 @@ void FeatureFlags::onFlagChanged(const std::string& name, FlagCallback callback)
     m_callbacks[name].push_back(callback);
 }
 
+#include <nlohmann/json.hpp>
+
+// ...existing code...
+
+
 bool FeatureFlags::loadFromFile(const std::string& filePath) {
-    // TODO: Implement TOML/JSON parsing
-    return false;
+    std::ifstream file(filePath);
+    if (!file.is_open()) return false;
+    
+    try {
+        nlohmann::json j;
+        file >> j;
+        
+        std::lock_guard<std::mutex> lock(m_mutex);
+        
+        // Parse simple key-value pairs
+        if (j.contains("bools")) {
+             for (auto& element : j["bools"].items()) {
+                 m_boolFlags[element.key()].store(element.value().get<bool>());
+             }
+        }
+        if (j.contains("strings")) {
+             for (auto& element : j["strings"].items()) {
+                 m_stringFlags[element.key()] = element.value().get<std::string>();
+             }
+        }
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 bool FeatureFlags::saveToFile(const std::string& filePath) const {
-    // TODO: Implement TOML/JSON serialization
-    return false;
+    try {
+        nlohmann::json j;
+        j["bools"] = nlohmann::json::object();
+        j["strings"] = nlohmann::json::object();
+
+        {
+             std::lock_guard<std::mutex> lock(m_mutex);
+             for (const auto& pair : m_boolFlags) {
+                 j["bools"][pair.first] = pair.second.load();
+             }
+             for (const auto& pair : m_stringFlags) {
+                 j["strings"][pair.first] = pair.second;
+             }
+        }
+        
+        std::ofstream file(filePath);
+        if (!file.is_open()) return false;
+        
+        file << j.dump(4);
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 std::string FeatureFlags::toJson() const {
