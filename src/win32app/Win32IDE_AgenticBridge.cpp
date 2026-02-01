@@ -164,40 +164,24 @@ AgentResponse AgenticBridge::ParseAgentResponse(const std::string& rawOutput) {
     return response;
 }
 
-// Private helpers for resolving paths are no longer needed for PowerShell
-// but we keep the method stubs empty or removed if they were private.
-// Since we are replacing the file content, we just don't include them.
-    si.hStdInput = m_hStdinRead;
-    si.dwFlags |= STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-    
-    PROCESS_INFORMATION pi = {};
-    
-    std::string cmdLine = scriptPath + " " + arguments;
-    
-    BOOL success = CreateProcessA(
-        NULL,
-        const_cast<char*>(cmdLine.c_str()),
-        NULL,
-        NULL,
-        TRUE,
-        CREATE_NO_WINDOW,
-        NULL,
-        NULL,
-        &si,
-        &pi
-    );
-    
-    if (!success) {
+std::string AgenticBridge::ResolveFrameworkPath() {
+    // Legacy: Was used for PowerShell scripts.
+    // Now we use native C++ logic, but return current dir for compatibility.
+    return ".";
+}
 
-        CloseHandle(m_hStdoutRead);
-        CloseHandle(m_hStdoutWrite);
-        CloseHandle(m_hStdinRead);
-        CloseHandle(m_hStdinWrite);
-        return false;
-    }
-    
-    m_hProcess = pi.hProcess;
+std::string AgenticBridge::ResolveToolsModulePath() {
+    return ".\\modules";
+}
+
+bool AgenticBridge::IsToolCall(const std::string& line) {
+    return line.find("Tool Call:") != std::string::npos;
+}
+
+bool AgenticBridge::IsAnswer(const std::string& line) {
+    return !IsToolCall(line);
+}
+
     CloseHandle(pi.hThread);
 
     return true;

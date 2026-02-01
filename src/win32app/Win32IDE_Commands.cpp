@@ -237,6 +237,58 @@ void Win32IDE::handleViewCommand(int commandId) {
             showModuleBrowser();
             break;
             
+        // Git Commands (3020-3024)
+        case 3020: // IDM_GIT_STATUS
+             // If function exists, call it. If not, implement basic call
+             if (isGitRepository()) {
+                 std::string output;
+                 executeGitCommand("git status", output);
+                 appendToOutput(output, "Output", OutputSeverity::Info);
+             } else {
+                 appendToOutput("Not a git repository", "Output", OutputSeverity::Warning);
+             }
+             break;
+             
+        case 3021: // IDM_GIT_COMMIT
+             showCommitDialog();
+             break;
+             
+        case 3022: // IDM_GIT_PUSH
+             if (isGitRepository()) {
+                 appendToOutput("git push...", "Output", OutputSeverity::Info);
+                 std::string output;
+                 // Use threaded execution for real logic to avoid UI freeze
+                 std::thread([this]() {
+                     std::string out;
+                     if (executeGitCommand("git push", out)) {
+                         this->appendToOutput(out, "Output", OutputSeverity::Info);
+                         this->appendToOutput("Push successful.", "Output", OutputSeverity::Info);
+                     } else {
+                         this->appendToOutput(out, "Errors", OutputSeverity::Error);
+                     }
+                 }).detach();
+             }
+             break;
+             
+        case 3023: // IDM_GIT_PULL
+             if (isGitRepository()) {
+                 appendToOutput("git pull...", "Output", OutputSeverity::Info);
+                 std::thread([this]() {
+                     std::string out;
+                     if (executeGitCommand("git pull", out)) {
+                         this->appendToOutput(out, "Output", OutputSeverity::Info);
+                         this->appendToOutput("Pull successful.", "Output", OutputSeverity::Info);
+                     } else {
+                         this->appendToOutput(out, "Errors", OutputSeverity::Error);
+                     }
+                 }).detach();
+             }
+             break;
+             
+        case 3024: // IDM_GIT_PANEL
+             showGitPanel();
+             break;
+            
         default:
             break;
     }

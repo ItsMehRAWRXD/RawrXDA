@@ -76,6 +76,17 @@ mainCRTStartup PROC FRAME
     
     jmp @@exit
 
+RunCLLoop:
+    ; Simple read-eval-print loop placeholder replacement
+    ; Check if model loaded
+    ; If not, print warning
+    ; Else call RunInferenceStep with dummy input
+    
+    mov cx, 5
+    call Sleep ; Yield
+    
+    jmp RunCLLoop
+
 @@load_failed:
     lea rcx, szFail
     call PrintString

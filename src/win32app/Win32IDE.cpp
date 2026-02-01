@@ -1,6 +1,6 @@
 Win32IDE::~Win32IDE() {
     if (m_nativeEngine) {
-        delete static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+        delete static_cast<CPUInference::CPUInferenceEngine*>(m_nativeEngine);
         m_nativeEngine = nullptr;
     }
     // Resource cleanup
@@ -273,7 +273,7 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
 
     // Initialize Native Fallback Engine
     try {
-        m_nativeEngine = new RawrXD::CPUInferenceEngine();
+        m_nativeEngine = new CPUInference::CPUInferenceEngine();
         m_nativeEngineLoaded = true;
     } catch (...) {
         m_nativeEngine = nullptr;
@@ -3207,7 +3207,9 @@ void Win32IDE::analyzeScript()
             std::string prompt = "Analyze the following script and report potential bugs, security issues, and improvements:\n\n" + script;
             // Assuming CPUInferenceEngine has an 'infer' or 'generate' method that takes a string
             // Based on cpu_inference_engine.cpp read earlier: std::string infer(const std::string& prompt);
-            std::string result = m_nativeEngine->infer(prompt);
+            
+            auto* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+            std::string result = engine->infer(prompt);
             
             // Post result back to UI thread or just append (if appendToOutput is thread-safe or we lock)
             // appendToOutput uses SendMessage which is generally thread-safe for simple text
@@ -3289,12 +3291,49 @@ void Win32IDE::showModuleBrowser()
 
 void Win32IDE::loadModule(const std::string& moduleName)
 {
-    for (auto& m : m_modules) if (m.name == moduleName) m.loaded = true;
+    bool found = false;
+    for (auto& m : m_modules) {
+        if (m.name == moduleName) {
+            m.loaded = true;
+            found = true;
+            break;
+        }
+    }
+    
+    // Explicit Logic: Actually load the module in PowerShell
+    std::string command = "Import-Module '" + moduleName + "'\n";
+    
+    TerminalPane* pane = getActiveTerminalPane();
+    if (pane && pane->manager && pane->manager->isRunning()) {
+        pane->manager->writeInput(command);
+        appendToOutput("Loading module: " + moduleName, "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("Cannot load module '" + moduleName + "': No active terminal.", "Errors", OutputSeverity::Error);
+    }
 }
 
 void Win32IDE::unloadModule(const std::string& moduleName)
 {
-    for (auto& m : m_modules) if (m.name == moduleName) m.loaded = false;
+    bool found = false;
+    for (auto& m : m_modules) {
+        if (m.name == moduleName) {
+            m.loaded = false;
+            found = true;
+            break;
+        }
+    }
+
+    // Explicit Logic: Actually remove the module in PowerShell
+    std::string command = "Remove-Module '" + moduleName + "'\n";
+    
+    TerminalPane* pane = getActiveTerminalPane();
+    if (pane && pane->manager && pane->manager->isRunning()) {
+        pane->manager->writeInput(command);
+        appendToOutput("Unloading module: " + moduleName, "Output", OutputSeverity::Info);
+    } else {
+        // Try to start one or log error
+        appendToOutput("Cannot unload module '" + moduleName + "': No active terminal.", "Errors", OutputSeverity::Error);
+    }
 }
 
 void Win32IDE::importModule()
@@ -3376,7 +3415,7 @@ void Win32IDE::exportModule()
     }
 }
 
-// Additional theme/helper stubs
+// Theme Management
 void Win32IDE::resetToDefaultTheme()
 {
     m_currentTheme.backgroundColor = RGB(30,30,30);
@@ -5145,12 +5184,42 @@ bool Win32IDE::initializeInference()
 {
     std::lock_guard<std::mutex> lock(m_inferenceMutex);
     
-    // Check if model is loaded
-    if (m_loadedModelPath.empty() || !m_ggufLoader) {
-        appendToOutput("No model loaded for inference", "Errors", OutputSeverity::Error);
-        return false;
+    // Explicit Logic: Initialize Native CPU Engine if missing (Un-mocking)
+    if (!m_nativeEngine) {
+        try {
+            m_nativeEngine = new RawrXD::CPUInferenceEngine();
+            m_nativeEngineLoaded = false;
+            appendToOutput("Initialized Native CPU Inference Engine.", "Output", OutputSeverity::Info);
+        } catch (const std::exception& e) {
+            appendToOutput(std::string("Failed to init native engine: ") + e.what(), "Errors", OutputSeverity::Error);
+            return false;
+        }
+    }
+
+    // Check if model is loaded via GGUF loader (Streaming)
+    if (m_loadedModelPath.empty()) {
+        if (!m_ggufLoader) {
+            appendToOutput("No model loaded for inference", "Errors", OutputSeverity::Error);
+            return false;
+        }
+        // If ggufLoader has a file open but path var is empty, try to recover (unlikely)
     }
     
+    // Connect Native Engine to Model
+    if (m_nativeEngine && !m_loadedModelPath.empty()) {
+        RawrXD::CPUInferenceEngine* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+        if (!engine->isModelLoaded()) {
+            appendToOutput("Loading model into Native Engine: " + m_loadedModelPath, "Output", OutputSeverity::Info);
+            if (engine->loadModel(m_loadedModelPath)) {
+                m_nativeEngineLoaded = true;
+                appendToOutput("✅ Native Engine Model Loaded Successfully.", "Output", OutputSeverity::Info);
+            } else {
+                 appendToOutput("❌ Native Engine Model Load Failed.", "Errors", OutputSeverity::Error);
+                 // Don't fail completely if we have Ollama fallback, but for "no simulation" we adhere to native.
+            }
+        }
+    }
+
     // Set up inference config from model metadata
     m_inferenceConfig.maxTokens = 512;
     m_inferenceConfig.temperature = 0.7f;

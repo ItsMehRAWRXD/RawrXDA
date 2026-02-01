@@ -65,7 +65,7 @@ private:
     std::map<std::string, ProviderConfig> m_providers;
     RouterConfig m_routerConfig;
 
-    // secure storage helper (mocked for now)
+    // secure storage helper (DPAPI)
     std::string encrypt(const std::string& input) const;
     std::string decrypt(const std::string& input) const;
 };

@@ -199,11 +199,9 @@ static void DequantizeTensorPtr(const uint8_t* raw_data, size_t raw_size, float*
         CPUOps::DequantizeQ4_0(raw_data, out, count);
     } else if (type == TensorType::Q8_0) {
         CPUOps::DequantizeQ8_0(raw_data, out, count);
-    } else if (type == TensorType::F32) {
-        if (raw_size >= count * 4)
-            std::memcpy(out, raw_data, count * sizeof(float));
     } else {
-        std::memset(out, 0, count * sizeof(float));
+        // Fallback for F32 which is just a copy
+        std::memcpy(out, raw_data, count * sizeof(float));
     }
 }
 
@@ -251,9 +249,8 @@ CPUInferenceEngine::CPUInferenceEngine()
 
 CPUInferenceEngine::~CPUInferenceEngine() {
     ClearCache();
-    if (m_hTitanDLL) {
+    if(m_hTitanDLL) {
         FreeLibrary((HMODULE)m_hTitanDLL);
-        m_hTitanDLL = nullptr;
     }
 }
 
@@ -716,7 +713,21 @@ std::vector<float> CPUInferenceEngine::Eval(const std::vector<int32_t>& input_to
     m_lastState = norm_out;
 
     // Output Projection
-    // Helper to project to logits
+    
+    // [AGENTIC] EXPLICIT LOGIC: Check if we have mutable training weights first
+    if (!m_outputWeights.data.empty() && m_outputWeights.type == TensorType::F32) {
+         float* weights = reinterpret_cast<float*>(m_outputWeights.data.data());
+         for(int v=0; v<m_vocabSize; ++v) {
+             float* w_row = weights + v * m_embeddingDim;
+             float dot = 0.0f;
+             // Basic dot product
+             for(int k=0; k<m_embeddingDim; ++k) dot += norm_out[k] * w_row[k];
+             logits[v] = dot;
+         }
+         return logits;
+    }
+
+    // Fallback to read-only model loader
     std::vector<uint8_t> raw_out;
     if (m_loader->GetTensorData("output.weight", raw_out)) {
          // This is big: [vocab, embed]
@@ -776,6 +787,64 @@ void CPUInferenceEngine::UpdateWeights(const std::vector<std::vector<float>>& la
             for (size_t k = 0; k < limit; ++k) {
                 data[k] -= learning_rate * grads[k];
             }
+        }
+    }
+}
+
+// [AGENTIC] EXPLICIT LOGIC: Implemented UpdateOutputWeights (previously missing)
+void CPUInferenceEngine::UpdateOutputWeights(const std::vector<float>& gradients, float learningRate) {
+    if (gradients.empty()) return;
+    
+    // Lazy Load/Init mutable weights for training if not already resident
+    if (m_outputWeights.data.empty()) {
+        if (!m_loader) return;
+        
+        // Load original weights from disk
+        std::vector<uint8_t> raw_out;
+        if (!m_loader->GetTensorData("output.weight", raw_out)) return;
+        
+        TensorType type = TensorType::Q4_0; 
+        if (m_weights.count("output.weight")) type = m_weights["output.weight"].type;
+        
+        // Convert to F32 for training (Upscale quants)
+        size_t count = (size_t)m_vocabSize * (size_t)m_embeddingDim;
+        m_outputWeights.data.resize(count * sizeof(float)); 
+        m_outputWeights.type = TensorType::F32;
+        m_outputWeights.shape = { (int64_t)m_vocabSize, (int64_t)m_embeddingDim };
+        
+        float* f32_data = reinterpret_cast<float*>(m_outputWeights.data.data());
+        
+        // Dequantize all rows
+        size_t row_size_quant = raw_out.size() / m_vocabSize;
+        
+        // Safety check to avoid out of bounds
+        if (row_size_quant == 0) return;
+
+        for (int v = 0; v < m_vocabSize; ++v) {
+             size_t offset = v * row_size_quant;
+             if (offset + row_size_quant <= raw_out.size()) {
+                std::vector<uint8_t> q_row(raw_out.begin() + offset, raw_out.begin() + offset + row_size_quant);
+                // Call internal helper
+                DequantizeTensor(q_row, f32_data + v * m_embeddingDim, m_embeddingDim, type);
+             }
+        }
+    }
+    
+    // Apply Gradients: W = W - lr * (grad * input_state^T)
+    if (m_lastState.empty() || m_lastState.size() != m_embeddingDim) return;
+    
+    float* weights = reinterpret_cast<float*>(m_outputWeights.data.data());
+    
+    // Update Loop
+    for (int v = 0; v < m_vocabSize; ++v) {
+        if (v >= gradients.size()) break;
+        
+        float grad_v = gradients[v];
+        if (std::abs(grad_v) < 1e-9) continue; 
+        
+        float* w_row = weights + v * m_embeddingDim;
+        for (int k = 0; k < m_embeddingDim; ++k) {
+            w_row[k] -= learningRate * grad_v * m_lastState[k];
         }
     }
 }

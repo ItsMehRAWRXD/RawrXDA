@@ -93,10 +93,17 @@ Editor::Editor(Window* parent) : Window(parent), stack(), font(L"Consolas", 12.0
     renderer.initialize(hwnd);
     
     // Default metrics
-    // We should measure font using DirectWrite
-    // For now, hardcode generic monospace metrics
-    charWidth = 9.0f;
-    lineHeight = 16.0f;
+    // Measure font using DirectWrite
+    SizeF mSize = renderer.measureText(L"M", font);
+    if (mSize.width > 0) {
+        charWidth = mSize.width;
+        // Add a small padding for line height
+        lineHeight = mSize.height * 1.2f; 
+    } else {
+        // Fallback
+        charWidth = 9.0f;
+        lineHeight = 16.0f;
+    }
 }
 
 Editor::~Editor() {

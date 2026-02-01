@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <chrono>
 #include <ctime>
+#include <psapi.h>
 
 #ifdef _WIN32
 #include <richedit.h>
@@ -752,20 +753,25 @@ void MainWindow::updateTelemetry()
 
 void MainWindow::updateAIMetricsDisplay()
 {
-    // Telemetry display stub: keep UI update without linking full telemetry
+    // Real Logic: System Metrics
+    PROCESS_MEMORY_COUNTERS_EX pmc;
+    GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
+    SIZE_T workingSet = pmc.WorkingSetSize / 1024 / 1024;
+    SIZE_T privateBytes = pmc.PrivateUsage / 1024 / 1024;
+
     std::ostringstream ss;
     ss << "=== AI Metrics Dashboard ===\n\n";
-    ss << "Session: n/a\n";
-    ss << "Latest:  n/a\n";
-    ss << "Latency: n/a\n";
-    ss << "Tokens:  n/a\n";
-    ss << "Model:   n/a\n";
-    ss << "\n[F11] Export | [F12] Clear\n";
+    ss << "Process Mem: " << workingSet << " MB\n";
+    ss << "Private Mem: " << privateBytes << " MB\n";
+    
+    // Uptime
+    static auto t0 = std::chrono::steady_clock::now();
+    auto sec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - t0).count();
+    ss << "Uptime: " << sec/3600 << "h " << (sec%3600)/60 << "m\n";
+    ss << "Threads: " << std::thread::hardware_concurrency();
 
 #ifdef _WIN32
-    if (m_floatingPanel && m_floatingPanelVisible) {
-        SetWindowTextA(m_floatingPanel, ss.str().c_str());
-    }
+    if(m_aiMetricsHwnd) SetWindowTextA(m_aiMetricsHwnd, ss.str().c_str());
 #endif
 }
 

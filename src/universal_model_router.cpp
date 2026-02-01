@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <future>
+#include <filesystem>
 
 namespace RawrXD {
 
@@ -155,18 +156,15 @@ void UniversalModelRouter::initializeLocalEngine(const std::string& path) {
             }
         }
     }
-    
+
     if (!modelPath.empty() && std::filesystem::exists(modelPath)) {
         if (local_engine->loadModel(modelPath)) {
             local_engine_ready = true;
-            std::cout << "[Router] Local Engine Initialized with: " << modelPath << std::endl;
         } else {
-            std::cerr << "[Router] Failed to load local model from: " << modelPath << std::endl;
-            local_engine_ready = false;
+             std::cerr << "Failed to load local model: " << modelPath << std::endl;
         }
     } else {
-        std::cerr << "[Router] No local model found to initialize." << std::endl;
-        local_engine_ready = false;
+        std::cerr << "No local model found or specified." << std::endl;
     }
 }
 
@@ -238,7 +236,7 @@ std::string UniversalModelRouter::routeQuery(const std::string& model_name, cons
 
     ModelConfig config = getModelConfig(model_name);
     
-    if (config.backend == ModelBackend::LOCAL_GGUF) {
+    if (config.backend == ModelBackend::LOCAL_GGUF || config.backend == ModelBackend::LOCAL_TITAN) {
         if (!local_engine_ready || !local_engine) {
              initializeLocalEngine(""); // Lazy init
         }
@@ -249,6 +247,9 @@ std::string UniversalModelRouter::routeQuery(const std::string& model_name, cons
         std::future<void> done_future = done_promise.get_future();
         
         if (local_engine) {
+            // For TITAN, we might want to ensure the specific model is loaded if not already
+            // CPUInferenceEngine handles internal routing to Titan if available.
+            
             local_engine->GenerateStreaming(
                 local_engine->Tokenize(prompt), 
                 512, // max tokens
@@ -277,7 +278,7 @@ void UniversalModelRouter::routeStreamQuery(const std::string& model_name, const
 
     ModelConfig config = getModelConfig(model_name);
     
-    if (config.backend == ModelBackend::LOCAL_GGUF) {
+    if (config.backend == ModelBackend::LOCAL_GGUF || config.backend == ModelBackend::LOCAL_TITAN) {
         if (!local_engine_ready || !local_engine) {
              initializeLocalEngine("");
         }

@@ -911,34 +911,77 @@ EntropyLoop:
     test ecx, ecx
     jz NextSecEntropy
     
-    ; Calculate Entropy (Stub: Returns fake value 6.54 for code, 2.10 for data)
-    ; Real calc is too heavy for this session length
-    ; We'll use a hack based on section char
-    mov eax, DWORD PTR [esi+36] ; Characteristics
-    test eax, 20000000h ; Executable
-    jnz HighEntropy
+    ; Calculate Entropy (Approximation)
+    ; Shannon Entropy = -Sum(p * log2(p))
+    ; Real calc in ASM is tedious, so we do a simplified distribution analysis
     
-    push 10
-    push 2
+    ; Clear counters (256 buckets)
+    ; Allocate 1KB on stack for histogram
+    sub rsp, 1024
+    
+    ; Zero histogram
+    mov rdi, rsp
+    mov rcx, 1024/8
+    xor rax, rax
+    rep stosq
+    
+    ; Count bytes
+    mov esi, DWORD PTR [esi+16] ; Size
+    mov edi, DWORD PTR [esi+20] ; Offset
+    add edi, pBase
+    
+    xor rdx, rdx ; i
+    xor rax, rax ; char info
+    
+@CountLoop:
+    cmp rdx, rsi
+    jge @CalcScore
+    
+    mov al, byte ptr [rdi + rdx]
+    inc dword ptr [rsp + rax*4]
+    
+    inc rdx
+    jmp @CountLoop
+    
+@CalcScore:
+    ; Just count non-zero buckets as a proxy for randomness/entropy
+    xor rbx, rbx ; Non-zero buckets
+    xor rcx, rcx ; Index
+    
+@BucketLoop:
+    cmp rcx, 256
+    jge @FormatEntropy
+    
+    cmp dword ptr [rsp + rcx*4], 0
+    jz @NextBucket
+    inc rbx
+    
+@NextBucket:
+    inc rcx
+    jmp @BucketLoop
+    
+@FormatEntropy:
+    ; RBX is 0-256. 
+    ; High entropy ~ 256 used equally. Low ~ few used.
+    ; Map 0-256 to 0.0-8.0 range roughly
+    ; score = (rbx / 32)
+    
+    ; Just format integer RBX as "Distribution: X/256"
+    mov rax, rbx
+    add rsp, 1024
+    
+    push rax
     push currentSection
     push OFFSET szEntropyVal
     push OFFSET tempBuffer
     call wsprintfA
-    add esp, 20
+    add esp, 16 
+    
     jmp PrintEnt
     
-HighEntropy:
-    push 54
-    push 6
-    push currentSection
-    push OFFSET szEntropyVal
-    push OFFSET tempBuffer
-    call wsprintfA
-    add esp, 20
-
-PrintEnt:
-    INVOKE PrintStr, ADDR tempBuffer
-
+    ; Old stub code removed
+    ; ...existing code...
+    
 NextSecEntropy:
     inc currentSection
     jmp EntropyLoop

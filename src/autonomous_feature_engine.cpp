@@ -136,7 +136,15 @@ std::vector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizatio
              size_t nextLine = res.response.find('\n', rPos);
              opt.reasoning = res.response.substr(rPos + 10, nextLine - (rPos + 10));
         }
-        // opt.impact = "High";
+        // Parse impact analysis or infer from keywords
+        if (res.response.find("O(1)") != std::string::npos || res.response.find("cache") != std::string::npos || res.response.find("allocation") != std::string::npos) {
+             opt.impact = "High";
+        } else if (res.response.find("O(n)") != std::string::npos || res.response.find("loop") != std::string::npos) {
+             opt.impact = "Medium";
+        } else {
+             opt.impact = "Low";
+        }
+
         opts.push_back(opt);
     }
     
@@ -625,12 +633,32 @@ UserCodingProfile AutonomousFeatureEngine::getUserProfile() const {
 }
 
 void AutonomousFeatureEngine::updateLearningModel(const std::string& c, const std::string& f) {
-    // Real implementation would train a LoRA adapter
-    // For now, we update the pattern usage histogram
+    // Real training data collection for Online Learning
+    // We persist the (code, feedback) pair to a JSONL dataset for the Trainer process
+    
+    // 1. Update In-Memory Statistics
     if (f == "accepted") {
-        // scan 'c' for patterns
         if (c.find("for (") != std::string::npos) userProfile.patternUsage["loop"]++;
         if (c.find("class ") != std::string::npos) userProfile.patternUsage["oop"]++;
+    }
+
+    // 2. Persist to Disk (JSONL format)
+    std::string datasetPath = "data/rxd_online_training.jsonl";
+    std::ofstream os(datasetPath, std::ios::app);
+    if (os) {
+        // Simple manual JSON construction to avoid heavy dependency here if not included
+        // Escape quotes in code 'c'
+        std::string escapedCode = c;
+        size_t pos = 0;
+        while ((pos = escapedCode.find("\"", pos)) != std::string::npos) {
+            escapedCode.replace(pos, 1, "\\\"");
+            pos += 2;
+        }
+        std::replace(escapedCode.begin(), escapedCode.end(), '\n', ' '); // Flatten for single line JSON
+
+        os << "{\"code\": \"" << escapedCode << "\", \"label\": \"" << f << "\", \"timestamp\": " 
+           << std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() 
+           << "}\n";
     }
 }
 std::vector<std::string> AutonomousFeatureEngine::predictNextAction(const std::string& codeContext) {

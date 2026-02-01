@@ -5,6 +5,7 @@
 #include <cstring>
 #include <algorithm>
 #include <random>
+#include <intrin.h> // For __cpuid
 
 DistributedTrainer::DistributedTrainer(void* parent) : m_initialized(false) {
     m_engine = std::make_unique<RawrXD::CPUInferenceEngine>();
@@ -167,12 +168,33 @@ bool DistributedTrainer::validateConfig() {
     return m_config.batchSize > 0 && m_config.learningRate > 0.0f; 
 }
 
-bool DistributedTrainer::initializeBackend() { return true; }
+// Real Hardware Capability Check
+bool DistributedTrainer::initializeBackend() {
+    int cpuInfo[4] = { -1 };
+    __cpuid(cpuInfo, 0);
+    int nIds = cpuInfo[0];
+    
+    // Check for AVX2 (Leaf 7, EBX bit 5)
+    bool avx2Supported = false;
+    if (nIds >= 7) {
+        __cpuid(cpuInfo, 7);
+        avx2Supported = (cpuInfo[1] & (1 << 5)) != 0;
+    }
+    
+    if (!avx2Supported) {
+        // Log warning but continue - we have scalar fallbacks
+        std::cerr << "[DistributedTrainer] Warning: AVX2 not available. Training will inevitably be slow." << std::endl;
+    } else {
+        std::cout << "[DistributedTrainer] Backend initialized. AVX2 detected." << std::endl;
+    }
+    return true; 
+}
 
 bool DistributedTrainer::detectDevices() {
     unsigned int cores = std::thread::hardware_concurrency();
     statusChanged("Detected " + std::to_string(cores) + " CPU threads.");
-    m_engine->SetThreadCount(std::max(1u, cores - 1));
+    // Reserve one thread for UI/System
+    m_engine->SetThreadCount(std::max(1u, cores > 1 ? cores - 1 : 1));
     return true;
 }
 
@@ -180,13 +202,23 @@ bool DistributedTrainer::setupProcessGroup() {
     // Check if we are Master or Worker
     if (m_config.pgConfig.worldSize > 1) {
         statusChanged("Joining Process Group as Rank " + std::to_string(m_config.pgConfig.rank));
+        // Verify we have network capabilities for distributed run
+        // For now, fail if > 1 until NCCL integration
+        statusChanged("Refusing distributed setup: Network layer pending.");
+        return false;
     }
     return true;
 }
 
-// Sync Stubs (No-ops for single node)
-// In a real distributed run, these would use NCCL/MPI
-bool DistributedTrainer::synchronizeGradients() { return true; }
+// Sync Logic
+bool DistributedTrainer::synchronizeGradients() {
+    if (m_config.pgConfig.worldSize > 1) {
+        // In a real distributed run, these would use NCCL/MPI
+        return false; // Not implemented for multi-node
+    }
+    // Single node: Gradients are already local
+    return true; 
+}
 bool DistributedTrainer::allReduceGradients() { return true; }
 void DistributedTrainer::compressGradients() {}
 void DistributedTrainer::decompressGradients() {}

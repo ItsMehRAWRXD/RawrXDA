@@ -98,7 +98,7 @@ void PlanOrchestrator::planningCompleted(const PlanningResult& result) {
 }
 
 void PlanOrchestrator::executionStarted(int taskCount) {
-    std::cout << "[PlanOrchestrator] EXECUTION START. Count: " << taskCount << std::endl;
+    std::cout << "[PlanOrchestrator] EXECUTION START. Tasks to run: " << taskCount << std::endl;
 }
 
 void PlanOrchestrator::taskExecuted(int taskIndex, bool success, const std::string& description) {
@@ -106,7 +106,10 @@ void PlanOrchestrator::taskExecuted(int taskIndex, bool success, const std::stri
 }
 
 void PlanOrchestrator::executionCompleted(const ExecutionResult& result) {
-    std::cout << "[PlanOrchestrator] EXECUTION FINISHED. Success: " << result.success << std::endl;
+    if (result.success)
+        std::cout << "[PlanOrchestrator] EXECUTION SUCCESS. Success: " << result.successCount << ", Failed: " << result.failureCount << std::endl;
+    else
+        std::cout << "[PlanOrchestrator] EXECUTION FAILED. Success: " << result.successCount << ", Failed: " << result.failureCount << std::endl;
 }
 
 void PlanOrchestrator::errorOccurred(const std::string& error) {
@@ -142,6 +145,20 @@ PlanningResult PlanOrchestrator::parsePlanningResponse(const std::string& respon
                 task.oldText = t.value("search_text", "");
                 task.newText = t.value("new_text", "");
                 task.description = t.value("description", "AI Task");
+                
+                // Explicit Logic: Map specific fields for Rename operations
+                if (task.operation == "rename") {
+                    task.symbolName = t.value("symbol_name", "");
+                    if (task.symbolName.empty()) task.symbolName = t.value("old_name", ""); // Fallback
+                    
+                    task.newSymbolName = t.value("new_symbol_name", "");
+                    if (task.newSymbolName.empty()) task.newSymbolName = t.value("new_name", ""); // Fallback
+                    
+                    // If still empty, try to infer from typical fields
+                    if (task.symbolName.empty()) task.symbolName = task.oldText;
+                    if (task.newSymbolName.empty()) task.newSymbolName = task.newText;
+                }
+                
                 result.tasks.push_back(task);
             }
             if (!result.tasks.empty()) result.success = true;
@@ -239,6 +256,22 @@ Format:
         } else {
              task.filePath = workspaceRoot + "/unknown_target.cpp";
         }
+        
+        // Attempt to extract symbol names
+        // Pattern: Rename [class/func] X to Y
+        std::regex renameRegex(R"(rename\s+(?:class\s+|function\s+|variable\s+|symbol\s+)?([A-Za-z0-9_]+)\s+to\s+([A-Za-z0-9_]+))");
+        std::smatch renameMatch;
+        // Use case-insensitive search on the lowP prompt, but we need original casing for symbols ideally.
+        // Assuming user typed correct casing in prompt.
+        if (std::regex_search(prompt, renameMatch, renameRegex)) {
+             task.symbolName = renameMatch[1].str(); // Extract X
+             task.newSymbolName = renameMatch[2].str(); // Extract Y
+             
+             // Also set old/new text for fallback search/replace logic if rename fails
+             task.oldText = task.symbolName;
+             task.newText = task.newSymbolName;
+        }
+        
         result.tasks.push_back(task);
     } 
     else if (lowP.find("create") != std::string::npos && lowP.find("file") != std::string::npos) {

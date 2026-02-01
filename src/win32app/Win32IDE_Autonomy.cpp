@@ -97,20 +97,46 @@ void AutonomyManager::loop() {
 }
 
 std::string AutonomyManager::planNextAction() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    // Extremely naive planner: if no goal -> idle
-    if (m_goal.empty()) {
-        return "NOOP";
+    std::string currentGoal;
+    std::vector<std::string> currentMemory;
+
+    // Snapshot state (Critical Section)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_goal.empty()) {
+            return "NOOP";
+        }
+        currentGoal = m_goal;
+        currentMemory = m_memory;
     }
-    // Example heuristic: examine memory size to decide next step
-    if (m_memory.empty()) {
-        return "tool:list_dir path=."; // gather context
+    
+    // Real Intelligence: Query the Agentic Bridge (LLM)
+    // This removes the simulated heuristic logic.
+    if (m_bridge && m_bridge->IsInitialized()) {
+        std::stringstream prompt;
+        prompt << "SYSTEM: You are an autonomous coding agent.\n";
+        prompt << "GOAL: " << currentGoal << "\n";
+        prompt << "MEMORY:\n";
+        size_t memStart = currentMemory.size() > 10 ? currentMemory.size() - 10 : 0;
+        for (size_t i = memStart; i < currentMemory.size(); ++i) {
+            prompt << "> " << currentMemory[i] << "\n";
+        }
+        prompt << "\nINSTRUCTION: Decide the next single action to make progress.\n";
+        prompt << "FORMAT: 'tool:<name> <args>' or 'prompt:<thought_or_query>'.\n";
+        prompt << "RESPONSE:";
+        
+        AgentResponse resp = m_bridge->ExecuteAgentCommand(prompt.str());
+        std::string action = resp.content;
+        
+        // Basic sanitization
+        if (action.find("tool:") == 0 || action.find("prompt:") == 0) {
+            return action;
+        }
+        // Fallback if LLM creates unstructured output
+        return "prompt: " + action;
     }
-    // After some memory items, attempt summarization (placeholder prompt)
-    if (m_memory.size() % 5 == 0) {
-        return "prompt: Summarize recent observations concisely.";
-    }
-    return "prompt: Reflect on goal and propose next file to inspect.";
+
+    return "NOOP";
 }
 
 void AutonomyManager::executeAction(const std::string& action) {
