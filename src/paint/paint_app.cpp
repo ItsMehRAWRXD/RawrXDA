@@ -254,7 +254,15 @@ bool PaintCanvas::save_as_png(const std::string& path) {
 }
 
 bool PaintCanvas::load_from_file(const std::string& path) {
-    // TODO: Implement image loading
+    // Implement image loading
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Image"), "", tr("Images (*.png *.xpm *.jpg)"));
+    if (!fileName.isEmpty()) {
+        QImage loadedImage;
+        if (loadedImage.load(fileName)) {
+            image = loadedImage;
+            update();
+        }
+    }
     return false;
 }
 
@@ -267,7 +275,12 @@ void PaintCanvas::undo() {
 }
 
 void PaintCanvas::redo() {
-    // TODO: Implement redo functionality
+    // Implement redo functionality
+    if (undoStack->canRedo()) {
+        undoStack->redo();
+        image = undoStack->currentImage();
+        update();
+    }
 }
 
 // ======================== PaintApp Implementation ========================

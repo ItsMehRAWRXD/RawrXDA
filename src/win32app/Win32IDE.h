@@ -11,13 +11,12 @@
 #include <shlobj.h>
 #include <string>
 #include <vector>
-#include <memory>
 #include <map>
-#include <unordered_map>
-#include <thread>
-#include <mutex>
-#include <atomic>
 #include <functional>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <memory>
 #include "IDELogger.h"
 #include "Win32TerminalManager.h"
 #include "TransparentRenderer.h"
@@ -1093,6 +1092,10 @@ private:
     // Ollama config
     std::string m_ollamaBaseUrl;      // e.g., http://localhost:11434
     std::string m_ollamaModelOverride; // if set, use this tag instead of deriving from filename
+    
+    // Native Fallback Engine
+    void* m_nativeEngine; // void* to avoid including heavy header here
+    bool m_nativeEngineLoaded;
 
     // File Explorer members (additional)
     HIMAGELIST m_hImageList;
