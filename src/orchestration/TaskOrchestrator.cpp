@@ -490,9 +490,21 @@ OrchestrationResult TaskOrchestrator::getTaskResult(const std::string& taskId) c
 void TaskOrchestrator::cancelTask(const std::string& taskId)
 {
     if (m_activeTasks.contains(taskId)) {
-        // TODO: Implement cancellation logic
+        // Mark task as cancelled
+        Task& task = m_activeTasks[taskId];
+        task.status = TaskStatus::FAILED;
+        task.error = "Task cancelled by user";
+        
+        // Decrement model workload
+        if (m_modelWorkloads.contains(task.model)) {
+            m_modelWorkloads[task.model] = std::max(0, m_modelWorkloads[task.model] - 1);
+        }
+        
+        // Remove from active tasks
         m_activeTasks.remove(taskId);
-        m_modelWorkloads[m_activeTasks[taskId].model] = qMax(0, m_modelWorkloads[m_activeTasks[taskId].model] - 1);
+        
+        // Emit task failed signal
+        taskFailed(taskId, "Task cancelled");
     }
 }
 

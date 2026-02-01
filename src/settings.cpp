@@ -9,7 +9,44 @@
 class Settings::Impl {
 public:
     Impl(const std::string& organization, const std::string& application) {
-        // In a real implementation, load "settings.ini" here
+        load();
+    }
+
+    void load() {
+        std::string path = "settings.ini";
+        if (!std::filesystem::exists(path)) return;
+        
+        std::ifstream file(path);
+        std::string line;
+        while (std::getline(file, line)) {
+            size_t eqPos = line.find('=');
+            if (eqPos != std::string::npos) {
+                std::string key = line.substr(0, eqPos);
+                std::string valStr = line.substr(eqPos + 1);
+                
+                // Simple type inference or storage as string
+                // Ideally we'd store raw strings and cast on retrieval, 
+                // but since we rely on typeid in save, we need to guess or use a variant that tracks type.
+                // For this simple replacement, we'll store everything as string and let callers cast/parse,
+                // OR we try to guess int/bool.
+                
+                if (valStr == "true") store_[key] = true;
+                else if (valStr == "false") store_[key] = false;
+                else {
+                    try {
+                        size_t pos;
+                        int i = std::stoi(valStr, &pos);
+                         if (pos == valStr.length()) {
+                             store_[key] = i;
+                         } else {
+                             store_[key] = valStr;
+                         }
+                    } catch (...) {
+                        store_[key] = valStr;
+                    }
+                }
+            }
+        }
     }
 
     void setValue(const std::string& key, const std::any& value) {
@@ -46,16 +83,53 @@ private:
     std::map<std::string, std::any> store_;
 };
 
-Settings::Settings() : settings_(nullptr) {
+Settings::Settings() : settings_(new Impl("", "")) {
+    // In a real app we'd pass org/app names
 }
 
 Settings::~Settings() {
     delete settings_;
 }
 
+Settings& Settings::instance() {
+    static Settings s_instance;
+    return s_instance;
+}
+
+MonacoSettings Settings::getMonacoSettings() {
+    MonacoSettings s;
+    Settings& self = instance();
+    
+    // Load overrides from settings_
+    try {
+        std::any val = self.getValue("monaco.fontFamily", std::any(s.fontFamily));
+        if (val.type() == typeid(std::string)) s.fontFamily = std::any_cast<std::string>(val);
+        
+        val = self.getValue("monaco.fontSize", std::any(s.fontSize));
+        if (val.type() == typeid(int)) s.fontSize = std::any_cast<int>(val);
+        
+        val = self.getValue("monaco.themePreset", std::any((int)s.themePreset));
+        if (val.type() == typeid(int)) s.themePreset = (MonacoThemePreset)std::any_cast<int>(val);
+
+        val = self.getValue("monaco.variant", std::any((int)s.variant));
+        if (val.type() == typeid(int)) s.variant = (MonacoVariantType)std::any_cast<int>(val);
+        
+        val = self.getValue("monaco.minimapEnabled", std::any(s.minimapEnabled));
+        if (val.type() == typeid(bool)) s.minimapEnabled = std::any_cast<bool>(val);
+        
+    } catch (...) {
+        // Fallback to defaults on type mismatch
+    }
+    
+    // Refresh colors based on preset
+    s.colors = GetThemePresetColors(s.themePreset);
+    
+    return s;
+}
+
 void Settings::initialize() {
-    if (!settings_) {
-        settings_ = new Impl("RawrXD", "AgenticIDE");
+    if (settings_) {
+        settings_->load();
     }
 }
 
@@ -147,28 +221,25 @@ MonacoThemeColors Settings::GetThemePresetColors(MonacoThemePreset preset) {
             colors.selection = 0xFFADD6FF;
             colors.lineHighlight = 0xFFEEEEEE;
             colors.glowColor = 0xFF0066CC;
-            colors.glowSecondary = 0xFFFF0000;.foreground = 0xFF00FFCC; // Neon Cyan
-            break;40;
-        case MonacoThemePreset::Cyberpunk:20;
+            colors.glowSecondary = 0xFFFF0000;
+            break;
+        case MonacoThemePreset::Cyberpunk:
             colors.background = 0xFF050510;
             colors.foreground = 0xFF00FFCC; // Neon Cyan
             colors.selection = 0xFF200040;
-            colors.lineHighlight = 0xFF101020;.foreground = 0xFF00FF00; // Terminal Green
-            colors.glowColor = 0xFF00FFCC;       colors.selection = 0xFF004000;
-            colors.glowSecondary = 0xFFFF00FF;.lineHighlight = 0xFF001000;
-            break;           break;
-        case MonacoThemePreset::Hacker:    }
-            colors.background = 0xFF000000;    return colors;
-
-
-
-
-
-
-
-
-
-
-
-}    return colors;    }            break;            colors.glowSecondary = 0xFF008800;            colors.glowColor = 0xFF00FF00;            colors.lineHighlight = 0xFF001000;            colors.selection = 0xFF004000;            colors.foreground = 0xFF00FF00; // Terminal Green}
+            colors.lineHighlight = 0xFF101020;
+            colors.glowColor = 0xFF00FFCC;
+            colors.glowSecondary = 0xFFFF00FF;
+            break;
+        case MonacoThemePreset::Hacker:
+            colors.background = 0xFF000000;
+            colors.foreground = 0xFF00FF00; // Terminal Green
+            colors.selection = 0xFF004000;
+            colors.lineHighlight = 0xFF001000;
+            colors.glowColor = 0xFF00FF00;
+            colors.glowSecondary = 0xFF008800;
+            break;
+    }
+    return colors;
+}
 

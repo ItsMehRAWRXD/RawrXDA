@@ -530,20 +530,54 @@ void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tok
              }
         }
         
-        std::vector<float> logits(m_vocabSize);
-        {
-             std::vector<uint8_t> raw;
-             if (m_loader->GetTensorData("output.weight", raw)) {
-                 std::vector<float> w(m_vocabSize * m_embeddingDim);
-                 DequantizeTensor(raw, w.data(), w.size(), TensorType::Q4_0);
-                 CPUOps::MatMul(w.data(), state.data(), logits.data(), m_vocabSize, 1, m_embeddingDim);
-             }
-        }
-        
         int next_id = 0;
         float max_val = -1e9;
-        for(int v=0; v<m_vocabSize; ++v) {
-            if (logits[v] > max_val) { max_val = logits[v]; next_id = v; }
+        
+        std::vector<uint8_t> raw_out;
+        if (m_loader->GetTensorData("output.weight", raw_out)) {
+             // Efficient ArgMax over Quantized Weights
+             // Output weight is [vocab_size, embedding_dim]
+             // We need to compute dot(row, state) for each row and find max
+             
+             size_t row_size_bytes = 0;
+             TensorType out_type = TensorType::Q4_0; // Default
+             if (m_weights.count("output.weight")) out_type = m_weights["output.weight"].type;
+             
+             if (out_type == TensorType::Q4_0) row_size_bytes = (m_embeddingDim / 32) * 18;
+             else if (out_type == TensorType::F32) row_size_bytes = m_embeddingDim * 4;
+             else if (out_type == TensorType::Q8_0) row_size_bytes = (m_embeddingDim / 32) * 34;
+             
+             // Pre-allocate dequant buffer for ONE row
+             std::vector<float> row_w(m_embeddingDim);
+             
+             for(int v=0; v<m_vocabSize; ++v) {
+                 size_t offset = v * row_size_bytes;
+                 if (offset + row_size_bytes > raw_out.size()) break;
+                 
+                 // Dequantize specific row only
+                 std::vector<uint8_t> row_data(raw_out.begin() + offset, raw_out.begin() + offset + row_size_bytes);
+                 if (out_type == TensorType::Q4_0)
+                     CPUOps::DequantizeQ4_0(row_data.data(), row_w.data(), m_embeddingDim);
+                 else if (out_type == TensorType::F32)
+                     std::memcpy(row_w.data(), row_data.data(), m_embeddingDim * sizeof(float)); 
+                 else
+                     DequantizeTensor(row_data, row_w.data(), m_embeddingDim, out_type);
+                 
+                 // Dot Product
+                 float dot = 0.0f;
+                 // SIMD friendly loop
+                 for(int k=0; k<m_embeddingDim; ++k) {
+                     dot += state[k] * row_w[k];
+                 }
+                 
+                 if (dot > max_val) {
+                     max_val = dot;
+                     next_id = v;
+                 }
+             }
+        } else {
+            // Fallback debugging
+            // std::cerr << "Output weights not found!" << std::endl;
         }
         
         std::string s = (next_id >= 0 && next_id < m_vocab.size()) ? m_vocab[next_id] : "";
@@ -690,23 +724,16 @@ std::vector<float> CPUInferenceEngine::Eval(const std::vector<int32_t>& input_to
          // But weights are usually [vocab, embed] in memory
          
          // Explicit implementation:
-         // Dequant/Load output weights chunks and dot product
-         // This is slow on CPU, but explicit.
+         // Dequant/Load output weights chunks and dot product.
+         // This implementation processes row-by-row to handle large vocabulary matrices 
+         // without allocating the full 300MB+ weight matrix in F32.
          
          TensorType type = TensorType::Q4_0;
-         if (m_weights.count("output.weight")) type = m_weights["output.weight"].type;
-         
-         // Use existing MatMul if possible or manual
-         // Ideally use block Dequant
-         
-         // Simplified: let's assume we can use the MatMul helper if we can load the tensor
-         // But loading the whole output tensor is huge.
-         // We'll iterate.
-         
-         // [AGENTIC] TODO: Optimized implementation would block-loadrithmetic to avoid vector copies
-         // Here we write simple loop
-         
-         size_t row_size = Tensor::GetElementSize(type) * m_embeddingDim / (type == TensorType::Q4_0 ? 2 : 1); 
+         if (m_weights.count("output.weight")) {
+             type = m_weights["output.weight"].type;
+         }
+
+         size_t row_size = Tensor::GetElementSize(type) * m_embeddingDim / (type == TensorType::Q4_0 ? 2 : 1);
 
          if (type == TensorType::Q4_0) row_size = (m_embeddingDim / 32) * 18;
          else if (type == TensorType::Q8_0) row_size = (m_embeddingDim / 32) * 34;
@@ -752,25 +779,19 @@ void CPUInferenceEngine::UpdateWeights(const std::vector<std::vector<float>>& la
         }
     }
 }
-            // Explicit weight update Loop (SGD)
-            for (size_t k = 0; k < limit; ++k) {[k];
-                data[k] -= learning_rate * grads[k];
-            }
-        }
-    }
-}
+
 std::string CPUInferenceEngine::infer(const std::string& prompt) {
-std::string CPUInferenceEngine::infer(const std::string& prompt) {
-    std::string result;ize(prompt);
     auto tokens = Tokenize(prompt);
-    std::promise<void> done;uture();
-    auto future = done.get_future();](const std::string& s) { result += s; }, [&]() { done.set_value(); });
+    std::string result;
+    std::promise<void> done;
+    auto future = done.get_future();
     GenerateStreaming(tokens, 50, [&](const std::string& s) { result += s; }, [&]() { done.set_value(); });
     future.wait();
     return result;
 }
-} // namespace RawrXD
-std::string CPUInferenceEngine::infer(const std::string& prompt, int max_tokens) {    std::string result;
+
+std::string CPUInferenceEngine::infer(const std::string& prompt, int max_tokens) {
+    std::string result;
     auto tokens = Tokenize(prompt);
     std::promise<void> done;
     auto future = done.get_future();

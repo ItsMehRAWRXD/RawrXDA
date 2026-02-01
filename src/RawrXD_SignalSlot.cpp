@@ -85,25 +85,11 @@ void Timer::stop() {
 }
 
 void Timer::singleShot(int msec, std::function<void()> cb) {
-    // This leaks the Timer object if we don't manage its lifetime.
-    // In a real app, we need a central manager for single shots.
-    // For now, let's create a self-deleting timer?
-    // Dangerous.
-    // Let's just create a static method that manages a list of single shot timers.
-    
-    auto* timer = new Timer();
-    timer->setInterval(msec);
-    timer->setSingleShot(true);
-    timer->onTimeout([timer, cb]() {
-        if(cb) cb();
-        // Delete timer later? 
-        // We can't delete it inside its own callback easily without risk.
-        // For now, this is a basic implementation.
-        // In a real implementation we'd queue it for deletion.
-    });
-    timer->start();
-    // Memory leak alert: 'timer' is never deleted.
-    // TODO: Implement proper SingleShot cleanup.
+    // Spawns a detached thread to handle the timeout without leaking a Timer object.
+    std::thread([msec, cb]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(msec));
+        if (cb) cb();
+    }).detach();
 }
 
 // --- FileWatcher Implementation ---

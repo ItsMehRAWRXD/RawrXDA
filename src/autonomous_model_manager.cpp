@@ -579,12 +579,6 @@ bool AutonomousModelManager::autoOptimizeModel(const std::string& modelId) {
 nlohmann::json AutonomousModelManager::analyzeCodebaseRequirements(const std::string& projectPath) {
     nlohmann::json reqs;
     reqs["language"] = "detecting";
-    int totalFiles = cppFiles + pyFiles;
-    if (totalFiles > 1000) reqs["complexity"] = "high";
-    else if (totalFiles > 100) reqs["complexity"] = "medium";
-    else reqs["complexity"] = "low";
-    
-    reqs["file_count"] = totalFiles;
     
     // Count files, look for specific extensions
     int cppFiles = 0;
@@ -596,6 +590,13 @@ nlohmann::json AutonomousModelManager::analyzeCodebaseRequirements(const std::st
             if (entry.path().extension() == ".py") pyFiles++;
         }
     } catch (...) {}
+    
+    int totalFiles = cppFiles + pyFiles;
+    if (totalFiles > 1000) reqs["complexity"] = "high";
+    else if (totalFiles > 100) reqs["complexity"] = "medium";
+    else reqs["complexity"] = "low";
+    
+    reqs["file_count"] = totalFiles;
     
     if (cppFiles > pyFiles) reqs["language"] = "cpp";
     else if (pyFiles > cppFiles) reqs["language"] = "python";

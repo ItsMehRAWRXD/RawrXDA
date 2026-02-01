@@ -9,6 +9,7 @@
 
 #include "plan_orchestrator.h"
 #include "universal_model_router.h" // Added for advanced model routing
+#include "cpu_inference_engine.h" // Added for InferenceEngine definition
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -250,9 +251,43 @@ Format:
          result.tasks.push_back(task);
     }
     else {
-        // General investigation task? 
-        // For now, return empty or dummy
-        result.planDescription = "No clear actionable tasks parsed from prompt.";
+        // Use AI to generate plan if available
+        if (m_inferenceEngine) {
+            std::string planningPrompt = "User Request: " + prompt + "\n"
+                "Plan task: Return a JSON array of file edits. "
+                "Format: [{\"operation\": \"replace|insert\", \"filePath\": \"...\", \"description\": \"...\", \"newText\": \"...\"}]";
+                
+            std::string response = m_inferenceEngine->infer(planningPrompt);
+            
+            try {
+                auto start = response.find("[");
+                auto end = response.rfind("]");
+                if (start != std::string::npos && end != std::string::npos) {
+                    std::string jsonStr = response.substr(start, end - start + 1);
+                    auto jsonTasks = nlohmann::json::parse(jsonStr);
+                    
+                    for (const auto& jTask : jsonTasks) {
+                        EditTask task;
+                        task.operation = jTask.value("operation", "insert");
+                        task.filePath = jTask.value("filePath", "generated.cpp");
+                        // Resolve relative paths
+                        if (!std::filesystem::path(task.filePath).is_absolute()) {
+                             task.filePath = m_workspaceRoot + "/" + task.filePath;
+                        }
+                        task.description = jTask.value("description", "AI Task");
+                        task.newText = jTask.value("newText", "");
+                        task.startLine = jTask.value("startLine", 0);
+                        result.tasks.push_back(task);
+                    }
+                    result.planDescription = "AI Generated Plan";
+                }
+            } catch (...) {
+                // Fallback if parsing fails
+                result.planDescription = "Could not parse AI plan.";
+            }
+        } else {
+            result.planDescription = "No clear actionable tasks and no AI engine available.";
+        }
     }
     
     planningCompleted(result);

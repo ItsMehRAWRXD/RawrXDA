@@ -7,8 +7,12 @@
 #pragma once
 
 #include <vector>
+#include <string>
+#include <map>
 #include <memory>
 #include <unordered_map>
+
+typedef std::vector<std::string> stringList;
 
 // Forward declarations
 class MASMSyntaxHighlighter;
@@ -129,15 +133,18 @@ class MASMCodeEditor {public:
     void unfoldBlock(int line);
     
     // Auto-completion
-    void setCompletionModel(const std::stringList& completions);
-    \npublic:\n    void breakpointToggled(int line, bool enabled);
+    void setCompletionModel(const stringList& completions);
+    
+public:
+    void breakpointToggled(int line, bool enabled);
     void errorClicked(const MASMError& error);
     
 protected:
-    void resizeEvent(void* event) override;
-    void keyPressEvent(void* event) override;
-    void mousePressEvent(void* event) override;
-    \nprivate:\n    void updateLineNumberAreaWidth(int newBlockCount);
+    void resizeEvent(void* event);
+    void keyPressEvent(void* event);
+    void mousePressEvent(void* event);
+    
+\nprivate:\n    void updateLineNumberAreaWidth(int newBlockCount);
     void highlightCurrentLine();
     void updateLineNumberArea(const struct { int x; int y; int w; int h; }& rect, int dy);
     
@@ -193,11 +200,13 @@ class MASMProjectExplorer {public:
     
     void setProject(const MASMProjectSettings& project);
     void refresh();
-    \npublic:\n    void fileOpened(const std::string& filePath);
+    
+\npublic:\n    void fileOpened(const std::string& filePath);
     void fileCreated(const std::string& filePath);
     void fileDeleted(const std::string& filePath);
     void fileRenamed(const std::string& oldPath, const std::string& newPath);
-    \nprivate:\n    void onTreeItemDoubleClicked(QTreeWidgetItem* item, int column);
+    
+\nprivate:\n    void onTreeItemDoubleClicked(QTreeWidgetItem* item, int column);
     void onTreeContextMenu(const struct { int x; int y; }& pos);
     
 private:
@@ -219,8 +228,10 @@ class MASMBuildOutput {public:
     void appendError(const MASMError& error);
     void appendStage(const std::string& stage);
     void setStats(const MASMCompilationStats& stats);
-    \npublic:\n    void errorDoubleClicked(const MASMError& error);
-    \nprivate:\n    void onOutputDoubleClicked();
+    
+\npublic:\n    void errorDoubleClicked(const MASMError& error);
+    
+\nprivate:\n    void onOutputDoubleClicked();
     
 private:
     std::unique_ptr<void> m_outputEdit;
@@ -239,8 +250,10 @@ class MASMSymbolBrowser {public:
     void setSymbols(const std::vector<MASMSymbol>& symbols);
     void clear();
     void filter(const std::string& text);
-    \npublic:\n    void symbolSelected(const MASMSymbol& symbol);
-    \nprivate:\n    void onSymbolClicked(QTreeWidgetItem* item, int column);
+    
+\npublic:\n    void symbolSelected(const MASMSymbol& symbol);
+    
+\nprivate:\n    void onSymbolClicked(QTreeWidgetItem* item, int column);
     void onFilterChanged(const std::string& text);
     
 private:
@@ -266,12 +279,14 @@ class MASMDebugger {public:
     void pause();
     
     void setBreakpoints(const std::unordered_set<int>& breakpoints);
-    \npublic:\n    void debuggerStarted();
+    
+\npublic:\n    void debuggerStarted();
     void debuggerStopped();
     void breakpointHit(int line);
     void registerChanged(const std::string& regName, uint64_t value);
     void memoryChanged(uint64_t address, const std::vector<uint8_t>& data);
-    \nprivate:\n    void onDebuggerOutput();
+    
+\nprivate:\n    void onDebuggerOutput();
     void onDebuggerError();
     
 private:
@@ -319,12 +334,14 @@ class MASMCompilerWidget {public:
     
     // Editor access
     MASMCodeEditor* getCurrentEditor() { return m_editor.get(); }
-    \npublic:\n    void compilationStarted();
+    
+\npublic:\n    void compilationStarted();
     void compilationFinished(bool success);
     void executionStarted();
     void executionFinished(int exitCode);
     void errorOccurred(const std::string& error);
-    \nprivate:\n    void onCompilerFinished(int exitCode, void*::ExitStatus exitStatus);
+    
+\nprivate:\n    void onCompilerFinished(int exitCode, void*::ExitStatus exitStatus);
     void onCompilerOutput();
     void onCompilerError();
     
@@ -407,7 +424,8 @@ class MASMCompilerBackend  {public:
     
     // Asynchronous compilation
     void compileAsync(const std::string& sourceFile, const MASMProjectSettings& settings);
-    \npublic:\n    void compilationProgress(const std::string& stage, int percentage);
+    
+\npublic:\n    void compilationProgress(const std::string& stage, int percentage);
     void compilationCompleted(const CompilationResult& result);
     
 private:

@@ -43,8 +43,29 @@ void* Detour::install(void* targetFunc, void* replacementFunc, size_t* trampolin
 }
 
 bool Detour::uninstall(void* targetFunc, void* trampoline) {
-    // TODO: Restore original bytes from trampoline
-    return false;
+    if (!targetFunc || !trampoline) return false;
+    
+    // The trampoline's first N bytes are the original target function bytes
+    // We stored the length in the 14-byte epilogue's first qword (metadata hack)
+    // For simplicity, assume we saved 5 or 14 bytes depending on 32/64-bit
+    
+    DWORD oldProtect;
+    const size_t restoreSize = 14; // Conservative: restore 14 bytes max
+    
+    if (!VirtualProtect(targetFunc, restoreSize, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+        return false;
+    }
+    
+    // Copy original bytes back from trampoline
+    std::memcpy(targetFunc, trampoline, restoreSize);
+    
+    // Restore protection
+    VirtualProtect(targetFunc, restoreSize, oldProtect, &oldProtect);
+    
+    // Free trampoline
+    VirtualFree(trampoline, 0, MEM_RELEASE);
+    
+    return true;
 }
 
 size_t Detour::calculateRequiredBytes(void* targetFunc) {

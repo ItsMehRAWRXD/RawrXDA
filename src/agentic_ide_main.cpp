@@ -40,8 +40,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         AgenticIDE logic; 
         logic.initialize(); 
         logic.setEditor(&editor); 
+        logic.startOrchestrator(); // Start the brain!
         
-        // Start a background thread for agent logic if needed, 
+        // Start a background thread for agent logic if needed,
         // or just let the main loop run and agent responds to events.
         // For now, we just initialize it.
 

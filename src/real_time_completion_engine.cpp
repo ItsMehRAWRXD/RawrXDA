@@ -1,6 +1,8 @@
 #include "real_time_completion_engine.h"
 #include <algorithm>
 #include <chrono>
+#include <sstream>
+#include <thread>
 
 RealTimeCompletionEngine::RealTimeCompletionEngine(
     std::shared_ptr<Logger> logger,
@@ -123,8 +125,8 @@ void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
     std::thread([this, warmupPrompt]() {
         try {
             // Short generation just to touch memory pages
-            std::vector<int32_t> tokens = m_inferenceEngine->tokenize(warmupPrompt);
-            m_inferenceEngine->generate(tokens, 5); 
+            std::vector<int32_t> tokens = m_inferenceEngine->Tokenize(warmupPrompt);
+            m_inferenceEngine->Generate(tokens, 5); 
         } catch (...) {
             // Ignore errors during prewarm
         }
@@ -223,14 +225,14 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         // ================================================
 
 
-        std::vector<int32_t> generatedTokens = m_inferenceEngine->generate(inputTokens, maxTokens);
+        std::vector<int32_t> generatedTokens = m_inferenceEngine->Generate(inputTokens, maxTokens);
 
         std::string generatedCompletion;
         if (generatedTokens.size() > inputTokens.size()) {
             std::vector<int32_t> completionSegment(
                 generatedTokens.begin() + static_cast<long long>(inputTokens.size()),
                 generatedTokens.end());
-            generatedCompletion = m_inferenceEngine->detokenize(completionSegment).toStdString();
+            generatedCompletion = m_inferenceEngine->Detokenize(completionSegment);
         } else {
 
         }

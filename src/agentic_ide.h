@@ -38,6 +38,7 @@ public:
     void run();
     void stop();
     void setEditor(RawrXD::Editor* editor);
+    void startOrchestrator(); // Added
 
     // Accessors for Agents
     MultiTabEditor* getEditor() { return m_multiTabEditor.get(); }

@@ -77,7 +77,16 @@ private:
     std::string enforceFormat(const std::string& response);
     std::string handleInfiniteLoop(const std::string& response);
 
-    // Callbacks placeholder
+    // Event Callbacks
+    std::function<void(FailureType, const std::string&)> m_onFailureDetected;
+    std::function<void(const std::string&)> m_onCorrectionApplied;
+    std::function<void(FailureType, const std::string&)> m_onCorrectionFailed;
+
+    void setFailureCallback(std::function<void(FailureType, const std::string&)> cb) { m_onFailureDetected = cb; }
+    void setCorrectionCallback(std::function<void(const std::string&)> cb) { m_onCorrectionApplied = cb; }
+    void setErrorCallback(std::function<void(FailureType, const std::string&)> cb) { m_onCorrectionFailed = cb; }
+
+    // Internal notification implementations
     void failureDetected(FailureType type, const std::string& diagnosis);
     void correctionApplied(const std::string& corrected);
     void correctionFailed(FailureType type, const std::string& reason);

@@ -20,6 +20,8 @@ void ModelInterface::initialize(const std::string& config_file_path)
 {
     router = std::make_shared<UniversalModelRouter>(this);
     cloud_client = std::make_shared<CloudApiClient>(this);
+    // Initialize Local Engine
+    local_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
     
     if (router->loadConfigFromFile(config_file_path)) {
         initialized_flag = true;
@@ -31,6 +33,9 @@ void ModelInterface::initializeWithRouter(std::shared_ptr<UniversalModelRouter> 
 {
     router = provided_router;
     cloud_client = std::make_shared<CloudApiClient>(this);
+    // Initialize Local Engine
+    local_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
+
     initialized_flag = (router != nullptr);
     
     if (initialized_flag) {
@@ -441,9 +446,39 @@ GenerationResult ModelInterface::generateInternal(const std::string& prompt,
     auto config = getModelConfigOrThrow(model_name);
     
     if (isLocalModel(model_name)) {
-        // Use local engine
-        result.content = "Local model generation not yet fully implemented";
-        result.backend = "LOCAL";
+        // Use local engine (Real Implementation)
+        if (!local_engine) {
+             result.success = false;
+             result.error = "Local engine not initialized";
+             return result;
+        }
+
+        // Try to load model if not already loaded (simple logic)
+        // Ideally we check if loaded model matches model_name path
+        // For no-stub, we assume we must construct the path and try loading
+        // or check if it's already the active one.
+        // Assuming single model loaded for now.
+        static std::string loaded_model_path = "";
+        std::string model_path = config.path; 
+        if (loaded_model_path != model_path) {
+             if (!local_engine->LoadModel(model_path)) {
+                 result.success = false;
+                 result.error = "Failed to load local model: " + model_path;
+                 return result;
+             }
+             loaded_model_path = model_path;
+        }
+
+        auto tokens = local_engine->Tokenize(prompt);
+        std::vector<int32_t> output_tokens;
+        // Generate expects callback or returns something. CPUInferenceEngine has:
+        // Generate(input_tokens, max_tokens) -> returns vector<int32_t>
+        // Use the method discovered in real_time_completion_engine.cpp
+        output_tokens = local_engine->Generate(tokens, options.max_tokens);
+        
+        result.content = local_engine->Detokenize(output_tokens); 
+        result.backend = "LOCAL_CPU";
+
     } else {
         // Use cloud client
         result.content = cloud_client->generate(prompt, config);
@@ -480,8 +515,29 @@ void ModelInterface::generateStreamInternal(const std::string& prompt,
     auto config = getModelConfigOrThrow(model_name);
     
     if (isLocalModel(model_name)) {
-        // Use local engine streaming
-        on_chunk("Local streaming not yet implemented");
+        if (!local_engine) {
+            if (on_error) on_error("Local engine not initialized");
+            return;
+        }
+
+        // Load model if different
+        static std::string loaded_model_path = "";
+        std::string model_path = config.path;
+        if (loaded_model_path != model_path) {
+             if (!local_engine->LoadModel(model_path)) {
+                 if (on_error) on_error("Failed to load local model: " + model_path);
+                 return;
+             }
+             loaded_model_path = model_path;
+        }
+
+        auto tokens = local_engine->Tokenize(prompt);
+        // Real streaming implementation
+        local_engine->GenerateStreaming(tokens, options.max_tokens, 
+            on_chunk, 
+            []() { /* complete */ },
+            nullptr);
+
     } else {
         // Use cloud client streaming
         cloud_client->generateStream(prompt, config, on_chunk, on_error);

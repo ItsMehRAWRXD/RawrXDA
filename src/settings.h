@@ -94,7 +94,8 @@ public:
     static bool SaveOverclock(const AppState& state, const std::string& path = "settings_overclock.ini");
 
     // Accessors
-    static MonacoSettings getMonacoSettings() { return MonacoSettings(); } // Stub
+    static Settings& instance(); // Singleton accessor
+    static MonacoSettings getMonacoSettings();
     static MonacoThemeColors GetThemePresetColors(MonacoThemePreset preset);
 
 private:
