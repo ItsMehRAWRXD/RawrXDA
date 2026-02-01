@@ -35,7 +35,7 @@ HTTPClient::HTTPClient(
     std::shared_ptr<Logger> logger,
     std::shared_ptr<Metrics> metrics)
     : m_logger(logger), m_metrics(metrics) {
-    if (m_logger) m_
+    if (m_logger) m_logger->log("HTTPClient initialized");
 }
 
 #if defined(HAVE_CURL) && HAVE_CURL
@@ -52,15 +52,15 @@ static size_t curl_write_callback(void* contents, size_t size, size_t nmemb, voi
 #endif
 
 HTTPResponse HTTPClient::sendRequest(const HTTPRequest& request) {
-    if (m_logger) m_logger->info("Sending HTTP Request: " + request.url);
+    if (m_logger) m_logger->log("Sending HTTP Request: " + request.url);
 
     HTTPResponse response;
     response.success = false;
 
-    // WinHttp Implementation for "No Stub" Requirement
+#if !defined(HAVE_CURL) || !HAVE_CURL
+    // WinHTTP Fallback Implementation
     std::wstring wUrl = s2ws(request.url);
-    URL_COMPONENTS urlComp;
-    ZeroMemory(&urlComp, sizeof(urlComp));
+    URL_COMPONENTS urlComp = {0};
     urlComp.dwStructSize = sizeof(urlComp);
     urlComp.dwSchemeLength = (DWORD)-1;
     urlComp.dwHostNameLength = (DWORD)-1;
@@ -68,13 +68,12 @@ HTTPResponse HTTPClient::sendRequest(const HTTPRequest& request) {
     urlComp.dwExtraInfoLength = (DWORD)-1;
 
     if (!WinHttpCrackUrl(wUrl.c_str(), (DWORD)wUrl.length(), 0, &urlComp)) {
-        response.errorMessage = "Invalid URL";
+        response.errorMessage = "WinHttpCrackUrl failed";
         return response;
     }
 
-    HINTERNET hSession = WinHttpOpen(L"RawrXD-Native/1.0",
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-Native/1.0", 
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-
     if (!hSession) {
         response.errorMessage = "WinHttpOpen failed";
         return response;
@@ -82,7 +81,6 @@ HTTPResponse HTTPClient::sendRequest(const HTTPRequest& request) {
 
     std::wstring hostName(urlComp.lpszHostName, urlComp.dwHostNameLength);
     HINTERNET hConnect = WinHttpConnect(hSession, hostName.c_str(), urlComp.nPort, 0);
-
     if (!hConnect) {
         WinHttpCloseHandle(hSession);
         response.errorMessage = "WinHttpConnect failed";
@@ -93,69 +91,65 @@ HTTPResponse HTTPClient::sendRequest(const HTTPRequest& request) {
     if (urlComp.dwExtraInfoLength > 0) {
         urlPath += std::wstring(urlComp.lpszExtraInfo, urlComp.dwExtraInfoLength);
     }
-    
+
     std::wstring method = s2ws(request.method);
     if (method.empty()) method = L"GET";
 
     DWORD flags = (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
-    HINTERNET hRequest = WinHttpOpenRequest(hConnect, method.c_str(), urlPath.c_str(),
-        NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
-
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, method.c_str(), urlPath.c_str(), 
+                                          NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
     if (!hRequest) {
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
         response.errorMessage = "WinHttpOpenRequest failed";
         return response;
     }
-    
-    // Set headers
+
     std::wstring headers;
     for (const auto& h : request.headers) {
         headers += s2ws(h.first) + L": " + s2ws(h.second) + L"\r\n";
     }
-    
-    BOOL bResults = WinHttpSendRequest(hRequest,
-        headers.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : headers.c_str(),
-        headers.empty() ? 0 : (DWORD)headers.length(),
-        (LPVOID)request.body.c_str(),
-        (DWORD)request.body.length(),
-        (DWORD)request.body.length(), 0);
 
-    if (bResults) {
-        bResults = WinHttpReceiveResponse(hRequest, NULL);
-    }
+    if (WinHttpSendRequest(hRequest, 
+                          headers.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : headers.c_str(),
+                          headers.empty() ? 0 : (DWORD)headers.length(),
+                          (LPVOID)request.body.c_str(), 
+                          (DWORD)request.body.length(), 
+                          (DWORD)request.body.length(), 0)) {
+        
+        if (WinHttpReceiveResponse(hRequest, NULL)) {
+            DWORD dwStatusCode = 0;
+            DWORD dwSize = sizeof(dwStatusCode);
+            WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                                WINHTTP_HEADER_NAME_BY_INDEX, &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX);
+            
+            response.statusCode = dwStatusCode;
+            response.success = (dwStatusCode >= 200 && dwStatusCode < 300);
 
-    if (bResults) {
-        DWORD dwStatusCode = 0;
-        DWORD dwSize = sizeof(dwStatusCode);
-        WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-            WINHTTP_HEADER_NAME_BY_INDEX, &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX);
-        response.statusCode = dwStatusCode;
-        response.success = (dwStatusCode >= 200 && dwStatusCode < 300);
-
-        DWORD dwSizeAvail = 0;
-        std::vector<char> buffer;
-        do {
-            dwSizeAvail = 0;
-            if (!WinHttpQueryDataAvailable(hRequest, &dwSizeAvail)) break;
-            if (dwSizeAvail == 0) break;
-
-            buffer.resize(dwSizeAvail);
-            DWORD dwRead = 0;
-            if (WinHttpReadData(hRequest, &buffer[0], dwSizeAvail, &dwRead)) {
-                response.body.append(buffer.begin(), buffer.begin() + dwRead);
-            }
-        } while (dwSizeAvail > 0);
+            DWORD dwSizeAvail = 0;
+            std::vector<char> buffer;
+            do {
+                dwSizeAvail = 0;
+                if (!WinHttpQueryDataAvailable(hRequest, &dwSizeAvail)) break;
+                if (dwSizeAvail == 0) break;
+                
+                size_t oldSize = response.body.size();
+                buffer.resize(dwSizeAvail);
+                DWORD dwRead = 0;
+                if (WinHttpReadData(hRequest, &buffer[0], dwSizeAvail, &dwRead)) {
+                    response.body.append(buffer.begin(), buffer.begin() + dwRead);
+                }
+            } while (dwSizeAvail > 0);
+        }
     } else {
-         response.errorMessage = "Request failed: " + std::to_string(GetLastError());
+        response.errorMessage = "WinHttpSendRequest failed: " + std::to_string(GetLastError());
     }
 
     WinHttpCloseHandle(hRequest);
     WinHttpCloseHandle(hConnect);
     WinHttpCloseHandle(hSession);
-
     return response;
-}
+#else
     CURL* curl = curl_easy_init();
     if (!curl) {
         if (m_logger) m_
