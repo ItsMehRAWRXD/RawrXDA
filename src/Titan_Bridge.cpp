@@ -12,14 +12,15 @@ struct TitanContext {
     bool shouldExit;
 };
 
-// Global instance pointer (managed by ASM)
-// Note: In ASM, TitanContext_Instance is a 4KB byte array. We cast it to TitanContext*.
-
+// Global State
 extern "C" {
+    volatile unsigned int g_InputState = 0;
+    volatile unsigned int g_OutputLength = 0;
+    char g_OutputBuffer[4096];
+    char g_InputBuffer[4096]; 
 
     void Math_InitTables() {
-        // Initialization for fast math (simulated or real lookups)
-        // Since we use CPUInferenceEngine which manages its own math, this might be a no-op or pre-calc.
+        // Initialization for fast math (handled internally by CPUInferenceEngine)
     }
 
     bool Titan_LoadModel(void* ctxBuffer, const char* path) {
@@ -48,14 +49,12 @@ extern "C" {
 
     // Called by Pipe Server when a prompt arrives
     void Titan_SubmitPrompt(const char* prompt, unsigned int length) {
-        // Find the global context - for CLI this is tricky as it's passed around.
-        // However, the Pipe Server ASM might need to know about the Context.
-        // Looking at RawrXD_PipeServer.asm, Titan_SubmitPrompt doesn't take context.
-        // It relies on Titan_InferenceThread knowing about it.
-        // We might need a global pointer or shared state.
+        if (length > 4095) length = 4095;
+        memcpy(g_InputBuffer, prompt, length);
+        g_InputBuffer[length] = 0;
         
-        // For simplicity, we assume single instance per process for the CLI.
-        // We can store the prompt in a global buffer that the thread checks.
+        // Signal the inference thread
+        g_InputState = 1; 
     }
     
     // Thread function
@@ -120,62 +119,4 @@ extern "C" {
         
         return 0;
     }
-
-}
-
-extern "C" {
-    // Defined in ASM or we define them here if EXTERN in ASM
-    // RawrXD_PipeServer.asm has:
-    // EXTERN g_InputState : DWORD
-    // ...
-    // This implies they are defined *elsewhere*.
-    // Typically they would be in the .data of the main or another C file.
-    // Let's define them here to be safe and complete the linkage.
-    
-    volatile unsigned int g_InputState = 0;
-    volatile unsigned int g_OutputLength = 0;
-    char g_OutputBuffer[4096];
-    char g_InputBuffer[4096]; // To store the prompt
-    
-    // Implementation of Titan_SubmitPrompt matching the ASM call
-    void Titan_SubmitPrompt(const char* prompt, unsigned int length) {
-        if (length > 4095) length = 4095;
-        memcpy(g_InputBuffer, prompt, length);
-        g_InputBuffer[length] = 0;
-        
-        // Signal the inference thread
-        g_InputState = 1; 
-    }
-}
-
-// Update the thread to watch g_InputState
-DWORD WINAPI Titan_ProcessLoop(LPVOID lpParam) {
-    TitanContext* ctx = (TitanContext*)lpParam;
-    
-    while (true) {
-        if (g_InputState == 1) {
-            // Pick up prompt
-            std::string prompt(g_InputBuffer);
-            
-            // Run Inference
-            if (ctx && ctx->engine) {
-                 auto tokens = ctx->engine->Tokenize(prompt);
-                 // ... Generate ... 
-                 // Mocking output for the bridge, since Generate returns logits
-                 std::string response = "Titan: I heard " + prompt;
-                 
-                 // Fill output
-                 size_t len = response.length();
-                 if (len > 4095) len = 4095;
-                 memcpy(g_OutputBuffer, response.c_str(), len);
-                 g_OutputBuffer[len] = 0;
-                 g_OutputLength = (unsigned int)len;
-            }
-            
-            // Signal Done
-            g_InputState = 0;
-        }
-        Sleep(1);
-    }
-    return 0;
 }

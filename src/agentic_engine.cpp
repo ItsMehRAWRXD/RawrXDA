@@ -23,23 +23,29 @@ AgenticEngine::~AgenticEngine() = default;
 
 json AgenticEngine::planTask(const std::string& goal) {
      // Explicit Logic: Ask LLM to generate a plan
-     std::string prompt = "Generate a JSON plan for: " + goal + "\nFormat: [{\"type\": \"file_edit\", \"target\": \"...\", ...}]";
+     std::string schema = R"([{"type": "file_edit", "target": "path/to/file", "content": "code_snippet_or_diff"}, {"type": "command", "cmd": "shell_command"}])";
+     std::string prompt = "You are an autonomous coding agent. Your goal is: " + goal + "\n"
+                          "Return a JSON array of actions to achieve this goal. NO conversational text.\n"
+                          "Schema: " + schema + "\n"
+                          "Response:";
+                          
      std::string response = processQuery(prompt);
      
      try {
          // Attempt to parse AI response as JSON
-         // Simple heuristic: find [ ... ]
+         // Robust parsing: Find the first/last bracket to handle potential preamble
          size_t start = response.find('[');
          size_t end = response.rfind(']');
-         if (start != std::string::npos && end != std::string::npos) {
+         if (start != std::string::npos && end != std::string::npos && end > start) {
              std::string jsonStr = response.substr(start, end - start + 1);
              return json::parse(jsonStr);
          }
      } catch (...) {}
      
-     // Fallback: Return a single generic action if parsing fails
+     // Fallback: Return a single generic action if parsing fails - but log the raw failure
+     std::cerr << "Plan Parse Failed. Raw Response: " << response << std::endl;
      return json::array({
-         {{"type", "unknown"}, {"description", "Could not parse AI plan"}, {"raw", response}}
+         {{"type", "error"}, {"description", "Could not parse AI plan into JSON"}, {"raw_response", response}}
      });
 }
 

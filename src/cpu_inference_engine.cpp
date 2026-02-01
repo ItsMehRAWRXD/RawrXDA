@@ -31,7 +31,10 @@ namespace CPUOps {
     void MatMul(const float* A, const float* B, float* C, int m, int n, int k) {
         if (n == 1) {
             // Matrix-Vector optimized
+            // Use OpenMP if available, else sequential
+            #ifdef _OPENMP
             #pragma omp parallel for
+            #endif
             for (int i = 0; i < m; ++i) {
                 float sum = 0.0f;
                 const float* A_row = A + i * k;

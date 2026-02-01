@@ -3,7 +3,7 @@
  * @brief Quantum Authentication Manager Implementation
  * 
  * Replaces the old UI wizard with a headless logic manager.
- * Handles key generation (simulated RDRAND), storage, and enrollment.
+ * Handles key generation using Windows CNG API (BCrypt), storage, and enrollment.
  * 
  * @copyright RawrXD IDE 2026
  */

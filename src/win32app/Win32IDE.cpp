@@ -5358,6 +5358,8 @@ std::string Win32IDE::generateResponse(const std::string& prompt)
 
 void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<void(const std::string&, bool)> callback)
 {
+    std::lock_guard<std::mutex> lock(m_inferenceMutex);
+
     if (m_inferenceRunning) {
         if (callback) callback("Inference already in progress.", true);
         return;
@@ -5368,12 +5370,47 @@ void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<vo
     m_currentInferencePrompt = prompt;
     m_inferenceCallback = callback;
     
-    m_inferenceThread = std::thread([this]() {
-        std::string response = generateResponse(m_currentInferencePrompt);
-        m_currentInferenceResponse = response;
-        m_inferenceRunning = false;
+    // Launch dedicated inference thread
+    m_inferenceThread = std::thread([this, prompt]() {
+        // 1. Try Native CPU Engine with Streaming
+        if (m_nativeEngine) {
+             RawrXD::CPUInferenceEngine* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+             if (engine->isModelLoaded()) {
+                 // Configure sampling (ensure thread-safe access if needed)
+                 engine->setSampling(
+                     m_inferenceConfig.temperature,
+                     m_inferenceConfig.topP,
+                     m_inferenceConfig.topK,
+                     m_inferenceConfig.repetitionPenalty
+                 );
+                 
+                 // Run generation with per-token callback
+                 bool success = engine->generate(prompt, [this](const std::string& token) {
+                     if (m_inferenceStopRequested) return false;
+                     
+                     // Send token to UI
+                     if (m_inferenceCallback) {
+                         m_inferenceCallback(token, false);
+                     }
+                     return true;
+                 });
+                 
+                 m_inferenceRunning = false;
+                 if (m_inferenceCallback) {
+                     m_inferenceCallback("", true); // Finalize
+                 }
+                 return;
+             }
+        }
+
+        // 2. Fallback: Synchronous Blocking Call (Ollama/Legacy)
+        // If native engine failed or wasn't loaded, we fall back to the blocking method
+        // but execute it in this background thread so UI doesn't freeze.
+        std::string response = generateResponse(prompt);
         
+        m_inferenceRunning = false;
         if (m_inferenceCallback) {
+            // Send full response as one chunk if fallback was used
             m_inferenceCallback(response, true);
         }
     });

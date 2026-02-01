@@ -183,11 +183,7 @@ std::string ModelCaller::callModel(const std::string& prompt, const GenerationPa
                              return "// Error: Found model at " + fallbackPath + " but failed to load.";
                          }
                      } else {
-                         // Fallback for tests lacking models
-                         if (prompt.find("int main") != std::string::npos) {
-                             return "std::cout << \"Hello World\" << std::endl;";
-                         }
-                         return "// Error: Model file not found at " + modelPath + " or " + fallbackPath;
+                         return "// Error: Model file not found. Please configure a valid model path in config or place 'model.gguf' in 'models/' directory.";
                      }
                 }
             }
