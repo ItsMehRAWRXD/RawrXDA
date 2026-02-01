@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <iostream>
 
+namespace RawrXD {
+
 StreamingGGUFLoader::StreamingGGUFLoader()
     : is_open_(false), current_zone_memory_(0), max_zone_memory_mb_(GGUFConstants::DEFAULT_ZONE_MEMORY_MB) {
     std::memset(&header_, 0, sizeof(GGUFHeader));
@@ -110,7 +112,6 @@ bool StreamingGGUFLoader::ParseMetadata() {
         std::string key, value;
         
         if (!ReadString(key)) {
-            
             return false;
         }
         
@@ -152,9 +153,46 @@ bool StreamingGGUFLoader::ParseMetadata() {
             float float_val;
             if (!ReadValue(float_val)) return false;
             metadata_.kv_pairs[key] = std::to_string(float_val);
+        } else if (value_type == 7) { // Bool
+            bool bval;
+            if (!ReadValue(bval)) return false;
+            metadata_.kv_pairs[key] = bval ? "true" : "false";
+        } else if (value_type == 9) { // Array
+            // Read array type and length
+            uint32_t array_type;
+            uint64_t array_len;
+            if (!ReadValue(array_type) || !ReadValue(array_len)) return false;
+            
+            // Handle tokenizer vocabulary (array of strings)
+            if (key == "tokenizer.ggml.tokens" && array_type == 1) { // 1 = STRING
+               vocabulary_.clear();
+               vocabulary_.reserve(array_len);
+               for (uint64_t k=0; k < array_len; ++k) {
+                   std::string tokenStr;
+                   if (!ReadString(tokenStr)) return false;
+                   vocabulary_.push_back(tokenStr);
+               }
+               // Also store simplistic representation in metadata for debugging
+               metadata_.kv_pairs[key] = "<vocabulary array>";
+            } else {
+               // Skip other arrays for now to advance file pointer
+               for (uint64_t k=0; k < array_len; ++k) {
+                   if (array_type == 1) { std::string s; ReadString(s); }
+                   else if (array_type == 4) { uint32_t v; ReadValue(v); }
+                   else if (array_type == 5) { int32_t v; ReadValue(v); }
+                   else if (array_type == 6) { float v; ReadValue(v); }
+                   else if (array_type == 7) { bool v; ReadValue(v); }
+                   else if (array_type == 9) { /* Nested array? Not supported in logic yet */ }
+                   else { /* unknown, can't skip reliably if dynamic size */ }
+               }
+               metadata_.kv_pairs[key] = "<array>";
+            }
         }
     }
     
+    // Save position for BuildTensorIndex
+    tensor_info_offset = file_.tellg();
+
     return true;
 }
 
@@ -167,31 +205,15 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
         return false;
     }
     
-    // Skip metadata to get to tensor info
-    file_.seekg(header_.metadata_offset);
-    
-    // Skip metadata entries
-    for (uint64_t i = 0; i < header_.metadata_kv_count; ++i) {
-        std::string key, value;
-        if (!ReadString(key)) return false;
-        
-        uint32_t value_type;
-        if (!ReadValue(value_type)) return false;
-        
-        if (value_type == 1) {
-            if (!ReadString(value)) return false;
-        } else if (value_type == 4 || value_type == 5 || value_type == 6) {
-            uint32_t dummy;
-            if (!ReadValue(dummy)) return false;
-        }
-    }
+    // Jump straight to tensor info (calculated by ParseMetadata)
+    if (tensor_info_offset == 0) return false;
+    file_.seekg(tensor_info_offset);
     
     // Now read tensor info (no data!)
     for (uint64_t i = 0; i < header_.tensor_count; ++i) {
         TensorRef ref;
         
         if (!ReadString(ref.name)) {
-            
             return false;
         }
         
@@ -215,6 +237,24 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
         tensor_index_[ref.name] = ref;
     }
     
+    // Calculate Data Base Offset
+    // GGUF aligns to 32 bytes (or specified alignment)
+    uint64_t current_pos = file_.tellg();
+    uint64_t alignment = 32; 
+    // TODO: Read alignment from metadata "general.alignment" if present
+    if (metadata_.kv_pairs.count("general.alignment")) {
+        try {
+             alignment = std::stoul(metadata_.kv_pairs["general.alignment"]);
+        } catch(...) {}
+    }
+
+    uint64_t remainder = current_pos % alignment;
+    if (remainder != 0) {
+        data_base_offset = current_pos + (alignment - remainder);
+    } else {
+        data_base_offset = current_pos;
+    }
+
     return true;
 }
 
@@ -342,8 +382,8 @@ bool StreamingGGUFLoader::LoadZone(const std::string& zone_name, uint64_t max_me
         
         const TensorRef& ref = tensor_it->second;
         
-        // Seek to tensor offset in file
-        file_.seekg(ref.offset, std::ios::beg);
+        // Seek to tensor offset in file (Base + Relative Offset)
+        file_.seekg(data_base_offset + ref.offset, std::ios::beg);
         
         // Read from disk into zone buffer
         size_t old_size = zone.data.size();
@@ -605,3 +645,5 @@ uint64_t StreamingGGUFLoader::GetFileSize() const {
     return GetTotalFileSize();
 }
 
+
+} // namespace RawrXD

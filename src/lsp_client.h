@@ -7,8 +7,14 @@
 
 #pragma once
 
-
+#include <string>
+#include <vector>
+#include <map>
 #include <functional>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include "nlohmann/json.hpp"
 
 namespace RawrXD {
 
@@ -50,145 +56,78 @@ struct Diagnostic {
 
 /**
  * \brief LSP client for language server integration
- * 
- * Features:
- * - Multi-language support (C++, Python, TypeScript, etc.)
- * - Real-time completions with streaming
- * - Inline ghost-text preview
- * - Diagnostics (errors/warnings)
- * - Go-to-definition, hover, formatting
- * - Incremental document sync
- * - Multi-file context awareness
  */
-class LSPClient : public void
+class LSPClient
 {
 
 public:
-    explicit LSPClient(const LSPServerConfig& config, void* parent = nullptr);
-    ~LSPClient() override;
+    explicit LSPClient(const LSPServerConfig& config);
+    ~LSPClient();
 
-    /**
-     * Two-phase initialization - call after void ready
-     */
     void initialize();
-
-    /**
-     * Start the LSP server process
-     */
     bool startServer();
-
-    /**
-     * Stop the LSP server
-     */
     void stopServer();
-
-    /**
-     * Check if server is running
-     */
     bool isRunning() const { return m_serverRunning; }
 
-    /**
-     * Open document for tracking
-     */
     void openDocument(const std::string& uri, const std::string& languageId, const std::string& text);
-
-    /**
-     * Close document
-     */
     void closeDocument(const std::string& uri);
-
-    /**
-     * Update document content (incremental sync)
-     */
     void updateDocument(const std::string& uri, const std::string& text, int version);
-
-    /**
-     * Request completions at cursor position
-     * \param uri Document URI
-     * \param line Line number (0-indexed)
-     * \param character Column number (0-indexed)
-     */
     void requestCompletions(const std::string& uri, int line, int character);
-
-    /**
-     * Request hover information
-     */
     void requestHover(const std::string& uri, int line, int character);
-
-    /**
-     * Request go-to-definition
-     */
     void requestDefinition(const std::string& uri, int line, int character);
-
-    /**
-     * Format document
-     */
     void formatDocument(const std::string& uri);
-
-    /**
-     * Get current diagnostics for document
-     */
     std::vector<Diagnostic> getDiagnostics(const std::string& uri) const;
 
+    void shutdown();
 
-    /**
-     * Server initialized and ready
-     */
+    // Callbacks / Signals (Stubs for now, can be std::function callbacks in real impl)
     void serverReady();
-
-    /**
-     * Completions received
-     */
     void completionsReceived(const std::string& uri, int line, int character, const std::vector<CompletionItem>& items);
-
-    /**
-     * Hover information received
-     */
     void hoverReceived(const std::string& uri, const std::string& markdown);
-
-    /**
-     * Definition location received
-     */
     void definitionReceived(const std::string& uri, int line, int character);
-
-    /**
-     * Diagnostics updated
-     */
     void diagnosticsUpdated(const std::string& uri, const std::vector<Diagnostic>& diagnostics);
-
-    /**
-     * Format edits received
-     */
     void formatEditsReceived(const std::string& uri, const std::string& formattedText);
-
-    /**
-     * Server error occurred
-     */
     void serverError(const std::string& error);
 
 private:
     void onServerReadyRead();
-    void onServerError(void*::ProcessError error);
-    void onServerFinished(int exitCode, void*::ExitStatus status);
+    void onServerError(int error);
+    void onServerFinished(int exitCode, int status);
 
-private:
-    void sendMessage(const void*& message);
-    void processMessage(const void*& message);
-    void handleInitializeResponse(const void*& result);
-    void handleCompletionResponse(const void*& result, int requestId);
-    void handleHoverResponse(const void*& result, int requestId);
-    void handleDefinitionResponse(const void*& result, int requestId);
-    void handleDiagnostics(const void*& params);
+    // Internal Process Management
+    void createChildProcess();
+    void writeToChild(const std::string& message);
+    void readFromChild();
+
+    void sendMessage(const nlohmann::json& message);
+    void processMessage(const nlohmann::json& message);
+    void handleInitializeResponse(const nlohmann::json& result);
+    void handleCompletionResponse(const nlohmann::json& result, int requestId);
+    void handleHoverResponse(const nlohmann::json& result, int requestId);
+    void handleDefinitionResponse(const nlohmann::json& result, int requestId);
+    void handleDiagnostics(const nlohmann::json& params);
+    void handleFormattingResponse(const nlohmann::json& result, int requestId);
     
     std::string buildDocumentUri(const std::string& filePath) const;
     
     LSPServerConfig m_config;
-    void** m_serverProcess{};
+    
+    // Win32 Process Handles (void* to avoid windows.h in header or polluting namespace)
+    void* m_hProcess = nullptr; 
+    void* m_hThread = nullptr;
+    void* m_hStdInWrite = nullptr; // Pipe write end
+    void* m_hStdOutRead = nullptr; // Pipe read end
+    void* m_hStdErrRead = nullptr; // Pipe read end
+    
+    std::thread m_readThread;
+    std::atomic<bool> m_stopThread{false};
+    std::mutex m_transportMutex; // Protect write access
+    
     bool m_serverRunning = false;
     bool m_initialized = false;
     int m_nextRequestId = 1;
     
-    std::vector<uint8_t> m_receiveBuffer;
+    std::string m_receiveBuffer;
     std::map<std::string, int> m_documentVersions;  // uri -> version
     std::map<std::string, std::vector<Diagnostic>> m_diagnostics;  // uri -> diagnostics
     
@@ -203,4 +142,3 @@ private:
 };
 
 } // namespace RawrXD
-

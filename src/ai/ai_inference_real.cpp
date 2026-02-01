@@ -147,7 +147,35 @@ bool LoadModelReal(const char* path) {
         return false;
     }
 
-    // Initialize tokenizer minimally
+    // Load tokenizer vocabulary from GGUF
+    int n_vocab = g_model.n_vocab;
+    int vocab_idx = gguf_find_key(g_model.gguf_ctx, "tokenizer.ggml.tokens");
+    if (vocab_idx >= 0) {
+        g_tokenizer.vocab.clear();
+        g_tokenizer.token_to_id.clear();
+        
+        const char* kv_data = (const char*)gguf_get_val_data(g_model.gguf_ctx, vocab_idx);
+        // GGUF stores array of strings. We need to iterate carefully using gguf helper if available,
+        // or manually if we know the layout. Safer: use loop with gguf_get_arr_data or similar if exposed.
+        // Actually, gguf_get_val_data returns raw pointer. 
+        // Better:
+        for (int i = 0; i < n_vocab; ++i) {
+             // accessing string tokens in GGUF is tricky without helper. 
+             // Let's assume we can get it by index if the API supports it.
+             // If not, we might need to rely on the simplified tokenizer or manual parsing which is risky.
+             // Looking at standard gguf usage:
+             const char * str = gguf_get_arr_str(g_model.gguf_ctx, vocab_idx, i);
+             if (str) {
+                 std::string token_str = str;
+                 g_tokenizer.vocab.push_back(token_str);
+                 g_tokenizer.token_to_id[token_str] = i;
+             }
+        }
+        LogInfo("Loaded %d tokens into vocabulary", (int)g_tokenizer.vocab.size());
+    } else {
+        LogInfo("No tokenizer found in GGUF");
+    }
+
     if (g_tokenizer.vocab.empty()) {
         g_tokenizer.vocab.push_back("<unk>");
         g_tokenizer.token_to_id["<unk>"] = 0;

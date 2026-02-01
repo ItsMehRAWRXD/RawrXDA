@@ -95,7 +95,71 @@ std::vector<PEExport> PEParser::getExports() const {
 
 std::vector<PEImport> PEParser::getImports() const {
     std::vector<PEImport> imports;
-    // TODO: Implement import parsing
+    
+    if (!isValidPE()) return imports;
+
+    DWORD importRva = m_ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    if (importRva == 0) return imports;
+
+    // Convert RVA to VA within our mapping
+    // Note: Using simple offset logic assuming section mapping corresponds to file offset for simple implementation
+    // Ideally we should traverse section headers to find which section contains the RVA.
+    // For mapped view (LoadLibrary style), RVA + Base is fine.
+    // For CreateFileMapping (Raw file), RVA != FileOffset. 
+    // Wait, MapViewOfFile maps the file as it is on disk (raw) unless SEC_IMAGE is used.
+    // The previous code used CreateFileMapping without SEC_IMAGE, so it is a RAW mapping.
+    // We must convert RVA to FileOffset.
+
+    auto rvaToFileOffset = [&](DWORD rva) -> DWORD {
+        auto* sectionHeader = IMAGE_FIRST_SECTION(m_ntHeaders);
+        for (WORD i = 0; i < m_ntHeaders->FileHeader.NumberOfSections; ++i, ++sectionHeader) {
+            if (rva >= sectionHeader->VirtualAddress && 
+                rva < sectionHeader->VirtualAddress + sectionHeader->Misc.VirtualSize) {
+                return rva - sectionHeader->VirtualAddress + sectionHeader->PointerToRawData;
+            }
+        }
+        return 0; 
+    };
+
+    DWORD importOffset = rvaToFileOffset(importRva);
+    if (!importOffset) return imports;
+
+    auto* importDesc = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(
+        static_cast<uint8_t*>(m_moduleBase) + importOffset);
+
+    while (importDesc->Name != 0) {
+        DWORD nameOffset = rvaToFileOffset(importDesc->Name);
+        if(!nameOffset) break;
+        
+        std::string dllName = reinterpret_cast<const char*>(static_cast<uint8_t*>(m_moduleBase) + nameOffset);
+
+        DWORD thunkOffset = importDesc->OriginalFirstThunk ? rvaToFileOffset(importDesc->OriginalFirstThunk) : rvaToFileOffset(importDesc->FirstThunk);
+        if(!thunkOffset) { importDesc++; continue; }
+
+        auto* thunk = reinterpret_cast<IMAGE_THUNK_DATA*>(static_cast<uint8_t*>(m_moduleBase) + thunkOffset);
+        
+        while (thunk->u1.AddressOfData != 0) {
+            PEImport imp;
+            imp.dllName = dllName;
+            
+            if (thunk->u1.Ordinal & IMAGE_ORDINAL_FLAG) {
+                imp.isOrdinal = true;
+                imp.ordinal = static_cast<WORD>(IMAGE_ORDINAL(thunk->u1.Ordinal));
+            } else {
+                imp.isOrdinal = false;
+                DWORD nameDataOffset = rvaToFileOffset(static_cast<DWORD>(thunk->u1.AddressOfData));
+                if(nameDataOffset) {
+                    auto* importByName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(
+                        static_cast<uint8_t*>(m_moduleBase) + nameDataOffset);
+                    imp.functionName = importByName->Name;
+                }
+            }
+            imports.push_back(imp);
+            thunk++;
+        }
+        importDesc++;
+    }
+
     return imports;
 }
 

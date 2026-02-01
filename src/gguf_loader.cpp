@@ -609,14 +609,13 @@ bool GGUFLoader::DecompressData(const std::vector<uint8_t>& compressed,
             case CompressionType::DEFLATE: {
                 // Use codec::inflate from inflate_deflate_cpp.cpp
                 // This handles DEFLATE decompression
-                std::vector<uint8_t> input(reinterpret_cast<const char*>(compressed.data()), 
-                                static_cast<int>(compressed.size()));
+                std::vector<uint8_t> input = compressed;
                 bool ok = false;
                 std::vector<uint8_t> output = codec::inflate(input, &ok);
                 if (!ok) return false;
                 
                 decompressed.resize(output.size());
-                std::memcpy(decompressed.data(), output.constData(), output.size());
+                std::memcpy(decompressed.data(), output.data(), output.size());
                 return true;
             }
             
@@ -645,26 +644,24 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
             case CompressionType::BRUTAL_GZIP:
             case CompressionType::ZLIB: {
                 // Compress using brutal::compress (MASM-optimized gzip)
-                std::vector<uint8_t> input(reinterpret_cast<const char*>(raw_data.data()), 
-                                static_cast<int>(raw_data.size()));
+                std::vector<uint8_t> input = raw_data;
                 std::vector<uint8_t> output = brutal::compress(input);
                 if (output.empty()) return false;
                 
                 compressed.resize(output.size());
-                std::memcpy(compressed.data(), output.constData(), output.size());
+                std::memcpy(compressed.data(), output.data(), output.size());
                 return true;
             }
             
             case CompressionType::DEFLATE: {
                 // Compress using codec::deflate (MASM-optimized deflate)
-                std::vector<uint8_t> input(reinterpret_cast<const char*>(raw_data.data()), 
-                                static_cast<int>(raw_data.size()));
+                std::vector<uint8_t> input = raw_data;
                 bool ok = false;
                 std::vector<uint8_t> output = codec::deflate(input, &ok);
                 if (!ok || output.empty()) return false;
                 
                 compressed.resize(output.size());
-                std::memcpy(compressed.data(), output.constData(), output.size());
+                std::memcpy(compressed.data(), output.data(), output.size());
                 return true;
             }
             

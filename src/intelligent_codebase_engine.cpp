@@ -1,602 +1,249 @@
 #include "intelligent_codebase_engine.h"
 #include <iostream>
 #include <filesystem>
-#include <algorithm>
 #include <fstream>
 #include <regex>
+#include <algorithm>
+#include <thread>
+#include <future>
+#include <atomic>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+namespace fs = std::filesystem;
 
 IntelligentCodebaseEngine::IntelligentCodebaseEngine() {
 }
 
 IntelligentCodebaseEngine::~IntelligentCodebaseEngine() {
+    stopRealTimeAnalysis();
 }
 
 bool IntelligentCodebaseEngine::analyzeEntireCodebase(const std::string& projectPath) {
     projectRoot = projectPath;
-    if (!std::filesystem::exists(projectPath)) return false;
+    if (!fs::exists(projectPath)) return false;
     
     if (onProgressUpdate) onProgressUpdate("Starting deep codebase analysis...");
     
+    // reset data
+    fileSymbols.clear();
+    callGraph.clear();
+    refactoringOpportunities.clear();
+    bugReports.clear();
+    optimizations.clear();
+    
+    int filesProcessed = 0;
     try {
-        for (const auto& entry : std::filesystem::recursive_directory_iterator(projectPath)) {
+        for (const auto& entry : fs::recursive_directory_iterator(projectPath)) {
             if (entry.is_regular_file()) {
                 std::string ext = entry.path().extension().string();
-                if (ext == ".cpp" || ext == ".h" || ext == ".asm" || ext == ".py") {
+                if (ext == ".cpp" || ext == ".h" || ext == ".hpp" || ext == ".c" || ext == ".py" || ext == ".asm") {
                     analyzeFile(entry.path().string());
+                    filesProcessed++;
                 }
             }
         }
     } catch (...) {
+        if (onProgressUpdate) onProgressUpdate("Error scanning directory structure.");
         return false;
     }
     
+    performDeepScan();
     buildCallGraph();
+    
+    if (onProgressUpdate) onProgressUpdate("Analysis complete. Processed " + std::to_string(filesProcessed) + " files.");
     if (onAnalysisComplete) onAnalysisComplete(true);
     return true;
 }
 
 bool IntelligentCodebaseEngine::analyzeFile(const std::string& filePath) {
-    // Basic regex-based symbol extraction (simplified for Qt-free demo)
     std::ifstream file(filePath);
     if (!file.is_open()) return false;
     
-    std::string line;
-    int lineNum = 0;
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     std::vector<SymbolInfo> symbols;
+
+    // Very basic regex-based parser
+    // This is a simplified implementation for demonstration purposes
+    // A real implementation would use a proper parser (clang-based or similar)
     
-    while (std::getline(file, line)) {
-        lineNum++;
-        // Very basic "class Name" detection
-        if (line.find("class ") != std::string::npos) {
+    std::string ext = fs::path(filePath).extension().string();
+    
+    if (ext == ".cpp" || ext == ".h" || ext == ".hpp") {
+        std::regex classRegex(R"(class\s+(\w+))");
+        auto words_begin = std::sregex_iterator(content.begin(), content.end(), classRegex);
+        auto words_end = std::sregex_iterator();
+        
+        for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+            std::smatch match = *i;
             SymbolInfo sym;
-            sym.name = "UnknownClass"; // Would use regex in real impl
+            sym.name = match[1].str();
             sym.type = "class";
             sym.filePath = filePath;
-            sym.lineNumber = lineNum;
+            // Line number would require counting newlines up to match.position()
+            sym.lineNumber = 1 + std::count(content.begin(), content.begin() + match.position(), '\n');
+            symbols.push_back(sym);
+        }
+        
+        std::regex funcRegex(R"((\w+)\s*\([^)]*\)\s*\{)");
+        words_begin = std::sregex_iterator(content.begin(), content.end(), funcRegex);
+        
+        for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+            std::smatch match = *i;
+            SymbolInfo sym;
+            sym.name = match[1].str();
+            sym.type = "function";
+            sym.filePath = filePath;
+            sym.lineNumber = 1 + std::count(content.begin(), content.begin() + match.position(), '\n');
+            symbols.push_back(sym);
+        }
+    } else if (ext == ".py") {
+        std::regex defRegex(R"(def\s+(\w+))");
+        auto words_begin = std::sregex_iterator(content.begin(), content.end(), defRegex);
+        auto words_end = std::sregex_iterator();
+        
+        for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+            std::smatch match = *i;
+            SymbolInfo sym;
+            sym.name = match[1].str();
+            sym.type = "function";
+            sym.filePath = filePath;
+            sym.lineNumber = 1 + std::count(content.begin(), content.begin() + match.position(), '\n');
             symbols.push_back(sym);
         }
     }
-    
+
     fileSymbols[filePath] = symbols;
+    
+    // Complexity Update
+    CodeComplexity fileComplexity;
+    fileComplexity.linesOfCode = std::count(content.begin(), content.end(), '\n') + 1;
+    fileComplexity.numberOfFunctions = symbols.size(); 
+    complexityAnalysis.linesOfCode += fileComplexity.linesOfCode;
+    complexityAnalysis.numberOfFunctions += fileComplexity.numberOfFunctions;
+
+    // Real Static Analysis: Bug Detection
+    std::regex todoRegex(R"(\/\/.*TODO.*)");
+    if (std::regex_search(content, todoRegex)) {
+         BugReport bug;
+         bug.type = "Technical Debt";
+         bug.description = "Found TODOs in file";
+         bug.severity = "Low";
+         bug.filePath = filePath;
+         bugReports.push_back(bug);
+    }
+    
+    std::regex unsafeRegex(R"(strcpy|strcat|sprintf|gets)");
+    auto unsafe_begin = std::sregex_iterator(content.begin(), content.end(), unsafeRegex);
+    auto unsafe_end = std::sregex_iterator();
+    for (std::sregex_iterator i = unsafe_begin; i != unsafe_end; ++i) {
+         std::smatch match = *i;
+         BugReport bug;
+         bug.type = "Security Vulnerability";
+         bug.description = "Unsafe C function used: " + match.str();
+         bug.severity = "Critical"; // High severity
+         bug.filePath = filePath;
+         bug.lineNumber = 1 + std::count(content.begin(), content.begin() + match.position(), '\n');
+         bugReports.push_back(bug);
+    }
+
+    // Real Static Analysis: Optimization Suggestions
+    std::regex endlRegex(R"(std::endl)");
+    if (std::regex_search(content, endlRegex)) {
+        Optimization opt;
+        opt.type = "Performance";
+        opt.description = "Replace std::endl with \\n to avoid excessive flushing";
+        opt.filePath = filePath;
+        opt.estimatedSpeedup = 1.01; // Minimal but real
+        optimizations.push_back(opt);
+    }
+
+    std::regex passByValueRegex(R"(const\s+std::(vector|string|map|unordered_map)[^&]*\s+\w+)"); 
+    // Naively check for const std::vector foo (missing &) in function args or declarations
+    // Note: This regex is very approximate.
+    if (std::regex_search(content, passByValueRegex)) {
+        Optimization opt;
+        opt.type = "Memory/Performance";
+        opt.description = "Possible pass-by-value of complex STL container detected. Use const reference.";
+        opt.filePath = filePath;
+        opt.estimatedSpeedup = 1.05;
+        optimizations.push_back(opt);
+    }
+
+    if (onAnalysisComplete) {
+        // Just for single file update
+         // onAnalysisComplete(true); // Don't trigger full complete on single file
+    }
     return true;
 }
 
-bool IntelligentCodebaseEngine::analyzeCppFile(const std::string& filePath, const std::string& content) {
-    // Function detection
-    std::regex functionRegex(R"((\w+(?:\s*\*)?\s+)(\w+)\s*\(([^)]*)\)\s*(const)?\s*\{)");
-    std::sregex_iterator functionMatches = functionRegex;
-    
-    int lineNumber = 1;
-    while (functionMatchesfalse) {
-        std::smatch match = functionMatches;
-        
-        SymbolInfo function;
-        function.name = match"";
-        function.type = "function";
-        function.filePath = filePath;
-        function.lineNumber = lineNumber;
-        function.signature = match"";
-        function.returnType = match"".trimmed();
-        function.parameters = parseParameters(match"");
-        function.isConst = !match"".empty();
-        
-        function.metadata["language"] = "cpp";
-        
-        symbolIndex[function.name] = function;
-        fileSymbols[filePath].append(function);
-        
-        lineNumber++;
-    }
-    
-    // Class detection
-    std::regex classRegex(R"(class\s+(\w+)\s*(?::\s*(?:public|private|protected)\s+(\w+))?\s*\{)");
-    std::sregex_iterator classMatches = classRegex;
-    
-    while (classMatchesfalse) {
-        std::smatch match = classMatches;
-        
-        SymbolInfo classSymbol;
-        classSymbol.name = match"";
-        classSymbol.type = "class";
-        classSymbol.filePath = filePath;
-        classSymbol.lineNumber = lineNumber;
-        classSymbol.signature = match"";
-        
-        if (!match"".empty()) {
-            classSymbol.baseClasses.append(match"");
-        }
-        
-        symbolIndex[classSymbol.name] = classSymbol;
-        fileSymbols[filePath].append(classSymbol);
-    }
-    
-    // Variable detection
-    std::regex variableRegex(R"((const\s+)?(\w+(?:\s*\*)?)\s+(\w+)\s*(?:=\s*([^;]+))?;)");
-    std::sregex_iterator variableMatches = variableRegex;
-    
-    while (variableMatchesfalse) {
-        std::smatch match = variableMatches;
-        
-        SymbolInfo variable;
-        variable.name = match"";
-        variable.type = match"".empty() ? "variable" : "constant";
-        variable.filePath = filePath;
-        variable.lineNumber = lineNumber;
-        variable.returnType = match"".trimmed();
-        variable.isConst = !match"".empty();
-        
-        symbolIndex[variable.name] = variable;
-        fileSymbols[filePath].append(variable);
-    }
-    
-    analyzeCallGraph(filePath, content);
-    analyzeDependencies(filePath, content);
-    
-    return true;
-}
 
-bool IntelligentCodebaseEngine::analyzePythonFile(const std::string& filePath, const std::string& content) {
-    // Python function detection
-    std::regex functionRegex(R"(def\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*(\w+))?\s*:)");
-    std::sregex_iterator functionMatches = functionRegex;
-    
-    int lineNumber = 1;
-    while (functionMatchesfalse) {
-        std::smatch match = functionMatches;
-        
-        SymbolInfo function;
-        function.name = match"";
-        function.type = "function";
-        function.filePath = filePath;
-        function.lineNumber = lineNumber;
-        function.signature = match"";
-        function.parameters = parseParameters(match"");
-        function.returnType = match"";
-        
-        function.metadata["language"] = "python";
-        
-        symbolIndex[function.name] = function;
-        fileSymbols[filePath].append(function);
-        
-        lineNumber++;
-    }
-    
-    // Python class detection
-    std::regex classRegex(R"(class\s+(\w+)\s*(?:\(([^)]+)\))?\s*:)");
-    std::sregex_iterator classMatches = classRegex;
-    
-    while (classMatchesfalse) {
-        std::smatch match = classMatches;
-        
-        SymbolInfo classSymbol;
-        classSymbol.name = match"";
-        classSymbol.type = "class";
-        classSymbol.filePath = filePath;
-        classSymbol.lineNumber = lineNumber;
-        classSymbol.signature = match"";
-        
-        if (!match"".empty()) {
-            classSymbol.baseClasses = match"".split(',', //SkipEmptyParts);
-        }
-        
-        symbolIndex[classSymbol.name] = classSymbol;
-        fileSymbols[filePath].append(classSymbol);
-    }
-    
-    return true;
-}
-
-bool IntelligentCodebaseEngine::analyzeGenericFile(const std::string& filePath, const std::string& content) {
-    // Generic analysis for unknown file types
-    complexityAnalysis.linesOfCode += content.count('\n') + 1;
-    return true;
-}
-
-bool IntelligentCodebaseEngine::analyzeCallGraph(const std::string& filePath, const std::string& content) {
-    std::regex callRegex(R"(\b(\w+)\s*\()");
-    std::sregex_iterator callMatches = callRegex;
-    
-    while (callMatchesfalse) {
-        std::smatch match = callMatches;
-        std::string calledFunction = match"";
-        
-        if (calledFunction != "if" && calledFunction != "while" && 
-            calledFunction != "for" && calledFunction != "switch") {
-            callGraph[calledFunction].append("caller");
+bool IntelligentCodebaseEngine::analyzeFunction(const std::string& functionName, const std::string& filePath) {
+    auto symbols = getSymbolsInFile(filePath);
+    for (const auto& sym : symbols) {
+        if (sym.name == functionName && sym.type == "function") {
+            // "Analyze" means finding it and ensuring it's indexed
+            return true;
         }
     }
-    
-    return true;
+    return false;
 }
 
-bool IntelligentCodebaseEngine::analyzeDependencies(const std::string& filePath, const std::string& content) {
-    // C++ includes
-    std::regex includeRegex(R"(#include\s*["<]([^">]+)[">])");
-    std::sregex_iterator includeMatches = includeRegex;
-    
-    while (includeMatchesfalse) {
-        std::smatch match = includeMatches;
-        std::string includeFile = match"";
-        
-        DependencyInfo dependency;
-        dependency.fromSymbol = filePath;
-        dependency.toSymbol = includeFile;
-        dependency.dependencyType = "import";
-        dependency.filePath = filePath;
-        dependency.lineNumber = 0;
-        dependency.confidence = 0.95;
-        
-        dependencyGraph[filePath].append(dependency);
+bool IntelligentCodebaseEngine::analyzeSymbol(const std::string& symbolName) {
+    // Check if symbol exists in any file
+    for (const auto& [file, symbols] : fileSymbols) {
+        for (const auto& sym : symbols) {
+            if (sym.name == symbolName) return true;
+        }
     }
-    
-    return true;
+    return false;
 }
 
+// Intelligent recommendations
 std::vector<RefactoringOpportunity> IntelligentCodebaseEngine::discoverRefactoringOpportunities() {
-
-
-    refactoringOpportunities.clear();
+    // Generate opportunities based on complexity
+    // Clear previous dynamic opportunities if needed, or append? 
+    // Usually these are recalculated. For now, we assume they are additive or cleared in analyzeEntireCodebase.
     
-    discoverExtractMethodOpportunities();
-    discoverInlineFunctionOpportunities();
-    discoverMoveClassOpportunities();
-    discoverRenameOpportunities();
-
-
-    refactoringOpportunitiesFound(refactoringOpportunities);
-    
+    if (complexityAnalysis.linesOfCode > 0) {
+        for (const auto& [file, symbols] : fileSymbols) {
+            // Check for God Files
+            if (symbols.size() > 20) {
+                 RefactoringOpportunity opp;
+                 opp.type = "Extract Class";
+                 opp.description = "File has too many responsibilities (High Symbol Count)";
+                 opp.filePath = file;
+                 opp.potentialImprovement = 0.8;
+                 
+                 // Deduplicate
+                 bool exists = false;
+                 for(const auto& existing : refactoringOpportunities) 
+                     if (existing.filePath == file && existing.type == opp.type) exists = true;
+                 
+                 if (!exists) refactoringOpportunities.push_back(opp);
+            }
+            
+            // implementation specific check
+            // if file size > 1000 lines?
+        }
+    }
     return refactoringOpportunities;
 }
 
-void IntelligentCodebaseEngine::discoverExtractMethodOpportunities() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function") {
-            double complexity = calculateFunctionComplexity(symbol);
-            
-            if (complexity > 15) {
-                RefactoringOpportunity opportunity;
-                opportunity.type = "extract_method";
-                opportunity.description = std::string("Extract complex logic from function '%1'");
-                opportunity.filePath = symbol.filePath;
-                opportunity.startLine = symbol.lineNumber;
-                opportunity.endLine = symbol.lineNumber + 50;
-                opportunity.confidence = 0.85;
-                opportunity.estimatedImpact = 0.7;
-                
-                opportunity.implementationHints["suggestion"] = "Break into smaller functions";
-                
-                refactoringOpportunities.append(opportunity);
-            }
-        }
-    }
-}
-
-void IntelligentCodebaseEngine::discoverInlineFunctionOpportunities() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function") {
-            double complexity = calculateFunctionComplexity(symbol);
-            
-            if (complexity < 3 && symbol.parameters.empty()) {
-                RefactoringOpportunity opportunity;
-                opportunity.type = "inline_function";
-                opportunity.description = std::string("Inline simple function '%1'");
-                opportunity.filePath = symbol.filePath;
-                opportunity.startLine = symbol.lineNumber;
-                opportunity.endLine = symbol.lineNumber + 10;
-                opportunity.confidence = 0.9;
-                opportunity.estimatedImpact = 0.6;
-                
-                refactoringOpportunities.append(opportunity);
-            }
-        }
-    }
-}
-
-void IntelligentCodebaseEngine::discoverMoveClassOpportunities() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "class") {
-            std::string expectedFileName = symbol.name.toLower() + ".cpp";
-            std::string actualFileName = std::filesystem::path(symbol.filePath).fileName();
-            
-            if (actualFileName != expectedFileName && actualFileName != symbol.name.toLower() + ".h") {
-                RefactoringOpportunity opportunity;
-                opportunity.type = "move_class";
-                opportunity.description = std::string("Move class '%1' to dedicated file");
-                opportunity.filePath = symbol.filePath;
-                opportunity.startLine = symbol.lineNumber;
-                opportunity.endLine = symbol.lineNumber + 50;
-                opportunity.confidence = 0.8;
-                opportunity.estimatedImpact = 0.5;
-                
-                refactoringOpportunities.append(opportunity);
-            }
-        }
-    }
-}
-
-void IntelligentCodebaseEngine::discoverRenameOpportunities() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.name.length() < 3 || symbol.name.contains(std::regex("[0-9]"))) {
-            RefactoringOpportunity opportunity;
-            opportunity.type = "rename";
-            opportunity.description = std::string("Rename symbol '%1' to follow naming conventions");
-            opportunity.filePath = symbol.filePath;
-            opportunity.startLine = symbol.lineNumber;
-            opportunity.endLine = symbol.lineNumber + 1;
-            opportunity.confidence = 0.7;
-            opportunity.estimatedImpact = 0.4;
-            
-            refactoringOpportunities.append(opportunity);
-        }
-    }
-}
-
 std::vector<BugReport> IntelligentCodebaseEngine::detectBugs() {
-
-
-    bugReports.clear();
-    
-    detectNullPointerBugs();
-    detectMemoryLeakBugs();
-    detectInfiniteLoopBugs();
-    detectRaceConditionBugs();
-
-
-    bugsDetected(bugReports);
-    
     return bugReports;
 }
 
-void IntelligentCodebaseEngine::detectNullPointerBugs() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function") {
-            for (const std::string& param : symbol.parameters) {
-                if (param.contains('*') || param.contains("pointer")) {
-                    if (!checkForNullChecks(symbol)) {
-                        BugReport bug;
-                        bug.bugType = "null_pointer";
-                        bug.severity = "high";
-                        bug.description = std::string("Function '%1' has pointer parameter without null check");
-                        bug.filePath = symbol.filePath;
-                        bug.lineNumber = symbol.lineNumber;
-                        bug.confidence = 0.8;
-                        
-                        bug.evidence.append("Pointer parameter detected: " + param);
-                        bug.suggestedFix["add_null_check"] = true;
-                        
-                        bugReports.append(bug);
-                    }
-                }
-            }
-        }
-    }
-}
-
-void IntelligentCodebaseEngine::detectMemoryLeakBugs() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function") {
-            bool hasAlloc = checkForMemoryAllocation(symbol);
-            bool hasDealloc = checkForMemoryDeallocation(symbol);
-            
-            if (hasAlloc && !hasDealloc) {
-                BugReport bug;
-                bug.bugType = "memory_leak";
-                bug.severity = "medium";
-                bug.description = std::string("Function '%1' allocates memory without proper cleanup");
-                bug.filePath = symbol.filePath;
-                bug.lineNumber = symbol.lineNumber;
-                bug.confidence = 0.7;
-                
-                bug.evidence.append("Memory allocation detected");
-                bug.suggestedFix["add_cleanup"] = true;
-                bug.suggestedFix["use_raii"] = true;
-                
-                bugReports.append(bug);
-            }
-        }
-    }
-}
-
-void IntelligentCodebaseEngine::detectInfiniteLoopBugs() {
-    // Simplified infinite loop detection
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function" && checkForLoopsWithoutBreak(symbol)) {
-            BugReport bug;
-            bug.bugType = "infinite_loop";
-            bug.severity = "high";
-            bug.description = std::string("Function '%1' has potential infinite loop");
-            bug.filePath = symbol.filePath;
-            bug.lineNumber = symbol.lineNumber;
-            bug.confidence = 0.6;
-            
-            bug.evidence.append("Loop without break condition detected");
-            bug.suggestedFix["add_break_condition"] = true;
-            
-            bugReports.append(bug);
-        }
-    }
-}
-
-void IntelligentCodebaseEngine::detectRaceConditionBugs() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function") {
-            bool hasSharedAccess = checkForSharedStateAccess(symbol);
-            bool hasSync = checkForSynchronization(symbol);
-            
-            if (hasSharedAccess && !hasSync) {
-                BugReport bug;
-                bug.bugType = "race_condition";
-                bug.severity = "critical";
-                bug.description = std::string("Function '%1' accesses shared state without synchronization");
-                bug.filePath = symbol.filePath;
-                bug.lineNumber = symbol.lineNumber;
-                bug.confidence = 0.8;
-                
-                bug.evidence.append("Shared state access detected");
-                bug.suggestedFix["add_mutex"] = true;
-                
-                bugReports.append(bug);
-            }
-        }
-    }
-}
-
 std::vector<Optimization> IntelligentCodebaseEngine::suggestOptimizations() {
-
-
-    optimizations.clear();
-    
-    suggestPerformanceOptimizations();
-    suggestMemoryOptimizations();
-    suggestReadabilityOptimizations();
-    suggestSecurityOptimizations();
-
-
-    optimizationsSuggested(optimizations);
-    
     return optimizations;
 }
 
-void IntelligentCodebaseEngine::suggestPerformanceOptimizations() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function") {
-            double complexity = calculateFunctionComplexity(symbol);
-            
-            if (complexity > 20) {
-                Optimization optimization;
-                optimization.optimizationType = "performance";
-                optimization.description = std::string("Optimize high-complexity function '%1'");
-                optimization.filePath = symbol.filePath;
-                optimization.lineNumber = symbol.lineNumber;
-                optimization.potentialImprovement = 30.0;
-                optimization.confidence = 0.85;
-                
-                optimization.optimizedImplementation["suggestion"] = "Break into smaller functions";
-                
-                optimizations.append(optimization);
-            }
-        }
-    }
-}
-
-void IntelligentCodebaseEngine::suggestMemoryOptimizations() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function" && checkForLargeObjectCreation(symbol)) {
-            Optimization optimization;
-            optimization.optimizationType = "memory";
-            optimization.description = std::string("Optimize memory usage in function '%1'");
-            optimization.filePath = symbol.filePath;
-            optimization.lineNumber = symbol.lineNumber;
-            optimization.potentialImprovement = 25.0;
-            optimization.confidence = 0.75;
-            
-            optimization.optimizedImplementation["use_raii"] = true;
-            
-            optimizations.append(optimization);
-        }
-    }
-}
-
-void IntelligentCodebaseEngine::suggestReadabilityOptimizations() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function" && symbol.parameters.size() > 5) {
-            Optimization optimization;
-            optimization.optimizationType = "readability";
-            optimization.description = std::string("Simplify parameter list of function '%1'");
-            optimization.filePath = symbol.filePath;
-            optimization.lineNumber = symbol.lineNumber;
-            optimization.potentialImprovement = 25.0;
-            optimization.confidence = 0.85;
-            
-            optimization.optimizedImplementation["parameter_object"] = true;
-            
-            optimizations.append(optimization);
-        }
-    }
-}
-
-void IntelligentCodebaseEngine::suggestSecurityOptimizations() {
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "function") {
-            if (!checkForInputValidation(symbol) && !symbol.parameters.empty()) {
-                Optimization optimization;
-                optimization.optimizationType = "security";
-                optimization.description = std::string("Add input validation to function '%1'");
-                optimization.filePath = symbol.filePath;
-                optimization.lineNumber = symbol.lineNumber;
-                optimization.potentialImprovement = 50.0;
-                optimization.confidence = 0.9;
-                
-                optimization.optimizedImplementation["input_validation"] = true;
-                
-                optimizations.append(optimization);
-            }
-        }
-    }
-}
-
 ArchitecturePattern IntelligentCodebaseEngine::detectArchitecturePattern() {
-
-
     ArchitecturePattern pattern;
-    pattern.confidenceScore = 0.0;
-    
-    bool hasModels = false;
-    bool hasViews = false;
-    bool hasControllers = false;
-    
-    for (auto it = symbolIndex.begin(); it != symbolIndex.end(); ++it) {
-        const SymbolInfo& symbol = it.value();
-        
-        if (symbol.type == "class") {
-            std::string className = symbol.name.toLower();
-            
-            if (className.contains("model")) hasModels = true;
-            if (className.contains("view")) hasViews = true;
-            if (className.contains("controller")) hasControllers = true;
-        }
-    }
-    
-    if (hasModels && hasViews && hasControllers) {
-        pattern.patternType = "MVC";
-        pattern.confidenceScore = 0.85;
-        pattern.evidence.append("MVC components detected");
-    } else if (hasModels || hasViews || hasControllers) {
-        pattern.patternType = "Layered";
-        pattern.confidenceScore = 0.7;
-        pattern.evidence.append("Layered architecture detected");
-    } else {
-        pattern.patternType = "Monolith";
-        pattern.confidenceScore = 0.6;
-        pattern.evidence.append("Monolithic structure detected");
-    }
-    
-    architecturePatternDetected(pattern);
-    
+    pattern.patternType = "Layered";
+    pattern.confidenceScore = 0.6;
     return pattern;
 }
 
@@ -604,1577 +251,279 @@ CodeComplexity IntelligentCodebaseEngine::analyzeComplexity() {
     return complexityAnalysis;
 }
 
-double IntelligentCodebaseEngine::calculateCodeQualityScore() {
-    double score = 1.0;
-    
-    score -= (refactoringOpportunities.size() * 0.05);
-    score -= (bugReports.size() * 0.1);
-    
-    return qMax(0.0, qMin(1.0, score));
-}
-
-double IntelligentCodebaseEngine::calculateMaintainabilityIndex() {
-    double avgComplexity = 0.0;
-    int functionCount = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") {
-            avgComplexity += calculateFunctionComplexity(symbol);
-            functionCount++;
+// Symbol intelligence
+SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
+    for (const auto& pair : fileSymbols) {
+        for (const auto& sym : pair.second) {
+            if (sym.name == symbolName) return sym;
         }
     }
-    
-    if (functionCount > 0) {
-        avgComplexity /= functionCount;
-    }
-    
-    return qMax(0.0, qMin(1.0, 1.0 - (avgComplexity / 100.0)));
-}
-
-void* IntelligentCodebaseEngine::generateQualityReport() {
-    void* report;
-    
-    report["code_quality_score"] = calculateCodeQualityScore();
-    report["maintainability_index"] = calculateMaintainabilityIndex();
-    report["total_symbols"] = symbolIndex.size();
-    report["total_files"] = fileSymbols.size();
-    report["refactoring_opportunities"] = refactoringOpportunities.size();
-    report["bugs_detected"] = bugReports.size();
-    report["optimizations_suggested"] = optimizations.size();
-    
-    return report;
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
+    return SymbolInfo();
 }
 
 std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
+    if (fileSymbols.count(filePath)) {
+        return fileSymbols[filePath];
+    }
+    return {};
 }
 
 std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
     std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
-            }
+    if (callGraph.count(symbolName)) {
+        for (const auto& depName : callGraph[symbolName]) {
+            DependencyInfo info;
+            info.dependencyType = "call";
+            info.confidence = 1.0;
+            // Lookup file path for depName
+            auto symInfo = getSymbolInfo(depName);
+            info.filePath = symInfo.filePath;
+            info.lineNumber = symInfo.lineNumber;
+            deps.push_back(info);
         }
     }
-    
     return deps;
 }
 
+// Dependency intelligence
 nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
+    nlohmann::json deps = nlohmann::json::array();
+    
+    if (fileSymbols.count(filePath)) {
+        for (const auto& sym : fileSymbols[filePath]) {
+            if (sym.type == "function" && callGraph.count(sym.name)) {
+                for (const auto& targetFunc : callGraph[sym.name]) {
+                    auto targetSym = getSymbolInfo(targetFunc);
+                    if (!targetSym.filePath.empty() && targetSym.filePath != filePath) {
+                         bool exists = false;
+                         for(const auto& d : deps) if(d["path"] == targetSym.filePath) exists = true;
+                         if(!exists) {
+                             deps.push_back({{"path", targetSym.filePath}, {"reason", "Function Call: " + sym.name + " -> " + targetFunc}});
+                         }
+                    }
+                }
+            }
+        }
+    }
+    return deps;
 }
 
 nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
     return nlohmann::json::object();
 }
 
+std::vector<std::string> IntelligentCodebaseEngine::getCircularDependencies() {
+    return {};
+}
+
+// Real-time analysis implementation using Win32 Directory Watcher
 bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
+    if (enableRealTimeIndexing) return true; // Already running
+    
+    enableRealTimeIndexing = true;
+    
+    // Launch background thread for directory watching
+    std::thread([this, projectPath]() {
+        #ifdef _WIN32
+        HANDLE hDir = CreateFileA(
+            projectPath.c_str(),
+            FILE_LIST_DIRECTORY,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            NULL,
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS,
+            NULL
+        );
+
+        if (hDir == INVALID_HANDLE_VALUE) {
+             if (onProgressUpdate) onProgressUpdate("Failed to start directory watcher.");
+             return;
+        }
+
+        char buffer[4096];
+        DWORD bytesReturned;
+
+        while (enableRealTimeIndexing) {
+            if (ReadDirectoryChangesW(
+                hDir,
+                &buffer,
+                sizeof(buffer),
+                TRUE, // Recursive
+                FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME,
+                &bytesReturned,
+                NULL,
+                NULL
+            )) {
+                // Determine file changed - simplified processing
+                // In a full implementation we parse FILE_NOTIFY_INFORMATION
+                // For now, we signal *something* changed and might need re-scan
+                
+                // Add tiny delay to debounce
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                
+                // Trigger incremental analysis if possible, or just log
+                // analyzeFile(...) - finding exact file requires parsing 'buffer'
+                
+                FILE_NOTIFY_INFORMATION* pInfo = (FILE_NOTIFY_INFORMATION*)buffer;
+                do {
+                    std::wstring fileName(pInfo->FileName, pInfo->FileNameLength / sizeof(wchar_t));
+                    std::string narrowName(fileName.begin(), fileName.end()); // Basic conversion
+                    
+                    std::string fullPath = projectPath + "/" + narrowName; // Approximation
+                    
+                    // Trigger update
+                    if (fullPath.find(".cpp") != std::string::npos || fullPath.find(".h") != std::string::npos) {
+                         // On main thread or protected:
+                         // analyzeFile(fullPath); 
+                         // For safety in this thread we just log/notify.
+                         if (onProgressUpdate) onProgressUpdate("File change detected: " + narrowName);
+                    }
+
+                    if (pInfo->NextEntryOffset == 0) break;
+                    pInfo = (FILE_NOTIFY_INFORMATION*)((LPBYTE)pInfo + pInfo->NextEntryOffset);
+                } while(true);
+            } else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        }
+        CloseHandle(hDir);
+        #else
+        // Linux/Mac implementation omitted
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        #endif
+    }).detach();
+
     return true;
 }
 
 bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
+    enableRealTimeIndexing = false;
     return true;
 }
 
 bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
+    return analyzeFile(filePath);
 }
 
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
+// Quality metrics
+double IntelligentCodebaseEngine::getCodeQualityScore() {
+    double score = 100.0;
     
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
+    // Deduct for complexity
+    if (complexityAnalysis.numberOfFunctions > 0) {
+        double avgLocPerFunc = (double)complexityAnalysis.linesOfCode / complexityAnalysis.numberOfFunctions;
+        if (avgLocPerFunc > 50) score -= 10.0;
+        if (avgLocPerFunc > 100) score -= 20.0;
     }
     
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
+    // Deduct for issues
+    score -= (refactoringOpportunities.size() * 1.5);
+    score -= (bugReports.size() * 5.0);
+    
+    if (score < 0) score = 0;
+    return score;
+}
+
+double IntelligentCodebaseEngine::getTestCoverage() {
+    // Explicit Logic: Real File IO Line Counting
+    // Instead of estimating from symbols, let's actually count the lines in the files we have tracked.
+    long long totalTestLines = 0;
+    long long totalCodeLines = 0;
+
+    for (const auto& [file, symbols] : fileSymbols) {
+        bool isTest = (file.find("test") != std::string::npos || file.find("Test") != std::string::npos);
+        
+        std::ifstream f(file);
+        int physicalLines = 0;
+        if (f.is_open()) {
+            std::string line;
+            while(std::getline(f, line)) {
+                physicalLines++;
+            }
+        }
+        
+        if (physicalLines == 0 && !symbols.empty()) {
+            // Fallback if file read failed but we had symbols (maybe deleted?)
+            physicalLines = (int)symbols.size() * 15;
+        }
+
+        if (isTest) totalTestLines += physicalLines;
+        else totalCodeLines += physicalLines;
     }
     
-    return files;
+    if (totalCodeLines == 0 && totalTestLines == 0) return 0.0;
+    if (totalCodeLines == 0) return 100.0; // All test code?
+    
+    // Heuristic: Test lines / Source lines ratio often target 1:1, but 100% means full coverage.
+    // We map a 1:1 ratio to ~90% coverage for estimation.
+    double ratio = (double)totalTestLines / (double)totalCodeLines;
+    return std::min(100.0, ratio * 90.0);
 }
 
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
+void IntelligentCodebaseEngine::performDeepScan() {
+    if (onProgressUpdate) onProgressUpdate("Performing deep code analysis...");
     
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
-}
-
-std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
-}
-
-std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
-    std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
+    // Cross-reference symbols
+    for (auto& [file, symbols] : fileSymbols) {
+        for (const auto& sym : symbols) {
+            // Naive duplicate check or similar scanning logic
+            if (sym.name.length() < 3) {
+                 // CodeQualityMetrics metric; // Removed undefined
+                 RefactoringOpportunity opp;
+                 opp.type = "Naming";
+                 opp.description = "Symbol '" + sym.name + "' is too short.";
+                 opp.filePath = file;
+                 opp.startLine = sym.lineNumber;
+                 opp.potentialImprovement = 0.8;
+                 refactoringOpportunities.push_back(opp);
             }
         }
     }
     
-    return deps;
-}
-
-nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
-}
-
-nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
-    return nlohmann::json::object();
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
-}
-
-std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
-}
-
-std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
-    std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
-            }
+    // Complexity Analysis Logic
+    // Validation: Ensure complexity analysis matches observed symbols
+    if (complexityAnalysis.numberOfFunctions == 0 && !fileSymbols.empty()) {
+        // Only re-calculate if missing
+        for (const auto& [file, symbols] : fileSymbols) {
+           complexityAnalysis.numberOfFunctions += (int)symbols.size();
         }
     }
     
-    return deps;
-}
-
-nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
-}
-
-nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
-    return nlohmann::json::object();
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
+    // Recalculate LOC if it appears invalid (e.g. 0 but we have symbols)
+    if (complexityAnalysis.linesOfCode == 0 && !fileSymbols.empty()) {
+         for (const auto& [file, symbols] : fileSymbols) {
+              std::ifstream f(file);
+              int lines = 0;
+              if (f.is_open()) {
+                   lines = (int)std::count(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>(), '\n');
+              }
+              complexityAnalysis.linesOfCode += lines;
+         }
     }
 }
 
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
+void IntelligentCodebaseEngine::buildCallGraph() {
+    if (onProgressUpdate) onProgressUpdate("Building call graph...");
     
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
-}
-
-std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
-}
-
-std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
-    std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
+    // Simplified: Link functions calling other functions based on name occurrence
+    for (auto& [file, symbols] : fileSymbols) {
+        std::ifstream f(file);
+        if (!f.is_open()) continue;
+        std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+        
+        for (const auto& sym : symbols) {
+            if (sym.type == "function") {
+                // Check if this function calls others
+                for (const auto& [targetFile, targetSymbols] : fileSymbols) {
+                    for (const auto& targetSym : targetSymbols) {
+                        if (targetSym.type == "function" && targetSym.name != sym.name) {
+                            if (content.find(targetSym.name + "(") != std::string::npos) {
+                                callGraph[sym.name].push_back(targetSym.name);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
-    
-    return deps;
 }
-
-nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
-}
-
-nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
-    return nlohmann::json::object();
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
-}
-
-std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
-}
-
-std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
-    std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
-            }
-        }
-    }
-    
-    return deps;
-}
-
-nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
-}
-
-nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
-    return nlohmann::json::object();
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
-}
-
-std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
-}
-
-std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
-    std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
-            }
-        }
-    }
-    
-    return deps;
-}
-
-nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
-}
-
-nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
-    return nlohmann::json::object();
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
-}
-
-std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
-}
-
-std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
-    std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
-            }
-        }
-    }
-    
-    return deps;
-}
-
-nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
-}
-
-nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
-    return nlohmann::json::object();
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
-}
-
-std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
-}
-
-std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
-    std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
-            }
-        }
-    }
-    
-    return deps;
-}
-
-nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
-}
-
-nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
-    return nlohmann::json::object();
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
-}
-
-std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
-}
-
-std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
-    std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
-            }
-        }
-    }
-    
-    return deps;
-}
-
-nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
-}
-
-nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
-    return nlohmann::json::object();
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine::getSymbolInfo(const std::string& symbolName) {
-    return symbolIndex.value(symbolName, SymbolInfo());
-}
-
-std::vector<SymbolInfo> IntelligentCodebaseEngine::getSymbolsInFile(const std::string& filePath) {
-    return fileSymbols.value(filePath, std::vector<SymbolInfo>());
-}
-
-std::vector<DependencyInfo> IntelligentCodebaseEngine::getSymbolDependencies(const std::string& symbolName) {
-    std::vector<DependencyInfo> deps;
-    
-    for (auto it = dependencyGraph.begin(); it != dependencyGraph.end(); ++it) {
-        for (const DependencyInfo& dep : it.value()) {
-            if (dep.fromSymbol == symbolName || dep.toSymbol == symbolName) {
-                deps.append(dep);
-            }
-        }
-    }
-    
-    return deps;
-}
-
-nlohmann::json IntelligentCodebaseEngine::getFileDependencies(const std::string& filePath) {
-    return nlohmann::json::array();
-}
-
-nlohmann::json IntelligentCodebaseEngine::getDependencyGraph() {
-    return nlohmann::json::object();
-}
-
-bool IntelligentCodebaseEngine::startRealTimeAnalysis(const std::string& projectPath) {
-    // In a real Qt-free impl, we would use ReadDirectoryChangesW on Windows
-    return true;
-}
-
-bool IntelligentCodebaseEngine::stopRealTimeAnalysis() {
-    return true;
-}
-
-bool IntelligentCodebaseEngine::updateAnalysis(const std::string& filePath) {
-
-
-    removeFileAnalysis(filePath);
-    analyzeFile(filePath);
-    
-    realTimeAnalysisUpdated(filePath);
-    
-    return true;
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::getAllSourceFiles(const std::string& projectPath) {
-    std::vector<std::string> files;
-    std::filesystem::path dir(projectPath);
-    
-    std::vector<std::string> filters;
-    filters << "*.cpp" << "*.h" << "*.c" << "*.hpp" << "*.py" << "*.js" << "*.ts";
-    
-    QFileInfoList fileList = dir.entryInfoList(filters, std::filesystem::path::Files | std::filesystem::path::NoDotAndDotDot);
-    
-    for (const std::filesystem::path& fileInfo : fileList) {
-        files.append(fileInfo.absoluteFilePath());
-    }
-    
-    QFileInfoList subdirs = dir.entryInfoList(std::filesystem::path::Dirs | std::filesystem::path::NoDotAndDotDot);
-    for (const std::filesystem::path& subdir : subdirs) {
-        files.append(getAllSourceFiles(subdir.absoluteFilePath()));
-    }
-    
-    return files;
-}
-
-void IntelligentCodebaseEngine::processBatchRelationships(const std::vector<std::string>& files) {
-    // Process inter-file relationships
-    for (const std::string& file : files) {
-        analyzeDependencies(file, "");
-    }
-}
-
-void IntelligentCodebaseEngine::performGlobalAnalysis() {
-
-
-    complexityAnalysis.numberOfFunctions = 0;
-    complexityAnalysis.numberOfClasses = 0;
-    
-    for (const SymbolInfo& symbol : symbolIndex) {
-        if (symbol.type == "function") complexityAnalysis.numberOfFunctions++;
-        if (symbol.type == "class") complexityAnalysis.numberOfClasses++;
-    }
-    
-    complexityAnalysis.numberOfDependencies = dependencyGraph.size();
-}
-
-void* IntelligentCodebaseEngine::generateAnalysisResults() {
-    return generateQualityReport();
-}
-
-std::string IntelligentCodebaseEngine::detectLanguage(const std::string& filePath) {
-    std::string suffix = std::filesystem::path(filePath).suffix().toLower();
-    
-    if (suffix == "cpp" || suffix == "cc" || suffix == "cxx" || suffix == "h" || suffix == "hpp") {
-        return "cpp";
-    } else if (suffix == "py") {
-        return "python";
-    } else if (suffix == "js") {
-        return "javascript";
-    } else if (suffix == "ts") {
-        return "typescript";
-    }
-    
-    return "unknown";
-}
-
-std::string IntelligentCodebaseEngine::detectFileType(const std::string& filePath) {
-    return std::filesystem::path(filePath).suffix();
-}
-
-std::vector<std::string> IntelligentCodebaseEngine::parseParameters(const std::string& paramString) {
-    std::vector<std::string> params;
-    
-    if (paramString.trimmed().empty()) {
-        return params;
-    }
-    
-    std::vector<std::string> paramList = paramString.split(',');
-    for (const std::string& param : paramList) {
-        params.append(param.trimmed());
-    }
-    
-    return params;
-}
-
-double IntelligentCodebaseEngine::calculateFunctionComplexity(const SymbolInfo& function) {
-    double complexity = 1.0;
-    
-    complexity += function.parameters.size() * 0.5;
-    if (function.isStatic) complexity += 0.5;
-    if (function.isConst) complexity += 0.3;
-    complexity += function.baseClasses.size() * 0.8;
-    
-    return complexity;
-}
-
-SymbolInfo IntelligentCodebaseEngine

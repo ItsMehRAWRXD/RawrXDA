@@ -1,103 +1,143 @@
 #include "digestion_db.h"
-DigestionDatabase::DigestionDatabase()  {}
+#include <fstream>
+#include <iostream>
+#include <ctime>
+
+DigestionDatabase::DigestionDatabase() {}
 
 bool DigestionDatabase::open(const std::string &path, std::string *error) {
-    if (m_db.isValid()) {
-        const std::string previousName = m_db.connectionName();
-        if (m_db.isOpen()) m_db.close();
-        if (!previousName.empty()) {
-            QSqlDatabase::removeDatabase(previousName);
-        }
+    m_dbPath = path;
+    // ensure file exists
+    std::ifstream f(m_dbPath);
+    if (!f.good()) {
+        json root = {{"runs", json::array()}};
+        return saveDb(root);
     }
-
-    const std::string connectionName = std::stringLiteral("digestion_%1_%2")
-        )
-        );
-
-    m_db = QSqlDatabase::addDatabase("QSQLITE", connectionName);
-    m_db.setDatabaseName(path);
-    if (!m_db.open()) {
-        if (error) *error = m_db.lastError().text();
-        return false;
-    }
-    QSqlQuery pragma(m_db);
-    pragma.exec("PRAGMA foreign_keys = ON");
     return true;
 }
 
 bool DigestionDatabase::ensureSchema(const std::string &schemaPath, std::string *error) {
-    std::string schemaSql;
-    if (!schemaPath.empty()) {
-        // File operation removed;
-        if (file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-            schemaSql = std::string::fromUtf8(file.readAll());
-        }
-    }
-    if (schemaSql.empty()) schemaSql = defaultSchema();
-
-    std::stringList statements;
-    for (const std::string &chunk : schemaSql.split(';', SkipEmptyParts)) {
-        const std::string stmt = chunk.trimmed();
-        if (!stmt.empty()) statements.append(stmt);
-    }
-    if (!m_db.transaction()) {
-        if (error) *error = m_db.lastError().text();
-        return false;
-    }
-    const bool ok = executeBatch(statements, error);
-    if (ok) {
-        m_db.commit();
-    } else {
-        m_db.rollback();
-    }
-    return ok;
+    // For JSON store, schema is implicit structure.
+    // Use this to validate or migrate if needed.
+    return true; 
 }
 
-bool DigestionDatabase::insertRun(const std::string &rootDir, const DigestionMetrics &metrics, void* report, int *runId, std::string *error) {
-    QSqlQuery query(m_db);
-    query.prepare("INSERT INTO digestion_runs (root_dir, start_ms, end_ms, elapsed_ms, total_files, scanned_files, stubs_found, fixes_applied, bytes_processed) "
-                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    query.addBindValue(rootDir);
-    query.addBindValue(metrics.startMs);
-    query.addBindValue(metrics.endMs);
-    query.addBindValue(metrics.elapsedMs);
-    query.addBindValue(metrics.totalFiles);
-    query.addBindValue(metrics.scannedFiles);
-    query.addBindValue(metrics.stubsFound);
-    query.addBindValue(metrics.fixesApplied);
-    query.addBindValue(metrics.bytesProcessed);
+bool DigestionDatabase::insertRun(const std::string &rootDir, const DigestionMetrics &metrics, const json& report, int *runId, std::string *error) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    try {
+        json db = loadDb();
+        if (!db.contains("runs")) db["runs"] = json::array();
 
-    if (!query.exec()) {
-        if (error) *error = query.lastError().text();
+        int nextId = 1;
+        if (!db["runs"].empty()) {
+            nextId = db["runs"].back()["id"].get<int>() + 1;
+        }
+
+        json run = {
+            {"id", nextId},
+            {"rootDir", rootDir},
+            {"timestamp", std::time(nullptr)},
+            {"metrics", {
+                {"startMs", metrics.startMs},
+                {"endMs", metrics.endMs},
+                {"elapsedMs", metrics.elapsedMs},
+                {"totalFiles", metrics.totalFiles},
+                {"scannedFiles", metrics.scannedFiles},
+                {"stubsFound", metrics.stubsFound},
+                {"fixesApplied", metrics.fixesApplied},
+                {"bytesProcessed", metrics.bytesProcessed}
+            }},
+            {"report", report},
+            {"file_results", json::array()}
+        };
+
+        db["runs"].push_back(run);
+        if (runId) *runId = nextId;
+
+        return saveDb(db);
+    } catch (const std::exception& e) {
+        if (error) *error = e.what();
         return false;
     }
-    const int id = query.lastInsertId();
-    if (runId) *runId = id;
+}
 
-    if (!report.empty()) {
-        QSqlQuery reportQuery(m_db);
-        reportQuery.prepare("INSERT INTO digestion_reports (run_id, report_json) VALUES (?, ?)");
-        reportQuery.addBindValue(id);
-        reportQuery.addBindValue(std::string::fromUtf8(void*(report).toJson(void*::Compact)));
-        if (!reportQuery.exec() && error) {
-            *error = reportQuery.lastError().text();
+bool DigestionDatabase::insertFileResult(int runId, const json& fileObj, std::string *error) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    try {
+        json db = loadDb();
+        for (auto& run : db["runs"]) {
+            if (run["id"] == runId) {
+                if (!run.contains("file_results")) run["file_results"] = json::array();
+                run["file_results"].push_back(fileObj);
+                return saveDb(db);
+            }
         }
+        if (error) *error = "Run ID not found";
+        return false;
+    } catch (const std::exception& e) {
+        if (error) *error = e.what();
+        return false;
     }
+}
 
+std::vector<json> DigestionDatabase::fetchRecentRuns(int limit, std::string *error) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    try {
+        json db = loadDb();
+        std::vector<json> results;
+        if (!db.contains("runs")) return results;
+        
+        const auto& runs = db["runs"];
+        // Iterate backwards for recent
+        int count = 0;
+        for (auto it = runs.rbegin(); it != runs.rend(); ++it) {
+            results.push_back(*it);
+            if (++count >= limit) break;
+        }
+        return results;
+    } catch (const std::exception& e) {
+        if (error) *error = e.what();
+        return {};
+    }
+}
+
+bool DigestionDatabase::deleteRun(int runId, std::string *error) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    try {
+        json db = loadDb();
+        if (!db.contains("runs")) return false;
+        
+        auto& runs = db["runs"];
+        runs.erase(std::remove_if(runs.begin(), runs.end(), [runId](const json& j) {
+            return j["id"] == runId;
+        }), runs.end());
+        
+        return saveDb(db);
+    } catch (const std::exception& e) {
+        if (error) *error = e.what();
+        return false;
+    }
+}
+
+std::string DigestionDatabase::defaultSchema() {
+    return "{}"; // JSON, no SQL schema
+}
+
+json DigestionDatabase::loadDb() const {
+    std::ifstream f(m_dbPath);
+    if (!f.is_open()) return {{"runs", json::array()}};
+    json j;
+    f >> j;
+    return j;
+}
+
+bool DigestionDatabase::saveDb(const json& db) const {
+    std::ofstream f(m_dbPath);
+    if (!f.is_open()) return false;
+    f << db.dump(4);
     return true;
 }
-
-std::vector<void*> DigestionDatabase::fetchRecentRuns(int limit, std::string *error) const {
-    std::vector<void*> runs;
-    if (!m_db.isValid()) {
-        if (error) *error = std::stringLiteral("Database connection is not open");
-        return runs;
-    }
-
-    QSqlQuery query(m_db);
-    query.prepare(std::stringLiteral(
-        "SELECT id, root_dir, start_ms, end_ms, elapsed_ms, total_files, scanned_files, "
-        "stubs_found, fixes_applied, bytes_processed, created_at "
         "FROM digestion_runs ORDER BY id DESC LIMIT ?"));
     query.addBindValue(limit);
 

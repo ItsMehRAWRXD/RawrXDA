@@ -710,24 +710,27 @@ int DetectComputeDevices()
     return DetectGPUDevices();
 }
 
-// Compression stubs (would integrate with real libraries)
+// Compression Stubs - Explicitly unsupported without external libs to avoid silent corruption
 bool DecompressDeflate(const std::vector<uint8_t>& compressed,
                       std::vector<uint8_t>& output)
 {
-    // Placeholder
-    output = compressed;
-    return true;
+    // Real logic: fail if not supported
+    return false;
 }
 
 bool DecompressLZ4(const std::vector<uint8_t>& compressed,
                   std::vector<uint8_t>& output)
 {
-    // Placeholder
-    output = compressed;
-    return true;
+    // Real logic: fail if not supported
+    return false;
 }
 
 bool DecompressZSTD(const std::vector<uint8_t>& compressed,
+                   std::vector<uint8_t>& output)
+{
+    // Real logic: fail if not supported
+    return false;
+}
                    std::vector<uint8_t>& output)
 {
     // Placeholder

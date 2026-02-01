@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 #include <nlohmann/json.hpp>
+#include "model_invoker.hpp"
+#include "agentic_puppeteer.hpp"
 
 // Forward declarations
 class AgenticEngine;
@@ -12,6 +14,7 @@ class ChatInterface;
 class MultiTabEditor;
 class TerminalPool;
 class AgenticExecutor;
+class AIIntegrationHub; // Forward declare
 
 using json = nlohmann::json;
 
@@ -28,6 +31,8 @@ public:
     // Initialization
     void initialize(AgenticEngine* engine, ChatInterface* chat, MultiTabEditor* editor, 
                    TerminalPool* terminals, AgenticExecutor* executor);
+    
+    void setIntegrationHub(std::shared_ptr<AIIntegrationHub> hub) { m_integrationHub = hub; }
 
     // Code Generation & Analysis
     std::string generateCodeCompletion(const std::string& context, const std::string& prefix);
@@ -44,18 +49,21 @@ public:
     std::string hotpatchResponse(const std::string& originalResponse, const json& context);
     bool detectAndCorrectFailure(std::string& response, const json& context);
 
-    // Signals replacement
-    // In C++ we can use callbacks, but for now I'll just log or assume caller polls
-    // or provide setter methods for callbacks if needed.
-    // Given the size, I'll keep it simple: no signals.
+    // Accessors for derived classes and integration
+    ModelInvoker* getModelInvoker() const { return m_modelInvoker.get(); } // Expose internal invoker if used as fallback
 
 private:
-    mutable std::mutex m_mutex;
+    std::mutex m_mutex;
+    std::shared_ptr<AIIntegrationHub> m_integrationHub;
     AgenticEngine* m_agenticEngine = nullptr;
     ChatInterface* m_chatInterface = nullptr;
     MultiTabEditor* m_multiTabEditor = nullptr;
     TerminalPool* m_terminalPool = nullptr;
     AgenticExecutor* m_agenticExecutor = nullptr;
+
+    // Fallback invoker if engine is missing
+    std::unique_ptr<ModelInvoker> m_modelInvoker;
+    std::unique_ptr<AgenticPuppeteer> m_puppeteer;
 
     void completionReady(const std::string& result);
     void analysisReady(const std::string& result);

@@ -77,6 +77,7 @@ struct Optimization {
     std::string type;
     std::string description;
     std::string targetSymbol;
+    std::string filePath; // Added
     double estimatedSpeedup;
 };
 
@@ -142,6 +143,11 @@ public:
     // Quality metrics
     double getCodeQualityScore();
     double getTestCoverage(); // Estimated
+
+    // Getters
+    const std::vector<RefactoringOpportunity>& getRefactoringOpportunities() const { return refactoringOpportunities; }
+    const std::vector<BugReport>& getBugReports() const { return bugReports; }
+    const std::vector<Optimization>& getOptimizations() const { return optimizations; }
     
 private:
     void performDeepScan();

@@ -1,0 +1,24 @@
+LIBRARY RawrXD_Interconnect
+EXPORTS
+    RingBufferConsumer_Initialize
+    RingBufferConsumer_Shutdown
+    RawrXD_RingBufferProducer_Write = RingBufferProducer_Write
+    HttpRouter_Initialize
+    ModelState_Initialize
+    ModelState_AcquireInstance
+    ModelState_Transition
+    ModelState_BeginStream
+    ModelState_EndStream
+    ModelState_Release
+    Swarm_Initialize
+    Swarm_SubmitJob
+    AgentRouter_Initialize
+    AgentRouter_ClassifyIntent
+    AgentRouter_SelectTool
+    AgentRouter_ExecuteTask
+    AgentRouter_CancelTask
+    StreamFormatter_Create
+    StreamFormatter_WriteToken
+    StreamFormatter_FlushChunk
+    StreamFormatter_Close
+    Json_ExtractField

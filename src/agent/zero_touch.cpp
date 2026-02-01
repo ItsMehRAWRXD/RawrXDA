@@ -133,11 +133,7 @@ void ZeroTouch::installVoiceTrigger() {
                     CloseClipboard();
                     
                     if (!spoken.empty() && spoken != m_lastVoiceWish) {
-                         if (spoken.length() > 10 && spoken.length() < 200 &&
-                            (spoken.find("ship") != std::string::npos ||
-                             spoken.find("release") != std::string::npos ||
-                             spoken.find("fix") != std::string::npos)) { // Case sensitive now, fixing to ignore case?
-                            
+                         if (spoken.length() > 10 && spoken.length() < 200) {
                              std::string lowerSpoken = spoken;
                              std::transform(lowerSpoken.begin(), lowerSpoken.end(), lowerSpoken.begin(), ::tolower);
                              

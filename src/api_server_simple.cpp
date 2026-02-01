@@ -14,6 +14,7 @@
 #include <chrono>
 #include <ctime>
 #include <sstream>
+#include "ai_model_caller.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma warning(disable : 4996)
@@ -64,42 +65,71 @@ std::string HandleStatusRequest() {
 }
 
 std::string HandleTagsRequest() {
-    std::string json = R"({
-  "models": [
-    {
-      "name": "llama2",
-      "modified_at": "2025-01-30T00:00:00Z",
-      "size": 3826046976,
-      "digest": "sha256:44040b922233197f6ef88da7d4d6e5767c6a6c9f14ffd7e25b7ad9fe36d6cbee"
+    std::string json = "{\"models\": [";
+    
+    WIN32_FIND_DATAA ffd;
+    HANDLE hFind = FindFirstFileA("models\\*.gguf", &ffd);
+    
+    bool first = true;
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if (!first) json += ",";
+            first = false;
+            
+            // Basic JSON construction
+            json += "{";
+            json += "\"name\": \"" + std::string(ffd.cFileName) + "\",";
+            json += "\"size\": " + std::to_string(((unsigned long long)ffd.nFileSizeHigh << 32) | ffd.nFileSizeLow);
+            json += "}";
+        } while (FindNextFileA(hFind, &ffd) != 0);
+        FindClose(hFind);
+    } else {
+        // Fallback if no models found, or directory doesn't exist
+        // Return empty list
     }
-  ]
-})";
+    
+    json += "]}";
     return BuildHttpResponse(200, "application/json", json);
 }
 
 std::string HandleGenerateRequest(const std::string& body) {
-    // Simulate token-by-token streaming response
-    // Extract prompt length to simulate token count
-    int tokens = std::max(1, (int)(body.length() / 10));
+    // Extract prompt safely
+    std::string prompt = "Default Prompt";
+    // basic json search
+    size_t p = body.find("\"prompt\"");
+    if(p != std::string::npos) {
+        size_t start = body.find(":", p);
+        if(start != std::string::npos) {
+             size_t q1 = body.find("\"", start);
+             if (q1 != std::string::npos) {
+                 size_t q2 = body.find("\"", q1+1);
+                 if (q2 != std::string::npos) {
+                     prompt = body.substr(q1+1, q2-q1-1);
+                 }
+             }
+        }
+    }
+
+    // Call Real Model
+    ModelCaller::GenerationParams params;
+    ModelCaller::GenerationParams params;
+    params.max_tokens = 128;
+    std::string response_text = ModelCaller::callModel(prompt, params);
     
-    // Simulate inference latency: ~50ms per token base + overhead
-    std::this_thread::sleep_for(std::chrono::milliseconds(tokens * 50));
-    
+    // Estimate tokens roughly (or return 0 if exact count not critical for simple API)
+    int eval_count = (int)(response_text.length() / 4);
+
     auto now = std::time(nullptr);
     auto tm = *std::gmtime(&now);
     char timestamp[30];
     strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &tm);
-    
-    std::string response_text = "This is a generated response from the GGUF inference engine. ";
-    response_text += "Processed " + std::to_string(tokens) + " tokens at approximately ";
-    response_text += std::to_string((int)(tokens * 1000 / (tokens * 50))) + " tokens/sec.";
     
     std::ostringstream json;
     json << R"({)"
          << R"("response":")" << response_text << R"(",)"
          << R"("created_at":")" << timestamp << R"(",)"
          << R"("done":true,)"
-         << R"("eval_count":)" << tokens
+         << R"("eval_count":)" << eval_count
          << R"(})";
     
     return BuildHttpResponse(200, "application/json", json.str());

@@ -109,11 +109,38 @@ json MetaPlanner::releasePlan(const std::string& wish) {
 }
 
 json MetaPlanner::fixPlan(const std::string& wish) {
-    std::string target = section(wish, ' ', 1); // guess target from sentence
+    // Better heuristic for fix plan
+    // Try to extract file and error from wish
+    std::string target = "main.cpp";
+    std::string issue = "bug";
+    
+    // Look for phrases like "fix x in y"
+    size_t inPos = wish.find(" in ");
+    if (inPos != std::string::npos) {
+         target = wish.substr(inPos + 4); 
+         // simplistic trim logic or regex could go here
+         issue = wish.substr(0, inPos);
+    }
+    
+    // If target has no extension, guess .cpp
+    if (target.find('.') == std::string::npos) {
+        target += ".cpp";
+    }
+
     json plan = json::array();
-    plan.push_back(task("edit_source", target, {{"old", "TODO"}, {"new", "FIX"}}));
+    plan.push_back(task("analyze_error", target, {{"symptom", issue}}));
+    
+    // Explicit missing logic: If we don't know the exact lines, we should ask the Agent/LLM first
+    // But for a deterministic plan, we'll add a 'search' task to locate the issue first.
+    plan.insert(plan.begin(), task("search_files", target, {{"query", issue}}));
+
+    // Fallback edit if search fails to provide context 
+    // We use a placeholder that the ActionExecutor knows means "replace the buggy part found in search"
+    plan.push_back(task("edit_source", target, {{"strategy", "apply_fix_from_analysis"}, {"context_from_search", true}}));
+    
+    plan.push_back(task("compile", "all", {}));
     plan.push_back(task("self_test", "regression", {{"cases", 10}}));
-    plan.push_back(task("release", "patch", {{"notes", wish}}));
+    plan.push_back(task("release", "patch", {{"notes", "Fix: " + wish}}));
     return plan;
 }
 
@@ -137,9 +164,43 @@ json MetaPlanner::testPlan(const std::string& wish) {
 
 json MetaPlanner::genericPlan(const std::string& wish) {
     // fallback: generic dev cycle
+    // Try to detect intent
+    std::string action = "edit_source";
+    if (wish.find("create") != std::string::npos || wish.find("add") != std::string::npos) {
+        action = "create_file";
+    }
+
     json plan = json::array();
-    plan.push_back(task("edit_source", "main.cpp", {{"old", "TODO"}, {"new", wish}}));
-    plan.push_back(task("self_test", "regression", {{"cases", 10}}));
+    
+    if (action == "create_file") {
+        std::string filename = "new_feature.cpp";
+        // Try to find a filename
+        size_t dot = wish.find('.');
+        if (dot != std::string::npos) {
+             size_t start = wish.rfind(' ', dot);
+             if (start != std::string::npos) {
+                  filename = wish.substr(start + 1);
+                  // Clean up punctuation
+                  if (filename.back() == '.') filename.pop_back();
+             }
+        }
+        plan.push_back(task("create_file", filename, {{"content", "// " + wish}}));
+        plan.push_back(task("add_to_project", filename, {}));
+    } else {
+        // Explicit missing logic: If we are editing main.cpp, we should first locate where to insert.
+        // Instead of blind replacement, we plan a smarter insertion.
+        // But for this "generic" plan, we'll assume we are appending a new function or feature.
+        
+        // Better: Use ActionExecutor's ability to 'apply_patch' or 'smart_edit'
+        plan.push_back(task("search_files", "main.cpp", {{"query", "main"}}));
+        plan.push_back(task("edit_source", "main.cpp", {
+            {"strategy", "append_feature"}, 
+            {"feature_description", wish}
+        }));
+    }
+
+    plan.push_back(task("compile", "all", {}));
+    plan.push_back(task("self_test", "regression", {{"cases", 5}}));
     plan.push_back(task("release", "patch", {{"notes", wish}}));
     return plan;
 }

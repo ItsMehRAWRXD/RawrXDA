@@ -59,8 +59,15 @@ public:
     
     // Setters
     void setEnabled(bool enabled) { m_enabled = enabled; }
+    
+    // Explicit Logic: Allow re-prompting via callback
+    void setRepromptCallback(std::function<std::string(const std::string&)> callback) {
+        m_repromptCallback = callback;
+    }
 
 private:
+    std::function<std::string(const std::string&)> m_repromptCallback;
+    
     FailureType detectFailure(const std::string& response);
     std::string diagnoseFailure(const std::string& response);
     

@@ -11,6 +11,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include "../agentic_engine.h"
 
 // Forward declaration
 class Win32IDE;
@@ -31,7 +32,7 @@ struct AgentResponse {
 };
 
 // Agentic Framework Bridge for Win32IDE
-// Integrates PowerShell-based agentic framework with C++ IDE
+// Integrates Native C++ Agentic Engine with Win32IDE
 class AgenticBridge {
 public:
     AgenticBridge(Win32IDE* ide);
@@ -55,7 +56,7 @@ public:
     
     // Configuration
     void SetModel(const std::string& modelName);
-    void SetOllamaServer(const std::string& serverUrl);
+    void SetOllamaServer(const std::string& serverUrl); // Kept for API interface compatibility but unused internally now
     std::string GetCurrentModel() const { return m_modelName; }
     
     // Output callback
@@ -63,11 +64,7 @@ public:
     void SetOutputCallback(OutputCallback callback);
 
 private:
-    // PowerShell process management
-    bool SpawnPowerShellProcess(const std::string& scriptPath, const std::string& arguments);
-    bool ReadProcessOutput(std::string& output, DWORD timeoutMs = 5000);
-    void KillPowerShellProcess();
-    
+   
     // Response parsing
     AgentResponse ParseAgentResponse(const std::string& rawOutput);
     bool IsToolCall(const std::string& line);
@@ -86,11 +83,8 @@ private:
     std::string m_modelName;
     std::string m_ollamaServer;
     
-    HANDLE m_hProcess;
-    HANDLE m_hStdoutRead;
-    HANDLE m_hStdoutWrite;
-    HANDLE m_hStdinRead;
-    HANDLE m_hStdinWrite;
+    // Native Engine
+    std::shared_ptr<AgenticEngine> m_nativeEngine;
     
     OutputCallback m_outputCallback;
 };

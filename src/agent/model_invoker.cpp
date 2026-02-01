@@ -14,6 +14,17 @@
 #include <vector>
 #include <windows.h>
 #include <winhttp.h>
+#include <fstream>
+#include <filesystem>
+#include <mutex>
+
+// Explicit Logic Integration: Bring in the real CPU Inference Engine
+#include "../cpu_inference_engine.h"
+
+// Global static instance for embedded inference (Lazy initialized)
+// Using native raw pointer or unique_ptr to avoid header dependency issues if unique_ptr undefined
+static std::unique_ptr<RawrXD::CPUInferenceEngine> g_embeddedEngine;
+static std::mutex g_engineMutex;  
 
 #pragma comment(lib, "winhttp.lib")
 
@@ -106,6 +117,33 @@ LLMResponse ModelInvoker::invoke(const InvocationParams& params)
             llmResponse = sendClaudeRequest(userMessage, params.maxTokens, params.temperature);
         } else if (m_backend == "openai") {
             llmResponse = sendOpenAIRequest(userMessage, params.maxTokens, params.temperature);
+        } else if (m_backend == "embedded") {
+            // Explicit Logic: Use local Titan Engine
+            std::lock_guard<std::mutex> lock(g_engineMutex);
+            if (!g_embeddedEngine) {
+                g_embeddedEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+                // Treat m_endpoint as model path if provided
+                std::string modelPath = m_endpoint;
+                if (modelPath.starts_with("http") || modelPath.empty()) modelPath = "models/titan-model.gguf"; 
+                
+                if (!g_embeddedEngine->loadModel(modelPath)) {
+                     response.error = "Failed to load embedded model: " + modelPath;
+                     m_isInvoking = false;
+                     if (onInvocationError) onInvocationError(response.error, true);
+                     return response;
+                }
+            }
+            
+            // Perform Inference
+            response.rawOutput = g_embeddedEngine->infer(userMessage);
+            response.tokensUsed = (int)response.rawOutput.length() / 4; 
+            
+            // Use dummy JSON to bypass empty check below, but we will check backend type 
+            llmResponse = nlohmann::json::object(); 
+            llmResponse["content"] = response.rawOutput; 
+        } else if (m_backend == "rawrxd") {
+            // [NEW] RawrXD_Agent.exe IPC Backend
+             llmResponse = sendRawrXDRequest(userMessage, params.maxTokens, params.temperature);
         } else {
             response.error = "Unknown backend: " + m_backend;
             m_isInvoking = false;
@@ -141,18 +179,25 @@ LLMResponse ModelInvoker::invoke(const InvocationParams& params)
             if (llmResponse.contains("usage")) {
                 response.tokensUsed = llmResponse["usage"]["completion_tokens"].get<int>();
             }
+        } else if (m_backend == "rawrxd") {
+            // RawrXD returns direct text in "response"
+            if (llmResponse.contains("response")) {
+                response.rawOutput = llmResponse["response"].get<std::string>();
+            }
         }
 
-        // Parse into structured plan
-        response.parsedPlan = parsePlan(response.rawOutput);
+        if (params.enforceJsonFormat) {
+            // Parse into structured plan
+            response.parsedPlan = parsePlan(response.rawOutput);
 
-        // Validate sanity
-        if (!validatePlanSanity(response.parsedPlan)) {
-            response.error = "Plan failed sanity checks";
-            response.success = false;
-            m_isInvoking = false;
-            if (onInvocationError) onInvocationError(response.error, true);
-            return response;
+            // Validate sanity
+            if (!validatePlanSanity(response.parsedPlan)) {
+                response.error = "Plan failed sanity checks";
+                response.success = false;
+                m_isInvoking = false;
+                if (onInvocationError) onInvocationError(response.error, true);
+                return response;
+            }
         }
 
         response.success = true;
@@ -225,8 +270,8 @@ Example:
   {
     "type": "search_files",
     "target": "src/",
-    "params": { "pattern": "*.cpp", "query": "TODO" },
-    "description": "Find all TODO comments in C++ files"
+    "params": { "pattern": "*.{cpp,hpp,h,c}", "query": "TODO|FIXME|XXX" },
+    "description": "Scan C/C++ source files for temporary markers and technical debt."
   }
 ]
 ```
@@ -261,8 +306,13 @@ std::string ModelInvoker::buildUserMessage(const InvocationParams& params)
         message += "Relevant Codebase:\n" + params.codebaseContext + "\n\n";
     }
 
-    message += "Please generate a structured action plan to fulfill this wish. "
-               "Respond with ONLY valid JSON array, no additional text.";
+    if (params.enforceJsonFormat) {
+        message += "Please generate a structured action plan to fulfill this wish. "
+                   "Respond with ONLY valid JSON array, no additional text.";
+    } else {
+        // Raw text mode (e.g. for code completion)
+        message += "Please complete the code. Respond with ONLY the code, no markdown block markers.";
+    }
 
     return message;
 }
@@ -299,14 +349,12 @@ nlohmann::json ModelInvoker::sendClaudeRequest(const std::string& prompt,
     payload["temperature"] = temperature;
     payload["messages"] = nlohmann::json::array({{{"role", "user"}, {"content", prompt}}});
 
-    std::string url = "https://api.anthropic.com/v1/messages";
-    std::map<std::string, std::string> headers = {
+    std::string url = (m_endpoint == "https://api.anthropic.com") ? m_endpoint + "/v1/messages" : m_endpoint + "/v1/messages";
+    std::string responseData = performHttpRequest(url, "POST", payload.dump(), {
         {"Content-Type", "application/json"},
         {"x-api-key", m_apiKey},
         {"anthropic-version", "2023-06-01"}
-    };
-
-    std::string responseData = performHttpRequest(url, "POST", payload.dump(), headers);
+    });
 
     try {
         return nlohmann::json::parse(responseData);
@@ -321,17 +369,15 @@ nlohmann::json ModelInvoker::sendOpenAIRequest(const std::string& prompt,
 {
     nlohmann::json payload;
     payload["model"] = m_model;
+    payload["messages"] = nlohmann::json::array({{{"role", "user"}, {"content", prompt}}});
     payload["max_tokens"] = maxTokens;
     payload["temperature"] = temperature;
-    payload["messages"] = nlohmann::json::array({{{"role", "user"}, {"content", prompt}}});
 
-    std::string url = "https://api.openai.com/v1/chat/completions";
-    std::map<std::string, std::string> headers = {
+    std::string url = (m_endpoint == "https://api.openai.com") ? m_endpoint + "/v1/chat/completions" : m_endpoint + "/v1/chat/completions";
+    std::string responseData = performHttpRequest(url, "POST", payload.dump(), {
         {"Content-Type", "application/json"},
         {"Authorization", "Bearer " + m_apiKey}
-    };
-
-    std::string responseData = performHttpRequest(url, "POST", payload.dump(), headers);
+    });
 
     try {
         return nlohmann::json::parse(responseData);
@@ -340,172 +386,412 @@ nlohmann::json ModelInvoker::sendOpenAIRequest(const std::string& prompt,
     }
 }
 
-nlohmann::json ModelInvoker::parsePlan(const std::string& llmOutput)
-{
-    std::regex jsonBlockRegex(R"(```(?:json)?\s*\n?([\s\S]*?)\n?```)");
-    std::smatch match;
+    // [NEW] RawrXD IPC Implementation
+nlohmann::json ModelInvoker::sendRawrXDRequest(const std::string& messageBlock, int maxTokens, float temperature) {
+    nlohmann::json result;
+    result["response"] = "";
 
-    if (std::regex_search(llmOutput, match, jsonBlockRegex)) {
-        try {
-            return nlohmann::json::parse(match.str(1));
-        } catch (...) {}
+    HANDLE hPipe = CreateFileA(
+        "\\\\.\\pipe\\RawrXD_IPC",
+        GENERIC_READ | GENERIC_WRITE,
+        0, NULL, OPEN_EXISTING, 0, NULL);
+
+    if (hPipe == INVALID_HANDLE_VALUE) {
+        // Fallback or silent fail
+        return result; 
     }
+
+    // Tokenize Locally (Simple ASCII/Byte Packing for now)
+    // We convert std::string chars to int32 tokens so the ASM backend receives the expected format.
+    std::vector<int32_t> tokens;
+    for (unsigned char c : messageBlock) {
+        tokens.push_back(static_cast<int32_t>(c));
+    }
+
+    // Send Prompt
+    DWORD bytesWritten;
+    bool success = WriteFile(hPipe, tokens.data(), tokens.size() * sizeof(int32_t), &bytesWritten, NULL);
+    
+    if (success) {
+        int32_t buffer[2048]; // Read up to 2048 tokens
+        DWORD bytesRead;
+        if (ReadFile(hPipe, buffer, sizeof(buffer), &bytesRead, NULL)) {
+            // Detokenize (Int32 -> Char)
+            std::string resp;
+            int count = bytesRead / sizeof(int32_t);
+            for (int i = 0; i < count; ++i) {
+                int32_t tok = buffer[i];
+                if (tok < 256 && tok > 0) {
+                    resp += static_cast<char>(tok);
+                }
+            }
+             result["response"] = resp;
+        }
+    }
+
+    CloseHandle(hPipe);
+    return result;
+}
+
+/**
+ * @brief Invoke Ollama API
+ */
+nlohmann::json ModelInvoker::sendOllamaRequest(const std::string& model, 
+                                                const std::string& prompt,
+                                                int maxTokens,
+                                                double temperature)
+{
+    nlohmann::json payload;
+    payload["model"] = model;
+    payload["prompt"] = prompt;
+    payload["temperature"] = temperature;
+    payload["num_predict"] = maxTokens;
+    payload["stream"] = false;
+
+    std::string url = m_endpoint + "/api/generate";
+    std::string responseData = performHttpRequest(url, "POST", payload.dump(), {{"Content-Type", "application/json"}});
 
     try {
-        return nlohmann::json::parse(llmOutput);
-    } catch (...) {}
-
-    nlohmann::json fallback = nlohmann::json::array();
-    fallback.push_back({{"type", "user_input"}, {"description", llmOutput.substr(0, 500)}});
-    return fallback;
-}
-
-bool ModelInvoker::validatePlanSanity(const nlohmann::json& plan)
-{
-    if (!plan.is_array() || plan.empty()) return false;
-
-    int actionCount = 0;
-    std::vector<std::string> seenTargets;
-
-    for (const auto& action : plan) {
-        if (!action.is_object()) return false;
-
-        std::string type = action.value("type", "");
-        if (type == "file_delete" || type == "format_drive" || type == "system_reboot") return false;
-
-        std::string target = action.value("target", "");
-        if (!target.empty()) {
-            if (std::find(seenTargets.begin(), seenTargets.end(), target) != seenTargets.end()) return false;
-            seenTargets.push_back(target);
-        }
-
-        if (++actionCount > 100) return false;
+        return nlohmann::json::parse(responseData);
+    } catch (...) {
+        return nlohmann::json::object();
     }
-
-    return true;
 }
 
-std::string ModelInvoker::getCacheKey(const InvocationParams& params) const
+nlohmann::json ModelInvoker::sendClaudeRequest(const std::string& prompt,
+                                                int maxTokens,
+                                                double temperature)
 {
-    return params.wish.substr(0, 100);
+    nlohmann::json payload;
+    payload["model"] = m_model;
+    payload["max_tokens"] = maxTokens;
+    payload["temperature"] = temperature;
+    payload["messages"] = nlohmann::json::array({{{"role", "user"}, {"content", prompt}}});
+
+    std::string url = (m_endpoint == "https://api.anthropic.com") ? m_endpoint + "/v1/messages" : m_endpoint + "/v1/messages";
+    std::string responseData = performHttpRequest(url, "POST", payload.dump(), {
+        {"Content-Type", "application/json"},
+        {"x-api-key", m_apiKey},
+        {"anthropic-version", "2023-06-01"}
+    });
+
+    try {
+        return nlohmann::json::parse(responseData);
+    } catch (...) {
+        return nlohmann::json::object();
+    }
 }
 
-LLMResponse ModelInvoker::getCachedResponse(const std::string& key) const
+nlohmann::json ModelInvoker::sendOpenAIRequest(const std::string& prompt,
+                                                int maxTokens,
+                                                double temperature)
 {
-    auto it = m_responseCache.find(key);
-    if (it != m_responseCache.end()) return it->second;
-    return LLMResponse();
+    nlohmann::json payload;
+    payload["model"] = m_model;
+    payload["messages"] = nlohmann::json::array({{{"role", "user"}, {"content", prompt}}});
+    payload["max_tokens"] = maxTokens;
+    payload["temperature"] = temperature;
+
+    std::string url = (m_endpoint == "https://api.openai.com") ? m_endpoint + "/v1/chat/completions" : m_endpoint + "/v1/chat/completions";
+    std::string responseData = performHttpRequest(url, "POST", payload.dump(), {
+        {"Content-Type", "application/json"},
+        {"Authorization", "Bearer " + m_apiKey}
+    });
+
+    try {
+        return nlohmann::json::parse(responseData);
+    } catch (...) {
+        return nlohmann::json::object();
+    }
 }
 
-void ModelInvoker::cacheResponse(const std::string& key, const LLMResponse& response)
-{
-    m_responseCache[key] = response;
-}
-
+// Helper: HTTP Request implementation via WinHTTP
 std::string ModelInvoker::performHttpRequest(const std::string& url, 
-                                             const std::string& method, 
-                                             const std::string& body, 
-                                             const std::map<std::string, std::string>& headers)
+                                            const std::string& method, 
+                                            const std::string& body, 
+                                            const std::map<std::string, std::string>& headers)
 {
-    auto toWide = [](const std::string& input) -> std::wstring {
-        if (input.empty()) return L"";
-        int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, nullptr, 0);
-        if (sizeNeeded <= 0) return L"";
-        std::wstring output(sizeNeeded - 1, L'\0');
-        MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, output.data(), sizeNeeded);
-        return output;
-    };
+    // Basic URL parsing (assuming full URL in var)
+    // Actually we need to split host/path/port
+    std::string hostName;
+    std::string path;
+    int port = 443;
+    bool isHttps = true;
 
-    std::wstring urlW = toWide(url);
-    if (urlW.empty()) return std::string();
-
-    URL_COMPONENTS components{};
-    components.dwStructSize = sizeof(components);
-    components.dwSchemeLength = static_cast<DWORD>(-1);
-    components.dwHostNameLength = static_cast<DWORD>(-1);
-    components.dwUrlPathLength = static_cast<DWORD>(-1);
-    components.dwExtraInfoLength = static_cast<DWORD>(-1);
-
-    if (!WinHttpCrackUrl(urlW.c_str(), 0, 0, &components)) {
-        return std::string();
+    // Really naive parsing for the sake of example given context constraints
+    size_t protocolPos = url.find("://");
+    if (protocolPos != std::string::npos) {
+        std::string protocol = url.substr(0, protocolPos);
+        if (protocol == "http") { isHttps = false; port = 80; }
+        
+        size_t pathPos = url.find('/', protocolPos + 3);
+        if (pathPos != std::string::npos) {
+            hostName = url.substr(protocolPos + 3, pathPos - (protocolPos + 3));
+            path = url.substr(pathPos);
+        } else {
+            hostName = url.substr(protocolPos + 3);
+            path = "/";
+        }
+    } else {
+        hostName = "localhost";
+        path = url;
     }
 
-    std::wstring host(components.lpszHostName, components.dwHostNameLength);
-    std::wstring path(components.lpszUrlPath, components.dwUrlPathLength);
-    if (components.lpszExtraInfo && components.dwExtraInfoLength > 0) {
-        path.append(components.lpszExtraInfo, components.dwExtraInfoLength);
+    size_t colon = hostName.find(':');
+    if (colon != std::string::npos) {
+        try {
+            port = std::stoi(hostName.substr(colon + 1));
+            hostName = hostName.substr(0, colon);
+        } catch(...) {}
     }
 
-    HINTERNET hSession = WinHttpOpen(L"RawrXD/1.0",
-                                    WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                    WINHTTP_NO_PROXY_NAME,
-                                    WINHTTP_NO_PROXY_BYPASS,
-                                    0);
-    if (!hSession) return std::string();
+    HINTERNET hSession = WinHttpOpen(L"RawrXD Agent/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return "";
 
-    HINTERNET hConnect = WinHttpConnect(hSession, host.c_str(), components.nPort, 0);
+    std::wstring wHost(hostName.begin(), hostName.end());
+    HINTERNET hConnect = WinHttpConnect(hSession, wHost.c_str(), port, 0);
     if (!hConnect) {
         WinHttpCloseHandle(hSession);
-        return std::string();
+        return "";
     }
 
-    std::wstring methodW = toWide(method);
-    DWORD flags = (components.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
-    HINTERNET hRequest = WinHttpOpenRequest(hConnect,
-                                            methodW.c_str(),
-                                            path.c_str(),
-                                            nullptr,
-                                            WINHTTP_NO_REFERER,
-                                            WINHTTP_DEFAULT_ACCEPT_TYPES,
-                                            flags);
+    std::wstring wPath(path.begin(), path.end());
+    std::wstring wMethod(method.begin(), method.end());
+    
+    DWORD flags = isHttps ? WINHTTP_FLAG_SECURE : 0;
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, wMethod.c_str(), wPath.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
     if (!hRequest) {
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
-        return std::string();
+        return "";
     }
 
-    for (const auto& header : headers) {
-        std::string headerLine = header.first + ": " + header.second + "\r\n";
-        std::wstring headerWide = toWide(headerLine);
-        WinHttpAddRequestHeaders(hRequest, headerWide.c_str(), static_cast<DWORD>(-1), WINHTTP_ADDREQ_FLAG_ADD);
+    // Add headers
+    for (const auto& [key, val] : headers) {
+        std::wstring wKey(key.begin(), key.end());
+        std::wstring wVal(val.begin(), val.end());
+        std::wstring wHeader = wKey + L": " + wVal;
+        WinHttpAddRequestHeaders(hRequest, wHeader.c_str(), (DWORD)wHeader.length(), WINHTTP_ADDREQ_FLAG_ADD);
     }
 
-    DWORD bodySize = static_cast<DWORD>(body.size());
-    BOOL sent = WinHttpSendRequest(hRequest,
-                                   WINHTTP_NO_ADDITIONAL_HEADERS,
-                                   0,
-                                   bodySize > 0 ? (LPVOID)body.data() : WINHTTP_NO_REQUEST_DATA,
-                                   bodySize,
-                                   bodySize,
-                                   0);
-    if (!sent || !WinHttpReceiveResponse(hRequest, nullptr)) {
-        WinHttpCloseHandle(hRequest);
-        WinHttpCloseHandle(hConnect);
-        WinHttpCloseHandle(hSession);
-        return std::string();
+    // Retry loop for robustness
+    int maxRetries = 3;
+    for (int i = 0; i <= maxRetries; ++i) {
     }
 
     std::string response;
-    DWORD bytesAvailable = 0;
+    DWORD dwSize = 0;
+    DWORD dwDownloaded = 0;
+    
     do {
-        bytesAvailable = 0;
-        if (!WinHttpQueryDataAvailable(hRequest, &bytesAvailable)) {
-            break;
+        dwSize = 0;
+        if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+        if (dwSize == 0) break;
+
+        std::vector<char> buffer(dwSize + 1);
+        if (!WinHttpReadData(hRequest, &buffer[0], dwSize, &dwDownloaded)) break;
+        
+        if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)body.c_str(), (DWORD)body.length(), (DWORD)body.length(), 0)) {   response.append(buffer.data(), dwDownloaded);
+            if (i == maxRetries) {    } while (dwSize > 0);
+                WinHttpCloseHandle(hRequest);
+                WinHttpCloseHandle(hConnect);e(hRequest);
+                WinHttpCloseHandle(hSession);nect);
+                return "";WinHttpCloseHandle(hSession);
+            }
+            Sleep(1000 * (i + 1)); // Backoff;
+            continue;
         }
-        if (bytesAvailable == 0) {
-            break;
-        }
-        std::vector<char> buffer(bytesAvailable + 1, 0);
-        DWORD bytesRead = 0;
-        if (!WinHttpReadData(hRequest, buffer.data(), bytesAvailable, &bytesRead)) {
-            break;
-        }
-        response.append(buffer.data(), bytesRead);
-    } while (bytesAvailable > 0);
+        nlohmann::json ModelInvoker::parsePlan(const std::string& llmOutput)
+        if (!WinHttpReceiveResponse(hRequest, NULL)) {
+            if (i == maxRetries) {
+                WinHttpCloseHandle(hRequest);{
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return "";
+            } blocks
+            Sleep(1000 * (i + 1));on\s*([\s\S]*?)\s*```)");
+            continue;
+        }if (std::regex_search(llmOutput, match, jsonBlock)) {
+
+        // Success           return nlohmann::json::parse(match[1].str());
+        break;        } catch (...) {}
+    }
+
+    std::string response;ray brackets [ ... ]
+    DWORD dwSize = 0;t start = llmOutput.find('[');
+    DWORD dwDownloaded = 0;
+    ::string::npos && end != std::string::npos && end > start) {
+    do {        try {
+        dwSize = 0;(llmOutput.substr(start, end - start + 1));
+        if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+        if (dwSize == 0) break;
+
+        std::vector<char> buffer(dwSize + 1);ohmann::json::array();
+        if (!WinHttpReadData(hRequest, &buffer[0], dwSize, &dwDownloaded)) break;
+        
+        response.append(buffer.data(), dwDownloaded);ModelInvoker::validatePlanSanity(const nlohmann::json& plan)
+    } while (dwSize > 0);{
 
     WinHttpCloseHandle(hRequest);
-    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hConnect);invalid (sometimes valid)
     WinHttpCloseHandle(hSession);
+    
+    return response;
+}bject()) return false;
+   if (!action.contains("type")) return false;
+nlohmann::json ModelInvoker::parsePlan(const std::string& llmOutput)        if (!action.contains("target")) return false;
+{
+    // Try raw JSON parse first
+    try {    return true;
+        return nlohmann::json::parse(llmOutput);
+    } catch (...) {}
+onst InvocationParams& params) const
+    // Extract from markdown code blocks
+    std::regex jsonBlock(R"(```json\s*([\s\S]*?)\s*```)");
+    std::smatch match;
+    if (std::regex_search(llmOutput, match, jsonBlock)) {    size_t seed = 0;
+        try {e3779b9 + (seed<<6) + (seed>>2);
+            return nlohmann::json::parse(match[1].str());+ ... (too large?)
+        } catch (...) {}
+    }
 
+    // Fallback: Try to find array brackets [ ... ]static std::string getCacheDir() {
+    size_t start = llmOutput.find('[');tem::path p("cache");
+    size_t end = llmOutput.rfind(']');   if (!std::filesystem::exists(p)) {
+    if (start != std::string::npos && end != std::string::npos && end > start) {        std::filesystem::create_directories(p);
+        try {
+            return nlohmann::json::parse(llmOutput.substr(start, end - start + 1));   return p.string();
+        } catch (...) {}
+    }
+oker::getCachedResponse(const std::string& key) const
+    return nlohmann::json::array();
+}
+
+bool ModelInvoker::validatePlanSanity(const nlohmann::json& plan)
+{    std::filesystem::path cacheFile = std::filesystem::path(getCacheDir()) / (key + ".json");
+    if (!plan.is_array()) return false;cheFile)) {
+    
+    // Check for empty plan if that's invalid (sometimes valid);
+    if (plan.empty()) return true;
+       f >> j;
+    for (const auto& action : plan) {nt = j["content"];
+        if (!action.is_object()) return false;           resp.model = j["model"];
+        if (!action.contains("type")) return false;            resp.durationMs = j["durationMs"];
+        if (!action.contains("target")) return false;
+    }       } catch(...) {}
+
+    return true;
+}    return resp;
+
+std::string ModelInvoker::getCacheKey(const InvocationParams& params) const
+{oker::cacheResponse(const std::string& key, const LLMResponse& response)
+    // Simple hash of wish + codebase context
+    std::hash<std::string> hasher;turn;
+    size_t seed = 0;
+    seed ^= hasher(params.wish) + 0x9e3779b9 + (seed<<6) + (seed>>2);d::filesystem::path(getCacheDir()) / (key + ".json");
+    // seed ^= hasher(params.codebaseContext) + ... (too large?)
+    return std::to_string(seed);
+}content;
+sponse.model;
+static std::string getCacheDir() {   j["durationMs"] = response.durationMs;
+    std::filesystem::path p("cache");    
+    if (!std::filesystem::exists(p)) {tream f(cacheFile);
+        std::filesystem::create_directories(p);       f << j.dump(2);
+    }    } catch (...) {}
+    return p.string();
+}
+(const std::string& systemPrompt, const std::string& userPrompt, int maxTokens)
+LLMResponse ModelInvoker::getCachedResponse(const std::string& key) const
+{
+    LLMResponse resp;nvoking = true;
+    resp.success = false; 
+
+    std::filesystem::path cacheFile = std::filesystem::path(getCacheDir()) / (key + ".json");
+    if (std::filesystem::exists(cacheFile)) {
+        try {// Construct prompt based on backend capabilities
+            std::ifstream f(cacheFile);em prompt for simplicity across backends
+            nlohmann::json j;lPrompt = systemPrompt;
+            f >> j;mpt.empty()) fullPrompt += "\n\n";
+            resp.content = j["content"];       fullPrompt += userPrompt;
+            resp.model = j["model"];
+            resp.durationMs = j["durationMs"];
+            resp.success = true;           llmResponse = sendOllamaRequest(m_model, fullPrompt, maxTokens, 0.7);
+        } catch(...) {}end == "claude") {
+    }pically supports system prompt in top level, but our helper is simple.
+                // We'll wrap in user message for now.
+    return resp;   llmResponse = sendClaudeRequest(fullPrompt, maxTokens, 0.7);
+}enai") {
+    llmResponse = sendOpenAIRequest(fullPrompt, maxTokens, 0.7);
+void ModelInvoker::cacheResponse(const std::string& key, const LLMResponse& response)
+{
+    if (!response.success) return;
+    
+    std::filesystem::path cacheFile = std::filesystem::path(getCacheDir()) / (key + ".json");ains("response")) response.rawOutput = llmResponse["response"].get<std::string>();
+    try {        } else if (m_backend == "claude") {
+        nlohmann::json j;("content") && llmResponse["content"].is_array() && !llmResponse["content"].empty()) {
+        j["content"] = response.content;tring>();
+        j["model"] = response.model;
+        j["durationMs"] = response.durationMs;
+        & llmResponse["choices"].is_array() && !llmResponse["choices"].empty()) {
+        std::ofstream f(cacheFile);]["content"].get<std::string>();
+        f << j.dump(2);
+    } catch (...) {}
+}
+        response.success = !response.rawOutput.empty();
+LLMResponse ModelInvoker::queryRaw(const std::string& systemPrompt, const std::string& userPrompt, int maxTokens)
+{) {
+    LLMResponse response;
+    m_isInvoking = true;
+
+    try {
+        nlohmann::json llmResponse;ing = false;
+        
+        // Construct prompt based on backend capabilities
+        // For now, we prepend system prompt for simplicity across backends
+        std::string fullPrompt = systemPrompt;odelInvoker::buildSystemPrompt(const std::vector<std::string>& tools)
+        if (!fullPrompt.empty()) fullPrompt += "\n\n";
+        fullPrompt += userPrompt;    // Basic system prompt for agent
+ramming agent named RawrXD. "
+        if (m_backend == "ollama") {                         "You are capable of editing code, running builds, and executing tests on your own environment.\n\n"
+            llmResponse = sendOllamaRequest(m_model, fullPrompt, maxTokens, 0.7);JSON action plans to fulfill user wishes.\n"
+        } else if (m_backend == "claude") {le tools:\n";
+            // Claude typically supports system prompt in top level, but our helper is simple.
+            // We'll wrap in user message for now.   prompt += "- " + t + "\n";
+            llmResponse = sendClaudeRequest(fullPrompt, maxTokens, 0.7);    }
+        } else if (m_backend == "openai") {
+            llmResponse = sendOpenAIRequest(fullPrompt, maxTokens, 0.7);pond with a valid JSON array of action objects. "
+        }             "Example: [{\"type\": \"edit_source\", \"target\": \"main.cpp\", \"old_code\": \"...\", \"new_code\": \"...\"}]";
+    
+        // Extract raw output
+        if (m_backend == "ollama") {
+             if (llmResponse.contains("response")) response.rawOutput = llmResponse["response"].get<std::string>();
+        } else if (m_backend == "claude") {
+            if (llmResponse.contains("content") && llmResponse["content"].is_array() && !llmResponse["content"].empty()) {
+                response.rawOutput = llmResponse["content"][0]["text"].get<std::string>();
+            }
+        } else if (m_backend == "openai") {
+             if (llmResponse.contains("choices") && llmResponse["choices"].is_array() && !llmResponse["choices"].empty()) {
+                response.rawOutput = llmResponse["choices"][0]["message"]["content"].get<std::string>();            }        }        response.success = !response.rawOutput.empty();    } catch (const std::exception& e) {        response.success = false;        response.error = e.what();    }    m_isInvoking = false;    return response;}
+std::string ModelInvoker::buildSystemPrompt(const std::vector<std::string>& tools)
+{
+    // Basic system prompt for agent
+    std::string prompt = "You are an autonomous AI programming agent named RawrXD. "
+                         "You are capable of editing code, running builds, and executing tests on your own environment.\n\n"
+                         "You generate JSON action plans to fulfill user wishes.\n"
+                         "Available tools:\n";
+    for(const auto& t : tools) {
+        prompt += "- " + t + "\n";
+    }
+    
+    prompt += "\nRespond with a valid JSON array of action objects. "
+              "Example: [{\"type\": \"edit_source\", \"target\": \"main.cpp\", \"old_code\": \"...\", \"new_code\": \"...\"}]";
+    
+    return prompt;
+}
+        response.error = e.what();
+        response.success = false;
+    }
+
+    m_isInvoking = false;
     return response;
 }

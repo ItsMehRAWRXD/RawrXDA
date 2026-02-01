@@ -2,6 +2,10 @@
 #ifndef AUTONOMOUS_FEATURE_ENGINE_H
 #define AUTONOMOUS_FEATURE_ENGINE_H
 
+#include <nlohmann/json.hpp>
+#include <thread>
+#include <atomic>
+#include <functional>
 
 // Forward declarations
 class HybridCloudManager;
@@ -18,7 +22,7 @@ struct AutonomousSuggestion {
     std::string explanation;
     double confidence;         // 0-1
     std::vector<std::string> benefits;
-    void* metadata;
+    nlohmann::json metadata;
     std::chrono::system_clock::time_point timestamp;
     bool wasAccepted;
 };
@@ -91,7 +95,7 @@ struct CodeQualityMetrics {
     double security;           // 0-100
     double efficiency;         // 0-100
     double overallScore;       // 0-100
-    void* details;
+    nlohmann::json details;
 };
 
 // Learning profile for user
@@ -101,10 +105,10 @@ struct UserCodingProfile {
     std::unordered_map<std::string, int> patternUsage;
     std::vector<std::string> commonMistakes;
     double averageAcceptanceRate;
-    void* preferences;
+    nlohmann::json preferences;
 };
 
-class AutonomousFeatureEngine : public void {
+class AutonomousFeatureEngine {
 
 public:
     explicit AutonomousFeatureEngine(void* parent = nullptr);
@@ -190,6 +194,20 @@ public:
     void analysisComplete(const std::string& filePath);
     void errorOccurred(const std::string& error);
 
+    // Explicit requests
+    void requestBugFix(const std::string& filePath, int lineNumber, const std::string& description);
+    void requestOptimization(const std::string& filePath, const std::string& description);
+
+    // Callbacks
+    std::function<void(const AutonomousSuggestion&)> onSuggestionGenerated;
+    std::function<void(const SecurityIssue&)> onSecurityIssueDetected;
+    std::function<void(const PerformanceOptimization&)> onOptimizationFound;
+    std::function<void(const DocumentationGap&)> onDocumentationGapFound;
+    std::function<void(const GeneratedTest&)> onTestGenerated;
+    std::function<void(const CodeQualityMetrics&)> onCodeQualityAssessed;
+    std::function<void(const std::string&)> onAnalysisComplete;
+    std::function<void(const std::string&)> onErrorOccurred;
+
 private:
     void onAnalysisTimerTimeout();
 
@@ -259,7 +277,8 @@ private:
     std::unordered_map<std::string, int> acceptedSuggestionsByType;
     std::unordered_map<std::string, int> rejectedSuggestionsByType;
     
-    void** analysisTimer;
+    std::thread backgroundThread;
+    std::atomic<bool> isRunning{false};
     std::string currentProjectPath;
     
     bool realTimeAnalysisEnabled;

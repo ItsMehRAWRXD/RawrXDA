@@ -1,8 +1,9 @@
 #pragma once
 
-#include <QByteArray>
+#include <vector>
+#include <cstdint>
 
 namespace codec {
-    QByteArray deflate(const QByteArray& input, bool* success = nullptr);
-    QByteArray inflate(const QByteArray& input, bool* success = nullptr);
+    std::vector<uint8_t> deflate(const std::vector<uint8_t>& input, bool* success = nullptr);
+    std::vector<uint8_t> inflate(const std::vector<uint8_t>& input, bool* success = nullptr);
 }

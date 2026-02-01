@@ -2,9 +2,20 @@
 
 
 #include <memory>
+#include <string>
+#include <vector>
+#include <nlohmann/json.hpp>
 #include "autonomous_model_manager.h"
 #include "intelligent_codebase_engine.h"
 #include "autonomous_feature_engine.h"
+#include "hybrid_cloud_manager.h"
+
+struct OrchestratorConfig {
+    bool autoAnalysis = true;
+    bool autoTestGen = true;
+    int checkIntervalSeconds = 30;
+    std::string mode = "hybrid";
+};
 
 /**
  * @brief Master Autonomous Intelligence Orchestrator
@@ -13,7 +24,7 @@
  * IDE experience comparable to Cursor. This is the "brain" that makes
  * the IDE truly autonomous.
  */
-class AutonomousIntelligenceOrchestrator : public void {
+class AutonomousIntelligenceOrchestrator {
 
 private:
     // Core autonomous systems
@@ -36,6 +47,7 @@ private:
     int totalBugsDetected = 0;
     
     // Configuration
+    int m_checkInterval = 30;
     bool autoAnalysisEnabled = true;
     bool autoTestGenerationEnabled = true;
     bool autoBugFixEnabled = true;
@@ -47,7 +59,7 @@ public:
     
     // Initialization
     bool initialize(const std::string& projectPath);
-    bool loadConfiguration(const void*& config);
+    bool loadConfiguration(const std::string& configPath);
     bool saveConfiguration();
     
     // Autonomous operations
@@ -57,16 +69,16 @@ public:
     bool resumeAutonomousMode();
     
     // Intelligent analysis
-    void* analyzeProject(const std::string& projectPath);
-    void* analyzeFile(const std::string& filePath);
-    void* analyzeFunction(const std::string& functionName, const std::string& filePath);
-    void* getProjectIntelligence();
+    bool analyzeProject(const std::string& projectPath);
+    bool analyzeFile(const std::string& filePath);
+    bool analyzeFunction(const std::string& functionName, const std::string& filePath);
+    nlohmann::json getProjectIntelligence();
     
     // Intelligent recommendations
-    void* getIntelligentRecommendations();
-    void* getOptimizationSuggestions();
-    void* getRefactoringSuggestions();
-    void* getBugReports();
+    nlohmann::json getIntelligentRecommendations();
+    std::vector<Optimization> getOptimizationSuggestions();
+    std::vector<RefactoringOpportunity> getRefactoringSuggestions();
+    std::vector<BugReport> getBugReports();
     
     // Automatic actions
     bool autoSelectBestModel(const std::string& taskType = "");
@@ -78,7 +90,7 @@ public:
     // Model intelligence
     ModelRecommendation getModelRecommendation(const std::string& taskType);
     bool switchModel(const std::string& modelId);
-    void* getAvailableModels();
+    nlohmann::json getAvailableModels();
     
     // Cloud integration
     bool enableCloudMode();
@@ -90,12 +102,12 @@ public:
     double getCodeQualityScore();
     double getTestCoverage();
     double getMaintainabilityIndex();
-    void* getQualityReport();
+    nlohmann::json getQualityReport();
     
     // Enterprise features
     bool enableEnterpriseMode();
     bool setupTeamCollaboration(const std::string& teamId);
-    void* getEnterpriseReport();
+    nlohmann::json getEnterpriseReport();
 
 
     void autonomousModeStarted();

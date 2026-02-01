@@ -198,6 +198,9 @@ struct ToolDefinition {
     
     // Tool handler function
     std::function<json(const json&)> handler;
+
+    // Input Schema (JSON Schema)
+    json inputSchema;
     
     // Metadata
     std::vector<std::string> tags;

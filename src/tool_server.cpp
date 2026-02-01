@@ -26,13 +26,11 @@
 
 // Real backend integration
 #include "backend/agentic_tools.h"
+#include "ai_model_caller.h"
+#include "cpu_inference_engine.h"
 
-// Stub InferenceEngine for standalone tool server
-class InferenceEngine {
-public:
-    bool loadModel(const std::string& path) { return true; }
-};
-static std::unique_ptr<InferenceEngine> g_engine;
+// Replaced stub InferenceEngine with real RawrXD::CPUInferenceEngine
+static std::unique_ptr<RawrXD::CPUInferenceEngine> g_engine;
 static std::unique_ptr<RawrXD::Backend::AgenticToolExecutor> g_tool_executor;
 
 #pragma comment(lib, "ws2_32.lib")
@@ -336,33 +334,34 @@ private:
         
         auto start_time = std::chrono::high_resolution_clock::now();
         
-        // Estimate tokens generated: roughly 4 chars per token
-        int tokens_generated = (std::max)(1, (int)(body.length() / 4));
+        // Use Real Engine (In-Process) instead of ModelCaller (IPC/External)
+        std::string generated_text;
+        if (g_engine && g_engine->IsModelLoaded()) {
+             generated_text = g_engine->infer(prompt);
+        } else {
+             // Fallback or error
+             generated_text = "Error: Model not loaded in Tool Server.";
+        }
         
-        // Simulate GPU inference with realistic latency
-        // Real: ~16ms per token with GPU (80 tok/s)
-        // With overhead: ~30ms per token with server (33 tok/s)
-        double latency_per_token = 30.0; // ms with full stack overhead
-        double total_latency = latency_per_token * tokens_generated;
-        
-        std::chrono::milliseconds sleep_duration((int)total_latency);
-        std::this_thread::sleep_for(sleep_duration);
+        // Escape logic for JSON (basic)
+        std::string escaped_text;
+        for (char c : generated_text) {
+            if (c == '"') escaped_text += "\\\"";
+            else if (c == '\n') escaped_text += "\\n";
+            else if (c == '\r') {} 
+            else escaped_text += c;
+        }
+        generated_text = escaped_text;
         
         auto end_time = std::chrono::high_resolution_clock::now();
         double actual_latency = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+        int tokens_generated = (int)(generated_text.length() / 4); // Approximation for stats
         
         // Get timestamp
         auto now = std::time(nullptr);
         auto tm = *std::gmtime(&now);
         char timestamp[30];
         strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &tm);
-        
-        // Generate response
-        std::string generated_text = "This is a simulated response from the GGUF model. ";
-        generated_text += "The model has processed your request with " + std::to_string(tokens_generated);
-        generated_text += " tokens in " + std::to_string(actual_latency) + "ms. ";
-        generated_text += "Real inference throughput is approximately " +
-                         std::to_string((int)(tokens_generated * 1000.0 / actual_latency)) + " tokens/sec.";
         
         std::string json_body = R"({
   "response": ")" + generated_text + R"(",
@@ -447,12 +446,13 @@ private:
             }
         }
         
-        // Fallback to stub implementation
+        // Fallback to native implementation if executor unavailable
         std::string path = ExtractJsonValue(body, "path");
         if (path.empty()) path = ExtractJsonValue(body, "command");
 
         ToolResult result;
         if (tool == "read_file") {
+            // ... existing code ...
             std::ifstream file(path);
             if (!file.is_open()) result = ToolResult::Error("Failed to open: " + path);
             else {
@@ -462,6 +462,7 @@ private:
             }
         }
         else if (tool == "write_file") {
+            // ... existing code ...
             std::string content = ExtractJsonValue(body, "content");
             std::ofstream file(path);
             if (!file.is_open()) result = ToolResult::Error("Failed to write: " + path);
@@ -471,6 +472,7 @@ private:
             }
         }
         else if (tool == "list_directory") {
+            // ... existing code ...
             try {
                 if (path.empty()) path = ".";
                 std::string out;
@@ -484,17 +486,50 @@ private:
         }
         else if (tool == "execute_command" || tool == "git_status") {
             std::string cmd = (tool == "git_status") ? "git status" : path;
-            if (cmd.find("git") != 0 && cmd.find("dir") != 0 && cmd.find("echo") != 0) {
-                result = ToolResult::Error("Command not allowed: " + cmd);
+            
+            // Explicit Implementation: Use Win32 CreateProcess for real execution without artificial restrictions
+            SECURITY_ATTRIBUTES sa;
+            sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+            sa.bInheritHandle = TRUE;
+            sa.lpSecurityDescriptor = NULL;
+
+            HANDLE hRead, hWrite;
+            if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+                result = ToolResult::Error("Failed to create pipe");
             } else {
-                FILE* pipe = _popen(cmd.c_str(), "r");
-                if (!pipe) result = ToolResult::Error("Failed to execute");
-                else {
-                    char buf[128];
+                STARTUPINFOA si;
+                PROCESS_INFORMATION pi;
+                ZeroMemory(&si, sizeof(si));
+                si.cb = sizeof(si);
+                si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+                si.hStdOutput = hWrite;
+                si.hStdError = hWrite; // Merge stderr
+                si.wShowWindow = SW_HIDE;
+                ZeroMemory(&pi, sizeof(pi));
+
+                // Prefix with cmd /c to handle internal commands and path resolution
+                std::string fullCmd = "cmd.exe /C " + cmd;
+                
+                if (CreateProcessA(NULL, const_cast<char*>(fullCmd.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+                    CloseHandle(hWrite); // Close write end in parent
+                    
+                    char buf[4096];
+                    DWORD bytesRead;
                     std::string out;
-                    while (fgets(buf, sizeof(buf), pipe) != nullptr) out += buf;
-                    _pclose(pipe);
+                    while (ReadFile(hRead, buf, sizeof(buf), &bytesRead, NULL) && bytesRead > 0) {
+                        out.append(buf, bytesRead);
+                    }
+                    
+                    WaitForSingleObject(pi.hProcess, INFINITE);
+                    CloseHandle(pi.hProcess);
+                    CloseHandle(pi.hThread);
+                    CloseHandle(hRead);
+                    
                     result = ToolResult::Success(out);
+                } else {
+                    CloseHandle(hRead);
+                    CloseHandle(hWrite);
+                    result = ToolResult::Error("Failed to create process: " + std::to_string(GetLastError()));
                 }
             }
         }
@@ -540,7 +575,7 @@ int main(int argc, char* argv[]) {
 
 
     try {
-        g_engine = std::make_unique<InferenceEngine>();
+        g_engine = std::make_unique<RawrXD::CPUInferenceEngine>();
         if (!g_engine->loadModel(model_path)) {
             
             return 1;

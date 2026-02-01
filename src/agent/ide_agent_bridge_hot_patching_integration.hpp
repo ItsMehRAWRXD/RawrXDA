@@ -14,6 +14,24 @@
 #include "gguf_proxy_server.hpp"
 
 #include <memory>
+#include <vector>
+#include <string>
+#include <nlohmann/json.hpp>
+
+// Forward declare definitions of records used in database loading
+struct CorrectionPatternRecord {
+    int id;
+    std::string pattern;
+    std::string type;
+    double confidenceThreshold;
+};
+
+struct BehaviorPatchRecord {
+    int id;
+    std::string description;
+    std::string patchType;
+    std::string payloadJson;
+};
 
 
 /**
@@ -40,7 +58,7 @@
 class IDEAgentBridgeWithHotPatching : public IDEAgentBridge {
 
 public:
-    explicit IDEAgentBridgeWithHotPatching(void* parent = nullptr);
+    IDEAgentBridgeWithHotPatching();
     ~IDEAgentBridgeWithHotPatching() override;
 
     /**
@@ -78,7 +96,7 @@ public:
     /**
      * Get hot patching statistics
      */
-    void* getHotPatchingStatistics() const;
+    nlohmann::json getHotPatchingStatistics() const;
 
     /**
      * Enable/disable hot patching at runtime
@@ -86,14 +104,14 @@ public:
     void setHotPatchingEnabled(bool enabled);
 
     /**
-     * Load correction patterns from database
+     * Load correction patterns from JSON
      */
-    void loadCorrectionPatterns(const std::string& databasePath);
+    void loadCorrectionPatterns(const std::string& jsonPath);
 
     /**
-     * Load behavior patches from database
+     * Load behavior patches from JSON
      */
-    void loadBehaviorPatches(const std::string& databasePath);
+    void loadBehaviorPatches(const std::string& jsonPath);
 
     /**
      * Runtime configuration: proxy port
@@ -169,7 +187,12 @@ private:
     // Logging
     void logCorrection(const HallucinationDetection& correction);
     void logNavigationFix(const NavigationFix& fix);
+
+    // Shadow initialize to ensure proxy is hooked up
+    void initialize(const std::string& endpoint, const std::string& backend, const std::string& apiKey) {
+        IDEAgentBridge::initialize(endpoint, backend, apiKey);
+        if (isHotPatchingActive()) {
+             onModelInvokerReplaced();
+        }
+    }
 };
-
-#endif // IDE_AGENT_BRIDGE_HOT_PATCHING_INTEGRATION_HPP
-

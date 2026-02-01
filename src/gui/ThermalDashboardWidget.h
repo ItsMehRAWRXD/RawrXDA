@@ -1,6 +1,6 @@
 /**
  * @file ThermalDashboardWidget.h
- * @brief Qt widget displaying live NVMe thermal data + inference stats
+ * @brief Win32/Direct2D widget displaying live NVMe thermal data + inference stats
  *
  * Connects to Pocket-Lab Turbo DLL for:
  * - Real-time NVMe temperatures (5 drives)
@@ -10,41 +10,56 @@
  */
 #pragma once
 
+#include "../RawrXD_Foundation.h"
+#include <d2d1.h>
+#include <dwrite.h>
 
-class ThermalDashboardWidget : public void {
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
 
+class ThermalDashboardWidget {
 public:
-    explicit ThermalDashboardWidget(void* parent = nullptr);
+    ThermalDashboardWidget();
     ~ThermalDashboardWidget();
+
+    /// Create the Win32 window
+    bool Create(HWND parent, int x, int y, int width, int height);
 
     /// Check if DLL is loaded and functional
     bool isConnected() const { return m_dllLoaded; }
 
-    /// Force immediate refresh
-    void refresh();
+    HWND GetHwnd() const { return m_hwnd; }
 
-
-    /// Emitted when thermal state changes significantly
-    void thermalStateChanged(int tier, int maxTempC);
-
-    /// Emitted when a drive exceeds threshold
-    void thermalWarning(int driveIndex, int tempC);
-
-protected:
-    void paintEvent(void*  event) override;
-    void resizeEvent(void*  event) override;
+    void SetSize(int width, int height);
 
 private:
-    void onTimerTick();
+    static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+    LRESULT HandleMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
-private:
+    HRESULT CreateDeviceResources();
+    void DiscardDeviceResources();
+    void OnPaint();
+    void OnResize(UINT width, UINT height);
+    void OnTimer();
+
     void loadDll();
-    void updateLayout();
-    std::string tierName(unsigned int tier) const;
-    uint32_t tempColor(double tempC) const;
+    
+    // Window Handle
+    HWND m_hwnd;
 
-    // Timer for periodic refresh
-    void** m_timer;
+    // Direct2D Resources
+    ID2D1Factory* m_pD2DFactory;
+    ID2D1HwndRenderTarget* m_pRenderTarget;
+    IDWriteFactory* m_pDWriteFactory;
+    IDWriteTextFormat* m_pTextFormat;
+
+    // Brushes
+    ID2D1SolidColorBrush* m_pBrushCool;
+    ID2D1SolidColorBrush* m_pBrushWarm;
+    ID2D1SolidColorBrush* m_pBrushHot;
+    ID2D1SolidColorBrush* m_pBrushBg;
+    ID2D1SolidColorBrush* m_pBrushText;
+    ID2D1SolidColorBrush* m_pBrushAccent;
 
     // DLL state
     bool m_dllLoaded;
@@ -62,10 +77,6 @@ private:
     unsigned int m_tier;
     unsigned int m_sparseSkipPct;
     unsigned int m_gpuSplit;
-
-    // UI state
-    int m_barWidth;
-    int m_barMaxHeight;
 
     // Thresholds
     static constexpr int TEMP_WARN = 45;

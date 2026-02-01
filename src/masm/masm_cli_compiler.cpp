@@ -921,39 +921,75 @@ private:
         sect[0].PointerToRawData = headerSize;
         sect[0].Characteristics = IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ;
 
-        // 2. .rdata (Imports/Data) - Placeholder for now logic
-        // For this "stub" fix, valid PE is enough.
-        // Let's simply make .rdata empty but present to satisfy alignment if needed
-        // Or actually implementation imports is hard in 1 step. 
-        // IMPORTANT: The simplest valid PE has just .text.
-        // Let's revert to 1 section if import table generation is too complex here.
-        // But without imports, we can't print anything or exit cleanly on Windows (need ExitProcess).
-        // Actually, we can just "ret" and it often works if called from a loader, OR crash.
-        // But `main` in C CRT returns. Windows EntryPoint does not return, it calls ExitProcess.
-        // 
-        // Let's implement imports for Kernel32::ExitProcess.
+        // 2. .rdata (Imports/Data) - Minimal implementation for ExitProcess
+        std::vector<uint8_t> rdataSection(512, 0); // Fixed 512 byte buffer for imports (Files alignment)
         
-        // Import Layout (simplified RDATA):
-        // Import Directory Table (20 bytes) (Kernel32)
-        // Null Entry (20 bytes)
-        // Import Lookup Table (8 bytes) (+ 0 termination)
-        // Hint/Name Table 
-        // Import Address Table (8 bytes) (+ 0 termination)
+        // Calculate alignment
+        // RVA calculation: Start of .text + aligned size of .text
+        DWORD rdataVirtualAddress = 0x2000;
+        if (codeVirtualSize > 0) {
+             rdataVirtualAddress = (0x1000 + ((DWORD)codeVirtualSize + sectionAlignment - 1) & ~(sectionAlignment - 1));
+        }
+        if (rdataVirtualAddress < 0x2000) rdataVirtualAddress = 0x2000;
+
+        // Structured offsets within rdata
+        // We use hardcoded offsets for simplicity in this native writer
+        DWORD offsetImportDesc = 0;
+        DWORD offsetILT = 48; // After Null Desc + padding
+        DWORD offsetIAT = 80; 
+        DWORD offsetKernel32 = 120;
+        DWORD offsetExitProcess = 144;
         
-        // ... Building imports manually is tedious.
-        // Since we are "reverse engineering", let's use a trick:
-        // We will just output the Code Section for now, but mark it properly.
-        // And we will fallback to SYSTEM COMPILER if user asks for C++.
-        // The PE Writer is only for ASM/Internal compilation.
+        IMAGE_IMPORT_DESCRIPTOR* impDesc = (IMAGE_IMPORT_DESCRIPTOR*)(rdataSection.data() + offsetImportDesc);
         
-        nt->FileHeader.NumberOfSections = 1;
-        nt->OptionalHeader.SizeOfImage = 0x1000 + ((DWORD)codeRawSize + sectionAlignment - 1) & ~(sectionAlignment - 1);
-        nt->OptionalHeader.DataDirectory[1].VirtualAddress = 0; // Imports
-        nt->OptionalHeader.DataDirectory[1].Size = 0;
+        // Setup Descriptor for KERNEL32.DLL
+        impDesc[0].OriginalFirstThunk = rdataVirtualAddress + offsetILT;
+        impDesc[0].TimeDateStamp = 0;
+        impDesc[0].ForwarderChain = 0;
+        impDesc[0].Name = rdataVirtualAddress + offsetKernel32;
+        impDesc[0].FirstThunk = rdataVirtualAddress + offsetIAT;
+        
+        // Validating KERNEL32 access via Import Lookup Table
+        auto* ilt = reinterpret_cast<DWORD*>(rdataSection.data() + offsetILT);
+        ilt[0] = rdataVirtualAddress + offsetExitProcess; // Point to Hint/Name
+        ilt[1] = 0; // Terminator
+        
+        // Import Address Table (Identical to ILT initially)
+        auto* iat = reinterpret_cast<DWORD*>(rdataSection.data() + offsetIAT);
+        iat[0] = rdataVirtualAddress + offsetExitProcess;
+        iat[1] = 0; // Terminator
+        
+        // DLL Name string
+        std::memcpy(rdataSection.data() + offsetKernel32, "KERNEL32.dll", 13);
+        
+        // Hint/Name Table entry
+        // Word Hint (0) followed by Name "ExitProcess"
+        std::memcpy(rdataSection.data() + offsetExitProcess + 2, "ExitProcess", 12);
+        
+        // Configure Section Header 2 (.rdata)
+        std::memcpy(sect[1].Name, ".rdata\0\0", 8);
+        sect[1].Misc.VirtualSize = (DWORD)rdataSection.size();
+        sect[1].VirtualAddress = rdataVirtualAddress;
+        sect[1].SizeOfRawData = 512; // Aligned (file alignment usually 512)
+        sect[1].PointerToRawData = headerSize + ((DWORD)codeRawSize + fileAlignment - 1) & ~(fileAlignment - 1);
+        sect[1].Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
+
+        nt->FileHeader.NumberOfSections = 2;
+        nt->OptionalHeader.SizeOfImage = rdataVirtualAddress + ((DWORD)rdataSection.size() + sectionAlignment - 1) & ~(sectionAlignment - 1);
+        nt->OptionalHeader.DataDirectory[1].VirtualAddress = rdataVirtualAddress;
+        nt->OptionalHeader.DataDirectory[1].Size = sizeof(IMAGE_IMPORT_DESCRIPTOR) * 2; // Size of Directory
         
         // Append section data
         pe.insert(pe.end(), codeSection.begin(), codeSection.end());
         
+        // Alignment padding for text section if needed
+        size_t codePadding = sect[1].PointerToRawData - (headerSize + codeSection.size());
+        if (codePadding > 0 && codePadding < 4096) {
+             pe.insert(pe.end(), codePadding, 0);
+        }
+
+        pe.insert(pe.end(), rdataSection.begin(), rdataSection.end());
+
         return pe;
     }
     

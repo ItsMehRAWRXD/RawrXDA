@@ -1,37 +1,19 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
+#include <string>
 #include <vector>
 #include <map>
+#include <cstdint>
+#include <tuple>
+#include <mutex>
 
-class QComboBox;
-class QCheckBox;
-class QSpinBox;
-class QLineEdit;
-class QTabWidget;
-
-/**
+/*!
  * @class CICDSettings
  * @brief Configure CI/CD pipelines for automated training and deployment
- *
- * Features:
- * - Define training jobs (hyperparameters, data, schedules)
- * - Job queuing and scheduling (immediate, scheduled, recurring)
- * - Deployment pipelines (model versioning, A/B testing)
- * - Webhook integration (GitHub, GitLab, Bitbucket)
- * - Automated model evaluation and validation
- * - Performance benchmarking and regression testing
- * - Artifact management (model versioning, checkpoint storage)
- * - Notification and alerting (email, Slack, webhook)
- * - Rollback capabilities
- * - Pipeline templates and presets
+ * STL-only replacement for Qt-based settings.
  */
-class CICDSettings : public QObject
+class CICDSettings
 {
-    Q_OBJECT
-
 public:
     enum class JobStatus {
         Pending,
@@ -60,44 +42,142 @@ public:
     };
 
     struct TrainingJob {
-        QString jobId;
-        QString jobName;
-        QString description;
-        QString modelName;
-        QString datasetPath;
-        int epochs;
-        int batchSize;
-        float learningRate;
-        QString optimizer;
-        int numGPUs;
-        QString priority;   // "low", "normal", "high"
-        TriggerType trigger;
-        QString cronSchedule;  // For scheduled jobs (e.g., "0 2 * * *" = 2 AM daily)
-        bool enabled;
-        qint64 createdAt;
-        qint64 lastRunAt;
-        int successCount;
-        int failureCount;
+        std::string jobId;
+        std::string jobName;
+        std::string description;
+        std::string modelName;
+        std::string datasetPath;
+        int epochs = 10;
+        int batchSize = 32;
+        float learningRate = 0.001f;
+        std::string optimizer = "adam";
+        int numGPUs = 1;
+        std::string priority = "normal";
+        TriggerType trigger = TriggerType::Manual;
+        std::string cronSchedule;
+        bool enabled = true;
+        int64_t createdAt = 0;
+        int64_t lastRunAt = 0;
+        int successCount = 0;
+        int failureCount = 0;
     };
 
     struct PipelineStage {
-        QString stageName;
-        QString description;
-        bool enabled;
-        int timeoutSeconds;
-        std::vector<QString> commands;  // Shell commands to run
-        bool continueOnError;
+        std::string stageName;
+        std::string description;
+        bool enabled = true;
+        int timeoutSeconds = 600;
+        std::vector<std::string> commands;
+        bool continueOnError = false;
     };
 
     struct DeploymentConfig {
-        QString modelPath;
-        DeploymentStrategy strategy;
-        float canaryPercentage;     // 0.0 to 1.0, for Canary strategy
-        QString targetEnvironment;  // "staging", "production"
-        bool requireApproval;
-        std::vector<QString> approvers;
-        bool rollbackOnFailure;
-        int maxConcurrentRequests;
+        std::string modelPath;
+        DeploymentStrategy strategy = DeploymentStrategy::Immediate;
+        float canaryPercentage = 0.1f;
+        std::string targetEnvironment = "staging";
+        bool requireApproval = false;
+        std::vector<std::string> approvers;
+        bool rollbackOnFailure = true;
+        int maxConcurrentRequests = 100;
+    };
+
+    struct JobRunLog {
+        std::string jobId;
+        std::string runId;
+        JobStatus status;
+        int64_t startTime;
+        int64_t endTime;
+        std::string outputLog;
+        std::string errorMessage;
+        float accuracy;
+    };
+
+    struct NotificationConfig {
+        bool enableSlack = false;
+        std::string slackWebhookUrl;
+        bool enableEmail = false;
+        std::string emailAddress;
+        bool notifyOnSuccess = true;
+        bool notifyOnFailure = true;
+        bool notifyOnStart = false;
+    };
+
+    CICDSettings(void* parent = nullptr); // Parent ignored for STL compatibility
+    ~CICDSettings();
+
+    // Job Management
+    bool createJob(const TrainingJob& job);
+    bool updateJob(const std::string& jobId, const TrainingJob& job);
+    TrainingJob getJob(const std::string& jobId) const;
+    std::vector<TrainingJob> listJobs() const;
+    bool deleteJob(const std::string& jobId);
+    bool setJobEnabled(const std::string& jobId, bool enabled);
+
+    // Execution
+    std::string queueJob(const std::string& jobId); // Returns runId
+    bool cancelJob(const std::string& runId);
+    JobStatus getJobStatus(const std::string& runId) const;
+    std::vector<JobRunLog> getJobHistory(const std::string& jobId, int limit = 10) const;
+    std::tuple<int, int, int, float> getJobStatistics(const std::string& jobId) const; // Runs, Success, Fail, AvgDuration
+
+    // Pipelines
+    bool definePipeline(const std::string& jobId, const std::vector<PipelineStage>& stages);
+    std::vector<PipelineStage> getPipeline(const std::string& jobId) const;
+    std::map<std::string, void*> getPipelineTemplates() const; // Returns JSON-compatible maps
+
+    // Deployment
+    bool setDeploymentConfig(const std::string& jobId, const DeploymentConfig& config);
+    DeploymentConfig getDeploymentConfig(const std::string& jobId) const;
+    std::string deployModel(const std::string& jobId, const std::string& runId); // Returns deploymentId
+    bool rollbackDeployment(const std::string& deploymentId, const std::string& targetRunId);
+    
+    // Webhooks
+    std::string registerWebhook(const std::string& jobId, const std::string& platform, 
+                               const std::string& repository, const std::string& branch);
+    std::string handleWebhook(const void*& webhookData); // Using void* as placeholder for parsed JSON in current context
+
+    // Notification
+    bool setNotificationConfig(const NotificationConfig& config);
+    NotificationConfig getNotificationConfig() const;
+    bool sendTestNotification() const;
+
+    // Artifacts
+    bool storeArtifact(const std::string& artifactId, const std::string& artifactPath, const void*& metadata);
+    std::string getArtifact(const std::string& artifactId) const;
+    std::vector<std::string> listArtifacts(const std::string& jobId) const;
+    int cleanupOldArtifacts(int olderThanDays);
+
+    // Config Persistence
+    void* exportConfiguration() const;          // Returns void* (JSON)
+    bool importConfiguration(const void*& config);
+    bool saveToFile(const std::string& filePath) const;
+    bool loadFromFile(const std::string& filePath);
+
+signals: // Mock simple signals
+    void jobStarted(const std::string& jobId, const std::string& runId);
+    void jobCompleted(const std::string& jobId, const std::string& runId, bool success);
+    void jobFailed(const std::string& jobId, const std::string& runId, const std::string& error);
+    void deploymentStarted(const std::string& deploymentId);
+    void deploymentCompleted(const std::string& deploymentId, bool success);
+    void deploymentRolledBack(const std::string& deploymentId);
+    void webhookReceived(const std::string& platform, const std::string& event);
+
+private:
+    std::string generateJobId();
+    std::string generateRunId();
+    std::string generateDeploymentId();
+
+    mutable std::mutex m_mutex;
+    std::map<std::string, TrainingJob> m_jobs;
+    std::map<std::string, JobRunLog> m_runLogs;
+    std::map<std::string, std::vector<PipelineStage>> m_pipelines;
+    std::map<std::string, DeploymentConfig> m_deploymentConfigs;
+    std::map<std::string, void*> m_artifacts; // Stores generic metadata
+    
+    NotificationConfig m_notificationConfig;
+};
+
     };
 
     struct NotificationConfig {

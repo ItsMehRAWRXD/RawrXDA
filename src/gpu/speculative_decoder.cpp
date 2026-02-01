@@ -1,40 +1,38 @@
 #include "speculative_decoder.h"
 #include "../gpu_masm/gpu_masm_bridge.h"
 #include "../ggml_masm/ggml_masm_bridge.h"
+#include "cpu_inference_engine.h"
+#include "ai_model_caller.h"
+
 SpeculativeDecoder::SpeculativeDecoder()
-    
-    , m_gpuAccelerated(false)
+    : m_gpuAccelerated(false)
     , m_draftModelLoaded(false)
     , m_targetModelLoaded(false)
 {
+    m_draftEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+    m_targetEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+
     // Check if GPU backend is available for speculative decoding
     if (IsBackendInitialized()) {
         m_gpuAccelerated = true;
-    } else {
     }
 }
 
-SpeculativeDecoder::~SpeculativeDecoder()
-{
-}
+SpeculativeDecoder::~SpeculativeDecoder() = default;
 
 void SpeculativeDecoder::setDraftModel(const std::string &modelPath)
 {
     m_draftModelPath = modelPath;
-    m_draftModelLoaded = true;
-    
-    // In real implementation, would load model weights into GPU memory
-    if (m_gpuAccelerated) {
+    if (m_draftEngine->LoadModel(modelPath)) {
+        m_draftModelLoaded = true;
     }
 }
 
 void SpeculativeDecoder::setTargetModel(const std::string &modelPath)
 {
     m_targetModelPath = modelPath;
-    m_targetModelLoaded = true;
-    
-    // In real implementation, would load model weights into GPU memory
-    if (m_gpuAccelerated) {
+    if (m_targetEngine->LoadModel(modelPath)) {
+        m_targetModelLoaded = true;
     }
 }
 
@@ -46,83 +44,52 @@ std::vector<int> SpeculativeDecoder::generateTokens(const std::string &prompt, i
     // Verify draft tokens with the target model
     std::vector<int> verifiedTokens = verifyTokens(prompt, draftTokens);
     
+    // Notify stats
+    if (!draftTokens.empty()) {
+        float rate = (float)verifiedTokens.size() / (float)draftTokens.size();
+        acceptanceRateChanged(rate);
+    }
+
     return verifiedTokens;
 }
 
 std::vector<int> SpeculativeDecoder::generateDraftTokens(const std::string &prompt, int maxTokens)
 {
-    if (!m_draftModelLoaded) {
-        return std::vector<int>();
-    }
+    if (!m_draftModelLoaded) return {};
     
-    std::vector<int> tokens;
-    
-    if (m_gpuAccelerated) {
-        // GPU-accelerated draft token generation
-        // In real implementation, would:
-        // 1. Encode prompt to token IDs
-        // 2. Run draft model inference on GPU using MASM kernels
-        // 3. Sample from logits distribution
-        // 4. Return generated token IDs
-        
-std::vector<int> SpeculativeDecoder::verifyTokens(const std::string &prompt, const std::vector<int> &draftTokens)
-{
-    if (!m_targetModelLoaded) {
-        return std::vector<int>();
-    }
-    
-    if (m_gpuAccelerated) {
-        // GPU-accelerated verification
-        // In real implementation, would:
-        // 1. Run target model inference on GPU for prompt + draft tokens
-        // 2. Compare target model logits with draft tokens
-        // 3. Accept tokens where target model agrees, reject otherwise
-        // 4. Return accepted tokens
-        
-        std::vector<int> verifiedTokens;
-        int acceptedCount = 0;
-        
-        // Simulate realistic acceptance rate (~70-80%)
-        for (int i = 0; i < draftTokens.size(); i++) {
-            // Real impl would call: gpu_verify_token(context, target_model, draft_token)
-            bool accepted = (i % 5 != 0); // Simulate 80% acceptance rate
-            
-            if (accepted) {
-                verifiedTokens.append(draftTokens[i]);
-                acceptedCount++;
-            } else {
-                // Token rejected - stop here and let target model generate next
-                break;
-            }
-        }
-        
-        float acceptanceRate = (float)acceptedCount / draftTokens.size() * 100.0f;
-                 << "tokens with target model (GPU-accelerated, acceptance:" 
-                 << std::string::number(acceptanceRate, 'f', 1) << "%)";
-        
-        return verifiedTokens;
-    } else {
-        // CPU fallback
-        // Simulate basic verification on CPU
-        return draftTokens.mid(0, draftTokens.size() * 8 / 10); // Accept 80%
-    }
-    } else {
-        // CPU fallback - very slow
-        for (int i = 0; i < maxTokens; i++) {
-            int tokenId = 100 + (i * 7) % 10000;
-            tokens.append(tokenId);
-        }
-    }
-    
-    return tokens;
+    // Use member engine
+    std::vector<int32_t> context = m_draftEngine->Tokenize(prompt);
+    std::vector<int32_t> output = m_draftEngine->Generate(context, maxTokens);
+
+    std::vector<int> result;
+    for (auto t : output) result.push_back((int)t);
+    return result;
 }
 
 std::vector<int> SpeculativeDecoder::verifyTokens(const std::string &prompt, const std::vector<int> &draftTokens)
 {
-    (void)(prompt)
-    // In a real implementation, this would use the target model to verify tokens
-    // For this example, we'll just return the draft tokens (simulating 100% acceptance)
-    
-    return draftTokens;
-}
+    if (!m_targetModelLoaded) return draftTokens; // Fallback
 
+    std::vector<int> verifiedTokens;
+    
+    // Use member engine
+    std::vector<int32_t> contextIds = m_targetEngine->Tokenize(prompt);
+    
+    for (int token : draftTokens) {
+        // Run forward pass on current context
+        std::vector<int32_t> nextTokens = m_targetEngine->Generate(contextIds, 1);
+        if (nextTokens.empty()) break;
+        
+        int bestId = nextTokens[0];
+        if (bestId == token) {
+            verifiedTokens.push_back(token);
+            contextIds.push_back(token);
+        } else {
+            // Rejection! We accept the target model's true token and stop speculative batch
+            verifiedTokens.push_back(bestId); 
+            break;
+        }
+    }
+    
+    return verifiedTokens;
+}

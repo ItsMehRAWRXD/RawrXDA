@@ -3,6 +3,12 @@
 #ifndef HYBRID_CLOUD_MANAGER_H
 #define HYBRID_CLOUD_MANAGER_H
 
+#include <nlohmann/json.hpp>
+#include <chrono> 
+#include <memory>
+#include <unordered_map>
+// Forward decl
+namespace RawrXD { class UniversalModelRouter; }
 
 // Cloud provider information
 struct CloudProvider {
@@ -16,7 +22,7 @@ struct CloudProvider {
     std::chrono::system_clock::time_point lastHealthCheck;
     double costPerRequest = 0.0;     // USD (0.0 for local Ollama)
     double averageLatency = 1000.0;  // milliseconds
-    void* capabilities;
+    nlohmann::json capabilities;
 };
 
 // Cloud model information
@@ -30,7 +36,7 @@ struct CloudModel {
     int maxTokens = 4096;
     double averageLatency = 1000.0;
     bool isAvailable = true;
-    void* metadata;
+    nlohmann::json metadata;
 };
 
 // Execution request
@@ -41,7 +47,7 @@ struct ExecutionRequest {
     std::string language;
     int maxTokens = 1024;
     double temperature = 0.7;
-    void* parameters;
+    nlohmann::json parameters;
     std::chrono::system_clock::time_point timestamp;
 };
 
@@ -57,7 +63,7 @@ struct ExecutionResult {
     bool success = false;
     std::string errorMessage;
     std::chrono::system_clock::time_point completedAt;
-    void* metadata;
+    nlohmann::json metadata;
 };
 
 // Hybrid execution decision
@@ -98,12 +104,11 @@ struct PerformanceMetrics {
 struct FailoverConfig {
     bool enabled = true;
     int maxRetries = 3;
-    int timeoutMs = 30000;
-    std::vector<std::string> fallbackProviders;
-    bool autoSwitchOnFailure = true;
+    std::vector<std::string> providerPriority;
+    bool fallbackToLocal = true;
 };
 
-class HybridCloudManager : public void {
+class HybridCloudManager {
 
 public:
     explicit HybridCloudManager(void* parent = nullptr);
@@ -269,7 +274,7 @@ private:
     
     // Data members - SYNCHRONIZED with cpp
     std::unordered_map<std::string, CloudProvider> providers;
-    std::vector<CloudModel> cloudModels;
+    std::unordered_map<std::string, CloudModel> cloudModels;
     std::vector<ExecutionResult> executionHistory;  // Changed to std::vector from std::unordered_map
     std::vector<ExecutionRequest> requestQueue;
     
@@ -302,6 +307,8 @@ private:
     static constexpr double DEFAULT_COST_THRESHOLD = 0.01;  // $0.01 per request
     static constexpr int DEFAULT_LATENCY_THRESHOLD = 2000;  // 2 seconds
     static constexpr int MAX_RETRY_ATTEMPTS = 3;
+    
+    std::unique_ptr<RawrXD::UniversalModelRouter> router;
 };
 
 #endif // HYBRID_CLOUD_MANAGER_H

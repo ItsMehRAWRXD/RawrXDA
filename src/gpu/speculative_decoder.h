@@ -1,8 +1,14 @@
 #ifndef SPECULATIVE_DECODER_H
 #define SPECULATIVE_DECODER_H
 
+#include <vector>
+#include <string>
+#include <memory>
+#include "../cpu_inference_engine.h"
+
 class SpeculativeDecoder 
-{public:
+{
+public:
     explicit SpeculativeDecoder();
     ~SpeculativeDecoder();
 
@@ -15,7 +21,8 @@ class SpeculativeDecoder
     // Generate tokens using speculative decoding
     // Returns verified tokens from target model
     std::vector<int> generateTokens(const std::string &prompt, int maxTokens);
-\npublic:\n    void tokensGenerated(const std::vector<int> &tokens);
+
+    void tokensGenerated(const std::vector<int> &tokens);
     void acceptanceRateChanged(float rate);
 
 private:
@@ -24,10 +31,16 @@ private:
 
     std::string m_draftModelPath;
     std::string m_targetModelPath;
+    
+    // Engines
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_draftEngine;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_targetEngine;
+
     bool m_gpuAccelerated;
     bool m_draftModelLoaded;
     bool m_targetModelLoaded;
 };
+
 
 #endif // SPECULATIVE_DECODER_H
 

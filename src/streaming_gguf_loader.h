@@ -6,6 +6,8 @@
 #include <memory>
 #include <cstdint>
 
+namespace RawrXD {
+
 // ============================================================================
 // STREAMING GGUF LOADER - Memory-efficient tensor loading with zone-based
 // streaming (game engine style)
@@ -81,6 +83,9 @@ public:
     // For compatibility with old loader
     std::vector<TensorInfo> GetAllTensorInfo() const override;
     
+    // ---- Vocabulary ----
+    std::vector<std::string> GetVocabulary() const { return vocabulary_; }
+
 private:
     // ---- File Handle (kept open for streaming) ----
     std::string filepath_;
@@ -126,4 +131,11 @@ private:
     bool ReadValue(T& value);
     bool ReadString(std::string& value);
     uint64_t CalculateTensorSize(const std::vector<uint64_t>& shape, GGMLType type) const;
+
+    std::vector<std::string> vocabulary_;
+    
+    uint64_t tensor_info_offset = 0;
+    uint64_t data_base_offset = 0;
 };
+
+} // namespace RawrXD

@@ -103,10 +103,32 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getContextualCompletions(
 }
 
 void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
-
-
     // Pre-populate cache with likely completions for this file
-    // Placeholder implementation
+    // Strategy: Run a cheap inference pass to ensure weights are loaded
+    // and potentially cache common headers or structures.
+    
+    // 1. Ensure model is loaded
+    if (!m_inferenceEngine) return;
+
+    // 2. Create a "warmup" prompt based on file extension
+    std::string warmupPrompt = "// Language: C++\n#include <"; 
+    if (filePath.find(".py") != std::string::npos) {
+        warmupPrompt = "# Language: Python\nimport ";
+    } else if (filePath.find(".js") != std::string::npos) {
+        warmupPrompt = "// Language: JavaScript\nconst ";
+    }
+
+    // 3. Fire-and-forget generation (don't wait for result, just trigger compute)
+    // Running in a detached thread strictly for side-effect of loading paging
+    std::thread([this, warmupPrompt]() {
+        try {
+            // Short generation just to touch memory pages
+            std::vector<int32_t> tokens = m_inferenceEngine->tokenize(warmupPrompt);
+            m_inferenceEngine->generate(tokens, 5); 
+        } catch (...) {
+            // Ignore errors during prewarm
+        }
+    }).detach();
 }
 
 void RealTimeCompletionEngine::clearCache() {
@@ -271,7 +293,22 @@ std::string RealTimeCompletionEngine::buildCompletionPrompt(
     const std::string& suffix,
     const std::string& context) {
 
-    return prefix + " " + suffix + " " + context;
+    // Using Fill-In-the-Middle (FIM) format common in code models (e.g. CodeLlama, StarCoder)
+    // <PRE> prefix <SUF> suffix <MID>
+    
+    // 1. Inject Context if available (simplified RAG)
+    std::string fullContext = "";
+    if (!context.empty()) {
+        fullContext = "// Context:\n" + context + "\n\n";
+    }
+
+    // 2. Construct FIM prompt
+    // Note: Tokens <PRE>, <SUF>, <MID> should ideally be special tokens, 
+    // but here we use the string representation which many models support.
+    std::ostringstream ss;
+    ss << "<PRE> " << fullContext << prefix << " <SUF> " << suffix << " <MID>";
+    
+    return ss.str();
 }
 
 std::vector<CodeCompletion> RealTimeCompletionEngine::postProcessCompletions(
@@ -280,9 +317,34 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::postProcessCompletions(
 
     // Filter and rank completions
     std::vector<CodeCompletion> processed;
+    
+    if (modelOutput.empty()) return processed;
 
-    // Keep only completions above minimum confidence
-    // and sort by confidence
+    CodeCompletion comp;
+    comp.text = modelOutput;
+    
+    // Heuristic: trimming common generation artifacts
+    if (comp.text.find("<EOT>") != std::string::npos) {
+        comp.text = comp.text.substr(0, comp.text.find("<EOT>"));
+    }
+    
+    comp.insertTextLength = comp.text.length();
+    comp.cursorOffset = comp.text.length(); // Move cursor to end
+    comp.kind = "text"; 
+    
+    // Detect kind
+    if (comp.text.find("(") != std::string::npos && comp.text.find(")") != std::string::npos) {
+        comp.kind = "method";
+    } else if (comp.text.find("class ") != std::string::npos) {
+        comp.kind = "class";
+    }
+    
+    comp.confidence = calculateConfidence(comp.text, prefix);
+    
+    // Basic filtering
+    if (comp.confidence > 0.3) {
+        processed.push_back(comp);
+    }
 
     return processed;
 }
@@ -291,9 +353,28 @@ double RealTimeCompletionEngine::calculateConfidence(
     const std::string& completion,
     const std::string& context) {
 
-    // Calculate how confident we are in this completion
-    // based on context matching, popularity, etc.
-    return 0.85;
+    double score = 0.5; // Base score
+
+    // 1. Syntax heuristic: Does it end with a semicolon or brace?
+    if (!completion.empty()) {
+        char last = completion.back();
+        if (last == ';' || last == '}' || last == ')') {
+            score += 0.2;
+        }
+    }
+
+    // 2. Context matching: Does it continue the indentation?
+    // (Simplified check)
+    if (context.size() > 0 && context.back() == ' ' && completion.size() > 0 && completion[0] != ' ') {
+         // Context ends in space, completion starts with non-space -> good flow
+         score += 0.1;
+    }
+
+    // 3. Length penalty (too short is often noise, too long might be hallucination)
+    if (completion.length() < 2) score -= 0.1;
+    if (completion.length() > 200) score -= 0.1;
+
+    return std::min(1.0, std::max(0.0, score));
 }
 
 bool RealTimeCompletionEngine::shouldUseCache(const std::string& key) {

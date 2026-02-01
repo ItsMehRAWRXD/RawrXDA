@@ -1,242 +1,302 @@
-// universal_model_router.cpp - Implementation of Universal Model Router
 #include "universal_model_router.h"
 #include "cloud_api_client.h"
+#include "cpu_inference_engine.h"
+#include "RawrXD_PipeClient.h"
+#include <fstream>
+#include <iostream>
+#include <future>
+
+namespace RawrXD {
+
+UniversalModelRouter::UniversalModelRouter() : local_engine_ready(false), local_engine(nullptr), cloud_client(nullptr) {}
 
 
-UniversalModelRouter::UniversalModelRouter(void* parent)
-    : void(parent),
-      local_engine_ready(false),
-      cloud_client_ready(false)
-{
-    cloud_client = std::make_unique<CloudApiClient>(this);
+UniversalModelRouter::~UniversalModelRouter() {
+    // Unique ptrs handle cleanup
 }
 
-UniversalModelRouter::~UniversalModelRouter() = default;
+void UniversalModelRouter::registerModel(const std::string& name, const ModelConfig& config) {
+    if (name.empty()) return;
+    model_registry[name] = config;
+}
 
-void UniversalModelRouter::registerModel(const std::string& model_name, const ModelConfig& config)
-{
-    if (!config.isValid()) {
-        routerError(std::string("Invalid configuration for model: %1"));
-        return;
+void UniversalModelRouter::unregisterModel(const std::string& name) {
+    model_registry.erase(name);
+}
+
+ModelConfig UniversalModelRouter::getModelConfig(const std::string& name) const {
+    auto it = model_registry.find(name);
+    if (it != model_registry.end()) return it->second;
+    return ModelConfig();
+}
+
+std::vector<std::string> UniversalModelRouter::getAvailableModels() const {
+    std::vector<std::string> keys;
+    for(const auto& [k, v] : model_registry) keys.push_back(k);
+    return keys;
+}
+
+std::vector<std::string> UniversalModelRouter::getModelsForBackend(ModelBackend backend) const {
+     std::vector<std::string> keys;
+     for(const auto& [k, v] : model_registry) {
+         if (v.backend == backend) keys.push_back(k);
+     }
+     return keys;
+}
+
+bool UniversalModelRouter::loadConfigFromFile(const std::string& path) {
+    try {
+        std::ifstream f(path);
+        if (!f.is_open()) return false;
+        json j;
+        f >> j;
+        return loadConfigFromJson(j);
+    } catch (...) {
+        return false;
+    }
+}
+
+bool UniversalModelRouter::loadConfigFromJson(const json& j) {
+    try {
+        if (!j.is_object()) return false;
+        
+        if (j.contains("models") && j["models"].is_object()) {
+            for (auto& [name, model_json] : j["models"].items()) {
+                ModelConfig config;
+                // Default to LOCAL_GGUF if not specified
+                int backendVal = model_json.value("backend", 0);
+                config.backend = static_cast<ModelBackend>(backendVal);
+                config.model_id = model_json.value("model_id", "");
+                config.api_key = model_json.value("api_key", "");
+                config.endpoint = model_json.value("endpoint", "");
+                config.description = model_json.value("description", "");
+                
+                if (model_json.contains("parameters") && model_json["parameters"].is_object()) {
+                    for (auto& [pk, pv] : model_json["parameters"].items()) {
+                        config.parameters[pk] = pv.get<std::string>();
+                    }
+                }
+                
+                config.full_config = model_json;
+                registerModel(name, config);
+            }
+        }
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+bool UniversalModelRouter::saveConfigToFile(const std::string& path) {
+    try {
+        json root = json::object();
+        json models = json::object();
+        
+        for (const auto& [name, config] : model_registry) {
+            json m;
+            m["backend"] = static_cast<int>(config.backend);
+            m["model_id"] = config.model_id;
+            m["api_key"] = config.api_key;
+            m["endpoint"] = config.endpoint;
+            m["description"] = config.description;
+            
+            json params = json::object();
+            for (const auto& [pk, pv] : config.parameters) {
+                params[pk] = pv;
+            }
+            m["parameters"] = params;
+            
+            models[name] = m;
+        }
+        
+        root["models"] = models;
+        
+        std::ofstream f(path);
+        if (!f.is_open()) return false;
+        f << root.dump(4);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+void UniversalModelRouter::initializeLocalEngine(const std::string& path) {
+    if (!local_engine) {
+        local_engine = std::make_unique<CPUInferenceEngine>();
     }
     
-    model_registry[model_name] = config;
-    modelRegistered(model_name, config.backend);
-}
-
-void UniversalModelRouter::unregisterModel(const std::string& model_name)
-{
-    if (model_registry.remove(model_name) > 0) {
-        modelUnregistered(model_name);
-    }
-}
-
-ModelConfig UniversalModelRouter::getModelConfig(const std::string& model_name) const
-{
-    if (model_registry.contains(model_name)) {
-        return model_registry[model_name];
-    }
+    std::string modelPath = path;
     
-    ModelConfig empty;
-    empty.model_id = "";
-    return empty;
-}
-
-std::vector<std::string> UniversalModelRouter::getAvailableModels() const
-{
-    return model_registry.keys();
-}
-
-std::vector<std::string> UniversalModelRouter::getModelsForBackend(ModelBackend backend) const
-{
-    std::vector<std::string> models;
-    
-    for (const auto& name : model_registry.keys()) {
-        if (model_registry[name].backend == backend) {
-            models.append(name);
+    // Auto-discovery logic if path is empty
+    if (modelPath.empty()) {
+        // Check if we have a default "local" model in the registry
+        for (const auto& [name, config] : model_registry) {
+            if (config.backend == ModelBackend::LOCAL_GGUF && !config.model_id.empty()) {
+                // If model_id looks like a path, use it
+                if (std::filesystem::exists(config.model_id)) {
+                    modelPath = config.model_id;
+                    break;
+                }
+            }
+        }
+        
+        // Fallback to common locations
+        if (modelPath.empty()) {
+            std::vector<std::string> searchPaths = {
+                "models/phi-2.gguf",
+                "models/mistral-7b-quantized.gguf",
+                "D:/rawrxd/models/default.gguf"
+            };
+            for (const auto& p : searchPaths) {
+                if (std::filesystem::exists(p)) {
+                    modelPath = p;
+                    break;
+                }
+            }
         }
     }
     
-    return models;
-}
-
-bool UniversalModelRouter::loadConfigFromFile(const std::string& config_file_path)
-{
-    std::fstream file(config_file_path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        routerError(std::string("Cannot open config file: %1"));
-        return false;
-    }
-    
-    void* doc = void*::fromJson(file.readAll());
-    file.close();
-    
-    if (!doc.isObject()) {
-        routerError("Config file is not valid JSON");
-        return false;
-    }
-    
-    return loadConfigFromJson(doc.object());
-}
-
-bool UniversalModelRouter::loadConfigFromJson(const void*& config_json)
-{
-    model_registry.clear();
-    
-    if (!config_json.contains("models")) {
-        routerError("Config missing 'models' section");
-        return false;
-    }
-    
-    void* models_obj = config_json["models"].toObject();
-    
-    for (const auto& model_name : models_obj.keys()) {
-        void* model_json = models_obj[model_name].toObject();
-        
-        ModelConfig config;
-        config.full_config = model_json;
-        config.model_id = model_json["model_id"].toString();
-        config.description = model_json.value("description").toString("");
-        config.api_key = model_json["api_key"].toString();
-        config.endpoint = model_json.value("endpoint").toString("");
-        
-        // Parse backend
-        std::string backend_str = model_json["backend"].toString().toUpper();
-        if (backend_str == "LOCAL_GGUF") {
-            config.backend = ModelBackend::LOCAL_GGUF;
-        } else if (backend_str == "OLLAMA_LOCAL") {
-            config.backend = ModelBackend::OLLAMA_LOCAL;
-        } else if (backend_str == "ANTHROPIC") {
-            config.backend = ModelBackend::ANTHROPIC;
-        } else if (backend_str == "OPENAI") {
-            config.backend = ModelBackend::OPENAI;
-        } else if (backend_str == "GOOGLE") {
-            config.backend = ModelBackend::GOOGLE;
-        } else if (backend_str == "MOONSHOT") {
-            config.backend = ModelBackend::MOONSHOT;
-        } else if (backend_str == "AZURE_OPENAI") {
-            config.backend = ModelBackend::AZURE_OPENAI;
-        } else if (backend_str == "AWS_BEDROCK") {
-            config.backend = ModelBackend::AWS_BEDROCK;
+    if (!modelPath.empty() && std::filesystem::exists(modelPath)) {
+        if (local_engine->loadModel(modelPath)) {
+            local_engine_ready = true;
+            std::cout << "[Router] Local Engine Initialized with: " << modelPath << std::endl;
         } else {
-            routerError(std::string("Unknown backend: %1"));
-            continue;
+            std::cerr << "[Router] Failed to load local model from: " << modelPath << std::endl;
+            local_engine_ready = false;
         }
-        
-        // Load parameters
-        if (model_json.contains("parameters")) {
-            void* params_obj = model_json["parameters"].toObject();
-            for (const auto& key : params_obj.keys()) {
-                config.parameters[key] = params_obj[key].toString();
-            }
-        }
-        
-        // Handle environment variable substitution
-        if (config.api_key.startsWith("${") && config.api_key.endsWith("}")) {
-            std::string env_var = config.api_key.mid(2, config.api_key.length() - 3);
-            std::string env_value = std::string::fromStdString(std::getenv(env_var.toStdString().c_str()));
-            if (!env_value.empty()) {
-                config.api_key = env_value;
-            }
-        }
-        
-        registerModel(model_name, config);
+    } else {
+        std::cerr << "[Router] No local model found to initialize." << std::endl;
+        local_engine_ready = false;
     }
-    
-    configLoaded(model_registry.size());
-    return true;
 }
 
-bool UniversalModelRouter::saveConfigToFile(const std::string& config_file_path)
-{
-    void* root;
-    void* models_obj;
-    
-    for (const auto& name : model_registry.keys()) {
-        const auto& config = model_registry[name];
-        models_obj[name] = config.full_config;
+void UniversalModelRouter::initializeCloudClient() {
+    // CloudApiClient is standard unique_ptr
+    if (!cloud_client) {
+        cloud_client = std::make_unique<CloudApiClient>(this);
     }
-    
-    root["models"] = models_obj;
-    
-    void* doc(root);
-    std::fstream file(config_file_path);
-    
-    if (!file.open(QIODevice::WriteOnly)) {
-        return false;
-    }
-    
-    file.write(doc.toJson());
-    file.close();
-    
-    configSaved();
-    return true;
 }
 
-void UniversalModelRouter::initializeLocalEngine(const std::string& engine_config_path)
-{
-    // Initialize local GGUF engine
-    // This would integrate with your existing QuantizationAwareInferenceEngine
-    local_engine_ready = true;
-    modelRegistered("local_engine_ready", ModelBackend::LOCAL_GGUF);
+ModelConfig UniversalModelRouter::getOrLoadModel(const std::string& name) {
+    return getModelConfig(name);
 }
 
-void UniversalModelRouter::initializeCloudClient()
-{
-    // Cloud client is already initialized in constructor
-    cloud_client_ready = true;
+bool UniversalModelRouter::isModelAvailable(const std::string& name) const {
+    return model_registry.find(name) != model_registry.end();
 }
 
-ModelConfig UniversalModelRouter::getOrLoadModel(const std::string& model_name)
-{
-    return getModelConfig(model_name);
+ModelBackend UniversalModelRouter::getModelBackend(const std::string& name) const {
+    auto it = model_registry.find(name);
+    if (it != model_registry.end()) return it->second.backend;
+    return ModelBackend::LOCAL_GGUF;
 }
 
-bool UniversalModelRouter::isModelAvailable(const std::string& model_name) const
-{
-    return model_registry.contains(model_name);
-}
-
-ModelBackend UniversalModelRouter::getModelBackend(const std::string& model_name) const
-{
-    if (model_registry.contains(model_name)) {
-        return model_registry[model_name].backend;
-    }
-    
-    return ModelBackend::LOCAL_GGUF;  // Default
-}
-
-std::string UniversalModelRouter::getModelDescription(const std::string& model_name) const
-{
-    if (model_registry.contains(model_name)) {
-        return model_registry[model_name].description;
-    }
-    
+std::string UniversalModelRouter::getModelDescription(const std::string& name) const {
+    auto it = model_registry.find(name);
+    if (it != model_registry.end()) return it->second.description;
     return "";
 }
 
-void* UniversalModelRouter::getModelInfo(const std::string& model_name) const
-{
-    if (model_registry.contains(model_name)) {
-        return model_registry[model_name].full_config;
+json UniversalModelRouter::getModelInfo(const std::string& name) const {
+    auto it = model_registry.find(name);
+    if (it != model_registry.end()) return it->second.full_config;
+    return json::object();
+}
+
+// Helper to bridge configs
+RawrXD::CloudModelConfig bridgeToCloudConfig(const RawrXD::ModelConfig& mc, float temp) {
+    RawrXD::CloudModelConfig cc;
+    
+    switch(mc.backend) {
+        case ModelBackend::ANTHROPIC: cc.provider = "anthropic"; break;
+        case ModelBackend::OLLAMA_LOCAL: cc.provider = "ollama"; break;
+        case ModelBackend::AZURE_OPENAI: cc.provider = "azure"; break;
+        case ModelBackend::GOOGLE: cc.provider = "google"; break;
+        case ModelBackend::MOONSHOT: cc.provider = "moonshot"; break;
+        case ModelBackend::OPENAI: 
+        default:
+            cc.provider = "openai"; break;
     }
     
-    return void*();
+    cc.model = mc.model_id;
+    cc.apiKey = mc.api_key;
+    cc.endpoint = mc.endpoint;
+    cc.temperature = temp;
+    
+    // Check parameters for overrides
+    if (mc.parameters.count("max_tokens")) {
+        try { cc.maxTokens = std::stoi(mc.parameters.at("max_tokens")); } catch(...) {}
+    }
+    
+    return cc;
 }
 
-void UniversalModelRouter::onLocalEngineInitialized()
-{
-    local_engine_ready = true;
+std::string UniversalModelRouter::routeQuery(const std::string& model_name, const std::string& prompt, float temperature) {
+    if (!isModelAvailable(model_name)) {
+        return "Error: Model not found.";
+    }
+
+    ModelConfig config = getModelConfig(model_name);
+    
+    if (config.backend == ModelBackend::LOCAL_GGUF) {
+        if (!local_engine_ready || !local_engine) {
+             initializeLocalEngine(""); // Lazy init
+        }
+        
+        // Blocking generation using streaming interface
+        std::string full_response;
+        std::promise<void> done_promise;
+        std::future<void> done_future = done_promise.get_future();
+        
+        if (local_engine) {
+            local_engine->GenerateStreaming(
+                local_engine->Tokenize(prompt), 
+                512, // max tokens
+                [&full_response](const std::string& chunk) { full_response += chunk; },
+                [&done_promise]() { done_promise.set_value(); }
+            );
+            done_future.wait();
+        } else {
+             return "Error: Local Engine Failed Init";
+        }
+        
+        return full_response;
+    } else {
+        if (!cloud_client) {
+            initializeCloudClient();
+        }
+        return cloud_client->generate(prompt, bridgeToCloudConfig(config, temperature));
+    }
 }
 
-void UniversalModelRouter::onCloudClientInitialized()
-{
-    cloud_client_ready = true;
+void UniversalModelRouter::routeStreamQuery(const std::string& model_name, const std::string& prompt, StreamCallback callback, float temperature) {
+    if (!isModelAvailable(model_name)) {
+        if(callback) callback("Error: Model not found.");
+        return;
+    }
+
+    ModelConfig config = getModelConfig(model_name);
+    
+    if (config.backend == ModelBackend::LOCAL_GGUF) {
+        if (!local_engine_ready || !local_engine) {
+             initializeLocalEngine("");
+        }
+        if (local_engine) {
+            local_engine->GenerateStreaming(
+                local_engine->Tokenize(prompt),
+                512,
+                callback,
+                nullptr // No completion callback usage here
+            ); 
+        }
+    } else {
+        if (!cloud_client) {
+            initializeCloudClient();
+        }
+        cloud_client->generateStream(prompt, bridgeToCloudConfig(config, temperature), callback);
+    }
 }
 
-void UniversalModelRouter::onEngineError(const std::string& error)
-{
-    routerError(error);
-}
 
 
+} // namespace RawrXD

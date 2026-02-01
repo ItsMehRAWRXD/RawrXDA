@@ -263,7 +263,14 @@ void AutoBootstrap::executePlan(const std::string& wish, const json& plan) {
                 // Benchmarks run during build
             }
             else if (type == "self_test") {
-                // TODO: implement test runner
+                std::string target = t.value("target", "");
+                int cases = t.value("cases", 0);
+                std::string cmd = "ctest -C Release";
+                if (!target.empty()) {
+                    cmd += " -R " + target;
+                }
+                int rc = system(cmd.c_str());
+                success = (rc == 0);
             }
             
             if (!success) {

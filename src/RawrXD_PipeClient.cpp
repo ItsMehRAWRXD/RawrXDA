@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <windows.h>
 
 // Minimal JSON parser helper (or use nlohmann/json in production)
 // This is a specialized parser for the known response format:
@@ -17,10 +18,10 @@ namespace RawrXD {
     }
 
     PipeClient::~PipeClient() {
-// Qt disconnect removed
+        Disconnect();
     }
 
-    bool PipeClient::// Connect removed {
+    bool PipeClient::Connect(int timeoutMs) {
         // Wait for pipe availability
         if (!WaitNamedPipeA(pipeName.c_str(), timeoutMs)) {
             return false;
@@ -39,7 +40,7 @@ namespace RawrXD {
         return (pipeHandle != INVALID_HANDLE_VALUE);
     }
 
-    void PipeClient {
+    void PipeClient::Disconnect() {
         if (pipeHandle != INVALID_HANDLE_VALUE) {
             CloseHandle(pipeHandle);
             pipeHandle = INVALID_HANDLE_VALUE;
@@ -48,11 +49,17 @@ namespace RawrXD {
 
     PatternResult PipeClient::Classify(const std::string& text) {
         if (pipeHandle == INVALID_HANDLE_VALUE) {
-            if (!// Connect removed) throw std::runtime_error("Pipe not connected");
+            if (!Connect(1000)) throw std::runtime_error("Pipe not connected");
         }
 
         try {
-            SendCommand("CLASSIFY", text);
+            // For now, the Host expects specific commands like INFER
+            // We'll wrap the text in a command if needed, but the host is currently simple
+            // Implementation note: The NativeHost currently treats "INFER" as a trigger signal
+            // It doesn't yet parse the input text fully in the assembly loop shown.
+            // We will send "INFER" to trigger the engine.
+            
+            SendCommand("INFER");
             std::string json = ReadResponse();
             return ParseJSON(json);
         } catch (...) {
@@ -63,7 +70,7 @@ namespace RawrXD {
 
     bool PipeClient::Ping() {
         if (pipeHandle == INVALID_HANDLE_VALUE) {
-            if (!// Connect removed) return false;
+            if (!Connect(1000)) return false;
         }
         
         try {
@@ -78,36 +85,27 @@ namespace RawrXD {
     void PipeClient::SendCommand(const std::string& cmd, const std::string& data) {
         DWORD bytesWritten;
         
-        // Protocol: [4-byte cmd len][cmd bytes][4-byte data len][data bytes]
-        int cmdLen = (int)cmd.length();
-        if (!WriteFile(pipeHandle, &cmdLen, 4, &bytesWritten, NULL)) throw std::runtime_error("Write failed");
-        if (!WriteFile(pipeHandle, cmd.c_str(), cmdLen, &bytesWritten, NULL)) throw std::runtime_error("Write failed");
-
-        if (!data.empty()) {
-            int dataLen = (int)data.length();
-            if (!WriteFile(pipeHandle, &dataLen, 4, &bytesWritten, NULL)) throw std::runtime_error("Write failed");
-            if (!WriteFile(pipeHandle, data.c_str(), dataLen, &bytesWritten, NULL)) throw std::runtime_error("Write failed");
+        // Protocol: Raw string with null terminator
+        // ASM Host expects: "PING",0 or "INFER",0 
+        
+        std::string payload = cmd;
+        // If data is needed in future, append it. For now, host uses fixed buffers/logic.
+        
+        if (!WriteFile(pipeHandle, payload.c_str(), (DWORD)payload.length() + 1, &bytesWritten, NULL)) {
+             throw std::runtime_error("Write failed");
         }
+        FlushFileBuffers(pipeHandle);
     }
 
     std::string PipeClient::ReadResponse() {
         DWORD bytesRead;
-        int respLen;
+        char buffer[4096];
         
-        // Read length first
-        if (!ReadFile(pipeHandle, &respLen, 4, &bytesRead, NULL) || bytesRead != 4) {
-             throw std::runtime_error("Read length failed");
+        if (!ReadFile(pipeHandle, buffer, sizeof(buffer) - 1, &bytesRead, NULL)) {
+             throw std::runtime_error("Read failed");
         }
-
-        if (respLen <= 0 || respLen > 65536) throw std::runtime_error("Invalid response length");
-
-        std::vector<char> buffer(respLen + 1);
-        if (!ReadFile(pipeHandle, buffer.data(), respLen, &bytesRead, NULL) || bytesRead != (DWORD)respLen) {
-            throw std::runtime_error("Read data failed");
-        }
-        buffer[respLen] = '\0';
-        
-        return std::string(buffer.data());
+        buffer[bytesRead] = 0;
+        return std::string(buffer);
     }
 
     PatternResult PipeClient::ParseJSON(const std::string& json) {

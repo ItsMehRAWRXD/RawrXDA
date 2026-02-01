@@ -3,9 +3,10 @@
 #include <vector>
 #include <string>
 #include <filesystem>
-#include "../inference/InferenceEngine.hpp"
+#include "../cpu_inference_engine.h"
 
 namespace fs = std::filesystem;
+using InferenceEngine = RawrXD::CPUInferenceEngine;
 
 struct ModelBenchmarkResult {
     std::string model_path;

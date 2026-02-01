@@ -23,19 +23,26 @@ IDEAgentBridge::IDEAgentBridge() {
     };
 
     // Wire up ActionExecutor callbacks
-    // Assuming ActionExecutor has callbacks: onProgress, onComplete, onError
-    // Since I refactored ActionExecutor, let's assume I need to set them or it returns a future?
-    // The previous code had signals.
-    // I'll assume I can set std::function members on m_executor.
-    /*
-    m_executor->onProgress = [this](int step, int total, const std::string& desc) {
-        if (onProgressUpdated) onProgressUpdated(step, total, desc);
+    m_executor->onProgressUpdated = [this](int step, int total) {
+         if (onProgressUpdated) onProgressUpdated(step, total, "Action in progress...");
     };
-    m_executor->onComplete = [this](bool success, const std::string& res) {
-        handleExecutionResult(success, res);
+    
+    m_executor->onActionStarted = [this](int step, const std::string& desc) {
+         // Update progress with description
+         // We might need to access total actions from executor context if not passed, 
+         // but onProgressUpdated usually fires right after? 
+         // Let's assume onProgressUpdated handles the count, we just want to ensure description matches.
+         // Actually onProgressUpdated(step, total) is called by executor. 
+         // onActionStarted is called separately.
+         // Let's try to pass the description in a way onProgressUpdated logic can use?
+         // Simplest: Just fire onProgressUpdated again with desc.
+         int total = m_executor->context().totalActions;
+         if (onProgressUpdated) onProgressUpdated(step, total, desc);
     };
-    */
-    // For now, I'll update m_executor handling when I execute actions.
+
+    m_executor->onPlanCompleted = [this](bool success, const nlohmann::json& result) {
+         handleExecutionResult(success, result.dump());
+    };
     
     m_projectRoot = fs::current_path().string();
 }
@@ -112,25 +119,20 @@ void IDEAgentBridge::approveExecution()
 {
     if (m_lastPlanJson.empty()) return;
 
+    try {
+        json plan = json::parse(m_lastPlanJson);
+        
+        ExecutionContext ctx;
+        ctx.projectRoot = m_projectRoot;
+        ctx.dryRun = m_dryRun;
+        m_executor->setContext(ctx);
 
-    // Convert string plan back to json or pass to executor
-    json plan = json::parse(m_lastPlanJson);
-    
-    // Execute async
-    // Assuming executor has helper or we run in thread
-    std::thread([this, plan]() {
-         // Mock progress
-         if (onProgressUpdated) onProgressUpdated(0, (int)plan.size(), "Starting execution...");
-         
-         // In real impl, iterate tasks and call executor
-         // bool result = m_executor->executeBatch(plan); 
-         // For now, assume success
-         
-         bool success = true; 
-         // m_executor->process(plan, ...);
-         
-         handleExecutionResult(success, "Plan executed successfully (mock)");
-    }).detach();
+        // Execute async
+        m_executor->executePlan(plan);
+    } catch (const std::exception& e) {
+        if (onAgentError) onAgentError(std::string("Execution failed to start: ") + e.what(), false);
+        m_isExecuting = false;
+    }
 }
 
 void IDEAgentBridge::rejectExecution()
@@ -142,8 +144,12 @@ void IDEAgentBridge::rejectExecution()
 
 void IDEAgentBridge::cancelExecution()
 {
-    // m_invoker->cancel();
-    // m_executor->cancel();
+    if (m_invoker) {
+        m_invoker->cancelPendingRequest();
+    }
+    if (m_executor) {
+        m_executor->cancelExecution();
+    }
     m_isExecuting = false;
     
 }
@@ -164,4 +170,26 @@ void IDEAgentBridge::handleExecutionResult(bool success, const std::string& resu
 {
     m_isExecuting = false;
     if (onExecutionComplete) onExecutionComplete(result);
+}
+
+// Explicit Logic: Generate code completion using real LLM invocation
+std::string IDEAgentBridge::generateCodeCompletion(const std::string& context, const std::string& prefix)
+{
+    InvocationParams params;
+    params.wish = "Analyze the context and complete the code at the cursor.";
+    // Combine context and prefix for the 'Context' field in the prompt
+    // Ideally we would have strict FIM format, but 'Context: ...' is acceptable for this general invoker.
+    params.context = context + prefix; 
+    params.enforceJsonFormat = false; // Important: Raw text output
+    params.maxTokens = 64; // Keep it short for ghost text
+    params.temperature = 0.2; // Low temperature for deterministic completion
+    
+    // Synchronous call to ensure we get the result for the editor
+    LLMResponse resp = m_invoker->invoke(params);
+    
+    if (resp.success) {
+        return resp.rawOutput;
+    }
+    
+    return ""; // Empty string on failure
 }

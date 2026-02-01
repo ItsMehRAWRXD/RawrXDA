@@ -1,4 +1,10 @@
 #include "api_server.h"
+#include "cpu_inference_engine.h"
+#include "agentic_configuration.h"
+#include "autonomous_model_manager.h"
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -8,6 +14,32 @@
 #include <iomanip>
 #include <ctime>
 #include <array>
+
+// Titan Engine Integration
+extern "C" {
+    struct TitanContext {
+        // Matches RawrXD_Titan_UNIFIED.asm
+        uint32_t signature;
+        uint32_t status;
+        uint64_t hFile;
+        uint64_t hMap;
+        uint64_t pFileBase;
+        uint64_t cbFile;
+        uint32_t arch_type;
+        uint32_t n_vocab;
+        uint32_t n_embd;
+        uint32_t n_layer;
+        uint32_t n_head;
+    };
+    
+    void Titan_Initialize(TitanContext** ppCtx);
+    int Titan_LoadModel(TitanContext* ctx, const char* path);
+    int Titan_RunInferenceStep(TitanContext* ctx, int32_t* token, int32_t* out_len);
+    int Titan_Shutdown(TitanContext* ctx);
+}
+
+static TitanContext* g_TitanCtx = nullptr;
+static std::mutex g_TitanMutex;
 
 // Structured logging helper with timestamp and severity
 static void LogApiOperation(const std::string& severity, const std::string& operation, const std::string& details) {
@@ -219,10 +251,47 @@ void APIServer::HandleChatCompletionsRequest(const std::string& request, std::st
 
 void APIServer::HandleTagsRequest(std::string& response) {
     try {
-        LogApiOperation("INFO", "TAGS_REQUEST", "Retrieving loaded models");
+        LogApiOperation("INFO", "TAGS_REQUEST", "Retrieving installed models via Manager");
         
-        // Return list of loaded models with proper JSON structure
-        response = R"({"models":[{"name":"loaded-model","modified_at":"2025-01-01T00:00:00Z","size":0}]})";
+        AutonomousModelManager manager;
+        // Get models from the manager which scans the models directory
+        nlohmann::json installed_models = manager.getInstalledModels();
+        
+        // Construct Ollama-compatible response
+        nlohmann::json ollama_response;
+        ollama_response["models"] = nlohmann::json::array();
+
+        if (installed_models.contains("models") && installed_models["models"].is_array()) {
+            for (const auto& model : installed_models["models"]) {
+                nlohmann::json model_entry;
+                // Map AutonomousModelManager fields to Ollama fields
+                // Assuming manager returns { "modelId": "...", "size": ... }
+                std::string name = model.value("modelId",   model.value("name", "unknown"));
+                model_entry["name"] = name;
+                model_entry["modified_at"] = "2024-02-06T12:00:00Z"; // Placeholder or file time if available
+                model_entry["size"] = model.value("size", 0LL); 
+                model_entry["digest"] = "unknown";
+                
+                nlohmann::json details;
+                details["format"] = "gguf";
+                details["family"] = "llama";
+                details["quantization_level"] = "Q4_0"; // Assumption
+                
+                model_entry["details"] = details;
+                
+                ollama_response["models"].push_back(model_entry);
+            }
+        }
+        
+        // Fallback: If no models found by manager, check app_state path
+        if (ollama_response["models"].empty() && !app_state_.model_path.empty()) {
+             nlohmann::json fallback;
+             fallback["name"] = app_state_.model_path;
+             fallback["size"] = 0;
+             ollama_response["models"].push_back(fallback);
+        }
+
+        response = ollama_response.dump();
         
         LogApiOperation("DEBUG", "TAGS_REQUEST", "Response: " + std::to_string(response.length()) + " bytes");
         total_requests_++;
@@ -261,11 +330,48 @@ void APIServer::HandlePullRequest(const std::string& request, std::string& respo
             return;
         }
         
-        // Start HuggingFace download simulation
-        LogApiOperation("INFO", "PULL_REQUEST", "Starting download for model: " + model_name);
-        response = R"({"status":"downloading","model":")" + model_name + R"("})";
+        // Real implementation using AutonomousModelManager
+        LogApiOperation("INFO", "PULL_REQUEST", "Initiating model download via AutonomousModelManager: " + model_name);
         
-        LogApiOperation("INFO", "PULL_REQUEST", "Download initiated");
+        // Execute detached download
+        std::thread([this, model_name]() {
+            try {
+                // Initialize manager (stateless/default config for now)
+                AutonomousModelManager manager;
+                
+                manager.onDownloadProgress = [](const std::string& model, int percent, int64_t downloaded, int64_t total) {
+                    if (percent % 10 == 0) { // Reduce log spam
+                        LogApiOperation("INFO", "DOWNLOAD_PROGRESS", 
+                            model + ": " + std::to_string(percent) + "% (" + std::to_string(downloaded / 1024 / 1024) + "MB)");
+                    }
+                };
+
+                manager.onDownloadCompleted = [](const std::string& model, bool success) {
+                    LogApiOperation("INFO", "DOWNLOAD_COMPLETE", 
+                        "Model: " + model + " Status: " + (success ? "Success" : "Failed"));
+                };
+                
+                manager.onError = [](const std::string& error) {
+                     LogApiOperation("ERROR", "DOWNLOAD", error);
+                };
+
+                // Trigger download and install
+                bool result = manager.installModel(model_name);
+                
+                if (result) {
+                    LogApiOperation("INFO", "PULL_THREAD", "Model installation successful: " + model_name);
+                } else {
+                    LogApiOperation("ERROR", "PULL_THREAD", "Model installation failed: " + model_name);
+                }
+
+            } catch (const std::exception& e) {
+                 LogApiOperation("ERROR", "PULL_THREAD", std::string("Download exception: ") + e.what());
+            }
+        }).detach();
+
+        response = "HTTP/1.1 202 Accepted\r\nContent-Type: application/json\r\n\r\n{\"status\": \"download_started\"}";
+        
+        LogApiOperation("INFO", "PULL_REQUEST", "Download initiated asynchronously");
         total_requests_++;
         successful_requests_++;
         
@@ -280,54 +386,60 @@ void APIServer::HandlePullRequest(const std::string& request, std::string& respo
 std::string APIServer::GenerateCompletion(const std::string& prompt) {
     try {
         LogApiOperation("DEBUG", "INFERENCE", "Generating completion for prompt (" + std::to_string(prompt.length()) + " chars)");
-        
-        if (!app_state_.loaded_model || !app_state_.gpu_context) {
-            LogApiOperation("WARN", "INFERENCE", "No model loaded or GPU context unavailable");
-            return "Error: No model loaded";
-        }
-        
-        // Simulate inference with timing
+
         auto start = std::chrono::steady_clock::now();
+
+        std::string completion;
         
-        // Production inference logic would interface with GGML/GGUF loader here
-        std::string completion = "This is a generated response from the model";
-        
+        if (app_state_.inference_engine) {
+             completion = app_state_.inference_engine->infer(prompt);
+        } else {
+             completion = "Error: Inference Engine not available.";
+        }
+
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - start);
-        LogApiOperation("DEBUG", "INFERENCE", 
+        LogApiOperation("DEBUG", "INFERENCE",
             "Completion generated in " + std::to_string(duration.count()) + "ms");
-        
+
         return completion;
-        
+
     } catch (const std::exception& e) {
         LogApiOperation("ERROR", "INFERENCE", std::string(e.what()));
         return std::string("Error: ") + e.what();
     }
-}
-
-std::string APIServer::GenerateChatCompletion(const std::vector<ChatMessage>& messages) {
+}std::string APIServer::GenerateChatCompletion(const std::vector<ChatMessage>& messages) {
     try {
         LogApiOperation("DEBUG", "CHAT_INFERENCE", "Generating chat completion for " + std::to_string(messages.size()) + " messages");
         
-        if (!app_state_.loaded_model || !app_state_.gpu_context) {
-            LogApiOperation("WARN", "CHAT_INFERENCE", "No model loaded or GPU context unavailable");
-            return "Error: No model loaded";
+        if (!g_TitanCtx) {
+             std::lock_guard<std::mutex> lock(g_TitanMutex);
+             if (!g_TitanCtx) Titan_Initialize(&g_TitanCtx);
         }
         
-        // Log message summary
-        for (size_t i = 0; i < messages.size(); ++i) {
-            LogApiOperation("DEBUG", "CHAT_INFERENCE", 
-                "Message[" + std::to_string(i) + "]: role=" + messages[i].role + 
-                " length=" + std::to_string(messages[i].content.length()));
+        if (g_TitanCtx && g_TitanCtx->status == 0) {
+             std::lock_guard<std::mutex> lock(g_TitanMutex);
+             if (app_state_.model_path.empty()) app_state_.model_path = "models/model.gguf";
+             Titan_LoadModel(g_TitanCtx, app_state_.model_path.c_str());
+             app_state_.loaded_model = true;
         }
         
-        // Simulate inference with timing
-        auto start = std::chrono::steady_clock::now();
-        
-        // Production inference logic would interface with GGML/GGUF loader here
-        std::string completion = "Assistant response to the conversation.";
-        
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+          // Build prompt
+          std::stringstream prompt_ss;
+          for (const auto& msg : messages) {
+               prompt_ss << "<|im_start|>" << msg.role << "\n" << msg.content << "<|im_end|>\n";
+          }
+          prompt_ss << "<|im_start|>assistant\n";
+          
+          auto start = std::chrono::steady_clock::now();
+
+          // Real Inference Call
+          std::string completion = "";
+          if (app_state_.inference_engine) {
+               completion = app_state_.inference_engine->infer(prompt_ss.str());
+          } else {
+               completion = "Error: Inference engine not initialized";
+          }        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - start);
         LogApiOperation("DEBUG", "CHAT_INFERENCE", 
             "Chat completion generated in " + std::to_string(duration.count()) + "ms");
@@ -346,9 +458,41 @@ void APIServer::InitializeHttpServer() {
         start_time_ = std::chrono::steady_clock::now();
         LogApiOperation("INFO", "HTTP_INIT", "Initializing HTTP server on port " + std::to_string(port_));
         
-        // Initialize socket, bind to port, start listening
-        LogApiOperation("DEBUG", "HTTP_INIT", "Socket configuration in progress");
-        LogApiOperation("INFO", "HTTP_INIT", "HTTP server initialized successfully");
+        WSADATA wsaData;
+        int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+        if (iResult != 0) {
+            throw std::runtime_error("WSAStartup failed: " + std::to_string(iResult));
+        }
+
+        SOCKET bfs = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (bfs == INVALID_SOCKET) {
+             WSACleanup();
+             throw std::runtime_error("Socket creation failed");
+        }
+        
+        sockaddr_in service;
+        service.sin_family = AF_INET;
+        service.sin_addr.s_addr = inet_addr("127.0.0.1");
+        service.sin_port = htons(port_);
+
+        if (bind(bfs, (SOCKADDR*)&service, sizeof(service)) == SOCKET_ERROR) {
+             closesocket(bfs);
+             WSACleanup();
+             throw std::runtime_error("Bind failed");
+        }
+        
+        if (listen(bfs, SOMAXCONN) == SOCKET_ERROR) {
+             closesocket(bfs);
+             WSACleanup();
+             throw std::runtime_error("Listen failed");
+        }
+        
+        // Non-blocking
+        u_long iMode = 1;
+        ioctlsocket(bfs, FIONBIO, &iMode);
+        listen_socket_ = (unsigned long long)bfs;
+
+        LogApiOperation("INFO", "HTTP_INIT", "HTTP server initialized successfully (Winsock)");
         
     } catch (const std::exception& e) {
         LogApiOperation("ERROR", "HTTP_INIT", std::string("Initialization failed: ") + e.what());
@@ -400,8 +544,37 @@ void APIServer::ProcessPendingRequests() {
 
 void APIServer::HandleClientConnections() {
     try {
-        // Accept new connections, add them to request queue
-        // This would interface with actual socket implementation
+        SOCKET ListenSocket = (SOCKET)listen_socket_;
+        if (ListenSocket == ~0ULL || ListenSocket == INVALID_SOCKET) return;
+
+        SOCKET ClientSocket = accept(ListenSocket, NULL, NULL);
+        if (ClientSocket != INVALID_SOCKET) {
+             active_connections_++;
+             total_requests_++;
+             
+             std::thread([this, ClientSocket]() {
+                 char recvbuf[4096];
+                 int iResult = recv(ClientSocket, recvbuf, 4096, 0);
+                 if (iResult > 0) {
+                     std::string req(recvbuf, iResult);
+                     std::string resp;
+                     if (req.find("POST /api/generate") != std::string::npos) {
+                         HandleGenerateRequest(req, resp);
+                     } else if (req.find("POST /v1/chat/completions") != std::string::npos) {
+                         HandleChatCompletionsRequest(req, resp);
+                     } else {
+                         resp = "{}"; 
+                     }
+                     
+                     std::string http = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + 
+                                        std::to_string(resp.length()) + "\r\n\r\n" + resp;
+                     send(ClientSocket, http.c_str(), (int)http.length(), 0);
+                     successful_requests_++;
+                 }
+                 closesocket(ClientSocket);
+                 active_connections_--;
+             }).detach();
+        }
         
     } catch (const std::exception& e) {
         LogApiOperation("ERROR", "CONNECTION", std::string(e.what()));

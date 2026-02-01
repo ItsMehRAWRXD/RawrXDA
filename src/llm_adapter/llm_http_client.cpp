@@ -92,8 +92,11 @@ bool LLMHttpClient::initialize(
     {
         std::lock_guard<std::mutex> lock(m_connectionPoolMutex);
         for (int i = 0; i < config.connectionPoolSize; ++i) {
-            // Placeholder: actual connection objects would be created here
-            m_connectionPool.push(nullptr);
+            // Real connection objects
+            CURL* curl = curl_easy_init();
+            if (curl) {
+                 m_connectionPool.push(curl);
+            }
         }
     }
 
@@ -124,7 +127,19 @@ APIResponse LLMHttpClient::makeStreamingRequest(
 
     int64_t startTime = getCurrentTimestampMs();
 
-    CURL* curl = curl_easy_init();
+    CURL* curl = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(m_poolMutex);
+        if (!m_connectionPool.empty()) {
+            curl = static_cast<CURL*>(m_connectionPool.front());
+            m_connectionPool.pop();
+        }
+    }
+
+    if (!curl) {
+        curl = curl_easy_init();
+    }
+
     if (!curl) {
         APIResponse resp;
         resp.statusCode = 0;
@@ -132,6 +147,9 @@ APIResponse LLMHttpClient::makeStreamingRequest(
         resp.error = "Failed to initialize CURL";
         return resp;
     }
+
+    // Reset handle for reuse
+    curl_easy_reset(curl);
 
     try {
         std::string fullUrl = m_config.baseUrl + request.endpoint;
@@ -267,12 +285,19 @@ APIResponse LLMHttpClient::makeStreamingRequest(
 
         // Cleanup
         curl_slist_free_all(headerList);
-        curl_easy_cleanup(curl);
+        
+        {
+            std::lock_guard<std::mutex> lock(m_poolMutex);
+            m_connectionPool.push(curl);
+        }
 
         return response;
 
     } catch (const std::exception& e) {
-        curl_easy_cleanup(curl);
+        {
+            std::lock_guard<std::mutex> lock(m_poolMutex);
+            m_connectionPool.push(curl);
+        }
         APIResponse resp;
         resp.statusCode = 0;
         resp.success = false;
@@ -734,7 +759,16 @@ APIResponse LLMHttpClient::sendHTTPRequest(const APIRequest& request, bool retry
     while (retryCount <= m_config.maxRetries) {
         int64_t startTime = getCurrentTimestampMs();
 
-        CURL* curl = curl_easy_init();
+        CURL* curl = nullptr;
+        {
+             std::lock_guard<std::mutex> lock(m_connectionPoolMutex);
+             if (!m_connectionPool.empty()) {
+                 curl = static_cast<CURL*>(m_connectionPool.front());
+                 m_connectionPool.pop();
+             }
+        }
+        if (!curl) curl = curl_easy_init();
+
         if (!curl) {
             APIResponse resp;
             resp.statusCode = 0;
@@ -826,7 +860,12 @@ APIResponse LLMHttpClient::sendHTTPRequest(const APIRequest& request, bool retry
 
             // Cleanup
             curl_slist_free_all(headerList);
-            curl_easy_cleanup(curl);
+            // Return to pool
+            curl_easy_reset(curl);
+            {
+                 std::lock_guard<std::mutex> lock(m_connectionPoolMutex);
+                 m_connectionPool.push(curl);
+            }
 
             // Check if we should retry
             if (!response.success && retry && shouldRetry(static_cast<int>(responseCode), retryCount)) {
@@ -840,7 +879,13 @@ APIResponse LLMHttpClient::sendHTTPRequest(const APIRequest& request, bool retry
             return response;
 
         } catch (const std::exception& e) {
-            curl_easy_cleanup(curl);
+            // Return to pool on exception too, unless handle is corrupted? Reset should handle it.
+            if (curl) {
+                curl_easy_reset(curl);
+                std::lock_guard<std::mutex> lock(m_connectionPoolMutex);
+                m_connectionPool.push(curl);
+            }
+            
             APIResponse resp;
             resp.statusCode = 0;
             resp.success = false;
@@ -976,7 +1021,44 @@ bool LLMHttpClient::isTokenExpired() const {
 }
 
 bool LLMHttpClient::refreshOAuth2Token() {
-    // Placeholder for OAuth2 token refresh
+    if (m_credentials.refreshToken.empty() || m_credentials.tokenEndpoint.empty()) {
+        return false;
+    }
+
+    // Real OAuth2 Token Refresh
+    APIRequest req;
+    req.endpoint = m_credentials.tokenEndpoint; // Usually absolute URL, need handling
+    // If endpoint is relative, prepend baseUrl? Assuming absolute or config handles it.
+    // For safety, generic implementation:
+    
+    // Construct generic OAuth2 refresh body
+    json body;
+    body["grant_type"] = "refresh_token";
+    body["refresh_token"] = m_credentials.refreshToken;
+    if (!m_credentials.clientId.empty()) body["client_id"] = m_credentials.clientId;
+    if (!m_credentials.clientSecret.empty()) body["client_secret"] = m_credentials.clientSecret;
+    
+    req.body = body;
+    req.method = "POST";
+    
+    // Bypass token check to avoid recursion
+    APIResponse resp = sendHTTPRequest(req, false); 
+    
+    if (resp.success) {
+        try {
+            auto j = json::parse(resp.responseBody);
+            if (j.contains("access_token")) {
+                m_credentials.apiKey = j["access_token"]; // Update token (apiKey holds bearer)
+                if (j.contains("expires_in")) {
+                    m_credentials.tokenExpiresAt = getCurrentTimestampMs() + (j["expires_in"].get<int>() * 1000);
+                }
+                if (j.contains("refresh_token")) {
+                    m_credentials.refreshToken = j["refresh_token"];
+                }
+                return true;
+            }
+        } catch (...) {}
+    }
     
     return false;
 }

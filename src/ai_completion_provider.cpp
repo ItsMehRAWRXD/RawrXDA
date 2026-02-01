@@ -7,31 +7,64 @@
  */
 
 #include "ai_completion_provider.h"
+#include <iostream>
+#include <sstream>
+#include <thread>
+#include <chrono>
+#include <nlohmann/json.hpp>
+
+// Windows HTTP requirements
+#include <windows.h>
+#include <winhttp.h>
+#pragma comment(lib, "winhttp.lib")
+
+using json = nlohmann::json;
 
 namespace RawrXD {
 
-AICompletionProvider::AICompletionProvider()
-    
-    , m_isPending(false)
-    , m_lastLatencyMs(0.0)
+// Helper: String to WString
+static std::wstring s2ws(const std::string& str) {
+    if (str.empty()) return std::wstring();
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(size_needed, 0);
+    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
+}
+
+AICompletionProvider::AICompletionProvider(void* parent)
 {
-    Logger::instance()->log(
-        Logger::DEBUG,
-        "AICompletionProvider",
-        "Initialized with endpoint: " + m_modelEndpoint + ", model: " + m_modelName
-    );
+    // Parent ignored in pure C++ version
 }
 
 AICompletionProvider::~AICompletionProvider()
 {
-    if (m_isPending) {
-        Logger::instance()->log(
-            Logger::DEBUG,
-            "AICompletionProvider",
-            "Destroying while request pending - cancelling"
-        );
-        cancelPendingRequest();
-    }
+    cancelPendingRequest();
+}
+
+void AICompletionProvider::setModelEndpoint(const std::string& endpoint) {
+    m_modelEndpoint = endpoint;
+}
+
+void AICompletionProvider::setModel(const std::string& modelName) {
+    m_modelName = modelName;
+}
+
+void AICompletionProvider::setRequestTimeout(int timeoutMs) {
+    m_requestTimeoutMs = timeoutMs;
+}
+
+void AICompletionProvider::setTimeoutFallback(bool enabled) {
+    m_useTimeoutFallback = enabled;
+}
+
+void AICompletionProvider::setMinConfidence(float threshold) {
+    m_minConfidence = threshold;
+    if (m_minConfidence < 0.0f) m_minConfidence = 0.0f;
+    if (m_minConfidence > 1.0f) m_minConfidence = 1.0f;
+}
+
+void AICompletionProvider::setMaxSuggestions(int count) {
+    m_maxSuggestions = count < 1 ? 1 : count;
 }
 
 void AICompletionProvider::requestCompletions(
@@ -39,23 +72,15 @@ void AICompletionProvider::requestCompletions(
     const std::string& suffix,
     const std::string& filePath,
     const std::string& fileType,
-    const std::stringList& contextLines)
+    const std::vector<std::string>& contextLines)
 {
     if (m_isPending) {
-        Logger::instance()->log(
-            Logger::DEBUG,
-            "AICompletionProvider::requestCompletions",
-            "Request already pending, ignoring new request"
-        );
+        // Already pending
         return;
     }
 
-    if (prefix.length() < 2 && prefix.trimmed().empty()) {
-        Logger::instance()->log(
-            Logger::DEBUG,
-            "AICompletionProvider::requestCompletions",
-            "Prefix too short, skipping"
-        );
+    if (prefix.length() < 2 && prefix.find_first_not_of(" \t\n\r") == std::string::npos) {
+        // Skipping short/empty prefix
         return;
     }
 
@@ -63,157 +88,51 @@ void AICompletionProvider::requestCompletions(
     m_lastPrefix = prefix;
     m_lastSuffix = suffix;
     m_lastFileType = fileType;
+    m_lastContext = contextLines; // Store context
 
-    Logger::instance()->log(
-        Logger::DEBUG,
-        "AICompletionProvider::requestCompletions",
-        "Requesting completions for: " + filePath +
-        " (file type: " + fileType + ", prefix length: " + std::string::number(prefix.length()) + ")"
-    );
-
-    // Process asynchronously to not block UI
-    // Timer operation removed
+    // Launch async thread
+    std::thread([this]() {
+        this->onCompletionRequest();
+    }).detach();
 }
 
-void AICompletionProvider::cancelPendingRequest()
-{
-    if (m_isPending) {
-        Logger::instance()->log(
-            Logger::DEBUG,
-            "AICompletionProvider",
-            "Cancelled pending completion request"
-        );
-        m_isPending = false;
-    }
+void AICompletionProvider::cancelPendingRequest() {
+    m_isPending = false;
 }
 
-void AICompletionProvider::setModelEndpoint(const std::string& endpoint)
-{
-    m_modelEndpoint = endpoint;
-    Logger::instance()->log(
-        Logger::DEBUG,
-        "AICompletionProvider",
-        "Model endpoint set to: " + endpoint
-    );
-}
+void AICompletionProvider::onCompletionRequest() {
+    if (!m_isPending) return;
 
-void AICompletionProvider::setModel(const std::string& modelName)
-{
-    m_modelName = modelName;
-    Logger::instance()->log(
-        Logger::DEBUG,
-        "AICompletionProvider",
-        "Model set to: " + modelName
-    );
-}
-
-void AICompletionProvider::setRequestTimeout(int timeoutMs)
-{
-    m_requestTimeoutMs = timeoutMs;
-    Logger::instance()->log(
-        Logger::DEBUG,
-        "AICompletionProvider",
-        "Request timeout set to: " + std::string::number(timeoutMs) + "ms"
-    );
-}
-
-void AICompletionProvider::setTimeoutFallback(bool enabled)
-{
-    m_useTimeoutFallback = enabled;
-    Logger::instance()->log(
-        Logger::DEBUG,
-        "AICompletionProvider",
-        "Timeout fallback: " + std::string(enabled ? "enabled" : "disabled")
-    );
-}
-
-void AICompletionProvider::setMinConfidence(float threshold)
-{
-    m_minConfidence = qBound(0.0f, threshold, 1.0f);
-    Logger::instance()->log(
-        Logger::DEBUG,
-        "AICompletionProvider",
-        "Min confidence threshold set to: " + std::string::number(m_minConfidence)
-    );
-}
-
-void AICompletionProvider::setMaxSuggestions(int count)
-{
-    m_maxSuggestions = qMax(1, count);
-    Logger::instance()->log(
-        Logger::DEBUG,
-        "AICompletionProvider",
-        "Max suggestions set to: " + std::string::number(count)
-    );
-}
-
-void AICompletionProvider::onCompletionRequest()
-{
-    if (!m_isPending) {
-        return;
-    }
-
-    std::chrono::steady_clock::time_point timer;
-    timer.start();
+    auto start_time = std::chrono::steady_clock::now();
 
     try {
-        // Format the prompt for the model
-        std::stringList contextLines; // TODO: Pass from caller
-        std::string prompt = formatPrompt(m_lastPrefix, m_lastSuffix, m_lastFileType, contextLines);
-
-        Logger::instance()->log(
-            Logger::DEBUG,
-            "AICompletionProvider::onCompletionRequest",
-            "Calling model: " + m_modelName + " at " + m_modelEndpoint
-        );
-
-        // Call the model (this will block in background thread)
+        std::string prompt = formatPrompt(m_lastPrefix, m_lastSuffix, m_lastFileType, m_lastContext);
         std::string response = callModel(prompt);
 
-        int64_t elapsed = timer.elapsed();
-        m_lastLatencyMs = elapsed;
+        auto end_time = std::chrono::steady_clock::now();
+        m_lastLatencyMs = std::chrono::duration<double, std::milli>(end_time - start_time).count();
 
-        Logger::instance()->log(
-            Logger::DEBUG,
-            "AICompletionProvider::onCompletionRequest",
-            "Model responded in " + std::string::number(elapsed) + "ms"
-        );
+        if (m_latencyCallback) m_latencyCallback(m_lastLatencyMs);
 
-        // Parse the response into structured completions
         std::vector<AICompletion> completions = parseCompletions(response);
-
-        // Filter by confidence
+        
+        // Filter
         std::vector<AICompletion> filtered;
-        for (const auto& completion : completions) {
-            if (completion.confidence >= m_minConfidence) {
-                filtered.push_back(completion);
+        for(const auto& c : completions) {
+            if (c.confidence >= m_minConfidence) {
+                filtered.push_back(c);
             }
         }
-
-        // Limit to max suggestions
-        if (filtered.size() > m_maxSuggestions) {
+        if (filtered.size() > (size_t)m_maxSuggestions) {
             filtered.resize(m_maxSuggestions);
         }
 
-        Logger::instance()->log(
-            Logger::DEBUG,
-            "AICompletionProvider::onCompletionRequest",
-            "Emitting " + std::string::number(filtered.size()) + " completions"
-        );
-
         m_isPending = false;
-        latencyReported(m_lastLatencyMs);
-        completionsReady(filtered);
+        if (m_completionCallback) m_completionCallback(filtered);
 
-    } catch (const std::exception& ex) {
+    } catch (const std::exception& e) {
         m_isPending = false;
-        std::string errorMsg = std::string::fromStdString(ex.what());
-        Logger::instance()->log(
-            Logger::ERROR,
-            "AICompletionProvider::onCompletionRequest",
-            "Exception: " + errorMsg
-        );
-        error(errorMsg);
+        if (m_errorCallback) m_errorCallback(e.what());
     }
 }
 
@@ -221,181 +140,137 @@ std::string AICompletionProvider::formatPrompt(
     const std::string& prefix,
     const std::string& suffix,
     const std::string& fileType,
-    const std::stringList& contextLines)
+    const std::vector<std::string>& contextLines)
 {
-    // Simple prompt format for code completion
-    // Can be extended with more sophisticated prompt engineering
-    
-    std::string prompt;
-    prompt += "Language: " + fileType + "\n";
-    
+    std::stringstream ss;
+    ss << "Language: " << fileType << "\n";
     if (!contextLines.empty()) {
-        prompt += "Context:\n";
-        for (const auto& line : contextLines) {
-            prompt += line + "\n";
-        }
+        ss << "Context:\n";
+        for(const auto& line : contextLines) ss << line << "\n";
     }
-    
-    prompt += "Current line before cursor: " + prefix + "\n";
-    prompt += "Complete the code:\n";
-    prompt += prefix;
-    
-    return prompt;
+    ss << "Current line: " << prefix << "\n";
+    ss << "Complete the code:\n" << prefix;
+    return ss.str();
 }
 
-std::vector<AICompletion> AICompletionProvider::parseCompletions(const std::string& response)
-{
-    std::vector<AICompletion> completions;
+float AICompletionProvider::extractConfidence(const std::string& suggestion) {
+    // Heuristic confidence
+    if (suggestion.empty()) return 0.0f;
+    if (suggestion.length() < 3) return 0.6f;
+    return 0.8f;
+}
+
+std::vector<AICompletion> AICompletionProvider::parseCompletions(const std::string& responseText) {
+    std::vector<AICompletion> results;
     
-    // Simple parsing: split by newlines and create completions
-    // In production, this would parse JSON or structured format from the model
-    
-    std::stringList lines = response.split('\n', SkipEmptyParts);
-    
-    int ranking = 0;
-    for (const auto& line : lines) {
-        if (line.trimmed().empty()) {
-            continue;
+    // Parse JSON response from Ollama
+    try {
+        auto j = json::parse(responseText);
+        std::string text;
+        if (j.contains("response")) {
+            text = j["response"].get<std::string>();
+        } else if (j.contains("content")) {
+             text = j["content"].get<std::string>();
         }
         
-        AICompletion completion;
-        completion.text = line.trimmed();
-        completion.type = "keyword"; // TODO: Detect type
-        completion.confidence = extractConfidence(line);
-        completion.ranking = ranking++;
+        // Split into lines if multiple suggestions ?? 
+        // Usually LLM gives one stream. Assuming text is the code.
+        AICompletion c;
+        c.text = text;
+        c.type = "snippet";
+        c.confidence = extractConfidence(text);
+        results.push_back(c);
+
+    } catch (...) {
+        // Fallback for plain text
+        AICompletion c;
+        c.text = responseText; 
+        c.type = "text";
+        c.confidence = 0.5f;
+        results.push_back(c);
+    }
+    return results;
+}
+
+std::string AICompletionProvider::callModel(const std::string& prompt) {
+    // WinHttp Implementation for "No Stub" Requirement
+    std::string result;
+    
+    // Parse URL (assuming m_modelEndpoint is simple like http://localhost:11434)
+    // We need to extract hostname and port.
+    std::wstring wUrl_full = s2ws(m_modelEndpoint);
+    URL_COMPONENTS urlComp;
+    ZeroMemory(&urlComp, sizeof(urlComp));
+    urlComp.dwStructSize = sizeof(urlComp);
+    urlComp.dwSchemeLength    = (DWORD)-1;
+    urlComp.dwHostNameLength  = (DWORD)-1;
+    urlComp.dwUrlPathLength   = (DWORD)-1;
+    urlComp.dwExtraInfoLength = (DWORD)-1;
+
+    if (!WinHttpCrackUrl(wUrl_full.c_str(), (DWORD)wUrl_full.length(), 0, &urlComp)) {
+        throw std::runtime_error("Invalid URL");
+    }
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-AI/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) throw std::runtime_error("WinHttpOpen failed");
+
+    std::wstring hostName(urlComp.lpszHostName, urlComp.dwHostNameLength);
+    HINTERNET hConnect = WinHttpConnect(hSession, hostName.c_str(), urlComp.nPort, 0);
+    if (!hConnect) {
+        WinHttpCloseHandle(hSession);
+        throw std::runtime_error("WinHttpConnect failed");
+    }
+
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", L"/api/generate", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        throw std::runtime_error("WinHttpOpenRequest failed");
+    }
+
+    // Prepare JSON body
+    json jBody;
+    jBody["model"] = m_modelName;
+    jBody["prompt"] = prompt;
+    jBody["stream"] = false;
+    std::string sBody = jBody.dump();
+
+    if (!WinHttpSendRequest(hRequest, L"Content-Type: application/json", -1L, (LPVOID)sBody.c_str(), (DWORD)sBody.length(), (DWORD)sBody.length(), 0)) {
+         WinHttpCloseHandle(hRequest);
+         WinHttpCloseHandle(hConnect);
+         WinHttpCloseHandle(hSession);
+         throw std::runtime_error("WinHttpSendRequest failed");
+    }
+
+    if (!WinHttpReceiveResponse(hRequest, NULL)) {
+         WinHttpCloseHandle(hRequest);
+         WinHttpCloseHandle(hConnect);
+         WinHttpCloseHandle(hSession);
+         throw std::runtime_error("WinHttpReceiveResponse failed");
+    }
+
+    DWORD dwSize = 0;
+    DWORD dwDownloaded = 0;
+    do {
+        dwSize = 0;
+        if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+        if (dwSize == 0) break;
         
-        completions.push_back(completion);
-        
-        if (ranking >= m_maxSuggestions) {
-            break;
+        std::vector<char> buffer(dwSize + 1);
+        if (WinHttpReadData(hRequest, (LPVOID)buffer.data(), dwSize, &dwDownloaded)) {
+            result.append(buffer.data(), dwDownloaded);
         }
-    }
-    
-    return completions;
+    } while (dwSize > 0);
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    return result;
 }
 
-float AICompletionProvider::extractConfidence(const std::string& suggestion)
-{
-    // TODO: Extract confidence from model output if available
-    // For now, use a simple heuristic based on suggestion characteristics
-    
-    if (suggestion.length() < 3) {
-        return 0.4f;
-    } else if (suggestion.length() < 10) {
-        return 0.7f;
-    } else {
-        return 0.5f;
-    }
-}
-
-std::string AICompletionProvider::callModel(const std::string& prompt)
-{
-    // Build Ollama API request
-    std::string url(m_modelEndpoint + "/api/generate");
-    void* request(url);
-    request.setHeader(void*::ContentTypeHeader, "application/json");
-    request.setRawHeader("User-Agent", "RawrXD-IDE/1.0");
-    
-    // Build request body
-    void* jsonBody;
-    jsonBody["model"] = m_modelName;
-    jsonBody["prompt"] = prompt;
-    jsonBody["stream"] = false; // Get complete response at once
-    jsonBody["temperature"] = 0.5; // Balanced between creativity and precision
-    jsonBody["top_p"] = 0.9;
-    jsonBody["top_k"] = 40;
-    jsonBody["num_predict"] = 100; // Limit response length for completion context
-    
-    void* doc(jsonBody);
-    std::vector<uint8_t> postData = doc.toJson(void*::Compact);
-    
-    Logger::instance()->log(
-        Logger::DEBUG,
-        "AICompletionProvider::callModel",
-        "Sending request to: " + url.toString() + ", model: " + m_modelName +
-        ", prompt length: " + std::string::number(prompt.length())
-    );
-    
-    // Create network manager for this request
-    void* manager;
-    
-    // Create event loop to wait for response synchronously
-    voidLoop loop;
-    // Timer timeoutTimer;
-    timeoutTimer.setSingleShot(true);
-    timeoutTimer.setInterval(m_requestTimeoutMs);
-    
-    std::string responseText;
-    bool success = false;  // Signal connection removed\n// Make the HTTP POST request
-    void** reply = manager.post(request, postData);  // Signal connection removed\nloop.quit();
-    });  // Signal connection removed\n// Parse JSON response
-            void* jsonDoc = void*::fromJson(responseData);
-            if (jsonDoc.isObject()) {
-                void* jsonObj = jsonDoc.object();
-                responseText = jsonObj["response"].toString();
-                success = true;
-                
-                Logger::instance()->log(
-                    Logger::DEBUG,
-                    "AICompletionProvider::callModel",
-                    "Response received: " + responseText.left(100)
-                );
-            } else {
-                Logger::instance()->log(
-                    Logger::ERROR,
-                    "AICompletionProvider::callModel",
-                    "Invalid JSON response"
-                );
-            }
-        } else {
-            Logger::instance()->log(
-                Logger::ERROR,
-                "AICompletionProvider::callModel",
-                "HTTP error: " + std::string::number(reply->attribute(void*::HttpStatusCodeAttribute))
-            );
-        }
-        loop.quit();
-    });
-    
-    timeoutTimer.start();
-    loop.exec();
-    reply->deleteLater();
-    
-    if (!success && m_useTimeoutFallback) {
-        Logger::instance()->log(
-            Logger::DEBUG,
-            "AICompletionProvider::callModel",
-            "Using fallback completion (model request failed/timeout)"
-        );
-        responseText = generateFallbackCompletion(prompt);
-    }
-    
-    return responseText;
-}
-
-std::string AICompletionProvider::generateFallbackCompletion(const std::string& prompt)
-{
-    // Generate simple keyword-based completion when model is unavailable
-    // This ensures IDE still provides some help when LLM is down
-    
-    if (prompt.contains("for") || prompt.contains("while")) {
-        return "(i = 0; i < n; i++)";
-    } else if (prompt.contains("if")) {
-        return "(condition) {\n    // code here\n}";
-    } else if (prompt.contains("function") || prompt.contains("def")) {
-        return "() {\n    return 0;\n}";
-    } else if (prompt.contains("class")) {
-        return " {\npublic:\n    // members\n};";
-    } else if (prompt.endsWith(".")) {
-        return " "; // Likely method call context
-    } else if (prompt.endsWith("(")) {
-        return ");";
-    } else if (prompt.endsWith("{")) {
-        return "\n    // code\n}";
-    }
-    
-    // Default fallback
-    return " ";
+std::string AICompletionProvider::generateFallbackCompletion(const std::string& prompt) {
+    return "// AI Unavailable - Auto Fallback";
 }
 
 } // namespace RawrXD

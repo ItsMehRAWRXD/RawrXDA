@@ -7,7 +7,15 @@
 #include <cstdint>
 #include <functional>
 
-namespace CPUInference {
+#ifdef RAWRXD_STATIC_ASM
+extern "C" {
+    void Titan_Initialize(void** ctx);
+    void Titan_LoadModel(void* ctx, const char* path);
+    int Titan_RunInferenceStep(void* ctx, const float* input, float* output);
+}
+#endif
+
+namespace RawrXD {
 
 // Tensor data types
 enum class TensorType {
@@ -49,22 +57,44 @@ struct Tensor {
 };
 
 // CPU inference engine class
-class CPUInferenceEngine {
+
+class InferenceEngine {
+public:
+    virtual ~InferenceEngine() = default;
+    virtual bool loadModel(const std::string& path) = 0;
+    virtual std::string infer(const std::string& prompt) = 0;
+    virtual bool isModelLoaded() const = 0;
+};
+
+class StreamingGGUFLoader;
+
+class CPUInferenceEngine : public InferenceEngine {
 public:
     CPUInferenceEngine();
     ~CPUInferenceEngine();
     
+    // InferenceEngine overrides
+    bool loadModel(const std::string& path) override;
+    std::string infer(const std::string& prompt) override;
+    // Overload for controlled generation
+    std::string infer(const std::string& prompt, int max_tokens);
+    
     // Model loading
     bool LoadModel(const std::string& model_path);
     bool LoadWeights(const std::unordered_map<std::string, Tensor>& tensors);
-    bool IsModelLoaded() const { return m_modelLoaded; }
+    bool isModelLoaded() const override { return m_modelLoaded; }
     
     // Inference
-    std::vector<float> Generate(const std::vector<int32_t>& input_tokens, int max_tokens = 100);
+    std::vector<int32_t> Generate(const std::vector<int32_t>& input_tokens, int max_tokens = 100);
+    // [AGENTIC] EXPLICIT LOGIC: Added Eval method to support Speculative Decoding verification
+    // Returns the logits for the next token given the context
+    std::vector<float> Eval(const std::vector<int32_t>& input_tokens);
+
     void GenerateStreaming(const std::vector<int32_t>& input_tokens,
                          int max_tokens,
                          std::function<void(const std::string&)> token_callback,
-                         std::function<void()> complete_callback);
+                         std::function<void()> complete_callback,
+                         std::function<void(int32_t)> token_id_callback = nullptr);
     
     // Tokenization
     std::vector<int32_t> Tokenize(const std::string& text);
@@ -76,6 +106,15 @@ public:
     int GetNumLayers() const { return m_numLayers; }
     int GetNumHeads() const { return m_numHeads; }
     
+    // Training Support
+    // Applies gradients to model weights using SGD/Adam step
+    // Note: Primarily supports F32/F16 weights. Quantized weights may be skipped or dequantized.
+    void UpdateWeights(const std::vector<std::vector<float>>& layer_gradients, float learning_rate);
+
+    // Advanced Fine-Tuning Support (Last Layer Backprop)
+    const std::vector<float>& GetLastEmbeddingState() const { return m_lastState; }
+    void UpdateOutputWeights(const std::vector<float>& gradients, float learningRate);
+    
     // Performance settings
     void SetThreadCount(int threads) { m_threadCount = threads; }
     int GetThreadCount() const { return m_threadCount; }
@@ -85,6 +124,34 @@ public:
     void ClearCache();
     
 private:
+    std::vector<std::string> m_vocab;
+    std::unique_ptr<StreamingGGUFLoader> m_loader;
+
+    struct LayerWeights {
+        Tensor attention_query;
+        Tensor attention_key;
+        Tensor attention_value;
+        Tensor attention_output;
+        Tensor layer_norm1;
+        Tensor feed_forward1;
+        Tensor feed_forward2;
+        Tensor layer_norm2;
+    };
+
+    // KV Cache Structure
+    struct KVCacheLayer {
+        std::vector<float> keys;   // [max_seq, num_heads, head_dim] -> flattened
+        std::vector<float> values; // [max_seq, num_heads, head_dim] -> flattened
+    };
+    
+    void InitKVCache();
+
+    std::vector<LayerWeights> m_layers;
+    std::vector<KVCacheLayer> m_kv_cache;
+
+    int m_maxSeqLen = 2048;
+    int m_currentPos = 0;
+
     // Internal tensor operations
     void MatMul(const float* A, const float* B, float* C, int m, int n, int k);
     void Softmax(float* data, int size);
@@ -95,10 +162,10 @@ private:
     
     // Attention mechanism
     void MultiHeadAttention(const float* query, const float* key, const float* value,
-                           float* output, int seq_len, int embed_dim, int num_heads);
+                           float* output, int seq_len, int embed_dim, int num_heads, int layer_idx);
     
     // Feed-forward network
-    void FeedForward(const float* input, float* output, int dim);
+    void FeedForward(const float* input, float* output, int layer_idx);
     
     // Transformer layer
     void TransformerLayer(const float* input, float* output, int layer_idx, int seq_len);
@@ -117,27 +184,35 @@ private:
     
     // Model weights
     std::unordered_map<std::string, Tensor> m_weights;
+
+    // Training state
+    std::vector<float> m_lastState;
     
     // Token embeddings
     Tensor m_tokenEmbeddings;
     Tensor m_outputWeights;
+
+    // Training State
+    std::vector<float> m_lastState;
     
     // Layer weights
-    struct LayerWeights {
-        Tensor attention_query;
-        Tensor attention_key;
-        Tensor attention_value;
-        Tensor attention_output;
-        Tensor layer_norm1;
-        Tensor feed_forward1;
-        Tensor feed_forward2;
-        Tensor layer_norm2;
-    };
-    std::vector<LayerWeights> m_layers;
+    // std::vector<LayerWeights> m_layers;
     
     // Memory pool
     std::vector<std::unique_ptr<float[]>> m_memoryPool;
     size_t m_totalMemoryAllocated = 0;
+
+    // Titan Assembly Engine Integration (Explicit Logic)
+    void* m_hTitanDLL = nullptr; // HMODULE
+    void* m_pTitanContext = nullptr;
+    using FTitan_Initialize = void(*)(void**);
+    using FTitan_LoadModel = void(*)(void*, const char*);
+    // Updated signature: Context, Input(Embedding), Output(Logits)
+    using FTitan_RunInferenceStep = int(*)(void*, const float*, float*);
+    
+    FTitan_Initialize fnTitan_Initialize = nullptr;
+    FTitan_LoadModel fnTitan_LoadModel = nullptr;
+    FTitan_RunInferenceStep fnTitan_RunInferenceStep = nullptr;
     
     // Performance tracking
     mutable size_t m_inferenceCount = 0;
@@ -172,4 +247,4 @@ namespace CPUOps {
     void EnableMultiThreading(bool enable);
 }
 
-} // namespace CPUInference
+} // namespace RawrXD

@@ -1,7 +1,7 @@
 #pragma once
 
 
-class SelfTest : public void {
+class SelfTest {
 
 public:
     explicit SelfTest(void* parent = nullptr);
@@ -9,6 +9,7 @@ public:
     bool runAll();               // unit + integration + perf
     bool runUnitTests();         // build/bin/*_test.exe
     bool runIntegrationTests();  // deflate_50mb, flash_attn, etc.
+    bool runInferenceTests();    // ModelInvoker check
     bool runLint();              // cl.exe /analyze
     bool runBenchmarkBaseline(); // tokens/sec vs. stored baseline
 

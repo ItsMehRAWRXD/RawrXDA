@@ -1,9 +1,39 @@
 #include "model_tester.h"
+#include <iostream>
 #include <sstream>
 #include <algorithm>
 #include <numeric>
 #include <iomanip>
 #include <ctime>
+#include <windows.h>
+#include <winhttp.h>
+#pragma comment(lib, "winhttp.lib")
+
+// Helper
+static std::string TesterHttpPost(const std::wstring& domain, int port, const std::wstring& path, const std::string& body) {
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-Tester/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return "";
+    HINTERNET hConnect = WinHttpConnect(hSession, domain.c_str(), port, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); return ""; }
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+    if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return ""; }
+    std::string response;
+    if (WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)body.c_str(), (DWORD)body.length(), (DWORD)body.length(), 0)) {
+        if (WinHttpReceiveResponse(hRequest, NULL)) {
+            DWORD dwSize = 0;
+            DWORD dwDownloaded = 0;
+            do {
+                dwSize = 0;
+                if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+                if (dwSize == 0) break;
+                std::vector<char> buffer(dwSize + 1);
+                if (WinHttpReadData(hRequest, &buffer[0], dwSize, &dwDownloaded)) response.append(buffer.data(), dwDownloaded);
+            } while (dwSize > 0);
+        }
+    }
+    WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
+    return response;
+}
 
 // Note: This implementation shows the framework structure.
 // For full HTTP integration, link against libcurl:
@@ -308,31 +338,21 @@ std::string ModelTester::makeOllamaRequest(
     const std::string& endpoint,
     const std::string& payload) {
 
-    // Implementation requires libcurl
-    // For now, return placeholder response
-    // In production, would use curl_easy_perform()
+    // Real logic: HTTP Request via WinHTTP
+    // Assume default Ollama port 11434 for tests if not specified in endpoint string (endpoint is usually just path)
+    // The previous code assumed endpoint was path.
 
-    if (m_logger) m_
-
-    // Placeholder: Simulate a response
-    // Real implementation would make actual HTTP call to http://localhost:11434{endpoint}
+    // Basic domain/port parsing
+    std::wstring domain = L"localhost";
+    int port = 11434;
     
-    std::string response = R"(
-{
-  "model": "llama2",
-  "created_at": "2024-12-12T10:00:00Z",
-  "response": "function add(a, b) {\n  return a + b;\n}",
-  "done": true,
-  "total_duration": 1234567,
-  "load_duration": 123456,
-  "prompt_eval_count": 10,
-  "prompt_eval_duration": 234567,
-  "eval_count": 15,
-  "eval_duration": 876543
-}
-)";
+    // Quick conversion of endpoint to wstring
+    std::wstring wpath(endpoint.begin(), endpoint.end());
 
-    if (m_logger) m_
+    std::string response = TesterHttpPost(domain, port, wpath, payload);
+    if (response.empty()) {
+        return "{\"error\": \"Connection failed\"}";
+    }
     return response;
 }
 

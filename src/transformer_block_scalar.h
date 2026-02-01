@@ -4,12 +4,12 @@
 #include <vector>
 #include <cstdint>
 
-class TransformerBlockScalar : public void
+class TransformerBlockScalar
 {
 
 public:
     enum class WeightType {
-        ,
+        UNKNOWN,
         K_WEIGHTS,
         V_WEIGHTS,
         O_WEIGHTS,
@@ -22,7 +22,7 @@ public:
         FFN_NORM
     };
     
-    explicit TransformerBlockScalar(void *parent = nullptr);
+    explicit TransformerBlockScalar();
     ~TransformerBlockScalar();
     
     bool initialize(uint32_t layerCount, uint32_t headCount, 
