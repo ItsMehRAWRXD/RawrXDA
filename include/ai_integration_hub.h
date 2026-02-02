@@ -55,7 +55,7 @@ struct BugReport {
     std::vector<std::string> suggestions;
 };
 
-struct TestCase {
+struct GeneratedTestCase {
     std::string name;
     std::string code;
     std::string description;
@@ -124,7 +124,7 @@ public:
 
     // Agent features
     std::string generateDocumentation(const std::string& code);
-    std::vector<TestCase> generateTests(const std::string& function);
+    std::vector<GeneratedTestCase> generateTests(const std::string& function);
     std::vector<BugReport> findBugs(const std::string& code);
     std::vector<Optimization> optimizeCode(const std::string& code);
 

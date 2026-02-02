@@ -6,14 +6,15 @@
 #ifndef RAWRXD_FOUNDATION_H
 #define RAWRXD_FOUNDATION_H
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#ifndef RAWRXD_NO_QT
-#define RAWRXD_NO_QT
-#endif
+// Critical Order: C++20 Standard Headers FIRST
+#include <compare>
+#include <atomic>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
 
-#include <windows.h>
+// Standard Headers
 #include <string>
 #include <vector>
 #include <map>
@@ -25,11 +26,27 @@
 #include <cstdint>
 #include <cstring>
 #include <cwchar>
-#include <atomic>
-#include <mutex>
-#include <thread>
-#include <condition_variable>
-#include <chrono>
+
+// Platform Headers
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef RAWRXD_NO_QT
+#define RAWRXD_NO_QT
+#endif
+
+#include <windows.h>
+
+// Undefine Helpers
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
 
 namespace RawrXD {
 

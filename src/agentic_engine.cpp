@@ -194,3 +194,19 @@ std::string AgenticEngine::buildPrompt(const std::string& query) {
 void AgenticEngine::logInteraction(const std::string& query, const std::string& response) {
     m_history.push_back({query, response});
 }
+
+std::string AgenticEngine::executePlan(const json& plan) {
+    if (plan.empty()) return "Empty plan.";
+    
+    // Create a local executor to run the plan
+    try {
+        ActionExecutor executor;
+        executor.setAgenticEngine(this); // Allow recursive calls
+        executor.executePlan(plan, true); // stopOnError=true
+        return "Plan executed successfully.";
+    } catch (const std::exception& e) {
+        return std::string("Plan execution failed: ") + e.what();
+    } catch (...) {
+        return "Plan execution failed with unknown error.";
+    }
+}

@@ -37,10 +37,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         editor.show();
         
         // Logic Engine (Background)
-        AgenticIDE logic; 
-        logic.initialize(); 
+        RawrXD::AgenticIDE logic;
+        logic.initialize();
         logic.setEditor(&editor); 
-        logic.startOrchestrator(); // Start the brain!
+        logic.start(); // Start the brain!
         
         // Start a background thread for agent logic if needed,
         // or just let the main loop run and agent responds to events.

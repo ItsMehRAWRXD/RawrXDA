@@ -12,7 +12,8 @@ class AgenticEngine;
 class ModelTrainer;
 
 namespace RawrXD {
-    class InferenceEngine;
+    class CPUInferenceEngine;
+    using InferenceEngine = CPUInferenceEngine;
 }
 using RawrXD::InferenceEngine;
 
@@ -106,10 +107,6 @@ private:
     std::map<std::string, std::any> m_memory;
     nlohmann::json m_executionHistory;
     std::string m_currentWorkingDirectory;
-    
-    int m_maxRetries = 3;
-    int m_currentRetryCount = 0;
-};
     
     int m_maxRetries = 3;
     int m_currentRetryCount = 0;

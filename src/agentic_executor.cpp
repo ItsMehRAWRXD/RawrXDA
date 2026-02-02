@@ -1,19 +1,23 @@
-// AgenticExecutor - Real agentic task execution (not simulated)
-#include "agentic_executor.h"
-#include "agentic_engine.h"
-#include "cpu_inference_engine.h" 
-#include "model_trainer.h"
-#include <fstream>
+#include <thread>
+#include <atomic>
+#include <compare>
+#include <string>
+#include <fstream> 
 #include <filesystem>
 #include <iostream>
 #include <sstream>
 #include <regex>
 #include <chrono>
 
+#include "agentic_executor.h"
+#include "agentic_engine.h"
+#include "cpu_inference_engine.h" 
+#include "model_trainer.h"
+
 using json = nlohmann::json;
 
 AgenticExecutor::AgenticExecutor(void* parent)
-    : m_currentWorkingDirectory(std::filesystem::path::currentPath())
+    : m_currentWorkingDirectory(std::filesystem::current_path().string())
 {
     m_executionHistory = json::array();
 }
@@ -107,11 +111,12 @@ json AgenticExecutor::decomposeTask(const std::string& goal)
         return json::array();
     }
     
-    std::string fullPrompt = "You are an expert planner. Decompose this task into actionable JSON steps: " + goal + 
+    std::string fullPrompt = "You are an autonomous AI agent. Decompose this task into actionable JSON steps: " + goal + 
                            "\nReturn ONLY a JSON array of objects with keys: action, description, params.";
                            
-    std::string response = m_agenticEngine ? m_agenticEngine->generateResponse(fullPrompt) : "[]";
+    std::string response = m_agenticEngine ? m_agenticEngine->processQuery(fullPrompt) : "[]";
     
+    // Attempt to parse JSON response
     try {
         // Attempt to find JSON array in response
         size_t start = response.find('[');
@@ -133,27 +138,39 @@ bool AgenticExecutor::executeStep(const json& step)
     if (!step.contains("action")) return false;
     
     std::string action = step["action"];
-    json params = step.contains("params") ? step["params"] : json::object();
-    std::string description = step.contains("description") ? step["description"] : action;
+    std::string description = step.contains("description") ? step["description"].get<std::string>() : action;
+
+    if (action == "CREATE_FILE") {
+        // Special handling for file creation to include content generation
+        std::string path = step["params"]["path"];
+        std::string content = step["params"].contains("content") ? step["params"]["content"] : "";
+        
+        // If content not provided, generate it
+        if (content.empty() && step["params"].contains("specification")) {
+            content = generateCode(step["params"]["specification"]);
+        }
+        
+        return createFile(path, content);
+    }
 
     logMessage("Step: " + description);
 
     try {
         if (action == "create_directory") {
-            std::string path = params["path"];
+            std::string path = step["params"]["path"];
             return createDirectory(path);
         }
         else if (action == "create_file") {
-            std::string path = params["path"];
+            std::string path = step["params"]["path"];
             std::string content = "";
             
-            if (params.contains("content")) {
-                content = params["content"];
+            if (step["params"].contains("content")) {
+                content = step["params"]["content"];
             }
             
             // If content not in params, generate it
-            if (content.empty() && params.contains("specification")) {
-                json codeGen = generateCode(params["specification"]);
+            if (content.empty() && step["params"].contains("specification")) {
+                json codeGen = generateCode(step["params"]["specification"]);
                 if (codeGen.contains("code")) {
                     content = codeGen["code"];
                 }
@@ -162,23 +179,23 @@ bool AgenticExecutor::executeStep(const json& step)
             return createFile(path, content);
         }
         else if (action == "compile") {
-            std::string projectPath = params["project_path"];
-            std::string compiler = params.contains("compiler") ? params["compiler"].get<std::string>() : "g++";
+            std::string projectPath = step["params"]["project_path"];
+            std::string compiler = step["params"].contains("compiler") ? step["params"]["compiler"].get<std::string>() : "g++";
             json compileResult = compileProject(projectPath, compiler);
             return compileResult.contains("success") && compileResult["success"].get<bool>();
         }
         else if (action == "run") {
-            std::string executable = params["executable"];
+            std::string executable = step["params"]["executable"];
             std::vector<std::string> args;
-            if (params.contains("args") && params["args"].is_array()) {
-                args = params["args"].get<std::vector<std::string>>();
+            if (step["params"].contains("args") && step["params"]["args"].is_array()) {
+                args = step["params"]["args"].get<std::vector<std::string>>();
             }
             json runResult = runExecutable(executable, args);
             return runResult.contains("success") && runResult["success"].get<bool>();
         }
         else if (action == "generate_code") {
-            std::string spec = params["specification"];
-            std::string outputPath = params["output_path"];
+            std::string spec = step["params"]["specification"];
+            std::string outputPath = step["params"]["output_path"];
             json codeGen = generateCode(spec);
             if (codeGen.contains("code")) {
                 return writeFile(outputPath, codeGen["code"]);
@@ -186,8 +203,8 @@ bool AgenticExecutor::executeStep(const json& step)
             return false;
         }
         else if (action == "tool_call") {
-            std::string toolName = params["tool_name"];
-            json toolParams = params["tool_params"];
+            std::string toolName = step["params"]["tool_name"];
+            json toolParams = step["params"]["tool_params"];
             json toolResult = callTool(toolName, toolParams);
             return toolResult.contains("success") && toolResult["success"].get<bool>();
         }
@@ -215,7 +232,7 @@ bool AgenticExecutor::verifyStepCompletion(const json& step, const std::string& 
            << "Does the actual result meet the success criteria? Answer with ONLY 'yes' or 'no'.";
 
     if (m_agenticEngine) {
-        std::string verification = m_agenticEngine->generateResponse(prompt.str());
+        std::string verification = m_agenticEngine->processQuery(prompt.str());
         std::transform(verification.begin(), verification.end(), verification.begin(), ::tolower);
         return verification.find("yes") != std::string::npos;
     }
@@ -306,9 +323,6 @@ std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path)
     } catch (...) {
         return {};
     }
-    return entries;
-}
-
     return entries;
 }
 
@@ -463,7 +477,7 @@ json AgenticExecutor::generateCode(const std::string& specification)
            << "- Follow C++17 best practices\n\n"
            << "Return ONLY the code, no explanations.";
 
-    std::string response = m_agenticEngine->generateResponse(prompt.str()); 
+    std::string response = m_agenticEngine->processQuery(prompt.str()); 
     std::string code = extractCodeFromResponse(response);
 
     result["specification"] = specification;
@@ -473,12 +487,11 @@ json AgenticExecutor::generateCode(const std::string& specification)
     return result;
 }
 
-std::string AgenticExecutor::extractCodeFromResponse(const std::string& response)
-{
+std::string AgenticExecutor::extractCodeFromResponse(const std::string& response) {
     std::regex codeBlockRegex("```(?:cpp|c\\+\\+)?\\s*\\n([\\s\\S]*?)```");
     std::smatch match;
     if (std::regex_search(response, match, codeBlockRegex) && match.size() > 1) {
-        return match.str(1);
+        return match[1].str();
     }
     return response;
 }
@@ -628,7 +641,7 @@ std::string AgenticExecutor::generateCorrectionPlan(const std::string& failureRe
            << "4. Verification steps\n\n"
            << "Be concise and actionable.";
 
-    return m_agenticEngine->generateResponse(prompt.str());
+    return m_agenticEngine->processQuery(prompt.str());
 }
 
 json AgenticExecutor::retryWithCorrection(const json& failedStep)

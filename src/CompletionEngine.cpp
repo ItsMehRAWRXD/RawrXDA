@@ -6,6 +6,7 @@
 #include <sstream>
 #include <regex>
 #include <nlohmann/json.hpp>
+#include <windows.h>
 #include <winhttp.h>
 
 #pragma comment(lib, "winhttp.lib")

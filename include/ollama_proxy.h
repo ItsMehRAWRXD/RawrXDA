@@ -1,11 +1,11 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QJsonDocument>
-#include <QJsonObject>
+#include "RawrXD_Foundation.h"
+#include "RawrXD_SignalSlot.h"
+#include <string>
+
+using RawrXD::String;
+using RawrXD::Signal;
 
 /**
  * @class OllamaProxy
@@ -18,47 +18,41 @@
  * Preserves all custom optimizations 95% of the time by using direct GGUF loading.
  * Falls back to Ollama only for edge cases (new quants, unsupported architectures).
  */
-class OllamaProxy : public QObject {
-    Q_OBJECT
+class OllamaProxy {
 public:
-    explicit OllamaProxy(QObject* parent = nullptr);
+    explicit OllamaProxy(void* parent = nullptr);
     ~OllamaProxy();
     
     // Set which Ollama model to use (e.g., "llama3.2:3b", "unlocked-350M:latest")
-    void setModel(const QString& modelName);
-    QString currentModel() const { return m_modelName; }
+    void setModel(const String& modelName);
+    String currentModel() const { return m_modelName; }
     
     // Check if Ollama is running and model is available
     bool isOllamaAvailable();
-    bool isModelAvailable(const QString& modelName);
+    bool isModelAvailable(const String& modelName);
     
     // Generate response using Ollama API with streaming
-    void generateResponse(const QString& prompt, 
+    void generateResponse(const String& prompt, 
                          float temperature = 0.8f,
                          int maxTokens = 512);
     
     // Stop current generation
     void stopGeneration();
     
-signals:
+    // Signals
     // Emitted for each token during streaming (compatible with AgenticEngine)
-    void tokenArrived(const QString& token);
+    Signal<const String&> tokenArrived;
     
     // Emitted when generation completes
-    void generationComplete();
+    Signal<> generationComplete;
     
     // Emitted on errors
-    void error(const QString& message);
-    
-private slots:
-    void onNetworkReply();
-    void onNetworkError(QNetworkReply::NetworkError code);
+    Signal<const String&> error;
     
 private:
-    QString m_modelName;
-    QString m_ollamaUrl;  // Default: http://localhost:11434
-    QNetworkAccessManager* m_networkManager;
-    QNetworkReply* m_currentReply;
+    String m_modelName;
+    bool m_isRunning;
     
-    QByteArray m_buffer;  // Buffer for partial SSE events
+    // Network handles or implementation detail
+    void* m_networkManager = nullptr; // Placeholder for WinHttp handle or similar
 };

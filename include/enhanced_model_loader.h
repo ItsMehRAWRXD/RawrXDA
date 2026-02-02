@@ -14,7 +14,7 @@ using RawrXD::String;
 using RawrXD::Signal;
 
 class GGUFServer;
-class InferenceEngine;
+namespace RawrXD { class InferenceEngine; }
 
 /**
  * @class EnhancedModelLoader
@@ -71,7 +71,7 @@ private:
     bool setupTempDirectory();
     void cleanupTempFiles();
 
-    std::unique_ptr<InferenceEngine> m_engine;
+    std::unique_ptr<RawrXD::InferenceEngine> m_engine;
     std::unique_ptr<GGUFServer> m_server;
     std::unique_ptr<FormatRouter> m_formatRouter;
     std::unique_ptr<HFDownloader> m_hfDownloader;

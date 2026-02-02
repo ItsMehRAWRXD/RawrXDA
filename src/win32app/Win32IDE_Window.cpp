@@ -272,4 +272,7 @@ void Win32IDE::initializeAgenticBridge() {
         std::string fullMsg = "[" + type + "] " + msg + "\n";
         HandleCopilotStreamUpdate(fullMsg.c_str(), fullMsg.length());
     });
+
+    // Initialize Swarm Intelligence System for replacement of simulation
+    initializeSwarmSystem();
 }

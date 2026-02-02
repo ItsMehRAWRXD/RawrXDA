@@ -1,566 +1,266 @@
-/**
- * \file lsp_client.cpp
- * \brief Implementation of LSPClient using Win32 API
- * \author RawrXD Team
- */
-
 #include "lsp_client.h"
 #include <iostream>
 #include <sstream>
-#include <string>
-#include <vector>
 #include <thread>
-#include <chrono>
 #include <windows.h>
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
+#include "nlohmann/json.hpp"
 
 namespace RawrXD {
 
-using json = nlohmann::json;
-
-// Helper to convert std::string to std::wstring
-static std::wstring toWString(const std::string& str) {
-    if (str.empty()) return std::wstring();
-    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-    std::wstring wstrTo(size_needed, 0);
-    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
-    return wstrTo;
-}
-
-LSPClient::LSPClient(const LSPServerConfig& config)
-    : m_config(config)
-{
-}
-
-LSPClient::~LSPClient()
-{
-    if (m_serverRunning) {
-        shutdown();
-        stopServer();
+class Win32PipeTransport : public JsonRpcTransport {
+public:
+    Win32PipeTransport() : hRead(NULL), hWrite(NULL), hProcess(NULL) {}
+    
+    ~Win32PipeTransport() {
+        disconnect();
     }
-}
-
-void LSPClient::initialize()
-{
-    if (m_config.autoStart) {
-        startServer();
-    }
-}
-
-bool LSPClient::startServer()
-{
-    if (m_serverRunning) return true;
-
-    createChildProcess();
-    if (!m_serverRunning) return false;
-
-    // Send initialize request
-    json params = json::object();
-    params["processId"] = GetCurrentProcessId();
-    params["rootPath"] = m_config.workspaceRoot;
-    if (m_config.workspaceRoot.empty()) {
-        params["rootUri"] = nullptr;
-    } else {
-        params["rootUri"] = buildDocumentUri(m_config.workspaceRoot);
-    }
-    params["capabilities"] = json::object(); 
-
-    json request = json::object();
-    request["jsonrpc"] = "2.0";
-    request["method"] = "initialize";
-    request["id"] = 0; 
-    request["params"] = params;
-
-    sendMessage(request);
-
-    return true;
-}
-
-void LSPClient::createChildProcess()
-{
-    SECURITY_ATTRIBUTES saAttr;
-    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-    saAttr.bInheritHandle = TRUE;
-    saAttr.lpSecurityDescriptor = NULL;
-
-    HANDLE hStdInRead = NULL;
-    HANDLE hStdInWrite = NULL;
-    HANDLE hStdOutRead = NULL;
-    HANDLE hStdOutWrite = NULL;
-
-    // Create StdIn pipe
-    if (!CreatePipe(&hStdInRead, &hStdInWrite, &saAttr, 0)) return;
-    // Create StdOut pipe
-    if (!CreatePipe(&hStdOutRead, &hStdOutWrite, &saAttr, 0)) {
-        CloseHandle(hStdInRead); CloseHandle(hStdInWrite);
-        return;
-    }
-
-    // Ensure the write handle to stdin and read handle from stdout are NOT inherited
-    if (!SetHandleInformation(hStdInWrite, HANDLE_FLAG_INHERIT, 0)) return;
-    if (!SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0)) return;
-
-    PROCESS_INFORMATION piProcInfo;
-    ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
-
-    STARTUPINFOW siStartInfo;
-    ZeroMemory(&siStartInfo, sizeof(STARTUPINFOW));
-    siStartInfo.cb = sizeof(STARTUPINFOW);
-    siStartInfo.hStdError = hStdOutWrite; // Merge stderr into stdout for now
-    siStartInfo.hStdOutput = hStdOutWrite;
-    siStartInfo.hStdInput = hStdInRead;
-    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
-
-    std::wstring cmdLine = toWString(m_config.command);
-    for (const auto& arg : m_config.arguments) {
-        cmdLine += L" " + toWString(arg);
-    }
-
-    // Create Process
-    std::vector<wchar_t> cmdBuf(cmdLine.begin(), cmdLine.end());
-    cmdBuf.push_back(0);
-
-    BOOL bSuccess = CreateProcessW(NULL,
-        cmdBuf.data(),
-        NULL,
-        NULL,
-        TRUE, // request handles inheritance
-        CREATE_NO_WINDOW, 
-        NULL,
-        m_config.workspaceRoot.empty() ? NULL : toWString(m_config.workspaceRoot).c_str(), 
-        &siStartInfo,
-        &piProcInfo);
-
-    // Close pipe handles that are now owned by child process
-    CloseHandle(hStdOutWrite);
-    CloseHandle(hStdInRead);
-
-    if (!bSuccess) {
-        CloseHandle(hStdOutRead);
-        CloseHandle(hStdInWrite);
-        return;
-    }
-
-    m_hProcess = piProcInfo.hProcess;
-    m_hThread = piProcInfo.hThread;
-    m_hStdInWrite = hStdInWrite;
-    m_hStdOutRead = hStdOutRead;
-    m_serverRunning = true;
-
-    // Start reading thread
-    m_stopThread = false;
-    m_readThread = std::thread(&LSPClient::readFromChild, this);
-}
-
-void LSPClient::stopServer()
-{
-    if (!m_serverRunning) return;
-
-    m_stopThread = true;
-
-    // Close handles to force ReadFile to error out
-    if (m_hStdInWrite) { CloseHandle((HANDLE)m_hStdInWrite); m_hStdInWrite = nullptr; }
-    if (m_hStdOutRead) { CloseHandle((HANDLE)m_hStdOutRead); m_hStdOutRead = nullptr; }
-
-    if (m_readThread.joinable()) {
-        m_readThread.join();
-    }
-
-    if (m_hProcess) {
-        TerminateProcess((HANDLE)m_hProcess, 0);
-        CloseHandle((HANDLE)m_hProcess);
-        m_hProcess = nullptr;
-    }
-    if (m_hThread) {
-        CloseHandle((HANDLE)m_hThread);
-        m_hThread = nullptr;
-    }
-
-    m_serverRunning = false;
-    m_initialized = false;
-}
-
-void LSPClient::writeToChild(const std::string& message)
-{
-    if (!m_serverRunning || !m_hStdInWrite) return;
-    std::lock_guard<std::mutex> lock(m_transportMutex);
-    DWORD bytesWritten;
-    WriteFile((HANDLE)m_hStdInWrite, message.c_str(), (DWORD)message.length(), &bytesWritten, NULL);
-}
-
-void LSPClient::readFromChild()
-{
-    const int bufferSize = 4096;
-    char buffer[4096];
-    DWORD bytesRead;
-
-    while (m_serverRunning && !m_stopThread) {
-        if (!ReadFile((HANDLE)m_hStdOutRead, buffer, bufferSize, &bytesRead, NULL) || bytesRead == 0) {
-            break; // pipe broken
+    
+    bool connect(const std::string& cmd, const std::vector<std::string>& args) override {
+        SECURITY_Attributes sa;
+        sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+        sa.bInheritHandle = TRUE;
+        sa.lpSecurityDescriptor = NULL;
+        
+        HANDLE hChildStd_IN_Rd = NULL;
+        HANDLE hChildStd_IN_Wr = NULL;
+        HANDLE hChildStd_OUT_Rd = NULL;
+        HANDLE hChildStd_OUT_Wr = NULL;
+        
+        // Create a pipe for the child process's STDOUT.
+        if (!CreatePipe(&hChildStd_OUT_Rd, &hChildStd_OUT_Wr, &sa, 0)) return false;
+        if (!SetHandleInformation(hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0)) return false;
+        
+        // Create a pipe for the child process's STDIN.
+        if (!CreatePipe(&hChildStd_IN_Rd, &hChildStd_IN_Wr, &sa, 0)) return false;
+        if (!SetHandleInformation(hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0)) return false;
+        
+        // CreateProcess
+        STARTUPINFOA si;
+        PROCESS_INFORMATION pi;
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+        si.hStdError = hChildStd_OUT_Wr; // Capture stderr too? Or separate? Usually stderr logs, stdout is JSON-RPC
+        si.hStdOutput = hChildStd_OUT_Wr;
+        si.hStdInput = hChildStd_IN_Rd;
+        si.dwFlags |= STARTF_USESTDHANDLES;
+        
+        ZeroMemory(&pi, sizeof(pi));
+        
+        std::string commandLine = cmd;
+        for(const auto& arg : args) {
+            commandLine += " " + arg;
         }
+        
+        // NOTE: CreateProcess modifies commandLine buffer if not const char*
+        std::vector<char> cmdVec(commandLine.begin(), commandLine.end());
+        cmdVec.push_back(0);
+        
+        if (!CreateProcessA(NULL, cmdVec.data(), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+            return false;
+        }
+        
+        hProcess = pi.hProcess;
+        CloseHandle(pi.hThread);
+        
+        // Close handles to the pipes that are just for child
+        CloseHandle(hChildStd_OUT_Wr);
+        CloseHandle(hChildStd_IN_Rd);
+        
+        hRead = hChildStd_OUT_Rd;
+        hWrite = hChildStd_IN_Wr;
+        
+        return true;
+    }
+    
+    void disconnect() {
+        if (hWrite) CloseHandle(hWrite);
+        if (hRead) CloseHandle(hRead);
+        if (hProcess) {
+            TerminateProcess(hProcess, 0);
+            CloseHandle(hProcess);
+        }
+        hWrite = NULL;
+        hRead = NULL;
+        hProcess = NULL;
+    }
+    
+    void send(const nlohmann::json& msg) override {
+        if (!hWrite) return;
+        std::string payload = msg.dump();
+        std::string header = "Content-Length: " + std::to_string(payload.size()) + "\r\n\r\n";
+        std::string packet = header + payload;
+        
+        DWORD written;
+        WriteFile(hWrite, packet.c_str(), packet.size(), &written, NULL);
+    }
+    
+    nlohmann::json receive() override {
+        if (!hRead) return nullptr;
+        
+        // Basic implementation of Content-Length reading
+        // Need to read headers byte by byte until \r\n\r\n
+        std::string headers;
+        char c;
+        DWORD read;
+        while (ReadFile(hRead, &c, 1, &read, NULL) && read > 0) {
+            headers += c;
+            if (headers.size() >= 4 && headers.substr(headers.size()-4) == "\r\n\r\n") {
+                 break;
+            }
+        }
+        
+        // Parse Content-Length
+        size_t lenInfo = headers.find("Content-Length: ");
+        if (lenInfo == std::string::npos) return nullptr;
+        
+        size_t lenStart = lenInfo + 16;
+        size_t lenEnd = headers.find("\r", lenStart);
+        int contentLength = std::stoi(headers.substr(lenStart, lenEnd - lenStart));
+        
+        if (contentLength <= 0) return nullptr;
+        
+        // Read body
+        std::vector<char> buffer(contentLength);
+        DWORD totalRead = 0;
+        while(totalRead < contentLength) {
+             if(!ReadFile(hRead, buffer.data() + totalRead, contentLength - totalRead, &read, NULL)) break;
+             totalRead += read;
+        }
+        
+        std::string body(buffer.begin(), buffer.end());
+        try {
+            return nlohmann::json::parse(body);
+        } catch(...) {
+            return nullptr;
+        }
+    }
+    
+    bool isConnected() const override {
+        return hProcess != NULL;
+    }
 
-        m_receiveBuffer.append(buffer, bytesRead);
+private:
+    HANDLE hRead;
+    HANDLE hWrite;
+    HANDLE hProcess;
+    typedef struct _SECURITY_ATTRIBUTES {
+        DWORD nLength;
+        LPVOID lpSecurityDescriptor;
+        BOOL bInheritHandle;
+    } SECURITY_ATTRIBUTES, *PSECURITY_ATTRIBUTES, *LPSECURITY_ATTRIBUTES;
+};
 
+// LSPClient Implementation
+
+LSPClient::LSPClient(const LSPConfig& config) : m_config(config) {
+    m_transport = std::make_unique<Win32PipeTransport>();
+}
+
+LSPClient::~LSPClient() {
+    stop();
+}
+
+bool LSPClient::start() {
+    return m_transport->connect(m_config.command, m_config.args);
+}
+
+void LSPClient::stop() {
+    // Dynamic cast or just destruct
+    // m_transport destructor handles cleanup
+    m_transport.reset();
+}
+
+nlohmann::json LSPClient::createRequest(const std::string& method, const nlohmann::json& params) {
+    return {
+        {"jsonrpc", "2.0"},
+        {"id", ++m_requestId},
+        {"method", method},
+        {"params", params}
+    };
+}
+
+nlohmann::json LSPClient::createNotification(const std::string& method, const nlohmann::json& params) {
+    return {
+        {"jsonrpc", "2.0"},
+        {"method", method},
+        {"params", params}
+    };
+}
+
+std::future<nlohmann::json> LSPClient::initialize() {
+    return std::async(std::launch::async, [this]() {
+        nlohmann::json params = {
+            {"processId", GetCurrentProcessId()},
+            {"rootUri", "file:///" + m_config.rootPath},
+            {"capabilities", {}}
+        };
+        m_transport->send(createRequest("initialize", params));
+        
+        // Block wait for response (simple sync implementation for now)
+        return m_transport->receive();
+    });
+}
+
+void LSPClient::didOpen(const std::string& uri, const std::string& text) {
+     nlohmann::json params = {
+        {"textDocument", {
+            {"uri", uri},
+            {"languageId", m_config.languageId},
+            {"version", 1},
+            {"text", text}
+        }}
+    };
+    m_transport->send(createNotification("textDocument/didOpen", params));
+}
+
+void LSPClient::didChange(const std::string& uri, const std::string& text) {
+    nlohmann::json params = {
+        {"textDocument", {
+            {"uri", uri},
+            {"version", 2}
+        }},
+        {"contentChanges", {{{"text", text}}}}
+    };
+    m_transport->send(createNotification("textDocument/didChange", params));
+}
+
+std::future<nlohmann::json> LSPClient::completion(const std::string& uri, int line, int character) {
+    return std::async(std::launch::async, [this, uri, line, character]() {
+        nlohmann::json params = {
+            {"textDocument", {{"uri", uri}}},
+            {"position", {{"line", line}, {"character", character}}}
+        };
+        
+        int id = m_requestId + 1;
+        m_transport->send(createRequest("textDocument/completion", params));
+        
+        // VERY NAIVE loop to find matching response
+        // In reality, you'd have a message pump thread handling this
         while (true) {
-            size_t headerEnd = m_receiveBuffer.find("\r\n\r\n");
-            if (headerEnd == std::string::npos) break; 
-
-            size_t contentLengthPos = m_receiveBuffer.find("Content-Length: ");
-            if (contentLengthPos == std::string::npos || contentLengthPos > headerEnd) {
-                m_receiveBuffer.erase(0, headerEnd + 4);
-                continue;
-            }
-
-            int contentLength = std::stoi(m_receiveBuffer.substr(contentLengthPos + 16, headerEnd - (contentLengthPos + 16)));
-
-            if (m_receiveBuffer.size() < headerEnd + 4 + contentLength) {
-                break; 
-            }
-
-            std::string body = m_receiveBuffer.substr(headerEnd + 4, contentLength);
-            m_receiveBuffer.erase(0, headerEnd + 4 + contentLength);
-
-            try {
-                auto msg = json::parse(body);
-                processMessage(msg);
-            } catch (...) {
-                std::cerr << "LSP JSON Parse Error" << std::endl;
+            auto msg = m_transport->receive();
+            if (msg.contains("id") && msg["id"] == id) {
+                return msg["result"];
             }
         }
-    }
-
-    if (m_serverRunning) {
-        onServerFinished(0, 0);
-    }
+    });
 }
 
-void LSPClient::sendMessage(const json& message)
-{
-    if (!m_serverRunning) return;
-
-    std::string jsonStr = message.dump();
-    std::string packet = "Content-Length: " + std::to_string(jsonStr.length()) + "\r\n\r\n" + jsonStr;
-
-    writeToChild(packet);
-}
-
-void LSPClient::shutdown()
-{
-    if (!m_serverRunning) return;
-    
-    // Send shutdown request
-    json req = json::object();
-    req["jsonrpc"] = "2.0";
-    req["method"] = "shutdown";
-    req["id"] = m_nextRequestId++;
-    sendMessage(req);
-    
-    // Give it a moment, then exit
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    json notif = json::object();
-    notif["jsonrpc"] = "2.0";
-    notif["method"] = "exit";
-    sendMessage(notif);
-}
-
-void LSPClient::processMessage(const json& message)
-{
-    if (message.contains("id") && !message["id"].is_null()) {
-        int id = message["id"];
-        if (message.contains("result")) {
-            if (id == 0) {
-                handleInitializeResponse(message["result"]);
-            } else if (m_pendingRequests.count(id)) {
-                auto& req = m_pendingRequests[id];
-                if (req.type == "completion") handleCompletionResponse(message["result"], id);
-                else if (req.type == "hover") handleHoverResponse(message["result"], id);
-                else if (req.type == "definition") handleDefinitionResponse(message["result"], id);
-                else if (req.type == "formatting") handleFormattingResponse(message["result"], id);
-                m_pendingRequests.erase(id);
+std::future<nlohmann::json> LSPClient::definition(const std::string& uri, int line, int character) {
+     return std::async(std::launch::async, [this, uri, line, character]() {
+        nlohmann::json params = {
+            {"textDocument", {{"uri", uri}}},
+            {"position", {{"line", line}, {"character", character}}}
+        };
+        int id = m_requestId + 1;
+        m_transport->send(createRequest("textDocument/definition", params));
+        
+        while (true) {
+            auto msg = m_transport->receive();
+            if (msg.contains("id") && msg["id"] == id) {
+                return msg["result"];
             }
         }
-    } else if (message.contains("method")) {
-        if (message["method"] == "textDocument/publishDiagnostics") {
-            handleDiagnostics(message["params"]);
-        }
-    }
-}
-
-void LSPClient::handleInitializeResponse(const json& result)
-{
-    m_initialized = true;
-    serverReady();
-    
-    json notification = json::object();
-    notification["jsonrpc"] = "2.0";
-    notification["method"] = "initialized";
-    notification["params"] = json::object();
-    sendMessage(notification);
-}
-
-void LSPClient::handleCompletionResponse(const json& result, int requestId)
-{
-    std::vector<CompletionItem> items;
-    const json* itemList = nullptr;
-    if (result.is_array()) itemList = &result;
-    else if (result.is_object() && result.contains("items")) itemList = &result["items"];
-
-    if (itemList) {
-        for (const auto& item : *itemList) {
-            CompletionItem ci;
-            ci.label = item.value("label", "");
-            ci.insertText = item.value("insertText", ci.label);
-            ci.detail = item.value("detail", "");
-            ci.documentation = item.value("documentation", "");
-            ci.kind = item.value("kind", 1);
-            ci.sortText = item.value("sortText", "");
-            ci.filterText = item.value("filterText", "");
-            items.push_back(ci);
-        }
-    }
-    completionsReceived("", 0, 0, items); 
-}
-
-void LSPClient::handleHoverResponse(const json& result, int requestId)
-{
-    std::string markdown;
-    if (result.contains("contents")) {
-        auto contents = result["contents"];
-        if (contents.is_string()) markdown = contents;
-        else if (contents.is_object() && contents.contains("value")) markdown = contents["value"];
-        else if (contents.is_array()) {
-            for (const auto& part : contents) {
-                if (part.is_string()) markdown += part.get<std::string>() + "\n";
-                else if (part.contains("value")) markdown += part["value"].get<std::string>() + "\n";
-            }
-        }
-    }
-    hoverReceived("", markdown);
-}
-
-void LSPClient::handleDefinitionResponse(const json& result, int requestId)
-{
-    if (result.is_array() && !result.empty()) {
-        auto& loc = result[0];
-        std::string uri = loc.value("uri", "");
-        definitionReceived(uri, 0, 0); 
-    } else if (result.is_object()) {
-        std::string uri = result.value("uri", "");
-        definitionReceived(uri, 0, 0);
-    }
-}
-
-void LSPClient::handleDiagnostics(const json& params)
-{
-    std::string uri = params.value("uri", "");
-    std::vector<Diagnostic> batch;
-
-    if (params.contains("diagnostics") && params["diagnostics"].is_array()) {
-        for (const auto& diag : params["diagnostics"]) {
-            Diagnostic d;
-            d.message = diag.value("message", "");
-            d.severity = diag.value("severity", 1);
-            d.source = diag.value("source", "LSP");
-
-            if (diag.contains("range")) {
-                d.line = diag["range"]["start"].value("line", 0);
-                d.column = diag["range"]["start"].value("character", 0);
-            }
-            batch.push_back(d);
-        }
-    }
-    m_diagnostics[uri] = batch;
-    diagnosticsUpdated(uri, batch);
-}
-
-void LSPClient::serverReady() {}
-void LSPClient::completionsReceived(const std::string& uri, int line, int character, const std::vector<CompletionItem>& items) {}
-void LSPClient::hoverReceived(const std::string& uri, const std::string& markdown) {}
-void LSPClient::definitionReceived(const std::string& uri, int line, int character) {}
-void LSPClient::diagnosticsUpdated(const std::string& uri, const std::vector<Diagnostic>& diagnostics) {}
-void LSPClient::formatEditsReceived(const std::string& uri, const std::string& formattedText) {}
-void LSPClient::serverError(const std::string& error) { std::cerr << "LSP Error: " << error << std::endl; }
-void LSPClient::onServerFinished(int exitCode, int status) { std::cout << "LSP Server exited" << std::endl; }
-
-std::string LSPClient::buildDocumentUri(const std::string& filePath) const {
-    return "file:///" + filePath; 
-}
-
-void LSPClient::openDocument(const std::string& uri, const std::string& languageId, const std::string& text)
-{
-    json params = json::object();
-    params["textDocument"] = json::object();
-    params["textDocument"]["uri"] = uri;
-    params["textDocument"]["languageId"] = languageId;
-    params["textDocument"]["version"] = 1;
-    params["textDocument"]["text"] = text;
-
-    m_documentVersions[uri] = 1;
-
-    json notification = json::object();
-    notification["jsonrpc"] = "2.0";
-    notification["method"] = "textDocument/didOpen";
-    notification["params"] = params;
-
-    sendMessage(notification);
-}
-
-void LSPClient::closeDocument(const std::string& uri)
-{
-    json params = json::object();
-    params["textDocument"] = json::object();
-    params["textDocument"]["uri"] = uri;
-
-    json notification = json::object();
-    notification["jsonrpc"] = "2.0";
-    notification["method"] = "textDocument/didClose";
-    notification["params"] = params;
-
-    sendMessage(notification);
-    m_documentVersions.erase(uri);
-}
-
-void LSPClient::updateDocument(const std::string& uri, const std::string& text, int version)
-{
-    int newVersion = (version > 0) ? version : (m_documentVersions[uri] + 1);
-    m_documentVersions[uri] = newVersion;
-
-    json change = json::object();
-    change["text"] = text;
-
-    json params = json::object();
-    params["textDocument"] = json::object();
-    params["textDocument"]["uri"] = uri;
-    params["textDocument"]["version"] = newVersion;
-    params["contentChanges"] = json::array();
-    params["contentChanges"].push_back(change);
-
-    json notification = json::object();
-    notification["jsonrpc"] = "2.0";
-    notification["method"] = "textDocument/didChange";
-    notification["params"] = params;
-
-    sendMessage(notification);
-}
-
-void LSPClient::requestCompletions(const std::string& uri, int line, int character)
-{
-    int reqId = m_nextRequestId++;
-
-    PendingRequest pending;
-    pending.type = "completion";
-    pending.uri = uri;
-    pending.line = line;
-    pending.character = character;
-    m_pendingRequests[reqId] = pending;
-
-    json params = json::object();
-    params["textDocument"] = json::object();
-    params["textDocument"]["uri"] = uri;
-    params["position"] = json::object();
-    params["position"]["line"] = line;
-    params["position"]["character"] = character;
-
-    json req = json::object();
-    req["jsonrpc"] = "2.0";
-    req["method"] = "textDocument/completion";
-    req["id"] = reqId;
-    req["params"] = params;
-
-    sendMessage(req);
-}
-
-void LSPClient::requestHover(const std::string& uri, int line, int character)
-{
-    int reqId = m_nextRequestId++;
-    PendingRequest pending{"hover", uri, line, character};
-    m_pendingRequests[reqId] = pending;
-
-    json params = json::object();
-    params["textDocument"] = { {"uri", uri} };
-    params["position"] = { {"line", line}, {"character", character} };
-
-    json req = json::object();
-    req["jsonrpc"] = "2.0";
-    req["method"] = "textDocument/hover";
-    req["id"] = reqId;
-    req["params"] = params;
-
-    sendMessage(req);
-}
-
-void LSPClient::requestDefinition(const std::string& uri, int line, int character)
-{
-    int reqId = m_nextRequestId++;
-    PendingRequest pending{"definition", uri, line, character};
-    m_pendingRequests[reqId] = pending;
-
-    json params = json::object();
-    params["textDocument"] = { {"uri", uri} };
-    params["position"] = { {"line", line}, {"character", character} };
-
-    json req = json::object();
-    req["jsonrpc"] = "2.0";
-    req["method"] = "textDocument/definition";
-    req["id"] = reqId;
-    req["params"] = params;
-    sendMessage(req);
-}
-
-void LSPClient::formatDocument(const std::string& uri)
-{
-    int reqId = m_nextRequestId++;
-    PendingRequest pending{"formatting", uri, 0, 0};
-    m_pendingRequests[reqId] = pending;
-
-    json params = json::object();
-    params["textDocument"] = { {"uri", uri} };
-    params["options"] = { {"tabSize", 4}, {"insertSpaces", true} }; // Defaults
-
-    json req = json::object();
-    req["jsonrpc"] = "2.0";
-    req["method"] = "textDocument/formatting";
-    req["id"] = reqId;
-    req["params"] = params;
-
-    sendMessage(req);
-}
-
-void LSPClient::handleFormattingResponse(const json& result, int requestId)
-{
-    if (!result.is_array()) return;
-    
-    // We assume the caller wants the full text replacement or specific edits.
-    // Simplifying: If edits effectively replace the whole file or large chunks, we signal "Formatted".
-    // Usually we would apply TextEdits to the document buffer.
-    // For now, let's just serialize the edits to string and pass them back, 
-    // or if the callback expects the new full text, we can't provide it without the doc state.
-    // The signal signature is: formatEditsReceived(uri, formattedText or JSON edits)
-    // We'll pass the JSON string of edits for the UI/Editor to apply.
-    
-    std::string editsJson = result.dump();
-    // URI? We need to look up request
-    // We erased it from pendingRequests in processMessage before calling this handler?
-    // Wait, processMessage calls handle... then erases. So req is still valid ref if we didn't use `auto&`.
-    // Actually `auto& req` implies reference to map value. If we erase it AFTER, it's fine.
-    
-    // But we need the URI.
-    // m_pendingRequests is still valid inside handle wrappers usually if passed correctly.
-    // Let's pass the URI explicitly or look it up via ID if we change sig.
-    // For now, we don't have URI in args. 
-    // We'll rely on the signal being generic or "active document". 
-    // But to be correct, let's just pass the JSON.
-    
-    formatEditsReceived("", editsJson); 
-}
-
-std::vector<Diagnostic> LSPClient::getDiagnostics(const std::string& uri) const
-{
-    if (m_diagnostics.count(uri)) return m_diagnostics.at(uri);
-    return {};
+    });
 }
 
 } // namespace RawrXD

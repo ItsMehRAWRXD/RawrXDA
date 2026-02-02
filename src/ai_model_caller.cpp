@@ -322,4 +322,37 @@ std::string ModelCaller::generateRewrite(
      return callModel(prompt, params);
 }
 
+bool ModelCaller::streamModel(const std::string& prompt, const GenerationParams& params, StreamCallback callback, std::chrono::milliseconds delay) {
+    // Check for GGUF Local support first
+    // In a real scenario, we might have a global engine instance or create one.
+    // Use CallNativeHost if IPC, or direct CPUInferenceEngine if linked.
+    
+    // For this implementation, we rely on callModel() which handles the backend selection
+    // (NativeHost IPC, WinHttp, or embedded CPUInferenceEngine).
+    
+    // Real inference happens in callModel (Blocking).
+    std::string fullResponse = callModel(prompt, params);
+    
+    if (fullResponse.substr(0, 8) == "// Error") return false;
+
+    // Stream Adapter: Chunking buffer for UI compatibility
+    // Since the backend is blocking, we emit chunks to satisfy the streaming interface.
+    size_t pos = 0;
+    size_t len = fullResponse.length();
+    size_t chunkSize = 16; // Emit small packets
+    
+    while (pos < len) {
+        size_t n = std::min(chunkSize, len - pos);
+        std::string token = fullResponse.substr(pos, n);
+        
+        if (!callback(token)) return false; // Cancelled
+        
+        pos += n;
+        // Minimal delay to allow UI refresh events if running on main thread (though usually this is bg)
+        if (delay.count() > 0) std::this_thread::sleep_for(delay);
+    }
+    
+    return true;
+}
+
 } // namespace RawrXD

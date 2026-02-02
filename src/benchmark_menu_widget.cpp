@@ -1,103 +1,98 @@
 /**
  * \file benchmark_menu_widget.cpp
- * \brief Implementation of benchmark menu system for IDE
+ * \brief Implementation of benchmark menu system for IDE (Stubbed)
  * \author RawrXD Team
- * \date 2025-12-13
+ * \date 2026-02-01
  */
 
 #include "benchmark_menu_widget.hpp"
 #include "benchmark_runner.hpp"
-
-#include "../../cpu_inference_engine.h"
-#include <filesystem>
-#include <chrono>
-#include <cmath>
-
 #include <iostream>
-#include <algorithm>
 
 // ============================================================================
-// BENCHMARK SELECTOR IMPLEMENTATION
+// BENCHMARK SELECTOR STUB
 // ============================================================================
 
-BenchmarkSelector::BenchmarkSelector(void* parent)
-    : void(parent) {
-    setupUI();
+BenchmarkSelector::BenchmarkSelector(void* parent) {
 }
 
-void BenchmarkSelector::setupUI() {
-    auto mainLayout = new void(this);
-
-    // ────────────────────────────────────────────────────────────────
-    // Test Selection Group
-    // ────────────────────────────────────────────────────────────────
-    
-    auto testGroup = new void("Benchmark Tests", this);
-    auto testLayout = new void(testGroup);
-
-    const std::vector<std::pair<std::string, std::string>> tests = {
-        {"cold_start", "Cold Start Latency - Initial model load + first inference"},
-        {"warm_cache", "Warm Cache Performance - Cached completions (target: <10ms)"},
-        {"rapid_fire", "Rapid-Fire Stress Test - 100+ burst requests"},
-        {"multi_lang", "Multi-Language Support - C++, Python, JS, TS, Rust"},
-        {"context_aware", "Context-Aware Completions - Full context window"},
-        {"multi_line", "Multi-Line Function Generation - Structural completion"},
-        {"gpu_accel", "GPU Acceleration - Vulkan compute shader performance"},
-        {"memory", "Memory Profiling - Model loading and caching overhead"}
+std::vector<std::string> BenchmarkSelector::getSelectedTests() const {
+    // Default to all tests for CLI/Stub
+    return {
+        "cold_start", "warm_cache", "rapid_fire", 
+        "multi_lang", "context_aware", "memory"
     };
+}
 
-    for (const auto& [testId, testDesc] : tests) {
-        auto checkbox = nullptr, this);
-        checkbox->setChecked(true);  // All selected by default
-        checkbox->setObjectName(std::string::fromStdString(testId));
-        testLayout->addWidget(checkbox);
-        testCheckboxes_.push_back(checkbox);
+std::string BenchmarkSelector::getSelectedModel() const {
+    return ""; // Default model
+}
+
+bool BenchmarkSelector::isGpuEnabled() const {
+    return true;
+}
+
+bool BenchmarkSelector::isVerbose() const {
+    return true;
+}
+
+// ============================================================================
+// BENCHMARK MENU WIDGET STUB
+// ============================================================================
+
+BenchmarkMenuWidget::BenchmarkMenuWidget(void* parent) {
+    runner_ = std::make_unique<BenchmarkRunner>();
+}
+
+BenchmarkMenuWidget::~BenchmarkMenuWidget() {
+}
+
+void BenchmarkMenuWidget::show() {
+    // CLI mode or No-op
+    startBenchmarks();
+}
+
+void BenchmarkMenuWidget::startBenchmarks() {
+    if (!runner_) return;
+
+    if (!selector_) {
+         selector_ = std::make_unique<BenchmarkSelector>();
     }
 
-    testLayout->addSpacing(10);
+    auto tests = selector_->getSelectedTests();
+    std::string model = selector_->getSelectedModel();
+    bool gpu = selector_->isGpuEnabled();
+    bool verbose = selector_->isVerbose();
 
-    // Add select all / deselect all buttons
-    auto buttonLayout = new void();
-    auto selectAllBtn = new void("Select All", this);
-    auto deselectAllBtn = new void("Deselect All", this);
-// Qt connect removed
-// Qt connect removed
-    buttonLayout->addWidget(selectAllBtn);
-    buttonLayout->addWidget(deselectAllBtn);
-    buttonLayout->addStretch();
-    
-    testLayout->addLayout(buttonLayout);
-    mainLayout->addWidget(testGroup);
+    // Hook up callbacks
+    runner_->setLogCallback([this](const std::string& msg, int level) {
+        this->logMessage(msg, level);
+    });
 
-    // ────────────────────────────────────────────────────────────────
-    // Configuration Group
-    // ────────────────────────────────────────────────────────────────
-    
-    auto configGroup = new void("Configuration", this);
-    auto configLayout = new void(configGroup);
+    runner_->setProgressCallback([this](int current, int total) {
+        this->updateProgress(current, total);
+    });
 
-    // Model selection
-    auto modelLayout = new void();
-    modelLayout->addWidget(new void("Model:", this));
-    modelCombo_ = new void(this);
-    modelCombo_->addItem("models/ministral-3b-instruct-v0.3-Q4_K_M.gguf", 
-                         "models/ministral-3b-instruct-v0.3-Q4_K_M.gguf");
-    modelCombo_->addItem("models/mistral-7b-Q4_K_M.gguf", 
-                         "models/mistral-7b-Q4_K_M.gguf");
-    modelCombo_->addItem("Custom...", "");
-    modelLayout->addWidget(modelCombo_);
-    modelLayout->addStretch();
-    configLayout->addLayout(modelLayout);
+    runner_->runBenchmarks(tests, model, gpu, verbose);
+}
 
-    // GPU checkbox
-    gpuCheckbox_ = nullptr", this);
-    gpuCheckbox_->setChecked(true);
-    configLayout->addWidget(gpuCheckbox_);
+void BenchmarkMenuWidget::stopBenchmarks() {
+    if (runner_) runner_->stop();
+}
 
-    // Verbose output checkbox
-    verboseCheckbox_ = nullptr;
-    verboseCheckbox_->setChecked(false);
-    configLayout->addWidget(verboseCheckbox_);
+void BenchmarkMenuWidget::addTestResult(const std::string& name, bool passed, double latency) {
+    std::cout << "[RESULT] " << name << ": " << (passed ? "PASS" : "FAIL") 
+              << " (" << latency << "ms)" << std::endl;
+}
+
+void BenchmarkMenuWidget::updateProgress(int current, int total) {
+    std::cout << "[PROGRESS] " << current << "/" << total << std::endl;
+}
+
+void BenchmarkMenuWidget::logMessage(const std::string& msg, int level) {
+    // Simple stdout logging for now
+    std::cout << "[LOG:" << level << "] " << msg << std::endl;
+}
 
     mainLayout->addWidget(configGroup);
     mainLayout->addStretch();

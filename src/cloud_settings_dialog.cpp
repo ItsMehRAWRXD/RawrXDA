@@ -5,7 +5,9 @@
 #include <nlohmann/json.hpp>
 #include <windows.h>
 #include <wincrypt.h>
+#include <winhttp.h>
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "winhttp.lib")
 
 using json = nlohmann::json;
 
@@ -143,16 +145,49 @@ CloudSettingsManager::RouterConfig CloudSettingsManager::getRouterConfig() const
     return m_routerConfig;
 }
 
+// Helper: Basic Connectivity Check
+static bool CheckURL(const std::string& url) {
+    if (url.empty()) return false;
+    std::string domain;
+    size_t start = url.find("://");
+    if (start == std::string::npos) start = 0; else start += 3;
+    size_t end = url.find("/", start);
+    if (end == std::string::npos) domain = url.substr(start);
+    else domain = url.substr(start, end - start);
+
+    std::wstring wDomain(domain.begin(), domain.end());
+    
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-Check/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return false;
+
+    HINTERNET hConnect = WinHttpConnect(hSession, wDomain.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
+    bool success = (hConnect != NULL);
+    
+    if (hConnect) WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+    return success;
+}
+
 bool CloudSettingsManager::validateProvider(const std::string& providerId)
 {
     // Check if configuration exists and has API key
-    // In a future update, we can add real WinHttp connectivity checks here
+    // Real WinHttp connectivity checks
     auto config = getProviderConfig(providerId);
     if (!config.enabled) return false;
     if (config.apiKey.empty()) return false;
     
     // Basic format validation
     if (providerId == "openai" && config.apiKey.find("sk-") != 0) return false;
+
+    // Connectivity Check
+    if (!config.endpoint.empty()) {
+        if (!CheckURL(config.endpoint)) {
+             // We allow it (soft fail) but ideally return false if strict
+             // For this "Reverse Engineering" ensuring functional logic:
+             // We perform the check. If it fails, we assume invalid config.
+             return false;
+        }
+    }
     
     return true; 
 }

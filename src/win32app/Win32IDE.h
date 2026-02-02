@@ -1,12 +1,6 @@
 #pragma once
 
 #include <windows.h>
-
-// Undefine Windows macros that conflict with our code
-#ifdef ERROR
-#undef ERROR
-#endif
-
 #include <commctrl.h>
 #include <shlobj.h>
 #include <string>
@@ -16,6 +10,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <algorithm> // Added for transform
 #include <memory>
 #include "IDELogger.h"
 #include "Win32TerminalManager.h"
@@ -24,6 +19,7 @@
 #include "streaming_gguf_loader.h"
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
+#include "../agentic/coordination/SwarmOrchestrator.h"
 
 // Define LOG_FUNCTION macro if not already defined
 #ifndef LOG_FUNCTION
@@ -33,6 +29,89 @@
 #include "TransparentRenderer.h"
 #include "gguf_loader.h"
 #include "streaming_gguf_loader.h"
+
+// ============================================================================
+// COMMAND SYSTEM STRUCTURES
+// ============================================================================
+
+enum class CommandID : int {
+    // File commands (2000-2099)
+    FILE_NEW = 2001,
+    FILE_OPEN = 2002,
+    FILE_SAVE = 2003,
+    FILE_SAVEAS = 2004,
+    FILE_EXIT = 2005,
+    FILE_LOAD_MODEL = 2006,
+    
+    // Edit commands (2100-2199)
+    EDIT_UNDO = 2101,
+    EDIT_REDO = 2102,
+    EDIT_CUT = 2103,
+    EDIT_COPY = 2104,
+    EDIT_PASTE = 2105,
+    EDIT_SELECT_ALL = 2106,
+    EDIT_FIND = 2107,
+    EDIT_REPLACE = 2108,
+    EDIT_FIND_NEXT = 2109,
+    EDIT_FIND_PREV = 2110,
+    EDIT_SNIPPET = 2111,
+    EDIT_COPY_FORMAT = 2112,
+    EDIT_PASTE_PLAIN = 2113,
+    EDIT_CLIPBOARD_HISTORY = 2114,
+    
+    // View commands (2200-2299)
+    VIEW_MINIMAP = 2201,
+    VIEW_OUTPUT_TABS = 2202,
+    VIEW_MODULE_BROWSER = 2203,
+    VIEW_THEME_EDITOR = 2204,
+    VIEW_FLOATING_PANEL = 2205,
+    VIEW_OUTPUT_PANEL = 2206,
+    VIEW_TERMINAL = 2207,
+    VIEW_SIDEBAR = 2208,
+    VIEW_TOGGLE_STREAMING = 2209,
+    VIEW_TOGGLE_VULKAN = 2210,
+    
+    // Terminal commands (2300-2399)
+    TERMINAL_POWERSHELL = 2301,
+    TERMINAL_CMD = 2302,
+    TERMINAL_STOP = 2303,
+    TERMINAL_CLEAR_ALL = 2304,
+    
+    // Tools commands (2400-2499)
+    TOOLS_PROFILE_START = 2401,
+    TOOLS_PROFILE_STOP = 2402,
+    TOOLS_PROFILE_RESULTS = 2403,
+    TOOLS_ANALYZE_SCRIPT = 2404,
+    
+    // Git commands (2500-2599)
+    GIT_STATUS = 2501,
+    GIT_COMMIT = 2502,
+    GIT_PUSH = 2503,
+    GIT_PULL = 2504,
+    GIT_TOGGLE_PANEL = 2505,
+    
+    // Module commands (2600-2699)
+    MODULES_REFRESH = 2601,
+    MODULES_IMPORT = 2602,
+    MODULES_EXPORT = 2603,
+    
+    // Help commands (2700-2799)
+    HELP_ABOUT = 2701,
+    HELP_CMDREF = 2702,
+    HELP_PSDOCS = 2703,
+    HELP_SEARCH = 2704,
+    
+    // Command palette
+    COMMAND_PALETTE = 9999
+};
+
+struct CommandInfo {
+    CommandID id;
+    const char* name;
+    const char* shortcut;
+    const char* category;
+    std::function<void()> handler;
+};
 
 // Theme and customization structures
 struct IDETheme {
@@ -148,6 +227,18 @@ public:
     Win32IDE(HINSTANCE hInstance);
     ~Win32IDE();
 
+    // Command System - Refactored
+    void initializeCommandRegistry();
+    bool routeCommand(int commandId);
+    void updateStatusBarForCommand(CommandID id);
+    void executeGitCommandAsync(const std::string& command, const std::string& progressMsg = "");
+    void populateCommandPalette(const std::string& filter);
+    static std::string toLower(const std::string& str);
+    
+    // Legacy registry, updated to use new struct
+    std::vector<CommandInfo> m_commandRegistry;
+    std::vector<CommandInfo> m_filteredCommands;
+
     bool createWindow();
     void showWindow();
     int runMessageLoop();
@@ -168,6 +259,13 @@ public:
 
     // Autonomy Framework Controls
     std::unique_ptr<AutonomyManager> m_autonomyManager; // high-level autonomous orchestrator
+    
+    // Swarm Intelligence System
+    std::unique_ptr<RawrXD::SwarmOrchestrator> m_swarmOrchestrator;
+    void initializeSwarmSystem();
+    void onSwarmStartTask(const std::string& task);
+    void onSwarmStatus();
+    
     void onAutonomyStart();
     void onAutonomyStop();
     void onAutonomyToggle();
@@ -218,6 +316,7 @@ private:
     void newFile();
     void openFile();
     void openFileDialog();
+	void openModelDialog(); // Added for explicit model loading
     void openRecentFile(int index);
     bool saveFile();
     bool saveFileAs();
@@ -1259,50 +1358,3 @@ private:
     bool isBreakpointAtLine(const std::string& file, int line) const;
     void highlightDebuggerLine(const std::string& file, int line);
     void clearDebuggerHighlight();
-
-private:
-    // Debugger UI Components
-    HWND m_hwndDebuggerContainer;
-    HWND m_hwndDebuggerTabs;
-    HWND m_hwndDebuggerBreakpoints;
-    HWND m_hwndDebuggerWatch;
-    HWND m_hwndDebuggerVariables;
-    HWND m_hwndDebuggerStackTrace;
-    HWND m_hwndDebuggerMemory;
-    HWND m_hwndDebuggerToolbar;
-    HWND m_hwndDebuggerInput;
-    HWND m_hwndDebuggerStatus;
-    
-    // Debugger State
-    bool m_debuggerEnabled;
-    bool m_debuggerAttached;
-    bool m_debuggerPaused;
-    std::string m_debuggerCurrentFile;
-    int m_debuggerCurrentLine;
-    COLORREF m_debuggerBreakpointColor;
-    COLORREF m_debuggerCurrentLineColor;
-    
-    // Breakpoints
-    std::vector<Breakpoint> m_breakpoints;
-    
-    // Call Stack
-    std::vector<StackFrame> m_callStack;
-    
-    // Variables
-    std::vector<Variable> m_watchVariables;
-    std::vector<Variable> m_localVariables;
-    
-    // Watch List
-    std::vector<WatchItem> m_watchList;
-    
-    // Debugger Configuration
-    bool m_debuggerBreakOnException;
-    bool m_debuggerBreakOnError;
-    bool m_debuggerBreakOnWarning;
-    uint64_t m_debuggerMaxMemory;
-    int m_debuggerRefreshRate;
-    
-    // Debugger History
-    std::vector<std::string> m_debuggerCommandHistory;
-    size_t m_debuggerHistoryIndex;
-};

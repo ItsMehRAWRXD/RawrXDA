@@ -4,49 +4,19 @@
 #include <vector>
 #include <map>
 #include <memory>
-#include <deque>
 #include <functional>
-#include <optional>
+#include <fstream>
+#include <iostream>
+#include <deque>
 
-// Forward declarations of core systems
 namespace RawrXD {
-    class LSPClient;
-    // AgenticTextEdit is now an internal logic component, not a widget
-    struct AgenticTextEdit; 
-}
 
-struct TextPosition {
-    size_t line = 0;
-    size_t column = 0;
+struct TextPosition { int line = 0; int col = 0; };
+struct SelectionRange { TextPosition start; TextPosition end; };
+enum class EditActionType { Insert, Delete, Replace };
+struct EditAction { EditActionType type; std::string text; TextPosition pos; };
 
-    bool operator==(const TextPosition& other) const { return line == other.line && column == other.column; }
-    bool operator!=(const TextPosition& other) const { return !(*this == other); }
-    bool operator<(const TextPosition& other) const {
-        if (line != other.line) return line < other.line;
-        return column < other.column;
-    }
-};
-
-struct SelectionRange {
-    TextPosition start;
-    TextPosition end;
-    bool active = false;
-};
-
-// Undo/Redo Action Types
-enum class EditActionType {
-    Insert,
-    Delete,
-    Replace
-};
-
-struct EditAction {
-    EditActionType type;
-    TextPosition position;
-    std::string text; // Text added or removed
-    std::string originalText; // For replace operations
-    uint64_t timestamp;
-};
+class LSPClient;
 
 class EditorTab {
 public:
@@ -155,4 +125,6 @@ private:
     // Helper to ensure a valid tab exists
     void ensureTabExists();
 };
+
+} // namespace RawrXD
 

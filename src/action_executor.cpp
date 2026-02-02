@@ -1,3 +1,4 @@
+#include <compare>
 #include "action_executor.h"
 #include <iostream>
 #include <fstream>

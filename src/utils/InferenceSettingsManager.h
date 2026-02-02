@@ -1,8 +1,11 @@
 #pragma once
 
-
 #include <mutex>
 #include <memory>
+#include <string>
+#include <vector>
+
+namespace RawrXD {
 
 /**
  * @brief InferenceSettingsManager - Phase 2 integration
@@ -14,7 +17,7 @@
  * - Settings validation and fallbacks
  * - Integration with Qt SettingsManager
  */
-class InferenceSettingsManager : public void
+class InferenceSettingsManager
 {
 
 public:
@@ -116,3 +119,5 @@ private:
     InferenceSettingsManager(const InferenceSettingsManager&) = delete;
     InferenceSettingsManager& operator=(const InferenceSettingsManager&) = delete;
 };
+
+}
