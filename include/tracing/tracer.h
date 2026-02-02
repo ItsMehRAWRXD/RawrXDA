@@ -14,7 +14,7 @@ private:
     std::unordered_map<std::string, std::string> m_attributes;
     std::string m_status = "unknown";
     std::string m_statusDescription;
-    std::mutex m_mutex;
+    mutable std::mutex m_mutex;
 
 public:
     Span(const std::string& name)
@@ -58,7 +58,7 @@ public:
 class Tracer {
 private:
     std::vector<std::shared_ptr<Span>> m_activeSpans;
-    std::mutex m_mutex;
+    mutable std::mutex m_mutex;
     bool m_enabled = true;
 
 public:

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <chrono>
 
 namespace RawrXD {
 namespace IDE {

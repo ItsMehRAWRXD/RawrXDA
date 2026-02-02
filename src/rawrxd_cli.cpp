@@ -9,8 +9,62 @@
 #include <thread>
 #include <atomic>
 #include <conio.h>
+#include <string>
 
 using namespace std::chrono_literals;
+
+// Helper: Interactive Chat Mode
+void RunInteractiveChat(AppState& state) {
+    if (!state.loaded_model) {
+        std::cout << "\n[ERROR] No model loaded. Cannot start chat.\n";
+        return;
+    }
+
+    std::cout << "\n=== RawrXD Interactive Chat ===\n";
+    std::cout << "Type 'exit' to return to menu.\n";
+    
+    // Clear buffer
+    while (_kbhit()) _getch();
+
+    std::string input;
+    while (true) {
+        std::cout << "\n>> ";
+        if (!std::getline(std::cin, input)) break;
+        if (input == "exit" || input == "quit") break;
+        if (input.empty()) continue;
+
+        std::cout << "RawrXD: ";
+        bool first = true;
+        
+        // Tokenize prompt properly if needed, but engine does it.
+        // We use GenerateStreaming for real-time feel
+        // Note: CPUInferenceEngine has GenerateStreaming
+        
+        std::atomic<bool> done{false};
+        
+        // Need to convert input to tokens? 
+        // CPUInferenceEngine::GenerateStreaming takes vector<int> tokens.
+        auto tokens = state.inference_engine->Tokenize(input);
+        
+        state.inference_engine->GenerateStreaming(
+            tokens, 
+            2048, // Max tokens
+            [&](const std::string& text) {
+                std::cout << text << std::flush;
+            },
+            [&]() {
+                done = true;
+            }
+        );
+        
+        // Wait for completion (blocking the UI thread here is fine for CLI)
+        while (!done) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        std::cout << "\n";
+    }
+    std::cout << "=== Exiting Chat ===\n";
+}
 
 int main(int argc, char** argv) {
     AppState state;
@@ -47,10 +101,26 @@ int main(int argc, char** argv) {
 
     bool running = true;
     telemetry::TelemetrySnapshot snap{};
+    
+    std::cout << "\nControls:\n"
+              << " [c] Chat Mode (Interactive)\n"
+              << " [s] Save Settings\n"
+              << " [q] Quit\n"
+              << " [g] Toggle Overclock Governor\n"
+              << " [p] Poll Telemetry\n";
+
     while (running) {
         if (_kbhit()) {
             int c = _getch();
             switch (c) {
+            case 'c':
+                RunInteractiveChat(state);
+                // Print menu again
+                std::cout << "\nControls:\n"
+                          << " [c] Chat Mode (Interactive)\n"
+                          << " [s] Save Settings\n"
+                          << " [q] Quit\n";
+                break;
             case 'h':
                 
                 break;

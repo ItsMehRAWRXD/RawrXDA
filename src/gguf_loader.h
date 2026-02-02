@@ -6,6 +6,22 @@
 #include <fstream>
 #include <cstdint>
 #include <variant>
+#include <unordered_map>
+#include <mutex>
+
+// We need windows.h for Handles in the Loader
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+// Vulkan Forward Declares to avoid full include in header
+typedef struct VkDevice_T* VkDevice;
+typedef struct VkPhysicalDevice_T* VkPhysicalDevice;
+typedef struct VkBuffer_T* VkBuffer;
+typedef struct VkDeviceMemory_T* VkDeviceMemory;
+typedef struct VkQueue_T* VkQueue;
+typedef struct VkCommandPool_T* VkCommandPool;
+typedef struct VkCommandBuffer_T* VkCommandBuffer;
+
 
 // Basic types for GGUF
 enum class GGMLType : uint32_t {
@@ -35,19 +51,83 @@ struct GGUFHeader {
     uint32_t version;
     uint64_t tensor_count;
     uint64_t metadata_kv_count;
-    uint64_t metadata_offset; // For parsing state
 };
 
 struct TensorInfo {
     std::string name;
-    std::vector<uint64_t> shape;
+    std::vector<uint64_t> shape; // dims
     GGMLType type;
     uint64_t offset;
-    size_t size;         // Computed size in bytes
-    size_t size_bytes;   // Alias for size, used in some contexts
+    size_t size;
+    
+    // GPU Resources
+    void* cpuData = nullptr;
+    VkBuffer gpuBuffer = nullptr; // VK_NULL_HANDLE
+    VkDeviceMemory gpuMemory = nullptr; // VK_NULL_HANDLE
+    bool onGPU = false;
 };
 
 struct GGUFMetadata {
+    // ...existing code...
+    uint32_t type;
+    uint32_t length;
+    uint64_t offset;
+};
+
+class GGUFLoader {
+public:
+    GGUFLoader();
+    ~GGUFLoader();
+
+    bool Open(const std::string& filepath);
+    void Close();
+    
+    // Original API
+    bool ParseHeader();
+    
+    // New API from user request (adapted)
+    bool Load(VkDevice vkDevice, VkPhysicalDevice vkPhysDevice);
+    
+    // Helpers
+    uint64_t GetMetadata(const std::string& key);
+    TensorInfo& GetTensor(const std::string& name);
+
+private:
+    std::ifstream file_;
+    std::string filepath_;
+    bool is_open_;
+    
+    GGUFHeader header_val; // Renamed to avoid collision with struct type
+    
+    // Handles for Memory Mapping
+    HANDLE hFile = INVALID_HANDLE_VALUE;
+    HANDLE hMapping = nullptr;
+    void* mappedView = nullptr;
+    size_t fileSize = 0;
+
+    // Vulkan Context
+    VkDevice device;
+    VkPhysicalDevice physDevice;
+    VkQueue transferQueue;
+    VkCommandPool cmdPool;
+    VkCommandBuffer cmdBuffer;
+
+    std::mutex tensorMutex;
+    std::unordered_map<std::string, TensorInfo> tensors;
+    
+    // Internal loading methods
+    void CreateVulkanResources();
+    void LoadTensorAsync(TensorInfo& info);
+    void UploadF32(TensorInfo& info, void* src, size_t count);
+    void DequantAndUploadQ4_0(TensorInfo& info, void* src, size_t count);
+    // ... Add others as needed, simplified for this integration
+    
+    void BeginCommandBuffer();
+    void EndCommandBuffer();
+    uint32_t FindMemoryType(uint32_t typeFilter, uint32_t props);
+    uint32_t FindQueueFamilyIndex(VkPhysicalDevice device, uint32_t queueFlags);
+};
+
     std::map<std::string, std::string> kv_pairs; 
     
     // Structured data extracted from KV pairs
@@ -57,6 +137,12 @@ struct GGUFMetadata {
     uint32_t embedding_dim = 0;
     uint32_t vocab_size = 0;
     uint32_t head_count = 0;
+
+    // Tokenizer data
+    std::vector<std::string> tokens;
+    std::vector<float> token_scores;
+    std::vector<uint32_t> token_types;
+    int32_t tokenizer_model_id = -1; // -1 for unknown/default
 };
 
 // Interface for GGUF Loaders
@@ -107,6 +193,8 @@ public:
     bool LoadTensorRange(size_t start_idx, size_t count, std::vector<uint8_t>& data) override;
 
     // Helper for subclasses or internal use
+    const void* GetBaseAddress() const { return mappedView; }
+
     template<typename T>
     bool ReadValue(T& val) {
         if (!file_.is_open()) return false;

@@ -4,50 +4,46 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include <map>
-
-class AgenticEngine;
-class ZeroDayAgenticEngine;
+#include <ctime>
+#include <mutex>
 
 namespace RawrXD {
-    class PlanOrchestrator;
-}
+
+class UniversalModelRouter;
+class ContextManager; 
 
 class ChatInterface {
 public:
+    struct Message {
+        std::string role; // "user", "assistant", "system"
+        std::string content;
+        long timestamp;
+    };
+    
     ChatInterface();
     ~ChatInterface();
-
-    void initialize();
     
-    void setAgenticEngine(AgenticEngine* engine) { m_agenticEngine = engine; }
-    void setPlanOrchestrator(RawrXD::PlanOrchestrator* orchestrator) { m_planOrchestrator = orchestrator; }
-    void setZeroDayAgent(ZeroDayAgenticEngine* agent) { m_zeroDayAgent = agent; }
+    void sendMessage(const std::string& text);
+    std::vector<Message> getHistory() const;
+    void clearHistory();
     
-    void addMessage(const std::string& sender, const std::string& message);
-    std::string selectedModel() const { return m_selectedModel; }
-    bool isMaxMode() const { return m_maxMode; }
+    // Real Integration
+    void attachModelRouter(UniversalModelRouter* router);
+    void attachContextManager(ContextManager* ctx);
     
-    void sendMessage(const std::string& message);
-    void executeAgentCommand(const std::string& command, const std::string& args = "");
-    bool isAgentCommand(const std::string& message) const;
-
-    // Callbacks
-    std::function<void(const std::string&, const std::string&)> onMessageAdded;
-    std::function<void(const std::string&)> onResponseReceived;
-    std::function<void(bool)> onMaxModeChanged;
-
+    // Callback for UI updates
+    std::function<void(const Message&)> onMessageReceived;
+    
 private:
-    void loadAvailableModels();
-    std::string resolveGgufPath(const std::string& modelName);
+    std::vector<Message> m_history;
+    mutable std::mutex m_mutex;
     
-    bool m_maxMode = false;
-    bool m_busy = false;
-    std::string m_selectedModel;
-    std::vector<std::pair<std::string, std::string>> m_history;
+    UniversalModelRouter* m_router = nullptr;
+    ContextManager* m_context = nullptr;
     
-    AgenticEngine* m_agenticEngine = nullptr;
-    RawrXD::PlanOrchestrator* m_planOrchestrator = nullptr;
-    ZeroDayAgenticEngine* m_zeroDayAgent = nullptr;
+    void processResponse(const std::string& modelOutput);
+    void appendToHistory(const std::string& role, const std::string& content);
 };
+
+} // namespace RawrXD
 

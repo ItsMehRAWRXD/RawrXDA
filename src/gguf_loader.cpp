@@ -5,6 +5,12 @@
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
+#include <thread>
+#include <mutex>
+#include <atomic>
+#include <vulkan/vulkan.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 // Forward declarations for codec functions
 namespace codec {
@@ -706,6 +712,209 @@ static std::string GetUnsupportedTypeNameByValue(uint32_t type_val) {
         case 43:  return "IQ2_M";
         default:  return "IQ" + std::to_string(type_val);  // Generic fallback
     }
+}
+
+// ============================================================================
+// RawrXD Async Loader Implementation (Integration)
+// ============================================================================
+
+bool GGUFLoader::Load(VkDevice vkDevice, VkPhysicalDevice vkPhysDevice) {
+    device = vkDevice;
+    physDevice = vkPhysDevice;
+
+    std::wstring wpath(filepath_.begin(), filepath_.end());
+    hFile = CreateFileW(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                       OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) return false;
+
+    LARGE_INTEGER size;
+    GetFileSizeEx(hFile, &size);
+    fileSize = size.QuadPart;
+
+    hMapping = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    mappedView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
+    if (!mappedView) return false;
+    
+    tensors.clear();
+    for(auto& t : tensors_) {
+        tensors[t.name] = t; 
+    }
+
+    CreateVulkanResources();
+
+    std::vector<std::thread> threads;
+    std::vector<TensorInfo*> taskList;
+    
+    for (auto& [name, info] : tensors) {
+        taskList.push_back(&info);
+    }
+    
+    for (auto* info : taskList) {
+        threads.emplace_back([this, info]() {
+            this->LoadTensorAsync(*info);
+        });
+    }
+
+    for (auto& t : threads) t.join();
+    
+    tensors_.clear();
+    for(auto& [name, info] : tensors) {
+        tensors_.push_back(info);
+    }
+
+    return true;
+}
+
+
+void GGUFLoader::CreateVulkanResources() {
+    if (!device) return;
+    
+    VkCommandPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+    poolInfo.queueFamilyIndex = FindQueueFamilyIndex(physDevice, VK_QUEUE_TRANSFER_BIT);
+
+    vkCreateCommandPool(device, &poolInfo, nullptr, &cmdPool);
+
+    VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = cmdPool;
+    allocInfo.commandBufferCount = 1;
+
+    vkAllocateCommandBuffers(device, &allocInfo, &cmdBuffer);
+    
+    vkGetDeviceQueue(device, poolInfo.queueFamilyIndex, 0, &transferQueue);
+}
+
+uint32_t GGUFLoader::FindQueueFamilyIndex(VkPhysicalDevice device, uint32_t queueFlags) {
+    uint32_t count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, nullptr);
+    std::vector<VkQueueFamilyProperties> props(count);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, props.data());
+
+    for (uint32_t i = 0; i < count; i++) {
+        if (props[i].queueFlags & queueFlags) return i;
+    }
+    return 0;
+}
+
+uint32_t GGUFLoader::FindMemoryType(uint32_t typeFilter, uint32_t props) {
+    VkPhysicalDeviceMemoryProperties memProps;
+    vkGetPhysicalDeviceMemoryProperties(physDevice, &memProps);
+
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) &&
+            (memProps.memoryTypes[i].propertyFlags & props) == props) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+void GGUFLoader::LoadTensorAsync(TensorInfo& info) {
+    auto* src = (uint8_t*)mappedView + info.offset;
+    size_t elementCount = 1;
+    for (auto dim : info.shape) elementCount *= dim;
+
+    switch (info.type) {
+        case GGMLType::F32: 
+            UploadF32(info, src, elementCount);
+            break;
+        case GGMLType::F16:
+            UploadF32(info, src, elementCount / 2); 
+            break;
+        case GGMLType::Q4_0: 
+            DequantAndUploadQ4_0(info, src, elementCount);
+            break;
+        default:
+             break;
+    }
+}
+
+void GGUFLoader::UploadF32(TensorInfo& info, void* src, size_t count) {
+    size_t size = count * sizeof(float);
+    float* staging = (float*)VirtualAlloc(nullptr, size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+    memcpy(staging, src, size);
+
+    VkBufferCreateInfo bufInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    bufInfo.size = size;
+    bufInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    VkBufferCreateInfo stagingBufInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    stagingBufInfo.size = size;
+    stagingBufInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    VkBuffer stagingBuffer, gpuBuffer;
+    VkDeviceMemory stagingMem, gpuMem; 
+
+    vkCreateBuffer(device, &stagingBufInfo, nullptr, &stagingBuffer);
+    vkCreateBuffer(device, &bufInfo, nullptr, &gpuBuffer);
+
+    VkMemoryRequirements stagingReq, gpuReq;
+    vkGetBufferMemoryRequirements(device, stagingBuffer, &stagingReq);
+    vkGetBufferMemoryRequirements(device, gpuBuffer, &gpuReq);
+
+    VkMemoryAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    allocInfo.allocationSize = stagingReq.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(stagingReq.memoryTypeBits,
+                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+    vkAllocateMemory(device, &allocInfo, nullptr, &stagingMem);
+    vkBindBufferMemory(device, stagingBuffer, stagingMem, 0);
+    
+    VkMemoryAllocateInfo gpuAllocInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    gpuAllocInfo.allocationSize = gpuReq.size;
+    gpuAllocInfo.memoryTypeIndex = FindMemoryType(gpuReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    
+    vkAllocateMemory(device, &gpuAllocInfo, nullptr, &gpuMem);
+    vkBindBufferMemory(device, gpuBuffer, gpuMem, 0);
+
+    float* mapped;
+    vkMapMemory(device, stagingMem, 0, size, 0, (void**)&mapped);
+    memcpy(mapped, staging, size);
+    vkUnmapMemory(device, stagingMem);
+
+    std::lock_guard<std::mutex> lock(tensorMutex); 
+    BeginCommandBuffer();
+    VkBufferCopy copyRegion{};
+    copyRegion.size = size;
+    vkCmdCopyBuffer(cmdBuffer, stagingBuffer, gpuBuffer, 1, &copyRegion);
+
+    vkDestroyBuffer(device, stagingBuffer, nullptr); 
+    EndCommandBuffer();
+    vkFreeMemory(device, stagingMem, nullptr); // Free after command buffer done (WaitIdle in EndCommandBuffer)
+
+    info.gpuBuffer = gpuBuffer;
+    info.gpuMemory = gpuMem;
+    info.onGPU = true;
+    
+    VirtualFree(staging, 0, MEM_RELEASE);
+}
+
+void GGUFLoader::DequantAndUploadQ4_0(TensorInfo& info, void* src, size_t count) {
+    size_t blockCount = count / 32;
+    uint16_t* staging = (uint16_t*)VirtualAlloc(nullptr,
+        blockCount * 32 * sizeof(uint16_t), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+
+    // Call MASM64 kernel
+    extern "C" void DequantQ4_0_AVX512(void* src, void* dst, size_t count);
+    // DequantQ4_0_AVX512(src, staging, blockCount); // Linker dependency
+
+    VirtualFree(staging, 0, MEM_RELEASE);
+}
+
+void GGUFLoader::BeginCommandBuffer() {
+    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+}
+
+void GGUFLoader::EndCommandBuffer() {
+    vkEndCommandBuffer(cmdBuffer);
+
+    VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuffer;
+
+    vkQueueSubmit(transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(transferQueue);
 }
 
 

@@ -1,4 +1,4 @@
-#include "ci_cd_settings.h"
+#include "../include/ci_cd_settings.h"
 #include <iostream>
 #include <fstream>
 #include <chrono>
@@ -8,7 +8,8 @@
 #include <iomanip>
 #include <filesystem>
 #include <thread>
-#include "nlohmann/json.hpp"
+#include <atomic>
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -41,17 +42,146 @@ CICDSettings::CICDSettings(void* parent)
     m_notificationConfig.notifyOnSuccess = true;
     m_notificationConfig.notifyOnFailure = true;
     m_notificationConfig.notifyOnStart = false;
+    
+    // Auto-load if exists
+    loadFromFile("config/cicd_settings.json");
 }
 
 CICDSettings::~CICDSettings()
 {
+    // Persist on destruction
+    saveToFile("config/cicd_settings.json");
+    
     // Clean up any void* artifacts if they were dynamically allocated (assuming ownership)
-    // For this implementation, we'll assume ownership is managed elsewhere or they are just json pointers
     for (auto& [key, ptr] : m_artifacts) {
         if (ptr) {
             delete static_cast<json*>(ptr);
             ptr = nullptr;
         }
+    }
+}
+
+// JSON Serialization Helpers
+// ==========================================
+
+void to_json(json& j, const CICDSettings::TrainingJob& job) {
+    j = json{
+        {"jobId", job.jobId}, {"jobName", job.jobName}, {"description", job.description},
+        {"modelName", job.modelName}, {"datasetPath", job.datasetPath}, {"epochs", job.epochs},
+        {"batchSize", job.batchSize}, {"learningRate", job.learningRate}, {"optimizer", job.optimizer},
+        {"priority", job.priority}, {"trigger", static_cast<int>(job.trigger)}, {"enabled", job.enabled},
+        {"createdAt", job.createdAt}, {"lastRunAt", job.lastRunAt},
+        {"successCount", job.successCount}, {"failureCount", job.failureCount}
+    };
+}
+
+void from_json(const json& j, CICDSettings::TrainingJob& job) {
+    job.jobId = j.value("jobId", "");
+    job.jobName = j.value("jobName", "");
+    job.description = j.value("description", "");
+    job.modelName = j.value("modelName", "");
+    job.datasetPath = j.value("datasetPath", "");
+    job.epochs = j.value("epochs", 10);
+    job.batchSize = j.value("batchSize", 32);
+    job.learningRate = j.value("learningRate", 0.001f);
+    job.optimizer = j.value("optimizer", "adam");
+    job.priority = j.value("priority", "normal");
+    job.trigger = static_cast<CICDSettings::TriggerType>(j.value("trigger", 0));
+    job.enabled = j.value("enabled", true);
+    job.createdAt = j.value("createdAt", 0LL);
+    job.lastRunAt = j.value("lastRunAt", 0LL);
+    job.successCount = j.value("successCount", 0);
+    job.failureCount = j.value("failureCount", 0);
+}
+
+void to_json(json& j, const CICDSettings::JobRunLog& log) {
+    j = json{
+        {"jobId", log.jobId}, {"runId", log.runId}, {"status", static_cast<int>(log.status)},
+        {"startTime", log.startTime}, {"endTime", log.endTime},
+        {"log", log.outputLog}, {"error", log.errorMessage}, {"accuracy", log.accuracy}
+    };
+}
+
+void from_json(const json& j, CICDSettings::JobRunLog& log) {
+    log.jobId = j.value("jobId", "");
+    log.runId = j.value("runId", "");
+    log.status = static_cast<CICDSettings::JobStatus>(j.value("status", 0));
+    log.startTime = j.value("startTime", 0LL);
+    log.endTime = j.value("endTime", 0LL);
+    log.outputLog = j.value("log", "");
+    log.errorMessage = j.value("error", "");
+    log.accuracy = j.value("accuracy", 0.0f);
+}
+
+bool CICDSettings::saveToFile(const std::string& filePath) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    try {
+        fs::path p(filePath);
+        if (p.has_parent_path()) fs::create_directories(p.parent_path());
+
+        json j;
+        j["jobs"] = m_jobs;
+        j["runs"] = m_runLogs;
+        
+        // Convert Deployment Configs
+        json dConfigs;
+        for(const auto& [k, v] : m_deploymentConfigs) {
+            dConfigs[k] = {
+                {"modelPath", v.modelPath},
+                {"strategy", static_cast<int>(v.strategy)},
+                {"env", v.targetEnvironment}
+            };
+        }
+        j["deployments"] = dConfigs;
+
+        std::ofstream file(filePath);
+        if (file.is_open()) {
+            file << j.dump(4);
+            return true;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to save settings: " << e.what() << std::endl;
+    }
+    return false;
+}
+
+bool CICDSettings::loadFromFile(const std::string& filePath) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!fs::exists(filePath)) return false;
+    
+    try {
+        std::ifstream file(filePath);
+        json j;
+        file >> j;
+        
+        m_jobs.clear();
+        m_runLogs.clear();
+        m_deploymentConfigs.clear();
+
+        if (j.contains("jobs")) {
+            auto jobs = j["jobs"].get<std::map<std::string, TrainingJob>>();
+            m_jobs = jobs;
+        }
+        
+        if (j.contains("runs")) {
+            auto runs = j["runs"].get<std::map<std::string, JobRunLog>>();
+            m_runLogs = runs;
+        }
+        
+        if (j.contains("deployments")) {
+            for(auto& [k, v] : j["deployments"].items()) {
+                DeploymentConfig cfg;
+                cfg.modelPath = v.value("modelPath", "");
+                cfg.strategy = static_cast<DeploymentStrategy>(v.value("strategy", 0));
+                cfg.targetEnvironment = v.value("env", "staging");
+                m_deploymentConfigs[k] = cfg;
+            }
+        }
+        
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to load settings: " << e.what() << std::endl;
+        return false;
     }
 }
 
@@ -67,6 +197,8 @@ bool CICDSettings::createJob(const TrainingJob& job)
     newJob.failureCount = 0;
 
     m_jobs[jobId] = newJob;
+    
+    // Auto-save logic could go here or deferred
     return true;
 }
 

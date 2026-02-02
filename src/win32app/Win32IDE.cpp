@@ -1,6 +1,6 @@
 Win32IDE::~Win32IDE() {
     if (m_nativeEngine) {
-        delete static_cast<CPUInference::CPUInferenceEngine*>(m_nativeEngine);
+        delete static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
         m_nativeEngine = nullptr;
     }
     // Resource cleanup
@@ -271,15 +271,8 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
         diag << "Win32IDE constructor entered" << std::endl;
     }
 
-    // Initialize Native Fallback Engine
-    try {
-        m_nativeEngine = new CPUInference::CPUInferenceEngine();
-        m_nativeEngineLoaded = true;
-    } catch (...) {
-        m_nativeEngine = nullptr;
-        m_nativeEngineLoaded = false;
-        OutputDebugStringA("ERROR: Failed to initialize Native CPU Inference Engine\n");
-    }
+    // Initialize Native Fallback Engine (Moved to end of constructor)
+    // m_nativeEngine init removed from here.
 
     // Initialize logger ABSOLUTELY FIRST - with fallback error handling
     try {
@@ -4797,17 +4790,22 @@ std::string Win32IDE::sendMessageToModel(const std::string& message)
     }
 
     // Fallback: Local CPU Inference (Real Logic)
-    if (m_ggufLoader) {
-        // Use the native fallback engine if available
-        if (m_nativeEngine) {
-             auto* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+    if (m_nativeEngine) {
+        auto* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+        
+        // Ensure model is loaded if we have a path but engine isn't ready
+        if (!engine->isModelLoaded() && !m_loadedModelPath.empty()) {
+            engine->loadModel(m_loadedModelPath);
+        }
+
+        if (engine->isModelLoaded()) {
              std::string response = engine->infer(message);
              m_chatHistory.push_back({message, response});
              return response;
         }
     }
 
-    std::string response = "Error: Local model loaded but Native Inference Engine not initialized.\n";
+    std::string response = "Error: Native Inference Engine not initialized or model not loaded.\n";
 }
 
 void Win32IDE::toggleChatMode()

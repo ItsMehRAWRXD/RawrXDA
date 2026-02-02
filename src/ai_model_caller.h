@@ -3,6 +3,8 @@
 #include <vector>
 #include <map>
 #include <memory> 
+#include <functional>
+#include <chrono>
 
 namespace RawrXD {
 
@@ -50,6 +52,9 @@ public:
 
     // Internal Implementation helpers (exposed for simplicity in this refactor step, but usually private)
     static std::string callModel(const std::string& prompt, const GenerationParams& params);
+
+    using StreamCallback = std::function<bool(const std::string&)>; // Returns false to cancel
+    static bool streamModel(const std::string& prompt, const GenerationParams& params, StreamCallback callback, std::chrono::milliseconds delay = std::chrono::milliseconds(0));
 
 private:
    static std::string buildCompletionPrompt(

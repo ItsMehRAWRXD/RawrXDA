@@ -35,6 +35,7 @@ public:
     std::string processQuery(const std::string& query);
     void processQueryAsync(const std::string& query, std::function<void(std::string)> callback);
     json planTask(const std::string& goal); // Added for implementation match
+    std::string executePlan(const json& plan); // Execute a generated plan
     
     // Configuration
     void updateConfig(const GenerationConfig& config);

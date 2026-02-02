@@ -8,6 +8,7 @@ namespace Agentic {
 
 AgenticCopilotIntegration::AgenticCopilotIntegration(std::unique_ptr<AgenticNavigator> navigator)
     : m_navigator(std::move(navigator)), m_ideInstance(nullptr) {
+    m_executor = std::make_shared<AgenticCommandExecutor>();
 }
 
 AgenticCopilotIntegration::~AgenticCopilotIntegration() {
@@ -232,10 +233,25 @@ NavigationResult AgenticCopilotIntegration::executeDebugOperation(const std::str
 NavigationResult AgenticCopilotIntegration::executeTerminalCommand(const std::string& command) {
     // Navigate to terminal
     auto navResult = m_navigator->navigateToTerminal();
-    if (navResult.success) {
-        // Execute terminal command
-        navResult.message += ", Terminal command: " + command;
+    
+    // Parse command simple (TODO: Robust parsing)
+    std::string cmd = command;
+    std::string args_str = "";
+    
+    // Extract actual command if prefixed with "run " or "exec "
+    if (cmd.rfind("run ", 0) == 0) cmd = cmd.substr(4);
+    else if (cmd.rfind("exec ", 0) == 0) cmd = cmd.substr(5);
+    
+    // Real execution via AgenticCommandExecutor
+    if (m_executor) {
+         m_executor->executeCommand(cmd, {}, true); // Require approval by default
+         navResult.message += ", Terminal command started: " + cmd;
+         navResult.success = true;
+    } else {
+         navResult.success = false;
+         navResult.message += ", Executor not initialized";
     }
+
     return navResult;
 }
 

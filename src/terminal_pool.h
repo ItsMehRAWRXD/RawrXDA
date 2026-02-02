@@ -1,36 +1,39 @@
 #pragma once
+
 #include <string>
 #include <map>
 #include <vector>
 #include <mutex>
-#include <windows.h>
 
-struct TerminalInstance {
-    HANDLE hPty;
-    HANDLE hProcess;
-    HANDLE hThread;
-    HANDLE hInRead, hInWrite; // For fallback
-    HANDLE hOutRead, hOutWrite; // For fallback
-    bool useConPty;
-};
+namespace RawrXD {
 
 class TerminalPool {
 public:
     TerminalPool();
     ~TerminalPool();
     
-    bool createTerminal(const std::string& name, const std::string& shellCmd = "cmd.exe");
-    bool runCommand(const std::string& name, const std::string& cmd);
-    std::string readOutput(const std::string& name);
-    void closeTerminal(const std::string& name);
+    int createTerminal(const std::string& shellPath = "cmd.exe");
+    void writeInput(int id, const std::string& data);
+    std::string readOutput(int id);
+    void resize(int id, int cols, int rows);
+    void destroyTerminal(int id);
     
-    std::vector<std::string> listTerminals() const;
+    // Helper to get all active IDs
+    std::vector<int> getActiveTerminals() const;
 
 private:
-    std::map<std::string, TerminalInstance> m_terminals;
-    mutable std::mutex m_mutex;
+    struct TerminalSession {
+        void* hPC;     // HPCON
+        void* hPipeIn; // HANDLE
+        void* hPipeOut;// HANDLE
+        void* hProcess;// HANDLE
+        void* hThread; // HANDLE
+        void* hAttrList; // LPPROC_THREAD_ATTRIBUTE_LIST
+    };
     
-    // ConPTY Helpers
-    HRESULT CreatePseudoConsoleAndPipes(HPCON* phPC, HANDLE* phPipeIn, HANDLE* phPipeOut);
-    HRESULT InitializeStartupInfoAttachedToPseudoConsole(STARTUPINFOEX* pStartupInfo, HPCON hPC);
+    std::map<int, TerminalSession> m_sessions;
+    mutable std::mutex m_mutex;
+    int m_nextId = 1;
 };
+
+} // namespace RawrXD

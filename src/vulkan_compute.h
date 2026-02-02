@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 
+namespace RawrXD {
+
 class VulkanCompute {
 public:
     VulkanCompute();
@@ -28,3 +30,5 @@ private:
     struct Impl;
     Impl* m_impl; // Pimpl to hide vulkan headers
 };
+
+} // namespace RawrXD
