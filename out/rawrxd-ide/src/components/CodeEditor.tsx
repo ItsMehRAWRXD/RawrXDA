@@ -12,13 +12,13 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, languag
   const providerRef = useRef<monaco.IDisposable | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const handleMount: OnMount = (editor, monacoInstance) => {
+  const handleMount: OnMount = (_editor, monacoInstance) => {
     if (providerRef.current) {
       providerRef.current.dispose();
     }
 
     providerRef.current = monacoInstance.languages.registerInlineCompletionsProvider(language, {
-      provideInlineCompletions: async (model, position, context, token) => {
+      provideInlineCompletions: async (model: monaco.editor.ITextModel, position: monaco.Position, _context: monaco.languages.InlineCompletionContext, _token: monaco.CancellationToken) => {
         try {
           // Cancel any in-flight stream before starting a new one
           if (abortControllerRef.current) {
@@ -50,7 +50,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, languag
           });
 
           if (!response.ok || !response.body) {
-            return { items: [], dispose: () => {} };
+            return { items: [], dispose: () => { } };
           }
 
           const reader = response.body.getReader();
@@ -66,7 +66,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, languag
 
             const { done, value } = await reader.read();
             if (done) break;
-            
+
             buffer_text += decoder.decode(value, { stream: true });
             const lines = buffer_text.split('\n');
             buffer_text = lines.pop() || '';
@@ -84,22 +84,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, languag
               }
             }
 
-            // Update UI incrementally as tokens arrive
-            if (fullCompletion) {
-              context.widget?.updateInlineCompletion({
-                insertText: fullCompletion,
-                range: new monacoInstance.Range(
-                  position.lineNumber,
-                  position.column,
-                  position.lineNumber,
-                  position.column
-                )
-              });
-            }
+            // Tokens accumulate in fullCompletion; final result returned below
           }
 
           if (!fullCompletion) {
-            return { items: [], dispose: () => {} };
+            return { items: [], dispose: () => { } };
           }
 
           return {
@@ -114,18 +103,18 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, languag
                 )
               }
             ],
-            dispose: () => {}
+            dispose: () => { }
           };
         } catch (err) {
           if (err instanceof Error && err.name === 'AbortError') {
             // Stream was cancelled by new keystroke - this is expected
-            return { items: [], dispose: () => {} };
+            return { items: [], dispose: () => { } };
           }
           console.error('Completion stream error:', err);
-          return { items: [], dispose: () => {} };
+          return { items: [], dispose: () => { } };
         }
       },
-      freeInlineCompletions: () => {}
+      freeInlineCompletions: () => { }
     });
   };
 

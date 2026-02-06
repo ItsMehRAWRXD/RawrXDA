@@ -1,0 +1,87 @@
+{
+  "editor": {
+    "fontFamily": "Consolas",
+    "fontSize": 14,
+    "tabSize": 4,
+    "wordWrap": true,
+    "lineNumbers": true,
+    "minimap": true,
+    "autoSave": false,
+    "autoSaveInterval": 30
+  },
+  "theme": {
+    "name": "Dark Modern",
+    "background": "#1E1E1E",
+    "foreground": "#D4D4D4",
+    "accent": "#007ACC",
+    "sidebarBackground": "#252526",
+    "activityBarBackground": "#333333",
+    "statusBarBackground": "#007ACC"
+  },
+  "inference": {
+    "maxTokens": 512,
+    "temperature": 0.7,
+    "topP": 0.9,
+    "topK": 40,
+    "repetitionPenalty": 1.1,
+    "contextSize": 4096,
+    "batchSize": 512,
+    "threads": 8,
+    "gpuLayers": 0
+  },
+  "ollama": {
+    "baseUrl": "http://localhost:11434",
+    "model": "llama2",
+    "timeout": 30
+  },
+  "agent": {
+    "maxIterations": 10,
+    "autoApprove": false,
+    "sandboxed": true,
+    "memoryLimit": 1024
+  },
+  "terminal": {
+    "shell": "powershell.exe",
+    "fontSize": 13,
+    "cursorStyle": "block",
+    "scrollback": 10000
+  },
+  "debugger": {
+    "engine": "gdb",
+    "stopOnEntry": false,
+    "externalConsole": false,
+    "showDisassembly": false
+  },
+  "reverseEngineering": {
+    "dumpbinPath": "",
+    "defaultFormat": "hex",
+    "maxFileSize": 104857600
+  },
+  "performance": {
+    "lazyInit": true,
+    "deferredRendering": true,
+    "maxMemoryMB": 2048
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "rawrxd.log",
+    "maxSizeMB": 50,
+    "rotateCount": 5
+  },
+  "features": {
+    "agenticBridge": true,
+    "autonomy": true,
+    "reverseEngineering": true,
+    "extensionSystem": true,
+    "copilotChat": true,
+    "commandPalette": true,
+    "gpuRenderer": true,
+    "powerShellPanel": true,
+    "debugger": true,
+    "gitIntegration": true,
+    "metricsExport": false,
+    "vulkanCompute": false,
+    "speculativeDecoding": false,
+    "flashAttention": false
+  }
+}

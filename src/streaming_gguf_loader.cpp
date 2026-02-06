@@ -127,38 +127,199 @@ bool StreamingGGUFLoader::ParseMetadata() {
             return false;
         }
         
-        // Value type 1 = UTF-8 string
-        if (value_type == GGUFConstants::GGUF_VALUE_TYPE_STRING) {
-            if (!ReadString(value)) {
-                std::cerr << "❌ Failed to read metadata string value for key: " << key << std::endl;
+        // ================================================================
+        // GGUF v3 complete value type handling (all 13 types)
+        // Ported from Qt streaming_gguf_loader_qt for full format support
+        // ================================================================
+        switch (value_type) {
+            case GGUFConstants::GGUF_VALUE_TYPE_UINT8: {
+                uint8_t val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_INT8: {
+                int8_t val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_UINT16: {
+                uint16_t val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_INT16: {
+                int16_t val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_UINT32: {
+                uint32_t val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                
+                // Parse important numeric metadata
+                if (key == GGUFConstants::META_LLAMA_BLOCK_COUNT) {
+                    metadata_.layer_count = val;
+                } else if (key == GGUFConstants::META_LLAMA_CONTEXT_LENGTH) {
+                    metadata_.context_length = val;
+                } else if (key == GGUFConstants::META_LLAMA_EMBEDDING_LENGTH) {
+                    metadata_.embedding_dim = val;
+                } else if (key == GGUFConstants::META_LLAMA_VOCAB_SIZE) {
+                    metadata_.vocab_size = val;
+                } else if (key == GGUFConstants::META_LLAMA_HEAD_COUNT) {
+                    metadata_.head_count = val;
+                } else if (key == GGUFConstants::META_LLAMA_HEAD_COUNT_KV) {
+                    metadata_.head_count_kv = val;
+                } else if (key == GGUFConstants::META_LLAMA_FFN_LENGTH) {
+                    metadata_.feed_forward_length = val;
+                }
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_INT32: {
+                int32_t val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_FLOAT32: {
+                float val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_BOOL: {
+                uint8_t val;  // GGUF spec: bool is stored as uint8
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = val ? "true" : "false";
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_STRING: {
+                if (!ReadString(value)) {
+                    std::cerr << "❌ Failed to read metadata string value for key: " << key << std::endl;
+                    return false;
+                }
+                metadata_.kv_pairs[key] = value;
+                
+                // Parse important string metadata
+                if (key == GGUFConstants::META_GENERAL_ARCHITECTURE) {
+                    if (value == "llama") metadata_.architecture_type = 1;
+                    else if (value == "mistral") metadata_.architecture_type = 2;
+                    else if (value == "phi") metadata_.architecture_type = 3;
+                    else if (value == "gemma") metadata_.architecture_type = 4;
+                    else if (value == "qwen2") metadata_.architecture_type = 5;
+                    else if (value == "starcoder") metadata_.architecture_type = 6;
+                }
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_ARRAY: {
+                // Array type: element_type (uint32) + count (uint64) + elements
+                uint32_t element_type;
+                uint64_t arr_count;
+                if (!ReadValue(element_type)) return false;
+                if (!ReadValue(arr_count)) return false;
+                
+                // Parse array elements based on element type
+                // For string arrays (tokenizer tokens), collect them
+                bool is_token_array = (key == GGUFConstants::META_TOKENIZER_TOKENS);
+                bool is_score_array = (key == GGUFConstants::META_TOKENIZER_SCORES);
+                bool is_type_array = (key == GGUFConstants::META_TOKENIZER_TOKEN_TYPE);
+                
+                for (uint64_t a = 0; a < arr_count; ++a) {
+                    switch (element_type) {
+                        case GGUFConstants::GGUF_VALUE_TYPE_UINT8: {
+                            uint8_t v; if (!ReadValue(v)) return false;
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_INT8: {
+                            int8_t v; if (!ReadValue(v)) return false;
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_UINT16: {
+                            uint16_t v; if (!ReadValue(v)) return false;
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_INT16: {
+                            int16_t v; if (!ReadValue(v)) return false;
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_UINT32: {
+                            uint32_t v; if (!ReadValue(v)) return false;
+                            if (is_type_array) metadata_.token_types.push_back(v);
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_INT32: {
+                            int32_t v; if (!ReadValue(v)) return false;
+                            if (is_type_array) metadata_.token_types.push_back(static_cast<uint32_t>(v));
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_FLOAT32: {
+                            float v; if (!ReadValue(v)) return false;
+                            if (is_score_array) metadata_.token_scores.push_back(v);
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_BOOL: {
+                            uint8_t v; if (!ReadValue(v)) return false;
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_STRING: {
+                            std::string s;
+                            if (!ReadString(s)) return false;
+                            if (is_token_array) {
+                                metadata_.tokens.push_back(s);
+                                m_vocab.push_back(s);
+                            }
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_UINT64: {
+                            uint64_t v; if (!ReadValue(v)) return false;
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_INT64: {
+                            int64_t v; if (!ReadValue(v)) return false;
+                            break;
+                        }
+                        case GGUFConstants::GGUF_VALUE_TYPE_FLOAT64: {
+                            double v; if (!ReadValue(v)) return false;
+                            break;
+                        }
+                        default: {
+                            std::cerr << "❌ Unknown array element type " << element_type 
+                                      << " in key: " << key << std::endl;
+                            return false;
+                        }
+                    }
+                }
+                
+                metadata_.kv_pairs[key] = "[array:" + std::to_string(arr_count) + "]";
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_UINT64: {
+                uint64_t val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_INT64: {
+                int64_t val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_FLOAT64: {
+                double val;
+                if (!ReadValue(val)) return false;
+                metadata_.kv_pairs[key] = std::to_string(val);
+                break;
+            }
+            default: {
+                std::cerr << "❌ Unknown metadata value type " << value_type 
+                          << " for key: " << key << " at index " << i << std::endl;
                 return false;
             }
-            metadata_.kv_pairs[key] = value;
-            
-            // Parse important metadata
-            if (key == GGUFConstants::META_GENERAL_ARCHITECTURE) {
-                if (value == "llama") metadata_.architecture_type = 1;
-            } else if (key == GGUFConstants::META_LLAMA_BLOCK_COUNT) {
-                metadata_.layer_count = std::stoul(value);
-            } else if (key == GGUFConstants::META_LLAMA_CONTEXT_LENGTH) {
-                metadata_.context_length = std::stoul(value);
-            } else if (key == GGUFConstants::META_LLAMA_EMBEDDING_LENGTH) {
-                metadata_.embedding_dim = std::stoul(value);
-            } else if (key == GGUFConstants::META_LLAMA_VOCAB_SIZE) {
-                metadata_.vocab_size = std::stoul(value);
-            }
-        } else if (value_type == GGUFConstants::GGUF_VALUE_TYPE_UINT32) {  // uint32
-            uint32_t uint_val;
-            if (!ReadValue(uint_val)) return false;
-            metadata_.kv_pairs[key] = std::to_string(uint_val);
-        } else if (value_type == GGUFConstants::GGUF_VALUE_TYPE_INT32) {  // int32
-            int32_t int_val;
-            if (!ReadValue(int_val)) return false;
-            metadata_.kv_pairs[key] = std::to_string(int_val);
-        } else if (value_type == GGUFConstants::GGUF_VALUE_TYPE_FLOAT32) {  // float32
-            float float_val;
-            if (!ReadValue(float_val)) return false;
-            metadata_.kv_pairs[key] = std::to_string(float_val);
         }
     }
     
@@ -177,7 +338,7 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
     // Skip metadata to get to tensor info
     file_.seekg(header_.metadata_offset);
     
-    // Skip metadata entries
+    // Skip metadata entries — must handle ALL 13 GGUF v3 value types
     for (uint64_t i = 0; i < header_.metadata_kv_count; ++i) {
         std::string key, value;
         if (!ReadString(key)) return false;
@@ -185,11 +346,52 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
         uint32_t value_type;
         if (!ReadValue(value_type)) return false;
         
-        if (value_type == 1) {
-            if (!ReadString(value)) return false;
-        } else if (value_type == 4 || value_type == 5 || value_type == 6) {
-            uint32_t dummy;
-            if (!ReadValue(dummy)) return false;
+        switch (value_type) {
+            case GGUFConstants::GGUF_VALUE_TYPE_UINT8:  { uint8_t v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_INT8:   { int8_t v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_UINT16: { uint16_t v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_INT16:  { int16_t v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_UINT32: { uint32_t v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_INT32:  { int32_t v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_FLOAT32:{ float v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_BOOL:   { uint8_t v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_STRING: { if (!ReadString(value)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_ARRAY: {
+                // Must skip the entire array: element_type + count + elements
+                uint32_t elem_type;
+                uint64_t arr_count;
+                if (!ReadValue(elem_type)) return false;
+                if (!ReadValue(arr_count)) return false;
+                
+                for (uint64_t a = 0; a < arr_count; ++a) {
+                    switch (elem_type) {
+                        case GGUFConstants::GGUF_VALUE_TYPE_UINT8:  { uint8_t v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_INT8:   { int8_t v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_UINT16: { uint16_t v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_INT16:  { int16_t v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_UINT32: { uint32_t v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_INT32:  { int32_t v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_FLOAT32:{ float v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_BOOL:   { uint8_t v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_STRING: { std::string s; if (!ReadString(s)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_UINT64: { uint64_t v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_INT64:  { int64_t v; if (!ReadValue(v)) return false; break; }
+                        case GGUFConstants::GGUF_VALUE_TYPE_FLOAT64:{ double v; if (!ReadValue(v)) return false; break; }
+                        default: {
+                            std::cerr << "❌ Unknown array element type " << elem_type << " while skipping metadata" << std::endl;
+                            return false;
+                        }
+                    }
+                }
+                break;
+            }
+            case GGUFConstants::GGUF_VALUE_TYPE_UINT64: { uint64_t v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_INT64:  { int64_t v; if (!ReadValue(v)) return false; break; }
+            case GGUFConstants::GGUF_VALUE_TYPE_FLOAT64:{ double v; if (!ReadValue(v)) return false; break; }
+            default: {
+                std::cerr << "❌ Unknown metadata type " << value_type << " while skipping key: " << key << std::endl;
+                return false;
+            }
         }
     }
     
@@ -513,17 +715,36 @@ std::vector<TensorInfo> StreamingGGUFLoader::GetTensorInfo() const {
 
 std::string StreamingGGUFLoader::GetTypeString(GGMLType type) const {
     switch (type) {
-        case GGMLType::F32: return "F32 (float32)";
-        case GGMLType::F16: return "F16 (float16)";
-        case GGMLType::Q4_0: return "Q4_0 (quantized 4-bit, zero point)";
-        case GGMLType::Q4_1: return "Q4_1 (quantized 4-bit with delta)";
-        case GGMLType::Q2_K: return "Q2_K (gguf2 quantized 2-bit)";
-        case GGMLType::Q3_K: return "Q3_K (gguf2 quantized 3-bit)";
-        case GGMLType::Q4_K: return "Q4_K (gguf2 quantized 4-bit)";
-        case GGMLType::Q5_K: return "Q5_K (gguf2 quantized 5-bit)";
-        case GGMLType::Q6_K: return "Q6_K (gguf2 quantized 6-bit)";
-        case GGMLType::Q8_0: return "Q8_0 (quantized 8-bit, zero point)";
-        default: return "Unknown";
+        case GGMLType::F32:       return "F32 (float32)";
+        case GGMLType::F16:       return "F16 (float16)";
+        case GGMLType::Q4_0:      return "Q4_0 (quantized 4-bit, zero point)";
+        case GGMLType::Q4_1:      return "Q4_1 (quantized 4-bit with delta)";
+        case GGMLType::F16_HALF:  return "F16_HALF (half precision)";
+        case GGMLType::Q5_0:      return "Q5_0 (quantized 5-bit, zero point)";
+        case GGMLType::Q5_1:      return "Q5_1 (quantized 5-bit with delta)";
+        case GGMLType::Q8_0:      return "Q8_0 (quantized 8-bit, zero point)";
+        case GGMLType::Q8_1:      return "Q8_1 (quantized 8-bit with delta)";
+        case GGMLType::Q2_K:      return "Q2_K (k-quant 2-bit)";
+        case GGMLType::Q4_K:      return "Q4_K (k-quant 4-bit)";
+        case GGMLType::Q5_K:      return "Q5_K (k-quant 5-bit)";
+        case GGMLType::Q3_K:      return "Q3_K (k-quant 3-bit)";
+        case GGMLType::Q6_K:      return "Q6_K (k-quant 6-bit)";
+        case GGMLType::Q8_K:      return "Q8_K (k-quant 8-bit)";
+        case GGMLType::IQ2_XXS:   return "IQ2_XXS (importance 2-bit ultra)";
+        case GGMLType::IQ2_XS:    return "IQ2_XS (importance 2-bit extra small)";
+        case GGMLType::IQ3_XXS:   return "IQ3_XXS (importance 3-bit ultra)";
+        case GGMLType::IQ1_S:     return "IQ1_S (importance 1-bit small)";
+        case GGMLType::IQ4_NL:    return "IQ4_NL (importance 4-bit non-linear)";
+        case GGMLType::IQ3_S:     return "IQ3_S (importance 3-bit small)";
+        case GGMLType::IQ2_S:     return "IQ2_S (importance 2-bit small)";
+        case GGMLType::IQ4_XS:    return "IQ4_XS (importance 4-bit extra small)";
+        case GGMLType::I8:        return "I8 (integer 8-bit)";
+        case GGMLType::I16:       return "I16 (integer 16-bit)";
+        case GGMLType::I32:       return "I32 (integer 32-bit)";
+        case GGMLType::I64:       return "I64 (integer 64-bit)";
+        case GGMLType::F64:       return "F64 (double precision)";
+        case GGMLType::IQ1_M:     return "IQ1_M (importance 1-bit medium)";
+        default:                  return "Unknown (type " + std::to_string(static_cast<uint32_t>(type)) + ")";
     }
 }
 
@@ -550,18 +771,40 @@ uint64_t StreamingGGUFLoader::CalculateTensorSize(const std::vector<uint64_t>& s
         num_elements *= dim;
     }
     
+    // Bytes per element for each GGMLType (complete v3 coverage)
+    // Quantized types use block-based sizes; we approximate per-element for zone sizing.
     float bytes_per_element = 4.0f;  // Default F32
     switch (type) {
-        case GGMLType::F32: bytes_per_element = 4.0f; break;
-        case GGMLType::F16: bytes_per_element = 2.0f; break;
-        case GGMLType::Q4_0:
-        case GGMLType::Q4_1: bytes_per_element = 0.5f; break;
-        case GGMLType::Q2_K: bytes_per_element = 0.3125f; break;
-        case GGMLType::Q3_K: bytes_per_element = 0.4375f; break;
-        case GGMLType::Q4_K: bytes_per_element = 0.5f; break;
-        case GGMLType::Q5_K: bytes_per_element = 0.625f; break;
-        case GGMLType::Q6_K: bytes_per_element = 0.75f; break;
-        case GGMLType::Q8_0: bytes_per_element = 1.0f; break;
+        case GGMLType::F32:       bytes_per_element = 4.0f; break;
+        case GGMLType::F16:       bytes_per_element = 2.0f; break;
+        case GGMLType::F16_HALF:  bytes_per_element = 2.0f; break;
+        case GGMLType::Q4_0:      bytes_per_element = 0.5f + (2.0f / 32); break;  // 18 bytes per 32 elements
+        case GGMLType::Q4_1:      bytes_per_element = 0.5f + (4.0f / 32); break;  // 20 bytes per 32 elements
+        case GGMLType::Q5_0:      bytes_per_element = 0.625f + (4.0f / 32); break;
+        case GGMLType::Q5_1:      bytes_per_element = 0.625f + (4.0f / 32); break;
+        case GGMLType::Q8_0:      bytes_per_element = 1.0f + (2.0f / 32); break;
+        case GGMLType::Q8_1:      bytes_per_element = 1.0f + (8.0f / 32); break;
+        case GGMLType::Q2_K:      bytes_per_element = 0.3125f; break;
+        case GGMLType::Q3_K:      bytes_per_element = 0.4375f; break;
+        case GGMLType::Q4_K:      bytes_per_element = 0.5f; break;
+        case GGMLType::Q5_K:      bytes_per_element = 0.625f; break;
+        case GGMLType::Q6_K:      bytes_per_element = 0.75f; break;
+        case GGMLType::Q8_K:      bytes_per_element = 1.0625f; break;
+        case GGMLType::IQ2_XXS:   bytes_per_element = 0.25f; break;
+        case GGMLType::IQ2_XS:    bytes_per_element = 0.28125f; break;
+        case GGMLType::IQ3_XXS:   bytes_per_element = 0.375f; break;
+        case GGMLType::IQ1_S:     bytes_per_element = 0.1875f; break;
+        case GGMLType::IQ4_NL:    bytes_per_element = 0.5f; break;
+        case GGMLType::IQ3_S:     bytes_per_element = 0.4375f; break;
+        case GGMLType::IQ2_S:     bytes_per_element = 0.3125f; break;
+        case GGMLType::IQ4_XS:    bytes_per_element = 0.5f; break;
+        case GGMLType::I8:        bytes_per_element = 1.0f; break;
+        case GGMLType::I16:       bytes_per_element = 2.0f; break;
+        case GGMLType::I32:       bytes_per_element = 4.0f; break;
+        case GGMLType::I64:       bytes_per_element = 8.0f; break;
+        case GGMLType::F64:       bytes_per_element = 8.0f; break;
+        case GGMLType::IQ1_M:     bytes_per_element = 0.21875f; break;
+        default:                  bytes_per_element = 4.0f; break;  // Conservative default
     }
     
     return static_cast<uint64_t>(num_elements * bytes_per_element);

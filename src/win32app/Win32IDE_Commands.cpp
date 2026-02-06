@@ -2,31 +2,156 @@
 // Centralized command routing with 25+ features
 
 #include "Win32IDE.h"
+#include "IDEConfig.h"
 #include <commctrl.h>
 #include <richedit.h>
+#include <fstream>
 #include <functional>
 #include <algorithm>
 #include <cctype>
+#include <set>
 
-// Menu command IDs
+// Menu command IDs (with guards to avoid redefinition from Win32IDE.cpp)
+#ifndef IDM_FILE_NEW
 #define IDM_FILE_NEW 1001
+#endif
+#ifndef IDM_FILE_OPEN
 #define IDM_FILE_OPEN 1002
+#endif
+#ifndef IDM_FILE_SAVE
 #define IDM_FILE_SAVE 1003
+#endif
+#ifndef IDM_FILE_SAVEAS
 #define IDM_FILE_SAVEAS 1004
+#endif
+#ifndef IDM_FILE_SAVEALL
 #define IDM_FILE_SAVEALL 1005
+#endif
+#ifndef IDM_FILE_CLOSE
 #define IDM_FILE_CLOSE 1006
+#endif
+#ifndef IDM_FILE_RECENT_BASE
 #define IDM_FILE_RECENT_BASE 1010
+#endif
+#ifndef IDM_FILE_RECENT_CLEAR
 #define IDM_FILE_RECENT_CLEAR 1020
+#endif
+#ifndef IDM_FILE_LOAD_MODEL
+#define IDM_FILE_LOAD_MODEL 1030
+#endif
+#ifndef IDM_FILE_MODEL_FROM_HF
+#define IDM_FILE_MODEL_FROM_HF 1031
+#endif
+#ifndef IDM_FILE_MODEL_FROM_OLLAMA
+#define IDM_FILE_MODEL_FROM_OLLAMA 1032
+#endif
+#ifndef IDM_FILE_MODEL_FROM_URL
+#define IDM_FILE_MODEL_FROM_URL 1033
+#endif
+#ifndef IDM_FILE_MODEL_UNIFIED
+#define IDM_FILE_MODEL_UNIFIED 1034
+#endif
+#ifndef IDM_FILE_MODEL_QUICK_LOAD
+#define IDM_FILE_MODEL_QUICK_LOAD 1035
+#endif
+#ifndef IDM_FILE_EXIT
 #define IDM_FILE_EXIT 1099
+#endif
 
+#ifndef IDM_EDIT_UNDO
 #define IDM_EDIT_UNDO 2001
+#endif
+#ifndef IDM_EDIT_REDO
 #define IDM_EDIT_REDO 2002
+#endif
+#ifndef IDM_EDIT_CUT
 #define IDM_EDIT_CUT 2003
+#endif
+#ifndef IDM_EDIT_COPY
 #define IDM_EDIT_COPY 2004
+#endif
+#ifndef IDM_EDIT_PASTE
 #define IDM_EDIT_PASTE 2005
+#endif
+#ifndef IDM_EDIT_SELECT_ALL
 #define IDM_EDIT_SELECT_ALL 2006
+#endif
+#ifndef IDM_EDIT_FIND
 #define IDM_EDIT_FIND 2007
+#endif
+#ifndef IDM_EDIT_REPLACE
 #define IDM_EDIT_REPLACE 2008
+#endif
+
+// ============================================================================
+// FUZZY MATCH SCORING (VS Code-style character-skip matching)
+// ============================================================================
+
+struct FuzzyResult {
+    bool matched;
+    int score;
+    std::vector<int> matchPositions; // indices into the target string that matched
+};
+
+static FuzzyResult fuzzyMatchScore(const std::string& query, const std::string& target) {
+    FuzzyResult result;
+    result.matched = false;
+    result.score = 0;
+
+    if (query.empty()) {
+        result.matched = true;
+        return result;
+    }
+
+    // Lowercase both for case-insensitive matching
+    std::string lq, lt;
+    lq.resize(query.size());
+    lt.resize(target.size());
+    std::transform(query.begin(), query.end(), lq.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::transform(target.begin(), target.end(), lt.begin(), [](unsigned char c) { return std::tolower(c); });
+
+    int qi = 0;
+    int prevMatchIdx = -1;
+    bool afterSeparator = true; // start-of-string counts as separator
+
+    for (int ti = 0; ti < (int)lt.size() && qi < (int)lq.size(); ti++) {
+        if (lt[ti] == lq[qi]) {
+            result.matchPositions.push_back(ti);
+
+            // Scoring bonuses
+            if (afterSeparator) {
+                result.score += 10; // Word boundary match (after space, colon, slash, etc.)
+            } else if (prevMatchIdx >= 0 && ti == prevMatchIdx + 1) {
+                result.score += 5;  // Consecutive character match
+            } else {
+                result.score += 1;  // Gap match
+            }
+
+            // Exact case bonus
+            if (qi < (int)query.size() && ti < (int)target.size() && query[qi] == target[ti]) {
+                result.score += 2;
+            }
+
+            prevMatchIdx = ti;
+            qi++;
+        }
+        // Track word boundaries
+        afterSeparator = (lt[ti] == ' ' || lt[ti] == ':' || lt[ti] == '/' ||
+                          lt[ti] == '\\' || lt[ti] == '_' || lt[ti] == '-');
+    }
+
+    result.matched = (qi == (int)lq.size());
+    if (result.matched) {
+        // Bonus for shorter targets (tighter match)
+        result.score += std::max(0, 50 - (int)target.size());
+        // Penalize for match spread
+        if (!result.matchPositions.empty()) {
+            int spread = result.matchPositions.back() - result.matchPositions.front();
+            result.score -= spread / 2;
+        }
+    }
+    return result;
+}
 
 // ============================================================================
 // MENU COMMAND SYSTEM (25+ Features)
@@ -65,6 +190,9 @@ bool Win32IDE::routeCommand(int commandId) {
     } else if (commandId >= 7000 && commandId < 8000) {
         handleHelpCommand(commandId);
         return true;
+    } else if (commandId >= 8000 && commandId < 9000) {
+        handleGitCommand(commandId);
+        return true;
     }
     
     return false;
@@ -99,13 +227,66 @@ void Win32IDE::updateCommandStates() {
     
     // Edit commands depend on editor state
     bool hasSelection = false;
-    CHARRANGE range;
-    SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&range);
-    hasSelection = (range.cpMax > range.cpMin);
+    bool hasEditorContent = false;
+    if (m_hwndEditor && IsWindow(m_hwndEditor)) {
+        CHARRANGE range;
+        SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&range);
+        hasSelection = (range.cpMax > range.cpMin);
+        int textLen = (int)SendMessage(m_hwndEditor, WM_GETTEXTLENGTH, 0, 0);
+        hasEditorContent = (textLen > 0);
+    }
     
     m_commandStates[IDM_EDIT_CUT] = hasSelection;
     m_commandStates[IDM_EDIT_COPY] = hasSelection;
     m_commandStates[IDM_EDIT_PASTE] = IsClipboardFormatAvailable(CF_TEXT);
+    m_commandStates[IDM_EDIT_FIND] = hasEditorContent;
+    m_commandStates[IDM_EDIT_REPLACE] = hasEditorContent;
+    m_commandStates[IDM_EDIT_SELECT_ALL] = hasEditorContent;
+
+    // File: Save All requires at least one modified tab
+    bool anyModified = false;
+    for (const auto& tab : m_editorTabs) {
+        if (tab.modified) { anyModified = true; break; }
+    }
+    m_commandStates[IDM_FILE_SAVEALL] = anyModified;
+
+    // Git commands: only available when in a git repository
+    bool gitAvailable = !m_gitRepoPath.empty();
+    m_commandStates[8001] = gitAvailable; // Git Status
+    m_commandStates[8002] = gitAvailable; // Git Commit
+    m_commandStates[8003] = gitAvailable; // Git Push
+    m_commandStates[8004] = gitAvailable; // Git Pull
+    m_commandStates[8005] = gitAvailable; // Git Stage All
+
+    // Tools: Stop Profiling only when profiling is active
+    m_commandStates[5002] = m_profilingActive;
+    m_commandStates[5003] = m_profilingActive; // Results only if profiled
+
+    // Terminal: Kill only if a terminal pane exists
+    bool hasTerminal = !m_terminalPanes.empty();
+    m_commandStates[4003] = hasTerminal; // Kill Terminal
+    m_commandStates[4004] = hasTerminal; // Clear Terminal
+    m_commandStates[4005] = hasTerminal; // Split Terminal
+
+    // Agent/AI: always available once bridge exists
+    bool agentReady = (m_agenticBridge != nullptr);
+    m_commandStates[IDM_AGENT_START_LOOP] = agentReady;
+    m_commandStates[IDM_AGENT_EXECUTE_CMD] = agentReady;
+    m_commandStates[IDM_AGENT_STOP] = agentReady;
+    m_commandStates[IDM_AUTONOMY_START] = agentReady;
+    m_commandStates[IDM_AUTONOMY_STOP] = agentReady;
+    m_commandStates[IDM_AUTONOMY_SET_GOAL] = agentReady;
+
+    // RE: Analyze/Dumpbin/Compile need a file open
+    bool hasFile = !m_currentFile.empty();
+    m_commandStates[IDM_REVENG_ANALYZE] = hasFile;
+    m_commandStates[IDM_REVENG_DISASM] = hasFile;
+    m_commandStates[IDM_REVENG_DUMPBIN] = hasFile;
+    m_commandStates[IDM_REVENG_COMPILE] = hasFile;
+    m_commandStates[IDM_REVENG_COMPARE] = hasFile;
+    m_commandStates[IDM_REVENG_DETECT_VULNS] = hasFile;
+    m_commandStates[IDM_REVENG_EXPORT_IDA] = hasFile;
+    m_commandStates[IDM_REVENG_EXPORT_GHIDRA] = hasFile;
 }
 
 // ============================================================================
@@ -141,6 +322,26 @@ void Win32IDE::handleFileCommand(int commandId) {
             
         case IDM_FILE_LOAD_MODEL:
             openModel();
+            break;
+
+        case IDM_FILE_MODEL_FROM_HF:
+            openModelFromHuggingFace();
+            break;
+        
+        case IDM_FILE_MODEL_FROM_OLLAMA:
+            openModelFromOllama();
+            break;
+        
+        case IDM_FILE_MODEL_FROM_URL:
+            openModelFromURL();
+            break;
+        
+        case IDM_FILE_MODEL_UNIFIED:
+            openModelUnified();
+            break;
+        
+        case IDM_FILE_MODEL_QUICK_LOAD:
+            quickLoadGGUFModel();
             break;
 
         case IDM_FILE_CLOSE:
@@ -206,11 +407,11 @@ void Win32IDE::handleEditCommand(int commandId) {
             break;
             
         case IDM_EDIT_FIND:
-            MessageBoxA(m_hwndMain, "Find dialog - Feature available", "Find", MB_OK);
+            showFindDialog();
             break;
             
         case IDM_EDIT_REPLACE:
-            MessageBoxA(m_hwndMain, "Replace dialog - Feature available", "Replace", MB_OK);
+            showReplaceDialog();
             break;
             
         default:
@@ -228,8 +429,9 @@ void Win32IDE::handleViewCommand(int commandId) {
             toggleMinimap();
             break;
             
-        case 3002: // Toggle Output Tabs
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Output tabs toggled");
+        case 3002: // Toggle Output Panel
+            toggleOutputPanel();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_outputPanelVisible ? "Output panel shown" : "Output panel hidden"));
             break;
             
         case 3003: // Toggle Floating Panel
@@ -243,6 +445,85 @@ void Win32IDE::handleViewCommand(int commandId) {
         case 3005: // Module Browser
             showModuleBrowser();
             break;
+
+        case 3006: // Toggle Sidebar
+            toggleSidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_sidebarVisible ? "Sidebar shown" : "Sidebar hidden"));
+            break;
+
+        case 3007: // Toggle Secondary Sidebar
+            toggleSecondarySidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Secondary sidebar toggled");
+            break;
+
+        case 3008: // Toggle Panel
+            togglePanel();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_panelVisible ? "Panel shown" : "Panel hidden"));
+            break;
+
+        // ====================================================================
+        // THEME SELECTION (3101–3116) → applyThemeById
+        // ====================================================================
+        case IDM_THEME_DARK_PLUS:
+        case IDM_THEME_LIGHT_PLUS:
+        case IDM_THEME_MONOKAI:
+        case IDM_THEME_DRACULA:
+        case IDM_THEME_NORD:
+        case IDM_THEME_SOLARIZED_DARK:
+        case IDM_THEME_SOLARIZED_LIGHT:
+        case IDM_THEME_CYBERPUNK_NEON:
+        case IDM_THEME_GRUVBOX_DARK:
+        case IDM_THEME_CATPPUCCIN_MOCHA:
+        case IDM_THEME_TOKYO_NIGHT:
+        case IDM_THEME_RAWRXD_CRIMSON:
+        case IDM_THEME_HIGH_CONTRAST:
+        case IDM_THEME_ONE_DARK_PRO:
+        case IDM_THEME_SYNTHWAVE84:
+        case IDM_THEME_ABYSS:
+            applyThemeById(commandId);
+            break;
+
+        // ====================================================================
+        // TRANSPARENCY PRESETS (3200–3206) → setWindowTransparency
+        // ====================================================================
+        case IDM_TRANSPARENCY_100:
+            setWindowTransparency(255);
+            break;
+        case IDM_TRANSPARENCY_90:
+            setWindowTransparency(230);
+            break;
+        case IDM_TRANSPARENCY_80:
+            setWindowTransparency(204);
+            break;
+        case IDM_TRANSPARENCY_70:
+            setWindowTransparency(178);
+            break;
+        case IDM_TRANSPARENCY_60:
+            setWindowTransparency(153);
+            break;
+        case IDM_TRANSPARENCY_50:
+            setWindowTransparency(128);
+            break;
+        case IDM_TRANSPARENCY_40:
+            setWindowTransparency(102);
+            break;
+
+        case IDM_TRANSPARENCY_CUSTOM:
+            showTransparencySlider();
+            break;
+
+        case IDM_TRANSPARENCY_TOGGLE:
+        {
+            // Toggle between fully opaque and last-used alpha
+            static BYTE s_lastAlpha = 200;
+            if (m_windowAlpha < 255) {
+                s_lastAlpha = m_windowAlpha;
+                setWindowTransparency(255);
+            } else {
+                setWindowTransparency(s_lastAlpha);
+            }
+            break;
+        }
             
         default:
             break;
@@ -279,6 +560,11 @@ void Win32IDE::handleTerminalCommand(int commandId) {
                 }
             }
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Terminal cleared");
+            break;
+
+        case 4005: // Split Terminal
+            splitTerminalHorizontal();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Terminal split");
             break;
             
         default:
@@ -409,6 +695,60 @@ void Win32IDE::handleHelpCommand(int commandId) {
                        MB_OK | MB_ICONINFORMATION);
             break;
             
+        case 7006: { // Export Prometheus Metrics
+            std::string metrics = METRICS.exportPrometheus();
+            // Write to file
+            CreateDirectoryA(".rawrxd", nullptr);
+            std::ofstream mf(".rawrxd/metrics.prom");
+            if (mf) {
+                mf << metrics;
+                mf.close();
+                appendToOutput("Metrics exported to .rawrxd/metrics.prom\n", "Output", OutputSeverity::Info);
+            }
+            // Also show in output panel
+            appendToOutput("=== Prometheus Metrics ===\n" + metrics + "\n", "Output", OutputSeverity::Info);
+            break;
+        }
+        
+        default:
+            break;
+    }
+}
+
+// ============================================================================
+// GIT COMMAND HANDLERS
+// ============================================================================
+
+void Win32IDE::handleGitCommand(int commandId) {
+    switch (commandId) {
+        case 8001: // Git Status
+            showGitStatus();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Git status");
+            break;
+
+        case 8002: // Git Commit
+            showCommitDialog();
+            break;
+
+        case 8003: // Git Push
+            gitPush();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Git push");
+            break;
+
+        case 8004: // Git Pull
+            gitPull();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Git pull");
+            break;
+
+        case 8005: { // Git Stage All
+            std::vector<GitFile> files = getGitChangedFiles();
+            for (const auto& f : files) {
+                if (!f.staged) gitStageFile(f.path);
+            }
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"All files staged");
+            break;
+        }
+
         default:
             break;
     }
@@ -484,16 +824,57 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({7003, "Help: Search Help", "", "Help"});
     m_commandRegistry.push_back({7004, "Help: About", "", "Help"});
     m_commandRegistry.push_back({7005, "Help: Keyboard Shortcuts", "", "Help"});
+    m_commandRegistry.push_back({7006, "Help: Export Prometheus Metrics", "", "Help"});
 
-    // AI & Reverse Engineering
+    // AI Mode Toggles
     m_commandRegistry.push_back({IDM_AI_MODE_MAX, "AI: Toggle Max Mode", "", "AI"});
     m_commandRegistry.push_back({IDM_AI_MODE_DEEP_THINK, "AI: Toggle Deep Thinking", "", "AI"});
     m_commandRegistry.push_back({IDM_AI_MODE_DEEP_RESEARCH, "AI: Toggle Deep Research", "", "AI"});
     m_commandRegistry.push_back({IDM_AI_MODE_NO_REFUSAL, "AI: Toggle No Refusal", "", "AI"});
 
-    m_commandRegistry.push_back({IDM_REVENG_DUMPBIN, "RE: Run Dumpbin on Current File", "", "RE"});
+    // AI Context Window Sizes
+    m_commandRegistry.push_back({IDM_AI_CONTEXT_4K, "AI: Set Context Window 4K", "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_CONTEXT_32K, "AI: Set Context Window 32K", "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_CONTEXT_64K, "AI: Set Context Window 64K", "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_CONTEXT_128K, "AI: Set Context Window 128K", "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_CONTEXT_256K, "AI: Set Context Window 256K", "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_CONTEXT_512K, "AI: Set Context Window 512K", "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_CONTEXT_1M, "AI: Set Context Window 1M", "", "AI"});
+
+    // Agent Execution
+    m_commandRegistry.push_back({IDM_AGENT_START_LOOP, "Agent: Start Agent Loop", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_EXECUTE_CMD, "Agent: Execute Command", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_CONFIGURE_MODEL, "Agent: Configure Model", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_VIEW_TOOLS, "Agent: View Available Tools", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_VIEW_STATUS, "Agent: View Status", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_STOP, "Agent: Stop Agent", "", "Agent"});
+
+    // Autonomy Framework
+    m_commandRegistry.push_back({IDM_AUTONOMY_TOGGLE, "Autonomy: Toggle Autonomous Mode", "", "Autonomy"});
+    m_commandRegistry.push_back({IDM_AUTONOMY_START, "Autonomy: Start", "", "Autonomy"});
+    m_commandRegistry.push_back({IDM_AUTONOMY_STOP, "Autonomy: Stop", "", "Autonomy"});
+    m_commandRegistry.push_back({IDM_AUTONOMY_SET_GOAL, "Autonomy: Set Goal", "", "Autonomy"});
+    m_commandRegistry.push_back({IDM_AUTONOMY_STATUS, "Autonomy: Show Status", "", "Autonomy"});
+    m_commandRegistry.push_back({IDM_AUTONOMY_MEMORY, "Autonomy: Show Memory", "", "Autonomy"});
+
+    // Reverse Engineering (full suite)
     m_commandRegistry.push_back({IDM_REVENG_ANALYZE, "RE: Run Codex Analysis", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_DISASM, "RE: Disassemble Binary", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_DUMPBIN, "RE: Run Dumpbin on Current File", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_COMPILE, "RE: Run Custom Compiler", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_COMPARE, "RE: Compare Binaries", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_DETECT_VULNS, "RE: Detect Vulnerabilities", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_EXPORT_IDA, "RE: Export to IDA", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_EXPORT_GHIDRA, "RE: Export to Ghidra", "", "RE"});
+
+    // File: Load Model & Exit (not in original list)
+    m_commandRegistry.push_back({1030, "File: Load AI Model (Local)", "", "File"});
+    m_commandRegistry.push_back({IDM_FILE_MODEL_FROM_HF, "File: Load Model from HuggingFace", "", "File"});
+    m_commandRegistry.push_back({IDM_FILE_MODEL_FROM_OLLAMA, "File: Load Model from Ollama Blobs", "", "File"});
+    m_commandRegistry.push_back({IDM_FILE_MODEL_FROM_URL, "File: Load Model from URL", "", "File"});
+    m_commandRegistry.push_back({IDM_FILE_MODEL_UNIFIED, "File: Smart Model Loader (Auto-Detect)", "Ctrl+Shift+M", "File"});
+    m_commandRegistry.push_back({IDM_FILE_MODEL_QUICK_LOAD, "File: Quick Load GGUF Model", "Ctrl+M", "File"});
+    m_commandRegistry.push_back({1099, "File: Exit", "Alt+F4", "File"});
 
     m_filteredCommands = m_commandRegistry;
 }
@@ -512,59 +893,113 @@ void Win32IDE::showCommandPalette()
     
     // Get window dimensions for centering
     RECT mainRect;
-    GetClientRect(m_hwndMain, &mainRect);
+    GetWindowRect(m_hwndMain, &mainRect);
     int paletteWidth = 600;
     int paletteHeight = 400;
-    int x = (mainRect.right - paletteWidth) / 2;
-    int y = 50; // Near top of window
-    
-    // Create palette window
+    int x = mainRect.left + (mainRect.right - mainRect.left - paletteWidth) / 2;
+    int y = mainRect.top + 60; // Near top of window
+
+    // Register a custom window class for the palette (once)
+    static bool classRegistered = false;
+    static const char* kPaletteClass = "RawrXD_CommandPalette";
+    if (!classRegistered) {
+        WNDCLASSEXA wc = {};
+        wc.cbSize = sizeof(wc);
+        wc.style = CS_DROPSHADOW;
+        wc.lpfnWndProc = Win32IDE::CommandPaletteProc;
+        wc.hInstance = m_hInstance;
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        wc.hbrBackground = CreateSolidBrush(RGB(37, 37, 38));
+        wc.lpszClassName = kPaletteClass;
+        if (RegisterClassExA(&wc)) {
+            classRegistered = true;
+        }
+    }
+
+    // Create palette as a moveable popup with title bar and close button
     m_hwndCommandPalette = CreateWindowExA(
         WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
-        "STATIC", "",
-        WS_POPUP | WS_BORDER | WS_VISIBLE,
-        x + mainRect.left, y, paletteWidth, paletteHeight,
+        classRegistered ? kPaletteClass : "STATIC",
+        "Command Palette",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        x, y, paletteWidth, paletteHeight,
         m_hwndMain, nullptr, m_hInstance, nullptr
     );
-    
-    // Map to screen coordinates
-    POINT pt = {x, y};
-    ClientToScreen(m_hwndMain, &pt);
-    SetWindowPos(m_hwndCommandPalette, HWND_TOPMOST, pt.x, pt.y, paletteWidth, paletteHeight, SWP_SHOWWINDOW);
-    
+
+    if (!m_hwndCommandPalette) return;
+
+    // Store 'this' pointer so CommandPaletteProc can access the IDE instance
     SetWindowLongPtrA(m_hwndCommandPalette, GWLP_USERDATA, (LONG_PTR)this);
+
+    // Adjust for non-client area (title bar eats into client size)
+    RECT clientRect;
+    GetClientRect(m_hwndCommandPalette, &clientRect);
+    int clientW = clientRect.right;
+    int clientH = clientRect.bottom;
+
+    // Dark title bar (DwmSetWindowAttribute for dark mode if available)
+    // Fallback: just set a dark background on the client area
     
-    // Dark background
-    HBRUSH bgBrush = CreateSolidBrush(RGB(30, 30, 30));
-    SetClassLongPtrA(m_hwndCommandPalette, GCLP_HBRBACKGROUND, (LONG_PTR)bgBrush);
-    
-    // Create search input at top
+    // Create search input at top of client area
     m_hwndCommandPaletteInput = CreateWindowExA(
         WS_EX_CLIENTEDGE, "EDIT", "",
         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
-        10, 10, paletteWidth - 20, 28,
+        8, 8, clientW - 16, 26,
         m_hwndCommandPalette, nullptr, m_hInstance, nullptr
     );
     
-    // Set placeholder text appearance
-    SendMessageA(m_hwndCommandPaletteInput, EM_SETCUEBANNER, TRUE, (LPARAM)L"> Type a command...");
-    
-    // Create command list
+    // Set placeholder text and dark style on input
+    if (m_hwndCommandPaletteInput) {
+        SendMessageA(m_hwndCommandPaletteInput, EM_SETCUEBANNER, TRUE, (LPARAM)L"> Type a command...");
+        // Set font
+        HFONT inputFont = CreateFontA(
+            -14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
+        );
+        if (inputFont) SendMessage(m_hwndCommandPaletteInput, WM_SETFONT, (WPARAM)inputFont, TRUE);
+
+        // Subclass the input to intercept keyboard (Escape, Enter, Up/Down)
+        SetWindowLongPtrA(m_hwndCommandPaletteInput, GWLP_USERDATA, (LONG_PTR)this);
+        m_oldCommandPaletteInputProc = (WNDPROC)SetWindowLongPtrA(
+            m_hwndCommandPaletteInput, GWLP_WNDPROC,
+            (LONG_PTR)Win32IDE::CommandPaletteInputProc
+        );
+    }
+
+    // Create command list below the input (owner-draw for fuzzy highlight rendering)
     m_hwndCommandPaletteList = CreateWindowExA(
-        WS_EX_CLIENTEDGE, WC_LISTBOXA, "",
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT,
-        10, 45, paletteWidth - 20, paletteHeight - 55,
+        0, WC_LISTBOXA, "",
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT
+            | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS,
+        8, 42, clientW - 16, clientH - 50,
         m_hwndCommandPalette, nullptr, m_hInstance, nullptr
     );
-    
+
+    if (m_hwndCommandPaletteList) {
+        HFONT listFont = CreateFontA(
+            -14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
+        );
+        if (listFont) SendMessage(m_hwndCommandPaletteList, WM_SETFONT, (WPARAM)listFont, TRUE);
+        // Set item height for owner-draw
+        SendMessageA(m_hwndCommandPaletteList, LB_SETITEMHEIGHT, 0, MAKELPARAM(24, 0));
+    }
+
+    // Update command availability before populating
+    updateCommandStates();
+
     // Populate with all commands
     m_filteredCommands = m_commandRegistry;
+    m_fuzzyMatchPositions.clear();
     for (const auto& cmd : m_filteredCommands) {
         std::string itemText = cmd.name;
         if (!cmd.shortcut.empty()) {
             itemText += "  [" + cmd.shortcut + "]";
         }
         SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)itemText.c_str());
+        m_fuzzyMatchPositions.push_back({}); // no highlights when showing all
     }
     
     // Select first item
@@ -572,9 +1007,6 @@ void Win32IDE::showCommandPalette()
     
     m_commandPaletteVisible = true;
     SetFocus(m_hwndCommandPaletteInput);
-    
-    // Subclass the input for keyboard handling
-    SetWindowLongPtrA(m_hwndCommandPaletteInput, GWLP_USERDATA, (LONG_PTR)this);
 }
 
 void Win32IDE::hideCommandPalette()
@@ -596,21 +1028,47 @@ void Win32IDE::filterCommandPalette(const std::string& query)
     // Clear list
     SendMessageA(m_hwndCommandPaletteList, LB_RESETCONTENT, 0, 0);
     m_filteredCommands.clear();
-    
-    // Convert query to lowercase for case-insensitive search
-    std::string lowerQuery = query;
-    std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    
-    // Filter commands
-    for (const auto& cmd : m_commandRegistry) {
-        std::string lowerName = cmd.name;
-        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(),
-                       [](unsigned char c) { return std::tolower(c); });
-        
-        if (query.empty() || lowerName.find(lowerQuery) != std::string::npos) {
+    m_fuzzyMatchPositions.clear();
+
+    if (query.empty()) {
+        // Show all commands unfiltered
+        for (const auto& cmd : m_commandRegistry) {
             m_filteredCommands.push_back(cmd);
-            
+            m_fuzzyMatchPositions.push_back({});
+            std::string itemText = cmd.name;
+            if (!cmd.shortcut.empty()) {
+                itemText += "  [" + cmd.shortcut + "]";
+            }
+            SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)itemText.c_str());
+        }
+    } else {
+        // Fuzzy match and score all commands
+        struct ScoredEntry {
+            int registryIndex;
+            int score;
+            FuzzyResult fuzzy;
+        };
+        std::vector<ScoredEntry> scored;
+
+        for (int i = 0; i < (int)m_commandRegistry.size(); i++) {
+            FuzzyResult fr = fuzzyMatchScore(query, m_commandRegistry[i].name);
+            if (fr.matched) {
+                // Bonus: also try matching category:name for "ai max" -> "AI: Toggle Max Mode"
+                scored.push_back({i, fr.score, fr});
+            }
+        }
+
+        // Sort by score descending (best matches first)
+        std::sort(scored.begin(), scored.end(),
+                  [](const ScoredEntry& a, const ScoredEntry& b) {
+                      return a.score > b.score;
+                  });
+
+        for (const auto& entry : scored) {
+            const auto& cmd = m_commandRegistry[entry.registryIndex];
+            m_filteredCommands.push_back(cmd);
+            m_fuzzyMatchPositions.push_back(entry.fuzzy.matchPositions);
+
             std::string itemText = cmd.name;
             if (!cmd.shortcut.empty()) {
                 itemText += "  [" + cmd.shortcut + "]";
@@ -618,39 +1076,43 @@ void Win32IDE::filterCommandPalette(const std::string& query)
             SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)itemText.c_str());
         }
     }
-    
+
     // Select first item if available
     if (!m_filteredCommands.empty()) {
         SendMessageA(m_hwndCommandPaletteList, LB_SETCURSEL, 0, 0);
     }
 }
 
+// Timer ID for status bar flash feedback
+static constexpr UINT_PTR IDT_STATUS_FLASH = 42;
+
 void Win32IDE::executeCommandFromPalette(int index)
 {
     if (index < 0 || index >= (int)m_filteredCommands.size()) return;
     
-    int commandId = m_filteredCommands[index].id;
+    const auto& cmd = m_filteredCommands[index];
+    int commandId = cmd.id;
+    std::string cmdName = cmd.name;
+    bool enabled = isCommandEnabled(commandId);
+
     hideCommandPalette();
-    
-    // Route the command
+
+    if (!enabled) {
+        // Command is currently unavailable — show feedback but don't execute
+        std::string msg = cmdName + " — not available right now";
+        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)msg.c_str());
+        return;
+    }
+
+    // Route the command — all command ranges handled by routeCommand
     routeCommand(commandId);
-    
-    // Handle special view commands
-    if (commandId == 3006) toggleSidebar();
-    else if (commandId == 3007) toggleSecondarySidebar();
-    else if (commandId == 3008) togglePanel();
-    
-    // Handle Git commands
-    else if (commandId == 8001) showGitStatus();
-    else if (commandId == 8002) showCommitDialog();
-    else if (commandId == 8003) gitPush();
-    else if (commandId == 8004) gitPull();
-    else if (commandId == 8005) {
-        // Stage all
-        std::vector<GitFile> files = getGitChangedFiles();
-        for (const auto& f : files) {
-            if (!f.staged) gitStageFile(f.path);
-        }
+
+    // Flash the status bar with execution confirmation
+    if (m_hwndStatusBar) {
+        std::string feedback = "\xE2\x9C\x93 " + cmdName; // UTF-8 checkmark + command name
+        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)feedback.c_str());
+        // Set timer to clear the flash after 2 seconds
+        SetTimer(m_hwndMain, IDT_STATUS_FLASH, 2000, nullptr);
     }
 }
 
@@ -659,199 +1121,233 @@ LRESULT CALLBACK Win32IDE::CommandPaletteProc(HWND hwnd, UINT uMsg, WPARAM wPara
     Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
     
     switch (uMsg) {
-    case WM_KEYDOWN:
-        if (pThis) {
-            if (wParam == VK_ESCAPE) {
-                pThis->hideCommandPalette();
-                return 0;
+    case WM_ACTIVATE:
+        // Close palette when it loses activation (user clicked outside)
+        if (LOWORD(wParam) == WA_INACTIVE) {
+            if (pThis && pThis->m_commandPaletteVisible) {
+                // Post a message to close asynchronously (avoid reentrancy)
+                PostMessage(hwnd, WM_CLOSE, 0, 0);
             }
-            else if (wParam == VK_RETURN) {
+        }
+        return 0;
+
+    case WM_CLOSE:
+        if (pThis) {
+            pThis->hideCommandPalette();
+        }
+        return 0;
+
+    case WM_DESTROY:
+        return 0;
+
+    case WM_COMMAND:
+        if (pThis) {
+            if (HIWORD(wParam) == EN_CHANGE && (HWND)lParam == pThis->m_hwndCommandPaletteInput) {
+                // Input text changed — filter the list
+                char buffer[256] = {0};
+                GetWindowTextA(pThis->m_hwndCommandPaletteInput, buffer, 256);
+                pThis->filterCommandPalette(buffer);
+            }
+            else if (HIWORD(wParam) == LBN_DBLCLK && (HWND)lParam == pThis->m_hwndCommandPaletteList) {
+                // Double-click on list item — execute
                 int sel = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCURSEL, 0, 0);
                 pThis->executeCommandFromPalette(sel);
-                return 0;
-            }
-            else if (wParam == VK_DOWN) {
-                int sel = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCURSEL, 0, 0);
-                int count = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCOUNT, 0, 0);
-                if (sel < count - 1) {
-                    SendMessageA(pThis->m_hwndCommandPaletteList, LB_SETCURSEL, sel + 1, 0);
-                }
-                return 0;
-            }
-            else if (wParam == VK_UP) {
-                int sel = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCURSEL, 0, 0);
-                if (sel > 0) {
-                    SendMessageA(pThis->m_hwndCommandPaletteList, LB_SETCURSEL, sel - 1, 0);
-                }
-                return 0;
             }
         }
         break;
-        
-    case WM_COMMAND:
-        if (pThis && HIWORD(wParam) == EN_CHANGE) {
-            // Input changed - filter list
-            char buffer[256] = {0};
-            GetWindowTextA(pThis->m_hwndCommandPaletteInput, buffer, 256);
-            pThis->filterCommandPalette(buffer);
+
+    case WM_MEASUREITEM: {
+        MEASUREITEMSTRUCT* mis = (MEASUREITEMSTRUCT*)lParam;
+        if (mis) {
+            mis->itemHeight = 26;
         }
-        else if (pThis && HIWORD(wParam) == LBN_DBLCLK) {
-            // Double-click on list item
+        return TRUE;
+    }
+
+    case WM_DRAWITEM: {
+        DRAWITEMSTRUCT* dis = (DRAWITEMSTRUCT*)lParam;
+        if (!dis || !pThis) break;
+        if (dis->itemID == (UINT)-1) break;
+
+        int idx = (int)dis->itemID;
+        if (idx < 0 || idx >= (int)pThis->m_filteredCommands.size()) break;
+
+        const auto& cmd = pThis->m_filteredCommands[idx];
+        bool isEnabled = pThis->isCommandEnabled(cmd.id);
+        bool isSelected = (dis->itemState & ODS_SELECTED) != 0;
+
+        // Background
+        COLORREF bgColor = isSelected ? RGB(4, 57, 94) : RGB(45, 45, 48);
+        HBRUSH hbr = CreateSolidBrush(bgColor);
+        FillRect(dis->hDC, &dis->rcItem, hbr);
+        DeleteObject(hbr);
+
+        SetBkMode(dis->hDC, TRANSPARENT);
+
+        // Category badge (small colored tag on the left)
+        COLORREF catColor = RGB(86, 156, 214); // default blue
+        if (cmd.category == "File") catColor = RGB(78, 201, 176);
+        else if (cmd.category == "Edit") catColor = RGB(220, 220, 170);
+        else if (cmd.category == "View") catColor = RGB(156, 220, 254);
+        else if (cmd.category == "Terminal") catColor = RGB(206, 145, 120);
+        else if (cmd.category == "Git") catColor = RGB(240, 128, 48);
+        else if (cmd.category == "AI") catColor = RGB(197, 134, 192);
+        else if (cmd.category == "Agent") catColor = RGB(197, 134, 192);
+        else if (cmd.category == "Autonomy") catColor = RGB(255, 140, 198);
+        else if (cmd.category == "RE") catColor = RGB(244, 71, 71);
+        else if (cmd.category == "Tools") catColor = RGB(128, 200, 128);
+        else if (cmd.category == "Help") catColor = RGB(180, 180, 180);
+
+        // Draw category dot
+        HBRUSH dotBrush = CreateSolidBrush(catColor);
+        RECT dotRect = {dis->rcItem.left + 6, dis->rcItem.top + 8, dis->rcItem.left + 12, dis->rcItem.top + 14};
+        HRGN dotRgn = CreateEllipticRgn(dotRect.left, dotRect.top, dotRect.right, dotRect.bottom);
+        FillRgn(dis->hDC, dotRgn, dotBrush);
+        DeleteObject(dotRgn);
+        DeleteObject(dotBrush);
+
+        int textLeft = dis->rcItem.left + 18;
+
+        // Get match positions for this item
+        std::vector<int> matchPos;
+        if (idx < (int)pThis->m_fuzzyMatchPositions.size()) {
+            matchPos = pThis->m_fuzzyMatchPositions[idx];
+        }
+
+        COLORREF normalColor = isEnabled ? RGB(220, 220, 220) : RGB(110, 110, 110);
+        COLORREF highlightColor = isEnabled ? RGB(18, 180, 250) : RGB(80, 120, 140);
+
+        // Draw command name character by character with fuzzy highlights
+        std::string name = cmd.name;
+        std::set<int> matchSet(matchPos.begin(), matchPos.end());
+
+        // Create bold font for highlights
+        static HFONT s_normalFont = nullptr;
+        static HFONT s_boldFont = nullptr;
+        if (!s_normalFont) {
+            s_normalFont = CreateFontA(-14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+        }
+        if (!s_boldFont) {
+            s_boldFont = CreateFontA(-14, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+                ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+        }
+
+        int xPos = textLeft;
+        for (int ci = 0; ci < (int)name.size(); ci++) {
+            bool isMatch = matchSet.count(ci) > 0;
+            SetTextColor(dis->hDC, isMatch ? highlightColor : normalColor);
+            SelectObject(dis->hDC, isMatch ? s_boldFont : s_normalFont);
+
+            char ch[2] = {name[ci], 0};
+            SIZE charSize;
+            GetTextExtentPoint32A(dis->hDC, ch, 1, &charSize);
+            TextOutA(dis->hDC, xPos, dis->rcItem.top + 4, ch, 1);
+            xPos += charSize.cx;
+        }
+
+        // Draw shortcut right-aligned in dimmer color
+        if (!cmd.shortcut.empty()) {
+            SelectObject(dis->hDC, s_normalFont);
+            SetTextColor(dis->hDC, isEnabled ? RGB(140, 140, 140) : RGB(80, 80, 80));
+            std::string shortcutText = "[" + cmd.shortcut + "]";
+            SIZE scSize;
+            GetTextExtentPoint32A(dis->hDC, shortcutText.c_str(), (int)shortcutText.size(), &scSize);
+            int scX = dis->rcItem.right - scSize.cx - 10;
+            TextOutA(dis->hDC, scX, dis->rcItem.top + 4, shortcutText.c_str(), (int)shortcutText.size());
+        }
+
+        // Draw disabled indicator
+        if (!isEnabled) {
+            SelectObject(dis->hDC, s_normalFont);
+            SetTextColor(dis->hDC, RGB(90, 90, 90));
+            const char* disabledTag = "(unavailable)";
+            SIZE tagSize;
+            GetTextExtentPoint32A(dis->hDC, disabledTag, 13, &tagSize);
+            int tagX = dis->rcItem.right - tagSize.cx - 10;
+            if (!cmd.shortcut.empty()) tagX -= 80; // offset if shortcut present
+            TextOutA(dis->hDC, tagX, dis->rcItem.top + 4, disabledTag, 13);
+        }
+
+        // Focus rect
+        if (dis->itemState & ODS_FOCUS) {
+            DrawFocusRect(dis->hDC, &dis->rcItem);
+        }
+
+        return TRUE;
+    }
+
+    case WM_CTLCOLORLISTBOX:
+    case WM_CTLCOLOREDIT:
+    case WM_CTLCOLORSTATIC: {
+        // Dark theme colors for child controls
+        HDC hdcCtrl = (HDC)wParam;
+        SetTextColor(hdcCtrl, RGB(220, 220, 220));
+        SetBkColor(hdcCtrl, RGB(45, 45, 48));
+        static HBRUSH s_paletteBrush = CreateSolidBrush(RGB(45, 45, 48));
+        return (LRESULT)s_paletteBrush;
+    }
+
+    case WM_ERASEBKGND: {
+        HDC hdc = (HDC)wParam;
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        HBRUSH bg = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, bg);
+        DeleteObject(bg);
+        return 1;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// Subclass proc for the command palette input — intercepts Escape, Enter, Up/Down
+LRESULT CALLBACK Win32IDE::CommandPaletteInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+    if (!pThis) return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+
+    if (uMsg == WM_KEYDOWN) {
+        if (wParam == VK_ESCAPE) {
+            pThis->hideCommandPalette();
+            return 0;
+        }
+        if (wParam == VK_RETURN) {
             int sel = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCURSEL, 0, 0);
             pThis->executeCommandFromPalette(sel);
+            return 0;
         }
-        break;
+        if (wParam == VK_DOWN) {
+            int sel = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCURSEL, 0, 0);
+            int count = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCOUNT, 0, 0);
+            if (sel < count - 1) {
+                SendMessageA(pThis->m_hwndCommandPaletteList, LB_SETCURSEL, sel + 1, 0);
+            }
+            return 0;
+        }
+        if (wParam == VK_UP) {
+            int sel = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCURSEL, 0, 0);
+            if (sel > 0) {
+                SendMessageA(pThis->m_hwndCommandPaletteList, LB_SETCURSEL, sel - 1, 0);
+            }
+            return 0;
+        }
     }
-    
+
+    // Forward to the original EDIT wndproc
+    if (pThis->m_oldCommandPaletteInputProc) {
+        return CallWindowProcA(pThis->m_oldCommandPaletteInputProc, hwnd, uMsg, wParam, lParam);
+    }
     return DefWindowProcA(hwnd, uMsg, wParam, lParam);
 }
 
 // ============================================================================
 // AGENT COMMAND HANDLERS
+// Moved to Win32IDE_AgentCommands.cpp to avoid duplicate definitions.
+// handleAgentCommand, onAgentStartLoop, onAgentExecuteCommand,
+// onAIModeMax, onAIModeDeepThink, onAIModeDeepResearch, onAIModeNoRefusal,
+// onAIContextSize are all defined in Win32IDE_AgentCommands.cpp
 // ============================================================================
-
-void Win32IDE::handleAgentCommand(int commandId) {
-    switch (commandId) {
-        case IDM_AGENT_START_LOOP: 
-            onAgentStartLoop(); 
-            break;
-        case IDM_AGENT_EXECUTE_CMD:
-            onAgentExecuteCommand();
-            break;
-        case IDM_AI_MODE_MAX: 
-            onAIModeMax(); 
-            break;
-        case IDM_AI_MODE_DEEP_THINK: 
-            onAIModeDeepThink(); 
-            break;
-        case IDM_AI_MODE_DEEP_RESEARCH: 
-            onAIModeDeepResearch(); 
-            break;
-        case IDM_AI_MODE_NO_REFUSAL: 
-            onAIModeNoRefusal(); 
-            break;
-        
-        case IDM_AI_CONTEXT_4K:
-        case IDM_AI_CONTEXT_32K:
-        case IDM_AI_CONTEXT_64K:
-        case IDM_AI_CONTEXT_128K:
-        case IDM_AI_CONTEXT_256K:
-        case IDM_AI_CONTEXT_512K:
-        case IDM_AI_CONTEXT_1M:
-            onAIContextSize(commandId);
-            break;
-
-        // Reverse Engineering Handlers
-        case IDM_REVENG_ANALYZE:
-            handleReverseEngineeringAnalyze();
-            break;
-        case IDM_REVENG_DISASM:
-            handleReverseEngineeringDisasm();
-            break;
-        case IDM_REVENG_DUMPBIN:
-            handleReverseEngineeringDumpBin();
-            break;
-        case IDM_REVENG_COMPILE:
-            handleReverseEngineeringCompile();
-            break;
-        case IDM_REVENG_COMPARE:
-            handleReverseEngineeringCompare();
-            break;
-        case IDM_REVENG_DETECT_VULNS:
-            handleReverseEngineeringDetectVulns();
-            break;
-        case IDM_REVENG_EXPORT_IDA:
-            handleReverseEngineeringExportIDA();
-            break;
-        case IDM_REVENG_EXPORT_GHIDRA:
-            handleReverseEngineeringExportGhidra();
-            break;
-            
-        default:
-            break;
-    }
-}
-
-void Win32IDE::onAgentStartLoop() {
-    if (m_agentBridge) {
-        m_agentBridge->Initialize("plugins/", "default.gguf");
-        appendToOutput("Agent Loop Started (Interactive Mode)", "Agent");
-    }
-}
-
-void Win32IDE::onAgentExecuteCommand() {
-    // Show input dialog or focus chat
-    if (m_hwndFloatingPanel) {
-        ShowWindow(m_hwndFloatingPanel, SW_SHOW);
-    }
-}
-
-void Win32IDE::onAIModeMax() {
-    if (!m_agentBridge) return;
-    bool state = !m_agentBridge->GetMaxMode(); // Add GetMaxMode to Bridge or track locally
-    m_agentBridge->SetMaxMode(state);
-    CheckMenuItem(m_hMenu, IDM_AI_MODE_MAX, state ? MF_CHECKED : MF_UNCHECKED);
-    appendToOutput(std::string("Max Mode: ") + (state ? "ON" : "OFF"), "Agent");
-}
-
-void Win32IDE::onAIModeDeepThink() {
-    if (!m_agentBridge) return;
-    bool state = !m_agentBridge->GetDeepThinking();
-    m_agentBridge->SetDeepThinking(state);
-    CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_THINK, state ? MF_CHECKED : MF_UNCHECKED);
-    appendToOutput(std::string("Deep Thinking: ") + (state ? "ON" : "OFF"), "Agent");
-}
-
-void Win32IDE::onAIModeDeepResearch() {
-    if (!m_agentBridge) return;
-    bool state = static_cast<AgenticBridge*>(m_agentBridge.get())->IsDeepResearch(); // Cast if needed
-    m_agentBridge->SetDeepResearch(state); // Toggle logic needed
-    // Assuming SetDeepResearch works as toggle or we track state.
-    // Let's assume we toggle based on menu state for simplicity if getter missing
-    UINT menuState = GetMenuState(m_hMenu, IDM_AI_MODE_DEEP_RESEARCH, MF_BYCOMMAND);
-    bool newState = !(menuState & MF_CHECKED);
-    m_agentBridge->SetDeepResearch(newState);
-    CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_RESEARCH, newState ? MF_CHECKED : MF_UNCHECKED);
-    appendToOutput(std::string("Deep Research: ") + (newState ? "ON" : "OFF"), "Agent");
-}
-
-void Win32IDE::onAIModeNoRefusal() {
-    if (!m_agentBridge) return;
-    UINT menuState = GetMenuState(m_hMenu, IDM_AI_MODE_NO_REFUSAL, MF_BYCOMMAND);
-    bool newState = !(menuState & MF_CHECKED);
-    m_agentBridge->SetNoRefusal(newState);
-    CheckMenuItem(m_hMenu, IDM_AI_MODE_NO_REFUSAL, newState ? MF_CHECKED : MF_UNCHECKED);
-    appendToOutput(std::string("No Refusal Mode: ") + (newState ? "ON" : "OFF"), "Agent");
-}
-
-void Win32IDE::onAIContextSize(int commandId) {
-    if (!m_agentBridge) return;
-    
-    // Uncheck all
-    CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_4K, MF_UNCHECKED);
-    CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_32K, MF_UNCHECKED);
-    CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_64K, MF_UNCHECKED);
-    CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_128K, MF_UNCHECKED);
-    CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_256K, MF_UNCHECKED);
-    CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_512K, MF_UNCHECKED);
-    CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_1M, MF_UNCHECKED);
-    
-    // Check current
-    CheckMenuItem(m_hMenu, commandId, MF_CHECKED);
-    
-    std::string sizeStr = "4k";
-    switch(commandId) {
-        case IDM_AI_CONTEXT_32K: sizeStr = "32k"; break;
-        case IDM_AI_CONTEXT_64K: sizeStr = "64k"; break;
-        case IDM_AI_CONTEXT_128K: sizeStr = "128k"; break;
-        case IDM_AI_CONTEXT_256K: sizeStr = "256k"; break;
-        case IDM_AI_CONTEXT_512K: sizeStr = "512k"; break;
-        case IDM_AI_CONTEXT_1M: sizeStr = "1m"; break;
-    }
-    
-    m_agentBridge->SetContextSize(sizeStr);
-    
-    // Auto-load memory module if VSIX loader present
-    // (Simulation of VSIX loading logic)
-    appendToOutput("Context Window updated to " + sizeStr, "Agent");
-}

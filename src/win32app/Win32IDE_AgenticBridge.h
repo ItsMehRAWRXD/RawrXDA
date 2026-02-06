@@ -12,6 +12,7 @@
 #include <functional>
 #include <memory>
 #include "../native_agent.hpp"
+#include "../cpu_inference_engine.h"
 
 // Forward declaration
 class Win32IDE;
@@ -58,13 +59,23 @@ public:
     void SetModel(const std::string& modelName);
     void SetOllamaServer(const std::string& serverUrl);
     void SetMaxMode(bool enabled);
+    bool GetMaxMode() const { return m_maxMode; }
     void SetDeepThinking(bool enabled);
+    bool GetDeepThinking() const { return m_deepThinking; }
     void SetDeepResearch(bool enabled);
+    bool GetDeepResearch() const { return m_deepResearch; }
     void SetNoRefusal(bool enabled);
+    bool GetNoRefusal() const { return m_noRefusal; }
     void SetAutoCorrect(bool enabled);
+    bool GetAutoCorrect() const { return m_autoCorrect; }
     void SetContextSize(const std::string& sizeName);
     bool LoadModel(const std::string& path);
     std::string GetCurrentModel() const { return m_modelName; }
+
+    // Language-aware context propagation
+    void SetLanguageContext(const std::string& language, const std::string& filePath);
+    std::string GetLanguageContext() const { return m_languageContext; }
+    std::string GetFileContext() const { return m_fileContext; }
     
     // Output callback
     using OutputCallback = std::function<void(const std::string&, const std::string&)>;
@@ -77,7 +88,7 @@ public:
 
 private:
    // Native Integration
-    std::unique_ptr<CPUInference::CPUInferenceEngine> m_nativeEngine;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
     std::unique_ptr<RawrXD::NativeAgent> m_nativeAgent;
 
     // PowerShell process management
@@ -115,4 +126,9 @@ private:
     bool m_deepResearch = false;
     bool m_noRefusal = false;
     bool m_autoCorrect = false;
+    std::string m_languageContext;  // Current language (e.g. "C/C++")
+    std::string m_fileContext;      // Current file path
+
+    // Output callback for streaming results to UI
+    OutputCallback m_outputCallback;
 };

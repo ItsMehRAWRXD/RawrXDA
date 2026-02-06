@@ -8,7 +8,7 @@ std::unique_ptr<EngineManager> g_engine_manager;
 
 EngineManager::EngineManager() {
     // Initialize with default engines
-    models_dir_ = std::filesystem::current_path() / "models" / "800b";
+    models_dir_ = (std::filesystem::current_path() / "models" / "800b").string();
 }
 
 EngineManager::~EngineManager() = default;
@@ -125,7 +125,7 @@ bool EngineManager::Load800BModel(const std::string& model_name) {
     }
     
     // Combine parts (simplified - would use mmap in real implementation)
-    std::filesystem::path output_path = models_dir_ / (model_name + ".gguf");
+    std::filesystem::path output_path = std::filesystem::path(models_dir_) / (model_name + ".gguf");
     std::ofstream output(output_path, std::ios::binary);
     
     for (const auto& part : model_parts) {
@@ -138,12 +138,12 @@ bool EngineManager::Load800BModel(const std::string& model_name) {
 }
 
 bool EngineManager::Setup5DriveLayout(const std::string& base_dir) {
-    models_dir_ = std::filesystem::path(base_dir);
+    models_dir_ = base_dir;
     std::filesystem::create_directories(models_dir_);
     
     // Create subdirectories for each drive
     for (int i = 1; i <= 5; i++) {
-        std::string drive_path = (models_dir_ / ("drive" + std::to_string(i))).string();
+        std::string drive_path = (std::filesystem::path(models_dir_) / ("drive" + std::to_string(i))).string();
         std::filesystem::create_directories(drive_path);
     }
     

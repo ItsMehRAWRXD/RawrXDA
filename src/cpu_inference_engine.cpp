@@ -1,6 +1,7 @@
 #include "cpu_inference_engine.h"
 #include "gguf_loader.h"
 #include "../plugins/MemoryPlugin.hpp"
+#include "inference_kernels.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -13,102 +14,240 @@
 #include <algorithm>
 // #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <immintrin.h>
 
 namespace RawrXD {
 
-// --- CPUOps Implementation ---
+// ============================================================================
+// AVX2-Vectorized CPUOps — No scalar fallback in hot paths
+// ============================================================================
+
+// --- Helper: Horizontal sum of __m256 ---
+static inline float hsum_avx_ops(__m256 v) {
+    __m128 lo = _mm256_castps256_ps128(v);
+    __m128 hi = _mm256_extractf128_ps(v, 1);
+    lo = _mm_add_ps(lo, hi);
+    __m128 shuf = _mm_movehdup_ps(lo);
+    __m128 sums = _mm_add_ps(lo, shuf);
+    shuf = _mm_movehl_ps(shuf, sums);
+    sums = _mm_add_ss(sums, shuf);
+    return _mm_cvtss_f32(sums);
+}
+
 namespace CPUOps {
-    // Basic Vector Add: c = a + b
+    // AVX2 Vector Add: c = a + b
     void VectorAdd(const float* a, const float* b, float* c, int size) {
-        for (int i = 0; i < size; ++i) c[i] = a[i] + b[i];
+        int i = 0;
+        for (; i + 7 < size; i += 8) {
+            __m256 va = _mm256_loadu_ps(a + i);
+            __m256 vb = _mm256_loadu_ps(b + i);
+            _mm256_storeu_ps(c + i, _mm256_add_ps(va, vb));
+        }
+        for (; i < size; ++i) c[i] = a[i] + b[i];
     }
 
-    // Basic Vector Mul: c = a * b
+    // AVX2 Vector Mul: c = a * b
     void VectorMul(const float* a, const float* b, float* c, int size) {
-        for (int i = 0; i < size; ++i) c[i] = a[i] * b[i];
+        int i = 0;
+        for (; i + 7 < size; i += 8) {
+            __m256 va = _mm256_loadu_ps(a + i);
+            __m256 vb = _mm256_loadu_ps(b + i);
+            _mm256_storeu_ps(c + i, _mm256_mul_ps(va, vb));
+        }
+        for (; i < size; ++i) c[i] = a[i] * b[i];
     }
 
-    // Basic MatMul: C = A * B. A[m, k], B[k, n] -> C[m, n]
+    // AVX2 MatMul: C = A * B. A[m, k], B[k, n] -> C[m, n]
     void MatMul(const float* A, const float* B, float* C, int m, int n, int k) {
         if (n == 1) {
-            // Matrix-Vector optimized
-            // Use OpenMP if available, else sequential
+            // Matrix-Vector: AVX2 FMA dot product per row
             #ifdef _OPENMP
-            #pragma omp parallel for
+            #pragma omp parallel for schedule(static)
             #endif
             for (int i = 0; i < m; ++i) {
-                float sum = 0.0f;
                 const float* A_row = A + i * k;
-                for (int j = 0; j < k; ++j) {
-                    sum += A_row[j] * B[j];
+                __m256 acc = _mm256_setzero_ps();
+                int j = 0;
+                for (; j + 7 < k; j += 8) {
+                    __m256 va = _mm256_loadu_ps(A_row + j);
+                    __m256 vb = _mm256_loadu_ps(B + j);
+                    acc = _mm256_fmadd_ps(va, vb, acc);
                 }
+                float sum = hsum_avx_ops(acc);
+                for (; j < k; ++j) sum += A_row[j] * B[j];
                 C[i] = sum;
             }
         } else {
-            // General Matrix-Matrix
+            // General Matrix-Matrix with tiling for cache
+            const int TILE_K = 64;
             std::memset(C, 0, m * n * sizeof(float));
-            for (int i = 0; i < m; ++i) {
-                for (int p = 0; p < k; ++p) {
-                    float valA = A[i * k + p];
-                    for (int j = 0; j < n; ++j) {
-                        C[i * n + j] += valA * B[p * n + j];
+            
+            for (int kt = 0; kt < k; kt += TILE_K) {
+                int k_end = std::min(kt + TILE_K, k);
+                for (int i = 0; i < m; ++i) {
+                    for (int p = kt; p < k_end; ++p) {
+                        float valA = A[i * k + p];
+                        __m256 va = _mm256_set1_ps(valA);
+                        int j = 0;
+                        for (; j + 7 < n; j += 8) {
+                            __m256 vc = _mm256_loadu_ps(C + i * n + j);
+                            __m256 vb = _mm256_loadu_ps(B + p * n + j);
+                            _mm256_storeu_ps(C + i * n + j, _mm256_fmadd_ps(va, vb, vc));
+                        }
+                        for (; j < n; ++j) {
+                            C[i * n + j] += valA * B[p * n + j];
+                        }
                     }
                 }
             }
         }
     }
 
+    // AVX2 Softmax with stability — fully vectorized exp via fast_exp_avx2_shared
     void Softmax(float* data, int size) {
-        float max_val = -1e9;
-        for (int i = 0; i < size; ++i) if (data[i] > max_val) max_val = data[i];
+        // Find max
+        __m256 vmax = _mm256_set1_ps(-1e30f);
+        int i = 0;
+        for (; i + 7 < size; i += 8) {
+            vmax = _mm256_max_ps(vmax, _mm256_loadu_ps(data + i));
+        }
+        float max_val = -1e30f;
+        {
+            alignas(32) float tmp[8];
+            _mm256_store_ps(tmp, vmax);
+            for (int j = 0; j < 8; j++) if (tmp[j] > max_val) max_val = tmp[j];
+        }
+        for (; i < size; ++i) if (data[i] > max_val) max_val = data[i];
         
+        // Exp and sum — fully vectorized, no scalar-in-SIMD loop
+        __m256 vmax_bc = _mm256_set1_ps(max_val);
+        __m256 vsum = _mm256_setzero_ps();
         float sum = 0.0f;
-        for (int i = 0; i < size; ++i) {
+        i = 0;
+        for (; i + 7 < size; i += 8) {
+            __m256 v = _mm256_loadu_ps(data + i);
+            __m256 e = fast_exp_avx2_shared(_mm256_sub_ps(v, vmax_bc));
+            _mm256_storeu_ps(data + i, e);
+            vsum = _mm256_add_ps(vsum, e);
+        }
+        sum = hsum_avx_ops(vsum);
+        for (; i < size; ++i) {
             data[i] = std::exp(data[i] - max_val);
             sum += data[i];
         }
         
+        // Normalize
         float inv_sum = 1.0f / sum;
-        for (int i = 0; i < size; ++i) data[i] *= inv_sum;
+        __m256 vinv = _mm256_set1_ps(inv_sum);
+        i = 0;
+        for (; i + 7 < size; i += 8) {
+            _mm256_storeu_ps(data + i, _mm256_mul_ps(_mm256_loadu_ps(data + i), vinv));
+        }
+        for (; i < size; ++i) data[i] *= inv_sum;
     }
 
+    // AVX2 RMSNorm
     void RMSNorm(float* data, int size, float epsilon) {
-        float sum_sq = 0.0f;
-        for (int i = 0; i < size; ++i) sum_sq += data[i] * data[i];
-        float rms = std::sqrt(sum_sq / size + epsilon);
-        float scale = 1.0f / rms;
-        for (int i = 0; i < size; ++i) data[i] *= scale;
+        __m256 vss = _mm256_setzero_ps();
+        int i = 0;
+        for (; i + 7 < size; i += 8) {
+            __m256 v = _mm256_loadu_ps(data + i);
+            vss = _mm256_fmadd_ps(v, v, vss);
+        }
+        float sum_sq = hsum_avx_ops(vss);
+        for (; i < size; ++i) sum_sq += data[i] * data[i];
+        
+        float scale = 1.0f / std::sqrt(sum_sq / size + epsilon);
+        __m256 vscale = _mm256_set1_ps(scale);
+        i = 0;
+        for (; i + 7 < size; i += 8) {
+            _mm256_storeu_ps(data + i, _mm256_mul_ps(_mm256_loadu_ps(data + i), vscale));
+        }
+        for (; i < size; ++i) data[i] *= scale;
     }
     
+    // AVX2 LayerNorm
     void LayerNorm(float* data, int size, float epsilon) {
-       float sum = 0.0f;
-       for (int i=0; i<size; ++i) sum += data[i];
+       // Mean
+       __m256 vsum = _mm256_setzero_ps();
+       int i = 0;
+       for (; i + 7 < size; i += 8) {
+           vsum = _mm256_add_ps(vsum, _mm256_loadu_ps(data + i));
+       }
+       float sum = hsum_avx_ops(vsum);
+       for (; i < size; ++i) sum += data[i];
        float mean = sum / size;
        
-       float sum_sq = 0.0f;
-       for (int i=0; i<size; ++i) {
-           float diff = data[i] - mean;
-           sum_sq += diff * diff;
+       // Variance
+       __m256 vmean = _mm256_set1_ps(mean);
+       __m256 vvar = _mm256_setzero_ps();
+       i = 0;
+       for (; i + 7 < size; i += 8) {
+           __m256 diff = _mm256_sub_ps(_mm256_loadu_ps(data + i), vmean);
+           vvar = _mm256_fmadd_ps(diff, diff, vvar);
        }
-       float var = sum_sq / size;
+       float var = hsum_avx_ops(vvar);
+       for (; i < size; ++i) {
+           float diff = data[i] - mean;
+           var += diff * diff;
+       }
+       var /= size;
        float scale = 1.0f / std::sqrt(var + epsilon);
        
-       for (int i=0; i<size; ++i) {
+       // Normalize
+       __m256 vscale = _mm256_set1_ps(scale);
+       i = 0;
+       for (; i + 7 < size; i += 8) {
+           __m256 v = _mm256_sub_ps(_mm256_loadu_ps(data + i), vmean);
+           _mm256_storeu_ps(data + i, _mm256_mul_ps(v, vscale));
+       }
+       for (; i < size; ++i) {
            data[i] = (data[i] - mean) * scale;
        }
     }
 
+    // AVX2 GELU activation — fully vectorized via fast_exp_avx2_shared (no scalar tanh)
     void GELU(float* data, int size) {
         const float SQRT_2_OVER_PI = 0.7978845608f;
-        for (int i = 0; i < size; ++i) {
+        const __m256 vsqrt = _mm256_set1_ps(SQRT_2_OVER_PI);
+        const __m256 vcoeff = _mm256_set1_ps(0.044715f);
+        const __m256 vhalf = _mm256_set1_ps(0.5f);
+        const __m256 vone = _mm256_set1_ps(1.0f);
+        const __m256 vneg2 = _mm256_set1_ps(-2.0f);
+        
+        int i = 0;
+        for (; i + 7 < size; i += 8) {
+            __m256 x = _mm256_loadu_ps(data + i);
+            __m256 x3 = _mm256_mul_ps(_mm256_mul_ps(x, x), x);
+            __m256 inner = _mm256_mul_ps(vsqrt, _mm256_fmadd_ps(vcoeff, x3, x));
+            // tanh via: tanh(a) = (1 - exp(-2a)) / (1 + exp(-2a))
+            __m256 exp_neg2a = fast_exp_avx2_shared(_mm256_mul_ps(inner, vneg2));
+            __m256 vtanh = _mm256_div_ps(_mm256_sub_ps(vone, exp_neg2a), 
+                                          _mm256_add_ps(vone, exp_neg2a));
+            __m256 cdf = _mm256_mul_ps(vhalf, _mm256_add_ps(vone, vtanh));
+            _mm256_storeu_ps(data + i, _mm256_mul_ps(x, cdf));
+        }
+        for (; i < size; ++i) {
             float x = data[i];
             float cdf = 0.5f * (1.0f + std::tanh(SQRT_2_OVER_PI * (x + 0.044715f * x * x * x)));
             data[i] = x * cdf;
         }
     }
     
+    // AVX2 SiLU activation: x * sigmoid(x) — fully vectorized via fast_exp_avx2_shared
     void SiLU(float* data, int size) {
-        for (int i = 0; i < size; ++i) {
+        const __m256 vone = _mm256_set1_ps(1.0f);
+        const __m256 vzero = _mm256_setzero_ps();
+        int i = 0;
+        for (; i + 7 < size; i += 8) {
+            __m256 x = _mm256_loadu_ps(data + i);
+            __m256 neg_x = _mm256_sub_ps(vzero, x);
+            // Fully vectorized exp(-x) via polynomial approximation
+            __m256 vexp = fast_exp_avx2_shared(neg_x);
+            __m256 sigmoid = _mm256_div_ps(vone, _mm256_add_ps(vone, vexp));
+            _mm256_storeu_ps(data + i, _mm256_mul_ps(x, sigmoid));
+        }
+        for (; i < size; ++i) {
             float x = data[i];
             float sigmoid = 1.0f / (1.0f + std::exp(-x));
             data[i] = x * sigmoid;
@@ -131,7 +270,7 @@ namespace CPUOps {
         }
     }
 
-    // Quantization Helpers
+    // AVX2 DequantizeQ4_0 — process 32 weights per block, vectorized inner loop + prefetch
     void DequantizeQ4_0(const uint8_t* quantized, float* output, int size) {
         const int block_size = 32;
         int num_blocks = size / block_size;
@@ -140,6 +279,12 @@ namespace CPUOps {
         float* p_dst = output;
         
         for (int i = 0; i < num_blocks; ++i) {
+            // Prefetch next block
+            if (i + 1 < num_blocks) {
+                _mm_prefetch((const char*)(p_src + 18), _MM_HINT_T0);
+            }
+            
+            // FP16 scale → FP32
             uint16_t d_u16;
             std::memcpy(&d_u16, p_src, 2);
             p_src += 2;
@@ -153,16 +298,30 @@ namespace CPUOps {
                 std::memcpy(&d_val, &f_val, 4);
             } else if (exp == 31) d_val = 65504.0f;
 
-            for (int j = 0; j < block_size/2; ++j) {
-                uint8_t qpair = *p_src++;
-                uint8_t q0 = qpair & 0x0F;
-                uint8_t q1 = (qpair >> 4) & 0x0F;
-                *p_dst++ = (static_cast<float>(q0) - 8.0f) * d_val;
-                *p_dst++ = (static_cast<float>(q1) - 8.0f) * d_val;
+            // AVX2: unpack 16 byte-pairs → 32 floats, subtract zp, mul scale
+            __m256 vd = _mm256_set1_ps(d_val);
+            __m256 vzp = _mm256_set1_ps(8.0f);
+            
+            // Unpack all 16 bytes into 32 floats
+            alignas(32) float wf[32];
+            for (int j = 0; j < 16; ++j) {
+                uint8_t qpair = p_src[j];
+                wf[j * 2]     = (float)(qpair & 0x0F);
+                wf[j * 2 + 1] = (float)((qpair >> 4) & 0x0F);
             }
+            p_src += 16;
+            
+            // 4 AVX2 passes of 8 floats each
+            for (int g = 0; g < 4; g++) {
+                __m256 w = _mm256_load_ps(wf + g * 8);
+                w = _mm256_mul_ps(_mm256_sub_ps(w, vzp), vd);
+                _mm256_storeu_ps(p_dst + g * 8, w);
+            }
+            p_dst += 32;
         }
     }
 
+    // AVX2 DequantizeQ8_0
     void DequantizeQ8_0(const uint8_t* quantized, float* output, int size) {
          const int block_size = 32;
          int num_blocks = size / block_size;
@@ -174,26 +333,41 @@ namespace CPUOps {
              std::memcpy(&d_u16, p_src, 2);
              p_src += 2;
              float d_val = 0.0f;
-             // F16 conversion
-            uint32_t sign = (d_u16 >> 15) & 0x1;
-            uint32_t exp = (d_u16 >> 10) & 0x1F;
-            uint32_t mant = d_u16 & 0x3FF;
+             uint32_t sign = (d_u16 >> 15) & 0x1;
+             uint32_t exp = (d_u16 >> 10) & 0x1F;
+             uint32_t mant = d_u16 & 0x3FF;
              if (exp != 0 && exp != 31) {
                  uint32_t f_val = (sign << 31) | ((exp + 127 - 15) << 23) | (mant << 13);
                  std::memcpy(&d_val, &f_val, 4);
              }
              
-             for(int j=0; j<block_size; ++j) {
-                 int8_t q = static_cast<int8_t>(*p_src++);
-                 *p_dst++ = q * d_val;
+             __m256 vd = _mm256_set1_ps(d_val);
+             
+             // Process 32 int8 values in 4 groups of 8
+             for (int g = 0; g < 4; g++) {
+                 alignas(32) float qf[8];
+                 for (int j = 0; j < 8; j++) {
+                     qf[j] = (float)(int8_t)p_src[g * 8 + j];
+                 }
+                 __m256 vq = _mm256_load_ps(qf);
+                 _mm256_storeu_ps(p_dst + g * 8, _mm256_mul_ps(vq, vd));
              }
+             p_src += 32;
+             p_dst += 32;
          }
     }
     
     void EnableAVX2(bool) {}
     void EnableMultiThreading(bool) {}
+    
+    // AVX2 VectorScale
     void VectorScale(float* data, float scale, int size) {
-        for(int i=0; i<size; ++i) data[i] *= scale;
+        __m256 vs = _mm256_set1_ps(scale);
+        int i = 0;
+        for (; i + 7 < size; i += 8) {
+            _mm256_storeu_ps(data + i, _mm256_mul_ps(_mm256_loadu_ps(data + i), vs));
+        }
+        for (; i < size; ++i) data[i] *= scale;
     }
 }
 
@@ -456,8 +630,21 @@ void CPUInferenceEngine::MultiHeadAttention(const float* query, const float* key
         int head_off = h * head_dim;
         std::vector<float> scores(kv_len);
         for(int t=0; t<kv_len; ++t) {
-            float dot = 0.0f;
-            for(int i=0; i<head_dim; ++i) {
+            // Prefetch next K entry
+            if (t + 1 < kv_len) {
+                _mm_prefetch((const char*)(cache.keys.data() + (t+1)*embed_dim + head_off), _MM_HINT_T0);
+            }
+            
+            // AVX2 dot product for score computation
+            __m256 dot_acc = _mm256_setzero_ps();
+            int i = 0;
+            for (; i + 7 < head_dim; i += 8) {
+                __m256 vq = _mm256_loadu_ps(q.data() + head_off + i);
+                __m256 vk = _mm256_loadu_ps(cache.keys.data() + t*embed_dim + head_off + i);
+                dot_acc = _mm256_fmadd_ps(vq, vk, dot_acc);
+            }
+            float dot = hsum_avx_ops(dot_acc);
+            for (; i < head_dim; ++i) {
                 dot += q[head_off + i] * cache.keys[t*embed_dim + head_off + i];
             }
             scores[t] = dot * scale;
@@ -466,8 +653,23 @@ void CPUInferenceEngine::MultiHeadAttention(const float* query, const float* key
         float* out_h = attn_out.data() + head_off;
         for(int t=0; t<kv_len; ++t) {
             float s = scores[t];
-            for(int i=0; i<head_dim; ++i) {
-                 out_h[i] += s * cache.values[t*embed_dim + head_off + i];
+            if (s < 1e-8f) continue;  // Skip negligible weights
+            
+            // Prefetch next V entry
+            if (t + 1 < kv_len) {
+                _mm_prefetch((const char*)(cache.values.data() + (t+1)*embed_dim + head_off), _MM_HINT_T0);
+            }
+            
+            // AVX2 FMA value accumulation
+            __m256 vs = _mm256_set1_ps(s);
+            int i = 0;
+            for (; i + 7 < head_dim; i += 8) {
+                __m256 vo = _mm256_loadu_ps(out_h + i);
+                __m256 vv = _mm256_loadu_ps(cache.values.data() + t*embed_dim + head_off + i);
+                _mm256_storeu_ps(out_h + i, _mm256_fmadd_ps(vs, vv, vo));
+            }
+            for(int i2=i; i2<head_dim; ++i2) {
+                 out_h[i2] += s * cache.values[t*embed_dim + head_off + i2];
             }
         }
     }
@@ -614,11 +816,17 @@ void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tok
                  else
                      DequantizeTensor(row_data, row_w.data(), m_embeddingDim, out_type);
                  
-                 // Dot Product
-                 float dot = 0.0f;
-                 // SIMD friendly loop
-                 for(int k=0; k<m_embeddingDim; ++k) {
-                     dot += state[k] * row_w[k];
+                 // AVX2 Dot Product for output projection
+                 __m256 dot_acc = _mm256_setzero_ps();
+                 int ki = 0;
+                 for (; ki + 7 < m_embeddingDim; ki += 8) {
+                     __m256 vs = _mm256_loadu_ps(state.data() + ki);
+                     __m256 vw = _mm256_loadu_ps(row_w.data() + ki);
+                     dot_acc = _mm256_fmadd_ps(vs, vw, dot_acc);
+                 }
+                 float dot = hsum_avx_ops(dot_acc);
+                 for (; ki < m_embeddingDim; ++ki) {
+                     dot += state[ki] * row_w[ki];
                  }
                  
                  if (dot > max_val) {

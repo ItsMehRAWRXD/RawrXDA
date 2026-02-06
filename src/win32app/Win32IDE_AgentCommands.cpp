@@ -88,6 +88,9 @@ void Win32IDE::onAgentStartLoop() {
     
     std::string promptStr(prompt);
     
+    // Enrich the user prompt with language context
+    promptStr = buildLanguageAwarePrompt(promptStr);
+    
     // Start agent loop in background thread
     appendToOutput("🚀 Starting Agent Loop: " + promptStr + "\n", "Output", OutputSeverity::Info);
     
@@ -337,6 +340,11 @@ void Win32IDE::onAgentStop() {
 void Win32IDE::handleAgentCommand(int commandId) {
     // Ensure agent bridge is ready (lazy init)
     if (!m_agenticBridge) initializeAgenticBridge();
+
+    // Push current language context to the agent on every command dispatch
+    if (m_agenticBridge) {
+        m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), m_currentFile);
+    }
  
     switch (commandId) {
         // --- Agent Execution ---
@@ -458,7 +466,7 @@ void Win32IDE::handleAgentCommand(int commandId) {
             handleReverseEngineeringAnalyze();
             break;
         case IDM_REVENG_DISASM:
-            handleReverseEngineeringDisasm();
+            handleReverseEngineeringDisassemble();
             break;
         case IDM_REVENG_DUMPBIN:
             handleReverseEngineeringDumpBin();

@@ -4,6 +4,7 @@
 // Full debugger with breakpoints, variables, call stack, and watch expressions
 
 #include "Win32IDE.h"
+#include "IDEConfig.h"
 #include <sstream>
 #include <algorithm>
 
@@ -281,6 +282,7 @@ void Win32IDE::createDebuggerUI()
 
 void Win32IDE::attachDebugger()
 {
+    METRICS.increment("debugger.attach_total");
     if (m_debuggerAttached) return;
 
     m_debuggerAttached = true;
@@ -425,6 +427,7 @@ void Win32IDE::removeBreakpoint(const std::string& file, int line)
 
 void Win32IDE::toggleBreakpoint(const std::string& file, int line)
 {
+    METRICS.increment("debugger.breakpoint_toggles");
     auto it = std::find_if(m_breakpoints.begin(), m_breakpoints.end(),
         [&](const Breakpoint& bp) { return bp.file == file && bp.line == line; });
 

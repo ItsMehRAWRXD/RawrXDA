@@ -21,6 +21,7 @@ set(SOURCES
     src/compression_interface.cpp
     
     src/engine/gguf_core.cpp
+    src/engine/inference_kernels.cpp
     src/engine/transformer.cpp
     src/engine/bpe_tokenizer.cpp
     src/engine/sampler.cpp
@@ -42,11 +43,11 @@ target_include_directories(RawrEngine PRIVATE
 target_link_libraries(RawrEngine PRIVATE Threads::Threads)
 
 if(WIN32)
-    target_link_libraries(RawrEngine PRIVATE shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid winhttp ws2_32)
+    target_link_libraries(RawrEngine PRIVATE shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid winhttp ws2_32 gomp)
 endif()
 
 if(NOT MSVC)
-    target_compile_options(RawrEngine PRIVATE -march=native -O3 -w)
+    target_compile_options(RawrEngine PRIVATE -march=native -O3 -w -mavx2 -mfma -fopenmp)
 endif()
 
 add_executable(rawrxd-monaco-gen
@@ -64,3 +65,100 @@ set_target_properties(rawrxd-monaco-gen PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY bin
     OUTPUT_NAME rawrxd-monaco-gen
 )
+
+# Win32 GUI IDE
+if(WIN32)
+    set(WIN32IDE_SOURCES
+        src/win32app/main_win32.cpp
+        src/win32app/Win32IDE.cpp
+        src/win32app/Win32IDE.h
+        src/win32app/Win32IDE_Core.cpp
+        src/win32app/Win32IDE_Sidebar.cpp
+        src/win32app/Win32IDE_VSCodeUI.cpp
+        src/win32app/Win32IDE_PowerShellPanel.cpp
+        src/win32app/Win32IDE_PowerShell.cpp
+        src/win32app/Win32IDE_Logger.cpp
+        src/win32app/IDELogger.h
+        src/win32app/Win32IDE_FileOps.cpp
+        src/win32app/Win32IDE_Commands.cpp
+        src/win32app/Win32IDE_Debugger.cpp
+        src/win32app/Win32IDE_AgenticBridge.h
+        src/win32app/Win32IDE_AgenticBridge.cpp
+        src/win32app/Win32IDE_AgentCommands.cpp
+        src/win32app/Win32IDE_Autonomy.h
+        src/win32app/Win32IDE_Autonomy.cpp
+        src/win32app/Win32IDE_SyntaxHighlight.cpp
+        src/win32app/Win32IDE_Themes.cpp
+        src/win32app/Win32IDE_Annotations.cpp
+        src/win32app/Win32IDE_Session.cpp
+        src/win32app/Win32IDE_StreamingUX.cpp
+        src/win32app/Win32IDE_ReverseEngineering.cpp
+        src/win32app/Win32TerminalManager.cpp
+        src/win32app/Win32TerminalManager.h
+        src/win32app/TransparentRenderer.cpp
+        src/win32app/TransparentRenderer.h
+        src/win32app/ModelConnection.h
+        src/win32app/ContextManager.h
+        
+        # Configuration management
+        src/config/IDEConfig.cpp
+        
+        # Core engine files needed by IDE
+        src/stubs.cpp
+        src/agentic_engine.cpp
+        src/utils/ErrorReporter.cpp
+        src/modules/engine_manager.cpp
+        src/cpu_inference_engine.cpp
+        src/memory_core.cpp
+        src/hot_patcher.cpp
+        src/streaming_gguf_loader.cpp
+        src/gguf_loader.cpp
+        src/gguf_vocab_resolver.cpp
+        src/model_source_resolver.cpp
+        src/compression_interface.cpp
+        src/engine/gguf_core.cpp
+        src/engine/inference_kernels.cpp
+        src/engine/transformer.cpp
+        src/engine/bpe_tokenizer.cpp
+        src/engine/sampler.cpp
+        src/engine/rawr_engine.cpp
+        src/engine/core_generator.cpp
+        src/codec/compression.cpp
+        src/codec/brutal_gzip.cpp
+        
+        # Module implementations
+        src/modules/vsix_loader_win32.cpp
+        src/modules/codex_ultimate.cpp
+    )
+    
+    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES})
+    
+    target_link_libraries(RawrXD-Win32IDE PRIVATE
+        Threads::Threads
+        comctl32 comdlg32 shell32 ole32 oleaut32 uuid
+        shlwapi psapi dbghelp winhttp ws2_32 winmm gdi32 user32
+        d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
+        gomp
+    )
+    
+    target_include_directories(RawrXD-Win32IDE PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/win32app
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/modules
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/config
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+
+    if(MSVC)
+        target_compile_options(RawrXD-Win32IDE PRIVATE /EHsc /O2 /W0 /arch:AVX2)
+    else()
+        target_compile_options(RawrXD-Win32IDE PRIVATE -O3 -w -mavx2 -mfma -march=native -fopenmp)
+    endif()
+
+    set_target_properties(RawrXD-Win32IDE PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY bin
+        OUTPUT_NAME RawrXD-Win32IDE
+    )
+endif()

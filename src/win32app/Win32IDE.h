@@ -21,12 +21,16 @@
 #include "IDELogger.h"
 #include "Win32TerminalManager.h"
 #include "TransparentRenderer.h"
-#include "gguf_loader.h"
-#include "streaming_gguf_loader.h"
+#include "../gguf_loader.h"
+#include "../streaming_gguf_loader.h"
+#include "../model_source_resolver.h"
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
 #include "../modules/engine_manager.h"
 #include "../modules/codex_ultimate.h"
+
+#include "../modules/ExtensionLoader.hpp"
+#include <nlohmann/json.hpp>
 
 // Agent and AI IDs
 #define IDM_AGENT_START_LOOP 4100
@@ -79,26 +83,134 @@
 #ifndef LOG_FUNCTION
 #define LOG_FUNCTION() LOG_DEBUG(std::string("ENTER ") + __FUNCTION__)
 #endif
-#include "Win32TerminalManager.h"
-#include "TransparentRenderer.h"
-#include "gguf_loader.h"
-#include "streaming_gguf_loader.h"
 
 // Theme and customization structures
 struct IDETheme {
-    COLORREF backgroundColor;
-    COLORREF textColor;
+    std::string name;                   // Display name ("Dracula", "Nord", etc.)
+    bool darkMode;
+
+    // Core editor
+    COLORREF backgroundColor;            // Editor pane background
+    COLORREF textColor;                  // Default text / foreground
     COLORREF keywordColor;
     COLORREF commentColor;
     COLORREF stringColor;
     COLORREF numberColor;
     COLORREF operatorColor;
-    COLORREF selectionColor;
-    COLORREF lineNumberColor;
+    COLORREF preprocessorColor;
+    COLORREF functionColor;
+    COLORREF typeColor;                  // Built-in types / classes
+    COLORREF selectionColor;             // Selection highlight
+    COLORREF selectionTextColor;         // Text on selected background
+    COLORREF lineNumberColor;            // Gutter line numbers
+    COLORREF lineNumberBg;               // Gutter background
+    COLORREF currentLineBg;              // Active line highlight
+    COLORREF cursorColor;
+
+    // Sidebar / Activity bar
+    COLORREF sidebarBg;
+    COLORREF sidebarFg;
+    COLORREF sidebarHeaderBg;
+    COLORREF activityBarBg;
+    COLORREF activityBarFg;
+    COLORREF activityBarIndicator;       // Active-tab accent stripe
+    COLORREF activityBarHoverBg;
+
+    // Tab bar
+    COLORREF tabBarBg;
+    COLORREF tabActiveBg;
+    COLORREF tabActiveFg;
+    COLORREF tabInactiveBg;
+    COLORREF tabInactiveFg;
+    COLORREF tabBorder;
+
+    // Status bar
+    COLORREF statusBarBg;
+    COLORREF statusBarFg;
+    COLORREF statusBarAccent;            // Remote / debug indicator
+
+    // Terminal / Output panel
+    COLORREF panelBg;
+    COLORREF panelFg;
+    COLORREF panelBorder;
+    COLORREF panelHeaderBg;
+
+    // Title bar
+    COLORREF titleBarBg;
+    COLORREF titleBarFg;
+
+    // Scrollbar
+    COLORREF scrollbarBg;
+    COLORREF scrollbarThumb;
+    COLORREF scrollbarThumbHover;
+
+    // Bracket matching / indent guides
+    COLORREF bracketMatchBg;
+    COLORREF indentGuideColor;
+
+    // Accent / brand
+    COLORREF accentColor;                // Primary brand accent
+    COLORREF errorColor;                 // Squiggle / diagnostic
+    COLORREF warningColor;
+    COLORREF infoColor;
+
+    // Font
     std::string fontName;
     int fontSize;
-    bool darkMode;
+
+    // Transparency (0 = fully transparent, 255 = opaque)
+    BYTE windowAlpha;
+
+    // Per-language syntax palette overrides (optional)
+    // When a language key is present, its non-zero fields override the
+    // theme-global keyword/comment/string/etc colors in getTokenColor().
+    struct LanguageTokenPalette {
+        COLORREF keywordColor;       // 0 = use theme global
+        COLORREF commentColor;
+        COLORREF stringColor;
+        COLORREF numberColor;
+        COLORREF operatorColor;
+        COLORREF preprocessorColor;
+        COLORREF functionColor;
+        COLORREF typeColor;
+        COLORREF bracketColor;
+        COLORREF textColor;          // Default text
+    };
+    std::map<int, LanguageTokenPalette> languagePalettes; // Keyed by SyntaxLanguage enum cast to int
 };
+
+// ============================================================================
+// THEME COMMAND IDS (3100 range — routed via handleViewCommand)
+// ============================================================================
+#define IDM_THEME_BASE              3100
+#define IDM_THEME_DARK_PLUS         3101
+#define IDM_THEME_LIGHT_PLUS        3102
+#define IDM_THEME_MONOKAI           3103
+#define IDM_THEME_DRACULA           3104
+#define IDM_THEME_NORD              3105
+#define IDM_THEME_SOLARIZED_DARK    3106
+#define IDM_THEME_SOLARIZED_LIGHT   3107
+#define IDM_THEME_CYBERPUNK_NEON    3108
+#define IDM_THEME_GRUVBOX_DARK      3109
+#define IDM_THEME_CATPPUCCIN_MOCHA  3110
+#define IDM_THEME_TOKYO_NIGHT       3111
+#define IDM_THEME_RAWRXD_CRIMSON    3112
+#define IDM_THEME_HIGH_CONTRAST     3113
+#define IDM_THEME_ONE_DARK_PRO      3114
+#define IDM_THEME_SYNTHWAVE84       3115
+#define IDM_THEME_ABYSS             3116
+#define IDM_THEME_END               3117
+
+// Transparency commands (3200 range — routed via handleViewCommand)
+#define IDM_TRANSPARENCY_100        3200
+#define IDM_TRANSPARENCY_90         3201
+#define IDM_TRANSPARENCY_80         3202
+#define IDM_TRANSPARENCY_70         3203
+#define IDM_TRANSPARENCY_60         3204
+#define IDM_TRANSPARENCY_50         3205
+#define IDM_TRANSPARENCY_40         3206
+#define IDM_TRANSPARENCY_CUSTOM     3210
+#define IDM_TRANSPARENCY_TOGGLE     3211
 
 struct CodeSnippet {
     std::string name;
@@ -195,6 +307,13 @@ public:
         Error = 3
     };
 
+    enum class PanelTab {
+        Terminal = 0,
+        Output = 1,
+        Problems = 2,
+        DebugConsole = 3
+    };
+
     Win32IDE(HINSTANCE hInstance);
     ~Win32IDE();
 
@@ -209,10 +328,18 @@ public:
 
     // Test agent access
     HWND getMainWindow() const { return m_hwndMain; }
+    HWND getToolbar() const { return m_hwndToolbar; }
+    HWND getSidebar() const { return m_hwndSidebar; }
+    HWND getEditor() const { return m_hwndEditor; }
+    HWND getStatusBar() const { return m_hwndStatusBar; }
+    HWND getActivityBar() const { return m_hwndActivityBar; }
+    HWND getLineNumbers() const { return m_hwndLineNumbers; }
+    HWND getTabBar() const { return m_hwndTabBar; }
 
     // Agentic Framework
     std::unique_ptr<AgenticBridge> m_agenticBridge;
     void initializeAgenticBridge();
+    void initializeAutonomy();
     void onAgentStartLoop();
     void onAgentExecuteCommand();
     void onAgentConfigureModel();
@@ -262,6 +389,7 @@ private:
     // Message handlers
     LRESULT handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     void onCreate(HWND hwnd);
+    void deferredHeavyInit();
     void onDestroy();
     void onSize(int width, int height);
     void onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify);
@@ -284,6 +412,7 @@ private:
     // File operations (9 features)
     void newFile();
     void openFile();
+    void openFile(const std::string& filePath);
     void openFileDialog();
     void openRecentFile(int index);
     bool saveFile();
@@ -302,6 +431,22 @@ private:
     std::string getModelInfo() const;
     bool loadTensorData(const std::string& tensorName, std::vector<uint8_t>& data);
     
+    // Unified model source resolution (HuggingFace, Ollama blobs, HTTP, local files)
+    void openModelFromHuggingFace();
+    void openModelFromOllama();
+    void openModelFromURL();
+    void openModelUnified();
+    bool resolveAndLoadModel(const std::string& input);
+    
+    // Streaming / Model UX — progress, cancellation, status feedback
+    void showModelProgressBar(const std::string& operation);
+    void updateModelProgress(float percent, const std::string& statusText);
+    void hideModelProgressBar();
+    void cancelModelOperation();
+    bool isModelOperationInProgress() const;
+    void showModelStatus(const std::string& text, int durationMs = 5000);
+    static LRESULT CALLBACK ModelProgressProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
     // AI Inference Engine - Local GGUF Model Chat
     struct InferenceConfig {
         int maxTokens = 512;
@@ -431,7 +576,7 @@ private:
     
     // PowerShell Configuration
     std::string getPowerShellVersion();
-    std::string getPowerShellEdition(); // Core or Desktop
+    std::string getPowerShellEdition();
     std::string getPowerShellExecutionPolicy();
     bool setPowerShellExecutionPolicy(const std::string& policy);
     std::map<std::string, std::string> getPowerShellEnvironmentVariables();
@@ -492,7 +637,7 @@ private:
     std::string getCurrentGitBranch() const;
     std::vector<GitFile> getGitChangedFiles() const;
     bool executeGitCommand(const std::string& command, std::string& output);
-    void showCommitDialog(); // simple commit message dialog (Ctrl+Shift+C)
+    void showCommitDialog();
     
     // Menu Command System (25 features)
     void handleFileCommand(int commandId);
@@ -502,7 +647,8 @@ private:
     void handleToolsCommand(int commandId);
     void handleModulesCommand(int commandId);
     void handleHelpCommand(int commandId);
-    void handleAgentCommand(int commandId); // Added Agent handler
+    void handleGitCommand(int commandId);
+    void handleAgentCommand(int commandId);
     
     // Reverse Engineering Menu Handlers
     void handleReverseEngineeringAnalyze();
@@ -522,14 +668,32 @@ private:
     std::string getCommandDescription(int commandId) const;
     bool isCommandEnabled(int commandId) const;
     void updateCommandStates();
-    void updateMenuEnableStates(); // dynamic enable/disable for Git & terminal items
+    void updateMenuEnableStates();
 
     // Theme and customization
     void loadTheme(const std::string& themeName);
     void saveTheme(const std::string& themeName);
     void applyTheme();
+    void applyThemeToAllControls();          // Deep apply: sidebar, activity bar, tabs, status bar, panels
     void showThemeEditor();
+    void showThemePicker();                   // Proper picker dialog with preview
+    void logThemeDiff(const IDETheme& before, const IDETheme& candidate) const;  // Debug diff during preview
     void resetToDefaultTheme();
+    void populateBuiltinThemes();             // Register all 16 built-in themes
+    IDETheme getBuiltinTheme(int themeId) const;  // Factory method
+    void applyThemeById(int themeId);         // IDM_THEME_xxx → apply
+    void setWindowTransparency(BYTE alpha);   // WS_EX_LAYERED alpha
+    void showTransparencySlider();            // Custom slider dialog
+    void buildThemeMenu(HMENU hParentMenu);   // Build Appearance submenu
+    COLORREF blendColor(COLORREF base, COLORREF overlay, float t) const;  // Utility
+
+    // Grant dialog procs access to private members
+    friend INT_PTR CALLBACK TransparencyDlgProc(HWND, UINT, WPARAM, LPARAM);
+    friend INT_PTR CALLBACK ThemePickerDlgProc(HWND, UINT, WPARAM, LPARAM);
+
+    // Theme session persistence
+    void saveSessionTheme(nlohmann::json& session);
+    void restoreSessionTheme(const nlohmann::json& session);
 
     // Code snippets
     void loadCodeSnippets();
@@ -557,6 +721,169 @@ private:
     void copyLineNumbers();
     void showClipboardHistory();
     void clearClipboardHistory();
+
+    // ========================================================================
+    // INCREMENTAL SYNTAX COLORING (RichEdit-based)
+    // ========================================================================
+    enum class TokenType {
+        Default = 0,
+        Keyword,
+        BuiltinType,
+        String,
+        Comment,
+        Number,
+        Preprocessor,
+        Operator,
+        Function,
+        Bracket
+    };
+    struct SyntaxToken {
+        int start;          // Character offset in the editor
+        int length;         // Token length
+        TokenType type;     // Token classification
+    };
+    enum class SyntaxLanguage {
+        None = 0,
+        Cpp,
+        Python,
+        JavaScript,
+        PowerShell,
+        JSON,
+        Markdown,
+        Assembly
+    };
+
+    // Visible-range descriptor for syntax coloring optimization
+    struct VisibleLineRange {
+        int firstLine;      // First visible line (0-based)
+        int lastLine;       // Last visible line (0-based)
+        int lineCount;      // Total visible line count (including margin)
+        int lineHeight;     // Pixel height per line
+    };
+
+    // Syntax coloring methods
+    void initSyntaxColorizer();
+    void applySyntaxColoring();
+    void applySyntaxColoringForRange(int startChar, int endChar);
+    void applySyntaxColoringForVisibleRange();  // Named wrapper — colors only the visible range
+    VisibleLineRange getVisibleEditorLines() const;  // Accessor for the visible line range
+    SyntaxLanguage getCurrentSyntaxLanguage() const;  // Accessor for the detected language enum
+    std::vector<SyntaxToken> tokenizeLine(const std::string& line, int lineStartOffset, SyntaxLanguage lang);
+    std::vector<SyntaxToken> tokenizeDocument(const std::string& text, SyntaxLanguage lang);
+    COLORREF getTokenColor(TokenType type) const;
+    SyntaxLanguage detectLanguageFromExtension(const std::string& filePath) const;
+    void onEditorContentChanged();  // Debounced EN_CHANGE handler for syntax coloring
+    bool isKeyword(const std::string& word, SyntaxLanguage lang) const;
+    bool isBuiltinType(const std::string& word, SyntaxLanguage lang) const;
+    static void CALLBACK SyntaxColorTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
+
+    // Syntax coloring state
+    static const UINT_PTR SYNTAX_COLOR_TIMER_ID = 7777;
+    static const UINT SYNTAX_COLOR_DELAY_MS = 80;
+    bool m_syntaxColoringEnabled;
+    bool m_syntaxDirty;
+    SyntaxLanguage m_syntaxLanguage;
+    bool m_inBlockComment;  // Tracks multi-line comment state across lines
+
+    // Line Number Gutter
+    void createLineNumberGutter(HWND hwndParent);
+    void updateLineNumbers();
+    static LRESULT CALLBACK LineNumberProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    void paintLineNumbers(HDC hdc, RECT& rc);
+
+    // Editor Tab Bar
+    void createTabBar(HWND hwndParent);
+    void addTab(const std::string& filePath, const std::string& displayName);
+    void removeTab(int index);
+    void setActiveTab(int index);
+    void onTabChanged();
+    int findTabByPath(const std::string& filePath) const;
+
+    // Session Persistence
+    void saveSession();
+    void restoreSession();
+    void saveSessionTabs(nlohmann::json& session);
+    void restoreSessionTabs(const nlohmann::json& session);
+    void saveSessionPanelState(nlohmann::json& session);
+    void restoreSessionPanelState(const nlohmann::json& session);
+    void saveSessionEditorState(nlohmann::json& session);
+    void restoreSessionEditorState(const nlohmann::json& session);
+    std::string getSessionFilePath() const;
+
+    // Agent Inline Annotations
+    enum class AnnotationSeverity {
+        Hint = 0,
+        Info = 1,
+        Warning = 2,
+        Error = 3,
+        Suggestion = 4
+    };
+    // Annotation Action Types — what happens when the user clicks an annotation
+    enum class AnnotationActionType {
+        None = 0,           // No action (display only)
+        JumpToLine,         // Navigate to the referenced line
+        ApplyFix,           // Apply a suggested code fix
+        AskAgent,           // Send the annotation context to the agent for elaboration
+        OpenFile,           // Open a referenced file
+        RunCommand,         // Execute a command palette command
+        Suppress            // Dismiss/suppress the annotation permanently
+    };
+
+    // Annotation Action — attached to an annotation for click-to-act
+    struct AnnotationAction {
+        AnnotationActionType type;
+        std::string label;          // Human-readable label for context menus
+        int targetLine;             // For JumpToLine: destination line (1-based)
+        std::string targetFile;     // For OpenFile / JumpToLine in another file
+        std::string fixContent;     // For ApplyFix: the replacement text
+        int fixStartLine;           // For ApplyFix: start line of replacement range
+        int fixEndLine;             // For ApplyFix: end line of replacement range
+        std::string agentPrompt;    // For AskAgent: pre-populated prompt
+        std::string commandId;      // For RunCommand: command to execute
+    };
+
+    struct InlineAnnotation {
+        int line;                   // 1-based line number
+        int column;                 // 0-based column (for inline placement)
+        AnnotationSeverity severity;
+        std::string text;           // Annotation message
+        std::string source;         // "agent", "linter", "diagnostics", etc.
+        COLORREF color;             // Computed from severity
+        bool visible;               // Can be toggled
+        std::vector<AnnotationAction> actions; // Click actions (may have multiple per annotation)
+    };
+    void addAnnotation(int line, AnnotationSeverity severity, const std::string& text, const std::string& source = "agent");
+    void addAnnotationWithAction(int line, AnnotationSeverity severity, const std::string& text,
+                                  const AnnotationAction& action, const std::string& source = "agent");
+    void removeAnnotations(int line, const std::string& source = "");
+    void clearAllAnnotations(const std::string& source = "");
+    void paintAnnotations(HDC hdc, RECT& rc);
+    void paintAnnotationGutterIcons(HDC hdc, RECT& gutterRC);
+    void updateAnnotationPositions(int fromLine, int lineDelta);
+    std::vector<InlineAnnotation> getAnnotationsForLine(int line) const;
+    std::string getAnnotationTooltip(int line) const;
+    void toggleAnnotationVisibility(const std::string& source);
+    COLORREF getAnnotationColor(AnnotationSeverity severity) const;
+    int getAnnotationGutterIconWidth() const;
+    static LRESULT CALLBACK AnnotationOverlayProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+    // Annotation lifecycle — tab switch / file close
+    void clearAnnotationsForCurrentFile();  // Clear annotations when closing a tab
+    void storeAnnotationsForTab();          // Stash annotations before tab switch
+    void restoreAnnotationsForTab();        // Restore stashed annotations on tab switch
+
+    // Annotation → Action Bridge
+    void executeAnnotationAction(const InlineAnnotation& annotation);
+    void onAnnotationClicked(int line, int clickX, int clickY);
+    void showAnnotationActionMenu(HWND hwndParent, int x, int y, const std::vector<InlineAnnotation>& annotations);
+
+    // Session-aware Annotations
+    void saveSessionAnnotations(nlohmann::json& session);
+    void restoreSessionAnnotations(const nlohmann::json& session);
+
+    // Language-aware Agent Prompts
+    std::string getSyntaxLanguageName() const;
+    std::string buildLanguageAwarePrompt(const std::string& basePrompt) const;
 
     // Minimap
     void createMinimap();
@@ -592,13 +919,16 @@ private:
     void executeCommandFromPalette(int index);
     void buildCommandRegistry();
     static LRESULT CALLBACK CommandPaletteProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK CommandPaletteInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     // Command palette UI handles and data
     HWND m_hwndCommandPalette;
     HWND m_hwndCommandPaletteInput;
     HWND m_hwndCommandPaletteList;
     bool m_commandPaletteVisible;
+    WNDPROC m_oldCommandPaletteInputProc;
     std::vector<CommandPaletteItem> m_commandRegistry;
     std::vector<CommandPaletteItem> m_filteredCommands;
+    std::vector<std::vector<int>> m_fuzzyMatchPositions; // per-item match highlight positions
     std::vector<int> m_commandPaletteFilteredIndices; // maps listbox index -> registry index
     std::unordered_map<int, std::function<void()>> m_commandHandlers;
 
@@ -663,7 +993,7 @@ private:
     
     void createActivityBar(HWND hwndParent);
     void createPrimarySidebar(HWND hwndParent);
-    void toggleSidebar(); // Ctrl+B
+    void toggleSidebar();
     void setSidebarView(SidebarView view);
     void updateSidebarContent();
     void resizeSidebar(int width, int height);
@@ -699,7 +1029,7 @@ private:
     void unstageSelectedFiles();
     void discardChanges();
     void commitChangesFromSidebar();
-    void syncRepository(); // push & pull
+    void syncRepository();
     void showSCMContextMenu(POINT pt);
     
     // Run and Debug View
@@ -807,13 +1137,30 @@ private:
     std::string getRawrXDPowerShellPath();
     
     // GGUF Model loader (initialized in constructor) - supports both streaming and standard implementations
-    std::unique_ptr<IGGUFLoader> m_ggufLoader;
+    std::unique_ptr<RawrXD::IGGUFLoader> m_ggufLoader;
     std::string m_loadedModelPath;
-    GGUFMetadata m_currentModelMetadata;
-    std::vector<TensorInfo> m_modelTensors;
+    RawrXD::GGUFMetadata m_currentModelMetadata;
+    std::vector<RawrXD::TensorInfo> m_modelTensors;
     bool m_useStreamingLoader; // preference to use streaming loader to minimize memory
     bool m_useVulkanRenderer; // preference to use Vulkan renderer if enabled
     
+    // Unified Model Source Resolver (HuggingFace, Ollama blobs, HTTP, local files)
+    std::unique_ptr<RawrXD::ModelSourceResolver> m_modelResolver;
+    
+    // Streaming / Model UX state
+    HWND m_hwndModelProgressBar;       // Progress bar control
+    HWND m_hwndModelProgressLabel;     // Status text label
+    HWND m_hwndModelProgressContainer; // Container panel
+    HWND m_hwndModelCancelBtn;         // Cancel button
+    std::atomic<bool> m_modelOperationActive;
+    std::atomic<bool> m_modelOperationCancelled;
+    std::atomic<float> m_modelProgressPercent;
+    std::string m_modelProgressStatus;
+    std::mutex m_modelProgressMutex;
+    static const UINT_PTR MODEL_PROGRESS_TIMER_ID = 9902;
+    static const UINT WM_MODEL_PROGRESS_UPDATE = WM_APP + 300;
+    static const UINT WM_MODEL_PROGRESS_DONE = WM_APP + 301;
+
     // AI Inference State
     InferenceConfig m_inferenceConfig;
     bool m_inferenceRunning;
@@ -826,11 +1173,13 @@ private:
     
     // Native Agent Integration
     std::unique_ptr<RawrXD::NativeAgent> m_agent;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
+    bool m_nativeEngineLoaded = false;
     std::mutex m_outputMutex;
     
     // Window Procedures for Subclassing
     static LRESULT CALLBACK CommandInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    static LRESULT CALLBACK SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam); // Renamed to avoid overload conflict
     WNDPROC m_oldCommandInputProc = nullptr;
     WNDPROC m_oldSidebarProc = nullptr;
     
@@ -848,6 +1197,22 @@ private:
     HINSTANCE m_hInstance;
     HWND m_hwndMain;
     HWND m_hwndEditor;
+    HWND m_hwndLineNumbers;     // Line number gutter
+    HWND m_hwndTabBar;           // Editor tab bar
+    WNDPROC m_oldLineNumberProc;
+    int m_lineNumberWidth;       // Width of the gutter in pixels
+    int m_currentLine;           // Current cursor line (1-based)
+
+    // Tab tracking
+    struct EditorTab {
+        std::string filePath;
+        std::string displayName;
+        std::string content;
+        bool modified;
+    };
+    std::vector<EditorTab> m_editorTabs;
+    int m_activeTabIndex;
+
     HWND m_hwndCommandInput;
     HWND m_hwndStatusBar;
     HWND m_hwndOutputTabs;
@@ -902,9 +1267,21 @@ private:
 
     // Theme system
     IDETheme m_currentTheme;
+    IDETheme m_themeBeforePreview;             // Saved for Cancel in theme picker
     std::map<std::string, IDETheme> m_themes;
+    int m_activeThemeId;                      // IDM_THEME_xxx of current theme
+    int m_themeIdBeforePreview;               // Saved for Cancel in theme picker
+    bool m_transparencyEnabled;
+    BYTE m_windowAlpha;                       // 0..255 (current window alpha)
     HBRUSH m_backgroundBrush;
+    // Tracked brushes for themed surfaces (deleted + recreated on theme switch)
+    HBRUSH m_sidebarBrush;
+    HBRUSH m_sidebarContentBrush;
+    HBRUSH m_panelBrush;
+    HBRUSH m_secondarySidebarBrush;
+    HBRUSH m_mainWindowBrush;
     HFONT m_editorFont;
+    HFONT m_hFontUI;
 
     // Code snippets
     std::vector<CodeSnippet> m_codeSnippets;
@@ -914,9 +1291,21 @@ private:
     std::map<std::string, HWND> m_outputWindows;
     std::string m_activeOutputTab;
     bool m_outputPanelVisible;
+    int m_outputTabHeight;
     int m_selectedOutputTab;
     HWND m_hwndSeverityFilter;
     int m_severityFilterLevel; // 0=All, 1=Info+, 2=Warn+, 3=Error only
+
+    // Session Persistence
+    bool m_sessionRestored;
+    std::string m_sessionFilePath;
+
+    // Agent Inline Annotations State
+    std::vector<InlineAnnotation> m_annotations;
+    bool m_annotationsVisible;
+    HWND m_hwndAnnotationOverlay;    // Transparent overlay for inline annotation rendering
+    HFONT m_annotationFont;          // Smaller italic font for annotations
+    std::map<std::string, std::vector<InlineAnnotation>> m_annotationCache;  // Per-file annotation stash for tab switching
 
     // Clipboard history
     std::vector<std::string> m_clipboardHistory;
@@ -927,6 +1316,8 @@ private:
     int m_minimapWidth;
     std::vector<std::string> m_minimapLines;
     std::vector<int> m_minimapLineStarts;
+
+    // (Syntax coloring state declared inline with methods above — lines 641-645)
 
     // Profiling
     bool m_profilingActive;
@@ -949,17 +1340,15 @@ private:
     int m_editorHeight;
     int m_terminalHeight;
     int m_minimapX;
-    int m_outputTabHeight;
     RECT m_editorRect;
     bool m_gpuTextEnabled;
     bool m_editorHooksInstalled;
-    
+
     // Splitter bar for terminal/output resize
     HWND m_hwndSplitter;
     bool m_splitterDragging;
     int m_splitterY;
-    
-    std::unique_ptr<IRenderer> m_renderer;
+    std::unique_ptr<RawrXD::IRenderer> m_renderer;
     bool m_rendererReady;
 
     // Search and Replace state
@@ -971,7 +1360,7 @@ private:
     int m_lastFoundPos;
     HWND m_hwndFindDialog;
     HWND m_hwndReplaceDialog;
-    
+
     // Primary Sidebar state
     HWND m_hwndActivityBar;
     HWND m_hwndSidebar;
@@ -979,13 +1368,13 @@ private:
     bool m_sidebarVisible;
     int m_sidebarWidth;
     SidebarView m_currentSidebarView;
-    
+
     // Explorer View
     HWND m_hwndExplorerTree;
     HWND m_hwndExplorerToolbar;
     HIMAGELIST m_hImageListExplorer;
     std::string m_explorerRootPath;
-    
+
     // Search View
     HWND m_hwndSearchInput;
     HWND m_hwndSearchResults;
@@ -994,12 +1383,12 @@ private:
     HWND m_hwndExcludePattern;
     std::vector<std::string> m_searchResults;
     bool m_searchInProgress;
-    
+
     // Source Control View (extends existing Git)
     HWND m_hwndSCMFileList;
     HWND m_hwndSCMToolbar;
     HWND m_hwndSCMMessageBox;
-    
+
     // Run and Debug View
     HWND m_hwndDebugConfigs;
     HWND m_hwndDebugToolbar;
@@ -1007,8 +1396,32 @@ private:
     HWND m_hwndDebugCallStack;
     HWND m_hwndDebugConsole;
     bool m_debuggingActive;
-    // m_breakpoints defined in Debugger State section with Breakpoint struct
-    
+
+    // Full Debugger UI HWNDs
+    HWND m_hwndDebuggerContainer = nullptr;
+    HWND m_hwndDebuggerToolbar = nullptr;
+    HWND m_hwndDebuggerStatus = nullptr;
+    HWND m_hwndDebuggerTabs = nullptr;
+    HWND m_hwndDebuggerBreakpoints = nullptr;
+    HWND m_hwndDebuggerWatch = nullptr;
+    HWND m_hwndDebuggerVariables = nullptr;
+    HWND m_hwndDebuggerStackTrace = nullptr;
+    HWND m_hwndDebuggerMemory = nullptr;
+
+    // Debugger State
+    bool m_debuggerEnabled = false;
+    bool m_debuggerAttached = false;
+    bool m_debuggerPaused = false;
+    size_t m_debuggerMaxMemory = 0;
+    std::string m_debuggerCurrentFile;
+    int m_debuggerCurrentLine = -1;
+
+    // Debugger Collections
+    std::vector<Breakpoint> m_breakpoints;
+    std::vector<StackFrame> m_callStack;
+    std::vector<Variable> m_localVariables;
+    std::vector<WatchItem> m_watchList;
+
     // Extensions View
     HWND m_hwndExtensionsList;
     HWND m_hwndExtensionSearch;
@@ -1023,7 +1436,7 @@ private:
         bool enabled;
     };
     std::vector<Extension> m_extensions;
-    
+
     // Outline View (code structure)
     HWND m_hwndOutlineTree;
     struct OutlineItem {
@@ -1038,7 +1451,7 @@ private:
     void updateOutlineView();
     void parseCodeForOutline();
     void goToOutlineItem(int index);
-    
+
     // Timeline View (file history)
     HWND m_hwndTimelineList;
     struct TimelineEntry {
@@ -1053,11 +1466,11 @@ private:
     void updateTimelineView();
     void loadGitHistory();
     void goToTimelineEntry(int index);
-    
+
     // =========================================================================
     // VS Code-like UI Components
     // =========================================================================
-    
+
     // Activity Bar (Far Left) - vertical icon bar for switching sidebar views
     static const int ACTIVITY_BAR_WIDTH = 48;
     HWND m_activityBarButtons[7];  // Explorer, Search, SCM, Debug, Extensions, Settings, Accounts
@@ -1066,7 +1479,7 @@ private:
     HBRUSH m_actBarHoverBrush;
     HBRUSH m_actBarActiveBrush;
     static LRESULT CALLBACK ActivityBarButtonProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    
+
     // Secondary Sidebar (Right) - AI Chat / Copilot area
     HWND m_hwndSecondarySidebar;
     HWND m_hwndSecondarySidebarHeader;
@@ -1077,13 +1490,13 @@ private:
     HWND m_hwndModelSelector;
     HWND m_hwndMaxTokensSlider;
     HWND m_hwndMaxTokensLabel;
-    
+
     // AI Mode Toggles
     HWND m_hwndChkMaxMode;
     HWND m_hwndChkDeepThink;
     HWND m_hwndChkDeepResearch;
     HWND m_hwndChkNoRefusal;
-    
+
     // New Context Slider
     HWND m_hwndContextSlider;
     HWND m_hwndContextLabel;
@@ -1096,14 +1509,8 @@ private:
     std::vector<std::string> m_availableModels;
     std::vector<std::pair<std::string, std::string>> m_chatHistory; // role, message
     static LRESULT CALLBACK SecondarySidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    
+
     // Panel (Bottom) - Terminal, Output, Problems, Debug Console
-    enum class PanelTab {
-        Terminal = 0,
-        Output = 1,
-        Problems = 2,
-        DebugConsole = 3
-    };
     HWND m_hwndPanelContainer;
     HWND m_hwndPanelTabs;
     HWND m_hwndPanelToolbar;
@@ -1117,7 +1524,7 @@ private:
     bool m_panelVisible;
     bool m_panelMaximized;
     int m_panelHeight;
-    
+
     // Problems tracking
     struct ProblemItem {
         std::string file;
@@ -1129,7 +1536,7 @@ private:
     std::vector<ProblemItem> m_problems;
     int m_errorCount;
     int m_warningCount;
-    
+
     // Enhanced Status Bar items
     struct StatusBarInfo {
         std::string remoteName;       // e.g., "WSL: Ubuntu" or empty
@@ -1150,37 +1557,35 @@ private:
     };
     StatusBarInfo m_statusBarInfo;
     HWND m_statusBarParts[12];  // Individual status bar items for custom drawing
-    
+
     // VS Code UI Creation/Update functions
     void createActivityBarUI(HWND hwndParent);
     void createSecondarySidebar(HWND hwndParent);
     void createPanel(HWND hwndParent);
     void createEnhancedStatusBar(HWND hwndParent);
-    
+
     void updateActivityBarState();
     void updateSecondarySidebarContent();
     void updatePanelContent();
     void updateEnhancedStatusBar();
     void updateProblemsPanel();
-    
-    void toggleSecondarySidebar();      // Ctrl+Alt+B
-    void togglePanel();                  // Ctrl+J
+
+    void toggleSecondarySidebar();
+    void togglePanel();
     void maximizePanel();
     void restorePanel();
-    
+
     void switchPanelTab(PanelTab tab);
     void addProblem(const std::string& file, int line, int col, const std::string& msg, int severity);
     void clearProblems();
     void goToProblem(int index);
-    
     void sendCopilotMessage(const std::string& message);
     void clearCopilotChat();
     void appendCopilotResponse(const std::string& response);
-    
     void updateCursorPosition();
     void updateLanguageMode();
     void detectLanguageFromFile(const std::string& filePath);
-    
+
     // File Explorer
     void createFileExplorer();
     void populateFileTree();
@@ -1210,86 +1615,76 @@ private:
     std::vector<FileExplorerItem> m_rootItems;
     std::string m_currentExplorerPath;
     HWND m_hwndFileExplorer;  // Primary file explorer window
-    
+
     // Model Chat state
     bool m_chatMode;
-    
+
     // ========================================================================
     // DEDICATED POWERSHELL PANEL - Always Available PowerShell Console
     // ========================================================================
-    
     // PowerShell Panel Window Handles
-    HWND m_hwndPowerShellPanel;           // Main PowerShell panel container
-    HWND m_hwndPowerShellOutput;          // PowerShell output/console area
-    HWND m_hwndPowerShellInput;           // PowerShell command input
-    HWND m_hwndPowerShellToolbar;         // PowerShell panel toolbar
-    HWND m_hwndPowerShellStatusBar;       // PowerShell status (version, execution policy)
-    
+    HWND m_hwndPowerShellPanel;
+    HWND m_hwndPowerShellOutput;
+    HWND m_hwndPowerShellInput;
+    HWND m_hwndPowerShellToolbar;
+    HWND m_hwndPowerShellStatusBar;
     // PowerShell Panel Buttons
-    HWND m_hwndPSBtnExecute;              // Execute button
-    HWND m_hwndPSBtnClear;                // Clear console
-    HWND m_hwndPSBtnStop;                 // Stop execution
-    HWND m_hwndPSBtnHistory;              // Command history
-    HWND m_hwndPSBtnRestart;              // Restart PowerShell session
-    HWND m_hwndPSBtnLoadRawrXD;           // Load RawrXD.ps1 module
-    HWND m_hwndPSBtnToggle;               // Toggle panel visibility
-    
+    HWND m_hwndPSBtnExecute;
+    HWND m_hwndPSBtnClear;
+    HWND m_hwndPSBtnStop;
+    HWND m_hwndPSBtnHistory;
+    HWND m_hwndPSBtnRestart;
+    HWND m_hwndPSBtnLoadRawrXD;
+    HWND m_hwndPSBtnToggle;
     // PowerShell Panel State
     bool m_powerShellPanelVisible;
-    bool m_powerShellPanelDocked;         // true=docked, false=floating
+    bool m_powerShellPanelDocked;
     bool m_powerShellSessionActive;
     bool m_powerShellRawrXDLoaded;
-    int m_powerShellPanelHeight;          // Height when docked
-    int m_powerShellPanelWidth;           // Width when floating
+    int m_powerShellPanelHeight;
+    int m_powerShellPanelWidth;
     std::string m_powerShellCurrentCommand;
     std::vector<std::string> m_powerShellCommandHistory;
     int m_powerShellHistoryIndex;
     size_t m_maxPowerShellHistory;
-    
     // PowerShell Execution State
     bool m_powerShellExecuting;
     std::string m_powerShellCurrentOutput;
     HANDLE m_powerShellProcessHandle;
     std::unique_ptr<Win32TerminalManager> m_dedicatedPowerShellTerminal;
-    
     // PowerShell Panel Functions
     void createPowerShellPanel();
     void createPowerShellToolbar();
     void showPowerShellPanel();
     void hidePowerShellPanel();
-    void togglePowerShellPanel();         // Ctrl+`
+    void togglePowerShellPanel();
     void dockPowerShellPanel();
     void floatPowerShellPanel();
     void resizePowerShellPanel(int width, int height);
     void layoutPowerShellPanel();
-    
     // PowerShell Execution
     void executePowerShellInput();
     void executePowerShellPanelCommand(const std::string& command);
     void stopPowerShellExecution();
     void clearPowerShellConsole();
     void appendPowerShellOutput(const std::string& text, COLORREF color = RGB(200, 200, 200));
-    
     // PowerShell History Management
     void addPowerShellHistory(const std::string& command);
     void navigatePowerShellHistoryUp();
     void navigatePowerShellHistoryDown();
     void showPowerShellHistory();
-    
     // PowerShell Session Management
     void startPowerShellSession();
     void restartPowerShellSession();
     void stopPowerShellSession();
     bool isPowerShellSessionActive() const;
     void updatePowerShellStatus();
-    
     // RawrXD.ps1 Integration
     void loadRawrXDModule();
     void unloadRawrXDModule();
     void executeRawrXDCommand(const std::string& command);
-    void quickLoadGGUFModel();            // Quick model loader dialog
-    void quickInference();                 // Quick inference dialog
-    
+    void quickLoadGGUFModel();
+    void quickInference();
     // PowerShell Panel Helpers
     void initializePowerShellPanel();
     void updatePowerShellPanelLayout(int mainWidth, int mainHeight);
@@ -1297,22 +1692,18 @@ private:
     void scrollPowerShellOutputToBottom();
     static LRESULT CALLBACK PowerShellPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static LRESULT CALLBACK PowerShellInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-
     // ========================================================================
     // DEBUGGER IMPLEMENTATION
     // ========================================================================
-    
     // Debugger UI Creation & Management
     void createDebuggerUI();
     void updateDebuggerUI();
     void toggleDebugger();
     void attachDebugger();
     void detachDebugger();
-    
     // ========================================================================
     // AI CHAT PANEL IMPLEMENTATION
     // ========================================================================
-    
     void createChatPanel();
     void HandleCopilotSend();
     void HandleCopilotClear();
@@ -1320,7 +1711,6 @@ private:
     void populateModelSelector();
     void onModelSelectionChanged();
     void onMaxTokensChanged(int newValue);
-    
     // Debugger Execution Control
     void pauseExecution();
     void resumeExecution();
@@ -1329,45 +1719,38 @@ private:
     void stepOutExecution();
     void restartDebugger();
     void stopDebugger();
-    
     // Breakpoint Management
     void addBreakpoint(const std::string& file, int line);
     void toggleBreakpoint(const std::string& file, int line);
     void updateBreakpointList();
     void clearAllBreakpoints();
-    
     // Watch Expression Management
     void addWatchExpression(const std::string& expression);
     void removeWatchExpression(const std::string& expression);
     void updateWatchList();
     void evaluateWatch(WatchItem& item);
-    
     // Variable & Stack Inspection
     void updateVariables();
     void updateCallStack();
     void updateMemoryView();
     void expandVariable(const std::string& name);
     void collapseVariable(const std::string& name);
-    
     // Debugger Commands
     void debuggerStepCommand(const std::string& command);
     void debuggerSetVariable(const std::string& name, const std::string& value);
     void debuggerInspectMemory(uint64_t address, size_t bytes);
     void debuggerEvaluateExpression(const std::string& expression);
-    
     // Debugger Callbacks
     void onDebuggerBreakpoint(const std::string& file, int line);
     void onDebuggerException(const std::string& message);
     void onDebuggerOutput(const std::string& text);
     void onDebuggerContinued();
     void onDebuggerTerminated();
-    
     // Helper Methods
     std::string formatDebuggerValue(const std::string& value, const std::string& type);
     bool isBreakpointAtLine(const std::string& file, int line) const;
     void highlightDebuggerLine(const std::string& file, int line);
     void clearDebuggerHighlight();
-
 #define WM_AGENT_OUTPUT (WM_APP + 101)
 #define WM_AGENT_OUTPUT_SAFE (WM_APP + 102)
     void onAgentOutput(const char* text);

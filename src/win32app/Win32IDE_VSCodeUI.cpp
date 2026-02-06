@@ -6,7 +6,25 @@
 #include <richedit.h>
 #include <sstream>
 #include <iomanip>
-#include <QDebug>
+#include <iostream>
+#include <fstream>
+#include <map>
+
+// Win32-native debug logging (replaces Qt qInfo/qDebug/qWarning)
+#ifndef RAWRXD_LOG_INFO
+#define RAWRXD_LOG_INFO(msg) do { \
+    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
+    OutputDebugStringA(_oss.str().c_str()); \
+    std::cout << _oss.str(); \
+} while(0)
+#endif
+#ifndef RAWRXD_LOG_WARNING
+#define RAWRXD_LOG_WARNING(msg) do { \
+    std::ostringstream _oss; _oss << "[WARN] " << msg << "\n"; \
+    OutputDebugStringA(_oss.str().c_str()); \
+    std::cerr << _oss.str(); \
+} while(0)
+#endif
 
 // Define GET_X_LPARAM and GET_Y_LPARAM if not available
 #ifndef GET_X_LPARAM
@@ -304,8 +322,8 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
 {
     if (message.empty()) return;
     
-    qInfo() << "=== SEND MESSAGE CLICKED ===";
-    qInfo() << "[sendCopilotMessage] Message: " << message.c_str();
+    RAWRXD_LOG_INFO("=== SEND MESSAGE CLICKED ===");
+    RAWRXD_LOG_INFO("[sendCopilotMessage] Message: " << message);
     
     // Add user message to history
     m_chatHistory.push_back({"user", message});
@@ -314,13 +332,13 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
     std::string response;
     
     if (isModelLoaded()) {
-        qInfo() << "[sendCopilotMessage] Model is loaded, calling generateResponse...";
+        RAWRXD_LOG_INFO("[sendCopilotMessage] Model is loaded, calling generateResponse...");
         // Use the loaded GGUF model for inference
         response = generateResponse(message);
-        qInfo() << "[sendCopilotMessage] Inference response: " << response.c_str();
+        RAWRXD_LOG_INFO("[sendCopilotMessage] Inference response: " << response);
     } else {
         // No model loaded - prompt user to load one
-        qWarning() << "[sendCopilotMessage] No model loaded!";
+        RAWRXD_LOG_WARNING("[sendCopilotMessage] No model loaded!");
         response = "⚠️ No AI model loaded.\r\n\r\n"
                    "To use AI assistance, please load a GGUF model:\r\n"
                    "1. Open the File Explorer (Activity Bar → Explorer icon)\r\n"
@@ -335,8 +353,8 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
     }
     
     m_chatHistory.push_back({"assistant", response});
-    qInfo() << "[sendCopilotMessage] Added response to history, updating UI...";
-    qInfo() << "=== SEND MESSAGE END ===";
+    RAWRXD_LOG_INFO("[sendCopilotMessage] Added response to history, updating UI...");
+    RAWRXD_LOG_INFO("=== SEND MESSAGE END ===");
     
     // Update display
     updateSecondarySidebarContent();

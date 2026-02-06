@@ -3,6 +3,7 @@
 
 #include "Win32IDE.h"
 #include "IDELogger.h"
+#include "IDEConfig.h"
 #include <fstream>
 #include <sstream>
 #include <commdlg.h>
@@ -14,6 +15,8 @@
 // ============================================================================
 
 void Win32IDE::openFileDialog() {
+    SCOPED_METRIC("file.open_dialog_fileops");
+    METRICS.increment("file.dialog_opens");
     LOG_INFO("openFileDialog() called");
     OPENFILENAMEA ofn = {};
     char szFile[MAX_PATH] = {0};

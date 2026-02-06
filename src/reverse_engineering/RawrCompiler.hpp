@@ -8,6 +8,9 @@
 #include <filesystem>
 #include <fstream>
 #include <algorithm>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace RawrXD {
 namespace ReverseEngineering {

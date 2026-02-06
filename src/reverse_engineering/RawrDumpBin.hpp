@@ -31,10 +31,10 @@ public:
         }
 
         std::ostringstream oss;
-        oss << "=".repeat(80) << "\n";
+        oss << std::string(80, '=') << "\n";
         oss << "RAWR DUMPBIN - Binary Header Analysis\n";
         oss << "File: " << filePath << "\n";
-        oss << "=".repeat(80) << "\n\n";
+        oss << std::string(80, '=') << "\n\n";
 
         oss << "Architecture: " << (std::filesystem::file_size(filePath) > 0 ? "PE/COFF" : "Unknown") << "\n";
         oss << "Machine Type: x64\n";
@@ -59,9 +59,9 @@ public:
         }
 
         std::ostringstream oss;
-        oss << "=".repeat(80) << "\n";
+        oss << std::string(80, '=') << "\n";
         oss << "IMPORT TABLE\n";
-        oss << "=".repeat(80) << "\n\n";
+        oss << std::string(80, '=') << "\n\n";
 
         auto imports = codex.GetImports();
         std::string currentModule;
@@ -90,9 +90,9 @@ public:
         }
 
         std::ostringstream oss;
-        oss << "=".repeat(80) << "\n";
+        oss << std::string(80, '=') << "\n";
         oss << "EXPORT TABLE\n";
-        oss << "=".repeat(80) << "\n\n";
+        oss << std::string(80, '=') << "\n\n";
 
         auto exports = codex.GetExports();
         for (const auto& exp : exports) {
@@ -116,9 +116,9 @@ public:
         }
 
         std::ostringstream oss;
-        oss << "=".repeat(80) << "\n";
+        oss << std::string(80, '=') << "\n";
         oss << "DISASSEMBLY at 0x" << std::hex << startAddr << "\n";
-        oss << "=".repeat(80) << "\n\n";
+        oss << std::string(80, '=') << "\n\n";
 
         auto disasm = codex.Disassemble(startAddr, count);
         for (const auto& line : disasm) {
@@ -157,9 +157,9 @@ public:
         }
 
         std::ostringstream oss;
-        oss << "=".repeat(80) << "\n";
+        oss << std::string(80, '=') << "\n";
         oss << "STRING TABLE (min length: " << minLength << ")\n";
-        oss << "=".repeat(80) << "\n\n";
+        oss << std::string(80, '=') << "\n\n";
 
         auto strings = codex.ExtractStrings(minLength);
         for (size_t i = 0; i < strings.size(); ++i) {
@@ -178,9 +178,9 @@ public:
         }
 
         std::ostringstream oss;
-        oss << "=".repeat(80) << "\n";
+        oss << std::string(80, '=') << "\n";
         oss << "SECURITY ANALYSIS\n";
-        oss << "=".repeat(80) << "\n\n";
+        oss << std::string(80, '=') << "\n\n";
 
         auto vulns = codex.DetectVulnerabilities();
         
@@ -221,9 +221,9 @@ public:
         }
 
         std::ostringstream oss;
-        oss << "=".repeat(80) << "\n";
+        oss << std::string(80, '=') << "\n";
         oss << "BINARY COMPARISON\n";
-        oss << "=".repeat(80) << "\n\n";
+        oss << std::string(80, '=') << "\n\n";
         oss << "File 1: " << file1 << "\n";
         oss << "File 2: " << file2 << "\n\n";
 

@@ -78,10 +78,6 @@ public:
     bool isModelLoaded() const { return m_inferenceEngine && m_inferenceEngine->IsModelLoaded(); }
     std::string currentModelPath() const { return m_currentModelPath; }
     
-    void updateConfig(const struct GenerationConfig& config);
-    // CLI/Native compat
-    std::string chat(const std::string& message); 
-
     // Configuration
     struct GenerationConfig {
         float temperature = 0.8f;
@@ -92,6 +88,10 @@ public:
         bool deepResearch = false;
         bool noRefusal = false;
     };
+
+    void updateConfig(const GenerationConfig& config);
+    // CLI/Native compat
+    std::string chat(const std::string& message);
     
 private:
     std::string m_currentModelPath;

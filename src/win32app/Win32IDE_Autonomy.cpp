@@ -1,4 +1,5 @@
 #include "Win32IDE_Autonomy.h"
+#include "IDEConfig.h"
 #include <sstream>
 
 AutonomyManager::AutonomyManager(AgenticBridge* bridge)
@@ -68,11 +69,14 @@ std::vector<std::string> AutonomyManager::getMemorySnapshot() {
 }
 
 void AutonomyManager::tick() {
+    SCOPED_METRIC("autonomy.tick");
     if (!m_running.load()) return;
     if (!rateLimitAllow()) {
+        METRICS.increment("autonomy.rate_limited");
         LOG_WARNING("Rate limit hit, skipping tick");
         return;
     }
+    METRICS.increment("autonomy.ticks_executed");
     std::string action = planNextAction();
     executeAction(action);
 }
@@ -154,10 +158,12 @@ std::string AutonomyManager::planNextAction() {
 }
 
 void AutonomyManager::executeAction(const std::string& action) {
+    SCOPED_METRIC("autonomy.execute_action");
     if (action == "NOOP") {
         LOG_DEBUG("Planner produced NOOP");
         return;
     }
+    METRICS.increment("autonomy.actions_executed");
     if (!m_bridge || !m_bridge->IsInitialized()) {
         LOG_WARNING("Bridge not initialized; cannot execute action: " + action);
         return;

@@ -10,13 +10,13 @@
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "comdlg32.lib")
 
-namespace RawrXD {
+namespace RawrXD_RE_Internals {
 
-// Global instances
-static ReverseEngineering::RawrCodex g_codex;
-static ReverseEngineering::RawrDumpBin g_dumpbin;
-static ReverseEngineering::RawrCompiler g_compiler;
-static std::string g_currentBinary;
+// Global instances for RE analysis (prefixed to avoid collision with codex_ultimate.h's s_reCodex)
+static RawrXD::ReverseEngineering::RawrCodex s_reCodex;
+static RawrXD::ReverseEngineering::RawrDumpBin s_reDumpbin;
+static RawrXD::ReverseEngineering::RawrCompiler s_reCompiler;
+static std::string s_reCurrentBinary;
 
 // Helper: Open file dialog
 static std::string OpenBinaryDialog(HWND hwnd) {
@@ -53,64 +53,67 @@ static void ShowOutput(HWND hwnd, const std::string& title, const std::string& c
     SendMessageA(outputWnd, EM_SCROLLCARET, 0, 0);
 }
 
+} // namespace RawrXD_RE_Internals
+
+using namespace RawrXD_RE_Internals;
+
 // Menu handler for IDM_REVENG_ANALYZE
 void Win32IDE::handleReverseEngineeringAnalyze() {
     LOG_FUNCTION();
     
-    std::string path = OpenBinaryDialog(m_hwnd);
+    std::string path = OpenBinaryDialog(m_hwndMain);
     if (path.empty()) return;
     
-    if (!g_codex.LoadBinary(path)) {
-        MessageBoxA(m_hwnd, "Failed to load binary", "Error", MB_OK | MB_ICONERROR);
+    if (!s_reCodex.LoadBinary(path)) {
+        MessageBoxA(m_hwndMain, "Failed to load binary", "Error", MB_OK | MB_ICONERROR);
         return;
     }
     
-    g_currentBinary = path;
+    s_reCurrentBinary = path;
     
     std::stringstream ss;
     ss << "Binary: " << path << "\n\n";
     
-    auto sections = g_codex.GetSections();
+    auto sections = s_reCodex.GetSections();
     ss << "Sections: " << sections.size() << "\n";
     for (const auto& sec : sections) {
         ss << "  " << sec.name 
            << " (VA: 0x" << std::hex << sec.virtualAddress 
-           << ", Size: 0x" << sec.size << ")\n" << std::dec;
+           << ", Size: 0x" << sec.virtualSize << ")\n" << std::dec;
     }
     
-    auto imports = g_codex.GetImports();
+    auto imports = s_reCodex.GetImports();
     ss << "\nImports: " << imports.size() << "\n";
     for (size_t i = 0; i < std::min<size_t>(10, imports.size()); ++i) {
-        ss << "  " << imports[i].dllName << "!" << imports[i].functionName << "\n";
+        ss << "  " << imports[i].moduleName << "!" << imports[i].functionName << "\n";
     }
     if (imports.size() > 10) ss << "  ... and " << (imports.size() - 10) << " more\n";
     
-    auto exports = g_codex.GetExports();
+    auto exports = s_reCodex.GetExports();
     ss << "\nExports: " << exports.size() << "\n";
     for (size_t i = 0; i < std::min<size_t>(10, exports.size()); ++i) {
         ss << "  " << exports[i].name << " @ 0x" << std::hex << exports[i].address << "\n" << std::dec;
     }
     if (exports.size() > 10) ss << "  ... and " << (exports.size() - 10) << " more\n";
     
-    auto strings = g_codex.ExtractStrings(8);
+    auto strings = s_reCodex.ExtractStrings(8);
     ss << "\nStrings (>= 8 chars): " << strings.size() << "\n";
     for (size_t i = 0; i < std::min<size_t>(10, strings.size()); ++i) {
-        ss << "  0x" << std::hex << strings[i].offset << ": " 
-           << std::dec << strings[i].value.substr(0, 60);
-        if (strings[i].value.length() > 60) ss << "...";
+        ss << "  " << strings[i].substr(0, 60);
+        if (strings[i].length() > 60) ss << "...";
         ss << "\n";
     }
     if (strings.size() > 10) ss << "  ... and " << (strings.size() - 10) << " more\n";
     
-    ShowOutput(m_hwnd, "Binary Analysis", ss.str());
+    ShowOutput(m_hwndMain, "Binary Analysis", ss.str());
 }
 
 // Menu handler for IDM_REVENG_DISASM
-void Win32IDE::handleReverseEngineeringDisasm() {
+void Win32IDE::handleReverseEngineeringDisassemble() {
     LOG_FUNCTION();
     
-    if (g_currentBinary.empty()) {
-        MessageBoxA(m_hwnd, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
         return;
     }
     
@@ -121,21 +124,21 @@ void Win32IDE::handleReverseEngineeringDisasm() {
     uint64_t addr = 0x1000;
     size_t count = 50;
     
-    std::string result = g_dumpbin.DumpDisassembly(g_currentBinary, addr, count);
-    ShowOutput(m_hwnd, "Disassembly", result);
+    std::string result = s_reDumpbin.DumpDisassembly(s_reCurrentBinary, addr, count);
+    ShowOutput(m_hwndMain, "Disassembly", result);
 }
 
 // Menu handler for IDM_REVENG_DUMPBIN
 void Win32IDE::handleReverseEngineeringDumpBin() {
     LOG_FUNCTION();
     
-    if (g_currentBinary.empty()) {
-        MessageBoxA(m_hwnd, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
         return;
     }
     
-    std::string result = g_dumpbin.DumpAll(g_currentBinary);
-    ShowOutput(m_hwnd, "Binary Dump", result);
+    std::string result = s_reDumpbin.DumpAll(s_reCurrentBinary);
+    ShowOutput(m_hwndMain, "Binary Dump", result);
 }
 
 // Menu handler for IDM_REVENG_COMPILE
@@ -145,7 +148,7 @@ void Win32IDE::handleReverseEngineeringCompile() {
     char filename[MAX_PATH] = {0};
     OPENFILENAMEA ofn = {0};
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = m_hwnd;
+    ofn.hwndOwner = m_hwndMain;
     ofn.lpstrFilter = "Source Files\0*.c;*.cpp;*.asm\0All Files\0*.*\0";
     ofn.lpstrFile = filename;
     ofn.nMaxFile = MAX_PATH;
@@ -154,17 +157,17 @@ void Win32IDE::handleReverseEngineeringCompile() {
     
     if (!GetOpenFileNameA(&ofn)) return;
     
-    ReverseEngineering::CompilerOptions opts;
+    RawrXD::ReverseEngineering::CompilerOptions opts;
     opts.optimizationLevel = 2;
     opts.targetArch = "x64";
-    opts.debug = true;
+    opts.debugInfo = true;
     
-    g_compiler.SetOptions(opts);
+    s_reCompiler.SetOptions(opts);
     
     std::stringstream ss;
     ss << "Compiling: " << filename << "\n\n";
     
-    auto result = g_compiler.CompileSource(filename);
+    auto result = s_reCompiler.CompileSource(filename);
     
     if (result.success) {
         ss << "✓ Compilation successful\n";
@@ -184,49 +187,49 @@ void Win32IDE::handleReverseEngineeringCompile() {
         }
     }
     
-    ShowOutput(m_hwnd, "Compilation", ss.str());
+    ShowOutput(m_hwndMain, "Compilation", ss.str());
 }
 
 // Menu handler for IDM_REVENG_COMPARE
 void Win32IDE::handleReverseEngineeringCompare() {
     LOG_FUNCTION();
     
-    std::string path1 = OpenBinaryDialog(m_hwnd);
+    std::string path1 = OpenBinaryDialog(m_hwndMain);
     if (path1.empty()) return;
     
-    std::string path2 = OpenBinaryDialog(m_hwnd);
+    std::string path2 = OpenBinaryDialog(m_hwndMain);
     if (path2.empty()) return;
     
-    std::string result = g_dumpbin.CompareBinaries(path1, path2);
-    ShowOutput(m_hwnd, "Binary Comparison", result);
+    std::string result = s_reDumpbin.CompareBinaries(path1, path2);
+    ShowOutput(m_hwndMain, "Binary Comparison", result);
 }
 
 // Menu handler for IDM_REVENG_DETECT_VULNS
 void Win32IDE::handleReverseEngineeringDetectVulns() {
     LOG_FUNCTION();
     
-    if (g_currentBinary.empty()) {
-        MessageBoxA(m_hwnd, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
         return;
     }
     
-    std::string result = g_dumpbin.DumpVulnerabilities(g_currentBinary);
-    ShowOutput(m_hwnd, "Vulnerability Detection", result);
+    std::string result = s_reDumpbin.DumpVulnerabilities(s_reCurrentBinary);
+    ShowOutput(m_hwndMain, "Vulnerability Detection", result);
 }
 
 // Menu handler for IDM_REVENG_EXPORT_IDA
 void Win32IDE::handleReverseEngineeringExportIDA() {
     LOG_FUNCTION();
     
-    if (g_currentBinary.empty()) {
-        MessageBoxA(m_hwnd, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
         return;
     }
     
     char filename[MAX_PATH] = {0};
     OPENFILENAMEA ofn = {0};
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = m_hwnd;
+    ofn.hwndOwner = m_hwndMain;
     ofn.lpstrFilter = "Python Scripts\0*.py\0All Files\0*.*\0";
     ofn.lpstrFile = filename;
     ofn.nMaxFile = MAX_PATH;
@@ -236,15 +239,15 @@ void Win32IDE::handleReverseEngineeringExportIDA() {
     
     if (!GetSaveFileNameA(&ofn)) return;
     
-    std::string script = g_codex.ExportToIDA();
+    std::string script = s_reCodex.ExportToIDA();
     
     FILE* f = fopen(filename, "w");
     if (f) {
         fwrite(script.c_str(), 1, script.length(), f);
         fclose(f);
-        MessageBoxA(m_hwnd, "IDA script exported successfully", "Success", MB_OK | MB_ICONINFORMATION);
+        MessageBoxA(m_hwndMain, "IDA script exported successfully", "Success", MB_OK | MB_ICONINFORMATION);
     } else {
-        MessageBoxA(m_hwnd, "Failed to save script", "Error", MB_OK | MB_ICONERROR);
+        MessageBoxA(m_hwndMain, "Failed to save script", "Error", MB_OK | MB_ICONERROR);
     }
 }
 
@@ -252,15 +255,15 @@ void Win32IDE::handleReverseEngineeringExportIDA() {
 void Win32IDE::handleReverseEngineeringExportGhidra() {
     LOG_FUNCTION();
     
-    if (g_currentBinary.empty()) {
-        MessageBoxA(m_hwnd, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
         return;
     }
     
     char filename[MAX_PATH] = {0};
     OPENFILENAMEA ofn = {0};
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = m_hwnd;
+    ofn.hwndOwner = m_hwndMain;
     ofn.lpstrFilter = "Python Scripts\0*.py\0All Files\0*.*\0";
     ofn.lpstrFile = filename;
     ofn.nMaxFile = MAX_PATH;
@@ -270,15 +273,15 @@ void Win32IDE::handleReverseEngineeringExportGhidra() {
     
     if (!GetSaveFileNameA(&ofn)) return;
     
-    std::string script = g_codex.ExportToGhidra();
+    std::string script = s_reCodex.ExportToGhidra();
     
     FILE* f = fopen(filename, "w");
     if (f) {
         fwrite(script.c_str(), 1, script.length(), f);
         fclose(f);
-        MessageBoxA(m_hwnd, "Ghidra script exported successfully", "Success", MB_OK | MB_ICONINFORMATION);
+        MessageBoxA(m_hwndMain, "Ghidra script exported successfully", "Success", MB_OK | MB_ICONINFORMATION);
     } else {
-        MessageBoxA(m_hwnd, "Failed to save script", "Error", MB_OK | MB_ICONERROR);
+        MessageBoxA(m_hwndMain, "Failed to save script", "Error", MB_OK | MB_ICONERROR);
     }
 }
 
@@ -300,5 +303,3 @@ HMENU Win32IDE::createReverseEngineeringMenu() {
     
     return menu;
 }
-
-} // namespace RawrXD

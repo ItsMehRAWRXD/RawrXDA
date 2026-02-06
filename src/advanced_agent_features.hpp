@@ -145,7 +145,7 @@ server.listen(PORT, () => console.log(`Server running at http://localhost:${PORT
 
             // 3. index.html (Modern)
             std::ofstream idx(projectDir + "/public/index.html");
-            idx << R"(<!DOCTYPE html>
+            std::string htmlContent = R"HTML(<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -197,7 +197,7 @@ server.listen(PORT, () => console.log(`Server running at http://localhost:${PORT
         socket.on('message', (msg) => {
             const div = document.createElement('div');
             div.style.marginBottom = '0.5rem';
-            div.innerHTML = `<strong style="color: #38bdf8">${msg.user}:</strong> ${msg.text}`;
+            div.innerHTML = '<strong style="color: #38bdf8">' + msg.user + ':</strong> ' + msg.text;
             msgList.appendChild(div);
             msgList.scrollTop = msgList.scrollHeight;
         });
@@ -213,7 +213,8 @@ server.listen(PORT, () => console.log(`Server running at http://localhost:${PORT
         }
     </script>
 </body>
-</html>)";
+</html>)HTML";
+            idx << htmlContent;
             
             return true;
         } catch (...) { return false; }

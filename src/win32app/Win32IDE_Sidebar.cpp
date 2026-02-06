@@ -4,11 +4,17 @@
 
 #include "Win32IDE.h"
 #include <commctrl.h>
+#include <commdlg.h>
+#include <shellapi.h>
 #include <shlwapi.h>
 #include <regex>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+
+#include "IDELogger.h"
+#include "vsix_loader.h"
+#include <nlohmann/json.hpp>
 
 // Define GET_X_LPARAM and GET_Y_LPARAM if not available
 #ifndef GET_X_LPARAM
@@ -327,6 +333,11 @@ void Win32IDE::resizeSidebar(int width, int height)
 {
     if (!m_hwndSidebarContent) return;
 
+    // LOGGING AS REQUESTED
+    char buf[256];
+    sprintf_s(buf, "Resizing Sidebar to %dx%d (ExplorerTree: %p)", width, height, m_hwndExplorerTree);
+    LOG_INFO(std::string(buf));
+
     MoveWindow(m_hwndSidebarContent, 0, 0, width, height, TRUE);
 
     // Resize active view controls
@@ -407,6 +418,12 @@ void Win32IDE::createExplorerView(HWND hwndParent)
 
     SetWindowLongPtrA(m_hwndExplorerTree, GWLP_USERDATA, (LONG_PTR)this);
     SetWindowLongPtrA(m_hwndExplorerTree, GWLP_WNDPROC, (LONG_PTR)ExplorerTreeProc);
+
+    // LOGGING AS REQUESTED
+    char buf[256];
+    sprintf_s(buf, "ExplorerTree HWND created: %p (SidebarContent: %p)", m_hwndExplorerTree, m_hwndSidebarContent);
+    LOG_INFO(std::string(buf));
+    appendToOutput(std::string(buf) + "\n", "Output", OutputSeverity::Debug);
 
     // Set current workspace as root
     m_explorerRootPath = "C:\\Users\\HiH8e\\OneDrive\\Desktop\\Powershield";
@@ -491,8 +508,84 @@ void Win32IDE::refreshFileTree()
 
 void Win32IDE::expandFolder(const std::string& path)
 {
-    // Placeholder - full implementation would recursively load subdirectories
-    appendToOutput("Expanding folder: " + path + "\n", "Output", OutputSeverity::Info);
+    LOG_FUNCTION();
+    if (!m_hwndExplorerTree || path.empty()) return;
+
+    // Find the tree item that corresponds to this path
+    HTREEITEM hTarget = nullptr;
+    for (const auto& [item, itemPath] : m_treeItemPaths) {
+        if (itemPath == path) { hTarget = item; break; }
+    }
+    if (!hTarget) {
+        LOG_WARNING("expandFolder: no tree item found for path: " + path);
+        return;
+    }
+
+    // Check if children are already loaded (first child is not a placeholder)
+    HTREEITEM hChild = TreeView_GetChild(m_hwndExplorerTree, hTarget);
+    bool alreadyLoaded = false;
+    if (hChild) {
+        char buf[MAX_PATH] = {};
+        TVITEMA tv = {};
+        tv.hItem = hChild;
+        tv.mask = TVIF_TEXT;
+        tv.pszText = buf;
+        tv.cchTextMax = MAX_PATH;
+        if (TreeView_GetItem(m_hwndExplorerTree, &tv) && strcmp(buf, "Loading...") != 0) {
+            alreadyLoaded = true;
+        }
+    }
+
+    if (!alreadyLoaded) {
+        // Remove any placeholder children
+        while (hChild) {
+            HTREEITEM hNext = TreeView_GetNextSibling(m_hwndExplorerTree, hChild);
+            TreeView_DeleteItem(m_hwndExplorerTree, hChild);
+            hChild = hNext;
+        }
+
+        // Populate with real directory contents
+        try {
+            for (const auto& entry : fs::directory_iterator(path)) {
+                try {
+                    std::string name = entry.path().filename().string();
+                    // Skip hidden/system entries starting with '.'
+                    if (!name.empty() && name[0] == '.') continue;
+
+                    TVINSERTSTRUCTA tvis = {};
+                    tvis.hParent = hTarget;
+                    tvis.hInsertAfter = TVI_LAST;
+                    tvis.item.mask = TVIF_TEXT | TVIF_PARAM;
+
+                    char* nameBuffer = new char[name.size() + 1];
+                    strcpy_s(nameBuffer, name.size() + 1, name.c_str());
+                    tvis.item.pszText = nameBuffer;
+                    tvis.item.lParam = entry.is_directory() ? 1 : 0;
+
+                    HTREEITEM hNew = TreeView_InsertItem(m_hwndExplorerTree, &tvis);
+                    if (hNew) {
+                        m_treeItemPaths[hNew] = entry.path().string();
+                        // Add dummy child for subdirectories so expand arrow shows
+                        if (entry.is_directory()) {
+                            TVINSERTSTRUCTA dummy = {};
+                            dummy.hParent = hNew;
+                            dummy.hInsertAfter = TVI_FIRST;
+                            dummy.item.mask = TVIF_TEXT;
+                            static char loadingText[] = "Loading...";
+                            dummy.item.pszText = loadingText;
+                            TreeView_InsertItem(m_hwndExplorerTree, &dummy);
+                        }
+                    }
+                    delete[] nameBuffer;
+                } catch (...) { continue; }
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("expandFolder failed: " + std::string(e.what()));
+        }
+    }
+
+    TreeView_Expand(m_hwndExplorerTree, hTarget, TVE_EXPAND);
+    LOG_INFO("Expanded folder: " + path);
 }
 
 void Win32IDE::collapseAllFolders()
@@ -507,104 +600,40 @@ void Win32IDE::collapseAllFolders()
 
 void Win32IDE::newFileInExplorer()
 {
-    qInfo() << "[Win32IDE] DEBUG: Starting new file creation from Explorer";
-    
+    LOG_FUNCTION();
     try {
-        // Production implementation with proper error handling
-        bool success = newFile();
-        
-        if (success) {
-            qInfo() << "[Win32IDE] INFO: New file created successfully from Explorer";
-            
-            // Log metrics
-            qDebug() << "[Win32IDE] METRIC: new_file_created=1";
-            qDebug() << "[Win32IDE] METRIC: source=explorer";
-        } else {
-            qWarning() << "[Win32IDE] ERROR: Failed to create new file from Explorer";
-            
-            // Show user-friendly error message
-            MessageBoxA(m_hwndMain, 
-                       "Failed to create new file. Please check permissions and try again.", 
-                       "File Creation Error", 
-                       MB_ICONERROR | MB_OK);
-        }
+        newFile();
+        LOG_INFO("New file created from Explorer");
+        appendToOutput("New file created from Explorer\n", "Explorer", OutputSeverity::Info);
     } catch (const std::exception& e) {
-        qCritical() << "[Win32IDE] CRITICAL: Exception during new file creation:" << e.what();
-        
+        LOG_CRITICAL(std::string("Exception during new file creation: ") + e.what());
         MessageBoxA(m_hwndMain, 
-                   "An unexpected error occurred while creating the file.", 
-                   "System Error", 
-                   MB_ICONERROR | MB_OK);
+                   "An unexpected error occurred while creating the file.",
+                   "System Error", MB_ICONERROR | MB_OK);
     }
 }
 
 void Win32IDE::newFolderInExplorer()
 {
-    qInfo() << "[Win32IDE] DEBUG: Starting new folder creation from Explorer";
-    
-    char folderName[256] = "NewFolder";
-    
-    // Production-ready input dialog with validation
-    INPUTBOXPARAMS params = {};
-    params.caption = "Create New Folder";
-    params.prompt = "Enter folder name:";
-    params.defaultText = folderName;
-    params.maxLength = sizeof(folderName) - 1;
-    
-    if (ShowInputBox(m_hwndMain, &params, folderName)) {
-        try {
-            std::string fullPath = m_explorerRootPath + "\\" + folderName;
-            
-            // Validate folder name
-            if (strlen(folderName) == 0) {
-                qWarning() << "[Win32IDE] ERROR: Empty folder name provided";
-                MessageBoxA(m_hwndMain, "Folder name cannot be empty.", "Invalid Input", MB_ICONWARNING);
-                return;
-            }
-            
-            // Check if folder already exists
-            if (fs::exists(fullPath)) {
-                qWarning() << "[Win32IDE] ERROR: Folder already exists:" << fullPath.c_str();
-                MessageBoxA(m_hwndMain, "A folder with this name already exists.", "Folder Exists", MB_ICONWARNING);
-                return;
-            }
-            
-            // Create the folder
-            if (fs::create_directory(fullPath)) {
-                qInfo() << "[Win32IDE] INFO: New folder created:" << fullPath.c_str();
-                
-                // Refresh file tree to show new folder
-                refreshFileTree();
-                
-                // Log metrics
-                qDebug() << "[Win32IDE] METRIC: new_folder_created=1";
-                qDebug() << "[Win32IDE] METRIC: folder_name=" << folderName;
-                qDebug() << "[Win32IDE] METRIC: full_path=" << fullPath.c_str();
-                
-                appendToOutput("New folder created: " + fullPath + "\n", "Explorer", OutputSeverity::Success);
-            } else {
-                qError() << "[Win32IDE] ERROR: Failed to create folder:" << fullPath.c_str();
-                MessageBoxA(m_hwndMain, "Failed to create folder. Check permissions.", "Creation Failed", MB_ICONERROR);
-            }
-        } catch (const std::exception& e) {
-            qCritical() << "[Win32IDE] CRITICAL: Exception during folder creation:" << e.what();
-            MessageBoxA(m_hwndMain, "An error occurred while creating the folder.", "System Error", MB_ICONERROR);
+    LOG_FUNCTION();
+    try {
+        std::string baseName = "NewFolder";
+        std::string fullPath = m_explorerRootPath + "\\" + baseName;
+        int counter = 1;
+        while (fs::exists(fullPath)) {
+            fullPath = m_explorerRootPath + "\\" + baseName + std::to_string(counter++);
         }
-    } else {
-        qInfo() << "[Win32IDE] INFO: Folder creation cancelled by user";
-    }
-}
-                    MB_OKCANCEL | MB_ICONQUESTION) == IDOK) {
-        std::string newPath = m_explorerRootPath + "\\NewFolder";
-        try {
-            fs::create_directory(newPath);
+        if (fs::create_directory(fullPath)) {
+            LOG_INFO("New folder created: " + fullPath);
             refreshFileTree();
-            appendToOutput("Folder created: " + newPath + "\n", "Output", OutputSeverity::Info);
+            appendToOutput("New folder created: " + fullPath + "\n", "Explorer", OutputSeverity::Info);
+        } else {
+            LOG_ERROR("Failed to create folder: " + fullPath);
+            MessageBoxA(m_hwndMain, "Failed to create folder. Check permissions.", "Creation Failed", MB_ICONERROR);
         }
-        catch (const std::exception& e) {
-            appendToOutput("Error creating folder: " + std::string(e.what()) + "\n", 
-                           "Output", OutputSeverity::Error);
-        }
+    } catch (const std::exception& e) {
+        LOG_CRITICAL(std::string("Exception during folder creation: ") + e.what());
+        MessageBoxA(m_hwndMain, "An error occurred while creating the folder.", "System Error", MB_ICONERROR);
     }
 }
 
@@ -877,8 +906,75 @@ void Win32IDE::updateSearchResults(const std::vector<std::string>& results)
 
 void Win32IDE::applySearchFilters(const std::string& includePattern, const std::string& excludePattern)
 {
-    // Placeholder - would filter search results based on patterns
-    appendToOutput("Apply filters - Include: " + includePattern + ", Exclude: " + excludePattern + "\n",
+    LOG_FUNCTION();
+    if (m_searchResults.empty()) return;
+
+    // Convert simple glob patterns (*.cpp, *.h) to check against results
+    auto matchesGlob = [](const std::string& filename, const std::string& pattern) -> bool {
+        if (pattern.empty() || pattern == "*") return true;
+        // Support simple *.ext patterns
+        if (pattern.size() >= 2 && pattern[0] == '*' && pattern[1] == '.') {
+            std::string ext = pattern.substr(1); // ".cpp"
+            if (filename.size() >= ext.size()) {
+                std::string fileExt = filename.substr(filename.size() - ext.size());
+                // Case-insensitive compare
+                std::string lowerFileExt = fileExt, lowerExt = ext;
+                std::transform(lowerFileExt.begin(), lowerFileExt.end(), lowerFileExt.begin(), ::tolower);
+                std::transform(lowerExt.begin(), lowerExt.end(), lowerExt.begin(), ::tolower);
+                return lowerFileExt == lowerExt;
+            }
+            return false;
+        }
+        // Substring match fallback
+        return filename.find(pattern) != std::string::npos;
+    };
+
+    // Parse comma-separated patterns
+    auto parsePatterns = [](const std::string& input) -> std::vector<std::string> {
+        std::vector<std::string> patterns;
+        std::istringstream ss(input);
+        std::string token;
+        while (std::getline(ss, token, ',')) {
+            // Trim whitespace
+            size_t start = token.find_first_not_of(" \t");
+            size_t end = token.find_last_not_of(" \t");
+            if (start != std::string::npos)
+                patterns.push_back(token.substr(start, end - start + 1));
+        }
+        return patterns;
+    };
+
+    auto includes = parsePatterns(includePattern);
+    auto excludes = parsePatterns(excludePattern);
+
+    std::vector<std::string> filtered;
+    for (const auto& result : m_searchResults) {
+        // Extract filename from result format "filename (line): content"
+        std::string filename = result.substr(0, result.find(' '));
+
+        // Check include (if include patterns specified, file must match at least one)
+        bool includeMatch = includes.empty();
+        for (const auto& pat : includes) {
+            if (matchesGlob(filename, pat)) { includeMatch = true; break; }
+        }
+        if (!includeMatch) continue;
+
+        // Check exclude (if any exclude pattern matches, skip)
+        bool excludeMatch = false;
+        for (const auto& pat : excludes) {
+            if (matchesGlob(filename, pat)) { excludeMatch = true; break; }
+        }
+        if (excludeMatch) continue;
+
+        filtered.push_back(result);
+    }
+
+    // Update UI with filtered results
+    m_searchResults = filtered;
+    updateSearchResults(filtered);
+
+    appendToOutput("Search filtered: " + std::to_string(filtered.size()) + " results (include: " +
+                   includePattern + ", exclude: " + excludePattern + ")\n",
                    "Output", OutputSeverity::Info);
 }
 
@@ -1169,8 +1265,68 @@ void Win32IDE::createRunDebugView(HWND hwndParent)
 
 void Win32IDE::createLaunchConfiguration()
 {
-    appendToOutput("Creating launch configuration...\n", "Output", OutputSeverity::Info);
-    // Placeholder - would create launch.json equivalent
+    LOG_FUNCTION();
+
+    // Create .rawrxd directory if it doesn't exist
+    std::string configDir = m_explorerRootPath + "\\.rawrxd";
+    try { fs::create_directories(configDir); } catch (...) {}
+
+    std::string launchPath = configDir + "\\launch.json";
+
+    // Detect project type from current file or workspace
+    std::string progName = "${workspaceFolder}\\build\\main.exe";
+    std::string debuggerType = "gdb";
+    std::string stopAtEntry = "true";
+
+    if (!m_currentFile.empty()) {
+        std::string ext = fs::path(m_currentFile).extension().string();
+        if (ext == ".ps1") {
+            debuggerType = "powershell";
+            progName = m_currentFile;
+        } else if (ext == ".py") {
+            debuggerType = "python";
+            progName = m_currentFile;
+        }
+    }
+
+    // Write launch.json
+    std::ofstream out(launchPath, std::ios::trunc);
+    if (!out.is_open()) {
+        LOG_ERROR("Failed to create launch configuration at: " + launchPath);
+        MessageBoxA(m_hwndMain, "Failed to create launch.json", "Error", MB_ICONERROR);
+        return;
+    }
+
+    out << "{\n";
+    out << "  \"version\": \"0.2.0\",\n";
+    out << "  \"configurations\": [\n";
+    out << "    {\n";
+    out << "      \"name\": \"RawrXD Debug (GDB)\",\n";
+    out << "      \"type\": \"" << debuggerType << "\",\n";
+    out << "      \"request\": \"launch\",\n";
+    out << "      \"program\": \"" << progName << "\",\n";
+    out << "      \"args\": [],\n";
+    out << "      \"stopAtEntry\": " << stopAtEntry << ",\n";
+    out << "      \"cwd\": \"" << m_explorerRootPath << "\",\n";
+    out << "      \"environment\": [],\n";
+    out << "      \"externalConsole\": false,\n";
+    out << "      \"preLaunchTask\": \"build\"\n";
+    out << "    },\n";
+    out << "    {\n";
+    out << "      \"name\": \"RawrXD Attach\",\n";
+    out << "      \"type\": \"gdb\",\n";
+    out << "      \"request\": \"attach\",\n";
+    out << "      \"processId\": \"${command:pickProcess}\"\n";
+    out << "    }\n";
+    out << "  ]\n";
+    out << "}\n";
+    out.close();
+
+    appendToOutput("Launch configuration created: " + launchPath + "\n", "Output", OutputSeverity::Info);
+    LOG_INFO("Created launch.json at: " + launchPath);
+
+    // Open the file in the editor so user can modify
+    openFile(launchPath);
 }
 
 void Win32IDE::startDebugging()
@@ -1217,29 +1373,63 @@ void Win32IDE::showDebugConsole()
 void Win32IDE::updateDebugVariables()
 {
     if (!m_debuggingActive || !m_hwndDebugVariables) return;
+    LOG_FUNCTION();
 
-    // Placeholder - would query actual debugger variables
     ListView_DeleteAllItems(m_hwndDebugVariables);
 
-    const struct { const char* name; const char* value; } vars[] = {
-        {"$PSVersionTable", "7.4.6"},
-        {"$PWD", "C:\\Users\\HiH8e"},
-        {"$ErrorCount", "0"}
-    };
+    // Collect real environment and debugger state
+    struct VarEntry { std::string name; std::string value; };
+    std::vector<VarEntry> vars;
+
+    // System variables
+    vars.push_back(VarEntry{"$DebuggerActive", m_debuggerAttached ? "true" : "false"});
+    vars.push_back(VarEntry{"$DebuggerPaused", m_debuggerPaused ? "true" : "false"});
+    vars.push_back(VarEntry{"$CurrentFile", m_currentFile.empty() ? "(none)" : m_currentFile});
+    vars.push_back(VarEntry{"$CurrentLine", std::to_string(m_debuggerCurrentLine)});
+    vars.push_back(VarEntry{"$BreakpointCount", std::to_string(m_breakpoints.size())});
+
+    // Watch expressions
+    for (const auto& w : m_watchList) {
+        if (w.enabled) {
+            vars.push_back(VarEntry{"[watch] " + w.expression, w.value.empty() ? "<not evaluated>" : w.value});
+        }
+    }
+
+    // Call stack info
+    if (!m_callStack.empty()) {
+        vars.push_back(VarEntry{"$CallStackDepth", std::to_string(m_callStack.size())});
+        vars.push_back(VarEntry{"$TopFrame", m_callStack[0].function + " @ " + m_callStack[0].file + ":" + std::to_string(m_callStack[0].line)});
+    }
+
+    // Model/inference state
+    vars.push_back(VarEntry{"$ModelLoaded", m_loadedModelPath.empty() ? "false" : "true"});
+    vars.push_back(VarEntry{"$ModelPath", m_loadedModelPath.empty() ? "(none)" : m_loadedModelPath});
+    vars.push_back(VarEntry{"$InferenceRunning", m_inferenceRunning ? "true" : "false"});
+    vars.push_back(VarEntry{"$WorkingDirectory", m_explorerRootPath});
+
+    // Process environment
+    char envBuf[256] = {};
+    if (GetEnvironmentVariableA("USERNAME", envBuf, sizeof(envBuf))) {
+        vars.push_back(VarEntry{"$USERNAME", envBuf});
+    }
+    if (GetEnvironmentVariableA("COMPUTERNAME", envBuf, sizeof(envBuf))) {
+        vars.push_back(VarEntry{"$COMPUTERNAME", envBuf});
+    }
 
     LVITEMA item = {};
     item.mask = LVIF_TEXT;
-
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < (int)vars.size(); i++) {
         item.iItem = i;
         item.iSubItem = 0;
-        item.pszText = (LPSTR)vars[i].name;
+        item.pszText = (LPSTR)vars[i].name.c_str();
         ListView_InsertItem(m_hwndDebugVariables, &item);
 
         item.iSubItem = 1;
-        item.pszText = (LPSTR)vars[i].value;
+        item.pszText = (LPSTR)vars[i].value.c_str();
         ListView_SetItem(m_hwndDebugVariables, &item);
     }
+
+    LOG_DEBUG("Updated " + std::to_string(vars.size()) + " debug variables");
 }
 
 // ============================================================================
@@ -1280,20 +1470,164 @@ void Win32IDE::createExtensionsView(HWND hwndParent)
 
 void Win32IDE::searchExtensions(const std::string& query)
 {
-    appendToOutput("Searching extensions: " + query + "\n", "Output", OutputSeverity::Info);
-    // Placeholder - would query extension marketplace
+    LOG_FUNCTION();
+    if (!m_hwndExtensionsList) return;
+
+    // Filter loaded extensions by query
+    ListView_DeleteAllItems(m_hwndExtensionsList);
+
+    std::string lowerQuery = query;
+    std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(), ::tolower);
+
+    LVITEMA item = {};
+    item.mask = LVIF_TEXT;
+    int idx = 0;
+
+    for (const auto& ext : m_extensions) {
+        std::string lowerName = ext.name;
+        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+        std::string lowerId = ext.id;
+        std::transform(lowerId.begin(), lowerId.end(), lowerId.begin(), ::tolower);
+        std::string lowerDesc = ext.description;
+        std::transform(lowerDesc.begin(), lowerDesc.end(), lowerDesc.begin(), ::tolower);
+
+        if (lowerQuery.empty() || lowerName.find(lowerQuery) != std::string::npos ||
+            lowerId.find(lowerQuery) != std::string::npos ||
+            lowerDesc.find(lowerQuery) != std::string::npos) {
+
+            item.iItem = idx;
+            item.iSubItem = 0;
+            item.pszText = (LPSTR)ext.name.c_str();
+            ListView_InsertItem(m_hwndExtensionsList, &item);
+
+            item.iSubItem = 1;
+            item.pszText = (LPSTR)ext.version.c_str();
+            ListView_SetItem(m_hwndExtensionsList, &item);
+            idx++;
+        }
+    }
+
+    // Also scan plugins directory for unloaded extensions
+    std::string pluginsDir = m_explorerRootPath + "\\plugins";
+    if (fs::exists(pluginsDir) && fs::is_directory(pluginsDir)) {
+        for (const auto& entry : fs::directory_iterator(pluginsDir)) {
+            if (!entry.is_directory()) continue;
+            std::string dirName = entry.path().filename().string();
+            std::string lowerDir = dirName;
+            std::transform(lowerDir.begin(), lowerDir.end(), lowerDir.begin(), ::tolower);
+
+            // Skip if already in loaded list
+            bool alreadyLoaded = false;
+            for (const auto& ext : m_extensions) {
+                if (ext.id == dirName) { alreadyLoaded = true; break; }
+            }
+            if (alreadyLoaded) continue;
+
+            if (lowerQuery.empty() || lowerDir.find(lowerQuery) != std::string::npos) {
+                item.iItem = idx;
+                item.iSubItem = 0;
+                item.pszText = (LPSTR)dirName.c_str();
+                ListView_InsertItem(m_hwndExtensionsList, &item);
+
+                std::string notInstalled = "(available)";
+                item.iSubItem = 1;
+                item.pszText = (LPSTR)notInstalled.c_str();
+                ListView_SetItem(m_hwndExtensionsList, &item);
+                idx++;
+            }
+        }
+    }
+
+    appendToOutput("Extension search '" + query + "': " + std::to_string(idx) + " results\n",
+                   "Output", OutputSeverity::Info);
 }
 
 void Win32IDE::installExtension(const std::string& extensionId)
 {
-    appendToOutput("Installing extension: " + extensionId + "\n", "Output", OutputSeverity::Info);
-    // Placeholder
+    LOG_FUNCTION();
+
+    // Check if extension directory exists in plugins/
+    std::string pluginsDir = m_explorerRootPath + "\\plugins";
+    std::string extDir = pluginsDir + "\\" + extensionId;
+
+    if (!fs::exists(extDir)) {
+        // Try loading as a .vsix file
+        std::string vsixPath = pluginsDir + "\\" + extensionId + ".vsix";
+        if (fs::exists(vsixPath)) {
+            extDir = vsixPath;
+        } else {
+            appendToOutput("Extension not found: " + extensionId + "\nPlace extension in: " + pluginsDir + "\n",
+                           "Output", OutputSeverity::Warning);
+            return;
+        }
+    }
+
+    // Use VSIXLoader to load
+    auto& loader = VSIXLoader::GetInstance();
+    if (loader.LoadPlugin(extDir)) {
+        // Add to our internal list
+        Extension info;
+        info.id = extensionId;
+        info.name = extensionId;
+        info.version = "1.0.0";
+        info.description = "Loaded from plugins directory";
+        info.author = "Local";
+        info.installed = true;
+        info.enabled = true;
+
+        // Try to read package.json for real metadata
+        std::string manifestPath = extDir + "\\package.json";
+        if (fs::exists(manifestPath)) {
+            try {
+                std::ifstream mf(manifestPath);
+                std::string content((std::istreambuf_iterator<char>(mf)), std::istreambuf_iterator<char>());
+                nlohmann::json manifest = nlohmann::json::parse(content);
+                if (manifest.contains("name")) info.name = manifest["name"].get<std::string>();
+                if (manifest.contains("version")) info.version = manifest["version"].get<std::string>();
+                if (manifest.contains("description")) info.description = manifest["description"].get<std::string>();
+                if (manifest.contains("publisher")) info.author = manifest["publisher"].get<std::string>();
+            } catch (...) {}
+        }
+
+        m_extensions.push_back(info);
+        loadInstalledExtensions(); // Refresh UI
+
+        appendToOutput("Installed extension: " + info.name + " v" + info.version + "\n",
+                       "Output", OutputSeverity::Info);
+        LOG_INFO("Installed extension: " + extensionId);
+    } else {
+        appendToOutput("Failed to install extension: " + extensionId + "\n",
+                       "Output", OutputSeverity::Error);
+        LOG_ERROR("Failed to install extension: " + extensionId);
+    }
 }
 
 void Win32IDE::uninstallExtension(const std::string& extensionId)
 {
-    appendToOutput("Uninstalling extension: " + extensionId + "\n", "Output", OutputSeverity::Info);
-    // Placeholder
+    LOG_FUNCTION();
+
+    // Unload from VSIXLoader
+    auto& loader = VSIXLoader::GetInstance();
+    loader.UnloadPlugin(extensionId);
+
+    // Remove from internal list
+    m_extensions.erase(
+        std::remove_if(m_extensions.begin(), m_extensions.end(),
+                       [&](const Extension& ext) { return ext.id == extensionId; }),
+        m_extensions.end());
+
+    // Optionally remove from disk
+    std::string extDir = m_explorerRootPath + "\\plugins\\" + extensionId;
+    if (fs::exists(extDir)) {
+        if (MessageBoxA(m_hwndMain, ("Delete extension files from disk?\n" + extDir).c_str(),
+                        "Uninstall Extension", MB_YESNO | MB_ICONQUESTION) == IDYES) {
+            try { fs::remove_all(extDir); } catch (...) {}
+        }
+    }
+
+    loadInstalledExtensions(); // Refresh UI
+    appendToOutput("Uninstalled extension: " + extensionId + "\n", "Output", OutputSeverity::Info);
+    LOG_INFO("Uninstalled extension: " + extensionId);
 }
 
 void Win32IDE::enableExtension(const std::string& extensionId)
@@ -1320,32 +1654,145 @@ void Win32IDE::disableExtension(const std::string& extensionId)
 
 void Win32IDE::updateExtension(const std::string& extensionId)
 {
-    appendToOutput("Updating extension: " + extensionId + "\n", "Output", OutputSeverity::Info);
-    // Placeholder
+    LOG_FUNCTION();
+
+    auto& loader = VSIXLoader::GetInstance();
+    if (loader.ReloadPlugin(extensionId)) {
+        appendToOutput("Extension updated: " + extensionId + "\n", "Output", OutputSeverity::Info);
+        loadInstalledExtensions();
+    } else {
+        appendToOutput("Failed to update extension: " + extensionId + "\n", "Output", OutputSeverity::Error);
+    }
 }
 
 void Win32IDE::showExtensionDetails(const std::string& extensionId)
 {
-    appendToOutput("Showing details for: " + extensionId + "\n", "Output", OutputSeverity::Info);
-    // Placeholder
+    LOG_FUNCTION();
+
+    std::string details;
+    // Check internal list first
+    for (const auto& ext : m_extensions) {
+        if (ext.id == extensionId) {
+            details += "Name: " + ext.name + "\n";
+            details += "ID: " + ext.id + "\n";
+            details += "Version: " + ext.version + "\n";
+            details += "Author: " + ext.author + "\n";
+            details += "Description: " + ext.description + "\n";
+            details += "Status: " + std::string(ext.enabled ? "Enabled" : "Disabled") + "\n";
+            details += "Installed: " + std::string(ext.installed ? "Yes" : "No") + "\n";
+            break;
+        }
+    }
+
+    // Check VSIXLoader for additional info (commands, dependencies)
+    auto& loader = VSIXLoader::GetInstance();
+    VSIXPlugin* plugin = loader.GetPlugin(extensionId);
+    if (plugin) {
+        details += "\n--- Plugin Details ---\n";
+        details += "Install Path: " + plugin->install_path.string() + "\n";
+        if (!plugin->commands.empty()) {
+            details += "Commands:\n";
+            for (const auto& cmd : plugin->commands) {
+                details += "  - " + cmd + "\n";
+            }
+        }
+        if (!plugin->dependencies.empty()) {
+            details += "Dependencies:\n";
+            for (const auto& dep : plugin->dependencies) {
+                details += "  - " + dep + "\n";
+            }
+        }
+    }
+
+    if (details.empty()) {
+        details = "No details available for: " + extensionId;
+    }
+
+    MessageBoxA(m_hwndMain, details.c_str(), ("Extension: " + extensionId).c_str(), MB_OK | MB_ICONINFORMATION);
+    appendToOutput("Extension details shown for: " + extensionId + "\n", "Output", OutputSeverity::Info);
 }
 
 void Win32IDE::loadInstalledExtensions()
 {
+    LOG_FUNCTION();
     if (!m_hwndExtensionsList) return;
 
     ListView_DeleteAllItems(m_hwndExtensionsList);
+    m_extensions.clear();
 
-    // Placeholder - load from extensions directory
-    m_extensions = {
-        {"powershell.vscode", "PowerShell", "2024.2.2", "PowerShell language support", "Microsoft", true, true},
-        {"ms-vscode.cpptools", "C/C++", "1.20.5", "C++ IntelliSense", "Microsoft", true, true},
-        {"github.copilot", "GitHub Copilot", "1.150.0", "AI pair programmer", "GitHub", true, true}
+    // Load from VSIXLoader (already-loaded plugins)
+    auto& loader = VSIXLoader::GetInstance();
+    auto loadedPlugins = loader.GetLoadedPlugins();
+    for (auto* plugin : loadedPlugins) {
+        Extension info;
+        info.id = plugin->id;
+        info.name = plugin->name;
+        info.version = plugin->version;
+        info.description = plugin->description;
+        info.author = plugin->author;
+        info.installed = true;
+        info.enabled = plugin->enabled;
+        m_extensions.push_back(info);
+    }
+
+    // Scan plugins directory for directory-based plugins not yet loaded
+    std::string pluginsDir = m_explorerRootPath + "\\plugins";
+    if (fs::exists(pluginsDir) && fs::is_directory(pluginsDir)) {
+        for (const auto& entry : fs::directory_iterator(pluginsDir)) {
+            if (!entry.is_directory()) continue;
+            std::string dirName = entry.path().filename().string();
+
+            // Skip if already in the list
+            bool found = false;
+            for (const auto& ext : m_extensions) {
+                if (ext.id == dirName) { found = true; break; }
+            }
+            if (found) continue;
+
+            Extension info;
+            info.id = dirName;
+            info.name = dirName;
+            info.version = "0.0.0";
+            info.description = "";
+            info.author = "";
+            info.installed = true;
+            info.enabled = false;
+
+            // Try reading package.json
+            std::string manifestPath = entry.path().string() + "\\package.json";
+            if (fs::exists(manifestPath)) {
+                try {
+                    std::ifstream mf(manifestPath);
+                    std::string manifestStr((std::istreambuf_iterator<char>(mf)), std::istreambuf_iterator<char>());
+                    nlohmann::json manifest = nlohmann::json::parse(manifestStr);
+                    if (manifest.contains("displayName")) info.name = manifest["displayName"].get<std::string>();
+                    else if (manifest.contains("name")) info.name = manifest["name"].get<std::string>();
+                    if (manifest.contains("version")) info.version = manifest["version"].get<std::string>();
+                    if (manifest.contains("description")) info.description = manifest["description"].get<std::string>();
+                    if (manifest.contains("publisher")) info.author = manifest["publisher"].get<std::string>();
+                } catch (...) {}
+            }
+
+            m_extensions.push_back(info);
+        }
+    }
+
+    // Always include built-in extensions
+    auto addBuiltIn = [&](const std::string& id, const std::string& name, const std::string& ver,
+                          const std::string& desc, const std::string& author) {
+        bool found = false;
+        for (const auto& ext : m_extensions) { if (ext.id == id) { found = true; break; } }
+        if (!found) {
+            m_extensions.push_back({id, name, ver, desc, author, true, true});
+        }
     };
+    addBuiltIn("rawrxd.inference", "RawrXD Inference", "7.1.0", "Native CPU inference engine", "RawrXD");
+    addBuiltIn("rawrxd.agentic", "RawrXD Agentic", "7.1.0", "Agentic AI bridge", "RawrXD");
+    addBuiltIn("rawrxd.reverse-eng", "RawrXD Reverse Engineering", "7.1.0", "Disassembler, DumpBin, Compiler", "RawrXD");
 
+    // Populate ListView
     LVITEMA item = {};
     item.mask = LVIF_TEXT;
-
     for (size_t i = 0; i < m_extensions.size(); i++) {
         item.iItem = (int)i;
         item.iSubItem = 0;

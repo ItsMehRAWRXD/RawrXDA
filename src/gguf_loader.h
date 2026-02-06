@@ -25,18 +25,39 @@ enum class CompressionType : uint32_t {
 };
 
 enum class GGMLType : uint32_t {
-    F32 = 0,
-    F16 = 1,
-    Q4_0 = 2,
-    Q4_1 = 3,
-    Q4_K = 10,
-    Q5_K = 11,
-    Q3_K = 12,
-    Q2_K = 9,
-    Q6_K = 13,
-    Q8_0 = 7,
-    Q5_1 = 5,
-    F16_HALF = 4,
+    F32       = 0,
+    F16       = 1,
+    Q4_0      = 2,
+    Q4_1      = 3,
+    F16_HALF  = 4,
+    Q5_0      = 5,
+    Q5_1      = 6,
+    Q8_0      = 7,
+    Q8_1      = 8,
+    Q2_K      = 9,
+    Q4_K      = 10,  // Q4_K_S in ggml
+    Q5_K      = 11,  // Q5_K_S in ggml
+    Q3_K      = 12,  // Q3_K_S in ggml
+    Q6_K      = 13,
+    Q8_K      = 14,
+    IQ2_XXS   = 15,
+    IQ2_XS    = 16,
+    IQ3_XXS   = 17,
+    IQ1_S     = 18,
+    IQ4_NL    = 19,
+    IQ3_S     = 20,
+    IQ2_S     = 21,
+    IQ4_XS    = 22,
+    I8        = 23,
+    I16       = 24,
+    I32       = 25,
+    I64       = 26,
+    F64       = 27,
+    IQ1_M     = 28,
+    // Aliases for backward compatibility
+    Q4_K_S = Q4_K,
+    Q5_K_S = Q5_K,
+    Q3_K_S = Q3_K,
 };
 
 struct GGUFHeader {

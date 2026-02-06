@@ -128,7 +128,31 @@ std::string AgenticEngine::runDumpbin(const std::string& filePath, const std::st
 std::string AgenticEngine::runCodex(const std::string& filePath) {
     RawrXD::ReverseEngineering::RawrCodex codex;
     if (codex.LoadBinary(filePath)) {
-        return codex.AnalyzeCodeStructure();
+        std::string result = "=== Codex Analysis: " + filePath + " ===\n";
+        auto sections = codex.GetSections();
+        result += "Sections: " + std::to_string(sections.size()) + "\n";
+        for (const auto& s : sections) {
+            result += "  " + s.name + " VA:0x" + std::to_string(s.virtualAddress)
+                    + " Size:0x" + std::to_string(s.virtualSize) + "\n";
+        }
+        auto imports = codex.GetImports();
+        result += "Imports: " + std::to_string(imports.size()) + "\n";
+        for (size_t i = 0; i < std::min<size_t>(20, imports.size()); ++i) {
+            result += "  " + imports[i].moduleName + "!" + imports[i].functionName + "\n";
+        }
+        auto exports = codex.GetExports();
+        result += "Exports: " + std::to_string(exports.size()) + "\n";
+        for (size_t i = 0; i < std::min<size_t>(20, exports.size()); ++i) {
+            result += "  " + exports[i].name + "\n";
+        }
+        auto vulns = codex.DetectVulnerabilities();
+        if (!vulns.empty()) {
+            result += "Vulnerabilities: " + std::to_string(vulns.size()) + "\n";
+            for (const auto& v : vulns) {
+                result += "  [" + v.severity + "] " + v.type + ": " + v.description + "\n";
+            }
+        }
+        return result;
     }
     return "Error: Could not analyze with Codex.";
 }
