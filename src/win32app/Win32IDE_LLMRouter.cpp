@@ -25,6 +25,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <iomanip>
+#include <climits>
 
 // nlohmann/json already included via Win32IDE.h
 
@@ -339,6 +341,21 @@ Win32IDE::RoutingDecision Win32IDE::selectBackendForTask(LLMTaskType task,
 
     std::lock_guard<std::mutex> lock(m_routerMutex);
 
+    // 0. Check if this task is pinned by the user (UX Enhancement)
+    const auto& pin = m_taskPins[(size_t)task];
+    if (pin.active && pin.pinnedBackend != AIBackendType::Count) {
+        decision.selectedBackend = pin.pinnedBackend;
+        decision.fallbackBackend = AIBackendType::Count;  // Pinned = no fallback
+        decision.policyOverride  = true;
+        decision.confidence      = 1.0f;
+        decision.reason          = "PINNED by user: task '" + taskTypeString(task) +
+                                   "' → backend '" + backendTypeString(pin.pinnedBackend) + "'";
+        if (!pin.reason.empty()) {
+            decision.reason += " (" + pin.reason + ")";
+        }
+        return decision;
+    }
+
     // 1. Start with the task preference
     const auto& pref = m_taskPreferences[(size_t)task];
     AIBackendType preferred = pref.preferredBackend;
@@ -416,6 +433,11 @@ std::string Win32IDE::routeWithIntelligence(const std::string& prompt) {
     // 1. Classify the task
     LLMTaskType task = classifyTask(prompt);
 
+    // 1b. If ensemble mode is enabled, fan out to multiple backends
+    if (m_ensembleEnabled) {
+        return routeWithEnsemble(prompt);
+    }
+
     // 2. Select backend
     RoutingDecision decision = selectBackendForTask(task, prompt);
 
@@ -480,6 +502,9 @@ std::string Win32IDE::routeWithIntelligence(const std::string& prompt) {
         }
         m_lastRoutingDecision = decision;
     }
+
+    // 6b. Record cost/latency for heatmap (UX Enhancement)
+    recordCostLatency(decision);
 
     // 7. Log the routing decision for explainability
     logInfo("[LLMRouter] " + getRoutingDecisionExplanation(decision));
@@ -1025,6 +1050,831 @@ void Win32IDE::handleRouterRouteEndpoint(SOCKET client, const std::string& body)
         j["confidence"]      = decision.confidence;
         j["reason"]          = decision.reason;
         j["policyOverride"]  = decision.policyOverride;
+
+        std::string respBody = j.dump(2);
+        std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                           "Content-Length: " + std::to_string(respBody.size()) + "\r\n\r\n" + respBody;
+        send(client, resp.c_str(), (int)resp.size(), 0);
+    } catch (const std::exception& e) {
+        std::string errBody = std::string(R"({"error":")") + e.what() + "\"}";
+        std::string resp = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                           "Content-Length: " + std::to_string(errBody.size()) + "\r\n\r\n" + errBody;
+        send(client, resp.c_str(), (int)resp.size(), 0);
+    }
+}
+
+// ============================================================================
+// UX ENHANCEMENT: "Why This Backend?" — Detailed Explanation
+// ============================================================================
+
+std::string Win32IDE::generateWhyExplanation(const RoutingDecision& decision) const {
+    std::ostringstream ss;
+
+    ss << "╔══════════════════════════════════════════════════════════╗\n";
+    ss << "║  WHY THIS BACKEND?  —  Routing Decision Explanation     ║\n";
+    ss << "╚══════════════════════════════════════════════════════════╝\n\n";
+
+    // 1. Task classification
+    ss << "▸ Task Classification: " << taskTypeString(decision.classifiedTask) << "\n";
+    ss << "  Confidence: " << (int)(decision.confidence * 100) << "%\n\n";
+
+    // 2. Selected backend + capabilities
+    ss << "▸ Selected Backend: " << backendTypeString(decision.selectedBackend) << "\n";
+    if (decision.selectedBackend < AIBackendType::Count) {
+        const auto& cap = m_backendCapabilities[(size_t)decision.selectedBackend];
+        ss << "  Context Window:    " << cap.maxContextTokens << " tokens\n";
+        ss << "  Quality Score:     " << (int)(cap.qualityScore * 100) << "%\n";
+        ss << "  Cost Tier:         " << cap.costTier << " (0=free, 3=expensive)\n";
+        ss << "  Tool Calls:        " << (cap.supportsToolCalls ? "✓" : "✗") << "\n";
+        ss << "  Function Calling:  " << (cap.supportsFunctionCalling ? "✓" : "✗") << "\n";
+        ss << "  Streaming:         " << (cap.supportsStreaming ? "✓" : "✗") << "\n";
+        ss << "  JSON Mode:         " << (cap.supportsJsonMode ? "✓" : "✗") << "\n";
+        if (!cap.notes.empty()) {
+            ss << "  Notes:             " << cap.notes << "\n";
+        }
+    }
+    ss << "\n";
+
+    // 3. Routing rationale
+    ss << "▸ Routing Rationale:\n";
+    ss << "  " << decision.reason << "\n\n";
+
+    // 4. Was the task pinned?
+    const auto& pin = m_taskPins[(size_t)decision.classifiedTask];
+    if (pin.active) {
+        ss << "▸ Pin Status: PINNED to " << backendTypeString(pin.pinnedBackend) << "\n";
+        if (!pin.reason.empty()) ss << "  Pin Reason: " << pin.reason << "\n";
+        ss << "\n";
+    } else {
+        ss << "▸ Pin Status: Not pinned (routed by policy)\n\n";
+    }
+
+    // 5. Fallback info
+    if (decision.fallbackBackend != AIBackendType::Count) {
+        ss << "▸ Fallback Backend: " << backendTypeString(decision.fallbackBackend) << "\n";
+        if (decision.fallbackUsed) {
+            ss << "  ⚠ Fallback WAS used (primary failed)\n";
+            ss << "  Primary Latency:  " << decision.primaryLatencyMs << " ms\n";
+            ss << "  Fallback Latency: " << decision.fallbackLatencyMs << " ms\n";
+        } else {
+            ss << "  Fallback was NOT needed (primary succeeded)\n";
+        }
+    } else {
+        ss << "▸ Fallback: None configured\n";
+    }
+    ss << "\n";
+
+    // 6. Policy override
+    if (decision.policyOverride) {
+        ss << "▸ ⚠ Policy Override: The router's standard preference was overridden\n";
+        ss << "  (due to failures, pin, or viability constraints).\n\n";
+    }
+
+    // 7. Performance
+    if (decision.primaryLatencyMs >= 0) {
+        ss << "▸ Performance: " << decision.primaryLatencyMs << " ms";
+        if (decision.fallbackLatencyMs >= 0) {
+            ss << " (fallback: " << decision.fallbackLatencyMs << " ms)";
+        }
+        ss << "\n";
+    }
+
+    return ss.str();
+}
+
+std::string Win32IDE::generateWhyExplanationForLast() const {
+    std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_routerMutex));
+    if (m_lastRoutingDecision.decisionEpochMs == 0) {
+        return "[LLMRouter] No routing decisions recorded yet. Enable the router and send a prompt first.";
+    }
+    return generateWhyExplanation(m_lastRoutingDecision);
+}
+
+// ============================================================================
+// UX ENHANCEMENT: Per-Task Backend Pinning
+// ============================================================================
+
+void Win32IDE::pinTaskToBackend(LLMTaskType task, AIBackendType backend, const std::string& reason) {
+    if (task >= LLMTaskType::Count || backend >= AIBackendType::Count) return;
+
+    std::lock_guard<std::mutex> lock(m_routerMutex);
+    auto& pin         = m_taskPins[(size_t)task];
+    pin.task           = task;
+    pin.pinnedBackend  = backend;
+    pin.active         = true;
+    pin.reason         = reason.empty() ? "User pinned via palette" : reason;
+
+    logInfo("[LLMRouter] Pinned task '" + taskTypeString(task) + "' → backend '" +
+            backendTypeString(backend) + "' (" + pin.reason + ")");
+    appendToOutput("[LLMRouter] Pinned: " + taskTypeString(task) + " → " +
+                   backendTypeString(backend),
+                   "General", OutputSeverity::Info);
+}
+
+void Win32IDE::unpinTask(LLMTaskType task) {
+    if (task >= LLMTaskType::Count) return;
+
+    std::lock_guard<std::mutex> lock(m_routerMutex);
+    auto& pin   = m_taskPins[(size_t)task];
+    std::string old = backendTypeString(pin.pinnedBackend);
+    pin.active  = false;
+    pin.pinnedBackend = AIBackendType::Count;
+    pin.reason.clear();
+
+    logInfo("[LLMRouter] Unpinned task '" + taskTypeString(task) + "' (was → '" + old + "')");
+    appendToOutput("[LLMRouter] Unpinned: " + taskTypeString(task),
+                   "General", OutputSeverity::Info);
+}
+
+void Win32IDE::clearAllPins() {
+    std::lock_guard<std::mutex> lock(m_routerMutex);
+    for (size_t i = 0; i < (size_t)LLMTaskType::Count; ++i) {
+        m_taskPins[i] = {};
+    }
+    logInfo("[LLMRouter] All task pins cleared");
+    appendToOutput("[LLMRouter] All task pins cleared.",
+                   "General", OutputSeverity::Info);
+}
+
+bool Win32IDE::isTaskPinned(LLMTaskType task) const {
+    if (task >= LLMTaskType::Count) return false;
+    return m_taskPins[(size_t)task].active;
+}
+
+Win32IDE::TaskBackendPin Win32IDE::getTaskPin(LLMTaskType task) const {
+    if (task >= LLMTaskType::Count) return TaskBackendPin{};
+    return m_taskPins[(size_t)task];
+}
+
+std::string Win32IDE::getPinnedTasksString() const {
+    std::ostringstream ss;
+    ss << "[LLMRouter] Task Pins:\n";
+    bool anyPinned = false;
+    for (size_t i = 0; i < (size_t)LLMTaskType::Count; ++i) {
+        const auto& pin = m_taskPins[i];
+        if (pin.active) {
+            ss << "  📌 " << taskTypeString((LLMTaskType)i)
+               << " → " << backendTypeString(pin.pinnedBackend);
+            if (!pin.reason.empty()) ss << " (" << pin.reason << ")";
+            ss << "\n";
+            anyPinned = true;
+        }
+    }
+    if (!anyPinned) {
+        ss << "  (no tasks pinned — all routing via policy)\n";
+    }
+    return ss.str();
+}
+
+// ============================================================================
+// UX ENHANCEMENT: Cost / Latency Heatmap
+// ============================================================================
+
+void Win32IDE::recordCostLatency(const RoutingDecision& decision) {
+    std::lock_guard<std::mutex> lock(m_routerMutex);
+
+    // Build a record
+    CostLatencyRecord rec;
+    rec.task         = decision.classifiedTask;
+    rec.backend      = decision.fallbackUsed ? decision.fallbackBackend : decision.selectedBackend;
+    rec.latencyMs    = decision.fallbackUsed ? decision.fallbackLatencyMs : decision.primaryLatencyMs;
+    rec.epochMs      = decision.decisionEpochMs;
+    rec.fallbackUsed = decision.fallbackUsed;
+
+    if (rec.backend < AIBackendType::Count) {
+        rec.costTier     = m_backendCapabilities[(size_t)rec.backend].costTier;
+        rec.qualityScore = m_backendCapabilities[(size_t)rec.backend].qualityScore;
+    }
+
+    // Append to rolling log
+    if (m_costLatencyLog.size() >= MAX_COST_LATENCY_LOG) {
+        m_costLatencyLog.erase(m_costLatencyLog.begin());
+    }
+    m_costLatencyLog.push_back(rec);
+
+    // Update heatmap cell
+    if (rec.task < LLMTaskType::Count && rec.backend < AIBackendType::Count) {
+        auto& cell = m_heatmap[(size_t)rec.task][(size_t)rec.backend];
+        cell.requestCount++;
+        cell.totalLatencyMs += (double)rec.latencyMs;
+        cell.avgLatencyMs    = cell.totalLatencyMs / (double)cell.requestCount;
+        if (rec.latencyMs < cell.minLatencyMs) cell.minLatencyMs = rec.latencyMs;
+        if (rec.latencyMs > cell.maxLatencyMs) cell.maxLatencyMs = rec.latencyMs;
+        cell.avgCostTier = ((cell.avgCostTier * (cell.requestCount - 1)) + rec.costTier)
+                           / (double)cell.requestCount;
+        cell.avgQuality  = ((cell.avgQuality * (cell.requestCount - 1)) + rec.qualityScore)
+                           / (double)cell.requestCount;
+    }
+}
+
+Win32IDE::HeatmapCell Win32IDE::getHeatmapCell(LLMTaskType task, AIBackendType backend) const {
+    if (task >= LLMTaskType::Count || backend >= AIBackendType::Count) return HeatmapCell{};
+    return m_heatmap[(size_t)task][(size_t)backend];
+}
+
+std::string Win32IDE::getCostLatencyHeatmapString() const {
+    std::ostringstream ss;
+    ss << "[LLMRouter] Cost / Latency Heatmap:\n";
+    ss << "  ──────────────────────────────────────────────────────────────\n";
+
+    // Column headers: backends
+    ss << "  Task\\Backend     ";
+    for (size_t b = 0; b < (size_t)AIBackendType::Count; ++b) {
+        std::string bname = backendTypeString((AIBackendType)b);
+        // Pad to 14 chars
+        while (bname.size() < 14) bname += ' ';
+        ss << bname;
+    }
+    ss << "\n  ──────────────────────────────────────────────────────────────\n";
+
+    for (size_t t = 0; t < (size_t)LLMTaskType::Count; ++t) {
+        std::string tname = taskTypeString((LLMTaskType)t);
+        while (tname.size() < 17) tname += ' ';
+        ss << "  " << tname;
+
+        for (size_t b = 0; b < (size_t)AIBackendType::Count; ++b) {
+            const auto& cell = m_heatmap[t][b];
+            if (cell.requestCount == 0) {
+                ss << "     -        ";
+            } else {
+                std::ostringstream cellStr;
+                cellStr << (int)cell.avgLatencyMs << "ms/"
+                        << cell.requestCount << "r";
+                std::string cs = cellStr.str();
+                while (cs.size() < 14) cs += ' ';
+                ss << cs;
+            }
+        }
+        ss << "\n";
+    }
+
+    ss << "  ──────────────────────────────────────────────────────────────\n";
+    ss << "  Legend: <avg latency>ms / <request count>r\n";
+    return ss.str();
+}
+
+std::string Win32IDE::getCostStatsString() const {
+    std::ostringstream ss;
+    ss << "[LLMRouter] Cost & Performance Statistics:\n";
+    ss << "  Total Records: " << m_costLatencyLog.size() << "\n\n";
+
+    // Per-backend aggregation
+    struct BStats {
+        uint64_t count = 0;
+        double totalLatency = 0;
+        int minLat = INT_MAX;
+        int maxLat = 0;
+        double totalCost = 0;
+    };
+    std::array<BStats, (size_t)AIBackendType::Count> bstats = {};
+
+    for (const auto& rec : m_costLatencyLog) {
+        if (rec.backend >= AIBackendType::Count) continue;
+        auto& bs = bstats[(size_t)rec.backend];
+        bs.count++;
+        bs.totalLatency += rec.latencyMs;
+        if (rec.latencyMs < bs.minLat) bs.minLat = rec.latencyMs;
+        if (rec.latencyMs > bs.maxLat) bs.maxLat = rec.latencyMs;
+        bs.totalCost += rec.costTier;
+    }
+
+    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
+        const auto& bs = bstats[i];
+        if (bs.count == 0) continue;
+        ss << "  " << backendTypeString((AIBackendType)i) << ":\n";
+        ss << "    Requests:     " << bs.count << "\n";
+        ss << "    Avg Latency:  " << (int)(bs.totalLatency / bs.count) << " ms\n";
+        ss << "    Min Latency:  " << bs.minLat << " ms\n";
+        ss << "    Max Latency:  " << bs.maxLat << " ms\n";
+        ss << "    Avg Cost Tier:" << std::fixed << std::setprecision(1)
+           << (bs.totalCost / bs.count) << "\n\n";
+    }
+
+    return ss.str();
+}
+
+// ============================================================================
+// RESEARCH: Ensemble Routing (Multi-Backend Fan-Out)
+// ============================================================================
+
+void Win32IDE::setEnsembleEnabled(bool enabled) {
+    m_ensembleEnabled = enabled;
+    logInfo("[LLMRouter] Ensemble mode " + std::string(enabled ? "ENABLED" : "DISABLED"));
+    appendToOutput("[LLMRouter] Ensemble routing " +
+                   std::string(enabled ? "ENABLED — prompts will be sent to multiple backends and the best response selected."
+                                       : "DISABLED — standard single-backend routing restored."),
+                   "General", OutputSeverity::Info);
+}
+
+bool Win32IDE::isEnsembleEnabled() const {
+    return m_ensembleEnabled;
+}
+
+std::string Win32IDE::routeWithEnsemble(const std::string& prompt) {
+    LLMTaskType task = classifyTask(prompt);
+    EnsembleDecision ensemble = buildEnsembleDecision(task, prompt);
+
+    // Store for later inspection
+    {
+        std::lock_guard<std::mutex> lock(m_routerMutex);
+        m_lastEnsembleDecision = ensemble;
+    }
+
+    logInfo("[LLMRouter] Ensemble: " + std::to_string(ensemble.votes.size()) +
+            " backends queried, winner='" + backendTypeString(ensemble.winnerBackend) +
+            "' (conf=" + std::to_string((int)(ensemble.winnerConfidence * 100)) +
+            "%, " + std::to_string(ensemble.totalLatencyMs) + "ms total)");
+
+    return ensemble.mergedResponse;
+}
+
+Win32IDE::EnsembleDecision Win32IDE::buildEnsembleDecision(LLMTaskType task,
+                                                            const std::string& prompt) {
+    EnsembleDecision ensemble;
+    ensemble.classifiedTask  = task;
+    ensemble.decisionEpochMs = currentEpochMs();
+    ensemble.strategy        = "confidence-weighted";
+
+    auto wallStart = std::chrono::steady_clock::now();
+
+    // Identify viable backends for this task
+    std::vector<AIBackendType> candidates;
+    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
+        AIBackendType bt = (AIBackendType)i;
+        if (isBackendViableForTask(bt, task)) {
+            candidates.push_back(bt);
+        }
+    }
+
+    if (candidates.empty()) {
+        // Fallback to active backend
+        candidates.push_back(m_activeBackend);
+    }
+
+    // Query each candidate backend sequentially
+    // (Could be parallelized in a future iteration with thread pool)
+    AIBackendType originalActive;
+    {
+        std::lock_guard<std::mutex> lock(m_backendMutex);
+        originalActive = m_activeBackend;
+    }
+
+    for (auto bt : candidates) {
+        EnsembleVote vote;
+        vote.backend = bt;
+
+        // Compute confidence weight from capability profile
+        {
+            const auto& cap = m_backendCapabilities[(size_t)bt];
+            vote.confidenceWeight = cap.qualityScore;
+            // Bonus for task alignment
+            if (task == LLMTaskType::ToolExecution && cap.supportsFunctionCalling) vote.confidenceWeight += 0.15f;
+            if (task == LLMTaskType::Research && cap.maxContextTokens >= 100000)   vote.confidenceWeight += 0.15f;
+            if (task == LLMTaskType::Chat && cap.costTier == 0)                    vote.confidenceWeight += 0.1f;
+            if (vote.confidenceWeight > 1.0f) vote.confidenceWeight = 1.0f;
+        }
+
+        // Execute inference on this backend
+        {
+            std::lock_guard<std::mutex> lock(m_backendMutex);
+            m_activeBackend = bt;
+        }
+
+        auto start = std::chrono::steady_clock::now();
+        std::string result = routeInferenceRequest(prompt);
+        auto end = std::chrono::steady_clock::now();
+        vote.latencyMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+        bool failed = result.empty() || result.find("[BackendSwitcher] Error") != std::string::npos;
+        vote.succeeded = !failed;
+        if (vote.succeeded) {
+            vote.response = result;
+        }
+
+        ensemble.votes.push_back(vote);
+    }
+
+    // Restore original backend
+    {
+        std::lock_guard<std::mutex> lock(m_backendMutex);
+        m_activeBackend = originalActive;
+    }
+
+    auto wallEnd = std::chrono::steady_clock::now();
+    ensemble.totalLatencyMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(wallEnd - wallStart).count();
+
+    // Select winner
+    ensemble.mergedResponse = selectEnsembleWinner(ensemble);
+
+    return ensemble;
+}
+
+std::string Win32IDE::selectEnsembleWinner(EnsembleDecision& decision) const {
+    // Strategy: pick the successful response with the highest confidence weight
+    float bestWeight = -1.0f;
+    size_t bestIndex = 0;
+    bool anySuccess = false;
+
+    for (size_t i = 0; i < decision.votes.size(); ++i) {
+        const auto& vote = decision.votes[i];
+        if (vote.succeeded && vote.confidenceWeight > bestWeight) {
+            bestWeight = vote.confidenceWeight;
+            bestIndex  = i;
+            anySuccess = true;
+        }
+    }
+
+    if (anySuccess) {
+        decision.winnerBackend    = decision.votes[bestIndex].backend;
+        decision.winnerConfidence = decision.votes[bestIndex].confidenceWeight;
+        return decision.votes[bestIndex].response;
+    }
+
+    // No backend succeeded
+    decision.winnerBackend    = AIBackendType::Count;
+    decision.winnerConfidence = 0.0f;
+    return "[LLMRouter] Ensemble: All " + std::to_string(decision.votes.size()) +
+           " backends failed to produce a response.";
+}
+
+std::string Win32IDE::getEnsembleStatusString() const {
+    std::ostringstream ss;
+    ss << "[LLMRouter] Ensemble Status:\n";
+    ss << "  Mode: " << (m_ensembleEnabled ? "ENABLED" : "DISABLED") << "\n";
+
+    std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_routerMutex));
+    if (m_lastEnsembleDecision.decisionEpochMs == 0) {
+        ss << "  No ensemble decisions recorded yet.\n";
+        return ss.str();
+    }
+
+    const auto& ens = m_lastEnsembleDecision;
+    ss << "  Last Ensemble Decision:\n";
+    ss << "    Task:        " << taskTypeString(ens.classifiedTask) << "\n";
+    ss << "    Strategy:    " << ens.strategy << "\n";
+    ss << "    Winner:      " << backendTypeString(ens.winnerBackend)
+       << " (confidence " << (int)(ens.winnerConfidence * 100) << "%)\n";
+    ss << "    Total Time:  " << ens.totalLatencyMs << " ms\n";
+    ss << "    Votes:\n";
+
+    for (const auto& vote : ens.votes) {
+        ss << "      " << backendTypeString(vote.backend)
+           << ": " << (vote.succeeded ? "OK" : "FAIL")
+           << " (" << vote.latencyMs << "ms, weight="
+           << (int)(vote.confidenceWeight * 100) << "%)"
+           << "\n";
+    }
+
+    return ss.str();
+}
+
+// ============================================================================
+// RESEARCH: Offline Routing Simulation
+// ============================================================================
+
+Win32IDE::SimulationResult Win32IDE::simulateRoutingOffline(
+    const std::vector<SimulationInput>& inputs) const
+{
+    SimulationResult result;
+    result.totalInputs = (int)inputs.size();
+    result.inputs      = inputs;
+
+    for (const auto& input : inputs) {
+        SimulationResult::PerInput pi;
+        pi.prompt = input.prompt;
+
+        // Classify
+        pi.classifiedTask = classifyTask(input.prompt);
+
+        // Simulate selection (create a mutable copy of this for the call)
+        // We use const_cast because selectBackendForTask takes a lock internally
+        // but the simulation is read-only in spirit (we don't actually route)
+        auto* mutableThis = const_cast<Win32IDE*>(this);
+        RoutingDecision decision = mutableThis->selectBackendForTask(pi.classifiedTask, input.prompt);
+
+        pi.selectedBackend = decision.selectedBackend;
+        pi.confidence      = decision.confidence;
+        pi.reason          = decision.reason;
+
+        // Check if classification matches expected
+        if (input.expectedTask != LLMTaskType::General ||
+            input.prompt.empty() == false) {
+            // Only count as "matched" if the user specified a non-General expected type
+            if (input.expectedTask != LLMTaskType::General) {
+                pi.matchedExpected = (pi.classifiedTask == input.expectedTask);
+                if (pi.matchedExpected) result.correctClassifications++;
+            }
+        }
+
+        result.results.push_back(pi);
+    }
+
+    if (result.totalInputs > 0) {
+        // Count accuracy only over inputs where expectedTask != General
+        int withExpected = 0;
+        for (const auto& inp : inputs) {
+            if (inp.expectedTask != LLMTaskType::General) withExpected++;
+        }
+        if (withExpected > 0) {
+            result.classificationAccuracy = (float)result.correctClassifications / (float)withExpected;
+        }
+    }
+
+    // Build summary
+    std::ostringstream ss;
+    ss << "Simulation: " << result.totalInputs << " prompts, "
+       << result.correctClassifications << " correct classifications";
+    if (result.classificationAccuracy > 0.0f) {
+        ss << " (" << (int)(result.classificationAccuracy * 100) << "% accuracy)";
+    }
+    result.summaryText = ss.str();
+
+    return result;
+}
+
+Win32IDE::SimulationResult Win32IDE::simulateFromHistory(int maxEvents) const {
+    // Load agent history events that have prompts
+    std::vector<AgentEvent> events = loadHistory(maxEvents);
+
+    std::vector<SimulationInput> inputs;
+    for (const auto& ev : events) {
+        if (ev.prompt.empty()) continue;
+        SimulationInput inp;
+        inp.prompt       = ev.prompt;
+        inp.expectedTask = LLMTaskType::General;  // No ground truth from history
+        inputs.push_back(inp);
+        if ((int)inputs.size() >= maxEvents) break;
+    }
+
+    if (inputs.empty()) {
+        SimulationResult empty;
+        empty.summaryText = "No prompts found in agent history for simulation.";
+        return empty;
+    }
+
+    return simulateRoutingOffline(inputs);
+}
+
+std::string Win32IDE::getSimulationResultString(const SimulationResult& result) const {
+    std::ostringstream ss;
+    ss << "[LLMRouter] Routing Simulation Results:\n";
+    ss << "  " << result.summaryText << "\n";
+    ss << "  ──────────────────────────────────────\n";
+
+    for (size_t i = 0; i < result.results.size() && i < 50; ++i) {
+        const auto& r = result.results[i];
+        std::string promptPreview = r.prompt.substr(0, 60);
+        if (r.prompt.size() > 60) promptPreview += "...";
+
+        ss << "  [" << (i + 1) << "] \"" << promptPreview << "\"\n";
+        ss << "      Task: " << taskTypeString(r.classifiedTask)
+           << " → " << backendTypeString(r.selectedBackend)
+           << " (conf " << (int)(r.confidence * 100) << "%)";
+        if (r.matchedExpected) ss << " ✓";
+        ss << "\n";
+    }
+
+    if (result.results.size() > 50) {
+        ss << "  ... and " << (result.results.size() - 50) << " more\n";
+    }
+
+    return ss.str();
+}
+
+// ============================================================================
+// UX/RESEARCH HTTP ENDPOINTS
+// ============================================================================
+
+void Win32IDE::handleRouterWhyEndpoint(SOCKET client) {
+    std::string explanation = generateWhyExplanationForLast();
+
+    // Build JSON response with both text and structured data
+    nlohmann::json j;
+    j["explanation"] = explanation;
+
+    {
+        std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_routerMutex));
+        if (m_lastRoutingDecision.decisionEpochMs > 0) {
+            const auto& d = m_lastRoutingDecision;
+            j["classifiedTask"]    = taskTypeString(d.classifiedTask);
+            j["selectedBackend"]   = backendTypeString(d.selectedBackend);
+            j["confidence"]        = d.confidence;
+            j["reason"]            = d.reason;
+            j["policyOverride"]    = d.policyOverride;
+            j["fallbackUsed"]      = d.fallbackUsed;
+            j["primaryLatencyMs"]  = d.primaryLatencyMs;
+            j["fallbackLatencyMs"] = d.fallbackLatencyMs;
+
+            // Include capability snapshot
+            if (d.selectedBackend < AIBackendType::Count) {
+                const auto& cap = m_backendCapabilities[(size_t)d.selectedBackend];
+                nlohmann::json cj;
+                cj["maxContextTokens"]       = cap.maxContextTokens;
+                cj["qualityScore"]           = cap.qualityScore;
+                cj["costTier"]               = cap.costTier;
+                cj["supportsToolCalls"]      = cap.supportsToolCalls;
+                cj["supportsFunctionCalling"] = cap.supportsFunctionCalling;
+                cj["supportsStreaming"]       = cap.supportsStreaming;
+                cj["supportsJsonMode"]       = cap.supportsJsonMode;
+                j["backendCapability"]       = cj;
+            }
+
+            // Pin status
+            const auto& pin = m_taskPins[(size_t)d.classifiedTask];
+            j["pinned"]        = pin.active;
+            j["pinnedBackend"] = pin.active ? backendTypeString(pin.pinnedBackend) : "none";
+            j["pinReason"]     = pin.reason;
+        }
+    }
+
+    std::string body = j.dump(2);
+    std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                       "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+void Win32IDE::handleRouterPinsEndpoint(SOCKET client) {
+    nlohmann::json j = nlohmann::json::array();
+
+    for (size_t i = 0; i < (size_t)LLMTaskType::Count; ++i) {
+        const auto& pin = m_taskPins[i];
+        nlohmann::json pj;
+        pj["task"]          = taskTypeString((LLMTaskType)i);
+        pj["active"]        = pin.active;
+        pj["pinnedBackend"] = pin.active ? backendTypeString(pin.pinnedBackend) : "none";
+        pj["reason"]        = pin.reason;
+        j.push_back(pj);
+    }
+
+    std::string body = j.dump(2);
+    std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                       "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+void Win32IDE::handleRouterHeatmapEndpoint(SOCKET client) {
+    nlohmann::json j;
+
+    // Heatmap grid
+    nlohmann::json grid = nlohmann::json::array();
+    for (size_t t = 0; t < (size_t)LLMTaskType::Count; ++t) {
+        nlohmann::json row;
+        row["task"] = taskTypeString((LLMTaskType)t);
+        nlohmann::json backends;
+        for (size_t b = 0; b < (size_t)AIBackendType::Count; ++b) {
+            const auto& cell = m_heatmap[t][b];
+            nlohmann::json cj;
+            cj["requestCount"] = cell.requestCount;
+            cj["avgLatencyMs"] = (int)cell.avgLatencyMs;
+            cj["minLatencyMs"] = (cell.requestCount > 0) ? cell.minLatencyMs : 0;
+            cj["maxLatencyMs"] = cell.maxLatencyMs;
+            cj["avgCostTier"]  = cell.avgCostTier;
+            cj["avgQuality"]   = cell.avgQuality;
+            backends[backendTypeString((AIBackendType)b)] = cj;
+        }
+        row["backends"] = backends;
+        grid.push_back(row);
+    }
+    j["heatmap"] = grid;
+
+    // Summary stats
+    j["totalRecords"] = (uint64_t)m_costLatencyLog.size();
+    j["maxRecords"]   = (uint64_t)MAX_COST_LATENCY_LOG;
+
+    std::string body = j.dump(2);
+    std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                       "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+void Win32IDE::handleRouterEnsembleEndpoint(SOCKET client, const std::string& body) {
+    try {
+        nlohmann::json reqJson = nlohmann::json::parse(body);
+
+        // Check for enable/disable action
+        if (reqJson.contains("action")) {
+            std::string action = reqJson["action"].get<std::string>();
+            if (action == "enable") {
+                setEnsembleEnabled(true);
+            } else if (action == "disable") {
+                setEnsembleEnabled(false);
+            } else if (action == "status") {
+                // Return status
+            }
+
+            nlohmann::json j;
+            j["ensembleEnabled"] = m_ensembleEnabled;
+            j["status"]          = getEnsembleStatusString();
+
+            std::string respBody = j.dump(2);
+            std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                               "Content-Length: " + std::to_string(respBody.size()) + "\r\n\r\n" + respBody;
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+
+        // Otherwise, run an ensemble query
+        std::string prompt = reqJson.value("prompt", "");
+        if (prompt.empty()) {
+            std::string errBody = R"({"error":"Missing 'prompt' or 'action' field"})";
+            std::string resp = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                               "Content-Length: " + std::to_string(errBody.size()) + "\r\n\r\n" + errBody;
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+
+        LLMTaskType task = classifyTask(prompt);
+        EnsembleDecision decision = buildEnsembleDecision(task, prompt);
+
+        nlohmann::json j;
+        j["classifiedTask"]   = taskTypeString(decision.classifiedTask);
+        j["strategy"]         = decision.strategy;
+        j["winnerBackend"]    = backendTypeString(decision.winnerBackend);
+        j["winnerConfidence"] = decision.winnerConfidence;
+        j["totalLatencyMs"]   = decision.totalLatencyMs;
+        j["mergedResponse"]   = decision.mergedResponse;
+
+        nlohmann::json votesArr = nlohmann::json::array();
+        for (const auto& vote : decision.votes) {
+            nlohmann::json vj;
+            vj["backend"]          = backendTypeString(vote.backend);
+            vj["succeeded"]        = vote.succeeded;
+            vj["latencyMs"]        = vote.latencyMs;
+            vj["confidenceWeight"] = vote.confidenceWeight;
+            vj["responsePreview"]  = vote.response.substr(0, 200);
+            votesArr.push_back(vj);
+        }
+        j["votes"] = votesArr;
+
+        std::string respBody = j.dump(2);
+        std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                           "Content-Length: " + std::to_string(respBody.size()) + "\r\n\r\n" + respBody;
+        send(client, resp.c_str(), (int)resp.size(), 0);
+    } catch (const std::exception& e) {
+        std::string errBody = std::string(R"({"error":")") + e.what() + "\"}";
+        std::string resp = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                           "Content-Length: " + std::to_string(errBody.size()) + "\r\n\r\n" + errBody;
+        send(client, resp.c_str(), (int)resp.size(), 0);
+    }
+}
+
+void Win32IDE::handleRouterSimulateEndpoint(SOCKET client, const std::string& body) {
+    try {
+        nlohmann::json reqJson = nlohmann::json::parse(body);
+
+        SimulationResult simResult;
+
+        if (reqJson.contains("fromHistory") && reqJson["fromHistory"].get<bool>()) {
+            int maxEvents = reqJson.value("maxEvents", 100);
+            simResult = simulateFromHistory(maxEvents);
+        } else if (reqJson.contains("prompts") && reqJson["prompts"].is_array()) {
+            std::vector<SimulationInput> inputs;
+            for (size_t pi = 0; pi < reqJson["prompts"].size(); ++pi) {
+                const auto& pj = reqJson["prompts"][pi];
+                SimulationInput inp;
+                if (pj.is_string()) {
+                    inp.prompt = pj.get<std::string>();
+                } else if (pj.is_object()) {
+                    inp.prompt       = pj.value("prompt", "");
+                    std::string expTask = pj.value("expectedTask", "General");
+                    inp.expectedTask = taskTypeFromString(expTask);
+                }
+                if (!inp.prompt.empty()) inputs.push_back(inp);
+            }
+            simResult = simulateRoutingOffline(inputs);
+        } else {
+            std::string errBody = R"({"error":"Provide 'prompts' array or 'fromHistory': true"})";
+            std::string resp = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                               "Content-Length: " + std::to_string(errBody.size()) + "\r\n\r\n" + errBody;
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+
+        // Store last result
+        {
+            std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_routerMutex));
+            const_cast<SimulationResult&>(m_lastSimulationResult) = simResult;
+        }
+
+        // Build JSON response
+        nlohmann::json j;
+        j["totalInputs"]             = simResult.totalInputs;
+        j["correctClassifications"]  = simResult.correctClassifications;
+        j["classificationAccuracy"]  = simResult.classificationAccuracy;
+        j["summary"]                 = simResult.summaryText;
+
+        nlohmann::json resultsArr = nlohmann::json::array();
+        for (const auto& r : simResult.results) {
+            nlohmann::json rj;
+            rj["prompt"]          = r.prompt.substr(0, 120);
+            rj["classifiedTask"]  = taskTypeString(r.classifiedTask);
+            rj["selectedBackend"] = backendTypeString(r.selectedBackend);
+            rj["confidence"]      = r.confidence;
+            rj["reason"]          = r.reason;
+            rj["matchedExpected"] = r.matchedExpected;
+            resultsArr.push_back(rj);
+        }
+        j["results"] = resultsArr;
 
         std::string respBody = j.dump(2);
         std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"

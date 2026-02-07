@@ -36,6 +36,7 @@
 #include "../modules/ExtensionLoader.hpp"
 #include <nlohmann/json.hpp>
 #include <condition_variable>
+#include <climits>
 
 // Agent and AI IDs
 #define IDM_AGENT_START_LOOP 4100

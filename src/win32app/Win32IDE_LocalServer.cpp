@@ -433,6 +433,32 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== UX Enhancements & Research Track ==========
+    else if (method == "GET" && path == "/api/router/why") {
+        handleRouterWhyEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/router/pins") {
+        handleRouterPinsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/router/heatmap") {
+        handleRouterHeatmapEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/router/ensemble") {
+        handleRouterEnsembleEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/router/simulate") {
+        handleRouterSimulateEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
     // ========== Phase 9A: LSP Client ==========
     else if (method == "GET" && path == "/api/lsp/status") {
         handleLSPStatusEndpoint(client);

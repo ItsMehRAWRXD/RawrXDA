@@ -919,6 +919,89 @@ void Win32IDE::handleToolsCommand(int commandId) {
             break;
 
         // ============================================================
+        // UX Enhancements & Research Track (5071–5081 range)
+        // ============================================================
+
+        case IDM_ROUTER_WHY_BACKEND:  // 5071
+            appendToOutput(generateWhyExplanationForLast(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_ROUTER_PIN_TASK:  // 5072
+            {
+                // Pin the last-classified task to the last-selected backend
+                RoutingDecision last = getLastRoutingDecision();
+                if (last.decisionEpochMs > 0) {
+                    pinTaskToBackend(last.classifiedTask, last.selectedBackend,
+                                     "Pinned via palette (last decision)");
+                } else {
+                    appendToOutput("[LLMRouter] No routing decision to pin from. "
+                                   "Send a prompt first, then pin.",
+                                   "General", OutputSeverity::Warning);
+                }
+            }
+            break;
+
+        case IDM_ROUTER_UNPIN_TASK:  // 5073
+            {
+                RoutingDecision last = getLastRoutingDecision();
+                if (last.decisionEpochMs > 0 && isTaskPinned(last.classifiedTask)) {
+                    unpinTask(last.classifiedTask);
+                } else {
+                    appendToOutput("[LLMRouter] No pinned task found for the last-routed task type.",
+                                   "General", OutputSeverity::Warning);
+                }
+            }
+            break;
+
+        case IDM_ROUTER_SHOW_PINS:  // 5074
+            appendToOutput(getPinnedTasksString(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_ROUTER_SHOW_HEATMAP:  // 5075
+            appendToOutput(getCostLatencyHeatmapString(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_ROUTER_ENSEMBLE_ENABLE:  // 5076
+            if (!m_routerInitialized) initLLMRouter();
+            setEnsembleEnabled(true);
+            break;
+
+        case IDM_ROUTER_ENSEMBLE_DISABLE:  // 5077
+            setEnsembleEnabled(false);
+            break;
+
+        case IDM_ROUTER_ENSEMBLE_STATUS:  // 5078
+            appendToOutput(getEnsembleStatusString(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_ROUTER_SIMULATE:  // 5079
+            {
+                // Simulate from agent history
+                SimulationResult simResult = simulateFromHistory(50);
+                m_lastSimulationResult = simResult;
+                appendToOutput(getSimulationResultString(simResult),
+                               "General", OutputSeverity::Info);
+            }
+            break;
+
+        case IDM_ROUTER_SIMULATE_LAST:  // 5080
+            {
+                if (m_lastSimulationResult.totalInputs > 0) {
+                    appendToOutput(getSimulationResultString(m_lastSimulationResult),
+                                   "General", OutputSeverity::Info);
+                } else {
+                    appendToOutput("[LLMRouter] No simulation results yet. "
+                                   "Run 'Router: Simulate from History' first.",
+                                   "General", OutputSeverity::Warning);
+                }
+            }
+            break;
+
+        case IDM_ROUTER_SHOW_COST_STATS:  // 5081
+            appendToOutput(getCostStatsString(), "General", OutputSeverity::Info);
+            break;
+
+        // ============================================================
         // LSP Client (5058–5070 range)
         // ============================================================
 
@@ -1330,6 +1413,21 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_ROUTER_SAVE_CONFIG,       "Router: Save Router Configuration",          "", "Router"});
     m_commandRegistry.push_back({IDM_ROUTER_ROUTE_PROMPT,      "Router: Dry-Run Route Current Prompt",       "", "Router"});
     m_commandRegistry.push_back({IDM_ROUTER_RESET_STATS,       "Router: Reset Statistics & Failure Counters", "", "Router"});
+
+    // ================================================================
+    // UX Enhancements & Research Track (5071–5081 range)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_ROUTER_WHY_BACKEND,       "Router: Why This Backend? (Explain Last Decision)", "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_PIN_TASK,          "Router: Pin Current Task to Backend",               "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_UNPIN_TASK,        "Router: Unpin Current Task",                        "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SHOW_PINS,         "Router: Show All Task Pins",                        "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SHOW_HEATMAP,      "Router: Show Cost/Latency Heatmap",                 "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_ENSEMBLE_ENABLE,   "Router: Enable Ensemble Routing (Multi-Backend)",   "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_ENSEMBLE_DISABLE,  "Router: Disable Ensemble Routing",                  "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_ENSEMBLE_STATUS,   "Router: Show Ensemble Status & Last Decision",      "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SIMULATE,          "Router: Simulate Routing from Agent History",        "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SIMULATE_LAST,     "Router: Show Last Simulation Results",              "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SHOW_COST_STATS,   "Router: Show Cost & Performance Statistics",         "", "Router"});
 
     // ================================================================
     // LSP Client (5058–5070 range — routed via handleToolsCommand)

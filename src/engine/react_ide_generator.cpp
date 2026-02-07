@@ -3369,7 +3369,7 @@ export const RouterPanel: React.FC = () => {
   const [testResult, setTestResult] = useState<RoutingDecision | null>(null);
   const [testing, setTesting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'overview' | 'capabilities' | 'test'>('overview');
+  const [tab, setTab] = useState<'overview' | 'capabilities' | 'test' | 'heatmap' | 'pins' | 'research'>('overview');
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -3416,6 +3416,351 @@ export const RouterPanel: React.FC = () => {
     }
   };
 
+  // ---- Heatmap Tab Sub-Component ----
+  const HeatmapTab: React.FC = () => {
+    const [heatmap, setHeatmap] = useState<any>(null);
+    const [whyData, setWhyData] = useState<any>(null);
+    const [loadingHm, setLoadingHm] = useState(true);
+
+    useEffect(() => {
+      (async () => {
+        setLoadingHm(true);
+        try {
+          const [hmRes, whyRes] = await Promise.all([
+            fetch('/api/router/heatmap'),
+            fetch('/api/router/why'),
+          ]);
+          if (hmRes.ok) setHeatmap(await hmRes.json());
+          if (whyRes.ok) setWhyData(await whyRes.json());
+        } catch (err) {
+          console.error('Heatmap fetch error:', err);
+        }
+        setLoadingHm(false);
+      })();
+    }, []);
+
+    if (loadingHm) return <div className="text-xs text-muted-foreground">Loading heatmap...</div>;
+
+    const backends = ['LocalGGUF', 'Ollama', 'OpenAI', 'Claude', 'Gemini'];
+    const heatColor = (avg: number, count: number) => {
+      if (count === 0) return 'bg-gray-800/30';
+      if (avg < 200) return 'bg-green-600/30 text-green-300';
+      if (avg < 1000) return 'bg-yellow-600/30 text-yellow-300';
+      return 'bg-red-600/30 text-red-300';
+    };
+
+    return (
+      <div className="space-y-3">
+        {/* Why this backend? */}
+        {whyData && whyData.classifiedTask && (
+          <div className="rounded-lg border border-teal-600/30 bg-teal-600/5 p-3 space-y-1">
+            <div className="text-xs font-medium text-teal-300">Why This Backend?</div>
+            <div className="text-xs font-mono">
+              {whyData.classifiedTask} → {whyData.selectedBackend}
+              {' '}({Math.round(whyData.confidence * 100)}%)
+            </div>
+            <div className="text-xs text-muted-foreground italic">{whyData.reason}</div>
+            {whyData.pinned && (
+              <div className="text-xs text-purple-400">📌 Pinned to {whyData.pinnedBackend}</div>
+            )}
+          </div>
+        )}
+
+        {/* Cost/Latency Grid */}
+        {heatmap && heatmap.heatmap && (
+          <div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">
+              Cost / Latency Heatmap ({heatmap.totalRecords} records)
+            </div>
+            <div className="overflow-x-auto">
+              <table className="text-xs w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="text-left p-1 text-muted-foreground">Task</th>
+                    {backends.map(b => (
+                      <th key={b} className="text-center p-1 text-muted-foreground">{b}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {heatmap.heatmap.map((row: any) => (
+                    <tr key={row.task}>
+                      <td className="p-1 font-mono text-foreground">{row.task}</td>
+                      {backends.map(b => {
+                        const cell = row.backends[b];
+                        return (
+                          <td key={b} className={`p-1 text-center font-mono rounded ${heatColor(cell?.avgLatencyMs || 0, cell?.requestCount || 0)}`}>
+                            {cell && cell.requestCount > 0
+                              ? `${cell.avgLatencyMs}ms/${cell.requestCount}r`
+                              : '-'
+                            }
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Colors: <span className="text-green-300">green</span> &lt;200ms ·{' '}
+              <span className="text-yellow-300">yellow</span> &lt;1s ·{' '}
+              <span className="text-red-300">red</span> &gt;1s
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ---- Pins Tab Sub-Component ----
+  const PinsTab: React.FC = () => {
+    const [pins, setPins] = useState<any[]>([]);
+    const [loadingPins, setLoadingPins] = useState(true);
+
+    useEffect(() => {
+      (async () => {
+        setLoadingPins(true);
+        try {
+          const res = await fetch('/api/router/pins');
+          if (res.ok) setPins(await res.json());
+        } catch (err) {
+          console.error('Pins fetch error:', err);
+        }
+        setLoadingPins(false);
+      })();
+    }, []);
+
+    if (loadingPins) return <div className="text-xs text-muted-foreground">Loading pins...</div>;
+
+    const activePins = pins.filter(p => p.active);
+    const inactivePins = pins.filter(p => !p.active);
+
+    return (
+      <div className="space-y-3">
+        <div className="text-xs text-muted-foreground">
+          Pins override the router's task → backend selection. Use the palette command
+          <code className="mx-1 px-1 bg-accent rounded">Router: Pin Current Task to Backend</code>
+          to pin.
+        </div>
+
+        {activePins.length > 0 && (
+          <div>
+            <div className="text-xs font-medium text-purple-400 mb-1">📌 Active Pins</div>
+            <div className="space-y-1">
+              {activePins.map(p => (
+                <div key={p.task} className="flex items-center gap-2 text-xs bg-purple-600/10 border border-purple-600/20 rounded px-2 py-1">
+                  <span className="font-mono text-foreground w-28">{p.task}</span>
+                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-purple-300 font-mono">{p.pinnedBackend}</span>
+                  {p.reason && <span className="text-muted-foreground italic ml-auto">({p.reason})</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {inactivePins.length > 0 && (
+          <div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">Unpinned Tasks (routed by policy)</div>
+            <div className="space-y-0.5">
+              {inactivePins.map(p => (
+                <div key={p.task} className="text-xs text-muted-foreground font-mono px-2 py-0.5">
+                  {p.task} — not pinned
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ---- Research Tab Sub-Component ----
+  const ResearchTab: React.FC = () => {
+    const [ensembleStatus, setEnsembleStatus] = useState<any>(null);
+    const [simResult, setSimResult] = useState<any>(null);
+    const [simulating, setSimulating] = useState(false);
+    const [ensemblePrompt, setEnsemblePrompt] = useState('');
+    const [ensembleResult, setEnsembleResult] = useState<any>(null);
+    const [ensembleTesting, setEnsembleTesting] = useState(false);
+
+    useEffect(() => {
+      (async () => {
+        try {
+          const res = await fetch('/api/router/ensemble', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'status' }),
+          });
+          if (res.ok) setEnsembleStatus(await res.json());
+        } catch (err) {
+          console.error('Ensemble status error:', err);
+        }
+      })();
+    }, []);
+
+    const runSimulation = async () => {
+      setSimulating(true);
+      try {
+        const res = await fetch('/api/router/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fromHistory: true, maxEvents: 50 }),
+        });
+        if (res.ok) setSimResult(await res.json());
+      } catch (err) {
+        console.error('Simulation error:', err);
+      }
+      setSimulating(false);
+    };
+
+    const testEnsemble = async () => {
+      if (!ensemblePrompt.trim()) return;
+      setEnsembleTesting(true);
+      try {
+        const res = await fetch('/api/router/ensemble', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: ensemblePrompt }),
+        });
+        if (res.ok) setEnsembleResult(await res.json());
+      } catch (err) {
+        console.error('Ensemble test error:', err);
+      }
+      setEnsembleTesting(false);
+    };
+
+    const toggleEnsemble = async (enabled: boolean) => {
+      try {
+        const res = await fetch('/api/router/ensemble', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: enabled ? 'enable' : 'disable' }),
+        });
+        if (res.ok) setEnsembleStatus(await res.json());
+      } catch (err) {
+        console.error('Ensemble toggle error:', err);
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        {/* Ensemble Routing Section */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-medium text-teal-400">Ensemble Routing (Multi-Backend)</div>
+            <button
+              onClick={() => toggleEnsemble(!ensembleStatus?.ensembleEnabled)}
+              className="flex items-center gap-1 px-2 py-0.5 text-xs rounded border border-border hover:bg-accent"
+            >
+              {ensembleStatus?.ensembleEnabled ? (
+                <><ToggleRight className="w-3 h-3 text-teal-400" /> ON</>
+              ) : (
+                <><ToggleLeft className="w-3 h-3 text-muted-foreground" /> OFF</>
+              )}
+            </button>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            When enabled, prompts are sent to all viable backends and the best response is selected via confidence-weighted voting.
+          </div>
+
+          <div>
+            <textarea
+              value={ensemblePrompt}
+              onChange={(e) => setEnsemblePrompt(e.target.value)}
+              className="w-full h-16 bg-black/50 border border-border rounded-md p-2 text-xs font-mono text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-teal-500"
+              placeholder="Test ensemble routing with a prompt..."
+            />
+            <button
+              onClick={testEnsemble}
+              disabled={ensembleTesting || !ensemblePrompt.trim()}
+              className="mt-1 flex items-center gap-2 px-3 py-1 text-xs rounded-md bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50"
+            >
+              {ensembleTesting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+              {ensembleTesting ? 'Querying backends...' : 'Test Ensemble'}
+            </button>
+          </div>
+
+          {ensembleResult && (
+            <div className="rounded-lg border border-teal-600/30 bg-teal-600/5 p-3 space-y-1">
+              <div className="text-xs font-medium text-teal-300">Ensemble Result</div>
+              <div className="text-xs font-mono">
+                Winner: {ensembleResult.winnerBackend}
+                {' '}({Math.round(ensembleResult.winnerConfidence * 100)}%)
+                {' · '}{ensembleResult.totalLatencyMs}ms total
+              </div>
+              {ensembleResult.votes && ensembleResult.votes.map((v: any, i: number) => (
+                <div key={i} className="text-xs flex items-center gap-2">
+                  <span className={v.succeeded ? 'text-green-400' : 'text-red-400'}>
+                    {v.succeeded ? '✓' : '✗'}
+                  </span>
+                  <span className="font-mono">{v.backend}</span>
+                  <span className="text-muted-foreground">{v.latencyMs}ms</span>
+                  <span className="text-muted-foreground">weight: {Math.round(v.confidenceWeight * 100)}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-border" />
+
+        {/* Offline Simulation Section */}
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-purple-400">Offline Routing Simulation</div>
+          <div className="text-xs text-muted-foreground">
+            Replays agent history through the router classifier to test task classification accuracy.
+          </div>
+          <button
+            onClick={runSimulation}
+            disabled={simulating}
+            className="flex items-center gap-2 px-3 py-1 text-xs rounded-md bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+          >
+            {simulating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+            {simulating ? 'Simulating...' : 'Simulate from History'}
+          </button>
+
+          {simResult && (
+            <div className="rounded-lg border border-purple-600/30 bg-purple-600/5 p-3 space-y-2">
+              <div className="text-xs font-medium text-purple-300">{simResult.summary}</div>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="text-center">
+                  <div className="font-bold text-purple-400">{simResult.totalInputs}</div>
+                  <div className="text-muted-foreground">Prompts</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-bold text-green-400">{simResult.correctClassifications}</div>
+                  <div className="text-muted-foreground">Correct</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-bold text-teal-400">{Math.round((simResult.classificationAccuracy || 0) * 100)}%</div>
+                  <div className="text-muted-foreground">Accuracy</div>
+                </div>
+              </div>
+              {simResult.results && simResult.results.length > 0 && (
+                <div className="max-h-40 overflow-y-auto space-y-0.5">
+                  {simResult.results.slice(0, 20).map((r: any, i: number) => (
+                    <div key={i} className="text-xs font-mono flex items-center gap-1">
+                      <span className="text-muted-foreground w-5">{i + 1}.</span>
+                      <span className="text-foreground truncate flex-1">{r.prompt}</span>
+                      <span className="text-teal-300 shrink-0">{r.classifiedTask}</span>
+                      <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <span className="text-purple-300 shrink-0">{r.selectedBackend}</span>
+                    </div>
+                  ))}
+                  {simResult.results.length > 20 && (
+                    <div className="text-xs text-muted-foreground">...and {simResult.results.length - 20} more</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
@@ -3443,8 +3788,8 @@ export const RouterPanel: React.FC = () => {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 border-b border-border pb-1">
-        {(['overview', 'capabilities', 'test'] as const).map(t => (
+      <div className="flex gap-1 border-b border-border pb-1 flex-wrap">
+        {(['overview', 'capabilities', 'test', 'heatmap', 'pins', 'research'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -3452,7 +3797,7 @@ export const RouterPanel: React.FC = () => {
               tab === t ? 'bg-accent text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {t === 'overview' ? 'Overview' : t === 'capabilities' ? 'Capabilities' : 'Test Route'}
+            {t === 'overview' ? 'Overview' : t === 'capabilities' ? 'Capabilities' : t === 'test' ? 'Test Route' : t === 'heatmap' ? 'Heatmap' : t === 'pins' ? 'Pins' : 'Research'}
           </button>
         ))}
       </div>
@@ -3614,10 +3959,25 @@ export const RouterPanel: React.FC = () => {
         </div>
       )}
 
+      {/* Heatmap tab */}
+      {tab === 'heatmap' && (
+        <HeatmapTab />
+      )}
+
+      {/* Pins tab */}
+      {tab === 'pins' && (
+        <PinsTab />
+      )}
+
+      {/* Research tab (Ensemble + Simulation) */}
+      {tab === 'research' && (
+        <ResearchTab />
+      )}
+
       {/* Footer */}
       <div className="border-t border-border pt-3 text-xs text-muted-foreground space-y-1">
         <div>
-          <strong>API:</strong> GET /api/router/status · GET /api/router/decision · GET /api/router/capabilities · POST /api/router/route
+          <strong>API:</strong> GET /api/router/status · decision · capabilities · why · pins · heatmap · POST route · ensemble · simulate
         </div>
         <div>
           <strong>Palette:</strong> :router to filter router commands
