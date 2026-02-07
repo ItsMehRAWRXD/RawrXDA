@@ -57,3 +57,6 @@ dist/
 # Local only
 *.local
 secrets.txt
+
+# Nested repos (not submodules)
+itsmehrawrxd-master/
