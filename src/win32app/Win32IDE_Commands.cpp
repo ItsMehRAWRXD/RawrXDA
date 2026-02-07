@@ -700,7 +700,81 @@ void Win32IDE::handleToolsCommand(int commandId) {
                 }
             }
             break;
-            
+
+        // ================================================================
+        // Policy Engine — Phase 7 (5027+)
+        // ================================================================
+        case 5027: // List Active Policies
+            appendToOutput("[Policy] Active Policies:\n"
+                           "  Use /policies in the REPL or GET /api/policies via HTTP.\n"
+                           "  Policy engine governs retry limits, swarm-to-chain redirects, and adaptive thresholds.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case 5028: // Generate Suggestions
+            appendToOutput("[Policy] Generating policy suggestions...\n"
+                           "  Use /suggest in the REPL or GET /api/policies/suggestions via HTTP.\n"
+                           "  The engine analyzes recent heuristics to recommend new policies.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case 5029: // Show Heuristics
+            appendToOutput("[Policy] Computing heuristics...\n"
+                           "  Use /heuristics in the REPL or GET /api/policies/heuristics via HTTP.\n"
+                           "  Heuristics: failure rate, avg latency, retry success %, swarm fan-out.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case 5030: // Export Policies
+            appendToOutput("[Policy] Export:\n"
+                           "  Use /policy export <file> in the REPL or GET /api/policies/export via HTTP.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case 5031: // Import Policies
+            appendToOutput("[Policy] Import:\n"
+                           "  Use /policy import <file> in the REPL or POST /api/policies/import via HTTP.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case 5032: // Policy Stats
+            appendToOutput("[Policy] Stats:\n"
+                           "  Use GET /api/policies/stats via HTTP.\n"
+                           "  Shows accepted/rejected/pending counts and heuristic summary.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        // ================================================================
+        // Explainability — Phase 8A (5033+)
+        // ================================================================
+        case 5033: // Session Explanation
+            appendToOutput("[Explain] Session Explanation:\n"
+                           "  Use /explain session in the REPL or GET /api/agents/explain via HTTP.\n"
+                           "  Returns a narrative summary of agent activity, failures, and policy decisions.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case 5034: // Trace Last Agent
+            appendToOutput("[Explain] Trace Last Agent:\n"
+                           "  Use /explain last in the REPL or GET /api/agents/explain?agent_id=<id> via HTTP.\n"
+                           "  Builds a causal decision trace showing each event and its outcome.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case 5035: // Export Snapshot
+            appendToOutput("[Explain] Export Snapshot:\n"
+                           "  Use /explain snapshot <file> in the REPL.\n"
+                           "  Exports the full explainability snapshot (traces, attributions, narrative) to JSON.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case 5036: // Explainability Stats
+            appendToOutput("[Explain] Stats:\n"
+                           "  Use GET /api/agents/explain/stats via HTTP.\n"
+                           "  Shows event counts, agent spawns, failures, retries, policy firings.",
+                           "General", OutputSeverity::Info);
+            break;
+
         default:
             break;
     }
@@ -1001,6 +1075,20 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({5024, "AI: Show Failure Intelligence Panel", "", "AI"});
     m_commandRegistry.push_back({5025, "AI: Show Failure Intelligence Stats", "", "AI"});
     m_commandRegistry.push_back({5026, "AI: Execute with Failure Intelligence", "", "AI"});
+
+    // Policy Engine — Phase 7 (5027+ range — routed via handleToolsCommand)
+    m_commandRegistry.push_back({5027, "Policy: List Active Policies", "", "Policy"});
+    m_commandRegistry.push_back({5028, "Policy: Generate Suggestions", "", "Policy"});
+    m_commandRegistry.push_back({5029, "Policy: Show Heuristics", "", "Policy"});
+    m_commandRegistry.push_back({5030, "Policy: Export Policies to File", "", "Policy"});
+    m_commandRegistry.push_back({5031, "Policy: Import Policies from File", "", "Policy"});
+    m_commandRegistry.push_back({5032, "Policy: Show Policy Stats", "", "Policy"});
+
+    // Explainability — Phase 8A (5033+ range — routed via handleToolsCommand)
+    m_commandRegistry.push_back({5033, "Explain: Show Session Explanation", "", "Explain"});
+    m_commandRegistry.push_back({5034, "Explain: Trace Last Agent", "", "Explain"});
+    m_commandRegistry.push_back({5035, "Explain: Export Snapshot", "", "Explain"});
+    m_commandRegistry.push_back({5036, "Explain: Show Explainability Stats", "", "Explain"});
 
     // ================================================================
     // Theme Selection (3101–3116 range — routed via handleViewCommand)
@@ -1395,6 +1483,11 @@ LRESULT CALLBACK Win32IDE::CommandPaletteProc(HWND hwnd, UINT uMsg, WPARAM wPara
         else if (cmd.category == "Help") catColor = RGB(180, 180, 180);
         else if (cmd.category == "Theme") catColor = RGB(255, 167, 38);
         else if (cmd.category == "Transparency") catColor = RGB(100, 181, 246);
+        else if (cmd.category == "History") catColor = RGB(78, 201, 176);
+        else if (cmd.category == "Settings") catColor = RGB(220, 220, 170);
+        else if (cmd.category == "Server") catColor = RGB(86, 156, 214);
+        else if (cmd.category == "Policy") catColor = RGB(255, 183, 77);
+        else if (cmd.category == "Explain") catColor = RGB(0, 188, 212);
 
         // Draw category dot
         HBRUSH dotBrush = CreateSolidBrush(catColor);

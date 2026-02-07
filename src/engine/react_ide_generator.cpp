@@ -798,7 +798,10 @@ import { HotPatchPanel } from '@/components/HotPatchPanel';
 import { VSIXLoaderPanel } from '@/components/VSIXLoaderPanel';
 import { SubAgentPanel } from '@/components/SubAgentPanel';
 import { FailurePanel } from '@/components/FailurePanel';
-import { Terminal, Bot } from 'lucide-react';
+import { HistoryPanel } from '@/components/HistoryPanel';
+import { PolicyPanel } from '@/components/PolicyPanel';
+import { ExplainabilityPanel } from '@/components/ExplainabilityPanel';
+import { Terminal, Bot, Clock, Shield, Eye } from 'lucide-react';
 
 function App() {
   const { connect, isConnected, logs, agenticReady } = useEngineStore();
@@ -812,7 +815,7 @@ function App() {
     subagents: false,
     capabilities: { completion: true, streaming: false }
   });
-  const [rightPanel, setRightPanel] = useState<'tools' | 'agents' | 'failures'>('tools');
+  const [rightPanel, setRightPanel] = useState<'tools' | 'agents' | 'failures' | 'history' | 'policy' | 'explain'>('tools');
 
   useEffect(() => {
     connect();
@@ -855,6 +858,33 @@ function App() {
           title="Toggle Failure Panel"
         >
           <span className="text-xs font-bold">!</span>
+        </button>
+        <button
+          onClick={() => setRightPanel(rightPanel === 'history' ? 'tools' : 'history')}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+            rightPanel === 'history' ? 'bg-green-600 text-white' : 'bg-background hover:bg-background/80'
+          }`}
+          title="Toggle History Panel"
+        >
+          <Clock className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setRightPanel(rightPanel === 'policy' ? 'tools' : 'policy')}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+            rightPanel === 'policy' ? 'bg-amber-600 text-white' : 'bg-background hover:bg-background/80'
+          }`}
+          title="Toggle Policy Panel"
+        >
+          <Shield className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setRightPanel(rightPanel === 'explain' ? 'tools' : 'explain')}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+            rightPanel === 'explain' ? 'bg-cyan-600 text-white' : 'bg-background hover:bg-background/80'
+          }`}
+          title="Toggle Explainability Panel"
+        >
+          <Eye className="w-4 h-4" />
         </button>
         <div className="flex flex-col items-center gap-1">
           {status.agentic && <div className="w-2 h-2 rounded-full bg-purple-500" title="Agentic" />}
@@ -902,6 +932,18 @@ function App() {
             ) : rightPanel === 'failures' ? (
               <div className="flex-1 overflow-hidden">
                 <FailurePanel />
+              </div>
+            ) : rightPanel === 'history' ? (
+              <div className="flex-1 overflow-hidden">
+                <HistoryPanel />
+              </div>
+            ) : rightPanel === 'policy' ? (
+              <div className="flex-1 overflow-hidden">
+                <PolicyPanel />
+              </div>
+            ) : rightPanel === 'explain' ? (
+              <div className="flex-1 overflow-hidden">
+                <ExplainabilityPanel />
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto border-b border-border">
@@ -1211,6 +1253,8 @@ bool ReactIDEGenerator::GenerateIDE(const std::string& name, const std::string& 
     WriteFile(project_path / "src" / "components" / "HistoryPanel.tsx", GenerateHistoryPanel());
     WriteFile(project_path / "src" / "components" / "FailurePanel.tsx", GenerateFailurePanel());
     WriteFile(project_path / "src" / "components" / "ExplainabilityPanel.tsx", GenerateExplainabilityPanel());
+    WriteFile(project_path / "src" / "components" / "PolicyPanel.tsx", GeneratePolicyPanel());
+    WriteFile(project_path / "src" / "components" / "SettingsPanel.tsx", GenerateSettingsPanel());
 
     // UI Components (Minimal shadcn abstraction)
     WriteFile(project_path / "src" / "components" / "ui" / "card.tsx", R"(import * as React from "react"
