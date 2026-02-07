@@ -498,6 +498,15 @@ void Win32IDE::handleAgentCommand(int commandId) {
         case IDM_REVENG_EXPORT_GHIDRA:
             handleReverseEngineeringExportGhidra();
             break;
+        case IDM_REVENG_CFG:
+            handleReverseEngineeringCFG();
+            break;
+        case IDM_REVENG_FUNCTIONS:
+            handleReverseEngineeringFunctions();
+            break;
+        case IDM_REVENG_DEMANGLE:
+            handleReverseEngineeringDemangle();
+            break;
 
         default:
             appendToOutput("Unknown Agent Command ID: " + std::to_string(commandId) + "\n", "Debug", OutputSeverity::Warning);

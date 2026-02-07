@@ -1,0 +1,2 @@
+mingw32-make: Makefile: No such file or directory
+mingw32-make: *** No rule to make target 'Makefile'.  Stop.

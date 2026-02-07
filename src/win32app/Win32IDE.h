@@ -105,6 +105,9 @@ class MultiResponseEngine;
 #define IDM_REVENG_DETECT_VULNS 4305
 #define IDM_REVENG_EXPORT_IDA 4306
 #define IDM_REVENG_EXPORT_GHIDRA 4307
+#define IDM_REVENG_CFG 4308
+#define IDM_REVENG_FUNCTIONS 4309
+#define IDM_REVENG_DEMANGLE 4310
 
 // Define LOG_FUNCTION macro if not already defined
 #ifndef LOG_FUNCTION
@@ -1062,6 +1065,9 @@ private:
     void handleReverseEngineeringDetectVulns();
     void handleReverseEngineeringExportIDA();
     void handleReverseEngineeringExportGhidra();
+    void handleReverseEngineeringCFG();
+    void handleReverseEngineeringFunctions();
+    void handleReverseEngineeringDemangle();
     
     HMENU createReverseEngineeringMenu(); // Helper to add the menu
 

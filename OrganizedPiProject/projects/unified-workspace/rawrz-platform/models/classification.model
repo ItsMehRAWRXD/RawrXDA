@@ -1,0 +1,372 @@
+{
+  "algorithm": "random_forest",
+  "nEstimators": 100,
+  "threatPatterns": {
+    "backdoor": {
+      "count": 171,
+      "featureSums": {
+        "fileSize": 820037481.0651118,
+        "entropy": 86.74297619379897,
+        "strings": 82798,
+        "imports": 8308,
+        "exports": 4343,
+        "sections": 1859,
+        "resources": 4064,
+        "certificates": 361
+      },
+      "featureCounts": {
+        "fileSize": 171,
+        "entropy": 171,
+        "strings": 171,
+        "imports": 171,
+        "exports": 171,
+        "sections": 171,
+        "resources": 171,
+        "certificates": 171
+      },
+      "averages": {
+        "fileSize": 4795540.824942174,
+        "entropy": 0.5072688666304033,
+        "strings": 484.19883040935673,
+        "imports": 48.58479532163743,
+        "exports": 25.39766081871345,
+        "sections": 10.871345029239766,
+        "resources": 23.76608187134503,
+        "certificates": 2.111111111111111
+      }
+    },
+    "spyware": {
+      "count": 198,
+      "featureSums": {
+        "fileSize": 1003802647.0520827,
+        "entropy": 101.51178203633393,
+        "strings": 97489,
+        "imports": 9814,
+        "exports": 4534,
+        "sections": 2079,
+        "resources": 4910,
+        "certificates": 388
+      },
+      "featureCounts": {
+        "fileSize": 198,
+        "entropy": 198,
+        "strings": 198,
+        "imports": 198,
+        "exports": 198,
+        "sections": 198,
+        "resources": 198,
+        "certificates": 198
+      },
+      "averages": {
+        "fileSize": 5069710.338646882,
+        "entropy": 0.5126857678602723,
+        "strings": 492.3686868686869,
+        "imports": 49.56565656565657,
+        "exports": 22.8989898989899,
+        "sections": 10.5,
+        "resources": 24.7979797979798,
+        "certificates": 1.9595959595959596
+      }
+    },
+    "botnet": {
+      "count": 188,
+      "featureSums": {
+        "fileSize": 936666738.554758,
+        "entropy": 95.30121914423249,
+        "strings": 90916,
+        "imports": 9322,
+        "exports": 4686,
+        "sections": 1917,
+        "resources": 4463,
+        "certificates": 341
+      },
+      "featureCounts": {
+        "fileSize": 188,
+        "entropy": 188,
+        "strings": 188,
+        "imports": 188,
+        "exports": 188,
+        "sections": 188,
+        "resources": 188,
+        "certificates": 188
+      },
+      "averages": {
+        "fileSize": 4982269.885929564,
+        "entropy": 0.5069213784267685,
+        "strings": 483.59574468085106,
+        "imports": 49.58510638297872,
+        "exports": 24.925531914893618,
+        "sections": 10.196808510638299,
+        "resources": 23.73936170212766,
+        "certificates": 1.8138297872340425
+      }
+    },
+    "benign": {
+      "count": 170,
+      "featureSums": {
+        "fileSize": 817222204.8709857,
+        "entropy": 50.241852060727446,
+        "strings": 83870,
+        "imports": 4889,
+        "exports": 4158,
+        "sections": 1767,
+        "resources": 4355,
+        "certificates": 383
+      },
+      "featureCounts": {
+        "fileSize": 170,
+        "entropy": 170,
+        "strings": 170,
+        "imports": 170,
+        "exports": 170,
+        "sections": 170,
+        "resources": 170,
+        "certificates": 170
+      },
+      "averages": {
+        "fileSize": 4807189.440417564,
+        "entropy": 0.2955403062395732,
+        "strings": 493.3529411764706,
+        "imports": 28.758823529411764,
+        "exports": 24.458823529411763,
+        "sections": 10.394117647058824,
+        "resources": 25.61764705882353,
+        "certificates": 2.2529411764705882
+      }
+    },
+    "keylogger": {
+      "count": 184,
+      "featureSums": {
+        "fileSize": 936892540.8918465,
+        "entropy": 90.64423292000514,
+        "strings": 91569,
+        "imports": 9642,
+        "exports": 4829,
+        "sections": 1976,
+        "resources": 4628,
+        "certificates": 357
+      },
+      "featureCounts": {
+        "fileSize": 184,
+        "entropy": 184,
+        "strings": 184,
+        "imports": 184,
+        "exports": 184,
+        "sections": 184,
+        "resources": 184,
+        "certificates": 184
+      },
+      "averages": {
+        "fileSize": 5091807.287455687,
+        "entropy": 0.49263170065220185,
+        "strings": 497.6576086956522,
+        "imports": 52.40217391304348,
+        "exports": 26.244565217391305,
+        "sections": 10.73913043478261,
+        "resources": 25.152173913043477,
+        "certificates": 1.940217391304348
+      }
+    },
+    "adware": {
+      "count": 168,
+      "featureSums": {
+        "fileSize": 871230121.244322,
+        "entropy": 79.12963089008798,
+        "strings": 75897,
+        "imports": 8250,
+        "exports": 4207,
+        "sections": 1727,
+        "resources": 4247,
+        "certificates": 350
+      },
+      "featureCounts": {
+        "fileSize": 168,
+        "entropy": 168,
+        "strings": 168,
+        "imports": 168,
+        "exports": 168,
+        "sections": 168,
+        "resources": 168,
+        "certificates": 168
+      },
+      "averages": {
+        "fileSize": 5185893.57883525,
+        "entropy": 0.4710097076790951,
+        "strings": 451.76785714285717,
+        "imports": 49.107142857142854,
+        "exports": 25.041666666666668,
+        "sections": 10.279761904761905,
+        "resources": 25.279761904761905,
+        "certificates": 2.0833333333333335
+      }
+    },
+    "trojan": {
+      "count": 184,
+      "featureSums": {
+        "fileSize": 932356548.9502984,
+        "entropy": 95.25521142197526,
+        "strings": 90071,
+        "imports": 15223,
+        "exports": 4659,
+        "sections": 2762,
+        "resources": 4658,
+        "certificates": 397
+      },
+      "featureCounts": {
+        "fileSize": 184,
+        "entropy": 184,
+        "strings": 184,
+        "imports": 184,
+        "exports": 184,
+        "sections": 184,
+        "resources": 184,
+        "certificates": 184
+      },
+      "averages": {
+        "fileSize": 5067155.157338578,
+        "entropy": 0.5176913664237786,
+        "strings": 489.51630434782606,
+        "imports": 82.7336956521739,
+        "exports": 25.320652173913043,
+        "sections": 15.01086956521739,
+        "resources": 25.315217391304348,
+        "certificates": 2.157608695652174
+      }
+    },
+    "malware": {
+      "count": 190,
+      "featureSums": {
+        "fileSize": 957379882.1561319,
+        "entropy": 155.1601123927718,
+        "strings": 102421,
+        "imports": 19185,
+        "exports": 4595,
+        "sections": 2116,
+        "resources": 4821,
+        "certificates": 385
+      },
+      "featureCounts": {
+        "fileSize": 190,
+        "entropy": 190,
+        "strings": 190,
+        "imports": 190,
+        "exports": 190,
+        "sections": 190,
+        "resources": 190,
+        "certificates": 190
+      },
+      "averages": {
+        "fileSize": 5038841.4850322725,
+        "entropy": 0.8166321704882726,
+        "strings": 539.0578947368421,
+        "imports": 100.97368421052632,
+        "exports": 24.18421052631579,
+        "sections": 11.136842105263158,
+        "resources": 25.373684210526317,
+        "certificates": 2.026315789473684
+      }
+    },
+    "phishing": {
+      "count": 175,
+      "featureSums": {
+        "fileSize": 975028762.9542549,
+        "entropy": 88.32808708263956,
+        "strings": 89977,
+        "imports": 9384,
+        "exports": 4234,
+        "sections": 1962,
+        "resources": 4109,
+        "certificates": 348
+      },
+      "featureCounts": {
+        "fileSize": 175,
+        "entropy": 175,
+        "strings": 175,
+        "imports": 175,
+        "exports": 175,
+        "sections": 175,
+        "resources": 175,
+        "certificates": 175
+      },
+      "averages": {
+        "fileSize": 5571592.93116717,
+        "entropy": 0.5047319261865117,
+        "strings": 514.1542857142857,
+        "imports": 53.62285714285714,
+        "exports": 24.194285714285716,
+        "sections": 11.211428571428572,
+        "resources": 23.48,
+        "certificates": 1.9885714285714287
+      }
+    },
+    "rootkit": {
+      "count": 178,
+      "featureSums": {
+        "fileSize": 905025932.8706667,
+        "entropy": 90.40322830017172,
+        "strings": 84986,
+        "imports": 8378,
+        "exports": 4230,
+        "sections": 1817,
+        "resources": 4178,
+        "certificates": 353
+      },
+      "featureCounts": {
+        "fileSize": 178,
+        "entropy": 178,
+        "strings": 178,
+        "imports": 178,
+        "exports": 178,
+        "sections": 178,
+        "resources": 178,
+        "certificates": 178
+      },
+      "averages": {
+        "fileSize": 5084415.353205993,
+        "entropy": 0.5078833050571445,
+        "strings": 477.44943820224717,
+        "imports": 47.06741573033708,
+        "exports": 23.764044943820224,
+        "sections": 10.207865168539326,
+        "resources": 23.471910112359552,
+        "certificates": 1.9831460674157304
+      }
+    },
+    "ransomware": {
+      "count": 194,
+      "featureSums": {
+        "fileSize": 1887476185.5585492,
+        "entropy": 172.99408553775618,
+        "strings": 84604,
+        "imports": 9395,
+        "exports": 4675,
+        "sections": 2038,
+        "resources": 4585,
+        "certificates": 364
+      },
+      "featureCounts": {
+        "fileSize": 194,
+        "entropy": 194,
+        "strings": 194,
+        "imports": 194,
+        "exports": 194,
+        "sections": 194,
+        "resources": 194,
+        "certificates": 194
+      },
+      "averages": {
+        "fileSize": 9729258.68844613,
+        "entropy": 0.8917220904008051,
+        "strings": 436.10309278350513,
+        "imports": 48.42783505154639,
+        "exports": 24.0979381443299,
+        "sections": 10.505154639175258,
+        "resources": 23.6340206185567,
+        "certificates": 1.8762886597938144
+      }
+    }
+  },
+  "trained": true,
+  "trainingDataSize": 2000,
+  "savedAt": "2025-09-27T04:18:01.318Z"
+}

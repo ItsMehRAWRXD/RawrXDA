@@ -1,0 +1,431 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{3A7731CF-62E4-35D6-A17E-1EBAD8A1943A}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>image_gen_example</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\RawrXD\build_universal\src\paint\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">image_gen_example.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">image_gen_example</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\RawrXD\build_universal\src\paint\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">image_gen_example.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">image_gen_example</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\RawrXD\build_universal\src\paint\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">image_gen_example.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">image_gen_example</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\RawrXD\build_universal\src\paint\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">image_gen_example.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">image_gen_example</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "E:/RawrXD/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCore" /external:I "C:/Qt/6.7.3/msvc2022_64/include" /external:I "C:/Qt/6.7.3/msvc2022_64/mkspecs/win32-msvc" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtGui" /external:I "C:/VulkanSDK/1.4.328.1/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtWidgets" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtNetwork" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtSql" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtConcurrent" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtTest" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCharts" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGL" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGLWidgets" -Zc:__cplusplus -utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/src/paint";QT_TESTCASE_SOURCEDIR="E:/RawrXD/src/paint";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR=\"E:/RawrXD/build_universal/src/paint\";QT_TESTCASE_SOURCEDIR=\"E:/RawrXD/src/paint\";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/src/paint";QT_TESTCASE_SOURCEDIR="E:/RawrXD/src/paint";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="Debug";</PreprocessorDefinitions>
+      <IncludePaths>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /MDd</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>3</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>C:\Qt\6.7.3\msvc2022_64\lib\Qt6Networkd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Sqld.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Concurrentd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Testd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Chartsd.lib;ws2_32.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLWidgetsd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Widgetsd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Guid.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Cored.lib;mpr.lib;userenv.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;user32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>E:/RawrXD/build_universal/src/paint/Debug/image_gen_example.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>E:/RawrXD/build_universal/src/paint/Debug/image_gen_example.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "E:/RawrXD/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCore" /external:I "C:/Qt/6.7.3/msvc2022_64/include" /external:I "C:/Qt/6.7.3/msvc2022_64/mkspecs/win32-msvc" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtGui" /external:I "C:/VulkanSDK/1.4.328.1/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtWidgets" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtNetwork" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtSql" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtConcurrent" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtTest" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCharts" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGL" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGLWidgets" -Zc:__cplusplus -utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/src/paint";QT_TESTCASE_SOURCEDIR="E:/RawrXD/src/paint";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR=\"E:/RawrXD/build_universal/src/paint\";QT_TESTCASE_SOURCEDIR=\"E:/RawrXD/src/paint\";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/src/paint";QT_TESTCASE_SOURCEDIR="E:/RawrXD/src/paint";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="Release";</PreprocessorDefinitions>
+      <IncludePaths>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /MD</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>3</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>C:\Qt\6.7.3\msvc2022_64\lib\Qt6Network.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Sql.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Concurrent.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Test.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Charts.lib;ws2_32.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLWidgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Widgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGL.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Gui.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Core.lib;mpr.lib;userenv.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;user32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>E:/RawrXD/build_universal/src/paint/Release/image_gen_example.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>E:/RawrXD/build_universal/src/paint/Release/image_gen_example.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "E:/RawrXD/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCore" /external:I "C:/Qt/6.7.3/msvc2022_64/include" /external:I "C:/Qt/6.7.3/msvc2022_64/mkspecs/win32-msvc" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtGui" /external:I "C:/VulkanSDK/1.4.328.1/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtWidgets" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtNetwork" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtSql" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtConcurrent" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtTest" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCharts" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGL" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGLWidgets" -Zc:__cplusplus -utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/src/paint";QT_TESTCASE_SOURCEDIR="E:/RawrXD/src/paint";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR=\"E:/RawrXD/build_universal/src/paint\";QT_TESTCASE_SOURCEDIR=\"E:/RawrXD/src/paint\";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/src/paint";QT_TESTCASE_SOURCEDIR="E:/RawrXD/src/paint";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="MinSizeRel";</PreprocessorDefinitions>
+      <IncludePaths>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /MD</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>3</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>C:\Qt\6.7.3\msvc2022_64\lib\Qt6Network.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Sql.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Concurrent.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Test.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Charts.lib;ws2_32.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLWidgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Widgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGL.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Gui.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Core.lib;mpr.lib;userenv.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;user32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>E:/RawrXD/build_universal/src/paint/MinSizeRel/image_gen_example.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>E:/RawrXD/build_universal/src/paint/MinSizeRel/image_gen_example.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "E:/RawrXD/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCore" /external:I "C:/Qt/6.7.3/msvc2022_64/include" /external:I "C:/Qt/6.7.3/msvc2022_64/mkspecs/win32-msvc" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtGui" /external:I "C:/VulkanSDK/1.4.328.1/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtWidgets" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtNetwork" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtSql" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtConcurrent" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtTest" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCharts" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGL" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGLWidgets" -Zc:__cplusplus -utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/src/paint";QT_TESTCASE_SOURCEDIR="E:/RawrXD/src/paint";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR=\"E:/RawrXD/build_universal/src/paint\";QT_TESTCASE_SOURCEDIR=\"E:/RawrXD/src/paint\";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;HAVE_VULKAN=1;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/src/paint";QT_TESTCASE_SOURCEDIR="E:/RawrXD/src/paint";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="RelWithDebInfo";</PreprocessorDefinitions>
+      <IncludePaths>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /MD</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>3</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\src\paint\..\include\image_generator;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>C:\Qt\6.7.3\msvc2022_64\lib\Qt6Network.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Sql.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Concurrent.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Test.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Charts.lib;ws2_32.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLWidgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Widgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGL.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Gui.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Core.lib;mpr.lib;userenv.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;user32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>E:/RawrXD/build_universal/src/paint/RelWithDebInfo/image_gen_example.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>E:/RawrXD/build_universal/src/paint/RelWithDebInfo/image_gen_example.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\RawrXD\src\paint\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/RawrXD/src/paint/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/src/paint/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\RawrXD\build_universal\src\paint\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/RawrXD/src/paint/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/src/paint/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\RawrXD\build_universal\src\paint\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule E:/RawrXD/src/paint/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/src/paint/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\RawrXD\build_universal\src\paint\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule E:/RawrXD/src/paint/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/src/paint/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\RawrXD\build_universal\src\paint\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="E:\RawrXD\src\paint\image_generator_example.cpp" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="E:\RawrXD\build_universal\ZERO_CHECK.vcxproj">
+      <Project>{CA3E2100-D192-3FD9-AD26-D81FDB1687A3}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

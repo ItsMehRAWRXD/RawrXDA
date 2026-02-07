@@ -3,6 +3,7 @@
 #include "../reverse_engineering/RawrCodex.hpp"
 #include "../reverse_engineering/RawrDumpBin.hpp"
 #include "../reverse_engineering/RawrCompiler.hpp"
+#include "../reverse_engineering/RawrReverseEngine.hpp"
 #include <shlwapi.h>
 #include <commdlg.h>
 #include <sstream>
@@ -16,6 +17,7 @@ namespace RawrXD_RE_Internals {
 static RawrXD::ReverseEngineering::RawrCodex s_reCodex;
 static RawrXD::ReverseEngineering::RawrDumpBin s_reDumpbin;
 static RawrXD::ReverseEngineering::RawrCompiler s_reCompiler;
+static RawrXD::ReverseEngineering::RawrReverseEngine s_reEngine;
 static std::string s_reCurrentBinary;
 
 // Helper: Open file dialog
@@ -295,6 +297,10 @@ HMENU Win32IDE::createReverseEngineeringMenu() {
     AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
     AppendMenuA(menu, MF_STRING, IDM_REVENG_COMPILE, "&Compile Source\tCtrl+F7");
     AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_CFG, "Control &Flow Graph");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_FUNCTIONS, "Recover F&unctions");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_DEMANGLE, "De&mangle Symbols");
+    AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
     AppendMenuA(menu, MF_STRING, IDM_REVENG_COMPARE, "C&ompare Binaries");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_DETECT_VULNS, "Detect &Vulnerabilities");
     AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
@@ -302,4 +308,61 @@ HMENU Win32IDE::createReverseEngineeringMenu() {
     AppendMenuA(menu, MF_STRING, IDM_REVENG_EXPORT_GHIDRA, "Export to &Ghidra");
     
     return menu;
+}
+
+// Menu handler for IDM_REVENG_CFG
+void Win32IDE::handleReverseEngineeringCFG() {
+    LOG_FUNCTION();
+    
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    // Get entry point from the codex analysis
+    auto symbols = s_reCodex.GetSymbols();
+    uint64_t entryAddr = 0;
+    for (const auto& sym : symbols) {
+        if (sym.name == "_start" || sym.name == "main" || sym.name == "WinMain" ||
+            sym.name == "_main" || sym.name == "wmain" || sym.name == "wWinMain" ||
+            sym.name == "entry" || sym.name == "EntryPoint") {
+            entryAddr = sym.address;
+            break;
+        }
+    }
+    if (entryAddr == 0 && !symbols.empty()) {
+        entryAddr = symbols[0].address; // fallback to first symbol
+    }
+    
+    s_reEngine.LoadBinary(s_reCurrentBinary);
+    std::string result = s_reEngine.AnalyzeCFG(entryAddr);
+    ShowOutput(m_hwndMain, "Control Flow Graph", result);
+}
+
+// Menu handler for IDM_REVENG_FUNCTIONS
+void Win32IDE::handleReverseEngineeringFunctions() {
+    LOG_FUNCTION();
+    
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    s_reEngine.LoadBinary(s_reCurrentBinary);
+    std::string result = s_reEngine.RecoverFunctions();
+    ShowOutput(m_hwndMain, "Function Recovery", result);
+}
+
+// Menu handler for IDM_REVENG_DEMANGLE
+void Win32IDE::handleReverseEngineeringDemangle() {
+    LOG_FUNCTION();
+    
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    s_reEngine.LoadBinary(s_reCurrentBinary);
+    std::string result = s_reEngine.DemangleAll();
+    ShowOutput(m_hwndMain, "Symbol Demangling", result);
 }

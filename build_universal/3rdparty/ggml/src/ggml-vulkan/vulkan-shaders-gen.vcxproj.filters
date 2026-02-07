@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\76a86cd07237065d1a62e659b641cf91\vulkan-shaders-gen-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\76a86cd07237065d1a62e659b641cf91\vulkan-shaders-gen-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\76a86cd07237065d1a62e659b641cf91\vulkan-shaders-gen-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\76a86cd07237065d1a62e659b641cf91\vulkan-shaders-gen-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\76a86cd07237065d1a62e659b641cf91\vulkan-shaders-gen-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\76a86cd07237065d1a62e659b641cf91\vulkan-shaders-gen-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\76a86cd07237065d1a62e659b641cf91\vulkan-shaders-gen-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\8a445b258ae47b3a334685185084d09e\vulkan-shaders-gen-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\32e018377857e9f49ed0757114b87dba\vulkan-shaders-gen.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\3rdparty\ggml\src\ggml-vulkan\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\CMakeFiles\vulkan-shaders-gen" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{90A6963C-F342-30A8-81E0-2521EB884FA0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

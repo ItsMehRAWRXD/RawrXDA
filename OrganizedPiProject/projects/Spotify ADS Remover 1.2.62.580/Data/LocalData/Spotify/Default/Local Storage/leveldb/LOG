@@ -1,0 +1,30 @@
+2025/09/27-22:47:18.773 f8c0 Reusing MANIFEST C:\Users\Garre\AppData\Local\Spotify\Default\Local Storage\leveldb/MANIFEST-000001
+2025/09/27-22:47:18.775 f8c0 Recovering log #3
+2025/09/27-22:47:18.777 f8c0 Reusing old log C:\Users\Garre\AppData\Local\Spotify\Default\Local Storage\leveldb/000003.log 
+2025/09/27-22:48:19.014 22f0 Level-0 table #5: started
+2025/09/27-22:48:19.017 22f0 Level-0 table #5: 41735 bytes OK
+2025/09/27-22:48:19.020 22f0 Delete type=0 #3
+2025/09/28-01:16:02.146 22f0 Level-0 table #7: started
+2025/09/28-01:16:02.151 22f0 Level-0 table #7: 33723 bytes OK
+2025/09/28-01:16:02.155 22f0 Delete type=0 #4
+2025/09/28-03:49:07.301 22f0 Level-0 table #9: started
+2025/09/28-03:49:07.304 22f0 Level-0 table #9: 31211 bytes OK
+2025/09/28-03:49:07.305 22f0 Delete type=0 #6
+2025/09/28-03:52:37.813 22f0 Level-0 table #11: started
+2025/09/28-03:52:37.817 22f0 Level-0 table #11: 54216 bytes OK
+2025/09/28-03:52:37.818 22f0 Delete type=0 #8
+2025/09/28-06:07:02.141 22f0 Level-0 table #13: started
+2025/09/28-06:07:02.145 22f0 Level-0 table #13: 25783 bytes OK
+2025/09/28-06:07:02.146 22f0 Delete type=0 #10
+2025/09/28-09:49:59.161 22f0 Level-0 table #15: started
+2025/09/28-09:49:59.166 22f0 Level-0 table #15: 16112 bytes OK
+2025/09/28-09:49:59.169 22f0 Delete type=0 #12
+2025/09/28-09:49:59.169 22f0 Compacting 4@0 + 1@1 files
+2025/09/28-09:49:59.175 22f0 Generated table #16@0: 98 keys, 120304 bytes
+2025/09/28-09:49:59.175 22f0 Compacted 4@0 + 1@1 files => 120304 bytes
+2025/09/28-09:49:59.177 22f0 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/09/28-09:49:59.178 22f0 Delete type=2 #7
+2025/09/28-09:49:59.178 22f0 Delete type=2 #9
+2025/09/28-09:49:59.178 22f0 Delete type=2 #11
+2025/09/28-09:49:59.178 22f0 Delete type=2 #13
+2025/09/28-09:49:59.178 22f0 Delete type=2 #15

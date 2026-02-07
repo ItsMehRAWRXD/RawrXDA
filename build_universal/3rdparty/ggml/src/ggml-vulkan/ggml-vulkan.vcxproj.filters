@@ -1,0 +1,771 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\abs.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\acc.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\add.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\add_id.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\argmax.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\argsort.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\clamp.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\concat.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\contig_copy.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\conv2d_dw.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\conv2d_mm.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\conv_transpose_1d.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\copy.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\copy_from_quant.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\copy_to_quant.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\cos.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\count_equal.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_f32.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_iq1_m.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_iq1_s.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_iq2_s.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_iq2_xs.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_iq2_xxs.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_iq3_s.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_iq3_xxs.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_iq4_nl.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_iq4_xs.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_mxfp4.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q2_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q3_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q4_0.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q4_1.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q4_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q5_0.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q5_1.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q5_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q6_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\dequant_q8_0.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\diag_mask_inf.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\div.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\exp.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\flash_attn.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\flash_attn_cm1.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\flash_attn_cm2.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\flash_attn_split_k_reduce.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\geglu.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\geglu_erf.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\geglu_quick.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\gelu.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\gelu_erf.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\gelu_quick.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\get_rows.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\get_rows_quant.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\group_norm.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\hardsigmoid.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\hardswish.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\im2col.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\im2col_3d.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\l2_norm.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\leaky_relu.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\log.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_split_k_reduce.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_iq1_m.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_iq1_s.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_iq2_s.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_iq2_xs.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_iq2_xxs.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_iq3_s.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_iq3_xxs.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_nc.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_p021.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_q2_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_q3_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_q4_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_q5_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vec_q6_k.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mat_vecq.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mm.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mm_cm2.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\mul_mmq.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\multi_add.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\neg.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\norm.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\opt_step_adamw.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\opt_step_sgd.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\pad.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\pool2d.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\quantize_q8_1.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\reglu.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\relu.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\repeat.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\repeat_back.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\rms_norm.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\rms_norm_back.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\rms_norm_partials.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\roll.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\rope_multi.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\rope_neox.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\rope_norm.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\rope_vision.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\scale.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\sigmoid.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\silu.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\silu_back.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\sin.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\soft_max.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\soft_max_back.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\sqrt.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\square.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\ssm_conv.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\ssm_scan.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\sub.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\sum_rows.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\swiglu.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\swiglu_oai.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\tanh.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\timestep_embedding.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\topk_moe.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\upscale.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\wkv6.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\wkv7.comp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\include\ggml-vulkan.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan-shaders.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\ggml-vulkan-shaders.hpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\abs.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\acc.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\add.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\add_id.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\argmax.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\argsort.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\clamp.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\concat.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\contig_copy.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\conv2d_dw.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\conv2d_mm.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\conv_transpose_1d.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\copy.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\copy_from_quant.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\copy_to_quant.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\cos.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\count_equal.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_f32.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_iq1_m.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_iq1_s.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_iq2_s.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_iq2_xs.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_iq2_xxs.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_iq3_s.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_iq3_xxs.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_iq4_nl.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_iq4_xs.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_mxfp4.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q2_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q3_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q4_0.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q4_1.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q4_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q5_0.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q5_1.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q5_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q6_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\dequant_q8_0.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\diag_mask_inf.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\div.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\exp.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\flash_attn.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\flash_attn_cm1.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\flash_attn_cm2.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\flash_attn_split_k_reduce.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\geglu.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\geglu_erf.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\geglu_quick.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\gelu.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\gelu_erf.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\gelu_quick.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\get_rows.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\get_rows_quant.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\group_norm.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\hardsigmoid.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\hardswish.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\im2col.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\im2col_3d.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\l2_norm.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\leaky_relu.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\log.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_split_k_reduce.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_iq1_m.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_iq1_s.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_iq2_s.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_iq2_xs.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_iq2_xxs.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_iq3_s.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_iq3_xxs.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_nc.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_p021.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_q2_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_q3_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_q4_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_q5_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vec_q6_k.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mat_vecq.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mm.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mm_cm2.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\mul_mmq.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\multi_add.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\neg.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\norm.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\opt_step_adamw.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\opt_step_sgd.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\pad.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\pool2d.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\quantize_q8_1.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\reglu.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\relu.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\repeat.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\repeat_back.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\rms_norm.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\rms_norm_back.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\rms_norm_partials.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\roll.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\rope_multi.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\rope_neox.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\rope_norm.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\rope_vision.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\scale.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\sigmoid.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\silu.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\silu_back.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\sin.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\soft_max.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\soft_max_back.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\sqrt.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\square.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\ssm_conv.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\ssm_scan.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\sub.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\sum_rows.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\swiglu.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\swiglu_oai.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\tanh.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\timestep_embedding.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\topk_moe.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\upscale.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\wkv6.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\build_universal\CMakeFiles\edc6299501e00226d19395e2d6377529\wkv7.comp.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\RawrXD\3rdparty\ggml\src\ggml-vulkan\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{90A6963C-F342-30A8-81E0-2521EB884FA0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{9FF5B125-4A6B-309E-8F2F-6879B155122F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{524A5D49-74DC-30FC-8211-B0B29AE571B6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

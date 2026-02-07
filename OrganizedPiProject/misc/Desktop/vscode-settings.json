@@ -1,0 +1,5 @@
+{
+  "github.copilot.chat.byok.ollamaEndpoint": "http://localhost:11434",
+  "github.copilot.enable": true,
+  "github.copilot.inlineSuggest.enable": true
+}

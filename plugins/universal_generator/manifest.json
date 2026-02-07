@@ -1,0 +1,29 @@
+{
+  "id": "rawer.universal.generator",
+  "name": "Universal Project Generator",
+  "version": "1.0.0",
+  "author": "ItsMehRAWRXD",
+  "description": "Generates complete projects for 60+ programming languages with build systems, tests, CI/CD, and Docker support.",
+  "commands": [
+    "/generate",
+    "/generate-from-template",
+    "/list-languages",
+    "/list-templates",
+    "/generate-with-tests",
+    "/generate-with-ci",
+    "/generate-with-docker"
+  ],
+  "configuration": {
+    "default_language": "cpp",
+    "include_tests": true,
+    "include_ci": false,
+    "include_docker": false,
+    "author_name": "RawrXD User",
+    "author_email": "user@rawrxd.dev"
+  },
+  "engines": {
+    "rawr_engine": ">=7.0.0"
+  },
+  "is_memory_module": false,
+  "dependencies": []
+}

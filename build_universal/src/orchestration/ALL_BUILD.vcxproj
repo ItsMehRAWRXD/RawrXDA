@@ -1,0 +1,187 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ResolveNugetPackages>false</ResolveNugetPackages>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D39FFC27-DBDC-3305-8D84-3248F2A59CA0}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>ALL_BUILD</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\RawrXD\src\orchestration\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/RawrXD/src/orchestration/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/src/orchestration/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeFindDependencyMacro.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigExtras.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Dependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Targets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6VersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeature.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeatureCommon.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicAppleHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeVersionHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicDependencyHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicExternalProjectHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFinalizerHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFindPackageHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicPluginHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTargetHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTestHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicToolHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicWalkLibsHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaDependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaPlugins.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaVersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets.cmake;E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\RawrXD\build_universal\src\orchestration\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/RawrXD/src/orchestration/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/src/orchestration/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeFindDependencyMacro.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigExtras.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Dependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Targets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6VersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeature.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeatureCommon.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicAppleHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeVersionHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicDependencyHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicExternalProjectHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFinalizerHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFindPackageHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicPluginHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTargetHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTestHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicToolHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicWalkLibsHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaDependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaPlugins.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaVersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets.cmake;E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\RawrXD\build_universal\src\orchestration\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule E:/RawrXD/src/orchestration/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/src/orchestration/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeFindDependencyMacro.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigExtras.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Dependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Targets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6VersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeature.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeatureCommon.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicAppleHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeVersionHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicDependencyHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicExternalProjectHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFinalizerHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFindPackageHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicPluginHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTargetHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTestHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicToolHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicWalkLibsHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaDependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaPlugins.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaVersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets.cmake;E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\RawrXD\build_universal\src\orchestration\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule E:/RawrXD/src/orchestration/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/src/orchestration/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeFindDependencyMacro.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigExtras.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Dependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Targets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6VersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeature.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeatureCommon.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicAppleHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeVersionHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicDependencyHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicExternalProjectHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFinalizerHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFindPackageHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicPluginHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTargetHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTestHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicToolHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicWalkLibsHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaDependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaPlugins.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6MultimediaVersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QFFmpegMediaPluginTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginAdditionalTargetInfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginConfig.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets-debug.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets-relwithdebinfo.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6Multimedia\Qt6QWindowsMediaPluginTargets.cmake;E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\RawrXD\build_universal\src\orchestration\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="E:\RawrXD\build_universal\ZERO_CHECK.vcxproj">
+      <Project>{CA3E2100-D192-3FD9-AD26-D81FDB1687A3}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="E:\RawrXD\build_universal\src\orchestration\RawrXDOrchestration.vcxproj">
+      <Project>{BDC85E7F-C34B-3293-86F6-847317A75369}</Project>
+      <Name>RawrXDOrchestration</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

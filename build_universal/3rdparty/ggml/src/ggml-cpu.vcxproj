@@ -1,0 +1,421 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7272F968-5335-3B96-8A00-768C60A72F61}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>ggml-cpu</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\RawrXD\build_universal\3rdparty\ggml\src\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ggml-cpu.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ggml-cpu</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\RawrXD\build_universal\3rdparty\ggml\src\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ggml-cpu.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ggml-cpu</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\RawrXD\build_universal\3rdparty\ggml\src\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">ggml-cpu.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">ggml-cpu</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\RawrXD\build_universal\3rdparty\ggml\src\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">ggml-cpu.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">ggml-cpu</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "E:/RawrXD/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCore" /external:I "C:/Qt/6.7.3/msvc2022_64/include" /external:I "C:/Qt/6.7.3/msvc2022_64/mkspecs/win32-msvc" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtGui" /external:I "C:/VulkanSDK/1.4.328.1/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtWidgets" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtNetwork" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtSql" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtConcurrent" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtTest" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCharts" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGL" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGLWidgets" -Zc:__cplusplus -utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4005;4244;4267;4305;4566;4996;4702</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <MinimalRebuild></MinimalRebuild>
+      <OpenMPSupport>true</OpenMPSupport>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/3rdparty/ggml/src";QT_TESTCASE_SOURCEDIR="E:/RawrXD/3rdparty/ggml/src";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR=\"E:/RawrXD/build_universal/3rdparty/ggml/src\";QT_TESTCASE_SOURCEDIR=\"E:/RawrXD/3rdparty/ggml/src\";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/3rdparty/ggml/src";QT_TESTCASE_SOURCEDIR="E:/RawrXD/3rdparty/ggml/src";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="Debug";</PreprocessorDefinitions>
+      <IncludePaths>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /MDd /wd4005 /wd4244 /wd4267 /wd4305 /wd4566 /wd4996 /wd4702</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>3</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "E:/RawrXD/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCore" /external:I "C:/Qt/6.7.3/msvc2022_64/include" /external:I "C:/Qt/6.7.3/msvc2022_64/mkspecs/win32-msvc" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtGui" /external:I "C:/VulkanSDK/1.4.328.1/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtWidgets" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtNetwork" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtSql" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtConcurrent" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtTest" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCharts" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGL" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGLWidgets" -Zc:__cplusplus -utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DisableSpecificWarnings>4005;4244;4267;4305;4566;4996;4702</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <MinimalRebuild></MinimalRebuild>
+      <OpenMPSupport>true</OpenMPSupport>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/3rdparty/ggml/src";QT_TESTCASE_SOURCEDIR="E:/RawrXD/3rdparty/ggml/src";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR=\"E:/RawrXD/build_universal/3rdparty/ggml/src\";QT_TESTCASE_SOURCEDIR=\"E:/RawrXD/3rdparty/ggml/src\";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/3rdparty/ggml/src";QT_TESTCASE_SOURCEDIR="E:/RawrXD/3rdparty/ggml/src";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="Release";</PreprocessorDefinitions>
+      <IncludePaths>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /MD /wd4005 /wd4244 /wd4267 /wd4305 /wd4566 /wd4996 /wd4702</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>3</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "E:/RawrXD/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCore" /external:I "C:/Qt/6.7.3/msvc2022_64/include" /external:I "C:/Qt/6.7.3/msvc2022_64/mkspecs/win32-msvc" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtGui" /external:I "C:/VulkanSDK/1.4.328.1/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtWidgets" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtNetwork" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtSql" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtConcurrent" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtTest" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCharts" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGL" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGLWidgets" -Zc:__cplusplus -utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DisableSpecificWarnings>4005;4244;4267;4305;4566;4996;4702</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <MinimalRebuild></MinimalRebuild>
+      <OpenMPSupport>true</OpenMPSupport>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/3rdparty/ggml/src";QT_TESTCASE_SOURCEDIR="E:/RawrXD/3rdparty/ggml/src";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR=\"E:/RawrXD/build_universal/3rdparty/ggml/src\";QT_TESTCASE_SOURCEDIR=\"E:/RawrXD/3rdparty/ggml/src\";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/3rdparty/ggml/src";QT_TESTCASE_SOURCEDIR="E:/RawrXD/3rdparty/ggml/src";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="MinSizeRel";</PreprocessorDefinitions>
+      <IncludePaths>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /MD /wd4005 /wd4244 /wd4267 /wd4305 /wd4566 /wd4996 /wd4702</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>3</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "E:/RawrXD/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCore" /external:I "C:/Qt/6.7.3/msvc2022_64/include" /external:I "C:/Qt/6.7.3/msvc2022_64/mkspecs/win32-msvc" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtGui" /external:I "C:/VulkanSDK/1.4.328.1/include" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtWidgets" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtNetwork" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtSql" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtConcurrent" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtTest" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtCharts" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGL" /external:I "C:/Qt/6.7.3/msvc2022_64/include/QtOpenGLWidgets" -Zc:__cplusplus -utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4005;4244;4267;4305;4566;4996;4702</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <MinimalRebuild></MinimalRebuild>
+      <OpenMPSupport>true</OpenMPSupport>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/3rdparty/ggml/src";QT_TESTCASE_SOURCEDIR="E:/RawrXD/3rdparty/ggml/src";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR=\"E:/RawrXD/build_universal/3rdparty/ggml/src\";QT_TESTCASE_SOURCEDIR=\"E:/RawrXD/3rdparty/ggml/src\";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GGML_USE_OPENMP;GGML_USE_CPU_REPACK;NOMINMAX;_WIN32_WINNT=0x0A00;HAVE_QT_CORE;QT_NO_OPENGL;HAVE_COMPRESSION=1;HAVE_ZLIB=1;GGML_SCHED_MAX_COPIES=4;_XOPEN_SOURCE=600;_CRT_SECURE_NO_WARNINGS;QT_CORE_LIB;QT_NO_DEBUG;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;_WIN64;UNICODE;_UNICODE;QT_GUI_LIB;QT_WIDGETS_LIB;QT_NETWORK_LIB;QT_SQL_LIB;QT_CONCURRENT_LIB;QT_TESTLIB_LIB;QT_TESTCASE_BUILDDIR="E:/RawrXD/build_universal/3rdparty/ggml/src";QT_TESTCASE_SOURCEDIR="E:/RawrXD/3rdparty/ggml/src";QT_CHARTS_LIB;QT_OPENGL_LIB;QT_OPENGLWIDGETS_LIB;CMAKE_INTDIR="RelWithDebInfo";</PreprocessorDefinitions>
+      <IncludePaths>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /MD /wd4005 /wd4244 /wd4267 /wd4305 /wd4566 /wd4996 /wd4702</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>3</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\RawrXD\3rdparty\ggml\src\..;E:\RawrXD\3rdparty\ggml\src\.;E:\RawrXD\3rdparty\ggml\src\ggml-cpu;E:\RawrXD\3rdparty\ggml\src\..\include;E:\RawrXD\include;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\RawrXD\3rdparty\ggml\src\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/RawrXD/3rdparty/ggml/src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/3rdparty/ggml/src/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCSourceRuns.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindOpenMP.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CheckSourceRuns.cmake;E:\RawrXD\3rdparty\ggml\cmake\common.cmake;E:\RawrXD\3rdparty\ggml\src\ggml-cpu\cmake\FindSIMD.cmake;E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\RawrXD\build_universal\3rdparty\ggml\src\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/RawrXD/3rdparty/ggml/src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/3rdparty/ggml/src/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCSourceRuns.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindOpenMP.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CheckSourceRuns.cmake;E:\RawrXD\3rdparty\ggml\cmake\common.cmake;E:\RawrXD\3rdparty\ggml\src\ggml-cpu\cmake\FindSIMD.cmake;E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\RawrXD\build_universal\3rdparty\ggml\src\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule E:/RawrXD/3rdparty/ggml/src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/3rdparty/ggml/src/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCSourceRuns.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindOpenMP.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CheckSourceRuns.cmake;E:\RawrXD\3rdparty\ggml\cmake\common.cmake;E:\RawrXD\3rdparty\ggml\src\ggml-cpu\cmake\FindSIMD.cmake;E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\RawrXD\build_universal\3rdparty\ggml\src\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule E:/RawrXD/3rdparty/ggml/src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD -BE:/RawrXD/build_universal --check-stamp-file E:/RawrXD/build_universal/3rdparty/ggml/src/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCSourceRuns.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindOpenMP.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CheckSourceRuns.cmake;E:\RawrXD\3rdparty\ggml\cmake\common.cmake;E:\RawrXD\3rdparty\ggml\src\ggml-cpu\cmake\FindSIMD.cmake;E:\RawrXD\build_universal\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\RawrXD\build_universal\3rdparty\ggml\src\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\ggml-cpu.c">
+      <ObjectFileName>$(IntDir)/ggml-cpu/ggml-cpu.c.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\ggml-cpu.cpp">
+      <ObjectFileName>$(IntDir)/ggml-cpu/ggml-cpu.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\repack.cpp">
+      <ObjectFileName>$(IntDir)/ggml-cpu/repack.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\repack.h" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\hbm.cpp" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\hbm.h" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\quants.c">
+      <ObjectFileName>$(IntDir)/ggml-cpu/quants.c.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\quants.h" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\traits.cpp" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\traits.h" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\amx\amx.cpp" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\amx\amx.h" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\amx\mmq.cpp" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\amx\mmq.h" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\ggml-cpu-impl.h" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\common.h" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\binary-ops.h" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\binary-ops.cpp" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\unary-ops.h" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\unary-ops.cpp" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\simd-mappings.h" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\vec.h" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\vec.cpp" />
+    <ClInclude Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\ops.h" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\ops.cpp" />
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\arch\x86\quants.c">
+      <ObjectFileName>$(IntDir)/ggml-cpu/arch/x86/quants.c.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\RawrXD\3rdparty\ggml\src\ggml-cpu\arch\x86\repack.cpp">
+      <ObjectFileName>$(IntDir)/ggml-cpu/arch/x86/repack.cpp.obj</ObjectFileName>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="E:\RawrXD\build_universal\ZERO_CHECK.vcxproj">
+      <Project>{CA3E2100-D192-3FD9-AD26-D81FDB1687A3}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="E:\RawrXD\build_universal\3rdparty\ggml\src\ggml-base.vcxproj">
+      <Project>{231A2B61-F9BE-3DDC-ACB3-13C1F6ABCC84}</Project>
+      <Name>ggml-base</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

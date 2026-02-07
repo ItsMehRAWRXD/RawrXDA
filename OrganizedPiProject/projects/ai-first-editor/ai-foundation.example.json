@@ -1,0 +1,7 @@
+{
+  "provider": "http",
+  "http": {
+    "endpoint": "https://your.endpoint.example/v1/chat",
+    "apiKeyEnv": "MY_AI_API_KEY"
+  }
+}

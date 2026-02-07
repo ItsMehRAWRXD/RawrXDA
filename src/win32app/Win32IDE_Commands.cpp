@@ -276,6 +276,9 @@ void Win32IDE::updateCommandStates() {
     m_commandStates[IDM_REVENG_DETECT_VULNS] = hasFile;
     m_commandStates[IDM_REVENG_EXPORT_IDA] = hasFile;
     m_commandStates[IDM_REVENG_EXPORT_GHIDRA] = hasFile;
+    m_commandStates[IDM_REVENG_CFG] = hasFile;
+    m_commandStates[IDM_REVENG_FUNCTIONS] = hasFile;
+    m_commandStates[IDM_REVENG_DEMANGLE] = hasFile;
 }
 
 // ============================================================================
@@ -1719,6 +1722,9 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_REVENG_DETECT_VULNS, "RE: Detect Vulnerabilities", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_EXPORT_IDA, "RE: Export to IDA", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_EXPORT_GHIDRA, "RE: Export to Ghidra", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_CFG, "RE: Control Flow Graph", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_FUNCTIONS, "RE: Recover Functions", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_DEMANGLE, "RE: Demangle Symbols", "", "RE"});
 
     // File: Load Model & Exit (not in original list)
     m_commandRegistry.push_back({1030, "File: Load AI Model (Local)", "", "File"});

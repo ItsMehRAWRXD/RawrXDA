@@ -1,0 +1,36 @@
+[
+  {
+    "id": 4,
+    "name": "binary_search",
+    "difficulty": 3,
+    "snippet": "public static int bs(int[] a, int x) {
+    int l = 0, r = a.length - 1;
+    while (l <= r) {
+        int m = l + (r - l) / 2;
+        if (a[m] == x) return m;
+        if (a[m] < x) l = m + 1;
+        else r = m - 1;
+    }
+    return -1;
+}"
+  },
+  {
+    "id": 2,
+    "name": "fibonacci",
+    "difficulty": 2,
+    "snippet": "public static int fib(int n) {
+    if (n < 2) return n;
+    return fib(n - 1) + fib(n - 2);
+}"
+  },
+  {
+    "id": 1,
+    "name": "hello_world",
+    "difficulty": 1,
+    "snippet": "public class Hello {
+    public static void main(String[] a) {
+        System.out.println(\"Hello, world!\");
+    }
+}"
+  }
+]
