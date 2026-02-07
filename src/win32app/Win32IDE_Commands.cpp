@@ -279,6 +279,8 @@ void Win32IDE::updateCommandStates() {
     m_commandStates[IDM_REVENG_CFG] = hasFile;
     m_commandStates[IDM_REVENG_FUNCTIONS] = hasFile;
     m_commandStates[IDM_REVENG_DEMANGLE] = hasFile;
+    m_commandStates[IDM_REVENG_SSA] = hasFile;
+    m_commandStates[IDM_REVENG_RECURSIVE_DISASM] = hasFile;
 }
 
 // ============================================================================
@@ -1725,6 +1727,8 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_REVENG_CFG, "RE: Control Flow Graph", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_FUNCTIONS, "RE: Recover Functions", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_DEMANGLE, "RE: Demangle Symbols", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_SSA, "RE: SSA Lifting", "Ctrl+Shift+S", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_RECURSIVE_DISASM, "RE: Recursive Descent Disassembly", "Ctrl+Shift+R", "RE"});
 
     // File: Load Model & Exit (not in original list)
     m_commandRegistry.push_back({1030, "File: Load AI Model (Local)", "", "File"});

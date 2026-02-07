@@ -62,9 +62,82 @@ struct DisassemblyLine {
     std::string comment;
 };
 
+// ============================================================================
+// SSA (Static Single Assignment) Structures
+// ============================================================================
+
+enum class SSAOpType : uint32_t {
+    Assign = 0,     // dst = src1
+    Add,            // dst = src1 + src2
+    Sub,            // dst = src1 - src2
+    Mul,            // dst = src1 * src2
+    Div,            // dst = src1 / src2
+    And,            // dst = src1 & src2
+    Or,             // dst = src1 | src2
+    Xor,            // dst = src1 ^ src2
+    Shl,            // dst = src1 << src2
+    Shr,            // dst = src1 >> src2
+    Sar,            // dst = src1 >>> src2 (arithmetic)
+    Not,            // dst = ~src1
+    Neg,            // dst = -src1
+    Load,           // dst = [src1 + offset]
+    Store,          // [dst + offset] = src1
+    Call,           // dst = call target(args...)
+    Ret,            // return src1
+    Cmp,            // flags = cmp(src1, src2)
+    Test,           // flags = test(src1, src2)
+    Branch,         // conditional branch on flags
+    Jmp,            // unconditional jump
+    Phi,            // PHI node merge
+    Lea,            // dst = &(base + index*scale + disp)
+    Unknown         // Unrecognized / fallback
+};
+
+enum class SSAVarClass : uint32_t {
+    Register = 0,   // Machine register (renamed to unique SSA version)
+    Temp,           // Compiler-generated temporary
+    Memory,         // Memory location reference
+    Immediate,      // Constant / literal value
+    Flags           // CPU flags pseudo-register
+};
+
+struct SSAVariable {
+    uint32_t varId;         // Unique SSA variable ID
+    SSAVarClass varClass;   // Classification
+    int32_t regIndex;       // Original machine register (0=rax..15=r15), -1 if N/A
+    uint32_t ssaVersion;    // Version number for this register (0, 1, 2, ...)
+    uint64_t immValue;      // Immediate value (for SSAVarClass::Immediate)
+    int32_t memBase;        // Base register for memory operands
+    int32_t memDisp;        // Displacement for memory operands
+    uint32_t bbIndex;       // Basic block index where defined
+    uint32_t instrIndex;    // Instruction index where defined (-1 for function entry / PHI)
+};
+
+struct SSAInstruction {
+    uint64_t origAddress;   // Original machine instruction VA
+    uint32_t origInstrIdx;  // Index into disassembly
+    SSAOpType op;           // SSA operation type
+    int32_t dstVarId;       // Destination SSA variable ID (-1 if none)
+    int32_t src1VarId;      // First source SSA variable ID (-1 if none)
+    int32_t src2VarId;      // Second source SSA variable ID (-1 if none)
+    int32_t flagsVarId;     // Flags SSA variable (for CMP/TEST producers, branch consumers)
+    uint32_t bbIndex;       // Basic block this belongs to
+    uint64_t callTarget;    // For Call: target address
+    uint64_t branchTarget;  // For Branch/Jmp: target BB start address
+    bool isDeadCode;        // True if DCE marks this as dead
+};
+
+struct PhiNode {
+    uint32_t bbIndex;       // Basic block where this PHI lives
+    int32_t dstVarId;       // Destination SSA variable (merged result)
+    int32_t regIndex;       // Original machine register being merged
+    std::vector<int32_t> operandVarIds;  // SSA var IDs from each predecessor
+    std::vector<uint32_t> operandBBs;    // Basic block indices of each predecessor
+};
+
 class RawrCodex {
 public:
-    RawrCodex() : m_architecture("x64"), m_bitness(64) {}
+    RawrCodex() : m_architecture("x64"), m_bitness(64), m_ssaNextVarId(0), m_ssaLifted(false) {}
 
     // ========================================================================
     // Core Analysis Functions
@@ -465,6 +538,371 @@ public:
     }
 
     // ========================================================================
+    // SSA Lifting (Static Single Assignment Form)
+    // Converts disassembled instruction stream + CFG into SSA form.
+    // Each register definition gets a unique version number.
+    // PHI nodes are inserted at basic block merge points.
+    // ========================================================================
+
+    struct SSALiftResult {
+        std::vector<SSAVariable> variables;
+        std::vector<SSAInstruction> instructions;
+        std::vector<PhiNode> phiNodes;
+        uint32_t totalVars;
+        bool success;
+    };
+
+    SSALiftResult LiftToSSA(uint64_t functionStart) {
+        SSALiftResult result;
+        result.success = false;
+        result.totalVars = 0;
+
+        // First, get the CFG for this function
+        auto blocks = AnalyzeControlFlow(functionStart);
+        if (blocks.empty()) return result;
+
+        // Get the disassembly for the function's address range
+        auto disasm = Disassemble(functionStart, 4096);
+        if (disasm.empty()) return result;
+
+        // Reset SSA state
+        m_ssaNextVarId = 0;
+        uint32_t regVersions[16] = {0}; // Version counter per register (rax=0..r15=15)
+        uint32_t flagsVersion = 0;
+
+        // Phase 1: Create initial SSA variables for each register (version 0)
+        // These represent function entry / undefined state
+        for (int reg = 0; reg < 16; ++reg) {
+            SSAVariable var;
+            var.varId = m_ssaNextVarId++;
+            var.varClass = SSAVarClass::Register;
+            var.regIndex = reg;
+            var.ssaVersion = 0;
+            var.immValue = 0;
+            var.memBase = -1;
+            var.memDisp = 0;
+            var.bbIndex = 0;
+            var.instrIndex = UINT32_MAX; // Function entry
+            result.variables.push_back(var);
+        }
+
+        // Initial flags variable
+        {
+            SSAVariable flagsVar;
+            flagsVar.varId = m_ssaNextVarId++;
+            flagsVar.varClass = SSAVarClass::Flags;
+            flagsVar.regIndex = -1;
+            flagsVar.ssaVersion = 0;
+            flagsVar.immValue = 0;
+            flagsVar.memBase = -1;
+            flagsVar.memDisp = 0;
+            flagsVar.bbIndex = 0;
+            flagsVar.instrIndex = UINT32_MAX;
+            result.variables.push_back(flagsVar);
+        }
+
+        // Build address-to-disasm-index map for fast lookup
+        std::unordered_map<uint64_t, size_t> addrToIdx;
+        for (size_t i = 0; i < disasm.size(); ++i) {
+            addrToIdx[disasm[i].address] = i;
+        }
+
+        // Phase 2: Walk each basic block and lift instructions
+        for (size_t bbIdx = 0; bbIdx < blocks.size(); ++bbIdx) {
+            const auto& bb = blocks[bbIdx];
+
+            // Phase 2a: Insert PHI nodes at multi-predecessor blocks
+            if (bb.predecessors.size() >= 2) {
+                for (int reg = 0; reg < 16; ++reg) {
+                    regVersions[reg]++;
+
+                    SSAVariable phiVar;
+                    phiVar.varId = m_ssaNextVarId++;
+                    phiVar.varClass = SSAVarClass::Register;
+                    phiVar.regIndex = reg;
+                    phiVar.ssaVersion = regVersions[reg];
+                    phiVar.immValue = 0;
+                    phiVar.memBase = -1;
+                    phiVar.memDisp = 0;
+                    phiVar.bbIndex = static_cast<uint32_t>(bbIdx);
+                    phiVar.instrIndex = UINT32_MAX;
+                    result.variables.push_back(phiVar);
+
+                    PhiNode phi;
+                    phi.bbIndex = static_cast<uint32_t>(bbIdx);
+                    phi.dstVarId = phiVar.varId;
+                    phi.regIndex = reg;
+                    // Operands will be resolved in Phase 3
+                    for (size_t p = 0; p < bb.predecessors.size(); ++p) {
+                        phi.operandVarIds.push_back(-1);
+                        phi.operandBBs.push_back(static_cast<uint32_t>(p));
+                    }
+                    result.phiNodes.push_back(phi);
+                }
+            }
+
+            // Phase 2b: Walk instructions in this basic block
+            for (size_t i = 0; i < disasm.size(); ++i) {
+                const auto& instr = disasm[i];
+                if (instr.address < bb.startAddress || instr.address > bb.endAddress)
+                    continue;
+
+                SSAInstruction ssaInstr;
+                ssaInstr.origAddress = instr.address;
+                ssaInstr.origInstrIdx = static_cast<uint32_t>(i);
+                ssaInstr.dstVarId = -1;
+                ssaInstr.src1VarId = -1;
+                ssaInstr.src2VarId = -1;
+                ssaInstr.flagsVarId = -1;
+                ssaInstr.bbIndex = static_cast<uint32_t>(bbIdx);
+                ssaInstr.callTarget = 0;
+                ssaInstr.branchTarget = 0;
+                ssaInstr.isDeadCode = false;
+
+                // Classify mnemonic → SSA operation
+                const std::string& mn = instr.mnemonic;
+
+                if (mn == "mov" || mn == "movsx" || mn == "movzx" || mn == "movsxd") {
+                    ssaInstr.op = SSAOpType::Assign;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]); // placeholder
+                } else if (mn == "lea") {
+                    ssaInstr.op = SSAOpType::Lea;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                } else if (mn == "add" || mn == "adc") {
+                    ssaInstr.op = SSAOpType::Add;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "sub" || mn == "sbb") {
+                    ssaInstr.op = SSAOpType::Sub;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "imul" || mn == "mul") {
+                    ssaInstr.op = SSAOpType::Mul;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "idiv" || mn == "div") {
+                    ssaInstr.op = SSAOpType::Div;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "and") {
+                    ssaInstr.op = SSAOpType::And;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "or") {
+                    ssaInstr.op = SSAOpType::Or;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "xor") {
+                    ssaInstr.op = SSAOpType::Xor;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "shl" || mn == "sal") {
+                    ssaInstr.op = SSAOpType::Shl;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "shr") {
+                    ssaInstr.op = SSAOpType::Shr;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "sar") {
+                    ssaInstr.op = SSAOpType::Sar;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "not") {
+                    ssaInstr.op = SSAOpType::Not;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                } else if (mn == "neg") {
+                    ssaInstr.op = SSAOpType::Neg;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                } else if (mn == "cmp") {
+                    ssaInstr.op = SSAOpType::Cmp;
+                    ssaInstr.flagsVarId = m_ssaNextVarId++;
+                    flagsVersion++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "test") {
+                    ssaInstr.op = SSAOpType::Test;
+                    ssaInstr.flagsVarId = m_ssaNextVarId++;
+                    flagsVersion++;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                    ssaInstr.src2VarId = static_cast<int32_t>(regVersions[1]);
+                } else if (mn == "call") {
+                    ssaInstr.op = SSAOpType::Call;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    regVersions[0]++; // Call clobbers rax
+                    // Parse call target from operands if available
+                    ssaInstr.callTarget = ParseBranchTarget(instr.operands);
+                } else if (mn == "ret" || mn == "retf") {
+                    ssaInstr.op = SSAOpType::Ret;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]); // rax = return value
+                } else if (mn == "jmp") {
+                    ssaInstr.op = SSAOpType::Jmp;
+                    ssaInstr.branchTarget = ParseBranchTarget(instr.operands);
+                } else if (mn.size() >= 2 && mn[0] == 'j') {
+                    // Conditional branch (jcc)
+                    ssaInstr.op = SSAOpType::Branch;
+                    ssaInstr.flagsVarId = static_cast<int32_t>(flagsVersion);
+                    ssaInstr.branchTarget = ParseBranchTarget(instr.operands);
+                } else if (mn == "push") {
+                    ssaInstr.op = SSAOpType::Store;
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                } else if (mn == "pop") {
+                    ssaInstr.op = SSAOpType::Load;
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                } else if (mn.size() >= 4 && mn.substr(0, 4) == "cmov") {
+                    ssaInstr.op = SSAOpType::Assign; // Conditional move
+                    ssaInstr.dstVarId = m_ssaNextVarId++;
+                    ssaInstr.flagsVarId = static_cast<int32_t>(flagsVersion);
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]);
+                } else if (mn == "nop") {
+                    continue; // Skip NOPs entirely
+                } else {
+                    ssaInstr.op = SSAOpType::Unknown;
+                }
+
+                result.instructions.push_back(ssaInstr);
+            }
+        }
+
+        // Phase 3: Resolve PHI node operands
+        // For each PHI node, find the last definition of the register in each predecessor
+        for (auto& phi : result.phiNodes) {
+            for (size_t opIdx = 0; opIdx < phi.operandBBs.size(); ++opIdx) {
+                uint32_t predBB = phi.operandBBs[opIdx];
+                // Scan SSA instructions backwards for a definition in predBB
+                bool found = false;
+                for (int j = static_cast<int>(result.instructions.size()) - 1; j >= 0; --j) {
+                    const auto& si = result.instructions[j];
+                    if (si.bbIndex == predBB && si.dstVarId >= 0) {
+                        phi.operandVarIds[opIdx] = si.dstVarId;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    // Use initial version (varId = regIndex for version 0)
+                    phi.operandVarIds[opIdx] = phi.regIndex;
+                }
+            }
+        }
+
+        result.totalVars = m_ssaNextVarId;
+        result.success = true;
+        m_ssaLifted = true;
+        return result;
+    }
+
+    // ========================================================================
+    // Recursive Descent Disassembler (CFG-guided)
+    // Follows control flow edges to disassemble only reachable code.
+    // Avoids inline data, alignment padding, and dead code regions.
+    // ========================================================================
+
+    std::vector<DisassemblyLine> RecursiveDisassemble(uint64_t entryPoint, size_t maxInstructions = 65536) {
+        std::vector<DisassemblyLine> result;
+        std::unordered_map<uint64_t, bool> visited;
+        std::vector<uint64_t> worklist;
+
+        worklist.push_back(entryPoint);
+
+        while (!worklist.empty() && result.size() < maxInstructions) {
+            uint64_t addr = worklist.back();
+            worklist.pop_back();
+
+            if (visited.count(addr)) continue;
+            visited[addr] = true;
+
+            // Find section containing this address
+            const Section* section = FindSectionByVA(addr);
+            if (!section) continue;
+
+            uint64_t offset = addr - section->virtualAddress;
+            if (offset >= section->data.size()) continue;
+
+            const uint8_t* data = section->data.data() + offset;
+            size_t remaining = section->data.size() - offset;
+            if (remaining == 0) continue;
+
+            // Decode one instruction at this address
+            DisassemblyLine line;
+            line.address = addr;
+
+            size_t instrLen = DecodeOneInstruction(data, remaining, line);
+            if (instrLen == 0) {
+                // Can't decode — emit as db
+                line.mnemonic = "db";
+                line.operands = "0x" + ByteToHex(data[0]);
+                line.bytes = {data[0]};
+                instrLen = 1;
+            } else {
+                line.bytes.assign(data, data + instrLen);
+            }
+
+            result.push_back(line);
+
+            // Determine successors based on control flow
+            if (line.mnemonic == "ret" || line.mnemonic == "retf") {
+                // Terminal — no successors
+                continue;
+            } else if (line.mnemonic == "jmp") {
+                // Unconditional jump — target only
+                uint64_t target = ParseBranchTarget(line.operands);
+                if (target != 0) {
+                    worklist.push_back(target);
+                }
+            } else if (line.mnemonic == "call") {
+                // Call — follow into callee AND fall-through
+                uint64_t target = ParseBranchTarget(line.operands);
+                if (target != 0) {
+                    worklist.push_back(target);
+                }
+                worklist.push_back(addr + instrLen); // fall-through
+            } else if (line.mnemonic.size() >= 2 && line.mnemonic[0] == 'j') {
+                // Conditional jump — target AND fall-through
+                uint64_t target = ParseBranchTarget(line.operands);
+                if (target != 0) {
+                    worklist.push_back(target);
+                }
+                worklist.push_back(addr + instrLen);
+            } else if (line.mnemonic == "loop" || line.mnemonic == "loope" ||
+                       line.mnemonic == "loopne" || line.mnemonic == "jrcxz") {
+                uint64_t target = ParseBranchTarget(line.operands);
+                if (target != 0) worklist.push_back(target);
+                worklist.push_back(addr + instrLen);
+            } else {
+                // Linear instruction — fall-through only
+                worklist.push_back(addr + instrLen);
+            }
+        }
+
+        // Sort by address for display
+        std::sort(result.begin(), result.end(),
+            [](const DisassemblyLine& a, const DisassemblyLine& b) {
+                return a.address < b.address;
+            });
+
+        return result;
+    }
+
+    // SSA state accessors
+    bool IsSSALifted() const { return m_ssaLifted; }
+    uint32_t GetSSAVarCount() const { return m_ssaNextVarId; }
+
+    // ========================================================================
     // Symbol Demangling (Itanium ABI / MSVC basic)
     // ========================================================================
 
@@ -628,6 +1066,25 @@ private:
     std::vector<Section> m_sections;
     std::vector<Import> m_imports;
     std::vector<Export> m_exports;
+
+    // SSA state
+    uint32_t m_ssaNextVarId;
+    bool m_ssaLifted;
+
+    // ========================================================================
+    // Utility Helpers
+    // ========================================================================
+
+    // Alias for DecodeInstruction — used by RecursiveDisassemble
+    size_t DecodeOneInstruction(const uint8_t* data, size_t maxLen, DisassemblyLine& out) {
+        return DecodeInstruction(data, maxLen, out);
+    }
+
+    static std::string ByteToHex(uint8_t b) {
+        char buf[4];
+        snprintf(buf, sizeof(buf), "%02X", b);
+        return std::string(buf);
+    }
 
     // ========================================================================
     // PE Parser

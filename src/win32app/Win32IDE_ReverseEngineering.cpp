@@ -300,6 +300,8 @@ HMENU Win32IDE::createReverseEngineeringMenu() {
     AppendMenuA(menu, MF_STRING, IDM_REVENG_CFG, "Control &Flow Graph");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_FUNCTIONS, "Recover F&unctions");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_DEMANGLE, "De&mangle Symbols");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_SSA, "&SSA Lifting\tCtrl+Shift+S");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_RECURSIVE_DISASM, "R&ecursive Disassembly\tCtrl+Shift+R");
     AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
     AppendMenuA(menu, MF_STRING, IDM_REVENG_COMPARE, "C&ompare Binaries");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_DETECT_VULNS, "Detect &Vulnerabilities");
@@ -365,4 +367,62 @@ void Win32IDE::handleReverseEngineeringDemangle() {
     s_reEngine.LoadBinary(s_reCurrentBinary);
     std::string result = s_reEngine.DemangleAll();
     ShowOutput(m_hwndMain, "Symbol Demangling", result);
+}
+
+// Menu handler for IDM_REVENG_SSA
+void Win32IDE::handleReverseEngineeringSSA() {
+    LOG_FUNCTION();
+    
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    // Determine function entry point for SSA lifting
+    auto symbols = s_reCodex.GetSymbols();
+    uint64_t entryAddr = 0;
+    for (const auto& sym : symbols) {
+        if (sym.name == "_start" || sym.name == "main" || sym.name == "WinMain" ||
+            sym.name == "_main" || sym.name == "wmain" || sym.name == "wWinMain" ||
+            sym.name == "entry" || sym.name == "EntryPoint") {
+            entryAddr = sym.address;
+            break;
+        }
+    }
+    if (entryAddr == 0 && !symbols.empty()) {
+        entryAddr = symbols[0].address;
+    }
+    
+    s_reEngine.LoadBinary(s_reCurrentBinary);
+    std::string result = s_reEngine.LiftSSA(entryAddr);
+    ShowOutput(m_hwndMain, "SSA Lifting", result);
+}
+
+// Menu handler for IDM_REVENG_RECURSIVE_DISASM
+void Win32IDE::handleReverseEngineeringRecursiveDisasm() {
+    LOG_FUNCTION();
+    
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    // Determine entry point for recursive descent
+    auto symbols = s_reCodex.GetSymbols();
+    uint64_t entryAddr = 0;
+    for (const auto& sym : symbols) {
+        if (sym.name == "_start" || sym.name == "main" || sym.name == "WinMain" ||
+            sym.name == "_main" || sym.name == "wmain" || sym.name == "wWinMain" ||
+            sym.name == "entry" || sym.name == "EntryPoint") {
+            entryAddr = sym.address;
+            break;
+        }
+    }
+    if (entryAddr == 0 && !symbols.empty()) {
+        entryAddr = symbols[0].address;
+    }
+    
+    s_reEngine.LoadBinary(s_reCurrentBinary);
+    std::string result = s_reEngine.RecursiveDisassemble(entryAddr);
+    ShowOutput(m_hwndMain, "Recursive Descent Disassembly", result);
 }

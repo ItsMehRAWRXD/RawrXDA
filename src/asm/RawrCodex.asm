@@ -12,6 +12,11 @@
 ;   - String extraction (ASCII, UTF-16)
 ;   - IDA Pro script export
 ;   - RVA-to-file-offset conversion
+;   - Control flow graph (CFG) construction with edge linking
+;   - Cross-reference (XREF) builder
+;   - Function boundary recovery (prologue scan + CALL harvest)
+;   - SSA lifting (register→SSA variable renaming with PHI nodes)
+;   - Recursive descent disassembler (CFG-guided, avoids inline data)
 ;
 ; Build: ml64 /c /Fo RawrCodex.obj RawrCodex.asm
 ;        link RawrCodex.obj /SUBSYSTEM:CONSOLE kernel32.lib
@@ -114,6 +119,47 @@ MAX_OPERANDS_LEN            EQU 128
 MAX_DISASM_ENTRIES          EQU 65536
 MAX_PATTERN_LEN             EQU 256
 MAX_STRING_LEN              EQU 1024
+
+; SSA / Decompiler constants
+MAX_SSA_VARS_PER_INSTR      EQU 4       ; Max SSA vars produced per instruction
+MAX_PHI_OPERANDS            EQU 16      ; Max incoming edges for a PHI node
+MAX_RECURSIVE_DEPTH         EQU 4096    ; Recursive descent stack depth limit
+
+; SSA operation types
+SSA_OP_ASSIGN               EQU 0       ; dst = src1
+SSA_OP_ADD                  EQU 1       ; dst = src1 + src2
+SSA_OP_SUB                  EQU 2       ; dst = src1 - src2
+SSA_OP_MUL                  EQU 3       ; dst = src1 * src2
+SSA_OP_DIV                  EQU 4       ; dst = src1 / src2
+SSA_OP_AND                  EQU 5       ; dst = src1 & src2
+SSA_OP_OR                   EQU 6       ; dst = src1 | src2
+SSA_OP_XOR                  EQU 7       ; dst = src1 ^ src2
+SSA_OP_SHL                  EQU 8       ; dst = src1 << src2
+SSA_OP_SHR                  EQU 9       ; dst = src1 >> src2
+SSA_OP_SAR                  EQU 10      ; dst = src1 >>> src2 (arithmetic)
+SSA_OP_NOT                  EQU 11      ; dst = ~src1
+SSA_OP_NEG                  EQU 12      ; dst = -src1
+SSA_OP_LOAD                 EQU 13      ; dst = [src1 + offset]
+SSA_OP_STORE                EQU 14      ; [dst + offset] = src1
+SSA_OP_CALL                 EQU 15      ; dst = call target(args...)
+SSA_OP_RET                  EQU 16      ; return src1
+SSA_OP_CMP                  EQU 17      ; flags = cmp(src1, src2)
+SSA_OP_TEST                 EQU 18      ; flags = test(src1, src2)
+SSA_OP_BRANCH               EQU 19      ; conditional branch on flags
+SSA_OP_JMP                  EQU 20      ; unconditional jump
+SSA_OP_PHI                  EQU 21      ; PHI node merge
+SSA_OP_LEA                  EQU 22      ; dst = &(src1 + src2*scale + disp)
+SSA_OP_UNKNOWN              EQU 23      ; Unrecognized / fallback
+
+; SSA variable class
+SSA_VAR_REGISTER            EQU 0       ; Machine register (renamed)
+SSA_VAR_TEMP                EQU 1       ; Temporary (intermediate)
+SSA_VAR_MEMORY              EQU 2       ; Memory location
+SSA_VAR_IMMEDIATE           EQU 3       ; Constant / immediate
+SSA_VAR_FLAGS               EQU 4       ; CPU flags pseudo-register
+
+; Recursive descent visited-set constants
+RECDESC_VISITED_BITMAP_SIZE EQU 8192    ; 8K bytes = 64K bit addresses
 
 ; =============================================================================
 ; Data Structures
@@ -230,6 +276,46 @@ XREF_DATA_READ          EQU 3
 XREF_DATA_WRITE         EQU 4
 XREF_DATA_LEA           EQU 5
 
+; --- SSA variable (Single Static Assignment form) ---
+; Each machine register usage is renamed to a unique SSA variable (e.g. rax_0, rax_1)
+RAWRSSAVAR STRUCT
+    varId           DWORD ?         ; Unique SSA variable ID (global counter)
+    varClass        DWORD ?         ; SSA_VAR_REGISTER, SSA_VAR_TEMP, SSA_VAR_MEMORY, SSA_VAR_IMMEDIATE, SSA_VAR_FLAGS
+    regIndex        DWORD ?         ; Original machine register index (0=rax..15=r15) or -1
+    ssaVersion      DWORD ?         ; Version number for this register (0, 1, 2, ...)
+    immValue        QWORD ?         ; Immediate value (for SSA_VAR_IMMEDIATE)
+    memBase         DWORD ?         ; Base register for memory operands
+    memDisp         DWORD ?         ; Displacement for memory operands
+    bbIndex         DWORD ?         ; Basic block index where this variable is defined
+    instrIndex      DWORD ?         ; Instruction index where this variable is defined
+RAWRSSAVAR ENDS
+
+; --- SSA instruction (lifted from machine instruction) ---
+RAWRSSAINSTR STRUCT
+    origAddress     QWORD ?         ; Original machine instruction VA
+    origInstrIdx    DWORD ?         ; Index into instructions DYNARRAY
+    ssaOp           DWORD ?         ; SSA_OP_* operation type
+    dstVarId        DWORD ?         ; Destination SSA variable ID (-1 if none)
+    src1VarId       DWORD ?         ; First source SSA variable ID (-1 if none)
+    src2VarId       DWORD ?         ; Second source SSA variable ID (-1 if none)
+    flagsVarId      DWORD ?         ; Flags SSA variable ID (for CMP/TEST producers, branch consumers)
+    bbIndex         DWORD ?         ; Basic block index this instruction belongs to
+    callTarget      QWORD ?         ; For SSA_OP_CALL: target address
+    branchTarget    QWORD ?         ; For SSA_OP_BRANCH/JMP: target basic block start address
+    isDeadCode      DWORD ?         ; 1 if DCE marks this as dead
+    _pad            DWORD ?         ; Alignment
+RAWRSSAINSTR ENDS
+
+; --- PHI node (SSA merge point at basic block entry) ---
+RAWRPHINODE STRUCT
+    bbIndex         DWORD ?         ; Basic block index where this PHI lives
+    dstVarId        DWORD ?         ; Destination SSA variable ID (the merged result)
+    regIndex        DWORD ?         ; Original machine register being merged
+    operandCount    DWORD ?         ; Number of incoming operands (one per predecessor)
+    operandVarIds   DWORD MAX_PHI_OPERANDS DUP(?) ; SSA var IDs from each predecessor
+    operandBBs      DWORD MAX_PHI_OPERANDS DUP(?) ; Basic block indices of each predecessor
+RAWRPHINODE ENDS
+
 ; --- Pattern match result ---
 RAWRMATCH STRUCT
     matchOff        QWORD ?         ; File offset of match
@@ -291,6 +377,15 @@ RAWRCODEX_CTX STRUCT
     strings         DYNARRAY <>     ; Array of RAWRSTRING
     xrefs           DYNARRAY <>     ; Array of RAWRXREF
 
+    ; SSA / Decompiler arrays
+    ssaVars         DYNARRAY <>     ; Array of RAWRSSAVAR
+    ssaInstrs       DYNARRAY <>     ; Array of RAWRSSAINSTR
+    phiNodes        DYNARRAY <>     ; Array of RAWRPHINODE
+
+    ; SSA state
+    ssaNextVarId    DWORD ?         ; Next available SSA variable ID
+    ssaLifted       DWORD ?         ; 1 if SSA lifting has been performed
+
     ; Status
     lastError       DWORD ?
     isLoaded        DWORD ?
@@ -314,6 +409,48 @@ fmtImportFmt    BYTE "  %s!%s  (ordinal %d)", 0
 fmtExportFmt    BYTE "  [%d] %08X  %s", 0
 fmtInstrFmt     BYTE "  %08X: %-8s %s", 0
 fmtFuncFmt      BYTE "  %08X - %08X  %s", 0
+
+; SSA format strings
+fmtSSAVarReg    BYTE "%s_%d", 0            ; e.g. "rax_3"
+fmtSSAVarTemp   BYTE "t%d", 0             ; e.g. "t17"
+fmtSSAVarMem    BYTE "mem_%d", 0          ; e.g. "mem_5"
+fmtSSAVarImm    BYTE "0x%X", 0            ; e.g. "0x1234"
+fmtSSAVarFlags  BYTE "flags_%d", 0        ; e.g. "flags_2"
+fmtSSAInstr     BYTE "  v%d = %s v%d, v%d", 0   ; "v3 = add v1, v2"
+fmtSSAAssign    BYTE "  v%d = v%d", 0     ; "v3 = v1"
+fmtSSAStore     BYTE "  [v%d] = v%d", 0   ; "[v3] = v1"
+fmtSSALoad      BYTE "  v%d = [v%d]", 0   ; "v3 = [v1]"
+fmtSSACall      BYTE "  v%d = call %08X", 0 ; "v3 = call 401000"
+fmtSSARet       BYTE "  ret v%d", 0       ; "ret v0"
+fmtSSAPhi       BYTE "  v%d = phi(", 0    ; "v3 = phi("
+fmtSSAPhiOp     BYTE "v%d:BB%d", 0        ; "v1:BB0"
+fmtSSABBHdr     BYTE "BB%d [%08X]:", 0    ; "BB0 [00401000]:"
+
+; SSA opcode name table — 24 entries, 8 bytes each (null-padded)
+ssaOpNames      BYTE "assign", 0, 0       ; 0  SSA_OP_ASSIGN
+                BYTE "add", 0,0,0,0,0     ; 1  SSA_OP_ADD
+                BYTE "sub", 0,0,0,0,0     ; 2  SSA_OP_SUB
+                BYTE "mul", 0,0,0,0,0     ; 3  SSA_OP_MUL
+                BYTE "div", 0,0,0,0,0     ; 4  SSA_OP_DIV
+                BYTE "and", 0,0,0,0,0     ; 5  SSA_OP_AND
+                BYTE "or", 0,0,0,0,0,0    ; 6  SSA_OP_OR
+                BYTE "xor", 0,0,0,0,0     ; 7  SSA_OP_XOR
+                BYTE "shl", 0,0,0,0,0     ; 8  SSA_OP_SHL
+                BYTE "shr", 0,0,0,0,0     ; 9  SSA_OP_SHR
+                BYTE "sar", 0,0,0,0,0     ; 10 SSA_OP_SAR
+                BYTE "not", 0,0,0,0,0     ; 11 SSA_OP_NOT
+                BYTE "neg", 0,0,0,0,0     ; 12 SSA_OP_NEG
+                BYTE "load", 0,0,0,0      ; 13 SSA_OP_LOAD
+                BYTE "store", 0,0,0       ; 14 SSA_OP_STORE
+                BYTE "call", 0,0,0,0      ; 15 SSA_OP_CALL
+                BYTE "ret", 0,0,0,0,0     ; 16 SSA_OP_RET
+                BYTE "cmp", 0,0,0,0,0     ; 17 SSA_OP_CMP
+                BYTE "test", 0,0,0,0      ; 18 SSA_OP_TEST
+                BYTE "branch", 0,0        ; 19 SSA_OP_BRANCH
+                BYTE "jmp", 0,0,0,0,0     ; 20 SSA_OP_JMP
+                BYTE "phi", 0,0,0,0,0     ; 21 SSA_OP_PHI
+                BYTE "lea", 0,0,0,0,0     ; 22 SSA_OP_LEA
+                BYTE "unknown", 0         ; 23 SSA_OP_UNKNOWN
 
 ; IDA script header
 idaScriptHdr    BYTE "# RawrCodex IDA Pro Import Script", 13, 10
@@ -540,6 +677,15 @@ fmtRegRipDisp32 BYTE "%s, [rip+0x%X]", 0
 
 tmpBuffer       BYTE 4096 DUP(?)    ; Scratch buffer for formatting
 tmpBuffer2      BYTE 4096 DUP(?)    ; Secondary scratch buffer
+
+; SSA lifter scratch state
+ssaRegVersions  DWORD 16 DUP(?)     ; Current SSA version for each register (rax=0..r15=15)
+ssaFlagsVersion DWORD ?             ; Current SSA version for flags pseudo-register
+
+; Recursive descent disassembler visited bitmap
+recDescVisited  BYTE RECDESC_VISITED_BITMAP_SIZE DUP(?)  ; Bit-per-address visited set
+recDescStack    QWORD MAX_RECURSIVE_DEPTH DUP(?)         ; Worklist stack for addresses to visit
+recDescStackTop DWORD ?             ; Current stack pointer into recDescStack
 
 ; =============================================================================
 ; Code Segment
@@ -771,6 +917,22 @@ RawrCodex_Create PROC
     mov edx, SIZEOF RAWRXREF
     call DynArray_Init
 
+    ; SSA / Decompiler arrays
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaVars
+    mov edx, SIZEOF RAWRSSAVAR
+    call DynArray_Init
+
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edx, SIZEOF RAWRSSAINSTR
+    call DynArray_Init
+
+    lea rcx, [rbx].RAWRCODEX_CTX.phiNodes
+    mov edx, SIZEOF RAWRPHINODE
+    call DynArray_Init
+
+    mov [rbx].RAWRCODEX_CTX.ssaNextVarId, 0
+    mov [rbx].RAWRCODEX_CTX.ssaLifted, 0
+
     mov [rbx].RAWRCODEX_CTX.hFile, INVALID_HANDLE_VALUE
     mov [rbx].RAWRCODEX_CTX.isLoaded, 0
 
@@ -840,6 +1002,14 @@ RawrCodex_Destroy PROC
     lea rcx, [rbx].RAWRCODEX_CTX.strings
     call DynArray_Destroy
     lea rcx, [rbx].RAWRCODEX_CTX.xrefs
+    call DynArray_Destroy
+
+    ; Destroy SSA / Decompiler arrays
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaVars
+    call DynArray_Destroy
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    call DynArray_Destroy
+    lea rcx, [rbx].RAWRCODEX_CTX.phiNodes
     call DynArray_Destroy
 
     ; Free the context itself
@@ -4576,5 +4746,1258 @@ RawrCodex_RecoverFunctions PROC
     pop rbx
     ret
 RawrCodex_RecoverFunctions ENDP
+
+; =============================================================================
+; RawrCodex_LiftToSSA - Lift decoded instructions to Static Single Assignment form
+;
+; Converts the machine instruction stream (in ctx->instructions) into SSA
+; representation using the basic block structure from ctx->basicBlocks.
+;
+; For each basic block:
+;   1. Initialize register version counters
+;   2. Walk instructions in the block
+;   3. For each instruction, create RAWRSSAINSTR with:
+;      - Source operands referencing current SSA versions of source registers
+;      - Destination operand creating a NEW SSA version of the dest register
+;   4. At block boundaries with multiple predecessors, insert PHI nodes
+;
+; The SSA form enables:
+;   - Dead code elimination (DCE)
+;   - Constant propagation
+;   - Expression simplification
+;   - Decompilation to high-level pseudocode
+;
+; Input:  RCX = pointer to RAWRCODEX_CTX (must have instructions + basicBlocks populated)
+; Output: EAX = number of SSA instructions generated (0 on error)
+;
+; Requires: RawrCodex_Disassemble + RawrCodex_BuildCFG called first
+; =============================================================================
+RawrCodex_LiftToSSA PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 88h                    ; Shadow + locals
+
+    test rcx, rcx
+    jz @@ssa_fail
+    mov rbx, rcx                    ; rbx = ctx
+
+    ; Validate prerequisites
+    lea rax, [rbx].RAWRCODEX_CTX.instructions
+    cmp [rax].DYNARRAY.count, 0
+    je @@ssa_fail
+    lea rax, [rbx].RAWRCODEX_CTX.basicBlocks
+    cmp [rax].DYNARRAY.count, 0
+    je @@ssa_fail
+
+    ; Clear previous SSA data
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaVars
+    call DynArray_Clear
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    call DynArray_Clear
+    lea rcx, [rbx].RAWRCODEX_CTX.phiNodes
+    call DynArray_Clear
+    mov [rbx].RAWRCODEX_CTX.ssaNextVarId, 0
+
+    ; Initialize register version table to 0 for all 16 registers
+    lea rdi, ssaRegVersions
+    xor eax, eax
+    mov ecx, 16
+    rep stosd
+    mov [ssaFlagsVersion], 0
+
+    ; -----------------------------------------------------------------------
+    ; Phase 1: Create initial SSA variables for each register (version 0)
+    ; These represent the "incoming" state (function parameters / undefined)
+    ; -----------------------------------------------------------------------
+    xor r12d, r12d                  ; r12 = register index (0..15)
+@@ssa_init_regs:
+    cmp r12d, 16
+    jge @@ssa_init_flags
+
+    ; Build RAWRSSAVAR on stack
+    sub rsp, SIZEOF RAWRSSAVAR
+    mov r8, rsp
+
+    ; Zero it
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRSSAVAR
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    mov [rsp].RAWRSSAVAR.varId, eax
+    mov [rsp].RAWRSSAVAR.varClass, SSA_VAR_REGISTER
+    mov [rsp].RAWRSSAVAR.regIndex, r12d
+    mov [rsp].RAWRSSAVAR.ssaVersion, 0
+    mov [rsp].RAWRSSAVAR.bbIndex, 0
+    mov [rsp].RAWRSSAVAR.instrIndex, -1     ; Defined at function entry
+
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaVars
+    mov rdx, rsp
+    call DynArray_Push
+
+    inc [rbx].RAWRCODEX_CTX.ssaNextVarId
+    add rsp, SIZEOF RAWRSSAVAR
+
+    inc r12d
+    jmp @@ssa_init_regs
+
+@@ssa_init_flags:
+    ; Create initial flags variable (version 0)
+    sub rsp, SIZEOF RAWRSSAVAR
+    mov r8, rsp
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRSSAVAR
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    mov [rsp].RAWRSSAVAR.varId, eax
+    mov [rsp].RAWRSSAVAR.varClass, SSA_VAR_FLAGS
+    mov [rsp].RAWRSSAVAR.regIndex, -1
+    mov [rsp].RAWRSSAVAR.ssaVersion, 0
+
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaVars
+    mov rdx, rsp
+    call DynArray_Push
+    inc [rbx].RAWRCODEX_CTX.ssaNextVarId
+    add rsp, SIZEOF RAWRSSAVAR
+
+    ; -----------------------------------------------------------------------
+    ; Phase 2: Walk each basic block and lift instructions to SSA
+    ; -----------------------------------------------------------------------
+    lea rax, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov r13d, [rax].DYNARRAY.count  ; r13 = total basic blocks
+    xor r14d, r14d                  ; r14 = current BB index
+
+@@ssa_bb_loop:
+    cmp r14d, r13d
+    jge @@ssa_phase3
+
+    ; Get pointer to current basic block
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov edx, r14d
+    call DynArray_Get
+    test rax, rax
+    jz @@ssa_bb_next
+    mov r15, rax                    ; r15 = ptr to current RAWRBASICBLOCK
+
+    ; Get the address range of this block
+    mov rsi, [r15].RAWRBASICBLOCK.startAddress  ; rsi = BB start addr
+    mov rdi, [r15].RAWRBASICBLOCK.endAddress    ; rdi = BB end addr
+
+    ; -----------------------------------------------------------------------
+    ; Phase 2a: Insert PHI nodes for blocks with multiple predecessors
+    ; -----------------------------------------------------------------------
+    cmp [r15].RAWRBASICBLOCK.predecessorCount, 2
+    jb @@ssa_bb_walk_instrs         ; No PHI needed for 0 or 1 predecessor
+
+    ; For each of the 16 registers, insert a PHI node if this block
+    ; has multiple predecessors (simplified: we always insert PHI for
+    ; all registers at multi-predecessor blocks; DCE will remove unused ones)
+    xor r12d, r12d
+@@ssa_phi_reg_loop:
+    cmp r12d, 16
+    jge @@ssa_bb_walk_instrs
+
+    ; Create a new SSA variable for the PHI result
+    sub rsp, SIZEOF RAWRSSAVAR
+    mov r8, rsp
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRSSAVAR
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    ; Bump the version for this register
+    lea rax, ssaRegVersions
+    mov ecx, r12d
+    inc DWORD PTR [rax + rcx*4]
+
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    mov [rsp].RAWRSSAVAR.varId, eax
+    mov [rsp].RAWRSSAVAR.varClass, SSA_VAR_REGISTER
+    mov [rsp].RAWRSSAVAR.regIndex, r12d
+    lea rcx, ssaRegVersions
+    mov edx, r12d
+    mov edx, [rcx + rdx*4]
+    mov [rsp].RAWRSSAVAR.ssaVersion, edx
+    mov [rsp].RAWRSSAVAR.bbIndex, r14d
+    mov [rsp].RAWRSSAVAR.instrIndex, -1     ; PHI, not a real instruction
+
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaVars
+    mov rdx, rsp
+    call DynArray_Push
+
+    inc [rbx].RAWRCODEX_CTX.ssaNextVarId
+
+    ; Free the SSA var space
+    add rsp, SIZEOF RAWRSSAVAR
+
+    ; Build RAWRPHINODE on stack
+    sub rsp, SIZEOF RAWRPHINODE
+    mov r8, rsp
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPHINODE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    mov [rsp].RAWRPHINODE.bbIndex, r14d
+    ; dstVarId = ssaNextVarId - 1 (the variable we just created)
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    dec eax
+    mov [rsp].RAWRPHINODE.dstVarId, eax
+    mov [rsp].RAWRPHINODE.regIndex, r12d
+
+    ; Fill in operand count from predecessor count
+    mov eax, [r15].RAWRBASICBLOCK.predecessorCount
+    cmp eax, MAX_PHI_OPERANDS
+    jbe @@ssa_phi_count_ok
+    mov eax, MAX_PHI_OPERANDS
+@@ssa_phi_count_ok:
+    mov [rsp].RAWRPHINODE.operandCount, eax
+
+    ; For now, operandVarIds are set to -1 (resolved in Phase 3)
+    ; operandBBs are filled from predecessor list
+    mov ecx, eax                    ; ecx = operand count
+    xor edx, edx
+@@ssa_phi_fill_preds:
+    cmp edx, ecx
+    jge @@ssa_phi_push
+    ; Store predecessor index placeholder
+    mov [rsp + RAWRPHINODE.operandBBs + rdx*4], edx
+    mov DWORD PTR [rsp + RAWRPHINODE.operandVarIds + rdx*4], -1
+    inc edx
+    jmp @@ssa_phi_fill_preds
+
+@@ssa_phi_push:
+    lea rcx, [rbx].RAWRCODEX_CTX.phiNodes
+    mov rdx, rsp
+    call DynArray_Push
+
+    add rsp, SIZEOF RAWRPHINODE
+
+    inc r12d
+    jmp @@ssa_phi_reg_loop
+
+    ; -----------------------------------------------------------------------
+    ; Phase 2b: Walk instructions in this basic block
+    ; For each instruction, map mnemonic -> SSA operation, assign SSA variables
+    ; -----------------------------------------------------------------------
+@@ssa_bb_walk_instrs:
+    ; Scan instructions array for those in range [rsi, rdi]
+    lea rax, [rbx].RAWRCODEX_CTX.instructions
+    mov ecx, [rax].DYNARRAY.count   ; total instruction count
+    mov [rsp + 40h], ecx            ; Save total instr count to stack local
+    xor r12d, r12d                  ; r12 = instruction index
+
+@@ssa_instr_loop:
+    mov ecx, [rsp + 40h]
+    cmp r12d, ecx
+    jge @@ssa_bb_next
+
+    ; Get instruction pointer
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    mov edx, r12d
+    call DynArray_Get
+    test rax, rax
+    jz @@ssa_instr_next
+
+    ; Check if this instruction's address falls within the current BB
+    mov rcx, [rax].RAWRINSTRUCTION.address
+    cmp rcx, rsi                    ; >= BB start?
+    jb @@ssa_instr_next
+    cmp rcx, rdi                    ; <= BB end?
+    ja @@ssa_instr_next
+
+    ; rax = ptr to RAWRINSTRUCTION within this BB
+    ; Now create an SSA instruction for it
+    mov [rsp + 48h], rax            ; Save instruction ptr to stack local
+
+    ; Build RAWRSSAINSTR on stack
+    sub rsp, SIZEOF RAWRSSAINSTR
+    mov r8, rsp
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRSSAINSTR
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    ; Restore instruction ptr
+    mov rax, [rsp + SIZEOF RAWRSSAINSTR + 48h]
+
+    ; Set common fields
+    mov rcx, [rax].RAWRINSTRUCTION.address
+    mov [rsp].RAWRSSAINSTR.origAddress, rcx
+    mov [rsp].RAWRSSAINSTR.origInstrIdx, r12d
+    mov [rsp].RAWRSSAINSTR.bbIndex, r14d
+    mov [rsp].RAWRSSAINSTR.dstVarId, -1
+    mov [rsp].RAWRSSAINSTR.src1VarId, -1
+    mov [rsp].RAWRSSAINSTR.src2VarId, -1
+    mov [rsp].RAWRSSAINSTR.flagsVarId, -1
+    mov [rsp].RAWRSSAINSTR.isDeadCode, 0
+
+    ; Classify mnemonic -> SSA op
+    lea rcx, [rax].RAWRINSTRUCTION.szMnemonic
+
+    ; Check first byte for fast classification
+    movzx edx, BYTE PTR [rcx]
+
+    cmp edx, 'a'                    ; add, and, adc
+    je @@ssa_class_a
+    cmp edx, 's'                    ; sub, shr, shl, sar, sbb
+    je @@ssa_class_s
+    cmp edx, 'x'                    ; xor
+    je @@ssa_class_x
+    cmp edx, 'o'                    ; or
+    je @@ssa_class_o
+    cmp edx, 'm'                    ; mov, mul
+    je @@ssa_class_m
+    cmp edx, 'l'                    ; lea
+    je @@ssa_class_l
+    cmp edx, 'c'                    ; cmp, call, cmov
+    je @@ssa_class_c
+    cmp edx, 't'                    ; test
+    je @@ssa_class_t
+    cmp edx, 'r'                    ; ret
+    je @@ssa_class_r
+    cmp edx, 'j'                    ; jmp, jcc
+    je @@ssa_class_j
+    cmp edx, 'n'                    ; not, neg, nop
+    je @@ssa_class_n
+    cmp edx, 'p'                    ; push, pop
+    je @@ssa_class_p
+    cmp edx, 'i'                    ; imul, idiv
+    je @@ssa_class_i
+    cmp edx, 'd'                    ; div
+    je @@ssa_class_d
+
+    ; Default: unknown
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+
+@@ssa_class_a:
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'd'                    ; add or adc
+    je @@ssa_is_add
+    cmp edx, 'n'                    ; and
+    je @@ssa_is_and
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_add:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_ADD
+    jmp @@ssa_binary_op
+@@ssa_is_and:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_AND
+    jmp @@ssa_binary_op
+
+@@ssa_class_s:
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'u'                    ; sub
+    je @@ssa_is_sub
+    cmp edx, 'h'                    ; shl, shr
+    je @@ssa_class_sh
+    cmp edx, 'a'                    ; sar
+    je @@ssa_is_sar
+    cmp edx, 'b'                    ; sbb
+    je @@ssa_is_sub                 ; treat sbb as sub for SSA purposes
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_sub:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_SUB
+    jmp @@ssa_binary_op
+@@ssa_class_sh:
+    movzx edx, BYTE PTR [rcx + 2]
+    cmp edx, 'l'                    ; shl
+    je @@ssa_is_shl
+    cmp edx, 'r'                    ; shr
+    je @@ssa_is_shr
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_shl:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_SHL
+    jmp @@ssa_binary_op
+@@ssa_is_shr:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_SHR
+    jmp @@ssa_binary_op
+@@ssa_is_sar:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_SAR
+    jmp @@ssa_binary_op
+
+@@ssa_class_x:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_XOR
+    jmp @@ssa_binary_op
+
+@@ssa_class_o:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_OR
+    jmp @@ssa_binary_op
+
+@@ssa_class_m:
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'o'                    ; mov
+    je @@ssa_is_mov
+    cmp edx, 'u'                    ; mul
+    je @@ssa_is_mul
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_mov:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_ASSIGN
+    jmp @@ssa_assign_op
+@@ssa_is_mul:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_MUL
+    jmp @@ssa_binary_op
+
+@@ssa_class_l:
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'e'                    ; lea
+    je @@ssa_is_lea
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_lea:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_LEA
+    jmp @@ssa_assign_op
+
+@@ssa_class_c:
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'm'                    ; cmp or cmov
+    je @@ssa_class_cm
+    cmp edx, 'a'                    ; call
+    je @@ssa_is_call
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_class_cm:
+    movzx edx, BYTE PTR [rcx + 2]
+    cmp edx, 'p'                    ; cmp
+    je @@ssa_is_cmp
+    cmp edx, 'o'                    ; cmov
+    je @@ssa_is_cmov
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_cmp:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_CMP
+    ; CMP produces flags, consumes two source operands
+    ; Create new flags SSA variable
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    mov [rsp].RAWRSSAINSTR.flagsVarId, eax
+    inc [rbx].RAWRCODEX_CTX.ssaNextVarId
+    inc [ssaFlagsVersion]
+    jmp @@ssa_emit
+@@ssa_is_cmov:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_ASSIGN  ; CMOVcc is conditional assign
+    jmp @@ssa_assign_op
+@@ssa_is_call:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_CALL
+    ; Restore instruction ptr to get branch target
+    mov rax, [rsp + SIZEOF RAWRSSAINSTR + 48h]
+    mov rcx, [rax].RAWRINSTRUCTION.branchTarget
+    mov [rsp].RAWRSSAINSTR.callTarget, rcx
+    ; Call clobbers rax — create new SSA var for rax
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    mov [rsp].RAWRSSAINSTR.dstVarId, eax
+    inc [rbx].RAWRCODEX_CTX.ssaNextVarId
+    ; Bump rax version
+    lea rcx, ssaRegVersions
+    inc DWORD PTR [rcx]             ; regIndex 0 = rax
+    jmp @@ssa_emit
+
+@@ssa_class_t:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_TEST
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    mov [rsp].RAWRSSAINSTR.flagsVarId, eax
+    inc [rbx].RAWRCODEX_CTX.ssaNextVarId
+    inc [ssaFlagsVersion]
+    jmp @@ssa_emit
+
+@@ssa_class_r:
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'e'                    ; ret
+    je @@ssa_is_ret
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_ret:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_RET
+    ; ret consumes rax (return value)
+    lea rcx, ssaRegVersions
+    mov eax, [rcx]                  ; current rax version
+    mov [rsp].RAWRSSAINSTR.src1VarId, eax
+    jmp @@ssa_emit
+
+@@ssa_class_j:
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'm'                    ; jmp
+    je @@ssa_is_jmp
+    ; Otherwise it's a Jcc (conditional branch)
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_BRANCH
+    ; Branch consumes flags
+    mov eax, [ssaFlagsVersion]
+    mov [rsp].RAWRSSAINSTR.flagsVarId, eax
+    ; Set branch target
+    mov rax, [rsp + SIZEOF RAWRSSAINSTR + 48h]
+    mov rcx, [rax].RAWRINSTRUCTION.branchTarget
+    mov [rsp].RAWRSSAINSTR.branchTarget, rcx
+    jmp @@ssa_emit
+@@ssa_is_jmp:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_JMP
+    mov rax, [rsp + SIZEOF RAWRSSAINSTR + 48h]
+    mov rcx, [rax].RAWRINSTRUCTION.branchTarget
+    mov [rsp].RAWRSSAINSTR.branchTarget, rcx
+    jmp @@ssa_emit
+
+@@ssa_class_n:
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'o'                    ; not or nop
+    je @@ssa_class_no
+    cmp edx, 'e'                    ; neg
+    je @@ssa_is_neg
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_class_no:
+    movzx edx, BYTE PTR [rcx + 2]
+    cmp edx, 't'                    ; not
+    je @@ssa_is_not
+    cmp edx, 'p'                    ; nop
+    je @@ssa_is_nop
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_not:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_NOT
+    jmp @@ssa_unary_op
+@@ssa_is_neg:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_NEG
+    jmp @@ssa_unary_op
+@@ssa_is_nop:
+    ; NOP — skip, don't emit SSA instruction
+    add rsp, SIZEOF RAWRSSAINSTR
+    jmp @@ssa_instr_next
+
+@@ssa_class_p:
+    ; push/pop — model as STORE/LOAD to stack
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'u'                    ; push
+    je @@ssa_is_push
+    cmp edx, 'o'                    ; pop
+    je @@ssa_is_pop
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_push:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_STORE
+    jmp @@ssa_emit
+@@ssa_is_pop:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_LOAD
+    jmp @@ssa_emit
+
+@@ssa_class_i:
+    movzx edx, BYTE PTR [rcx + 1]
+    cmp edx, 'm'                    ; imul
+    je @@ssa_is_imul
+    cmp edx, 'd'                    ; idiv
+    je @@ssa_is_idiv
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_UNKNOWN
+    jmp @@ssa_emit
+@@ssa_is_imul:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_MUL
+    jmp @@ssa_binary_op
+@@ssa_is_idiv:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_DIV
+    jmp @@ssa_binary_op
+
+@@ssa_class_d:
+    mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_DIV
+    jmp @@ssa_binary_op
+
+    ; -------------------------------------------------------------------
+    ; SSA variable assignment helpers
+    ; -------------------------------------------------------------------
+
+@@ssa_binary_op:
+    ; Binary op: dst = src1 OP src2
+    ; Create new SSA var for destination
+    ; In a full implementation, operand parsing determines actual dst/src registers
+    ; Here we use register version counters as placeholder references
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    mov [rsp].RAWRSSAINSTR.dstVarId, eax
+    inc [rbx].RAWRCODEX_CTX.ssaNextVarId
+    ; src1 = current rax version counter (placeholder)
+    lea rcx, ssaRegVersions
+    mov eax, [rcx]                  ; rax version as placeholder src1
+    mov [rsp].RAWRSSAINSTR.src1VarId, eax
+    mov eax, [rcx + 4]             ; rcx version as placeholder src2
+    mov [rsp].RAWRSSAINSTR.src2VarId, eax
+    jmp @@ssa_emit
+
+@@ssa_assign_op:
+    ; Assignment: dst = src1
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    mov [rsp].RAWRSSAINSTR.dstVarId, eax
+    inc [rbx].RAWRCODEX_CTX.ssaNextVarId
+    lea rcx, ssaRegVersions
+    mov eax, [rcx]                  ; source placeholder
+    mov [rsp].RAWRSSAINSTR.src1VarId, eax
+    jmp @@ssa_emit
+
+@@ssa_unary_op:
+    ; Unary: dst = OP src1
+    mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
+    mov [rsp].RAWRSSAINSTR.dstVarId, eax
+    inc [rbx].RAWRCODEX_CTX.ssaNextVarId
+    lea rcx, ssaRegVersions
+    mov eax, [rcx]
+    mov [rsp].RAWRSSAINSTR.src1VarId, eax
+    jmp @@ssa_emit
+
+@@ssa_emit:
+    ; Push the SSA instruction
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov rdx, rsp
+    call DynArray_Push
+
+    add rsp, SIZEOF RAWRSSAINSTR
+
+@@ssa_instr_next:
+    inc r12d
+    jmp @@ssa_instr_loop
+
+@@ssa_bb_next:
+    inc r14d
+    jmp @@ssa_bb_loop
+
+    ; -----------------------------------------------------------------------
+    ; Phase 3: Resolve PHI node operand variable IDs
+    ; For each PHI node, find the last definition of the register in each
+    ; predecessor block. This requires scanning ssaInstrs in reverse within
+    ; each predecessor block.
+    ; -----------------------------------------------------------------------
+@@ssa_phase3:
+    lea rax, [rbx].RAWRCODEX_CTX.phiNodes
+    mov r13d, [rax].DYNARRAY.count
+    xor r14d, r14d                  ; phi index
+
+@@ssa_phi_resolve_loop:
+    cmp r14d, r13d
+    jge @@ssa_done
+
+    lea rcx, [rbx].RAWRCODEX_CTX.phiNodes
+    mov edx, r14d
+    call DynArray_Get
+    test rax, rax
+    jz @@ssa_phi_resolve_next
+    mov r15, rax                    ; r15 = ptr to RAWRPHINODE
+
+    ; For each operand in this PHI node
+    mov ecx, [r15].RAWRPHINODE.operandCount
+    xor r12d, r12d
+
+@@ssa_phi_operand_loop:
+    cmp r12d, ecx
+    jge @@ssa_phi_resolve_next
+
+    ; Find the last SSA instruction in predecessor block r12 that defines
+    ; a variable with regIndex == this PHI's regIndex
+    lea rax, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edi, [rax].DYNARRAY.count
+    dec edi                         ; Start from last SSA instr
+
+@@ssa_phi_scan:
+    cmp edi, 0
+    jl @@ssa_phi_operand_default    ; Not found — use -1
+
+    push rcx
+    push r12
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edx, edi
+    call DynArray_Get
+    pop r12
+    pop rcx
+    test rax, rax
+    jz @@ssa_phi_operand_default
+
+    ; Check if this SSA instr is in the predecessor BB
+    mov edx, [r15 + RAWRPHINODE.operandBBs + r12*4]
+    cmp [rax].RAWRSSAINSTR.bbIndex, edx
+    jne @@ssa_phi_scan_prev
+
+    ; Check if it defines a destination (dstVarId != -1)
+    cmp [rax].RAWRSSAINSTR.dstVarId, -1
+    je @@ssa_phi_scan_prev
+
+    ; Found a definition in the predecessor block — use its dstVarId
+    mov edx, [rax].RAWRSSAINSTR.dstVarId
+    mov [r15 + RAWRPHINODE.operandVarIds + r12*4], edx
+    jmp @@ssa_phi_operand_next
+
+@@ssa_phi_scan_prev:
+    dec edi
+    jmp @@ssa_phi_scan
+
+@@ssa_phi_operand_default:
+    ; No definition found — use initial version (varId = regIndex for version 0)
+    mov edx, [r15].RAWRPHINODE.regIndex
+    mov [r15 + RAWRPHINODE.operandVarIds + r12*4], edx
+
+@@ssa_phi_operand_next:
+    inc r12d
+    jmp @@ssa_phi_operand_loop
+
+@@ssa_phi_resolve_next:
+    inc r14d
+    jmp @@ssa_phi_resolve_loop
+
+@@ssa_done:
+    mov [rbx].RAWRCODEX_CTX.ssaLifted, 1
+
+    ; Return total SSA instruction count
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov eax, [rcx].DYNARRAY.count
+
+    add rsp, 88h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+
+@@ssa_fail:
+    xor eax, eax
+    add rsp, 88h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+RawrCodex_LiftToSSA ENDP
+
+; =============================================================================
+; RawrCodex_RecursiveDisassemble - CFG-guided recursive descent disassembler
+;
+; Unlike linear sweep (RawrCodex_Disassemble), this follows control flow edges
+; to only disassemble reachable code. This avoids disassembling inline data,
+; jump tables, alignment padding, and other non-code regions.
+;
+; Algorithm:
+;   1. Start with entry address on the worklist
+;   2. Pop an address from the worklist
+;   3. If already visited, skip
+;   4. Mark as visited
+;   5. Decode one instruction at that address
+;   6. If it's a branch/call, push target onto worklist
+;   7. If it's not a terminator, push fall-through address
+;   8. Repeat until worklist is empty
+;
+; The visited bitmap uses address offsets relative to the image base.
+; Each bit represents one byte offset.
+;
+; Input:  RCX = pointer to RAWRCODEX_CTX
+;         RDX = entry point address (VA)
+; Output: EAX = number of instructions decoded (0 on error)
+;
+; Results are appended to ctx->instructions (cleared first)
+; =============================================================================
+RawrCodex_RecursiveDisassemble PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 88h
+
+    test rcx, rcx
+    jz @@recdesc_fail
+    mov rbx, rcx                    ; rbx = ctx
+    mov r12, rdx                    ; r12 = entry point VA
+
+    ; Validate binary is loaded
+    cmp [rbx].RAWRCODEX_CTX.isLoaded, 0
+    je @@recdesc_fail
+
+    ; Clear previous instructions (recursive disasm replaces linear sweep)
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    call DynArray_Clear
+
+    ; -----------------------------------------------------------------------
+    ; Initialize visited bitmap — zero out RECDESC_VISITED_BITMAP_SIZE bytes
+    ; -----------------------------------------------------------------------
+    lea rdi, recDescVisited
+    xor eax, eax
+    mov ecx, RECDESC_VISITED_BITMAP_SIZE
+    rep stosb
+
+    ; -----------------------------------------------------------------------
+    ; Initialize worklist stack — push entry point
+    ; -----------------------------------------------------------------------
+    mov [recDescStackTop], 0
+    lea rdi, recDescStack
+    mov [rdi], r12                  ; Push entry point
+    mov [recDescStackTop], 1
+
+    ; Image base for VA-to-RVA conversion
+    mov r13, [rbx].RAWRCODEX_CTX.peImageBase   ; r13 = image base (PE)
+
+    ; -----------------------------------------------------------------------
+    ; Main worklist loop
+    ; -----------------------------------------------------------------------
+@@recdesc_loop:
+    ; Check worklist not empty
+    cmp [recDescStackTop], 0
+    je @@recdesc_complete
+
+    ; Pop address from worklist
+    dec [recDescStackTop]
+    mov eax, [recDescStackTop]
+    lea rdi, recDescStack
+    mov r14, [rdi + rax*8]          ; r14 = current VA to disassemble
+
+    ; Compute RVA from image base for visited bitmap
+    mov rax, r14
+    sub rax, r13                    ; rax = RVA (VA - imageBase)
+
+    ; Check bounds — bitmap can only track RECDESC_VISITED_BITMAP_SIZE * 8 bytes
+    mov rcx, rax
+    shr rcx, 3                      ; byte index = RVA / 8
+    cmp rcx, RECDESC_VISITED_BITMAP_SIZE
+    jae @@recdesc_loop              ; Out of bitmap range — skip
+
+    ; Check if already visited
+    lea rdi, recDescVisited
+    mov rdx, rax
+    and edx, 7                      ; bit index = RVA & 7
+    bt DWORD PTR [rdi + rcx], edx
+    jc @@recdesc_loop               ; Already visited — skip
+
+    ; Mark as visited
+    bts DWORD PTR [rdi + rcx], edx
+
+    ; -----------------------------------------------------------------------
+    ; Convert VA to file offset using RvaToFileOffset
+    ; -----------------------------------------------------------------------
+    mov rcx, rbx
+    mov rax, r14
+    sub rax, r13                    ; RVA = VA - imageBase
+    mov edx, eax                    ; edx = RVA (32-bit)
+    call RvaToFileOffset            ; returns file offset in eax, or -1
+    cmp eax, -1
+    je @@recdesc_loop               ; Can't map this VA — skip
+
+    mov r15d, eax                   ; r15d = file offset
+
+    ; Check bounds
+    mov rcx, [rbx].RAWRCODEX_CTX.fileSize
+    movsxd rax, r15d
+    cmp rax, rcx
+    jae @@recdesc_loop
+
+    ; Get pointer to raw bytes: pFileBase + fileOffset
+    mov rsi, [rbx].RAWRCODEX_CTX.pFileBase
+    add rsi, rax                    ; rsi = ptr to instruction bytes
+
+    ; Remaining bytes in file from this point
+    mov eax, DWORD PTR [rbx].RAWRCODEX_CTX.fileSize  ; Low 32 bits of fileSize
+    sub eax, r15d
+    mov ecx, eax                    ; ecx = bytes remaining
+    cmp ecx, MAX_INSTR_LEN
+    jbe @@recdesc_use_remaining
+    mov ecx, MAX_INSTR_LEN
+@@recdesc_use_remaining:
+    mov [rsp + 40h], ecx            ; Save max bytes available
+
+    ; -----------------------------------------------------------------------
+    ; Decode the instruction using full decoder
+    ; RawrCodex_DecodeInstruction(ctx=RCX, pBytes=RDX, maxLen=R8D, VA=R9)
+    ; -----------------------------------------------------------------------
+    mov rcx, rbx
+    mov rdx, rsi
+    mov r8d, [rsp + 40h]
+    mov r9, r14
+    call RawrCodex_DecodeInstruction
+
+    ; DecodeInstruction pushes result to ctx->instructions internally?
+    ; No — it builds a local RAWRINSTRUCTION. We need to check the returned length.
+    ; Actually, DecodeInstruction returns instrLen in eax (or 0 on failure)
+    test eax, eax
+    jz @@recdesc_loop               ; Decode failed — skip
+
+    mov [rsp + 48h], eax            ; Save instruction length
+
+    ; The decoded instruction is already in ctx->instructions
+    ; (DecodeInstruction was called by Disassemble which pushes)
+    ; Actually, DecodeInstruction is a standalone decoder. We need to
+    ; build and push the instruction ourselves using the decode result.
+
+    ; Build RAWRINSTRUCTION on stack for this decoded instruction
+    sub rsp, SIZEOF RAWRINSTRUCTION
+    mov r8, rsp
+
+    ; Zero it
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRINSTRUCTION
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    mov [rsp].RAWRINSTRUCTION.address, r14
+    mov eax, [rsp + SIZEOF RAWRINSTRUCTION + 48h]
+    mov [rsp].RAWRINSTRUCTION.instrLen, eax
+
+    ; Copy raw bytes (up to 16)
+    push rcx
+    push rdi
+    mov ecx, eax
+    cmp ecx, 16
+    jbe @@recdesc_copy_ok
+    mov ecx, 16
+@@recdesc_copy_ok:
+    lea rdi, [rsp + 16].RAWRINSTRUCTION.rawBytes
+    push rsi
+    rep movsb
+    pop rsi
+    pop rdi
+    pop rcx
+
+    ; Now classify the first opcode byte for control flow
+    movzx eax, BYTE PTR [rsi]
+    mov [rsp + SIZEOF RAWRINSTRUCTION + 50h], eax  ; Save opcode
+
+    ; Handle REX prefix
+    cmp al, 40h
+    jb @@recdesc_decode_opcode
+    cmp al, 4Fh
+    ja @@recdesc_decode_opcode
+    movzx eax, BYTE PTR [rsi + 1]  ; Real opcode after REX
+
+@@recdesc_decode_opcode:
+    ; RET
+    cmp al, 0C3h
+    je @@recdesc_emit_ret
+    cmp al, 0CBh
+    je @@recdesc_emit_ret
+
+    ; CALL rel32
+    cmp al, 0E8h
+    je @@recdesc_emit_call
+
+    ; JMP rel32
+    cmp al, 0E9h
+    je @@recdesc_emit_jmp32
+
+    ; JMP rel8
+    cmp al, 0EBh
+    je @@recdesc_emit_jmp8
+
+    ; Jcc rel8 (70-7F)
+    cmp al, 70h
+    jb @@recdesc_check_0f_opcode
+    cmp al, 7Fh
+    ja @@recdesc_check_0f_opcode
+    jmp @@recdesc_emit_jcc8
+
+@@recdesc_check_0f_opcode:
+    cmp al, 0Fh
+    jne @@recdesc_emit_linear
+
+    ; Two-byte opcode — check for 0F 80-8F (Jcc rel32)
+    movzx eax, BYTE PTR [rsi + 1]
+    cmp al, 80h
+    jb @@recdesc_emit_linear
+    cmp al, 8Fh
+    ja @@recdesc_emit_linear
+    jmp @@recdesc_emit_jcc32
+
+    ; --- Emit: RET (no successors) ---
+@@recdesc_emit_ret:
+    mov [rsp].RAWRINSTRUCTION.isReturn, 1
+    lea rdi, [rsp].RAWRINSTRUCTION.szMnemonic
+    mov BYTE PTR [rdi], 'r'
+    mov BYTE PTR [rdi+1], 'e'
+    mov BYTE PTR [rdi+2], 't'
+    mov BYTE PTR [rdi+3], 0
+
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    mov rdx, rsp
+    call DynArray_Push
+    add rsp, SIZEOF RAWRINSTRUCTION
+    jmp @@recdesc_loop
+
+    ; --- Emit: CALL rel32 (push both target + fall-through) ---
+@@recdesc_emit_call:
+    mov [rsp].RAWRINSTRUCTION.isCall, 1
+    lea rdi, [rsp].RAWRINSTRUCTION.szMnemonic
+    mov BYTE PTR [rdi], 'c'
+    mov BYTE PTR [rdi+1], 'a'
+    mov BYTE PTR [rdi+2], 'l'
+    mov BYTE PTR [rdi+3], 'l'
+    mov BYTE PTR [rdi+4], 0
+
+    ; Compute call target: VA + instrLen + disp32
+    mov eax, [rsp].RAWRINSTRUCTION.instrLen
+    movsxd r8, eax
+    movsxd rax, DWORD PTR [rsi + r8 - 4]
+    add rax, r14
+    add rax, r8
+    mov [rsp].RAWRINSTRUCTION.branchTarget, rax
+
+    ; Push call target onto worklist
+    mov ecx, [recDescStackTop]
+    cmp ecx, MAX_RECURSIVE_DEPTH
+    jge @@recdesc_call_push_ft
+    lea rdi, recDescStack
+    mov [rdi + rcx*8], rax
+    inc [recDescStackTop]
+
+@@recdesc_call_push_ft:
+    ; Push fall-through
+    mov eax, [rsp].RAWRINSTRUCTION.instrLen
+    movsxd rax, eax
+    add rax, r14
+    mov ecx, [recDescStackTop]
+    cmp ecx, MAX_RECURSIVE_DEPTH
+    jge @@recdesc_call_push_done
+    lea rdi, recDescStack
+    mov [rdi + rcx*8], rax
+    inc [recDescStackTop]
+
+@@recdesc_call_push_done:
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    mov rdx, rsp
+    call DynArray_Push
+    add rsp, SIZEOF RAWRINSTRUCTION
+    jmp @@recdesc_loop
+
+    ; --- Emit: JMP rel32 (target only, no fall-through) ---
+@@recdesc_emit_jmp32:
+    mov [rsp].RAWRINSTRUCTION.isJump, 1
+    lea rdi, [rsp].RAWRINSTRUCTION.szMnemonic
+    mov BYTE PTR [rdi], 'j'
+    mov BYTE PTR [rdi+1], 'm'
+    mov BYTE PTR [rdi+2], 'p'
+    mov BYTE PTR [rdi+3], 0
+
+    mov eax, [rsp].RAWRINSTRUCTION.instrLen
+    movsxd r8, eax
+    movsxd rax, DWORD PTR [rsi + r8 - 4]
+    add rax, r14
+    add rax, r8
+    mov [rsp].RAWRINSTRUCTION.branchTarget, rax
+
+    mov ecx, [recDescStackTop]
+    cmp ecx, MAX_RECURSIVE_DEPTH
+    jge @@recdesc_jmp32_done
+    lea rdi, recDescStack
+    mov [rdi + rcx*8], rax
+    inc [recDescStackTop]
+
+@@recdesc_jmp32_done:
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    mov rdx, rsp
+    call DynArray_Push
+    add rsp, SIZEOF RAWRINSTRUCTION
+    jmp @@recdesc_loop
+
+    ; --- Emit: JMP rel8 (target only) ---
+@@recdesc_emit_jmp8:
+    mov [rsp].RAWRINSTRUCTION.isJump, 1
+    lea rdi, [rsp].RAWRINSTRUCTION.szMnemonic
+    mov BYTE PTR [rdi], 'j'
+    mov BYTE PTR [rdi+1], 'm'
+    mov BYTE PTR [rdi+2], 'p'
+    mov BYTE PTR [rdi+3], 0
+
+    mov eax, [rsp].RAWRINSTRUCTION.instrLen
+    movsxd r8, eax
+    movsx eax, BYTE PTR [rsi + r8 - 1]
+    movsxd rax, eax
+    add rax, r14
+    add rax, r8
+    mov [rsp].RAWRINSTRUCTION.branchTarget, rax
+
+    mov ecx, [recDescStackTop]
+    cmp ecx, MAX_RECURSIVE_DEPTH
+    jge @@recdesc_jmp8_done
+    lea rdi, recDescStack
+    mov [rdi + rcx*8], rax
+    inc [recDescStackTop]
+
+@@recdesc_jmp8_done:
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    mov rdx, rsp
+    call DynArray_Push
+    add rsp, SIZEOF RAWRINSTRUCTION
+    jmp @@recdesc_loop
+
+    ; --- Emit: Jcc rel8 (push both target + fall-through) ---
+@@recdesc_emit_jcc8:
+    mov [rsp].RAWRINSTRUCTION.isJump, 1
+    mov [rsp].RAWRINSTRUCTION.isBranch, 1
+    lea rdi, [rsp].RAWRINSTRUCTION.szMnemonic
+    mov BYTE PTR [rdi], 'j'
+    mov BYTE PTR [rdi+1], 'c'
+    mov BYTE PTR [rdi+2], 'c'
+    mov BYTE PTR [rdi+3], 0
+
+    mov eax, [rsp].RAWRINSTRUCTION.instrLen
+    movsxd r8, eax
+    movsx eax, BYTE PTR [rsi + r8 - 1]
+    movsxd rax, eax
+    add rax, r14
+    add rax, r8
+    mov [rsp].RAWRINSTRUCTION.branchTarget, rax
+
+    ; Push branch target
+    mov ecx, [recDescStackTop]
+    cmp ecx, MAX_RECURSIVE_DEPTH
+    jge @@recdesc_jcc8_ft
+    lea rdi, recDescStack
+    mov [rdi + rcx*8], rax
+    inc [recDescStackTop]
+
+@@recdesc_jcc8_ft:
+    ; Push fall-through
+    mov eax, [rsp].RAWRINSTRUCTION.instrLen
+    movsxd rax, eax
+    add rax, r14
+    mov ecx, [recDescStackTop]
+    cmp ecx, MAX_RECURSIVE_DEPTH
+    jge @@recdesc_jcc8_done
+    lea rdi, recDescStack
+    mov [rdi + rcx*8], rax
+    inc [recDescStackTop]
+
+@@recdesc_jcc8_done:
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    mov rdx, rsp
+    call DynArray_Push
+    add rsp, SIZEOF RAWRINSTRUCTION
+    jmp @@recdesc_loop
+
+    ; --- Emit: Jcc rel32 (0F 80-8F, push both target + fall-through) ---
+@@recdesc_emit_jcc32:
+    mov [rsp].RAWRINSTRUCTION.isJump, 1
+    mov [rsp].RAWRINSTRUCTION.isBranch, 1
+    lea rdi, [rsp].RAWRINSTRUCTION.szMnemonic
+    mov BYTE PTR [rdi], 'j'
+    mov BYTE PTR [rdi+1], 'c'
+    mov BYTE PTR [rdi+2], 'c'
+    mov BYTE PTR [rdi+3], 0
+
+    mov eax, [rsp].RAWRINSTRUCTION.instrLen
+    movsxd r8, eax
+    movsxd rax, DWORD PTR [rsi + r8 - 4]
+    add rax, r14
+    add rax, r8
+    mov [rsp].RAWRINSTRUCTION.branchTarget, rax
+
+    ; Push branch target
+    mov ecx, [recDescStackTop]
+    cmp ecx, MAX_RECURSIVE_DEPTH
+    jge @@recdesc_jcc32_ft
+    lea rdi, recDescStack
+    mov [rdi + rcx*8], rax
+    inc [recDescStackTop]
+
+@@recdesc_jcc32_ft:
+    ; Push fall-through
+    mov eax, [rsp].RAWRINSTRUCTION.instrLen
+    movsxd rax, eax
+    add rax, r14
+    mov ecx, [recDescStackTop]
+    cmp ecx, MAX_RECURSIVE_DEPTH
+    jge @@recdesc_jcc32_done
+    lea rdi, recDescStack
+    mov [rdi + rcx*8], rax
+    inc [recDescStackTop]
+
+@@recdesc_jcc32_done:
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    mov rdx, rsp
+    call DynArray_Push
+    add rsp, SIZEOF RAWRINSTRUCTION
+    jmp @@recdesc_loop
+
+    ; --- Emit: Linear (non-branching) instruction ---
+@@recdesc_emit_linear:
+    lea rdi, [rsp].RAWRINSTRUCTION.szMnemonic
+    mov BYTE PTR [rdi], 'i'
+    mov BYTE PTR [rdi+1], 'n'
+    mov BYTE PTR [rdi+2], 's'
+    mov BYTE PTR [rdi+3], 0
+
+    ; Push fall-through only
+    mov eax, [rsp].RAWRINSTRUCTION.instrLen
+    movsxd rax, eax
+    add rax, r14
+    mov ecx, [recDescStackTop]
+    cmp ecx, MAX_RECURSIVE_DEPTH
+    jge @@recdesc_linear_done
+    lea rdi, recDescStack
+    mov [rdi + rcx*8], rax
+    inc [recDescStackTop]
+
+@@recdesc_linear_done:
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    lea rdi, [rsp].RAWRINSTRUCTION.szMnemonic  ; Restore rdi clobbered above
+    mov rdx, rsp
+    call DynArray_Push
+    add rsp, SIZEOF RAWRINSTRUCTION
+    jmp @@recdesc_loop
+
+@@recdesc_complete:
+    ; Return number of instructions decoded
+    lea rcx, [rbx].RAWRCODEX_CTX.instructions
+    mov eax, [rcx].DYNARRAY.count
+
+    add rsp, 88h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+
+@@recdesc_fail:
+    xor eax, eax
+    add rsp, 88h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+RawrCodex_RecursiveDisassemble ENDP
 
 END

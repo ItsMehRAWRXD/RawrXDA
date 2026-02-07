@@ -108,6 +108,8 @@ class MultiResponseEngine;
 #define IDM_REVENG_CFG 4308
 #define IDM_REVENG_FUNCTIONS 4309
 #define IDM_REVENG_DEMANGLE 4310
+#define IDM_REVENG_SSA 4311
+#define IDM_REVENG_RECURSIVE_DISASM 4312
 
 // Define LOG_FUNCTION macro if not already defined
 #ifndef LOG_FUNCTION
@@ -1068,6 +1070,8 @@ private:
     void handleReverseEngineeringCFG();
     void handleReverseEngineeringFunctions();
     void handleReverseEngineeringDemangle();
+    void handleReverseEngineeringSSA();
+    void handleReverseEngineeringRecursiveDisasm();
     
     HMENU createReverseEngineeringMenu(); // Helper to add the menu
 

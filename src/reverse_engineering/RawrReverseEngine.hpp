@@ -613,6 +613,146 @@ public:
     }
 
     // ========================================================================
+    // SSA Lifting (Static Single Assignment Form)
+    // ========================================================================
+
+    std::string LiftSSA(uint64_t functionAddr) {
+        auto ssaResult = m_codex.LiftToSSA(functionAddr);
+
+        std::ostringstream oss;
+        oss << "=== SSA Lifting @ 0x" << std::hex << functionAddr << " ===\n";
+
+        if (!ssaResult.success) {
+            oss << "ERROR: SSA lifting failed. Ensure binary is loaded and CFG is built.\n";
+            return oss.str();
+        }
+
+        oss << "SSA Variables: " << std::dec << ssaResult.totalVars << "\n";
+        oss << "SSA Instructions: " << ssaResult.instructions.size() << "\n";
+        oss << "PHI Nodes: " << ssaResult.phiNodes.size() << "\n\n";
+
+        // SSA opcode name table
+        static const char* ssaOpNames[] = {
+            "assign", "add", "sub", "mul", "div", "and", "or", "xor",
+            "shl", "shr", "sar", "not", "neg", "load", "store", "call",
+            "ret", "cmp", "test", "branch", "jmp", "phi", "lea", "unknown"
+        };
+
+        // Print PHI nodes grouped by basic block
+        if (!ssaResult.phiNodes.empty()) {
+            oss << "--- PHI Nodes ---\n";
+            uint32_t currentBB = UINT32_MAX;
+            for (const auto& phi : ssaResult.phiNodes) {
+                if (phi.bbIndex != currentBB) {
+                    currentBB = phi.bbIndex;
+                    oss << "  BB" << std::dec << currentBB << ":\n";
+                }
+                oss << "    v" << phi.dstVarId << " = phi(";
+                for (size_t k = 0; k < phi.operandVarIds.size(); ++k) {
+                    if (k > 0) oss << ", ";
+                    oss << "v" << phi.operandVarIds[k] << ":BB" << phi.operandBBs[k];
+                }
+                oss << ")  [reg=" << phi.regIndex << "]\n";
+            }
+            oss << "\n";
+        }
+
+        // Print SSA instructions grouped by basic block
+        oss << "--- SSA Instructions ---\n";
+        uint32_t currentBB = UINT32_MAX;
+        size_t deadCount = 0;
+
+        for (const auto& si : ssaResult.instructions) {
+            if (si.bbIndex != currentBB) {
+                currentBB = si.bbIndex;
+                oss << "  BB" << std::dec << currentBB << ":\n";
+            }
+
+            if (si.isDeadCode) {
+                deadCount++;
+                continue; // Skip dead code in output
+            }
+
+            uint32_t opIdx = static_cast<uint32_t>(si.op);
+            const char* opName = (opIdx < 24) ? ssaOpNames[opIdx] : "unknown";
+
+            oss << "    ";
+            if (si.dstVarId >= 0) {
+                oss << "v" << si.dstVarId << " = ";
+            }
+
+            oss << opName;
+
+            if (si.src1VarId >= 0) {
+                oss << " v" << si.src1VarId;
+            }
+            if (si.src2VarId >= 0) {
+                oss << ", v" << si.src2VarId;
+            }
+            if (si.flagsVarId >= 0) {
+                oss << " [flags=v" << si.flagsVarId << "]";
+            }
+            if (si.op == SSAOpType::Call && si.callTarget != 0) {
+                oss << " -> 0x" << std::hex << si.callTarget;
+            }
+            if ((si.op == SSAOpType::Branch || si.op == SSAOpType::Jmp) && si.branchTarget != 0) {
+                oss << " -> 0x" << std::hex << si.branchTarget;
+            }
+
+            oss << "    ; @0x" << std::hex << si.origAddress << std::dec << "\n";
+        }
+
+        oss << "\n--- SSA Statistics ---\n";
+        oss << "Total SSA Variables: " << ssaResult.totalVars << "\n";
+        oss << "Total SSA Instructions: " << ssaResult.instructions.size() << "\n";
+        oss << "Dead Code Instructions: " << deadCount << "\n";
+        oss << "PHI Nodes: " << ssaResult.phiNodes.size() << "\n";
+
+        return oss.str();
+    }
+
+    // ========================================================================
+    // Recursive Descent Disassembly (CFG-guided)
+    // ========================================================================
+
+    std::string RecursiveDisassemble(uint64_t entryPoint) {
+        auto disasm = m_codex.RecursiveDisassemble(entryPoint);
+
+        std::ostringstream oss;
+        oss << "=== Recursive Descent Disassembly @ 0x" << std::hex << entryPoint << " ===\n";
+        oss << "Instructions decoded: " << std::dec << disasm.size() << "\n";
+        oss << "(CFG-guided: only reachable code is shown)\n\n";
+
+        for (const auto& line : disasm) {
+            oss << "  0x" << std::hex << std::setw(12) << std::setfill('0') << line.address << ": ";
+
+            // Print raw bytes (up to 8)
+            for (size_t j = 0; j < line.bytes.size() && j < 8; ++j) {
+                oss << std::hex << std::setw(2) << std::setfill('0') << (int)line.bytes[j] << " ";
+            }
+            // Pad to align mnemonics
+            for (size_t j = line.bytes.size(); j < 8; ++j) {
+                oss << "   ";
+            }
+
+            oss << std::setfill(' ') << std::left << std::setw(8) << line.mnemonic;
+            if (!line.operands.empty()) {
+                oss << " " << line.operands;
+            }
+            if (!line.comment.empty()) {
+                oss << "  ; " << line.comment;
+            }
+            oss << "\n";
+        }
+
+        if (disasm.empty()) {
+            oss << "  (no reachable code found from entry point)\n";
+        }
+
+        return oss.str();
+    }
+
+    // ========================================================================
     // Symbol Demangling
     // ========================================================================
 
