@@ -3,6 +3,29 @@
 #include <sstream>
 #include <iostream>
 
+// ╔════════════════════════════════════════════════════════════════════════════╗
+// ║  RAW-STRING DISCIPLINE — READ BEFORE EDITING THIS FILE                   ║
+// ║                                                                          ║
+// ║  Each Generate*Panel() returns a C++ raw string literal that contains     ║
+// ║  an entire React/TypeScript component. Named delimiters (SUBAGENT,        ║
+// ║  HISTORY, POLICY, EXPLAIN, FAILURE, CODEEDITOR, TAILWIND) prevent         ║
+// ║  accidental closure by parentheses inside JSX.                            ║
+// ║                                                                          ║
+// ║  RULES:                                                                  ║
+// ║   1. NEVER insert C++ code between a R"DELIM(  and its  )DELIM"          ║
+// ║   2. NEVER use replace_string_in_file matching text that spans across     ║
+// ║      a raw-string boundary — the match will land INSIDE the literal       ║
+// ║   3. New panels go BETWEEN closing  )DELIM"; }  and the next function    ║
+// ║   4. If you add a panel, add a guard comment pair at both boundaries      ║
+// ║   5. Verify balance after every edit:                                     ║
+// ║        Select-String -Pattern 'R"[A-Z]+\(' to count opens                ║
+// ║        Select-String -Pattern '\)[A-Z]+"' to count closes                ║
+// ║                                                                          ║
+// ║  Phase 6B regression: a replacement matched `)POLICY"; }` and inserted   ║
+// ║  new code INSIDE R"EXPLAIN(", splitting the ExplainabilityPanel in half. ║
+// ║  This took 150+ lines of surgical repair. Don't repeat it.               ║
+// ╚════════════════════════════════════════════════════════════════════════════╝
+
 ReactIDEGenerator::ReactIDEGenerator() {
     InitializeTemplates();
 }
@@ -142,6 +165,7 @@ export default defineConfig({
 }
 
 std::string ReactIDEGenerator::GenerateTailwindConfig() {
+    // ──── RAW STRING OPEN: R"TAILWIND( ──── do not insert C++ inside this block ────
     return R"TAILWIND(/** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -165,6 +189,7 @@ export default {
   },
   plugins: [],
 })TAILWIND";
+    // ──── RAW STRING CLOSE: )TAILWIND" ──── end of TailwindConfig block ────
 }
 
 std::string ReactIDEGenerator::GenerateMainTsx() {
@@ -910,6 +935,7 @@ export default App;
 }
 
 std::string ReactIDEGenerator::GenerateCodeEditor() {
+    // ──── RAW STRING OPEN: R"CODEEDITOR( ──── do not insert C++ inside this block ────
     return R"CODEEDITOR(import React, { useEffect, useRef } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
@@ -1068,6 +1094,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, languag
   );
 };
 )CODEEDITOR";
+    // ──── RAW STRING CLOSE: )CODEEDITOR" ──── end of CodeEditor block ────
 }
 
 std::string ReactIDEGenerator::GenerateIndexHtml() {
@@ -1437,6 +1464,7 @@ export const ChatInterface: React.FC = () => {
 }
 
 std::string ReactIDEGenerator::GenerateSubAgentPanel() {
+    // ──── RAW STRING OPEN: R"SUBAGENT( ──── do not insert C++ inside this block ────
     return R"SUBAGENT(import React, { useState, useEffect } from 'react';
 import { useEngineStore, AgentInfo, TodoItem } from '@/lib/engine-bridge';
 import { Bot, GitBranch, Hexagon, ListTodo, Play, RefreshCw, Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react';
@@ -1759,9 +1787,11 @@ export const SubAgentPanel: React.FC = () => {
   );
 };
 )SUBAGENT";
+    // ──── RAW STRING CLOSE: )SUBAGENT" ──── end of SubAgentPanel block ────
 }
 
 std::string ReactIDEGenerator::GenerateHistoryPanel() {
+    // ──── RAW STRING OPEN: R"HISTORY( ──── do not insert C++ inside this block ────
     return R"HISTORY(import React, { useState, useEffect } from 'react';
 import { useEngineStore, HistoryEvent, HistoryStats } from '@/lib/engine-bridge';
 import { Clock, RotateCcw, Filter, BarChart3, CheckCircle2, XCircle, Activity } from 'lucide-react';
@@ -1953,9 +1983,11 @@ export const HistoryPanel: React.FC = () => {
   );
 };
 )HISTORY";
+    // ──── RAW STRING CLOSE: )HISTORY" ──── end of HistoryPanel block ────
 }
 
 std::string ReactIDEGenerator::GeneratePolicyPanel() {
+    // ──── RAW STRING OPEN: R"POLICY( ──── do not insert C++ inside this block ────
     return R"POLICY(import React, { useState, useEffect, useCallback } from 'react';
 import { Shield, Lightbulb, Check, X, Download, Upload, BarChart3, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -2385,9 +2417,11 @@ export const PolicyPanel: React.FC = () => {
   );
 };
 )POLICY";
+    // ──── RAW STRING CLOSE: )POLICY" ──── end of PolicyPanel block ────
 }
 
 std::string ReactIDEGenerator::GenerateExplainabilityPanel() {
+    // ──── RAW STRING OPEN: R"EXPLAIN( ──── do not insert C++ inside this block ────
     return R"EXPLAIN(import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Eye, AlertTriangle, Shield, GitBranch, RefreshCw, Download, ChevronDown, ChevronRight, Clock, CheckCircle2, XCircle } from 'lucide-react';
 
@@ -2719,9 +2753,11 @@ export const ExplainabilityPanel: React.FC = () => {
   );
 };
 )EXPLAIN";
+    // ──── RAW STRING CLOSE: )EXPLAIN" ──── end of ExplainabilityPanel block ────
 }
 
 std::string ReactIDEGenerator::GenerateFailurePanel() {
+    // ──── RAW STRING OPEN: R"FAILURE( ──── do not insert C++ inside this block ────
     return R"FAILURE(import React, { useState, useEffect } from 'react';
 import { useEngineStore, FailureRecord, FailureStats } from '@/lib/engine-bridge';
 import { AlertTriangle, CheckCircle2, XCircle, Ban, BarChart3, RefreshCw, Filter, Clock, Shield } from 'lucide-react';
@@ -2987,6 +3023,7 @@ export const FailurePanel: React.FC = () => {
   );
 };
 )FAILURE";
+    // ──── RAW STRING CLOSE: )FAILURE" ──── end of FailurePanel block ────
 }
 
 std::string ReactIDEGenerator::GenerateSettingsPanel() {
