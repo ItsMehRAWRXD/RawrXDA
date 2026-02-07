@@ -762,7 +762,7 @@ Win32IDE::LSPWorkspaceEdit Win32IDE::lspRenameSymbol(const std::string& uri,
 
     const auto& result = resp["result"];
     if (result.contains("changes") && result["changes"].is_object()) {
-        for (auto it = result["changes"].obj_begin(); it != result["changes"].obj_end(); ++it) {
+        for (auto it = result["changes"].begin(); it != result["changes"].end(); ++it) {
             std::string fileUri = it->first;
             std::vector<LSPWorkspaceEdit::TextEdit> edits;
             if (it->second.is_array()) {

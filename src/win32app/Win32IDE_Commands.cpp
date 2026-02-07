@@ -1072,6 +1072,58 @@ void Win32IDE::handleToolsCommand(int commandId) {
                            "General", OutputSeverity::Info);
             break;
 
+        // ============================================================
+        // Phase 9A-ASM: ASM Semantic Support (5082–5093 range)
+        // ============================================================
+
+        case IDM_ASM_PARSE_SYMBOLS:  // 5082
+            cmdAsmParseSymbols();
+            break;
+
+        case IDM_ASM_GOTO_LABEL:  // 5083
+            cmdAsmGotoLabel();
+            break;
+
+        case IDM_ASM_FIND_LABEL_REFS:  // 5084
+            cmdAsmFindLabelRefs();
+            break;
+
+        case IDM_ASM_SHOW_SYMBOL_TABLE:  // 5085
+            cmdAsmShowSymbolTable();
+            break;
+
+        case IDM_ASM_INSTRUCTION_INFO:  // 5086
+            cmdAsmInstructionInfo();
+            break;
+
+        case IDM_ASM_REGISTER_INFO:  // 5087
+            cmdAsmRegisterInfo();
+            break;
+
+        case IDM_ASM_ANALYZE_BLOCK:  // 5088
+            cmdAsmAnalyzeBlock();
+            break;
+
+        case IDM_ASM_SHOW_CALL_GRAPH:  // 5089
+            cmdAsmShowCallGraph();
+            break;
+
+        case IDM_ASM_SHOW_DATA_FLOW:  // 5090
+            cmdAsmShowDataFlow();
+            break;
+
+        case IDM_ASM_DETECT_CONVENTION:  // 5091
+            cmdAsmDetectConvention();
+            break;
+
+        case IDM_ASM_SHOW_SECTIONS:  // 5092
+            cmdAsmShowSections();
+            break;
+
+        case IDM_ASM_CLEAR_SYMBOLS:  // 5093
+            cmdAsmClearSymbols();
+            break;
+
         default:
             break;
     }
@@ -1445,6 +1497,22 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_LSP_SHOW_SYMBOL_INFO,   "LSP: Show Stats & Request Counts",          "", "LSP"});
     m_commandRegistry.push_back({IDM_LSP_CONFIGURE,          "LSP: Show Configuration Path",              "", "LSP"});
     m_commandRegistry.push_back({IDM_LSP_SAVE_CONFIG,        "LSP: Save Configuration",                   "", "LSP"});
+
+    // ================================================================
+    // Phase 9A-ASM: ASM Semantic Support (5082–5093 — routed via handleToolsCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_ASM_PARSE_SYMBOLS,      "ASM: Parse Symbols in Current File",        "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_GOTO_LABEL,         "ASM: Go to Label/Symbol at Cursor",         "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_FIND_LABEL_REFS,    "ASM: Find All References to Label",         "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_SHOW_SYMBOL_TABLE,  "ASM: Show Full Symbol Table",               "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_INSTRUCTION_INFO,   "ASM: Instruction Info at Cursor",           "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_REGISTER_INFO,      "ASM: Register Info at Cursor",              "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_ANALYZE_BLOCK,      "ASM: Analyze Code Block (AI Reasoning)",    "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_SHOW_CALL_GRAPH,    "ASM: Show Call Graph",                      "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_SHOW_DATA_FLOW,     "ASM: Show Data Flow Analysis",              "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_DETECT_CONVENTION,  "ASM: Detect Calling Convention",            "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_SHOW_SECTIONS,      "ASM: Show Sections & Directives",           "", "ASM"});
+    m_commandRegistry.push_back({IDM_ASM_CLEAR_SYMBOLS,      "ASM: Clear All Parsed Symbols",             "", "ASM"});
 
     // ================================================================
     // Theme Selection (3101–3116 range — routed via handleViewCommand)

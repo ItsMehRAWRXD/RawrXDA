@@ -170,7 +170,7 @@ Imported policies get fresh UUIDs and `createdBy: "import"` attribution.
 
 ---
 
-## 5. Inference Stack (Phases 8B–8C)
+## 5. Inference Stack (Phases 8B–9B)
 
 ### Data Flow
 
@@ -198,6 +198,7 @@ UI / CLI / HTTP Request
 ┌──────────────────────────────┐
 │  Execution Engine            │
 │  ├── Local GGUF (CPU)        │
+│  ├── GPU-DX12-Compute (9B)   │  ← DX12 dispatch, VRAM, fence sync
 │  ├── Ollama (local GPU)      │
 │  ├── OpenAI (remote API)     │
 │  ├── Claude (remote API)     │
@@ -231,6 +232,24 @@ Task-based intelligent routing that sits above the Backend Switcher:
 - **Persistence** — `router.json` for task preferences and capability overrides
 
 Full reference: [`LLM_ROUTER.md`](LLM_ROUTER.md)
+
+### GPU Backend Bridge (Phase 9B)
+
+**Files:** `src/core/gpu_backend_bridge.h` (180 lines), `src/core/gpu_backend_bridge.cpp` (860 lines)
+
+DirectX 12 compute bridge connecting the streaming engine registry to actual GPU hardware:
+
+- **Dynamic DX12 loading** — `LoadLibrary("d3d12.dll")` / `LoadLibrary("dxgi.dll")`, no compile-time DX12 headers needed (MinGW-safe)
+- **Best adapter selection** — DXGI factory enumeration, picks GPU with most dedicated VRAM
+- **Compute command queue** — `D3D12_COMMAND_LIST_TYPE_COMPUTE`, fence synchronization, async dispatch
+- **COM vtable wrappers** — all DX12 API calls go through vtable index (no `d3d12.h` include)
+- **GPU capability detection** — vendor ID, shader model, FP16/INT8/FP64 support, wavefront size
+- **VRAM tracking** — logical allocation tracking, quota enforcement
+- **Registry integration** — registered as "GPU-DX12-Compute" engine with live function pointers
+- **Graceful fallback** — if DX12 unavailable, falls back to CPU AVX-512 without crash
+- **Thread-safe** — `std::mutex` + `std::atomic` on all state
+
+Namespace: `RawrXD::GPU`, singleton: `getGPUBackendBridge()`
 
 ---
 
@@ -403,9 +422,12 @@ build/bin/RawrXD-Win32IDE.exe     # Win32 GUI IDE
 | 8A | Command Palette polish | 159 commands, MRU ordering, category filters, HFONT leak fix |
 | 8B | Backend Switcher | 5-backend abstraction, health probing, HTTP endpoints, config persistence |
 | 8C | LLM Router | Task classification, capability scoring, failure demotion, explainable fallback |
+| 9.1 | K-quant dequantization | Q2_K/Q3_K/Q4_K/Q5_K/Q6_K/F16 MASM AVX-512 kernels |
+| 9A | LSP Client Bridge | clangd/pyright/typescript-language-server integration |
+| 9B | GPU Backend Bridge | DX12 compute dispatch, VRAM management, streaming engine registry wiring |
 
-**v7.6.0 is a feature-complete orchestration freeze.** Backend Switcher + LLM Router locked. Bugfix-only forward.
+**v7.7.0-phase9b is the GPU execution layer completion.** DX12 bridge + enterprise license stubs integrated.
 
 ---
 
-*Last updated: v7.6.0-stable — February 2026*
+*Last updated: v7.7.0-phase9b — February 2026*

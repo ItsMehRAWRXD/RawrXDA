@@ -9,6 +9,7 @@
 #include "IDELogger.h"
 #include "IDEConfig.h"
 #include "ModelConnection.h"
+#include "../core/multi_response_engine.h"
 #include "../cpu_inference_engine.h"
 #include "../modules/native_memory.hpp"
 #include "../modules/ExtensionLoader.hpp"
@@ -977,6 +978,10 @@ void Win32IDE::deferredHeavyInit() {
             m_modelResolver.reset();
             OutputDebugStringA("ERROR: ModelSourceResolver init failed (unknown)\n");
         }
+
+        // GPU Backend Bridge — stubbed out (requires gpu_backend_bridge.cpp)
+        // Will be enabled when DX12 compute dispatch is fully linked.
+        OutputDebugStringA("GPU Backend Bridge: deferred (not linked in this build)\n");
 
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 

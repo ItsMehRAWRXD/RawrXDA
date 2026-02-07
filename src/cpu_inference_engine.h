@@ -126,6 +126,9 @@ public:
     size_t GetMemoryUsage() const;
     void ClearCache();
     
+    // Allow ExecutionScheduler to call private TransformerLayer
+    friend class ExecutionScheduler;
+    
 private:
     struct KVCacheLayer {
         std::vector<float> keys;

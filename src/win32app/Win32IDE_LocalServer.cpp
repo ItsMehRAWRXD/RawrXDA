@@ -470,6 +470,22 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== Phase 9A-ASM: ASM Semantic Support ==========
+    else if (method == "GET" && path.rfind("/api/asm/symbols", 0) == 0) {
+        handleAsmSymbolsEndpoint(client, path);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/asm/navigate") {
+        handleAsmNavigateEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/asm/analyze") {
+        handleAsmAnalyzeEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,
