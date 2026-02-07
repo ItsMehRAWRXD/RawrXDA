@@ -1,6 +1,6 @@
-# RawrXD Architecture — v7.3.0 (Stable)
+# RawrXD Architecture — v7.6.0 (Stable)
 
-> Governed Agent Execution Platform with History, Replay, Failure Intelligence, and Adaptive Policy
+> Governed Agent Execution Platform with History, Replay, Failure Intelligence, Adaptive Policy, and Explainable LLM Routing
 
 ---
 
@@ -170,7 +170,38 @@ Imported policies get fresh UUIDs and `createdBy: "import"` attribution.
 
 ---
 
-## 5. Surfaces
+## 5. Inference Routing (Phases 8A–8C)
+
+The inference stack is a closed, layered pipeline with no hidden behavior:
+
+```
+UI / CLI / HTTP
+      ↓
+Explainability (8A)        — observability hooks, command palette polish
+      ↓
+LLM Router (8C)            — task classification, capability scoring, failure demotion
+      ↓
+Backend Switcher (8B)      — explicit backend selection, health probing, config persistence
+      ↓
+Execution Engine
+  ├── Local GGUF (CPU)     — native inference, zero network
+  ├── Ollama (local GPU)   — GPU-accelerated local server
+  ├── OpenAI (remote)      — GPT-4o, function calling, JSON mode
+  ├── Claude (remote)      — strong reasoning, 200K context
+  └── Gemini (remote)      — 1M context, cost-effective
+```
+
+**Key invariants:**
+- Router wraps Switcher — never bypasses it
+- Fallback is explicit, logged, and auditable — never silent
+- When router is disabled, `routeWithIntelligence()` passes straight through to `routeInferenceRequest()`
+- Every routing decision is recorded with task type, backend, confidence, latency, and human-readable reason
+
+Full specification: [`LLM_ROUTER.md`](LLM_ROUTER.md)
+
+---
+
+## 6. Surfaces
 
 ### CLI REPL (RawrEngine)
 
@@ -217,6 +248,13 @@ Full control plane with structured output:
 | `POST` | `/api/policies/import` | P7 |
 | `GET` | `/api/policies/heuristics` | P7 |
 | `GET` | `/api/policies/stats` | P7 |
+| `GET` | `/api/backends` | P8B |
+| `GET` | `/api/backend/active` | P8B |
+| `POST` | `/api/backend/switch` | P8B |
+| `GET` | `/api/router/status` | P8C |
+| `GET` | `/api/router/decision` | P8C |
+| `GET` | `/api/router/capabilities` | P8C |
+| `POST` | `/api/router/route` | P8C |
 
 ### React IDE (rawrxd-monaco-gen)
 
@@ -225,6 +263,8 @@ Generates a complete Vite + Monaco + Tailwind project with:
 - SubAgent control panel
 - History & Replay panel
 - **Policy panel** with Suggestions / Policies / Heuristics tabs
+- **Backend panel** with switcher, status, health probing
+- **Router panel** with overview, capabilities, dry-run route testing
 
 ### Win32 GUI IDE (RawrXD-Win32IDE)
 
@@ -234,10 +274,12 @@ Native Win32 application with Direct2D/DirectWrite rendering:
 - Failure intelligence and detection
 - Autonomy system with plan execution
 - Agent history integration
+- Backend Switcher with 5-backend support
+- LLM Router with task-aware routing and explainability
 
 ---
 
-## 6. File Map (Active Build Targets)
+## 7. File Map (Active Build Targets)
 
 ### Core Engine (shared by all targets)
 ```
@@ -265,12 +307,14 @@ src/win32app/Win32IDE_AgentHistory.cpp — History integration
 src/win32app/Win32IDE_FailureIntelligence.cpp — Failure detection
 src/win32app/Win32IDE_Autonomy.{h,cpp} — Autonomous plan execution
 src/win32app/Win32IDE_PlanExecutor.cpp — Plan step execution
-+ 20 more Win32IDE_*.cpp files
+src/win32app/Win32IDE_BackendSwitcher.cpp — 5-backend switcher (Phase 8B)
+src/win32app/Win32IDE_LLMRouter.cpp — Task-based routing (Phase 8C)
++ 18 more Win32IDE_*.cpp files
 ```
 
 ---
 
-## 7. Design Invariants
+## 8. Design Invariants
 
 These are **non-negotiable** properties of the system:
 
@@ -284,7 +328,7 @@ These are **non-negotiable** properties of the system:
 
 ---
 
-## 8. Build
+## 9. Build
 
 ```bash
 # Configure
@@ -310,18 +354,21 @@ build/bin/RawrXD-Win32IDE.exe     # Win32 GUI IDE
 
 ---
 
-## 9. Phase History
+## 10. Phase History
 
 | Phase | Milestone | Key Deliverable |
-|-------|-----------|-----------------|
+|-------|-----------|------------------|
 | 1–3 | Core inference + surfaces | GGUF loading, tokenization, HTTP, CLI, Win32 IDE |
 | 4 | Multi-agent orchestration | SubAgent, Chain, Swarm, tool dispatch, portable core |
 | 5 | Memory | Append-only event history, timeline query, session replay |
 | 6 | Failure intelligence | Detection, classification, retry strategies |
 | 7 | Governance | Policy engine, heuristics, suggestions, export/import |
+| 8A | Command Palette polish | 159 commands, MRU ordering, category filters, HFONT leak fix |
+| 8B | Backend Switcher | 5-backend abstraction, health probing, HTTP endpoints, config persistence |
+| 8C | LLM Router | Task classification, capability scoring, failure demotion, explainable fallback |
 
-**v7.3.0 is a feature-complete, frozen release.** No new features. Bug fixes only.
+**v7.6.0 is a feature-complete orchestration freeze.** Backend Switcher + LLM Router locked. Bugfix-only forward.
 
 ---
 
-*Last updated: v7.3.0-stable — February 2026*
+*Last updated: v7.6.0-stable — February 2026*
