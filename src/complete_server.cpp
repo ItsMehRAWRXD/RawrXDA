@@ -4,6 +4,7 @@
 #include "agent_history.h"
 #include "agent_policy.h"
 #include "agent_explainability.h"
+#include "ai_backend.h"
 
 #include <algorithm>
 #include <cctype>
@@ -314,7 +315,7 @@ void CompletionServer::HandleClient(int client_fd) {
         response_body = std::string("{\"ready\":") + (running_ ? "true" : "false") +
                         ",\"model_loaded\":" + (model_loaded ? "true" : "false") +
                         ",\"model_path\":\"" + escaped_path + "\"" +
-                        ",\"backend\":\"rawrxd\"" +
+                        ",\"backend\":\"" + (backend_mgr_ ? backend_mgr_->getActiveBackendName() : "rawrxd") + "\"" +
                         ",\"agentic\":" + (agentic_engine_ ? "true" : "false") +
                         ",\"subagents\":" + (subagent_mgr_ ? "true" : "false") +
                         ",\"capabilities\":{\"completion\":true,\"streaming\":true"
@@ -370,6 +371,14 @@ void CompletionServer::HandleClient(int client_fd) {
         response_body = HandleExplainRequest(path, parsed_body);
     } else if (method == "GET" && path == "/api/agents/explain/stats") {
         response_body = HandleExplainStatsRequest();
+    }
+    // === Phase 8B: Backend Switcher API Routes ===
+    else if (method == "GET" && path == "/api/backends") {
+        response_body = HandleBackendsListRequest();
+    } else if (method == "GET" && path == "/api/backends/status") {
+        response_body = HandleBackendsStatusRequest();
+    } else if (method == "POST" && path == "/api/backends/use") {
+        response_body = HandleBackendsUseRequest(parsed_body);
     } else {
         status = 400;
         response_body = R"({"error":"unknown_endpoint"})";
@@ -1036,5 +1045,55 @@ std::string CompletionServer::HandleExplainStatsRequest() {
     return ss.str();
 }
 
+// ============================================================================
+// Phase 8B — Backend Switcher API Handlers
+// ============================================================================
 
+std::string CompletionServer::HandleBackendsListRequest() {
+    if (!backend_mgr_) {
+        return R"({"error":"backend_manager_not_initialized"})";
+    }
+    return backend_mgr_->toJSON();
+}
+
+std::string CompletionServer::HandleBackendsStatusRequest() {
+    if (!backend_mgr_) {
+        return R"({"error":"backend_manager_not_initialized"})";
+    }
+    return backend_mgr_->getStatsJSON();
+}
+
+std::string CompletionServer::HandleBackendsUseRequest(const std::string& body) {
+    if (!backend_mgr_) {
+        return R"({"error":"backend_manager_not_initialized"})";
+    }
+
+    // Parse "id" field from JSON body — minimal extraction
+    std::string id;
+    auto pos = body.find("\"id\"");
+    if (pos == std::string::npos) pos = body.find("\"backend\"");
+    if (pos != std::string::npos) {
+        auto colon = body.find(':', pos);
+        if (colon != std::string::npos) {
+            auto qStart = body.find('"', colon + 1);
+            if (qStart != std::string::npos) {
+                auto qEnd = body.find('"', qStart + 1);
+                if (qEnd != std::string::npos) {
+                    id = body.substr(qStart + 1, qEnd - qStart - 1);
+                }
+            }
+        }
+    }
+
+    if (id.empty()) {
+        return R"({"success":false,"error":"Missing 'id' or 'backend' field in request body"})";
+    }
+
+    bool ok = backend_mgr_->setActiveBackend(id);
+    if (ok) {
+        return "{\"success\":true,\"active\":\"" + id +
+               "\",\"activeName\":\"" + backend_mgr_->getActiveBackendName() + "\"}";
+    }
+    return "{\"success\":false,\"error\":\"Backend '" + id + "' not found or disabled\"}";
+}
 } // namespace RawrXD

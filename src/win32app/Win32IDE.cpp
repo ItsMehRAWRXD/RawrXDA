@@ -3853,9 +3853,9 @@ std::string Win32IDE::sendMessageToModel(const std::string& message)
         return "Error: No model loaded";
     }
 
-    // Phase 8B: Route through backend manager if initialized
+    // Phase 8B/8C: Route through LLM router (if enabled) or backend manager
     if (m_backendManagerInitialized) {
-        std::string resp = routeInferenceRequest(message);
+        std::string resp = routeWithIntelligence(message);
         if (!resp.empty() && resp.find("[Backend Error]") != 0) {
             m_chatHistory.push_back({message, resp});
             return resp;
@@ -4388,9 +4388,9 @@ std::string Win32IDE::generateResponse(const std::string& prompt)
         return "Inference already in progress. Please wait...";
     }
 
-    // Phase 8B: Route through backend manager if initialized
+    // Phase 8B/8C: Route through LLM router (if enabled) or backend manager
     if (m_backendManagerInitialized) {
-        return routeInferenceRequest(prompt);
+        return routeWithIntelligence(prompt);
     }
 
     // Attempt real remote/local inference via Ollama if configured

@@ -12,6 +12,7 @@
 #include "agent_history.h"
 #include "agent_policy.h"
 #include "agent_explainability.h"
+#include "ai_backend.h"
 
 void SignalHandler(int signal) {
     std::cout << "\n[ENGINE] Exiting...\n";
@@ -22,9 +23,9 @@ int main(int argc, char** argv) {
     std::signal(SIGINT, SignalHandler);
     std::cout << R"(
 ╔══════════════════════════════════════════════════════════════╗
-║              RawrXD Engine v7.3 — Agentic Core               ║
+║              RawrXD Engine v7.4 — Agentic Core               ║
 ║  Subagents • Chaining • HexMag Swarm • History & Replay     ║
-║  Phase 7: Adaptive Intelligence & Policy Layer               ║
+║  Phase 8B: AI Backend Switcher + Explainability              ║
 ╚══════════════════════════════════════════════════════════════╝
 )" << std::endl;
 
@@ -80,6 +81,9 @@ HTTP API Endpoints:
   POST /api/policies/import   Import policies (Phase 7)
   GET  /api/policies/heuristics  Compute heuristics (Phase 7)
   GET  /api/policies/stats    Policy engine stats (Phase 7)
+  GET  /api/backends          List all backends (Phase 8B)
+  GET  /api/backends/status   Active backend status (Phase 8B)
+  POST /api/backends/use      Switch active backend (Phase 8B)
 
 REPL Commands:
   /subagent <prompt>        Spawn a sub-agent
@@ -100,6 +104,9 @@ REPL Commands:
   /explain last             Explain most recent agent (Phase 8A)
   /explain session          Explain full session (Phase 8A)
   /explain snapshot <file>  Export explainability snapshot (Phase 8A)
+  /backend list             List all backends (Phase 8B)
+  /backend use <id>         Switch active backend (Phase 8B)
+  /backend status           Show active backend status (Phase 8B)
   exit                      Quit
 )" << std::endl;
             return 0;
@@ -168,6 +175,28 @@ REPL Commands:
     });
     std::cout << "[SYSTEM] Explainability engine: ready (Phase 8A)\n";
 
+    // Initialize AI backend manager (Phase 8B)
+    AIBackendManager backendMgr;
+    backendMgr.setLogCallback([](int level, const std::string& msg) {
+        const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
+        if (level >= 0 && level <= 3) {
+            std::cout << prefix[level] << " " << msg << "\n";
+        }
+    });
+    // Pre-register Ollama as a common second backend
+    {
+        AIBackendConfig ollama;
+        ollama.id          = "ollama";
+        ollama.displayName = "Ollama";
+        ollama.type        = AIBackendType::Ollama;
+        ollama.endpoint    = "http://localhost:11434";
+        ollama.model       = "llama3";
+        ollama.enabled     = true;
+        backendMgr.addBackend(ollama);
+    }
+    std::cout << "[SYSTEM] Backend manager: " << backendMgr.backendCount()
+              << " backends, active=" << backendMgr.getActiveBackendName() << " (Phase 8B)\n";
+
     // Start HTTP server with agentic support
     RawrXD::CompletionServer server;
     if (enable_http) {
@@ -176,6 +205,7 @@ REPL Commands:
         server.SetHistoryRecorder(&historyRecorder);
         server.SetPolicyEngine(&policyEngine);
         server.SetExplainabilityEngine(&explainEngine);
+        server.SetBackendManager(&backendMgr);
         server.Start(port, &engine, model_path);
     }
 
@@ -210,6 +240,9 @@ REPL Commands:
                           << "  /explain last           Explain most recent agent (Phase 8A)\n"
                           << "  /explain session        Explain full session (Phase 8A)\n"
                           << "  /explain snapshot <f>   Export snapshot to file (Phase 8A)\n"
+                          << "  /backend list           List all backends (Phase 8B)\n"
+                          << "  /backend use <id>       Switch active backend (Phase 8B)\n"
+                          << "  /backend status         Show active backend status (Phase 8B)\n"
                           << "  exit                    Quit\n\n";
             }
             else if (input.substr(0, 5) == "/chat" || (input[0] != '/' && !input.empty())) {
@@ -539,6 +572,45 @@ REPL Commands:
                 if (trace.failureCount > 0) {
                     std::cout << "\n" << explainEngine.summarizeFailures();
                 }
+            }
+            // ── Phase 8B: Backend Switcher Commands ──
+            else if (input == "/backend list") {
+                auto backends = backendMgr.listBackends();
+                std::string activeId = backendMgr.getActiveId();
+                std::cout << "[Backends] " << backends.size() << " configured:\n";
+                for (const auto& b : backends) {
+                    std::string icon = (b.id == activeId) ? "🟢" : "⚪";
+                    if (!b.enabled) icon = "⛔";
+                    std::cout << "  " << icon << " [" << b.id << "] "
+                              << b.displayName
+                              << " (" << aiBackendTypeName(b.type) << ")";
+                    if (!b.endpoint.empty()) std::cout << " → " << b.endpoint;
+                    if (!b.model.empty()) std::cout << " model=" << b.model;
+                    std::cout << "\n";
+                }
+            }
+            else if (input.substr(0, 13) == "/backend use ") {
+                std::string id = input.substr(13);
+                if (backendMgr.setActiveBackend(id)) {
+                    std::cout << "[Backend ✅] Active backend → " << id
+                              << " (" << backendMgr.getActiveBackendName() << ")\n";
+                } else {
+                    std::cout << "[Backend ❌] Backend '" << id
+                              << "' not found or disabled. Use /backend list.\n";
+                }
+            }
+            else if (input == "/backend status") {
+                std::cout << "[Backend Status] " << backendMgr.getStatsJSON() << "\n";
+                auto active = backendMgr.getActiveBackend();
+                std::cout << "  Active: " << active.displayName
+                          << " (" << aiBackendTypeName(active.type) << ")\n";
+                if (!active.endpoint.empty())
+                    std::cout << "  Endpoint: " << active.endpoint << "\n";
+                if (!active.model.empty())
+                    std::cout << "  Model: " << active.model << "\n";
+                std::cout << "  MaxTokens: " << active.maxTokens
+                          << "  Temperature: " << active.temperature
+                          << "  Timeout: " << active.timeoutMs << "ms\n";
             }
             else {
                 std::cout << "Unknown command. Type /help for commands.\n";

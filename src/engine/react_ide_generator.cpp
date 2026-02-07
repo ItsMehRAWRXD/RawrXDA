@@ -801,7 +801,9 @@ import { FailurePanel } from '@/components/FailurePanel';
 import { HistoryPanel } from '@/components/HistoryPanel';
 import { PolicyPanel } from '@/components/PolicyPanel';
 import { ExplainabilityPanel } from '@/components/ExplainabilityPanel';
-import { Terminal, Bot, Clock, Shield, Eye } from 'lucide-react';
+import { BackendPanel } from '@/components/BackendPanel';
+import { RouterPanel } from '@/components/RouterPanel';
+import { Terminal, Bot, Clock, Shield, Eye, Zap, GitBranch } from 'lucide-react';
 
 function App() {
   const { connect, isConnected, logs, agenticReady } = useEngineStore();
@@ -815,7 +817,7 @@ function App() {
     subagents: false,
     capabilities: { completion: true, streaming: false }
   });
-  const [rightPanel, setRightPanel] = useState<'tools' | 'agents' | 'failures' | 'history' | 'policy' | 'explain'>('tools');
+  const [rightPanel, setRightPanel] = useState<'tools' | 'agents' | 'failures' | 'history' | 'policy' | 'explain' | 'backend' | 'router'>('tools');
 
   useEffect(() => {
     connect();
@@ -886,6 +888,24 @@ function App() {
         >
           <Eye className="w-4 h-4" />
         </button>
+        <button
+          onClick={() => setRightPanel(rightPanel === 'backend' ? 'tools' : 'backend')}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+            rightPanel === 'backend' ? 'bg-indigo-600 text-white' : 'bg-background hover:bg-background/80'
+          }`}
+          title="Toggle Backend Switcher"
+        >
+          <Zap className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setRightPanel(rightPanel === 'router' ? 'tools' : 'router')}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+            rightPanel === 'router' ? 'bg-teal-600 text-white' : 'bg-background hover:bg-background/80'
+          }`}
+          title="Toggle LLM Router"
+        >
+          <GitBranch className="w-4 h-4" />
+        </button>
         <div className="flex flex-col items-center gap-1">
           {status.agentic && <div className="w-2 h-2 rounded-full bg-purple-500" title="Agentic" />}
           <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -944,6 +964,14 @@ function App() {
             ) : rightPanel === 'explain' ? (
               <div className="flex-1 overflow-hidden">
                 <ExplainabilityPanel />
+              </div>
+            ) : rightPanel === 'backend' ? (
+              <div className="flex-1 overflow-hidden">
+                <BackendPanel />
+              </div>
+            ) : rightPanel === 'router' ? (
+              <div className="flex-1 overflow-hidden">
+                <RouterPanel />
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto border-b border-border">
@@ -1256,6 +1284,7 @@ bool ReactIDEGenerator::GenerateIDE(const std::string& name, const std::string& 
     WriteFile(project_path / "src" / "components" / "PolicyPanel.tsx", GeneratePolicyPanel());
     WriteFile(project_path / "src" / "components" / "SettingsPanel.tsx", GenerateSettingsPanel());
     WriteFile(project_path / "src" / "components" / "BackendPanel.tsx", GenerateBackendPanel());
+    WriteFile(project_path / "src" / "components" / "RouterPanel.tsx", GenerateRouterPanel());
 
     // UI Components (Minimal shadcn abstraction)
     WriteFile(project_path / "src" / "components" / "ui" / "card.tsx", R"(import * as React from "react"
@@ -3279,3 +3308,324 @@ export const BackendPanel: React.FC = () => {
 };
 )BACKEND";
 }
+
+// ============================================================================
+// RouterPanel — Phase 8C: LLM Router status + decision trace + config
+// ============================================================================
+std::string ReactIDEGenerator::GenerateRouterPanel() {
+    return R"ROUTER(
+import React, { useState, useEffect, useCallback } from 'react';
+import { GitBranch, RefreshCw, Play, ToggleLeft, ToggleRight, ChevronRight, AlertTriangle, CheckCircle2 } from 'lucide-react';
+
+interface TaskPreference {
+  task: string;
+  preferred: string;
+  fallback: string;
+  allowFallback: boolean;
+}
+
+interface RouterStatus {
+  enabled: boolean;
+  initialized: boolean;
+  taskPreferences: TaskPreference[];
+  consecutiveFailures: Record<string, number>;
+  stats: {
+    totalRouted: number;
+    totalFallbacksUsed: number;
+    totalPolicyOverrides: number;
+  };
+}
+
+interface RoutingDecision {
+  classifiedTask: string;
+  selectedBackend: string;
+  fallbackBackend: string;
+  confidence: number;
+  reason: string;
+  policyOverride: boolean;
+  fallbackUsed: boolean;
+  decisionEpochMs: number;
+  primaryLatencyMs: number;
+  fallbackLatencyMs: number;
+}
+
+interface BackendCapability {
+  backend: string;
+  maxContextTokens: number;
+  supportsToolCalls: boolean;
+  supportsStreaming: boolean;
+  supportsFunctionCalling: boolean;
+  supportsJsonMode: boolean;
+  costTier: number;
+  qualityScore: number;
+  notes: string;
+}
+
+export const RouterPanel: React.FC = () => {
+  const [status, setStatus] = useState<RouterStatus | null>(null);
+  const [lastDecision, setLastDecision] = useState<RoutingDecision | null>(null);
+  const [capabilities, setCapabilities] = useState<BackendCapability[]>([]);
+  const [testPrompt, setTestPrompt] = useState('');
+  const [testResult, setTestResult] = useState<RoutingDecision | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'overview' | 'capabilities' | 'test'>('overview');
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [statusRes, decisionRes, capRes] = await Promise.all([
+        fetch('/api/router/status'),
+        fetch('/api/router/decision'),
+        fetch('/api/router/capabilities'),
+      ]);
+      if (statusRes.ok) setStatus(await statusRes.json());
+      if (decisionRes.ok) setLastDecision(await decisionRes.json());
+      if (capRes.ok) setCapabilities(await capRes.json());
+    } catch (err) {
+      console.error('Router fetch error:', err);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const testRoute = async () => {
+    if (!testPrompt.trim()) return;
+    setTesting(true);
+    try {
+      const res = await fetch('/api/router/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: testPrompt }),
+      });
+      if (res.ok) setTestResult(await res.json());
+    } catch (err) {
+      console.error('Route test error:', err);
+    }
+    setTesting(false);
+  };
+
+  const costLabel = (tier: number) => {
+    switch (tier) {
+      case 0: return 'Free';
+      case 1: return 'Low';
+      case 2: return 'Medium';
+      case 3: return 'High';
+      default: return `Tier ${tier}`;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
+        <RefreshCw className="w-4 h-4 animate-spin" /> Loading router status...
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 space-y-4 text-sm overflow-y-auto h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 font-semibold">
+          <GitBranch className="w-4 h-4 text-teal-400" />
+          LLM Router
+          {status?.enabled ? (
+            <span className="text-xs px-2 py-0.5 rounded bg-teal-600/20 text-teal-300">ON</span>
+          ) : (
+            <span className="text-xs px-2 py-0.5 rounded bg-gray-600/20 text-gray-400">OFF</span>
+          )}
+        </div>
+        <button onClick={fetchAll} className="p-1 hover:bg-accent rounded" title="Refresh">
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border pb-1">
+        {(['overview', 'capabilities', 'test'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-3 py-1 text-xs rounded-t transition-colors ${
+              tab === t ? 'bg-accent text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t === 'overview' ? 'Overview' : t === 'capabilities' ? 'Capabilities' : 'Test Route'}
+          </button>
+        ))}
+      </div>
+
+      {/* Overview tab */}
+      {tab === 'overview' && status && (
+        <div className="space-y-3">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="rounded-lg border border-border p-2 text-center">
+              <div className="text-lg font-bold text-teal-400">{status.stats.totalRouted}</div>
+              <div className="text-muted-foreground">Routed</div>
+            </div>
+            <div className="rounded-lg border border-border p-2 text-center">
+              <div className="text-lg font-bold text-yellow-400">{status.stats.totalFallbacksUsed}</div>
+              <div className="text-muted-foreground">Fallbacks</div>
+            </div>
+            <div className="rounded-lg border border-border p-2 text-center">
+              <div className="text-lg font-bold text-purple-400">{status.stats.totalPolicyOverrides}</div>
+              <div className="text-muted-foreground">Overrides</div>
+            </div>
+          </div>
+
+          {/* Task preferences */}
+          <div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">Task Routing Map</div>
+            <div className="space-y-1">
+              {status.taskPreferences.map(p => (
+                <div key={p.task} className="flex items-center gap-2 text-xs font-mono bg-accent/30 rounded px-2 py-1">
+                  <span className="w-28 text-foreground">{p.task}</span>
+                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-teal-300">{p.preferred}</span>
+                  {p.fallback !== 'none' && (
+                    <>
+                      <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-yellow-300">{p.fallback}</span>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Last decision */}
+          {lastDecision && lastDecision.decisionEpochMs > 0 && (
+            <div className="rounded-lg border border-border p-3 space-y-1">
+              <div className="text-xs font-medium text-muted-foreground">Last Routing Decision</div>
+              <div className="text-xs font-mono">
+                <span className="text-foreground">{lastDecision.classifiedTask}</span>
+                {' → '}
+                <span className="text-teal-300">{lastDecision.selectedBackend}</span>
+                {' '}
+                <span className="text-muted-foreground">({Math.round(lastDecision.confidence * 100)}%)</span>
+              </div>
+              {lastDecision.fallbackUsed && (
+                <div className="flex items-center gap-1 text-xs text-yellow-400">
+                  <AlertTriangle className="w-3 h-3" /> Fallback used: {lastDecision.fallbackBackend}
+                </div>
+              )}
+              {lastDecision.primaryLatencyMs >= 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Latency: {lastDecision.primaryLatencyMs}ms
+                  {lastDecision.fallbackLatencyMs >= 0 && ` (fallback: ${lastDecision.fallbackLatencyMs}ms)`}
+                </div>
+              )}
+              <div className="text-xs text-muted-foreground italic">{lastDecision.reason}</div>
+            </div>
+          )}
+
+          {/* Consecutive failures */}
+          {status.consecutiveFailures && Object.values(status.consecutiveFailures).some(v => v > 0) && (
+            <div>
+              <div className="text-xs font-medium text-red-400 mb-1">Consecutive Failures</div>
+              <div className="space-y-0.5">
+                {Object.entries(status.consecutiveFailures).filter(([, v]) => v > 0).map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-2 text-xs">
+                    <span className="text-foreground">{k}</span>
+                    <span className="text-red-400 font-bold">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Capabilities tab */}
+      {tab === 'capabilities' && (
+        <div className="space-y-2">
+          {capabilities.map(cap => (
+            <div key={cap.backend} className="rounded-lg border border-border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-xs">{cap.backend}</span>
+                <span className="text-xs text-muted-foreground">
+                  {costLabel(cap.costTier)} · {Math.round(cap.qualityScore * 100)}% quality
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                <span>Context: {cap.maxContextTokens.toLocaleString()} tokens</span>
+                <span>Streaming: {cap.supportsStreaming ? '✓' : '✗'}</span>
+                <span>Tool Calls: {cap.supportsToolCalls ? '✓' : '✗'}</span>
+                <span>Func Calling: {cap.supportsFunctionCalling ? '✓' : '✗'}</span>
+                <span>JSON Mode: {cap.supportsJsonMode ? '✓' : '✗'}</span>
+              </div>
+              {cap.notes && (
+                <div className="text-xs text-muted-foreground italic">{cap.notes}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Test Route tab */}
+      {tab === 'test' && (
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">Test Prompt</label>
+            <textarea
+              value={testPrompt}
+              onChange={(e) => setTestPrompt(e.target.value)}
+              className="w-full h-20 bg-black/50 border border-border rounded-md p-2 text-xs font-mono text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-teal-500"
+              placeholder="Enter a prompt to test routing (dry-run, no inference)..."
+            />
+          </div>
+          <button
+            onClick={testRoute}
+            disabled={testing || !testPrompt.trim()}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-md bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50"
+          >
+            {testing ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+            {testing ? 'Routing...' : 'Test Route'}
+          </button>
+
+          {testResult && (
+            <div className="rounded-lg border border-teal-600/30 bg-teal-600/5 p-3 space-y-1">
+              <div className="flex items-center gap-2 text-xs font-medium">
+                <CheckCircle2 className="w-4 h-4 text-teal-400" />
+                Routing Decision
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <span className="text-muted-foreground">Task:</span>
+                <span className="text-foreground font-mono">{testResult.classifiedTask}</span>
+                <span className="text-muted-foreground">Backend:</span>
+                <span className="text-teal-300 font-mono">{testResult.selectedBackend}</span>
+                <span className="text-muted-foreground">Fallback:</span>
+                <span className="text-yellow-300 font-mono">{testResult.fallbackBackend}</span>
+                <span className="text-muted-foreground">Confidence:</span>
+                <span className="font-mono">{Math.round(testResult.confidence * 100)}%</span>
+                {testResult.policyOverride && (
+                  <>
+                    <span className="text-muted-foreground">Override:</span>
+                    <span className="text-purple-400">Policy override active</span>
+                  </>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground italic mt-1">{testResult.reason}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="border-t border-border pt-3 text-xs text-muted-foreground space-y-1">
+        <div>
+          <strong>API:</strong> GET /api/router/status · GET /api/router/decision · GET /api/router/capabilities · POST /api/router/route
+        </div>
+        <div>
+          <strong>Palette:</strong> :router to filter router commands
+        </div>
+      </div>
+    </div>
+  );
+};
+)ROUTER";
+}
+

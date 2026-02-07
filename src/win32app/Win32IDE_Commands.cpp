@@ -842,6 +842,82 @@ void Win32IDE::handleToolsCommand(int commandId) {
                            "General", OutputSeverity::Info);
             break;
 
+        // ================================================================
+        // LLM Router — Phase 8C (5048+)
+        // ================================================================
+        case IDM_ROUTER_ENABLE:  // 5048
+            if (!m_routerInitialized) initLLMRouter();
+            setRouterEnabled(true);
+            break;
+
+        case IDM_ROUTER_DISABLE:  // 5049
+            setRouterEnabled(false);
+            break;
+
+        case IDM_ROUTER_SHOW_STATUS:  // 5050
+            appendToOutput(getRouterStatusString(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_ROUTER_SHOW_DECISION:  // 5051
+            {
+                RoutingDecision last = getLastRoutingDecision();
+                if (last.decisionEpochMs > 0) {
+                    appendToOutput("[LLMRouter] Last Decision:\n  " +
+                                   getRoutingDecisionExplanation(last),
+                                   "General", OutputSeverity::Info);
+                } else {
+                    appendToOutput("[LLMRouter] No routing decisions recorded yet. "
+                                   "Enable the router and send a prompt first.",
+                                   "General", OutputSeverity::Info);
+                }
+            }
+            break;
+
+        case IDM_ROUTER_SET_POLICY:  // 5052
+            appendToOutput("[LLMRouter] Policy Configuration:\n"
+                           "  Use /router policy <task> <backend> [fallback] in the REPL, or\n"
+                           "  POST /api/router/route with {\"prompt\":\"...\"} to test routing.\n"
+                           "  Edit router.json for persistent task → backend mappings.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case IDM_ROUTER_SHOW_CAPABILITIES:  // 5053
+            appendToOutput(getCapabilitiesString(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_ROUTER_SHOW_FALLBACKS:  // 5054
+            appendToOutput(getFallbackChainString(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_ROUTER_SAVE_CONFIG:  // 5055
+            saveRouterConfig();
+            appendToOutput("[LLMRouter] Router config saved to disk.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case IDM_ROUTER_ROUTE_PROMPT:  // 5056
+            {
+                std::string testPrompt = getWindowText(m_hwndCopilotChatInput);
+                if (!testPrompt.empty()) {
+                    LLMTaskType task = classifyTask(testPrompt);
+                    RoutingDecision decision = selectBackendForTask(task, testPrompt);
+                    appendToOutput("[LLMRouter] Dry-run routing:\n  " +
+                                   getRoutingDecisionExplanation(decision),
+                                   "General", OutputSeverity::Info);
+                } else {
+                    appendToOutput("[LLMRouter] Enter a prompt in the chat input first, "
+                                   "then run this command to see where it would be routed.",
+                                   "General", OutputSeverity::Warning);
+                }
+            }
+            break;
+
+        case IDM_ROUTER_RESET_STATS:  // 5057
+            resetRouterStats();
+            appendToOutput("[LLMRouter] Router statistics and failure counters reset.",
+                           "General", OutputSeverity::Info);
+            break;
+
         default:
             break;
     }

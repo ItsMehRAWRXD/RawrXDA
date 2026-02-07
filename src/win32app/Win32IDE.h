@@ -247,6 +247,18 @@ struct IDETheme {
 #define IDM_BACKEND_SET_API_KEY     5046
 #define IDM_BACKEND_SAVE_CONFIGS    5047
 
+// LLM Router commands (5048+ range — routed via handleToolsCommand)
+#define IDM_ROUTER_ENABLE           5048
+#define IDM_ROUTER_DISABLE          5049
+#define IDM_ROUTER_SHOW_STATUS      5050
+#define IDM_ROUTER_SHOW_DECISION    5051
+#define IDM_ROUTER_SET_POLICY       5052
+#define IDM_ROUTER_SHOW_CAPABILITIES 5053
+#define IDM_ROUTER_SHOW_FALLBACKS   5054
+#define IDM_ROUTER_SAVE_CONFIG      5055
+#define IDM_ROUTER_ROUTE_PROMPT     5056
+#define IDM_ROUTER_RESET_STATS      5057
+
 struct CodeSnippet {
     std::string name;
     std::string description;
@@ -2390,6 +2402,125 @@ private:
     std::mutex    m_backendMutex;
 
     // ========================================================================
+    // LLM Router — Phase 8C (Win32IDE_LLMRouter.cpp)
+    // ========================================================================
+    // Task-based routing: classifies prompts by intent, selects the optimal
+    // backend based on capabilities, failure history, and policy constraints.
+    // Fallback is explicit, auditable, never silent.
+
+    // ---- Task classification ----
+    enum class LLMTaskType {
+        Chat           = 0,   // General conversation / Q&A
+        CodeGeneration = 1,   // Write new code from description
+        CodeReview     = 2,   // Analyze / review existing code
+        CodeEdit       = 3,   // Edit / refactor existing code
+        Planning       = 4,   // Multi-step plan generation
+        ToolExecution  = 5,   // Tool-call / function-calling tasks
+        Research       = 6,   // Summarization / information retrieval
+        General        = 7,   // Unclassified — default bucket
+        Count          = 8
+    };
+
+    // ---- Backend capability profile ----
+    struct BackendCapability {
+        AIBackendType backend         = AIBackendType::LocalGGUF;
+        int           maxContextTokens = 4096;
+        bool          supportsToolCalls = false;
+        bool          supportsStreaming = true;
+        bool          supportsFunctionCalling = false;
+        bool          supportsJsonMode = false;
+        int           costTier         = 0;     // 0 = free/local, 1 = cheap, 2 = moderate, 3 = expensive
+        float         qualityScore     = 0.5f;  // 0.0–1.0 subjective quality rating
+        std::string   notes;                    // Human-readable notes
+    };
+
+    // ---- Routing decision (the core output of the router) ----
+    struct RoutingDecision {
+        AIBackendType selectedBackend   = AIBackendType::LocalGGUF;
+        AIBackendType fallbackBackend   = AIBackendType::Count;  // Count = no fallback
+        LLMTaskType   classifiedTask    = LLMTaskType::General;
+        float         confidence        = 0.0f;   // 0.0–1.0 classification confidence
+        std::string   reason;                      // Human-readable routing rationale
+        bool          policyOverride    = false;   // true if policy engine redirected
+        bool          fallbackUsed      = false;   // true if primary failed and fallback served
+        uint64_t      decisionEpochMs   = 0;       // When the decision was made
+        int           primaryLatencyMs  = -1;      // Latency of primary attempt (-1 = not yet)
+        int           fallbackLatencyMs = -1;      // Latency of fallback attempt (-1 = not used)
+    };
+
+    // ---- Per-task routing preference (user-configurable) ----
+    struct TaskRoutingPreference {
+        LLMTaskType   taskType          = LLMTaskType::General;
+        AIBackendType preferredBackend  = AIBackendType::LocalGGUF;
+        AIBackendType fallbackBackend   = AIBackendType::Count;
+        bool          allowFallback     = true;
+        int           maxFailuresBeforeSkip = 5;   // Skip a backend after N consecutive failures
+    };
+
+    // ---- Router statistics ----
+    struct RouterStats {
+        uint64_t totalRouted           = 0;
+        uint64_t totalFallbacksUsed    = 0;
+        uint64_t totalPolicyOverrides  = 0;
+        uint64_t taskTypeCounts[(size_t)LLMTaskType::Count] = {};
+        uint64_t backendSelections[(size_t)AIBackendType::Count] = {};
+        uint64_t backendFallbacks[(size_t)AIBackendType::Count] = {};
+    };
+
+    // Router — initialization & lifecycle
+    void initLLMRouter();
+    void shutdownLLMRouter();
+    void loadRouterConfig();
+    void saveRouterConfig();
+
+    // Task classification
+    LLMTaskType classifyTask(const std::string& prompt) const;
+    std::string taskTypeString(LLMTaskType type) const;
+    LLMTaskType taskTypeFromString(const std::string& name) const;
+
+    // Capability management
+    void initDefaultCapabilities();
+    BackendCapability getBackendCapability(AIBackendType type) const;
+    void setBackendCapability(AIBackendType type, const BackendCapability& cap);
+
+    // Core routing
+    RoutingDecision selectBackendForTask(LLMTaskType task, const std::string& prompt);
+    std::string routeWithIntelligence(const std::string& prompt);
+    std::string handleRoutingFallback(AIBackendType primary, AIBackendType fallback,
+                                       const std::string& prompt, RoutingDecision& decision);
+
+    // Policy integration — failure-informed routing
+    AIBackendType getFailureAdjustedBackend(AIBackendType preferred, LLMTaskType task) const;
+    bool isBackendViableForTask(AIBackendType type, LLMTaskType task) const;
+    int getConsecutiveFailures(AIBackendType type) const;
+
+    // Router status & explainability
+    std::string getRouterStatusString() const;
+    std::string getRoutingDecisionExplanation(const RoutingDecision& decision) const;
+    std::string getRouterStatsString() const;
+    std::string getCapabilitiesString() const;
+    std::string getFallbackChainString() const;
+    RoutingDecision getLastRoutingDecision() const;
+
+    // Router configuration
+    void setTaskPreference(LLMTaskType task, AIBackendType preferred, AIBackendType fallback);
+    TaskRoutingPreference getTaskPreference(LLMTaskType task) const;
+    void setRouterEnabled(bool enabled);
+    bool isRouterEnabled() const;
+    void resetRouterStats();
+    std::string getRouterConfigFilePath() const;
+
+    // Router state
+    bool m_routerEnabled                                            = false;
+    bool m_routerInitialized                                        = false;
+    std::array<BackendCapability, (size_t)AIBackendType::Count>     m_backendCapabilities;
+    std::array<TaskRoutingPreference, (size_t)LLMTaskType::Count>   m_taskPreferences;
+    std::array<int, (size_t)AIBackendType::Count>                   m_consecutiveFailures = {};
+    RouterStats m_routerStats                                       = {};
+    RoutingDecision m_lastRoutingDecision                           = {};
+    std::mutex m_routerMutex;
+
+    // ========================================================================
     // Settings Dialog (Win32IDE_Settings.cpp)
     // ========================================================================
     std::string getSettingsFilePath() const;
@@ -2425,6 +2556,12 @@ private:
     void handleBackendsListEndpoint(SOCKET client);
     void handleBackendActiveEndpoint(SOCKET client);
     void handleBackendSwitchEndpoint(SOCKET client, const std::string& body);
+
+    // Phase 8C: LLM Router HTTP endpoints
+    void handleRouterStatusEndpoint(SOCKET client);
+    void handleRouterDecisionEndpoint(SOCKET client);
+    void handleRouterCapabilitiesEndpoint(SOCKET client);
+    void handleRouterRouteEndpoint(SOCKET client, const std::string& body);
 
     void toggleLocalServer();
     std::string getLocalServerStatus() const;

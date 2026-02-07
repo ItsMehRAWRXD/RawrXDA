@@ -42,6 +42,7 @@ private:
     std::string GenerateExplainabilityPanel();
     std::string GenerateSettingsPanel();
     std::string GenerateBackendPanel();
+    std::string GenerateRouterPanel();
     
     void WriteFile(const std::filesystem::path& path, const std::string& content);
     void CreateDirectoryStructure(const std::filesystem::path& base);
