@@ -1125,6 +1125,58 @@ void Win32IDE::handleToolsCommand(int commandId) {
             break;
 
         // ============================================================
+        // Phase 9B: LSP-AI Hybrid Integration Bridge (5094–5105)
+        // ============================================================
+
+        case IDM_HYBRID_COMPLETE:  // 5094
+            cmdHybridComplete();
+            break;
+
+        case IDM_HYBRID_DIAGNOSTICS:  // 5095
+            cmdHybridDiagnostics();
+            break;
+
+        case IDM_HYBRID_SMART_RENAME:  // 5096
+            cmdHybridSmartRename();
+            break;
+
+        case IDM_HYBRID_ANALYZE_FILE:  // 5097
+            cmdHybridAnalyzeFile();
+            break;
+
+        case IDM_HYBRID_AUTO_PROFILE:  // 5098
+            cmdHybridAutoProfile();
+            break;
+
+        case IDM_HYBRID_STATUS:  // 5099
+            cmdHybridStatus();
+            break;
+
+        case IDM_HYBRID_SYMBOL_USAGE:  // 5100
+            cmdHybridSymbolUsage();
+            break;
+
+        case IDM_HYBRID_EXPLAIN_SYMBOL:  // 5101
+            cmdHybridExplainSymbol();
+            break;
+
+        case IDM_HYBRID_ANNOTATE_DIAG:  // 5102
+            cmdHybridAnnotateDiag();
+            break;
+
+        case IDM_HYBRID_STREAM_ANALYZE:  // 5103
+            cmdHybridStreamAnalyze();
+            break;
+
+        case IDM_HYBRID_SEMANTIC_PREFETCH:  // 5104
+            cmdHybridSemanticPrefetch();
+            break;
+
+        case IDM_HYBRID_CORRECTION_LOOP:  // 5105
+            cmdHybridCorrectionLoop();
+            break;
+
+        // ============================================================
         // Phase 9C: Multi-Response Chain (5106–5117 range)
         // ============================================================
 

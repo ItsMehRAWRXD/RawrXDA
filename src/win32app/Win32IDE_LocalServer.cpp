@@ -526,6 +526,39 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ============================================================
+    // Phase 9B: LSP-AI Hybrid Integration Bridge
+    // ============================================================
+    else if (method == "POST" && path == "/api/hybrid/complete") {
+        handleHybridCompleteEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path.rfind("/api/hybrid/diagnostics", 0) == 0) {
+        handleHybridDiagnosticsEndpoint(client, path);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/hybrid/rename") {
+        handleHybridSmartRenameEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/hybrid/analyze") {
+        handleHybridAnalyzeEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/hybrid/status") {
+        handleHybridStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/hybrid/symbol-usage") {
+        handleHybridSymbolUsageEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,

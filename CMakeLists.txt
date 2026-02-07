@@ -110,6 +110,7 @@ if(WIN32)
         src/win32app/Win32IDE_LLMRouter.cpp
         src/win32app/Win32IDE_LSPClient.cpp
         src/win32app/Win32IDE_AsmSemantic.cpp
+        src/win32app/Win32IDE_LSP_AI_Bridge.cpp
         src/win32app/Win32IDE_MultiResponse.cpp
         src/win32app/Win32IDE_SubAgent.h
         src/win32app/Win32IDE_SubAgent.cpp
