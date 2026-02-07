@@ -96,10 +96,9 @@ CFG_CAUSAL      EQU 60
 ; =============================================================================
 ;                             DATA
 ; =============================================================================
-.data
-ALIGN 64
+_DATA64 SEGMENT ALIGN(64) 'DATA'
 
-; Broadcast-ready constants
+; Broadcast-ready constants (64-byte aligned for ZMM loads)
 g_NegInf            DD 16 DUP(0FF800000h)      ; -inf × 16 (one ZMM)
 
 ; AVX-512 capability flag (set by FlashAttention_Init)
@@ -108,6 +107,8 @@ g_AVX512Ready       DD 0
 ; Performance counters
 g_FlashAttnCalls    DQ 0
 g_FlashAttnTiles    DQ 0
+
+_DATA64 ENDS
 
 ; =============================================================================
 ;                             CODE

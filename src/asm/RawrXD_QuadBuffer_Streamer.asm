@@ -891,7 +891,7 @@ QB_Init PROC FRAME
 
     ; --- Initialize critical section for thread safety ---
     mov     rcx, r14
-    add     rcx, OFFSET QB_CONTEXT.csGlobalLock
+    add     rcx, QB_CONTEXT.csGlobalLock
     call    InitializeCriticalSection
 
     mov     g_Init, 1
@@ -1089,7 +1089,7 @@ QB_StreamTensor PROC FRAME
 
     ; --- Lock critical section ---
     mov     rcx, rdi
-    add     rcx, OFFSET QB_CONTEXT.csGlobalLock
+    add     rcx, QB_CONTEXT.csGlobalLock
     call    EnterCriticalSection
 
     ; --- Find tensor by hash in tensor table ---
@@ -1275,7 +1275,7 @@ QB_StreamTensor PROC FRAME
     ; Save result, unlock critical section, restore result
     push    rax
     mov     rcx, rdi
-    add     rcx, OFFSET QB_CONTEXT.csGlobalLock
+    add     rcx, QB_CONTEXT.csGlobalLock
     call    LeaveCriticalSection
     pop     rax
 
@@ -1312,7 +1312,7 @@ QB_ReleaseTensor PROC FRAME
 
     ; Lock
     mov     rcx, rdi
-    add     rcx, OFFSET QB_CONTEXT.csGlobalLock
+    add     rcx, QB_CONTEXT.csGlobalLock
     call    EnterCriticalSection
 
     ; Find tensor by hash
@@ -1337,7 +1337,7 @@ QB_ReleaseTensor PROC FRAME
 @release_not_found:
     ; Unlock
     mov     rcx, rdi
-    add     rcx, OFFSET QB_CONTEXT.csGlobalLock
+    add     rcx, QB_CONTEXT.csGlobalLock
     call    LeaveCriticalSection
 
 @release_no_ctx:
@@ -1536,7 +1536,7 @@ QB_Shutdown PROC FRAME
 
     ; --- Delete critical section ---
     mov     rcx, rbx
-    add     rcx, OFFSET QB_CONTEXT.csGlobalLock
+    add     rcx, QB_CONTEXT.csGlobalLock
     call    DeleteCriticalSection
 
     ; --- Free context structure ---

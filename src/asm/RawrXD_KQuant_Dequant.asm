@@ -46,10 +46,9 @@ GGML_TYPE_Q6_K          EQU     18
 NIBBLE_MASK             EQU     0Fh
 
 ; -----------------------------------------------------------------------------
-; Data Section
+; Data Section (64-byte aligned for AVX2/AVX-512 broadcast loads)
 ; -----------------------------------------------------------------------------
-.data
-ALIGN 64
+_DATA64 SEGMENT ALIGN(64) 'DATA'
 
 ; Broadcast mask for nibble isolation (4-bit low)
 mask_0F:
@@ -75,6 +74,8 @@ mask_3F:
 ; Signed offset for Q6_K (subtract 32 to center)
 offset_32:
     DD  32.0, 32.0, 32.0, 32.0, 32.0, 32.0, 32.0, 32.0
+
+_DATA64 ENDS
 
 ; -----------------------------------------------------------------------------
 ; Code Section

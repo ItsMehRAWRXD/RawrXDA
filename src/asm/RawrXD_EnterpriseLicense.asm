@@ -78,13 +78,13 @@ ENTERPRISE_CONTEXT STRUCT
     Signature           DB RSA_SIGNATURE_SIZE DUP(0)    ; RSA-4096 signature
     SignatureSize       DD 0
     _pad3               DD 0
-    Lock                CRITICAL_SECTION <>              ; Thread safety
+    csLock              CRITICAL_SECTION <>              ; Thread safety
 ENTERPRISE_CONTEXT ENDS
 
 ; =============================================================================
 ;                          GLOBAL DATA
 ; =============================================================================
-.data?
+.data
 ALIGN 16
 g_EntCtx                ENTERPRISE_CONTEXT <>
 
@@ -92,10 +92,8 @@ g_EntCtx                ENTERPRISE_CONTEXT <>
 PUBLIC g_800B_Unlocked
 PUBLIC g_EnterpriseFeatures
 
-g_800B_Unlocked         DD ?
-g_EnterpriseFeatures    DQ ?
-
-.data
+g_800B_Unlocked         DD 0
+g_EnterpriseFeatures    DQ 0
 ALIGN 8
 
 ; Embedded RSA-4096 Public Key Blob (CryptoAPI PUBLICKEYBLOB format)
@@ -183,7 +181,7 @@ Enterprise_InitLicenseSystem PROC FRAME
     mov     g_EnterpriseFeatures, rax
 
     ; ---- Initialize Critical Section ----
-    lea     rcx, g_EntCtx.Lock
+    lea     rcx, g_EntCtx.csLock
     call    InitializeCriticalSection
 
     ; ---- Acquire CryptoAPI Context ----
@@ -664,7 +662,7 @@ Enterprise_InstallLicense PROC FRAME
     ja      @@invalid_size
 
     ; Thread safety
-    lea     rcx, g_EntCtx.Lock
+    lea     rcx, g_EntCtx.csLock
     call    EnterCriticalSection
 
     ; Copy license data into context
@@ -722,7 +720,7 @@ Enterprise_InstallLicense PROC FRAME
 
 @@store_done:
     ; Release lock
-    lea     rcx, g_EntCtx.Lock
+    lea     rcx, g_EntCtx.csLock
     call    LeaveCriticalSection
 
     xor     eax, eax                         ; SUCCESS
@@ -735,7 +733,7 @@ Enterprise_InstallLicense PROC FRAME
 @@invalid_license:
     ; Release lock on failure path too
     push    rax
-    lea     rcx, g_EntCtx.Lock
+    lea     rcx, g_EntCtx.csLock
     call    LeaveCriticalSection
     pop     rax
     ; eax already has error from Enterprise_ValidateLicense
@@ -929,7 +927,7 @@ Enterprise_Shutdown PROC FRAME
 
 @@skip_reg:
     ; Delete critical section
-    lea     rcx, g_EntCtx.Lock
+    lea     rcx, g_EntCtx.csLock
     call    DeleteCriticalSection
 
     ; Zero out sensitive context

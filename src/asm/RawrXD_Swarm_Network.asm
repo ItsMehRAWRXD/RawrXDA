@@ -127,6 +127,15 @@ g_Blake2bSigma  DB 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 ALIGN 16
 g_HeartbeatTable DQ SWARM_MAX_NODES DUP(0)
 
+; xxHash64 prime constants (official spec by Yann Collet)
+; Stored as QWORDs because x64 imul/add cannot take 64-bit immediates
+ALIGN 8
+g_XXH_P1        DQ      09E3779B185EBCA87h
+g_XXH_P2        DQ      0C2B2AE3D27D4EB4Fh
+g_XXH_P3        DQ      0165667B19E3779F9h
+g_XXH_P4        DQ      085EBCA77C2B2AE63h
+g_XXH_P5        DQ      027D4EB2F165667C5h
+
 ; Error strings (for debug output)
 szRingFull      DB "Swarm: Ring buffer overflow", 0
 szBadMagic      DB "Swarm: Invalid packet magic", 0
@@ -491,13 +500,6 @@ Swarm_Blake2b_128 ENDP
 ; Returns: RAX = 64-bit hash
 ; =============================================================================
 
-; xxHash64 constants
-XXH_PRIME64_1   EQU     011400714785074A69h
-XXH_PRIME64_2   EQU     014CF4839D12CDCB7h
-XXH_PRIME64_3   EQU     01A9BA4BDE8B6CC57h
-XXH_PRIME64_4   EQU     01397E2279F22B346h
-XXH_PRIME64_5   EQU     0428A2F98D728AE23h
-
 Swarm_XXH64 PROC FRAME
     push    rbx
     .pushreg rbx
@@ -523,14 +525,22 @@ Swarm_XXH64 PROC FRAME
     jb      @@small
 
     ; Initialize 4 accumulators
+    ; v1 = seed + P1 + P2
     mov     r8,  r15
-    add     r8,  XXH_PRIME64_1
-    add     r8,  XXH_PRIME64_2  ; v1 = seed + P1 + P2
+    mov     r14, QWORD PTR [g_XXH_P1]
+    add     r8,  r14
+    mov     r14, QWORD PTR [g_XXH_P2]
+    add     r8,  r14
+    ; v2 = seed + P2
     mov     r9,  r15
-    add     r9,  XXH_PRIME64_2  ; v2 = seed + P2
-    mov     r10, r15            ; v3 = seed
+    mov     r14, QWORD PTR [g_XXH_P2]
+    add     r9,  r14
+    ; v3 = seed
+    mov     r10, r15
+    ; v4 = seed - P1
     mov     r11, r15
-    sub     r11, XXH_PRIME64_1  ; v4 = seed - P1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    sub     r11, r14
 
     mov     r12, rdi            ; remaining
     lea     r13, [rsi + rdi]    ; end pointer
@@ -542,31 +552,39 @@ Swarm_XXH64 PROC FRAME
 
     ; v1 += read64 * P2; v1 = rotl(v1, 31); v1 *= P1
     mov     rax, [rsi]
-    imul    rax, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rax, r14
     add     r8, rax
     rol     r8, 31
-    imul    r8, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    r8, r14
 
     ; v2
     mov     rax, [rsi + 8]
-    imul    rax, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rax, r14
     add     r9, rax
     rol     r9, 31
-    imul    r9, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    r9, r14
 
     ; v3
     mov     rax, [rsi + 16]
-    imul    rax, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rax, r14
     add     r10, rax
     rol     r10, 31
-    imul    r10, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    r10, r14
 
     ; v4
     mov     rax, [rsi + 24]
-    imul    rax, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rax, r14
     add     r11, rax
     rol     r11, 31
-    imul    r11, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    r11, r14
 
     add     rsi, 32
     jmp     @@stripe_loop
@@ -589,43 +607,60 @@ Swarm_XXH64 PROC FRAME
     ; mergeRound(acc, v) = (acc XOR (rotl(v*P2,31)*P1)) * P1 + P4
     ; v1
     mov     rbx, r8
-    imul    rbx, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rbx, r14
     rol     rbx, 31
-    imul    rbx, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rbx, r14
     xor     rax, rbx
-    imul    rax, XXH_PRIME64_1
-    add     rax, XXH_PRIME64_4
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rax, r14
+    mov     r14, QWORD PTR [g_XXH_P4]
+    add     rax, r14
     ; v2
     mov     rbx, r9
-    imul    rbx, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rbx, r14
     rol     rbx, 31
-    imul    rbx, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rbx, r14
     xor     rax, rbx
-    imul    rax, XXH_PRIME64_1
-    add     rax, XXH_PRIME64_4
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rax, r14
+    mov     r14, QWORD PTR [g_XXH_P4]
+    add     rax, r14
     ; v3
     mov     rbx, r10
-    imul    rbx, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rbx, r14
     rol     rbx, 31
-    imul    rbx, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rbx, r14
     xor     rax, rbx
-    imul    rax, XXH_PRIME64_1
-    add     rax, XXH_PRIME64_4
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rax, r14
+    mov     r14, QWORD PTR [g_XXH_P4]
+    add     rax, r14
     ; v4
     mov     rbx, r11
-    imul    rbx, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rbx, r14
     rol     rbx, 31
-    imul    rbx, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rbx, r14
     xor     rax, rbx
-    imul    rax, XXH_PRIME64_1
-    add     rax, XXH_PRIME64_4
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rax, r14
+    mov     r14, QWORD PTR [g_XXH_P4]
+    add     rax, r14
 
     jmp     @@finalize
 
 @@small:
     ; len < 32: h = seed + PRIME5
     mov     rax, r15
-    add     rax, XXH_PRIME64_5
+    mov     r14, QWORD PTR [g_XXH_P5]
+    add     rax, r14
 
 @@finalize:
     ; h += len
@@ -638,11 +673,14 @@ Swarm_XXH64 PROC FRAME
     cmp     rsi, rbx
     ja      @@tail4
     mov     rcx, [rsi]
-    imul    rcx, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rcx, r14
     xor     rax, rcx
     rol     rax, 27
-    imul    rax, XXH_PRIME64_1
-    add     rax, XXH_PRIME64_4
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rax, r14
+    mov     r14, QWORD PTR [g_XXH_P4]
+    add     rax, r14
     add     rsi, 8
     jmp     @@tail8
 
@@ -651,11 +689,14 @@ Swarm_XXH64 PROC FRAME
     cmp     rsi, rbx
     ja      @@tail1
     mov     ecx, [rsi]
-    imul    rcx, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rcx, r14
     xor     rax, rcx
     rol     rax, 23
-    imul    rax, XXH_PRIME64_2
-    add     rax, XXH_PRIME64_3
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rax, r14
+    mov     r14, QWORD PTR [g_XXH_P3]
+    add     rax, r14
     add     rsi, 4
     jmp     @@tail4
 
@@ -663,10 +704,12 @@ Swarm_XXH64 PROC FRAME
     cmp     rsi, r13
     jge     @@avalanche
     movzx   ecx, BYTE PTR [rsi]
-    imul    rcx, XXH_PRIME64_5
+    mov     r14, QWORD PTR [g_XXH_P5]
+    imul    rcx, r14
     xor     rax, rcx
     rol     rax, 11
-    imul    rax, XXH_PRIME64_1
+    mov     r14, QWORD PTR [g_XXH_P1]
+    imul    rax, r14
     inc     rsi
     jmp     @@tail1
 
@@ -675,11 +718,13 @@ Swarm_XXH64 PROC FRAME
     mov     rcx, rax
     shr     rcx, 33
     xor     rax, rcx
-    imul    rax, XXH_PRIME64_2
+    mov     r14, QWORD PTR [g_XXH_P2]
+    imul    rax, r14
     mov     rcx, rax
     shr     rcx, 29
     xor     rax, rcx
-    imul    rax, XXH_PRIME64_3
+    mov     r14, QWORD PTR [g_XXH_P3]
+    imul    rax, r14
     mov     rcx, rax
     shr     rcx, 32
     xor     rax, rcx
