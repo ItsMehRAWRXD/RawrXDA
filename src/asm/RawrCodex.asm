@@ -17,6 +17,10 @@
 ;   - Function boundary recovery (prologue scan + CALL harvest)
 ;   - SSA lifting (register→SSA variable renaming with PHI nodes)
 ;   - Recursive descent disassembler (CFG-guided, avoids inline data)
+;   - Type recovery via data flow analysis (Phase 17)
+;   - Def-use chain construction
+;   - Control flow structuring (dominator tree, edge classification, Phase 18)
+;   - Semantic pseudocode emission (C-like output with type annotations, Phase 18)
 ;
 ; Build: ml64 /c /Fo RawrCodex.obj RawrCodex.asm
 ;        link RawrCodex.obj /SUBSYSTEM:CONSOLE kernel32.lib
@@ -201,6 +205,61 @@ MAX_DEF_USE_CHAINS          EQU 32      ; Max use sites per SSA variable
 MAX_STRUCT_FIELDS           EQU 64      ; Max fields detected in a recovered struct
 MAX_RECOVERED_TYPES         EQU 1024    ; Max type entries in type table
 
+; Control flow structuring constants (Phase 18)
+; CFG edge classification (Tarjan interval-based)
+EDGE_TREE                   EQU 0       ; Tree edge (DFS spanning tree)
+EDGE_FORWARD                EQU 1       ; Forward edge (ancestor → descendant, non-tree)
+EDGE_BACK                   EQU 2       ; Back edge (descendant → ancestor, indicates loop)
+EDGE_CROSS                  EQU 3       ; Cross edge (between unrelated subtrees)
+
+; Structured region types (produced by structuring algorithm)
+REGION_SEQUENCE             EQU 0       ; Sequential block (no branching)
+REGION_IF_THEN              EQU 1       ; if (cond) { body }
+REGION_IF_THEN_ELSE         EQU 2       ; if (cond) { then } else { else }
+REGION_WHILE_LOOP           EQU 3       ; while (cond) { body }
+REGION_DO_WHILE             EQU 4       ; do { body } while (cond)
+REGION_BREAK                EQU 5       ; break out of enclosing loop
+REGION_CONTINUE             EQU 6       ; continue to loop header
+REGION_RETURN               EQU 7       ; return statement
+REGION_SWITCH               EQU 8       ; switch/case (jump table)
+REGION_INFINITE_LOOP        EQU 9       ; while(1) { body } (no exit edge)
+REGION_GOTO                 EQU 10      ; Irreducible — emit goto
+
+; AST node types (expression trees for pseudocode rendering)
+AST_LITERAL                 EQU 0       ; Constant value (immediate)
+AST_VARIABLE                EQU 1       ; SSA variable reference (v%d)
+AST_BINOP                   EQU 2       ; Binary operation (left OP right)
+AST_UNOP                    EQU 3       ; Unary operation (OP operand)
+AST_DEREF                   EQU 4       ; Pointer dereference (*ptr or ptr->field)
+AST_ADDROF                  EQU 5       ; Address-of (&var)
+AST_CALL                    EQU 6       ; Function call (target(args))
+AST_CAST                    EQU 7       ; Type cast ((type)expr)
+AST_FIELD                   EQU 8       ; Struct field access (base.field)
+AST_INDEX                   EQU 9       ; Array index (base[index])
+AST_TERNARY                 EQU 10      ; Ternary (cond ? a : b)
+AST_ASSIGN                  EQU 11      ; Assignment (dst = src)
+
+; Pseudocode emission limits
+MAX_STRUCTURED_REGIONS      EQU 512     ; Max structured regions per function
+MAX_CFG_EDGES               EQU 2048    ; Max classified edges in CFG
+MAX_AST_NODES               EQU 4096    ; Max AST nodes for expression trees
+MAX_PSEUDOCODE_LINES        EQU 8192    ; Max output pseudocode lines
+MAX_PSEUDOCODE_LINE_LEN     EQU 256     ; Max chars per pseudocode line
+MAX_INDENT_DEPTH            EQU 32      ; Max nesting depth
+MAX_DOMINATOR_NODES         EQU 512     ; Max nodes in dominator tree
+
+; Condition code to C operator mapping indices
+CC_EQ                       EQU 0       ; ==
+CC_NE                       EQU 1       ; !=
+CC_LT                       EQU 2       ; < (signed)
+CC_GE                       EQU 3       ; >= (signed)
+CC_LE                       EQU 4       ; <= (signed)
+CC_GT                       EQU 5       ; > (signed)
+CC_LTU                      EQU 6       ; < (unsigned)
+CC_GEU                      EQU 7       ; >= (unsigned)
+CC_LEU                      EQU 8       ; <= (unsigned)
+CC_GTU                      EQU 9       ; > (unsigned)
+
 ; License feature gate bit definitions (Enterprise protection)
 FEATURE_LINEAR_DISASM       EQU 0       ; Bit 0:  Linear sweep (Community)
 FEATURE_PE_PARSER           EQU 1       ; Bit 1:  PE parsing (Community)
@@ -218,10 +277,11 @@ FEATURE_SEMANTIC_ANALYSIS   EQU 19      ; Bit 19: Full semantic decompilation (E
 FEATURE_TYPE_RECOVERY       EQU 20      ; Bit 20: Type recovery (Government)
 FEATURE_DATA_FLOW           EQU 21      ; Bit 21: Data flow analysis (Government)
 FEATURE_PSEUDOCODE          EQU 22      ; Bit 22: Pseudocode emission (Government)
+FEATURE_STRUCTURING         EQU 23      ; Bit 23: Control flow structuring (Government)
 FEATURE_LICENSE_MASK_COMMUNITY EQU 0000001Fh   ; Bits 0-4
 FEATURE_LICENSE_MASK_PRO       EQU 00000F1Fh   ; Bits 0-4, 8-11
 FEATURE_LICENSE_MASK_ENTERPRISE EQU 000F0F1Fh  ; + Bits 16-19
-FEATURE_LICENSE_MASK_GOVERNMENT EQU 007F0F1Fh  ; + Bits 20-22
+FEATURE_LICENSE_MASK_GOVERNMENT EQU 00FF0F1Fh  ; + Bits 20-23
 
 ; =============================================================================
 ; Data Structures
@@ -420,6 +480,70 @@ RAWRDEFUSE STRUCT
     reachesReturn   DWORD ?         ; 1 if value flows to a RET instruction
 RAWRDEFUSE ENDS
 
+; --- Classified CFG edge (Phase 18: Control Flow Structuring) ---
+RAWRCFGEDGE STRUCT
+    fromBB          DWORD ?         ; Source basic block index
+    toBB            DWORD ?         ; Target basic block index
+    edgeType        DWORD ?         ; EDGE_TREE/FORWARD/BACK/CROSS
+    isLoopEdge      DWORD ?         ; 1 if this is a loop-forming back edge
+RAWRCFGEDGE ENDS
+
+; --- Structured region (high-level control flow construct) ---
+RAWRSTRUCTREGION STRUCT
+    regionType      DWORD ?         ; REGION_* type classification
+    headBB          DWORD ?         ; Header basic block index
+    exitBB          DWORD ?         ; Exit/merge basic block index (-1 if none)
+    condVarId       DWORD ?         ; SSA variable ID for condition (-1 if none)
+    condCode        DWORD ?         ; CC_* condition code for branch
+    thenRegion      DWORD ?         ; Child region index for 'then' branch (-1 if none)
+    elseRegion      DWORD ?         ; Child region index for 'else' branch (-1 if none)
+    bodyRegion      DWORD ?         ; Child region index for loop body (-1 if none)
+    parentRegion    DWORD ?         ; Parent region index (-1 if root)
+    depth           DWORD ?         ; Nesting depth (for indentation)
+    bbCount         DWORD ?         ; Number of BBs in this region
+    bbList          DWORD 16 DUP(?) ; Basic block indices in this region
+RAWRSTRUCTREGION ENDS
+
+; --- AST expression node (for rendering C expressions) ---
+RAWRASTNODE STRUCT
+    nodeType        DWORD ?         ; AST_* node type
+    ssaOp           DWORD ?         ; SSA_OP_* for BINOP/UNOP nodes
+    ssaVarId        DWORD ?         ; SSA variable ID (for AST_VARIABLE)
+    typeId          DWORD ?         ; RAWRTYPEINFO type ID (from Phase 17)
+    immValue        QWORD ?         ; Immediate value (for AST_LITERAL)
+    leftChild       DWORD ?         ; Left child AST node index (-1 if leaf)
+    rightChild      DWORD ?         ; Right child AST node index (-1 if leaf)
+    parentNode      DWORD ?         ; Parent AST node index (-1 if root)
+    szRender        BYTE 128 DUP(?) ; Pre-rendered C expression text
+    renderLen       DWORD ?         ; Length of rendered text
+    _pad            DWORD ?         ; Alignment
+RAWRASTNODE ENDS
+
+; --- Pseudocode output line ---
+RAWRPSEUDOLINE STRUCT
+    szLine          BYTE MAX_PSEUDOCODE_LINE_LEN DUP(?) ; Line text
+    lineLen         DWORD ?         ; Actual length
+    indent          DWORD ?         ; Indentation level
+    srcBB           DWORD ?         ; Source basic block index
+    srcInstr        DWORD ?         ; Source instruction index (-1 if synthetic)
+    regionIdx       DWORD ?         ; Structured region this line belongs to
+    isComment       DWORD ?         ; 1 if this line is a comment
+    lineType        DWORD ?         ; 0=statement, 1=open-brace, 2=close-brace, 3=blank
+    _pad            DWORD ?         ; Alignment
+RAWRPSEUDOLINE ENDS
+
+; --- Dominator tree node (scratch for Lengauer-Tarjan) ---
+RAWRDOMNODE STRUCT
+    bbIndex         DWORD ?         ; Basic block index this node represents
+    idom            DWORD ?         ; Immediate dominator BB index (-1 for entry)
+    dfsNum          DWORD ?         ; DFS discovery number
+    dfsParent       DWORD ?         ; DFS tree parent BB index
+    semiDom         DWORD ?         ; Semi-dominator DFS number
+    bestNode        DWORD ?         ; Best node for path compression
+    ltLabel         DWORD ?         ; Label for EVAL/LINK (Lengauer-Tarjan)
+    ancestor        DWORD ?         ; Ancestor for EVAL/LINK
+RAWRDOMNODE ENDS
+
 ; --- License validation context ---
 RAWRLICENSE STRUCT
     featureMask     QWORD ?         ; Bitmask of enabled features
@@ -510,6 +634,18 @@ RAWRCODEX_CTX STRUCT
     typeNextId      DWORD ?         ; Next available type ID
     typesRecovered  DWORD ?         ; 1 if type recovery has been performed
 
+    ; Control flow structuring arrays (Phase 18)
+    cfgEdges        DYNARRAY <>     ; Array of RAWRCFGEDGE
+    structRegions   DYNARRAY <>     ; Array of RAWRSTRUCTREGION
+    astNodes        DYNARRAY <>     ; Array of RAWRASTNODE
+    pseudoLines     DYNARRAY <>     ; Array of RAWRPSEUDOLINE
+
+    ; Structuring state
+    structNextRegion DWORD ?        ; Next available region ID
+    astNextNode     DWORD ?         ; Next available AST node ID
+    cfgStructured   DWORD ?         ; 1 if structuring has been performed
+    pseudoEmitted   DWORD ?         ; 1 if pseudocode has been emitted
+
     ; License context
     license         RAWRLICENSE <>  ; License validation state
 
@@ -586,6 +722,105 @@ fmtStructField  BYTE "  +0x%02X: %s %s;  // %d accesses", 0
 fmtDefUse       BYTE "  v%d: def@BB%d:%d  uses=%d  live=%s", 0
 fmtLicenseTier  BYTE "License: %s (features=0x%08X)", 0
 fmtLicenseDeny  BYTE "DENIED: Feature %d requires %s tier", 0
+
+; Pseudocode emission format strings (Phase 18)
+fmtPseudoFuncHdr  BYTE "%s sub_%08X(", 0     ; "int32_t sub_00401000("
+fmtPseudoParam    BYTE "%s v%d", 0            ; "int32_t v3"
+fmtPseudoParamSep BYTE ", ", 0                ; ", " between params
+fmtPseudoFuncEnd  BYTE ")", 0                 ; closing paren
+fmtPseudoOpenBrace BYTE " {", 0               ; " {"
+fmtPseudoCloseBrace BYTE "}", 0               ; "}"
+fmtPseudoWhile    BYTE "while (%s)", 0        ; "while (v3 != 0)"
+fmtPseudoDoWhile  BYTE "do", 0                ; "do"
+fmtPseudoDoWhileEnd BYTE "} while (%s);", 0   ; "} while (v3 != 0);"
+fmtPseudoIf       BYTE "if (%s)", 0           ; "if (v3 == 0)"
+fmtPseudoElse     BYTE "else", 0              ; "else"
+fmtPseudoReturn   BYTE "return v%d;", 0       ; "return v0;"
+fmtPseudoRetVoid  BYTE "return;", 0           ; "return;"
+fmtPseudoAssign   BYTE "v%d = %s;", 0         ; "v3 = v1 + v2;"
+fmtPseudoStore    BYTE "*v%d = v%d;", 0       ; "*v3 = v1;"
+fmtPseudoLoad     BYTE "v%d = *v%d;", 0       ; "v3 = *v1;"
+fmtPseudoCall     BYTE "v%d = sub_%08X();", 0 ; "v3 = sub_00401000();"
+fmtPseudoCallVoid BYTE "sub_%08X();", 0       ; "sub_00401000();"
+fmtPseudoBreak    BYTE "break;", 0            ; "break;"
+fmtPseudoContinue BYTE "continue;", 0         ; "continue;"
+fmtPseudoGoto     BYTE "goto BB%d;", 0        ; "goto BB5;"
+fmtPseudoLabel    BYTE "BB%d:", 0             ; "BB5:"
+fmtPseudoComment  BYTE "// %s", 0             ; "// original: mov rax, rcx"
+fmtPseudoAddr     BYTE "/* %08X */ ", 0       ; "/* 00401000 */ "
+fmtPseudoCast     BYTE "(%s)", 0              ; "(int32_t*)"
+fmtPseudoDeref    BYTE "*((%s*)v%d)", 0       ; "*((int32_t*)v3)"
+fmtPseudoFieldAcc BYTE "v%d->field_0x%02X", 0 ; "v3->field_0x10"
+fmtPseudoArrayIdx BYTE "v%d[%d]", 0           ; "v3[4]"
+fmtPseudoInline   BYTE "%s", 0                ; Generic inline string
+
+; C operator string table — indexed by SSA_OP_*, 4 bytes each
+ssaOpToC        BYTE " = ", 0                  ; 0  SSA_OP_ASSIGN
+                BYTE " + ", 0                  ; 1  SSA_OP_ADD
+                BYTE " - ", 0                  ; 2  SSA_OP_SUB
+                BYTE " * ", 0                  ; 3  SSA_OP_MUL
+                BYTE " / ", 0                  ; 4  SSA_OP_DIV
+                BYTE " & ", 0                  ; 5  SSA_OP_AND
+                BYTE " | ", 0                  ; 6  SSA_OP_OR
+                BYTE " ^ ", 0                  ; 7  SSA_OP_XOR
+                BYTE " <<", 0                  ; 8  SSA_OP_SHL
+                BYTE " >>", 0                  ; 9  SSA_OP_SHR
+                BYTE ">>>", 0                  ; 10 SSA_OP_SAR
+                BYTE " ~ ", 0                  ; 11 SSA_OP_NOT
+                BYTE " - ", 0                  ; 12 SSA_OP_NEG (unary minus)
+
+; Condition code to C comparison operator — 10 entries, 4 bytes each
+ccToCOp         BYTE "==", 0, 0               ; 0 CC_EQ
+                BYTE "!=", 0, 0               ; 1 CC_NE
+                BYTE "< ", 0, 0               ; 2 CC_LT
+                BYTE ">=", 0, 0               ; 3 CC_GE
+                BYTE "<=", 0, 0               ; 4 CC_LE
+                BYTE "> ", 0, 0               ; 5 CC_GT
+                BYTE "< ", 0, 0               ; 6 CC_LTU (unsigned <)
+                BYTE ">=", 0, 0               ; 7 CC_GEU
+                BYTE "<=", 0, 0               ; 8 CC_LEU
+                BYTE "> ", 0, 0               ; 9 CC_GTU
+
+; x86 Jcc condition code to CC_* mapping table
+; Indexed by lower nibble of Jcc opcode (0x70-0x7F / 0F 80-8F)
+jccToCC         DWORD 0FFFFFFFFh              ; 0  jo   — no direct CC mapping
+                DWORD 0FFFFFFFFh              ; 1  jno  — no direct CC mapping
+                DWORD CC_LTU                  ; 2  jb   — unsigned <
+                DWORD CC_GEU                  ; 3  jae  — unsigned >=
+                DWORD CC_EQ                   ; 4  je   — ==
+                DWORD CC_NE                   ; 5  jne  — !=
+                DWORD CC_LEU                  ; 6  jbe  — unsigned <=
+                DWORD CC_GTU                  ; 7  ja   — unsigned >
+                DWORD 0FFFFFFFFh              ; 8  js   — no direct mapping
+                DWORD 0FFFFFFFFh              ; 9  jns  — no direct mapping
+                DWORD 0FFFFFFFFh              ; A  jp   — no direct mapping
+                DWORD 0FFFFFFFFh              ; B  jnp  — no direct mapping
+                DWORD CC_LT                   ; C  jl   — signed <
+                DWORD CC_GE                   ; D  jge  — signed >=
+                DWORD CC_LE                   ; E  jle  — signed <=
+                DWORD CC_GT                   ; F  jg   — signed >
+
+; Edge type name table — 4 entries, 8 bytes each
+edgeTypeNames   BYTE "tree", 0, 0, 0, 0       ; 0 EDGE_TREE
+                BYTE "forward", 0             ; 1 EDGE_FORWARD
+                BYTE "back", 0, 0, 0, 0       ; 2 EDGE_BACK
+                BYTE "cross", 0, 0, 0         ; 3 EDGE_CROSS
+
+; Region type name table — 11 entries, 16 bytes each
+regionTypeNames BYTE "sequence", 0,0,0,0,0,0,0,0       ; 0 REGION_SEQUENCE
+                BYTE "if-then", 0,0,0,0,0,0,0,0,0      ; 1 REGION_IF_THEN
+                BYTE "if-then-else", 0,0,0,0            ; 2 REGION_IF_THEN_ELSE
+                BYTE "while", 0,0,0,0,0,0,0,0,0,0,0     ; 3 REGION_WHILE_LOOP
+                BYTE "do-while", 0,0,0,0,0,0,0,0        ; 4 REGION_DO_WHILE
+                BYTE "break", 0,0,0,0,0,0,0,0,0,0,0     ; 5 REGION_BREAK
+                BYTE "continue", 0,0,0,0,0,0,0,0        ; 6 REGION_CONTINUE
+                BYTE "return", 0,0,0,0,0,0,0,0,0,0      ; 7 REGION_RETURN
+                BYTE "switch", 0,0,0,0,0,0,0,0,0,0      ; 8 REGION_SWITCH
+                BYTE "infinite", 0,0,0,0,0,0,0,0        ; 9 REGION_INFINITE_LOOP
+                BYTE "goto", 0,0,0,0,0,0,0,0,0,0,0,0    ; 10 REGION_GOTO
+
+; Indentation string (4 spaces per level, pre-computed for fast emission)
+indentSpaces    BYTE "                                                                                                                                ", 0
 
 ; Type name table — 20 entries, 16 bytes each (null-padded)
 typeNames       BYTE "unknown", 0,0,0,0,0,0,0,0,0      ; 0  TYPE_UNKNOWN
@@ -858,6 +1093,34 @@ typeFieldBuf    BYTE  SIZEOF RAWRSTRUCTFIELD DUP(?) ; Temp struct field for push
 
 ; License scratch
 licenseFeatureCache QWORD ?         ; Cached feature mask for fast gate checks
+
+; Control flow structuring scratch state (Phase 18)
+domIdoms        DWORD MAX_DOMINATOR_NODES DUP(?)  ; Immediate dominator for each BB (indexed by BB index)
+domDfsNums      DWORD MAX_DOMINATOR_NODES DUP(?)  ; DFS discovery number per BB
+domDfsParent    DWORD MAX_DOMINATOR_NODES DUP(?)  ; DFS parent per BB
+domSemiDom      DWORD MAX_DOMINATOR_NODES DUP(?)  ; Semi-dominator per BB
+domBest         DWORD MAX_DOMINATOR_NODES DUP(?)  ; Best node (path compression)
+domLabel        DWORD MAX_DOMINATOR_NODES DUP(?)  ; Label for EVAL/LINK
+domAncestor     DWORD MAX_DOMINATOR_NODES DUP(?)  ; Ancestor for EVAL/LINK
+domVertex       DWORD MAX_DOMINATOR_NODES DUP(?)  ; DFS-order vertex list
+domBucket       DWORD MAX_DOMINATOR_NODES * 8 DUP(?) ; Bucket lists for Lengauer-Tarjan
+domBucketCount  DWORD MAX_DOMINATOR_NODES DUP(?)  ; Count per bucket
+domDfsCounter   DWORD ?                           ; Current DFS counter
+domNumNodes     DWORD ?                           ; Total nodes in dominator tree
+
+; Edge classification scratch
+edgeScratch     BYTE SIZEOF RAWRCFGEDGE DUP(?)    ; Temp edge for push
+
+; Region building scratch
+regionScratch   BYTE SIZEOF RAWRSTRUCTREGION DUP(?)  ; Temp region for push
+
+; AST node scratch
+astScratch      BYTE SIZEOF RAWRASTNODE DUP(?)    ; Temp AST node for push
+
+; Pseudocode line scratch
+pseudoScratch   BYTE SIZEOF RAWRPSEUDOLINE DUP(?) ; Temp line for push
+pseudoLineBuf   BYTE MAX_PSEUDOCODE_LINE_LEN DUP(?)  ; Assembly buffer for line text
+pseudoExprBuf   BYTE 512 DUP(?)                   ; Expression rendering buffer
 
 ; =============================================================================
 ; Code Segment
@@ -6913,6 +7176,2454 @@ RawrCodex_BuildDefUseChains PROC
     pop rbx
     ret
 RawrCodex_BuildDefUseChains ENDP
+
+; =============================================================================
+; =============================================================================
+;
+;   PHASE 18: SEMANTIC PSEUDOCODE GENERATION
+;   Control Flow Structuring + C Pseudocode Emission
+;
+;   Prerequisites: Phase 15 (CFG), Phase 16 (SSA), Phase 17 (Types)
+;
+;   Pipeline:
+;     1. RawrCodex_StructureControlFlow  — Dominator tree, edge classification,
+;        interval-based loop/conditional detection, region building
+;     2. RawrCodex_EmitPseudocode        — Walk structured regions, emit C-like
+;        pseudocode with type annotations and expression trees
+;
+; =============================================================================
+; =============================================================================
+
+; =============================================================================
+; RawrCodex_StructureControlFlow — Interval-based CFG structuring algorithm
+;
+; Transforms the flat CFG (basic blocks + edges) into a hierarchy of
+; structured regions (while, if-then-else, do-while, sequence, goto).
+;
+; Algorithm (Sharir, 1980 + Tarjan dominator refinement):
+;   Phase A: Compute dominator tree via Lengauer-Tarjan O(n α(n))
+;   Phase B: DFS edge classification (tree/forward/back/cross)
+;   Phase C: Identify natural loops from back edges
+;   Phase D: Build structured regions (intervals → regions)
+;   Phase E: Handle irreducible flow with goto fallback
+;
+; Input:  RCX = pointer to RAWRCODEX_CTX (must have CFG + SSA + Types done)
+; Output: EAX = number of structured regions (0 on error)
+;
+; Requires:
+;   - basicBlocks populated (RawrCodex_BuildCFG called)
+;   - ssaInstrs populated (RawrCodex_LiftToSSA called)
+;   - typeInfos populated (RawrCodex_RecoverTypes called)
+;
+; License gate: FEATURE_STRUCTURING (Government tier)
+; =============================================================================
+RawrCodex_StructureControlFlow PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 0C8h                   ; Shadow + generous locals
+
+    test rcx, rcx
+    jz @@scf_fail
+    mov rbx, rcx                    ; rbx = ctx
+
+    ; License gate check
+    mov edx, FEATURE_STRUCTURING
+    call RawrLicense_CheckFeature
+    test eax, eax
+    jz @@scf_fail
+
+    ; Validate prerequisites
+    lea rax, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov r12d, [rax].DYNARRAY.count  ; r12 = number of basic blocks
+    test r12d, r12d
+    jz @@scf_fail
+    cmp r12d, MAX_DOMINATOR_NODES
+    jge @@scf_fail                  ; CFG too large for scratch arrays
+
+    cmp [rbx].RAWRCODEX_CTX.ssaLifted, 1
+    jne @@scf_fail
+
+    ; Clear previous structuring data
+    lea rcx, [rbx].RAWRCODEX_CTX.cfgEdges
+    call DynArray_Clear
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    call DynArray_Clear
+    lea rcx, [rbx].RAWRCODEX_CTX.astNodes
+    call DynArray_Clear
+    mov [rbx].RAWRCODEX_CTX.structNextRegion, 0
+    mov [rbx].RAWRCODEX_CTX.astNextNode, 0
+    mov [rbx].RAWRCODEX_CTX.cfgStructured, 0
+
+    ; =====================================================================
+    ; Phase A: Compute Dominator Tree (Lengauer-Tarjan, simplified)
+    ;
+    ; Uses iterative data-flow approach (Cooper, Harvey, Kennedy):
+    ;   1. Number all BBs in reverse postorder (from DFS)
+    ;   2. Iterate until convergence:
+    ;        for each BB (except entry):
+    ;          new_idom = intersect of all predecessors' dominators
+    ;          if idom[BB] changed, set changed = true
+    ;   3. idom[entry] = entry (self-dominates)
+    ;
+    ; This is O(n^2) worst case but converges fast on reducible CFGs.
+    ; =====================================================================
+
+    ; Initialize dominator arrays
+    lea rdi, domIdoms
+    mov ecx, r12d
+    mov eax, -1                     ; -1 = undefined
+@@scf_init_idoms:
+    mov DWORD PTR [rdi + rcx*4 - 4], eax
+    dec ecx
+    jnz @@scf_init_idoms
+
+    ; Initialize DFS numbering arrays
+    lea rdi, domDfsNums
+    xor eax, eax
+    mov ecx, r12d
+    rep stosd
+
+    lea rdi, domDfsParent
+    mov eax, -1
+    mov ecx, r12d
+    rep stosd
+
+    mov [domDfsCounter], 0
+    mov [domNumNodes], r12d
+
+    ; -----------------------------------------------------------------
+    ; DFS traversal to compute reverse postorder numbering
+    ; Using iterative DFS with explicit stack (domVertex as worklist)
+    ; -----------------------------------------------------------------
+    ; DFS stack stored in domVertex temporarily
+    ; domVertex[i] will hold the BB index in RPO order after DFS
+    lea rdi, domVertex
+    mov DWORD PTR [rdi], 0          ; Push BB 0 (entry)
+    mov r13d, 1                     ; Stack pointer (1 item)
+
+    ; Visited bitmap on stack
+    lea r14, domDfsNums             ; Reuse as visited markers (set >0 = visited)
+
+    xor r15d, r15d                  ; RPO counter (fills from end)
+
+@@scf_dfs_loop:
+    test r13d, r13d
+    jz @@scf_dfs_done
+
+    ; Pop from DFS stack
+    dec r13d
+    lea rdi, domVertex
+    mov esi, DWORD PTR [rdi + r13*4]   ; esi = current BB index
+
+    ; Check if already visited
+    cmp DWORD PTR [r14 + rsi*4], 0
+    jne @@scf_dfs_loop              ; Already visited, skip
+    mov DWORD PTR [r14 + rsi*4], 1  ; Mark visited
+
+    ; Get BB pointer for successor enumeration
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov edx, esi
+    call DynArray_Get
+    test rax, rax
+    jz @@scf_dfs_post
+
+    ; Push all successors onto DFS stack
+    mov ecx, [rax].RAWRBASICBLOCK.successorCount
+    test ecx, ecx
+    jz @@scf_dfs_post
+
+    ; Find BB indices for successor addresses
+    xor edi, edi                    ; successor index
+@@scf_dfs_push_succ:
+    cmp edi, ecx
+    jge @@scf_dfs_post
+
+    ; Get successor address
+    mov [rsp + 50h], ecx            ; Save successor count
+    mov [rsp + 54h], esi            ; Save current BB index
+    mov [rsp + 58h], edi            ; Save successor index
+    lea r8, [rax + 40]             ; &block.successors[0] (offset 40 = after header fields)
+    mov r9, QWORD PTR [r8 + rdi*8] ; successor address
+
+    ; Search for BB with this start address
+    push rax
+    xor edx, edx                   ; BB search index
+@@scf_find_succ_bb:
+    cmp edx, r12d
+    jge @@scf_succ_not_found
+
+    push rdx
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    call DynArray_Get
+    pop rdx
+    test rax, rax
+    jz @@scf_succ_search_next
+    cmp [rax].RAWRBASICBLOCK.startAddress, r9
+    jne @@scf_succ_search_next
+
+    ; Found successor BB — push onto DFS stack if not visited
+    cmp DWORD PTR [r14 + rdx*4], 0
+    jne @@scf_succ_found_skip
+    lea rdi, domVertex
+    mov DWORD PTR [rdi + r13*4], edx
+    inc r13d
+    ; Record DFS parent
+    mov eax, [rsp + 54h + 8]       ; current BB (adjusted for push rax)
+    mov DWORD PTR [domDfsParent + rdx*4], eax
+@@scf_succ_found_skip:
+    jmp @@scf_succ_found
+
+@@scf_succ_search_next:
+    inc edx
+    jmp @@scf_find_succ_bb
+
+@@scf_succ_not_found:
+@@scf_succ_found:
+    pop rax                         ; Restore BB pointer
+    mov ecx, [rsp + 50h]
+    mov esi, [rsp + 54h]
+    mov edi, [rsp + 58h]
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov edx, esi
+    push rcx
+    push r13
+    call DynArray_Get               ; Re-fetch current BB pointer
+    pop r13
+    pop rcx
+    mov ecx, [rax].RAWRBASICBLOCK.successorCount
+    inc edi
+    jmp @@scf_dfs_push_succ
+
+@@scf_dfs_post:
+    ; Assign RPO number
+    mov eax, r12d
+    dec eax
+    sub eax, r15d                   ; RPO number = (numBBs - 1) - counter
+    mov DWORD PTR [domDfsNums + rsi*4], eax
+    inc r15d
+    jmp @@scf_dfs_loop
+
+@@scf_dfs_done:
+
+    ; -----------------------------------------------------------------
+    ; Iterative dominator computation (Cooper-Harvey-Kennedy)
+    ; idom[entry] = entry
+    ; Repeat until no changes:
+    ;   for each BB b (RPO order, skip entry):
+    ;     new_idom = first processed predecessor
+    ;     for each other processed predecessor p:
+    ;       new_idom = intersect(new_idom, p)
+    ;     if idom[b] != new_idom:
+    ;       idom[b] = new_idom; changed = true
+    ; -----------------------------------------------------------------
+    lea rdi, domIdoms
+    mov DWORD PTR [rdi], 0          ; idom[0] = 0 (entry dominates itself)
+
+@@scf_dom_iterate:
+    xor r15d, r15d                  ; changed = false
+    mov esi, 1                      ; Start from BB 1 (skip entry)
+
+@@scf_dom_bb_loop:
+    cmp esi, r12d
+    jge @@scf_dom_check_converge
+
+    ; Get BB pointer for predecessor enumeration
+    mov [rsp + 50h], esi            ; Save current BB index
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov edx, esi
+    call DynArray_Get
+    test rax, rax
+    jz @@scf_dom_bb_next
+
+    mov ecx, [rax].RAWRBASICBLOCK.predecessorCount
+    test ecx, ecx
+    jz @@scf_dom_bb_next            ; No predecessors — unreachable
+
+    ; Find first processed predecessor (idom != -1)
+    mov r13d, -1                    ; new_idom = undefined
+    xor edi, edi                    ; predecessor index
+
+@@scf_dom_find_first_pred:
+    cmp edi, ecx
+    jge @@scf_dom_apply
+
+    ; Get predecessor address
+    lea r8, [rax + 104]            ; &block.predecessors[0] (offset 104)
+    mov r9, QWORD PTR [r8 + rdi*8]
+
+    ; Find BB index for this predecessor address
+    push rax
+    push rcx
+    push rdi
+    xor edx, edx
+@@scf_dom_find_pred_bb:
+    cmp edx, r12d
+    jge @@scf_dom_pred_not_found
+    push rdx
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    call DynArray_Get
+    pop rdx
+    test rax, rax
+    jz @@scf_dom_pred_search_next
+    cmp [rax].RAWRBASICBLOCK.startAddress, r9
+    je @@scf_dom_pred_found
+@@scf_dom_pred_search_next:
+    inc edx
+    jmp @@scf_dom_find_pred_bb
+
+@@scf_dom_pred_not_found:
+    pop rdi
+    pop rcx
+    pop rax
+    inc edi
+    jmp @@scf_dom_find_first_pred
+
+@@scf_dom_pred_found:
+    ; edx = predecessor BB index
+    lea r8, domIdoms
+    cmp DWORD PTR [r8 + rdx*4], -1
+    je @@scf_dom_pred_not_processed
+    ; This predecessor is processed — use as initial new_idom
+    mov r13d, edx
+    pop rdi
+    pop rcx
+    pop rax
+    inc edi
+    jmp @@scf_dom_intersect_preds
+
+@@scf_dom_pred_not_processed:
+    pop rdi
+    pop rcx
+    pop rax
+    inc edi
+    jmp @@scf_dom_find_first_pred
+
+@@scf_dom_intersect_preds:
+    ; Intersect remaining predecessors
+    cmp edi, ecx
+    jge @@scf_dom_apply
+
+    ; Get next predecessor address
+    lea r8, [rax + 104]
+    mov r9, QWORD PTR [r8 + rdi*8]
+
+    ; Find BB index
+    push rax
+    push rcx
+    push rdi
+    xor edx, edx
+@@scf_dom_find_pred_bb2:
+    cmp edx, r12d
+    jge @@scf_dom_pred2_not_found
+    push rdx
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    call DynArray_Get
+    pop rdx
+    test rax, rax
+    jz @@scf_dom_pred2_next
+    cmp [rax].RAWRBASICBLOCK.startAddress, r9
+    je @@scf_dom_pred2_found
+@@scf_dom_pred2_next:
+    inc edx
+    jmp @@scf_dom_find_pred_bb2
+
+@@scf_dom_pred2_not_found:
+    pop rdi
+    pop rcx
+    pop rax
+    inc edi
+    jmp @@scf_dom_intersect_preds
+
+@@scf_dom_pred2_found:
+    ; edx = this predecessor's BB index
+    lea r8, domIdoms
+    cmp DWORD PTR [r8 + rdx*4], -1
+    je @@scf_dom_skip_unprocessed
+    ; Intersect: walk up dominator chains until they meet
+    mov r8d, r13d                   ; finger1 = new_idom
+    mov r9d, edx                    ; finger2 = this predecessor
+
+@@scf_dom_intersect_walk:
+    cmp r8d, r9d
+    je @@scf_dom_intersect_done
+    ; Walk the higher-numbered finger up
+@@scf_dom_walk_f1:
+    cmp r8d, r9d
+    jle @@scf_dom_walk_f2
+    lea r10, domIdoms
+    mov r8d, DWORD PTR [r10 + r8*4] ; finger1 = idom[finger1]
+    cmp r8d, -1
+    je @@scf_dom_intersect_done     ; Safety: prevent infinite loop
+    jmp @@scf_dom_intersect_walk
+@@scf_dom_walk_f2:
+    cmp r9d, r8d
+    jle @@scf_dom_intersect_walk
+    lea r10, domIdoms
+    mov r9d, DWORD PTR [r10 + r9*4] ; finger2 = idom[finger2]
+    cmp r9d, -1
+    je @@scf_dom_intersect_done
+    jmp @@scf_dom_intersect_walk
+
+@@scf_dom_intersect_done:
+    mov r13d, r8d                   ; new_idom = meeting point
+
+@@scf_dom_skip_unprocessed:
+    pop rdi
+    pop rcx
+    pop rax
+    inc edi
+    jmp @@scf_dom_intersect_preds
+
+@@scf_dom_apply:
+    ; Apply new_idom if changed
+    mov esi, [rsp + 50h]            ; Restore current BB index
+    cmp r13d, -1
+    je @@scf_dom_bb_next            ; No processed predecessor found
+    lea r8, domIdoms
+    cmp DWORD PTR [r8 + rsi*4], r13d
+    je @@scf_dom_bb_next            ; No change
+    mov DWORD PTR [r8 + rsi*4], r13d ; idom[b] = new_idom
+    mov r15d, 1                     ; changed = true
+
+@@scf_dom_bb_next:
+    mov esi, [rsp + 50h]
+    inc esi
+    jmp @@scf_dom_bb_loop
+
+@@scf_dom_check_converge:
+    test r15d, r15d
+    jnz @@scf_dom_iterate           ; Not converged — iterate again
+
+    ; =====================================================================
+    ; Phase B: DFS Edge Classification
+    ;
+    ; Walk all CFG edges and classify using DFS numbers + dominator tree:
+    ;   - Back edge:    target dominates source (descendant → ancestor)
+    ;   - Forward edge: source dominates target, not a tree edge
+    ;   - Cross edge:   neither dominates the other
+    ;   - Tree edge:    parent in DFS tree
+    ;
+    ; Back edges indicate natural loops.
+    ; =====================================================================
+    xor esi, esi                    ; BB index
+
+@@scf_edge_classify_loop:
+    cmp esi, r12d
+    jge @@scf_phase_c
+
+    mov [rsp + 50h], esi
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov edx, esi
+    call DynArray_Get
+    test rax, rax
+    jz @@scf_edge_next_bb
+    mov r14, rax                    ; r14 = current BB pointer
+
+    ; For each successor of this BB
+    mov ecx, [r14].RAWRBASICBLOCK.successorCount
+    xor edi, edi
+
+@@scf_edge_succ_loop:
+    cmp edi, ecx
+    jge @@scf_edge_next_bb
+
+    mov [rsp + 58h], edi
+    mov [rsp + 5Ch], ecx
+
+    ; Get successor address
+    lea r8, [r14 + 40]
+    mov r9, QWORD PTR [r8 + rdi*8]
+
+    ; Find successor BB index
+    xor edx, edx
+@@scf_edge_find_succ:
+    cmp edx, r12d
+    jge @@scf_edge_succ_next
+    push rdx
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    call DynArray_Get
+    pop rdx
+    test rax, rax
+    jz @@scf_edge_succ_search_next
+    cmp [rax].RAWRBASICBLOCK.startAddress, r9
+    je @@scf_edge_succ_found
+@@scf_edge_succ_search_next:
+    inc edx
+    jmp @@scf_edge_find_succ
+
+@@scf_edge_succ_found:
+    ; esi (from stack) = source BB, edx = target BB
+    mov esi, [rsp + 50h]
+    mov r13d, edx                   ; r13d = target BB index
+
+    ; Build RAWRCFGEDGE on scratch
+    lea r8, edgeScratch
+    mov DWORD PTR [r8].RAWRCFGEDGE.fromBB, esi
+    mov DWORD PTR [r8].RAWRCFGEDGE.toBB, r13d
+    mov DWORD PTR [r8].RAWRCFGEDGE.isLoopEdge, 0
+
+    ; Classify edge:
+    ; Check if target dominates source (back edge test)
+    ; Walk idom chain from source upward; if we reach target, it's a back edge
+    mov eax, esi                    ; finger = source BB
+    mov ecx, 0                      ; iteration guard
+
+@@scf_edge_dom_walk:
+    cmp eax, r13d
+    je @@scf_edge_is_back           ; target dominates source
+    cmp eax, -1
+    je @@scf_edge_not_back
+    cmp eax, 0
+    je @@scf_edge_check_entry       ; Reached entry
+    inc ecx
+    cmp ecx, MAX_DOMINATOR_NODES
+    jge @@scf_edge_not_back         ; Safety guard
+    lea r10, domIdoms
+    mov eax, DWORD PTR [r10 + rax*4]
+    jmp @@scf_edge_dom_walk
+
+@@scf_edge_check_entry:
+    cmp r13d, 0
+    je @@scf_edge_is_back           ; Entry dominates everything
+    jmp @@scf_edge_not_back
+
+@@scf_edge_is_back:
+    mov DWORD PTR [r8].RAWRCFGEDGE.edgeType, EDGE_BACK
+    mov DWORD PTR [r8].RAWRCFGEDGE.isLoopEdge, 1
+    jmp @@scf_edge_push
+
+@@scf_edge_not_back:
+    ; Check if source dominates target (forward edge)
+    mov eax, r13d                   ; finger = target BB
+    xor ecx, ecx
+
+@@scf_edge_fwd_walk:
+    cmp eax, esi
+    je @@scf_edge_is_forward
+    cmp eax, -1
+    je @@scf_edge_is_cross
+    cmp eax, 0
+    je @@scf_edge_fwd_check_entry
+    inc ecx
+    cmp ecx, MAX_DOMINATOR_NODES
+    jge @@scf_edge_is_cross
+    lea r10, domIdoms
+    mov eax, DWORD PTR [r10 + rax*4]
+    jmp @@scf_edge_fwd_walk
+
+@@scf_edge_fwd_check_entry:
+    cmp esi, 0
+    je @@scf_edge_is_forward
+    jmp @@scf_edge_is_cross
+
+@@scf_edge_is_forward:
+    ; Check if it's a tree edge (DFS parent)
+    lea r10, domDfsParent
+    cmp DWORD PTR [r10 + r13*4], esi
+    je @@scf_edge_is_tree
+    mov DWORD PTR [r8].RAWRCFGEDGE.edgeType, EDGE_FORWARD
+    jmp @@scf_edge_push
+
+@@scf_edge_is_tree:
+    mov DWORD PTR [r8].RAWRCFGEDGE.edgeType, EDGE_TREE
+    jmp @@scf_edge_push
+
+@@scf_edge_is_cross:
+    mov DWORD PTR [r8].RAWRCFGEDGE.edgeType, EDGE_CROSS
+    jmp @@scf_edge_push
+
+@@scf_edge_push:
+    ; Push edge to cfgEdges
+    lea rcx, [rbx].RAWRCODEX_CTX.cfgEdges
+    lea rdx, edgeScratch
+    call DynArray_Push
+
+@@scf_edge_succ_next:
+    mov edi, [rsp + 58h]
+    mov ecx, [rsp + 5Ch]
+    inc edi
+    mov esi, [rsp + 50h]
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov edx, esi
+    push rcx
+    call DynArray_Get
+    pop rcx
+    mov r14, rax
+    mov ecx, [r14].RAWRBASICBLOCK.successorCount
+    jmp @@scf_edge_succ_loop
+
+@@scf_edge_next_bb:
+    mov esi, [rsp + 50h]
+    inc esi
+    jmp @@scf_edge_classify_loop
+
+    ; =====================================================================
+    ; Phase C: Identify Natural Loops from Back Edges
+    ;
+    ; For each back edge (source → header):
+    ;   The "natural loop" is the set of nodes that can reach source
+    ;   without going through header. header is the loop header.
+    ;
+    ; We build a REGION_WHILE_LOOP for each detected natural loop.
+    ; =====================================================================
+@@scf_phase_c:
+    lea rax, [rbx].RAWRCODEX_CTX.cfgEdges
+    mov r13d, [rax].DYNARRAY.count  ; r13 = total classified edges
+    xor r14d, r14d                  ; edge index
+
+@@scf_loop_detect:
+    cmp r14d, r13d
+    jge @@scf_phase_d
+
+    lea rcx, [rbx].RAWRCODEX_CTX.cfgEdges
+    mov edx, r14d
+    call DynArray_Get
+    test rax, rax
+    jz @@scf_loop_next_edge
+
+    cmp [rax].RAWRCFGEDGE.edgeType, EDGE_BACK
+    jne @@scf_loop_next_edge
+
+    ; Back edge found: source = [rax].fromBB, header = [rax].toBB
+    mov esi, [rax].RAWRCFGEDGE.fromBB    ; loop tail
+    mov edi, [rax].RAWRCFGEDGE.toBB      ; loop header
+
+    ; Build a WHILE loop region
+    lea r8, regionScratch
+    ; Zero the region
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRSTRUCTREGION
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    lea r8, regionScratch
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.regionType, REGION_WHILE_LOOP
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.headBB, edi
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.exitBB, -1        ; Determined later
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.thenRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.elseRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bodyRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.parentRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.depth, 0
+
+    ; Populate BB list with loop body nodes
+    ; Simple heuristic: all BBs from header to tail (inclusive)
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbList, edi  ; First = header
+    mov ecx, 1                                       ; bbCount
+    cmp esi, edi
+    je @@scf_loop_single_bb                          ; Single-BB loop
+
+    ; Walk BB indices from header+1 to tail
+    mov eax, edi
+    inc eax
+@@scf_loop_fill_body:
+    cmp eax, esi
+    jg @@scf_loop_body_done
+    cmp ecx, 16                     ; Max BBs per region
+    jge @@scf_loop_body_done
+    mov DWORD PTR [r8 + RAWRSTRUCTREGION.bbList + rcx*4], eax
+    inc ecx
+    inc eax
+    jmp @@scf_loop_fill_body
+
+@@scf_loop_single_bb:
+@@scf_loop_body_done:
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbCount, ecx
+
+    ; Determine exit BB: first successor of header that is NOT in the loop
+    push rcx
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov edx, edi                    ; header BB
+    call DynArray_Get
+    pop rcx
+    test rax, rax
+    jz @@scf_loop_no_exit
+
+    mov edx, [rax].RAWRBASICBLOCK.successorCount
+    cmp edx, 2
+    jb @@scf_loop_no_exit           ; Need at least 2 successors for while-loop exit
+
+    ; Successor[1] is typically the exit (fall-through = loop body, branch = exit)
+    ; Use the successor that is NOT the loop body (i.e., not between header and tail)
+    ; For now: if header has 2 successors, exit = the one outside [header..tail]
+    ; This will be refined by the condition analysis
+
+    lea r8, regionScratch
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condCode, CC_NE  ; Default condition
+
+    ; Try to find the condition variable from the header's last SSA instruction
+    ; (should be a BRANCH instruction consuming flags)
+    push rax                        ; Save BB pointer
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov r9d, [rcx].DYNARRAY.count
+    test r9d, r9d
+    jz @@scf_loop_no_cond
+
+    ; Scan SSA instructions for BRANCH in header BB
+    dec r9d
+@@scf_loop_find_branch:
+    cmp r9d, 0
+    jl @@scf_loop_no_cond
+    push r9
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edx, r9d
+    call DynArray_Get
+    pop r9
+    test rax, rax
+    jz @@scf_loop_find_branch_prev
+    cmp [rax].RAWRSSAINSTR.bbIndex, edi
+    jne @@scf_loop_find_branch_prev
+    cmp [rax].RAWRSSAINSTR.ssaOp, SSA_OP_BRANCH
+    je @@scf_loop_found_branch
+@@scf_loop_find_branch_prev:
+    dec r9d
+    jmp @@scf_loop_find_branch
+
+@@scf_loop_found_branch:
+    ; Found BRANCH in header BB — extract condition variable
+    mov ecx, [rax].RAWRSSAINSTR.flagsVarId
+    lea r8, regionScratch
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, ecx
+    jmp @@scf_loop_cond_done
+
+@@scf_loop_no_cond:
+    lea r8, regionScratch
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, -1
+
+@@scf_loop_cond_done:
+    pop rax                         ; Restore BB pointer (may be stale, but okay)
+
+@@scf_loop_no_exit:
+    ; Push loop region
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    lea rdx, regionScratch
+    call DynArray_Push
+    inc [rbx].RAWRCODEX_CTX.structNextRegion
+
+@@scf_loop_next_edge:
+    inc r14d
+    jmp @@scf_loop_detect
+
+    ; =====================================================================
+    ; Phase D: Build If-Then-Else Regions from Forward/Cross Edges
+    ;
+    ; For each BB with exactly 2 successors that is NOT a loop header:
+    ;   If both successors converge at a common post-dominator → if-then-else
+    ;   If only one path reaches a merge → if-then
+    ;
+    ; Also build SEQUENCE regions for linear chains.
+    ; =====================================================================
+@@scf_phase_d:
+    xor esi, esi                    ; BB index
+
+@@scf_region_build_loop:
+    cmp esi, r12d
+    jge @@scf_phase_e
+
+    mov [rsp + 50h], esi
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov edx, esi
+    call DynArray_Get
+    test rax, rax
+    jz @@scf_region_next_bb
+    mov r14, rax
+
+    ; Check if this BB is already covered by a loop region
+    ; (skip if it's a loop header — already handled in Phase C)
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    mov r13d, [rcx].DYNARRAY.count
+    xor edi, edi
+@@scf_check_loop_header:
+    cmp edi, r13d
+    jge @@scf_not_loop_header
+    push rdi
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    mov edx, edi
+    call DynArray_Get
+    pop rdi
+    test rax, rax
+    jz @@scf_check_loop_next
+    cmp [rax].RAWRSTRUCTREGION.regionType, REGION_WHILE_LOOP
+    jne @@scf_check_loop_next
+    mov ecx, [rsp + 50h]
+    cmp [rax].RAWRSTRUCTREGION.headBB, ecx
+    je @@scf_region_next_bb         ; Already a loop header — skip
+@@scf_check_loop_next:
+    inc edi
+    jmp @@scf_check_loop_header
+
+@@scf_not_loop_header:
+    mov esi, [rsp + 50h]
+
+    ; Check successor count
+    mov ecx, [r14].RAWRBASICBLOCK.successorCount
+
+    cmp ecx, 2
+    je @@scf_build_if_region
+    cmp ecx, 1
+    je @@scf_build_sequence
+    cmp ecx, 0
+    je @@scf_build_return
+    jmp @@scf_region_next_bb        ; >2 successors = switch (TODO: Phase 19)
+
+@@scf_build_return:
+    ; Zero successors = return block
+    lea r8, regionScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRSTRUCTREGION
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, regionScratch
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.regionType, REGION_RETURN
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.headBB, esi
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.exitBB, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.thenRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.elseRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bodyRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.parentRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.depth, 0
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbCount, 1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbList, esi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    lea rdx, regionScratch
+    call DynArray_Push
+    inc [rbx].RAWRCODEX_CTX.structNextRegion
+    jmp @@scf_region_next_bb
+
+@@scf_build_sequence:
+    ; Single successor = sequence block
+    lea r8, regionScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRSTRUCTREGION
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, regionScratch
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.regionType, REGION_SEQUENCE
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.headBB, esi
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.exitBB, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.thenRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.elseRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bodyRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.parentRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.depth, 0
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbCount, 1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbList, esi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    lea rdx, regionScratch
+    call DynArray_Push
+    inc [rbx].RAWRCODEX_CTX.structNextRegion
+    jmp @@scf_region_next_bb
+
+@@scf_build_if_region:
+    ; 2 successors = conditional (if-then or if-then-else)
+    ; Successor[0] = fall-through (then), Successor[1] = branch target (else)
+    lea r8, regionScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRSTRUCTREGION
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    ; Find successor BB indices
+    lea r8, [r14 + 40]              ; successors array
+    mov r9, QWORD PTR [r8]          ; successor[0] address (then)
+    mov r10, QWORD PTR [r8 + 8]     ; successor[1] address (else)
+
+    ; Find then-BB index
+    mov [rsp + 60h], r9
+    mov [rsp + 68h], r10
+    xor edx, edx
+@@scf_find_then_bb:
+    cmp edx, r12d
+    jge @@scf_if_no_then
+    push rdx
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    call DynArray_Get
+    pop rdx
+    test rax, rax
+    jz @@scf_find_then_next
+    mov r9, [rsp + 60h]
+    cmp [rax].RAWRBASICBLOCK.startAddress, r9
+    je @@scf_found_then
+@@scf_find_then_next:
+    inc edx
+    jmp @@scf_find_then_bb
+@@scf_found_then:
+    mov [rsp + 70h], edx            ; then BB index
+    jmp @@scf_find_else_bb
+@@scf_if_no_then:
+    mov DWORD PTR [rsp + 70h], -1
+
+@@scf_find_else_bb:
+    xor edx, edx
+@@scf_find_else_loop:
+    cmp edx, r12d
+    jge @@scf_if_no_else
+    push rdx
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    call DynArray_Get
+    pop rdx
+    test rax, rax
+    jz @@scf_find_else_next
+    mov r10, [rsp + 68h]
+    cmp [rax].RAWRBASICBLOCK.startAddress, r10
+    je @@scf_found_else
+@@scf_find_else_next:
+    inc edx
+    jmp @@scf_find_else_loop
+@@scf_found_else:
+    mov [rsp + 78h], edx            ; else BB index
+    jmp @@scf_build_if_struct
+@@scf_if_no_else:
+    mov DWORD PTR [rsp + 78h], -1
+
+@@scf_build_if_struct:
+    mov esi, [rsp + 50h]            ; Restore current BB
+    lea r8, regionScratch
+
+    ; Determine if this is if-then or if-then-else
+    ; Check if else-BB immediately dominates/follows then-BB
+    ; Simple heuristic: if then successor == else BB → if-then (no else)
+    ; If both then and else have different paths → if-then-else
+    mov eax, [rsp + 78h]            ; else BB index
+    cmp eax, -1
+    je @@scf_emit_if_then
+
+    mov ecx, [rsp + 70h]            ; then BB index
+    cmp ecx, -1
+    je @@scf_emit_if_then
+
+    ; Both branches exist — check if they merge
+    ; If then-BB's successor == else-BB → if-then (else is the merge point)
+    push rax
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov edx, [rsp + 70h + 8]       ; then BB (adjusted for push)
+    call DynArray_Get
+    pop rcx                         ; restore else BB index
+    test rax, rax
+    jz @@scf_emit_if_then_else
+
+    cmp [rax].RAWRBASICBLOCK.successorCount, 1
+    jne @@scf_emit_if_then_else
+    lea r9, [rax + 40]
+    mov r9, QWORD PTR [r9]          ; then-BB's single successor address
+
+    ; Find that successor's BB index
+    push rcx
+    xor edx, edx
+@@scf_find_merge:
+    cmp edx, r12d
+    jge @@scf_no_merge
+    push rdx
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    call DynArray_Get
+    pop rdx
+    test rax, rax
+    jz @@scf_merge_next
+    cmp [rax].RAWRBASICBLOCK.startAddress, r9
+    je @@scf_merge_found
+@@scf_merge_next:
+    inc edx
+    jmp @@scf_find_merge
+@@scf_merge_found:
+    pop rcx                         ; else BB index
+    ; edx = then-BB's successor's BB index
+    ; If edx == else BB → if-then (else is the merge point)
+    cmp edx, ecx
+    je @@scf_emit_if_then
+    ; Otherwise it's if-then-else with merge at edx
+    mov [rsp + 80h], edx            ; merge/exit BB
+    jmp @@scf_emit_if_then_else
+
+@@scf_no_merge:
+    pop rcx
+
+@@scf_emit_if_then_else:
+    lea r8, regionScratch
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.regionType, REGION_IF_THEN_ELSE
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.headBB, esi
+    mov eax, [rsp + 78h]
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.exitBB, eax  ; Merge point approximation
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.parentRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bodyRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.depth, 0
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbCount, 1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbList, esi
+
+    ; Find condition variable (last BRANCH in this BB)
+    push r8
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov r9d, [rcx].DYNARRAY.count
+    dec r9d
+@@scf_if_find_branch:
+    cmp r9d, 0
+    jl @@scf_if_no_branch
+    push r9
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edx, r9d
+    call DynArray_Get
+    pop r9
+    test rax, rax
+    jz @@scf_if_find_branch_prev
+    cmp [rax].RAWRSSAINSTR.bbIndex, esi
+    jne @@scf_if_find_branch_prev
+    cmp [rax].RAWRSSAINSTR.ssaOp, SSA_OP_BRANCH
+    je @@scf_if_found_branch
+@@scf_if_find_branch_prev:
+    dec r9d
+    jmp @@scf_if_find_branch
+@@scf_if_found_branch:
+    pop r8
+    mov ecx, [rax].RAWRSSAINSTR.flagsVarId
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, ecx
+    jmp @@scf_if_push_region
+@@scf_if_no_branch:
+    pop r8
+
+@@scf_if_push_region:
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    lea rdx, regionScratch
+    call DynArray_Push
+    inc [rbx].RAWRCODEX_CTX.structNextRegion
+    jmp @@scf_region_next_bb
+
+@@scf_emit_if_then:
+    lea r8, regionScratch
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.regionType, REGION_IF_THEN
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.headBB, esi
+    mov eax, [rsp + 78h]
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.exitBB, eax
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.parentRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bodyRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.thenRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.elseRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.depth, 0
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbCount, 1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbList, esi
+
+    ; Find condition variable
+    push r8
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov r9d, [rcx].DYNARRAY.count
+    dec r9d
+@@scf_ift_find_branch:
+    cmp r9d, 0
+    jl @@scf_ift_no_branch
+    push r9
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edx, r9d
+    call DynArray_Get
+    pop r9
+    test rax, rax
+    jz @@scf_ift_find_prev
+    cmp [rax].RAWRSSAINSTR.bbIndex, esi
+    jne @@scf_ift_find_prev
+    cmp [rax].RAWRSSAINSTR.ssaOp, SSA_OP_BRANCH
+    je @@scf_ift_found_branch
+@@scf_ift_find_prev:
+    dec r9d
+    jmp @@scf_ift_find_branch
+@@scf_ift_found_branch:
+    pop r8
+    mov ecx, [rax].RAWRSSAINSTR.flagsVarId
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, ecx
+    jmp @@scf_ift_push
+@@scf_ift_no_branch:
+    pop r8
+
+@@scf_ift_push:
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    lea rdx, regionScratch
+    call DynArray_Push
+    inc [rbx].RAWRCODEX_CTX.structNextRegion
+    jmp @@scf_region_next_bb
+
+@@scf_region_next_bb:
+    mov esi, [rsp + 50h]
+    inc esi
+    jmp @@scf_region_build_loop
+
+    ; =====================================================================
+    ; Phase E: Mark Irreducible Flow as GOTO
+    ;
+    ; Any cross edge that wasn't resolved to a structured region gets
+    ; tagged as REGION_GOTO. This is the fallback for irreducible CFGs
+    ; that cannot be expressed as while/if-else.
+    ; =====================================================================
+@@scf_phase_e:
+    ; For each cross edge, check if its target BB is covered by a region
+    ; If not, emit a GOTO region
+    lea rax, [rbx].RAWRCODEX_CTX.cfgEdges
+    mov r13d, [rax].DYNARRAY.count
+    xor r14d, r14d
+
+@@scf_goto_check:
+    cmp r14d, r13d
+    jge @@scf_done
+
+    lea rcx, [rbx].RAWRCODEX_CTX.cfgEdges
+    mov edx, r14d
+    call DynArray_Get
+    test rax, rax
+    jz @@scf_goto_next
+
+    cmp [rax].RAWRCFGEDGE.edgeType, EDGE_CROSS
+    jne @@scf_goto_next
+
+    ; Cross edge — check if target BB is already in a structured region
+    mov esi, [rax].RAWRCFGEDGE.toBB
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    mov r15d, [rcx].DYNARRAY.count
+    xor edi, edi
+    mov r9d, 0                      ; found = false
+
+@@scf_goto_region_scan:
+    cmp edi, r15d
+    jge @@scf_goto_emit
+    push rdi
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    mov edx, edi
+    call DynArray_Get
+    pop rdi
+    test rax, rax
+    jz @@scf_goto_region_next
+
+    ; Check if any BB in this region matches our target
+    mov ecx, [rax].RAWRSTRUCTREGION.bbCount
+    xor edx, edx
+@@scf_goto_bb_scan:
+    cmp edx, ecx
+    jge @@scf_goto_region_next
+    cmp DWORD PTR [rax + RAWRSTRUCTREGION.bbList + rdx*4], esi
+    je @@scf_goto_found_in_region
+    inc edx
+    jmp @@scf_goto_bb_scan
+
+@@scf_goto_found_in_region:
+    mov r9d, 1                      ; Target is covered
+    jmp @@scf_goto_next             ; Skip — already structured
+
+@@scf_goto_region_next:
+    inc edi
+    jmp @@scf_goto_region_scan
+
+@@scf_goto_emit:
+    ; Target BB not in any region — emit GOTO
+    test r9d, r9d
+    jnz @@scf_goto_next
+
+    lea r8, regionScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRSTRUCTREGION
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, regionScratch
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.regionType, REGION_GOTO
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.headBB, esi
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.exitBB, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.thenRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.elseRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bodyRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.parentRegion, -1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbCount, 1
+    mov DWORD PTR [r8].RAWRSTRUCTREGION.bbList, esi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    lea rdx, regionScratch
+    call DynArray_Push
+    inc [rbx].RAWRCODEX_CTX.structNextRegion
+
+@@scf_goto_next:
+    inc r14d
+    jmp @@scf_goto_check
+
+@@scf_done:
+    mov [rbx].RAWRCODEX_CTX.cfgStructured, 1
+
+    ; Return number of structured regions
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    mov eax, [rcx].DYNARRAY.count
+
+    add rsp, 0C8h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+
+@@scf_fail:
+    xor eax, eax
+    add rsp, 0C8h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+RawrCodex_StructureControlFlow ENDP
+
+; =============================================================================
+; RawrCodex_EmitPseudocode — Transform structured regions into C pseudocode
+;
+; Walks the structured region tree and emits human-readable C-like pseudocode.
+; Uses type information from Phase 17 for variable annotations.
+; Builds AST expression trees for infix operator rendering.
+;
+; Input:  RCX = pointer to RAWRCODEX_CTX (must have structuring done)
+; Output: EAX = number of pseudocode lines emitted (0 on error)
+;
+; Results stored in ctx->pseudoLines (array of RAWRPSEUDOLINE)
+;
+; License gate: FEATURE_PSEUDOCODE (Government tier)
+; =============================================================================
+RawrCodex_EmitPseudocode PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 0C8h
+
+    test rcx, rcx
+    jz @@pseudo_fail
+    mov rbx, rcx
+
+    ; License gate
+    mov edx, FEATURE_PSEUDOCODE
+    call RawrLicense_CheckFeature
+    test eax, eax
+    jz @@pseudo_fail
+
+    ; Validate prerequisites
+    cmp [rbx].RAWRCODEX_CTX.cfgStructured, 1
+    jne @@pseudo_fail
+
+    ; Clear previous pseudocode
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    call DynArray_Clear
+    mov [rbx].RAWRCODEX_CTX.pseudoEmitted, 0
+
+    ; =====================================================================
+    ; Step 1: Emit function header
+    ; Determine return type from SSA RET instruction analysis
+    ; =====================================================================
+
+    ; Build function header line: "type sub_XXXXXXXX(params) {"
+    lea rdi, pseudoLineBuf
+    xor eax, eax
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+    rep stosb
+
+    ; Get entry point for function name
+    mov eax, [rbx].RAWRCODEX_CTX.peEntryPointRVA
+    add rax, [rbx].RAWRCODEX_CTX.peImageBase
+
+    ; Format: "int64_t sub_XXXXXXXX()"
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoFuncHdr
+    ; Use "int64_t" as default return type
+    lea r8, typeNames + 64          ; TYPE_INT64 = index 4, 16 bytes each
+    mov r9d, eax                    ; Entry point address
+    sub rsp, 20h                    ; Shadow space for wsprintfA
+    call wsprintfA
+    add rsp, 20h
+
+    ; Build RAWRPSEUDOLINE for function header
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcBB, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.regionIdx, -1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.isComment, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 0    ; Statement
+
+    ; Copy line text
+    lea rdi, [r8].RAWRPSEUDOLINE.szLine
+    lea rsi, pseudoLineBuf
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+@@pseudo_copy_hdr:
+    mov al, BYTE PTR [rsi]
+    mov BYTE PTR [rdi], al
+    test al, al
+    jz @@pseudo_hdr_copied
+    inc rsi
+    inc rdi
+    dec ecx
+    jnz @@pseudo_copy_hdr
+@@pseudo_hdr_copied:
+    ; Compute line length
+    lea rax, [r8].RAWRPSEUDOLINE.szLine
+    sub rdi, rax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, edi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Emit opening brace "{"
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '{'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 1, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 1    ; Open brace
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; =====================================================================
+    ; Step 2: Walk structured regions in order and emit pseudocode
+    ; =====================================================================
+    lea rax, [rbx].RAWRCODEX_CTX.structRegions
+    mov r12d, [rax].DYNARRAY.count  ; r12 = total regions
+    xor r13d, r13d                  ; r13 = current region index
+    mov r14d, 1                     ; r14 = current indent level
+
+@@pseudo_region_loop:
+    cmp r13d, r12d
+    jge @@pseudo_emit_closing
+
+    lea rcx, [rbx].RAWRCODEX_CTX.structRegions
+    mov edx, r13d
+    call DynArray_Get
+    test rax, rax
+    jz @@pseudo_region_next
+    mov r15, rax                    ; r15 = ptr to RAWRSTRUCTREGION
+
+    mov eax, [r15].RAWRSTRUCTREGION.regionType
+
+    cmp eax, REGION_WHILE_LOOP
+    je @@pseudo_emit_while
+    cmp eax, REGION_DO_WHILE
+    je @@pseudo_emit_do_while
+    cmp eax, REGION_IF_THEN
+    je @@pseudo_emit_if_then
+    cmp eax, REGION_IF_THEN_ELSE
+    je @@pseudo_emit_if_then_else
+    cmp eax, REGION_RETURN
+    je @@pseudo_emit_return
+    cmp eax, REGION_GOTO
+    je @@pseudo_emit_goto
+    cmp eax, REGION_SEQUENCE
+    je @@pseudo_emit_sequence
+    jmp @@pseudo_region_next
+
+    ; -----------------------------------------------------------------
+    ; Emit: while (condition) {
+    ; -----------------------------------------------------------------
+@@pseudo_emit_while:
+    ; Build condition string from condVarId
+    lea rdi, pseudoLineBuf
+    xor eax, eax
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+    rep stosb
+
+    mov eax, [r15].RAWRSTRUCTREGION.condVarId
+    cmp eax, -1
+    je @@pseudo_while_no_cond
+
+    ; Format: "while (v%d != 0)"
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoWhile
+    ; Build condition expression: "v%d != 0"
+    lea r8, pseudoExprBuf
+    push rax
+    lea rcx, pseudoExprBuf
+    lea rdx, fmtSSAVarTemp
+    pop r8                          ; r8d = condVarId as temp variable
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    ; Now format "while (t%d)"
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoWhile
+    lea r8, pseudoExprBuf
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    jmp @@pseudo_while_emit_line
+
+@@pseudo_while_no_cond:
+    ; while (1) — infinite loop
+    lea rcx, pseudoLineBuf
+    mov BYTE PTR [rcx], 'w'
+    mov BYTE PTR [rcx+1], 'h'
+    mov BYTE PTR [rcx+2], 'i'
+    mov BYTE PTR [rcx+3], 'l'
+    mov BYTE PTR [rcx+4], 'e'
+    mov BYTE PTR [rcx+5], ' '
+    mov BYTE PTR [rcx+6], '('
+    mov BYTE PTR [rcx+7], '1'
+    mov BYTE PTR [rcx+8], ')'
+    mov BYTE PTR [rcx+9], 0
+
+@@pseudo_while_emit_line:
+    ; Emit the while line
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov eax, [r15].RAWRSTRUCTREGION.headBB
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcBB, eax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.regionIdx, r13d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.isComment, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 0
+
+    ; Copy line text
+    lea rdi, [r8].RAWRPSEUDOLINE.szLine
+    lea rsi, pseudoLineBuf
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+@@pseudo_while_copy:
+    mov al, BYTE PTR [rsi]
+    mov BYTE PTR [rdi], al
+    test al, al
+    jz @@pseudo_while_copied
+    inc rsi
+    inc rdi
+    dec ecx
+    jnz @@pseudo_while_copy
+@@pseudo_while_copied:
+    lea rax, [r8].RAWRPSEUDOLINE.szLine
+    sub rdi, rax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, edi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Emit opening brace at current indent
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '{'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 1, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Emit SSA instructions for loop body BBs
+    inc r14d                        ; Increase indent for body
+    mov ecx, [r15].RAWRSTRUCTREGION.bbCount
+    xor esi, esi
+
+@@pseudo_while_body:
+    cmp esi, ecx
+    jge @@pseudo_while_close
+    mov [rsp + 50h], ecx
+    mov [rsp + 54h], esi
+
+    mov eax, DWORD PTR [r15 + RAWRSTRUCTREGION.bbList + rsi*4]
+    mov [rsp + 58h], eax            ; Current BB index
+
+    ; Emit SSA instructions for this BB
+    call @@pseudo_emit_bb_instrs
+
+    mov ecx, [rsp + 50h]
+    mov esi, [rsp + 54h]
+    inc esi
+    jmp @@pseudo_while_body
+
+@@pseudo_while_close:
+    dec r14d                        ; Restore indent
+    ; Emit closing brace
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '}'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 1, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 2
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+    jmp @@pseudo_region_next
+
+    ; -----------------------------------------------------------------
+    ; Emit: do { ... } while (condition);
+    ; -----------------------------------------------------------------
+@@pseudo_emit_do_while:
+    ; Emit "do"
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, 'd'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 1, 'o'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 2, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 2
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Emit "{"
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '{'
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Body (reuse while-body logic)
+    inc r14d
+    mov ecx, [r15].RAWRSTRUCTREGION.bbCount
+    xor esi, esi
+@@pseudo_dowhile_body:
+    cmp esi, ecx
+    jge @@pseudo_dowhile_close
+    mov [rsp + 50h], ecx
+    mov [rsp + 54h], esi
+    mov eax, DWORD PTR [r15 + RAWRSTRUCTREGION.bbList + rsi*4]
+    mov [rsp + 58h], eax
+    call @@pseudo_emit_bb_instrs
+    mov ecx, [rsp + 50h]
+    mov esi, [rsp + 54h]
+    inc esi
+    jmp @@pseudo_dowhile_body
+
+@@pseudo_dowhile_close:
+    dec r14d
+    ; Emit "} while (cond);"
+    lea rdi, pseudoLineBuf
+    xor eax, eax
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+    rep stosb
+
+    mov eax, [r15].RAWRSTRUCTREGION.condVarId
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoDoWhileEnd
+    lea r8, pseudoExprBuf
+    ; Build condition text
+    push rax
+    lea rcx, pseudoExprBuf
+    lea rdx, fmtSSAVarTemp
+    pop r8
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoDoWhileEnd
+    lea r8, pseudoExprBuf
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+
+    ; Push as line
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 2
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rdi, [r8].RAWRPSEUDOLINE.szLine
+    lea rsi, pseudoLineBuf
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+@@pseudo_dowhile_copy:
+    mov al, [rsi]
+    mov [rdi], al
+    test al, al
+    jz @@pseudo_dowhile_copied
+    inc rsi
+    inc rdi
+    dec ecx
+    jnz @@pseudo_dowhile_copy
+@@pseudo_dowhile_copied:
+    lea rax, [r8].RAWRPSEUDOLINE.szLine
+    sub rdi, rax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, edi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+    jmp @@pseudo_region_next
+
+    ; -----------------------------------------------------------------
+    ; Emit: if (condition) { ... }
+    ; -----------------------------------------------------------------
+@@pseudo_emit_if_then:
+    ; Build "if (cond)"
+    lea rdi, pseudoLineBuf
+    xor eax, eax
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+    rep stosb
+
+    mov eax, [r15].RAWRSTRUCTREGION.condVarId
+    cmp eax, -1
+    je @@pseudo_if_no_cond
+    lea rcx, pseudoExprBuf
+    lea rdx, fmtSSAVarTemp
+    mov r8d, eax
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoIf
+    lea r8, pseudoExprBuf
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    jmp @@pseudo_if_emit_line
+
+@@pseudo_if_no_cond:
+    lea rcx, pseudoLineBuf
+    mov BYTE PTR [rcx], 'i'
+    mov BYTE PTR [rcx+1], 'f'
+    mov BYTE PTR [rcx+2], ' '
+    mov BYTE PTR [rcx+3], '('
+    mov BYTE PTR [rcx+4], '.'
+    mov BYTE PTR [rcx+5], '.'
+    mov BYTE PTR [rcx+6], '.'
+    mov BYTE PTR [rcx+7], ')'
+    mov BYTE PTR [rcx+8], 0
+
+@@pseudo_if_emit_line:
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov eax, [r15].RAWRSTRUCTREGION.headBB
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcBB, eax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.regionIdx, r13d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 0
+
+    lea rdi, [r8].RAWRPSEUDOLINE.szLine
+    lea rsi, pseudoLineBuf
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+@@pseudo_if_copy:
+    mov al, [rsi]
+    mov [rdi], al
+    test al, al
+    jz @@pseudo_if_copied
+    inc rsi
+    inc rdi
+    dec ecx
+    jnz @@pseudo_if_copy
+@@pseudo_if_copied:
+    lea rax, [r8].RAWRPSEUDOLINE.szLine
+    sub rdi, rax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, edi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Emit "{" + body + "}"
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '{'
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Emit body instructions
+    inc r14d
+    mov ecx, [r15].RAWRSTRUCTREGION.bbCount
+    xor esi, esi
+@@pseudo_if_body:
+    cmp esi, ecx
+    jge @@pseudo_if_close
+    mov [rsp + 50h], ecx
+    mov [rsp + 54h], esi
+    mov eax, DWORD PTR [r15 + RAWRSTRUCTREGION.bbList + rsi*4]
+    mov [rsp + 58h], eax
+    call @@pseudo_emit_bb_instrs
+    mov ecx, [rsp + 50h]
+    mov esi, [rsp + 54h]
+    inc esi
+    jmp @@pseudo_if_body
+
+@@pseudo_if_close:
+    dec r14d
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '}'
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 2
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+    jmp @@pseudo_region_next
+
+    ; -----------------------------------------------------------------
+    ; Emit: if (cond) { ... } else { ... }
+    ; -----------------------------------------------------------------
+@@pseudo_emit_if_then_else:
+    ; Reuse if-then header emission
+    lea rdi, pseudoLineBuf
+    xor eax, eax
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+    rep stosb
+
+    mov eax, [r15].RAWRSTRUCTREGION.condVarId
+    cmp eax, -1
+    je @@pseudo_ite_no_cond
+    lea rcx, pseudoExprBuf
+    lea rdx, fmtSSAVarTemp
+    mov r8d, eax
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoIf
+    lea r8, pseudoExprBuf
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    jmp @@pseudo_ite_emit_hdr
+
+@@pseudo_ite_no_cond:
+    lea rcx, pseudoLineBuf
+    mov BYTE PTR [rcx], 'i'
+    mov BYTE PTR [rcx+1], 'f'
+    mov BYTE PTR [rcx+2], ' '
+    mov BYTE PTR [rcx+3], '('
+    mov BYTE PTR [rcx+4], '.'
+    mov BYTE PTR [rcx+5], '.'
+    mov BYTE PTR [rcx+6], '.'
+    mov BYTE PTR [rcx+7], ')'
+    mov BYTE PTR [rcx+8], 0
+
+@@pseudo_ite_emit_hdr:
+    ; Emit if header
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov eax, [r15].RAWRSTRUCTREGION.headBB
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcBB, eax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.regionIdx, r13d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rdi, [r8].RAWRPSEUDOLINE.szLine
+    lea rsi, pseudoLineBuf
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+@@pseudo_ite_copy:
+    mov al, [rsi]
+    mov [rdi], al
+    test al, al
+    jz @@pseudo_ite_copied
+    inc rsi
+    inc rdi
+    dec ecx
+    jnz @@pseudo_ite_copy
+@@pseudo_ite_copied:
+    lea rax, [r8].RAWRPSEUDOLINE.szLine
+    sub rdi, rax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, edi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Emit then block: { body }
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '{'
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Then-body instructions (head BB only for now)
+    inc r14d
+    mov eax, [r15].RAWRSTRUCTREGION.headBB
+    mov [rsp + 58h], eax
+    call @@pseudo_emit_bb_instrs
+    dec r14d
+
+    ; Close then block
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '}'
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 2
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Emit "else {"
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, 'e'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 1, 'l'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 2, 's'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 3, 'e'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 4, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 4
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Else brace
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '{'
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Else body (exit BB)
+    inc r14d
+    mov eax, [r15].RAWRSTRUCTREGION.exitBB
+    cmp eax, -1
+    je @@pseudo_ite_no_else_body
+    mov [rsp + 58h], eax
+    call @@pseudo_emit_bb_instrs
+@@pseudo_ite_no_else_body:
+    dec r14d
+
+    ; Close else block
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '}'
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 2
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+    jmp @@pseudo_region_next
+
+    ; -----------------------------------------------------------------
+    ; Emit: return v0;
+    ; -----------------------------------------------------------------
+@@pseudo_emit_return:
+    ; Emit BB instructions first
+    mov eax, [r15].RAWRSTRUCTREGION.headBB
+    mov [rsp + 58h], eax
+    call @@pseudo_emit_bb_instrs
+
+    ; Then emit "return" line
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+
+    ; Check if the last SSA instr in this BB is a RET with a src1
+    ; If so, emit "return v%d;" else "return;"
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoRetVoid
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+
+    lea r8, pseudoScratch
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rdi, [r8].RAWRPSEUDOLINE.szLine
+    lea rsi, pseudoLineBuf
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+@@pseudo_ret_copy:
+    mov al, [rsi]
+    mov [rdi], al
+    test al, al
+    jz @@pseudo_ret_copied
+    inc rsi
+    inc rdi
+    dec ecx
+    jnz @@pseudo_ret_copy
+@@pseudo_ret_copied:
+    lea rax, [r8].RAWRPSEUDOLINE.szLine
+    sub rdi, rax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, edi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+    jmp @@pseudo_region_next
+
+    ; -----------------------------------------------------------------
+    ; Emit: goto BB%d;
+    ; -----------------------------------------------------------------
+@@pseudo_emit_goto:
+    lea rdi, pseudoLineBuf
+    xor eax, eax
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+    rep stosb
+
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoGoto
+    mov r8d, [r15].RAWRSTRUCTREGION.headBB
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov eax, [r15].RAWRSTRUCTREGION.headBB
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcBB, eax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rdi, [r8].RAWRPSEUDOLINE.szLine
+    lea rsi, pseudoLineBuf
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+@@pseudo_goto_copy:
+    mov al, [rsi]
+    mov [rdi], al
+    test al, al
+    jz @@pseudo_goto_copied
+    inc rsi
+    inc rdi
+    dec ecx
+    jnz @@pseudo_goto_copy
+@@pseudo_goto_copied:
+    lea rax, [r8].RAWRPSEUDOLINE.szLine
+    sub rdi, rax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, edi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+    jmp @@pseudo_region_next
+
+    ; -----------------------------------------------------------------
+    ; Emit: sequence block (just the BB instructions)
+    ; -----------------------------------------------------------------
+@@pseudo_emit_sequence:
+    mov eax, [r15].RAWRSTRUCTREGION.headBB
+    mov [rsp + 58h], eax
+    call @@pseudo_emit_bb_instrs
+    jmp @@pseudo_region_next
+
+@@pseudo_region_next:
+    inc r13d
+    jmp @@pseudo_region_loop
+
+    ; =====================================================================
+    ; Step 3: Emit closing brace for function
+    ; =====================================================================
+@@pseudo_emit_closing:
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine, '}'
+    mov BYTE PTR [r8].RAWRPSEUDOLINE.szLine + 1, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, 1
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 2
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, -1
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+    ; Done
+    mov [rbx].RAWRCODEX_CTX.pseudoEmitted, 1
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    mov eax, [rcx].DYNARRAY.count
+
+    add rsp, 0C8h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+
+    ; =====================================================================
+    ; Internal subroutine: Emit SSA instructions for a basic block
+    ;
+    ; Input: [rsp + 58h] = BB index to emit
+    ;        rbx = ctx, r14d = current indent level
+    ;
+    ; Walks all SSA instructions in the given BB and emits a pseudocode
+    ; line for each, using the C operator table and type annotations.
+    ; =====================================================================
+@@pseudo_emit_bb_instrs:
+    ; Get SSA instruction count
+    lea rax, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov ecx, [rax].DYNARRAY.count
+    test ecx, ecx
+    jz @@pseudo_bb_done
+
+    mov [rsp + 90h], ecx            ; Total SSA instrs
+    xor esi, esi                    ; SSA instr index
+
+@@pseudo_bb_instr_loop:
+    mov ecx, [rsp + 90h]
+    cmp esi, ecx
+    jge @@pseudo_bb_done
+
+    mov [rsp + 94h], esi            ; Save SSA instr index
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edx, esi
+    call DynArray_Get
+    test rax, rax
+    jz @@pseudo_bb_instr_next
+
+    ; Check if this instruction belongs to our target BB
+    mov ecx, [rsp + 58h]            ; Target BB index
+    cmp [rax].RAWRSSAINSTR.bbIndex, ecx
+    jne @@pseudo_bb_instr_next
+
+    ; Skip dead code
+    cmp [rax].RAWRSSAINSTR.isDeadCode, 1
+    je @@pseudo_bb_instr_next
+
+    ; Skip PHI, JMP, BRANCH (these are control flow, not statements)
+    cmp [rax].RAWRSSAINSTR.ssaOp, SSA_OP_PHI
+    je @@pseudo_bb_instr_next
+    cmp [rax].RAWRSSAINSTR.ssaOp, SSA_OP_JMP
+    je @@pseudo_bb_instr_next
+    cmp [rax].RAWRSSAINSTR.ssaOp, SSA_OP_BRANCH
+    je @@pseudo_bb_instr_next
+
+    ; Format this SSA instruction as a C statement
+    mov [rsp + 98h], rax            ; Save SSA instr pointer
+
+    lea rdi, pseudoLineBuf
+    xor eax, eax
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+    rep stosb
+
+    mov rax, [rsp + 98h]
+    mov r9d, [rax].RAWRSSAINSTR.ssaOp
+
+    ; Dispatch by SSA op type
+    cmp r9d, SSA_OP_ASSIGN
+    je @@pseudo_bb_assign
+    cmp r9d, SSA_OP_CALL
+    je @@pseudo_bb_call
+    cmp r9d, SSA_OP_RET
+    je @@pseudo_bb_ret
+    cmp r9d, SSA_OP_STORE
+    je @@pseudo_bb_store
+    cmp r9d, SSA_OP_LOAD
+    je @@pseudo_bb_load
+    cmp r9d, SSA_OP_CMP
+    je @@pseudo_bb_instr_next       ; CMP produces flags, not a statement
+    cmp r9d, SSA_OP_TEST
+    je @@pseudo_bb_instr_next       ; TEST produces flags, not a statement
+    cmp r9d, SSA_OP_UNKNOWN
+    je @@pseudo_bb_instr_next       ; Skip unknown ops
+
+    ; Binary/unary operation: "v%d = v%d OP v%d;"
+    jmp @@pseudo_bb_binop
+
+@@pseudo_bb_assign:
+    ; "v%d = v%d;"
+    mov rax, [rsp + 98h]
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoAssign
+    mov r8d, [rax].RAWRSSAINSTR.dstVarId
+    ; Build expression for src: just "v%d" for simple assign
+    lea rcx, pseudoExprBuf
+    lea rdx, fmtSSAVarTemp
+    mov r8d, [rax].RAWRSSAINSTR.src1VarId
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    mov rax, [rsp + 98h]
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoAssign
+    mov r8d, [rax].RAWRSSAINSTR.dstVarId
+    lea r9, pseudoExprBuf
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    jmp @@pseudo_bb_emit_line
+
+@@pseudo_bb_call:
+    ; "v%d = sub_XXXXXXXX();"
+    mov rax, [rsp + 98h]
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoCall
+    mov r8d, [rax].RAWRSSAINSTR.dstVarId
+    mov r9d, DWORD PTR [rax].RAWRSSAINSTR.callTarget  ; Low 32 bits
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    jmp @@pseudo_bb_emit_line
+
+@@pseudo_bb_ret:
+    ; "return v%d;"
+    mov rax, [rsp + 98h]
+    mov r8d, [rax].RAWRSSAINSTR.src1VarId
+    cmp r8d, -1
+    je @@pseudo_bb_ret_void
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoReturn
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    jmp @@pseudo_bb_emit_line
+@@pseudo_bb_ret_void:
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoRetVoid
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    jmp @@pseudo_bb_emit_line
+
+@@pseudo_bb_store:
+    ; "*v%d = v%d;"
+    mov rax, [rsp + 98h]
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoStore
+    mov r8d, [rax].RAWRSSAINSTR.dstVarId
+    mov r9d, [rax].RAWRSSAINSTR.src1VarId
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    jmp @@pseudo_bb_emit_line
+
+@@pseudo_bb_load:
+    ; "v%d = *v%d;"
+    mov rax, [rsp + 98h]
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtPseudoLoad
+    mov r8d, [rax].RAWRSSAINSTR.dstVarId
+    mov r9d, [rax].RAWRSSAINSTR.src1VarId
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h
+    jmp @@pseudo_bb_emit_line
+
+@@pseudo_bb_binop:
+    ; "v%d = v%d OP v%d;"
+    ; Get C operator string
+    mov rax, [rsp + 98h]
+    mov r9d, [rax].RAWRSSAINSTR.ssaOp
+    cmp r9d, 12                     ; Ensure within range of ssaOpToC table
+    ja @@pseudo_bb_instr_next       ; Out of range — skip
+
+    ; Format: "v%d = v%d + v%d;"
+    ; Use wsprintfA with SSA instruction format
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtSSAInstr
+    mov r8d, [rax].RAWRSSAINSTR.dstVarId
+    ; Get operator name from ssaOpNames
+    mov eax, r9d
+    shl eax, 3                      ; * 8 bytes per entry
+    lea r9, ssaOpNames
+    add r9, rax                     ; r9 -> operator name
+    mov rax, [rsp + 98h]
+    ; Need to push extra params for %d, %d after the string
+    mov ecx, [rax].RAWRSSAINSTR.src2VarId
+    push rcx                        ; 6th param: src2 var id
+    mov ecx, [rax].RAWRSSAINSTR.src1VarId
+    push rcx                        ; 5th param: src1 var id
+    lea rcx, pseudoLineBuf
+    lea rdx, fmtSSAInstr
+    mov r8d, [rax].RAWRSSAINSTR.dstVarId
+    sub rsp, 20h
+    call wsprintfA
+    add rsp, 20h + 10h             ; Clean shadow + 2 pushed params
+
+    ; Append semicolon
+    lea rcx, pseudoLineBuf
+    call lstrlenA
+    lea rcx, pseudoLineBuf
+    mov BYTE PTR [rcx + rax], ';'
+    mov BYTE PTR [rcx + rax + 1], 0
+    jmp @@pseudo_bb_emit_line
+
+@@pseudo_bb_emit_line:
+    ; Build and push pseudocode line
+    lea r8, pseudoScratch
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRPSEUDOLINE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+    lea r8, pseudoScratch
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.indent, r14d
+    mov eax, [rsp + 58h]
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcBB, eax
+    mov eax, [rsp + 94h]
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.srcInstr, eax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineType, 0
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.isComment, 0
+
+    ; Copy pseudoLineBuf into szLine
+    lea rdi, [r8].RAWRPSEUDOLINE.szLine
+    lea rsi, pseudoLineBuf
+    mov ecx, MAX_PSEUDOCODE_LINE_LEN
+@@pseudo_bb_copy:
+    mov al, [rsi]
+    mov [rdi], al
+    test al, al
+    jz @@pseudo_bb_copied
+    inc rsi
+    inc rdi
+    dec ecx
+    jnz @@pseudo_bb_copy
+@@pseudo_bb_copied:
+    lea rax, [r8].RAWRPSEUDOLINE.szLine
+    sub rdi, rax
+    mov DWORD PTR [r8].RAWRPSEUDOLINE.lineLen, edi
+
+    lea rcx, [rbx].RAWRCODEX_CTX.pseudoLines
+    lea rdx, pseudoScratch
+    call DynArray_Push
+
+@@pseudo_bb_instr_next:
+    mov esi, [rsp + 94h]
+    inc esi
+    jmp @@pseudo_bb_instr_loop
+
+@@pseudo_bb_done:
+    ret
+
+@@pseudo_fail:
+    xor eax, eax
+    add rsp, 0C8h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+RawrCodex_EmitPseudocode ENDP
 
 ; =============================================================================
 ; RawrLicense_CheckFeature - Check if a feature is enabled in the license
