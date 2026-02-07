@@ -35,6 +35,7 @@
 
 #include "../modules/ExtensionLoader.hpp"
 #include <nlohmann/json.hpp>
+#include <condition_variable>
 
 // Agent and AI IDs
 #define IDM_AGENT_START_LOOP 4100
@@ -258,6 +259,21 @@ struct IDETheme {
 #define IDM_ROUTER_SAVE_CONFIG      5055
 #define IDM_ROUTER_ROUTE_PROMPT     5056
 #define IDM_ROUTER_RESET_STATS      5057
+
+// LSP Client commands (5058+ range — routed via handleToolsCommand)
+#define IDM_LSP_START_ALL           5058
+#define IDM_LSP_STOP_ALL            5059
+#define IDM_LSP_SHOW_STATUS         5060
+#define IDM_LSP_GOTO_DEFINITION     5061
+#define IDM_LSP_FIND_REFERENCES     5062
+#define IDM_LSP_RENAME_SYMBOL       5063
+#define IDM_LSP_HOVER_INFO          5064
+#define IDM_LSP_SHOW_DIAGNOSTICS    5065
+#define IDM_LSP_RESTART_SERVER      5066
+#define IDM_LSP_CLEAR_DIAGNOSTICS   5067
+#define IDM_LSP_SHOW_SYMBOL_INFO    5068
+#define IDM_LSP_CONFIGURE           5069
+#define IDM_LSP_SAVE_CONFIG         5070
 
 struct CodeSnippet {
     std::string name;
@@ -2519,6 +2535,205 @@ private:
     RouterStats m_routerStats                                       = {};
     RoutingDecision m_lastRoutingDecision                           = {};
     std::mutex m_routerMutex;
+
+    // ========================================================================
+    // LSP Client Bridge — Phase 9A (Win32IDE_LSPClient.cpp)
+    // ========================================================================
+    // Minimal LSP integration for C/C++ (clangd), Python (pyright), and
+    // TypeScript (typescript-language-server). Provides go-to-definition,
+    // find-references, rename, hover, and diagnostics. The LSP servers run as
+    // child processes communicating via JSON-RPC over stdin/stdout.
+
+    // ---- Supported language servers ----
+    enum class LSPLanguage {
+        Cpp        = 0,    // clangd
+        Python     = 1,    // pyright-langserver (basedpyright) or pylsp
+        TypeScript = 2,    // typescript-language-server
+        Count      = 3
+    };
+
+    // ---- Per-server configuration ----
+    struct LSPServerConfig {
+        LSPLanguage language           = LSPLanguage::Cpp;
+        std::string name;              // "clangd", "pyright", "typescript-language-server"
+        std::string executablePath;    // Full path to the LSP binary
+        std::vector<std::string> args; // Command-line arguments
+        std::string rootUri;           // Workspace root URI ("file:///D:/rawrxd")
+        bool        enabled            = true;
+        int         initTimeoutMs      = 10000;
+    };
+
+    // ---- Per-server runtime state ----
+    enum class LSPServerState {
+        Stopped     = 0,
+        Starting    = 1,
+        Running     = 2,
+        ShuttingDown = 3,
+        Error       = 4
+    };
+
+    struct LSPServerStatus {
+        LSPLanguage   language          = LSPLanguage::Cpp;
+        LSPServerState state            = LSPServerState::Stopped;
+        HANDLE        hProcess          = nullptr;    // Child process handle
+        HANDLE        hStdinWrite       = nullptr;    // Write end of stdin pipe
+        HANDLE        hStdoutRead       = nullptr;    // Read end of stdout pipe
+        DWORD         pid               = 0;
+        int           requestIdCounter  = 1;          // Monotonic JSON-RPC id
+        bool          initialized       = false;      // Server responded to initialize
+        std::string   lastError;
+        uint64_t      startedEpochMs    = 0;
+        uint64_t      requestCount      = 0;
+        uint64_t      notificationCount = 0;
+    };
+
+    // ---- LSP protocol types (minimal subset) ----
+    struct LSPPosition {
+        int line      = 0;    // 0-based
+        int character = 0;    // 0-based (UTF-16 offset)
+    };
+
+    struct LSPRange {
+        LSPPosition start;
+        LSPPosition end;
+    };
+
+    struct LSPLocation {
+        std::string uri;      // "file:///path/to/file.cpp"
+        LSPRange    range;
+    };
+
+    struct LSPDiagnostic {
+        LSPRange    range;
+        int         severity    = 1;    // 1=Error, 2=Warning, 3=Information, 4=Hint
+        std::string code;               // Diagnostic code (e.g., "-Wunused")
+        std::string source;             // "clangd", "pyright", etc.
+        std::string message;
+    };
+
+    struct LSPHoverInfo {
+        std::string contents;           // Markdown hover text
+        LSPRange    range;              // Range the hover applies to
+        bool        valid = false;
+    };
+
+    struct LSPSymbolInfo {
+        std::string name;
+        int         kind     = 0;       // LSP SymbolKind (1=File ... 26=TypeParameter)
+        std::string detail;             // e.g., "void foo(int x)"
+        LSPLocation location;
+        std::string containerName;      // Enclosing symbol name
+    };
+
+    struct LSPWorkspaceEdit {
+        // uri → list of {range, newText}
+        struct TextEdit {
+            LSPRange    range;
+            std::string newText;
+        };
+        std::map<std::string, std::vector<TextEdit>> changes;
+    };
+
+    // ---- LSP client statistics ----
+    struct LSPStats {
+        uint64_t totalDefinitionRequests    = 0;
+        uint64_t totalReferenceRequests     = 0;
+        uint64_t totalRenameRequests        = 0;
+        uint64_t totalHoverRequests         = 0;
+        uint64_t totalDiagnosticsReceived   = 0;
+        uint64_t totalServerRestarts        = 0;
+    };
+
+    // LSP Client — lifecycle
+    void initLSPClient();
+    void shutdownLSPClient();
+    void loadLSPConfig();
+    void saveLSPConfig();
+
+    // LSP Server management
+    bool startLSPServer(LSPLanguage lang);
+    void stopLSPServer(LSPLanguage lang);
+    void restartLSPServer(LSPLanguage lang);
+    void startAllLSPServers();
+    void stopAllLSPServers();
+    LSPServerState getLSPServerState(LSPLanguage lang) const;
+
+    // JSON-RPC transport
+    int  sendLSPRequest(LSPLanguage lang, const std::string& method, const nlohmann::json& params);
+    void sendLSPNotification(LSPLanguage lang, const std::string& method, const nlohmann::json& params);
+    nlohmann::json readLSPResponse(LSPLanguage lang, int requestId, int timeoutMs = 5000);
+    void lspReaderThread(LSPLanguage lang);
+
+    // LSP initialization handshake
+    bool sendInitialize(LSPLanguage lang);
+    void sendInitialized(LSPLanguage lang);
+    void sendShutdown(LSPLanguage lang);
+    void sendExit(LSPLanguage lang);
+
+    // Document sync
+    void sendDidOpen(LSPLanguage lang, const std::string& uri, const std::string& languageId,
+                     const std::string& content);
+    void sendDidChange(LSPLanguage lang, const std::string& uri, const std::string& content);
+    void sendDidClose(LSPLanguage lang, const std::string& uri);
+    void sendDidSave(LSPLanguage lang, const std::string& uri);
+
+    // Core LSP features (5 required)
+    std::vector<LSPLocation> lspGotoDefinition(const std::string& uri, int line, int character);
+    std::vector<LSPLocation> lspFindReferences(const std::string& uri, int line, int character);
+    LSPWorkspaceEdit lspRenameSymbol(const std::string& uri, int line, int character,
+                                      const std::string& newName);
+    LSPHoverInfo lspHover(const std::string& uri, int line, int character);
+    // Diagnostics arrive as notifications — handled in lspReaderThread
+
+    // Apply edits from LSP
+    bool applyWorkspaceEdit(const LSPWorkspaceEdit& edit);
+
+    // Language detection
+    LSPLanguage detectLanguageForFile(const std::string& filePath) const;
+    std::string lspLanguageId(LSPLanguage lang) const;
+    std::string lspLanguageString(LSPLanguage lang) const;
+    LSPLanguage lspLanguageFromString(const std::string& name) const;
+
+    // URI helpers
+    std::string filePathToUri(const std::string& filePath) const;
+    std::string uriToFilePath(const std::string& uri) const;
+
+    // Diagnostics management
+    void onDiagnosticsReceived(const std::string& uri, const std::vector<LSPDiagnostic>& diagnostics);
+    std::vector<LSPDiagnostic> getDiagnosticsForFile(const std::string& uri) const;
+    std::vector<std::pair<std::string, std::vector<LSPDiagnostic>>> getAllDiagnostics() const;
+    void clearDiagnostics(const std::string& uri);
+    void clearAllDiagnostics();
+    void displayDiagnosticsAsAnnotations(const std::string& uri);
+
+    // Status & display
+    std::string getLSPStatusString() const;
+    std::string getLSPStatsString() const;
+    std::string getLSPDiagnosticsSummary() const;
+    std::string getLSPConfigFilePath() const;
+
+    // Command handlers (called from handleToolsCommand)
+    void cmdLSPGotoDefinition();
+    void cmdLSPFindReferences();
+    void cmdLSPRenameSymbol();
+    void cmdLSPHoverInfo();
+
+    // HTTP endpoints
+    void handleLSPStatusEndpoint(SOCKET client);
+    void handleLSPDiagnosticsEndpoint(SOCKET client);
+
+    // LSP Client state
+    bool m_lspInitialized                                       = false;
+    std::array<LSPServerConfig, (size_t)LSPLanguage::Count>     m_lspConfigs;
+    std::array<LSPServerStatus, (size_t)LSPLanguage::Count>     m_lspStatuses;
+    std::map<std::string, std::vector<LSPDiagnostic>>           m_lspDiagnostics;     // uri → diagnostics
+    std::map<int, nlohmann::json>                               m_lspPendingResponses; // requestId → response
+    LSPStats    m_lspStats                                      = {};
+    std::mutex  m_lspMutex;
+    std::mutex  m_lspDiagnosticsMutex;
+    std::mutex  m_lspResponseMutex;
+    std::condition_variable m_lspResponseCV;
+    std::vector<std::thread> m_lspReaderThreads;
 
     // ========================================================================
     // Settings Dialog (Win32IDE_Settings.cpp)
