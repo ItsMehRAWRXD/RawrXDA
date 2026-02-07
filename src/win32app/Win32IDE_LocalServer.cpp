@@ -491,16 +491,19 @@ void Win32IDE::handleOllamaApiGenerate(SOCKET client, const std::string& body) {
         maxTokens = numPredict;
     }
 
-    // ── Phase 8B: Route through BackendSwitcher ──────────────────────────
+    // ── Phase 8B+8C: Route through LLM Router → BackendSwitcher ────────
     // LocalGGUF + streaming: use native token-level SSE (preserved)
     // LocalGGUF + non-streaming: use native engine directly (preserved)
-    // Remote backends: use routeInferenceRequest() and wrap in Ollama format
+    // Remote backends: use routeWithIntelligence() for task-aware routing,
+    //   then wrap the result in Ollama JSON format
     // ─────────────────────────────────────────────────────────────────────
     AIBackendType activeBackend = getActiveBackendType();
 
     if (activeBackend != AIBackendType::LocalGGUF) {
-        // Remote backend — route through BackendSwitcher (always non-streaming)
-        std::string result = routeInferenceRequest(prompt);
+        // Remote backend — route through LLM Router (task classification,
+        // capability matching, fallback chains). When router is disabled,
+        // routeWithIntelligence() passes straight to routeInferenceRequest().
+        std::string result = routeWithIntelligence(prompt);
         bool isError = result.find("[BackendSwitcher] Error") != std::string::npos;
 
         if (isError) {
@@ -510,7 +513,11 @@ void Win32IDE::handleOllamaApiGenerate(SOCKET client, const std::string& body) {
             return;
         }
 
-        std::string backendName = LocalServerUtil::toLower(backendTypeString(activeBackend));
+        // Use the Router's actual selected backend for the response model name
+        // (may differ from activeBackend if Router reclassified the task)
+        AIBackendType routedBackend = getLastRoutingDecision().selectedBackend;
+        if (!m_routerEnabled || !m_routerInitialized) routedBackend = activeBackend;
+        std::string backendName = LocalServerUtil::toLower(backendTypeString(routedBackend));
         m_localServerStats.totalTokens++;
 
         if (stream) {
@@ -610,16 +617,19 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
     std::string requestId = "chatcmpl-rawrxd-" + std::to_string(
         std::chrono::steady_clock::now().time_since_epoch().count());
 
-    // ── Phase 8B: Route through BackendSwitcher ──────────────────────────
+    // ── Phase 8B+8C: Route through LLM Router → BackendSwitcher ────────
     // LocalGGUF + streaming: use native token-level SSE (preserved)
     // LocalGGUF + non-streaming: use native engine directly (preserved)
-    // Remote backends: use routeInferenceRequest() and wrap in OpenAI format
+    // Remote backends: use routeWithIntelligence() for task-aware routing,
+    //   then wrap the result in OpenAI chat completion format
     // ─────────────────────────────────────────────────────────────────────
     AIBackendType activeBackend = getActiveBackendType();
 
     if (activeBackend != AIBackendType::LocalGGUF) {
-        // Remote backend — route through BackendSwitcher
-        std::string result = routeInferenceRequest(prompt);
+        // Remote backend — route through LLM Router (task classification,
+        // capability matching, fallback chains). When router is disabled,
+        // routeWithIntelligence() passes straight to routeInferenceRequest().
+        std::string result = routeWithIntelligence(prompt);
         bool isError = result.find("[BackendSwitcher] Error") != std::string::npos;
 
         if (isError) {
@@ -829,22 +839,29 @@ void Win32IDE::handleAskEndpoint(SOCKET client, const std::string& body) {
         return;
     }
 
-    // ── Phase 8B: Route through BackendSwitcher ──────────────────────────
-    // All backends go through routeInferenceRequest() which delegates to
-    // the correct provider (LocalGGUF → native engine, Ollama → HTTP,
-    // OpenAI/Claude/Gemini → respective APIs).
-    // The "no model loaded" check for LocalGGUF is handled inside
-    // routeToLocalGGUF() which returns a clear error string.
+    // ── Phase 8B+8C: Route through LLM Router → BackendSwitcher ────────
+    // All backends go through routeWithIntelligence() which classifies
+    // the task, selects the optimal backend (with fallback), then delegates
+    // to routeInferenceRequest() for actual inference.
+    // When the router is disabled, routeWithIntelligence() passes straight
+    // through to routeInferenceRequest() — zero behavior change.
     // ─────────────────────────────────────────────────────────────────────
-    std::string answer = routeInferenceRequest(question);
+    std::string answer = routeWithIntelligence(question);
     bool isError = answer.find("[BackendSwitcher] Error") != std::string::npos;
     m_localServerStats.totalTokens++;
+
+    // Determine the actual backend used (Router may have reclassified)
+    AIBackendType reportedBackend = getActiveBackendType();
+    if (m_routerEnabled && m_routerInitialized) {
+        reportedBackend = getLastRoutingDecision().selectedBackend;
+    }
+    std::string backendStr = backendTypeString(reportedBackend);
 
     if (isError) {
         // Return the error as a displayable answer (not a 500)
         // so the HTML chatbot can show it gracefully
         std::string json = "{\"answer\":\"" + LocalServerUtil::escapeJson(answer)
-            + "\",\"backend\":\"" + LocalServerUtil::escapeJson(backendTypeString(getActiveBackendType()))
+            + "\",\"backend\":\"" + LocalServerUtil::escapeJson(backendStr)
             + "\",\"error\":true}";
         std::string resp = LocalServerUtil::buildHttpResponse(200, json);
         send(client, resp.c_str(), (int)resp.size(), 0);
@@ -852,7 +869,7 @@ void Win32IDE::handleAskEndpoint(SOCKET client, const std::string& body) {
     }
 
     std::string json = "{\"answer\":\"" + LocalServerUtil::escapeJson(answer)
-        + "\",\"backend\":\"" + LocalServerUtil::escapeJson(backendTypeString(getActiveBackendType()))
+        + "\",\"backend\":\"" + LocalServerUtil::escapeJson(backendStr)
         + "\"}";
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
     send(client, resp.c_str(), (int)resp.size(), 0);
