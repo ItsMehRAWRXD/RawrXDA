@@ -597,6 +597,90 @@ void Win32IDE::handleToolsCommand(int commandId) {
         case 5005: // Code Snippets
             showSnippetManager();
             break;
+
+        // ================================================================
+        // Copilot Parity Features (5010+)
+        // ================================================================
+        case 5010: // Toggle Ghost Text
+            toggleGhostText();
+            break;
+
+        case 5011: { // Generate Agent Plan
+            // Prompt user for goal
+            char goalBuf[1024] = {};
+            HWND hDlg = CreateWindowExA(0, "STATIC", "", WS_POPUP, 0, 0, 0, 0, m_hwndMain, nullptr, m_hInstance, nullptr);
+            // Simple input via prompt
+            if (m_hwndEditor) {
+                // Get selected text as default goal, or prompt
+                CHARRANGE sel;
+                SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
+                std::string selectedText;
+                if (sel.cpMax > sel.cpMin) {
+                    int len = sel.cpMax - sel.cpMin;
+                    std::vector<char> buf(len + 1, 0);
+                    TEXTRANGEA tr;
+                    tr.chrg = sel;
+                    tr.lpstrText = buf.data();
+                    SendMessageA(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
+                    selectedText = buf.data();
+                }
+                if (!selectedText.empty()) {
+                    generateAgentPlan(selectedText);
+                } else {
+                    appendToOutput("[Plan] Select text describing your goal, then run 'Generate Agent Plan'.",
+                                   "General", OutputSeverity::Info);
+                }
+            }
+            if (hDlg) DestroyWindow(hDlg);
+            break;
+        }
+
+        case 5012: // Show Plan Status
+            appendToOutput(getPlanStatusString(), "General", OutputSeverity::Info);
+            break;
+
+        case 5013: // Cancel Current Plan
+            cancelPlan();
+            break;
+
+        case 5014: // Toggle Failure Detector
+            toggleFailureDetector();
+            break;
+
+        case 5015: // Show Failure Detector Stats
+            appendToOutput(getFailureDetectorStats(), "General", OutputSeverity::Info);
+            break;
+
+        case 5016: // Settings Dialog
+            showSettingsDialog();
+            break;
+
+        case 5017: // Toggle Local Server
+            toggleLocalServer();
+            break;
+
+        case 5018: // Show Server Status
+            appendToOutput(getLocalServerStatus(), "General", OutputSeverity::Info);
+            break;
+
+        // ================================================================
+        // Agent History & Replay (5019+)
+        // ================================================================
+        case 5019: // Toggle Agent History
+            toggleAgentHistory();
+            break;
+
+        case 5020: // Show Agent History Panel
+            showAgentHistoryPanel();
+            break;
+
+        case 5021: // Show Agent History Stats
+            appendToOutput(getAgentHistoryStats(), "General", OutputSeverity::Info);
+            break;
+
+        case 5022: // Replay Previous Session
+            showAgentReplayDialog();
+            break;
             
         default:
             break;
@@ -875,6 +959,23 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_FILE_MODEL_UNIFIED, "File: Smart Model Loader (Auto-Detect)", "Ctrl+Shift+M", "File"});
     m_commandRegistry.push_back({IDM_FILE_MODEL_QUICK_LOAD, "File: Quick Load GGUF Model", "Ctrl+M", "File"});
     m_commandRegistry.push_back({1099, "File: Exit", "Alt+F4", "File"});
+
+    // Copilot Parity Features (5010+ range — routed via handleToolsCommand)
+    m_commandRegistry.push_back({5010, "AI: Toggle Ghost Text (Inline Completions)", "", "AI"});
+    m_commandRegistry.push_back({5011, "AI: Generate Agent Plan", "", "AI"});
+    m_commandRegistry.push_back({5012, "AI: Show Plan Status", "", "AI"});
+    m_commandRegistry.push_back({5013, "AI: Cancel Current Plan", "", "AI"});
+    m_commandRegistry.push_back({5014, "AI: Toggle Failure Detector", "", "AI"});
+    m_commandRegistry.push_back({5015, "AI: Show Failure Detector Stats", "", "AI"});
+    m_commandRegistry.push_back({5016, "Settings: Open Settings Dialog", "Ctrl+,", "Settings"});
+    m_commandRegistry.push_back({5017, "Server: Toggle Local GGUF HTTP Server", "", "Server"});
+    m_commandRegistry.push_back({5018, "Server: Show Server Status", "", "Server"});
+
+    // Agent History & Replay (5019+ range — routed via handleToolsCommand)
+    m_commandRegistry.push_back({5019, "History: Toggle Agent History Recording", "", "History"});
+    m_commandRegistry.push_back({5020, "History: Show Agent History Timeline", "", "History"});
+    m_commandRegistry.push_back({5021, "History: Show Agent History Stats", "", "History"});
+    m_commandRegistry.push_back({5022, "History: Replay Previous Session", "", "History"});
 
     m_filteredCommands = m_commandRegistry;
 }

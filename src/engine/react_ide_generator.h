@@ -35,6 +35,8 @@ private:
     std::string GenerateVSIXLoaderPanel();
     std::string GenerateModelLoaderPanel();
     std::string GenerateChatInterface();
+    std::string GenerateSubAgentPanel();
+    std::string GenerateHistoryPanel();
     std::string GenerateSettingsPanel();
     
     void WriteFile(const std::filesystem::path& path, const std::string& content);

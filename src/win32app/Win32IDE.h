@@ -1,5 +1,7 @@
 #pragma once
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 
 // Undefine Windows macros that conflict with our code
@@ -26,6 +28,7 @@
 #include "../model_source_resolver.h"
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
+#include "Win32IDE_SubAgent.h"
 #include "../modules/engine_manager.h"
 #include "../modules/codex_ultimate.h"
 
@@ -59,6 +62,19 @@
 #define IDC_AI_DEEP_THINK 5002
 #define IDC_AI_DEEP_RESEARCH 5003
 #define IDC_AI_NO_REFUSAL 5004
+
+// Plan Approval Dialog Controls
+#define IDC_PLAN_LIST          7001
+#define IDC_PLAN_DETAIL        7002
+#define IDC_PLAN_GOAL_LABEL    7003
+#define IDC_PLAN_SUMMARY_LABEL 7004
+#define IDC_PLAN_BTN_APPROVE   7010
+#define IDC_PLAN_BTN_EDIT      7011
+#define IDC_PLAN_BTN_REJECT    7012
+#define IDC_PLAN_BTN_PAUSE     7013
+#define IDC_PLAN_BTN_CANCEL    7014
+#define IDC_PLAN_PROGRESS      7020
+#define IDC_PLAN_PROGRESS_LABEL 7021
 
 // Context Window IDs
 #define IDM_AI_CONTEXT_4K 4210
@@ -297,6 +313,204 @@ struct WatchItem {
     bool enabled;
 };
 
+// ============================================================================
+// Ghost Text / Inline Completions — WM_APP message
+// ============================================================================
+#define WM_GHOST_TEXT_READY (WM_APP + 400)
+
+// ============================================================================
+// Agent Failure Detection Enums & Structures
+// ============================================================================
+enum class AgentFailureType {
+    Refusal,
+    Hallucination,
+    FormatViolation,
+    InfiniteLoop,
+    QualityDegradation,
+    EmptyResponse
+};
+
+struct FailureStats {
+    int totalRequests       = 0;
+    int totalFailures       = 0;
+    int totalRetries        = 0;
+    int successAfterRetry   = 0;
+    int refusalCount        = 0;
+    int hallucinationCount  = 0;
+    int formatViolationCount = 0;
+    int infiniteLoopCount   = 0;
+    int qualityDegradationCount = 0;
+    int emptyResponseCount  = 0;
+};
+
+// ============================================================================
+// Plan Executor Enums & Structures
+// ============================================================================
+#define WM_PLAN_READY     (WM_APP + 500)
+#define WM_PLAN_STEP_DONE (WM_APP + 501)
+#define WM_PLAN_COMPLETE  (WM_APP + 502)
+
+enum class PlanStepType {
+    CodeEdit,
+    FileCreate,
+    FileDelete,
+    ShellCommand,
+    Analysis,
+    Verification,
+    General
+};
+
+enum class PlanStepStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    Skipped
+};
+
+enum class PlanStatus {
+    None,
+    Generating,
+    AwaitingApproval,
+    Approved,
+    Rejected,
+    Executing,
+    Completed,
+    Failed
+};
+
+struct PlanStep {
+    int id                 = 0;
+    std::string title;
+    std::string description;
+    PlanStepType type      = PlanStepType::General;
+    std::string targetFile;
+    int estimatedMinutes   = 0;
+    float confidence       = 0.5f;
+    std::string risk;
+    PlanStepStatus status  = PlanStepStatus::Pending;
+    std::string output;
+};
+
+struct AgentPlan {
+    std::string goal;
+    std::vector<PlanStep> steps;
+    PlanStatus status      = PlanStatus::None;
+    int currentStepIndex   = -1;
+    float overallConfidence = 0.0f;
+};
+
+// ============================================================================
+// IDE Settings Structure
+// ============================================================================
+struct IDESettings {
+    // General
+    bool autoSaveEnabled        = false;
+    bool lineNumbersVisible     = true;
+    bool wordWrapEnabled        = false;
+    int fontSize                = 14;
+    std::string fontName        = "Consolas";
+    std::string workingDirectory;
+    int autoSaveIntervalSec     = 60;
+
+    // AI / Model
+    float aiTemperature         = 0.7f;
+    float aiTopP                = 0.9f;
+    int aiTopK                  = 40;
+    int aiMaxTokens             = 512;
+    int aiContextWindow         = 4096;
+    std::string aiModelPath;
+    std::string aiOllamaUrl     = "http://localhost:11434";
+    bool ghostTextEnabled       = true;
+    bool failureDetectorEnabled = true;
+    int failureMaxRetries       = 3;
+
+    // Editor
+    int tabSize                 = 4;
+    bool useSpaces              = true;
+    std::string encoding        = "UTF-8";
+    std::string eolStyle        = "LF";
+    bool syntaxColoringEnabled  = true;
+    bool minimapEnabled         = true;
+
+    // Theme
+    int themeId                 = 3101; // IDM_THEME_DARK_PLUS
+    BYTE windowAlpha            = 255;
+
+    // Server
+    bool localServerEnabled     = false;
+    int localServerPort         = 11435;
+};
+
+// ============================================================================
+// Local Server Statistics
+// ============================================================================
+struct LocalServerStats {
+    int totalRequests = 0;
+    int totalTokens   = 0;
+};
+
+// ============================================================================
+// Agent History — Persisted Event Schema (JSONL append-only log)
+// ============================================================================
+#define WM_AGENT_HISTORY_REPLAY_DONE (WM_APP + 600)
+
+enum class AgentEventType {
+    AgentStarted,           // Agent received a prompt
+    AgentCompleted,         // Agent returned a result
+    AgentFailed,            // Agent encountered an error
+    SubAgentSpawned,        // SubAgentManager spawned a child
+    SubAgentResult,         // SubAgent returned a result
+    ChainStepStarted,       // Chain pipeline step began
+    ChainStepCompleted,     // Chain pipeline step finished
+    SwarmStarted,           // HexMag swarm fan-out began
+    SwarmTaskCompleted,     // One swarm task finished
+    SwarmMerged,            // Swarm merge completed
+    ToolInvoked,            // Agent invoked a tool (file edit, shell, etc.)
+    TodoUpdated,            // Todo list item status changed
+    PlanGenerated,          // Plan executor generated a plan
+    PlanStepExecuted,       // Plan executor completed a step
+    FailureDetected,        // Failure detector flagged an issue
+    FailureCorrected,       // Failure detector correction succeeded
+    GhostTextRequested,     // Ghost text completion was requested
+    GhostTextAccepted,      // Ghost text completion was accepted
+    SettingsChanged,        // Settings were modified
+    SessionEvent            // Generic session-level event (startup, shutdown)
+};
+
+struct AgentEvent {
+    AgentEventType type;
+    uint64_t timestampMs;       // Epoch milliseconds
+    std::string sessionId;      // Unique per IDE launch
+    std::string parentId;       // Agent/subagent parent ID (empty for root)
+    std::string agentId;        // Agent or subagent ID
+    std::string prompt;         // Input prompt (may be truncated)
+    std::string result;         // Output result (may be truncated)
+    std::string metadata;       // JSON string with type-specific extra data
+    int durationMs;             // Elapsed time for the event (0 if instantaneous)
+    bool success;               // Whether the operation succeeded
+
+    std::string typeString() const;
+    std::string toJSONL() const;
+    static AgentEvent fromJSONL(const std::string& line);
+};
+
+// Agent History statistics for the current session
+struct AgentHistoryStats {
+    int totalEvents         = 0;
+    int agentStarted        = 0;
+    int agentCompleted      = 0;
+    int agentFailed         = 0;
+    int subAgentSpawned     = 0;
+    int chainSteps          = 0;
+    int swarmTasks          = 0;
+    int toolInvocations     = 0;
+    int failuresDetected    = 0;
+    int failuresCorrected   = 0;
+    int ghostTextAccepted   = 0;
+    int totalDurationMs     = 0;
+};
+
 class Win32IDE
 {
 public:
@@ -446,6 +660,12 @@ private:
     bool isModelOperationInProgress() const;
     void showModelStatus(const std::string& text, int durationMs = 5000);
     static LRESULT CALLBACK ModelProgressProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+    // SubAgent / Swarm UX — progress, status display
+    void showSubAgentProgress(const std::string& operation, int totalTasks);
+    void updateSubAgentProgress(int completedTasks, int totalTasks, const std::string& currentTask);
+    void hideSubAgentProgress();
+    void showSwarmStatus();
 
     // AI Inference Engine - Local GGUF Model Chat
     struct InferenceConfig {
@@ -1755,4 +1975,182 @@ private:
 #define WM_AGENT_OUTPUT_SAFE (WM_APP + 102)
     void onAgentOutput(const char* text);
     void postAgentOutputSafe(const std::string& text);
+
+    // ========================================================================
+    // Ghost Text / Inline Completions (Win32IDE_GhostText.cpp)
+    // ========================================================================
+    void initGhostText();
+    void shutdownGhostText();
+    void triggerGhostTextCompletion();
+    void onGhostTextTimer();
+    std::string requestGhostTextCompletion(const std::string& context, const std::string& language);
+    void onGhostTextReady(int requestedCursorPos, const char* completionText);
+    void dismissGhostText();
+    void acceptGhostText();
+    void renderGhostText(HDC hdc);
+    bool handleGhostTextKey(UINT vk);
+    void toggleGhostText();
+    std::string trimGhostText(const std::string& raw);
+
+    // Ghost Text state
+    bool m_ghostTextEnabled     = false;
+    bool m_ghostTextVisible     = false;
+    bool m_ghostTextAccepted    = false;
+    bool m_ghostTextPending     = false;
+    std::string m_ghostTextContent;
+    int m_ghostTextLine         = -1;
+    int m_ghostTextColumn       = -1;
+    HFONT m_ghostTextFont       = nullptr;
+
+    // ========================================================================
+    // Plan Executor — Plan → Approve → Execute (Win32IDE_PlanExecutor.cpp)
+    // ========================================================================
+    void generateAgentPlan(const std::string& goal);
+    void onPlanReady(int stepCount, PlanStep* steps);
+    void showPlanApprovalDialog();
+    void executePlan();
+    void onPlanStepDone(int stepIndex, int result);
+    void onPlanComplete(bool success);
+    void cancelPlan();
+    void pausePlan();
+    void resumePlan();
+    std::string getPlanStatusString() const;
+    std::vector<PlanStep> parsePlanSteps(const std::string& agentOutput);
+    std::string planStepTypeString(PlanStepType type) const;
+
+    // Plan Approval Dialog — custom UI
+    void populatePlanListView();
+    void onPlanListSelChanged();
+    void onPlanDialogCommand(int controlId);
+    void updatePlanStepInDialog(int stepIndex, PlanStepStatus status);
+    void closePlanDialog();
+    void editSelectedPlanStep();
+
+    // Plan state
+    AgentPlan m_currentPlan;
+    std::vector<AgentPlan> m_planHistory;
+    std::atomic<bool> m_planExecutionCancelled{false};
+    std::atomic<bool> m_planExecutionPaused{false};
+    static const size_t MAX_PLAN_HISTORY = 50;
+
+    // Plan Approval Dialog HWNDs
+    HWND m_hwndPlanDialog       = nullptr;
+    HWND m_hwndPlanList         = nullptr;  // ListView
+    HWND m_hwndPlanDetail       = nullptr;  // RichEdit / Static detail panel
+    HWND m_hwndPlanGoalLabel    = nullptr;
+    HWND m_hwndPlanSummaryLabel = nullptr;
+    HWND m_hwndPlanBtnApprove   = nullptr;
+    HWND m_hwndPlanBtnEdit      = nullptr;
+    HWND m_hwndPlanBtnReject    = nullptr;
+    HWND m_hwndPlanBtnPause     = nullptr;
+    HWND m_hwndPlanBtnCancel    = nullptr;
+    HWND m_hwndPlanProgress     = nullptr;
+    HWND m_hwndPlanProgressLabel = nullptr;
+    HBRUSH m_planDialogBrush    = nullptr;
+
+    // ========================================================================
+    // Failure Detection & Self-Correction (Win32IDE_FailureDetector.cpp)
+    // ========================================================================
+    void initFailureDetector();
+    std::vector<AgentFailureType> detectFailures(const std::string& response,
+                                                  const std::string& originalPrompt);
+    bool detectRefusal(const std::string& response);
+    bool detectHallucination(const std::string& response, const std::string& prompt);
+    bool detectFormatViolation(const std::string& response, const std::string& prompt);
+    bool detectInfiniteLoop(const std::string& response);
+    bool detectQualityDegradation(const std::string& response);
+    std::string applyCorrectionStrategy(AgentFailureType failure,
+                                        const std::string& originalPrompt,
+                                        int retryAttempt);
+    AgentResponse executeWithFailureDetection(const std::string& prompt);
+    std::string failureTypeString(AgentFailureType type) const;
+    std::string getFailureDetectorStats() const;
+    void toggleFailureDetector();
+
+    // Failure detector state
+    bool m_failureDetectorEnabled = false;
+    int m_failureMaxRetries       = 3;
+    FailureStats m_failureStats;
+
+    // ========================================================================
+    // Settings Dialog (Win32IDE_Settings.cpp)
+    // ========================================================================
+    std::string getSettingsFilePath() const;
+    void loadSettings();
+    void saveSettings();
+    void applyDefaultSettings();
+    void applySettings();
+    void showSettingsDialog();
+
+    // Settings state
+    IDESettings m_settings;
+
+    // ========================================================================
+    // Local GGUF HTTP Server (Win32IDE_LocalServer.cpp)
+    // ========================================================================
+    void startLocalServer();
+    void stopLocalServer();
+    void handleLocalServerClient(SOCKET clientFd);
+    void handleOllamaApiTags(SOCKET client);
+    void handleOllamaApiGenerate(SOCKET client, const std::string& body);
+    void handleOpenAIChatCompletions(SOCKET client, const std::string& body);
+    void handleModelsEndpoint(SOCKET client);
+    void handleAskEndpoint(SOCKET client, const std::string& body);
+    void handleServeGui(SOCKET client);
+    void toggleLocalServer();
+    std::string getLocalServerStatus() const;
+
+    // Local server state
+    std::atomic<bool> m_localServerRunning{false};
+    std::thread m_localServerThread;
+    LocalServerStats m_localServerStats;
+
+    // ========================================================================
+    // Persisted Agent History + Replay (Win32IDE_AgentHistory.cpp)
+    // ========================================================================
+    void initAgentHistory();
+    void shutdownAgentHistory();
+    void recordEvent(AgentEventType type, const std::string& agentId,
+                     const std::string& prompt, const std::string& result,
+                     int durationMs, bool success,
+                     const std::string& parentId = "",
+                     const std::string& metadata = "");
+    void recordSimpleEvent(AgentEventType type, const std::string& description);
+    void flushEventLog();
+    std::string getHistoryFilePath() const;
+    std::vector<AgentEvent> loadHistory(int maxEvents = 500) const;
+    std::vector<AgentEvent> loadHistoryForSession(const std::string& sessionId) const;
+    std::vector<AgentEvent> filterHistory(AgentEventType typeFilter, int maxEvents = 100) const;
+    void pruneHistory(int maxAgeDays = 30, int maxFileBytes = 10 * 1024 * 1024);
+    void showAgentHistoryPanel();
+    void updateAgentHistoryPanel();
+    void showAgentReplayDialog();
+    void replaySession(const std::string& sessionId);
+    void onReplayStepDone(int stepIndex, int totalSteps);
+    std::string getAgentHistoryStats() const;
+    void toggleAgentHistory();
+    std::string generateSessionId() const;
+    std::string agentEventTypeString(AgentEventType type) const;
+    uint64_t currentEpochMs() const;
+    std::string truncateForLog(const std::string& text, size_t maxLen = 512) const;
+
+    // Agent History state
+    bool m_agentHistoryEnabled       = true;
+    std::string m_currentSessionId;
+    std::vector<AgentEvent> m_eventBuffer;      // In-memory ring buffer for current session
+    std::mutex m_eventBufferMutex;
+    AgentHistoryStats m_historyStats;
+    static const size_t MAX_EVENT_BUFFER  = 1000;
+    static const size_t MAX_LOG_FIELD_LEN = 512;
+
+    // Agent History UI
+    HWND m_hwndHistoryPanel   = nullptr;
+    HWND m_hwndHistoryList    = nullptr;
+    HWND m_hwndHistoryDetail  = nullptr;
+    HWND m_hwndHistoryFilter  = nullptr;
+    HWND m_hwndHistoryStats   = nullptr;
+    HWND m_hwndHistoryBtnReplay   = nullptr;
+    HWND m_hwndHistoryBtnExport   = nullptr;
+    HWND m_hwndHistoryBtnClear    = nullptr;
+    HWND m_hwndHistoryBtnRefresh  = nullptr;
 };

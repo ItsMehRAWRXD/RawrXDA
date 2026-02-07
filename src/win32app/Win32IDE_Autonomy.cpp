@@ -115,8 +115,12 @@ std::string AutonomyManager::planNextAction() {
                "- tool:read_file path=...\n"
                "- tool:write_file path=... content=...\n"
                "- tool:exec_cmd cmd=... (executes system command/powershell)\n"
+               "- TOOL:runSubagent:{\"description\":\"...\",\"prompt\":\"...\"} (spawn a sub-agent for subtasks)\n"
+               "- TOOL:chain:{\"steps\":[\"step1\",\"step2 with {{input}}\"],\"input\":\"...\"} (sequential pipeline)\n"
+               "- TOOL:hexmag_swarm:{\"prompts\":[\"task1\",\"task2\"],\"strategy\":\"concatenate\",\"maxParallel\":4} (parallel fan-out)\n"
+               "- TOOL:manage_todo_list:[{\"id\":1,\"title\":\"...\",\"status\":\"not-started\"},...] (task tracking)\n"
                "\n"
-               "Decide the first step. Output ONLY the tool command starting with 'tool:'.";
+               "Decide the first step. Output ONLY the tool command starting with 'tool:' or 'TOOL:'.";
     }
 
     std::string lastObs = m_memory.back();
@@ -154,7 +158,9 @@ std::string AutonomyManager::planNextAction() {
     }
     
     return "prompt: History:\n" + context + "\n"
-           "Based on the above results, what is the next step? Output ONLY the tool command starting with 'tool:'.";
+           "Based on the above results, what is the next step? "
+           "Output ONLY the tool command starting with 'tool:' or 'TOOL:'. "
+           "You may use runSubagent, chain, hexmag_swarm, or manage_todo_list tools.";
 }
 
 void AutonomyManager::executeAction(const std::string& action) {
@@ -171,12 +177,34 @@ void AutonomyManager::executeAction(const std::string& action) {
     // Differentiate tool vs prompt
     if (action.rfind("tool:", 0) == 0) {
         std::string toolCall = action.substr(5);
+
+        // Check if this is a subagent/chain/swarm tool call
+        std::string toolResult;
+        if (m_bridge->DispatchModelToolCalls(toolCall, toolResult)) {
+            addObservation("TOOL_DISPATCH:" + toolCall + " => " + toolResult);
+            LOG_INFO("Autonomy dispatched subagent tool: " + toolCall);
+            return;
+        }
+
         auto resp = m_bridge->ExecuteAgentCommand(toolCall);
-        addObservation("TOOL:" + toolCall + " => " + resp.content);
+
+        // Also check the response for embedded tool calls
+        if (m_bridge->DispatchModelToolCalls(resp.content, toolResult)) {
+            addObservation("TOOL:" + toolCall + " => " + resp.content + "\n[Tool Result] " + toolResult);
+        } else {
+            addObservation("TOOL:" + toolCall + " => " + resp.content);
+        }
     } else if (action.rfind("prompt:", 0) == 0) {
         std::string prompt = action.substr(7);
         auto resp = m_bridge->ExecuteAgentCommand(prompt);
-        addObservation("ANSWER:" + resp.content);
+
+        // Check if the model's answer contains tool calls
+        std::string toolResult;
+        if (m_bridge->DispatchModelToolCalls(resp.content, toolResult)) {
+            addObservation("ANSWER:" + resp.content + "\n[Tool Result] " + toolResult);
+        } else {
+            addObservation("ANSWER:" + resp.content);
+        }
     } else {
         auto resp = m_bridge->ExecuteAgentCommand(action);
         addObservation("RAW:" + resp.content);

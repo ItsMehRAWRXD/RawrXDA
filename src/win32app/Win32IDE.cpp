@@ -732,6 +732,18 @@ void Win32IDE::createEditor(HWND hwnd)
 
     initializeEditorSurface();
 
+    // ================================================================
+    // Subclass the editor RichEdit control
+    // Store IDE pointer and original wndproc as window properties,
+    // then redirect to EditorSubclassProc for ghost text, key intercept,
+    // scroll sync, and minimap updates.
+    // ================================================================
+    if (m_hwndEditor) {
+        SetPropW(m_hwndEditor, kEditorWndProp, (HANDLE)this);
+        WNDPROC oldEditorProc = (WNDPROC)SetWindowLongPtrW(
+            m_hwndEditor, GWLP_WNDPROC, (LONG_PTR)EditorSubclassProc);
+        SetPropW(m_hwndEditor, kEditorProcProp, (HANDLE)oldEditorProc);
+    }
 }
 
 void Win32IDE::createTerminal(HWND hwnd)
@@ -2286,6 +2298,224 @@ void Win32IDE::toggleFloatingPanel()
     BOOL vis = IsWindowVisible(m_hwndFloatingPanel);
     ShowWindow(m_hwndFloatingPanel, vis?SW_HIDE:SW_SHOW);
 }
+
+// ============================================================================
+// Floating Panel Implementation
+// ============================================================================
+
+void Win32IDE::createFloatingPanel()
+{
+    if (m_hwndFloatingPanel) return; // Already created
+
+    // Register a custom window class for the floating panel
+    WNDCLASSEXA wc = {};
+    wc.cbSize = sizeof(WNDCLASSEXA);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = FloatingPanelProc;
+    wc.hInstance = m_hInstance;
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wc.hbrBackground = CreateSolidBrush(RGB(30, 30, 30));
+    wc.lpszClassName = "RawrXD_FloatingPanel";
+    RegisterClassExA(&wc);
+
+    // Position floating panel in the lower portion of the main window
+    RECT rcMain;
+    GetClientRect(m_hwndMain, &rcMain);
+    int panelWidth = rcMain.right - rcMain.left;
+    int panelHeight = 250;
+    int panelX = rcMain.left;
+    int panelY = rcMain.bottom - panelHeight;
+
+    m_hwndFloatingPanel = CreateWindowExA(
+        WS_EX_TOOLWINDOW,
+        "RawrXD_FloatingPanel",
+        "Panel",
+        WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
+        panelX, panelY, panelWidth, panelHeight,
+        m_hwndMain, nullptr, m_hInstance, nullptr
+    );
+
+    if (!m_hwndFloatingPanel) {
+        appendToOutput("Failed to create floating panel\n", "Output", OutputSeverity::Error);
+        return;
+    }
+
+    // Store 'this' pointer for the proc
+    SetWindowLongPtrA(m_hwndFloatingPanel, GWLP_USERDATA, (LONG_PTR)this);
+
+    // Create tab buttons at the top of the floating panel
+    static const char* tabLabels[] = { "Problems", "Output", "Debug Console", "Terminal" };
+    for (int i = 0; i < 4; i++) {
+        CreateWindowExA(
+            0, "BUTTON", tabLabels[i],
+            WS_CHILD | WS_VISIBLE | BS_FLAT | BS_PUSHBUTTON,
+            5 + i * 120, 2, 115, 24,
+            m_hwndFloatingPanel, (HMENU)(UINT_PTR)(7001 + i),
+            m_hInstance, nullptr
+        );
+    }
+
+    // Create the content area (a multi-line EDIT for text output)
+    m_hwndFloatingContent = CreateWindowExA(
+        WS_EX_CLIENTEDGE,
+        "EDIT", "",
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
+        0, 28, panelWidth, panelHeight - 28,
+        m_hwndFloatingPanel, nullptr, m_hInstance, nullptr
+    );
+
+    // Apply dark theme to content
+    if (m_hwndFloatingContent) {
+        SendMessageA(m_hwndFloatingContent, WM_SETFONT,
+                     (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+    }
+
+    appendToOutput("Floating panel created\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::showFloatingPanel()
+{
+    if (!m_hwndFloatingPanel) {
+        createFloatingPanel();
+    }
+    if (m_hwndFloatingPanel) {
+        ShowWindow(m_hwndFloatingPanel, SW_SHOW);
+        m_outputPanelVisible = true;
+    }
+}
+
+void Win32IDE::hideFloatingPanel()
+{
+    if (m_hwndFloatingPanel) {
+        ShowWindow(m_hwndFloatingPanel, SW_HIDE);
+        m_outputPanelVisible = false;
+    }
+}
+
+void Win32IDE::updateFloatingPanelContent(const std::string& content)
+{
+    if (!m_hwndFloatingContent) return;
+
+    // Append the new content to the existing text in the floating panel
+    int textLen = GetWindowTextLengthA(m_hwndFloatingContent);
+    SendMessageA(m_hwndFloatingContent, EM_SETSEL, (WPARAM)textLen, (LPARAM)textLen);
+    SendMessageA(m_hwndFloatingContent, EM_REPLACESEL, FALSE, (LPARAM)content.c_str());
+
+    // Auto-scroll to bottom
+    SendMessageA(m_hwndFloatingContent, EM_SCROLLCARET, 0, 0);
+}
+
+void Win32IDE::setFloatingPanelTab(int tabIndex)
+{
+    if (!m_hwndFloatingPanel) return;
+
+    // Visually highlight the active tab button and unhighlight others
+    for (int i = 0; i < 4; i++) {
+        HWND hTabBtn = GetDlgItem(m_hwndFloatingPanel, 7001 + i);
+        if (hTabBtn) {
+            // Bold the active tab, normal weight for others
+            if (i == tabIndex) {
+                SendMessageA(hTabBtn, BM_SETSTATE, TRUE, 0);
+            } else {
+                SendMessageA(hTabBtn, BM_SETSTATE, FALSE, 0);
+            }
+        }
+    }
+
+    // Update content area based on selected tab
+    if (m_hwndFloatingContent) {
+        static const char* tabTitles[] = {
+            "=== Problems ===\r\n",
+            "=== Output ===\r\n",
+            "=== Debug Console ===\r\n",
+            "=== Terminal ===\r\n"
+        };
+
+        if (tabIndex >= 0 && tabIndex < 4) {
+            SetWindowTextA(m_hwndFloatingContent, tabTitles[tabIndex]);
+        }
+    }
+}
+
+LRESULT CALLBACK Win32IDE::FloatingPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        // Dark background matching VS Code panel area
+        HBRUSH hBrush = CreateSolidBrush(RGB(30, 30, 30));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        // Draw a subtle top border line (panel separator)
+        HPEN hPen = CreatePen(PS_SOLID, 1, RGB(0, 122, 204));
+        HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+        MoveToEx(hdc, rc.left, rc.top, nullptr);
+        LineTo(hdc, rc.right, rc.top);
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hPen);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis && pThis->m_hwndFloatingContent) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            // Resize content area below the tab buttons (28px tab bar)
+            MoveWindow(pThis->m_hwndFloatingContent,
+                       0, 28, rc.right, rc.bottom - 28, TRUE);
+        }
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        if (pThis) {
+            int id = LOWORD(wParam);
+            // Tab button IDs: 7001=Problems, 7002=Output, 7003=Debug Console, 7004=Terminal
+            if (id >= 7001 && id <= 7004) {
+                pThis->setFloatingPanelTab(id - 7001);
+                return 0;
+            }
+        }
+        break;
+    }
+
+    case WM_CLOSE:
+        if (pThis) {
+            pThis->hideFloatingPanel();
+            return 0;
+        }
+        break;
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+int Win32IDE::getPanelAreaWidth() const
+{
+    if (!m_hwndMain) return 0;
+
+    RECT rcMain;
+    GetClientRect(m_hwndMain, &rcMain);
+    int totalWidth = rcMain.right - rcMain.left;
+
+    // Panel area width = total width minus sidebar (if visible) minus activity bar
+    int sidebarOffset = 0;
+    if (m_sidebarVisible) {
+        sidebarOffset = m_sidebarWidth + 48; // 48 = activity bar width
+    }
+
+    return totalWidth - sidebarOffset;
+}
+
 // ============================================================================
 // Search and Replace Implementation
 // ============================================================================
@@ -5986,4 +6216,314 @@ void Win32IDE::openModelUnified() {
     if (!inputStr.empty()) {
         resolveAndLoadModel(inputStr);
     }
+}
+
+// ============================================================================
+// EditorSubclassProc — Editor RichEdit subclass window procedure
+// Routes editor-specific messages (scroll sync, key interception) while
+// forwarding everything else to the original EDIT wndproc.
+// ============================================================================
+LRESULT CALLBACK Win32IDE::EditorSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    Win32IDE* pThis = (Win32IDE*)GetPropW(hwnd, kEditorWndProp);
+    WNDPROC oldProc = (WNDPROC)GetPropW(hwnd, kEditorProcProp);
+
+    if (pThis) {
+        switch (uMsg) {
+        case WM_VSCROLL:
+        case WM_MOUSEWHEEL:
+            // After scroll, sync line numbers and minimap
+            if (oldProc) {
+                LRESULT result = CallWindowProcW(oldProc, hwnd, uMsg, wParam, lParam);
+                pThis->updateLineNumbers();
+                if (pThis->m_minimapVisible) pThis->updateMinimap();
+                return result;
+            }
+            break;
+
+        case WM_KEYDOWN:
+            // Ghost text key handling — Tab accepts, Esc dismisses, other keys dismiss
+            if (pThis->handleGhostTextKey((UINT)wParam)) {
+                return 0;  // Ghost text consumed the key
+            }
+            // Ctrl+Shift+P → command palette
+            if (wParam == 'P' && (GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000)) {
+                pThis->showCommandPalette();
+                return 0;
+            }
+            // F9 → toggle breakpoint at current line
+            if (wParam == VK_F9) {
+                CHARRANGE sel;
+                SendMessage(hwnd, EM_EXGETSEL, 0, (LPARAM)&sel);
+                int line = (int)SendMessage(hwnd, EM_LINEFROMCHAR, sel.cpMin, 0) + 1;
+                pThis->toggleBreakpoint(pThis->m_currentFile, line);
+                return 0;
+            }
+            break;
+
+        case WM_PAINT: {
+            // Let the RichEdit control paint itself first
+            if (oldProc) {
+                LRESULT result = CallWindowProcW(oldProc, hwnd, uMsg, wParam, lParam);
+                // Overlay ghost text on top of the editor content
+                if (pThis->m_ghostTextVisible) {
+                    HDC hdc = GetDC(hwnd);
+                    if (hdc) {
+                        pThis->renderGhostText(hdc);
+                        ReleaseDC(hwnd, hdc);
+                    }
+                }
+                return result;
+            }
+            break;
+        }
+
+        case WM_CHAR:
+            // After character input, trigger syntax coloring debounce
+            if (oldProc) {
+                LRESULT result = CallWindowProcW(oldProc, hwnd, uMsg, wParam, lParam);
+                pThis->onEditorContentChanged();
+                return result;
+            }
+            break;
+
+        case WM_DESTROY:
+            // Clean up properties on destruction
+            RemovePropW(hwnd, kEditorWndProp);
+            RemovePropW(hwnd, kEditorProcProp);
+            break;
+        }
+    }
+
+    if (oldProc) {
+        return CallWindowProcW(oldProc, hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// SidebarProcImpl — Secondary sidebar (AI Chat panel) window procedure
+// Handles paint, sizing, and command routing for the right-side AI panel.
+// Distinct from SidebarProc which handles the primary (left) sidebar.
+// ============================================================================
+LRESULT CALLBACK Win32IDE::SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        COLORREF bgColor = pThis ? pThis->m_currentTheme.sidebarBg : RGB(37, 37, 38);
+        HBRUSH hBrush = CreateSolidBrush(bgColor);
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        if (pThis) {
+            int controlId = LOWORD(wParam);
+            int notifyCode = HIWORD(wParam);
+            // Route button clicks from AI Chat panel controls
+            if (controlId == IDC_AI_MAX_MODE && notifyCode == BN_CLICKED) {
+                pThis->onAIModeMax();
+            } else if (controlId == IDC_AI_DEEP_THINK && notifyCode == BN_CLICKED) {
+                pThis->onAIModeDeepThink();
+            } else if (controlId == IDC_AI_DEEP_RESEARCH && notifyCode == BN_CLICKED) {
+                pThis->onAIModeDeepResearch();
+            } else if (controlId == IDC_AI_NO_REFUSAL && notifyCode == BN_CLICKED) {
+                pThis->onAIModeNoRefusal();
+            }
+        }
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis) {
+            pThis->updateSecondarySidebarContent();
+        }
+        return 0;
+    }
+    }
+
+    // Forward to the original sidebar window procedure
+    if (pThis && pThis->m_oldSidebarProc) {
+        return CallWindowProcA(pThis->m_oldSidebarProc, hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// getCurrentGitBranch — Returns the current git branch name
+// ============================================================================
+std::string Win32IDE::getCurrentGitBranch() const {
+    if (!isGitRepository()) return "";
+
+    std::string output;
+    const_cast<Win32IDE*>(this)->executeGitCommand("git rev-parse --abbrev-ref HEAD", output);
+
+    // Trim whitespace/newlines from output
+    while (!output.empty() && (output.back() == '\n' || output.back() == '\r' || output.back() == ' ')) {
+        output.pop_back();
+    }
+    return output;
+}
+
+// ============================================================================
+// DEFERRED IMPLEMENTATIONS — Terminal Pane Management
+// These are stubbed with TODO logging. They do not block any current
+// feature path but are declared in Win32IDE.h for future multi-terminal.
+// ============================================================================
+
+void Win32IDE::switchTerminalPane(int paneId) {
+    LOG_INFO("switchTerminalPane: paneId=" + std::to_string(paneId));
+    TerminalPane* pane = findTerminalPane(paneId);
+    if (pane) {
+        setActiveTerminalPane(paneId);
+        appendToOutput("Switched to terminal: " + pane->name + "\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("Terminal pane " + std::to_string(paneId) + " not found\n", "Output", OutputSeverity::Warning);
+    }
+}
+
+void Win32IDE::closeTerminalPane(int paneId) {
+    LOG_INFO("closeTerminalPane: paneId=" + std::to_string(paneId));
+    for (auto it = m_terminalPanes.begin(); it != m_terminalPanes.end(); ++it) {
+        if (it->id == paneId) {
+            if (it->manager) it->manager->stop();
+            if (it->hwnd && IsWindow(it->hwnd)) DestroyWindow(it->hwnd);
+            m_terminalPanes.erase(it);
+            // Switch to another pane if we closed the active one
+            if (m_activeTerminalId == paneId && !m_terminalPanes.empty()) {
+                setActiveTerminalPane(m_terminalPanes.front().id);
+            }
+            appendToOutput("Closed terminal pane " + std::to_string(paneId) + "\n", "Output", OutputSeverity::Info);
+            return;
+        }
+    }
+    appendToOutput("Terminal pane " + std::to_string(paneId) + " not found\n", "Output", OutputSeverity::Warning);
+}
+
+void Win32IDE::resizeTerminalPanes() {
+    LOG_INFO("resizeTerminalPanes");
+    if (m_terminalPanes.empty()) return;
+    
+    RECT rc;
+    GetClientRect(m_hwndMain, &rc);
+    int totalWidth = rc.right;
+    int paneWidth = totalWidth / static_cast<int>(m_terminalPanes.size());
+    
+    int x = 0;
+    for (auto& pane : m_terminalPanes) {
+        if (pane.hwnd && IsWindow(pane.hwnd)) {
+            pane.bounds = { x, 0, x + paneWidth, rc.bottom };
+            MoveWindow(pane.hwnd, x, 0, paneWidth, rc.bottom, TRUE);
+        }
+        x += paneWidth;
+    }
+}
+
+void Win32IDE::sendToAllTerminals(const std::string& command) {
+    LOG_INFO("sendToAllTerminals: " + command);
+    for (auto& pane : m_terminalPanes) {
+        if (pane.manager) {
+            pane.manager->writeInput(command + "\r\n");
+        }
+    }
+    appendToOutput("Sent to all " + std::to_string(m_terminalPanes.size()) + " terminals: " + command + "\n", "Output", OutputSeverity::Info);
+}
+
+// ============================================================================
+// DEFERRED IMPLEMENTATIONS — Extension System
+// Stubbed with TODO logging. Extension architecture is roadmapped
+// but not blocking any current feature path.
+// ============================================================================
+
+void Win32IDE::refreshExtensions() {
+    LOG_INFO("refreshExtensions");
+    if (m_extensionLoader) {
+        m_extensionLoader->Scan();
+        auto exts = m_extensionLoader->GetExtensions();
+        appendToOutput("Extensions refreshed: " + std::to_string(exts.size()) + " found\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+    }
+}
+
+void Win32IDE::loadExtension(const std::string& name) {
+    LOG_INFO("loadExtension: " + name);
+    if (m_extensionLoader) {
+        // Re-scan to ensure extension list is current, then load native modules
+        m_extensionLoader->Scan();
+        m_extensionLoader->LoadNativeModules();
+        appendToOutput("✅ Extension loaded: " + name + "\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+    }
+}
+
+void Win32IDE::unloadExtension(const std::string& name) {
+    LOG_INFO("unloadExtension: " + name);
+    // ExtensionLoader does not yet support individual unload — log and no-op
+    appendToOutput("TODO: Extension unload not yet supported (" + name + ")\n", "Output", OutputSeverity::Warning);
+}
+
+void Win32IDE::showExtensionHelp(const std::string& name) {
+    LOG_INFO("showExtensionHelp: " + name);
+    if (m_extensionLoader) {
+        std::string help = m_extensionLoader->GetHelp(name);
+        appendToOutput("--- Extension Help: " + name + " ---\n" + help + "\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+    }
+}
+
+// ============================================================================
+// DEFERRED IMPLEMENTATIONS — PowerShell Panel Dock/Float
+// ============================================================================
+
+void Win32IDE::dockPowerShellPanel() {
+    LOG_INFO("dockPowerShellPanel");
+    m_powerShellPanelDocked = true;
+    
+    if (m_hwndPowerShellPanel && IsWindow(m_hwndPowerShellPanel)) {
+        // Remove WS_POPUP, add WS_CHILD — reparent to main window
+        LONG style = GetWindowLong(m_hwndPowerShellPanel, GWL_STYLE);
+        style = (style & ~WS_POPUP) | WS_CHILD;
+        SetWindowLong(m_hwndPowerShellPanel, GWL_STYLE, style);
+        SetParent(m_hwndPowerShellPanel, m_hwndMain);
+        
+        // Trigger layout recalculation
+        RECT rc;
+        GetClientRect(m_hwndMain, &rc);
+        onSize(rc.right, rc.bottom);
+    }
+    
+    appendToOutput("PowerShell panel docked\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::floatPowerShellPanel() {
+    LOG_INFO("floatPowerShellPanel");
+    m_powerShellPanelDocked = false;
+    
+    if (m_hwndPowerShellPanel && IsWindow(m_hwndPowerShellPanel)) {
+        // Remove WS_CHILD, add WS_POPUP — detach from main window
+        LONG style = GetWindowLong(m_hwndPowerShellPanel, GWL_STYLE);
+        style = (style & ~WS_CHILD) | WS_POPUP | WS_CAPTION | WS_THICKFRAME;
+        SetWindowLong(m_hwndPowerShellPanel, GWL_STYLE, style);
+        SetParent(m_hwndPowerShellPanel, nullptr);
+        
+        // Position floating window near the main window
+        RECT mainRect;
+        GetWindowRect(m_hwndMain, &mainRect);
+        SetWindowPos(m_hwndPowerShellPanel, HWND_TOP,
+                     mainRect.right - 500, mainRect.bottom - 400, 480, 360,
+                     SWP_SHOWWINDOW);
+    }
+    
+    appendToOutput("PowerShell panel floating\n", "Output", OutputSeverity::Info);
 }

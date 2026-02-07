@@ -13,6 +13,7 @@
 #include <memory>
 #include "../native_agent.hpp"
 #include "../cpu_inference_engine.h"
+#include "Win32IDE_SubAgent.h"
 
 // Forward declaration
 class Win32IDE;
@@ -86,10 +87,38 @@ public:
     std::string RunCodex(const std::string& path);
     std::string RunCompiler(const std::string& path);
 
+    // ---- SubAgent / Chaining / HexMag Swarm ----
+
+    /// Access the SubAgentManager (lazy-initialized)
+    SubAgentManager* GetSubAgentManager();
+
+    /// Spawn a sub-agent from user/model request
+    std::string RunSubAgent(const std::string& description, const std::string& prompt);
+
+    /// Execute a sequential chain of prompts
+    std::string ExecuteChain(const std::vector<std::string>& steps, const std::string& initialInput = "");
+
+    /// Execute a HexMag swarm (parallel fan-out with merge)
+    std::string ExecuteSwarm(const std::vector<std::string>& prompts,
+                              const std::string& mergeStrategy = "concatenate",
+                              int maxParallel = 4);
+
+    /// Cancel all running sub-agents
+    void CancelAllSubAgents();
+
+    /// Get sub-agent status summary
+    std::string GetSubAgentStatus() const;
+
+    /// Dispatch tool calls detected in model output
+    bool DispatchModelToolCalls(const std::string& modelOutput, std::string& toolResult);
+
 private:
    // Native Integration
     std::unique_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
     std::unique_ptr<RawrXD::NativeAgent> m_nativeAgent;
+
+    // SubAgent Manager (lazy-initialized)
+    std::unique_ptr<SubAgentManager> m_subAgentManager;
 
     // PowerShell process management
     bool SpawnPowerShellProcess(const std::string& scriptPath, const std::string& arguments);

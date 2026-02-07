@@ -6,6 +6,9 @@
 #include <iostream>
 #include <sstream>
 
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+#include <windows.h>
+#endif
 
 #include <vector>
 #include <cstdint>
@@ -758,4 +761,152 @@ namespace RawrXD {
         return 0; 
     }
 }
+
+// ============================================================================
+// EXPERIMENTAL: Vulkan GPU + Memory-Mapped I/O Subsystem
+// These methods are declared in gguf_loader.h but require a full Vulkan
+// runtime and mmap infrastructure that is not yet available.
+// Gated behind RAWRXD_EXPERIMENTAL_GGUF_GPU. Without the flag, they
+// return explicit failure with logged diagnostics.
+// ============================================================================
+
+namespace RawrXD {
+
+bool GGUFLoader::UploadAllTensorsToVulkan() {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (!vulkan_engine_) {
+        std::cerr << "[GGUFLoader] UploadAllTensorsToVulkan: no Vulkan engine attached" << std::endl;
+        return false;
+    }
+    // TODO: Iterate tensors_ and call UploadTensorToVulkan for each
+    return false;
+#else
+    std::cerr << "[GGUFLoader] UploadAllTensorsToVulkan: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return false;
+#endif
+}
+
+bool GGUFLoader::UploadTensorToVulkan(const std::string& tensor_name) {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (!vulkan_engine_) {
+        std::cerr << "[GGUFLoader] UploadTensorToVulkan: no Vulkan engine attached" << std::endl;
+        return false;
+    }
+    // TODO: Load tensor data, create VulkanTensor, upload via vulkan_engine_
+    return false;
+#else
+    std::cerr << "[GGUFLoader] UploadTensorToVulkan('" << tensor_name 
+              << "'): not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return false;
+#endif
+}
+
+bool GGUFLoader::ReadMetadataKV(const std::string& key, std::string& value) {
+    auto it = metadata_.kv_pairs.find(key);
+    if (it != metadata_.kv_pairs.end()) {
+        value = it->second;
+        return true;
+    }
+    return false;
+}
+
+bool GGUFLoader::CreateDummyModel() {
+    // Create a minimal synthetic model for testing without a real GGUF file
+    header_.magic = 0x46475547; // "GGUF"
+    header_.version = 3;
+    header_.tensor_count = 0;
+    header_.metadata_kv_count = 0;
+    metadata_.vocab_size = 0;
+    metadata_.embedding_dim = 0;
+    metadata_.layer_count = 0;
+    metadata_.head_count = 0;
+    metadata_.context_length = 4096;
+    use_dummy_mode_ = true;
+    std::cout << "[GGUFLoader] Created dummy model for testing" << std::endl;
+    return true;
+}
+
+bool GGUFLoader::InitializeMemoryMap() {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (filepath_.empty() || !is_open_) {
+        std::cerr << "[GGUFLoader] InitializeMemoryMap: no file open" << std::endl;
+        return false;
+    }
+    // Open file handle for memory mapping (Windows API)
+    file_handle_ = CreateFileA(filepath_.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file_handle_ == INVALID_HANDLE_VALUE) {
+        file_handle_ = nullptr;
+        std::cerr << "[GGUFLoader] InitializeMemoryMap: CreateFile failed" << std::endl;
+        return false;
+    }
+    LARGE_INTEGER fileSize;
+    GetFileSizeEx(file_handle_, &fileSize);
+    map_handle_ = CreateFileMappingA(file_handle_, nullptr, PAGE_READONLY, 
+                                      fileSize.HighPart, fileSize.LowPart, nullptr);
+    if (!map_handle_) {
+        CloseHandle(file_handle_);
+        file_handle_ = nullptr;
+        std::cerr << "[GGUFLoader] InitializeMemoryMap: CreateFileMapping failed" << std::endl;
+        return false;
+    }
+    mmap_base_ = MapViewOfFile(map_handle_, FILE_MAP_READ, 0, 0, 0);
+    if (!mmap_base_) {
+        CloseHandle(map_handle_);
+        CloseHandle(file_handle_);
+        map_handle_ = nullptr;
+        file_handle_ = nullptr;
+        std::cerr << "[GGUFLoader] InitializeMemoryMap: MapViewOfFile failed" << std::endl;
+        return false;
+    }
+    use_mmap_ = true;
+    file_size_ = static_cast<uint64_t>(fileSize.QuadPart);
+    std::cout << "[GGUFLoader] Memory-mapped " << file_size_ << " bytes" << std::endl;
+    return true;
+#else
+    std::cerr << "[GGUFLoader] InitializeMemoryMap: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return false;
+#endif
+}
+
+void GGUFLoader::CleanupMemoryMap() {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (mmap_base_) {
+        UnmapViewOfFile(mmap_base_);
+        mmap_base_ = nullptr;
+    }
+    if (map_handle_) {
+        CloseHandle(map_handle_);
+        map_handle_ = nullptr;
+    }
+    if (file_handle_) {
+        CloseHandle(file_handle_);
+        file_handle_ = nullptr;
+    }
+    use_mmap_ = false;
+    std::cout << "[GGUFLoader] Memory map cleaned up" << std::endl;
+#else
+    // No-op when experimental GPU support is disabled
+#endif
+}
+
+const void* GGUFLoader::GetMappedSlice(uint64_t offset, uint64_t size) const {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (!mmap_base_ || !use_mmap_) {
+        std::cerr << "[GGUFLoader] GetMappedSlice: memory map not initialized" << std::endl;
+        return nullptr;
+    }
+    if (offset + size > file_size_) {
+        std::cerr << "[GGUFLoader] GetMappedSlice: range [" << offset << ", " 
+                  << (offset + size) << ") exceeds file size " << file_size_ << std::endl;
+        return nullptr;
+    }
+    return static_cast<const uint8_t*>(mmap_base_) + offset;
+#else
+    std::cerr << "[GGUFLoader] GetMappedSlice: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return nullptr;
+#endif
+}
+
+} // namespace RawrXD
 

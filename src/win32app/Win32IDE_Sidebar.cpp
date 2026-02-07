@@ -77,6 +77,9 @@ constexpr int IDC_EXT_DETAILS = 6052;
 constexpr int IDC_EXT_INSTALL = 6053;
 constexpr int IDC_EXT_UNINSTALL = 6054;
 
+// File Explorer IDs from Win32IDE.cpp (used in FileExplorerProc)
+constexpr int IDC_FILE_TREE = 1026;
+
 // ============================================================================
 // Activity Bar Implementation
 // ============================================================================
@@ -2074,5 +2077,539 @@ void Win32IDE::goToTimelineEntry(int index)
         }
     } else {
         appendToOutput("Selected local entry: " + entry.message + "\n", "Output", OutputSeverity::Info);
+    }
+}
+
+// ============================================================================
+// Git Panel Window Procedure
+// ============================================================================
+
+LRESULT CALLBACK Win32IDE::GitPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        // Dark background matching VS Code SCM panel
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        // Draw header text
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(204, 204, 204));
+        HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+        HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+
+        RECT rcHeader = rc;
+        rcHeader.left += 8;
+        rcHeader.top += 4;
+        rcHeader.bottom = rcHeader.top + 24;
+        DrawTextA(hdc, "SOURCE CONTROL", -1, &rcHeader, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+
+        SelectObject(hdc, hOldFont);
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+
+            // Resize the git status text
+            if (pThis->m_hwndGitStatusText) {
+                MoveWindow(pThis->m_hwndGitStatusText, 8, 30,
+                           rc.right - 16, 60, TRUE);
+            }
+
+            // Resize the git file list
+            if (pThis->m_hwndGitFileList) {
+                MoveWindow(pThis->m_hwndGitFileList, 8, 96,
+                           rc.right - 16, rc.bottom - 104, TRUE);
+            }
+        }
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        if (pThis) {
+            int id = LOWORD(wParam);
+            switch (id) {
+            case IDC_SCM_STAGE:
+                pThis->stageSelectedFiles();
+                return 0;
+            case IDC_SCM_UNSTAGE:
+                pThis->refreshSourceControlView();
+                return 0;
+            case IDC_SCM_COMMIT:
+                pThis->commitChangesFromSidebar();
+                return 0;
+            case IDC_SCM_SYNC:
+                pThis->syncRepository();
+                return 0;
+            }
+        }
+        break;
+    }
+
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLOREDIT: {
+        // Dark theme colors for child controls
+        HDC hdcChild = (HDC)wParam;
+        SetTextColor(hdcChild, RGB(204, 204, 204));
+        SetBkColor(hdcChild, RGB(30, 30, 30));
+        static HBRUSH hDarkBrush = CreateSolidBrush(RGB(30, 30, 30));
+        return (LRESULT)hDarkBrush;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// Module Panel Window Procedure
+// ============================================================================
+
+LRESULT CALLBACK Win32IDE::ModulePanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        // Dark background for module browser panel
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        // Draw header
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(204, 204, 204));
+        HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+        HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+
+        RECT rcHeader = rc;
+        rcHeader.left += 8;
+        rcHeader.top += 4;
+        rcHeader.bottom = rcHeader.top + 24;
+        DrawTextA(hdc, "MODULE BROWSER", -1, &rcHeader, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+
+        SelectObject(hdc, hOldFont);
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+
+            // Resize module list
+            if (pThis->m_hwndModuleList) {
+                MoveWindow(pThis->m_hwndModuleList, 8, 62,
+                           rc.right - 16, rc.bottom - 70, TRUE);
+            }
+
+            // Reposition buttons horizontally in toolbar area
+            int btnY = 30;
+            int btnW = 65;
+            int btnH = 25;
+            int btnX = 8;
+            if (pThis->m_hwndModuleLoadButton) {
+                MoveWindow(pThis->m_hwndModuleLoadButton, btnX, btnY, btnW, btnH, TRUE);
+                btnX += btnW + 5;
+            }
+            if (pThis->m_hwndModuleUnloadButton) {
+                MoveWindow(pThis->m_hwndModuleUnloadButton, btnX, btnY, btnW, btnH, TRUE);
+                btnX += btnW + 5;
+            }
+            if (pThis->m_hwndModuleRefreshButton) {
+                MoveWindow(pThis->m_hwndModuleRefreshButton, btnX, btnY, btnW, btnH, TRUE);
+            }
+        }
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        if (pThis) {
+            HWND hCtrl = (HWND)lParam;
+
+            if (hCtrl == pThis->m_hwndModuleLoadButton) {
+                // Get selected module from the list
+                if (pThis->m_hwndModuleList) {
+                    int sel = (int)SendMessageA(pThis->m_hwndModuleList, LB_GETCURSEL, 0, 0);
+                    if (sel != LB_ERR && sel < (int)pThis->m_modules.size()) {
+                        pThis->loadModule(pThis->m_modules[sel].name);
+                        pThis->m_moduleListDirty = true;
+                    } else {
+                        pThis->appendToOutput("No module selected for loading\n",
+                                              "Output", OutputSeverity::Warning);
+                    }
+                }
+                return 0;
+            }
+
+            if (hCtrl == pThis->m_hwndModuleUnloadButton) {
+                if (pThis->m_hwndModuleList) {
+                    int sel = (int)SendMessageA(pThis->m_hwndModuleList, LB_GETCURSEL, 0, 0);
+                    if (sel != LB_ERR && sel < (int)pThis->m_modules.size()) {
+                        pThis->unloadModule(pThis->m_modules[sel].name);
+                        pThis->m_moduleListDirty = true;
+                    } else {
+                        pThis->appendToOutput("No module selected for unloading\n",
+                                              "Output", OutputSeverity::Warning);
+                    }
+                }
+                return 0;
+            }
+
+            if (hCtrl == pThis->m_hwndModuleRefreshButton) {
+                // Refresh the module list from PowerShell
+                pThis->m_moduleListDirty = true;
+                if (pThis->m_hwndModuleList) {
+                    SendMessageA(pThis->m_hwndModuleList, LB_RESETCONTENT, 0, 0);
+                    for (const auto& mod : pThis->m_modules) {
+                        std::string display = mod.name;
+                        if (mod.loaded) display += " [loaded]";
+                        if (!mod.version.empty()) display += " v" + mod.version;
+                        SendMessageA(pThis->m_hwndModuleList, LB_ADDSTRING, 0,
+                                     (LPARAM)display.c_str());
+                    }
+                }
+                pThis->appendToOutput("Module list refreshed\n", "Output", OutputSeverity::Info);
+                return 0;
+            }
+        }
+        break;
+    }
+
+    case WM_CTLCOLORLISTBOX:
+    case WM_CTLCOLORSTATIC: {
+        HDC hdcChild = (HDC)wParam;
+        SetTextColor(hdcChild, RGB(204, 204, 204));
+        SetBkColor(hdcChild, RGB(30, 30, 30));
+        static HBRUSH hDarkBrush = CreateSolidBrush(RGB(30, 30, 30));
+        return (LRESULT)hDarkBrush;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// Commit Dialog Window Procedure
+// ============================================================================
+
+LRESULT CALLBACK Win32IDE::CommitDialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_CREATE: {
+        // Dark background
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        SetClassLongPtrA(hwnd, GCLP_HBRBACKGROUND, (LONG_PTR)hBrush);
+
+        HINSTANCE hInst = ((CREATESTRUCTA*)lParam)->hInstance;
+
+        // Commit message label
+        CreateWindowExA(0, "STATIC", "Commit Message:",
+                        WS_CHILD | WS_VISIBLE,
+                        10, 10, 280, 20, hwnd, nullptr, hInst, nullptr);
+
+        // Commit message edit (multi-line)
+        CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+                        WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL,
+                        10, 35, 360, 120, hwnd, (HMENU)8001, hInst, nullptr);
+
+        // OK / Cancel buttons
+        CreateWindowExA(0, "BUTTON", "Commit",
+                        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+                        200, 170, 80, 30, hwnd, (HMENU)IDOK, hInst, nullptr);
+
+        CreateWindowExA(0, "BUTTON", "Cancel",
+                        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                        290, 170, 80, 30, hwnd, (HMENU)IDCANCEL, hInst, nullptr);
+
+        return 0;
+    }
+
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        int id = LOWORD(wParam);
+
+        if (id == IDOK && pThis) {
+            // Retrieve commit message from the edit control
+            HWND hEdit = GetDlgItem(hwnd, 8001);
+            if (hEdit) {
+                int len = GetWindowTextLengthA(hEdit);
+                if (len > 0) {
+                    std::string message(len + 1, '\0');
+                    GetWindowTextA(hEdit, &message[0], len + 1);
+                    message.resize(len);
+
+                    // Execute git commit
+                    std::string cmd = "git commit -m \"" + message + "\"";
+                    std::string output;
+                    if (pThis->executeGitCommand(cmd, output)) {
+                        pThis->appendToOutput("✅ Committed: " + message + "\n",
+                                              "Output", OutputSeverity::Info);
+                        pThis->refreshSourceControlView();
+                    } else {
+                        pThis->appendToOutput("❌ Commit failed: " + output + "\n",
+                                              "Output", OutputSeverity::Error);
+                    }
+                } else {
+                    pThis->appendToOutput("⚠️ Cannot commit with empty message\n",
+                                          "Output", OutputSeverity::Warning);
+                    return 0; // Don't close dialog
+                }
+            }
+            DestroyWindow(hwnd);
+            if (pThis) pThis->m_hwndCommitDialog = nullptr;
+            return 0;
+        }
+
+        if (id == IDCANCEL) {
+            DestroyWindow(hwnd);
+            if (pThis) pThis->m_hwndCommitDialog = nullptr;
+            return 0;
+        }
+        break;
+    }
+
+    case WM_CLOSE:
+        DestroyWindow(hwnd);
+        if (pThis) pThis->m_hwndCommitDialog = nullptr;
+        return 0;
+
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLOREDIT: {
+        HDC hdcChild = (HDC)wParam;
+        SetTextColor(hdcChild, RGB(204, 204, 204));
+        SetBkColor(hdcChild, RGB(30, 30, 30));
+        static HBRUSH hDarkBrush = CreateSolidBrush(RGB(30, 30, 30));
+        return (LRESULT)hDarkBrush;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// File Explorer Window Procedure
+// ============================================================================
+
+LRESULT CALLBACK Win32IDE::FileExplorerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        // Dark background for file explorer container
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+
+            // Resize the file tree to fill the explorer container
+            if (pThis->m_hwndFileTree) {
+                MoveWindow(pThis->m_hwndFileTree, 0, 0,
+                           rc.right, rc.bottom, TRUE);
+            }
+        }
+        return 0;
+    }
+
+    case WM_NOTIFY: {
+        if (pThis) {
+            NMHDR* pnmh = (NMHDR*)lParam;
+            if (pnmh->idFrom == IDC_FILE_TREE || pnmh->idFrom == IDC_EXPLORER_TREE) {
+                switch (pnmh->code) {
+                case TVN_SELCHANGEDA: {
+                    NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
+                    if (pnmtv->itemNew.hItem) {
+                        pThis->onFileTreeSelect(pnmtv->itemNew.hItem);
+                    }
+                    return 0;
+                }
+
+                case NM_DBLCLK: {
+                    HTREEITEM hItem = TreeView_GetSelection(pnmh->hwndFrom);
+                    if (hItem) {
+                        pThis->onFileTreeDoubleClick(hItem);
+                    }
+                    return 0;
+                }
+
+                case TVN_ITEMEXPANDINGA: {
+                    NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
+                    if ((pnmtv->action & TVE_EXPAND) && pnmtv->itemNew.hItem) {
+                        std::string path = pThis->getTreeItemPath(pnmtv->itemNew.hItem);
+                        if (!path.empty()) {
+                            pThis->onFileTreeExpand(pnmtv->itemNew.hItem, path);
+                        }
+                    }
+                    return 0;
+                }
+                }
+            }
+        }
+        break;
+    }
+
+    case WM_CONTEXTMENU: {
+        if (pThis) {
+            POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+            pThis->handleExplorerContextMenu(pt);
+            return 0;
+        }
+        break;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// File Tree Selection and Navigation
+// ============================================================================
+
+void Win32IDE::onFileTreeSelect(HTREEITEM item)
+{
+    if (!item) return;
+
+    std::string path = getTreeItemPath(item);
+    if (path.empty()) {
+        // Try extracting from the tree item text directly
+        if (m_hwndFileTree) {
+            char buf[MAX_PATH] = {};
+            TVITEMA tvi = {};
+            tvi.mask = TVIF_TEXT;
+            tvi.hItem = item;
+            tvi.pszText = buf;
+            tvi.cchTextMax = MAX_PATH;
+            if (TreeView_GetItem(m_hwndFileTree, &tvi)) {
+                path = buf;
+            }
+        }
+    }
+
+    if (path.empty()) return;
+
+    // Update status bar with the selected file/folder path
+    if (m_hwndStatusBar) {
+        std::string statusText = "Selected: " + path;
+        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)statusText.c_str());
+    }
+
+    // Check if it's a file (has extension) or directory
+    DWORD attrs = GetFileAttributesA(path.c_str());
+    if (attrs != INVALID_FILE_ATTRIBUTES && !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+        // It's a file — show preview info in the output
+        WIN32_FILE_ATTRIBUTE_DATA fileData = {};
+        if (GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &fileData)) {
+            ULARGE_INTEGER fileSize;
+            fileSize.LowPart = fileData.nFileSizeLow;
+            fileSize.HighPart = fileData.nFileSizeHigh;
+
+            std::ostringstream oss;
+            oss << "📄 " << path << " (" << fileSize.QuadPart << " bytes)";
+            appendToOutput(oss.str() + "\n", "Output", OutputSeverity::Debug);
+        }
+    }
+}
+
+void Win32IDE::onFileTreeDoubleClick(HTREEITEM item)
+{
+    if (!item) return;
+
+    std::string path = getTreeItemPath(item);
+    if (path.empty()) {
+        // Fallback: extract from tree item text
+        if (m_hwndFileTree) {
+            char buf[MAX_PATH] = {};
+            TVITEMA tvi = {};
+            tvi.mask = TVIF_TEXT;
+            tvi.hItem = item;
+            tvi.pszText = buf;
+            tvi.cchTextMax = MAX_PATH;
+            if (TreeView_GetItem(m_hwndFileTree, &tvi)) {
+                path = buf;
+            }
+        }
+    }
+
+    if (path.empty()) return;
+
+    DWORD attrs = GetFileAttributesA(path.c_str());
+    if (attrs == INVALID_FILE_ATTRIBUTES) {
+        appendToOutput("⚠️ Cannot access: " + path + "\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
+        // It's a directory — expand the tree node
+        if (m_hwndFileTree) {
+            TreeView_Expand(m_hwndFileTree, item, TVE_TOGGLE);
+        }
+    } else {
+        // It's a file — open it in the editor
+        appendToOutput("Opening: " + path + "\n", "Output", OutputSeverity::Info);
+        openFile(path);
+
+        // Check if it's a GGUF model file and offer to load it
+        std::string ext;
+        size_t dotPos = path.rfind('.');
+        if (dotPos != std::string::npos) {
+            ext = path.substr(dotPos + 1);
+            for (char& c : ext) c = (char)tolower((unsigned char)c);
+        }
+
+        if (ext == "gguf") {
+            int result = MessageBoxA(m_hwndMain,
+                ("Load model file?\n\n" + path).c_str(),
+                "RawrXD - Load Model",
+                MB_YESNO | MB_ICONQUESTION);
+            if (result == IDYES) {
+                loadModelFromPath(path);
+            }
+        }
     }
 }

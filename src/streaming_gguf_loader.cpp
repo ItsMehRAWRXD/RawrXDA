@@ -858,6 +858,62 @@ uint64_t StreamingGGUFLoader::GetFileSize() const {
     return const_cast<StreamingGGUFLoader*>(this)->GetTotalFileSize();
 }
 
+bool StreamingGGUFLoader::StreamZoneFromDisk(const std::string& zone_name) {
+    auto zone_it = zones_.find(zone_name);
+    if (zone_it == zones_.end()) {
+        std::cerr << "[StreamingGGUFLoader] StreamZoneFromDisk: zone '" << zone_name << "' not found" << std::endl;
+        return false;
+    }
+
+    if (!is_open_ || !file_.is_open()) {
+        std::cerr << "[StreamingGGUFLoader] StreamZoneFromDisk: file not open" << std::endl;
+        return false;
+    }
+
+    TensorZoneInfo& zone = zone_it->second;
+
+    // Allocate buffer for the entire zone
+    zone.data.clear();
+    zone.data.reserve(static_cast<size_t>(zone.total_bytes));
+
+    // Stream each tensor in the zone from disk
+    for (const auto& tensor_name : zone.tensors) {
+        auto ref_it = tensor_index_.find(tensor_name);
+        if (ref_it == tensor_index_.end()) {
+            std::cerr << "[StreamingGGUFLoader] StreamZoneFromDisk: tensor '" 
+                      << tensor_name << "' not in index" << std::endl;
+            continue;
+        }
+
+        const TensorRef& ref = ref_it->second;
+        file_.seekg(static_cast<std::streamoff>(ref.offset));
+        if (!file_.good()) {
+            std::cerr << "[StreamingGGUFLoader] StreamZoneFromDisk: seek failed for tensor '" 
+                      << tensor_name << "' at offset " << ref.offset << std::endl;
+            zone.data.clear();
+            return false;
+        }
+
+        size_t prev_size = zone.data.size();
+        zone.data.resize(prev_size + static_cast<size_t>(ref.size));
+        file_.read(reinterpret_cast<char*>(zone.data.data() + prev_size),
+                   static_cast<std::streamsize>(ref.size));
+
+        if (!file_.good()) {
+            std::cerr << "[StreamingGGUFLoader] StreamZoneFromDisk: read failed for tensor '" 
+                      << tensor_name << "' (" << ref.size << " bytes)" << std::endl;
+            zone.data.clear();
+            return false;
+        }
+    }
+
+    zone.is_loaded = true;
+    active_zones_[zone_name] = true;
+    std::cout << "[StreamingGGUFLoader] Streamed zone '" << zone_name 
+              << "' from disk: " << zone.data.size() << " bytes, "
+              << zone.tensors.size() << " tensors" << std::endl;
+    return true;
+}
 
 // GetVocabulary is defined inline in header
 } // namespace RawrXD

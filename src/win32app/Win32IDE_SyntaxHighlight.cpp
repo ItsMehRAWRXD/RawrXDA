@@ -697,6 +697,11 @@ void Win32IDE::applySyntaxColoringForVisibleRange() {
 // Sets a timer; when it fires, actual coloring runs.
 // ============================================================================
 void Win32IDE::onEditorContentChanged() {
+    // Trigger ghost text debounce on every content change
+    if (m_ghostTextEnabled) {
+        triggerGhostTextCompletion();
+    }
+
     if (!m_syntaxColoringEnabled) return;
     if (m_syntaxLanguage == SyntaxLanguage::None) return;
 

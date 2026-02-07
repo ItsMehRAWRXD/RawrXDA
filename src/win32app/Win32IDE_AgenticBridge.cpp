@@ -4,6 +4,7 @@
 // ============================================================================
 
 #include "Win32IDE_AgenticBridge.h"
+#include "Win32IDE_SubAgent.h"
 #include "IDELogger.h"
 #include "IDEConfig.h"
 #include "Win32IDE.h"
@@ -140,6 +141,14 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt) {
     // Fall through to general chat
     std::string response = g_agentEngine->chat(refinedPrompt);
 
+    // Check for tool calls in the model's response and dispatch them
+    std::string toolResult;
+    if (DispatchModelToolCalls(response, toolResult)) {
+        LOG_INFO("Tool call dispatched from model output");
+        // Append tool result and optionally re-prompt the model
+        response += "\n\n[Tool Execution Result]\n" + toolResult;
+    }
+
     AgentResponse r;
     r.content = response;
     r.type = AgentResponseType::ANSWER;
@@ -258,7 +267,8 @@ void AgenticBridge::StopAgentLoop() {
 std::vector<std::string> AgenticBridge::GetAvailableTools() {
     return {
         "shell", "powershell", "read_file", "write_file",
-        "web_search", "list_dir", "git_status", "task_orchestrator"
+        "web_search", "list_dir", "git_status", "task_orchestrator",
+        "runSubagent", "manage_todo_list", "chain", "hexmag_swarm"
     };
 }
 
@@ -274,6 +284,11 @@ std::string AgenticBridge::GetAgentStatus() {
     status << "  Deep Thinking: " << (m_deepThinking ? "Yes" : "No") << "\n";
     status << "  Deep Research: " << (m_deepResearch ? "Yes" : "No") << "\n";
     status << "  Engine Loaded: " << (g_cpuEngine && g_cpuEngine->IsModelLoaded() ? "Yes" : "No") << "\n";
+    if (m_subAgentManager) {
+        status << "  SubAgents Active: " << m_subAgentManager->activeSubAgentCount() << "\n";
+        status << "  SubAgents Spawned: " << m_subAgentManager->totalSpawned() << "\n";
+        status << "  " << m_subAgentManager->getStatusSummary() << "\n";
+    }
     return status.str();
 }
 
@@ -517,6 +532,92 @@ std::string AgenticBridge::RunCodex(const std::string& path) {
 std::string AgenticBridge::RunCompiler(const std::string& path) {
     if (g_agentEngine) return g_agentEngine->runCompiler(path, "x64");
     return "Agentic Engine not initialized";
+}
+
+// ============================================================================
+// SubAgent / Chaining / HexMag Swarm Operations
+// ============================================================================
+
+SubAgentManager* AgenticBridge::GetSubAgentManager() {
+    if (!m_subAgentManager && g_agentEngine) {
+        // Use factory to get IDELogger + METRICS wired automatically
+        m_subAgentManager.reset(createWin32SubAgentManager(g_agentEngine.get()));
+
+        // Wire callbacks to IDE output
+        m_subAgentManager->setCompletionCallback(
+            [this](const std::string& agentId, const std::string& result, bool success) {
+                if (m_outputCallback) {
+                    std::string prefix = success ? "✅ SubAgent " : "❌ SubAgent ";
+                    m_outputCallback(prefix + agentId, result);
+                }
+            });
+    }
+    return m_subAgentManager.get();
+}
+
+std::string AgenticBridge::RunSubAgent(const std::string& description, const std::string& prompt) {
+    SCOPED_METRIC("agentic.run_subagent");
+    METRICS.increment("agentic.subagent_calls");
+
+    auto* mgr = GetSubAgentManager();
+    if (!mgr) return "[Error] SubAgentManager not available — engine not initialized";
+
+    LOG_INFO("RunSubAgent: " + description);
+    std::string agentId = mgr->spawnSubAgent("bridge", description, prompt);
+    bool success = mgr->waitForSubAgent(agentId, 120000);
+    return mgr->getSubAgentResult(agentId);
+}
+
+std::string AgenticBridge::ExecuteChain(const std::vector<std::string>& steps,
+                                         const std::string& initialInput) {
+    SCOPED_METRIC("agentic.execute_chain");
+    METRICS.increment("agentic.chain_calls");
+
+    auto* mgr = GetSubAgentManager();
+    if (!mgr) return "[Error] SubAgentManager not available — engine not initialized";
+
+    LOG_INFO("ExecuteChain: " + std::to_string(steps.size()) + " steps");
+    return mgr->executeChain("bridge", steps, initialInput);
+}
+
+std::string AgenticBridge::ExecuteSwarm(const std::vector<std::string>& prompts,
+                                         const std::string& mergeStrategy,
+                                         int maxParallel) {
+    SCOPED_METRIC("agentic.execute_swarm");
+    METRICS.increment("agentic.swarm_calls");
+
+    auto* mgr = GetSubAgentManager();
+    if (!mgr) return "[Error] SubAgentManager not available — engine not initialized";
+
+    SwarmConfig config;
+    config.maxParallel = maxParallel;
+    config.timeoutMs = 120000;
+    config.mergeStrategy = mergeStrategy;
+    config.failFast = false;
+
+    LOG_INFO("ExecuteSwarm: " + std::to_string(prompts.size()) + " tasks, strategy=" + mergeStrategy);
+    return mgr->executeSwarm("bridge", prompts, config);
+}
+
+void AgenticBridge::CancelAllSubAgents() {
+    auto* mgr = GetSubAgentManager();
+    if (mgr) {
+        mgr->cancelAll();
+        LOG_INFO("All sub-agents cancelled via bridge");
+    }
+}
+
+std::string AgenticBridge::GetSubAgentStatus() const {
+    if (m_subAgentManager) {
+        return m_subAgentManager->getStatusSummary();
+    }
+    return "SubAgentManager not initialized";
+}
+
+bool AgenticBridge::DispatchModelToolCalls(const std::string& modelOutput, std::string& toolResult) {
+    auto* mgr = GetSubAgentManager();
+    if (!mgr) return false;
+    return mgr->dispatchToolCall("bridge", modelOutput, toolResult);
 }
 
 // ============================================================================

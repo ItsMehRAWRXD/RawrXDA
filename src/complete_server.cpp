@@ -1,4 +1,7 @@
 #include "complete_server.h"
+#include "agentic_engine.h"
+#include "subagent_core.h"
+#include "agent_history.h"
 
 #include <algorithm>
 #include <cctype>
@@ -310,17 +313,38 @@ void CompletionServer::HandleClient(int client_fd) {
                         ",\"model_loaded\":" + (model_loaded ? "true" : "false") +
                         ",\"model_path\":\"" + escaped_path + "\"" +
                         ",\"backend\":\"rawrxd\"" +
-                        ",\"capabilities\":{\"completion\":true,\"streaming\":true}}";
+                        ",\"agentic\":" + (agentic_engine_ ? "true" : "false") +
+                        ",\"subagents\":" + (subagent_mgr_ ? "true" : "false") +
+                        ",\"capabilities\":{\"completion\":true,\"streaming\":true"
+                        ",\"chat\":true,\"subagent\":true,\"chain\":true,\"swarm\":true}}";
     } else if (method == "POST" && path == "/complete") {
         response_body = HandleCompleteRequest(parsed_body);
     } else if (method == "POST" && path == "/complete/stream") {
-        // Stream handler manages its own response
         HandleCompleteStreamRequest(static_cast<int>(client), parsed_body);
         CloseSocket(client);
         return;
+    }
+    // === Agentic API Routes ===
+    else if (method == "POST" && path == "/api/chat") {
+        response_body = HandleChatRequest(parsed_body);
+    } else if (method == "POST" && path == "/api/subagent") {
+        response_body = HandleSubAgentRequest(parsed_body);
+    } else if (method == "POST" && path == "/api/chain") {
+        response_body = HandleChainRequest(parsed_body);
+    } else if (method == "POST" && path == "/api/swarm") {
+        response_body = HandleSwarmRequest(parsed_body);
+    } else if (method == "GET" && path == "/api/agents") {
+        response_body = HandleAgentsListRequest();
+    } else if (method == "GET" && path == "/api/agents/status") {
+        response_body = HandleAgentsStatusRequest();
+    } else if ((method == "GET" || method == "POST") &&
+               (path == "/api/agents/history" || path.rfind("/api/agents/history?", 0) == 0)) {
+        response_body = HandleHistoryRequest(path, parsed_body);
+    } else if (method == "POST" && path == "/api/agents/replay") {
+        response_body = HandleReplayRequest(parsed_body);
     } else {
         status = 400;
-        response_body = R"({"completion":""})";
+        response_body = R"({"error":"unknown_endpoint"})";
     }
 
     std::string response = BuildResponse(status, response_body, response_headers);
@@ -488,6 +512,322 @@ void CompletionServer::HandleCompleteStreamRequest(int client_fd, const std::str
     // Send end event
     std::string end_event = "event: end\r\ndata: {}\r\n\r\n";
     send(client, end_event.c_str(), static_cast<int>(end_event.size()), 0);
+}
+
+// ============================================================================
+// Agentic API Handlers
+// ============================================================================
+
+std::string CompletionServer::HandleChatRequest(const std::string& body) {
+    if (!agentic_engine_) {
+        return R"({"error":"agentic_engine_not_available"})";
+    }
+
+    std::string message;
+    ExtractJsonString(body, "message", message);
+    if (message.empty()) ExtractJsonString(body, "prompt", message);
+    if (message.empty()) {
+        return R"({"error":"missing_message"})";
+    }
+
+    std::string response = agentic_engine_->chat(message);
+
+    // Auto-dispatch tool calls if subagent manager is available
+    std::string toolResult;
+    bool hadToolCall = false;
+    if (subagent_mgr_) {
+        hadToolCall = subagent_mgr_->dispatchToolCall("api", response, toolResult);
+    }
+
+    std::string escaped = EscapeJson(response);
+    std::string result = "{\"response\":\"" + escaped + "\"";
+    if (hadToolCall) {
+        result += ",\"tool_result\":\"" + EscapeJson(toolResult) + "\"";
+    }
+    result += "}";
+    return result;
+}
+
+std::string CompletionServer::HandleSubAgentRequest(const std::string& body) {
+    if (!subagent_mgr_) {
+        return R"({"error":"subagent_manager_not_available"})";
+    }
+
+    std::string description, prompt;
+    ExtractJsonString(body, "description", description);
+    ExtractJsonString(body, "prompt", prompt);
+    if (prompt.empty()) {
+        return R"({"error":"missing_prompt"})";
+    }
+    if (description.empty()) description = "API subagent";
+
+    std::string timeoutStr;
+    int timeout = 120000;
+    if (ExtractJsonNumber(body, "timeout", timeoutStr)) {
+        timeout = std::max(1000, std::stoi(timeoutStr));
+    }
+
+    std::string agentId = subagent_mgr_->spawnSubAgent("api", description, prompt);
+    bool success = subagent_mgr_->waitForSubAgent(agentId, timeout);
+    std::string result = subagent_mgr_->getSubAgentResult(agentId);
+
+    return "{\"agent_id\":\"" + agentId + "\""
+           ",\"success\":" + (success ? "true" : "false") +
+           ",\"result\":\"" + EscapeJson(result) + "\"}";
+}
+
+std::string CompletionServer::HandleChainRequest(const std::string& body) {
+    if (!subagent_mgr_) {
+        return R"({"error":"subagent_manager_not_available"})";
+    }
+
+    // Parse steps array
+    std::vector<std::string> steps;
+    size_t stepsPos = body.find("\"steps\"");
+    if (stepsPos == std::string::npos) {
+        return R"({"error":"missing_steps_array"})";
+    }
+
+    size_t arrStart = body.find('[', stepsPos);
+    if (arrStart == std::string::npos) {
+        return R"({"error":"invalid_steps_format"})";
+    }
+
+    int depth = 0;
+    size_t arrEnd = arrStart;
+    for (size_t i = arrStart; i < body.size(); i++) {
+        if (body[i] == '[') depth++;
+        else if (body[i] == ']') { depth--; if (depth == 0) { arrEnd = i; break; } }
+    }
+
+    std::string arr = body.substr(arrStart + 1, arrEnd - arrStart - 1);
+    size_t strStart = 0;
+    while ((strStart = arr.find('"', strStart)) != std::string::npos) {
+        strStart++;
+        std::string value;
+        for (size_t i = strStart; i < arr.size(); i++) {
+            if (arr[i] == '\\' && i + 1 < arr.size()) { value += arr[++i]; }
+            else if (arr[i] == '"') { strStart = i + 1; break; }
+            else value += arr[i];
+        }
+        if (!value.empty()) steps.push_back(value);
+    }
+
+    if (steps.empty()) {
+        return R"({"error":"empty_steps"})";
+    }
+
+    std::string initialInput;
+    ExtractJsonString(body, "input", initialInput);
+
+    std::string result = subagent_mgr_->executeChain("api", steps, initialInput);
+
+    // Get step details
+    auto chainSteps = subagent_mgr_->getChainSteps();
+    std::string stepsJson = "[";
+    for (size_t i = 0; i < chainSteps.size(); i++) {
+        if (i > 0) stepsJson += ",";
+        stepsJson += "{\"index\":" + std::to_string(chainSteps[i].index)
+                   + ",\"state\":\"" + (chainSteps[i].state == SubAgent::State::Completed ? "completed" : "failed")
+                   + "\",\"result\":\"" + EscapeJson(chainSteps[i].result) + "\"}";
+    }
+    stepsJson += "]";
+
+    return "{\"result\":\"" + EscapeJson(result) + "\""
+           ",\"steps\":" + stepsJson +
+           ",\"step_count\":" + std::to_string(steps.size()) + "}";
+}
+
+std::string CompletionServer::HandleSwarmRequest(const std::string& body) {
+    if (!subagent_mgr_) {
+        return R"({"error":"subagent_manager_not_available"})";
+    }
+
+    // Parse prompts array
+    std::vector<std::string> prompts;
+    size_t promptsPos = body.find("\"prompts\"");
+    if (promptsPos == std::string::npos) {
+        return R"({"error":"missing_prompts_array"})";
+    }
+
+    size_t arrStart = body.find('[', promptsPos);
+    if (arrStart == std::string::npos) {
+        return R"({"error":"invalid_prompts_format"})";
+    }
+
+    int depth = 0;
+    size_t arrEnd = arrStart;
+    for (size_t i = arrStart; i < body.size(); i++) {
+        if (body[i] == '[') depth++;
+        else if (body[i] == ']') { depth--; if (depth == 0) { arrEnd = i; break; } }
+    }
+
+    std::string arr = body.substr(arrStart + 1, arrEnd - arrStart - 1);
+    size_t strStart = 0;
+    while ((strStart = arr.find('"', strStart)) != std::string::npos) {
+        strStart++;
+        std::string value;
+        for (size_t i = strStart; i < arr.size(); i++) {
+            if (arr[i] == '\\' && i + 1 < arr.size()) { value += arr[++i]; }
+            else if (arr[i] == '"') { strStart = i + 1; break; }
+            else value += arr[i];
+        }
+        if (!value.empty()) prompts.push_back(value);
+    }
+
+    if (prompts.empty()) {
+        return R"({"error":"empty_prompts"})";
+    }
+
+    // Parse config
+    SwarmConfig config;
+    std::string tmp;
+    if (ExtractJsonString(body, "strategy", tmp) || ExtractJsonString(body, "mergeStrategy", tmp)) {
+        config.mergeStrategy = tmp;
+    }
+    if (ExtractJsonNumber(body, "maxParallel", tmp)) {
+        config.maxParallel = std::max(1, std::stoi(tmp));
+    }
+    if (ExtractJsonNumber(body, "timeoutMs", tmp)) {
+        config.timeoutMs = std::max(1000, std::stoi(tmp));
+    }
+    ExtractJsonString(body, "mergePrompt", config.mergePrompt);
+
+    std::string result = subagent_mgr_->executeSwarm("api", prompts, config);
+
+    return "{\"result\":\"" + EscapeJson(result) + "\""
+           ",\"task_count\":" + std::to_string(prompts.size()) +
+           ",\"strategy\":\"" + config.mergeStrategy + "\"}";
+}
+
+std::string CompletionServer::HandleAgentsListRequest() {
+    if (!subagent_mgr_) {
+        return R"({"error":"subagent_manager_not_available"})";
+    }
+
+    auto agents = subagent_mgr_->getAllSubAgents();
+    std::string json = "{\"agents\":[";
+    for (size_t i = 0; i < agents.size(); i++) {
+        if (i > 0) json += ",";
+        json += "{\"id\":\"" + agents[i].id + "\""
+                ",\"parent_id\":\"" + agents[i].parentId + "\""
+                ",\"description\":\"" + EscapeJson(agents[i].description) + "\""
+                ",\"state\":\"" + agents[i].stateString() + "\""
+                ",\"progress\":" + std::to_string(agents[i].progress) +
+                ",\"elapsed_ms\":" + std::to_string(agents[i].elapsedMs()) +
+                ",\"tokens\":" + std::to_string(agents[i].tokensGenerated) + "}";
+    }
+    json += "],\"total\":" + std::to_string(agents.size()) + "}";
+    return json;
+}
+
+std::string CompletionServer::HandleAgentsStatusRequest() {
+    if (!subagent_mgr_) {
+        return R"({"error":"subagent_manager_not_available"})";
+    }
+
+    std::string summary = subagent_mgr_->getStatusSummary();
+    int active = subagent_mgr_->activeSubAgentCount();
+    int total = subagent_mgr_->totalSpawned();
+
+    auto todos = subagent_mgr_->getTodoList();
+    std::string todosJson = "[";
+    for (size_t i = 0; i < todos.size(); i++) {
+        if (i > 0) todosJson += ",";
+        todosJson += todos[i].toJSON();
+    }
+    todosJson += "]";
+
+    return "{\"summary\":\"" + EscapeJson(summary) + "\""
+           ",\"active\":" + std::to_string(active) +
+           ",\"total_spawned\":" + std::to_string(total) +
+           ",\"todos\":" + todosJson + "}";
+}
+
+// ============================================================================
+// Phase 5 — History & Replay Handlers
+// ============================================================================
+
+std::string CompletionServer::HandleHistoryRequest(const std::string& path, const std::string& body) {
+    if (!history_recorder_) {
+        return R"({"error":"history_recorder_not_available"})";
+    }
+
+    HistoryQuery q;
+
+    // Parse query parameters from URL path (e.g., /api/agents/history?agent_id=sa-xxx&limit=50)
+    auto parseParam = [&](const std::string& key) -> std::string {
+        std::string needle = key + "=";
+        auto pos = path.find(needle);
+        if (pos == std::string::npos) return "";
+        pos += needle.size();
+        auto end = path.find('&', pos);
+        if (end == std::string::npos) end = path.size();
+        return path.substr(pos, end - pos);
+    };
+
+    // Also check POST body for JSON filter fields
+    std::string tmp;
+    if (!parseParam("agent_id").empty()) q.agentId = parseParam("agent_id");
+    else if (ExtractJsonString(body, "agent_id", tmp)) q.agentId = tmp;
+
+    if (!parseParam("session_id").empty()) q.sessionId = parseParam("session_id");
+    else if (ExtractJsonString(body, "session_id", tmp)) q.sessionId = tmp;
+
+    if (!parseParam("event_type").empty()) q.eventType = parseParam("event_type");
+    else if (ExtractJsonString(body, "event_type", tmp)) q.eventType = tmp;
+
+    if (!parseParam("parent_id").empty()) q.parentId = parseParam("parent_id");
+    else if (ExtractJsonString(body, "parent_id", tmp)) q.parentId = tmp;
+
+    std::string limitStr = parseParam("limit");
+    if (!limitStr.empty()) q.limit = std::max(1, std::stoi(limitStr));
+    else if (ExtractJsonNumber(body, "limit", tmp)) q.limit = std::max(1, std::stoi(tmp));
+
+    std::string offsetStr = parseParam("offset");
+    if (!offsetStr.empty()) q.offset = std::max(0, std::stoi(offsetStr));
+    else if (ExtractJsonNumber(body, "offset", tmp)) q.offset = std::max(0, std::stoi(tmp));
+
+    auto events = history_recorder_->query(q);
+    std::string eventsJson = history_recorder_->toJSON(events);
+    std::string stats = history_recorder_->getStatsSummary();
+
+    return "{\"events\":" + eventsJson +
+           ",\"count\":" + std::to_string(events.size()) +
+           ",\"stats\":" + stats + "}";
+}
+
+std::string CompletionServer::HandleReplayRequest(const std::string& body) {
+    if (!history_recorder_) {
+        return R"({"error":"history_recorder_not_available"})";
+    }
+    if (!subagent_mgr_) {
+        return R"({"error":"subagent_manager_not_available"})";
+    }
+
+    ReplayRequest req;
+    std::string tmp;
+    if (ExtractJsonString(body, "agent_id", tmp)) req.originalAgentId = tmp;
+    if (ExtractJsonString(body, "session_id", tmp)) req.originalSessionId = tmp;
+    if (ExtractJsonString(body, "event_type", tmp)) req.eventType = tmp;
+
+    // Check for dry_run
+    auto dryPos = body.find("\"dry_run\"");
+    if (dryPos != std::string::npos) {
+        auto valPos = body.find(':', dryPos);
+        if (valPos != std::string::npos) {
+            auto afterColon = body.substr(valPos + 1, 10);
+            req.dryRun = (afterColon.find("true") != std::string::npos);
+        }
+    }
+
+    ReplayResult result = history_recorder_->replay(req, subagent_mgr_);
+
+    return "{\"success\":" + std::string(result.success ? "true" : "false") +
+           ",\"result\":\"" + EscapeJson(result.result) + "\"" +
+           ",\"original_result\":\"" + EscapeJson(result.originalResult) + "\"" +
+           ",\"events_replayed\":" + std::to_string(result.eventsReplayed) +
+           ",\"duration_ms\":" + std::to_string(result.durationMs) + "}";
 }
 
 

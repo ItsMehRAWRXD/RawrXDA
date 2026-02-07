@@ -15,6 +15,9 @@ set(SOURCES
     src/hot_patcher.cpp
     src/cpu_inference_engine.cpp
     src/complete_server.cpp
+    src/agentic_engine.cpp
+    src/subagent_core.cpp
+    src/agent_history.cpp
     src/streaming_gguf_loader.cpp
     src/gguf_loader.cpp
     src/gguf_vocab_resolver.cpp
@@ -93,6 +96,14 @@ if(WIN32)
         src/win32app/Win32IDE_Session.cpp
         src/win32app/Win32IDE_StreamingUX.cpp
         src/win32app/Win32IDE_ReverseEngineering.cpp
+        src/win32app/Win32IDE_GhostText.cpp
+        src/win32app/Win32IDE_PlanExecutor.cpp
+        src/win32app/Win32IDE_FailureDetector.cpp
+        src/win32app/Win32IDE_Settings.cpp
+        src/win32app/Win32IDE_LocalServer.cpp
+        src/win32app/Win32IDE_SubAgent.h
+        src/win32app/Win32IDE_SubAgent.cpp
+        src/win32app/Win32IDE_AgentHistory.cpp
         src/win32app/Win32TerminalManager.cpp
         src/win32app/Win32TerminalManager.h
         src/win32app/TransparentRenderer.cpp
@@ -106,6 +117,8 @@ if(WIN32)
         # Core engine files needed by IDE
         src/stubs.cpp
         src/agentic_engine.cpp
+        src/subagent_core.cpp
+        src/agent_history.cpp
         src/utils/ErrorReporter.cpp
         src/modules/engine_manager.cpp
         src/cpu_inference_engine.cpp

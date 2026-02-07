@@ -6,6 +6,7 @@
 #include "ModelConnection.h"
 #include "IDELogger.h"
 #include <sstream>
+#include <algorithm>
 
 // Initialize the Agentic Bridge
 void Win32IDE::initializeAgenticBridge() {
@@ -490,5 +491,156 @@ void Win32IDE::handleAgentCommand(int commandId) {
         default:
             appendToOutput("Unknown Agent Command ID: " + std::to_string(commandId) + "\n", "Debug", OutputSeverity::Warning);
             break;
+    }
+}
+
+// ============================================================================
+// AI MODE TOGGLE HANDLERS
+// Pure state mutation + engine propagation + logging.
+// These mirror the inline switch logic in handleAgentCommand but provide
+// a clean callable API for programmatic use (e.g., from SidebarProcImpl).
+// ============================================================================
+
+void Win32IDE::onAIModeMax() {
+    LOG_INFO("onAIModeMax toggled");
+    bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_MAX, MF_BYCOMMAND) & MF_CHECKED) != 0;
+    bool newState = !current;
+    CheckMenuItem(m_hMenu, IDM_AI_MODE_MAX, newState ? MF_CHECKED : MF_UNCHECKED);
+    if (m_agenticBridge) m_agenticBridge->SetMaxMode(newState);
+    if (m_nativeEngine) m_nativeEngine->SetMaxMode(newState);
+    if (m_hwndChkMaxMode) SendMessage(m_hwndChkMaxMode, BM_SETCHECK, newState ? BST_CHECKED : BST_UNCHECKED, 0);
+    appendToOutput(std::string("Max Mode ") + (newState ? "ENABLED" : "DISABLED") + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onAIModeDeepThink() {
+    LOG_INFO("onAIModeDeepThink toggled");
+    bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_DEEP_THINK, MF_BYCOMMAND) & MF_CHECKED) != 0;
+    bool newState = !current;
+    CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_THINK, newState ? MF_CHECKED : MF_UNCHECKED);
+    if (m_agenticBridge) m_agenticBridge->SetDeepThinking(newState);
+    if (m_nativeEngine) m_nativeEngine->SetDeepThinking(newState);
+    if (m_hwndChkDeepThink) SendMessage(m_hwndChkDeepThink, BM_SETCHECK, newState ? BST_CHECKED : BST_UNCHECKED, 0);
+    appendToOutput(std::string("Deep Thinking (CoT) ") + (newState ? "ENABLED" : "DISABLED") + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onAIModeDeepResearch() {
+    LOG_INFO("onAIModeDeepResearch toggled");
+    bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_DEEP_RESEARCH, MF_BYCOMMAND) & MF_CHECKED) != 0;
+    bool newState = !current;
+    CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_RESEARCH, newState ? MF_CHECKED : MF_UNCHECKED);
+    if (m_agenticBridge) m_agenticBridge->SetDeepResearch(newState);
+    if (m_nativeEngine) m_nativeEngine->SetDeepResearch(newState);
+    if (m_hwndChkDeepResearch) SendMessage(m_hwndChkDeepResearch, BM_SETCHECK, newState ? BST_CHECKED : BST_UNCHECKED, 0);
+    appendToOutput(std::string("Deep Research ") + (newState ? "ENABLED" : "DISABLED") + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onAIModeNoRefusal() {
+    LOG_INFO("onAIModeNoRefusal toggled");
+    bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_NO_REFUSAL, MF_BYCOMMAND) & MF_CHECKED) != 0;
+    bool newState = !current;
+    CheckMenuItem(m_hMenu, IDM_AI_MODE_NO_REFUSAL, newState ? MF_CHECKED : MF_UNCHECKED);
+    if (m_agenticBridge) m_agenticBridge->SetNoRefusal(newState);
+    if (m_hwndChkNoRefusal) SendMessage(m_hwndChkNoRefusal, BM_SETCHECK, newState ? BST_CHECKED : BST_UNCHECKED, 0);
+    appendToOutput(std::string("No Refusal Mode ") + (newState ? "ENABLED" : "DISABLED") + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onAIContextSize(int sizeEnum) {
+    LOG_INFO("onAIContextSize: " + std::to_string(sizeEnum));
+    
+    // Map enum value to token count
+    static const struct { int menuId; int tokens; const char* label; } contextMap[] = {
+        { IDM_AI_CONTEXT_4K,   4096,    "4K"   },
+        { IDM_AI_CONTEXT_32K,  32768,   "32K"  },
+        { IDM_AI_CONTEXT_64K,  65536,   "64K"  },
+        { IDM_AI_CONTEXT_128K, 131072,  "128K" },
+        { IDM_AI_CONTEXT_256K, 262144,  "256K" },
+        { IDM_AI_CONTEXT_512K, 524288,  "512K" },
+        { IDM_AI_CONTEXT_1M,   1048576, "1M"   },
+    };
+    
+    int tokens = 4096;
+    std::string label = "4K";
+    for (const auto& entry : contextMap) {
+        if (entry.menuId == sizeEnum) {
+            tokens = entry.tokens;
+            label = entry.label;
+            break;
+        }
+    }
+    
+    m_inferenceConfig.contextWindow = tokens;
+    m_currentContextSize = static_cast<size_t>(tokens);
+    
+    if (m_agenticBridge) {
+        std::string sizeStr = label;
+        std::transform(sizeStr.begin(), sizeStr.end(), sizeStr.begin(), ::tolower);
+        m_agenticBridge->SetContextSize(sizeStr);
+    }
+    if (m_nativeEngine) m_nativeEngine->SetContextSize(static_cast<size_t>(tokens));
+    
+    // Update menu checkmarks
+    for (const auto& entry : contextMap) {
+        CheckMenuItem(m_hMenu, entry.menuId, (entry.menuId == sizeEnum) ? MF_CHECKED : MF_UNCHECKED);
+    }
+    
+    updateContextSliderLabel();
+    appendToOutput("Context window set to " + label + " (" + std::to_string(tokens) + " tokens)\n", "Output", OutputSeverity::Info);
+}
+
+// ============================================================================
+// AUTONOMY INITIALIZATION
+// ============================================================================
+void Win32IDE::initializeAutonomy() {
+    LOG_INFO("Initializing Autonomy Manager");
+    
+    if (!m_agenticBridge) {
+        appendToOutput("⚠️ Cannot initialize autonomy: Agentic Bridge not ready\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+    
+    if (!m_autonomyManager) {
+        m_autonomyManager = std::make_unique<AutonomyManager>(m_agenticBridge.get());
+    }
+    
+    appendToOutput("✅ Autonomy Manager initialized\n", "Output", OutputSeverity::Info);
+}
+
+// ============================================================================
+// MEMORY PLUGIN SYSTEM
+// ============================================================================
+void Win32IDE::loadMemoryPlugin(const std::string& path) {
+    LOG_INFO("loadMemoryPlugin: " + path);
+    
+    if (path.empty()) {
+        appendToOutput("⚠️ Empty plugin path\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+    
+    // Attempt to load the plugin DLL and register with the native engine
+    HMODULE hPlugin = LoadLibraryA(path.c_str());
+    if (!hPlugin) {
+        DWORD err = GetLastError();
+        appendToOutput("❌ Failed to load memory plugin: " + path + " (error " + std::to_string(err) + ")\n", 
+                       "Errors", OutputSeverity::Error);
+        return;
+    }
+    
+    // Look for the standard plugin factory export
+    using CreatePluginFn = RawrXD::IMemoryPlugin* (*)();
+    auto createFn = (CreatePluginFn)GetProcAddress(hPlugin, "CreateMemoryPlugin");
+    if (!createFn) {
+        appendToOutput("❌ Plugin missing CreateMemoryPlugin export: " + path + "\n", "Errors", OutputSeverity::Error);
+        FreeLibrary(hPlugin);
+        return;
+    }
+    
+    auto* rawPlugin = createFn();
+    if (rawPlugin && m_nativeEngine) {
+        m_nativeEngine->RegisterMemoryPlugin(std::shared_ptr<RawrXD::IMemoryPlugin>(rawPlugin));
+        appendToOutput("✅ Memory plugin loaded: " + path + "\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("⚠️ Plugin created but no native engine available\n", "Output", OutputSeverity::Warning);
+        delete rawPlugin;
+        FreeLibrary(hPlugin);
     }
 }

@@ -188,3 +188,71 @@ std::string AgenticEngine::chat(const std::string& message) {
     agent.Ask(message);
     return response;
 }
+
+// ============================================================================
+// SubAgent / Chaining / Swarm — convenience wrappers
+// These use the engine's own chat() to run sub-tasks. For the full
+// SubAgentManager with thread pools and progress tracking, use the
+// bridge-level SubAgentManager directly.
+// ============================================================================
+
+std::string AgenticEngine::runSubAgent(const std::string& description, const std::string& prompt) {
+    // Simple synchronous sub-agent: just call chat with the prompt
+    return chat("You are a sub-agent tasked with: " + description + "\n\n" + prompt);
+}
+
+std::string AgenticEngine::executeChain(const std::vector<std::string>& steps,
+                                         const std::string& initialInput) {
+    std::string currentInput = initialInput;
+    for (size_t i = 0; i < steps.size(); i++) {
+        std::string prompt = steps[i];
+        // Replace {{input}} placeholder
+        const std::string placeholder = "{{input}}";
+        size_t pos = 0;
+        while ((pos = prompt.find(placeholder, pos)) != std::string::npos) {
+            prompt.replace(pos, placeholder.size(), currentInput);
+            pos += currentInput.size();
+        }
+        if (prompt == steps[i] && !currentInput.empty()) {
+            prompt += "\n\nContext from previous step:\n" + currentInput;
+        }
+        currentInput = chat(prompt);
+    }
+    return currentInput;
+}
+
+std::string AgenticEngine::executeSwarm(const std::vector<std::string>& prompts,
+                                         const std::string& mergeStrategy,
+                                         int maxParallel) {
+    // Simple sequential fallback (the real parallel version is in SubAgentManager)
+    std::vector<std::string> results;
+    for (const auto& prompt : prompts) {
+        results.push_back(chat(prompt));
+    }
+
+    if (mergeStrategy == "vote") {
+        // Pick most common
+        std::unordered_map<std::string, int> votes;
+        for (const auto& r : results) votes[r]++;
+        std::string best;
+        int bestCount = 0;
+        for (const auto& [r, c] : votes) {
+            if (c > bestCount) { bestCount = c; best = r; }
+        }
+        return best;
+    }
+    else if (mergeStrategy == "summarize") {
+        std::string all;
+        for (size_t i = 0; i < results.size(); i++) {
+            all += "=== Task " + std::to_string(i + 1) + " ===\n" + results[i] + "\n\n";
+        }
+        return chat("Merge and synthesize these sub-agent outputs:\n\n" + all);
+    }
+
+    // Default: concatenate
+    std::string merged;
+    for (size_t i = 0; i < results.size(); i++) {
+        merged += "=== Task " + std::to_string(i + 1) + " ===\n" + results[i] + "\n\n";
+    }
+    return merged;
+}

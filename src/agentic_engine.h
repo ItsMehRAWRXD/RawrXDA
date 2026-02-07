@@ -92,6 +92,15 @@ public:
     void updateConfig(const GenerationConfig& config);
     // CLI/Native compat
     std::string chat(const std::string& message);
+
+    // SubAgent / Chaining / Swarm — thin wrappers for use from the engine
+    // The full implementation lives in SubAgentManager; these are convenience
+    // entry points for code that only has an AgenticEngine*.
+    std::string runSubAgent(const std::string& description, const std::string& prompt);
+    std::string executeChain(const std::vector<std::string>& steps, const std::string& initialInput = "");
+    std::string executeSwarm(const std::vector<std::string>& prompts,
+                              const std::string& mergeStrategy = "concatenate",
+                              int maxParallel = 4);
     
 private:
     std::string m_currentModelPath;

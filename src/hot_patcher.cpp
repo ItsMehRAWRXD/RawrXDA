@@ -91,6 +91,78 @@ void HotPatcher::ListPatches() {
 
 HotPatcher g_hot_patcher;
 
+// ============================================================================
+// ScanAndPatch — Deterministic signature scan + byte replacement
+// Scans the memory of the current process for an exact byte signature
+// and applies a replacement patch. No heuristics, no fuzzy matching.
+// ============================================================================
+bool HotPatcher::ScanAndPatch(const std::string& patch_name, 
+                               const std::vector<unsigned char>& signature, 
+                               const std::vector<unsigned char>& replacement) {
+    if (signature.empty()) {
+        std::cerr << "[PATCH] ScanAndPatch: empty signature for '" << patch_name << "'\n";
+        return false;
+    }
+    if (signature.size() != replacement.size()) {
+        std::cerr << "[PATCH] ScanAndPatch: signature and replacement size mismatch ("
+                  << signature.size() << " vs " << replacement.size() << ") for '" << patch_name << "'\n";
+        return false;
+    }
+    if (patches_.find(patch_name) != patches_.end()) {
+        std::cerr << "[PATCH] ScanAndPatch: patch '" << patch_name << "' already exists\n";
+        return false;
+    }
+
+    // Enumerate all memory regions in the current process
+    HANDLE hProcess = GetCurrentProcess();
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+
+    unsigned char* addr = static_cast<unsigned char*>(sysInfo.lpMinimumApplicationAddress);
+    unsigned char* maxAddr = static_cast<unsigned char*>(sysInfo.lpMaximumApplicationAddress);
+    
+    MEMORY_BASIC_INFORMATION mbi;
+    size_t scanCount = 0;
+
+    while (addr < maxAddr) {
+        if (VirtualQuery(addr, &mbi, sizeof(mbi)) == 0) {
+            break;
+        }
+
+        // Only scan committed, executable/readable regions
+        if (mbi.State == MEM_COMMIT &&
+            (mbi.Protect == PAGE_EXECUTE_READ || 
+             mbi.Protect == PAGE_EXECUTE_READWRITE ||
+             mbi.Protect == PAGE_EXECUTE_WRITECOPY ||
+             mbi.Protect == PAGE_READONLY ||
+             mbi.Protect == PAGE_READWRITE)) {
+
+            unsigned char* regionBase = static_cast<unsigned char*>(mbi.BaseAddress);
+            size_t regionSize = mbi.RegionSize;
+            scanCount += regionSize;
+
+            // Linear scan for exact signature match
+            if (regionSize >= signature.size()) {
+                for (size_t i = 0; i <= regionSize - signature.size(); ++i) {
+                    if (memcmp(regionBase + i, signature.data(), signature.size()) == 0) {
+                        // Found exact match — apply patch via ApplyPatch
+                        void* target = regionBase + i;
+                        std::cout << "[PATCH] ScanAndPatch: found signature for '" << patch_name 
+                                  << "' at " << target << " (scanned " << scanCount << " bytes)\n";
+                        return ApplyPatch(patch_name, target, replacement);
+                    }
+                }
+            }
+        }
+
+        addr = static_cast<unsigned char*>(mbi.BaseAddress) + mbi.RegionSize;
+    }
+
+    std::cerr << "[PATCH] ScanAndPatch: signature not found for '" << patch_name 
+              << "' after scanning " << scanCount << " bytes\n";
+    return false;
+}
+
 // Helper to parse hex address string to void*
 void* ParseHexAddress(const std::string& addrStr) {
     if (addrStr.empty()) return nullptr;

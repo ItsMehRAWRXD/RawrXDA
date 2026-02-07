@@ -411,6 +411,44 @@ void Win32IDE::addBreakpoint(const std::string& file, int line)
     appendToOutput(msg, "Output", OutputSeverity::Debug);
 }
 
+void Win32IDE::setBreakpoint(const std::string& file, int line)
+{
+    METRICS.increment("debugger.breakpoint_sets");
+
+    // Check if breakpoint already exists at this location
+    for (auto& bp : m_breakpoints) {
+        if (bp.file == file && bp.line == line) {
+            // Re-enable if it was disabled
+            if (!bp.enabled) {
+                bp.enabled = true;
+                updateBreakpointList();
+                std::string msg = "🔴 Breakpoint re-enabled at " + file + ":" + std::to_string(line);
+                appendToOutput(msg, "Output", OutputSeverity::Debug);
+            }
+            return;
+        }
+    }
+
+    // Create and add new breakpoint
+    Breakpoint bp;
+    bp.file = file;
+    bp.line = line;
+    bp.enabled = true;
+    bp.condition = "";
+    bp.hitCount = 0;
+
+    m_breakpoints.push_back(bp);
+    updateBreakpointList();
+
+    // Highlight the breakpoint line in the editor if it's the current file
+    if (file == m_currentFile || file == m_debuggerCurrentFile) {
+        highlightDebuggerLine(file, line);
+    }
+
+    std::string msg = "🔴 Breakpoint set at " + file + ":" + std::to_string(line);
+    appendToOutput(msg, "Output", OutputSeverity::Info);
+}
+
 void Win32IDE::removeBreakpoint(const std::string& file, int line)
 {
     auto it = std::find_if(m_breakpoints.begin(), m_breakpoints.end(),

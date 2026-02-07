@@ -166,6 +166,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                     if (pNMHDR->code == EN_CHANGE && m_syntaxColoringEnabled) {
                         onEditorContentChanged();
                     }
+                    // Dismiss ghost text when caret moves (anchor becomes stale)
+                    if (pNMHDR->code == EN_SELCHANGE && m_ghostTextVisible) {
+                        dismissGhostText();
+                    }
                     // Update status bar cursor position
                     CHARRANGE sel;
                     SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
@@ -205,6 +209,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             }
             return 0;
         }
+        if (wParam == 8888) { // GHOST_TEXT_TIMER_ID
+            onGhostTextTimer();
+            return 0;
+        }
         if (wParam == MODEL_PROGRESS_TIMER_ID) {
             // Poll model progress and update the progress bar UI
             if (m_modelOperationActive.load()) {
@@ -223,6 +231,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             } else {
                 hideModelProgressBar();
             }
+            return 0;
+        }
+        if (wParam == 8888) { // GHOST_TEXT_TIMER_ID
+            onGhostTextTimer();
             return 0;
         }
         if (wParam == 42) { // IDT_STATUS_FLASH
@@ -251,6 +263,15 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     }
     case WM_APP + 301: { // WM_MODEL_PROGRESS_DONE
         hideModelProgressBar();
+        return 0;
+    }
+
+    // Ghost Text delivery from background completion thread
+    case WM_GHOST_TEXT_READY: {
+        int cursorPos = (int)wParam;
+        const char* text = reinterpret_cast<const char*>(lParam);
+        onGhostTextReady(cursorPos, text);
+        if (text) free(const_cast<char*>(text));  // Allocated with _strdup
         return 0;
     }
 
@@ -307,6 +328,36 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 onAgentOutput(text);
                 free(const_cast<char*>(text));
             }
+            return 0;
+        }
+        // Handle Ghost Text completion delivery from background thread
+        if (uMsg == WM_GHOST_TEXT_READY) {
+            const char* completionText = reinterpret_cast<const char*>(lParam);
+            onGhostTextReady((int)wParam, completionText);
+            if (completionText) free(const_cast<char*>(completionText));
+            return 0;
+        }
+        // Handle Plan Executor messages
+        if (uMsg == WM_PLAN_READY) {
+            onPlanReady((int)wParam, reinterpret_cast<PlanStep*>(lParam));
+            return 0;
+        }
+        if (uMsg == WM_PLAN_STEP_DONE) {
+            onPlanStepDone((int)wParam, (int)lParam);
+            return 0;
+        }
+        if (uMsg == WM_PLAN_COMPLETE) {
+            onPlanComplete(wParam != 0);
+            return 0;
+        }
+        // Plan step status update from background thread (live dialog update)
+        if (uMsg == WM_APP + 503) {
+            updatePlanStepInDialog((int)wParam, static_cast<PlanStepStatus>((int)lParam));
+            return 0;
+        }
+        // Agent History replay step completion
+        if (uMsg == WM_AGENT_HISTORY_REPLAY_DONE) {
+            onReplayStepDone((int)wParam, (int)lParam);
             return 0;
         }
         break;
@@ -443,6 +494,8 @@ int Win32IDE::runMessageLoop() {
             if (ctrl && msg.wParam == 'F') { routeCommand(IDM_EDIT_FIND); continue; }
             if (ctrl && msg.wParam == 'H') { routeCommand(IDM_EDIT_REPLACE); continue; }
             if (ctrl && msg.wParam == 'B') { toggleSidebar(); continue; }
+            // Ctrl+, → Settings dialog
+            if (ctrl && msg.wParam == VK_OEM_COMMA) { showSettingsDialog(); continue; }
         }
 
         TranslateMessage(&msg);
@@ -756,6 +809,9 @@ void Win32IDE::onCreate(HWND hwnd) {
     // Initialize syntax coloring engine
     initSyntaxColorizer();
 
+    // Initialize ghost text / inline completions engine
+    initGhostText();
+
     // Restore previous session (tabs, cursor, panel state)
     restoreSession();
 
@@ -869,6 +925,35 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: initializeAgenticBridge failed\n");
         }
 
+        // Initialize Ghost Text renderer (Copilot-style inline completions)
+        try {
+            initGhostText();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initGhostText failed\n");
+        }
+
+        // Initialize Failure Detector (agent self-correction)
+        try {
+            initFailureDetector();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initFailureDetector failed\n");
+        }
+
+        // Load persistent settings from %APPDATA%\RawrXD\settings.json
+        try {
+            loadSettings();
+            applySettings();
+        } catch (...) {
+            OutputDebugStringA("ERROR: loadSettings/applySettings failed\n");
+        }
+
+        // Initialize Agent History (append-only JSONL event log)
+        try {
+            initAgentHistory();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initAgentHistory failed\n");
+        }
+
         // Initialize Unified Model Source Resolver (HuggingFace, Ollama blobs, HTTP, local)
         try {
             m_modelResolver = std::make_unique<RawrXD::ModelSourceResolver>();
@@ -900,6 +985,18 @@ void Win32IDE::deferredHeavyInit() {
 // ============================================================================
 void Win32IDE::onDestroy() {
     LOG_INFO("Win32IDE::onDestroy - shutting down");
+
+    // Shutdown ghost text renderer (kill timers, free font)
+    shutdownGhostText();
+
+    // Stop local GGUF HTTP server
+    stopLocalServer();
+
+    // Shutdown agent history (flush event buffer to disk)
+    shutdownAgentHistory();
+
+    // Save settings to disk
+    try { saveSettings(); } catch (...) {}
 
     // Save full session state for next launch
     saveSession();

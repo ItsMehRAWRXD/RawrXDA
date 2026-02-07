@@ -11,6 +11,8 @@
 #include <filesystem>
 #include "runtime_core.h"
 #include "modules/react_generator.h"
+#include "agentic_engine.h"
+#include "subagent_core.h"
 
 namespace fs = std::filesystem;
 
@@ -40,6 +42,10 @@ struct CLIState {
     
     // Terminal state
     std::vector<std::string> terminalPanes;
+    
+    // Agentic engine + SubAgent manager (set from main or externally)
+    AgenticEngine* agenticEngine = nullptr;
+    SubAgentManager* subAgentMgr = nullptr;
 };
 
 CLIState g_state;
@@ -223,8 +229,24 @@ void cmd_agent_execute(const std::string& args) {
         std::cout << "Usage: !agent_execute <prompt>\n";
         return;
     }
-    std::cout << "🤖 Agent executing: " << args << "\n";
-    std::cout << "📊 Response: [Agentic execution in background]\n";
+    
+    if (g_state.agenticEngine && g_state.agenticEngine->isModelLoaded()) {
+        std::cout << "🤖 Agent executing: " << args << "\n";
+        std::string response = g_state.agenticEngine->chat(args);
+        std::cout << response << "\n";
+        
+        // Auto-dispatch tool calls in response
+        if (g_state.subAgentMgr) {
+            std::string toolResult;
+            if (g_state.subAgentMgr->dispatchToolCall("cli-agent", response, toolResult)) {
+                std::cout << "\n[Tool Result]\n" << toolResult << "\n";
+            }
+        }
+    } else {
+        std::cout << "🤖 Agent executing: " << args << "\n";
+        std::string out = process_prompt(args);
+        std::cout << out << "\n";
+    }
 }
 
 void cmd_agent_loop(const std::string& args) {
@@ -248,13 +270,32 @@ void cmd_agent_loop(const std::string& args) {
     g_state.agentLoopRunning = true;
     std::cout << "🚀 Starting agent loop: " << prompt << " (max " << iterations << " iterations)\n";
     
-    std::thread([prompt, iterations]() {
+    // Capture pointers locally before launching thread
+    AgenticEngine* eng = g_state.agenticEngine;
+    SubAgentManager* mgr = g_state.subAgentMgr;
+    
+    std::thread([prompt, iterations, eng, mgr]() {
         for (int i = 0; i < iterations; i++) {
             std::cout << "[Agent Iter " << (i+1) << "/" << iterations << "] Processing...\n";
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            
+            if (eng && eng->isModelLoaded()) {
+                std::string response = eng->chat(
+                    "Iteration " + std::to_string(i + 1) + "/" + std::to_string(iterations) +
+                    ". Goal: " + prompt + "\nPrevious context available. Continue working toward the goal.");
+                std::cout << response << "\n";
+                
+                // Dispatch tool calls
+                if (mgr) {
+                    std::string toolResult;
+                    if (mgr->dispatchToolCall("cli-loop", response, toolResult)) {
+                        std::cout << "[Tool Result] " << toolResult << "\n";
+                    }
+                }
+            } else {
+                std::string out = process_prompt(prompt);
+                std::cout << out << "\n";
+            }
         }
-        std::lock_guard<std::mutex> lock(g_stateMutex);
-        g_state.agentLoopRunning = false;
         std::cout << "✅ Agent loop completed\n";
     }).detach();
 }
@@ -478,6 +519,165 @@ void cmd_profile(const std::string& args) {
 }
 
 // ============================================================================
+// SUBAGENT OPERATIONS (Feature Parity with Win32IDE_SubAgent)
+// ============================================================================
+
+void cmd_subagent(const std::string& args) {
+    if (args.empty()) {
+        std::cout << "Usage: !subagent <prompt>\n";
+        return;
+    }
+    if (!g_state.subAgentMgr) {
+        std::cout << "❌ SubAgentManager not initialized (no model loaded)\n";
+        return;
+    }
+    std::cout << "🤖 Spawning sub-agent...\n";
+    std::string id = g_state.subAgentMgr->spawnSubAgent("cli", "CLI subagent", args);
+    bool ok = g_state.subAgentMgr->waitForSubAgent(id, 120000);
+    std::string result = g_state.subAgentMgr->getSubAgentResult(id);
+    std::cout << (ok ? "✅" : "❌") << " SubAgent result:\n" << result << "\n";
+}
+
+void cmd_chain(const std::string& args) {
+    if (args.empty()) {
+        std::cout << "Usage: !chain <step1> | <step2> | <step3> ...\n";
+        std::cout << "  Steps are separated by ' | '\n";
+        std::cout << "  Each step can use {{input}} for the previous step's output\n";
+        return;
+    }
+    if (!g_state.subAgentMgr) {
+        std::cout << "❌ SubAgentManager not initialized\n";
+        return;
+    }
+
+    std::vector<std::string> steps;
+    size_t pos = 0;
+    while (true) {
+        size_t delim = args.find(" | ", pos);
+        if (delim == std::string::npos) {
+            steps.push_back(args.substr(pos));
+            break;
+        }
+        steps.push_back(args.substr(pos, delim - pos));
+        pos = delim + 3;
+    }
+
+    std::cout << "🔗 Running chain with " << steps.size() << " steps...\n";
+    for (size_t i = 0; i < steps.size(); i++) {
+        std::cout << "  Step " << (i + 1) << ": " << steps[i].substr(0, 60)
+                  << (steps[i].size() > 60 ? "..." : "") << "\n";
+    }
+
+    std::string result = g_state.subAgentMgr->executeChain("cli", steps);
+    std::cout << "✅ Chain result:\n" << result << "\n";
+}
+
+void cmd_swarm(const std::string& args) {
+    if (args.empty()) {
+        std::cout << "Usage: !swarm <prompt1> | <prompt2> | <prompt3> ...\n";
+        std::cout << "  Options (append after last prompt):\n";
+        std::cout << "    --strategy <concatenate|vote|summarize>  Merge strategy\n";
+        std::cout << "    --parallel <n>                           Max parallel agents\n";
+        return;
+    }
+    if (!g_state.subAgentMgr) {
+        std::cout << "❌ SubAgentManager not initialized\n";
+        return;
+    }
+
+    // Parse strategy and parallel options from the end
+    SwarmConfig config;
+    std::string remaining = args;
+
+    auto extractOpt = [&](const std::string& opt) -> std::string {
+        size_t pos = remaining.find(opt);
+        if (pos == std::string::npos) return "";
+        size_t valStart = pos + opt.size();
+        while (valStart < remaining.size() && remaining[valStart] == ' ') valStart++;
+        size_t valEnd = remaining.find(' ', valStart);
+        if (valEnd == std::string::npos) valEnd = remaining.size();
+        std::string val = remaining.substr(valStart, valEnd - valStart);
+        remaining = remaining.substr(0, pos) + remaining.substr(std::min(valEnd + 1, remaining.size()));
+        return val;
+    };
+
+    std::string strategy = extractOpt("--strategy ");
+    if (!strategy.empty()) config.mergeStrategy = strategy;
+    std::string parallel = extractOpt("--parallel ");
+    if (!parallel.empty()) config.maxParallel = std::stoi(parallel);
+
+    // Split prompts on " | "
+    std::vector<std::string> prompts;
+    size_t pos = 0;
+    while (true) {
+        size_t delim = remaining.find(" | ", pos);
+        if (delim == std::string::npos) {
+            std::string p = remaining.substr(pos);
+            if (!p.empty()) prompts.push_back(p);
+            break;
+        }
+        prompts.push_back(remaining.substr(pos, delim - pos));
+        pos = delim + 3;
+    }
+
+    if (prompts.empty()) {
+        std::cout << "❌ No prompts provided\n";
+        return;
+    }
+
+    std::cout << "🐝 Launching HexMag swarm with " << prompts.size()
+              << " tasks (strategy=" << config.mergeStrategy
+              << ", parallel=" << config.maxParallel << ")\n";
+
+    std::string result = g_state.subAgentMgr->executeSwarm("cli", prompts, config);
+    std::cout << "✅ Swarm result:\n" << result << "\n";
+}
+
+void cmd_agents_list(const std::string& args) {
+    if (!g_state.subAgentMgr) {
+        std::cout << "❌ SubAgentManager not initialized\n";
+        return;
+    }
+    auto agents = g_state.subAgentMgr->getAllSubAgents();
+    if (agents.empty()) {
+        std::cout << "No sub-agents.\n";
+        return;
+    }
+    std::cout << "📋 Sub-agents (" << agents.size() << "):\n";
+    for (const auto& a : agents) {
+        std::string icon = "⬜";
+        if (a.state == SubAgent::State::Running) icon = "🔄";
+        else if (a.state == SubAgent::State::Completed) icon = "✅";
+        else if (a.state == SubAgent::State::Failed) icon = "❌";
+        else if (a.state == SubAgent::State::Cancelled) icon = "🚫";
+        std::cout << "  " << icon << " " << a.id << " [" << a.stateString() << "] "
+                  << a.description << " (" << a.elapsedMs() << "ms)\n";
+    }
+}
+
+void cmd_todo_list(const std::string& args) {
+    if (!g_state.subAgentMgr) {
+        std::cout << "❌ SubAgentManager not initialized\n";
+        return;
+    }
+    auto todos = g_state.subAgentMgr->getTodoList();
+    if (todos.empty()) {
+        std::cout << "Todo list empty.\n";
+        return;
+    }
+    std::cout << "📝 Todo List:\n";
+    for (const auto& t : todos) {
+        std::string icon = "⬜";
+        if (t.status == TodoItem::Status::InProgress) icon = "🔄";
+        else if (t.status == TodoItem::Status::Completed) icon = "✅";
+        else if (t.status == TodoItem::Status::Failed) icon = "❌";
+        std::cout << "  " << icon << " [" << t.id << "] " << t.title;
+        if (!t.description.empty()) std::cout << " — " << t.description;
+        std::cout << "\n";
+    }
+}
+
+// ============================================================================
 // STATUS & INFO
 // ============================================================================
 
@@ -491,7 +691,11 @@ void cmd_status(const std::string& args) {
     std::cout << "  Autonomy: " << (g_state.autonomyEnabled ? "enabled" : "disabled") << "\n";
     std::cout << "  Debugger: " << (g_state.debuggingActive ? "active" : "stopped") << "\n";
     std::cout << "  Terminals: " << g_state.terminalPanes.size() << "\n";
-    std::cout << "  Breakpoints: " << g_state.breakpoints.size() << "\n\n";
+    std::cout << "  Breakpoints: " << g_state.breakpoints.size() << "\n";
+    if (g_state.subAgentMgr) {
+        std::cout << "  " << g_state.subAgentMgr->getStatusSummary() << "\n";
+    }
+    std::cout << "\n";
 }
 
 // ============================================================================
@@ -547,6 +751,14 @@ void print_help() {
     std::cout << "  !search <pattern> [path]      Search files\n";
     std::cout << "  !analyze                      Analyze current file\n";
     std::cout << "  !profile                      Profile code\n";
+    std::cout << "\n🤖 SUBAGENT OPERATIONS:\n";
+    std::cout << "  !subagent <prompt>            Spawn a sub-agent\n";
+    std::cout << "  !chain <s1> | <s2> | ...      Sequential prompt chain\n";
+    std::cout << "  !swarm <p1> | <p2> | ...      Parallel HexMag swarm\n";
+    std::cout << "    --strategy <merge>           concatenate|vote|summarize\n";
+    std::cout << "    --parallel <n>               Max concurrent agents\n";
+    std::cout << "  !agents                       List all sub-agents\n";
+    std::cout << "  !todo                         Show todo list\n";
     std::cout << "\n⚙️  CONFIGURATION:\n";
     std::cout << "  !mode <mode>                  Set AI mode (ask|plan|edit|...)\n";
     std::cout << "  !engine <name>                Switch model\n";
@@ -626,6 +838,13 @@ void route_command(const std::string& line) {
     else if (cmd == "!analyze") cmd_analyze(args);
     else if (cmd == "!profile") cmd_profile(args);
     
+    // SubAgent operations
+    else if (cmd == "!subagent") cmd_subagent(args);
+    else if (cmd == "!chain") cmd_chain(args);
+    else if (cmd == "!swarm") cmd_swarm(args);
+    else if (cmd == "!agents") cmd_agents_list(args);
+    else if (cmd == "!todo") cmd_todo_list(args);
+    
     // Status & info
     else if (cmd == "!status") cmd_status(args);
     else if (cmd == "!help") print_help();
@@ -682,8 +901,21 @@ void route_command(const std::string& line) {
     }
     else {
         // Fall through to AI prompt processing
-        std::string out = process_prompt(line);
+        std::string out;
+        if (g_state.agenticEngine && g_state.agenticEngine->isModelLoaded()) {
+            out = g_state.agenticEngine->chat(line);
+        } else {
+            out = process_prompt(line);
+        }
         std::cout << out << "\n";
+        
+        // Auto-dispatch tool calls in AI response
+        if (g_state.subAgentMgr) {
+            std::string toolResult;
+            if (g_state.subAgentMgr->dispatchToolCall("cli", out, toolResult)) {
+                std::cout << "\n[Tool Result]\n" << toolResult << "\n";
+            }
+        }
     }
 }
 

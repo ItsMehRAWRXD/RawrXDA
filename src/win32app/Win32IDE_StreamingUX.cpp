@@ -14,6 +14,7 @@
 
 #include "Win32IDE.h"
 #include "IDELogger.h"
+#include "Win32IDE_SubAgent.h"
 #include <richedit.h>
 
 // ============================================================================
@@ -266,4 +267,186 @@ LRESULT CALLBACK Win32IDE::ModelProgressProc(HWND hwnd, UINT uMsg, WPARAM wParam
     }
     
     return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// SUBAGENT / SWARM STATUS DISPLAY
+// ============================================================================
+
+void Win32IDE::showSubAgentProgress(const std::string& operation, int totalTasks) {
+    if (!m_agenticBridge) return;
+
+    showModelProgressBar("🔀 " + operation + " [0/" + std::to_string(totalTasks) + "]");
+    LOG_INFO("SubAgent progress started: " + operation + " (" + std::to_string(totalTasks) + " tasks)");
+}
+
+void Win32IDE::updateSubAgentProgress(int completedTasks, int totalTasks, const std::string& currentTask) {
+    if (totalTasks <= 0) return;
+    float pct = (float)completedTasks / (float)totalTasks * 100.0f;
+    std::string status = "🔀 " + currentTask + " [" +
+                          std::to_string(completedTasks) + "/" +
+                          std::to_string(totalTasks) + "]";
+    updateModelProgress(pct, status);
+}
+
+void Win32IDE::hideSubAgentProgress() {
+    hideModelProgressBar();
+}
+
+void Win32IDE::showSwarmStatus() {
+    if (!m_agenticBridge) {
+        appendToOutput("SubAgent system not initialized.\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    auto* mgr = m_agenticBridge->GetSubAgentManager();
+    if (!mgr) {
+        appendToOutput("SubAgentManager not initialized.\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    std::string summary = mgr->getStatusSummary();
+
+    // Build detailed view
+    std::ostringstream out;
+    out << "=== SubAgent / Swarm Status ===\n" << summary << "\n\n";
+
+    // Show todo list if any
+    auto todos = mgr->getTodoList();
+    if (!todos.empty()) {
+        out << "--- Todo List ---\n";
+        for (const auto& item : todos) {
+            std::string icon;
+            switch (item.status) {
+                case TodoItem::Status::NotStarted: icon = "⬜"; break;
+                case TodoItem::Status::InProgress: icon = "🔄"; break;
+                case TodoItem::Status::Completed:  icon = "✅"; break;
+                case TodoItem::Status::Failed:     icon = "❌"; break;
+            }
+            out << icon << " [" << item.id << "] " << item.title
+                << " — " << item.statusString() << "\n";
+            if (!item.description.empty()) {
+                out << "    " << item.description << "\n";
+            }
+        }
+        out << "\n";
+    }
+
+    // Show active sub-agents
+    auto agents = mgr->getAllSubAgents();
+    if (!agents.empty()) {
+        out << "--- Sub-Agents ---\n";
+        for (const auto& agent : agents) {
+            std::string icon;
+            switch (agent.state) {
+                case SubAgent::State::Pending:   icon = "⏳"; break;
+                case SubAgent::State::Running:   icon = "🔄"; break;
+                case SubAgent::State::Completed: icon = "✅"; break;
+                case SubAgent::State::Failed:    icon = "❌"; break;
+                case SubAgent::State::Cancelled: icon = "🚫"; break;
+            }
+            out << icon << " " << agent.id << " [" << agent.stateString() << "] "
+                << agent.description << " (" << agent.elapsedMs() << "ms)\n";
+        }
+        out << "\n";
+    }
+
+    // Show chain progress
+    auto chainSteps = mgr->getChainSteps();
+    if (!chainSteps.empty()) {
+        out << "--- Chain Progress ---\n";
+        for (const auto& step : chainSteps) {
+            std::string icon;
+            switch (step.state) {
+                case SubAgent::State::Pending:   icon = "⏳"; break;
+                case SubAgent::State::Running:   icon = "🔄"; break;
+                case SubAgent::State::Completed: icon = "✅"; break;
+                case SubAgent::State::Failed:    icon = "❌"; break;
+                default:                         icon = "⬜"; break;
+            }
+            out << icon << " Step " << (step.index + 1)
+                << ": " << step.promptTemplate.substr(0, 80)
+                << (step.promptTemplate.size() > 80 ? "..." : "") << "\n";
+        }
+        out << "\n";
+    }
+
+    appendToOutput(out.str(), "Output", OutputSeverity::Info);
+    showModelStatus("SubAgent status displayed", 3000);
+}
+
+// ============================================================================
+// CONTEXT SLIDER LABEL UPDATE
+// Synchronizes the context slider UI label with the current context size.
+// ============================================================================
+void Win32IDE::updateContextSliderLabel() {
+    if (!m_hwndContextLabel) return;
+
+    static const struct { size_t tokens; const char* label; } contextLabels[] = {
+        { 4096,    "4K"   },
+        { 32768,   "32K"  },
+        { 65536,   "64K"  },
+        { 131072,  "128K" },
+        { 262144,  "256K" },
+        { 524288,  "512K" },
+        { 1048576, "1M"   },
+    };
+
+    std::string label = std::to_string(m_currentContextSize);
+    for (const auto& entry : contextLabels) {
+        if (entry.tokens == m_currentContextSize) {
+            label = entry.label;
+            break;
+        }
+    }
+
+    SetWindowTextA(m_hwndContextLabel, label.c_str());
+
+    // Sync the slider position (0=4K, 1=32K, 2=64K, ...)
+    if (m_hwndContextSlider) {
+        int pos = 0;
+        for (int i = 0; i < 7; ++i) {
+            if (contextLabels[i].tokens == m_currentContextSize) {
+                pos = i;
+                break;
+            }
+        }
+        SendMessage(m_hwndContextSlider, TBM_SETPOS, TRUE, pos);
+    }
+}
+
+// ============================================================================
+// onContextSizeChanged — Handler for context slider value changes
+// Maps slider position (0-6) to token count and propagates to engine.
+// ============================================================================
+void Win32IDE::onContextSizeChanged(int newValue) {
+    static const size_t contextSizes[] = { 4096, 32768, 65536, 131072, 262144, 524288, 1048576 };
+    
+    if (newValue < 0 || newValue > 6) {
+        newValue = 0;
+    }
+    
+    m_currentContextSize = contextSizes[newValue];
+    m_inferenceConfig.contextWindow = static_cast<int>(m_currentContextSize);
+
+    if (m_nativeEngine) {
+        m_nativeEngine->SetContextSize(m_currentContextSize);
+    }
+    if (m_agenticBridge) {
+        std::string label;
+        switch (newValue) {
+            case 0: label = "4k"; break;
+            case 1: label = "32k"; break;
+            case 2: label = "64k"; break;
+            case 3: label = "128k"; break;
+            case 4: label = "256k"; break;
+            case 5: label = "512k"; break;
+            case 6: label = "1m"; break;
+            default: label = "4k"; break;
+        }
+        m_agenticBridge->SetContextSize(label);
+    }
+
+    updateContextSliderLabel();
+    appendToOutput("Context size changed to " + std::to_string(m_currentContextSize) + " tokens\n", "Output", OutputSeverity::Info);
 }

@@ -1177,4 +1177,59 @@ void CPUInferenceEngine::DequantizeTensor(const std::vector<uint8_t>& src, float
     DequantizeTensorPtr(src.data(), src.size(), dst, size, type);
 }
 
+// ============================================================================
+// CPUInferenceEngine member methods — forward to CPUOps:: free functions
+// These class members are declared in the header and forward to the
+// AVX2-vectorized CPUOps implementations above.
+// ============================================================================
+
+void CPUInferenceEngine::SetContextSize(size_t size) {
+    std::cout << "[CPUInferenceEngine] SetContextSize: " << m_contextLimit << " -> " << size << std::endl;
+    SetContextLimit(size);  // Delegate to the primary context management method
+}
+
+void CPUInferenceEngine::MatMul(const float* A, const float* B, float* C, int m, int n, int k) {
+    CPUOps::MatMul(A, B, C, m, n, k);
+}
+
+void CPUInferenceEngine::Softmax(float* data, int size) {
+    CPUOps::Softmax(data, size);
+}
+
+void CPUInferenceEngine::LayerNorm(float* data, int size, float epsilon) {
+    CPUOps::LayerNorm(data, size, epsilon);
+}
+
+void CPUInferenceEngine::GELU(float* data, int size) {
+    CPUOps::GELU(data, size);
+}
+
+void CPUInferenceEngine::RMSNorm(float* data, int size, float epsilon) {
+    CPUOps::RMSNorm(data, size, epsilon);
+}
+
+void CPUInferenceEngine::RoPE(float* data, int dim, int pos, int rotary_dim) {
+    CPUOps::RoPE(data, dim, pos, rotary_dim);
+}
+
+float* CPUInferenceEngine::AllocateTensor(size_t size) {
+    auto ptr = std::make_unique<float[]>(size);
+    float* raw = ptr.get();
+    m_totalMemoryAllocated += size * sizeof(float);
+    m_memoryPool.push_back(std::move(ptr));
+    return raw;
+}
+
+void CPUInferenceEngine::DeallocateTensor(float* ptr) {
+    if (!ptr) return;
+    for (auto it = m_memoryPool.begin(); it != m_memoryPool.end(); ++it) {
+        if (it->get() == ptr) {
+            m_totalMemoryAllocated -= 0; // Size unknown at dealloc; tracked via pool lifetime
+            m_memoryPool.erase(it);
+            return;
+        }
+    }
+    std::cerr << "[CPUInferenceEngine] DeallocateTensor: pointer not found in memory pool" << std::endl;
+}
+
 } // namespace RawrXD
