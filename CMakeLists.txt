@@ -112,6 +112,7 @@ if(WIN32)
         src/win32app/Win32IDE_AsmSemantic.cpp
         src/win32app/Win32IDE_LSP_AI_Bridge.cpp
         src/win32app/Win32IDE_MultiResponse.cpp
+        src/win32app/Win32IDE_ExecutionGovernor.cpp
         src/win32app/Win32IDE_SubAgent.h
         src/win32app/Win32IDE_SubAgent.cpp
         src/win32app/Win32IDE_AgentHistory.cpp
@@ -160,6 +161,10 @@ if(WIN32)
         src/core/multi_response_engine.cpp
         src/core/flash_attention.cpp
         src/core/execution_scheduler.cpp
+        src/core/execution_governor.cpp
+        src/core/agent_safety_contract.cpp
+        src/core/deterministic_replay.cpp
+        src/core/confidence_gate.cpp
         
         # Module implementations
         src/modules/vsix_loader_win32.cpp

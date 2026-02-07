@@ -559,6 +559,86 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== Phase 10: Governor Endpoints ==========
+    else if (method == "GET" && path == "/api/governor/status") {
+        handleGovernorStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/governor/submit") {
+        handleGovernorSubmitEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/governor/kill") {
+        handleGovernorKillEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/governor/result") {
+        handleGovernorResultEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 10: Safety Endpoints ==========
+    else if (method == "GET" && path == "/api/safety/status") {
+        handleSafetyStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/safety/check") {
+        handleSafetyCheckEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/safety/violations") {
+        handleSafetyViolationsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/safety/rollback") {
+        handleSafetyRollbackEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 10: Replay Endpoints ==========
+    else if (method == "GET" && path == "/api/replay/status") {
+        handleReplayStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/replay/records") {
+        handleReplayRecordsEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/replay/sessions") {
+        handleReplaySessionsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 10: Confidence Endpoints ==========
+    else if (method == "GET" && path == "/api/confidence/status") {
+        handleConfidenceStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/confidence/evaluate") {
+        handleConfidenceEvaluateEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/confidence/history") {
+        handleConfidenceHistoryEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 10: Unified Status ==========
+    else if (method == "GET" && path == "/api/phase10/status") {
+        handlePhase10StatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,

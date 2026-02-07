@@ -1217,6 +1217,64 @@ void Win32IDE::handleToolsCommand(int commandId) {
             cmdMultiResponseApplyPreferred();
             break;
 
+        // ════════════════════════════════════════════
+        // Phase 10: Governor (5118-5121)
+        // ════════════════════════════════════════════
+        case IDM_GOV_STATUS:                  // 5118
+            cmdGovernorStatus();
+            break;
+        case IDM_GOV_SUBMIT_COMMAND:          // 5119
+            cmdGovernorSubmitCommand();
+            break;
+        case IDM_GOV_KILL_ALL:                // 5120
+            cmdGovernorKillAll();
+            break;
+        case IDM_GOV_TASK_LIST:               // 5121
+            cmdGovernorTaskList();
+            break;
+
+        // ════════════════════════════════════════════
+        // Phase 10: Safety Contracts (5122-5125)
+        // ════════════════════════════════════════════
+        case IDM_SAFETY_STATUS:               // 5122
+            cmdSafetyStatus();
+            break;
+        case IDM_SAFETY_RESET_BUDGET:         // 5123
+            cmdSafetyResetBudget();
+            break;
+        case IDM_SAFETY_ROLLBACK_LAST:        // 5124
+            cmdSafetyRollbackLast();
+            break;
+        case IDM_SAFETY_SHOW_VIOLATIONS:      // 5125
+            cmdSafetyShowViolations();
+            break;
+
+        // ════════════════════════════════════════════
+        // Phase 10: Replay Journal (5126-5129)
+        // ════════════════════════════════════════════
+        case IDM_REPLAY_STATUS:               // 5126
+            cmdReplayStatus();
+            break;
+        case IDM_REPLAY_SHOW_LAST:            // 5127
+            cmdReplayShowLast();
+            break;
+        case IDM_REPLAY_EXPORT_SESSION:       // 5128
+            cmdReplayExportSession();
+            break;
+        case IDM_REPLAY_CHECKPOINT:           // 5129
+            cmdReplayCheckpoint();
+            break;
+
+        // ════════════════════════════════════════════
+        // Phase 10: Confidence Gate (5130-5131)
+        // ════════════════════════════════════════════
+        case IDM_CONFIDENCE_STATUS:           // 5130
+            cmdConfidenceStatus();
+            break;
+        case IDM_CONFIDENCE_SET_POLICY:       // 5131
+            cmdConfidenceSetPolicy();
+            break;
+
         default:
             break;
     }

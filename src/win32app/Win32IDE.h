@@ -3412,4 +3412,78 @@ private:
     // Multi-Response state
     bool m_multiResponseInitialized = false;
     std::unique_ptr<MultiResponseEngine> m_multiResponseEngine;
+
+    // ════════════════════════════════════════════════════════════════════
+    // Phase 10: Autonomous Execution & Trust Hardening
+    // ════════════════════════════════════════════════════════════════════
+
+    // ---- IDM defines for Phase 10 commands (5118–5131) ----
+#define IDM_GOV_STATUS              5118
+#define IDM_GOV_SUBMIT_COMMAND      5119
+#define IDM_GOV_KILL_ALL            5120
+#define IDM_GOV_TASK_LIST           5121
+#define IDM_SAFETY_STATUS           5122
+#define IDM_SAFETY_RESET_BUDGET     5123
+#define IDM_SAFETY_ROLLBACK_LAST    5124
+#define IDM_SAFETY_SHOW_VIOLATIONS  5125
+#define IDM_REPLAY_STATUS           5126
+#define IDM_REPLAY_SHOW_LAST        5127
+#define IDM_REPLAY_EXPORT_SESSION   5128
+#define IDM_REPLAY_CHECKPOINT       5129
+#define IDM_CONFIDENCE_STATUS       5130
+#define IDM_CONFIDENCE_SET_POLICY   5131
+
+    // Phase 10 lifecycle
+    void initPhase10();
+    void shutdownPhase10();
+
+    // Governor command handlers (10A)
+    void cmdGovernorStatus();
+    void cmdGovernorSubmitCommand();
+    void cmdGovernorKillAll();
+    void cmdGovernorTaskList();
+
+    // Safety command handlers (10B)
+    void cmdSafetyStatus();
+    void cmdSafetyResetBudget();
+    void cmdSafetyRollbackLast();
+    void cmdSafetyShowViolations();
+
+    // Replay command handlers (10C)
+    void cmdReplayStatus();
+    void cmdReplayShowLast();
+    void cmdReplayExportSession();
+    void cmdReplayCheckpoint();
+
+    // Confidence command handlers (10D)
+    void cmdConfidenceStatus();
+    void cmdConfidenceSetPolicy();
+
+    // Governor HTTP endpoint handlers (10A)
+    void handleGovernorStatusEndpoint(SOCKET client);
+    void handleGovernorSubmitEndpoint(SOCKET client, const std::string& body);
+    void handleGovernorKillEndpoint(SOCKET client, const std::string& body);
+    void handleGovernorResultEndpoint(SOCKET client, const std::string& body);
+
+    // Safety HTTP endpoint handlers (10B)
+    void handleSafetyStatusEndpoint(SOCKET client);
+    void handleSafetyCheckEndpoint(SOCKET client, const std::string& body);
+    void handleSafetyViolationsEndpoint(SOCKET client);
+    void handleSafetyRollbackEndpoint(SOCKET client, const std::string& body);
+
+    // Replay HTTP endpoint handlers (10C)
+    void handleReplayStatusEndpoint(SOCKET client);
+    void handleReplayRecordsEndpoint(SOCKET client, const std::string& body);
+    void handleReplaySessionsEndpoint(SOCKET client);
+
+    // Confidence HTTP endpoint handlers (10D)
+    void handleConfidenceStatusEndpoint(SOCKET client);
+    void handleConfidenceEvaluateEndpoint(SOCKET client, const std::string& body);
+    void handleConfidenceHistoryEndpoint(SOCKET client);
+
+    // Unified Phase 10 status endpoint
+    void handlePhase10StatusEndpoint(SOCKET client);
+
+    // Phase 10 state
+    bool m_phase10Initialized = false;
 };
