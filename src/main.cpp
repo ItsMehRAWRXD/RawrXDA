@@ -10,6 +10,7 @@
 #include "agentic_engine.h"
 #include "subagent_core.h"
 #include "agent_history.h"
+#include "agent_policy.h"
 
 void SignalHandler(int signal) {
     std::cout << "\n[ENGINE] Exiting...\n";
@@ -20,8 +21,9 @@ int main(int argc, char** argv) {
     std::signal(SIGINT, SignalHandler);
     std::cout << R"(
 ╔══════════════════════════════════════════════════════════════╗
-║              RawrXD Engine v7.2 — Agentic Core               ║
+║              RawrXD Engine v7.3 — Agentic Core               ║
 ║  Subagents • Chaining • HexMag Swarm • History & Replay     ║
+║  Phase 7: Adaptive Intelligence & Policy Layer               ║
 ╚══════════════════════════════════════════════════════════════╝
 )" << std::endl;
 
@@ -30,6 +32,7 @@ int main(int argc, char** argv) {
     bool enable_http = true;
     bool enable_repl = true;
     std::string history_dir = "./history";
+    std::string policy_dir = "./policies";
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -43,6 +46,8 @@ int main(int argc, char** argv) {
             enable_repl = false;
         } else if (arg == "--history-dir" && i + 1 < argc) {
             history_dir = argv[++i];
+        } else if (arg == "--policy-dir" && i + 1 < argc) {
+            policy_dir = argv[++i];
         } else if (arg == "--help") {
             std::cout << R"(
 Usage: RawrEngine [options]
@@ -51,6 +56,7 @@ Usage: RawrEngine [options]
   --no-http         Disable HTTP server
   --no-repl         Disable interactive REPL
   --history-dir <d> Directory for history JSONL (default: ./history)
+  --policy-dir <d>  Directory for policy storage (default: ./policies)
   --help            Show this help
 
 HTTP API Endpoints:
@@ -65,6 +71,14 @@ HTTP API Endpoints:
   GET  /api/agents/status     Sub-agent manager status
   GET  /api/agents/history    Query event history (Phase 5)
   POST /api/agents/replay     Replay a recorded session (Phase 5)
+  GET  /api/policies          List all policies (Phase 7)
+  GET  /api/policies/suggestions  Get policy suggestions (Phase 7)
+  POST /api/policies/apply    Accept a suggestion (Phase 7)
+  POST /api/policies/reject   Reject a suggestion (Phase 7)
+  GET  /api/policies/export   Export policies (Phase 7)
+  POST /api/policies/import   Import policies (Phase 7)
+  GET  /api/policies/heuristics  Compute heuristics (Phase 7)
+  GET  /api/policies/stats    Policy engine stats (Phase 7)
 
 REPL Commands:
   /subagent <prompt>        Spawn a sub-agent
@@ -74,6 +88,13 @@ REPL Commands:
   /status                   Show system status
   /history [agent_id]       Show event history (Phase 5)
   /replay <agent_id>        Replay an agent run (Phase 5)
+  /policies                 List active policies (Phase 7)
+  /suggest                  Generate policy suggestions (Phase 7)
+  /policy accept <id>       Accept a suggestion (Phase 7)
+  /policy reject <id>       Reject a suggestion (Phase 7)
+  /policy export <file>     Export policies to file (Phase 7)
+  /policy import <file>     Import policies from file (Phase 7)
+  /heuristics               Compute & show heuristics (Phase 7)
   exit                      Quit
 )" << std::endl;
             return 0;
@@ -117,12 +138,26 @@ REPL Commands:
     std::cout << "[SYSTEM] Event history: session=" << historyRecorder.sessionId()
               << " dir=" << history_dir << "\n";
 
+    // Initialize policy engine (Phase 7)
+    PolicyEngine policyEngine(policy_dir);
+    policyEngine.setLogCallback([](int level, const std::string& msg) {
+        const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
+        if (level >= 0 && level <= 3) {
+            std::cout << prefix[level] << " " << msg << "\n";
+        }
+    });
+    policyEngine.setHistoryRecorder(&historyRecorder);
+    subAgentMgr.setPolicyEngine(&policyEngine);
+    std::cout << "[SYSTEM] Policy engine: " << policyEngine.policyCount()
+              << " policies loaded from " << policy_dir << "\n";
+
     // Start HTTP server with agentic support
     RawrXD::CompletionServer server;
     if (enable_http) {
         server.SetAgenticEngine(&agentEngine);
         server.SetSubAgentManager(&subAgentMgr);
         server.SetHistoryRecorder(&historyRecorder);
+        server.SetPolicyEngine(&policyEngine);
         server.Start(port, &engine, model_path);
     }
 
@@ -146,6 +181,13 @@ REPL Commands:
                           << "  /history [agent_id]     Event history (Phase 5)\n"
                           << "  /replay <agent_id>      Replay an agent run (Phase 5)\n"
                           << "  /stats                  History statistics (Phase 5)\n"
+                          << "  /policies               List active policies (Phase 7)\n"
+                          << "  /suggest                Generate policy suggestions (Phase 7)\n"
+                          << "  /policy accept <id>     Accept a suggestion (Phase 7)\n"
+                          << "  /policy reject <id>     Reject a suggestion (Phase 7)\n"
+                          << "  /policy export <file>   Export policies to file (Phase 7)\n"
+                          << "  /policy import <file>   Import policies from file (Phase 7)\n"
+                          << "  /heuristics             Compute & show heuristics (Phase 7)\n"
                           << "  exit                    Quit\n\n";
             }
             else if (input.substr(0, 5) == "/chat" || (input[0] != '/' && !input.empty())) {
@@ -293,6 +335,102 @@ REPL Commands:
             else if (input == "/stats") {
                 std::cout << "[History Stats] " << historyRecorder.getStatsSummary() << "\n";
                 std::cout << "Total events: " << historyRecorder.eventCount() << "\n";
+            }
+            // ── Phase 7: Policy Engine Commands ──
+            else if (input == "/policies") {
+                auto policies = policyEngine.getAllPolicies();
+                if (policies.empty()) {
+                    std::cout << "[Policies] No policies defined.\n";
+                } else {
+                    std::cout << "[Policies] " << policies.size() << " policies:\n";
+                    for (const auto& p : policies) {
+                        std::string icon = p.enabled ? "🟢" : "⚪";
+                        std::cout << "  " << icon << " [" << p.id << "] " << p.name
+                                  << " (pri=" << p.priority << " v" << p.version
+                                  << " applied=" << p.appliedCount << ")\n";
+                        if (!p.description.empty()) {
+                            std::cout << "      " << p.description << "\n";
+                        }
+                    }
+                }
+            }
+            else if (input == "/suggest") {
+                std::cout << "[Policy] Analyzing history and generating suggestions...\n";
+                auto suggestions = policyEngine.generateSuggestions();
+                auto pending = policyEngine.getPendingSuggestions();
+                
+                if (pending.empty()) {
+                    std::cout << "[Policy] No suggestions at this time. Need more history data.\n";
+                } else {
+                    std::cout << "[Policy] " << pending.size() << " pending suggestions:\n";
+                    for (const auto& s : pending) {
+                        std::cout << "\n  📋 Suggestion [" << s.id << "]\n";
+                        std::cout << "     Policy: " << s.proposedPolicy.name << "\n";
+                        std::cout << "     Rationale: " << s.rationale << "\n";
+                        std::cout << "     Estimated improvement: "
+                                  << (int)(s.estimatedImprovement * 100.0f) << "%\n";
+                        std::cout << "     Supporting events: " << s.supportingEvents << "\n";
+                        std::cout << "     → /policy accept " << s.id << "\n";
+                        std::cout << "     → /policy reject " << s.id << "\n";
+                    }
+                }
+            }
+            else if (input.substr(0, 15) == "/policy accept ") {
+                std::string id = input.substr(15);
+                if (policyEngine.acceptSuggestion(id)) {
+                    std::cout << "[Policy ✅] Suggestion accepted and policy activated.\n";
+                    policyEngine.save();
+                } else {
+                    std::cout << "[Policy ❌] Suggestion not found or already decided.\n";
+                }
+            }
+            else if (input.substr(0, 15) == "/policy reject ") {
+                std::string id = input.substr(15);
+                if (policyEngine.rejectSuggestion(id)) {
+                    std::cout << "[Policy ✅] Suggestion rejected.\n";
+                    policyEngine.save();
+                } else {
+                    std::cout << "[Policy ❌] Suggestion not found or already decided.\n";
+                }
+            }
+            else if (input.substr(0, 15) == "/policy export ") {
+                std::string filePath = input.substr(15);
+                if (policyEngine.exportToFile(filePath)) {
+                    std::cout << "[Policy ✅] Policies exported to " << filePath << "\n";
+                } else {
+                    std::cout << "[Policy ❌] Export failed.\n";
+                }
+            }
+            else if (input.substr(0, 15) == "/policy import ") {
+                std::string filePath = input.substr(15);
+                int count = policyEngine.importFromFile(filePath);
+                std::cout << "[Policy] Imported " << count << " policies from " << filePath << "\n";
+                if (count > 0) policyEngine.save();
+            }
+            else if (input == "/heuristics") {
+                std::cout << "[Policy] Computing heuristics from event history...\n";
+                policyEngine.computeHeuristics();
+                auto heuristics = policyEngine.getAllHeuristics();
+                
+                if (heuristics.empty()) {
+                    std::cout << "[Policy] No heuristics computed. Need event history.\n";
+                } else {
+                    std::cout << "[Policy] " << heuristics.size() << " heuristics:\n";
+                    for (const auto& h : heuristics) {
+                        std::cout << "  📊 " << h.key
+                                  << " — events=" << h.totalEvents
+                                  << " success=" << (int)(h.successRate * 100.0f) << "%"
+                                  << " fail=" << h.failCount;
+                        if (h.avgDurationMs > 0) {
+                            std::cout << " avg=" << (int)h.avgDurationMs << "ms"
+                                      << " p95=" << (int)h.p95DurationMs << "ms";
+                        }
+                        std::cout << "\n";
+                        for (const auto& reason : h.topFailureReasons) {
+                            std::cout << "      ⚠ " << reason << "\n";
+                        }
+                    }
+                }
             }
             else {
                 std::cout << "Unknown command. Type /help for commands.\n";

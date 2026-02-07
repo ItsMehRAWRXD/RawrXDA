@@ -37,6 +37,7 @@ private:
     std::string GenerateChatInterface();
     std::string GenerateSubAgentPanel();
     std::string GenerateHistoryPanel();
+    std::string GeneratePolicyPanel();
     std::string GenerateSettingsPanel();
     
     void WriteFile(const std::filesystem::path& path, const std::string& content);

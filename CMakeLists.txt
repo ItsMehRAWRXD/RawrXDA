@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(RawrEngine VERSION 7.1.0 LANGUAGES CXX)
+project(RawrEngine VERSION 7.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +18,7 @@ set(SOURCES
     src/agentic_engine.cpp
     src/subagent_core.cpp
     src/agent_history.cpp
+    src/agent_policy.cpp
     src/streaming_gguf_loader.cpp
     src/gguf_loader.cpp
     src/gguf_vocab_resolver.cpp
@@ -99,6 +100,7 @@ if(WIN32)
         src/win32app/Win32IDE_GhostText.cpp
         src/win32app/Win32IDE_PlanExecutor.cpp
         src/win32app/Win32IDE_FailureDetector.cpp
+        src/win32app/Win32IDE_FailureIntelligence.cpp
         src/win32app/Win32IDE_Settings.cpp
         src/win32app/Win32IDE_LocalServer.cpp
         src/win32app/Win32IDE_SubAgent.h
@@ -119,6 +121,7 @@ if(WIN32)
         src/agentic_engine.cpp
         src/subagent_core.cpp
         src/agent_history.cpp
+        src/agent_policy.cpp
         src/utils/ErrorReporter.cpp
         src/modules/engine_manager.cpp
         src/cpu_inference_engine.cpp

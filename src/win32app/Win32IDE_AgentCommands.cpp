@@ -133,6 +133,17 @@ void Win32IDE::onAgentExecuteCommand() {
         // Execute in background
         std::thread([this, command]() {
             AgentResponse response = m_agenticBridge->ExecuteAgentCommand(command);
+
+            // Phase 4B: Choke Point 3 — hookAgentCommand after direct command execution
+            FailureClassification cmdFailure = hookAgentCommand(response.content, command);
+            if (cmdFailure.reason != AgentFailureType::None) {
+                // Failure detected — attempt bounded retry
+                AgentResponse retryResponse = executeWithBoundedRetry(command);
+                if (!retryResponse.content.empty() &&
+                    retryResponse.type != AgentResponseType::AGENT_ERROR) {
+                    response = retryResponse;
+                }
+            }
             
             std::string output = "Agent Response:\n";
             output += "Type: " + std::to_string((int)response.type) + "\n";

@@ -1,0 +1,34 @@
+[  1%] Building CXX object CMakeFiles/RawrEngine.dir/src/main.cpp.obj
+In file included from D:\rawrxd\src\main.cpp:25:
+D:\rawrxd\src\ide_window.h:3:9: warning: 'WIN32_LEAN_AND_MEAN' redefined
+    3 | #define WIN32_LEAN_AND_MEAN
+      |         ^~~~~~~~~~~~~~~~~~~
+<command-line>: note: this is the location of the previous definition
+In file included from D:\rawrxd\src\ide_window.h:11:
+D:\rawrxd\src\engine/react_ide_generator.h:55:5: error: 'ReactIDEGenerator::ReactIDEGenerator()' cannot be overloaded with 'ReactIDEGenerator::ReactIDEGenerator()'
+   55 |     ReactIDEGenerator();
+      |     ^~~~~~~~~~~~~~~~~
+D:\rawrxd\src\engine/react_ide_generator.h:20:5: note: previous declaration 'ReactIDEGenerator::ReactIDEGenerator()'
+   20 |     ReactIDEGenerator();
+      |     ^~~~~~~~~~~~~~~~~
+D:\rawrxd\src\engine/react_ide_generator.h:60:10: error: 'bool ReactIDEGenerator::GenerateMinimalIDE(const std::string&, const std::filesystem::__cxx11::path&)' cannot be overloaded with 'bool ReactIDEGenerator::GenerateMinimalIDE(const std::string&, const std::filesystem::__cxx11::path&)'
+   60 |     bool GenerateMinimalIDE(const std::string& name, const std::filesystem::path& output_dir);
+      |          ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\engine/react_ide_generator.h:23:10: note: previous declaration 'bool ReactIDEGenerator::GenerateMinimalIDE(const std::string&, const std::filesystem::__cxx11::path&)'
+   23 |     bool GenerateMinimalIDE(const std::string& name, const std::filesystem::path& output_dir);
+      |          ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\engine/react_ide_generator.h:61:10: error: 'bool ReactIDEGenerator::GenerateFullIDE(const std::string&, const std::filesystem::__cxx11::path&)' cannot be overloaded with 'bool ReactIDEGenerator::GenerateFullIDE(const std::string&, const std::filesystem::__cxx11::path&)'
+   61 |     bool GenerateFullIDE(const std::string& name, const std::filesystem::path& output_dir);
+      |          ^~~~~~~~~~~~~~~
+D:\rawrxd\src\engine/react_ide_generator.h:24:10: note: previous declaration 'bool ReactIDEGenerator::GenerateFullIDE(const std::string&, const std::filesystem::__cxx11::path&)'
+   24 |     bool GenerateFullIDE(const std::string& name, const std::filesystem::path& output_dir);
+      |          ^~~~~~~~~~~~~~~
+D:\rawrxd\src\engine/react_ide_generator.h:62:10: error: 'bool ReactIDEGenerator::GenerateAgenticIDE(const std::string&, const std::filesystem::__cxx11::path&)' cannot be overloaded with 'bool ReactIDEGenerator::GenerateAgenticIDE(const std::string&, const std::filesystem::__cxx11::path&)'
+   62 |     bool GenerateAgenticIDE(const std::string& name, const std::filesystem::path& output_dir);
+      |          ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\engine/react_ide_generator.h:25:10: note: previous declaration 'bool ReactIDEGenerator::GenerateAgenticIDE(const std::string&, const std::filesystem::__cxx11::path&)'
+   25 |     bool GenerateAgenticIDE(const std::string& name, const std::filesystem::path& output_dir);
+      |          ^~~~~~~~~~~~~~~~~~
+mingw32-make[2]: *** [CMakeFiles\RawrEngine.dir\build.make:79: CMakeFiles/RawrEngine.dir/src/main.cpp.obj] Error 1
+mingw32-make[1]: *** [CMakeFiles\Makefile2:89: CMakeFiles/RawrEngine.dir/all] Error 2
+mingw32-make: *** [Makefile:90: all] Error 2

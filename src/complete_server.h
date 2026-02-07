@@ -10,6 +10,7 @@
 class AgenticEngine;
 class SubAgentManager;
 class AgentHistoryRecorder;
+class PolicyEngine;
 
 namespace RawrXD {
 
@@ -25,6 +26,7 @@ public:
     void SetAgenticEngine(AgenticEngine* engine) { agentic_engine_ = engine; }
     void SetSubAgentManager(SubAgentManager* mgr) { subagent_mgr_ = mgr; }
     void SetHistoryRecorder(AgentHistoryRecorder* rec) { history_recorder_ = rec; }
+    void SetPolicyEngine(PolicyEngine* engine)         { policy_engine_ = engine; }
 
 private:
     void Run(uint16_t port);
@@ -42,6 +44,16 @@ private:
     std::string HandleHistoryRequest(const std::string& path, const std::string& body);
     std::string HandleReplayRequest(const std::string& body);
 
+    // Phase 7 — Policy API handlers
+    std::string HandlePoliciesRequest(const std::string& path, const std::string& body);
+    std::string HandlePolicySuggestionsRequest(const std::string& body);
+    std::string HandlePolicyApplyRequest(const std::string& body);
+    std::string HandlePolicyRejectRequest(const std::string& body);
+    std::string HandlePolicyExportRequest();
+    std::string HandlePolicyImportRequest(const std::string& body);
+    std::string HandlePolicyHeuristicsRequest();
+    std::string HandlePolicyStatsRequest();
+
     std::atomic<bool> running_;
     std::thread server_thread_;
     CPUInferenceEngine* engine_;
@@ -49,6 +61,7 @@ private:
     AgenticEngine* agentic_engine_ = nullptr;
     SubAgentManager* subagent_mgr_ = nullptr;
     AgentHistoryRecorder* history_recorder_ = nullptr;
+    PolicyEngine* policy_engine_ = nullptr;
 };
 
 } // namespace RawrXD

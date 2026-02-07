@@ -145,6 +145,28 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt) {
     std::string toolResult;
     if (DispatchModelToolCalls(response, toolResult)) {
         LOG_INFO("Tool call dispatched from model output");
+
+        // Phase 4B: Choke Point 2 — hookToolResult after tool dispatch
+        if (m_ide) {
+            // Extract tool name from the model output (first tool: directive)
+            std::string toolName = "unknown";
+            auto toolPos = response.find("tool:");
+            if (toolPos == std::string::npos) toolPos = response.find("TOOL:");
+            if (toolPos != std::string::npos) {
+                size_t nameStart = toolPos + 5;
+                while (nameStart < response.size() && response[nameStart] == ' ') nameStart++;
+                size_t nameEnd = response.find_first_of(" \n\r({[", nameStart);
+                if (nameEnd == std::string::npos) nameEnd = response.size();
+                toolName = response.substr(nameStart, nameEnd - nameStart);
+            }
+            FailureClassification toolFailure = m_ide->hookToolResult(toolName, toolResult);
+            if (toolFailure.reason != AgentFailureType::None) {
+                LOG_WARNING("[Phase4B] Tool '" + toolName + "' failure: " +
+                    m_ide->failureTypeString(toolFailure.reason) +
+                    " (confidence=" + std::to_string(toolFailure.confidence) + ")");
+            }
+        }
+
         // Append tool result and optionally re-prompt the model
         response += "\n\n[Tool Execution Result]\n" + toolResult;
     }
@@ -596,7 +618,20 @@ std::string AgenticBridge::ExecuteSwarm(const std::vector<std::string>& prompts,
     config.failFast = false;
 
     LOG_INFO("ExecuteSwarm: " + std::to_string(prompts.size()) + " tasks, strategy=" + mergeStrategy);
-    return mgr->executeSwarm("bridge", prompts, config);
+    std::string mergedResult = mgr->executeSwarm("bridge", prompts, config);
+
+    // Phase 4B: Choke Point 5 — hookSwarmMerge after swarm merge
+    if (m_ide) {
+        FailureClassification swarmFailure = m_ide->hookSwarmMerge(
+            mergedResult, (int)prompts.size(), mergeStrategy);
+        if (swarmFailure.reason != AgentFailureType::None) {
+            LOG_WARNING("[Phase4B] Swarm merge failure: " +
+                m_ide->failureTypeString(swarmFailure.reason) +
+                " (confidence=" + std::to_string(swarmFailure.confidence) + ")");
+        }
+    }
+
+    return mergedResult;
 }
 
 void AgenticBridge::CancelAllSubAgents() {
@@ -617,7 +652,31 @@ std::string AgenticBridge::GetSubAgentStatus() const {
 bool AgenticBridge::DispatchModelToolCalls(const std::string& modelOutput, std::string& toolResult) {
     auto* mgr = GetSubAgentManager();
     if (!mgr) return false;
-    return mgr->dispatchToolCall("bridge", modelOutput, toolResult);
+    bool dispatched = mgr->dispatchToolCall("bridge", modelOutput, toolResult);
+
+    // Phase 4B: Choke Point 2 — hookToolResult at the dispatch funnel
+    // Every tool result flows through here, regardless of caller (Autonomy, Bridge, etc.)
+    if (dispatched && m_ide) {
+        // Extract tool name from the model output (first tool: directive)
+        std::string toolName = "unknown";
+        auto toolPos = modelOutput.find("tool:");
+        if (toolPos == std::string::npos) toolPos = modelOutput.find("TOOL:");
+        if (toolPos != std::string::npos) {
+            size_t nameStart = toolPos + 5;
+            while (nameStart < modelOutput.size() && modelOutput[nameStart] == ' ') nameStart++;
+            size_t nameEnd = modelOutput.find_first_of(" \n\r({[", nameStart);
+            if (nameEnd == std::string::npos) nameEnd = modelOutput.size();
+            toolName = modelOutput.substr(nameStart, nameEnd - nameStart);
+        }
+        FailureClassification toolFailure = m_ide->hookToolResult(toolName, toolResult);
+        if (toolFailure.reason != AgentFailureType::None) {
+            LOG_WARNING("[Phase4B] Tool '" + toolName + "' failure at dispatch: " +
+                m_ide->failureTypeString(toolFailure.reason) +
+                " (confidence=" + std::to_string(toolFailure.confidence) + ")");
+        }
+    }
+
+    return dispatched;
 }
 
 // ============================================================================

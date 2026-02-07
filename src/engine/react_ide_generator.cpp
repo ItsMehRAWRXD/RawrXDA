@@ -1872,6 +1872,438 @@ export const HistoryPanel: React.FC = () => {
 )HISTORY";
 }
 
+std::string ReactIDEGenerator::GeneratePolicyPanel() {
+    return R"POLICY(import React, { useState, useEffect, useCallback } from 'react';
+import { Shield, Lightbulb, Check, X, Download, Upload, BarChart3, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+
+interface PolicyTrigger {
+  eventType: string;
+  failureReason: string;
+  taskPattern: string;
+  toolName: string;
+  failureRateAbove: number;
+  minOccurrences: number;
+}
+
+interface PolicyAction {
+  maxRetries: number;
+  retryDelayMs: number;
+  preferChainOverSwarm: boolean;
+  reduceParallelism: number;
+  timeoutOverrideMs: number;
+  confidenceThreshold: number;
+  addValidationStep: boolean;
+  validationPrompt: string;
+  customAction: string;
+}
+
+interface AgentPolicy {
+  id: string;
+  name: string;
+  description: string;
+  version: number;
+  trigger: PolicyTrigger;
+  action: PolicyAction;
+  enabled: boolean;
+  requiresUserApproval: boolean;
+  priority: number;
+  createdAt: number;
+  modifiedAt: number;
+  createdBy: string;
+  appliedCount: number;
+}
+
+interface PolicySuggestion {
+  id: string;
+  proposedPolicy: AgentPolicy;
+  rationale: string;
+  estimatedImprovement: number;
+  supportingEvents: number;
+  affectedEventTypes: string[];
+  affectedAgentIds: string[];
+  state: 'pending' | 'accepted' | 'rejected' | 'expired';
+  generatedAt: number;
+  decidedAt: number;
+}
+
+interface PolicyHeuristic {
+  key: string;
+  totalEvents: number;
+  successCount: number;
+  failCount: number;
+  successRate: number;
+  avgDurationMs: number;
+  p95DurationMs: number;
+  topFailureReasons: string[];
+}
+
+const BASE_URL = 'http://localhost:8080';
+
+export const PolicyPanel: React.FC = () => {
+  const [policies, setPolicies] = useState<AgentPolicy[]>([]);
+  const [suggestions, setSuggestions] = useState<PolicySuggestion[]>([]);
+  const [heuristics, setHeuristics] = useState<PolicyHeuristic[]>([]);
+  const [activeTab, setActiveTab] = useState<'policies' | 'suggestions' | 'heuristics'>('suggestions');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [expandedPolicy, setExpandedPolicy] = useState<string | null>(null);
+
+  const fetchPolicies = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/policies`);
+      const data = await res.json();
+      setPolicies(data.policies || []);
+    } catch (e) { console.error('Failed to fetch policies', e); }
+  }, []);
+
+  const fetchSuggestions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/policies/suggestions`);
+      const data = await res.json();
+      setSuggestions(data.suggestions || []);
+    } catch (e) { console.error('Failed to fetch suggestions', e); }
+    setLoading(false);
+  }, []);
+
+  const fetchHeuristics = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/policies/heuristics`);
+      const data = await res.json();
+      setHeuristics(data.heuristics || []);
+    } catch (e) { console.error('Failed to fetch heuristics', e); }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchPolicies();
+    fetchSuggestions();
+  }, [fetchPolicies, fetchSuggestions]);
+
+  const handleAccept = async (suggestionId: string) => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/policies/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suggestion_id: suggestionId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('Suggestion accepted — policy activated!');
+        fetchPolicies();
+        fetchSuggestions();
+      } else {
+        setMessage('Failed to accept suggestion.');
+      }
+    } catch (e) { setMessage('Error accepting suggestion.'); }
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleReject = async (suggestionId: string) => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/policies/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suggestion_id: suggestionId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('Suggestion rejected.');
+        fetchSuggestions();
+      }
+    } catch (e) { setMessage('Error rejecting suggestion.'); }
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/policies/export`);
+      const data = await res.text();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'rawrxd-policies.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      setMessage('Policies exported!');
+    } catch (e) { setMessage('Export failed.'); }
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleImport = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      try {
+        const res = await fetch(`${BASE_URL}/api/policies/import`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: text
+        });
+        const data = await res.json();
+        setMessage(`Imported ${data.imported} policies!`);
+        fetchPolicies();
+      } catch (e) { setMessage('Import failed.'); }
+      setTimeout(() => setMessage(''), 3000);
+    };
+    input.click();
+  };
+
+  const improvementColor = (val: number) => {
+    if (val >= 0.2) return 'text-green-400';
+    if (val >= 0.1) return 'text-yellow-400';
+    return 'text-gray-400';
+  };
+
+  const successRateColor = (rate: number) => {
+    if (rate >= 0.9) return 'text-green-400';
+    if (rate >= 0.7) return 'text-yellow-400';
+    return 'text-red-400';
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background text-foreground p-3 gap-3 overflow-y-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Shield className="w-4 h-4 text-blue-400" />
+          <span className="font-semibold text-sm">Policy Engine</span>
+          <span className="text-xs text-muted-foreground">Phase 7</span>
+        </div>
+        <div className="flex gap-1">
+          <button onClick={handleExport} className="p-1.5 rounded hover:bg-secondary" title="Export policies">
+            <Download className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={handleImport} className="p-1.5 rounded hover:bg-secondary" title="Import policies">
+            <Upload className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Message bar */}
+      {message && (
+        <div className="text-xs bg-blue-600/20 text-blue-300 p-2 rounded">{message}</div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        {(['suggestions', 'policies', 'heuristics'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => {
+              setActiveTab(tab);
+              if (tab === 'heuristics') fetchHeuristics();
+            }}
+            className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+              activeTab === tab
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab === 'suggestions' && <Lightbulb className="w-3 h-3 inline mr-1" />}
+            {tab === 'policies' && <Shield className="w-3 h-3 inline mr-1" />}
+            {tab === 'heuristics' && <BarChart3 className="w-3 h-3 inline mr-1" />}
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'suggestions' && suggestions.length > 0 && (
+              <span className="ml-1 bg-blue-600/30 text-blue-300 px-1 rounded text-[10px]">
+                {suggestions.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Suggestions Tab */}
+      {activeTab === 'suggestions' && (
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">
+              {suggestions.length} pending suggestion{suggestions.length !== 1 ? 's' : ''}
+            </span>
+            <button
+              onClick={fetchSuggestions}
+              disabled={loading}
+              className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
+            >
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+          </div>
+
+          {suggestions.length === 0 ? (
+            <div className="text-sm text-muted-foreground italic text-center p-6 border border-dashed rounded">
+              No suggestions yet. Run more agent operations to generate policy suggestions.
+            </div>
+          ) : (
+            suggestions.map(s => (
+              <div key={s.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{s.proposedPolicy.name}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{s.rationale}</div>
+                  </div>
+                  <span className={`text-xs font-mono ${improvementColor(s.estimatedImprovement)}`}>
+                    +{(s.estimatedImprovement * 100).toFixed(0)}%
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span>{s.supportingEvents} events analyzed</span>
+                  <span>•</span>
+                  <span>Priority: {s.proposedPolicy.priority}</span>
+                  {s.affectedEventTypes.length > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>Affects: {s.affectedEventTypes.join(', ')}</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => handleAccept(s.id)}
+                    className="flex items-center gap-1 text-xs bg-green-600/20 text-green-300 px-3 py-1 rounded hover:bg-green-600/30 transition-colors"
+                  >
+                    <Check className="w-3 h-3" /> Accept
+                  </button>
+                  <button
+                    onClick={() => handleReject(s.id)}
+                    className="flex items-center gap-1 text-xs bg-red-600/20 text-red-300 px-3 py-1 rounded hover:bg-red-600/30 transition-colors"
+                  >
+                    <X className="w-3 h-3" /> Reject
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Policies Tab */}
+      {activeTab === 'policies' && (
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">
+              {policies.length} total, {policies.filter(p => p.enabled).length} enabled
+            </span>
+            <button onClick={fetchPolicies} className="text-xs text-muted-foreground hover:text-foreground">
+              <RefreshCw className="w-3 h-3 inline" /> Refresh
+            </button>
+          </div>
+
+          {policies.length === 0 ? (
+            <div className="text-sm text-muted-foreground italic text-center p-6 border border-dashed rounded">
+              No policies defined. Accept suggestions or import policies.
+            </div>
+          ) : (
+            policies.map(p => (
+              <div key={p.id} className="bg-card border border-border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setExpandedPolicy(expandedPolicy === p.id ? null : p.id)}
+                  className="w-full flex items-center gap-2 p-3 text-left hover:bg-secondary/50 transition-colors"
+                >
+                  {expandedPolicy === p.id
+                    ? <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                    : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
+                  <span className={`w-2 h-2 rounded-full ${p.enabled ? 'bg-green-500' : 'bg-gray-500'}`} />
+                  <span className="text-sm font-medium flex-1">{p.name}</span>
+                  <span className="text-xs text-muted-foreground">v{p.version} • {p.appliedCount} applied</span>
+                </button>
+                {expandedPolicy === p.id && (
+                  <div className="px-3 pb-3 space-y-2 border-t border-border pt-2">
+                    <div className="text-xs text-muted-foreground">{p.description}</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div><span className="text-muted-foreground">Trigger:</span> {p.trigger.eventType || 'any'}</div>
+                      <div><span className="text-muted-foreground">Priority:</span> {p.priority}</div>
+                      <div><span className="text-muted-foreground">Created by:</span> {p.createdBy}</div>
+                      <div><span className="text-muted-foreground">Approval:</span> {p.requiresUserApproval ? 'required' : 'auto'}</div>
+                    </div>
+                    {p.action.maxRetries >= 0 && (
+                      <div className="text-xs">Action: retry up to {p.action.maxRetries}x (delay: {p.action.retryDelayMs}ms)</div>
+                    )}
+                    {p.action.addValidationStep && (
+                      <div className="text-xs">Action: adds validation sub-agent</div>
+                    )}
+                    {p.action.preferChainOverSwarm && (
+                      <div className="text-xs">Action: prefer chain over swarm</div>
+                    )}
+                    {p.action.reduceParallelism > 0 && (
+                      <div className="text-xs">Action: reduce parallelism by {p.action.reduceParallelism}</div>
+                    )}
+                    {p.action.timeoutOverrideMs >= 0 && (
+                      <div className="text-xs">Action: timeout override {p.action.timeoutOverrideMs}ms</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Heuristics Tab */}
+      {activeTab === 'heuristics' && (
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">
+              {heuristics.length} heuristic{heuristics.length !== 1 ? 's' : ''} computed
+            </span>
+            <button
+              onClick={fetchHeuristics}
+              disabled={loading}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} /> Recompute
+            </button>
+          </div>
+
+          {heuristics.length === 0 ? (
+            <div className="text-sm text-muted-foreground italic text-center p-6 border border-dashed rounded">
+              No heuristics computed. Click Recompute after accumulating history.
+            </div>
+          ) : (
+            heuristics.map(h => (
+              <div key={h.key} className="bg-card border border-border rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium font-mono">{h.key}</span>
+                  <span className={`text-sm font-mono ${successRateColor(h.successRate)}`}>
+                    {(h.successRate * 100).toFixed(0)}%
+                  </span>
+                </div>
+                <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
+                  <span>{h.totalEvents} events</span>
+                  <span className="text-green-400">{h.successCount} ok</span>
+                  <span className="text-red-400">{h.failCount} fail</span>
+                  {h.avgDurationMs > 0 && (
+                    <>
+                      <span>avg {h.avgDurationMs.toFixed(0)}ms</span>
+                      <span>p95 {h.p95DurationMs.toFixed(0)}ms</span>
+                    </>
+                  )}
+                </div>
+                {h.topFailureReasons.length > 0 && (
+                  <div className="mt-1.5 space-y-0.5">
+                    {h.topFailureReasons.map((r, i) => (
+                      <div key={i} className="text-xs text-red-400/80 truncate">⚠ {r}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+)POLICY";
+}
+
 std::string ReactIDEGenerator::GenerateSettingsPanel() {
     return R"(import React from 'react';
 

@@ -1,0 +1,542 @@
+[1/17] Building CXX object CMakeFiles/RawrEngine.dir/src/modules/react_generator.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/modules/react_generator.cpp.obj 
+C:\ProgramData\mingw64\mingw64\bin\c++.exe -DNOMINMAX -DRAWER_ENGINE_REV=\"7\" -DRAWER_ENGINE_VERSION=\"7.0.0\" -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:/rawrxd/src -ID:/rawrxd/src/engine -ID:/rawrxd/include -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -Wall -fopenmp -std=gnu++20 -MD -MT CMakeFiles/RawrEngine.dir/src/modules/react_generator.cpp.obj -MF CMakeFiles\RawrEngine.dir\src\modules\react_generator.cpp.obj.d -o CMakeFiles/RawrEngine.dir/src/modules/react_generator.cpp.obj -c D:/rawrxd/src/modules/react_generator.cpp
+D:/rawrxd/src/modules/react_generator.cpp:1233:2: warning: missing terminating " character
+ 1233 | )";
+      |  ^
+D:/rawrxd/src/modules/react_generator.cpp:1233:2: error: missing terminating " character
+ 1233 | )";
+      |  ^~
+D:/rawrxd/src/modules/react_generator.cpp:1436:2: warning: missing terminating " character
+ 1436 | )";
+      |  ^
+D:/rawrxd/src/modules/react_generator.cpp:1436:2: error: missing terminating " character
+ 1436 | )";
+      |  ^~
+D:/rawrxd/src/modules/react_generator.cpp: In static member function 'static std::string RawrXD::ReactServerGenerator::GetAgentModePanelContent(const RawrXD::ReactServerConfig&)':
+D:/rawrxd/src/modules/react_generator.cpp:1225:45: error: expected ';' before 'icon'
+ 1225 |       <ModeToggle label="Max Context (32K+)" icon={Zap} modeKey="maxMode" color="text-yellow-400" />
+      |                                             ^~~~~
+      |                                             ;
+D:/rawrxd/src/modules/react_generator.cpp:1225:46: error: 'icon' was not declared in this scope
+ 1225 |       <ModeToggle label="Max Context (32K+)" icon={Zap} modeKey="maxMode" color="text-yellow-400" />
+      |                                              ^~~~
+D:/rawrxd/src/modules/react_generator.cpp:1225:52: error: 'Zap' was not declared in this scope
+ 1225 |       <ModeToggle label="Max Context (32K+)" icon={Zap} modeKey="maxMode" color="text-yellow-400" />
+      |                                                    ^~~
+D:/rawrxd/src/modules/react_generator.cpp:1226:60: error: 'modeKey' was not declared in this scope
+ 1226 |       <ModeToggle label="Deep Thinking (CoT)" icon={Brain} modeKey="deepThinking" color="text-purple-400" />
+      |                                                            ^~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp: At global scope:
+D:/rawrxd/src/modules/react_generator.cpp:1233:1: error: expected unqualified-id before ')' token
+ 1233 | )";
+      | ^
+D:/rawrxd/src/modules/react_generator.cpp:1236:13: error: 'ReactServerGenerator' has not been declared
+ 1236 | std::string ReactServerGenerator::GetEngineManagerContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1236:65: error: 'ReactServerConfig' does not name a type
+ 1236 | std::string ReactServerGenerator::GetEngineManagerContent(const ReactServerConfig& config) {
+      |                                                                 ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1313:13: error: 'ReactServerGenerator' has not been declared
+ 1313 | std::string ReactServerGenerator::GetMemoryViewerContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1313:64: error: 'ReactServerConfig' does not name a type
+ 1313 | std::string ReactServerGenerator::GetMemoryViewerContent(const ReactServerConfig& config) {
+      |                                                                ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1350:13: error: 'ReactServerGenerator' has not been declared
+ 1350 | std::string ReactServerGenerator::GetToolOutputPanelContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1350:67: error: 'ReactServerConfig' does not name a type
+ 1350 | std::string ReactServerGenerator::GetToolOutputPanelContent(const ReactServerConfig& config) {
+      |                                                                   ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1378:13: error: 'ReactServerGenerator' has not been declared
+ 1378 | std::string ReactServerGenerator::GetHotpatchControlsContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1378:68: error: 'ReactServerConfig' does not name a type
+ 1378 | std::string ReactServerGenerator::GetHotpatchControlsContent(const ReactServerConfig& config) {
+      |                                                                    ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp: In function 'std::string GetHotpatchControlsContent(const int&)':
+D:/rawrxd/src/modules/react_generator.cpp:1415:51: error: expected ';' before 'value'
+ 1415 |                     placeholder="Old Code (Match)"
+      |                                                   ^
+      |                                                   ;
+ 1416 |                     value={oldCode} onChange={e => setOldCode(e.target.value)}
+      |                     ~~~~~                          
+D:/rawrxd/src/modules/react_generator.cpp:1416:21: error: 'value' was not declared in this scope
+ 1416 |                     value={oldCode} onChange={e => setOldCode(e.target.value)}
+      |                     ^~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1416:28: error: 'oldCode' was not declared in this scope
+ 1416 |                     value={oldCode} onChange={e => setOldCode(e.target.value)}
+      |                            ^~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1417:17: error: expected primary-expression before '/' token
+ 1417 |                 />
+      |                 ^
+D:/rawrxd/src/modules/react_generator.cpp:1417:18: error: expected primary-expression before '>' token
+ 1417 |                 />
+      |                  ^
+D:/rawrxd/src/modules/react_generator.cpp:1418:17: error: expected primary-expression before '<' token
+ 1418 |                 <textarea
+      |                 ^
+D:/rawrxd/src/modules/react_generator.cpp:1418:18: error: 'textarea' was not declared in this scope
+ 1418 |                 <textarea
+      |                  ^~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1421:37: error: 'onChange' was not declared in this scope
+ 1421 |                     value={newCode} onChange={e => setNewCode(e.target.value)}
+      |                                     ^~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1421:47: error: 'e' was not declared in this scope; did you mean 'std::numbers::e'?
+ 1421 |                     value={newCode} onChange={e => setNewCode(e.target.value)}
+      |                                               ^
+      |                                               std::numbers::e
+In file included from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/max_size_type.h:39,
+                 from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/ranges_base.h:41,
+                 from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/string_view:58,
+                 from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/basic_string.h:51,
+                 from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/string:56,
+                 from D:/rawrxd/src/modules/react_generator.h:2,
+                 from D:/rawrxd/src/modules/react_generator.cpp:1:
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/numbers:129:27: note: 'std::numbers::e' declared here
+  129 |   inline constexpr double e = e_v<double>;
+      |                           ^
+D:/rawrxd/src/modules/react_generator.cpp:1421:50: error: expected primary-expression before '>' token
+ 1421 |                     value={newCode} onChange={e => setNewCode(e.target.value)}
+      |                                                  ^
+D:/rawrxd/src/modules/react_generator.cpp:1421:52: error: 'setNewCode' was not declared in this scope
+ 1421 |                     value={newCode} onChange={e => setNewCode(e.target.value)}
+      |                                                    ^~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1427:21: error: 'className' was not declared in this scope
+ 1427 |                     className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-bold w-full"
+      |                     ^~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1429:21: error: 'APPLY' was not declared in this scope
+ 1429 |                     APPLY HOTPATCH
+      |                     ^~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1433:9: error: expected primary-expression before '<' token
+ 1433 |         </div>
+      |         ^
+D:/rawrxd/src/modules/react_generator.cpp:1433:10: error: expected primary-expression before '/' token
+ 1433 |         </div>
+      |          ^
+D:/rawrxd/src/modules/react_generator.cpp:1434:5: error: expected primary-expression before ')' token
+ 1434 |     );
+      |     ^
+D:/rawrxd/src/modules/react_generator.cpp: At global scope:
+D:/rawrxd/src/modules/react_generator.cpp:1436:1: error: expected unqualified-id before ')' token
+ 1436 | )";
+      | ^
+D:/rawrxd/src/modules/react_generator.cpp:1437:1: error: expected declaration before '}' token
+ 1437 | }
+      | ^
+D:/rawrxd/src/modules/react_generator.cpp:1439:13: error: 'ReactServerGenerator' has not been declared
+ 1439 | std::string ReactServerGenerator::GetREToolsPanelContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1439:64: error: 'ReactServerConfig' does not name a type
+ 1439 | std::string ReactServerGenerator::GetREToolsPanelContent(const ReactServerConfig& config) {
+      |                                                                ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1505:13: error: 'ReactServerGenerator' has not been declared
+ 1505 | std::string ReactServerGenerator::GetMainIDEAppContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1505:62: error: 'ReactServerConfig' does not name a type
+ 1505 | std::string ReactServerGenerator::GetMainIDEAppContent(const ReactServerConfig& config) {
+      |                                                              ^~~~~~~~~~~~~~~~~
+[2/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/codec/brutal_gzip.cpp.obj
+[3/17] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/react_ide_generator.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/engine/react_ide_generator.cpp.obj 
+C:\ProgramData\mingw64\mingw64\bin\c++.exe -DNOMINMAX -DRAWER_ENGINE_REV=\"7\" -DRAWER_ENGINE_VERSION=\"7.0.0\" -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:/rawrxd/src -ID:/rawrxd/src/engine -ID:/rawrxd/include -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -Wall -fopenmp -std=gnu++20 -MD -MT CMakeFiles/RawrEngine.dir/src/engine/react_ide_generator.cpp.obj -MF CMakeFiles\RawrEngine.dir\src\engine\react_ide_generator.cpp.obj.d -o CMakeFiles/RawrEngine.dir/src/engine/react_ide_generator.cpp.obj -c D:/rawrxd/src/engine/react_ide_generator.cpp
+D:/rawrxd/src/engine/react_ide_generator.cpp:555:1: error: expected declaration before '}' token
+  555 | }
+      | ^
+[4/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/engine/react_ide_generator.cpp.obj
+FAILED: CMakeFiles/RawrXD-IDE.dir/src/engine/react_ide_generator.cpp.obj 
+C:\ProgramData\mingw64\mingw64\bin\c++.exe -DNOMINMAX -DRAWER_ENGINE_REV=\"7\" -DRAWER_ENGINE_VERSION=\"7.0.0\" -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:/rawrxd/src -ID:/rawrxd/src/engine -ID:/rawrxd/include -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -Wall -fopenmp -std=gnu++20 -MD -MT CMakeFiles/RawrXD-IDE.dir/src/engine/react_ide_generator.cpp.obj -MF CMakeFiles\RawrXD-IDE.dir\src\engine\react_ide_generator.cpp.obj.d -o CMakeFiles/RawrXD-IDE.dir/src/engine/react_ide_generator.cpp.obj -c D:/rawrxd/src/engine/react_ide_generator.cpp
+D:/rawrxd/src/engine/react_ide_generator.cpp:555:1: error: expected declaration before '}' token
+  555 | }
+      | ^
+[5/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/modules/react_generator.cpp.obj
+FAILED: CMakeFiles/RawrXD-IDE.dir/src/modules/react_generator.cpp.obj 
+C:\ProgramData\mingw64\mingw64\bin\c++.exe -DNOMINMAX -DRAWER_ENGINE_REV=\"7\" -DRAWER_ENGINE_VERSION=\"7.0.0\" -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:/rawrxd/src -ID:/rawrxd/src/engine -ID:/rawrxd/include -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -Wall -fopenmp -std=gnu++20 -MD -MT CMakeFiles/RawrXD-IDE.dir/src/modules/react_generator.cpp.obj -MF CMakeFiles\RawrXD-IDE.dir\src\modules\react_generator.cpp.obj.d -o CMakeFiles/RawrXD-IDE.dir/src/modules/react_generator.cpp.obj -c D:/rawrxd/src/modules/react_generator.cpp
+D:/rawrxd/src/modules/react_generator.cpp:1233:2: warning: missing terminating " character
+ 1233 | )";
+      |  ^
+D:/rawrxd/src/modules/react_generator.cpp:1233:2: error: missing terminating " character
+ 1233 | )";
+      |  ^~
+D:/rawrxd/src/modules/react_generator.cpp:1436:2: warning: missing terminating " character
+ 1436 | )";
+      |  ^
+D:/rawrxd/src/modules/react_generator.cpp:1436:2: error: missing terminating " character
+ 1436 | )";
+      |  ^~
+D:/rawrxd/src/modules/react_generator.cpp: In static member function 'static std::string RawrXD::ReactServerGenerator::GetAgentModePanelContent(const RawrXD::ReactServerConfig&)':
+D:/rawrxd/src/modules/react_generator.cpp:1225:45: error: expected ';' before 'icon'
+ 1225 |       <ModeToggle label="Max Context (32K+)" icon={Zap} modeKey="maxMode" color="text-yellow-400" />
+      |                                             ^~~~~
+      |                                             ;
+D:/rawrxd/src/modules/react_generator.cpp:1225:46: error: 'icon' was not declared in this scope
+ 1225 |       <ModeToggle label="Max Context (32K+)" icon={Zap} modeKey="maxMode" color="text-yellow-400" />
+      |                                              ^~~~
+D:/rawrxd/src/modules/react_generator.cpp:1225:52: error: 'Zap' was not declared in this scope
+ 1225 |       <ModeToggle label="Max Context (32K+)" icon={Zap} modeKey="maxMode" color="text-yellow-400" />
+      |                                                    ^~~
+D:/rawrxd/src/modules/react_generator.cpp:1226:60: error: 'modeKey' was not declared in this scope
+ 1226 |       <ModeToggle label="Deep Thinking (CoT)" icon={Brain} modeKey="deepThinking" color="text-purple-400" />
+      |                                                            ^~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp: At global scope:
+D:/rawrxd/src/modules/react_generator.cpp:1233:1: error: expected unqualified-id before ')' token
+ 1233 | )";
+      | ^
+D:/rawrxd/src/modules/react_generator.cpp:1236:13: error: 'ReactServerGenerator' has not been declared
+ 1236 | std::string ReactServerGenerator::GetEngineManagerContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1236:65: error: 'ReactServerConfig' does not name a type
+ 1236 | std::string ReactServerGenerator::GetEngineManagerContent(const ReactServerConfig& config) {
+      |                                                                 ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1313:13: error: 'ReactServerGenerator' has not been declared
+ 1313 | std::string ReactServerGenerator::GetMemoryViewerContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1313:64: error: 'ReactServerConfig' does not name a type
+ 1313 | std::string ReactServerGenerator::GetMemoryViewerContent(const ReactServerConfig& config) {
+      |                                                                ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1350:13: error: 'ReactServerGenerator' has not been declared
+ 1350 | std::string ReactServerGenerator::GetToolOutputPanelContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1350:67: error: 'ReactServerConfig' does not name a type
+ 1350 | std::string ReactServerGenerator::GetToolOutputPanelContent(const ReactServerConfig& config) {
+      |                                                                   ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1378:13: error: 'ReactServerGenerator' has not been declared
+ 1378 | std::string ReactServerGenerator::GetHotpatchControlsContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1378:68: error: 'ReactServerConfig' does not name a type
+ 1378 | std::string ReactServerGenerator::GetHotpatchControlsContent(const ReactServerConfig& config) {
+      |                                                                    ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp: In function 'std::string GetHotpatchControlsContent(const int&)':
+D:/rawrxd/src/modules/react_generator.cpp:1415:51: error: expected ';' before 'value'
+ 1415 |                     placeholder="Old Code (Match)"
+      |                                                   ^
+      |                                                   ;
+ 1416 |                     value={oldCode} onChange={e => setOldCode(e.target.value)}
+      |                     ~~~~~                          
+D:/rawrxd/src/modules/react_generator.cpp:1416:21: error: 'value' was not declared in this scope
+ 1416 |                     value={oldCode} onChange={e => setOldCode(e.target.value)}
+      |                     ^~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1416:28: error: 'oldCode' was not declared in this scope
+ 1416 |                     value={oldCode} onChange={e => setOldCode(e.target.value)}
+      |                            ^~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1417:17: error: expected primary-expression before '/' token
+ 1417 |                 />
+      |                 ^
+D:/rawrxd/src/modules/react_generator.cpp:1417:18: error: expected primary-expression before '>' token
+ 1417 |                 />
+      |                  ^
+D:/rawrxd/src/modules/react_generator.cpp:1418:17: error: expected primary-expression before '<' token
+ 1418 |                 <textarea
+      |                 ^
+D:/rawrxd/src/modules/react_generator.cpp:1418:18: error: 'textarea' was not declared in this scope
+ 1418 |                 <textarea
+      |                  ^~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1421:37: error: 'onChange' was not declared in this scope
+ 1421 |                     value={newCode} onChange={e => setNewCode(e.target.value)}
+      |                                     ^~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1421:47: error: 'e' was not declared in this scope; did you mean 'std::numbers::e'?
+ 1421 |                     value={newCode} onChange={e => setNewCode(e.target.value)}
+      |                                               ^
+      |                                               std::numbers::e
+In file included from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/max_size_type.h:39,
+                 from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/ranges_base.h:41,
+                 from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/string_view:58,
+                 from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/basic_string.h:51,
+                 from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/string:56,
+                 from D:/rawrxd/src/modules/react_generator.h:2,
+                 from D:/rawrxd/src/modules/react_generator.cpp:1:
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/numbers:129:27: note: 'std::numbers::e' declared here
+  129 |   inline constexpr double e = e_v<double>;
+      |                           ^
+D:/rawrxd/src/modules/react_generator.cpp:1421:50: error: expected primary-expression before '>' token
+ 1421 |                     value={newCode} onChange={e => setNewCode(e.target.value)}
+      |                                                  ^
+D:/rawrxd/src/modules/react_generator.cpp:1421:52: error: 'setNewCode' was not declared in this scope
+ 1421 |                     value={newCode} onChange={e => setNewCode(e.target.value)}
+      |                                                    ^~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1427:21: error: 'className' was not declared in this scope
+ 1427 |                     className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-bold w-full"
+      |                     ^~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1429:21: error: 'APPLY' was not declared in this scope
+ 1429 |                     APPLY HOTPATCH
+      |                     ^~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1433:9: error: expected primary-expression before '<' token
+ 1433 |         </div>
+      |         ^
+D:/rawrxd/src/modules/react_generator.cpp:1433:10: error: expected primary-expression before '/' token
+ 1433 |         </div>
+      |          ^
+D:/rawrxd/src/modules/react_generator.cpp:1434:5: error: expected primary-expression before ')' token
+ 1434 |     );
+      |     ^
+D:/rawrxd/src/modules/react_generator.cpp: At global scope:
+D:/rawrxd/src/modules/react_generator.cpp:1436:1: error: expected unqualified-id before ')' token
+ 1436 | )";
+      | ^
+D:/rawrxd/src/modules/react_generator.cpp:1437:1: error: expected declaration before '}' token
+ 1437 | }
+      | ^
+D:/rawrxd/src/modules/react_generator.cpp:1439:13: error: 'ReactServerGenerator' has not been declared
+ 1439 | std::string ReactServerGenerator::GetREToolsPanelContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1439:64: error: 'ReactServerConfig' does not name a type
+ 1439 | std::string ReactServerGenerator::GetREToolsPanelContent(const ReactServerConfig& config) {
+      |                                                                ^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1505:13: error: 'ReactServerGenerator' has not been declared
+ 1505 | std::string ReactServerGenerator::GetMainIDEAppContent(const ReactServerConfig& config) {
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/modules/react_generator.cpp:1505:62: error: 'ReactServerConfig' does not name a type
+ 1505 | std::string ReactServerGenerator::GetMainIDEAppContent(const ReactServerConfig& config) {
+      |                                                              ^~~~~~~~~~~~~~~~~
+[6/17] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/universal_generator.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/engine/universal_generator.cpp.obj 
+C:\ProgramData\mingw64\mingw64\bin\c++.exe -DNOMINMAX -DRAWER_ENGINE_REV=\"7\" -DRAWER_ENGINE_VERSION=\"7.0.0\" -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:/rawrxd/src -ID:/rawrxd/src/engine -ID:/rawrxd/include -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -Wall -fopenmp -std=gnu++20 -MD -MT CMakeFiles/RawrEngine.dir/src/engine/universal_generator.cpp.obj -MF CMakeFiles\RawrEngine.dir\src\engine\universal_generator.cpp.obj.d -o CMakeFiles/RawrEngine.dir/src/engine/universal_generator.cpp.obj -c D:/rawrxd/src/engine/universal_generator.cpp
+D:/rawrxd/src/engine/universal_generator.cpp: In member function 'void UniversalGenerator::InitializeTemplates()':
+D:/rawrxd/src/engine/universal_generator.cpp:250:5: error: no match for 'operator=' (operand types are 'std::unordered_map<std::__cxx11::basic_string<char>, ProjectTemplate>::mapped_type' {aka 'ProjectTemplate'} and '<brace-enclosed initializer list>')
+  250 |     };
+      |     ^
+D:/rawrxd/src/engine/universal_generator.cpp:250:5: note: there are 2 candidates
+In file included from D:/rawrxd/src/engine/universal_generator.cpp:1:
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 1: 'ProjectTemplate& ProjectTemplate::operator=(const ProjectTemplate&)'
+   64 | struct ProjectTemplate {
+      |        ^~~~~~~~~~~~~~~
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'const ProjectTemplate&'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 2: 'ProjectTemplate& ProjectTemplate::operator=(ProjectTemplate&&)'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'ProjectTemplate&&'
+D:/rawrxd/src/engine/universal_generator.cpp:264:5: error: no match for 'operator=' (operand types are 'std::unordered_map<std::__cxx11::basic_string<char>, ProjectTemplate>::mapped_type' {aka 'ProjectTemplate'} and '<brace-enclosed initializer list>')
+  264 |     };
+      |     ^
+D:/rawrxd/src/engine/universal_generator.cpp:264:5: note: there are 2 candidates
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 1: 'ProjectTemplate& ProjectTemplate::operator=(const ProjectTemplate&)'
+   64 | struct ProjectTemplate {
+      |        ^~~~~~~~~~~~~~~
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'const ProjectTemplate&'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 2: 'ProjectTemplate& ProjectTemplate::operator=(ProjectTemplate&&)'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'ProjectTemplate&&'
+D:/rawrxd/src/engine/universal_generator.cpp:278:5: error: no match for 'operator=' (operand types are 'std::unordered_map<std::__cxx11::basic_string<char>, ProjectTemplate>::mapped_type' {aka 'ProjectTemplate'} and '<brace-enclosed initializer list>')
+  278 |     };
+      |     ^
+D:/rawrxd/src/engine/universal_generator.cpp:278:5: note: there are 2 candidates
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 1: 'ProjectTemplate& ProjectTemplate::operator=(const ProjectTemplate&)'
+   64 | struct ProjectTemplate {
+      |        ^~~~~~~~~~~~~~~
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'const ProjectTemplate&'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 2: 'ProjectTemplate& ProjectTemplate::operator=(ProjectTemplate&&)'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'ProjectTemplate&&'
+D:/rawrxd/src/engine/universal_generator.cpp: In member function 'bool UniversalGenerator::GenerateProject(const std::string&, LanguageType, const std::filesystem::__cxx11::path&)':
+D:/rawrxd/src/engine/universal_generator.cpp:516:22: error: 'const struct LanguageConfig' has no member named 'run_commands'
+  516 |     readme << config.run_commands[0] << "\n";
+      |                      ^~~~~~~~~~~~
+D:/rawrxd/src/engine/universal_generator.cpp: In member function 'bool UniversalGenerator::GenerateWithTests(const std::string&, LanguageType, const std::filesystem::__cxx11::path&)':
+D:/rawrxd/src/engine/universal_generator.cpp:652:17: warning: unused variable 'config' [-Wunused-variable]
+  652 |     const auto& config = it->second;
+      |                 ^~~~~~
+[7/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/engine/universal_generator.cpp.obj
+FAILED: CMakeFiles/RawrXD-IDE.dir/src/engine/universal_generator.cpp.obj 
+C:\ProgramData\mingw64\mingw64\bin\c++.exe -DNOMINMAX -DRAWER_ENGINE_REV=\"7\" -DRAWER_ENGINE_VERSION=\"7.0.0\" -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:/rawrxd/src -ID:/rawrxd/src/engine -ID:/rawrxd/include -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -Wall -fopenmp -std=gnu++20 -MD -MT CMakeFiles/RawrXD-IDE.dir/src/engine/universal_generator.cpp.obj -MF CMakeFiles\RawrXD-IDE.dir\src\engine\universal_generator.cpp.obj.d -o CMakeFiles/RawrXD-IDE.dir/src/engine/universal_generator.cpp.obj -c D:/rawrxd/src/engine/universal_generator.cpp
+D:/rawrxd/src/engine/universal_generator.cpp: In member function 'void UniversalGenerator::InitializeTemplates()':
+D:/rawrxd/src/engine/universal_generator.cpp:250:5: error: no match for 'operator=' (operand types are 'std::unordered_map<std::__cxx11::basic_string<char>, ProjectTemplate>::mapped_type' {aka 'ProjectTemplate'} and '<brace-enclosed initializer list>')
+  250 |     };
+      |     ^
+D:/rawrxd/src/engine/universal_generator.cpp:250:5: note: there are 2 candidates
+In file included from D:/rawrxd/src/engine/universal_generator.cpp:1:
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 1: 'ProjectTemplate& ProjectTemplate::operator=(const ProjectTemplate&)'
+   64 | struct ProjectTemplate {
+      |        ^~~~~~~~~~~~~~~
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'const ProjectTemplate&'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 2: 'ProjectTemplate& ProjectTemplate::operator=(ProjectTemplate&&)'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'ProjectTemplate&&'
+D:/rawrxd/src/engine/universal_generator.cpp:264:5: error: no match for 'operator=' (operand types are 'std::unordered_map<std::__cxx11::basic_string<char>, ProjectTemplate>::mapped_type' {aka 'ProjectTemplate'} and '<brace-enclosed initializer list>')
+  264 |     };
+      |     ^
+D:/rawrxd/src/engine/universal_generator.cpp:264:5: note: there are 2 candidates
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 1: 'ProjectTemplate& ProjectTemplate::operator=(const ProjectTemplate&)'
+   64 | struct ProjectTemplate {
+      |        ^~~~~~~~~~~~~~~
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'const ProjectTemplate&'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 2: 'ProjectTemplate& ProjectTemplate::operator=(ProjectTemplate&&)'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'ProjectTemplate&&'
+D:/rawrxd/src/engine/universal_generator.cpp:278:5: error: no match for 'operator=' (operand types are 'std::unordered_map<std::__cxx11::basic_string<char>, ProjectTemplate>::mapped_type' {aka 'ProjectTemplate'} and '<brace-enclosed initializer list>')
+  278 |     };
+      |     ^
+D:/rawrxd/src/engine/universal_generator.cpp:278:5: note: there are 2 candidates
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 1: 'ProjectTemplate& ProjectTemplate::operator=(const ProjectTemplate&)'
+   64 | struct ProjectTemplate {
+      |        ^~~~~~~~~~~~~~~
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'const ProjectTemplate&'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: candidate 2: 'ProjectTemplate& ProjectTemplate::operator=(ProjectTemplate&&)'
+D:/rawrxd/src/engine/universal_generator.h:64:8: note: no known conversion for argument 1 from '<brace-enclosed initializer list>' to 'ProjectTemplate&&'
+D:/rawrxd/src/engine/universal_generator.cpp: In member function 'bool UniversalGenerator::GenerateProject(const std::string&, LanguageType, const std::filesystem::__cxx11::path&)':
+D:/rawrxd/src/engine/universal_generator.cpp:516:22: error: 'const struct LanguageConfig' has no member named 'run_commands'
+  516 |     readme << config.run_commands[0] << "\n";
+      |                      ^~~~~~~~~~~~
+D:/rawrxd/src/engine/universal_generator.cpp: In member function 'bool UniversalGenerator::GenerateWithTests(const std::string&, LanguageType, const std::filesystem::__cxx11::path&)':
+D:/rawrxd/src/engine/universal_generator.cpp:652:17: warning: unused variable 'config' [-Wunused-variable]
+  652 |     const auto& config = it->second;
+      |                 ^~~~~~
+[8/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/modules/memory_manager.cpp.obj
+[9/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/utils/diagnostics_impl.cpp.obj
+[10/17] Building CXX object CMakeFiles/RawrEngine.dir/src/cpu_inference_engine.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/cpu_inference_engine.cpp.obj 
+C:\ProgramData\mingw64\mingw64\bin\c++.exe -DNOMINMAX -DRAWER_ENGINE_REV=\"7\" -DRAWER_ENGINE_VERSION=\"7.0.0\" -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:/rawrxd/src -ID:/rawrxd/src/engine -ID:/rawrxd/include -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -Wall -fopenmp -std=gnu++20 -MD -MT CMakeFiles/RawrEngine.dir/src/cpu_inference_engine.cpp.obj -MF CMakeFiles\RawrEngine.dir\src\cpu_inference_engine.cpp.obj.d -o CMakeFiles/RawrEngine.dir/src/cpu_inference_engine.cpp.obj -c D:/rawrxd/src/cpu_inference_engine.cpp
+D:/rawrxd/src/cpu_inference_engine.cpp: In function 'void CPUInference::CPUOps::DequantizeQ4_0_AVX2(const uint8_t*, float*, int)':
+D:/rawrxd/src/cpu_inference_engine.cpp:63:21: warning: unused variable 'high' [-Wunused-variable]
+   63 |             __m256i high = _mm256_cvtepu8_epi16(_mm_srli_epi16(raw, 4));
+      |                     ^~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:67:20: warning: unused variable 'f_low' [-Wunused-variable]
+   67 |             __m256 f_low = _mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_mm256_extracti128_si256(_mm256_sub_epi16(low, shift), 0)));
+      |                    ^~~~~
+In file included from D:/rawrxd/src/cpu_inference_engine.cpp:1:
+D:/rawrxd/src/cpu_inference_engine.h: In constructor 'CPUInference::CPUInferenceEngine::CPUInferenceEngine()':
+D:/rawrxd/src/cpu_inference_engine.h:156:9: warning: 'CPUInference::CPUInferenceEngine::m_numHeads' will be initialized after [-Wreorder]
+  156 |     int m_numHeads = 0;
+      |         ^~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:154:9: warning:   'int CPUInference::CPUInferenceEngine::m_embeddingDim' [-Wreorder]
+  154 |     int m_embeddingDim = 0;
+      |         ^~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:286:1: warning:   when initialized here [-Wreorder]
+  286 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:154:9: warning: 'CPUInference::CPUInferenceEngine::m_embeddingDim' will be initialized after [-Wreorder]
+  154 |     int m_embeddingDim = 0;
+      |         ^~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:153:9: warning:   'int CPUInference::CPUInferenceEngine::m_vocabSize' [-Wreorder]
+  153 |     int m_vocabSize = 0;
+      |         ^~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:286:1: warning:   when initialized here [-Wreorder]
+  286 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:157:9: warning: 'CPUInference::CPUInferenceEngine::m_threadCount' will be initialized after [-Wreorder]
+  157 |     int m_threadCount = 1;
+      |         ^~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:152:10: warning:   'bool CPUInference::CPUInferenceEngine::m_modelLoaded' [-Wreorder]
+  152 |     bool m_modelLoaded = false;
+      |          ^~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:286:1: warning:   when initialized here [-Wreorder]
+  286 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::InitKVCache()':
+D:/rawrxd/src/cpu_inference_engine.cpp:393:27: warning: comparison of integer expressions of different signedness: 'std::vector<CPUInference::CPUInferenceEngine::KVCache>::size_type' {aka 'long long unsigned int'} and 'int' [-Wsign-compare]
+  393 |     if (m_kv_cache.size() == m_numLayers) {
+      |         ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::MultiHeadAttention(const float*, const float*, const float*, float*, int, int, int, int)':
+D:/rawrxd/src/cpu_inference_engine.cpp:511:19: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<CPUInference::CPUInferenceEngine::KVCache>::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  511 |     if (layer_idx < m_kv_cache.size()) {
+      |         ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:514:32: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<float>::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  514 |         if (offset + embed_dim <= cache.keys.size()) {
+      |             ~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::GenerateStreaming(const std::vector<int>&, int, std::function<void(const std::__cxx11::basic_string<char>&)>, std::function<void()>, std::function<void(int)>)':
+D:/rawrxd/src/cpu_inference_engine.cpp:690:50: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<std::__cxx11::basic_string<char> >::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  690 |         std::string s = (next_id >= 0 && next_id < m_vocab.size()) ? m_vocab[next_id] : "";
+      |                                          ~~~~~~~~^~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:695:9: error: 'last_token' was not declared in this scope
+  695 |         last_token = next_id;
+      |         ^~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'std::vector<int> CPUInference::CPUInferenceEngine::Tokenize(const std::string&)':
+D:/rawrxd/src/cpu_inference_engine.cpp:725:29: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<std::__cxx11::basic_string<char> >::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  725 |         for (int id = 0; id < m_vocab.size(); ++id) {
+      |                          ~~~^~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'std::string CPUInference::CPUInferenceEngine::Detokenize(const std::vector<int>&)':
+D:/rawrxd/src/cpu_inference_engine.cpp:755:43: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<std::__cxx11::basic_string<char> >::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  755 |     for (auto t : tokens) if (t >= 0 && t < m_vocab.size()) s += m_vocab[t];
+      |                                         ~~^~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::UpdateOutputWeights(const std::vector<float>&, float)':
+D:/rawrxd/src/cpu_inference_engine.cpp:944:51: warning: comparison of integer expressions of different signedness: 'std::vector<float>::size_type' {aka 'long long unsigned int'} and 'int' [-Wsign-compare]
+  944 |     if (m_lastState.empty() || m_lastState.size() != m_embeddingDim) return;
+      |                                ~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:950:15: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<float>::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  950 |         if (v >= gradients.size()) break;
+      |             ~~^~~~~~~~~~~~~~~~~~~
+[11/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/cpu_inference_engine.cpp.obj
+FAILED: CMakeFiles/RawrXD-IDE.dir/src/cpu_inference_engine.cpp.obj 
+C:\ProgramData\mingw64\mingw64\bin\c++.exe -DNOMINMAX -DRAWER_ENGINE_REV=\"7\" -DRAWER_ENGINE_VERSION=\"7.0.0\" -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:/rawrxd/src -ID:/rawrxd/src/engine -ID:/rawrxd/include -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -Wall -fopenmp -std=gnu++20 -MD -MT CMakeFiles/RawrXD-IDE.dir/src/cpu_inference_engine.cpp.obj -MF CMakeFiles\RawrXD-IDE.dir\src\cpu_inference_engine.cpp.obj.d -o CMakeFiles/RawrXD-IDE.dir/src/cpu_inference_engine.cpp.obj -c D:/rawrxd/src/cpu_inference_engine.cpp
+D:/rawrxd/src/cpu_inference_engine.cpp: In function 'void CPUInference::CPUOps::DequantizeQ4_0_AVX2(const uint8_t*, float*, int)':
+D:/rawrxd/src/cpu_inference_engine.cpp:63:21: warning: unused variable 'high' [-Wunused-variable]
+   63 |             __m256i high = _mm256_cvtepu8_epi16(_mm_srli_epi16(raw, 4));
+      |                     ^~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:67:20: warning: unused variable 'f_low' [-Wunused-variable]
+   67 |             __m256 f_low = _mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_mm256_extracti128_si256(_mm256_sub_epi16(low, shift), 0)));
+      |                    ^~~~~
+In file included from D:/rawrxd/src/cpu_inference_engine.cpp:1:
+D:/rawrxd/src/cpu_inference_engine.h: In constructor 'CPUInference::CPUInferenceEngine::CPUInferenceEngine()':
+D:/rawrxd/src/cpu_inference_engine.h:156:9: warning: 'CPUInference::CPUInferenceEngine::m_numHeads' will be initialized after [-Wreorder]
+  156 |     int m_numHeads = 0;
+      |         ^~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:154:9: warning:   'int CPUInference::CPUInferenceEngine::m_embeddingDim' [-Wreorder]
+  154 |     int m_embeddingDim = 0;
+      |         ^~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:286:1: warning:   when initialized here [-Wreorder]
+  286 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:154:9: warning: 'CPUInference::CPUInferenceEngine::m_embeddingDim' will be initialized after [-Wreorder]
+  154 |     int m_embeddingDim = 0;
+      |         ^~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:153:9: warning:   'int CPUInference::CPUInferenceEngine::m_vocabSize' [-Wreorder]
+  153 |     int m_vocabSize = 0;
+      |         ^~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:286:1: warning:   when initialized here [-Wreorder]
+  286 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:157:9: warning: 'CPUInference::CPUInferenceEngine::m_threadCount' will be initialized after [-Wreorder]
+  157 |     int m_threadCount = 1;
+      |         ^~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.h:152:10: warning:   'bool CPUInference::CPUInferenceEngine::m_modelLoaded' [-Wreorder]
+  152 |     bool m_modelLoaded = false;
+      |          ^~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:286:1: warning:   when initialized here [-Wreorder]
+  286 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::InitKVCache()':
+D:/rawrxd/src/cpu_inference_engine.cpp:393:27: warning: comparison of integer expressions of different signedness: 'std::vector<CPUInference::CPUInferenceEngine::KVCache>::size_type' {aka 'long long unsigned int'} and 'int' [-Wsign-compare]
+  393 |     if (m_kv_cache.size() == m_numLayers) {
+      |         ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::MultiHeadAttention(const float*, const float*, const float*, float*, int, int, int, int)':
+D:/rawrxd/src/cpu_inference_engine.cpp:511:19: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<CPUInference::CPUInferenceEngine::KVCache>::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  511 |     if (layer_idx < m_kv_cache.size()) {
+      |         ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:514:32: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<float>::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  514 |         if (offset + embed_dim <= cache.keys.size()) {
+      |             ~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::GenerateStreaming(const std::vector<int>&, int, std::function<void(const std::__cxx11::basic_string<char>&)>, std::function<void()>, std::function<void(int)>)':
+D:/rawrxd/src/cpu_inference_engine.cpp:690:50: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<std::__cxx11::basic_string<char> >::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  690 |         std::string s = (next_id >= 0 && next_id < m_vocab.size()) ? m_vocab[next_id] : "";
+      |                                          ~~~~~~~~^~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:695:9: error: 'last_token' was not declared in this scope
+  695 |         last_token = next_id;
+      |         ^~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'std::vector<int> CPUInference::CPUInferenceEngine::Tokenize(const std::string&)':
+D:/rawrxd/src/cpu_inference_engine.cpp:725:29: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<std::__cxx11::basic_string<char> >::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  725 |         for (int id = 0; id < m_vocab.size(); ++id) {
+      |                          ~~~^~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'std::string CPUInference::CPUInferenceEngine::Detokenize(const std::vector<int>&)':
+D:/rawrxd/src/cpu_inference_engine.cpp:755:43: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<std::__cxx11::basic_string<char> >::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  755 |     for (auto t : tokens) if (t >= 0 && t < m_vocab.size()) s += m_vocab[t];
+      |                                         ~~^~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::UpdateOutputWeights(const std::vector<float>&, float)':
+D:/rawrxd/src/cpu_inference_engine.cpp:944:51: warning: comparison of integer expressions of different signedness: 'std::vector<float>::size_type' {aka 'long long unsigned int'} and 'int' [-Wsign-compare]
+  944 |     if (m_lastState.empty() || m_lastState.size() != m_embeddingDim) return;
+      |                                ~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+D:/rawrxd/src/cpu_inference_engine.cpp:950:15: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<float>::size_type' {aka 'long long unsigned int'} [-Wsign-compare]
+  950 |         if (v >= gradients.size()) break;
+      |             ~~^~~~~~~~~~~~~~~~~~~
+[12/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/ai/ai_ide_integration.cpp.obj
+D:/rawrxd/src/ai/ai_ide_integration.cpp:7: warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+    7 | #pragma comment(lib, "comctl32.lib")
+[13/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/ide_engine_logic.cpp.obj
+In file included from D:/rawrxd/src/ide_engine_logic.cpp:1:
+D:/rawrxd/src/ide_window.h:3:9: warning: 'WIN32_LEAN_AND_MEAN' redefined
+    3 | #define WIN32_LEAN_AND_MEAN
+      |         ^~~~~~~~~~~~~~~~~~~
+<command-line>: note: this is the location of the previous definition
+[14/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/streaming_gguf_loader.cpp.obj
+D:/rawrxd/src/streaming_gguf_loader.cpp: In member function 'uint64_t CPUInference::StreamingGGUFLoader::CalculateTensorSize(const std::vector<long long unsigned int>&, CPUInference::GGMLType) const':
+D:/rawrxd/src/streaming_gguf_loader.cpp:567:12: warning: enumeration value 'Q5_1' not handled in switch [-Wswitch]
+  567 |     switch (type) {
+      |            ^
+D:/rawrxd/src/streaming_gguf_loader.cpp:567:12: warning: enumeration value 'F16_HALF' not handled in switch [-Wswitch]
+[15/17] Building CXX object CMakeFiles/RawrXD-IDE.dir/src/ai/ai_assistant_engine.cpp.obj
+D:/rawrxd/src/ai/ai_assistant_engine.cpp:12: warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+   12 | #pragma comment(lib, "winhttp.lib")
+ninja: build stopped: subcommand failed.

@@ -8,6 +8,7 @@
 #include "subagent_core.h"
 #include "agentic_engine.h"
 #include "agent_history.h"
+#include "agent_policy.h"
 #include "native_agent.hpp"
 #include <random>
 #include <iomanip>
@@ -79,6 +80,16 @@ std::string SubAgentManager::spawnSubAgent(
 
     m_totalSpawned++;
     logInfo("SubAgent spawned: " + agentId + " desc='" + description + "' parent=" + parentId);
+
+    // Phase 7: Evaluate policies before execution
+    if (m_policyEngine) {
+        PolicyEvalResult policyResult = m_policyEngine->evaluate("agent_spawn", description);
+        if (policyResult.hasMatch && !policyResult.needsUserApproval) {
+            const auto& action = policyResult.mergedAction;
+            logInfo("Policy applied to agent " + agentId + ": " + policyResult.summary);
+            // Note: validation step and timeout overrides are applied in runSubAgentThread
+        }
+    }
 
     if (m_historyRecorder) {
         m_historyRecorder->recordAgentSpawn(agentId, parentId, description, prompt);
@@ -281,6 +292,15 @@ std::string SubAgentManager::executeChain(
     logInfo("Chain started: " + std::to_string(promptTemplates.size()) +
             " steps, parent=" + parentId);
 
+    // Phase 7: Evaluate policies for chain execution
+    if (m_policyEngine) {
+        PolicyEvalResult policyResult = m_policyEngine->evaluate("chain_start",
+            "Chain with " + std::to_string(promptTemplates.size()) + " steps");
+        if (policyResult.hasMatch) {
+            logInfo("Policy evaluated for chain: " + policyResult.summary);
+        }
+    }
+
     if (m_historyRecorder) {
         m_historyRecorder->recordChainStart(parentId, (int)promptTemplates.size());
     }
@@ -386,15 +406,40 @@ std::string SubAgentManager::executeSwarm(
             " tasks, maxParallel=" + std::to_string(config.maxParallel) +
             " merge=" + config.mergeStrategy);
 
+    // Phase 7: Evaluate policies for swarm execution
+    SwarmConfig adjustedConfig = config;
+    if (m_policyEngine) {
+        PolicyEvalResult policyResult = m_policyEngine->evaluate("swarm_start",
+            "Swarm with " + std::to_string(prompts.size()) + " tasks");
+        if (policyResult.hasMatch && !policyResult.needsUserApproval) {
+            const auto& action = policyResult.mergedAction;
+            if (action.reduceParallelism > 0) {
+                adjustedConfig.maxParallel = std::max(1,
+                    adjustedConfig.maxParallel - action.reduceParallelism);
+                logInfo("Policy: reduced swarm parallelism to " +
+                    std::to_string(adjustedConfig.maxParallel));
+            }
+            if (action.timeoutOverrideMs >= 0) {
+                adjustedConfig.timeoutMs = action.timeoutOverrideMs;
+                logInfo("Policy: swarm timeout overridden to " +
+                    std::to_string(adjustedConfig.timeoutMs) + "ms");
+            }
+            if (action.preferChainOverSwarm) {
+                logInfo("Policy suggests chain over swarm — executing as chain instead");
+                return executeChain(parentId, prompts);
+            }
+        }
+    }
+
     std::string swarmId = generateUUID();
 
     if (m_historyRecorder) {
-        m_historyRecorder->recordSwarmStart(parentId, (int)prompts.size(), config.mergeStrategy);
+        m_historyRecorder->recordSwarmStart(parentId, (int)prompts.size(), adjustedConfig.mergeStrategy);
     }
 
     auto swarmState = std::make_shared<SwarmState>();
     swarmState->swarmId = swarmId;
-    swarmState->config = config;
+    swarmState->config = adjustedConfig;
 
     for (int i = 0; i < (int)prompts.size(); i++) {
         SwarmTask task;
@@ -420,12 +465,12 @@ std::string SubAgentManager::executeSwarm(
         {
             std::unique_lock<std::mutex> lock(batchMutex);
             batchCV.wait(lock, [&]() {
-                return running.load() < config.maxParallel || swarmState->cancelled.load();
+                return running.load() < adjustedConfig.maxParallel || swarmState->cancelled.load();
             });
         }
 
         if (swarmState->cancelled.load()) break;
-        if (config.failFast && anyFailed.load()) break;
+        if (adjustedConfig.failFast && anyFailed.load()) break;
 
         running++;
 

@@ -681,6 +681,36 @@ void Win32IDE::handleToolsCommand(int commandId) {
         case 5022: // Replay Previous Session
             showAgentReplayDialog();
             break;
+
+        // ================================================================
+        // Failure Intelligence — Phase 6 (5023+)
+        // ================================================================
+        case 5023: // Toggle Failure Intelligence
+            toggleFailureIntelligence();
+            break;
+
+        case 5024: // Show Failure Intelligence Panel
+            showFailureIntelligencePanel();
+            break;
+
+        case 5025: // Show Failure Intelligence Stats
+            showFailureIntelligenceStats();
+            break;
+
+        case 5026: // Execute with Failure Intelligence
+            {
+                // Get prompt from editor selection or agent input
+                std::string testPrompt = getWindowText(m_hwndCopilotChatInput);
+                if (!testPrompt.empty()) {
+                    AgentResponse resp = executeWithFailureIntelligence(testPrompt);
+                    appendToOutput("[FailureIntelligence] Result: " + resp.content.substr(0, 500),
+                                   "General", OutputSeverity::Info);
+                } else {
+                    appendToOutput("[FailureIntelligence] No prompt — enter text in chat input first",
+                                   "General", OutputSeverity::Warning);
+                }
+            }
+            break;
             
         default:
             break;
@@ -976,6 +1006,12 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({5020, "History: Show Agent History Timeline", "", "History"});
     m_commandRegistry.push_back({5021, "History: Show Agent History Stats", "", "History"});
     m_commandRegistry.push_back({5022, "History: Replay Previous Session", "", "History"});
+
+    // Failure Intelligence — Phase 6 (5023+ range — routed via handleToolsCommand)
+    m_commandRegistry.push_back({5023, "AI: Toggle Failure Intelligence", "", "AI"});
+    m_commandRegistry.push_back({5024, "AI: Show Failure Intelligence Panel", "", "AI"});
+    m_commandRegistry.push_back({5025, "AI: Show Failure Intelligence Stats", "", "AI"});
+    m_commandRegistry.push_back({5026, "AI: Execute with Failure Intelligence", "", "AI"});
 
     m_filteredCommands = m_commandRegistry;
 }

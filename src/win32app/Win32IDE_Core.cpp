@@ -954,6 +954,13 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: initAgentHistory failed\n");
         }
 
+        // Initialize Failure Intelligence — Phase 6 (classification + retry strategies)
+        try {
+            initFailureIntelligence();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initFailureIntelligence failed\n");
+        }
+
         // Initialize Unified Model Source Resolver (HuggingFace, Ollama blobs, HTTP, local)
         try {
             m_modelResolver = std::make_unique<RawrXD::ModelSourceResolver>();

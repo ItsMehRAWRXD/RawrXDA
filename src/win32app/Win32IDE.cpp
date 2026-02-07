@@ -4508,6 +4508,28 @@ void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<vo
         // Execute via parity bridge (supports /edit, /think, etc.)
         m_agenticBridge->ExecuteAgentCommand(prompt);
 
+        // Phase 4B: Choke Point 4 — hookPostGeneration after streaming inference
+        // Note: For streaming responses, the full output was already sent via callback.
+        // We hook here for failure detection on the completed inference cycle.
+        // The response content was streamed — we check the accumulated result if available.
+        if (!m_inferenceStopRequested) {
+            std::string accumulatedResponse = m_currentInferenceResponse;
+            if (!accumulatedResponse.empty()) {
+                FailureClassification inferenceFailure = hookPostGeneration(
+                    accumulatedResponse, prompt);
+                if (inferenceFailure.reason != AgentFailureType::None) {
+                    LOG_WARNING("[Phase4B] Inference failure detected: " +
+                        failureTypeString(inferenceFailure.reason) +
+                        " (confidence=" + std::to_string(inferenceFailure.confidence) + ")");
+                    // For streaming responses, we log the failure and record it
+                    // but don't auto-retry (the user sees output in real-time)
+                    recordSimpleEvent(AgentEventType::FailureDetected,
+                        "Inference failure: " + failureTypeString(inferenceFailure.reason) +
+                        " | " + inferenceFailure.evidence);
+                }
+            }
+        }
+
         m_inferenceRunning = false;
         if (m_inferenceCallback) {
             m_inferenceCallback("", true); // Finalize

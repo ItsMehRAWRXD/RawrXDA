@@ -21,6 +21,7 @@
 // Forward declarations
 class AgenticEngine;
 class AgentHistoryRecorder;
+class PolicyEngine;
 
 // ============================================================================
 // Pluggable logger — callers inject via setLogCallback; default = no-op
@@ -150,6 +151,7 @@ public:
     void setLogCallback(SubAgentLogCallback cb)       { m_logCb = cb; }
     void setMetricsCallback(SubAgentMetricsCallback cb){ m_metricsCb = cb; }
     void setHistoryRecorder(AgentHistoryRecorder* rec) { m_historyRecorder = rec; }
+    void setPolicyEngine(PolicyEngine* engine)          { m_policyEngine = engine; }
 
     // ---- Core SubAgent Operations ----
     std::string spawnSubAgent(const std::string& parentId,
@@ -225,6 +227,7 @@ private:
 
     AgenticEngine* m_engine;
     AgentHistoryRecorder* m_historyRecorder = nullptr;
+    PolicyEngine* m_policyEngine = nullptr;
     SubAgentLogCallback m_logCb;
     SubAgentMetricsCallback m_metricsCb;
 

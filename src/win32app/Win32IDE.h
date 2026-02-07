@@ -76,6 +76,11 @@
 #define IDC_PLAN_PROGRESS      7020
 #define IDC_PLAN_PROGRESS_LABEL 7021
 
+// Retry Approval Controls (inside Plan Dialog)
+#define IDC_PLAN_BTN_RETRY_YES 7030
+#define IDC_PLAN_BTN_RETRY_NO  7031
+#define IDC_PLAN_RETRY_LABEL   7032
+
 // Context Window IDs
 #define IDM_AI_CONTEXT_4K 4210
 #define IDM_AI_CONTEXT_32K 4211
@@ -322,12 +327,35 @@ struct WatchItem {
 // Agent Failure Detection Enums & Structures
 // ============================================================================
 enum class AgentFailureType {
+    None = 0,
     Refusal,
     Hallucination,
     FormatViolation,
     InfiniteLoop,
     QualityDegradation,
-    EmptyResponse
+    EmptyResponse,
+    Timeout,
+    ToolError,
+    InvalidOutput,
+    LowConfidence,
+    SafetyViolation,
+    UserAbort
+};
+
+// ── Phase 4B: Failure Classification with confidence + evidence ──
+struct FailureClassification {
+    AgentFailureType reason    = AgentFailureType::None;
+    float            confidence = 0.0f;   // 0.0–1.0
+    std::string      evidence;             // Bounded short string
+
+    static FailureClassification ok() { return { AgentFailureType::None, 1.0f, "" }; }
+    static FailureClassification make(AgentFailureType r, float c, const std::string& e) {
+        FailureClassification fc;
+        fc.reason     = r;
+        fc.confidence = c;
+        fc.evidence   = e.size() > 256 ? e.substr(0, 256) : e;
+        return fc;
+    }
 };
 
 struct FailureStats {
@@ -341,6 +369,96 @@ struct FailureStats {
     int infiniteLoopCount   = 0;
     int qualityDegradationCount = 0;
     int emptyResponseCount  = 0;
+    int timeoutCount        = 0;
+    int toolErrorCount      = 0;
+    int invalidOutputCount  = 0;
+    int lowConfidenceCount  = 0;
+    int safetyViolationCount = 0;
+    int userAbortCount      = 0;
+    int retriesDeclined     = 0;
+};
+
+// ============================================================================
+// Failure Intelligence — Phase 6: Granular Classification + Retry Strategies
+// ============================================================================
+
+// Granular failure reason — finer than AgentFailureType
+enum class FailureReason {
+    Unknown             = 0,
+    // Refusal sub-types
+    PolicyRefusal       = 1,    // Model's safety policy blocked the output
+    TaskRefusal         = 2,    // Model explicitly declined the task
+    CapabilityRefusal   = 3,    // Model says it cannot do the task
+    // Hallucination sub-types
+    FabricatedAPI       = 10,   // Made-up function/library names
+    FabricatedFact      = 11,   // Incorrect factual claims
+    SelfContradiction   = 12,   // Output contradicts itself
+    // Format sub-types
+    WrongFormat         = 20,   // JSON expected but got prose, etc.
+    MissingStructure    = 21,   // Required fields/sections missing
+    ExcessiveVerbosity  = 22,   // Too much explanation when code-only requested
+    // Loop sub-types
+    TokenRepetition     = 30,   // Same tokens repeated (stuck decoding)
+    BlockRepetition     = 31,   // Same paragraphs/blocks repeated
+    // Quality sub-types
+    LowDensity          = 40,   // Very low information density
+    FillerDominant      = 41,   // Output dominated by filler/stop words
+    TooShort            = 42,   // Response suspiciously short for the task
+    // System-level
+    EmptyOutput         = 50,   // Agent returned nothing
+    Timeout             = 51,   // Inference timed out
+    ToolError           = 52,   // Tool invocation failed
+    ContextOverflow     = 53    // Prompt exceeded context window
+};
+
+// Retry strategy types — what to do when a failure occurs
+enum class RetryStrategyType {
+    None                = 0,    // No retry — accept the failure
+    Rephrase            = 1,    // Rephrase the prompt to avoid the trigger
+    AddContext           = 2,    // Inject grounding context / examples
+    ForceFormat         = 3,    // Add explicit format instructions
+    ReduceScope         = 4,    // Shorten/simplify the prompt
+    AdjustTemperature   = 5,    // Lower temperature for more deterministic output
+    SplitTask           = 6,    // Break the task into smaller sub-tasks
+    RetryVerbatim       = 7,    // Retry the exact same prompt (transient failures)
+    ToolRetry           = 8     // Retry only the failed tool call
+};
+
+// A single retry strategy definition
+struct RetryStrategy {
+    RetryStrategyType type      = RetryStrategyType::None;
+    int maxAttempts             = 1;        // Max times this strategy can be attempted
+    float temperatureOverride   = -1.0f;    // -1 = no override
+    std::string promptPrefix;               // Prepended to the prompt on retry
+    std::string promptSuffix;               // Appended to the prompt on retry
+    std::string description;                // Human-readable description for UI
+
+    std::string typeString() const;
+};
+
+// A record of a specific failure + its classification, stored in history
+struct FailureIntelligenceRecord {
+    uint64_t timestampMs        = 0;
+    std::string promptHash;                 // SHA-like hash of the prompt (for matching)
+    std::string promptSnippet;              // First 256 chars of prompt
+    AgentFailureType failureType = AgentFailureType::EmptyResponse;
+    FailureReason reason        = FailureReason::Unknown;
+    RetryStrategyType strategyUsed = RetryStrategyType::None;
+    int attemptNumber           = 0;
+    bool retrySucceeded         = false;
+    std::string failureDetail;              // Human-readable detail
+    std::string sessionId;
+
+    std::string toMetadataJSON() const;
+};
+
+// Per-reason aggregated stats
+struct FailureReasonStats {
+    int occurrences             = 0;
+    int retriesAttempted        = 0;
+    int retriesSucceeded        = 0;
+    float avgRetryAttempts      = 0.0f;
+    RetryStrategyType bestStrategy = RetryStrategyType::None;
 };
 
 // ============================================================================
@@ -472,6 +590,8 @@ enum class AgentEventType {
     PlanStepExecuted,       // Plan executor completed a step
     FailureDetected,        // Failure detector flagged an issue
     FailureCorrected,       // Failure detector correction succeeded
+    FailureFailed,          // Failure detector correction failed after retry
+    FailureRetryDeclined,   // User declined a retry proposal
     GhostTextRequested,     // Ghost text completion was requested
     GhostTextAccepted,      // Ghost text completion was accepted
     SettingsChanged,        // Settings were modified
@@ -2067,10 +2187,93 @@ private:
     std::string getFailureDetectorStats() const;
     void toggleFailureDetector();
 
+    // Phase 4B: Failure Classification (returns structured FailureClassification)
+    FailureClassification classifyFailure(const std::string& response,
+                                          const std::string& originalPrompt);
+    std::vector<FailureClassification> classifyAllFailures(const std::string& response,
+                                                           const std::string& originalPrompt);
+
+    // Phase 4B: Detection hooks — wired at exact choke points only
+    //   1. Post-generation validation
+    //   2. Tool invocation result parsing
+    //   3. Plan step output verification
+    //   4. Agent command post-processing
+    FailureClassification hookPostGeneration(const std::string& response,
+                                             const std::string& prompt);
+    FailureClassification hookToolResult(const std::string& toolName,
+                                         const std::string& toolOutput);
+    FailureClassification hookPlanStepOutput(int stepIndex,
+                                             const std::string& output);
+    FailureClassification hookAgentCommand(const std::string& response,
+                                            const std::string& prompt);
+    FailureClassification hookSwarmMerge(const std::string& mergedResult,
+                                         int taskCount,
+                                         const std::string& strategy);
+
+    // Phase 4B: Bounded retry (max 1 retry, approval required)
+    std::string buildRetryPrompt(const FailureClassification& failure,
+                                 const std::string& originalPrompt);
+    bool showRetryApprovalInPlanDialog(int stepIndex,
+                                       const FailureClassification& failure);
+    std::string getRetryStrategyDescription(AgentFailureType reason) const;
+
+    // Phase 4B: Failure-aware plan execution (replaces blind retry)
+    AgentResponse executeWithBoundedRetry(const std::string& prompt);
+
     // Failure detector state
     bool m_failureDetectorEnabled = false;
-    int m_failureMaxRetries       = 3;
+    int m_failureMaxRetries       = 1;  // Phase 4B: hard cap at 1
     FailureStats m_failureStats;
+
+    // ========================================================================
+    // Failure Intelligence — Phase 6 (Win32IDE_FailureIntelligence.cpp)
+    // ========================================================================
+    // Phase 6.1 — Granular Classification
+    FailureReason classifyFailureReason(AgentFailureType type,
+                                         const std::string& response,
+                                         const std::string& prompt);
+    FailureReason classifyRefusalReason(const std::string& response);
+    FailureReason classifyHallucinationReason(const std::string& response);
+    FailureReason classifyFormatReason(const std::string& response, const std::string& prompt);
+    FailureReason classifyLoopReason(const std::string& response);
+    FailureReason classifyQualityReason(const std::string& response);
+    std::string failureReasonString(FailureReason reason) const;
+    std::string computePromptHash(const std::string& prompt) const;
+
+    // Phase 6.2 — Bounded Retry Strategies
+    void initFailureIntelligence();
+    RetryStrategy getRetryStrategyForReason(FailureReason reason) const;
+    std::string applyRetryStrategy(const RetryStrategy& strategy,
+                                    const std::string& originalPrompt);
+    AgentResponse executeWithFailureIntelligence(const std::string& prompt);
+    void recordFailureIntelligence(const FailureIntelligenceRecord& record);
+    void loadFailureIntelligenceHistory();
+    void flushFailureIntelligence();
+
+    // Phase 6.3 — History-Aware Suggestion UI
+    bool hasMatchingPreviousFailure(const std::string& prompt) const;
+    std::vector<FailureIntelligenceRecord> getMatchingFailures(const std::string& prompt) const;
+    void showFailureSuggestionDialog(const std::string& prompt,
+                                     const std::vector<FailureIntelligenceRecord>& matches);
+    void showFailureIntelligencePanel();
+    void showFailureIntelligenceStats();
+    std::string getFailureIntelligenceStatsString() const;
+    void toggleFailureIntelligence();
+
+    // Failure Intelligence state
+    bool m_failureIntelligenceEnabled  = true;
+    int m_intelligenceMaxRetries       = 2;
+    std::vector<FailureIntelligenceRecord> m_failureIntelligenceHistory;
+    std::map<int, FailureReasonStats> m_failureReasonStats;  // keyed by (int)FailureReason
+    std::mutex m_failureIntelligenceMutex;
+    static const size_t MAX_FAILURE_INTELLIGENCE_RECORDS = 500;
+
+    // Failure Intelligence UI
+    HWND m_hwndFailureIntelPanel       = nullptr;
+    HWND m_hwndFailureIntelList        = nullptr;
+    HWND m_hwndFailureIntelDetail      = nullptr;
+    HWND m_hwndFailureIntelStats       = nullptr;
+    HWND m_hwndFailureSuggestionDlg    = nullptr;
 
     // ========================================================================
     // Settings Dialog (Win32IDE_Settings.cpp)

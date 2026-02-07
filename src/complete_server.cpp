@@ -2,6 +2,7 @@
 #include "agentic_engine.h"
 #include "subagent_core.h"
 #include "agent_history.h"
+#include "agent_policy.h"
 
 #include <algorithm>
 #include <cctype>
@@ -342,6 +343,25 @@ void CompletionServer::HandleClient(int client_fd) {
         response_body = HandleHistoryRequest(path, parsed_body);
     } else if (method == "POST" && path == "/api/agents/replay") {
         response_body = HandleReplayRequest(parsed_body);
+    }
+    // === Phase 7: Policy API Routes ===
+    else if ((method == "GET" || method == "POST") &&
+             (path == "/api/policies" || path.rfind("/api/policies?", 0) == 0)) {
+        response_body = HandlePoliciesRequest(path, parsed_body);
+    } else if (method == "GET" && path == "/api/policies/suggestions") {
+        response_body = HandlePolicySuggestionsRequest(parsed_body);
+    } else if (method == "POST" && path == "/api/policies/apply") {
+        response_body = HandlePolicyApplyRequest(parsed_body);
+    } else if (method == "POST" && path == "/api/policies/reject") {
+        response_body = HandlePolicyRejectRequest(parsed_body);
+    } else if (method == "GET" && path == "/api/policies/export") {
+        response_body = HandlePolicyExportRequest();
+    } else if (method == "POST" && path == "/api/policies/import") {
+        response_body = HandlePolicyImportRequest(parsed_body);
+    } else if (method == "GET" && path == "/api/policies/heuristics") {
+        response_body = HandlePolicyHeuristicsRequest();
+    } else if (method == "GET" && path == "/api/policies/stats") {
+        response_body = HandlePolicyStatsRequest();
     } else {
         status = 400;
         response_body = R"({"error":"unknown_endpoint"})";
@@ -828,6 +848,109 @@ std::string CompletionServer::HandleReplayRequest(const std::string& body) {
            ",\"original_result\":\"" + EscapeJson(result.originalResult) + "\"" +
            ",\"events_replayed\":" + std::to_string(result.eventsReplayed) +
            ",\"duration_ms\":" + std::to_string(result.durationMs) + "}";
+}
+
+// ============================================================================
+// Phase 7 — Policy API Handlers
+// ============================================================================
+
+std::string CompletionServer::HandlePoliciesRequest(const std::string& path, const std::string& body) {
+    if (!policy_engine_) {
+        return R"({"error":"policy_engine_not_available"})";
+    }
+
+    auto policies = policy_engine_->getAllPolicies();
+    std::string json = "{\"policies\":[";
+    for (size_t i = 0; i < policies.size(); ++i) {
+        if (i > 0) json += ",";
+        json += policies[i].toJSON();
+    }
+    json += "],\"count\":" + std::to_string(policies.size()) + "}";
+    return json;
+}
+
+std::string CompletionServer::HandlePolicySuggestionsRequest(const std::string& body) {
+    if (!policy_engine_) {
+        return R"({"error":"policy_engine_not_available"})";
+    }
+
+    // Generate fresh suggestions from history
+    auto suggestions = policy_engine_->generateSuggestions();
+    auto pending = policy_engine_->getPendingSuggestions();
+
+    std::string json = "{\"suggestions\":[";
+    for (size_t i = 0; i < pending.size(); ++i) {
+        if (i > 0) json += ",";
+        json += pending[i].toJSON();
+    }
+    json += "],\"pending\":" + std::to_string(pending.size()) +
+            ",\"new_generated\":" + std::to_string(suggestions.size()) + "}";
+    return json;
+}
+
+std::string CompletionServer::HandlePolicyApplyRequest(const std::string& body) {
+    if (!policy_engine_) {
+        return R"({"error":"policy_engine_not_available"})";
+    }
+
+    std::string suggestionId;
+    if (!ExtractJsonString(body, "suggestion_id", suggestionId)) {
+        return R"({"error":"missing_suggestion_id"})";
+    }
+
+    bool ok = policy_engine_->acceptSuggestion(suggestionId);
+    return "{\"success\":" + std::string(ok ? "true" : "false") +
+           ",\"suggestion_id\":\"" + EscapeJson(suggestionId) + "\"}";
+}
+
+std::string CompletionServer::HandlePolicyRejectRequest(const std::string& body) {
+    if (!policy_engine_) {
+        return R"({"error":"policy_engine_not_available"})";
+    }
+
+    std::string suggestionId;
+    if (!ExtractJsonString(body, "suggestion_id", suggestionId)) {
+        return R"({"error":"missing_suggestion_id"})";
+    }
+
+    bool ok = policy_engine_->rejectSuggestion(suggestionId);
+    return "{\"success\":" + std::string(ok ? "true" : "false") +
+           ",\"suggestion_id\":\"" + EscapeJson(suggestionId) + "\"}";
+}
+
+std::string CompletionServer::HandlePolicyExportRequest() {
+    if (!policy_engine_) {
+        return R"({"error":"policy_engine_not_available"})";
+    }
+
+    return policy_engine_->exportPolicies();
+}
+
+std::string CompletionServer::HandlePolicyImportRequest(const std::string& body) {
+    if (!policy_engine_) {
+        return R"({"error":"policy_engine_not_available"})";
+    }
+
+    int count = policy_engine_->importPolicies(body);
+    policy_engine_->save();
+    return "{\"imported\":" + std::to_string(count) + "}";
+}
+
+std::string CompletionServer::HandlePolicyHeuristicsRequest() {
+    if (!policy_engine_) {
+        return R"({"error":"policy_engine_not_available"})";
+    }
+
+    policy_engine_->computeHeuristics();
+    return policy_engine_->heuristicsSummaryJSON();
+}
+
+std::string CompletionServer::HandlePolicyStatsRequest() {
+    if (!policy_engine_) {
+        return R"({"error":"policy_engine_not_available"})";
+    }
+
+    return policy_engine_->getStatsSummary();
 }
 
 

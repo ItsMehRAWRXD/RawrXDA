@@ -49,6 +49,8 @@ std::string AgentEvent::typeString() const {
         case AgentEventType::PlanStepExecuted:      return "PlanStepExecuted";
         case AgentEventType::FailureDetected:       return "FailureDetected";
         case AgentEventType::FailureCorrected:      return "FailureCorrected";
+        case AgentEventType::FailureFailed:         return "FailureFailed";
+        case AgentEventType::FailureRetryDeclined:  return "FailureRetryDeclined";
         case AgentEventType::GhostTextRequested:    return "GhostTextRequested";
         case AgentEventType::GhostTextAccepted:     return "GhostTextAccepted";
         case AgentEventType::SettingsChanged:       return "SettingsChanged";
@@ -135,6 +137,8 @@ AgentEvent AgentEvent::fromJSONL(const std::string& line) {
             {"PlanStepExecuted",   AgentEventType::PlanStepExecuted},
             {"FailureDetected",    AgentEventType::FailureDetected},
             {"FailureCorrected",   AgentEventType::FailureCorrected},
+            {"FailureFailed",      AgentEventType::FailureFailed},
+            {"FailureRetryDeclined",AgentEventType::FailureRetryDeclined},
             {"GhostTextRequested", AgentEventType::GhostTextRequested},
             {"GhostTextAccepted",  AgentEventType::GhostTextAccepted},
             {"SettingsChanged",    AgentEventType::SettingsChanged},
@@ -251,6 +255,8 @@ void Win32IDE::recordEvent(AgentEventType type, const std::string& agentId,
         case AgentEventType::ToolInvoked:         m_historyStats.toolInvocations++;     break;
         case AgentEventType::FailureDetected:     m_historyStats.failuresDetected++;    break;
         case AgentEventType::FailureCorrected:    m_historyStats.failuresCorrected++;   break;
+        case AgentEventType::FailureFailed:       m_historyStats.failuresDetected++;    break;  // Failed retry counts as detection
+        case AgentEventType::FailureRetryDeclined: m_historyStats.failuresDetected++;    break;  // Counts toward detection
         case AgentEventType::GhostTextAccepted:   m_historyStats.ghostTextAccepted++;   break;
         default: break;
     }
