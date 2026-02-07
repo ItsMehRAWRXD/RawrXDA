@@ -369,17 +369,509 @@ namespace CPUOps {
         }
         for (; i < size; ++i) data[i] *= scale;
     }
+
+    // ========================================================================
+    // FP16 → FP32 helper (used by all K-quant decoders)
+    // ========================================================================
+    static inline float fp16_to_fp32(uint16_t h) {
+        uint32_t sign = (h >> 15) & 0x1;
+        uint32_t exp  = (h >> 10) & 0x1F;
+        uint32_t mant = h & 0x3FF;
+        float val = 0.0f;
+        if (exp == 0) {
+            // Subnormal or zero
+            if (mant != 0) {
+                val = std::ldexp((float)mant, -24);
+                if (sign) val = -val;
+            }
+        } else if (exp == 31) {
+            val = (mant == 0) ? (sign ? -INFINITY : INFINITY) : NAN;
+        } else {
+            uint32_t f = (sign << 31) | ((exp + 127 - 15) << 23) | (mant << 13);
+            std::memcpy(&val, &f, 4);
+        }
+        return val;
+    }
+
+    // ========================================================================
+    // K-QUANT SCALE UNPACKING
+    // ========================================================================
+    // Q4_K and Q5_K use 12 bytes (K_SCALE_SIZE) to pack 8 scales + 8 mins
+    // encoded as 6-bit values.  Layout:
+    //   bytes 0..3   → low 4 bits of scales[0..7] (nibble pairs)
+    //   bytes 4..7   → low 4 bits of mins[0..7]
+    //   bytes 8..11  → high 2 bits of scales[0..7] and mins[0..7]
+    // ========================================================================
+    static void unpack_k_scales(const uint8_t scales_packed[12],
+                                 uint8_t scales_out[8], uint8_t mins_out[8]) {
+        // Low 4 bits
+        for (int i = 0; i < 4; ++i) {
+            scales_out[2*i+0] = scales_packed[i] & 0x3F;
+            scales_out[2*i+1] = scales_packed[i] >> 4; // Note: only uses bits [7:4], but we need 6 bits total
+        }
+        // Actually: the canonical llama.cpp encoding is:
+        //   scales[i] low 6 bits come from two sources.
+        // Let's use the exact ggml reference implementation logic.
+        
+        // Rewrite with exact ggml logic:
+        // bytes 0-3: pairs of 4-bit values for low nibbles of sc and m
+        //   sc[j] & 0xF for j=0..7  packed into bytes 0..3
+        //   m[j]  & 0xF for j=0..7  packed into bytes 4..7
+        //   (sc[j] >> 4) & 3  and (m[j] >> 4) & 3 packed into bytes 8..11
+        scales_out[0] = (scales_packed[0] & 0x3F);
+        scales_out[1] = (scales_packed[0] >> 6) | ((scales_packed[8] & 0x03) << 2) | ((scales_packed[1] & 0x0F) << 4 & 0); // complex
+        
+        // This is getting messy. Let's use the EXACT ggml reference decode.
+        // From ggml-quants.c dequantize_row_q4_K:
+        //
+        //   const uint8_t * scales = x[i].scales;
+        //   for (int j = 0; j < QK_K/64; ++j) {  // j = 0..3
+        //       // 2 sub-blocks per j, 32 elements each
+        //       uint8_t sc = scales[j];       // for j < 4: scale  low nibble
+        //       uint8_t m  = scales[j + 4];   // for j < 4: min    low nibble
+        //       ...
+        //   }
+        //
+        // Actually the 6-bit decode is:
+        //   for j=0..3:  sc[2j+0] = scales[j]&0xF | ((scales[j+8]&3)<<4)
+        //                sc[2j+1] = scales[j]>>4   | (((scales[j+8]>>2)&3)<<4)
+        //                 m[2j+0] = scales[j+4]&0xF | ((scales[j+8+2]&3)<<4)   wait no...
+        //
+        // The canonical decode from dequantize_row_q4_K in ggml-quants.c:
+        //   uint8_t sc, m;
+        //   get_scale_min_k4(j, x[i].scales, &sc, &m);
+        
+        // Let me just inline the get_scale_min_k4 logic exactly.
+        // I'll leave this function as a stub and inline the decode in each kernel.
+        (void)scales_packed; (void)scales_out; (void)mins_out;
+    }
+
+    // ========================================================================
+    // get_scale_min_k4 — exact port from ggml-quants.c
+    // j = sub-block index (0..7 for Q4_K's 8 sub-blocks of 32)
+    // Returns scale and min for that sub-block.
+    // ========================================================================
+    static inline void get_scale_min_k4(int j, const uint8_t* q, uint8_t* sc, uint8_t* m) {
+        if (j < 4) {
+            *sc = q[j] & 63;
+            *m  = q[j + 4] & 63;
+        } else {
+            *sc = (q[j + 4] & 0xF) | ((q[j - 4] >> 6) << 4);
+            *m  = (q[j + 4] >>  4) | ((q[j]     >> 6) << 4);
+        }
+    }
+
+    // ========================================================================
+    // Q4_K DEQUANT — 256 elements per super-block, 144 bytes each
+    //   Layout: { fp16 d, fp16 dmin, uint8_t scales[12], uint8_t qs[128] }
+    //   8 sub-blocks of 32 weights. Each weight is 4-bit.
+    //   weight = d * sc * q - dmin * m
+    // ========================================================================
+    void DequantizeQ4_K(const uint8_t* quantized, float* output, int num_elements) {
+        const int QK = 256;                    // elements per super-block
+        const int BLOCK_BYTES = 144;           // sizeof(block_q4_K)
+        int num_blocks = num_elements / QK;
+
+        for (int i = 0; i < num_blocks; ++i) {
+            const uint8_t* block = quantized + (size_t)i * BLOCK_BYTES;
+            float* dst = output + (size_t)i * QK;
+
+            // Read d and dmin (fp16 at offset 0 and 2)
+            uint16_t d_fp16, dmin_fp16;
+            std::memcpy(&d_fp16,    block + 0, 2);
+            std::memcpy(&dmin_fp16, block + 2, 2);
+            float d    = fp16_to_fp32(d_fp16);
+            float dmin = fp16_to_fp32(dmin_fp16);
+
+            // Scales at offset 4, 12 bytes
+            const uint8_t* scales = block + 4;
+
+            // Quants at offset 16, 128 bytes (256 / 2)
+            const uint8_t* qs = block + 16;
+
+            // 8 sub-blocks of 32 weights each
+            for (int j = 0; j < QK / 32; ++j) {
+                uint8_t sc, m;
+                get_scale_min_k4(j, scales, &sc, &m);
+
+                float d_sc    = d    * (float)sc;
+                float dmin_m  = dmin * (float)m;
+
+                const uint8_t* qptr = qs + j * 16;  // 16 bytes = 32 nibbles
+
+                // AVX2: broadcast d_sc, dmin_m
+                __m256 vd   = _mm256_set1_ps(d_sc);
+                __m256 vm   = _mm256_set1_ps(dmin_m);
+
+                // Unpack 16 bytes → 32 floats (low nibble, high nibble)
+                alignas(32) float wf[32];
+                for (int k = 0; k < 16; ++k) {
+                    wf[k]      = (float)(qptr[k] & 0x0F);
+                    wf[k + 16] = (float)(qptr[k] >> 4);
+                }
+
+                // 4 passes of 8 floats: w = d_sc * q - dmin_m
+                for (int g = 0; g < 4; ++g) {
+                    __m256 w = _mm256_load_ps(wf + g * 8);
+                    w = _mm256_sub_ps(_mm256_mul_ps(w, vd), vm);
+                    _mm256_storeu_ps(dst + j * 32 + g * 8, w);
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Q5_K DEQUANT — 256 elements per super-block, 176 bytes each
+    //   Layout: { fp16 d, fp16 dmin, uint8_t scales[12], uint8_t qh[32], uint8_t qs[128] }
+    //   8 sub-blocks of 32 weights. Each weight is 5-bit (4 low + 1 high).
+    //   weight = d * sc * q - dmin * m
+    // ========================================================================
+    void DequantizeQ5_K(const uint8_t* quantized, float* output, int num_elements) {
+        const int QK = 256;
+        const int BLOCK_BYTES = 176;           // sizeof(block_q5_K)
+        int num_blocks = num_elements / QK;
+
+        for (int i = 0; i < num_blocks; ++i) {
+            const uint8_t* block = quantized + (size_t)i * BLOCK_BYTES;
+            float* dst = output + (size_t)i * QK;
+
+            // fp16 d at offset 0, dmin at offset 2
+            uint16_t d_fp16, dmin_fp16;
+            std::memcpy(&d_fp16,    block + 0, 2);
+            std::memcpy(&dmin_fp16, block + 2, 2);
+            float d    = fp16_to_fp32(d_fp16);
+            float dmin = fp16_to_fp32(dmin_fp16);
+
+            // scales[12] at offset 4
+            const uint8_t* scales = block + 4;
+            // qh[32] at offset 16  (high bits)
+            const uint8_t* qh = block + 16;
+            // qs[128] at offset 48 (low 4 bits)
+            const uint8_t* qs = block + 48;
+
+            // 8 sub-blocks of 32 weights
+            for (int j = 0; j < QK / 32; ++j) {
+                uint8_t sc, m;
+                get_scale_min_k4(j, scales, &sc, &m);
+
+                float d_sc   = d    * (float)sc;
+                float dmin_m = dmin * (float)m;
+
+                const uint8_t* qptr = qs + j * 16;
+                // High bits: qh byte n, bit position within byte
+                // For sub-block j, elements 0..31, high bit comes from qh[]
+
+                __m256 vd = _mm256_set1_ps(d_sc);
+                __m256 vm = _mm256_set1_ps(dmin_m);
+
+                alignas(32) float wf[32];
+                for (int k = 0; k < 16; ++k) {
+                    int elem_lo = j * 32 + k;
+                    int elem_hi = j * 32 + k + 16;
+
+                    uint8_t q_lo = qptr[k] & 0x0F;
+                    uint8_t q_hi = qptr[k] >> 4;
+
+                    // Extract high bit from qh[]
+                    uint8_t hbit_lo = (qh[elem_lo / 8] >> (elem_lo % 8)) & 1;
+                    uint8_t hbit_hi = (qh[elem_hi / 8] >> (elem_hi % 8)) & 1;
+
+                    wf[k]      = (float)(q_lo | (hbit_lo << 4));
+                    wf[k + 16] = (float)(q_hi | (hbit_hi << 4));
+                }
+
+                for (int g = 0; g < 4; ++g) {
+                    __m256 w = _mm256_load_ps(wf + g * 8);
+                    w = _mm256_sub_ps(_mm256_mul_ps(w, vd), vm);
+                    _mm256_storeu_ps(dst + j * 32 + g * 8, w);
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Q6_K DEQUANT — 256 elements per super-block, 210 bytes each
+    //   Layout: { uint8_t ql[128], uint8_t qh[64], int8_t scales[16], fp16 d }
+    //   16 sub-blocks of 16 elements. Each weight is 6-bit.
+    //   weight = d * sc * q  (no min term)
+    // ========================================================================
+    void DequantizeQ6_K(const uint8_t* quantized, float* output, int num_elements) {
+        const int QK = 256;
+        const int BLOCK_BYTES = 210;           // sizeof(block_q6_K)
+        int num_blocks = num_elements / QK;
+
+        for (int i = 0; i < num_blocks; ++i) {
+            const uint8_t* block = quantized + (size_t)i * BLOCK_BYTES;
+            float* dst = output + (size_t)i * QK;
+
+            // ql[128] at offset 0, qh[64] at offset 128, scales[16] at offset 192, d at offset 208
+            const uint8_t* ql = block;
+            const uint8_t* qh = block + 128;
+            const int8_t* sc  = (const int8_t*)(block + 192);
+
+            uint16_t d_fp16;
+            std::memcpy(&d_fp16, block + 208, 2);
+            float d = fp16_to_fp32(d_fp16);
+
+            // Decode 256 weights
+            // ql encodes low 4 bits, qh encodes upper 2 bits
+            // 16 sub-blocks of 16 elements each, 16 scales
+            for (int j = 0; j < QK / 16; ++j) {
+                float scale = d * (float)sc[j];
+                __m256 vs = _mm256_set1_ps(scale);
+
+                alignas(32) float wf[16];
+                for (int k = 0; k < 16; ++k) {
+                    int idx = j * 16 + k;
+                    // Low 4 bits from ql
+                    uint8_t q4;
+                    if (idx < 128) {
+                        q4 = ql[idx] & 0x0F;
+                    } else {
+                        q4 = ql[idx - 128] >> 4;
+                    }
+
+                    // High 2 bits from qh
+                    int qh_idx = idx / 4;
+                    int qh_shift = (idx % 4) * 2;
+                    uint8_t q2 = (qh[qh_idx] >> qh_shift) & 0x03;
+
+                    int8_t q = (int8_t)((q4 | (q2 << 4)) - 32);
+                    wf[k] = (float)q;
+                }
+
+                // 2 passes of 8 floats
+                for (int g = 0; g < 2; ++g) {
+                    __m256 w = _mm256_load_ps(wf + g * 8);
+                    w = _mm256_mul_ps(w, vs);
+                    _mm256_storeu_ps(dst + j * 16 + g * 8, w);
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Q2_K DEQUANT — 256 elements per super-block, 84 bytes each
+    //   Layout: { uint8_t scales[16], uint8_t qs[64], fp16 d, fp16 dmin }
+    //   16 sub-blocks of 16 elements. Each weight is 2-bit.
+    //   weight = d * sc * q - dmin * m
+    // ========================================================================
+    void DequantizeQ2_K(const uint8_t* quantized, float* output, int num_elements) {
+        const int QK = 256;
+        const int BLOCK_BYTES = 84;            // sizeof(block_q2_K)
+        int num_blocks = num_elements / QK;
+
+        for (int i = 0; i < num_blocks; ++i) {
+            const uint8_t* block = quantized + (size_t)i * BLOCK_BYTES;
+            float* dst = output + (size_t)i * QK;
+
+            // scales[16] at offset 0, qs[64] at offset 16, d at offset 80, dmin at offset 82
+            const uint8_t* scales = block;
+            const uint8_t* qs = block + 16;
+
+            uint16_t d_fp16, dmin_fp16;
+            std::memcpy(&d_fp16,    block + 80, 2);
+            std::memcpy(&dmin_fp16, block + 82, 2);
+            float d    = fp16_to_fp32(d_fp16);
+            float dmin = fp16_to_fp32(dmin_fp16);
+
+            // 16 sub-blocks of 16 elements
+            for (int j = 0; j < 16; ++j) {
+                uint8_t sc_byte = scales[j];
+                float scale = d    * (float)(sc_byte & 0x0F);
+                float min   = dmin * (float)(sc_byte >> 4);
+
+                __m256 vs = _mm256_set1_ps(scale);
+                __m256 vm = _mm256_set1_ps(min);
+
+                // 4 bytes → 16 two-bit values
+                alignas(32) float wf[16];
+                const uint8_t* qptr = qs + j * 4;
+                for (int k = 0; k < 4; ++k) {
+                    uint8_t q = qptr[k];
+                    wf[k * 4 + 0] = (float)((q >> 0) & 3);
+                    wf[k * 4 + 1] = (float)((q >> 2) & 3);
+                    wf[k * 4 + 2] = (float)((q >> 4) & 3);
+                    wf[k * 4 + 3] = (float)((q >> 6) & 3);
+                }
+
+                // 2 passes of 8 floats: w = scale * q - min
+                for (int g = 0; g < 2; ++g) {
+                    __m256 w = _mm256_load_ps(wf + g * 8);
+                    w = _mm256_sub_ps(_mm256_mul_ps(w, vs), vm);
+                    _mm256_storeu_ps(dst + j * 16 + g * 8, w);
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Q3_K DEQUANT — 256 elements per super-block, 110 bytes each
+    //   Layout: { uint8_t hmask[32], uint8_t qs[64], uint8_t scales[12], fp16 d }
+    //   16 sub-blocks of 16 elements. Each weight is 3-bit (2 low + 1 high).
+    //   weight = d * sc * q  (no min term; q is signed)
+    // ========================================================================
+    void DequantizeQ3_K(const uint8_t* quantized, float* output, int num_elements) {
+        const int QK = 256;
+        const int BLOCK_BYTES = 110;           // sizeof(block_q3_K)
+        int num_blocks = num_elements / QK;
+
+        for (int i = 0; i < num_blocks; ++i) {
+            const uint8_t* block = quantized + (size_t)i * BLOCK_BYTES;
+            float* dst = output + (size_t)i * QK;
+
+            // hmask[32] at offset 0, qs[64] at offset 32, scales[12] at offset 96, d at offset 108
+            const uint8_t* hmask = block;
+            const uint8_t* qs    = block + 32;
+            const uint8_t* sc_raw = block + 96;
+
+            uint16_t d_fp16;
+            std::memcpy(&d_fp16, block + 108, 2);
+            float d = fp16_to_fp32(d_fp16);
+
+            // Decode scales (6-bit packed in 12 bytes → 16 scales)
+            int8_t scales[16];
+            {
+                // Low nibbles from first 6 bytes
+                for (int s = 0; s < 6; ++s) {
+                    scales[2*s+0] = (int8_t)(sc_raw[s] & 0x0F);
+                    scales[2*s+1] = (int8_t)(sc_raw[s] >> 4);
+                }
+                // High bits from bytes 6..11
+                for (int s = 0; s < 4; ++s) {
+                    int idx = s + 6;
+                    if (idx < 12) {
+                        // Scale values: subtract 32 to make signed
+                        scales[2*s]     = (int8_t)((scales[2*s]     & 0xF) | ((sc_raw[idx] & 0x03) << 4)) - 32;
+                        scales[2*s + 1] = (int8_t)((scales[2*s + 1] & 0xF) | (((sc_raw[idx] >> 2) & 0x03) << 4)) - 32;
+                    }
+                }
+                // For remaining scales
+                for (int s = 8; s < 16; ++s) {
+                    scales[s] -= 32;
+                }
+            }
+
+            // Decode 256 weights
+            for (int j = 0; j < 16; ++j) {
+                float scale = d * (float)scales[j];
+                __m256 vs = _mm256_set1_ps(scale);
+
+                alignas(32) float wf[16];
+                for (int k = 0; k < 16; ++k) {
+                    int idx = j * 16 + k;
+
+                    // 2 low bits from qs (2 bits per element, packed 4 per byte)
+                    int qs_byte_idx = idx / 4;
+                    int qs_bit_shift = (idx % 4) * 2;
+                    uint8_t q2 = (qs[qs_byte_idx] >> qs_bit_shift) & 3;
+
+                    // High bit from hmask
+                    uint8_t hbit = (hmask[idx / 8] >> (idx % 8)) & 1;
+
+                    int8_t q = (int8_t)(q2 | (hbit << 2)) - 4;
+                    wf[k] = (float)q;
+                }
+
+                for (int g = 0; g < 2; ++g) {
+                    __m256 w = _mm256_load_ps(wf + g * 8);
+                    w = _mm256_mul_ps(w, vs);
+                    _mm256_storeu_ps(dst + j * 16 + g * 8, w);
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // F16 DEQUANT — trivial FP16 → FP32 conversion
+    // ========================================================================
+    void DequantizeF16(const uint8_t* quantized, float* output, int num_elements) {
+        const uint16_t* src = (const uint16_t*)quantized;
+        int i = 0;
+        // AVX2 + F16C: convert 8 fp16 → 8 fp32 at a time
+        for (; i + 7 < num_elements; i += 8) {
+            __m128i h8 = _mm_loadu_si128((const __m128i*)(src + i));
+            __m256 f8 = _mm256_cvtph_ps(h8);
+            _mm256_storeu_ps(output + i, f8);
+        }
+        // Scalar tail
+        for (; i < num_elements; ++i) {
+            output[i] = fp16_to_fp32(src[i]);
+        }
+    }
 }
 
 // --- Internal Helpers ---
 static void DequantizeTensorPtr(const uint8_t* raw_data, size_t raw_size, float* out, size_t count, TensorType type) {
-    if (type == TensorType::Q4_0) {
-        CPUOps::DequantizeQ4_0(raw_data, out, count);
-    } else if (type == TensorType::Q8_0) {
-        CPUOps::DequantizeQ8_0(raw_data, out, count);
-    } else {
-        // Fallback for F32 which is just a copy
-        std::memcpy(out, raw_data, count * sizeof(float));
+    switch (type) {
+        case TensorType::Q4_0:
+            CPUOps::DequantizeQ4_0(raw_data, out, (int)count);
+            break;
+        case TensorType::Q8_0:
+            CPUOps::DequantizeQ8_0(raw_data, out, (int)count);
+            break;
+        case TensorType::Q4_K:
+            CPUOps::DequantizeQ4_K(raw_data, out, (int)count);
+            break;
+        case TensorType::Q5_K:
+            CPUOps::DequantizeQ5_K(raw_data, out, (int)count);
+            break;
+        case TensorType::Q6_K:
+            CPUOps::DequantizeQ6_K(raw_data, out, (int)count);
+            break;
+        case TensorType::Q2_K:
+            CPUOps::DequantizeQ2_K(raw_data, out, (int)count);
+            break;
+        case TensorType::Q3_K:
+            CPUOps::DequantizeQ3_K(raw_data, out, (int)count);
+            break;
+        case TensorType::F16:
+            CPUOps::DequantizeF16(raw_data, out, (int)count);
+            break;
+        case TensorType::F32:
+        default:
+            // F32 and unknown types: raw copy
+            std::memcpy(out, raw_data, count * sizeof(float));
+            break;
+    }
+}
+
+// --- Bytes-per-element for each tensor type (exact, fractional) ---
+// Used to compute element count from raw byte size: elems = raw_bytes / bpe
+static float BytesPerElement(TensorType type) {
+    switch (type) {
+        case TensorType::F32:  return 4.0f;
+        case TensorType::F16:  return 2.0f;
+        case TensorType::Q4_0: return 18.0f / 32.0f;   // 0.5625
+        case TensorType::Q4_1: return 20.0f / 32.0f;   // 0.625
+        case TensorType::Q5_0: return 22.0f / 32.0f;   // 0.6875
+        case TensorType::Q5_1: return 24.0f / 32.0f;   // 0.75
+        case TensorType::Q8_0: return 34.0f / 32.0f;   // 1.0625
+        case TensorType::Q2_K: return 84.0f / 256.0f;  // 0.328125
+        case TensorType::Q3_K: return 110.0f / 256.0f;  // 0.4296875
+        case TensorType::Q4_K: return 144.0f / 256.0f;  // 0.5625
+        case TensorType::Q5_K: return 176.0f / 256.0f;  // 0.6875
+        case TensorType::Q6_K: return 210.0f / 256.0f;  // 0.8203125
+        default: return 4.0f;
+    }
+}
+
+// --- Row size in bytes for a given embedding dimension and type ---
+static size_t RowSizeBytes(TensorType type, size_t dim) {
+    switch (type) {
+        case TensorType::F32:  return dim * 4;
+        case TensorType::F16:  return dim * 2;
+        case TensorType::Q4_0: return (dim / 32) * 18;
+        case TensorType::Q4_1: return (dim / 32) * 20;
+        case TensorType::Q5_0: return (dim / 32) * 22;
+        case TensorType::Q5_1: return (dim / 32) * 24;
+        case TensorType::Q8_0: return (dim / 32) * 34;
+        case TensorType::Q2_K: return (dim / 256) * 84;
+        case TensorType::Q3_K: return (dim / 256) * 110;
+        case TensorType::Q4_K: return (dim / 256) * 144;
+        case TensorType::Q5_K: return (dim / 256) * 176;
+        case TensorType::Q6_K: return (dim / 256) * 210;
+        default: return dim * 4;
     }
 }
 
@@ -558,7 +1050,7 @@ void CPUInferenceEngine::FeedForward(const float* input, float* output, int laye
          
          type_out = TensorType::Q4_0;
          if (m_weights.count(name)) type_out = m_weights[name].type;
-         float bpf = (type_out == TensorType::Q4_0) ? 0.5625f : (type_out == TensorType::Q8_0 ? 1.0625f : 4.0f);
+         float bpf = BytesPerElement(type_out);
          size_t elems = (size_t)(raw.size() / bpf);
          w_out.resize(elems);
          DequantizeTensor(raw, w_out.data(), elems, type_out);
@@ -737,23 +1229,16 @@ void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tok
         int32_t token = input_tokens[i];
         std::vector<uint8_t> raw_emb;
         if (m_loader->LoadTensorZone("token_embd.weight", raw_emb)) {
-             size_t row_size = (m_embeddingDim / 32) * 18; // Default Q4_0
              TensorType type = TensorType::Q4_0;
              if (m_weights.count("token_embd.weight")) {
                  type = m_weights["token_embd.weight"].type;
-                 if (type == TensorType::Q4_0) row_size = (m_embeddingDim / 32) * 18;
-                 else if (type == TensorType::F32) row_size = m_embeddingDim * 4;
-                 else if (type == TensorType::Q8_0) row_size = (m_embeddingDim / 32) * 34;
              }
+             size_t row_size = RowSizeBytes(type, m_embeddingDim);
              
              size_t offset = token * row_size;
              if (offset + row_size <= raw_emb.size()) {
-                 if (type == TensorType::Q4_0)
-                    CPUOps::DequantizeQ4_0(raw_emb.data() + offset, state.data(), m_embeddingDim);
-                 else if (type == TensorType::Q8_0)
-                    CPUOps::DequantizeQ8_0(raw_emb.data() + offset, state.data(), m_embeddingDim);
-                 else if (type == TensorType::F32)
-                     std::memcpy(state.data(), raw_emb.data() + offset, m_embeddingDim * sizeof(float));
+                 std::vector<uint8_t> row_data(raw_emb.begin() + offset, raw_emb.begin() + offset + row_size);
+                 DequantizeTensor(row_data, state.data(), m_embeddingDim, type);
              }
         }
         
@@ -792,13 +1277,9 @@ void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tok
              // Output weight is [vocab_size, embedding_dim]
              // We need to compute dot(row, state) for each row and find max
              
-             size_t row_size_bytes = 0;
              TensorType out_type = TensorType::Q4_0; // Default
              if (m_weights.count("output.weight")) out_type = m_weights["output.weight"].type;
-             
-             if (out_type == TensorType::Q4_0) row_size_bytes = (m_embeddingDim / 32) * 18;
-             else if (out_type == TensorType::F32) row_size_bytes = m_embeddingDim * 4;
-             else if (out_type == TensorType::Q8_0) row_size_bytes = (m_embeddingDim / 32) * 34;
+             size_t row_size_bytes = RowSizeBytes(out_type, m_embeddingDim);
              
              // Pre-allocate dequant buffer for ONE row
              std::vector<float> row_w(m_embeddingDim);
@@ -809,12 +1290,7 @@ void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tok
                  
                  // Dequantize specific row only
                  std::vector<uint8_t> row_data(raw_out.begin() + offset, raw_out.begin() + offset + row_size_bytes);
-                 if (out_type == TensorType::Q4_0)
-                     CPUOps::DequantizeQ4_0(row_data.data(), row_w.data(), m_embeddingDim);
-                 else if (out_type == TensorType::F32)
-                     std::memcpy(row_w.data(), row_data.data(), m_embeddingDim * sizeof(float)); 
-                 else
-                     DequantizeTensor(row_data, row_w.data(), m_embeddingDim, out_type);
+                 DequantizeTensor(row_data, row_w.data(), m_embeddingDim, out_type);
                  
                  // AVX2 Dot Product for output projection
                  __m256 dot_acc = _mm256_setzero_ps();
@@ -847,10 +1323,13 @@ void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tok
         last_token = next_id;
         std::vector<uint8_t> raw_emb;
         if (m_loader->LoadTensorZone("token_embd.weight", raw_emb)) {
-             size_t row_size = (m_embeddingDim / 32) * 18;
+             TensorType emb_type = TensorType::Q4_0;
+             if (m_weights.count("token_embd.weight")) emb_type = m_weights["token_embd.weight"].type;
+             size_t row_size = RowSizeBytes(emb_type, m_embeddingDim);
              size_t offset = last_token * row_size;
              if (offset + row_size <= raw_emb.size()) {
-                 CPUOps::DequantizeQ4_0(raw_emb.data() + offset, state.data(), m_embeddingDim);
+                 std::vector<uint8_t> row(raw_emb.begin() + offset, raw_emb.begin() + offset + row_size);
+                 DequantizeTensor(row, state.data(), m_embeddingDim, emb_type);
              }
         }
         
@@ -936,14 +1415,11 @@ std::vector<float> CPUInferenceEngine::Eval(const std::vector<int32_t>& input_to
         // Load Embedding
         std::vector<uint8_t> raw_emb;
         if (m_loader->LoadTensorZone("token_embd.weight", raw_emb)) {
-             size_t row_size = (m_embeddingDim / 32) * 18; // Default Q4_0 assumption or check type
              TensorType type = TensorType::Q4_0;
              if (m_weights.count("token_embd.weight")) {
                  type = m_weights["token_embd.weight"].type;
-                 // ...recalc row_size...
-                 if (type == TensorType::F32) row_size = m_embeddingDim * 4;
-                 else if (type == TensorType::Q8_0) row_size = (m_embeddingDim / 32) * 34;
              }
+             size_t row_size = RowSizeBytes(type, m_embeddingDim);
              size_t offset = token * row_size;
              if (offset + row_size <= raw_emb.size()) {
                  std::vector<uint8_t> row(raw_emb.begin() + offset, raw_emb.begin() + offset + row_size);
@@ -1006,11 +1482,7 @@ std::vector<float> CPUInferenceEngine::Eval(const std::vector<int32_t>& input_to
              type = m_weights["output.weight"].type;
          }
 
-         size_t row_size = Tensor::GetElementSize(type) * m_embeddingDim / (type == TensorType::Q4_0 ? 2 : 1);
-
-         if (type == TensorType::Q4_0) row_size = (m_embeddingDim / 32) * 18;
-         else if (type == TensorType::Q8_0) row_size = (m_embeddingDim / 32) * 34;
-         else if (type == TensorType::F32) row_size = m_embeddingDim * 4;
+         size_t row_size = RowSizeBytes(type, m_embeddingDim);
 
          std::vector<float> w_row(m_embeddingDim);
          for(int v=0; v<m_vocabSize; ++v) {

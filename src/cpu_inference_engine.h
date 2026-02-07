@@ -12,13 +12,20 @@
 
 namespace RawrXD {
 
-// Tensor data types
+// Tensor data types — values match ggml_type from GGUF spec
 enum class TensorType {
-    F32 = 0,    // 32-bit float
-    F16 = 1,    // 16-bit float
-    Q4_0 = 2,   // 4-bit quantization
-    Q8_0 = 7,   // 8-bit quantization
-    // Add more quantization types as needed
+    F32  = 0,    // 32-bit float
+    F16  = 1,    // 16-bit float
+    Q4_0 = 2,    // 4-bit quantization (32 elements per block)
+    Q4_1 = 3,    // 4-bit with min (32 elements per block)
+    Q5_0 = 6,    // 5-bit quantization (32 elements per block)
+    Q5_1 = 7,    // 5-bit with min (32 elements per block)
+    Q8_0 = 8,    // 8-bit quantization (32 elements per block)
+    Q2_K = 14,   // 2-bit K-quant (256-element super-block)
+    Q3_K = 15,   // 3-bit K-quant (256-element super-block)
+    Q4_K = 16,   // 4-bit K-quant (256-element super-block)
+    Q5_K = 17,   // 5-bit K-quant (256-element super-block)
+    Q6_K = 18,   // 6-bit K-quant (256-element super-block)
 };
 
 // Tensor structure
@@ -34,10 +41,18 @@ struct Tensor {
     
     static size_t GetElementSize(TensorType type) {
         switch(type) {
-            case TensorType::F32: return 4;
-            case TensorType::F16: return 2;
-            case TensorType::Q4_0: return 1; // Approximate
-            case TensorType::Q8_0: return 1; // Approximate
+            case TensorType::F32:  return 4;
+            case TensorType::F16:  return 2;
+            case TensorType::Q4_0: return 1; // ~0.5625 bytes/weight (18B / 32)
+            case TensorType::Q4_1: return 1; // ~0.625  bytes/weight (20B / 32)
+            case TensorType::Q5_0: return 1; // ~0.6875 bytes/weight (22B / 32)
+            case TensorType::Q5_1: return 1; // ~0.75   bytes/weight (24B / 32)
+            case TensorType::Q8_0: return 1; // ~1.0625 bytes/weight (34B / 32)
+            case TensorType::Q2_K: return 1; // ~0.328  bytes/weight (84B / 256)
+            case TensorType::Q3_K: return 1; // ~0.430  bytes/weight (110B / 256)
+            case TensorType::Q4_K: return 1; // ~0.5625 bytes/weight (144B / 256)
+            case TensorType::Q5_K: return 1; // ~0.6875 bytes/weight (176B / 256)
+            case TensorType::Q6_K: return 1; // ~0.8203 bytes/weight (210B / 256)
             default: return 4;
         }
     }
@@ -233,10 +248,18 @@ namespace CPUOps {
     void LayerNorm(float* data, int size, float epsilon = 1e-5f);
     void RMSNorm(float* data, int size, float epsilon = 1e-5f);
     
-    // Quantization support
+    // Quantization support — basic types
     void DequantizeQ4_0(const uint8_t* quantized, float* output, int size);
     void DequantizeQ8_0(const uint8_t* quantized, float* output, int size);
-    
+
+    // Quantization support — K-quant super-blocks (256-element blocks)
+    void DequantizeQ4_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeQ5_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeQ6_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeQ2_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeQ3_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeF16 (const uint8_t* quantized, float* output, int num_elements);
+
     // Performance optimization flags
     void EnableAVX2(bool enable);
     void EnableMultiThreading(bool enable);
