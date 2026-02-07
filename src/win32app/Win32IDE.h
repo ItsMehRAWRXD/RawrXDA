@@ -633,6 +633,8 @@ struct AgentHistoryStats {
 
 class Win32IDE
 {
+    friend class AgenticBridge;
+
 public:
     enum class OutputSeverity {
         Debug = 0,
@@ -1030,6 +1032,7 @@ private:
     // Grant dialog procs access to private members
     friend INT_PTR CALLBACK TransparencyDlgProc(HWND, UINT, WPARAM, LPARAM);
     friend INT_PTR CALLBACK ThemePickerDlgProc(HWND, UINT, WPARAM, LPARAM);
+    friend class AgenticBridge;  // AgenticBridge needs failure hooks + failureTypeString
 
     // Theme session persistence
     void saveSessionTheme(nlohmann::json& session);

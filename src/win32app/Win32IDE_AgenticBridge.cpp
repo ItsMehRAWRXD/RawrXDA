@@ -142,30 +142,11 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt) {
     std::string response = g_agentEngine->chat(refinedPrompt);
 
     // Check for tool calls in the model's response and dispatch them
+    // NOTE: hookToolResult fires inside DispatchModelToolCalls (the funnel)
+    //       so every caller — Autonomy, Bridge, etc. — gets failure detection.
     std::string toolResult;
     if (DispatchModelToolCalls(response, toolResult)) {
         LOG_INFO("Tool call dispatched from model output");
-
-        // Phase 4B: Choke Point 2 — hookToolResult after tool dispatch
-        if (m_ide) {
-            // Extract tool name from the model output (first tool: directive)
-            std::string toolName = "unknown";
-            auto toolPos = response.find("tool:");
-            if (toolPos == std::string::npos) toolPos = response.find("TOOL:");
-            if (toolPos != std::string::npos) {
-                size_t nameStart = toolPos + 5;
-                while (nameStart < response.size() && response[nameStart] == ' ') nameStart++;
-                size_t nameEnd = response.find_first_of(" \n\r({[", nameStart);
-                if (nameEnd == std::string::npos) nameEnd = response.size();
-                toolName = response.substr(nameStart, nameEnd - nameStart);
-            }
-            FailureClassification toolFailure = m_ide->hookToolResult(toolName, toolResult);
-            if (toolFailure.reason != AgentFailureType::None) {
-                LOG_WARNING("[Phase4B] Tool '" + toolName + "' failure: " +
-                    m_ide->failureTypeString(toolFailure.reason) +
-                    " (confidence=" + std::to_string(toolFailure.confidence) + ")");
-            }
-        }
 
         // Append tool result and optionally re-prompt the model
         response += "\n\n[Tool Execution Result]\n" + toolResult;
