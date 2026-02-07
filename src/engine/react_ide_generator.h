@@ -38,6 +38,8 @@ private:
     std::string GenerateSubAgentPanel();
     std::string GenerateHistoryPanel();
     std::string GeneratePolicyPanel();
+    std::string GenerateFailurePanel();
+    std::string GenerateExplainabilityPanel();
     std::string GenerateSettingsPanel();
     
     void WriteFile(const std::filesystem::path& path, const std::string& content);

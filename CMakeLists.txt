@@ -19,6 +19,7 @@ set(SOURCES
     src/subagent_core.cpp
     src/agent_history.cpp
     src/agent_policy.cpp
+    src/agent_explainability.cpp
     src/streaming_gguf_loader.cpp
     src/gguf_loader.cpp
     src/gguf_vocab_resolver.cpp
@@ -122,6 +123,7 @@ if(WIN32)
         src/subagent_core.cpp
         src/agent_history.cpp
         src/agent_policy.cpp
+        src/agent_explainability.cpp
         src/utils/ErrorReporter.cpp
         src/modules/engine_manager.cpp
         src/cpu_inference_engine.cpp

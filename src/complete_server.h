@@ -11,6 +11,7 @@ class AgenticEngine;
 class SubAgentManager;
 class AgentHistoryRecorder;
 class PolicyEngine;
+class ExplainabilityEngine;
 
 namespace RawrXD {
 
@@ -27,6 +28,7 @@ public:
     void SetSubAgentManager(SubAgentManager* mgr) { subagent_mgr_ = mgr; }
     void SetHistoryRecorder(AgentHistoryRecorder* rec) { history_recorder_ = rec; }
     void SetPolicyEngine(PolicyEngine* engine)         { policy_engine_ = engine; }
+    void SetExplainabilityEngine(ExplainabilityEngine* engine) { explain_engine_ = engine; }
 
 private:
     void Run(uint16_t port);
@@ -54,6 +56,10 @@ private:
     std::string HandlePolicyHeuristicsRequest();
     std::string HandlePolicyStatsRequest();
 
+    // Phase 8A — Explainability API handlers
+    std::string HandleExplainRequest(const std::string& path, const std::string& body);
+    std::string HandleExplainStatsRequest();
+
     std::atomic<bool> running_;
     std::thread server_thread_;
     CPUInferenceEngine* engine_;
@@ -62,6 +68,7 @@ private:
     SubAgentManager* subagent_mgr_ = nullptr;
     AgentHistoryRecorder* history_recorder_ = nullptr;
     PolicyEngine* policy_engine_ = nullptr;
+    ExplainabilityEngine* explain_engine_ = nullptr;
 };
 
 } // namespace RawrXD

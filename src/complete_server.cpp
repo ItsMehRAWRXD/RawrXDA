@@ -3,6 +3,7 @@
 #include "subagent_core.h"
 #include "agent_history.h"
 #include "agent_policy.h"
+#include "agent_explainability.h"
 
 #include <algorithm>
 #include <cctype>
@@ -362,6 +363,13 @@ void CompletionServer::HandleClient(int client_fd) {
         response_body = HandlePolicyHeuristicsRequest();
     } else if (method == "GET" && path == "/api/policies/stats") {
         response_body = HandlePolicyStatsRequest();
+    }
+    // === Phase 8A: Explainability API Routes ===
+    else if (method == "GET" &&
+             (path == "/api/agents/explain" || path.rfind("/api/agents/explain?", 0) == 0)) {
+        response_body = HandleExplainRequest(path, parsed_body);
+    } else if (method == "GET" && path == "/api/agents/explain/stats") {
+        response_body = HandleExplainStatsRequest();
     } else {
         status = 400;
         response_body = R"({"error":"unknown_endpoint"})";
@@ -951,6 +959,81 @@ std::string CompletionServer::HandlePolicyStatsRequest() {
     }
 
     return policy_engine_->getStatsSummary();
+}
+
+// ============================================================================
+// Phase 8A: Explainability API Handlers
+// ============================================================================
+
+std::string CompletionServer::HandleExplainRequest(const std::string& path, const std::string& body) {
+    if (!explain_engine_) {
+        return R"({"error":"explainability_engine_not_available"})";
+    }
+
+    // Parse agent_id from query string: /api/agents/explain?agent_id=xxx
+    std::string agentId;
+    auto qpos = path.find('?');
+    if (qpos != std::string::npos) {
+        std::string qs = path.substr(qpos + 1);
+        // Simple query param parser
+        size_t pos = 0;
+        while (pos < qs.size()) {
+            size_t eq = qs.find('=', pos);
+            if (eq == std::string::npos) break;
+            size_t amp = qs.find('&', eq);
+            if (amp == std::string::npos) amp = qs.size();
+            std::string key = qs.substr(pos, eq - pos);
+            std::string val = qs.substr(eq + 1, amp - eq - 1);
+            if (key == "agent_id") agentId = val;
+            pos = amp + 1;
+        }
+    }
+
+    // Also check JSON body for agent_id
+    if (agentId.empty() && !body.empty()) {
+        auto idPos = body.find("\"agent_id\"");
+        if (idPos != std::string::npos) {
+            auto colonPos = body.find(':', idPos);
+            auto quoteStart = body.find('"', colonPos + 1);
+            auto quoteEnd = body.find('"', quoteStart + 1);
+            if (quoteStart != std::string::npos && quoteEnd != std::string::npos) {
+                agentId = body.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+            }
+        }
+    }
+
+    if (agentId.empty()) {
+        // Return session-level explanation
+        auto session = explain_engine_->explainSession();
+        return session.toJSON();
+    }
+
+    // Build trace for specific agent
+    auto trace = explain_engine_->traceAuto(agentId);
+    return trace.toJSON();
+}
+
+std::string CompletionServer::HandleExplainStatsRequest() {
+    if (!explain_engine_) {
+        return R"({"error":"explainability_engine_not_available"})";
+    }
+
+    // Build aggregated stats
+    auto session = explain_engine_->explainSession();
+    std::ostringstream ss;
+    ss << "{";
+    ss << "\"totalEvents\":" << session.totalEvents;
+    ss << ",\"agentSpawns\":" << session.agentSpawns;
+    ss << ",\"chainExecutions\":" << session.chainExecutions;
+    ss << ",\"swarmExecutions\":" << session.swarmExecutions;
+    ss << ",\"failures\":" << session.failures;
+    ss << ",\"retries\":" << session.retries;
+    ss << ",\"policyFirings\":" << session.policyFirings;
+    ss << ",\"failureAttributionCount\":" << session.failureAttributions.size();
+    ss << ",\"policyAttributionCount\":" << session.policyAttributions.size();
+    ss << ",\"traceCount\":" << session.traces.size();
+    ss << "}";
+    return ss.str();
 }
 
 

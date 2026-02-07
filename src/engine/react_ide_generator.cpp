@@ -229,6 +229,27 @@ export interface HistoryStats {
   eventTypes: Record<string, number>;
 }
 
+export interface FailureRecord {
+  timestampMs: number;
+  type: string;
+  reason: string;
+  confidence: number;
+  evidence: string;
+  strategy: string;
+  outcome: 'Detected' | 'Corrected' | 'Failed' | 'Declined';
+  promptSnippet: string;
+  sessionId: string;
+  attempt: number;
+}
+
+export interface FailureStats {
+  totalFailures: number;
+  totalRetries: number;
+  successAfterRetry: number;
+  retriesDeclined: number;
+  topReasons: { type: string; count: number }[];
+}
+
 export interface EngineState {
   isConnected: boolean;
   memoryTier: string;
@@ -264,6 +285,12 @@ export interface EngineState {
   getHistory: (opts?: { agentId?: string; eventType?: string; limit?: number }) => Promise<HistoryEvent[]>;
   replayAgent: (agentId: string, dryRun?: boolean) => Promise<{ success: boolean; result: string; eventsReplayed: number; durationMs: number }>;
   getHistoryStats: () => Promise<HistoryStats>;
+
+  // Phase 6B: Failure Visibility
+  failures: FailureRecord[];
+  failureStats: FailureStats | null;
+  getFailures: (opts?: { limit?: number; reason?: string }) => Promise<FailureRecord[]>;
+  getAgentStatusDetailed: () => Promise<any>;
 }
 
 export const useEngineStore = create<EngineState>((set, get) => ({
@@ -279,6 +306,8 @@ export const useEngineStore = create<EngineState>((set, get) => ({
   agenticReady: false,
   historyEvents: [],
   historyStats: null,
+  failures: [],
+  failureStats: null,
 
   connect: async () => {
     console.log("Connecting to RawrXD Engine...");
@@ -503,6 +532,44 @@ export const useEngineStore = create<EngineState>((set, get) => ({
       console.error('Stats error:', err);
     }
     return { totalEvents: 0, sessionId: '', successCount: 0, failCount: 0, eventTypes: {} };
+  },
+
+  // ====================================================================
+  // Phase 6B: Failure Visibility API methods
+  // ====================================================================
+
+  getFailures: async (opts?: { limit?: number; reason?: string }) => {
+    try {
+      let url = '/api/failures';
+      const params = new URLSearchParams();
+      if (opts?.limit) params.set('limit', opts.limit.toString());
+      if (opts?.reason) params.set('reason', opts.reason);
+      if (params.toString()) url += '?' + params.toString();
+
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        const failures: FailureRecord[] = data.failures || [];
+        const stats: FailureStats = data.stats || null;
+        set({ failures, failureStats: stats });
+        return failures;
+      }
+    } catch (err) {
+      console.error('Failures API error:', err);
+    }
+    return [];
+  },
+
+  getAgentStatusDetailed: async () => {
+    try {
+      const res = await fetch('/api/agents/status');
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.error('Agent status error:', err);
+    }
+    return null;
   }
 }));
 )";
@@ -705,6 +772,7 @@ import { MemoryPanel } from '@/components/MemoryPanel';
 import { HotPatchPanel } from '@/components/HotPatchPanel';
 import { VSIXLoaderPanel } from '@/components/VSIXLoaderPanel';
 import { SubAgentPanel } from '@/components/SubAgentPanel';
+import { FailurePanel } from '@/components/FailurePanel';
 import { Terminal, Bot } from 'lucide-react';
 
 function App() {
@@ -719,7 +787,7 @@ function App() {
     subagents: false,
     capabilities: { completion: true, streaming: false }
   });
-  const [rightPanel, setRightPanel] = useState<'tools' | 'agents'>('tools');
+  const [rightPanel, setRightPanel] = useState<'tools' | 'agents' | 'failures'>('tools');
 
   useEffect(() => {
     connect();
@@ -753,6 +821,15 @@ function App() {
           title="Toggle Agent Panel"
         >
           <Bot className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => setRightPanel(rightPanel === 'failures' ? 'tools' : 'failures')}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+            rightPanel === 'failures' ? 'bg-red-600 text-white' : 'bg-background hover:bg-background/80'
+          }`}
+          title="Toggle Failure Panel"
+        >
+          <span className="text-xs font-bold">!</span>
         </button>
         <div className="flex flex-col items-center gap-1">
           {status.agentic && <div className="w-2 h-2 rounded-full bg-purple-500" title="Agentic" />}
@@ -796,6 +873,10 @@ function App() {
             {rightPanel === 'agents' ? (
               <div className="flex-1 overflow-hidden">
                 <SubAgentPanel />
+              </div>
+            ) : rightPanel === 'failures' ? (
+              <div className="flex-1 overflow-hidden">
+                <FailurePanel />
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto border-b border-border">
@@ -1101,6 +1182,8 @@ bool ReactIDEGenerator::GenerateIDE(const std::string& name, const std::string& 
     WriteFile(project_path / "src" / "components" / "VSIXLoaderPanel.tsx", GenerateVSIXLoaderPanel());
     WriteFile(project_path / "src" / "components" / "SubAgentPanel.tsx", GenerateSubAgentPanel());
     WriteFile(project_path / "src" / "components" / "HistoryPanel.tsx", GenerateHistoryPanel());
+    WriteFile(project_path / "src" / "components" / "FailurePanel.tsx", GenerateFailurePanel());
+    WriteFile(project_path / "src" / "components" / "ExplainabilityPanel.tsx", GenerateExplainabilityPanel());
 
     // UI Components (Minimal shadcn abstraction)
     WriteFile(project_path / "src" / "components" / "ui" / "card.tsx", R"(import * as React from "react"
@@ -2302,6 +2385,274 @@ export const PolicyPanel: React.FC = () => {
   );
 };
 )POLICY";
+}
+
+std::string ReactIDEGenerator::GenerateFailurePanel() {
+    return R"FAILURE(import React, { useState, useEffect } from 'react';
+import { useEngineStore, FailureRecord, FailureStats } from '@/lib/engine-bridge';
+import { AlertTriangle, CheckCircle2, XCircle, Ban, BarChart3, RefreshCw, Filter, Clock, Shield } from 'lucide-react';
+
+const outcomeConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+  Corrected: { color: 'text-green-400', icon: <CheckCircle2 className="w-3 h-3" />, label: 'Corrected' },
+  Failed:    { color: 'text-red-400',   icon: <XCircle className="w-3 h-3" />,      label: 'Failed' },
+  Declined:  { color: 'text-yellow-400', icon: <Ban className="w-3 h-3" />,          label: 'Declined' },
+  Detected:  { color: 'text-orange-400', icon: <AlertTriangle className="w-3 h-3" />, label: 'Detected' },
+};
+
+const typeColors: Record<string, string> = {
+  Hallucination:      'bg-red-600/20 text-red-300',
+  Refusal:            'bg-orange-600/20 text-orange-300',
+  FormatViolation:    'bg-yellow-600/20 text-yellow-300',
+  ToolError:          'bg-purple-600/20 text-purple-300',
+  EmptyResponse:      'bg-gray-600/20 text-gray-300',
+  Timeout:            'bg-blue-600/20 text-blue-300',
+  InvalidOutput:      'bg-pink-600/20 text-pink-300',
+  InfiniteLoop:       'bg-cyan-600/20 text-cyan-300',
+  LowConfidence:      'bg-amber-600/20 text-amber-300',
+  SafetyViolation:    'bg-red-800/20 text-red-200',
+  QualityDegradation: 'bg-teal-600/20 text-teal-300',
+  UserAbort:          'bg-slate-600/20 text-slate-300',
+};
+
+function formatTimestamp(ms: number): string {
+  if (!ms) return '';
+  const d = new Date(ms);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+export const FailurePanel: React.FC = () => {
+  const { failures, failureStats, getFailures, getAgentStatusDetailed } = useEngineStore();
+  const [loading, setLoading] = useState(false);
+  const [reasonFilter, setReasonFilter] = useState('');
+  const [limit, setLimit] = useState(100);
+  const [agentStatus, setAgentStatus] = useState<any>(null);
+  const [selectedFailure, setSelectedFailure] = useState<FailureRecord | null>(null);
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const refresh = async () => {
+    setLoading(true);
+    await getFailures({ limit, reason: reasonFilter || undefined });
+    const status = await getAgentStatusDetailed();
+    setAgentStatus(status);
+    setLoading(false);
+  };
+
+  const filteredFailures = failures.filter(f => {
+    if (reasonFilter && f.type !== reasonFilter && !f.type.includes(reasonFilter)) return false;
+    return true;
+  });
+
+  const retrySuccessRate = failureStats && failureStats.totalRetries > 0
+    ? ((failureStats.successAfterRetry / failureStats.totalRetries) * 100).toFixed(1)
+    : '0.0';
+
+  const activeReasons = (failureStats?.topReasons || []).filter(r => r.count > 0);
+
+  return (
+    <div className="p-4 space-y-4 h-full overflow-auto">
+      <h2 className="text-xl font-bold flex items-center gap-2">
+        <Shield className="w-6 h-6 text-red-400" /> Failure Intelligence
+      </h2>
+
+      {/* ================================================================ */}
+      {/* Stats Bar                                                        */}
+      {/* ================================================================ */}
+      {failureStats && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="bg-card p-3 rounded-lg border border-border">
+            <div className="text-xs text-muted-foreground">Total Failures</div>
+            <div className="text-xl font-mono text-red-400">{failureStats.totalFailures}</div>
+          </div>
+          <div className="bg-card p-3 rounded-lg border border-border">
+            <div className="text-xs text-muted-foreground">Retries</div>
+            <div className="text-xl font-mono text-yellow-400">{failureStats.totalRetries}</div>
+          </div>
+          <div className="bg-card p-3 rounded-lg border border-border">
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-green-400" /> Corrected
+            </div>
+            <div className="text-xl font-mono text-green-400">{failureStats.successAfterRetry}</div>
+          </div>
+          <div className="bg-card p-3 rounded-lg border border-border">
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <Ban className="w-3 h-3 text-yellow-400" /> Declined
+            </div>
+            <div className="text-xl font-mono text-yellow-400">{failureStats.retriesDeclined}</div>
+          </div>
+          <div className="bg-card p-3 rounded-lg border border-border">
+            <div className="text-xs text-muted-foreground">Retry Success %</div>
+            <div className="text-xl font-mono text-blue-400">{retrySuccessRate}%</div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================ */}
+      {/* Top Failure Reasons                                              */}
+      {/* ================================================================ */}
+      {activeReasons.length > 0 && (
+        <div className="bg-card p-3 rounded-lg border border-border">
+          <h3 className="text-sm font-semibold mb-2 flex items-center gap-1">
+            <BarChart3 className="w-4 h-4" /> Failure Breakdown
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {activeReasons.map((r, i) => (
+              <button
+                key={i}
+                onClick={() => setReasonFilter(reasonFilter === r.type ? '' : r.type)}
+                className={`text-xs px-2 py-1 rounded-full transition-colors ${
+                  typeColors[r.type] || 'bg-gray-600/20 text-gray-300'
+                } ${reasonFilter === r.type ? 'ring-1 ring-white/50' : ''}`}
+              >
+                {r.type}: {r.count}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================ */}
+      {/* Filters                                                          */}
+      {/* ================================================================ */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <select
+            value={reasonFilter}
+            onChange={e => setReasonFilter(e.target.value)}
+            className="bg-secondary text-sm px-2 py-1.5 rounded border border-border"
+          >
+            <option value="">All Types</option>
+            <option value="Hallucination">Hallucination</option>
+            <option value="Refusal">Refusal</option>
+            <option value="FormatViolation">FormatViolation</option>
+            <option value="ToolError">ToolError</option>
+            <option value="EmptyResponse">EmptyResponse</option>
+            <option value="Timeout">Timeout</option>
+            <option value="InvalidOutput">InvalidOutput</option>
+            <option value="InfiniteLoop">InfiniteLoop</option>
+            <option value="LowConfidence">LowConfidence</option>
+            <option value="SafetyViolation">SafetyViolation</option>
+            <option value="QualityDegradation">QualityDegradation</option>
+          </select>
+        </div>
+        <input
+          type="number"
+          value={limit}
+          onChange={e => setLimit(Number(e.target.value))}
+          min={1}
+          max={1000}
+          className="w-20 bg-secondary text-sm px-2 py-1.5 rounded border border-border"
+        />
+        <button
+          onClick={refresh}
+          disabled={loading}
+          className="bg-primary text-primary-foreground px-3 py-1.5 rounded text-sm flex items-center gap-1 hover:opacity-90 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
+
+      {/* ================================================================ */}
+      {/* Failure Timeline                                                 */}
+      {/* ================================================================ */}
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="bg-secondary px-3 py-2 text-xs font-semibold flex items-center gap-2">
+          <AlertTriangle className="w-3 h-3 text-red-400" />
+          Failure Timeline — {filteredFailures.length} events
+        </div>
+        <div className="max-h-[400px] overflow-y-auto divide-y divide-border">
+          {filteredFailures.length === 0 ? (
+            <div className="p-4 text-sm text-muted-foreground text-center">
+              No failures recorded. The system is operating normally.
+            </div>
+          ) : (
+            filteredFailures.map((f, i) => {
+              const outcome = outcomeConfig[f.outcome] || outcomeConfig.Detected;
+              return (
+                <div
+                  key={i}
+                  className={`px-3 py-2 hover:bg-secondary/50 text-sm cursor-pointer ${
+                    selectedFailure === f ? 'bg-secondary/70' : ''
+                  }`}
+                  onClick={() => setSelectedFailure(selectedFailure === f ? null : f)}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={outcome.color}>{outcome.icon}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${
+                      typeColors[f.type] || 'bg-gray-600/20 text-gray-300'
+                    }`}>
+                      {f.type}
+                    </span>
+                    <span className={`text-xs font-mono ${outcome.color}`}>
+                      {outcome.label}
+                    </span>
+                    <span className="flex-1 truncate text-muted-foreground text-xs">
+                      {f.evidence || f.promptSnippet || '(no detail)'}
+                    </span>
+                    {f.timestampMs > 0 && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                        <Clock className="w-3 h-3" />
+                        {formatTimestamp(f.timestampMs)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Expanded detail */}
+                  {selectedFailure === f && (
+                    <div className="mt-2 ml-5 space-y-1 text-xs">
+                      {f.evidence && (
+                        <div><span className="text-muted-foreground">Evidence:</span> {f.evidence}</div>
+                      )}
+                      {f.strategy && (
+                        <div><span className="text-muted-foreground">Strategy:</span> {f.strategy}</div>
+                      )}
+                      {f.promptSnippet && (
+                        <div className="truncate"><span className="text-muted-foreground">Prompt:</span> {f.promptSnippet}</div>
+                      )}
+                      {f.attempt > 0 && (
+                        <div><span className="text-muted-foreground">Attempt:</span> #{f.attempt}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* ================================================================ */}
+      {/* Inline Correction Badge Example (for integration in chat)        */}
+      {/* ================================================================ */}
+      {filteredFailures.some(f => f.outcome === 'Corrected') && (
+        <div className="bg-green-900/20 border border-green-700/30 rounded-lg p-3">
+          <h4 className="text-sm font-semibold text-green-300 flex items-center gap-1 mb-2">
+            <CheckCircle2 className="w-4 h-4" /> Corrected Responses
+          </h4>
+          <div className="space-y-1">
+            {filteredFailures
+              .filter(f => f.outcome === 'Corrected')
+              .slice(0, 5)
+              .map((f, i) => (
+                <div key={i} className="text-xs flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 bg-green-600/20 text-green-300 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Corrected after {f.type}
+                  </span>
+                  <span className="text-muted-foreground truncate">{f.strategy || 'auto-retry'}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+)FAILURE";
 }
 
 std::string ReactIDEGenerator::GenerateSettingsPanel() {

@@ -11,6 +11,7 @@
 #include "subagent_core.h"
 #include "agent_history.h"
 #include "agent_policy.h"
+#include "agent_explainability.h"
 
 void SignalHandler(int signal) {
     std::cout << "\n[ENGINE] Exiting...\n";
@@ -95,6 +96,10 @@ REPL Commands:
   /policy export <file>     Export policies to file (Phase 7)
   /policy import <file>     Import policies from file (Phase 7)
   /heuristics               Compute & show heuristics (Phase 7)
+  /explain <agent_id>       Explain agent decision trace (Phase 8A)
+  /explain last             Explain most recent agent (Phase 8A)
+  /explain session          Explain full session (Phase 8A)
+  /explain snapshot <file>  Export explainability snapshot (Phase 8A)
   exit                      Quit
 )" << std::endl;
             return 0;
@@ -151,6 +156,18 @@ REPL Commands:
     std::cout << "[SYSTEM] Policy engine: " << policyEngine.policyCount()
               << " policies loaded from " << policy_dir << "\n";
 
+    // Initialize explainability engine (Phase 8A — read-only)
+    ExplainabilityEngine explainEngine;
+    explainEngine.setHistoryRecorder(&historyRecorder);
+    explainEngine.setPolicyEngine(&policyEngine);
+    explainEngine.setLogCallback([](int level, const std::string& msg) {
+        const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
+        if (level >= 0 && level <= 3) {
+            std::cout << prefix[level] << " " << msg << "\n";
+        }
+    });
+    std::cout << "[SYSTEM] Explainability engine: ready (Phase 8A)\n";
+
     // Start HTTP server with agentic support
     RawrXD::CompletionServer server;
     if (enable_http) {
@@ -158,6 +175,7 @@ REPL Commands:
         server.SetSubAgentManager(&subAgentMgr);
         server.SetHistoryRecorder(&historyRecorder);
         server.SetPolicyEngine(&policyEngine);
+        server.SetExplainabilityEngine(&explainEngine);
         server.Start(port, &engine, model_path);
     }
 
@@ -188,6 +206,10 @@ REPL Commands:
                           << "  /policy export <file>   Export policies to file (Phase 7)\n"
                           << "  /policy import <file>   Import policies from file (Phase 7)\n"
                           << "  /heuristics             Compute & show heuristics (Phase 7)\n"
+                          << "  /explain <agent_id>     Explain agent decision (Phase 8A)\n"
+                          << "  /explain last           Explain most recent agent (Phase 8A)\n"
+                          << "  /explain session        Explain full session (Phase 8A)\n"
+                          << "  /explain snapshot <f>   Export snapshot to file (Phase 8A)\n"
                           << "  exit                    Quit\n\n";
             }
             else if (input.substr(0, 5) == "/chat" || (input[0] != '/' && !input.empty())) {
@@ -430,6 +452,92 @@ REPL Commands:
                             std::cout << "      ⚠ " << reason << "\n";
                         }
                     }
+                }
+            }
+            // ── Phase 8A: Explainability Commands ──
+            else if (input == "/explain last") {
+                // Find the most recent agent_spawn event
+                HistoryQuery lastQ;
+                lastQ.limit = 1;
+                auto recent = historyRecorder.query(lastQ);
+                if (recent.empty()) {
+                    std::cout << "[Explain] No events recorded yet.\n";
+                } else {
+                    // Walk backwards to find last agent
+                    auto all = historyRecorder.allEvents();
+                    std::string lastAgent;
+                    for (auto it = all.rbegin(); it != all.rend(); ++it) {
+                        if (!it->agentId.empty()) { lastAgent = it->agentId; break; }
+                    }
+                    if (lastAgent.empty()) {
+                        std::cout << "[Explain] No agent events found.\n";
+                    } else {
+                        auto trace = explainEngine.traceAuto(lastAgent);
+                        std::cout << "[Explain] " << trace.summary << "\n";
+                        for (const auto& node : trace.nodes) {
+                            std::string icon = node.success ? "✅" : "❌";
+                            std::cout << "  " << icon << " #" << node.eventId
+                                      << " [" << node.eventType << "] "
+                                      << node.trigger;
+                            if (!node.policyId.empty())
+                                std::cout << " 🛡️ " << node.policyName << ": " << node.policyEffect;
+                            if (node.durationMs > 0)
+                                std::cout << " (" << node.durationMs << "ms)";
+                            std::cout << "\n";
+                        }
+                    }
+                }
+            }
+            else if (input == "/explain session") {
+                auto session = explainEngine.explainSession();
+                std::cout << "[Explain] Session narrative:\n" << session.narrative << "\n\n";
+
+                if (!session.failureAttributions.empty()) {
+                    std::cout << "Failure attributions:\n";
+                    for (const auto& fa : session.failureAttributions) {
+                        std::cout << "  ❌ " << fa.agentId << " [" << fa.failureType << "]: "
+                                  << fa.errorMessage;
+                        if (fa.wasRetried)
+                            std::cout << " → retried (" << (fa.retrySucceeded ? "success" : "failed") << ")";
+                        if (!fa.policyId.empty())
+                            std::cout << " [policy: " << fa.policyName << "]";
+                        std::cout << "\n";
+                    }
+                }
+
+                if (!session.policyAttributions.empty()) {
+                    std::cout << "\nPolicy attributions:\n";
+                    for (const auto& pa : session.policyAttributions) {
+                        std::cout << "  🛡️ " << pa.policyName << " (applied "
+                                  << pa.policyAppliedCount << "x): " << pa.effectDescription << "\n";
+                    }
+                }
+            }
+            else if (input.substr(0, 18) == "/explain snapshot ") {
+                std::string filePath = input.substr(18);
+                if (explainEngine.exportSnapshot(filePath)) {
+                    std::cout << "[Explain ✅] Snapshot exported to " << filePath << "\n";
+                } else {
+                    std::cout << "[Explain ❌] Failed to export snapshot.\n";
+                }
+            }
+            else if (input.substr(0, 9) == "/explain ") {
+                std::string agentId = input.substr(9);
+                auto trace = explainEngine.traceAuto(agentId);
+                std::cout << "[Explain] " << trace.summary << "\n";
+                for (const auto& node : trace.nodes) {
+                    std::string icon = node.success ? "✅" : "❌";
+                    std::cout << "  " << icon << " #" << node.eventId
+                              << " [" << node.eventType << "] "
+                              << node.trigger;
+                    if (!node.policyId.empty())
+                        std::cout << " 🛡️ " << node.policyName << ": " << node.policyEffect;
+                    if (node.durationMs > 0)
+                        std::cout << " (" << node.durationMs << "ms)";
+                    std::cout << "\n";
+                }
+                if (trace.failureCount > 0) {
+                    std::cout << "\n" << explainEngine.summarizeFailures();
                 }
             }
             else {
