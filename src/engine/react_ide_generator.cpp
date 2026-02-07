@@ -2652,93 +2652,9 @@ export const ExplainabilityPanel: React.FC = () => {
                         <Clock className="w-2.5 h-2.5" /> {node.durationMs}ms
                       </span>
                     )}
-)FAILURE";
-}
-
-std::string ReactIDEGenerator::GenerateExplainabilityPanel() {
-    return R"EXPLAIN(import React, { useState, useEffect } from 'react';
-import { useEngineStore } from '@/lib/engine-bridge';
-import { Brain, MessageSquare, GitBranch, Lightbulb, ChevronRight } from 'lucide-react';
-
-interface ExplainEntry {
-  timestamp: string;
-  action: string;
-  reasoning: string;
-  context: string[];
-}
-
-export const ExplainabilityPanel: React.FC = () => {
-  const [entries, setEntries] = useState<ExplainEntry[]>([]);
-  const [expanded, setExpanded] = useState<number | null>(null);
-
-  useEffect(() => {
-    // Placeholder — Phase 8A will populate this from /api/explain
-    setEntries([]);
-  }, []);
-
-  return (
-    <div className="p-4 space-y-4 h-full overflow-auto">
-      <h2 className="text-xl font-bold flex items-center gap-2">
-        <Brain className="w-6 h-6 text-purple-400" /> Explainability
-      </h2>
-
-      <div className="bg-card p-4 rounded-lg border border-border text-sm text-muted-foreground">
-        <div className="flex items-center gap-2 mb-2">
-          <Lightbulb className="w-4 h-4 text-yellow-400" />
-          <span className="font-semibold text-foreground">Understanding Agent Decisions</span>
-        </div>
-        <p>
-          This panel will show <em>why</em> the agent made each decision:
-          why a retry happened, why a swarm became a chain, which policy fired and why.
-        </p>
-        <p className="mt-2 text-xs">
-          Phase 8A will populate this with live reasoning traces from the agent pipeline.
-        </p>
-      </div>
-
-      {entries.length === 0 ? (
-        <div className="border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
-          <Brain className="w-8 h-8 mx-auto mb-2 opacity-40" />
-          No explanation entries yet. Run an agent task to see reasoning traces.
-        </div>
-      ) : (
-        <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
-          {entries.map((entry, i) => (
-            <div
-              key={i}
-              className="px-3 py-2 hover:bg-secondary/50 cursor-pointer"
-              onClick={() => setExpanded(expanded === i ? null : i)}
-            >
-              <div className="flex items-center gap-2 text-sm">
-                <ChevronRight className={`w-4 h-4 transition-transform ${expanded === i ? 'rotate-90' : ''}`} />
-                <span className="font-mono text-xs text-muted-foreground">{entry.timestamp}</span>
-                <span className="text-xs px-1.5 py-0.5 rounded bg-purple-600/20 text-purple-300">{entry.action}</span>
-                <span className="flex-1 truncate">{entry.reasoning}</span>
-              </div>
-              {expanded === i && (
-                <div className="mt-2 ml-6 text-xs space-y-1">
-                  <div><span className="text-muted-foreground">Reasoning:</span> {entry.reasoning}</div>
-                  {entry.context.length > 0 && (
-                    <div>
-                      <span className="text-muted-foreground">Context:</span>
-                      <ul className="ml-3 list-disc">
-                        {entry.context.map((c, j) => <li key={j}>{c}</li>)}
-                      </ul>
-                    </div>
-                  )}
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-)EXPLAIN";
-}
-
-std::string ReactIDEGenerator::GenerateSettingsPanel() {
+              </button>
               {expandedNodes.has(node.eventId) && (
                 <div className="ml-10 mb-2 p-2 bg-secondary/30 rounded text-xs space-y-1">
                   {node.description && <div><span className="text-muted-foreground">Description:</span> {node.description}</div>}
