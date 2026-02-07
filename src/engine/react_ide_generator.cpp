@@ -2387,6 +2387,424 @@ export const PolicyPanel: React.FC = () => {
 )POLICY";
 }
 
+std::string ReactIDEGenerator::GenerateExplainabilityPanel() {
+    return R"EXPLAIN(import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Eye, AlertTriangle, Shield, GitBranch, RefreshCw, Download, ChevronDown, ChevronRight, Clock, CheckCircle2, XCircle } from 'lucide-react';
+
+interface DecisionNode {
+  eventId: number;
+  eventType: string;
+  agentId: string;
+  description: string;
+  timestampMs: number;
+  durationMs: number;
+  success: boolean;
+  errorMessage?: string;
+  parentEventId?: number;
+  trigger: string;
+  policyId?: string;
+  policyName?: string;
+  policyEffect?: string;
+}
+
+interface DecisionTrace {
+  traceId: string;
+  rootAgentId: string;
+  rootEventType: string;
+  sessionId: string;
+  overallSuccess: boolean;
+  totalDurationMs: number;
+  nodeCount: number;
+  failureCount: number;
+  policyFireCount: number;
+  summary: string;
+  nodes: DecisionNode[];
+}
+
+interface FailureAttribution {
+  failureEventId: number;
+  agentId: string;
+  failureType: string;
+  errorMessage: string;
+  wasRetried: boolean;
+  retrySucceeded?: boolean;
+  correctionStrategy: string;
+  policyId?: string;
+  policyName?: string;
+}
+
+interface SessionExplanation {
+  sessionId: string;
+  totalEvents: number;
+  agentSpawns: number;
+  chainExecutions: number;
+  swarmExecutions: number;
+  failures: number;
+  retries: number;
+  policyFirings: number;
+  narrative: string;
+  traces: DecisionTrace[];
+  failureAttributions: FailureAttribution[];
+  policyAttributions: Array<{
+    policyId: string;
+    policyName: string;
+    effectDescription: string;
+    redirectedSwarmToChain: boolean;
+    policyAppliedCount: number;
+  }>;
+}
+
+interface ExplainStats {
+  totalEvents: number;
+  agentSpawns: number;
+  chainExecutions: number;
+  swarmExecutions: number;
+  failures: number;
+  retries: number;
+  policyFirings: number;
+  traceCount: number;
+}
+
+type TabId = 'summary' | 'timeline' | 'badges';
+
+export const ExplainabilityPanel: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<TabId>('summary');
+  const [agentId, setAgentId] = useState('');
+  const [session, setSession] = useState<SessionExplanation | null>(null);
+  const [trace, setTrace] = useState<DecisionTrace | null>(null);
+  const [stats, setStats] = useState<ExplainStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [expandedNodes, setExpandedNodes] = useState<Set<number>>(new Set());
+
+  const fetchSession = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/agents/explain');
+      if (res.ok) {
+        const data = await res.json();
+        setSession(data);
+        setTrace(null);
+      }
+    } catch (err) { console.error('Failed to fetch session explanation', err); }
+    setLoading(false);
+  }, []);
+
+  const fetchTrace = useCallback(async () => {
+    if (!agentId.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/agents/explain?agent_id=${encodeURIComponent(agentId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTrace(data);
+      }
+    } catch (err) { console.error('Failed to fetch trace', err); }
+    setLoading(false);
+  }, [agentId]);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/agents/explain/stats');
+      if (res.ok) setStats(await res.json());
+    } catch (err) { console.error('Failed to fetch explain stats', err); }
+  }, []);
+
+  useEffect(() => { fetchSession(); fetchStats(); }, []);
+
+  const toggleNode = (id: number) => {
+    setExpandedNodes(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
+    { id: 'summary', label: 'Summary', icon: <Eye className="w-3 h-3" /> },
+    { id: 'timeline', label: 'Causal Timeline', icon: <GitBranch className="w-3 h-3" /> },
+    { id: 'badges', label: 'Badges', icon: <Shield className="w-3 h-3" /> },
+  ];
+
+  const badgeCounts = {
+    failures: session?.failures ?? trace?.failureCount ?? 0,
+    retries: session?.retries ?? 0,
+    policies: session?.policyFirings ?? trace?.policyFireCount ?? 0,
+    swarmRedirects: session?.policyAttributions?.filter(p => p.redirectedSwarmToChain).length ?? 0,
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Eye className="w-5 h-5 text-cyan-400" />
+          Explainability
+          <span className="text-xs px-2 py-0.5 rounded bg-cyan-600/20 text-cyan-300">Phase 8A</span>
+        </h2>
+        <div className="flex gap-2">
+          <button onClick={fetchSession} className="p-1 rounded hover:bg-secondary" title="Refresh">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button onClick={() => { if (session) { const blob = new Blob([JSON.stringify(session, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `explain-${session.sessionId}.json`; a.click(); } }} className="p-1 rounded hover:bg-secondary" title="Export snapshot">
+            <Download className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Agent search */}
+      <div className="flex gap-2">
+        <input
+          className="flex-1 px-3 py-1.5 bg-secondary rounded text-sm font-mono"
+          placeholder="Agent ID (empty = session)"
+          value={agentId}
+          onChange={e => setAgentId(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && fetchTrace()}
+        />
+        <button onClick={fetchTrace} className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 rounded text-sm font-medium">
+          <Search className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+              activeTab === tab.id ? 'border-cyan-400 text-cyan-300' : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Summary Tab */}
+      {activeTab === 'summary' && (
+        <div className="space-y-3">
+          {session && (
+            <>
+              <div className="p-3 bg-secondary/50 rounded-lg text-sm leading-relaxed">
+                {session.narrative}
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: 'Events', value: session.totalEvents, color: 'text-blue-400' },
+                  { label: 'Agents', value: session.agentSpawns, color: 'text-green-400' },
+                  { label: 'Failures', value: session.failures, color: 'text-red-400' },
+                  { label: 'Policies', value: session.policyFirings, color: 'text-purple-400' },
+                ].map(s => (
+                  <div key={s.label} className="p-2 bg-secondary/30 rounded text-center">
+                    <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-muted-foreground">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {session.failureAttributions.length > 0 && (
+                <div className="space-y-1">
+                  <h3 className="text-sm font-medium text-red-400 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" /> Failure Attributions
+                  </h3>
+                  {session.failureAttributions.map(fa => (
+                    <div key={fa.failureEventId} className="p-2 bg-red-900/10 border border-red-800/30 rounded text-xs">
+                      <span className="font-mono">{fa.agentId}</span>
+                      <span className="text-muted-foreground"> [{fa.failureType}]: </span>
+                      {fa.errorMessage}
+                      {fa.wasRetried && (
+                        <span className={fa.retrySucceeded ? 'text-green-400' : 'text-red-400'}>
+                          {' '}→ retried ({fa.retrySucceeded ? 'success' : 'failed'})
+                        </span>
+                      )}
+                      {fa.policyName && <span className="text-purple-400"> [policy: {fa.policyName}]</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          {!session && !loading && <div className="text-sm text-muted-foreground">No session data yet.</div>}
+        </div>
+      )}
+
+      {/* Timeline Tab */}
+      {activeTab === 'timeline' && (
+        <div className="space-y-1">
+          {(trace?.nodes ?? session?.traces?.[0]?.nodes ?? []).map(node => (
+            <div key={node.eventId} className="group">
+              <button
+                onClick={() => toggleNode(node.eventId)}
+                className="w-full flex items-start gap-2 p-2 rounded hover:bg-secondary/50 text-left text-xs"
+              >
+                <div className="mt-0.5">
+                  {expandedNodes.has(node.eventId) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                </div>
+                <div className="mt-0.5">
+                  {node.success ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <XCircle className="w-3 h-3 text-red-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-cyan-300">#{node.eventId}</span>
+                    <span className="px-1.5 py-0.5 bg-secondary rounded text-[10px]">{node.eventType}</span>
+                    {node.policyId && <span className="px-1.5 py-0.5 bg-purple-800/30 text-purple-300 rounded text-[10px]">🛡️ {node.policyName}</span>}
+                    {node.durationMs > 0 && (
+                      <span className="flex items-center gap-0.5 text-muted-foreground">
+                        <Clock className="w-2.5 h-2.5" /> {node.durationMs}ms
+                      </span>
+                    )}
+)FAILURE";
+}
+
+std::string ReactIDEGenerator::GenerateExplainabilityPanel() {
+    return R"EXPLAIN(import React, { useState, useEffect } from 'react';
+import { useEngineStore } from '@/lib/engine-bridge';
+import { Brain, MessageSquare, GitBranch, Lightbulb, ChevronRight } from 'lucide-react';
+
+interface ExplainEntry {
+  timestamp: string;
+  action: string;
+  reasoning: string;
+  context: string[];
+}
+
+export const ExplainabilityPanel: React.FC = () => {
+  const [entries, setEntries] = useState<ExplainEntry[]>([]);
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Placeholder — Phase 8A will populate this from /api/explain
+    setEntries([]);
+  }, []);
+
+  return (
+    <div className="p-4 space-y-4 h-full overflow-auto">
+      <h2 className="text-xl font-bold flex items-center gap-2">
+        <Brain className="w-6 h-6 text-purple-400" /> Explainability
+      </h2>
+
+      <div className="bg-card p-4 rounded-lg border border-border text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 mb-2">
+          <Lightbulb className="w-4 h-4 text-yellow-400" />
+          <span className="font-semibold text-foreground">Understanding Agent Decisions</span>
+        </div>
+        <p>
+          This panel will show <em>why</em> the agent made each decision:
+          why a retry happened, why a swarm became a chain, which policy fired and why.
+        </p>
+        <p className="mt-2 text-xs">
+          Phase 8A will populate this with live reasoning traces from the agent pipeline.
+        </p>
+      </div>
+
+      {entries.length === 0 ? (
+        <div className="border border-border rounded-lg p-6 text-center text-muted-foreground text-sm">
+          <Brain className="w-8 h-8 mx-auto mb-2 opacity-40" />
+          No explanation entries yet. Run an agent task to see reasoning traces.
+        </div>
+      ) : (
+        <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+          {entries.map((entry, i) => (
+            <div
+              key={i}
+              className="px-3 py-2 hover:bg-secondary/50 cursor-pointer"
+              onClick={() => setExpanded(expanded === i ? null : i)}
+            >
+              <div className="flex items-center gap-2 text-sm">
+                <ChevronRight className={`w-4 h-4 transition-transform ${expanded === i ? 'rotate-90' : ''}`} />
+                <span className="font-mono text-xs text-muted-foreground">{entry.timestamp}</span>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-purple-600/20 text-purple-300">{entry.action}</span>
+                <span className="flex-1 truncate">{entry.reasoning}</span>
+              </div>
+              {expanded === i && (
+                <div className="mt-2 ml-6 text-xs space-y-1">
+                  <div><span className="text-muted-foreground">Reasoning:</span> {entry.reasoning}</div>
+                  {entry.context.length > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Context:</span>
+                      <ul className="ml-3 list-disc">
+                        {entry.context.map((c, j) => <li key={j}>{c}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+)EXPLAIN";
+}
+
+std::string ReactIDEGenerator::GenerateSettingsPanel() {
+              {expandedNodes.has(node.eventId) && (
+                <div className="ml-10 mb-2 p-2 bg-secondary/30 rounded text-xs space-y-1">
+                  {node.description && <div><span className="text-muted-foreground">Description:</span> {node.description}</div>}
+                  {node.agentId && <div><span className="text-muted-foreground">Agent:</span> <span className="font-mono">{node.agentId}</span></div>}
+                  {node.errorMessage && <div className="text-red-400"><span className="text-muted-foreground">Error:</span> {node.errorMessage}</div>}
+                  {node.policyEffect && <div className="text-purple-300"><span className="text-muted-foreground">Policy effect:</span> {node.policyEffect}</div>}
+                </div>
+              )}
+            </div>
+          ))}
+          {(trace?.nodes ?? session?.traces?.[0]?.nodes ?? []).length === 0 && (
+            <div className="text-sm text-muted-foreground p-4 text-center">No events to display. Run an agent, chain, or swarm first.</div>
+          )}
+        </div>
+      )}
+
+      {/* Badges Tab */}
+      {activeTab === 'badges' && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: 'Failures', count: badgeCounts.failures, icon: <XCircle className="w-4 h-4" />, color: 'bg-red-900/20 border-red-800/40 text-red-400' },
+              { label: 'Retries', count: badgeCounts.retries, icon: <RefreshCw className="w-4 h-4" />, color: 'bg-yellow-900/20 border-yellow-800/40 text-yellow-400' },
+              { label: 'Policy Actions', count: badgeCounts.policies, icon: <Shield className="w-4 h-4" />, color: 'bg-purple-900/20 border-purple-800/40 text-purple-400' },
+              { label: 'Swarm→Chain', count: badgeCounts.swarmRedirects, icon: <GitBranch className="w-4 h-4" />, color: 'bg-cyan-900/20 border-cyan-800/40 text-cyan-400' },
+            ].map(badge => (
+              <div key={badge.label} className={`p-3 rounded border ${badge.color} flex items-center gap-3`}>
+                {badge.icon}
+                <div>
+                  <div className="text-lg font-bold">{badge.count}</div>
+                  <div className="text-xs opacity-75">{badge.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {session?.policyAttributions && session.policyAttributions.length > 0 && (
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium text-purple-400 flex items-center gap-1">
+                <Shield className="w-3 h-3" /> Policy Impact
+              </h3>
+              {session.policyAttributions.map(pa => (
+                <div key={pa.policyId} className="p-2 bg-purple-900/10 border border-purple-800/30 rounded text-xs">
+                  <div className="font-medium">{pa.policyName}</div>
+                  <div className="text-muted-foreground mt-0.5">{pa.effectDescription}</div>
+                  <div className="text-muted-foreground">Applied {pa.policyAppliedCount}x
+                    {pa.redirectedSwarmToChain && <span className="text-cyan-400 ml-2">⚡ Swarm→Chain redirect</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {stats && (
+            <div className="p-2 bg-secondary/20 rounded text-xs text-muted-foreground">
+              Stats: {stats.traceCount} traces built, {stats.totalEvents} events analyzed
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+)EXPLAIN";
+}
+
 std::string ReactIDEGenerator::GenerateFailurePanel() {
     return R"FAILURE(import React, { useState, useEffect } from 'react';
 import { useEngineStore, FailureRecord, FailureStats } from '@/lib/engine-bridge';
