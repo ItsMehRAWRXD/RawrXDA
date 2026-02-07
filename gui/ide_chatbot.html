@@ -1790,6 +1790,7 @@
       chat: { sending: false, messageCount: 0 },
       terminal: { history: [], index: -1, minimized: false },
       reconnectTimer: null,
+      failureData: [],
     };
 
     // ======================================================================
@@ -2590,6 +2591,7 @@
           addTerminalLine('  ask <question>   \u2014 Send a question', 'output');
           addTerminalLine('  endpoints        \u2014 List API endpoints', 'output');
           addTerminalLine('  curl <path>      \u2014 GET an endpoint', 'output');
+          addTerminalLine('  failures         \u2014 Show failure summary', 'output');
           addTerminalLine('  clear            \u2014 Clear terminal', 'output');
           break;
 
@@ -2674,6 +2676,10 @@
           addTerminalLine('POST /api/generate        \u2014 Ollama-compatible', 'output');
           addTerminalLine('POST /v1/chat/completions \u2014 OpenAI-compatible', 'output');
           addTerminalLine('GET  /gui                 \u2014 This HTML interface', 'output');
+          addTerminalLine('GET  /api/failures        \u2014 Failure timeline + stats', 'output');
+          addTerminalLine('GET  /api/agents/status   \u2014 Agent & failure status', 'output');
+          addTerminalLine('GET  /api/agents/history  \u2014 Agent event history', 'output');
+          addTerminalLine('POST /api/agents/replay   \u2014 Replay agent events', 'output');
           break;
 
         case 'curl':
@@ -2691,6 +2697,35 @@
                 } catch (_) {
                   addTerminalLine(text.substring(0, 500), 'output');
                 }
+              })
+              .catch(function (e) { addTerminalLine('Error: ' + e.message, 'error'); });
+          }
+          break;
+
+        case 'failures':
+          if (!State.backend.online) {
+            addTerminalLine('Backend offline. Run "connect" first.', 'error');
+          } else {
+            addTerminalLine('Fetching failure data...', 'system');
+            fetch(State.backend.url + '/api/failures?limit=50', { signal: AbortSignal.timeout(5000) })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                var s = data.stats || {};
+                addTerminalLine('\u2500\u2500\u2500 Failure Intelligence \u2500\u2500\u2500', 'output');
+                addTerminalLine('  Total Failures:    ' + (s.totalFailures || 0), s.totalFailures > 0 ? 'error' : 'success');
+                addTerminalLine('  Total Retries:     ' + (s.totalRetries || 0), 'output');
+                addTerminalLine('  Retry Successes:   ' + (s.successAfterRetry || 0), 'success');
+                addTerminalLine('  Retries Declined:  ' + (s.retriesDeclined || 0), 'output');
+                var reasons = (s.topReasons || []).filter(function (r) { return r.count > 0; });
+                if (reasons.length > 0) {
+                  addTerminalLine('  Top Reasons:', 'output');
+                  reasons.slice(0, 5).forEach(function (r) {
+                    addTerminalLine('    ' + r.type + ': ' + r.count, 'error');
+                  });
+                } else {
+                  addTerminalLine('  No failure reasons recorded.', 'success');
+                }
+                addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
               })
               .catch(function (e) { addTerminalLine('Error: ' + e.message, 'error'); });
           }
