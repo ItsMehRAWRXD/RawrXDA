@@ -396,6 +396,22 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== Phase 8B: Backend Switcher ==========
+    else if (method == "GET" && path == "/api/backends") {
+        handleBackendsListEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/backend/active") {
+        handleBackendActiveEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && (path == "/api/backend/switch" || path == "/api/backends/switch")) {
+        handleBackendSwitchEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,
@@ -1233,5 +1249,130 @@ std::string Win32IDE::getLocalServerStatus() const {
     oss << "  GET  /api/agents/status    — Agent + failure stats\r\n";
     oss << "  POST /api/agents/replay    — Replay agent session events\r\n";
     oss << "  GET  /api/failures         — Failure timeline (Phase 4B)\r\n";
+    oss << "  GET  /api/backends         — List all configured backends\r\n";
+    oss << "  GET  /api/backend/active   — Get active backend info\r\n";
+    oss << "  POST /api/backend/switch   — Switch active backend\r\n";
     return oss.str();
+}
+
+// ============================================================================
+// Phase 8B: Backend Switcher HTTP Endpoints
+// ============================================================================
+
+// GET /api/backends — list all configured backends with status
+void Win32IDE::handleBackendsListEndpoint(SOCKET client) {
+    nlohmann::json j;
+    j["active"] = backendTypeString(m_activeBackend);
+
+    nlohmann::json backendsArr = nlohmann::json::array();
+    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
+        const auto& cfg = m_backendConfigs[i];
+        const auto& st  = m_backendStatuses[i];
+        nlohmann::json bj;
+        bj["type"]          = backendTypeString(cfg.type);
+        bj["name"]          = cfg.name;
+        bj["endpoint"]      = cfg.endpoint;
+        bj["model"]         = cfg.model;
+        bj["enabled"]       = cfg.enabled;
+        bj["timeoutMs"]     = cfg.timeoutMs;
+        bj["maxTokens"]     = cfg.maxTokens;
+        bj["temperature"]   = cfg.temperature;
+        bj["hasApiKey"]     = !cfg.apiKey.empty();
+        bj["connected"]     = st.connected;
+        bj["healthy"]       = st.healthy;
+        bj["latencyMs"]     = st.latencyMs;
+        bj["requestCount"]  = st.requestCount;
+        bj["failureCount"]  = st.failureCount;
+        bj["lastError"]     = st.lastError;
+        bj["lastModel"]     = st.lastModel;
+        bj["lastUsedEpochMs"] = st.lastUsedEpochMs;
+        bj["isActive"]      = ((AIBackendType)i == m_activeBackend);
+        backendsArr.push_back(bj);
+    }
+    j["backends"] = backendsArr;
+    j["count"]    = (int)AIBackendType::Count;
+
+    std::string response = LocalServerUtil::buildHttpResponse(200, j.dump(2));
+    send(client, response.c_str(), (int)response.size(), 0);
+}
+
+// GET /api/backend/active — current active backend details
+void Win32IDE::handleBackendActiveEndpoint(SOCKET client) {
+    const auto& cfg = m_backendConfigs[(size_t)m_activeBackend];
+    const auto& st  = m_backendStatuses[(size_t)m_activeBackend];
+
+    nlohmann::json j;
+    j["type"]          = backendTypeString(cfg.type);
+    j["name"]          = cfg.name;
+    j["endpoint"]      = cfg.endpoint;
+    j["model"]         = cfg.model;
+    j["enabled"]       = cfg.enabled;
+    j["hasApiKey"]     = !cfg.apiKey.empty();
+    j["connected"]     = st.connected;
+    j["healthy"]       = st.healthy;
+    j["latencyMs"]     = st.latencyMs;
+    j["requestCount"]  = st.requestCount;
+    j["failureCount"]  = st.failureCount;
+    j["lastError"]     = st.lastError;
+
+    std::string response = LocalServerUtil::buildHttpResponse(200, j.dump(2));
+    send(client, response.c_str(), (int)response.size(), 0);
+}
+
+// POST /api/backend/switch — switch active backend
+// Body: {"backend": "Ollama"} or {"backend": "openai", "model": "gpt-4o", "apiKey": "sk-..."}
+void Win32IDE::handleBackendSwitchEndpoint(SOCKET client, const std::string& body) {
+    try {
+        nlohmann::json req = nlohmann::json::parse(body);
+        std::string backendName = req.value("backend", "");
+        if (backendName.empty()) {
+            std::string errResp = LocalServerUtil::buildHttpResponse(400,
+                "{\"error\":\"missing_field\",\"message\":\"'backend' field is required\"}");
+            send(client, errResp.c_str(), (int)errResp.size(), 0);
+            return;
+        }
+
+        AIBackendType target = backendTypeFromString(backendName);
+        if (target == AIBackendType::Count) {
+            std::string errResp = LocalServerUtil::buildHttpResponse(400,
+                "{\"error\":\"invalid_backend\",\"message\":\"Unknown backend: " +
+                LocalServerUtil::escapeJson(backendName) +
+                ". Valid: LocalGGUF, Ollama, OpenAI, Claude, Gemini\"}");
+            send(client, errResp.c_str(), (int)errResp.size(), 0);
+            return;
+        }
+
+        // Apply optional config updates before switching
+        if (req.contains("model") && req["model"].is_string()) {
+            setBackendModel(target, req["model"].get<std::string>());
+        }
+        if (req.contains("apiKey") && req["apiKey"].is_string()) {
+            setBackendApiKey(target, req["apiKey"].get<std::string>());
+        }
+        if (req.contains("endpoint") && req["endpoint"].is_string()) {
+            setBackendEndpoint(target, req["endpoint"].get<std::string>());
+        }
+
+        bool ok = setActiveBackend(target);
+        if (ok) {
+            nlohmann::json resp;
+            resp["success"]  = true;
+            resp["active"]   = backendTypeString(m_activeBackend);
+            resp["model"]    = m_backendConfigs[(size_t)m_activeBackend].model;
+            resp["message"]  = "Switched to " + m_backendConfigs[(size_t)m_activeBackend].name;
+
+            std::string httpResp = LocalServerUtil::buildHttpResponse(200, resp.dump(2));
+            send(client, httpResp.c_str(), (int)httpResp.size(), 0);
+        } else {
+            std::string errResp = LocalServerUtil::buildHttpResponse(422,
+                "{\"error\":\"switch_failed\",\"message\":\"Backend '" +
+                LocalServerUtil::escapeJson(backendName) + "' is disabled or unavailable\"}");
+            send(client, errResp.c_str(), (int)errResp.size(), 0);
+        }
+    } catch (const std::exception& e) {
+        std::string errResp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"parse_error\",\"message\":\"Invalid JSON: " +
+            LocalServerUtil::escapeJson(e.what()) + "\"}");
+        send(client, errResp.c_str(), (int)errResp.size(), 0);
+    }
 }

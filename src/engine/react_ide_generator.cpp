@@ -1255,6 +1255,7 @@ bool ReactIDEGenerator::GenerateIDE(const std::string& name, const std::string& 
     WriteFile(project_path / "src" / "components" / "ExplainabilityPanel.tsx", GenerateExplainabilityPanel());
     WriteFile(project_path / "src" / "components" / "PolicyPanel.tsx", GeneratePolicyPanel());
     WriteFile(project_path / "src" / "components" / "SettingsPanel.tsx", GenerateSettingsPanel());
+    WriteFile(project_path / "src" / "components" / "BackendPanel.tsx", GenerateBackendPanel());
 
     // UI Components (Minimal shadcn abstraction)
     WriteFile(project_path / "src" / "components" / "ui" / "card.tsx", R"(import * as React from "react"
@@ -3084,4 +3085,197 @@ export const SettingsPanel: React.FC = () => {
   );
 };
 )";
+}
+
+// ============================================================================
+// BACKEND PANEL — Phase 8B: AI Backend Switcher React Component
+// ============================================================================
+
+std::string ReactIDEGenerator::GenerateBackendPanel() {
+    return R"BACKEND(import React, { useState, useEffect, useCallback } from 'react';
+
+interface BackendConfig {
+  type: string;
+  name: string;
+  endpoint: string;
+  model: string;
+  enabled: boolean;
+  timeoutMs: number;
+  maxTokens: number;
+  temperature: number;
+  hasApiKey: boolean;
+  connected: boolean;
+  healthy: boolean;
+  latencyMs: number;
+  requestCount: number;
+  failureCount: number;
+  lastError: string;
+  lastModel: string;
+  lastUsedEpochMs: number;
+  isActive: boolean;
+}
+
+interface BackendsResponse {
+  active: string;
+  backends: BackendConfig[];
+  count: number;
+}
+
+const BACKEND_COLORS: Record<string, string> = {
+  LocalGGUF: '#4ec9b0',
+  Ollama: '#dcdcaa',
+  OpenAI: '#569cd6',
+  Claude: '#c586c0',
+  Gemini: '#ce9178',
+};
+
+const statusIcon = (b: BackendConfig) => {
+  if (!b.enabled) return '⭘';
+  if (b.healthy) return '✅';
+  if (b.connected) return '🟡';
+  return '❌';
+};
+
+export const BackendPanel: React.FC = () => {
+  const [backends, setBackends] = useState<BackendConfig[]>([]);
+  const [active, setActive] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [switching, setSwitching] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchBackends = useCallback(async () => {
+    try {
+      const res = await fetch('/api/backends');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: BackendsResponse = await res.json();
+      setBackends(data.backends);
+      setActive(data.active);
+      setError('');
+    } catch (e: any) {
+      setError(e.message || 'Failed to fetch backends');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBackends();
+    const interval = setInterval(fetchBackends, 5000);
+    return () => clearInterval(interval);
+  }, [fetchBackends]);
+
+  const switchBackend = async (type: string) => {
+    setSwitching(true);
+    try {
+      const res = await fetch('/api/backend/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ backend: type }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || `Switch failed (${res.status})`);
+      }
+      await fetchBackends();
+    } catch (e: any) {
+      setError(e.message || 'Switch failed');
+    } finally {
+      setSwitching(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4 text-muted-foreground text-sm">
+        Loading backends...
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">AI Backend Switcher</h2>
+        <span className="text-xs text-muted-foreground">
+          Active: <span style={{ color: BACKEND_COLORS[active] || '#fff' }}>{active}</span>
+        </span>
+      </div>
+
+      {error && (
+        <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {backends.map((b) => (
+          <div
+            key={b.type}
+            className={`rounded-lg border p-3 transition-colors ${
+              b.isActive
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-muted-foreground/30'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span title={b.healthy ? 'Healthy' : b.lastError || 'Not connected'}>
+                  {statusIcon(b)}
+                </span>
+                <span
+                  className="font-medium"
+                  style={{ color: BACKEND_COLORS[b.type] || '#d4d4d4' }}
+                >
+                  {b.name}
+                </span>
+                {b.isActive && (
+                  <span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs text-primary">
+                    active
+                  </span>
+                )}
+              </div>
+              {!b.isActive && b.enabled && (
+                <button
+                  onClick={() => switchBackend(b.type)}
+                  disabled={switching}
+                  className="rounded-md border border-border px-3 py-1 text-xs hover:bg-accent disabled:opacity-50"
+                >
+                  {switching ? '...' : 'Switch'}
+                </button>
+              )}
+              {!b.enabled && (
+                <span className="text-xs text-muted-foreground italic">disabled</span>
+              )}
+            </div>
+
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span>Model: {b.model || '(default)'}</span>
+              <span>Endpoint: {b.endpoint || '(local)'}</span>
+              <span>Requests: {b.requestCount}</span>
+              <span>Failures: {b.failureCount}</span>
+              <span>Latency: {b.latencyMs >= 0 ? `${b.latencyMs}ms` : 'N/A'}</span>
+              <span>API Key: {b.hasApiKey ? '••••' : 'none'}</span>
+            </div>
+
+            {b.lastError && (
+              <div className="mt-1 text-xs text-red-400 truncate" title={b.lastError}>
+                Last error: {b.lastError}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-border pt-3 text-xs text-muted-foreground space-y-1">
+        <div>
+          <strong>API:</strong> GET /api/backends · GET /api/backend/active · POST /api/backend/switch
+        </div>
+        <div>
+          <strong>Palette:</strong> :backend to filter backend commands
+        </div>
+      </div>
+    </div>
+  );
+};
+)BACKEND";
 }

@@ -775,6 +775,73 @@ void Win32IDE::handleToolsCommand(int commandId) {
                            "General", OutputSeverity::Info);
             break;
 
+        // ================================================================
+        // Backend Switcher — Phase 8B (5037+)
+        // ================================================================
+        case IDM_BACKEND_SWITCH_LOCAL:  // 5037
+            setActiveBackend(AIBackendType::LocalGGUF);
+            break;
+
+        case IDM_BACKEND_SWITCH_OLLAMA:  // 5038
+            setActiveBackend(AIBackendType::Ollama);
+            break;
+
+        case IDM_BACKEND_SWITCH_OPENAI:  // 5039
+            setActiveBackend(AIBackendType::OpenAI);
+            break;
+
+        case IDM_BACKEND_SWITCH_CLAUDE:  // 5040
+            setActiveBackend(AIBackendType::Claude);
+            break;
+
+        case IDM_BACKEND_SWITCH_GEMINI:  // 5041
+            setActiveBackend(AIBackendType::Gemini);
+            break;
+
+        case IDM_BACKEND_SHOW_STATUS:  // 5042
+            appendToOutput(getBackendStatusString(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_BACKEND_SHOW_SWITCHER:  // 5043
+            showBackendSwitcherDialog();
+            break;
+
+        case IDM_BACKEND_CONFIGURE:  // 5044
+            showBackendConfigDialog(getActiveBackendType());
+            break;
+
+        case IDM_BACKEND_HEALTH_CHECK:  // 5045
+            probeAllBackendsAsync();
+            appendToOutput("[BackendSwitcher] Health probe started for all enabled backends...",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case IDM_BACKEND_SET_API_KEY: {  // 5046
+            AIBackendType active = getActiveBackendType();
+            if (active == AIBackendType::LocalGGUF) {
+                appendToOutput("[BackendSwitcher] Local GGUF does not require an API key.",
+                               "General", OutputSeverity::Info);
+            } else {
+                std::string key = getWindowText(m_hwndCopilotChatInput);
+                if (!key.empty()) {
+                    setBackendApiKey(active, key);
+                    setWindowText(m_hwndCopilotChatInput, "");
+                    appendToOutput("[BackendSwitcher] API key set for " + backendTypeString(active) +
+                                   ". Backend auto-enabled.", "General", OutputSeverity::Info);
+                } else {
+                    appendToOutput("[BackendSwitcher] Paste your API key into the chat input, then run this command again.",
+                                   "General", OutputSeverity::Warning);
+                }
+            }
+            break;
+        }
+
+        case IDM_BACKEND_SAVE_CONFIGS:  // 5047
+            saveBackendConfigs();
+            appendToOutput("[BackendSwitcher] Backend configs saved to disk.",
+                           "General", OutputSeverity::Info);
+            break;
+
         default:
             break;
     }
@@ -1089,6 +1156,19 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({5034, "Explain: Trace Last Agent", "", "Explain"});
     m_commandRegistry.push_back({5035, "Explain: Export Snapshot", "", "Explain"});
     m_commandRegistry.push_back({5036, "Explain: Show Explainability Stats", "", "Explain"});
+
+    // Backend Switcher — Phase 8B (5037+ range — routed via handleToolsCommand)
+    m_commandRegistry.push_back({IDM_BACKEND_SWITCH_LOCAL,   "AI: Switch to Local GGUF",              "", "AI"});
+    m_commandRegistry.push_back({IDM_BACKEND_SWITCH_OLLAMA,  "AI: Switch to Ollama",                  "", "AI"});
+    m_commandRegistry.push_back({IDM_BACKEND_SWITCH_OPENAI,  "AI: Switch to OpenAI",                  "", "AI"});
+    m_commandRegistry.push_back({IDM_BACKEND_SWITCH_CLAUDE,  "AI: Switch to Claude",                  "", "AI"});
+    m_commandRegistry.push_back({IDM_BACKEND_SWITCH_GEMINI,  "AI: Switch to Gemini",                  "", "AI"});
+    m_commandRegistry.push_back({IDM_BACKEND_SHOW_STATUS,    "Backend: Show All Backend Status",      "", "Backend"});
+    m_commandRegistry.push_back({IDM_BACKEND_SHOW_SWITCHER,  "Backend: Show Switcher Dialog",         "", "Backend"});
+    m_commandRegistry.push_back({IDM_BACKEND_CONFIGURE,      "Backend: Configure Active Backend",     "", "Backend"});
+    m_commandRegistry.push_back({IDM_BACKEND_HEALTH_CHECK,   "Backend: Health Check All Backends",    "", "Backend"});
+    m_commandRegistry.push_back({IDM_BACKEND_SET_API_KEY,    "AI: Set API Key (Active Backend)",      "", "AI"});
+    m_commandRegistry.push_back({IDM_BACKEND_SAVE_CONFIGS,   "Backend: Save Backend Configurations",  "", "Backend"});
 
     // ================================================================
     // Theme Selection (3101–3116 range — routed via handleViewCommand)
@@ -1488,6 +1568,7 @@ LRESULT CALLBACK Win32IDE::CommandPaletteProc(HWND hwnd, UINT uMsg, WPARAM wPara
         else if (cmd.category == "Server") catColor = RGB(86, 156, 214);
         else if (cmd.category == "Policy") catColor = RGB(255, 183, 77);
         else if (cmd.category == "Explain") catColor = RGB(0, 188, 212);
+        else if (cmd.category == "Backend") catColor = RGB(129, 212, 250);
 
         // Draw category dot
         HBRUSH dotBrush = CreateSolidBrush(catColor);

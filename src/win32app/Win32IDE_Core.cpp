@@ -1002,6 +1002,9 @@ void Win32IDE::onDestroy() {
     // Shutdown agent history (flush event buffer to disk)
     shutdownAgentHistory();
 
+    // Shutdown backend manager (save configs)
+    shutdownBackendManager();
+
     // Save settings to disk
     try { saveSettings(); } catch (...) {}
 

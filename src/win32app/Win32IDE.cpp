@@ -3243,6 +3243,9 @@ void Win32IDE::loadModelFromPath(const std::string& filepath)
             // Initialize inference system
             initializeInference();
             
+            // Initialize backend manager (Phase 8B)
+            initBackendManager();
+            
             // Notify user in chat
             std::string msg = "✅ Model loaded and ready for inference!\r\n\r\n"
                              "You can now ask questions in the chat panel.\r\n"
@@ -3849,6 +3852,15 @@ std::string Win32IDE::sendMessageToModel(const std::string& message)
     if (!isModelLoaded()) {
         return "Error: No model loaded";
     }
+
+    // Phase 8B: Route through backend manager if initialized
+    if (m_backendManagerInitialized) {
+        std::string resp = routeInferenceRequest(message);
+        if (!resp.empty() && resp.find("[Backend Error]") != 0) {
+            m_chatHistory.push_back({message, resp});
+            return resp;
+        }
+    }
     
     // First try: send through local Ollama if available
     std::string llmResponse;
@@ -4374,6 +4386,11 @@ std::string Win32IDE::generateResponse(const std::string& prompt)
     if (m_inferenceRunning) {
         METRICS.increment("inference.requests_rejected");
         return "Inference already in progress. Please wait...";
+    }
+
+    // Phase 8B: Route through backend manager if initialized
+    if (m_backendManagerInitialized) {
+        return routeInferenceRequest(prompt);
     }
 
     // Attempt real remote/local inference via Ollama if configured

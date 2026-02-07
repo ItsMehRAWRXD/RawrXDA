@@ -13,6 +13,7 @@
 #include <shlobj.h>
 #include <string>
 #include <vector>
+#include <array>
 #include <memory>
 #include <map>
 #include <unordered_map>
@@ -232,6 +233,19 @@ struct IDETheme {
 #define IDM_TRANSPARENCY_40         3206
 #define IDM_TRANSPARENCY_CUSTOM     3210
 #define IDM_TRANSPARENCY_TOGGLE     3211
+
+// AI Backend Switcher commands (5037+ range — routed via handleToolsCommand)
+#define IDM_BACKEND_SWITCH_LOCAL    5037
+#define IDM_BACKEND_SWITCH_OLLAMA   5038
+#define IDM_BACKEND_SWITCH_OPENAI   5039
+#define IDM_BACKEND_SWITCH_CLAUDE   5040
+#define IDM_BACKEND_SWITCH_GEMINI   5041
+#define IDM_BACKEND_SHOW_STATUS     5042
+#define IDM_BACKEND_SHOW_SWITCHER   5043
+#define IDM_BACKEND_CONFIGURE       5044
+#define IDM_BACKEND_HEALTH_CHECK    5045
+#define IDM_BACKEND_SET_API_KEY     5046
+#define IDM_BACKEND_SAVE_CONFIGS    5047
 
 struct CodeSnippet {
     std::string name;
@@ -788,6 +802,8 @@ private:
     void updateSubAgentProgress(int completedTasks, int totalTasks, const std::string& currentTask);
     void hideSubAgentProgress();
     void showSwarmStatus();
+
+    // (AI Backend Abstraction — Phase 8B: see full declaration block below Settings section)
 
     // AI Inference Engine - Local GGUF Model Chat
     struct InferenceConfig {
@@ -1512,6 +1528,8 @@ private:
     std::mutex m_inferenceMutex;
     std::function<void(const std::string&, bool)> m_inferenceCallback;
     
+    // (AI Backend state — Phase 8B: see full block near Settings section)
+
     // Native Agent Integration
     std::unique_ptr<RawrXD::NativeAgent> m_agent;
     std::unique_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
@@ -2277,6 +2295,101 @@ private:
     HWND m_hwndFailureSuggestionDlg    = nullptr;
 
     // ========================================================================
+    // AI Backend Switcher — Phase 8B (Win32IDE_BackendSwitcher.cpp)
+    // ========================================================================
+    enum class AIBackendType {
+        LocalGGUF  = 0,   // Native CPU inference via RawrXD engine
+        Ollama     = 1,   // Ollama HTTP server (local or remote)
+        OpenAI     = 2,   // OpenAI API (gpt-4o, etc.)
+        Claude     = 3,   // Anthropic Claude API
+        Gemini     = 4,   // Google Gemini API
+        Count      = 5
+    };
+
+    struct AIBackendConfig {
+        AIBackendType type      = AIBackendType::LocalGGUF;
+        std::string   name;           // Human-readable label ("Local GGUF", "Ollama", etc.)
+        std::string   endpoint;       // Base URL (e.g., "http://localhost:11434", "https://api.openai.com")
+        std::string   model;          // Model identifier (e.g., "llama3.2", "gpt-4o", "claude-sonnet-4-20250514")
+        std::string   apiKey;         // API key for remote backends (empty for local)
+        bool          enabled   = true;
+        int           timeoutMs = 30000;   // Request timeout
+        int           maxTokens = 2048;    // Default max tokens for this backend
+        float         temperature = 0.7f;  // Default temperature for this backend
+    };
+
+    struct AIBackendStatus {
+        AIBackendType type       = AIBackendType::LocalGGUF;
+        bool          connected  = false;
+        bool          healthy    = false;
+        int           latencyMs  = -1;       // Last measured round-trip latency (-1 = unknown)
+        uint64_t      requestCount = 0;      // Total requests sent to this backend
+        uint64_t      failureCount = 0;      // Total failed requests
+        std::string   lastError;             // Last error message (empty if ok)
+        std::string   lastModel;             // Last model actually used
+        uint64_t      lastUsedEpochMs = 0;   // Epoch ms of last use
+    };
+
+    // Backend Manager — initialization & lifecycle
+    void initBackendManager();
+    void shutdownBackendManager();
+    void loadBackendConfigs();
+    void saveBackendConfigs();
+
+    // Backend switching (the core operation)
+    bool setActiveBackend(AIBackendType type);
+    AIBackendType getActiveBackendType() const;
+    const AIBackendConfig& getActiveBackendConfig() const;
+    std::string getActiveBackendName() const;
+
+    // Backend listing & inspection
+    std::vector<AIBackendConfig> listBackends() const;
+    AIBackendConfig getBackendConfig(AIBackendType type) const;
+    AIBackendStatus getBackendStatus(AIBackendType type) const;
+    std::string getBackendStatusString() const;         // Human-readable summary of all backends
+
+    // Backend configuration mutations
+    void setBackendEndpoint(AIBackendType type, const std::string& endpoint);
+    void setBackendModel(AIBackendType type, const std::string& model);
+    void setBackendApiKey(AIBackendType type, const std::string& apiKey);
+    void setBackendEnabled(AIBackendType type, bool enabled);
+    void setBackendTimeout(AIBackendType type, int timeoutMs);
+
+    // Backend health probing
+    bool probeBackendHealth(AIBackendType type);
+    void probeAllBackendsAsync();
+    void onBackendHealthResult(AIBackendType type, bool healthy, int latencyMs, const std::string& error);
+
+    // Backend inference routing (delegates to correct engine)
+    std::string routeInferenceRequest(const std::string& prompt);
+    void routeInferenceRequestAsync(const std::string& prompt,
+                                     std::function<void(const std::string&, bool)> callback);
+    std::string routeToLocalGGUF(const std::string& prompt);
+    std::string routeToOllama(const std::string& prompt);
+    std::string routeToOpenAI(const std::string& prompt);
+    std::string routeToClaude(const std::string& prompt);
+    std::string routeToGemini(const std::string& prompt);
+
+    // HTTP helpers for remote backends
+    std::string httpPost(const std::string& url, const std::string& body,
+                         const std::vector<std::string>& headers, int timeoutMs);
+
+    // Backend UI helpers
+    void showBackendSwitcherDialog();
+    void showBackendConfigDialog(AIBackendType type);
+    void updateStatusBarBackend();
+    std::string backendTypeString(AIBackendType type) const;
+    AIBackendType backendTypeFromString(const std::string& name) const;
+    std::string getBackendConfigFilePath() const;
+
+    // Backend Switcher state
+    AIBackendType m_activeBackend                           = AIBackendType::LocalGGUF;
+    std::array<AIBackendConfig, (size_t)AIBackendType::Count>  m_backendConfigs;
+    std::array<AIBackendStatus, (size_t)AIBackendType::Count>  m_backendStatuses;
+    bool          m_backendManagerInitialized                = false;
+    std::mutex    m_backendMutex;
+
+    // ========================================================================
     // Settings Dialog (Win32IDE_Settings.cpp)
     // ========================================================================
     std::string getSettingsFilePath() const;
@@ -2307,6 +2420,11 @@ private:
     void handleAgentStatusEndpoint(SOCKET client);
     void handleAgentReplayEndpoint(SOCKET client, const std::string& body);
     void handleFailuresEndpoint(SOCKET client, const std::string& path);
+
+    // Phase 8B: Backend Switcher HTTP endpoints
+    void handleBackendsListEndpoint(SOCKET client);
+    void handleBackendActiveEndpoint(SOCKET client);
+    void handleBackendSwitchEndpoint(SOCKET client, const std::string& body);
 
     void toggleLocalServer();
     std::string getLocalServerStatus() const;
