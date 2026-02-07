@@ -172,6 +172,11 @@ if(WIN32)
         src/core/swarm_network_stubs.cpp
         src/win32app/Win32IDE_SwarmPanel.cpp
         
+        # Native Debugger Engine (Phase 12)
+        src/core/native_debugger_engine.cpp
+        src/core/debug_engine_stubs.cpp
+        src/win32app/Win32IDE_NativeDebugPanel.cpp
+        
         # Module implementations
         src/modules/vsix_loader_win32.cpp
         src/modules/codex_ultimate.cpp
@@ -182,7 +187,7 @@ if(WIN32)
     target_link_libraries(RawrXD-Win32IDE PRIVATE
         Threads::Threads
         comctl32 comdlg32 shell32 ole32 oleaut32 uuid
-        shlwapi psapi dbghelp winhttp ws2_32 winmm gdi32 user32
+        shlwapi psapi dbghelp dbgeng winhttp ws2_32 winmm gdi32 user32
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
         advapi32 crypt32
         gomp

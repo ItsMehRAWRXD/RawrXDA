@@ -997,6 +997,13 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: initPhase11 failed\n");
         }
 
+        // Initialize Phase 12: Native Debugger Engine
+        try {
+            initPhase12();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initPhase12 failed\n");
+        }
+
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
         // Notify UI thread to refresh
@@ -1011,6 +1018,9 @@ void Win32IDE::deferredHeavyInit() {
 // ============================================================================
 void Win32IDE::onDestroy() {
     LOG_INFO("Win32IDE::onDestroy - shutting down");
+
+    // Shutdown Phase 12: Native Debugger Engine
+    shutdownPhase12();
 
     // Shutdown Phase 11: Distributed Swarm Compilation
     shutdownPhase11();

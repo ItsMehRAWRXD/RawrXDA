@@ -710,6 +710,81 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ====================================================================
+    // PHASE 12 — NATIVE DEBUGGER ENGINE HTTP ENDPOINTS
+    // ====================================================================
+    // GET endpoints
+    else if (method == "GET" && path == "/api/debug/status") {
+        handleDbgStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/debug/breakpoints") {
+        handleDbgBreakpointsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/debug/registers") {
+        handleDbgRegistersEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/debug/stack") {
+        handleDbgStackEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/debug/modules") {
+        handleDbgModulesEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/debug/threads") {
+        handleDbgThreadsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/debug/events") {
+        handleDbgEventsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/debug/watches") {
+        handleDbgWatchesEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    // POST endpoints with body
+    else if (method == "POST" && path == "/api/debug/memory") {
+        handleDbgMemoryEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/debug/disasm") {
+        handleDbgDisasmEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/debug/launch") {
+        handleDbgLaunchEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/debug/attach") {
+        handleDbgAttachEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/debug/go") {
+        handleDbgGoEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/phase12/status") {
+        handlePhase12StatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,

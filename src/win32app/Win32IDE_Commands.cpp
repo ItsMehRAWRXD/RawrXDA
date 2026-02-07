@@ -1354,6 +1354,103 @@ void Win32IDE::handleToolsCommand(int commandId) {
             cmdSwarmFitnessTest();
             break;
 
+        // ====================================================================
+        // PHASE 12 — NATIVE DEBUGGER ENGINE (IDM 5157–5184)
+        // ====================================================================
+        // 12A: Session Control
+        case IDM_DBG_LAUNCH:                  // 5157
+            cmdDbgLaunch();
+            break;
+        case IDM_DBG_ATTACH:                  // 5158
+            cmdDbgAttach();
+            break;
+        case IDM_DBG_DETACH:                  // 5159
+            cmdDbgDetach();
+            break;
+
+        // 12B: Execution Control
+        case IDM_DBG_GO:                      // 5160
+            cmdDbgGo();
+            break;
+        case IDM_DBG_STEP_OVER:               // 5161
+            cmdDbgStepOver();
+            break;
+        case IDM_DBG_STEP_INTO:               // 5162
+            cmdDbgStepInto();
+            break;
+        case IDM_DBG_STEP_OUT:                // 5163
+            cmdDbgStepOut();
+            break;
+        case IDM_DBG_BREAK:                   // 5164
+            cmdDbgBreak();
+            break;
+        case IDM_DBG_KILL:                    // 5165
+            cmdDbgKill();
+            break;
+
+        // 12C: Breakpoint Management
+        case IDM_DBG_ADD_BP:                  // 5166
+            cmdDbgAddBP();
+            break;
+        case IDM_DBG_REMOVE_BP:               // 5167
+            cmdDbgRemoveBP();
+            break;
+        case IDM_DBG_ENABLE_BP:               // 5168
+            cmdDbgEnableBP();
+            break;
+        case IDM_DBG_CLEAR_BPS:               // 5169
+            cmdDbgClearBPs();
+            break;
+        case IDM_DBG_LIST_BPS:                // 5170
+            cmdDbgListBPs();
+            break;
+        case IDM_DBG_ADD_WATCH:               // 5171
+            cmdDbgAddWatch();
+            break;
+        case IDM_DBG_REMOVE_WATCH:            // 5172
+            cmdDbgRemoveWatch();
+            break;
+
+        // 12D: Inspection
+        case IDM_DBG_REGISTERS:               // 5173
+            cmdDbgRegisters();
+            break;
+        case IDM_DBG_STACK:                   // 5174
+            cmdDbgStack();
+            break;
+        case IDM_DBG_MEMORY:                  // 5175
+            cmdDbgMemory();
+            break;
+        case IDM_DBG_DISASM:                  // 5176
+            cmdDbgDisasm();
+            break;
+        case IDM_DBG_MODULES:                 // 5177
+            cmdDbgModules();
+            break;
+        case IDM_DBG_THREADS:                 // 5178
+            cmdDbgThreads();
+            break;
+        case IDM_DBG_SWITCH_THREAD:           // 5179
+            cmdDbgSwitchThread();
+            break;
+        case IDM_DBG_EVALUATE:                // 5180
+            cmdDbgEvaluate();
+            break;
+
+        // 12E: Utilities
+        case IDM_DBG_SET_REGISTER:            // 5181
+            cmdDbgSetRegister();
+            break;
+        case IDM_DBG_SEARCH_MEMORY:           // 5182
+            cmdDbgSearchMemory();
+            break;
+        case IDM_DBG_SYMBOL_PATH:             // 5183
+            cmdDbgSymbolPath();
+            break;
+        case IDM_DBG_STATUS:                  // 5184
+            cmdDbgStatus();
+            break;
+
         default:
             break;
     }

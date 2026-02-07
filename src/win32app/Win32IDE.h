@@ -3579,4 +3579,106 @@ private:
 
     // Phase 11 state
     bool m_phase11Initialized = false;
+
+    // =========================================================================
+    //              PHASE 12 — Native Debugger Engine
+    // =========================================================================
+    // DbgEng COM interop + MASM64 breakpoint injection kernel.
+    // IDM range: 5157 – 5184
+
+    // ---- IDM defines for Native Debugger commands ----
+    // Session Control (12A)
+#define IDM_DBG_LAUNCH              5157
+#define IDM_DBG_ATTACH              5158
+#define IDM_DBG_DETACH              5159
+    // Execution Control (12B)
+#define IDM_DBG_GO                  5160
+#define IDM_DBG_STEP_OVER           5161
+#define IDM_DBG_STEP_INTO           5162
+#define IDM_DBG_STEP_OUT            5163
+#define IDM_DBG_BREAK               5164
+#define IDM_DBG_KILL                5165
+    // Breakpoint Management (12C)
+#define IDM_DBG_ADD_BP              5166
+#define IDM_DBG_REMOVE_BP           5167
+#define IDM_DBG_ENABLE_BP           5168
+#define IDM_DBG_CLEAR_BPS           5169
+#define IDM_DBG_LIST_BPS            5170
+    // Watch Management (12D)
+#define IDM_DBG_ADD_WATCH           5171
+#define IDM_DBG_REMOVE_WATCH        5172
+    // Inspection (12E)
+#define IDM_DBG_REGISTERS           5173
+#define IDM_DBG_STACK               5174
+#define IDM_DBG_MEMORY              5175
+#define IDM_DBG_DISASM              5176
+#define IDM_DBG_MODULES             5177
+#define IDM_DBG_THREADS             5178
+#define IDM_DBG_SWITCH_THREAD       5179
+#define IDM_DBG_EVALUATE            5180
+#define IDM_DBG_SET_REGISTER        5181
+#define IDM_DBG_SEARCH_MEMORY       5182
+#define IDM_DBG_SYMBOL_PATH         5183
+#define IDM_DBG_STATUS              5184
+
+    // Phase 12 lifecycle
+    void initPhase12();
+    void shutdownPhase12();
+
+    // Session Control command handlers (12A)
+    void cmdDbgLaunch();
+    void cmdDbgAttach();
+    void cmdDbgDetach();
+
+    // Execution Control command handlers (12B)
+    void cmdDbgGo();
+    void cmdDbgStepOver();
+    void cmdDbgStepInto();
+    void cmdDbgStepOut();
+    void cmdDbgBreak();
+    void cmdDbgKill();
+
+    // Breakpoint Management command handlers (12C)
+    void cmdDbgAddBP();
+    void cmdDbgRemoveBP();
+    void cmdDbgEnableBP();
+    void cmdDbgClearBPs();
+    void cmdDbgListBPs();
+
+    // Watch Management command handlers (12D)
+    void cmdDbgAddWatch();
+    void cmdDbgRemoveWatch();
+
+    // Inspection command handlers (12E)
+    void cmdDbgRegisters();
+    void cmdDbgStack();
+    void cmdDbgMemory();
+    void cmdDbgDisasm();
+    void cmdDbgModules();
+    void cmdDbgThreads();
+    void cmdDbgSwitchThread();
+    void cmdDbgEvaluate();
+    void cmdDbgSetRegister();
+    void cmdDbgSearchMemory();
+    void cmdDbgSymbolPath();
+    void cmdDbgStatus();
+
+    // Debug HTTP endpoint handlers (12F)
+    void handleDbgStatusEndpoint(SOCKET client);
+    void handleDbgBreakpointsEndpoint(SOCKET client);
+    void handleDbgRegistersEndpoint(SOCKET client);
+    void handleDbgStackEndpoint(SOCKET client);
+    void handleDbgMemoryEndpoint(SOCKET client, const std::string& body);
+    void handleDbgDisasmEndpoint(SOCKET client, const std::string& body);
+    void handleDbgModulesEndpoint(SOCKET client);
+    void handleDbgThreadsEndpoint(SOCKET client);
+    void handleDbgEventsEndpoint(SOCKET client);
+    void handleDbgWatchesEndpoint(SOCKET client);
+    void handleDbgLaunchEndpoint(SOCKET client, const std::string& body);
+    void handleDbgAttachEndpoint(SOCKET client, const std::string& body);
+    void handleDbgGoEndpoint(SOCKET client);
+    void handlePhase12StatusEndpoint(SOCKET client);
+
+    // Phase 12 state
+    bool m_phase12Initialized = false;
 };
