@@ -803,7 +803,8 @@ import { PolicyPanel } from '@/components/PolicyPanel';
 import { ExplainabilityPanel } from '@/components/ExplainabilityPanel';
 import { BackendPanel } from '@/components/BackendPanel';
 import { RouterPanel } from '@/components/RouterPanel';
-import { Terminal, Bot, Clock, Shield, Eye, Zap, GitBranch } from 'lucide-react';
+import { MultiResponsePanel } from '@/components/MultiResponsePanel';
+import { Terminal, Bot, Clock, Shield, Eye, Zap, GitBranch, Layers } from 'lucide-react';
 
 function App() {
   const { connect, isConnected, logs, agenticReady } = useEngineStore();
@@ -817,7 +818,7 @@ function App() {
     subagents: false,
     capabilities: { completion: true, streaming: false }
   });
-  const [rightPanel, setRightPanel] = useState<'tools' | 'agents' | 'failures' | 'history' | 'policy' | 'explain' | 'backend' | 'router'>('tools');
+  const [rightPanel, setRightPanel] = useState<'tools' | 'agents' | 'failures' | 'history' | 'policy' | 'explain' | 'backend' | 'router' | 'multiresponse'>('tools');
 
   useEffect(() => {
     connect();
@@ -906,6 +907,15 @@ function App() {
         >
           <GitBranch className="w-4 h-4" />
         </button>
+        <button
+          onClick={() => setRightPanel(rightPanel === 'multiresponse' ? 'tools' : 'multiresponse')}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+            rightPanel === 'multiresponse' ? 'bg-orange-600 text-white' : 'bg-background hover:bg-background/80'
+          }`}
+          title="Toggle Multi-Response Panel"
+        >
+          <Layers className="w-4 h-4" />
+        </button>
         <div className="flex flex-col items-center gap-1">
           {status.agentic && <div className="w-2 h-2 rounded-full bg-purple-500" title="Agentic" />}
           <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -972,6 +982,10 @@ function App() {
             ) : rightPanel === 'router' ? (
               <div className="flex-1 overflow-hidden">
                 <RouterPanel />
+              </div>
+            ) : rightPanel === 'multiresponse' ? (
+              <div className="flex-1 overflow-hidden">
+                <MultiResponsePanel />
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto border-b border-border">
@@ -1285,6 +1299,7 @@ bool ReactIDEGenerator::GenerateIDE(const std::string& name, const std::string& 
     WriteFile(project_path / "src" / "components" / "SettingsPanel.tsx", GenerateSettingsPanel());
     WriteFile(project_path / "src" / "components" / "BackendPanel.tsx", GenerateBackendPanel());
     WriteFile(project_path / "src" / "components" / "RouterPanel.tsx", GenerateRouterPanel());
+    WriteFile(project_path / "src" / "components" / "MultiResponsePanel.tsx", GenerateMultiResponsePanel());
 
     // UI Components (Minimal shadcn abstraction)
     WriteFile(project_path / "src" / "components" / "ui" / "card.tsx", R"(import * as React from "react"
@@ -4276,3 +4291,380 @@ export const RouterPanel: React.FC = () => {
 )ROUTER";
 }
 
+// ============================================================================
+// MultiResponsePanel — Phase 9C: Multi-Response Chain UI
+// ============================================================================
+
+std::string ReactIDEGenerator::GenerateMultiResponsePanel() {
+    return R"MULTIRESP(
+import React, { useState, useEffect, useCallback } from 'react';
+
+interface ResponseTemplate {
+  id: number;
+  name: string;
+  shortLabel: string;
+  description: string;
+  temperature: number;
+  maxTokens: number;
+  enabled: boolean;
+}
+
+interface GeneratedResponse {
+  index: number;
+  templateId: number;
+  templateName: string;
+  content: string;
+  tokenCount: number;
+  latencyMs: number;
+  complete: boolean;
+  error: boolean;
+  errorDetail?: string;
+}
+
+interface MultiResponseSession {
+  sessionId: number;
+  prompt: string;
+  maxResponses: number;
+  status: string;
+  responses: GeneratedResponse[];
+  preferredIndex: number;
+  totalMs: number;
+}
+
+interface MultiResponseStats {
+  totalSessions: number;
+  totalResponsesGenerated: number;
+  totalPreferencesRecorded: number;
+  preferenceCount: number[];
+  avgLatencyMs: number[];
+  errorCount: number;
+}
+
+type Tab = 'generate' | 'compare' | 'stats';
+
+const TEMPLATE_COLORS: Record<number, string> = {
+  0: 'border-blue-500 bg-blue-500/10',    // Strategic
+  1: 'border-green-500 bg-green-500/10',   // Grounded
+  2: 'border-purple-500 bg-purple-500/10', // Creative
+  3: 'border-gray-400 bg-gray-400/10',     // Concise
+};
+
+const TEMPLATE_BADGES: Record<number, string> = {
+  0: 'bg-blue-600',
+  1: 'bg-green-600',
+  2: 'bg-purple-600',
+  3: 'bg-gray-600',
+};
+
+export const MultiResponsePanel: React.FC = () => {
+  const [tab, setTab] = useState<Tab>('generate');
+  const [templates, setTemplates] = useState<ResponseTemplate[]>([]);
+  const [session, setSession] = useState<MultiResponseSession | null>(null);
+  const [stats, setStats] = useState<MultiResponseStats | null>(null);
+  const [prompt, setPrompt] = useState('');
+  const [maxResponses, setMaxResponses] = useState(4);
+  const [generating, setGenerating] = useState(false);
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+
+  const fetchTemplates = useCallback(async () => {
+    try {
+      const res = await fetch('/api/multi-response/templates');
+      if (res.ok) setTemplates(await res.json());
+    } catch (err) { console.error('MR templates fetch error:', err); }
+  }, []);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/multi-response/stats');
+      if (res.ok) setStats(await res.json());
+    } catch (err) { console.error('MR stats fetch error:', err); }
+  }, []);
+
+  const fetchLatest = useCallback(async () => {
+    try {
+      const res = await fetch('/api/multi-response/results?session=latest');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sessionId) setSession(data);
+      }
+    } catch (err) { console.error('MR results fetch error:', err); }
+  }, []);
+
+  useEffect(() => {
+    fetchTemplates();
+    fetchStats();
+    fetchLatest();
+  }, [fetchTemplates, fetchStats, fetchLatest]);
+
+  const handleGenerate = async () => {
+    if (!prompt.trim() || generating) return;
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/multi-response/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, maxResponses }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSession(data);
+        setTab('compare');
+        fetchStats();
+      }
+    } catch (err) {
+      console.error('MR generate error:', err);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handlePrefer = async (idx: number) => {
+    if (!session) return;
+    try {
+      await fetch('/api/multi-response/prefer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.sessionId, responseIndex: idx }),
+      });
+      setSession({ ...session, preferredIndex: idx });
+      fetchStats();
+    } catch (err) { console.error('MR prefer error:', err); }
+  };
+
+  const toggleExpand = (idx: number) => {
+    setExpanded(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  const templateNames = ['Strategic', 'Grounded', 'Creative', 'Concise'];
+
+  return (
+    <div className="h-full flex flex-col text-sm">
+      {/* Tab bar */}
+      <div className="flex border-b border-border">
+        {(['generate', 'compare', 'stats'] as Tab[]).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 capitalize transition-colors ${
+              tab === t
+                ? 'border-b-2 border-orange-500 text-orange-400 font-medium'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {/* ── Generate Tab ── */}
+        {tab === 'generate' && (
+          <>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Prompt</label>
+              <textarea
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                rows={4}
+                className="w-full bg-background border border-border rounded-md p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-orange-500"
+                placeholder="Enter your question here..."
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-medium text-muted-foreground">Responses:</label>
+              {[1,2,3,4].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setMaxResponses(n)}
+                  className={`w-8 h-8 rounded-md text-xs font-bold transition-colors ${
+                    maxResponses === n
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-background border border-border hover:bg-background/80'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={handleGenerate}
+              disabled={generating || !prompt.trim()}
+              className="w-full py-2 rounded-md bg-orange-600 text-white font-medium hover:bg-orange-700 disabled:opacity-50 transition-colors"
+            >
+              {generating ? 'Generating...' : `Generate ${maxResponses} Response${maxResponses > 1 ? 's' : ''}`}
+            </button>
+
+            <div className="space-y-1">
+              <h3 className="text-xs font-medium text-muted-foreground">Templates</h3>
+              {templates.map(t => (
+                <div
+                  key={t.id}
+                  className={`flex items-center gap-2 p-2 rounded-md border ${
+                    TEMPLATE_COLORS[t.id] || 'border-border'
+                  } ${!t.enabled ? 'opacity-40' : ''}`}
+                >
+                  <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white ${
+                    TEMPLATE_BADGES[t.id] || 'bg-gray-600'
+                  }`}>
+                    {t.shortLabel}
+                  </span>
+                  <div className="flex-1">
+                    <span className="font-medium">{t.name}</span>
+                    <span className="text-muted-foreground ml-2 text-xs">
+                      temp={t.temperature} / {t.maxTokens} tok
+                    </span>
+                  </div>
+                  <span className={`text-xs ${t.enabled ? 'text-green-400' : 'text-red-400'}`}>
+                    {t.enabled ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── Compare Tab ── */}
+        {tab === 'compare' && (
+          <>
+            {!session ? (
+              <div className="text-center text-muted-foreground py-8">
+                No session yet. Go to Generate tab first.
+              </div>
+            ) : (
+              <>
+                <div className="p-2 bg-background rounded-md border border-border">
+                  <div className="text-xs text-muted-foreground">
+                    Session #{session.sessionId} &mdash; {session.responses.length} responses in {Math.round(session.totalMs)}ms
+                  </div>
+                  <div className="text-sm mt-1 line-clamp-2">{session.prompt}</div>
+                </div>
+
+                {session.responses.map((resp, idx) => (
+                  <div
+                    key={idx}
+                    className={`rounded-md border-2 ${
+                      session.preferredIndex === idx
+                        ? 'border-orange-500 ring-1 ring-orange-500/30'
+                        : TEMPLATE_COLORS[resp.templateId] || 'border-border'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between p-2 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white ${
+                          TEMPLATE_BADGES[resp.templateId] || 'bg-gray-600'
+                        }`}>
+                          {templateNames[resp.templateId]?.[0] || '?'}
+                        </span>
+                        <span className="font-medium">{resp.templateName}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {resp.tokenCount} tok / {Math.round(resp.latencyMs)}ms
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handlePrefer(idx)}
+                          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                            session.preferredIndex === idx
+                              ? 'bg-orange-600 text-white'
+                              : 'bg-background border border-border hover:bg-orange-600/20'
+                          }`}
+                        >
+                          {session.preferredIndex === idx ? '★ Preferred' : 'Prefer'}
+                        </button>
+                        <button
+                          onClick={() => toggleExpand(idx)}
+                          className="px-2 py-1 rounded text-xs bg-background border border-border hover:bg-background/80"
+                        >
+                          {expanded[idx] ? 'Collapse' : 'Expand'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className={`p-2 text-sm whitespace-pre-wrap ${expanded[idx] ? '' : 'max-h-32 overflow-hidden'}`}>
+                      {resp.error ? (
+                        <span className="text-red-400">Error: {resp.errorDetail}</span>
+                      ) : (
+                        resp.content
+                      )}
+                    </div>
+                    {!expanded[idx] && resp.content.length > 200 && (
+                      <div className="h-6 bg-gradient-to-t from-background to-transparent -mt-6 relative" />
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── Stats Tab ── */}
+        {tab === 'stats' && (
+          <>
+            {!stats ? (
+              <div className="text-center text-muted-foreground py-8">Loading stats...</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 bg-background rounded-md border border-border">
+                    <div className="text-xs text-muted-foreground">Sessions</div>
+                    <div className="text-lg font-bold">{stats.totalSessions}</div>
+                  </div>
+                  <div className="p-2 bg-background rounded-md border border-border">
+                    <div className="text-xs text-muted-foreground">Responses</div>
+                    <div className="text-lg font-bold">{stats.totalResponsesGenerated}</div>
+                  </div>
+                  <div className="p-2 bg-background rounded-md border border-border">
+                    <div className="text-xs text-muted-foreground">Preferences</div>
+                    <div className="text-lg font-bold">{stats.totalPreferencesRecorded}</div>
+                  </div>
+                  <div className="p-2 bg-background rounded-md border border-border">
+                    <div className="text-xs text-muted-foreground">Errors</div>
+                    <div className="text-lg font-bold text-red-400">{stats.errorCount}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-xs font-medium text-muted-foreground">Template Preference Breakdown</h3>
+                  {templateNames.map((name, i) => {
+                    const count = stats.preferenceCount?.[i] || 0;
+                    const total = stats.totalPreferencesRecorded || 1;
+                    const pct = Math.round((count / total) * 100);
+                    const avg = Math.round(stats.avgLatencyMs?.[i] || 0);
+                    return (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-medium">{name}</span>
+                          <span className="text-muted-foreground">{count}x ({pct}%) &mdash; avg {avg}ms</span>
+                        </div>
+                        <div className="h-2 bg-background rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              i === 0 ? 'bg-blue-500' :
+                              i === 1 ? 'bg-green-500' :
+                              i === 2 ? 'bg-purple-500' : 'bg-gray-400'
+                            }`}
+                            style={{ width: `${Math.max(pct, 2)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => fetchStats()}
+                  className="w-full py-1.5 rounded-md bg-background border border-border text-xs hover:bg-background/80 transition-colors"
+                >
+                  Refresh Stats
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+)MULTIRESP";
+}

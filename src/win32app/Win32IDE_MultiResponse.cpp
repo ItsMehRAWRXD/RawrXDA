@@ -17,6 +17,49 @@
 #include <algorithm>
 
 // ============================================================================
+// Local HTTP utility (mirrors LocalServerUtil from Win32IDE_LocalServer.cpp)
+// ============================================================================
+namespace LocalServerUtil {
+static std::string buildHttpResponse(int status, const std::string& body,
+                                      const std::string& contentType = "application/json") {
+    std::ostringstream oss;
+    switch (status) {
+        case 200: oss << "HTTP/1.1 200 OK\r\n"; break;
+        case 204: oss << "HTTP/1.1 204 No Content\r\n"; break;
+        case 400: oss << "HTTP/1.1 400 Bad Request\r\n"; break;
+        case 404: oss << "HTTP/1.1 404 Not Found\r\n"; break;
+        case 422: oss << "HTTP/1.1 422 Unprocessable Entity\r\n"; break;
+        case 502: oss << "HTTP/1.1 502 Bad Gateway\r\n"; break;
+        default:  oss << "HTTP/1.1 500 Internal Server Error\r\n"; break;
+    }
+    oss << "Content-Type: " << contentType << "\r\n";
+    oss << "Content-Length: " << body.size() << "\r\n";
+    oss << "Access-Control-Allow-Origin: *\r\n";
+    oss << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+    oss << "Access-Control-Allow-Headers: Content-Type, Authorization\r\n";
+    oss << "Connection: close\r\n\r\n";
+    oss << body;
+    return oss.str();
+}
+
+static std::string escapeJson(const std::string& value) {
+    std::string out;
+    out.reserve(value.size());
+    for (char c : value) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:   out.push_back(c); break;
+        }
+    }
+    return out;
+}
+} // namespace LocalServerUtil
+
+// ============================================================================
 // LIFECYCLE
 // ============================================================================
 

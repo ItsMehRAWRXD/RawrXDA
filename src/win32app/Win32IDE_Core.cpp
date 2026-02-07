@@ -9,7 +9,7 @@
 #include "IDELogger.h"
 #include "IDEConfig.h"
 #include "ModelConnection.h"
-#include "../core/multi_response_engine.h"
+#include "multi_response_engine.h"
 #include "../cpu_inference_engine.h"
 #include "../modules/native_memory.hpp"
 #include "../modules/ExtensionLoader.hpp"

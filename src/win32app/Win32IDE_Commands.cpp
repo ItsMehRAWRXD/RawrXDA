@@ -1124,6 +1124,47 @@ void Win32IDE::handleToolsCommand(int commandId) {
             cmdAsmClearSymbols();
             break;
 
+        // ============================================================
+        // Phase 9C: Multi-Response Chain (5106–5117 range)
+        // ============================================================
+
+        case IDM_MULTI_RESP_GENERATE:         // 5106
+            cmdMultiResponseGenerate();
+            break;
+        case IDM_MULTI_RESP_SET_MAX:          // 5107
+            cmdMultiResponseSetMax();
+            break;
+        case IDM_MULTI_RESP_SELECT_PREFERRED: // 5108
+            cmdMultiResponseSelectPreferred();
+            break;
+        case IDM_MULTI_RESP_COMPARE:          // 5109
+            cmdMultiResponseCompare();
+            break;
+        case IDM_MULTI_RESP_SHOW_STATS:       // 5110
+            cmdMultiResponseShowStats();
+            break;
+        case IDM_MULTI_RESP_SHOW_TEMPLATES:   // 5111
+            cmdMultiResponseShowTemplates();
+            break;
+        case IDM_MULTI_RESP_TOGGLE_TEMPLATE:  // 5112
+            cmdMultiResponseToggleTemplate();
+            break;
+        case IDM_MULTI_RESP_SHOW_PREFS:       // 5113
+            cmdMultiResponseShowPreferences();
+            break;
+        case IDM_MULTI_RESP_SHOW_LATEST:      // 5114
+            cmdMultiResponseShowLatest();
+            break;
+        case IDM_MULTI_RESP_SHOW_STATUS:      // 5115
+            cmdMultiResponseShowStatus();
+            break;
+        case IDM_MULTI_RESP_CLEAR_HISTORY:    // 5116
+            cmdMultiResponseClearHistory();
+            break;
+        case IDM_MULTI_RESP_APPLY_PREFERRED:  // 5117
+            cmdMultiResponseApplyPreferred();
+            break;
+
         default:
             break;
     }
@@ -1513,6 +1554,22 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_ASM_DETECT_CONVENTION,  "ASM: Detect Calling Convention",            "", "ASM"});
     m_commandRegistry.push_back({IDM_ASM_SHOW_SECTIONS,      "ASM: Show Sections & Directives",           "", "ASM"});
     m_commandRegistry.push_back({IDM_ASM_CLEAR_SYMBOLS,      "ASM: Clear All Parsed Symbols",             "", "ASM"});
+
+    // ================================================================
+    // Phase 9C: Multi-Response Chain (5106–5117 — routed via handleToolsCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_MULTI_RESP_GENERATE,         "MultiResp: Generate Multi-Response Chain",      "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_SET_MAX,          "MultiResp: Set Max Response Count (cycle 1-4)", "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_SELECT_PREFERRED, "MultiResp: Select Preferred Response (cycle)",  "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_COMPARE,          "MultiResp: Compare All Responses",              "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_SHOW_STATS,       "MultiResp: Show Statistics",                    "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_SHOW_TEMPLATES,   "MultiResp: Show Response Templates",            "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_TOGGLE_TEMPLATE,  "MultiResp: Toggle Template On/Off (cycle)",     "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_SHOW_PREFS,       "MultiResp: Show Preference History",            "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_SHOW_LATEST,      "MultiResp: Show Latest Session JSON",           "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_SHOW_STATUS,      "MultiResp: Show Engine Status",                 "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_CLEAR_HISTORY,    "MultiResp: Clear All History",                  "", "MultiResp"});
+    m_commandRegistry.push_back({IDM_MULTI_RESP_APPLY_PREFERRED,  "MultiResp: Apply Preferred Response to Chat",   "", "MultiResp"});
 
     // ================================================================
     // Theme Selection (3101–3116 range — routed via handleViewCommand)

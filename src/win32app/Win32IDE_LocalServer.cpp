@@ -486,6 +486,46 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== Phase 9C: Multi-Response Chain ==========
+    else if (method == "GET" && path == "/api/multi-response/status") {
+        handleMultiResponseStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/multi-response/templates") {
+        handleMultiResponseTemplatesEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/multi-response/generate") {
+        handleMultiResponseGenerateEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path.rfind("/api/multi-response/results", 0) == 0) {
+        // Extract session ID from query: /api/multi-response/results?session=123
+        std::string sid = "latest";
+        auto qpos = path.find("session=");
+        if (qpos != std::string::npos) sid = path.substr(qpos + 8);
+        handleMultiResponseResultsEndpoint(client, sid);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/multi-response/prefer") {
+        handleMultiResponsePreferEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/multi-response/stats") {
+        handleMultiResponseStatsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/multi-response/preferences") {
+        handleMultiResponsePreferencesEndpoint(client);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,
@@ -1445,6 +1485,13 @@ std::string Win32IDE::getLocalServerStatus() const {
     oss << "  GET  /api/router/decision      — Last routing decision trace\r\n";
     oss << "  GET  /api/router/capabilities  — Backend capability profiles\r\n";
     oss << "  POST /api/router/route         — Dry-run route a prompt (no inference)\r\n";
+    oss << "  GET  /api/multi-response/status      — Multi-Response engine status\r\n";
+    oss << "  GET  /api/multi-response/templates    — List response templates (S/G/C/X)\r\n";
+    oss << "  POST /api/multi-response/generate     — Generate multi-response chain\r\n";
+    oss << "  GET  /api/multi-response/results      — Get session results (?session=ID)\r\n";
+    oss << "  POST /api/multi-response/prefer       — Record preference for a response\r\n";
+    oss << "  GET  /api/multi-response/stats        — Generation & preference stats\r\n";
+    oss << "  GET  /api/multi-response/preferences  — Preference history\r\n";
     return oss.str();
 }
 
