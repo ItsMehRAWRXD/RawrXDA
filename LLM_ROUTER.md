@@ -1,120 +1,145 @@
 # LLM Router — Phase 8C Reference
 
-> Task-based routing layer that classifies prompts by intent, selects the optimal backend
-> based on capabilities, failure history, and policy constraints, and executes with
-> auditable fallback. Every routing decision is logged and explainable.
+> Task-aware routing layer on top of the Phase 8B Backend Switcher.
+> Classifies prompts by intent, selects the optimal backend, and executes
+> with auditable fallback.  When disabled, all calls pass through unchanged.
 
-**File:** `src/win32app/Win32IDE_LLMRouter.cpp` (1,039 lines)
-**Header:** `src/win32app/Win32IDE.h` (structs, enums, state, methods)
-
----
-
-## 1. Task Types
-
-The router classifies every prompt into one of eight task types using keyword pattern matching:
-
-| Task Type | ID | Trigger Patterns (subset) | Default Backend | Default Fallback |
-|-----------|----|--------------------------|-----------------|------------------|
-| Chat | 0 | `hello`, `hi `, `how are`, `can you help` | LocalGGUF | Ollama |
-| CodeGeneration | 1 | `write a `, `implement `, `generate code`, `scaffold ` | Claude | OpenAI |
-| CodeReview | 2 | `review this`, `find bugs`, `audit this`, `vulnerability` | Claude | OpenAI |
-| CodeEdit | 3 | `refactor `, `fix this`, `rewrite `, `optimize this code` | LocalGGUF | — |
-| Planning | 4 | `plan `, `step by step`, `architecture for`, `roadmap ` | OpenAI | Claude |
-| ToolExecution | 5 | `call `, `execute `, `invoke `, `function_call` | OpenAI | Gemini |
-| Research | 6 | `summarize `, `explain `, `what is `, `compare ` | Gemini | Claude |
-| General | 7 | *(catch-all — no pattern match)* | LocalGGUF | — |
-
-Classification runs in O(patterns × prompt_length) with early exit on first match.
-Patterns are matched case-insensitively against the full prompt text.
+**File:** `src/win32app/Win32IDE_LLMRouter.cpp` (1 040 lines)
+**Config:** `router.json` (auto-saved next to `session.json`)
+**Depends on:** Phase 8B Backend Switcher (`Win32IDE_BackendSwitcher.cpp`)
 
 ---
 
-## 2. Backend Capability Profiles
+## 1. Decision Model
 
-Each backend has a capability profile used for scoring and gating:
-
-| Backend | Context (tokens) | Tool Calls | Streaming | Func Calling | JSON Mode | Cost Tier | Quality |
-|---------|----------------:|:----------:|:---------:|:------------:|:---------:|:---------:|--------:|
-| LocalGGUF | 4,096 | ✗ | ✓ | ✗ | ✗ | 0 (free) | 40% |
-| Ollama | 8,192 | ✗ | ✓ | ✗ | ✓ | 0 (free) | 50% |
-| OpenAI | 128,000 | ✓ | ✓ | ✓ | ✓ | 2 (moderate) | 80% |
-| Claude | 200,000 | ✓ | ✓ | ✓ | ✗ | 3 (expensive) | 90% |
-| Gemini | 1,000,000 | ✓ | ✓ | ✓ | ✓ | 1 (cheap) | 70% |
-
-Profiles are initialized at startup and can be overridden via `router.json`.
-Cost tiers: `0` = free/local, `1` = cheap, `2` = moderate, `3` = expensive.
-
----
-
-## 3. Confidence Scoring
-
-Each routing decision includes a confidence score (0.0–1.0) computed from:
+Every prompt that enters `routeWithIntelligence()` passes through four stages:
 
 ```
-conf = 0.5 (base)
-     + alignment_bonus          (up to +0.2 for capability match)
-     + quality_score × 0.2      (from backend profile)
-     → clamped to [0.0, 1.0]
+prompt
+  │
+  ▼
+┌──────────────────────────┐
+│ 1. classifyTask(prompt)  │   Pattern-match → LLMTaskType
+└──────────┬───────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────┐
+│ 2. selectBackendForTask(task, prompt)    │
+│    a. Load TaskRoutingPreference         │
+│    b. Check preferred backend viability  │
+│    c. Failure-adjust (demotion)          │
+│    d. Compute confidence score           │
+│    e. Return RoutingDecision             │
+└──────────┬───────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────┐
+│ 3. Execute: temporarily swap active      │
+│    backend → routeInferenceRequest()     │
+│    → restore original active backend     │
+└──────────┬───────────────────────────────┘
+           │  primary failed?
+           ▼
+┌──────────────────────────────────────────┐
+│ 4. handleRoutingFallback()               │
+│    Swap to fallback → retry inference    │
+│    Log outcome regardless of result      │
+└──────────────────────────────────────────┘
 ```
 
-**Alignment bonuses:**
-- ToolExecution + backend supports function calling → +0.2
-- Research + backend has ≥100K context → +0.2
-- Chat + backend cost tier = 0 → +0.1
+### Task Classification
 
----
+`classifyTask()` uses substring pattern matching on the lowercased prompt.
+The first matching category wins (no scoring — deterministic and fast).
 
-## 4. Failure Demotion
+| LLMTaskType | Example trigger words |
+|---|---|
+| `CodeGeneration` | "write a", "implement", "generate code", "scaffold" |
+| `CodeReview` | "review this", "find bugs", "security review" |
+| `CodeEdit` | "refactor", "fix this", "rewrite", "port this" |
+| `Planning` | "plan", "step by step", "architecture for" |
+| `ToolExecution` | "call", "invoke", "function_call", "tool_use" |
+| `Research` | "summarize", "explain", "what is", "compare" |
+| `Chat` | "hello", "hi", "thanks", "how are" |
+| `General` | *(catch-all when nothing matches)* |
 
-The router tracks consecutive failures per backend. When a backend exceeds the configured
-`maxFailuresBeforeSkip` threshold (default: 5), it is automatically demoted:
+### Capability Scoring
+
+Each backend has a static `BackendCapability` profile:
+
+| Backend | Context | Tool Calls | Fn Calling | JSON Mode | Cost Tier | Quality |
+|---|---|---|---|---|---|---|
+| LocalGGUF | 4 096 | ✗ | ✗ | ✗ | 0 (free) | 40% |
+| Ollama | 8 192 | ✗ | ✗ | ✓ | 0 (free) | 50% |
+| OpenAI | 128 000 | ✓ | ✓ | ✓ | 2 | 80% |
+| Claude | 200 000 | ✓ | ✓ | ✗ | 3 | 90% |
+| Gemini | 1 000 000 | ✓ | ✓ | ✓ | 1 | 70% |
+
+Confidence is computed as:
 
 ```
-Preferred backend has N ≥ maxFailures?
-  YES → try fallback backend
-         Fallback also has N ≥ maxFailures?
-           YES → fall back to globally active backend
-           NO  → use fallback
-  NO  → use preferred
+conf = 0.5 + alignment_bonus + 0.2 * qualityScore
 ```
 
-Demotion is **logged** (reason field includes "demoted due to consecutive failures")
-and flagged as a **policy override** in the routing decision.
+Alignment bonuses:
+- ToolExecution + supportsFunctionCalling → +0.2
+- Research + maxContextTokens ≥ 100 000 → +0.2
+- Chat + costTier = 0 → +0.1
 
-Consecutive failure counters reset to zero on the first successful request.
+Clamped to [0, 1].
 
----
+### Failure Demotion
 
-## 5. Fallback Semantics
+`getFailureAdjustedBackend()` checks a per-backend `consecutiveFailures`
+counter.  When it reaches `maxFailuresBeforeSkip` (default 5):
 
-Fallback is **explicit, auditable, and never silent**:
+1. Preferred → demoted to its fallback
+2. If fallback is also over the limit → demoted to the globally active backend
+3. On any success, the counter resets to 0
 
-1. **Primary attempt** — Router temporarily sets the active backend and calls `routeInferenceRequest()`
-2. **Failure detection** — Empty response or response containing `"[BackendSwitcher] Error"` triggers fallback
-3. **Fallback attempt** — If `allowFallback` is true and a fallback backend is configured, the router switches and retries
-4. **Logging** — Both attempts are logged with latency. The `RoutingDecision` struct records:
-   - `fallbackUsed: true/false`
-   - `primaryLatencyMs` / `fallbackLatencyMs`
-   - `reason` (appended with fallback outcome)
-5. **Output pane notification** — User sees `[LLMRouter] Primary '...' failed → fallback '...' succeeded`
-6. **Restore** — Original active backend is restored after routing completes
-
-If both primary and fallback fail, the response is returned as-is (error) with a warning in the output pane.
+This is an **advisory demotion** — it does not disable the backend.
 
 ---
 
-## 6. Passthrough Mode
+## 2. Fallback Semantics
 
-When the router is **disabled** (`m_routerEnabled = false`), `routeWithIntelligence()` delegates
-directly to `routeInferenceRequest()` with zero overhead. No classification, no scoring, no logging.
+**Rules:**
 
-This is the default state on startup. Enable via command palette or API.
+1. Fallback is **explicit** — always logged with `logWarning()`
+2. Fallback is **never silent** — the Output panel shows a message
+3. Fallback is **single-hop** — preferred → fallback → done (no cascading)
+4. Fallback is **no-retry** — if both fail, the error bubbles up as-is
+5. Fallback **preserves** the original active backend — restored after routing
+
+If both primary and fallback fail, the Output panel receives a
+`Warning`-severity message:
+```
+[LLMRouter] BOTH primary ('Claude') and fallback ('OpenAI') failed.
+```
+
+### Default Fallback Chains
+
+| Task | Preferred | Fallback |
+|---|---|---|
+| Chat | LocalGGUF | Ollama |
+| CodeGeneration | Claude | OpenAI |
+| CodeReview | Claude | OpenAI |
+| CodeEdit | LocalGGUF | *(none)* |
+| Planning | OpenAI | Claude |
+| ToolExecution | OpenAI | Gemini |
+| Research | Gemini | Claude |
+| General | LocalGGUF | *(none)* |
+
+Each chain is user-configurable via `setTaskPreference()` or `router.json`.
 
 ---
 
-## 7. `router.json` Schema
+## 3. Configuration
 
-Saved to the same directory as the session file. Loaded on `initLLMRouter()`.
+### `router.json`
+
+Saved automatically on shutdown, loaded on `initLLMRouter()`.
+Lives in the same directory as `session.json`.
 
 ```json
 {
@@ -124,13 +149,6 @@ Saved to the same directory as the session file. Loaded on `initLLMRouter()`.
       "task": "Chat",
       "preferred": "LocalGGUF",
       "fallback": "Ollama",
-      "allowFallback": true,
-      "maxFailuresBeforeSkip": 5
-    },
-    {
-      "task": "CodeGeneration",
-      "preferred": "Claude",
-      "fallback": "OpenAI",
       "allowFallback": true,
       "maxFailuresBeforeSkip": 5
     }
@@ -151,32 +169,38 @@ Saved to the same directory as the session file. Loaded on `initLLMRouter()`.
 }
 ```
 
-**Fields:**
-- `enabled` — Whether the router is active (default: `false`)
-- `taskPreferences[]` — Per-task routing preferences (8 entries, one per `LLMTaskType`)
-  - `task` — Task type name (case-sensitive: `Chat`, `CodeGeneration`, etc.)
-  - `preferred` — Backend name (`LocalGGUF`, `Ollama`, `OpenAI`, `Claude`, `Gemini`)
-  - `fallback` — Fallback backend name, or `"none"` for no fallback
-  - `allowFallback` — Whether fallback is permitted for this task
-  - `maxFailuresBeforeSkip` — Consecutive failures before demotion
-- `capabilities[]` — Backend capability overrides (5 entries, one per `AIBackendType`)
+### Command Palette
+
+| IDM | Command |
+|---|---|
+| 5048 | Router: Show Status |
+| 5049 | Router: Enable |
+| 5050 | Router: Disable |
+| 5051 | Router: Show Capabilities |
+| 5052 | Router: Show Fallback Chains |
+| 5053 | Router: Reset Stats |
+| 5054 | Router: Test Classification |
+| 5055 | Router: Show Last Decision |
+| 5056 | Router: Show Stats |
+| 5057 | Router: Save Config |
 
 ---
 
-## 8. HTTP Endpoints
+## 4. HTTP API
 
-All endpoints are served by the Win32IDE LocalServer (default port 11435).
+All endpoints live on the Win32IDE local server (default port 11435).
 
 ### `GET /api/router/status`
 
-Returns full router state: enabled flag, task preferences, consecutive failures, stats.
+Returns the full router state: enabled flag, task preferences,
+consecutive-failure counters, aggregate stats.
 
 ```json
 {
   "enabled": true,
   "initialized": true,
-  "taskPreferences": [...],
-  "consecutiveFailures": { "LocalGGUF": 0, "Ollama": 0, ... },
+  "taskPreferences": [ "..." ],
+  "consecutiveFailures": { "LocalGGUF": 0, "Ollama": 0 },
   "stats": {
     "totalRouted": 42,
     "totalFallbacksUsed": 3,
@@ -187,7 +211,8 @@ Returns full router state: enabled flag, task preferences, consecutive failures,
 
 ### `GET /api/router/decision`
 
-Returns the last routing decision trace.
+Returns the **last** `RoutingDecision` (most recent prompt that went
+through the router).
 
 ```json
 {
@@ -198,43 +223,26 @@ Returns the last routing decision trace.
   "reason": "Task 'CodeGeneration' → preferred backend 'Claude' (fallback: 'OpenAI')",
   "policyOverride": false,
   "fallbackUsed": false,
-  "decisionEpochMs": 1738800000000,
-  "primaryLatencyMs": 1200,
+  "decisionEpochMs": 1738000000000,
+  "primaryLatencyMs": 1234,
   "fallbackLatencyMs": -1
 }
 ```
 
 ### `GET /api/router/capabilities`
 
-Returns the capability profile array for all backends.
-
-```json
-[
-  {
-    "backend": "LocalGGUF",
-    "maxContextTokens": 4096,
-    "supportsToolCalls": false,
-    "supportsStreaming": true,
-    "supportsFunctionCalling": false,
-    "supportsJsonMode": false,
-    "costTier": 0,
-    "qualityScore": 0.4,
-    "notes": "Native CPU inference, zero latency to network"
-  }
-]
-```
+Returns the capability profiles for all five backends (array of objects).
 
 ### `POST /api/router/route`
 
-Dry-run routing: classifies a prompt and returns the routing decision **without executing inference**.
+**Dry-run** classification + backend selection — does **not** execute
+inference.  Useful for testing the classifier.
 
-**Request:**
 ```json
-{ "prompt": "Write a function to sort an array" }
-```
+// Request
+{ "prompt": "Write a Python function to sort a list" }
 
-**Response:**
-```json
+// Response
 {
   "classifiedTask": "CodeGeneration",
   "selectedBackend": "Claude",
@@ -247,61 +255,53 @@ Dry-run routing: classifies a prompt and returns the routing decision **without 
 
 ---
 
-## 9. Command Palette Commands
+## 5. Integration Points
 
-10 commands registered under the **Router** category (teal dot, `RGB(0,200,170)`):
+### With Backend Switcher (Phase 8B)
 
-| Command ID | Palette Label | Action |
-|-----------|---------------|--------|
-| 5048 | Router: Enable Intelligent Routing | Init + enable |
-| 5049 | Router: Disable (Passthrough Mode) | Disable |
-| 5050 | Router: Show Status & Task Preferences | Print status to output |
-| 5051 | Router: Show Last Routing Decision | Print last decision trace |
-| 5052 | Router: Configure Task Routing Policy | Print config instructions |
-| 5053 | Router: Show Backend Capabilities | Print capability table |
-| 5054 | Router: Show Fallback Chains | Print task → preferred → fallback chains |
-| 5055 | Router: Save Router Configuration | Persist to `router.json` |
-| 5056 | Router: Dry-Run Route Current Prompt | Classify chat input without inference |
-| 5057 | Router: Reset Statistics & Failure Counters | Zero all counters |
-
----
-
-## 10. React Panel
-
-`GenerateRouterPanel()` produces a `RouterPanel.tsx` component with three tabs:
-
-1. **Overview** — Live stats (routed, fallbacks, overrides), task routing map, last decision trace, consecutive failures
-2. **Capabilities** — Per-backend capability cards (context, tools, streaming, cost, quality)
-3. **Test Route** — Textarea for dry-run prompt classification with result display
-
-Polls `/api/router/status`, `/api/router/decision`, and `/api/router/capabilities`.
-
----
-
-## 11. Interaction with Other Layers
+The Router **wraps** `routeInferenceRequest()` — it never replaces it.
 
 ```
-UI / CLI / HTTP
-      ↓
-Explainability (Phase 8A)     ← observability hooks
-      ↓
-LLM Router (Phase 8C)        ← THIS LAYER — task classification + routing
-      ↓
-Backend Switcher (Phase 8B)   ← explicit backend dispatch
-      ↓
-Execution Engine
-  ├── Local GGUF (CPU inference)
-  ├── Ollama (local GPU)
-  ├── OpenAI (remote API)
-  ├── Claude (remote API)
-  └── Gemini (remote API)
+routeWithIntelligence(prompt)
+  ├─ router disabled?  ──→  routeInferenceRequest(prompt)   // passthrough
+  └─ router enabled?
+      ├─ classifyTask → selectBackendForTask
+      ├─ swap activeBackend → call routeInferenceRequest
+      ├─ if failed → handleRoutingFallback → routeInferenceRequest
+      └─ restore original activeBackend
 ```
 
-- **Router wraps Switcher** — `routeWithIntelligence()` calls `routeInferenceRequest()` after selecting a backend
-- **Router reads config** — Uses `m_backendConfigs` and `m_backendStatuses` from the Switcher
-- **Router does not mutate** — Never enables/disables backends or changes configs
-- **Policy integration** — Failure demotion uses the same `maxFailuresBeforeSkip` paradigm as Phase 7 policy engine
+### With HTTP Endpoints
+
+Three server handlers now call `routeWithIntelligence()` instead of
+`routeInferenceRequest()`:
+
+- `handleOllamaApiGenerate()` — `/api/generate`
+- `handleOpenAIChatCompletions()` — `/v1/chat/completions`
+- `handleAskEndpoint()` — `/api/ask`
+
+When the router is disabled, this is a zero-cost passthrough.
+
+### With React IDE
+
+`RouterPanel.tsx` (generated by `react_ide_generator.cpp`) provides three
+tabs: Overview, Capabilities, and Test Route.
 
 ---
 
-*Last updated: v7.6.0-stable — February 2026*
+## 6. Design Invariants
+
+1. **Disabled by default** — `m_routerEnabled = false`.  Explicit user
+   action required to enable.
+2. **No backend mutation** — the Router reads configs; it never writes
+   to `m_backendConfigs`.
+3. **No auto-disable** — failure demotion is advisory, not permanent.
+4. **Single-hop fallback** — preferred → fallback → done.  No cascading.
+5. **Always auditable** — every decision is logged and retrievable via
+   `/api/router/decision`.
+6. **Thread-safe** — `m_routerMutex` guards all shared state.
+   `m_backendMutex` guards backend swaps.
+
+---
+
+*Last updated: v7.6.0-stable*

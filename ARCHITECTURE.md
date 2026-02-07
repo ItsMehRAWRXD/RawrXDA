@@ -170,34 +170,67 @@ Imported policies get fresh UUIDs and `createdBy: "import"` attribution.
 
 ---
 
-## 5. Inference Routing (Phases 8A–8C)
+## 5. Inference Stack (Phases 8B–8C)
 
-The inference stack is a closed, layered pipeline with no hidden behavior:
+### Data Flow
 
 ```
-UI / CLI / HTTP
-      ↓
-Explainability (8A)        — observability hooks, command palette polish
-      ↓
-LLM Router (8C)            — task classification, capability scoring, failure demotion
-      ↓
-Backend Switcher (8B)      — explicit backend selection, health probing, config persistence
-      ↓
-Execution Engine
-  ├── Local GGUF (CPU)     — native inference, zero network
-  ├── Ollama (local GPU)   — GPU-accelerated local server
-  ├── OpenAI (remote)      — GPT-4o, function calling, JSON mode
-  ├── Claude (remote)      — strong reasoning, 200K context
-  └── Gemini (remote)      — 1M context, cost-effective
+UI / CLI / HTTP Request
+       │
+       ▼
+┌──────────────────────────────┐
+│  Explainability (Phase 8A)   │  Observability hooks, decision audit
+└─────────────┬────────────────┘
+              │
+              ▼
+┌──────────────────────────────┐
+│  LLM Router (Phase 8C)       │  Task classification → capability scoring
+│  routeWithIntelligence()     │  → failure demotion → fallback
+└─────────────┬────────────────┘
+              │
+              ▼
+┌──────────────────────────────┐
+│  Backend Switcher (Phase 8B) │  Active backend dispatch
+│  routeInferenceRequest()     │  5 backends: LocalGGUF, Ollama, OpenAI, Claude, Gemini
+└─────────────┬────────────────┘
+              │
+              ▼
+┌──────────────────────────────┐
+│  Execution Engine            │
+│  ├── Local GGUF (CPU)        │
+│  ├── Ollama (local GPU)      │
+│  ├── OpenAI (remote API)     │
+│  ├── Claude (remote API)     │
+│  └── Gemini (remote API)     │
+└──────────────────────────────┘
 ```
 
-**Key invariants:**
-- Router wraps Switcher — never bypasses it
-- Fallback is explicit, logged, and auditable — never silent
-- When router is disabled, `routeWithIntelligence()` passes straight through to `routeInferenceRequest()`
-- Every routing decision is recorded with task type, backend, confidence, latency, and human-readable reason
+### Backend Switcher (Phase 8B)
 
-Full specification: [`LLM_ROUTER.md`](LLM_ROUTER.md)
+**Files:** `ai_backend.h` (RawrEngine), `Win32IDE_BackendSwitcher.cpp` (Win32IDE)
+
+Runtime-selectable AI backends without touching inference logic:
+
+- **5 backends** — LocalGGUF (default), Ollama, OpenAI, Claude, Gemini
+- **Config per backend** — endpoint, model, API key, timeout, max tokens, temperature
+- **Health probing** — async HTTP health checks with latency measurement
+- **Persistence** — `backends.json` (RawrEngine) / session-relative config (Win32IDE)
+- **Thread-safe** — `std::mutex` + `std::lock_guard` on all state
+
+### LLM Router (Phase 8C)
+
+**File:** `Win32IDE_LLMRouter.cpp` (1,040 lines)
+
+Task-based intelligent routing that sits above the Backend Switcher:
+
+- **8 task types** — Chat, CodeGeneration, CodeReview, CodeEdit, Planning, ToolExecution, Research, General
+- **Capability scoring** — per-backend profiles (context window, tool support, cost tier, quality)
+- **Failure demotion** — consecutive failures trigger automatic backend demotion
+- **Explicit fallback** — auditable, logged, never silent; original active backend always restored
+- **Passthrough mode** — when disabled, zero overhead
+- **Persistence** — `router.json` for task preferences and capability overrides
+
+Full reference: [`LLM_ROUTER.md`](LLM_ROUTER.md)
 
 ---
 
@@ -224,6 +257,9 @@ Full control plane with structured output:
 | `/policy export <file>` | P7 | Export to JSON |
 | `/policy import <file>` | P7 | Import from JSON |
 | `/heuristics` | P7 | Compute & display heuristics |
+| `/backend list` | P8B | List registered backends |
+| `/backend use <id>` | P8B | Switch active backend |
+| `/backend status` | P8B | Show active backend info |
 
 ### HTTP API (port 8080)
 
@@ -249,8 +285,8 @@ Full control plane with structured output:
 | `GET` | `/api/policies/heuristics` | P7 |
 | `GET` | `/api/policies/stats` | P7 |
 | `GET` | `/api/backends` | P8B |
-| `GET` | `/api/backend/active` | P8B |
-| `POST` | `/api/backend/switch` | P8B |
+| `GET` | `/api/backends/status` | P8B |
+| `POST` | `/api/backends/use` | P8B |
 | `GET` | `/api/router/status` | P8C |
 | `GET` | `/api/router/decision` | P8C |
 | `GET` | `/api/router/capabilities` | P8C |
@@ -263,8 +299,8 @@ Generates a complete Vite + Monaco + Tailwind project with:
 - SubAgent control panel
 - History & Replay panel
 - **Policy panel** with Suggestions / Policies / Heuristics tabs
-- **Backend panel** with switcher, status, health probing
-- **Router panel** with overview, capabilities, dry-run route testing
+- **Backend panel** with backend list, switching, health status
+- **Router panel** with stats, capabilities, dry-run test routing
 
 ### Win32 GUI IDE (RawrXD-Win32IDE)
 
@@ -274,8 +310,8 @@ Native Win32 application with Direct2D/DirectWrite rendering:
 - Failure intelligence and detection
 - Autonomy system with plan execution
 - Agent history integration
-- Backend Switcher with 5-backend support
-- LLM Router with task-aware routing and explainability
+- Backend Switcher with 5-backend support + health probing
+- LLM Router with task-based intelligent routing + explicit fallback
 
 ---
 
@@ -287,6 +323,7 @@ src/agentic_engine.{h,cpp}       — Model inference wrapper
 src/subagent_core.{h,cpp}        — SubAgent, Chain, Swarm orchestration
 src/agent_history.{h,cpp}        — Event log, query, replay (Phase 5)
 src/agent_policy.{h,cpp}         — Policy engine, heuristics, suggestions (Phase 7)
+src/ai_backend.h                  — Backend registry & switcher (Phase 8B, header-only)
 src/complete_server.{h,cpp}      — HTTP server with all API routes
 src/cpu_inference_engine.{h,cpp}  — GGUF model loading and token generation
 src/main.cpp                      — RawrEngine entry point (REPL + HTTP)
