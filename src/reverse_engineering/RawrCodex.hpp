@@ -101,6 +101,132 @@ enum class SSAVarClass : uint32_t {
     Flags           // CPU flags pseudo-register
 };
 
+// ============================================================================
+// Phase 17: Type Recovery + Data Flow Analysis + License Enforcement
+// ============================================================================
+
+// Recovered type classification
+enum class RecoveredType : uint32_t {
+    Unknown = 0,
+    Int8, Int16, Int32, Int64,
+    UInt8, UInt16, UInt32, UInt64,
+    Float32, Float64,
+    Pointer,        // Generic void*
+    CodePtr,        // Function pointer (CALL target)
+    DataPtr,        // Data pointer (LOAD/STORE through)
+    StructPtr,      // Struct pointer (multiple field offsets)
+    ArrayPtr,       // Array pointer (LEA with scale)
+    Bool,           // Boolean (TEST+Jcc pattern)
+    Flags,          // CPU flags (internal)
+    StringPtr,      // Pointer to string (heuristic)
+    Void            // void / no value
+};
+
+// Type inference confidence
+enum class TypeConfidence : uint32_t {
+    None = 0,
+    Low = 25,       // Width inference only
+    Medium = 50,    // Width + usage pattern
+    High = 75,      // API match or strong pattern
+    Certain = 100   // Direct evidence
+};
+
+// Recovered type descriptor
+struct TypeInfo {
+    uint32_t typeId;            // Unique type ID
+    RecoveredType baseType;     // Base classification
+    uint32_t typeWidth;         // Width in bytes (1, 2, 4, 8)
+    bool isPointer;             // True if pointer type
+    uint32_t pointsToType;     // Type ID of pointee
+    bool isSigned;              // True if signed integer
+    TypeConfidence confidence;  // Confidence level
+    uint32_t ssaVarId;          // SSA variable this was inferred from
+    uint32_t arrayStride;       // Array element stride
+    uint32_t arrayCount;        // Estimated element count
+    uint32_t structSize;        // Total struct size
+    uint32_t fieldCount;        // Number of detected fields
+    std::string typeName;       // Human-readable name
+};
+
+// Recovered struct field
+struct StructField {
+    uint32_t parentTypeId;      // Containing struct type ID
+    uint32_t fieldOffset;       // Byte offset from struct base
+    uint32_t fieldWidth;        // Width of this field
+    RecoveredType fieldType;    // Type classification
+    uint32_t accessCount;       // Number of accesses
+    bool isRead;
+    bool isWritten;
+    std::string fieldName;      // Generated name (e.g. "field_0x10")
+};
+
+// Definition-use chain entry
+struct DefUseChain {
+    uint32_t ssaVarId;          // SSA variable being tracked
+    uint32_t defInstrIdx;       // Instruction index of definition
+    uint32_t defBBIdx;          // Basic block of definition
+    std::vector<uint32_t> useInstrIdxs;  // Where used
+    std::vector<uint32_t> useBBIdxs;     // BB of each use
+    bool isLive;                // Still live at function exit
+    bool reachesReturn;         // Flows to RET
+};
+
+// License tier
+enum class LicenseTier : uint32_t {
+    Community = 0,
+    Pro = 1,
+    Enterprise = 2,
+    Government = 3
+};
+
+// Feature bits (must match MASM FEATURE_* constants)
+enum class FeatureBit : uint32_t {
+    LinearDisasm    = 0,
+    PEParser        = 1,
+    ELFParser       = 2,
+    StringExtract   = 3,
+    PatternScan     = 4,
+    CFGBuild        = 8,
+    XRefBuild       = 9,
+    FuncRecovery    = 10,
+    IDAExport       = 11,
+    RecursiveDisasm = 16,
+    SSALifting      = 17,
+    PHINodes        = 18,
+    SemanticAnalysis = 19,
+    TypeRecovery    = 20,
+    DataFlow        = 21,
+    Pseudocode      = 22
+};
+
+// License context
+struct LicenseContext {
+    uint64_t featureMask;
+    LicenseTier tier;
+    bool isValid;
+    bool isAirgapped;
+    std::string customer;
+
+    LicenseContext() : featureMask(0x1F), tier(LicenseTier::Community),
+                       isValid(true), isAirgapped(true) {}
+
+    bool CheckFeature(FeatureBit bit) const {
+        if (!isValid) return false;
+        return (featureMask >> static_cast<uint32_t>(bit)) & 1;
+    }
+
+    void SetTier(LicenseTier t) {
+        tier = t;
+        switch (t) {
+            case LicenseTier::Community:  featureMask = 0x0000001F; break;
+            case LicenseTier::Pro:        featureMask = 0x00000F1F; break;
+            case LicenseTier::Enterprise: featureMask = 0x000F0F1F; break;
+            case LicenseTier::Government: featureMask = 0x007F0F1F; break;
+        }
+        isValid = true;
+    }
+};
+
 struct SSAVariable {
     uint32_t varId;         // Unique SSA variable ID
     SSAVarClass varClass;   // Classification
@@ -137,7 +263,8 @@ struct PhiNode {
 
 class RawrCodex {
 public:
-    RawrCodex() : m_architecture("x64"), m_bitness(64), m_ssaNextVarId(0), m_ssaLifted(false) {}
+    RawrCodex() : m_architecture("x64"), m_bitness(64), m_ssaNextVarId(0),
+                   m_ssaLifted(false), m_typesRecovered(false) {}
 
     // ========================================================================
     // Core Analysis Functions
@@ -901,6 +1028,256 @@ public:
     // SSA state accessors
     bool IsSSALifted() const { return m_ssaLifted; }
     uint32_t GetSSAVarCount() const { return m_ssaNextVarId; }
+    bool AreTypesRecovered() const { return m_typesRecovered; }
+    const LicenseContext& GetLicense() const { return m_license; }
+    void SetLicenseTier(LicenseTier tier) { m_license.SetTier(tier); }
+
+    // ========================================================================
+    // Phase 17: Type Recovery
+    // Infers types from SSA data flow: pointer detection, signed/unsigned,
+    // struct field recovery, array stride detection.
+    // ========================================================================
+
+    struct TypeRecoveryResult {
+        std::vector<TypeInfo> types;
+        std::vector<StructField> fields;
+        std::vector<DefUseChain> defUseChains;
+        uint32_t totalTypes;
+        uint32_t deadVarCount;
+        bool success;
+    };
+
+    TypeRecoveryResult RecoverTypes(uint64_t functionStart) {
+        TypeRecoveryResult result;
+        result.success = false;
+        result.totalTypes = 0;
+        result.deadVarCount = 0;
+
+        // SSA must be lifted first
+        if (!m_ssaLifted) {
+            auto ssaResult = LiftToSSA(functionStart);
+            if (!ssaResult.success) return result;
+        }
+
+        // Type name table (matches MASM typeNames)
+        static const char* typeNameTable[] = {
+            "unknown", "int8_t", "int16_t", "int32_t", "int64_t",
+            "uint8_t", "uint16_t", "uint32_t", "uint64_t",
+            "float", "double", "void*", "func_ptr", "data_ptr",
+            "struct*", "array_ptr", "bool", "flags", "char*", "void"
+        };
+
+        // Get SSA state from last lift
+        auto ssaResult = LiftToSSA(functionStart);
+        if (!ssaResult.success) return result;
+
+        // Scratch arrays: per-variable type inference
+        std::vector<RecoveredType> varTypes(ssaResult.totalVars, RecoveredType::Unknown);
+        std::vector<uint32_t> varWidths(ssaResult.totalVars, 0);
+        std::vector<TypeConfidence> varConfidence(ssaResult.totalVars, TypeConfidence::None);
+
+        // ---------------------------------------------------------------
+        // Pass 1: Width + type inference from SSA operations
+        // ---------------------------------------------------------------
+        for (const auto& si : ssaResult.instructions) {
+            if (si.dstVarId < 0 || static_cast<uint32_t>(si.dstVarId) >= ssaResult.totalVars) continue;
+            uint32_t dst = static_cast<uint32_t>(si.dstVarId);
+
+            switch (si.op) {
+                case SSAOpType::Load:
+                    varTypes[dst] = RecoveredType::Int64;
+                    varWidths[dst] = 8;
+                    varConfidence[dst] = TypeConfidence::Low;
+                    // Mark source as data pointer
+                    if (si.src1VarId >= 0 && static_cast<uint32_t>(si.src1VarId) < ssaResult.totalVars) {
+                        varTypes[si.src1VarId] = RecoveredType::DataPtr;
+                        varConfidence[si.src1VarId] = TypeConfidence::Medium;
+                    }
+                    break;
+
+                case SSAOpType::Store:
+                    // Destination of store is a pointer
+                    varTypes[dst] = RecoveredType::DataPtr;
+                    varConfidence[dst] = TypeConfidence::Medium;
+                    break;
+
+                case SSAOpType::Call:
+                    // Return value: assume pointer if target is non-zero (likely API)
+                    if (si.callTarget != 0) {
+                        varTypes[dst] = RecoveredType::Pointer;
+                        varConfidence[dst] = TypeConfidence::Medium;
+                    } else {
+                        varTypes[dst] = RecoveredType::Int64;
+                        varConfidence[dst] = TypeConfidence::Low;
+                    }
+                    varWidths[dst] = 8;
+                    break;
+
+                case SSAOpType::Lea:
+                    varTypes[dst] = RecoveredType::Pointer;
+                    varWidths[dst] = 8;
+                    varConfidence[dst] = TypeConfidence::High;
+                    // If there's a src2 (index register), it's an array access
+                    if (si.src2VarId >= 0) {
+                        varTypes[dst] = RecoveredType::ArrayPtr;
+                    }
+                    break;
+
+                case SSAOpType::Cmp:
+                case SSAOpType::Test:
+                    // Flags producer
+                    if (si.flagsVarId >= 0 && static_cast<uint32_t>(si.flagsVarId) < ssaResult.totalVars) {
+                        varTypes[si.flagsVarId] = RecoveredType::Flags;
+                        varConfidence[si.flagsVarId] = TypeConfidence::Certain;
+                    }
+                    break;
+
+                case SSAOpType::Add:
+                case SSAOpType::Sub:
+                case SSAOpType::Mul:
+                    varTypes[dst] = RecoveredType::Int64;
+                    varWidths[dst] = 8;
+                    varConfidence[dst] = TypeConfidence::Low;
+                    break;
+
+                case SSAOpType::And:
+                case SSAOpType::Or:
+                case SSAOpType::Xor:
+                case SSAOpType::Shl:
+                case SSAOpType::Shr:
+                    varTypes[dst] = RecoveredType::UInt64;
+                    varWidths[dst] = 8;
+                    varConfidence[dst] = TypeConfidence::Low;
+                    break;
+
+                case SSAOpType::Sar:
+                    // Arithmetic right shift → signed
+                    varTypes[dst] = RecoveredType::Int64;
+                    varWidths[dst] = 8;
+                    varConfidence[dst] = TypeConfidence::Medium;
+                    break;
+
+                case SSAOpType::Assign:
+                    // Propagate type from source
+                    if (si.src1VarId >= 0 && static_cast<uint32_t>(si.src1VarId) < ssaResult.totalVars) {
+                        varTypes[dst] = varTypes[si.src1VarId];
+                        varWidths[dst] = varWidths[si.src1VarId];
+                        varConfidence[dst] = varConfidence[si.src1VarId];
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Pass 2: Pointer dereference pattern → struct promotion
+        // ---------------------------------------------------------------
+        std::unordered_map<uint32_t, int> ptrAccessCount; // varId → access count
+        for (const auto& si : ssaResult.instructions) {
+            if (si.op == SSAOpType::Load && si.src1VarId >= 0) {
+                ptrAccessCount[si.src1VarId]++;
+            }
+            if (si.op == SSAOpType::Store && si.dstVarId >= 0) {
+                ptrAccessCount[si.dstVarId]++;
+            }
+        }
+        for (auto& [varId, count] : ptrAccessCount) {
+            if (count >= 2 && varId < ssaResult.totalVars &&
+                varTypes[varId] == RecoveredType::DataPtr) {
+                varTypes[varId] = RecoveredType::StructPtr;
+                varConfidence[varId] = TypeConfidence::Medium;
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Pass 3: Build TypeInfo entries
+        // ---------------------------------------------------------------
+        uint32_t nextTypeId = 0;
+        for (uint32_t i = 0; i < ssaResult.totalVars; ++i) {
+            if (varTypes[i] == RecoveredType::Unknown) continue;
+
+            TypeInfo ti;
+            ti.typeId = nextTypeId++;
+            ti.baseType = varTypes[i];
+            ti.typeWidth = varWidths[i];
+            ti.ssaVarId = i;
+            ti.confidence = varConfidence[i];
+
+            // Pointer classification
+            ti.isPointer = (varTypes[i] == RecoveredType::Pointer ||
+                            varTypes[i] == RecoveredType::CodePtr ||
+                            varTypes[i] == RecoveredType::DataPtr ||
+                            varTypes[i] == RecoveredType::StructPtr ||
+                            varTypes[i] == RecoveredType::ArrayPtr ||
+                            varTypes[i] == RecoveredType::StringPtr);
+
+            // Signed classification
+            uint32_t bt = static_cast<uint32_t>(varTypes[i]);
+            ti.isSigned = (bt >= 1 && bt <= 4); // Int8..Int64
+
+            // Type name from table
+            if (bt < 20) {
+                ti.typeName = typeNameTable[bt];
+            } else {
+                ti.typeName = "unknown";
+            }
+
+            ti.pointsToType = 0;
+            ti.arrayStride = 0;
+            ti.arrayCount = 0;
+            ti.structSize = 0;
+            ti.fieldCount = 0;
+
+            result.types.push_back(ti);
+        }
+
+        // ---------------------------------------------------------------
+        // Pass 4: Build def-use chains
+        // ---------------------------------------------------------------
+        for (const auto& var : ssaResult.variables) {
+            DefUseChain du;
+            du.ssaVarId = var.varId;
+            du.defInstrIdx = var.instrIndex;
+            du.defBBIdx = var.bbIndex;
+            du.isLive = false;
+            du.reachesReturn = false;
+
+            // Find all uses
+            for (size_t i = 0; i < ssaResult.instructions.size(); ++i) {
+                const auto& si = ssaResult.instructions[i];
+                bool isUsed = (si.src1VarId == static_cast<int32_t>(var.varId) ||
+                               si.src2VarId == static_cast<int32_t>(var.varId) ||
+                               si.flagsVarId == static_cast<int32_t>(var.varId));
+                if (isUsed) {
+                    du.useInstrIdxs.push_back(static_cast<uint32_t>(i));
+                    du.useBBIdxs.push_back(si.bbIndex);
+                    if (si.op == SSAOpType::Ret) {
+                        du.reachesReturn = true;
+                    }
+                }
+            }
+
+            du.isLive = !du.useInstrIdxs.empty();
+            if (!du.isLive) result.deadVarCount++;
+
+            result.defUseChains.push_back(du);
+        }
+
+        result.totalTypes = nextTypeId;
+        result.success = true;
+        m_typesRecovered = true;
+        return result;
+    }
+
+    // ========================================================================
+    // Phase 17: License Feature Gate
+    // ========================================================================
+
+    bool CheckFeature(FeatureBit feature) const {
+        return m_license.CheckFeature(feature);
+    }
 
     // ========================================================================
     // Symbol Demangling (Itanium ABI / MSVC basic)
@@ -1070,6 +1447,10 @@ private:
     // SSA state
     uint32_t m_ssaNextVarId;
     bool m_ssaLifted;
+
+    // Type recovery state (Phase 17)
+    bool m_typesRecovered;
+    LicenseContext m_license;
 
     // ========================================================================
     // Utility Helpers

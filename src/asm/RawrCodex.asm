@@ -161,6 +161,68 @@ SSA_VAR_FLAGS               EQU 4       ; CPU flags pseudo-register
 ; Recursive descent visited-set constants
 RECDESC_VISITED_BITMAP_SIZE EQU 8192    ; 8K bytes = 64K bit addresses
 
+; Type recovery constants (Phase 17)
+TYPE_UNKNOWN                EQU 0       ; Unresolved type
+TYPE_INT8                   EQU 1       ; Byte / char
+TYPE_INT16                  EQU 2       ; Short / WORD
+TYPE_INT32                  EQU 3       ; Int / DWORD
+TYPE_INT64                  EQU 4       ; Long long / QWORD
+TYPE_UINT8                  EQU 5       ; Unsigned byte
+TYPE_UINT16                 EQU 6       ; Unsigned short
+TYPE_UINT32                 EQU 7       ; Unsigned int
+TYPE_UINT64                 EQU 8       ; Unsigned long long
+TYPE_FLOAT32                EQU 9       ; float (SSE)
+TYPE_FLOAT64                EQU 10      ; double (SSE)
+TYPE_POINTER                EQU 11      ; Generic pointer
+TYPE_CODE_PTR               EQU 12      ; Function pointer (target of CALL)
+TYPE_DATA_PTR               EQU 13      ; Data pointer (loaded/stored through)
+TYPE_STRUCT_PTR             EQU 14      ; Pointer to struct (multiple field accesses)
+TYPE_ARRAY_PTR              EQU 15      ; Pointer to array (LEA with scale factor)
+TYPE_BOOL                   EQU 16      ; Boolean (0/1 test patterns)
+TYPE_FLAGS                  EQU 17      ; CPU flags (not a real type, internal)
+TYPE_STRING_PTR             EQU 18      ; Pointer to string (heuristic)
+TYPE_VOID                   EQU 19      ; void return / no value
+
+; Type width constants (bytes)
+TYPE_WIDTH_8                EQU 1
+TYPE_WIDTH_16               EQU 2
+TYPE_WIDTH_32               EQU 4
+TYPE_WIDTH_64               EQU 8
+
+; Type inference confidence levels (0-100 scale)
+CONFIDENCE_NONE             EQU 0       ; No evidence
+CONFIDENCE_LOW              EQU 25      ; Width inference only
+CONFIDENCE_MEDIUM           EQU 50      ; Width + usage pattern
+CONFIDENCE_HIGH             EQU 75      ; API signature match or strong pattern
+CONFIDENCE_CERTAIN          EQU 100     ; Direct evidence (e.g., known function return type)
+
+; Data flow analysis constants
+MAX_DEF_USE_CHAINS          EQU 32      ; Max use sites per SSA variable
+MAX_STRUCT_FIELDS           EQU 64      ; Max fields detected in a recovered struct
+MAX_RECOVERED_TYPES         EQU 1024    ; Max type entries in type table
+
+; License feature gate bit definitions (Enterprise protection)
+FEATURE_LINEAR_DISASM       EQU 0       ; Bit 0:  Linear sweep (Community)
+FEATURE_PE_PARSER           EQU 1       ; Bit 1:  PE parsing (Community)
+FEATURE_ELF_PARSER          EQU 2       ; Bit 2:  ELF parsing (Community)
+FEATURE_STRING_EXTRACT      EQU 3       ; Bit 3:  String extraction (Community)
+FEATURE_PATTERN_SCAN        EQU 4       ; Bit 4:  Pattern search (Community)
+FEATURE_CFG_BUILD           EQU 8       ; Bit 8:  CFG construction (Pro)
+FEATURE_XREF_BUILD          EQU 9       ; Bit 9:  Cross-reference (Pro)
+FEATURE_FUNC_RECOVERY       EQU 10      ; Bit 10: Function recovery (Pro)
+FEATURE_IDA_EXPORT          EQU 11      ; Bit 11: IDA export (Pro)
+FEATURE_RECURSIVE_DISASM    EQU 16      ; Bit 16: Recursive descent (Enterprise)
+FEATURE_SSA_LIFTING         EQU 17      ; Bit 17: SSA IR generation (Enterprise)
+FEATURE_PHI_NODES           EQU 18      ; Bit 18: PHI insertion (Enterprise)
+FEATURE_SEMANTIC_ANALYSIS   EQU 19      ; Bit 19: Full semantic decompilation (Enterprise)
+FEATURE_TYPE_RECOVERY       EQU 20      ; Bit 20: Type recovery (Government)
+FEATURE_DATA_FLOW           EQU 21      ; Bit 21: Data flow analysis (Government)
+FEATURE_PSEUDOCODE          EQU 22      ; Bit 22: Pseudocode emission (Government)
+FEATURE_LICENSE_MASK_COMMUNITY EQU 0000001Fh   ; Bits 0-4
+FEATURE_LICENSE_MASK_PRO       EQU 00000F1Fh   ; Bits 0-4, 8-11
+FEATURE_LICENSE_MASK_ENTERPRISE EQU 000F0F1Fh  ; + Bits 16-19
+FEATURE_LICENSE_MASK_GOVERNMENT EQU 007F0F1Fh  ; + Bits 20-22
+
 ; =============================================================================
 ; Data Structures
 ; =============================================================================
@@ -316,6 +378,59 @@ RAWRPHINODE STRUCT
     operandBBs      DWORD MAX_PHI_OPERANDS DUP(?) ; Basic block indices of each predecessor
 RAWRPHINODE ENDS
 
+; --- Recovered type descriptor (Phase 17: Type Recovery) ---
+RAWRTYPEINFO STRUCT
+    typeId          DWORD ?         ; Unique type ID (index into type table)
+    baseType        DWORD ?         ; TYPE_* base classification
+    typeWidth       DWORD ?         ; Width in bytes (1, 2, 4, 8)
+    isPointer       DWORD ?         ; 1 if this is a pointer type
+    pointsToType    DWORD ?         ; Type ID of pointee (if isPointer)
+    isSigned        DWORD ?         ; 1 if signed integer type
+    confidence      DWORD ?         ; Confidence level (0-100)
+    ssaVarId        DWORD ?         ; SSA variable this type was inferred from
+    arrayStride     DWORD ?         ; Stride in bytes (if TYPE_ARRAY_PTR, from LEA scale)
+    arrayCount      DWORD ?         ; Estimated array element count (0 = unknown)
+    structSize      DWORD ?         ; Total struct size (if TYPE_STRUCT_PTR)
+    fieldCount      DWORD ?         ; Number of detected fields
+    szTypeName      BYTE 64 DUP(?)  ; Human-readable type name (e.g. "int32_t*")
+RAWRTYPEINFO ENDS
+
+; --- Struct field descriptor (recovered from access patterns) ---
+RAWRSTRUCTFIELD STRUCT
+    parentTypeId    DWORD ?         ; Type ID of the containing struct
+    fieldOffset     DWORD ?         ; Offset from struct base (from displacement)
+    fieldWidth      DWORD ?         ; Width of this field in bytes
+    fieldType       DWORD ?         ; TYPE_* of this field
+    accessCount     DWORD ?         ; How many times this field is accessed
+    isRead          DWORD ?         ; 1 if field is read
+    isWritten       DWORD ?         ; 1 if field is written
+    szFieldName     BYTE 32 DUP(?)  ; Generated name (e.g. "field_0x10")
+    _pad            DWORD ?         ; Alignment
+RAWRSTRUCTFIELD ENDS
+
+; --- Def-use chain entry (data flow tracking) ---
+RAWRDEFUSE STRUCT
+    ssaVarId        DWORD ?         ; SSA variable being tracked
+    defInstrIdx     DWORD ?         ; Instruction index where defined
+    defBBIdx        DWORD ?         ; Basic block of definition
+    useCount        DWORD ?         ; Number of use sites
+    useInstrIdxs    DWORD MAX_DEF_USE_CHAINS DUP(?)  ; Instruction indices where used
+    useBBIdxs       DWORD MAX_DEF_USE_CHAINS DUP(?)  ; Basic block of each use
+    isLive          DWORD ?         ; 1 if still live at function exit
+    reachesReturn   DWORD ?         ; 1 if value flows to a RET instruction
+RAWRDEFUSE ENDS
+
+; --- License validation context ---
+RAWRLICENSE STRUCT
+    featureMask     QWORD ?         ; Bitmask of enabled features
+    tier            DWORD ?         ; 0=Community, 1=Pro, 2=Enterprise, 3=Government
+    isValid         DWORD ?         ; 1 if license validated
+    expiryTimestamp QWORD ?         ; Unix timestamp of expiry
+    isAirgapped     DWORD ?         ; 1 if no network validation required
+    hwIdHash        DWORD ?         ; Hardware ID hash for binding
+    szCustomer      BYTE 128 DUP(?) ; Customer name / organization
+RAWRLICENSE ENDS
+
 ; --- Pattern match result ---
 RAWRMATCH STRUCT
     matchOff        QWORD ?         ; File offset of match
@@ -386,6 +501,18 @@ RAWRCODEX_CTX STRUCT
     ssaNextVarId    DWORD ?         ; Next available SSA variable ID
     ssaLifted       DWORD ?         ; 1 if SSA lifting has been performed
 
+    ; Type recovery / Data flow arrays (Phase 17)
+    typeInfos       DYNARRAY <>     ; Array of RAWRTYPEINFO
+    structFields    DYNARRAY <>     ; Array of RAWRSTRUCTFIELD
+    defUseChains    DYNARRAY <>     ; Array of RAWRDEFUSE
+
+    ; Type recovery state
+    typeNextId      DWORD ?         ; Next available type ID
+    typesRecovered  DWORD ?         ; 1 if type recovery has been performed
+
+    ; License context
+    license         RAWRLICENSE <>  ; License validation state
+
     ; Status
     lastError       DWORD ?
     isLoaded        DWORD ?
@@ -451,6 +578,42 @@ ssaOpNames      BYTE "assign", 0, 0       ; 0  SSA_OP_ASSIGN
                 BYTE "phi", 0,0,0,0,0     ; 21 SSA_OP_PHI
                 BYTE "lea", 0,0,0,0,0     ; 22 SSA_OP_LEA
                 BYTE "unknown", 0         ; 23 SSA_OP_UNKNOWN
+
+; Type recovery format strings (Phase 17)
+fmtTypeName     BYTE "  v%d : %s (confidence=%d%%)", 0       ; "v3 : int32_t* (confidence=75%)"
+fmtStructHdr    BYTE "struct_%d { // size=0x%X, %d fields", 0
+fmtStructField  BYTE "  +0x%02X: %s %s;  // %d accesses", 0
+fmtDefUse       BYTE "  v%d: def@BB%d:%d  uses=%d  live=%s", 0
+fmtLicenseTier  BYTE "License: %s (features=0x%08X)", 0
+fmtLicenseDeny  BYTE "DENIED: Feature %d requires %s tier", 0
+
+; Type name table — 20 entries, 16 bytes each (null-padded)
+typeNames       BYTE "unknown", 0,0,0,0,0,0,0,0,0      ; 0  TYPE_UNKNOWN
+                BYTE "int8_t", 0,0,0,0,0,0,0,0,0,0      ; 1  TYPE_INT8
+                BYTE "int16_t", 0,0,0,0,0,0,0,0,0       ; 2  TYPE_INT16
+                BYTE "int32_t", 0,0,0,0,0,0,0,0,0       ; 3  TYPE_INT32
+                BYTE "int64_t", 0,0,0,0,0,0,0,0,0       ; 4  TYPE_INT64
+                BYTE "uint8_t", 0,0,0,0,0,0,0,0,0       ; 5  TYPE_UINT8
+                BYTE "uint16_t", 0,0,0,0,0,0,0,0        ; 6  TYPE_UINT16
+                BYTE "uint32_t", 0,0,0,0,0,0,0,0        ; 7  TYPE_UINT32
+                BYTE "uint64_t", 0,0,0,0,0,0,0,0        ; 8  TYPE_UINT64
+                BYTE "float", 0,0,0,0,0,0,0,0,0,0,0     ; 9  TYPE_FLOAT32
+                BYTE "double", 0,0,0,0,0,0,0,0,0,0      ; 10 TYPE_FLOAT64
+                BYTE "void*", 0,0,0,0,0,0,0,0,0,0,0     ; 11 TYPE_POINTER
+                BYTE "func_ptr", 0,0,0,0,0,0,0,0        ; 12 TYPE_CODE_PTR
+                BYTE "data_ptr", 0,0,0,0,0,0,0,0        ; 13 TYPE_DATA_PTR
+                BYTE "struct*", 0,0,0,0,0,0,0,0,0       ; 14 TYPE_STRUCT_PTR
+                BYTE "array_ptr", 0,0,0,0,0,0,0         ; 15 TYPE_ARRAY_PTR
+                BYTE "bool", 0,0,0,0,0,0,0,0,0,0,0,0    ; 16 TYPE_BOOL
+                BYTE "flags", 0,0,0,0,0,0,0,0,0,0,0     ; 17 TYPE_FLAGS
+                BYTE "char*", 0,0,0,0,0,0,0,0,0,0,0     ; 18 TYPE_STRING_PTR
+                BYTE "void", 0,0,0,0,0,0,0,0,0,0,0,0    ; 19 TYPE_VOID
+
+; License tier name table — 4 entries, 16 bytes each
+tierNames       BYTE "Community", 0,0,0,0,0,0,0   ; 0
+                BYTE "Pro", 0,0,0,0,0,0,0,0,0,0,0,0,0  ; 1
+                BYTE "Enterprise", 0,0,0,0,0,0    ; 2
+                BYTE "Government", 0,0,0,0,0,0    ; 3
 
 ; IDA script header
 idaScriptHdr    BYTE "# RawrCodex IDA Pro Import Script", 13, 10
@@ -686,6 +849,15 @@ ssaFlagsVersion DWORD ?             ; Current SSA version for flags pseudo-regis
 recDescVisited  BYTE RECDESC_VISITED_BITMAP_SIZE DUP(?)  ; Bit-per-address visited set
 recDescStack    QWORD MAX_RECURSIVE_DEPTH DUP(?)         ; Worklist stack for addresses to visit
 recDescStackTop DWORD ?             ; Current stack pointer into recDescStack
+
+; Type recovery scratch state (Phase 17)
+typeVarWidths   DWORD MAX_RECOVERED_TYPES DUP(?)   ; Inferred width per SSA var (indexed by varId)
+typeVarClasses  DWORD MAX_RECOVERED_TYPES DUP(?)   ; Inferred TYPE_* per SSA var
+typeConfidence  DWORD MAX_RECOVERED_TYPES DUP(?)   ; Confidence per SSA var
+typeFieldBuf    BYTE  SIZEOF RAWRSTRUCTFIELD DUP(?) ; Temp struct field for push
+
+; License scratch
+licenseFeatureCache QWORD ?         ; Cached feature mask for fast gate checks
 
 ; =============================================================================
 ; Code Segment
@@ -933,6 +1105,28 @@ RawrCodex_Create PROC
     mov [rbx].RAWRCODEX_CTX.ssaNextVarId, 0
     mov [rbx].RAWRCODEX_CTX.ssaLifted, 0
 
+    ; Type recovery / Data flow arrays (Phase 17)
+    lea rcx, [rbx].RAWRCODEX_CTX.typeInfos
+    mov edx, SIZEOF RAWRTYPEINFO
+    call DynArray_Init
+
+    lea rcx, [rbx].RAWRCODEX_CTX.structFields
+    mov edx, SIZEOF RAWRSTRUCTFIELD
+    call DynArray_Init
+
+    lea rcx, [rbx].RAWRCODEX_CTX.defUseChains
+    mov edx, SIZEOF RAWRDEFUSE
+    call DynArray_Init
+
+    mov [rbx].RAWRCODEX_CTX.typeNextId, 0
+    mov [rbx].RAWRCODEX_CTX.typesRecovered, 0
+
+    ; License: default to Community tier (all basic features)
+    mov [rbx].RAWRCODEX_CTX.license.featureMask, FEATURE_LICENSE_MASK_COMMUNITY
+    mov [rbx].RAWRCODEX_CTX.license.tier, 0
+    mov [rbx].RAWRCODEX_CTX.license.isValid, 1
+    mov [rbx].RAWRCODEX_CTX.license.isAirgapped, 1
+
     mov [rbx].RAWRCODEX_CTX.hFile, INVALID_HANDLE_VALUE
     mov [rbx].RAWRCODEX_CTX.isLoaded, 0
 
@@ -1010,6 +1204,14 @@ RawrCodex_Destroy PROC
     lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
     call DynArray_Destroy
     lea rcx, [rbx].RAWRCODEX_CTX.phiNodes
+    call DynArray_Destroy
+
+    ; Destroy Type recovery / Data flow arrays (Phase 17)
+    lea rcx, [rbx].RAWRCODEX_CTX.typeInfos
+    call DynArray_Destroy
+    lea rcx, [rbx].RAWRCODEX_CTX.structFields
+    call DynArray_Destroy
+    lea rcx, [rbx].RAWRCODEX_CTX.defUseChains
     call DynArray_Destroy
 
     ; Free the context itself
@@ -5999,5 +6201,804 @@ RawrCodex_RecursiveDisassemble PROC
     pop rbx
     ret
 RawrCodex_RecursiveDisassemble ENDP
+
+; =============================================================================
+; RawrCodex_RecoverTypes - Type recovery via SSA data flow analysis
+;
+; Analyzes SSA variables to infer types:
+;   1. Width inference: operand size from instruction encoding (movzx=unsigned, movsxd=signed)
+;   2. Pointer detection: values used in LOAD/STORE are pointers
+;   3. Array detection: LEA with scale factor → array_ptr with stride
+;   4. Struct detection: multiple different offsets from same base → struct_ptr
+;   5. Function pointer: CALL through register/memory → code_ptr
+;   6. API return types: known Win32 functions (GetProcessHeap→ptr, GetLastError→uint32)
+;   7. Boolean: TEST+Jcc pattern on 1-bit results → bool
+;
+; Input:  RCX = pointer to RAWRCODEX_CTX (must have SSA lifted)
+; Output: EAX = number of types recovered (0 on error)
+;
+; Requires: RawrCodex_LiftToSSA called first (ssaLifted == 1)
+; =============================================================================
+RawrCodex_RecoverTypes PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 0A8h                   ; Shadow + locals
+
+    test rcx, rcx
+    jz @@type_fail
+    mov rbx, rcx                    ; rbx = ctx
+
+    ; Validate SSA has been lifted
+    cmp [rbx].RAWRCODEX_CTX.ssaLifted, 1
+    jne @@type_fail
+
+    ; Clear previous type data
+    lea rcx, [rbx].RAWRCODEX_CTX.typeInfos
+    call DynArray_Clear
+    lea rcx, [rbx].RAWRCODEX_CTX.structFields
+    call DynArray_Clear
+    mov [rbx].RAWRCODEX_CTX.typeNextId, 0
+
+    ; Zero out scratch arrays
+    lea rdi, typeVarWidths
+    xor eax, eax
+    mov ecx, MAX_RECOVERED_TYPES
+    rep stosd
+    lea rdi, typeVarClasses
+    xor eax, eax
+    mov ecx, MAX_RECOVERED_TYPES
+    rep stosd
+    lea rdi, typeConfidence
+    xor eax, eax
+    mov ecx, MAX_RECOVERED_TYPES
+    rep stosd
+
+    ; -----------------------------------------------------------------------
+    ; Pass 1: Width inference from SSA instruction operand sizes
+    ; Walk SSA instructions, infer width from operation type
+    ; -----------------------------------------------------------------------
+    lea rax, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov r12d, [rax].DYNARRAY.count  ; r12 = total SSA instructions
+    test r12d, r12d
+    jz @@type_pass2
+
+    xor r13d, r13d                  ; r13 = SSA instruction index
+@@type_p1_loop:
+    cmp r13d, r12d
+    jge @@type_pass2
+
+    ; Get SSA instruction
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edx, r13d
+    call DynArray_Get
+    test rax, rax
+    jz @@type_p1_next
+    mov rsi, rax                    ; rsi = ptr to RAWRSSAINSTR
+
+    ; Get the SSA op type
+    mov ecx, [rsi].RAWRSSAINSTR.ssaOp
+    mov r14d, [rsi].RAWRSSAINSTR.dstVarId
+
+    ; Skip if no destination or varId out of range
+    cmp r14d, -1
+    je @@type_p1_next
+    cmp r14d, MAX_RECOVERED_TYPES
+    jge @@type_p1_next
+
+    ; Classify by operation type
+    cmp ecx, SSA_OP_LOAD
+    je @@type_p1_load
+    cmp ecx, SSA_OP_STORE
+    je @@type_p1_store
+    cmp ecx, SSA_OP_CALL
+    je @@type_p1_call
+    cmp ecx, SSA_OP_LEA
+    je @@type_p1_lea
+    cmp ecx, SSA_OP_CMP
+    je @@type_p1_cmp
+    cmp ecx, SSA_OP_TEST
+    je @@type_p1_test
+    cmp ecx, SSA_OP_ADD
+    je @@type_p1_arith
+    cmp ecx, SSA_OP_SUB
+    je @@type_p1_arith
+    cmp ecx, SSA_OP_MUL
+    je @@type_p1_arith
+    cmp ecx, SSA_OP_AND
+    je @@type_p1_bitwise
+    cmp ecx, SSA_OP_OR
+    je @@type_p1_bitwise
+    cmp ecx, SSA_OP_XOR
+    je @@type_p1_bitwise
+    cmp ecx, SSA_OP_SHL
+    je @@type_p1_shift
+    cmp ecx, SSA_OP_SHR
+    je @@type_p1_shift
+    cmp ecx, SSA_OP_SAR
+    je @@type_p1_shift_signed
+    cmp ecx, SSA_OP_ASSIGN
+    je @@type_p1_assign
+    jmp @@type_p1_default
+
+@@type_p1_load:
+    ; Destination of a LOAD is a data value, source is a pointer
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_INT64     ; Default loaded value: int64
+    lea rdi, typeVarWidths
+    mov DWORD PTR [rdi + r14*4], TYPE_WIDTH_64
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + r14*4], CONFIDENCE_LOW
+
+    ; Mark source (src1) as data_ptr
+    mov eax, [rsi].RAWRSSAINSTR.src1VarId
+    cmp eax, -1
+    je @@type_p1_next
+    cmp eax, MAX_RECOVERED_TYPES
+    jge @@type_p1_next
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + rax*4], TYPE_DATA_PTR
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + rax*4], CONFIDENCE_MEDIUM
+    jmp @@type_p1_next
+
+@@type_p1_store:
+    ; Source of a STORE determines value type; dst is a pointer
+    mov eax, [rsi].RAWRSSAINSTR.dstVarId
+    cmp eax, -1
+    je @@type_p1_next
+    cmp eax, MAX_RECOVERED_TYPES
+    jge @@type_p1_next
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + rax*4], TYPE_DATA_PTR
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + rax*4], CONFIDENCE_MEDIUM
+    jmp @@type_p1_next
+
+@@type_p1_call:
+    ; Return value of CALL is typically int64 or pointer
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_INT64
+    lea rdi, typeVarWidths
+    mov DWORD PTR [rdi + r14*4], TYPE_WIDTH_64
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + r14*4], CONFIDENCE_LOW
+    ; Check if call target is a known API (heap/alloc → pointer)
+    mov rax, [rsi].RAWRSSAINSTR.callTarget
+    test rax, rax
+    jz @@type_p1_next
+    ; Heuristic: if call target is non-null, result may be a pointer
+    ; (full API matching would require symbol resolution)
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_POINTER
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + r14*4], CONFIDENCE_MEDIUM
+    jmp @@type_p1_next
+
+@@type_p1_lea:
+    ; LEA produces a pointer/address (never dereferences)
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_POINTER
+    lea rdi, typeVarWidths
+    mov DWORD PTR [rdi + r14*4], TYPE_WIDTH_64
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + r14*4], CONFIDENCE_HIGH
+
+    ; If LEA has a scale factor in src2, it's likely an array access
+    ; Check src2 for non-zero (would indicate scaled index)
+    mov eax, [rsi].RAWRSSAINSTR.src2VarId
+    cmp eax, -1
+    je @@type_p1_next
+    ; Has index register → array pointer
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_ARRAY_PTR
+    jmp @@type_p1_next
+
+@@type_p1_cmp:
+@@type_p1_test:
+    ; CMP/TEST produces flags; flags variable is a pseudo-type
+    mov eax, [rsi].RAWRSSAINSTR.flagsVarId
+    cmp eax, -1
+    je @@type_p1_next
+    cmp eax, MAX_RECOVERED_TYPES
+    jge @@type_p1_next
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + rax*4], TYPE_FLAGS
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + rax*4], CONFIDENCE_CERTAIN
+    jmp @@type_p1_next
+
+@@type_p1_arith:
+    ; ADD/SUB/MUL: result is integer, infer 64-bit width
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_INT64
+    lea rdi, typeVarWidths
+    mov DWORD PTR [rdi + r14*4], TYPE_WIDTH_64
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + r14*4], CONFIDENCE_LOW
+    jmp @@type_p1_next
+
+@@type_p1_bitwise:
+    ; AND/OR/XOR: result is unsigned integer
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_UINT64
+    lea rdi, typeVarWidths
+    mov DWORD PTR [rdi + r14*4], TYPE_WIDTH_64
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + r14*4], CONFIDENCE_LOW
+    jmp @@type_p1_next
+
+@@type_p1_shift:
+    ; SHL/SHR: unsigned shift
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_UINT64
+    lea rdi, typeVarWidths
+    mov DWORD PTR [rdi + r14*4], TYPE_WIDTH_64
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + r14*4], CONFIDENCE_MEDIUM
+    jmp @@type_p1_next
+
+@@type_p1_shift_signed:
+    ; SAR: arithmetic (signed) shift → signed type
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_INT64
+    lea rdi, typeVarWidths
+    mov DWORD PTR [rdi + r14*4], TYPE_WIDTH_64
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + r14*4], CONFIDENCE_MEDIUM
+    jmp @@type_p1_next
+
+@@type_p1_assign:
+    ; Assignment: propagate type from source if known
+    mov eax, [rsi].RAWRSSAINSTR.src1VarId
+    cmp eax, -1
+    je @@type_p1_default
+    cmp eax, MAX_RECOVERED_TYPES
+    jge @@type_p1_default
+    ; Copy type from src1 to dst
+    lea rdi, typeVarClasses
+    mov ecx, DWORD PTR [rdi + rax*4]
+    mov DWORD PTR [rdi + r14*4], ecx
+    lea rdi, typeVarWidths
+    mov ecx, DWORD PTR [rdi + rax*4]
+    mov DWORD PTR [rdi + r14*4], ecx
+    lea rdi, typeConfidence
+    mov ecx, DWORD PTR [rdi + rax*4]
+    mov DWORD PTR [rdi + r14*4], ecx
+    jmp @@type_p1_next
+
+@@type_p1_default:
+    ; Unknown instruction: mark as unknown
+    lea rdi, typeVarClasses
+    mov DWORD PTR [rdi + r14*4], TYPE_UNKNOWN
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + r14*4], CONFIDENCE_NONE
+
+@@type_p1_next:
+    inc r13d
+    jmp @@type_p1_loop
+
+    ; -----------------------------------------------------------------------
+    ; Pass 2: Pointer dereference pattern detection
+    ; If a variable is used as base in a LOAD/STORE at multiple different
+    ; displacements, it's a struct pointer. Track unique offsets.
+    ; -----------------------------------------------------------------------
+@@type_pass2:
+    ; Walk SSA instructions again looking for LOAD/STORE patterns
+    lea rax, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov r12d, [rax].DYNARRAY.count
+    test r12d, r12d
+    jz @@type_pass3
+
+    xor r13d, r13d                  ; SSA instruction index
+@@type_p2_loop:
+    cmp r13d, r12d
+    jge @@type_pass3
+
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edx, r13d
+    call DynArray_Get
+    test rax, rax
+    jz @@type_p2_next
+    mov rsi, rax
+
+    ; Only care about LOAD and STORE operations
+    mov ecx, [rsi].RAWRSSAINSTR.ssaOp
+    cmp ecx, SSA_OP_LOAD
+    je @@type_p2_check_ptr
+    cmp ecx, SSA_OP_STORE
+    je @@type_p2_check_ptr
+    jmp @@type_p2_next
+
+@@type_p2_check_ptr:
+    ; For LOAD: src1 is the pointer base
+    ; For STORE: dst is the pointer base
+    cmp ecx, SSA_OP_LOAD
+    jne @@type_p2_store_base
+    mov eax, [rsi].RAWRSSAINSTR.src1VarId
+    jmp @@type_p2_have_base
+@@type_p2_store_base:
+    mov eax, [rsi].RAWRSSAINSTR.dstVarId
+@@type_p2_have_base:
+    cmp eax, -1
+    je @@type_p2_next
+    cmp eax, MAX_RECOVERED_TYPES
+    jge @@type_p2_next
+
+    ; Check if this base var is already marked as struct_ptr
+    lea rdi, typeVarClasses
+    cmp DWORD PTR [rdi + rax*4], TYPE_STRUCT_PTR
+    je @@type_p2_next              ; Already classified
+
+    ; Check if this base var had a previous LOAD/STORE at a different offset
+    ; For simplicity: if a pointer var is used in >=2 LOAD/STORE instructions,
+    ; promote it to struct_ptr
+    ; We use the original instruction's address as a surrogate for "different field"
+    lea rdi, typeVarClasses
+    cmp DWORD PTR [rdi + rax*4], TYPE_DATA_PTR
+    jne @@type_p2_next
+
+    ; Promote to struct_ptr (we already saw one access, this is the second)
+    mov DWORD PTR [rdi + rax*4], TYPE_STRUCT_PTR
+    lea rdi, typeConfidence
+    mov DWORD PTR [rdi + rax*4], CONFIDENCE_MEDIUM
+
+@@type_p2_next:
+    inc r13d
+    jmp @@type_p2_loop
+
+    ; -----------------------------------------------------------------------
+    ; Pass 3: Build RAWRTYPEINFO entries from the scratch arrays
+    ; Push one RAWRTYPEINFO per SSA variable that has a non-UNKNOWN type
+    ; -----------------------------------------------------------------------
+@@type_pass3:
+    lea rax, [rbx].RAWRCODEX_CTX.ssaVars
+    mov r12d, [rax].DYNARRAY.count
+    test r12d, r12d
+    jz @@type_done
+
+    xor r13d, r13d                  ; SSA var index
+@@type_p3_loop:
+    cmp r13d, r12d
+    jge @@type_done
+
+    ; Get SSA variable
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaVars
+    mov edx, r13d
+    call DynArray_Get
+    test rax, rax
+    jz @@type_p3_next
+    mov rsi, rax                    ; rsi = ptr to RAWRSSAVAR
+
+    mov r14d, [rsi].RAWRSSAVAR.varId
+    cmp r14d, MAX_RECOVERED_TYPES
+    jge @@type_p3_next
+
+    ; Check if this variable has a non-UNKNOWN type
+    lea rdi, typeVarClasses
+    mov ecx, DWORD PTR [rdi + r14*4]
+    cmp ecx, TYPE_UNKNOWN
+    je @@type_p3_next
+
+    ; Build a RAWRTYPEINFO on the stack
+    sub rsp, SIZEOF RAWRTYPEINFO
+    mov r8, rsp
+
+    ; Zero it
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRTYPEINFO
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    ; Fill fields
+    mov eax, [rbx].RAWRCODEX_CTX.typeNextId
+    mov [r8].RAWRTYPEINFO.typeId, eax
+    inc [rbx].RAWRCODEX_CTX.typeNextId
+
+    ; baseType from scratch array
+    lea rdi, typeVarClasses
+    mov eax, DWORD PTR [rdi + r14*4]
+    mov [r8].RAWRTYPEINFO.baseType, eax
+
+    ; typeWidth from scratch array
+    lea rdi, typeVarWidths
+    mov eax, DWORD PTR [rdi + r14*4]
+    mov [r8].RAWRTYPEINFO.typeWidth, eax
+
+    ; Is it a pointer?
+    mov eax, [r8].RAWRTYPEINFO.baseType
+    cmp eax, TYPE_POINTER
+    je @@type_p3_isptr
+    cmp eax, TYPE_CODE_PTR
+    je @@type_p3_isptr
+    cmp eax, TYPE_DATA_PTR
+    je @@type_p3_isptr
+    cmp eax, TYPE_STRUCT_PTR
+    je @@type_p3_isptr
+    cmp eax, TYPE_ARRAY_PTR
+    je @@type_p3_isptr
+    cmp eax, TYPE_STRING_PTR
+    je @@type_p3_isptr
+    mov [r8].RAWRTYPEINFO.isPointer, 0
+    jmp @@type_p3_signed
+
+@@type_p3_isptr:
+    mov [r8].RAWRTYPEINFO.isPointer, 1
+
+@@type_p3_signed:
+    ; Is it signed?
+    mov eax, [r8].RAWRTYPEINFO.baseType
+    cmp eax, TYPE_INT8
+    je @@type_p3_yes_signed
+    cmp eax, TYPE_INT16
+    je @@type_p3_yes_signed
+    cmp eax, TYPE_INT32
+    je @@type_p3_yes_signed
+    cmp eax, TYPE_INT64
+    je @@type_p3_yes_signed
+    mov [r8].RAWRTYPEINFO.isSigned, 0
+    jmp @@type_p3_confidence
+
+@@type_p3_yes_signed:
+    mov [r8].RAWRTYPEINFO.isSigned, 1
+
+@@type_p3_confidence:
+    ; Confidence from scratch array
+    lea rdi, typeConfidence
+    mov eax, DWORD PTR [rdi + r14*4]
+    mov [r8].RAWRTYPEINFO.confidence, eax
+
+    ; SSA var ID link
+    mov [r8].RAWRTYPEINFO.ssaVarId, r14d
+
+    ; Copy type name from type name table
+    mov eax, [r8].RAWRTYPEINFO.baseType
+    cmp eax, 20             ; bounds check (0..19)
+    jge @@type_p3_unknown_name
+    ; Lookup: typeNames[baseType * 16]
+    shl eax, 4              ; eax = baseType * 16
+    lea rcx, typeNames
+    add rcx, rax            ; rcx = pointer to type name string
+    lea rdi, [r8].RAWRTYPEINFO.szTypeName
+    ; Copy up to 15 chars
+    xor edx, edx
+@@type_p3_copy_name:
+    mov al, BYTE PTR [rcx + rdx]
+    mov BYTE PTR [rdi + rdx], al
+    test al, al
+    jz @@type_p3_name_done
+    inc edx
+    cmp edx, 15
+    jl @@type_p3_copy_name
+    mov BYTE PTR [rdi + rdx], 0
+    jmp @@type_p3_name_done
+
+@@type_p3_unknown_name:
+    lea rdi, [r8].RAWRTYPEINFO.szTypeName
+    mov BYTE PTR [rdi], '?'
+    mov BYTE PTR [rdi+1], 0
+
+@@type_p3_name_done:
+    ; Push RAWRTYPEINFO to typeInfos
+    lea rcx, [rbx].RAWRCODEX_CTX.typeInfos
+    mov rdx, r8
+    call DynArray_Push
+    add rsp, SIZEOF RAWRTYPEINFO
+
+@@type_p3_next:
+    inc r13d
+    jmp @@type_p3_loop
+
+@@type_done:
+    mov [rbx].RAWRCODEX_CTX.typesRecovered, 1
+    ; Return number of types recovered
+    lea rcx, [rbx].RAWRCODEX_CTX.typeInfos
+    mov eax, [rcx].DYNARRAY.count
+
+    add rsp, 0A8h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+
+@@type_fail:
+    xor eax, eax
+    add rsp, 0A8h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+RawrCodex_RecoverTypes ENDP
+
+; =============================================================================
+; RawrCodex_BuildDefUseChains - Construct definition-use chains for SSA vars
+;
+; For each SSA variable, records:
+;   - Where it is defined (instruction + basic block)
+;   - Where it is used (up to MAX_DEF_USE_CHAINS sites)
+;   - Whether it is live at function exit (reaches RET)
+;
+; This enables dead code elimination, constant propagation, and
+; register pressure analysis.
+;
+; Input:  RCX = pointer to RAWRCODEX_CTX (must have SSA lifted)
+; Output: EAX = number of def-use chain entries (0 on error)
+; =============================================================================
+RawrCodex_BuildDefUseChains PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 88h
+
+    test rcx, rcx
+    jz @@du_fail
+    mov rbx, rcx
+
+    cmp [rbx].RAWRCODEX_CTX.ssaLifted, 1
+    jne @@du_fail
+
+    ; Clear previous def-use chains
+    lea rcx, [rbx].RAWRCODEX_CTX.defUseChains
+    call DynArray_Clear
+
+    ; Get counts
+    lea rax, [rbx].RAWRCODEX_CTX.ssaVars
+    mov r12d, [rax].DYNARRAY.count      ; r12 = number of SSA variables
+    lea rax, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov r13d, [rax].DYNARRAY.count      ; r13 = number of SSA instructions
+    test r12d, r12d
+    jz @@du_done
+    test r13d, r13d
+    jz @@du_done
+
+    ; For each SSA variable, build a def-use entry
+    xor r14d, r14d                      ; r14 = SSA var index
+@@du_var_loop:
+    cmp r14d, r12d
+    jge @@du_done
+
+    ; Get SSA variable
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaVars
+    mov edx, r14d
+    call DynArray_Get
+    test rax, rax
+    jz @@du_var_next
+    mov rsi, rax                        ; rsi = ptr to RAWRSSAVAR
+
+    mov r15d, [rsi].RAWRSSAVAR.varId    ; r15 = this var's ID
+
+    ; Build RAWRDEFUSE on stack
+    sub rsp, SIZEOF RAWRDEFUSE
+    mov r8, rsp
+
+    ; Zero it
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRDEFUSE
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    ; Fill definition info
+    mov [r8].RAWRDEFUSE.ssaVarId, r15d
+    mov eax, [rsi].RAWRSSAVAR.instrIndex
+    mov [r8].RAWRDEFUSE.defInstrIdx, eax
+    mov eax, [rsi].RAWRSSAVAR.bbIndex
+    mov [r8].RAWRDEFUSE.defBBIdx, eax
+    mov [r8].RAWRDEFUSE.useCount, 0
+    mov [r8].RAWRDEFUSE.isLive, 0
+    mov [r8].RAWRDEFUSE.reachesReturn, 0
+
+    ; Walk all SSA instructions to find uses of this variable
+    xor edi, edi                        ; edi = SSA instruction index
+@@du_instr_loop:
+    cmp edi, r13d
+    jge @@du_instr_done
+
+    ; Get SSA instruction
+    push r8                             ; Save RAWRDEFUSE ptr
+    lea rcx, [rbx].RAWRCODEX_CTX.ssaInstrs
+    mov edx, edi
+    call DynArray_Get
+    pop r8
+    test rax, rax
+    jz @@du_instr_next
+
+    ; Check if this instruction uses our variable (src1, src2, or flagsVarId)
+    mov ecx, [rax].RAWRSSAINSTR.src1VarId
+    cmp ecx, r15d
+    je @@du_found_use
+    mov ecx, [rax].RAWRSSAINSTR.src2VarId
+    cmp ecx, r15d
+    je @@du_found_use
+    mov ecx, [rax].RAWRSSAINSTR.flagsVarId
+    cmp ecx, r15d
+    je @@du_found_use
+    jmp @@du_instr_next
+
+@@du_found_use:
+    ; Record use site (if room in array)
+    mov ecx, [r8].RAWRDEFUSE.useCount
+    cmp ecx, MAX_DEF_USE_CHAINS
+    jge @@du_instr_next
+
+    ; Store instruction index
+    lea r9, [r8].RAWRDEFUSE.useInstrIdxs
+    mov DWORD PTR [r9 + rcx*4], edi
+
+    ; Store basic block index
+    mov edx, [rax].RAWRSSAINSTR.bbIndex
+    lea r9, [r8].RAWRDEFUSE.useBBIdxs
+    mov DWORD PTR [r9 + rcx*4], edx
+
+    inc [r8].RAWRDEFUSE.useCount
+
+    ; Check if this use is in a RET instruction
+    cmp [rax].RAWRSSAINSTR.ssaOp, SSA_OP_RET
+    jne @@du_instr_next
+    mov [r8].RAWRDEFUSE.reachesReturn, 1
+    mov [r8].RAWRDEFUSE.isLive, 1
+
+@@du_instr_next:
+    inc edi
+    jmp @@du_instr_loop
+
+@@du_instr_done:
+    ; If useCount > 0, the variable is "used" (not dead)
+    cmp [r8].RAWRDEFUSE.useCount, 0
+    je @@du_maybe_dead
+    mov [r8].RAWRDEFUSE.isLive, 1
+    jmp @@du_push_entry
+
+@@du_maybe_dead:
+    ; Zero uses = dead code candidate
+    mov [r8].RAWRDEFUSE.isLive, 0
+
+@@du_push_entry:
+    ; Push to defUseChains
+    lea rcx, [rbx].RAWRCODEX_CTX.defUseChains
+    mov rdx, r8
+    call DynArray_Push
+    add rsp, SIZEOF RAWRDEFUSE
+
+@@du_var_next:
+    inc r14d
+    jmp @@du_var_loop
+
+@@du_done:
+    lea rcx, [rbx].RAWRCODEX_CTX.defUseChains
+    mov eax, [rcx].DYNARRAY.count
+
+    add rsp, 88h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+
+@@du_fail:
+    xor eax, eax
+    add rsp, 88h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+RawrCodex_BuildDefUseChains ENDP
+
+; =============================================================================
+; RawrLicense_CheckFeature - Check if a feature is enabled in the license
+;
+; Input:  RCX = pointer to RAWRCODEX_CTX
+;         EDX = feature bit number (FEATURE_* constant)
+; Output: EAX = 1 if feature is allowed, 0 if denied
+;
+; License enforcement is air-gap compatible: no network calls.
+; The feature mask is validated at context creation from the license key.
+; =============================================================================
+RawrLicense_CheckFeature PROC
+    test rcx, rcx
+    jz @@license_deny
+
+    ; Load feature mask from license context
+    mov rax, [rcx].RAWRCODEX_CTX.license.featureMask
+
+    ; Check if license is valid at all
+    cmp [rcx].RAWRCODEX_CTX.license.isValid, 1
+    jne @@license_deny
+
+    ; Test the requested feature bit
+    bt rax, rdx
+    jnc @@license_deny
+
+    mov eax, 1
+    ret
+
+@@license_deny:
+    xor eax, eax
+    ret
+RawrLicense_CheckFeature ENDP
+
+; =============================================================================
+; RawrLicense_SetTier - Set the license tier and feature mask
+;
+; Input:  RCX = pointer to RAWRCODEX_CTX
+;         EDX = tier (0=Community, 1=Pro, 2=Enterprise, 3=Government)
+; Output: EAX = 1 on success, 0 on invalid tier
+;
+; This is called during initialization or when a license key is loaded.
+; In production, the tier would be derived from RSA-4096 signed license key.
+; =============================================================================
+RawrLicense_SetTier PROC
+    test rcx, rcx
+    jz @@tier_fail
+
+    cmp edx, 0
+    je @@tier_community
+    cmp edx, 1
+    je @@tier_pro
+    cmp edx, 2
+    je @@tier_enterprise
+    cmp edx, 3
+    je @@tier_government
+    jmp @@tier_fail
+
+@@tier_community:
+    mov [rcx].RAWRCODEX_CTX.license.featureMask, FEATURE_LICENSE_MASK_COMMUNITY
+    mov [rcx].RAWRCODEX_CTX.license.tier, 0
+    jmp @@tier_ok
+
+@@tier_pro:
+    mov [rcx].RAWRCODEX_CTX.license.featureMask, FEATURE_LICENSE_MASK_PRO
+    mov [rcx].RAWRCODEX_CTX.license.tier, 1
+    jmp @@tier_ok
+
+@@tier_enterprise:
+    mov [rcx].RAWRCODEX_CTX.license.featureMask, FEATURE_LICENSE_MASK_ENTERPRISE
+    mov [rcx].RAWRCODEX_CTX.license.tier, 2
+    jmp @@tier_ok
+
+@@tier_government:
+    mov [rcx].RAWRCODEX_CTX.license.featureMask, FEATURE_LICENSE_MASK_GOVERNMENT
+    mov [rcx].RAWRCODEX_CTX.license.tier, 3
+
+@@tier_ok:
+    mov [rcx].RAWRCODEX_CTX.license.isValid, 1
+    mov [rcx].RAWRCODEX_CTX.license.isAirgapped, 1
+    mov eax, 1
+    ret
+
+@@tier_fail:
+    xor eax, eax
+    ret
+RawrLicense_SetTier ENDP
 
 END

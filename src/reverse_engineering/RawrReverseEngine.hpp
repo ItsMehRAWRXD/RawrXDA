@@ -753,6 +753,125 @@ public:
     }
 
     // ========================================================================
+    // Type Recovery (Phase 17)
+    // ========================================================================
+
+    std::string RecoverTypes(uint64_t functionAddr) {
+        auto typeResult = m_codex.RecoverTypes(functionAddr);
+
+        std::ostringstream oss;
+        oss << "=== Type Recovery @ 0x" << std::hex << functionAddr << " ===\n";
+
+        if (!typeResult.success) {
+            oss << "ERROR: Type recovery failed. Ensure SSA lifting is complete.\n";
+            return oss.str();
+        }
+
+        oss << "Types Recovered: " << std::dec << typeResult.totalTypes << "\n";
+        oss << "Dead Variables: " << typeResult.deadVarCount << "\n";
+        oss << "Def-Use Chains: " << typeResult.defUseChains.size() << "\n\n";
+
+        // Type inference results
+        oss << "--- Inferred Types ---\n";
+        for (const auto& ti : typeResult.types) {
+            oss << "  v" << ti.ssaVarId << " : " << ti.typeName;
+            if (ti.isPointer) oss << "*";
+            oss << " (width=" << ti.typeWidth << "B";
+            oss << ", confidence=" << static_cast<uint32_t>(ti.confidence) << "%";
+            if (ti.isSigned) oss << ", signed";
+            oss << ")\n";
+        }
+
+        // Struct pointer analysis
+        bool hasStructs = false;
+        for (const auto& ti : typeResult.types) {
+            if (ti.baseType == RecoveredType::StructPtr) {
+                if (!hasStructs) {
+                    oss << "\n--- Struct Pointers ---\n";
+                    hasStructs = true;
+                }
+                oss << "  v" << ti.ssaVarId << " → struct (multiple field accesses detected)\n";
+            }
+        }
+
+        // Def-use chain summary
+        oss << "\n--- Data Flow Summary ---\n";
+        uint32_t liveCount = 0, deadCount = 0, retCount = 0;
+        for (const auto& du : typeResult.defUseChains) {
+            if (du.isLive) liveCount++;
+            else deadCount++;
+            if (du.reachesReturn) retCount++;
+        }
+        oss << "  Live variables: " << liveCount << "\n";
+        oss << "  Dead variables: " << deadCount << "\n";
+        oss << "  Reaches return: " << retCount << "\n";
+
+        // Top-used variables
+        oss << "\n--- Most-Used Variables ---\n";
+        std::vector<std::pair<uint32_t, size_t>> usagePairs;
+        for (const auto& du : typeResult.defUseChains) {
+            if (!du.useInstrIdxs.empty()) {
+                usagePairs.push_back({du.ssaVarId, du.useInstrIdxs.size()});
+            }
+        }
+        std::sort(usagePairs.begin(), usagePairs.end(),
+                  [](const auto& a, const auto& b) { return a.second > b.second; });
+        size_t showCount = std::min<size_t>(10, usagePairs.size());
+        for (size_t i = 0; i < showCount; ++i) {
+            oss << "  v" << usagePairs[i].first << ": " << usagePairs[i].second << " uses\n";
+        }
+
+        return oss.str();
+    }
+
+    // ========================================================================
+    // License Info (Phase 17)
+    // ========================================================================
+
+    std::string GetLicenseInfo() {
+        const auto& lic = m_codex.GetLicense();
+
+        static const char* tierNames[] = {"Community", "Pro", "Enterprise", "Government"};
+        uint32_t tierIdx = static_cast<uint32_t>(lic.tier);
+        const char* tierName = (tierIdx < 4) ? tierNames[tierIdx] : "Unknown";
+
+        std::ostringstream oss;
+        oss << "=== RawrCodex License Info ===\n";
+        oss << "Tier: " << tierName << "\n";
+        oss << "Valid: " << (lic.isValid ? "Yes" : "No") << "\n";
+        oss << "Air-gapped: " << (lic.isAirgapped ? "Yes" : "No") << "\n";
+        oss << "Feature Mask: 0x" << std::hex << lic.featureMask << std::dec << "\n\n";
+
+        // List features
+        oss << "--- Feature Access ---\n";
+        struct FeatEntry { FeatureBit bit; const char* name; };
+        FeatEntry features[] = {
+            {FeatureBit::LinearDisasm,    "Linear Disassembly"},
+            {FeatureBit::PEParser,        "PE Parser"},
+            {FeatureBit::ELFParser,       "ELF Parser"},
+            {FeatureBit::StringExtract,   "String Extraction"},
+            {FeatureBit::PatternScan,     "Pattern Scanning"},
+            {FeatureBit::CFGBuild,        "CFG Construction"},
+            {FeatureBit::XRefBuild,       "Cross-References"},
+            {FeatureBit::FuncRecovery,    "Function Recovery"},
+            {FeatureBit::IDAExport,       "IDA Export"},
+            {FeatureBit::RecursiveDisasm, "Recursive Descent"},
+            {FeatureBit::SSALifting,      "SSA Lifting"},
+            {FeatureBit::PHINodes,        "PHI Nodes"},
+            {FeatureBit::SemanticAnalysis,"Semantic Analysis"},
+            {FeatureBit::TypeRecovery,    "Type Recovery"},
+            {FeatureBit::DataFlow,        "Data Flow Analysis"},
+            {FeatureBit::Pseudocode,      "Pseudocode Emission"},
+        };
+        for (const auto& f : features) {
+            bool allowed = lic.CheckFeature(f.bit);
+            oss << "  " << (allowed ? "[✓]" : "[✗]") << " " << f.name << "\n";
+        }
+
+        return oss.str();
+    }
+
+    // ========================================================================
     // Symbol Demangling
     // ========================================================================
 

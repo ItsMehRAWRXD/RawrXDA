@@ -302,12 +302,16 @@ HMENU Win32IDE::createReverseEngineeringMenu() {
     AppendMenuA(menu, MF_STRING, IDM_REVENG_DEMANGLE, "De&mangle Symbols");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_SSA, "&SSA Lifting\tCtrl+Shift+S");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_RECURSIVE_DISASM, "R&ecursive Disassembly\tCtrl+Shift+R");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_TYPE_RECOVERY, "&Type Recovery\tCtrl+Shift+T");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_DATA_FLOW, "Data &Flow Analysis");
     AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
     AppendMenuA(menu, MF_STRING, IDM_REVENG_COMPARE, "C&ompare Binaries");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_DETECT_VULNS, "Detect &Vulnerabilities");
     AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
     AppendMenuA(menu, MF_STRING, IDM_REVENG_EXPORT_IDA, "Export to &IDA Pro");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_EXPORT_GHIDRA, "Export to &Ghidra");
+    AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_LICENSE_INFO, "&License Info");
     
     return menu;
 }
@@ -425,4 +429,70 @@ void Win32IDE::handleReverseEngineeringRecursiveDisasm() {
     s_reEngine.LoadBinary(s_reCurrentBinary);
     std::string result = s_reEngine.RecursiveDisassemble(entryAddr);
     ShowOutput(m_hwndMain, "Recursive Descent Disassembly", result);
+}
+
+// Menu handler for IDM_REVENG_TYPE_RECOVERY
+void Win32IDE::handleReverseEngineeringTypeRecovery() {
+    LOG_FUNCTION();
+    
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    auto symbols = s_reCodex.GetSymbols();
+    uint64_t entryAddr = 0;
+    for (const auto& sym : symbols) {
+        if (sym.name == "_start" || sym.name == "main" || sym.name == "WinMain" ||
+            sym.name == "_main" || sym.name == "wmain" || sym.name == "wWinMain" ||
+            sym.name == "entry" || sym.name == "EntryPoint") {
+            entryAddr = sym.address;
+            break;
+        }
+    }
+    if (entryAddr == 0 && !symbols.empty()) {
+        entryAddr = symbols[0].address;
+    }
+    
+    s_reEngine.LoadBinary(s_reCurrentBinary);
+    std::string result = s_reEngine.RecoverTypes(entryAddr);
+    ShowOutput(m_hwndMain, "Type Recovery", result);
+}
+
+// Menu handler for IDM_REVENG_DATA_FLOW
+void Win32IDE::handleReverseEngineeringDataFlow() {
+    LOG_FUNCTION();
+    
+    if (s_reCurrentBinary.empty()) {
+        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    auto symbols = s_reCodex.GetSymbols();
+    uint64_t entryAddr = 0;
+    for (const auto& sym : symbols) {
+        if (sym.name == "_start" || sym.name == "main" || sym.name == "WinMain" ||
+            sym.name == "_main" || sym.name == "wmain" || sym.name == "wWinMain" ||
+            sym.name == "entry" || sym.name == "EntryPoint") {
+            entryAddr = sym.address;
+            break;
+        }
+    }
+    if (entryAddr == 0 && !symbols.empty()) {
+        entryAddr = symbols[0].address;
+    }
+    
+    // RecoverTypes includes def-use chain output
+    s_reEngine.LoadBinary(s_reCurrentBinary);
+    std::string result = s_reEngine.RecoverTypes(entryAddr);
+    ShowOutput(m_hwndMain, "Data Flow Analysis", result);
+}
+
+// Menu handler for IDM_REVENG_LICENSE_INFO
+void Win32IDE::handleReverseEngineeringLicenseInfo() {
+    LOG_FUNCTION();
+    
+    s_reEngine.LoadBinary(s_reCurrentBinary.empty() ? "" : s_reCurrentBinary);
+    std::string result = s_reEngine.GetLicenseInfo();
+    ShowOutput(m_hwndMain, "License Info", result);
 }

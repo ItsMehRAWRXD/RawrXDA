@@ -513,6 +513,15 @@ void Win32IDE::handleAgentCommand(int commandId) {
         case IDM_REVENG_RECURSIVE_DISASM:
             handleReverseEngineeringRecursiveDisasm();
             break;
+        case IDM_REVENG_TYPE_RECOVERY:
+            handleReverseEngineeringTypeRecovery();
+            break;
+        case IDM_REVENG_DATA_FLOW:
+            handleReverseEngineeringDataFlow();
+            break;
+        case IDM_REVENG_LICENSE_INFO:
+            handleReverseEngineeringLicenseInfo();
+            break;
 
         default:
             appendToOutput("Unknown Agent Command ID: " + std::to_string(commandId) + "\n", "Debug", OutputSeverity::Warning);
