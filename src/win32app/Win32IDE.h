@@ -1006,7 +1006,6 @@ private:
 
     // Command routing
     bool routeCommand(int commandId);
-    void registerCommandHandler(int commandId, std::function<void()> handler);
     std::string getCommandDescription(int commandId) const;
     bool isCommandEnabled(int commandId) const;
     void updateCommandStates();
@@ -1272,8 +1271,7 @@ private:
     std::vector<CommandPaletteItem> m_commandRegistry;
     std::vector<CommandPaletteItem> m_filteredCommands;
     std::vector<std::vector<int>> m_fuzzyMatchPositions; // per-item match highlight positions
-    std::vector<int> m_commandPaletteFilteredIndices; // maps listbox index -> registry index
-    std::unordered_map<int, std::function<void()>> m_commandHandlers;
+    std::unordered_map<int, int> m_commandMRU; // commandId -> usage count (session-only, no disk)
 
     // Utility
     std::string getWindowText(HWND hwnd);

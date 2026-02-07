@@ -158,13 +158,6 @@ static FuzzyResult fuzzyMatchScore(const std::string& query, const std::string& 
 // ============================================================================
 
 bool Win32IDE::routeCommand(int commandId) {
-    // Check if command has a registered handler
-    auto it = m_commandHandlers.find(commandId);
-    if (it != m_commandHandlers.end()) {
-        it->second(); // Execute handler
-        return true;
-    }
-    
     // Route to appropriate handler based on command ID range
     if (commandId >= 1000 && commandId < 2000) {
         handleFileCommand(commandId);
@@ -196,10 +189,6 @@ bool Win32IDE::routeCommand(int commandId) {
     }
     
     return false;
-}
-
-void Win32IDE::registerCommandHandler(int commandId, std::function<void()> handler) {
-    m_commandHandlers[commandId] = handler;
 }
 
 std::string Win32IDE::getCommandDescription(int commandId) const {
@@ -1013,6 +1002,39 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({5025, "AI: Show Failure Intelligence Stats", "", "AI"});
     m_commandRegistry.push_back({5026, "AI: Execute with Failure Intelligence", "", "AI"});
 
+    // ================================================================
+    // Theme Selection (3101–3116 range — routed via handleViewCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_THEME_DARK_PLUS,        "Theme: Dark+ (Default)",     "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_LIGHT_PLUS,       "Theme: Light+",              "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_MONOKAI,          "Theme: Monokai",             "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_DRACULA,          "Theme: Dracula",             "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_NORD,             "Theme: Nord",                "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_SOLARIZED_DARK,   "Theme: Solarized Dark",      "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_SOLARIZED_LIGHT,  "Theme: Solarized Light",     "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_CYBERPUNK_NEON,   "Theme: Cyberpunk Neon",      "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_GRUVBOX_DARK,     "Theme: Gruvbox Dark",        "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_CATPPUCCIN_MOCHA, "Theme: Catppuccin Mocha",    "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_TOKYO_NIGHT,      "Theme: Tokyo Night",         "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_RAWRXD_CRIMSON,   "Theme: RawrXD Crimson",      "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_HIGH_CONTRAST,    "Theme: High Contrast",       "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_ONE_DARK_PRO,     "Theme: One Dark Pro",        "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_SYNTHWAVE84,      "Theme: SynthWave '84",       "", "Theme"});
+    m_commandRegistry.push_back({IDM_THEME_ABYSS,            "Theme: Abyss",               "", "Theme"});
+
+    // ================================================================
+    // Transparency Presets (3200–3211 range — routed via handleViewCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_TRANSPARENCY_100,    "Transparency: 100% (Opaque)",     "", "Transparency"});
+    m_commandRegistry.push_back({IDM_TRANSPARENCY_90,     "Transparency: 90%",               "", "Transparency"});
+    m_commandRegistry.push_back({IDM_TRANSPARENCY_80,     "Transparency: 80%",               "", "Transparency"});
+    m_commandRegistry.push_back({IDM_TRANSPARENCY_70,     "Transparency: 70%",               "", "Transparency"});
+    m_commandRegistry.push_back({IDM_TRANSPARENCY_60,     "Transparency: 60%",               "", "Transparency"});
+    m_commandRegistry.push_back({IDM_TRANSPARENCY_50,     "Transparency: 50%",               "", "Transparency"});
+    m_commandRegistry.push_back({IDM_TRANSPARENCY_40,     "Transparency: 40%",               "", "Transparency"});
+    m_commandRegistry.push_back({IDM_TRANSPARENCY_CUSTOM, "Transparency: Custom Slider",     "", "Transparency"});
+    m_commandRegistry.push_back({IDM_TRANSPARENCY_TOGGLE, "Transparency: Toggle On/Off",     "", "Transparency"});
+
     m_filteredCommands = m_commandRegistry;
 }
 
@@ -1087,14 +1109,14 @@ void Win32IDE::showCommandPalette()
     
     // Set placeholder text and dark style on input
     if (m_hwndCommandPaletteInput) {
-        SendMessageA(m_hwndCommandPaletteInput, EM_SETCUEBANNER, TRUE, (LPARAM)L"> Type a command...");
-        // Set font
-        HFONT inputFont = CreateFontA(
+        SendMessageA(m_hwndCommandPaletteInput, EM_SETCUEBANNER, TRUE, (LPARAM)L"> Type a command... (prefix :category to filter)");
+        // Use static font — created once, never leaked
+        static HFONT s_inputFont = CreateFontA(
             -14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
             CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
         );
-        if (inputFont) SendMessage(m_hwndCommandPaletteInput, WM_SETFONT, (WPARAM)inputFont, TRUE);
+        if (s_inputFont) SendMessage(m_hwndCommandPaletteInput, WM_SETFONT, (WPARAM)s_inputFont, TRUE);
 
         // Subclass the input to intercept keyboard (Escape, Enter, Up/Down)
         SetWindowLongPtrA(m_hwndCommandPaletteInput, GWLP_USERDATA, (LONG_PTR)this);
@@ -1114,12 +1136,13 @@ void Win32IDE::showCommandPalette()
     );
 
     if (m_hwndCommandPaletteList) {
-        HFONT listFont = CreateFontA(
+        // Use static font — created once, never leaked
+        static HFONT s_listFont = CreateFontA(
             -14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
             CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
         );
-        if (listFont) SendMessage(m_hwndCommandPaletteList, WM_SETFONT, (WPARAM)listFont, TRUE);
+        if (s_listFont) SendMessage(m_hwndCommandPaletteList, WM_SETFONT, (WPARAM)s_listFont, TRUE);
         // Set item height for owner-draw
         SendMessageA(m_hwndCommandPaletteList, LB_SETITEMHEIGHT, 0, MAKELPARAM(24, 0));
     }
@@ -1167,51 +1190,84 @@ void Win32IDE::filterCommandPalette(const std::string& query)
     m_filteredCommands.clear();
     m_fuzzyMatchPositions.clear();
 
-    if (query.empty()) {
-        // Show all commands unfiltered
-        for (const auto& cmd : m_commandRegistry) {
-            m_filteredCommands.push_back(cmd);
-            m_fuzzyMatchPositions.push_back({});
-            std::string itemText = cmd.name;
-            if (!cmd.shortcut.empty()) {
-                itemText += "  [" + cmd.shortcut + "]";
-            }
-            SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)itemText.c_str());
+    // ── Category prefix filter (:file, :ai, :theme, :git, etc.) ──
+    // If query starts with ':' or '@', extract the category prefix and
+    // filter to only commands in that category. Remainder is fuzzy query.
+    std::string categoryFilter;
+    std::string fuzzyQuery = query;
+    if (!query.empty() && (query[0] == ':' || query[0] == '@')) {
+        size_t spacePos = query.find(' ');
+        std::string prefix = (spacePos != std::string::npos)
+            ? query.substr(1, spacePos - 1)
+            : query.substr(1);
+        // Lowercase the prefix for matching
+        std::transform(prefix.begin(), prefix.end(), prefix.begin(),
+                       [](unsigned char c) { return (char)std::tolower(c); });
+        if (!prefix.empty()) {
+            categoryFilter = prefix;
+            fuzzyQuery = (spacePos != std::string::npos)
+                ? query.substr(spacePos + 1)
+                : "";
         }
-    } else {
-        // Fuzzy match and score all commands
-        struct ScoredEntry {
-            int registryIndex;
-            int score;
-            FuzzyResult fuzzy;
-        };
-        std::vector<ScoredEntry> scored;
+    }
 
-        for (int i = 0; i < (int)m_commandRegistry.size(); i++) {
-            FuzzyResult fr = fuzzyMatchScore(query, m_commandRegistry[i].name);
+    // Build scored list
+    struct ScoredEntry {
+        int registryIndex;
+        int score;
+        FuzzyResult fuzzy;
+    };
+    std::vector<ScoredEntry> scored;
+
+    for (int i = 0; i < (int)m_commandRegistry.size(); i++) {
+        const auto& cmd = m_commandRegistry[i];
+
+        // Category filter: if active, skip non-matching categories
+        if (!categoryFilter.empty()) {
+            std::string catLower = cmd.category;
+            std::transform(catLower.begin(), catLower.end(), catLower.begin(),
+                           [](unsigned char c) { return (char)std::tolower(c); });
+            // Prefix match: ":th" matches "theme", ":trans" matches "transparency"
+            if (catLower.find(categoryFilter) != 0) continue;
+        }
+
+        if (fuzzyQuery.empty()) {
+            // No fuzzy part — include all commands in the category (or all if no filter)
+            scored.push_back({i, 0, {true, 0, {}}});
+        } else {
+            FuzzyResult fr = fuzzyMatchScore(fuzzyQuery, cmd.name);
             if (fr.matched) {
-                // Bonus: also try matching category:name for "ai max" -> "AI: Toggle Max Mode"
                 scored.push_back({i, fr.score, fr});
             }
         }
+    }
 
-        // Sort by score descending (best matches first)
-        std::sort(scored.begin(), scored.end(),
-                  [](const ScoredEntry& a, const ScoredEntry& b) {
-                      return a.score > b.score;
-                  });
-
-        for (const auto& entry : scored) {
-            const auto& cmd = m_commandRegistry[entry.registryIndex];
-            m_filteredCommands.push_back(cmd);
-            m_fuzzyMatchPositions.push_back(entry.fuzzy.matchPositions);
-
-            std::string itemText = cmd.name;
-            if (!cmd.shortcut.empty()) {
-                itemText += "  [" + cmd.shortcut + "]";
-            }
-            SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)itemText.c_str());
+    // MRU boost: add bonus for recently-used commands (session-only)
+    for (auto& entry : scored) {
+        int cmdId = m_commandRegistry[entry.registryIndex].id;
+        auto mruIt = m_commandMRU.find(cmdId);
+        if (mruIt != m_commandMRU.end() && mruIt->second > 0) {
+            // Boost: 20 points per usage, capped at 100
+            entry.score += std::min(mruIt->second * 20, 100);
         }
+    }
+
+    // Sort by score descending (best matches first)
+    std::sort(scored.begin(), scored.end(),
+              [](const ScoredEntry& a, const ScoredEntry& b) {
+                  return a.score > b.score;
+              });
+
+    for (const auto& entry : scored) {
+        const auto& cmd = m_commandRegistry[entry.registryIndex];
+        m_filteredCommands.push_back(cmd);
+        m_fuzzyMatchPositions.push_back(entry.fuzzy.matchPositions);
+
+        std::string itemText = cmd.name;
+        if (!cmd.shortcut.empty()) {
+            itemText += "  [" + cmd.shortcut + "]";
+        }
+        SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)itemText.c_str());
     }
 
     // Select first item if available
@@ -1240,6 +1296,9 @@ void Win32IDE::executeCommandFromPalette(int index)
         SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)msg.c_str());
         return;
     }
+
+    // MRU tracking: increment usage count (session-only, no disk writes)
+    m_commandMRU[commandId]++;
 
     // Route the command — all command ranges handled by routeCommand
     routeCommand(commandId);
@@ -1334,6 +1393,8 @@ LRESULT CALLBACK Win32IDE::CommandPaletteProc(HWND hwnd, UINT uMsg, WPARAM wPara
         else if (cmd.category == "RE") catColor = RGB(244, 71, 71);
         else if (cmd.category == "Tools") catColor = RGB(128, 200, 128);
         else if (cmd.category == "Help") catColor = RGB(180, 180, 180);
+        else if (cmd.category == "Theme") catColor = RGB(255, 167, 38);
+        else if (cmd.category == "Transparency") catColor = RGB(100, 181, 246);
 
         // Draw category dot
         HBRUSH dotBrush = CreateSolidBrush(catColor);
@@ -1470,6 +1531,21 @@ LRESULT CALLBACK Win32IDE::CommandPaletteInputProc(HWND hwnd, UINT uMsg, WPARAM 
             if (sel > 0) {
                 SendMessageA(pThis->m_hwndCommandPaletteList, LB_SETCURSEL, sel - 1, 0);
             }
+            return 0;
+        }
+        if (wParam == VK_NEXT) { // Page Down
+            int sel = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCURSEL, 0, 0);
+            int count = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCOUNT, 0, 0);
+            int newSel = std::min(sel + 10, count - 1);
+            if (newSel >= 0) {
+                SendMessageA(pThis->m_hwndCommandPaletteList, LB_SETCURSEL, newSel, 0);
+            }
+            return 0;
+        }
+        if (wParam == VK_PRIOR) { // Page Up
+            int sel = (int)SendMessageA(pThis->m_hwndCommandPaletteList, LB_GETCURSEL, 0, 0);
+            int newSel = std::max(sel - 10, 0);
+            SendMessageA(pThis->m_hwndCommandPaletteList, LB_SETCURSEL, newSel, 0);
             return 0;
         }
     }
