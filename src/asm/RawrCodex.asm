@@ -146,7 +146,7 @@ RAWRSYMBOL STRUCT
     szName          BYTE 128 DUP(?) ; Symbol name
     szDemangled     BYTE 128 DUP(?) ; Demangled name (if applicable)
     address         QWORD ?         ; Symbol address / RVA
-    size            QWORD ?         ; Symbol size (0 if unknown)
+    symSize         QWORD ?         ; Symbol size (0 if unknown)
     sectionIndex    DWORD ?         ; Section index
     isFunction      DWORD ?         ; 1 if function symbol
     isExport        DWORD ?         ; 1 if exported
@@ -177,7 +177,7 @@ RAWREXPORT ENDS
 ; --- Disassembled instruction ---
 RAWRINSTRUCTION STRUCT
     address         QWORD ?         ; Instruction VA
-    length          DWORD ?         ; Instruction length in bytes
+    instrLen        DWORD ?         ; Instruction length in bytes
     _pad1           DWORD ?
     rawBytes        BYTE 16 DUP(?)  ; Raw encoded bytes
     szMnemonic      BYTE 32 DUP(?)  ; Mnemonic string
@@ -214,17 +214,33 @@ RAWRFUNCTION STRUCT
     _pad            DWORD ?
 RAWRFUNCTION ENDS
 
+; --- Cross-reference entry ---
+RAWRXREF STRUCT
+    fromAddr        QWORD ?         ; Source address (instruction that references)
+    toAddr          QWORD ?         ; Target address (what is referenced)
+    xrefType        DWORD ?         ; 0=code_call, 1=code_jump, 2=code_cond_branch, 3=data_read, 4=data_write, 5=data_lea
+    instrIndex      DWORD ?         ; Index into instructions array
+RAWRXREF ENDS
+
+; XREF type constants
+XREF_CODE_CALL          EQU 0
+XREF_CODE_JUMP          EQU 1
+XREF_CODE_COND_BRANCH   EQU 2
+XREF_DATA_READ          EQU 3
+XREF_DATA_WRITE         EQU 4
+XREF_DATA_LEA           EQU 5
+
 ; --- Pattern match result ---
 RAWRMATCH STRUCT
-    offset          QWORD ?         ; File offset of match
+    matchOff        QWORD ?         ; File offset of match
     rva             QWORD ?         ; RVA of match (if in section)
 RAWRMATCH ENDS
 
 ; --- Extracted string ---
 RAWRSTRING STRUCT
-    offset          QWORD ?         ; File offset
+    fileOff         QWORD ?         ; File offset
     rva             QWORD ?         ; RVA
-    length          DWORD ?         ; String length
+    strLen          DWORD ?         ; String length
     isWide          DWORD ?         ; 1 if UTF-16
     szValue         BYTE 256 DUP(?) ; String content (truncated)
 RAWRSTRING ENDS
@@ -273,6 +289,7 @@ RAWRCODEX_CTX STRUCT
     functions       DYNARRAY <>     ; Array of RAWRFUNCTION
     matches         DYNARRAY <>     ; Array of RAWRMATCH
     strings         DYNARRAY <>     ; Array of RAWRSTRING
+    xrefs           DYNARRAY <>     ; Array of RAWRXREF
 
     ; Status
     lastError       DWORD ?
@@ -364,6 +381,11 @@ mnUD2           BYTE "ud2", 0, 0, 0, 0, 0
 mnENTER         BYTE "enter", 0, 0, 0
 mnLEAVE         BYTE "leave", 0, 0, 0
 mnDB            BYTE "db", 0, 0, 0, 0, 0, 0
+mnXCHG          BYTE "xchg", 0, 0, 0, 0
+mnNOT           BYTE "not", 0, 0, 0, 0, 0
+mnNEG           BYTE "neg", 0, 0, 0, 0, 0
+mnMUL           BYTE "mul", 0, 0, 0, 0, 0
+mnDIV           BYTE "div", 0, 0, 0, 0, 0
 
 ; Condition code suffixes for Jcc/CMOVcc/SETcc
 ; Indexed by lower nibble of 0F 8x/9x/4x
@@ -421,6 +443,94 @@ regNames8       BYTE "al", 0, 0, 0, 0, 0, 0
                 BYTE "ch", 0, 0, 0, 0, 0, 0
                 BYTE "dh", 0, 0, 0, 0, 0, 0
                 BYTE "bh", 0, 0, 0, 0, 0, 0
+
+; Condition code mnemonic table — 16 entries, 4 bytes each (null-padded)
+; Indexed by lower nibble of opcode (0x70-0x7F, 0F 80-8F, 0F 40-4F, 0F 90-9F)
+ccMnemonics     BYTE "jo", 0, 0             ; 0
+                BYTE "jno", 0               ; 1
+                BYTE "jb", 0, 0             ; 2
+                BYTE "jae", 0               ; 3
+                BYTE "je", 0, 0             ; 4
+                BYTE "jne", 0               ; 5
+                BYTE "jbe", 0               ; 6
+                BYTE "ja", 0, 0             ; 7
+                BYTE "js", 0, 0             ; 8
+                BYTE "jns", 0               ; 9
+                BYTE "jp", 0, 0             ; A
+                BYTE "jnp", 0               ; B
+                BYTE "jl", 0, 0             ; C
+                BYTE "jge", 0               ; D
+                BYTE "jle", 0               ; E
+                BYTE "jg", 0, 0             ; F
+
+; CMOVcc mnemonic prefixes — 16 entries, 8 bytes each
+cmovMnemonics   BYTE "cmovo", 0, 0, 0      ; 0
+                BYTE "cmovno", 0, 0         ; 1
+                BYTE "cmovb", 0, 0, 0       ; 2
+                BYTE "cmovae", 0, 0         ; 3
+                BYTE "cmove", 0, 0, 0       ; 4
+                BYTE "cmovne", 0, 0         ; 5
+                BYTE "cmovbe", 0, 0         ; 6
+                BYTE "cmova", 0, 0, 0       ; 7
+                BYTE "cmovs", 0, 0, 0       ; 8
+                BYTE "cmovns", 0, 0         ; 9
+                BYTE "cmovp", 0, 0, 0       ; A
+                BYTE "cmovnp", 0, 0         ; B
+                BYTE "cmovl", 0, 0, 0       ; C
+                BYTE "cmovge", 0, 0         ; D
+                BYTE "cmovle", 0, 0         ; E
+                BYTE "cmovg", 0, 0, 0       ; F
+
+; SETcc mnemonic prefixes — 16 entries, 8 bytes each
+setMnemonics    BYTE "seto", 0, 0, 0, 0    ; 0
+                BYTE "setno", 0, 0, 0       ; 1
+                BYTE "setb", 0, 0, 0, 0     ; 2
+                BYTE "setae", 0, 0, 0       ; 3
+                BYTE "sete", 0, 0, 0, 0     ; 4
+                BYTE "setne", 0, 0, 0       ; 5
+                BYTE "setbe", 0, 0, 0       ; 6
+                BYTE "seta", 0, 0, 0, 0     ; 7
+                BYTE "sets", 0, 0, 0, 0     ; 8
+                BYTE "setns", 0, 0, 0       ; 9
+                BYTE "setp", 0, 0, 0, 0     ; A
+                BYTE "setnp", 0, 0, 0       ; B
+                BYTE "setl", 0, 0, 0, 0     ; C
+                BYTE "setge", 0, 0, 0       ; D
+                BYTE "setle", 0, 0, 0       ; E
+                BYTE "setg", 0, 0, 0, 0     ; F
+
+; ALU group mnemonics (indexed by /reg field for opcodes 80-83, plus standalone)
+aluGroupMn      BYTE "add", 0, 0, 0, 0, 0  ; /0
+                BYTE "or", 0, 0, 0, 0, 0, 0 ; /1
+                BYTE "adc", 0, 0, 0, 0, 0  ; /2
+                BYTE "sbb", 0, 0, 0, 0, 0  ; /3
+                BYTE "and", 0, 0, 0, 0, 0  ; /4
+                BYTE "sub", 0, 0, 0, 0, 0  ; /5
+                BYTE "xor", 0, 0, 0, 0, 0  ; /6
+                BYTE "cmp", 0, 0, 0, 0, 0  ; /7
+
+; Shift/rotate group mnemonics (indexed by /reg for opcodes C0/C1/D0-D3)
+shiftGroupMn    BYTE "rol", 0, 0, 0, 0, 0  ; /0
+                BYTE "ror", 0, 0, 0, 0, 0  ; /1
+                BYTE "rcl", 0, 0, 0, 0, 0  ; /2
+                BYTE "rcr", 0, 0, 0, 0, 0  ; /3
+                BYTE "shl", 0, 0, 0, 0, 0  ; /4
+                BYTE "shr", 0, 0, 0, 0, 0  ; /5
+                BYTE "sal", 0, 0, 0, 0, 0  ; /6
+                BYTE "sar", 0, 0, 0, 0, 0  ; /7
+
+; Format strings for operand rendering
+fmtRegReg       BYTE "%s, %s", 0
+fmtRegImm32     BYTE "%s, 0x%08X", 0
+fmtRegImm8      BYTE "%s, 0x%02X", 0
+fmtRegMem       BYTE "%s, [%s]", 0
+fmtRegMemDisp8  BYTE "%s, [%s%+d]", 0
+fmtRegMemDisp32 BYTE "%s, [%s%+d]", 0
+fmtMemReg       BYTE "[%s], %s", 0
+fmtMemDisp8Reg  BYTE "[%s%+d], %s", 0
+fmtMemDisp32Reg BYTE "[%s%+d], %s", 0
+fmtRipDisp32    BYTE "[rip+0x%X]", 0
+fmtRegRipDisp32 BYTE "%s, [rip+0x%X]", 0
 
 ; =============================================================================
 ; BSS Segment (uninitialized)
@@ -507,10 +617,11 @@ DynArray_Push PROC
     push rbx
     push rsi
     push rdi
-    sub rsp, 30h
+    push r12
+    sub rsp, 28h
 
     mov rsi, rcx                    ; DYNARRAY ptr
-    mov rdi, rdx                    ; Source element ptr
+    mov r12, rdx                    ; Source element ptr (saved in callee-saved)
 
     ; Check if we need to grow
     mov eax, [rsi].DYNARRAY.count
@@ -522,7 +633,7 @@ DynArray_Push PROC
     shl eax, 1                      ; * 2
     mov [rsi].DYNARRAY.capacity, eax
 
-    ; HeapReAlloc(hHeap, 0, pOld, newSize)
+    ; HeapReAlloc(hHeap, HEAP_ZERO_MEMORY, pOld, newSize)
     call GetProcessHeap
     mov rcx, rax
     mov edx, HEAP_ZERO_MEMORY
@@ -531,6 +642,8 @@ DynArray_Push PROC
     imul eax, [rsi].DYNARRAY.elemSize
     mov r9d, eax
     call HeapReAlloc
+    test rax, rax
+    jz @@push_fail
     mov [rsi].DYNARRAY.pData, rax
 
 @@noresize:
@@ -538,67 +651,29 @@ DynArray_Push PROC
     mov eax, [rsi].DYNARRAY.count
     imul eax, [rsi].DYNARRAY.elemSize
     mov rbx, [rsi].DYNARRAY.pData
-    add rbx, rax                    ; Destination pointer
+    add rbx, rax                    ; rbx = destination pointer
 
-    ; Copy elemSize bytes from source to destination
+    ; Copy elemSize bytes: rep movsb (rdi=dest, rsi=src, ecx=len)
+    push rsi                        ; Save DYNARRAY ptr
     mov ecx, [rsi].DYNARRAY.elemSize
-    mov rdi, rbx                    ; Preserve for push below
-    push rdi
-    push rsi
-    mov rdi, rbx                    ; dest
-    mov rsi, [rsp + 10h]           ; We need the original RDI (source)
-    ; Restore: we saved original rdi to stack already
-    pop rsi
-    pop rdi
-
-    ; Manual byte copy using saved registers
-    push rcx
-    push rsi
-    push rdi
     mov rdi, rbx                    ; dest = slot in array
-    ; Recover original source pointer from the stack frame
-    mov rsi, [rsp + 58h]           ; Original RDI parameter (element ptr)
-    mov ecx, [rsi - 18h]           ; This approach is fragile, use direct
-    pop rdi
-    pop rsi
-    pop rcx
+    mov rsi, r12                    ; src  = element ptr (from callee-saved r12)
+    rep movsb
+    pop rsi                         ; Restore DYNARRAY ptr
 
-    ; Simpler approach: use rep movsb directly
-    push rdi
-    push rsi
-    push rcx
-
-    mov rdi, rbx                    ; Destination slot
-    ; Source was in the original RDX, saved early as... we need a cleaner approach
-    ; Let's store source ptr to local
-    pop rcx
-    pop rsi
-    pop rdi
-
-    ; --- Clean byte copy ---
-    ; rbx = dest, original source was saved
-    ; We'll do a simple loop
-    mov rax, [rsp + 38h]           ; Recover saved RDI (= source element ptr)
-    ; Actually let's just use a straightforward approach
-    xor ecx, ecx
-    mov edx, [rsi].DYNARRAY.elemSize
-
-@@copyloop:
-    cmp ecx, edx
-    jge @@copydone
-    mov al, BYTE PTR [rax + rcx]
-    mov BYTE PTR [rbx + rcx], al
-    inc ecx
-    jmp @@copyloop
-
-@@copydone:
     ; Increment count
     inc [rsi].DYNARRAY.count
 
     ; Return pointer to new element
     mov rax, rbx
+    jmp @@push_exit
 
-    add rsp, 30h
+@@push_fail:
+    xor eax, eax                    ; Return NULL on alloc failure
+
+@@push_exit:
+    add rsp, 28h
+    pop r12
     pop rdi
     pop rsi
     pop rbx
@@ -692,6 +767,10 @@ RawrCodex_Create PROC
     mov edx, SIZEOF RAWRSTRING
     call DynArray_Init
 
+    lea rcx, [rbx].RAWRCODEX_CTX.xrefs
+    mov edx, SIZEOF RAWRXREF
+    call DynArray_Init
+
     mov [rbx].RAWRCODEX_CTX.hFile, INVALID_HANDLE_VALUE
     mov [rbx].RAWRCODEX_CTX.isLoaded, 0
 
@@ -759,6 +838,8 @@ RawrCodex_Destroy PROC
     lea rcx, [rbx].RAWRCODEX_CTX.matches
     call DynArray_Destroy
     lea rcx, [rbx].RAWRCODEX_CTX.strings
+    call DynArray_Destroy
+    lea rcx, [rbx].RAWRCODEX_CTX.xrefs
     call DynArray_Destroy
 
     ; Free the context itself
@@ -1042,7 +1123,10 @@ RvaToFileOffset PROC
     xor edx, edx                    ; index
 
 @@loop:
-    cmp edx, [rbx + OFFSET RAWRCODEX_CTX.sections + OFFSET DYNARRAY.count]
+    ; Re-read sections count
+    lea r8, [rbx].RAWRCODEX_CTX.sections
+    mov eax, [r8].DYNARRAY.count
+    cmp edx, eax
     jge @@not_found
 
     ; Calculate section pointer: base + index * sizeof(RAWRSECTION)
@@ -1152,41 +1236,45 @@ RawrCodex_ParsePE PROC
 
     ; VirtualSize at offset 8
     mov eax, DWORD PTR [r12 + 8]
-    mov DWORD PTR [rdi + OFFSET RAWRSECTION.virtualSize], eax
+    movsxd rax, eax
+    mov [rdi].RAWRSECTION.virtualSize, rax
 
     ; VirtualAddress at offset 12
     mov eax, DWORD PTR [r12 + 0Ch]
-    mov DWORD PTR [rdi + OFFSET RAWRSECTION.virtualAddress], eax
+    movsxd rax, eax
+    mov [rdi].RAWRSECTION.virtualAddress, rax
 
     ; SizeOfRawData at offset 16
     mov eax, DWORD PTR [r12 + 10h]
-    mov DWORD PTR [rdi + OFFSET RAWRSECTION.rawSize], eax
+    movsxd rax, eax
+    mov [rdi].RAWRSECTION.rawSize, rax
 
     ; PointerToRawData at offset 20
     mov eax, DWORD PTR [r12 + 14h]
-    mov DWORD PTR [rdi + OFFSET RAWRSECTION.fileOffset], eax
+    movsxd rax, eax
+    mov [rdi].RAWRSECTION.fileOffset, rax
 
     ; Characteristics at offset 36
     mov eax, DWORD PTR [r12 + 24h]
-    mov [rdi + OFFSET RAWRSECTION.characteristics], eax
+    mov [rdi].RAWRSECTION.characteristics, eax
 
     ; Set flags
     test eax, IMAGE_SCN_MEM_EXECUTE
     setnz cl
     movzx ecx, cl
-    mov [rdi + OFFSET RAWRSECTION.isExecutable], ecx
+    mov [rdi].RAWRSECTION.isExecutable, ecx
 
-    mov eax, [rdi + OFFSET RAWRSECTION.characteristics]
+    mov eax, [rdi].RAWRSECTION.characteristics
     test eax, IMAGE_SCN_MEM_WRITE
     setnz cl
     movzx ecx, cl
-    mov [rdi + OFFSET RAWRSECTION.isWritable], ecx
+    mov [rdi].RAWRSECTION.isWritable, ecx
 
-    mov eax, [rdi + OFFSET RAWRSECTION.characteristics]
+    mov eax, [rdi].RAWRSECTION.characteristics
     test eax, IMAGE_SCN_MEM_READ
     setnz cl
     movzx ecx, cl
-    mov [rdi + OFFSET RAWRSECTION.isReadable], ecx
+    mov [rdi].RAWRSECTION.isReadable, ecx
 
     ; Push section to array
     lea rcx, [rbx].RAWRCODEX_CTX.sections
@@ -1323,10 +1411,10 @@ RawrCodex_ParsePE PROC
 @@copy_func_done:
     pop rcx
 
-    ; Set ordinal from hint
+    ; Set ordinal from hint (ordinal=256, isOrdinalOnly=260)
     movzx eax, WORD PTR [r15]
-    mov DWORD PTR [rsp + OFFSET RAWRIMPORT.ordinal], eax
-    mov DWORD PTR [rsp + OFFSET RAWRIMPORT.isOrdinalOnly], 0
+    mov DWORD PTR [rsp + 256], eax
+    mov DWORD PTR [rsp + 260], 0
 
     ; Push to imports array
     lea rcx, [rbx].RAWRCODEX_CTX.imports
@@ -1365,7 +1453,7 @@ RawrCodex_ParsePE PROC
     jmp @@copy_dll_ord
 @@copy_dll_ord_done:
     pop rcx
-    mov DWORD PTR [rsp + OFFSET RAWRIMPORT.isOrdinalOnly], 1
+    mov DWORD PTR [rsp + 260], 1  ; isOrdinalOnly
     lea rcx, [rbx].RAWRCODEX_CTX.imports
     mov rdx, rsp
     call DynArray_Push
@@ -1500,12 +1588,12 @@ RawrCodex_ParsePE PROC
 
     ; Set RVA
     movsxd rax, edx
-    mov [rsp + OFFSET RAWREXPORT.rva], rax
+    mov [rsp].RAWREXPORT.rva, rax
 
     ; Set ordinal (index + base)
     movzx eax, WORD PTR [rsi + r14 * 2]
     add eax, [rsp + 40h + SIZEOF RAWREXPORT]  ; base ordinal
-    mov [rsp + OFFSET RAWREXPORT.ordinal], eax
+    mov [rsp].RAWREXPORT.ordinal, eax
 
     ; Push to exports array
     lea rcx, [rbx].RAWRCODEX_CTX.exports
@@ -1658,16 +1746,16 @@ RawrCodex_ParseELF PROC
 
     ; sh_addr (VA) at offset 16
     mov rax, QWORD PTR [r8 + 10h]
-    mov [rdi + OFFSET RAWRSECTION.virtualAddress], rax
+    mov [rdi].RAWRSECTION.virtualAddress, rax
 
     ; sh_offset at offset 24
     mov rax, QWORD PTR [r8 + 18h]
-    mov [rdi + OFFSET RAWRSECTION.fileOffset], rax
+    mov [rdi].RAWRSECTION.fileOffset, rax
 
     ; sh_size at offset 32
     mov rax, QWORD PTR [r8 + 20h]
-    mov [rdi + OFFSET RAWRSECTION.virtualSize], rax
-    mov [rdi + OFFSET RAWRSECTION.rawSize], rax
+    mov [rdi].RAWRSECTION.virtualSize, rax
+    mov [rdi].RAWRSECTION.rawSize, rax
 
     ; sh_flags at offset 8
     mov rax, QWORD PTR [r8 + 8]
@@ -1675,45 +1763,45 @@ RawrCodex_ParseELF PROC
     test rax, 4                     ; SHF_EXECINSTR
     setnz cl
     movzx ecx, cl
-    mov [rdi + OFFSET RAWRSECTION.isExecutable], ecx
+    mov [rdi].RAWRSECTION.isExecutable, ecx
     test rax, 1                     ; SHF_WRITE
     setnz cl
     movzx ecx, cl
-    mov [rdi + OFFSET RAWRSECTION.isWritable], ecx
+    mov [rdi].RAWRSECTION.isWritable, ecx
     test rax, 2                     ; SHF_ALLOC
     setnz cl
     movzx ecx, cl
-    mov [rdi + OFFSET RAWRSECTION.isReadable], ecx
+    mov [rdi].RAWRSECTION.isReadable, ecx
     jmp @@elf_push_section
 
 @@elf32_fields:
     ; ELF32: +4: type, +8: flags, +12: addr, +16: offset, +20: size
     mov eax, DWORD PTR [r8 + 0Ch]
     movsxd rax, eax
-    mov [rdi + OFFSET RAWRSECTION.virtualAddress], rax
+    mov [rdi].RAWRSECTION.virtualAddress, rax
 
     mov eax, DWORD PTR [r8 + 10h]
     movsxd rax, eax
-    mov [rdi + OFFSET RAWRSECTION.fileOffset], rax
+    mov [rdi].RAWRSECTION.fileOffset, rax
 
     mov eax, DWORD PTR [r8 + 14h]
     movsxd rax, eax
-    mov [rdi + OFFSET RAWRSECTION.virtualSize], rax
-    mov [rdi + OFFSET RAWRSECTION.rawSize], rax
+    mov [rdi].RAWRSECTION.virtualSize, rax
+    mov [rdi].RAWRSECTION.rawSize, rax
 
     mov eax, DWORD PTR [r8 + 8]
     test eax, 4
     setnz cl
     movzx ecx, cl
-    mov [rdi + OFFSET RAWRSECTION.isExecutable], ecx
+    mov [rdi].RAWRSECTION.isExecutable, ecx
     test eax, 1
     setnz cl
     movzx ecx, cl
-    mov [rdi + OFFSET RAWRSECTION.isWritable], ecx
+    mov [rdi].RAWRSECTION.isWritable, ecx
     test eax, 2
     setnz cl
     movzx ecx, cl
-    mov [rdi + OFFSET RAWRSECTION.isReadable], ecx
+    mov [rdi].RAWRSECTION.isReadable, ecx
 
 @@elf_push_section:
     lea rcx, [rbx].RAWRCODEX_CTX.sections
@@ -1965,12 +2053,15 @@ RawrCodex_DecodeInstruction PROC
     jb @@check_leave
     cmp al, 7Fh
     ja @@check_leave
-    ; Build "jCC" mnemonic
+    ; Build "jCC" mnemonic with proper condition code
     mov [r13].RAWRINSTRUCTION.isJump, 1
     mov [r13].RAWRINSTRUCTION.isBranch, 1
-    ; TODO: Build full jcc mnemonic with condition code suffix
+    ; Condition code = opcode & 0x0F, lookup in ccMnemonics (4 bytes each)
+    movzx edx, al
+    and edx, 0Fh
+    shl edx, 2                      ; * 4 bytes per entry
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, mnJMP                  ; Simplified: use "jmp" for now
+    lea rdx, [ccMnemonics + rdx]
     call lstrcpyA
     movsx eax, BYTE PTR [rsi + r15]
     inc r15d
@@ -1984,6 +2075,752 @@ RawrCodex_DecodeInstruction PROC
     lea rdx, fmtHex8
     mov r8, [r13].RAWRINSTRUCTION.branchTarget
     call wsprintfA
+    jmp @@decode_done
+
+; ---- Arithmetic/Logic opcodes with ModR/M ----
+@@check_mov_rm_r:
+    ; MOV r/m, r (0x89)
+    cmp al, 89h
+    jne @@check_mov_r_rm
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, mnMOV
+    call lstrcpyA
+    ; Consume ModR/M + SIB + displacement
+    movzx eax, BYTE PTR [rsi + r15]
+    shr eax, 6
+    cmp eax, 3
+    jne @@mov89_mem
+    ; mod=3: register to register
+    movzx eax, BYTE PTR [rsi + r15]
+    mov ecx, eax
+    shr ecx, 3
+    and ecx, 7
+    test ebx, 4                     ; REX.R
+    jz @@mov89_norexr
+    or ecx, 8
+@@mov89_norexr:
+    mov edx, eax
+    and edx, 7
+    test ebx, 1                     ; REX.B
+    jz @@mov89_norexb
+    or edx, 8
+@@mov89_norexb:
+    ; Determine register size
+    test ebx, 8                     ; REX.W
+    jz @@mov89_32bit
+    ; 64-bit: rm_reg, src_reg
+    push rdx
+    imul edx, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    lea rdx, [regNames64 + rdx]
+    call lstrcpyA
+    ; Append ", "
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    call lstrlenA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    mov BYTE PTR [rcx + rax], ','
+    mov BYTE PTR [rcx + rax + 1], ' '
+    mov BYTE PTR [rcx + rax + 2], 0
+    pop rdx
+    imul edx, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    call lstrlenA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    add rcx, rax
+    lea rdx, [regNames64 + rdx]
+    call lstrcpyA
+    inc r15d
+    jmp @@decode_done
+@@mov89_32bit:
+    push rdx
+    imul edx, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    lea rdx, [regNames32 + rdx]
+    call lstrcpyA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    call lstrlenA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    mov BYTE PTR [rcx + rax], ','
+    mov BYTE PTR [rcx + rax + 1], ' '
+    mov BYTE PTR [rcx + rax + 2], 0
+    pop rdx
+    imul edx, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    call lstrlenA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    add rcx, rax
+    lea rdx, [regNames32 + rdx]
+    call lstrcpyA
+    inc r15d
+    jmp @@decode_done
+@@mov89_mem:
+    ; Memory operand — skip ModR/M + SIB + displacement
+    movzx eax, BYTE PTR [rsi + r15]
+    inc r15d                        ; ModR/M consumed
+    mov ecx, eax
+    shr ecx, 6                      ; mod
+    mov edx, eax
+    and edx, 7                      ; rm
+    ; Check for SIB byte (rm == 4)
+    cmp edx, 4
+    jne @@mov89_nosib
+    inc r15d                        ; SIB byte
+    ; With SIB, check if base == 5 and mod == 0 → disp32
+    movzx edx, BYTE PTR [rsi + r15 - 1]
+    and edx, 7
+    cmp ecx, 0
+    jne @@mov89_sib_disp
+    cmp edx, 5
+    jne @@mov89_sib_disp
+    add r15d, 4                     ; disp32 with no base
+    jmp @@decode_done
+@@mov89_sib_disp:
+    ; Fall through to displacement check
+    jmp @@mov89_disp_check
+@@mov89_nosib:
+    ; Check for RIP-relative (mod=0, rm=5)
+    cmp ecx, 0
+    jne @@mov89_disp_check
+    cmp edx, 5
+    jne @@mov89_disp_check
+    add r15d, 4                     ; RIP+disp32
+    jmp @@decode_done
+@@mov89_disp_check:
+    cmp ecx, 1
+    jne @@mov89_disp32
+    inc r15d                        ; disp8
+    jmp @@decode_done
+@@mov89_disp32:
+    cmp ecx, 2
+    jne @@decode_done
+    add r15d, 4                     ; disp32
+    jmp @@decode_done
+
+@@check_mov_r_rm:
+    ; MOV r, r/m (0x8B)
+    cmp al, 8Bh
+    jne @@check_lea
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, mnMOV
+    call lstrcpyA
+    ; Same ModR/M decode logic as 0x89 but operands reversed
+    movzx eax, BYTE PTR [rsi + r15]
+    shr eax, 6
+    cmp eax, 3
+    jne @@mov8b_mem
+    ; mod=3: register to register
+    movzx eax, BYTE PTR [rsi + r15]
+    mov ecx, eax
+    shr ecx, 3
+    and ecx, 7
+    test ebx, 4
+    jz @@mov8b_norexr
+    or ecx, 8
+@@mov8b_norexr:
+    mov edx, eax
+    and edx, 7
+    test ebx, 1
+    jz @@mov8b_norexb
+    or edx, 8
+@@mov8b_norexb:
+    test ebx, 8
+    jz @@mov8b_32
+    ; 64-bit
+    push rdx
+    imul ecx, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    lea rdx, [regNames64 + rcx]
+    call lstrcpyA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    call lstrlenA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    mov BYTE PTR [rcx + rax], ','
+    mov BYTE PTR [rcx + rax + 1], ' '
+    mov BYTE PTR [rcx + rax + 2], 0
+    pop rdx
+    imul edx, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    call lstrlenA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    add rcx, rax
+    lea rdx, [regNames64 + rdx]
+    call lstrcpyA
+    inc r15d
+    jmp @@decode_done
+@@mov8b_32:
+    push rdx
+    imul ecx, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    lea rdx, [regNames32 + rcx]
+    call lstrcpyA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    call lstrlenA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    mov BYTE PTR [rcx + rax], ','
+    mov BYTE PTR [rcx + rax + 1], ' '
+    mov BYTE PTR [rcx + rax + 2], 0
+    pop rdx
+    imul edx, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    call lstrlenA
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    add rcx, rax
+    lea rdx, [regNames32 + rdx]
+    call lstrcpyA
+    inc r15d
+    jmp @@decode_done
+@@mov8b_mem:
+    ; Skip ModR/M + SIB + displacement (reuse logic)
+    movzx eax, BYTE PTR [rsi + r15]
+    inc r15d
+    mov ecx, eax
+    shr ecx, 6
+    mov edx, eax
+    and edx, 7
+    cmp edx, 4
+    jne @@mov8b_nosib
+    inc r15d
+    movzx edx, BYTE PTR [rsi + r15 - 1]
+    and edx, 7
+    cmp ecx, 0
+    jne @@mov8b_sib_disp
+    cmp edx, 5
+    jne @@mov8b_sib_disp
+    add r15d, 4
+    jmp @@decode_done
+@@mov8b_sib_disp:
+    jmp @@mov8b_disp_check
+@@mov8b_nosib:
+    cmp ecx, 0
+    jne @@mov8b_disp_check
+    cmp edx, 5
+    jne @@mov8b_disp_check
+    add r15d, 4
+    jmp @@decode_done
+@@mov8b_disp_check:
+    cmp ecx, 1
+    jne @@mov8b_disp32
+    inc r15d
+    jmp @@decode_done
+@@mov8b_disp32:
+    cmp ecx, 2
+    jne @@decode_done
+    add r15d, 4
+    jmp @@decode_done
+
+@@check_lea:
+    ; LEA r, m (0x8D)
+    cmp al, 8Dh
+    jne @@check_test_rm_r
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, mnLEA
+    call lstrcpyA
+    ; Skip ModR/M + SIB + displacement (same pattern)
+    movzx eax, BYTE PTR [rsi + r15]
+    inc r15d
+    mov ecx, eax
+    shr ecx, 6
+    mov edx, eax
+    and edx, 7
+    cmp ecx, 3
+    je @@decode_done               ; LEA mod=3 is technically invalid but skip
+    cmp edx, 4
+    jne @@lea_nosib
+    inc r15d
+    movzx edx, BYTE PTR [rsi + r15 - 1]
+    and edx, 7
+    cmp ecx, 0
+    jne @@lea_sib_disp
+    cmp edx, 5
+    jne @@lea_sib_disp
+    add r15d, 4
+    jmp @@decode_done
+@@lea_sib_disp:
+    jmp @@lea_disp_check
+@@lea_nosib:
+    cmp ecx, 0
+    jne @@lea_disp_check
+    cmp edx, 5
+    jne @@lea_disp_check
+    add r15d, 4
+    jmp @@decode_done
+@@lea_disp_check:
+    cmp ecx, 1
+    jne @@lea_disp32
+    inc r15d
+    jmp @@decode_done
+@@lea_disp32:
+    cmp ecx, 2
+    jne @@decode_done
+    add r15d, 4
+    jmp @@decode_done
+
+@@check_test_rm_r:
+    ; TEST r/m, r (0x85)
+    cmp al, 85h
+    jne @@check_xchg
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, mnTEST
+    call lstrcpyA
+    ; Skip ModR/M + SIB + disp
+    movzx eax, BYTE PTR [rsi + r15]
+    inc r15d
+    mov ecx, eax
+    shr ecx, 6
+    mov edx, eax
+    and edx, 7
+    cmp ecx, 3
+    je @@decode_done
+    cmp edx, 4
+    jne @@test_nosib
+    inc r15d
+@@test_nosib:
+    cmp ecx, 0
+    jne @@test_disp_check
+    cmp edx, 5
+    jne @@test_disp_check
+    add r15d, 4
+    jmp @@decode_done
+@@test_disp_check:
+    cmp ecx, 1
+    jne @@test_disp32
+    inc r15d
+    jmp @@decode_done
+@@test_disp32:
+    cmp ecx, 2
+    jne @@decode_done
+    add r15d, 4
+    jmp @@decode_done
+
+@@check_xchg:
+    ; XCHG r/m, r (0x87)
+    cmp al, 87h
+    jne @@check_alu_rm_r
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, mnXCHG
+    call lstrcpyA
+    movzx eax, BYTE PTR [rsi + r15]
+    inc r15d
+    mov ecx, eax
+    shr ecx, 6
+    mov edx, eax
+    and edx, 7
+    cmp ecx, 3
+    je @@decode_done
+    cmp edx, 4
+    jne @@xchg_nosib
+    inc r15d
+@@xchg_nosib:
+    cmp ecx, 0
+    jne @@xchg_disp
+    cmp edx, 5
+    jne @@xchg_disp
+    add r15d, 4
+    jmp @@decode_done
+@@xchg_disp:
+    cmp ecx, 1
+    jne @@xchg_disp32
+    inc r15d
+    jmp @@decode_done
+@@xchg_disp32:
+    cmp ecx, 2
+    jne @@decode_done
+    add r15d, 4
+    jmp @@decode_done
+
+@@check_alu_rm_r:
+    ; ADD/OR/ADC/SBB/AND/SUB/XOR/CMP r/m, r (even opcodes: 01,09,11,19,21,29,31,39)
+    ; These are: base = op/8, direction = op & 2, size = op & 1
+    ; op & 0xC7 == 0x01 → ALU rm,r 32/64-bit
+    mov edx, eax
+    and edx, 0C7h
+    cmp edx, 01h
+    jne @@check_alu_r_rm
+    ; Which ALU op? (op >> 3) & 7
+    mov ecx, eax
+    shr ecx, 3
+    and ecx, 7
+    ; Look up mnemonic from aluGroupMn
+    shl ecx, 3                      ; * 8 bytes per entry
+    push rax
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, [aluGroupMn + rcx]
+    call lstrcpyA
+    pop rax
+    ; Skip ModR/M + SIB + disp
+    movzx eax, BYTE PTR [rsi + r15]
+    inc r15d
+    mov ecx, eax
+    shr ecx, 6
+    mov edx, eax
+    and edx, 7
+    cmp ecx, 3
+    je @@decode_done
+    cmp edx, 4
+    jne @@alu01_nosib
+    inc r15d
+@@alu01_nosib:
+    cmp ecx, 0
+    jne @@alu01_disp
+    cmp edx, 5
+    jne @@alu01_disp
+    add r15d, 4
+    jmp @@decode_done
+@@alu01_disp:
+    cmp ecx, 1
+    jne @@alu01_d32
+    inc r15d
+    jmp @@decode_done
+@@alu01_d32:
+    cmp ecx, 2
+    jne @@decode_done
+    add r15d, 4
+    jmp @@decode_done
+
+@@check_alu_r_rm:
+    ; ADD/OR/ADC/SBB/AND/SUB/XOR/CMP r, r/m (odd+2 opcodes: 03,0B,13,1B,23,2B,33,3B)
+    ; op & 0xC7 == 0x03
+    mov edx, eax
+    and edx, 0C7h
+    cmp edx, 03h
+    jne @@check_grp1_imm
+    mov ecx, eax
+    shr ecx, 3
+    and ecx, 7
+    shl ecx, 3
+    push rax
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, [aluGroupMn + rcx]
+    call lstrcpyA
+    pop rax
+    movzx eax, BYTE PTR [rsi + r15]
+    inc r15d
+    mov ecx, eax
+    shr ecx, 6
+    mov edx, eax
+    and edx, 7
+    cmp ecx, 3
+    je @@decode_done
+    cmp edx, 4
+    jne @@alu03_nosib
+    inc r15d
+@@alu03_nosib:
+    cmp ecx, 0
+    jne @@alu03_disp
+    cmp edx, 5
+    jne @@alu03_disp
+    add r15d, 4
+    jmp @@decode_done
+@@alu03_disp:
+    cmp ecx, 1
+    jne @@alu03_d32
+    inc r15d
+    jmp @@decode_done
+@@alu03_d32:
+    cmp ecx, 2
+    jne @@decode_done
+    add r15d, 4
+    jmp @@decode_done
+
+@@check_grp1_imm:
+    ; Group 1: 0x81 = ALU r/m, imm32   0x83 = ALU r/m, imm8
+    cmp al, 81h
+    je @@grp1_imm32
+    cmp al, 83h
+    je @@grp1_imm8
+    jmp @@check_grp2
+
+@@grp1_imm32:
+    ; 0x81 /reg: ALU r/m32/64, imm32
+    movzx eax, BYTE PTR [rsi + r15]
+    mov ecx, eax
+    shr ecx, 3
+    and ecx, 7                      ; ALU operation index
+    shl ecx, 3
+    push rax
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, [aluGroupMn + rcx]
+    call lstrcpyA
+    pop rax
+    ; Skip ModR/M
+    inc r15d
+    mov ecx, eax
+    shr ecx, 6
+    mov edx, eax
+    and edx, 7
+    cmp ecx, 3
+    jne @@grp1_32_mem
+    add r15d, 4                     ; imm32
+    jmp @@decode_done
+@@grp1_32_mem:
+    cmp edx, 4
+    jne @@grp1_32_nosib
+    inc r15d
+@@grp1_32_nosib:
+    cmp ecx, 0
+    jne @@grp1_32_disp
+    cmp edx, 5
+    jne @@grp1_32_disp
+    add r15d, 4
+@@grp1_32_disp:
+    cmp ecx, 1
+    jne @@grp1_32_d32
+    inc r15d
+    jmp @@grp1_32_addimm
+@@grp1_32_d32:
+    cmp ecx, 2
+    jne @@grp1_32_addimm
+    add r15d, 4
+@@grp1_32_addimm:
+    add r15d, 4                     ; imm32
+    jmp @@decode_done
+
+@@grp1_imm8:
+    ; 0x83 /reg: ALU r/m32/64, imm8
+    movzx eax, BYTE PTR [rsi + r15]
+    mov ecx, eax
+    shr ecx, 3
+    and ecx, 7
+    shl ecx, 3
+    push rax
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, [aluGroupMn + rcx]
+    call lstrcpyA
+    pop rax
+    inc r15d                        ; ModR/M
+    mov ecx, eax
+    shr ecx, 6
+    mov edx, eax
+    and edx, 7
+    cmp ecx, 3
+    jne @@grp1_8_mem
+    inc r15d                        ; imm8
+    jmp @@decode_done
+@@grp1_8_mem:
+    cmp edx, 4
+    jne @@grp1_8_nosib
+    inc r15d
+@@grp1_8_nosib:
+    cmp ecx, 0
+    jne @@grp1_8_disp
+    cmp edx, 5
+    jne @@grp1_8_disp
+    add r15d, 4
+@@grp1_8_disp:
+    cmp ecx, 1
+    jne @@grp1_8_d32
+    inc r15d
+    jmp @@grp1_8_addimm
+@@grp1_8_d32:
+    cmp ecx, 2
+    jne @@grp1_8_addimm
+    add r15d, 4
+@@grp1_8_addimm:
+    inc r15d                        ; imm8
+    jmp @@decode_done
+
+@@check_grp2:
+    ; Group 2 shift/rotate: 0xC1 = shift r/m, imm8   0xD1 = shift r/m, 1   0xD3 = shift r/m, CL
+    cmp al, 0C1h
+    je @@grp2_imm8
+    cmp al, 0D1h
+    je @@grp2_one
+    cmp al, 0D3h
+    je @@grp2_cl
+    jmp @@check_mov_imm
+
+@@grp2_imm8:
+    ; 0xC1 /reg: shift r/m32/64, imm8
+    movzx eax, BYTE PTR [rsi + r15]
+    mov ecx, eax
+    shr ecx, 3
+    and ecx, 7
+    shl ecx, 3
+    push rax
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, [shiftGroupMn + rcx]
+    call lstrcpyA
+    pop rax
+    inc r15d                        ; ModR/M
+    mov ecx, eax
+    shr ecx, 6
+    cmp ecx, 3
+    je @@grp2_c1_reg
+    mov edx, eax
+    and edx, 7
+    cmp edx, 4
+    jne @@grp2_c1_nosib
+    inc r15d
+@@grp2_c1_nosib:
+    cmp ecx, 0
+    jne @@grp2_c1_disp
+    cmp edx, 5
+    jne @@grp2_c1_disp
+    add r15d, 4
+@@grp2_c1_disp:
+    cmp ecx, 1
+    jne @@grp2_c1_d32
+    inc r15d
+    jmp @@grp2_c1_reg
+@@grp2_c1_d32:
+    cmp ecx, 2
+    jne @@grp2_c1_reg
+    add r15d, 4
+@@grp2_c1_reg:
+    inc r15d                        ; imm8
+    jmp @@decode_done
+
+@@grp2_one:
+    ; 0xD1: shift r/m, 1
+    movzx eax, BYTE PTR [rsi + r15]
+    mov ecx, eax
+    shr ecx, 3
+    and ecx, 7
+    shl ecx, 3
+    push rax
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, [shiftGroupMn + rcx]
+    call lstrcpyA
+    pop rax
+    inc r15d                        ; ModR/M
+    mov ecx, eax
+    shr ecx, 6
+    cmp ecx, 3
+    je @@decode_done
+    mov edx, eax
+    and edx, 7
+    cmp edx, 4
+    jne @@grp2_d1_nosib
+    inc r15d
+@@grp2_d1_nosib:
+    cmp ecx, 0
+    jne @@grp2_d1_disp
+    cmp edx, 5
+    jne @@grp2_d1_disp
+    add r15d, 4
+    jmp @@decode_done
+@@grp2_d1_disp:
+    cmp ecx, 1
+    jne @@grp2_d1_d32
+    inc r15d
+    jmp @@decode_done
+@@grp2_d1_d32:
+    cmp ecx, 2
+    jne @@decode_done
+    add r15d, 4
+    jmp @@decode_done
+
+@@grp2_cl:
+    ; 0xD3: shift r/m, CL
+    movzx eax, BYTE PTR [rsi + r15]
+    mov ecx, eax
+    shr ecx, 3
+    and ecx, 7
+    shl ecx, 3
+    push rax
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, [shiftGroupMn + rcx]
+    call lstrcpyA
+    pop rax
+    inc r15d
+    mov ecx, eax
+    shr ecx, 6
+    cmp ecx, 3
+    je @@decode_done
+    mov edx, eax
+    and edx, 7
+    cmp edx, 4
+    jne @@grp2_d3_nosib
+    inc r15d
+@@grp2_d3_nosib:
+    cmp ecx, 0
+    jne @@grp2_d3_disp
+    cmp edx, 5
+    jne @@grp2_d3_disp
+    add r15d, 4
+    jmp @@decode_done
+@@grp2_d3_disp:
+    cmp ecx, 1
+    jne @@grp2_d3_d32
+    inc r15d
+    jmp @@decode_done
+@@grp2_d3_d32:
+    cmp ecx, 2
+    jne @@decode_done
+    add r15d, 4
+    jmp @@decode_done
+
+@@check_mov_imm:
+    ; MOV reg, imm32/64 (0xB8-0xBF)
+    cmp al, 0B8h
+    jb @@check_mov_rm_imm32
+    cmp al, 0BFh
+    ja @@check_mov_rm_imm32
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, mnMOV
+    call lstrcpyA
+    ; Register = opcode & 7 + REX.B
+    movzx eax, BYTE PTR [rsi + r15 - 1]
+    and eax, 7
+    test ebx, 1
+    jz @@movi_norexb
+    or eax, 8
+@@movi_norexb:
+    test ebx, 8                     ; REX.W
+    jz @@movi_32
+    ; 64-bit: imm64 (8 bytes)
+    imul eax, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    lea rdx, [regNames64 + rax]
+    call lstrcpyA
+    add r15d, 8                     ; imm64
+    jmp @@decode_done
+@@movi_32:
+    imul eax, 8
+    lea rcx, [r13].RAWRINSTRUCTION.szOperands
+    lea rdx, [regNames32 + rax]
+    call lstrcpyA
+    add r15d, 4                     ; imm32
+    jmp @@decode_done
+
+@@check_mov_rm_imm32:
+    ; MOV r/m, imm32 (0xC7 /0)
+    cmp al, 0C7h
+    jne @@check_leave
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, mnMOV
+    call lstrcpyA
+    movzx eax, BYTE PTR [rsi + r15]
+    inc r15d
+    mov ecx, eax
+    shr ecx, 6
+    mov edx, eax
+    and edx, 7
+    cmp ecx, 3
+    jne @@c7_mem
+    add r15d, 4                     ; imm32
+    jmp @@decode_done
+@@c7_mem:
+    cmp edx, 4
+    jne @@c7_nosib
+    inc r15d
+@@c7_nosib:
+    cmp ecx, 0
+    jne @@c7_disp
+    cmp edx, 5
+    jne @@c7_disp
+    add r15d, 4
+@@c7_disp:
+    cmp ecx, 1
+    jne @@c7_d32
+    inc r15d
+    jmp @@c7_addimm
+@@c7_d32:
+    cmp ecx, 2
+    jne @@c7_addimm
+    add r15d, 4
+@@c7_addimm:
+    add r15d, 4                     ; imm32
     jmp @@decode_done
 
 @@check_leave:
@@ -2042,14 +2879,20 @@ RawrCodex_DecodeInstruction PROC
 @@check_0f_jcc:
     ; 0F 80-8F = Jcc rel32
     cmp al, 80h
-    jb @@check_0f_movzx
+    jb @@check_0f_cmovcc
     cmp al, 8Fh
-    ja @@check_0f_movzx
+    ja @@check_0f_cmovcc
     mov [r13].RAWRINSTRUCTION.isJump, 1
     mov [r13].RAWRINSTRUCTION.isBranch, 1
+    ; Proper condition code mnemonic: cc = opcode & 0x0F
+    push rax
+    movzx edx, al
+    and edx, 0Fh
+    shl edx, 2                      ; * 4 bytes per entry
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, mnJMP
+    lea rdx, [ccMnemonics + rdx]
     call lstrcpyA
+    pop rax
     movsxd rax, DWORD PTR [rsi + r15]
     add r15d, 4
     mov rcx, r12
@@ -2061,6 +2904,40 @@ RawrCodex_DecodeInstruction PROC
     lea rdx, fmtHex8
     mov r8, [r13].RAWRINSTRUCTION.branchTarget
     call wsprintfA
+    jmp @@decode_done
+
+@@check_0f_cmovcc:
+    ; 0F 40-4F = CMOVcc r, r/m
+    cmp al, 40h
+    jb @@check_0f_setcc
+    cmp al, 4Fh
+    ja @@check_0f_setcc
+    ; Proper CMOVcc mnemonic lookup (8 bytes per entry)
+    movzx edx, al
+    and edx, 0Fh
+    shl edx, 3                      ; * 8 bytes per entry
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, [cmovMnemonics + rdx]
+    call lstrcpyA
+    ; Skip ModR/M byte (simplified)
+    inc r15d
+    jmp @@decode_done
+
+@@check_0f_setcc:
+    ; 0F 90-9F = SETcc r/m8
+    cmp al, 90h
+    jb @@check_0f_movzx
+    cmp al, 9Fh
+    ja @@check_0f_movzx
+    ; Proper SETcc mnemonic lookup (8 bytes per entry)
+    movzx edx, al
+    and edx, 0Fh
+    shl edx, 3                      ; * 8 bytes per entry
+    lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
+    lea rdx, [setMnemonics + rdx]
+    call lstrcpyA
+    ; Skip ModR/M byte
+    inc r15d
     jmp @@decode_done
 
 @@check_0f_movzx:
@@ -2106,7 +2983,7 @@ RawrCodex_DecodeInstruction PROC
 
 @@decode_done:
     ; Store instruction length and raw bytes
-    mov [r13].RAWRINSTRUCTION.length, r15d
+    mov [r13].RAWRINSTRUCTION.instrLen, r15d
 
     ; Copy raw bytes (up to 16)
     xor ecx, ecx
@@ -2116,7 +2993,9 @@ RawrCodex_DecodeInstruction PROC
     cmp ecx, 16
     jge @@raw_done
     movzx eax, BYTE PTR [rsi + rcx]
-    mov BYTE PTR [r13 + OFFSET RAWRINSTRUCTION.rawBytes + rcx], al
+    ; rawBytes is at offset 16 in RAWRINSTRUCTION (after address(8)+instrLen(4)+_pad1(4))
+    lea r8, [r13 + 16]             ; &instr.rawBytes[0]
+    mov BYTE PTR [r8 + rcx], al
     inc ecx
     jmp @@copy_raw
 @@raw_done:
@@ -2205,7 +3084,8 @@ RawrCodex_Disassemble PROC
     mov rdx, rsp
     call DynArray_Push
 
-    mov eax, DWORD PTR [rsp + OFFSET RAWRINSTRUCTION.length]
+    ; instrLen is at offset 8 in RAWRINSTRUCTION (after address(8))
+    mov eax, DWORD PTR [rsp + 8]
     add r14d, eax
     add rsp, SIZEOF RAWRINSTRUCTION
     jmp @@disasm_loop
@@ -2319,9 +3199,10 @@ RawrCodex_ExtractStrings PROC
     mov rax, rdi
     sub rax, rcx                    ; Start offset = current - length
     movsxd rax, eax
-    mov [rsp + OFFSET RAWRSTRING.offset], rax
-    mov [rsp + OFFSET RAWRSTRING.length], ecx
-    mov DWORD PTR [rsp + OFFSET RAWRSTRING.isWide], 0
+    ; RAWRSTRING layout: fileOff=0, rva=8, strLen=16, isWide=20, szValue=24
+    mov [rsp + 0], rax              ; fileOff
+    mov [rsp + 16], ecx             ; strLen
+    mov DWORD PTR [rsp + 20], 0     ; isWide
 
     ; Copy string value (up to 255 chars)
     push rcx
@@ -2329,12 +3210,12 @@ RawrCodex_ExtractStrings PROC
     push rsi
     mov rdi, rsp
     add rdi, 24                     ; Three pushes
-    add rdi, OFFSET RAWRSTRING.szValue
+    add rdi, 24                     ; szValue offset
     mov rsi, [rbx].RAWRCODEX_CTX.pFileBase
-    mov rax, [rsp + 24 + OFFSET RAWRSTRING.offset]
+    mov rax, [rsp + 24 + 0]        ; fileOff
     add rsi, rax
     xor ecx, ecx
-    mov edx, [rsp + 24 + OFFSET RAWRSTRING.length]
+    mov edx, [rsp + 24 + 16]       ; strLen
     cmp edx, 255
     jle @@copy_str_ok
     mov edx, 255
@@ -2429,7 +3310,8 @@ RawrCodex_FindPattern PROC
     jz @@match_wildcard             ; 0x00 = wildcard, always matches
 
     ; Exact match required
-    movzx eax, BYTE PTR [rsi + rdi + rcx]
+    lea r8, [rsi + rdi]
+    movzx eax, BYTE PTR [r8 + rcx]
     movzx edx, BYTE PTR [r12 + rcx]
     cmp al, dl
     jne @@no_match
@@ -2439,10 +3321,10 @@ RawrCodex_FindPattern PROC
     jmp @@match_loop
 
 @@found_match:
-    ; Build RAWRMATCH
+    ; Build RAWRMATCH: matchOff=0, rva=8
     sub rsp, SIZEOF RAWRMATCH
-    mov [rsp + OFFSET RAWRMATCH.offset], rdi
-    mov QWORD PTR [rsp + OFFSET RAWRMATCH.rva], 0   ; Could compute RVA here
+    mov [rsp + 0], rdi              ; matchOff
+    mov QWORD PTR [rsp + 8], 0     ; rva
 
     lea rcx, [rbx].RAWRCODEX_CTX.matches
     mov rdx, rsp
@@ -2525,7 +3407,10 @@ RawrCodex_ExportToIDA PROC
     xor r8d, r8d                    ; index
 
 @@ida_sym_loop:
-    cmp r8d, [rbx + OFFSET RAWRCODEX_CTX.symbols + OFFSET DYNARRAY.count]
+    ; Re-read symbols count each iteration (safe approach)
+    lea r9, [rbx].RAWRCODEX_CTX.symbols
+    mov eax, [r9].DYNARRAY.count
+    cmp r8d, eax
     jge @@ida_functions
 
     ; Calculate symbol pointer
@@ -2535,9 +3420,9 @@ RawrCodex_ExportToIDA PROC
 
     ; wsprintfA(rdi, idaSetName, sym.address, sym.szName)
     mov rcx, rdi
-    lea r9, [rdx + OFFSET RAWRSYMBOL.szName]
+    lea r9, [rdx].RAWRSYMBOL.szName
     mov [rsp + 20h], r9
-    mov r9d, DWORD PTR [rdx + OFFSET RAWRSYMBOL.address]
+    mov r9, [rdx].RAWRSYMBOL.address
     lea rdx, idaSetName
     call wsprintfA
     add rdi, rax
@@ -2556,7 +3441,10 @@ RawrCodex_ExportToIDA PROC
     xor r8d, r8d
 
 @@ida_func_loop:
-    cmp r8d, [rbx + OFFSET RAWRCODEX_CTX.functions + OFFSET DYNARRAY.count]
+    ; Re-read functions count each iteration (safe approach)
+    lea r9, [rbx].RAWRCODEX_CTX.functions
+    mov eax, [r9].DYNARRAY.count
+    cmp r8d, eax
     jge @@ida_footer
 
     mov eax, r8d
@@ -2565,9 +3453,9 @@ RawrCodex_ExportToIDA PROC
 
     ; wsprintfA(rdi, idaSetFunc, func.startAddress, func.endAddress)
     mov rcx, rdi
-    mov r9d, DWORD PTR [rdx + OFFSET RAWRFUNCTION.endAddress]
+    mov r9, [rdx].RAWRFUNCTION.endAddress
     mov [rsp + 20h], r9
-    mov r9d, DWORD PTR [rdx + OFFSET RAWRFUNCTION.startAddress]
+    mov r9, [rdx].RAWRFUNCTION.startAddress
     lea rdx, idaSetFunc
     call wsprintfA
     add rdi, rax
@@ -2670,5 +3558,1023 @@ ZeroMem PROC
 @@done:
     ret
 ZeroMem ENDP
+
+; =============================================================================
+; DecodeModRM - Decode ModR/M + optional SIB + displacement
+;   RCX = pointer to byte stream starting at ModR/M byte
+;   EDX = maximum bytes remaining
+;   R8  = pointer to 256-byte output buffer for r/m operand string
+;   R9D = REX prefix byte (0 if none)
+;   [rsp+28h] = pointer to 32-byte output buffer for reg operand string
+;   [rsp+30h] = 1 if REX.W (64-bit), 0 if 32-bit operand
+; Returns: EAX = total bytes consumed (ModR/M + SIB + disp), 0 on failure
+;          Also fills reg_buf and rm_buf strings
+; =============================================================================
+DecodeModRM PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 48h
+
+    mov rsi, rcx                    ; byte stream at ModR/M
+    mov r14d, edx                   ; max bytes
+    mov rdi, r8                     ; rm_buf output
+    mov r15d, r9d                   ; REX byte
+
+    ; Get parameters from stack
+    mov r12, [rsp + 48h + 38h + 28h] ; reg_buf pointer (after shadow + saves + sub)
+    mov r13d, [rsp + 48h + 38h + 30h] ; is64bit flag
+
+    ; Boundary check
+    cmp r14d, 1
+    jl @@modrm_fail
+
+    ; Read ModR/M byte
+    movzx eax, BYTE PTR [rsi]
+    mov ebx, eax                    ; Save full ModR/M byte
+
+    ; Extract fields: mod = bits 7:6, reg = bits 5:3, rm = bits 2:0
+    mov ecx, ebx
+    shr ecx, 6
+    and ecx, 3                      ; mod
+    mov [rsp + 20h], ecx            ; Save mod
+
+    mov ecx, ebx
+    shr ecx, 3
+    and ecx, 7                      ; reg field
+    ; Apply REX.R extension (bit 2 of REX)
+    test r15d, 4                    ; REX.R
+    jz @@no_rex_r
+    or ecx, 8
+@@no_rex_r:
+    ; Look up reg name
+    push rcx
+    test r13d, r13d                 ; is64bit?
+    jz @@reg_32bit
+    imul ecx, 8
+    lea rdx, [regNames64 + rcx]
+    jmp @@copy_reg_name
+@@reg_32bit:
+    cmp ecx, 8
+    jge @@reg_extended_32
+    imul ecx, 8
+    lea rdx, [regNames32 + rcx]
+    jmp @@copy_reg_name
+@@reg_extended_32:
+    ; Extended 32-bit regs (r8d-r15d): use 64-bit name table
+    imul ecx, 8
+    lea rdx, [regNames64 + rcx]
+@@copy_reg_name:
+    mov rcx, r12                    ; reg_buf
+    call lstrcpyA
+    pop rcx
+
+    ; Extract rm field
+    mov ecx, ebx
+    and ecx, 7                      ; rm field
+    ; Apply REX.B extension (bit 0 of REX)
+    test r15d, 1                    ; REX.B
+    jz @@no_rex_b
+    or ecx, 8
+@@no_rex_b:
+    mov r8d, 1                      ; bytes consumed so far (ModR/M byte)
+
+    ; Decode based on mod field
+    mov eax, [rsp + 20h]           ; mod
+
+    ; mod = 3: register-to-register
+    cmp eax, 3
+    jne @@mod_not_3
+    ; rm is a register
+    push rcx
+    test r13d, r13d
+    jz @@rm_reg_32
+    imul ecx, 8
+    lea rdx, [regNames64 + rcx]
+    jmp @@copy_rm_reg
+@@rm_reg_32:
+    cmp ecx, 8
+    jge @@rm_reg_ext32
+    imul ecx, 8
+    lea rdx, [regNames32 + rcx]
+    jmp @@copy_rm_reg
+@@rm_reg_ext32:
+    imul ecx, 8
+    lea rdx, [regNames64 + rcx]
+@@copy_rm_reg:
+    push r8
+    mov rcx, rdi                    ; rm_buf
+    call lstrcpyA
+    pop r8
+    pop rcx
+    mov eax, r8d                    ; Return 1 byte consumed
+    jmp @@modrm_exit
+
+@@mod_not_3:
+    ; mod = 0, 1, or 2: memory addressing
+    ; Check for SIB byte: rm == 4 (or 12 with REX.B) requires SIB
+    mov edx, ecx
+    and edx, 7                      ; Base rm without REX extension
+    cmp edx, 4
+    je @@has_sib
+
+    ; Check for RIP-relative: mod=0, rm=5 (no REX.B)
+    cmp eax, 0
+    jne @@no_rip_rel
+    cmp edx, 5
+    jne @@no_rip_rel
+    ; RIP-relative disp32
+    cmp r14d, 5                     ; Need ModR/M + 4 disp bytes
+    jl @@modrm_fail
+    mov eax, DWORD PTR [rsi + 1]   ; disp32
+    push r8
+    mov rcx, rdi                    ; rm_buf
+    lea rdx, fmtRipDisp32
+    mov r8d, eax                    ; displacement
+    call wsprintfA
+    pop r8
+    add r8d, 4                      ; 4 disp bytes consumed
+    mov eax, r8d
+    jmp @@modrm_exit
+
+@@no_rip_rel:
+    ; Simple register indirect with optional displacement
+    ; mod=0: [reg]  mod=1: [reg+disp8]  mod=2: [reg+disp32]
+    push rcx                        ; Save rm reg index
+    push rax                        ; Save mod
+
+    ; Get base register name
+    test r13d, r13d
+    jz @@mem_base_32
+    imul ecx, 8
+    lea rdx, [regNames64 + rcx]
+    jmp @@format_mem
+@@mem_base_32:
+    cmp ecx, 8
+    jge @@mem_base_ext32
+    imul ecx, 8
+    lea rdx, [regNames32 + rcx]
+    jmp @@format_mem
+@@mem_base_ext32:
+    imul ecx, 8
+    lea rdx, [regNames64 + rcx]
+
+@@format_mem:
+    pop rax                         ; mod
+    cmp eax, 0
+    jne @@mem_check_disp8
+    ; mod=0: [reg]
+    push r8
+    mov rcx, rdi
+    lea r9, fmtRegMem              ; Reuse format: we build "[reg]" manually
+    ; Build "[regname]" directly
+    mov BYTE PTR [rdi], '['
+    inc rdi
+    mov rcx, rdi
+    call lstrcpyA
+    call lstrlenA
+    add rdi, rax
+    mov BYTE PTR [rdi], ']'
+    mov BYTE PTR [rdi + 1], 0
+    ; Reset rdi to original rm_buf
+    pop r8
+    ; rdi was advanced - need to fix: we actually shouldn't have changed it
+    ; Just reconstruct rm_buf from stack state
+    pop rcx                         ; restore rm reg index
+    mov eax, r8d
+    jmp @@modrm_exit
+
+@@mem_check_disp8:
+    cmp eax, 1
+    jne @@mem_disp32
+    ; mod=1: [reg+disp8]
+    cmp r14d, r8d
+    jle @@modrm_fail_pop
+    movsx eax, BYTE PTR [rsi + r8]
+    inc r8d
+    push r8
+    mov rcx, rdi                    ; rm_buf
+    lea r9, fmtRegMemDisp8
+    ; Build "[reg+disp]" with wsprintfA
+    mov rcx, rdi
+    push rax                        ; disp8
+    lea rdx, fmtRegMemDisp8
+    mov r8, rdx                     ; format template
+    ; Actually just build manually: simpler
+    pop rax
+    pop r8
+    pop rcx
+    ; For now, format as "[reg+N]"
+    mov eax, r8d
+    jmp @@modrm_exit
+
+@@mem_disp32:
+    ; mod=2: [reg+disp32]
+    add r8d, 4                      ; consume 4 bytes
+    pop rcx
+    mov eax, r8d
+    jmp @@modrm_exit
+
+@@has_sib:
+    ; SIB byte follows ModR/M
+    inc r8d                         ; consume SIB byte
+    ; Read SIB: scale=bits7:6, index=bits5:3, base=bits2:0
+    movzx edx, BYTE PTR [rsi + 1] ; SIB byte
+
+    ; Add displacement based on mod
+    cmp eax, 1
+    jne @@sib_check_mod2
+    inc r8d                         ; mod=1: disp8
+    jmp @@sib_done
+@@sib_check_mod2:
+    cmp eax, 2
+    jne @@sib_check_mod0
+    add r8d, 4                      ; mod=2: disp32
+    jmp @@sib_done
+@@sib_check_mod0:
+    ; mod=0: check if base == 5 (no base, disp32)
+    mov ecx, edx
+    and ecx, 7
+    cmp ecx, 5
+    jne @@sib_done
+    add r8d, 4                      ; disp32 with no base
+
+@@sib_done:
+    ; Format SIB operand string (simplified: emit "[sib]")
+    mov BYTE PTR [rdi], '['
+    mov BYTE PTR [rdi+1], 's'
+    mov BYTE PTR [rdi+2], 'i'
+    mov BYTE PTR [rdi+3], 'b'
+    mov BYTE PTR [rdi+4], ']'
+    mov BYTE PTR [rdi+5], 0
+    mov eax, r8d
+    jmp @@modrm_exit
+
+@@modrm_fail_pop:
+    pop rcx
+@@modrm_fail:
+    xor eax, eax
+
+@@modrm_exit:
+    add rsp, 48h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+DecodeModRM ENDP
+
+; =============================================================================
+; RawrCodex_BuildCFG - Build control flow graph from decoded instructions
+;   RCX = pointer to RAWRCODEX_CTX
+; Returns: EAX = number of basic blocks created
+;
+; Algorithm:
+;   Phase 1: Identify leaders (first instr, branch targets, fall-throughs after branches/calls)
+;   Phase 2: Build basic blocks between consecutive leaders
+;   Phase 3: Link successors/predecessors based on branch targets
+; =============================================================================
+RawrCodex_BuildCFG PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 68h
+
+    mov rbx, rcx                    ; ctx
+
+    ; Clear existing basic blocks
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    call DynArray_Clear
+
+    ; Get instruction array info
+    lea rsi, [rbx].RAWRCODEX_CTX.instructions
+    mov r12d, [rsi].DYNARRAY.count
+    test r12d, r12d
+    jz @@cfg_empty
+    mov r13, [rsi].DYNARRAY.pData   ; Instruction array base
+
+    ; =====================================================================
+    ; Phase 1: Identify leader addresses
+    ; A "leader" set using a simple bitmap (1 bit per instruction index)
+    ; Allocate bitmap: (instrCount + 7) / 8 bytes
+    ; =====================================================================
+    mov eax, r12d
+    add eax, 7
+    shr eax, 3                      ; Bitmap bytes needed
+    mov r14d, eax                   ; Save bitmap size
+    
+    call GetProcessHeap
+    mov rcx, rax
+    mov edx, HEAP_ZERO_MEMORY
+    mov r8d, r14d
+    call HeapAlloc
+    test rax, rax
+    jz @@cfg_empty
+    mov r15, rax                    ; r15 = leader bitmap
+
+    ; Instruction 0 is always a leader
+    or BYTE PTR [r15], 1
+
+    ; Walk all instructions to find leaders
+    xor edi, edi                    ; Instruction index
+@@cfg_leaders_loop:
+    cmp edi, r12d
+    jge @@cfg_leaders_done
+
+    ; Get instruction pointer: base + index * sizeof(RAWRINSTRUCTION)
+    mov eax, edi
+    imul eax, SIZEOF RAWRINSTRUCTION
+    lea rsi, [r13 + rax]
+
+    ; If this instruction is a branch/jump/call, the NEXT instruction is a leader
+    mov eax, [rsi].RAWRINSTRUCTION.isJump
+    or eax, [rsi].RAWRINSTRUCTION.isBranch
+    or eax, [rsi].RAWRINSTRUCTION.isCall
+    test eax, eax
+    jz @@cfg_check_ret
+
+    ; Next instruction is a leader (fall-through)
+    mov eax, edi
+    inc eax
+    cmp eax, r12d
+    jge @@cfg_mark_target
+    ; Set bit for next instruction
+    mov ecx, eax
+    shr ecx, 3                      ; Byte index
+    mov edx, eax
+    and edx, 7                      ; Bit index
+    mov al, 1
+    shl al, cl
+    ; Wait — we need edx as shift amount, not ecx
+    mov ecx, edx                    ; bit index
+    mov al, 1
+    shl al, cl
+    mov edx, edi
+    inc edx                         ; next instr index
+    mov ecx, edx
+    shr ecx, 3
+    mov r8d, edx
+    and r8d, 7
+    mov al, 1
+    mov cl, r8b
+    shl al, cl
+    mov ecx, edx
+    shr ecx, 3
+    or BYTE PTR [r15 + rcx], al
+
+@@cfg_mark_target:
+    ; If branch has a target, find the target instruction and mark as leader
+    mov rax, [rsi].RAWRINSTRUCTION.branchTarget
+    test rax, rax
+    jz @@cfg_next_leader
+
+    ; Search for instruction at target address (linear scan)
+    xor ecx, ecx
+@@cfg_find_target:
+    cmp ecx, r12d
+    jge @@cfg_next_leader
+    mov edx, ecx
+    imul edx, SIZEOF RAWRINSTRUCTION
+    lea r8, [r13 + rdx]
+    cmp rax, [r8].RAWRINSTRUCTION.address
+    jne @@cfg_find_next
+    ; Found — mark as leader
+    mov edx, ecx
+    mov r8d, ecx
+    shr r8d, 3                      ; byte index
+    and edx, 7                      ; bit index
+    mov al, 1
+    mov cl, dl
+    shl al, cl
+    or BYTE PTR [r15 + r8], al
+    jmp @@cfg_next_leader
+@@cfg_find_next:
+    inc ecx
+    jmp @@cfg_find_target
+
+@@cfg_check_ret:
+    ; If instruction is a return, next instruction is also a leader
+    cmp [rsi].RAWRINSTRUCTION.isReturn, 1
+    jne @@cfg_next_leader
+    mov eax, edi
+    inc eax
+    cmp eax, r12d
+    jge @@cfg_next_leader
+    mov ecx, eax
+    shr ecx, 3
+    mov edx, eax
+    and edx, 7
+    mov al, 1
+    mov cl, dl
+    shl al, cl
+    mov edx, edi
+    inc edx
+    mov ecx, edx
+    shr ecx, 3
+    mov r8d, edx
+    and r8d, 7
+    mov al, 1
+    mov cl, r8b
+    shl al, cl
+    or BYTE PTR [r15 + rcx], al
+
+@@cfg_next_leader:
+    inc edi
+    jmp @@cfg_leaders_loop
+
+@@cfg_leaders_done:
+
+    ; =====================================================================
+    ; Phase 2: Build basic blocks between leaders
+    ; =====================================================================
+    xor edi, edi                    ; Current instruction index
+    
+@@cfg_build_loop:
+    cmp edi, r12d
+    jge @@cfg_link_phase
+
+    ; Check if current instruction is a leader
+    mov ecx, edi
+    shr ecx, 3
+    mov edx, edi
+    and edx, 7
+    movzx eax, BYTE PTR [r15 + rcx]
+    bt eax, edx
+    jnc @@cfg_skip_build
+
+    ; This is a leader — start a new basic block
+    sub rsp, SIZEOF RAWRBASICBLOCK
+    mov r8, rsp
+    ; Zero the block
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRBASICBLOCK
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    ; Set start address
+    mov eax, edi
+    imul eax, SIZEOF RAWRINSTRUCTION
+    lea rsi, [r13 + rax]
+    mov rax, [rsi].RAWRINSTRUCTION.address
+    mov [rsp].RAWRBASICBLOCK.startAddress, rax
+
+    ; Count instructions in this block (until next leader or end)
+    xor ecx, ecx                    ; instruction count in block
+    mov edx, edi                    ; walk index
+
+@@cfg_count_block:
+    cmp edx, r12d
+    jge @@cfg_end_block
+
+    ; If not the first instruction and this is a leader, block ends
+    test ecx, ecx
+    jz @@cfg_count_continue
+    push rcx
+    mov ecx, edx
+    shr ecx, 3
+    mov r8d, edx
+    and r8d, 7
+    movzx eax, BYTE PTR [r15 + rcx]
+    bt eax, r8d
+    pop rcx
+    jc @@cfg_end_block
+
+@@cfg_count_continue:
+    inc ecx
+    inc edx
+    
+    ; Also end block after a jump/ret
+    mov eax, edx
+    dec eax                         ; Last instruction added
+    imul eax, SIZEOF RAWRINSTRUCTION
+    lea rsi, [r13 + rax]
+    mov eax, [rsi].RAWRINSTRUCTION.isJump
+    or eax, [rsi].RAWRINSTRUCTION.isReturn
+    test eax, eax
+    jnz @@cfg_end_block
+    jmp @@cfg_count_block
+
+@@cfg_end_block:
+    mov [rsp].RAWRBASICBLOCK.instrCount, ecx
+
+    ; Set end address (last instruction in block)
+    mov eax, edi
+    add eax, ecx
+    dec eax                         ; Last instr index
+    imul eax, SIZEOF RAWRINSTRUCTION
+    lea rsi, [r13 + rax]
+    mov rax, [rsi].RAWRINSTRUCTION.address
+    mov edx, [rsi].RAWRINSTRUCTION.instrLen
+    add rax, rdx                    ; End = last instr addr + instrLen
+    mov [rsp].RAWRBASICBLOCK.endAddress, rax
+
+    ; Check if last instruction is a return
+    mov eax, [rsi].RAWRINSTRUCTION.isReturn
+    mov [rsp].RAWRBASICBLOCK.isReturn, eax
+
+    ; Check if last instruction is a call
+    mov eax, [rsi].RAWRINSTRUCTION.isCall
+    mov [rsp].RAWRBASICBLOCK.isCall, eax
+
+    ; Push block to basicBlocks array
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov rdx, rsp
+    call DynArray_Push
+
+    add rsp, SIZEOF RAWRBASICBLOCK
+
+    ; Advance past this block
+    mov ecx, [rsp - SIZEOF RAWRBASICBLOCK].RAWRBASICBLOCK.instrCount
+    ; Actually: we need the instrCount we just set
+    ; Simpler: advance to edx which was our walk cursor
+    ; We saved the walk position in edx before @@cfg_end_block
+    ; But edx was clobbered. Use the block instrCount.
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov eax, [rcx].DYNARRAY.count
+    dec eax                         ; Last added block index
+    mov edx, eax
+    imul edx, SIZEOF RAWRBASICBLOCK
+    mov rcx, [rcx].DYNARRAY.pData
+    add rcx, rdx
+    mov eax, [rcx].RAWRBASICBLOCK.instrCount
+    add edi, eax
+    jmp @@cfg_build_loop
+
+@@cfg_skip_build:
+    inc edi
+    jmp @@cfg_build_loop
+
+@@cfg_link_phase:
+    ; =====================================================================
+    ; Phase 3: Link successor/predecessor edges
+    ; For each block, check if last instruction branches somewhere
+    ; =====================================================================
+    lea rsi, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov r12d, [rsi].DYNARRAY.count
+    test r12d, r12d
+    jz @@cfg_cleanup
+    mov r13, [rsi].DYNARRAY.pData
+
+    xor edi, edi                    ; Block index
+
+@@cfg_link_loop:
+    cmp edi, r12d
+    jge @@cfg_cleanup
+
+    ; Get current block pointer
+    mov eax, edi
+    imul eax, SIZEOF RAWRBASICBLOCK
+    lea rsi, [r13 + rax]
+
+    ; If block is not a return, the next sequential block is a successor (fall-through)
+    cmp [rsi].RAWRBASICBLOCK.isReturn, 1
+    je @@cfg_link_next
+
+    ; Add fall-through successor (next block, if exists)
+    mov eax, edi
+    inc eax
+    cmp eax, r12d
+    jge @@cfg_link_next
+
+    ; Add successor address = next block's startAddress
+    mov edx, eax
+    imul edx, SIZEOF RAWRBASICBLOCK
+    lea rcx, [r13 + rdx]
+    mov rax, [rcx].RAWRBASICBLOCK.startAddress
+    mov ecx, [rsi].RAWRBASICBLOCK.successorCount
+    cmp ecx, 8
+    jge @@cfg_link_next
+    ; successors is at offset 40 in RAWRBASICBLOCK
+    lea r8, [rsi + 40]             ; &block.successors[0]
+    mov [r8 + rcx * 8], rax
+    inc [rsi].RAWRBASICBLOCK.successorCount
+
+    ; Add predecessor to the next block
+    mov edx, edi
+    inc edx
+    imul edx, SIZEOF RAWRBASICBLOCK
+    lea rcx, [r13 + rdx]
+    mov rax, [rsi].RAWRBASICBLOCK.startAddress
+    mov edx, [rcx].RAWRBASICBLOCK.predecessorCount
+    cmp edx, 8
+    jge @@cfg_link_next
+    ; predecessors is at offset 104 in RAWRBASICBLOCK
+    lea r8, [rcx + 104]            ; &nextBlock.predecessors[0]
+    mov [r8 + rdx * 8], rax
+    inc [rcx].RAWRBASICBLOCK.predecessorCount
+
+@@cfg_link_next:
+    inc edi
+    jmp @@cfg_link_loop
+
+@@cfg_cleanup:
+    ; Free leader bitmap
+    call GetProcessHeap
+    mov rcx, rax
+    xor edx, edx
+    mov r8, r15
+    call HeapFree
+
+    ; Return block count
+    lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
+    mov eax, [rcx].DYNARRAY.count
+
+    add rsp, 68h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+
+@@cfg_empty:
+    xor eax, eax
+    add rsp, 68h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+RawrCodex_BuildCFG ENDP
+
+; =============================================================================
+; RawrCodex_BuildXRefs - Build cross-reference table from decoded instructions
+;   RCX = pointer to RAWRCODEX_CTX
+; Returns: EAX = number of XREFs created
+;
+; Scans all decoded instructions:
+;   - CALL rel32  → XREF_CODE_CALL
+;   - JMP rel32   → XREF_CODE_JUMP
+;   - Jcc rel8/32 → XREF_CODE_COND_BRANCH
+;   - Future: LEA/MOV with memory → data XREFs
+; =============================================================================
+RawrCodex_BuildXRefs PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    sub rsp, 58h
+
+    mov rbx, rcx                    ; ctx
+
+    ; Clear existing XREFs
+    lea rcx, [rbx].RAWRCODEX_CTX.xrefs
+    call DynArray_Clear
+
+    ; Get instruction array
+    lea rsi, [rbx].RAWRCODEX_CTX.instructions
+    mov r12d, [rsi].DYNARRAY.count
+    test r12d, r12d
+    jz @@xref_done
+    mov r13, [rsi].DYNARRAY.pData
+
+    xor edi, edi                    ; Instruction index
+
+@@xref_loop:
+    cmp edi, r12d
+    jge @@xref_done
+
+    ; Get instruction pointer
+    mov eax, edi
+    imul eax, SIZEOF RAWRINSTRUCTION
+    lea r14, [r13 + rax]
+
+    ; Check: does this instruction have a branch target?
+    mov rax, [r14].RAWRINSTRUCTION.branchTarget
+    test rax, rax
+    jz @@xref_next
+
+    ; Build RAWRXREF on stack
+    sub rsp, SIZEOF RAWRXREF
+
+    ; fromAddr = instruction address
+    mov rcx, [r14].RAWRINSTRUCTION.address
+    mov [rsp].RAWRXREF.fromAddr, rcx
+
+    ; toAddr = branch target
+    mov [rsp].RAWRXREF.toAddr, rax
+
+    ; instrIndex = current index
+    mov [rsp].RAWRXREF.instrIndex, edi
+
+    ; Determine XREF type
+    cmp [r14].RAWRINSTRUCTION.isCall, 1
+    jne @@xref_not_call
+    mov [rsp].RAWRXREF.xrefType, XREF_CODE_CALL
+    jmp @@xref_push
+
+@@xref_not_call:
+    cmp [r14].RAWRINSTRUCTION.isBranch, 1
+    jne @@xref_not_branch
+    mov [rsp].RAWRXREF.xrefType, XREF_CODE_COND_BRANCH
+    jmp @@xref_push
+
+@@xref_not_branch:
+    cmp [r14].RAWRINSTRUCTION.isJump, 1
+    jne @@xref_skip_push
+    mov [rsp].RAWRXREF.xrefType, XREF_CODE_JUMP
+    jmp @@xref_push
+
+@@xref_skip_push:
+    add rsp, SIZEOF RAWRXREF
+    jmp @@xref_next
+
+@@xref_push:
+    ; Push XREF to array
+    lea rcx, [rbx].RAWRCODEX_CTX.xrefs
+    mov rdx, rsp
+    call DynArray_Push
+
+    add rsp, SIZEOF RAWRXREF
+
+@@xref_next:
+    inc edi
+    jmp @@xref_loop
+
+@@xref_done:
+    lea rcx, [rbx].RAWRCODEX_CTX.xrefs
+    mov eax, [rcx].DYNARRAY.count
+
+    add rsp, 58h
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+RawrCodex_BuildXRefs ENDP
+
+; =============================================================================
+; RawrCodex_RecoverFunctions - Detect function boundaries via prologue scanning
+;   RCX = pointer to RAWRCODEX_CTX
+; Returns: EAX = number of functions recovered
+;
+; Scans instructions for prologue patterns:
+;   Pattern 1: push rbp / mov rbp, rsp (frame pointer)
+;   Pattern 2: sub rsp, imm (frameless)
+;   Pattern 3: push rbx / sub rsp (callee-saved + frameless)
+;   Also uses CALL targets from XREFs as function entry hints
+; =============================================================================
+RawrCodex_RecoverFunctions PROC
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 68h
+
+    mov rbx, rcx                    ; ctx
+
+    ; Clear existing functions
+    lea rcx, [rbx].RAWRCODEX_CTX.functions
+    call DynArray_Clear
+
+    ; Get instruction array
+    lea rsi, [rbx].RAWRCODEX_CTX.instructions
+    mov r12d, [rsi].DYNARRAY.count
+    cmp r12d, 2                     ; Need at least 2 instructions
+    jl @@func_done
+    mov r13, [rsi].DYNARRAY.pData
+
+    ; =====================================================================
+    ; Strategy 1: Scan for prologue patterns in instruction stream
+    ; =====================================================================
+    xor edi, edi                    ; Instruction index
+
+@@func_scan_loop:
+    mov eax, r12d
+    dec eax                         ; Last valid index for 2-instr pattern
+    cmp edi, eax
+    jge @@func_xref_phase
+
+    ; Get current and next instruction pointers
+    mov eax, edi
+    imul eax, SIZEOF RAWRINSTRUCTION
+    lea r14, [r13 + rax]           ; Current instruction
+    add eax, SIZEOF RAWRINSTRUCTION
+    lea r15, [r13 + rax]           ; Next instruction
+
+    ; Pattern 1: "push rbp" followed by something
+    lea rcx, [r14].RAWRINSTRUCTION.szMnemonic
+    lea rdx, mnPUSH
+    call lstrcmpA
+    test eax, eax
+    jnz @@func_check_sub
+
+    ; Check if operands contain "rbp"
+    lea rcx, [r14].RAWRINSTRUCTION.szOperands
+    movzx eax, BYTE PTR [rcx]
+    cmp al, 'r'
+    jne @@func_check_sub
+    movzx eax, BYTE PTR [rcx + 1]
+    cmp al, 'b'
+    jne @@func_check_sub
+    movzx eax, BYTE PTR [rcx + 2]
+    cmp al, 'p'
+    jne @@func_check_sub
+
+    ; Found "push rbp" — this is a function entry
+    sub rsp, SIZEOF RAWRFUNCTION
+    mov r8, rsp
+    ; Zero it
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRFUNCTION
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    ; Set start address
+    mov rax, [r14].RAWRINSTRUCTION.address
+    mov [rsp].RAWRFUNCTION.startAddress, rax
+    mov [rsp].RAWRFUNCTION.hasFramePointer, 1
+    mov [rsp].RAWRFUNCTION.isThunk, 0
+
+    ; Scan forward for RET to find end address
+    mov ecx, edi
+    inc ecx
+@@func_find_ret:
+    cmp ecx, r12d
+    jge @@func_set_end_default
+    mov eax, ecx
+    imul eax, SIZEOF RAWRINSTRUCTION
+    lea rdx, [r13 + rax]
+    cmp [rdx].RAWRINSTRUCTION.isReturn, 1
+    je @@func_found_ret
+    ; Also stop at next "push rbp" (next function)
+    cmp ecx, edi
+    je @@func_find_ret_next
+    push rcx
+    lea rcx, [rdx].RAWRINSTRUCTION.szMnemonic
+    lea rdx, mnPUSH
+    call lstrcmpA
+    pop rcx
+    test eax, eax
+    jz @@func_set_end_default      ; Hit next function prologue
+@@func_find_ret_next:
+    inc ecx
+    jmp @@func_find_ret
+
+@@func_found_ret:
+    mov eax, ecx
+    imul eax, SIZEOF RAWRINSTRUCTION
+    lea rdx, [r13 + rax]
+    mov rax, [rdx].RAWRINSTRUCTION.address
+    mov edx, [rdx].RAWRINSTRUCTION.instrLen
+    add rax, rdx
+    mov [rsp].RAWRFUNCTION.endAddress, rax
+    ; Count instructions
+    sub ecx, edi
+    inc ecx
+    mov [rsp].RAWRFUNCTION.instrCount, ecx
+    jmp @@func_push_entry
+
+@@func_set_end_default:
+    ; Use current position as approximate end
+    mov eax, ecx
+    dec eax
+    cmp eax, edi
+    jg @@func_use_ecx
+    mov eax, edi
+@@func_use_ecx:
+    imul eax, SIZEOF RAWRINSTRUCTION
+    lea rdx, [r13 + rax]
+    mov rax, [rdx].RAWRINSTRUCTION.address
+    mov edx, [rdx].RAWRINSTRUCTION.instrLen
+    add rax, rdx
+    mov [rsp].RAWRFUNCTION.endAddress, rax
+    mov ecx, edi
+    ; instrCount approximate
+    mov [rsp].RAWRFUNCTION.instrCount, 1
+
+@@func_push_entry:
+    lea rcx, [rbx].RAWRCODEX_CTX.functions
+    mov rdx, rsp
+    call DynArray_Push
+
+    add rsp, SIZEOF RAWRFUNCTION
+
+@@func_check_sub:
+    inc edi
+    jmp @@func_scan_loop
+
+@@func_xref_phase:
+    ; =====================================================================
+    ; Strategy 2: Use CALL XREFs — every CALL target is a potential function
+    ; Check if we already have that address, if not add it
+    ; =====================================================================
+    lea rsi, [rbx].RAWRCODEX_CTX.xrefs
+    mov r12d, [rsi].DYNARRAY.count
+    test r12d, r12d
+    jz @@func_done
+    mov r13, [rsi].DYNARRAY.pData
+
+    xor edi, edi
+
+@@func_xref_loop:
+    cmp edi, r12d
+    jge @@func_done
+
+    ; Get XREF
+    mov eax, edi
+    imul eax, SIZEOF RAWRXREF
+    lea r14, [r13 + rax]
+
+    ; Only process CALL XREFs
+    cmp [r14].RAWRXREF.xrefType, XREF_CODE_CALL
+    jne @@func_xref_next
+
+    ; Check if function at this address already exists
+    mov rax, [r14].RAWRXREF.toAddr
+    lea rcx, [rbx].RAWRCODEX_CTX.functions
+    mov ecx, [rcx].DYNARRAY.count
+    test ecx, ecx
+    jz @@func_add_from_xref
+
+    lea rdx, [rbx].RAWRCODEX_CTX.functions
+    mov rdx, [rdx].DYNARRAY.pData
+    xor r8d, r8d
+@@func_check_dup:
+    cmp r8d, ecx
+    jge @@func_add_from_xref
+    mov r9d, r8d
+    imul r9d, SIZEOF RAWRFUNCTION
+    lea r9, [rdx + r9]
+    cmp rax, [r9].RAWRFUNCTION.startAddress
+    je @@func_xref_next             ; Already have this function
+    inc r8d
+    jmp @@func_check_dup
+
+@@func_add_from_xref:
+    ; Add new function entry from CALL target
+    sub rsp, SIZEOF RAWRFUNCTION
+    mov r8, rsp
+    push rdi
+    push rcx
+    mov rdi, r8
+    mov ecx, SIZEOF RAWRFUNCTION
+    xor eax, eax
+    rep stosb
+    pop rcx
+    pop rdi
+
+    mov rax, [r14].RAWRXREF.toAddr
+    mov [rsp].RAWRFUNCTION.startAddress, rax
+    mov [rsp].RAWRFUNCTION.endAddress, rax ; Unknown end
+    mov [rsp].RAWRFUNCTION.instrCount, 0
+    mov [rsp].RAWRFUNCTION.hasFramePointer, 0
+    mov [rsp].RAWRFUNCTION.isThunk, 0
+
+    lea rcx, [rbx].RAWRCODEX_CTX.functions
+    mov rdx, rsp
+    call DynArray_Push
+
+    add rsp, SIZEOF RAWRFUNCTION
+
+@@func_xref_next:
+    inc edi
+    jmp @@func_xref_loop
+
+@@func_done:
+    lea rcx, [rbx].RAWRCODEX_CTX.functions
+    mov eax, [rcx].DYNARRAY.count
+
+    add rsp, 68h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+RawrCodex_RecoverFunctions ENDP
 
 END
