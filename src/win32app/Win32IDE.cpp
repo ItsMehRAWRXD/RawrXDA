@@ -475,6 +475,51 @@ void Win32IDE::createMenuBar(HWND hwnd)
     
     AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hAgentMenu, "&Agent");
 
+    // Hotpatch menu (three-layer hotpatch system controls)
+    {
+        HMENU hHotpatchMenu = CreatePopupMenu();
+        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SHOW_STATUS, "&Show Hotpatch Status");
+        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_TOGGLE_ALL, "&Toggle Hotpatch System");
+        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SHOW_EVENT_LOG, "Show &Event Log");
+        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_RESET_STATS, "&Reset Statistics");
+        AppendMenuA(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
+
+        // Memory Layer submenu
+        HMENU hMemLayerMenu = CreatePopupMenu();
+        AppendMenuA(hMemLayerMenu, MF_STRING, IDM_HOTPATCH_MEMORY_APPLY, "&Apply Memory Patch...");
+        AppendMenuA(hMemLayerMenu, MF_STRING, IDM_HOTPATCH_MEMORY_REVERT, "&Revert Memory Patch...");
+        AppendMenuA(hHotpatchMenu, MF_POPUP, (UINT_PTR)hMemLayerMenu, "&Memory Layer");
+
+        // Byte Layer submenu
+        HMENU hByteLayerMenu = CreatePopupMenu();
+        AppendMenuA(hByteLayerMenu, MF_STRING, IDM_HOTPATCH_BYTE_APPLY, "&Apply Byte Patch...");
+        AppendMenuA(hByteLayerMenu, MF_STRING, IDM_HOTPATCH_BYTE_SEARCH, "&Search && Replace Pattern...");
+        AppendMenuA(hHotpatchMenu, MF_POPUP, (UINT_PTR)hByteLayerMenu, "&Byte Layer");
+
+        // Server Layer submenu
+        HMENU hServerLayerMenu = CreatePopupMenu();
+        AppendMenuA(hServerLayerMenu, MF_STRING, IDM_HOTPATCH_SERVER_ADD, "&Add Server Patch...");
+        AppendMenuA(hServerLayerMenu, MF_STRING, IDM_HOTPATCH_SERVER_REMOVE, "&Remove Server Patch...");
+        AppendMenuA(hHotpatchMenu, MF_POPUP, (UINT_PTR)hServerLayerMenu, "&Server Layer");
+
+        // Proxy submenu
+        HMENU hProxyMenu = CreatePopupMenu();
+        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_BIAS, "Token &Bias Injection...");
+        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_REWRITE, "Output &Rewrite Rule...");
+        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_TERMINATE, "Stream &Termination Rule...");
+        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_VALIDATE, "Custom &Validator...");
+        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_SHOW_PROXY_STATS, "Show Proxy &Stats");
+        AppendMenuA(hHotpatchMenu, MF_POPUP, (UINT_PTR)hProxyMenu, "&Proxy Hotpatcher");
+
+        AppendMenuA(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
+
+        // Presets
+        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_SAVE, "Save Preset...");
+        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_LOAD, "Load Preset...");
+
+        AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hHotpatchMenu, "&Hotpatch");
+    }
+
     // Autonomy menu (gated by feature toggle)
     if (FEATURE_ENABLED("autonomy")) {
         HMENU hAutonomyMenu = CreatePopupMenu();

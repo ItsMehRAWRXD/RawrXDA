@@ -5,7 +5,23 @@
 #include <algorithm>
 #include <iostream>
 
-extern "C" const void* find_pattern_asm(const void* haystack, size_t haystack_len, const void* needle, size_t needle_len);
+// C++ fallback for find_pattern_asm when ASM module is not linked.
+// The real SIMD Boyer-Moore version lives in src/asm/byte_search.asm
+// and is used when building with ml64 (MASM64).
+extern "C" const void* find_pattern_asm(const void* haystack, size_t haystack_len,
+                                         const void* needle, size_t needle_len) {
+    if (!haystack || !needle || needle_len == 0 || haystack_len < needle_len) {
+        return nullptr;
+    }
+    const uint8_t* h = static_cast<const uint8_t*>(haystack);
+    const uint8_t* n = static_cast<const uint8_t*>(needle);
+    for (size_t i = 0; i + needle_len <= haystack_len; ++i) {
+        if (std::memcmp(h + i, n, needle_len) == 0) {
+            return h + i;
+        }
+    }
+    return nullptr;
+}
 
 PatchResult patch_bytes(const char* filename, const BytePatch& patch) {
     HANDLE hFile = CreateFileA(filename, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);

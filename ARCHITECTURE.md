@@ -1,26 +1,259 @@
-# RawrXD Architecture — v7.6.0 (Stable)
+# RawrXD Architecture — v14.2.0
 
-> Governed Agent Execution Platform with History, Replay, Failure Intelligence, Adaptive Policy, and Explainable LLM Routing
+> Advanced GGUF Model Loader, Live Hotpatching IDE, and Agentic Execution Platform
 
 ---
 
 ## 1. System Overview
 
-RawrXD is a **local-first, deterministic agentic platform** that loads GGUF models directly and provides multi-agent orchestration with full governance. It runs entirely on the user's machine — no cloud dependencies, no telemetry, no external API calls required.
+RawrXD is a **local-first, zero-telemetry agentic platform** that loads GGUF models
+directly and provides multi-agent orchestration with full governance. It runs entirely
+on the user's machine — no cloud dependencies required.
 
 **Three build targets** share a common agentic core:
 
 | Target | Type | Purpose |
 |--------|------|---------|
 | `RawrEngine` | Console + HTTP | CLI REPL + REST API on port 8080 |
-| `rawrxd-monaco-gen` | Codegen tool | Generates Vite/Monaco/Tailwind React IDEs |
-| `RawrXD-Win32IDE` | Win32 GUI | Full native IDE with Direct2D rendering |
+| `rawrxd-monaco-gen` | Codegen tool | Generates Vite / Monaco / Tailwind React IDEs |
+| `RawrXD-Win32IDE` | Win32 GUI | Full native IDE with Direct2D, three-layer hotpatching |
 
-**Build requirements:** CMake 3.20+, C++20, MinGW GCC 15+ or MSVC 2022.
+**Requirements:** CMake 3.20+, C++20, MinGW GCC 15+ or MSVC 2022, Windows SDK.
+MASM64 (`ml64.exe`) optional for ASM kernel acceleration.
 
 ---
 
-## 2. Execution Model
+## 2. Directory Layout
+
+```
+src/
+├── main.cpp                          # RawrEngine entry point
+├── stubs.cpp                         # Platform stubs (linker)
+├── agentic_engine.cpp                # Core agentic loop
+├── subagent_core.cpp                 # Sub-agent dispatch
+├── agent_history.cpp                 # Append-only JSONL recorder
+├── agent_policy.cpp                  # Adaptive policy engine
+├── agent_explainability.cpp          # Explainable LLM routing
+├── cpu_inference_engine.cpp          # CPU-only transformer inference
+├── memory_core.cpp                   # Memory arena management
+├── hot_patcher.cpp                   # Legacy hotpatch shim
+├── streaming_gguf_loader.cpp         # Streaming GGUF file loader
+├── gguf_loader.cpp / gguf_vocab_resolver.cpp
+├── model_source_resolver.cpp         # HuggingFace + local path resolution
+├── compression_interface.cpp         # Codec abstraction
+├── monaco_gen.cpp                    # React IDE generator entry
+│
+├── engine/                           # Core inference engine
+│   ├── gguf_core.cpp                 # GGUF format parser
+│   ├── inference_kernels.cpp         # SIMD-optimized kernel dispatch
+│   ├── transformer.cpp               # Transformer forward pass
+│   ├── bpe_tokenizer.cpp             # Byte-pair encoding tokenizer
+│   ├── sampler.cpp                   # Top-k / top-p / temperature sampling
+│   ├── rawr_engine.cpp               # High-level engine API
+│   ├── core_generator.cpp            # Token generation loop
+│   └── react_ide_generator.cpp       # Monaco IDE React codegen
+│
+├── codec/
+│   ├── compression.cpp               # zlib / DEFLATE wrappers
+│   └── brutal_gzip.cpp               # Raw gzip stream handler
+│
+├── core/                             # Shared subsystems
+│   ├── streaming_engine_registry.cpp # Multi-engine hot-swap registry
+│   ├── gpu_backend_bridge.cpp        # GPU ↔ CPU bridge abstraction
+│   ├── enterprise_license.cpp        # License gate logic (Phase 17)
+│   ├── enterprise_license_stubs.cpp  # Stub license endpoints
+│   ├── multi_response_engine.cpp     # Parallel inference aggregator
+│   ├── flash_attention.cpp           # Flash-attention kernel
+│   ├── execution_scheduler.cpp       # DAG-based task scheduler
+│   ├── execution_governor.cpp        # Rate-limiting + quota enforcement
+│   ├── agent_safety_contract.cpp     # Safety invariants
+│   ├── deterministic_replay.cpp      # Replay engine (Phase 5)
+│   ├── confidence_gate.cpp           # Confidence threshold gating
+│   ├── swarm_coordinator.cpp         # Distributed swarm coordinator (Phase 11)
+│   ├── swarm_worker.cpp              # Swarm worker process
+│   ├── swarm_network_stubs.cpp       # Network transport stubs
+│   ├── native_debugger_engine.cpp    # Native debugger engine (Phase 12)
+│   ├── debug_engine_stubs.cpp        # Debugger platform stubs
+│   │
+│   ├── model_memory_hotpatch.hpp/cpp # Layer 1: Memory hotpatching (VirtualProtect)
+│   ├── byte_level_hotpatcher.hpp/cpp # Layer 2: Byte-level GGUF patching (mmap)
+│   ├── unified_hotpatch_manager.hpp/cpp # Coordination layer (routes to L1/L2/L3)
+│   └── proxy_hotpatcher.hpp/cpp      # Token bias, rewrite, termination, validators
+│
+├── server/
+│   └── gguf_server_hotpatch.hpp/cpp  # Layer 3: Server request/response patching
+│
+├── agent/                            # Agentic failure recovery
+│   ├── agentic_failure_detector.hpp/cpp  # Detects refusal/hallucination/timeout
+│   └── agentic_puppeteer.hpp/cpp         # Auto-correct failed responses
+│
+├── asm/                              # MASM64 assembly kernels
+│   ├── memory_patch.asm              # VirtualProtect-wrapped memory patching
+│   ├── byte_search.asm               # SIMD Boyer-Moore pattern search
+│   ├── request_patch.asm             # Server request/response interception
+│   ├── inference_core.asm            # AVX2/FMA matrix multiply kernels
+│   ├── flash_attn_avx512.asm         # AVX-512 flash attention
+│   ├── quant_avx2.asm               # Quantization dequant routines
+│   ├── simd_primitives.asm           # SSE/AVX utility primitives
+│   └── tokenizer_fast.asm            # Fast BPE merge kernel
+│
+├── config/
+│   └── IDEConfig.cpp                 # IDE configuration management
+│
+├── utils/
+│   └── ErrorReporter.cpp             # Centralized error reporting
+│
+├── modules/
+│   ├── engine_manager.cpp            # Engine lifecycle manager
+│   ├── vsix_loader_win32.cpp         # Win32 VSIX extension loader
+│   └── codex_ultimate.cpp            # Code generation module
+│
+└── win32app/                         # Win32 GUI IDE (44+ files)
+    ├── main_win32.cpp                # WinMain entry point
+    ├── Win32IDE.h                    # Main class declaration (~3750 lines)
+    ├── Win32IDE.cpp                  # Core impl + menu bar + window proc
+    ├── Win32IDE_Core.cpp             # Window creation + layout
+    ├── Win32IDE_VSCodeUI.cpp         # VS Code-like UI rendering
+    ├── Win32IDE_Sidebar.cpp          # Activity bar + side panels
+    ├── Win32IDE_SyntaxHighlight.cpp  # Multi-language syntax highlighter
+    ├── Win32IDE_Themes.cpp           # Theme engine (30+ themes)
+    ├── Win32IDE_Commands.cpp         # Command palette + routing (170+ commands)
+    ├── Win32IDE_FileOps.cpp          # File I/O, tab management
+    ├── Win32IDE_Debugger.cpp         # Integrated debugger UI
+    ├── Win32IDE_PowerShell.cpp       # PowerShell backend integration
+    ├── Win32IDE_PowerShellPanel.cpp  # Terminal panel UI
+    ├── Win32IDE_Logger.cpp           # IDE logging subsystem
+    ├── Win32IDE_AgenticBridge.cpp    # Agentic engine ↔ IDE bridge
+    ├── Win32IDE_AgentCommands.cpp    # Agent-specific commands
+    ├── Win32IDE_Autonomy.cpp         # Autonomous agent execution
+    ├── Win32IDE_Annotations.cpp      # Code annotations overlay
+    ├── Win32IDE_Session.cpp          # Session save/restore
+    ├── Win32IDE_StreamingUX.cpp      # Streaming token display
+    ├── Win32IDE_ReverseEngineering.cpp # Disassembler / reverse engineering
+    ├── Win32IDE_GhostText.cpp        # Ghost text completion overlay
+    ├── Win32IDE_PlanExecutor.cpp     # Plan execution UI
+    ├── Win32IDE_FailureDetector.cpp  # Failure detection integration
+    ├── Win32IDE_FailureIntelligence.cpp # Failure intelligence UI
+    ├── Win32IDE_Settings.cpp         # Settings panel
+    ├── Win32IDE_LocalServer.cpp      # Embedded HTTP server
+    ├── Win32IDE_BackendSwitcher.cpp  # LLM backend switching
+    ├── Win32IDE_LLMRouter.cpp        # Multi-LLM routing
+    ├── Win32IDE_LSPClient.cpp        # Language Server Protocol client
+    ├── Win32IDE_AsmSemantic.cpp      # ASM semantic analysis
+    ├── Win32IDE_LSP_AI_Bridge.cpp    # LSP ↔ AI integration
+    ├── Win32IDE_MultiResponse.cpp    # Multi-response comparison
+    ├── Win32IDE_ExecutionGovernor.cpp # Execution governance UI
+    ├── Win32IDE_SubAgent.cpp         # Sub-agent panel
+    ├── Win32IDE_AgentHistory.cpp     # Agent history viewer
+    ├── Win32IDE_SwarmPanel.cpp       # Swarm compilation UI (Phase 11)
+    ├── Win32IDE_NativeDebugPanel.cpp # Native debugger panel (Phase 12)
+    ├── Win32IDE_HotpatchPanel.cpp    # Hotpatch UI integration (Phase 14.2)
+    ├── Win32TerminalManager.cpp      # Terminal process management
+    └── TransparentRenderer.cpp       # Direct2D transparent rendering
+```
+
+---
+
+## 3. Build System
+
+```bash
+# Configure (one-time)
+cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+
+# Build all targets
+cmake --build build --config Release
+
+# Build individual targets
+cmake --build build --config Release --target RawrEngine
+cmake --build build --config Release --target RawrXD-Win32IDE
+cmake --build build --config Release --target rawrxd-monaco-gen
+```
+
+### Link Libraries (Win32IDE)
+
+```
+comctl32 comdlg32 shell32 ole32 oleaut32 uuid shlwapi psapi
+dbghelp dbgeng winhttp ws2_32 winmm gdi32 user32 d2d1 dwrite
+d3d11 dcomp d3dcompiler dwmapi advapi32 crypt32 gomp
+```
+
+---
+
+## 4. Three-Layer Hotpatch Architecture
+
+The hotpatch system modifies model behavior at runtime without reloading.
+All three layers coordinate through `UnifiedHotpatchManager`.
+
+```
+┌─────────────────────────────────────────────────────┐
+│              UnifiedHotpatchManager                  │
+│  (Routes patches, tracks stats, preset save/load)   │
+├─────────────┬──────────────┬────────────────────────┤
+│  Layer 1    │  Layer 2     │  Layer 3               │
+│  Memory     │  Byte-Level  │  Server                │
+│  Hotpatch   │  Hotpatch    │  Hotpatch              │
+├─────────────┼──────────────┼────────────────────────┤
+│ VirtualProt │ CreateFileMap│ Request/Response        │
+│ Direct RAM  │ mmap GGUF    │ transform callbacks     │
+│ Tensor patch│ Pattern scan │ Injection points:       │
+│             │ XOR/rotate   │  PreReq PostReq         │
+│             │ swap/reverse │  PreRes PostRes          │
+│             │              │  StreamChunk             │
+└─────────────┴──────────────┴────────────────────────┘
+        │               │               │
+        ▼               ▼               ▼
+┌───────────────────────────────────────────────────┐
+│              ProxyHotpatcher                       │
+│  Token bias injection, output rewriting,           │
+│  stream termination, custom validators             │
+│  (function pointers, NOT std::function)            │
+└───────────────────────────────────────────────────┘
+```
+
+### Key Types
+
+```cpp
+// Structured result — no exceptions
+struct PatchResult {
+    bool success; const char* detail; int errorCode;
+    static PatchResult ok(const char* msg);
+    static PatchResult error(const char* msg, int code);
+};
+
+// Event ring buffer for poll-based notification
+struct HotpatchEvent {
+    enum Type : uint8_t { MemoryPatchApplied, ..., PresetSaved };
+    Type type; uint64_t timestamp; uint64_t sequenceId; const char* detail;
+};
+```
+
+### IDE Integration (Phase 14.2)
+
+Command IDs 9001–9017 map hotpatch operations to the Win32IDE:
+
+| ID | Command | Layer |
+|----|---------|-------|
+| 9001 | Show Status | All |
+| 9002 | Toggle System | All |
+| 9003 | Apply Memory Patch | Layer 1 |
+| 9004 | Revert Memory Patch | Layer 1 |
+| 9005 | Apply Byte Patch | Layer 2 |
+| 9006 | Search & Replace | Layer 2 |
+| 9007 | Add Server Patch | Layer 3 |
+| 9008 | Remove Server Patch | Layer 3 |
+| 9009 | Token Bias | Proxy |
+| 9010 | Output Rewrite | Proxy |
+| 9011 | Stream Termination | Proxy |
+| 9012 | Custom Validator | Proxy |
+| 9013 | Save Preset | All |
+| 9014 | Load Preset | All |
+| 9015 | Show Event Log | All |
+| 9016 | Reset Stats | All |
+| 9017 | Show Proxy Stats | Proxy |
+
+---
+
+## 5. Execution Model
 
 ```
 User Request
@@ -34,400 +267,104 @@ User Request
        ▼
 ┌──────────────────────────────────────────────────┐
 │              SubAgentManager                      │
-│                                                   │
 │  ┌─────────┐  ┌───────────┐  ┌────────────────┐ │
 │  │ SubAgent│  │   Chain   │  │  HexMag Swarm  │ │
 │  │ (single)│  │(sequential)│  │  (parallel)    │ │
 │  └─────────┘  └───────────┘  └────────────────┘ │
-│                                                   │
 │  ┌─────────────────────────────────────────────┐ │
-│  │ AgentHistoryRecorder (append-only JSONL)    │ │  (Phase 5)
+│  │ AgentHistoryRecorder (append-only JSONL)    │ │
 │  └─────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────────────────┐
+│         Failure Recovery Pipeline                 │
+│  ┌─────────────────┐  ┌────────────────────────┐ │
+│  │ FailureDetector  │  │ AgenticPuppeteer       │ │
+│  │ refusal, timeout │→│ auto-correct, retry    │ │
+│  │ hallucination    │  │ proxy rewrite          │ │
+│  └─────────────────┘  └────────────────────────┘ │
 └──────────────────────────────────────────────────┘
 ```
 
-### Execution Primitives
+---
 
-- **SubAgent** — A single inference task with lifecycle: `Pending → Running → Completed|Failed|Cancelled`
-- **Chain** — Sequential pipeline where each step's output feeds the next step's input via `{{input}}` template substitution
-- **HexMag Swarm** — Parallel fan-out of N tasks across up to `maxParallel` threads, with configurable merge strategies (`concatenate`, `vote`, `summarize`, custom prompt)
-- **Tool Dispatch** — Automatic detection and execution of tool calls in model output (subagent spawning, todo lists, chain invocation, swarm launch)
+## 6. Win32IDE Command Architecture
 
-### Threading Model
+The Win32IDE uses a VS Code-style command palette (Ctrl+Shift+P) with
+170+ registered commands across these ID ranges:
 
-- One `std::thread` per SubAgent execution
-- Swarms use a semaphore pattern (`condition_variable` + atomic counter) to cap parallelism
-- All shared state protected by `std::mutex` / `std::lock_guard`
-- No recursive locks. No manual unlock. No `std::function` in hot paths.
+| Range | Category |
+|-------|----------|
+| 1000–1999 | File operations |
+| 2000–2999 | Edit operations |
+| 3000–3999 | View / panels |
+| 4000–4099 | Terminal |
+| 4100–4399 | Agent commands |
+| 5000–5999 | Tools / diagnostics |
+| 6000–6999 | Modules / extensions |
+| 7000–7999 | Help |
+| 8000–8999 | Git integration |
+| 9000–9999 | Hotpatch system |
+
+Command routing: `routeCommand()` in `Win32IDE_Commands.cpp` dispatches
+by ID range, each range calling its category handler.
 
 ---
 
-## 3. History & Replay (Phase 5)
+## 7. Rendering Pipeline
 
-**File:** `agent_history.h/cpp`
-
-Every agentic operation emits an `AgentEvent` into an append-only log:
-
-```
-AgentEvent
-├── id              (auto-incrementing int64)
-├── eventType       (16 types: agent_spawn, chain_step, swarm_merge, etc.)
-├── sessionId       (process run identifier)
-├── timestampMs     (epoch UTC)
-├── durationMs      (operation duration)
-├── agentId         (SubAgent ID)
-├── parentId        (parent agent/session)
-├── description     (human-readable summary)
-├── input/output    (truncated to configurable max bytes)
-├── metadata        (JSON blob — tool name, strategy, step index)
-├── success         (bool)
-└── errorMessage    (non-empty on failure)
-```
-
-**Persistence:** JSONL files in `--history-dir` (default: `./history/`). One JSON object per line, append-only. Loaded into memory on startup.
-
-**Query:** `HistoryQuery` supports filtering by session, agent, event type, parent, time range, limit/offset.
-
-**Replay:** Re-executes a previously recorded chain or swarm from its event timeline via `SubAgentManager`. Supports dry-run mode.
-
-**Retention:** Configurable via `setRetentionDays()`. `purgeExpired()` removes old events.
+- **Direct2D** for text rendering, syntax highlighting, ghost text overlay
+- **DirectWrite** for font metrics, subpixel positioning
+- **D3D11** compositing layer for transparent overlays
+- **DirectComposition** for smooth scrolling and panel transitions
+- **GDI fallback** for standard Win32 controls (menus, dialogs, status bar)
 
 ---
 
-## 4. Adaptive Intelligence & Policy (Phase 7)
+## 8. Phase History
 
-**File:** `agent_policy.h/cpp`
-
-### Design Philosophy
-
-> "iptables for agent behavior" — explicit, versioned, auditable, human-editable rules.
-> No ML. No RL. No opaque scoring. The human is always the decision authority.
-
-### Policy Schema
-
-```
-AgentPolicy
-├── id / name / description / version
-├── PolicyTrigger
-│   ├── eventType          (match specific event types)
-│   ├── failureReason      (substring match on errors)
-│   ├── taskPattern        (substring match on description)
-│   ├── toolName           (match specific tools)
-│   ├── failureRateAbove   (threshold from heuristics)
-│   └── minOccurrences     (data sufficiency requirement)
-├── PolicyAction
-│   ├── maxRetries / retryDelayMs
-│   ├── preferChainOverSwarm
-│   ├── reduceParallelism
-│   ├── timeoutOverrideMs
-│   ├── confidenceThreshold
-│   ├── addValidationStep / validationPrompt
-│   └── customAction
-├── enabled / requiresUserApproval / priority
-└── createdAt / modifiedAt / createdBy / appliedCount
-```
-
-### How Policies Affect Execution
-
-1. **Before `spawnSubAgent()`** — PolicyEngine evaluates trigger conditions. Matched actions logged.
-2. **Before `executeChain()`** — Policy evaluation informs chain configuration.
-3. **Before `executeSwarm()`** — Policies can:
-   - Reduce `maxParallel` (e.g., resource contention detected)
-   - Override `timeoutMs` (e.g., slow operations observed)
-   - **Redirect swarm → chain** (if `preferChainOverSwarm` is set)
-
-### Heuristic Computation
-
-`PolicyEngine::computeHeuristics()` scans the full event history and produces per-event-type and per-tool statistics:
-
-- **Success rate** (success / total)
-- **Avg / P95 duration** (from all events with duration > 0)
-- **Top failure reasons** (grouped and ranked by count)
-
-### Suggestion Generation
-
-Four deterministic algorithms, each guarded against duplicates:
-
-| # | Trigger | Suggested Action | Threshold |
-|---|---------|-----------------|-----------|
-| 1 | Success rate < 70% | Add retry (max 2, 1s delay) | ≥5 events |
-| 2 | P95 duration > 30s | Extend timeout to P95 × 1.5 | ≥5 events |
-| 3 | Swarm success < 80% | Prefer chain over swarm | ≥3 events |
-| 4 | Agent success 50–85% | Add validation sub-agent | ≥10 events |
-
-Every suggestion includes: rationale (human-readable), estimated improvement (0–1.0), supporting event count, affected event types.
-
-**Critical:** Suggestions are **never auto-applied**. The user must explicitly `/policy accept <id>` or click Accept in the UI.
-
-### Export / Import
-
-Policies serialize to portable JSON. Teams can share policies via:
-- CLI: `/policy export <file>` / `/policy import <file>`
-- HTTP: `GET /api/policies/export` / `POST /api/policies/import`
-- React: Download/Upload buttons in PolicyPanel
-
-Imported policies get fresh UUIDs and `createdBy: "import"` attribution.
+| Phase | Version | Key Addition |
+|-------|---------|-------------|
+| 1–4 | v1–v4 | Core IDE, agentic engine, failure detection |
+| 5 | v5 | Deterministic replay, history recording |
+| 7 | v7 | Policy engine, adaptive governance |
+| 9 | v9 | Streaming engine registry, multi-response |
+| 11 | v10 | Distributed swarm compilation |
+| 12 | v11 | Native debugger engine, SSA lifting |
+| 13 | v12 | Ghost text, plan executor |
+| 14 | v13 | Reverse engineering, ASM semantic analysis |
+| 14.5 | v13.5 | Flash attention, execution governor |
+| 15 | v14 | LSP client, LLM router, backend switcher |
+| 16 | v14.1 | SSA lifting + recursive descent |
+| 17 | v14.1 | Type recovery, data flow, license gates |
+| 14.1-stable | v14.1.0 | ASM fixes, hotpatch core file creation |
+| **14.2** | **v14.2.0** | **Hotpatch UI integration, docs consolidation** |
 
 ---
 
-## 5. Inference Stack (Phases 8B–9B)
+## 9. Threading Model
 
-### Data Flow
-
-```
-UI / CLI / HTTP Request
-       │
-       ▼
-┌──────────────────────────────┐
-│  Explainability (Phase 8A)   │  Observability hooks, decision audit
-└─────────────┬────────────────┘
-              │
-              ▼
-┌──────────────────────────────┐
-│  LLM Router (Phase 8C)       │  Task classification → capability scoring
-│  routeWithIntelligence()     │  → failure demotion → fallback
-└─────────────┬────────────────┘
-              │
-              ▼
-┌──────────────────────────────┐
-│  Backend Switcher (Phase 8B) │  Active backend dispatch
-│  routeInferenceRequest()     │  5 backends: LocalGGUF, Ollama, OpenAI, Claude, Gemini
-└─────────────┬────────────────┘
-              │
-              ▼
-┌──────────────────────────────┐
-│  Execution Engine            │
-│  ├── Local GGUF (CPU)        │
-│  ├── GPU-DX12-Compute (9B)   │  ← DX12 dispatch, VRAM, fence sync
-│  ├── Ollama (local GPU)      │
-│  ├── OpenAI (remote API)     │
-│  ├── Claude (remote API)     │
-│  └── Gemini (remote API)     │
-└──────────────────────────────┘
-```
-
-### Backend Switcher (Phase 8B)
-
-**Files:** `ai_backend.h` (RawrEngine), `Win32IDE_BackendSwitcher.cpp` (Win32IDE)
-
-Runtime-selectable AI backends without touching inference logic:
-
-- **5 backends** — LocalGGUF (default), Ollama, OpenAI, Claude, Gemini
-- **Config per backend** — endpoint, model, API key, timeout, max tokens, temperature
-- **Health probing** — async HTTP health checks with latency measurement
-- **Persistence** — `backends.json` (RawrEngine) / session-relative config (Win32IDE)
-- **Thread-safe** — `std::mutex` + `std::lock_guard` on all state
-
-### LLM Router (Phase 8C)
-
-**File:** `Win32IDE_LLMRouter.cpp` (1,040 lines)
-
-Task-based intelligent routing that sits above the Backend Switcher:
-
-- **8 task types** — Chat, CodeGeneration, CodeReview, CodeEdit, Planning, ToolExecution, Research, General
-- **Capability scoring** — per-backend profiles (context window, tool support, cost tier, quality)
-- **Failure demotion** — consecutive failures trigger automatic backend demotion
-- **Explicit fallback** — auditable, logged, never silent; original active backend always restored
-- **Passthrough mode** — when disabled, zero overhead
-- **Persistence** — `router.json` for task preferences and capability overrides
-
-Full reference: [`LLM_ROUTER.md`](LLM_ROUTER.md)
-
-### GPU Backend Bridge (Phase 9B)
-
-**Files:** `src/core/gpu_backend_bridge.h` (180 lines), `src/core/gpu_backend_bridge.cpp` (860 lines)
-
-DirectX 12 compute bridge connecting the streaming engine registry to actual GPU hardware:
-
-- **Dynamic DX12 loading** — `LoadLibrary("d3d12.dll")` / `LoadLibrary("dxgi.dll")`, no compile-time DX12 headers needed (MinGW-safe)
-- **Best adapter selection** — DXGI factory enumeration, picks GPU with most dedicated VRAM
-- **Compute command queue** — `D3D12_COMMAND_LIST_TYPE_COMPUTE`, fence synchronization, async dispatch
-- **COM vtable wrappers** — all DX12 API calls go through vtable index (no `d3d12.h` include)
-- **GPU capability detection** — vendor ID, shader model, FP16/INT8/FP64 support, wavefront size
-- **VRAM tracking** — logical allocation tracking, quota enforcement
-- **Registry integration** — registered as "GPU-DX12-Compute" engine with live function pointers
-- **Graceful fallback** — if DX12 unavailable, falls back to CPU AVX-512 without crash
-- **Thread-safe** — `std::mutex` + `std::atomic` on all state
-
-Namespace: `RawrXD::GPU`, singleton: `getGPUBackendBridge()`
+- `std::mutex` + `std::lock_guard` — no recursive locks
+- `std::atomic` for statistics counters
+- OS threads (`CreateThread`) for terminal processes
+- Event ring buffer + poll for cross-thread notification
+- No `std::function` in hotpatch paths — function pointers only
 
 ---
 
-## 6. Surfaces
+## 10. Critical Rules
 
-### CLI REPL (RawrEngine)
-
-Full control plane with structured output:
-
-| Command | Phase | Purpose |
-|---------|-------|---------|
-| `/chat <msg>` | Core | Chat with model |
-| `/subagent <prompt>` | P4 | Spawn sub-agent |
-| `/chain <s1> \| <s2>` | P4 | Sequential pipeline |
-| `/swarm <p1> \| <p2>` | P4 | Parallel fan-out |
-| `/agents` | P4 | List all sub-agents |
-| `/history [agent_id]` | P5 | Query event log |
-| `/replay <agent_id>` | P5 | Re-execute from history |
-| `/stats` | P5 | History statistics |
-| `/policies` | P7 | List active policies |
-| `/suggest` | P7 | Generate suggestions from heuristics |
-| `/policy accept <id>` | P7 | Accept a suggestion |
-| `/policy reject <id>` | P7 | Reject a suggestion |
-| `/policy export <file>` | P7 | Export to JSON |
-| `/policy import <file>` | P7 | Import from JSON |
-| `/heuristics` | P7 | Compute & display heuristics |
-| `/backend list` | P8B | List registered backends |
-| `/backend use <id>` | P8B | Switch active backend |
-| `/backend status` | P8B | Show active backend info |
-
-### HTTP API (port 8080)
-
-| Method | Path | Phase |
-|--------|------|-------|
-| `GET` | `/status` | Core |
-| `POST` | `/complete` | Core |
-| `POST` | `/complete/stream` | Core |
-| `POST` | `/api/chat` | Core |
-| `POST` | `/api/subagent` | P4 |
-| `POST` | `/api/chain` | P4 |
-| `POST` | `/api/swarm` | P4 |
-| `GET` | `/api/agents` | P4 |
-| `GET` | `/api/agents/status` | P4 |
-| `GET/POST` | `/api/agents/history` | P5 |
-| `POST` | `/api/agents/replay` | P5 |
-| `GET/POST` | `/api/policies` | P7 |
-| `GET` | `/api/policies/suggestions` | P7 |
-| `POST` | `/api/policies/apply` | P7 |
-| `POST` | `/api/policies/reject` | P7 |
-| `GET` | `/api/policies/export` | P7 |
-| `POST` | `/api/policies/import` | P7 |
-| `GET` | `/api/policies/heuristics` | P7 |
-| `GET` | `/api/policies/stats` | P7 |
-| `GET` | `/api/backends` | P8B |
-| `GET` | `/api/backends/status` | P8B |
-| `POST` | `/api/backends/use` | P8B |
-| `GET` | `/api/router/status` | P8C |
-| `GET` | `/api/router/decision` | P8C |
-| `GET` | `/api/router/capabilities` | P8C |
-| `POST` | `/api/router/route` | P8C |
-
-### React IDE (rawrxd-monaco-gen)
-
-Generates a complete Vite + Monaco + Tailwind project with:
-- Code editor with AI completions
-- SubAgent control panel
-- History & Replay panel
-- **Policy panel** with Suggestions / Policies / Heuristics tabs
-- **Backend panel** with backend list, switching, health status
-- **Router panel** with stats, capabilities, dry-run test routing
-
-### Win32 GUI IDE (RawrXD-Win32IDE)
-
-Native Win32 application with Direct2D/DirectWrite rendering:
-- Full editor with syntax highlighting, ghost text, annotations
-- Agent bridge to SubAgentManager
-- Failure intelligence and detection
-- Autonomy system with plan execution
-- Agent history integration
-- Backend Switcher with 5-backend support + health probing
-- LLM Router with task-based intelligent routing + explicit fallback
+1. **No exceptions** — all errors via `PatchResult::ok()` / `PatchResult::error()`
+2. **No STL allocators** inside patch code paths
+3. **All pointer math** uses `uintptr_t`
+4. **Factory results** — `PatchResult::ok("msg")`, never `return {true,"ok",0}`
+5. **Header isolation** — no circular includes
+6. **NO SOURCE FILE IS TO BE SIMPLIFIED** — all files are canonical
 
 ---
 
-## 7. File Map (Active Build Targets)
+## 11. Archived Documentation
 
-### Core Engine (shared by all targets)
-```
-src/agentic_engine.{h,cpp}       — Model inference wrapper
-src/subagent_core.{h,cpp}        — SubAgent, Chain, Swarm orchestration
-src/agent_history.{h,cpp}        — Event log, query, replay (Phase 5)
-src/agent_policy.{h,cpp}         — Policy engine, heuristics, suggestions (Phase 7)
-src/ai_backend.h                  — Backend registry & switcher (Phase 8B, header-only)
-src/complete_server.{h,cpp}      — HTTP server with all API routes
-src/cpu_inference_engine.{h,cpp}  — GGUF model loading and token generation
-src/main.cpp                      — RawrEngine entry point (REPL + HTTP)
-```
-
-### React Codegen
-```
-src/monaco_gen.cpp                — CLI entry point for codegen
-src/engine/react_ide_generator.{h,cpp} — Generates full React IDE projects
-```
-
-### Win32 IDE
-```
-src/win32app/Win32IDE.{h,cpp}     — Main window and message loop
-src/win32app/Win32IDE_Core.cpp    — Core editor functionality
-src/win32app/Win32IDE_SubAgent.{h,cpp} — SubAgent bridge
-src/win32app/Win32IDE_AgentHistory.cpp — History integration
-src/win32app/Win32IDE_FailureIntelligence.cpp — Failure detection
-src/win32app/Win32IDE_Autonomy.{h,cpp} — Autonomous plan execution
-src/win32app/Win32IDE_PlanExecutor.cpp — Plan step execution
-src/win32app/Win32IDE_BackendSwitcher.cpp — 5-backend switcher (Phase 8B)
-src/win32app/Win32IDE_LLMRouter.cpp — Task-based routing (Phase 8C)
-+ 18 more Win32IDE_*.cpp files
-```
-
----
-
-## 8. Design Invariants
-
-These are **non-negotiable** properties of the system:
-
-1. **No exceptions in core paths** — Structured results (`PatchResult`, `PolicyEvalResult`) everywhere
-2. **No global state** — All engines are injected via pointers (`setPolicyEngine()`, `setHistoryRecorder()`)
-3. **No autonomy creep** — Policies suggest, humans decide. `requiresUserApproval` defaults to `true`
-4. **No circular includes** — Strict header dependency ordering: `policy.h` → `history.h` → `subagent.h`
-5. **Thread-safe by construction** — `std::mutex` + `std::lock_guard` on all shared containers
-6. **Append-only history** — Events are never modified or deleted (only purged by retention policy)
-7. **Platform-independent core** — `subagent_core`, `agent_history`, `agent_policy` have zero platform dependencies
-
----
-
-## 9. Build
-
-```bash
-# Configure
-cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -B build
-
-# Build all targets
-cmake --build build --config Release -j12
-
-# Artifacts
-build/RawrEngine.exe              # Console + HTTP
-build/bin/rawrxd-monaco-gen.exe   # React IDE generator
-build/bin/RawrXD-Win32IDE.exe     # Win32 GUI IDE
-```
-
-### Runtime Directories
-
-| Flag | Default | Purpose |
-|------|---------|---------|
-| `--history-dir` | `./history/` | JSONL event logs |
-| `--policy-dir` | `./policies/` | Policy + suggestion JSON |
-| `--model` | (none) | Path to GGUF model file |
-| `--port` | `8080` | HTTP server port |
-
----
-
-## 10. Phase History
-
-| Phase | Milestone | Key Deliverable |
-|-------|-----------|------------------|
-| 1–3 | Core inference + surfaces | GGUF loading, tokenization, HTTP, CLI, Win32 IDE |
-| 4 | Multi-agent orchestration | SubAgent, Chain, Swarm, tool dispatch, portable core |
-| 5 | Memory | Append-only event history, timeline query, session replay |
-| 6 | Failure intelligence | Detection, classification, retry strategies |
-| 7 | Governance | Policy engine, heuristics, suggestions, export/import |
-| 8A | Command Palette polish | 159 commands, MRU ordering, category filters, HFONT leak fix |
-| 8B | Backend Switcher | 5-backend abstraction, health probing, HTTP endpoints, config persistence |
-| 8C | LLM Router | Task classification, capability scoring, failure demotion, explainable fallback |
-| 9.1 | K-quant dequantization | Q2_K/Q3_K/Q4_K/Q5_K/Q6_K/F16 MASM AVX-512 kernels |
-| 9A | LSP Client Bridge | clangd/pyright/typescript-language-server integration |
-| 9B | GPU Backend Bridge | DX12 compute dispatch, VRAM management, streaming engine registry wiring |
-
-**v7.7.0-phase9b is the GPU execution layer completion.** DX12 bridge + enterprise license stubs integrated.
-
----
-
-*Last updated: v7.7.0-phase9b — February 2026*
+344 legacy `.md` files from phases 1–17 have been moved to `docs/archive/`.
+This single `ARCHITECTURE.md` is the canonical reference.

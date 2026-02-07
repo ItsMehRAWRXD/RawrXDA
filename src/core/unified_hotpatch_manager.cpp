@@ -2,14 +2,12 @@
 // Routes patches to proper layer, tracks stats, preset save/load via manual JSON.
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #include "unified_hotpatch_manager.hpp"
+#include "../server/gguf_server_hotpatch.hpp"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <cstring>
 #include <cstdio>
 #include <fstream>
-
-// Forward declarations from server layer
-struct ServerHotpatch;
 
 // ---------------------------------------------------------------------------
 // Singleton

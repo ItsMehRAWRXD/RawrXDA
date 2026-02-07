@@ -109,16 +109,12 @@ bool ProxyHotpatcher::check_termination(const char* output, size_t outputLen, si
             if (seqLen > 0 && outputLen >= seqLen) {
                 // Search for stop sequence in the last seqLen*2 bytes (near-end matching)
                 size_t searchStart = (outputLen > seqLen * 2) ? (outputLen - seqLen * 2) : 0;
-                const char* found = static_cast<const char*>(
-                    std::memmem(output + searchStart, outputLen - searchStart,
-                                rule.stopSequence, seqLen));
-                // memmem may not be available on MSVC; use manual search
-                if (!found) {
-                    for (size_t i = searchStart; i + seqLen <= outputLen; ++i) {
-                        if (std::memcmp(output + i, rule.stopSequence, seqLen) == 0) {
-                            found = output + i;
-                            break;
-                        }
+                const char* found = nullptr;
+                // Manual search (memmem not available on MSVC/MinGW)
+                for (size_t i = searchStart; i + seqLen <= outputLen; ++i) {
+                    if (std::memcmp(output + i, rule.stopSequence, seqLen) == 0) {
+                        found = output + i;
+                        break;
                     }
                 }
                 if (found) {

@@ -3697,4 +3697,53 @@ private:
 
     // Phase 12 state
     bool m_phase12Initialized = false;
+
+    // =========================================================================
+    //              PHASE 14.2 — Hotpatch UI Integration
+    // =========================================================================
+    // Wires the three-layer hotpatch system into the Win32IDE command palette
+    // and menu bar. IDM range: 9001 – 9030
+
+#define IDM_HOTPATCH_SHOW_STATUS        9001
+#define IDM_HOTPATCH_MEMORY_APPLY       9002
+#define IDM_HOTPATCH_MEMORY_REVERT      9003
+#define IDM_HOTPATCH_BYTE_APPLY         9004
+#define IDM_HOTPATCH_BYTE_SEARCH        9005
+#define IDM_HOTPATCH_SERVER_ADD         9006
+#define IDM_HOTPATCH_SERVER_REMOVE      9007
+#define IDM_HOTPATCH_PROXY_BIAS         9008
+#define IDM_HOTPATCH_PROXY_REWRITE      9009
+#define IDM_HOTPATCH_PROXY_TERMINATE    9010
+#define IDM_HOTPATCH_PROXY_VALIDATE     9011
+#define IDM_HOTPATCH_PRESET_SAVE        9012
+#define IDM_HOTPATCH_PRESET_LOAD        9013
+#define IDM_HOTPATCH_SHOW_EVENT_LOG     9014
+#define IDM_HOTPATCH_RESET_STATS        9015
+#define IDM_HOTPATCH_TOGGLE_ALL         9016
+#define IDM_HOTPATCH_SHOW_PROXY_STATS   9017
+
+    // Hotpatch command handlers (implemented in Win32IDE_HotpatchPanel.cpp)
+    void initHotpatchUI();
+    void handleHotpatchCommand(int commandId);
+    void cmdHotpatchShowStatus();
+    void cmdHotpatchMemoryApply();
+    void cmdHotpatchMemoryRevert();
+    void cmdHotpatchByteApply();
+    void cmdHotpatchByteSearch();
+    void cmdHotpatchServerAdd();
+    void cmdHotpatchServerRemove();
+    void cmdHotpatchProxyBias();
+    void cmdHotpatchProxyRewrite();
+    void cmdHotpatchProxyTerminate();
+    void cmdHotpatchProxyValidate();
+    void cmdHotpatchPresetSave();
+    void cmdHotpatchPresetLoad();
+    void cmdHotpatchShowEventLog();
+    void cmdHotpatchResetStats();
+    void cmdHotpatchToggleAll();
+    void cmdHotpatchShowProxyStats();
+
+    // Hotpatch state
+    bool m_hotpatchEnabled = false;
+    bool m_hotpatchUIInitialized = false;
 };

@@ -186,6 +186,9 @@ bool Win32IDE::routeCommand(int commandId) {
     } else if (commandId >= 8000 && commandId < 9000) {
         handleGitCommand(commandId);
         return true;
+    } else if (commandId >= 9000 && commandId < 10000) {
+        handleHotpatchCommand(commandId);
+        return true;
     }
     
     return false;
@@ -1905,6 +1908,27 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_TRANSPARENCY_40,     "Transparency: 40%",               "", "Transparency"});
     m_commandRegistry.push_back({IDM_TRANSPARENCY_CUSTOM, "Transparency: Custom Slider",     "", "Transparency"});
     m_commandRegistry.push_back({IDM_TRANSPARENCY_TOGGLE, "Transparency: Toggle On/Off",     "", "Transparency"});
+
+    // ================================================================
+    // Hotpatch System (9001–9017 range — routed via handleHotpatchCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_HOTPATCH_SHOW_STATUS,      "Hotpatch: Show System Status",                "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_TOGGLE_ALL,       "Hotpatch: Toggle Hotpatch System On/Off",     "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_SHOW_EVENT_LOG,   "Hotpatch: Show Event Log",                    "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_RESET_STATS,      "Hotpatch: Reset All Statistics",              "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_MEMORY_APPLY,     "Hotpatch: Apply Memory Patch (Layer 1)",      "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_MEMORY_REVERT,    "Hotpatch: Revert Memory Patch (Layer 1)",     "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_BYTE_APPLY,       "Hotpatch: Apply Byte Patch (Layer 2)",        "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_BYTE_SEARCH,      "Hotpatch: Search & Replace Pattern (Layer 2)", "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_SERVER_ADD,       "Hotpatch: Add Server Patch (Layer 3)",        "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_SERVER_REMOVE,    "Hotpatch: Remove Server Patch (Layer 3)",     "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_PROXY_BIAS,       "Hotpatch: Token Bias Injection (Proxy)",      "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_PROXY_REWRITE,    "Hotpatch: Output Rewrite Rule (Proxy)",       "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_PROXY_TERMINATE,  "Hotpatch: Stream Termination Rule (Proxy)",   "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_PROXY_VALIDATE,   "Hotpatch: Custom Validator (Proxy)",          "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_SHOW_PROXY_STATS, "Hotpatch: Show Proxy Statistics",             "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_PRESET_SAVE,      "Hotpatch: Save Preset to File",               "", "Hotpatch"});
+    m_commandRegistry.push_back({IDM_HOTPATCH_PRESET_LOAD,      "Hotpatch: Load Preset from File",             "", "Hotpatch"});
 
     m_filteredCommands = m_commandRegistry;
 }

@@ -177,6 +177,17 @@ if(WIN32)
         src/core/debug_engine_stubs.cpp
         src/win32app/Win32IDE_NativeDebugPanel.cpp
         
+        # Three-Layer Hotpatch System (Phase 14.2)
+        src/core/model_memory_hotpatch.cpp
+        src/core/byte_level_hotpatcher.cpp
+        src/core/unified_hotpatch_manager.cpp
+        src/core/proxy_hotpatcher.cpp
+        src/server/gguf_server_hotpatch.cpp
+        src/win32app/Win32IDE_HotpatchPanel.cpp
+        
+        # Agent-Driven Hotpatch Orchestration (Phase 18)
+        src/agent/agentic_hotpatch_orchestrator.cpp
+        
         # Module implementations
         src/modules/vsix_loader_win32.cpp
         src/modules/codex_ultimate.cpp
@@ -197,6 +208,8 @@ if(WIN32)
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/server
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
         ${CMAKE_CURRENT_SOURCE_DIR}/src/win32app
         ${CMAKE_CURRENT_SOURCE_DIR}/src/modules
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
