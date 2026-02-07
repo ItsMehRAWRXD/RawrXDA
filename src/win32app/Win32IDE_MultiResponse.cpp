@@ -95,7 +95,13 @@ void Win32IDE::cmdMultiResponseGenerate() {
     if (!m_multiResponseInitialized) initMultiResponse();
 
     // Use whatever is in the chat input or last user message
-    std::string prompt = getLastUserMessage();
+    std::string prompt;
+    for (auto it = m_chatHistory.rbegin(); it != m_chatHistory.rend(); ++it) {
+        if (it->first == "user" && !it->second.empty()) {
+            prompt = it->second;
+            break;
+        }
+    }
     if (prompt.empty()) {
         appendToOutput("[MultiResponse] No prompt available. Type a question first.",
                        "General", OutputSeverity::Warning);
@@ -426,7 +432,7 @@ void Win32IDE::handleMultiResponseGenerateEndpoint(SOCKET client, const std::str
 }
 
 // GET /api/multi-response/results — get latest session results
-void Win32IDE::handleMultiResponseResultsEndpoint(SOCKET client) {
+void Win32IDE::handleMultiResponseResultsEndpoint(SOCKET client, const std::string& /*sessionId*/) {
     if (!m_multiResponseInitialized) initMultiResponse();
 
     const auto* session = m_multiResponseEngine->getLatestSession();
