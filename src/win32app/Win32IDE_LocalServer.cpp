@@ -433,6 +433,17 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== Phase 9A: LSP Client ==========
+    else if (method == "GET" && path == "/api/lsp/status") {
+        handleLSPStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/lsp/diagnostics") {
+        handleLSPDiagnosticsEndpoint(client);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,

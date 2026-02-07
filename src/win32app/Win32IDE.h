@@ -275,6 +275,19 @@ struct IDETheme {
 #define IDM_LSP_CONFIGURE           5069
 #define IDM_LSP_SAVE_CONFIG         5070
 
+// UX Enhancements & Research Track commands (5071+ range — routed via handleToolsCommand)
+#define IDM_ROUTER_WHY_BACKEND      5071
+#define IDM_ROUTER_PIN_TASK         5072
+#define IDM_ROUTER_UNPIN_TASK       5073
+#define IDM_ROUTER_SHOW_PINS        5074
+#define IDM_ROUTER_SHOW_HEATMAP     5075
+#define IDM_ROUTER_ENSEMBLE_ENABLE  5076
+#define IDM_ROUTER_ENSEMBLE_DISABLE 5077
+#define IDM_ROUTER_ENSEMBLE_STATUS  5078
+#define IDM_ROUTER_SIMULATE         5079
+#define IDM_ROUTER_SIMULATE_LAST    5080
+#define IDM_ROUTER_SHOW_COST_STATS  5081
+
 struct CodeSnippet {
     std::string name;
     std::string description;
@@ -2483,6 +2496,81 @@ private:
         uint64_t backendFallbacks[(size_t)AIBackendType::Count] = {};
     };
 
+    // ---- Cost / latency record (one per routing event) ----
+    struct CostLatencyRecord {
+        LLMTaskType   task              = LLMTaskType::General;
+        AIBackendType backend           = AIBackendType::LocalGGUF;
+        int           latencyMs         = 0;
+        int           costTier          = 0;     // Snapshot of backend's costTier at routing time
+        float         qualityScore      = 0.0f;  // Snapshot of backend's qualityScore
+        uint64_t      epochMs           = 0;
+        bool          fallbackUsed      = false;
+    };
+
+    // ---- Aggregated cost/latency heatmap cell ----
+    struct HeatmapCell {
+        uint64_t      requestCount      = 0;
+        double        totalLatencyMs    = 0.0;
+        double        avgLatencyMs      = 0.0;
+        int           minLatencyMs      = INT_MAX;
+        int           maxLatencyMs      = 0;
+        double        avgCostTier       = 0.0;
+        double        avgQuality        = 0.0;
+    };
+
+    // ---- Per-task backend pin (user override) ----
+    struct TaskBackendPin {
+        LLMTaskType   task              = LLMTaskType::General;
+        AIBackendType pinnedBackend     = AIBackendType::Count;  // Count = not pinned
+        bool          active            = false;
+        std::string   reason;                                     // "User pinned via palette"
+    };
+
+    // ---- Ensemble vote (one backend's response in an ensemble query) ----
+    struct EnsembleVote {
+        AIBackendType backend           = AIBackendType::LocalGGUF;
+        std::string   response;
+        int           latencyMs         = -1;
+        float         confidenceWeight  = 0.0f;  // Derived from qualityScore * viability
+        bool          succeeded         = false;
+    };
+
+    // ---- Ensemble routing decision ----
+    struct EnsembleDecision {
+        LLMTaskType   classifiedTask    = LLMTaskType::General;
+        std::vector<EnsembleVote> votes;
+        std::string   mergedResponse;            // The winning / merged output
+        AIBackendType winnerBackend     = AIBackendType::LocalGGUF;
+        float         winnerConfidence  = 0.0f;
+        int           totalLatencyMs    = 0;     // Wall-clock time for the whole ensemble
+        std::string   strategy;                  // "confidence-weighted", "fastest", "majority"
+        uint64_t      decisionEpochMs   = 0;
+    };
+
+    // ---- Offline routing simulation input ----
+    struct SimulationInput {
+        std::string   prompt;
+        LLMTaskType   expectedTask      = LLMTaskType::General;  // Ground truth (if known)
+    };
+
+    // ---- Offline routing simulation result ----
+    struct SimulationResult {
+        std::vector<SimulationInput> inputs;
+        struct PerInput {
+            std::string   prompt;
+            LLMTaskType   classifiedTask  = LLMTaskType::General;
+            AIBackendType selectedBackend = AIBackendType::LocalGGUF;
+            float         confidence      = 0.0f;
+            std::string   reason;
+            bool          matchedExpected = false;  // Only meaningful when expectedTask is set
+        };
+        std::vector<PerInput> results;
+        int     totalInputs          = 0;
+        int     correctClassifications = 0;   // Count of matchedExpected == true
+        float   classificationAccuracy = 0.0f;
+        std::string summaryText;
+    };
+
     // Router — initialization & lifecycle
     void initLLMRouter();
     void shutdownLLMRouter();
@@ -2526,6 +2614,44 @@ private:
     void resetRouterStats();
     std::string getRouterConfigFilePath() const;
 
+    // UX: "Why this backend?" detailed explanation
+    std::string generateWhyExplanation(const RoutingDecision& decision) const;
+    std::string generateWhyExplanationForLast() const;
+
+    // UX: Per-task backend pinning
+    void pinTaskToBackend(LLMTaskType task, AIBackendType backend, const std::string& reason = "");
+    void unpinTask(LLMTaskType task);
+    void clearAllPins();
+    bool isTaskPinned(LLMTaskType task) const;
+    TaskBackendPin getTaskPin(LLMTaskType task) const;
+    std::string getPinnedTasksString() const;
+
+    // UX: Cost / latency heatmap tracking
+    void recordCostLatency(const RoutingDecision& decision);
+    HeatmapCell getHeatmapCell(LLMTaskType task, AIBackendType backend) const;
+    std::string getCostLatencyHeatmapString() const;
+    std::string getCostStatsString() const;
+
+    // Research: Ensemble routing (multi-backend fan-out)
+    void setEnsembleEnabled(bool enabled);
+    bool isEnsembleEnabled() const;
+    std::string routeWithEnsemble(const std::string& prompt);
+    EnsembleDecision buildEnsembleDecision(LLMTaskType task, const std::string& prompt);
+    std::string selectEnsembleWinner(EnsembleDecision& decision) const;
+    std::string getEnsembleStatusString() const;
+
+    // Research: Offline routing simulation
+    SimulationResult simulateRoutingOffline(const std::vector<SimulationInput>& inputs) const;
+    SimulationResult simulateFromHistory(int maxEvents = 100) const;
+    std::string getSimulationResultString(const SimulationResult& result) const;
+
+    // UX/Research HTTP endpoints
+    void handleRouterWhyEndpoint(SOCKET client);
+    void handleRouterPinsEndpoint(SOCKET client);
+    void handleRouterHeatmapEndpoint(SOCKET client);
+    void handleRouterEnsembleEndpoint(SOCKET client, const std::string& body);
+    void handleRouterSimulateEndpoint(SOCKET client, const std::string& body);
+
     // Router state
     bool m_routerEnabled                                            = false;
     bool m_routerInitialized                                        = false;
@@ -2535,6 +2661,23 @@ private:
     RouterStats m_routerStats                                       = {};
     RoutingDecision m_lastRoutingDecision                           = {};
     std::mutex m_routerMutex;
+
+    // UX Enhancement state — per-task pinning
+    std::array<TaskBackendPin, (size_t)LLMTaskType::Count>          m_taskPins = {};
+
+    // UX Enhancement state — cost / latency heatmap
+    // Indexed as [taskType][backendType]
+    std::array<std::array<HeatmapCell, (size_t)AIBackendType::Count>,
+               (size_t)LLMTaskType::Count>                          m_heatmap = {};
+    std::vector<CostLatencyRecord>                                  m_costLatencyLog;
+    static const size_t MAX_COST_LATENCY_LOG = 2000;
+
+    // Research state — ensemble routing
+    bool m_ensembleEnabled                                          = false;
+    EnsembleDecision m_lastEnsembleDecision                         = {};
+
+    // Research state — last simulation result
+    SimulationResult m_lastSimulationResult                         = {};
 
     // ========================================================================
     // LSP Client Bridge — Phase 9A (Win32IDE_LSPClient.cpp)

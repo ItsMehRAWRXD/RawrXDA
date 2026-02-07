@@ -106,6 +106,7 @@ if(WIN32)
         src/win32app/Win32IDE_LocalServer.cpp
         src/win32app/Win32IDE_BackendSwitcher.cpp
         src/win32app/Win32IDE_LLMRouter.cpp
+        src/win32app/Win32IDE_LSPClient.cpp
         src/win32app/Win32IDE_SubAgent.h
         src/win32app/Win32IDE_SubAgent.cpp
         src/win32app/Win32IDE_AgentHistory.cpp

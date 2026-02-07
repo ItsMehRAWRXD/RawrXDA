@@ -918,6 +918,77 @@ void Win32IDE::handleToolsCommand(int commandId) {
                            "General", OutputSeverity::Info);
             break;
 
+        // ============================================================
+        // LSP Client (5058–5070 range)
+        // ============================================================
+
+        case IDM_LSP_START_ALL:  // 5058
+            startAllLSPServers();
+            break;
+
+        case IDM_LSP_STOP_ALL:  // 5059
+            stopAllLSPServers();
+            appendToOutput("[LSP] All servers stopped.", "General", OutputSeverity::Info);
+            break;
+
+        case IDM_LSP_SHOW_STATUS:  // 5060
+            appendToOutput(getLSPStatusString(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_LSP_GOTO_DEFINITION:  // 5061
+            cmdLSPGotoDefinition();
+            break;
+
+        case IDM_LSP_FIND_REFERENCES:  // 5062
+            cmdLSPFindReferences();
+            break;
+
+        case IDM_LSP_RENAME_SYMBOL:  // 5063
+            cmdLSPRenameSymbol();
+            break;
+
+        case IDM_LSP_HOVER_INFO:  // 5064
+            cmdLSPHoverInfo();
+            break;
+
+        case IDM_LSP_SHOW_DIAGNOSTICS:  // 5065
+            appendToOutput(getLSPDiagnosticsSummary(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_LSP_RESTART_SERVER:  // 5066
+        {
+            // Restart the server for the current file's language
+            LSPLanguage lang = detectLanguageForFile(m_currentFile);
+            if (lang < LSPLanguage::Count) {
+                restartLSPServer(lang);
+            } else {
+                appendToOutput("[LSP] Cannot determine language for current file.",
+                               "General", OutputSeverity::Warning);
+            }
+        }
+            break;
+
+        case IDM_LSP_CLEAR_DIAGNOSTICS:  // 5067
+            clearAllDiagnostics();
+            appendToOutput("[LSP] All diagnostics cleared.", "General", OutputSeverity::Info);
+            break;
+
+        case IDM_LSP_SHOW_SYMBOL_INFO:  // 5068
+            appendToOutput(getLSPStatsString(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_LSP_CONFIGURE:  // 5069
+            appendToOutput("[LSP] Configuration file: " + getLSPConfigFilePath() +
+                           "\nEdit this file and restart servers to apply changes.",
+                           "General", OutputSeverity::Info);
+            break;
+
+        case IDM_LSP_SAVE_CONFIG:  // 5070
+            saveLSPConfig();
+            appendToOutput("[LSP] Configuration saved to " + getLSPConfigFilePath(),
+                           "General", OutputSeverity::Info);
+            break;
+
         default:
             break;
     }
@@ -1259,6 +1330,23 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_ROUTER_SAVE_CONFIG,       "Router: Save Router Configuration",          "", "Router"});
     m_commandRegistry.push_back({IDM_ROUTER_ROUTE_PROMPT,      "Router: Dry-Run Route Current Prompt",       "", "Router"});
     m_commandRegistry.push_back({IDM_ROUTER_RESET_STATS,       "Router: Reset Statistics & Failure Counters", "", "Router"});
+
+    // ================================================================
+    // LSP Client (5058–5070 range — routed via handleToolsCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_LSP_START_ALL,          "LSP: Start All Language Servers",            "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_STOP_ALL,           "LSP: Stop All Language Servers",             "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_SHOW_STATUS,        "LSP: Show Server Status",                   "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_GOTO_DEFINITION,    "LSP: Go to Definition",                     "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_FIND_REFERENCES,    "LSP: Find All References",                  "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_RENAME_SYMBOL,      "LSP: Rename Symbol (enter name in chat)",   "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_HOVER_INFO,         "LSP: Hover Info at Cursor",                 "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_SHOW_DIAGNOSTICS,   "LSP: Show Diagnostics Summary",             "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_RESTART_SERVER,     "LSP: Restart Server for Current Language",  "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_CLEAR_DIAGNOSTICS,  "LSP: Clear All Diagnostics",                "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_SHOW_SYMBOL_INFO,   "LSP: Show Stats & Request Counts",          "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_CONFIGURE,          "LSP: Show Configuration Path",              "", "LSP"});
+    m_commandRegistry.push_back({IDM_LSP_SAVE_CONFIG,        "LSP: Save Configuration",                   "", "LSP"});
 
     // ================================================================
     // Theme Selection (3101–3116 range — routed via handleViewCommand)
