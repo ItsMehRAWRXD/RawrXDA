@@ -1247,6 +1247,20 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_BACKEND_SAVE_CONFIGS,   "Backend: Save Backend Configurations",  "", "Backend"});
 
     // ================================================================
+    // LLM Router (5048–5057 range — routed via handleToolsCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_ROUTER_ENABLE,            "Router: Enable Intelligent Routing",         "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_DISABLE,           "Router: Disable (Passthrough Mode)",         "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SHOW_STATUS,       "Router: Show Status & Task Preferences",     "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SHOW_DECISION,     "Router: Show Last Routing Decision",         "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SET_POLICY,        "Router: Configure Task Routing Policy",      "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SHOW_CAPABILITIES, "Router: Show Backend Capabilities",          "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SHOW_FALLBACKS,    "Router: Show Fallback Chains",               "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_SAVE_CONFIG,       "Router: Save Router Configuration",          "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_ROUTE_PROMPT,      "Router: Dry-Run Route Current Prompt",       "", "Router"});
+    m_commandRegistry.push_back({IDM_ROUTER_RESET_STATS,       "Router: Reset Statistics & Failure Counters", "", "Router"});
+
+    // ================================================================
     // Theme Selection (3101–3116 range — routed via handleViewCommand)
     // ================================================================
     m_commandRegistry.push_back({IDM_THEME_DARK_PLUS,        "Theme: Dark+ (Default)",     "", "Theme"});
@@ -1645,6 +1659,7 @@ LRESULT CALLBACK Win32IDE::CommandPaletteProc(HWND hwnd, UINT uMsg, WPARAM wPara
         else if (cmd.category == "Policy") catColor = RGB(255, 183, 77);
         else if (cmd.category == "Explain") catColor = RGB(0, 188, 212);
         else if (cmd.category == "Backend") catColor = RGB(129, 212, 250);
+        else if (cmd.category == "Router") catColor = RGB(0, 200, 170);
 
         // Draw category dot
         HBRUSH dotBrush = CreateSolidBrush(catColor);

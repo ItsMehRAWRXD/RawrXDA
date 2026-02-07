@@ -3246,6 +3246,9 @@ void Win32IDE::loadModelFromPath(const std::string& filepath)
             // Initialize backend manager (Phase 8B)
             initBackendManager();
             
+            // Initialize LLM Router (Phase 8C)
+            initLLMRouter();
+            
             // Notify user in chat
             std::string msg = "✅ Model loaded and ready for inference!\r\n\r\n"
                              "You can now ask questions in the chat panel.\r\n"

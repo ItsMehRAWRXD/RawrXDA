@@ -412,6 +412,27 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== Phase 8C: LLM Router ==========
+    else if (method == "GET" && path == "/api/router/status") {
+        handleRouterStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/router/decision") {
+        handleRouterDecisionEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/router/capabilities") {
+        handleRouterCapabilitiesEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/router/route") {
+        handleRouterRouteEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,
@@ -470,6 +491,48 @@ void Win32IDE::handleOllamaApiGenerate(SOCKET client, const std::string& body) {
         maxTokens = numPredict;
     }
 
+    // ── Phase 8B: Route through BackendSwitcher ──────────────────────────
+    // LocalGGUF + streaming: use native token-level SSE (preserved)
+    // LocalGGUF + non-streaming: use native engine directly (preserved)
+    // Remote backends: use routeInferenceRequest() and wrap in Ollama format
+    // ─────────────────────────────────────────────────────────────────────
+    AIBackendType activeBackend = getActiveBackendType();
+
+    if (activeBackend != AIBackendType::LocalGGUF) {
+        // Remote backend — route through BackendSwitcher (always non-streaming)
+        std::string result = routeInferenceRequest(prompt);
+        bool isError = result.find("[BackendSwitcher] Error") != std::string::npos;
+
+        if (isError) {
+            std::string json = "{\"error\":\"" + LocalServerUtil::escapeJson(result) + "\"}";
+            std::string resp = LocalServerUtil::buildHttpResponse(502, json);
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+
+        std::string backendName = LocalServerUtil::toLower(backendTypeString(activeBackend));
+        m_localServerStats.totalTokens++;
+
+        if (stream) {
+            LocalServerUtil::sendSSEHeaders(client);
+            std::string event = "{\"model\":\"" + LocalServerUtil::escapeJson(backendName)
+                + "\",\"response\":\"" + LocalServerUtil::escapeJson(result)
+                + "\",\"done\":false}\n";
+            send(client, event.c_str(), (int)event.size(), 0);
+            std::string doneEvent = "{\"model\":\"" + LocalServerUtil::escapeJson(backendName)
+                + "\",\"response\":\"\",\"done\":true}\n";
+            send(client, doneEvent.c_str(), (int)doneEvent.size(), 0);
+        } else {
+            std::string json = "{\"model\":\"" + LocalServerUtil::escapeJson(backendName)
+                + "\",\"response\":\"" + LocalServerUtil::escapeJson(result)
+                + "\",\"done\":true}";
+            std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+            send(client, resp.c_str(), (int)resp.size(), 0);
+        }
+        return;
+    }
+
+    // ── LocalGGUF path (original behavior preserved) ─────────────────────
     if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"no model loaded\"}");
@@ -544,6 +607,59 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
 
     prompt = allContent;
 
+    std::string requestId = "chatcmpl-rawrxd-" + std::to_string(
+        std::chrono::steady_clock::now().time_since_epoch().count());
+
+    // ── Phase 8B: Route through BackendSwitcher ──────────────────────────
+    // LocalGGUF + streaming: use native token-level SSE (preserved)
+    // LocalGGUF + non-streaming: use native engine directly (preserved)
+    // Remote backends: use routeInferenceRequest() and wrap in OpenAI format
+    // ─────────────────────────────────────────────────────────────────────
+    AIBackendType activeBackend = getActiveBackendType();
+
+    if (activeBackend != AIBackendType::LocalGGUF) {
+        // Remote backend — route through BackendSwitcher
+        std::string result = routeInferenceRequest(prompt);
+        bool isError = result.find("[BackendSwitcher] Error") != std::string::npos;
+
+        if (isError) {
+            std::string errJson = "{\"error\":{\"message\":\""
+                + LocalServerUtil::escapeJson(result) + "\"}}";
+            std::string resp = LocalServerUtil::buildHttpResponse(502, errJson);
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+
+        m_localServerStats.totalTokens++;
+
+        if (stream) {
+            LocalServerUtil::sendSSEHeaders(client);
+            std::ostringstream event;
+            event << "data: {\"id\":\"" << requestId
+                  << "\",\"object\":\"chat.completion.chunk\""
+                  << ",\"choices\":[{\"index\":0,\"delta\":{\"content\":\""
+                  << LocalServerUtil::escapeJson(result) << "\"}}]}\n\n";
+            std::string eventStr = event.str();
+            send(client, eventStr.c_str(), (int)eventStr.size(), 0);
+            std::string doneStr = "data: [DONE]\n\n";
+            send(client, doneStr.c_str(), (int)doneStr.size(), 0);
+        } else {
+            std::ostringstream j;
+            j << "{\"id\":\"" << requestId
+              << "\",\"object\":\"chat.completion\""
+              << ",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\""
+              << LocalServerUtil::escapeJson(result)
+              << "\"},\"finish_reason\":\"stop\"}]"
+              << ",\"usage\":{\"prompt_tokens\":0"
+              << ",\"completion_tokens\":0"
+              << ",\"total_tokens\":0}}";
+            std::string resp = LocalServerUtil::buildHttpResponse(200, j.str());
+            send(client, resp.c_str(), (int)resp.size(), 0);
+        }
+        return;
+    }
+
+    // ── LocalGGUF path (original behavior preserved) ─────────────────────
     if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":{\"message\":\"No model loaded\"}}");
@@ -553,9 +669,6 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
 
     auto tokens = m_nativeEngine->Tokenize(prompt);
     auto generated = m_nativeEngine->Generate(tokens, maxTokens);
-
-    std::string requestId = "chatcmpl-rawrxd-" + std::to_string(
-        std::chrono::steady_clock::now().time_since_epoch().count());
 
     if (stream) {
         LocalServerUtil::sendSSEHeaders(client);
@@ -716,25 +829,31 @@ void Win32IDE::handleAskEndpoint(SOCKET client, const std::string& body) {
         return;
     }
 
-    // If no native engine or no model loaded, return a local-mode fallback
-    if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded()) {
-        std::string answer = "[Local Mode] No model is currently loaded. "
-                             "Load a model first using the Model selector or "
-                             "the terminal command: .load-model <name>";
-        std::string json = "{\"answer\":\"" + LocalServerUtil::escapeJson(answer) + "\"}";
+    // ── Phase 8B: Route through BackendSwitcher ──────────────────────────
+    // All backends go through routeInferenceRequest() which delegates to
+    // the correct provider (LocalGGUF → native engine, Ollama → HTTP,
+    // OpenAI/Claude/Gemini → respective APIs).
+    // The "no model loaded" check for LocalGGUF is handled inside
+    // routeToLocalGGUF() which returns a clear error string.
+    // ─────────────────────────────────────────────────────────────────────
+    std::string answer = routeInferenceRequest(question);
+    bool isError = answer.find("[BackendSwitcher] Error") != std::string::npos;
+    m_localServerStats.totalTokens++;
+
+    if (isError) {
+        // Return the error as a displayable answer (not a 500)
+        // so the HTML chatbot can show it gracefully
+        std::string json = "{\"answer\":\"" + LocalServerUtil::escapeJson(answer)
+            + "\",\"backend\":\"" + LocalServerUtil::escapeJson(backendTypeString(getActiveBackendType()))
+            + "\",\"error\":true}";
         std::string resp = LocalServerUtil::buildHttpResponse(200, json);
         send(client, resp.c_str(), (int)resp.size(), 0);
         return;
     }
 
-    // Generate response using loaded model
-    auto tokens = m_nativeEngine->Tokenize(question);
-    int maxTokens = std::min(context, 4096);
-    auto generated = m_nativeEngine->Generate(tokens, maxTokens);
-    std::string answer = m_nativeEngine->Detokenize(generated);
-    m_localServerStats.totalTokens += (int)generated.size();
-
-    std::string json = "{\"answer\":\"" + LocalServerUtil::escapeJson(answer) + "\"}";
+    std::string json = "{\"answer\":\"" + LocalServerUtil::escapeJson(answer)
+        + "\",\"backend\":\"" + LocalServerUtil::escapeJson(backendTypeString(getActiveBackendType()))
+        + "\"}";
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
     send(client, resp.c_str(), (int)resp.size(), 0);
 }
@@ -1252,6 +1371,10 @@ std::string Win32IDE::getLocalServerStatus() const {
     oss << "  GET  /api/backends         — List all configured backends\r\n";
     oss << "  GET  /api/backend/active   — Get active backend info\r\n";
     oss << "  POST /api/backend/switch   — Switch active backend\r\n";
+    oss << "  GET  /api/router/status       — LLM Router status & preferences\r\n";
+    oss << "  GET  /api/router/decision      — Last routing decision trace\r\n";
+    oss << "  GET  /api/router/capabilities  — Backend capability profiles\r\n";
+    oss << "  POST /api/router/route         — Dry-run route a prompt (no inference)\r\n";
     return oss.str();
 }
 
