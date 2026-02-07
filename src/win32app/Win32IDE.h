@@ -2303,6 +2303,13 @@ private:
     void handleModelsEndpoint(SOCKET client);
     void handleAskEndpoint(SOCKET client, const std::string& body);
     void handleServeGui(SOCKET client);
+
+    // Phase 6B: Agentic + Failure visibility endpoints (read-only)
+    void handleAgentHistoryEndpoint(SOCKET client, const std::string& path);
+    void handleAgentStatusEndpoint(SOCKET client);
+    void handleAgentReplayEndpoint(SOCKET client, const std::string& body);
+    void handleFailuresEndpoint(SOCKET client, const std::string& path);
+
     void toggleLocalServer();
     std::string getLocalServerStatus() const;
 

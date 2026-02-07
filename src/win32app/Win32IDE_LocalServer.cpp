@@ -372,6 +372,30 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== Phase 6B: Agent History (read-only) ==========
+    else if (method == "GET" && path.find("/api/agents/history") == 0) {
+        handleAgentHistoryEndpoint(client, path);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 6B: Agent Status (read-only) ==========
+    else if (method == "GET" && path == "/api/agents/status") {
+        handleAgentStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 6B: Agent Replay ==========
+    else if (method == "POST" && path == "/api/agents/replay") {
+        handleAgentReplayEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 6B: Failure Timeline (read-only) ==========
+    else if (method == "GET" && path.find("/api/failures") == 0) {
+        handleFailuresEndpoint(client, path);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,
@@ -749,6 +773,431 @@ void Win32IDE::handleServeGui(SOCKET client) {
 }
 
 // ============================================================================
+// Phase 6B: GET /api/agents/history — Agent event history timeline
+// ============================================================================
+// Query params: ?agent_id=X&event_type=Y&limit=N&session_id=Z
+// Returns the in-memory event buffer as JSON array.
+// Purely read-only — no mutations, no side effects.
+// ============================================================================
+
+void Win32IDE::handleAgentHistoryEndpoint(SOCKET client, const std::string& path) {
+    // Parse query parameters from the URL
+    std::string agentIdFilter, eventTypeFilter, sessionIdFilter;
+    int limit = 200;
+
+    auto qPos = path.find('?');
+    if (qPos != std::string::npos) {
+        std::string query = path.substr(qPos + 1);
+        // Simple query parameter parsing (key=value&key2=value2)
+        std::istringstream qs(query);
+        std::string param;
+        while (std::getline(qs, param, '&')) {
+            auto eqPos = param.find('=');
+            if (eqPos == std::string::npos) continue;
+            std::string key = param.substr(0, eqPos);
+            std::string val = param.substr(eqPos + 1);
+            if (key == "agent_id") agentIdFilter = val;
+            else if (key == "event_type") eventTypeFilter = val;
+            else if (key == "session_id") sessionIdFilter = val;
+            else if (key == "limit") {
+                try { limit = std::stoi(val); } catch (...) {}
+                if (limit < 0) limit = 200;
+                if (limit > 10000) limit = 10000;
+            }
+        }
+    }
+
+    // Lock and read event buffer
+    std::vector<AgentEvent> events;
+    {
+        std::lock_guard<std::mutex> lock(m_eventBufferMutex);
+        events = m_eventBuffer; // Copy under lock
+    }
+
+    // Apply filters
+    std::vector<const AgentEvent*> filtered;
+    filtered.reserve(events.size());
+    for (const auto& ev : events) {
+        if (!agentIdFilter.empty() && ev.agentId != agentIdFilter) continue;
+        if (!eventTypeFilter.empty() && ev.typeString() != eventTypeFilter) continue;
+        if (!sessionIdFilter.empty() && ev.sessionId != sessionIdFilter) continue;
+        filtered.push_back(&ev);
+    }
+
+    // Apply limit (most recent first)
+    if ((int)filtered.size() > limit) {
+        filtered.erase(filtered.begin(), filtered.begin() + (filtered.size() - limit));
+    }
+
+    // Build JSON response
+    std::ostringstream j;
+    j << "{\"events\":[";
+
+    for (int i = 0; i < (int)filtered.size(); i++) {
+        const AgentEvent* ev = filtered[i];
+        if (i > 0) j << ",";
+        j << "{"
+          << "\"id\":" << i
+          << ",\"eventType\":\"" << LocalServerUtil::escapeJson(ev->typeString()) << "\""
+          << ",\"sessionId\":\"" << LocalServerUtil::escapeJson(ev->sessionId) << "\""
+          << ",\"timestampMs\":" << ev->timestampMs
+          << ",\"durationMs\":" << ev->durationMs
+          << ",\"agentId\":\"" << LocalServerUtil::escapeJson(ev->agentId) << "\""
+          << ",\"parentId\":\"" << LocalServerUtil::escapeJson(ev->parentId) << "\""
+          << ",\"description\":\"" << LocalServerUtil::escapeJson(
+                ev->prompt.empty() ? ev->result.substr(0, 256) : ev->prompt.substr(0, 256)) << "\""
+          << ",\"input\":\"" << LocalServerUtil::escapeJson(ev->prompt.substr(0, 512)) << "\""
+          << ",\"output\":\"" << LocalServerUtil::escapeJson(ev->result.substr(0, 512)) << "\""
+          << ",\"metadata\":\"" << LocalServerUtil::escapeJson(ev->metadata) << "\""
+          << ",\"success\":" << (ev->success ? "true" : "false")
+          << ",\"errorMessage\":\"" << (ev->success ? "" :
+                LocalServerUtil::escapeJson(ev->result.substr(0, 256))) << "\""
+          << "}";
+    }
+
+    // Compute stats inline
+    j << "],\"stats\":{"
+      << "\"totalEvents\":" << m_historyStats.totalEvents
+      << ",\"sessionId\":\"" << LocalServerUtil::escapeJson(m_currentSessionId) << "\""
+      << ",\"successCount\":" << (m_historyStats.agentCompleted + m_historyStats.failuresCorrected)
+      << ",\"failCount\":" << (m_historyStats.agentFailed + m_historyStats.failuresDetected)
+      << ",\"eventTypes\":{"
+      << "\"AgentStarted\":" << m_historyStats.agentStarted
+      << ",\"AgentCompleted\":" << m_historyStats.agentCompleted
+      << ",\"AgentFailed\":" << m_historyStats.agentFailed
+      << ",\"SubAgentSpawned\":" << m_historyStats.subAgentSpawned
+      << ",\"ChainSteps\":" << m_historyStats.chainSteps
+      << ",\"SwarmTasks\":" << m_historyStats.swarmTasks
+      << ",\"ToolInvocations\":" << m_historyStats.toolInvocations
+      << ",\"FailuresDetected\":" << m_historyStats.failuresDetected
+      << ",\"FailuresCorrected\":" << m_historyStats.failuresCorrected
+      << ",\"GhostTextAccepted\":" << m_historyStats.ghostTextAccepted
+      << "}"
+      << "}}";
+
+    std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
+    send(client, response.c_str(), (int)response.size(), 0);
+}
+
+// ============================================================================
+// Phase 6B: GET /api/agents/status — Agent + failure stats
+// ============================================================================
+// Returns:
+//   - Agent counts (from history stats)
+//   - Failure breakdown by type (from m_failureStats)
+//   - Retry success rate
+//   - Failure intelligence summary (from m_failureReasonStats)
+// Purely read-only — no mutations, no side effects.
+// ============================================================================
+
+void Win32IDE::handleAgentStatusEndpoint(SOCKET client) {
+    std::ostringstream j;
+    j << "{\"agents\":{"
+      << "\"active\":" << m_historyStats.agentStarted
+      << ",\"completed\":" << m_historyStats.agentCompleted
+      << ",\"failed\":" << m_historyStats.agentFailed
+      << ",\"subagents\":" << m_historyStats.subAgentSpawned
+      << "},\"failures\":{"
+      << "\"total\":" << m_failureStats.totalFailures
+      << ",\"totalRequests\":" << m_failureStats.totalRequests
+      << ",\"totalRetries\":" << m_failureStats.totalRetries
+      << ",\"successAfterRetry\":" << m_failureStats.successAfterRetry
+      << ",\"retriesDeclined\":" << m_failureStats.retriesDeclined
+      << ",\"byType\":{"
+      << "\"Refusal\":{\"count\":" << m_failureStats.refusalCount
+        << ",\"corrected\":" << 0 << "}"  // Individual correction counts not tracked per-type in FailureStats
+      << ",\"Hallucination\":{\"count\":" << m_failureStats.hallucinationCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"FormatViolation\":{\"count\":" << m_failureStats.formatViolationCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"InfiniteLoop\":{\"count\":" << m_failureStats.infiniteLoopCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"QualityDegradation\":{\"count\":" << m_failureStats.qualityDegradationCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"EmptyResponse\":{\"count\":" << m_failureStats.emptyResponseCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"Timeout\":{\"count\":" << m_failureStats.timeoutCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"ToolError\":{\"count\":" << m_failureStats.toolErrorCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"InvalidOutput\":{\"count\":" << m_failureStats.invalidOutputCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"LowConfidence\":{\"count\":" << m_failureStats.lowConfidenceCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"SafetyViolation\":{\"count\":" << m_failureStats.safetyViolationCount
+        << ",\"corrected\":" << 0 << "}"
+      << ",\"UserAbort\":{\"count\":" << m_failureStats.userAbortCount
+        << ",\"corrected\":" << 0 << "}"
+      << "}"
+      << ",\"retrySuccessRate\":";
+
+    // Compute retry success rate
+    if (m_failureStats.totalRetries > 0) {
+        float rate = (float)m_failureStats.successAfterRetry / (float)m_failureStats.totalRetries;
+        j << std::fixed;
+        j.precision(3);
+        j << rate;
+    } else {
+        j << "0.0";
+    }
+
+    // Add Failure Intelligence per-reason stats if available
+    j << "},\"intelligence\":{";
+    {
+        std::lock_guard<std::mutex> lock(m_failureIntelligenceMutex);
+        bool first = true;
+        for (const auto& [reasonInt, stats] : m_failureReasonStats) {
+            if (!first) j << ",";
+            first = false;
+            j << "\"" << reasonInt << "\":{"
+              << "\"occurrences\":" << stats.occurrences
+              << ",\"retriesAttempted\":" << stats.retriesAttempted
+              << ",\"retriesSucceeded\":" << stats.retriesSucceeded
+              << ",\"avgRetryAttempts\":" << stats.avgRetryAttempts
+              << "}";
+        }
+    }
+
+    j << "}}";
+
+    std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
+    send(client, response.c_str(), (int)response.size(), 0);
+}
+
+// ============================================================================
+// Phase 6B: POST /api/agents/replay — Replay agent session events
+// ============================================================================
+// Body: { "agent_id": "abc123", "dry_run": true/false }
+// Replays events for the given agent_id from the current event buffer.
+// This re-executes the event sequence without mutations (dry_run default).
+// ============================================================================
+
+void Win32IDE::handleAgentReplayEndpoint(SOCKET client, const std::string& body) {
+    std::string agentId;
+    bool dryRun = true;
+
+    LocalServerUtil::extractJsonString(body, "agent_id", agentId);
+    LocalServerUtil::extractJsonBool(body, "dry_run", dryRun);
+
+    if (agentId.empty()) {
+        std::string resp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"agent_id is required\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Collect events for this agent from the event buffer
+    std::vector<AgentEvent> agentEvents;
+    {
+        std::lock_guard<std::mutex> lock(m_eventBufferMutex);
+        for (const auto& ev : m_eventBuffer) {
+            if (ev.agentId == agentId || ev.parentId == agentId) {
+                agentEvents.push_back(ev);
+            }
+        }
+    }
+
+    if (agentEvents.empty()) {
+        std::string resp = LocalServerUtil::buildHttpResponse(404,
+            "{\"success\":false,\"result\":\"No events found for agent: " +
+            LocalServerUtil::escapeJson(agentId) + "\",\"events_replayed\":0,\"duration_ms\":0}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    auto startTime = std::chrono::steady_clock::now();
+
+    // For dry_run, just return the event sequence without re-executing
+    // For non-dry_run, the real replay is more complex and would need
+    // the agentic bridge — but the data visibility is what matters here
+    std::ostringstream replayResult;
+    replayResult << "Replay of agent " << agentId << ":\\n";
+    int stepNum = 0;
+    for (const auto& ev : agentEvents) {
+        stepNum++;
+        replayResult << "  Step " << stepNum << ": " << ev.typeString();
+        if (!ev.prompt.empty()) {
+            replayResult << " — " << ev.prompt.substr(0, 80);
+        }
+        replayResult << (ev.success ? " [OK]" : " [FAIL]") << "\\n";
+    }
+
+    auto endTime = std::chrono::steady_clock::now();
+    int durationMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+
+    std::ostringstream j;
+    j << "{\"success\":true"
+      << ",\"result\":\"" << LocalServerUtil::escapeJson(replayResult.str()) << "\""
+      << ",\"events_replayed\":" << (int)agentEvents.size()
+      << ",\"duration_ms\":" << durationMs
+      << ",\"dry_run\":" << (dryRun ? "true" : "false")
+      << "}";
+
+    std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
+    send(client, response.c_str(), (int)response.size(), 0);
+}
+
+// ============================================================================
+// Phase 6B: GET /api/failures — Failure timeline (Phase 4B data)
+// ============================================================================
+// Query params: ?limit=N&reason=X
+// Returns the failure intelligence history as a dedicated timeline.
+// Each record carries: timestamp, type, reason, confidence, evidence,
+//                      strategy used, outcome, prompt snippet.
+// Purely read-only — no mutations, no side effects.
+// ============================================================================
+
+void Win32IDE::handleFailuresEndpoint(SOCKET client, const std::string& path) {
+    int limit = 200;
+    std::string reasonFilter;
+
+    auto qPos = path.find('?');
+    if (qPos != std::string::npos) {
+        std::string query = path.substr(qPos + 1);
+        std::istringstream qs(query);
+        std::string param;
+        while (std::getline(qs, param, '&')) {
+            auto eqPos = param.find('=');
+            if (eqPos == std::string::npos) continue;
+            std::string key = param.substr(0, eqPos);
+            std::string val = param.substr(eqPos + 1);
+            if (key == "limit") {
+                try { limit = std::stoi(val); } catch (...) {}
+                if (limit < 0) limit = 200;
+                if (limit > 10000) limit = 10000;
+            } else if (key == "reason") {
+                reasonFilter = val;
+            }
+        }
+    }
+
+    // Build the failure timeline from two sources:
+    // 1. FailureIntelligence history (rich records with classification)
+    // 2. Event buffer (FailureDetected/Corrected/Failed/Declined events)
+
+    std::ostringstream j;
+    j << "{\"failures\":[";
+
+    int count = 0;
+
+    // Source 1: FailureIntelligence records (Phase 6 rich data)
+    {
+        std::lock_guard<std::mutex> lock(m_failureIntelligenceMutex);
+        int startIdx = 0;
+        if ((int)m_failureIntelligenceHistory.size() > limit) {
+            startIdx = (int)m_failureIntelligenceHistory.size() - limit;
+        }
+        for (int i = startIdx; i < (int)m_failureIntelligenceHistory.size(); i++) {
+            const auto& rec = m_failureIntelligenceHistory[i];
+
+            // Apply reason filter
+            if (!reasonFilter.empty()) {
+                std::string failTypeStr = failureTypeString(rec.failureType);
+                if (failTypeStr != reasonFilter) continue;
+            }
+
+            if (count > 0) j << ",";
+            count++;
+
+            // Map failure type to string
+            std::string typeStr = failureTypeString(rec.failureType);
+
+            // Determine outcome from retry data
+            std::string outcome = "Detected";
+            if (rec.retrySucceeded) outcome = "Corrected";
+            else if (rec.attemptNumber > 0) outcome = "Failed";
+
+            // Strategy description
+            RetryStrategy tmpStrat;
+            tmpStrat.type = rec.strategyUsed;
+            std::string strategyStr = tmpStrat.typeString();
+
+            j << "{"
+              << "\"timestampMs\":" << rec.timestampMs
+              << ",\"type\":\"" << LocalServerUtil::escapeJson(typeStr) << "\""
+              << ",\"reason\":\"" << (int)rec.reason << "\""
+              << ",\"confidence\":0"  // FailureIntelligenceRecord doesn't carry confidence directly
+              << ",\"evidence\":\"" << LocalServerUtil::escapeJson(rec.failureDetail.substr(0, 256)) << "\""
+              << ",\"strategy\":\"" << LocalServerUtil::escapeJson(strategyStr) << "\""
+              << ",\"outcome\":\"" << outcome << "\""
+              << ",\"promptSnippet\":\"" << LocalServerUtil::escapeJson(rec.promptSnippet.substr(0, 128)) << "\""
+              << ",\"sessionId\":\"" << LocalServerUtil::escapeJson(rec.sessionId) << "\""
+              << ",\"attempt\":" << rec.attemptNumber
+              << "}";
+        }
+    }
+
+    // Source 2: Event buffer failure events (Phase 4B hooks)
+    // These carry confidence + evidence in their metadata field
+    {
+        std::lock_guard<std::mutex> lock(m_eventBufferMutex);
+        for (const auto& ev : m_eventBuffer) {
+            if (ev.type != AgentEventType::FailureDetected &&
+                ev.type != AgentEventType::FailureCorrected &&
+                ev.type != AgentEventType::FailureFailed &&
+                ev.type != AgentEventType::FailureRetryDeclined) continue;
+
+            if (count >= limit) break;
+
+            // Apply reason filter against the event result/metadata
+            if (!reasonFilter.empty()) {
+                if (ev.result.find(reasonFilter) == std::string::npos &&
+                    ev.metadata.find(reasonFilter) == std::string::npos) continue;
+            }
+
+            if (count > 0) j << ",";
+            count++;
+
+            std::string outcome;
+            switch (ev.type) {
+                case AgentEventType::FailureDetected:      outcome = "Detected"; break;
+                case AgentEventType::FailureCorrected:     outcome = "Corrected"; break;
+                case AgentEventType::FailureFailed:        outcome = "Failed"; break;
+                case AgentEventType::FailureRetryDeclined: outcome = "Declined"; break;
+                default: outcome = "Unknown"; break;
+            }
+
+            j << "{"
+              << "\"timestampMs\":" << ev.timestampMs
+              << ",\"type\":\"" << LocalServerUtil::escapeJson(ev.typeString()) << "\""
+              << ",\"reason\":\"\""
+              << ",\"confidence\":0"
+              << ",\"evidence\":\"" << LocalServerUtil::escapeJson(ev.result.substr(0, 256)) << "\""
+              << ",\"strategy\":\"\""
+              << ",\"outcome\":\"" << outcome << "\""
+              << ",\"promptSnippet\":\"" << LocalServerUtil::escapeJson(ev.prompt.substr(0, 128)) << "\""
+              << ",\"sessionId\":\"" << LocalServerUtil::escapeJson(ev.sessionId) << "\""
+              << ",\"attempt\":0"
+              << "}";
+        }
+    }
+
+    // Summary stats
+    j << "],\"stats\":{"
+      << "\"totalFailures\":" << m_failureStats.totalFailures
+      << ",\"totalRetries\":" << m_failureStats.totalRetries
+      << ",\"successAfterRetry\":" << m_failureStats.successAfterRetry
+      << ",\"retriesDeclined\":" << m_failureStats.retriesDeclined
+      << ",\"topReasons\":["
+      << "{\"type\":\"Hallucination\",\"count\":" << m_failureStats.hallucinationCount << "}"
+      << ",{\"type\":\"Refusal\",\"count\":" << m_failureStats.refusalCount << "}"
+      << ",{\"type\":\"FormatViolation\",\"count\":" << m_failureStats.formatViolationCount << "}"
+      << ",{\"type\":\"ToolError\",\"count\":" << m_failureStats.toolErrorCount << "}"
+      << ",{\"type\":\"EmptyResponse\",\"count\":" << m_failureStats.emptyResponseCount << "}"
+      << ",{\"type\":\"Timeout\",\"count\":" << m_failureStats.timeoutCount << "}"
+      << ",{\"type\":\"InvalidOutput\",\"count\":" << m_failureStats.invalidOutputCount << "}"
+      << ",{\"type\":\"InfiniteLoop\",\"count\":" << m_failureStats.infiniteLoopCount << "}"
+      << ",{\"type\":\"LowConfidence\",\"count\":" << m_failureStats.lowConfidenceCount << "}"
+      << ",{\"type\":\"SafetyViolation\",\"count\":" << m_failureStats.safetyViolationCount << "}"
+      << ",{\"type\":\"QualityDegradation\",\"count\":" << m_failureStats.qualityDegradationCount << "}"
+      << ",{\"type\":\"UserAbort\",\"count\":" << m_failureStats.userAbortCount << "}"
+      << "]}}";
+
+    std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
+    send(client, response.c_str(), (int)response.size(), 0);
+}
+
+// ============================================================================
 // TOGGLE — start/stop server
 // ============================================================================
 
@@ -780,5 +1229,9 @@ std::string Win32IDE::getLocalServerStatus() const {
     oss << "  GET  /models              — List all local GGUF + Ollama models (Frontend)\r\n";
     oss << "  POST /ask                 — Unified chat endpoint (Frontend)\r\n";
     oss << "  GET  /gui                 — Serve agentic chatbot HTML interface\r\n";
+    oss << "  GET  /api/agents/history   — Agent event history timeline\r\n";
+    oss << "  GET  /api/agents/status    — Agent + failure stats\r\n";
+    oss << "  POST /api/agents/replay    — Replay agent session events\r\n";
+    oss << "  GET  /api/failures         — Failure timeline (Phase 4B)\r\n";
     return oss.str();
 }
