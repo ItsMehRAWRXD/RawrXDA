@@ -166,6 +166,12 @@ if(WIN32)
         src/core/deterministic_replay.cpp
         src/core/confidence_gate.cpp
         
+        # Distributed Swarm Compilation (Phase 11)
+        src/core/swarm_coordinator.cpp
+        src/core/swarm_worker.cpp
+        src/core/swarm_network_stubs.cpp
+        src/win32app/Win32IDE_SwarmPanel.cpp
+        
         # Module implementations
         src/modules/vsix_loader_win32.cpp
         src/modules/codex_ultimate.cpp

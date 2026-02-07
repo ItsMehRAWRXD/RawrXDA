@@ -639,6 +639,77 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== Phase 11: Distributed Swarm Compilation ==========
+    else if (method == "GET" && path == "/api/swarm/status") {
+        handleSwarmStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/swarm/nodes") {
+        handleSwarmNodesEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/swarm/tasks") {
+        handleSwarmTaskGraphEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/swarm/stats") {
+        handleSwarmStatsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/swarm/events") {
+        handleSwarmEventsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/swarm/config") {
+        handleSwarmConfigEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/swarm/worker") {
+        handleSwarmWorkerEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/swarm/start") {
+        handleSwarmStartEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/swarm/stop") {
+        handleSwarmStopEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/swarm/nodes/add") {
+        handleSwarmAddNodeEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/swarm/build") {
+        handleSwarmBuildEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/swarm/cancel") {
+        handleSwarmCancelEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/swarm/cache/clear") {
+        handleSwarmCacheClearEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/phase11/status") {
+        handlePhase11StatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,

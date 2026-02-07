@@ -983,6 +983,20 @@ void Win32IDE::deferredHeavyInit() {
         // Will be enabled when DX12 compute dispatch is fully linked.
         OutputDebugStringA("GPU Backend Bridge: deferred (not linked in this build)\n");
 
+        // Initialize Phase 10: Execution Governor + Safety + Replay + Confidence
+        try {
+            initPhase10();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initPhase10 failed\n");
+        }
+
+        // Initialize Phase 11: Distributed Swarm Compilation
+        try {
+            initPhase11();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initPhase11 failed\n");
+        }
+
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
         // Notify UI thread to refresh
@@ -997,6 +1011,12 @@ void Win32IDE::deferredHeavyInit() {
 // ============================================================================
 void Win32IDE::onDestroy() {
     LOG_INFO("Win32IDE::onDestroy - shutting down");
+
+    // Shutdown Phase 11: Distributed Swarm Compilation
+    shutdownPhase11();
+
+    // Shutdown Phase 10: Execution Governor + Safety + Replay + Confidence
+    shutdownPhase10();
 
     // Shutdown ghost text renderer (kill timers, free font)
     shutdownGhostText();

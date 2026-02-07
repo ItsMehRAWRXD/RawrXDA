@@ -3433,6 +3433,39 @@ private:
 #define IDM_CONFIDENCE_STATUS       5130
 #define IDM_CONFIDENCE_SET_POLICY   5131
 
+    // ---- IDM defines for Phase 11 commands (5132–5155) ----
+    // Swarm Control
+#define IDM_SWARM_STATUS            5132
+#define IDM_SWARM_START_LEADER      5133
+#define IDM_SWARM_START_WORKER      5134
+#define IDM_SWARM_START_HYBRID      5135
+#define IDM_SWARM_STOP              5136
+    // Node Management
+#define IDM_SWARM_LIST_NODES        5137
+#define IDM_SWARM_ADD_NODE          5138
+#define IDM_SWARM_REMOVE_NODE       5139
+#define IDM_SWARM_BLACKLIST_NODE    5140
+    // Build
+#define IDM_SWARM_BUILD_SOURCES     5141
+#define IDM_SWARM_BUILD_CMAKE       5142
+#define IDM_SWARM_START_BUILD       5143
+#define IDM_SWARM_CANCEL_BUILD      5144
+    // Cache & Config
+#define IDM_SWARM_CACHE_STATUS      5145
+#define IDM_SWARM_CACHE_CLEAR       5146
+#define IDM_SWARM_SHOW_CONFIG       5147
+#define IDM_SWARM_TOGGLE_DISCOVERY  5148
+    // Task Graph & Events
+#define IDM_SWARM_SHOW_TASK_GRAPH   5149
+#define IDM_SWARM_SHOW_EVENTS       5150
+#define IDM_SWARM_SHOW_STATS        5151
+#define IDM_SWARM_RESET_STATS       5152
+    // Worker Control
+#define IDM_SWARM_WORKER_STATUS     5153
+#define IDM_SWARM_WORKER_CONNECT    5154
+#define IDM_SWARM_WORKER_DISCONNECT 5155
+#define IDM_SWARM_FITNESS_TEST      5156
+
     // Phase 10 lifecycle
     void initPhase10();
     void shutdownPhase10();
@@ -3486,4 +3519,64 @@ private:
 
     // Phase 10 state
     bool m_phase10Initialized = false;
+
+    // Phase 11 lifecycle
+    void initPhase11();
+    void shutdownPhase11();
+
+    // Swarm Control command handlers (11A)
+    void cmdSwarmStatus();
+    void cmdSwarmStartLeader();
+    void cmdSwarmStartWorker();
+    void cmdSwarmStartHybrid();
+    void cmdSwarmStop();
+
+    // Node Management command handlers (11B)
+    void cmdSwarmListNodes();
+    void cmdSwarmAddNode();
+    void cmdSwarmRemoveNode();
+    void cmdSwarmBlacklistNode();
+
+    // Build command handlers (11C)
+    void cmdSwarmBuildFromSources();
+    void cmdSwarmBuildFromCMake();
+    void cmdSwarmStartBuild();
+    void cmdSwarmCancelBuild();
+
+    // Cache & Config command handlers (11D)
+    void cmdSwarmCacheStatus();
+    void cmdSwarmCacheClear();
+    void cmdSwarmShowConfig();
+    void cmdSwarmToggleDiscovery();
+
+    // Task Graph & Events command handlers (11E)
+    void cmdSwarmShowTaskGraph();
+    void cmdSwarmShowEvents();
+    void cmdSwarmShowStats();
+    void cmdSwarmResetStats();
+
+    // Worker Control command handlers (11F)
+    void cmdSwarmWorkerStatus();
+    void cmdSwarmWorkerConnect();
+    void cmdSwarmWorkerDisconnect();
+    void cmdSwarmFitnessTest();
+
+    // Swarm HTTP endpoint handlers (11G)
+    void handleSwarmStatusEndpoint(SOCKET client);
+    void handleSwarmNodesEndpoint(SOCKET client);
+    void handleSwarmTaskGraphEndpoint(SOCKET client);
+    void handleSwarmStatsEndpoint(SOCKET client);
+    void handleSwarmEventsEndpoint(SOCKET client);
+    void handleSwarmConfigEndpoint(SOCKET client);
+    void handleSwarmWorkerEndpoint(SOCKET client);
+    void handleSwarmStartEndpoint(SOCKET client, const std::string& body);
+    void handleSwarmStopEndpoint(SOCKET client);
+    void handleSwarmAddNodeEndpoint(SOCKET client, const std::string& body);
+    void handleSwarmBuildEndpoint(SOCKET client, const std::string& body);
+    void handleSwarmCancelEndpoint(SOCKET client);
+    void handleSwarmCacheClearEndpoint(SOCKET client);
+    void handlePhase11StatusEndpoint(SOCKET client);
+
+    // Phase 11 state
+    bool m_phase11Initialized = false;
 };

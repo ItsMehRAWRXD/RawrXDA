@@ -1275,6 +1275,85 @@ void Win32IDE::handleToolsCommand(int commandId) {
             cmdConfidenceSetPolicy();
             break;
 
+        // ════════════════════════════════════════════
+        // Phase 11: Distributed Swarm Compilation
+        // ════════════════════════════════════════════
+        case IDM_SWARM_STATUS:                // 5132
+            cmdSwarmStatus();
+            break;
+        case IDM_SWARM_START_LEADER:          // 5133
+            cmdSwarmStartLeader();
+            break;
+        case IDM_SWARM_START_WORKER:          // 5134
+            cmdSwarmStartWorker();
+            break;
+        case IDM_SWARM_START_HYBRID:          // 5135
+            cmdSwarmStartHybrid();
+            break;
+        case IDM_SWARM_STOP:                  // 5136
+            cmdSwarmStop();
+            break;
+        case IDM_SWARM_LIST_NODES:            // 5137
+            cmdSwarmListNodes();
+            break;
+        case IDM_SWARM_ADD_NODE:              // 5138
+            cmdSwarmAddNode();
+            break;
+        case IDM_SWARM_REMOVE_NODE:           // 5139
+            cmdSwarmRemoveNode();
+            break;
+        case IDM_SWARM_BLACKLIST_NODE:        // 5140
+            cmdSwarmBlacklistNode();
+            break;
+        case IDM_SWARM_BUILD_SOURCES:         // 5141
+            cmdSwarmBuildFromSources();
+            break;
+        case IDM_SWARM_BUILD_CMAKE:           // 5142
+            cmdSwarmBuildFromCMake();
+            break;
+        case IDM_SWARM_START_BUILD:           // 5143
+            cmdSwarmStartBuild();
+            break;
+        case IDM_SWARM_CANCEL_BUILD:          // 5144
+            cmdSwarmCancelBuild();
+            break;
+        case IDM_SWARM_CACHE_STATUS:          // 5145
+            cmdSwarmCacheStatus();
+            break;
+        case IDM_SWARM_CACHE_CLEAR:           // 5146
+            cmdSwarmCacheClear();
+            break;
+        case IDM_SWARM_SHOW_CONFIG:           // 5147
+            cmdSwarmShowConfig();
+            break;
+        case IDM_SWARM_TOGGLE_DISCOVERY:      // 5148
+            cmdSwarmToggleDiscovery();
+            break;
+        case IDM_SWARM_SHOW_TASK_GRAPH:       // 5149
+            cmdSwarmShowTaskGraph();
+            break;
+        case IDM_SWARM_SHOW_EVENTS:           // 5150
+            cmdSwarmShowEvents();
+            break;
+        case IDM_SWARM_SHOW_STATS:            // 5151
+            cmdSwarmShowStats();
+            break;
+        case IDM_SWARM_RESET_STATS:           // 5152
+            cmdSwarmResetStats();
+            break;
+        case IDM_SWARM_WORKER_STATUS:         // 5153
+            cmdSwarmWorkerStatus();
+            break;
+        case IDM_SWARM_WORKER_CONNECT:        // 5154
+            cmdSwarmWorkerConnect();
+            break;
+        case IDM_SWARM_WORKER_DISCONNECT:     // 5155
+            cmdSwarmWorkerDisconnect();
+            break;
+        case IDM_SWARM_FITNESS_TEST:          // 5156
+            cmdSwarmFitnessTest();
+            break;
+
         default:
             break;
     }
