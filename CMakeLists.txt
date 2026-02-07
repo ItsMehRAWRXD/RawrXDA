@@ -35,6 +35,8 @@ set(SOURCES
     
     src/codec/compression.cpp
     src/codec/brutal_gzip.cpp
+
+    src/core/execution_scheduler.cpp
 )
 
 add_executable(RawrEngine ${SOURCES})
@@ -107,6 +109,8 @@ if(WIN32)
         src/win32app/Win32IDE_BackendSwitcher.cpp
         src/win32app/Win32IDE_LLMRouter.cpp
         src/win32app/Win32IDE_LSPClient.cpp
+        src/win32app/Win32IDE_AsmSemantic.cpp
+        src/win32app/Win32IDE_MultiResponse.cpp
         src/win32app/Win32IDE_SubAgent.h
         src/win32app/Win32IDE_SubAgent.cpp
         src/win32app/Win32IDE_AgentHistory.cpp
@@ -149,6 +153,12 @@ if(WIN32)
         
         # Streaming engine registry (Phase 9)
         src/core/streaming_engine_registry.cpp
+        src/core/gpu_backend_bridge.cpp
+        src/core/enterprise_license.cpp
+        src/core/enterprise_license_stubs.cpp
+        src/core/multi_response_engine.cpp
+        src/core/flash_attention.cpp
+        src/core/execution_scheduler.cpp
         
         # Module implementations
         src/modules/vsix_loader_win32.cpp
@@ -162,6 +172,7 @@ if(WIN32)
         comctl32 comdlg32 shell32 ole32 oleaut32 uuid
         shlwapi psapi dbghelp winhttp ws2_32 winmm gdi32 user32
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
+        advapi32 crypt32
         gomp
     )
     

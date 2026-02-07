@@ -3315,7 +3315,7 @@ export const BackendPanel: React.FC = () => {
 std::string ReactIDEGenerator::GenerateRouterPanel() {
     return R"ROUTER(
 import React, { useState, useEffect, useCallback } from 'react';
-import { GitBranch, RefreshCw, Play, ToggleLeft, ToggleRight, ChevronRight, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { GitBranch, RefreshCw, Play, ToggleLeft, ToggleRight, ChevronRight, AlertTriangle, CheckCircle2, Download, Zap } from 'lucide-react';
 
 interface TaskPreference {
   task: string;
@@ -3509,6 +3509,35 @@ export const RouterPanel: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Heatmap Persistence */}
+        <div className="border-t border-border pt-3 space-y-2">
+          <div className="text-xs font-medium text-cyan-400">Heatmap Persistence</div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/router/heatmap/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+                  if (res.ok) { const d = await res.json(); alert(`Saved ${d.recordsSaved} records to disk.`); }
+                } catch (err) { console.error(err); }
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border hover:bg-accent"
+            >
+              <Download className="w-3 h-3" /> Save to Disk
+            </button>
+            <button
+              onClick={fetchHeatmap}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border hover:bg-accent"
+            >
+              <RefreshCw className="w-3 h-3" /> Refresh
+            </button>
+          </div>
+          {heatmap && (
+            <div className="text-xs text-muted-foreground">
+              {heatmap.totalRecords || 0} records · capacity indicator
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -3570,6 +3599,110 @@ export const RouterPanel: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Auto-Pin Suggestions */}
+        <AutoPinSuggestions onPinsChanged={() => {
+          (async () => {
+            try {
+              const res = await fetch('/api/router/pins');
+              if (res.ok) setPins(await res.json());
+            } catch (err) { console.error(err); }
+          })();
+        }} />
+      </div>
+    );
+  };
+
+  // ---- Auto-Pin Suggestions Sub-Component ----
+  const AutoPinSuggestions: React.FC<{ onPinsChanged: () => void }> = ({ onPinsChanged }) => {
+    const [suggestions, setSuggestions] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [applying, setApplying] = useState(false);
+
+    const fetchSuggestions = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/router/auto-pin');
+        if (res.ok) setSuggestions(await res.json());
+      } catch (err) {
+        console.error('Auto-pin fetch error:', err);
+      }
+      setLoading(false);
+    };
+
+    const applySuggestions = async () => {
+      setApplying(true);
+      try {
+        const res = await fetch('/api/router/auto-pin/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          alert(data.message);
+          onPinsChanged();
+          fetchSuggestions();
+        }
+      } catch (err) {
+        console.error('Auto-pin apply error:', err);
+      }
+      setApplying(false);
+    };
+
+    return (
+      <div className="border-t border-border pt-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-medium text-amber-400">Auto-Pin Suggestions</div>
+          <button
+            onClick={fetchSuggestions}
+            disabled={loading}
+            className="flex items-center gap-1 px-2 py-0.5 text-xs rounded border border-border hover:bg-accent disabled:opacity-50"
+          >
+            {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+            Analyze
+          </button>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          The router analyzes heatmap data to find tasks where a cheaper or faster backend would work equally well.
+        </div>
+
+        {suggestions && suggestions.count === 0 && (
+          <div className="text-xs text-muted-foreground italic">
+            No suggestions — need 3+ samples per task/backend pair. ({suggestions.totalRecords} total records)
+          </div>
+        )}
+
+        {suggestions && suggestions.count > 0 && (
+          <div className="space-y-2">
+            {suggestions.suggestions.map((s: any, i: number) => (
+              <div key={i} className="rounded-lg border border-amber-600/30 bg-amber-600/5 p-2 space-y-1">
+                <div className="text-xs font-medium text-amber-300">{s.task}</div>
+                <div className="grid grid-cols-2 gap-x-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Current: </span>
+                    <span className="text-foreground font-mono">{s.currentPreferred}</span>
+                    <span className="text-muted-foreground"> ({s.currentAvgLatencyMs}ms, tier {s.currentCostTier})</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Suggested: </span>
+                    <span className="text-amber-300 font-mono">{s.suggestedBackend}</span>
+                    <span className="text-muted-foreground"> ({s.suggestedAvgLatencyMs}ms, tier {s.suggestedCostTier})</span>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground italic">{s.reason}</div>
+              </div>
+            ))}
+            <button
+              onClick={applySuggestions}
+              disabled={applying}
+              className="flex items-center gap-2 px-3 py-1 text-xs rounded-md bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
+            >
+              {applying ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+              {applying ? 'Applying...' : `Apply All ${suggestions.count} Suggestions`}
+            </button>
           </div>
         )}
       </div>
@@ -3757,6 +3890,160 @@ export const RouterPanel: React.FC = () => {
             </div>
           )}
         </div>
+
+        <div className="border-t border-border" />
+
+        {/* Ensemble Delta / Response Diff Analysis */}
+        <EnsembleDeltaSection />
+      </div>
+    );
+  };
+
+  // ---- Ensemble Delta Sub-Component ----
+  const EnsembleDeltaSection: React.FC = () => {
+    const [delta, setDelta] = useState<any>(null);
+    const [loadingDelta, setLoadingDelta] = useState(false);
+
+    const fetchDelta = async () => {
+      setLoadingDelta(true);
+      try {
+        const res = await fetch('/api/router/ensemble/delta');
+        if (res.ok) setDelta(await res.json());
+      } catch (err) {
+        console.error('Ensemble delta fetch error:', err);
+      }
+      setLoadingDelta(false);
+    };
+
+    const similarityColor = (score: number) => {
+      if (score >= 0.8) return 'text-green-400';
+      if (score >= 0.5) return 'text-yellow-400';
+      return 'text-red-400';
+    };
+
+    const similarityBar = (score: number) => {
+      const pct = Math.round(score * 100);
+      return (
+        <div className="flex items-center gap-1">
+          <div className="w-20 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${score >= 0.8 ? 'bg-green-500' : score >= 0.5 ? 'bg-yellow-500' : 'bg-red-500'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className={`text-xs font-mono ${similarityColor(score)}`}>{pct}%</span>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-medium text-cyan-400">Ensemble Response Delta (Diff Analysis)</div>
+          <button
+            onClick={fetchDelta}
+            disabled={loadingDelta}
+            className="flex items-center gap-1 px-2 py-0.5 text-xs rounded border border-border hover:bg-accent disabled:opacity-50"
+          >
+            {loadingDelta ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            Fetch Delta
+          </button>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Compares responses across backends from the last ensemble query. Shows similarity, shared tokens, and unique content per backend.
+        </div>
+
+        {delta && !delta.classifiedTask && (
+          <div className="text-xs text-muted-foreground italic">
+            No ensemble data available. Run an ensemble test above first.
+          </div>
+        )}
+
+        {delta && delta.classifiedTask && (
+          <div className="space-y-3">
+            {/* Summary header */}
+            <div className="rounded-lg border border-cyan-600/30 bg-cyan-600/5 p-3 space-y-1">
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Task: </span>
+                  <span className="text-cyan-300 font-mono">{delta.classifiedTask}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Winner: </span>
+                  <span className="text-green-400 font-mono font-bold">{delta.winnerBackend}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Strategy: </span>
+                  <span className="text-foreground font-mono">{delta.strategy}</span>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Total latency: {delta.totalLatencyMs}ms · {delta.deltas?.length || 0} backends queried
+              </div>
+              {delta.summaryText && (
+                <div className="text-xs text-muted-foreground italic mt-1">{delta.summaryText}</div>
+              )}
+            </div>
+
+            {/* Per-backend delta cards */}
+            {delta.deltas && delta.deltas.map((d: any, i: number) => (
+              <div
+                key={i}
+                className={`rounded-lg border p-2 space-y-1 ${
+                  d.isWinner
+                    ? 'border-green-600/40 bg-green-600/5'
+                    : d.succeeded
+                    ? 'border-border bg-card'
+                    : 'border-red-600/30 bg-red-600/5'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-mono font-medium ${d.isWinner ? 'text-green-400' : 'text-foreground'}`}>
+                      {d.backend}
+                    </span>
+                    {d.isWinner && <span className="text-xs px-1.5 py-0.5 rounded bg-green-600/20 text-green-300">WINNER</span>}
+                    {!d.succeeded && <span className="text-xs px-1.5 py-0.5 rounded bg-red-600/20 text-red-300">FAILED</span>}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {d.latencyMs}ms · weight {Math.round(d.confidenceWeight * 100)}%
+                  </div>
+                </div>
+
+                {d.succeeded && (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Similarity to winner:</span>
+                      {similarityBar(d.similarityScore)}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Response length: </span>
+                      <span className="font-mono">{d.responseLength} chars</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Shared prefix: </span>
+                      <span className="font-mono">{d.sharedPrefixLen} chars</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Shared suffix: </span>
+                      <span className="font-mono">{d.sharedSuffixLen} chars</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Unique words: </span>
+                      <span className="font-mono">{d.uniqueWordCount}</span>
+                    </div>
+                  </div>
+                )}
+
+                {d.responsePreview && (
+                  <div className="text-xs font-mono text-muted-foreground bg-black/30 rounded p-1.5 max-h-16 overflow-y-auto whitespace-pre-wrap break-words">
+                    {d.responsePreview}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };

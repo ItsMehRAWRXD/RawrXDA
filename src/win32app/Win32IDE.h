@@ -38,6 +38,9 @@
 #include <condition_variable>
 #include <climits>
 
+// Forward declarations
+class MultiResponseEngine;
+
 // Agent and AI IDs
 #define IDM_AGENT_START_LOOP 4100
 #define IDM_AGENT_EXECUTE_CMD 4101
@@ -2988,4 +2991,425 @@ private:
     HWND m_hwndHistoryBtnExport   = nullptr;
     HWND m_hwndHistoryBtnClear    = nullptr;
     HWND m_hwndHistoryBtnRefresh  = nullptr;
+
+    // ========================================================================
+    // ASM Semantic Support (Win32IDE_AsmSemantic.cpp)
+    // ========================================================================
+
+    // ---- IDM defines for ASM commands (5082–5093) ----
+#define IDM_ASM_PARSE_SYMBOLS       5082
+#define IDM_ASM_GOTO_LABEL          5083
+#define IDM_ASM_FIND_LABEL_REFS     5084
+#define IDM_ASM_SHOW_SYMBOL_TABLE   5085
+#define IDM_ASM_INSTRUCTION_INFO    5086
+#define IDM_ASM_REGISTER_INFO       5087
+#define IDM_ASM_ANALYZE_BLOCK       5088
+#define IDM_ASM_SHOW_CALL_GRAPH     5089
+#define IDM_ASM_SHOW_DATA_FLOW      5090
+#define IDM_ASM_DETECT_CONVENTION   5091
+#define IDM_ASM_SHOW_SECTIONS       5092
+#define IDM_ASM_CLEAR_SYMBOLS       5093
+
+    // ---- Symbol kinds for ASM analysis ----
+    enum class AsmSymbolKind {
+        Label       = 0,
+        Procedure   = 1,
+        Macro       = 2,
+        Equate      = 3,
+        DataDef     = 4,
+        Section     = 5,
+        Struct      = 6,
+        Extern      = 7,
+        Global      = 8,
+        Local       = 9,
+        Count       = 10
+    };
+
+    // ---- Symbol reference (where a symbol is used) ----
+    struct AsmSymbolRef {
+        std::string filePath;
+        int         line       = 0;
+        int         column     = 0;
+        bool        isDefinition = false;
+    };
+
+    // ---- A single ASM symbol entry ----
+    struct AsmSymbol {
+        std::string   name;
+        AsmSymbolKind kind       = AsmSymbolKind::Label;
+        std::string   filePath;
+        int           line       = 0;
+        int           column     = 0;
+        int           endLine    = 0;
+        std::string   detail;
+        std::string   section;
+        std::vector<AsmSymbolRef> references;
+    };
+
+    // ---- Instruction information ----
+    struct AsmInstructionInfo {
+        std::string mnemonic;
+        std::string category;
+        std::string description;
+        std::string operands;
+        bool        affectsFlags = false;
+    };
+
+    // ---- Register information ----
+    struct AsmRegisterInfo {
+        std::string name;
+        std::string category;
+        int         bits = 64;
+        std::string description;
+        std::string aliases;
+    };
+
+    // ---- Section descriptor ----
+    struct AsmSectionInfo {
+        std::string name;
+        std::string filePath;
+        int         startLine = 0;
+        int         endLine   = 0;
+        int         symbolCount = 0;
+    };
+
+    // ---- Call graph edge ----
+    struct AsmCallEdge {
+        std::string caller;
+        std::string callee;
+        std::string filePath;
+        int         line = 0;
+    };
+
+    // ---- Data flow reference ----
+    struct AsmDataFlowRef {
+        std::string symbol;
+        int         line = 0;
+        bool        isRead  = false;
+        bool        isWrite = false;
+        std::string instruction;
+    };
+
+    // ---- AI analysis result for an ASM block ----
+    struct AsmBlockAnalysis {
+        std::string summary;
+        std::string callingConvention;
+        std::vector<std::string> registersUsed;
+        std::vector<std::string> registersModified;
+        std::vector<std::string> memoryAccesses;
+        std::vector<std::string> observations;
+        bool        isLeafFunction = false;
+        bool        usesStackFrame = false;
+        int         estimatedStackUsage = 0;
+    };
+
+    // ---- Aggregate statistics ----
+    struct AsmSemanticStats {
+        uint64_t totalSymbols         = 0;
+        uint64_t totalLabels          = 0;
+        uint64_t totalProcedures      = 0;
+        uint64_t totalMacros          = 0;
+        uint64_t totalEquates         = 0;
+        uint64_t totalDataDefs        = 0;
+        uint64_t totalSections        = 0;
+        uint64_t totalExterns         = 0;
+        uint64_t totalFiles           = 0;
+        uint64_t totalParseTimeMs     = 0;
+        uint64_t gotoDefRequests      = 0;
+        uint64_t findRefsRequests     = 0;
+        uint64_t analyzeBlockRequests = 0;
+    };
+
+    // ASM Semantic — lifecycle
+    void initAsmSemantic();
+    void shutdownAsmSemantic();
+
+    // Symbol table — parsing
+    void parseAsmFile(const std::string& filePath);
+    void parseAsmDirectory(const std::string& dirPath, bool recursive = true);
+    void reparseCurrentAsmFile();
+    void clearAsmSymbols();
+    void clearAsmSymbolsForFile(const std::string& filePath);
+
+    // Symbol table — queries
+    const AsmSymbol* findAsmSymbol(const std::string& name) const;
+    std::vector<const AsmSymbol*> findAsmSymbolsByKind(AsmSymbolKind kind) const;
+    std::vector<const AsmSymbol*> findAsmSymbolsInFile(const std::string& filePath) const;
+    std::vector<const AsmSymbol*> findAsmSymbolsInSection(const std::string& sectionName) const;
+    std::vector<AsmSymbolRef> findAsmSymbolReferences(const std::string& symbolName) const;
+
+    // Navigation
+    bool asmGotoDefinition(const std::string& symbolName);
+    bool asmGotoDefinitionAtCursor();
+    std::vector<AsmSymbolRef> asmFindReferencesAtCursor();
+
+    // Instruction & register lookup
+    AsmInstructionInfo lookupInstruction(const std::string& mnemonic) const;
+    AsmRegisterInfo lookupRegister(const std::string& regName) const;
+    std::string getInstructionInfoString(const std::string& mnemonic) const;
+    std::string getRegisterInfoString(const std::string& regName) const;
+
+    // Section analysis
+    std::vector<AsmSectionInfo> getAsmSections(const std::string& filePath) const;
+    std::string getAsmSectionsString(const std::string& filePath) const;
+
+    // Call graph
+    std::vector<AsmCallEdge> buildCallGraph(const std::string& filePath) const;
+    std::string getCallGraphString(const std::string& filePath) const;
+
+    // Data flow
+    std::vector<AsmDataFlowRef> analyzeDataFlow(const std::string& symbolName,
+                                                 const std::string& filePath) const;
+    std::string getDataFlowString(const std::string& symbolName,
+                                   const std::string& filePath) const;
+
+    // AI-assisted block analysis
+    AsmBlockAnalysis analyzeAsmBlock(const std::string& filePath,
+                                      int startLine, int endLine) const;
+    AsmBlockAnalysis analyzeCurrentProcedure() const;
+    std::string detectCallingConvention(const std::string& filePath,
+                                         int startLine, int endLine) const;
+    std::string getAsmBlockAnalysisString(const AsmBlockAnalysis& analysis) const;
+
+    // Editor helpers (ASM)
+    void gotoLine(int line);
+    std::string getWordAtCursor() const;
+    bool asmIsAsmFile(const std::string& filePath) const;
+
+    // Display & status
+    std::string getAsmSymbolTableString() const;
+    std::string getAsmSemanticStatsString() const;
+    std::string asmSymbolKindString(AsmSymbolKind kind) const;
+
+    // Command handlers
+    void cmdAsmParseSymbols();
+    void cmdAsmGotoLabel();
+    void cmdAsmFindLabelRefs();
+    void cmdAsmShowSymbolTable();
+    void cmdAsmInstructionInfo();
+    void cmdAsmRegisterInfo();
+    void cmdAsmAnalyzeBlock();
+    void cmdAsmShowCallGraph();
+    void cmdAsmShowDataFlow();
+    void cmdAsmDetectConvention();
+    void cmdAsmShowSections();
+    void cmdAsmClearSymbols();
+
+    // HTTP endpoints
+    void handleAsmSymbolsEndpoint(SOCKET client, const std::string& path);
+    void handleAsmNavigateEndpoint(SOCKET client, const std::string& body);
+    void handleAsmAnalyzeEndpoint(SOCKET client, const std::string& body);
+
+    // ASM Semantic state
+    bool m_asmSemanticInitialized                                = false;
+    std::map<std::string, AsmSymbol>     m_asmSymbolTable;
+    std::map<std::string, std::vector<std::string>> m_asmFileSymbols;
+    mutable AsmSemanticStats m_asmStats                          = {};
+    mutable std::mutex m_asmMutex;
+
+    // ========================================================================
+    // Phase 9B: LSP-AI Hybrid Integration Bridge
+    // (Win32IDE_LSP_AI_Bridge.cpp)
+    // ========================================================================
+
+    // ---- IDM defines for Hybrid commands (5094–5109) ----
+#define IDM_HYBRID_COMPLETE         5094
+#define IDM_HYBRID_DIAGNOSTICS      5095
+#define IDM_HYBRID_SMART_RENAME     5096
+#define IDM_HYBRID_ANALYZE_FILE     5097
+#define IDM_HYBRID_AUTO_PROFILE     5098
+#define IDM_HYBRID_STATUS           5099
+#define IDM_HYBRID_SYMBOL_USAGE     5100
+#define IDM_HYBRID_EXPLAIN_SYMBOL   5101
+#define IDM_HYBRID_ANNOTATE_DIAG    5102
+#define IDM_HYBRID_STREAM_ANALYZE   5103
+#define IDM_HYBRID_SEMANTIC_PREFETCH 5104
+#define IDM_HYBRID_CORRECTION_LOOP  5105
+
+    // ---- Hybrid completion result ----
+    struct HybridCompletionItem {
+        std::string label;
+        std::string detail;
+        std::string insertText;
+        std::string source;       // "lsp", "ai", "asm", "merged"
+        float       confidence = 0.0f;
+        int         sortOrder  = 0;
+    };
+
+    // ---- Aggregate diagnostic with AI explanation ----
+    struct HybridDiagnostic {
+        std::string filePath;
+        int         line       = 0;
+        int         character  = 0;
+        int         severity   = 0;   // 1=Error, 2=Warning, 3=Info, 4=Hint
+        std::string message;
+        std::string source;           // "lsp", "ai", "asm"
+        std::string aiExplanation;    // AI-generated fix suggestion
+        std::string suggestedFix;
+    };
+
+    // ---- Symbol usage analysis ----
+    struct HybridSymbolUsage {
+        std::string symbol;
+        std::string kind;             // "function", "variable", "procedure", etc.
+        int         definitionLine = 0;
+        std::string definitionFile;
+        int         referenceCount = 0;
+        std::vector<std::pair<std::string, int>> references; // (file, line) pairs
+        std::string aiSummary;        // AI-generated description of the symbol
+    };
+
+    // ---- Streaming analysis result ----
+    struct HybridStreamAnalysis {
+        std::string filePath;
+        int         totalLines     = 0;
+        int         symbolCount    = 0;
+        int         diagnosticCount = 0;
+        int         complexityScore = 0;
+        std::string summary;
+        std::vector<HybridDiagnostic> diagnostics;
+        std::vector<std::string> observations;
+        double      analysisTimeMs = 0.0;
+    };
+
+    // ---- LSP profile recommendation ----
+    struct LSPProfileRecommendation {
+        LSPLanguage language;
+        std::string serverName;
+        std::string reason;
+        bool        isInstalled = false;
+    };
+
+    // ---- Bridge statistics ----
+    struct HybridBridgeStats {
+        uint64_t hybridCompletions   = 0;
+        uint64_t aggregateDiagRuns   = 0;
+        uint64_t smartRenames        = 0;
+        uint64_t streamAnalyses      = 0;
+        uint64_t autoProfileSelects  = 0;
+        uint64_t semanticPrefetches  = 0;
+        uint64_t correctionLoops     = 0;
+        uint64_t symbolExplains      = 0;
+        double   totalBridgeTimeMs   = 0.0;
+    };
+
+    // Phase 9B — lifecycle
+    void initLSPAIBridge();
+    void shutdownLSPAIBridge();
+
+    // Hybrid completion (LSP + AI + ASM merged)
+    std::vector<HybridCompletionItem> requestHybridCompletion(
+        const std::string& filePath, int line, int character);
+
+    // Aggregate diagnostics (LSP + AI analysis + ASM semantic)
+    std::vector<HybridDiagnostic> aggregateDiagnostics(const std::string& filePath);
+
+    // Smart rename (LSP rename + AI verification + ASM cross-ref)
+    bool hybridSmartRename(const std::string& filePath, int line, int character,
+                           const std::string& newName);
+
+    // Streaming large file analysis (uses StreamingEngineRegistry)
+    HybridStreamAnalysis streamLargeFileAnalysis(const std::string& filePath);
+
+    // Auto LSP profile selection based on project analysis
+    std::vector<LSPProfileRecommendation> autoSelectLSPProfile();
+
+    // Symbol usage analysis (LSP references + ASM refs + AI summary)
+    HybridSymbolUsage analyzeSymbolUsage(const std::string& symbol,
+                                          const std::string& filePath);
+
+    // AI-powered symbol explanation
+    std::string explainSymbol(const std::string& symbol, const std::string& filePath);
+
+    // Semantic prefetching (pre-warm LSP + ASM caches for open files)
+    void semanticPrefetch(const std::string& filePath);
+
+    // Agent-LSP correction loop (detect bad output → re-query with LSP context)
+    std::string agentCorrectionLoop(const std::string& prompt,
+                                     const std::string& badOutput,
+                                     const std::string& filePath);
+
+    // Diagnostic annotation overlay (merge diagnostics → IDE annotations)
+    void annotateDiagnostics(const std::string& filePath);
+
+    // Bridge status & statistics
+    HybridBridgeStats getHybridBridgeStats() const;
+    std::string getHybridBridgeStatusString() const;
+
+    // Command handlers
+    void cmdHybridComplete();
+    void cmdHybridDiagnostics();
+    void cmdHybridSmartRename();
+    void cmdHybridAnalyzeFile();
+    void cmdHybridAutoProfile();
+    void cmdHybridStatus();
+    void cmdHybridSymbolUsage();
+    void cmdHybridExplainSymbol();
+    void cmdHybridAnnotateDiag();
+    void cmdHybridStreamAnalyze();
+    void cmdHybridSemanticPrefetch();
+    void cmdHybridCorrectionLoop();
+
+    // HTTP endpoints
+    void handleHybridCompleteEndpoint(SOCKET client, const std::string& body);
+    void handleHybridDiagnosticsEndpoint(SOCKET client, const std::string& path);
+    void handleHybridSmartRenameEndpoint(SOCKET client, const std::string& body);
+    void handleHybridAnalyzeEndpoint(SOCKET client, const std::string& body);
+    void handleHybridStatusEndpoint(SOCKET client);
+    void handleHybridSymbolUsageEndpoint(SOCKET client, const std::string& body);
+
+    // Phase 9B state
+    bool m_hybridBridgeInitialized = false;
+    mutable HybridBridgeStats m_hybridStats = {};
+    mutable std::mutex m_hybridMutex;
+
+    // ========================================================================
+    // Phase 9C: Multi-Response Chain Engine
+    // (Win32IDE_MultiResponse.cpp)
+    // ========================================================================
+
+    // ---- IDM defines for MultiResponse commands (5106–5117) ----
+#define IDM_MULTI_RESP_GENERATE         5106
+#define IDM_MULTI_RESP_SET_MAX          5107
+#define IDM_MULTI_RESP_SELECT_PREFERRED 5108
+#define IDM_MULTI_RESP_COMPARE          5109
+#define IDM_MULTI_RESP_SHOW_STATS       5110
+#define IDM_MULTI_RESP_SHOW_TEMPLATES   5111
+#define IDM_MULTI_RESP_TOGGLE_TEMPLATE  5112
+#define IDM_MULTI_RESP_SHOW_PREFS       5113
+#define IDM_MULTI_RESP_SHOW_LATEST      5114
+#define IDM_MULTI_RESP_SHOW_STATUS      5115
+#define IDM_MULTI_RESP_CLEAR_HISTORY    5116
+#define IDM_MULTI_RESP_APPLY_PREFERRED  5117
+
+    // Multi-Response lifecycle
+    void initMultiResponse();
+    void shutdownMultiResponse();
+
+    // Multi-Response command handlers
+    void cmdMultiResponseGenerate();
+    void cmdMultiResponseSetMax();
+    void cmdMultiResponseSelectPreferred();
+    void cmdMultiResponseCompare();
+    void cmdMultiResponseShowStats();
+    void cmdMultiResponseShowTemplates();
+    void cmdMultiResponseToggleTemplate();
+    void cmdMultiResponseShowPreferences();
+    void cmdMultiResponseShowLatest();
+    void cmdMultiResponseShowStatus();
+    void cmdMultiResponseClearHistory();
+    void cmdMultiResponseApplyPreferred();
+
+    // Multi-Response HTTP endpoint handlers
+    void handleMultiResponseStatusEndpoint(SOCKET client);
+    void handleMultiResponseTemplatesEndpoint(SOCKET client);
+    void handleMultiResponseGenerateEndpoint(SOCKET client, const std::string& body);
+    void handleMultiResponseResultsEndpoint(SOCKET client, const std::string& sessionId);
+    void handleMultiResponsePreferEndpoint(SOCKET client, const std::string& body);
+    void handleMultiResponseStatsEndpoint(SOCKET client);
+    void handleMultiResponsePreferencesEndpoint(SOCKET client);
+
+    // Multi-Response state
+    bool m_multiResponseInitialized = false;
+    std::unique_ptr<MultiResponseEngine> m_multiResponseEngine;
 };
