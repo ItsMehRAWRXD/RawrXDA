@@ -2424,6 +2424,16 @@ private:
     AIBackendType backendTypeFromString(const std::string& name) const;
     std::string getBackendConfigFilePath() const;
 
+    // Streaming Engine Selection — Phase 9
+    // Auto-selects the optimal ASM streaming engine for a given model file
+    std::string selectStreamingEngine(const std::string& modelPath);
+    // Get full diagnostics from the streaming engine registry
+    std::string getStreamingEngineDiagnostics() const;
+    // List all registered streaming engines
+    std::vector<std::string> getAvailableStreamingEngines() const;
+    // Manually switch to a specific streaming engine by name
+    bool switchStreamingEngine(const std::string& engineName);
+
     // Backend Switcher state
     AIBackendType m_activeBackend                           = AIBackendType::LocalGGUF;
     std::array<AIBackendConfig, (size_t)AIBackendType::Count>  m_backendConfigs;

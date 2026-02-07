@@ -147,6 +147,9 @@ if(WIN32)
         src/codec/compression.cpp
         src/codec/brutal_gzip.cpp
         
+        # Streaming engine registry (Phase 9)
+        src/core/streaming_engine_registry.cpp
+        
         # Module implementations
         src/modules/vsix_loader_win32.cpp
         src/modules/codex_ultimate.cpp
@@ -165,6 +168,7 @@ if(WIN32)
     target_include_directories(RawrXD-Win32IDE PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core
         ${CMAKE_CURRENT_SOURCE_DIR}/src/win32app
         ${CMAKE_CURRENT_SOURCE_DIR}/src/modules
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
