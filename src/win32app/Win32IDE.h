@@ -1105,6 +1105,20 @@ private:
     void decompViewSyncToAddress(uint64_t address);
     bool isDecompilerViewActive() const;
 
+public:
+    // ========================================================================
+    // FEATURE MANIFEST & SELF-TEST (Phase 19)
+    // Auto-introspects all IDE features across Win32/CLI/React/PowerShell
+    // ========================================================================
+    int runFeatureSelfTests(std::vector<std::string>& results);
+    std::string generateFeatureManifestMarkdown();
+    std::string generateFeatureManifestJSON();
+    void exportFeatureManifest();
+    int getLoadedThemeCount() const { return static_cast<int>(m_themes.size()); }
+    bool hasAgenticBridge() const { return m_agenticBridge != nullptr; }
+
+private:
+
     // Command routing
     bool routeCommand(int commandId);
     std::string getCommandDescription(int commandId) const;
