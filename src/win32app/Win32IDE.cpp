@@ -1,5 +1,7 @@
 #include "Win32IDE.h"
+#include "../../include/rawrxd_version.h"
 #include "multi_response_engine.h"
+#include "lsp/RawrXD_LSPServer.h"
 #include "IDELogger.h"
 #include "IDEConfig.h"
 #include "Win32IDE_AgenticBridge.h"
@@ -406,6 +408,45 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_RESULTS, "Profile &Results...");
     AppendMenuA(hToolsMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_ANALYZE_SCRIPT, "&Analyze Script");
+    AppendMenuA(hToolsMenu, MF_SEPARATOR, 0, nullptr);
+
+    // Voice Chat submenu
+    HMENU hVoiceMenu = CreatePopupMenu();
+    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_TOGGLE_PANEL, "Show/Hide &Voice Panel\tCtrl+Shift+U");
+    AppendMenuA(hVoiceMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_RECORD, "&Record / Stop\tF9");
+    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_PTT, "&Push-to-Talk\tCtrl+Shift+V");
+    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_SPEAK, "Text-to-&Speech");
+    AppendMenuA(hVoiceMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_JOIN_ROOM, "&Join/Leave Room");
+    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_SHOW_DEVICES, "Audio &Devices...");
+    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_METRICS, "&Metrics...");
+    AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceMenu, "🎙️ &Voice Chat");
+
+    // Backup submenu
+    HMENU hBackupMenu = CreatePopupMenu();
+    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_CREATE, "&Create Backup Now\tCtrl+Shift+B");
+    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_RESTORE, "&Restore from Backup...");
+    AppendMenuA(hBackupMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_AUTO_TOGGLE, "Toggle &Auto-Backup");
+    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_LIST, "&List Backups...");
+    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_PRUNE, "&Prune Old Backups");
+    AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hBackupMenu, "💾 &Backups");
+
+    // Alert & Monitoring submenu
+    HMENU hAlertMenu = CreatePopupMenu();
+    AppendMenuA(hAlertMenu, MF_STRING, IDM_QW_ALERT_TOGGLE_MONITOR, "Toggle Resource &Monitor");
+    AppendMenuA(hAlertMenu, MF_STRING, IDM_QW_ALERT_RESOURCE_STATUS, "&Resource Status...");
+    AppendMenuA(hAlertMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuA(hAlertMenu, MF_STRING, IDM_QW_ALERT_SHOW_HISTORY, "Alert &History...");
+    AppendMenuA(hAlertMenu, MF_STRING, IDM_QW_ALERT_DISMISS_ALL, "&Dismiss All Alerts");
+    AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hAlertMenu, "🔔 A&lerts");
+
+    // Shortcuts & SLO
+    AppendMenuA(hToolsMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuA(hToolsMenu, MF_STRING, IDM_QW_SHORTCUT_EDITOR, "⌨️ &Keyboard Shortcuts...\tCtrl+K Ctrl+S");
+    AppendMenuA(hToolsMenu, MF_STRING, IDM_QW_SLO_DASHBOARD, "📊 &SLO Dashboard...");
+
     AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hToolsMenu, "&Tools");
     
     // Modules menu
@@ -4730,18 +4771,24 @@ void Win32IDE::toggleTerminal()
 void Win32IDE::showAbout()
 {
     std::string aboutText = 
-        "RawrXD Win32 IDE\n\n"
-        "Version: 1.0.0\n"
-        "Build: " __DATE__ " " __TIME__ "\n\n"
-        "Features:\n"
-        "• Native Win32 UI\n"
-        "• GGUF Model Support\n"
-        "• PowerShell Integration\n"
-        "• Git Integration\n"
-        "• AI Chat via Ollama\n"
-        "• Syntax Highlighting\n"
-        "• Multi-Terminal Support\n\n"
-        "GitHub: ItsMehRAWRXD/RawrXD";
+        RAWRXD_VERSION_FULL "\n\n"
+        "Build: " RAWRXD_BUILD_DATE " " RAWRXD_BUILD_TIME "\n"
+        "Channel: " RAWRXD_CHANNEL "\n"
+        "Units: " + std::to_string(RAWRXD_COMPILE_UNITS) + " compilation units\n"
+        "MASM64: " + std::to_string(RAWRXD_MASM_KERNELS) + " ASM kernels\n\n"
+        "Engine:\n"
+        "• Native Win32 C++20 (no Qt, no Electron)\n"
+        "• GGUF Model Loader + AVX-512 Inference\n"
+        "• Chain-of-Thought Multi-Model Review\n"
+        "• Native PDB Symbol Server (MSF v7.00)\n"
+        "• Three-Layer Hotpatch System\n"
+        "• Voice Chat (waveIn/Out + VAD + STT/TTS)\n"
+        "• Unified GPU Accelerator Router\n"
+        "• Embedded LSP Server (JSON-RPC 2.0)\n"
+        "• Distributed Swarm Inference\n\n"
+        RAWRXD_COPYRIGHT "\n"
+        RAWRXD_LICENSE "\n"
+        RAWRXD_GITHUB;
     
     MessageBoxA(m_hwndMain, aboutText.c_str(), "About RawrXD IDE", MB_OK | MB_ICONINFORMATION);
 }
