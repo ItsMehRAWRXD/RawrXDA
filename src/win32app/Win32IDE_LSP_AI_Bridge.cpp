@@ -401,6 +401,94 @@ std::vector<Win32IDE::HybridCompletionItem> Win32IDE::requestHybridCompletion(
         }
     }
 
+    // ── Step 3.5: Local keyword fallback (when LSP + AI returned nothing) ──
+    // This ensures users always get IntelliSense suggestions, even when
+    // no language server is running and no AI model is loaded.
+    std::vector<HybridCompletionItem> fallbackItems;
+    if (lspItems.empty() && aiItems.empty()) {
+        // Read file content for local identifier extraction
+        std::string fileContent;
+        {
+            std::ifstream fin(filePath);
+            if (fin.is_open()) {
+                std::ostringstream oss;
+                oss << fin.rdbuf();
+                fileContent = oss.str();
+                fin.close();
+            }
+        }
+
+        if (!fileContent.empty()) {
+            // Determine cursor byte offset from line/character
+            int cursorOffset = 0;
+            {
+                int currentLine = 0;
+                for (size_t i = 0; i < fileContent.size(); ++i) {
+                    if (currentLine == line) {
+                        cursorOffset = (int)i + character;
+                        break;
+                    }
+                    if (fileContent[i] == '\n') currentLine++;
+                }
+                if (cursorOffset > (int)fileContent.size())
+                    cursorOffset = (int)fileContent.size();
+            }
+
+            // Determine language from extension
+            std::string langId = ext;
+            if (!langId.empty() && langId[0] == '.') langId = langId.substr(1);
+
+            // Call the local fallback engine (defined in ai_completion_real.cpp)
+            // Use dynamic struct matching LocalFallbackItem layout
+            struct FallbackResult {
+                char label[256];
+                char detail[128];
+                char insertText[512];
+                float confidence;
+                char category[32];
+            };
+
+            static const int MAX_FALLBACK = 50;
+            std::vector<FallbackResult> fbBuf(MAX_FALLBACK);
+
+            // GetLocalFallbackCompletions is extern "C" in ai_completion_real.cpp
+            // Use declaration at block scope via function pointer to avoid C++20 restriction
+            typedef int (*FnGetLocalFallbackCompletions)(
+                const char* content, int cursorPos, const char* language,
+                void* outItems, int maxItems);
+            static auto GetLocalFallbackCompletions =
+                reinterpret_cast<FnGetLocalFallbackCompletions>(
+                    GetProcAddress(GetModuleHandleA(nullptr), "GetLocalFallbackCompletions"));
+            if (!GetLocalFallbackCompletions) {
+                // Fallback: try direct link (linker will resolve)
+                OutputDebugStringA("[LSP-AI] GetLocalFallbackCompletions not found via GetProcAddress, skipping fallback\n");
+            }
+
+            int fbCount = 0;
+            if (GetLocalFallbackCompletions) {
+                fbCount = GetLocalFallbackCompletions(
+                    fileContent.c_str(), cursorOffset, langId.c_str(),
+                    fbBuf.data(), MAX_FALLBACK);
+            }
+
+            for (int fi = 0; fi < fbCount; ++fi) {
+                HybridCompletionItem item;
+                item.label      = fbBuf[fi].label;
+                item.detail     = std::string(fbBuf[fi].detail) + " (local fallback)";
+                item.insertText = fbBuf[fi].insertText;
+                item.source     = "fallback";
+                item.confidence = fbBuf[fi].confidence * 0.7f; // Scale down vs LSP/AI
+                item.sortOrder  = 2000 + fi;
+                fallbackItems.push_back(std::move(item));
+            }
+
+            if (!fallbackItems.empty()) {
+                logInfo("[Hybrid] LSP+AI empty — local fallback provided "
+                        + std::to_string(fallbackItems.size()) + " items for " + ext);
+            }
+        }
+    }
+
     // ── Step 4: Merge and deduplicate ───────────────────────────────────
     // LSP items have highest base priority, then ASM, then AI
     std::map<std::string, HybridCompletionItem> merged;
@@ -444,6 +532,19 @@ std::vector<Win32IDE::HybridCompletionItem> Win32IDE::requestHybridCompletion(
             it->second.source = "merged";
             it->second.confidence = computeConfidence("merged", true, true, false);
             it->second.detail += " | AI confirmed";
+        }
+    }
+
+    // Insert local fallback items (lowest priority, only when LSP+AI empty)
+    for (auto& item : fallbackItems) {
+        auto key = item.label;
+        auto it = merged.find(key);
+        if (it == merged.end()) {
+            merged[key] = item;
+        } else {
+            // Fallback confirms an existing item — slight confidence boost
+            it->second.confidence += 0.05f;
+            if (it->second.confidence > 1.0f) it->second.confidence = 1.0f;
         }
     }
 

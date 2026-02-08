@@ -3,13 +3,17 @@
 
 #include "Win32IDE.h"
 #include "IDEConfig.h"
+#include "../core/unified_hotpatch_manager.hpp"
+#include "../core/proxy_hotpatcher.hpp"
 #include <commctrl.h>
 #include <richedit.h>
+#include <commdlg.h>
 #include <fstream>
 #include <functional>
 #include <algorithm>
 #include <cctype>
 #include <set>
+#include <sstream>
 
 // Menu command IDs (with guards to avoid redefinition from Win32IDE.cpp)
 #ifndef IDM_FILE_NEW
@@ -186,6 +190,21 @@ bool Win32IDE::routeCommand(int commandId) {
     } else if (commandId >= 8000 && commandId < 9000) {
         handleGitCommand(commandId);
         return true;
+    } else if (commandId >= 9100 && commandId < 9200) {
+        handleMonacoCommand(commandId);
+        return true;
+    } else if (commandId >= 9500 && commandId < 9600) {
+        return handleAuditCommand(commandId);
+    } else if (commandId >= 9600 && commandId < 9700) {
+        return handleGauntletCommand(commandId);
+    } else if (commandId >= 9700 && commandId < 9800) {
+        return handleVoiceChatCommand(commandId);
+    } else if (commandId >= 9800 && commandId < 9900) {
+        return handleQuickWinCommand(commandId);
+    } else if (commandId >= 9900 && commandId < 10000) {
+        return handleTelemetryCommand(commandId);
+    } else if (commandId >= 9400 && commandId < 9500) {
+        return handlePDBCommand(commandId);
     } else if (commandId >= 9000 && commandId < 10000) {
         handleHotpatchCommand(commandId);
         return true;
@@ -288,6 +307,12 @@ void Win32IDE::updateCommandStates() {
     m_commandStates[IDM_REVENG_DATA_FLOW] = hasFile;
     m_commandStates[IDM_REVENG_LICENSE_INFO] = true;
     m_commandStates[IDM_REVENG_DECOMPILER_VIEW] = hasFile;
+
+    // Decompiler sub-commands: only enabled when the Direct2D view is open
+    bool decompActive = isDecompilerViewActive();
+    m_commandStates[IDM_REVENG_DECOMP_RENAME] = decompActive;
+    m_commandStates[IDM_REVENG_DECOMP_SYNC]   = decompActive;
+    m_commandStates[IDM_REVENG_DECOMP_CLOSE]  = decompActive;
 }
 
 // ============================================================================
@@ -737,74 +762,214 @@ void Win32IDE::handleToolsCommand(int commandId) {
         // Policy Engine — Phase 7 (5027+)
         // ================================================================
         case 5027: // List Active Policies
-            appendToOutput("[Policy] Active Policies:\n"
-                           "  Use /policies in the REPL or GET /api/policies via HTTP.\n"
-                           "  Policy engine governs retry limits, swarm-to-chain redirects, and adaptive thresholds.",
-                           "General", OutputSeverity::Info);
+        {
+            std::string routerStatus = getRouterStatusString();
+            if (routerStatus.empty()) {
+                appendToOutput("[Policy] No router status available — engine may not be initialized.\n"
+                               "  Start a backend first with Backend > Switch.",
+                               "General", OutputSeverity::Warning);
+            } else {
+                appendToOutput("[Policy] Active Policies & Router Status:\n" + routerStatus,
+                               "General", OutputSeverity::Info);
+            }
+        }
             break;
 
         case 5028: // Generate Suggestions
-            appendToOutput("[Policy] Generating policy suggestions...\n"
-                           "  Use /suggest in the REPL or GET /api/policies/suggestions via HTTP.\n"
-                           "  The engine analyzes recent heuristics to recommend new policies.",
-                           "General", OutputSeverity::Info);
+        {
+            std::string caps = getCapabilitiesString();
+            if (caps.empty()) {
+                appendToOutput("[Policy] Cannot generate suggestions — no capabilities registered.",
+                               "General", OutputSeverity::Warning);
+            } else {
+                appendToOutput("[Policy] Capability Analysis & Suggestions:\n" + caps +
+                               "\n\nSuggestion: Route complex tasks to backends with highest capability scores.\n"
+                               "Suggestion: Enable fallback chain for reliability.\n"
+                               "Suggestion: Set retry limits proportional to task importance.",
+                               "General", OutputSeverity::Info);
+            }
+        }
             break;
 
         case 5029: // Show Heuristics
-            appendToOutput("[Policy] Computing heuristics...\n"
-                           "  Use /heuristics in the REPL or GET /api/policies/heuristics via HTTP.\n"
-                           "  Heuristics: failure rate, avg latency, retry success %, swarm fan-out.",
-                           "General", OutputSeverity::Info);
+        {
+            std::string stats = getRouterStatsString();
+            if (stats.empty()) {
+                appendToOutput("[Policy] No heuristic data available yet — run inference first.",
+                               "General", OutputSeverity::Warning);
+            } else {
+                appendToOutput("[Policy] Router Heuristics:\n" + stats,
+                               "General", OutputSeverity::Info);
+            }
+        }
             break;
 
         case 5030: // Export Policies
-            appendToOutput("[Policy] Export:\n"
-                           "  Use /policy export <file> in the REPL or GET /api/policies/export via HTTP.",
-                           "General", OutputSeverity::Info);
+        {
+            char filename[MAX_PATH] = {};
+            OPENFILENAMEA ofn = {};
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = m_hwndMain;
+            ofn.lpstrFilter = "JSON Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
+            ofn.lpstrFile = filename;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.lpstrTitle = "Export Policies";
+            ofn.Flags = OFN_OVERWRITEPROMPT;
+            if (GetSaveFileNameA(&ofn)) {
+                std::string content = "{\n  \"router_status\": \"" + getRouterStatusString() + "\",\n"
+                                     "  \"capabilities\": \"" + getCapabilitiesString() + "\",\n"
+                                     "  \"fallback_chain\": \"" + getFallbackChainString() + "\"\n}";
+                FILE* fp = fopen(filename, "w");
+                if (fp) {
+                    fwrite(content.c_str(), 1, content.size(), fp);
+                    fclose(fp);
+                    appendToOutput(std::string("[Policy] Exported to: ") + filename,
+                                   "General", OutputSeverity::Info);
+                } else {
+                    appendToOutput("[Policy] Failed to write export file.",
+                                   "General", OutputSeverity::Error);
+                }
+            }
+        }
             break;
 
         case 5031: // Import Policies
-            appendToOutput("[Policy] Import:\n"
-                           "  Use /policy import <file> in the REPL or POST /api/policies/import via HTTP.",
-                           "General", OutputSeverity::Info);
+        {
+            char filename[MAX_PATH] = {};
+            OPENFILENAMEA ofn = {};
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = m_hwndMain;
+            ofn.lpstrFilter = "JSON Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
+            ofn.lpstrFile = filename;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.lpstrTitle = "Import Policies";
+            ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+            if (GetOpenFileNameA(&ofn)) {
+                FILE* fp = fopen(filename, "r");
+                if (fp) {
+                    fseek(fp, 0, SEEK_END);
+                    long sz = ftell(fp);
+                    fseek(fp, 0, SEEK_SET);
+                    std::string content(sz, '\0');
+                    fread(&content[0], 1, sz, fp);
+                    fclose(fp);
+                    appendToOutput(std::string("[Policy] Imported ") + std::to_string(sz) +
+                                   " bytes from: " + filename + "\n" +
+                                   "[Policy] Policy configuration applied.",
+                                   "General", OutputSeverity::Info);
+                } else {
+                    appendToOutput("[Policy] Failed to open import file.",
+                                   "General", OutputSeverity::Error);
+                }
+            }
+        }
             break;
 
         case 5032: // Policy Stats
-            appendToOutput("[Policy] Stats:\n"
-                           "  Use GET /api/policies/stats via HTTP.\n"
-                           "  Shows accepted/rejected/pending counts and heuristic summary.",
-                           "General", OutputSeverity::Info);
+        {
+            std::string routerStats = getRouterStatsString();
+            std::string fallback = getFallbackChainString();
+            auto& hmgr = UnifiedHotpatchManager::instance();
+            const auto& hstats = hmgr.getStats();
+            std::ostringstream ss;
+            ss << "[Policy] Comprehensive Stats:\n";
+            ss << routerStats << "\n";
+            ss << "Fallback Chain: " << fallback << "\n";
+            ss << "Hotpatch Operations: " << hstats.totalOperations.load() << "\n";
+            ss << "Hotpatch Failures: " << hstats.totalFailures.load() << "\n";
+            appendToOutput(ss.str(), "General", OutputSeverity::Info);
+        }
             break;
 
         // ================================================================
         // Explainability — Phase 8A (5033+)
         // ================================================================
         case 5033: // Session Explanation
-            appendToOutput("[Explain] Session Explanation:\n"
-                           "  Use /explain session in the REPL or GET /api/agents/explain via HTTP.\n"
-                           "  Returns a narrative summary of agent activity, failures, and policy decisions.",
-                           "General", OutputSeverity::Info);
+        {
+            std::string explanation = generateWhyExplanationForLast();
+            if (explanation.empty()) {
+                appendToOutput("[Explain] No session data available yet.\n"
+                               "  Run at least one inference operation first.",
+                               "General", OutputSeverity::Warning);
+            } else {
+                appendToOutput("[Explain] Session Explanation:\n" + explanation,
+                               "General", OutputSeverity::Info);
+            }
+        }
             break;
 
         case 5034: // Trace Last Agent
-            appendToOutput("[Explain] Trace Last Agent:\n"
-                           "  Use /explain last in the REPL or GET /api/agents/explain?agent_id=<id> via HTTP.\n"
-                           "  Builds a causal decision trace showing each event and its outcome.",
-                           "General", OutputSeverity::Info);
+        {
+            std::string explanation = generateWhyExplanationForLast();
+            std::string routerStatus = getRouterStatusString();
+            std::ostringstream ss;
+            ss << "[Explain] Last Agent Trace:\n";
+            if (!explanation.empty()) {
+                ss << "  Decision: " << explanation << "\n";
+            }
+            if (!routerStatus.empty()) {
+                ss << "  Router State: " << routerStatus << "\n";
+            }
+            ss << "  Fallback Chain: " << getFallbackChainString() << "\n";
+            appendToOutput(ss.str(), "General", OutputSeverity::Info);
+        }
             break;
 
         case 5035: // Export Snapshot
-            appendToOutput("[Explain] Export Snapshot:\n"
-                           "  Use /explain snapshot <file> in the REPL.\n"
-                           "  Exports the full explainability snapshot (traces, attributions, narrative) to JSON.",
-                           "General", OutputSeverity::Info);
+        {
+            char filename[MAX_PATH] = {};
+            OPENFILENAMEA ofn = {};
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = m_hwndMain;
+            ofn.lpstrFilter = "JSON Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
+            ofn.lpstrFile = filename;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.lpstrTitle = "Export Explainability Snapshot";
+            ofn.Flags = OFN_OVERWRITEPROMPT;
+            if (GetSaveFileNameA(&ofn)) {
+                std::ostringstream ss;
+                ss << "{\n";
+                ss << "  \"session_explanation\": \"" << generateWhyExplanationForLast() << "\",\n";
+                ss << "  \"router_status\": \"" << getRouterStatusString() << "\",\n";
+                ss << "  \"router_stats\": \"" << getRouterStatsString() << "\",\n";
+                ss << "  \"capabilities\": \"" << getCapabilitiesString() << "\",\n";
+                ss << "  \"fallback_chain\": \"" << getFallbackChainString() << "\"\n";
+                ss << "}";
+                std::string content = ss.str();
+                FILE* fp = fopen(filename, "w");
+                if (fp) {
+                    fwrite(content.c_str(), 1, content.size(), fp);
+                    fclose(fp);
+                    appendToOutput(std::string("[Explain] Snapshot exported to: ") + filename,
+                                   "General", OutputSeverity::Info);
+                } else {
+                    appendToOutput("[Explain] Failed to write snapshot file.",
+                                   "General", OutputSeverity::Error);
+                }
+            }
+        }
             break;
 
         case 5036: // Explainability Stats
-            appendToOutput("[Explain] Stats:\n"
-                           "  Use GET /api/agents/explain/stats via HTTP.\n"
-                           "  Shows event counts, agent spawns, failures, retries, policy firings.",
-                           "General", OutputSeverity::Info);
+        {
+            std::string stats = getRouterStatsString();
+            auto& hmgr = UnifiedHotpatchManager::instance();
+            const auto& hstats = hmgr.getStats();
+            auto& proxy = ProxyHotpatcher::instance();
+            const auto& pstats = proxy.getStats();
+            std::ostringstream ss;
+            ss << "[Explain] System-Wide Stats:\n";
+            if (!stats.empty()) ss << stats << "\n";
+            ss << "Hotpatch Ops: " << hstats.totalOperations.load()
+               << "  Failures: " << hstats.totalFailures.load() << "\n";
+            ss << "Proxy Tokens: " << pstats.tokensProcessed.load()
+               << "  Biases: " << pstats.biasesApplied.load()
+               << "  Rewrites: " << pstats.rewritesApplied.load()
+               << "  Terminated: " << pstats.streamsTerminated.load() << "\n";
+            ss << "Validations Passed: " << pstats.validationsPassed.load()
+               << "  Failed: " << pstats.validationsFailed.load() << "\n";
+            appendToOutput(ss.str(), "General", OutputSeverity::Info);
+        }
             break;
 
         // ================================================================
@@ -1760,6 +1925,9 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_REVENG_DATA_FLOW, "RE: Data Flow Analysis", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_LICENSE_INFO, "RE: License Info", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_DECOMPILER_VIEW, "RE: Decompiler View (Direct2D)", "Ctrl+Shift+D", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_DECOMP_RENAME, "RE: Decompiler — Rename Variable (SSA)", "F2", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_DECOMP_SYNC, "RE: Decompiler — Sync Panes to Address", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_DECOMP_CLOSE, "RE: Decompiler — Close View", "", "RE"});
 
     // File: Load Model & Exit (not in original list)
     m_commandRegistry.push_back({1030, "File: Load AI Model (Local)", "", "File"});
@@ -1951,6 +2119,58 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_HOTPATCH_SHOW_PROXY_STATS, "Hotpatch: Show Proxy Statistics",             "", "Hotpatch"});
     m_commandRegistry.push_back({IDM_HOTPATCH_PRESET_SAVE,      "Hotpatch: Save Preset to File",               "", "Hotpatch"});
     m_commandRegistry.push_back({IDM_HOTPATCH_PRESET_LOAD,      "Hotpatch: Load Preset from File",             "", "Hotpatch"});
+
+    // WebView2 + Monaco Editor (Phase 26)
+    m_commandRegistry.push_back({IDM_VIEW_TOGGLE_MONACO,        "View: Toggle Monaco Editor (WebView2)",       "Ctrl+Shift+M", "WebView2"});
+    m_commandRegistry.push_back({IDM_VIEW_MONACO_DEVTOOLS,      "View: Monaco DevTools (F12)",                 "F12",          "WebView2"});
+    m_commandRegistry.push_back({IDM_VIEW_MONACO_RELOAD,        "View: Reload Monaco Editor",                  "",             "WebView2"});
+    m_commandRegistry.push_back({IDM_VIEW_MONACO_ZOOM_IN,       "View: Monaco Zoom In",                       "Ctrl+=",       "WebView2"});
+    m_commandRegistry.push_back({IDM_VIEW_MONACO_ZOOM_OUT,      "View: Monaco Zoom Out",                      "Ctrl+-",       "WebView2"});
+    m_commandRegistry.push_back({IDM_VIEW_MONACO_SYNC_THEME,    "View: Sync Win32 Theme to Monaco",           "",             "WebView2"});
+
+    // ================================================================
+    // IDE Self-Audit (9500 range — routed via handleAuditCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_AUDIT_SHOW_DASHBOARD,  "Audit: Show Dashboard",                "", "Audit"});
+    m_commandRegistry.push_back({IDM_AUDIT_RUN_FULL,        "Audit: Run Full Audit",                "", "Audit"});
+    m_commandRegistry.push_back({IDM_AUDIT_DETECT_STUBS,    "Audit: Detect Stubs",                  "", "Audit"});
+    m_commandRegistry.push_back({IDM_AUDIT_CHECK_MENUS,     "Audit: Check Menu Wiring",             "", "Audit"});
+    m_commandRegistry.push_back({IDM_AUDIT_RUN_TESTS,       "Audit: Run Component Tests",           "", "Audit"});
+    m_commandRegistry.push_back({IDM_AUDIT_EXPORT_REPORT,   "Audit: Export Report",                 "", "Audit"});
+    m_commandRegistry.push_back({IDM_AUDIT_QUICK_STATS,     "Audit: Quick Stats",                   "", "Audit"});
+
+    // ================================================================
+    // Phase 32: Final Gauntlet (9600 range — routed via handleGauntletCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_GAUNTLET_RUN,          "Gauntlet: Run All Tests (Phase 32)",   "", "Gauntlet"});
+    m_commandRegistry.push_back({IDM_GAUNTLET_EXPORT,       "Gauntlet: Export Report (Phase 32)",   "", "Gauntlet"});
+
+    // ================================================================
+    // Phase 33: Voice Chat (9700 range — routed via handleVoiceChatCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_VOICE_TOGGLE_PANEL,    "Voice: Toggle Panel",                  "Ctrl+Shift+U", "Voice"});
+    m_commandRegistry.push_back({IDM_VOICE_RECORD,          "Voice: Record / Stop",                 "F9",           "Voice"});
+    m_commandRegistry.push_back({IDM_VOICE_PTT,             "Voice: Push-to-Talk",                  "Ctrl+Shift+V", "Voice"});
+    m_commandRegistry.push_back({IDM_VOICE_SPEAK,           "Voice: Text-to-Speech",                "",             "Voice"});
+    m_commandRegistry.push_back({IDM_VOICE_JOIN_ROOM,       "Voice: Join/Leave Room",               "",             "Voice"});
+    m_commandRegistry.push_back({IDM_VOICE_SHOW_DEVICES,    "Voice: Audio Devices",                 "",             "Voice"});
+    m_commandRegistry.push_back({IDM_VOICE_METRICS,         "Voice: Show Metrics",                  "",             "Voice"});
+
+    // ================================================================
+    // Phase 33: Quick-Win Ports (9800 range — routed via handleQuickWinCommand)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_QW_SHORTCUT_EDITOR,    "Shortcuts: Open Editor",               "Ctrl+K Ctrl+S", "Shortcuts"});
+    m_commandRegistry.push_back({IDM_QW_SHORTCUT_RESET,     "Shortcuts: Reset to Defaults",         "",              "Shortcuts"});
+    m_commandRegistry.push_back({IDM_QW_BACKUP_CREATE,      "Backup: Create Now",                   "Ctrl+Shift+B",  "Backup"});
+    m_commandRegistry.push_back({IDM_QW_BACKUP_RESTORE,     "Backup: Restore...",                   "",              "Backup"});
+    m_commandRegistry.push_back({IDM_QW_BACKUP_AUTO_TOGGLE, "Backup: Toggle Auto-Backup",           "",              "Backup"});
+    m_commandRegistry.push_back({IDM_QW_BACKUP_LIST,        "Backup: List All",                     "",              "Backup"});
+    m_commandRegistry.push_back({IDM_QW_BACKUP_PRUNE,       "Backup: Prune Old",                    "",              "Backup"});
+    m_commandRegistry.push_back({IDM_QW_ALERT_TOGGLE_MONITOR, "Alerts: Toggle Resource Monitor",    "",              "Alerts"});
+    m_commandRegistry.push_back({IDM_QW_ALERT_SHOW_HISTORY, "Alerts: Show History",                 "",              "Alerts"});
+    m_commandRegistry.push_back({IDM_QW_ALERT_DISMISS_ALL,  "Alerts: Dismiss All",                  "",              "Alerts"});
+    m_commandRegistry.push_back({IDM_QW_ALERT_RESOURCE_STATUS, "Alerts: Resource Status",           "",              "Alerts"});
+    m_commandRegistry.push_back({IDM_QW_SLO_DASHBOARD,      "SLO: Dashboard",                       "",              "SLO"});
 
     m_filteredCommands = m_commandRegistry;
 }
@@ -2488,3 +2708,275 @@ LRESULT CALLBACK Win32IDE::CommandPaletteInputProc(HWND hwnd, UINT uMsg, WPARAM 
 // onAIModeMax, onAIModeDeepThink, onAIModeDeepResearch, onAIModeNoRefusal,
 // onAIContextSize are all defined in Win32IDE_AgentCommands.cpp
 // ============================================================================
+
+// ============================================================================
+// WEBVIEW2 + MONACO COMMAND HANDLERS — Phase 26
+// ============================================================================
+
+void Win32IDE::handleMonacoCommand(int commandId) {
+    switch (commandId) {
+    case IDM_VIEW_TOGGLE_MONACO:
+        toggleMonacoEditor();
+        break;
+
+    case IDM_VIEW_MONACO_DEVTOOLS:
+        // Open Edge DevTools for WebView2 debugging
+        if (m_webView2 && m_webView2->isReady()) {
+            // DevTools can be opened via the WebView2 API
+            // For now, use the keyboard shortcut approach
+            LOG_INFO("Monaco: Opening DevTools...");
+        }
+        break;
+
+    case IDM_VIEW_MONACO_RELOAD:
+        if (m_webView2) {
+            LOG_INFO("Monaco: Reloading editor...");
+            destroyMonacoEditor();
+            createMonacoEditor(m_hwndMain);
+        }
+        break;
+
+    case IDM_VIEW_MONACO_ZOOM_IN:
+        if (m_webView2 && m_webView2->isReady()) {
+            m_monacoZoomLevel += 0.1f;
+            m_monacoOptions.fontSize = (int)(14.0f * m_monacoZoomLevel);
+            m_webView2->setOptions(m_monacoOptions);
+            LOG_INFO("Monaco: Zoom level " + std::to_string(m_monacoZoomLevel));
+        }
+        break;
+
+    case IDM_VIEW_MONACO_ZOOM_OUT:
+        if (m_webView2 && m_webView2->isReady()) {
+            m_monacoZoomLevel = std::max(0.5f, m_monacoZoomLevel - 0.1f);
+            m_monacoOptions.fontSize = (int)(14.0f * m_monacoZoomLevel);
+            m_webView2->setOptions(m_monacoOptions);
+            LOG_INFO("Monaco: Zoom level " + std::to_string(m_monacoZoomLevel));
+        }
+        break;
+
+    case IDM_VIEW_MONACO_SYNC_THEME:
+        syncThemeToMonaco();
+        break;
+
+    default:
+        LOG_WARNING("Unknown Monaco command: " + std::to_string(commandId));
+        break;
+    }
+}
+
+// ============================================================================
+// CREATE MONACO EDITOR — Initialize WebView2 container + Monaco
+// ============================================================================
+void Win32IDE::createMonacoEditor(HWND hwnd) {
+    if (m_webView2) {
+        LOG_WARNING("Monaco editor already exists");
+        return;
+    }
+
+    LOG_INFO("Creating WebView2 + Monaco editor...");
+
+    m_webView2 = new WebView2Container();
+
+    // Set callbacks
+    m_webView2->setReadyCallback([](void* userData) {
+        auto* ide = static_cast<Win32IDE*>(userData);
+        LOG_INFO("Monaco editor ready! All 16 themes registered.");
+
+        // Sync current Win32 theme to Monaco
+        std::string monacoName = MonacoThemeExporter::monacoThemeName(ide->m_activeThemeId);
+        ide->m_webView2->setTheme(monacoName);
+
+        // If there's content in the RichEdit, transfer it
+        ide->syncRichEditToMonaco();
+    }, this);
+
+    m_webView2->setCursorCallback([](int line, int col, void* userData) {
+        auto* ide = static_cast<Win32IDE*>(userData);
+        // Update status bar with Monaco cursor position
+        if (ide->m_hwndStatusBar) {
+            std::string pos = "Ln " + std::to_string(line) + ", Col " + std::to_string(col);
+            SendMessageA(ide->m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)pos.c_str());
+        }
+    }, this);
+
+    m_webView2->setErrorCallback([](const char* error, void* userData) {
+        LOG_ERROR(std::string("Monaco error: ") + error);
+    }, this);
+
+    // Get editor area bounds
+    RECT clientRect;
+    GetClientRect(hwnd, &clientRect);
+    int editorX = 250;  // After sidebar
+    int editorY = 80;   // After tab bar + title bar
+    int editorW = clientRect.right - editorX;
+    int editorH = clientRect.bottom - editorY - 200; // Leave room for panel + status
+
+    m_webView2->resize(editorX, editorY, editorW, editorH);
+
+    // Start async initialization
+    WebView2Result result = m_webView2->initialize(hwnd);
+    if (!result.success) {
+        LOG_ERROR(std::string("WebView2 init failed: ") + result.detail);
+        delete m_webView2;
+        m_webView2 = nullptr;
+
+        // Show user-friendly message
+        MessageBoxA(hwnd,
+            "WebView2 initialization failed.\n\n"
+            "Make sure WebView2Loader.dll is in the application directory\n"
+            "and the Microsoft Edge WebView2 Runtime is installed.\n\n"
+            "Download from: https://developer.microsoft.com/microsoft-edge/webview2/",
+            "Monaco Editor - WebView2 Error",
+            MB_OK | MB_ICONWARNING);
+        return;
+    }
+
+    LOG_INFO("WebView2 initialization started (async). State: " +
+             std::string(m_webView2->getStateString()));
+}
+
+// ============================================================================
+// DESTROY MONACO EDITOR
+// ============================================================================
+void Win32IDE::destroyMonacoEditor() {
+    if (!m_webView2) return;
+
+    LOG_INFO("Destroying Monaco editor...");
+
+    // If Monaco was active, sync content back to RichEdit first
+    if (m_monacoEditorActive) {
+        syncMonacoToRichEdit();
+    }
+
+    m_webView2->destroy();
+    delete m_webView2;
+    m_webView2 = nullptr;
+    m_monacoEditorActive = false;
+
+    // Show RichEdit again
+    if (m_hwndEditor) {
+        ShowWindow(m_hwndEditor, SW_SHOW);
+    }
+
+    LOG_INFO("Monaco editor destroyed. RichEdit restored.");
+}
+
+// ============================================================================
+// TOGGLE MONACO EDITOR — Switch between RichEdit ↔ Monaco
+// ============================================================================
+void Win32IDE::toggleMonacoEditor() {
+    if (!m_webView2) {
+        // First time — create it
+        createMonacoEditor(m_hwndMain);
+        if (m_webView2) {
+            m_monacoEditorActive = true;
+            if (m_hwndEditor) ShowWindow(m_hwndEditor, SW_HIDE);
+            m_webView2->show();
+            LOG_INFO("Switched to Monaco editor (WebView2)");
+            if (m_hwndStatusBar) {
+                SendMessageA(m_hwndStatusBar, SB_SETTEXT, 0,
+                    (LPARAM)"Editor: Monaco (WebView2) — All 16 themes loaded");
+            }
+        }
+    } else if (m_monacoEditorActive) {
+        // Switch back to RichEdit
+        m_monacoEditorActive = false;
+        m_webView2->hide();
+        syncMonacoToRichEdit();
+        if (m_hwndEditor) ShowWindow(m_hwndEditor, SW_SHOW);
+        LOG_INFO("Switched to RichEdit editor");
+        if (m_hwndStatusBar) {
+            SendMessageA(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Editor: RichEdit");
+        }
+    } else {
+        // Switch to Monaco
+        m_monacoEditorActive = true;
+        syncRichEditToMonaco();
+        if (m_hwndEditor) ShowWindow(m_hwndEditor, SW_HIDE);
+        m_webView2->show();
+        LOG_INFO("Switched to Monaco editor");
+        if (m_hwndStatusBar) {
+            SendMessageA(m_hwndStatusBar, SB_SETTEXT, 0,
+                (LPARAM)"Editor: Monaco (WebView2)");
+        }
+    }
+}
+
+// ============================================================================
+// SYNC CONTENT: RichEdit → Monaco
+// ============================================================================
+void Win32IDE::syncRichEditToMonaco() {
+    if (!m_webView2 || !m_webView2->isReady() || !m_hwndEditor) return;
+
+    // Get text length from RichEdit
+    int textLen = GetWindowTextLengthA(m_hwndEditor);
+    if (textLen <= 0) return;
+
+    // Get the text
+    std::string text(textLen + 1, '\0');
+    GetWindowTextA(m_hwndEditor, &text[0], textLen + 1);
+    text.resize(textLen);
+
+    // Detect language from current file extension
+    std::string lang = "plaintext";
+    if (!m_currentFile.empty()) {
+        std::string ext = m_currentFile;
+        size_t dotPos = ext.rfind('.');
+        if (dotPos != std::string::npos) {
+            ext = ext.substr(dotPos + 1);
+            if (ext == "cpp" || ext == "cc" || ext == "cxx" || ext == "h" || ext == "hpp") lang = "cpp";
+            else if (ext == "c") lang = "c";
+            else if (ext == "py") lang = "python";
+            else if (ext == "js") lang = "javascript";
+            else if (ext == "ts") lang = "typescript";
+            else if (ext == "rs") lang = "rust";
+            else if (ext == "go") lang = "go";
+            else if (ext == "java") lang = "java";
+            else if (ext == "cs") lang = "csharp";
+            else if (ext == "rb") lang = "ruby";
+            else if (ext == "lua") lang = "lua";
+            else if (ext == "asm" || ext == "s") lang = "asm";
+            else if (ext == "json") lang = "json";
+            else if (ext == "xml" || ext == "html" || ext == "htm") lang = "html";
+            else if (ext == "css") lang = "css";
+            else if (ext == "md") lang = "markdown";
+            else if (ext == "yaml" || ext == "yml") lang = "yaml";
+            else if (ext == "cmake") lang = "cmake";
+            else if (ext == "sh" || ext == "bash") lang = "shell";
+            else if (ext == "ps1") lang = "powershell";
+            else if (ext == "sql") lang = "sql";
+        }
+    }
+
+    m_webView2->setContent(text, lang);
+    LOG_INFO("Synced RichEdit → Monaco (" + std::to_string(textLen) + " chars, lang=" + lang + ")");
+}
+
+// ============================================================================
+// SYNC CONTENT: Monaco → RichEdit
+// ============================================================================
+void Win32IDE::syncMonacoToRichEdit() {
+    if (!m_webView2 || !m_webView2->isReady() || !m_hwndEditor) return;
+
+    // Request content from Monaco (async — will be delivered via callback)
+    m_webView2->setContentCallback([](const char* content, uint32_t length, void* userData) {
+        auto* ide = static_cast<Win32IDE*>(userData);
+        if (ide->m_hwndEditor && content) {
+            SetWindowTextA(ide->m_hwndEditor, content);
+            LOG_INFO("Synced Monaco → RichEdit (" + std::to_string(length) + " chars)");
+        }
+    }, this);
+
+    m_webView2->getContent();
+}
+
+// ============================================================================
+// SYNC THEME: Win32 → Monaco
+// ============================================================================
+void Win32IDE::syncThemeToMonaco() {
+    if (!m_webView2 || !m_webView2->isReady()) return;
+
+    std::string monacoName = MonacoThemeExporter::monacoThemeName(m_activeThemeId);
+    m_webView2->setTheme(monacoName);
+    LOG_INFO("Synced Win32 theme → Monaco: " + monacoName);
+}

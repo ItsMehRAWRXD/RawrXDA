@@ -634,9 +634,13 @@ struct AgentHistoryStats {
     int totalDurationMs     = 0;
 };
 
+// Forward declaration for friend class
+namespace vscode { class VSCodeExtensionAPI; }
+
 class Win32IDE
 {
     friend class AgenticBridge;
+    friend class vscode::VSCodeExtensionAPI;
 
 public:
     enum class OutputSeverity {
@@ -788,6 +792,16 @@ public:
     void logWindowDestroy(const std::string& windowName, HWND hwnd);
     void logFileOperation(const std::string& operation, const std::string& filePath, bool success);
     void logUIEvent(const std::string& event, const std::string& details);
+
+    // ---- Public Accessors (for VSCodeExtensionAPI bridge) ----
+    const IDESettings& getSettings() const { return m_settings; }
+    IDESettings& getSettingsMut() { return m_settings; }
+    bool isDebugActive() const { return m_debuggingActive; }
+    const std::string& getDebugCurrentFile() const { return m_debuggerCurrentFile; }
+    int createTerminalPanePublic(Win32TerminalManager::ShellType type, const std::string& name) {
+        return createTerminalPane(type, name);
+    }
+    void sendToAllTerminalsPublic(const std::string& cmd) { sendToAllTerminals(cmd); }
 
 private:
     EngineManager* m_engineManager = nullptr;
@@ -3830,6 +3844,21 @@ private:
 #define IDM_PDB_ENABLE                  9404
 #define IDM_PDB_RESOLVE                 9405
 
+// Phase 29.3: PE Import/Export Table Provider
+#define IDM_PDB_IMPORTS                 9410
+#define IDM_PDB_EXPORTS                 9411
+#define IDM_PDB_IAT_STATUS              9412
+
+// ============================================================================
+// PHASE 34: TELEMETRY EXPORT — Privacy-respecting IDE metrics (9900 range)
+// ============================================================================
+#define IDM_TELEMETRY_TOGGLE            9900
+#define IDM_TELEMETRY_EXPORT_JSON       9901
+#define IDM_TELEMETRY_EXPORT_CSV        9902
+#define IDM_TELEMETRY_SHOW_DASHBOARD    9903
+#define IDM_TELEMETRY_CLEAR             9904
+#define IDM_TELEMETRY_SNAPSHOT          9905
+
 // ============================================================================
 // IDE SELF-AUDIT & VERIFICATION COMMANDS — Phase 31 (9500 range)
 // ============================================================================
@@ -3914,6 +3943,11 @@ private:
     void cmdPDBCacheClear();
     void cmdPDBEnable();
     void cmdPDBResolve();
+
+    // Phase 29.3: PE Import/Export Table Provider
+    void cmdPDBImports();
+    void cmdPDBExports();
+    void cmdPDBIATStatus();
 
     // PDB state
     bool m_pdbInitialized = false;
@@ -4151,4 +4185,39 @@ private:
 
     // State
     bool m_quickWinInitialized = false;
+
+    // ========================================================================
+    // PHASE 34: TELEMETRY EXPORT — Privacy-respecting IDE Metrics
+    // Non-Qt, Win32-native, GDPR/CCPA compliant, opt-in only
+    // ========================================================================
+    void initTelemetry();
+    void shutdownTelemetry();
+
+    // Command handlers (IDM_TELEMETRY_* range, 9900)
+    void cmdTelemetryToggle();
+    void cmdTelemetryExportJSON();
+    void cmdTelemetryExportCSV();
+    void cmdTelemetryShowDashboard();
+    void cmdTelemetryClear();
+    void cmdTelemetrySnapshot();
+
+    // Command router
+    bool handleTelemetryCommand(int commandId);
+
+    // Inline telemetry recording (call from anywhere in IDE)
+    void telemetryTrack(const char* featureName, double value = 1.0);
+    void telemetryTrackLatency(const char* operation, double ms);
+
+    // State
+    bool m_telemetryInitialized = false;
+    bool m_telemetryEnabled     = false;
+
+    // ========================================================================
+    // PHASE 33 VOICE UX POLISH — Hotkey, status bar, device hot-swap
+    // ========================================================================
+    void registerVoiceHotkeys();
+    void unregisterVoiceHotkeys();
+    void updateVoiceStatusBar();
+    void voiceSavePreferences();
+    void voiceLoadPreferences();
 };

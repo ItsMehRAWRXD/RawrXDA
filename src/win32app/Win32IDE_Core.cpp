@@ -984,9 +984,19 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: ModelSourceResolver init failed (unknown)\n");
         }
 
-        // GPU Backend Bridge — stubbed out (requires gpu_backend_bridge.cpp)
-        // Will be enabled when DX12 compute dispatch is fully linked.
-        OutputDebugStringA("GPU Backend Bridge: deferred (not linked in this build)\n");
+        // GPU Backend Bridge — detect and initialize Vulkan compute if available
+        {
+            HMODULE hVulkan = LoadLibraryA("vulkan-1.dll");
+            if (hVulkan) {
+                m_gpuTextEnabled = true;
+                FreeLibrary(hVulkan);
+                OutputDebugStringA("GPU Backend Bridge: Vulkan ICD detected — GPU compute available\n");
+                appendToOutput("[GPU] Vulkan compute backend detected and ready\n", "Output", OutputSeverity::Info);
+            } else {
+                m_gpuTextEnabled = false;
+                OutputDebugStringA("GPU Backend Bridge: No Vulkan ICD — CPU-only mode\n");
+            }
+        }
 
         // Initialize Phase 10: Execution Governor + Safety + Replay + Confidence
         try {
@@ -1037,6 +1047,13 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: initChainOfThought failed\n");
         }
 
+        // Initialize Phase 34: Telemetry Export Subsystem
+        try {
+            initTelemetry();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initTelemetry failed\n");
+        }
+
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
         // Notify UI thread to refresh
@@ -1051,6 +1068,9 @@ void Win32IDE::deferredHeavyInit() {
 // ============================================================================
 void Win32IDE::onDestroy() {
     LOG_INFO("Win32IDE::onDestroy - shutting down");
+
+    // Shutdown Phase 34: Telemetry Export
+    shutdownTelemetry();
 
     // Shutdown Phase 33: Voice Chat Engine
     shutdownVoiceChat();

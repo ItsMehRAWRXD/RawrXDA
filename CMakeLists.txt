@@ -539,6 +539,9 @@ if(WIN32)
 
         # Phase 32A: Chain-of-Thought Multi-Model Review Engine
         src/core/chain_of_thought_engine.cpp
+
+        # Phase 34: Telemetry Export
+        src/win32app/Win32IDE_Telemetry.cpp
     )
     
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES})

@@ -15,6 +15,7 @@
 #include "IDEConfig.h"
 #include "../core/native_debugger_engine.h"
 #include "../core/native_debugger_types.h"
+#include <richedit.h>
 #include <sstream>
 #include <algorithm>
 #include <iomanip>
@@ -1184,13 +1185,60 @@ void Win32IDE::onDebuggerTerminated()
 
 void Win32IDE::highlightDebuggerLine(const std::string& file, int line)
 {
-    // In a real implementation, would highlight the line in the editor
     m_debuggerCurrentFile = file;
     m_debuggerCurrentLine = line;
+
+    // Open the file in the editor if it's not the current file
+    if (!file.empty() && file != m_currentFile) {
+        openFile(file);
+    }
+
+    // Scroll to the line and highlight it in the editor
+    if (m_hwndEditor && line > 0) {
+        // Calculate character index for the target line
+        int charIndex = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, line - 1, 0);
+        if (charIndex >= 0) {
+            int lineLen = (int)SendMessage(m_hwndEditor, EM_LINELENGTH, charIndex, 0);
+            // Select the entire line to highlight it
+            CHARRANGE cr = { charIndex, charIndex + lineLen };
+            SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&cr);
+            SendMessage(m_hwndEditor, EM_SCROLLCARET, 0, 0);
+            // Apply yellow background highlight via CHARFORMAT2
+            CHARFORMAT2A cf = {};
+            cf.cbSize = sizeof(cf);
+            cf.dwMask = CFM_BACKCOLOR;
+            cf.crBackColor = RGB(255, 255, 180); // Light yellow for breakpoint line
+            SendMessageA(m_hwndEditor, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+        }
+    }
+
+    // Update the debugger status bar
+    if (m_hwndDebuggerStatus) {
+        std::string status = "\xe2\x96\xb6 " + file + ":" + std::to_string(line);
+        SetWindowTextA(m_hwndDebuggerStatus, status.c_str());
+    }
 }
 
 void Win32IDE::clearDebuggerHighlight()
 {
+    // Clear the highlight in the editor by resetting background color
+    if (m_hwndEditor && m_debuggerCurrentLine > 0) {
+        int charIndex = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, m_debuggerCurrentLine - 1, 0);
+        if (charIndex >= 0) {
+            int lineLen = (int)SendMessage(m_hwndEditor, EM_LINELENGTH, charIndex, 0);
+            CHARRANGE cr = { charIndex, charIndex + lineLen };
+            SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&cr);
+            // Reset to default background
+            CHARFORMAT2A cf = {};
+            cf.cbSize = sizeof(cf);
+            cf.dwMask = CFM_BACKCOLOR;
+            cf.dwEffects = CFE_AUTOBACKCOLOR;
+            SendMessageA(m_hwndEditor, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+            // Deselect
+            CHARRANGE desel = { 0, 0 };
+            SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&desel);
+        }
+    }
     m_debuggerCurrentFile = "";
     m_debuggerCurrentLine = -1;
 }
