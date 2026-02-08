@@ -8,6 +8,7 @@
 #include <deque>
 #include <atomic>
 #include <mutex>
+#include <chrono>
 #include <filesystem>
 #include "runtime_core.h"
 #include "modules/react_generator.h"
@@ -15,6 +16,9 @@
 #include "subagent_core.h"
 #include "cli/agentic_decision_tree.h"
 #include "cli/cli_autonomy_loop.h"
+#include "cli/cli_headless_systems.h"
+#include "deterministic_replay.h"
+#include "../include/chain_of_thought_engine.h"
 
 namespace fs = std::filesystem;
 
@@ -823,6 +827,201 @@ void cmd_swarm(const std::string& args) {
     std::cout << "✅ Swarm result:\n" << result << "\n";
 }
 
+// ============================================================================
+// CHAIN-OF-THOUGHT MULTI-MODEL REVIEW (Phase 32A)
+// ============================================================================
+void cmd_cot(const std::string& args) {
+    auto& cot = ChainOfThoughtEngine::instance();
+
+    // Wire inference callback if not already set (uses routeWithIntelligence via subagent)
+    static bool callbackSet = false;
+    if (!callbackSet && g_state.subAgentMgr) {
+        cot.setInferenceCallback([](const std::string& systemPrompt,
+                                     const std::string& userMessage,
+                                     const std::string& /*model*/) -> std::string {
+            // Use SubAgentManager to route inference through the agent pipeline
+            if (g_state.subAgentMgr) {
+                std::string combined = systemPrompt + "\n\n" + userMessage;
+                std::vector<std::string> steps = { combined };
+                return g_state.subAgentMgr->executeChain("cot", steps);
+            }
+            return "[Error] No inference backend available";
+        });
+        callbackSet = true;
+    }
+
+    if (args.empty()) {
+        std::cout << "🔗 Chain-of-Thought Multi-Model Review\n";
+        std::cout << "Usage:\n";
+        std::cout << "  !cot status             — Show CoT engine status\n";
+        std::cout << "  !cot presets            — List available presets\n";
+        std::cout << "  !cot roles              — List all available roles\n";
+        std::cout << "  !cot preset <name>      — Apply a preset (review|audit|think|research|debate|custom)\n";
+        std::cout << "  !cot steps              — Show current chain steps\n";
+        std::cout << "  !cot add <role>         — Add a step with the given role\n";
+        std::cout << "  !cot clear              — Clear all steps\n";
+        std::cout << "  !cot run <query>        — Execute the chain on a query\n";
+        std::cout << "  !cot cancel             — Cancel a running chain\n";
+        std::cout << "  !cot stats              — Show execution statistics\n";
+        return;
+    }
+
+    // Parse subcommand
+    auto sp = args.find(' ');
+    std::string subcmd = (sp == std::string::npos) ? args : args.substr(0, sp);
+    std::string subargs = (sp == std::string::npos) ? "" : args.substr(sp + 1);
+
+    if (subcmd == "status") {
+        std::cout << cot.getStatusJSON() << "\n";
+    }
+    else if (subcmd == "presets") {
+        auto names = getCoTPresetNames();
+        std::cout << "📋 Available presets:\n";
+        for (const auto& n : names) {
+            const CoTPreset* p = getCoTPreset(n);
+            if (p) {
+                std::cout << "  " << n << " (" << p->label << ") — "
+                          << p->steps.size() << " steps: ";
+                for (size_t i = 0; i < p->steps.size(); i++) {
+                    if (i > 0) std::cout << " → ";
+                    std::cout << getCoTRoleInfo(p->steps[i].role).label;
+                }
+                std::cout << "\n";
+            }
+        }
+    }
+    else if (subcmd == "roles") {
+        const auto& roles = getAllCoTRoles();
+        std::cout << "🎭 Available roles (" << roles.size() << "):\n";
+        for (const auto& r : roles) {
+            std::cout << "  " << r.icon << " " << r.name
+                      << " — " << r.instruction << "\n";
+        }
+    }
+    else if (subcmd == "preset") {
+        if (subargs.empty()) {
+            std::cout << "❌ Usage: !cot preset <name>\n";
+            return;
+        }
+        if (cot.applyPreset(subargs)) {
+            std::cout << "✅ Applied preset '" << subargs << "' ("
+                      << cot.getSteps().size() << " steps)\n";
+            const auto& steps = cot.getSteps();
+            for (size_t i = 0; i < steps.size(); i++) {
+                const auto& info = getCoTRoleInfo(steps[i].role);
+                std::cout << "  Step " << (i + 1) << ": " << info.icon
+                          << " " << info.label << "\n";
+            }
+        } else {
+            std::cout << "❌ Unknown preset: " << subargs << "\n";
+            std::cout << "   Available: review, audit, think, research, debate, custom\n";
+        }
+    }
+    else if (subcmd == "steps") {
+        const auto& steps = cot.getSteps();
+        if (steps.empty()) {
+            std::cout << "⚠ No steps configured. Use !cot preset <name> or !cot add <role>\n";
+        } else {
+            std::cout << "🔗 Current chain (" << steps.size() << " steps):\n";
+            for (size_t i = 0; i < steps.size(); i++) {
+                const auto& info = getCoTRoleInfo(steps[i].role);
+                std::cout << "  [" << (i + 1) << "] " << info.icon << " "
+                          << info.label;
+                if (steps[i].skip) std::cout << " (SKIPPED)";
+                if (!steps[i].model.empty()) std::cout << " [model: " << steps[i].model << "]";
+                std::cout << "\n";
+            }
+        }
+    }
+    else if (subcmd == "add") {
+        if (subargs.empty()) {
+            std::cout << "❌ Usage: !cot add <role>\n";
+            return;
+        }
+        const CoTRoleInfo* info = getCoTRoleByName(subargs);
+        if (!info) {
+            std::cout << "❌ Unknown role: " << subargs << "\n";
+            std::cout << "   Available roles: ";
+            const auto& roles = getAllCoTRoles();
+            for (size_t i = 0; i < roles.size(); i++) {
+                if (i > 0) std::cout << ", ";
+                std::cout << roles[i].name;
+            }
+            std::cout << "\n";
+            return;
+        }
+        cot.addStep(info->id);
+        std::cout << "✅ Added step: " << info->icon << " " << info->label
+                  << " (total: " << cot.getSteps().size() << " steps)\n";
+    }
+    else if (subcmd == "clear") {
+        cot.clearSteps();
+        std::cout << "✅ Chain cleared.\n";
+    }
+    else if (subcmd == "run") {
+        if (subargs.empty()) {
+            std::cout << "❌ Usage: !cot run <your query>\n";
+            return;
+        }
+        if (cot.getSteps().empty()) {
+            std::cout << "⚠ No steps configured. Applying 'review' preset...\n";
+            cot.applyPreset("review");
+        }
+
+        // Set step callback for progress output
+        cot.setStepCallback([](const CoTStepResult& sr) {
+            const auto& info = getCoTRoleInfo(sr.role);
+            if (sr.skipped) {
+                std::cout << "  ⏭ Step " << (sr.stepIndex + 1) << " (" << info.label << "): SKIPPED\n";
+            } else if (sr.success) {
+                std::cout << "  ✅ Step " << (sr.stepIndex + 1) << " (" << info.label
+                          << "): " << sr.latencyMs << "ms, ~" << sr.tokenCount << " tokens\n";
+            } else {
+                std::cout << "  ❌ Step " << (sr.stepIndex + 1) << " (" << info.label
+                          << "): FAILED — " << sr.error << "\n";
+            }
+        });
+
+        std::cout << "🔗 Executing CoT chain (" << cot.getSteps().size() << " steps)...\n";
+        CoTChainResult result = cot.executeChain(subargs);
+
+        if (result.success) {
+            std::cout << "\n✅ Chain complete (" << result.totalLatencyMs << "ms)\n";
+            std::cout << "   Steps: " << result.stepsCompleted << " completed, "
+                      << result.stepsSkipped << " skipped, "
+                      << result.stepsFailed << " failed\n";
+            std::cout << "\n📝 Final Output:\n" << result.finalOutput << "\n";
+        } else {
+            std::cout << "\n❌ Chain failed: " << result.error << "\n";
+        }
+    }
+    else if (subcmd == "cancel") {
+        cot.cancel();
+        std::cout << "🛑 Cancel requested.\n";
+    }
+    else if (subcmd == "stats") {
+        auto stats = cot.getStats();
+        std::cout << "📊 CoT Statistics:\n";
+        std::cout << "  Total chains:     " << stats.totalChains << "\n";
+        std::cout << "  Successful:       " << stats.successfulChains << "\n";
+        std::cout << "  Failed:           " << stats.failedChains << "\n";
+        std::cout << "  Steps executed:   " << stats.totalStepsExecuted << "\n";
+        std::cout << "  Steps skipped:    " << stats.totalStepsSkipped << "\n";
+        std::cout << "  Steps failed:     " << stats.totalStepsFailed << "\n";
+        std::cout << "  Avg latency:      " << stats.avgLatencyMs << "ms\n";
+        if (!stats.roleUsage.empty()) {
+            std::cout << "  Role usage:\n";
+            for (const auto& [role, count] : stats.roleUsage) {
+                std::cout << "    " << getCoTRoleInfo(role).label << ": " << count << "\n";
+            }
+        }
+    }
+    else {
+        std::cout << "❌ Unknown subcommand: " << subcmd << "\n";
+        std::cout << "   Type !cot for usage.\n";
+    }
+}
+
 void cmd_agents_list(const std::string& args) {
     if (!g_state.subAgentMgr) {
         std::cout << "❌ SubAgentManager not initialized\n";
@@ -945,6 +1144,72 @@ void print_help() {
     std::cout << "    interval <ms>                 Set tick interval\n";
     std::cout << "  !ssa_lift <bin> [func] [addr] Run SSA Lifter on a binary function\n";
     std::cout << "  !auto_patch [text|analyze|stats] Auto-correct inference failures\n";
+    std::cout << "\n🛡️  SAFETY CONTRACT (Phase 10B):\n";
+    std::cout << "  !safety status                Show budget, risk, violations\n";
+    std::cout << "  !safety reset                 Reset intent budget\n";
+    std::cout << "  !safety rollback [all]        Rollback last/all actions\n";
+    std::cout << "  !safety violations            Show violation log\n";
+    std::cout << "  !safety block <class>         Block an action class\n";
+    std::cout << "  !safety unblock <class>       Unblock an action class\n";
+    std::cout << "  !safety risk <tier>           Set max risk (None|Low|Medium|High|Critical)\n";
+    std::cout << "  !safety budget                Show remaining intent budget\n";
+    std::cout << "\n🎯 CONFIDENCE GATE (Phase 10D):\n";
+    std::cout << "  !confidence status            Gate stats + thresholds + trend\n";
+    std::cout << "  !confidence policy <p>        Set policy (strict|normal|relaxed|disabled)\n";
+    std::cout << "  !confidence threshold <e><s><a> Set thresholds\n";
+    std::cout << "  !confidence history           Recent evaluations\n";
+    std::cout << "  !confidence trend             Trend analysis\n";
+    std::cout << "  !confidence selfabort         Self-abort status\n";
+    std::cout << "  !confidence reset             Reset gate\n";
+    std::cout << "\n📼 REPLAY JOURNAL (Phase 10C):\n";
+    std::cout << "  !replay status                Journal stats\n";
+    std::cout << "  !replay last [n]              Last N actions (default 10)\n";
+    std::cout << "  !replay session               Current session snapshot\n";
+    std::cout << "  !replay sessions              List all sessions\n";
+    std::cout << "  !replay checkpoint [label]    Insert checkpoint\n";
+    std::cout << "  !replay export <file>         Export session\n";
+    std::cout << "  !replay filter <type>         Filter by action type\n";
+    std::cout << "  !replay start|pause|stop      Control recording\n";
+    std::cout << "\n⚙️  EXECUTION GOVERNOR (Phase 10A):\n";
+    std::cout << "  !governor status              Stats + active tasks\n";
+    std::cout << "  !governor run <cmd>           Run command with timeout\n";
+    std::cout << "  !governor tasks               List active tasks\n";
+    std::cout << "  !governor kill <id>           Kill a task\n";
+    std::cout << "  !governor kill_all            Kill all tasks\n";
+    std::cout << "  !governor wait <id>           Block until task completes\n";
+    std::cout << "\n🔀 MULTI-RESPONSE (Phase 9C):\n";
+    std::cout << "  !multi <prompt>               Generate N styled responses\n";
+    std::cout << "  !multi compare                Side-by-side comparison\n";
+    std::cout << "  !multi prefer <0-3> [reason]  Record preference\n";
+    std::cout << "  !multi templates              Show templates\n";
+    std::cout << "  !multi toggle <0-3>           Toggle template on/off\n";
+    std::cout << "  !multi recommend              Recommended template\n";
+    std::cout << "  !multi stats                  Generation stats\n";
+    std::cout << "\n📜 HISTORY & EXPLAINABILITY (Phase 5/8A):\n";
+    std::cout << "  !history show [n]             Last N events\n";
+    std::cout << "  !history session              Session timeline\n";
+    std::cout << "  !history agent <id>           Agent timeline\n";
+    std::cout << "  !history type <type>          Events by type\n";
+    std::cout << "  !history stats|flush|clear    Manage history\n";
+    std::cout << "  !history export <file>        Export events\n";
+    std::cout << "  !explain agent|chain|swarm <id>  Trace causal chain\n";
+    std::cout << "  !explain failures             Explain all failures\n";
+    std::cout << "  !explain policies             Policy firing attribution\n";
+    std::cout << "  !explain session              Full session explanation\n";
+    std::cout << "  !explain snapshot <file>      Export audit snapshot\n";
+    std::cout << "\n📋 POLICY ENGINE (Phase 7):\n";
+    std::cout << "  !policy list                  List all policies\n";
+    std::cout << "  !policy show <id>             Policy details\n";
+    std::cout << "  !policy enable|disable <id>   Toggle policy\n";
+    std::cout << "  !policy remove <id>           Remove policy\n";
+    std::cout << "  !policy heuristics            Computed heuristics\n";
+    std::cout << "  !policy suggest               Generate suggestions\n";
+    std::cout << "  !policy accept|reject <id>    Accept/reject suggestion\n";
+    std::cout << "  !policy pending               Pending suggestions\n";
+    std::cout << "  !policy export|import <file>  Export/import policies\n";
+    std::cout << "  !policy stats                 Engine statistics\n";
+    std::cout << "\n🔧 TOOL REGISTRY:\n";
+    std::cout << "  !tools                        List registered tools\n";
     std::cout << "\n🔍 TOOLS:\n";
     std::cout << "  !search <pattern> [path]      Search files\n";
     std::cout << "  !analyze                      Analyze current file\n";
@@ -957,6 +1222,18 @@ void print_help() {
     std::cout << "    --parallel <n>               Max concurrent agents\n";
     std::cout << "  !agents                       List all sub-agents\n";
     std::cout << "  !todo                         Show todo list\n";
+    std::cout << "\n🔗 CHAIN-OF-THOUGHT (Phase 32A):\n";
+    std::cout << "  !cot                          Show CoT help\n";
+    std::cout << "  !cot status                   Engine status\n";
+    std::cout << "  !cot presets                  List presets (review|audit|think|...)\n";
+    std::cout << "  !cot roles                    List all roles\n";
+    std::cout << "  !cot preset <name>            Apply preset\n";
+    std::cout << "  !cot steps                    Show current chain\n";
+    std::cout << "  !cot add <role>               Add step to chain\n";
+    std::cout << "  !cot clear                    Clear chain\n";
+    std::cout << "  !cot run <query>              Execute chain on query\n";
+    std::cout << "  !cot cancel                   Cancel running chain\n";
+    std::cout << "  !cot stats                    Execution statistics\n";
     std::cout << "\n⚙️  CONFIGURATION:\n";
     std::cout << "  !mode <mode>                  Set AI mode (ask|plan|edit|...)\n";
     std::cout << "  !engine <name>                Switch model\n";
@@ -1037,6 +1314,17 @@ void route_command(const std::string& line) {
     else if (cmd == "!ssa_lift") cmd_ssa_lift(args);
     else if (cmd == "!auto_patch") cmd_auto_patch(args);
     
+    // Headless Systems (Phase 20)
+    else if (cmd == "!safety") cmd_safety(args);
+    else if (cmd == "!confidence") cmd_confidence(args);
+    else if (cmd == "!replay") cmd_replay(args);
+    else if (cmd == "!governor") cmd_governor(args);
+    else if (cmd == "!multi") cmd_multi_response(args);
+    else if (cmd == "!history") cmd_history(args);
+    else if (cmd == "!explain") cmd_explain(args);
+    else if (cmd == "!policy") cmd_policy(args);
+    else if (cmd == "!tools") cmd_tools(args);
+    
     // Tools
     else if (cmd == "!search") cmd_search_files(args);
     else if (cmd == "!analyze") cmd_analyze(args);
@@ -1046,6 +1334,7 @@ void route_command(const std::string& line) {
     else if (cmd == "!subagent") cmd_subagent(args);
     else if (cmd == "!chain") cmd_chain(args);
     else if (cmd == "!swarm") cmd_swarm(args);
+    else if (cmd == "!cot") cmd_cot(args);
     else if (cmd == "!agents") cmd_agents_list(args);
     else if (cmd == "!todo") cmd_todo_list(args);
     
@@ -1105,13 +1394,30 @@ void route_command(const std::string& line) {
     }
     else {
         // Fall through to AI prompt processing
+        // Record query in replay journal + history
+        cli_record_action(static_cast<int>(ReplayActionType::AgentQuery),
+                          "agent", "CLI chat query", line, "", 0, 1.0f, 0.0);
+        if (cli_get_history_recorder()) {
+            cli_get_history_recorder()->recordChatRequest(line);
+        }
+        
+        auto queryStart = std::chrono::steady_clock::now();
         std::string out;
         if (g_state.agenticEngine && g_state.agenticEngine->isModelLoaded()) {
             out = g_state.agenticEngine->chat(line);
         } else {
             out = process_prompt(line);
         }
+        auto queryEnd = std::chrono::steady_clock::now();
+        double queryMs = std::chrono::duration<double, std::milli>(queryEnd - queryStart).count();
         std::cout << out << "\n";
+        
+        // Record response in replay journal + history
+        cli_record_action(static_cast<int>(ReplayActionType::AgentResponse),
+                          "agent", "CLI chat response", "", out, 0, 1.0f, queryMs);
+        if (cli_get_history_recorder()) {
+            cli_get_history_recorder()->recordChatResponse(out, static_cast<int>(queryMs));
+        }
         
         // Auto-dispatch tool calls in AI response
         if (g_state.subAgentMgr) {
@@ -1146,12 +1452,16 @@ int main() {
         }
     }
     
+    // Initialize Phase 20: Headless CLI systems (safety, confidence, replay, governor, etc.)
+    cli_headless_init(g_state.agenticEngine, g_state.subAgentMgr);
+    
     std::cout << "\n╔════════════════════════════════════════════════════════════════════╗\n";
     std::cout << "║      RawrXD AI Runtime (CLI) - Feature Parity with Win32 IDE        ║\n";
-    std::cout << "║      30+ Commands | Agentic | Autonomy | Decision Tree | SSA        ║\n";
+    std::cout << "║    50+ Commands | Safety | Confidence | Replay | Governor | Multi   ║\n";
     std::cout << "╚════════════════════════════════════════════════════════════════════╝\n\n";
     std::cout << "Type !help for commands or start typing to chat with AI.\n";
-    std::cout << "Phase 19: Agentic Decision Tree active. Use !decision_tree dump to inspect.\n\n";
+    std::cout << "Phase 19: Agentic Decision Tree active. Use !decision_tree dump to inspect.\n";
+    std::cout << "Phase 20: Safety | Confidence | Replay | Governor | Multi-Response | History | Policy\n\n";
 
     std::string line;
     while (true) {
@@ -1161,6 +1471,9 @@ int main() {
         if (line == "!quit") break;
         route_command(line);
     }
+    
+    // Clean shutdown of all headless systems
+    cli_headless_shutdown();
     
     return 0;
 }

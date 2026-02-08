@@ -30,10 +30,13 @@
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
 #include "Win32IDE_SubAgent.h"
+#include "Win32IDE_WebView2.h"
 #include "../modules/engine_manager.h"
 #include "../modules/codex_ultimate.h"
+#include "../../include/editor_engine.h"
 
 #include "../modules/ExtensionLoader.hpp"
+#include "../modules/vscode_extension_api.h"
 #include <nlohmann/json.hpp>
 #include <condition_variable>
 #include <climits>
@@ -41,6 +44,7 @@
 // Forward declarations
 class MultiResponseEngine;
 class SubAgentManager;
+namespace RawrXD { namespace LSPServer { class RawrXDLSPServer; } }
 
 // Agent and AI IDs
 #define IDM_AGENT_START_LOOP 4100
@@ -143,100 +147,8 @@ class SubAgentManager;
 #define LOG_FUNCTION() LOG_DEBUG(std::string("ENTER ") + __FUNCTION__)
 #endif
 
-// Theme and customization structures
-struct IDETheme {
-    std::string name;                   // Display name ("Dracula", "Nord", etc.)
-    bool darkMode;
-
-    // Core editor
-    COLORREF backgroundColor;            // Editor pane background
-    COLORREF textColor;                  // Default text / foreground
-    COLORREF keywordColor;
-    COLORREF commentColor;
-    COLORREF stringColor;
-    COLORREF numberColor;
-    COLORREF operatorColor;
-    COLORREF preprocessorColor;
-    COLORREF functionColor;
-    COLORREF typeColor;                  // Built-in types / classes
-    COLORREF selectionColor;             // Selection highlight
-    COLORREF selectionTextColor;         // Text on selected background
-    COLORREF lineNumberColor;            // Gutter line numbers
-    COLORREF lineNumberBg;               // Gutter background
-    COLORREF currentLineBg;              // Active line highlight
-    COLORREF cursorColor;
-
-    // Sidebar / Activity bar
-    COLORREF sidebarBg;
-    COLORREF sidebarFg;
-    COLORREF sidebarHeaderBg;
-    COLORREF activityBarBg;
-    COLORREF activityBarFg;
-    COLORREF activityBarIndicator;       // Active-tab accent stripe
-    COLORREF activityBarHoverBg;
-
-    // Tab bar
-    COLORREF tabBarBg;
-    COLORREF tabActiveBg;
-    COLORREF tabActiveFg;
-    COLORREF tabInactiveBg;
-    COLORREF tabInactiveFg;
-    COLORREF tabBorder;
-
-    // Status bar
-    COLORREF statusBarBg;
-    COLORREF statusBarFg;
-    COLORREF statusBarAccent;            // Remote / debug indicator
-
-    // Terminal / Output panel
-    COLORREF panelBg;
-    COLORREF panelFg;
-    COLORREF panelBorder;
-    COLORREF panelHeaderBg;
-
-    // Title bar
-    COLORREF titleBarBg;
-    COLORREF titleBarFg;
-
-    // Scrollbar
-    COLORREF scrollbarBg;
-    COLORREF scrollbarThumb;
-    COLORREF scrollbarThumbHover;
-
-    // Bracket matching / indent guides
-    COLORREF bracketMatchBg;
-    COLORREF indentGuideColor;
-
-    // Accent / brand
-    COLORREF accentColor;                // Primary brand accent
-    COLORREF errorColor;                 // Squiggle / diagnostic
-    COLORREF warningColor;
-    COLORREF infoColor;
-
-    // Font
-    std::string fontName;
-    int fontSize;
-
-    // Transparency (0 = fully transparent, 255 = opaque)
-    BYTE windowAlpha;
-
-    // Per-language syntax palette overrides (optional)
-    // When a language key is present, its non-zero fields override the
-    // theme-global keyword/comment/string/etc colors in getTokenColor().
-    struct LanguageTokenPalette {
-        COLORREF keywordColor;       // 0 = use theme global
-        COLORREF commentColor;
-        COLORREF stringColor;
-        COLORREF numberColor;
-        COLORREF operatorColor;
-        COLORREF preprocessorColor;
-        COLORREF functionColor;
-        COLORREF typeColor;
-        COLORREF bracketColor;
-        COLORREF textColor;          // Default text
-    };
-    std::map<int, LanguageTokenPalette> languagePalettes; // Keyed by SyntaxLanguage enum cast to int
-};
+// Theme and customization structures — now in include/IDETheme.h
+// IDETheme is already included via editor_engine.h → IDETheme.h
 
 // ============================================================================
 // THEME COMMAND IDS (3100 range — routed via handleViewCommand)
@@ -906,6 +818,15 @@ private:
     void createEditor(HWND hwnd);
     void createTerminal(HWND hwnd);
     void createStatusBar(HWND hwnd);
+
+    // ---- WebView2 + Monaco Editor (Phase 26) ----
+    void createMonacoEditor(HWND hwnd);
+    void destroyMonacoEditor();
+    void toggleMonacoEditor();
+    void syncRichEditToMonaco();
+    void syncMonacoToRichEdit();
+    void syncThemeToMonaco();
+    void handleMonacoCommand(int commandId);
 
     // File operations (9 features)
     void newFile();
@@ -3083,6 +3004,19 @@ private:
     void handleRouterCapabilitiesEndpoint(SOCKET client);
     void handleRouterRouteEndpoint(SOCKET client, const std::string& body);
 
+    // Phase 32A: Chain-of-Thought Multi-Model Review HTTP endpoints
+    void handleCoTStatusEndpoint(SOCKET client);
+    void handleCoTPresetsEndpoint(SOCKET client);
+    void handleCoTStepsEndpoint(SOCKET client);
+    void handleCoTApplyPresetEndpoint(SOCKET client, const std::string& body);
+    void handleCoTSetStepsEndpoint(SOCKET client, const std::string& body);
+    void handleCoTExecuteEndpoint(SOCKET client, const std::string& body);
+    void handleCoTCancelEndpoint(SOCKET client);
+    void handleCoTRolesEndpoint(SOCKET client);
+
+    // Phase 32A: Chain-of-Thought initialization
+    void initChainOfThought();
+
     void toggleLocalServer();
     std::string getLocalServerStatus() const;
 
@@ -3854,6 +3788,95 @@ private:
 #define IDM_HOTPATCH_TOGGLE_ALL         9016
 #define IDM_HOTPATCH_SHOW_PROXY_STATS   9017
 
+// ========================================================================
+// WEBVIEW2 + MONACO EDITOR COMMANDS — Phase 26 (9100 range)
+// ========================================================================
+#define IDM_VIEW_TOGGLE_MONACO          9100
+#define IDM_VIEW_MONACO_DEVTOOLS        9101
+#define IDM_VIEW_MONACO_RELOAD          9102
+#define IDM_VIEW_MONACO_ZOOM_IN         9103
+#define IDM_VIEW_MONACO_ZOOM_OUT        9104
+#define IDM_VIEW_MONACO_SYNC_THEME      9105
+
+// ========================================================================
+// LSP SERVER COMMANDS — Phase 27 (9200 range)
+// ========================================================================
+#define IDM_LSP_SERVER_START            9200
+#define IDM_LSP_SERVER_STOP             9201
+#define IDM_LSP_SERVER_STATUS           9202
+#define IDM_LSP_SERVER_REINDEX          9203
+#define IDM_LSP_SERVER_STATS            9204
+#define IDM_LSP_SERVER_PUBLISH_DIAG     9205
+#define IDM_LSP_SERVER_CONFIG           9206
+#define IDM_LSP_SERVER_EXPORT_SYMBOLS   9207
+#define IDM_LSP_SERVER_LAUNCH_STDIO     9208
+
+// ========================================================================
+// EDITOR ENGINE COMMANDS — Phase 28 (9300 range)
+// ========================================================================
+#define IDM_EDITOR_ENGINE_RICHEDIT_CMD  9300
+#define IDM_EDITOR_ENGINE_WEBVIEW2_CMD  9301
+#define IDM_EDITOR_ENGINE_MONACOCORE_CMD 9302
+#define IDM_EDITOR_ENGINE_CYCLE_CMD     9303
+#define IDM_EDITOR_ENGINE_STATUS_CMD    9304
+
+// ========================================================================
+// PDB SYMBOL SERVER COMMANDS — Phase 29 (9400 range)
+// ========================================================================
+#define IDM_PDB_LOAD                    9400
+#define IDM_PDB_FETCH                   9401
+#define IDM_PDB_STATUS                  9402
+#define IDM_PDB_CACHE_CLEAR             9403
+#define IDM_PDB_ENABLE                  9404
+#define IDM_PDB_RESOLVE                 9405
+
+// ============================================================================
+// IDE SELF-AUDIT & VERIFICATION COMMANDS — Phase 31 (9500 range)
+// ============================================================================
+#define IDM_AUDIT_SHOW_DASHBOARD        9500
+#define IDM_AUDIT_RUN_FULL              9501
+#define IDM_AUDIT_DETECT_STUBS          9502
+#define IDM_AUDIT_CHECK_MENUS           9503
+#define IDM_AUDIT_RUN_TESTS             9504
+#define IDM_AUDIT_EXPORT_REPORT         9505
+#define IDM_AUDIT_QUICK_STATS           9506
+
+// ============================================================================
+// PHASE 32: FINAL GAUNTLET — Pre-Packaging Runtime Verification (9600 range)
+// ============================================================================
+#define IDM_GAUNTLET_RUN                9600
+#define IDM_GAUNTLET_EXPORT             9601
+
+// ============================================================================
+// PHASE 33: VOICE CHAT — Native Win32 Audio Engine (9700 range)
+// ============================================================================
+#define IDM_VOICE_RECORD                9700
+#define IDM_VOICE_PTT                   9701
+#define IDM_VOICE_SPEAK                 9702
+#define IDM_VOICE_JOIN_ROOM             9703
+#define IDM_VOICE_SHOW_DEVICES          9704
+#define IDM_VOICE_METRICS               9705
+#define IDM_VOICE_TOGGLE_PANEL          9706
+#define IDM_VOICE_MODE_PTT              9707
+#define IDM_VOICE_MODE_CONTINUOUS       9708
+#define IDM_VOICE_MODE_DISABLED         9709
+
+// ============================================================================
+// PHASE 33: QUICK-WIN PORTS — Shortcut, Backup, Alerts (9800 range)
+// ============================================================================
+#define IDM_QW_SHORTCUT_EDITOR          9800
+#define IDM_QW_SHORTCUT_RESET           9801
+#define IDM_QW_BACKUP_CREATE            9810
+#define IDM_QW_BACKUP_RESTORE           9811
+#define IDM_QW_BACKUP_AUTO_TOGGLE       9812
+#define IDM_QW_BACKUP_LIST              9813
+#define IDM_QW_BACKUP_PRUNE             9814
+#define IDM_QW_ALERT_TOGGLE_MONITOR     9820
+#define IDM_QW_ALERT_SHOW_HISTORY       9821
+#define IDM_QW_ALERT_DISMISS_ALL        9822
+#define IDM_QW_ALERT_RESOURCE_STATUS    9823
+#define IDM_QW_SLO_DASHBOARD            9830
+
     // Hotpatch command handlers (implemented in Win32IDE_HotpatchPanel.cpp)
     void initHotpatchUI();
     void handleHotpatchCommand(int commandId);
@@ -3878,6 +3901,23 @@ private:
     // Hotpatch state
     bool m_hotpatchEnabled = false;
     bool m_hotpatchUIInitialized = false;
+
+    // ========================================================================
+    // PDB SYMBOL SERVER — Phase 29: Native PDB Symbol Server
+    // Lifecycle, command routing, status, cache management
+    // ========================================================================
+    void initPDBSymbols();
+    bool handlePDBCommand(int commandId);
+    void cmdPDBLoad();
+    void cmdPDBFetch();
+    void cmdPDBStatus();
+    void cmdPDBCacheClear();
+    void cmdPDBEnable();
+    void cmdPDBResolve();
+
+    // PDB state
+    bool m_pdbInitialized = false;
+    bool m_pdbEnabled = true;
 
     // ========================================================================
     // DECOMPILER VIEW STATE — Direct2D Split View (Phase 18B)
@@ -3917,4 +3957,198 @@ private:
     // SUBAGENT MANAGER INSTANCE — Phase 19B (owned, used by chain/swarm/todo)
     // ========================================================================
     std::unique_ptr<SubAgentManager> m_subAgentManager;
+
+    // ========================================================================
+    // WEBVIEW2 + MONACO EDITOR STATE — Phase 26
+    // ========================================================================
+    HWND                    m_hwndMonacoContainer = nullptr;
+    WebView2Container*      m_webView2 = nullptr;
+    bool                    m_monacoEditorActive = false;
+    MonacoEditorOptions     m_monacoOptions;
+    float                   m_monacoZoomLevel = 1.0f;
+
+    // ========================================================================
+    // LSP SERVER — Phase 27 (Embedded Language Server)
+    // ========================================================================
+    // Lifecycle
+    void initLSPServer();
+    void shutdownLSPServer();
+
+    // Command handlers (IDM_LSP_SERVER_* range, routed via handleLSPServerCommand)
+    void cmdLSPServerStart();
+    void cmdLSPServerStop();
+    void cmdLSPServerStatus();
+    void cmdLSPServerReindex();
+    void cmdLSPServerStats();
+    void cmdLSPServerPublishDiagnostics();
+    void cmdLSPServerConfig();
+    void cmdLSPServerExportSymbols();
+    void cmdLSPServerLaunchStdio();
+
+    // Command router
+    bool handleLSPServerCommand(int commandId);
+
+    // In-process message forwarding (Win32IDE → LSP Server)
+    void forwardToLSPServer(const std::string& method, const nlohmann::json& params);
+    void notifyLSPServerDidOpen(const std::string& uri, const std::string& languageId,
+                                 const std::string& content);
+    void notifyLSPServerDidChange(const std::string& uri, const std::string& content,
+                                   int version);
+    void notifyLSPServerDidClose(const std::string& uri);
+
+    // HTTP endpoint
+    void handleLSPServerStatusEndpoint(SOCKET client);
+
+    // State
+    std::unique_ptr<RawrXD::LSPServer::RawrXDLSPServer> m_lspServer;
+
+    // ========================================================================
+    // EDITOR ENGINE SYSTEM — Phase 28 (MonacoCore / WebView2 / RichEdit Toggle)
+    // ========================================================================
+    // Lifecycle
+    void initEditorEngines();
+    void shutdownEditorEngines();
+
+    // Command handlers (IDM_EDITOR_ENGINE_* range)
+    void cmdEditorEngineSetRichEdit();
+    void cmdEditorEngineSetWebView2();
+    void cmdEditorEngineSetMonacoCore();
+    void cmdEditorEngineCycle();
+    void cmdEditorEngineStatus();
+
+    // Command router
+    bool handleEditorEngineCommand(int commandId);
+
+    // State
+    bool m_editorEnginesInitialized = false;
+
+    // ========================================================================
+    // VS CODE EXTENSION API COMPATIBILITY — Phase 29
+    // ========================================================================
+    // Lifecycle
+    void initVSCodeExtensionAPI();
+    void shutdownVSCodeExtensionAPI();
+
+    // Command handlers (IDM_VSCEXT_API_* range)
+    void cmdVSCExtAPIStatus();
+    void cmdVSCExtAPIReload();
+    void cmdVSCExtAPIListCommands();
+    void cmdVSCExtAPIListProviders();
+    void cmdVSCExtAPIDiagnostics();
+    void cmdVSCExtAPIExtensions();
+    void cmdVSCExtAPIStats();
+    void cmdVSCExtAPILoadNative();
+    void cmdVSCExtAPIDeactivateAll();
+    void cmdVSCExtAPIExportConfig();
+
+    // Command router
+    bool handleVSCExtAPICommand(int commandId);
+
+    // State
+    bool m_vscExtAPIInitialized = false;
+
+    // ========================================================================
+    // IDE SELF-AUDIT & VERIFICATION — Phase 31: CT Scanner / Compliance Auditor
+    // ========================================================================
+    // Lifecycle
+    void initAuditSystem();
+
+    // Command handlers (IDM_AUDIT_* range, 9500)
+    void cmdAuditShowDashboard();
+    void cmdAuditRunFull();
+    void cmdAuditDetectStubs();
+    void cmdAuditCheckMenus();
+    void cmdAuditRunTests();
+    void cmdAuditExportReport();
+    void cmdAuditQuickStats();
+
+    // Command router
+    bool handleAuditCommand(int commandId);
+
+    // State
+    bool m_auditInitialized = false;
+    HWND m_hwndAuditDashboard = nullptr;
+
+    // ========================================================================
+    // PHASE 32: FINAL GAUNTLET — Pre-Packaging Runtime Verification
+    // ========================================================================
+    // Command handlers (IDM_GAUNTLET_* range, 9600)
+    void cmdGauntletRun();
+    void cmdGauntletShowResults(const struct GauntletSummary& summary);
+    void cmdGauntletExport();
+
+    // Command router
+    bool handleGauntletCommand(int commandId);
+
+    // State
+    HWND m_hwndGauntletWindow = nullptr;
+
+    // ========================================================================
+    // PHASE 33: VOICE CHAT — Native Win32 Audio Engine
+    // ========================================================================
+    // Lifecycle
+    void initVoiceChat();
+    void shutdownVoiceChat();
+
+    // UI creation
+    void createVoiceChatPanel(HWND hwndParent);
+    void layoutVoiceChatPanel(int panelWidth, int panelHeight);
+    void onVoiceChatTimer();
+
+    // Command handlers (IDM_VOICE_* range, 9700)
+    void cmdVoiceRecord();
+    void cmdVoicePTT();
+    void cmdVoiceSpeak();
+    void cmdVoiceJoinRoom();
+    void cmdVoiceModeChanged();
+    void cmdVoiceDeviceChanged();
+    void cmdVoiceShowDevices();
+    void cmdVoiceShowMetrics();
+    void cmdVoiceTogglePanel();
+
+    // Command router
+    bool handleVoiceChatCommand(int commandId);
+
+    // Access
+    class VoiceChat* getVoiceChatEngine();
+
+    // State
+    bool m_voicePanelVisible = false;
+    bool m_voiceChatInitialized = false;
+
+    // ========================================================================
+    // PHASE 33: QUICK-WIN PORTS — Shortcuts, Backups, Alerts, SLO
+    // ========================================================================
+    // Lifecycle
+    void initQuickWinSystems();
+    void shutdownQuickWinSystems();
+
+    // Shortcut Manager
+    void cmdShortcutEditor();
+    void cmdShortcutReset();
+    class ShortcutManager* getShortcutManager();
+
+    // Backup Manager
+    void cmdBackupCreate();
+    void cmdBackupRestore();
+    void cmdBackupAutoToggle();
+    void cmdBackupList();
+    void cmdBackupPrune();
+    class BackupManager* getBackupManager();
+
+    // Alert System
+    void cmdAlertToggleMonitor();
+    void cmdAlertShowHistory();
+    void cmdAlertDismissAll();
+    void cmdAlertResourceStatus();
+    class AlertSystem* getAlertSystem();
+
+    // SLO Tracker
+    void cmdSLODashboard();
+
+    // Command router for 9800-9899 range
+    bool handleQuickWinCommand(int commandId);
+
+    // State
+    bool m_quickWinInitialized = false;
 };

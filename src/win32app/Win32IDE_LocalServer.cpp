@@ -18,6 +18,7 @@
 
 #include "Win32IDE.h"
 #include "IDELogger.h"
+#include "../../include/chain_of_thought_engine.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <thread>
@@ -782,6 +783,47 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
     }
     else if (method == "GET" && path == "/api/phase12/status") {
         handlePhase12StatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 32A: Chain-of-Thought Multi-Model Review ==========
+    else if (method == "GET" && path == "/api/cot/status") {
+        handleCoTStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/cot/presets") {
+        handleCoTPresetsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/cot/steps") {
+        handleCoTStepsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/cot/roles") {
+        handleCoTRolesEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/cot/preset") {
+        handleCoTApplyPresetEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/cot/steps") {
+        handleCoTSetStepsEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/cot/execute") {
+        handleCoTExecuteEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/cot/cancel") {
+        handleCoTCancelEndpoint(client);
         closesocket(client);
         return;
     }
@@ -1751,6 +1793,14 @@ std::string Win32IDE::getLocalServerStatus() const {
     oss << "  POST /api/multi-response/prefer       — Record preference for a response\r\n";
     oss << "  GET  /api/multi-response/stats        — Generation & preference stats\r\n";
     oss << "  GET  /api/multi-response/preferences  — Preference history\r\n";
+    oss << "  GET  /api/cot/status          — Chain-of-Thought engine status\r\n";
+    oss << "  GET  /api/cot/presets         — List available CoT presets\r\n";
+    oss << "  GET  /api/cot/steps           — Current chain steps\r\n";
+    oss << "  GET  /api/cot/roles           — All available CoT roles\r\n";
+    oss << "  POST /api/cot/preset          — Apply a preset (body: {\"preset\":\"review\"})\r\n";
+    oss << "  POST /api/cot/steps           — Set custom steps\r\n";
+    oss << "  POST /api/cot/execute         — Execute chain (body: {\"query\":\"...\"})\r\n";
+    oss << "  POST /api/cot/cancel          — Cancel running chain\r\n";
     return oss.str();
 }
 
@@ -1874,4 +1924,204 @@ void Win32IDE::handleBackendSwitchEndpoint(SOCKET client, const std::string& bod
             LocalServerUtil::escapeJson(e.what()) + "\"}");
         send(client, errResp.c_str(), (int)errResp.size(), 0);
     }
+}
+
+// ============================================================================
+// Phase 32A: Chain-of-Thought Multi-Model Review HTTP Endpoints
+// ============================================================================
+
+void Win32IDE::initChainOfThought() {
+    auto& cot = ChainOfThoughtEngine::instance();
+
+    // Wire the inference callback to route through our LLM Router / Backend Switcher
+    cot.setInferenceCallback([this](const std::string& systemPrompt,
+                                     const std::string& userMessage,
+                                     const std::string& model) -> std::string {
+        // Build a combined prompt: system instruction + user content
+        std::string combined = systemPrompt + "\n\n" + userMessage;
+        // Route through the intelligence layer (task classification, backend selection)
+        return routeWithIntelligence(combined);
+    });
+
+    // Apply default preset
+    cot.applyPreset("review");
+}
+
+// GET /api/cot/status — engine status + stats
+void Win32IDE::handleCoTStatusEndpoint(SOCKET client) {
+    auto& cot = ChainOfThoughtEngine::instance();
+    std::string json = cot.getStatusJSON();
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+// GET /api/cot/presets — list all available presets
+void Win32IDE::handleCoTPresetsEndpoint(SOCKET client) {
+    auto& cot = ChainOfThoughtEngine::instance();
+    std::string json = cot.getPresetsJSON();
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+// GET /api/cot/steps — current chain configuration
+void Win32IDE::handleCoTStepsEndpoint(SOCKET client) {
+    auto& cot = ChainOfThoughtEngine::instance();
+    std::string json = cot.getStepsJSON();
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+// GET /api/cot/roles — all available roles
+void Win32IDE::handleCoTRolesEndpoint(SOCKET client) {
+    const auto& roles = getAllCoTRoles();
+    std::ostringstream j;
+    j << "[";
+    for (size_t i = 0; i < roles.size(); i++) {
+        if (i > 0) j << ",";
+        j << "{\"id\":\"" << roles[i].name
+          << "\",\"label\":\"" << roles[i].label
+          << "\",\"icon\":\"" << roles[i].icon
+          << "\",\"instruction\":\"" << LocalServerUtil::escapeJson(roles[i].instruction)
+          << "\"}";
+    }
+    j << "]";
+    std::string resp = LocalServerUtil::buildHttpResponse(200, j.str());
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+// POST /api/cot/preset — apply a preset { "preset": "review" }
+void Win32IDE::handleCoTApplyPresetEndpoint(SOCKET client, const std::string& body) {
+    std::string presetName;
+    LocalServerUtil::extractJsonString(body, "preset", presetName);
+    if (presetName.empty()) {
+        std::string resp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"missing_field\",\"message\":\"'preset' field required\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    auto& cot = ChainOfThoughtEngine::instance();
+    if (!cot.applyPreset(presetName)) {
+        std::string resp = LocalServerUtil::buildHttpResponse(404,
+            "{\"error\":\"preset_not_found\",\"message\":\"Unknown preset: " +
+            LocalServerUtil::escapeJson(presetName) + "\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    std::string json = "{\"success\":true,\"preset\":\"" +
+        LocalServerUtil::escapeJson(presetName) + "\",\"steps\":" +
+        cot.getStepsJSON() + "}";
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+// POST /api/cot/steps — set custom steps
+// Body: { "steps": [{ "role": "reviewer", "model": "", "instruction": "", "skip": false }, ...] }
+void Win32IDE::handleCoTSetStepsEndpoint(SOCKET client, const std::string& body) {
+    auto& cot = ChainOfThoughtEngine::instance();
+    std::vector<CoTStep> steps;
+
+    // Simple JSON array parsing: find each "role" field
+    size_t pos = 0;
+    while ((pos = body.find("\"role\"", pos)) != std::string::npos) {
+        std::string roleName;
+        if (LocalServerUtil::extractJsonString(body.substr(pos), "role", roleName)) {
+            const CoTRoleInfo* info = getCoTRoleByName(roleName);
+            if (info) {
+                CoTStep step;
+                step.role = info->id;
+
+                // Try to extract optional fields from the surrounding object
+                size_t objStart = body.rfind('{', pos);
+                size_t objEnd = body.find('}', pos);
+                if (objStart != std::string::npos && objEnd != std::string::npos) {
+                    std::string objStr = body.substr(objStart, objEnd - objStart + 1);
+                    LocalServerUtil::extractJsonString(objStr, "model", step.model);
+                    LocalServerUtil::extractJsonString(objStr, "instruction", step.instruction);
+                    LocalServerUtil::extractJsonBool(objStr, "skip", step.skip);
+                }
+                steps.push_back(step);
+            }
+        }
+        pos += 6;
+    }
+
+    if (steps.empty()) {
+        std::string resp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"invalid_steps\",\"message\":\"No valid steps found in request\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    cot.setSteps(steps);
+    std::string json = "{\"success\":true,\"stepCount\":" + std::to_string(steps.size()) +
+        ",\"steps\":" + cot.getStepsJSON() + "}";
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+// POST /api/cot/execute — execute the chain { "query": "..." }
+void Win32IDE::handleCoTExecuteEndpoint(SOCKET client, const std::string& body) {
+    std::string query;
+    LocalServerUtil::extractJsonString(body, "query", query);
+    if (query.empty()) {
+        std::string resp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"missing_field\",\"message\":\"'query' field required\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    auto& cot = ChainOfThoughtEngine::instance();
+    if (cot.isRunning()) {
+        std::string resp = LocalServerUtil::buildHttpResponse(409,
+            "{\"error\":\"chain_running\",\"message\":\"A chain is already running. Cancel it first.\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Execute the chain synchronously
+    CoTChainResult result = cot.executeChain(query);
+
+    // Build JSON response
+    std::ostringstream j;
+    j << "{\"success\":" << (result.success ? "true" : "false");
+    j << ",\"totalLatencyMs\":" << result.totalLatencyMs;
+    j << ",\"stepsCompleted\":" << result.stepsCompleted;
+    j << ",\"stepsSkipped\":" << result.stepsSkipped;
+    j << ",\"stepsFailed\":" << result.stepsFailed;
+    j << ",\"finalOutput\":\"" << LocalServerUtil::escapeJson(result.finalOutput) << "\"";
+    if (!result.error.empty()) {
+        j << ",\"error\":\"" << LocalServerUtil::escapeJson(result.error) << "\"";
+    }
+    j << ",\"steps\":[";
+    for (size_t i = 0; i < result.stepResults.size(); i++) {
+        if (i > 0) j << ",";
+        const auto& sr = result.stepResults[i];
+        j << "{\"index\":" << sr.stepIndex;
+        j << ",\"role\":\"" << sr.roleName << "\"";
+        j << ",\"model\":\"" << LocalServerUtil::escapeJson(sr.model) << "\"";
+        j << ",\"success\":" << (sr.success ? "true" : "false");
+        j << ",\"skipped\":" << (sr.skipped ? "true" : "false");
+        j << ",\"latencyMs\":" << sr.latencyMs;
+        j << ",\"tokenCount\":" << sr.tokenCount;
+        if (!sr.output.empty())
+            j << ",\"output\":\"" << LocalServerUtil::escapeJson(sr.output) << "\"";
+        if (!sr.error.empty())
+            j << ",\"error\":\"" << LocalServerUtil::escapeJson(sr.error) << "\"";
+        j << "}";
+    }
+    j << "]}";
+
+    std::string resp = LocalServerUtil::buildHttpResponse(200, j.str());
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+// POST /api/cot/cancel — cancel running chain
+void Win32IDE::handleCoTCancelEndpoint(SOCKET client) {
+    auto& cot = ChainOfThoughtEngine::instance();
+    cot.cancel();
+    std::string resp = LocalServerUtil::buildHttpResponse(200,
+        "{\"success\":true,\"message\":\"Cancel requested\"}");
+    send(client, resp.c_str(), (int)resp.size(), 0);
 }
