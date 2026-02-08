@@ -399,6 +399,37 @@ void Win32IDE::handleAgentCommand(int commandId) {
             onAutonomyViewMemory();
             break;
 
+        // --- Agent Memory (Phase 19B) ---
+        case IDM_AGENT_MEMORY:
+            onAgentMemoryView();
+            break;
+        case IDM_AGENT_MEMORY_VIEW:
+            onAgentMemoryView();
+            break;
+        case IDM_AGENT_MEMORY_CLEAR:
+            onAgentMemoryClear();
+            break;
+        case IDM_AGENT_MEMORY_EXPORT:
+            onAgentMemoryExport();
+            break;
+
+        // --- SubAgent Chain / Swarm / Todo (Phase 19B) ---
+        case IDM_SUBAGENT_CHAIN:
+            onSubAgentChain();
+            break;
+        case IDM_SUBAGENT_SWARM:
+            onSubAgentSwarm();
+            break;
+        case IDM_SUBAGENT_TODO_LIST:
+            onSubAgentTodoList();
+            break;
+        case IDM_SUBAGENT_TODO_CLEAR:
+            onSubAgentTodoClear();
+            break;
+        case IDM_SUBAGENT_STATUS:
+            onSubAgentStatus();
+            break;
+
         // --- AI Options (Max Mode / Reasoning) ---
         case IDM_AI_MODE_MAX: {
             bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_MAX, MF_BYCOMMAND) & MF_CHECKED);

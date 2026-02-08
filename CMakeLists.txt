@@ -37,6 +37,18 @@ set(SOURCES
     src/codec/brutal_gzip.cpp
 
     src/core/execution_scheduler.cpp
+    
+    # Agentic Decision Tree + CLI Autonomy (Phase 19)
+    src/cli/agentic_decision_tree.cpp
+    src/cli/cli_autonomy_loop.cpp
+    
+    # Three-layer hotpatch system (needed by decision tree)
+    src/core/model_memory_hotpatch.cpp
+    src/core/byte_level_hotpatcher.cpp
+    src/core/unified_hotpatch_manager.cpp
+    src/core/proxy_hotpatcher.cpp
+    src/server/gguf_server_hotpatch.cpp
+    src/agent/agentic_hotpatch_orchestrator.cpp
 )
 
 add_executable(RawrEngine ${SOURCES})
@@ -44,6 +56,11 @@ add_executable(RawrEngine ${SOURCES})
 target_include_directories(RawrEngine PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/server
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cli
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/reverse_engineering
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 

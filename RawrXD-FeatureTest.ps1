@@ -236,8 +236,8 @@ function Introspect-CppFeature {
     $matchCount = (Select-String -Path $FilePath -Pattern $Pattern -ErrorAction SilentlyContinue).Count
     
     if ($matchCount -gt 0 -and $lineCount -ge $MinLines) {
-        # Check for stubs/TODO patterns
-        $stubCount = (Select-String -Path $FilePath -Pattern "TODO|STUB|NOT IMPLEMENTED|placeholder" -ErrorAction SilentlyContinue).Count
+        # Check for stubs/TODO patterns (case-sensitive to avoid matching TodoItem, TodoList etc.)
+        $stubCount = (Select-String -Path $FilePath -Pattern "\bTODO\b|\bSTUB\b|NOT IMPLEMENTED|// placeholder" -CaseSensitive -ErrorAction SilentlyContinue).Count
         if ($stubCount -gt ($matchCount / 2)) {
             Add-TestResult $Category $Feature "Win32" "PARTIAL" "$matchCount matches, $stubCount stubs in $lineCount lines" "PatternMatch"
         } else {
@@ -363,7 +363,7 @@ Write-Host "  🤖 Agent / AI..." -ForegroundColor Gray
 Introspect-Feature "Agent" "Agent Loop"       $script:Paths.Win32Agent "IDM_AGENT_START_LOOP" "cmd_agent_loop"     "AgentMode"       "Invoke-AgenticChat"
 Introspect-Feature "Agent" "Agent Execute"    $script:Paths.Win32Agent "IDM_AGENT_EXECUTE"    "cmd_agent_execute"  "AgentMode"       "Invoke-AgenticShellCommand"
 Introspect-Feature "Agent" "Agent Goal"       $script:Paths.Win32Agent "agentGoal|setGoal"    "cmd_agent_goal"     "NEVER_MATCH"     "agentContext.*Goal"
-Introspect-Feature "Agent" "Agent Memory"     $script:Paths.Win32Agent "agentMemory"          "cmd_agent_memory"   "NEVER_MATCH"     "agentContext.*Memory"
+Introspect-Feature "Agent" "Agent Memory"     $script:Paths.Win32SubAgent "agentMemory|onAgentMemoryStore|IDM_AGENT_MEMORY" "cmd_agent_memory" "NEVER_MATCH" "agentContext.*Memory"
 Introspect-Feature "Agent" "Agent Stop"       $script:Paths.Win32Agent "IDM_AGENT_STOP"       "NEVER_MATCH"        "NEVER_MATCH"     "Stop-OllamaHost"
 Introspect-Feature "Agent" "Failure Detect"   $script:Paths.Win32FailDet "FailureType|refusal|hallucination" "NEVER_MATCH" "NEVER_MATCH" "Register-ErrorHandler"
 Introspect-Feature "Agent" "Plan Executor"    $script:Paths.Win32Plan  "PlanStep|executePlan"  "NEVER_MATCH"        "NEVER_MATCH"     "New-AgentTask|Start-AgentTask"
@@ -393,7 +393,7 @@ Write-Host "  🐛 Debugging..." -ForegroundColor Gray
 Introspect-Feature "Debug" "Start Debug"  $script:Paths.Win32Debug "startDebug|debug_start"  "cmd_debug_start"   "NEVER_MATCH" "NEVER_MATCH"
 Introspect-Feature "Debug" "Breakpoints"  $script:Paths.Win32Debug "breakpoint|toggleBreak"  "cmd_breakpoint"    "NEVER_MATCH" "NEVER_MATCH"
 Introspect-Feature "Debug" "Step Over"    $script:Paths.Win32Debug "stepOver|stepInto"       "cmd_debug_step"    "NEVER_MATCH" "NEVER_MATCH"
-Introspect-Feature "Debug" "Native DbgEng" $script:Paths.Win32NatDbg "IDebugClient|DbgEng"  "NEVER_MATCH"       "NEVER_MATCH" "NEVER_MATCH"
+Introspect-Feature "Debug" "Native DbgEng" $script:Paths.Win32NatDbg "NativeDebuggerEngine|IDM_DBG_LAUNCH|DbgEng"  "NEVER_MATCH"       "NEVER_MATCH" "NEVER_MATCH"
 
 # ──────────────────────────────────────────────────────────────────────────
 # REVERSE ENGINEERING
@@ -424,7 +424,7 @@ Introspect-Feature "Decompiler" "SSA Var Rename"    $script:Paths.Win32Decomp "P
 # ──────────────────────────────────────────────────────────────────────────
 Write-Host "  🔥 Hotpatch System..." -ForegroundColor Gray
 Introspect-Feature "Hotpatch" "Memory Patch"    "D:\rawrxd\src\core\model_memory_hotpatch.cpp" "VirtualProtect|mprotect" "cmd_hotpatch" "Hotpatch" "NEVER_MATCH" 5
-Introspect-Feature "Hotpatch" "Byte-Level"      "D:\rawrxd\src\core\byte_level_hotpatcher.cpp" "directWrite|directSearch" "NEVER_MATCH" "NEVER_MATCH" "NEVER_MATCH" 5
+Introspect-Feature "Hotpatch" "Byte-Level"      "D:\rawrxd\src\core\byte_level_hotpatcher.cpp" "patch_bytes|find_pattern_asm|search_and_patch" "NEVER_MATCH" "NEVER_MATCH" "NEVER_MATCH" 5
 Introspect-Feature "Hotpatch" "Server Patch"    "D:\rawrxd\src\server\gguf_server_hotpatch.cpp" "ServerHotpatch|transform" "NEVER_MATCH" "Hotpatch" "NEVER_MATCH" 5
 Introspect-Feature "Hotpatch" "Unified Manager" "D:\rawrxd\src\core\unified_hotpatch_manager.cpp" "UnifiedResult|apply_memory" "NEVER_MATCH" "NEVER_MATCH" "NEVER_MATCH" 5
 Introspect-Feature "Hotpatch" "Hotpatch Panel"  $script:Paths.Win32Hotpatch "HotpatchPanel|hotpatchList" "NEVER_MATCH" "HotpatchControls" "NEVER_MATCH"
@@ -434,7 +434,7 @@ Introspect-Feature "Hotpatch" "Hotpatch Panel"  $script:Paths.Win32Hotpatch "Hot
 # ──────────────────────────────────────────────────────────────────────────
 Write-Host "  🎨 Themes..." -ForegroundColor Gray
 Introspect-Feature "Themes" "16 Built-in"     $script:Paths.Win32Themes "IDM_THEME_|Monokai|Dracula|Nord" "NEVER_MATCH" "NEVER_MATCH" "Apply-Theme"
-Introspect-Feature "Themes" "Theme Editor"    $script:Paths.Win32Themes "showThemeEditor"    "NEVER_MATCH" "NEVER_MATCH" "Show-CustomThemeBuilder"
+Introspect-Feature "Themes" "Theme Editor"    $script:Paths.Win32Cmds "showThemeEditor"    "NEVER_MATCH" "NEVER_MATCH" "Show-CustomThemeBuilder"
 Introspect-Feature "Themes" "Transparency"    $script:Paths.Win32Themes "setWindowTransparency|WS_EX_LAYERED" "NEVER_MATCH" "NEVER_MATCH" "NEVER_MATCH"
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -442,7 +442,7 @@ Introspect-Feature "Themes" "Transparency"    $script:Paths.Win32Themes "setWind
 # ──────────────────────────────────────────────────────────────────────────
 Write-Host "  🖍️  Syntax Highlighting..." -ForegroundColor Gray
 Introspect-Feature "Syntax" "C++ Keywords"    $script:Paths.Win32Syntax "cppKeywords|isKeyword"  "NEVER_MATCH" "MonacoEditor" "Get-FileIcon"
-Introspect-Feature "Syntax" "ASM Semantic"    "D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp" "asmMnemonic|registerName" "NEVER_MATCH" "NEVER_MATCH" "NEVER_MATCH"
+Introspect-Feature "Syntax" "ASM Semantic"    "D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp" "AsmInstructionInfo|AsmRegisterInfo|lookupInstruction" "NEVER_MATCH" "NEVER_MATCH" "NEVER_MATCH"
 Introspect-Feature "Syntax" "6 Languages"     $script:Paths.Win32Syntax "SyntaxLanguage|Python|Rust|GLSL" "NEVER_MATCH" "language" "NEVER_MATCH"
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -450,14 +450,14 @@ Introspect-Feature "Syntax" "6 Languages"     $script:Paths.Win32Syntax "SyntaxL
 # ──────────────────────────────────────────────────────────────────────────
 Write-Host "  💻 Terminal..." -ForegroundColor Gray
 Introspect-Feature "Terminal" "New Terminal"   $script:Paths.Win32Terminal "createTerminalPane|TerminalManager" "cmd_terminal_new"  "NEVER_MATCH" "New-Terminal"
-Introspect-Feature "Terminal" "Split Terminal" $script:Paths.Win32Terminal "splitTerminal"     "cmd_terminal_split" "NEVER_MATCH" "Split-Terminal"
-Introspect-Feature "Terminal" "Kill Terminal"  $script:Paths.Win32Terminal "killTerminal"      "cmd_terminal_kill"  "NEVER_MATCH" "Kill-Terminal"
+Introspect-Feature "Terminal" "Split Terminal" $script:Paths.Win32Cmds "splitTerminalHorizontal|splitTerminalVertical|IDM_TERMINAL_SPLIT" "cmd_terminal_split" "NEVER_MATCH" "Split-Terminal"
+Introspect-Feature "Terminal" "Kill Terminal"  $script:Paths.Win32SubAgent "killTerminal|killTerminalWithTimeout|IDM_TERMINAL_KILL" "cmd_terminal_kill" "NEVER_MATCH" "Kill-Terminal"
 
 # ──────────────────────────────────────────────────────────────────────────
 # STREAMING UX
 # ──────────────────────────────────────────────────────────────────────────
 Write-Host "  📡 Streaming..." -ForegroundColor Gray
-Introspect-Feature "Streaming" "Token Stream"  $script:Paths.Win32Stream "appendStreamingToken|streamingOutput" "NEVER_MATCH" "NEVER_MATCH" "streaming|token.*by.*token"
+Introspect-Feature "Streaming" "Token Stream"  $script:Paths.Win32SubAgent "appendStreamingToken|streamingOutput|clearStreamingOutput" "NEVER_MATCH" "NEVER_MATCH" "streaming|token.*by.*token"
 Introspect-Feature "Streaming" "Ghost Text"    $script:Paths.Win32Ghost  "ghostText|inlineSuggestion"          "NEVER_MATCH" "NEVER_MATCH" "Get-AIAutoCompleteSuggestions"
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -485,8 +485,8 @@ Introspect-Feature "Git" "Git Commit"           $script:Paths.Win32Cmds "gitComm
 # ──────────────────────────────────────────────────────────────────────────
 Write-Host "  🖥️  View & Layout..." -ForegroundColor Gray
 Introspect-Feature "View" "Sidebar"           $script:Paths.Win32Sidebar "toggleSidebar"    "NEVER_MATCH" "NEVER_MATCH" "Toggle-Sidebar"
-Introspect-Feature "View" "Output Panel"      $script:Paths.Win32VsCode  "toggleOutputPanel" "NEVER_MATCH" "NEVER_MATCH" "Toggle-OutputPanel"
-Introspect-Feature "View" "Minimap"           $script:Paths.Win32VsCode  "toggleMinimap"    "NEVER_MATCH" "minimap" "Set-EditorMinimap"
+Introspect-Feature "View" "Output Panel"      $script:Paths.Win32Cmds  "toggleOutputPanel" "NEVER_MATCH" "NEVER_MATCH" "Toggle-OutputPanel"
+Introspect-Feature "View" "Minimap"           $script:Paths.Win32Cmds  "toggleMinimap"    "NEVER_MATCH" "minimap" "Set-EditorMinimap"
 Introspect-Feature "View" "Command Palette"   $script:Paths.Win32Cmds    "commandPalette|fuzzyMatch" "NEVER_MATCH" "NEVER_MATCH" "Show-CommandPalette"
 
 # ──────────────────────────────────────────────────────────────────────────

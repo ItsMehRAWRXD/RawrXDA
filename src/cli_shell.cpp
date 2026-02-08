@@ -13,6 +13,8 @@
 #include "modules/react_generator.h"
 #include "agentic_engine.h"
 #include "subagent_core.h"
+#include "cli/agentic_decision_tree.h"
+#include "cli/cli_autonomy_loop.h"
 
 namespace fs = std::filesystem;
 
@@ -490,6 +492,194 @@ void cmd_hotpatch_create(const std::string& args) {
 }
 
 // ============================================================================
+// AGENTIC DECISION TREE (Phase 19: Headless Autonomy)
+// ============================================================================
+
+void cmd_decision_tree(const std::string& args) {
+    auto& tree = AgenticDecisionTree::instance();
+
+    if (args == "dump" || args == "show") {
+        std::cout << tree.dumpTreeJSON() << "\n";
+    } else if (args == "trace") {
+        std::cout << tree.dumpLastTrace() << "\n";
+    } else if (args == "stats") {
+        auto& s = tree.getStats();
+        std::cout << "\n🌳 Decision Tree Statistics:\n";
+        std::cout << "  Trees evaluated:      " << s.treesEvaluated.load() << "\n";
+        std::cout << "  Nodes visited:        " << s.nodesVisited.load() << "\n";
+        std::cout << "  SSA lifts:            " << s.ssaLiftsPerformed.load() << "\n";
+        std::cout << "  Failures detected:    " << s.failuresDetected.load() << "\n";
+        std::cout << "  Patches applied:      " << s.patchesApplied.load() << "\n";
+        std::cout << "  Patches reverted:     " << s.patchesReverted.load() << "\n";
+        std::cout << "  Successful fixes:     " << s.successfulCorrections.load() << "\n";
+        std::cout << "  Failed fixes:         " << s.failedCorrections.load() << "\n";
+        std::cout << "  Escalations:          " << s.escalations.load() << "\n";
+        std::cout << "  Total retries:        " << s.totalRetries.load() << "\n";
+        std::cout << "  Aborts:               " << s.aborts.load() << "\n\n";
+    } else if (args == "enable") {
+        tree.setEnabled(true);
+        std::cout << "✅ Decision tree enabled\n";
+    } else if (args == "disable") {
+        tree.setEnabled(false);
+        std::cout << "⏹️  Decision tree disabled\n";
+    } else if (args == "reset") {
+        tree.resetStats();
+        tree.buildDefaultTree();
+        std::cout << "✅ Decision tree reset to defaults\n";
+    } else {
+        std::cout << "Usage: !decision_tree <dump|trace|stats|enable|disable|reset>\n";
+    }
+}
+
+void cmd_autonomy_run(const std::string& args) {
+    auto& loop = CLIAutonomyLoop::instance();
+
+    // Wire engines if not already done
+    if (g_state.agenticEngine) {
+        loop.setAgenticEngine(g_state.agenticEngine);
+    }
+    if (g_state.subAgentMgr) {
+        loop.setSubAgentManager(g_state.subAgentMgr);
+    }
+
+    if (args == "start" || args.empty()) {
+        loop.start();
+    } else if (args == "stop") {
+        loop.stop();
+    } else if (args == "pause") {
+        loop.pause();
+    } else if (args == "resume") {
+        loop.resume();
+    } else if (args == "status") {
+        std::cout << loop.getDetailedStatus();
+    } else if (args == "tick") {
+        auto outcome = loop.tick();
+        std::cout << (outcome.success ? "✅" : "❌") << " "
+                  << outcome.summary << "\n";
+        for (const auto& t : outcome.traceLog) {
+            std::cout << "    " << t << "\n";
+        }
+    } else if (args.rfind("verbose ", 0) == 0) {
+        std::string val = args.substr(8);
+        AutonomyLoopConfig cfg = loop.getConfig();
+        cfg.verboseTracing = (val == "on" || val == "true" || val == "1");
+        loop.setConfig(cfg);
+        std::cout << "✅ Verbose tracing: " << (cfg.verboseTracing ? "ON" : "OFF") << "\n";
+    } else if (args.rfind("rate ", 0) == 0) {
+        try {
+            int rate = std::stoi(args.substr(5));
+            AutonomyLoopConfig cfg = loop.getConfig();
+            cfg.maxActionsPerMinute = rate;
+            loop.setConfig(cfg);
+            std::cout << "✅ Rate limit: " << rate << " actions/min\n";
+        } catch (...) {
+            std::cout << "Usage: !autonomy_run rate <number>\n";
+        }
+    } else if (args.rfind("interval ", 0) == 0) {
+        try {
+            int ms = std::stoi(args.substr(9));
+            AutonomyLoopConfig cfg = loop.getConfig();
+            cfg.tickIntervalMs = ms;
+            loop.setConfig(cfg);
+            std::cout << "✅ Tick interval: " << ms << "ms\n";
+        } catch (...) {
+            std::cout << "Usage: !autonomy_run interval <ms>\n";
+        }
+    } else {
+        std::cout << "Usage: !autonomy_run <start|stop|pause|resume|status|tick>\n";
+        std::cout << "       !autonomy_run verbose <on|off>\n";
+        std::cout << "       !autonomy_run rate <actions_per_min>\n";
+        std::cout << "       !autonomy_run interval <ms>\n";
+    }
+}
+
+void cmd_ssa_lift(const std::string& args) {
+    if (args.empty()) {
+        std::cout << "Usage: !ssa_lift <binary_path> [function_name] [hex_address]\n";
+        std::cout << "  Examples:\n";
+        std::cout << "    !ssa_lift target.exe main\n";
+        std::cout << "    !ssa_lift target.dll 0x140001000\n";
+        std::cout << "    !ssa_lift model.gguf process_tokens 0x7ff6a000\n";
+        return;
+    }
+
+    // Parse arguments: <binary> [func_name] [hex_addr]
+    std::vector<std::string> parts;
+    std::istringstream iss(args);
+    std::string token;
+    while (iss >> token) parts.push_back(token);
+
+    std::string binaryPath = parts[0];
+    std::string funcName = (parts.size() > 1) ? parts[1] : "";
+    uint64_t addr = 0;
+
+    // Check if func_name is actually a hex address
+    if (!funcName.empty() && funcName.rfind("0x", 0) == 0) {
+        addr = std::stoull(funcName, nullptr, 16);
+        funcName.clear();
+    }
+
+    // Check for explicit hex address in 3rd arg
+    if (parts.size() > 2 && parts[2].rfind("0x", 0) == 0) {
+        addr = std::stoull(parts[2], nullptr, 16);
+    }
+
+    std::cout << "🔬 Running SSA Lifter on: " << binaryPath;
+    if (!funcName.empty()) std::cout << " func=" << funcName;
+    if (addr != 0) std::cout << " addr=0x" << std::hex << addr << std::dec;
+    std::cout << "\n";
+
+    auto& loop = CLIAutonomyLoop::instance();
+    std::string result = loop.runSSALift(binaryPath, funcName, addr);
+    std::cout << result << "\n";
+}
+
+void cmd_auto_patch(const std::string& args) {
+    if (args == "stats") {
+        auto& tree = AgenticDecisionTree::instance();
+        auto& s = tree.getStats();
+        std::cout << "🔧 Auto-Patch Stats: "
+                  << s.patchesApplied.load() << " applied, "
+                  << s.patchesReverted.load() << " reverted, "
+                  << s.successfulCorrections.load() << " verified\n";
+        return;
+    }
+
+    if (args == "analyze" || args.empty()) {
+        std::cout << "🔧 Running autonomous correction pipeline...\n";
+
+        auto& loop = CLIAutonomyLoop::instance();
+        if (g_state.agenticEngine) {
+            loop.setAgenticEngine(g_state.agenticEngine);
+        }
+        if (g_state.subAgentMgr) {
+            loop.setSubAgentManager(g_state.subAgentMgr);
+        }
+
+        auto outcome = loop.autoPatch();
+        if (!outcome.success && args.empty()) {
+            std::cout << "ℹ️  No prior failure context. Run inference first, then use !auto_patch.\n";
+            std::cout << "    Or: pipe output through autonomy with !autonomy_run start\n";
+        }
+        return;
+    }
+
+    // Allow one-shot: !auto_patch "<output text>" "<prompt>"
+    // Simple: just analyze the args as output text
+    std::cout << "🔧 Analyzing provided text for failures...\n";
+    auto& tree = AgenticDecisionTree::instance();
+    if (g_state.agenticEngine) {
+        tree.setAgenticEngine(g_state.agenticEngine);
+    }
+
+    DecisionOutcome outcome = tree.analyzeAndFix(args, "");
+    std::cout << (outcome.success ? "✅" : "❌") << " " << outcome.summary << "\n";
+    for (const auto& t : outcome.traceLog) {
+        std::cout << "    " << t << "\n";
+    }
+}
+
+// ============================================================================
 // SEARCH & TOOLS (Feature Parity with Win32IDE Tools)
 // ============================================================================
 
@@ -747,6 +937,14 @@ void print_help() {
     std::cout << "\n🔥 HOTPATCH OPERATIONS:\n";
     std::cout << "  !hotpatch_apply <file>       Apply hotpatch without restart\n";
     std::cout << "  !hotpatch_create              Create hotpatch from current file\n";
+    std::cout << "\n🧠 AGENTIC DECISION TREE (Phase 19):\n";
+    std::cout << "  !decision_tree <sub>          dump|trace|stats|enable|disable|reset\n";
+    std::cout << "  !autonomy_run <sub>           start|stop|pause|resume|status|tick\n";
+    std::cout << "    verbose <on|off>              Toggle verbose tracing\n";
+    std::cout << "    rate <n>                      Set actions/minute limit\n";
+    std::cout << "    interval <ms>                 Set tick interval\n";
+    std::cout << "  !ssa_lift <bin> [func] [addr] Run SSA Lifter on a binary function\n";
+    std::cout << "  !auto_patch [text|analyze|stats] Auto-correct inference failures\n";
     std::cout << "\n🔍 TOOLS:\n";
     std::cout << "  !search <pattern> [path]      Search files\n";
     std::cout << "  !analyze                      Analyze current file\n";
@@ -833,6 +1031,12 @@ void route_command(const std::string& line) {
     else if (cmd == "!hotpatch_apply") cmd_hotpatch_apply(args);
     else if (cmd == "!hotpatch_create") cmd_hotpatch_create(args);
     
+    // Agentic Decision Tree (Phase 19)
+    else if (cmd == "!decision_tree") cmd_decision_tree(args);
+    else if (cmd == "!autonomy_run") cmd_autonomy_run(args);
+    else if (cmd == "!ssa_lift") cmd_ssa_lift(args);
+    else if (cmd == "!auto_patch") cmd_auto_patch(args);
+    
     // Tools
     else if (cmd == "!search") cmd_search_files(args);
     else if (cmd == "!analyze") cmd_analyze(args);
@@ -916,17 +1120,38 @@ void route_command(const std::string& line) {
                 std::cout << "\n[Tool Result]\n" << toolResult << "\n";
             }
         }
+        
+        // Feed output to the autonomy loop for background analysis
+        auto& loop = CLIAutonomyLoop::instance();
+        if (loop.getState() == AutonomyLoopState::Running) {
+            loop.enqueueOutput(out, line);
+        }
     }
 }
 
 int main() {
     init_runtime();
     
+    // Initialize decision tree + autonomy loop with engine pointers
+    {
+        auto& tree = AgenticDecisionTree::instance();
+        auto& loop = CLIAutonomyLoop::instance();
+        if (g_state.agenticEngine) {
+            tree.setAgenticEngine(g_state.agenticEngine);
+            loop.setAgenticEngine(g_state.agenticEngine);
+        }
+        if (g_state.subAgentMgr) {
+            tree.setSubAgentManager(g_state.subAgentMgr);
+            loop.setSubAgentManager(g_state.subAgentMgr);
+        }
+    }
+    
     std::cout << "\n╔════════════════════════════════════════════════════════════════════╗\n";
     std::cout << "║      RawrXD AI Runtime (CLI) - Feature Parity with Win32 IDE        ║\n";
-    std::cout << "║            25+ Commands | Agentic | Autonomy | Debugger             ║\n";
+    std::cout << "║      30+ Commands | Agentic | Autonomy | Decision Tree | SSA        ║\n";
     std::cout << "╚════════════════════════════════════════════════════════════════════╝\n\n";
-    std::cout << "Type !help for commands or start typing to chat with AI.\n\n";
+    std::cout << "Type !help for commands or start typing to chat with AI.\n";
+    std::cout << "Phase 19: Agentic Decision Tree active. Use !decision_tree dump to inspect.\n\n";
 
     std::string line;
     while (true) {

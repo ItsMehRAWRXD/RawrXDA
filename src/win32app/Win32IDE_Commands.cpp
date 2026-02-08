@@ -567,6 +567,26 @@ void Win32IDE::handleTerminalCommand(int commandId) {
             splitTerminalHorizontal();
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Terminal split");
             break;
+
+        case IDM_TERMINAL_KILL: // Kill Terminal with timeout (Phase 19B)
+            killTerminal();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Terminal killed");
+            break;
+
+        case IDM_TERMINAL_SPLIT_H: // Split Terminal Horizontal (Phase 19B)
+            splitTerminalHorizontal();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Terminal split horizontally");
+            break;
+
+        case IDM_TERMINAL_SPLIT_V: // Split Terminal Vertical (Phase 19B)
+            splitTerminalVertical();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Terminal split vertically");
+            break;
+
+        case IDM_TERMINAL_SPLIT_CODE: // Split Code Viewer (Phase 19B)
+            splitCodeViewerHorizontal();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Code viewer split");
+            break;
             
         default:
             break;

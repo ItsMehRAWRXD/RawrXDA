@@ -379,12 +379,16 @@ static FeatureEntry g_featureManifest[] = {
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
     
     {"terminal.split", "Split Terminal", "Split terminal horizontally/vertically",
-     FeatureCategory::Terminal, 4005, "", "Win32TerminalManager.cpp",
+     FeatureCategory::Terminal, 4005, "", "Win32IDE_Commands.cpp",
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Partial, nullptr},
     
-    {"terminal.kill", "Kill Terminal", "Close terminal pane",
-     FeatureCategory::Terminal, 4003, "", "Win32TerminalManager.cpp",
+    {"terminal.kill", "Kill Terminal", "Force-kill terminal with configurable timeout",
+     FeatureCategory::Terminal, 4006, "", "Win32IDE_SubAgent.cpp",
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"terminal.splitCode", "Split Code Viewer", "Split editor into side-by-side panes",
+     FeatureCategory::Terminal, 4009, "", "Win32IDE_SubAgent.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== AGENT ==========================
     {"agent.startLoop", "Agent Loop", "Start multi-turn agentic reasoning loop",
@@ -410,6 +414,10 @@ static FeatureEntry g_featureManifest[] = {
     {"agent.stop", "Agent Stop", "Stop the running agent loop",
      FeatureCategory::Agent, 4105, "", "Win32IDE_AgentCommands.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"agent.memory", "Agent Memory", "Persistent agent observation store (key/value)",
+     FeatureCategory::Agent, 4106, "", "Win32IDE_SubAgent.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Partial, nullptr},
     
     {"agent.history", "Agent History", "View agent command history",
      FeatureCategory::Agent, 0, "", "Win32IDE_AgentHistory.cpp",
@@ -605,16 +613,16 @@ static FeatureEntry g_featureManifest[] = {
      FeatureCategory::SubAgent, 0, "", "Win32IDE_SubAgent.cpp",
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Partial, nullptr},
     
-    {"subagent.chain", "Prompt Chain", "Sequential multi-step prompt chain",
-     FeatureCategory::SubAgent, 0, "", "Win32IDE_SubAgent.cpp",
+    {"subagent.chain", "Prompt Chain", "Sequential multi-step prompt chain (executeChain)",
+     FeatureCategory::SubAgent, 4110, "", "Win32IDE_SubAgent.cpp",
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
     
-    {"subagent.swarm", "HexMag Swarm", "Parallel agent swarm execution",
-     FeatureCategory::SubAgent, 0, "", "Win32IDE_SubAgent.cpp",
+    {"subagent.swarm", "HexMag Swarm", "Parallel agent swarm execution (executeSwarm)",
+     FeatureCategory::SubAgent, 4111, "", "Win32IDE_SubAgent.cpp",
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
     
-    {"subagent.todoList", "Agent Todo List", "Track agent task progress",
-     FeatureCategory::SubAgent, 0, "", "Win32IDE_SubAgent.cpp",
+    {"subagent.todoList", "Agent Todo List", "Track agent task progress (TodoItem)",
+     FeatureCategory::SubAgent, 4112, "", "Win32IDE_SubAgent.cpp",
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== SWARM COMPILATION ==========================

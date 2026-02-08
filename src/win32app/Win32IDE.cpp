@@ -4642,6 +4642,9 @@ void Win32IDE::onInferenceToken(const std::string& token)
     // Called when streaming tokens during inference
     m_currentInferenceResponse += token;
     
+    // Phase 19B: Feed token to the streaming output system
+    appendStreamingToken(token);
+    
     // Update UI with partial response if streaming is enabled
     if (m_inferenceConfig.streamOutput && m_inferenceCallback) {
         m_inferenceCallback(token, false);

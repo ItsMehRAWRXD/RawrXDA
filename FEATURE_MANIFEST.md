@@ -1,6 +1,6 @@
 # RawrXD IDE — Complete Feature Manifest
 
-**Generated**: 2026-02-07 20:27:58
+**Generated**: 2026-02-07 20:32:23
 **Source**: Auto-introspected from actual source code by RawrXD-FeatureTest.ps1
 
 ## Coverage Summary

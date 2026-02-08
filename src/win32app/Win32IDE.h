@@ -40,6 +40,7 @@
 
 // Forward declarations
 class MultiResponseEngine;
+class SubAgentManager;
 
 // Agent and AI IDs
 #define IDM_AGENT_START_LOOP 4100
@@ -48,6 +49,23 @@ class MultiResponseEngine;
 #define IDM_AGENT_VIEW_TOOLS 4103
 #define IDM_AGENT_VIEW_STATUS 4104
 #define IDM_AGENT_STOP 4105
+#define IDM_AGENT_MEMORY 4106
+#define IDM_AGENT_MEMORY_VIEW 4107
+#define IDM_AGENT_MEMORY_CLEAR 4108
+#define IDM_AGENT_MEMORY_EXPORT 4109
+
+// SubAgent / Chain / Swarm / Todo command IDs (4110–4119)
+#define IDM_SUBAGENT_CHAIN 4110
+#define IDM_SUBAGENT_SWARM 4111
+#define IDM_SUBAGENT_TODO_LIST 4112
+#define IDM_SUBAGENT_TODO_CLEAR 4113
+#define IDM_SUBAGENT_STATUS 4114
+
+// Terminal extended IDs (4006–4009)
+#define IDM_TERMINAL_KILL 4006
+#define IDM_TERMINAL_SPLIT_H 4007
+#define IDM_TERMINAL_SPLIT_V 4008
+#define IDM_TERMINAL_SPLIT_CODE 4009
 
 // Autonomy IDs
 #define IDM_AUTONOMY_TOGGLE 4150
@@ -774,6 +792,77 @@ public:
     
     // Memory Plugin System (Native VSIX Style)
     void loadMemoryPlugin(const std::string& path);
+
+    // ========================================================================
+    // AGENT MEMORY — Persistent observation store for agentic iterations
+    // Phase 19B: Lets agents/models/swarms/end-users store & recall context
+    // ========================================================================
+    struct AgentMemoryEntry {
+        std::string key;
+        std::string value;
+        std::string source;       // "agent", "user", "swarm", etc.
+        uint64_t    timestampMs;
+    };
+    void onAgentMemoryStore(const std::string& key, const std::string& value,
+                            const std::string& source = "agent");
+    void onAgentMemoryRecall(const std::string& key);
+    void onAgentMemoryView();
+    void onAgentMemoryClear();
+    void onAgentMemoryExport();
+    std::string agentMemoryToJSON() const;
+    bool agentMemoryHas(const std::string& key) const;
+    std::string agentMemoryGet(const std::string& key) const;
+
+    // ========================================================================
+    // SUBAGENT WIN32 COMMAND HANDLERS — Wire SubAgentManager to Win32IDE
+    // Phase 19B: Expose chain/swarm/todo via menu & command palette
+    // ========================================================================
+    void onSubAgentChain();
+    void onSubAgentSwarm();
+    void onSubAgentTodoList();
+    void onSubAgentTodoClear();
+    void onSubAgentStatus();
+
+    // ========================================================================
+    // TOKEN-BY-TOKEN STREAMING — Live output to editor/output panel
+    // Phase 19B: appendStreamingToken writes tokens as they arrive
+    // ========================================================================
+    void appendStreamingToken(const std::string& token);
+    void clearStreamingOutput();
+    std::string getStreamingOutput() const;
+
+    // ========================================================================
+    // KILL TERMINAL — Force-kill stuck/frozen terminals with timeout
+    // Phase 19B: Configurable time limiter, used by agents/models/end-users
+    // ========================================================================
+    void killTerminal(int paneId = -1);
+    void killTerminalWithTimeout(int paneId, int timeoutMs);
+    void setTerminalKillTimeout(int timeoutMs);
+    int  getTerminalKillTimeout() const;
+
+    // ========================================================================
+    // SPLIT CODE VIEWER — Split editor into two side-by-side code panes
+    // Phase 19B: Independent of terminal split
+    // ========================================================================
+    void splitCodeViewerHorizontal();
+    void splitCodeViewerVertical();
+    bool isCodeViewerSplit() const;
+    void closeSplitCodeViewer();
+
+    // ========================================================================
+    // CROSS-IDE FINDPATTERN RVA PARITY TEST
+    // Phase 19B: Ensures CLI & Win32IDE produce identical FindPattern results
+    // ========================================================================
+    bool testFindPatternRVAParity(const std::string& binaryPath,
+                                   const std::string& pattern,
+                                   uint64_t& outRVA);
+
+    // ========================================================================
+    // LICENSE → MANIFEST WIRING
+    // Phase 19B: Connect RawrLicense_CheckFeature (Phase 17) to FeatureManifest
+    // ========================================================================
+    bool checkFeatureLicense(const std::string& featureId) const;
+    void syncLicenseWithManifest();
 
     // Comprehensive Logging System
     void initializeLogging();
@@ -3797,4 +3886,35 @@ private:
     HWND m_hwndDecompPane   = nullptr;  // Left pane: decompiler (Direct2D)
     HWND m_hwndDisasmPane   = nullptr;  // Right pane: disassembly (Direct2D)
     bool m_decompViewActive = false;    // True when decompiler view is showing
+
+    // ========================================================================
+    // AGENT MEMORY STATE — Phase 19B
+    // ========================================================================
+    std::vector<AgentMemoryEntry> m_agentMemory;
+    mutable std::mutex m_agentMemoryMutex;
+    static const size_t MAX_AGENT_MEMORY_ENTRIES = 2000;
+
+    // ========================================================================
+    // TOKEN STREAMING STATE — Phase 19B
+    // ========================================================================
+    std::string m_streamingOutput;
+    mutable std::mutex m_streamingOutputMutex;
+    bool m_streamingActive = false;
+
+    // ========================================================================
+    // TERMINAL KILL TIMEOUT STATE — Phase 19B
+    // ========================================================================
+    int m_terminalKillTimeoutMs = 5000;  // Default 5s, user-configurable
+
+    // ========================================================================
+    // SPLIT CODE VIEWER STATE — Phase 19B
+    // ========================================================================
+    HWND m_hwndSplitCodeViewer = nullptr;
+    HWND m_hwndSplitCodeEditor = nullptr;
+    bool m_codeViewerSplit = false;
+
+    // ========================================================================
+    // SUBAGENT MANAGER INSTANCE — Phase 19B (owned, used by chain/swarm/todo)
+    // ========================================================================
+    std::unique_ptr<SubAgentManager> m_subAgentManager;
 };
