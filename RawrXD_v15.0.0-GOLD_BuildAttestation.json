@@ -1,0 +1,639 @@
+{
+  "Modules": [
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 9715,
+      "Path": "src\\asm\\RawrCodex.asm",
+      "Hashes": {
+        "MD5": "3AE87A2EFDECA8BF17A69D444BFD6495",
+        "SHA256": "495401358EE17DE9EE8C615A24DF6BCEECBDAED4D278AAD3F23AE00269465E42"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 9715,
+      "FileName": "RawrCodex.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [],
+        "Extern": [
+          "GetProcessHeap",
+          "HeapAlloc",
+          "HeapFree",
+          "HeapReAlloc",
+          "CreateFileA",
+          "ReadFile",
+          "WriteFile",
+          "CloseHandle",
+          "GetFileSize",
+          "CreateFileMappingA",
+          "MapViewOfFile",
+          "UnmapViewOfFile",
+          "GetLastError",
+          "VirtualProtect",
+          "lstrlenA",
+          "lstrcpyA",
+          "lstrcmpA",
+          "wsprintfA"
+        ]
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 31,
+        "ENDP": 31
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 1104,
+      "Path": "src\\asm\\FlashAttention_AVX512.asm",
+      "Hashes": {
+        "MD5": "87EF07160E32CBED96100C86FE5B5131",
+        "SHA256": "36619BAFDF75135BABD96DFFB4B8371046BD9407A7FC7245698940E7BD099153"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 1104,
+      "FileName": "FlashAttention_AVX512.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "FlashAttention_Forward",
+          "FlashAttention_CheckAVX512",
+          "FlashAttention_Init",
+          "FlashAttention_GetTileConfig"
+        ],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 4,
+        "ENDP": 4
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 1628,
+      "Path": "src\\asm\\RawrXD_Debug_Engine.asm",
+      "Hashes": {
+        "MD5": "A835A267E2C1BC9CB7B5C482201D2EF7",
+        "SHA256": "9C5A9136C377AFCD4F5D22F2E74F425825325BB5CEA79C24856B2BE24BAA40F6"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 1628,
+      "FileName": "RawrXD_Debug_Engine.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "Dbg_InjectINT3",
+          "Dbg_RestoreINT3",
+          "Dbg_SetHardwareBreakpoint",
+          "Dbg_ClearHardwareBreakpoint",
+          "Dbg_EnableSingleStep",
+          "Dbg_DisableSingleStep",
+          "Dbg_CaptureContext",
+          "Dbg_SetRegister",
+          "Dbg_WalkStack",
+          "Dbg_ReadMemory",
+          "Dbg_WriteMemory",
+          "Dbg_MemoryScan",
+          "Dbg_MemoryCRC32",
+          "Dbg_RDTSC"
+        ],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 14,
+        "ENDP": 14
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 563,
+      "Path": "src\\asm\\RawrXD_KQuant_Dequant.asm",
+      "Hashes": {
+        "MD5": "794CE78430C46CC46B5E2BF621FF8874",
+        "SHA256": "C2C4603F4FBC0414823AF4C36E26809F74117704F2B6E4C353A9E5B956EE3B18"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 563,
+      "FileName": "RawrXD_KQuant_Dequant.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "KQuant_DequantizeQ4_K",
+          "KQuant_DequantizeQ5_K",
+          "KQuant_DequantizeQ6_K",
+          "KQuant_DequantizeQ2_K",
+          "KQuant_DequantizeQ3_K",
+          "KQuant_DequantizeF16",
+          "KQuant_Dispatch"
+        ],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 7,
+        "ENDP": 7
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 1153,
+      "Path": "src\\asm\\RawrXD_Swarm_Network.asm",
+      "Hashes": {
+        "MD5": "DEBC19200224302AD6A8A769F6BA3E5E",
+        "SHA256": "CEE9C4D211C527B94375F7C3470FDAAE79FDC924ECCB6E8A9A234909D8B5812D"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 1153,
+      "FileName": "RawrXD_Swarm_Network.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "Swarm_RingBuffer_Init",
+          "Swarm_RingBuffer_Push",
+          "Swarm_RingBuffer_Pop",
+          "Swarm_RingBuffer_Count",
+          "Swarm_Blake2b_128",
+          "Swarm_ValidatePacketHeader",
+          "Swarm_BuildPacketHeader",
+          "Swarm_HeartbeatCheck",
+          "Swarm_HeartbeatRecord",
+          "Swarm_ComputeNodeFitness",
+          "Swarm_IOCP_Create",
+          "Swarm_IOCP_Associate",
+          "Swarm_IOCP_GetCompletion",
+          "Swarm_MemCopy_NT",
+          "Swarm_XXH64"
+        ],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 15,
+        "ENDP": 15
+      },
+      "Critical": false
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 1561,
+      "Path": "src\\asm\\RawrXD_QuadBuffer_Streamer.asm",
+      "Hashes": {
+        "MD5": "F9969D4BAD9D77EC725E2A78D2C91ACC",
+        "SHA256": "B139DC9178749EFF68567EB2B7958C9EAA702630E56F548AD6173D5F165C1233"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 1561,
+      "FileName": "RawrXD_QuadBuffer_Streamer.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "QB_Init",
+          "QB_Shutdown",
+          "QB_LoadModel",
+          "QB_StreamTensor",
+          "QB_ReleaseTensor",
+          "QB_GetStats",
+          "QB_ForceEviction",
+          "QB_SetVRAMLimit",
+          "QB_GetEngineDescriptor",
+          "GGUF_LoadIndex",
+          "Safetensors_LoadIndex",
+          "Blob_LoadIndex"
+        ],
+        "Extern": [
+          "CreateFileW",
+          "ReadFile",
+          "SetFilePointerEx",
+          "GetFileSizeEx",
+          "CreateFileMappingW",
+          "MapViewOfFile",
+          "UnmapViewOfFile",
+          "CloseHandle",
+          "VirtualAlloc",
+          "VirtualFree",
+          "VirtualProtect",
+          "CreateThread",
+          "CreateEventW",
+          "CreateSemaphoreW",
+          "WaitForSingleObject",
+          "ReleaseSemaphore",
+          "SetEvent",
+          "EnterCriticalSection",
+          "LeaveCriticalSection",
+          "InitializeCriticalSection",
+          "DeleteCriticalSection",
+          "QueryPerformanceCounter",
+          "Sleep",
+          "ExitThread",
+          "memcpy",
+          "memset"
+        ]
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 16,
+        "ENDP": 16
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 996,
+      "Path": "src\\asm\\RawrXD_EnterpriseLicense.asm",
+      "Hashes": {
+        "MD5": "5889823BF8EB17505916F4CB5A83B8D4",
+        "SHA256": "8380FFFEA7E9839E931BFA0C661E01849972E0C08671634F7768E7C7DF51F802"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 996,
+      "FileName": "RawrXD_EnterpriseLicense.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "Enterprise_InitLicenseSystem",
+          "Enterprise_ValidateLicense",
+          "Enterprise_CheckFeature",
+          "Enterprise_Unlock800BDualEngine",
+          "Enterprise_InstallLicense",
+          "Enterprise_GetLicenseStatus",
+          "Enterprise_GetFeatureString",
+          "Enterprise_GenerateHardwareHash",
+          "Enterprise_RuntimeIntegrityCheck",
+          "Enterprise_Shutdown",
+          "Titan_CheckEnterpriseUnlock",
+          "Streaming_CheckEnterpriseBudget",
+          "g_800B_Unlocked",
+          "g_EnterpriseFeatures"
+        ],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 12,
+        "ENDP": 12
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 1092,
+      "Path": "src\\asm\\RawrXD_License_Shield.asm",
+      "Hashes": {
+        "MD5": "E7D14589F15851C3AEF2492BADED1A0A",
+        "SHA256": "163D5970C890A7B7556ECB33C832657AE84A39DB528C701BD3F0E8B1F5B18BE4"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 1092,
+      "FileName": "RawrXD_License_Shield.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "IsDebuggerPresent_Native",
+          "Unlock_800B_Kernel",
+          "Shield_GenerateHWID",
+          "Shield_VerifyIntegrity",
+          "Shield_AES_DecryptShim",
+          "Shield_TimingCheck",
+          "Shield_InitializeDefense",
+          "Shield_CheckHeapFlags",
+          "Shield_CheckKernelDebug",
+          "Shield_MurmurHash3_x64",
+          "Shield_DecryptKernelEntry"
+        ],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 11,
+        "ENDP": 11
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 229,
+      "Path": "src\\asm\\memory_patch.asm",
+      "Hashes": {
+        "MD5": "CAAAB71FF3000CAD14DD1D86788B291D",
+        "SHA256": "84ECF2E56CEBD8C060EBFA12572CEB4B2AA93008DF0447DCAAD3F550C55E1835"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 229,
+      "FileName": "memory_patch.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "asm_apply_memory_patch",
+          "asm_revert_memory_patch",
+          "asm_safe_memread"
+        ],
+        "Extern": [
+          "VirtualProtect",
+          "FlushInstructionCache",
+          "GetCurrentProcess"
+        ]
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 3,
+        "ENDP": 3
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 390,
+      "Path": "src\\asm\\byte_search.asm",
+      "Hashes": {
+        "MD5": "81305DB95E3C1D9C24FD98FA0A7C6253",
+        "SHA256": "A80943AC8FD9540A41659F0F51A3912856C96C9B96A6AA33D69875976DE39042"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 390,
+      "FileName": "byte_search.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "find_pattern_asm",
+          "asm_byte_search",
+          "asm_boyer_moore_search"
+        ],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 3,
+        "ENDP": 3
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 118,
+      "Path": "src\\asm\\request_patch.asm",
+      "Hashes": {
+        "MD5": "1FE50A980FB3DC2AF381AEE643B4A600",
+        "SHA256": "DA1F5E7F6B312333949BC557994E06AE1F80115E74084956D0481D389D65113E"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 118,
+      "FileName": "request_patch.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "asm_intercept_request",
+          "asm_intercept_response"
+        ],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 2,
+        "ENDP": 2
+      },
+      "Critical": true
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 495,
+      "Path": "src\\asm\\custom_zlib.asm",
+      "Hashes": {
+        "MD5": "05C8ED09D81F6B9158220E32C7ECDE7E",
+        "SHA256": "8D6AA380C16FD54A8BAD750FEACF8542E8B535F2358E2E698ACD9377C2CBD4C7"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 495,
+      "FileName": "custom_zlib.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [
+          "CustomZlibCompress",
+          "CustomZlibDecompress",
+          "CustomZlibGetCompressedSize",
+          "CustomZlibGetDecompressedSize",
+          "CustomZlibInit",
+          "CustomZlibFree"
+        ],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 7,
+        "ENDP": 7
+      },
+      "Critical": false
+    },
+    {
+      "Syntax": {
+        "Errors": 0,
+        "Status": "PASS",
+        "Warnings": 0,
+        "Output": "Clean assembly"
+      },
+      "NasmCheck": {
+        "Score": 0,
+        "Contaminated": false,
+        "Patterns": []
+      },
+      "Issues": [],
+      "LinesExpected": 151,
+      "Path": "src\\asm\\inference_kernels.asm",
+      "Hashes": {
+        "MD5": "85095FF2146FDC0012AE1251ABF3C2B7",
+        "SHA256": "A43F318986A8A116A095466B0E81C1E3BB9D3D036AC90E48599E2418D6FC234A"
+      },
+      "Overall": "PASS",
+      "LineCheck": true,
+      "LineDelta": 0,
+      "Lines": 151,
+      "FileName": "inference_kernels.asm",
+      "Exists": true,
+      "Symbols": {
+        "Public": [],
+        "Extern": []
+      },
+      "ProcBalance": {
+        "Balanced": true,
+        "PROC": 2,
+        "ENDP": 2
+      },
+      "Critical": true
+    }
+  ],
+  "Metadata": {
+    "RepoRoot": "D:\\rawrxd",
+    "Version": "15.0.0-GOLD",
+    "Validator": "RawrXD-BuildCert-v1",
+    "Timestamp": "2026-02-07T19:47:38.5412378-05:00",
+    "ML64Path": "C:\\VS2022Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostx64\\x64\\ml64.exe",
+    "Platform": "MASM64/x64"
+  },
+  "Summary": {
+    "TotalLines": 19195,
+    "Warnings": 0,
+    "Passed": 13,
+    "TotalFiles": 13,
+    "Failed": 0
+  }
+}
