@@ -207,10 +207,11 @@ private:
         // Estimate tokens generated: roughly 4 chars per token
         int tokens_generated = std::max(1, (int)(body.length() / 4));
         
-        // Simulate GPU inference with realistic latency
-        // Real: ~16ms per token with GPU (80 tok/s)
-        // With overhead: ~30ms per token with server (33 tok/s)
-        double latency_per_token = 30.0; // ms with full stack overhead
+        // No model loaded — placeholder server for API compatibility testing.
+        // When a real engine is connected, this path is replaced by actual
+        // inference dispatch (see InferenceEngine / cpu_inference_engine).
+        // Placeholder latency: ~5ms per token to simulate round-trip overhead.
+        double latency_per_token = 5.0; // ms placeholder (not real inference)
         double total_latency = latency_per_token * tokens_generated;
         
         std::chrono::milliseconds sleep_duration((int)total_latency);
@@ -238,11 +239,10 @@ private:
         RecordMetric(metric);
         
         // Generate response
-        std::string generated_text = "This is a simulated response from the GGUF model. ";
-        generated_text += "The model has processed your request with " + std::to_string(tokens_generated);
-        generated_text += " tokens in " + std::to_string(actual_latency) + "ms. ";
-        generated_text += "Real inference throughput is approximately " +
-                         std::to_string((int)(tokens_generated * 1000.0 / actual_latency)) + " tokens/sec.";
+        std::string generated_text = "[Placeholder — no model loaded] ";
+        generated_text += "API server processed " + std::to_string(tokens_generated);
+        generated_text += " simulated tokens in " + std::to_string(actual_latency) + "ms. ";
+        generated_text += "Connect a real GGUF model for actual inference throughput.";
         
         std::string json_body = R"({
   "response": ")" + generated_text + R"(",
