@@ -522,6 +522,9 @@ void Win32IDE::handleAgentCommand(int commandId) {
         case IDM_REVENG_LICENSE_INFO:
             handleReverseEngineeringLicenseInfo();
             break;
+        case IDM_REVENG_DECOMPILER_VIEW:
+            handleReverseEngineeringDecompilerView();
+            break;
 
         default:
             appendToOutput("Unknown Agent Command ID: " + std::to_string(commandId) + "\n", "Debug", OutputSeverity::Warning);

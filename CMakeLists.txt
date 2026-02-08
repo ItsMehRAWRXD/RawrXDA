@@ -100,6 +100,7 @@ if(WIN32)
         src/win32app/Win32IDE_Session.cpp
         src/win32app/Win32IDE_StreamingUX.cpp
         src/win32app/Win32IDE_ReverseEngineering.cpp
+        src/win32app/Win32IDE_DecompilerView.cpp
         src/win32app/Win32IDE_GhostText.cpp
         src/win32app/Win32IDE_PlanExecutor.cpp
         src/win32app/Win32IDE_FailureDetector.cpp

@@ -287,6 +287,7 @@ void Win32IDE::updateCommandStates() {
     m_commandStates[IDM_REVENG_TYPE_RECOVERY] = hasFile;
     m_commandStates[IDM_REVENG_DATA_FLOW] = hasFile;
     m_commandStates[IDM_REVENG_LICENSE_INFO] = true;
+    m_commandStates[IDM_REVENG_DECOMPILER_VIEW] = hasFile;
 }
 
 // ============================================================================
@@ -1738,6 +1739,7 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_REVENG_TYPE_RECOVERY, "RE: Type Recovery", "Ctrl+Shift+T", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_DATA_FLOW, "RE: Data Flow Analysis", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_LICENSE_INFO, "RE: License Info", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_DECOMPILER_VIEW, "RE: Decompiler View (Direct2D)", "Ctrl+Shift+D", "RE"});
 
     // File: Load Model & Exit (not in original list)
     m_commandRegistry.push_back({1030, "File: Load AI Model (Local)", "", "File"});

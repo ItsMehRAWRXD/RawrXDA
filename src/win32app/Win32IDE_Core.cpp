@@ -1004,6 +1004,13 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: initPhase12 failed\n");
         }
 
+        // Initialize Decompiler View (Phase 18B)
+        try {
+            initDecompilerView();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initDecompilerView failed\n");
+        }
+
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
         // Notify UI thread to refresh

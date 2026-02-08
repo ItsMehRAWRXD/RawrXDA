@@ -114,6 +114,12 @@ class MultiResponseEngine;
 #define IDM_REVENG_DATA_FLOW 4314
 #define IDM_REVENG_LICENSE_INFO 4315
 
+// Decompiler View IDs (Phase 18B)
+#define IDM_REVENG_DECOMPILER_VIEW 4316
+#define IDM_REVENG_DECOMP_RENAME   4317
+#define IDM_REVENG_DECOMP_SYNC     4318
+#define IDM_REVENG_DECOMP_CLOSE    4319
+
 // Define LOG_FUNCTION macro if not already defined
 #ifndef LOG_FUNCTION
 #define LOG_FUNCTION() LOG_DEBUG(std::string("ENTER ") + __FUNCTION__)
@@ -1078,8 +1084,26 @@ private:
     void handleReverseEngineeringTypeRecovery();
     void handleReverseEngineeringDataFlow();
     void handleReverseEngineeringLicenseInfo();
+    void handleReverseEngineeringDecompilerView();
     
     HMENU createReverseEngineeringMenu(); // Helper to add the menu
+
+    // ========================================================================
+    // DECOMPILER VIEW — Direct2D Split View (Phase 18B)
+    // Direct2D-rendered decompiler (left) + disassembly (right) with:
+    //   1. Syntax coloring via tokenizeLine() / getTokenColor()
+    //   2. Bidirectional synchronized selection (click ↔ highlight)
+    //   3. Right-click variable rename with SSA graph propagation
+    // ========================================================================
+    void initDecompilerView();
+    void showDecompilerView(const std::string& decompCode,
+                            const std::string& disasmText,
+                            const std::string& binaryName);
+    void destroyDecompilerView();
+    void decompViewRenameVariable(const std::string& oldName, const std::string& newName);
+    std::map<std::string, std::string> decompViewGetRenameMap() const;
+    void decompViewSyncToAddress(uint64_t address);
+    bool isDecompilerViewActive() const;
 
     // Command routing
     bool routeCommand(int commandId);
@@ -1109,6 +1133,11 @@ private:
     friend INT_PTR CALLBACK TransparencyDlgProc(HWND, UINT, WPARAM, LPARAM);
     friend INT_PTR CALLBACK ThemePickerDlgProc(HWND, UINT, WPARAM, LPARAM);
     friend class AgenticBridge;  // AgenticBridge needs failure hooks + failureTypeString
+
+    // Grant Decompiler View free functions access to private members (theme, tokenizer)
+    friend void DecompView_PaintDecomp(struct DecompViewState* state);
+    friend void DecompView_PaintDisasm(struct DecompViewState* state);
+    friend LRESULT CALLBACK SplitterBarProc(HWND, UINT, WPARAM, LPARAM);
 
     // Theme session persistence
     void saveSessionTheme(nlohmann::json& session);
@@ -3746,4 +3775,12 @@ private:
     // Hotpatch state
     bool m_hotpatchEnabled = false;
     bool m_hotpatchUIInitialized = false;
+
+    // ========================================================================
+    // DECOMPILER VIEW STATE — Direct2D Split View (Phase 18B)
+    // ========================================================================
+    HWND m_hwndDecompView   = nullptr;  // Split-view container
+    HWND m_hwndDecompPane   = nullptr;  // Left pane: decompiler (Direct2D)
+    HWND m_hwndDisasmPane   = nullptr;  // Right pane: disassembly (Direct2D)
+    bool m_decompViewActive = false;    // True when decompiler view is showing
 };
