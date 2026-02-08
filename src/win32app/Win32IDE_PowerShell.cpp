@@ -895,12 +895,20 @@ void Win32IDE::updatePowerShellModuleCache() {
 }
 
 std::string Win32IDE::getRawrXDPowerShellPath() {
-    // Look for RawrXD.ps1 in common locations
+    // Look for RawrXD.ps1 in common locations (portable — no hardcoded user paths)
+    char exeDir[MAX_PATH] = {};
+    GetModuleFileNameA(nullptr, exeDir, MAX_PATH);
+    char* lastSlash = strrchr(exeDir, '\\');
+    if (lastSlash) *(lastSlash + 1) = '\0';
+
+    std::string base(exeDir);
     std::vector<std::string> searchPaths = {
-        "C:\\Users\\HiH8e\\OneDrive\\Desktop\\Powershield\\RawrXD.ps1",
+        base + "RawrXD.ps1",
+        base + "scripts\\RawrXD.ps1",
         ".\\RawrXD.ps1",
         "..\\RawrXD.ps1",
-        "..\\..\\RawrXD.ps1"
+        "..\\..\\RawrXD.ps1",
+        "scripts\\RawrXD.ps1"
     };
     
     for (const auto& path : searchPaths) {

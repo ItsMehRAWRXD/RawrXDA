@@ -428,8 +428,17 @@ void Win32IDE::createExplorerView(HWND hwndParent)
     LOG_INFO(std::string(buf));
     appendToOutput(std::string(buf) + "\n", "Output", OutputSeverity::Debug);
 
-    // Set current workspace as root
-    m_explorerRootPath = "C:\\Users\\HiH8e\\OneDrive\\Desktop\\Powershield";
+    // Set current workspace as root (portable — relative to exe directory)
+    {
+        char exeDir[MAX_PATH] = {};
+        GetModuleFileNameA(nullptr, exeDir, MAX_PATH);
+        char* lastSlash = strrchr(exeDir, '\\');
+        if (lastSlash) *(lastSlash + 1) = '\0';
+        m_explorerRootPath = std::string(exeDir);
+        // Trim trailing backslash
+        if (!m_explorerRootPath.empty() && m_explorerRootPath.back() == '\\')
+            m_explorerRootPath.pop_back();
+    }
 
     appendToOutput("Explorer view created with file tree at: " + m_explorerRootPath + "\n", "Output", OutputSeverity::Info);
 }

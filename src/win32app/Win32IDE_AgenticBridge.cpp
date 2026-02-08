@@ -496,10 +496,20 @@ bool AgenticBridge::IsAnswer(const std::string& line) {
 // ============================================================================
 
 std::string AgenticBridge::ResolveFrameworkPath() {
+    // Resolve the exe directory for portable path resolution
+    char exeDir[MAX_PATH] = {};
+    GetModuleFileNameA(nullptr, exeDir, MAX_PATH);
+    char* lastSlash = strrchr(exeDir, '\\');
+    if (lastSlash) *(lastSlash + 1) = '\0';
+
+    std::string base(exeDir);
     std::vector<std::string> searchPaths = {
-        "C:\\Users\\HiH8e\\OneDrive\\Desktop\\Powershield\\Agentic-Framework.ps1",
-        "..\\..\\..\\..\\Powershield\\Agentic-Framework.ps1",
-        "Agentic-Framework.ps1"
+        base + "Agentic-Framework.ps1",
+        base + "scripts\\Agentic-Framework.ps1",
+        "Agentic-Framework.ps1",
+        "scripts\\Agentic-Framework.ps1",
+        "..\\Agentic-Framework.ps1",
+        "..\\scripts\\Agentic-Framework.ps1"
     };
 
     for (const auto& path : searchPaths) {
@@ -510,8 +520,8 @@ std::string AgenticBridge::ResolveFrameworkPath() {
         }
     }
 
-    LOG_WARNING("Agentic-Framework.ps1 not found, using default path");
-    return "C:\\Users\\HiH8e\\OneDrive\\Desktop\\Powershield\\Agentic-Framework.ps1";
+    LOG_WARNING("Agentic-Framework.ps1 not found in any search path");
+    return "Agentic-Framework.ps1";
 }
 
 std::string AgenticBridge::ResolveToolsModulePath() {

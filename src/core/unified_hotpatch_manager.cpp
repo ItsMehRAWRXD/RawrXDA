@@ -206,17 +206,142 @@ PatchResult UnifiedHotpatchManager::load_preset(const char* filename, HotpatchPr
         return PatchResult::error("Null filename or output preset", 1);
     }
 
-    // Stub: full JSON parser would go here.
-    // For now, validate the file exists and is readable.
+    // Open and read the entire preset file
     HANDLE hFile = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL,
                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
         return PatchResult::error("Preset file not found", static_cast<int>(GetLastError()));
     }
+
+    DWORD fileSize = GetFileSize(hFile, NULL);
+    if (fileSize == INVALID_FILE_SIZE || fileSize > 1024 * 1024) { // 1MB limit
+        CloseHandle(hFile);
+        return PatchResult::error("Preset file too large or unreadable", 2);
+    }
+
+    std::vector<char> buffer(fileSize + 1, 0);
+    DWORD bytesRead = 0;
+    if (!ReadFile(hFile, buffer.data(), fileSize, &bytesRead, NULL)) {
+        CloseHandle(hFile);
+        return PatchResult::error("Failed to read preset file", static_cast<int>(GetLastError()));
+    }
     CloseHandle(hFile);
 
+    std::string json(buffer.data(), bytesRead);
+
+    // Lightweight JSON parser for our known preset format
+    auto extractString = [&](const std::string& key) -> std::string {
+        std::string search = "\"" + key + "\"";
+        size_t pos = json.find(search);
+        if (pos == std::string::npos) return "";
+        size_t start = json.find('"', pos + search.size() + 1) + 1;
+        size_t end = json.find('"', start);
+        if (start == std::string::npos || end == std::string::npos) return "";
+        return json.substr(start, end - start);
+    };
+
+    auto extractInt = [&](const std::string& key) -> int {
+        std::string search = "\"" + key + "\"";
+        size_t pos = json.find(search);
+        if (pos == std::string::npos) return 0;
+        size_t colon = json.find(':', pos);
+        if (colon == std::string::npos) return 0;
+        return std::atoi(json.c_str() + colon + 1);
+    };
+
+    // Parse preset fields
+    {
+        std::string n = extractString("name");
+        std::strncpy(outPreset->name, n.c_str(), sizeof(outPreset->name) - 1);
+        outPreset->name[sizeof(outPreset->name) - 1] = '\0';
+    }
+    outPreset->version = extractInt("version");
+
+    // Parse memoryPatchNames array
+    outPreset->memoryPatchNames.clear();
+    size_t memPos = json.find("\"memoryPatchNames\"");
+    if (memPos != std::string::npos) {
+        size_t arrStart = json.find('[', memPos);
+        size_t arrEnd = json.find(']', arrStart);
+        if (arrStart != std::string::npos && arrEnd != std::string::npos) {
+            std::string arrStr = json.substr(arrStart + 1, arrEnd - arrStart - 1);
+            size_t p = 0;
+            while ((p = arrStr.find('"', p)) != std::string::npos) {
+                size_t e = arrStr.find('"', p + 1);
+                if (e != std::string::npos) {
+                    outPreset->memoryPatchNames.push_back(arrStr.substr(p + 1, e - p - 1));
+                    p = e + 1;
+                } else break;
+            }
+        }
+    }
+
+    // Parse serverPatchNames array
+    outPreset->serverPatchNames.clear();
+    size_t srvPos = json.find("\"serverPatchNames\"");
+    if (srvPos != std::string::npos) {
+        size_t arrStart = json.find('[', srvPos);
+        size_t arrEnd = json.find(']', arrStart);
+        if (arrStart != std::string::npos && arrEnd != std::string::npos) {
+            std::string arrStr = json.substr(arrStart + 1, arrEnd - arrStart - 1);
+            size_t p = 0;
+            while ((p = arrStr.find('"', p)) != std::string::npos) {
+                size_t e = arrStr.find('"', p + 1);
+                if (e != std::string::npos) {
+                    outPreset->serverPatchNames.push_back(arrStr.substr(p + 1, e - p - 1));
+                    p = e + 1;
+                } else break;
+            }
+        }
+    }
+
+    // Parse bytePatches array
+    outPreset->bytePatches.clear();
+    size_t bpPos = json.find("\"bytePatches\"");
+    if (bpPos != std::string::npos) {
+        size_t arrStart = json.find('[', bpPos);
+        size_t arrEnd = json.find(']', arrStart);
+        if (arrStart != std::string::npos && arrEnd != std::string::npos) {
+            std::string arrStr = json.substr(arrStart + 1, arrEnd - arrStart - 1);
+            // Parse each {offset, size, desc} object
+            size_t objPos = 0;
+            while ((objPos = arrStr.find('{', objPos)) != std::string::npos) {
+                size_t objEnd = arrStr.find('}', objPos);
+                if (objEnd == std::string::npos) break;
+                std::string objStr = arrStr.substr(objPos, objEnd - objPos + 1);
+
+                BytePatch entry;
+                entry.offset = 0;
+                // Extract offset
+                size_t offPos = objStr.find("\"offset\"");
+                if (offPos != std::string::npos) {
+                    size_t colon = objStr.find(':', offPos);
+                    entry.offset = static_cast<size_t>(std::strtoull(objStr.c_str() + colon + 1, nullptr, 10));
+                }
+                // Extract size
+                size_t szPos = objStr.find("\"size\"");
+                if (szPos != std::string::npos) {
+                    size_t colon = objStr.find(':', szPos);
+                    size_t dataSize = static_cast<size_t>(std::strtoull(objStr.c_str() + colon + 1, nullptr, 10));
+                    entry.data.resize(dataSize, 0);
+                }
+                // Extract description
+                size_t descPos = objStr.find("\"desc\"");
+                if (descPos != std::string::npos) {
+                    size_t s = objStr.find('"', descPos + 6) + 1;
+                    size_t e = objStr.find('"', s);
+                    if (s != std::string::npos && e != std::string::npos) {
+                        entry.description = objStr.substr(s, e - s);
+                    }
+                }
+                outPreset->bytePatches.push_back(entry);
+                objPos = objEnd + 1;
+            }
+        }
+    }
+
     emit_event(HotpatchEvent::PresetLoaded, filename);
-    return PatchResult::ok("Preset loaded (stub — parser pending)");
+    return PatchResult::ok("Preset loaded successfully");
 }
 
 // ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@
 #include "Win32IDE.h"
 #include "IDELogger.h"
 #include "IDEConfig.h"
+#include "lsp/RawrXD_LSPServer.h"
 #include "ModelConnection.h"
 #include "multi_response_engine.h"
 #include "../cpu_inference_engine.h"
@@ -244,6 +245,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             if (m_hwndStatusBar) {
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
             }
+            return 0;
+        }
+        if (wParam == 0x7C01) { // VOICE_TIMER_ID (voice chat VU meter)
+            onVoiceChatTimer();
             return 0;
         }
         break;
@@ -1011,6 +1016,27 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: initDecompilerView failed\n");
         }
 
+        // Initialize Phase 33: Voice Chat Engine
+        try {
+            initVoiceChat();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initVoiceChat failed\n");
+        }
+
+        // Initialize Phase 33: Quick-Win Systems (Shortcuts, Backups, Alerts, SLO)
+        try {
+            initQuickWinSystems();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initQuickWinSystems failed\n");
+        }
+
+        // Initialize Phase 32B: Chain-of-Thought Multi-Model Review Engine
+        try {
+            initChainOfThought();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initChainOfThought failed\n");
+        }
+
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
         // Notify UI thread to refresh
@@ -1025,6 +1051,12 @@ void Win32IDE::deferredHeavyInit() {
 // ============================================================================
 void Win32IDE::onDestroy() {
     LOG_INFO("Win32IDE::onDestroy - shutting down");
+
+    // Shutdown Phase 33: Voice Chat Engine
+    shutdownVoiceChat();
+
+    // Shutdown Phase 33: Quick-Win Systems
+    shutdownQuickWinSystems();
 
     // Shutdown Phase 12: Native Debugger Engine
     shutdownPhase12();

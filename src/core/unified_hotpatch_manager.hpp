@@ -68,10 +68,13 @@ typedef void (*HotpatchEventCallback)(const HotpatchEvent* event, void* userData
 // ---------------------------------------------------------------------------
 struct HotpatchPreset {
     char                        name[128];
+    int                         version = 0;
     std::vector<MemoryPatchEntry>  memoryPatches;
     std::vector<BytePatch>         bytePatches;
     // Server patches are function pointers, not serializable — stored by name
     std::vector<std::string>       serverPatchNames;
+    // Memory patches stored by name for preset load/save
+    std::vector<std::string>       memoryPatchNames;
 };
 
 // ---------------------------------------------------------------------------
